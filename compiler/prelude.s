@@ -44,7 +44,7 @@ pub struct BuiltinModuleDecl {
     types: Vec[BuiltinTypeDecl],
 }
 
-pub fn LoadPrelude() -> BuiltinModuleDecl {
+fn LoadPrelude() -> BuiltinModuleDecl {
     BuiltinModuleDecl {
         name: "std.prelude",
         traits: builtInTraits(),
@@ -143,11 +143,11 @@ fn builtInTypes() -> Vec[BuiltinTypeDecl] {
     types
 }
 
-pub fn Prelude() -> BuiltinModuleDecl {
+fn Prelude() -> BuiltinModuleDecl {
     LoadPrelude()
 }
 
-pub fn LookupBuiltinType(receiver_type: Type) -> Option[BuiltinTypeDecl] {
+fn LookupBuiltinType(receiver_type: Type) -> Option[BuiltinTypeDecl] {
     var base = baseName(receiver_type)
     match base {
         Option::Some(name) => findBuiltinType(builtInTypes(), name),
@@ -155,14 +155,14 @@ pub fn LookupBuiltinType(receiver_type: Type) -> Option[BuiltinTypeDecl] {
     }
 }
 
-pub fn LookupBuiltinMethods(receiver_type: Type, member: String) -> Vec[BuiltinMethodDecl] {
+fn LookupBuiltinMethods(receiver_type: Type, member: String) -> Vec[BuiltinMethodDecl] {
     match LookupBuiltinType(receiver_type) {
         Option::Some(builtin_type) => findBuiltinMethods(builtin_type, member, receiver_type),
         Option::None => Vec[BuiltinMethodDecl](),
     }
 }
 
-pub fn LookupBuiltinMethod(receiver_type: Type, member: String) -> Option[BuiltinMethodDecl] {
+fn LookupBuiltinMethod(receiver_type: Type, member: String) -> Option[BuiltinMethodDecl] {
     var methods = LookupBuiltinMethods(receiver_type, member)
     if methods.len() == 1 {
         return Option::Some(methods[0])
@@ -170,7 +170,7 @@ pub fn LookupBuiltinMethod(receiver_type: Type, member: String) -> Option[Builti
     Option::None
 }
 
-pub fn LookupIndexType(receiver_type: Type) -> Option[Type] {
+fn LookupIndexType(receiver_type: Type) -> Option[Type] {
     var inner = UnwrapRefs(receiver_type)
     match LookupBuiltinType(inner) {
         Option::Some(builtin_type) => {
@@ -269,14 +269,14 @@ fn firstNamedArg(ty: Type) -> Option[Type] {
     }
 }
 
-pub fn IsNamedTypeVar(ty: Type, name: String) -> bool {
+fn IsNamedTypeVar(ty: Type, name: String) -> bool {
     match ty {
         Type::Named(value) => value.name == name && value.args.len() == 0,
         _ => false,
     }
 }
 
-pub fn UnwrapRefs(ty: Type) -> Type {
+fn UnwrapRefs(ty: Type) -> Type {
     var current = ty
     while true {
         match current {

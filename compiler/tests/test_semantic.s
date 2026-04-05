@@ -68,7 +68,7 @@ fn semanticCases(fixtures_root: String) -> Vec[semanticCase] {
     }
 }
 
-pub fn RunSemanticSuite(fixtures_root: String) -> Vec[SemanticFailure] {
+fn RunSemanticSuite(fixtures_root: String) -> Vec[SemanticFailure] {
     var failures = Vec[SemanticFailure]()
 
     for case in semanticCases(fixtures_root) {

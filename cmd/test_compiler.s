@@ -12,7 +12,7 @@ struct cliError {
     message: String,
 }
 
-pub fn Main(args: Vec[String]) -> i32 {
+fn Main(args: Vec[String]) -> i32 {
     match run(args) {
         Result::Ok(()) => 0,
         Result::Err(err) => {

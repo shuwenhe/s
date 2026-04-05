@@ -19,7 +19,7 @@ pub struct Lexer {
     column: i32,
 }
 
-pub fn new_lexer(source: String) -> Lexer {
+fn new_lexer(source: String) -> Lexer {
     Lexer {
         source: source,
         index: 0,
@@ -29,7 +29,7 @@ pub fn new_lexer(source: String) -> Lexer {
 }
 
 impl Lexer {
-    pub fn tokenize(mut self) -> Result[Vec[Token], LexError] {
+    fn tokenize(mut self) -> Result[Vec[Token], LexError] {
         var tokens = Vec[Token]()
         while !self.is_eof() {
             self.skip_ignored()?
@@ -263,7 +263,7 @@ impl Lexer {
     }
 }
 
-pub fn is_whitespace(ch: String) -> bool {
+fn is_whitespace(ch: String) -> bool {
     match ch {
         " " => true,
         "\t" => true,
@@ -273,7 +273,7 @@ pub fn is_whitespace(ch: String) -> bool {
     }
 }
 
-pub fn is_digit(ch: String) -> bool {
+fn is_digit(ch: String) -> bool {
     match ch {
         "0" => true,
         "1" => true,
@@ -289,18 +289,18 @@ pub fn is_digit(ch: String) -> bool {
     }
 }
 
-pub fn is_ident_start(ch: String) -> bool {
+fn is_ident_start(ch: String) -> bool {
     if ch == "_" {
         return true
     }
     is_ascii_alpha(ch)
 }
 
-pub fn is_ident_continue(ch: String) -> bool {
+fn is_ident_continue(ch: String) -> bool {
     is_ident_start(ch) || is_digit(ch)
 }
 
-pub fn is_ascii_alpha(ch: String) -> bool {
+fn is_ascii_alpha(ch: String) -> bool {
     match ch {
         "a" => true,
         "b" => true,
@@ -358,7 +358,7 @@ pub fn is_ascii_alpha(ch: String) -> bool {
     }
 }
 
-pub fn is_single_symbol(ch: String) -> bool {
+fn is_single_symbol(ch: String) -> bool {
     match ch {
         "(" => true,
         ")" => true,

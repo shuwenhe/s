@@ -19,7 +19,7 @@ pub struct Token {
     column: i32,
 }
 
-pub fn token_kind_name(kind: TokenKind) -> String {
+fn token_kind_name(kind: TokenKind) -> String {
     match kind {
         TokenKind::Ident => "IDENT",
         TokenKind::Int => "INT",
@@ -30,7 +30,7 @@ pub fn token_kind_name(kind: TokenKind) -> String {
     }
 }
 
-pub fn dump_tokens(tokens: Vec[Token]) -> String {
+fn dump_tokens(tokens: Vec[Token]) -> String {
     var out = ""
     for token in tokens {
         if out != "" {
@@ -49,7 +49,7 @@ pub fn dump_tokens(tokens: Vec[Token]) -> String {
     out
 }
 
-pub fn is_keyword(text: String) -> bool {
+fn is_keyword(text: String) -> bool {
     match text {
         "package" => true,
         "use" => true,
