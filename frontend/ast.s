@@ -156,6 +156,22 @@ struct VarStmt {
     value: Expr,
 }
 
+struct AssignStmt {
+    name: String,
+    value: Expr,
+}
+
+struct IncrementStmt {
+    name: String,
+}
+
+struct CForStmt {
+    init: Box[Stmt],
+    condition: Expr,
+    step: Box[Stmt],
+    body: BlockExpr,
+}
+
 struct ReturnStmt {
     value: Option[Expr],
 }
@@ -166,6 +182,9 @@ struct ExprStmt {
 
 enum Stmt {
     Var(VarStmt),
+    Assign(AssignStmt),
+    Increment(IncrementStmt),
+    CFor(CForStmt),
     Return(ReturnStmt),
     Expr(ExprStmt),
 }
@@ -366,8 +385,29 @@ func dump_stmt(stmt: Stmt, indent: String) -> Vec[String] {
                 match value.type_name {
                     Option::Some(type_name) => indent + "var " + value.name + ": " + type_name + " = " + dump_expr(value.value),
                     Option::None => indent + "var " + value.name + " = " + dump_expr(value.value),
-                }
+            }
             single_line(text)
+        }
+        Stmt::Assign(value) => {
+            single_line(indent + value.name + " = " + dump_expr(value.value))
+        }
+        Stmt::Increment(value) => {
+            single_line(indent + value.name + "++")
+        }
+        Stmt::CFor(value) => {
+            var lines = Vec[String]()
+            lines.push(
+                indent
+                    + "for ("
+                    + dump_for_clause(value.init.value)
+                    + "; "
+                    + dump_expr(value.condition)
+                    + "; "
+                    + dump_for_clause(value.step.value)
+                    + ")"
+            )
+            append_lines(lines, dump_block(value.body, indent + "  "))
+            lines
         }
         Stmt::Return(value) => {
             var text =
@@ -378,6 +418,22 @@ func dump_stmt(stmt: Stmt, indent: String) -> Vec[String] {
             single_line(text)
         }
         Stmt::Expr(value) => single_line(indent + "expr " + dump_expr(value.expr)),
+    }
+}
+
+func dump_for_clause(stmt: Stmt) -> String {
+    match stmt {
+        Stmt::Var(value) => {
+            match value.type_name {
+                Option::Some(type_name) => type_name + " " + value.name + " = " + dump_expr(value.value),
+                Option::None => "var " + value.name + " = " + dump_expr(value.value),
+            }
+        }
+        Stmt::Assign(value) => value.name + " = " + dump_expr(value.value),
+        Stmt::Increment(value) => value.name + "++",
+        Stmt::Expr(value) => dump_expr(value.expr),
+        Stmt::Return(_) => "return",
+        Stmt::CFor(_) => "for (...)",
     }
 }
 
