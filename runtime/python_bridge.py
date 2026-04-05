@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-import inspect
 import subprocess
+import sys
 import tempfile
 from typing import Any, Callable, Generic, Iterable, TypeVar
 
@@ -144,7 +144,7 @@ def __host_println(text: str) -> None:
 
 
 def __host_eprintln(text: str) -> None:
-    print(text, file=inspect.sys.stderr)
+    print(text, file=sys.stderr)
 
 
 def __option_panic_unwrap() -> object:
