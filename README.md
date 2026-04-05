@@ -513,7 +513,7 @@ S 不应采用 C/C++ 头文件模型。
 ```s
 package net.http
 
-pub struct Request { ... }
+struct Request { ... }
 
 fn parse_header(...) -> Header { ... }
 ```
@@ -522,8 +522,8 @@ fn parse_header(...) -> Header { ... }
 
 - 一个文件属于一个模块
 - 一个目录构成一个包
-- `pub` 控制导出
-- 默认私有
+- 首字母大写控制导出
+- 首字母小写表示模块内可见
 
 ### 导入
 
