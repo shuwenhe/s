@@ -1,5 +1,5 @@
 package demo.builtin_field
 
-func read(info: FileInfo) -> i32 {
+i32 read(FileInfo info) {
     info.size
 }
