@@ -61,6 +61,13 @@ S source
 - 字符串、数组、IO、panic 分类清晰
 - 新 intrinsic 通过 manifest 增量注册
 
+Current status:
+
+- a machine-readable manifest now lives in
+  [intrinsics_manifest.json](/app/s/runtime/intrinsics_manifest.json)
+- [python_bridge.py](/app/s/runtime/python_bridge.py) now loads and validates
+  that manifest instead of treating the local registry as the source of truth
+
 ### Phase B: Move Validation Entry To S
 
 把验证入口先迁到 `.s`，让 Python 只负责执行 ABI。
