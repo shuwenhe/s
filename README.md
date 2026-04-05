@@ -780,9 +780,9 @@ S 的第一个可用版本不需要一次性解决所有问题。
 
 同时，自举工作已经开始，第一批 S 原生编译器骨架位于：
 
-- [selfhost/README.md](/app/s/selfhost/README.md)
-- [ast.s](/app/s/selfhost/frontend/ast.s)
-- [tokens.s](/app/s/selfhost/frontend/tokens.s)
+- [selfhost.md](/app/s/selfhost.md)
+- [ast.s](/app/s/frontend/ast.s)
+- [tokens.s](/app/s/frontend/tokens.s)
 - [self_hosting.md](/app/s/docs/self_hosting.md)
 
 下一步最值得继续推进的内容：
