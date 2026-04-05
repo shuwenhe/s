@@ -72,6 +72,9 @@ invoke_intrinsic("__string_slice", "hello", 1, 4)
 - `__vec_array_get`
 - `__vec_array_set`
 - `__host_read_to_string`
+- `__host_write_text_file`
+- `__host_make_temp_dir`
+- `__host_run_process`
 - `__host_println`
 - `__host_eprintln`
 - `__option_panic_unwrap`
@@ -102,6 +105,19 @@ invoke_intrinsic("__vec_array_set", array, index, value)
 - `i32` -> Python `int`
 - `Array[T]` -> `HostArray`
 - `()` -> `None`
+
+For the std-layer host intrinsics, the current bridge uses a success-path model:
+
+- `__host_read_to_string` -> Python `str`
+- `__host_make_temp_dir` -> Python `str`
+- `__host_write_text_file` -> `None`
+- `__host_run_process` -> `None`
+- `__host_println` / `__host_eprintln` -> `None`
+
+S declarations currently expose these as `Result[...]` for `std.fs` and
+`std.process`, but the Python prototype does not yet materialize a host-side
+`Result[T, E]` wrapper. Instead, success returns the payload and failures raise
+`RuntimeTrap`.
 
 后续如需支持：
 
@@ -138,6 +154,10 @@ python3 /app/s/runtime/check_bridge.py
 - `char_at`
 - `slice`
 - `vec` 底层数组读写
+- `read_to_string`
+- `write_text_file`
+- `make_temp_dir`
+- `run_process`
 - dispatcher 的符号调用路径
 
 另外：
@@ -169,6 +189,12 @@ python3 /app/s/runtime/validate_outputs.py all
 
 - `run_lex_dump` 通过 `__host_read_to_string` / `__host_println`
 - `run_ast_dump` 通过 `__host_read_to_string` / `__host_println`
+
+编译器后端当前也已经切到 std-layer host boundary：
+
+- [main.s](/app/s/compiler/main.s) 通过 `std.fs.ReadToString`
+- [backend_elf64.s](/app/s/compiler/backend_elf64.s) 通过
+  `std.fs.WriteTextFile` / `std.fs.MakeTempDir` / `std.process.RunProcess`
 
 这意味着 `ExecutionPlan` 已经不只记录 parser/lexer 内部 intrinsic，也开始覆盖宿主 IO 边界。
 
