@@ -6,9 +6,8 @@ use std.io.println
 use std.prelude.to_string
 use std.result.Result
 use std.vec.Vec
-use selfhost.frontend.dump_tokens
-use selfhost.frontend.new_lexer
-use selfhost.frontend.Token
+use selfhost.frontend.dump_source_file
+use selfhost.frontend.parse_source
 
 pub struct CliError {
     message: String,
@@ -27,15 +26,15 @@ pub fn main(args: Vec[String]) -> i32 {
 pub fn run(args: Vec[String]) -> Result[(), CliError] {
     let path = parse_path(args)?
     let source = read_source(path)?
-    let tokens = lex_source(source)?
-    println(dump_tokens(tokens))
+    let ast = parse_ast(source)?
+    println(dump_source_file(ast))
     Result::Ok(())
 }
 
 pub fn parse_path(args: Vec[String]) -> Result[String, CliError] {
     if len(args) < 2 {
         return Result::Err(CliError {
-            message: "usage: lex_dump <path>",
+            message: "usage: ast_dump <path>",
         })
     }
     Result::Ok(args[1])
@@ -50,9 +49,9 @@ pub fn read_source(path: String) -> Result[String, CliError] {
     }
 }
 
-pub fn lex_source(source: String) -> Result[Vec[Token], CliError] {
-    match new_lexer(source).tokenize() {
-        Result::Ok(tokens) => Result::Ok(tokens),
+pub fn parse_ast(source: String) -> Result[SourceFile, CliError] {
+    match parse_source(source) {
+        Result::Ok(ast) => Result::Ok(ast),
         Result::Err(err) => Result::Err(CliError {
             message: err.message + " at " + to_string(err.line) + ":" + to_string(err.column),
         }),
