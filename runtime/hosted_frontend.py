@@ -438,4 +438,5 @@ def _host_println(text: str, plan: ExecutionPlan, source: str) -> str:
     )
     plan.intrinsic_calls.append(call)
     plan.steps.append(PlanStep("println", source))
-    return dispatch(call).value
+    dispatch(call)
+    return text
