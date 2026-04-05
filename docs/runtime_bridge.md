@@ -71,6 +71,9 @@ invoke_intrinsic("__string_slice", "hello", 1, 4)
 - `__vec_new_array`
 - `__vec_array_get`
 - `__vec_array_set`
+- `__host_read_to_string`
+- `__host_println`
+- `__host_eprintln`
 - `__option_panic_unwrap`
 - `__result_panic_unwrap`
 - `__result_panic_unwrap_err`
@@ -148,14 +151,26 @@ python3 /app/s/runtime/validate_outputs.py all
 当前 parser 侧也已经开始接入这条链：
 
 - `HostedParser._parse_pattern`
+- `HostedParser._parse_use_path`
+- `HostedParser._parse_path`
 - `HostedParser._path_contains_dot`
 - `HostedParser._starts_with_upper`
 - `HostedParser._join_strings`
 - `HostedParser._normalize_type_text`
 - `HostedParser._parse_type_text`
 - `HostedParser._parse_bracket_group`
+- `HostedParser._expect_keyword`
+- `HostedParser._expect_symbol`
+- `HostedParser._expect_ident`
 
 这些 helper 现在会通过 `__runtime_len` / `__string_char_at` / `__string_concat` / `__string_replace` 产出并执行显式 `IntrinsicCall`，而不是直接依赖 Python 原生字符串语义。
+
+另外，command 边界现在也已经开始进入统一执行计划：
+
+- `run_lex_dump` 通过 `__host_read_to_string` / `__host_println`
+- `run_ast_dump` 通过 `__host_read_to_string` / `__host_println`
+
+这意味着 `ExecutionPlan` 已经不只记录 parser/lexer 内部 intrinsic，也开始覆盖宿主 IO 边界。
 
 ## 9. Next Step
 
