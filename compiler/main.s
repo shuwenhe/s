@@ -31,8 +31,8 @@ pub fn Main(args: Vec[String]) -> i32 {
 }
 
 fn run(args: Vec[String]) -> Result[(), cliError] {
-    let command = parseCommand(args)?
-    let source = readSource(command.path)?
+    var command = parseCommand(args)?
+    var source = readSource(command.path)?
 
     if command.dump_tokens {
         match new_lexer(source).tokenize() {
@@ -45,7 +45,7 @@ fn run(args: Vec[String]) -> Result[(), cliError] {
         }
     }
 
-    let parsed =
+    var parsed =
         match parse_source(source) {
             Result::Ok(ast) => ast,
             Result::Err(err) => {
@@ -59,7 +59,7 @@ fn run(args: Vec[String]) -> Result[(), cliError] {
         println(dump_source_file(parsed))
     }
 
-    let checked = CheckSource(parsed)
+    var checked = CheckSource(parsed)
     if !IsOK(checked) {
         for diagnostic in checked.diagnostics {
             eprintln("error: " + diagnostic.message)
@@ -81,15 +81,15 @@ fn parseCommand(args: Vec[String]) -> Result[checkOptions, cliError] {
         return usageError()
     }
 
-    let options = checkOptions {
+    var options = checkOptions {
         path: args[2],
         dump_tokens: false,
         dump_ast: false,
     }
 
-    let index = 3
+    var index = 3
     while index < args.len() {
-        let flag = args[index]
+        var flag = args[index]
         if flag == "--dump-tokens" {
             options.dump_tokens = true
         } else if flag == "--dump-ast" {

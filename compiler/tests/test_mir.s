@@ -15,7 +15,7 @@ pub struct MirFailure {
 }
 
 pub fn RunMirSuite() -> Vec[MirFailure] {
-    let failures = Vec[MirFailure]()
+    var failures = Vec[MirFailure]()
 
     match checkLocalsVersioned() {
         Result::Ok(()) => (),
@@ -36,9 +36,9 @@ pub fn RunMirSuite() -> Vec[MirFailure] {
 }
 
 fn checkLocalsVersioned() -> Result[(), MirFailure] {
-    let parsed =
+    var parsed =
         match parse_source(
-            "package demo.mir\n\nfn shadow(x: i32) -> i32 {\n    let x = 1\n    x\n}\n",
+            "package demo.mir\n\nfn shadow(x: i32) -> i32 {\n    var x = 1\n    x\n}\n",
         ) {
             Result::Ok(value) => value,
             Result::Err(err) => {
@@ -53,7 +53,7 @@ fn checkLocalsVersioned() -> Result[(), MirFailure] {
         frontend.Item::Function(func) => {
             match func.body {
                 Option::Some(body) => {
-                    let graph = LowerBlock(body, Vec[String] { "x" }, Vec[TypeBinding] {
+                    var graph = LowerBlock(body, Vec[String] { "x" }, Vec[TypeBinding] {
                         TypeBinding { name: "x", value: ParseType("i32") },
                     })
                     if graph.locals.len() == 0 {
@@ -78,7 +78,7 @@ fn checkLocalsVersioned() -> Result[(), MirFailure] {
 }
 
 fn checkMirShape() -> Result[(), MirFailure] {
-    let parsed =
+    var parsed =
         match parse_source(
             "package demo.mir\n\nfn choose(flag: bool) -> i32 {\n    if flag {\n        1\n    } else {\n        2\n    }\n}\n",
         ) {
@@ -95,7 +95,7 @@ fn checkMirShape() -> Result[(), MirFailure] {
         frontend.Item::Function(func) => {
             match func.body {
                 Option::Some(body) => {
-                    let graph = LowerBlock(body, Vec[String] { "flag" }, Vec[TypeBinding] {
+                    var graph = LowerBlock(body, Vec[String] { "flag" }, Vec[TypeBinding] {
                         TypeBinding { name: "flag", value: ParseType("bool") },
                     })
                     if graph.blocks.len() < 2 {
@@ -120,7 +120,7 @@ fn checkMirShape() -> Result[(), MirFailure] {
 }
 
 fn checkPreludeShape() -> Result[(), MirFailure] {
-    let prelude = LoadPrelude()
+    var prelude = LoadPrelude()
     if prelude.name != "std.prelude" {
         return Result::Err(MirFailure {
             name: "prelude_shape",

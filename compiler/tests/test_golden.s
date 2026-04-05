@@ -15,8 +15,8 @@ struct suiteResult {
 }
 
 pub fn RunGoldenSuite(fixtures_root: String) -> suiteResult {
-    let failures = Vec[GoldenFailure]()
-    let passed = 0
+    var failures = Vec[GoldenFailure]()
+    var passed = 0
 
     for case in LexerCases(fixtures_root) {
         match RunLexerCase(case) {

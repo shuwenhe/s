@@ -60,8 +60,8 @@ pub fn ParserCases(root: String) -> Vec[GoldenCase] {
 }
 
 pub fn RunLexerCase(case: GoldenCase) -> Result[(), GoldenFailure] {
-    let source = readFixture(case.name, case.source_path)?
-    let expected = readFixture(case.name, case.expected_path)?
+    var source = readFixture(case.name, case.source_path)?
+    var expected = readFixture(case.name, case.expected_path)?
     match new_lexer(source).tokenize() {
         Result::Ok(tokens) => compareOutput(case.name, expected, dump_tokens(tokens)),
         Result::Err(err) => Result::Err(GoldenFailure {
@@ -72,8 +72,8 @@ pub fn RunLexerCase(case: GoldenCase) -> Result[(), GoldenFailure] {
 }
 
 pub fn RunParserCase(case: GoldenCase) -> Result[(), GoldenFailure] {
-    let source = readFixture(case.name, case.source_path)?
-    let expected = readFixture(case.name, case.expected_path)?
+    var source = readFixture(case.name, case.source_path)?
+    var expected = readFixture(case.name, case.expected_path)?
     match parse_source(source) {
         Result::Ok(ast) => compareOutput(case.name, expected, dump_source_file(ast)),
         Result::Err(err) => Result::Err(GoldenFailure {
