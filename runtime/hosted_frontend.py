@@ -197,6 +197,57 @@ class HostedParser(Parser):
             return VariantPattern(path=path)
         return NamePattern(name=path)
 
+    def _parse_use_path(self) -> str:
+        parts = [self._expect_ident()]
+        while self._eat_symbol("."):
+            if self._eat_symbol("{"):
+                members: list[str] = []
+                while not self._eat_symbol("}"):
+                    member = self._expect_ident()
+                    if self._eat_keyword("as"):
+                        member = self._concat(member, self._concat(" as ", self._expect_ident()))
+                    members.append(member)
+                    self._eat_symbol(",")
+                return self._concat(
+                    self._concat(self._join_strings(parts, "."), ".{"),
+                    self._concat(self._join_strings(members, ", "), "}"),
+                )
+            parts.append(self._expect_ident())
+        return self._join_strings(parts, ".")
+
+    def _parse_path(self) -> str:
+        parts = [self._expect_ident()]
+        while self._eat_symbol("."):
+            parts.append(self._expect_ident())
+        if self._at_symbol("["):
+            last = parts.pop()
+            if last is None:
+                raise self._error_here("expected identifier")
+            parts.append(self._concat(last, self._parse_bracket_group()))
+        return self._join_strings(parts, ".")
+
+    def _expect_keyword(self, value: str):
+        token = self._peek()
+        if token.kind == TokenKind.KEYWORD and token.value == value:
+            return self._advance()
+        raise self._make_error(self._concat("expected keyword ", value), token.line, token.column)
+
+    def _expect_symbol(self, value: str):
+        token = self._peek()
+        if token.kind == TokenKind.SYMBOL and token.value == value:
+            return self._advance()
+        raise self._make_error(self._concat("expected symbol ", value), token.line, token.column)
+
+    def _expect_ident(self) -> str:
+        token = self._peek()
+        if token.kind == TokenKind.IDENT:
+            self._advance()
+            return token.value
+        if token.kind == TokenKind.KEYWORD and token.value == "self":
+            self._advance()
+            return token.value
+        raise self._make_error("expected identifier", token.line, token.column)
+
     def _path_contains_dot(self, path: str) -> bool:
         i = 0
         while i < self._len(path):
@@ -306,6 +357,13 @@ class HostedParser(Parser):
         self.trace.append(call)
         return dispatch(call).value
 
+    def _error_here(self, message: str):
+        token = self._peek()
+        return self._make_error(message, token.line, token.column)
+
+    def _make_error(self, message: str, line: int, column: int):
+        return type("HostedParseError", (Exception,), {})(message)
+
     def _peek(self) -> Token:
         return super()._peek()
 
@@ -334,29 +392,52 @@ class ExecutionResult:
 
 
 def run_lex_dump(path: Path) -> ExecutionResult:
-    source = path.read_text()
     plan = ExecutionPlan(name="lex_dump", path=path)
-    plan.steps.append(PlanStep("read_source", str(path)))
+    source = _host_read_to_string(path, plan)
     lexer = HostedLexer(source)
     tokens = lexer.tokenize()
+    text = dump_tokens(tokens)
+    output = _host_println(text, plan, source="lex_dump")
     plan.steps.append(PlanStep("tokenize", f"{len(tokens)} tokens"))
     plan.steps.append(PlanStep("dump_tokens", "render token stream"))
     plan.intrinsic_calls.extend(lexer.trace)
-    return ExecutionResult(output=dump_tokens(tokens), plan=plan)
+    return ExecutionResult(output=output, plan=plan)
 
 
 def run_ast_dump(path: Path) -> ExecutionResult:
-    source = path.read_text()
     plan = ExecutionPlan(name="ast_dump", path=path)
-    plan.steps.append(PlanStep("read_source", str(path)))
+    source = _host_read_to_string(path, plan)
     lexer = HostedLexer(source)
     tokens = lexer.tokenize()
-    plan.steps.append(PlanStep("tokenize", f"{len(tokens)} tokens"))
     parser = HostedParser(tokens)
     ast = parser.parse_source_file()
+    output = _host_println(dump_source_file(ast), plan, source="ast_dump")
+    plan.steps.append(PlanStep("tokenize", f"{len(tokens)} tokens"))
     plan.steps.append(PlanStep("parse_source_file", "build SourceFile AST"))
     plan.steps.append(PlanStep("parse_pattern_helpers", "dispatch hosted parser string helpers"))
     plan.steps.append(PlanStep("dump_source_file", "render AST dump"))
     plan.intrinsic_calls.extend(lexer.trace)
     plan.intrinsic_calls.extend(parser.trace)
-    return ExecutionResult(output=dump_source_file(ast), plan=plan)
+    return ExecutionResult(output=output, plan=plan)
+
+
+def _host_read_to_string(path: Path, plan: ExecutionPlan) -> str:
+    call = IntrinsicCall(
+        symbol="__host_read_to_string",
+        args=(str(path),),
+        source="HostedCommand",
+    )
+    plan.intrinsic_calls.append(call)
+    plan.steps.append(PlanStep("read_source", str(path)))
+    return dispatch(call).value
+
+
+def _host_println(text: str, plan: ExecutionPlan, source: str) -> str:
+    call = IntrinsicCall(
+        symbol="__host_println",
+        args=(text,),
+        source=source,
+    )
+    plan.intrinsic_calls.append(call)
+    plan.steps.append(PlanStep("println", source))
+    return dispatch(call).value

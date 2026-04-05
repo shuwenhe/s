@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 import inspect
 from typing import Any, Callable, Generic, Iterable, TypeVar
 
@@ -86,6 +87,18 @@ def __vec_array_set(array: HostArray[T], index: int, value: T) -> None:
     array.storage[index] = value
 
 
+def __host_read_to_string(path: str) -> str:
+    return Path(path).read_text()
+
+
+def __host_println(text: str) -> str:
+    return text
+
+
+def __host_eprintln(text: str) -> str:
+    return text
+
+
 def __option_panic_unwrap() -> object:
     raise RuntimeTrap("called Option.unwrap() on None")
 
@@ -108,6 +121,9 @@ INTRINSICS: dict[str, IntrinsicSpec] = {
     "__vec_new_array": IntrinsicSpec("__vec_new_array", __vec_new_array, 1, "Array[T]"),
     "__vec_array_get": IntrinsicSpec("__vec_array_get", __vec_array_get, 2, "T"),
     "__vec_array_set": IntrinsicSpec("__vec_array_set", __vec_array_set, 3, "()"),
+    "__host_read_to_string": IntrinsicSpec("__host_read_to_string", __host_read_to_string, 1, "String"),
+    "__host_println": IntrinsicSpec("__host_println", __host_println, 1, "String"),
+    "__host_eprintln": IntrinsicSpec("__host_eprintln", __host_eprintln, 1, "String"),
     "__option_panic_unwrap": IntrinsicSpec("__option_panic_unwrap", __option_panic_unwrap, 0, "never"),
     "__result_panic_unwrap": IntrinsicSpec("__result_panic_unwrap", __result_panic_unwrap, 0, "never"),
     "__result_panic_unwrap_err": IntrinsicSpec("__result_panic_unwrap_err", __result_panic_unwrap_err, 0, "never"),

@@ -16,6 +16,7 @@ def main() -> int:
         ("len(string)", invoke_intrinsic("__runtime_len", "demo") == 4),
         ("concat", invoke_intrinsic("__string_concat", "de", "mo") == "demo"),
         ("replace", invoke_intrinsic("__string_replace", "a b", " ", "_") == "a_b"),
+        ("host println", invoke_intrinsic("__host_println", "demo") == "demo"),
         ("char_at", invoke_intrinsic("__string_char_at", "demo", 1) == "e"),
         ("slice", invoke_intrinsic("__string_slice", "demo", 1, 3) == "em"),
     ]
