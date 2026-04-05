@@ -334,8 +334,8 @@ impl Parser {
         let final_expr = Option::None
 
         while !self.at_symbol("}") {
-            if self.at_keyword("let") {
-                statements.push(Stmt::Let(self.parse_let_stmt()?))
+            if self.at_keyword("var") {
+                statements.push(Stmt::Var(self.parse_var_stmt()?))
                 continue
             }
             if self.at_keyword("return") {
@@ -360,8 +360,8 @@ impl Parser {
         })
     }
 
-    fn parse_let_stmt(mut self) -> Result[LetStmt, ParseError] {
-        self.expect_keyword("let")?
+    fn parse_var_stmt(mut self) -> Result[VarStmt, ParseError] {
+        self.expect_keyword("var")?
         let name = self.expect_ident()?
         let type_name =
             if self.eat_symbol(":") {
@@ -372,7 +372,7 @@ impl Parser {
         self.expect_symbol("=")?
         let value = self.parse_expr()?
         self.eat_symbol(";")
-        Result::Ok(LetStmt {
+        Result::Ok(VarStmt {
             name: name,
             type_name: type_name,
             value: value,
