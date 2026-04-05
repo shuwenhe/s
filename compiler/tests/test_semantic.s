@@ -16,7 +16,7 @@ struct semanticCase {
     expected_message: Option[String],
 }
 
-pub struct SemanticFailure {
+struct SemanticFailure {
     name: String,
     message: String,
 }
