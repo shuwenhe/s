@@ -6,23 +6,23 @@ use frontend.BlockExpr
 use frontend.Expr
 
 struct BorrowDiagnostic {
-    String message,
+    message: String,
 }
 
 struct borrowState {
-    String name,
-    Type ty,
-    bool moved,
+    name: String,
+    ty: Type,
+    moved: bool,
 }
 
-Vec[BorrowDiagnostic] AnalyzeBlock(BlockExpr block, Vec[VarState] initial){
+func AnalyzeBlock(block: BlockExpr, initial: Vec[VarState]) -> Vec[BorrowDiagnostic] {
     var diagnostics = Vec[BorrowDiagnostic]()
     var scope = Vec[borrowState]()
     for entry in initial {
         scope.push(borrowState {
-            entry.name name,
-            entry.ty ty,
-            false moved,
+            name: entry.name,
+            ty: entry.ty,
+            moved: false,
         })
     }
     for stmt in block.statements {
@@ -31,7 +31,7 @@ Vec[BorrowDiagnostic] AnalyzeBlock(BlockExpr block, Vec[VarState] initial){
             frontend.Stmt::Return(value) => {
                 match value.value {
                     Option::Some(expr) => inspectExpr(expr, scope, diagnostics),
-                    :None => () Option,
+                    Option::None => (),
                 }
             }
             frontend.Stmt::Expr(value) => inspectExpr(value.expr, scope, diagnostics),
@@ -39,71 +39,71 @@ Vec[BorrowDiagnostic] AnalyzeBlock(BlockExpr block, Vec[VarState] initial){
     }
     match block.final_expr {
         Option::Some(expr) => inspectExpr(expr, scope, diagnostics),
-        :None => () Option,
+        Option::None => (),
     }
     diagnostics
 }
 
-() inspectExpr(Expr expr, Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics){
+func inspectExpr(expr: Expr, scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic]) -> () {
     match expr {
         Expr::Name(value) => consumeName(scope, diagnostics, value.name),
-        :Borrow(value) => { Expr
+        Expr::Borrow(value) => {
             match value.target.value {
                 Expr::Name(name_expr) => inspectName(scope, diagnostics, name_expr.name),
                 other => inspectExpr(other, scope, diagnostics),
             }
         }
-        :Binary(value) => { Expr
+        Expr::Binary(value) => {
             inspectExpr(value.left.value, scope, diagnostics)
             inspectExpr(value.right.value, scope, diagnostics)
         }
-        :Call(value) => { Expr
+        Expr::Call(value) => {
             inspectExpr(value.callee.value, scope, diagnostics)
             for arg in value.args {
                 inspectExpr(arg, scope, diagnostics)
             }
         }
         Expr::Member(value) => inspectExpr(value.target.value, scope, diagnostics),
-        :Index(value) => { Expr
+        Expr::Index(value) => {
             inspectExpr(value.target.value, scope, diagnostics)
             inspectExpr(value.index.value, scope, diagnostics)
         }
-        :Match(value) => { Expr
+        Expr::Match(value) => {
             inspectExpr(value.subject.value, scope, diagnostics)
             for arm in value.arms {
                 inspectExpr(arm.expr, scope, diagnostics)
             }
         }
-        :If(value) => { Expr
+        Expr::If(value) => {
             inspectExpr(value.condition.value, scope, diagnostics)
             AnalyzeBlock(value.then_branch, toVarState(scope))
             match value.else_branch {
                 Option::Some(other) => inspectExpr(other.value, scope, diagnostics),
-                :None => () Option,
+                Option::None => (),
             }
         }
-        :While(value) => { Expr
+        Expr::While(value) => {
             inspectExpr(value.condition.value, scope, diagnostics)
             AnalyzeBlock(value.body, toVarState(scope))
         }
-        :For(value) => { Expr
+        Expr::For(value) => {
             inspectExpr(value.iterable.value, scope, diagnostics)
             AnalyzeBlock(value.body, toVarState(scope))
         }
-        :Block(value) => { Expr
+        Expr::Block(value) => {
             AnalyzeBlock(value, toVarState(scope))
         }
         _ => (),
     }
 }
 
-() consumeName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, String name){
+func consumeName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name: String) -> () {
     var index = 0
     while index < scope.len() {
         if scope[index].name == name {
             if scope[index].moved {
                 diagnostics.push(BorrowDiagnostic {
-                    "use of moved value " + name message,
+                    message: "use of moved value " + name,
                 })
                 return
             }
@@ -116,23 +116,23 @@ Vec[BorrowDiagnostic] AnalyzeBlock(BlockExpr block, Vec[VarState] initial){
     }
 }
 
-() inspectName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, String name){
+func inspectName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name: String) -> () {
     for entry in scope {
         if entry.name == name && entry.moved {
             diagnostics.push(BorrowDiagnostic {
-                "borrow of moved value " + name message,
+                message: "borrow of moved value " + name,
             })
             return
         }
     }
 }
 
-Vec[VarState] toVarState(Vec[borrowState] scope){
+func toVarState(scope: Vec[borrowState]) -> Vec[VarState] {
     var out = Vec[VarState]()
     for entry in scope {
         out.push(VarState {
-            entry.name name,
-            entry.ty ty,
+            name: entry.name,
+            ty: entry.ty,
         })
     }
     out

@@ -4,8 +4,8 @@ use std.io.Reader
 use std.result.Result as Res
 
 struct Config[T] {
-    String Addr,
-    i32 retries,
+    Addr: String,
+    retries: i32,
 }
 
 enum Option[T] {
@@ -14,16 +14,16 @@ enum Option[T] {
 }
 
 trait ReaderLike[T] {
-    Result[usize, IoError] read(&mut Self self, []u8 buf);
+    func read(self: &mut Self, buf: []u8) -> Result[usize, IoError];
 }
 
-Result[String, IoError] load[T: Reader](T reader, String path){
+func load[T: Reader](reader: T, path: String) -> Result[String, IoError] {
     var value = 1
     value
 }
 
 impl ReaderLike[File] for File {
-    Result[usize, IoError] read(&mut Self self, []u8 buf){
+    func read(self: &mut Self, buf: []u8) -> Result[usize, IoError] {
         buf
     }
 }
