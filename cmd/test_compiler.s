@@ -23,16 +23,16 @@ pub fn Main(args: Vec[String]) -> i32 {
 }
 
 fn run(args: Vec[String]) -> Result[(), cliError] {
-    let fixtures_root =
+    var fixtures_root =
         if args.len() >= 2 {
             args[1]
         } else {
             "/app/s/compiler/tests/fixtures"
         }
 
-    let golden = RunGoldenSuite(fixtures_root)
-    let semantic = RunSemanticSuite(fixtures_root)
-    let mir = RunMirSuite()
+    var golden = RunGoldenSuite(fixtures_root)
+    var semantic = RunSemanticSuite(fixtures_root)
+    var mir = RunMirSuite()
 
     if golden.failed.len() > 0 {
         for failure in golden.failed {

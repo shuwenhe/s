@@ -18,7 +18,7 @@ trait ReaderLike[T] {
 }
 
 fn load[T: Reader](reader: T, path: String) -> Result[String, IoError] {
-    let value = 1
+    var value = 1
     value
 }
 

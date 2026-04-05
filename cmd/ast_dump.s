@@ -25,9 +25,9 @@ pub fn main(args: Vec[String]) -> i32 {
 }
 
 pub fn run(args: Vec[String]) -> Result[(), CliError] {
-    let path = parse_path(args)?
-    let source = read_source(path)?
-    let ast = parse_ast(source)?
+    var path = parse_path(args)?
+    var source = read_source(path)?
+    var ast = parse_ast(source)?
     println(dump_source_file(ast))
     Result::Ok(())
 }

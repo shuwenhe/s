@@ -53,7 +53,7 @@ pub fn LoadPrelude() -> BuiltinModuleDecl {
 }
 
 fn builtInTraits() -> Vec[BuiltinTraitDecl] {
-    let traits = Vec[BuiltinTraitDecl]()
+    var traits = Vec[BuiltinTraitDecl]()
     traits.push(BuiltinTraitDecl {
         name: "Len",
         methods: Vec[BuiltinMethodGroup] {
@@ -80,7 +80,7 @@ fn builtInTraits() -> Vec[BuiltinTraitDecl] {
 }
 
 fn builtInTypes() -> Vec[BuiltinTypeDecl] {
-    let types = Vec[BuiltinTypeDecl]()
+    var types = Vec[BuiltinTypeDecl]()
     types.push(BuiltinTypeDecl {
         name: "String",
         traits: Vec[String] { "Clone" },
@@ -148,7 +148,7 @@ pub fn Prelude() -> BuiltinModuleDecl {
 }
 
 pub fn LookupBuiltinType(receiver_type: Type) -> Option[BuiltinTypeDecl] {
-    let base = baseName(receiver_type)
+    var base = baseName(receiver_type)
     match base {
         Option::Some(name) => findBuiltinType(builtInTypes(), name),
         Option::None => Option::None,
@@ -163,7 +163,7 @@ pub fn LookupBuiltinMethods(receiver_type: Type, member: String) -> Vec[BuiltinM
 }
 
 pub fn LookupBuiltinMethod(receiver_type: Type, member: String) -> Option[BuiltinMethodDecl] {
-    let methods = LookupBuiltinMethods(receiver_type, member)
+    var methods = LookupBuiltinMethods(receiver_type, member)
     if methods.len() == 1 {
         return Option::Some(methods[0])
     }
@@ -171,7 +171,7 @@ pub fn LookupBuiltinMethod(receiver_type: Type, member: String) -> Option[Builti
 }
 
 pub fn LookupIndexType(receiver_type: Type) -> Option[Type] {
-    let inner = UnwrapRefs(receiver_type)
+    var inner = UnwrapRefs(receiver_type)
     match LookupBuiltinType(inner) {
         Option::Some(builtin_type) => {
             match builtin_type.index_result_kind {
@@ -224,14 +224,14 @@ fn findBuiltinMethods(
 }
 
 fn rewriteVecPush(methods: Vec[BuiltinMethodDecl], receiver_type: Type) -> Vec[BuiltinMethodDecl] {
-    let rewritten = Vec[BuiltinMethodDecl]()
-    let inner = UnwrapRefs(receiver_type)
-    let replacement = firstNamedArg(inner)
+    var rewritten = Vec[BuiltinMethodDecl]()
+    var inner = UnwrapRefs(receiver_type)
+    var replacement = firstNamedArg(inner)
     for method in methods {
         match replacement {
             Option::Some(value) => {
-                let params = Vec[Type]()
-                let index = 0
+                var params = Vec[Type]()
+                var index = 0
                 for param in method.signature.params {
                     if index == 0 && IsNamedTypeVar(param, "T") {
                         params.push(value)
@@ -277,7 +277,7 @@ pub fn IsNamedTypeVar(ty: Type, name: String) -> bool {
 }
 
 pub fn UnwrapRefs(ty: Type) -> Type {
-    let current = ty
+    var current = ty
     while true {
         match current {
             Type::Reference(value) => current = value.inner.value,

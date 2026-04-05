@@ -31,7 +31,7 @@ pub fn token_kind_name(kind: TokenKind) -> String {
 }
 
 pub fn dump_tokens(tokens: Vec[Token]) -> String {
-    let out = ""
+    var out = ""
     for token in tokens {
         if out != "" {
             out = out + "\n"
@@ -55,7 +55,7 @@ pub fn is_keyword(text: String) -> bool {
         "use" => true,
         "as" => true,
         "fn" => true,
-        "let" => true,
+        "var" => true,
         "var" => true,
         "const" => true,
         "static" => true,
