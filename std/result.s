@@ -6,25 +6,25 @@ pub enum Result[T, E] {
 }
 
 impl Result[T, E] {
-    pub fn is_ok(self) -> bool {
+    fn is_ok(self) -> bool {
         match self {
             Result::Ok(_) => true,
             Result::Err(_) => false,
         }
     }
 
-    pub fn is_err(self) -> bool {
+    fn is_err(self) -> bool {
         !self.is_ok()
     }
 
-    pub fn unwrap(self) -> T {
+    fn unwrap(self) -> T {
         match self {
             Result::Ok(value) => value,
             Result::Err(_) => __result_panic_unwrap(),
         }
     }
 
-    pub fn unwrap_err(self) -> E {
+    fn unwrap_err(self) -> E {
         match self {
             Result::Ok(_) => __result_panic_unwrap_err(),
             Result::Err(err) => err,
