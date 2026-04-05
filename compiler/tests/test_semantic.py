@@ -163,3 +163,32 @@ class SemanticTests(unittest.TestCase):
         )
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "5050")
+
+    def test_native_runner_build_sum_binary_output(self) -> None:
+        build_runner = subprocess.run(
+            ["/app/s/scripts/build_native_runner.sh", "/tmp/s_native_test"],
+            cwd="/app",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(build_runner.returncode, 0, build_runner.stderr)
+
+        build = subprocess.run(
+            ["/tmp/s_native_test", "build", "/app/s/examples/s/sum.s", "-o", "/tmp/s_sum_native_test"],
+            cwd="/app",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(build.returncode, 0, build.stderr)
+
+        run = subprocess.run(
+            ["/tmp/s_sum_native_test"],
+            cwd="/app/s",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(run.stdout.strip(), "5050")
