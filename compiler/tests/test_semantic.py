@@ -5,6 +5,7 @@ import subprocess
 import sys
 import unittest
 
+from compiler.hosted_compiler import run_cli
 from compiler.prelude import PRELUDE
 from compiler.parser import parse_source
 from compiler.semantic import check_source
@@ -126,6 +127,20 @@ class SemanticTests(unittest.TestCase):
 
         run = subprocess.run(
             ["/tmp/s_sum_test"],
+            cwd="/app/s",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(run.stdout.strip(), "5050")
+
+    def test_hosted_build_sum_binary_output(self) -> None:
+        code = run_cli(["build", "/app/s/examples/s/sum.s", "-o", "/tmp/s_sum_hosted"])
+        self.assertEqual(code, 0)
+
+        run = subprocess.run(
+            ["/tmp/s_sum_hosted"],
             cwd="/app/s",
             capture_output=True,
             text=True,
