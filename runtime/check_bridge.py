@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import tempfile
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,7 +17,7 @@ def main() -> int:
         ("len(string)", invoke_intrinsic("__runtime_len", "demo") == 4),
         ("concat", invoke_intrinsic("__string_concat", "de", "mo") == "demo"),
         ("replace", invoke_intrinsic("__string_replace", "a b", " ", "_") == "a_b"),
-        ("host println", invoke_intrinsic("__host_println", "demo") == "demo"),
+        ("host println", invoke_intrinsic("__host_println", "demo") is None),
         ("char_at", invoke_intrinsic("__string_char_at", "demo", 1) == "e"),
         ("slice", invoke_intrinsic("__string_slice", "demo", 1, 3) == "em"),
     ]
@@ -26,6 +27,30 @@ def main() -> int:
     invoke_intrinsic("__vec_array_set", array, 1, "y")
     checks.append(("vec get 0", invoke_intrinsic("__vec_array_get", array, 0) == "x"))
     checks.append(("vec get 1", invoke_intrinsic("__vec_array_get", array, 1) == "y"))
+
+    temp_dir = invoke_intrinsic("__host_make_temp_dir", "s-bridge-")
+    temp_file = Path(temp_dir) / "bridge.txt"
+    invoke_intrinsic("__host_write_text_file", str(temp_file), "bridge-demo")
+    checks.append(("host write_text_file", temp_file.exists()))
+    checks.append(
+        (
+            "host read_to_string",
+            invoke_intrinsic("__host_read_to_string", str(temp_file)) == "bridge-demo",
+        )
+    )
+
+    process_cmd = "/bin/true" if Path("/bin/true").exists() else sys.executable
+    process_args: list[str]
+    if process_cmd == sys.executable:
+        process_args = [sys.executable, "-c", "pass"]
+    else:
+        process_args = [process_cmd]
+    checks.append(
+        (
+            "host run_process",
+            invoke_intrinsic("__host_run_process", process_args) is None,
+        )
+    )
 
     dispatched = dispatch(
         IntrinsicCall(
