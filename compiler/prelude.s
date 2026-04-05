@@ -44,15 +44,15 @@ pub struct BuiltinModuleDecl {
     types: Vec[BuiltinTypeDecl],
 }
 
-pub fn load_prelude() -> BuiltinModuleDecl {
+pub fn LoadPrelude() -> BuiltinModuleDecl {
     BuiltinModuleDecl {
         name: "std.prelude",
-        traits: built_in_traits(),
-        types: built_in_types(),
+        traits: builtInTraits(),
+        types: builtInTypes(),
     }
 }
 
-pub fn built_in_traits() -> Vec[BuiltinTraitDecl] {
+fn builtInTraits() -> Vec[BuiltinTraitDecl] {
     let traits = Vec[BuiltinTraitDecl]()
     traits.push(BuiltinTraitDecl {
         name: "Len",
@@ -60,7 +60,7 @@ pub fn built_in_traits() -> Vec[BuiltinTraitDecl] {
             BuiltinMethodGroup {
                 name: "len",
                 overloads: Vec[BuiltinMethodDecl] {
-                    make_method("len", Option::None, "ref", Vec[Type](), i32_type()),
+                    makeMethod("len", Option::None, "ref", Vec[Type](), NewI32Type()),
                 },
             },
         },
@@ -71,7 +71,7 @@ pub fn built_in_traits() -> Vec[BuiltinTraitDecl] {
             BuiltinMethodGroup {
                 name: "push",
                 overloads: Vec[BuiltinMethodDecl] {
-                    make_method("push", Option::None, "mut", Vec[Type] { named_type("T") }, unit_type()),
+                    makeMethod("push", Option::None, "mut", Vec[Type] { namedType("T") }, NewUnitType()),
                 },
             },
         },
@@ -79,7 +79,7 @@ pub fn built_in_traits() -> Vec[BuiltinTraitDecl] {
     traits
 }
 
-pub fn built_in_types() -> Vec[BuiltinTypeDecl] {
+fn builtInTypes() -> Vec[BuiltinTypeDecl] {
     let types = Vec[BuiltinTypeDecl]()
     types.push(BuiltinTypeDecl {
         name: "String",
@@ -89,7 +89,7 @@ pub fn built_in_types() -> Vec[BuiltinTypeDecl] {
             BuiltinMethodGroup {
                 name: "len",
                 overloads: Vec[BuiltinMethodDecl] {
-                    make_method("len", Option::Some("Len"), "ref", Vec[Type](), i32_type()),
+                    makeMethod("len", Option::Some("Len"), "ref", Vec[Type](), NewI32Type()),
                 },
             },
         },
@@ -104,13 +104,13 @@ pub fn built_in_types() -> Vec[BuiltinTypeDecl] {
             BuiltinMethodGroup {
                 name: "len",
                 overloads: Vec[BuiltinMethodDecl] {
-                    make_method("len", Option::Some("Len"), "ref", Vec[Type](), i32_type()),
+                    makeMethod("len", Option::Some("Len"), "ref", Vec[Type](), NewI32Type()),
                 },
             },
             BuiltinMethodGroup {
                 name: "push",
                 overloads: Vec[BuiltinMethodDecl] {
-                    make_method("push", Option::Some("Push"), "mut", Vec[Type] { named_type("T") }, unit_type()),
+                    makeMethod("push", Option::Some("Push"), "mut", Vec[Type] { namedType("T") }, NewUnitType()),
                 },
             },
         },
@@ -123,14 +123,14 @@ pub fn built_in_types() -> Vec[BuiltinTypeDecl] {
         fields: Vec[BuiltinFieldDecl] {
             BuiltinFieldDecl {
                 name: "size",
-                ty: i32_type(),
+                ty: NewI32Type(),
                 visibility: "pub",
                 readable: true,
                 writable: false,
             },
             BuiltinFieldDecl {
                 name: "hidden",
-                ty: i32_type(),
+                ty: NewI32Type(),
                 visibility: "priv",
                 readable: false,
                 writable: false,
@@ -143,36 +143,36 @@ pub fn built_in_types() -> Vec[BuiltinTypeDecl] {
     types
 }
 
-pub fn prelude() -> BuiltinModuleDecl {
-    load_prelude()
+pub fn Prelude() -> BuiltinModuleDecl {
+    LoadPrelude()
 }
 
-pub fn lookup_builtin_type(receiver_type: Type) -> Option[BuiltinTypeDecl] {
-    let base = base_name(receiver_type)
+pub fn LookupBuiltinType(receiver_type: Type) -> Option[BuiltinTypeDecl] {
+    let base = baseName(receiver_type)
     match base {
-        Option::Some(name) => find_builtin_type(built_in_types(), name),
+        Option::Some(name) => findBuiltinType(builtInTypes(), name),
         Option::None => Option::None,
     }
 }
 
-pub fn lookup_builtin_methods(receiver_type: Type, member: String) -> Vec[BuiltinMethodDecl] {
-    match lookup_builtin_type(receiver_type) {
-        Option::Some(builtin_type) => find_builtin_methods(builtin_type, member, receiver_type),
+pub fn LookupBuiltinMethods(receiver_type: Type, member: String) -> Vec[BuiltinMethodDecl] {
+    match LookupBuiltinType(receiver_type) {
+        Option::Some(builtin_type) => findBuiltinMethods(builtin_type, member, receiver_type),
         Option::None => Vec[BuiltinMethodDecl](),
     }
 }
 
-pub fn lookup_builtin_method(receiver_type: Type, member: String) -> Option[BuiltinMethodDecl] {
-    let methods = lookup_builtin_methods(receiver_type, member)
+pub fn LookupBuiltinMethod(receiver_type: Type, member: String) -> Option[BuiltinMethodDecl] {
+    let methods = LookupBuiltinMethods(receiver_type, member)
     if methods.len() == 1 {
         return Option::Some(methods[0])
     }
     Option::None
 }
 
-pub fn lookup_index_type(receiver_type: Type) -> Option[Type] {
-    let inner = unwrap_refs(receiver_type)
-    match lookup_builtin_type(inner) {
+pub fn LookupIndexType(receiver_type: Type) -> Option[Type] {
+    let inner = UnwrapRefs(receiver_type)
+    match LookupBuiltinType(inner) {
         Option::Some(builtin_type) => {
             match builtin_type.index_result_kind {
                 Option::Some(kind) => {
@@ -198,7 +198,7 @@ pub fn lookup_index_type(receiver_type: Type) -> Option[Type] {
     }
 }
 
-pub fn find_builtin_type(types: Vec[BuiltinTypeDecl], name: String) -> Option[BuiltinTypeDecl] {
+fn findBuiltinType(types: Vec[BuiltinTypeDecl], name: String) -> Option[BuiltinTypeDecl] {
     for ty in types {
         if ty.name == name {
             return Option::Some(ty)
@@ -207,7 +207,7 @@ pub fn find_builtin_type(types: Vec[BuiltinTypeDecl], name: String) -> Option[Bu
     Option::None
 }
 
-pub fn find_builtin_methods(
+fn findBuiltinMethods(
     builtin_type: BuiltinTypeDecl,
     member: String,
     receiver_type: Type,
@@ -215,7 +215,7 @@ pub fn find_builtin_methods(
     for method_group in builtin_type.methods {
         if method_group.name == member {
             if builtin_type.name == "Vec" && member == "push" {
-                return rewrite_vec_push(method_group.overloads, receiver_type)
+                return rewriteVecPush(method_group.overloads, receiver_type)
             }
             return method_group.overloads
         }
@@ -223,17 +223,17 @@ pub fn find_builtin_methods(
     Vec[BuiltinMethodDecl]()
 }
 
-pub fn rewrite_vec_push(methods: Vec[BuiltinMethodDecl], receiver_type: Type) -> Vec[BuiltinMethodDecl] {
+fn rewriteVecPush(methods: Vec[BuiltinMethodDecl], receiver_type: Type) -> Vec[BuiltinMethodDecl] {
     let rewritten = Vec[BuiltinMethodDecl]()
-    let inner = unwrap_refs(receiver_type)
-    let replacement = first_named_arg(inner)
+    let inner = UnwrapRefs(receiver_type)
+    let replacement = firstNamedArg(inner)
     for method in methods {
         match replacement {
             Option::Some(value) => {
                 let params = Vec[Type]()
                 let index = 0
                 for param in method.signature.params {
-                    if index == 0 && is_named_type_var(param, "T") {
+                    if index == 0 && IsNamedTypeVar(param, "T") {
                         params.push(value)
                     } else {
                         params.push(param)
@@ -257,7 +257,7 @@ pub fn rewrite_vec_push(methods: Vec[BuiltinMethodDecl], receiver_type: Type) ->
     rewritten
 }
 
-pub fn first_named_arg(ty: Type) -> Option[Type] {
+fn firstNamedArg(ty: Type) -> Option[Type] {
     match ty {
         Type::Named(value) => {
             if value.args.len() > 0 {
@@ -269,14 +269,14 @@ pub fn first_named_arg(ty: Type) -> Option[Type] {
     }
 }
 
-pub fn is_named_type_var(ty: Type, name: String) -> bool {
+pub fn IsNamedTypeVar(ty: Type, name: String) -> bool {
     match ty {
         Type::Named(value) => value.name == name && value.args.len() == 0,
         _ => false,
     }
 }
 
-pub fn unwrap_refs(ty: Type) -> Type {
+pub fn UnwrapRefs(ty: Type) -> Type {
     let current = ty
     while true {
         match current {
@@ -287,21 +287,21 @@ pub fn unwrap_refs(ty: Type) -> Type {
     current
 }
 
-pub fn base_name(ty: Type) -> Option[String] {
-    match unwrap_refs(ty) {
+fn baseName(ty: Type) -> Option[String] {
+    match UnwrapRefs(ty) {
         Type::Named(value) => Option::Some(value.name),
         _ => Option::None,
     }
 }
 
-pub fn named_type(name: String) -> Type {
+fn namedType(name: String) -> Type {
     Type::Named(NamedType {
         name: name,
         args: Vec[Type](),
     })
 }
 
-pub fn make_method(
+fn makeMethod(
     name: String,
     trait_name: Option[String],
     receiver_mode: String,
@@ -312,7 +312,7 @@ pub fn make_method(
         name: name,
         trait_name: trait_name,
         receiver_mode: receiver_mode,
-        receiver_policy: receiver_policy_for(receiver_mode),
+        receiver_policy: receiverPolicyFor(receiver_mode),
         signature: FunctionType {
             params: params,
             return_type: Option::Some(return_type),
@@ -320,7 +320,7 @@ pub fn make_method(
     }
 }
 
-pub fn receiver_policy_for(receiver_mode: String) -> String {
+fn receiverPolicyFor(receiver_mode: String) -> String {
     if receiver_mode == "mut" {
         return "addressable"
     }
