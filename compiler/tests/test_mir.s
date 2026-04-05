@@ -14,7 +14,7 @@ pub struct MirFailure {
     message: String,
 }
 
-pub fn run() -> Vec[MirFailure] {
+pub fn run_mir_suite() -> Vec[MirFailure] {
     let failures = Vec[MirFailure]()
 
     match check_locals_versioned() {
