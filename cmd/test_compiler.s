@@ -4,9 +4,9 @@ use std.io.eprintln
 use std.io.println
 use std.result.Result
 use std.vec.Vec
-use compiler.tests.run as run_golden_suite
-use compiler.tests.run as run_mir_suite
-use compiler.tests.run as run_semantic_suite
+use compiler.tests.run_golden_suite
+use compiler.tests.run_mir_suite
+use compiler.tests.run_semantic_suite
 
 pub struct CliError {
     message: String,

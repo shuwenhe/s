@@ -14,7 +14,7 @@ pub struct SuiteResult {
     failed: Vec[GoldenFailure],
 }
 
-pub fn run(fixtures_root: String) -> SuiteResult {
+pub fn run_golden_suite(fixtures_root: String) -> SuiteResult {
     let failures = Vec[GoldenFailure]()
     let passed = 0
 
