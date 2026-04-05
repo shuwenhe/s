@@ -1,0 +1,104 @@
+from __future__ import annotations
+
+from pathlib import Path
+import subprocess
+import sys
+import unittest
+
+from compiler.prelude import PRELUDE
+from compiler.parser import parse_source
+from compiler.semantic import check_source
+
+
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+
+
+class SemanticTests(unittest.TestCase):
+    def test_check_source_success(self) -> None:
+        source = (FIXTURES / "check_ok.s").read_text()
+        result = check_source(parse_source(source))
+        self.assertTrue(result.ok, [d.message for d in result.diagnostics])
+
+    def test_check_source_failure(self) -> None:
+        source = (FIXTURES / "check_fail.s").read_text()
+        result = check_source(parse_source(source))
+        self.assertFalse(result.ok)
+        self.assertIn("let value expected bool, got i32", [d.message for d in result.diagnostics])
+
+    def test_cli_check_success(self) -> None:
+        proc = subprocess.run(
+            [sys.executable, "-m", "compiler", "check", str(FIXTURES / "check_ok.s")],
+            cwd="/app/s",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("ok:", proc.stdout)
+
+    def test_cli_check_failure(self) -> None:
+        proc = subprocess.run(
+            [sys.executable, "-m", "compiler", "check", str(FIXTURES / "check_fail.s")],
+            cwd="/app/s",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("error: let value expected bool, got i32", proc.stderr)
+
+    def test_borrow_checker_failure(self) -> None:
+        source = (FIXTURES / "borrow_fail.s").read_text()
+        result = check_source(parse_source(source))
+        self.assertFalse(result.ok)
+        messages = [d.message for d in result.diagnostics]
+        self.assertIn("cannot mutably borrow value while borrowed", messages)
+        self.assertIn("use of moved value text", messages)
+
+    def test_generic_bound_failure(self) -> None:
+        source = (FIXTURES / "generic_bound_fail.s").read_text()
+        result = check_source(parse_source(source))
+        self.assertFalse(result.ok)
+        messages = [d.message for d in result.diagnostics]
+        self.assertIn("type String does not satisfy bound Copy", messages)
+
+    def test_branch_dataflow_failure(self) -> None:
+        source = (FIXTURES / "branch_move_fail.s").read_text()
+        result = check_source(parse_source(source))
+        self.assertFalse(result.ok)
+        messages = [d.message for d in result.diagnostics]
+        self.assertIn("use of moved value text", messages)
+
+    def test_member_and_trait_method_success(self) -> None:
+        source = (FIXTURES / "member_method_sample.s").read_text()
+        result = check_source(parse_source(source))
+        self.assertTrue(result.ok, [d.message for d in result.diagnostics])
+
+    def test_prelude_method_success(self) -> None:
+        source = (FIXTURES / "prelude_methods_ok.s").read_text()
+        result = check_source(parse_source(source))
+        self.assertTrue(result.ok, [d.message for d in result.diagnostics])
+
+    def test_method_candidate_conflict(self) -> None:
+        source = (FIXTURES / "method_conflict_fail.s").read_text()
+        result = check_source(parse_source(source))
+        self.assertFalse(result.ok)
+        messages = [d.message for d in result.diagnostics]
+        self.assertTrue(any("multiple method candidates" in message for message in messages), messages)
+
+    def test_receiver_auto_borrow_success(self) -> None:
+        source = (FIXTURES / "receiver_auto_borrow_ok.s").read_text()
+        result = check_source(parse_source(source))
+        self.assertTrue(result.ok, [d.message for d in result.diagnostics])
+
+    def test_prelude_loaded_from_decl(self) -> None:
+        self.assertEqual(PRELUDE.name, "std.prelude")
+        self.assertIn("Vec", PRELUDE.types)
+        self.assertIn("push", PRELUDE.types["Vec"].methods)
+        self.assertIn("Len", PRELUDE.traits)
+        self.assertEqual(PRELUDE.types["Vec"].methods["push"][0].receiver_policy, "addressable")
+
+    def test_builtin_field_success(self) -> None:
+        source = (FIXTURES / "builtin_field_ok.s").read_text()
+        result = check_source(parse_source(source))
+        self.assertTrue(result.ok, [d.message for d in result.diagnostics])
