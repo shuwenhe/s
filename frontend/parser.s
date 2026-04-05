@@ -75,18 +75,17 @@ impl Parser {
     }
 
     fn parse_item(mut self) -> Result[Item, ParseError] {
-        let is_public = self.eat_keyword("pub")
         if self.at_keyword("fn") {
-            return Result::Ok(Item::Function(self.parse_function_decl(is_public)?))
+            return Result::Ok(Item::Function(self.parse_function_decl()?))
         }
         if self.at_keyword("struct") {
-            return Result::Ok(Item::Struct(self.parse_struct_decl(is_public)?))
+            return Result::Ok(Item::Struct(self.parse_struct_decl()?))
         }
         if self.at_keyword("enum") {
-            return Result::Ok(Item::Enum(self.parse_enum_decl(is_public)?))
+            return Result::Ok(Item::Enum(self.parse_enum_decl()?))
         }
         if self.at_keyword("trait") {
-            return Result::Ok(Item::Trait(self.parse_trait_decl(is_public)?))
+            return Result::Ok(Item::Trait(self.parse_trait_decl()?))
         }
         if self.at_keyword("impl") {
             return Result::Ok(Item::Impl(self.parse_impl_decl()?))
@@ -94,16 +93,16 @@ impl Parser {
         Result::Err(self.error_here("unexpected token"))
     }
 
-    fn parse_function_decl(mut self, is_public: bool) -> Result[FunctionDecl, ParseError] {
+    fn parse_function_decl(mut self) -> Result[FunctionDecl, ParseError] {
         let pair = self.parse_function(true)?
         Result::Ok(FunctionDecl {
             sig: pair.sig,
             body: pair.body,
-            is_public: is_public,
+            is_public: starts_with_upper(pair.sig.name),
         })
     }
 
-    fn parse_struct_decl(mut self, is_public: bool) -> Result[StructDecl, ParseError] {
+    fn parse_struct_decl(mut self) -> Result[StructDecl, ParseError] {
         self.expect_keyword("struct")?
         let name = self.expect_ident()?
         let generics = self.parse_generic_params()?
@@ -111,14 +110,13 @@ impl Parser {
         let fields = Vec[Field]()
 
         while !self.eat_symbol("}") {
-            let field_public = self.eat_keyword("pub")
             let field_name = self.expect_ident()?
             self.expect_symbol(":")?
             let field_type = self.parse_type_text(Vec[String] { ",", "}" })?
             fields.push(Field {
                 name: field_name,
                 type_name: field_type,
-                is_public: field_public,
+                is_public: starts_with_upper(field_name),
             })
             self.eat_symbol(",")
         }
@@ -127,11 +125,11 @@ impl Parser {
             name: name,
             generics: generics,
             fields: fields,
-            is_public: is_public,
+            is_public: starts_with_upper(name),
         })
     }
 
-    fn parse_enum_decl(mut self, is_public: bool) -> Result[EnumDecl, ParseError] {
+    fn parse_enum_decl(mut self) -> Result[EnumDecl, ParseError] {
         self.expect_keyword("enum")?
         let name = self.expect_ident()?
         let generics = self.parse_generic_params()?
@@ -159,11 +157,11 @@ impl Parser {
             name: name,
             generics: generics,
             variants: variants,
-            is_public: is_public,
+            is_public: starts_with_upper(name),
         })
     }
 
-    fn parse_trait_decl(mut self, is_public: bool) -> Result[TraitDecl, ParseError] {
+    fn parse_trait_decl(mut self) -> Result[TraitDecl, ParseError] {
         self.expect_keyword("trait")?
         let name = self.expect_ident()?
         let generics = self.parse_generic_params()?
@@ -180,7 +178,7 @@ impl Parser {
             name: name,
             generics: generics,
             methods: methods,
-            is_public: is_public,
+            is_public: starts_with_upper(name),
         })
     }
 
@@ -201,8 +199,7 @@ impl Parser {
         let methods = Vec[FunctionDecl]()
 
         while !self.eat_symbol("}") {
-            let is_public = self.eat_keyword("pub")
-            methods.push(self.parse_function_decl(is_public)?)
+            methods.push(self.parse_function_decl()?)
         }
 
         Result::Ok(ImplDecl {

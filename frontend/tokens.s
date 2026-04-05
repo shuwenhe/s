@@ -54,7 +54,6 @@ pub fn is_keyword(text: String) -> bool {
         "package" => true,
         "use" => true,
         "as" => true,
-        "pub" => true,
         "fn" => true,
         "let" => true,
         "var" => true,
