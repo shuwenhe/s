@@ -8,8 +8,8 @@ pub fn box[T](value: T) -> Box[T] {
     Box[T] { value: value }
 }
 
-pub fn len(value: String) -> i32 {
-    __string_len(value)
+pub fn len[T](value: T) -> i32 {
+    __runtime_len[T](value)
 }
 
 pub fn to_string(value: i32) -> String {
@@ -24,7 +24,7 @@ pub fn slice(text: String, start: i32, end: i32) -> String {
     __string_slice(text, start, end)
 }
 
-extern "intrinsic" fn __string_len(text: String) -> i32
+extern "intrinsic" fn __runtime_len[T](value: T) -> i32
 
 extern "intrinsic" fn __int_to_string(value: i32) -> String
 
