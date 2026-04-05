@@ -43,7 +43,7 @@ source file
 ```s
 use std.fs.read_to_string
 
-fn read_to_string(path: String) -> Result[String, FsError]
+func read_to_string(path: String) -> Result[String, FsError]
 ```
 
 当前自举阶段对这个接口的约束只有这些：
@@ -67,8 +67,8 @@ fn read_to_string(path: String) -> Result[String, FsError]
 use std.io.println
 use std.io.eprintln
 
-fn println(text: String) -> ()
-fn eprintln(text: String) -> ()
+func println(text: String) -> ()
+func eprintln(text: String) -> ()
 ```
 
 当前约束：
@@ -84,7 +84,7 @@ fn eprintln(text: String) -> ()
 `lex_dump` 当前还假设运行时能把命令行参数以如下形式交给入口：
 
 ```s
-fn main(args: Vec[String]) -> i32
+func main(args: Vec[String]) -> i32
 ```
 
 约定：

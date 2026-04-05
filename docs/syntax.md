@@ -84,7 +84,7 @@ IDENT = XID_Start { XID_Continue }
 
 ```text
 package use as pub
-fn let var const static
+func let var const static
 struct enum trait impl for
 if else for while match
 return break continue
@@ -319,8 +319,8 @@ TraitBound =
 示例：
 
 ```s
-fn max[T: Ord](a: T, b: T) -> T
-fn copy_pair[T: Copy + Clone](a: T, b: T) -> (T, T)
+func max[T: Ord](a: T, b: T) -> T
+func copy_pair[T: Copy + Clone](a: T, b: T) -> (T, T)
 ```
 
 ### 7.2 Where Clause
@@ -808,7 +808,7 @@ S 的基本规则如下：
 最小版本的 parser 建议优先支持：
 
 1. `package` 和 `use`
-2. `fn` / `struct` / `enum` / `trait` / `impl`
+2. `func` / `struct` / `enum` / `trait` / `impl`
 3. 基础类型语法
 4. `let` / `var` / `return`
 5. `if` / `while` / `for` / `match`

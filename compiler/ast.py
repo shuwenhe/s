@@ -251,7 +251,7 @@ def _dump_function(item: FunctionDecl, indent: str = "") -> List[str]:
     prefix = "pub " if item.is_public else ""
     params = ", ".join(f"{p.name}: {p.type_name}" for p in sig.params)
     ret = f" -> {sig.return_type}" if sig.return_type else ""
-    lines = [f"{indent}{prefix}fn {sig.name}{_fmt_generics(sig.generics)}({params}){ret}"]
+    lines = [f"{indent}{prefix}func {sig.name}{_fmt_generics(sig.generics)}({params}){ret}"]
     if item.body is not None:
         lines.extend(_dump_block(item.body, indent + "  "))
     return lines
@@ -283,7 +283,7 @@ def _dump_trait(item: TraitDecl) -> List[str]:
     for method in item.methods:
         params = ", ".join(f"{p.name}: {p.type_name}" for p in method.params)
         ret = f" -> {method.return_type}" if method.return_type else ""
-        lines.append(f"  fn {method.name}{_fmt_generics(method.generics)}({params}){ret}")
+        lines.append(f"  func {method.name}{_fmt_generics(method.generics)}({params}){ret}")
     return lines
 
 
