@@ -173,7 +173,7 @@
         },
         {
           "name": "storage.type.declaration.s",
-          "match": "\\b(?:func|var|struct|enum|trait|impl|for)\\b"
+          "match": "\\b(?:var|struct|enum|trait|impl|for)\\b"
         }
       ]
     },
@@ -246,7 +246,7 @@
       "patterns": [
         {
           "name": "entity.name.function.s",
-          "match": "(?<=\\bfn\\s)([a-zA-Z_][A-Za-z0-9_]*)"
+          "match": "(?m)^\\s*(?:[A-Za-z_][A-Za-z0-9_.]*(?:\\[[^\\]]+\\])?\\s+)+([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()"
         },
         {
           "name": "meta.function.call.s",
