@@ -5,135 +5,135 @@ use std.prelude.box
 use std.prelude.to_string
 use std.vec.Vec
 
-pub struct UseDecl {
+struct UseDecl {
     path: String,
     alias: Option[String],
 }
 
-pub struct Field {
+struct Field {
     name: String,
     type_name: String,
     is_public: bool,
 }
 
-pub struct Param {
+struct Param {
     name: String,
     type_name: String,
 }
 
-pub struct FunctionSig {
+struct FunctionSig {
     name: String,
     generics: Vec[String],
     params: Vec[Param],
     return_type: Option[String],
 }
 
-pub struct NamePattern {
+struct NamePattern {
     name: String,
 }
 
-pub struct WildcardPattern {}
+struct WildcardPattern {}
 
-pub struct VariantPattern {
+struct VariantPattern {
     path: String,
     args: Vec[Pattern],
 }
 
-pub enum Pattern {
+enum Pattern {
     Name(NamePattern),
     Wildcard(WildcardPattern),
     Variant(VariantPattern),
 }
 
-pub struct IntExpr {
+struct IntExpr {
     value: String,
     inferred_type: Option[String],
 }
 
-pub struct StringExpr {
+struct StringExpr {
     value: String,
     inferred_type: Option[String],
 }
 
-pub struct BoolExpr {
+struct BoolExpr {
     value: bool,
     inferred_type: Option[String],
 }
 
-pub struct NameExpr {
+struct NameExpr {
     name: String,
     inferred_type: Option[String],
 }
 
-pub struct BorrowExpr {
+struct BorrowExpr {
     target: Box[Expr],
     mutable: bool,
     inferred_type: Option[String],
 }
 
-pub struct BinaryExpr {
+struct BinaryExpr {
     left: Box[Expr],
     op: String,
     right: Box[Expr],
     inferred_type: Option[String],
 }
 
-pub struct MemberExpr {
+struct MemberExpr {
     target: Box[Expr],
     member: String,
     inferred_type: Option[String],
 }
 
-pub struct IndexExpr {
+struct IndexExpr {
     target: Box[Expr],
     index: Box[Expr],
     inferred_type: Option[String],
 }
 
-pub struct CallExpr {
+struct CallExpr {
     callee: Box[Expr],
     args: Vec[Expr],
     inferred_type: Option[String],
 }
 
-pub struct MatchArm {
+struct MatchArm {
     pattern: Pattern,
     expr: Expr,
 }
 
-pub struct MatchExpr {
+struct MatchExpr {
     subject: Box[Expr],
     arms: Vec[MatchArm],
     inferred_type: Option[String],
 }
 
-pub struct IfExpr {
+struct IfExpr {
     condition: Box[Expr],
     then_branch: BlockExpr,
     else_branch: Option[Box[Expr]],
     inferred_type: Option[String],
 }
 
-pub struct WhileExpr {
+struct WhileExpr {
     condition: Box[Expr],
     body: BlockExpr,
     inferred_type: Option[String],
 }
 
-pub struct ForExpr {
+struct ForExpr {
     name: String,
     iterable: Box[Expr],
     body: BlockExpr,
     inferred_type: Option[String],
 }
 
-pub struct BlockExpr {
+struct BlockExpr {
     statements: Vec[Stmt],
     final_expr: Option[Expr],
     inferred_type: Option[String],
 }
 
-pub enum Expr {
+enum Expr {
     Int(IntExpr),
     String(StringExpr),
     Bool(BoolExpr),
@@ -150,66 +150,66 @@ pub enum Expr {
     Block(BlockExpr),
 }
 
-pub struct VarStmt {
+struct VarStmt {
     name: String,
     type_name: Option[String],
     value: Expr,
 }
 
-pub struct ReturnStmt {
+struct ReturnStmt {
     value: Option[Expr],
 }
 
-pub struct ExprStmt {
+struct ExprStmt {
     expr: Expr,
 }
 
-pub enum Stmt {
+enum Stmt {
     Var(VarStmt),
     Return(ReturnStmt),
     Expr(ExprStmt),
 }
 
-pub struct FunctionDecl {
+struct FunctionDecl {
     sig: FunctionSig,
     body: Option[BlockExpr],
     is_public: bool,
 }
 
-pub struct StructDecl {
+struct StructDecl {
     name: String,
     generics: Vec[String],
     fields: Vec[Field],
     is_public: bool,
 }
 
-pub struct EnumVariant {
+struct EnumVariant {
     name: String,
     payload: Option[String],
 }
 
-pub struct EnumDecl {
+struct EnumDecl {
     name: String,
     generics: Vec[String],
     variants: Vec[EnumVariant],
     is_public: bool,
 }
 
-pub struct TraitDecl {
+struct TraitDecl {
     name: String,
     generics: Vec[String],
     methods: Vec[FunctionSig],
     is_public: bool,
 }
 
-pub struct ImplDecl {
+struct ImplDecl {
     target: String,
     trait_name: Option[String],
     generics: Vec[String],
     methods: Vec[FunctionDecl],
 }
 
-pub enum Item {
+enum Item {
     Function(FunctionDecl),
     Struct(StructDecl),
     Enum(EnumDecl),
@@ -217,7 +217,7 @@ pub enum Item {
     Impl(ImplDecl),
 }
 
-pub struct SourceFile {
+struct SourceFile {
     package: String,
     uses: Vec[UseDecl],
     items: Vec[Item],
