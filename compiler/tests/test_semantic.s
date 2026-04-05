@@ -4,9 +4,9 @@ use std.fs.read_to_string
 use std.option.Option
 use std.result.Result
 use std.vec.Vec
+use compiler.Diagnostic
 use compiler.check_source
 use compiler.load_prelude
-use compiler.lookup_builtin_type
 use frontend.parse_source
 
 pub struct SemanticCase {
@@ -136,7 +136,7 @@ pub fn run_case(case: SemanticCase) -> Result[(), SemanticFailure] {
     Result::Ok(())
 }
 
-pub fn has_diagnostic(diagnostics: Vec[compiler.Diagnostic], expected: String) -> bool {
+pub fn has_diagnostic(diagnostics: Vec[Diagnostic], expected: String) -> bool {
     for diagnostic in diagnostics {
         if diagnostic.message == expected {
             return true

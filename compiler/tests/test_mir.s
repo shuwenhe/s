@@ -3,9 +3,9 @@ package compiler.tests
 use std.option.Option
 use std.result.Result
 use std.vec.Vec
+use compiler.TypeBinding
 use compiler.load_prelude
 use compiler.lower_block
-use compiler.make_plan
 use compiler.parse_type
 use frontend.parse_source
 
@@ -53,8 +53,8 @@ pub fn check_locals_versioned() -> Result[(), MirFailure] {
         frontend.Item::Function(func) => {
             match func.body {
                 Option::Some(body) => {
-                    let graph = lower_block(body, Vec[String] { "x" }, Vec[compiler.TypeBinding] {
-                        compiler.TypeBinding { name: "x", value: parse_type("i32") },
+                    let graph = lower_block(body, Vec[String] { "x" }, Vec[TypeBinding] {
+                        TypeBinding { name: "x", value: parse_type("i32") },
                     })
                     if graph.locals.len() == 0 {
                         return Result::Err(MirFailure {
@@ -95,8 +95,8 @@ pub fn check_mir_shape() -> Result[(), MirFailure] {
         frontend.Item::Function(func) => {
             match func.body {
                 Option::Some(body) => {
-                    let graph = lower_block(body, Vec[String] { "flag" }, Vec[compiler.TypeBinding] {
-                        compiler.TypeBinding { name: "flag", value: parse_type("bool") },
+                    let graph = lower_block(body, Vec[String] { "flag" }, Vec[TypeBinding] {
+                        TypeBinding { name: "flag", value: parse_type("bool") },
                     })
                     if graph.blocks.len() < 2 {
                         return Result::Err(MirFailure {
