@@ -20,7 +20,7 @@ struct checkOptions {
     bool dump_ast,
 }
 
-func Main(Vec[String] args) -> i32 {
+func main(Vec[String] args) -> i32 {
     match run(args) {
         Result::Ok(()) => 0,
         Result::Err(err) => {
