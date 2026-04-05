@@ -784,9 +784,9 @@ At the same time, self-hosting work has already started. The first S-native comp
 - [selfhost.md](/app/s/selfhost.md)
 - [ast.s](/app/s/frontend/ast.s)
 - [tokens.s](/app/s/frontend/tokens.s)
+- [main.s](/app/s/compiler/main.s)
+- [backend_elf64.s](/app/s/compiler/backend_elf64.s)
 - [self_hosting.md](/app/s/docs/self_hosting.md)
-- [slate_migration.md](/app/s/docs/slate_migration.md)
-- [slate_self_hosting.md](/app/s/docs/slate_self_hosting.md)
 
 The most valuable next steps are:
 
