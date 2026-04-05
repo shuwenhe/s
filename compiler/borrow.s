@@ -6,16 +6,16 @@ use frontend.BlockExpr
 use frontend.Expr
 
 struct BorrowDiagnostic {
-    String message,
+    message: String,
 }
 
 struct borrowState {
-    String name,
-    Type ty,
-    bool moved,
+    name: String,
+    ty: Type,
+    moved: bool,
 }
 
-Vec[BorrowDiagnostic] AnalyzeBlock(BlockExpr block, Vec[VarState] initial) {
+func AnalyzeBlock(block: BlockExpr, initial: Vec[VarState]) -> Vec[BorrowDiagnostic] {
     var diagnostics = Vec[BorrowDiagnostic]()
     var scope = Vec[borrowState]()
     for entry in initial {
@@ -44,7 +44,7 @@ Vec[BorrowDiagnostic] AnalyzeBlock(BlockExpr block, Vec[VarState] initial) {
     diagnostics
 }
 
-inspectExpr(Expr expr, Vec[borrowState] scope, Vec[BorrowDiagnostic]) -> ( diagnostics) {
+func inspectExpr(expr: Expr, scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic]) -> () {
     match expr {
         Expr::Name(value) => consumeName(scope, diagnostics, value.name),
         Expr::Borrow(value) => {
@@ -97,7 +97,7 @@ inspectExpr(Expr expr, Vec[borrowState] scope, Vec[BorrowDiagnostic]) -> ( diagn
     }
 }
 
-consumeName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, String) -> ( name) {
+func consumeName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name: String) -> () {
     var index = 0
     while index < scope.len() {
         if scope[index].name == name {
@@ -116,7 +116,7 @@ consumeName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, String) -
     }
 }
 
-inspectName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, String) -> ( name) {
+func inspectName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name: String) -> () {
     for entry in scope {
         if entry.name == name && entry.moved {
             diagnostics.push(BorrowDiagnostic {
@@ -127,7 +127,7 @@ inspectName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, String) -
     }
 }
 
-Vec[VarState] toVarState(Vec[borrowState] scope) {
+func toVarState(scope: Vec[borrowState]) -> Vec[VarState] {
     var out = Vec[VarState]()
     for entry in scope {
         out.push(VarState {

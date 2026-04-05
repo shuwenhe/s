@@ -1,6 +1,6 @@
 package demo.flow
 
-i32 choose(bool flag, Vec[i32] items, i32 index) {
+func choose(flag: bool, items: Vec[i32], index: i32) -> i32 {
     if flag {
         items[index]
     } else {
