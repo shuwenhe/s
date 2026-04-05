@@ -11,10 +11,16 @@ Current purpose:
 Files:
 
 - `python_bridge.py`: host implementation of the current intrinsic contract
+- `s_native_runner.c`: minimal non-Python runner for the current `hello.s` / `sum.s` build subset
 - `intrinsic_dispatch.py`: dispatcher from S-side intrinsic symbols to bridge calls
 - `hosted_frontend.py`: hosted lexer/parser pipeline that emits and executes `IntrinsicCall`
 - `check_bridge.py`: minimal bridge self-check for intrinsic execution
 - `validate_outputs.py`: golden-output validator for lexer/parser-facing behavior
+
+For the current MVP there are now two runtime tracks:
+
+- Python-hosted execution for the broader self-hosting workflow
+- a native C runner that can build the current `hello.s` / `sum.s` subset without Python
 
 This bridge is intentionally transitional. The long-term goal is to replace it with a real S runtime or a lower-level execution backend.
 
