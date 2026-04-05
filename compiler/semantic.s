@@ -16,7 +16,6 @@ use frontend.FunctionDecl
 use frontend.IfExpr
 use frontend.IndexExpr
 use frontend.IntExpr
-use frontend.LetStmt
 use frontend.MatchExpr
 use frontend.MemberExpr
 use frontend.NameExpr
