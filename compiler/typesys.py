@@ -91,7 +91,7 @@ def dump_type(ty: Type) -> str:
     if isinstance(ty, SliceType):
         return "[]" + dump_type(ty.inner)
     if isinstance(ty, FunctionType):
-        return f"fn({', '.join(dump_type(param) for param in ty.params)}) -> {dump_type(ty.return_type or UNIT)}"
+        return f"func({', '.join(dump_type(param) for param in ty.params)}) -> {dump_type(ty.return_type or UNIT)}"
     if isinstance(ty, UnitType):
         return "()"
     if isinstance(ty, UnknownType):
