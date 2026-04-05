@@ -246,6 +246,7 @@ class Parser:
     def _starts_stmt(self) -> bool:
         return (
             self._at_keyword("let")
+            or self._at_keyword("var")
             or self._at_keyword("return")
             or self._at_keyword("for")
             or self._looks_like_typed_let()
@@ -256,6 +257,8 @@ class Parser:
     def _parse_stmt(self):
         if self._at_keyword("let"):
             return self._parse_let_stmt()
+        if self._at_keyword("var"):
+            return self._parse_var_stmt()
         if self._at_keyword("return"):
             return self._parse_return_stmt()
         if self._at_keyword("for"):
@@ -269,36 +272,43 @@ class Parser:
         token = self._peek()
         raise ParseError(f"unexpected statement {token.value!r} at {token.line}:{token.column}")
 
-    def _parse_let_stmt(self) -> LetStmt:
-        self._expect_keyword("let")
+    def _parse_let_stmt(self, keyword: str = "let", consume_semicolon: bool = True) -> LetStmt:
+        self._expect_keyword(keyword)
         name = self._expect_ident()
         type_name = None
         if self._eat_symbol(":"):
             type_name = self._parse_type_text(stop_values={"="})
         self._expect_symbol("=")
         value = self._parse_expr()
-        self._eat_symbol(";")
+        if consume_semicolon:
+            self._eat_symbol(";")
         return LetStmt(name=name, type_name=type_name, value=value)
 
-    def _parse_typed_let_stmt(self) -> LetStmt:
+    def _parse_var_stmt(self, consume_semicolon: bool = True) -> LetStmt:
+        return self._parse_let_stmt(keyword="var", consume_semicolon=consume_semicolon)
+
+    def _parse_typed_let_stmt(self, consume_semicolon: bool = True) -> LetStmt:
         type_name = self._advance().value
         name = self._expect_ident()
         self._expect_symbol("=")
         value = self._parse_expr()
-        self._eat_symbol(";")
+        if consume_semicolon:
+            self._eat_symbol(";")
         return LetStmt(name=name, type_name=type_name, value=value)
 
-    def _parse_assign_stmt(self) -> AssignStmt:
+    def _parse_assign_stmt(self, consume_semicolon: bool = True) -> AssignStmt:
         name = self._expect_ident()
         self._expect_symbol("=")
         value = self._parse_expr()
-        self._eat_symbol(";")
+        if consume_semicolon:
+            self._eat_symbol(";")
         return AssignStmt(name=name, value=value)
 
-    def _parse_increment_stmt(self) -> IncrementStmt:
+    def _parse_increment_stmt(self, consume_semicolon: bool = True) -> IncrementStmt:
         name = self._expect_ident()
         self._expect_symbol("++")
-        self._eat_symbol(";")
+        if consume_semicolon:
+            self._eat_symbol(";")
         return IncrementStmt(name=name)
 
     def _parse_c_for_stmt(self) -> CForStmt:
@@ -315,13 +325,15 @@ class Parser:
 
     def _parse_for_clause_stmt(self):
         if self._at_keyword("let"):
-            return self._parse_let_stmt()
+            return self._parse_let_stmt(consume_semicolon=False)
+        if self._at_keyword("var"):
+            return self._parse_var_stmt(consume_semicolon=False)
         if self._looks_like_typed_let():
-            return self._parse_typed_let_stmt()
+            return self._parse_typed_let_stmt(consume_semicolon=False)
         if self._looks_like_assignment():
-            return self._parse_assign_stmt()
+            return self._parse_assign_stmt(consume_semicolon=False)
         if self._looks_like_increment():
-            return self._parse_increment_stmt()
+            return self._parse_increment_stmt(consume_semicolon=False)
         token = self._peek()
         raise ParseError(f"unexpected for clause {token.value!r} at {token.line}:{token.column}")
 
