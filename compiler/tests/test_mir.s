@@ -4,9 +4,9 @@ use std.option.Option
 use std.result.Result
 use std.vec.Vec
 use compiler.TypeBinding
-use compiler.load_prelude
-use compiler.lower_block
-use compiler.parse_type
+use compiler.LoadPrelude
+use compiler.LowerBlock
+use compiler.ParseType
 use frontend.parse_source
 
 pub struct MirFailure {
@@ -53,8 +53,8 @@ pub fn check_locals_versioned() -> Result[(), MirFailure] {
         frontend.Item::Function(func) => {
             match func.body {
                 Option::Some(body) => {
-                    let graph = lower_block(body, Vec[String] { "x" }, Vec[TypeBinding] {
-                        TypeBinding { name: "x", value: parse_type("i32") },
+                    let graph = LowerBlock(body, Vec[String] { "x" }, Vec[TypeBinding] {
+                        TypeBinding { name: "x", value: ParseType("i32") },
                     })
                     if graph.locals.len() == 0 {
                         return Result::Err(MirFailure {
@@ -95,8 +95,8 @@ pub fn check_mir_shape() -> Result[(), MirFailure] {
         frontend.Item::Function(func) => {
             match func.body {
                 Option::Some(body) => {
-                    let graph = lower_block(body, Vec[String] { "flag" }, Vec[TypeBinding] {
-                        TypeBinding { name: "flag", value: parse_type("bool") },
+                    let graph = LowerBlock(body, Vec[String] { "flag" }, Vec[TypeBinding] {
+                        TypeBinding { name: "flag", value: ParseType("bool") },
                     })
                     if graph.blocks.len() < 2 {
                         return Result::Err(MirFailure {
@@ -120,7 +120,7 @@ pub fn check_mir_shape() -> Result[(), MirFailure] {
 }
 
 pub fn check_prelude_shape() -> Result[(), MirFailure] {
-    let prelude = load_prelude()
+    let prelude = LoadPrelude()
     if prelude.name != "std.prelude" {
         return Result::Err(MirFailure {
             name: "prelude_shape",
