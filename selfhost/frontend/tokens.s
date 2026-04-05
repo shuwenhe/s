@@ -1,5 +1,7 @@
 package selfhost.frontend
 
+use std.vec.Vec
+
 pub enum TokenKind {
     Ident,
     Int,
@@ -14,6 +16,36 @@ pub struct Token {
     value: String,
     line: i32,
     column: i32,
+}
+
+pub fn token_kind_name(kind: TokenKind) -> String {
+    match kind {
+        TokenKind::Ident => "IDENT",
+        TokenKind::Int => "INT",
+        TokenKind::String => "STRING",
+        TokenKind::Keyword => "KEYWORD",
+        TokenKind::Symbol => "SYMBOL",
+        TokenKind::Eof => "EOF",
+    }
+}
+
+pub fn dump_tokens(tokens: Vec[Token]) -> String {
+    let out = ""
+    for token in tokens {
+        if out != "" {
+            out = out + "\n"
+        }
+        out =
+            out
+            + to_string(token.line)
+            + ":"
+            + to_string(token.column)
+            + " "
+            + token_kind_name(token.kind)
+            + " "
+            + token.value
+    }
+    out
 }
 
 pub fn is_keyword(text: String) -> bool {
