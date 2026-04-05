@@ -1,8 +1,8 @@
 package compiler
 
 use compiler.backend_elf64.BackendError
-use compiler.backend_elf64.build_executable
-use std.fs.read_to_string
+use compiler.backend_elf64.buildExecutable
+use std.fs.ReadToString
 use std.io.eprintln
 use std.io.println
 use std.result.Result
@@ -146,6 +146,13 @@ func emitBinary(frontend.SourceFile parsed, String outputPath) -> Result[(), cli
     }
 }
 
+func emitBinary(frontend.SourceFile parsed, String outputPath) -> Result[(), cliError] {
+    match buildExecutable(parsed, outputPath) {
+        Result::Ok(()) => Result::Ok(()),
+        Result::Err(err) => backendError(err),
+    }
+}
+
 func backendError(BackendError err) -> Result[(), cliError] {
     Result::Err(cliError {
         message: err.message,
@@ -153,7 +160,7 @@ func backendError(BackendError err) -> Result[(), cliError] {
 }
 
 func readSource(String path) -> Result[String, cliError] {
-    match read_to_string(path) {
+    match ReadToString(path) {
         Result::Ok(source) => Result::Ok(source),
         Result::Err(_) => Result::Err(cliError {
             message: "failed to read source file: " + path,
