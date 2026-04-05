@@ -185,7 +185,7 @@ fn checkStmt(
     diagnostics: Vec[Diagnostic],
 ) -> () {
     match stmt {
-        frontend.Stmt::Let(value) => {
+        frontend.Stmt::Var(value) => {
             let actual = inferExpr(value.value, scope, functions, structs, diagnostics)
             let resolved =
                 match value.type_name {
@@ -194,7 +194,7 @@ fn checkStmt(
                         if !typeEq(declared, actual) {
                             pushError(
                                 diagnostics,
-                                "let " + value.name + " expected " + DumpType(declared) + ", got " + DumpType(actual),
+                                "var " + value.name + " expected " + DumpType(declared) + ", got " + DumpType(actual),
                             )
                         }
                         declared

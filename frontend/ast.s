@@ -150,7 +150,7 @@ pub enum Expr {
     Block(BlockExpr),
 }
 
-pub struct LetStmt {
+pub struct VarStmt {
     name: String,
     type_name: Option[String],
     value: Expr,
@@ -165,7 +165,7 @@ pub struct ExprStmt {
 }
 
 pub enum Stmt {
-    Let(LetStmt),
+    Var(VarStmt),
     Return(ReturnStmt),
     Expr(ExprStmt),
 }
