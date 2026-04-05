@@ -218,6 +218,11 @@ Match the current Python backend exactly:
 
 - evaluate `main`
 - collect stdout/stderr writes
+
+There is now also a native bootstrap runner in
+[`s_native_runner.c`](/app/s/runtime/s_native_runner.c) that proves the current
+`hello.s` / `sum.s` subset can be built without Python, while still staying far
+smaller than the eventual full S runtime.
 - collect exit code
 - emit one `.s`
 - invoke `as`
