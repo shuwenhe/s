@@ -10,6 +10,13 @@ venv/
 htmlcov/
 *.log
 *.tmp
+*.swp
+*.swo
+*.so
+*.o
+*.out
+*.exe
+*.a
 dist/
 build/
 *.egg-info/
