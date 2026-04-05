@@ -15,6 +15,7 @@ self-hosting bootstrap phase. The current scope covers:
 - `Vec` 底层数组分配与读写
 - `Option` / `Result` 的 panic-style unwrap fallback
 - `std.fs` / `std.process` / `std.io` 对应的 host IO bridge
+- `std.env` / `std.process` 对应的 process entry bridge
 
 These intrinsics are not yet the final public runtime API. They are the
 bootstrap execution contract currently relied on by the self-hosted frontend,
@@ -122,6 +123,7 @@ The new std-layer host boundary is now:
 - [fs.s](/app/s/std/fs.s)
 - [process.s](/app/s/std/process.s)
 - [io.s](/app/s/std/io.s)
+- [env.s](/app/s/std/env.s)
 
 Current declarations:
 
@@ -130,6 +132,8 @@ extern "intrinsic" func __host_read_to_string(path: String) -> Result[String, Fs
 extern "intrinsic" func __host_write_text_file(path: String, contents: String) -> Result[(), FsError]
 extern "intrinsic" func __host_make_temp_dir(prefix: String) -> Result[String, FsError]
 extern "intrinsic" func __host_run_process(argv: Vec[String]) -> Result[(), ProcessError]
+extern "intrinsic" func __host_args() -> Vec[String]
+extern "intrinsic" func __host_exit(code: int) -> ()
 extern "intrinsic" func __host_println(text: String) -> ()
 extern "intrinsic" func __host_eprintln(text: String) -> ()
 ```
@@ -137,7 +141,9 @@ extern "intrinsic" func __host_eprintln(text: String) -> ()
 Bridge behavior in the current Python prototype:
 
 - success path returns the payload for `read_to_string` / `make_temp_dir`
+- success path returns the payload for `args`
 - success path returns `None` for `write_text_file` / `run_process` / `println` / `eprintln`
+- `exit` terminates through a dedicated host boundary
 - host IO failures raise `RuntimeTrap`
 
 This means the bridge currently models the successful payload path plus trap
@@ -158,6 +164,7 @@ Code that currently depends on these contracts includes:
 - [fs.s](/app/s/std/fs.s)
 - [process.s](/app/s/std/process.s)
 - [io.s](/app/s/std/io.s)
+- [env.s](/app/s/std/env.s)
 
 ## 7. Next Step
 
