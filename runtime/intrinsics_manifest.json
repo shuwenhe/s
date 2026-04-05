@@ -1,0 +1,112 @@
+{
+  "version": "0.1",
+  "intrinsics": [
+    {
+      "name": "__runtime_len",
+      "arity": 1,
+      "returns": "i32",
+      "notes": "len for string, host arrays, and Vec-like values"
+    },
+    {
+      "name": "__int_to_string",
+      "arity": 1,
+      "returns": "String"
+    },
+    {
+      "name": "__string_concat",
+      "arity": 2,
+      "returns": "String"
+    },
+    {
+      "name": "__string_replace",
+      "arity": 3,
+      "returns": "String"
+    },
+    {
+      "name": "__string_char_at",
+      "arity": 2,
+      "returns": "String"
+    },
+    {
+      "name": "__string_slice",
+      "arity": 3,
+      "returns": "String"
+    },
+    {
+      "name": "__vec_new_array",
+      "arity": 1,
+      "returns": "Array[T]"
+    },
+    {
+      "name": "__vec_array_get",
+      "arity": 2,
+      "returns": "T"
+    },
+    {
+      "name": "__vec_array_set",
+      "arity": 3,
+      "returns": "()"
+    },
+    {
+      "name": "__host_read_to_string",
+      "arity": 1,
+      "returns": "String",
+      "notes": "bridge success path returns payload; host failures raise RuntimeTrap"
+    },
+    {
+      "name": "__host_write_text_file",
+      "arity": 2,
+      "returns": "()",
+      "notes": "bridge success path returns unit; host failures raise RuntimeTrap"
+    },
+    {
+      "name": "__host_make_temp_dir",
+      "arity": 1,
+      "returns": "String",
+      "notes": "bridge success path returns payload; host failures raise RuntimeTrap"
+    },
+    {
+      "name": "__host_run_process",
+      "arity": 1,
+      "returns": "()",
+      "notes": "bridge success path returns unit; host failures raise RuntimeTrap"
+    },
+    {
+      "name": "__host_args",
+      "arity": 0,
+      "returns": "Vec[String]",
+      "notes": "bridge success path returns argv without the executable name"
+    },
+    {
+      "name": "__host_exit",
+      "arity": 1,
+      "returns": "never",
+      "notes": "host process termination boundary for S command wrappers"
+    },
+    {
+      "name": "__host_println",
+      "arity": 1,
+      "returns": "()"
+    },
+    {
+      "name": "__host_eprintln",
+      "arity": 1,
+      "returns": "()"
+    },
+    {
+      "name": "__option_panic_unwrap",
+      "arity": 0,
+      "returns": "never"
+    },
+    {
+      "name": "__result_panic_unwrap",
+      "arity": 0,
+      "returns": "never"
+    },
+    {
+      "name": "__result_panic_unwrap_err",
+      "arity": 0,
+      "returns": "never"
+    }
+  ]
+}
