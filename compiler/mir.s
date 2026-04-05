@@ -69,16 +69,16 @@ pub struct MIRGraph {
     locals: Vec[LocalSlot],
 }
 
-pub fn lower_block(block: BlockExpr, param_names: Vec[String], type_env: Vec[TypeBinding]) -> MIRGraph {
+pub fn LowerBlock(block: BlockExpr, param_names: Vec[String], type_env: Vec[TypeBinding]) -> MIRGraph {
     let locals = Vec[LocalSlot]()
     let statements = Vec[String]()
     let next_local = 0
 
     for name in param_names {
         let ty =
-            match find_type_binding(type_env, name) {
+            match FindTypeBinding(type_env, name) {
                 Option::Some(value) => value,
-                Option::None => unknown_type("param"),
+                Option::None => UnknownTypeOf("param"),
             }
         locals.push(LocalSlot {
             id: next_local,

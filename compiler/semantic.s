@@ -54,14 +54,14 @@ pub struct VarState {
     ty: Type,
 }
 
-pub fn check_source(source: SourceFile) -> CheckResult {
+pub fn CheckSource(source: SourceFile) -> CheckResult {
     let diagnostics = Vec[Diagnostic]()
-    let functions = collect_functions(source)
-    let structs = collect_structs(source)
+    let functions = collectFunctions(source)
+    let structs = collectStructs(source)
 
     for item in source.items {
         match item {
-            frontend.Item::Function(func) => check_function(func, functions, structs, diagnostics),
+            frontend.Item::Function(func) => checkFunction(func, functions, structs, diagnostics),
             _ => (),
         }
     }
@@ -71,26 +71,26 @@ pub fn check_source(source: SourceFile) -> CheckResult {
     }
 }
 
-pub fn is_ok(result: CheckResult) -> bool {
+pub fn IsOK(result: CheckResult) -> bool {
     result.diagnostics.len() == 0
 }
 
-pub fn collect_functions(source: SourceFile) -> Vec[FunctionInfo] {
+fn collectFunctions(source: SourceFile) -> Vec[FunctionInfo] {
     let functions = Vec[FunctionInfo]()
     for item in source.items {
         match item {
             frontend.Item::Function(func) => {
                 let params = Vec[Type]()
                 for param in func.sig.params {
-                    params.push(parse_type(param.type_name))
+                    params.push(ParseType(param.type_name))
                 }
                 functions.push(FunctionInfo {
                     name: func.sig.name,
                     params: params,
                     return_type:
                         match func.sig.return_type {
-                            Option::Some(value) => parse_type(value),
-                            Option::None => unit_type(),
+                            Option::Some(value) => ParseType(value),
+                            Option::None => NewUnitType(),
                         },
                 })
             }
@@ -100,7 +100,7 @@ pub fn collect_functions(source: SourceFile) -> Vec[FunctionInfo] {
     functions
 }
 
-pub fn collect_structs(source: SourceFile) -> Vec[StructInfo] {
+fn collectStructs(source: SourceFile) -> Vec[StructInfo] {
     let structs = Vec[StructInfo]()
     for item in source.items {
         match item {
@@ -109,7 +109,7 @@ pub fn collect_structs(source: SourceFile) -> Vec[StructInfo] {
                 for field in decl.fields {
                     fields.push(FieldType {
                         name: field.name,
-                        ty: parse_type(field.type_name),
+                        ty: ParseType(field.type_name),
                     })
                 }
                 structs.push(StructInfo {
@@ -123,7 +123,7 @@ pub fn collect_structs(source: SourceFile) -> Vec[StructInfo] {
     structs
 }
 
-pub fn check_function(
+fn checkFunction(
     item: FunctionDecl,
     functions: Vec[FunctionInfo],
     structs: Vec[StructInfo],
@@ -135,54 +135,49 @@ pub fn check_function(
             for param in item.sig.params {
                 scope.push(VarState {
                     name: param.name,
-                    ty: parse_type(param.type_name),
+                    ty: ParseType(param.type_name),
                 })
             }
             let expected =
                 match item.sig.return_type {
-                    Option::Some(value) => parse_type(value),
-                    Option::None => unit_type(),
+                    Option::Some(value) => ParseType(value),
+                    Option::None => NewUnitType(),
                 }
-            let actual = infer_block(body, scope, functions, structs, diagnostics)
-            if !type_eq(expected, actual) && !type_eq(expected, unit_type()) {
-                push_error(
+            let actual = inferBlock(body, scope, functions, structs, diagnostics)
+            if !typeEq(expected, actual) && !typeEq(expected, NewUnitType()) {
+                pushError(
                     diagnostics,
-                    "function "
-                        + item.sig.name
-                        + " expected "
-                        + dump_type(expected)
-                        + ", got "
-                        + dump_type(actual),
+                    "function " + item.sig.name + " expected " + DumpType(expected) + ", got " + DumpType(actual),
                 )
             }
 
-            let borrow_diags = analyze_block(body, scope)
+            let borrow_diags = AnalyzeBlock(body, scope)
             for diag in borrow_diags {
-                push_error(diagnostics, diag.message)
+                pushError(diagnostics, diag.message)
             }
         }
         Option::None => (),
     }
 }
 
-pub fn infer_block(
+fn inferBlock(
     block: BlockExpr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
     structs: Vec[StructInfo],
     diagnostics: Vec[Diagnostic],
 ) -> Type {
-    let local_scope = clone_scope(scope)
+    let local_scope = cloneScope(scope)
     for stmt in block.statements {
-        check_stmt(stmt, local_scope, functions, structs, diagnostics)
+        checkStmt(stmt, local_scope, functions, structs, diagnostics)
     }
     match block.final_expr {
-        Option::Some(expr) => infer_expr(expr, local_scope, functions, structs, diagnostics),
-        Option::None => unit_type(),
+        Option::Some(expr) => inferExpr(expr, local_scope, functions, structs, diagnostics),
+        Option::None => NewUnitType(),
     }
 }
 
-pub fn check_stmt(
+fn checkStmt(
     stmt: frontend.Stmt,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
@@ -191,33 +186,33 @@ pub fn check_stmt(
 ) -> () {
     match stmt {
         frontend.Stmt::Let(value) => {
-            let actual = infer_expr(value.value, scope, functions, structs, diagnostics)
+            let actual = inferExpr(value.value, scope, functions, structs, diagnostics)
             let resolved =
                 match value.type_name {
                     Option::Some(type_name) => {
-                        let declared = parse_type(type_name)
-                        if !type_eq(declared, actual) {
-                            push_error(
+                        let declared = ParseType(type_name)
+                        if !typeEq(declared, actual) {
+                            pushError(
                                 diagnostics,
-                                "let " + value.name + " expected " + dump_type(declared) + ", got " + dump_type(actual),
+                                "let " + value.name + " expected " + DumpType(declared) + ", got " + DumpType(actual),
                             )
                         }
                         declared
                     }
                     Option::None => actual,
                 }
-            bind_var(scope, value.name, resolved)
+            bindVar(scope, value.name, resolved)
         }
         frontend.Stmt::Return(value) => {
             match value.value {
                 Option::Some(expr) => {
-                    infer_expr(expr, scope, functions, structs, diagnostics)
+                    inferExpr(expr, scope, functions, structs, diagnostics)
                 }
                 Option::None => (),
             }
         }
         frontend.Stmt::Expr(value) => {
-            infer_expr(value.expr, scope, functions, structs, diagnostics)
+            inferExpr(value.expr, scope, functions, structs, diagnostics)
         }
     }
 }
