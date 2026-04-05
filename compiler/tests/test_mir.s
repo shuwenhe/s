@@ -10,41 +10,41 @@ use compiler.ParseType
 use frontend.parse_source
 
 struct MirFailure {
-    name: String,
-    message: String,
+    String name,
+    String message,
 }
 
-func RunMirSuite() -> Vec[MirFailure] {
+Vec[MirFailure] RunMirSuite(){
     var failures = Vec[MirFailure]()
 
     match checkLocalsVersioned() {
-        Result::Ok(()) => (),
-        Result::Err(err) => failures.push(err),
+        :Ok(()) => () Result,
+        :Err(err) => failures.push(err) Result,
     }
 
     match checkMirShape() {
-        Result::Ok(()) => (),
-        Result::Err(err) => failures.push(err),
+        :Ok(()) => () Result,
+        :Err(err) => failures.push(err) Result,
     }
 
     match checkPreludeShape() {
-        Result::Ok(()) => (),
-        Result::Err(err) => failures.push(err),
+        :Ok(()) => () Result,
+        :Err(err) => failures.push(err) Result,
     }
 
     failures
 }
 
-func checkLocalsVersioned() -> Result[(), MirFailure] {
+Result[(), MirFailure] checkLocalsVersioned(){
     var parsed =
         match parse_source(
             "package demo.mir\n\nfn shadow(x: i32) -> i32 {\n    var x = 1\n    x\n}\n",
         ) {
-            Result::Ok(value) => value,
-            Result::Err(err) => {
+            :Ok(value) => value Result,
+            :Err(err) => { Result
                 return Result::Err(MirFailure {
-                    name: "locals_versioned",
-                    message: "parse error: " + err.message,
+                    "locals_versioned" name,
+                    "parse error: " + err.message message,
                 })
             }
         }
@@ -52,41 +52,41 @@ func checkLocalsVersioned() -> Result[(), MirFailure] {
     match parsed.items[0] {
         frontend.Item::Function(func) => {
             match func.body {
-                Option::Some(body) => {
+                :Some(body) => { Option
                     var graph = LowerBlock(body, Vec[String] { "x" }, Vec[TypeBinding] {
                         TypeBinding { name: "x", value: ParseType("i32") },
                     })
                     if graph.locals.len() == 0 {
                         return Result::Err(MirFailure {
-                            name: "locals_versioned",
-                            message: "expected MIR locals",
+                            "locals_versioned" name,
+                            "expected MIR locals" message,
                         })
                     }
-                    Result::Ok(())
+                    :Ok(()) Result
                 }
-                Option::None => Result::Err(MirFailure {
-                    name: "locals_versioned",
-                    message: "function body missing",
+                :None => Result::Err(MirFailure { Option
+                    "locals_versioned" name,
+                    "function body missing" message,
                 }),
             }
         }
         _ => Result::Err(MirFailure {
-            name: "locals_versioned",
-            message: "expected function item",
+            "locals_versioned" name,
+            "expected function item" message,
         }),
     }
 }
 
-func checkMirShape() -> Result[(), MirFailure] {
+Result[(), MirFailure] checkMirShape(){
     var parsed =
         match parse_source(
             "package demo.mir\n\nfn choose(flag: bool) -> i32 {\n    if flag {\n        1\n    } else {\n        2\n    }\n}\n",
         ) {
-            Result::Ok(value) => value,
-            Result::Err(err) => {
+            :Ok(value) => value Result,
+            :Err(err) => { Result
                 return Result::Err(MirFailure {
-                    name: "mir_shape",
-                    message: "parse error: " + err.message,
+                    "mir_shape" name,
+                    "parse error: " + err.message message,
                 })
             }
         }
@@ -94,38 +94,38 @@ func checkMirShape() -> Result[(), MirFailure] {
     match parsed.items[0] {
         frontend.Item::Function(func) => {
             match func.body {
-                Option::Some(body) => {
+                :Some(body) => { Option
                     var graph = LowerBlock(body, Vec[String] { "flag" }, Vec[TypeBinding] {
                         TypeBinding { name: "flag", value: ParseType("bool") },
                     })
                     if graph.blocks.len() < 2 {
                         return Result::Err(MirFailure {
-                            name: "mir_shape",
-                            message: "expected entry and exit blocks",
+                            "mir_shape" name,
+                            "expected entry and exit blocks" message,
                         })
                     }
-                    Result::Ok(())
+                    :Ok(()) Result
                 }
-                Option::None => Result::Err(MirFailure {
-                    name: "mir_shape",
-                    message: "function body missing",
+                :None => Result::Err(MirFailure { Option
+                    "mir_shape" name,
+                    "function body missing" message,
                 }),
             }
         }
         _ => Result::Err(MirFailure {
-            name: "mir_shape",
-            message: "expected function item",
+            "mir_shape" name,
+            "expected function item" message,
         }),
     }
 }
 
-func checkPreludeShape() -> Result[(), MirFailure] {
+Result[(), MirFailure] checkPreludeShape(){
     var prelude = LoadPrelude()
     if prelude.name != "std.prelude" {
         return Result::Err(MirFailure {
-            name: "prelude_shape",
-            message: "prelude name mismatch",
+            "prelude_shape" name,
+            "prelude name mismatch" message,
         })
     }
-    Result::Ok(())
+    :Ok(()) Result
 }
