@@ -6,5 +6,6 @@ Current scope:
 
 - `frontend/ast.s`: S-native AST data model mirroring `compiler/ast.py`
 - `frontend/tokens.s`: S-native token definitions mirroring `compiler/lexer/tokens.py`
+- `frontend/lexer.s`: S-native lexer mirroring `compiler/lexer/lexer.py`
 
 These files are intentionally foundational. They are the first step toward replacing the Python prototype with S implementations in the order described by [docs/self_hosting.md](/app/s/docs/self_hosting.md).
