@@ -26,7 +26,7 @@ use std.vec.Vec
 
 struct Program {
     ops: Vec[ProgramOp],
-    exit_code: int,
+    exitCode: int,
 }
 
 struct WriteOp {
@@ -64,7 +64,7 @@ struct HostError {
     message: String,
 }
 
-func build_executable(SourceFile source, String output_path) -> Result[(), BackendError] {
+func buildExecutable(SourceFile source, String outputPath) -> Result[(), BackendError] {
     // Minimal backend design:
     // 1. compile SourceFile -> linear ProgramOp list
     // 2. emit Linux x86_64 assembly text
@@ -73,30 +73,30 @@ func build_executable(SourceFile source, String output_path) -> Result[(), Backe
     // See /app/s/docs/backend_elf64.md for the executable MVP plan.
     //
     // The runnable algorithm still lives in backend_elf64.py today.
-    var program = compile_program(source)?
-    var asm_text = emit_asm(program)
-    assemble_and_link(asm_text, output_path)
+    var program = compileProgram(source)?
+    var asmText = emitAsm(program)
+    assembleAndLink(asmText, outputPath)
 }
 
-func compile_program(SourceFile source) -> Result[Program, BackendError] {
-    var main_func = find_main(source)?
+func compileProgram(SourceFile source) -> Result[Program, BackendError] {
+    var mainFunc = findMain(source)?
     var env = Vec[LocalBinding]()
     var ops = Vec[ProgramOp]()
-    var exit_code = execute_function(main_func, env, ops)?
+    var exitCode = executeFunction(mainFunc, env, ops)?
     ops.push(ProgramOp::Exit(ExitOp {
-        code: exit_code,
+        code: exitCode,
     }))
     Result::Ok(Program {
         ops: ops,
-        exit_code: exit_code,
+        exitCode: exitCode,
     })
 }
 
-func emit_asm(Program program) -> String {
-    emit_data_section(program.ops) + "\n" + emit_text_section(program.ops, program.exit_code) + "\n"
+func emitAsm(Program program) -> String {
+    emitDataSection(program.ops) + "\n" + emitTextSection(program.ops, program.exitCode) + "\n"
 }
 
-func find_main(SourceFile source) -> Result[FunctionDecl, BackendError] {
+func findMain(SourceFile source) -> Result[FunctionDecl, BackendError] {
     for item in source.items {
         match item {
             Item::Function(func) => {
@@ -112,45 +112,45 @@ func find_main(SourceFile source) -> Result[FunctionDecl, BackendError] {
     })
 }
 
-func execute_function(
+func executeFunction(
     FunctionDecl func,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops,
 ) -> Result[int, BackendError] {
     match func.body {
-        Option::Some(body) => execute_block(body, env, ops),
+        Option::Some(body) => executeBlock(body, env, ops),
         Option::None => Result::Ok(0),
     }
 }
 
-func execute_block(
+func executeBlock(
     BlockExpr body,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops,
 ) -> Result[int, BackendError] {
     for stmt in body.statements {
         match stmt {
-            Stmt::Return(value) => return execute_return_stmt(value, env),
-            _ => execute_stmt(stmt, env, ops)?,
+            Stmt::Return(value) => return executeReturnStmt(value, env),
+            _ => executeStmt(stmt, env, ops)?,
         }
     }
     match body.final_expr {
-        Option::Some(expr) => as_exit_code(eval_expr(expr, env)?),
+        Option::Some(expr) => asExitCode(evalExpr(expr, env)?),
         Option::None => Result::Ok(0),
     }
 }
 
-func execute_stmt(
+func executeStmt(
     Stmt stmt,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops,
 ) -> Result[(), BackendError] {
     match stmt {
-        Stmt::Var(value) => execute_var_stmt(value, env),
-        Stmt::Assign(value) => execute_assign_stmt(value, env),
-        Stmt::Increment(value) => execute_increment_stmt(value, env),
-        Stmt::CFor(value) => execute_cfor_stmt(value, env, ops),
-        Stmt::Expr(value) => execute_expr_stmt(value, env, ops),
+        Stmt::Var(value) => executeVarStmt(value, env),
+        Stmt::Assign(value) => executeAssignStmt(value, env),
+        Stmt::Increment(value) => executeIncrementStmt(value, env),
+        Stmt::CFor(value) => executeCForStmt(value, env, ops),
+        Stmt::Expr(value) => executeExprStmt(value, env, ops),
         Stmt::Return(value) => {
             value
             Result::Ok(())
@@ -158,36 +158,36 @@ func execute_stmt(
     }
 }
 
-func eval_expr(
+func evalExpr(
     Expr expr,
     Vec[LocalBinding] env,
 ) -> Result[Value, BackendError] {
     match expr {
-        Expr::Int(value) => Result::Ok(Value::Int(parse_int_literal(value))),
-        Expr::String(value) => Result::Ok(Value::String(unquote_string(value))),
+        Expr::Int(value) => Result::Ok(Value::Int(parseIntLiteral(value))),
+        Expr::String(value) => Result::Ok(Value::String(unquoteString(value))),
         Expr::Bool(value) => Result::Ok(Value::Bool(value.value)),
-        Expr::Name(value) => lookup_binding(env, value.name),
-        Expr::Binary(value) => eval_binary_expr(value, env),
+        Expr::Name(value) => lookupBinding(env, value.name),
+        Expr::Binary(value) => evalBinaryExpr(value, env),
         _ => Result::Err(unsupported("backend expr")),
     }
 }
 
-func emit_data_section(Vec[ProgramOp] ops) -> String {
+func emitDataSection(Vec[ProgramOp] ops) -> String {
     var lines = Vec[String]()
     lines.push(".section .data")
     var index = 0
     for op in ops {
         match op {
-            ProgramOp::WriteStdout(write) => append_data_payload(lines, "message_" + to_string(index), write.text),
-            ProgramOp::WriteStderr(write) => append_data_payload(lines, "message_" + to_string(index), write.text),
+            ProgramOp::WriteStdout(write) => appendDataPayload(lines, "message_" + to_string(index), write.text),
+            ProgramOp::WriteStderr(write) => appendDataPayload(lines, "message_" + to_string(index), write.text),
             ProgramOp::Exit(_) => (),
         }
         index = index + 1
     }
-    join_lines(lines)
+    joinLines(lines)
 }
 
-func emit_text_section(Vec[ProgramOp] ops, int exit_code) -> String {
+func emitTextSection(Vec[ProgramOp] ops, int exitCode) -> String {
     var lines = Vec[String]()
     lines.push(".section .text")
     lines.push(".global _start")
@@ -195,61 +195,61 @@ func emit_text_section(Vec[ProgramOp] ops, int exit_code) -> String {
     var index = 0
     for op in ops {
         match op {
-            ProgramOp::WriteStdout(write) => append_write_syscall(lines, 1, "message_" + to_string(index), write.text),
-            ProgramOp::WriteStderr(write) => append_write_syscall(lines, 2, "message_" + to_string(index), write.text),
+            ProgramOp::WriteStdout(write) => appendWriteSyscall(lines, 1, "message_" + to_string(index), write.text),
+            ProgramOp::WriteStderr(write) => appendWriteSyscall(lines, 2, "message_" + to_string(index), write.text),
             ProgramOp::Exit(_) => (),
         }
         index = index + 1
     }
     lines.push("    mov $60, %rax")
-    lines.push("    mov $" + to_string(exit_code) + ", %rdi")
+    lines.push("    mov $" + to_string(exitCode) + ", %rdi")
     lines.push("    syscall")
-    join_lines(lines)
+    joinLines(lines)
 }
 
-func assemble_and_link(String asm_text, String output_path) -> Result[(), BackendError] {
-    var temp_dir = host_make_temp_dir("s-build-")?
-    var asm_path = temp_dir + "/out.s"
-    var obj_path = temp_dir + "/out.o"
-    host_write_text_file(asm_path, asm_text)?
-    host_run_process(Vec[String] { "as", "-o", obj_path, asm_path })?
-    host_run_process(Vec[String] { "ld", "-o", output_path, obj_path })?
+func assembleAndLink(String asmText, String outputPath) -> Result[(), BackendError] {
+    var tempDir = hostMakeTempDir("s-build-")?
+    var asmPath = tempDir + "/out.s"
+    var objPath = tempDir + "/out.o"
+    hostWriteTextFile(asmPath, asmText)?
+    hostRunProcess(Vec[String] { "as", "-o", objPath, asmPath })?
+    hostRunProcess(Vec[String] { "ld", "-o", outputPath, objPath })?
     Result::Ok(())
 }
 
-func append_data_payload(Vec[String] lines, String label, String text) -> () {
+func appendDataPayload(Vec[String] lines, String label, String text) -> () {
     lines.push(label + ":")
-    lines.push("    .byte " + encode_bytes(text))
+    lines.push("    .byte " + encodeBytes(text))
 }
 
-func append_write_syscall(Vec[String] lines, int fd, String label, String text) -> () {
+func appendWriteSyscall(Vec[String] lines, int fd, String label, String text) -> () {
     lines.push("    mov $1, %rax")
     lines.push("    mov $" + to_string(fd) + ", %rdi")
     lines.push("    lea " + label + "(%rip), %rsi")
-    lines.push("    mov $" + byte_len(text) + ", %rdx")
+    lines.push("    mov $" + byteLen(text) + ", %rdx")
     lines.push("    syscall")
 }
 
-func encode_bytes(String text) -> String {
+func encodeBytes(String text) -> String {
     var parts = Vec[String]()
     var index = 0
     while index < len(text) {
-        parts.push(to_string(ascii_code(char_at(text, index))))
+        parts.push(to_string(asciiCode(char_at(text, index))))
         index = index + 1
     }
-    join_with(parts, ", ")
+    joinWith(parts, ", ")
 }
 
-func byte_len(String text) -> String {
+func byteLen(String text) -> String {
     // MVP: assume ASCII payloads first.
     to_string(text.len())
 }
 
-func join_lines(Vec[String] lines) -> String {
-    join_with(lines, "\n")
+func joinLines(Vec[String] lines) -> String {
+    joinWith(lines, "\n")
 }
 
-func join_with(Vec[String] values, String sep) -> String {
+func joinWith(Vec[String] values, String sep) -> String {
     var text = ""
     var index = 0
     while index < values.len() {
@@ -268,127 +268,127 @@ func unsupported(String feature) -> BackendError {
     }
 }
 
-func execute_var_stmt(
+func executeVarStmt(
     VarStmt stmt,
     Vec[LocalBinding] env,
 ) -> Result[(), BackendError] {
-    var value = eval_expr(stmt.value, env)?
-    set_local(env, stmt.name, value)
+    var value = evalExpr(stmt.value, env)?
+    setLocal(env, stmt.name, value)
     Result::Ok(())
 }
 
-func execute_assign_stmt(
+func executeAssignStmt(
     AssignStmt stmt,
     Vec[LocalBinding] env,
 ) -> Result[(), BackendError] {
-    var value = eval_expr(stmt.value, env)?
+    var value = evalExpr(stmt.value, env)?
     if !hasLocal(env, stmt.name) {
         return Result::Err(BackendError {
             message: "undefined name " + stmt.name,
         })
     }
-    set_local(env, stmt.name, value)
+    setLocal(env, stmt.name, value)
     Result::Ok(())
 }
 
-func execute_increment_stmt(
+func executeIncrementStmt(
     IncrementStmt stmt,
     Vec[LocalBinding] env,
 ) -> Result[(), BackendError] {
-    var current = lookup_binding(env, stmt.name)?
+    var current = lookupBinding(env, stmt.name)?
     match current {
         Value::Int(number) => {
-            set_local(env, stmt.name, Value::Int(number + 1))
+            setLocal(env, stmt.name, Value::Int(number + 1))
             Result::Ok(())
         }
         _ => Result::Err(unsupported("increment target")),
     }
 }
 
-func execute_cfor_stmt(
+func executeCForStmt(
     CForStmt stmt,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops,
 ) -> Result[(), BackendError] {
-    execute_stmt(stmt.init.value, env, ops)?
-    while is_true(eval_expr(stmt.condition, env)?) {
-        execute_block(stmt.body, env, ops)?
-        execute_stmt(stmt.step.value, env, ops)?
+    executeStmt(stmt.init.value, env, ops)?
+    while isTrue(evalExpr(stmt.condition, env)?) {
+        executeBlock(stmt.body, env, ops)?
+        executeStmt(stmt.step.value, env, ops)?
     }
     Result::Ok(())
 }
 
-func execute_expr_stmt(
+func executeExprStmt(
     ExprStmt stmt,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops,
 ) -> Result[(), BackendError] {
     match stmt.expr {
-        Expr::Call(value) => execute_call_stmt(value, env, ops),
+        Expr::Call(value) => executeCallStmt(value, env, ops),
         _ => {
-            eval_expr(stmt.expr, env)?
+            evalExpr(stmt.expr, env)?
             Result::Ok(())
         }
     }
 }
 
-func execute_call_stmt(
+func executeCallStmt(
     CallExpr call,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops,
 ) -> Result[(), BackendError] {
-    var callee_name = extract_callee_name(call)?
+    var calleeName = extractCalleeName(call)?
     if len(call.args) != 1 {
         return Result::Err(unsupported("call arity"))
     }
-    var value = eval_expr(call.args[0], env)?
-    var text = value_to_string(value)?
+    var value = evalExpr(call.args[0], env)?
+    var text = valueToString(value)?
 
-    if callee_name == "println" {
+    if calleeName == "println" {
         ops.push(ProgramOp::WriteStdout(WriteOp {
             fd: 1,
             text: text + "\n",
         }))
         return Result::Ok(())
     }
-    if callee_name == "eprintln" {
+    if calleeName == "eprintln" {
         ops.push(ProgramOp::WriteStderr(WriteOp {
             fd: 2,
             text: text + "\n",
         }))
         return Result::Ok(())
     }
-    Result::Err(unsupported("call " + callee_name))
+    Result::Err(unsupported("call " + calleeName))
 }
 
-func execute_return_stmt(
+func executeReturnStmt(
     ReturnStmt stmt,
     Vec[LocalBinding] env,
 ) -> Result[int, BackendError] {
     match stmt.value {
-        Option::Some(expr) => as_exit_code(eval_expr(expr, env)?),
+        Option::Some(expr) => asExitCode(evalExpr(expr, env)?),
         Option::None => Result::Ok(0),
     }
 }
 
-func eval_binary_expr(
+func evalBinaryExpr(
     frontend.BinaryExpr expr,
     Vec[LocalBinding] env,
 ) -> Result[Value, BackendError] {
-    var left = eval_expr(expr.left.value, env)?
-    var right = eval_expr(expr.right.value, env)?
+    var left = evalExpr(expr.left.value, env)?
+    var right = evalExpr(expr.right.value, env)?
 
     if expr.op == "+" {
         match left {
-            Value::Int(left_value) => {
+            Value::Int(leftValue) => {
                 match right {
-                    Value::Int(right_value) => return Result::Ok(Value::Int(left_value + right_value)),
+                    Value::Int(rightValue) => return Result::Ok(Value::Int(leftValue + rightValue)),
                     _ => return Result::Err(unsupported("mixed + operands")),
                 }
             }
-            Value::String(left_value) => {
+            Value::String(leftValue) => {
                 match right {
-                    Value::String(right_value) => return Result::Ok(Value::String(left_value + right_value)),
+                    Value::String(rightValue) => return Result::Ok(Value::String(leftValue + rightValue)),
                     _ => return Result::Err(unsupported("mixed + operands")),
                 }
             }
@@ -398,9 +398,9 @@ func eval_binary_expr(
 
     if expr.op == "<=" {
         match left {
-            Value::Int(left_value) => {
+            Value::Int(leftValue) => {
                 match right {
-                    Value::Int(right_value) => return Result::Ok(Value::Bool(left_value <= right_value)),
+                    Value::Int(rightValue) => return Result::Ok(Value::Bool(leftValue <= rightValue)),
                     _ => return Result::Err(unsupported("operator <=")),
                 }
             }
@@ -411,7 +411,7 @@ func eval_binary_expr(
     Result::Err(unsupported("binary operator " + expr.op))
 }
 
-func lookup_binding(
+func lookupBinding(
     Vec[LocalBinding] env,
     String name,
 ) -> Result[Value, BackendError] {
@@ -425,7 +425,7 @@ func lookup_binding(
     })
 }
 
-func bind_local(
+func bindLocal(
     Vec[LocalBinding] env,
     String name,
     Value value,
@@ -436,7 +436,7 @@ func bind_local(
     })
 }
 
-func set_local(
+func setLocal(
     Vec[LocalBinding] env,
     String name,
     Value value,
@@ -472,14 +472,14 @@ func hasLocal(
     false
 }
 
-func extract_callee_name(CallExpr call) -> Result[String, BackendError] {
+func extractCalleeName(CallExpr call) -> Result[String, BackendError] {
     match call.callee.value {
         Expr::Name(value) => Result::Ok(value.name),
         _ => Result::Err(unsupported("callee")),
     }
 }
 
-func value_to_string(Value value) -> Result[String, BackendError] {
+func valueToString(Value value) -> Result[String, BackendError] {
     match value {
         Value::Int(number) => Result::Ok(to_string(number)),
         Value::String(text) => Result::Ok(text),
@@ -488,7 +488,7 @@ func value_to_string(Value value) -> Result[String, BackendError] {
     }
 }
 
-func as_exit_code(Value value) -> Result[int, BackendError] {
+func asExitCode(Value value) -> Result[int, BackendError] {
     match value {
         Value::Int(number) => Result::Ok(number),
         Value::Bool(flag) => Result::Ok(if flag { 1 } else { 0 }),
@@ -497,11 +497,11 @@ func as_exit_code(Value value) -> Result[int, BackendError] {
     }
 }
 
-func parse_int_literal(IntExpr expr) -> int {
-    parse_decimal(expr.value)
+func parseIntLiteral(IntExpr expr) -> int {
+    parseDecimal(expr.value)
 }
 
-func unquote_string(StringExpr expr) -> String {
+func unquoteString(StringExpr expr) -> String {
     var text = expr.value
     if len(text) < 2 {
         return text
@@ -509,7 +509,7 @@ func unquote_string(StringExpr expr) -> String {
     slice(text, 1, len(text) - 1)
 }
 
-func host_write_text_file(String path, String contents) -> Result[(), BackendError] {
+func hostWriteTextFile(String path, String contents) -> Result[(), BackendError] {
     match __host_write_text_file(path, contents) {
         Result::Ok(()) => Result::Ok(()),
         Result::Err(err) => Result::Err(BackendError {
@@ -518,7 +518,7 @@ func host_write_text_file(String path, String contents) -> Result[(), BackendErr
     }
 }
 
-func host_run_process(Vec[String] argv) -> Result[(), BackendError] {
+func hostRunProcess(Vec[String] argv) -> Result[(), BackendError] {
     match __host_run_process(argv) {
         Result::Ok(()) => Result::Ok(()),
         Result::Err(err) => Result::Err(BackendError {
@@ -527,7 +527,7 @@ func host_run_process(Vec[String] argv) -> Result[(), BackendError] {
     }
 }
 
-func host_make_temp_dir(String prefix) -> Result[String, BackendError] {
+func hostMakeTempDir(String prefix) -> Result[String, BackendError] {
     match __host_make_temp_dir(prefix) {
         Result::Ok(path) => Result::Ok(path),
         Result::Err(err) => Result::Err(BackendError {
@@ -542,7 +542,7 @@ extern "intrinsic" func __host_run_process(Vec[String] argv) -> Result[(), HostE
 
 extern "intrinsic" func __host_make_temp_dir(String prefix) -> Result[String, HostError]
 
-func parse_decimal(String text) -> int {
+func parseDecimal(String text) -> int {
     var value = 0
     var index = 0
     while index < len(text) {
@@ -551,13 +551,13 @@ func parse_decimal(String text) -> int {
             index = index + 1
             continue
         }
-        value = value * 10 + digit_value(ch)
+        value = value * 10 + digitValue(ch)
         index = index + 1
     }
     value
 }
 
-func digit_value(String ch) -> int {
+func digitValue(String ch) -> int {
     if ch == "0" {
         return 0
     }
@@ -591,7 +591,7 @@ func digit_value(String ch) -> int {
     0
 }
 
-func ascii_code(String ch) -> int {
+func asciiCode(String ch) -> int {
     if ch == "\n" {
         return 10
     }
@@ -832,7 +832,7 @@ func ascii_code(String ch) -> int {
     63
 }
 
-func is_true(Value value) -> bool {
+func isTrue(Value value) -> bool {
     match value {
         Value::Bool(flag) => flag,
         Value::Int(number) => number != 0,
