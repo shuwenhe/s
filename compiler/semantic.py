@@ -130,6 +130,20 @@ class Checker:
         self.trait_methods: Dict[str, Dict[str, TraitMethodInfo]] = {}
         self.impls: List[ImplInfo] = []
         self._current_type_env: Dict[str, Type] = {}
+        self.builtin_functions: Dict[str, TraitMethodInfo] = {
+            "println": TraitMethodInfo(
+                owner="builtin",
+                generics=["T"],
+                params=[NamedType("T")],
+                return_type=UNIT,
+            ),
+            "eprintln": TraitMethodInfo(
+                owner="builtin",
+                generics=["T"],
+                params=[NamedType("T")],
+                return_type=UNIT,
+            ),
+        }
 
     def load_items(self, source: SourceFile) -> None:
         for item in source.items:
@@ -311,6 +325,14 @@ class Checker:
                     return_type=info.return_type,
                 )
                 return self._check_callable(method_like, expr.args, scope, expr.callee.name, expr)
+            if isinstance(expr.callee, NameExpr) and expr.callee.name in self.builtin_functions:
+                return self._check_callable(
+                    self.builtin_functions[expr.callee.name],
+                    expr.args,
+                    scope,
+                    expr.callee.name,
+                    expr,
+                )
             self._infer_expr(expr.callee, scope)
             for arg in expr.args:
                 self._infer_expr(arg, scope)
