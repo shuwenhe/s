@@ -107,7 +107,7 @@ fn consumeName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name
                 })
                 return
             }
-            if !is_copy_type(scope[index].ty) {
+            if !IsCopyType(scope[index].ty) {
                 scope[index].moved = true
             }
             return
