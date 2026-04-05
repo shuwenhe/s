@@ -13,7 +13,7 @@ pub struct OwnershipEntry {
     decision: OwnershipDecision,
 }
 
-pub fn MakeDecision(ty: Type) -> OwnershipDecision {
+fn MakeDecision(ty: Type) -> OwnershipDecision {
     var copyable = IsCopyType(ty)
     OwnershipDecision {
         ty: ty,
@@ -22,7 +22,7 @@ pub fn MakeDecision(ty: Type) -> OwnershipDecision {
     }
 }
 
-pub fn MakePlan(type_env: Vec[TypeBinding]) -> Vec[OwnershipEntry] {
+fn MakePlan(type_env: Vec[TypeBinding]) -> Vec[OwnershipEntry] {
     var out = Vec[OwnershipEntry]()
     for entry in type_env {
         out.push(OwnershipEntry {

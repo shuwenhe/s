@@ -19,7 +19,7 @@ pub struct GoldenFailure {
     message: String,
 }
 
-pub fn LexerCases(root: String) -> Vec[GoldenCase] {
+fn LexerCases(root: String) -> Vec[GoldenCase] {
     Vec[GoldenCase] {
         GoldenCase {
             name: "sample.tokens",
@@ -29,7 +29,7 @@ pub fn LexerCases(root: String) -> Vec[GoldenCase] {
     }
 }
 
-pub fn ParserCases(root: String) -> Vec[GoldenCase] {
+fn ParserCases(root: String) -> Vec[GoldenCase] {
     Vec[GoldenCase] {
         GoldenCase {
             name: "sample.ast",
@@ -59,7 +59,7 @@ pub fn ParserCases(root: String) -> Vec[GoldenCase] {
     }
 }
 
-pub fn RunLexerCase(case: GoldenCase) -> Result[(), GoldenFailure] {
+fn RunLexerCase(case: GoldenCase) -> Result[(), GoldenFailure] {
     var source = readFixture(case.name, case.source_path)?
     var expected = readFixture(case.name, case.expected_path)?
     match new_lexer(source).tokenize() {
@@ -71,7 +71,7 @@ pub fn RunLexerCase(case: GoldenCase) -> Result[(), GoldenFailure] {
     }
 }
 
-pub fn RunParserCase(case: GoldenCase) -> Result[(), GoldenFailure] {
+fn RunParserCase(case: GoldenCase) -> Result[(), GoldenFailure] {
     var source = readFixture(case.name, case.source_path)?
     var expected = readFixture(case.name, case.expected_path)?
     match parse_source(source) {

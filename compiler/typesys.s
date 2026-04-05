@@ -42,26 +42,26 @@ pub struct UnknownType {
     label: String,
 }
 
-pub fn NewBoolType() -> Type {
+fn NewBoolType() -> Type {
     Type::Primitive(PrimitiveType { name: "bool" })
 }
 
-pub fn NewI32Type() -> Type {
+fn NewI32Type() -> Type {
     Type::Primitive(PrimitiveType { name: "i32" })
 }
 
-pub fn NewStringType() -> Type {
+fn NewStringType() -> Type {
     Type::Named(NamedType {
         name: "String",
         args: Vec[Type](),
     })
 }
 
-pub fn NewUnitType() -> Type {
+fn NewUnitType() -> Type {
     Type::Unit(UnitType {})
 }
 
-pub fn ParseType(text: String) -> Type {
+fn ParseType(text: String) -> Type {
     var trimmed = text.trim()
     if trimmed == "" {
         return Type::Unknown(UnknownType { label: "unknown" })
@@ -115,7 +115,7 @@ pub fn ParseType(text: String) -> Type {
     })
 }
 
-pub fn DumpType(ty: Type) -> String {
+fn DumpType(ty: Type) -> String {
     match ty {
         Type::Primitive(value) => value.name,
         Type::Named(value) => {
@@ -142,7 +142,7 @@ pub fn DumpType(ty: Type) -> String {
     }
 }
 
-pub fn IsCopyType(ty: Type) -> bool {
+fn IsCopyType(ty: Type) -> bool {
     match ty {
         Type::Primitive(_) => true,
         Type::Reference(_) => true,
@@ -150,7 +150,7 @@ pub fn IsCopyType(ty: Type) -> bool {
     }
 }
 
-pub fn SubstituteType(ty: Type, mapping: Vec[TypeBinding]) -> Type {
+fn SubstituteType(ty: Type, mapping: Vec[TypeBinding]) -> Type {
     match ty {
         Type::Named(value) => {
             if value.args.len() == 0 {
@@ -194,7 +194,7 @@ pub struct TypeBinding {
     value: Type,
 }
 
-pub fn FindTypeBinding(bindings: Vec[TypeBinding], name: String) -> Option[Type] {
+fn FindTypeBinding(bindings: Vec[TypeBinding], name: String) -> Option[Type] {
     for binding in bindings {
         if binding.name == name {
             return Option::Some(binding.value)

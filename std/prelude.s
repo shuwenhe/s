@@ -4,23 +4,23 @@ pub struct Box[T] {
     value: T,
 }
 
-pub fn box[T](value: T) -> Box[T] {
+fn box[T](value: T) -> Box[T] {
     Box[T] { value: value }
 }
 
-pub fn len[T](value: T) -> i32 {
+fn len[T](value: T) -> i32 {
     __runtime_len[T](value)
 }
 
-pub fn to_string(value: i32) -> String {
+fn to_string(value: i32) -> String {
     __int_to_string(value)
 }
 
-pub fn char_at(text: String, index: i32) -> String {
+fn char_at(text: String, index: i32) -> String {
     __string_char_at(text, index)
 }
 
-pub fn slice(text: String, start: i32, end: i32) -> String {
+fn slice(text: String, start: i32, end: i32) -> String {
     __string_slice(text, start, end)
 }
 
