@@ -1,5 +1,6 @@
 package selfhost.frontend
 
+use std.prelude.to_string
 use std.vec.Vec
 
 pub enum TokenKind {
