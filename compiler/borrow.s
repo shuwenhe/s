@@ -16,8 +16,8 @@ struct borrowState {
 }
 
 pub fn AnalyzeBlock(block: BlockExpr, initial: Vec[VarState]) -> Vec[BorrowDiagnostic] {
-    let diagnostics = Vec[BorrowDiagnostic]()
-    let scope = Vec[borrowState]()
+    var diagnostics = Vec[BorrowDiagnostic]()
+    var scope = Vec[borrowState]()
     for entry in initial {
         scope.push(borrowState {
             name: entry.name,
@@ -98,7 +98,7 @@ fn inspectExpr(expr: Expr, scope: Vec[borrowState], diagnostics: Vec[BorrowDiagn
 }
 
 fn consumeName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name: String) -> () {
-    let index = 0
+    var index = 0
     while index < scope.len() {
         if scope[index].name == name {
             if scope[index].moved {
@@ -128,7 +128,7 @@ fn inspectName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name
 }
 
 fn toVarState(scope: Vec[borrowState]) -> Vec[VarState] {
-    let out = Vec[VarState]()
+    var out = Vec[VarState]()
     for entry in scope {
         out.push(VarState {
             name: entry.name,

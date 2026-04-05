@@ -29,7 +29,7 @@ pub fn parse_source(source: String) -> Result[SourceFile, ParseError] {
 }
 
 pub fn parse_tokens(tokens: Vec[Token]) -> Result[SourceFile, ParseError] {
-    let parser = Parser {
+    var parser = Parser {
         tokens: tokens,
         index: 0,
     }
@@ -39,9 +39,9 @@ pub fn parse_tokens(tokens: Vec[Token]) -> Result[SourceFile, ParseError] {
 impl Parser {
     pub fn parse_source_file(mut self) -> Result[SourceFile, ParseError] {
         self.expect_keyword("package")?
-        let package = self.parse_path()?
-        let uses = Vec[UseDecl]()
-        let items = Vec[Item]()
+        var package = self.parse_path()?
+        var uses = Vec[UseDecl]()
+        var items = Vec[Item]()
 
         while self.at_keyword("use") {
             uses.push(self.parse_use_decl()?)
@@ -60,8 +60,8 @@ impl Parser {
 
     fn parse_use_decl(mut self) -> Result[UseDecl, ParseError] {
         self.expect_keyword("use")?
-        let path = self.parse_use_path()?
-        let alias =
+        var path = self.parse_use_path()?
+        var alias =
             if self.at_keyword("as") {
                 self.advance()?
                 Option::Some(self.expect_ident()?)
@@ -94,7 +94,7 @@ impl Parser {
     }
 
     fn parse_function_decl(mut self) -> Result[FunctionDecl, ParseError] {
-        let pair = self.parse_function(true)?
+        var pair = self.parse_function(true)?
         Result::Ok(FunctionDecl {
             sig: pair.sig,
             body: pair.body,
@@ -104,15 +104,15 @@ impl Parser {
 
     fn parse_struct_decl(mut self) -> Result[StructDecl, ParseError] {
         self.expect_keyword("struct")?
-        let name = self.expect_ident()?
-        let generics = self.parse_generic_params()?
+        var name = self.expect_ident()?
+        var generics = self.parse_generic_params()?
         self.expect_symbol("{")?
-        let fields = Vec[Field]()
+        var fields = Vec[Field]()
 
         while !self.eat_symbol("}") {
-            let field_name = self.expect_ident()?
+            var field_name = self.expect_ident()?
             self.expect_symbol(":")?
-            let field_type = self.parse_type_text(Vec[String] { ",", "}" })?
+            var field_type = self.parse_type_text(Vec[String] { ",", "}" })?
             fields.push(Field {
                 name: field_name,
                 type_name: field_type,
@@ -131,16 +131,16 @@ impl Parser {
 
     fn parse_enum_decl(mut self) -> Result[EnumDecl, ParseError] {
         self.expect_keyword("enum")?
-        let name = self.expect_ident()?
-        let generics = self.parse_generic_params()?
+        var name = self.expect_ident()?
+        var generics = self.parse_generic_params()?
         self.expect_symbol("{")?
-        let variants = Vec[EnumVariant]()
+        var variants = Vec[EnumVariant]()
 
         while !self.eat_symbol("}") {
-            let variant_name = self.expect_ident()?
-            let payload =
+            var variant_name = self.expect_ident()?
+            var payload =
                 if self.eat_symbol("(") {
-                    let ty = self.parse_type_text(Vec[String] { ")" })?
+                    var ty = self.parse_type_text(Vec[String] { ")" })?
                     self.expect_symbol(")")?
                     Option::Some(ty)
                 } else {
@@ -163,13 +163,13 @@ impl Parser {
 
     fn parse_trait_decl(mut self) -> Result[TraitDecl, ParseError] {
         self.expect_keyword("trait")?
-        let name = self.expect_ident()?
-        let generics = self.parse_generic_params()?
+        var name = self.expect_ident()?
+        var generics = self.parse_generic_params()?
         self.expect_symbol("{")?
-        let methods = Vec[FunctionSig]()
+        var methods = Vec[FunctionSig]()
 
         while !self.eat_symbol("}") {
-            let pair = self.parse_function(false)?
+            var pair = self.parse_function(false)?
             methods.push(pair.sig)
             self.expect_symbol(";")?
         }
@@ -184,10 +184,10 @@ impl Parser {
 
     fn parse_impl_decl(mut self) -> Result[ImplDecl, ParseError] {
         self.expect_keyword("impl")?
-        let generics = self.parse_generic_params()?
-        let first = self.parse_path()?
-        let trait_name = Option::None
-        let target = first
+        var generics = self.parse_generic_params()?
+        var first = self.parse_path()?
+        var trait_name = Option::None
+        var target = first
 
         if self.eat_keyword("for") {
             trait_name = Option::Some(first)
@@ -196,7 +196,7 @@ impl Parser {
 
         self.parse_where_clause()?
         self.expect_symbol("{")?
-        let methods = Vec[FunctionDecl]()
+        var methods = Vec[FunctionDecl]()
 
         while !self.eat_symbol("}") {
             methods.push(self.parse_function_decl()?)
@@ -212,13 +212,13 @@ impl Parser {
 
     fn parse_function(mut self, require_body: bool) -> Result[ParsedFunction, ParseError] {
         self.expect_keyword("fn")?
-        let name = self.expect_ident()?
-        let generics = self.parse_generic_params()?
+        var name = self.expect_ident()?
+        var generics = self.parse_generic_params()?
         self.expect_symbol("(")?
-        let params = self.parse_params()?
+        var params = self.parse_params()?
         self.expect_symbol(")")?
 
-        let return_type =
+        var return_type =
             if self.eat_symbol("->") {
                 Option::Some(self.parse_type_text(Vec[String] { "where", "{", ";" })?)
             } else {
@@ -227,7 +227,7 @@ impl Parser {
 
         self.parse_where_clause()?
 
-        let body =
+        var body =
             if require_body {
                 Option::Some(self.parse_block_expr()?)
             } else {
@@ -246,15 +246,15 @@ impl Parser {
     }
 
     fn parse_params(mut self) -> Result[Vec[Param], ParseError] {
-        let params = Vec[Param]()
+        var params = Vec[Param]()
         if self.at_symbol(")") {
             return Result::Ok(params)
         }
 
         while true {
-            let name = self.parse_param_name()?
+            var name = self.parse_param_name()?
             self.expect_symbol(":")?
-            let type_name = self.parse_type_text(Vec[String] { ",", ")" })?
+            var type_name = self.parse_type_text(Vec[String] { ",", ")" })?
             params.push(Param {
                 name: name,
                 type_name: type_name,
@@ -272,7 +272,7 @@ impl Parser {
             return Result::Ok("mut " + self.expect_ident()?)
         }
         if self.eat_symbol("&") {
-            let prefix =
+            var prefix =
                 if self.eat_keyword("mut") {
                     "&mut "
                 } else {
@@ -290,16 +290,16 @@ impl Parser {
     }
 
     fn parse_generic_params(mut self) -> Result[Vec[String], ParseError] {
-        let generics = Vec[String]()
+        var generics = Vec[String]()
         if !self.eat_symbol("[") {
             return Result::Ok(generics)
         }
 
         while !self.eat_symbol("]") {
-            let name = self.expect_ident()?
-            let item =
+            var name = self.expect_ident()?
+            var item =
                 if self.eat_symbol(":") {
-                    let bounds = Vec[String]()
+                    var bounds = Vec[String]()
                     bounds.push(self.parse_path()?)
                     while self.eat_symbol("+") {
                         bounds.push(self.parse_path()?)
@@ -330,8 +330,8 @@ impl Parser {
 
     fn parse_block_expr(mut self) -> Result[BlockExpr, ParseError] {
         self.expect_symbol("{")?
-        let statements = Vec[Stmt]()
-        let final_expr = Option::None
+        var statements = Vec[Stmt]()
+        var final_expr = Option::None
 
         while !self.at_symbol("}") {
             if self.at_keyword("var") {
@@ -343,7 +343,7 @@ impl Parser {
                 continue
             }
 
-            let expr = self.parse_expr()?
+            var expr = self.parse_expr()?
             if self.eat_symbol(";") {
                 statements.push(Stmt::Expr(ExprStmt { expr: expr }))
                 continue
@@ -362,15 +362,15 @@ impl Parser {
 
     fn parse_var_stmt(mut self) -> Result[VarStmt, ParseError] {
         self.expect_keyword("var")?
-        let name = self.expect_ident()?
-        let type_name =
+        var name = self.expect_ident()?
+        var type_name =
             if self.eat_symbol(":") {
                 Option::Some(self.parse_type_text(Vec[String] { "=" })?)
             } else {
                 Option::None
             }
         self.expect_symbol("=")?
-        let value = self.parse_expr()?
+        var value = self.parse_expr()?
         self.eat_symbol(";")
         Result::Ok(VarStmt {
             name: name,
@@ -386,7 +386,7 @@ impl Parser {
                 value: Option::None,
             })
         }
-        let value = self.parse_expr()?
+        var value = self.parse_expr()?
         self.eat_symbol(";")
         Result::Ok(ReturnStmt {
             value: Option::Some(value),
@@ -411,14 +411,14 @@ impl Parser {
 
     fn parse_match_expr(mut self) -> Result[Expr, ParseError] {
         self.expect_keyword("match")?
-        let subject = self.parse_expr()?
+        var subject = self.parse_expr()?
         self.expect_symbol("{")?
-        let arms = Vec[MatchArm]()
+        var arms = Vec[MatchArm]()
 
         while !self.eat_symbol("}") {
-            let pattern = self.parse_pattern()?
+            var pattern = self.parse_pattern()?
             self.expect_symbol("=>")?
-            let expr = self.parse_expr()?
+            var expr = self.parse_expr()?
             arms.push(MatchArm {
                 pattern: pattern,
                 expr: expr,
@@ -435,9 +435,9 @@ impl Parser {
 
     fn parse_if_expr(mut self) -> Result[Expr, ParseError] {
         self.expect_keyword("if")?
-        let condition = self.parse_expr()?
-        let then_branch = self.parse_block_expr()?
-        let else_branch =
+        var condition = self.parse_expr()?
+        var then_branch = self.parse_block_expr()?
+        var else_branch =
             if self.eat_keyword("else") {
                 if self.at_keyword("if") {
                     Option::Some(Box(self.parse_if_expr()?))
@@ -458,8 +458,8 @@ impl Parser {
 
     fn parse_while_expr(mut self) -> Result[Expr, ParseError] {
         self.expect_keyword("while")?
-        let condition = self.parse_expr()?
-        let body = self.parse_block_expr()?
+        var condition = self.parse_expr()?
+        var body = self.parse_block_expr()?
         Result::Ok(Expr::While(WhileExpr {
             condition: Box(condition),
             body: body,
@@ -469,10 +469,10 @@ impl Parser {
 
     fn parse_for_expr(mut self) -> Result[Expr, ParseError] {
         self.expect_keyword("for")?
-        let name = self.expect_ident()?
+        var name = self.expect_ident()?
         self.expect_keyword("in")?
-        let iterable = self.parse_expr()?
-        let body = self.parse_block_expr()?
+        var iterable = self.parse_expr()?
+        var body = self.parse_block_expr()?
         Result::Ok(Expr::For(ForExpr {
             name: name,
             iterable: Box(iterable),
@@ -486,9 +486,9 @@ impl Parser {
             return Result::Ok(Pattern::Wildcard(WildcardPattern {}))
         }
 
-        let path = self.parse_path()?
+        var path = self.parse_path()?
         if self.eat_symbol("(") {
-            let args = Vec[Pattern]()
+            var args = Vec[Pattern]()
             if !self.at_symbol(")") {
                 while true {
                     args.push(self.parse_pattern()?)
@@ -515,15 +515,15 @@ impl Parser {
     }
 
     fn parse_binary_expr(mut self, min_precedence: i32) -> Result[Expr, ParseError] {
-        let expr = self.parse_unary_expr()?
+        var expr = self.parse_unary_expr()?
         while true {
-            let token = self.peek()?
-            let precedence = self.binary_precedence(token.value)
+            var token = self.peek()?
+            var precedence = self.binary_precedence(token.value)
             if precedence < min_precedence {
                 break
             }
-            let op = self.advance()?.value
-            let rhs = self.parse_binary_expr(precedence + 1)?
+            var op = self.advance()?.value
+            var rhs = self.parse_binary_expr(precedence + 1)?
             expr = Expr::Binary(BinaryExpr {
                 left: Box(expr),
                 op: op,
@@ -536,8 +536,8 @@ impl Parser {
 
     fn parse_unary_expr(mut self) -> Result[Expr, ParseError] {
         if self.eat_symbol("&") {
-            let mutable = self.eat_keyword("mut")
-            let target = self.parse_unary_expr()?
+            var mutable = self.eat_keyword("mut")
+            var target = self.parse_unary_expr()?
             return Result::Ok(Expr::Borrow(BorrowExpr {
                 target: Box(target),
                 mutable: mutable,
@@ -548,10 +548,10 @@ impl Parser {
     }
 
     fn parse_call_expr(mut self) -> Result[Expr, ParseError] {
-        let expr = self.parse_primary_expr()?
+        var expr = self.parse_primary_expr()?
         while true {
             if self.eat_symbol("(") {
-                let args = Vec[Expr]()
+                var args = Vec[Expr]()
                 if !self.at_symbol(")") {
                     while true {
                         args.push(self.parse_expr()?)
@@ -577,7 +577,7 @@ impl Parser {
                 continue
             }
             if self.eat_symbol("[") {
-                let index = self.parse_expr()?
+                var index = self.parse_expr()?
                 self.expect_symbol("]")?
                 expr = Expr::Index(IndexExpr {
                     target: Box(expr),
@@ -592,7 +592,7 @@ impl Parser {
     }
 
     fn parse_primary_expr(mut self) -> Result[Expr, ParseError] {
-        let token = self.peek()?
+        var token = self.peek()?
         if token.kind == TokenKind::Int {
             self.advance()?
             return Result::Ok(Expr::Int(IntExpr {
@@ -625,7 +625,7 @@ impl Parser {
             return Result::Ok(Expr::Block(self.parse_block_expr()?))
         }
         if self.eat_symbol("(") {
-            let expr = self.parse_expr()?
+            var expr = self.parse_expr()?
             self.expect_symbol(")")?
             return Result::Ok(expr)
         }
@@ -655,14 +655,14 @@ impl Parser {
     }
 
     fn parse_use_path(mut self) -> Result[String, ParseError] {
-        let parts = Vec[String]()
+        var parts = Vec[String]()
         parts.push(self.expect_ident()?)
         while self.eat_symbol(".") {
             if self.eat_symbol("{") {
-                let members = Vec[String]()
+                var members = Vec[String]()
                 while !self.eat_symbol("}") {
-                    let member = self.expect_ident()?
-                    let text =
+                    var member = self.expect_ident()?
+                    var text =
                         if self.eat_keyword("as") {
                             member + " as " + self.expect_ident()?
                         } else {
@@ -679,25 +679,25 @@ impl Parser {
     }
 
     fn parse_path(mut self) -> Result[String, ParseError] {
-        let parts = Vec[String]()
+        var parts = Vec[String]()
         parts.push(self.expect_ident()?)
         while self.eat_symbol(".") {
             parts.push(self.expect_ident()?)
         }
         if self.at_symbol("[") {
-            let last = parts.pop().unwrap()
+            var last = parts.pop().unwrap()
             parts.push(last + self.parse_bracket_group()?)
         }
         Result::Ok(join_strings(parts, "."))
     }
 
     fn parse_type_text(mut self, stop_values: Vec[String]) -> Result[String, ParseError] {
-        let parts = Vec[String]()
-        let bracket = 0
-        let paren = 0
+        var parts = Vec[String]()
+        var bracket = 0
+        var paren = 0
 
         while true {
-            let token = self.peek()?
+            var token = self.peek()?
             if token.kind == TokenKind::Eof {
                 break
             }
@@ -723,11 +723,11 @@ impl Parser {
     }
 
     fn parse_bracket_group(mut self) -> Result[String, ParseError] {
-        let parts = Vec[String]()
+        var parts = Vec[String]()
         parts.push(self.advance()?.value)
-        let depth = 1
+        var depth = 1
         while depth > 0 {
-            let token = self.advance()?
+            var token = self.advance()?
             parts.push(token.value)
             if token.value == "[" {
                 depth = depth + 1
@@ -748,12 +748,12 @@ impl Parser {
     }
 
     fn at_keyword(self, value: String) -> bool {
-        let token = self.peek().unwrap()
+        var token = self.peek().unwrap()
         token.kind == TokenKind::Keyword && token.value == value
     }
 
     fn at_symbol(self, value: String) -> bool {
-        let token = self.peek().unwrap()
+        var token = self.peek().unwrap()
         token.kind == TokenKind::Symbol && token.value == value
     }
 
@@ -766,7 +766,7 @@ impl Parser {
     }
 
     fn eat_ident_value(mut self, value: String) -> bool {
-        let token = self.peek().unwrap()
+        var token = self.peek().unwrap()
         if token.kind == TokenKind::Ident && token.value == value {
             self.advance().unwrap()
             return true
@@ -783,7 +783,7 @@ impl Parser {
     }
 
     fn expect_keyword(mut self, value: String) -> Result[Token, ParseError] {
-        let token = self.peek()?
+        var token = self.peek()?
         if token.kind == TokenKind::Keyword && token.value == value {
             return self.advance()
         }
@@ -795,7 +795,7 @@ impl Parser {
     }
 
     fn expect_symbol(mut self, value: String) -> Result[Token, ParseError] {
-        let token = self.peek()?
+        var token = self.peek()?
         if token.kind == TokenKind::Symbol && token.value == value {
             return self.advance()
         }
@@ -807,7 +807,7 @@ impl Parser {
     }
 
     fn expect_ident(mut self) -> Result[String, ParseError] {
-        let token = self.peek()?
+        var token = self.peek()?
         if token.kind == TokenKind::Ident {
             self.advance()?
             return Result::Ok(token.value)
@@ -835,13 +835,13 @@ impl Parser {
     }
 
     fn advance(mut self) -> Result[Token, ParseError] {
-        let token = self.peek()?
+        var token = self.peek()?
         self.index = self.index + 1
         Result::Ok(token)
     }
 
     fn error_here(self, message: String) -> ParseError {
-        let token = self.peek().unwrap()
+        var token = self.peek().unwrap()
         ParseError {
             message: message,
             line: token.line,
@@ -878,8 +878,8 @@ pub fn contains_string(values: Vec[String], target: String) -> bool {
 }
 
 pub fn join_strings(values: Vec[String], sep: String) -> String {
-    let out = ""
-    let first = true
+    var out = ""
+    var first = true
     for value in values {
         if !first {
             out = out + sep
@@ -891,7 +891,7 @@ pub fn join_strings(values: Vec[String], sep: String) -> String {
 }
 
 pub fn path_contains_dot(path: String) -> bool {
-    let i = 0
+    var i = 0
     while i < len(path) {
         if char_at(path, i) == "." {
             return true
@@ -905,7 +905,7 @@ pub fn starts_with_upper(text: String) -> bool {
     if text == "" {
         return false
     }
-    let ch = char_at(text, 0)
+    var ch = char_at(text, 0)
     match ch {
         "A" => true,
         "B" => true,

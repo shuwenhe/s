@@ -33,7 +33,7 @@ fn semanticCases(fixtures_root: String) -> Vec[semanticCase] {
             name: "check_fail",
             path: fixtures_root + "/check_fail.s",
             should_pass: false,
-            expected_message: Option::Some("let value expected bool, got i32"),
+            expected_message: Option::Some("var value expected bool, got i32"),
         },
         semanticCase {
             name: "borrow_fail",
@@ -69,7 +69,7 @@ fn semanticCases(fixtures_root: String) -> Vec[semanticCase] {
 }
 
 pub fn RunSemanticSuite(fixtures_root: String) -> Vec[SemanticFailure] {
-    let failures = Vec[SemanticFailure]()
+    var failures = Vec[SemanticFailure]()
 
     for case in semanticCases(fixtures_root) {
         match runCase(case) {
@@ -78,7 +78,7 @@ pub fn RunSemanticSuite(fixtures_root: String) -> Vec[SemanticFailure] {
         }
     }
 
-    let prelude = LoadPrelude()
+    var prelude = LoadPrelude()
     if prelude.name != "std.prelude" {
         failures.push(SemanticFailure {
             name: "prelude",
@@ -90,7 +90,7 @@ pub fn RunSemanticSuite(fixtures_root: String) -> Vec[SemanticFailure] {
 }
 
 fn runCase(case: semanticCase) -> Result[(), SemanticFailure] {
-    let source =
+    var source =
         match read_to_string(case.path) {
             Result::Ok(value) => value,
             Result::Err(_) => {
@@ -101,7 +101,7 @@ fn runCase(case: semanticCase) -> Result[(), SemanticFailure] {
             }
         }
 
-    let parsed =
+    var parsed =
         match parse_source(source) {
             Result::Ok(value) => value,
             Result::Err(err) => {
@@ -112,8 +112,8 @@ fn runCase(case: semanticCase) -> Result[(), SemanticFailure] {
             }
         }
 
-    let checked = CheckSource(parsed)
-    let ok = checked.diagnostics.len() == 0
+    var checked = CheckSource(parsed)
+    var ok = checked.diagnostics.len() == 0
     if ok != case.should_pass {
         return Result::Err(SemanticFailure {
             name: case.name,

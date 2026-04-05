@@ -19,7 +19,7 @@ pub fn new_vec[T]() -> Vec[T] {
 }
 
 pub fn with_capacity[T](capacity: i32) -> Vec[T] {
-    let initial =
+    var initial =
         if capacity > 0 {
             capacity
         } else {
@@ -86,9 +86,9 @@ pub fn ensure_capacity[T](mut vec: Vec[T], wanted: i32) -> () {
         return
     }
 
-    let next = grow_capacity(vec.raw.capacity, wanted)
-    let next_storage = new_array[T](next)
-    let i = 0
+    var next = grow_capacity(vec.raw.capacity, wanted)
+    var next_storage = new_array[T](next)
+    var i = 0
     while i < vec.length {
         array_set(next_storage, i, array_get(vec.raw.storage.value, i))
         i = i + 1
@@ -98,7 +98,7 @@ pub fn ensure_capacity[T](mut vec: Vec[T], wanted: i32) -> () {
 }
 
 pub fn grow_capacity(current: i32, wanted: i32) -> i32 {
-    let next = current
+    var next = current
     if next <= 0 {
         next = 4
     }
