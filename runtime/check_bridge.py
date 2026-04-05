@@ -8,11 +8,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from runtime.intrinsic_dispatch import IntrinsicCall, dispatch
-from runtime.python_bridge import RuntimeExit, invoke_intrinsic
+from runtime.python_bridge import INTRINSICS, RuntimeExit, invoke_intrinsic
 
 
 def main() -> int:
     checks = [
+        ("manifest loaded", "__host_exit" in INTRINSICS),
         ("len(string)", invoke_intrinsic("__runtime_len", "demo") == 4),
         ("concat", invoke_intrinsic("__string_concat", "de", "mo") == "demo"),
         ("replace", invoke_intrinsic("__string_replace", "a b", " ", "_") == "a_b"),
