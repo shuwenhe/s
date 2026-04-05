@@ -30,6 +30,7 @@ Status: Working Draft
 - `parser.py` 已有对应 S 版 [frontend/parser.s](/app/s/frontend/parser.s)
 - 本次新增 `typesys.py` 对应的 [compiler/typesys.s](/app/s/compiler/typesys.s)
 - 本次新增 `ownership.py` 对应的 [compiler/ownership.s](/app/s/compiler/ownership.s)
+- 本次新增最小 golden 验证入口 [compiler/golden.s](/app/s/compiler/golden.s)
 
 ### Group B: Replace After Core Frontend Stabilizes
 
@@ -64,6 +65,11 @@ Status: Working Draft
 
 - 先保留它们，直到 S 版测试入口和 CLI 更成熟
 - 后续再把验证逻辑迁到 S 侧或 host bridge 新层
+
+当前状态：
+
+- `golden.py` 已有最小 S 版对应物 [compiler/golden.s](/app/s/compiler/golden.s)
+- Python 测试文件仍保留，继续作为宿主验证入口
 
 ### Group D: Host Bridge Must Stay For Now
 
@@ -112,4 +118,5 @@ Status: Working Draft
 
 1. `prelude.py` 的最小 S 版已落地
 2. `__main__.py` 的最小 S 版 CLI 入口已落地
-3. 下一步建议转到 `semantic.py` 的局部子集，优先挑纯类型/诊断路径
+3. `golden.py` 已有最小 S 版验证入口
+4. 下一步建议转到 `semantic.py` 的局部子集，优先挑纯类型/诊断路径
