@@ -2,7 +2,7 @@ package main
 
 func main() {
     int sum = 0
-    for (int i = 1; i <= 100; i = i + 1) {
+    for (int i = 1; i <= 100; i++) {
         sum = sum + i
     }
     println(sum)
