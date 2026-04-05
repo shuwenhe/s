@@ -27,7 +27,7 @@ pub fn AnalyzeBlock(block: BlockExpr, initial: Vec[VarState]) -> Vec[BorrowDiagn
     }
     for stmt in block.statements {
         match stmt {
-            frontend.Stmt::Let(value) => inspectExpr(value.value, scope, diagnostics),
+            frontend.Stmt::Var(value) => inspectExpr(value.value, scope, diagnostics),
             frontend.Stmt::Return(value) => {
                 match value.value {
                     Option::Some(expr) => inspectExpr(expr, scope, diagnostics),
