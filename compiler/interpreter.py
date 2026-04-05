@@ -88,10 +88,13 @@ class Interpreter:
         if block is None:
             return None
         local = dict(env)
+        return self._eval_block_in_place(block, local)
+
+    def _eval_block_in_place(self, block: BlockExpr, env: dict[str, Any]) -> Any:
         for stmt in block.statements:
-            self.eval_stmt(stmt, local)
+            self.eval_stmt(stmt, env)
         if block.final_expr is not None:
-            return self.eval_expr(block.final_expr, local)
+            return self.eval_expr(block.final_expr, env)
         return None
 
     def eval_stmt(self, stmt: LetStmt | AssignStmt | IncrementStmt | CForStmt | ReturnStmt | ExprStmt, env: dict[str, Any]) -> None:
@@ -112,7 +115,7 @@ class Interpreter:
             loop_env = dict(env)
             self.eval_stmt(stmt.init, loop_env)
             while self.eval_expr(stmt.condition, loop_env):
-                self.eval_block(stmt.body, loop_env)
+                self._eval_block_in_place(stmt.body, loop_env)
                 self.eval_stmt(stmt.step, loop_env)
             for name in list(env.keys()):
                 if name in loop_env:
