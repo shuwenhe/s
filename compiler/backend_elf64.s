@@ -8,13 +8,14 @@ struct BackendError {
 }
 
 func build_executable(SourceFile source, String output_path) -> Result[(), BackendError] {
-    // Bootstrap plan:
-    // 1. lower SourceFile -> Linux x86_64 assembly text
-    // 2. invoke host assembler and linker
-    // 3. return Result
+    // Minimal backend design:
+    // 1. compile SourceFile -> linear ProgramOp list
+    // 2. emit Linux x86_64 assembly text
+    // 3. invoke host as/ld through runtime boundary
     //
-    // The executable implementation still lives in the Python bootstrap path.
-    // This S file is the self-hosted backend contract we will grow into.
+    // See /app/s/docs/backend_elf64.md for the executable MVP plan.
+    //
+    // The runnable algorithm still lives in backend_elf64.py today.
     source
     output_path
     Result::Err(BackendError {
