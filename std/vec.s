@@ -14,11 +14,11 @@ pub struct Vec[T] {
     length: i32,
 }
 
-pub fn new_vec[T]() -> Vec[T] {
+fn new_vec[T]() -> Vec[T] {
     with_capacity[T](4)
 }
 
-pub fn with_capacity[T](capacity: i32) -> Vec[T] {
+fn with_capacity[T](capacity: i32) -> Vec[T] {
     var initial =
         if capacity > 0 {
             capacity
@@ -35,13 +35,13 @@ pub fn with_capacity[T](capacity: i32) -> Vec[T] {
 }
 
 impl Vec[T] {
-    pub fn push(mut self, value: T) -> () {
+    fn push(mut self, value: T) -> () {
         ensure_capacity(self, self.length + 1)
         array_set(self.raw.storage.value, self.length, value)
         self.length = self.length + 1
     }
 
-    pub fn pop(mut self) -> Option[T] {
+    fn pop(mut self) -> Option[T] {
         if self.length == 0 {
             return Option::None
         }
@@ -49,26 +49,26 @@ impl Vec[T] {
         Option::Some(array_get(self.raw.storage.value, self.length))
     }
 
-    pub fn len(self) -> i32 {
+    fn len(self) -> i32 {
         self.length
     }
 
-    pub fn capacity(self) -> i32 {
+    fn capacity(self) -> i32 {
         self.raw.capacity
     }
 
-    pub fn is_empty(self) -> bool {
+    fn is_empty(self) -> bool {
         self.length == 0
     }
 
-    pub fn get(self, index: i32) -> Option[T] {
+    fn get(self, index: i32) -> Option[T] {
         if index < 0 || index >= self.length {
             return Option::None
         }
         Option::Some(array_get(self.raw.storage.value, index))
     }
 
-    pub fn set(mut self, index: i32, value: T) -> bool {
+    fn set(mut self, index: i32, value: T) -> bool {
         if index < 0 || index >= self.length {
             return false
         }
@@ -76,12 +76,12 @@ impl Vec[T] {
         true
     }
 
-    pub fn clear(mut self) -> () {
+    fn clear(mut self) -> () {
         self.length = 0
     }
 }
 
-pub fn ensure_capacity[T](mut vec: Vec[T], wanted: i32) -> () {
+fn ensure_capacity[T](mut vec: Vec[T], wanted: i32) -> () {
     if wanted <= vec.raw.capacity {
         return
     }
@@ -97,7 +97,7 @@ pub fn ensure_capacity[T](mut vec: Vec[T], wanted: i32) -> () {
     vec.raw.capacity = next
 }
 
-pub fn grow_capacity(current: i32, wanted: i32) -> i32 {
+fn grow_capacity(current: i32, wanted: i32) -> i32 {
     var next = current
     if next <= 0 {
         next = 4
@@ -110,15 +110,15 @@ pub fn grow_capacity(current: i32, wanted: i32) -> i32 {
 
 pub struct Array[T] {}
 
-pub fn new_array[T](size: i32) -> Array[T] {
+fn new_array[T](size: i32) -> Array[T] {
     __vec_new_array[T](size)
 }
 
-pub fn array_get[T](array: Array[T], index: i32) -> T {
+fn array_get[T](array: Array[T], index: i32) -> T {
     __vec_array_get[T](array, index)
 }
 
-pub fn array_set[T](array: Array[T], index: i32, value: T) -> () {
+fn array_set[T](array: Array[T], index: i32, value: T) -> () {
     __vec_array_set[T](array, index, value)
 }
 

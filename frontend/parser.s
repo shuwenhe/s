@@ -17,7 +17,7 @@ pub struct Parser {
     index: i32,
 }
 
-pub fn parse_source(source: String) -> Result[SourceFile, ParseError] {
+fn parse_source(source: String) -> Result[SourceFile, ParseError] {
     match new_lexer(source).tokenize() {
         Result::Ok(tokens) => parse_tokens(tokens),
         Result::Err(err) => Result::Err(ParseError {
@@ -28,7 +28,7 @@ pub fn parse_source(source: String) -> Result[SourceFile, ParseError] {
     }
 }
 
-pub fn parse_tokens(tokens: Vec[Token]) -> Result[SourceFile, ParseError] {
+fn parse_tokens(tokens: Vec[Token]) -> Result[SourceFile, ParseError] {
     var parser = Parser {
         tokens: tokens,
         index: 0,
@@ -37,7 +37,7 @@ pub fn parse_tokens(tokens: Vec[Token]) -> Result[SourceFile, ParseError] {
 }
 
 impl Parser {
-    pub fn parse_source_file(mut self) -> Result[SourceFile, ParseError] {
+    fn parse_source_file(mut self) -> Result[SourceFile, ParseError] {
         self.expect_keyword("package")?
         var package = self.parse_path()?
         var uses = Vec[UseDecl]()
@@ -855,7 +855,7 @@ pub struct ParsedFunction {
     body: Option[BlockExpr],
 }
 
-pub fn normalize_type_text(text: String) -> String {
+fn normalize_type_text(text: String) -> String {
     text
         .replace(" . ", ".")
         .replace("[ ", "[")
@@ -868,7 +868,7 @@ pub fn normalize_type_text(text: String) -> String {
         .replace(" [", "[")
 }
 
-pub fn contains_string(values: Vec[String], target: String) -> bool {
+fn contains_string(values: Vec[String], target: String) -> bool {
     for value in values {
         if value == target {
             return true
@@ -877,7 +877,7 @@ pub fn contains_string(values: Vec[String], target: String) -> bool {
     false
 }
 
-pub fn join_strings(values: Vec[String], sep: String) -> String {
+fn join_strings(values: Vec[String], sep: String) -> String {
     var out = ""
     var first = true
     for value in values {
@@ -890,7 +890,7 @@ pub fn join_strings(values: Vec[String], sep: String) -> String {
     out
 }
 
-pub fn path_contains_dot(path: String) -> bool {
+fn path_contains_dot(path: String) -> bool {
     var i = 0
     while i < len(path) {
         if char_at(path, i) == "." {
@@ -901,7 +901,7 @@ pub fn path_contains_dot(path: String) -> bool {
     false
 }
 
-pub fn starts_with_upper(text: String) -> bool {
+fn starts_with_upper(text: String) -> bool {
     if text == "" {
         return false
     }

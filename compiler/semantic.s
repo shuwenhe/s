@@ -53,7 +53,7 @@ pub struct VarState {
     ty: Type,
 }
 
-pub fn CheckSource(source: SourceFile) -> CheckResult {
+fn CheckSource(source: SourceFile) -> CheckResult {
     var diagnostics = Vec[Diagnostic]()
     var functions = collectFunctions(source)
     var structs = collectStructs(source)
@@ -70,7 +70,7 @@ pub fn CheckSource(source: SourceFile) -> CheckResult {
     }
 }
 
-pub fn IsOK(result: CheckResult) -> bool {
+fn IsOK(result: CheckResult) -> bool {
     result.diagnostics.len() == 0
 }
 
@@ -461,7 +461,7 @@ fn pushError(diagnostics: Vec[Diagnostic], message: String) -> () {
     })
 }
 
-pub fn UnknownTypeOf(label: String) -> Type {
+fn UnknownTypeOf(label: String) -> Type {
     Type::Unknown(UnknownType {
         label: label,
     })
