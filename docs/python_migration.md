@@ -46,7 +46,9 @@ Status: Working Draft
 
 - `prelude.py` 已有最小 S 版 [compiler/prelude.s](/app/s/compiler/prelude.s)
 - `__main__.py` 已有最小 S 版 [compiler/main.s](/app/s/compiler/main.s)
-- `semantic.py`、`mir.py`、`borrow.py` 仍然停留在 Python 主实现
+- `semantic.py` 已有最小 S 版 [compiler/semantic.s](/app/s/compiler/semantic.s)
+- `mir.py` 已有最小 S 版 [compiler/mir.s](/app/s/compiler/mir.s)
+- `borrow.py` 已有最小 S 版 [compiler/borrow.s](/app/s/compiler/borrow.s)
 
 ### Group C: Python Packaging / Test Glue
 
@@ -119,4 +121,5 @@ Status: Working Draft
 1. `prelude.py` 的最小 S 版已落地
 2. `__main__.py` 的最小 S 版 CLI 入口已落地
 3. `golden.py` 已有最小 S 版验证入口
-4. 下一步建议转到 `semantic.py` 的局部子集，优先挑纯类型/诊断路径
+4. `semantic.py`、`mir.py`、`borrow.py` 已有最小 S 版主链替代物
+5. 下一步建议继续清理 Python 测试 glue，并逐步缩小 runtime 宿主层

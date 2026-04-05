@@ -3,6 +3,7 @@ package compiler
 use std.fs.read_to_string
 use std.io.eprintln
 use std.io.println
+use std.prelude.to_string
 use std.result.Result
 use std.vec.Vec
 use frontend.dump_source_file
@@ -57,6 +58,16 @@ pub fn run(args: Vec[String]) -> Result[(), CliError] {
 
     if command.dump_ast {
         println(dump_source_file(parsed))
+    }
+
+    let checked = check_source(parsed)
+    if !is_ok(checked) {
+        for diagnostic in checked.diagnostics {
+            eprintln("error: " + diagnostic.message)
+        }
+        return Result::Err(CliError {
+            message: "semantic check failed",
+        })
     }
 
     println("ok: " + command.path)
