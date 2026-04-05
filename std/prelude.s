@@ -1,6 +1,6 @@
 package std.prelude
 
-pub struct Box[T] {
+struct Box[T] {
     value: T,
 }
 

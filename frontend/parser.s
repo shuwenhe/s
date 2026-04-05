@@ -6,13 +6,13 @@ use std.prelude.len
 use std.result.Result
 use std.vec.Vec
 
-pub struct ParseError {
+struct ParseError {
     message: String,
     line: i32,
     column: i32,
 }
 
-pub struct Parser {
+struct Parser {
     tokens: Vec[Token],
     index: i32,
 }
@@ -850,7 +850,7 @@ impl Parser {
     }
 }
 
-pub struct ParsedFunction {
+struct ParsedFunction {
     sig: FunctionSig,
     body: Option[BlockExpr],
 }
