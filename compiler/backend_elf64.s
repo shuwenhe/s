@@ -282,7 +282,7 @@ func execute_assign_stmt(
     Vec[LocalBinding] env,
 ) -> Result[(), BackendError] {
     var value = eval_expr(stmt.value, env)?
-    if !has_local(env, stmt.name) {
+    if !hasLocal(env, stmt.name) {
         return Result::Err(BackendError {
             message: "undefined name " + stmt.name,
         })
@@ -458,7 +458,7 @@ func set_local(
     })
 }
 
-func has_local(
+func hasLocal(
     Vec[LocalBinding] env,
     String name,
 ) -> bool {
