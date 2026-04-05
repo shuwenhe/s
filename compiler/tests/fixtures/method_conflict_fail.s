@@ -1,14 +1,14 @@
 package demo.conflict
 
-pub struct Point {
+struct Point {
     x: i32,
 }
 
-pub trait MeasureA {
+trait MeasureA {
     fn size(self: Point) -> i32;
 }
 
-pub trait MeasureB {
+trait MeasureB {
     fn size(self: Point) -> i32;
 }
 
@@ -24,6 +24,6 @@ impl MeasureB for Point {
     }
 }
 
-pub fn bad(p: Point) -> i32 {
+fn bad(p: Point) -> i32 {
     p.size()
 }
