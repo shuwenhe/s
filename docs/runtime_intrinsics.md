@@ -16,6 +16,12 @@ Status: Working Draft
 
 这些 intrinsic 目前还不是“标准库公开 API”，而是 self-hosted 前端在真正 runtime 落地前所依赖的最小执行契约。
 
+当前宿主桥接原型位于：
+
+- [runtime/README.md](/app/s/runtime/README.md)
+- [python_bridge.py](/app/s/runtime/python_bridge.py)
+- [validate_outputs.py](/app/s/runtime/validate_outputs.py)
+
 ## 2. String Intrinsics
 
 当前 [prelude.s](/app/s/std/prelude.s) 约定如下 intrinsic：
@@ -119,6 +125,6 @@ Draft 0.1 推荐：
 
 接下来最值得推进的是：
 
-1. 为这些 intrinsic 设计一个最小解释器后端或宿主桥接层
+1. 让 Python bridge 接到更明确的 S AST / intrinsic 调用层
 2. 让 `lex_dump` 真正跑通 `sample.s -> sample.tokens`
 3. 让 `ast_dump` 真正跑通 `sample.s -> sample.ast`
