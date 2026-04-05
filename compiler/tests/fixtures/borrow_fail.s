@@ -1,6 +1,6 @@
 package demo.borrow
 
-func bad(value: i32, text: String) -> String {
+String bad(i32 value, String text) {
     var shared = &value
     var unique = &mut value
     var moved = text

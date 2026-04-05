@@ -6,70 +6,70 @@ use frontend.BlockExpr
 use frontend.Expr
 
 struct LocalSlot {
-    id: i32,
-    name: String,
-    kind: String,
-    version: i32,
-    ty: Type,
+    i32 id,
+    String name,
+    String kind,
+    i32 version,
+    Type ty,
 }
 
 struct Operand {
-    kind: String,
-    slot: i32,
-    text: String,
+    String kind,
+    i32 slot,
+    String text,
 }
 
 struct AssignStmt {
-    target: i32,
-    op: String,
-    args: Vec[Operand],
+    i32 target,
+    String op,
+    Vec[Operand] args,
 }
 
 struct EvalStmt {
-    op: String,
-    args: Vec[Operand],
+    String op,
+    Vec[Operand] args,
 }
 
 struct MoveStmt {
-    target: i32,
-    source: Operand,
+    i32 target,
+    Operand source,
 }
 
 struct CopyStmt {
-    target: i32,
-    source: Operand,
+    i32 target,
+    Operand source,
 }
 
 struct DropStmt {
-    slot: i32,
+    i32 slot,
 }
 
 struct ControlEdge {
-    id: String,
-    target: i32,
-    args: Vec[Operand],
+    String id,
+    i32 target,
+    Vec[Operand] args,
 }
 
 struct Terminator {
-    kind: String,
-    edges: Vec[ControlEdge],
+    String kind,
+    Vec[ControlEdge] edges,
 }
 
 struct BasicBlock {
-    id: i32,
-    params: Vec[i32],
-    statements: Vec[String],
-    terminator: Terminator,
+    i32 id,
+    Vec[i32] params,
+    Vec[String] statements,
+    Terminator terminator,
 }
 
 struct MIRGraph {
-    blocks: Vec[BasicBlock],
-    entry: i32,
-    exit: i32,
-    locals: Vec[LocalSlot],
+    Vec[BasicBlock] blocks,
+    i32 entry,
+    i32 exit,
+    Vec[LocalSlot] locals,
 }
 
-func LowerBlock(block: BlockExpr, param_names: Vec[String], type_env: Vec[TypeBinding]) -> MIRGraph {
+MIRGraph LowerBlock(BlockExpr block, Vec[String] param_names, Vec[TypeBinding] type_env) {
     var locals = Vec[LocalSlot]()
     var statements = Vec[String]()
     var next_local = 0
