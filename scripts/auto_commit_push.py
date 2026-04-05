@@ -7,7 +7,6 @@ import signal
 import subprocess
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 
 
@@ -79,13 +78,45 @@ def has_upstream(repo):
     return result.returncode == 0
 
 
+def summarize_paths(paths):
+    labels = []
+    mapping = [
+        ("compiler/", "compiler"),
+        ("frontend/", "frontend"),
+        ("runtime/", "runtime"),
+        ("std/", "standard library"),
+        ("cmd/", "commands"),
+        ("docs/", "docs"),
+        ("editor/vscode/", "VS Code support"),
+        (".vscode/", "workspace settings"),
+        ("scripts/", "tooling"),
+    ]
+    for prefix, label in mapping:
+        if any(path.startswith(prefix) for path in paths):
+            labels.append(label)
+    if not labels:
+        labels.append("project files")
+    return labels
+
+
+def build_commit_message(paths):
+    labels = summarize_paths(paths)
+    if len(labels) == 1:
+        return f"Update {labels[0]}."
+    if len(labels) == 2:
+        return f"Update {labels[0]} and {labels[1]}."
+    return f"Update {', '.join(labels[:-1])}, and {labels[-1]}."
+
+
 def commit_and_push(repo, message_prefix):
+    del message_prefix
     git(repo, "add", "-A", check=True)
     cached = git(repo, "diff", "--cached", "--name-only", check=True).stdout.strip()
     if not cached:
         return False
+    changed_paths = [line.strip() for line in cached.splitlines() if line.strip()]
 
-    message = f"{message_prefix} {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    message = build_commit_message(changed_paths)
     git(repo, "commit", "-m", message, check=True)
 
     branch = current_branch(repo)
