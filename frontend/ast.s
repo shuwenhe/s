@@ -259,7 +259,6 @@ pub fn fmt_generics(generics: Vec[String]) -> String {
 
 pub fn dump_function(item: FunctionDecl, indent: String) -> Vec[String] {
     let lines = Vec[String]()
-    let prefix = if item.is_public { "pub " } else { "" }
     let params = Vec[String]()
     for param in item.sig.params {
         params.push(param.name + ": " + param.type_name)
@@ -271,7 +270,6 @@ pub fn dump_function(item: FunctionDecl, indent: String) -> Vec[String] {
         }
     lines.push(
         indent
-            + prefix
             + "fn "
             + item.sig.name
             + fmt_generics(item.sig.generics)
@@ -289,19 +287,16 @@ pub fn dump_function(item: FunctionDecl, indent: String) -> Vec[String] {
 
 pub fn dump_struct(item: StructDecl) -> Vec[String] {
     let lines = Vec[String]()
-    let prefix = if item.is_public { "pub " } else { "" }
-    lines.push(prefix + "struct " + item.name + fmt_generics(item.generics))
+    lines.push("struct " + item.name + fmt_generics(item.generics))
     for field in item.fields {
-        let fp = if field.is_public { "pub " } else { "" }
-        lines.push("  " + fp + field.name + ": " + field.type_name)
+        lines.push("  " + field.name + ": " + field.type_name)
     }
     lines
 }
 
 pub fn dump_enum(item: EnumDecl) -> Vec[String] {
     let lines = Vec[String]()
-    let prefix = if item.is_public { "pub " } else { "" }
-    lines.push(prefix + "enum " + item.name + fmt_generics(item.generics))
+    lines.push("enum " + item.name + fmt_generics(item.generics))
     for variant in item.variants {
         match variant.payload {
             Option::Some(payload) => lines.push("  " + variant.name + "(" + payload + ")"),
@@ -313,8 +308,7 @@ pub fn dump_enum(item: EnumDecl) -> Vec[String] {
 
 pub fn dump_trait(item: TraitDecl) -> Vec[String] {
     let lines = Vec[String]()
-    let prefix = if item.is_public { "pub " } else { "" }
-    lines.push(prefix + "trait " + item.name + fmt_generics(item.generics))
+    lines.push("trait " + item.name + fmt_generics(item.generics))
     for method in item.methods {
         let params = Vec[String]()
         for param in method.params {
