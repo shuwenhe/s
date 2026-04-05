@@ -15,10 +15,20 @@ pub struct Vec[T] {
 }
 
 pub fn new_vec[T]() -> Vec[T] {
+    with_capacity[T](4)
+}
+
+pub fn with_capacity[T](capacity: i32) -> Vec[T] {
+    let initial =
+        if capacity > 0 {
+            capacity
+        } else {
+            4
+        }
     Vec[T] {
         raw: RawVec[T] {
-            storage: box(new_array[T](4)),
-            capacity: 4,
+            storage: box(new_array[T](initial)),
+            capacity: initial,
         },
         length: 0,
     }
@@ -41,6 +51,33 @@ impl Vec[T] {
 
     pub fn len(self) -> i32 {
         self.length
+    }
+
+    pub fn capacity(self) -> i32 {
+        self.raw.capacity
+    }
+
+    pub fn is_empty(self) -> bool {
+        self.length == 0
+    }
+
+    pub fn get(self, index: i32) -> Option[T] {
+        if index < 0 || index >= self.length {
+            return Option::None
+        }
+        Option::Some(array_get(self.raw.storage.value, index))
+    }
+
+    pub fn set(mut self, index: i32, value: T) -> bool {
+        if index < 0 || index >= self.length {
+            return false
+        }
+        array_set(self.raw.storage.value, index, value)
+        true
+    }
+
+    pub fn clear(mut self) -> () {
+        self.length = 0
     }
 }
 
