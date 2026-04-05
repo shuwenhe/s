@@ -24,31 +24,31 @@ use frontend.SourceFile
 use frontend.StringExpr
 use frontend.WhileExpr
 
-pub struct Diagnostic {
+struct Diagnostic {
     message: String,
 }
 
-pub struct CheckResult {
+struct CheckResult {
     diagnostics: Vec[Diagnostic],
 }
 
-pub struct FunctionInfo {
+struct FunctionInfo {
     name: String,
     params: Vec[Type],
     return_type: Type,
 }
 
-pub struct StructInfo {
+struct StructInfo {
     name: String,
     fields: Vec[FieldType],
 }
 
-pub struct FieldType {
+struct FieldType {
     name: String,
     ty: Type,
 }
 
-pub struct VarState {
+struct VarState {
     name: String,
     ty: Type,
 }
