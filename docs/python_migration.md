@@ -71,6 +71,9 @@ Status: Working Draft
 当前状态：
 
 - `golden.py` 已有最小 S 版对应物 [compiler/golden.s](/app/s/compiler/golden.s)
+- `test_golden.py` 已有对应入口 [compiler/tests/test_golden.s](/app/s/compiler/tests/test_golden.s)
+- `test_semantic.py` 已有对应入口 [compiler/tests/test_semantic.s](/app/s/compiler/tests/test_semantic.s)
+- `test_mir.py` 已有对应入口 [compiler/tests/test_mir.s](/app/s/compiler/tests/test_mir.s)
 - Python 测试文件仍保留，继续作为宿主验证入口
 
 ### Group D: Host Bridge Must Stay For Now
