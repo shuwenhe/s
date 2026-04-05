@@ -1,0 +1,2 @@
+"""Slate compiler package."""
+
