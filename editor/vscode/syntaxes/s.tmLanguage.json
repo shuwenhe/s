@@ -173,7 +173,7 @@
         },
         {
           "name": "storage.type.declaration.s",
-          "match": "\\b(?:fn|let|var|struct|enum|trait|impl|for)\\b"
+          "match": "\\b(?:func|var|struct|enum|trait|impl|for)\\b"
         }
       ]
     },

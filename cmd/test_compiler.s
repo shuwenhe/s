@@ -12,7 +12,7 @@ struct cliError {
     message: String,
 }
 
-fn Main(args: Vec[String]) -> i32 {
+func Main(args: Vec[String]) -> i32 {
     match run(args) {
         Result::Ok(()) => 0,
         Result::Err(err) => {
@@ -22,7 +22,7 @@ fn Main(args: Vec[String]) -> i32 {
     }
 }
 
-fn run(args: Vec[String]) -> Result[(), cliError] {
+func run(args: Vec[String]) -> Result[(), cliError] {
     var fixtures_root =
         if args.len() >= 2 {
             args[1]

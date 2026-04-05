@@ -27,7 +27,7 @@ Status: Working Draft
 - `A*` 表示零次或多次
 - `A+` 表示一次或多次
 - `()` 表示分组
-- 字面终结符使用引号，例如 `"fn"`
+- 字面终结符使用引号，例如 `"func"`
 - 词法类使用大写名称，例如 `IDENT`
 
 为保持可读性，本文档不追求完全形式化的 parser grammar，而追求“足够严格、可落地实现”。
@@ -196,7 +196,7 @@ Visibility = "pub"
 
 ```text
 FunctionDecl =
-    Visibility? "fn" IDENT GenericParamList?
+    "func" IDENT GenericParamList?
     "(" ParamList? ")" ReturnType?
     WhereClause? BlockExpr
 ```
@@ -264,7 +264,7 @@ TraitItem =
 
 ```text
 FunctionSig =
-    "fn" IDENT GenericParamList?
+    "func" IDENT GenericParamList?
     "(" ParamList? ")" ReturnType?
     WhereClause?
 ```
@@ -395,7 +395,7 @@ TypeList =
 
 ```text
 FunctionType =
-    "fn" "(" TypeList? ")" "->" Type
+    "func" "(" TypeList? ")" "->" Type
 ```
 
 ### 8.6 Paths
