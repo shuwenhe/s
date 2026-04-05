@@ -60,7 +60,7 @@ def parse_type(text: str) -> Type:
         return UNIT
     if text == "bool":
         return BOOL
-    if text == "i32":
+    if text in {"i32", "int"}:
         return I32
     if text == "String":
         return STRING

@@ -156,6 +156,25 @@ class LetStmt(Stmt):
 
 
 @dataclass
+class AssignStmt(Stmt):
+    name: str
+    value: Expr
+
+
+@dataclass
+class IncrementStmt(Stmt):
+    name: str
+
+
+@dataclass
+class CForStmt(Stmt):
+    init: Stmt
+    condition: Expr
+    step: Stmt
+    body: "BlockExpr"
+
+
+@dataclass
 class ReturnStmt(Stmt):
     value: Optional[Expr]
 
@@ -313,6 +332,16 @@ def _dump_stmt(stmt: Stmt, indent: str) -> List[str]:
             text += f": {stmt.type_name}"
         text += f" = {_dump_expr(stmt.value)}"
         return [text]
+    if isinstance(stmt, AssignStmt):
+        return [f"{indent}{stmt.name} = {_dump_expr(stmt.value)}"]
+    if isinstance(stmt, IncrementStmt):
+        return [f"{indent}{stmt.name}++"]
+    if isinstance(stmt, CForStmt):
+        lines = [
+            f"{indent}for ({_dump_for_part(stmt.init)}; {_dump_expr(stmt.condition)}; {_dump_for_part(stmt.step)})"
+        ]
+        lines.extend(_dump_block(stmt.body, indent + "  "))
+        return lines
     if isinstance(stmt, ReturnStmt):
         value = _dump_expr(stmt.value) if stmt.value is not None else "()"
         return [f"{indent}return {value}"]
@@ -372,3 +401,15 @@ def _dump_pattern(pattern: Pattern) -> str:
         args = ", ".join(_dump_pattern(arg) for arg in pattern.args)
         return f"{pattern.path}({args})"
     return type(pattern).__name__
+
+
+def _dump_for_part(stmt: Stmt) -> str:
+    if isinstance(stmt, LetStmt):
+        if stmt.type_name:
+            return f"{stmt.type_name} {stmt.name} = {_dump_expr(stmt.value)}"
+        return f"let {stmt.name} = {_dump_expr(stmt.value)}"
+    if isinstance(stmt, AssignStmt):
+        return f"{stmt.name} = {_dump_expr(stmt.value)}"
+    if isinstance(stmt, IncrementStmt):
+        return f"{stmt.name}++"
+    return type(stmt).__name__

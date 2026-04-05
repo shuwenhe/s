@@ -4,11 +4,13 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from compiler.ast import (
+    AssignStmt,
     BlockExpr,
     BinaryExpr,
     BoolExpr,
     BorrowExpr,
     CallExpr,
+    CForStmt,
     EnumDecl,
     EnumVariant,
     Expr,
@@ -19,6 +21,7 @@ from compiler.ast import (
     ForExpr,
     IfExpr,
     ImplDecl,
+    IncrementStmt,
     IndexExpr,
     IntExpr,
     LetStmt,
@@ -228,11 +231,8 @@ class Parser:
         statements = []
         final_expr = None
         while not self._at_symbol("}"):
-            if self._at_keyword("let"):
-                statements.append(self._parse_let_stmt())
-                continue
-            if self._at_keyword("return"):
-                statements.append(self._parse_return_stmt())
+            if self._starts_stmt():
+                statements.append(self._parse_stmt())
                 continue
             expr = self._parse_expr()
             if self._eat_symbol(";"):
@@ -242,6 +242,32 @@ class Parser:
             break
         self._expect_symbol("}")
         return BlockExpr(statements=statements, final_expr=final_expr)
+
+    def _starts_stmt(self) -> bool:
+        return (
+            self._at_keyword("let")
+            or self._at_keyword("return")
+            or self._at_keyword("for")
+            or self._looks_like_typed_let()
+            or self._looks_like_assignment()
+            or self._looks_like_increment()
+        )
+
+    def _parse_stmt(self):
+        if self._at_keyword("let"):
+            return self._parse_let_stmt()
+        if self._at_keyword("return"):
+            return self._parse_return_stmt()
+        if self._at_keyword("for"):
+            return self._parse_c_for_stmt()
+        if self._looks_like_typed_let():
+            return self._parse_typed_let_stmt()
+        if self._looks_like_assignment():
+            return self._parse_assign_stmt()
+        if self._looks_like_increment():
+            return self._parse_increment_stmt()
+        token = self._peek()
+        raise ParseError(f"unexpected statement {token.value!r} at {token.line}:{token.column}")
 
     def _parse_let_stmt(self) -> LetStmt:
         self._expect_keyword("let")
@@ -253,6 +279,51 @@ class Parser:
         value = self._parse_expr()
         self._eat_symbol(";")
         return LetStmt(name=name, type_name=type_name, value=value)
+
+    def _parse_typed_let_stmt(self) -> LetStmt:
+        type_name = self._advance().value
+        name = self._expect_ident()
+        self._expect_symbol("=")
+        value = self._parse_expr()
+        self._eat_symbol(";")
+        return LetStmt(name=name, type_name=type_name, value=value)
+
+    def _parse_assign_stmt(self) -> AssignStmt:
+        name = self._expect_ident()
+        self._expect_symbol("=")
+        value = self._parse_expr()
+        self._eat_symbol(";")
+        return AssignStmt(name=name, value=value)
+
+    def _parse_increment_stmt(self) -> IncrementStmt:
+        name = self._expect_ident()
+        self._expect_symbol("++")
+        self._eat_symbol(";")
+        return IncrementStmt(name=name)
+
+    def _parse_c_for_stmt(self) -> CForStmt:
+        self._expect_keyword("for")
+        self._expect_symbol("(")
+        init = self._parse_for_clause_stmt()
+        self._expect_symbol(";")
+        condition = self._parse_expr()
+        self._expect_symbol(";")
+        step = self._parse_for_clause_stmt()
+        self._expect_symbol(")")
+        body = self._parse_block_expr()
+        return CForStmt(init=init, condition=condition, step=step, body=body)
+
+    def _parse_for_clause_stmt(self):
+        if self._at_keyword("let"):
+            return self._parse_let_stmt()
+        if self._looks_like_typed_let():
+            return self._parse_typed_let_stmt()
+        if self._looks_like_assignment():
+            return self._parse_assign_stmt()
+        if self._looks_like_increment():
+            return self._parse_increment_stmt()
+        token = self._peek()
+        raise ParseError(f"unexpected for clause {token.value!r} at {token.line}:{token.column}")
 
     def _parse_return_stmt(self) -> ReturnStmt:
         self._expect_keyword("return")
@@ -488,6 +559,28 @@ class Parser:
     def _at(self, kind: TokenKind) -> bool:
         return self._peek().kind == kind
 
+    def _looks_like_typed_let(self) -> bool:
+        return (
+            self._peek().kind in {TokenKind.IDENT, TokenKind.KEYWORD}
+            and self._peek(1).kind == TokenKind.IDENT
+            and self._peek(2).kind == TokenKind.SYMBOL
+            and self._peek(2).value == "="
+        )
+
+    def _looks_like_assignment(self) -> bool:
+        return (
+            self._peek().kind == TokenKind.IDENT
+            and self._peek(1).kind == TokenKind.SYMBOL
+            and self._peek(1).value == "="
+        )
+
+    def _looks_like_increment(self) -> bool:
+        return (
+            self._peek().kind == TokenKind.IDENT
+            and self._peek(1).kind == TokenKind.SYMBOL
+            and self._peek(1).value == "++"
+        )
+
     def _at_keyword(self, value: str) -> bool:
         token = self._peek()
         return token.kind == TokenKind.KEYWORD and token.value == value
@@ -537,8 +630,9 @@ class Parser:
             return token.value
         raise ParseError(f"expected identifier at {token.line}:{token.column}")
 
-    def _peek(self) -> Token:
-        return self.tokens[self.index]
+    def _peek(self, offset: int = 0) -> Token:
+        index = min(self.index + offset, len(self.tokens) - 1)
+        return self.tokens[index]
 
     def _advance(self) -> Token:
         token = self.tokens[self.index]
