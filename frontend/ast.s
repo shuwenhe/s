@@ -361,7 +361,7 @@ pub fn dump_block(block: BlockExpr, indent: String) -> Vec[String] {
 
 pub fn dump_stmt(stmt: Stmt, indent: String) -> Vec[String] {
     match stmt {
-        Stmt::Let(value) => {
+        Stmt::Var(value) => {
             var text =
                 match value.type_name {
                     Option::Some(type_name) => indent + "var " + value.name + ": " + type_name + " = " + dump_expr(value.value),
