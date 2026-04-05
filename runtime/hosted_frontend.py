@@ -6,7 +6,7 @@ from typing import Iterable
 
 from compiler.ast import NamePattern, VariantPattern, WildcardPattern, dump_source_file
 from compiler.lexer.tokens import KEYWORDS, Token, TokenKind, dump_tokens
-from compiler.parser.parser import Parser
+from compiler.parser.parser import ParseError, Parser
 from runtime.intrinsic_dispatch import IntrinsicCall, dispatch
 
 
@@ -221,8 +221,6 @@ class HostedParser(Parser):
             parts.append(self._expect_ident())
         if self._at_symbol("["):
             last = parts.pop()
-            if last is None:
-                raise self._error_here("expected identifier")
             parts.append(self._concat(last, self._parse_bracket_group()))
         return self._join_strings(parts, ".")
 
@@ -362,7 +360,7 @@ class HostedParser(Parser):
         return self._make_error(message, token.line, token.column)
 
     def _make_error(self, message: str, line: int, column: int):
-        return type("HostedParseError", (Exception,), {})(message)
+        return ParseError(f"{message} at {line}:{column}")
 
     def _peek(self) -> Token:
         return super()._peek()
