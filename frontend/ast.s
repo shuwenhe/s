@@ -261,7 +261,7 @@ func dump_function(item: FunctionDecl, indent: String) -> Vec[String] {
     var lines = Vec[String]()
     var params = Vec[String]()
     for param in item.sig.params {
-        params.push(param.name + ": " + param.type_name)
+        params.push(param.type_name + " " + param.name)
     }
     var ret =
         match item.sig.return_type {
@@ -289,7 +289,7 @@ func dump_struct(item: StructDecl) -> Vec[String] {
     var lines = Vec[String]()
     lines.push("struct " + item.name + fmt_generics(item.generics))
     for field in item.fields {
-        lines.push("  " + field.name + ": " + field.type_name)
+        lines.push("  " + field.type_name + " " + field.name)
     }
     lines
 }
@@ -312,7 +312,7 @@ func dump_trait(item: TraitDecl) -> Vec[String] {
     for method in item.methods {
         var params = Vec[String]()
         for param in method.params {
-            params.push(param.name + ": " + param.type_name)
+            params.push(param.type_name + " " + param.name)
         }
         var ret =
             match method.return_type {

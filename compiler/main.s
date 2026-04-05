@@ -11,16 +11,16 @@ use frontend.new_lexer
 use frontend.parse_source
 
 struct cliError {
-    message: String,
+    String message,
 }
 
 struct checkOptions {
-    path: String,
-    dump_tokens: bool,
-    dump_ast: bool,
+    String path,
+    bool dump_tokens,
+    bool dump_ast,
 }
 
-func Main(args: Vec[String]) -> i32 {
+func Main(Vec[String] args) -> i32 {
     match run(args) {
         Result::Ok(()) => 0,
         Result::Err(err) => {
@@ -30,7 +30,7 @@ func Main(args: Vec[String]) -> i32 {
     }
 }
 
-func run(args: Vec[String]) -> Result[(), cliError] {
+func run(Vec[String] args) -> Result[(), cliError] {
     var command = parseCommand(args)?
     var source = readSource(command.path)?
 
@@ -73,7 +73,7 @@ func run(args: Vec[String]) -> Result[(), cliError] {
     Result::Ok(())
 }
 
-func parseCommand(args: Vec[String]) -> Result[checkOptions, cliError] {
+func parseCommand(Vec[String] args) -> Result[checkOptions, cliError] {
     if args.len() < 3 {
         return usageError()
     }
@@ -105,7 +105,7 @@ func parseCommand(args: Vec[String]) -> Result[checkOptions, cliError] {
     Result::Ok(options)
 }
 
-func readSource(path: String) -> Result[String, cliError] {
+func readSource(String path) -> Result[String, cliError] {
     match read_to_string(path) {
         Result::Ok(source) => Result::Ok(source),
         Result::Err(_) => Result::Err(cliError {
