@@ -128,6 +128,16 @@ Current status:
 - `check_bridge.py` 与 `validate_outputs.py` 的职责已被新 runner 替代
 - Python 不再处于必经执行路径
 
+Current progress:
+
+- a minimal non-Python runner now exists in
+  [s_native_runner.c](/app/s/runtime/s_native_runner.c)
+- it can build the current
+  [hello.s](/app/s/examples/s/hello.s) and
+  [sum.s](/app/s/examples/s/sum.s)
+  subset without Python
+- it does not yet execute the full `cmd/s.s -> compiler.main(args)` path
+
 ## 4. Near-Term Work
 
 当前最近两步建议是：
