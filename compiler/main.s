@@ -11,16 +11,16 @@ use frontend.new_lexer
 use frontend.parse_source
 
 struct cliError {
-    String message,
+    message: String,
 }
 
 struct checkOptions {
-    String path,
-    bool dump_tokens,
-    bool dump_ast,
+    path: String,
+    dump_tokens: bool,
+    dump_ast: bool,
 }
 
-i32 Main(Vec[String] args) {
+func Main(args: Vec[String]) -> i32 {
     match run(args) {
         Result::Ok(()) => 0,
         Result::Err(err) => {
@@ -30,7 +30,7 @@ i32 Main(Vec[String] args) {
     }
 }
 
-Result[(), cliError] run(Vec[String] args) {
+func run(args: Vec[String]) -> Result[(), cliError] {
     var command = parseCommand(args)?
     var source = readSource(command.path)?
 
@@ -73,7 +73,7 @@ Result[(), cliError] run(Vec[String] args) {
     Result::Ok(())
 }
 
-Result[checkOptions, cliError] parseCommand(Vec[String] args) {
+func parseCommand(args: Vec[String]) -> Result[checkOptions, cliError] {
     if args.len() < 3 {
         return usageError()
     }
@@ -105,7 +105,7 @@ Result[checkOptions, cliError] parseCommand(Vec[String] args) {
     Result::Ok(options)
 }
 
-Result[String, cliError] readSource(String path) {
+func readSource(path: String) -> Result[String, cliError] {
     match read_to_string(path) {
         Result::Ok(source) => Result::Ok(source),
         Result::Err(_) => Result::Err(cliError {
@@ -114,7 +114,7 @@ Result[String, cliError] readSource(String path) {
     }
 }
 
-Result[checkOptions, cliError] usageError() {
+func usageError() -> Result[checkOptions, cliError] {
     Result::Err(cliError {
         message: "usage: s check <path> [--dump-tokens] [--dump-ast]",
     })
