@@ -16,12 +16,14 @@ pub struct Parser {
 }
 
 pub fn parse_source(source: String) -> Result[SourceFile, ParseError] {
-    let tokens = new_lexer(source).tokenize().map_err(|err| ParseError {
-        message: err.message,
-        line: err.line,
-        column: err.column,
-    })?
-    parse_tokens(tokens)
+    match new_lexer(source).tokenize() {
+        Result::Ok(tokens) => parse_tokens(tokens),
+        Result::Err(err) => Result::Err(ParseError {
+            message: err.message,
+            line: err.line,
+            column: err.column,
+        }),
+    }
 }
 
 pub fn parse_tokens(tokens: Vec[Token]) -> Result[SourceFile, ParseError] {
@@ -890,7 +892,14 @@ pub fn join_strings(values: Vec[String], sep: String) -> String {
 }
 
 pub fn path_contains_dot(path: String) -> bool {
-    contains_string(Vec[String] { "." }, char_vec(path))
+    let i = 0
+    while i < len(path) {
+        if char_at(path, i) == "." {
+            return true
+        }
+        i = i + 1
+    }
+    false
 }
 
 pub fn starts_with_upper(text: String) -> bool {
