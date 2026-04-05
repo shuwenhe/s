@@ -362,8 +362,8 @@ class HostedParser(Parser):
     def _make_error(self, message: str, line: int, column: int):
         return ParseError(f"{message} at {line}:{column}")
 
-    def _peek(self) -> Token:
-        return super()._peek()
+    def _peek(self, offset: int = 0) -> Token:
+        return super()._peek(offset)
 
     def _advance(self) -> Token:
         return super()._advance()
