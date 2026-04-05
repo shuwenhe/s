@@ -4,11 +4,13 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from compiler.ast import (
+    AssignStmt,
     BinaryExpr,
     BlockExpr,
     BoolExpr,
     BorrowExpr,
     CallExpr,
+    CForStmt,
     EnumDecl,
     Expr,
     ExprStmt,
@@ -16,6 +18,7 @@ from compiler.ast import (
     FunctionDecl,
     IfExpr,
     ImplDecl,
+    IncrementStmt,
     IndexExpr,
     IntExpr,
     LetStmt,
@@ -232,6 +235,35 @@ class Checker:
             resolved = declared or value_type
             scope[stmt.name] = VarState(resolved)
             self._current_type_env[stmt.name] = resolved
+            return
+        if isinstance(stmt, AssignStmt):
+            state = scope.get(stmt.name)
+            if state is None:
+                self._error(f"unresolved name {stmt.name}")
+                self._infer_expr(stmt.value, scope)
+                return
+            value_type = self._infer_expr(stmt.value, scope)
+            if not self._type_eq(state.ty, value_type):
+                self._error(f"assign {stmt.name} expected {dump_type(state.ty)}, got {dump_type(value_type)}")
+            return
+        if isinstance(stmt, IncrementStmt):
+            state = scope.get(stmt.name)
+            if state is None:
+                self._error(f"unresolved name {stmt.name}")
+                return
+            if not self._type_eq(state.ty, I32):
+                self._error(f"increment {stmt.name} expected i32, got {dump_type(state.ty)}")
+            return
+        if isinstance(stmt, CForStmt):
+            loop_scope = self._clone_scope(scope)
+            self._check_stmt(stmt.init, loop_scope, expected_return)
+            cond_type = self._infer_expr(stmt.condition, loop_scope)
+            if not self._type_eq(cond_type, BOOL):
+                self._error(f"for condition expected bool, got {dump_type(cond_type)}")
+            body_scope = self._clone_scope(loop_scope)
+            self._check_block(stmt.body, body_scope, UNIT)
+            self._check_stmt(stmt.step, body_scope, expected_return)
+            self._merge_back(scope, body_scope)
             return
         if isinstance(stmt, ReturnStmt):
             actual = self._infer_expr(stmt.value, scope) if stmt.value is not None else UNIT
