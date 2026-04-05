@@ -13,3 +13,9 @@ Current scope:
 - `cmd/ast_dump.s`: minimal self-hosting driver for `source -> AST dump`
 
 These files are intentionally foundational. They are the first step toward replacing the Python prototype with S implementations in the order described by [docs/self_hosting.md](/app/s/docs/self_hosting.md).
+
+Supporting docs:
+
+- [docs/selfhost_lex_dump.md](/app/s/docs/selfhost_lex_dump.md)
+- [docs/ast_dump.md](/app/s/docs/ast_dump.md)
+- [docs/runtime_intrinsics.md](/app/s/docs/runtime_intrinsics.md)
