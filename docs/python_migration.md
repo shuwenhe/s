@@ -74,6 +74,7 @@ Status: Working Draft
 - `test_golden.py` 已有对应入口 [compiler/tests/test_golden.s](/app/s/compiler/tests/test_golden.s)
 - `test_semantic.py` 已有对应入口 [compiler/tests/test_semantic.s](/app/s/compiler/tests/test_semantic.s)
 - `test_mir.py` 已有对应入口 [compiler/tests/test_mir.s](/app/s/compiler/tests/test_mir.s)
+- 新增统一 S 侧测试入口 [test_compiler.s](/app/s/cmd/test_compiler.s)
 - Python 测试文件仍保留，继续作为宿主验证入口
 
 ### Group D: Host Bridge Must Stay For Now
