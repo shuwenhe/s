@@ -1,5 +1,5 @@
 package std.io
 
-fn println(text: String) -> () {}
+func println(text: String) -> () {}
 
-fn eprintln(text: String) -> () {}
+func eprintln(text: String) -> () {}

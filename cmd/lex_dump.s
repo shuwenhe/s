@@ -14,7 +14,7 @@ struct CliError {
     message: String,
 }
 
-fn main(args: Vec[String]) -> i32 {
+func main(args: Vec[String]) -> i32 {
     match run(args) {
         Result::Ok(()) => 0,
         Result::Err(err) => {
@@ -24,7 +24,7 @@ fn main(args: Vec[String]) -> i32 {
     }
 }
 
-fn run(args: Vec[String]) -> Result[(), CliError] {
+func run(args: Vec[String]) -> Result[(), CliError] {
     var path = parse_path(args)?
     var source = read_source(path)?
     var tokens = lex_source(source)?
@@ -32,7 +32,7 @@ fn run(args: Vec[String]) -> Result[(), CliError] {
     Result::Ok(())
 }
 
-fn parse_path(args: Vec[String]) -> Result[String, CliError] {
+func parse_path(args: Vec[String]) -> Result[String, CliError] {
     if len(args) < 2 {
         return Result::Err(CliError {
             message: "usage: lex_dump <path>",
@@ -41,7 +41,7 @@ fn parse_path(args: Vec[String]) -> Result[String, CliError] {
     Result::Ok(args[1])
 }
 
-fn read_source(path: String) -> Result[String, CliError] {
+func read_source(path: String) -> Result[String, CliError] {
     match read_to_string(path) {
         Result::Ok(source) => Result::Ok(source),
         Result::Err(_) => Result::Err(CliError {
@@ -50,7 +50,7 @@ fn read_source(path: String) -> Result[String, CliError] {
     }
 }
 
-fn lex_source(source: String) -> Result[Vec[Token], CliError] {
+func lex_source(source: String) -> Result[Vec[Token], CliError] {
     match new_lexer(source).tokenize() {
         Result::Ok(tokens) => Result::Ok(tokens),
         Result::Err(err) => Result::Err(CliError {

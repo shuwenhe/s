@@ -17,7 +17,7 @@ struct Parser {
     index: i32,
 }
 
-fn parse_source(source: String) -> Result[SourceFile, ParseError] {
+func parse_source(source: String) -> Result[SourceFile, ParseError] {
     match new_lexer(source).tokenize() {
         Result::Ok(tokens) => parse_tokens(tokens),
         Result::Err(err) => Result::Err(ParseError {
@@ -28,7 +28,7 @@ fn parse_source(source: String) -> Result[SourceFile, ParseError] {
     }
 }
 
-fn parse_tokens(tokens: Vec[Token]) -> Result[SourceFile, ParseError] {
+func parse_tokens(tokens: Vec[Token]) -> Result[SourceFile, ParseError] {
     var parser = Parser {
         tokens: tokens,
         index: 0,
@@ -37,7 +37,7 @@ fn parse_tokens(tokens: Vec[Token]) -> Result[SourceFile, ParseError] {
 }
 
 impl Parser {
-    fn parse_source_file(mut self) -> Result[SourceFile, ParseError] {
+    func parse_source_file(mut self) -> Result[SourceFile, ParseError] {
         self.expect_keyword("package")?
         var package = self.parse_path()?
         var uses = Vec[UseDecl]()
@@ -58,7 +58,7 @@ impl Parser {
         })
     }
 
-    fn parse_use_decl(mut self) -> Result[UseDecl, ParseError] {
+    func parse_use_decl(mut self) -> Result[UseDecl, ParseError] {
         self.expect_keyword("use")?
         var path = self.parse_use_path()?
         var alias =
@@ -74,8 +74,8 @@ impl Parser {
         })
     }
 
-    fn parse_item(mut self) -> Result[Item, ParseError] {
-        if self.at_keyword("fn") {
+    func parse_item(mut self) -> Result[Item, ParseError] {
+        if self.at_keyword("func") {
             return Result::Ok(Item::Function(self.parse_function_decl()?))
         }
         if self.at_keyword("struct") {
@@ -93,7 +93,7 @@ impl Parser {
         Result::Err(self.error_here("unexpected token"))
     }
 
-    fn parse_function_decl(mut self) -> Result[FunctionDecl, ParseError] {
+    func parse_function_decl(mut self) -> Result[FunctionDecl, ParseError] {
         var pair = self.parse_function(true)?
         Result::Ok(FunctionDecl {
             sig: pair.sig,
@@ -102,7 +102,7 @@ impl Parser {
         })
     }
 
-    fn parse_struct_decl(mut self) -> Result[StructDecl, ParseError] {
+    func parse_struct_decl(mut self) -> Result[StructDecl, ParseError] {
         self.expect_keyword("struct")?
         var name = self.expect_ident()?
         var generics = self.parse_generic_params()?
@@ -129,7 +129,7 @@ impl Parser {
         })
     }
 
-    fn parse_enum_decl(mut self) -> Result[EnumDecl, ParseError] {
+    func parse_enum_decl(mut self) -> Result[EnumDecl, ParseError] {
         self.expect_keyword("enum")?
         var name = self.expect_ident()?
         var generics = self.parse_generic_params()?
@@ -161,7 +161,7 @@ impl Parser {
         })
     }
 
-    fn parse_trait_decl(mut self) -> Result[TraitDecl, ParseError] {
+    func parse_trait_decl(mut self) -> Result[TraitDecl, ParseError] {
         self.expect_keyword("trait")?
         var name = self.expect_ident()?
         var generics = self.parse_generic_params()?
@@ -182,7 +182,7 @@ impl Parser {
         })
     }
 
-    fn parse_impl_decl(mut self) -> Result[ImplDecl, ParseError] {
+    func parse_impl_decl(mut self) -> Result[ImplDecl, ParseError] {
         self.expect_keyword("impl")?
         var generics = self.parse_generic_params()?
         var first = self.parse_path()?
@@ -210,8 +210,8 @@ impl Parser {
         })
     }
 
-    fn parse_function(mut self, require_body: bool) -> Result[ParsedFunction, ParseError] {
-        self.expect_keyword("fn")?
+    func parse_function(mut self, require_body: bool) -> Result[ParsedFunction, ParseError] {
+        self.expect_keyword("func")?
         var name = self.expect_ident()?
         var generics = self.parse_generic_params()?
         self.expect_symbol("(")?
@@ -245,7 +245,7 @@ impl Parser {
         })
     }
 
-    fn parse_params(mut self) -> Result[Vec[Param], ParseError] {
+    func parse_params(mut self) -> Result[Vec[Param], ParseError] {
         var params = Vec[Param]()
         if self.at_symbol(")") {
             return Result::Ok(params)
@@ -267,7 +267,7 @@ impl Parser {
         Result::Ok(params)
     }
 
-    fn parse_param_name(mut self) -> Result[String, ParseError] {
+    func parse_param_name(mut self) -> Result[String, ParseError] {
         if self.eat_keyword("mut") {
             return Result::Ok("mut " + self.expect_ident()?)
         }
@@ -289,7 +289,7 @@ impl Parser {
         self.expect_ident()
     }
 
-    fn parse_generic_params(mut self) -> Result[Vec[String], ParseError] {
+    func parse_generic_params(mut self) -> Result[Vec[String], ParseError] {
         var generics = Vec[String]()
         if !self.eat_symbol("[") {
             return Result::Ok(generics)
@@ -315,7 +315,7 @@ impl Parser {
         Result::Ok(generics)
     }
 
-    fn parse_where_clause(mut self) -> Result[(), ParseError] {
+    func parse_where_clause(mut self) -> Result[(), ParseError] {
         if !self.eat_keyword("where") {
             return Result::Ok(())
         }
@@ -328,7 +328,7 @@ impl Parser {
         Result::Ok(())
     }
 
-    fn parse_block_expr(mut self) -> Result[BlockExpr, ParseError] {
+    func parse_block_expr(mut self) -> Result[BlockExpr, ParseError] {
         self.expect_symbol("{")?
         var statements = Vec[Stmt]()
         var final_expr = Option::None
@@ -360,7 +360,7 @@ impl Parser {
         })
     }
 
-    fn parse_var_stmt(mut self) -> Result[VarStmt, ParseError] {
+    func parse_var_stmt(mut self) -> Result[VarStmt, ParseError] {
         self.expect_keyword("var")?
         var name = self.expect_ident()?
         var type_name =
@@ -379,7 +379,7 @@ impl Parser {
         })
     }
 
-    fn parse_return_stmt(mut self) -> Result[ReturnStmt, ParseError] {
+    func parse_return_stmt(mut self) -> Result[ReturnStmt, ParseError] {
         self.expect_keyword("return")?
         if self.eat_symbol(";") {
             return Result::Ok(ReturnStmt {
@@ -393,7 +393,7 @@ impl Parser {
         })
     }
 
-    fn parse_expr(mut self) -> Result[Expr, ParseError] {
+    func parse_expr(mut self) -> Result[Expr, ParseError] {
         if self.at_keyword("match") {
             return self.parse_match_expr()
         }
@@ -409,7 +409,7 @@ impl Parser {
         self.parse_binary_expr(0)
     }
 
-    fn parse_match_expr(mut self) -> Result[Expr, ParseError] {
+    func parse_match_expr(mut self) -> Result[Expr, ParseError] {
         self.expect_keyword("match")?
         var subject = self.parse_expr()?
         self.expect_symbol("{")?
@@ -433,7 +433,7 @@ impl Parser {
         }))
     }
 
-    fn parse_if_expr(mut self) -> Result[Expr, ParseError] {
+    func parse_if_expr(mut self) -> Result[Expr, ParseError] {
         self.expect_keyword("if")?
         var condition = self.parse_expr()?
         var then_branch = self.parse_block_expr()?
@@ -456,7 +456,7 @@ impl Parser {
         }))
     }
 
-    fn parse_while_expr(mut self) -> Result[Expr, ParseError] {
+    func parse_while_expr(mut self) -> Result[Expr, ParseError] {
         self.expect_keyword("while")?
         var condition = self.parse_expr()?
         var body = self.parse_block_expr()?
@@ -467,7 +467,7 @@ impl Parser {
         }))
     }
 
-    fn parse_for_expr(mut self) -> Result[Expr, ParseError] {
+    func parse_for_expr(mut self) -> Result[Expr, ParseError] {
         self.expect_keyword("for")?
         var name = self.expect_ident()?
         self.expect_keyword("in")?
@@ -481,7 +481,7 @@ impl Parser {
         }))
     }
 
-    fn parse_pattern(mut self) -> Result[Pattern, ParseError] {
+    func parse_pattern(mut self) -> Result[Pattern, ParseError] {
         if self.eat_ident_value("_") {
             return Result::Ok(Pattern::Wildcard(WildcardPattern {}))
         }
@@ -514,7 +514,7 @@ impl Parser {
         Result::Ok(Pattern::Name(NamePattern { name: path }))
     }
 
-    fn parse_binary_expr(mut self, min_precedence: i32) -> Result[Expr, ParseError] {
+    func parse_binary_expr(mut self, min_precedence: i32) -> Result[Expr, ParseError] {
         var expr = self.parse_unary_expr()?
         while true {
             var token = self.peek()?
@@ -534,7 +534,7 @@ impl Parser {
         Result::Ok(expr)
     }
 
-    fn parse_unary_expr(mut self) -> Result[Expr, ParseError] {
+    func parse_unary_expr(mut self) -> Result[Expr, ParseError] {
         if self.eat_symbol("&") {
             var mutable = self.eat_keyword("mut")
             var target = self.parse_unary_expr()?
@@ -547,7 +547,7 @@ impl Parser {
         self.parse_call_expr()
     }
 
-    fn parse_call_expr(mut self) -> Result[Expr, ParseError] {
+    func parse_call_expr(mut self) -> Result[Expr, ParseError] {
         var expr = self.parse_primary_expr()?
         while true {
             if self.eat_symbol("(") {
@@ -591,7 +591,7 @@ impl Parser {
         Result::Ok(expr)
     }
 
-    fn parse_primary_expr(mut self) -> Result[Expr, ParseError] {
+    func parse_primary_expr(mut self) -> Result[Expr, ParseError] {
         var token = self.peek()?
         if token.kind == TokenKind::Int {
             self.advance()?
@@ -635,7 +635,7 @@ impl Parser {
         }))
     }
 
-    fn binary_precedence(self, op: String) -> i32 {
+    func binary_precedence(self, op: String) -> i32 {
         match op {
             "||" => 1,
             "&&" => 2,
@@ -654,7 +654,7 @@ impl Parser {
         }
     }
 
-    fn parse_use_path(mut self) -> Result[String, ParseError] {
+    func parse_use_path(mut self) -> Result[String, ParseError] {
         var parts = Vec[String]()
         parts.push(self.expect_ident()?)
         while self.eat_symbol(".") {
@@ -678,7 +678,7 @@ impl Parser {
         Result::Ok(join_strings(parts, "."))
     }
 
-    fn parse_path(mut self) -> Result[String, ParseError] {
+    func parse_path(mut self) -> Result[String, ParseError] {
         var parts = Vec[String]()
         parts.push(self.expect_ident()?)
         while self.eat_symbol(".") {
@@ -691,7 +691,7 @@ impl Parser {
         Result::Ok(join_strings(parts, "."))
     }
 
-    fn parse_type_text(mut self, stop_values: Vec[String]) -> Result[String, ParseError] {
+    func parse_type_text(mut self, stop_values: Vec[String]) -> Result[String, ParseError] {
         var parts = Vec[String]()
         var bracket = 0
         var paren = 0
@@ -722,7 +722,7 @@ impl Parser {
         Result::Ok(normalize_type_text(join_strings(parts, " ")))
     }
 
-    fn parse_bracket_group(mut self) -> Result[String, ParseError] {
+    func parse_bracket_group(mut self) -> Result[String, ParseError] {
         var parts = Vec[String]()
         parts.push(self.advance()?.value)
         var depth = 1
@@ -743,21 +743,21 @@ impl Parser {
         )
     }
 
-    fn at(self, kind: TokenKind) -> bool {
+    func at(self, kind: TokenKind) -> bool {
         self.peek().unwrap().kind == kind
     }
 
-    fn at_keyword(self, value: String) -> bool {
+    func at_keyword(self, value: String) -> bool {
         var token = self.peek().unwrap()
         token.kind == TokenKind::Keyword && token.value == value
     }
 
-    fn at_symbol(self, value: String) -> bool {
+    func at_symbol(self, value: String) -> bool {
         var token = self.peek().unwrap()
         token.kind == TokenKind::Symbol && token.value == value
     }
 
-    fn eat_keyword(mut self, value: String) -> bool {
+    func eat_keyword(mut self, value: String) -> bool {
         if self.at_keyword(value) {
             self.advance().unwrap()
             return true
@@ -765,7 +765,7 @@ impl Parser {
         false
     }
 
-    fn eat_ident_value(mut self, value: String) -> bool {
+    func eat_ident_value(mut self, value: String) -> bool {
         var token = self.peek().unwrap()
         if token.kind == TokenKind::Ident && token.value == value {
             self.advance().unwrap()
@@ -774,7 +774,7 @@ impl Parser {
         false
     }
 
-    fn eat_symbol(mut self, value: String) -> bool {
+    func eat_symbol(mut self, value: String) -> bool {
         if self.at_symbol(value) {
             self.advance().unwrap()
             return true
@@ -782,7 +782,7 @@ impl Parser {
         false
     }
 
-    fn expect_keyword(mut self, value: String) -> Result[Token, ParseError] {
+    func expect_keyword(mut self, value: String) -> Result[Token, ParseError] {
         var token = self.peek()?
         if token.kind == TokenKind::Keyword && token.value == value {
             return self.advance()
@@ -794,7 +794,7 @@ impl Parser {
         })
     }
 
-    fn expect_symbol(mut self, value: String) -> Result[Token, ParseError] {
+    func expect_symbol(mut self, value: String) -> Result[Token, ParseError] {
         var token = self.peek()?
         if token.kind == TokenKind::Symbol && token.value == value {
             return self.advance()
@@ -806,7 +806,7 @@ impl Parser {
         })
     }
 
-    fn expect_ident(mut self) -> Result[String, ParseError] {
+    func expect_ident(mut self) -> Result[String, ParseError] {
         var token = self.peek()?
         if token.kind == TokenKind::Ident {
             self.advance()?
@@ -823,7 +823,7 @@ impl Parser {
         })
     }
 
-    fn peek(self) -> Result[Token, ParseError] {
+    func peek(self) -> Result[Token, ParseError] {
         if self.index >= len(self.tokens) {
             return Result::Err(ParseError {
                 message: "unexpected eof",
@@ -834,13 +834,13 @@ impl Parser {
         Result::Ok(self.tokens[self.index])
     }
 
-    fn advance(mut self) -> Result[Token, ParseError] {
+    func advance(mut self) -> Result[Token, ParseError] {
         var token = self.peek()?
         self.index = self.index + 1
         Result::Ok(token)
     }
 
-    fn error_here(self, message: String) -> ParseError {
+    func error_here(self, message: String) -> ParseError {
         var token = self.peek().unwrap()
         ParseError {
             message: message,
@@ -855,7 +855,7 @@ struct ParsedFunction {
     body: Option[BlockExpr],
 }
 
-fn normalize_type_text(text: String) -> String {
+func normalize_type_text(text: String) -> String {
     text
         .replace(" . ", ".")
         .replace("[ ", "[")
@@ -868,7 +868,7 @@ fn normalize_type_text(text: String) -> String {
         .replace(" [", "[")
 }
 
-fn contains_string(values: Vec[String], target: String) -> bool {
+func contains_string(values: Vec[String], target: String) -> bool {
     for value in values {
         if value == target {
             return true
@@ -877,7 +877,7 @@ fn contains_string(values: Vec[String], target: String) -> bool {
     false
 }
 
-fn join_strings(values: Vec[String], sep: String) -> String {
+func join_strings(values: Vec[String], sep: String) -> String {
     var out = ""
     var first = true
     for value in values {
@@ -890,7 +890,7 @@ fn join_strings(values: Vec[String], sep: String) -> String {
     out
 }
 
-fn path_contains_dot(path: String) -> bool {
+func path_contains_dot(path: String) -> bool {
     var i = 0
     while i < len(path) {
         if char_at(path, i) == "." {
@@ -901,7 +901,7 @@ fn path_contains_dot(path: String) -> bool {
     false
 }
 
-fn starts_with_upper(text: String) -> bool {
+func starts_with_upper(text: String) -> bool {
     if text == "" {
         return false
     }
