@@ -10,11 +10,11 @@ use compiler.ParseType
 use frontend.parse_source
 
 struct MirFailure {
-    String name,
-    String message,
+    name: String,
+    message: String,
 }
 
-Vec[MirFailure] RunMirSuite() {
+func RunMirSuite() -> Vec[MirFailure] {
     var failures = Vec[MirFailure]()
 
     match checkLocalsVersioned() {
@@ -35,7 +35,7 @@ Vec[MirFailure] RunMirSuite() {
     failures
 }
 
-Result[(), MirFailure] checkLocalsVersioned() {
+func checkLocalsVersioned() -> Result[(), MirFailure] {
     var parsed =
         match parse_source(
             "package demo.mir\n\nfn shadow(x: i32) -> i32 {\n    var x = 1\n    x\n}\n",
@@ -77,7 +77,7 @@ Result[(), MirFailure] checkLocalsVersioned() {
     }
 }
 
-Result[(), MirFailure] checkMirShape() {
+func checkMirShape() -> Result[(), MirFailure] {
     var parsed =
         match parse_source(
             "package demo.mir\n\nfn choose(flag: bool) -> i32 {\n    if flag {\n        1\n    } else {\n        2\n    }\n}\n",
@@ -119,7 +119,7 @@ Result[(), MirFailure] checkMirShape() {
     }
 }
 
-Result[(), MirFailure] checkPreludeShape() {
+func checkPreludeShape() -> Result[(), MirFailure] {
     var prelude = LoadPrelude()
     if prelude.name != "std.prelude" {
         return Result::Err(MirFailure {

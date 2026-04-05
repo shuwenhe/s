@@ -10,18 +10,18 @@ use compiler.LoadPrelude
 use frontend.parse_source
 
 struct semanticCase {
-    String name,
-    String path,
-    bool should_pass,
-    Option[String] expected_message,
+    name: String,
+    path: String,
+    should_pass: bool,
+    expected_message: Option[String],
 }
 
 struct SemanticFailure {
-    String name,
-    String message,
+    name: String,
+    message: String,
 }
 
-Vec[semanticCase] semanticCases(String fixtures_root) {
+func semanticCases(fixtures_root: String) -> Vec[semanticCase] {
     Vec[semanticCase] {
         semanticCase {
             name: "check_ok",
@@ -68,7 +68,7 @@ Vec[semanticCase] semanticCases(String fixtures_root) {
     }
 }
 
-Vec[SemanticFailure] RunSemanticSuite(String fixtures_root) {
+func RunSemanticSuite(fixtures_root: String) -> Vec[SemanticFailure] {
     var failures = Vec[SemanticFailure]()
 
     for case in semanticCases(fixtures_root) {
@@ -89,7 +89,7 @@ Vec[SemanticFailure] RunSemanticSuite(String fixtures_root) {
     failures
 }
 
-Result[(), SemanticFailure] runCase(semanticCase case) {
+func runCase(case: semanticCase) -> Result[(), SemanticFailure] {
     var source =
         match read_to_string(case.path) {
             Result::Ok(value) => value,
@@ -136,7 +136,7 @@ Result[(), SemanticFailure] runCase(semanticCase case) {
     Result::Ok(())
 }
 
-bool hasDiagnostic(Vec[Diagnostic] diagnostics, String expected) {
+func hasDiagnostic(diagnostics: Vec[Diagnostic], expected: String) -> bool {
     for diagnostic in diagnostics {
         if diagnostic.message == expected {
             return true
