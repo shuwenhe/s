@@ -1,4 +1,4 @@
-package selfhost.cmd
+package cmd
 
 use std.fs.read_to_string
 use std.io.eprintln
@@ -6,9 +6,9 @@ use std.io.println
 use std.prelude.to_string
 use std.result.Result
 use std.vec.Vec
-use selfhost.frontend.dump_tokens
-use selfhost.frontend.new_lexer
-use selfhost.frontend.Token
+use frontend.dump_tokens
+use frontend.new_lexer
+use frontend.Token
 
 pub struct CliError {
     message: String,
