@@ -143,6 +143,14 @@ python3 /app/s/runtime/validate_outputs.py all
 
 现在已经不再直接走 Python 原型 lexer，而是通过 [hosted_frontend.py](/app/s/runtime/hosted_frontend.py) 中的 `HostedLexer` 真实产出并执行 `IntrinsicCall`，再完成 `lex_dump` / `ast_dump` 的 golden 对比。
 
+当前 parser 侧也已经开始接入这条链：
+
+- `HostedParser._parse_pattern`
+- `HostedParser._path_contains_dot`
+- `HostedParser._starts_with_upper`
+
+这些 helper 现在会通过 `__runtime_len` / `__string_char_at` 产出并执行显式 `IntrinsicCall`，而不是直接依赖 Python 原生字符串语义。
+
 ## 9. Next Step
 
 下一步最值得推进的是：
