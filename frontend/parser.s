@@ -75,6 +75,9 @@ impl Parser {
     }
 
     func parse_item(mut self) -> Result[Item, ParseError] {
+        if self.at_keyword("func") {
+            return Result::Ok(Item::Function(self.parse_function_decl()?))
+        }
         if self.at_keyword("struct") {
             return Result::Ok(Item::Struct(self.parse_struct_decl()?))
         }
@@ -107,11 +110,13 @@ impl Parser {
         var fields = Vec[Field]()
 
         while !self.eat_symbol("}") {
-            var field = self.parse_typed_name(Vec[String] { ",", "}" })?
+            var field_name = self.expect_ident()?
+            self.expect_symbol(":")?
+            var field_type = self.parse_type_text(Vec[String] { ",", "}" })?
             fields.push(Field {
-                name: field.name,
-                type_name: field.type_name,
-                is_public: starts_with_upper(field.name),
+                name: field_name,
+                type_name: field_type,
+                is_public: starts_with_upper(field_name),
             })
             self.eat_symbol(",")
         }
@@ -206,10 +211,19 @@ impl Parser {
     }
 
     func parse_function(mut self, require_body: bool) -> Result[ParsedFunction, ParseError] {
-        var head = self.parse_function_head()?
+        self.expect_keyword("func")?
+        var name = self.expect_ident()?
+        var generics = self.parse_generic_params()?
         self.expect_symbol("(")?
         var params = self.parse_params()?
         self.expect_symbol(")")?
+
+        var return_type =
+            if self.eat_symbol("->") {
+                Option::Some(self.parse_type_text(Vec[String] { "where", "{", ";" })?)
+            } else {
+                Option::None
+            }
 
         self.parse_where_clause()?
 
@@ -222,10 +236,10 @@ impl Parser {
 
         Result::Ok(ParsedFunction {
             sig: FunctionSig {
-                name: head.name,
-                generics: head.generics,
+                name: name,
+                generics: generics,
                 params: params,
-                return_type: head.return_type,
+                return_type: return_type,
             },
             body: body,
         })
@@ -238,10 +252,12 @@ impl Parser {
         }
 
         while true {
-            var part = self.parse_typed_name(Vec[String] { ",", ")" })?
+            var name = self.parse_param_name()?
+            self.expect_symbol(":")?
+            var type_name = self.parse_type_text(Vec[String] { ",", ")" })?
             params.push(Param {
-                name: part.name,
-                type_name: part.type_name,
+                name: name,
+                type_name: type_name,
             })
             if !self.eat_symbol(",") || self.at_symbol(")") {
                 break
@@ -249,6 +265,28 @@ impl Parser {
         }
 
         Result::Ok(params)
+    }
+
+    func parse_param_name(mut self) -> Result[String, ParseError] {
+        if self.eat_keyword("mut") {
+            return Result::Ok("mut " + self.expect_ident()?)
+        }
+        if self.eat_symbol("&") {
+            var prefix =
+                if self.eat_keyword("mut") {
+                    "&mut "
+                } else {
+                    "&"
+                }
+            if self.eat_keyword("self") {
+                return Result::Ok(prefix + "self")
+            }
+            return Result::Ok(prefix + self.expect_ident()?)
+        }
+        if self.eat_keyword("self") {
+            return Result::Ok("self")
+        }
+        self.expect_ident()
     }
 
     func parse_generic_params(mut self) -> Result[Vec[String], ParseError] {
@@ -288,75 +326,6 @@ impl Parser {
             }
         }
         Result::Ok(())
-    }
-
-    func parse_typed_name(mut self, stop_values: Vec[String]) -> Result[TypedName, ParseError] {
-        var segment = self.parse_token_segment(stop_values)?
-        parse_decl_tokens(segment)
-    }
-
-    func parse_function_head(mut self) -> Result[FunctionHead, ParseError] {
-        var header = self.parse_token_segment(Vec[String] { "(" })?
-        var split = find_decl_name_index(header)
-        if split < 0 {
-            return Result::Err(self.error_here("expected function name"))
-        }
-
-        var return_tokens = Vec[Token]()
-        var i = 0
-        while i < split {
-            return_tokens.push(header[i])
-            i = i + 1
-        }
-        var name = header[split].value
-        var suffix_tokens = Vec[Token]()
-        i = split + 1
-        while i < len(header) {
-            suffix_tokens.push(header[i])
-            i = i + 1
-        }
-        var return_type =
-            if len(return_tokens) == 0 {
-                Option::None
-            } else {
-                Option::Some(normalize_type_text(join_token_values(return_tokens)))
-            }
-        Result::Ok(FunctionHead {
-            return_type: return_type,
-            name: name,
-            generics: parse_generic_suffix(normalize_type_text(join_token_values(suffix_tokens))),
-        })
-    }
-
-    func parse_token_segment(mut self, stop_values: Vec[String]) -> Result[Vec[Token], ParseError] {
-        var segment = Vec[Token]()
-        var bracket = 0
-        var paren = 0
-
-        while true {
-            var token = self.peek()?
-            if token.kind == TokenKind::Eof {
-                break
-            }
-            if bracket == 0 && paren == 0 && contains_string(stop_values, token.value) {
-                break
-            }
-            if token.value == "[" {
-                bracket = bracket + 1
-            } else if token.value == "]" {
-                bracket = bracket - 1
-            } else if token.value == "(" {
-                paren = paren + 1
-            } else if token.value == ")" {
-                if paren == 0 {
-                    break
-                }
-                paren = paren - 1
-            }
-            segment.push(self.advance()?)
-        }
-
-        Result::Ok(segment)
     }
 
     func parse_block_expr(mut self) -> Result[BlockExpr, ParseError] {
@@ -884,107 +853,6 @@ impl Parser {
 struct ParsedFunction {
     sig: FunctionSig,
     body: Option[BlockExpr],
-}
-
-struct TypedName {
-    type_name: String,
-    name: String,
-}
-
-struct FunctionHead {
-    return_type: Option[String],
-    name: String,
-    generics: Vec[String],
-}
-
-func parse_decl_tokens(tokens: Vec[Token]) -> Result[TypedName, ParseError] {
-    var split = find_decl_name_index(tokens)
-    if split < 0 {
-        return Result::Err(ParseError {
-            message: "expected declaration name",
-            line: 0,
-            column: 0,
-        })
-    }
-    var type_tokens = Vec[Token]()
-    var i = 0
-    while i < split {
-        type_tokens.push(tokens[i])
-        i = i + 1
-    }
-    var name = tokens[split].value
-    var type_name = normalize_type_text(join_token_values(type_tokens))
-    Result::Ok(TypedName {
-        type_name: type_name,
-        name: name,
-    })
-}
-
-func find_decl_name_index(tokens: Vec[Token]) -> i32 {
-    var bracket = 0
-    var index = -1
-    var i = 0
-    while i < len(tokens) {
-        var token = tokens[i]
-        if token.value == "[" {
-            bracket = bracket + 1
-        } else if token.value == "]" {
-            bracket = bracket - 1
-        } else if bracket == 0 && token.kind == TokenKind::Ident {
-            index = i
-        }
-        i = i + 1
-    }
-    index
-}
-
-func join_token_values(tokens: Vec[Token]) -> String {
-    var parts = Vec[String]()
-    for token in tokens {
-        parts.push(token.value)
-    }
-    join_strings(parts, " ")
-}
-
-func parse_generic_suffix(text: String) -> Vec[String] {
-    var generics = Vec[String]()
-    if text == "" {
-        return generics
-    }
-    var body = slice(text, 1, len(text) - 1)
-    var parts = Vec[String]()
-    var current = ""
-    var bracket = 0
-    var paren = 0
-    var i = 0
-    while i < len(body) {
-        var ch = char_at(body, i)
-        if ch == "[" {
-            bracket = bracket + 1
-        } else if ch == "]" {
-            bracket = bracket - 1
-        } else if ch == "(" {
-            paren = paren + 1
-        } else if ch == ")" {
-            paren = paren - 1
-        }
-        if ch == "," && bracket == 0 && paren == 0 {
-            parts.push(normalize_type_text(current))
-            current = ""
-        } else {
-            current = current + ch
-        }
-        i = i + 1
-    }
-    if current != "" {
-        parts.push(normalize_type_text(current))
-    }
-    for part in parts {
-        if part != "" {
-            generics.push(part)
-        }
-    }
-    generics
 }
 
 func normalize_type_text(text: String) -> String {
