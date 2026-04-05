@@ -5,7 +5,7 @@ enum Option[T] {
     None,
 }
 
-func unwrap_or_zero(value: Option[i32]) -> i32 {
+i32 unwrap_or_zero(Option[i32] value){
     match value {
         Some(inner) => inner,
         None => 0,
