@@ -10,7 +10,7 @@ use frontend.SourceFile
 use frontend.dump_source_file
 use frontend.parse_source
 
-pub struct CliError {
+struct CliError {
     message: String,
 }
 
