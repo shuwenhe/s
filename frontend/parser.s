@@ -290,6 +290,75 @@ impl Parser {
         Result::Ok(())
     }
 
+    func parse_typed_name(mut self, stop_values: Vec[String]) -> Result[TypedName, ParseError] {
+        var segment = self.parse_token_segment(stop_values)?
+        parse_decl_tokens(segment)
+    }
+
+    func parse_function_head(mut self) -> Result[FunctionHead, ParseError] {
+        var header = self.parse_token_segment(Vec[String] { "(" })?
+        var split = find_decl_name_index(header)
+        if split < 0 {
+            return Result::Err(self.error_here("expected function name"))
+        }
+
+        var return_tokens = Vec[Token]()
+        var i = 0
+        while i < split {
+            return_tokens.push(header[i])
+            i = i + 1
+        }
+        var name = header[split].value
+        var suffix_tokens = Vec[Token]()
+        i = split + 1
+        while i < len(header) {
+            suffix_tokens.push(header[i])
+            i = i + 1
+        }
+        var return_type =
+            if len(return_tokens) == 0 {
+                Option::None
+            } else {
+                Option::Some(normalize_type_text(join_token_values(return_tokens)))
+            }
+        Result::Ok(FunctionHead {
+            return_type: return_type,
+            name: name,
+            generics: parse_generic_suffix(normalize_type_text(join_token_values(suffix_tokens))),
+        })
+    }
+
+    func parse_token_segment(mut self, stop_values: Vec[String]) -> Result[Vec[Token], ParseError] {
+        var segment = Vec[Token]()
+        var bracket = 0
+        var paren = 0
+
+        while true {
+            var token = self.peek()?
+            if token.kind == TokenKind::Eof {
+                break
+            }
+            if bracket == 0 && paren == 0 && contains_string(stop_values, token.value) {
+                break
+            }
+            if token.value == "[" {
+                bracket = bracket + 1
+            } else if token.value == "]" {
+                bracket = bracket - 1
+            } else if token.value == "(" {
+                paren = paren + 1
+            } else if token.value == ")" {
+                if paren == 0 {
+                    break
+                }
+                paren = paren - 1
+            }
+            segment.push(self.advance()?)
+        }
+
+        Result::Ok(segment)
+    }
+
     func parse_block_expr(mut self) -> Result[BlockExpr, ParseError] {
         self.expect_symbol("{")?
         var statements = Vec[Stmt]()
