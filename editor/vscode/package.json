@@ -1,0 +1,45 @@
+{
+  "name": "s-language-support",
+  "displayName": "S Language Support",
+  "description": "Minimal VS Code syntax support for the S language.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "main": "./extension.js",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:s"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "s",
+        "aliases": [
+          "S",
+          "s"
+        ],
+        "extensions": [
+          ".s"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "s",
+        "scopeName": "source.s",
+        "path": "./syntaxes/s.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "s",
+        "path": "./snippets/s.code-snippets"
+      }
+    ]
+  }
+}
