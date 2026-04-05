@@ -8,25 +8,21 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from compiler.ast import dump_source_file
-from compiler.lexer import Lexer, dump_tokens
-from compiler.parser import parse_source
+from runtime.hosted_frontend import run_ast_dump, run_lex_dump
 
 
 FIXTURES = ROOT / "compiler" / "tests" / "fixtures"
 
 
 def validate_lex() -> bool:
-    source = (FIXTURES / "sample.s").read_text()
     expected = (FIXTURES / "sample.tokens").read_text().strip()
-    actual = dump_tokens(Lexer(source).tokenize()).strip()
+    actual = run_lex_dump(FIXTURES / "sample.s").output.strip()
     return report_case("lex_dump", expected, actual)
 
 
 def validate_ast() -> bool:
-    source = (FIXTURES / "sample.s").read_text()
     expected = (FIXTURES / "sample.ast").read_text().strip()
-    actual = dump_source_file(parse_source(source)).strip()
+    actual = run_ast_dump(FIXTURES / "sample.s").output.strip()
     return report_case("ast_dump", expected, actual)
 
 

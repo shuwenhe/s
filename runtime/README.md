@@ -12,6 +12,7 @@ Files:
 
 - `python_bridge.py`: host implementation of the current intrinsic contract
 - `intrinsic_dispatch.py`: dispatcher from S-side intrinsic symbols to bridge calls
+- `hosted_frontend.py`: hosted lexer/parser pipeline that emits and executes `IntrinsicCall`
 - `check_bridge.py`: minimal bridge self-check for intrinsic execution
 - `validate_outputs.py`: golden-output validator for lexer/parser-facing behavior
 
