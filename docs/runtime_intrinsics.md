@@ -27,10 +27,10 @@ Status: Working Draft
 当前 [prelude.s](/app/s/std/prelude.s) 约定如下 intrinsic：
 
 ```s
-extern "intrinsic" fn __runtime_len[T](value: T) -> i32
-extern "intrinsic" fn __int_to_string(value: i32) -> String
-extern "intrinsic" fn __string_char_at(text: String, index: i32) -> String
-extern "intrinsic" fn __string_slice(text: String, start: i32, end: i32) -> String
+extern "intrinsic" func __runtime_len[T](value: T) -> i32
+extern "intrinsic" func __int_to_string(value: i32) -> String
+extern "intrinsic" func __string_char_at(text: String, index: i32) -> String
+extern "intrinsic" func __string_slice(text: String, start: i32, end: i32) -> String
 ```
 
 ### `__runtime_len`
@@ -76,9 +76,9 @@ Draft 0.1 推荐：
 当前 [vec.s](/app/s/std/vec.s) 约定如下 intrinsic：
 
 ```s
-extern "intrinsic" fn __vec_new_array[T](size: i32) -> Array[T]
-extern "intrinsic" fn __vec_array_get[T](array: Array[T], index: i32) -> T
-extern "intrinsic" fn __vec_array_set[T](array: Array[T], index: i32, value: T) -> ()
+extern "intrinsic" func __vec_new_array[T](size: i32) -> Array[T]
+extern "intrinsic" func __vec_array_get[T](array: Array[T], index: i32) -> T
+extern "intrinsic" func __vec_array_set[T](array: Array[T], index: i32, value: T) -> ()
 ```
 
 要求：
@@ -95,9 +95,9 @@ extern "intrinsic" fn __vec_array_set[T](array: Array[T], index: i32, value: T) 
 当前约定如下 intrinsic：
 
 ```s
-extern "intrinsic" fn __option_panic_unwrap[T]() -> T
-extern "intrinsic" fn __result_panic_unwrap[T]() -> T
-extern "intrinsic" fn __result_panic_unwrap_err[E]() -> E
+extern "intrinsic" func __option_panic_unwrap[T]() -> T
+extern "intrinsic" func __result_panic_unwrap[T]() -> T
+extern "intrinsic" func __result_panic_unwrap_err[E]() -> E
 ```
 
 用途：

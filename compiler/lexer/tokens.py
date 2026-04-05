@@ -18,7 +18,7 @@ KEYWORDS = {
     "use",
     "as",
     "pub",
-    "fn",
+    "func",
     "let",
     "var",
     "const",
