@@ -38,7 +38,7 @@ pub fn RunMirSuite() -> Vec[MirFailure] {
 fn checkLocalsVersioned() -> Result[(), MirFailure] {
     let parsed =
         match parse_source(
-            "package demo.mir\n\npub fn shadow(x: i32) -> i32 {\n    let x = 1\n    x\n}\n",
+            "package demo.mir\n\nfn shadow(x: i32) -> i32 {\n    let x = 1\n    x\n}\n",
         ) {
             Result::Ok(value) => value,
             Result::Err(err) => {
@@ -80,7 +80,7 @@ fn checkLocalsVersioned() -> Result[(), MirFailure] {
 fn checkMirShape() -> Result[(), MirFailure] {
     let parsed =
         match parse_source(
-            "package demo.mir\n\npub fn choose(flag: bool) -> i32 {\n    if flag {\n        1\n    } else {\n        2\n    }\n}\n",
+            "package demo.mir\n\nfn choose(flag: bool) -> i32 {\n    if flag {\n        1\n    } else {\n        2\n    }\n}\n",
         ) {
             Result::Ok(value) => value,
             Result::Err(err) => {
