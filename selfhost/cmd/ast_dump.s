@@ -6,6 +6,7 @@ use std.io.println
 use std.prelude.to_string
 use std.result.Result
 use std.vec.Vec
+use selfhost.frontend.SourceFile
 use selfhost.frontend.dump_source_file
 use selfhost.frontend.parse_source
 
