@@ -66,7 +66,7 @@ let buf: Vec[u8] = Vec::with_capacity(1024)
 示例：
 
 ```s
-fn print_name(name: &str) {
+func print_name(name: &str) {
     println(name)
 }
 ```
@@ -278,7 +278,7 @@ println(x)
 非法示例：
 
 ```s
-fn bad() -> &str {
+func bad() -> &str {
     let s = String::from("hello")
     s.as_str()
 }
@@ -293,7 +293,7 @@ fn bad() -> &str {
 非法示例：
 
 ```s
-fn bad(user: &User) {
+func bad(user: &User) {
     user.active = false
 }
 ```
@@ -342,7 +342,7 @@ Draft 0.1 建议：
 ### 10.1 By Value
 
 ```s
-fn consume(buf: Buf) -> Result[(), Error]
+func consume(buf: Buf) -> Result[(), Error]
 ```
 
 按值参数通常意味着：
@@ -355,7 +355,7 @@ fn consume(buf: Buf) -> Result[(), Error]
 ### 10.2 By Shared Borrow
 
 ```s
-fn len(s: &str) -> usize
+func len(s: &str) -> usize
 ```
 
 表示调用方保留所有权，被调用方只做只读访问。
@@ -363,7 +363,7 @@ fn len(s: &str) -> usize
 ### 10.3 By Mutable Borrow
 
 ```s
-fn push(v: &mut Vec[i32], value: i32)
+func push(v: &mut Vec[i32], value: i32)
 ```
 
 表示调用方保留所有权，但临时把唯一修改权交给被调用方。
@@ -383,7 +383,7 @@ fn push(v: &mut Vec[i32], value: i32)
 ### 11.1 `self`
 
 ```s
-fn into_bytes(self) -> Vec[u8]
+func into_bytes(self) -> Vec[u8]
 ```
 
 表示方法消费接收者。
@@ -391,7 +391,7 @@ fn into_bytes(self) -> Vec[u8]
 ### 11.2 `&self`
 
 ```s
-fn len(&self) -> usize
+func len(&self) -> usize
 ```
 
 表示方法只读访问接收者。
@@ -399,7 +399,7 @@ fn len(&self) -> usize
 ### 11.3 `&mut self`
 
 ```s
-fn clear(&mut self)
+func clear(&mut self)
 ```
 
 表示方法临时独占修改接收者。
@@ -415,7 +415,7 @@ fn clear(&mut self)
 示例：
 
 ```s
-fn load() -> Result[String, IoError] {
+func load() -> Result[String, IoError] {
     let file = File::open("config.toml")?
     let data = file.read_all()?
     Ok(data)
@@ -439,7 +439,7 @@ Draft 0.1 推荐局部变量按逆声明顺序析构。
 
 ```s
 trait Drop {
-    fn drop(&mut self)
+    func drop(&mut self)
 }
 ```
 
