@@ -140,13 +140,6 @@ func parseCheckedSource(checkOptions command, String source) -> Result[frontend.
 }
 
 func emitBinary(frontend.SourceFile parsed, String outputPath) -> Result[(), cliError] {
-    match build_executable(parsed, outputPath) {
-        Result::Ok(()) => Result::Ok(()),
-        Result::Err(err) => backendError(err),
-    }
-}
-
-func emitBinary(frontend.SourceFile parsed, String outputPath) -> Result[(), cliError] {
     match buildExecutable(parsed, outputPath) {
         Result::Ok(()) => Result::Ok(()),
         Result::Err(err) => backendError(err),
