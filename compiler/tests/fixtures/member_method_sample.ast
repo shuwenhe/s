@@ -3,9 +3,9 @@ struct Point
   x: i32
   y: i32
 trait Measure
-  fn size(self: Point) -> i32
+  func size(self: Point) -> i32
 impl Measure for Point
-  fn size(self: Point) -> i32
+  func size(self: Point) -> i32
     final (self.x + self.y)
-fn total(p: Point, items: Vec[i32], index: i32) -> i32
+func total(p: Point, items: Vec[i32], index: i32) -> i32
   final (call p.size() + items[index])
