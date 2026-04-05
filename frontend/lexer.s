@@ -30,20 +30,20 @@ pub fn new_lexer(source: String) -> Lexer {
 
 impl Lexer {
     pub fn tokenize(mut self) -> Result[Vec[Token], LexError] {
-        let tokens = Vec[Token]()
+        var tokens = Vec[Token]()
         while !self.is_eof() {
             self.skip_ignored()?
             if self.is_eof() {
                 break
             }
 
-            let start_line = self.line
-            let start_column = self.column
-            let ch = self.peek()?
+            var start_line = self.line
+            var start_column = self.column
+            var ch = self.peek()?
 
             if is_ident_start(ch) {
-                let value = self.read_identifier()?
-                let kind =
+                var value = self.read_identifier()?
+                var kind =
                     if is_keyword(value) {
                         TokenKind::Keyword
                     } else {
@@ -98,7 +98,7 @@ impl Lexer {
 
     fn skip_ignored(mut self) -> Result[(), LexError] {
         while !self.is_eof() {
-            let ch = self.peek()?
+            var ch = self.peek()?
 
             if is_whitespace(ch) {
                 self.advance()?
@@ -115,7 +115,7 @@ impl Lexer {
             if self.match_text("/*") {
                 self.advance()?
                 self.advance()?
-                let depth = 1
+                var depth = 1
                 while depth > 0 {
                     if self.is_eof() {
                         return err(self.error("unterminated block comment"))
@@ -144,9 +144,9 @@ impl Lexer {
     }
 
     fn read_identifier(mut self) -> Result[String, LexError] {
-        let out = ""
+        var out = ""
         while !self.is_eof() {
-            let ch = self.peek()?
+            var ch = self.peek()?
             if !is_ident_continue(ch) {
                 break
             }
@@ -156,9 +156,9 @@ impl Lexer {
     }
 
     fn read_number(mut self) -> Result[String, LexError] {
-        let out = ""
+        var out = ""
         while !self.is_eof() {
-            let ch = self.peek()?
+            var ch = self.peek()?
             if !is_digit(ch) {
                 break
             }
@@ -168,9 +168,9 @@ impl Lexer {
     }
 
     fn read_string(mut self) -> Result[String, LexError] {
-        let out = self.advance()?
+        var out = self.advance()?
         while !self.is_eof() {
-            let ch = self.advance()?
+            var ch = self.advance()?
             out = out + ch
             if ch == "\\" {
                 if self.is_eof() {
@@ -187,7 +187,7 @@ impl Lexer {
     }
 
     fn read_symbol(mut self) -> Result[String, LexError] {
-        let multi = Vec[String] {
+        var multi = Vec[String] {
             "->",
             "=>",
             "==",
@@ -202,9 +202,9 @@ impl Lexer {
 
         for symbol in multi {
             if self.match_text(symbol) {
-                let out = ""
-                let count = len(symbol)
-                let i = 0
+                var out = ""
+                var count = len(symbol)
+                var i = 0
                 while i < count {
                     out = out + self.advance()?
                     i = i + 1
@@ -213,7 +213,7 @@ impl Lexer {
             }
         }
 
-        let ch = self.peek()?
+        var ch = self.peek()?
         if is_single_symbol(ch) {
             return Result::Ok(self.advance()?)
         }
@@ -237,7 +237,7 @@ impl Lexer {
             return Result::Err(self.error("unexpected eof"))
         }
 
-        let ch = char_at(self.source, self.index)
+        var ch = char_at(self.source, self.index)
         self.index = self.index + 1
 
         if ch == "\n" {
