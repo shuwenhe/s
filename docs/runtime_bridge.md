@@ -75,6 +75,8 @@ invoke_intrinsic("__string_slice", "hello", 1, 4)
 - `__host_write_text_file`
 - `__host_make_temp_dir`
 - `__host_run_process`
+- `__host_args`
+- `__host_exit`
 - `__host_println`
 - `__host_eprintln`
 - `__option_panic_unwrap`
@@ -112,7 +114,9 @@ For the std-layer host intrinsics, the current bridge uses a success-path model:
 - `__host_make_temp_dir` -> Python `str`
 - `__host_write_text_file` -> `None`
 - `__host_run_process` -> `None`
+- `__host_args` -> Python `list[str]`
 - `__host_println` / `__host_eprintln` -> `None`
+- `__host_exit` -> raises `RuntimeExit`
 
 S declarations currently expose these as `Result[...]` for `std.fs` and
 `std.process`, but the Python prototype does not yet materialize a host-side
@@ -158,6 +162,8 @@ python3 /app/s/runtime/check_bridge.py
 - `write_text_file`
 - `make_temp_dir`
 - `run_process`
+- `args`
+- `exit`
 - dispatcher 的符号调用路径
 
 另外：
@@ -195,6 +201,12 @@ python3 /app/s/runtime/validate_outputs.py all
 - [main.s](/app/s/compiler/main.s) 通过 `std.fs.ReadToString`
 - [backend_elf64.s](/app/s/compiler/backend_elf64.s) 通过
   `std.fs.WriteTextFile` / `std.fs.MakeTempDir` / `std.process.RunProcess`
+
+命令入口 ABI 也已经有了 S 侧包装：
+
+- [env.s](/app/s/std/env.s) 通过 `__host_args`
+- [process.s](/app/s/std/process.s) 通过 `__host_exit`
+- [s.s](/app/s/cmd/s.s) 通过 `Args() -> compiler.main(args) -> Exit(code)`
 
 这意味着 `ExecutionPlan` 已经不只记录 parser/lexer 内部 intrinsic，也开始覆盖宿主 IO 边界。
 
