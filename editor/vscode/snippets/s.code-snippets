@@ -1,0 +1,60 @@
+{
+  "Function": {
+    "prefix": "fn",
+    "body": [
+      "pub fn ${1:name}(${2:arg}: ${3:i32}) -> ${4:()} {",
+      "\t${5}",
+      "}"
+    ],
+    "description": "Insert an S function"
+  },
+  "Struct": {
+    "prefix": "struct",
+    "body": [
+      "pub struct ${1:Name}${2:[T]} {",
+      "\t${3:field}: ${4:i32},",
+      "}"
+    ],
+    "description": "Insert an S struct"
+  },
+  "Enum": {
+    "prefix": "enum",
+    "body": [
+      "enum ${1:Option}[${2:T}] {",
+      "\t${3:Some}(${2:T}),",
+      "\t${4:None},",
+      "}"
+    ],
+    "description": "Insert an S enum"
+  },
+  "Trait": {
+    "prefix": "trait",
+    "body": [
+      "pub trait ${1:TraitName}${2:[T]} {",
+      "\tfn ${3:method}(self: &${4:Self}) -> ${5:()};",
+      "}"
+    ],
+    "description": "Insert an S trait"
+  },
+  "Impl": {
+    "prefix": "impl",
+    "body": [
+      "impl ${1:TraitName} for ${2:TypeName} {",
+      "\tfn ${3:method}(self: ${2:TypeName}) -> ${4:()} {",
+      "\t\t${5}",
+      "\t}",
+      "}"
+    ],
+    "description": "Insert an S impl block"
+  },
+  "Match": {
+    "prefix": "match",
+    "body": [
+      "match ${1:value} {",
+      "\t${2:Pattern} => ${3:expr},",
+      "\t_ => ${4:expr},",
+      "}"
+    ],
+    "description": "Insert an S match expression"
+  }
+}
