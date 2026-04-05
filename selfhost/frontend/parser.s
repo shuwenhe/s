@@ -1,6 +1,8 @@
 package selfhost.frontend
 
 use std.option.Option
+use std.prelude.char_at
+use std.prelude.len
 use std.result.Result
 use std.vec.Vec
 

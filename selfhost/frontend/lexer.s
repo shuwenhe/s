@@ -1,7 +1,10 @@
 package selfhost.frontend
 
-use std.option.Option
+use std.prelude.char_at
+use std.prelude.len
+use std.prelude.slice
 use std.vec.Vec
+use std.result.Result
 
 pub struct LexError {
     message: String,
@@ -90,7 +93,7 @@ impl Lexer {
             column: self.column,
         })
 
-        ok(tokens)
+        Result::Ok(tokens)
     }
 
     fn skip_ignored(mut self) -> Result[(), LexError] {
@@ -137,7 +140,7 @@ impl Lexer {
             break
         }
 
-        ok(())
+        Result::Ok(())
     }
 
     fn read_identifier(mut self) -> Result[String, LexError] {
@@ -149,7 +152,7 @@ impl Lexer {
             }
             out = out + self.advance()?
         }
-        ok(out)
+        Result::Ok(out)
     }
 
     fn read_number(mut self) -> Result[String, LexError] {
@@ -161,7 +164,7 @@ impl Lexer {
             }
             out = out + self.advance()?
         }
-        ok(out)
+        Result::Ok(out)
     }
 
     fn read_string(mut self) -> Result[String, LexError] {
@@ -171,16 +174,16 @@ impl Lexer {
             out = out + ch
             if ch == "\\" {
                 if self.is_eof() {
-                    return err(self.error("unterminated escape sequence"))
+                return Result::Err(self.error("unterminated escape sequence"))
                 }
                 out = out + self.advance()?
                 continue
             }
             if ch == "\"" {
-                return ok(out)
+                return Result::Ok(out)
             }
         }
-        err(self.error("unterminated string literal"))
+        Result::Err(self.error("unterminated string literal"))
     }
 
     fn read_symbol(mut self) -> Result[String, LexError] {
@@ -206,16 +209,16 @@ impl Lexer {
                     out = out + self.advance()?
                     i = i + 1
                 }
-                return ok(out)
+                return Result::Ok(out)
             }
         }
 
         let ch = self.peek()?
         if is_single_symbol(ch) {
-            return ok(self.advance()?)
+            return Result::Ok(self.advance()?)
         }
 
-        err(self.error("unexpected character"))
+        Result::Err(self.error("unexpected character"))
     }
 
     fn match_text(self, text: String) -> bool {
@@ -224,14 +227,14 @@ impl Lexer {
 
     fn peek(self) -> Result[String, LexError] {
         if self.is_eof() {
-            return err(self.error("unexpected eof"))
+            return Result::Err(self.error("unexpected eof"))
         }
-        ok(char_at(self.source, self.index))
+        Result::Ok(char_at(self.source, self.index))
     }
 
     fn advance(mut self) -> Result[String, LexError] {
         if self.is_eof() {
-            return err(self.error("unexpected eof"))
+            return Result::Err(self.error("unexpected eof"))
         }
 
         let ch = char_at(self.source, self.index)
@@ -244,7 +247,7 @@ impl Lexer {
             self.column = self.column + 1
         }
 
-        ok(ch)
+        Result::Ok(ch)
     }
 
     fn is_eof(self) -> bool {
