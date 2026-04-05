@@ -4,12 +4,15 @@ import argparse
 from pathlib import Path
 import sys
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from compiler.ast import dump_source_file
 from compiler.lexer import Lexer, dump_tokens
 from compiler.parser import parse_source
 
 
-ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "compiler" / "tests" / "fixtures"
 
 
