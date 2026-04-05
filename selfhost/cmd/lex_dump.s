@@ -3,6 +3,7 @@ package selfhost.cmd
 use std.fs.read_to_string
 use std.io.eprintln
 use std.io.println
+use std.prelude.to_string
 use std.result.Result
 use std.vec.Vec
 use selfhost.frontend.dump_tokens
@@ -53,12 +54,7 @@ pub fn lex_source(source: String) -> Result[Vec[Token], CliError] {
     match new_lexer(source).tokenize() {
         Result::Ok(tokens) => Result::Ok(tokens),
         Result::Err(err) => Result::Err(CliError {
-            message:
-                err.message
-                + " at "
-                + to_string(err.line)
-                + ":"
-                + to_string(err.column),
+            message: err.message + " at " + to_string(err.line) + ":" + to_string(err.column),
         }),
     }
 }
