@@ -344,15 +344,10 @@ impl Parser {
         var final_expr = Option::None
 
         while !self.at_symbol("}") {
-            if self.at_keyword("var") {
-                statements.push(Stmt::Var(self.parse_var_stmt()?))
+            if self.starts_stmt() {
+                statements.push(self.parse_stmt()?)
                 continue
             }
-            if self.at_keyword("return") {
-                statements.push(Stmt::Return(self.parse_return_stmt()?))
-                continue
-            }
-
             var expr = self.parse_expr()?
             if self.eat_symbol(";") {
                 statements.push(Stmt::Expr(ExprStmt { expr: expr }))
@@ -370,7 +365,38 @@ impl Parser {
         })
     }
 
-    func parse_var_stmt(mut self) -> Result[VarStmt, ParseError] {
+    func starts_stmt(self) -> bool {
+        self.at_keyword("var")
+            || self.at_keyword("return")
+            || self.at_cfor_start()
+            || self.looks_like_typed_var_stmt()
+            || self.looks_like_increment_stmt()
+            || self.looks_like_assignment_stmt()
+    }
+
+    func parse_stmt(mut self) -> Result[Stmt, ParseError] {
+        if self.at_keyword("var") {
+            return Result::Ok(Stmt::Var(self.parse_var_stmt(true)?))
+        }
+        if self.at_keyword("return") {
+            return Result::Ok(Stmt::Return(self.parse_return_stmt()?))
+        }
+        if self.at_cfor_start() {
+            return Result::Ok(Stmt::CFor(self.parse_cfor_stmt()?))
+        }
+        if self.looks_like_typed_var_stmt() {
+            return Result::Ok(Stmt::Var(self.parse_typed_var_stmt(true)?))
+        }
+        if self.looks_like_increment_stmt() {
+            return Result::Ok(Stmt::Increment(self.parse_increment_stmt(true)?))
+        }
+        if self.looks_like_assignment_stmt() {
+            return Result::Ok(Stmt::Assign(self.parse_assign_stmt(true)?))
+        }
+        Result::Err(self.error_here("unexpected statement"))
+    }
+
+    func parse_var_stmt(mut self, consume_semicolon: bool) -> Result[VarStmt, ParseError] {
         self.expect_keyword("var")?
         var name = self.expect_ident()?
         var type_name =
@@ -381,12 +407,87 @@ impl Parser {
             }
         self.expect_symbol("=")?
         var value = self.parse_expr()?
-        self.eat_symbol(";")
+        if consume_semicolon {
+            self.eat_symbol(";")
+        }
         Result::Ok(VarStmt {
             name: name,
             type_name: type_name,
             value: value,
         })
+    }
+
+    func parse_typed_var_stmt(mut self, consume_semicolon: bool) -> Result[VarStmt, ParseError] {
+        var segment = self.parse_token_segment(Vec[String] { "=" })?
+        var named = decode_named_type(segment)?
+        self.expect_symbol("=")?
+        var value = self.parse_expr()?
+        if consume_semicolon {
+            self.eat_symbol(";")
+        }
+        Result::Ok(VarStmt {
+            name: named.name,
+            type_name: Option::Some(named.type_name),
+            value: value,
+        })
+    }
+
+    func parse_assign_stmt(mut self, consume_semicolon: bool) -> Result[AssignStmt, ParseError] {
+        var name = self.expect_ident()?
+        self.expect_symbol("=")?
+        var value = self.parse_expr()?
+        if consume_semicolon {
+            self.eat_symbol(";")
+        }
+        Result::Ok(AssignStmt {
+            name: name,
+            value: value,
+        })
+    }
+
+    func parse_increment_stmt(mut self, consume_semicolon: bool) -> Result[IncrementStmt, ParseError] {
+        var name = self.expect_ident()?
+        self.expect_symbol("++")?
+        if consume_semicolon {
+            self.eat_symbol(";")
+        }
+        Result::Ok(IncrementStmt {
+            name: name,
+        })
+    }
+
+    func parse_cfor_stmt(mut self) -> Result[CForStmt, ParseError] {
+        self.expect_keyword("for")?
+        self.expect_symbol("(")?
+        var init = self.parse_for_clause_stmt()?
+        self.expect_symbol(";")?
+        var condition = self.parse_expr()?
+        self.expect_symbol(";")?
+        var step = self.parse_for_clause_stmt()?
+        self.expect_symbol(")")?
+        var body = self.parse_block_expr()?
+        Result::Ok(CForStmt {
+            init: box(init),
+            condition: condition,
+            step: box(step),
+            body: body,
+        })
+    }
+
+    func parse_for_clause_stmt(mut self) -> Result[Stmt, ParseError] {
+        if self.at_keyword("var") {
+            return Result::Ok(Stmt::Var(self.parse_var_stmt(false)?))
+        }
+        if self.looks_like_typed_var_stmt() {
+            return Result::Ok(Stmt::Var(self.parse_typed_var_stmt(false)?))
+        }
+        if self.looks_like_increment_stmt() {
+            return Result::Ok(Stmt::Increment(self.parse_increment_stmt(false)?))
+        }
+        if self.looks_like_assignment_stmt() {
+            return Result::Ok(Stmt::Assign(self.parse_assign_stmt(false)?))
+        }
+        Result::Err(self.error_here("unexpected for clause"))
     }
 
     func parse_return_stmt(mut self) -> Result[ReturnStmt, ParseError] {
@@ -767,6 +868,30 @@ impl Parser {
         token.kind == TokenKind::Symbol && token.value == value
     }
 
+    func at_cfor_start(self) -> bool {
+        self.at_keyword("for") && self.peek_at(1).unwrap().kind == TokenKind::Symbol && self.peek_at(1).unwrap().value == "("
+    }
+
+    func looks_like_assignment_stmt(self) -> bool {
+        var first = self.peek().unwrap()
+        var second = self.peek_at(1).unwrap()
+        first.kind == TokenKind::Ident && second.kind == TokenKind::Symbol && second.value == "="
+    }
+
+    func looks_like_increment_stmt(self) -> bool {
+        var first = self.peek().unwrap()
+        var second = self.peek_at(1).unwrap()
+        first.kind == TokenKind::Ident && second.kind == TokenKind::Symbol && second.value == "++"
+    }
+
+    func looks_like_typed_var_stmt(self) -> bool {
+        var offset = self.find_top_level_symbol_offset("=")
+        if offset <= 0 {
+            return false
+        }
+        decode_named_type(slice_tokens(self.tokens, self.index, self.index + offset)).is_ok()
+    }
+
     func eat_keyword(mut self, value: String) -> bool {
         if self.at_keyword(value) {
             self.advance().unwrap()
@@ -834,6 +959,10 @@ impl Parser {
     }
 
     func peek(self) -> Result[Token, ParseError] {
+        self.peek_at(0)
+    }
+
+    func peek_at(self, offset: i32) -> Result[Token, ParseError] {
         if self.index >= len(self.tokens) {
             return Result::Err(ParseError {
                 message: "unexpected eof",
@@ -841,7 +970,11 @@ impl Parser {
                 column: 0,
             })
         }
-        Result::Ok(self.tokens[self.index])
+        var target = self.index + offset
+        if target >= len(self.tokens) {
+            target = len(self.tokens) - 1
+        }
+        Result::Ok(self.tokens[target])
     }
 
     func advance(mut self) -> Result[Token, ParseError] {
@@ -857,6 +990,38 @@ impl Parser {
             line: token.line,
             column: token.column,
         }
+    }
+}
+
+impl Parser {
+    func find_top_level_symbol_offset(self, value: String) -> i32 {
+        var bracket = 0
+        var paren = 0
+        var offset = 0
+        while self.index + offset < len(self.tokens) {
+            var token = self.tokens[self.index + offset]
+            if token.kind == TokenKind::Eof {
+                break
+            }
+            if token.value == "[" {
+                bracket = bracket + 1
+            } else if token.value == "]" {
+                bracket = bracket - 1
+            } else if token.value == "(" {
+                paren = paren + 1
+            } else if token.value == ")" {
+                if paren == 0 {
+                    break
+                }
+                paren = paren - 1
+            } else if bracket == 0 && paren == 0 && token.value == value {
+                return offset
+            } else if bracket == 0 && paren == 0 && (token.value == ";" || token.value == "}") {
+                break
+            }
+            offset = offset + 1
+        }
+        -1
     }
 }
 
