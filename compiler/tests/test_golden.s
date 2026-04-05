@@ -4,10 +4,10 @@ use std.result.Result
 use std.vec.Vec
 use compiler.GoldenCase
 use compiler.GoldenFailure
-use compiler.lexer_cases
-use compiler.parser_cases
-use compiler.run_lexer_case
-use compiler.run_parser_case
+use compiler.LexerCases
+use compiler.ParserCases
+use compiler.RunLexerCase
+use compiler.RunParserCase
 
 pub struct SuiteResult {
     passed: i32,
@@ -18,15 +18,15 @@ pub fn run_golden_suite(fixtures_root: String) -> SuiteResult {
     let failures = Vec[GoldenFailure]()
     let passed = 0
 
-    for case in lexer_cases(fixtures_root) {
-        match run_lexer_case(case) {
+    for case in LexerCases(fixtures_root) {
+        match RunLexerCase(case) {
             Result::Ok(()) => passed = passed + 1,
             Result::Err(err) => failures.push(err),
         }
     }
 
-    for case in parser_cases(fixtures_root) {
-        match run_parser_case(case) {
+    for case in ParserCases(fixtures_root) {
+        match RunParserCase(case) {
             Result::Ok(()) => passed = passed + 1,
             Result::Err(err) => failures.push(err),
         }
