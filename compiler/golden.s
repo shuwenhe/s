@@ -19,7 +19,7 @@ pub struct GoldenFailure {
     message: String,
 }
 
-pub fn lexer_cases(root: String) -> Vec[GoldenCase] {
+pub fn LexerCases(root: String) -> Vec[GoldenCase] {
     Vec[GoldenCase] {
         GoldenCase {
             name: "sample.tokens",
@@ -29,7 +29,7 @@ pub fn lexer_cases(root: String) -> Vec[GoldenCase] {
     }
 }
 
-pub fn parser_cases(root: String) -> Vec[GoldenCase] {
+pub fn ParserCases(root: String) -> Vec[GoldenCase] {
     Vec[GoldenCase] {
         GoldenCase {
             name: "sample.ast",
@@ -59,11 +59,11 @@ pub fn parser_cases(root: String) -> Vec[GoldenCase] {
     }
 }
 
-pub fn run_lexer_case(case: GoldenCase) -> Result[(), GoldenFailure] {
-    let source = read_fixture(case.name, case.source_path)?
-    let expected = read_fixture(case.name, case.expected_path)?
+pub fn RunLexerCase(case: GoldenCase) -> Result[(), GoldenFailure] {
+    let source = readFixture(case.name, case.source_path)?
+    let expected = readFixture(case.name, case.expected_path)?
     match new_lexer(source).tokenize() {
-        Result::Ok(tokens) => compare_output(case.name, expected, dump_tokens(tokens)),
+        Result::Ok(tokens) => compareOutput(case.name, expected, dump_tokens(tokens)),
         Result::Err(err) => Result::Err(GoldenFailure {
             name: case.name,
             message: "lex error: " + err.message,
@@ -71,11 +71,11 @@ pub fn run_lexer_case(case: GoldenCase) -> Result[(), GoldenFailure] {
     }
 }
 
-pub fn run_parser_case(case: GoldenCase) -> Result[(), GoldenFailure] {
-    let source = read_fixture(case.name, case.source_path)?
-    let expected = read_fixture(case.name, case.expected_path)?
+pub fn RunParserCase(case: GoldenCase) -> Result[(), GoldenFailure] {
+    let source = readFixture(case.name, case.source_path)?
+    let expected = readFixture(case.name, case.expected_path)?
     match parse_source(source) {
-        Result::Ok(ast) => compare_output(case.name, expected, dump_source_file(ast)),
+        Result::Ok(ast) => compareOutput(case.name, expected, dump_source_file(ast)),
         Result::Err(err) => Result::Err(GoldenFailure {
             name: case.name,
             message: "parse error: " + err.message,
@@ -83,7 +83,7 @@ pub fn run_parser_case(case: GoldenCase) -> Result[(), GoldenFailure] {
     }
 }
 
-pub fn read_fixture(name: String, path: String) -> Result[String, GoldenFailure] {
+fn readFixture(name: String, path: String) -> Result[String, GoldenFailure] {
     match read_to_string(path) {
         Result::Ok(text) => Result::Ok(text),
         Result::Err(_) => Result::Err(GoldenFailure {
@@ -93,7 +93,7 @@ pub fn read_fixture(name: String, path: String) -> Result[String, GoldenFailure]
     }
 }
 
-pub fn compare_output(name: String, expected: String, actual: String) -> Result[(), GoldenFailure] {
+fn compareOutput(name: String, expected: String, actual: String) -> Result[(), GoldenFailure] {
     if expected.trim() == actual.trim() {
         return Result::Ok(())
     }
