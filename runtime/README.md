@@ -17,3 +17,7 @@ Files:
 - `validate_outputs.py`: golden-output validator for lexer/parser-facing behavior
 
 This bridge is intentionally transitional. The long-term goal is to replace it with a real S runtime or a lower-level execution backend.
+
+Transition design:
+
+- [runtime_transition.md](/app/s/docs/runtime_transition.md): phased plan for shrinking and replacing the Python host bridge
