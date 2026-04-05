@@ -110,13 +110,11 @@ impl Parser {
         var fields = Vec[Field]()
 
         while !self.eat_symbol("}") {
-            var field_name = self.expect_ident()?
-            self.expect_symbol(":")?
-            var field_type = self.parse_type_text(Vec[String] { ",", "}" })?
+            var field = self.parse_named_type(Vec[String] { ",", "}" })?
             fields.push(Field {
-                name: field_name,
-                type_name: field_type,
-                is_public: starts_with_upper(field_name),
+                name: field.name,
+                type_name: field.type_name,
+                is_public: starts_with_upper(field.name),
             })
             self.eat_symbol(",")
         }
@@ -252,12 +250,10 @@ impl Parser {
         }
 
         while true {
-            var name = self.parse_param_name()?
-            self.expect_symbol(":")?
-            var type_name = self.parse_type_text(Vec[String] { ",", ")" })?
+            var part = self.parse_named_type(Vec[String] { ",", ")" })?
             params.push(Param {
-                name: name,
-                type_name: type_name,
+                name: part.name,
+                type_name: part.type_name,
             })
             if !self.eat_symbol(",") || self.at_symbol(")") {
                 break
@@ -265,28 +261,6 @@ impl Parser {
         }
 
         Result::Ok(params)
-    }
-
-    func parse_param_name(mut self) -> Result[String, ParseError] {
-        if self.eat_keyword("mut") {
-            return Result::Ok("mut " + self.expect_ident()?)
-        }
-        if self.eat_symbol("&") {
-            var prefix =
-                if self.eat_keyword("mut") {
-                    "&mut "
-                } else {
-                    "&"
-                }
-            if self.eat_keyword("self") {
-                return Result::Ok(prefix + "self")
-            }
-            return Result::Ok(prefix + self.expect_ident()?)
-        }
-        if self.eat_keyword("self") {
-            return Result::Ok("self")
-        }
-        self.expect_ident()
     }
 
     func parse_generic_params(mut self) -> Result[Vec[String], ParseError] {
@@ -326,6 +300,42 @@ impl Parser {
             }
         }
         Result::Ok(())
+    }
+
+    func parse_named_type(mut self, stop_values: Vec[String]) -> Result[NamedType, ParseError] {
+        var segment = self.parse_token_segment(stop_values)?
+        decode_named_type(segment)
+    }
+
+    func parse_token_segment(mut self, stop_values: Vec[String]) -> Result[Vec[Token], ParseError] {
+        var segment = Vec[Token]()
+        var bracket = 0
+        var paren = 0
+
+        while true {
+            var token = self.peek()?
+            if token.kind == TokenKind::Eof {
+                break
+            }
+            if bracket == 0 && paren == 0 && contains_string(stop_values, token.value) {
+                break
+            }
+            if token.value == "[" {
+                bracket = bracket + 1
+            } else if token.value == "]" {
+                bracket = bracket - 1
+            } else if token.value == "(" {
+                paren = paren + 1
+            } else if token.value == ")" {
+                if paren == 0 {
+                    break
+                }
+                paren = paren - 1
+            }
+            segment.push(self.advance()?)
+        }
+
+        Result::Ok(segment)
     }
 
     func parse_block_expr(mut self) -> Result[BlockExpr, ParseError] {
@@ -853,6 +863,99 @@ impl Parser {
 struct ParsedFunction {
     sig: FunctionSig,
     body: Option[BlockExpr],
+}
+
+struct NamedType {
+    name: String,
+    type_name: String,
+}
+
+func decode_named_type(tokens: Vec[Token]) -> Result[NamedType, ParseError] {
+    var colon = find_token_value(tokens, ":")
+    if colon >= 0 {
+        var name_tokens = slice_tokens(tokens, 0, colon)
+        var type_tokens = slice_tokens(tokens, colon + 1, len(tokens))
+        return Result::Ok(NamedType {
+            name: normalize_type_text(join_token_values(name_tokens)),
+            type_name: normalize_type_text(join_token_values(type_tokens)),
+        })
+    }
+
+    var split = find_decl_name_index(tokens)
+    if split <= 0 {
+        return Result::Err(ParseError {
+            message: "expected typed name",
+            line: 0,
+            column: 0,
+        })
+    }
+    Result::Ok(NamedType {
+        name: tokens[split].value,
+        type_name: normalize_type_text(join_token_values(slice_tokens(tokens, 0, split))),
+    })
+}
+
+func slice_tokens(tokens: Vec[Token], start: i32, end: i32) -> Vec[Token] {
+    var out = Vec[Token]()
+    var i = start
+    while i < end {
+        out.push(tokens[i])
+        i = i + 1
+    }
+    out
+}
+
+func join_token_values(tokens: Vec[Token]) -> String {
+    var parts = Vec[String]()
+    for token in tokens {
+        parts.push(token.value)
+    }
+    join_strings(parts, " ")
+}
+
+func find_token_value(tokens: Vec[Token], value: String) -> i32 {
+    var bracket = 0
+    var paren = 0
+    var i = 0
+    while i < len(tokens) {
+        var token = tokens[i]
+        if token.value == "[" {
+            bracket = bracket + 1
+        } else if token.value == "]" {
+            bracket = bracket - 1
+        } else if token.value == "(" {
+            paren = paren + 1
+        } else if token.value == ")" {
+            paren = paren - 1
+        } else if bracket == 0 && paren == 0 && token.value == value {
+            return i
+        }
+        i = i + 1
+    }
+    -1
+}
+
+func find_decl_name_index(tokens: Vec[Token]) -> i32 {
+    var bracket = 0
+    var paren = 0
+    var index = -1
+    var i = 0
+    while i < len(tokens) {
+        var token = tokens[i]
+        if token.value == "[" {
+            bracket = bracket + 1
+        } else if token.value == "]" {
+            bracket = bracket - 1
+        } else if token.value == "(" {
+            paren = paren + 1
+        } else if token.value == ")" {
+            paren = paren - 1
+        } else if bracket == 0 && paren == 0 && token.kind == TokenKind::Ident {
+            index = i
+        }
+        i = i + 1
+    }
+    index
 }
 
 func normalize_type_text(text: String) -> String {
