@@ -49,6 +49,12 @@ class GoldenTests(unittest.TestCase):
         actual = dump_source_file(parse_source(source)).strip()
         self.assertEqual(expected, actual)
 
+    def test_cfor_parser_golden(self) -> None:
+        source = (FIXTURES / "cfor_sample.s").read_text()
+        expected = (FIXTURES / "cfor_sample.ast").read_text().strip()
+        actual = dump_source_file(parse_source(source)).strip()
+        self.assertEqual(expected, actual)
+
 
 if __name__ == "__main__":
     unittest.main()
