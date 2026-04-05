@@ -1,5 +1,5 @@
 package demo.binary
 
-fn calc(a: i32, b: i32, c: i32) -> i32 {
+func calc(a: i32, b: i32, c: i32) -> i32 {
     a + b * c
 }
