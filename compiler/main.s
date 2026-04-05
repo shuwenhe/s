@@ -3,7 +3,6 @@ package compiler
 use std.fs.read_to_string
 use std.io.eprintln
 use std.io.println
-use std.prelude.to_string
 use std.result.Result
 use std.vec.Vec
 use frontend.dump_source_file
