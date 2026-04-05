@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, Iterable, TypeVar
+import inspect
+from typing import Any, Callable, Generic, Iterable, TypeVar
 
 
 T = TypeVar("T")
@@ -14,6 +15,15 @@ class RuntimeTrap(RuntimeError):
 @dataclass
 class HostArray(Generic[T]):
     storage: list[T | None]
+
+
+@dataclass(frozen=True)
+class IntrinsicSpec:
+    name: str
+    func: Callable[..., Any]
+    arity: int
+    returns: str
+    notes: str = ""
 
 
 def __runtime_len(value: object) -> int:
@@ -77,26 +87,39 @@ def __result_panic_unwrap_err() -> object:
     raise RuntimeTrap("called Result.unwrap_err() on Ok")
 
 
-INTRINSICS = {
-    "__runtime_len": __runtime_len,
-    "__int_to_string": __int_to_string,
-    "__string_char_at": __string_char_at,
-    "__string_slice": __string_slice,
-    "__vec_new_array": __vec_new_array,
-    "__vec_array_get": __vec_array_get,
-    "__vec_array_set": __vec_array_set,
-    "__option_panic_unwrap": __option_panic_unwrap,
-    "__result_panic_unwrap": __result_panic_unwrap,
-    "__result_panic_unwrap_err": __result_panic_unwrap_err,
+INTRINSICS: dict[str, IntrinsicSpec] = {
+    "__runtime_len": IntrinsicSpec("__runtime_len", __runtime_len, 1, "i32"),
+    "__int_to_string": IntrinsicSpec("__int_to_string", __int_to_string, 1, "String"),
+    "__string_char_at": IntrinsicSpec("__string_char_at", __string_char_at, 2, "String"),
+    "__string_slice": IntrinsicSpec("__string_slice", __string_slice, 3, "String"),
+    "__vec_new_array": IntrinsicSpec("__vec_new_array", __vec_new_array, 1, "Array[T]"),
+    "__vec_array_get": IntrinsicSpec("__vec_array_get", __vec_array_get, 2, "T"),
+    "__vec_array_set": IntrinsicSpec("__vec_array_set", __vec_array_set, 3, "()"),
+    "__option_panic_unwrap": IntrinsicSpec("__option_panic_unwrap", __option_panic_unwrap, 0, "never"),
+    "__result_panic_unwrap": IntrinsicSpec("__result_panic_unwrap", __result_panic_unwrap, 0, "never"),
+    "__result_panic_unwrap_err": IntrinsicSpec("__result_panic_unwrap_err", __result_panic_unwrap_err, 0, "never"),
 }
 
 
-def get_intrinsic(name: str):
+def get_intrinsic(name: str) -> IntrinsicSpec:
     try:
         return INTRINSICS[name]
     except KeyError as exc:
         raise RuntimeTrap(f"unknown intrinsic {name}") from exc
 
 
+def invoke_intrinsic(name: str, *args: Any) -> Any:
+    spec = get_intrinsic(name)
+    if len(args) != spec.arity:
+        raise RuntimeTrap(
+            f"intrinsic {name} expected {spec.arity} args, got {len(args)}"
+        )
+    return spec.func(*args)
+
+
 def list_intrinsics() -> Iterable[str]:
     return sorted(INTRINSICS)
+
+
+def list_specs() -> list[IntrinsicSpec]:
+    return [INTRINSICS[name] for name in list_intrinsics()]
