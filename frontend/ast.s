@@ -261,22 +261,21 @@ func dump_function(item: FunctionDecl, indent: String) -> Vec[String] {
     var lines = Vec[String]()
     var params = Vec[String]()
     for param in item.sig.params {
-        params.push(param.name + ": " + param.type_name)
+        params.push(param.type_name + " " + param.name)
     }
-    var ret =
+    var head =
         match item.sig.return_type {
-            Option::Some(value) => " -> " + value,
+            Option::Some(value) => value + " ",
             Option::None => "",
         }
     lines.push(
         indent
-            + "func "
+            + head
             + item.sig.name
             + fmt_generics(item.sig.generics)
             + "("
             + join_with(params, ", ")
             + ")"
-            + ret
     )
     match item.body {
         Option::Some(body) => append_lines(lines, dump_block(body, indent + "  ")),
@@ -289,7 +288,7 @@ func dump_struct(item: StructDecl) -> Vec[String] {
     var lines = Vec[String]()
     lines.push("struct " + item.name + fmt_generics(item.generics))
     for field in item.fields {
-        lines.push("  " + field.name + ": " + field.type_name)
+        lines.push("  " + field.type_name + " " + field.name)
     }
     lines
 }
@@ -312,21 +311,21 @@ func dump_trait(item: TraitDecl) -> Vec[String] {
     for method in item.methods {
         var params = Vec[String]()
         for param in method.params {
-            params.push(param.name + ": " + param.type_name)
+            params.push(param.type_name + " " + param.name)
         }
-        var ret =
+        var head =
             match method.return_type {
-                Option::Some(value) => " -> " + value,
+                Option::Some(value) => value + " ",
                 Option::None => "",
             }
         lines.push(
-            "  func "
+            "  "
+                + head
                 + method.name
                 + fmt_generics(method.generics)
                 + "("
                 + join_with(params, ", ")
                 + ")"
-                + ret
         )
     }
     lines
