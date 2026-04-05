@@ -69,7 +69,7 @@ struct MIRGraph {
     locals: Vec[LocalSlot],
 }
 
-fn LowerBlock(block: BlockExpr, param_names: Vec[String], type_env: Vec[TypeBinding]) -> MIRGraph {
+func LowerBlock(block: BlockExpr, param_names: Vec[String], type_env: Vec[TypeBinding]) -> MIRGraph {
     var locals = Vec[LocalSlot]()
     var statements = Vec[String]()
     var next_local = 0
