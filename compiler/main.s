@@ -11,35 +11,35 @@ use frontend.new_lexer
 use frontend.parse_source
 
 struct cliError {
-    String message,
+    message: String,
 }
 
 struct checkOptions {
-    String path,
-    bool dump_tokens,
-    bool dump_ast,
+    path: String,
+    dump_tokens: bool,
+    dump_ast: bool,
 }
 
-i32 Main(Vec[String] args){
+func Main(args: Vec[String]) -> i32 {
     match run(args) {
-        :Ok(()) => 0 Result,
-        :Err(err) => { Result
+        Result::Ok(()) => 0,
+        Result::Err(err) => {
             eprintln("error: " + err.message)
             1
         }
     }
 }
 
-Result[(), cliError] run(Vec[String] args){
+func run(args: Vec[String]) -> Result[(), cliError] {
     var command = parseCommand(args)?
     var source = readSource(command.path)?
 
     if command.dump_tokens {
         match new_lexer(source).tokenize() {
-            :Ok(tokens) => println(dump_tokens(tokens)) Result,
-            :Err(err) => { Result
+            Result::Ok(tokens) => println(dump_tokens(tokens)),
+            Result::Err(err) => {
                 return Result::Err(cliError {
-                    "lex error: " + err.message message,
+                    message: "lex error: " + err.message,
                 })
             }
         }
@@ -47,10 +47,10 @@ Result[(), cliError] run(Vec[String] args){
 
     var parsed =
         match parse_source(source) {
-            :Ok(ast) => ast Result,
-            :Err(err) => { Result
+            Result::Ok(ast) => ast,
+            Result::Err(err) => {
                 return Result::Err(cliError {
-                    "parse error: " + err.message message,
+                    message: "parse error: " + err.message,
                 })
             }
         }
@@ -65,15 +65,15 @@ Result[(), cliError] run(Vec[String] args){
             eprintln("error: " + diagnostic.message)
         }
         return Result::Err(cliError {
-            "semantic check failed" message,
+            message: "semantic check failed",
         })
     }
 
     println("ok: " + command.path)
-    :Ok(()) Result
+    Result::Ok(())
 }
 
-Result[checkOptions, cliError] parseCommand(Vec[String] args){
+func parseCommand(args: Vec[String]) -> Result[checkOptions, cliError] {
     if args.len() < 3 {
         return usageError()
     }
@@ -82,9 +82,9 @@ Result[checkOptions, cliError] parseCommand(Vec[String] args){
     }
 
     var options = checkOptions {
-        args[2] path,
-        false dump_tokens,
-        false dump_ast,
+        path: args[2],
+        dump_tokens: false,
+        dump_ast: false,
     }
 
     var index = 3
@@ -96,26 +96,26 @@ Result[checkOptions, cliError] parseCommand(Vec[String] args){
             options.dump_ast = true
         } else {
             return Result::Err(cliError {
-                "unknown flag: " + flag message,
+                message: "unknown flag: " + flag,
             })
         }
         index = index + 1
     }
 
-    :Ok(options) Result
+    Result::Ok(options)
 }
 
-Result[String, cliError] readSource(String path){
+func readSource(path: String) -> Result[String, cliError] {
     match read_to_string(path) {
-        :Ok(source) => Result::Ok(source) Result,
-        :Err(_) => Result::Err(cliError { Result
-            "failed to read source file: " + path message,
+        Result::Ok(source) => Result::Ok(source),
+        Result::Err(_) => Result::Err(cliError {
+            message: "failed to read source file: " + path,
         }),
     }
 }
 
-Result[checkOptions, cliError] usageError(){
-    :Err(cliError { Result
-        "usage: s check <path> [--dump-tokens] [--dump-ast]" message,
+func usageError() -> Result[checkOptions, cliError] {
+    Result::Err(cliError {
+        message: "usage: s check <path> [--dump-tokens] [--dump-ast]",
     })
 }

@@ -3,31 +3,31 @@ package compiler
 use std.vec.Vec
 
 struct OwnershipDecision {
-    Type ty,
-    bool copyable,
-    bool droppable,
+    ty: Type,
+    copyable: bool,
+    droppable: bool,
 }
 
 struct OwnershipEntry {
-    String name,
-    OwnershipDecision decision,
+    name: String,
+    decision: OwnershipDecision,
 }
 
-OwnershipDecision MakeDecision(Type ty){
+func MakeDecision(ty: Type) -> OwnershipDecision {
     var copyable = IsCopyType(ty)
     OwnershipDecision {
-        ty ty,
-        copyable copyable,
-        !copyable droppable,
+        ty: ty,
+        copyable: copyable,
+        droppable: !copyable,
     }
 }
 
-Vec[OwnershipEntry] MakePlan(Vec[TypeBinding] type_env){
+func MakePlan(type_env: Vec[TypeBinding]) -> Vec[OwnershipEntry] {
     var out = Vec[OwnershipEntry]()
     for entry in type_env {
         out.push(OwnershipEntry {
-            entry.name name,
-            MakeDecision(entry.value) decision,
+            name: entry.name,
+            decision: MakeDecision(entry.value),
         })
     }
     out

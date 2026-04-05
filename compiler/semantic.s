@@ -25,35 +25,35 @@ use frontend.StringExpr
 use frontend.WhileExpr
 
 struct Diagnostic {
-    String message,
+    message: String,
 }
 
 struct CheckResult {
-    Vec[Diagnostic] diagnostics,
+    diagnostics: Vec[Diagnostic],
 }
 
 struct FunctionInfo {
-    String name,
-    Vec[Type] params,
-    Type return_type,
+    name: String,
+    params: Vec[Type],
+    return_type: Type,
 }
 
 struct StructInfo {
-    String name,
-    Vec[FieldType] fields,
+    name: String,
+    fields: Vec[FieldType],
 }
 
 struct FieldType {
-    String name,
-    Type ty,
+    name: String,
+    ty: Type,
 }
 
 struct VarState {
-    String name,
-    Type ty,
+    name: String,
+    ty: Type,
 }
 
-CheckResult CheckSource(SourceFile source){
+func CheckSource(source: SourceFile) -> CheckResult {
     var diagnostics = Vec[Diagnostic]()
     var functions = collectFunctions(source)
     var structs = collectStructs(source)
@@ -66,15 +66,15 @@ CheckResult CheckSource(SourceFile source){
     }
 
     CheckResult {
-        diagnostics diagnostics,
+        diagnostics: diagnostics,
     }
 }
 
-bool IsOK(CheckResult result){
+func IsOK(result: CheckResult) -> bool {
     result.diagnostics.len() == 0
 }
 
-Vec[FunctionInfo] collectFunctions(SourceFile source){
+func collectFunctions(source: SourceFile) -> Vec[FunctionInfo] {
     var functions = Vec[FunctionInfo]()
     for item in source.items {
         match item {
@@ -84,11 +84,12 @@ Vec[FunctionInfo] collectFunctions(SourceFile source){
                     params.push(ParseType(param.type_name))
                 }
                 functions.push(FunctionInfo {
-                    func.sig.name name,
-                    params params,
-                    match func.sig.return_type { return_type
-                            :Some(value) => ParseType(value) Option,
-                            :None => NewUnitType() Option,
+                    name: func.sig.name,
+                    params: params,
+                    return_type:
+                        match func.sig.return_type {
+                            Option::Some(value) => ParseType(value),
+                            Option::None => NewUnitType(),
                         },
                 })
             }
@@ -98,7 +99,7 @@ Vec[FunctionInfo] collectFunctions(SourceFile source){
     functions
 }
 
-Vec[StructInfo] collectStructs(SourceFile source){
+func collectStructs(source: SourceFile) -> Vec[StructInfo] {
     var structs = Vec[StructInfo]()
     for item in source.items {
         match item {
@@ -106,13 +107,13 @@ Vec[StructInfo] collectStructs(SourceFile source){
                 var fields = Vec[FieldType]()
                 for field in decl.fields {
                     fields.push(FieldType {
-                        field.name name,
-                        ParseType(field.type_name) ty,
+                        name: field.name,
+                        ty: ParseType(field.type_name),
                     })
                 }
                 structs.push(StructInfo {
-                    decl.name name,
-                    fields fields,
+                    name: decl.name,
+                    fields: fields,
                 })
             }
             _ => (),
@@ -121,20 +122,25 @@ Vec[StructInfo] collectStructs(SourceFile source){
     structs
 }
 
-() checkFunction(FunctionDecl item, Vec[FunctionInfo] functions, Vec[StructInfo] structs, Vec[Diagnostic] diagnostics){
+func checkFunction(
+    item: FunctionDecl,
+    functions: Vec[FunctionInfo],
+    structs: Vec[StructInfo],
+    diagnostics: Vec[Diagnostic],
+) -> () {
     match item.body {
-        :Some(body) => { Option
+        Option::Some(body) => {
             var scope = Vec[VarState]()
             for param in item.sig.params {
                 scope.push(VarState {
-                    param.name name,
-                    ParseType(param.type_name) ty,
+                    name: param.name,
+                    ty: ParseType(param.type_name),
                 })
             }
             var expected =
                 match item.sig.return_type {
-                    :Some(value) => ParseType(value) Option,
-                    :None => NewUnitType() Option,
+                    Option::Some(value) => ParseType(value),
+                    Option::None => NewUnitType(),
                 }
             var actual = inferBlock(body, scope, functions, structs, diagnostics)
             if !typeEq(expected, actual) && !typeEq(expected, NewUnitType()) {
@@ -149,28 +155,40 @@ Vec[StructInfo] collectStructs(SourceFile source){
                 pushError(diagnostics, diag.message)
             }
         }
-        :None => () Option,
+        Option::None => (),
     }
 }
 
-Type inferBlock(BlockExpr block, Vec[VarState] scope, Vec[FunctionInfo] functions, Vec[StructInfo] structs, Vec[Diagnostic] diagnostics){
+func inferBlock(
+    block: BlockExpr,
+    scope: Vec[VarState],
+    functions: Vec[FunctionInfo],
+    structs: Vec[StructInfo],
+    diagnostics: Vec[Diagnostic],
+) -> Type {
     var local_scope = cloneScope(scope)
     for stmt in block.statements {
         checkStmt(stmt, local_scope, functions, structs, diagnostics)
     }
     match block.final_expr {
         Option::Some(expr) => inferExpr(expr, local_scope, functions, structs, diagnostics),
-        :None => NewUnitType() Option,
+        Option::None => NewUnitType(),
     }
 }
 
-() checkStmt(frontend.Stmt stmt, Vec[VarState] scope, Vec[FunctionInfo] functions, Vec[StructInfo] structs, Vec[Diagnostic] diagnostics){
+func checkStmt(
+    stmt: frontend.Stmt,
+    scope: Vec[VarState],
+    functions: Vec[FunctionInfo],
+    structs: Vec[StructInfo],
+    diagnostics: Vec[Diagnostic],
+) -> () {
     match stmt {
         frontend.Stmt::Var(value) => {
             var actual = inferExpr(value.value, scope, functions, structs, diagnostics)
             var resolved =
                 match value.type_name {
-                    :Some(type_name) => { Option
+                    Option::Some(type_name) => {
                         var declared = ParseType(type_name)
                         if !typeEq(declared, actual) {
                             pushError(
@@ -180,16 +198,16 @@ Type inferBlock(BlockExpr block, Vec[VarState] scope, Vec[FunctionInfo] function
                         }
                         declared
                     }
-                    :None => actual Option,
+                    Option::None => actual,
                 }
             bindVar(scope, value.name, resolved)
         }
         frontend.Stmt::Return(value) => {
             match value.value {
-                :Some(expr) => { Option
+                Option::Some(expr) => {
                     inferExpr(expr, scope, functions, structs, diagnostics)
                 }
-                :None => () Option,
+                Option::None => (),
             }
         }
         frontend.Stmt::Expr(value) => {
@@ -198,26 +216,32 @@ Type inferBlock(BlockExpr block, Vec[VarState] scope, Vec[FunctionInfo] function
     }
 }
 
-Type inferExpr(Expr expr, Vec[VarState] scope, Vec[FunctionInfo] functions, Vec[StructInfo] structs, Vec[Diagnostic] diagnostics){
+func inferExpr(
+    expr: Expr,
+    scope: Vec[VarState],
+    functions: Vec[FunctionInfo],
+    structs: Vec[StructInfo],
+    diagnostics: Vec[Diagnostic],
+) -> Type {
     match expr {
-        :Int(_) => NewI32Type() Expr,
-        :String(_) => NewStringType() Expr,
-        :Bool(_) => NewBoolType() Expr,
+        Expr::Int(_) => NewI32Type(),
+        Expr::String(_) => NewStringType(),
+        Expr::Bool(_) => NewBoolType(),
         Expr::Name(value) => lookupName(scope, value.name, diagnostics),
-        :Borrow(value) => Type::Reference(ReferenceType { Expr
+        Expr::Borrow(value) => Type::Reference(ReferenceType {
             inner: Box(inferExpr(value.target.value, scope, functions, structs, diagnostics)),
-            value.mutable mutable,
+            mutable: value.mutable,
         }),
         Expr::Binary(value) => inferBinary(value, scope, functions, structs, diagnostics),
         Expr::Member(value) => inferMember(value, scope, functions, structs, diagnostics),
         Expr::Index(value) => inferIndex(value, scope, functions, structs, diagnostics),
         Expr::Call(value) => inferCall(value, scope, functions, structs, diagnostics),
         Expr::Block(value) => inferBlock(value, scope, functions, structs, diagnostics),
-        :If(value) => { Expr
+        Expr::If(value) => {
             inferExpr(value.condition.value, scope, functions, structs, diagnostics)
             var then_type = inferBlock(value.then_branch, scope, functions, structs, diagnostics)
             match value.else_branch {
-                :Some(other) => { Option
+                Option::Some(other) => {
                     var else_type = inferExpr(other.value, scope, functions, structs, diagnostics)
                     if !typeEq(then_type, else_type) {
                         pushError(diagnostics, "if branch type mismatch")
@@ -225,20 +249,20 @@ Type inferExpr(Expr expr, Vec[VarState] scope, Vec[FunctionInfo] functions, Vec[
                     }
                     then_type
                 }
-                :None => NewUnitType() Option,
+                Option::None => NewUnitType(),
             }
         }
-        :While(value) => { Expr
+        Expr::While(value) => {
             inferExpr(value.condition.value, scope, functions, structs, diagnostics)
             inferBlock(value.body, scope, functions, structs, diagnostics)
             NewUnitType()
         }
-        :For(value) => { Expr
+        Expr::For(value) => {
             inferExpr(value.iterable.value, scope, functions, structs, diagnostics)
             inferBlock(value.body, scope, functions, structs, diagnostics)
             NewUnitType()
         }
-        :Match(value) => { Expr
+        Expr::Match(value) => {
             inferExpr(value.subject.value, scope, functions, structs, diagnostics)
             var arm_type = UnknownTypeOf("match")
             for arm in value.arms {
@@ -254,7 +278,13 @@ Type inferExpr(Expr expr, Vec[VarState] scope, Vec[FunctionInfo] functions, Vec[
     }
 }
 
-Type inferBinary(BinaryExpr expr, Vec[VarState] scope, Vec[FunctionInfo] functions, Vec[StructInfo] structs, Vec[Diagnostic] diagnostics){
+func inferBinary(
+    expr: BinaryExpr,
+    scope: Vec[VarState],
+    functions: Vec[FunctionInfo],
+    structs: Vec[StructInfo],
+    diagnostics: Vec[Diagnostic],
+) -> Type {
     var left = inferExpr(expr.left.value, scope, functions, structs, diagnostics)
     var right = inferExpr(expr.right.value, scope, functions, structs, diagnostics)
     if expr.op == "+" || expr.op == "-" || expr.op == "*" || expr.op == "/" || expr.op == "%" {
@@ -273,16 +303,22 @@ Type inferBinary(BinaryExpr expr, Vec[VarState] scope, Vec[FunctionInfo] functio
     UnknownTypeOf("binary")
 }
 
-Type inferMember(MemberExpr expr, Vec[VarState] scope, Vec[FunctionInfo] functions, Vec[StructInfo] structs, Vec[Diagnostic] diagnostics){
+func inferMember(
+    expr: MemberExpr,
+    scope: Vec[VarState],
+    functions: Vec[FunctionInfo],
+    structs: Vec[StructInfo],
+    diagnostics: Vec[Diagnostic],
+) -> Type {
     var target = inferExpr(expr.target.value, scope, functions, structs, diagnostics)
     var field_type = lookupStructFieldType(structs, target, expr.member)
     match field_type {
-        :Some(value) => value Option,
-        :None => { Option
+        Option::Some(value) => value,
+        Option::None => {
             var builtin_method = LookupBuiltinMethod(target, expr.member)
             match builtin_method {
-                :Some(method) => Type::Function(method.signature) Option,
-                :None => { Option
+                Option::Some(method) => Type::Function(method.signature),
+                Option::None => {
                     pushError(diagnostics, "unknown member " + expr.member)
                     UnknownTypeOf("member")
                 }
@@ -291,35 +327,47 @@ Type inferMember(MemberExpr expr, Vec[VarState] scope, Vec[FunctionInfo] functio
     }
 }
 
-Type inferIndex(IndexExpr expr, Vec[VarState] scope, Vec[FunctionInfo] functions, Vec[StructInfo] structs, Vec[Diagnostic] diagnostics){
+func inferIndex(
+    expr: IndexExpr,
+    scope: Vec[VarState],
+    functions: Vec[FunctionInfo],
+    structs: Vec[StructInfo],
+    diagnostics: Vec[Diagnostic],
+) -> Type {
     var target = inferExpr(expr.target.value, scope, functions, structs, diagnostics)
     inferExpr(expr.index.value, scope, functions, structs, diagnostics)
     match LookupIndexType(target) {
-        :Some(value) => value Option,
-        :None => UnknownTypeOf("index") Option,
+        Option::Some(value) => value,
+        Option::None => UnknownTypeOf("index"),
     }
 }
 
-Type inferCall(CallExpr expr, Vec[VarState] scope, Vec[FunctionInfo] functions, Vec[StructInfo] structs, Vec[Diagnostic] diagnostics){
+func inferCall(
+    expr: CallExpr,
+    scope: Vec[VarState],
+    functions: Vec[FunctionInfo],
+    structs: Vec[StructInfo],
+    diagnostics: Vec[Diagnostic],
+) -> Type {
     match expr.callee.value {
-        :Name(name_expr) => { Expr
+        Expr::Name(name_expr) => {
             var info = lookupFunction(functions, name_expr.name)
             match info {
-                :Some(func) => { Option
+                Option::Some(func) => {
                     checkCallArgs(func.params, expr.args, scope, functions, structs, diagnostics)
                     return func.return_type
                 }
-                :None => () Option,
+                Option::None => (),
             }
         }
-        :Member(member_expr) => { Expr
+        Expr::Member(member_expr) => {
             var target = inferExpr(member_expr.target.value, scope, functions, structs, diagnostics)
             var methods = LookupBuiltinMethods(target, member_expr.member)
             if methods.len() == 1 {
                 checkCallArgs(methods[0].signature.params, expr.args, scope, functions, structs, diagnostics)
                 match methods[0].signature.return_type {
-                    :Some(value) => return value Option,
-                    :None => return NewUnitType() Option,
+                    Option::Some(value) => return value,
+                    Option::None => return NewUnitType(),
                 }
             }
         }
@@ -332,7 +380,14 @@ Type inferCall(CallExpr expr, Vec[VarState] scope, Vec[FunctionInfo] functions, 
     UnknownTypeOf("call")
 }
 
-() checkCallArgs(Vec[Type] params, Vec[Expr] args, Vec[VarState] scope, Vec[FunctionInfo] functions, Vec[StructInfo] structs, Vec[Diagnostic] diagnostics){
+func checkCallArgs(
+    params: Vec[Type],
+    args: Vec[Expr],
+    scope: Vec[VarState],
+    functions: Vec[FunctionInfo],
+    structs: Vec[StructInfo],
+    diagnostics: Vec[Diagnostic],
+) -> () {
     if params.len() != args.len() {
         pushError(diagnostics, "call argument count mismatch")
         return
@@ -348,7 +403,7 @@ Type inferCall(CallExpr expr, Vec[VarState] scope, Vec[FunctionInfo] functions, 
     }
 }
 
-Type lookupName(Vec[VarState] scope, String name, Vec[Diagnostic] diagnostics){
+func lookupName(scope: Vec[VarState], name: String, diagnostics: Vec[Diagnostic]) -> Type {
     for entry in scope {
         if entry.name == name {
             return entry.ty
@@ -358,18 +413,18 @@ Type lookupName(Vec[VarState] scope, String name, Vec[Diagnostic] diagnostics){
     UnknownTypeOf("name")
 }
 
-Option[FunctionInfo] lookupFunction(Vec[FunctionInfo] functions, String name){
+func lookupFunction(functions: Vec[FunctionInfo], name: String) -> Option[FunctionInfo] {
     for function in functions {
         if function.name == name {
             return Option::Some(function)
         }
     }
-    :None Option
+    Option::None
 }
 
-Option[Type] lookupStructFieldType(Vec[StructInfo] structs, Type target, String member){
+func lookupStructFieldType(structs: Vec[StructInfo], target: Type, member: String) -> Option[Type] {
     match UnwrapRefs(target) {
-        :Named(named) => { Type
+        Type::Named(named) => {
             for item in structs {
                 if item.name == named.name {
                     for field in item.fields {
@@ -379,20 +434,20 @@ Option[Type] lookupStructFieldType(Vec[StructInfo] structs, Type target, String 
                     }
                 }
             }
-            :None Option
+            Option::None
         }
         _ => Option::None,
     }
 }
 
-() bindVar(Vec[VarState] scope, String name, Type ty){
+func bindVar(scope: Vec[VarState], name: String, ty: Type) -> () {
     scope.push(VarState {
-        name name,
-        ty ty,
+        name: name,
+        ty: ty,
     })
 }
 
-Vec[VarState] cloneScope(Vec[VarState] scope){
+func cloneScope(scope: Vec[VarState]) -> Vec[VarState] {
     var out = Vec[VarState]()
     for value in scope {
         out.push(value)
@@ -400,25 +455,25 @@ Vec[VarState] cloneScope(Vec[VarState] scope){
     out
 }
 
-() pushError(Vec[Diagnostic] diagnostics, String message){
+func pushError(diagnostics: Vec[Diagnostic], message: String) -> () {
     diagnostics.push(Diagnostic {
-        message message,
+        message: message,
     })
 }
 
-Type UnknownTypeOf(String label){
-    :Unknown(UnknownType { Type
-        label label,
+func UnknownTypeOf(label: String) -> Type {
+    Type::Unknown(UnknownType {
+        label: label,
     })
 }
 
-bool isUnknownType(Type ty){
+func isUnknownType(ty: Type) -> bool {
     match ty {
-        :Unknown(_) => true Type,
+        Type::Unknown(_) => true,
         _ => false,
     }
 }
 
-bool typeEq(Type left, Type right){
+func typeEq(left: Type, right: Type) -> bool {
     DumpType(left) == DumpType(right)
 }
