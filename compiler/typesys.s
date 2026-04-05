@@ -14,54 +14,54 @@ enum Type {
 }
 
 struct PrimitiveType {
-    String name,
+    name: String,
 }
 
 struct NamedType {
-    String name,
-    Vec[Type] args,
+    name: String,
+    args: Vec[Type],
 }
 
 struct ReferenceType {
-    Box[Type] inner,
-    bool mutable,
+    inner: Box[Type],
+    mutable: bool,
 }
 
 struct SliceType {
-    Box[Type] inner,
+    inner: Box[Type],
 }
 
 struct FunctionType {
-    Vec[Type] params,
-    Option[Type] return_type,
+    params: Vec[Type],
+    return_type: Option[Type],
 }
 
 struct UnitType {}
 
 struct UnknownType {
-    String label,
+    label: String,
 }
 
-Type NewBoolType(){
-    :Primitive(PrimitiveType { name: "bool" }) Type
+func NewBoolType() -> Type {
+    Type::Primitive(PrimitiveType { name: "bool" })
 }
 
-Type NewI32Type(){
-    :Primitive(PrimitiveType { name: "i32" }) Type
+func NewI32Type() -> Type {
+    Type::Primitive(PrimitiveType { name: "i32" })
 }
 
-Type NewStringType(){
-    :Named(NamedType { Type
-        "String" name,
-        Vec[Type]() args,
+func NewStringType() -> Type {
+    Type::Named(NamedType {
+        name: "String",
+        args: Vec[Type](),
     })
 }
 
-Type NewUnitType(){
-    :Unit(UnitType {}) Type
+func NewUnitType() -> Type {
+    Type::Unit(UnitType {})
 }
 
-Type ParseType(String text){
+func ParseType(text: String) -> Type {
     var trimmed = text.trim()
     if trimmed == "" {
         return Type::Unknown(UnknownType { label: "unknown" })
@@ -81,13 +81,13 @@ Type ParseType(String text){
     if trimmed.starts_with("&mut ") {
         return Type::Reference(ReferenceType {
             inner: Box(ParseType(trimmed.slice(5, trimmed.len()).trim())),
-            true mutable,
+            mutable: true,
         })
     }
     if trimmed.starts_with("&") {
         return Type::Reference(ReferenceType {
             inner: Box(ParseType(trimmed.slice(1, trimmed.len()).trim())),
-            false mutable,
+            mutable: false,
         })
     }
     if trimmed.starts_with("[]") {
@@ -105,59 +105,59 @@ Type ParseType(String text){
             }
         }
         return Type::Named(NamedType {
-            name name,
-            args args,
+            name: name,
+            args: args,
         })
     }
-    :Named(NamedType { Type
-        trimmed name,
-        Vec[Type]() args,
+    Type::Named(NamedType {
+        name: trimmed,
+        args: Vec[Type](),
     })
 }
 
-String DumpType(Type ty){
+func DumpType(ty: Type) -> String {
     match ty {
-        :Primitive(value) => value.name Type,
-        :Named(value) => { Type
+        Type::Primitive(value) => value.name,
+        Type::Named(value) => {
             if value.args.len() == 0 {
                 return value.name
             }
             value.name + "[" + joinTypes(value.args, ", ") + "]"
         }
-        :Reference(value) => { Type
+        Type::Reference(value) => {
             var prefix = if value.mutable { "&mut " } else { "&" }
             prefix + DumpType(value.inner.value)
         }
-        :Slice(value) => "[]" + DumpType(value.inner.value) Type,
-        :Function(value) => { Type
+        Type::Slice(value) => "[]" + DumpType(value.inner.value),
+        Type::Function(value) => {
             var ret =
                 match value.return_type {
-                    :Some(inner) => inner Option,
-                    :None => NewUnitType() Option,
+                    Option::Some(inner) => inner,
+                    Option::None => NewUnitType(),
                 }
             "func(" + joinTypes(value.params, ", ") + ") -> " + DumpType(ret)
         }
-        :Unit(_) => "()" Type,
-        :Unknown(value) => value.label Type,
+        Type::Unit(_) => "()",
+        Type::Unknown(value) => value.label,
     }
 }
 
-bool IsCopyType(Type ty){
+func IsCopyType(ty: Type) -> bool {
     match ty {
-        :Primitive(_) => true Type,
-        :Reference(_) => true Type,
+        Type::Primitive(_) => true,
+        Type::Reference(_) => true,
         _ => false,
     }
 }
 
-Type SubstituteType(Type ty, Vec[TypeBinding] mapping){
+func SubstituteType(ty: Type, mapping: Vec[TypeBinding]) -> Type {
     match ty {
-        :Named(value) => { Type
+        Type::Named(value) => {
             if value.args.len() == 0 {
                 var resolved = FindTypeBinding(mapping, value.name)
                 match resolved {
-                    :Some(found) => return found Option,
-                    :None => () Option,
+                    Option::Some(found) => return found,
+                    Option::None => (),
                 }
             }
             var args = Vec[Type]()
@@ -166,14 +166,14 @@ Type SubstituteType(Type ty, Vec[TypeBinding] mapping){
             }
             Type::Named(NamedType { name: value.name, args: args })
         }
-        :Reference(value) => Type::Reference(ReferenceType { Type
+        Type::Reference(value) => Type::Reference(ReferenceType {
             inner: Box(SubstituteType(value.inner.value, mapping)),
-            value.mutable mutable,
+            mutable: value.mutable,
         }),
-        :Slice(value) => Type::Slice(SliceType { Type
+        Type::Slice(value) => Type::Slice(SliceType {
             inner: Box(SubstituteType(value.inner.value, mapping)),
         }),
-        :Function(value) => { Type
+        Type::Function(value) => {
             var params = Vec[Type]()
             for param in value.params {
                 params.push(SubstituteType(param, mapping))
@@ -181,7 +181,7 @@ Type SubstituteType(Type ty, Vec[TypeBinding] mapping){
             var ret =
                 match value.return_type {
                     Option::Some(inner) => Option::Some(SubstituteType(inner, mapping)),
-                    :None => Option::None Option,
+                    Option::None => Option::None,
                 }
             Type::Function(FunctionType { params: params, return_type: ret })
         }
@@ -190,20 +190,20 @@ Type SubstituteType(Type ty, Vec[TypeBinding] mapping){
 }
 
 struct TypeBinding {
-    String name,
-    Type value,
+    name: String,
+    value: Type,
 }
 
-Option[Type] FindTypeBinding(Vec[TypeBinding] bindings, String name){
+func FindTypeBinding(bindings: Vec[TypeBinding], name: String) -> Option[Type] {
     for binding in bindings {
         if binding.name == name {
             return Option::Some(binding.value)
         }
     }
-    :None Option
+    Option::None
 }
 
-Vec[String] splitArgs(String text){
+func splitArgs(text: String) -> Vec[String] {
     var parts = Vec[String]()
     var current = ""
     var depth = 0
@@ -230,7 +230,7 @@ Vec[String] splitArgs(String text){
     parts
 }
 
-String joinTypes(Vec[Type] values, String sep){
+func joinTypes(values: Vec[Type], sep: String) -> String {
     var out = ""
     var first = true
     for value in values {

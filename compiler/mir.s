@@ -6,70 +6,70 @@ use frontend.BlockExpr
 use frontend.Expr
 
 struct LocalSlot {
-    i32 id,
-    String name,
-    String kind,
-    i32 version,
-    Type ty,
+    id: i32,
+    name: String,
+    kind: String,
+    version: i32,
+    ty: Type,
 }
 
 struct Operand {
-    String kind,
-    i32 slot,
-    String text,
+    kind: String,
+    slot: i32,
+    text: String,
 }
 
 struct AssignStmt {
-    i32 target,
-    String op,
-    Vec[Operand] args,
+    target: i32,
+    op: String,
+    args: Vec[Operand],
 }
 
 struct EvalStmt {
-    String op,
-    Vec[Operand] args,
+    op: String,
+    args: Vec[Operand],
 }
 
 struct MoveStmt {
-    i32 target,
-    Operand source,
+    target: i32,
+    source: Operand,
 }
 
 struct CopyStmt {
-    i32 target,
-    Operand source,
+    target: i32,
+    source: Operand,
 }
 
 struct DropStmt {
-    i32 slot,
+    slot: i32,
 }
 
 struct ControlEdge {
-    String id,
-    i32 target,
-    Vec[Operand] args,
+    id: String,
+    target: i32,
+    args: Vec[Operand],
 }
 
 struct Terminator {
-    String kind,
-    Vec[ControlEdge] edges,
+    kind: String,
+    edges: Vec[ControlEdge],
 }
 
 struct BasicBlock {
-    i32 id,
-    Vec[i32] params,
-    Vec[String] statements,
-    Terminator terminator,
+    id: i32,
+    params: Vec[i32],
+    statements: Vec[String],
+    terminator: Terminator,
 }
 
 struct MIRGraph {
-    Vec[BasicBlock] blocks,
-    i32 entry,
-    i32 exit,
-    Vec[LocalSlot] locals,
+    blocks: Vec[BasicBlock],
+    entry: i32,
+    exit: i32,
+    locals: Vec[LocalSlot],
 }
 
-MIRGraph LowerBlock(BlockExpr block, Vec[String] param_names, Vec[TypeBinding] type_env){
+func LowerBlock(block: BlockExpr, param_names: Vec[String], type_env: Vec[TypeBinding]) -> MIRGraph {
     var locals = Vec[LocalSlot]()
     var statements = Vec[String]()
     var next_local = 0
@@ -77,15 +77,15 @@ MIRGraph LowerBlock(BlockExpr block, Vec[String] param_names, Vec[TypeBinding] t
     for name in param_names {
         var ty =
             match FindTypeBinding(type_env, name) {
-                :Some(value) => value Option,
-                :None => UnknownTypeOf("param") Option,
+                Option::Some(value) => value,
+                Option::None => UnknownTypeOf("param"),
             }
         locals.push(LocalSlot {
-            next_local id,
-            name name,
-            "param" kind,
-            0 version,
-            ty ty,
+            id: next_local,
+            name: name,
+            kind: "param",
+            version: 0,
+            ty: ty,
         })
         next_local = next_local + 1
     }
@@ -94,40 +94,40 @@ MIRGraph LowerBlock(BlockExpr block, Vec[String] param_names, Vec[TypeBinding] t
         statements.push("stmt")
     }
     match block.final_expr {
-        :Some(_) => statements.push("yield") Option,
-        :None => () Option,
+        Option::Some(_) => statements.push("yield"),
+        Option::None => (),
     }
 
     var blocks = Vec[BasicBlock]()
     blocks.push(BasicBlock {
-        0 id,
-        Vec[i32]() params,
-        statements statements,
-        Terminator { terminator
-            "goto" kind,
-            Vec[ControlEdge] { edges
+        id: 0,
+        params: Vec[i32](),
+        statements: statements,
+        terminator: Terminator {
+            kind: "goto",
+            edges: Vec[ControlEdge] {
                 ControlEdge {
-                    "edge:0" id,
-                    1 target,
-                    Vec[Operand]() args,
+                    id: "edge:0",
+                    target: 1,
+                    args: Vec[Operand](),
                 },
             },
         },
     })
     blocks.push(BasicBlock {
-        1 id,
-        Vec[i32]() params,
-        Vec[String]() statements,
-        Terminator { terminator
-            "return" kind,
-            Vec[ControlEdge]() edges,
+        id: 1,
+        params: Vec[i32](),
+        statements: Vec[String](),
+        terminator: Terminator {
+            kind: "return",
+            edges: Vec[ControlEdge](),
         },
     })
 
     MIRGraph {
-        blocks blocks,
-        0 entry,
-        1 exit,
-        locals locals,
+        blocks: blocks,
+        entry: 0,
+        exit: 1,
+        locals: locals,
     }
 }
