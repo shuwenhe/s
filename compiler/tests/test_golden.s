@@ -10,30 +10,30 @@ use compiler.RunLexerCase
 use compiler.RunParserCase
 
 struct suiteResult {
-    i32 passed,
-    Vec[GoldenFailure] failed,
+    passed: i32,
+    failed: Vec[GoldenFailure],
 }
 
-suiteResult RunGoldenSuite(String fixtures_root){
+func RunGoldenSuite(fixtures_root: String) -> suiteResult {
     var failures = Vec[GoldenFailure]()
     var passed = 0
 
     for case in LexerCases(fixtures_root) {
         match RunLexerCase(case) {
-            :Ok(()) => passed = passed + 1 Result,
-            :Err(err) => failures.push(err) Result,
+            Result::Ok(()) => passed = passed + 1,
+            Result::Err(err) => failures.push(err),
         }
     }
 
     for case in ParserCases(fixtures_root) {
         match RunParserCase(case) {
-            :Ok(()) => passed = passed + 1 Result,
-            :Err(err) => failures.push(err) Result,
+            Result::Ok(()) => passed = passed + 1,
+            Result::Err(err) => failures.push(err),
         }
     }
 
     suiteResult {
-        passed passed,
-        failures failed,
+        passed: passed,
+        failed: failures,
     }
 }

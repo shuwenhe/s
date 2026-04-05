@@ -1,9 +1,9 @@
 package demo.generic
 
-T require_copy[T: Copy](T value){
+func require_copy[T: Copy](value: T) -> T {
     value
 }
 
-String bad(String text){
+func bad(text: String) -> String {
     require_copy(text)
 }
