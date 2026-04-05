@@ -217,7 +217,7 @@ fn checkStmt(
     }
 }
 
-pub fn infer_expr(
+fn inferExpr(
     expr: Expr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
@@ -225,53 +225,53 @@ pub fn infer_expr(
     diagnostics: Vec[Diagnostic],
 ) -> Type {
     match expr {
-        Expr::Int(_) => i32_type(),
-        Expr::String(_) => string_type(),
-        Expr::Bool(_) => bool_type(),
-        Expr::Name(value) => lookup_name(scope, value.name, diagnostics),
+        Expr::Int(_) => NewI32Type(),
+        Expr::String(_) => NewStringType(),
+        Expr::Bool(_) => NewBoolType(),
+        Expr::Name(value) => lookupName(scope, value.name, diagnostics),
         Expr::Borrow(value) => Type::Reference(ReferenceType {
-            inner: Box(infer_expr(value.target.value, scope, functions, structs, diagnostics)),
+            inner: Box(inferExpr(value.target.value, scope, functions, structs, diagnostics)),
             mutable: value.mutable,
         }),
-        Expr::Binary(value) => infer_binary(value, scope, functions, structs, diagnostics),
-        Expr::Member(value) => infer_member(value, scope, functions, structs, diagnostics),
-        Expr::Index(value) => infer_index(value, scope, functions, structs, diagnostics),
-        Expr::Call(value) => infer_call(value, scope, functions, structs, diagnostics),
-        Expr::Block(value) => infer_block(value, scope, functions, structs, diagnostics),
+        Expr::Binary(value) => inferBinary(value, scope, functions, structs, diagnostics),
+        Expr::Member(value) => inferMember(value, scope, functions, structs, diagnostics),
+        Expr::Index(value) => inferIndex(value, scope, functions, structs, diagnostics),
+        Expr::Call(value) => inferCall(value, scope, functions, structs, diagnostics),
+        Expr::Block(value) => inferBlock(value, scope, functions, structs, diagnostics),
         Expr::If(value) => {
-            infer_expr(value.condition.value, scope, functions, structs, diagnostics)
-            let then_type = infer_block(value.then_branch, scope, functions, structs, diagnostics)
+            inferExpr(value.condition.value, scope, functions, structs, diagnostics)
+            let then_type = inferBlock(value.then_branch, scope, functions, structs, diagnostics)
             match value.else_branch {
                 Option::Some(other) => {
-                    let else_type = infer_expr(other.value, scope, functions, structs, diagnostics)
-                    if !type_eq(then_type, else_type) {
-                        push_error(diagnostics, "if branch type mismatch")
-                        return unknown_type("if")
+                    let else_type = inferExpr(other.value, scope, functions, structs, diagnostics)
+                    if !typeEq(then_type, else_type) {
+                        pushError(diagnostics, "if branch type mismatch")
+                        return UnknownTypeOf("if")
                     }
                     then_type
                 }
-                Option::None => unit_type(),
+                Option::None => NewUnitType(),
             }
         }
         Expr::While(value) => {
-            infer_expr(value.condition.value, scope, functions, structs, diagnostics)
-            infer_block(value.body, scope, functions, structs, diagnostics)
-            unit_type()
+            inferExpr(value.condition.value, scope, functions, structs, diagnostics)
+            inferBlock(value.body, scope, functions, structs, diagnostics)
+            NewUnitType()
         }
         Expr::For(value) => {
-            infer_expr(value.iterable.value, scope, functions, structs, diagnostics)
-            infer_block(value.body, scope, functions, structs, diagnostics)
-            unit_type()
+            inferExpr(value.iterable.value, scope, functions, structs, diagnostics)
+            inferBlock(value.body, scope, functions, structs, diagnostics)
+            NewUnitType()
         }
         Expr::Match(value) => {
-            infer_expr(value.subject.value, scope, functions, structs, diagnostics)
-            let arm_type = unknown_type("match")
+            inferExpr(value.subject.value, scope, functions, structs, diagnostics)
+            let arm_type = UnknownTypeOf("match")
             for arm in value.arms {
-                let current = infer_expr(arm.expr, scope, functions, structs, diagnostics)
-                if is_unknown_type(arm_type) {
+                let current = inferExpr(arm.expr, scope, functions, structs, diagnostics)
+                if isUnknownType(arm_type) {
                     arm_type = current
-                } else if !type_eq(arm_type, current) {
-                    push_error(diagnostics, "match arm type mismatch")
+                } else if !typeEq(arm_type, current) {
+                    pushError(diagnostics, "match arm type mismatch")
                 }
             }
             arm_type
@@ -279,71 +279,71 @@ pub fn infer_expr(
     }
 }
 
-pub fn infer_binary(
+fn inferBinary(
     expr: BinaryExpr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
     structs: Vec[StructInfo],
     diagnostics: Vec[Diagnostic],
 ) -> Type {
-    let left = infer_expr(expr.left.value, scope, functions, structs, diagnostics)
-    let right = infer_expr(expr.right.value, scope, functions, structs, diagnostics)
+    let left = inferExpr(expr.left.value, scope, functions, structs, diagnostics)
+    let right = inferExpr(expr.right.value, scope, functions, structs, diagnostics)
     if expr.op == "+" || expr.op == "-" || expr.op == "*" || expr.op == "/" || expr.op == "%" {
-        if type_eq(left, i32_type()) && type_eq(right, i32_type()) {
-            return i32_type()
+        if typeEq(left, NewI32Type()) && typeEq(right, NewI32Type()) {
+            return NewI32Type()
         }
-        push_error(diagnostics, "binary operator expects i32 operands")
-        return unknown_type("binary")
+        pushError(diagnostics, "binary operator expects i32 operands")
+        return UnknownTypeOf("binary")
     }
     if expr.op == "==" || expr.op == "!=" || expr.op == "<" || expr.op == "<=" || expr.op == ">" || expr.op == ">=" {
-        return bool_type()
+        return NewBoolType()
     }
     if expr.op == "&&" || expr.op == "||" {
-        return bool_type()
+        return NewBoolType()
     }
-    unknown_type("binary")
+    UnknownTypeOf("binary")
 }
 
-pub fn infer_member(
+fn inferMember(
     expr: MemberExpr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
     structs: Vec[StructInfo],
     diagnostics: Vec[Diagnostic],
 ) -> Type {
-    let target = infer_expr(expr.target.value, scope, functions, structs, diagnostics)
-    let field_type = lookup_struct_field_type(structs, target, expr.member)
+    let target = inferExpr(expr.target.value, scope, functions, structs, diagnostics)
+    let field_type = lookupStructFieldType(structs, target, expr.member)
     match field_type {
         Option::Some(value) => value,
         Option::None => {
-            let builtin_method = lookup_builtin_method(target, expr.member)
+            let builtin_method = LookupBuiltinMethod(target, expr.member)
             match builtin_method {
                 Option::Some(method) => Type::Function(method.signature),
                 Option::None => {
-                    push_error(diagnostics, "unknown member " + expr.member)
-                    unknown_type("member")
+                    pushError(diagnostics, "unknown member " + expr.member)
+                    UnknownTypeOf("member")
                 }
             }
         }
     }
 }
 
-pub fn infer_index(
+fn inferIndex(
     expr: IndexExpr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
     structs: Vec[StructInfo],
     diagnostics: Vec[Diagnostic],
 ) -> Type {
-    let target = infer_expr(expr.target.value, scope, functions, structs, diagnostics)
-    infer_expr(expr.index.value, scope, functions, structs, diagnostics)
-    match lookup_index_type(target) {
+    let target = inferExpr(expr.target.value, scope, functions, structs, diagnostics)
+    inferExpr(expr.index.value, scope, functions, structs, diagnostics)
+    match LookupIndexType(target) {
         Option::Some(value) => value,
-        Option::None => unknown_type("index"),
+        Option::None => UnknownTypeOf("index"),
     }
 }
 
-pub fn infer_call(
+fn inferCall(
     expr: CallExpr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
@@ -352,36 +352,36 @@ pub fn infer_call(
 ) -> Type {
     match expr.callee.value {
         Expr::Name(name_expr) => {
-            let info = lookup_function(functions, name_expr.name)
+            let info = lookupFunction(functions, name_expr.name)
             match info {
                 Option::Some(func) => {
-                    check_call_args(func.params, expr.args, scope, functions, structs, diagnostics)
+                    checkCallArgs(func.params, expr.args, scope, functions, structs, diagnostics)
                     return func.return_type
                 }
                 Option::None => (),
             }
         }
         Expr::Member(member_expr) => {
-            let target = infer_expr(member_expr.target.value, scope, functions, structs, diagnostics)
-            let methods = lookup_builtin_methods(target, member_expr.member)
+            let target = inferExpr(member_expr.target.value, scope, functions, structs, diagnostics)
+            let methods = LookupBuiltinMethods(target, member_expr.member)
             if methods.len() == 1 {
-                check_call_args(methods[0].signature.params, expr.args, scope, functions, structs, diagnostics)
+                checkCallArgs(methods[0].signature.params, expr.args, scope, functions, structs, diagnostics)
                 match methods[0].signature.return_type {
                     Option::Some(value) => return value,
-                    Option::None => return unit_type(),
+                    Option::None => return NewUnitType(),
                 }
             }
         }
         _ => (),
     }
-    infer_expr(expr.callee.value, scope, functions, structs, diagnostics)
+    inferExpr(expr.callee.value, scope, functions, structs, diagnostics)
     for arg in expr.args {
-        infer_expr(arg, scope, functions, structs, diagnostics)
+        inferExpr(arg, scope, functions, structs, diagnostics)
     }
-    unknown_type("call")
+    UnknownTypeOf("call")
 }
 
-pub fn check_call_args(
+fn checkCallArgs(
     params: Vec[Type],
     args: Vec[Expr],
     scope: Vec[VarState],
@@ -390,31 +390,31 @@ pub fn check_call_args(
     diagnostics: Vec[Diagnostic],
 ) -> () {
     if params.len() != args.len() {
-        push_error(diagnostics, "call argument count mismatch")
+        pushError(diagnostics, "call argument count mismatch")
         return
     }
     let index = 0
     for arg in args {
-        let actual = infer_expr(arg, scope, functions, structs, diagnostics)
+        let actual = inferExpr(arg, scope, functions, structs, diagnostics)
         let expected = params[index]
-        if !type_eq(expected, actual) && !is_named_type_var(expected, "T") {
-            push_error(diagnostics, "call argument type mismatch")
+        if !typeEq(expected, actual) && !IsNamedTypeVar(expected, "T") {
+            pushError(diagnostics, "call argument type mismatch")
         }
         index = index + 1
     }
 }
 
-pub fn lookup_name(scope: Vec[VarState], name: String, diagnostics: Vec[Diagnostic]) -> Type {
+fn lookupName(scope: Vec[VarState], name: String, diagnostics: Vec[Diagnostic]) -> Type {
     for entry in scope {
         if entry.name == name {
             return entry.ty
         }
     }
-    push_error(diagnostics, "unresolved name " + name)
-    unknown_type("name")
+    pushError(diagnostics, "unresolved name " + name)
+    UnknownTypeOf("name")
 }
 
-pub fn lookup_function(functions: Vec[FunctionInfo], name: String) -> Option[FunctionInfo] {
+fn lookupFunction(functions: Vec[FunctionInfo], name: String) -> Option[FunctionInfo] {
     for function in functions {
         if function.name == name {
             return Option::Some(function)
@@ -423,8 +423,8 @@ pub fn lookup_function(functions: Vec[FunctionInfo], name: String) -> Option[Fun
     Option::None
 }
 
-pub fn lookup_struct_field_type(structs: Vec[StructInfo], target: Type, member: String) -> Option[Type] {
-    match unwrap_refs(target) {
+fn lookupStructFieldType(structs: Vec[StructInfo], target: Type, member: String) -> Option[Type] {
+    match UnwrapRefs(target) {
         Type::Named(named) => {
             for item in structs {
                 if item.name == named.name {
@@ -441,14 +441,14 @@ pub fn lookup_struct_field_type(structs: Vec[StructInfo], target: Type, member: 
     }
 }
 
-pub fn bind_var(scope: Vec[VarState], name: String, ty: Type) -> () {
+fn bindVar(scope: Vec[VarState], name: String, ty: Type) -> () {
     scope.push(VarState {
         name: name,
         ty: ty,
     })
 }
 
-pub fn clone_scope(scope: Vec[VarState]) -> Vec[VarState] {
+fn cloneScope(scope: Vec[VarState]) -> Vec[VarState] {
     let out = Vec[VarState]()
     for value in scope {
         out.push(value)
@@ -456,25 +456,25 @@ pub fn clone_scope(scope: Vec[VarState]) -> Vec[VarState] {
     out
 }
 
-pub fn push_error(diagnostics: Vec[Diagnostic], message: String) -> () {
+fn pushError(diagnostics: Vec[Diagnostic], message: String) -> () {
     diagnostics.push(Diagnostic {
         message: message,
     })
 }
 
-pub fn unknown_type(label: String) -> Type {
+pub fn UnknownTypeOf(label: String) -> Type {
     Type::Unknown(UnknownType {
         label: label,
     })
 }
 
-pub fn is_unknown_type(ty: Type) -> bool {
+fn isUnknownType(ty: Type) -> bool {
     match ty {
         Type::Unknown(_) => true,
         _ => false,
     }
 }
 
-pub fn type_eq(left: Type, right: Type) -> bool {
-    dump_type(left) == dump_type(right)
+fn typeEq(left: Type, right: Type) -> bool {
+    DumpType(left) == DumpType(right)
 }

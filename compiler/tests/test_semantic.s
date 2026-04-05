@@ -5,8 +5,8 @@ use std.option.Option
 use std.result.Result
 use std.vec.Vec
 use compiler.Diagnostic
-use compiler.check_source
-use compiler.load_prelude
+use compiler.CheckSource
+use compiler.LoadPrelude
 use frontend.parse_source
 
 pub struct SemanticCase {
@@ -78,7 +78,7 @@ pub fn run_semantic_suite(fixtures_root: String) -> Vec[SemanticFailure] {
         }
     }
 
-    let prelude = load_prelude()
+    let prelude = LoadPrelude()
     if prelude.name != "std.prelude" {
         failures.push(SemanticFailure {
             name: "prelude",
@@ -112,7 +112,7 @@ pub fn run_case(case: SemanticCase) -> Result[(), SemanticFailure] {
             }
         }
 
-    let checked = check_source(parsed)
+    let checked = CheckSource(parsed)
     let ok = checked.diagnostics.len() == 0
     if ok != case.should_pass {
         return Result::Err(SemanticFailure {
