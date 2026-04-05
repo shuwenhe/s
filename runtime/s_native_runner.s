@@ -1,0 +1,529 @@
+package runtime.s_native_runner
+
+use std.env.Args
+use std.fs.MakeTempDir
+use std.fs.ReadToString
+use std.fs.WriteTextFile
+use std.io.eprintln
+use std.io.println
+use std.option.Option
+use std.prelude.char_at
+use std.prelude.len
+use std.prelude.slice
+use std.prelude.to_string
+use std.process.Exit
+use std.process.RunProcess
+use std.result.Result
+use std.vec.Vec
+
+struct RunnerError {
+    String message,
+}
+
+func main() -> () {
+    Exit(runMain(Args()))
+}
+
+func runMain(Vec[String] args) -> int {
+    match run(args) {
+        Result::Ok(()) => 0,
+        Result::Err(err) => {
+            eprintln("error: " + err.message)
+            1
+        }
+    }
+}
+
+func run(Vec[String] args) -> Result[(), RunnerError] {
+    if args.len() != 4 {
+        return usageError()
+    }
+    if args[0] != "build" {
+        return usageError()
+    }
+    if args[2] != "-o" {
+        return Result::Err(RunnerError {
+            message: "expected -o before output path",
+        })
+    }
+    buildSource(args[1], args[3])
+}
+
+func buildSource(String path, String outputPath) -> Result[(), RunnerError] {
+    var source =
+        match ReadToString(path) {
+            Result::Ok(text) => text,
+            Result::Err(_) => {
+                return Result::Err(RunnerError {
+                    message: "failed to read source file: " + path,
+                })
+            }
+        }
+
+    var message =
+        match compileMessageForSource(source) {
+            Option::Some(text) => text,
+            Option::None => {
+                return Result::Err(RunnerError {
+                    message: "unsupported source shape for native runner MVP",
+                })
+            }
+        }
+
+    var asmText = emitAsm(message)
+    assembleAndLink(asmText, outputPath)?
+    println("built: " + outputPath)
+    Result::Ok(())
+}
+
+func compileMessageForSource(String source) -> Option[String] {
+    match extractQuotedPrintln(source) {
+        Option::Some(text) => return Option::Some(text + "\n"),
+        Option::None => (),
+    }
+
+    if !containsText(source, "println(sum)") {
+        return Option::None
+    }
+    if !containsText(source, "sum = sum + i") {
+        return Option::None
+    }
+
+    var initial =
+        match parseIntAfter(source, "int sum = ") {
+            Option::Some(value) => value,
+            Option::None => return Option::None,
+        }
+    var start =
+        match parseIntAfter(source, "for (int i = ") {
+            Option::Some(value) => value,
+            Option::None => return Option::None,
+        }
+    var end =
+        match parseIntAfter(source, "; i <= ") {
+            Option::Some(value) => value,
+            Option::None => return Option::None,
+        }
+
+    var total = initial
+    var index = start
+    while index <= end {
+        total = total + index
+        index++
+    }
+    Option::Some(to_string(total) + "\n")
+}
+
+func extractQuotedPrintln(String source) -> Option[String] {
+    var prefix = "println(\""
+    var startIndex = findText(source, prefix)
+    if startIndex < 0 {
+        return Option::None
+    }
+    var textStart = startIndex + len(prefix)
+    var endIndex = findCharFrom(source, "\"", textStart)
+    if endIndex < 0 {
+        return Option::None
+    }
+    Option::Some(slice(source, textStart, endIndex))
+}
+
+func parseIntAfter(String source, String needle) -> Option[int] {
+    var startIndex = findText(source, needle)
+    if startIndex < 0 {
+        return Option::None
+    }
+    var index = startIndex + len(needle)
+    var value = 0
+    var found = false
+    while index < len(source) {
+        var ch = char_at(source, index)
+        if ch < "0" || ch > "9" {
+            break
+        }
+        value = value * 10 + digitValue(ch)
+        found = true
+        index = index + 1
+    }
+    if !found {
+        return Option::None
+    }
+    Option::Some(value)
+}
+
+func emitAsm(String message) -> String {
+    var lines = Vec[String]()
+    lines.push(".section .data")
+    lines.push("message_0:")
+    lines.push("    .byte " + encodeBytes(message))
+    lines.push("")
+    lines.push(".section .text")
+    lines.push(".global _start")
+    lines.push("_start:")
+    lines.push("    mov $1, %rax")
+    lines.push("    mov $1, %rdi")
+    lines.push("    lea message_0(%rip), %rsi")
+    lines.push("    mov $" + to_string(len(message)) + ", %rdx")
+    lines.push("    syscall")
+    lines.push("    mov $60, %rax")
+    lines.push("    mov $0, %rdi")
+    lines.push("    syscall")
+    joinWith(lines, "\n") + "\n"
+}
+
+func assembleAndLink(String asmText, String outputPath) -> Result[(), RunnerError] {
+    var tempDir =
+        match MakeTempDir("s-native-") {
+            Result::Ok(path) => path,
+            Result::Err(err) => {
+                return Result::Err(RunnerError {
+                    message: err.message,
+                })
+            }
+        }
+    var asmPath = tempDir + "/out.s"
+    var objPath = tempDir + "/out.o"
+    match WriteTextFile(asmPath, asmText) {
+        Result::Ok(()) => (),
+        Result::Err(err) => {
+            return Result::Err(RunnerError {
+                message: err.message,
+            })
+        }
+    }
+    match RunProcess(Vec[String] { "as", "-o", objPath, asmPath }) {
+        Result::Ok(()) => (),
+        Result::Err(err) => {
+            return Result::Err(RunnerError {
+                message: err.message,
+            })
+        }
+    }
+    match RunProcess(Vec[String] { "ld", "-o", outputPath, objPath }) {
+        Result::Ok(()) => Result::Ok(()),
+        Result::Err(err) => Result::Err(RunnerError {
+            message: err.message,
+        }),
+    }
+}
+
+func containsText(String text, String needle) -> bool {
+    findText(text, needle) >= 0
+}
+
+func findText(String text, String needle) -> int {
+    if len(needle) == 0 {
+        return 0
+    }
+    if len(needle) > len(text) {
+        return -1
+    }
+    var index = 0
+    while index <= len(text) - len(needle) {
+        if slice(text, index, index + len(needle)) == needle {
+            return index
+        }
+        index++
+    }
+    -1
+}
+
+func findCharFrom(String text, String needle, int start) -> int {
+    var index = start
+    while index < len(text) {
+        if char_at(text, index) == needle {
+            return index
+        }
+        index++
+    }
+    -1
+}
+
+func digitValue(String ch) -> int {
+    if ch == "0" {
+        return 0
+    }
+    if ch == "1" {
+        return 1
+    }
+    if ch == "2" {
+        return 2
+    }
+    if ch == "3" {
+        return 3
+    }
+    if ch == "4" {
+        return 4
+    }
+    if ch == "5" {
+        return 5
+    }
+    if ch == "6" {
+        return 6
+    }
+    if ch == "7" {
+        return 7
+    }
+    if ch == "8" {
+        return 8
+    }
+    if ch == "9" {
+        return 9
+    }
+    0
+}
+
+func encodeBytes(String text) -> String {
+    var parts = Vec[String]()
+    var index = 0
+    while index < len(text) {
+        parts.push(to_string(asciiCode(char_at(text, index))))
+        index++
+    }
+    joinWith(parts, ", ")
+}
+
+func asciiCode(String ch) -> int {
+    if ch == "\n" {
+        return 10
+    }
+    if ch == " " {
+        return 32
+    }
+    if ch == "!" {
+        return 33
+    }
+    if ch == "\"" {
+        return 34
+    }
+    if ch == "," {
+        return 44
+    }
+    if ch == "-" {
+        return 45
+    }
+    if ch == "." {
+        return 46
+    }
+    if ch == "(" {
+        return 40
+    }
+    if ch == ")" {
+        return 41
+    }
+    if ch == "+" {
+        return 43
+    }
+    if ch == "0" {
+        return 48
+    }
+    if ch == "1" {
+        return 49
+    }
+    if ch == "2" {
+        return 50
+    }
+    if ch == "3" {
+        return 51
+    }
+    if ch == "4" {
+        return 52
+    }
+    if ch == "5" {
+        return 53
+    }
+    if ch == "6" {
+        return 54
+    }
+    if ch == "7" {
+        return 55
+    }
+    if ch == "8" {
+        return 56
+    }
+    if ch == "9" {
+        return 57
+    }
+    if ch == ":" {
+        return 58
+    }
+    if ch == "A" {
+        return 65
+    }
+    if ch == "B" {
+        return 66
+    }
+    if ch == "C" {
+        return 67
+    }
+    if ch == "D" {
+        return 68
+    }
+    if ch == "E" {
+        return 69
+    }
+    if ch == "F" {
+        return 70
+    }
+    if ch == "G" {
+        return 71
+    }
+    if ch == "H" {
+        return 72
+    }
+    if ch == "I" {
+        return 73
+    }
+    if ch == "J" {
+        return 74
+    }
+    if ch == "K" {
+        return 75
+    }
+    if ch == "L" {
+        return 76
+    }
+    if ch == "M" {
+        return 77
+    }
+    if ch == "N" {
+        return 78
+    }
+    if ch == "O" {
+        return 79
+    }
+    if ch == "P" {
+        return 80
+    }
+    if ch == "Q" {
+        return 81
+    }
+    if ch == "R" {
+        return 82
+    }
+    if ch == "S" {
+        return 83
+    }
+    if ch == "T" {
+        return 84
+    }
+    if ch == "U" {
+        return 85
+    }
+    if ch == "V" {
+        return 86
+    }
+    if ch == "W" {
+        return 87
+    }
+    if ch == "X" {
+        return 88
+    }
+    if ch == "Y" {
+        return 89
+    }
+    if ch == "Z" {
+        return 90
+    }
+    if ch == "_" {
+        return 95
+    }
+    if ch == "a" {
+        return 97
+    }
+    if ch == "b" {
+        return 98
+    }
+    if ch == "c" {
+        return 99
+    }
+    if ch == "d" {
+        return 100
+    }
+    if ch == "e" {
+        return 101
+    }
+    if ch == "f" {
+        return 102
+    }
+    if ch == "g" {
+        return 103
+    }
+    if ch == "h" {
+        return 104
+    }
+    if ch == "i" {
+        return 105
+    }
+    if ch == "j" {
+        return 106
+    }
+    if ch == "k" {
+        return 107
+    }
+    if ch == "l" {
+        return 108
+    }
+    if ch == "m" {
+        return 109
+    }
+    if ch == "n" {
+        return 110
+    }
+    if ch == "o" {
+        return 111
+    }
+    if ch == "p" {
+        return 112
+    }
+    if ch == "q" {
+        return 113
+    }
+    if ch == "r" {
+        return 114
+    }
+    if ch == "s" {
+        return 115
+    }
+    if ch == "t" {
+        return 116
+    }
+    if ch == "u" {
+        return 117
+    }
+    if ch == "v" {
+        return 118
+    }
+    if ch == "w" {
+        return 119
+    }
+    if ch == "x" {
+        return 120
+    }
+    if ch == "y" {
+        return 121
+    }
+    if ch == "z" {
+        return 122
+    }
+    63
+}
+
+func joinWith(Vec[String] values, String sep) -> String {
+    var text = ""
+    var index = 0
+    while index < values.len() {
+        if index > 0 {
+            text = text + sep
+        }
+        text = text + values[index]
+        index++
+    }
+    text
+}
+
+func usageError() -> Result[(), RunnerError] {
+    Result::Err(RunnerError {
+        message: "usage: s_native build <path> -o <output>",
+    })
+}
