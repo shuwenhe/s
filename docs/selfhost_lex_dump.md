@@ -5,14 +5,14 @@ Status: Working Draft
 
 ## 1. Purpose
 
-本文档说明自举阶段最小 driver [lex_dump.s](/app/s/selfhost/cmd/lex_dump.s) 的职责、调用路径，以及它当前依赖的 `std.fs` / `std.io` 接口假设。
+本文档说明自举阶段最小 driver [lex_dump.s](/app/s/cmd/lex_dump.s) 的职责、调用路径，以及它当前依赖的 `std.fs` / `std.io` 接口假设。
 
 `lex_dump` 的目标很简单：
 
 ```text
 source file
   -> read source text
-  -> selfhost lexer
+  -> self-hosted lexer
   -> token stream
   -> textual dump
 ```
@@ -26,15 +26,15 @@ source file
 1. `main(args)` 读取命令行参数
 2. `parse_path(args)` 提取输入文件路径
 3. `read_source(path)` 调用 `std.fs.read_to_string`
-4. `lex_source(source)` 调用 [lexer.s](/app/s/selfhost/frontend/lexer.s)
+4. `lex_source(source)` 调用 [lexer.s](/app/s/frontend/lexer.s)
 5. `dump_tokens(tokens)` 生成与 Python 版接近的 token dump 文本
 6. `println(...)` 输出到标准输出
 
 涉及文件：
 
-- [lex_dump.s](/app/s/selfhost/cmd/lex_dump.s)
-- [lexer.s](/app/s/selfhost/frontend/lexer.s)
-- [tokens.s](/app/s/selfhost/frontend/tokens.s)
+- [lex_dump.s](/app/s/cmd/lex_dump.s)
+- [lexer.s](/app/s/frontend/lexer.s)
+- [tokens.s](/app/s/frontend/tokens.s)
 
 ## 3. `std.fs` Assumptions
 
