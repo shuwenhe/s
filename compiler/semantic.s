@@ -53,7 +53,7 @@ struct VarState {
     ty: Type,
 }
 
-fn CheckSource(source: SourceFile) -> CheckResult {
+func CheckSource(source: SourceFile) -> CheckResult {
     var diagnostics = Vec[Diagnostic]()
     var functions = collectFunctions(source)
     var structs = collectStructs(source)
@@ -70,11 +70,11 @@ fn CheckSource(source: SourceFile) -> CheckResult {
     }
 }
 
-fn IsOK(result: CheckResult) -> bool {
+func IsOK(result: CheckResult) -> bool {
     result.diagnostics.len() == 0
 }
 
-fn collectFunctions(source: SourceFile) -> Vec[FunctionInfo] {
+func collectFunctions(source: SourceFile) -> Vec[FunctionInfo] {
     var functions = Vec[FunctionInfo]()
     for item in source.items {
         match item {
@@ -99,7 +99,7 @@ fn collectFunctions(source: SourceFile) -> Vec[FunctionInfo] {
     functions
 }
 
-fn collectStructs(source: SourceFile) -> Vec[StructInfo] {
+func collectStructs(source: SourceFile) -> Vec[StructInfo] {
     var structs = Vec[StructInfo]()
     for item in source.items {
         match item {
@@ -122,7 +122,7 @@ fn collectStructs(source: SourceFile) -> Vec[StructInfo] {
     structs
 }
 
-fn checkFunction(
+func checkFunction(
     item: FunctionDecl,
     functions: Vec[FunctionInfo],
     structs: Vec[StructInfo],
@@ -159,7 +159,7 @@ fn checkFunction(
     }
 }
 
-fn inferBlock(
+func inferBlock(
     block: BlockExpr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
@@ -176,7 +176,7 @@ fn inferBlock(
     }
 }
 
-fn checkStmt(
+func checkStmt(
     stmt: frontend.Stmt,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
@@ -216,7 +216,7 @@ fn checkStmt(
     }
 }
 
-fn inferExpr(
+func inferExpr(
     expr: Expr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
@@ -278,7 +278,7 @@ fn inferExpr(
     }
 }
 
-fn inferBinary(
+func inferBinary(
     expr: BinaryExpr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
@@ -303,7 +303,7 @@ fn inferBinary(
     UnknownTypeOf("binary")
 }
 
-fn inferMember(
+func inferMember(
     expr: MemberExpr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
@@ -327,7 +327,7 @@ fn inferMember(
     }
 }
 
-fn inferIndex(
+func inferIndex(
     expr: IndexExpr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
@@ -342,7 +342,7 @@ fn inferIndex(
     }
 }
 
-fn inferCall(
+func inferCall(
     expr: CallExpr,
     scope: Vec[VarState],
     functions: Vec[FunctionInfo],
@@ -380,7 +380,7 @@ fn inferCall(
     UnknownTypeOf("call")
 }
 
-fn checkCallArgs(
+func checkCallArgs(
     params: Vec[Type],
     args: Vec[Expr],
     scope: Vec[VarState],
@@ -403,7 +403,7 @@ fn checkCallArgs(
     }
 }
 
-fn lookupName(scope: Vec[VarState], name: String, diagnostics: Vec[Diagnostic]) -> Type {
+func lookupName(scope: Vec[VarState], name: String, diagnostics: Vec[Diagnostic]) -> Type {
     for entry in scope {
         if entry.name == name {
             return entry.ty
@@ -413,7 +413,7 @@ fn lookupName(scope: Vec[VarState], name: String, diagnostics: Vec[Diagnostic]) 
     UnknownTypeOf("name")
 }
 
-fn lookupFunction(functions: Vec[FunctionInfo], name: String) -> Option[FunctionInfo] {
+func lookupFunction(functions: Vec[FunctionInfo], name: String) -> Option[FunctionInfo] {
     for function in functions {
         if function.name == name {
             return Option::Some(function)
@@ -422,7 +422,7 @@ fn lookupFunction(functions: Vec[FunctionInfo], name: String) -> Option[Function
     Option::None
 }
 
-fn lookupStructFieldType(structs: Vec[StructInfo], target: Type, member: String) -> Option[Type] {
+func lookupStructFieldType(structs: Vec[StructInfo], target: Type, member: String) -> Option[Type] {
     match UnwrapRefs(target) {
         Type::Named(named) => {
             for item in structs {
@@ -440,14 +440,14 @@ fn lookupStructFieldType(structs: Vec[StructInfo], target: Type, member: String)
     }
 }
 
-fn bindVar(scope: Vec[VarState], name: String, ty: Type) -> () {
+func bindVar(scope: Vec[VarState], name: String, ty: Type) -> () {
     scope.push(VarState {
         name: name,
         ty: ty,
     })
 }
 
-fn cloneScope(scope: Vec[VarState]) -> Vec[VarState] {
+func cloneScope(scope: Vec[VarState]) -> Vec[VarState] {
     var out = Vec[VarState]()
     for value in scope {
         out.push(value)
@@ -455,25 +455,25 @@ fn cloneScope(scope: Vec[VarState]) -> Vec[VarState] {
     out
 }
 
-fn pushError(diagnostics: Vec[Diagnostic], message: String) -> () {
+func pushError(diagnostics: Vec[Diagnostic], message: String) -> () {
     diagnostics.push(Diagnostic {
         message: message,
     })
 }
 
-fn UnknownTypeOf(label: String) -> Type {
+func UnknownTypeOf(label: String) -> Type {
     Type::Unknown(UnknownType {
         label: label,
     })
 }
 
-fn isUnknownType(ty: Type) -> bool {
+func isUnknownType(ty: Type) -> bool {
     match ty {
         Type::Unknown(_) => true,
         _ => false,
     }
 }
 
-fn typeEq(left: Type, right: Type) -> bool {
+func typeEq(left: Type, right: Type) -> bool {
     DumpType(left) == DumpType(right)
 }

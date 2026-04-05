@@ -44,7 +44,7 @@ struct BuiltinModuleDecl {
     types: Vec[BuiltinTypeDecl],
 }
 
-fn LoadPrelude() -> BuiltinModuleDecl {
+func LoadPrelude() -> BuiltinModuleDecl {
     BuiltinModuleDecl {
         name: "std.prelude",
         traits: builtInTraits(),
@@ -52,7 +52,7 @@ fn LoadPrelude() -> BuiltinModuleDecl {
     }
 }
 
-fn builtInTraits() -> Vec[BuiltinTraitDecl] {
+func builtInTraits() -> Vec[BuiltinTraitDecl] {
     var traits = Vec[BuiltinTraitDecl]()
     traits.push(BuiltinTraitDecl {
         name: "Len",
@@ -79,7 +79,7 @@ fn builtInTraits() -> Vec[BuiltinTraitDecl] {
     traits
 }
 
-fn builtInTypes() -> Vec[BuiltinTypeDecl] {
+func builtInTypes() -> Vec[BuiltinTypeDecl] {
     var types = Vec[BuiltinTypeDecl]()
     types.push(BuiltinTypeDecl {
         name: "String",
@@ -143,11 +143,11 @@ fn builtInTypes() -> Vec[BuiltinTypeDecl] {
     types
 }
 
-fn Prelude() -> BuiltinModuleDecl {
+func Prelude() -> BuiltinModuleDecl {
     LoadPrelude()
 }
 
-fn LookupBuiltinType(receiver_type: Type) -> Option[BuiltinTypeDecl] {
+func LookupBuiltinType(receiver_type: Type) -> Option[BuiltinTypeDecl] {
     var base = baseName(receiver_type)
     match base {
         Option::Some(name) => findBuiltinType(builtInTypes(), name),
@@ -155,14 +155,14 @@ fn LookupBuiltinType(receiver_type: Type) -> Option[BuiltinTypeDecl] {
     }
 }
 
-fn LookupBuiltinMethods(receiver_type: Type, member: String) -> Vec[BuiltinMethodDecl] {
+func LookupBuiltinMethods(receiver_type: Type, member: String) -> Vec[BuiltinMethodDecl] {
     match LookupBuiltinType(receiver_type) {
         Option::Some(builtin_type) => findBuiltinMethods(builtin_type, member, receiver_type),
         Option::None => Vec[BuiltinMethodDecl](),
     }
 }
 
-fn LookupBuiltinMethod(receiver_type: Type, member: String) -> Option[BuiltinMethodDecl] {
+func LookupBuiltinMethod(receiver_type: Type, member: String) -> Option[BuiltinMethodDecl] {
     var methods = LookupBuiltinMethods(receiver_type, member)
     if methods.len() == 1 {
         return Option::Some(methods[0])
@@ -170,7 +170,7 @@ fn LookupBuiltinMethod(receiver_type: Type, member: String) -> Option[BuiltinMet
     Option::None
 }
 
-fn LookupIndexType(receiver_type: Type) -> Option[Type] {
+func LookupIndexType(receiver_type: Type) -> Option[Type] {
     var inner = UnwrapRefs(receiver_type)
     match LookupBuiltinType(inner) {
         Option::Some(builtin_type) => {
@@ -198,7 +198,7 @@ fn LookupIndexType(receiver_type: Type) -> Option[Type] {
     }
 }
 
-fn findBuiltinType(types: Vec[BuiltinTypeDecl], name: String) -> Option[BuiltinTypeDecl] {
+func findBuiltinType(types: Vec[BuiltinTypeDecl], name: String) -> Option[BuiltinTypeDecl] {
     for ty in types {
         if ty.name == name {
             return Option::Some(ty)
@@ -207,7 +207,7 @@ fn findBuiltinType(types: Vec[BuiltinTypeDecl], name: String) -> Option[BuiltinT
     Option::None
 }
 
-fn findBuiltinMethods(
+func findBuiltinMethods(
     builtin_type: BuiltinTypeDecl,
     member: String,
     receiver_type: Type,
@@ -223,7 +223,7 @@ fn findBuiltinMethods(
     Vec[BuiltinMethodDecl]()
 }
 
-fn rewriteVecPush(methods: Vec[BuiltinMethodDecl], receiver_type: Type) -> Vec[BuiltinMethodDecl] {
+func rewriteVecPush(methods: Vec[BuiltinMethodDecl], receiver_type: Type) -> Vec[BuiltinMethodDecl] {
     var rewritten = Vec[BuiltinMethodDecl]()
     var inner = UnwrapRefs(receiver_type)
     var replacement = firstNamedArg(inner)
@@ -257,7 +257,7 @@ fn rewriteVecPush(methods: Vec[BuiltinMethodDecl], receiver_type: Type) -> Vec[B
     rewritten
 }
 
-fn firstNamedArg(ty: Type) -> Option[Type] {
+func firstNamedArg(ty: Type) -> Option[Type] {
     match ty {
         Type::Named(value) => {
             if value.args.len() > 0 {
@@ -269,14 +269,14 @@ fn firstNamedArg(ty: Type) -> Option[Type] {
     }
 }
 
-fn IsNamedTypeVar(ty: Type, name: String) -> bool {
+func IsNamedTypeVar(ty: Type, name: String) -> bool {
     match ty {
         Type::Named(value) => value.name == name && value.args.len() == 0,
         _ => false,
     }
 }
 
-fn UnwrapRefs(ty: Type) -> Type {
+func UnwrapRefs(ty: Type) -> Type {
     var current = ty
     while true {
         match current {
@@ -287,21 +287,21 @@ fn UnwrapRefs(ty: Type) -> Type {
     current
 }
 
-fn baseName(ty: Type) -> Option[String] {
+func baseName(ty: Type) -> Option[String] {
     match UnwrapRefs(ty) {
         Type::Named(value) => Option::Some(value.name),
         _ => Option::None,
     }
 }
 
-fn namedType(name: String) -> Type {
+func namedType(name: String) -> Type {
     Type::Named(NamedType {
         name: name,
         args: Vec[Type](),
     })
 }
 
-fn makeMethod(
+func makeMethod(
     name: String,
     trait_name: Option[String],
     receiver_mode: String,
@@ -320,7 +320,7 @@ fn makeMethod(
     }
 }
 
-fn receiverPolicyFor(receiver_mode: String) -> String {
+func receiverPolicyFor(receiver_mode: String) -> String {
     if receiver_mode == "mut" {
         return "addressable"
     }

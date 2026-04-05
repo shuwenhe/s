@@ -15,7 +15,7 @@ struct borrowState {
     moved: bool,
 }
 
-fn AnalyzeBlock(block: BlockExpr, initial: Vec[VarState]) -> Vec[BorrowDiagnostic] {
+func AnalyzeBlock(block: BlockExpr, initial: Vec[VarState]) -> Vec[BorrowDiagnostic] {
     var diagnostics = Vec[BorrowDiagnostic]()
     var scope = Vec[borrowState]()
     for entry in initial {
@@ -44,7 +44,7 @@ fn AnalyzeBlock(block: BlockExpr, initial: Vec[VarState]) -> Vec[BorrowDiagnosti
     diagnostics
 }
 
-fn inspectExpr(expr: Expr, scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic]) -> () {
+func inspectExpr(expr: Expr, scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic]) -> () {
     match expr {
         Expr::Name(value) => consumeName(scope, diagnostics, value.name),
         Expr::Borrow(value) => {
@@ -97,7 +97,7 @@ fn inspectExpr(expr: Expr, scope: Vec[borrowState], diagnostics: Vec[BorrowDiagn
     }
 }
 
-fn consumeName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name: String) -> () {
+func consumeName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name: String) -> () {
     var index = 0
     while index < scope.len() {
         if scope[index].name == name {
@@ -116,7 +116,7 @@ fn consumeName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name
     }
 }
 
-fn inspectName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name: String) -> () {
+func inspectName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name: String) -> () {
     for entry in scope {
         if entry.name == name && entry.moved {
             diagnostics.push(BorrowDiagnostic {
@@ -127,7 +127,7 @@ fn inspectName(scope: Vec[borrowState], diagnostics: Vec[BorrowDiagnostic], name
     }
 }
 
-fn toVarState(scope: Vec[borrowState]) -> Vec[VarState] {
+func toVarState(scope: Vec[borrowState]) -> Vec[VarState] {
     var out = Vec[VarState]()
     for entry in scope {
         out.push(VarState {
