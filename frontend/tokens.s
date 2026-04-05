@@ -54,6 +54,8 @@ func is_keyword(text: String) -> bool {
         "package" => true,
         "use" => true,
         "as" => true,
+        "func" => true,
+        "var" => true,
         "var" => true,
         "const" => true,
         "static" => true,
