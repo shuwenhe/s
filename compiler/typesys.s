@@ -14,54 +14,54 @@ enum Type {
 }
 
 struct PrimitiveType {
-    String name,
+    name: String,
 }
 
 struct NamedType {
-    String name,
-    Vec[Type] args,
+    name: String,
+    args: Vec[Type],
 }
 
 struct ReferenceType {
-    Box[Type] inner,
-    bool mutable,
+    inner: Box[Type],
+    mutable: bool,
 }
 
 struct SliceType {
-    Box[Type] inner,
+    inner: Box[Type],
 }
 
 struct FunctionType {
-    Vec[Type] params,
-    Option[Type] return_type,
+    params: Vec[Type],
+    return_type: Option[Type],
 }
 
 struct UnitType {}
 
 struct UnknownType {
-    String label,
+    label: String,
 }
 
-Type NewBoolType() {
+func NewBoolType() -> Type {
     Type::Primitive(PrimitiveType { name: "bool" })
 }
 
-Type NewI32Type() {
+func NewI32Type() -> Type {
     Type::Primitive(PrimitiveType { name: "i32" })
 }
 
-Type NewStringType() {
+func NewStringType() -> Type {
     Type::Named(NamedType {
         name: "String",
         args: Vec[Type](),
     })
 }
 
-Type NewUnitType() {
+func NewUnitType() -> Type {
     Type::Unit(UnitType {})
 }
 
-Type ParseType(String text) {
+func ParseType(text: String) -> Type {
     var trimmed = text.trim()
     if trimmed == "" {
         return Type::Unknown(UnknownType { label: "unknown" })
@@ -115,7 +115,7 @@ Type ParseType(String text) {
     })
 }
 
-String DumpType(Type ty) {
+func DumpType(ty: Type) -> String {
     match ty {
         Type::Primitive(value) => value.name,
         Type::Named(value) => {
@@ -142,7 +142,7 @@ String DumpType(Type ty) {
     }
 }
 
-bool IsCopyType(Type ty) {
+func IsCopyType(ty: Type) -> bool {
     match ty {
         Type::Primitive(_) => true,
         Type::Reference(_) => true,
@@ -150,7 +150,7 @@ bool IsCopyType(Type ty) {
     }
 }
 
-Type SubstituteType(Type ty, Vec[TypeBinding] mapping) {
+func SubstituteType(ty: Type, mapping: Vec[TypeBinding]) -> Type {
     match ty {
         Type::Named(value) => {
             if value.args.len() == 0 {
@@ -190,11 +190,11 @@ Type SubstituteType(Type ty, Vec[TypeBinding] mapping) {
 }
 
 struct TypeBinding {
-    String name,
-    Type value,
+    name: String,
+    value: Type,
 }
 
-Option[Type] FindTypeBinding(Vec[TypeBinding] bindings, String name) {
+func FindTypeBinding(bindings: Vec[TypeBinding], name: String) -> Option[Type] {
     for binding in bindings {
         if binding.name == name {
             return Option::Some(binding.value)
@@ -203,7 +203,7 @@ Option[Type] FindTypeBinding(Vec[TypeBinding] bindings, String name) {
     Option::None
 }
 
-Vec[String] splitArgs(String text) {
+func splitArgs(text: String) -> Vec[String] {
     var parts = Vec[String]()
     var current = ""
     var depth = 0
@@ -230,7 +230,7 @@ Vec[String] splitArgs(String text) {
     parts
 }
 
-String joinTypes(Vec[Type] values, String sep) {
+func joinTypes(values: Vec[Type], sep: String) -> String {
     var out = ""
     var first = true
     for value in values {
