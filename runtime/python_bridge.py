@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -175,7 +176,7 @@ def __result_panic_unwrap_err() -> object:
     raise RuntimeTrap("called Result.unwrap_err() on Ok")
 
 
-INTRINSICS: dict[str, IntrinsicSpec] = {
+_LOCAL_INTRINSICS: dict[str, IntrinsicSpec] = {
     "__runtime_len": IntrinsicSpec("__runtime_len", __runtime_len, 1, "i32"),
     "__int_to_string": IntrinsicSpec("__int_to_string", __int_to_string, 1, "String"),
     "__string_concat": IntrinsicSpec("__string_concat", __string_concat, 2, "String"),
@@ -233,6 +234,49 @@ INTRINSICS: dict[str, IntrinsicSpec] = {
     "__result_panic_unwrap": IntrinsicSpec("__result_panic_unwrap", __result_panic_unwrap, 0, "never"),
     "__result_panic_unwrap_err": IntrinsicSpec("__result_panic_unwrap_err", __result_panic_unwrap_err, 0, "never"),
 }
+
+
+def _load_manifest() -> dict[str, IntrinsicSpec]:
+    manifest_path = Path(__file__).with_name("intrinsics_manifest.json")
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_specs: dict[str, IntrinsicSpec] = {}
+    for item in data["intrinsics"]:
+        name = item["name"]
+        func = _LOCAL_INTRINSICS.get(name)
+        if func is None:
+            raise RuntimeTrap(f"manifest declares intrinsic without bridge implementation: {name}")
+        manifest_specs[name] = IntrinsicSpec(
+            name=name,
+            func=func.func,
+            arity=int(item["arity"]),
+            returns=item["returns"],
+            notes=item.get("notes", ""),
+        )
+    return manifest_specs
+
+
+def _validate_manifest(manifest_specs: dict[str, IntrinsicSpec]) -> None:
+    local_names = set(_LOCAL_INTRINSICS)
+    manifest_names = set(manifest_specs)
+    missing = sorted(local_names - manifest_names)
+    if missing:
+        raise RuntimeTrap(
+            "local bridge intrinsics missing from manifest: " + ", ".join(missing)
+        )
+    for name, spec in manifest_specs.items():
+        local = _LOCAL_INTRINSICS[name]
+        if local.arity != spec.arity:
+            raise RuntimeTrap(
+                f"manifest arity mismatch for {name}: local={local.arity} manifest={spec.arity}"
+            )
+        if local.returns != spec.returns:
+            raise RuntimeTrap(
+                f"manifest return mismatch for {name}: local={local.returns} manifest={spec.returns}"
+            )
+
+
+INTRINSICS = _load_manifest()
+_validate_manifest(INTRINSICS)
 
 
 def get_intrinsic(name: str) -> IntrinsicSpec:

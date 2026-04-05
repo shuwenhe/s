@@ -23,6 +23,7 @@ S source
 
 - [python_bridge.py](/app/s/runtime/python_bridge.py)
 - [intrinsic_dispatch.py](/app/s/runtime/intrinsic_dispatch.py)
+- [intrinsics_manifest.json](/app/s/runtime/intrinsics_manifest.json)
 - [hosted_frontend.py](/app/s/runtime/hosted_frontend.py)
 - [check_bridge.py](/app/s/runtime/check_bridge.py)
 
@@ -59,6 +60,9 @@ invoke_intrinsic("__string_slice", "hello", 1, 4)
 - dispatcher `IntrinsicCall.symbol`
 
 三者必须一致。
+
+The manifest is now the ABI source of truth. The Python bridge must match it at
+import time.
 
 当前已接通的符号包括：
 
