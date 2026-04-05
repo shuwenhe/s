@@ -1,4 +1,4 @@
-package selfhost.frontend
+package frontend
 
 use std.option.Option
 use std.prelude.char_at
