@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import inspect
+import subprocess
+import tempfile
 from typing import Any, Callable, Generic, Iterable, TypeVar
 
 
@@ -88,15 +90,61 @@ def __vec_array_set(array: HostArray[T], index: int, value: T) -> None:
 
 
 def __host_read_to_string(path: str) -> str:
-    return Path(path).read_text()
+    try:
+        return Path(path).read_text(encoding="utf-8")
+    except OSError as exc:
+        raise RuntimeTrap(f"read_to_string failed for {path}: {exc}") from exc
 
 
-def __host_println(text: str) -> str:
-    return text
+def __host_write_text_file(path: str, contents: str) -> None:
+    try:
+        Path(path).write_text(contents, encoding="utf-8")
+    except OSError as exc:
+        raise RuntimeTrap(f"write_text_file failed for {path}: {exc}") from exc
 
 
-def __host_eprintln(text: str) -> str:
-    return text
+def __host_make_temp_dir(prefix: str) -> str:
+    try:
+        return tempfile.mkdtemp(prefix=prefix)
+    except OSError as exc:
+        raise RuntimeTrap(f"make_temp_dir failed for {prefix}: {exc}") from exc
+
+
+def _coerce_argv(argv: object) -> list[str]:
+    if isinstance(argv, HostArray):
+        values: list[str] = []
+        for value in argv.storage:
+            if value is None:
+                continue
+            values.append(str(value))
+        return values
+    if isinstance(argv, (list, tuple)):
+        return [str(value) for value in argv]
+    raise RuntimeTrap(f"run_process expected Vec[String]-like argv, got {type(argv).__name__}")
+
+
+def __host_run_process(argv: object) -> None:
+    args = _coerce_argv(argv)
+    if not args:
+        raise RuntimeTrap("run_process expected at least one argv entry")
+    try:
+        subprocess.run(args, check=True, capture_output=True, text=True)
+    except FileNotFoundError as exc:
+        raise RuntimeTrap(f"run_process failed, command not found: {args[0]}") from exc
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.strip() if exc.stderr else ""
+        detail = f": {stderr}" if stderr else ""
+        raise RuntimeTrap(
+            f"run_process failed with exit code {exc.returncode}{detail}"
+        ) from exc
+
+
+def __host_println(text: str) -> None:
+    print(text)
+
+
+def __host_eprintln(text: str) -> None:
+    print(text, file=inspect.sys.stderr)
 
 
 def __option_panic_unwrap() -> object:
@@ -121,9 +169,36 @@ INTRINSICS: dict[str, IntrinsicSpec] = {
     "__vec_new_array": IntrinsicSpec("__vec_new_array", __vec_new_array, 1, "Array[T]"),
     "__vec_array_get": IntrinsicSpec("__vec_array_get", __vec_array_get, 2, "T"),
     "__vec_array_set": IntrinsicSpec("__vec_array_set", __vec_array_set, 3, "()"),
-    "__host_read_to_string": IntrinsicSpec("__host_read_to_string", __host_read_to_string, 1, "String"),
-    "__host_println": IntrinsicSpec("__host_println", __host_println, 1, "String"),
-    "__host_eprintln": IntrinsicSpec("__host_eprintln", __host_eprintln, 1, "String"),
+    "__host_read_to_string": IntrinsicSpec(
+        "__host_read_to_string",
+        __host_read_to_string,
+        1,
+        "String",
+        "bridge success path returns payload; host failures raise RuntimeTrap",
+    ),
+    "__host_write_text_file": IntrinsicSpec(
+        "__host_write_text_file",
+        __host_write_text_file,
+        2,
+        "()",
+        "bridge success path returns unit; host failures raise RuntimeTrap",
+    ),
+    "__host_make_temp_dir": IntrinsicSpec(
+        "__host_make_temp_dir",
+        __host_make_temp_dir,
+        1,
+        "String",
+        "bridge success path returns payload; host failures raise RuntimeTrap",
+    ),
+    "__host_run_process": IntrinsicSpec(
+        "__host_run_process",
+        __host_run_process,
+        1,
+        "()",
+        "bridge success path returns unit; host failures raise RuntimeTrap",
+    ),
+    "__host_println": IntrinsicSpec("__host_println", __host_println, 1, "()"),
+    "__host_eprintln": IntrinsicSpec("__host_eprintln", __host_eprintln, 1, "()"),
     "__option_panic_unwrap": IntrinsicSpec("__option_panic_unwrap", __option_panic_unwrap, 0, "never"),
     "__result_panic_unwrap": IntrinsicSpec("__result_panic_unwrap", __result_panic_unwrap, 0, "never"),
     "__result_panic_unwrap_err": IntrinsicSpec("__result_panic_unwrap_err", __result_panic_unwrap_err, 0, "never"),
