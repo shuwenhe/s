@@ -23,6 +23,7 @@ S source
 
 - [python_bridge.py](/app/s/runtime/python_bridge.py)
 - [intrinsic_dispatch.py](/app/s/runtime/intrinsic_dispatch.py)
+- [hosted_frontend.py](/app/s/runtime/hosted_frontend.py)
 - [check_bridge.py](/app/s/runtime/check_bridge.py)
 
 ## 3. Call Model
@@ -134,10 +135,18 @@ python3 /app/s/runtime/check_bridge.py
 - `vec` 底层数组读写
 - dispatcher 的符号调用路径
 
+另外：
+
+```bash
+python3 /app/s/runtime/validate_outputs.py all
+```
+
+现在已经不再直接走 Python 原型 lexer，而是通过 [hosted_frontend.py](/app/s/runtime/hosted_frontend.py) 中的 `HostedLexer` 真实产出并执行 `IntrinsicCall`，再完成 `lex_dump` / `ast_dump` 的 golden 对比。
+
 ## 9. Next Step
 
 下一步最值得推进的是：
 
-1. 让 parser/IR 在宿主侧能显式产出 `IntrinsicCall`
+1. 让 parser 的更多辅助路径和后续 lowering 阶段也显式产出 `IntrinsicCall`
 2. 给 `Vec`、`Option`、`Result` 增加 host wrapper
-3. 让 `lex_dump` / `ast_dump` 的执行原型真正通过 dispatcher 访问 runtime
+3. 让 `read_to_string` / `println` 这类宿主边界也进入统一执行计划
