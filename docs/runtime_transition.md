@@ -128,6 +128,11 @@ S source
 1. 为 `compiler/tests/*.s` 增加统一的 S runner
 2. 把 intrinsic manifest 从 Python registry 中抽离成仓库内数据文件
 
+当前状态：
+
+- 已新增统一 runner [test_compiler.s](/app/s/cmd/test_compiler.s)
+- 下一步更适合转到 intrinsic manifest 和 host adapter 拆分
+
 ## 5. Exit Criteria
 
 只有满足以下条件，才适合删除 `runtime/*.py` 主文件：
