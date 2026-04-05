@@ -16,11 +16,14 @@ use frontend.SourceFile
 use frontend.Stmt
 use frontend.StringExpr
 use frontend.VarStmt
+use std.fs.MakeTempDir
+use std.fs.WriteTextFile
 use std.option.Option
 use std.prelude.char_at
 use std.prelude.len
 use std.prelude.slice
 use std.prelude.to_string
+use std.process.RunProcess
 use std.result.Result
 use std.vec.Vec
 
@@ -57,10 +60,6 @@ struct LocalBinding {
 }
 
 struct BackendError {
-    message: String,
-}
-
-struct HostError {
     message: String,
 }
 
@@ -208,12 +207,41 @@ func emitTextSection(Vec[ProgramOp] ops, int exitCode) -> String {
 }
 
 func assembleAndLink(String asmText, String outputPath) -> Result[(), BackendError] {
-    var tempDir = hostMakeTempDir("s-build-")?
+    var tempDir =
+        match MakeTempDir("s-build-") {
+            Result::Ok(path) => path,
+            Result::Err(err) => {
+                return Result::Err(BackendError {
+                    message: err.message,
+                })
+            }
+        }
     var asmPath = tempDir + "/out.s"
     var objPath = tempDir + "/out.o"
-    hostWriteTextFile(asmPath, asmText)?
-    hostRunProcess(Vec[String] { "as", "-o", objPath, asmPath })?
-    hostRunProcess(Vec[String] { "ld", "-o", outputPath, objPath })?
+    match WriteTextFile(asmPath, asmText) {
+        Result::Ok(()) => (),
+        Result::Err(err) => {
+            return Result::Err(BackendError {
+                message: err.message,
+            })
+        }
+    }
+    match RunProcess(Vec[String] { "as", "-o", objPath, asmPath }) {
+        Result::Ok(()) => (),
+        Result::Err(err) => {
+            return Result::Err(BackendError {
+                message: err.message,
+            })
+        }
+    }
+    match RunProcess(Vec[String] { "ld", "-o", outputPath, objPath }) {
+        Result::Ok(()) => (),
+        Result::Err(err) => {
+            return Result::Err(BackendError {
+                message: err.message,
+            })
+        }
+    }
     Result::Ok(())
 }
 
@@ -509,38 +537,6 @@ func unquoteString(StringExpr expr) -> String {
     slice(text, 1, len(text) - 1)
 }
 
-func hostWriteTextFile(String path, String contents) -> Result[(), BackendError] {
-    match __host_write_text_file(path, contents) {
-        Result::Ok(()) => Result::Ok(()),
-        Result::Err(err) => Result::Err(BackendError {
-            message: err.message,
-        }),
-    }
-}
-
-func hostRunProcess(Vec[String] argv) -> Result[(), BackendError] {
-    match __host_run_process(argv) {
-        Result::Ok(()) => Result::Ok(()),
-        Result::Err(err) => Result::Err(BackendError {
-            message: err.message,
-        }),
-    }
-}
-
-func hostMakeTempDir(String prefix) -> Result[String, BackendError] {
-    match __host_make_temp_dir(prefix) {
-        Result::Ok(path) => Result::Ok(path),
-        Result::Err(err) => Result::Err(BackendError {
-            message: err.message,
-        }),
-    }
-}
-
-extern "intrinsic" func __host_write_text_file(String path, String contents) -> Result[(), HostError]
-
-extern "intrinsic" func __host_run_process(Vec[String] argv) -> Result[(), HostError]
-
-extern "intrinsic" func __host_make_temp_dir(String prefix) -> Result[String, HostError]
 
 func parseDecimal(String text) -> int {
     var value = 0
