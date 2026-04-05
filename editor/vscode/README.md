@@ -8,6 +8,11 @@ Included:
 - TextMate grammar for baseline syntax highlighting
 - `language-configuration.json` for comments, brackets, and auto-closing pairs
 
+Current syntax direction:
+
+- exported names follow Go-style capitalization
+- visibility is moving away from a dedicated `pub` keyword
+
 To use it in VS Code:
 
 1. Open this folder as an extension project.

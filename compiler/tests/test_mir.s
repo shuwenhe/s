@@ -14,20 +14,20 @@ pub struct MirFailure {
     message: String,
 }
 
-pub fn run_mir_suite() -> Vec[MirFailure] {
+pub fn RunMirSuite() -> Vec[MirFailure] {
     let failures = Vec[MirFailure]()
 
-    match check_locals_versioned() {
+    match checkLocalsVersioned() {
         Result::Ok(()) => (),
         Result::Err(err) => failures.push(err),
     }
 
-    match check_mir_shape() {
+    match checkMirShape() {
         Result::Ok(()) => (),
         Result::Err(err) => failures.push(err),
     }
 
-    match check_prelude_shape() {
+    match checkPreludeShape() {
         Result::Ok(()) => (),
         Result::Err(err) => failures.push(err),
     }
@@ -35,7 +35,7 @@ pub fn run_mir_suite() -> Vec[MirFailure] {
     failures
 }
 
-pub fn check_locals_versioned() -> Result[(), MirFailure] {
+fn checkLocalsVersioned() -> Result[(), MirFailure] {
     let parsed =
         match parse_source(
             "package demo.mir\n\npub fn shadow(x: i32) -> i32 {\n    let x = 1\n    x\n}\n",
@@ -77,7 +77,7 @@ pub fn check_locals_versioned() -> Result[(), MirFailure] {
     }
 }
 
-pub fn check_mir_shape() -> Result[(), MirFailure] {
+fn checkMirShape() -> Result[(), MirFailure] {
     let parsed =
         match parse_source(
             "package demo.mir\n\npub fn choose(flag: bool) -> i32 {\n    if flag {\n        1\n    } else {\n        2\n    }\n}\n",
@@ -119,7 +119,7 @@ pub fn check_mir_shape() -> Result[(), MirFailure] {
     }
 }
 
-pub fn check_prelude_shape() -> Result[(), MirFailure] {
+fn checkPreludeShape() -> Result[(), MirFailure] {
     let prelude = LoadPrelude()
     if prelude.name != "std.prelude" {
         return Result::Err(MirFailure {
