@@ -1,5 +1,7 @@
 package compiler
 
+use compiler.backend_elf64.BackendError
+use compiler.backend_elf64.build_executable
 use std.fs.read_to_string
 use std.io.eprintln
 use std.io.println
@@ -15,7 +17,9 @@ struct cliError {
 }
 
 struct checkOptions {
+    String command,
     String path,
+    String output,
     bool dump_tokens,
     bool dump_ast,
 }
@@ -33,7 +37,70 @@ func main(Vec[String] args) -> i32 {
 func run(Vec[String] args) -> Result[(), cliError] {
     var command = parseCommand(args)?
     var source = readSource(command.path)?
+    var parsed = parseCheckedSource(command, source)?
 
+    if command.command == "check" {
+        println("ok: " + command.path)
+        return Result::Ok(())
+    }
+    if command.command == "build" {
+        emitBinary(parsed, command.output)?
+        println("built: " + command.output)
+        return Result::Ok(())
+    }
+    Result::Err(cliError {
+        message: "unknown command: " + command.command,
+    })
+}
+
+func parseCommand(Vec[String] args) -> Result[checkOptions, cliError] {
+    if args.len() < 3 {
+        return usageError()
+    }
+    if args[1] != "check" && args[1] != "build" {
+        return usageError()
+    }
+
+    var options = checkOptions {
+        command: args[1],
+        path: args[2],
+        output: "",
+        dump_tokens: false,
+        dump_ast: false,
+    }
+
+    if options.command == "build" {
+        if args.len() < 5 {
+            return usageError()
+        }
+        if args[3] != "-o" {
+            return Result::Err(cliError {
+                message: "expected -o before output path",
+            })
+        }
+        options.output = args[4]
+        return Result::Ok(options)
+    }
+
+    var index = 3
+    while index < args.len() {
+        var flag = args[index]
+        if flag == "--dump-tokens" {
+            options.dump_tokens = true
+        } else if flag == "--dump-ast" {
+            options.dump_ast = true
+        } else {
+            return Result::Err(cliError {
+                message: "unknown flag: " + flag,
+            })
+        }
+        index = index + 1
+    }
+
+    Result::Ok(options)
+}
+
+func parseCheckedSource(checkOptions command, String source) -> Result[frontend.SourceFile, cliError] {
     if command.dump_tokens {
         match new_lexer(source).tokenize() {
             Result::Ok(tokens) => println(dump_tokens(tokens)),
@@ -69,40 +136,20 @@ func run(Vec[String] args) -> Result[(), cliError] {
         })
     }
 
-    println("ok: " + command.path)
-    Result::Ok(())
+    Result::Ok(parsed)
 }
 
-func parseCommand(Vec[String] args) -> Result[checkOptions, cliError] {
-    if args.len() < 3 {
-        return usageError()
+func emitBinary(frontend.SourceFile parsed, String outputPath) -> Result[(), cliError] {
+    match build_executable(parsed, outputPath) {
+        Result::Ok(()) => Result::Ok(()),
+        Result::Err(err) => backendError(err),
     }
-    if args[1] != "check" {
-        return usageError()
-    }
+}
 
-    var options = checkOptions {
-        path: args[2],
-        dump_tokens: false,
-        dump_ast: false,
-    }
-
-    var index = 3
-    while index < args.len() {
-        var flag = args[index]
-        if flag == "--dump-tokens" {
-            options.dump_tokens = true
-        } else if flag == "--dump-ast" {
-            options.dump_ast = true
-        } else {
-            return Result::Err(cliError {
-                message: "unknown flag: " + flag,
-            })
-        }
-        index = index + 1
-    }
-
-    Result::Ok(options)
+func backendError(BackendError err) -> Result[(), cliError] {
+    Result::Err(cliError {
+        message: err.message,
+    })
 }
 
 func readSource(String path) -> Result[String, cliError] {
@@ -116,6 +163,6 @@ func readSource(String path) -> Result[String, cliError] {
 
 func usageError() -> Result[checkOptions, cliError] {
     Result::Err(cliError {
-        message: "usage: s check <path> [--dump-tokens] [--dump-ast]",
+        message: "usage: s check <path> [--dump-tokens] [--dump-ast] | s build <path> -o <output>",
     })
 }
