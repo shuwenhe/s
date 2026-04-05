@@ -15,6 +15,14 @@ class RuntimeTrap(RuntimeError):
     pass
 
 
+@dataclass(frozen=True)
+class RuntimeExit(RuntimeError):
+    code: int
+
+    def __str__(self) -> str:
+        return f"process exited with code {self.code}"
+
+
 @dataclass
 class HostArray(Generic[T]):
     storage: list[T | None]
@@ -139,6 +147,14 @@ def __host_run_process(argv: object) -> None:
         ) from exc
 
 
+def __host_args() -> list[str]:
+    return list(sys.argv[1:])
+
+
+def __host_exit(code: int) -> None:
+    raise RuntimeExit(int(code))
+
+
 def __host_println(text: str) -> None:
     print(text)
 
@@ -196,6 +212,20 @@ INTRINSICS: dict[str, IntrinsicSpec] = {
         1,
         "()",
         "bridge success path returns unit; host failures raise RuntimeTrap",
+    ),
+    "__host_args": IntrinsicSpec(
+        "__host_args",
+        __host_args,
+        0,
+        "Vec[String]",
+        "bridge success path returns argv without the executable name",
+    ),
+    "__host_exit": IntrinsicSpec(
+        "__host_exit",
+        __host_exit,
+        1,
+        "never",
+        "host process termination boundary for S command wrappers",
     ),
     "__host_println": IntrinsicSpec("__host_println", __host_println, 1, "()"),
     "__host_eprintln": IntrinsicSpec("__host_eprintln", __host_eprintln, 1, "()"),

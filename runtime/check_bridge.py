@@ -8,7 +8,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from runtime.intrinsic_dispatch import IntrinsicCall, dispatch
-from runtime.python_bridge import invoke_intrinsic
+from runtime.python_bridge import RuntimeExit, invoke_intrinsic
 
 
 def main() -> int:
@@ -50,6 +50,14 @@ def main() -> int:
             invoke_intrinsic("__host_run_process", process_args) is None,
         )
     )
+    checks.append(("host args", isinstance(invoke_intrinsic("__host_args"), list)))
+
+    exit_ok = False
+    try:
+        invoke_intrinsic("__host_exit", 7)
+    except RuntimeExit as exc:
+        exit_ok = exc.code == 7
+    checks.append(("host exit", exit_ok))
 
     dispatched = dispatch(
         IntrinsicCall(
