@@ -9,7 +9,7 @@ use compiler.CheckSource
 use compiler.LoadPrelude
 use frontend.parse_source
 
-pub struct SemanticCase {
+struct semanticCase {
     name: String,
     path: String,
     should_pass: bool,
@@ -21,45 +21,45 @@ pub struct SemanticFailure {
     message: String,
 }
 
-pub fn semantic_cases(fixtures_root: String) -> Vec[SemanticCase] {
-    Vec[SemanticCase] {
-        SemanticCase {
+fn semanticCases(fixtures_root: String) -> Vec[semanticCase] {
+    Vec[semanticCase] {
+        semanticCase {
             name: "check_ok",
             path: fixtures_root + "/check_ok.s",
             should_pass: true,
             expected_message: Option::None,
         },
-        SemanticCase {
+        semanticCase {
             name: "check_fail",
             path: fixtures_root + "/check_fail.s",
             should_pass: false,
             expected_message: Option::Some("let value expected bool, got i32"),
         },
-        SemanticCase {
+        semanticCase {
             name: "borrow_fail",
             path: fixtures_root + "/borrow_fail.s",
             should_pass: false,
             expected_message: Option::Some("use of moved value text"),
         },
-        SemanticCase {
+        semanticCase {
             name: "generic_bound_fail",
             path: fixtures_root + "/generic_bound_fail.s",
             should_pass: false,
             expected_message: Option::Some("type String does not satisfy bound Copy"),
         },
-        SemanticCase {
+        semanticCase {
             name: "member_method_sample",
             path: fixtures_root + "/member_method_sample.s",
             should_pass: true,
             expected_message: Option::None,
         },
-        SemanticCase {
+        semanticCase {
             name: "prelude_methods_ok",
             path: fixtures_root + "/prelude_methods_ok.s",
             should_pass: true,
             expected_message: Option::None,
         },
-        SemanticCase {
+        semanticCase {
             name: "builtin_field_ok",
             path: fixtures_root + "/builtin_field_ok.s",
             should_pass: true,
@@ -68,11 +68,11 @@ pub fn semantic_cases(fixtures_root: String) -> Vec[SemanticCase] {
     }
 }
 
-pub fn run_semantic_suite(fixtures_root: String) -> Vec[SemanticFailure] {
+pub fn RunSemanticSuite(fixtures_root: String) -> Vec[SemanticFailure] {
     let failures = Vec[SemanticFailure]()
 
-    for case in semantic_cases(fixtures_root) {
-        match run_case(case) {
+    for case in semanticCases(fixtures_root) {
+        match runCase(case) {
             Result::Ok(()) => (),
             Result::Err(err) => failures.push(err),
         }
@@ -89,7 +89,7 @@ pub fn run_semantic_suite(fixtures_root: String) -> Vec[SemanticFailure] {
     failures
 }
 
-pub fn run_case(case: SemanticCase) -> Result[(), SemanticFailure] {
+fn runCase(case: semanticCase) -> Result[(), SemanticFailure] {
     let source =
         match read_to_string(case.path) {
             Result::Ok(value) => value,
@@ -123,7 +123,7 @@ pub fn run_case(case: SemanticCase) -> Result[(), SemanticFailure] {
 
     match case.expected_message {
         Option::Some(message) => {
-            if !has_diagnostic(checked.diagnostics, message) {
+            if !hasDiagnostic(checked.diagnostics, message) {
                 return Result::Err(SemanticFailure {
                     name: case.name,
                     message: "expected diagnostic not found",
@@ -136,7 +136,7 @@ pub fn run_case(case: SemanticCase) -> Result[(), SemanticFailure] {
     Result::Ok(())
 }
 
-pub fn has_diagnostic(diagnostics: Vec[Diagnostic], expected: String) -> bool {
+fn hasDiagnostic(diagnostics: Vec[Diagnostic], expected: String) -> bool {
     for diagnostic in diagnostics {
         if diagnostic.message == expected {
             return true
