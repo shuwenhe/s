@@ -9,17 +9,17 @@ use frontend.parse_source
 use frontend.new_lexer
 
 struct GoldenCase {
-    name: String,
-    source_path: String,
-    expected_path: String,
+    String name,
+    String source_path,
+    String expected_path,
 }
 
 struct GoldenFailure {
-    name: String,
-    message: String,
+    String name,
+    String message,
 }
 
-func LexerCases(root: String) -> Vec[GoldenCase] {
+Vec[GoldenCase] LexerCases(String root) {
     Vec[GoldenCase] {
         GoldenCase {
             name: "sample.tokens",
@@ -29,7 +29,7 @@ func LexerCases(root: String) -> Vec[GoldenCase] {
     }
 }
 
-func ParserCases(root: String) -> Vec[GoldenCase] {
+Vec[GoldenCase] ParserCases(String root) {
     Vec[GoldenCase] {
         GoldenCase {
             name: "sample.ast",
@@ -59,7 +59,7 @@ func ParserCases(root: String) -> Vec[GoldenCase] {
     }
 }
 
-func RunLexerCase(case: GoldenCase) -> Result[(), GoldenFailure] {
+Result[(), GoldenFailure] RunLexerCase(GoldenCase case) {
     var source = readFixture(case.name, case.source_path)?
     var expected = readFixture(case.name, case.expected_path)?
     match new_lexer(source).tokenize() {
@@ -71,7 +71,7 @@ func RunLexerCase(case: GoldenCase) -> Result[(), GoldenFailure] {
     }
 }
 
-func RunParserCase(case: GoldenCase) -> Result[(), GoldenFailure] {
+Result[(), GoldenFailure] RunParserCase(GoldenCase case) {
     var source = readFixture(case.name, case.source_path)?
     var expected = readFixture(case.name, case.expected_path)?
     match parse_source(source) {
@@ -83,7 +83,7 @@ func RunParserCase(case: GoldenCase) -> Result[(), GoldenFailure] {
     }
 }
 
-func readFixture(name: String, path: String) -> Result[String, GoldenFailure] {
+Result[String, GoldenFailure] readFixture(String name, String path) {
     match read_to_string(path) {
         Result::Ok(text) => Result::Ok(text),
         Result::Err(_) => Result::Err(GoldenFailure {
@@ -93,7 +93,7 @@ func readFixture(name: String, path: String) -> Result[String, GoldenFailure] {
     }
 }
 
-func compareOutput(name: String, expected: String, actual: String) -> Result[(), GoldenFailure] {
+Result[(), GoldenFailure] compareOutput(String name, String expected, String actual) {
     if expected.trim() == actual.trim() {
         return Result::Ok(())
     }

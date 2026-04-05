@@ -10,11 +10,11 @@ use compiler.RunLexerCase
 use compiler.RunParserCase
 
 struct suiteResult {
-    passed: i32,
-    failed: Vec[GoldenFailure],
+    i32 passed,
+    Vec[GoldenFailure] failed,
 }
 
-func RunGoldenSuite(fixtures_root: String) -> suiteResult {
+suiteResult RunGoldenSuite(String fixtures_root) {
     var failures = Vec[GoldenFailure]()
     var passed = 0
 

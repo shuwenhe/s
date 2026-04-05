@@ -1,6 +1,6 @@
 package demo.fail
 
-func wrong() -> bool {
+bool wrong() {
     var value: bool = 1
     value
 }

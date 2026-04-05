@@ -4,47 +4,47 @@ use std.option.Option
 use std.vec.Vec
 
 struct BuiltinMethodDecl {
-    name: String,
-    trait_name: Option[String],
-    receiver_mode: String,
-    receiver_policy: String,
-    signature: FunctionType,
+    String name,
+    Option[String] trait_name,
+    String receiver_mode,
+    String receiver_policy,
+    FunctionType signature,
 }
 
 struct BuiltinFieldDecl {
-    name: String,
-    ty: Type,
-    visibility: String,
-    readable: bool,
-    writable: bool,
+    String name,
+    Type ty,
+    String visibility,
+    bool readable,
+    bool writable,
 }
 
 struct BuiltinTraitDecl {
-    name: String,
-    methods: Vec[BuiltinMethodGroup],
+    String name,
+    Vec[BuiltinMethodGroup] methods,
 }
 
 struct BuiltinMethodGroup {
-    name: String,
-    overloads: Vec[BuiltinMethodDecl],
+    String name,
+    Vec[BuiltinMethodDecl] overloads,
 }
 
 struct BuiltinTypeDecl {
-    name: String,
-    traits: Vec[String],
-    fields: Vec[BuiltinFieldDecl],
-    methods: Vec[BuiltinMethodGroup],
-    index_result_kind: Option[String],
-    default_impls: Vec[String],
+    String name,
+    Vec[String] traits,
+    Vec[BuiltinFieldDecl] fields,
+    Vec[BuiltinMethodGroup] methods,
+    Option[String] index_result_kind,
+    Vec[String] default_impls,
 }
 
 struct BuiltinModuleDecl {
-    name: String,
-    traits: Vec[BuiltinTraitDecl],
-    types: Vec[BuiltinTypeDecl],
+    String name,
+    Vec[BuiltinTraitDecl] traits,
+    Vec[BuiltinTypeDecl] types,
 }
 
-func LoadPrelude() -> BuiltinModuleDecl {
+BuiltinModuleDecl LoadPrelude() {
     BuiltinModuleDecl {
         name: "std.prelude",
         traits: builtInTraits(),
@@ -52,7 +52,7 @@ func LoadPrelude() -> BuiltinModuleDecl {
     }
 }
 
-func builtInTraits() -> Vec[BuiltinTraitDecl] {
+Vec[BuiltinTraitDecl] builtInTraits() {
     var traits = Vec[BuiltinTraitDecl]()
     traits.push(BuiltinTraitDecl {
         name: "Len",
@@ -79,7 +79,7 @@ func builtInTraits() -> Vec[BuiltinTraitDecl] {
     traits
 }
 
-func builtInTypes() -> Vec[BuiltinTypeDecl] {
+Vec[BuiltinTypeDecl] builtInTypes() {
     var types = Vec[BuiltinTypeDecl]()
     types.push(BuiltinTypeDecl {
         name: "String",
@@ -143,11 +143,11 @@ func builtInTypes() -> Vec[BuiltinTypeDecl] {
     types
 }
 
-func Prelude() -> BuiltinModuleDecl {
+BuiltinModuleDecl Prelude() {
     LoadPrelude()
 }
 
-func LookupBuiltinType(receiver_type: Type) -> Option[BuiltinTypeDecl] {
+Option[BuiltinTypeDecl] LookupBuiltinType(Type receiver_type) {
     var base = baseName(receiver_type)
     match base {
         Option::Some(name) => findBuiltinType(builtInTypes(), name),
@@ -155,14 +155,14 @@ func LookupBuiltinType(receiver_type: Type) -> Option[BuiltinTypeDecl] {
     }
 }
 
-func LookupBuiltinMethods(receiver_type: Type, member: String) -> Vec[BuiltinMethodDecl] {
+Vec[BuiltinMethodDecl] LookupBuiltinMethods(Type receiver_type, String member) {
     match LookupBuiltinType(receiver_type) {
         Option::Some(builtin_type) => findBuiltinMethods(builtin_type, member, receiver_type),
         Option::None => Vec[BuiltinMethodDecl](),
     }
 }
 
-func LookupBuiltinMethod(receiver_type: Type, member: String) -> Option[BuiltinMethodDecl] {
+Option[BuiltinMethodDecl] LookupBuiltinMethod(Type receiver_type, String member) {
     var methods = LookupBuiltinMethods(receiver_type, member)
     if methods.len() == 1 {
         return Option::Some(methods[0])
@@ -170,7 +170,7 @@ func LookupBuiltinMethod(receiver_type: Type, member: String) -> Option[BuiltinM
     Option::None
 }
 
-func LookupIndexType(receiver_type: Type) -> Option[Type] {
+Option[Type] LookupIndexType(Type receiver_type) {
     var inner = UnwrapRefs(receiver_type)
     match LookupBuiltinType(inner) {
         Option::Some(builtin_type) => {
@@ -198,7 +198,7 @@ func LookupIndexType(receiver_type: Type) -> Option[Type] {
     }
 }
 
-func findBuiltinType(types: Vec[BuiltinTypeDecl], name: String) -> Option[BuiltinTypeDecl] {
+Option[BuiltinTypeDecl] findBuiltinType(Vec[BuiltinTypeDecl] types, String name) {
     for ty in types {
         if ty.name == name {
             return Option::Some(ty)
@@ -207,11 +207,7 @@ func findBuiltinType(types: Vec[BuiltinTypeDecl], name: String) -> Option[Builti
     Option::None
 }
 
-func findBuiltinMethods(
-    builtin_type: BuiltinTypeDecl,
-    member: String,
-    receiver_type: Type,
-) -> Vec[BuiltinMethodDecl] {
+Vec[BuiltinMethodDecl] findBuiltinMethods(BuiltinTypeDecl builtin_type, String member, Type receiver_type) {
     for method_group in builtin_type.methods {
         if method_group.name == member {
             if builtin_type.name == "Vec" && member == "push" {
@@ -223,7 +219,7 @@ func findBuiltinMethods(
     Vec[BuiltinMethodDecl]()
 }
 
-func rewriteVecPush(methods: Vec[BuiltinMethodDecl], receiver_type: Type) -> Vec[BuiltinMethodDecl] {
+Vec[BuiltinMethodDecl] rewriteVecPush(Vec[BuiltinMethodDecl] methods, Type receiver_type) {
     var rewritten = Vec[BuiltinMethodDecl]()
     var inner = UnwrapRefs(receiver_type)
     var replacement = firstNamedArg(inner)
@@ -257,7 +253,7 @@ func rewriteVecPush(methods: Vec[BuiltinMethodDecl], receiver_type: Type) -> Vec
     rewritten
 }
 
-func firstNamedArg(ty: Type) -> Option[Type] {
+Option[Type] firstNamedArg(Type ty) {
     match ty {
         Type::Named(value) => {
             if value.args.len() > 0 {
@@ -269,14 +265,14 @@ func firstNamedArg(ty: Type) -> Option[Type] {
     }
 }
 
-func IsNamedTypeVar(ty: Type, name: String) -> bool {
+bool IsNamedTypeVar(Type ty, String name) {
     match ty {
         Type::Named(value) => value.name == name && value.args.len() == 0,
         _ => false,
     }
 }
 
-func UnwrapRefs(ty: Type) -> Type {
+Type UnwrapRefs(Type ty) {
     var current = ty
     while true {
         match current {
@@ -287,27 +283,21 @@ func UnwrapRefs(ty: Type) -> Type {
     current
 }
 
-func baseName(ty: Type) -> Option[String] {
+Option[String] baseName(Type ty) {
     match UnwrapRefs(ty) {
         Type::Named(value) => Option::Some(value.name),
         _ => Option::None,
     }
 }
 
-func namedType(name: String) -> Type {
+Type namedType(String name) {
     Type::Named(NamedType {
         name: name,
         args: Vec[Type](),
     })
 }
 
-func makeMethod(
-    name: String,
-    trait_name: Option[String],
-    receiver_mode: String,
-    params: Vec[Type],
-    return_type: Type,
-) -> BuiltinMethodDecl {
+BuiltinMethodDecl makeMethod(String name, Option[String] trait_name, String receiver_mode, Vec[Type] params, Type return_type) {
     BuiltinMethodDecl {
         name: name,
         trait_name: trait_name,
@@ -320,7 +310,7 @@ func makeMethod(
     }
 }
 
-func receiverPolicyFor(receiver_mode: String) -> String {
+String receiverPolicyFor(String receiver_mode) {
     if receiver_mode == "mut" {
         return "addressable"
     }
