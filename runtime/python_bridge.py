@@ -49,8 +49,11 @@ def __string_char_at(text: str, index: int) -> str:
 
 
 def __string_slice(text: str, start: int, end: int) -> str:
-    if start < 0 or end < start or end > len(text):
+    if start < 0 or end < start:
         raise RuntimeTrap(f"invalid string slice: {start}:{end}")
+    if start > len(text):
+        raise RuntimeTrap(f"invalid string slice: {start}:{end}")
+    end = min(end, len(text))
     return text[start:end]
 
 
