@@ -19,7 +19,7 @@ struct Lexer {
     column: i32,
 }
 
-fn new_lexer(source: String) -> Lexer {
+func new_lexer(source: String) -> Lexer {
     Lexer {
         source: source,
         index: 0,
@@ -29,7 +29,7 @@ fn new_lexer(source: String) -> Lexer {
 }
 
 impl Lexer {
-    fn tokenize(mut self) -> Result[Vec[Token], LexError] {
+    func tokenize(mut self) -> Result[Vec[Token], LexError] {
         var tokens = Vec[Token]()
         while !self.is_eof() {
             self.skip_ignored()?
@@ -96,7 +96,7 @@ impl Lexer {
         Result::Ok(tokens)
     }
 
-    fn skip_ignored(mut self) -> Result[(), LexError] {
+    func skip_ignored(mut self) -> Result[(), LexError] {
         while !self.is_eof() {
             var ch = self.peek()?
 
@@ -143,7 +143,7 @@ impl Lexer {
         Result::Ok(())
     }
 
-    fn read_identifier(mut self) -> Result[String, LexError] {
+    func read_identifier(mut self) -> Result[String, LexError] {
         var out = ""
         while !self.is_eof() {
             var ch = self.peek()?
@@ -155,7 +155,7 @@ impl Lexer {
         Result::Ok(out)
     }
 
-    fn read_number(mut self) -> Result[String, LexError] {
+    func read_number(mut self) -> Result[String, LexError] {
         var out = ""
         while !self.is_eof() {
             var ch = self.peek()?
@@ -167,7 +167,7 @@ impl Lexer {
         Result::Ok(out)
     }
 
-    fn read_string(mut self) -> Result[String, LexError] {
+    func read_string(mut self) -> Result[String, LexError] {
         var out = self.advance()?
         while !self.is_eof() {
             var ch = self.advance()?
@@ -186,7 +186,7 @@ impl Lexer {
         Result::Err(self.error("unterminated string literal"))
     }
 
-    fn read_symbol(mut self) -> Result[String, LexError] {
+    func read_symbol(mut self) -> Result[String, LexError] {
         var multi = Vec[String] {
             "->",
             "=>",
@@ -221,18 +221,18 @@ impl Lexer {
         Result::Err(self.error("unexpected character"))
     }
 
-    fn match_text(self, text: String) -> bool {
+    func match_text(self, text: String) -> bool {
         slice(self.source, self.index, self.index + len(text)) == text
     }
 
-    fn peek(self) -> Result[String, LexError] {
+    func peek(self) -> Result[String, LexError] {
         if self.is_eof() {
             return Result::Err(self.error("unexpected eof"))
         }
         Result::Ok(char_at(self.source, self.index))
     }
 
-    fn advance(mut self) -> Result[String, LexError] {
+    func advance(mut self) -> Result[String, LexError] {
         if self.is_eof() {
             return Result::Err(self.error("unexpected eof"))
         }
@@ -250,11 +250,11 @@ impl Lexer {
         Result::Ok(ch)
     }
 
-    fn is_eof(self) -> bool {
+    func is_eof(self) -> bool {
         self.index >= len(self.source)
     }
 
-    fn error(self, message: String) -> LexError {
+    func error(self, message: String) -> LexError {
         LexError {
             message: message,
             line: self.line,
@@ -263,7 +263,7 @@ impl Lexer {
     }
 }
 
-fn is_whitespace(ch: String) -> bool {
+func is_whitespace(ch: String) -> bool {
     match ch {
         " " => true,
         "\t" => true,
@@ -273,7 +273,7 @@ fn is_whitespace(ch: String) -> bool {
     }
 }
 
-fn is_digit(ch: String) -> bool {
+func is_digit(ch: String) -> bool {
     match ch {
         "0" => true,
         "1" => true,
@@ -289,18 +289,18 @@ fn is_digit(ch: String) -> bool {
     }
 }
 
-fn is_ident_start(ch: String) -> bool {
+func is_ident_start(ch: String) -> bool {
     if ch == "_" {
         return true
     }
     is_ascii_alpha(ch)
 }
 
-fn is_ident_continue(ch: String) -> bool {
+func is_ident_continue(ch: String) -> bool {
     is_ident_start(ch) || is_digit(ch)
 }
 
-fn is_ascii_alpha(ch: String) -> bool {
+func is_ascii_alpha(ch: String) -> bool {
     match ch {
         "a" => true,
         "b" => true,
@@ -358,7 +358,7 @@ fn is_ascii_alpha(ch: String) -> bool {
     }
 }
 
-fn is_single_symbol(ch: String) -> bool {
+func is_single_symbol(ch: String) -> bool {
     match ch {
         "(" => true,
         ")" => true,

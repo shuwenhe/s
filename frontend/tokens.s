@@ -54,7 +54,7 @@ fn is_keyword(text: String) -> bool {
         "package" => true,
         "use" => true,
         "as" => true,
-        "fn" => true,
+        "func" => true,
         "var" => true,
         "var" => true,
         "const" => true,

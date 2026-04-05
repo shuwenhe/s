@@ -223,7 +223,7 @@ struct SourceFile {
     items: Vec[Item],
 }
 
-fn dump_source_file(source: SourceFile) -> String {
+func dump_source_file(source: SourceFile) -> String {
     var lines = Vec[String]()
     lines.push("package " + source.package)
     for use_decl in source.uses {
@@ -240,7 +240,7 @@ fn dump_source_file(source: SourceFile) -> String {
     join_lines(lines)
 }
 
-fn append_item_dump(lines: Vec[String], item: Item) -> () {
+func append_item_dump(lines: Vec[String], item: Item) -> () {
     match item {
         Item::Function(value) => append_lines(lines, dump_function(value, "")),
         Item::Struct(value) => append_lines(lines, dump_struct(value)),
@@ -250,14 +250,14 @@ fn append_item_dump(lines: Vec[String], item: Item) -> () {
     }
 }
 
-fn fmt_generics(generics: Vec[String]) -> String {
+func fmt_generics(generics: Vec[String]) -> String {
     if len(generics) == 0 {
         return ""
     }
     "[" + join_with(generics, ", ") + "]"
 }
 
-fn dump_function(item: FunctionDecl, indent: String) -> Vec[String] {
+func dump_function(item: FunctionDecl, indent: String) -> Vec[String] {
     var lines = Vec[String]()
     var params = Vec[String]()
     for param in item.sig.params {
@@ -270,7 +270,7 @@ fn dump_function(item: FunctionDecl, indent: String) -> Vec[String] {
         }
     lines.push(
         indent
-            + "fn "
+            + "func "
             + item.sig.name
             + fmt_generics(item.sig.generics)
             + "("
@@ -285,7 +285,7 @@ fn dump_function(item: FunctionDecl, indent: String) -> Vec[String] {
     lines
 }
 
-fn dump_struct(item: StructDecl) -> Vec[String] {
+func dump_struct(item: StructDecl) -> Vec[String] {
     var lines = Vec[String]()
     lines.push("struct " + item.name + fmt_generics(item.generics))
     for field in item.fields {
@@ -294,7 +294,7 @@ fn dump_struct(item: StructDecl) -> Vec[String] {
     lines
 }
 
-fn dump_enum(item: EnumDecl) -> Vec[String] {
+func dump_enum(item: EnumDecl) -> Vec[String] {
     var lines = Vec[String]()
     lines.push("enum " + item.name + fmt_generics(item.generics))
     for variant in item.variants {
@@ -306,7 +306,7 @@ fn dump_enum(item: EnumDecl) -> Vec[String] {
     lines
 }
 
-fn dump_trait(item: TraitDecl) -> Vec[String] {
+func dump_trait(item: TraitDecl) -> Vec[String] {
     var lines = Vec[String]()
     lines.push("trait " + item.name + fmt_generics(item.generics))
     for method in item.methods {
@@ -320,7 +320,7 @@ fn dump_trait(item: TraitDecl) -> Vec[String] {
                 Option::None => "",
             }
         lines.push(
-            "  fn "
+            "  func "
                 + method.name
                 + fmt_generics(method.generics)
                 + "("
@@ -332,7 +332,7 @@ fn dump_trait(item: TraitDecl) -> Vec[String] {
     lines
 }
 
-fn dump_impl(item: ImplDecl) -> Vec[String] {
+func dump_impl(item: ImplDecl) -> Vec[String] {
     var lines = Vec[String]()
     var head =
         match item.trait_name {
@@ -347,7 +347,7 @@ fn dump_impl(item: ImplDecl) -> Vec[String] {
     lines
 }
 
-fn dump_block(block: BlockExpr, indent: String) -> Vec[String] {
+func dump_block(block: BlockExpr, indent: String) -> Vec[String] {
     var lines = Vec[String]()
     for stmt in block.statements {
         append_lines(lines, dump_stmt(stmt, indent))
@@ -359,7 +359,7 @@ fn dump_block(block: BlockExpr, indent: String) -> Vec[String] {
     lines
 }
 
-fn dump_stmt(stmt: Stmt, indent: String) -> Vec[String] {
+func dump_stmt(stmt: Stmt, indent: String) -> Vec[String] {
     match stmt {
         Stmt::Var(value) => {
             var text =
@@ -381,7 +381,7 @@ fn dump_stmt(stmt: Stmt, indent: String) -> Vec[String] {
     }
 }
 
-fn dump_expr(expr: Expr) -> String {
+func dump_expr(expr: Expr) -> String {
     match expr {
         Expr::Int(value) => value.value,
         Expr::String(value) => value.value,
@@ -403,7 +403,7 @@ fn dump_expr(expr: Expr) -> String {
     }
 }
 
-fn dump_if_expr(value: IfExpr) -> String {
+func dump_if_expr(value: IfExpr) -> String {
     var text = "if " + dump_expr(value.condition.value) + " {...}"
     match value.else_branch {
         Option::Some(expr) => text + " else " + dump_expr(expr.value),
@@ -411,7 +411,7 @@ fn dump_if_expr(value: IfExpr) -> String {
     }
 }
 
-fn dump_pattern(pattern: Pattern) -> String {
+func dump_pattern(pattern: Pattern) -> String {
     match pattern {
         Pattern::Name(value) => value.name,
         Pattern::Wildcard(_) => "_",
@@ -424,7 +424,7 @@ fn dump_pattern(pattern: Pattern) -> String {
     }
 }
 
-fn join_exprs(values: Vec[Expr]) -> String {
+func join_exprs(values: Vec[Expr]) -> String {
     var parts = Vec[String]()
     for value in values {
         parts.push(dump_expr(value))
@@ -432,7 +432,7 @@ fn join_exprs(values: Vec[Expr]) -> String {
     join_with(parts, ", ")
 }
 
-fn join_patterns(values: Vec[Pattern]) -> String {
+func join_patterns(values: Vec[Pattern]) -> String {
     var parts = Vec[String]()
     for value in values {
         parts.push(dump_pattern(value))
@@ -440,7 +440,7 @@ fn join_patterns(values: Vec[Pattern]) -> String {
     join_with(parts, ", ")
 }
 
-fn join_match_arms(values: Vec[MatchArm]) -> String {
+func join_match_arms(values: Vec[MatchArm]) -> String {
     var parts = Vec[String]()
     for value in values {
         parts.push(dump_pattern(value.pattern) + " => " + dump_expr(value.expr))
@@ -448,23 +448,23 @@ fn join_match_arms(values: Vec[MatchArm]) -> String {
     join_with(parts, "; ")
 }
 
-fn append_lines(dest: Vec[String], source: Vec[String]) -> () {
+func append_lines(dest: Vec[String], source: Vec[String]) -> () {
     for line in source {
         dest.push(line)
     }
 }
 
-fn single_line(text: String) -> Vec[String] {
+func single_line(text: String) -> Vec[String] {
     var lines = Vec[String]()
     lines.push(text)
     lines
 }
 
-fn join_lines(lines: Vec[String]) -> String {
+func join_lines(lines: Vec[String]) -> String {
     join_with(lines, "\n")
 }
 
-fn join_with(values: Vec[String], sep: String) -> String {
+func join_with(values: Vec[String], sep: String) -> String {
     var out = ""
     var first = true
     for value in values {
@@ -477,6 +477,6 @@ fn join_with(values: Vec[String], sep: String) -> String {
     out
 }
 
-fn replace_once(text: String, from: String, to: String) -> String {
+func replace_once(text: String, from: String, to: String) -> String {
     text
 }

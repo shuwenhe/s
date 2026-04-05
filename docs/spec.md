@@ -66,11 +66,11 @@ package pkg.name
 use std.io.Reader
 use net.http.{Request, Response}
 
-pub struct Config {
+struct Config {
     addr: String
 }
 
-fn main() -> Result[(), Error] {
+func main() -> Result[(), Error] {
     ...
 }
 ```
@@ -127,7 +127,7 @@ S 支持以下注释形式：
 以下为保留关键字：
 
 ```text
-package use pub fn let var const struct enum trait impl
+package use func var const struct enum trait impl
 if else for while match return break continue
 true false unsafe extern as mut
 ```
@@ -149,7 +149,7 @@ Item         = FunctionDecl
              | ConstDecl
              | StaticDecl
 
-FunctionDecl = Visibility? "fn" Ident GenericParams? "(" ParamList? ")" ReturnType? Block
+FunctionDecl = "func" Ident GenericParams? "(" ParamList? ")" ReturnType? Block
 StructDecl   = Visibility? "struct" Ident GenericParams? StructBody
 EnumDecl     = Visibility? "enum" Ident GenericParams? EnumBody
 TraitDecl    = Visibility? "trait" Ident GenericParams? TraitBody
@@ -177,32 +177,30 @@ Expr         = Literal
 
 ### 7.1 Visibility
 
-S 采用“默认私有，显式导出”的可见性规则。
+S 采用 Go 风格的可见性规则。
 
-- 未标记 `pub` 的顶层项仅在当前包内可见
-- 标记 `pub` 的顶层项可被其他包导入
+- 首字母小写的顶层项仅在当前包内可见
+- 首字母大写的顶层项可被其他包导入
 
 示例：
 
 ```s
-struct Tokenizer { ... }
+struct tokenizer { ... }
 
-pub struct Parser { ... }
+struct Parser { ... }
 ```
 
 ### 7.2 Bindings
 
-S 支持三种基础绑定形式：
+S 支持两种基础绑定形式：
 
 ```s
-let x = 1
 var y = 2
 const max_conn = 1024
 ```
 
 规则如下：
 
-- `let` 绑定默认不可变
 - `var` 绑定可变
 - `const` 必须在编译期可求值
 
@@ -211,9 +209,9 @@ const max_conn = 1024
 内层作用域可以遮蔽外层同名绑定：
 
 ```s
-let x = 1
+var x = 1
 {
-    let x = 2
+    var x = 2
     println(x)
 }
 ```
