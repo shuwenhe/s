@@ -14,6 +14,9 @@ use frontend.Stmt
 use frontend.StringExpr
 use frontend.VarStmt
 use std.option.Option
+use std.prelude.char_at
+use std.prelude.len
+use std.prelude.slice
 use std.prelude.to_string
 use std.result.Result
 use std.vec.Vec
@@ -222,10 +225,7 @@ func append_write_syscall(Vec[String] lines, int fd, String label, String text) 
 }
 
 func encode_bytes(String text) -> String {
-    // Phase 1 assumes ASCII payloads.
-    // The host/runtime bridge can later provide a byte encoder intrinsic.
-    text
-    "0"
+    __host_encode_bytes(text)
 }
 
 func byte_len(String text) -> String {
@@ -407,14 +407,15 @@ func as_exit_code(Value value) -> Result[int, BackendError] {
 }
 
 func parse_int_literal(IntExpr expr) -> int {
-    // Placeholder until std string/number helpers are available.
-    expr
-    0
+    parse_decimal(expr.value)
 }
 
 func unquote_string(StringExpr expr) -> String {
-    // Placeholder until std string slicing helpers are available.
-    expr.value
+    var text = expr.value
+    if len(text) < 2 {
+        return text
+    }
+    slice(text, 1, len(text) - 1)
 }
 
 func host_write_text_file(String path, String contents) -> Result[(), BackendError] {
@@ -449,3 +450,54 @@ extern "intrinsic" func __host_write_text_file(String path, String contents) -> 
 extern "intrinsic" func __host_run_process(Vec[String] argv) -> Result[(), HostError]
 
 extern "intrinsic" func __host_make_temp_dir(String prefix) -> Result[String, HostError]
+
+extern "intrinsic" func __host_encode_bytes(String text) -> String
+
+func parse_decimal(String text) -> int {
+    var value = 0
+    var index = 0
+    while index < len(text) {
+        var ch = char_at(text, index)
+        if ch == "_" {
+            index = index + 1
+            continue
+        }
+        value = value * 10 + digit_value(ch)
+        index = index + 1
+    }
+    value
+}
+
+func digit_value(String ch) -> int {
+    if ch == "0" {
+        return 0
+    }
+    if ch == "1" {
+        return 1
+    }
+    if ch == "2" {
+        return 2
+    }
+    if ch == "3" {
+        return 3
+    }
+    if ch == "4" {
+        return 4
+    }
+    if ch == "5" {
+        return 5
+    }
+    if ch == "6" {
+        return 6
+    }
+    if ch == "7" {
+        return 7
+    }
+    if ch == "8" {
+        return 8
+    }
+    if ch == "9" {
+        return 9
+    }
+    0
+}
