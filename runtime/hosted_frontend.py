@@ -211,6 +211,69 @@ class HostedParser(Parser):
         ch = self._char_at(text, 0)
         return "A" <= ch <= "Z"
 
+    def _parse_type_text(self, stop_values: set[str]) -> str:
+        parts: list[str] = []
+        bracket = 0
+        paren = 0
+
+        while True:
+            token = self._peek()
+            if token.kind == TokenKind.EOF:
+                break
+            if bracket == 0 and paren == 0 and token.value in stop_values:
+                break
+            if token.value == "[":
+                bracket += 1
+            elif token.value == "]":
+                bracket -= 1
+            elif token.value == "(":
+                paren += 1
+            elif token.value == ")":
+                if paren == 0:
+                    break
+                paren -= 1
+            parts.append(self._advance().value)
+
+        return self._normalize_type_text(self._join_strings(parts, " "))
+
+    def _parse_bracket_group(self) -> str:
+        parts = [self._advance().value]
+        depth = 1
+        while depth > 0:
+            token = self._advance()
+            parts.append(token.value)
+            if token.value == "[":
+                depth += 1
+            elif token.value == "]":
+                depth -= 1
+        text = self._join_strings(parts, " ")
+        text = self._replace(text, "[ ", "[")
+        text = self._replace(text, " ]", "]")
+        text = self._replace(text, " ,", ",")
+        return text
+
+    def _normalize_type_text(self, text: str) -> str:
+        text = self._replace(text, " . ", ".")
+        text = self._replace(text, "[ ", "[")
+        text = self._replace(text, " ]", "]")
+        text = self._replace(text, "( ", "(")
+        text = self._replace(text, " )", ")")
+        text = self._replace(text, " ,", ",")
+        text = self._replace(text, "& mut ", "&mut ")
+        text = self._replace(text, "[] ", "[]")
+        text = self._replace(text, " [", "[")
+        return text
+
+    def _join_strings(self, values: list[str], sep: str) -> str:
+        out = ""
+        first = True
+        for value in values:
+            if not first:
+                out = self._concat(out, sep)
+            out = self._concat(out, value)
+            first = False
+        return out
+
     def _len(self, value: object) -> int:
         call = IntrinsicCall(symbol="__runtime_len", args=(value,), source="HostedParser")
         self.trace.append(call)
@@ -224,6 +287,30 @@ class HostedParser(Parser):
         )
         self.trace.append(call)
         return dispatch(call).value
+
+    def _concat(self, left: str, right: str) -> str:
+        call = IntrinsicCall(
+            symbol="__string_concat",
+            args=(left, right),
+            source="HostedParser",
+        )
+        self.trace.append(call)
+        return dispatch(call).value
+
+    def _replace(self, text: str, old: str, new: str) -> str:
+        call = IntrinsicCall(
+            symbol="__string_replace",
+            args=(text, old, new),
+            source="HostedParser",
+        )
+        self.trace.append(call)
+        return dispatch(call).value
+
+    def _peek(self) -> Token:
+        return super()._peek()
+
+    def _advance(self) -> Token:
+        return super()._advance()
 
 
 @dataclass(frozen=True)

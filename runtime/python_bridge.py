@@ -42,6 +42,14 @@ def __int_to_string(value: int) -> str:
     return str(value)
 
 
+def __string_concat(left: str, right: str) -> str:
+    return left + right
+
+
+def __string_replace(text: str, old: str, new: str) -> str:
+    return text.replace(old, new)
+
+
 def __string_char_at(text: str, index: int) -> str:
     if index < 0 or index >= len(text):
         raise RuntimeTrap(f"string index out of bounds: {index}")
@@ -93,6 +101,8 @@ def __result_panic_unwrap_err() -> object:
 INTRINSICS: dict[str, IntrinsicSpec] = {
     "__runtime_len": IntrinsicSpec("__runtime_len", __runtime_len, 1, "i32"),
     "__int_to_string": IntrinsicSpec("__int_to_string", __int_to_string, 1, "String"),
+    "__string_concat": IntrinsicSpec("__string_concat", __string_concat, 2, "String"),
+    "__string_replace": IntrinsicSpec("__string_replace", __string_replace, 3, "String"),
     "__string_char_at": IntrinsicSpec("__string_char_at", __string_char_at, 2, "String"),
     "__string_slice": IntrinsicSpec("__string_slice", __string_slice, 3, "String"),
     "__vec_new_array": IntrinsicSpec("__vec_new_array", __vec_new_array, 1, "Array[T]"),
