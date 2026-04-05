@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
-from compiler.ast import dump_source_file
+from compiler.ast import NamePattern, VariantPattern, WildcardPattern, dump_source_file
 from compiler.lexer.tokens import KEYWORDS, Token, TokenKind, dump_tokens
 from compiler.parser.parser import Parser
 from runtime.intrinsic_dispatch import IntrinsicCall, dispatch
@@ -174,6 +174,58 @@ class HostedLexer:
         return dispatch(call).value
 
 
+@dataclass
+class HostedParser(Parser):
+    trace: list[IntrinsicCall] = field(default_factory=list)
+
+    def _parse_pattern(self):
+        if self._eat_ident_value("_"):
+            return WildcardPattern()
+        path = self._parse_path()
+        if self._eat_symbol("("):
+            args = []
+            if not self._at_symbol(")"):
+                while True:
+                    args.append(self._parse_pattern())
+                    if not self._eat_symbol(","):
+                        break
+                    if self._at_symbol(")"):
+                        break
+            self._expect_symbol(")")
+            return VariantPattern(path=path, args=args)
+        if self._path_contains_dot(path) or self._starts_with_upper(path):
+            return VariantPattern(path=path)
+        return NamePattern(name=path)
+
+    def _path_contains_dot(self, path: str) -> bool:
+        i = 0
+        while i < self._len(path):
+            if self._char_at(path, i) == ".":
+                return True
+            i += 1
+        return False
+
+    def _starts_with_upper(self, text: str) -> bool:
+        if text == "":
+            return False
+        ch = self._char_at(text, 0)
+        return "A" <= ch <= "Z"
+
+    def _len(self, value: object) -> int:
+        call = IntrinsicCall(symbol="__runtime_len", args=(value,), source="HostedParser")
+        self.trace.append(call)
+        return dispatch(call).value
+
+    def _char_at(self, text: str, index: int) -> str:
+        call = IntrinsicCall(
+            symbol="__string_char_at",
+            args=(text, index),
+            source="HostedParser",
+        )
+        self.trace.append(call)
+        return dispatch(call).value
+
+
 @dataclass(frozen=True)
 class PlanStep:
     kind: str
@@ -213,8 +265,11 @@ def run_ast_dump(path: Path) -> ExecutionResult:
     lexer = HostedLexer(source)
     tokens = lexer.tokenize()
     plan.steps.append(PlanStep("tokenize", f"{len(tokens)} tokens"))
-    ast = Parser(tokens).parse_source_file()
+    parser = HostedParser(tokens)
+    ast = parser.parse_source_file()
     plan.steps.append(PlanStep("parse_source_file", "build SourceFile AST"))
+    plan.steps.append(PlanStep("parse_pattern_helpers", "dispatch hosted parser string helpers"))
     plan.steps.append(PlanStep("dump_source_file", "render AST dump"))
     plan.intrinsic_calls.extend(lexer.trace)
+    plan.intrinsic_calls.extend(parser.trace)
     return ExecutionResult(output=dump_source_file(ast), plan=plan)
