@@ -14,16 +14,16 @@ enum Option[T] {
 }
 
 trait ReaderLike[T] {
-    fn read(self: &mut Self, buf: []u8) -> Result[usize, IoError];
+    func read(self: &mut Self, buf: []u8) -> Result[usize, IoError];
 }
 
-fn load[T: Reader](reader: T, path: String) -> Result[String, IoError] {
+func load[T: Reader](reader: T, path: String) -> Result[String, IoError] {
     var value = 1
     value
 }
 
 impl ReaderLike[File] for File {
-    fn read(self: &mut Self, buf: []u8) -> Result[usize, IoError] {
+    func read(self: &mut Self, buf: []u8) -> Result[usize, IoError] {
         buf
     }
 }

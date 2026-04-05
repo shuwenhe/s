@@ -19,7 +19,7 @@ struct GoldenFailure {
     message: String,
 }
 
-fn LexerCases(root: String) -> Vec[GoldenCase] {
+func LexerCases(root: String) -> Vec[GoldenCase] {
     Vec[GoldenCase] {
         GoldenCase {
             name: "sample.tokens",
@@ -29,7 +29,7 @@ fn LexerCases(root: String) -> Vec[GoldenCase] {
     }
 }
 
-fn ParserCases(root: String) -> Vec[GoldenCase] {
+func ParserCases(root: String) -> Vec[GoldenCase] {
     Vec[GoldenCase] {
         GoldenCase {
             name: "sample.ast",
@@ -59,7 +59,7 @@ fn ParserCases(root: String) -> Vec[GoldenCase] {
     }
 }
 
-fn RunLexerCase(case: GoldenCase) -> Result[(), GoldenFailure] {
+func RunLexerCase(case: GoldenCase) -> Result[(), GoldenFailure] {
     var source = readFixture(case.name, case.source_path)?
     var expected = readFixture(case.name, case.expected_path)?
     match new_lexer(source).tokenize() {
@@ -71,7 +71,7 @@ fn RunLexerCase(case: GoldenCase) -> Result[(), GoldenFailure] {
     }
 }
 
-fn RunParserCase(case: GoldenCase) -> Result[(), GoldenFailure] {
+func RunParserCase(case: GoldenCase) -> Result[(), GoldenFailure] {
     var source = readFixture(case.name, case.source_path)?
     var expected = readFixture(case.name, case.expected_path)?
     match parse_source(source) {
@@ -83,7 +83,7 @@ fn RunParserCase(case: GoldenCase) -> Result[(), GoldenFailure] {
     }
 }
 
-fn readFixture(name: String, path: String) -> Result[String, GoldenFailure] {
+func readFixture(name: String, path: String) -> Result[String, GoldenFailure] {
     match read_to_string(path) {
         Result::Ok(text) => Result::Ok(text),
         Result::Err(_) => Result::Err(GoldenFailure {
@@ -93,7 +93,7 @@ fn readFixture(name: String, path: String) -> Result[String, GoldenFailure] {
     }
 }
 
-fn compareOutput(name: String, expected: String, actual: String) -> Result[(), GoldenFailure] {
+func compareOutput(name: String, expected: String, actual: String) -> Result[(), GoldenFailure] {
     if expected.trim() == actual.trim() {
         return Result::Ok(())
     }

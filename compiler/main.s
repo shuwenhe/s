@@ -20,7 +20,7 @@ struct checkOptions {
     dump_ast: bool,
 }
 
-fn Main(args: Vec[String]) -> i32 {
+func Main(args: Vec[String]) -> i32 {
     match run(args) {
         Result::Ok(()) => 0,
         Result::Err(err) => {
@@ -30,7 +30,7 @@ fn Main(args: Vec[String]) -> i32 {
     }
 }
 
-fn run(args: Vec[String]) -> Result[(), cliError] {
+func run(args: Vec[String]) -> Result[(), cliError] {
     var command = parseCommand(args)?
     var source = readSource(command.path)?
 
@@ -73,7 +73,7 @@ fn run(args: Vec[String]) -> Result[(), cliError] {
     Result::Ok(())
 }
 
-fn parseCommand(args: Vec[String]) -> Result[checkOptions, cliError] {
+func parseCommand(args: Vec[String]) -> Result[checkOptions, cliError] {
     if args.len() < 3 {
         return usageError()
     }
@@ -105,7 +105,7 @@ fn parseCommand(args: Vec[String]) -> Result[checkOptions, cliError] {
     Result::Ok(options)
 }
 
-fn readSource(path: String) -> Result[String, cliError] {
+func readSource(path: String) -> Result[String, cliError] {
     match read_to_string(path) {
         Result::Ok(source) => Result::Ok(source),
         Result::Err(_) => Result::Err(cliError {
@@ -114,7 +114,7 @@ fn readSource(path: String) -> Result[String, cliError] {
     }
 }
 
-fn usageError() -> Result[checkOptions, cliError] {
+func usageError() -> Result[checkOptions, cliError] {
     Result::Err(cliError {
         message: "usage: s check <path> [--dump-tokens] [--dump-ast]",
     })
