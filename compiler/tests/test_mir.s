@@ -9,7 +9,7 @@ use compiler.LowerBlock
 use compiler.ParseType
 use frontend.parse_source
 
-pub struct MirFailure {
+struct MirFailure {
     name: String,
     message: String,
 }
