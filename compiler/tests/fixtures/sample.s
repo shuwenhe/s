@@ -4,8 +4,8 @@ use std.io.Reader
 use std.result.Result as Res
 
 struct Config[T] {
-    String Addr,
-    i32 retries,
+    Addr: String,
+    retries: i32,
 }
 
 enum Option[T] {
