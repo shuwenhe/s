@@ -6,13 +6,13 @@ use std.prelude.slice
 use std.vec.Vec
 use std.result.Result
 
-pub struct LexError {
+struct LexError {
     message: String,
     line: i32,
     column: i32,
 }
 
-pub struct Lexer {
+struct Lexer {
     source: String,
     index: i32,
     line: i32,

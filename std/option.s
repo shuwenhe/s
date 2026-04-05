@@ -1,6 +1,6 @@
 package std.option
 
-pub enum Option[T] {
+enum Option[T] {
     Some(T),
     None,
 }

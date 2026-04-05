@@ -2,7 +2,7 @@ package std.fs
 
 use std.result.Result
 
-pub struct FsError {
+struct FsError {
     message: String,
 }
 
