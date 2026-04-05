@@ -41,6 +41,12 @@ Status: Working Draft
 - [compiler/borrow.py](/app/s/compiler/borrow.py)
 - [compiler/__main__.py](/app/s/compiler/__main__.py)
 
+当前状态：
+
+- `prelude.py` 已有最小 S 版 [compiler/prelude.s](/app/s/compiler/prelude.s)
+- `__main__.py` 已有最小 S 版 [compiler/main.s](/app/s/compiler/main.s)
+- `semantic.py`、`mir.py`、`borrow.py` 仍然停留在 Python 主实现
+
 ### Group C: Python Packaging / Test Glue
 
 这些文件主要是 Python 包装、导出或测试 glue，不是最先应该逐个“翻译成 S”的对象：
@@ -101,3 +107,9 @@ Status: Working Draft
 1. `prelude.py`
 2. `semantic.py` 的局部子集
 3. `__main__.py` 对应的最小 S 版 CLI 入口
+
+当前推进情况：
+
+1. `prelude.py` 的最小 S 版已落地
+2. `__main__.py` 的最小 S 版 CLI 入口已落地
+3. 下一步建议转到 `semantic.py` 的局部子集，优先挑纯类型/诊断路径
