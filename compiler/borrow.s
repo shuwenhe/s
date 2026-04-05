@@ -5,7 +5,7 @@ use std.vec.Vec
 use frontend.BlockExpr
 use frontend.Expr
 
-pub struct BorrowDiagnostic {
+struct BorrowDiagnostic {
     message: String,
 }
 

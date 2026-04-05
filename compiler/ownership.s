@@ -2,13 +2,13 @@ package compiler
 
 use std.vec.Vec
 
-pub struct OwnershipDecision {
+struct OwnershipDecision {
     ty: Type,
     copyable: bool,
     droppable: bool,
 }
 
-pub struct OwnershipEntry {
+struct OwnershipEntry {
     name: String,
     decision: OwnershipDecision,
 }

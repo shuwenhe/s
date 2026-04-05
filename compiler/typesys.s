@@ -3,7 +3,7 @@ package compiler
 use std.option.Option
 use std.vec.Vec
 
-pub enum Type {
+enum Type {
     Primitive(PrimitiveType),
     Named(NamedType),
     Reference(ReferenceType),
@@ -13,32 +13,32 @@ pub enum Type {
     Unknown(UnknownType),
 }
 
-pub struct PrimitiveType {
+struct PrimitiveType {
     name: String,
 }
 
-pub struct NamedType {
+struct NamedType {
     name: String,
     args: Vec[Type],
 }
 
-pub struct ReferenceType {
+struct ReferenceType {
     inner: Box[Type],
     mutable: bool,
 }
 
-pub struct SliceType {
+struct SliceType {
     inner: Box[Type],
 }
 
-pub struct FunctionType {
+struct FunctionType {
     params: Vec[Type],
     return_type: Option[Type],
 }
 
-pub struct UnitType {}
+struct UnitType {}
 
-pub struct UnknownType {
+struct UnknownType {
     label: String,
 }
 
@@ -189,7 +189,7 @@ fn SubstituteType(ty: Type, mapping: Vec[TypeBinding]) -> Type {
     }
 }
 
-pub struct TypeBinding {
+struct TypeBinding {
     name: String,
     value: Type,
 }

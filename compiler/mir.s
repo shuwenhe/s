@@ -5,7 +5,7 @@ use std.vec.Vec
 use frontend.BlockExpr
 use frontend.Expr
 
-pub struct LocalSlot {
+struct LocalSlot {
     id: i32,
     name: String,
     kind: String,
@@ -13,56 +13,56 @@ pub struct LocalSlot {
     ty: Type,
 }
 
-pub struct Operand {
+struct Operand {
     kind: String,
     slot: i32,
     text: String,
 }
 
-pub struct AssignStmt {
+struct AssignStmt {
     target: i32,
     op: String,
     args: Vec[Operand],
 }
 
-pub struct EvalStmt {
+struct EvalStmt {
     op: String,
     args: Vec[Operand],
 }
 
-pub struct MoveStmt {
+struct MoveStmt {
     target: i32,
     source: Operand,
 }
 
-pub struct CopyStmt {
+struct CopyStmt {
     target: i32,
     source: Operand,
 }
 
-pub struct DropStmt {
+struct DropStmt {
     slot: i32,
 }
 
-pub struct ControlEdge {
+struct ControlEdge {
     id: String,
     target: i32,
     args: Vec[Operand],
 }
 
-pub struct Terminator {
+struct Terminator {
     kind: String,
     edges: Vec[ControlEdge],
 }
 
-pub struct BasicBlock {
+struct BasicBlock {
     id: i32,
     params: Vec[i32],
     statements: Vec[String],
     terminator: Terminator,
 }
 
-pub struct MIRGraph {
+struct MIRGraph {
     blocks: Vec[BasicBlock],
     entry: i32,
     exit: i32,

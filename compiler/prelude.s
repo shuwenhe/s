@@ -3,7 +3,7 @@ package compiler
 use std.option.Option
 use std.vec.Vec
 
-pub struct BuiltinMethodDecl {
+struct BuiltinMethodDecl {
     name: String,
     trait_name: Option[String],
     receiver_mode: String,
@@ -11,7 +11,7 @@ pub struct BuiltinMethodDecl {
     signature: FunctionType,
 }
 
-pub struct BuiltinFieldDecl {
+struct BuiltinFieldDecl {
     name: String,
     ty: Type,
     visibility: String,
@@ -19,17 +19,17 @@ pub struct BuiltinFieldDecl {
     writable: bool,
 }
 
-pub struct BuiltinTraitDecl {
+struct BuiltinTraitDecl {
     name: String,
     methods: Vec[BuiltinMethodGroup],
 }
 
-pub struct BuiltinMethodGroup {
+struct BuiltinMethodGroup {
     name: String,
     overloads: Vec[BuiltinMethodDecl],
 }
 
-pub struct BuiltinTypeDecl {
+struct BuiltinTypeDecl {
     name: String,
     traits: Vec[String],
     fields: Vec[BuiltinFieldDecl],
@@ -38,7 +38,7 @@ pub struct BuiltinTypeDecl {
     default_impls: Vec[String],
 }
 
-pub struct BuiltinModuleDecl {
+struct BuiltinModuleDecl {
     name: String,
     traits: Vec[BuiltinTraitDecl],
     types: Vec[BuiltinTypeDecl],
