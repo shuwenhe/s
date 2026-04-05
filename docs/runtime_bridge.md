@@ -64,6 +64,8 @@ invoke_intrinsic("__string_slice", "hello", 1, 4)
 
 - `__runtime_len`
 - `__int_to_string`
+- `__string_concat`
+- `__string_replace`
 - `__string_char_at`
 - `__string_slice`
 - `__vec_new_array`
@@ -148,8 +150,12 @@ python3 /app/s/runtime/validate_outputs.py all
 - `HostedParser._parse_pattern`
 - `HostedParser._path_contains_dot`
 - `HostedParser._starts_with_upper`
+- `HostedParser._join_strings`
+- `HostedParser._normalize_type_text`
+- `HostedParser._parse_type_text`
+- `HostedParser._parse_bracket_group`
 
-这些 helper 现在会通过 `__runtime_len` / `__string_char_at` 产出并执行显式 `IntrinsicCall`，而不是直接依赖 Python 原生字符串语义。
+这些 helper 现在会通过 `__runtime_len` / `__string_char_at` / `__string_concat` / `__string_replace` 产出并执行显式 `IntrinsicCall`，而不是直接依赖 Python 原生字符串语义。
 
 ## 9. Next Step
 
