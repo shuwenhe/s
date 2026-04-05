@@ -113,3 +113,23 @@ class SemanticTests(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("built:", proc.stdout)
+
+    def test_cli_build_sum_binary_output(self) -> None:
+        build = subprocess.run(
+            [sys.executable, "-m", "compiler", "build", "/app/s/examples/s/sum.s", "-o", "/tmp/s_sum_test"],
+            cwd="/app/s",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(build.returncode, 0, build.stderr)
+
+        run = subprocess.run(
+            ["/tmp/s_sum_test"],
+            cwd="/app/s",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(run.stdout.strip(), "5050")
