@@ -786,6 +786,7 @@ At the same time, self-hosting work has already started. The first S-native comp
 - [tokens.s](/app/s/frontend/tokens.s)
 - [main.s](/app/s/compiler/main.s)
 - [backend_elf64.s](/app/s/compiler/backend_elf64.s)
+- [backend_elf64.md](/app/s/docs/backend_elf64.md)
 - [self_hosting.md](/app/s/docs/self_hosting.md)
 
 The most valuable next steps are:
