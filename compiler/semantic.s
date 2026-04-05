@@ -1,6 +1,7 @@
 package compiler
 
 use std.option.Option
+use std.prelude.Box
 use std.vec.Vec
 use frontend.BinaryExpr
 use frontend.BlockExpr
@@ -22,7 +23,6 @@ use frontend.NameExpr
 use frontend.ReturnStmt
 use frontend.SourceFile
 use frontend.StringExpr
-use frontend.StructDecl
 use frontend.WhileExpr
 
 pub struct Diagnostic {

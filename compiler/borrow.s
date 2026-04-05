@@ -1,15 +1,9 @@
 package compiler
 
+use std.option.Option
 use std.vec.Vec
-use frontend.BinaryExpr
 use frontend.BlockExpr
-use frontend.BorrowExpr
-use frontend.CallExpr
 use frontend.Expr
-use frontend.IndexExpr
-use frontend.MatchExpr
-use frontend.MemberExpr
-use frontend.NameExpr
 
 pub struct BorrowDiagnostic {
     message: String,
