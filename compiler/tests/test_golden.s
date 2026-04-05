@@ -9,12 +9,12 @@ use compiler.ParserCases
 use compiler.RunLexerCase
 use compiler.RunParserCase
 
-pub struct SuiteResult {
+struct suiteResult {
     passed: i32,
     failed: Vec[GoldenFailure],
 }
 
-pub fn run_golden_suite(fixtures_root: String) -> SuiteResult {
+pub fn RunGoldenSuite(fixtures_root: String) -> suiteResult {
     let failures = Vec[GoldenFailure]()
     let passed = 0
 
@@ -32,7 +32,7 @@ pub fn run_golden_suite(fixtures_root: String) -> SuiteResult {
         }
     }
 
-    SuiteResult {
+    suiteResult {
         passed: passed,
         failed: failures,
     }

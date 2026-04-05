@@ -113,14 +113,14 @@ S 自带统一工具：
 
 ## 语法草案
 
-S 语法目标是“接近 Go/Rust 的清晰度”，但保留系统语言需要的明确性。
+S 语法目标是“接近 Go 的清晰度”，并保留系统语言需要的明确性。
 
 ### Hello World
 
 ```s
 package main
 
-fn main() {
+fn Main() {
     println("hello, world")
 }
 ```
@@ -184,11 +184,11 @@ while running {
 ### 函数
 
 ```s
-fn add(a: i32, b: i32) -> i32 {
+fn Add(a: i32, b: i32) -> i32 {
     a + b
 }
 
-fn open_file(path: str) -> Result<File, IoError> {
+fn openFile(path: str) -> Result<File, IoError> {
     ...
 }
 ```
@@ -198,6 +198,7 @@ fn open_file(path: str) -> Result<File, IoError> {
 - 函数签名必须显式
 - 返回值使用 `->`
 - 单表达式函数体可以隐式返回最后一个表达式
+- 可见性采用 Go 风格：首字母大写表示导出，首字母小写表示模块内可见，不再依赖 `pub`
 
 ### 结构体与方法
 
@@ -209,11 +210,11 @@ struct User {
 }
 
 impl User {
-    fn activate(mut self) {
+    fn Activate(mut self) {
         self.active = true
     }
 
-    fn display_name(self) -> str {
+    fn displayName(self) -> str {
         self.name.as_str()
     }
 }
