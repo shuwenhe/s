@@ -157,7 +157,7 @@ enum Option[T] {
 - `is_none() -> bool`
 - `unwrap() -> T`
 - `unwrap_or(default: T) -> T`
-- `map[U](f: fn(T) -> U) -> Option[U]`
+- `map[U](f: func(T) -> U) -> Option[U]`
 
 ### 6.2 `std.result`
 
@@ -176,8 +176,8 @@ enum Result[T, E] {
 - `is_err() -> bool`
 - `unwrap() -> T`
 - `unwrap_err() -> E`
-- `map[U](f: fn(T) -> U) -> Result[U, E]`
-- `map_err[F](f: fn(E) -> F) -> Result[T, F]`
+- `map[U](f: func(T) -> U) -> Result[U, E]`
+- `map_err[F](f: func(E) -> F) -> Result[T, F]`
 
 ### 6.3 `std.error`
 
@@ -185,7 +185,7 @@ enum Result[T, E] {
 
 ```s
 trait Error {
-    fn message(&self) -> str
+    func message(&self) -> str
 }
 ```
 
@@ -348,12 +348,12 @@ Draft 0.1 先固定最小接口。
 
 ```s
 trait Reader {
-    fn read(&mut self, buf: []u8) -> Result[usize, IoError]
+    func read(&mut self, buf: []u8) -> Result[usize, IoError]
 }
 
 trait Writer {
-    fn write(&mut self, buf: []u8) -> Result[usize, IoError]
-    fn flush(&mut self) -> Result[(), IoError]
+    func write(&mut self, buf: []u8) -> Result[usize, IoError]
+    func flush(&mut self) -> Result[(), IoError]
 }
 ```
 

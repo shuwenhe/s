@@ -31,7 +31,7 @@ S source
 S 侧当前把 intrinsic 写成：
 
 ```s
-extern "intrinsic" fn __string_slice(text: String, start: i32, end: i32) -> String
+extern "intrinsic" func __string_slice(text: String, start: i32, end: i32) -> String
 ```
 
 在宿主桥接层，这会映射为：
@@ -85,7 +85,7 @@ invoke_intrinsic("__string_slice", "hello", 1, 4)
 例如：
 
 ```s
-extern "intrinsic" fn __vec_array_set[T](array: Array[T], index: i32, value: T) -> ()
+extern "intrinsic" func __vec_array_set[T](array: Array[T], index: i32, value: T) -> ()
 ```
 
 对应：

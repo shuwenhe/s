@@ -14,7 +14,7 @@ class MIRTests(unittest.TestCase):
         source = """
 package demo.mir
 
-pub fn choose(flag: bool) -> i32 {
+pub func choose(flag: bool) -> i32 {
     if flag {
         1
     } else {
@@ -23,8 +23,8 @@ pub fn choose(flag: bool) -> i32 {
 }
 """
         parsed = parse_source(source)
-        fn = parsed.items[0]
-        graph = lower_block(fn.body, [param.name for param in fn.sig.params])
+        func = parsed.items[0]
+        graph = lower_block(func.body, [param.name for param in func.sig.params])
         join_blocks = [block for block in graph.blocks.values() if block.params]
         self.assertTrue(join_blocks)
         arg_edges = [edge for block in graph.blocks.values() for edge in block.terminator.edges if edge.args]
@@ -38,14 +38,14 @@ pub fn choose(flag: bool) -> i32 {
         source = """
 package demo.mir
 
-pub fn shadow(x: i32) -> i32 {
+pub func shadow(x: i32) -> i32 {
     let x = 1
     x
 }
 """
         parsed = parse_source(source)
-        fn = parsed.items[0]
-        graph = lower_block(fn.body, [param.name for param in fn.sig.params])
+        func = parsed.items[0]
+        graph = lower_block(func.body, [param.name for param in func.sig.params])
         versions = [slot.version for slot in graph.locals.values() if slot.name == "x"]
         self.assertGreaterEqual(len(versions), 2)
         self.assertIn(0, versions)
@@ -55,16 +55,16 @@ pub fn shadow(x: i32) -> i32 {
         source = """
 package demo.mir
 
-pub fn take(text: String) -> String {
+pub func take(text: String) -> String {
     let other = text
     other
 }
 """
         parsed = parse_source(source)
-        fn = parsed.items[0]
+        func = parsed.items[0]
         graph = lower_block(
-            fn.body,
-            [param.name for param in fn.sig.params],
+            func.body,
+            [param.name for param in func.sig.params],
             {"text": parse_type("String"), "other": parse_type("String")},
             make_plan({"text": parse_type("String"), "other": parse_type("String")}),
         )

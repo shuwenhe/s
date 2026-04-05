@@ -307,7 +307,7 @@ Draft 0.1 推荐同时支持上述几类形式。
 函数声明形式如下：
 
 ```s
-fn add(a: i32, b: i32) -> i32 {
+func add(a: i32, b: i32) -> i32 {
     a + b
 }
 ```
@@ -329,9 +329,9 @@ fn add(a: i32, b: i32) -> i32 {
 示例：
 
 ```s
-fn len(s: &str) -> usize
-fn push(v: &mut Vec[i32], value: i32)
-fn consume(buf: Buf) -> Result[(), Error]
+func len(s: &str) -> usize
+func push(v: &mut Vec[i32], value: i32)
+func consume(buf: Buf) -> Result[(), Error]
 ```
 
 ### 10.3 Methods
@@ -340,11 +340,11 @@ fn consume(buf: Buf) -> Result[(), Error]
 
 ```s
 impl User {
-    fn activate(&mut self) {
+    func activate(&mut self) {
         self.active = true
     }
 
-    fn name(&self) -> str {
+    func name(&self) -> str {
         self.name.as_str()
     }
 }
@@ -484,7 +484,7 @@ S 使用基于作用域的资源释放模型。
 示例：
 
 ```s
-fn load() -> Result[String, IoError] {
+func load() -> Result[String, IoError] {
     let file = File::open("config.toml")?
     file.read_all()
 }
@@ -498,7 +498,7 @@ fn load() -> Result[String, IoError] {
 
 ```s
 trait Drop {
-    fn drop(&mut self)
+    func drop(&mut self)
 }
 ```
 
@@ -523,7 +523,7 @@ trait 用于描述共享行为约束：
 
 ```s
 trait Writer {
-    fn write(&mut self, data: []u8) -> Result[usize, IoError]
+    func write(&mut self, data: []u8) -> Result[usize, IoError]
 }
 ```
 
@@ -536,7 +536,7 @@ trait 的用途包括：
 ### 14.2 Generic Functions
 
 ```s
-fn max[T: Ord](a: T, b: T) -> T {
+func max[T: Ord](a: T, b: T) -> T {
     if a > b { a } else { b }
 }
 ```
@@ -579,7 +579,7 @@ enum Result[T, E] {
 S 支持 `?` 用于传播错误：
 
 ```s
-fn run() -> Result[(), Error] {
+func run() -> Result[(), Error] {
     let cfg = load_config("app.conf")?
     let conn = connect(cfg.addr)?
     conn.start()?
@@ -761,7 +761,7 @@ S 应优先支持 C ABI。
 示例：
 
 ```s
-extern "C" fn puts(s: *const u8) -> i32
+extern "C" func puts(s: *const u8) -> i32
 ```
 
 FFI 至少应支持：
@@ -834,7 +834,7 @@ S 的最小可用版本应至少支持：
 
 - 基本类型
 - `let` / `var` / `const`
-- `fn`
+- `func`
 - `struct`
 - `enum`
 - `if` / `for` / `while` / `match`

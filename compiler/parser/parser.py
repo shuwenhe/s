@@ -80,7 +80,7 @@ class Parser:
 
     def _parse_item(self) -> object:
         is_public = self._eat_keyword("pub")
-        if self._at_keyword("fn"):
+        if self._at_keyword("func"):
             return self._parse_function_decl(is_public)
         if self._at_keyword("struct"):
             return self._parse_struct_decl(is_public)
@@ -158,7 +158,7 @@ class Parser:
         return ImplDecl(target=target, trait_name=trait_name, generics=generics, methods=methods)
 
     def _parse_function(self, require_body: bool) -> tuple[FunctionSig, Optional[BlockExpr]]:
-        self._expect_keyword("fn")
+        self._expect_keyword("func")
         name = self._expect_ident()
         generics = self._parse_generic_params()
         self._expect_symbol("(")

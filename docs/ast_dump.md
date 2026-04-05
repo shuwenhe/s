@@ -43,7 +43,7 @@ source file
 ```s
 use std.fs.read_to_string
 
-fn read_to_string(path: String) -> Result[String, FsError]
+func read_to_string(path: String) -> Result[String, FsError]
 ```
 
 当前只依赖这些性质：
@@ -61,8 +61,8 @@ fn read_to_string(path: String) -> Result[String, FsError]
 use std.io.println
 use std.io.eprintln
 
-fn println(text: String) -> ()
-fn eprintln(text: String) -> ()
+func println(text: String) -> ()
+func eprintln(text: String) -> ()
 ```
 
 当前要求仍然只是最小输出能力：
@@ -75,7 +75,7 @@ fn eprintln(text: String) -> ()
 `ast_dump` 当前假设 parser 提供如下最小接口：
 
 ```s
-fn parse_source(source: String) -> Result[SourceFile, ParseError]
+func parse_source(source: String) -> Result[SourceFile, ParseError]
 ```
 
 以及如下最小错误形状：
@@ -99,7 +99,7 @@ struct ParseError {
 当前入口约定如下：
 
 ```s
-fn main(args: Vec[String]) -> i32
+func main(args: Vec[String]) -> i32
 ```
 
 最小调用形状：
