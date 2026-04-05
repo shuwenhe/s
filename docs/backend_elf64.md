@@ -181,22 +181,14 @@ There is one unavoidable host boundary in the MVP:
 - running `as`
 - running `ld`
 
-So `backend_elf64.s` needs a tiny host contract for:
+So the S backend should depend on a tiny standard-library host contract:
 
-- `write_text_file(path, contents)`
-- `run_process(argv)`
-- `make_temp_dir()`
+- `std.fs.WriteTextFile(path, contents)`
+- `std.process.RunProcess(argv)`
+- `std.fs.MakeTempDir(prefix)`
 
 These should be modeled as runtime intrinsics or standard-library host calls,
 not hidden logic inside the parser or CLI.
-
-Suggested boundary:
-
-```s
-func host_write_text_file(String path, String contents) -> Result[(), HostError]
-func host_run_process(Vec[String] argv) -> Result[(), HostError]
-func host_make_temp_dir(String prefix) -> Result[String, HostError]
-```
 
 ## Semantic Restrictions
 
