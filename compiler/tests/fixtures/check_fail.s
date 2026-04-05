@@ -1,6 +1,6 @@
 package demo.fail
 
-pub fn wrong() -> bool {
+fn wrong() -> bool {
     let value: bool = 1
     value
 }
