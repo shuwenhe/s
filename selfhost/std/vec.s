@@ -1,5 +1,7 @@
 package std.vec
 
+use std.option.Option
+
 pub struct Vec[T] {}
 
 impl Vec[T] {
