@@ -8,18 +8,26 @@ pub fn box[T](value: T) -> Box[T] {
     Box[T] { value: value }
 }
 
-pub fn len[T](value: T) -> i32 {
-    0
+pub fn len(value: String) -> i32 {
+    __string_len(value)
 }
 
 pub fn to_string(value: i32) -> String {
-    "<int>"
+    __int_to_string(value)
 }
 
 pub fn char_at(text: String, index: i32) -> String {
-    "?"
+    __string_char_at(text, index)
 }
 
 pub fn slice(text: String, start: i32, end: i32) -> String {
-    ""
+    __string_slice(text, start, end)
 }
+
+extern "intrinsic" fn __string_len(text: String) -> i32
+
+extern "intrinsic" fn __int_to_string(value: i32) -> String
+
+extern "intrinsic" fn __string_char_at(text: String, index: i32) -> String
+
+extern "intrinsic" fn __string_slice(text: String, start: i32, end: i32) -> String
