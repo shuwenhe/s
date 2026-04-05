@@ -10,7 +10,7 @@ use frontend.dump_tokens
 use frontend.new_lexer
 use frontend.Token
 
-pub struct CliError {
+struct CliError {
     message: String,
 }
 

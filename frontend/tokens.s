@@ -3,7 +3,7 @@ package frontend
 use std.prelude.to_string
 use std.vec.Vec
 
-pub enum TokenKind {
+enum TokenKind {
     Ident,
     Int,
     String,
@@ -12,7 +12,7 @@ pub enum TokenKind {
     Eof,
 }
 
-pub struct Token {
+struct Token {
     kind: TokenKind,
     value: String,
     line: i32,

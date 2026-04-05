@@ -4,12 +4,12 @@ use std.option.Option
 use std.prelude.Box
 use std.prelude.box
 
-pub struct RawVec[T] {
+struct RawVec[T] {
     storage: Box[Array[T]],
     capacity: i32,
 }
 
-pub struct Vec[T] {
+struct Vec[T] {
     raw: RawVec[T],
     length: i32,
 }
@@ -108,7 +108,7 @@ fn grow_capacity(current: i32, wanted: i32) -> i32 {
     next
 }
 
-pub struct Array[T] {}
+struct Array[T] {}
 
 fn new_array[T](size: i32) -> Array[T] {
     __vec_new_array[T](size)
