@@ -1,10 +1,18 @@
 package compiler.backend_elf64
 
 use frontend.BlockExpr
+use frontend.CallExpr
 use frontend.Expr
+use frontend.ExprStmt
 use frontend.FunctionDecl
+use frontend.IntExpr
 use frontend.Item
+use frontend.NameExpr
+use frontend.ReturnStmt
 use frontend.SourceFile
+use frontend.Stmt
+use frontend.StringExpr
+use frontend.VarStmt
 use std.option.Option
 use std.prelude.to_string
 use std.result.Result
@@ -43,6 +51,10 @@ struct LocalBinding {
 }
 
 struct BackendError {
+    message: String,
+}
+
+struct HostError {
     message: String,
 }
 
@@ -110,32 +122,45 @@ func execute_block(
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops,
 ) -> Result[int, BackendError] {
-    // Phase 1 keeps compile-time execution intentionally narrow.
-    // We will expand stmt/expr coverage as we move the Python backend logic over.
-    body
-    env
-    ops
-    Result::Ok(0)
+    for stmt in body.statements {
+        match stmt {
+            Stmt::Return(value) => return execute_return_stmt(value, env),
+            _ => execute_stmt(stmt, env, ops)?,
+        }
+    }
+    match body.final_expr {
+        Option::Some(expr) => as_exit_code(eval_expr(expr, env)?),
+        Option::None => Result::Ok(0),
+    }
 }
 
 func execute_stmt(
-    frontend.Stmt stmt,
+    Stmt stmt,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops,
 ) -> Result[(), BackendError] {
-    stmt
-    env
-    ops
-    Result::Err(unsupported("backend stmt"))
+    match stmt {
+        Stmt::Var(value) => execute_var_stmt(value, env),
+        Stmt::Expr(value) => execute_expr_stmt(value, env, ops),
+        Stmt::Return(value) => {
+            value
+            Result::Ok(())
+        }
+    }
 }
 
 func eval_expr(
     Expr expr,
     Vec[LocalBinding] env,
 ) -> Result[Value, BackendError] {
-    expr
-    env
-    Result::Err(unsupported("backend expr"))
+    match expr {
+        Expr::Int(value) => Result::Ok(Value::Int(parse_int_literal(value))),
+        Expr::String(value) => Result::Ok(Value::String(unquote_string(value))),
+        Expr::Bool(value) => Result::Ok(Value::Bool(value.value)),
+        Expr::Name(value) => lookup_binding(env, value.name),
+        Expr::Binary(value) => eval_binary_expr(value, env),
+        _ => Result::Err(unsupported("backend expr")),
+    }
 }
 
 func emit_data_section(Vec[ProgramOp] ops) -> String {
@@ -174,15 +199,13 @@ func emit_text_section(Vec[ProgramOp] ops, int exit_code) -> String {
 }
 
 func assemble_and_link(String asm_text, String output_path) -> Result[(), BackendError] {
-    // Phase 1 host boundary:
-    // - write temporary .s file
-    // - call as
-    // - call ld
-    asm_text
-    output_path
-    Result::Err(BackendError {
-        message: "host assembler/linker bridge not wired yet",
-    })
+    var temp_dir = host_make_temp_dir("s-build-")?
+    var asm_path = temp_dir + "/out.s"
+    var obj_path = temp_dir + "/out.o"
+    host_write_text_file(asm_path, asm_text)?
+    host_run_process(Vec[String] { "as", "-o", obj_path, asm_path })?
+    host_run_process(Vec[String] { "ld", "-o", output_path, obj_path })?
+    Result::Ok(())
 }
 
 func append_data_payload(Vec[String] lines, String label, String text) -> () {
@@ -199,6 +222,8 @@ func append_write_syscall(Vec[String] lines, int fd, String label, String text) 
 }
 
 func encode_bytes(String text) -> String {
+    // Phase 1 assumes ASCII payloads.
+    // The host/runtime bridge can later provide a byte encoder intrinsic.
     text
     "0"
 }
@@ -226,3 +251,201 @@ func unsupported(String feature) -> BackendError {
         message: "unsupported " + feature,
     }
 }
+
+func execute_var_stmt(
+    VarStmt stmt,
+    Vec[LocalBinding] env,
+) -> Result[(), BackendError] {
+    var value = eval_expr(stmt.value, env)?
+    bind_local(env, stmt.name, value)
+    Result::Ok(())
+}
+
+func execute_expr_stmt(
+    ExprStmt stmt,
+    Vec[LocalBinding] env,
+    Vec[ProgramOp] ops,
+) -> Result[(), BackendError] {
+    match stmt.expr {
+        Expr::Call(value) => execute_call_stmt(value, env, ops),
+        // Assignment, i++, and C-style for are part of the MVP backend target,
+        // but they still need matching frontend AST nodes in /app/s/frontend.
+        _ => {
+            eval_expr(stmt.expr, env)?
+            Result::Ok(())
+        }
+    }
+}
+
+func execute_call_stmt(
+    CallExpr call,
+    Vec[LocalBinding] env,
+    Vec[ProgramOp] ops,
+) -> Result[(), BackendError] {
+    var callee_name = extract_callee_name(call)?
+    if len(call.args) != 1 {
+        return Result::Err(unsupported("call arity"))
+    }
+    var value = eval_expr(call.args[0], env)?
+    var text = value_to_string(value)?
+
+    if callee_name == "println" {
+        ops.push(ProgramOp::WriteStdout(WriteOp {
+            fd: 1,
+            text: text + "\n",
+        }))
+        return Result::Ok(())
+    }
+    if callee_name == "eprintln" {
+        ops.push(ProgramOp::WriteStderr(WriteOp {
+            fd: 2,
+            text: text + "\n",
+        }))
+        return Result::Ok(())
+    }
+    Result::Err(unsupported("call " + callee_name))
+}
+
+func execute_return_stmt(
+    ReturnStmt stmt,
+    Vec[LocalBinding] env,
+) -> Result[int, BackendError] {
+    match stmt.value {
+        Option::Some(expr) => as_exit_code(eval_expr(expr, env)?),
+        Option::None => Result::Ok(0),
+    }
+}
+
+func eval_binary_expr(
+    frontend.BinaryExpr expr,
+    Vec[LocalBinding] env,
+) -> Result[Value, BackendError] {
+    var left = eval_expr(expr.left.value, env)?
+    var right = eval_expr(expr.right.value, env)?
+
+    if expr.op == "+" {
+        match left {
+            Value::Int(left_value) => {
+                match right {
+                    Value::Int(right_value) => return Result::Ok(Value::Int(left_value + right_value)),
+                    _ => return Result::Err(unsupported("mixed + operands")),
+                }
+            }
+            Value::String(left_value) => {
+                match right {
+                    Value::String(right_value) => return Result::Ok(Value::String(left_value + right_value)),
+                    _ => return Result::Err(unsupported("mixed + operands")),
+                }
+            }
+            _ => return Result::Err(unsupported("operator +")),
+        }
+    }
+
+    if expr.op == "<=" {
+        match left {
+            Value::Int(left_value) => {
+                match right {
+                    Value::Int(right_value) => return Result::Ok(Value::Bool(left_value <= right_value)),
+                    _ => return Result::Err(unsupported("operator <=")),
+                }
+            }
+            _ => return Result::Err(unsupported("operator <=")),
+        }
+    }
+
+    Result::Err(unsupported("binary operator " + expr.op))
+}
+
+func lookup_binding(
+    Vec[LocalBinding] env,
+    String name,
+) -> Result[Value, BackendError] {
+    for binding in env {
+        if binding.name == name {
+            return Result::Ok(binding.value)
+        }
+    }
+    Result::Err(BackendError {
+        message: "undefined name " + name,
+    })
+}
+
+func bind_local(
+    Vec[LocalBinding] env,
+    String name,
+    Value value,
+) -> () {
+    env.push(LocalBinding {
+        name: name,
+        value: value,
+    })
+}
+
+func extract_callee_name(CallExpr call) -> Result[String, BackendError] {
+    match call.callee.value {
+        Expr::Name(value) => Result::Ok(value.name),
+        _ => Result::Err(unsupported("callee")),
+    }
+}
+
+func value_to_string(Value value) -> Result[String, BackendError] {
+    match value {
+        Value::Int(number) => Result::Ok(to_string(number)),
+        Value::String(text) => Result::Ok(text),
+        Value::Bool(flag) => Result::Ok(if flag { "true" } else { "false" }),
+        Value::Unit(()) => Result::Ok("()"),
+    }
+}
+
+func as_exit_code(Value value) -> Result[int, BackendError] {
+    match value {
+        Value::Int(number) => Result::Ok(number),
+        Value::Bool(flag) => Result::Ok(if flag { 1 } else { 0 }),
+        Value::Unit(()) => Result::Ok(0),
+        _ => Result::Err(unsupported("main return type")),
+    }
+}
+
+func parse_int_literal(IntExpr expr) -> int {
+    // Placeholder until std string/number helpers are available.
+    expr
+    0
+}
+
+func unquote_string(StringExpr expr) -> String {
+    // Placeholder until std string slicing helpers are available.
+    expr.value
+}
+
+func host_write_text_file(String path, String contents) -> Result[(), BackendError] {
+    match __host_write_text_file(path, contents) {
+        Result::Ok(()) => Result::Ok(()),
+        Result::Err(err) => Result::Err(BackendError {
+            message: err.message,
+        }),
+    }
+}
+
+func host_run_process(Vec[String] argv) -> Result[(), BackendError] {
+    match __host_run_process(argv) {
+        Result::Ok(()) => Result::Ok(()),
+        Result::Err(err) => Result::Err(BackendError {
+            message: err.message,
+        }),
+    }
+}
+
+func host_make_temp_dir(String prefix) -> Result[String, BackendError] {
+    match __host_make_temp_dir(prefix) {
+        Result::Ok(path) => Result::Ok(path),
+        Result::Err(err) => Result::Err(BackendError {
+            message: err.message,
+        }),
+    }
+}
+
+extern "intrinsic" func __host_write_text_file(String path, String contents) -> Result[(), HostError]
+
+extern "intrinsic" func __host_run_process(Vec[String] argv) -> Result[(), HostError]
+
+extern "intrinsic" func __host_make_temp_dir(String prefix) -> Result[String, HostError]
