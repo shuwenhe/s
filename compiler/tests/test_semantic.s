@@ -10,104 +10,104 @@ use compiler.LoadPrelude
 use frontend.parse_source
 
 struct semanticCase {
-    String name,
-    String path,
-    bool should_pass,
-    Option[String] expected_message,
+    name: String,
+    path: String,
+    should_pass: bool,
+    expected_message: Option[String],
 }
 
 struct SemanticFailure {
-    String name,
-    String message,
+    name: String,
+    message: String,
 }
 
-Vec[semanticCase] semanticCases(String fixtures_root){
+func semanticCases(fixtures_root: String) -> Vec[semanticCase] {
     Vec[semanticCase] {
         semanticCase {
-            "check_ok" name,
-            fixtures_root + "/check_ok.s" path,
-            true should_pass,
-            Option::None expected_message,
+            name: "check_ok",
+            path: fixtures_root + "/check_ok.s",
+            should_pass: true,
+            expected_message: Option::None,
         },
         semanticCase {
-            "check_fail" name,
-            fixtures_root + "/check_fail.s" path,
-            false should_pass,
+            name: "check_fail",
+            path: fixtures_root + "/check_fail.s",
+            should_pass: false,
             expected_message: Option::Some("var value expected bool, got i32"),
         },
         semanticCase {
-            "borrow_fail" name,
-            fixtures_root + "/borrow_fail.s" path,
-            false should_pass,
-            Option::Some("use of moved value text") expected_message,
+            name: "borrow_fail",
+            path: fixtures_root + "/borrow_fail.s",
+            should_pass: false,
+            expected_message: Option::Some("use of moved value text"),
         },
         semanticCase {
-            "generic_bound_fail" name,
-            fixtures_root + "/generic_bound_fail.s" path,
-            false should_pass,
-            Option::Some("type String does not satisfy bound Copy") expected_message,
+            name: "generic_bound_fail",
+            path: fixtures_root + "/generic_bound_fail.s",
+            should_pass: false,
+            expected_message: Option::Some("type String does not satisfy bound Copy"),
         },
         semanticCase {
-            "member_method_sample" name,
-            fixtures_root + "/member_method_sample.s" path,
-            true should_pass,
-            Option::None expected_message,
+            name: "member_method_sample",
+            path: fixtures_root + "/member_method_sample.s",
+            should_pass: true,
+            expected_message: Option::None,
         },
         semanticCase {
-            "prelude_methods_ok" name,
-            fixtures_root + "/prelude_methods_ok.s" path,
-            true should_pass,
-            Option::None expected_message,
+            name: "prelude_methods_ok",
+            path: fixtures_root + "/prelude_methods_ok.s",
+            should_pass: true,
+            expected_message: Option::None,
         },
         semanticCase {
-            "builtin_field_ok" name,
-            fixtures_root + "/builtin_field_ok.s" path,
-            true should_pass,
-            Option::None expected_message,
+            name: "builtin_field_ok",
+            path: fixtures_root + "/builtin_field_ok.s",
+            should_pass: true,
+            expected_message: Option::None,
         },
     }
 }
 
-Vec[SemanticFailure] RunSemanticSuite(String fixtures_root){
+func RunSemanticSuite(fixtures_root: String) -> Vec[SemanticFailure] {
     var failures = Vec[SemanticFailure]()
 
     for case in semanticCases(fixtures_root) {
         match runCase(case) {
-            :Ok(()) => () Result,
-            :Err(err) => failures.push(err) Result,
+            Result::Ok(()) => (),
+            Result::Err(err) => failures.push(err),
         }
     }
 
     var prelude = LoadPrelude()
     if prelude.name != "std.prelude" {
         failures.push(SemanticFailure {
-            "prelude" name,
-            "prelude name mismatch" message,
+            name: "prelude",
+            message: "prelude name mismatch",
         })
     }
 
     failures
 }
 
-Result[(), SemanticFailure] runCase(semanticCase case){
+func runCase(case: semanticCase) -> Result[(), SemanticFailure] {
     var source =
         match read_to_string(case.path) {
-            :Ok(value) => value Result,
-            :Err(_) => { Result
+            Result::Ok(value) => value,
+            Result::Err(_) => {
                 return Result::Err(SemanticFailure {
-                    case.name name,
-                    "failed to read fixture" message,
+                    name: case.name,
+                    message: "failed to read fixture",
                 })
             }
         }
 
     var parsed =
         match parse_source(source) {
-            :Ok(value) => value Result,
-            :Err(err) => { Result
+            Result::Ok(value) => value,
+            Result::Err(err) => {
                 return Result::Err(SemanticFailure {
-                    case.name name,
-                    "parse error: " + err.message message,
+                    name: case.name,
+                    message: "parse error: " + err.message,
                 })
             }
         }
@@ -116,27 +116,27 @@ Result[(), SemanticFailure] runCase(semanticCase case){
     var ok = checked.diagnostics.len() == 0
     if ok != case.should_pass {
         return Result::Err(SemanticFailure {
-            case.name name,
-            "unexpected semantic result" message,
+            name: case.name,
+            message: "unexpected semantic result",
         })
     }
 
     match case.expected_message {
-        :Some(message) => { Option
+        Option::Some(message) => {
             if !hasDiagnostic(checked.diagnostics, message) {
                 return Result::Err(SemanticFailure {
-                    case.name name,
-                    "expected diagnostic not found" message,
+                    name: case.name,
+                    message: "expected diagnostic not found",
                 })
             }
         }
-        :None => () Option,
+        Option::None => (),
     }
 
-    :Ok(()) Result
+    Result::Ok(())
 }
 
-bool hasDiagnostic(Vec[Diagnostic] diagnostics, String expected){
+func hasDiagnostic(diagnostics: Vec[Diagnostic], expected: String) -> bool {
     for diagnostic in diagnostics {
         if diagnostic.message == expected {
             return true

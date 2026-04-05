@@ -1,20 +1,20 @@
 package demo.member
 
 struct Point {
-    i32 x,
-    i32 y,
+    x: i32,
+    y: i32,
 }
 
 trait Measure {
-    i32 size(Point self);
+    func size(self: Point) -> i32;
 }
 
 impl Measure for Point {
-    i32 size(Point self){
+    func size(self: Point) -> i32 {
         self.x + self.y
     }
 }
 
-i32 total(Point p, Vec[i32] items, i32 index){
+func total(p: Point, items: Vec[i32], index: i32) -> i32 {
     p.size() + items[index]
 }
