@@ -4,14 +4,17 @@ from dataclasses import dataclass
 from typing import Any
 
 from compiler.ast import (
+    AssignStmt,
     BinaryExpr,
     BlockExpr,
     BoolExpr,
+    CForStmt,
     CallExpr,
     Expr,
     ExprStmt,
     FunctionDecl,
     IfExpr,
+    IncrementStmt,
     IntExpr,
     LetStmt,
     NameExpr,
@@ -91,9 +94,29 @@ class Interpreter:
             return self.eval_expr(block.final_expr, local)
         return None
 
-    def eval_stmt(self, stmt: LetStmt | ReturnStmt | ExprStmt, env: dict[str, Any]) -> None:
+    def eval_stmt(self, stmt: LetStmt | AssignStmt | IncrementStmt | CForStmt | ReturnStmt | ExprStmt, env: dict[str, Any]) -> None:
         if isinstance(stmt, LetStmt):
             env[stmt.name] = self.eval_expr(stmt.value, env)
+            return
+        if isinstance(stmt, AssignStmt):
+            if stmt.name not in env:
+                raise InterpreterError(f"unknown name {stmt.name}")
+            env[stmt.name] = self.eval_expr(stmt.value, env)
+            return
+        if isinstance(stmt, IncrementStmt):
+            if stmt.name not in env:
+                raise InterpreterError(f"unknown name {stmt.name}")
+            env[stmt.name] = int(env[stmt.name]) + 1
+            return
+        if isinstance(stmt, CForStmt):
+            loop_env = dict(env)
+            self.eval_stmt(stmt.init, loop_env)
+            while self.eval_expr(stmt.condition, loop_env):
+                self.eval_block(stmt.body, loop_env)
+                self.eval_stmt(stmt.step, loop_env)
+            for name in list(env.keys()):
+                if name in loop_env:
+                    env[name] = loop_env[name]
             return
         if isinstance(stmt, ReturnStmt):
             value = self.eval_expr(stmt.value, env) if stmt.value is not None else None
@@ -174,4 +197,3 @@ class Interpreter:
         if value is False:
             return "false"
         return str(value)
-

@@ -102,3 +102,14 @@ class SemanticTests(unittest.TestCase):
         source = (FIXTURES / "builtin_field_ok.s").read_text()
         result = check_source(parse_source(source))
         self.assertTrue(result.ok, [d.message for d in result.diagnostics])
+
+    def test_cli_build_sum_success(self) -> None:
+        proc = subprocess.run(
+            [sys.executable, "-m", "compiler", "build", "/app/s/examples/s/sum.s", "-o", "/tmp/s_sum_test"],
+            cwd="/app/s",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("built:", proc.stdout)
