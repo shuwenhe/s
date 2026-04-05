@@ -1,105 +1,105 @@
 # S Language
 
-S 是一门面向系统软件、基础设施和高性能服务的编程语言草案。
+S is a draft programming language for systems software, infrastructure, and high-performance services.
 
-它希望提取 C、Go、Rust、C++ 各自最有价值的部分，而避开它们最容易拖累工程体验的部分：
+It aims to take the most valuable parts of C, Go, Rust, and C++, while avoiding the parts that most often drag down engineering experience:
 
-- 从 C 借用贴近硬件、布局可控、ABI 友好的能力
-- 从 Go 借用统一工具链、简洁语法和高效工程体验
-- 从 Rust 借用默认安全、显式危险边界和健壮的错误模型
-- 从 C++ 借用 RAII、零成本抽象和值语义表达力
+- From C: hardware-level control, predictable layout, and ABI friendliness
+- From Go: a unified toolchain, simple syntax, and efficient engineering workflows
+- From Rust: safety by default, explicit unsafe boundaries, and robust error modeling
+- From C++: RAII, zero-cost abstractions, and expressive value semantics
 
-S 的目标不是做“四门语言的拼盘”，而是做一门系统级、默认安全、表达直接、工具链完整的现代语言。
+S is not trying to become a loose mixture of four languages. The goal is a modern systems language that is safe by default, direct to read, and backed by a complete toolchain.
 
-## 设计宣言
+## Design Statement
 
-S 试图回答一个很实际的问题：
+S is trying to answer a practical question:
 
-为什么写系统软件时，我们总要在几组矛盾里选一边？
+Why do we always have to choose one side of the same trade-offs when building systems software?
 
-- 要性能，就常常失去安全
-- 要安全，就常常失去可预测性
-- 要抽象能力，就常常失去编译速度和可读性
-- 要工程效率，就常常失去底层控制力
+- If we want performance, we often lose safety
+- If we want safety, we often lose predictability
+- If we want abstraction, we often lose compile speed and readability
+- If we want engineering efficiency, we often lose low-level control
 
-S 的答案是：
+S answers with:
 
-- 默认安全，但不牺牲底层控制
-- 值语义优先，但允许显式引用和可控共享
-- 抽象应该接近零成本，而不是依赖运行时魔法
-- 工具链必须官方统一，避免生态级碎片化
-- 危险能力必须存在，但必须被明确隔离在 `unsafe`
+- safety by default, without giving up low-level control
+- value semantics first, with explicit references and controlled sharing
+- abstractions that should be close to zero cost instead of relying on runtime magic
+- a single official toolchain instead of ecosystem fragmentation
+- dangerous capabilities that exist, but are explicitly isolated behind `unsafe`
 
-一句话概括：
+In one line:
 
-> S = C 的控制力 + Go 的工程体验 + Rust 的安全边界 + C++ 的零成本抽象
+> S = C's control + Go's tooling experience + Rust's safety boundaries + C++'s zero-cost abstractions
 
-## 语言定位
+## Language Positioning
 
-S 适合的场景：
+S is intended for:
 
-- 服务端基础设施
-- 网络服务与网关
-- 数据处理与存储引擎
-- 编译器、运行时、中间件
-- 嵌入式与系统组件
-- 需要 C ABI 互操作的高性能模块
+- server-side infrastructure
+- network services and gateways
+- data processing and storage engines
+- compilers, runtimes, and middleware
+- embedded and system components
+- high-performance modules that need C ABI interoperability
 
-S 暂时不把自己定位成：
+S is not currently trying to be:
 
-- 以 GC 为核心的业务脚本语言
-- 以元编程为核心的研究型语言
-- 以极端类型体操为卖点的学术语言
+- a business scripting language centered on GC
+- a research language centered on metaprogramming
+- an academic language centered on extreme type-level tricks
 
-## 核心原则
+## Core Principles
 
-### 1. 默认安全
+### 1. Safety By Default
 
-普通 S 代码默认不允许出现明显未定义行为来源：
+Ordinary S code should not allow obvious sources of undefined behavior by default:
 
-- 空悬引用
+- dangling references
 - double free
-- 越界访问
-- 数据竞争
+- out-of-bounds access
+- data races
 
-需要直接操作裸指针、手工管理内存、调用不安全 FFI 时，必须进入 `unsafe` 边界。
+Raw pointers, manual memory management, and unsafe FFI must live inside explicit `unsafe` boundaries.
 
-### 2. 值语义优先
+### 2. Value Semantics First
 
-S 优先鼓励：
+S encourages:
 
-- 小对象按值传递
-- 资源通过作用域自动释放
-- 所有权清晰流动
+- passing small objects by value
+- releasing resources automatically when scopes end
+- making ownership flow explicit
 
-引用和共享不是默认行为，而是显式行为。
+References and sharing are not the default. They are explicit choices.
 
-### 3. 可预测性能
+### 3. Predictable Performance
 
-S 语言本身不鼓励隐式堆分配，不依赖 GC 才能正常写程序。
+S should not encourage implicit heap allocation, and it should not depend on GC for normal programming.
 
-开发者应该能较容易回答：
+Developers should be able to answer questions like:
 
-- 这段代码会不会分配
-- 这次传参会不会拷贝
-- 这个对象何时释放
-- 这次并发是否需要同步
+- Will this code allocate?
+- Will this function call copy values?
+- When is this object released?
+- Does this concurrent path require synchronization?
 
-### 4. 工程优先于技巧
+### 4. Engineering Over Cleverness
 
-S 更重视：
+S values:
 
-- 易读
-- 易学
-- 易维护
-- 易编译
-- 易部署
+- readability
+- learnability
+- maintainability
+- compile speed
+- deployability
 
-而不是让开发者通过复杂技巧“战胜语言”。
+The language should not force people to "defeat the language" with tricks.
 
-### 5. 单一官方工具链
+### 5. One Official Toolchain
 
-S 自带统一工具：
+S is intended to ship with a unified set of tools:
 
 - `s build`
 - `s run`
@@ -109,11 +109,11 @@ S 自带统一工具：
 - `s doc`
 - `s pkg`
 
-语言、包管理、测试、格式化、文档和构建应由同一套官方体验串起来。
+Language tooling, package management, testing, formatting, documentation, and builds should feel like one coherent experience.
 
-## 语法草案
+## Syntax Draft
 
-S 语法目标是“接近 Go 的清晰度”，并保留系统语言需要的明确性。
+S aims for syntax that is close to Go in clarity, while still keeping the explicitness expected from a systems language.
 
 ### Hello World
 
@@ -125,7 +125,7 @@ func Main() {
 }
 ```
 
-### 变量与常量
+### Variables And Constants
 
 ```s
 let x = 42
@@ -134,13 +134,13 @@ var count = 0
 const max_conn = 1024
 ```
 
-约定：
+Conventions:
 
-- `let` 表示默认不可变绑定
-- `var` 表示可变绑定
-- `const` 表示编译期常量
+- `let` means an immutable binding by default
+- `var` means a mutable binding
+- `const` means a compile-time constant
 
-### 基本类型
+### Primitive Types
 
 ```s
 bool
@@ -151,13 +151,13 @@ char
 str
 ```
 
-说明：
+Notes:
 
-- `str` 是 UTF-8 字符串切片视图
-- 堆上可增长字符串使用 `String`
-- 字节序列使用 `[]u8`
+- `str` is a UTF-8 string slice view
+- growable heap strings use `String`
+- byte sequences use `[]u8`
 
-### 控制流
+### Control Flow
 
 ```s
 if score > 90 {
@@ -181,7 +181,7 @@ while running {
 }
 ```
 
-### 函数
+### Functions
 
 ```s
 func Add(a: i32, b: i32) -> i32 {
@@ -193,14 +193,14 @@ func openFile(path: str) -> Result<File, IoError> {
 }
 ```
 
-默认规则：
+Default rules:
 
-- 函数签名必须显式
-- 返回值使用 `->`
-- 单表达式函数体可以隐式返回最后一个表达式
-- 可见性采用 Go 风格：首字母大写表示导出，首字母小写表示模块内可见，不再依赖 `pub`
+- function signatures must be explicit
+- return values use `->`
+- a single-expression body may implicitly return its final expression
+- visibility follows a Go-style rule: uppercase exports, lowercase stays module-local, without relying on `pub`
 
-### 结构体与方法
+### Structs And Methods
 
 ```s
 struct User {
@@ -220,7 +220,7 @@ impl User {
 }
 ```
 
-### 枚举与模式匹配
+### Enums And Pattern Matching
 
 ```s
 enum Option[T] {
@@ -239,7 +239,7 @@ match result {
 }
 ```
 
-### 泛型
+### Generics
 
 ```s
 func max[T: Ord](a: T, b: T) -> T {
@@ -247,22 +247,22 @@ func max[T: Ord](a: T, b: T) -> T {
 }
 ```
 
-S 支持泛型，但只追求工程上够用、可读、可编译，不鼓励模板元编程式的复杂化。
+S supports generics, but only to the degree that they stay practical, readable, and compilable. It is not aiming for template-metaprogramming complexity.
 
-## 类型系统
+## Type System
 
-S 使用静态强类型系统，默认支持类型推导，但拒绝模糊不清的隐式转换。
+S uses a statically typed, strongly typed system. Type inference is supported, but unclear implicit conversions are intentionally rejected.
 
-### 类型系统目标
+### Type System Goals
 
-- 对新手友好
-- 对系统编程足够强
-- 对错误足够早暴露
-- 对编译器实现足够可控
+- friendly to newcomers
+- strong enough for systems programming
+- able to surface mistakes early
+- controlled enough for compiler implementation
 
-### 设计要点
+### Design Points
 
-#### 1. 默认无隐式数值转换
+#### 1. No Implicit Numeric Conversion By Default
 
 ```s
 let a: i32 = 1
@@ -270,20 +270,20 @@ let b: i64 = 2
 let c = a as i64 + b
 ```
 
-这样做虽然略显严格，但能大幅减少系统编程中的边界错误。
+This is slightly stricter, but it avoids a large class of boundary bugs in systems code.
 
-#### 2. 代数数据类型
+#### 2. Algebraic Data Types
 
-S 原生支持：
+S should support:
 
 - `enum`
 - `Option[T]`
 - `Result[T, E]`
-- 模式匹配
+- pattern matching
 
-这让错误处理、状态建模和协议建模更自然。
+That makes error handling, state modeling, and protocol modeling much more natural.
 
-#### 3. trait 风格约束
+#### 3. Trait-Style Constraints
 
 ```s
 trait Writer {
@@ -291,26 +291,26 @@ trait Writer {
 }
 ```
 
-用途：
+Use cases:
 
-- 抽象行为
-- 为泛型提供约束
-- 避免面向继承的复杂对象层级
+- behavior abstraction
+- generic constraints
+- avoiding complex inheritance trees
 
-#### 4. 明确区分值、借用与拥有
+#### 4. Clear Distinction Between Values, Borrows, And Ownership
 
-S 不要求像 Rust 那样把生命周期复杂度全面显式暴露给用户，但仍然保留核心语义：
+S does not need to expose Rust-level lifetime complexity everywhere, but it should still preserve the core semantics:
 
-- 值有单一明确的拥有者
-- 临时借用必须受作用域约束
-- 可变借用在同一时刻必须唯一
+- values have a single clear owner
+- temporary borrows are scope-bound
+- mutable borrows must be unique at any moment
 
-这里可以采用一种更“工程化”的 borrow-lite 方案：
+A more engineering-oriented borrow-lite approach is possible:
 
-- 大多数生命周期由编译器推断
-- 只有在复杂跨函数返回借用时才要求显式注解
+- most lifetimes are inferred by the compiler
+- explicit annotation is only needed in more complex cross-function borrowed return paths
 
-### 建议的引用模型
+### Suggested Reference Model
 
 ```s
 func len(s: &str) -> usize
@@ -318,21 +318,21 @@ func push(v: &mut Vec[i32], value: i32)
 func consume(buf: Buf) -> Result[(), Error]
 ```
 
-含义：
+Meaning:
 
-- `T` 表示拥有值
-- `&T` 表示只读借用
-- `&mut T` 表示可变借用
+- `T` means an owned value
+- `&T` means an immutable borrow
+- `&mut T` means a mutable borrow
 
-这样既保留系统语言的精确性，也不会完全失去熟悉感。
+This keeps the precision expected from a systems language without losing all familiarity.
 
-## 内存与资源管理
+## Memory And Resource Management
 
-这是 S 的核心。
+This is one of the core pillars of S.
 
-### 主路线：RAII + move 语义
+### Main Path: RAII + Move Semantics
 
-S 默认使用基于作用域的资源释放。
+S uses scope-based resource release by default.
 
 ```s
 func main() -> Result[(), IoError] {
@@ -343,41 +343,41 @@ func main() -> Result[(), IoError] {
 }
 ```
 
-当 `file` 离开作用域，资源自动释放。
+When `file` leaves scope, its resources are released automatically.
 
-### 不以 GC 为前提
+### Not GC-First
 
-S 不把垃圾回收设为默认依赖，这样可以保证：
+S does not treat garbage collection as the default assumption. That helps preserve:
 
-- 延迟更稳定
-- 内存行为更可预测
-- 更适合系统组件和高性能服务
+- steadier latency
+- more predictable memory behavior
+- better fit for system components and high-performance services
 
-### 分层内存模型
+### Layered Memory Model
 
-S 应支持三层内存能力：
+S should support three layers of memory capability:
 
-#### 1. 安全默认层
+#### 1. Safe Default Layer
 
-- 栈对象
-- RAII 资源对象
-- 标准容器
+- stack objects
+- RAII resource objects
+- standard containers
 
-#### 2. 高性能控制层
+#### 2. High-Performance Control Layer
 
-- arena
-- pool allocator
-- 自定义 allocator
+- arena allocation
+- pool allocators
+- custom allocators
 
-#### 3. 危险能力层
+#### 3. Dangerous Capability Layer
 
-- 裸指针
-- 手工释放
-- 非托管内存
+- raw pointers
+- manual deallocation
+- unmanaged memory
 
-这些能力必须通过 `unsafe` 暴露。
+These capabilities should be exposed through `unsafe`.
 
-### unsafe 边界
+### Unsafe Boundaries
 
 ```s
 unsafe {
@@ -387,17 +387,17 @@ unsafe {
 }
 ```
 
-原则：
+Principles:
 
-- `unsafe` 是能力开关，不是性能开关
-- 安全代码可以调用被良好封装的 `unsafe` 库
-- 不安全实现应尽量缩小到少数模块
+- `unsafe` is a capability switch, not a performance switch
+- safe code may call well-encapsulated unsafe libraries
+- unsafe implementations should be kept in a small number of modules
 
-## 错误处理
+## Error Handling
 
-S 采用 `Result[T, E]` 作为主流错误处理模型，不把异常作为默认机制。
+S uses `Result[T, E]` as the primary error model. Exceptions are not intended to be the default mechanism.
 
-### 基础形式
+### Basic Form
 
 ```s
 func parse_port(s: str) -> Result[u16, ParseError] {
@@ -405,7 +405,7 @@ func parse_port(s: str) -> Result[u16, ParseError] {
 }
 ```
 
-### 传播操作符
+### Propagation Operator
 
 ```s
 func run() -> Result[(), Error] {
@@ -416,24 +416,24 @@ func run() -> Result[(), Error] {
 }
 ```
 
-### 不可恢复错误
+### Unrecoverable Errors
 
-对于真正不可恢复的问题，可以提供：
+For truly unrecoverable situations, the language may provide:
 
 - `panic`
 - `assert`
 - `unreachable`
 
-但它们不应替代正常错误建模。
+But those should not replace normal error modeling.
 
-### 错误设计原则
+### Error Design Principles
 
-- 错误必须可组合
-- 错误应带上下文
-- 错误打印应友好
-- 标准库要提供统一错误 trait
+- errors should compose
+- errors should carry context
+- error printing should be friendly
+- the standard library should provide a unified error trait
 
-例如：
+For example:
 
 ```s
 trait Error {
@@ -442,14 +442,14 @@ trait Error {
 }
 ```
 
-## 并发模型
+## Concurrency Model
 
-S 的并发设计建议同时吸收 Go 和 Rust 的优点：
+The concurrency model of S should learn from both Go and Rust:
 
-- 写法上尽量简单
-- 数据安全上尽量严格
+- syntax should remain simple
+- data safety should remain strong
 
-### 建议主模型：结构化并发
+### Suggested Main Model: Structured Concurrency
 
 ```s
 func main() -> Result[(), Error] {
@@ -464,13 +464,13 @@ func main() -> Result[(), Error] {
 }
 ```
 
-特点：
+Properties:
 
-- 子任务生命周期受父作用域约束
-- 降低 goroutine 泄漏类问题
-- 更适合服务端工程
+- child task lifetimes are bound to the parent scope
+- goroutine-leak-style problems are reduced
+- this is a better fit for server-side engineering
 
-### channel 通信
+### Channel Communication
 
 ```s
 let (tx, rx) = channel[Job](1024)
@@ -482,33 +482,33 @@ spawn || {
 let item = rx.recv()?
 ```
 
-### 并发安全约束
+### Concurrency Safety Constraints
 
-S 可以借鉴 Rust 的思想，但用更轻量的形式表达：
+S can borrow the Rust idea in a lighter form:
 
-- 只有满足 `Send` 的类型可跨线程移动
-- 只有满足 `Sync` 的类型可被多线程共享引用
+- only `Send` types may move across threads
+- only `Sync` types may be shared by reference across threads
 
 ```s
 trait Send
 trait Sync
 ```
 
-### 不鼓励裸共享可变状态
+### Shared Mutable State Should Not Be The Default
 
-首选：
+Preferred patterns:
 
-- 消息传递
-- 作用域任务
-- 显式 `Mutex` / `RwLock` / `Atomic`
+- message passing
+- scoped tasks
+- explicit `Mutex` / `RwLock` / `Atomic`
 
-而不是默认自由共享。
+Not unrestricted shared mutation by default.
 
-## 模块与包系统
+## Modules And Packages
 
-S 不应采用 C/C++ 头文件模型。
+S should not use the C/C++ header model.
 
-### 模块
+### Modules
 
 ```s
 package net.http
@@ -518,14 +518,14 @@ struct Request { ... }
 func parse_header(...) -> Header { ... }
 ```
 
-建议规则：
+Suggested rules:
 
-- 一个文件属于一个模块
-- 一个目录构成一个包
-- 首字母大写控制导出
-- 首字母小写表示模块内可见
+- one file belongs to one module
+- one directory forms one package
+- uppercase controls export
+- lowercase stays module-local
 
-### 导入
+### Imports
 
 ```s
 use net.http.Request
@@ -533,9 +533,9 @@ use io.{Reader, Writer}
 use math as m
 ```
 
-### 包管理
+### Package Management
 
-每个项目有一个清晰 manifest：
+Each project should have a clear manifest:
 
 ```toml
 [package]
@@ -548,260 +548,260 @@ http = "1.2"
 json = "0.8"
 ```
 
-### 版本与构建
+### Versioning And Builds
 
-S 需要：
+S should support:
 
-- 锁文件
-- 可复现构建
-- workspace
-- monorepo 友好
+- lock files
+- reproducible builds
+- workspaces
+- monorepo-friendly workflows
 
-## 标准库方向
+## Standard Library Direction
 
-标准库建议“核心小而稳，外围包分层扩展”。
+The standard library should be small and stable at the core, with layered packages around it.
 
-核心至少包括：
+At minimum it should include:
 
-- 基础类型与容器
-- 字符串与 UTF-8
-- 文件与 IO
-- 网络
-- 并发原语
-- 时间
-- 序列化接口
-- 测试框架
-- FFI
+- core types and containers
+- strings and UTF-8
+- files and IO
+- networking
+- concurrency primitives
+- time
+- serialization interfaces
+- a test framework
+- FFI support
 
-## FFI 与系统能力
+## FFI And System Capabilities
 
-为了真正进入系统领域，S 必须优先做好 C ABI 互操作。
+If S wants to become a real systems language, C ABI interoperability has to be a first-class priority.
 
-### C FFI 示例
+### C FFI Example
 
 ```s
 extern "C" func puts(s: *const u8) -> i32
 ```
 
-设计目标：
+Design goals:
 
-- 可导入 C 函数
-- 可导出 S 函数给 C
-- 结构体布局可控
-- 调用约定明确
+- import C functions
+- export S functions to C
+- control struct layout
+- make calling conventions explicit
 
-如果 C FFI 做不好，S 很难成为真正可落地的系统语言。
+If C FFI is weak, S will struggle to become a practical systems language.
 
-## 与 C / Go / Rust / C++ 的取舍
+## Trade-Offs Against C / Go / Rust / C++
 
-### 从 C 学什么
+### What To Learn From C
 
-- 简洁
-- 可预测布局
-- 贴近硬件
-- FFI 友好
+- simplicity
+- predictable layout
+- hardware closeness
+- FFI friendliness
 
-### 不学什么
+### What Not To Learn From C
 
-- 默认裸指针
-- 宏替代语言机制
-- 未定义行为泛滥
+- raw pointers by default
+- macros standing in for language mechanisms
+- widespread undefined behavior
 
-### 从 Go 学什么
+### What To Learn From Go
 
-- 工具链统一
-- 构建体验统一
-- 包管理和测试内建
-- 语法简洁
+- unified tooling
+- a consistent build experience
+- built-in package management and testing
+- simple syntax
 
-### 不学什么
+### What Not To Learn From Go
 
-- 过度依赖 GC
-- 容易变成样板的错误写法
+- deep dependence on GC
+- error patterns that become repetitive boilerplate
 
-### 从 Rust 学什么
+### What To Learn From Rust
 
-- 默认安全
+- safety by default
 - `Option` / `Result`
-- trait 抽象
-- 模式匹配
-- `unsafe` 边界
+- trait abstractions
+- pattern matching
+- `unsafe` boundaries
 
-### 不学什么
+### What Not To Learn From Rust
 
-- 把所有复杂度都直接暴露给用户
-- 让简单程序也被生命周期语法淹没
+- exposing all complexity directly to users
+- forcing simple programs to drown in lifetime syntax
 
-### 从 C++ 学什么
+### What To Learn From C++
 
 - RAII
-- move 语义
-- 零成本抽象
-- 强大的库表达力
+- move semantics
+- zero-cost abstractions
+- strong library expressiveness
 
-### 不学什么
+### What Not To Learn From C++
 
-- 过重历史包袱
-- 规则爆炸
-- 模板错误灾难
+- excessive historical baggage
+- rule explosion
+- catastrophic template errors
 
-## 一个可能的最小语言子集
+## A Possible Minimal Language Subset
 
-S 的第一个可用版本不需要一次性解决所有问题。
+The first usable version of S does not need to solve everything at once.
 
-最小可用子集可以只包含：
+A practical minimal subset could include only:
 
-- 基本类型
+- primitive types
 - `struct`
 - `enum`
 - `func`
-- `let/var/const`
-- `if/for/while/match`
+- `let / var / const`
+- `if / for / while / match`
 - `Result` / `Option`
 - `&` / `&mut`
 - `impl` / `trait`
 - `package` / `use`
 - `unsafe`
-- 基础标准库
+- a minimal standard library
 - `s build` / `s run` / `s test` / `s fmt`
 
-这样就已经足够写：
+That is already enough to build:
 
-- CLI 工具
-- 简单网络服务
-- 文件处理程序
-- 小型系统组件
+- CLI tools
+- simple network services
+- file-processing programs
+- small systems components
 
 ## Roadmap
 
-### Phase 0: 愿景与规范
+### Phase 0: Vision And Specification
 
-目标：
+Goals:
 
-- 明确语言定位
-- 冻结核心语法方向
-- 明确内存模型和错误模型
+- make the language positioning explicit
+- freeze the core syntax direction
+- define the memory and error models
 
-产出：
+Deliverables:
 
-- 语言宣言
-- 语法草案
-- 类型系统草案
-- 标准库最小清单
+- language manifesto
+- syntax draft
+- type system draft
+- minimal standard library checklist
 
-### Phase 1: 最小编译器
+### Phase 1: Minimal Compiler
 
-目标：
+Goals:
 
-- 能编译最小可执行程序
-- 支持基本类型、函数、控制流和模块
+- compile a minimal executable program
+- support basic types, functions, control flow, and modules
 
-优先实现：
+Priority work:
 
 - lexer
 - parser
 - AST
 - type checker
-- 简单 IR
-- LLVM backend 或自研最小 backend
+- simple IR
+- LLVM backend or a custom minimal backend
 
-### Phase 2: 资源与错误模型
+### Phase 2: Resource And Error Model
 
-目标：
+Goals:
 
-- 实现 `Result`
-- 实现 RAII
-- 实现 move 和借用基础规则
+- implement `Result`
+- implement RAII
+- implement the basics of move and borrow rules
 
-优先实现：
+Priority work:
 
-- 作用域销毁
-- 所有权转移
-- `?` 操作符
-- 模式匹配
+- scope-based destruction
+- ownership transfer
+- the `?` operator
+- pattern matching
 
-### Phase 3: 标准库与工具链
+### Phase 3: Standard Library And Toolchain
 
-目标：
+Goals:
 
-- 让语言可用于真实小项目
+- make the language usable for real small projects
 
-优先实现：
+Priority work:
 
 - `String`
 - `Vec`
 - `Map`
 - IO
-- 文件系统
-- 测试框架
+- filesystem
+- testing framework
 - formatter
 - package manager
 
-### Phase 4: 并发与 runtime
+### Phase 4: Concurrency And Runtime
 
-目标：
+Goals:
 
-- 支持服务端场景
+- support server-side workloads
 
-优先实现：
+Priority work:
 
 - task runtime
-- channel
-- timer
-- socket API
-- 结构化并发
+- channels
+- timers
+- socket APIs
+- structured concurrency
 
-### Phase 5: FFI 与生态接入
+### Phase 5: FFI And Ecosystem Integration
 
-目标：
+Goals:
 
-- 能与现有 C 生态共存
-- 能构建系统模块和高性能服务
+- coexist with the C ecosystem
+- build system modules and high-performance services
 
-优先实现：
+Priority work:
 
 - C ABI
-- 动态库/静态库输出
-- allocator API
+- shared/static library output
+- allocator APIs
 - profiling hooks
 
-## 成功标准
+## Success Criteria
 
-如果 S 设计成功，它应该满足这些标准：
+If S is successful, it should satisfy the following:
 
-- 一个熟悉 Go 的工程师能在几天内上手
-- 一个熟悉 Rust 的工程师不会觉得它“不安全到不可用”
-- 一个熟悉 C/C++ 的工程师不会觉得它“失去控制力”
-- 一个中型服务项目能在不依赖 GC 的情况下自然落地
-- 工具链体验比传统系统语言明显更统一
+- an engineer familiar with Go can become productive in a few days
+- an engineer familiar with Rust does not feel it is too unsafe to use
+- an engineer familiar with C/C++ does not feel that it has lost control
+- a medium-sized service can be built naturally without depending on GC
+- the toolchain experience is more unified than in traditional systems languages
 
-## 当前状态
+## Current Status
 
-当前仓库中的 S 仍然处于设计草案阶段。
+S is still in the design-draft stage in this repository.
 
-同时，自举工作已经开始，第一批 S 原生编译器骨架位于：
+At the same time, self-hosting work has already started. The first S-native compiler skeleton lives in:
 
 - [selfhost.md](/app/s/selfhost.md)
 - [ast.s](/app/s/frontend/ast.s)
 - [tokens.s](/app/s/frontend/tokens.s)
 - [self_hosting.md](/app/s/docs/self_hosting.md)
 
-下一步最值得继续推进的内容：
+The most valuable next steps are:
 
-1. 写出正式语法规范草案
-2. 设计 borrow-lite 的精确规则
-3. 设计 `trait` 与泛型实例化策略
-4. 设计标准库最小 API
-5. 决定编译器实现路线和 IR 方案
+1. write a formal syntax draft
+2. define precise borrow-lite rules
+3. design the `trait` and generic instantiation strategy
+4. design the minimal standard-library API
+5. decide on the compiler implementation path and IR strategy
 
-## 许可证与协作方向
+## License And Collaboration Direction
 
-欢迎围绕以下议题继续演化这份草案：
+Discussion and iteration are especially welcome around:
 
-- 语法是否足够简洁
-- 所有权模型是否足够实用
-- 并发模型是否应更偏 Go 还是更偏 Rust
-- 标准库边界应画在哪里
-- 是否需要 edition 机制来承载未来演化
+- whether the syntax is simple enough
+- whether the ownership model is practical enough
+- whether concurrency should lean more toward Go or Rust
+- where the standard library boundary should sit
+- whether an edition mechanism is needed for future evolution
 
-S 不是为了“重新发明一切”，而是为了把现代系统语言里那些已经被证明有价值的设计，重新组合成一个更统一、更可学、更适合工程落地的整体。
+S is not trying to reinvent everything. It is trying to recombine modern systems-language ideas that have already proven valuable into something more unified, more learnable, and better suited to real engineering work.
