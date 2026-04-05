@@ -8,10 +8,10 @@ enum Option[T]
   Some(T)
   None
 trait ReaderLike[T]
-  func read(&mut Self self, []u8 buf) -> Result[usize, IoError]
+  func read(&mut self: Self, buf: []u8) -> Result[usize, IoError]
 func load[T: Reader](reader: T, path: String) -> Result[String, IoError]
   let value = 1
   final value
 impl ReaderLike[File] for File
-  func read(&mut Self self, []u8 buf) -> Result[usize, IoError]
+  func read(&mut self: Self, buf: []u8) -> Result[usize, IoError]
     final buf
