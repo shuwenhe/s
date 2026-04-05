@@ -8,13 +8,13 @@ use frontend.dump_tokens
 use frontend.parse_source
 use frontend.new_lexer
 
-pub struct GoldenCase {
+struct GoldenCase {
     name: String,
     source_path: String,
     expected_path: String,
 }
 
-pub struct GoldenFailure {
+struct GoldenFailure {
     name: String,
     message: String,
 }
