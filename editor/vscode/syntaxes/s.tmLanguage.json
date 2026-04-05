@@ -169,7 +169,7 @@
       "patterns": [
         {
           "name": "storage.modifier.s",
-          "match": "\\b(?:pub|const|static)\\b"
+          "match": "\\b(?:const|static)\\b"
         },
         {
           "name": "storage.type.declaration.s",

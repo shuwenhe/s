@@ -4,15 +4,15 @@ use std.io.eprintln
 use std.io.println
 use std.result.Result
 use std.vec.Vec
-use compiler.tests.run_golden_suite
-use compiler.tests.run_mir_suite
-use compiler.tests.run_semantic_suite
+use compiler.tests.RunGoldenSuite
+use compiler.tests.RunMirSuite
+use compiler.tests.RunSemanticSuite
 
-pub struct CliError {
+struct cliError {
     message: String,
 }
 
-pub fn main(args: Vec[String]) -> i32 {
+pub fn Main(args: Vec[String]) -> i32 {
     match run(args) {
         Result::Ok(()) => 0,
         Result::Err(err) => {
@@ -22,7 +22,7 @@ pub fn main(args: Vec[String]) -> i32 {
     }
 }
 
-pub fn run(args: Vec[String]) -> Result[(), CliError] {
+fn run(args: Vec[String]) -> Result[(), cliError] {
     let fixtures_root =
         if args.len() >= 2 {
             args[1]
@@ -30,15 +30,15 @@ pub fn run(args: Vec[String]) -> Result[(), CliError] {
             "/app/s/compiler/tests/fixtures"
         }
 
-    let golden = run_golden_suite(fixtures_root)
-    let semantic = run_semantic_suite(fixtures_root)
-    let mir = run_mir_suite()
+    let golden = RunGoldenSuite(fixtures_root)
+    let semantic = RunSemanticSuite(fixtures_root)
+    let mir = RunMirSuite()
 
     if golden.failed.len() > 0 {
         for failure in golden.failed {
             eprintln("golden failed: " + failure.name + ": " + failure.message)
         }
-        return Result::Err(CliError {
+        return Result::Err(cliError {
             message: "golden suite failed",
         })
     }
@@ -47,7 +47,7 @@ pub fn run(args: Vec[String]) -> Result[(), CliError] {
         for failure in semantic {
             eprintln("semantic failed: " + failure.name + ": " + failure.message)
         }
-        return Result::Err(CliError {
+        return Result::Err(cliError {
             message: "semantic suite failed",
         })
     }
@@ -56,7 +56,7 @@ pub fn run(args: Vec[String]) -> Result[(), CliError] {
         for failure in mir {
             eprintln("mir failed: " + failure.name + ": " + failure.message)
         }
-        return Result::Err(CliError {
+        return Result::Err(cliError {
             message: "mir suite failed",
         })
     }
