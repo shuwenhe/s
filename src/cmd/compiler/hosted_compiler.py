@@ -6,6 +6,7 @@ import sys
 
 from compiler.ast import SourceFile, dump_source_file
 from compiler.backend_elf64 import BackendError, build_executable
+from compiler.interpreter import Interpreter, InterpreterError
 from compiler.lexer import Lexer, dump_tokens
 from compiler.parser import ParseError, parse_source
 from compiler.semantic import check_source
@@ -28,6 +29,7 @@ class CheckOptions:
     output: str = ""
     dump_tokens: bool = False
     dump_ast: bool = False
+    run_args: tuple[str, ...] = ()
 
 
 def run_cli(argv: list[str]) -> int:
@@ -42,6 +44,8 @@ def run_cli(argv: list[str]) -> int:
             emit_binary(parsed, command.output)
             print(f"built: {command.output}")
             return 0
+        if command.command == "run":
+            return run_source(parsed, command.run_args)
         raise CliError(f"unknown command: {command.command}")
     except CliError as exc:
         print(f"error: {exc.message}", file=sys.stderr)
@@ -52,7 +56,7 @@ def parse_command(argv: list[str]) -> CheckOptions:
     if len(argv) < 2:
         raise _usage_error()
     command = argv[0]
-    if command not in {"check", "build"}:
+    if command not in {"check", "build", "run"}:
         raise _usage_error()
     if len(argv) < 2:
         raise _usage_error()
@@ -63,6 +67,8 @@ def parse_command(argv: list[str]) -> CheckOptions:
         if argv[2] != "-o":
             raise CliError("expected -o before output path")
         return CheckOptions(command=command, path=argv[1], output=str(resolve_output_path(argv[3])))
+    if command == "run":
+        return CheckOptions(command=command, path=argv[1], run_args=tuple(argv[2:]))
 
     options = CheckOptions(command=command, path=argv[1])
     index = 2
@@ -122,6 +128,15 @@ def emit_binary(parsed: SourceFile, output_path: str) -> None:
         raise CliError(f"backend error: {exc}") from exc
 
 
+def run_source(parsed: SourceFile, run_args: tuple[str, ...]) -> int:
+    try:
+        interpreter = Interpreter(parsed)
+        interpreter.argv = list(run_args)
+        return int(interpreter.run_main())
+    except InterpreterError as exc:
+        raise CliError(f"runtime error: {exc}") from exc
+
+
 def resolve_output_path(output_path: str) -> Path:
     target = Path(output_path)
     if not target.is_absolute():
@@ -131,4 +146,7 @@ def resolve_output_path(output_path: str) -> Path:
 
 
 def _usage_error() -> CliError:
-    return CliError("usage: s check <path> [--dump-tokens] [--dump-ast] | s build <path> -o <output>")
+    return CliError(
+        "usage: s check <path> [--dump-tokens] [--dump-ast] | "
+        "s build <path> -o <output> | s run <path> [args...]"
+    )
