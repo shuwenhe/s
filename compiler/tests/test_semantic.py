@@ -10,6 +10,7 @@ from compiler.hosted_compiler import run_cli
 from runtime.hosted_command import run_cmd_s
 from compiler.prelude import PRELUDE
 from compiler.parser import parse_source
+from compiler.interpreter import Interpreter
 from compiler.semantic import check_source
 
 
@@ -329,3 +330,18 @@ func main() -> int {
         )
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "5050")
+
+    def test_s_native_runner_interprets_int_literal_shape(self) -> None:
+        runner = Interpreter(parse_source(Path("/app/s/runtime/s_native_runner.s").read_text()))
+        result = runner.call_function(
+            "compileMessageForSource",
+            [
+                "package demo.literal\n\nuse std.io.println\n\nfunc main() -> int {\n    println(42);\n    0\n}\n"
+            ],
+        )
+        self.assertEqual(result, ("Some", "42\\n"))
+
+    def test_s_native_runner_encodes_extended_ascii(self) -> None:
+        runner = Interpreter(parse_source(Path("/app/s/runtime/s_native_runner.s").read_text()))
+        result = runner.call_function("encodeBytes", ["@[]{}~"])
+        self.assertEqual(result, "64, 91, 93, 123, 125, 126")
