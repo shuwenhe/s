@@ -2,8 +2,8 @@ package compiler
 
 use std.option.Option
 use std.vec.Vec
-use frontend.BlockExpr
-use frontend.Expr
+use s.BlockExpr
+use s.Expr
 
 struct BorrowDiagnostic {
     String message,
@@ -27,14 +27,14 @@ func AnalyzeBlock(BlockExpr block, Vec[VarState] initial) -> Vec[BorrowDiagnosti
     }
     for stmt in block.statements {
         match stmt {
-            frontend.Stmt::Var(value) => inspectExpr(value.value, scope, diagnostics),
-            frontend.Stmt::Return(value) => {
+            s.Stmt::Var(value) => inspectExpr(value.value, scope, diagnostics),
+            s.Stmt::Return(value) => {
                 match value.value {
                     Option::Some(expr) => inspectExpr(expr, scope, diagnostics),
                     Option::None => (),
                 }
             }
-            frontend.Stmt::Expr(value) => inspectExpr(value.expr, scope, diagnostics),
+            s.Stmt::Expr(value) => inspectExpr(value.expr, scope, diagnostics),
         }
     }
     match block.final_expr {

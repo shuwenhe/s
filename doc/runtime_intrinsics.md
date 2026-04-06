@@ -153,9 +153,9 @@ semantics. It does not yet materialize a host-side `Result[T, E]` wrapper.
 
 Code that currently depends on these contracts includes:
 
-- [lexer.s](/app/s/src/frontend/lexer.s)
-- [parser.s](/app/s/src/frontend/parser.s)
-- [tokens.s](/app/s/src/frontend/tokens.s)
+- [lexer.s](/app/s/src/s/lexer.s)
+- [parser.s](/app/s/src/s/parser.s)
+- [tokens.s](/app/s/src/s/tokens.s)
 - [lex_dump.s](/app/s/src/cmd/lex_dump.s)
 - [ast_dump.s](/app/s/src/cmd/ast_dump.s)
 - [vec.s](/app/s/src/std/vec.s)
