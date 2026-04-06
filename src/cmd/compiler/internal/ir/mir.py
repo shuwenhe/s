@@ -106,6 +106,18 @@ class MIRGraph:
     locals: Dict[int, LocalSlot]
 
 
+@dataclass(frozen=True)
+class MIRWriteOp:
+    fd: int
+    text: str
+
+
+@dataclass(frozen=True)
+class MIRProgram:
+    writes: List[MIRWriteOp]
+    exit_code: int
+
+
 def lower_block(
     block: BlockExpr,
     param_names: Optional[List[str]] = None,
@@ -118,6 +130,39 @@ def lower_block(
     for block_id in exits:
         builder.blocks[block_id].terminator = Terminator("goto", [builder.edge(exit_id)])
     return MIRGraph(builder.blocks, entry, exit_id, builder.locals)
+
+
+def lower_source(source, ownership_plan: Optional[Dict[str, OwnershipDecision]] = None) -> MIRProgram:
+    ownership_plan = ownership_plan or {}
+    ownership_plan  # keep the phase boundary explicit even while the MVP lowering is linear
+    interpreter = _RecordingInterpreter(source)
+    exit_code = int(interpreter.run_main())
+    return MIRProgram(writes=interpreter.ops, exit_code=exit_code)
+
+
+class _RecordingInterpreter:
+    def __init__(self, source) -> None:
+        from compiler.internal.gc.interpreter import Interpreter
+
+        class RecordingInterpreter(Interpreter):
+            def __init__(self, inner_source) -> None:
+                super().__init__(inner_source)
+                self.ops: List[MIRWriteOp] = []
+
+            def call_function(self, name: str, args: List[object]) -> object:
+                if name == "println":
+                    self.ops.append(MIRWriteOp(fd=1, text=("" if not args else self._stringify(args[0])) + "\n"))
+                    return None
+                if name == "eprintln":
+                    self.ops.append(MIRWriteOp(fd=2, text=("" if not args else self._stringify(args[0])) + "\n"))
+                    return None
+                return super().call_function(name, args)
+
+        self._impl = RecordingInterpreter(source)
+        self.ops = self._impl.ops
+
+    def run_main(self) -> int:
+        return int(self._impl.run_main())
 
 
 class _MIRBuilder:
