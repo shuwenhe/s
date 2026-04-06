@@ -60,6 +60,9 @@ def render_program(program: AsmProgram) -> str:
         data_lines.append(f"    .byte {payload}")
 
     for insn in program.text:
+        if insn.opcode.endswith(":"):
+            text_lines.append(insn.opcode)
+            continue
         if insn.operands:
             text_lines.append(f"    {insn.opcode} " + ", ".join(insn.operands))
         else:
