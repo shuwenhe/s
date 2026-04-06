@@ -19,7 +19,7 @@ class HostedCommandResult:
 
 def run_cmd_s(argv: list[str]) -> HostedCommandResult:
     """
-    Hosted execution model for /app/s/src/cmd/s.s:
+    Hosted execution model for /app/s/src/cmd/s/main.s:
 
         Exit(compiler.main(Args()))
 

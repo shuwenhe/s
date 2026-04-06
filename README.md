@@ -784,9 +784,9 @@ At the same time, self-hosting work has already started. The first S-native comp
 - [selfhost.md](/app/s/doc/selfhost.md)
 - [ast.s](/app/s/src/s/ast.s)
 - [tokens.s](/app/s/src/s/tokens.s)
-- [main.s](/app/s/src/compiler/main.s)
-- [backend_elf64.s](/app/s/src/compiler/backend_elf64.s)
-- [s.s](/app/s/src/cmd/s.s)
+- [main.s](/app/s/src/cmd/compile/main.s)
+- [backend_elf64.s](/app/s/src/cmd/compile/backend_elf64.s)
+- [s.s](/app/s/src/cmd/s/main.s)
 - [backend_elf64.md](/app/s/doc/backend_elf64.md)
 - [self_hosting.md](/app/s/doc/self_hosting.md)
 

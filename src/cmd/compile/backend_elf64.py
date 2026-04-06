@@ -59,7 +59,7 @@ def build_executable(source: SourceFile, output_path: Path) -> None:
 
 
 def _build_native_runner(output_path: Path) -> None:
-    template = Path("/app/s/src/compiler/backend_elf64_runner_bootstrap.c").resolve()
+    template = Path("/app/s/src/cmd/compile/backend_elf64_runner_bootstrap.c").resolve()
     try:
         subprocess.run(
             ["cc", "-O2", "-std=c11", str(template), "-o", str(output_path)],
