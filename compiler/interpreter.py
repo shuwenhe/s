@@ -30,6 +30,7 @@ from compiler.ast import (
     SourceFile,
     StringExpr,
     VariantPattern,
+    WhileExpr,
     WildcardPattern,
     NamePattern,
 )
@@ -227,9 +228,15 @@ class Interpreter:
             return target[int(index)]
         if isinstance(expr, IfExpr):
             if self.eval_expr(expr.condition, env):
-                return self.eval_block(expr.then_branch, env)
+                return self._eval_block_in_place(expr.then_branch, env)
             if expr.else_branch is not None:
+                if isinstance(expr.else_branch, BlockExpr):
+                    return self._eval_block_in_place(expr.else_branch, env)
                 return self.eval_expr(expr.else_branch, env)
+            return None
+        if isinstance(expr, WhileExpr):
+            while self.eval_expr(expr.condition, env):
+                self._eval_block_in_place(expr.body, env)
             return None
         if isinstance(expr, MatchExpr):
             subject = self.eval_expr(expr.subject, env)
