@@ -61,6 +61,10 @@ func NewUnitType() -> Type {
     Type::Unit(UnitType {})
 }
 
+func UnknownTypeOf(String label) -> Type {
+    Type::Unknown(UnknownType { label: label })
+}
+
 func ParseType(String text) -> Type {
     var trimmed = text.trim()
     if trimmed == "" {
@@ -147,6 +151,20 @@ func IsCopyType(Type ty) -> bool {
         Type::Primitive(_) => true,
         Type::Reference(_) => true,
         _ => false,
+    }
+}
+
+func IsNamedTypeVar(Type ty, String name) -> bool {
+    match ty {
+        Type::Named(value) => value.name == name && value.args.len() == 0,
+        _ => false,
+    }
+}
+
+func UnwrapRefs(Type ty) -> Type {
+    match ty {
+        Type::Reference(value) => UnwrapRefs(value.inner.value),
+        _ => ty,
     }
 }
 
