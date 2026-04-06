@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import unittest
 
-from compiler.mir import DropStmt, MoveStmt, lower_block
+from compiler.mir import DropStmt, MIRProgram, MIRWriteOp, MoveStmt, lower_block, lower_source
 from compiler.internal.amd64.isel import select_instructions
 from compiler.internal.ssagen.lowering import LoweredData, LoweredInstruction, LoweredProgram, lower_program
-from compiler.internal.ir import MIRProgram, MIRWriteOp
 from compiler.ownership import make_plan
 from compiler.parser import parse_source
 from compiler.prelude import PRELUDE
@@ -123,3 +122,25 @@ pub func take(text: String) -> String {
         self.assertIn(("jmp", ("L_false",)), text)
         self.assertIn(("L_true:", ()), text)
         self.assertIn(("syscall", ()), text)
+
+    def test_lower_source_emits_real_compute_ops_for_sum(self) -> None:
+        parsed = parse_source(
+            """
+package main
+
+func main() {
+    int sum = 0
+    for (int i = 1; i <= 100; i++) {
+        sum = sum + i
+    }
+    println(sum)
+}
+"""
+        )
+        mir = lower_source(parsed)
+        ops = [op.op for op in mir.ops]
+        self.assertIn("load_const", ops)
+        self.assertIn("add_i32", ops)
+        self.assertIn("cmp_le_i32", ops)
+        self.assertIn("branch_if", ops)
+        self.assertIn("call_builtin", ops)

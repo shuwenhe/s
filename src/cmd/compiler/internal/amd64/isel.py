@@ -76,6 +76,8 @@ def _label(_: LoweredInstruction) -> list[AsmInstruction]:
 def _call_builtin(inst: LoweredInstruction) -> list[AsmInstruction]:
     if inst.builtin in {"syscall_write", "syscall_exit"}:
         return [AsmInstruction("syscall")]
+    if inst.builtin == "print_i32":
+        return []
     raise ValueError(f"unsupported amd64 builtin {inst.builtin}")
 
 
@@ -101,6 +103,7 @@ _SELECTORS: dict[tuple[str, str, str], Selector] = {
     ("add_i32", "i32", "ecx"): _add_i32("ecx"),
     ("cmp_le_i32", "i32", ""): _cmp_le_i32,
     ("branch_if", "flags", ""): _branch_if,
+    ("jump", "label", ""): lambda inst: [AsmInstruction("jmp", (inst.target_label,))],
     ("label", "label", ""): _label,
     ("call_builtin", "unit", ""): _call_builtin,
     ("syscall", "unit", ""): _syscall,

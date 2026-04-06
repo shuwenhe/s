@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from compiler.internal.ir import MIRProgram
+from compiler.internal.ir import MIROp, MIRProgram
 
 
 @dataclass(frozen=True)
@@ -35,6 +35,10 @@ class LoweredProgram:
 def lower_program(mir: MIRProgram, arch_name: str) -> LoweredProgram:
     data: list[LoweredData] = []
     instructions: list[LoweredInstruction] = []
+    reg_map: dict[str, str] = {}
+
+    for op in mir.ops:
+        instructions.extend(_lower_mir_op(op, reg_map))
 
     for index, write in enumerate(mir.writes):
         label = f"message_{index}"
@@ -70,6 +74,66 @@ def lower_program(mir: MIRProgram, arch_name: str) -> LoweredProgram:
         instructions=instructions,
         exit_code=mir.exit_code,
     )
+
+
+def _lower_mir_op(op: MIROp, reg_map: dict[str, str]) -> list[LoweredInstruction]:
+    if op.op == "label":
+        return [LoweredInstruction(op="label", value_type="label", target_reg="", target_label=op.target_label)]
+    if op.op == "jump":
+        return [LoweredInstruction(op="jump", value_type="label", target_reg="", target_label=op.target_label)]
+    if op.op == "branch_if":
+        return [
+            LoweredInstruction(
+                op="branch_if",
+                value_type="flags",
+                target_reg="",
+                target_label=op.target_label,
+                false_label=op.false_label,
+            )
+        ]
+    if op.op == "call_builtin":
+        source_reg = _ensure_reg(op.target, reg_map)
+        return [
+            LoweredInstruction(
+                op="call_builtin",
+                value_type="unit",
+                target_reg="",
+                builtin=op.source,
+                source_reg=source_reg,
+            )
+        ]
+
+    target_reg = _ensure_reg(op.target, reg_map)
+    if op.op == "load_const":
+        return [LoweredInstruction(op="load_const", value_type="i32", target_reg=target_reg, value=str(op.value))]
+    if op.op == "add_i32":
+        return [
+            LoweredInstruction(
+                op="add_i32",
+                value_type="i32",
+                target_reg=target_reg,
+                source_reg=_ensure_reg(op.source, reg_map),
+            )
+        ]
+    if op.op == "cmp_le_i32":
+        return [
+            LoweredInstruction(
+                op="cmp_le_i32",
+                value_type="i32",
+                target_reg=target_reg,
+                source_reg=_ensure_reg(op.source, reg_map),
+            )
+        ]
+    return []
+
+
+def _ensure_reg(name: str, reg_map: dict[str, str]) -> str:
+    if name in reg_map:
+        return reg_map[name]
+    pool = ["eax", "ecx", "edx", "r8d", "r9d", "r10d", "r11d"]
+    reg = pool[len(reg_map) % len(pool)]
+    reg_map[name] = reg
+    return reg
 
 
 def _entry_symbol(arch_name: str) -> str:
