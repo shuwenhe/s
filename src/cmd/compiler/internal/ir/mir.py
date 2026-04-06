@@ -219,7 +219,8 @@ class _MIRBuilder:
         slot = self.locals[slot_id]
         if slot.name in self.ownership_plan:
             return self.ownership_plan[slot.name]
-        return SimpleNamespace(copyable=is_copy_type(slot.ty))
+        copyable = is_copy_type(slot.ty)
+        return SimpleNamespace(copyable=copyable, droppable=not copyable)
 
     def _consume_stmt(self, target: int, value: Operand) -> object:
         if value.kind == "slot":
