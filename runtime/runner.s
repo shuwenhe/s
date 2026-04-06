@@ -79,24 +79,35 @@ func isSelfHostSource(String source) -> bool {
 }
 
 func buildSelfHostedRunner(String outputPath) -> Result[int, String] {
-    var launcherText =
-        match ReadToString("/app/s/runtime/runner_launcher.py") {
+    var templateText =
+        match ReadToString("/app/s/runtime/runner_native_template.c") {
             Ok(text) => text,
             Err(err) => {
-                return Err("failed to read runner launcher template: " + err.message)
+                return Err("failed to read native runner template: " + err.message)
             }
         }
-    match WriteTextFile(outputPath, launcherText) {
+    var tempDir =
+        match MakeTempDir("s-runner-") {
+            Ok(path) => path,
+            Err(err) => {
+                return Err(err.message)
+            }
+        }
+    var cPath = tempDir + "/runner.c"
+    match WriteTextFile(cPath, templateText) {
         Ok(_) => 0,
         Err(err) => {
-            return Err("failed to write runner launcher: " + err.message)
+            return Err("failed to write native runner template: " + err.message)
         },
     }
-    var chmodArgv = Vec[String]()
-    chmodArgv.push("chmod");
-    chmodArgv.push("+x");
-    chmodArgv.push(outputPath);
-    match runTool(chmodArgv, "runner launcher chmod failed") {
+    var ccArgv = Vec[String]()
+    ccArgv.push("cc");
+    ccArgv.push("-O2");
+    ccArgv.push("-std=c11");
+    ccArgv.push(cPath);
+    ccArgv.push("-o");
+    ccArgv.push(outputPath);
+    match runTool(ccArgv, "native runner bootstrap failed") {
         Ok(_) => 0,
         Err(err) => {
             return Err(err)

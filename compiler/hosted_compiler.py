@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-import stat
 import sys
 
 from compiler.ast import SourceFile, dump_source_file
@@ -32,8 +31,6 @@ class CheckOptions:
 def run_cli(argv: list[str]) -> int:
     try:
         command = parse_command(argv)
-        if _handle_bootstrap_build(command):
-            return 0
         source = read_source(command.path)
         parsed = parse_checked_source(command, source)
         if command.command == "check":
@@ -125,24 +122,3 @@ def emit_binary(parsed: SourceFile, output_path: str) -> None:
 
 def _usage_error() -> CliError:
     return CliError("usage: s check <path> [--dump-tokens] [--dump-ast] | s build <path> -o <output>")
-
-
-def _handle_bootstrap_build(command: CheckOptions) -> bool:
-    if command.command != "build":
-        return False
-    source_path = Path(command.path).resolve()
-    native_runner = Path("/app/s/runtime/runner.s").resolve()
-    if source_path != native_runner:
-        return False
-    _build_native_runner_bootstrap(Path(command.output).resolve())
-    print(f"built: {command.output}")
-    return True
-
-
-def _build_native_runner_bootstrap(output_path: Path) -> None:
-    try:
-        launcher = Path("/app/s/runtime/runner_launcher.py").resolve().read_text()
-        output_path.write_text(launcher)
-        output_path.chmod(output_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    except OSError as exc:
-        raise CliError(f"bootstrap build failed: {exc}") from exc

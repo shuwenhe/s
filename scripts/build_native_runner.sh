@@ -5,9 +5,14 @@ ROOT="/app/s"
 OUT="${1:-$ROOT/runtime/s_native}"
 
 # Bootstrap-native chain:
-# - copy the checked-in launcher template
-# - the resulting executable loads runtime/runner.s at runtime
+# - use the hosted compiler build path
+# - backend special-cases runtime/runner.s into a native executable
 
-cp "$ROOT/runtime/runner_launcher.py" "$OUT"
-chmod +x "$OUT"
-echo "built native runner launcher: $OUT"
+if command -v python3 >/dev/null 2>&1; then
+    if (cd "$ROOT" && python3 -m compiler build "$ROOT/runtime/runner.s" -o "$OUT"); then
+        echo "built native runner through backend build path: $OUT"
+        exit 0
+    fi
+fi
+echo "python3 with hosted compiler support is required to build the native runner" >&2
+exit 1

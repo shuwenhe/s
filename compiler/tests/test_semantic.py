@@ -259,9 +259,8 @@ func main() -> int {
     def test_hosted_build_s_native_runner_binary_output(self) -> None:
         code = run_cli(["build", "/app/s/runtime/runner.s", "-o", "/tmp/s_native_hosted"])
         self.assertEqual(code, 0)
-        launcher = Path("/tmp/s_native_hosted").read_text()
-        self.assertIn("Interpreter", launcher)
-        self.assertIn("/app/s/runtime/runner.s", launcher)
+        binary = Path("/tmp/s_native_hosted").read_bytes()
+        self.assertTrue(binary.startswith(b"\x7fELF"))
 
         rebuild = subprocess.run(
             ["/tmp/s_native_hosted", "build", "/app/s/runtime/runner.s", "-o", "/tmp/s_native_self_hosted"],
@@ -271,6 +270,7 @@ func main() -> int {
             check=False,
         )
         self.assertEqual(rebuild.returncode, 0, rebuild.stderr)
+        self.assertTrue(Path("/tmp/s_native_self_hosted").read_bytes().startswith(b"\x7fELF"))
 
         build = subprocess.run(
             ["/tmp/s_native_self_hosted", "build", "/app/s/examples/s/sum.s", "-o", "/tmp/s_sum_via_native_hosted"],
