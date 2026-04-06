@@ -53,6 +53,20 @@ These parts should be treated as stable during Phase 1:
   - `uses`
   - `items`
 
+## Minimum Language Subset
+
+Before broadening the language, the following source subset should stay stable:
+
+- top-level file shape: `package`, then `use`, then items
+- top-level items: `func`, `struct`, `enum`, `trait`, `impl`
+- statements: variable declaration, assignment, increment, return, expr stmt
+- expressions: literals, names, binary, call, member, index, block, `if`,
+  `while`, and `match`
+
+This is the subset that parser, semantic checking, build, and runtime support
+should protect first. The fuller contract lives in
+`/app/s/doc/minimum_language_subset.md`.
+
 ## AST Model Summary
 
 The current AST is intentionally split into a few predictable layers:
