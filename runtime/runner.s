@@ -79,11 +79,24 @@ func isSelfHostSource(String source) -> bool {
 }
 
 func buildSelfHostedRunner(String outputPath) -> Result[int, String] {
-    var pyArgv = Vec[String]()
-    pyArgv.push("python3");
-    pyArgv.push("/app/s/runtime/write_s_native_launcher.py");
-    pyArgv.push(outputPath);
-    match runTool(pyArgv, "bootstrap launcher failed") {
+    var launcherText =
+        match ReadToString("/app/s/runtime/runner_launcher.py") {
+            Ok(text) => text,
+            Err(err) => {
+                return Err("failed to read runner launcher template: " + err.message)
+            }
+        }
+    match WriteTextFile(outputPath, launcherText) {
+        Ok(_) => 0,
+        Err(err) => {
+            return Err("failed to write runner launcher: " + err.message)
+        },
+    }
+    var chmodArgv = Vec[String]()
+    chmodArgv.push("chmod");
+    chmodArgv.push("+x");
+    chmodArgv.push(outputPath);
+    match runTool(chmodArgv, "runner launcher chmod failed") {
         Ok(_) => 0,
         Err(err) => {
             return Err(err)
