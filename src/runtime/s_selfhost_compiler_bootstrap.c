@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <stdbool.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,18 +12,31 @@
 static const char *NATIVE_RUNNER = "/app/s/bin/s-native";
 enum { S_PATH_CAP = 4096 };
 
+static int run_child_with_stdout(char *const argv[], bool quiet_stdout);
+
 static int usage(void) {
     fprintf(stderr, "usage: s-selfhosted check <path> | s-selfhosted build <path> -o <output> | s-selfhosted run <path> [arg ...]\n");
     return 1;
 }
 
 static int run_child(char *const argv[]) {
+    return run_child_with_stdout(argv, false);
+}
+
+static int run_child_with_stdout(char *const argv[], bool quiet_stdout) {
     pid_t pid = fork();
     if (pid < 0) {
         perror("fork");
         return errno == 0 ? 127 : errno;
     }
     if (pid == 0) {
+        if (quiet_stdout) {
+            int devnull = open("/dev/null", O_WRONLY);
+            if (devnull >= 0) {
+                dup2(devnull, STDOUT_FILENO);
+                close(devnull);
+            }
+        }
         execv(argv[0], argv);
         perror(argv[0]);
         _exit(errno == 0 ? 127 : errno);
@@ -79,7 +93,7 @@ static int run_check(int argc, char **argv) {
         output_path,
         NULL,
     };
-    int code = run_child(build_argv);
+    int code = run_child_with_stdout(build_argv, true);
     if (code != 0) {
         return code;
     }
@@ -130,7 +144,7 @@ static int run_run(int argc, char **argv) {
         output_path,
         NULL,
     };
-    int code = run_child(build_argv);
+    int code = run_child_with_stdout(build_argv, true);
     if (code != 0) {
         return code;
     }
