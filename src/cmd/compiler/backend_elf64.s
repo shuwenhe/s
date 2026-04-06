@@ -1,5 +1,8 @@
 package compiler.backend_elf64
 
+use compiler.internal.ssagen.MachineOp
+use compiler.internal.ssagen.MachineProgram
+use compiler.internal.ssagen.MachineWriteOp
 use s.BlockExpr
 use s.CallExpr
 use s.CForStmt
@@ -78,6 +81,11 @@ struct BackendError {
     String message,
 }
 
+func EmitProgram(MachineProgram program, String outputPath) -> Result[(), BackendError] {
+    var asmText = emitMachineAsm(program)
+    assembleAndLink(asmText, outputPath)
+}
+
 func buildExecutable(SourceFile source, String outputPath) -> Result[(), BackendError] {
     // Minimal backend design:
     // 1. compile SourceFile -> linear ProgramOp list
@@ -96,6 +104,53 @@ func buildExecutable(SourceFile source, String outputPath) -> Result[(), Backend
         }
     var asmText = emitAsm(program)
     assembleAndLink(asmText, outputPath)
+}
+
+func emitMachineAsm(MachineProgram program) -> String {
+    emitMachineDataSection(program.ops) + "\n" + emitMachineTextSection(program) + "\n"
+}
+
+func emitMachineDataSection(Vec[MachineOp] ops) -> String {
+    var lines = Vec[String]()
+    lines.push(".section .data")
+    var index = 0
+    while index < ops.len() {
+        match ops[index] {
+            MachineOp::WriteStdout(write) => appendDataPayload(lines, "message_" + to_string(index), write.text),
+            MachineOp::WriteStderr(write) => appendDataPayload(lines, "message_" + to_string(index), write.text),
+            MachineOp::Exit(_) => (),
+        }
+        index = index + 1
+    }
+    joinLines(lines)
+}
+
+func emitMachineTextSection(MachineProgram program) -> String {
+    var lines = Vec[String]()
+    lines.push(".section .text")
+    lines.push(".global " + program.entry_symbol)
+    lines.push(program.entry_symbol + ":")
+    var index = 0
+    while index < program.ops.len() {
+        match program.ops[index] {
+            MachineOp::WriteStdout(write) => appendMachineWrite(lines, write, "message_" + to_string(index)),
+            MachineOp::WriteStderr(write) => appendMachineWrite(lines, write, "message_" + to_string(index)),
+            MachineOp::Exit(_) => (),
+        }
+        index = index + 1
+    }
+    lines.push("    mov $60, %rax")
+    lines.push("    mov $" + to_string(program.exit_code) + ", %rdi")
+    lines.push("    syscall")
+    joinLines(lines)
+}
+
+func appendMachineWrite(Vec[String] lines, MachineWriteOp write, String label) -> () {
+    lines.push("    mov $1, %rax")
+    lines.push("    mov $" + to_string(write.fd) + ", %rdi")
+    lines.push("    lea " + label + "(%rip), %rsi")
+    lines.push("    mov $" + byteLen(write.text) + ", %rdx")
+    lines.push("    syscall")
 }
 
 func compileProgram(SourceFile source) -> Result[Program, BackendError] {
