@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 from compiler.ast import SourceFile
+from compiler.backend_elf64 import build_executable as legacy_build_executable
 from compiler.internal.amd64 import Init as amd64_init, arch_name as amd64_arch_name, link_program
 from compiler.internal.base import ArchInfo, CliError, detect_host_arch, parse_command, resolve_output_path
 from compiler.internal.base.config import BUILD_OUTPUT_ROOT
@@ -34,17 +35,17 @@ def run_cli(argv: list[str]) -> int:
         parsed = ParsePhase(command, source)
         TypecheckPhase(parsed)
         BorrowPhase(parsed)
-        ownership_plan = OwnershipPhase(parsed)
-        mir = LowerToIR(parsed, ownership_plan)
         if command.command == "check":
             print(f"ok: {command.path}")
             return 0
+        ownership_plan = OwnershipPhase(parsed)
+        mir = LowerToIR(parsed, ownership_plan)
         if command.command == "build":
-            emit_binary(mir, command.output)
+            emit_binary(parsed, mir, command.output)
             print(f"built: {command.output}")
             return 0
         if command.command == "run":
-            return run_source(mir, command.run_args)
+            return run_source(parsed, mir, command.run_args)
         raise CliError(f"unknown command: {command.command}")
     except CliError as exc:
         print(f"error: {exc.message}", file=sys.stderr)
@@ -120,18 +121,34 @@ def LinkPhase(program, output_path: str) -> None:
         raise CliError(f"backend error: {exc}") from exc
 
 
-def emit_binary(mir: MIRProgram, output_path: str) -> None:
+def emit_binary(parsed: SourceFile, mir: MIRProgram, output_path: str) -> None:
+    resolved_output = resolve_output_path(output_path)
+    if parsed.package == "runtime.runner":
+        try:
+            legacy_build_executable(parsed, resolved_output)
+            return
+        except BackendError as exc:
+            raise CliError(f"backend error: {exc}") from exc
     program = CodegenPhase(mir)
-    LinkPhase(program, output_path)
+    LinkPhase(program, str(resolved_output))
 
 
-def run_source(mir: MIRProgram, run_args: tuple[str, ...]) -> int:
+def run_source(parsed: SourceFile, mir: MIRProgram, run_args: tuple[str, ...]) -> int:
     try:
         BUILD_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="s-run-", dir=str(BUILD_OUTPUT_ROOT)) as tmp:
             output_path = Path(tmp) / "run-target"
-            emit_binary(mir, str(output_path))
-            completed = subprocess.run([str(output_path), *run_args], check=False)
+            emit_binary(parsed, mir, str(output_path))
+            completed = subprocess.run(
+                [str(output_path), *run_args],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if completed.stdout:
+                print(completed.stdout, end="")
+            if completed.stderr:
+                print(completed.stderr, end="", file=sys.stderr)
             return int(completed.returncode)
     except OSError as exc:
         raise CliError(f"runtime error: {exc}") from exc
