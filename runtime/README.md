@@ -12,7 +12,7 @@ Files:
 
 - `python_bridge.py`: host implementation of the current intrinsic contract
 - `runner.s`: primary S-native source for the runner, built through the hosted S build path
-- `write_s_native_launcher.py`: writes the executable launcher used to run `runner.s`
+- `runner_launcher.py`: checked-in executable launcher template used to run `runner.s`
 - `intrinsic_dispatch.py`: dispatcher from S-side intrinsic symbols to bridge calls
 - `hosted_frontend.py`: hosted lexer/parser pipeline that emits and executes `IntrinsicCall`
 - `check_bridge.py`: minimal bridge self-check for intrinsic execution
@@ -21,7 +21,7 @@ Files:
 For the current MVP there are now two runtime tracks:
 
 - Python-hosted execution for the broader self-hosting workflow
-- a bootstrap-native runner path where `scripts/build_native_runner.sh` builds an executable launcher for `runner.s`
+- a bootstrap-native runner path where `scripts/build_native_runner.sh` copies an executable launcher for `runner.s`
 
 This bridge is intentionally transitional. The long-term goal is to replace it with a real S runtime or a lower-level execution backend.
 
