@@ -4,9 +4,9 @@ use std.fs.read_to_string
 use std.option.Option
 use std.result.Result
 use std.vec.Vec
-use compiler.LoadPrelude
 use compiler.internal.typecheck.CheckSource
 use compiler.internal.typecheck.Diagnostic
+use compiler.internal.typecheck.LoadPrelude
 use s.parse_source
 
 struct semanticCase {

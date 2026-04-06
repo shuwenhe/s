@@ -1,19 +1,4 @@
-package compiler
-
-use compiler.internal.typecheck.FindTypeBinding
-use compiler.internal.typecheck.FunctionType
-use compiler.internal.typecheck.IsNamedTypeVar
-use compiler.internal.typecheck.NamedType
-use compiler.internal.typecheck.NewBoolType
-use compiler.internal.typecheck.NewI32Type
-use compiler.internal.typecheck.NewStringType
-use compiler.internal.typecheck.NewUnitType
-use compiler.internal.typecheck.ParseType
-use compiler.internal.typecheck.ReferenceType
-use compiler.internal.typecheck.SliceType
-use compiler.internal.typecheck.Type
-use compiler.internal.typecheck.TypeBinding
-use compiler.internal.typecheck.UnwrapRefs
+package compiler.internal.typecheck
 use std.option.Option
 use std.vec.Vec
 
