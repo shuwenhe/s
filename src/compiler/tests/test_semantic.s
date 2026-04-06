@@ -7,7 +7,7 @@ use std.vec.Vec
 use compiler.Diagnostic
 use compiler.CheckSource
 use compiler.LoadPrelude
-use frontend.parse_source
+use s.parse_source
 
 struct semanticCase {
     String name,

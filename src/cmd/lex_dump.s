@@ -6,9 +6,9 @@ use std.io.println
 use std.prelude.to_string
 use std.result.Result
 use std.vec.Vec
-use frontend.dump_tokens
-use frontend.new_lexer
-use frontend.Token
+use s.dump_tokens
+use s.new_lexer
+use s.Token
 
 struct CliError {
     String message,

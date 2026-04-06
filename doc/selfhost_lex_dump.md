@@ -26,15 +26,15 @@ source file
 1. `main(args)` 读取命令行参数
 2. `parse_path(args)` 提取输入文件路径
 3. `read_source(path)` 调用 `std.fs.read_to_string`
-4. `lex_source(source)` 调用 [lexer.s](/app/s/src/frontend/lexer.s)
+4. `lex_source(source)` 调用 [lexer.s](/app/s/src/s/lexer.s)
 5. `dump_tokens(tokens)` 生成与 Python 版接近的 token dump 文本
 6. `println(...)` 输出到标准输出
 
 涉及文件：
 
 - [lex_dump.s](/app/s/src/cmd/lex_dump.s)
-- [lexer.s](/app/s/src/frontend/lexer.s)
-- [tokens.s](/app/s/src/frontend/tokens.s)
+- [lexer.s](/app/s/src/s/lexer.s)
+- [tokens.s](/app/s/src/s/tokens.s)
 
 ## 3. `std.fs` Assumptions
 

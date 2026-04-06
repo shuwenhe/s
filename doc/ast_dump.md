@@ -26,15 +26,15 @@ source file
 1. `main(args)` 读取命令行参数
 2. `parse_path(args)` 提取输入文件路径
 3. `read_source(path)` 调用 `std.fs.read_to_string`
-4. `parse_ast(source)` 调用 [parser.s](/app/s/src/frontend/parser.s)
-5. `dump_source_file(ast)` 调用 [ast.s](/app/s/src/frontend/ast.s) 里的 dump helper
+4. `parse_ast(source)` 调用 [parser.s](/app/s/src/s/parser.s)
+5. `dump_source_file(ast)` 调用 [ast.s](/app/s/src/s/ast.s) 里的 dump helper
 6. `println(...)` 输出 AST dump 文本
 
 涉及文件：
 
 - [ast_dump.s](/app/s/src/cmd/ast_dump.s)
-- [parser.s](/app/s/src/frontend/parser.s)
-- [ast.s](/app/s/src/frontend/ast.s)
+- [parser.s](/app/s/src/s/parser.s)
+- [ast.s](/app/s/src/s/ast.s)
 
 ## 3. `std.fs` Assumptions
 

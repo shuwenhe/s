@@ -1,4 +1,4 @@
-package frontend
+package s
 
 use std.prelude.char_at
 use std.prelude.len

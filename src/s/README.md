@@ -11,6 +11,6 @@ Planned responsibilities:
 - `types/`: public type-model helpers intended to be shared across tools
 - `format/`: formatting and pretty-printing support
 
-Existing production code still lives in `src/frontend` and `src/compiler`.
+Existing production code still lives in `src/s` and `src/compiler`.
 These subdirectories are the long-term package layout for reusable S-facing APIs.
 

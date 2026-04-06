@@ -782,8 +782,8 @@ S is still in the design-draft stage in this repository.
 At the same time, self-hosting work has already started. The first S-native compiler skeleton lives in:
 
 - [selfhost.md](/app/s/doc/selfhost.md)
-- [ast.s](/app/s/src/frontend/ast.s)
-- [tokens.s](/app/s/src/frontend/tokens.s)
+- [ast.s](/app/s/src/s/ast.s)
+- [tokens.s](/app/s/src/s/tokens.s)
 - [main.s](/app/s/src/compiler/main.s)
 - [backend_elf64.s](/app/s/src/compiler/backend_elf64.s)
 - [s.s](/app/s/src/cmd/s.s)

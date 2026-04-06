@@ -3,26 +3,26 @@ package compiler
 use std.option.Option
 use std.prelude.Box
 use std.vec.Vec
-use frontend.BinaryExpr
-use frontend.BlockExpr
-use frontend.BoolExpr
-use frontend.BorrowExpr
-use frontend.CallExpr
-use frontend.EnumDecl
-use frontend.Expr
-use frontend.ExprStmt
-use frontend.ForExpr
-use frontend.FunctionDecl
-use frontend.IfExpr
-use frontend.IndexExpr
-use frontend.IntExpr
-use frontend.MatchExpr
-use frontend.MemberExpr
-use frontend.NameExpr
-use frontend.ReturnStmt
-use frontend.SourceFile
-use frontend.StringExpr
-use frontend.WhileExpr
+use s.BinaryExpr
+use s.BlockExpr
+use s.BoolExpr
+use s.BorrowExpr
+use s.CallExpr
+use s.EnumDecl
+use s.Expr
+use s.ExprStmt
+use s.ForExpr
+use s.FunctionDecl
+use s.IfExpr
+use s.IndexExpr
+use s.IntExpr
+use s.MatchExpr
+use s.MemberExpr
+use s.NameExpr
+use s.ReturnStmt
+use s.SourceFile
+use s.StringExpr
+use s.WhileExpr
 
 struct Diagnostic {
     String message,
@@ -60,7 +60,7 @@ func CheckSource(SourceFile source) -> CheckResult {
 
     for item in source.items {
         match item {
-            frontend.Item::Function(func) => checkFunction(func, functions, structs, diagnostics),
+            s.Item::Function(func) => checkFunction(func, functions, structs, diagnostics),
             _ => (),
         }
     }
@@ -78,7 +78,7 @@ func collectFunctions(SourceFile source) -> Vec[FunctionInfo] {
     var functions = Vec[FunctionInfo]()
     for item in source.items {
         match item {
-            frontend.Item::Function(func) => {
+            s.Item::Function(func) => {
                 var params = Vec[Type]()
                 for param in func.sig.params {
                     params.push(ParseType(param.type_name))
@@ -103,7 +103,7 @@ func collectStructs(SourceFile source) -> Vec[StructInfo] {
     var structs = Vec[StructInfo]()
     for item in source.items {
         match item {
-            frontend.Item::Struct(decl) => {
+            s.Item::Struct(decl) => {
                 var fields = Vec[FieldType]()
                 for field in decl.fields {
                     fields.push(FieldType {
@@ -177,14 +177,14 @@ func inferBlock(
 }
 
 func checkStmt(
-    frontend.Stmt stmt,
+    s.Stmt stmt,
     Vec[VarState] scope,
     Vec[FunctionInfo] functions,
     Vec[StructInfo] structs,
     Vec[Diagnostic] diagnostics
 ) -> () {
     match stmt {
-        frontend.Stmt::Var(value) => {
+        s.Stmt::Var(value) => {
             var actual = inferExpr(value.value, scope, functions, structs, diagnostics)
             var resolved =
                 match value.type_name {
@@ -202,7 +202,7 @@ func checkStmt(
                 }
             bindVar(scope, value.name, resolved)
         }
-        frontend.Stmt::Return(value) => {
+        s.Stmt::Return(value) => {
             match value.value {
                 Option::Some(expr) => {
                     inferExpr(expr, scope, functions, structs, diagnostics)
@@ -210,7 +210,7 @@ func checkStmt(
                 Option::None => (),
             }
         }
-        frontend.Stmt::Expr(value) => {
+        s.Stmt::Expr(value) => {
             inferExpr(value.expr, scope, functions, structs, diagnostics)
         }
     }

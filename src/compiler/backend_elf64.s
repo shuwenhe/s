@@ -1,27 +1,27 @@
 package compiler.backend_elf64
 
-use frontend.BlockExpr
-use frontend.CallExpr
-use frontend.CForStmt
-use frontend.Expr
-use frontend.ExprStmt
-use frontend.FunctionDecl
-use frontend.IntExpr
-use frontend.IndexExpr
-use frontend.Item
-use frontend.MatchExpr
-use frontend.MemberExpr
-use frontend.Pattern
-use frontend.VariantPattern
-use frontend.AssignStmt
-use frontend.IncrementStmt
-use frontend.NameExpr
-use frontend.ReturnStmt
-use frontend.SourceFile
-use frontend.Stmt
-use frontend.StringExpr
-use frontend.VarStmt
-use frontend.WhileExpr
+use s.BlockExpr
+use s.CallExpr
+use s.CForStmt
+use s.Expr
+use s.ExprStmt
+use s.FunctionDecl
+use s.IntExpr
+use s.IndexExpr
+use s.Item
+use s.MatchExpr
+use s.MemberExpr
+use s.Pattern
+use s.VariantPattern
+use s.AssignStmt
+use s.IncrementStmt
+use s.NameExpr
+use s.ReturnStmt
+use s.SourceFile
+use s.Stmt
+use s.StringExpr
+use s.VarStmt
+use s.WhileExpr
 use std.fs.MakeTempDir
 use std.fs.WriteTextFile
 use std.option.Option
@@ -817,7 +817,7 @@ func evalIndexExpr(
 }
 
 func evalBinaryExpr(
-    frontend.BinaryExpr expr,
+    s.BinaryExpr expr,
     Vec[LocalBinding] env
 ) -> Result[Value, BackendError] {
     var left =
