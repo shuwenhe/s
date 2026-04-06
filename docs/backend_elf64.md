@@ -223,6 +223,12 @@ There is now also a native bootstrap runner in
 [`runner.s`](/app/s/runtime/runner.s) that proves the current
 `hello.s` / `sum.s` subset can be built without Python, while still staying far
 smaller than the eventual full S runtime.
+
+The current transitional native bootstrap template now lives under the backend
+implementation itself at
+[`backend_elf64_runner_bootstrap.c`](/app/s/compiler/backend_elf64_runner_bootstrap.c),
+instead of under `runtime/`, so the bootstrap path is anchored in the backend
+rather than in runtime-specific scaffolding.
 - collect exit code
 - emit one `.s`
 - invoke `as`

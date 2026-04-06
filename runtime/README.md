@@ -12,7 +12,6 @@ Files:
 
 - `python_bridge.py`: host implementation of the current intrinsic contract
 - `runner.s`: primary S-native source for the runner, built through the hosted S build path
-- `runner_native_template.c`: transitional native bootstrap template used to lower `runner.s` to a real executable
 - `intrinsic_dispatch.py`: dispatcher from S-side intrinsic symbols to bridge calls
 - `hosted_frontend.py`: hosted lexer/parser pipeline that emits and executes `IntrinsicCall`
 - `check_bridge.py`: minimal bridge self-check for intrinsic execution
