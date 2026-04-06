@@ -1,4 +1,4 @@
-package runtime.s_native_runner
+package runtime.runner
 
 use std.env.Args
 use std.fs.MakeTempDir
@@ -75,7 +75,7 @@ func buildSource(String path, String outputPath) -> Result[int, String] {
 }
 
 func isSelfHostSource(String source) -> bool {
-    return containsText(source, "package runtime.s_native_runner")
+    return containsText(source, "package runtime.runner")
 }
 
 func buildSelfHostedRunner(String outputPath) -> Result[int, String] {

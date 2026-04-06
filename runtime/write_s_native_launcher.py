@@ -18,7 +18,7 @@ from compiler.parser import ParseError, parse_source
 
 def main() -> int:
     try:
-        source = Path("/app/s/runtime/s_native_runner.s").read_text()
+        source = Path("/app/s/runtime/runner.s").read_text()
         runner = Interpreter(parse_source(source))
         runner.argv = sys.argv[1:]
         return int(runner.run_main())
