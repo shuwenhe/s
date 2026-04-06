@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-import tempfile
-import subprocess
+import stat
 import sys
 
 from compiler.ast import SourceFile, dump_source_file
@@ -141,14 +140,9 @@ def _handle_bootstrap_build(command: CheckOptions) -> bool:
 
 
 def _build_native_runner_bootstrap(output_path: Path) -> None:
-    launcher_writer = Path("/app/s/runtime/write_s_native_launcher.py").resolve()
     try:
-        subprocess.run(
-            [sys.executable, str(launcher_writer), str(output_path)],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except subprocess.CalledProcessError as exc:
-        message = exc.stderr.strip() or exc.stdout.strip() or f"command exited with {exc.returncode}"
-        raise CliError(f"bootstrap build failed: {message}") from exc
+        launcher = Path("/app/s/runtime/runner_launcher.py").resolve().read_text()
+        output_path.write_text(launcher)
+        output_path.chmod(output_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    except OSError as exc:
+        raise CliError(f"bootstrap build failed: {exc}") from exc
