@@ -27,7 +27,7 @@ func run(Vec[String] args) -> Result[(), cliError] {
         if args.len() >= 2 {
             args[1]
         } else {
-            "/app/s/src/compiler/tests/fixtures"
+            "/app/s/src/cmd/compile/tests/fixtures"
         }
 
     var golden = RunGoldenSuite(fixtures_root)
