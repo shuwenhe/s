@@ -1,5 +1,6 @@
+#define _GNU_SOURCE
+
 #include <errno.h>
-#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +9,7 @@
 #include <unistd.h>
 
 static const char *NATIVE_RUNNER = "/app/s/bin/s-native";
+enum { S_PATH_CAP = 4096 };
 
 static int usage(void) {
     fprintf(stderr, "usage: s-selfhosted check <path> | s-selfhosted build <path> -o <output> | s-selfhosted run <path> [arg ...]\n");
@@ -66,7 +68,7 @@ static int run_check(int argc, char **argv) {
         return errno == 0 ? 127 : errno;
     }
 
-    char output_path[PATH_MAX];
+    char output_path[S_PATH_CAP];
     snprintf(output_path, sizeof(output_path), "%s/out", temp_dir);
 
     char *build_argv[] = {
@@ -117,7 +119,7 @@ static int run_run(int argc, char **argv) {
         return errno == 0 ? 127 : errno;
     }
 
-    char output_path[PATH_MAX];
+    char output_path[S_PATH_CAP];
     snprintf(output_path, sizeof(output_path), "%s/run-target", temp_dir);
 
     char *build_argv[] = {
