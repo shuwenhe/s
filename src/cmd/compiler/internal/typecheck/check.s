@@ -1,8 +1,5 @@
 package compiler.internal.typecheck
 
-use compiler.LookupBuiltinMethods
-use compiler.LookupBuiltinType
-use compiler.LookupIndexType
 use std.option.Option
 use std.prelude.Box
 use std.vec.Vec
