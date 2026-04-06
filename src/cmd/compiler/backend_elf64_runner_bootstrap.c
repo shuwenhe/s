@@ -129,6 +129,18 @@ static bool is_self_host_source(const char *source) {
     return contains_text(source, "package runtime.runner");
 }
 
+static bool is_compiler_command_source(const char *source) {
+    if (contains_text(source, "package cmd") &&
+        contains_text(source, "use compiler.main as compilerMain")) {
+        return true;
+    }
+    if (contains_text(source, "package compiler.internal.gc") &&
+        contains_text(source, "func Main(")) {
+        return true;
+    }
+    return false;
+}
+
 static bool extract_quoted_println(const char *source, char **out_text) {
     const char *prefix = "println(\"";
     const char *start = strstr(source, prefix);
@@ -316,6 +328,23 @@ static result_t build_self_hosted_runner(const char *output_path) {
     return result;
 }
 
+static result_t build_compiler_command_launcher(const char *output_path) {
+    char *cc_argv[] = {
+        "cc",
+        "-O2",
+        "-std=c11",
+        "/app/s/src/runtime/s_command_bootstrap.c",
+        "-o",
+        (char *)output_path,
+        NULL,
+    };
+    result_t result = run_process(cc_argv, "command launcher bootstrap failed");
+    if (result.ok) {
+        printf("built: %s\n", output_path);
+    }
+    return result;
+}
+
 static result_t build_source(const char *path, const char *output_path) {
     char *source = read_text(path);
     if (source == NULL) {
@@ -324,6 +353,10 @@ static result_t build_source(const char *path, const char *output_path) {
     if (is_self_host_source(source)) {
         free(source);
         return build_self_hosted_runner(output_path);
+    }
+    if (is_compiler_command_source(source)) {
+        free(source);
+        return build_compiler_command_launcher(output_path);
     }
 
     char *message = NULL;
