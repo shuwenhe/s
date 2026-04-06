@@ -3,10 +3,10 @@ package compiler.tests
 use std.option.Option
 use std.result.Result
 use std.vec.Vec
-use compiler.TypeBinding
 use compiler.LoadPrelude
-use compiler.LowerBlock
-use compiler.ParseType
+use compiler.internal.ir.LowerBlock
+use compiler.internal.typecheck.ParseType
+use compiler.internal.typecheck.TypeBinding
 use s.parse_source
 
 struct MirFailure {
