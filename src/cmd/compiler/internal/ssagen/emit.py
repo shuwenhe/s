@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 
 from compiler.ast import SourceFile
-from compiler.interpreter import Interpreter, InterpreterError
+from compiler.internal.ir import MIRProgram, MIRWriteOp, lower_source
 
 BUILD_OUTPUT_ROOT = Path("/app/tmp")
 
@@ -21,19 +21,30 @@ class WriteOp:
     text: str
 
 
-class RecordingInterpreter(Interpreter):
-    def __init__(self, source: SourceFile) -> None:
-        super().__init__(source)
-        self.ops: list[WriteOp] = []
+@dataclass(frozen=True)
+class MachineWriteOp:
+    fd: int
+    text: str
 
-    def call_function(self, name: str, args: list[object]) -> object:
-        if name == "println":
-            self.ops.append(WriteOp(fd=1, text=("" if not args else self._stringify(args[0])) + "\n"))
-            return None
-        if name == "eprintln":
-            self.ops.append(WriteOp(fd=2, text=("" if not args else self._stringify(args[0])) + "\n"))
-            return None
-        return super().call_function(name, args)
+
+@dataclass(frozen=True)
+class MachineExitOp:
+    code: int
+
+
+@dataclass(frozen=True)
+class MachineOp:
+    kind: str
+    fd: int = 1
+    text: str = ""
+    code: int = 0
+
+
+@dataclass(frozen=True)
+class MachineProgram:
+    entry_symbol: str
+    ops: list[MachineOp]
+    exit_code: int
 
 
 def build_executable(source: SourceFile, output_path: Path) -> None:
@@ -42,8 +53,22 @@ def build_executable(source: SourceFile, output_path: Path) -> None:
     if source.package == "runtime.runner":
         _build_native_runner(output_path)
         return
-    program = _compile_program(source)
-    asm = _emit_asm(program)
+    machine = lower_program(lower_source(source), "amd64")
+    emit_program(machine, output_path)
+
+
+def lower_program(mir: MIRProgram, arch_name: str) -> MachineProgram:
+    ops: list[MachineOp] = []
+    for write in mir.writes:
+        _append_write_op(ops, write)
+    ops.append(MachineOp(kind="exit", code=mir.exit_code))
+    return MachineProgram(entry_symbol=_entry_symbol(arch_name), ops=ops, exit_code=mir.exit_code)
+
+
+def emit_program(program: MachineProgram, output_path: Path) -> None:
+    BUILD_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    asm = _emit_machine_asm(program)
 
     with tempfile.TemporaryDirectory(prefix="s-build-", dir=str(BUILD_OUTPUT_ROOT)) as tmp:
         workdir = Path(tmp)
@@ -69,21 +94,27 @@ def _build_native_runner(output_path: Path) -> None:
         raise BackendError(f"native runner bootstrap failed with exit code {exc.returncode}") from exc
 
 
-def _compile_program(source: SourceFile) -> tuple[list[WriteOp], int]:
-    interpreter = RecordingInterpreter(source)
-    try:
-        exit_code = interpreter.run_main()
-    except InterpreterError as exc:
-        raise BackendError(str(exc)) from exc
-    return interpreter.ops, int(exit_code)
+def _append_write_op(ops: list[MachineOp], write: MIRWriteOp) -> None:
+    if write.fd == 2:
+        ops.append(MachineOp(kind="stderr", fd=write.fd, text=write.text))
+        return
+    ops.append(MachineOp(kind="stdout", fd=write.fd, text=write.text))
 
 
-def _emit_asm(program: tuple[list[WriteOp], int]) -> str:
-    ops, exit_code = program
+def _entry_symbol(arch_name: str) -> str:
+    if arch_name == "amd64":
+        return "_start"
+    return "_start"
+
+
+def _emit_machine_asm(program: MachineProgram) -> str:
+    ops, exit_code = program.ops, program.exit_code
     data_lines: list[str] = [".section .data"]
-    text_lines: list[str] = [".section .text", ".global _start", "_start:"]
+    text_lines: list[str] = [".section .text", f".global {program.entry_symbol}", f"{program.entry_symbol}:"]
 
     for index, op in enumerate(ops):
+        if op.kind == "exit":
+            continue
         label = f"message_{index}"
         encoded = op.text.encode("utf-8")
         payload = ", ".join(str(byte) for byte in encoded) if encoded else "0"
