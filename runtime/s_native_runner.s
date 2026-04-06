@@ -79,14 +79,11 @@ func isSelfHostSource(String source) -> bool {
 }
 
 func buildSelfHostedRunner(String outputPath) -> Result[int, String] {
-    var ccArgv = Vec[String]()
-    ccArgv.push("cc");
-    ccArgv.push("-O2");
-    ccArgv.push("-std=c11");
-    ccArgv.push("/app/s/runtime/s_native_runner.c");
-    ccArgv.push("-o");
-    ccArgv.push(outputPath);
-    match runTool(ccArgv, "bootstrap compiler failed") {
+    var pyArgv = Vec[String]()
+    pyArgv.push("python3");
+    pyArgv.push("/app/s/runtime/write_s_native_launcher.py");
+    pyArgv.push(outputPath);
+    match runTool(pyArgv, "bootstrap launcher failed") {
         Ok(_) => 0,
         Err(err) => {
             return Err(err)
