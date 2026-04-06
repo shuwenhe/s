@@ -87,20 +87,38 @@ func buildExecutable(SourceFile source, String outputPath) -> Result[(), Backend
     // See /app/s/docs/backend_elf64.md for the executable MVP plan.
     //
     // The runnable algorithm still lives in backend_elf64.py today.
-    var program = compileProgram(source)?
+    var program =
+        match compileProgram(source) {
+            Ok(value) => value,
+            Err(err) => {
+                return Err(err)
+            }
+        }
     var asmText = emitAsm(program)
     assembleAndLink(asmText, outputPath)
 }
 
 func compileProgram(SourceFile source) -> Result[Program, BackendError] {
-    var mainFunc = findMain(source)?
+    var mainFunc =
+        match findMain(source) {
+            Ok(value) => value,
+            Err(err) => {
+                return Err(err)
+            }
+        }
     var env = Vec[LocalBinding]()
     var ops = Vec[ProgramOp]()
-    var exitCode = executeFunction(mainFunc, env, ops)?
-    ops.push(ProgramOp::Exit(ExitOp {
+    var exitCode =
+        match executeFunction(mainFunc, env, ops) {
+            Ok(value) => value,
+            Err(err) => {
+                return Err(err)
+            }
+        }
+    ops.push(Exit(ExitOp {
         code: exitCode,
     }))
-    Result::Ok(Program {
+    Ok(Program {
         ops: ops,
         exitCode: exitCode,
     })
@@ -113,15 +131,15 @@ func emitAsm(Program program) -> String {
 func findMain(SourceFile source) -> Result[FunctionDecl, BackendError] {
     for item in source.items {
         match item {
-            Item::Function(func) => {
+            Function(func) => {
                 if func.sig.name == "main" {
-                    return Result::Ok(func)
+                    return Ok(func)
                 }
             }
             _ => (),
         }
     }
-    Result::Err(BackendError {
+    Err(BackendError {
         message: "entry function main not found",
     })
 }
@@ -132,8 +150,8 @@ func executeFunction(
     Vec[ProgramOp] ops
 ) -> Result[int, BackendError] {
     match func.body {
-        Option::Some(body) => executeBlock(body, env, ops),
-        Option::None => Result::Ok(0),
+        Some(body) => executeBlock(body, env, ops),
+        None => Ok(0),
     }
 }
 
@@ -144,13 +162,29 @@ func executeBlock(
 ) -> Result[int, BackendError] {
     for stmt in body.statements {
         match stmt {
-            Stmt::Return(value) => return executeReturnStmt(value, env),
-            _ => executeStmt(stmt, env, ops)?,
+            Return(value) => return executeReturnStmt(value, env),
+            _ => {
+                match executeStmt(stmt, env, ops) {
+                    Ok(()) => (),
+                    Err(err) => {
+                        return Err(err)
+                    }
+                }
+            }
         }
     }
     match body.final_expr {
-        Option::Some(expr) => asExitCode(evalExpr(expr, env)?),
-        Option::None => Result::Ok(0),
+        Some(expr) => {
+            var value =
+                match evalExpr(expr, env) {
+                    Ok(found) => found,
+                    Err(err) => {
+                        return Err(err)
+                    }
+                }
+            asExitCode(value)
+        }
+        None => Ok(0),
     }
 }
 
@@ -160,14 +194,14 @@ func executeStmt(
     Vec[ProgramOp] ops
 ) -> Result[(), BackendError] {
     match stmt {
-        Stmt::Var(value) => executeVarStmt(value, env),
-        Stmt::Assign(value) => executeAssignStmt(value, env),
-        Stmt::Increment(value) => executeIncrementStmt(value, env),
-        Stmt::CFor(value) => executeCForStmt(value, env, ops),
-        Stmt::Expr(value) => executeExprStmt(value, env, ops),
-        Stmt::Return(value) => {
+        Var(value) => executeVarStmt(value, env),
+        Assign(value) => executeAssignStmt(value, env),
+        Increment(value) => executeIncrementStmt(value, env),
+        CFor(value) => executeCForStmt(value, env, ops),
+        Expr(value) => executeExprStmt(value, env, ops),
+        Return(value) => {
             value
-            Result::Ok(())
+            Ok(())
         }
     }
 }
@@ -177,15 +211,15 @@ func evalExpr(
     Vec[LocalBinding] env
 ) -> Result[Value, BackendError] {
     match expr {
-        Expr::Int(value) => Result::Ok(Value::Int(parseIntLiteral(value))),
-        Expr::String(value) => Result::Ok(Value::String(unquoteString(value))),
-        Expr::Bool(value) => Result::Ok(Value::Bool(value.value)),
-        Expr::Index(value) => evalIndexExpr(value, env),
-        Expr::Name(value) => lookupBinding(env, value.name),
-        Expr::Call(value) => evalCallExpr(value, env),
-        Expr::Binary(value) => evalBinaryExpr(value, env),
-        Expr::Match(value) => evalMatchExpr(value, env),
-        _ => Result::Err(unsupported("backend expr")),
+        Int(value) => Ok(Int(parseIntLiteral(value))),
+        String(value) => Ok(String(unquoteString(value))),
+        Bool(value) => Ok(Bool(value.value)),
+        Index(value) => evalIndexExpr(value, env),
+        Name(value) => lookupBinding(env, value.name),
+        Call(value) => evalCallExpr(value, env),
+        Binary(value) => evalBinaryExpr(value, env),
+        Match(value) => evalMatchExpr(value, env),
+        _ => Err(unsupported("backend expr")),
     }
 }
 
@@ -195,9 +229,9 @@ func emitDataSection(Vec[ProgramOp] ops) -> String {
     var index = 0
     for op in ops {
         match op {
-            ProgramOp::WriteStdout(write) => appendDataPayload(lines, "message_" + to_string(index), write.text),
-            ProgramOp::WriteStderr(write) => appendDataPayload(lines, "message_" + to_string(index), write.text),
-            ProgramOp::Exit(_) => (),
+            WriteStdout(write) => appendDataPayload(lines, "message_" + to_string(index), write.text),
+            WriteStderr(write) => appendDataPayload(lines, "message_" + to_string(index), write.text),
+            Exit(_) => (),
         }
         index = index + 1
     }
@@ -212,9 +246,9 @@ func emitTextSection(Vec[ProgramOp] ops, int exitCode) -> String {
     var index = 0
     for op in ops {
         match op {
-            ProgramOp::WriteStdout(write) => appendWriteSyscall(lines, 1, "message_" + to_string(index), write.text),
-            ProgramOp::WriteStderr(write) => appendWriteSyscall(lines, 2, "message_" + to_string(index), write.text),
-            ProgramOp::Exit(_) => (),
+            WriteStdout(write) => appendWriteSyscall(lines, 1, "message_" + to_string(index), write.text),
+            WriteStderr(write) => appendWriteSyscall(lines, 2, "message_" + to_string(index), write.text),
+            Exit(_) => (),
         }
         index = index + 1
     }
@@ -227,9 +261,9 @@ func emitTextSection(Vec[ProgramOp] ops, int exitCode) -> String {
 func assembleAndLink(String asmText, String outputPath) -> Result[(), BackendError] {
     var tempDir =
         match MakeTempDir("s-build-") {
-            Result::Ok(path) => path,
-            Result::Err(err) => {
-                return Result::Err(BackendError {
+            Ok(path) => path,
+            Err(err) => {
+                return Err(BackendError {
                     message: err.message,
                 })
             }
@@ -237,30 +271,30 @@ func assembleAndLink(String asmText, String outputPath) -> Result[(), BackendErr
     var asmPath = tempDir + "/out.s"
     var objPath = tempDir + "/out.o"
     match WriteTextFile(asmPath, asmText) {
-        Result::Ok(()) => (),
-        Result::Err(err) => {
-            return Result::Err(BackendError {
+        Ok(()) => (),
+        Err(err) => {
+            return Err(BackendError {
                 message: err.message,
             })
         }
     }
     match RunProcess(Vec[String] { "as", "-o", objPath, asmPath }) {
-        Result::Ok(()) => (),
-        Result::Err(err) => {
-            return Result::Err(BackendError {
+        Ok(()) => (),
+        Err(err) => {
+            return Err(BackendError {
                 message: err.message,
             })
         }
     }
     match RunProcess(Vec[String] { "ld", "-o", outputPath, objPath }) {
-        Result::Ok(()) => (),
-        Result::Err(err) => {
-            return Result::Err(BackendError {
+        Ok(()) => (),
+        Err(err) => {
+            return Err(BackendError {
                 message: err.message,
             })
         }
     }
-    Result::Ok(())
+    Ok(())
 }
 
 func appendDataPayload(Vec[String] lines, String label, String text) -> () {
@@ -318,36 +352,54 @@ func executeVarStmt(
     VarStmt stmt,
     Vec[LocalBinding] env
 ) -> Result[(), BackendError] {
-    var value = evalExpr(stmt.value, env)?
+    var value =
+        match evalExpr(stmt.value, env) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
+            }
+        }
     setLocal(env, stmt.name, value)
-    Result::Ok(())
+    Ok(())
 }
 
 func executeAssignStmt(
     AssignStmt stmt,
     Vec[LocalBinding] env
 ) -> Result[(), BackendError] {
-    var value = evalExpr(stmt.value, env)?
+    var value =
+        match evalExpr(stmt.value, env) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
+            }
+        }
     if !hasLocal(env, stmt.name) {
-        return Result::Err(BackendError {
+        return Err(BackendError {
             message: "undefined name " + stmt.name,
         })
     }
     setLocal(env, stmt.name, value)
-    Result::Ok(())
+    Ok(())
 }
 
 func executeIncrementStmt(
     IncrementStmt stmt,
     Vec[LocalBinding] env
 ) -> Result[(), BackendError] {
-    var current = lookupBinding(env, stmt.name)?
-    match current {
-        Value::Int(number) => {
-            setLocal(env, stmt.name, Value::Int(number + 1))
-            Result::Ok(())
+    var current =
+        match lookupBinding(env, stmt.name) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
+            }
         }
-        _ => Result::Err(unsupported("increment target")),
+    match current {
+        Int(number) => {
+            setLocal(env, stmt.name, Int(number + 1))
+            Ok(())
+        }
+        _ => Err(unsupported("increment target")),
     }
 }
 
@@ -356,12 +408,39 @@ func executeCForStmt(
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops
 ) -> Result[(), BackendError] {
-    executeStmt(stmt.init.value, env, ops)?
-    while isTrue(evalExpr(stmt.condition, env)?) {
-        executeBlock(stmt.body, env, ops)?
-        executeStmt(stmt.step.value, env, ops)?
+    match executeStmt(stmt.init.value, env, ops) {
+        Ok(()) => (),
+        Err(err) => {
+            return Err(err)
+        }
     }
-    Result::Ok(())
+    var keepGoing = true
+    while keepGoing {
+        var condValue =
+            match evalExpr(stmt.condition, env) {
+                Ok(found) => found,
+                Err(err) => {
+                    return Err(err)
+                }
+            }
+        if isTrue(condValue) == false {
+            keepGoing = false
+        } else {
+            match executeBlock(stmt.body, env, ops) {
+                Ok(_) => (),
+                Err(err) => {
+                    return Err(err)
+                }
+            }
+            match executeStmt(stmt.step.value, env, ops) {
+                Ok(()) => (),
+                Err(err) => {
+                    return Err(err)
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 func executeExprStmt(
@@ -370,11 +449,16 @@ func executeExprStmt(
     Vec[ProgramOp] ops
 ) -> Result[(), BackendError] {
     match stmt.expr {
-        Expr::Call(value) => executeCallStmt(value, env, ops),
-        Expr::While(value) => executeWhileExpr(value, env, ops),
+        Call(value) => executeCallStmt(value, env, ops),
+        While(value) => executeWhileExpr(value, env, ops),
         _ => {
-            evalExpr(stmt.expr, env)?
-            Result::Ok(())
+            match evalExpr(stmt.expr, env) {
+                Ok(_) => (),
+                Err(err) => {
+                    return Err(err)
+                }
+            }
+            Ok(())
         }
     }
 }
@@ -385,31 +469,49 @@ func executeCallStmt(
     Vec[ProgramOp] ops
 ) -> Result[(), BackendError] {
     match call.callee.value {
-        Expr::Member(member) => return executeMemberCallStmt(member, call.args, env),
+        Member(member) => return executeMemberCallStmt(member, call.args, env),
         _ => (),
     }
-    var calleeName = extractCalleeName(call)?
+    var calleeName =
+        match extractCalleeName(call) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
+            }
+        }
     if len(call.args) != 1 {
-        return Result::Err(unsupported("call arity"))
+        return Err(unsupported("call arity"))
     }
-    var value = evalExpr(call.args[0], env)?
-    var text = valueToString(value)?
+    var value =
+        match evalExpr(call.args[0], env) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
+            }
+        }
+    var text =
+        match valueToString(value) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
+            }
+        }
 
     if calleeName == "println" {
-        ops.push(ProgramOp::WriteStdout(WriteOp {
+        ops.push(WriteStdout(WriteOp {
             fd: 1,
             text: text + "\n",
         }))
-        return Result::Ok(())
+        return Ok(())
     }
     if calleeName == "eprintln" {
-        ops.push(ProgramOp::WriteStderr(WriteOp {
+        ops.push(WriteStderr(WriteOp {
             fd: 2,
             text: text + "\n",
         }))
-        return Result::Ok(())
+        return Ok(())
     }
-    Result::Err(unsupported("call " + calleeName))
+    Err(unsupported("call " + calleeName))
 }
 
 func executeMemberCallStmt(
@@ -418,30 +520,42 @@ func executeMemberCallStmt(
     Vec[LocalBinding] env
 ) -> Result[(), BackendError] {
     match member.target.value {
-        Expr::Name(nameExpr) => {
+        Name(nameExpr) => {
             if member.member == "push" {
                 if len(args) != 1 {
-                    return Result::Err(unsupported("call arity"))
+                    return Err(unsupported("call arity"))
                 }
-                var current = lookupBinding(env, nameExpr.name)?
-                var nextValue = evalExpr(args[0], env)?
-                match current {
-                    Value::VecString(items) => {
-                        match nextValue {
-                            Value::String(text) => {
-                                items.push(text)
-                                setLocal(env, nameExpr.name, Value::VecString(items))
-                                return Result::Ok(())
-                            }
-                            _ => return Result::Err(unsupported("vec push payload")),
+                var current =
+                    match lookupBinding(env, nameExpr.name) {
+                        Ok(found) => found,
+                        Err(err) => {
+                            return Err(err)
                         }
                     }
-                    _ => return Result::Err(unsupported("method " + member.member)),
+                var nextValue =
+                    match evalExpr(args[0], env) {
+                        Ok(found) => found,
+                        Err(err) => {
+                            return Err(err)
+                        }
+                    }
+                match current {
+                    VecString(items) => {
+                        match nextValue {
+                            String(text) => {
+                                items.push(text)
+                                setLocal(env, nameExpr.name, VecString(items))
+                                return Ok(())
+                            }
+                            _ => return Err(unsupported("vec push payload")),
+                        }
+                    }
+                    _ => return Err(unsupported("method " + member.member)),
                 }
             }
-            Result::Err(unsupported("method " + member.member))
+            Err(unsupported("method " + member.member))
         }
-        _ => Result::Err(unsupported("method receiver")),
+        _ => Err(unsupported("method receiver")),
     }
 }
 
@@ -450,10 +564,27 @@ func executeWhileExpr(
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops
 ) -> Result[(), BackendError] {
-    while isTrue(evalExpr(expr.condition.value, env)?) {
-        executeBlock(expr.body, env, ops)?
+    var keepGoing = true
+    while keepGoing {
+        var condValue =
+            match evalExpr(expr.condition.value, env) {
+                Ok(found) => found,
+                Err(err) => {
+                    return Err(err)
+                }
+            }
+        if isTrue(condValue) == false {
+            keepGoing = false
+        } else {
+            match executeBlock(expr.body, env, ops) {
+                Ok(_) => (),
+                Err(err) => {
+                    return Err(err)
+                }
+            }
+        }
     }
-    Result::Ok(())
+    Ok(())
 }
 
 func executeReturnStmt(
@@ -461,8 +592,17 @@ func executeReturnStmt(
     Vec[LocalBinding] env
 ) -> Result[int, BackendError] {
     match stmt.value {
-        Option::Some(expr) => asExitCode(evalExpr(expr, env)?),
-        Option::None => Result::Ok(0),
+        Some(expr) => {
+            var value =
+                match evalExpr(expr, env) {
+                    Ok(found) => found,
+                    Err(err) => {
+                        return Err(err)
+                    }
+                }
+            asExitCode(value)
+        }
+        None => Ok(0),
     }
 }
 
@@ -471,38 +611,44 @@ func evalCallExpr(
     Vec[LocalBinding] env
 ) -> Result[Value, BackendError] {
     match call.callee.value {
-        Expr::Name(nameExpr) => {
+        Name(nameExpr) => {
             if nameExpr.name == "Vec" {
                 if len(call.args) == 0 {
-                    return Result::Ok(Value::VecString(Vec[String]()))
+                    return Ok(VecString(Vec[String]()))
                 }
-                return Result::Err(unsupported("vec constructor arity"))
+                return Err(unsupported("vec constructor arity"))
             }
             if nameExpr.name == "Some" || nameExpr.name == "Ok" || nameExpr.name == "Err" {
                 if len(call.args) != 1 {
-                    return Result::Err(unsupported("variant constructor arity"))
+                    return Err(unsupported("variant constructor arity"))
                 }
-                var payload = evalExpr(call.args[0], env)?
-                return Result::Ok(Value::Variant(VariantValue {
+                var payload =
+                    match evalExpr(call.args[0], env) {
+                        Ok(found) => found,
+                        Err(err) => {
+                            return Err(err)
+                        }
+                    }
+                return Ok(Variant(VariantValue {
                     tag: nameExpr.name,
-                    payload: Option::Some(box(payload)),
+                    payload: Some(box(payload)),
                 }))
             }
-            Result::Err(unsupported("call " + nameExpr.name))
+            Err(unsupported("call " + nameExpr.name))
         }
-        Expr::Index(indexExpr) => {
+        Index(indexExpr) => {
             match indexExpr.target.value {
-                Expr::Name(nameExpr) => {
+                Name(nameExpr) => {
                     if nameExpr.name == "Vec" && len(call.args) == 0 {
-                        return Result::Ok(Value::VecString(Vec[String]()))
+                        return Ok(VecString(Vec[String]()))
                     }
-                    Result::Err(unsupported("callee"))
+                    Err(unsupported("callee"))
                 }
-                _ => Result::Err(unsupported("callee")),
+                _ => Err(unsupported("callee")),
             }
         }
-        Expr::Member(memberExpr) => evalMemberCallExpr(memberExpr, call.args, env),
-        _ => Result::Err(unsupported("callee")),
+        Member(memberExpr) => evalMemberCallExpr(memberExpr, call.args, env),
+        _ => Err(unsupported("callee")),
     }
 }
 
@@ -511,22 +657,33 @@ func evalMemberCallExpr(
     Vec[Expr] args,
     Vec[LocalBinding] env
 ) -> Result[Value, BackendError] {
-    var receiver = evalExpr(member.target.value, env)?
+    var receiver =
+        match evalExpr(member.target.value, env) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
+            }
+        }
     if member.member == "len" {
         if len(args) != 0 {
-            return Result::Err(unsupported("call arity"))
+            return Err(unsupported("call arity"))
         }
         match receiver {
-            Value::VecString(items) => return Result::Ok(Value::Int(items.len())),
-            Value::String(text) => return Result::Ok(Value::Int(text.len())),
-            _ => return Result::Err(unsupported("method len")),
+            VecString(items) => return Ok(Int(items.len())),
+            String(text) => return Ok(Int(text.len())),
+            _ => return Err(unsupported("method len")),
         }
     }
     if member.member == "push" {
-        executeMemberCallStmt(member, args, env)?
-        return Result::Ok(Value::Unit(()))
+        match executeMemberCallStmt(member, args, env) {
+            Ok(()) => (),
+            Err(err) => {
+                return Err(err)
+            }
+        }
+        return Ok(Unit(()))
     }
-    Result::Err(unsupported("method " + member.member))
+    Err(unsupported("method " + member.member))
 }
 
 struct PatternMatch {
@@ -538,18 +695,36 @@ func evalMatchExpr(
     MatchExpr expr,
     Vec[LocalBinding] env
 ) -> Result[Value, BackendError] {
-    var subject = evalExpr(expr.subject.value, env)?
+    var subject =
+        match evalExpr(expr.subject.value, env) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
+            }
+        }
     for arm in expr.arms {
-        var matchResult = matchPattern(arm.pattern, subject)?
+        var matchResult =
+            match matchPattern(arm.pattern, subject) {
+                Ok(found) => found,
+                Err(err) => {
+                    return Err(err)
+                }
+            }
         if matchResult.matched {
             var armEnv = cloneEnv(env)
             applyBindings(armEnv, matchResult.bindings)
-            var value = evalExpr(arm.expr, armEnv)?
+            var value =
+                match evalExpr(arm.expr, armEnv) {
+                    Ok(found) => found,
+                    Err(err) => {
+                        return Err(err)
+                    }
+                }
             syncExistingBindings(env, armEnv)
-            return Result::Ok(value)
+            return Ok(value)
         }
     }
-    Result::Err(unsupported("match fallthrough"))
+    Err(unsupported("match fallthrough"))
 }
 
 func matchPattern(
@@ -557,11 +732,11 @@ func matchPattern(
     Value value
 ) -> Result[PatternMatch, BackendError] {
     match pattern {
-        Pattern::Wildcard(_) => Result::Ok(PatternMatch {
+        Wildcard(_) => Ok(PatternMatch {
             matched: true,
             bindings: Vec[LocalBinding](),
         }),
-        Pattern::Name(name) => Result::Ok(PatternMatch {
+        Name(name) => Ok(PatternMatch {
             matched: true,
             bindings: Vec[LocalBinding] {
                 LocalBinding {
@@ -570,7 +745,7 @@ func matchPattern(
                 },
             },
         }),
-        Pattern::Variant(variant) => matchVariantPattern(variant, value),
+        Variant(variant) => matchVariantPattern(variant, value),
     }
 }
 
@@ -579,33 +754,33 @@ func matchVariantPattern(
     Value value
 ) -> Result[PatternMatch, BackendError] {
     match value {
-        Value::Variant(variant) => {
+        Variant(variant) => {
             if lastPathSegment(pattern.path) != variant.tag {
-                return Result::Ok(PatternMatch {
+                return Ok(PatternMatch {
                     matched: false,
                     bindings: Vec[LocalBinding](),
                 })
             }
             if len(pattern.args) == 0 {
-                return Result::Ok(PatternMatch {
+                return Ok(PatternMatch {
                     matched: true,
                     bindings: Vec[LocalBinding](),
                 })
             }
             match variant.payload {
-                Option::Some(payload) => {
+                Some(payload) => {
                     if len(pattern.args) != 1 {
-                        return Result::Err(unsupported("variant pattern arity"))
+                        return Err(unsupported("variant pattern arity"))
                     }
                     return matchPattern(pattern.args[0], payload.value)
                 }
-                Option::None => Result::Ok(PatternMatch {
+                None => Ok(PatternMatch {
                     matched: false,
                     bindings: Vec[LocalBinding](),
                 }),
             }
         }
-        _ => Result::Ok(PatternMatch {
+        _ => Ok(PatternMatch {
             matched: false,
             bindings: Vec[LocalBinding](),
         }),
@@ -616,16 +791,28 @@ func evalIndexExpr(
     IndexExpr expr,
     Vec[LocalBinding] env
 ) -> Result[Value, BackendError] {
-    var target = evalExpr(expr.target.value, env)?
-    var index = evalExpr(expr.index.value, env)?
-    match index {
-        Value::Int(pos) => {
-            match target {
-                Value::VecString(items) => Result::Ok(Value::String(items[pos])),
-                _ => Result::Err(unsupported("index target")),
+    var target =
+        match evalExpr(expr.target.value, env) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
             }
         }
-        _ => Result::Err(unsupported("index value")),
+    var index =
+        match evalExpr(expr.index.value, env) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
+            }
+        }
+    match index {
+        Int(pos) => {
+            match target {
+                VecString(items) => Ok(String(items[pos])),
+                _ => Err(unsupported("index target")),
+            }
+        }
+        _ => Err(unsupported("index value")),
     }
 }
 
@@ -633,40 +820,52 @@ func evalBinaryExpr(
     frontend.BinaryExpr expr,
     Vec[LocalBinding] env
 ) -> Result[Value, BackendError] {
-    var left = evalExpr(expr.left.value, env)?
-    var right = evalExpr(expr.right.value, env)?
+    var left =
+        match evalExpr(expr.left.value, env) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
+            }
+        }
+    var right =
+        match evalExpr(expr.right.value, env) {
+            Ok(found) => found,
+            Err(err) => {
+                return Err(err)
+            }
+        }
 
     if expr.op == "+" {
         match left {
-            Value::Int(leftValue) => {
+            Int(leftValue) => {
                 match right {
-                    Value::Int(rightValue) => return Result::Ok(Value::Int(leftValue + rightValue)),
-                    _ => return Result::Err(unsupported("mixed + operands")),
+                    Int(rightValue) => return Ok(Int(leftValue + rightValue)),
+                    _ => return Err(unsupported("mixed + operands")),
                 }
             }
-            Value::String(leftValue) => {
+            String(leftValue) => {
                 match right {
-                    Value::String(rightValue) => return Result::Ok(Value::String(leftValue + rightValue)),
-                    _ => return Result::Err(unsupported("mixed + operands")),
+                    String(rightValue) => return Ok(String(leftValue + rightValue)),
+                    _ => return Err(unsupported("mixed + operands")),
                 }
             }
-            _ => return Result::Err(unsupported("operator +")),
+            _ => return Err(unsupported("operator +")),
         }
     }
 
     if expr.op == "<=" {
         match left {
-            Value::Int(leftValue) => {
+            Int(leftValue) => {
                 match right {
-                    Value::Int(rightValue) => return Result::Ok(Value::Bool(leftValue <= rightValue)),
-                    _ => return Result::Err(unsupported("operator <=")),
+                    Int(rightValue) => return Ok(Bool(leftValue <= rightValue)),
+                    _ => return Err(unsupported("operator <=")),
                 }
             }
-            _ => return Result::Err(unsupported("operator <=")),
+            _ => return Err(unsupported("operator <=")),
         }
     }
 
-    Result::Err(unsupported("binary operator " + expr.op))
+    Err(unsupported("binary operator " + expr.op))
 }
 
 func lookupBinding(
@@ -674,17 +873,17 @@ func lookupBinding(
     String name
 ) -> Result[Value, BackendError] {
     if name == "None" {
-        return Result::Ok(Value::Variant(VariantValue {
+        return Ok(Variant(VariantValue {
             tag: "None",
-            payload: Option::None,
+            payload: None,
         }))
     }
     for binding in env {
         if binding.name == name {
-            return Result::Ok(binding.value)
+            return Ok(binding.value)
         }
     }
-    Result::Err(BackendError {
+    Err(BackendError {
         message: "undefined name " + name,
     })
 }
@@ -716,13 +915,13 @@ func syncExistingBindings(
     var index = 0
     while index < env.len() {
         match lookupBinding(source, env[index].name) {
-            Result::Ok(value) => {
+            Ok(value) => {
                 env[index] = LocalBinding {
                     name: env[index].name,
                     value: value,
                 }
             }
-            Result::Err(_) => (),
+            Err(_) => (),
         }
         index = index + 1
     }
@@ -777,33 +976,42 @@ func hasLocal(
 
 func extractCalleeName(CallExpr call) -> Result[String, BackendError] {
     match call.callee.value {
-        Expr::Name(value) => Result::Ok(value.name),
-        _ => Result::Err(unsupported("callee")),
+        Name(value) => Ok(value.name),
+        _ => Err(unsupported("callee")),
     }
 }
 
 func valueToString(Value value) -> Result[String, BackendError] {
     match value {
-        Value::Int(number) => Result::Ok(to_string(number)),
-        Value::String(text) => Result::Ok(text),
-        Value::Bool(flag) => Result::Ok(if flag { "true" } else { "false" }),
-        Value::VecString(_) => Result::Err(unsupported("stringify vec")),
-        Value::Variant(variant) => {
+        Int(number) => Ok(to_string(number)),
+        String(text) => Ok(text),
+        Bool(flag) => Ok(if flag { "true" } else { "false" }),
+        VecString(_) => Err(unsupported("stringify vec")),
+        Variant(variant) => {
             match variant.payload {
-                Option::Some(payload) => Result::Ok(variant.tag + "(" + valueToString(payload.value)? + ")"),
-                Option::None => Result::Ok(variant.tag),
+                Some(payload) => {
+                    var text =
+                        match valueToString(payload.value) {
+                            Ok(found) => found,
+                            Err(err) => {
+                                return Err(err)
+                            }
+                        }
+                    Ok(variant.tag + "(" + text + ")")
+                }
+                None => Ok(variant.tag),
             }
         }
-        Value::Unit(()) => Result::Ok("()"),
+        Unit(()) => Ok("()"),
     }
 }
 
 func asExitCode(Value value) -> Result[int, BackendError] {
     match value {
-        Value::Int(number) => Result::Ok(number),
-        Value::Bool(flag) => Result::Ok(if flag { 1 } else { 0 }),
-        Value::Unit(()) => Result::Ok(0),
-        _ => Result::Err(unsupported("main return type")),
+        Int(number) => Ok(number),
+        Bool(flag) => Ok(if flag { 1 } else { 0 }),
+        Unit(()) => Ok(0),
+        _ => Err(unsupported("main return type")),
     }
 }
 
@@ -1112,12 +1320,12 @@ func asciiCode(String ch) -> int {
 
 func isTrue(Value value) -> bool {
     match value {
-        Value::Bool(flag) => flag,
-        Value::Int(number) => number != 0,
-        Value::Unit(()) => false,
-        Value::VecString(items) => items.len() != 0,
-        Value::Variant(_) => true,
-        Value::String(text) => len(text) != 0,
+        Bool(flag) => flag,
+        Int(number) => number != 0,
+        Unit(()) => false,
+        VecString(items) => items.len() != 0,
+        Variant(_) => true,
+        String(text) => len(text) != 0,
     }
 }
 
