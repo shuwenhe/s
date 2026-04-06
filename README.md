@@ -129,7 +129,7 @@ func Main() {
 
 ```s
 let x = 42
-let price: f64 = 12.5
+f64 price = 12.5
 var count = 0
 const max_conn = 1024
 ```
@@ -184,11 +184,11 @@ while running {
 ### Functions
 
 ```s
-func Add(a: i32, b: i32) -> i32 {
+func Add(i32 a, i32 b) -> i32 {
     a + b
 }
 
-func openFile(path: str) -> Result<File, IoError> {
+func openFile(str path) -> Result<File, IoError> {
     ...
 }
 ```
@@ -204,17 +204,17 @@ Default rules:
 
 ```s
 struct User {
-    id: u64
-    name: String
-    active: bool
+    u64 id
+    String name
+    bool active
 }
 
 impl User {
-    func Activate(mut self) {
+    func Activate(mut Self self) {
         self.active = true
     }
 
-    func displayName(self) -> str {
+    func displayName(Self self) -> str {
         self.name.as_str()
     }
 }
@@ -242,7 +242,7 @@ match result {
 ### Generics
 
 ```s
-func max[T: Ord](a: T, b: T) -> T {
+func max[T: Ord](T a, T b) -> T {
     if a > b { a } else { b }
 }
 ```
@@ -265,8 +265,8 @@ S uses a statically typed, strongly typed system. Type inference is supported, b
 #### 1. No Implicit Numeric Conversion By Default
 
 ```s
-let a: i32 = 1
-let b: i64 = 2
+i32 a = 1
+i64 b = 2
 let c = a as i64 + b
 ```
 
@@ -287,7 +287,7 @@ That makes error handling, state modeling, and protocol modeling much more natur
 
 ```s
 trait Writer {
-    func write(mut self, data: []u8) -> Result[usize, IoError]
+    func write(mut Self self, []u8 data) -> Result[usize, IoError]
 }
 ```
 
@@ -313,9 +313,9 @@ A more engineering-oriented borrow-lite approach is possible:
 ### Suggested Reference Model
 
 ```s
-func len(s: &str) -> usize
-func push(v: &mut Vec[i32], value: i32)
-func consume(buf: Buf) -> Result[(), Error]
+func len(&str s) -> usize
+func push(&mut Vec[i32] v, i32 value)
+func consume(Buf buf) -> Result[(), Error]
 ```
 
 Meaning:
@@ -381,7 +381,7 @@ These capabilities should be exposed through `unsafe`.
 
 ```s
 unsafe {
-    let p: *mut u8 = alloc(1024)
+    *mut u8 p = alloc(1024)
     raw_write(p, 0xff)
     free(p)
 }
@@ -400,7 +400,7 @@ S uses `Result[T, E]` as the primary error model. Exceptions are not intended to
 ### Basic Form
 
 ```s
-func parse_port(s: str) -> Result[u16, ParseError] {
+func parse_port(str s) -> Result[u16, ParseError] {
     ...
 }
 ```
@@ -580,7 +580,7 @@ If S wants to become a real systems language, C ABI interoperability has to be a
 ### C FFI Example
 
 ```s
-extern "C" func puts(s: *const u8) -> i32
+extern "C" func puts(*const u8 s) -> i32
 ```
 
 Design goals:
@@ -781,14 +781,14 @@ S is still in the design-draft stage in this repository.
 
 At the same time, self-hosting work has already started. The first S-native compiler skeleton lives in:
 
-- [selfhost.md](/app/s/selfhost.md)
-- [ast.s](/app/s/frontend/ast.s)
-- [tokens.s](/app/s/frontend/tokens.s)
-- [main.s](/app/s/compiler/main.s)
-- [backend_elf64.s](/app/s/compiler/backend_elf64.s)
-- [s.s](/app/s/cmd/s.s)
-- [backend_elf64.md](/app/s/docs/backend_elf64.md)
-- [self_hosting.md](/app/s/docs/self_hosting.md)
+- [selfhost.md](/app/s/doc/selfhost.md)
+- [ast.s](/app/s/src/frontend/ast.s)
+- [tokens.s](/app/s/src/frontend/tokens.s)
+- [main.s](/app/s/src/compiler/main.s)
+- [backend_elf64.s](/app/s/src/compiler/backend_elf64.s)
+- [s.s](/app/s/src/cmd/s.s)
+- [backend_elf64.md](/app/s/doc/backend_elf64.md)
+- [self_hosting.md](/app/s/doc/self_hosting.md)
 
 The most valuable next steps are:
 
