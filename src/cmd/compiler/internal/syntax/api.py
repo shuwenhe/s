@@ -5,8 +5,9 @@ import sys
 
 from compiler.ast import SourceFile, dump_source_file
 from compiler.internal.base import CliError, CommandOptions
-from compiler.lexer import Lexer, dump_tokens
-from compiler.parser import ParseError, parse_source
+from compiler.internal.syntax.lexer import Lexer
+from compiler.internal.syntax.parser import ParseError, parse_source
+from compiler.internal.syntax.tokens import dump_tokens
 from compiler.internal.typecheck import check_source
 
 

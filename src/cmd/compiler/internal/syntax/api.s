@@ -3,6 +3,7 @@ package compiler.internal.syntax
 use compiler.internal.base.cliError
 use std.fs.ReadToString
 use std.result.Result
+use std.vec.Vec
 use s.ParseError
 use s.SourceFile
 use s.Token
