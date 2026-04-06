@@ -5,7 +5,7 @@
 int main(int argc, char **argv) {
     (void)argc;
 
-    execv("/usr/local/bin/s", argv);
+    execv("/app/s/bin/s-selfhosted", argv);
     execv("/app/s/bin/s", argv);
 
     perror("s command launcher");
