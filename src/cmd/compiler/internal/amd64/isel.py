@@ -86,12 +86,22 @@ def _syscall(_: LoweredInstruction) -> list[AsmInstruction]:
 
 
 _SELECTORS: dict[tuple[str, str, str], Selector] = {
+    ("load_const", "i32", "eax"): _mov_imm("eax"),
+    ("load_const", "i32", "ecx"): _mov_imm("ecx"),
+    ("load_const", "i32", "edx"): _mov_imm("edx"),
+    ("load_const", "i32", "r8d"): _mov_imm("r8d"),
+    ("load_const", "i32", "r9d"): _mov_imm("r9d"),
+    ("load_const", "i32", "r10d"): _mov_imm("r10d"),
+    ("load_const", "i32", "r11d"): _mov_imm("r11d"),
     ("load_const", "i64", "rax"): _mov_imm("rax"),
     ("load_const", "i64", "rdi"): _mov_imm("rdi"),
     ("load_const", "i64", "rdx"): _mov_imm("rdx"),
     ("load_const", "i64", "r8"): _mov_imm("r8"),
     ("load_const", "i64", "r9"): _mov_imm("r9"),
     ("load_const", "i64", "r11"): _mov_imm("r11"),
+    ("copy_reg", "i32", "eax"): _copy_reg("eax"),
+    ("copy_reg", "i32", "ecx"): _copy_reg("ecx"),
+    ("copy_reg", "i32", "edx"): _copy_reg("edx"),
     ("copy_reg", "i64", "rax"): _copy_reg("rax"),
     ("copy_reg", "i64", "rdi"): _copy_reg("rdi"),
     ("copy_reg", "i64", "rdx"): _copy_reg("rdx"),
