@@ -181,16 +181,21 @@ def _lower_compute_block(block: BlockExpr) -> List[MIROp]:
                 ops.extend(loop_ops)
             continue
         if isinstance(stmt, ExprStmt):
-            call = stmt.expr
-            if (
-                isinstance(call, CallExpr)
-                and isinstance(call.callee, NameExpr)
-                and call.callee.name == "println"
-                and len(call.args) == 1
-                and isinstance(call.args[0], NameExpr)
-            ):
-                ops.append(MIROp(op="call_builtin", target=call.args[0].name, source="print_i32"))
+            _append_compute_call(stmt.expr, ops)
+    if block.final_expr is not None:
+        _append_compute_call(block.final_expr, ops)
     return ops
+
+
+def _append_compute_call(expr: Expr, ops: List[MIROp]) -> None:
+    if (
+        isinstance(expr, CallExpr)
+        and isinstance(expr.callee, NameExpr)
+        and expr.callee.name == "println"
+        and len(expr.args) == 1
+        and isinstance(expr.args[0], NameExpr)
+    ):
+        ops.append(MIROp(op="call_builtin", target=expr.args[0].name, source="print_i32"))
 
 
 def _lower_cfor_compute(stmt: CForStmt) -> List[MIROp]:
