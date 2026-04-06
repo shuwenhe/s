@@ -193,7 +193,7 @@ class Interpreter:
         if isinstance(expr, IntExpr):
             return int(expr.value.replace("_", ""))
         if isinstance(expr, StringExpr):
-            return expr.value[1:-1]
+            return self._decode_string_literal(expr.value)
         if isinstance(expr, BoolExpr):
             return expr.value
         if isinstance(expr, NameExpr):
@@ -335,3 +335,30 @@ class Interpreter:
         if value is False:
             return "false"
         return str(value)
+
+    def _decode_string_literal(self, literal: str) -> str:
+        text = literal[1:-1]
+        out: list[str] = []
+        index = 0
+        while index < len(text):
+            ch = text[index]
+            if ch != "\\":
+                out.append(ch)
+                index += 1
+                continue
+            if index + 1 >= len(text):
+                out.append("\\")
+                break
+            esc = text[index + 1]
+            if esc == "n":
+                out.append("\n")
+            elif esc == "t":
+                out.append("\t")
+            elif esc == '"':
+                out.append('"')
+            elif esc == "\\":
+                out.append("\\")
+            else:
+                out.append(esc)
+            index += 2
+        return "".join(out)
