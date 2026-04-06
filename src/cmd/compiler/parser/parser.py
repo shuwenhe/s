@@ -222,6 +222,9 @@ class Parser:
             if self._eat_symbol(";"):
                 statements.append(ExprStmt(expr))
                 continue
+            if not self._at_symbol("}"):
+                statements.append(ExprStmt(expr))
+                continue
             final_expr = expr
             break
         self._expect_symbol("}")
