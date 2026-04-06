@@ -108,9 +108,7 @@ class Parser:
         fields: List[Field] = []
         while not self._eat_symbol("}"):
             field_public = self._eat_keyword("pub")
-            field_name = self._expect_ident()
-            self._expect_symbol(":")
-            field_type = self._parse_type_text(stop_values={",", "}"})
+            field_name, field_type = self._parse_named_type(stop_values={",", "}"})
             fields.append(Field(name=field_name, type_name=field_type, is_public=field_public))
             self._eat_symbol(",")
         return StructDecl(name=name, generics=generics, fields=fields, is_public=is_public)
@@ -179,27 +177,13 @@ class Parser:
         if self._at_symbol(")"):
             return params
         while True:
-            name = self._parse_param_name()
-            self._expect_symbol(":")
-            type_name = self._parse_type_text(stop_values={",", ")"})
+            name, type_name = self._parse_named_type(stop_values={",", ")"})
             params.append(Param(name=name, type_name=type_name))
             if not self._eat_symbol(","):
                 break
             if self._at_symbol(")"):
                 break
         return params
-
-    def _parse_param_name(self) -> str:
-        if self._eat_keyword("mut"):
-            return "mut " + self._expect_ident()
-        if self._eat_symbol("&"):
-            prefix = "&mut " if self._eat_keyword("mut") else "&"
-            if self._eat_keyword("self"):
-                return prefix + "self"
-            return prefix + self._expect_ident()
-        if self._eat_keyword("self"):
-            return "self"
-        return self._expect_ident()
 
     def _parse_generic_params(self) -> List[str]:
         generics: List[str] = []
@@ -248,6 +232,9 @@ class Parser:
             self._at_keyword("let")
             or self._at_keyword("var")
             or self._at_keyword("return")
+            or self._at_keyword("if")
+            or self._at_keyword("while")
+            or self._at_keyword("match")
             or self._at_keyword("for")
             or self._looks_like_typed_let()
             or self._looks_like_assignment()
@@ -261,6 +248,10 @@ class Parser:
             return self._parse_var_stmt()
         if self._at_keyword("return"):
             return self._parse_return_stmt()
+        if self._at_keyword("if") or self._at_keyword("while") or self._at_keyword("match"):
+            expr = self._parse_expr()
+            self._eat_symbol(";")
+            return ExprStmt(expr)
         if self._at_keyword("for"):
             return self._parse_c_for_stmt()
         if self._looks_like_typed_let():
@@ -545,7 +536,60 @@ class Parser:
                     break
                 paren -= 1
             parts.append(self._advance().value)
-        text = " ".join(parts)
+        return self._normalize_type_text(" ".join(parts))
+
+    def _parse_named_type(self, stop_values: set[str]) -> tuple[str, str]:
+        return self._decode_named_type(self._parse_token_segment(stop_values))
+
+    def _parse_token_segment(self, stop_values: set[str]) -> List[Token]:
+        segment: List[Token] = []
+        bracket = 0
+        paren = 0
+        while True:
+            token = self._peek()
+            if token.kind == TokenKind.EOF:
+                break
+            if bracket == 0 and paren == 0 and token.value in stop_values:
+                break
+            if token.value == "[":
+                bracket += 1
+            elif token.value == "]":
+                bracket -= 1
+            elif token.value == "(":
+                paren += 1
+            elif token.value == ")":
+                if paren == 0:
+                    break
+                paren -= 1
+            segment.append(self._advance())
+        return segment
+
+    def _decode_named_type(self, tokens: List[Token]) -> tuple[str, str]:
+        colon = self._find_token_value(tokens, ":")
+        if colon >= 0:
+            name_text = self._normalize_type_text(self._join_token_values(tokens[:colon]))
+            type_text = self._normalize_type_text(self._join_token_values(tokens[colon + 1 :]))
+            return self._normalize_receiver_decl(name_text, type_text)
+        split = self._find_decl_name_index(tokens)
+        if split <= 0:
+            token = tokens[0] if tokens else self._peek()
+            raise ParseError(f"expected typed name at {token.line}:{token.column}")
+        name_text = tokens[split].value
+        type_text = self._normalize_type_text(self._join_token_values(tokens[:split]))
+        return self._normalize_receiver_decl(name_text, type_text)
+
+    def _normalize_receiver_decl(self, name_text: str, type_text: str) -> tuple[str, str]:
+        if name_text == "self":
+            return name_text, type_text
+        if name_text == "&self":
+            return "self", self._normalize_type_text("& " + type_text)
+        if name_text == "&mut self":
+            return "self", self._normalize_type_text("&mut " + type_text)
+        if name_text == "mut self":
+            return "self", self._normalize_type_text("mut " + type_text)
+        return name_text, type_text
+
+    def _normalize_type_text(self, text: str) -> str:
         text = text.replace(" . ", ".")
         text = text.replace("[ ", "[").replace(" ]", "]")
         text = text.replace("( ", "(").replace(" )", ")")
@@ -554,6 +598,42 @@ class Parser:
         text = text.replace("[] ", "[]")
         text = text.replace(" [", "[")
         return text.strip()
+
+    def _join_token_values(self, tokens: List[Token]) -> str:
+        return " ".join(token.value for token in tokens)
+
+    def _find_token_value(self, tokens: List[Token], value: str) -> int:
+        bracket = 0
+        paren = 0
+        for i, token in enumerate(tokens):
+            if token.value == "[":
+                bracket += 1
+            elif token.value == "]":
+                bracket -= 1
+            elif token.value == "(":
+                paren += 1
+            elif token.value == ")":
+                paren -= 1
+            elif bracket == 0 and paren == 0 and token.value == value:
+                return i
+        return -1
+
+    def _find_decl_name_index(self, tokens: List[Token]) -> int:
+        bracket = 0
+        paren = 0
+        index = -1
+        for i, token in enumerate(tokens):
+            if token.value == "[":
+                bracket += 1
+            elif token.value == "]":
+                bracket -= 1
+            elif token.value == "(":
+                paren += 1
+            elif token.value == ")":
+                paren -= 1
+            elif bracket == 0 and paren == 0 and token.kind == TokenKind.IDENT:
+                index = i
+        return index
 
     def _parse_bracket_group(self) -> str:
         parts = [self._advance().value]

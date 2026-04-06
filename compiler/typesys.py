@@ -42,6 +42,11 @@ class UnitType(Type):
 
 
 @dataclass(frozen=True)
+class NeverType(Type):
+    pass
+
+
+@dataclass(frozen=True)
 class UnknownType(Type):
     label: str = "unknown"
 
@@ -50,6 +55,7 @@ BOOL = PrimitiveType("bool")
 I32 = PrimitiveType("i32")
 STRING = NamedType("String")
 UNIT = UnitType()
+NEVER = NeverType()
 
 
 def parse_type(text: str) -> Type:
@@ -58,6 +64,8 @@ def parse_type(text: str) -> Type:
         return UnknownType()
     if text == "()":
         return UNIT
+    if text == "never":
+        return NEVER
     if text == "bool":
         return BOOL
     if text in {"i32", "int"}:
@@ -94,6 +102,8 @@ def dump_type(ty: Type) -> str:
         return f"func({', '.join(dump_type(param) for param in ty.params)}) -> {dump_type(ty.return_type or UNIT)}"
     if isinstance(ty, UnitType):
         return "()"
+    if isinstance(ty, NeverType):
+        return "never"
     if isinstance(ty, UnknownType):
         return ty.label
     return repr(ty)
@@ -103,6 +113,8 @@ def is_copy_type(ty: Type) -> bool:
     if isinstance(ty, PrimitiveType):
         return True
     if isinstance(ty, ReferenceType):
+        return True
+    if isinstance(ty, NeverType):
         return True
     return False
 
