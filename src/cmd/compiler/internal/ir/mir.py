@@ -16,6 +16,7 @@ from compiler.ast import (
     ForExpr,
     FunctionDecl,
     IfExpr,
+    IncrementStmt,
     IndexExpr,
     IntExpr,
     LetStmt,
