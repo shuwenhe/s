@@ -16,25 +16,21 @@ use std.process.RunProcess
 use std.result.Result
 use std.vec.Vec
 
-struct RunnerError {
-    String message,
-}
-
 func main() -> () {
     Exit(runMain(Args()))
 }
 
 func runMain(Vec[String] args) -> int {
-    match run(args) {
-        Result::Ok(()) => 0,
-        Result::Err(err) => {
-            eprintln("error: " + err.message)
+    return match run(args) {
+        Ok(_) => 0,
+        Err(err) => {
+            eprintln("error: " + err);
             1
         }
     }
 }
 
-func run(Vec[String] args) -> Result[(), RunnerError] {
+func run(Vec[String] args) -> Result[int, String] {
     if args.len() != 4 {
         return usageError()
     }
@@ -42,67 +38,74 @@ func run(Vec[String] args) -> Result[(), RunnerError] {
         return usageError()
     }
     if args[2] != "-o" {
-        return Result::Err(RunnerError {
-            message: "expected -o before output path",
-        })
+        return Err("expected -o before output path")
     }
-    buildSource(args[1], args[3])
+    return buildSource(args[1], args[3])
 }
 
-func buildSource(String path, String outputPath) -> Result[(), RunnerError] {
+func buildSource(String path, String outputPath) -> Result[int, String] {
     var source =
         match ReadToString(path) {
-            Result::Ok(text) => text,
-            Result::Err(_) => {
-                return Result::Err(RunnerError {
-                    message: "failed to read source file: " + path,
-                })
+            Ok(text) => text,
+            Err(_) => {
+                return Err("failed to read source file: " + path)
             }
         }
 
     var message =
         match compileMessageForSource(source) {
-            Option::Some(text) => text,
-            Option::None => {
-                return Result::Err(RunnerError {
-                    message: "unsupported source shape for native runner MVP",
-                })
+            Some(text) => text,
+            None => {
+                return Err("unsupported source shape for native runner MVP")
             }
         }
 
     var asmText = emitAsm(message)
-    assembleAndLink(asmText, outputPath)?
-    println("built: " + outputPath)
-    Result::Ok(())
+    match assembleAndLink(asmText, outputPath) {
+        Ok(_) => 0,
+        Err(err) => {
+            return Err(err)
+        },
+    }
+    println("built: " + outputPath);
+    return Ok(0)
 }
 
 func compileMessageForSource(String source) -> Option[String] {
     match extractQuotedPrintln(source) {
-        Option::Some(text) => return Option::Some(text + "\n"),
-        Option::None => (),
+        Some(text) => {
+            return Some(text + "\n")
+        },
+        None => 0,
     }
 
-    if !containsText(source, "println(sum)") {
-        return Option::None
+    if containsText(source, "println(sum)") == false {
+        return None
     }
-    if !containsText(source, "sum = sum + i") {
-        return Option::None
+    if containsText(source, "sum = sum + i") == false {
+        return None
     }
 
     var initial =
-        match parseIntAfter(source, "int sum = ") {
-            Option::Some(value) => value,
-            Option::None => return Option::None,
+        match parseSignedIntAfter(source, "int sum = ") {
+            Some(value) => value,
+            None => {
+                return None
+            },
         }
     var start =
-        match parseIntAfter(source, "for (int i = ") {
-            Option::Some(value) => value,
-            Option::None => return Option::None,
+        match parseSignedIntAfter(source, "for (int i = ") {
+            Some(value) => value,
+            None => {
+                return None
+            },
         }
     var end =
-        match parseIntAfter(source, "; i <= ") {
-            Option::Some(value) => value,
-            Option::None => return Option::None,
+        match parseSignedIntAfter(source, "; i <= ") {
+            Some(value) => value,
+            None => {
+                return None
+            },
         }
 
     var total = initial
@@ -111,104 +114,120 @@ func compileMessageForSource(String source) -> Option[String] {
         total = total + index
         index++
     }
-    Option::Some(to_string(total) + "\n")
+    return Some(to_string(total) + "\n")
 }
 
 func extractQuotedPrintln(String source) -> Option[String] {
     var prefix = "println(\""
     var startIndex = findText(source, prefix)
     if startIndex < 0 {
-        return Option::None
+        return None
     }
     var textStart = startIndex + len(prefix)
     var endIndex = findCharFrom(source, "\"", textStart)
     if endIndex < 0 {
-        return Option::None
+        return None
     }
-    Option::Some(slice(source, textStart, endIndex))
+    return Some(slice(source, textStart, endIndex))
 }
 
-func parseIntAfter(String source, String needle) -> Option[int] {
+func parseSignedIntAfter(String source, String needle) -> Option[int] {
     var startIndex = findText(source, needle)
     if startIndex < 0 {
-        return Option::None
+        return None
     }
     var index = startIndex + len(needle)
+    var sign = 1
+    if index < len(source) {
+        if char_at(source, index) == "-" {
+            sign = 0 - 1
+            index = index + 1
+        }
+    }
     var value = 0
     var found = false
     while index < len(source) {
         var ch = char_at(source, index)
-        if ch < "0" || ch > "9" {
-            break
+        if ch < "0" {
+            index = len(source)
+        } else if ch > "9" {
+            index = len(source)
+        } else {
+            value = value * 10 + digitValue(ch)
+            found = true
+            index = index + 1
         }
-        value = value * 10 + digitValue(ch)
-        found = true
-        index = index + 1
     }
-    if !found {
-        return Option::None
+    if found == false {
+        return None
     }
-    Option::Some(value)
+    return Some(value * sign)
 }
 
 func emitAsm(String message) -> String {
     var lines = Vec[String]()
-    lines.push(".section .data")
-    lines.push("message_0:")
-    lines.push("    .byte " + encodeBytes(message))
-    lines.push("")
-    lines.push(".section .text")
-    lines.push(".global _start")
-    lines.push("_start:")
-    lines.push("    mov $1, %rax")
-    lines.push("    mov $1, %rdi")
-    lines.push("    lea message_0(%rip), %rsi")
-    lines.push("    mov $" + to_string(len(message)) + ", %rdx")
-    lines.push("    syscall")
-    lines.push("    mov $60, %rax")
-    lines.push("    mov $0, %rdi")
-    lines.push("    syscall")
-    joinWith(lines, "\n") + "\n"
+    lines.push(".section .data");
+    lines.push("message_0:");
+    lines.push("    .byte " + encodeBytes(message));
+    lines.push("");
+    lines.push(".section .text");
+    lines.push(".global _start");
+    lines.push("_start:");
+    lines.push("    mov $1, %rax");
+    lines.push("    mov $1, %rdi");
+    lines.push("    lea message_0(%rip), %rsi");
+    lines.push("    mov $" + to_string(len(message)) + ", %rdx");
+    lines.push("    syscall");
+    lines.push("    mov $60, %rax");
+    lines.push("    mov $0, %rdi");
+    lines.push("    syscall");
+    return joinWith(lines, "\n") + "\n"
 }
 
-func assembleAndLink(String asmText, String outputPath) -> Result[(), RunnerError] {
+func assembleAndLink(String asmText, String outputPath) -> Result[int, String] {
     var tempDir =
         match MakeTempDir("s-native-") {
-            Result::Ok(path) => path,
-            Result::Err(err) => {
-                return Result::Err(RunnerError {
-                    message: err.message,
-                })
+            Ok(path) => path,
+            Err(err) => {
+                return Err(err.message)
             }
         }
     var asmPath = tempDir + "/out.s"
     var objPath = tempDir + "/out.o"
     match WriteTextFile(asmPath, asmText) {
-        Result::Ok(()) => (),
-        Result::Err(err) => {
-            return Result::Err(RunnerError {
-                message: err.message,
-            })
+        Ok(_) => 0,
+        Err(err) => {
+            return Err(err.message)
         }
     }
-    match RunProcess(Vec[String] { "as", "-o", objPath, asmPath }) {
-        Result::Ok(()) => (),
-        Result::Err(err) => {
-            return Result::Err(RunnerError {
-                message: err.message,
-            })
-        }
+    var asArgv = Vec[String]()
+    asArgv.push("as");
+    asArgv.push("-o");
+    asArgv.push(objPath);
+    asArgv.push(asmPath);
+    match runTool(asArgv, "assembler failed") {
+        Ok(_) => 0,
+        Err(err) => {
+            return Err(err)
+        },
     }
-    match RunProcess(Vec[String] { "ld", "-o", outputPath, objPath }) {
-        Result::Ok(()) => Result::Ok(()),
-        Result::Err(err) => Result::Err(RunnerError {
-            message: err.message,
-        }),
+    var ldArgv = Vec[String]()
+    ldArgv.push("ld");
+    ldArgv.push("-o");
+    ldArgv.push(outputPath);
+    ldArgv.push(objPath);
+    return runTool(ldArgv, "linker failed")
+}
+
+func runTool(Vec[String] argv, String message) -> Result[int, String] {
+    return match RunProcess(argv) {
+        Ok(_) => Ok(0),
+        Err(_) => Err(message),
     }
 }
 
 func containsText(String text, String needle) -> bool {
-    findText(text, needle) >= 0
+    return findText(text, needle) >= 0
 }
 
 func findText(String text, String needle) -> int {
@@ -216,7 +235,7 @@ func findText(String text, String needle) -> int {
         return 0
     }
     if len(needle) > len(text) {
-        return -1
+        return 0 - 1
     }
     var index = 0
     while index <= len(text) - len(needle) {
@@ -225,7 +244,7 @@ func findText(String text, String needle) -> int {
         }
         index++
     }
-    -1
+    return 0 - 1
 }
 
 func findCharFrom(String text, String needle, int start) -> int {
@@ -236,7 +255,7 @@ func findCharFrom(String text, String needle, int start) -> int {
         }
         index++
     }
-    -1
+    return 0 - 1
 }
 
 func digitValue(String ch) -> int {
@@ -270,17 +289,17 @@ func digitValue(String ch) -> int {
     if ch == "9" {
         return 9
     }
-    0
+    return 0
 }
 
 func encodeBytes(String text) -> String {
     var parts = Vec[String]()
     var index = 0
     while index < len(text) {
-        parts.push(to_string(asciiCode(char_at(text, index))))
+        parts.push(to_string(asciiCode(char_at(text, index))));
         index++
     }
-    joinWith(parts, ", ")
+    return joinWith(parts, ", ")
 }
 
 func asciiCode(String ch) -> int {
@@ -506,7 +525,7 @@ func asciiCode(String ch) -> int {
     if ch == "z" {
         return 122
     }
-    63
+    return 63
 }
 
 func joinWith(Vec[String] values, String sep) -> String {
@@ -519,11 +538,9 @@ func joinWith(Vec[String] values, String sep) -> String {
         text = text + values[index]
         index++
     }
-    text
+    return text
 }
 
-func usageError() -> Result[(), RunnerError] {
-    Result::Err(RunnerError {
-        message: "usage: s_native build <path> -o <output>",
-    })
+func usageError() -> Result[int, String] {
+    return Err("usage: s_native build <path> -o <output>")
 }

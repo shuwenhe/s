@@ -26,12 +26,14 @@ from compiler.ast import (
     MemberExpr,
     NameExpr,
     NamePattern,
+    Param,
     Pattern,
     ReturnStmt,
     SourceFile,
     StringExpr,
     StructDecl,
     TraitDecl,
+    UseDecl,
     VariantPattern,
     WhileExpr,
     WildcardPattern,
@@ -43,6 +45,7 @@ from compiler.typesys import (
     BOOL,
     FunctionType,
     I32,
+    NEVER,
     STRING,
     UNIT,
     NamedType,
@@ -128,11 +131,14 @@ class Checker:
         self.enums: Dict[str, EnumInfo] = {}
         self.structs: Dict[str, StructInfo] = {}
         self.variant_to_enum: Dict[str, str] = {}
+        self.imported_functions: Dict[str, TraitMethodInfo] = {}
+        self.type_aliases: Dict[str, str] = {}
         self.traits: set[str] = {"Copy", "Clone", "Eq", "Ord"}
         self.impl_traits: Dict[str, set[str]] = {}
         self.trait_methods: Dict[str, Dict[str, TraitMethodInfo]] = {}
         self.impls: List[ImplInfo] = []
         self._current_type_env: Dict[str, Type] = {}
+        self._current_return_type: Type = UNIT
         self.builtin_functions: Dict[str, TraitMethodInfo] = {
             "println": TraitMethodInfo(
                 owner="builtin",
@@ -147,26 +153,31 @@ class Checker:
                 return_type=UNIT,
             ),
         }
+        self._load_stdlib_primitives()
 
     def load_items(self, source: SourceFile) -> None:
+        self._load_use_decls(source.uses)
         for item in source.items:
             if isinstance(item, FunctionDecl):
                 self.functions[item.sig.name] = FunctionInfo(
                     generics=item.sig.generics,
-                    params=[parse_type(param.type_name) for param in item.sig.params],
-                    return_type=parse_type(item.sig.return_type or "()"),
+                    params=[self._normalize_type(parse_type(param.type_name)) for param in item.sig.params],
+                    return_type=self._normalize_type(parse_type(item.sig.return_type or "()")),
                 )
             elif isinstance(item, EnumDecl):
                 info = EnumInfo(
                     generics=item.generics,
-                    variants={variant.name: parse_type(variant.payload) if variant.payload else None for variant in item.variants},
+                    variants={
+                        variant.name: self._normalize_type(parse_type(variant.payload)) if variant.payload else None
+                        for variant in item.variants
+                    },
                 )
                 self.enums[item.name] = info
                 for variant in item.variants:
                     self.variant_to_enum[variant.name] = item.name
             elif isinstance(item, StructDecl):
                 self.structs[item.name] = StructInfo(
-                    fields={field.name: parse_type(field.type_name) for field in item.fields}
+                    fields={field.name: self._normalize_type(parse_type(field.type_name)) for field in item.fields}
                 )
             elif isinstance(item, TraitDecl):
                 self.traits.add(item.name)
@@ -174,10 +185,10 @@ class Checker:
                     method.name: TraitMethodInfo(
                         owner=item.name,
                         generics=method.generics,
-                        params=[parse_type(param.type_name) for param in method.params],
-                        return_type=parse_type(method.return_type or "()"),
-                        has_receiver=bool(method.params and method.params[0].name.endswith("self")),
-                        receiver_mode=self._receiver_mode(method.params[0].name if method.params else ""),
+                        params=[self._normalize_type(parse_type(param.type_name)) for param in method.params],
+                        return_type=self._normalize_type(parse_type(method.return_type or "()")),
+                        has_receiver=bool(method.params and method.params[0].name == "self"),
+                        receiver_mode=self._receiver_mode(method.params[0] if method.params else None),
                     )
                     for method in item.methods
                 }
@@ -186,10 +197,10 @@ class Checker:
                     method.sig.name: TraitMethodInfo(
                         owner=item.target,
                         generics=method.sig.generics,
-                        params=[parse_type(param.type_name) for param in method.sig.params],
-                        return_type=parse_type(method.sig.return_type or "()"),
-                        has_receiver=bool(method.sig.params and method.sig.params[0].name.endswith("self")),
-                        receiver_mode=self._receiver_mode(method.sig.params[0].name if method.sig.params else ""),
+                        params=[self._normalize_type(parse_type(param.type_name)) for param in method.sig.params],
+                        return_type=self._normalize_type(parse_type(method.sig.return_type or "()")),
+                        has_receiver=bool(method.sig.params and method.sig.params[0].name == "self"),
+                        receiver_mode=self._receiver_mode(method.sig.params[0] if method.sig.params else None),
                     )
                     for method in item.methods
                 }
@@ -206,54 +217,62 @@ class Checker:
     def _check_function(self, item: FunctionDecl) -> None:
         scope: Dict[str, VarState] = {}
         self._current_type_env = {}
+        previous_return = self._current_return_type
+        self._current_return_type = self._normalize_type(parse_type(item.sig.return_type or "()"))
         for param in item.sig.params:
-            ty = parse_type(param.type_name)
+            ty = self._normalize_type(parse_type(param.type_name))
             scope[param.name] = VarState(ty)
             self._current_type_env[param.name] = ty
         initial_scope = self._clone_scope(scope)
-        self._check_block(item.body, scope, parse_type(item.sig.return_type or "()"))
+        self._check_block(item.body, scope, self._current_return_type)
         cfg_diags = analyze_block(item.body, initial_scope, make_plan(self._current_type_env))
         for diag in cfg_diags:
             self._error(diag.message)
+        self._current_return_type = previous_return
 
     def _check_block(self, block: BlockExpr, scope: Dict[str, VarState], expected_return: Type) -> Type:
         local_scope = self._clone_scope(scope)
+        terminated = False
         for stmt in block.statements:
-            self._check_stmt(stmt, local_scope, expected_return)
-        final_type = self._infer_expr(block.final_expr, local_scope) if block.final_expr is not None else UNIT
+            if self._check_stmt(stmt, local_scope, expected_return):
+                terminated = True
+                break
+        final_type = NEVER if terminated and block.final_expr is None else (
+            self._infer_expr_with_hint(block.final_expr, local_scope, expected_return) if block.final_expr is not None else UNIT
+        )
         if not self._type_eq(expected_return, UNIT) and block.final_expr is not None and not self._type_eq(expected_return, final_type):
             self._error(f"block expected {dump_type(expected_return)}, got {dump_type(final_type)}")
         self._merge_back(scope, local_scope)
         return final_type
 
-    def _check_stmt(self, stmt, scope: Dict[str, VarState], expected_return: Type) -> None:
+    def _check_stmt(self, stmt, scope: Dict[str, VarState], expected_return: Type) -> bool:
         if isinstance(stmt, LetStmt):
             value_type = self._infer_expr(stmt.value, scope)
-            declared = parse_type(stmt.type_name) if stmt.type_name else None
+            declared = self._normalize_type(parse_type(stmt.type_name)) if stmt.type_name else None
             if declared and not self._type_eq(declared, value_type):
                 self._error(f"let {stmt.name} expected {dump_type(declared)}, got {dump_type(value_type)}")
             resolved = declared or value_type
             scope[stmt.name] = VarState(resolved)
             self._current_type_env[stmt.name] = resolved
-            return
+            return False
         if isinstance(stmt, AssignStmt):
             state = scope.get(stmt.name)
             if state is None:
                 self._error(f"unresolved name {stmt.name}")
                 self._infer_expr(stmt.value, scope)
-                return
+                return False
             value_type = self._infer_expr(stmt.value, scope)
             if not self._type_eq(state.ty, value_type):
                 self._error(f"assign {stmt.name} expected {dump_type(state.ty)}, got {dump_type(value_type)}")
-            return
+            return False
         if isinstance(stmt, IncrementStmt):
             state = scope.get(stmt.name)
             if state is None:
                 self._error(f"unresolved name {stmt.name}")
-                return
+                return False
             if not self._type_eq(state.ty, I32):
                 self._error(f"increment {stmt.name} expected i32, got {dump_type(state.ty)}")
-            return
+            return False
         if isinstance(stmt, CForStmt):
             loop_scope = self._clone_scope(scope)
             self._check_stmt(stmt.init, loop_scope, expected_return)
@@ -264,16 +283,20 @@ class Checker:
             self._check_block(stmt.body, body_scope, UNIT)
             self._check_stmt(stmt.step, body_scope, expected_return)
             self._merge_back(scope, body_scope)
-            return
+            return False
         if isinstance(stmt, ReturnStmt):
-            actual = self._infer_expr(stmt.value, scope) if stmt.value is not None else UNIT
-            if not self._type_eq(expected_return, actual):
-                self._error(f"return expected {dump_type(expected_return)}, got {dump_type(actual)}")
-            return
+            actual = self._infer_expr_with_hint(stmt.value, scope, self._current_return_type) if stmt.value is not None else UNIT
+            if not self._type_eq(self._current_return_type, actual):
+                self._error(f"return expected {dump_type(self._current_return_type)}, got {dump_type(actual)}")
+            return True
         if isinstance(stmt, ExprStmt):
-            self._infer_expr(stmt.expr, scope)
+            return self._is_never(self._infer_expr(stmt.expr, scope))
+        return False
 
     def _infer_expr(self, expr: Optional[Expr], scope: Dict[str, VarState]) -> Type:
+        return self._infer_expr_with_hint(expr, scope, None)
+
+    def _infer_expr_with_hint(self, expr: Optional[Expr], scope: Dict[str, VarState], expected_type: Optional[Type]) -> Type:
         if expr is None:
             return UNIT
         if isinstance(expr, IntExpr):
@@ -289,7 +312,12 @@ class Checker:
             state = scope.get(expr.name)
             if state is None:
                 if expr.name in self.variant_to_enum:
-                    ty = NamedType(expr.name)
+                    ty = self._infer_unit_variant_name(expr.name, expected_type)
+                    expr.inferred_type = dump_type(ty)
+                    return ty
+                imported = self.imported_functions.get(expr.name)
+                if imported is not None:
+                    ty = FunctionType(imported.params, imported.return_type)
                     expr.inferred_type = dump_type(ty)
                     return ty
                 self._error(f"unresolved name {expr.name}")
@@ -344,6 +372,14 @@ class Checker:
             expr.inferred_type = dump_type(result)
             return result
         if isinstance(expr, CallExpr):
+            variant_result = self._infer_variant_constructor_call(expr, scope, expected_type)
+            if variant_result is not None:
+                expr.inferred_type = dump_type(variant_result)
+                return variant_result
+            constructed = self._infer_type_constructor_call(expr.callee, expr.args)
+            if constructed is not None:
+                expr.inferred_type = dump_type(constructed)
+                return constructed
             if isinstance(expr.callee, MemberExpr):
                 method_info = self._resolve_method_call(expr.callee, expr.args, scope)
                 if method_info is not None:
@@ -360,6 +396,14 @@ class Checker:
             if isinstance(expr.callee, NameExpr) and expr.callee.name in self.builtin_functions:
                 return self._check_callable(
                     self.builtin_functions[expr.callee.name],
+                    expr.args,
+                    scope,
+                    expr.callee.name,
+                    expr,
+                )
+            if isinstance(expr.callee, NameExpr) and expr.callee.name in self.imported_functions:
+                return self._check_callable(
+                    self.imported_functions[expr.callee.name],
                     expr.args,
                     scope,
                     expr.callee.name,
@@ -387,6 +431,12 @@ class Checker:
             if expr.else_branch is None:
                 expr.inferred_type = dump_type(UNIT)
                 return UNIT
+            if self._is_never(then_type):
+                expr.inferred_type = dump_type(else_type)
+                return else_type
+            if self._is_never(else_type):
+                expr.inferred_type = dump_type(then_type)
+                return then_type
             if not self._type_eq(then_type, else_type):
                 self._error(f"if branch type mismatch: {dump_type(then_type)} vs {dump_type(else_type)}")
                 return UnknownType()
@@ -420,7 +470,9 @@ class Checker:
                 self._bind_pattern(arm.pattern, subject_type, arm_scope)
                 current = self._infer_expr(arm.expr, arm_scope)
                 arm_scopes.append(arm_scope)
-                if arm_type is None:
+                if self._is_never(current):
+                    continue
+                if arm_type is None or self._is_never(arm_type):
                     arm_type = current
                 elif not self._type_eq(arm_type, current):
                     self._error(f"match arm type mismatch: {dump_type(arm_type)} vs {dump_type(current)}")
@@ -435,6 +487,74 @@ class Checker:
         self._error(f"unhandled expr {type(expr).__name__}")
         return UnknownType()
 
+    def _infer_variant_constructor_call(
+        self,
+        expr: CallExpr,
+        scope: Dict[str, VarState],
+        expected_type: Optional[Type],
+    ) -> Optional[Type]:
+        if not isinstance(expr.callee, NameExpr):
+            return None
+        variant_name = self._variant_name(expr.callee.name)
+        enum_name = self.variant_to_enum.get(variant_name)
+        if enum_name is None:
+            return None
+        expected_type = self._normalize_type(expected_type) if expected_type is not None else None
+        if not isinstance(expected_type, NamedType) or expected_type.name != enum_name:
+            for arg in expr.args:
+                self._infer_expr(arg, scope)
+            return UnknownType()
+        payload_type = self._resolve_variant_payload_type(variant_name, expected_type)
+        if payload_type is None:
+            if expr.args:
+                self._error(f"variant {variant_name} does not take payload")
+            return expected_type
+        if len(expr.args) != 1:
+            self._error(f"variant {variant_name} expects 1 payload")
+            return expected_type
+        actual_payload = self._infer_expr(expr.args[0], scope)
+        if not self._type_eq(payload_type, actual_payload):
+            self._error(f"call {variant_name} expected {dump_type(payload_type)}, got {dump_type(actual_payload)}")
+        return expected_type
+
+    def _infer_unit_variant_name(self, name: str, expected_type: Optional[Type]) -> Type:
+        variant_name = self._variant_name(name)
+        enum_name = self.variant_to_enum.get(variant_name)
+        normalized_expected = self._normalize_type(expected_type) if expected_type is not None else None
+        if isinstance(normalized_expected, NamedType) and normalized_expected.name == enum_name:
+            payload_type = self._resolve_variant_payload_type(variant_name, normalized_expected)
+            if payload_type is None:
+                return normalized_expected
+        return NamedType(name)
+
+    def _infer_type_constructor_call(self, callee: Expr, args: List[Expr]) -> Optional[Type]:
+        if args:
+            return None
+        if isinstance(callee, IndexExpr) and isinstance(callee.target, NameExpr):
+            base = self.type_aliases.get(callee.target.name, callee.target.name)
+            if base == "Vec":
+                element = self._type_from_expr(callee.index)
+                if element is not None:
+                    return NamedType("Vec", [element])
+        if isinstance(callee, NameExpr):
+            base = self.type_aliases.get(callee.name, callee.name)
+            if base == "Vec":
+                return NamedType("Vec")
+        return None
+
+    def _is_never(self, ty: Type) -> bool:
+        return isinstance(self._normalize_type(ty), type(NEVER))
+
+    def _type_from_expr(self, expr: Expr) -> Optional[Type]:
+        if isinstance(expr, NameExpr):
+            return self._normalize_type(parse_type(expr.name))
+        if isinstance(expr, IndexExpr) and isinstance(expr.target, NameExpr):
+            base = self.type_aliases.get(expr.target.name, expr.target.name)
+            inner = self._type_from_expr(expr.index)
+            if inner is not None:
+                return NamedType(base, [inner])
+        return None
+
     def _bind_pattern(self, pattern: Pattern, subject_type: Type, scope: Dict[str, VarState]) -> None:
         if isinstance(pattern, WildcardPattern):
             return
@@ -442,8 +562,9 @@ class Checker:
             scope[pattern.name] = VarState(subject_type)
             return
         if isinstance(pattern, VariantPattern):
-            expected_payload = self._resolve_variant_payload_type(pattern.path, subject_type)
-            if pattern.path not in self.variant_to_enum:
+            variant_name = self._variant_name(pattern.path)
+            expected_payload = self._resolve_variant_payload_type(variant_name, subject_type)
+            if variant_name not in self.variant_to_enum:
                 self._error(f"unknown match variant {pattern.path}")
             if expected_payload is None and pattern.args:
                 self._error(f"variant {pattern.path} does not take payload")
@@ -453,6 +574,7 @@ class Checker:
                 self._bind_pattern(arg, expected_payload or UnknownType(), scope)
 
     def _resolve_variant_payload_type(self, variant_name: str, subject_type: Type) -> Optional[Type]:
+        subject_type = self._normalize_type(subject_type)
         enum_name = self.variant_to_enum.get(variant_name)
         if enum_name is None:
             return None
@@ -468,6 +590,15 @@ class Checker:
         return payload
 
     def _infer_binary(self, op: str, left: Type, right: Type) -> Type:
+        left = self._normalize_type(left)
+        right = self._normalize_type(right)
+        if op == "+":
+            if self._type_eq(left, I32) and self._type_eq(right, I32):
+                return I32
+            if self._type_eq(left, STRING) and self._type_eq(right, STRING):
+                return STRING
+            self._error(f"operator + expects matching i32/String operands, got {dump_type(left)} and {dump_type(right)}")
+            return UnknownType()
         if op in {"+", "-", "*", "/", "%"}:
             if self._type_eq(left, I32) and self._type_eq(right, I32):
                 return I32
@@ -487,7 +618,7 @@ class Checker:
         return UnknownType()
 
     def _type_eq(self, left: Type, right: Type) -> bool:
-        return dump_type(left) == dump_type(right)
+        return dump_type(self._normalize_type(left)) == dump_type(self._normalize_type(right))
 
     def _unify_types(self, expected: Type, actual: Type, subst: Dict[str, Type]) -> bool:
         if isinstance(expected, NamedType) and not expected.args and expected.name.isupper():
@@ -671,6 +802,9 @@ class Checker:
             if state is None:
                 if expr.name in self.variant_to_enum:
                     return NamedType(expr.name)
+                imported = self.imported_functions.get(expr.name)
+                if imported is not None:
+                    return FunctionType(imported.params, imported.return_type)
                 self._error(f"unresolved name {expr.name}")
                 return UnknownType()
             if state.moved:
@@ -678,13 +812,108 @@ class Checker:
             return state.ty
         return self._infer_expr(expr, scope)
 
-    def _receiver_mode(self, name: str) -> str:
-        if name == "&mut self":
-            return "mut_ref"
-        if name == "&self":
-            return "ref"
-        if name == "self":
+    def _load_stdlib_primitives(self) -> None:
+        self.enums["Option"] = EnumInfo(generics=["T"], variants={"Some": NamedType("T"), "None": None})
+        self.enums["Result"] = EnumInfo(
+            generics=["T", "E"],
+            variants={"Ok": NamedType("T"), "Err": NamedType("E")},
+        )
+        self.variant_to_enum.update(
+            {
+                "Some": "Option",
+                "None": "Option",
+                "Ok": "Result",
+                "Err": "Result",
+            }
+        )
+        self.structs.setdefault("FsError", StructInfo(fields={"message": STRING}))
+        self.structs.setdefault("ProcessError", StructInfo(fields={"message": STRING}))
+
+    def _load_use_decls(self, uses: List[UseDecl]) -> None:
+        for use in uses:
+            local_name = use.alias or use.path.split(".")[-1]
+            canonical_name = use.path.split(".")[-1]
+            self.type_aliases[local_name] = canonical_name
+            imported = self._builtin_for_use(use.path, local_name)
+            if imported is not None:
+                self.imported_functions[local_name] = imported
+
+    def _builtin_for_use(self, path: str, local_name: str) -> Optional[TraitMethodInfo]:
+        std_functions = {
+            "std.env.Args": TraitMethodInfo(owner="std.env", generics=[], params=[], return_type=parse_type("Vec[String]")),
+            "std.fs.ReadToString": TraitMethodInfo(
+                owner="std.fs",
+                generics=[],
+                params=[STRING],
+                return_type=parse_type("Result[String, FsError]"),
+            ),
+            "std.fs.WriteTextFile": TraitMethodInfo(
+                owner="std.fs",
+                generics=[],
+                params=[STRING, STRING],
+                return_type=parse_type("Result[(), FsError]"),
+            ),
+            "std.fs.MakeTempDir": TraitMethodInfo(
+                owner="std.fs",
+                generics=[],
+                params=[STRING],
+                return_type=parse_type("Result[String, FsError]"),
+            ),
+            "std.io.println": TraitMethodInfo(owner="std.io", generics=["T"], params=[NamedType("T")], return_type=UNIT),
+            "std.io.eprintln": TraitMethodInfo(owner="std.io", generics=["T"], params=[NamedType("T")], return_type=UNIT),
+            "std.prelude.len": TraitMethodInfo(owner="std.prelude", generics=["T"], params=[NamedType("T")], return_type=I32),
+            "std.prelude.to_string": TraitMethodInfo(owner="std.prelude", generics=[], params=[I32], return_type=STRING),
+            "std.prelude.char_at": TraitMethodInfo(owner="std.prelude", generics=[], params=[STRING, I32], return_type=STRING),
+            "std.prelude.slice": TraitMethodInfo(owner="std.prelude", generics=[], params=[STRING, I32, I32], return_type=STRING),
+            "std.process.Exit": TraitMethodInfo(owner="std.process", generics=[], params=[I32], return_type=UNIT),
+            "std.process.RunProcess": TraitMethodInfo(
+                owner="std.process",
+                generics=[],
+                params=[parse_type("Vec[String]")],
+                return_type=parse_type("Result[(), ProcessError]"),
+            ),
+        }
+        builtin = std_functions.get(path)
+        if builtin is None:
+            return None
+        return TraitMethodInfo(
+            owner=builtin.owner,
+            generics=builtin.generics,
+            params=[self._normalize_type(param) for param in builtin.params],
+            return_type=self._normalize_type(builtin.return_type),
+            has_receiver=builtin.has_receiver,
+            receiver_mode=builtin.receiver_mode,
+        )
+
+    def _normalize_type(self, ty: Type) -> Type:
+        if isinstance(ty, NamedType):
+            name = self.type_aliases.get(ty.name, ty.name)
+            return NamedType(name, [self._normalize_type(arg) for arg in ty.args])
+        if isinstance(ty, ReferenceType):
+            return ReferenceType(self._normalize_type(ty.inner), mutable=ty.mutable)
+        if isinstance(ty, SliceType):
+            return SliceType(self._normalize_type(ty.inner))
+        if isinstance(ty, FunctionType):
+            return FunctionType(
+                [self._normalize_type(param) for param in ty.params],
+                self._normalize_type(ty.return_type or UNIT),
+            )
+        return ty
+
+    def _variant_name(self, path: str) -> str:
+        if "::" in path:
+            return path.split("::")[-1]
+        if "." in path:
+            return path.split(".")[-1]
+        return path
+
+    def _receiver_mode(self, param: Optional[Param]) -> str:
+        if param is None or param.name != "self":
             return "value"
+        if param.type_name.startswith("&mut "):
+            return "mut_ref"
+        if param.type_name.startswith("&"):
+            return "ref"
         return "value"
 
     def _validate_receiver(self, method: TraitMethodInfo, receiver_type: Type, receiver_expr: Expr, method_name: str) -> None:
