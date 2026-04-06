@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="/app/s"
+SRC_ROOT="$ROOT/src"
+
+cd "$SRC_ROOT"
+exec python3 -m compiler "$@"
