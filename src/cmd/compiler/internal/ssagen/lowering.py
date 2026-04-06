@@ -17,7 +17,11 @@ class LoweredInstruction:
     value_type: str
     target_reg: str
     value: str = ""
+    source_reg: str = ""
     symbol: str = ""
+    target_label: str = ""
+    false_label: str = ""
+    builtin: str = ""
 
 
 @dataclass(frozen=True)
@@ -38,19 +42,25 @@ def lower_program(mir: MIRProgram, arch_name: str) -> LoweredProgram:
         data.append(LoweredData(label=label, text=write.text))
         instructions.extend(
             [
-                LoweredInstruction(op="load_syscall_nr", value_type="syscall_no", target_reg="rax", value="1"),
-                LoweredInstruction(op="load_fd", value_type="fd", target_reg="rdi", value=str(write.fd)),
-                LoweredInstruction(op="load_addr", value_type="ptr", target_reg="rsi", symbol=label),
-                LoweredInstruction(op="load_len", value_type="size", target_reg="rdx", value=str(encoded_len)),
-                LoweredInstruction(op="syscall", value_type="unit", target_reg=""),
+                LoweredInstruction(op="load_const", value_type="i64", target_reg="r8", value="1"),
+                LoweredInstruction(op="copy_reg", value_type="i64", target_reg="rax", source_reg="r8"),
+                LoweredInstruction(op="load_const", value_type="i64", target_reg="r9", value=str(write.fd)),
+                LoweredInstruction(op="copy_reg", value_type="i64", target_reg="rdi", source_reg="r9"),
+                LoweredInstruction(op="load_addr", value_type="ptr", target_reg="r10", symbol=label),
+                LoweredInstruction(op="copy_reg", value_type="ptr", target_reg="rsi", source_reg="r10"),
+                LoweredInstruction(op="load_const", value_type="i64", target_reg="r11", value=str(encoded_len)),
+                LoweredInstruction(op="copy_reg", value_type="i64", target_reg="rdx", source_reg="r11"),
+                LoweredInstruction(op="call_builtin", value_type="unit", target_reg="", builtin="syscall_write"),
             ]
         )
 
     instructions.extend(
         [
-            LoweredInstruction(op="load_syscall_nr", value_type="syscall_no", target_reg="rax", value="60"),
-            LoweredInstruction(op="load_exit_code", value_type="exit_code", target_reg="rdi", value=str(mir.exit_code)),
-            LoweredInstruction(op="syscall", value_type="unit", target_reg=""),
+            LoweredInstruction(op="load_const", value_type="i64", target_reg="r8", value="60"),
+            LoweredInstruction(op="copy_reg", value_type="i64", target_reg="rax", source_reg="r8"),
+            LoweredInstruction(op="load_const", value_type="i64", target_reg="r9", value=str(mir.exit_code)),
+            LoweredInstruction(op="copy_reg", value_type="i64", target_reg="rdi", source_reg="r9"),
+            LoweredInstruction(op="call_builtin", value_type="unit", target_reg="", builtin="syscall_exit"),
         ]
     )
 
