@@ -304,7 +304,7 @@ static result_t build_self_hosted_runner(const char *output_path) {
         "cc",
         "-O2",
         "-std=c11",
-        "/app/s/runtime/runner_native_template.c",
+        "/app/s/compiler/backend_elf64_runner_bootstrap.c",
         "-o",
         (char *)output_path,
         NULL,
