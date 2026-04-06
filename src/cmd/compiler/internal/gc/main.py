@@ -1,35 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
+import argparse
 import sys
 
-from compiler.ast import SourceFile, dump_source_file
-from compiler.backend_elf64 import BackendError, build_executable
-from compiler.interpreter import Interpreter, InterpreterError
-from compiler.lexer import Lexer, dump_tokens
-from compiler.parser import ParseError, parse_source
-from compiler.semantic import check_source
+from compiler.ast import SourceFile
+from compiler.internal.amd64 import Init as amd64_init
+from compiler.internal.base import ArchInfo, CliError, detect_host_arch, parse_command, resolve_output_path
+from compiler.internal.gc.interpreter import Interpreter, InterpreterError
+from compiler.internal.ssagen import BackendError
+from compiler.internal.syntax import parse_checked_source, read_source
 
-BUILD_OUTPUT_ROOT = Path("/app/tmp")
-
-
-@dataclass(frozen=True)
-class CliError(Exception):
-    message: str
-
-    def __str__(self) -> str:
-        return self.message
-
-
-@dataclass(frozen=True)
-class CheckOptions:
-    command: str
-    path: str
-    output: str = ""
-    dump_tokens: bool = False
-    dump_ast: bool = False
-    run_args: tuple[str, ...] = ()
+ARCH_INITS = {
+    "amd64": amd64_init,
+}
 
 
 def run_cli(argv: list[str]) -> int:
@@ -52,78 +35,11 @@ def run_cli(argv: list[str]) -> int:
         return 1
 
 
-def parse_command(argv: list[str]) -> CheckOptions:
-    if len(argv) < 2:
-        raise _usage_error()
-    command = argv[0]
-    if command not in {"check", "build", "run"}:
-        raise _usage_error()
-    if len(argv) < 2:
-        raise _usage_error()
-
-    if command == "build":
-        if len(argv) < 4:
-            raise _usage_error()
-        if argv[2] != "-o":
-            raise CliError("expected -o before output path")
-        return CheckOptions(command=command, path=argv[1], output=str(resolve_output_path(argv[3])))
-    if command == "run":
-        return CheckOptions(command=command, path=argv[1], run_args=tuple(argv[2:]))
-
-    options = CheckOptions(command=command, path=argv[1])
-    index = 2
-    dump_tokens_flag = False
-    dump_ast_flag = False
-    while index < len(argv):
-        flag = argv[index]
-        if flag == "--dump-tokens":
-            dump_tokens_flag = True
-        elif flag == "--dump-ast":
-            dump_ast_flag = True
-        else:
-            raise CliError(f"unknown flag: {flag}")
-        index += 1
-    return CheckOptions(
-        command=options.command,
-        path=options.path,
-        output=options.output,
-        dump_tokens=dump_tokens_flag,
-        dump_ast=dump_ast_flag,
-    )
-
-
-def read_source(path: str) -> str:
-    source_path = Path(path)
-    try:
-        return source_path.read_text()
-    except OSError as exc:
-        raise CliError(f"failed to read source file: {path}") from exc
-
-
-def parse_checked_source(command: CheckOptions, source: str) -> SourceFile:
-    if command.dump_tokens:
-        print(dump_tokens(Lexer(source).tokenize()))
-
-    try:
-        parsed = parse_source(source)
-    except ParseError as exc:
-        raise CliError(f"parse error: {exc}") from exc
-
-    if command.dump_ast:
-        print(dump_source_file(parsed))
-
-    result = check_source(parsed)
-    if not result.ok:
-        for diagnostic in result.diagnostics:
-            print(f"error: {diagnostic.message}", file=sys.stderr)
-        raise CliError("semantic check failed")
-
-    return parsed
-
-
 def emit_binary(parsed: SourceFile, output_path: str) -> None:
+    arch = _init_arch()
     try:
-        build_executable(parsed, resolve_output_path(output_path))
+        assert arch.emitter is not None
+        arch.emitter(parsed, resolve_output_path(output_path))
     except BackendError as exc:
         raise CliError(f"backend error: {exc}") from exc
 
@@ -137,16 +53,44 @@ def run_source(parsed: SourceFile, run_args: tuple[str, ...]) -> int:
         raise CliError(f"runtime error: {exc}") from exc
 
 
-def resolve_output_path(output_path: str) -> Path:
-    target = Path(output_path)
-    if not target.is_absolute():
-        target = BUILD_OUTPUT_ROOT / target.name
-    target.parent.mkdir(parents=True, exist_ok=True)
-    return target.resolve()
+def Main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="s")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    check_cmd = sub.add_parser("check", help="parse and type-check an S source file")
+    check_cmd.add_argument("path")
+    check_cmd.add_argument("--dump-tokens", action="store_true")
+    check_cmd.add_argument("--dump-ast", action="store_true")
+
+    build_cmd = sub.add_parser("build", help="build a minimal S source file into a native binary")
+    build_cmd.add_argument("path")
+    build_cmd.add_argument("-o", "--output", required=True)
+
+    run_cmd = sub.add_parser("run", help="interpret a minimal S source file")
+    run_cmd.add_argument("path")
+    run_cmd.add_argument("program_args", nargs="*", metavar="arg")
+
+    args = parser.parse_args(argv)
+    if args.command == "check":
+        cmd = [args.command, args.path]
+        if args.dump_tokens:
+            cmd.append("--dump-tokens")
+        if args.dump_ast:
+            cmd.append("--dump-ast")
+        return run_cli(cmd)
+    if args.command == "build":
+        return run_cli([args.command, args.path, "-o", args.output])
+    if args.command == "run":
+        return run_cli([args.command, args.path, *args.program_args])
+    parser.error("unknown command")
+    return 2
 
 
-def _usage_error() -> CliError:
-    return CliError(
-        "usage: s check <path> [--dump-tokens] [--dump-ast] | "
-        "s build <path> -o <output> | s run <path> [args...]"
-    )
+def _init_arch() -> ArchInfo:
+    arch_name = detect_host_arch()
+    arch_init = ARCH_INITS.get(arch_name)
+    if arch_init is None:
+        raise CliError(f"unsupported architecture: {arch_name}")
+    info = ArchInfo(name=arch_name)
+    arch_init(info)
+    return info
