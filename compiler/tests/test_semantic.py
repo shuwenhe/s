@@ -259,6 +259,9 @@ func main() -> int {
     def test_hosted_build_s_native_runner_binary_output(self) -> None:
         code = run_cli(["build", "/app/s/runtime/s_native_runner.s", "-o", "/tmp/s_native_hosted"])
         self.assertEqual(code, 0)
+        launcher = Path("/tmp/s_native_hosted").read_text()
+        self.assertIn("Interpreter", launcher)
+        self.assertIn("/app/s/runtime/s_native_runner.s", launcher)
 
         rebuild = subprocess.run(
             ["/tmp/s_native_hosted", "build", "/app/s/runtime/s_native_runner.s", "-o", "/tmp/s_native_self_hosted"],
@@ -339,7 +342,7 @@ func main() -> int {
                 "package demo.literal\n\nuse std.io.println\n\nfunc main() -> int {\n    println(42);\n    0\n}\n"
             ],
         )
-        self.assertEqual(result, ("Some", "42\\n"))
+        self.assertEqual(result, ("Some", "42\n"))
 
     def test_s_native_runner_encodes_extended_ascii(self) -> None:
         runner = Interpreter(parse_source(Path("/app/s/runtime/s_native_runner.s").read_text()))
