@@ -353,6 +353,10 @@ impl Parser {
                 statements.push(Stmt::Expr(ExprStmt { expr: expr }))
                 continue
             }
+            if !self.at_symbol("}") {
+                statements.push(Stmt::Expr(ExprStmt { expr: expr }))
+                continue
+            }
             final_expr = Option::Some(expr)
             break
         }
