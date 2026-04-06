@@ -202,8 +202,8 @@ python3 /app/s/src/runtime/validate_outputs.py all
 
 编译器后端当前也已经切到 std-layer host boundary：
 
-- [main.s](/app/s/src/cmd/compile/main.s) 通过 `std.fs.ReadToString`
-- [backend_elf64.s](/app/s/src/cmd/compile/backend_elf64.s) 通过
+- [main.s](/app/s/src/cmd/compiler/main.s) 通过 `std.fs.ReadToString`
+- [backend_elf64.s](/app/s/src/cmd/compiler/backend_elf64.s) 通过
   `std.fs.WriteTextFile` / `std.fs.MakeTempDir` / `std.process.RunProcess`
 
 命令入口 ABI 也已经有了 S 侧包装：
