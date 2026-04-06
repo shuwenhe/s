@@ -38,13 +38,21 @@ def lower_program(mir: MIRProgram, arch_name: str) -> LoweredProgram:
         data.append(LoweredData(label=label, text=write.text))
         instructions.extend(
             [
-                LoweredInstruction(op="mov_imm", value_type="i64", target_reg="rax", value="1"),
-                LoweredInstruction(op="mov_imm", value_type="i64", target_reg="rdi", value=str(write.fd)),
-                LoweredInstruction(op="lea_symbol", value_type="ptr", target_reg="rsi", symbol=label),
-                LoweredInstruction(op="mov_imm", value_type="i64", target_reg="rdx", value=str(encoded_len)),
+                LoweredInstruction(op="load_syscall_nr", value_type="syscall_no", target_reg="rax", value="1"),
+                LoweredInstruction(op="load_fd", value_type="fd", target_reg="rdi", value=str(write.fd)),
+                LoweredInstruction(op="load_addr", value_type="ptr", target_reg="rsi", symbol=label),
+                LoweredInstruction(op="load_len", value_type="size", target_reg="rdx", value=str(encoded_len)),
                 LoweredInstruction(op="syscall", value_type="unit", target_reg=""),
             ]
         )
+
+    instructions.extend(
+        [
+            LoweredInstruction(op="load_syscall_nr", value_type="syscall_no", target_reg="rax", value="60"),
+            LoweredInstruction(op="load_exit_code", value_type="exit_code", target_reg="rdi", value=str(mir.exit_code)),
+            LoweredInstruction(op="syscall", value_type="unit", target_reg=""),
+        ]
+    )
 
     return LoweredProgram(
         entry_symbol=_entry_symbol(arch_name),
