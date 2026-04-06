@@ -132,7 +132,7 @@ def _handle_bootstrap_build(command: CheckOptions) -> bool:
     if command.command != "build":
         return False
     source_path = Path(command.path).resolve()
-    native_runner = Path("/app/s/runtime/s_native_runner.s").resolve()
+    native_runner = Path("/app/s/runtime/runner.s").resolve()
     if source_path != native_runner:
         return False
     _build_native_runner_bootstrap(Path(command.output).resolve())
