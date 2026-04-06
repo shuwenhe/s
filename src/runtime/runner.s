@@ -80,7 +80,7 @@ func isSelfHostSource(String source) -> bool {
 
 func buildSelfHostedRunner(String outputPath) -> Result[int, String] {
     var templateText =
-        match ReadToString("/app/s/src/cmd/compile/backend_elf64_runner_bootstrap.c") {
+        match ReadToString("/app/s/src/cmd/compiler/backend_elf64_runner_bootstrap.c") {
             Ok(text) => text,
             Err(err) => {
                 return Err("failed to read native runner template: " + err.message)
