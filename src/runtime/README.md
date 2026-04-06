@@ -22,10 +22,12 @@ For the current MVP there are now two runtime tracks:
 - Python-hosted execution for the broader self-hosting workflow
 - a bootstrap-native runner path where `misc/scripts/build_native_runner.sh` builds a real native executable for `runner.s`
 - a stable project-local launcher target at `/app/s/bin/s-selfhosted` for native command launchers
+- a stable project-local native runner at `/app/s/bin/s-native`
 
-Right now `/app/s/bin/s-selfhosted` is still a bootstrap launcher, not a fully self-hosted
-compiler binary. Native command launchers prefer that path first so the final cutover can
-happen at one stable location later.
+`/app/s/bin/s-selfhosted` now dispatches directly to `/app/s/bin/s-native` for `check`,
+`build`, and `run`, so that binary path no longer depends on the Python launcher at runtime.
+The remaining limitation is compiler capability: the native runner still implements the current
+MVP source-shape subset rather than the full hosted compiler.
 
 This bridge is intentionally transitional. The long-term goal is to replace it with a real S runtime or a lower-level execution backend.
 
