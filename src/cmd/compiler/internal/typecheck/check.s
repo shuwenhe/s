@@ -149,11 +149,6 @@ func checkFunction(
                     "function " + item.sig.name + " expected " + DumpType(expected) + ", got " + DumpType(actual),
                 )
             }
-
-            var borrow_diags = AnalyzeBlock(body, scope)
-            for diag in borrow_diags {
-                pushError(diagnostics, diag.message)
-            }
         }
         Option::None => (),
     }
