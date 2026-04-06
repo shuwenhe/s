@@ -54,6 +54,9 @@ func buildSource(String path, String outputPath) -> Result[int, String] {
     if isSelfHostSource(source) {
         return buildSelfHostedRunner(outputPath)
     }
+    if isCompilerCommandSource(source) {
+        return buildCompilerCommandLauncher(outputPath)
+    }
 
     var message =
         match compileMessageForSource(source) {
@@ -76,6 +79,16 @@ func buildSource(String path, String outputPath) -> Result[int, String] {
 
 func isSelfHostSource(String source) -> bool {
     return containsText(source, "package runtime.runner")
+}
+
+func isCompilerCommandSource(String source) -> bool {
+    if containsText(source, "package cmd") && containsText(source, "use compiler.main as compilerMain") {
+        return true
+    }
+    if containsText(source, "package compiler.internal.gc") && containsText(source, "func Main(") {
+        return true
+    }
+    return false
 }
 
 func buildSelfHostedRunner(String outputPath) -> Result[int, String] {
@@ -108,6 +121,45 @@ func buildSelfHostedRunner(String outputPath) -> Result[int, String] {
     ccArgv.push("-o");
     ccArgv.push(outputPath);
     match runTool(ccArgv, "native runner bootstrap failed") {
+        Ok(_) => 0,
+        Err(err) => {
+            return Err(err)
+        },
+    }
+    println("built: " + outputPath);
+    return Ok(0)
+}
+
+func buildCompilerCommandLauncher(String outputPath) -> Result[int, String] {
+    var templateText =
+        match ReadToString("/app/s/src/runtime/s_command_bootstrap.c") {
+            Ok(text) => text,
+            Err(err) => {
+                return Err("failed to read command launcher template: " + err.message)
+            }
+        }
+    var tempDir =
+        match MakeTempDir("s-command-") {
+            Ok(path) => path,
+            Err(err) => {
+                return Err(err.message)
+            }
+        }
+    var cPath = tempDir + "/s_command.c"
+    match WriteTextFile(cPath, templateText) {
+        Ok(_) => 0,
+        Err(err) => {
+            return Err("failed to write command launcher template: " + err.message)
+        },
+    }
+    var ccArgv = Vec[String]()
+    ccArgv.push("cc");
+    ccArgv.push("-O2");
+    ccArgv.push("-std=c11");
+    ccArgv.push(cPath);
+    ccArgv.push("-o");
+    ccArgv.push(outputPath);
+    match runTool(ccArgv, "command launcher bootstrap failed") {
         Ok(_) => 0,
         Err(err) => {
             return Err(err)
