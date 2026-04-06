@@ -1,13 +1,8 @@
 package compiler.internal.typecheck
 
-use compiler.BuiltinMethodDecl
-use compiler.BuiltinModuleDecl
-use compiler.BuiltinTypeDecl
-use compiler.LoadPrelude
 use compiler.LookupBuiltinMethods
 use compiler.LookupBuiltinType
 use compiler.LookupIndexType
-use compiler.borrow.AnalyzeBlock
 use std.option.Option
 use std.prelude.Box
 use std.vec.Vec
