@@ -2,10 +2,7 @@ from __future__ import annotations
 
 import argparse
 
-from compiler.interpreter import Interpreter, InterpreterError
 from compiler.hosted_compiler import run_cli
-from compiler.parser import ParseError, parse_source
-from compiler.semantic import check_source
 
 
 def main(argv: list[str] | None = None) -> int:
