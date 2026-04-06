@@ -14,6 +14,7 @@ from compiler.ast import (
     Expr,
     ExprStmt,
     ForExpr,
+    FunctionDecl,
     IfExpr,
     IndexExpr,
     IntExpr,
@@ -117,9 +118,9 @@ class MIRWriteOp:
 
 @dataclass(frozen=True)
 class MIRProgram:
-    ops: List["MIROp"]
     writes: List[MIRWriteOp]
     exit_code: int
+    ops: List["MIROp"] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
