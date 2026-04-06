@@ -240,6 +240,8 @@ class Checker:
         final_type = NEVER if terminated and block.final_expr is None else (
             self._infer_expr_with_hint(block.final_expr, local_scope, expected_return) if block.final_expr is not None else UNIT
         )
+        if block.final_expr is not None:
+            self._consume_tail_expr(block.final_expr, local_scope)
         if not self._type_eq(expected_return, UNIT) and block.final_expr is not None and not self._type_eq(expected_return, final_type):
             self._error(f"block expected {dump_type(expected_return)}, got {dump_type(final_type)}")
         self._merge_back(scope, local_scope)
@@ -324,8 +326,6 @@ class Checker:
                 return UnknownType()
             if state.moved:
                 self._error(f"use of moved value {expr.name}")
-            if not is_copy_type(state.ty):
-                state.moved = True
             expr.inferred_type = dump_type(state.ty)
             return state.ty
         if isinstance(expr, BorrowExpr):
@@ -422,11 +422,11 @@ class Checker:
             if not self._type_eq(cond, BOOL):
                 self._error(f"if condition expected bool, got {dump_type(cond)}")
             then_scope = self._clone_scope(scope)
-            then_type = self._check_block(expr.then_branch, then_scope, UNIT)
+            then_type = self._check_block(expr.then_branch, then_scope, expected_type or UNIT)
             else_type = UNIT
             else_scope = self._clone_scope(scope)
             if expr.else_branch is not None:
-                else_type = self._infer_expr(expr.else_branch, else_scope)
+                else_type = self._infer_expr_with_hint(expr.else_branch, else_scope, expected_type)
             self._join_scopes(scope, then_scope, else_scope)
             if expr.else_branch is None:
                 expr.inferred_type = dump_type(UNIT)
@@ -468,7 +468,7 @@ class Checker:
             for arm in expr.arms:
                 arm_scope = self._clone_scope(scope)
                 self._bind_pattern(arm.pattern, subject_type, arm_scope)
-                current = self._infer_expr(arm.expr, arm_scope)
+                current = self._infer_expr_with_hint(arm.expr, arm_scope, expected_type)
                 arm_scopes.append(arm_scope)
                 if self._is_never(current):
                     continue
@@ -544,6 +544,14 @@ class Checker:
 
     def _is_never(self, ty: Type) -> bool:
         return isinstance(self._normalize_type(ty), type(NEVER))
+
+    def _consume_tail_expr(self, expr: Expr, scope: Dict[str, VarState]) -> None:
+        if isinstance(expr, NameExpr):
+            state = scope.get(expr.name)
+            if state is None:
+                return
+            if not is_copy_type(state.ty):
+                state.moved = True
 
     def _type_from_expr(self, expr: Expr) -> Optional[Type]:
         if isinstance(expr, NameExpr):
