@@ -20,7 +20,7 @@ def main(argv: list[str] | None = None) -> int:
 
     run_cmd = sub.add_parser("run", help="interpret a minimal S source file")
     run_cmd.add_argument("path")
-    run_cmd.add_argument("program_args", nargs=argparse.REMAINDER)
+    run_cmd.add_argument("program_args", nargs="*", metavar="arg")
 
     args = parser.parse_args(argv)
     if args.command == "check":
