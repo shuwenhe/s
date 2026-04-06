@@ -1,4 +1,4 @@
-package compiler
+package compiler.internal.typecheck
 
 use std.option.Option
 use std.vec.Vec

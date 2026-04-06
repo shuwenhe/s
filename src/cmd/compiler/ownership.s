@@ -1,5 +1,8 @@
 package compiler
 
+use compiler.internal.typecheck.IsCopyType
+use compiler.internal.typecheck.Type
+use compiler.internal.typecheck.TypeBinding
 use std.vec.Vec
 
 struct OwnershipDecision {
