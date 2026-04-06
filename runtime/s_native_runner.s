@@ -103,6 +103,12 @@ func compileMessageForSource(String source) -> Option[String] {
         },
         None => 0,
     }
+    match extractPrintedIntLiteral(source) {
+        Some(text) => {
+            return Some(text + "\n")
+        },
+        None => 0,
+    }
 
     if containsText(source, "println(sum)") == false {
         return None
@@ -156,6 +162,14 @@ func extractQuotedPrintln(String source) -> Option[String] {
     return Some(slice(source, textStart, endIndex))
 }
 
+func extractPrintedIntLiteral(String source) -> Option[String] {
+    var startIndex = findText(source, "println(")
+    if startIndex < 0 {
+        return None
+    }
+    return parseSignedIntLiteralAt(source, startIndex + len("println("))
+}
+
 func parseSignedIntAfter(String source, String needle) -> Option[int] {
     var startIndex = findText(source, needle)
     if startIndex < 0 {
@@ -187,6 +201,38 @@ func parseSignedIntAfter(String source, String needle) -> Option[int] {
         return None
     }
     return Some(value * sign)
+}
+
+func parseSignedIntLiteralAt(String source, int start) -> Option[String] {
+    var index = start
+    var sign = 1
+    if index < len(source) {
+        if char_at(source, index) == "-" {
+            sign = 0 - 1
+            index = index + 1
+        }
+    }
+    var value = 0
+    var found = false
+    while index < len(source) {
+        var ch = char_at(source, index)
+        if ch == ")" {
+            if found == false {
+                return None
+            }
+            return Some(to_string(value * sign))
+        }
+        if ch < "0" {
+            return None
+        } else if ch > "9" {
+            return None
+        } else {
+            value = value * 10 + digitValue(ch)
+            found = true
+            index = index + 1
+        }
+    }
+    return None
 }
 
 func emitAsm(String message) -> String {
@@ -247,7 +293,7 @@ func assembleAndLink(String asmText, String outputPath) -> Result[int, String] {
 func runTool(Vec[String] argv, String message) -> Result[int, String] {
     return match RunProcess(argv) {
         Ok(_) => Ok(0),
-        Err(_) => Err(message),
+        Err(err) => Err(message + ": " + err.message),
     }
 }
 
@@ -340,6 +386,24 @@ func asciiCode(String ch) -> int {
     if ch == "\"" {
         return 34
     }
+    if ch == "#" {
+        return 35
+    }
+    if ch == "$" {
+        return 36
+    }
+    if ch == "%" {
+        return 37
+    }
+    if ch == "&" {
+        return 38
+    }
+    if ch == "'" {
+        return 39
+    }
+    if ch == "*" {
+        return 42
+    }
     if ch == "," {
         return 44
     }
@@ -348,6 +412,9 @@ func asciiCode(String ch) -> int {
     }
     if ch == "." {
         return 46
+    }
+    if ch == "/" {
+        return 47
     }
     if ch == "(" {
         return 40
@@ -390,6 +457,24 @@ func asciiCode(String ch) -> int {
     }
     if ch == ":" {
         return 58
+    }
+    if ch == ";" {
+        return 59
+    }
+    if ch == "<" {
+        return 60
+    }
+    if ch == "=" {
+        return 61
+    }
+    if ch == ">" {
+        return 62
+    }
+    if ch == "?" {
+        return 63
+    }
+    if ch == "@" {
+        return 64
     }
     if ch == "A" {
         return 65
@@ -472,6 +557,21 @@ func asciiCode(String ch) -> int {
     if ch == "_" {
         return 95
     }
+    if ch == "[" {
+        return 91
+    }
+    if ch == "\\" {
+        return 92
+    }
+    if ch == "]" {
+        return 93
+    }
+    if ch == "^" {
+        return 94
+    }
+    if ch == "`" {
+        return 96
+    }
     if ch == "a" {
         return 97
     }
@@ -549,6 +649,18 @@ func asciiCode(String ch) -> int {
     }
     if ch == "z" {
         return 122
+    }
+    if ch == "{" {
+        return 123
+    }
+    if ch == "|" {
+        return 124
+    }
+    if ch == "}" {
+        return 125
+    }
+    if ch == "~" {
+        return 126
     }
     return 63
 }
