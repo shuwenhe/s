@@ -3,6 +3,9 @@ from __future__ import annotations
 import unittest
 
 from compiler.mir import DropStmt, MoveStmt, lower_block
+from compiler.internal.amd64.isel import select_instructions
+from compiler.internal.ssagen.lowering import LoweredData, LoweredInstruction, LoweredProgram, lower_program
+from compiler.internal.ir import MIRProgram, MIRWriteOp
 from compiler.ownership import make_plan
 from compiler.parser import parse_source
 from compiler.prelude import PRELUDE
@@ -84,3 +87,39 @@ pub func take(text: String) -> String {
         self.assertFalse(PRELUDE.types["FileInfo"].fields["hidden"].readable)
         self.assertEqual(len(PRELUDE.types["Vec"].methods["push"]), 1)
         self.assertEqual(PRELUDE.types["Vec"].methods["push"][0].receiver_policy, "addressable")
+
+    def test_lowering_emits_richer_builtin_ops(self) -> None:
+        lowered = lower_program(
+            MIRProgram(writes=[MIRWriteOp(fd=1, text="42\n")], exit_code=0),
+            "amd64",
+        )
+        ops = [inst.op for inst in lowered.instructions]
+        self.assertIn("load_const", ops)
+        self.assertIn("copy_reg", ops)
+        self.assertIn("call_builtin", ops)
+
+    def test_amd64_selector_dispatches_compute_style_ops(self) -> None:
+        lowered = LoweredProgram(
+            entry_symbol="_start",
+            data=[LoweredData(label="msg", text="x")],
+            instructions=[
+                LoweredInstruction(op="load_const", value_type="i64", target_reg="r8", value="7"),
+                LoweredInstruction(op="copy_reg", value_type="i64", target_reg="rax", source_reg="r8"),
+                LoweredInstruction(op="add_i32", value_type="i32", target_reg="eax", source_reg="ecx"),
+                LoweredInstruction(op="cmp_le_i32", value_type="i32", target_reg="eax", source_reg="ecx"),
+                LoweredInstruction(op="branch_if", value_type="flags", target_reg="", target_label="L_true", false_label="L_false"),
+                LoweredInstruction(op="label", value_type="label", target_reg="", target_label="L_true"),
+                LoweredInstruction(op="call_builtin", value_type="unit", target_reg="", builtin="syscall_exit"),
+            ],
+            exit_code=0,
+        )
+        asm = select_instructions(lowered)
+        text = [(insn.opcode, insn.operands) for insn in asm.text]
+        self.assertIn(("mov", ("$7", "%r8")), text)
+        self.assertIn(("mov", ("%r8", "%rax")), text)
+        self.assertIn(("add", ("%ecx", "%eax")), text)
+        self.assertIn(("cmp", ("%ecx", "%eax")), text)
+        self.assertIn(("jle", ("L_true",)), text)
+        self.assertIn(("jmp", ("L_false",)), text)
+        self.assertIn(("L_true:", ()), text)
+        self.assertIn(("syscall", ()), text)
