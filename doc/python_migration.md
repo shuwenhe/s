@@ -15,12 +15,12 @@ Status: Working Draft
 
 这些文件要么已经有清晰的 S 版目标，要么逻辑足够独立，适合第一批开始替换：
 
-- [compiler/typesys.py](/app/s/src/compiler/typesys.py)
-- [compiler/ownership.py](/app/s/src/compiler/ownership.py)
-- [compiler/ast.py](/app/s/src/compiler/ast.py)
-- [compiler/lexer/tokens.py](/app/s/src/compiler/lexer/tokens.py)
-- [compiler/lexer/lexer.py](/app/s/src/compiler/lexer/lexer.py)
-- [compiler/parser/parser.py](/app/s/src/compiler/parser/parser.py)
+- [compiler/typesys.py](/app/s/src/cmd/compile/typesys.py)
+- [compiler/ownership.py](/app/s/src/cmd/compile/ownership.py)
+- [compiler/ast.py](/app/s/src/cmd/compile/ast.py)
+- [compiler/lexer/tokens.py](/app/s/src/cmd/compile/lexer/tokens.py)
+- [compiler/lexer/lexer.py](/app/s/src/cmd/compile/lexer/lexer.py)
+- [compiler/parser/parser.py](/app/s/src/cmd/compile/parser/parser.py)
 
 当前状态：
 
@@ -28,40 +28,40 @@ Status: Working Draft
 - `tokens.py` 已有对应 S 版 [s/tokens.s](/app/s/src/s/tokens.s)
 - `lexer.py` 已有对应 S 版 [s/lexer.s](/app/s/src/s/lexer.s)
 - `parser.py` 已有对应 S 版 [s/parser.s](/app/s/src/s/parser.s)
-- 本次新增 `typesys.py` 对应的 [compiler/typesys.s](/app/s/src/compiler/typesys.s)
-- 本次新增 `ownership.py` 对应的 [compiler/ownership.s](/app/s/src/compiler/ownership.s)
-- 本次新增最小 golden 验证入口 [compiler/golden.s](/app/s/src/compiler/golden.s)
+- 本次新增 `typesys.py` 对应的 [compiler/typesys.s](/app/s/src/cmd/compile/typesys.s)
+- 本次新增 `ownership.py` 对应的 [compiler/ownership.s](/app/s/src/cmd/compile/ownership.s)
+- 本次新增最小 golden 验证入口 [compiler/golden.s](/app/s/src/cmd/compile/golden.s)
 
 ### Group B: Replace After Core Frontend Stabilizes
 
 这些文件依赖较多，但一旦前端和类型层稳定，就值得逐步替换：
 
-- [compiler/prelude.py](/app/s/src/compiler/prelude.py)
-- [compiler/semantic.py](/app/s/src/compiler/semantic.py)
-- [compiler/mir.py](/app/s/src/compiler/mir.py)
-- [compiler/borrow.py](/app/s/src/compiler/borrow.py)
-- [compiler/__main__.py](/app/s/src/compiler/__main__.py)
+- [compiler/prelude.py](/app/s/src/cmd/compile/prelude.py)
+- [compiler/semantic.py](/app/s/src/cmd/compile/semantic.py)
+- [compiler/mir.py](/app/s/src/cmd/compile/mir.py)
+- [compiler/borrow.py](/app/s/src/cmd/compile/borrow.py)
+- [compiler/__main__.py](/app/s/src/cmd/compile/__main__.py)
 
 当前状态：
 
-- `prelude.py` 已有最小 S 版 [compiler/prelude.s](/app/s/src/compiler/prelude.s)
-- `__main__.py` 已有最小 S 版 [compiler/main.s](/app/s/src/compiler/main.s)
-- `semantic.py` 已有最小 S 版 [compiler/semantic.s](/app/s/src/compiler/semantic.s)
-- `mir.py` 已有最小 S 版 [compiler/mir.s](/app/s/src/compiler/mir.s)
-- `borrow.py` 已有最小 S 版 [compiler/borrow.s](/app/s/src/compiler/borrow.s)
+- `prelude.py` 已有最小 S 版 [compiler/prelude.s](/app/s/src/cmd/compile/prelude.s)
+- `__main__.py` 已有最小 S 版 [compiler/main.s](/app/s/src/cmd/compile/main.s)
+- `semantic.py` 已有最小 S 版 [compiler/semantic.s](/app/s/src/cmd/compile/semantic.s)
+- `mir.py` 已有最小 S 版 [compiler/mir.s](/app/s/src/cmd/compile/mir.s)
+- `borrow.py` 已有最小 S 版 [compiler/borrow.s](/app/s/src/cmd/compile/borrow.s)
 
 ### Group C: Python Packaging / Test Glue
 
 这些文件主要是 Python 包装、导出或测试 glue，不是最先应该逐个“翻译成 S”的对象：
 
-- [compiler/__init__.py](/app/s/src/compiler/__init__.py)
-- [compiler/lexer/__init__.py](/app/s/src/compiler/lexer/__init__.py)
-- [compiler/parser/__init__.py](/app/s/src/compiler/parser/__init__.py)
-- [compiler/tests/__init__.py](/app/s/src/compiler/tests/__init__.py)
-- [compiler/tests/golden.py](/app/s/src/compiler/tests/golden.py)
-- [compiler/tests/test_golden.py](/app/s/src/compiler/tests/test_golden.py)
-- [compiler/tests/test_mir.py](/app/s/src/compiler/tests/test_mir.py)
-- [compiler/tests/test_semantic.py](/app/s/src/compiler/tests/test_semantic.py)
+- [compiler/__init__.py](/app/s/src/cmd/compile/__init__.py)
+- [compiler/lexer/__init__.py](/app/s/src/cmd/compile/lexer/__init__.py)
+- [compiler/parser/__init__.py](/app/s/src/cmd/compile/parser/__init__.py)
+- [compiler/tests/__init__.py](/app/s/src/cmd/compile/tests/__init__.py)
+- [compiler/tests/golden.py](/app/s/src/cmd/compile/tests/golden.py)
+- [compiler/tests/test_golden.py](/app/s/src/cmd/compile/tests/test_golden.py)
+- [compiler/tests/test_mir.py](/app/s/src/cmd/compile/tests/test_mir.py)
+- [compiler/tests/test_semantic.py](/app/s/src/cmd/compile/tests/test_semantic.py)
 
 推荐做法：
 
@@ -70,11 +70,11 @@ Status: Working Draft
 
 当前状态：
 
-- `golden.py` 已有最小 S 版对应物 [compiler/golden.s](/app/s/src/compiler/golden.s)
-- `test_golden.py` 已有对应入口 [compiler/tests/test_golden.s](/app/s/src/compiler/tests/test_golden.s)
-- `test_semantic.py` 已有对应入口 [compiler/tests/test_semantic.s](/app/s/src/compiler/tests/test_semantic.s)
-- `test_mir.py` 已有对应入口 [compiler/tests/test_mir.s](/app/s/src/compiler/tests/test_mir.s)
-- 新增统一 S 侧测试入口 [test_compiler.s](/app/s/src/cmd/test_compiler.s)
+- `golden.py` 已有最小 S 版对应物 [compiler/golden.s](/app/s/src/cmd/compile/golden.s)
+- `test_golden.py` 已有对应入口 [compiler/tests/test_golden.s](/app/s/src/cmd/compile/tests/test_golden.s)
+- `test_semantic.py` 已有对应入口 [compiler/tests/test_semantic.s](/app/s/src/cmd/compile/tests/test_semantic.s)
+- `test_mir.py` 已有对应入口 [compiler/tests/test_mir.s](/app/s/src/cmd/compile/tests/test_mir.s)
+- 新增统一 S 侧测试入口 [test_compiler.s](/app/s/src/cmd/test_compiler/main.s)
 - Python 测试文件仍保留，继续作为宿主验证入口
 
 ### Group D: Host Bridge Must Stay For Now

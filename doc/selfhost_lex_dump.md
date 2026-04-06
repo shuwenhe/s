@@ -5,7 +5,7 @@ Status: Working Draft
 
 ## 1. Purpose
 
-本文档说明自举阶段最小 driver [lex_dump.s](/app/s/src/cmd/lex_dump.s) 的职责、调用路径，以及它当前依赖的 `std.fs` / `std.io` 接口假设。
+本文档说明自举阶段最小 driver [lex_dump.s](/app/s/src/cmd/lex_dump/main.s) 的职责、调用路径，以及它当前依赖的 `std.fs` / `std.io` 接口假设。
 
 `lex_dump` 的目标很简单：
 
@@ -32,7 +32,7 @@ source file
 
 涉及文件：
 
-- [lex_dump.s](/app/s/src/cmd/lex_dump.s)
+- [lex_dump.s](/app/s/src/cmd/lex_dump/main.s)
 - [lexer.s](/app/s/src/s/lexer.s)
 - [tokens.s](/app/s/src/s/tokens.s)
 
@@ -121,7 +121,7 @@ struct CliError {
 - `std.fs` / `std.io` 还没有真实 S 实现
 - 命令行参数注入机制还只是接口约定
 - `dump_tokens` 依赖 `to_string`、`len` 等基础库能力，这些也还没有真正落地
-- 还没有 golden test runner 去自动比对 [sample.tokens](/app/s/src/compiler/tests/fixtures/sample.tokens)
+- 还没有 golden test runner 去自动比对 [sample.tokens](/app/s/src/cmd/compile/tests/fixtures/sample.tokens)
 
 ## 8. Next Step
 
@@ -129,5 +129,5 @@ struct CliError {
 
 1. 给自举 runtime 补最小 `std.fs.read_to_string`
 2. 给自举 runtime 补最小 `std.io.println` / `std.io.eprintln`
-3. 用 [sample.s](/app/s/src/compiler/tests/fixtures/sample.s) 跑出和 [sample.tokens](/app/s/src/compiler/tests/fixtures/sample.tokens) 对齐的输出
+3. 用 [sample.s](/app/s/src/cmd/compile/tests/fixtures/sample.s) 跑出和 [sample.tokens](/app/s/src/cmd/compile/tests/fixtures/sample.tokens) 对齐的输出
 4. 把 parser 接到 `token stream -> AST` 路径上

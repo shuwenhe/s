@@ -81,10 +81,17 @@ def has_upstream(repo):
 def summarize_paths(paths):
     labels = []
     mapping = [
-        ("src/compiler/", "compiler"),
+        ("src/cmd/compile/", "compiler"),
         ("src/s/", "language packages"),
         ("src/runtime/", "runtime"),
-        ("src/std/", "standard library"),
+        ("src/prelude/", "standard library"),
+        ("src/result/", "standard library"),
+        ("src/option/", "standard library"),
+        ("src/vec/", "standard library"),
+        ("src/io/", "standard library"),
+        ("src/fs/", "standard library"),
+        ("src/env/", "standard library"),
+        ("src/process/", "standard library"),
         ("src/cmd/", "commands"),
         ("doc/", "docs"),
         ("misc/editor/vscode/", "VS Code support"),
