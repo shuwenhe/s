@@ -202,15 +202,15 @@ python3 /app/s/src/runtime/validate_outputs.py all
 
 编译器后端当前也已经切到 std-layer host boundary：
 
-- [main.s](/app/s/src/compiler/main.s) 通过 `std.fs.ReadToString`
-- [backend_elf64.s](/app/s/src/compiler/backend_elf64.s) 通过
+- [main.s](/app/s/src/cmd/compile/main.s) 通过 `std.fs.ReadToString`
+- [backend_elf64.s](/app/s/src/cmd/compile/backend_elf64.s) 通过
   `std.fs.WriteTextFile` / `std.fs.MakeTempDir` / `std.process.RunProcess`
 
 命令入口 ABI 也已经有了 S 侧包装：
 
-- [env.s](/app/s/src/std/env.s) 通过 `__host_args`
-- [process.s](/app/s/src/std/process.s) 通过 `__host_exit`
-- [s.s](/app/s/src/cmd/s.s) 通过 `Args() -> compiler.main(args) -> Exit(code)`
+- [env.s](/app/s/src/env/env.s) 通过 `__host_args`
+- [process.s](/app/s/src/process/process.s) 通过 `__host_exit`
+- [s.s](/app/s/src/cmd/s/main.s) 通过 `Args() -> compiler.main(args) -> Exit(code)`
 
 这意味着 `ExecutionPlan` 已经不只记录 parser/lexer 内部 intrinsic，也开始覆盖宿主 IO 边界。
 

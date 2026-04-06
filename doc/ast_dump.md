@@ -5,7 +5,7 @@ Status: Working Draft
 
 ## 1. Purpose
 
-本文档说明最小 AST driver [ast_dump.s](/app/s/src/cmd/ast_dump.s) 的职责、调用路径，以及它当前依赖的 `std.fs` / `std.io` / parser 接口假设。
+本文档说明最小 AST driver [ast_dump.s](/app/s/src/cmd/ast_dump/main.s) 的职责、调用路径，以及它当前依赖的 `std.fs` / `std.io` / parser 接口假设。
 
 `ast_dump` 的目标是：
 
@@ -32,7 +32,7 @@ source file
 
 涉及文件：
 
-- [ast_dump.s](/app/s/src/cmd/ast_dump.s)
+- [ast_dump.s](/app/s/src/cmd/ast_dump/main.s)
 - [parser.s](/app/s/src/s/parser.s)
 - [ast.s](/app/s/src/s/ast.s)
 
@@ -119,7 +119,7 @@ ast_dump path/to/file.s
 
 - `std.fs` / `std.io` 还没有真实后端实现
 - parser 仍处于 skeleton 阶段
-- AST dump 还没有 golden test runner 自动比对 [sample.ast](/app/s/src/compiler/tests/fixtures/sample.ast)
+- AST dump 还没有 golden test runner 自动比对 [sample.ast](/app/s/src/cmd/compile/tests/fixtures/sample.ast)
 - `Vec` / 字符串 / intrinsic 仍然只是最小 runtime 约定
 
 ## 8. Next Step

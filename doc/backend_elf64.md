@@ -1,7 +1,7 @@
 # Minimal `backend_elf64` Design
 
 This document defines the smallest executable backend we want for
-[`backend_elf64.s`](/app/s/src/compiler/backend_elf64.s).
+[`backend_elf64.s`](/app/s/src/cmd/compile/backend_elf64.s).
 
 The goal is not a general-purpose optimizer or a full code generator.
 The goal is to make the S compiler's own `build` path real with the
@@ -50,7 +50,7 @@ The minimal backend should stay intentionally simple:
 4. Call `as` and `ld`
 
 This is the same shape as the current Python backend in
-[`backend_elf64.py`](/app/s/src/compiler/backend_elf64.py), but rewritten as an
+[`backend_elf64.py`](/app/s/src/cmd/compile/backend_elf64.py), but rewritten as an
 explicit S-side backend contract.
 
 ## Why This Shape
@@ -226,7 +226,7 @@ smaller than the eventual full S runtime.
 
 The current transitional native bootstrap template now lives under the backend
 implementation itself at
-[`backend_elf64_runner_bootstrap.c`](/app/s/src/compiler/backend_elf64_runner_bootstrap.c),
+[`backend_elf64_runner_bootstrap.c`](/app/s/src/cmd/compile/backend_elf64_runner_bootstrap.c),
 instead of under `runtime/`, so the bootstrap path is anchored in the backend
 rather than in runtime-specific scaffolding.
 - collect exit code
@@ -264,10 +264,10 @@ The MVP is complete when all of these are true:
 
 Right now:
 
-- [main.s](/app/s/src/compiler/main.s) already has a `build` command path
-- [backend_elf64.s](/app/s/src/compiler/backend_elf64.s) is still a stub
+- [main.s](/app/s/src/cmd/compile/main.s) already has a `build` command path
+- [backend_elf64.s](/app/s/src/cmd/compile/backend_elf64.s) is still a stub
 - the runnable implementation still lives in
-  [backend_elf64.py](/app/s/src/compiler/backend_elf64.py)
+  [backend_elf64.py](/app/s/src/cmd/compile/backend_elf64.py)
 
 So the next engineering step is straightforward:
 

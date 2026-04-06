@@ -29,7 +29,7 @@ Current host bridge files:
 
 ## 2. String Intrinsics
 
-Current [prelude.s](/app/s/src/std/prelude.s) declares:
+Current [prelude.s](/app/s/src/prelude/prelude.s) declares:
 
 ```s
 extern "intrinsic" func __runtime_len[T](T value) -> i32
@@ -78,7 +78,7 @@ Requirements:
 
 ## 3. Vec Intrinsics
 
-Current [vec.s](/app/s/src/std/vec.s) declares:
+Current [vec.s](/app/s/src/vec/vec.s) declares:
 
 ```s
 extern "intrinsic" func __vec_new_array[T](i32 size) -> Array[T]
@@ -120,10 +120,10 @@ Draft 0.1 recommendation:
 
 The new std-layer host boundary is now:
 
-- [fs.s](/app/s/src/std/fs.s)
-- [process.s](/app/s/src/std/process.s)
-- [io.s](/app/s/src/std/io.s)
-- [env.s](/app/s/src/std/env.s)
+- [fs.s](/app/s/src/fs/fs.s)
+- [process.s](/app/s/src/process/process.s)
+- [io.s](/app/s/src/io/io.s)
+- [env.s](/app/s/src/env/env.s)
 
 Current declarations:
 
@@ -156,15 +156,15 @@ Code that currently depends on these contracts includes:
 - [lexer.s](/app/s/src/s/lexer.s)
 - [parser.s](/app/s/src/s/parser.s)
 - [tokens.s](/app/s/src/s/tokens.s)
-- [lex_dump.s](/app/s/src/cmd/lex_dump.s)
-- [ast_dump.s](/app/s/src/cmd/ast_dump.s)
-- [vec.s](/app/s/src/std/vec.s)
-- [main.s](/app/s/src/compiler/main.s)
-- [backend_elf64.s](/app/s/src/compiler/backend_elf64.s)
-- [fs.s](/app/s/src/std/fs.s)
-- [process.s](/app/s/src/std/process.s)
-- [io.s](/app/s/src/std/io.s)
-- [env.s](/app/s/src/std/env.s)
+- [lex_dump.s](/app/s/src/cmd/lex_dump/main.s)
+- [ast_dump.s](/app/s/src/cmd/ast_dump/main.s)
+- [vec.s](/app/s/src/vec/vec.s)
+- [main.s](/app/s/src/cmd/compile/main.s)
+- [backend_elf64.s](/app/s/src/cmd/compile/backend_elf64.s)
+- [fs.s](/app/s/src/fs/fs.s)
+- [process.s](/app/s/src/process/process.s)
+- [io.s](/app/s/src/io/io.s)
+- [env.s](/app/s/src/env/env.s)
 
 ## 7. Next Step
 
