@@ -5,15 +5,18 @@ from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 
 from compiler.ast import (
+    AssignStmt as AstAssignStmt,
     BinaryExpr,
     BlockExpr,
     BorrowExpr,
     CallExpr,
+    CForStmt,
     Expr,
     ExprStmt,
     ForExpr,
     IfExpr,
     IndexExpr,
+    IntExpr,
     LetStmt,
     MatchExpr,
     MemberExpr,
@@ -114,8 +117,19 @@ class MIRWriteOp:
 
 @dataclass(frozen=True)
 class MIRProgram:
+    ops: List["MIROp"]
     writes: List[MIRWriteOp]
     exit_code: int
+
+
+@dataclass(frozen=True)
+class MIROp:
+    op: str
+    target: str = ""
+    source: str = ""
+    value: int = 0
+    target_label: str = ""
+    false_label: str = ""
 
 
 def lower_block(
@@ -137,7 +151,94 @@ def lower_source(source, ownership_plan: Optional[Dict[str, Any]] = None) -> MIR
     ownership_plan  # keep the phase boundary explicit even while the MVP lowering is linear
     interpreter = _RecordingInterpreter(source)
     exit_code = int(interpreter.run_main())
-    return MIRProgram(writes=interpreter.ops, exit_code=exit_code)
+    return MIRProgram(
+        ops=_lower_compute_ops(source),
+        writes=interpreter.ops,
+        exit_code=exit_code,
+    )
+
+
+def _lower_compute_ops(source) -> List[MIROp]:
+    for item in source.items:
+        if isinstance(item, FunctionDecl) and item.sig.name == "main" and item.body is not None:
+            ops = _lower_compute_block(item.body)
+            if ops:
+                return ops
+    return []
+
+
+def _lower_compute_block(block: BlockExpr) -> List[MIROp]:
+    ops: List[MIROp] = []
+    for stmt in block.statements:
+        if isinstance(stmt, LetStmt) and isinstance(stmt.value, IntExpr):
+            ops.append(MIROp(op="load_const", target=stmt.name, value=int(stmt.value.value.replace("_", ""))))
+            continue
+        if isinstance(stmt, CForStmt):
+            loop_ops = _lower_cfor_compute(stmt)
+            if loop_ops:
+                ops.extend(loop_ops)
+            continue
+        if isinstance(stmt, ExprStmt):
+            call = stmt.expr
+            if (
+                isinstance(call, CallExpr)
+                and isinstance(call.callee, NameExpr)
+                and call.callee.name == "println"
+                and len(call.args) == 1
+                and isinstance(call.args[0], NameExpr)
+            ):
+                ops.append(MIROp(op="call_builtin", target=call.args[0].name, source="print_i32"))
+    return ops
+
+
+def _lower_cfor_compute(stmt: CForStmt) -> List[MIROp]:
+    if not isinstance(stmt.init, LetStmt) or not isinstance(stmt.init.value, IntExpr):
+        return []
+    if not isinstance(stmt.condition, BinaryExpr) or stmt.condition.op != "<=":
+        return []
+    if not isinstance(stmt.condition.left, NameExpr):
+        return []
+    if not isinstance(stmt.condition.right, IntExpr):
+        return []
+    if not isinstance(stmt.step, IncrementStmt):
+        return []
+
+    loop_var = stmt.init.name
+    if stmt.condition.left.name != loop_var or stmt.step.name != loop_var:
+        return []
+
+    body_ops: List[MIROp] = []
+    for inner in stmt.body.statements:
+        if (
+            isinstance(inner, AstAssignStmt)
+            and isinstance(inner.value, BinaryExpr)
+            and inner.value.op == "+"
+            and isinstance(inner.value.left, NameExpr)
+            and isinstance(inner.value.right, NameExpr)
+            and inner.value.left.name == inner.name
+        ):
+            body_ops.append(MIROp(op="add_i32", target=inner.name, source=inner.value.right.name))
+        else:
+            return []
+
+    cond_label = f"{loop_var}_cond"
+    body_label = f"{loop_var}_body"
+    end_label = f"{loop_var}_end"
+
+    ops: List[MIROp] = [
+        MIROp(op="load_const", target=loop_var, value=int(stmt.init.value.value.replace("_", ""))),
+        MIROp(op="load_const", target=f"{loop_var}_limit", value=int(stmt.condition.right.value.replace("_", ""))),
+        MIROp(op="load_const", target=f"{loop_var}_step", value=1),
+        MIROp(op="label", target_label=cond_label),
+        MIROp(op="cmp_le_i32", target=loop_var, source=f"{loop_var}_limit"),
+        MIROp(op="branch_if", target_label=body_label, false_label=end_label),
+        MIROp(op="label", target_label=body_label),
+    ]
+    ops.extend(body_ops)
+    ops.append(MIROp(op="add_i32", target=loop_var, source=f"{loop_var}_step"))
+    ops.append(MIROp(op="jump", target_label=cond_label))
+    ops.append(MIROp(op="label", target_label=end_label))
+    return ops
 
 
 class _RecordingInterpreter:
