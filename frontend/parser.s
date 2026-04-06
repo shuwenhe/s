@@ -7,17 +7,17 @@ use std.result.Result
 use std.vec.Vec
 
 struct ParseError {
-    message: String,
-    line: i32,
-    column: i32,
+    String message,
+    i32 line,
+    i32 column,
 }
 
 struct Parser {
-    tokens: Vec[Token],
-    index: i32,
+    Vec[Token] tokens,
+    i32 index,
 }
 
-func parse_source(source: String) -> Result[SourceFile, ParseError] {
+func parse_source(String source) -> Result[SourceFile, ParseError] {
     match new_lexer(source).tokenize() {
         Result::Ok(tokens) => parse_tokens(tokens),
         Result::Err(err) => Result::Err(ParseError {
@@ -28,7 +28,7 @@ func parse_source(source: String) -> Result[SourceFile, ParseError] {
     }
 }
 
-func parse_tokens(tokens: Vec[Token]) -> Result[SourceFile, ParseError] {
+func parse_tokens(Vec[Token] tokens) -> Result[SourceFile, ParseError] {
     var parser = Parser {
         tokens: tokens,
         index: 0,
@@ -208,7 +208,7 @@ impl Parser {
         })
     }
 
-    func parse_function(mut self, require_body: bool) -> Result[ParsedFunction, ParseError] {
+    func parse_function(mut self, bool require_body) -> Result[ParsedFunction, ParseError] {
         self.expect_keyword("func")?
         var name = self.expect_ident()?
         var generics = self.parse_generic_params()?
@@ -302,12 +302,12 @@ impl Parser {
         Result::Ok(())
     }
 
-    func parse_named_type(mut self, stop_values: Vec[String]) -> Result[NamedType, ParseError] {
+    func parse_named_type(mut self, Vec[String] stop_values) -> Result[NamedType, ParseError] {
         var segment = self.parse_token_segment(stop_values)?
         decode_named_type(segment)
     }
 
-    func parse_token_segment(mut self, stop_values: Vec[String]) -> Result[Vec[Token], ParseError] {
+    func parse_token_segment(mut self, Vec[String] stop_values) -> Result[Vec[Token], ParseError] {
         var segment = Vec[Token]()
         var bracket = 0
         var paren = 0
@@ -368,6 +368,9 @@ impl Parser {
     func starts_stmt(self) -> bool {
         self.at_keyword("var")
             || self.at_keyword("return")
+            || self.at_keyword("if")
+            || self.at_keyword("while")
+            || self.at_keyword("match")
             || self.at_cfor_start()
             || self.looks_like_typed_var_stmt()
             || self.looks_like_increment_stmt()
@@ -380,6 +383,11 @@ impl Parser {
         }
         if self.at_keyword("return") {
             return Result::Ok(Stmt::Return(self.parse_return_stmt()?))
+        }
+        if self.at_keyword("if") || self.at_keyword("while") || self.at_keyword("match") {
+            var expr = self.parse_expr()?
+            self.eat_symbol(";")
+            return Result::Ok(Stmt::Expr(ExprStmt { expr: expr }))
         }
         if self.at_cfor_start() {
             return Result::Ok(Stmt::CFor(self.parse_cfor_stmt()?))
@@ -396,7 +404,7 @@ impl Parser {
         Result::Err(self.error_here("unexpected statement"))
     }
 
-    func parse_var_stmt(mut self, consume_semicolon: bool) -> Result[VarStmt, ParseError] {
+    func parse_var_stmt(mut self, bool consume_semicolon) -> Result[VarStmt, ParseError] {
         self.expect_keyword("var")?
         var name = self.expect_ident()?
         var type_name =
@@ -417,7 +425,7 @@ impl Parser {
         })
     }
 
-    func parse_typed_var_stmt(mut self, consume_semicolon: bool) -> Result[VarStmt, ParseError] {
+    func parse_typed_var_stmt(mut self, bool consume_semicolon) -> Result[VarStmt, ParseError] {
         var segment = self.parse_token_segment(Vec[String] { "=" })?
         var named = decode_named_type(segment)?
         self.expect_symbol("=")?
@@ -432,7 +440,7 @@ impl Parser {
         })
     }
 
-    func parse_assign_stmt(mut self, consume_semicolon: bool) -> Result[AssignStmt, ParseError] {
+    func parse_assign_stmt(mut self, bool consume_semicolon) -> Result[AssignStmt, ParseError] {
         var name = self.expect_ident()?
         self.expect_symbol("=")?
         var value = self.parse_expr()?
@@ -445,7 +453,7 @@ impl Parser {
         })
     }
 
-    func parse_increment_stmt(mut self, consume_semicolon: bool) -> Result[IncrementStmt, ParseError] {
+    func parse_increment_stmt(mut self, bool consume_semicolon) -> Result[IncrementStmt, ParseError] {
         var name = self.expect_ident()?
         self.expect_symbol("++")?
         if consume_semicolon {
@@ -625,7 +633,7 @@ impl Parser {
         Result::Ok(Pattern::Name(NamePattern { name: path }))
     }
 
-    func parse_binary_expr(mut self, min_precedence: i32) -> Result[Expr, ParseError] {
+    func parse_binary_expr(mut self, i32 min_precedence) -> Result[Expr, ParseError] {
         var expr = self.parse_unary_expr()?
         while true {
             var token = self.peek()?
@@ -746,7 +754,7 @@ impl Parser {
         }))
     }
 
-    func binary_precedence(self, op: String) -> i32 {
+    func binary_precedence(self, String op) -> i32 {
         match op {
             "||" => 1,
             "&&" => 2,
@@ -802,7 +810,7 @@ impl Parser {
         Result::Ok(join_strings(parts, "."))
     }
 
-    func parse_type_text(mut self, stop_values: Vec[String]) -> Result[String, ParseError] {
+    func parse_type_text(mut self, Vec[String] stop_values) -> Result[String, ParseError] {
         var parts = Vec[String]()
         var bracket = 0
         var paren = 0
@@ -854,16 +862,16 @@ impl Parser {
         )
     }
 
-    func at(self, kind: TokenKind) -> bool {
+    func at(self, TokenKind kind) -> bool {
         self.peek().unwrap().kind == kind
     }
 
-    func at_keyword(self, value: String) -> bool {
+    func at_keyword(self, String value) -> bool {
         var token = self.peek().unwrap()
         token.kind == TokenKind::Keyword && token.value == value
     }
 
-    func at_symbol(self, value: String) -> bool {
+    func at_symbol(self, String value) -> bool {
         var token = self.peek().unwrap()
         token.kind == TokenKind::Symbol && token.value == value
     }
@@ -892,7 +900,7 @@ impl Parser {
         decode_named_type(slice_tokens(self.tokens, self.index, self.index + offset)).is_ok()
     }
 
-    func eat_keyword(mut self, value: String) -> bool {
+    func eat_keyword(mut self, String value) -> bool {
         if self.at_keyword(value) {
             self.advance().unwrap()
             return true
@@ -900,7 +908,7 @@ impl Parser {
         false
     }
 
-    func eat_ident_value(mut self, value: String) -> bool {
+    func eat_ident_value(mut self, String value) -> bool {
         var token = self.peek().unwrap()
         if token.kind == TokenKind::Ident && token.value == value {
             self.advance().unwrap()
@@ -909,7 +917,7 @@ impl Parser {
         false
     }
 
-    func eat_symbol(mut self, value: String) -> bool {
+    func eat_symbol(mut self, String value) -> bool {
         if self.at_symbol(value) {
             self.advance().unwrap()
             return true
@@ -917,7 +925,7 @@ impl Parser {
         false
     }
 
-    func expect_keyword(mut self, value: String) -> Result[Token, ParseError] {
+    func expect_keyword(mut self, String value) -> Result[Token, ParseError] {
         var token = self.peek()?
         if token.kind == TokenKind::Keyword && token.value == value {
             return self.advance()
@@ -929,7 +937,7 @@ impl Parser {
         })
     }
 
-    func expect_symbol(mut self, value: String) -> Result[Token, ParseError] {
+    func expect_symbol(mut self, String value) -> Result[Token, ParseError] {
         var token = self.peek()?
         if token.kind == TokenKind::Symbol && token.value == value {
             return self.advance()
@@ -962,7 +970,7 @@ impl Parser {
         self.peek_at(0)
     }
 
-    func peek_at(self, offset: i32) -> Result[Token, ParseError] {
+    func peek_at(self, i32 offset) -> Result[Token, ParseError] {
         if self.index >= len(self.tokens) {
             return Result::Err(ParseError {
                 message: "unexpected eof",
@@ -983,7 +991,7 @@ impl Parser {
         Result::Ok(token)
     }
 
-    func error_here(self, message: String) -> ParseError {
+    func error_here(self, String message) -> ParseError {
         var token = self.peek().unwrap()
         ParseError {
             message: message,
@@ -994,7 +1002,7 @@ impl Parser {
 }
 
 impl Parser {
-    func find_top_level_symbol_offset(self, value: String) -> i32 {
+    func find_top_level_symbol_offset(self, String value) -> i32 {
         var bracket = 0
         var paren = 0
         var offset = 0
@@ -1026,16 +1034,16 @@ impl Parser {
 }
 
 struct ParsedFunction {
-    sig: FunctionSig,
-    body: Option[BlockExpr],
+    FunctionSig sig,
+    Option[BlockExpr] body,
 }
 
 struct NamedType {
-    name: String,
-    type_name: String,
+    String name,
+    String type_name,
 }
 
-func decode_named_type(tokens: Vec[Token]) -> Result[NamedType, ParseError] {
+func decode_named_type(Vec[Token] tokens) -> Result[NamedType, ParseError] {
     var colon = find_token_value(tokens, ":")
     if colon >= 0 {
         var name_tokens = slice_tokens(tokens, 0, colon)
@@ -1060,7 +1068,7 @@ func decode_named_type(tokens: Vec[Token]) -> Result[NamedType, ParseError] {
     })
 }
 
-func slice_tokens(tokens: Vec[Token], start: i32, end: i32) -> Vec[Token] {
+func slice_tokens(Vec[Token] tokens, i32 start, i32 end) -> Vec[Token] {
     var out = Vec[Token]()
     var i = start
     while i < end {
@@ -1070,7 +1078,7 @@ func slice_tokens(tokens: Vec[Token], start: i32, end: i32) -> Vec[Token] {
     out
 }
 
-func join_token_values(tokens: Vec[Token]) -> String {
+func join_token_values(Vec[Token] tokens) -> String {
     var parts = Vec[String]()
     for token in tokens {
         parts.push(token.value)
@@ -1078,7 +1086,7 @@ func join_token_values(tokens: Vec[Token]) -> String {
     join_strings(parts, " ")
 }
 
-func find_token_value(tokens: Vec[Token], value: String) -> i32 {
+func find_token_value(Vec[Token] tokens, String value) -> i32 {
     var bracket = 0
     var paren = 0
     var i = 0
@@ -1100,7 +1108,7 @@ func find_token_value(tokens: Vec[Token], value: String) -> i32 {
     -1
 }
 
-func find_decl_name_index(tokens: Vec[Token]) -> i32 {
+func find_decl_name_index(Vec[Token] tokens) -> i32 {
     var bracket = 0
     var paren = 0
     var index = -1
@@ -1123,7 +1131,7 @@ func find_decl_name_index(tokens: Vec[Token]) -> i32 {
     index
 }
 
-func normalize_type_text(text: String) -> String {
+func normalize_type_text(String text) -> String {
     text
         .replace(" . ", ".")
         .replace("[ ", "[")
@@ -1136,7 +1144,7 @@ func normalize_type_text(text: String) -> String {
         .replace(" [", "[")
 }
 
-func contains_string(values: Vec[String], target: String) -> bool {
+func contains_string(Vec[String] values, String target) -> bool {
     for value in values {
         if value == target {
             return true
@@ -1145,7 +1153,7 @@ func contains_string(values: Vec[String], target: String) -> bool {
     false
 }
 
-func join_strings(values: Vec[String], sep: String) -> String {
+func join_strings(Vec[String] values, String sep) -> String {
     var out = ""
     var first = true
     for value in values {
@@ -1158,7 +1166,7 @@ func join_strings(values: Vec[String], sep: String) -> String {
     out
 }
 
-func path_contains_dot(path: String) -> bool {
+func path_contains_dot(String path) -> bool {
     var i = 0
     while i < len(path) {
         if char_at(path, i) == "." {
@@ -1169,7 +1177,7 @@ func path_contains_dot(path: String) -> bool {
     false
 }
 
-func starts_with_upper(text: String) -> bool {
+func starts_with_upper(String text) -> bool {
     if text == "" {
         return false
     }

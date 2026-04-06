@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+import subprocess
+import tempfile
 from typing import Any
 
 from compiler.ast import (
@@ -15,12 +18,20 @@ from compiler.ast import (
     FunctionDecl,
     IfExpr,
     IncrementStmt,
+    IndexExpr,
     IntExpr,
     LetStmt,
+    MatchExpr,
+    MatchArm,
+    MemberExpr,
     NameExpr,
+    Pattern,
     ReturnStmt,
     SourceFile,
     StringExpr,
+    VariantPattern,
+    WildcardPattern,
+    NamePattern,
 )
 
 
@@ -41,6 +52,9 @@ class Interpreter:
             for item in source.items
             if isinstance(item, FunctionDecl) and item.body is not None
         }
+        self.imports = {use.alias or use.path.split(".")[-1]: use.path for use in source.uses}
+        self.explicit_exit_code: int | None = None
+        self.argv: list[str] = []
 
     def run_main(self) -> int:
         if "main" in self.functions:
@@ -51,6 +65,8 @@ class Interpreter:
             raise InterpreterError("entry function main not found")
 
         result = self.call_function(entry, [])
+        if self.explicit_exit_code is not None:
+            return self.explicit_exit_code
         if result is None:
             return 0
         if isinstance(result, bool):
@@ -60,6 +76,11 @@ class Interpreter:
         raise InterpreterError(f"entry function must return i32/unit, got {type(result).__name__}")
 
     def call_function(self, name: str, args: list[Any]) -> Any:
+        if name in {"Ok", "Err", "Some"}:
+            payload = None if not args else args[0]
+            return (name, payload)
+        if name == "None":
+            return ("None", None)
         if name == "println":
             print("" if not args else self._stringify(args[0]))
             return None
@@ -68,6 +89,42 @@ class Interpreter:
 
             print("" if not args else self._stringify(args[0]), file=sys.stderr)
             return None
+        if name == "Args" and self.imports.get("Args") == "std.env.Args":
+            return list(self.argv)
+        if name == "Exit" and self.imports.get("Exit") == "std.process.Exit":
+            self.explicit_exit_code = int(args[0]) if args else 0
+            return None
+        if name == "ReadToString" and self.imports.get("ReadToString") == "std.fs.ReadToString":
+            try:
+                return ("Ok", Path(str(args[0])).read_text())
+            except OSError as exc:
+                return ("Err", {"message": str(exc)})
+        if name == "WriteTextFile" and self.imports.get("WriteTextFile") == "std.fs.WriteTextFile":
+            try:
+                Path(str(args[0])).write_text("" if len(args) < 2 else str(args[1]))
+                return ("Ok", None)
+            except OSError as exc:
+                return ("Err", {"message": str(exc)})
+        if name == "MakeTempDir" and self.imports.get("MakeTempDir") == "std.fs.MakeTempDir":
+            try:
+                path = tempfile.mkdtemp(prefix="" if not args else str(args[0]))
+                return ("Ok", path)
+            except OSError as exc:
+                return ("Err", {"message": str(exc)})
+        if name == "RunProcess" and self.imports.get("RunProcess") == "std.process.RunProcess":
+            try:
+                subprocess.run([str(arg) for arg in (args[0] if args else [])], check=True, capture_output=True, text=True)
+                return ("Ok", None)
+            except (OSError, subprocess.CalledProcessError) as exc:
+                return ("Err", {"message": str(exc)})
+        if name == "len" and self.imports.get("len") == "std.prelude.len":
+            return len(args[0]) if args else 0
+        if name == "to_string" and self.imports.get("to_string") == "std.prelude.to_string":
+            return str(args[0]) if args else ""
+        if name == "char_at" and self.imports.get("char_at") == "std.prelude.char_at":
+            return str(args[0])[int(args[1])]
+        if name == "slice" and self.imports.get("slice") == "std.prelude.slice":
+            return str(args[0])[int(args[1]) : int(args[2])]
 
         fn = self.functions.get(name)
         if fn is None:
@@ -141,8 +198,17 @@ class Interpreter:
         if isinstance(expr, NameExpr):
             if expr.name in env:
                 return env[expr.name]
+            if expr.name == "None":
+                return ("None", None)
             raise InterpreterError(f"unknown name {expr.name}")
         if isinstance(expr, CallExpr):
+            constructed = self._eval_type_constructor(expr.callee, expr.args, env)
+            if constructed is not None:
+                return constructed
+            if isinstance(expr.callee, MemberExpr):
+                receiver = self.eval_expr(expr.callee.target, env)
+                args = [self.eval_expr(arg, env) for arg in expr.args]
+                return self.eval_method_call(receiver, expr.callee.member, args)
             callee = self.eval_callee(expr.callee)
             args = [self.eval_expr(arg, env) for arg in expr.args]
             return self.call_function(callee, args)
@@ -150,11 +216,30 @@ class Interpreter:
             left = self.eval_expr(expr.left, env)
             right = self.eval_expr(expr.right, env)
             return self.eval_binary(expr.op, left, right)
+        if isinstance(expr, MemberExpr):
+            target = self.eval_expr(expr.target, env)
+            if isinstance(target, dict):
+                return target.get(expr.member)
+            raise InterpreterError(f"unsupported member access {expr.member}")
+        if isinstance(expr, IndexExpr):
+            target = self.eval_expr(expr.target, env)
+            index = self.eval_expr(expr.index, env)
+            return target[int(index)]
         if isinstance(expr, IfExpr):
             if self.eval_expr(expr.condition, env):
                 return self.eval_block(expr.then_branch, env)
             if expr.else_branch is not None:
                 return self.eval_expr(expr.else_branch, env)
+            return None
+        if isinstance(expr, MatchExpr):
+            subject = self.eval_expr(expr.subject, env)
+            for arm in expr.arms:
+                bindings = self._match_pattern(arm.pattern, subject)
+                if bindings is None:
+                    continue
+                arm_env = dict(env)
+                arm_env.update(bindings)
+                return self.eval_expr(arm.expr, arm_env)
             return None
         if isinstance(expr, BlockExpr):
             return self.eval_block(expr, env)
@@ -164,6 +249,45 @@ class Interpreter:
         if isinstance(expr, NameExpr):
             return expr.name
         raise InterpreterError(f"unsupported callee {type(expr).__name__}")
+
+    def eval_method_call(self, receiver: Any, member: str, args: list[Any]) -> Any:
+        if member == "push" and isinstance(receiver, list):
+            if args:
+                receiver.append(args[0])
+            return None
+        if member == "len":
+            return len(receiver)
+        raise InterpreterError(f"unsupported method {member}")
+
+    def _eval_type_constructor(self, callee: Expr, args: list[Expr], env: dict[str, Any]) -> Any:
+        if args:
+            return None
+        if isinstance(callee, IndexExpr) and isinstance(callee.target, NameExpr) and callee.target.name == "Vec":
+            return []
+        if isinstance(callee, NameExpr) and callee.name == "Vec":
+            return []
+        return None
+
+    def _match_pattern(self, pattern: Pattern, value: Any) -> dict[str, Any] | None:
+        if isinstance(pattern, WildcardPattern):
+            return {}
+        if isinstance(pattern, NamePattern):
+            return {pattern.name: value}
+        if isinstance(pattern, VariantPattern):
+            tag = pattern.path.split("::")[-1].split(".")[-1]
+            if not isinstance(value, tuple) or len(value) != 2 or value[0] != tag:
+                return None
+            payload = value[1]
+            if not pattern.args:
+                return {}
+            bindings: dict[str, Any] = {}
+            for arg in pattern.args:
+                matched = self._match_pattern(arg, payload)
+                if matched is None:
+                    return None
+                bindings.update(matched)
+            return bindings
+        return None
 
     def eval_binary(self, op: str, left: Any, right: Any) -> Any:
         if op == "+":
@@ -195,6 +319,10 @@ class Interpreter:
     def _stringify(self, value: Any) -> str:
         if value is None:
             return "()"
+        if isinstance(value, tuple) and len(value) == 2:
+            if value[0] == "None":
+                return "None"
+            return f"{value[0]}({self._stringify(value[1])})"
         if value is True:
             return "true"
         if value is False:
