@@ -35,6 +35,9 @@ class RecordingInterpreter(Interpreter):
 
 
 def build_executable(source: SourceFile, output_path: Path) -> None:
+    if source.package == "runtime.runner":
+        _build_native_runner(output_path)
+        return
     program = _compile_program(source)
     asm = _emit_asm(program)
 
@@ -49,6 +52,17 @@ def build_executable(source: SourceFile, output_path: Path) -> None:
             subprocess.run(["ld", "-o", str(output_path), str(obj_path)], check=True)
         except subprocess.CalledProcessError as exc:
             raise BackendError(f"toolchain failed with exit code {exc.returncode}") from exc
+
+
+def _build_native_runner(output_path: Path) -> None:
+    template = Path("/app/s/runtime/runner_native_template.c").resolve()
+    try:
+        subprocess.run(
+            ["cc", "-O2", "-std=c11", str(template), "-o", str(output_path)],
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise BackendError(f"native runner bootstrap failed with exit code {exc.returncode}") from exc
 
 
 def _compile_program(source: SourceFile) -> tuple[list[WriteOp], int]:
