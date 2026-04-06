@@ -3,13 +3,13 @@ package compiler.internal.gc
 use compiler.backend_elf64.BackendError
 use compiler.internal.amd64.ArchName
 use compiler.internal.amd64.LinkProgram
-use compiler.backend_elf64.BackendError
 use compiler.internal.base.ParseCommand
 use compiler.internal.base.checkOptions
 use compiler.internal.base.cliError
 use compiler.internal.ir.LowerSource
 use compiler.internal.ir.MIRProgram
 use compiler.internal.ssagen.LowerProgram
+use compiler.internal.ssagen.MachineProgram
 use compiler.internal.syntax.DumpAstText
 use compiler.internal.syntax.DumpTokensText
 use compiler.internal.syntax.ParseSourceText
@@ -19,7 +19,9 @@ use compiler.internal.typecheck.CheckSource
 use compiler.internal.typecheck.MakePlan
 use compiler.internal.typecheck.OwnershipEntry
 use compiler.internal.typecheck.ParseType
+use compiler.internal.typecheck.TypeBinding
 use compiler.internal.typecheck.VarState
+use s.FunctionDecl
 use std.fs.MakeTempDir
 use std.io.eprintln
 use std.io.println
@@ -128,18 +130,18 @@ func OwnershipPhase(s.SourceFile parsed) -> Vec[OwnershipEntry] {
 
 func LowerToIR(s.SourceFile parsed, Vec[OwnershipEntry] ownership) -> Result[MIRProgram, cliError] {
     match LowerSource(parsed, ownership) {
-        Result::Ok(()) => Result::Ok(()),
+        Result::Ok(mir) => Result::Ok(mir),
         Result::Err(err) => Result::Err(cliError {
             message: "ir lowering failed: " + err,
         }),
     }
 }
 
-func CodegenPhase(MIRProgram mir) -> compiler.internal.ssagen.MachineProgram {
+func CodegenPhase(MIRProgram mir) -> MachineProgram {
     LowerProgram(mir, ArchName())
 }
 
-func LinkPhase(compiler.internal.ssagen.MachineProgram program, String outputPath) -> Result[(), cliError] {
+func LinkPhase(MachineProgram program, String outputPath) -> Result[(), cliError] {
     match LinkProgram(program, outputPath) {
         Result::Ok(()) => Result::Ok(()),
         Result::Err(err) => backendError(err),
@@ -169,13 +171,13 @@ func runSource(MIRProgram mir, checkOptions command) -> Result[(), cliError] {
     }
 }
 
-func collectTypeBindings(s.SourceFile parsed) -> Vec[compiler.internal.typecheck.TypeBinding] {
-    var bindings = Vec[compiler.internal.typecheck.TypeBinding]()
+func collectTypeBindings(s.SourceFile parsed) -> Vec[TypeBinding] {
+    var bindings = Vec[TypeBinding]()
     for item in parsed.items {
         match item {
             s.Item::Function(func) => {
                 for param in func.sig.params {
-                    bindings.push(compiler.internal.typecheck.TypeBinding {
+                    bindings.push(TypeBinding {
                         name: param.name,
                         value: ParseType(param.type_name),
                     })
@@ -187,7 +189,7 @@ func collectTypeBindings(s.SourceFile parsed) -> Vec[compiler.internal.typecheck
     bindings
 }
 
-func initialScope(s.FunctionDecl func) -> Vec[VarState] {
+func initialScope(FunctionDecl func) -> Vec[VarState] {
     var scope = Vec[VarState]()
     for param in func.sig.params {
         scope.push(VarState {
