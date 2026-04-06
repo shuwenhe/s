@@ -21,7 +21,7 @@ from compiler.ast import (
     ReturnStmt,
     WhileExpr,
 )
-from compiler.typesys import Type, UnknownType, is_copy_type, parse_type
+from compiler.internal.typecheck.types import Type, UnknownType, is_copy_type, parse_type
 
 
 @dataclass(frozen=True)
