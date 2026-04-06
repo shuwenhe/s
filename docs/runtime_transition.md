@@ -131,7 +131,7 @@ Current status:
 Current progress:
 
 - a minimal non-Python runner now exists in
-  [s_native_runner.s](/app/s/runtime/s_native_runner.s)
+  [runner.s](/app/s/runtime/runner.s)
 - it can build the current
   [hello.s](/app/s/examples/s/hello.s) and
   [sum.s](/app/s/examples/s/sum.s)
