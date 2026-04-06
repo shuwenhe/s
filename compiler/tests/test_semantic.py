@@ -257,14 +257,14 @@ func main() -> int {
             self.assertEqual(run.stdout.strip(), "42")
 
     def test_hosted_build_s_native_runner_binary_output(self) -> None:
-        code = run_cli(["build", "/app/s/runtime/s_native_runner.s", "-o", "/tmp/s_native_hosted"])
+        code = run_cli(["build", "/app/s/runtime/runner.s", "-o", "/tmp/s_native_hosted"])
         self.assertEqual(code, 0)
         launcher = Path("/tmp/s_native_hosted").read_text()
         self.assertIn("Interpreter", launcher)
-        self.assertIn("/app/s/runtime/s_native_runner.s", launcher)
+        self.assertIn("/app/s/runtime/runner.s", launcher)
 
         rebuild = subprocess.run(
-            ["/tmp/s_native_hosted", "build", "/app/s/runtime/s_native_runner.s", "-o", "/tmp/s_native_self_hosted"],
+            ["/tmp/s_native_hosted", "build", "/app/s/runtime/runner.s", "-o", "/tmp/s_native_self_hosted"],
             cwd="/app/s",
             capture_output=True,
             text=True,
@@ -335,7 +335,7 @@ func main() -> int {
         self.assertEqual(run.stdout.strip(), "5050")
 
     def test_s_native_runner_interprets_int_literal_shape(self) -> None:
-        runner = Interpreter(parse_source(Path("/app/s/runtime/s_native_runner.s").read_text()))
+        runner = Interpreter(parse_source(Path("/app/s/runtime/runner.s").read_text()))
         result = runner.call_function(
             "compileMessageForSource",
             [
@@ -345,6 +345,6 @@ func main() -> int {
         self.assertEqual(result, ("Some", "42\n"))
 
     def test_s_native_runner_encodes_extended_ascii(self) -> None:
-        runner = Interpreter(parse_source(Path("/app/s/runtime/s_native_runner.s").read_text()))
+        runner = Interpreter(parse_source(Path("/app/s/runtime/runner.s").read_text()))
         result = runner.call_function("encodeBytes", ["@[]{}~"])
         self.assertEqual(result, "64, 91, 93, 123, 125, 126")

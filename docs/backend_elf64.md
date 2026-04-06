@@ -220,7 +220,7 @@ Match the current Python backend exactly:
 - collect stdout/stderr writes
 
 There is now also a native bootstrap runner in
-[`s_native_runner.s`](/app/s/runtime/s_native_runner.s) that proves the current
+[`runner.s`](/app/s/runtime/runner.s) that proves the current
 `hello.s` / `sum.s` subset can be built without Python, while still staying far
 smaller than the eventual full S runtime.
 - collect exit code
