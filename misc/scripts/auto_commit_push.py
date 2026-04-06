@@ -82,7 +82,7 @@ def summarize_paths(paths):
     labels = []
     mapping = [
         ("src/compiler/", "compiler"),
-        ("src/s/", "frontend"),
+        ("src/s/", "language packages"),
         ("src/runtime/", "runtime"),
         ("src/std/", "standard library"),
         ("src/cmd/", "commands"),
