@@ -1,4 +1,4 @@
-# S Frontend Packages
+# S Language Packages
 
 This directory replaces the generic `src/go` placeholder with S-specific
 language-facing packages.
@@ -11,6 +11,5 @@ Planned responsibilities:
 - `types/`: public type-model helpers intended to be shared across tools
 - `format/`: formatting and pretty-printing support
 
-Existing production code still lives in `src/s` and `src/compiler`.
-These subdirectories are the long-term package layout for reusable S-facing APIs.
-
+Core reusable S-facing code now lives directly in `src/s`, while compiler-only
+logic remains in `src/compiler`.
