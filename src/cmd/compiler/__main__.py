@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
 
     run_cmd = sub.add_parser("run", help="interpret a minimal S source file")
     run_cmd.add_argument("path")
+    run_cmd.add_argument("program_args", nargs=argparse.REMAINDER)
 
     args = parser.parse_args(argv)
     if args.command == "check":
@@ -35,33 +36,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "build":
         return run_cli([args.command, args.path, "-o", args.output])
     if args.command == "run":
-        return run_source(args.path)
+        return run_cli([args.command, args.path, *args.program_args])
     parser.error("unknown command")
     return 2
-
-def run_source(path: str) -> int:
-    import sys
-    from pathlib import Path
-
-    source_path = Path(path)
-    source = source_path.read_text()
-    try:
-        parsed = parse_source(source)
-    except ParseError as exc:
-        print(f"parse error: {exc}", file=sys.stderr)
-        return 1
-
-    result = check_source(parsed)
-    if not result.ok:
-        for diagnostic in result.diagnostics:
-            print(f"error: {diagnostic.message}", file=sys.stderr)
-        return 1
-
-    try:
-        return Interpreter(parsed).run_main()
-    except InterpreterError as exc:
-        print(f"runtime error: {exc}", file=sys.stderr)
-        return 1
 
 
 if __name__ == "__main__":

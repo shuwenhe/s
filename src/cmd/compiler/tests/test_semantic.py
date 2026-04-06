@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from contextlib import redirect_stderr, redirect_stdout
+import io
 import subprocess
 import sys
 import tempfile
@@ -241,6 +243,22 @@ func pick(Result[i32, String] value) -> Result[i32, String] {
         )
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "5050")
+
+    def test_hosted_run_sum_output(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            code = run_cli(["run", "/app/s/misc/examples/s/sum.s"])
+        self.assertEqual(code, 0, stderr.getvalue())
+        self.assertEqual(stdout.getvalue().strip(), "5050")
+
+    def test_cmd_s_hosted_run_sum_output(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            result = run_cmd_s(["run", "/app/s/misc/examples/s/sum.s"])
+        self.assertEqual(result.exit_code, 0, stderr.getvalue())
+        self.assertEqual(stdout.getvalue().strip(), "5050")
 
     def test_hosted_build_vec_push_and_string_concat(self) -> None:
         source = """

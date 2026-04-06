@@ -2,11 +2,13 @@ package compiler
 
 use compiler.backend_elf64.BackendError
 use compiler.backend_elf64.buildExecutable
+use std.fs.MakeTempDir
 use std.fs.ReadToString
 use std.io.eprintln
 use std.io.println
 use std.prelude.char_at
 use std.prelude.slice
+use std.process.RunProcess
 use std.result.Result
 use std.vec.Vec
 use s.dump_source_file
@@ -24,6 +26,7 @@ struct checkOptions {
     String output,
     bool dump_tokens,
     bool dump_ast,
+    Vec[String] run_args,
 }
 
 func main(Vec[String] args) -> i32 {
@@ -50,41 +53,55 @@ func run(Vec[String] args) -> Result[(), cliError] {
         println("built: " + command.output)
         return Result::Ok(())
     }
+    if command.command == "run" {
+        runSource(parsed, command)?
+        return Result::Ok(())
+    }
     Result::Err(cliError {
         message: "unknown command: " + command.command,
     })
 }
 
 func parseCommand(Vec[String] args) -> Result[checkOptions, cliError] {
-    if args.len() < 3 {
+    if args.len() < 2 {
         return usageError()
     }
-    if args[1] != "check" && args[1] != "build" {
+    if args[0] != "check" && args[0] != "build" && args[0] != "run" {
         return usageError()
     }
 
     var options = checkOptions {
-        command: args[1],
-        path: args[2],
+        command: args[0],
+        path: args[1],
         output: "",
         dump_tokens: false,
         dump_ast: false,
+        run_args: Vec[String](),
     }
 
     if options.command == "build" {
-        if args.len() < 5 {
+        if args.len() < 4 {
             return usageError()
         }
-        if args[3] != "-o" {
+        if args[2] != "-o" {
             return Result::Err(cliError {
                 message: "expected -o before output path",
             })
         }
-        options.output = normalizeOutputPath(args[4])
+        options.output = normalizeOutputPath(args[3])
         return Result::Ok(options)
     }
 
-    var index = 3
+    if options.command == "run" {
+        var index = 2
+        while index < args.len() {
+            options.run_args.push(args[index]);
+            index = index + 1
+        }
+        return Result::Ok(options)
+    }
+
+    var index = 2
     while index < args.len() {
         var flag = args[index]
         if flag == "--dump-tokens" {
@@ -148,6 +165,24 @@ func emitBinary(s.SourceFile parsed, String outputPath) -> Result[(), cliError] 
     }
 }
 
+func runSource(s.SourceFile parsed, checkOptions command) -> Result[(), cliError] {
+    var outputPath = tempRunOutputPath()?
+    emitBinary(parsed, outputPath)?
+
+    var argv = Vec[String]()
+    argv.push(outputPath);
+    for value in command.run_args {
+        argv.push(value);
+    }
+
+    match RunProcess(argv) {
+        Result::Ok(()) => Result::Ok(()),
+        Result::Err(err) => Result::Err(cliError {
+            message: "run failed: " + err.message,
+        }),
+    }
+}
+
 func backendError(BackendError err) -> Result[(), cliError] {
     Result::Err(cliError {
         message: err.message,
@@ -165,8 +200,19 @@ func readSource(String path) -> Result[String, cliError] {
 
 func usageError() -> Result[checkOptions, cliError] {
     Result::Err(cliError {
-        message: "usage: s check <path> [--dump-tokens] [--dump-ast] | s build <path> -o <output>",
+        message:
+            "usage: s check <path> [--dump-tokens] [--dump-ast] | " +
+            "s build <path> -o <output> | s run <path> [args...]",
     })
+}
+
+func tempRunOutputPath() -> Result[String, cliError] {
+    match MakeTempDir("s-run-") {
+        Result::Ok(path) => Result::Ok(path + "/run-target"),
+        Result::Err(err) => Result::Err(cliError {
+            message: "failed to create run temp dir: " + err.message,
+        }),
+    }
 }
 
 func normalizeOutputPath(String outputPath) -> String {
