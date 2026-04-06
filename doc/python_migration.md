@@ -24,10 +24,10 @@ Status: Working Draft
 
 当前状态：
 
-- `ast.py` 已有对应 S 版 [frontend/ast.s](/app/s/src/s/ast.s)
-- `tokens.py` 已有对应 S 版 [frontend/tokens.s](/app/s/src/s/tokens.s)
-- `lexer.py` 已有对应 S 版 [frontend/lexer.s](/app/s/src/s/lexer.s)
-- `parser.py` 已有对应 S 版 [frontend/parser.s](/app/s/src/s/parser.s)
+- `ast.py` 已有对应 S 版 [s/ast.s](/app/s/src/s/ast.s)
+- `tokens.py` 已有对应 S 版 [s/tokens.s](/app/s/src/s/tokens.s)
+- `lexer.py` 已有对应 S 版 [s/lexer.s](/app/s/src/s/lexer.s)
+- `parser.py` 已有对应 S 版 [s/parser.s](/app/s/src/s/parser.s)
 - 本次新增 `typesys.py` 对应的 [compiler/typesys.s](/app/s/src/compiler/typesys.s)
 - 本次新增 `ownership.py` 对应的 [compiler/ownership.s](/app/s/src/compiler/ownership.s)
 - 本次新增最小 golden 验证入口 [compiler/golden.s](/app/s/src/compiler/golden.s)
