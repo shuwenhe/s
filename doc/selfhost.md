@@ -6,10 +6,10 @@ Current scope:
 
 - `std/*.s`: minimal self-hosting runtime skeleton for Option / Result / Vec / IO / FS / prelude helpers
 - `std/env.s` and `std/process.s`: command-entry ABI for argv / exit during self-hosted execution
-- `frontend/ast.s`: S-native AST data model mirroring `compiler/ast.py`
-- `frontend/tokens.s`: S-native token definitions mirroring `compiler/lexer/tokens.py`
-- `frontend/lexer.s`: S-native lexer mirroring `compiler/lexer/lexer.py`
-- `frontend/parser.s`: S-native parser skeleton mirroring `compiler/parser/parser.py`
+- `s/ast.s`: S-native AST data model mirroring `compiler/ast.py`
+- `s/tokens.s`: S-native token definitions mirroring `compiler/lexer/tokens.py`
+- `s/lexer.s`: S-native lexer mirroring `compiler/lexer/lexer.py`
+- `s/parser.s`: S-native parser skeleton mirroring `compiler/parser/parser.py`
 - `cmd/lex_dump.s`: minimal self-hosting driver for `source -> tokens -> dump`
 - `cmd/ast_dump.s`: minimal self-hosting driver for `source -> AST dump`
 - `cmd/s.s`: minimal self-hosted compiler command wrapper around `compiler.main`

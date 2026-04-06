@@ -1,4 +1,4 @@
-package frontend
+package s
 
 use std.prelude.to_string
 use std.vec.Vec
