@@ -3,8 +3,8 @@ package compiler.tests
 use std.option.Option
 use std.result.Result
 use std.vec.Vec
-use compiler.LoadPrelude
 use compiler.internal.ir.LowerBlock
+use compiler.internal.typecheck.LoadPrelude
 use compiler.internal.typecheck.ParseType
 use compiler.internal.typecheck.TypeBinding
 use s.parse_source
