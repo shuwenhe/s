@@ -42,7 +42,8 @@ from compiler.ast import (
     WhileExpr,
     WildcardPattern,
 )
-from compiler.lexer import Lexer, Token, TokenKind
+from compiler.internal.syntax.lexer import Lexer
+from compiler.internal.syntax.tokens import Token, TokenKind
 
 
 class ParseError(Exception):
