@@ -422,6 +422,15 @@ func main() -> int {
         self.assertEqual(run.stdout.strip(), "5050")
 
     def test_native_runner_build_cmd_s_launcher_binary_output(self) -> None:
+        install = subprocess.run(
+            ["/app/s/misc/scripts/install_selfhost_compiler_launcher.sh"],
+            cwd="/app",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(install.returncode, 0, install.stderr)
+
         build_runner = subprocess.run(
             ["/app/s/misc/scripts/build_native_runner.sh", "/tmp/s_native_cmd_test"],
             cwd="/app",
