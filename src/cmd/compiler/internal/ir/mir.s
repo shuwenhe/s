@@ -1,5 +1,9 @@
-package compiler
+package compiler.internal.ir
 
+use compiler.internal.typecheck.FindTypeBinding
+use compiler.internal.typecheck.Type
+use compiler.internal.typecheck.TypeBinding
+use compiler.internal.typecheck.UnknownTypeOf
 use std.option.Option
 use std.vec.Vec
 use s.BlockExpr
