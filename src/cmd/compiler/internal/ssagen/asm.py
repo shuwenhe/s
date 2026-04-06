@@ -29,7 +29,6 @@ class AsmProgram:
     entry_symbol: str
     data: list[AsmData]
     text: list[AsmInstruction]
-    exit_code: int
 
 
 def emit_program(program: AsmProgram, output_path: Path) -> None:
@@ -65,12 +64,4 @@ def render_program(program: AsmProgram) -> str:
             text_lines.append(f"    {insn.opcode} " + ", ".join(insn.operands))
         else:
             text_lines.append(f"    {insn.opcode}")
-
-    text_lines.extend(
-        [
-            "    mov $60, %rax",
-            f"    mov ${program.exit_code}, %rdi",
-            "    syscall",
-        ]
-    )
     return "\n".join(data_lines + [""] + text_lines + [""])

@@ -24,7 +24,6 @@ def select_instructions(program: LoweredProgram) -> AsmProgram:
         entry_symbol=program.entry_symbol,
         data=data,
         text=text,
-        exit_code=program.exit_code,
     )
 
 
@@ -56,9 +55,10 @@ def _syscall(_: LoweredInstruction) -> list[AsmInstruction]:
 
 
 _SELECTORS: dict[tuple[str, str, str], Selector] = {
-    ("mov_imm", "i64", "rax"): _mov_imm("rax"),
-    ("mov_imm", "i64", "rdi"): _mov_imm("rdi"),
-    ("mov_imm", "i64", "rdx"): _mov_imm("rdx"),
-    ("lea_symbol", "ptr", "rsi"): _lea_symbol("rsi"),
+    ("load_syscall_nr", "syscall_no", "rax"): _mov_imm("rax"),
+    ("load_fd", "fd", "rdi"): _mov_imm("rdi"),
+    ("load_len", "size", "rdx"): _mov_imm("rdx"),
+    ("load_exit_code", "exit_code", "rdi"): _mov_imm("rdi"),
+    ("load_addr", "ptr", "rsi"): _lea_symbol("rsi"),
     ("syscall", "unit", ""): _syscall,
 }
