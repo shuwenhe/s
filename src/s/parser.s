@@ -368,9 +368,6 @@ impl Parser {
     func starts_stmt(self) -> bool {
         self.at_keyword("var")
             || self.at_keyword("return")
-            || self.at_keyword("if")
-            || self.at_keyword("while")
-            || self.at_keyword("match")
             || self.at_cfor_start()
             || self.looks_like_typed_var_stmt()
             || self.looks_like_increment_stmt()
@@ -383,11 +380,6 @@ impl Parser {
         }
         if self.at_keyword("return") {
             return Result::Ok(Stmt::Return(self.parse_return_stmt()?))
-        }
-        if self.at_keyword("if") || self.at_keyword("while") || self.at_keyword("match") {
-            var expr = self.parse_expr()?
-            self.eat_symbol(";")
-            return Result::Ok(Stmt::Expr(ExprStmt { expr: expr }))
         }
         if self.at_cfor_start() {
             return Result::Ok(Stmt::CFor(self.parse_cfor_stmt()?))

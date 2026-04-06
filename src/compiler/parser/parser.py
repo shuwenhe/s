@@ -232,9 +232,6 @@ class Parser:
             self._at_keyword("let")
             or self._at_keyword("var")
             or self._at_keyword("return")
-            or self._at_keyword("if")
-            or self._at_keyword("while")
-            or self._at_keyword("match")
             or self._at_keyword("for")
             or self._looks_like_typed_let()
             or self._looks_like_assignment()
@@ -248,10 +245,6 @@ class Parser:
             return self._parse_var_stmt()
         if self._at_keyword("return"):
             return self._parse_return_stmt()
-        if self._at_keyword("if") or self._at_keyword("while") or self._at_keyword("match"):
-            expr = self._parse_expr()
-            self._eat_symbol(";")
-            return ExprStmt(expr)
         if self._at_keyword("for"):
             return self._parse_c_for_stmt()
         if self._looks_like_typed_let():
