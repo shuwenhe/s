@@ -7,7 +7,7 @@ use compiler.TypeBinding
 use compiler.LoadPrelude
 use compiler.LowerBlock
 use compiler.ParseType
-use frontend.parse_source
+use s.parse_source
 
 struct MirFailure {
     String name,
@@ -50,7 +50,7 @@ func checkLocalsVersioned() -> Result[(), MirFailure] {
         }
 
     match parsed.items[0] {
-        frontend.Item::Function(func) => {
+        s.Item::Function(func) => {
             match func.body {
                 Option::Some(body) => {
                     var graph = LowerBlock(body, Vec[String] { "x" }, Vec[TypeBinding] {
@@ -92,7 +92,7 @@ func checkMirShape() -> Result[(), MirFailure] {
         }
 
     match parsed.items[0] {
-        frontend.Item::Function(func) => {
+        s.Item::Function(func) => {
             match func.body {
                 Option::Some(body) => {
                     var graph = LowerBlock(body, Vec[String] { "flag" }, Vec[TypeBinding] {

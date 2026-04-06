@@ -2,8 +2,8 @@ package compiler
 
 use std.option.Option
 use std.vec.Vec
-use frontend.BlockExpr
-use frontend.Expr
+use s.BlockExpr
+use s.Expr
 
 struct LocalSlot {
     i32 id,

@@ -6,9 +6,9 @@ use std.io.println
 use std.prelude.to_string
 use std.result.Result
 use std.vec.Vec
-use frontend.SourceFile
-use frontend.dump_source_file
-use frontend.parse_source
+use s.SourceFile
+use s.dump_source_file
+use s.parse_source
 
 struct CliError {
     String message,
