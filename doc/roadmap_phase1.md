@@ -48,7 +48,7 @@ Done means:
 
 Primary directories:
 
-- `/app/s/src/compiler`
+- `/app/s/src/cmd/compiler`
 
 Tasks:
 
@@ -67,7 +67,7 @@ Done means:
 
 Primary directories:
 
-- `/app/s/src/compiler`
+- `/app/s/src/cmd/compiler`
 - `/app/s/src/cmd`
 
 Tasks:
@@ -141,7 +141,7 @@ Done means:
 
 Primary directories:
 
-- `/app/s/src/compiler`
+- `/app/s/src/cmd/compiler`
 
 Tasks:
 
@@ -174,7 +174,14 @@ Done means:
 
 Primary directories:
 
-- `/app/s/src/std`
+- `/app/s/src/prelude`
+- `/app/s/src/result`
+- `/app/s/src/option`
+- `/app/s/src/vec`
+- `/app/s/src/io`
+- `/app/s/src/fs`
+- `/app/s/src/env`
+- `/app/s/src/process`
 
 Tasks:
 
@@ -214,7 +221,7 @@ Primary directories:
 
 - `/app/s/src/runtime`
 - `/app/s/src/internal/bootstrap`
-- `/app/s/src/compiler`
+- `/app/s/src/cmd/compiler`
 
 Tasks:
 
@@ -229,8 +236,8 @@ Done means:
 ## Recommended Execution Order
 
 1. Stabilize `/app/s/src/s`
-2. Stabilize semantic checking in `/app/s/src/compiler`
-3. Make the build path solid in `/app/s/src/compiler` and `/app/s/src/cmd`
+2. Stabilize semantic checking in `/app/s/src/cmd/compiler`
+3. Make the build path solid in `/app/s/src/cmd/compiler` and `/app/s/src/cmd`
 4. Keep `/app/s/src/runtime` small and stable
 5. Strengthen `/app/s/src/cmd/compiler/tests` and `/app/s/src/testing`
 6. Refine ownership and borrow analysis
