@@ -459,6 +459,26 @@ func main() -> int {
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "5050")
 
+    def test_selfhosted_launcher_runs_without_python_launcher(self) -> None:
+        install = subprocess.run(
+            ["/app/s/misc/scripts/install_selfhost_compiler_launcher.sh"],
+            cwd="/app",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(install.returncode, 0, install.stderr)
+
+        run = subprocess.run(
+            ["/app/s/bin/s-selfhosted", "run", "/app/s/misc/examples/s/sum.s"],
+            cwd="/app",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(run.stdout.strip().splitlines()[-1], "5050")
+
     def test_s_native_runner_interprets_int_literal_shape(self) -> None:
         runner = Interpreter(parse_source(Path("/app/s/src/runtime/runner.s").read_text()))
         result = runner.call_function(
