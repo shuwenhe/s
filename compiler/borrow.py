@@ -153,7 +153,7 @@ def _apply_operand(value, scope: Dict[str, VarState], diagnostics: List[BorrowDi
 
 
 def _apply_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic]) -> None:
-    from compiler.ast import BinaryExpr, BorrowExpr, CallExpr, IndexExpr, MatchExpr, MemberExpr, NameExpr
+    from compiler.ast import BinaryExpr, BlockExpr, BorrowExpr, CallExpr, IfExpr, IndexExpr, MatchExpr, MemberExpr, NameExpr
 
     if isinstance(expr, NameExpr):
         _consume_name(expr.name, scope, diagnostics)
@@ -194,6 +194,32 @@ def _apply_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiagno
         return
     if isinstance(expr, MatchExpr):
         _apply_expr(expr.subject, scope, diagnostics)
+        for arm in expr.arms:
+            arm_scope = _clone_scope(scope)
+            _apply_expr(arm.expr, arm_scope, diagnostics)
+        return
+    if isinstance(expr, IfExpr):
+        _apply_expr(expr.condition, scope, diagnostics)
+        then_scope = _clone_scope(scope)
+        _apply_block_expr(expr.then_branch, then_scope, diagnostics)
+        if expr.else_branch is not None:
+            else_scope = _clone_scope(scope)
+            _apply_expr(expr.else_branch, else_scope, diagnostics)
+        return
+    if isinstance(expr, BlockExpr):
+        _apply_block_expr(expr, scope, diagnostics)
+
+
+def _apply_block_expr(block, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic]) -> None:
+    for stmt in block.statements:
+        if isinstance(stmt, LetStmt) and isinstance(stmt.value, NameExpr):
+            _consume_name(stmt.value.name, scope, diagnostics)
+        elif isinstance(stmt, ExprStmt):
+            _apply_expr(stmt.expr, scope, diagnostics)
+        elif isinstance(stmt, ReturnStmt) and stmt.value is not None:
+            _apply_expr(stmt.value, scope, diagnostics)
+    if block.final_expr is not None:
+        _apply_expr(block.final_expr, scope, diagnostics)
 
 
 def _join_scopes(left: Dict[str, VarState], right: Dict[str, VarState]) -> Dict[str, VarState]:
