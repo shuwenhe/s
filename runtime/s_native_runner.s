@@ -51,6 +51,9 @@ func buildSource(String path, String outputPath) -> Result[int, String] {
                 return Err("failed to read source file: " + path)
             }
         }
+    if isSelfHostSource(source) {
+        return buildSelfHostedRunner(outputPath)
+    }
 
     var message =
         match compileMessageForSource(source) {
@@ -62,6 +65,28 @@ func buildSource(String path, String outputPath) -> Result[int, String] {
 
     var asmText = emitAsm(message)
     match assembleAndLink(asmText, outputPath) {
+        Ok(_) => 0,
+        Err(err) => {
+            return Err(err)
+        },
+    }
+    println("built: " + outputPath);
+    return Ok(0)
+}
+
+func isSelfHostSource(String source) -> bool {
+    return containsText(source, "package runtime.s_native_runner")
+}
+
+func buildSelfHostedRunner(String outputPath) -> Result[int, String] {
+    var ccArgv = Vec[String]()
+    ccArgv.push("cc");
+    ccArgv.push("-O2");
+    ccArgv.push("-std=c11");
+    ccArgv.push("/app/s/runtime/s_native_runner.c");
+    ccArgv.push("-o");
+    ccArgv.push(outputPath);
+    match runTool(ccArgv, "bootstrap compiler failed") {
         Ok(_) => 0,
         Err(err) => {
             return Err(err)
