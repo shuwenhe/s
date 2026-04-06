@@ -1,7 +1,5 @@
 package compiler.internal.gc
 
-use compiler.CheckSource
-use compiler.IsOK
 use compiler.backend_elf64.BackendError
 use compiler.backend_elf64.buildExecutable
 use compiler.internal.base.ParseCommand
@@ -11,6 +9,7 @@ use compiler.internal.syntax.DumpAstText
 use compiler.internal.syntax.DumpTokensText
 use compiler.internal.syntax.ParseSourceText
 use compiler.internal.syntax.ReadSource
+use compiler.internal.typecheck.CheckSource
 use std.fs.MakeTempDir
 use std.io.eprintln
 use std.io.println
@@ -63,7 +62,7 @@ func parseCheckedSource(checkOptions command, String source) -> Result[s.SourceF
     }
 
     var checked = CheckSource(parsed)
-    if !IsOK(checked) {
+    if checked.diagnostics.len() > 0 {
         for diagnostic in checked.diagnostics {
             eprintln("error: " + diagnostic.message)
         }
