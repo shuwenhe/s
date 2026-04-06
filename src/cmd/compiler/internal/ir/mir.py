@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from types import SimpleNamespace
+from typing import Any, Dict, List, Optional
 
 from compiler.ast import (
     BinaryExpr,
@@ -20,8 +21,7 @@ from compiler.ast import (
     ReturnStmt,
     WhileExpr,
 )
-from compiler.ownership import OwnershipDecision, make_decision
-from compiler.typesys import Type, UnknownType, parse_type
+from compiler.typesys import Type, UnknownType, is_copy_type, parse_type
 
 
 @dataclass(frozen=True)
@@ -122,7 +122,7 @@ def lower_block(
     block: BlockExpr,
     param_names: Optional[List[str]] = None,
     type_env: Optional[Dict[str, Type]] = None,
-    ownership_plan: Optional[Dict[str, OwnershipDecision]] = None,
+    ownership_plan: Optional[Dict[str, Any]] = None,
 ) -> MIRGraph:
     builder = _MIRBuilder(param_names or [], type_env or {}, ownership_plan or {})
     entry, exits = builder.lower_block(block)
@@ -132,7 +132,7 @@ def lower_block(
     return MIRGraph(builder.blocks, entry, exit_id, builder.locals)
 
 
-def lower_source(source, ownership_plan: Optional[Dict[str, OwnershipDecision]] = None) -> MIRProgram:
+def lower_source(source, ownership_plan: Optional[Dict[str, Any]] = None) -> MIRProgram:
     ownership_plan = ownership_plan or {}
     ownership_plan  # keep the phase boundary explicit even while the MVP lowering is linear
     interpreter = _RecordingInterpreter(source)
@@ -170,7 +170,7 @@ class _MIRBuilder:
         self,
         param_names: List[str],
         type_env: Dict[str, Type],
-        ownership_plan: Dict[str, OwnershipDecision],
+        ownership_plan: Dict[str, Any],
     ) -> None:
         self.blocks: Dict[int, BasicBlock] = {}
         self.locals: Dict[int, LocalSlot] = {}
@@ -215,11 +215,11 @@ class _MIRBuilder:
     def slot_for_name(self, name: str) -> int:
         return self.bind_name(name, "local", self.type_env.get(name, UnknownType()))
 
-    def _decision_for_slot(self, slot_id: int) -> OwnershipDecision:
+    def _decision_for_slot(self, slot_id: int) -> Any:
         slot = self.locals[slot_id]
         if slot.name in self.ownership_plan:
             return self.ownership_plan[slot.name]
-        return make_decision(slot.ty)
+        return SimpleNamespace(copyable=is_copy_type(slot.ty))
 
     def _consume_stmt(self, target: int, value: Operand) -> object:
         if value.kind == "slot":
