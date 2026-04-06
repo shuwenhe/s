@@ -9,10 +9,10 @@ use std.prelude.char_at
 use std.prelude.slice
 use std.result.Result
 use std.vec.Vec
-use frontend.dump_source_file
-use frontend.dump_tokens
-use frontend.new_lexer
-use frontend.parse_source
+use s.dump_source_file
+use s.dump_tokens
+use s.new_lexer
+use s.parse_source
 
 struct cliError {
     String message,
@@ -102,7 +102,7 @@ func parseCommand(Vec[String] args) -> Result[checkOptions, cliError] {
     Result::Ok(options)
 }
 
-func parseCheckedSource(checkOptions command, String source) -> Result[frontend.SourceFile, cliError] {
+func parseCheckedSource(checkOptions command, String source) -> Result[s.SourceFile, cliError] {
     if command.dump_tokens {
         match new_lexer(source).tokenize() {
             Result::Ok(tokens) => println(dump_tokens(tokens)),
@@ -141,7 +141,7 @@ func parseCheckedSource(checkOptions command, String source) -> Result[frontend.
     Result::Ok(parsed)
 }
 
-func emitBinary(frontend.SourceFile parsed, String outputPath) -> Result[(), cliError] {
+func emitBinary(s.SourceFile parsed, String outputPath) -> Result[(), cliError] {
     match buildExecutable(parsed, outputPath) {
         Result::Ok(()) => Result::Ok(()),
         Result::Err(err) => backendError(err),

@@ -1,4 +1,4 @@
-package frontend
+package s
 
 use std.option.Option
 use std.prelude.char_at

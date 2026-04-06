@@ -3,10 +3,10 @@ package compiler
 use std.fs.read_to_string
 use std.result.Result
 use std.vec.Vec
-use frontend.dump_source_file
-use frontend.dump_tokens
-use frontend.parse_source
-use frontend.new_lexer
+use s.dump_source_file
+use s.dump_tokens
+use s.parse_source
+use s.new_lexer
 
 struct GoldenCase {
     String name,
