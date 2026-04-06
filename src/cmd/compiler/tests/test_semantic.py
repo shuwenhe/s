@@ -421,6 +421,35 @@ func main() -> int {
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "5050")
 
+    def test_native_runner_build_cmd_s_launcher_binary_output(self) -> None:
+        build_runner = subprocess.run(
+            ["/app/s/misc/scripts/build_native_runner.sh", "/tmp/s_native_cmd_test"],
+            cwd="/app",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(build_runner.returncode, 0, build_runner.stderr)
+
+        build = subprocess.run(
+            ["/tmp/s_native_cmd_test", "build", "/app/s/src/cmd/s/main.s", "-o", "/tmp/s_cmd_native_test"],
+            cwd="/app",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(build.returncode, 0, build.stderr)
+
+        run = subprocess.run(
+            ["/tmp/s_cmd_native_test", "run", "/app/s/misc/examples/s/sum.s"],
+            cwd="/app",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(run.stdout.strip(), "5050")
+
     def test_s_native_runner_interprets_int_literal_shape(self) -> None:
         runner = Interpreter(parse_source(Path("/app/s/src/runtime/runner.s").read_text()))
         result = runner.call_function(
