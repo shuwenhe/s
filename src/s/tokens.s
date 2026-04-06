@@ -31,6 +31,7 @@ func token_kind_name(TokenKind kind) -> String {
 }
 
 func dump_tokens(Vec[Token] tokens) -> String {
+    // Golden tests depend on this exact one-token-per-line format.
     var out = ""
     for token in tokens {
         if out != "" {
@@ -54,8 +55,9 @@ func is_keyword(String text) -> bool {
         "package" => true,
         "use" => true,
         "as" => true,
+        "pub" => true,
         "func" => true,
-        "var" => true,
+        "let" => true,
         "var" => true,
         "const" => true,
         "static" => true,

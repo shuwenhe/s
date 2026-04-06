@@ -159,7 +159,7 @@ impl Lexer {
         var out = ""
         while !self.is_eof() {
             var ch = self.peek()?
-            if !is_digit(ch) {
+            if !is_number_continue(ch) {
                 break
             }
             out = out + self.advance()?
@@ -174,7 +174,7 @@ impl Lexer {
             out = out + ch
             if ch == "\\" {
                 if self.is_eof() {
-                return Result::Err(self.error("unterminated escape sequence"))
+                    return Result::Err(self.error("unterminated escape sequence"))
                 }
                 out = out + self.advance()?
                 continue
@@ -188,6 +188,7 @@ impl Lexer {
 
     func read_symbol(mut self) -> Result[String, LexError] {
         var multi = Vec[String] {
+            "++",
             "->",
             "=>",
             "==",
@@ -196,6 +197,9 @@ impl Lexer {
             ">=",
             "&&",
             "||",
+            "<<",
+            ">>",
+            "::",
             "..=",
             "..",
         }
@@ -222,6 +226,9 @@ impl Lexer {
     }
 
     func match_text(self, String text) -> bool {
+        if self.index + len(text) > len(self.source) {
+            return false
+        }
         slice(self.source, self.index, self.index + len(text)) == text
     }
 
@@ -287,6 +294,10 @@ func is_digit(String ch) -> bool {
         "9" => true,
         _ => false,
     }
+}
+
+func is_number_continue(String ch) -> bool {
+    is_digit(ch) || ch == "_"
 }
 
 func is_ident_start(String ch) -> bool {
@@ -382,6 +393,7 @@ func is_single_symbol(String ch) -> bool {
         "?" => true,
         "&" => true,
         "|" => true,
+        "^" => true,
         _ => false,
     }
 }
