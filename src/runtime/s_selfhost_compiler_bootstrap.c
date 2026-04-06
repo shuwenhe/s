@@ -5,9 +5,8 @@
 int main(int argc, char **argv) {
     (void)argc;
 
-    execv("/app/s/bin/s-selfhosted", argv);
     execv("/app/s/bin/s", argv);
 
-    perror("s command launcher");
+    perror("s selfhost bootstrap");
     return errno == 0 ? 127 : errno;
 }
