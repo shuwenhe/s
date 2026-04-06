@@ -256,6 +256,56 @@ func main() -> int {
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(run.stdout.strip(), "42")
 
+    def test_hosted_build_match_while_vec_index(self) -> None:
+        source = """
+package demo.match_while_vec
+
+use std.io.println
+use std.option.Option
+use std.vec.Vec
+
+func pick(Option[String] value) -> String {
+    return match value {
+        Some(text) => text,
+        None => "2",
+    }
+}
+
+func tail() -> Option[String] {
+    return Some("2")
+}
+
+func main() -> int {
+    var parts = Vec[String]()
+    var index = 0
+    while index <= 0 {
+        parts.push("4");
+        index++;
+    }
+    var extra = pick(tail())
+    parts.push(extra);
+    println(parts[0] + parts[1]);
+    0
+}
+"""
+        with tempfile.TemporaryDirectory(prefix="s-semantic-") as tmp:
+            source_path = Path(tmp) / "match_while_vec.s"
+            output_path = Path(tmp) / "match_while_vec_bin"
+            source_path.write_text(source)
+
+            code = run_cli(["build", str(source_path), "-o", str(output_path)])
+            self.assertEqual(code, 0)
+
+            run = subprocess.run(
+                [str(output_path)],
+                cwd="/app/s",
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(run.stdout.strip(), "42")
+
     def test_hosted_build_s_native_runner_binary_output(self) -> None:
         code = run_cli(["build", "/app/s/runtime/runner.s", "-o", "/tmp/s_native_hosted"])
         self.assertEqual(code, 0)
