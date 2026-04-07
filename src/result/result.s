@@ -6,25 +6,25 @@ enum Result[T, E] {
 }
 
 impl Result[T, E] {
-    func is_ok(self) -> bool {
+    func is_ok(self) bool {
         match self {
             Result::Ok(_) => true,
             Result::Err(_) => false,
         }
     }
 
-    func is_err(self) -> bool {
+    func is_err(self) bool {
         !self.is_ok()
     }
 
-    func unwrap(self) -> T {
+    func unwrap(self) T {
         match self {
             Result::Ok(value) => value,
             Result::Err(_) => __result_panic_unwrap(),
         }
     }
 
-    func unwrap_err(self) -> E {
+    func unwrap_err(self) E {
         match self {
             Result::Ok(_) => __result_panic_unwrap_err(),
             Result::Err(err) => err,
@@ -32,6 +32,6 @@ impl Result[T, E] {
     }
 }
 
-extern "intrinsic" func __result_panic_unwrap[T]() -> T
+extern "intrinsic" func __result_panic_unwrap[T]() T
 
-extern "intrinsic" func __result_panic_unwrap_err[E]() -> E
+extern "intrinsic" func __result_panic_unwrap_err[E]() E

@@ -12,7 +12,7 @@ use s.dump_tokens
 use s.new_lexer
 use s.parse_source
 
-func ReadSource(String path) -> Result[String, cliError] {
+func ReadSource(String path) Result[String, cliError] {
     match ReadToString(path) {
         Result::Ok(source) => Result::Ok(source),
         Result::Err(_) => Result::Err(cliError {
@@ -21,7 +21,7 @@ func ReadSource(String path) -> Result[String, cliError] {
     }
 }
 
-func LexSource(String source) -> Result[Vec[Token], cliError] {
+func LexSource(String source) Result[Vec[Token], cliError] {
     match new_lexer(source).tokenize() {
         Result::Ok(tokens) => Result::Ok(tokens),
         Result::Err(err) => Result::Err(cliError {
@@ -30,25 +30,25 @@ func LexSource(String source) -> Result[Vec[Token], cliError] {
     }
 }
 
-func ParseSourceText(String source) -> Result[SourceFile, cliError] {
+func ParseSourceText(String source) Result[SourceFile, cliError] {
     match parse_source(source) {
         Result::Ok(ast) => Result::Ok(ast),
         Result::Err(err) => parseError(err),
     }
 }
 
-func DumpTokensText(String source) -> Result[String, cliError] {
+func DumpTokensText(String source) Result[String, cliError] {
     match LexSource(source) {
         Result::Ok(tokens) => Result::Ok(dump_tokens(tokens)),
         Result::Err(err) => Result::Err(err),
     }
 }
 
-func DumpAstText(SourceFile source) -> String {
+func DumpAstText(SourceFile source) String {
     dump_source_file(source)
 }
 
-func parseError(ParseError err) -> Result[SourceFile, cliError] {
+func parseError(ParseError err) Result[SourceFile, cliError] {
     Result::Err(cliError {
         message: "parse error: " + err.message,
     })

@@ -32,10 +32,10 @@ Current host bridge files:
 Current [prelude.s](/app/s/src/prelude/prelude.s) declares:
 
 ```s
-extern "intrinsic" func __runtime_len[T](T value) -> i32
-extern "intrinsic" func __int_to_string(i32 value) -> String
-extern "intrinsic" func __string_char_at(String text, i32 index) -> String
-extern "intrinsic" func __string_slice(String text, i32 start, i32 end) -> String
+extern "intrinsic" func __runtime_len[T](T value) i32
+extern "intrinsic" func __int_to_string(i32 value) String
+extern "intrinsic" func __string_char_at(String text, i32 index) String
+extern "intrinsic" func __string_slice(String text, i32 start, i32 end) String
 ```
 
 ### `__runtime_len`
@@ -54,7 +54,7 @@ Notes:
 
 Requirements:
 
-- 支持 `i32 -> String`
+- 支持 `i32  String`
 - 至少正确处理 `0`、正数、负数
 
 ### `__string_char_at`
@@ -81,9 +81,9 @@ Requirements:
 Current [vec.s](/app/s/src/vec/vec.s) declares:
 
 ```s
-extern "intrinsic" func __vec_new_array[T](i32 size) -> Array[T]
-extern "intrinsic" func __vec_array_get[T](Array[T] array, i32 index) -> T
-extern "intrinsic" func __vec_array_set[T](Array[T] array, i32 index, T value) -> ()
+extern "intrinsic" func __vec_new_array[T](i32 size) Array[T]
+extern "intrinsic" func __vec_array_get[T](Array[T] array, i32 index) T
+extern "intrinsic" func __vec_array_set[T](Array[T] array, i32 index, T value) ()
 ```
 
 Requirements:
@@ -101,9 +101,9 @@ needs to provide the backing array behavior.
 Current declarations:
 
 ```s
-extern "intrinsic" func __option_panic_unwrap[T]() -> T
-extern "intrinsic" func __result_panic_unwrap[T]() -> T
-extern "intrinsic" func __result_panic_unwrap_err[E]() -> E
+extern "intrinsic" func __option_panic_unwrap[T]() T
+extern "intrinsic" func __result_panic_unwrap[T]() T
+extern "intrinsic" func __result_panic_unwrap_err[E]() E
 ```
 
 Purpose:
@@ -128,14 +128,14 @@ The new std-layer host boundary is now:
 Current declarations:
 
 ```s
-extern "intrinsic" func __host_read_to_string(String path) -> Result[String, FsError]
-extern "intrinsic" func __host_write_text_file(String path, String contents) -> Result[(), FsError]
-extern "intrinsic" func __host_make_temp_dir(String prefix) -> Result[String, FsError]
-extern "intrinsic" func __host_run_process(Vec[String] argv) -> Result[(), ProcessError]
-extern "intrinsic" func __host_args() -> Vec[String]
-extern "intrinsic" func __host_exit(int code) -> ()
-extern "intrinsic" func __host_println(String text) -> ()
-extern "intrinsic" func __host_eprintln(String text) -> ()
+extern "intrinsic" func __host_read_to_string(String path) Result[String, FsError]
+extern "intrinsic" func __host_write_text_file(String path, String contents) Result[(), FsError]
+extern "intrinsic" func __host_make_temp_dir(String prefix) Result[String, FsError]
+extern "intrinsic" func __host_run_process(Vec[String] argv) Result[(), ProcessError]
+extern "intrinsic" func __host_args() Vec[String]
+extern "intrinsic" func __host_exit(int code) ()
+extern "intrinsic" func __host_println(String text) ()
+extern "intrinsic" func __host_eprintln(String text) ()
 ```
 
 Bridge behavior in the current Python prototype:
@@ -171,5 +171,5 @@ Code that currently depends on these contracts includes:
 The next valuable steps are:
 
 1. 让 Python bridge 接到更明确的 S AST / intrinsic 调用层
-2. 让 `lex_dump` 真正跑通 `sample.s -> sample.tokens`
-3. 让 `ast_dump` 真正跑通 `sample.s -> sample.ast`
+2. 让 `lex_dump` 真正跑通 `sample.s  sample.tokens`
+3. 让 `ast_dump` 真正跑通 `sample.s  sample.ast`

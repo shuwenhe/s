@@ -25,7 +25,7 @@ struct MachineProgram {
     int exit_code,
 }
 
-func LowerProgram(MIRProgram mir, String arch_name) -> MachineProgram {
+func LowerProgram(MIRProgram mir, String arch_name) MachineProgram {
     var ops = Vec[MachineOp]()
     for write in mir.writes {
         appendWriteOp(ops, write)
@@ -40,7 +40,7 @@ func LowerProgram(MIRProgram mir, String arch_name) -> MachineProgram {
     }
 }
 
-func appendWriteOp(Vec[MachineOp] ops, MIRWriteOp write) -> () {
+func appendWriteOp(Vec[MachineOp] ops, MIRWriteOp write) () {
     if write.fd == 2 {
         ops.push(WriteStderr(MachineWriteOp {
             fd: write.fd,
@@ -54,7 +54,7 @@ func appendWriteOp(Vec[MachineOp] ops, MIRWriteOp write) -> () {
     }))
 }
 
-func entrySymbol(String arch_name) -> String {
+func entrySymbol(String arch_name) String {
     if arch_name == "amd64" {
         return "_start"
     }

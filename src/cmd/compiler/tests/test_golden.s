@@ -14,7 +14,7 @@ struct suiteResult {
     Vec[GoldenFailure] failed,
 }
 
-func RunGoldenSuite(String fixtures_root) -> suiteResult {
+func RunGoldenSuite(String fixtures_root) suiteResult {
     var failures = Vec[GoldenFailure]()
     var passed = 0
 

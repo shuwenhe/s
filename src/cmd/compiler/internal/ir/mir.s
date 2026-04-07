@@ -129,7 +129,7 @@ struct MIRLocalBinding {
     MIRValue value,
 }
 
-func LowerBlock(BlockExpr block, Vec[String] param_names, Vec[TypeBinding] type_env) -> MIRGraph {
+func LowerBlock(BlockExpr block, Vec[String] param_names, Vec[TypeBinding] type_env) MIRGraph {
     var locals = Vec[LocalSlot]()
     var statements = Vec[String]()
     var next_local = 0
@@ -192,7 +192,7 @@ func LowerBlock(BlockExpr block, Vec[String] param_names, Vec[TypeBinding] type_
     }
 }
 
-func LowerSource(SourceFile source, Vec[OwnershipEntry] ownership_plan) -> Result[MIRProgram, String] {
+func LowerSource(SourceFile source, Vec[OwnershipEntry] ownership_plan) Result[MIRProgram, String] {
     ownership_plan
     var programs = Vec[MIRProgram]()
     for item in source.items {
@@ -212,7 +212,7 @@ func LowerFunction(
     FunctionDecl func,
     Vec[OwnershipEntry] ownership_plan,
     bool is_entry
-) -> Result[MIRProgram, String] {
+) Result[MIRProgram, String] {
     ownership_plan
     if is_entry == false {
         return Result::Ok(MIRProgram {
@@ -236,7 +236,7 @@ func LowerFunction(
     })
 }
 
-func MergeMIRPrograms(Vec[MIRProgram] programs, String entry_name) -> Result[MIRProgram, String] {
+func MergeMIRPrograms(Vec[MIRProgram] programs, String entry_name) Result[MIRProgram, String] {
     entry_name
     if programs.len() == 0 {
         return Result::Ok(MIRProgram {
@@ -252,7 +252,7 @@ func MergeMIRPrograms(Vec[MIRProgram] programs, String entry_name) -> Result[MIR
     Result::Ok(programs[programs.len() - 1])
 }
 
-func findMain(SourceFile source) -> Option[FunctionDecl] {
+func findMain(SourceFile source) Option[FunctionDecl] {
     for item in source.items {
         match item {
             Item::Function(func) => {
@@ -270,7 +270,7 @@ func executeFunction(
     FunctionDecl func,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[int, String] {
+) Result[int, String] {
     match func.body {
         Option::Some(body) => executeBlock(body, env, writes),
         Option::None => Result::Ok(0),
@@ -281,7 +281,7 @@ func executeBlock(
     BlockExpr body,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[int, String] {
+) Result[int, String] {
     // support block-local deferred expressions executed LIFO on block exit
     var defers = Vec[Expr]()
     for stmt in body.statements {
@@ -336,7 +336,7 @@ func executeStmt(
     Stmt stmt,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[(), String] {
+) Result[(), String] {
     match stmt {
         Stmt::Var(value) => executeVarStmt(value, env, writes),
         Stmt::Assign(value) => executeAssignStmt(value, env, writes),
@@ -351,7 +351,7 @@ func executeVarStmt(
     VarStmt stmt,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[(), String] {
+) Result[(), String] {
     var value = evalExpr(stmt.value, env, writes)?
     setLocal(env, stmt.name, value)
     Result::Ok(())
@@ -361,7 +361,7 @@ func executeAssignStmt(
     AssignStmt stmt,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[(), String] {
+) Result[(), String] {
     if !hasLocal(env, stmt.name) {
         return Result::Err("undefined name " + stmt.name)
     }
@@ -373,7 +373,7 @@ func executeAssignStmt(
 func executeIncrementStmt(
     IncrementStmt stmt,
     Vec[MIRLocalBinding] env
-) -> Result[(), String] {
+) Result[(), String] {
     var current = lookupBinding(env, stmt.name)?
     match current {
         MIRValue::Int(number) => {
@@ -388,7 +388,7 @@ func executeCForStmt(
     CForStmt stmt,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[(), String] {
+) Result[(), String] {
     executeStmt(stmt.init.value, env, writes)?
     var keep_going = true
     while keep_going {
@@ -407,7 +407,7 @@ func executeExprStmt(
     ExprStmt stmt,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[(), String] {
+) Result[(), String] {
     match stmt.expr {
         Expr::Call(value) => executeCallStmt(value, env, writes),
         Expr::While(value) => executeWhileExpr(value, env, writes),
@@ -422,7 +422,7 @@ func executeCallStmt(
     CallExpr call,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[(), String] {
+) Result[(), String] {
     match call.callee.value {
         Expr::Member(member) => return executeMemberCallStmt(member, call.args, env),
         _ => (),
@@ -454,7 +454,7 @@ func executeMemberCallStmt(
     MemberExpr member,
     Vec[Expr] args,
     Vec[MIRLocalBinding] env
-) -> Result[(), String] {
+) Result[(), String] {
     match member.target.value {
         Expr::Name(name_expr) => {
             if member.member == "push" {
@@ -487,7 +487,7 @@ func executeWhileExpr(
     WhileExpr expr,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[(), String] {
+) Result[(), String] {
     var keep_going = true
     while keep_going {
         var cond = evalExpr(expr.condition.value, env, writes)?
@@ -500,7 +500,7 @@ func executeWhileExpr(
     Result::Ok(())
 }
 
-func executeReturnStmt(ReturnStmt stmt, Vec[MIRLocalBinding] env) -> Result[int, String] {
+func executeReturnStmt(ReturnStmt stmt, Vec[MIRLocalBinding] env) Result[int, String] {
     match stmt.value {
         Option::Some(expr) => {
             var value = evalExpr(expr, env, Vec[MIRWriteOp]())?
@@ -514,7 +514,7 @@ func evalExpr(
     Expr expr,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[MIRValue, String] {
+) Result[MIRValue, String] {
     writes
     match expr {
         Expr::Int(value) => Result::Ok(MIRValue::Int(parseIntLiteral(value))),
@@ -533,7 +533,7 @@ func evalCallExpr(
     CallExpr call,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[MIRValue, String] {
+) Result[MIRValue, String] {
     writes
     match call.callee.value {
         Expr::Name(name_expr) => {
@@ -576,7 +576,7 @@ func evalMemberCallExpr(
     Vec[Expr] args,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[MIRValue, String] {
+) Result[MIRValue, String] {
     var receiver = evalExpr(member.target.value, env, writes)?
     if member.member == "len" {
         if len(args) != 0 {
@@ -604,7 +604,7 @@ func evalMatchExpr(
     MatchExpr expr,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[MIRValue, String] {
+) Result[MIRValue, String] {
     var subject = evalExpr(expr.subject.value, env, writes)?
     for arm in expr.arms {
         var matched = matchPattern(arm.pattern, subject)?
@@ -617,7 +617,7 @@ func evalMatchExpr(
     Result::Err("unsupported match fallthrough")
 }
 
-func matchPattern(Pattern pattern, MIRValue value) -> Result[MIRPatternMatch, String] {
+func matchPattern(Pattern pattern, MIRValue value) Result[MIRPatternMatch, String] {
     match pattern {
         Pattern::Wildcard(_) => Result::Ok(MIRPatternMatch {
             matched: true,
@@ -639,7 +639,7 @@ func matchPattern(Pattern pattern, MIRValue value) -> Result[MIRPatternMatch, St
 func matchVariantPattern(
     VariantPattern pattern,
     MIRValue value
-) -> Result[MIRPatternMatch, String] {
+) Result[MIRPatternMatch, String] {
     match value {
         MIRValue::Variant(variant) => {
             if lastPathSegment(pattern.path) != variant.tag {
@@ -678,7 +678,7 @@ func evalIndexExpr(
     IndexExpr expr,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[MIRValue, String] {
+) Result[MIRValue, String] {
     var target = evalExpr(expr.target.value, env, writes)?
     var index = evalExpr(expr.index.value, env, writes)?
     match index {
@@ -696,7 +696,7 @@ func evalBinaryExpr(
     s.BinaryExpr expr,
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
-) -> Result[MIRValue, String] {
+) Result[MIRValue, String] {
     var left = evalExpr(expr.left.value, env, writes)?
     var right = evalExpr(expr.right.value, env, writes)?
     if expr.op == "+" {
@@ -730,7 +730,7 @@ func evalBinaryExpr(
     Result::Err("unsupported binary operator " + expr.op)
 }
 
-func lookupBinding(Vec[MIRLocalBinding] env, String name) -> Result[MIRValue, String] {
+func lookupBinding(Vec[MIRLocalBinding] env, String name) Result[MIRValue, String] {
     if name == "None" {
         return Result::Ok(MIRValue::Variant(MIRVariantValue {
             tag: "None",
@@ -745,7 +745,7 @@ func lookupBinding(Vec[MIRLocalBinding] env, String name) -> Result[MIRValue, St
     Result::Err("undefined name " + name)
 }
 
-func cloneEnv(Vec[MIRLocalBinding] env) -> Vec[MIRLocalBinding] {
+func cloneEnv(Vec[MIRLocalBinding] env) Vec[MIRLocalBinding] {
     var copied = Vec[MIRLocalBinding]()
     for binding in env {
         copied.push(MIRLocalBinding {
@@ -756,13 +756,13 @@ func cloneEnv(Vec[MIRLocalBinding] env) -> Vec[MIRLocalBinding] {
     copied
 }
 
-func applyBindings(Vec[MIRLocalBinding] env, Vec[MIRLocalBinding] bindings) -> () {
+func applyBindings(Vec[MIRLocalBinding] env, Vec[MIRLocalBinding] bindings) () {
     for binding in bindings {
         setLocal(env, binding.name, binding.value)
     }
 }
 
-func setLocal(Vec[MIRLocalBinding] env, String name, MIRValue value) -> () {
+func setLocal(Vec[MIRLocalBinding] env, String name, MIRValue value) () {
     var index = 0
     while index < env.len() {
         if env[index].name == name {
@@ -780,7 +780,7 @@ func setLocal(Vec[MIRLocalBinding] env, String name, MIRValue value) -> () {
     })
 }
 
-func hasLocal(Vec[MIRLocalBinding] env, String name) -> bool {
+func hasLocal(Vec[MIRLocalBinding] env, String name) bool {
     var index = 0
     while index < env.len() {
         if env[index].name == name {
@@ -791,14 +791,14 @@ func hasLocal(Vec[MIRLocalBinding] env, String name) -> bool {
     false
 }
 
-func extractCalleeName(CallExpr call) -> Result[String, String] {
+func extractCalleeName(CallExpr call) Result[String, String] {
     match call.callee.value {
         Expr::Name(value) => Result::Ok(value.name),
         _ => Result::Err("unsupported callee"),
     }
 }
 
-func valueToString(MIRValue value) -> Result[String, String] {
+func valueToString(MIRValue value) Result[String, String] {
     match value {
         MIRValue::Int(number) => Result::Ok(to_string(number)),
         MIRValue::String(text) => Result::Ok(text),
@@ -817,7 +817,7 @@ func valueToString(MIRValue value) -> Result[String, String] {
     }
 }
 
-func asExitCode(MIRValue value) -> Result[int, String] {
+func asExitCode(MIRValue value) Result[int, String] {
     match value {
         MIRValue::Int(number) => Result::Ok(number),
         MIRValue::Bool(flag) => Result::Ok(if flag { 1 } else { 0 }),
@@ -826,7 +826,7 @@ func asExitCode(MIRValue value) -> Result[int, String] {
     }
 }
 
-func isTrue(MIRValue value) -> bool {
+func isTrue(MIRValue value) bool {
     match value {
         MIRValue::Bool(flag) => flag,
         MIRValue::Int(number) => number != 0,
@@ -834,11 +834,11 @@ func isTrue(MIRValue value) -> bool {
     }
 }
 
-func parseIntLiteral(IntExpr expr) -> int {
+func parseIntLiteral(IntExpr expr) int {
     parseDecimal(expr.value)
 }
 
-func unquoteString(StringExpr expr) -> String {
+func unquoteString(StringExpr expr) String {
     var text = expr.value
     if len(text) < 2 {
         return text
@@ -846,7 +846,7 @@ func unquoteString(StringExpr expr) -> String {
     slice(text, 1, len(text) - 1)
 }
 
-func parseDecimal(String text) -> int {
+func parseDecimal(String text) int {
     var value = 0
     var index = 0
     while index < len(text) {
@@ -861,7 +861,7 @@ func parseDecimal(String text) -> int {
     value
 }
 
-func digitValue(String ch) -> int {
+func digitValue(String ch) int {
     if ch == "0" { return 0 }
     if ch == "1" { return 1 }
     if ch == "2" { return 2 }
@@ -875,7 +875,7 @@ func digitValue(String ch) -> int {
     0
 }
 
-func lastPathSegment(String path) -> String {
+func lastPathSegment(String path) String {
     var index = path.len() - 1
     while index >= 0 {
         if char_at(path, index) == ":" {

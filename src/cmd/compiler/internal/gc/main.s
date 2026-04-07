@@ -5,7 +5,7 @@ use std.io.eprintln
 use std.result.Result
 use std.vec.Vec
 
-func Main(Vec[String] args) -> i32 {
+func Main(Vec[String] args) i32 {
     match Run(args) {
         Result::Ok(()) => 0,
         Result::Err(err) => {
@@ -15,6 +15,6 @@ func Main(Vec[String] args) -> i32 {
     }
 }
 
-func Run(Vec[String] args) -> Result[(), cliError] {
+func Run(Vec[String] args) Result[(), cliError] {
     RunCommand(args)
 }

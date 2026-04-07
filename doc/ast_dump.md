@@ -11,10 +11,10 @@ Status: Working Draft
 
 ```text
 source file
-  -> read source text
-  -> self-hosted parser
-  -> AST
-  -> textual dump
+   read source text
+   self-hosted parser
+   AST
+   textual dump
 ```
 
 它是 `lex_dump` 的下一层，不做类型检查，也不做 codegen。
@@ -43,7 +43,7 @@ source file
 ```s
 use std.fs.read_to_string
 
-func read_to_string(String path) -> Result[String, FsError]
+func read_to_string(String path) Result[String, FsError]
 ```
 
 当前只依赖这些性质：
@@ -61,8 +61,8 @@ func read_to_string(String path) -> Result[String, FsError]
 use std.io.println
 use std.io.eprintln
 
-func println(String text) -> ()
-func eprintln(String text) -> ()
+func println(String text) ()
+func eprintln(String text) ()
 ```
 
 当前要求仍然只是最小输出能力：
@@ -75,7 +75,7 @@ func eprintln(String text) -> ()
 `ast_dump` 当前假设 parser 提供如下最小接口：
 
 ```s
-func parse_source(String source) -> Result[SourceFile, ParseError]
+func parse_source(String source) Result[SourceFile, ParseError]
 ```
 
 以及如下最小错误形状：
@@ -99,7 +99,7 @@ struct ParseError {
 当前入口约定如下：
 
 ```s
-func main(Vec[String] args) -> i32
+func main(Vec[String] args) i32
 ```
 
 最小调用形状：

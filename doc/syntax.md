@@ -110,7 +110,7 @@ CHAR_LITERAL   = "'" char_or_escape "'"
 ### 3.7 Delimiters and Operators
 
 ```text
-DELIMITERS = "(" ")" "[" "]" "{" "}" "," ":" ";" "." "->"
+DELIMITERS = "(" ")" "[" "]" "{" "}" "," ":" ";" "." " "
 
 OPERATORS =
     "="
@@ -204,7 +204,7 @@ FunctionDecl =
 ```text
 ParamList   = Param ("," Param)* ","?
 Param       = Pattern ":" Type
-ReturnType  = "->" Type
+ReturnType  = " " Type
 ```
 
 ### 6.2 Struct Declaration
@@ -319,8 +319,8 @@ TraitBound =
 示例：
 
 ```s
-func max[T: Ord](T a, T b) -> T
-func copy_pair[T: Copy + Clone](T a, T b) -> (T, T)
+func max[T: Ord](T a, T b) T
+func copy_pair[T: Copy + Clone](T a, T b) (T, T)
 ```
 
 ### 7.2 Where Clause
@@ -395,7 +395,7 @@ TypeList =
 
 ```text
 FunctionType =
-    "func" "(" TypeList? ")" "->" Type
+    "func" "(" TypeList? ")" " " Type
 ```
 
 ### 8.6 Paths
