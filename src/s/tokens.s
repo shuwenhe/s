@@ -15,11 +15,11 @@ enum TokenKind {
 struct Token {
     TokenKind kind,
     String value,
-    i32 line,
-    i32 column,
+    int32 line,
+    int32 column,
 }
 
-func token_kind_name(TokenKind kind) -> String {
+func token_kind_name(TokenKind kind) String {
     match kind {
         TokenKind::Ident => "IDENT",
         TokenKind::Int => "INT",
@@ -30,7 +30,7 @@ func token_kind_name(TokenKind kind) -> String {
     }
 }
 
-func dump_tokens(Vec[Token] tokens) -> String {
+func dump_tokens(Vec[Token] tokens) String {
     // Golden tests depend on this exact one-token-per-line format.
     var out = ""
     for token in tokens {
@@ -50,7 +50,7 @@ func dump_tokens(Vec[Token] tokens) -> String {
     out
 }
 
-func is_keyword(String text) -> bool {
+func is_keyword(String text) bool {
     match text {
         "package" => true,
         "use" => true,

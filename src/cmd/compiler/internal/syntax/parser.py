@@ -166,8 +166,12 @@ class Parser:
         self._expect_symbol("(")
         params = self._parse_params()
         self._expect_symbol(")")
+        # Parse return type in Go-style: type appears after parameter list.
         return_type = None
-        if self._eat_symbol("->"):
+        next_tok = self._peek()
+        if not (next_tok.kind == TokenKind.SYMBOL and next_tok.value in {"{", ";"}) and not (
+            next_tok.kind == TokenKind.KEYWORD and next_tok.value == "where"
+        ):
             return_type = self._parse_type_text(stop_values={"where", "{", ";"})
         self._parse_where_clause()
         body = self._parse_block_expr() if require_body else None
@@ -350,8 +354,9 @@ class Parser:
         self._expect_symbol("{")
         arms: List[MatchArm] = []
         while not self._eat_symbol("}"):
+            self._expect_keyword("case")
             pattern = self._parse_pattern()
-            self._expect_symbol("=>")
+            self._expect_symbol(":")
             expr = self._parse_expr()
             arms.append(MatchArm(pattern=pattern, expr=expr))
             self._eat_symbol(",")
