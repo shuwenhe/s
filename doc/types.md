@@ -117,7 +117,7 @@ let s = String::from("hello")
 示例：
 
 ```s
-func add(i32 a, i32 b) -> i32 {
+func add(i32 a, i32 b) i32 {
     a + b
 }
 ```
@@ -171,7 +171,7 @@ S 提供固定宽度和平台相关整数类型：
 示例：
 
 ```s
-func len(&str s) -> usize
+func len(&str s) usize
 func push(&mut Vec[i32] v, i32 value)
 ```
 
@@ -289,7 +289,7 @@ enum Result[T, E] {
 概念上，一个函数类型可写作：
 
 ```text
-func(T1, T2) -> R
+func(T1, T2) R
 ```
 
 是否允许函数类型作为一等值直接书写、是否支持闭包 trait，属于后续版本细化议题；Draft 0.1 先要求语义层支持函数值和闭包值的区分。
@@ -391,7 +391,7 @@ trait 是 S 中描述行为能力的主要机制。
 
 ```s
 trait Writer {
-    func write(&mut Self self, []u8 data) -> Result[usize, IoError]
+    func write(&mut Self self, []u8 data) Result[usize, IoError]
 }
 ```
 
@@ -407,7 +407,7 @@ Draft 0.1 至少要求支持方法签名和约束用途。
 
 ```s
 impl Writer for File {
-    func write(&mut Self self, []u8 data) -> Result[usize, IoError] {
+    func write(&mut Self self, []u8 data) Result[usize, IoError] {
         ...
     }
 }
@@ -420,7 +420,7 @@ impl Writer for File {
 trait 可作为泛型约束：
 
 ```s
-func flush_all[T: Writer]([]T items) -> Result[(), IoError] {
+func flush_all[T: Writer]([]T items) Result[(), IoError] {
     ...
 }
 ```
@@ -442,7 +442,7 @@ struct Vec[T] {
     ...
 }
 
-func max[T: Ord](T a, T b) -> T {
+func max[T: Ord](T a, T b) T {
     if a > b { a } else { b }
 }
 ```
@@ -537,7 +537,7 @@ trait Drop {
 
 ```s
 trait Clone {
-    func clone(&self) -> Self
+    func clone(&self) Self
 }
 ```
 
@@ -613,7 +613,7 @@ S 推荐把错误也建模为普通类型。
 
 ```s
 trait Error {
-    func message(&self) -> str
+    func message(&self) str
 }
 ```
 

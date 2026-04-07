@@ -81,14 +81,14 @@ struct BackendError {
     String message,
 }
 
-func EmitProgram(MachineProgram program, String outputPath) -> Result[(), BackendError] {
+func EmitProgram(MachineProgram program, String outputPath) Result[(), BackendError] {
     var asmText = emitMachineAsm(program)
     assembleAndLink(asmText, outputPath)
 }
 
-func buildExecutable(SourceFile source, String outputPath) -> Result[(), BackendError] {
+func buildExecutable(SourceFile source, String outputPath) Result[(), BackendError] {
     // Minimal backend design:
-    // 1. compile SourceFile -> linear ProgramOp list
+    // 1. compile SourceFile  linear ProgramOp list
     // 2. emit Linux x86_64 assembly text
     // 3. invoke host as/ld through runtime boundary
     //
@@ -106,11 +106,11 @@ func buildExecutable(SourceFile source, String outputPath) -> Result[(), Backend
     assembleAndLink(asmText, outputPath)
 }
 
-func emitMachineAsm(MachineProgram program) -> String {
+func emitMachineAsm(MachineProgram program) String {
     emitMachineDataSection(program.ops) + "\n" + emitMachineTextSection(program) + "\n"
 }
 
-func emitMachineDataSection(Vec[MachineOp] ops) -> String {
+func emitMachineDataSection(Vec[MachineOp] ops) String {
     var lines = Vec[String]()
     lines.push(".section .data")
     var index = 0
@@ -125,7 +125,7 @@ func emitMachineDataSection(Vec[MachineOp] ops) -> String {
     joinLines(lines)
 }
 
-func emitMachineTextSection(MachineProgram program) -> String {
+func emitMachineTextSection(MachineProgram program) String {
     var lines = Vec[String]()
     lines.push(".section .text")
     lines.push(".global " + program.entry_symbol)
@@ -145,7 +145,7 @@ func emitMachineTextSection(MachineProgram program) -> String {
     joinLines(lines)
 }
 
-func appendMachineWrite(Vec[String] lines, MachineWriteOp write, String label) -> () {
+func appendMachineWrite(Vec[String] lines, MachineWriteOp write, String label) () {
     lines.push("    mov $1, %rax")
     lines.push("    mov $" + to_string(write.fd) + ", %rdi")
     lines.push("    lea " + label + "(%rip), %rsi")
@@ -153,7 +153,7 @@ func appendMachineWrite(Vec[String] lines, MachineWriteOp write, String label) -
     lines.push("    syscall")
 }
 
-func compileProgram(SourceFile source) -> Result[Program, BackendError] {
+func compileProgram(SourceFile source) Result[Program, BackendError] {
     var mainFunc =
         match findMain(source) {
             Ok(value) => value,
@@ -179,11 +179,11 @@ func compileProgram(SourceFile source) -> Result[Program, BackendError] {
     })
 }
 
-func emitAsm(Program program) -> String {
+func emitAsm(Program program) String {
     emitDataSection(program.ops) + "\n" + emitTextSection(program.ops, program.exitCode) + "\n"
 }
 
-func findMain(SourceFile source) -> Result[FunctionDecl, BackendError] {
+func findMain(SourceFile source) Result[FunctionDecl, BackendError] {
     for item in source.items {
         match item {
             Function(func) => {
@@ -203,7 +203,7 @@ func executeFunction(
     FunctionDecl func,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops
-) -> Result[int, BackendError] {
+) Result[int, BackendError] {
     match func.body {
         Some(body) => executeBlock(body, env, ops),
         None => Ok(0),
@@ -214,7 +214,7 @@ func executeBlock(
     BlockExpr body,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops
-) -> Result[int, BackendError] {
+) Result[int, BackendError] {
     for stmt in body.statements {
         match stmt {
             Return(value) => return executeReturnStmt(value, env),
@@ -247,7 +247,7 @@ func executeStmt(
     Stmt stmt,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops
-) -> Result[(), BackendError] {
+) Result[(), BackendError] {
     match stmt {
         Var(value) => executeVarStmt(value, env),
         Assign(value) => executeAssignStmt(value, env),
@@ -264,7 +264,7 @@ func executeStmt(
 func evalExpr(
     Expr expr,
     Vec[LocalBinding] env
-) -> Result[Value, BackendError] {
+) Result[Value, BackendError] {
     match expr {
         Int(value) => Ok(Int(parseIntLiteral(value))),
         String(value) => Ok(String(unquoteString(value))),
@@ -278,7 +278,7 @@ func evalExpr(
     }
 }
 
-func emitDataSection(Vec[ProgramOp] ops) -> String {
+func emitDataSection(Vec[ProgramOp] ops) String {
     var lines = Vec[String]()
     lines.push(".section .data")
     var index = 0
@@ -293,7 +293,7 @@ func emitDataSection(Vec[ProgramOp] ops) -> String {
     joinLines(lines)
 }
 
-func emitTextSection(Vec[ProgramOp] ops, int exitCode) -> String {
+func emitTextSection(Vec[ProgramOp] ops, int exitCode) String {
     var lines = Vec[String]()
     lines.push(".section .text")
     lines.push(".global _start")
@@ -313,7 +313,7 @@ func emitTextSection(Vec[ProgramOp] ops, int exitCode) -> String {
     joinLines(lines)
 }
 
-func assembleAndLink(String asmText, String outputPath) -> Result[(), BackendError] {
+func assembleAndLink(String asmText, String outputPath) Result[(), BackendError] {
     var tempDir =
         match MakeTempDir("s-build-") {
             Ok(path) => path,
@@ -352,12 +352,12 @@ func assembleAndLink(String asmText, String outputPath) -> Result[(), BackendErr
     Ok(())
 }
 
-func appendDataPayload(Vec[String] lines, String label, String text) -> () {
+func appendDataPayload(Vec[String] lines, String label, String text) () {
     lines.push(label + ":")
     lines.push("    .byte " + encodeBytes(text))
 }
 
-func appendWriteSyscall(Vec[String] lines, int fd, String label, String text) -> () {
+func appendWriteSyscall(Vec[String] lines, int fd, String label, String text) () {
     lines.push("    mov $1, %rax")
     lines.push("    mov $" + to_string(fd) + ", %rdi")
     lines.push("    lea " + label + "(%rip), %rsi")
@@ -365,7 +365,7 @@ func appendWriteSyscall(Vec[String] lines, int fd, String label, String text) ->
     lines.push("    syscall")
 }
 
-func encodeBytes(String text) -> String {
+func encodeBytes(String text) String {
     var parts = Vec[String]()
     var index = 0
     while index < len(text) {
@@ -375,16 +375,16 @@ func encodeBytes(String text) -> String {
     joinWith(parts, ", ")
 }
 
-func byteLen(String text) -> String {
+func byteLen(String text) String {
     // MVP: assume ASCII payloads first.
     to_string(text.len())
 }
 
-func joinLines(Vec[String] lines) -> String {
+func joinLines(Vec[String] lines) String {
     joinWith(lines, "\n")
 }
 
-func joinWith(Vec[String] values, String sep) -> String {
+func joinWith(Vec[String] values, String sep) String {
     var text = ""
     var index = 0
     while index < values.len() {
@@ -397,7 +397,7 @@ func joinWith(Vec[String] values, String sep) -> String {
     text
 }
 
-func unsupported(String feature) -> BackendError {
+func unsupported(String feature) BackendError {
     BackendError {
         message: "unsupported " + feature,
     }
@@ -406,7 +406,7 @@ func unsupported(String feature) -> BackendError {
 func executeVarStmt(
     VarStmt stmt,
     Vec[LocalBinding] env
-) -> Result[(), BackendError] {
+) Result[(), BackendError] {
     var value =
         match evalExpr(stmt.value, env) {
             Ok(found) => found,
@@ -421,7 +421,7 @@ func executeVarStmt(
 func executeAssignStmt(
     AssignStmt stmt,
     Vec[LocalBinding] env
-) -> Result[(), BackendError] {
+) Result[(), BackendError] {
     var value =
         match evalExpr(stmt.value, env) {
             Ok(found) => found,
@@ -441,7 +441,7 @@ func executeAssignStmt(
 func executeIncrementStmt(
     IncrementStmt stmt,
     Vec[LocalBinding] env
-) -> Result[(), BackendError] {
+) Result[(), BackendError] {
     var current =
         match lookupBinding(env, stmt.name) {
             Ok(found) => found,
@@ -462,7 +462,7 @@ func executeCForStmt(
     CForStmt stmt,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops
-) -> Result[(), BackendError] {
+) Result[(), BackendError] {
     match executeStmt(stmt.init.value, env, ops) {
         Ok(()) => (),
         Err(err) => {
@@ -502,7 +502,7 @@ func executeExprStmt(
     ExprStmt stmt,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops
-) -> Result[(), BackendError] {
+) Result[(), BackendError] {
     match stmt.expr {
         Call(value) => executeCallStmt(value, env, ops),
         While(value) => executeWhileExpr(value, env, ops),
@@ -522,7 +522,7 @@ func executeCallStmt(
     CallExpr call,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops
-) -> Result[(), BackendError] {
+) Result[(), BackendError] {
     match call.callee.value {
         Member(member) => return executeMemberCallStmt(member, call.args, env),
         _ => (),
@@ -573,7 +573,7 @@ func executeMemberCallStmt(
     MemberExpr member,
     Vec[Expr] args,
     Vec[LocalBinding] env
-) -> Result[(), BackendError] {
+) Result[(), BackendError] {
     match member.target.value {
         Name(nameExpr) => {
             if member.member == "push" {
@@ -618,7 +618,7 @@ func executeWhileExpr(
     WhileExpr expr,
     Vec[LocalBinding] env,
     Vec[ProgramOp] ops
-) -> Result[(), BackendError] {
+) Result[(), BackendError] {
     var keepGoing = true
     while keepGoing {
         var condValue =
@@ -645,7 +645,7 @@ func executeWhileExpr(
 func executeReturnStmt(
     ReturnStmt stmt,
     Vec[LocalBinding] env
-) -> Result[int, BackendError] {
+) Result[int, BackendError] {
     match stmt.value {
         Some(expr) => {
             var value =
@@ -664,7 +664,7 @@ func executeReturnStmt(
 func evalCallExpr(
     CallExpr call,
     Vec[LocalBinding] env
-) -> Result[Value, BackendError] {
+) Result[Value, BackendError] {
     match call.callee.value {
         Name(nameExpr) => {
             if nameExpr.name == "Vec" {
@@ -711,7 +711,7 @@ func evalMemberCallExpr(
     MemberExpr member,
     Vec[Expr] args,
     Vec[LocalBinding] env
-) -> Result[Value, BackendError] {
+) Result[Value, BackendError] {
     var receiver =
         match evalExpr(member.target.value, env) {
             Ok(found) => found,
@@ -749,7 +749,7 @@ struct PatternMatch {
 func evalMatchExpr(
     MatchExpr expr,
     Vec[LocalBinding] env
-) -> Result[Value, BackendError] {
+) Result[Value, BackendError] {
     var subject =
         match evalExpr(expr.subject.value, env) {
             Ok(found) => found,
@@ -785,7 +785,7 @@ func evalMatchExpr(
 func matchPattern(
     Pattern pattern,
     Value value
-) -> Result[PatternMatch, BackendError] {
+) Result[PatternMatch, BackendError] {
     match pattern {
         Wildcard(_) => Ok(PatternMatch {
             matched: true,
@@ -807,7 +807,7 @@ func matchPattern(
 func matchVariantPattern(
     VariantPattern pattern,
     Value value
-) -> Result[PatternMatch, BackendError] {
+) Result[PatternMatch, BackendError] {
     match value {
         Variant(variant) => {
             if lastPathSegment(pattern.path) != variant.tag {
@@ -845,7 +845,7 @@ func matchVariantPattern(
 func evalIndexExpr(
     IndexExpr expr,
     Vec[LocalBinding] env
-) -> Result[Value, BackendError] {
+) Result[Value, BackendError] {
     var target =
         match evalExpr(expr.target.value, env) {
             Ok(found) => found,
@@ -874,7 +874,7 @@ func evalIndexExpr(
 func evalBinaryExpr(
     s.BinaryExpr expr,
     Vec[LocalBinding] env
-) -> Result[Value, BackendError] {
+) Result[Value, BackendError] {
     var left =
         match evalExpr(expr.left.value, env) {
             Ok(found) => found,
@@ -926,7 +926,7 @@ func evalBinaryExpr(
 func lookupBinding(
     Vec[LocalBinding] env,
     String name
-) -> Result[Value, BackendError] {
+) Result[Value, BackendError] {
     if name == "None" {
         return Ok(Variant(VariantValue {
             tag: "None",
@@ -943,7 +943,7 @@ func lookupBinding(
     })
 }
 
-func cloneEnv(Vec[LocalBinding] env) -> Vec[LocalBinding] {
+func cloneEnv(Vec[LocalBinding] env) Vec[LocalBinding] {
     var copied = Vec[LocalBinding]()
     for binding in env {
         copied.push(LocalBinding {
@@ -957,7 +957,7 @@ func cloneEnv(Vec[LocalBinding] env) -> Vec[LocalBinding] {
 func applyBindings(
     Vec[LocalBinding] env,
     Vec[LocalBinding] bindings
-) -> () {
+) () {
     for binding in bindings {
         setLocal(env, binding.name, binding.value)
     }
@@ -966,7 +966,7 @@ func applyBindings(
 func syncExistingBindings(
     Vec[LocalBinding] env,
     Vec[LocalBinding] source
-) -> () {
+) () {
     var index = 0
     while index < env.len() {
         match lookupBinding(source, env[index].name) {
@@ -986,7 +986,7 @@ func bindLocal(
     Vec[LocalBinding] env,
     String name,
     Value value
-) -> () {
+) () {
     env.push(LocalBinding {
         name: name,
         value: value,
@@ -997,7 +997,7 @@ func setLocal(
     Vec[LocalBinding] env,
     String name,
     Value value
-) -> () {
+) () {
     var index = 0
     while index < env.len() {
         if env[index].name == name {
@@ -1018,7 +1018,7 @@ func setLocal(
 func hasLocal(
     Vec[LocalBinding] env,
     String name
-) -> bool {
+) bool {
     var index = 0
     while index < env.len() {
         if env[index].name == name {
@@ -1029,14 +1029,14 @@ func hasLocal(
     false
 }
 
-func extractCalleeName(CallExpr call) -> Result[String, BackendError] {
+func extractCalleeName(CallExpr call) Result[String, BackendError] {
     match call.callee.value {
         Name(value) => Ok(value.name),
         _ => Err(unsupported("callee")),
     }
 }
 
-func valueToString(Value value) -> Result[String, BackendError] {
+func valueToString(Value value) Result[String, BackendError] {
     match value {
         Int(number) => Ok(to_string(number)),
         String(text) => Ok(text),
@@ -1061,7 +1061,7 @@ func valueToString(Value value) -> Result[String, BackendError] {
     }
 }
 
-func asExitCode(Value value) -> Result[int, BackendError] {
+func asExitCode(Value value) Result[int, BackendError] {
     match value {
         Int(number) => Ok(number),
         Bool(flag) => Ok(if flag { 1 } else { 0 }),
@@ -1070,11 +1070,11 @@ func asExitCode(Value value) -> Result[int, BackendError] {
     }
 }
 
-func parseIntLiteral(IntExpr expr) -> int {
+func parseIntLiteral(IntExpr expr) int {
     parseDecimal(expr.value)
 }
 
-func unquoteString(StringExpr expr) -> String {
+func unquoteString(StringExpr expr) String {
     var text = expr.value
     if len(text) < 2 {
         return text
@@ -1083,7 +1083,7 @@ func unquoteString(StringExpr expr) -> String {
 }
 
 
-func parseDecimal(String text) -> int {
+func parseDecimal(String text) int {
     var value = 0
     var index = 0
     while index < len(text) {
@@ -1098,7 +1098,7 @@ func parseDecimal(String text) -> int {
     value
 }
 
-func digitValue(String ch) -> int {
+func digitValue(String ch) int {
     if ch == "0" {
         return 0
     }
@@ -1132,7 +1132,7 @@ func digitValue(String ch) -> int {
     0
 }
 
-func asciiCode(String ch) -> int {
+func asciiCode(String ch) int {
     if ch == "\n" {
         return 10
     }
@@ -1373,7 +1373,7 @@ func asciiCode(String ch) -> int {
     63
 }
 
-func isTrue(Value value) -> bool {
+func isTrue(Value value) bool {
     match value {
         Bool(flag) => flag,
         Int(number) => number != 0,
@@ -1384,7 +1384,7 @@ func isTrue(Value value) -> bool {
     }
 }
 
-func lastPathSegment(String path) -> String {
+func lastPathSegment(String path) String {
     var index = len(path) - 1
     while index >= 0 {
         var ch = char_at(path, index)
