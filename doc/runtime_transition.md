@@ -11,20 +11,20 @@ Status: Working Draft
 
 ```text
 S source
-  -> hosted Python frontend
-  -> IntrinsicCall
-  -> python_bridge.py
-  -> host value
+   hosted Python frontend
+   IntrinsicCall
+   python_bridge.py
+   host value
 ```
 
 推进到：
 
 ```text
 S source
-  -> S frontend / S test entry
-  -> runtime ABI
-  -> thin host adapter
-  -> backend or native runtime
+   S frontend / S test entry
+   runtime ABI
+   thin host adapter
+   backend or native runtime
 ```
 
 ## 2. Current Python Responsibilities
@@ -136,7 +136,7 @@ Current progress:
   [hello.s](/app/s/misc/examples/s/hello.s) and
   [sum.s](/app/s/misc/examples/s/sum.s)
   subset without Python
-- it does not yet execute the full `cmd/s.s -> compiler.main(args)` path
+- it does not yet execute the full `cmd/s.s  compiler.main(args)` path
 
 ## 4. Near-Term Work
 

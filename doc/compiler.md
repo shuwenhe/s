@@ -42,15 +42,15 @@ S 编译器建议遵循以下原则：
 
 ```text
 Source
-  -> Lexer
-  -> Parser
-  -> AST
-  -> Name Resolution
-  -> Type Checking
-  -> Ownership / Borrow Checking
-  -> Lowering to HIR / MIR
-  -> Code Generation
-  -> Link
+   Lexer
+   Parser
+   AST
+   Name Resolution
+   Type Checking
+   Ownership / Borrow Checking
+   Lowering to HIR / MIR
+   Code Generation
+   Link
 ```
 
 说明：
@@ -472,13 +472,13 @@ MVP backend 有两条常见路线：
 建议 lowering 顺序：
 
 ```text
-AST -> HIR -> MIR -> LLVM IR
+AST  HIR  MIR  LLVM IR
 ```
 
 若实现简化，也可暂时：
 
 ```text
-AST -> Typed HIR -> LLVM IR
+AST  Typed HIR  LLVM IR
 ```
 
 但长期仍建议保留 MIR 层，以承载所有权和 drop 语义。

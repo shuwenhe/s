@@ -19,7 +19,7 @@ struct GoldenFailure {
     String message,
 }
 
-func LexerCases(String root) -> Vec[GoldenCase] {
+func LexerCases(String root) Vec[GoldenCase] {
     Vec[GoldenCase] {
         GoldenCase {
             name: "sample.tokens",
@@ -29,7 +29,7 @@ func LexerCases(String root) -> Vec[GoldenCase] {
     }
 }
 
-func ParserCases(String root) -> Vec[GoldenCase] {
+func ParserCases(String root) Vec[GoldenCase] {
     Vec[GoldenCase] {
         GoldenCase {
             name: "sample.ast",
@@ -59,7 +59,7 @@ func ParserCases(String root) -> Vec[GoldenCase] {
     }
 }
 
-func RunLexerCase(GoldenCase case) -> Result[(), GoldenFailure] {
+func RunLexerCase(GoldenCase case) Result[(), GoldenFailure] {
     var source = readFixture(case.name, case.source_path)?
     var expected = readFixture(case.name, case.expected_path)?
     match new_lexer(source).tokenize() {
@@ -71,7 +71,7 @@ func RunLexerCase(GoldenCase case) -> Result[(), GoldenFailure] {
     }
 }
 
-func RunParserCase(GoldenCase case) -> Result[(), GoldenFailure] {
+func RunParserCase(GoldenCase case) Result[(), GoldenFailure] {
     var source = readFixture(case.name, case.source_path)?
     var expected = readFixture(case.name, case.expected_path)?
     match parse_source(source) {
@@ -83,7 +83,7 @@ func RunParserCase(GoldenCase case) -> Result[(), GoldenFailure] {
     }
 }
 
-func readFixture(String name, String path) -> Result[String, GoldenFailure] {
+func readFixture(String name, String path) Result[String, GoldenFailure] {
     match read_to_string(path) {
         Result::Ok(text) => Result::Ok(text),
         Result::Err(_) => Result::Err(GoldenFailure {
@@ -93,7 +93,7 @@ func readFixture(String name, String path) -> Result[String, GoldenFailure] {
     }
 }
 
-func compareOutput(String name, String expected, String actual) -> Result[(), GoldenFailure] {
+func compareOutput(String name, String expected, String actual) Result[(), GoldenFailure] {
     if expected.trim() == actual.trim() {
         return Result::Ok(())
     }

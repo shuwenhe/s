@@ -10,8 +10,8 @@ Current scope:
 - `s/tokens.s`: S-native token definitions mirroring `compiler/lexer/tokens.py`
 - `s/lexer.s`: S-native lexer mirroring `compiler/lexer/lexer.py`
 - `s/parser.s`: S-native parser skeleton mirroring `compiler/parser/parser.py`
-- `cmd/lex_dump.s`: minimal self-hosting driver for `source -> tokens -> dump`
-- `cmd/ast_dump.s`: minimal self-hosting driver for `source -> AST dump`
+- `cmd/lex_dump.s`: minimal self-hosting driver for `source  tokens  dump`
+- `cmd/ast_dump.s`: minimal self-hosting driver for `source  AST dump`
 - `cmd/s.s`: minimal self-hosted compiler command wrapper around `compiler.main`
 
 These files are intentionally foundational. They are the first step toward replacing the Python prototype with S implementations in the order described by [docs/self_hosting.md](/app/s/doc/self_hosting.md).

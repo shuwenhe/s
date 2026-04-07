@@ -269,7 +269,7 @@ def _dump_function(item: FunctionDecl, indent: str = "") -> List[str]:
     sig = item.sig
     prefix = "pub " if item.is_public else ""
     params = ", ".join(f"{p.type_name} {p.name}" for p in sig.params)
-    ret = f" -> {sig.return_type}" if sig.return_type else ""
+    ret = f" {sig.return_type}" if sig.return_type else ""
     lines = [f"{indent}{prefix}func {sig.name}{_fmt_generics(sig.generics)}({params}){ret}"]
     if item.body is not None:
         lines.extend(_dump_block(item.body, indent + "  "))
@@ -301,7 +301,7 @@ def _dump_trait(item: TraitDecl) -> List[str]:
     lines = [f"{prefix}trait {item.name}{_fmt_generics(item.generics)}"]
     for method in item.methods:
         params = ", ".join(f"{p.type_name} {p.name}" for p in method.params)
-        ret = f" -> {method.return_type}" if method.return_type else ""
+        ret = f" {method.return_type}" if method.return_type else ""
         lines.append(f"  func {method.name}{_fmt_generics(method.generics)}({params}){ret}")
     return lines
 
@@ -374,7 +374,7 @@ def _dump_expr(expr: Optional[Expr]) -> str:
         args = ", ".join(_dump_expr(arg) for arg in expr.args)
         return f"call {_dump_expr(expr.callee)}({args})"
     if isinstance(expr, MatchExpr):
-        arms = "; ".join(f"{_dump_pattern(arm.pattern)} => {_dump_expr(arm.expr)}" for arm in expr.arms)
+        arms = "; ".join(f"case {_dump_pattern(arm.pattern)}: {_dump_expr(arm.expr)}" for arm in expr.arms)
         return f"match {_dump_expr(expr.subject)} {{ {arms} }}"
     if isinstance(expr, IfExpr):
         text = f"if {_dump_expr(expr.condition)} {{...}}"

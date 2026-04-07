@@ -2,7 +2,7 @@
   "Function": {
     "prefix": "fn",
     "body": [
-      "pub fn ${1:name}(${2:arg}: ${3:i32}) -> ${4:()} {",
+      "pub fn ${1:name}(${2:arg}: ${3:i32}) ${4:()} {",
       "\t${5}",
       "}"
     ],
@@ -31,7 +31,7 @@
     "prefix": "trait",
     "body": [
       "pub trait ${1:TraitName}${2:[T]} {",
-      "\tfn ${3:method}(self: &${4:Self}) -> ${5:()};",
+      "\tfn ${3:method}(self: &${4:Self}) ${5:()};",
       "}"
     ],
     "description": "Insert an S trait"
@@ -40,7 +40,7 @@
     "prefix": "impl",
     "body": [
       "impl ${1:TraitName} for ${2:TypeName} {",
-      "\tfn ${3:method}(self: ${2:TypeName}) -> ${4:()} {",
+      "\tfn ${3:method}(self: ${2:TypeName}) ${4:()} {",
       "\t\t${5}",
       "\t}",
       "}"

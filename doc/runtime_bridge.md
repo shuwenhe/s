@@ -11,10 +11,10 @@ Status: Working Draft
 
 ```text
 S source
-  -> intrinsic symbol in S code
-  -> host-side IntrinsicCall
-  -> Python bridge dispatch
-  -> concrete host value
+   intrinsic symbol in S code
+   host-side IntrinsicCall
+   Python bridge dispatch
+   concrete host value
 ```
 
 ## 2. Runtime Files
@@ -32,7 +32,7 @@ S source
 S 侧当前把 intrinsic 写成：
 
 ```s
-extern "intrinsic" func __string_slice(String text, i32 start, i32 end) -> String
+extern "intrinsic" func __string_slice(String text, i32 start, i32 end) String
 ```
 
 在宿主桥接层，这会映射为：
@@ -94,7 +94,7 @@ import time.
 例如：
 
 ```s
-extern "intrinsic" func __vec_array_set[T](Array[T] array, i32 index, T value) -> ()
+extern "intrinsic" func __vec_array_set[T](Array[T] array, i32 index, T value) ()
 ```
 
 对应：
@@ -107,20 +107,20 @@ invoke_intrinsic("__vec_array_set", array, index, value)
 
 当前宿主值采用最小 Python 编码：
 
-- `String` -> Python `str`
-- `i32` -> Python `int`
-- `Array[T]` -> `HostArray`
-- `()` -> `None`
+- `String`  Python `str`
+- `i32`  Python `int`
+- `Array[T]`  `HostArray`
+- `()`  `None`
 
 For the std-layer host intrinsics, the current bridge uses a success-path model:
 
-- `__host_read_to_string` -> Python `str`
-- `__host_make_temp_dir` -> Python `str`
-- `__host_write_text_file` -> `None`
-- `__host_run_process` -> `None`
-- `__host_args` -> Python `list[str]`
-- `__host_println` / `__host_eprintln` -> `None`
-- `__host_exit` -> raises `RuntimeExit`
+- `__host_read_to_string`  Python `str`
+- `__host_make_temp_dir`  Python `str`
+- `__host_write_text_file`  `None`
+- `__host_run_process`  `None`
+- `__host_args`  Python `list[str]`
+- `__host_println` / `__host_eprintln`  `None`
+- `__host_exit`  raises `RuntimeExit`
 
 S declarations currently expose these as `Result[...]` for `std.fs` and
 `std.process`, but the Python prototype does not yet materialize a host-side
@@ -210,7 +210,7 @@ python3 /app/s/src/runtime/validate_outputs.py all
 
 - [env.s](/app/s/src/env/env.s) 通过 `__host_args`
 - [process.s](/app/s/src/process/process.s) 通过 `__host_exit`
-- [s.s](/app/s/src/cmd/s/main.s) 通过 `Args() -> compiler.main(args) -> Exit(code)`
+- [s.s](/app/s/src/cmd/s/main.s) 通过 `Args() compiler.main(args) Exit(code)`
 
 这意味着 `ExecutionPlan` 已经不只记录 parser/lexer 内部 intrinsic，也开始覆盖宿主 IO 边界。
 

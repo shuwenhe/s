@@ -57,7 +57,7 @@ struct CompileQueue {
     String entry_name,
 }
 
-func RunCommand(Vec[String] args) -> Result[(), cliError] {
+func RunCommand(Vec[String] args) Result[(), cliError] {
     var command = ParseCommand(args)?
     var frontend = FrontendPhase(command)?
 
@@ -81,7 +81,7 @@ func RunCommand(Vec[String] args) -> Result[(), cliError] {
     })
 }
 
-func FrontendPhase(checkOptions command) -> Result[FrontendResult, cliError] {
+func FrontendPhase(checkOptions command) Result[FrontendResult, cliError] {
     var source = LoadSource(command)?
     var parsed = ParsePhase(command, source)?
     TypecheckPhase(parsed)?
@@ -93,7 +93,7 @@ func FrontendPhase(checkOptions command) -> Result[FrontendResult, cliError] {
     })
 }
 
-func CompilePhase(FrontendResult frontend) -> Result[CompileResult, cliError] {
+func CompilePhase(FrontendResult frontend) Result[CompileResult, cliError] {
     var queue = PrepareCompileQueue(frontend.parsed)
     var ownership = OwnershipPhase(frontend.parsed)
     var result = CompileFunctions(frontend, queue, ownership)?
@@ -105,11 +105,11 @@ func CompilePhase(FrontendResult frontend) -> Result[CompileResult, cliError] {
     })
 }
 
-func LoadSource(checkOptions command) -> Result[String, cliError] {
+func LoadSource(checkOptions command) Result[String, cliError] {
     ReadSource(command.path)
 }
 
-func ParsePhase(checkOptions command, String source) -> Result[s.SourceFile, cliError] {
+func ParsePhase(checkOptions command, String source) Result[s.SourceFile, cliError] {
     if command.dump_tokens {
         println(DumpTokensText(source)?)
     }
@@ -123,7 +123,7 @@ func ParsePhase(checkOptions command, String source) -> Result[s.SourceFile, cli
     Result::Ok(parsed)
 }
 
-func TypecheckPhase(s.SourceFile parsed) -> Result[(), cliError] {
+func TypecheckPhase(s.SourceFile parsed) Result[(), cliError] {
     var checked = CheckSource(parsed)
     if checked.diagnostics.len() > 0 {
         for diagnostic in checked.diagnostics {
@@ -136,7 +136,7 @@ func TypecheckPhase(s.SourceFile parsed) -> Result[(), cliError] {
     Result::Ok(())
 }
 
-func BorrowPhase(s.SourceFile parsed) -> Result[(), cliError] {
+func BorrowPhase(s.SourceFile parsed) Result[(), cliError] {
     for item in parsed.items {
         match item {
             s.Item::Function(func) => {
@@ -162,11 +162,11 @@ func BorrowPhase(s.SourceFile parsed) -> Result[(), cliError] {
     Result::Ok(())
 }
 
-func OwnershipPhase(s.SourceFile parsed) -> Vec[OwnershipEntry] {
+func OwnershipPhase(s.SourceFile parsed) Vec[OwnershipEntry] {
     MakePlan(collectTypeBindings(parsed))
 }
 
-func PrepareFunc(FunctionDecl func, String origin) -> Option[FunctionCompileUnit] {
+func PrepareFunc(FunctionDecl func, String origin) Option[FunctionCompileUnit] {
     if func.sig.name == "_" {
         return Option::None
     }
@@ -184,14 +184,14 @@ func PrepareFunc(FunctionDecl func, String origin) -> Option[FunctionCompileUnit
     }
 }
 
-func EnqueueFunc(Vec[FunctionCompileUnit] queue, FunctionDecl func, String origin) -> () {
+func EnqueueFunc(Vec[FunctionCompileUnit] queue, FunctionDecl func, String origin) () {
     match PrepareFunc(func, origin) {
         Option::Some(unit) => queue.push(unit),
         Option::None => (),
     }
 }
 
-func PrepareCompileQueue(s.SourceFile parsed) -> CompileQueue {
+func PrepareCompileQueue(s.SourceFile parsed) CompileQueue {
     var units = Vec[FunctionCompileUnit]()
     var entry_name = ""
 
@@ -221,7 +221,7 @@ func LowerToIR(
     FunctionCompileUnit unit,
     Vec[OwnershipEntry] ownership,
     bool is_entry
-) -> Result[MIRProgram, cliError] {
+) Result[MIRProgram, cliError] {
     match LowerFunction(frontend.parsed, unit.decl, ownership, is_entry) {
         Result::Ok(mir) => Result::Ok(mir),
         Result::Err(err) => Result::Err(cliError {
@@ -234,7 +234,7 @@ func CompileFunctions(
     FrontendResult frontend,
     CompileQueue queue,
     Vec[OwnershipEntry] ownership
-) -> Result[CompileResult, cliError] {
+) Result[CompileResult, cliError] {
     var programs = Vec[MIRProgram]()
     for unit in queue.units {
         programs.push(LowerToIR(frontend, unit, ownership, unit.name == queue.entry_name)?)
@@ -249,23 +249,23 @@ func CompileFunctions(
     })
 }
 
-func CodegenPhase(MIRProgram mir) -> MachineProgram {
+func CodegenPhase(MIRProgram mir) MachineProgram {
     LowerProgram(mir, ArchName())
 }
 
-func LinkPhase(MachineProgram program, String outputPath) -> Result[(), cliError] {
+func LinkPhase(MachineProgram program, String outputPath) Result[(), cliError] {
     match LinkProgram(program, outputPath) {
         Result::Ok(()) => Result::Ok(()),
         Result::Err(err) => backendError(err),
     }
 }
 
-func emitBinary(CompileResult compiled, String outputPath) -> Result[(), cliError] {
+func emitBinary(CompileResult compiled, String outputPath) Result[(), cliError] {
     var program = CodegenPhase(compiled.mir)
     LinkPhase(program, outputPath)
 }
 
-func runBinary(CompileResult compiled) -> Result[(), cliError] {
+func runBinary(CompileResult compiled) Result[(), cliError] {
     var outputPath = tempRunOutputPath()?
     emitBinary(compiled, outputPath)?
 
@@ -283,7 +283,7 @@ func runBinary(CompileResult compiled) -> Result[(), cliError] {
     }
 }
 
-func collectTypeBindings(s.SourceFile parsed) -> Vec[TypeBinding] {
+func collectTypeBindings(s.SourceFile parsed) Vec[TypeBinding] {
     var bindings = Vec[TypeBinding]()
     for item in parsed.items {
         match item {
@@ -301,13 +301,13 @@ func collectTypeBindings(s.SourceFile parsed) -> Vec[TypeBinding] {
     bindings
 }
 
-func enqueueImplMethods(Vec[FunctionCompileUnit] units, ImplDecl impl_decl, String packageName) -> () {
+func enqueueImplMethods(Vec[FunctionCompileUnit] units, ImplDecl impl_decl, String packageName) () {
     for method in impl_decl.methods {
         EnqueueFunc(units, method, packageName + ".impl." + impl_decl.target)
     }
 }
 
-func markQueueCompiled(CompileQueue queue) -> () {
+func markQueueCompiled(CompileQueue queue) () {
     var index = 0
     while index < queue.units.len() {
         var unit = queue.units[index]
@@ -322,7 +322,7 @@ func markQueueCompiled(CompileQueue queue) -> () {
     }
 }
 
-func initialScope(FunctionDecl func) -> Vec[VarState] {
+func initialScope(FunctionDecl func) Vec[VarState] {
     var scope = Vec[VarState]()
     for param in func.sig.params {
         scope.push(VarState {
@@ -333,13 +333,13 @@ func initialScope(FunctionDecl func) -> Vec[VarState] {
     scope
 }
 
-func backendError(BackendError err) -> Result[(), cliError] {
+func backendError(BackendError err) Result[(), cliError] {
     Result::Err(cliError {
         message: err.message,
     })
 }
 
-func tempRunOutputPath() -> Result[String, cliError] {
+func tempRunOutputPath() Result[String, cliError] {
     match MakeTempDir("s-run-") {
         Result::Ok(path) => Result::Ok(path + "/run-target"),
         Result::Err(err) => Result::Err(cliError {

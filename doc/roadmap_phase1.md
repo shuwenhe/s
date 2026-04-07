@@ -250,7 +250,7 @@ Done means:
 
 Phase 1 is:
 
-`s -> compiler -> runtime -> cmd -> std(min) -> tests`
+`s  compiler  runtime  cmd  std(min) tests`
 
 The goal is to make that loop solid before chasing a larger library surface or
 broader ecosystem work.

@@ -247,7 +247,7 @@ struct SourceFile {
     Vec[Item] items,
 }
 
-func dump_source_file(SourceFile source) -> String {
+func dump_source_file(SourceFile source) String {
     var lines = Vec[String]()
     lines.push("package " + source.package)
     for use_decl in source.uses {
@@ -264,7 +264,7 @@ func dump_source_file(SourceFile source) -> String {
     join_lines(lines)
 }
 
-func append_item_dump(Vec[String] lines, Item item) -> () {
+func append_item_dump(Vec[String] lines, Item item) () {
     match item {
         Item::Function(value) => append_lines(lines, dump_function(value, "")),
         Item::Struct(value) => append_lines(lines, dump_struct(value)),
@@ -274,14 +274,14 @@ func append_item_dump(Vec[String] lines, Item item) -> () {
     }
 }
 
-func fmt_generics(Vec[String] generics) -> String {
+func fmt_generics(Vec[String] generics) String {
     if len(generics) == 0 {
         return ""
     }
     "[" + join_with(generics, ", ") + "]"
 }
 
-func dump_function(FunctionDecl item, String indent) -> Vec[String] {
+func dump_function(FunctionDecl item, String indent) Vec[String] {
     var lines = Vec[String]()
     var params = Vec[String]()
     for param in item.sig.params {
@@ -289,7 +289,7 @@ func dump_function(FunctionDecl item, String indent) -> Vec[String] {
     }
     var ret =
         match item.sig.return_type {
-            Option::Some(value) => " -> " + value,
+            Option::Some(value) => " " + value,
             Option::None => "",
         }
     lines.push(
@@ -309,7 +309,7 @@ func dump_function(FunctionDecl item, String indent) -> Vec[String] {
     lines
 }
 
-func dump_struct(StructDecl item) -> Vec[String] {
+func dump_struct(StructDecl item) Vec[String] {
     var lines = Vec[String]()
     lines.push("struct " + item.name + fmt_generics(item.generics))
     for field in item.fields {
@@ -318,7 +318,7 @@ func dump_struct(StructDecl item) -> Vec[String] {
     lines
 }
 
-func dump_enum(EnumDecl item) -> Vec[String] {
+func dump_enum(EnumDecl item) Vec[String] {
     var lines = Vec[String]()
     lines.push("enum " + item.name + fmt_generics(item.generics))
     for variant in item.variants {
@@ -330,7 +330,7 @@ func dump_enum(EnumDecl item) -> Vec[String] {
     lines
 }
 
-func dump_trait(TraitDecl item) -> Vec[String] {
+func dump_trait(TraitDecl item) Vec[String] {
     var lines = Vec[String]()
     lines.push("trait " + item.name + fmt_generics(item.generics))
     for method in item.methods {
@@ -340,7 +340,7 @@ func dump_trait(TraitDecl item) -> Vec[String] {
         }
         var ret =
             match method.return_type {
-                Option::Some(value) => " -> " + value,
+                Option::Some(value) => " " + value,
                 Option::None => "",
             }
         lines.push(
@@ -356,7 +356,7 @@ func dump_trait(TraitDecl item) -> Vec[String] {
     lines
 }
 
-func dump_impl(ImplDecl item) -> Vec[String] {
+func dump_impl(ImplDecl item) Vec[String] {
     var lines = Vec[String]()
     var head =
         match item.trait_name {
@@ -371,7 +371,7 @@ func dump_impl(ImplDecl item) -> Vec[String] {
     lines
 }
 
-func dump_block(BlockExpr block, String indent) -> Vec[String] {
+func dump_block(BlockExpr block, String indent) Vec[String] {
     var lines = Vec[String]()
     for stmt in block.statements {
         append_lines(lines, dump_stmt(stmt, indent))
@@ -383,7 +383,7 @@ func dump_block(BlockExpr block, String indent) -> Vec[String] {
     lines
 }
 
-func dump_stmt(Stmt stmt, String indent) -> Vec[String] {
+func dump_stmt(Stmt stmt, String indent) Vec[String] {
     match stmt {
         Stmt::Var(value) => {
             var text =
@@ -427,7 +427,7 @@ func dump_stmt(Stmt stmt, String indent) -> Vec[String] {
     }
 }
 
-func dump_for_clause(Stmt stmt) -> String {
+func dump_for_clause(Stmt stmt) String {
     match stmt {
         Stmt::Var(value) => {
             match value.type_name {
@@ -443,7 +443,7 @@ func dump_for_clause(Stmt stmt) -> String {
     }
 }
 
-func dump_expr(Expr expr) -> String {
+func dump_expr(Expr expr) String {
     match expr {
         Expr::Int(value) => value.value,
         Expr::String(value) => value.value,
@@ -465,7 +465,7 @@ func dump_expr(Expr expr) -> String {
     }
 }
 
-func dump_if_expr(IfExpr value) -> String {
+func dump_if_expr(IfExpr value) String {
     var text = "if " + dump_expr(value.condition.value) + " {...}"
     match value.else_branch {
         Option::Some(expr) => text + " else " + dump_expr(expr.value),
@@ -473,7 +473,7 @@ func dump_if_expr(IfExpr value) -> String {
     }
 }
 
-func dump_pattern(Pattern pattern) -> String {
+func dump_pattern(Pattern pattern) String {
     match pattern {
         Pattern::Name(value) => value.name,
         Pattern::Wildcard(_) => "_",
@@ -486,7 +486,7 @@ func dump_pattern(Pattern pattern) -> String {
     }
 }
 
-func join_exprs(Vec[Expr] values) -> String {
+func join_exprs(Vec[Expr] values) String {
     var parts = Vec[String]()
     for value in values {
         parts.push(dump_expr(value))
@@ -494,7 +494,7 @@ func join_exprs(Vec[Expr] values) -> String {
     join_with(parts, ", ")
 }
 
-func join_patterns(Vec[Pattern] values) -> String {
+func join_patterns(Vec[Pattern] values) String {
     var parts = Vec[String]()
     for value in values {
         parts.push(dump_pattern(value))
@@ -502,7 +502,7 @@ func join_patterns(Vec[Pattern] values) -> String {
     join_with(parts, ", ")
 }
 
-func join_match_arms(Vec[MatchArm] values) -> String {
+func join_match_arms(Vec[MatchArm] values) String {
     var parts = Vec[String]()
     for value in values {
         parts.push(dump_pattern(value.pattern) + " => " + dump_expr(value.expr))
@@ -510,23 +510,23 @@ func join_match_arms(Vec[MatchArm] values) -> String {
     join_with(parts, "; ")
 }
 
-func append_lines(Vec[String] dest, Vec[String] source) -> () {
+func append_lines(Vec[String] dest, Vec[String] source) () {
     for line in source {
         dest.push(line)
     }
 }
 
-func single_line(String text) -> Vec[String] {
+func single_line(String text) Vec[String] {
     var lines = Vec[String]()
     lines.push(text)
     lines
 }
 
-func join_lines(Vec[String] lines) -> String {
+func join_lines(Vec[String] lines) String {
     join_with(lines, "\n")
 }
 
-func join_with(Vec[String] values, String sep) -> String {
+func join_with(Vec[String] values, String sep) String {
     var out = ""
     var first = true
     for value in values {
@@ -539,6 +539,6 @@ func join_with(Vec[String] values, String sep) -> String {
     out
 }
 
-func replace_once(String text, String from, String to) -> String {
+func replace_once(String text, String from, String to) String {
     text
 }

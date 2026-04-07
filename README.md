@@ -184,11 +184,11 @@ while running {
 ### Functions
 
 ```s
-func Add(i32 a, i32 b) -> i32 {
+func Add(i32 a, i32 b) i32 {
     a + b
 }
 
-func openFile(str path) -> Result<File, IoError> {
+func openFile(str path) Result<File, IoError> {
     ...
 }
 ```
@@ -196,7 +196,7 @@ func openFile(str path) -> Result<File, IoError> {
 Default rules:
 
 - function signatures must be explicit
-- return values use `->`
+- return values use ` `
 - a single-expression body may implicitly return its final expression
 - visibility follows a Go-style rule: uppercase exports, lowercase stays module-local, without relying on `pub`
 
@@ -214,7 +214,7 @@ impl User {
         self.active = true
     }
 
-    func displayName(Self self) -> str {
+    func displayName(Self self) str {
         self.name.as_str()
     }
 }
@@ -242,7 +242,7 @@ match result {
 ### Generics
 
 ```s
-func max[T: Ord](T a, T b) -> T {
+func max[T: Ord](T a, T b) T {
     if a > b { a } else { b }
 }
 ```
@@ -287,7 +287,7 @@ That makes error handling, state modeling, and protocol modeling much more natur
 
 ```s
 trait Writer {
-    func write(mut Self self, []u8 data) -> Result[usize, IoError]
+    func write(mut Self self, []u8 data) Result[usize, IoError]
 }
 ```
 
@@ -313,9 +313,9 @@ A more engineering-oriented borrow-lite approach is possible:
 ### Suggested Reference Model
 
 ```s
-func len(&str s) -> usize
+func len(&str s) usize
 func push(&mut Vec[i32] v, i32 value)
-func consume(Buf buf) -> Result[(), Error]
+func consume(Buf buf) Result[(), Error]
 ```
 
 Meaning:
@@ -335,7 +335,7 @@ This is one of the core pillars of S.
 S uses scope-based resource release by default.
 
 ```s
-func main() -> Result[(), IoError] {
+func main() Result[(), IoError] {
     let file = File::open("a.txt")?
     let data = file.read_all()?
     println(data)
@@ -400,7 +400,7 @@ S uses `Result[T, E]` as the primary error model. Exceptions are not intended to
 ### Basic Form
 
 ```s
-func parse_port(str s) -> Result[u16, ParseError] {
+func parse_port(str s) Result[u16, ParseError] {
     ...
 }
 ```
@@ -408,7 +408,7 @@ func parse_port(str s) -> Result[u16, ParseError] {
 ### Propagation Operator
 
 ```s
-func run() -> Result[(), Error] {
+func run() Result[(), Error] {
     let cfg = load_config("app.conf")?
     let conn = connect(cfg.addr)?
     conn.start()?
@@ -437,8 +437,8 @@ For example:
 
 ```s
 trait Error {
-    func message(self) -> str
-    func source(self) -> Option[&Error]
+    func message(self) str
+    func source(self) Option[&Error]
 }
 ```
 
@@ -452,7 +452,7 @@ The concurrency model of S should learn from both Go and Rust:
 ### Suggested Main Model: Structured Concurrency
 
 ```s
-func main() -> Result[(), Error] {
+func main() Result[(), Error] {
     task::scope(|scope| {
         let a = scope.spawn(|| fetch_price("BTC-USDT"))
         let b = scope.spawn(|| fetch_price("ETH-USDT"))
@@ -515,7 +515,7 @@ package net.http
 
 struct Request { ... }
 
-func parse_header(...) -> Header { ... }
+func parse_header(...) Header { ... }
 ```
 
 Suggested rules:
@@ -580,7 +580,7 @@ If S wants to become a real systems language, C ABI interoperability has to be a
 ### C FFI Example
 
 ```s
-extern "C" func puts(*const u8 s) -> i32
+extern "C" func puts(*const u8 s) i32
 ```
 
 Design goals:

@@ -42,30 +42,30 @@ struct UnknownType {
     String label,
 }
 
-func NewBoolType() -> Type {
+func NewBoolType() Type {
     Type::Primitive(PrimitiveType { name: "bool" })
 }
 
-func NewI32Type() -> Type {
+func NewI32Type() Type {
     Type::Primitive(PrimitiveType { name: "i32" })
 }
 
-func NewStringType() -> Type {
+func NewStringType() Type {
     Type::Named(NamedType {
         name: "String",
         args: Vec[Type](),
     })
 }
 
-func NewUnitType() -> Type {
+func NewUnitType() Type {
     Type::Unit(UnitType {})
 }
 
-func UnknownTypeOf(String label) -> Type {
+func UnknownTypeOf(String label) Type {
     Type::Unknown(UnknownType { label: label })
 }
 
-func ParseType(String text) -> Type {
+func ParseType(String text) Type {
     var trimmed = text.trim()
     if trimmed == "" {
         return Type::Unknown(UnknownType { label: "unknown" })
@@ -119,7 +119,7 @@ func ParseType(String text) -> Type {
     })
 }
 
-func DumpType(Type ty) -> String {
+func DumpType(Type ty) String {
     match ty {
         Type::Primitive(value) => value.name,
         Type::Named(value) => {
@@ -139,14 +139,14 @@ func DumpType(Type ty) -> String {
                     Option::Some(inner) => inner,
                     Option::None => NewUnitType(),
                 }
-            "func(" + joinTypes(value.params, ", ") + ") -> " + DumpType(ret)
+            "func(" + joinTypes(value.params, ", ") + ") " + DumpType(ret)
         }
         Type::Unit(_) => "()",
         Type::Unknown(value) => value.label,
     }
 }
 
-func IsCopyType(Type ty) -> bool {
+func IsCopyType(Type ty) bool {
     match ty {
         Type::Primitive(_) => true,
         Type::Reference(_) => true,
@@ -154,21 +154,21 @@ func IsCopyType(Type ty) -> bool {
     }
 }
 
-func IsNamedTypeVar(Type ty, String name) -> bool {
+func IsNamedTypeVar(Type ty, String name) bool {
     match ty {
         Type::Named(value) => value.name == name && value.args.len() == 0,
         _ => false,
     }
 }
 
-func UnwrapRefs(Type ty) -> Type {
+func UnwrapRefs(Type ty) Type {
     match ty {
         Type::Reference(value) => UnwrapRefs(value.inner.value),
         _ => ty,
     }
 }
 
-func SubstituteType(Type ty, Vec[TypeBinding] mapping) -> Type {
+func SubstituteType(Type ty, Vec[TypeBinding] mapping) Type {
     match ty {
         Type::Named(value) => {
             if value.args.len() == 0 {
@@ -212,7 +212,7 @@ struct TypeBinding {
     Type value,
 }
 
-func FindTypeBinding(Vec[TypeBinding] bindings, String name) -> Option[Type] {
+func FindTypeBinding(Vec[TypeBinding] bindings, String name) Option[Type] {
     for binding in bindings {
         if binding.name == name {
             return Option::Some(binding.value)
@@ -221,7 +221,7 @@ func FindTypeBinding(Vec[TypeBinding] bindings, String name) -> Option[Type] {
     Option::None
 }
 
-func splitArgs(String text) -> Vec[String] {
+func splitArgs(String text) Vec[String] {
     var parts = Vec[String]()
     var current = ""
     var depth = 0
@@ -248,7 +248,7 @@ func splitArgs(String text) -> Vec[String] {
     parts
 }
 
-func joinTypes(Vec[Type] values, String sep) -> String {
+func joinTypes(Vec[Type] values, String sep) String {
     var out = ""
     var first = true
     for value in values {
