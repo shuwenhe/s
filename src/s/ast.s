@@ -180,6 +180,10 @@ struct ExprStmt {
     Expr expr,
 }
 
+struct DeferStmt {
+    Expr expr,
+}
+
 enum Stmt {
     Var(VarStmt),
     Assign(AssignStmt),
@@ -187,6 +191,7 @@ enum Stmt {
     CFor(CForStmt),
     Return(ReturnStmt),
     Expr(ExprStmt),
+    Defer(DeferStmt),
 }
 
 struct FunctionDecl {
@@ -418,6 +423,7 @@ func dump_stmt(Stmt stmt, String indent) -> Vec[String] {
             single_line(text)
         }
         Stmt::Expr(value) => single_line(indent + "expr " + dump_expr(value.expr)),
+        Stmt::Defer(value) => single_line(indent + "defer " + dump_expr(value.expr)),
     }
 }
 

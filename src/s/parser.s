@@ -372,15 +372,20 @@ impl Parser {
     func starts_stmt(self) -> bool {
         self.at_keyword("var")
             || self.at_keyword("return")
+            || self.at_keyword("defer")
             || self.at_cfor_start()
             || self.looks_like_typed_var_stmt()
             || self.looks_like_increment_stmt()
             || self.looks_like_assignment_stmt()
+            || self.looks_like_short_var_stmt()
     }
 
     func parse_stmt(mut self) -> Result[Stmt, ParseError] {
         if self.at_keyword("var") {
             return Result::Ok(Stmt::Var(self.parse_var_stmt(true)?))
+        }
+        if self.at_keyword("defer") {
+            return Result::Ok(Stmt::Defer(self.parse_defer_stmt()?))
         }
         if self.at_keyword("return") {
             return Result::Ok(Stmt::Return(self.parse_return_stmt()?))
@@ -396,6 +401,9 @@ impl Parser {
         }
         if self.looks_like_assignment_stmt() {
             return Result::Ok(Stmt::Assign(self.parse_assign_stmt(true)?))
+        }
+        if self.looks_like_short_var_stmt() {
+            return Result::Ok(Stmt::Var(self.parse_short_var_stmt(true)?))
         }
         Result::Err(self.error_here("unexpected statement"))
     }
@@ -419,6 +427,27 @@ impl Parser {
             type_name: type_name,
             value: value,
         })
+    }
+
+    func parse_short_var_stmt(mut self, bool consume_semicolon) -> Result[VarStmt, ParseError] {
+        var name = self.expect_ident()?
+        self.expect_symbol(":=")?
+        var value = self.parse_expr()?
+        if consume_semicolon {
+            self.eat_symbol(";")
+        }
+        Result::Ok(VarStmt {
+            name: name,
+            type_name: Option::None,
+            value: value,
+        })
+    }
+
+    func parse_defer_stmt(mut self) -> Result[DeferStmt, ParseError] {
+        self.expect_keyword("defer")?
+        var expr = self.parse_expr()?
+        self.eat_symbol(";")
+        Result::Ok(DeferStmt { expr: expr })
     }
 
     func parse_typed_var_stmt(mut self, bool consume_semicolon) -> Result[VarStmt, ParseError] {
@@ -481,6 +510,9 @@ impl Parser {
     func parse_for_clause_stmt(mut self) -> Result[Stmt, ParseError] {
         if self.at_keyword("var") {
             return Result::Ok(Stmt::Var(self.parse_var_stmt(false)?))
+        }
+        if self.looks_like_short_var_stmt() {
+            return Result::Ok(Stmt::Var(self.parse_short_var_stmt(false)?))
         }
         if self.looks_like_typed_var_stmt() {
             return Result::Ok(Stmt::Var(self.parse_typed_var_stmt(false)?))
@@ -880,6 +912,12 @@ impl Parser {
         var first = self.peek().unwrap()
         var second = self.peek_at(1).unwrap()
         first.kind == TokenKind::Ident && second.kind == TokenKind::Symbol && second.value == "="
+    }
+
+    func looks_like_short_var_stmt(self) -> bool {
+        var first = self.peek().unwrap()
+        var second = self.peek_at(1).unwrap()
+        first.kind == TokenKind::Ident && second.kind == TokenKind::Symbol && second.value == ":="
     }
 
     func looks_like_increment_stmt(self) -> bool {
