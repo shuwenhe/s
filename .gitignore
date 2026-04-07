@@ -24,4 +24,4 @@ build/
 editor/vscode/*.vsix
 
 # Build outputs
-/s/out/
+# /s/out/
