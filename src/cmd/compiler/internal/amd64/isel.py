@@ -73,6 +73,21 @@ def _label(_: LoweredInstruction) -> list[AsmInstruction]:
     return [AsmInstruction(f"{_.target_label}:")]
 
 
+def _call(inst: LoweredInstruction) -> list[AsmInstruction]:
+    ops = [AsmInstruction("call", (inst.symbol,))]
+    if inst.target_reg and inst.target_reg != "eax":
+        ops.append(AsmInstruction("mov", ("%eax", f"%{inst.target_reg}")))
+    return ops
+
+
+def _return(inst: LoweredInstruction) -> list[AsmInstruction]:
+    ops: list[AsmInstruction] = []
+    if inst.target_reg and inst.target_reg != "eax":
+        ops.append(AsmInstruction("mov", (f"%{inst.target_reg}", "%eax")))
+    ops.append(AsmInstruction("ret"))
+    return ops
+
+
 def _call_builtin(inst: LoweredInstruction) -> list[AsmInstruction]:
     if inst.builtin in {"syscall_write", "syscall_exit"}:
         return [AsmInstruction("syscall")]
@@ -115,6 +130,8 @@ _SELECTORS: dict[tuple[str, str, str], Selector] = {
     ("branch_if", "flags", ""): _branch_if,
     ("jump", "label", ""): lambda inst: [AsmInstruction("jmp", (inst.target_label,))],
     ("label", "label", ""): _label,
+    ("call", "i32", ""): _call,
+    ("return", "i32", ""): _return,
     ("call_builtin", "unit", ""): _call_builtin,
     ("syscall", "unit", ""): _syscall,
 }

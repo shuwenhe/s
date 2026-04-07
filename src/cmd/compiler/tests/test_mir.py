@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from compiler.mir import DropStmt, MIRProgram, MIRWriteOp, MoveStmt, lower_block, lower_source
+from compiler.mir import DropStmt, MIRFunction, MIROp, MIRProgram, MIRWriteOp, MoveStmt, lower_block, lower_function, lower_source, merge_mir_programs
 from compiler.internal.amd64.isel import select_instructions
 from compiler.internal.ssagen.lowering import LoweredData, LoweredInstruction, LoweredProgram, lower_program
 from compiler.ownership import make_plan
@@ -123,6 +123,30 @@ pub func take(text: String) -> String {
         self.assertIn(("L_true:", ()), text)
         self.assertIn(("syscall", ()), text)
 
+    def test_ssagen_supports_minimal_function_call(self) -> None:
+        lowered = lower_program(
+            MIRProgram(
+                writes=[],
+                exit_code=0,
+                functions=[
+                    MIRFunction(
+                        name="helper",
+                        ops=[
+                            MIROp(op="load_const", target="_helper_ret", value=7),
+                            MIROp(op="return", target="_helper_ret"),
+                        ],
+                    )
+                ],
+                ops=[MIROp(op="call", target="_call_0", source="helper")],
+            ),
+            "amd64",
+        )
+        asm = select_instructions(lowered)
+        text = [(insn.opcode, insn.operands) for insn in asm.text]
+        self.assertIn(("call", ("fn_helper",)), text)
+        self.assertIn(("ret", ()), text)
+        self.assertIn(("fn_helper:", ()), text)
+
     def test_lower_source_emits_real_compute_ops_for_sum(self) -> None:
         parsed = parse_source(
             """
@@ -144,3 +168,32 @@ func main() {
         self.assertIn("cmp_le_i32", ops)
         self.assertIn("branch_if", ops)
         self.assertIn("call_builtin", ops)
+
+    def test_merge_mir_programs_uses_entry_function_output(self) -> None:
+        parsed = parse_source(
+            """
+package main
+
+func helper() -> i32 {
+    7
+}
+
+func main() {
+    int sum = 0
+    for (int i = 1; i <= 3; i++) {
+        sum = sum + i
+    }
+    println(sum)
+}
+"""
+        )
+        funcs = [item for item in parsed.items if hasattr(item, "sig")]
+        functions = [
+            lower_function(parsed, fn, is_entry=fn.sig.name == "main")
+            for fn in funcs
+        ]
+        merged = merge_mir_programs(parsed, functions, entry_name="main")
+        self.assertEqual([write.text for write in merged.writes], ["6\n"])
+        self.assertEqual(merged.exit_code, 0)
+        self.assertIn("call_builtin", [op.op for op in merged.ops])
+        self.assertEqual([function.name for function in merged.functions], ["helper", "main"])
