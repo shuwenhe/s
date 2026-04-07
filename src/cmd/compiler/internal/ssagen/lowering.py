@@ -35,10 +35,18 @@ class LoweredProgram:
 def lower_program(mir: MIRProgram, arch_name: str) -> LoweredProgram:
     data: list[LoweredData] = []
     instructions: list[LoweredInstruction] = []
-    reg_map: dict[str, str] = {}
 
     for op in mir.ops:
-        instructions.extend(_lower_mir_op(op, reg_map))
+        instructions.extend(_lower_mir_op(op, {}, label_prefix="entry__"))
+
+    function_instructions: list[LoweredInstruction] = []
+    for function in mir.functions:
+        reg_map: dict[str, str] = {}
+        function_instructions.append(
+            LoweredInstruction(op="label", value_type="label", target_reg="", target_label=_function_symbol(function.name))
+        )
+        for op in function.ops:
+            function_instructions.extend(_lower_mir_op(op, reg_map, label_prefix=f"{function.name}__"))
 
     for index, write in enumerate(mir.writes):
         label = f"message_{index}"
@@ -67,6 +75,7 @@ def lower_program(mir: MIRProgram, arch_name: str) -> LoweredProgram:
             LoweredInstruction(op="call_builtin", value_type="unit", target_reg="", builtin="syscall_exit"),
         ]
     )
+    instructions.extend(function_instructions)
 
     return LoweredProgram(
         entry_symbol=_entry_symbol(arch_name),
@@ -76,19 +85,33 @@ def lower_program(mir: MIRProgram, arch_name: str) -> LoweredProgram:
     )
 
 
-def _lower_mir_op(op: MIROp, reg_map: dict[str, str]) -> list[LoweredInstruction]:
+def _lower_mir_op(op: MIROp, reg_map: dict[str, str], label_prefix: str = "") -> list[LoweredInstruction]:
     if op.op == "label":
-        return [LoweredInstruction(op="label", value_type="label", target_reg="", target_label=op.target_label)]
+        return [
+            LoweredInstruction(
+                op="label",
+                value_type="label",
+                target_reg="",
+                target_label=_scoped_label(op.target_label, label_prefix),
+            )
+        ]
     if op.op == "jump":
-        return [LoweredInstruction(op="jump", value_type="label", target_reg="", target_label=op.target_label)]
+        return [
+            LoweredInstruction(
+                op="jump",
+                value_type="label",
+                target_reg="",
+                target_label=_scoped_label(op.target_label, label_prefix),
+            )
+        ]
     if op.op == "branch_if":
         return [
             LoweredInstruction(
                 op="branch_if",
                 value_type="flags",
                 target_reg="",
-                target_label=op.target_label,
-                false_label=op.false_label,
+                target_label=_scoped_label(op.target_label, label_prefix),
+                false_label=_scoped_label(op.false_label, label_prefix),
             )
         ]
     if op.op == "call_builtin":
@@ -102,10 +125,30 @@ def _lower_mir_op(op: MIROp, reg_map: dict[str, str]) -> list[LoweredInstruction
                 source_reg=source_reg,
             )
         ]
+    if op.op == "call":
+        return [
+            LoweredInstruction(
+                op="call",
+                value_type="i32",
+                target_reg=_ensure_reg(op.target, reg_map),
+                symbol=_function_symbol(op.source),
+            )
+        ]
+    if op.op == "return":
+        return [LoweredInstruction(op="return", value_type="i32", target_reg=_ensure_reg(op.target, reg_map))]
 
     target_reg = _ensure_reg(op.target, reg_map)
     if op.op == "load_const":
         return [LoweredInstruction(op="load_const", value_type="i32", target_reg=target_reg, value=str(op.value))]
+    if op.op == "copy":
+        return [
+            LoweredInstruction(
+                op="copy_reg",
+                value_type="i32",
+                target_reg=target_reg,
+                source_reg=_ensure_reg(op.source, reg_map),
+            )
+        ]
     if op.op == "add_i32":
         return [
             LoweredInstruction(
@@ -140,3 +183,13 @@ def _entry_symbol(arch_name: str) -> str:
     if arch_name == "amd64":
         return "_start"
     return "_start"
+
+
+def _function_symbol(name: str) -> str:
+    return f"fn_{name}"
+
+
+def _scoped_label(label: str, prefix: str) -> str:
+    if not label:
+        return label
+    return f"{prefix}{label}" if prefix else label

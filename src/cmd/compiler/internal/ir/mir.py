@@ -121,6 +121,7 @@ class MIRWriteOp:
 class MIRProgram:
     writes: List[MIRWriteOp]
     exit_code: int
+    functions: List["MIRFunction"] = field(default_factory=list)
     ops: List["MIROp"] = field(default_factory=list)
 
 
@@ -132,6 +133,13 @@ class MIROp:
     value: int = 0
     target_label: str = ""
     false_label: str = ""
+
+
+@dataclass(frozen=True)
+class MIRFunction:
+    name: str
+    ops: List[MIROp]
+    is_entry: bool = False
 
 
 def lower_block(
@@ -150,30 +158,69 @@ def lower_block(
 
 def lower_source(source, ownership_plan: Optional[Dict[str, Any]] = None) -> MIRProgram:
     ownership_plan = ownership_plan or {}
+    functions = [
+        lower_function(source, item, ownership_plan, is_entry=item.sig.name == "main")
+        for item in source.items
+        if isinstance(item, FunctionDecl)
+    ]
+    return merge_mir_programs(source, functions, entry_name="main")
+
+
+def lower_function(
+    source,
+    fn: FunctionDecl,
+    ownership_plan: Optional[Dict[str, Any]] = None,
+    *,
+    is_entry: bool = False,
+) -> MIRFunction:
+    ownership_plan = ownership_plan or {}
     ownership_plan  # keep the phase boundary explicit even while the MVP lowering is linear
+    ops = _lower_function_compute_ops(fn)
+    return MIRFunction(name=fn.sig.name, ops=ops, is_entry=is_entry)
+
+
+def merge_mir_programs(source, functions: List[MIRFunction], entry_name: str = "main") -> MIRProgram:
+    if not functions:
+        return MIRProgram(writes=[], exit_code=0, functions=[], ops=[])
+
+    entry_function = functions[-1]
+    for function in functions:
+        if function.name == entry_name:
+            entry_function = function
+            break
+
     interpreter = _RecordingInterpreter(source)
     exit_code = int(interpreter.run_main())
+
     return MIRProgram(
-        ops=_lower_compute_ops(source),
         writes=interpreter.ops,
         exit_code=exit_code,
+        functions=functions,
+        ops=_entry_ops(entry_function),
     )
 
 
 def _lower_compute_ops(source) -> List[MIROp]:
     for item in source.items:
         if isinstance(item, FunctionDecl) and item.sig.name == "main" and item.body is not None:
-            ops = _lower_compute_block(item.body)
-            if ops:
-                return ops
+            return _lower_function_compute_ops(item)
     return []
 
 
-def _lower_compute_block(block: BlockExpr) -> List[MIROp]:
+def _lower_function_compute_ops(fn: FunctionDecl) -> List[MIROp]:
+    if fn.body is None:
+        return []
+    return _lower_compute_block(fn.body, fn.sig.name, include_return=fn.sig.name != "main")
+
+
+def _lower_compute_block(block: BlockExpr, function_name: str, include_return: bool) -> List[MIROp]:
     ops: List[MIROp] = []
     for stmt in block.statements:
         if isinstance(stmt, LetStmt) and isinstance(stmt.value, IntExpr):
             ops.append(MIROp(op="load_const", target=stmt.name, value=int(stmt.value.value.replace("_", ""))))
+            continue
+        if isinstance(stmt, LetStmt) and isinstance(stmt.value, CallExpr):
+            _append_compute_value(stmt.value, stmt.name, ops)
             continue
         if isinstance(stmt, CForStmt):
             loop_ops = _lower_cfor_compute(stmt)
@@ -182,8 +229,15 @@ def _lower_compute_block(block: BlockExpr) -> List[MIROp]:
             continue
         if isinstance(stmt, ExprStmt):
             _append_compute_call(stmt.expr, ops)
+    ret_name = f"_{function_name}_ret"
     if block.final_expr is not None:
-        _append_compute_call(block.final_expr, ops)
+        if include_return:
+            _append_return_expr(block.final_expr, ret_name, ops)
+        else:
+            _append_compute_call(block.final_expr, ops)
+    elif include_return:
+        ops.append(MIROp(op="load_const", target=ret_name, value=0))
+        ops.append(MIROp(op="return", target=ret_name))
     return ops
 
 
@@ -193,9 +247,41 @@ def _append_compute_call(expr: Expr, ops: List[MIROp]) -> None:
         and isinstance(expr.callee, NameExpr)
         and expr.callee.name == "println"
         and len(expr.args) == 1
-        and isinstance(expr.args[0], NameExpr)
     ):
-        ops.append(MIROp(op="call_builtin", target=expr.args[0].name, source="print_i32"))
+        arg = expr.args[0]
+        if isinstance(arg, NameExpr):
+            ops.append(MIROp(op="call_builtin", target=arg.name, source="print_i32"))
+            return
+        if isinstance(arg, CallExpr):
+            target = f"_call_{len(ops)}"
+            if _append_compute_value(arg, target, ops):
+                ops.append(MIROp(op="call_builtin", target=target, source="print_i32"))
+
+
+def _append_compute_value(expr: Expr, target: str, ops: List[MIROp]) -> bool:
+    if isinstance(expr, CallExpr) and isinstance(expr.callee, NameExpr) and len(expr.args) == 0:
+        if expr.callee.name not in {"println", "eprintln"}:
+            ops.append(MIROp(op="call", target=target, source=expr.callee.name))
+            return True
+    if isinstance(expr, IntExpr):
+        ops.append(MIROp(op="load_const", target=target, value=int(expr.value.replace("_", ""))))
+        return True
+    if isinstance(expr, NameExpr) and target != expr.name:
+        ops.append(MIROp(op="copy", target=target, source=expr.name))
+        return True
+    return False
+
+
+def _append_return_expr(expr: Expr, target: str, ops: List[MIROp]) -> None:
+    if _append_compute_value(expr, target, ops):
+        ops.append(MIROp(op="return", target=target))
+        return
+    ops.append(MIROp(op="load_const", target=target, value=0))
+    ops.append(MIROp(op="return", target=target))
+
+
+def _entry_ops(function: MIRFunction) -> List[MIROp]:
+    return [op for op in function.ops if op.op != "return"]
 
 
 def _lower_cfor_compute(stmt: CForStmt) -> List[MIROp]:
