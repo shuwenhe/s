@@ -282,19 +282,47 @@ func executeBlock(
     Vec[MIRLocalBinding] env,
     Vec[MIRWriteOp] writes
 ) -> Result[int, String] {
+    // support block-local deferred expressions executed LIFO on block exit
+    var defers = Vec[Expr]()
     for stmt in body.statements {
         match stmt {
-            Stmt::Return(value) => return executeReturnStmt(value, env),
+            Stmt::Defer(value) => {
+                defers.push(value.expr)
+                continue
+            }
+            Stmt::Return(value) => {
+                // execute defers in reverse order before returning
+                var i = defers.len() - 1
+                while i >= 0 {
+                    evalExpr(defers[i], env, writes)?
+                    i = i - 1
+                }
+                return executeReturnStmt(value, env)
+            }
             _ => {
                 match executeStmt(stmt, env, writes) {
                     Result::Ok(()) => (),
                     Result::Err(err) => {
+                        // execute defers before propagating error
+                        var j = defers.len() - 1
+                        while j >= 0 {
+                            evalExpr(defers[j], env, writes)?
+                            j = j - 1
+                        }
                         return Result::Err(err)
                     }
                 }
             }
         }
     }
+
+    // normal block exit: run defers then return final expr or unit
+    var k = defers.len() - 1
+    while k >= 0 {
+        evalExpr(defers[k], env, writes)?
+        k = k - 1
+    }
+
     match body.final_expr {
         Option::Some(expr) => {
             var value = evalExpr(expr, env, writes)?

@@ -13,6 +13,7 @@ struct borrowState {
     String name,
     Type ty,
     bool moved,
+    bool captured_by_defer,
 }
 
 func AnalyzeBlock(BlockExpr block, Vec[VarState] initial) -> Vec[BorrowDiagnostic] {
@@ -23,11 +24,45 @@ func AnalyzeBlock(BlockExpr block, Vec[VarState] initial) -> Vec[BorrowDiagnosti
             name: entry.name,
             ty: entry.ty,
             moved: false,
+            captured_by_defer: false,
         })
     }
     for stmt in block.statements {
         match stmt {
-            s.Stmt::Var(value) => inspectExpr(value.value, scope, diagnostics),
+            s.Stmt::Var(value) => {
+                inspectExpr(value.value, scope, diagnostics)
+                // bind new variable in borrow scope
+                scope.push(borrowState {
+                    name: value.name,
+                    ty: value.type_name.is_some() ? ParseType(value.type_name.unwrap()) : UnknownTypeOf("var"),
+                    moved: false,
+                    captured_by_defer: false,
+                })
+            }
+            s.Stmt::Assign(value) => {
+                inspectExpr(value.value, scope, diagnostics)
+                // assignment reinitializes target (not a move)
+                for i in 0..scope.len() {
+                    if scope[i].name == value.name {
+                        scope[i].moved = false
+                    }
+                }
+            }
+            s.Stmt::Defer(value) => {
+                // collect names used by defer and mark captured
+                var names = collectNames(value.expr)
+                for n in names {
+                    var idx = 0
+                    while idx < scope.len() {
+                        if scope[idx].name == n {
+                            scope[idx].captured_by_defer = true
+                        }
+                        idx = idx + 1
+                    }
+                }
+                // also inspect expression for immediate issues
+                inspectExpr(value.expr, scope, diagnostics)
+            }
             s.Stmt::Return(value) => {
                 match value.value {
                     Option::Some(expr) => inspectExpr(expr, scope, diagnostics),
@@ -35,6 +70,7 @@ func AnalyzeBlock(BlockExpr block, Vec[VarState] initial) -> Vec[BorrowDiagnosti
                 }
             }
             s.Stmt::Expr(value) => inspectExpr(value.expr, scope, diagnostics),
+            _ => (),
         }
     }
     match block.final_expr {
@@ -108,6 +144,12 @@ func consumeName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, Stri
                 return
             }
             if !IsCopyType(scope[index].ty) {
+                // moving a value: if it was captured by a defer, that's an error
+                if scope[index].captured_by_defer {
+                    diagnostics.push(BorrowDiagnostic {
+                        message: "value " + name + " moved but captured by defer",
+                    })
+                }
                 scope[index].moved = true
             }
             return
@@ -134,6 +176,70 @@ func toVarState(Vec[borrowState] scope) -> Vec[VarState] {
             name: entry.name,
             ty: entry.ty,
         })
+    }
+    out
+}
+
+func collectNames(Expr expr) -> Vec[String] {
+    var out = Vec[String]()
+    match expr {
+        Expr::Name(value) => out.push(value.name),
+        Expr::Borrow(value) => {
+            match value.target.value {
+                Expr::Name(name_expr) => out.push(name_expr.name),
+                other => out = out + collectNames(other),
+            }
+        }
+        Expr::Binary(value) => {
+            out = out + collectNames(value.left.value)
+            out = out + collectNames(value.right.value)
+        }
+        Expr::Call(value) => {
+            out = out + collectNames(value.callee.value)
+            for arg in value.args {
+                out = out + collectNames(arg)
+            }
+        }
+        Expr::Member(value) => out = out + collectNames(value.target.value),
+        Expr::Index(value) => {
+            out = out + collectNames(value.target.value)
+            out = out + collectNames(value.index.value)
+        }
+        Expr::Match(value) => {
+            out = out + collectNames(value.subject.value)
+            for arm in value.arms {
+                out = out + collectNames(arm.expr)
+            }
+        }
+        Expr::If(value) => {
+            out = out + collectNames(value.condition.value)
+            out = out + collectNames(Expr::Block(value.then_branch))
+            match value.else_branch {
+                Option::Some(other) => out = out + collectNames(other.value),
+                Option::None => (),
+            }
+        }
+        Expr::While(value) => {
+            out = out + collectNames(value.condition.value)
+            out = out + collectNames(Expr::Block(value.body))
+        }
+        Expr::For(value) => {
+            out = out + collectNames(value.iterable.value)
+            out = out + collectNames(Expr::Block(value.body))
+        }
+        Expr::Block(value) => {
+            for stmt in value.statements {
+                match stmt {
+                    Stmt::Var(v) => out = out + collectNames(v.value),
+                    Stmt::Assign(a) => out = out + collectNames(a.value),
+                    Stmt::Expr(e) => out = out + collectNames(e.expr),
+                    Stmt::Return(r) => match r.value { Option::Some(expr) => out = out + collectNames(expr), Option::None => () },
+                    _ => (),
+                }
+            }
+            match value.final_expr { Option::Some(expr) => out = out + collectNames(expr), Option::None => () }
+        }
+        _ => (),
     }
     out
 }
