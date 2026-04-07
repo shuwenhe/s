@@ -22,3 +22,6 @@ build/
 *.egg-info/
 .DS_Store
 editor/vscode/*.vsix
+
+# Build outputs
+/s/out/
