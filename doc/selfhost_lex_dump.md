@@ -11,10 +11,10 @@ Status: Working Draft
 
 ```text
 source file
-  -> read source text
-  -> self-hosted lexer
-  -> token stream
-  -> textual dump
+   read source text
+   self-hosted lexer
+   token stream
+   textual dump
 ```
 
 它不是完整的 `s check` CLI，只是自举前端的最小验证入口。
@@ -43,7 +43,7 @@ source file
 ```s
 use std.fs.read_to_string
 
-func read_to_string(String path) -> Result[String, FsError]
+func read_to_string(String path) Result[String, FsError]
 ```
 
 当前自举阶段对这个接口的约束只有这些：
@@ -67,8 +67,8 @@ func read_to_string(String path) -> Result[String, FsError]
 use std.io.println
 use std.io.eprintln
 
-func println(String text) -> ()
-func eprintln(String text) -> ()
+func println(String text) ()
+func eprintln(String text) ()
 ```
 
 当前约束：
@@ -84,7 +84,7 @@ func eprintln(String text) -> ()
 `lex_dump` 当前还假设运行时能把命令行参数以如下形式交给入口：
 
 ```s
-func main(Vec[String] args) -> i32
+func main(Vec[String] args) i32
 ```
 
 约定：
@@ -130,4 +130,4 @@ struct CliError {
 1. 给自举 runtime 补最小 `std.fs.read_to_string`
 2. 给自举 runtime 补最小 `std.io.println` / `std.io.eprintln`
 3. 用 [sample.s](/app/s/src/cmd/compiler/tests/fixtures/sample.s) 跑出和 [sample.tokens](/app/s/src/cmd/compiler/tests/fixtures/sample.tokens) 对齐的输出
-4. 把 parser 接到 `token stream -> AST` 路径上
+4. 把 parser 接到 `token stream  AST` 路径上

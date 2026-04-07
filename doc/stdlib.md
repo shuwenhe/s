@@ -153,11 +153,11 @@ enum Option[T] {
 
 最小 API 方向：
 
-- `is_some() -> bool`
-- `is_none() -> bool`
-- `unwrap() -> T`
-- `unwrap_or(T default) -> T`
-- `map[U](func(T) -> U f) -> Option[U]`
+- `is_some() bool`
+- `is_none() bool`
+- `unwrap() T`
+- `unwrap_or(T default) T`
+- `map[U](func(T) U f) Option[U]`
 
 ### 6.2 `std.result`
 
@@ -172,12 +172,12 @@ enum Result[T, E] {
 
 最小 API 方向：
 
-- `is_ok() -> bool`
-- `is_err() -> bool`
-- `unwrap() -> T`
-- `unwrap_err() -> E`
-- `map[U](func(T) -> U f) -> Result[U, E]`
-- `map_err[F](func(E) -> F f) -> Result[T, F]`
+- `is_ok() bool`
+- `is_err() bool`
+- `unwrap() T`
+- `unwrap_err() E`
+- `map[U](func(T) U f) Result[U, E]`
+- `map_err[F](func(E) F f) Result[T, F]`
 
 ### 6.3 `std.error`
 
@@ -185,13 +185,13 @@ enum Result[T, E] {
 
 ```s
 trait Error {
-    func message(&self) -> str
+    func message(&self) str
 }
 ```
 
 后续可扩展：
 
-- `source() -> Option[&dyn Error]`
+- `source() Option[&dyn Error]`
 - 错误分类
 - backtrace 支持
 
@@ -223,10 +223,10 @@ Draft 0.1 先固定最小接口。
 
 最小 API 方向：
 
-- `size_of[T]() -> usize`
-- `align_of[T]() -> usize`
-- `replace[T](&mut T place, T value) -> T`
-- `take[T: Default](&mut T place) -> T`
+- `size_of[T]() usize`
+- `align_of[T]() usize`
+- `replace[T](&mut T place, T value) T`
+- `take[T: Default](&mut T place) T`
 
 ### 7.2 `std.box`
 
@@ -268,11 +268,11 @@ Draft 0.1 先固定最小接口。
 
 - `new()`
 - `from(s: &str)`
-- `len() -> usize`
-- `is_empty() -> bool`
+- `len() usize`
+- `is_empty() bool`
 - `push(ch: char)`
 - `push_str(s: &str)`
-- `as_str() -> &str`
+- `as_str() &str`
 
 设计要求：
 
@@ -301,13 +301,13 @@ Draft 0.1 先固定最小接口。
 
 - `new()`
 - `with_capacity(n: usize)`
-- `len() -> usize`
-- `capacity() -> usize`
+- `len() usize`
+- `capacity() usize`
 - `push(value: T)`
-- `pop() -> Option[T]`
-- `get(index: usize) -> Option[&T]`
-- `get_mut(index: usize) -> Option[&mut T]`
-- `as_slice() -> []T`
+- `pop() Option[T]`
+- `get(index: usize) Option[&T]`
+- `get_mut(index: usize) Option[&mut T]`
+- `as_slice() []T`
 
 ### 9.2 `std.map`
 
@@ -316,11 +316,11 @@ Draft 0.1 先固定最小接口。
 最小 API 方向：
 
 - `new()`
-- `insert(K key, V value) -> Option[V]`
-- `get(key: &K) -> Option[&V]`
-- `get_mut(key: &K) -> Option[&mut V]`
-- `remove(key: &K) -> Option[V]`
-- `contains(key: &K) -> bool`
+- `insert(K key, V value) Option[V]`
+- `get(key: &K) Option[&V]`
+- `get_mut(key: &K) Option[&mut V]`
+- `remove(key: &K) Option[V]`
+- `contains(key: &K) bool`
 
 具体选择哈希映射还是有序映射作为默认 `Map`，属于设计决策点。Draft 0.1 可以先保留抽象名。
 
@@ -348,12 +348,12 @@ Draft 0.1 先固定最小接口。
 
 ```s
 trait Reader {
-    func read(&mut Self self, []u8 buf) -> Result[usize, IoError]
+    func read(&mut Self self, []u8 buf) Result[usize, IoError]
 }
 
 trait Writer {
-    func write(&mut Self self, []u8 buf) -> Result[usize, IoError]
-    func flush(&mut Self self) -> Result[(), IoError]
+    func write(&mut Self self, []u8 buf) Result[usize, IoError]
+    func flush(&mut Self self) Result[(), IoError]
 }
 ```
 
@@ -368,9 +368,9 @@ trait Writer {
 
 示例方向：
 
-- `File::open(path: &Path) -> Result[File, IoError]`
-- `File::create(path: &Path) -> Result[File, IoError]`
-- `read_to_string(path: &Path) -> Result[String, IoError]`
+- `File::open(path: &Path) Result[File, IoError]`
+- `File::create(path: &Path) Result[File, IoError]`
+- `read_to_string(path: &Path) Result[String, IoError]`
 
 ### 10.3 `std.path`
 

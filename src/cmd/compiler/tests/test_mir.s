@@ -14,7 +14,7 @@ struct MirFailure {
     String message,
 }
 
-func RunMirSuite() -> Vec[MirFailure] {
+func RunMirSuite() Vec[MirFailure] {
     var failures = Vec[MirFailure]()
 
     match checkLocalsVersioned() {
@@ -35,10 +35,10 @@ func RunMirSuite() -> Vec[MirFailure] {
     failures
 }
 
-func checkLocalsVersioned() -> Result[(), MirFailure] {
+func checkLocalsVersioned() Result[(), MirFailure] {
     var parsed =
         match parse_source(
-            "package demo.mir\n\nfn shadow(x: i32) -> i32 {\n    var x = 1\n    x\n}\n",
+            "package demo.mir\n\nfn shadow(x: i32) i32 {\n    var x = 1\n    x\n}\n",
         ) {
             Result::Ok(value) => value,
             Result::Err(err) => {
@@ -77,10 +77,10 @@ func checkLocalsVersioned() -> Result[(), MirFailure] {
     }
 }
 
-func checkMirShape() -> Result[(), MirFailure] {
+func checkMirShape() Result[(), MirFailure] {
     var parsed =
         match parse_source(
-            "package demo.mir\n\nfn choose(flag: bool) -> i32 {\n    if flag {\n        1\n    } else {\n        2\n    }\n}\n",
+            "package demo.mir\n\nfn choose(flag: bool) i32 {\n    if flag {\n        1\n    } else {\n        2\n    }\n}\n",
         ) {
             Result::Ok(value) => value,
             Result::Err(err) => {
@@ -119,7 +119,7 @@ func checkMirShape() -> Result[(), MirFailure] {
     }
 }
 
-func checkPreludeShape() -> Result[(), MirFailure] {
+func checkPreludeShape() Result[(), MirFailure] {
     var prelude = LoadPrelude()
     if prelude.name != "std.prelude" {
         return Result::Err(MirFailure {

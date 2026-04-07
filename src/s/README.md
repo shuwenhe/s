@@ -71,7 +71,7 @@ should protect first. The fuller contract lives in
 
 The current AST is intentionally split into a few predictable layers:
 
-- top level: `SourceFile -> UseDecl + Item`
+- top level: `SourceFile  UseDecl + Item`
 - declarations: `FunctionDecl`, `StructDecl`, `EnumDecl`, `TraitDecl`, `ImplDecl`
 - statements: `Var`, `Assign`, `Increment`, `CFor`, `Return`, `Expr`
 - expressions: literals, names, borrow, binary, member, index, call, match, if,

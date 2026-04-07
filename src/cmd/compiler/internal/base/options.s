@@ -18,7 +18,7 @@ struct checkOptions {
     Vec[String] run_args,
 }
 
-func ParseCommand(Vec[String] args) -> Result[checkOptions, cliError] {
+func ParseCommand(Vec[String] args) Result[checkOptions, cliError] {
     if args.len() < 2 {
         return UsageError()
     }
@@ -75,7 +75,7 @@ func ParseCommand(Vec[String] args) -> Result[checkOptions, cliError] {
     Result::Ok(options)
 }
 
-func UsageError() -> Result[checkOptions, cliError] {
+func UsageError() Result[checkOptions, cliError] {
     Result::Err(cliError {
         message:
             "usage: s check <path> [--dump-tokens] [--dump-ast] | " +
@@ -83,14 +83,14 @@ func UsageError() -> Result[checkOptions, cliError] {
     })
 }
 
-func NormalizeOutputPath(String outputPath) -> String {
+func NormalizeOutputPath(String outputPath) String {
     if outputPath.len() > 0 && char_at(outputPath, 0) == "/" {
         return outputPath
     }
     return "/app/tmp/" + LastPathSegment(outputPath)
 }
 
-func LastPathSegment(String path) -> String {
+func LastPathSegment(String path) String {
     var index = path.len() - 1
     while index >= 0 {
         if char_at(path, index) == "/" {

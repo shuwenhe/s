@@ -53,7 +53,7 @@ struct VarState {
     Type ty,
 }
 
-func CheckSource(SourceFile source) -> CheckResult {
+func CheckSource(SourceFile source) CheckResult {
     var diagnostics = Vec[Diagnostic]()
     var functions = collectFunctions(source)
     var structs = collectStructs(source)
@@ -70,11 +70,11 @@ func CheckSource(SourceFile source) -> CheckResult {
     }
 }
 
-func IsOK(CheckResult result) -> bool {
+func IsOK(CheckResult result) bool {
     result.diagnostics.len() == 0
 }
 
-func collectFunctions(SourceFile source) -> Vec[FunctionInfo] {
+func collectFunctions(SourceFile source) Vec[FunctionInfo] {
     var functions = Vec[FunctionInfo]()
     for item in source.items {
         match item {
@@ -99,7 +99,7 @@ func collectFunctions(SourceFile source) -> Vec[FunctionInfo] {
     functions
 }
 
-func collectStructs(SourceFile source) -> Vec[StructInfo] {
+func collectStructs(SourceFile source) Vec[StructInfo] {
     var structs = Vec[StructInfo]()
     for item in source.items {
         match item {
@@ -127,7 +127,7 @@ func checkFunction(
     Vec[FunctionInfo] functions,
     Vec[StructInfo] structs,
     Vec[Diagnostic] diagnostics
-) -> () {
+) () {
     match item.body {
         Option::Some(body) => {
             var scope = Vec[VarState]()
@@ -160,7 +160,7 @@ func inferBlock(
     Vec[FunctionInfo] functions,
     Vec[StructInfo] structs,
     Vec[Diagnostic] diagnostics
-) -> Type {
+) Type {
     var local_scope = cloneScope(scope)
     for stmt in block.statements {
         checkStmt(stmt, local_scope, functions, structs, diagnostics)
@@ -177,7 +177,7 @@ func checkStmt(
     Vec[FunctionInfo] functions,
     Vec[StructInfo] structs,
     Vec[Diagnostic] diagnostics
-) -> () {
+) () {
     match stmt {
         s.Stmt::Var(value) => {
             var actual = inferExpr(value.value, scope, functions, structs, diagnostics)
@@ -217,7 +217,7 @@ func inferExpr(
     Vec[FunctionInfo] functions,
     Vec[StructInfo] structs,
     Vec[Diagnostic] diagnostics
-) -> Type {
+) Type {
     match expr {
         Expr::Int(_) => NewI32Type(),
         Expr::String(_) => NewStringType(),
@@ -279,7 +279,7 @@ func inferBinary(
     Vec[FunctionInfo] functions,
     Vec[StructInfo] structs,
     Vec[Diagnostic] diagnostics
-) -> Type {
+) Type {
     var left = inferExpr(expr.left.value, scope, functions, structs, diagnostics)
     var right = inferExpr(expr.right.value, scope, functions, structs, diagnostics)
     if expr.op == "+" || expr.op == "-" || expr.op == "*" || expr.op == "/" || expr.op == "%" {
@@ -304,7 +304,7 @@ func inferMember(
     Vec[FunctionInfo] functions,
     Vec[StructInfo] structs,
     Vec[Diagnostic] diagnostics
-) -> Type {
+) Type {
     var target = inferExpr(expr.target.value, scope, functions, structs, diagnostics)
     var field_type = lookupStructFieldType(structs, target, expr.member)
     match field_type {
@@ -328,7 +328,7 @@ func inferIndex(
     Vec[FunctionInfo] functions,
     Vec[StructInfo] structs,
     Vec[Diagnostic] diagnostics
-) -> Type {
+) Type {
     var target = inferExpr(expr.target.value, scope, functions, structs, diagnostics)
     inferExpr(expr.index.value, scope, functions, structs, diagnostics)
     match LookupIndexType(target) {
@@ -343,7 +343,7 @@ func inferCall(
     Vec[FunctionInfo] functions,
     Vec[StructInfo] structs,
     Vec[Diagnostic] diagnostics
-) -> Type {
+) Type {
     match expr.callee.value {
         Expr::Name(name_expr) => {
             var info = lookupFunction(functions, name_expr.name)
@@ -382,7 +382,7 @@ func checkCallArgs(
     Vec[FunctionInfo] functions,
     Vec[StructInfo] structs,
     Vec[Diagnostic] diagnostics
-) -> () {
+) () {
     if params.len() != args.len() {
         pushError(diagnostics, "call argument count mismatch")
         return
@@ -398,7 +398,7 @@ func checkCallArgs(
     }
 }
 
-func lookupName(Vec[VarState] scope, String name, Vec[Diagnostic] diagnostics) -> Type {
+func lookupName(Vec[VarState] scope, String name, Vec[Diagnostic] diagnostics) Type {
     for entry in scope {
         if entry.name == name {
             return entry.ty
@@ -408,7 +408,7 @@ func lookupName(Vec[VarState] scope, String name, Vec[Diagnostic] diagnostics) -
     UnknownTypeOf("name")
 }
 
-func lookupFunction(Vec[FunctionInfo] functions, String name) -> Option[FunctionInfo] {
+func lookupFunction(Vec[FunctionInfo] functions, String name) Option[FunctionInfo] {
     for function in functions {
         if function.name == name {
             return Option::Some(function)
@@ -417,7 +417,7 @@ func lookupFunction(Vec[FunctionInfo] functions, String name) -> Option[Function
     Option::None
 }
 
-func lookupStructFieldType(Vec[StructInfo] structs, Type target, String member) -> Option[Type] {
+func lookupStructFieldType(Vec[StructInfo] structs, Type target, String member) Option[Type] {
     match UnwrapRefs(target) {
         Type::Named(named) => {
             for item in structs {
@@ -435,14 +435,14 @@ func lookupStructFieldType(Vec[StructInfo] structs, Type target, String member) 
     }
 }
 
-func bindVar(Vec[VarState] scope, String name, Type ty) -> () {
+func bindVar(Vec[VarState] scope, String name, Type ty) () {
     scope.push(VarState {
         name: name,
         ty: ty,
     })
 }
 
-func cloneScope(Vec[VarState] scope) -> Vec[VarState] {
+func cloneScope(Vec[VarState] scope) Vec[VarState] {
     var out = Vec[VarState]()
     for value in scope {
         out.push(value)
@@ -450,25 +450,25 @@ func cloneScope(Vec[VarState] scope) -> Vec[VarState] {
     out
 }
 
-func pushError(Vec[Diagnostic] diagnostics, String message) -> () {
+func pushError(Vec[Diagnostic] diagnostics, String message) () {
     diagnostics.push(Diagnostic {
         message: message,
     })
 }
 
-func UnknownTypeOf(String label) -> Type {
+func UnknownTypeOf(String label) Type {
     Type::Unknown(UnknownType {
         label: label,
     })
 }
 
-func isUnknownType(Type ty) -> bool {
+func isUnknownType(Type ty) bool {
     match ty {
         Type::Unknown(_) => true,
         _ => false,
     }
 }
 
-func typeEq(Type left, Type right) -> bool {
+func typeEq(Type left, Type right) bool {
     DumpType(left) == DumpType(right)
 }

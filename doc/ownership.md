@@ -278,7 +278,7 @@ println(x)
 非法示例：
 
 ```s
-func bad() -> &str {
+func bad() &str {
     let s = String::from("hello")
     s.as_str()
 }
@@ -342,7 +342,7 @@ Draft 0.1 建议：
 ### 10.1 By Value
 
 ```s
-func consume(Buf buf) -> Result[(), Error]
+func consume(Buf buf) Result[(), Error]
 ```
 
 按值参数通常意味着：
@@ -355,7 +355,7 @@ func consume(Buf buf) -> Result[(), Error]
 ### 10.2 By Shared Borrow
 
 ```s
-func len(&str s) -> usize
+func len(&str s) usize
 ```
 
 表示调用方保留所有权，被调用方只做只读访问。
@@ -383,7 +383,7 @@ func push(&mut Vec[i32] v, i32 value)
 ### 11.1 `self`
 
 ```s
-func into_bytes(self) -> Vec[u8]
+func into_bytes(self) Vec[u8]
 ```
 
 表示方法消费接收者。
@@ -391,7 +391,7 @@ func into_bytes(self) -> Vec[u8]
 ### 11.2 `&self`
 
 ```s
-func len(&Self self) -> usize
+func len(&Self self) usize
 ```
 
 表示方法只读访问接收者。
@@ -415,7 +415,7 @@ func clear(&mut Self self)
 示例：
 
 ```s
-func load() -> Result[String, IoError] {
+func load() Result[String, IoError] {
     let file = File::open("config.toml")?
     let data = file.read_all()?
     Ok(data)

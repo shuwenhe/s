@@ -8,18 +8,18 @@ use std.result.Result
 
 struct LexError {
     String message,
-    i32 line,
-    i32 column,
+    int32 line,
+    int32 column,
 }
 
 struct Lexer {
     String source,
-    i32 index,
-    i32 line,
-    i32 column,
+    int32 index,
+    int32 line,
+    int32 column,
 }
 
-func new_lexer(String source) -> Lexer {
+func new_lexer(String source) Lexer {
     Lexer {
         source: source,
         index: 0,
@@ -29,7 +29,7 @@ func new_lexer(String source) -> Lexer {
 }
 
 impl Lexer {
-    func tokenize(mut self) -> Result[Vec[Token], LexError] {
+    func tokenize(mut self) Result[Vec[Token], LexError] {
         var tokens = Vec[Token]()
         while !self.is_eof() {
             self.skip_ignored()?
@@ -96,7 +96,7 @@ impl Lexer {
         Result::Ok(tokens)
     }
 
-    func skip_ignored(mut self) -> Result[(), LexError] {
+    func skip_ignored(mut self) Result[(), LexError] {
         while !self.is_eof() {
             var ch = self.peek()?
 
@@ -143,7 +143,7 @@ impl Lexer {
         Result::Ok(())
     }
 
-    func read_identifier(mut self) -> Result[String, LexError] {
+    func read_identifier(mut self) Result[String, LexError] {
         var out = ""
         while !self.is_eof() {
             var ch = self.peek()?
@@ -155,7 +155,7 @@ impl Lexer {
         Result::Ok(out)
     }
 
-    func read_number(mut self) -> Result[String, LexError] {
+    func read_number(mut self) Result[String, LexError] {
         var out = ""
         while !self.is_eof() {
             var ch = self.peek()?
@@ -167,7 +167,7 @@ impl Lexer {
         Result::Ok(out)
     }
 
-    func read_string(mut self) -> Result[String, LexError] {
+    func read_string(mut self) Result[String, LexError] {
         var out = self.advance()?
         while !self.is_eof() {
             var ch = self.advance()?
@@ -186,11 +186,11 @@ impl Lexer {
         Result::Err(self.error("unterminated string literal"))
     }
 
-    func read_symbol(mut self) -> Result[String, LexError] {
+    func read_symbol(mut self) Result[String, LexError] {
         var multi = Vec[String] {
             "++",
             ":=",
-            "->",
+            " ",
             "=>",
             "==",
             "!=",
@@ -226,21 +226,21 @@ impl Lexer {
         Result::Err(self.error("unexpected character"))
     }
 
-    func match_text(self, String text) -> bool {
+    func match_text(self, String text) bool {
         if self.index + len(text) > len(self.source) {
             return false
         }
         slice(self.source, self.index, self.index + len(text)) == text
     }
 
-    func peek(self) -> Result[String, LexError] {
+    func peek(self) Result[String, LexError] {
         if self.is_eof() {
             return Result::Err(self.error("unexpected eof"))
         }
         Result::Ok(char_at(self.source, self.index))
     }
 
-    func advance(mut self) -> Result[String, LexError] {
+    func advance(mut self) Result[String, LexError] {
         if self.is_eof() {
             return Result::Err(self.error("unexpected eof"))
         }
@@ -258,11 +258,11 @@ impl Lexer {
         Result::Ok(ch)
     }
 
-    func is_eof(self) -> bool {
+    func is_eof(self) bool {
         self.index >= len(self.source)
     }
 
-    func error(self, String message) -> LexError {
+    func error(self, String message) LexError {
         LexError {
             message: message,
             line: self.line,
@@ -271,7 +271,7 @@ impl Lexer {
     }
 }
 
-func is_whitespace(String ch) -> bool {
+func is_whitespace(String ch) bool {
     match ch {
         " " => true,
         "\t" => true,
@@ -281,7 +281,7 @@ func is_whitespace(String ch) -> bool {
     }
 }
 
-func is_digit(String ch) -> bool {
+func is_digit(String ch) bool {
     match ch {
         "0" => true,
         "1" => true,
@@ -297,22 +297,22 @@ func is_digit(String ch) -> bool {
     }
 }
 
-func is_number_continue(String ch) -> bool {
+func is_number_continue(String ch) bool {
     is_digit(ch) || ch == "_"
 }
 
-func is_ident_start(String ch) -> bool {
+func is_ident_start(String ch) bool {
     if ch == "_" {
         return true
     }
     is_ascii_alpha(ch)
 }
 
-func is_ident_continue(String ch) -> bool {
+func is_ident_continue(String ch) bool {
     is_ident_start(ch) || is_digit(ch)
 }
 
-func is_ascii_alpha(String ch) -> bool {
+func is_ascii_alpha(String ch) bool {
     match ch {
         "a" => true,
         "b" => true,
@@ -370,7 +370,7 @@ func is_ascii_alpha(String ch) -> bool {
     }
 }
 
-func is_single_symbol(String ch) -> bool {
+func is_single_symbol(String ch) bool {
     match ch {
         "(" => true,
         ")" => true,

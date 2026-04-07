@@ -16,7 +16,7 @@ struct borrowState {
     bool captured_by_defer,
 }
 
-func AnalyzeBlock(BlockExpr block, Vec[VarState] initial) -> Vec[BorrowDiagnostic] {
+func AnalyzeBlock(BlockExpr block, Vec[VarState] initial) Vec[BorrowDiagnostic] {
     var diagnostics = Vec[BorrowDiagnostic]()
     var scope = Vec[borrowState]()
     for entry in initial {
@@ -80,7 +80,7 @@ func AnalyzeBlock(BlockExpr block, Vec[VarState] initial) -> Vec[BorrowDiagnosti
     diagnostics
 }
 
-func inspectExpr(Expr expr, Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics) -> () {
+func inspectExpr(Expr expr, Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics) () {
     match expr {
         Expr::Name(value) => consumeName(scope, diagnostics, value.name),
         Expr::Borrow(value) => {
@@ -133,7 +133,7 @@ func inspectExpr(Expr expr, Vec[borrowState] scope, Vec[BorrowDiagnostic] diagno
     }
 }
 
-func consumeName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, String name) -> () {
+func consumeName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, String name) () {
     var index = 0
     while index < scope.len() {
         if scope[index].name == name {
@@ -158,7 +158,7 @@ func consumeName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, Stri
     }
 }
 
-func inspectName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, String name) -> () {
+func inspectName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, String name) () {
     for entry in scope {
         if entry.name == name && entry.moved {
             diagnostics.push(BorrowDiagnostic {
@@ -169,7 +169,7 @@ func inspectName(Vec[borrowState] scope, Vec[BorrowDiagnostic] diagnostics, Stri
     }
 }
 
-func toVarState(Vec[borrowState] scope) -> Vec[VarState] {
+func toVarState(Vec[borrowState] scope) Vec[VarState] {
     var out = Vec[VarState]()
     for entry in scope {
         out.push(VarState {
@@ -180,7 +180,7 @@ func toVarState(Vec[borrowState] scope) -> Vec[VarState] {
     out
 }
 
-func collectNames(Expr expr) -> Vec[String] {
+func collectNames(Expr expr) Vec[String] {
     var out = Vec[String]()
     match expr {
         Expr::Name(value) => out.push(value.name),

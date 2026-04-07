@@ -21,7 +21,7 @@ struct SemanticFailure {
     String message,
 }
 
-func semanticCases(String fixtures_root) -> Vec[semanticCase] {
+func semanticCases(String fixtures_root) Vec[semanticCase] {
     Vec[semanticCase] {
         semanticCase {
             name: "check_ok",
@@ -68,7 +68,7 @@ func semanticCases(String fixtures_root) -> Vec[semanticCase] {
     }
 }
 
-func RunSemanticSuite(String fixtures_root) -> Vec[SemanticFailure] {
+func RunSemanticSuite(String fixtures_root) Vec[SemanticFailure] {
     var failures = Vec[SemanticFailure]()
 
     for case in semanticCases(fixtures_root) {
@@ -89,7 +89,7 @@ func RunSemanticSuite(String fixtures_root) -> Vec[SemanticFailure] {
     failures
 }
 
-func runCase(semanticCase case) -> Result[(), SemanticFailure] {
+func runCase(semanticCase case) Result[(), SemanticFailure] {
     var source =
         match read_to_string(case.path) {
             Result::Ok(value) => value,
@@ -136,7 +136,7 @@ func runCase(semanticCase case) -> Result[(), SemanticFailure] {
     Result::Ok(())
 }
 
-func hasDiagnostic(Vec[Diagnostic] diagnostics, String expected) -> bool {
+func hasDiagnostic(Vec[Diagnostic] diagnostics, String expected) bool {
     for diagnostic in diagnostics {
         if diagnostic.message == expected {
             return true

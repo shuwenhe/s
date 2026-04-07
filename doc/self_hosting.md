@@ -239,7 +239,7 @@ Status: Working Draft
 
 阶段目标：
 
-- 形成 S 版本前端闭环：source -> tokens -> AST
+- 形成 S 版本前端闭环：source  tokens  AST
 
 ### Phase E
 

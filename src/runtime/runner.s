@@ -16,11 +16,11 @@ use std.process.RunProcess
 use std.result.Result
 use std.vec.Vec
 
-func main() -> () {
+func main() () {
     Exit(runMain(Args()))
 }
 
-func runMain(Vec[String] args) -> int {
+func runMain(Vec[String] args) int {
     return match run(args) {
         Ok(_) => 0,
         Err(err) => {
@@ -30,7 +30,7 @@ func runMain(Vec[String] args) -> int {
     }
 }
 
-func run(Vec[String] args) -> Result[int, String] {
+func run(Vec[String] args) Result[int, String] {
     if args.len() != 4 {
         return usageError()
     }
@@ -43,7 +43,7 @@ func run(Vec[String] args) -> Result[int, String] {
     return buildSource(args[1], normalizeOutputPath(args[3]))
 }
 
-func buildSource(String path, String outputPath) -> Result[int, String] {
+func buildSource(String path, String outputPath) Result[int, String] {
     var source =
         match ReadToString(path) {
             Ok(text) => text,
@@ -77,11 +77,11 @@ func buildSource(String path, String outputPath) -> Result[int, String] {
     return Ok(0)
 }
 
-func isSelfHostSource(String source) -> bool {
+func isSelfHostSource(String source) bool {
     return containsText(source, "package runtime.runner")
 }
 
-func isCompilerCommandSource(String source) -> bool {
+func isCompilerCommandSource(String source) bool {
     if containsText(source, "package cmd") && containsText(source, "use compiler.main as compilerMain") {
         return true
     }
@@ -91,7 +91,7 @@ func isCompilerCommandSource(String source) -> bool {
     return false
 }
 
-func buildSelfHostedRunner(String outputPath) -> Result[int, String] {
+func buildSelfHostedRunner(String outputPath) Result[int, String] {
     var templateText =
         match ReadToString("/app/s/src/cmd/compiler/backend_elf64_runner_bootstrap.c") {
             Ok(text) => text,
@@ -130,7 +130,7 @@ func buildSelfHostedRunner(String outputPath) -> Result[int, String] {
     return Ok(0)
 }
 
-func buildCompilerCommandLauncher(String outputPath) -> Result[int, String] {
+func buildCompilerCommandLauncher(String outputPath) Result[int, String] {
     var templateText =
         match ReadToString("/app/s/src/runtime/s_command_bootstrap.c") {
             Ok(text) => text,
@@ -169,7 +169,7 @@ func buildCompilerCommandLauncher(String outputPath) -> Result[int, String] {
     return Ok(0)
 }
 
-func compileMessageForSource(String source) -> Option[String] {
+func compileMessageForSource(String source) Option[String] {
     match extractQuotedPrintln(source) {
         Some(text) => {
             return Some(text + "\n")
@@ -221,7 +221,7 @@ func compileMessageForSource(String source) -> Option[String] {
     return Some(to_string(total) + "\n")
 }
 
-func extractQuotedPrintln(String source) -> Option[String] {
+func extractQuotedPrintln(String source) Option[String] {
     var prefix = "println(\""
     var startIndex = findText(source, prefix)
     if startIndex < 0 {
@@ -235,7 +235,7 @@ func extractQuotedPrintln(String source) -> Option[String] {
     return Some(slice(source, textStart, endIndex))
 }
 
-func extractPrintedIntLiteral(String source) -> Option[String] {
+func extractPrintedIntLiteral(String source) Option[String] {
     var startIndex = findText(source, "println(")
     if startIndex < 0 {
         return None
@@ -243,7 +243,7 @@ func extractPrintedIntLiteral(String source) -> Option[String] {
     return parseSignedIntLiteralAt(source, startIndex + len("println("))
 }
 
-func parseSignedIntAfter(String source, String needle) -> Option[int] {
+func parseSignedIntAfter(String source, String needle) Option[int] {
     var startIndex = findText(source, needle)
     if startIndex < 0 {
         return None
@@ -276,7 +276,7 @@ func parseSignedIntAfter(String source, String needle) -> Option[int] {
     return Some(value * sign)
 }
 
-func parseSignedIntLiteralAt(String source, int start) -> Option[String] {
+func parseSignedIntLiteralAt(String source, int start) Option[String] {
     var index = start
     var sign = 1
     if index < len(source) {
@@ -308,7 +308,7 @@ func parseSignedIntLiteralAt(String source, int start) -> Option[String] {
     return None
 }
 
-func emitAsm(String message) -> String {
+func emitAsm(String message) String {
     var lines = Vec[String]()
     lines.push(".section .data");
     lines.push("message_0:");
@@ -328,7 +328,7 @@ func emitAsm(String message) -> String {
     return joinWith(lines, "\n") + "\n"
 }
 
-func assembleAndLink(String asmText, String outputPath) -> Result[int, String] {
+func assembleAndLink(String asmText, String outputPath) Result[int, String] {
     var tempDir =
         match MakeTempDir("s-native-") {
             Ok(path) => path,
@@ -363,18 +363,18 @@ func assembleAndLink(String asmText, String outputPath) -> Result[int, String] {
     return runTool(ldArgv, "linker failed")
 }
 
-func runTool(Vec[String] argv, String message) -> Result[int, String] {
+func runTool(Vec[String] argv, String message) Result[int, String] {
     return match RunProcess(argv) {
         Ok(_) => Ok(0),
         Err(err) => Err(message + ": " + err.message),
     }
 }
 
-func containsText(String text, String needle) -> bool {
+func containsText(String text, String needle) bool {
     return findText(text, needle) >= 0
 }
 
-func findText(String text, String needle) -> int {
+func findText(String text, String needle) int {
     if len(needle) == 0 {
         return 0
     }
@@ -391,7 +391,7 @@ func findText(String text, String needle) -> int {
     return 0 - 1
 }
 
-func findCharFrom(String text, String needle, int start) -> int {
+func findCharFrom(String text, String needle, int start) int {
     var index = start
     while index < len(text) {
         if char_at(text, index) == needle {
@@ -402,7 +402,7 @@ func findCharFrom(String text, String needle, int start) -> int {
     return 0 - 1
 }
 
-func digitValue(String ch) -> int {
+func digitValue(String ch) int {
     if ch == "0" {
         return 0
     }
@@ -436,7 +436,7 @@ func digitValue(String ch) -> int {
     return 0
 }
 
-func encodeBytes(String text) -> String {
+func encodeBytes(String text) String {
     var parts = Vec[String]()
     var index = 0
     while index < len(text) {
@@ -446,7 +446,7 @@ func encodeBytes(String text) -> String {
     return joinWith(parts, ", ")
 }
 
-func asciiCode(String ch) -> int {
+func asciiCode(String ch) int {
     if ch == "\n" {
         return 10
     }
@@ -738,7 +738,7 @@ func asciiCode(String ch) -> int {
     return 63
 }
 
-func joinWith(Vec[String] values, String sep) -> String {
+func joinWith(Vec[String] values, String sep) String {
     var text = ""
     var index = 0
     while index < values.len() {
@@ -751,18 +751,18 @@ func joinWith(Vec[String] values, String sep) -> String {
     return text
 }
 
-func usageError() -> Result[int, String] {
+func usageError() Result[int, String] {
     return Err("usage: s_native build <path> -o <output>")
 }
 
-func normalizeOutputPath(String outputPath) -> String {
+func normalizeOutputPath(String outputPath) String {
     if outputPath.len() > 0 && char_at(outputPath, 0) == "/" {
         return outputPath
     }
     return "/app/tmp/" + lastPathSegment(outputPath)
 }
 
-func lastPathSegment(String path) -> String {
+func lastPathSegment(String path) String {
     var index = path.len() - 1
     while index >= 0 {
         if char_at(path, index) == "/" {
