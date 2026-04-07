@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 
+from compiler.internal.gc.compile import PrepareCompileQueue
 from compiler.hosted_compiler import run_cli
 from runtime.hosted_command import run_cmd_s
 from compiler.prelude import PRELUDE
@@ -20,6 +21,57 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 class SemanticTests(unittest.TestCase):
+    def test_prepare_compile_queue_tracks_top_level_and_impl_methods(self) -> None:
+        parsed = parse_source(
+            """
+package demo.queue
+
+struct Counter {
+    i32 value,
+}
+
+impl Counter {
+    func bump(Counter self) -> i32 {
+        self.value
+    }
+}
+
+func helper() -> i32 {
+    1
+}
+
+func main() -> i32 {
+    helper()
+}
+"""
+        )
+        queue = PrepareCompileQueue(parsed)
+        self.assertEqual([unit.name for unit in queue.units], ["bump", "helper", "main"])
+        self.assertEqual(queue.entry_name, "main")
+        self.assertTrue(all(unit.prepared for unit in queue.units))
+        self.assertTrue(all(not unit.compiled for unit in queue.units))
+
+    def test_prepare_compile_queue_skips_blank_and_bodyless_functions(self) -> None:
+        parsed = parse_source(
+            """
+package demo.queue_skip
+
+trait Writer {
+    func write(String text) -> i32;
+}
+
+func _() -> i32 {
+    0
+}
+
+func main() -> i32 {
+    0
+}
+"""
+        )
+        queue = PrepareCompileQueue(parsed)
+        self.assertEqual([unit.name for unit in queue.units], ["main"])
+
     def test_check_source_success(self) -> None:
         source = (FIXTURES / "check_ok.s").read_text()
         result = check_source(parse_source(source))

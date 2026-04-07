@@ -194,26 +194,62 @@ func LowerBlock(BlockExpr block, Vec[String] param_names, Vec[TypeBinding] type_
 
 func LowerSource(SourceFile source, Vec[OwnershipEntry] ownership_plan) -> Result[MIRProgram, String] {
     ownership_plan
-    var main_func =
-        match findMain(source) {
-            Option::Some(value) => value,
-            Option::None => {
-                return Result::Err("entry function main not found")
+    var programs = Vec[MIRProgram]()
+    for item in source.items {
+        match item {
+            Item::Function(func) => {
+                var program = LowerFunction(source, func, ownership_plan, func.sig.name == "main")?
+                programs.push(program)
             }
+            _ => (),
         }
+    }
+    MergeMIRPrograms(programs, "main")
+}
+
+func LowerFunction(
+    SourceFile source,
+    FunctionDecl func,
+    Vec[OwnershipEntry] ownership_plan,
+    bool is_entry
+) -> Result[MIRProgram, String] {
+    ownership_plan
+    if is_entry == false {
+        return Result::Ok(MIRProgram {
+            writes: Vec[MIRWriteOp](),
+            exit_code: 0,
+        })
+    }
     var env = Vec[MIRLocalBinding]()
     var writes = Vec[MIRWriteOp]()
     var exit_code =
-        match executeFunction(main_func, env, writes) {
+        match executeFunction(func, env, writes) {
             Result::Ok(value) => value,
             Result::Err(err) => {
                 return Result::Err(err)
             }
         }
+    source
     Result::Ok(MIRProgram {
         writes: writes,
         exit_code: exit_code,
     })
+}
+
+func MergeMIRPrograms(Vec[MIRProgram] programs, String entry_name) -> Result[MIRProgram, String] {
+    entry_name
+    if programs.len() == 0 {
+        return Result::Ok(MIRProgram {
+            writes: Vec[MIRWriteOp](),
+            exit_code: 0,
+        })
+    }
+    for program in programs {
+        if program.writes.len() > 0 || program.exit_code != 0 {
+            return Result::Ok(program)
+        }
+    }
+    Result::Ok(programs[programs.len() - 1])
 }
 
 func findMain(SourceFile source) -> Option[FunctionDecl] {
