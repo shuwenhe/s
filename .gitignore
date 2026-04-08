@@ -19,6 +19,8 @@ htmlcov/
 *.a
 dist/
 build/
+!src/cmd/compile/internal/build/
+!src/cmd/compile/internal/build/**
 *.egg-info/
 .DS_Store
 editor/vscode/*.vsix
