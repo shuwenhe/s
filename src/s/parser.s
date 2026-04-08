@@ -76,7 +76,26 @@ impl Parser {
 
     func parse_item(mut self) Result[Item, ParseError] {
         if self.at_keyword("func") {
-            return Result::Ok(Item::Function(self.parse_function_decl()?))
+            // parse a function; if it has a receiver, convert to an impl item
+            var parsed = self.parse_function(true)?
+            match parsed.receiver {
+                Option::Some(r) => {
+                    // build FunctionDecl for method
+                    var method = FunctionDecl {
+                        sig: parsed.sig,
+                        body: parsed.body,
+                        is_public: starts_with_upper(parsed.sig.name),
+                    }
+                    var impl = ImplDecl {
+                        target: r.type_name,
+                        trait_name: Option::None,
+                        generics: Vec[String](),
+                        methods: Vec[FunctionDecl] { method },
+                    }
+                    return Result::Ok(Item::Impl(impl))
+                }
+                Option::None => return Result::Ok(Item::Function(self.parse_function_decl()?)),
+            }
         }
         if self.at_keyword("struct") {
             return Result::Ok(Item::Struct(self.parse_struct_decl()?))
@@ -95,6 +114,9 @@ impl Parser {
 
     func parse_function_decl(mut self) Result[FunctionDecl, ParseError] {
         var pair = self.parse_function(true)?
+        if pair.receiver.is_some() {
+            return Result::Err(self.error_here("method receiver not allowed in this context"))
+        }
         Result::Ok(FunctionDecl {
             sig: pair.sig,
             body: pair.body,
@@ -210,6 +232,14 @@ impl Parser {
 
     func parse_function(mut self, bool require_body) Result[ParsedFunction, ParseError] {
         self.expect_keyword("func")?
+        // optional receiver syntax: (name type)
+        var receiver = Option::None
+        if self.at_symbol("(") {
+            self.expect_symbol("(")?
+            var named = self.parse_named_type(Vec[String] { ")" })?
+            self.expect_symbol(")")?
+            receiver = Option::Some(named)
+        }
         var name = self.expect_ident()?
         var generics = self.parse_generic_params()?
         self.expect_symbol("(")?
@@ -247,6 +277,7 @@ impl Parser {
                 return_type: return_type,
             },
             body: body,
+            receiver: receiver,
         })
     }
 
@@ -783,6 +814,58 @@ impl Parser {
             self.expect_symbol(")")?
             return Result::Ok(expr)
         }
+        // composite literals: array literal syntax like []T{...}
+        if self.at_symbol("[") {
+            // consume bracket group (e.g., "[]")
+            var bracket = self.parse_bracket_group()?
+            var type_text = bracket
+            // if there are more type tokens before '{', grab them
+            var token = self.peek().unwrap()
+            if token.kind != TokenKind::Symbol || token.value != "{" {
+                var seg = self.parse_token_segment(Vec[String] { "{" })?
+                type_text = type_text + " " + join_token_values(seg)
+            }
+            self.expect_symbol("{")?
+            var items = Vec[Expr]()
+            if !self.at_symbol("}") {
+                while true {
+                    items.push(self.parse_expr()?)
+                    if !self.eat_symbol(",") || self.at_symbol("}") {
+                        break
+                    }
+                }
+            }
+            self.expect_symbol("}")?
+            return Result::Ok(Expr::Array(ArrayLiteral { type_text: Option::Some(type_text.trim()), items: items }))
+        }
+        // map literal: map[K]V{ key: value, ... }
+        if token.kind == TokenKind::Ident && token.value == "map" {
+            // consume 'map'
+            self.advance()?
+            var bracket = self.parse_bracket_group()?
+            var type_text = "map" + bracket
+            // optional value type after bracket
+            var token2 = self.peek().unwrap()
+            if token2.kind == TokenKind::Ident || token2.kind == TokenKind::Symbol {
+                var seg = self.parse_token_segment(Vec[String] { "{" })?
+                type_text = type_text + " " + join_token_values(seg)
+            }
+            self.expect_symbol("{")?
+            var entries = Vec[MapEntry]()
+            if !self.at_symbol("}") {
+                while true {
+                    var key = self.parse_expr()?
+                    self.expect_symbol(":")?
+                    var value = self.parse_expr()?
+                    entries.push(MapEntry { key: key, value: value })
+                    if !self.eat_symbol(",") || self.at_symbol("}") {
+                        break
+                    }
+                }
+            }
+            self.expect_symbol("}")?
+            return Result::Ok(Expr::Map(MapLiteral { type_text: Option::Some(type_text.trim()), entries: entries }))
+        }
         Result::Ok(Expr::Name(NameExpr {
             name: self.expect_ident()?,
             inferred_type: Option::None,
@@ -1077,6 +1160,7 @@ impl Parser {
 struct ParsedFunction {
     FunctionSig sig,
     Option[BlockExpr] body,
+    Option[NamedType] receiver,
 }
 
 struct NamedType {
