@@ -85,6 +85,9 @@ func isCompilerCommandSource(String source) bool {
     if containsText(source, "package cmd") && containsText(source, "use compiler.main as compilerMain") {
         return true
     }
+    if containsText(source, "package cmd") && containsText(source, "use compile.internal.sc.Main as compileMain") {
+        return true
+    }
     if containsText(source, "package compiler.internal.gc") && containsText(source, "func Main(") {
         return true
     }
