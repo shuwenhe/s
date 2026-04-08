@@ -80,6 +80,7 @@ func is_keyword(String text) bool {
         "mut" => true,
         "where" => true,
         "in" => true,
+        "range" => true,
         _ => false,
     }
 }

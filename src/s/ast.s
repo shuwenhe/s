@@ -121,7 +121,8 @@ struct WhileExpr {
 }
 
 struct ForExpr {
-    String name,
+    Vec[String] names,
+    bool declare,
     Box[Expr] iterable,
     BlockExpr body,
     Option[String] inferred_type,
@@ -131,6 +132,21 @@ struct BlockExpr {
     Vec[Stmt] statements,
     Option[Expr] final_expr,
     Option[String] inferred_type,
+}
+
+struct ArrayLiteral {
+    Option[String] type_text,
+    Vec[Expr] items,
+}
+
+struct MapEntry {
+    Expr key,
+    Expr value,
+}
+
+struct MapLiteral {
+    Option[String] type_text,
+    Vec[MapEntry] entries,
 }
 
 enum Expr {
@@ -148,6 +164,8 @@ enum Expr {
     While(WhileExpr),
     For(ForExpr),
     Block(BlockExpr),
+    Array(ArrayLiteral),
+    Map(MapLiteral),
 }
 
 struct VarStmt {
@@ -460,8 +478,30 @@ func dump_expr(Expr expr) String {
         Expr::Match(value) => "match " + dump_expr(value.subject.value) + " { " + join_match_arms(value.arms) + " }",
         Expr::If(value) => dump_if_expr(value),
         Expr::While(value) => "while " + dump_expr(value.condition.value) + " {...}",
-        Expr::For(value) => "for " + value.name + " in " + dump_expr(value.iterable.value) + " {...}",
+        Expr::For(value) => {
+            var names = ""
+            var i = 0
+            while i < value.names.len() {
+                if i > 0 {
+                    names = names + ", "
+                }
+                names = names + value.names[i]
+                i = i + 1
+            }
+            var decl = if value.declare { " := " } else { " in " }
+            "for " + names + decl + dump_expr(value.iterable.value) + " {...}"
+        }
         Expr::Block(_) => "{...}",
+        Expr::Array(value) => {
+            var elems = Vec[String]()
+            for e in value.items { elems.push(dump_expr(e)) }
+            "[" + join_with(elems, ", ") + "]"
+        }
+        Expr::Map(value) => {
+            var parts = Vec[String]()
+            for entry in value.entries { parts.push(dump_expr(entry.key) + ": " + dump_expr(entry.value)) }
+            "{" + join_with(parts, ", ") + "}"
+        }
     }
 }
 
@@ -496,9 +536,7 @@ func join_exprs(Vec[Expr] values) String {
 
 func join_patterns(Vec[Pattern] values) String {
     var parts = Vec[String]()
-    for value in values {
-        parts.push(dump_pattern(value))
-    }
+    for value in values { parts.push(dump_pattern(value)) }
     join_with(parts, ", ")
 }
 
@@ -525,7 +563,6 @@ func single_line(String text) Vec[String] {
 func join_lines(Vec[String] lines) String {
     join_with(lines, "\n")
 }
-
 func join_with(Vec[String] values, String sep) String {
     var out = ""
     var first = true
