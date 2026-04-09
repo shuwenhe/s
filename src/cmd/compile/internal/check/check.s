@@ -8,8 +8,6 @@ use s.AssignStmt
 use s.BlockExpr
 use s.BinaryExpr
 use s.CallExpr
-use s.CForStmt
-use s.DeferStmt
 use s.Expr
 use s.FunctionDecl
 use s.FunctionSig
@@ -18,9 +16,11 @@ use s.Item
 use s.Param
 use s.ReturnStmt
 use s.SourceFile
+use s.Stmt
 use s.StructDecl
 use s.TraitDecl
 use s.Token
+use s.IncrementStmt
 use s.VarStmt
 use std.option.Option
 use std.prelude.to_string
