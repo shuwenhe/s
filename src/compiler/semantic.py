@@ -836,6 +836,13 @@ class Checker:
         )
         self.structs.setdefault("FsError", StructInfo(fields={"message": STRING}))
         self.structs.setdefault("ProcessError", StructInfo(fields={"message": STRING}))
+        self.structs.setdefault("CliError", StructInfo(fields={"message": STRING}))
+        self.structs.setdefault(
+            "CompileOptions",
+            StructInfo(fields={"command": STRING, "path": STRING, "output": STRING}),
+        )
+        self.structs.setdefault("ParseError", StructInfo(fields={"message": STRING}))
+        self.structs.setdefault("ExecError", StructInfo(fields={"message": STRING}))
 
     def _load_use_decls(self, uses: List[UseDecl]) -> None:
         for use in uses:
@@ -897,6 +904,30 @@ class Checker:
                 generics=[],
                 params=[parse_type("Vec[String]")],
                 return_type=I32,
+            ),
+            "compile.internal.build.parse.ParseOptions": TraitMethodInfo(
+                owner="compile.internal.build.parse",
+                generics=[],
+                params=[parse_type("Vec[String]")],
+                return_type=parse_type("Result[CompileOptions, ParseError]"),
+            ),
+            "compile.internal.build.exec.Run": TraitMethodInfo(
+                owner="compile.internal.build.exec",
+                generics=[],
+                params=[parse_type("CompileOptions")],
+                return_type=parse_type("Result[(), ExecError]"),
+            ),
+            "compile.internal.backend.Build": TraitMethodInfo(
+                owner="compile.internal.backend",
+                generics=[],
+                params=[STRING, STRING],
+                return_type=parse_type("Result[(), CliError]"),
+            ),
+            "compile.internal.backend.Run": TraitMethodInfo(
+                owner="compile.internal.backend",
+                generics=[],
+                params=[STRING],
+                return_type=parse_type("Result[(), CliError]"),
             ),
             "compile.internal.dispatch.Main": TraitMethodInfo(
                 owner="compile.internal.dispatch",

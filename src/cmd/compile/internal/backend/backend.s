@@ -10,7 +10,7 @@ struct CliError {
     String message,
 }
 
-func Build(String path, String output) Result[(), CliError] {
+func Build(String path, String output) -> Result[(), CliError] {
     // The S frontend is in place; native runner remains the backend bridge.
     var argv = Vec[String]()
     argv.push("/app/s/bin/s-native")
@@ -30,7 +30,7 @@ func Build(String path, String output) Result[(), CliError] {
     }
 }
 
-func Run(String path) Result[(), CliError] {
+func Run(String path) -> Result[(), CliError] {
     var temp_dir =
         match MakeTempDir("s-compile-") {
             Result::Ok(dir) => dir,
