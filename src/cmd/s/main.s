@@ -1,5 +1,8 @@
 package cmd
 
+use compile.internal.dispatch.Main as dispatchMain
+use std.env.Args as hostArgs
+
 func main() -> i32 {
-    return 0
+    return dispatchMain(hostArgs())
 }
