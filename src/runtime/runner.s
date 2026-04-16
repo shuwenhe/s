@@ -16,7 +16,7 @@ use std.process.RunProcess
 use std.result.Result
 use std.vec.Vec
 
-func main() () {
+func main() -> () {
     Exit(runMain(Args()))
 }
 
@@ -83,6 +83,9 @@ func isSelfHostSource(String source) bool {
 
 func isCompilerCommandSource(String source) bool {
     if containsText(source, "package cmd") && containsText(source, "use compiler.main as compilerMain") {
+        return true
+    }
+    if containsText(source, "package cmd") && containsText(source, "use compile.internal.gc.Main as compileMain") {
         return true
     }
     if containsText(source, "package cmd") && containsText(source, "use compile.internal.sc.Main as compileMain") {

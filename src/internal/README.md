@@ -6,7 +6,7 @@ to the S toolchain.
 Planned responsibilities:
 
 - `bootstrap/`: Python-hosted and migration-only bootstrap layers
-- `buildcfg/`: build-mode, target, and output-path configuration
+- `buildcfg/`: build-mode and target configuration
 - `toolchain/`: assembler, linker, and host tool invocation helpers
 - `platform/`: OS and architecture specific support code
 - `testenv/`: test-only environment setup and host capability checks
@@ -14,3 +14,7 @@ Planned responsibilities:
 Current code is still centered in `src/compiler` and `src/runtime`. New
 non-public helpers should land here first instead of growing those packages.
 
+Implemented building blocks currently include the `buildcfg/` skeleton.
+The current `buildcfg/` skeleton exposes `Target`, `Toolchain`, and `BuildCfg`
+records for the compiler entry path.
+The current arch dispatch layer lives under `cmd/compile/internal/arch/`.
