@@ -9,7 +9,33 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-static const char *NATIVE_RUNNER = "/app/s/bin/s-native";
+/* Determine native runner path at runtime:
+   - prefer env var NATIVE_RUNNER
+   - else try to locate `s-native` on PATH
+   - else fall back to default hardcoded path */
+static const char *DEFAULT_NATIVE_RUNNER = "/app/s/bin/s-native";
+static char *g_native_runner = NULL;
+
+static char *resolve_native_runner(void) {
+    const char *env = getenv("NATIVE_RUNNER");
+    if (env && access(env, X_OK) == 0) {
+        return strdup(env);
+    }
+    /* try which */
+    FILE *p = popen("which s-native 2>/dev/null", "r");
+    if (p) {
+        char buf[4096];
+        if (fgets(buf, sizeof(buf), p)) {
+            size_t n = strlen(buf);
+            if (n > 0 && buf[n-1] == '\n') buf[n-1] = '\0';
+            pclose(p);
+            if (access(buf, X_OK) == 0) return strdup(buf);
+        } else {
+            pclose(p);
+        }
+    }
+    return strdup(DEFAULT_NATIVE_RUNNER);
+}
 enum { S_PATH_CAP = 4096 };
 
 static int run_child_with_stdout(char *const argv[], bool quiet_stdout);
@@ -59,7 +85,7 @@ static int run_build(int argc, char **argv) {
         return 1;
     }
     char *build_argv[] = {
-        (char *)NATIVE_RUNNER,
+        g_native_runner,
         "build",
         argv[2],
         "-o",
@@ -86,7 +112,7 @@ static int run_check(int argc, char **argv) {
     snprintf(output_path, sizeof(output_path), "%s/out", temp_dir);
 
     char *build_argv[] = {
-        (char *)NATIVE_RUNNER,
+        g_native_runner,
         "build",
         argv[2],
         "-o",
@@ -137,7 +163,7 @@ static int run_run(int argc, char **argv) {
     snprintf(output_path, sizeof(output_path), "%s/run-target", temp_dir);
 
     char *build_argv[] = {
-        (char *)NATIVE_RUNNER,
+        g_native_runner,
         "build",
         argv[2],
         "-o",
@@ -155,18 +181,27 @@ int main(int argc, char **argv) {
     if (argc < 2) {
         return usage();
     }
-    if (access(NATIVE_RUNNER, X_OK) != 0) {
-        fprintf(stderr, "error: native runner missing: %s\n", NATIVE_RUNNER);
+    char *native_runner = resolve_native_runner();
+    if (native_runner == NULL || access(native_runner, X_OK) != 0) {
+        fprintf(stderr, "error: native runner missing: %s\n", native_runner ? native_runner : "(null)");
+        free(native_runner);
         return errno == 0 ? 127 : errno;
     }
     if (strcmp(argv[1], "build") == 0) {
-        return run_build(argc, argv);
+        int r = run_build(argc, argv);
+        free(native_runner);
+        return r;
     }
     if (strcmp(argv[1], "check") == 0) {
-        return run_check(argc, argv);
+        int r = run_check(argc, argv);
+        free(native_runner);
+        return r;
     }
     if (strcmp(argv[1], "run") == 0) {
-        return run_run(argc, argv);
+        int r = run_run(argc, argv);
+        free(native_runner);
+        return r;
     }
+    free(native_runner);
     return usage();
 }
