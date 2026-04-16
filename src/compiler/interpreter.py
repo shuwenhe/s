@@ -352,6 +352,20 @@ class Interpreter:
             return None
         if member == "len":
             return len(receiver)
+        if isinstance(receiver, tuple) and len(receiver) == 2 and receiver[0] in {"Ok", "Err"}:
+            tag, payload = receiver
+            if member == "is_ok":
+                return tag == "Ok"
+            if member == "is_err":
+                return tag == "Err"
+            if member == "unwrap":
+                if tag == "Ok":
+                    return payload
+                raise InterpreterError("called Result.unwrap() on Err")
+            if member == "unwrap_err":
+                if tag == "Err":
+                    return payload
+                raise InterpreterError("called Result.unwrap_err() on Ok")
         raise InterpreterError(f"unsupported method {member}")
 
     def _eval_type_constructor(self, callee: Expr, args: list[Expr], env: dict[str, Any]) -> Any:
