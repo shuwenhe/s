@@ -95,6 +95,54 @@
         "Push"
       ]
     },
+    "Result": {
+      "traits": [],
+      "fields": {},
+      "methods": {
+        "is_ok": {
+          "overloads": [
+            {
+              "receiver_mode": "ref",
+              "receiver_policy": "shared_or_addressable",
+              "params": [],
+              "return_type": "bool"
+            }
+          ]
+        },
+        "is_err": {
+          "overloads": [
+            {
+              "receiver_mode": "ref",
+              "receiver_policy": "shared_or_addressable",
+              "params": [],
+              "return_type": "bool"
+            }
+          ]
+        },
+        "unwrap": {
+          "overloads": [
+            {
+              "receiver_mode": "ref",
+              "receiver_policy": "shared_or_addressable",
+              "params": [],
+              "return_type": "T"
+            }
+          ]
+        },
+        "unwrap_err": {
+          "overloads": [
+            {
+              "receiver_mode": "ref",
+              "receiver_policy": "shared_or_addressable",
+              "params": [],
+              "return_type": "E"
+            }
+          ]
+        }
+      },
+      "index": null,
+      "default_impls": []
+    },
     "FileInfo": {
       "traits": [],
       "fields": {
