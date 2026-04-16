@@ -4,10 +4,11 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
-import subprocess
 import sys
 import tempfile
 from typing import Any, Callable, Generic, Iterable, TypeVar
+
+from runtime.launcher import run_process_runner
 
 BUILD_OUTPUT_ROOT = Path("/app/tmp")
 
@@ -142,16 +143,28 @@ def __host_run_process(argv: object) -> None:
     args = _coerce_argv(argv)
     if not args:
         raise RuntimeTrap("run_process expected at least one argv entry")
-    try:
-        subprocess.run(args, check=True, capture_output=True, text=True)
-    except FileNotFoundError as exc:
-        raise RuntimeTrap(f"run_process failed, command not found: {args[0]}") from exc
-    except subprocess.CalledProcessError as exc:
-        stderr = exc.stderr.strip() if exc.stderr else ""
-        detail = f": {stderr}" if stderr else ""
-        raise RuntimeTrap(
-            f"run_process failed with exit code {exc.returncode}{detail}"
-        ) from exc
+    code = run_process_runner(["run-argv", *args])
+    if code != 0:
+        raise RuntimeTrap(f"run_process failed with exit code {code}")
+
+
+def __host_run_process1(program: str) -> int:
+    return run_process_runner(["run-argv", program])
+
+
+def __host_run_process5(program: str, arg1: str, arg2: str, arg3: str, arg4: str) -> int:
+    return run_process_runner(["run-argv", program, arg1, arg2, arg3, arg4])
+
+
+def __host_run_process_argv(encoded: str) -> int:
+    args = encoded.split("<<ARG>>")
+    if not args or args == [""]:
+        raise RuntimeTrap("run_process expected at least one argv entry")
+    return run_process_runner(["run-argv", *args])
+
+
+def __host_run_shell(command: str) -> int:
+    return run_process_runner(["run-shell", command])
 
 
 def __host_args() -> list[str]:
@@ -223,6 +236,34 @@ _LOCAL_INTRINSICS: dict[str, IntrinsicSpec] = {
         1,
         "()",
         "bridge success path returns unit; host failures raise RuntimeTrap",
+    ),
+    "__host_run_process1": IntrinsicSpec(
+        "__host_run_process1",
+        __host_run_process1,
+        1,
+        "i32",
+        "bridge success path returns exit code; host failures raise RuntimeTrap",
+    ),
+    "__host_run_process5": IntrinsicSpec(
+        "__host_run_process5",
+        __host_run_process5,
+        5,
+        "i32",
+        "bridge success path returns exit code; host failures raise RuntimeTrap",
+    ),
+    "__host_run_process_argv": IntrinsicSpec(
+        "__host_run_process_argv",
+        __host_run_process_argv,
+        1,
+        "i32",
+        "bridge success path returns exit code; host failures raise RuntimeTrap",
+    ),
+    "__host_run_shell": IntrinsicSpec(
+        "__host_run_shell",
+        __host_run_shell,
+        1,
+        "i32",
+        "bridge success path returns exit code; host failures raise RuntimeTrap",
     ),
     "__host_args": IntrinsicSpec(
         "__host_args",
