@@ -182,6 +182,8 @@ int main(int argc, char **argv) {
         return usage();
     }
     char *native_runner = resolve_native_runner();
+    /* expose resolved path to functions that use `g_native_runner` */
+    g_native_runner = native_runner;
     if (native_runner == NULL || access(native_runner, X_OK) != 0) {
         fprintf(stderr, "error: native runner missing: %s\n", native_runner ? native_runner : "(null)");
         free(native_runner);
