@@ -78,6 +78,12 @@
       "notes": "bridge success path returns argv without the executable name"
     },
     {
+      "name": "__host_get_env",
+      "arity": 1,
+      "returns": "Option[String]",
+      "notes": "bridge success path returns environment values when present"
+    },
+    {
       "name": "__host_exit",
       "arity": 1,
       "returns": "never",

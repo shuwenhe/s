@@ -12,8 +12,10 @@ from runtime.python_bridge import INTRINSICS, RuntimeExit, invoke_intrinsic
 
 
 def main() -> int:
+    env_value = invoke_intrinsic("__host_get_env", "PATH")
     checks = [
         ("manifest loaded", "__host_exit" in INTRINSICS),
+        ("host env", env_value is None or isinstance(env_value, str)),
         ("len(string)", invoke_intrinsic("__runtime_len", "demo") == 4),
         ("concat", invoke_intrinsic("__string_concat", "de", "mo") == "demo"),
         ("replace", invoke_intrinsic("__string_replace", "a b", " ", "_") == "a_b"),
