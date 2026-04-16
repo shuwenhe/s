@@ -13,7 +13,7 @@ struct ParseError {
     String message,
 }
 
-func ParseOptions(Vec[String] args) Result[CompileOptions, ParseError] {
+func ParseOptions(Vec[String] args) -> Result[CompileOptions, ParseError] {
     if args.len() < 2 {
         return Result::Ok(CompileOptions {
             command: "help",
@@ -80,7 +80,7 @@ func ParseOptions(Vec[String] args) Result[CompileOptions, ParseError] {
     })
 }
 
-func Usage() String {
+func Usage() -> String {
     "usage:\n"
         + "  compile check <path>\n"
         + "  compile tokens <path>\n"
