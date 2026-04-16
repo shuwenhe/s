@@ -317,6 +317,9 @@ static result_t build_self_hosted_runner(const char *output_path) {
 }
 
 static result_t build_source(const char *path, const char *output_path) {
+    /* Debug: log entry */
+    fprintf(stderr, "[debug] build_source called path='%s' output='%s'\n", path, output_path);
+
     /* If the path is a directory, try to find a reasonable entrypoint
        source file (a file containing `package main` or `func Main(`) and
        delegate to the hosted Python compiler on that file. This provides
@@ -326,32 +329,78 @@ static result_t build_source(const char *path, const char *output_path) {
     if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
         char cmd[1024];
         /* Search for a candidate .s file under the directory. */
+        /* Prefer known compiler entry if present: <repo>/src/cmd/compile/main.s */
+        char candidate_entry[512];
+        snprintf(candidate_entry, sizeof(candidate_entry), "%s/src/cmd/compile/main.s", path);
         /* Prefer an explicit main.s if present */
         char main_path[512];
         snprintf(main_path, sizeof(main_path), "%s/main.s", path);
         char found[512];
-        if (access(main_path, R_OK) == 0) {
+        if (access(candidate_entry, R_OK) == 0) {
+            strncpy(found, candidate_entry, sizeof(found));
+            found[sizeof(found)-1] = '\0';
+            fprintf(stderr, "[debug] using repo compiler entry: %s\n", found);
+        } else if (access(main_path, R_OK) == 0) {
             strncpy(found, main_path, sizeof(found));
             found[sizeof(found)-1] = '\0';
+            fprintf(stderr, "[debug] using explicit main: %s\n", found);
         } else {
-            snprintf(cmd, sizeof(cmd), "grep -R -l -e 'func Main(' -e 'package main' --include='*.s' %s | head -n1", path);
+            /* Search only .s files and exclude test/fixture paths */
+            snprintf(cmd, sizeof(cmd), "grep -R -l -e 'func Main(' -e 'package main' --include='*.s' %s | grep -v -E '/tests/|/fixtures/' | head -n1", path);
+            fprintf(stderr, "[debug] running search cmd: %s\n", cmd);
             FILE *p = popen(cmd, "r");
             if (p == NULL) {
+                fprintf(stderr, "[debug] popen failed\n");
                 return err_message("failed to search directory for entrypoint");
             }
             if (fgets(found, sizeof(found), p) == NULL) {
                 pclose(p);
+                fprintf(stderr, "[debug] no entrypoint found in dir: %s\n", path);
                 return err_message("no entrypoint (.s) found in directory");
             }
             pclose(p);
+            /* Trim trailing newline */
+            size_t n = strlen(found);
+            if (n > 0 && found[n - 1] == '\n') {
+                found[n - 1] = '\0';
+            }
+            fprintf(stderr, "[debug] found candidate: %s\n", found);
         }
-        /* Trim trailing newline */
-        size_t n = strlen(found);
-        if (n > 0 && found[n - 1] == '\n') {
-            found[n - 1] = '\0';
+        /* Prefer an explicit S compiler binary if provided via env var S_COMPILER,
+           or a system `s` found in PATH. Fall back to python3 if neither works. */
+        const char *env_s = getenv("S_COMPILER");
+        if (env_s != NULL && access(env_s, X_OK) == 0) {
+            char *s_argv[] = {(char *)env_s, "build", found, "-o", (char *)output_path, NULL};
+            fprintf(stderr, "[debug] delegating to S_COMPILER: %s %s %s %s %s\n", s_argv[0], s_argv[1], s_argv[2], s_argv[3], s_argv[4]);
+            result_t r = run_process(s_argv, "self-hosted compiler failed");
+            if (r.ok) {
+                fprintf(stderr, "[debug] delegated to S_COMPILER succeeded\n");
+                return r;
+            }
+            fprintf(stderr, "[debug] S_COMPILER failed: %s\n", r.message ? r.message : "(null)");
         }
+
+        /* Try `s` on PATH */
+        char *s_on_path_argv[] = {"s", "build", found, "-o", (char *)output_path, NULL};
+        fprintf(stderr, "[debug] attempting to use 's' on PATH\n");
+        result_t r_path = run_process(s_on_path_argv, "s on PATH failed");
+        if (r_path.ok) {
+            fprintf(stderr, "[debug] delegated to s on PATH succeeded\n");
+            return r_path;
+        }
+        fprintf(stderr, "[debug] s on PATH failed: %s\n", r_path.message ? r_path.message : "(null)");
+
+        /* Fallback to python hosted compiler */
         char *py_argv[] = {"python3", "-m", "compiler", "build", found, "-o", (char *)output_path, NULL};
-        return run_process(py_argv, "python hosted compiler failed");
+        fprintf(stderr, "[debug] falling back to python: %s %s %s %s %s %s\n",
+                py_argv[0], py_argv[1], py_argv[2], py_argv[3], py_argv[4], py_argv[5]);
+        result_t r_py = run_process(py_argv, "python hosted compiler failed");
+        if (!r_py.ok) {
+            fprintf(stderr, "[debug] delegated python failed: %s\n", r_py.message ? r_py.message : "(null)");
+        } else {
+            fprintf(stderr, "[debug] delegated python succeeded\n");
+        }
+        return r_py;
     }
 
     char *source = read_text(path);
