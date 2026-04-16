@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 import os
-import subprocess
+from pathlib import Path
 import tempfile
 from typing import Any
 
@@ -36,6 +35,7 @@ from compiler.ast import (
     NamePattern,
 )
 from compiler.parser import parse_source
+from runtime.launcher import run_process_runner
 
 
 class InterpreterError(Exception):
@@ -93,6 +93,8 @@ class Interpreter:
 
             print("" if not args else self._stringify(args[0]), file=sys.stderr)
             return None
+        if name == "__host_run_shell":
+            return run_process_runner(["run-shell", "" if not args else str(args[0])])
         if name == "__host_args":
             return list(self.argv)
         if name == "__host_get_env":
@@ -118,11 +120,20 @@ class Interpreter:
             except OSError as exc:
                 return ("Err", {"message": str(exc)})
         if name == "__host_run_process":
-            try:
-                subprocess.run([str(arg) for arg in (args[0] if args else [])], check=True, capture_output=True, text=True)
-                return ("Ok", None)
-            except (OSError, subprocess.CalledProcessError) as exc:
-                return ("Err", {"message": str(exc)})
+            code = run_process_runner(["run-argv", *[str(arg) for arg in (args[0] if args else [])]])
+            if code != 0:
+                return ("Err", {"message": f"run_process failed with exit code {code}"})
+            return ("Ok", None)
+        if name == "__host_run_process1":
+            return run_process_runner(["run-argv", str(args[0])])
+        if name == "__host_run_process5":
+            return run_process_runner(["run-argv", *[str(arg) for arg in args[:5]]])
+        if name == "__host_run_process_argv":
+            command = "" if not args else str(args[0])
+            values = command.split("<<ARG>>")
+            if not values or values == [""]:
+                return 1
+            return run_process_runner(["run-argv", *values])
         if name == "__host_exit":
             self.explicit_exit_code = int(args[0]) if args else 0
             return None
@@ -149,11 +160,20 @@ class Interpreter:
             except OSError as exc:
                 return ("Err", {"message": str(exc)})
         if name == "RunProcess" and self.imports.get("RunProcess") == "std.process.RunProcess":
-            try:
-                subprocess.run([str(arg) for arg in (args[0] if args else [])], check=True, capture_output=True, text=True)
-                return ("Ok", None)
-            except (OSError, subprocess.CalledProcessError) as exc:
-                return ("Err", {"message": str(exc)})
+            code = run_process_runner(["run-argv", *[str(arg) for arg in (args[0] if args else [])]])
+            if code != 0:
+                return ("Err", {"message": f"run_process failed with exit code {code}"})
+            return ("Ok", None)
+        if name == "RunProcess1" and self.imports.get("RunProcess1") == "std.process.RunProcess1":
+            return run_process_runner(["run-argv", str(args[0])])
+        if name == "RunProcess5" and self.imports.get("RunProcess5") == "std.process.RunProcess5":
+            return run_process_runner(["run-argv", *[str(arg) for arg in args[:5]]])
+        if name == "RunProcessArgv" and self.imports.get("RunProcessArgv") == "std.process.RunProcessArgv":
+            command = "" if not args else str(args[0])
+            values = command.split("<<ARG>>")
+            if not values or values == [""]:
+                return 1
+            return run_process_runner(["run-argv", *values])
         if name == "len" and self.imports.get("len") == "std.prelude.len":
             return len(args[0]) if args else 0
         if name == "to_string" and self.imports.get("to_string") == "std.prelude.to_string":
