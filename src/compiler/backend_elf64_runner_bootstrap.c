@@ -317,6 +317,35 @@ static result_t build_self_hosted_runner(const char *output_path) {
 }
 
 static result_t build_source(const char *path, const char *output_path) {
+    /* If the path is a directory, try to find a reasonable entrypoint
+       source file (a file containing `package main` or `func Main(`) and
+       delegate to the hosted Python compiler on that file. This provides
+       basic package/multi-file build support for the native runner MVP.
+    */
+    struct stat st;
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
+        char cmd[1024];
+        /* Search for a candidate .s file under the directory. */
+        snprintf(cmd, sizeof(cmd), "grep -R -l -e 'func Main(' -e 'package main' --include='*.s' %s | head -n1", path);
+        FILE *p = popen(cmd, "r");
+        if (p == NULL) {
+            return err_message("failed to search directory for entrypoint");
+        }
+        char found[512];
+        if (fgets(found, sizeof(found), p) == NULL) {
+            pclose(p);
+            return err_message("no entrypoint (.s) found in directory");
+        }
+        pclose(p);
+        /* Trim trailing newline */
+        size_t n = strlen(found);
+        if (n > 0 && found[n - 1] == '\n') {
+            found[n - 1] = '\0';
+        }
+        char *py_argv[] = {"python3", "-m", "compiler", "build", found, "-o", (char *)output_path, NULL};
+        return run_process(py_argv, "python hosted compiler failed");
+    }
+
     char *source = read_text(path);
     if (source == NULL) {
         return err_result(join3("failed to read source file", ": ", path));
