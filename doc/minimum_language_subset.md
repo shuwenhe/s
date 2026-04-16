@@ -19,7 +19,7 @@ The minimum complete loop is:
 Primary directories:
 
 - `/app/s/src/s`
-- `/app/s/src/cmd/compiler`
+- `/app/s/src/cmd/compile/internal/compiler`
 - `/app/s/src/runtime`
 - `/app/s/src/cmd`
 
@@ -114,7 +114,7 @@ to how Go keeps reusable syntax packages under `src/go/*`.
 
 ## 3. Minimal Compiler Boundary
 
-The compiler implementation lives in `/app/s/src/cmd/compiler`.
+The compiler implementation lives in `/app/s/src/cmd/compile/internal/compiler`.
 
 Phase 1 compiler responsibilities:
 
@@ -127,7 +127,7 @@ Success means these commands stay working:
 
 ```bash
 cd /app/s/src
-python3 -m compiler check /app/s/src/cmd/compiler/tests/fixtures/check_ok.s
+python3 -m compiler check /app/s/src/cmd/compile/internal/compiler/tests/fixtures/check_ok.s
 python3 -m compiler build /app/s/misc/examples/s/hello.s -o /app/tmp/s_hello
 python3 -m compiler build /app/s/misc/examples/s/sum.s -o /app/tmp/s_sum
 ```

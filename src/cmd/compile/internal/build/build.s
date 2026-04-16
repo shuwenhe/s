@@ -9,26 +9,27 @@ use compile.internal.build.report.Usage as ReportUsage
 use std.result.Result
 use std.vec.Vec
 
-func Main(Vec[String] args) i32 {
+func Main(Vec[String] args) -> i32 {
     match Run(args) {
-        Result::Ok(()) => 0,
+        Result::Ok(_) => 0,
         Result::Err(err) => {
             ReportError(err.message)
             1
-        }
+        },
     }
 }
 
-func Run(Vec[String] args) Result[(), ExecError] {
+func Run(Vec[String] args) -> Result[(), ExecError] {
     match ParseOptions(args) {
         Result::Ok(options) => {
             if options.command == "help" {
                 ReportUsage(Usage())
-                return Result::Ok(())
-            }
-            match RunCommand(options) {
-                Result::Ok(()) => Result::Ok(()),
-                Result::Err(err) => Result::Err(convert_exec_error(err.message)),
+                Result::Ok(())
+            } else {
+                match RunCommand(options) {
+                    Result::Ok(_) => Result::Ok(()),
+                    Result::Err(err) => Result::Err(convert_exec_error(err.message)),
+                }
             }
         }
         Result::Err(err) => Result::Err(convert_parse_error(err.message)),

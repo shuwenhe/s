@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import os
 import subprocess
 import tempfile
 from typing import Any
@@ -34,6 +35,7 @@ from compiler.ast import (
     WildcardPattern,
     NamePattern,
 )
+from compiler.parser import parse_source
 
 
 class InterpreterError(Exception):
@@ -56,6 +58,7 @@ class Interpreter:
         self.imports = {use.alias or use.path.split(".")[-1]: use.path for use in source.uses}
         self.explicit_exit_code: int | None = None
         self.argv: list[str] = []
+        self._package_cache: dict[str, Interpreter] = {}
 
     def run_main(self) -> int:
         if "main" in self.functions:
@@ -89,6 +92,39 @@ class Interpreter:
             import sys
 
             print("" if not args else self._stringify(args[0]), file=sys.stderr)
+            return None
+        if name == "__host_args":
+            return list(self.argv)
+        if name == "__host_get_env":
+            value = os.environ.get("" if not args else str(args[0]))
+            if value is None:
+                return ("None", None)
+            return ("Some", value)
+        if name == "__host_read_to_string":
+            try:
+                return ("Ok", Path(str(args[0])).read_text())
+            except OSError as exc:
+                return ("Err", {"message": str(exc)})
+        if name == "__host_write_text_file":
+            try:
+                Path(str(args[0])).write_text("" if len(args) < 2 else str(args[1]))
+                return ("Ok", None)
+            except OSError as exc:
+                return ("Err", {"message": str(exc)})
+        if name == "__host_make_temp_dir":
+            try:
+                path = tempfile.mkdtemp(prefix="" if not args else str(args[0]))
+                return ("Ok", path)
+            except OSError as exc:
+                return ("Err", {"message": str(exc)})
+        if name == "__host_run_process":
+            try:
+                subprocess.run([str(arg) for arg in (args[0] if args else [])], check=True, capture_output=True, text=True)
+                return ("Ok", None)
+            except (OSError, subprocess.CalledProcessError) as exc:
+                return ("Err", {"message": str(exc)})
+        if name == "__host_exit":
+            self.explicit_exit_code = int(args[0]) if args else 0
             return None
         if name == "Args" and self.imports.get("Args") == "std.env.Args":
             return list(self.argv)
@@ -127,6 +163,10 @@ class Interpreter:
         if name == "slice" and self.imports.get("slice") == "std.prelude.slice":
             return str(args[0])[int(args[1]) : int(args[2])]
 
+        imported_path = self.imports.get(name)
+        if imported_path is not None:
+            return self._call_imported_function(imported_path, args)
+
         fn = self.functions.get(name)
         if fn is None:
             raise InterpreterError(f"unknown function {name}")
@@ -141,6 +181,54 @@ class Interpreter:
             return self.eval_block(fn.body, env)
         except ReturnSignal as signal:
             return signal.value
+
+    def _call_imported_function(self, imported_path: str, args: list[Any]) -> Any:
+        if imported_path == "std.env.Args":
+            return list(self.argv)
+        if imported_path == "std.process.Exit":
+            self.explicit_exit_code = int(args[0]) if args else 0
+            return None
+
+        package_path, func_name = imported_path.rsplit(".", 1)
+        imported_interpreter = self._load_imported_package(package_path)
+        result = imported_interpreter.call_function(func_name, args)
+        if imported_interpreter.explicit_exit_code is not None:
+            self.explicit_exit_code = imported_interpreter.explicit_exit_code
+        return result
+
+    def _load_imported_package(self, package_path: str) -> "Interpreter":
+        cached = self._package_cache.get(package_path)
+        if cached is not None:
+            return cached
+
+        source_path = self._source_path_for_package(package_path)
+        if source_path is None:
+            raise InterpreterError(f"unknown imported package {package_path}")
+        source_text = source_path.read_text()
+        source = parse_source(source_text)
+        child = Interpreter(source)
+        child.argv = self.argv
+        child._package_cache = self._package_cache
+        self._package_cache[package_path] = child
+        return child
+
+    def _source_path_for_package(self, package_path: str) -> Path | None:
+        root = Path(__file__).resolve().parent.parent
+        if package_path.startswith("compile.internal."):
+            tail = package_path.removeprefix("compile.internal.")
+            parts = tail.split(".")
+            return root / "cmd" / "compile" / "internal" / Path(*parts) / f"{parts[-1]}.s"
+        if package_path.startswith("internal."):
+            tail = package_path.removeprefix("internal.")
+            parts = tail.split(".")
+            return root / "internal" / Path(*parts) / f"{parts[-1]}.s"
+        if package_path.startswith("std."):
+            tail = package_path.removeprefix("std.")
+            if tail == "prelude":
+                return root / "prelude" / "prelude.s"
+            parts = tail.split(".")
+            return root / Path(*parts) / f"{parts[-1]}.s"
+        return None
 
     def eval_block(self, block: BlockExpr | None, env: dict[str, Any]) -> Any:
         if block is None:
