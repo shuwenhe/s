@@ -14,7 +14,7 @@ struct cliError {
 
 func Main(Vec[String] args) i32 {
     match run(args) {
-        Result::Ok(()) => 0,
+        Result::Ok(_) => 0,
         Result::Err(err) => {
             eprintln("error: " + err.message)
             1

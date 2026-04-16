@@ -20,7 +20,7 @@ func Build(String path, String output) Result[(), CliError] {
     argv.push(output)
 
     match RunProcess(argv) {
-        Result::Ok(()) => {
+        Result::Ok(_) => {
             println("built: " + output)
             Result::Ok(())
         }
@@ -47,7 +47,7 @@ func Run(String path) Result[(), CliError] {
     argv.push(output)
 
     match RunProcess(argv) {
-        Result::Ok(()) => Result::Ok(()),
+        Result::Ok(_) => Result::Ok(()),
         Result::Err(err) => Result::Err(CliError {
             message: "failed to run compiled program: " + err.message,
         }),
