@@ -1,3 +1,56 @@
+# Build outputs
+bin/
+build/
+out/
+dist/
+
+# Temporary files and dirs
+tmp/
+*.tmp
+
+# Compiled objects and libraries
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+pip-wheel-metadata/
+*.egg-info/
+
+# Logs and coverage
+logs/
+*.log
+.pytest_cache/
+.coverage
+coverage/
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+tags
+ctags
+
+# Caches
+.cache/
+.mypy_cache/
+
+# Generated tools/artifacts
+misc/tools/*.o
+misc/tools/*.exe
+
+# Node
+node_modules/
 __pycache__/
 *.py[cod]
 .pytest_cache/
