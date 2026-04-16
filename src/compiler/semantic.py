@@ -152,6 +152,30 @@ class Checker:
                 params=[NamedType("T")],
                 return_type=UNIT,
             ),
+            "__host_run_shell": TraitMethodInfo(
+                owner="builtin",
+                generics=[],
+                params=[STRING],
+                return_type=I32,
+            ),
+            "__host_run_process1": TraitMethodInfo(
+                owner="builtin",
+                generics=[],
+                params=[STRING],
+                return_type=I32,
+            ),
+            "__host_run_process5": TraitMethodInfo(
+                owner="builtin",
+                generics=[],
+                params=[STRING, STRING, STRING, STRING, STRING],
+                return_type=I32,
+            ),
+            "__host_run_process_argv": TraitMethodInfo(
+                owner="builtin",
+                generics=[],
+                params=[STRING],
+                return_type=I32,
+            ),
         }
         self._load_stdlib_primitives()
 
@@ -921,13 +945,13 @@ class Checker:
                 owner="compile.internal.backend",
                 generics=[],
                 params=[STRING, STRING],
-                return_type=parse_type("Result[(), CliError]"),
+                return_type=I32,
             ),
             "compile.internal.backend.Run": TraitMethodInfo(
                 owner="compile.internal.backend",
                 generics=[],
                 params=[STRING],
-                return_type=parse_type("Result[(), CliError]"),
+                return_type=I32,
             ),
             "compile.internal.dispatch.Main": TraitMethodInfo(
                 owner="compile.internal.dispatch",
