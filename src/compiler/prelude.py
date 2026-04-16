@@ -136,6 +136,34 @@ def lookup_builtin_methods(receiver_type: Type, member: str) -> tuple[BuiltinMet
                     )
                 )
             return tuple(rewritten)
+    if builtin_type.name == "Result":
+        inner = _unwrap_refs(receiver_type)
+        if isinstance(inner, NamedType) and len(inner.args) >= 2:
+            ok_type = inner.args[0]
+            err_type = inner.args[1]
+            rewritten = []
+            for method in methods:
+                params = [
+                    ok_type if isinstance(param, NamedType) and param.name == "T" else
+                    err_type if isinstance(param, NamedType) and param.name == "E" else
+                    param
+                    for param in method.signature.params
+                ]
+                return_type = method.signature.return_type
+                if isinstance(return_type, NamedType) and return_type.name == "T":
+                    return_type = ok_type
+                elif isinstance(return_type, NamedType) and return_type.name == "E":
+                    return_type = err_type
+                rewritten.append(
+                    BuiltinMethodDecl(
+                        name=method.name,
+                        trait_name=method.trait_name,
+                        receiver_mode=method.receiver_mode,
+                        receiver_policy=method.receiver_policy,
+                        signature=FunctionType(params, return_type or UNIT),
+                    )
+                )
+            return tuple(rewritten)
     return methods
 
 
