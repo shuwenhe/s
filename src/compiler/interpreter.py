@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import os
 from pathlib import Path
-import tempfile
 from typing import Any
 
 from compiler.ast import (
@@ -35,7 +33,7 @@ from compiler.ast import (
     NamePattern,
 )
 from compiler.parser import parse_source
-from runtime.launcher import run_process_runner
+from compiler.interpreter_dispatch import dispatch_imported_call, dispatch_special_call
 
 
 class InterpreterError(Exception):
@@ -80,111 +78,15 @@ class Interpreter:
         raise InterpreterError(f"entry function must return i32/unit, got {type(result).__name__}")
 
     def call_function(self, name: str, args: list[Any]) -> Any:
-        if name in {"Ok", "Err", "Some"}:
-            payload = None if not args else args[0]
-            return (name, payload)
-        if name == "None":
-            return ("None", None)
-        if name == "println":
-            print("" if not args else self._stringify(args[0]))
-            return None
-        if name == "eprintln":
-            import sys
-
-            print("" if not args else self._stringify(args[0]), file=sys.stderr)
-            return None
-        if name == "__host_run_shell":
-            return run_process_runner(["run-shell", "" if not args else str(args[0])])
-        if name == "__host_args":
-            return list(self.argv)
-        if name == "__host_get_env":
-            value = os.environ.get("" if not args else str(args[0]))
-            if value is None:
-                return ("None", None)
-            return ("Some", value)
-        if name == "__host_read_to_string":
-            try:
-                return ("Ok", Path(str(args[0])).read_text())
-            except OSError as exc:
-                return ("Err", {"message": str(exc)})
-        if name == "__host_write_text_file":
-            try:
-                Path(str(args[0])).write_text("" if len(args) < 2 else str(args[1]))
-                return ("Ok", None)
-            except OSError as exc:
-                return ("Err", {"message": str(exc)})
-        if name == "__host_make_temp_dir":
-            try:
-                path = tempfile.mkdtemp(prefix="" if not args else str(args[0]))
-                return ("Ok", path)
-            except OSError as exc:
-                return ("Err", {"message": str(exc)})
-        if name == "__host_run_process":
-            code = run_process_runner(["run-argv", *[str(arg) for arg in (args[0] if args else [])]])
-            if code != 0:
-                return ("Err", {"message": f"run_process failed with exit code {code}"})
-            return ("Ok", None)
-        if name == "__host_run_process1":
-            return run_process_runner(["run-argv", str(args[0])])
-        if name == "__host_run_process5":
-            return run_process_runner(["run-argv", *[str(arg) for arg in args[:5]]])
-        if name == "__host_run_process_argv":
-            command = "" if not args else str(args[0])
-            values = command.split("<<ARG>>")
-            if not values or values == [""]:
-                return 1
-            return run_process_runner(["run-argv", *values])
-        if name == "__host_exit":
-            self.explicit_exit_code = int(args[0]) if args else 0
-            return None
-        if name == "Args" and self.imports.get("Args") == "std.env.Args":
-            return list(self.argv)
-        if name == "Exit" and self.imports.get("Exit") == "std.process.Exit":
-            self.explicit_exit_code = int(args[0]) if args else 0
-            return None
-        if name == "ReadToString" and self.imports.get("ReadToString") == "std.fs.ReadToString":
-            try:
-                return ("Ok", Path(str(args[0])).read_text())
-            except OSError as exc:
-                return ("Err", {"message": str(exc)})
-        if name == "WriteTextFile" and self.imports.get("WriteTextFile") == "std.fs.WriteTextFile":
-            try:
-                Path(str(args[0])).write_text("" if len(args) < 2 else str(args[1]))
-                return ("Ok", None)
-            except OSError as exc:
-                return ("Err", {"message": str(exc)})
-        if name == "MakeTempDir" and self.imports.get("MakeTempDir") == "std.fs.MakeTempDir":
-            try:
-                path = tempfile.mkdtemp(prefix="" if not args else str(args[0]))
-                return ("Ok", path)
-            except OSError as exc:
-                return ("Err", {"message": str(exc)})
-        if name == "RunProcess" and self.imports.get("RunProcess") == "std.process.RunProcess":
-            code = run_process_runner(["run-argv", *[str(arg) for arg in (args[0] if args else [])]])
-            if code != 0:
-                return ("Err", {"message": f"run_process failed with exit code {code}"})
-            return ("Ok", None)
-        if name == "RunProcess1" and self.imports.get("RunProcess1") == "std.process.RunProcess1":
-            return run_process_runner(["run-argv", str(args[0])])
-        if name == "RunProcess5" and self.imports.get("RunProcess5") == "std.process.RunProcess5":
-            return run_process_runner(["run-argv", *[str(arg) for arg in args[:5]]])
-        if name == "RunProcessArgv" and self.imports.get("RunProcessArgv") == "std.process.RunProcessArgv":
-            command = "" if not args else str(args[0])
-            values = command.split("<<ARG>>")
-            if not values or values == [""]:
-                return 1
-            return run_process_runner(["run-argv", *values])
-        if name == "len" and self.imports.get("len") == "std.prelude.len":
-            return len(args[0]) if args else 0
-        if name == "to_string" and self.imports.get("to_string") == "std.prelude.to_string":
-            return str(args[0]) if args else ""
-        if name == "char_at" and self.imports.get("char_at") == "std.prelude.char_at":
-            return str(args[0])[int(args[1])]
-        if name == "slice" and self.imports.get("slice") == "std.prelude.slice":
-            return str(args[0])[int(args[1]) : int(args[2])]
+        handled, value = dispatch_special_call(self, name, args)
+        if handled:
+            return value
 
         imported_path = self.imports.get(name)
         if imported_path is not None:
+            handled, value = dispatch_imported_call(self, imported_path, args)
+            if handled:
+                return value
             return self._call_imported_function(imported_path, args)
 
         fn = self.functions.get(name)
@@ -203,12 +105,6 @@ class Interpreter:
             return signal.value
 
     def _call_imported_function(self, imported_path: str, args: list[Any]) -> Any:
-        if imported_path == "std.env.Args":
-            return list(self.argv)
-        if imported_path == "std.process.Exit":
-            self.explicit_exit_code = int(args[0]) if args else 0
-            return None
-
         package_path, func_name = imported_path.rsplit(".", 1)
         imported_interpreter = self._load_imported_package(package_path)
         result = imported_interpreter.call_function(func_name, args)

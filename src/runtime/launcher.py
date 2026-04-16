@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-import subprocess
+import os
+from pathlib import Path
 
-from runtime.process_runner import get_executable
+
+DEFAULT_EXECUTABLE_PATH = Path(__file__).with_name("launcher")
+DEFAULT_LIBRARY_PATH = Path(__file__).with_name("liblauncher.so")
 
 
-def run_process_runner(argv: list[str]) -> int:
-    executable = str(get_executable())
-    completed = subprocess.run([executable, *argv], capture_output=True, text=True)
-    return int(completed.returncode)
+def get_executable() -> Path:
+    return Path(os.environ.get("S_LAUNCHER_EXECUTABLE", DEFAULT_EXECUTABLE_PATH))
 
+
+def get_library_path() -> Path:
+    return Path(os.environ.get("S_LAUNCHER_LIBRARY", DEFAULT_LIBRARY_PATH))
