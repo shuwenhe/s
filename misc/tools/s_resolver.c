@@ -26,7 +26,8 @@ static int visited(Node *head, const char *path) {
 
 static void add(Node **head, const char *path) {
     Node *n = malloc(sizeof(Node));
-    n->path = strdup(path);
+    n->path = malloc(strlen(path) + 1);
+    if (n->path) strcpy(n->path, path);
     n->next = *head;
     *head = n;
 }
