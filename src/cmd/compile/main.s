@@ -1,6 +1,6 @@
 package cmd
 
-use compile.internal.sc.Main as compileMain
+use compile.internal.gc.Main as compileMain
 use std.vec.Vec
 
 func main(Vec[String] args) i32 {
