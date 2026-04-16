@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -157,6 +158,10 @@ def __host_args() -> list[str]:
     return list(sys.argv[1:])
 
 
+def __host_get_env(key: str) -> str | None:
+    return os.environ.get(key)
+
+
 def __host_exit(code: int) -> None:
     raise RuntimeExit(int(code))
 
@@ -225,6 +230,13 @@ _LOCAL_INTRINSICS: dict[str, IntrinsicSpec] = {
         0,
         "Vec[String]",
         "bridge success path returns argv without the executable name",
+    ),
+    "__host_get_env": IntrinsicSpec(
+        "__host_get_env",
+        __host_get_env,
+        1,
+        "Option[String]",
+        "bridge success path returns environment values when present",
     ),
     "__host_exit": IntrinsicSpec(
         "__host_exit",
