@@ -326,17 +326,25 @@ static result_t build_source(const char *path, const char *output_path) {
     if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
         char cmd[1024];
         /* Search for a candidate .s file under the directory. */
-        snprintf(cmd, sizeof(cmd), "grep -R -l -e 'func Main(' -e 'package main' --include='*.s' %s | head -n1", path);
-        FILE *p = popen(cmd, "r");
-        if (p == NULL) {
-            return err_message("failed to search directory for entrypoint");
-        }
+        /* Prefer an explicit main.s if present */
+        char main_path[512];
+        snprintf(main_path, sizeof(main_path), "%s/main.s", path);
         char found[512];
-        if (fgets(found, sizeof(found), p) == NULL) {
+        if (access(main_path, R_OK) == 0) {
+            strncpy(found, main_path, sizeof(found));
+            found[sizeof(found)-1] = '\0';
+        } else {
+            snprintf(cmd, sizeof(cmd), "grep -R -l -e 'func Main(' -e 'package main' --include='*.s' %s | head -n1", path);
+            FILE *p = popen(cmd, "r");
+            if (p == NULL) {
+                return err_message("failed to search directory for entrypoint");
+            }
+            if (fgets(found, sizeof(found), p) == NULL) {
+                pclose(p);
+                return err_message("no entrypoint (.s) found in directory");
+            }
             pclose(p);
-            return err_message("no entrypoint (.s) found in directory");
         }
-        pclose(p);
         /* Trim trailing newline */
         size_t n = strlen(found);
         if (n > 0 && found[n - 1] == '\n') {
