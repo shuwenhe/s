@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/app/s"
-SRC_ROOT="$ROOT/src"
-OUT="${1:-/app/tmp/s_native}"
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Determine repo root relative to this script if not provided
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="${ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+SRC_ROOT="${SRC_ROOT:-$ROOT/src}"
+OUT="${1:-/tmp/s_native}"
 
 # Bootstrap-native chain:
-# - use the hosted compiler build path
+# - use the hosted compiler build path (python) if available
 # - backend special-cases runtime/runner.s into a native executable
 
 if command -v python3 >/dev/null 2>&1; then
@@ -15,5 +20,6 @@ if command -v python3 >/dev/null 2>&1; then
         exit 0
     fi
 fi
+
 echo "python3 with hosted compiler support is required to build the native runner" >&2
 exit 1
