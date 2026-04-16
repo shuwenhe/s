@@ -67,7 +67,7 @@ struct FunctionContext {
     Option[String] return_type,
 }
 
-func LoadFrontend(String path) Result[FrontendResult, CliError] {
+func LoadFrontend(String path) -> Result[FrontendResult, CliError] {
     var source = read_source(path)?
     var tokens = tokenize_source(source)?
     var ast = parse_tokens_text(tokens)?
@@ -78,7 +78,7 @@ func LoadFrontend(String path) Result[FrontendResult, CliError] {
     })
 }
 
-func CheckFrontend(FrontendResult frontend) Result[(), CliError] {
+func CheckFrontend(FrontendResult frontend) -> Result[(), CliError] {
     if frontend.ast.package == "" {
         return Result::Err(CliError {
             message: "missing package declaration",
@@ -99,7 +99,7 @@ func CheckFrontend(FrontendResult frontend) Result[(), CliError] {
     Result::Ok(())
 }
 
-func build_type_env(Vec[Item] items) Result[TypeEnv, CliError] {
+func build_type_env(Vec[Item] items) -> Result[TypeEnv, CliError] {
     var env = TypeEnv {
         functions: Vec[FunctionInfo](),
         structs: Vec[StructInfo](),
@@ -116,7 +116,7 @@ func build_type_env(Vec[Item] items) Result[TypeEnv, CliError] {
     Result::Ok(env)
 }
 
-func register_function(TypeEnv env, FunctionDecl func) Result[TypeEnv, CliError] {
+func register_function(TypeEnv env, FunctionDecl func) -> Result[TypeEnv, CliError] {
     if find_function(env, func.sig.name).is_some() {
         return Result::Err(cli_error("duplicate function: " + func.sig.name))
     }
@@ -130,7 +130,7 @@ func register_function(TypeEnv env, FunctionDecl func) Result[TypeEnv, CliError]
     Result::Ok(env)
 }
 
-func register_struct(TypeEnv env, StructDecl decl) Result[TypeEnv, CliError] {
+func register_struct(TypeEnv env, StructDecl decl) -> Result[TypeEnv, CliError] {
     if find_struct(env, decl.name).is_some() {
         return Result::Err(cli_error("duplicate struct: " + decl.name))
     }
@@ -156,7 +156,7 @@ func register_struct(TypeEnv env, StructDecl decl) Result[TypeEnv, CliError] {
     Result::Ok(env)
 }
 
-func ensure_params_have_types(Vec[Param] params) Result[(), CliError] {
+func ensure_params_have_types(Vec[Param] params) -> Result[(), CliError] {
     for param in params {
         if param.type_name == "" {
             return Result::Err(cli_error("missing type for parameter " + param.name))
@@ -165,7 +165,7 @@ func ensure_params_have_types(Vec[Param] params) Result[(), CliError] {
     Result::Ok(())
 }
 
-func check_struct(StructDecl decl) Result[(), CliError] {
+func check_struct(StructDecl decl) -> Result[(), CliError] {
     var seen = Vec[String]()
     for field in decl.fields {
         if field.type_name == "" {
@@ -179,7 +179,7 @@ func check_struct(StructDecl decl) Result[(), CliError] {
     Result::Ok(())
 }
 
-func check_trait(TraitDecl decl) Result[(), CliError] {
+func check_trait(TraitDecl decl) -> Result[(), CliError] {
     var seen = Vec[String]()
     for method in decl.methods {
         ensure_params_have_types(method.params)?
@@ -191,7 +191,7 @@ func check_trait(TraitDecl decl) Result[(), CliError] {
     Result::Ok(())
 }
 
-func check_impl(ImplDecl decl, TypeEnv env) Result[(), CliError] {
+func check_impl(ImplDecl decl, TypeEnv env) -> Result[(), CliError] {
     if find_struct(env, decl.target).is_none() {
         return Result::Err(cli_error("impl target not found: " + decl.target))
     }
@@ -207,7 +207,7 @@ func check_impl(ImplDecl decl, TypeEnv env) Result[(), CliError] {
     Result::Ok(())
 }
 
-func check_function(FunctionDecl decl, TypeEnv env) Result[(), CliError] {
+func check_function(FunctionDecl decl, TypeEnv env) -> Result[(), CliError] {
     var ctx = FunctionContext {
         locals: Vec[LocalVar](),
         return_type: decl.sig.return_type,
@@ -229,7 +229,7 @@ func check_function(FunctionDecl decl, TypeEnv env) Result[(), CliError] {
     Result::Ok(())
 }
 
-func check_block(BlockExpr block, mut FunctionContext ctx, TypeEnv env) Result[(), CliError] {
+func check_block(BlockExpr block, mut FunctionContext ctx, TypeEnv env) -> Result[(), CliError] {
     for stmt in block.statements {
         check_stmt(stmt, mut ctx, env)?
     }
@@ -242,7 +242,7 @@ func check_block(BlockExpr block, mut FunctionContext ctx, TypeEnv env) Result[(
     Result::Ok(())
 }
 
-func check_stmt(Stmt stmt, mut FunctionContext ctx, TypeEnv env) Result[(), CliError] {
+func check_stmt(Stmt stmt, mut FunctionContext ctx, TypeEnv env) -> Result[(), CliError] {
     match stmt {
         Stmt::Var(value) => check_var_stmt(value, mut ctx, env)?,
         Stmt::Assign(value) => check_assign_stmt(value, ctx, env)?,
@@ -267,7 +267,7 @@ func check_stmt(Stmt stmt, mut FunctionContext ctx, TypeEnv env) Result[(), CliE
     Result::Ok(())
 }
 
-func check_var_stmt(VarStmt stmt, mut FunctionContext ctx, TypeEnv env) Result[(), CliError] {
+func check_var_stmt(VarStmt stmt, mut FunctionContext ctx, TypeEnv env) -> Result[(), CliError] {
     var inferred = infer_expr_type(stmt.value, ctx, env)?
     var ty =
         match stmt.type_name {
@@ -287,7 +287,7 @@ func check_var_stmt(VarStmt stmt, mut FunctionContext ctx, TypeEnv env) Result[(
     Result::Ok(())
 }
 
-func check_assign_stmt(AssignStmt stmt, FunctionContext ctx, TypeEnv env) Result[(), CliError] {
+func check_assign_stmt(AssignStmt stmt, FunctionContext ctx, TypeEnv env) -> Result[(), CliError] {
     var var_type =
         match find_local(ctx, stmt.name) {
             Option::Some(value) => value,
@@ -300,7 +300,7 @@ func check_assign_stmt(AssignStmt stmt, FunctionContext ctx, TypeEnv env) Result
     Result::Ok(())
 }
 
-func check_increment_stmt(IncrementStmt stmt, FunctionContext ctx) Result[(), CliError] {
+func check_increment_stmt(IncrementStmt stmt, FunctionContext ctx) -> Result[(), CliError] {
     var var_type =
         match find_local(ctx, stmt.name) {
             Option::Some(value) => value,
@@ -312,7 +312,7 @@ func check_increment_stmt(IncrementStmt stmt, FunctionContext ctx) Result[(), Cl
     Result::Ok(())
 }
 
-func check_return_stmt(ReturnStmt stmt, FunctionContext ctx, TypeEnv env) Result[(), CliError] {
+func check_return_stmt(ReturnStmt stmt, FunctionContext ctx, TypeEnv env) -> Result[(), CliError] {
     match stmt.value {
         Option::Some(expr) => {
             var expr_type = infer_expr_type(expr, ctx, env)?
@@ -334,7 +334,7 @@ func check_return_stmt(ReturnStmt stmt, FunctionContext ctx, TypeEnv env) Result
     Result::Ok(())
 }
 
-func infer_expr_type(Expr expr, FunctionContext ctx, TypeEnv env) Result[String, CliError] {
+func infer_expr_type(Expr expr, FunctionContext ctx, TypeEnv env) -> Result[String, CliError] {
     match expr {
         Expr::Int(_) => Result::Ok("int"),
         Expr::String(_) => Result::Ok("str"),
@@ -350,7 +350,7 @@ func infer_expr_type(Expr expr, FunctionContext ctx, TypeEnv env) Result[String,
     }
 }
 
-func infer_binary_type(BinaryExpr expr, FunctionContext ctx, TypeEnv env) Result[String, CliError] {
+func infer_binary_type(BinaryExpr expr, FunctionContext ctx, TypeEnv env) -> Result[String, CliError] {
     var left = infer_expr_type(*expr.left, ctx, env)?
     var right = infer_expr_type(*expr.right, ctx, env)?
     match expr.op {
@@ -382,7 +382,7 @@ func infer_binary_type(BinaryExpr expr, FunctionContext ctx, TypeEnv env) Result
     }
 }
 
-func infer_call_type(CallExpr expr, FunctionContext ctx, TypeEnv env) Result[String, CliError] {
+func infer_call_type(CallExpr expr, FunctionContext ctx, TypeEnv env) -> Result[String, CliError] {
     var callee =
         match *expr.callee {
             Expr::Name(value) => value.name,
@@ -417,7 +417,7 @@ func infer_call_type(CallExpr expr, FunctionContext ctx, TypeEnv env) Result[Str
     }
 }
 
-func normalize_type(String ty) String {
+func normalize_type(String ty) -> String {
     match ty {
         "i32" | "int" => "int",
         "string" => "str",
@@ -425,7 +425,7 @@ func normalize_type(String ty) String {
     }
 }
 
-func find_function(TypeEnv env, String name) Option[FunctionInfo] {
+func find_function(TypeEnv env, String name) -> Option[FunctionInfo] {
     var i = 0
     while i < env.functions.len() {
         var info = env.functions[i]
@@ -437,7 +437,7 @@ func find_function(TypeEnv env, String name) Option[FunctionInfo] {
     Option::None
 }
 
-func find_struct(TypeEnv env, String name) Option[StructInfo] {
+func find_struct(TypeEnv env, String name) -> Option[StructInfo] {
     var i = 0
     while i < env.structs.len() {
         var info = env.structs[i]
@@ -449,7 +449,7 @@ func find_struct(TypeEnv env, String name) Option[StructInfo] {
     Option::None
 }
 
-func find_local(FunctionContext ctx, String name) Option[String] {
+func find_local(FunctionContext ctx, String name) -> Option[String] {
     for local in ctx.locals {
         if local.name == name {
             return Option::Some(local.type_name)
@@ -458,7 +458,7 @@ func find_local(FunctionContext ctx, String name) Option[String] {
     Option::None
 }
 
-func add_local(mut FunctionContext ctx, LocalVar local) Result[(), CliError] {
+func add_local(mut FunctionContext ctx, LocalVar local) -> Result[(), CliError] {
     if find_local(ctx, local.name).is_some() {
         return Result::Err(cli_error("duplicate local: " + local.name))
     }
@@ -466,7 +466,7 @@ func add_local(mut FunctionContext ctx, LocalVar local) Result[(), CliError] {
     Result::Ok(())
 }
 
-func field_name_exists(Vec[FieldInfo] fields, String name) bool {
+func field_name_exists(Vec[FieldInfo] fields, String name) -> bool {
     for field in fields {
         if field.name == name {
             return true
@@ -475,7 +475,7 @@ func field_name_exists(Vec[FieldInfo] fields, String name) bool {
     false
 }
 
-func contains_string(Vec[String] values, String target) bool {
+func contains_string(Vec[String] values, String target) -> bool {
     for value in values {
         if value == target {
             return true
@@ -484,32 +484,32 @@ func contains_string(Vec[String] values, String target) bool {
     false
 }
 
-func cli_error(String message) CliError {
+func cli_error(String message) -> CliError {
     CliError { message: message }
 }
 
-func read_source(String path) Result[String, CliError] {
+func read_source(String path) -> Result[String, CliError] {
     match ReadSource(path) {
         Result::Ok(source) => Result::Ok(source),
         Result::Err(err) => Result::Err(convert_syntax_error(err)),
     }
 }
 
-func tokenize_source(String source) Result[Vec[Token], CliError] {
+func tokenize_source(String source) -> Result[Vec[Token], CliError] {
     match Tokenize(source) {
         Result::Ok(tokens) => Result::Ok(tokens),
         Result::Err(err) => Result::Err(convert_syntax_error(err)),
     }
 }
 
-func parse_tokens_text(Vec[Token] tokens) Result[SourceFile, CliError] {
+func parse_tokens_text(Vec[Token] tokens) -> Result[SourceFile, CliError] {
     match ParseTokens(tokens) {
         Result::Ok(ast) => Result::Ok(ast),
         Result::Err(err) => Result::Err(convert_syntax_error(err)),
     }
 }
 
-func convert_syntax_error(SyntaxError err) CliError {
+func convert_syntax_error(SyntaxError err) -> CliError {
     if err.line == 0 {
         return CliError {
             message: err.message,

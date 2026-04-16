@@ -16,7 +16,7 @@ struct ExecError {
     String message,
 }
 
-func Run(CompileOptions options) Result[(), ExecError] {
+func Run(CompileOptions options) -> Result[(), ExecError] {
     if options.command == "help" {
         return Result::Ok(())
     }
@@ -68,13 +68,13 @@ func Run(CompileOptions options) Result[(), ExecError] {
     }
 }
 
-func convert_frontend_error(FrontendError err) ExecError {
+func convert_frontend_error(FrontendError err) -> ExecError {
     ExecError {
         message: err.message,
     }
 }
 
-func convert_backend_error(BackendError err) ExecError {
+func convert_backend_error(BackendError err) -> ExecError {
     ExecError {
         message: err.message,
     }

@@ -119,7 +119,7 @@ ast_dump path/to/file.s
 
 - `std.fs` / `std.io` 还没有真实后端实现
 - parser 仍处于 skeleton 阶段
-- AST dump 还没有 golden test runner 自动比对 [sample.ast](/app/s/src/cmd/compiler/tests/fixtures/sample.ast)
+- AST dump 还没有 golden test runner 自动比对 [sample.ast](/app/s/src/cmd/compile/internal/compiler/tests/fixtures/sample.ast)
 - `Vec` / 字符串 / intrinsic 仍然只是最小 runtime 约定
 
 ## 8. Next Step
