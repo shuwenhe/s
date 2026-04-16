@@ -849,6 +849,12 @@ class Checker:
     def _builtin_for_use(self, path: str, local_name: str) -> Optional[TraitMethodInfo]:
         std_functions = {
             "std.env.Args": TraitMethodInfo(owner="std.env", generics=[], params=[], return_type=parse_type("Vec[String]")),
+            "std.env.Get": TraitMethodInfo(
+                owner="std.env",
+                generics=[],
+                params=[STRING],
+                return_type=parse_type("Option[String]"),
+            ),
             "std.fs.ReadToString": TraitMethodInfo(
                 owner="std.fs",
                 generics=[],
@@ -880,6 +886,48 @@ class Checker:
                 params=[parse_type("Vec[String]")],
                 return_type=parse_type("Result[(), ProcessError]"),
             ),
+            "compile.internal.gc.Main": TraitMethodInfo(
+                owner="compile.internal.gc",
+                generics=[],
+                params=[parse_type("Vec[String]")],
+                return_type=I32,
+            ),
+            "compile.internal.build.Main": TraitMethodInfo(
+                owner="compile.internal.build",
+                generics=[],
+                params=[parse_type("Vec[String]")],
+                return_type=I32,
+            ),
+            "compile.internal.dispatch.Main": TraitMethodInfo(
+                owner="compile.internal.dispatch",
+                generics=[],
+                params=[parse_type("Vec[String]")],
+                return_type=I32,
+            ),
+            "compile.internal.arch.Init": TraitMethodInfo(
+                owner="compile.internal.arch",
+                generics=[],
+                params=[STRING],
+                return_type=STRING,
+            ),
+            "internal.buildcfg.Check": TraitMethodInfo(
+                owner="internal.buildcfg",
+                generics=[],
+                params=[],
+                return_type=STRING,
+            ),
+            "internal.buildcfg.GOARCH": TraitMethodInfo(
+                owner="internal.buildcfg",
+                generics=[],
+                params=[],
+                return_type=STRING,
+            ),
+            "compile.internal.amd64.Init": TraitMethodInfo(owner="compile.internal.amd64", generics=[], params=[], return_type=UNIT),
+            "compile.internal.arm64.Init": TraitMethodInfo(owner="compile.internal.arm64", generics=[], params=[], return_type=UNIT),
+            "compile.internal.riscv64.Init": TraitMethodInfo(owner="compile.internal.riscv64", generics=[], params=[], return_type=UNIT),
+            "compile.internal.amd64p32.Init": TraitMethodInfo(owner="compile.internal.amd64p32", generics=[], params=[], return_type=UNIT),
+            "compile.internal.s390x.Init": TraitMethodInfo(owner="compile.internal.s390x", generics=[], params=[], return_type=UNIT),
+            "compile.internal.wasm.Init": TraitMethodInfo(owner="compile.internal.wasm", generics=[], params=[], return_type=UNIT),
         }
         builtin = std_functions.get(path)
         if builtin is None:

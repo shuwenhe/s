@@ -74,9 +74,9 @@ Current status:
 
 当前已经开始对应的 S 入口：
 
-- [compiler/tests/test_golden.s](/app/s/src/cmd/compiler/tests/test_golden.s)
-- [compiler/tests/test_semantic.s](/app/s/src/cmd/compiler/tests/test_semantic.s)
-- [compiler/tests/test_mir.s](/app/s/src/cmd/compiler/tests/test_mir.s)
+- [compiler/tests/test_golden.s](/app/s/src/cmd/compile/internal/compiler/tests/test_golden.s)
+- [compiler/tests/test_semantic.s](/app/s/src/cmd/compile/internal/compiler/tests/test_semantic.s)
+- [compiler/tests/test_mir.s](/app/s/src/cmd/compile/internal/compiler/tests/test_mir.s)
 
 完成标准：
 

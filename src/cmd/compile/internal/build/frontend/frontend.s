@@ -10,7 +10,7 @@ struct FrontendError {
     String message,
 }
 
-func Load(String path) Result[FrontendResult, FrontendError] {
+func Load(String path) -> Result[FrontendResult, FrontendError] {
     var frontend =
         match LoadFrontend(path) {
             Result::Ok(value) => value,
@@ -25,7 +25,7 @@ func Load(String path) Result[FrontendResult, FrontendError] {
     }
 }
 
-func convert_check_error(CheckCliError err) FrontendError {
+func convert_check_error(CheckCliError err) -> FrontendError {
     FrontendError {
         message: err.message,
     }
