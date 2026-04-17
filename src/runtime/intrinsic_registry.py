@@ -9,12 +9,12 @@ from runtime.intrinsics_impl import HostArray, IntrinsicSpec, RuntimeExit, Runti
 
 
 _LOCAL_INTRINSICS: dict[str, IntrinsicSpec] = {
-    "__runtime_len": IntrinsicSpec("__runtime_len", impl.__runtime_len, 1, "i32"),
-    "__int_to_string": IntrinsicSpec("__int_to_string", impl.__int_to_string, 1, "String"),
-    "__string_concat": IntrinsicSpec("__string_concat", impl.__string_concat, 2, "String"),
-    "__string_replace": IntrinsicSpec("__string_replace", impl.__string_replace, 3, "String"),
-    "__string_char_at": IntrinsicSpec("__string_char_at", impl.__string_char_at, 2, "String"),
-    "__string_slice": IntrinsicSpec("__string_slice", impl.__string_slice, 3, "String"),
+    "__runtime_len": IntrinsicSpec("__runtime_len", impl.__runtime_len, 1, "int32"),
+    "__int_to_string": IntrinsicSpec("__int_to_string", impl.__int_to_string, 1, "string"),
+    "__string_concat": IntrinsicSpec("__string_concat", impl.__string_concat, 2, "string"),
+    "__string_replace": IntrinsicSpec("__string_replace", impl.__string_replace, 3, "string"),
+    "__string_char_at": IntrinsicSpec("__string_char_at", impl.__string_char_at, 2, "string"),
+    "__string_slice": IntrinsicSpec("__string_slice", impl.__string_slice, 3, "string"),
     "__vec_new_array": IntrinsicSpec("__vec_new_array", impl.__vec_new_array, 1, "Array[T]"),
     "__vec_array_get": IntrinsicSpec("__vec_array_get", impl.__vec_array_get, 2, "T"),
     "__vec_array_set": IntrinsicSpec("__vec_array_set", impl.__vec_array_set, 3, "()"),
@@ -22,7 +22,7 @@ _LOCAL_INTRINSICS: dict[str, IntrinsicSpec] = {
         "__host_read_to_string",
         impl.__host_read_to_string,
         1,
-        "String",
+        "string",
         "bridge success path returns payload; host failures raise RuntimeTrap",
     ),
     "__host_write_text_file": IntrinsicSpec(
@@ -36,21 +36,14 @@ _LOCAL_INTRINSICS: dict[str, IntrinsicSpec] = {
         "__host_make_temp_dir",
         impl.__host_make_temp_dir,
         1,
-        "String",
+        "string",
         "bridge success path returns payload; host failures raise RuntimeTrap",
     ),
     "__host_build_executable": IntrinsicSpec(
         "__host_build_executable",
         impl.__host_build_executable,
         2,
-        "i32",
-        "bridge success path returns exit code; host failures raise RuntimeTrap",
-    ),
-    "__host_run_executable": IntrinsicSpec(
-        "__host_run_executable",
-        impl.__host_run_executable,
-        1,
-        "i32",
+        "int32",
         "bridge success path returns exit code; host failures raise RuntimeTrap",
     ),
     "__host_run_process": IntrinsicSpec(
@@ -64,42 +57,42 @@ _LOCAL_INTRINSICS: dict[str, IntrinsicSpec] = {
         "__host_run_process1",
         impl.__host_run_process1,
         1,
-        "i32",
+        "int32",
         "bridge success path returns exit code; host failures raise RuntimeTrap",
     ),
     "__host_run_process5": IntrinsicSpec(
         "__host_run_process5",
         impl.__host_run_process5,
         5,
-        "i32",
+        "int32",
         "bridge success path returns exit code; host failures raise RuntimeTrap",
     ),
     "__host_run_process_argv": IntrinsicSpec(
         "__host_run_process_argv",
         impl.__host_run_process_argv,
         1,
-        "i32",
+        "int32",
         "bridge success path returns exit code; host failures raise RuntimeTrap",
     ),
     "__host_run_shell": IntrinsicSpec(
         "__host_run_shell",
         impl.__host_run_shell,
         1,
-        "i32",
+        "int32",
         "bridge success path returns exit code; host failures raise RuntimeTrap",
     ),
     "__host_args": IntrinsicSpec(
         "__host_args",
         impl.__host_args,
         0,
-        "Vec[String]",
+        "Vec[string]",
         "bridge success path returns argv without the executable name",
     ),
     "__host_get_env": IntrinsicSpec(
         "__host_get_env",
         impl.__host_get_env,
         1,
-        "Option[String]",
+        "Option[string]",
         "bridge success path returns environment values when present",
     ),
     "__host_exit": IntrinsicSpec(
@@ -117,7 +110,7 @@ _LOCAL_INTRINSICS: dict[str, IntrinsicSpec] = {
 }
 
 
-def _load_manifest() -> dict[str, IntrinsicSpec]:
+def _load_manifest()  dict[str, IntrinsicSpec]:
     manifest_path = Path(__file__).with_name("intrinsics_manifest.json")
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest_specs: dict[str, IntrinsicSpec] = {}
@@ -136,7 +129,7 @@ def _load_manifest() -> dict[str, IntrinsicSpec]:
     return manifest_specs
 
 
-def _validate_manifest(manifest_specs: dict[str, IntrinsicSpec]) -> None:
+def _validate_manifest(manifest_specs: dict[str, IntrinsicSpec])  None:
     local_names = set(_LOCAL_INTRINSICS)
     manifest_names = set(manifest_specs)
     missing = sorted(local_names - manifest_names)
@@ -160,14 +153,14 @@ INTRINSICS = _load_manifest()
 _validate_manifest(INTRINSICS)
 
 
-def get_intrinsic(name: str) -> IntrinsicSpec:
+def get_intrinsic(name: str)  IntrinsicSpec:
     try:
         return INTRINSICS[name]
     except KeyError as exc:
         raise RuntimeTrap(f"unknown intrinsic {name}") from exc
 
 
-def invoke_intrinsic(name: str, *args: Any) -> Any:
+def invoke_intrinsic(name: str, *args: Any)  Any:
     spec = get_intrinsic(name)
     if len(args) != spec.arity:
         raise RuntimeTrap(
@@ -176,9 +169,9 @@ def invoke_intrinsic(name: str, *args: Any) -> Any:
     return spec.func(*args)
 
 
-def list_intrinsics() -> Iterable[str]:
+def list_intrinsics()  Iterable[str]:
     return sorted(INTRINSICS)
 
 
-def list_specs() -> list[IntrinsicSpec]:
+def list_specs()  list[IntrinsicSpec]:
     return [INTRINSICS[name] for name in list_intrinsics()]

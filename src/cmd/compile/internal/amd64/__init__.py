@@ -5,7 +5,7 @@ from compiler.internal.ssagen import LoweredProgram, build_executable
 from .isel import arch_name, link_program, select_instructions
 
 
-def Init(info: ArchInfo) -> None:
+def Init(info: ArchInfo) None:
     info.name = "amd64"
     info.emitter = build_executable
 

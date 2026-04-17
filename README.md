@@ -144,7 +144,7 @@ Conventions:
 
 ```s
 bool
-i8 i16 i32 i64 isize
+i8 i16 int32 i64 isize
 u8 u16 u32 u64 usize
 f32 f64
 char
@@ -154,7 +154,7 @@ str
 Notes:
 
 - `str` is a UTF-8 string slice view
-- growable heap strings use `String`
+- growable heap strings use `string`
 - byte sequences use `[]u8`
 
 ### Control Flow
@@ -184,7 +184,7 @@ while running {
 ### Functions
 
 ```s
-func Add(i32 a, i32 b) i32 {
+func Add(int32 a, int32 b) int32 {
     a + b
 }
 
@@ -205,7 +205,7 @@ Default rules:
 ```s
 struct User {
     u64 id
-    String name
+    string name
     bool active
 }
 
@@ -265,7 +265,7 @@ S uses a statically typed, strongly typed system. Type inference is supported, b
 #### 1. No Implicit Numeric Conversion By Default
 
 ```s
-i32 a = 1
+int32 a = 1
 i64 b = 2
 let c = a as i64 + b
 ```
@@ -314,7 +314,7 @@ A more engineering-oriented borrow-lite approach is possible:
 
 ```s
 func len(&str s) usize
-func push(&mut Vec[i32] v, i32 value)
+func push(&mut Vec[int32] v, int32 value)
 func consume(Buf buf) Result[(), Error]
 ```
 
@@ -580,7 +580,7 @@ If S wants to become a real systems language, C ABI interoperability has to be a
 ### C FFI Example
 
 ```s
-extern "C" func puts(*const u8 s) i32
+extern "C" func puts(*const u8 s) int32
 ```
 
 Design goals:
@@ -728,7 +728,7 @@ Goals:
 
 Priority work:
 
-- `String`
+- `string`
 - `Vec`
 - `Map`
 - IO

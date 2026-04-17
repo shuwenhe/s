@@ -2,23 +2,32 @@ package compile.internal.build.backend
 
 use std.fs.MakeTempDir
 use std.io.eprintln
+use std.process.RunProcess
+use std.vec.Vec
 
 func Build(string path, string output) int32 {
     __host_build_executable(path, output)
 }
 
 func Run(string path) int32 {
-    var temp_dir_result = MakeTempDir("s-build-")
-    if temp_dir_result.is_err() {
+    var tempDirResult = MakeTempDir("s-build-")
+    if tempDirResult.is_err() {
         eprintln("run failed: could not create temporary output directory");
         return 1
     }
 
-    var output_path = temp_dir_result.unwrap() + "/a.out"
-    if Build(path, output_path) != 0 {
+    var outputPath = tempDirResult.unwrap() + "/a.out"
+    if Build(path, outputPath) != 0 {
         eprintln("run failed: build step failed");
         return 1
     }
 
-    return __host_run_executable(output_path)
+    var runArgv = Vec[string]()
+    runArgv.push(outputPath);
+    var runResult = RunProcess(runArgv)
+    if runResult.is_err() {
+        eprintln("run failed: process execution failed");
+        return 1
+    }
+    return 0
 }

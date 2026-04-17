@@ -11,7 +11,7 @@ from runtime.intrinsic_dispatch import IntrinsicCall, dispatch
 from runtime.python_bridge import INTRINSICS, RuntimeExit, invoke_intrinsic
 
 
-def main() -> int:
+def main()  int:
     env_value = invoke_intrinsic("__host_get_env", "PATH")
     checks = [
         ("manifest loaded", "__host_exit" in INTRINSICS),

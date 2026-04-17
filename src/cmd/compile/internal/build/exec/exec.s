@@ -10,19 +10,21 @@ use compile.internal.semantic.CheckText
 use compile.internal.syntax.ParseSource
 use compile.internal.syntax.ReadSource
 use compile.internal.syntax.Tokenize
+use compile.internal.build.parse.CompileOptions
+
 func Run(Vec[string] options) int32 {
     if options[0] == "help" {
         return 0
     }
 
-    var source_result = ReadSource(options[1])
-    if source_result.is_err() {
+    var sourceResult = ReadSource(options[1])
+    if sourceResult.is_err() {
         return 1
     }
-    var source = source_result.unwrap()
+    var source = sourceResult.unwrap()
     if options[0] == "check" {
-        var parse_result = ParseSource(source)
-        if parse_result.is_err() {
+        var parseResult = ParseSource(source)
+        if parseResult.is_err() {
             return 1
         }
         if CheckText(source) != 0 {
@@ -33,20 +35,20 @@ func Run(Vec[string] options) int32 {
     }
 
     if options[0] == "tokens" {
-        var tokens_result = Tokenize(source)
-        if tokens_result.is_err() {
+        var tokensResult = Tokenize(source)
+        if tokensResult.is_err() {
             return 1
         }
-        EmitTokens(tokens_result.unwrap());
+        EmitTokens(tokensResult.unwrap());
         return 0
     }
 
     if options[0] == "ast" {
-        var ast_result = ParseSource(source)
-        if ast_result.is_err() {
+        var astResult = ParseSource(source)
+        if astResult.is_err() {
             return 1
         }
-        EmitAst(ast_result.unwrap());
+        EmitAst(astResult.unwrap());
         return 0
     }
 

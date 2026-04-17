@@ -9,7 +9,7 @@
               "receiver_mode": "ref",
               "receiver_policy": "shared_or_addressable",
               "params": [],
-              "return_type": "i32"
+              "return_type": "int32"
             }
           ]
         }
@@ -33,7 +33,7 @@
     }
   },
   "types": {
-    "String": {
+    "string": {
       "traits": [
         "Clone"
       ],
@@ -46,7 +46,7 @@
               "receiver_mode": "ref",
               "receiver_policy": "shared_or_addressable",
               "params": [],
-              "return_type": "i32"
+              "return_type": "int32"
             }
           ]
         }
@@ -69,7 +69,7 @@
               "receiver_mode": "ref",
               "receiver_policy": "shared_or_addressable",
               "params": [],
-              "return_type": "i32"
+              "return_type": "int32"
             }
           ]
         },
@@ -147,13 +147,13 @@
       "traits": [],
       "fields": {
         "size": {
-          "type": "i32",
+          "type": "int32",
           "visibility": "pub",
           "readable": true,
           "writable": false
         },
         "hidden": {
-          "type": "i32",
+          "type": "int32",
           "visibility": "priv",
           "readable": false,
           "writable": false

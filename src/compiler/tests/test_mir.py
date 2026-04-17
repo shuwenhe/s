@@ -10,11 +10,11 @@ from compiler.typesys import parse_type
 
 
 class MIRTests(unittest.TestCase):
-    def test_if_lowering_emits_block_param_join(self) -> None:
+    def test_if_lowering_emits_block_param_join(self)  None:
         source = """
 package demo.mir
 
-pub func choose(flag: bool) -> i32 {
+pub func choose(flag: bool) int32 {
     if flag {
         1
     } else {
@@ -34,11 +34,11 @@ pub func choose(flag: bool) -> i32 {
         )
         self.assertTrue(all(edge.id for edge in arg_edges))
 
-    def test_locals_are_versioned(self) -> None:
+    def test_locals_are_versioned(self)  None:
         source = """
 package demo.mir
 
-pub func shadow(x: i32) -> i32 {
+pub func shadow(x: int32) int32 {
     let x = 1
     x
 }
@@ -51,11 +51,11 @@ pub func shadow(x: i32) -> i32 {
         self.assertIn(0, versions)
         self.assertIn(1, versions)
 
-    def test_ownership_plan_drives_move_and_drop(self) -> None:
+    def test_ownership_plan_drives_move_and_drop(self)  None:
         source = """
 package demo.mir
 
-pub func take(text: String) -> String {
+pub func take(text: string) string {
     let other = text
     other
 }
@@ -65,20 +65,20 @@ pub func take(text: String) -> String {
         graph = lower_block(
             func.body,
             [param.name for param in func.sig.params],
-            {"text": parse_type("String"), "other": parse_type("String")},
-            make_plan({"text": parse_type("String"), "other": parse_type("String")}),
+            {"text": parse_type("string"), "other": parse_type("string")},
+            make_plan({"text": parse_type("string"), "other": parse_type("string")}),
         )
         moves = [stmt for block in graph.blocks.values() for stmt in block.statements if isinstance(stmt, MoveStmt)]
         drops = [stmt for block in graph.blocks.values() for stmt in block.statements if isinstance(stmt, DropStmt)]
         self.assertTrue(moves)
         self.assertTrue(drops)
 
-    def test_prelude_decl_has_traits_and_index(self) -> None:
+    def test_prelude_decl_has_traits_and_index(self)  None:
         self.assertEqual(PRELUDE.name, "std.prelude")
         self.assertIn("Len", PRELUDE.traits)
-        self.assertIn("Clone", PRELUDE.types["String"].traits)
+        self.assertIn("Clone", PRELUDE.types["string"].traits)
         self.assertEqual(PRELUDE.types["Vec"].index_result_kind, "first_type_arg")
-        self.assertIn("Len", PRELUDE.types["String"].default_impls)
+        self.assertIn("Len", PRELUDE.types["string"].default_impls)
         self.assertEqual(PRELUDE.types["FileInfo"].fields["size"].visibility, "pub")
         self.assertFalse(PRELUDE.types["FileInfo"].fields["size"].writable)
         self.assertFalse(PRELUDE.types["FileInfo"].fields["hidden"].readable)

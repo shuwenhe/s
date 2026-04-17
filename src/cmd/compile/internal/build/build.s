@@ -5,32 +5,24 @@ use compile.internal.build.parse.ParseOptions
 use compile.internal.build.report.Error as ReportError
 use std.vec.Vec
 
-func Main(Vec[string] args) int32 {
-    var parsed = ParseOptions(args)
-    if parsed.is_err() {
-        report_error("parse failed")
-    }
-    if parsed.is_err() {
-        return 1
-    }
-
-    var options = parsed.unwrap()
+func main(Vec[string] args)  int32 {
+    var options = ParseOptions(args)
     if options[0] == "help" {
         return 0
     }
 
-    var exec_result = ExecRun(options)
+    var execResult = ExecRun(options)
     if options[0] == "run" {
-        return exec_result
+        return execResult
     }
-    if exec_result != 0 {
-        report_error("execution failed");
+    if execResult != 0 {
+        reportError("execution failed");
         return 1
     }
 
     0
 }
 
-func report_error(string message) () {
+func reportError(string message)  () {
     ReportError(message)
 }
