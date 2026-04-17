@@ -18,18 +18,18 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 class SemanticTests(unittest.TestCase):
-    def test_check_source_success(self) -> None:
+    def test_check_source_success(self)  None:
         source = (FIXTURES / "check_ok.s").read_text()
         result = check_source(parse_source(source))
         self.assertTrue(result.ok, [d.message for d in result.diagnostics])
 
-    def test_check_source_failure(self) -> None:
+    def test_check_source_failure(self)  None:
         source = (FIXTURES / "check_fail.s").read_text()
         result = check_source(parse_source(source))
         self.assertFalse(result.ok)
-        self.assertIn("let value expected bool, got i32", [d.message for d in result.diagnostics])
+        self.assertIn("let value expected bool, got int32", [d.message for d in result.diagnostics])
 
-    def test_cli_check_success(self) -> None:
+    def test_cli_check_success(self)  None:
         proc = subprocess.run(
             [sys.executable, "-m", "compiler", "check", str(FIXTURES / "check_ok.s")],
             cwd="/app/s/src",
@@ -40,7 +40,7 @@ class SemanticTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("ok:", proc.stdout)
 
-    def test_cli_check_failure(self) -> None:
+    def test_cli_check_failure(self)  None:
         proc = subprocess.run(
             [sys.executable, "-m", "compiler", "check", str(FIXTURES / "check_fail.s")],
             cwd="/app/s/src",
@@ -49,9 +49,9 @@ class SemanticTests(unittest.TestCase):
             check=False,
         )
         self.assertEqual(proc.returncode, 1)
-        self.assertIn("error: let value expected bool, got i32", proc.stderr)
+        self.assertIn("error: let value expected bool, got int32", proc.stderr)
 
-    def test_borrow_checker_failure(self) -> None:
+    def test_borrow_checker_failure(self)  None:
         source = (FIXTURES / "borrow_fail.s").read_text()
         result = check_source(parse_source(source))
         self.assertFalse(result.ok)
@@ -59,69 +59,69 @@ class SemanticTests(unittest.TestCase):
         self.assertIn("cannot mutably borrow value while borrowed", messages)
         self.assertIn("use of moved value text", messages)
 
-    def test_generic_bound_failure(self) -> None:
+    def test_generic_bound_failure(self)  None:
         source = (FIXTURES / "generic_bound_fail.s").read_text()
         result = check_source(parse_source(source))
         self.assertFalse(result.ok)
         messages = [d.message for d in result.diagnostics]
-        self.assertIn("type String does not satisfy bound Copy", messages)
+        self.assertIn("type string does not satisfy bound Copy", messages)
 
-    def test_branch_dataflow_failure(self) -> None:
+    def test_branch_dataflow_failure(self)  None:
         source = (FIXTURES / "branch_move_fail.s").read_text()
         result = check_source(parse_source(source))
         self.assertFalse(result.ok)
         messages = [d.message for d in result.diagnostics]
         self.assertIn("use of moved value text", messages)
 
-    def test_member_and_trait_method_success(self) -> None:
+    def test_member_and_trait_method_success(self)  None:
         source = (FIXTURES / "member_method_sample.s").read_text()
         result = check_source(parse_source(source))
         self.assertTrue(result.ok, [d.message for d in result.diagnostics])
 
-    def test_prelude_method_success(self) -> None:
+    def test_prelude_method_success(self)  None:
         source = (FIXTURES / "prelude_methods_ok.s").read_text()
         result = check_source(parse_source(source))
         self.assertTrue(result.ok, [d.message for d in result.diagnostics])
 
-    def test_method_candidate_conflict(self) -> None:
+    def test_method_candidate_conflict(self)  None:
         source = (FIXTURES / "method_conflict_fail.s").read_text()
         result = check_source(parse_source(source))
         self.assertFalse(result.ok)
         messages = [d.message for d in result.diagnostics]
         self.assertTrue(any("multiple method candidates" in message for message in messages), messages)
 
-    def test_receiver_auto_borrow_success(self) -> None:
+    def test_receiver_auto_borrow_success(self)  None:
         source = (FIXTURES / "receiver_auto_borrow_ok.s").read_text()
         result = check_source(parse_source(source))
         self.assertTrue(result.ok, [d.message for d in result.diagnostics])
 
-    def test_prelude_loaded_from_decl(self) -> None:
+    def test_prelude_loaded_from_decl(self)  None:
         self.assertEqual(PRELUDE.name, "std.prelude")
         self.assertIn("Vec", PRELUDE.types)
         self.assertIn("push", PRELUDE.types["Vec"].methods)
         self.assertIn("Len", PRELUDE.traits)
         self.assertEqual(PRELUDE.types["Vec"].methods["push"][0].receiver_policy, "addressable")
 
-    def test_builtin_field_success(self) -> None:
+    def test_builtin_field_success(self)  None:
         source = (FIXTURES / "builtin_field_ok.s").read_text()
         result = check_source(parse_source(source))
         self.assertTrue(result.ok, [d.message for d in result.diagnostics])
 
-    def test_std_result_option_variant_payloads(self) -> None:
+    def test_std_result_option_variant_payloads(self)  None:
         source = """
 package demo.variant_payload
 
 use std.option.Option
 use std.result.Result
 
-func unwrap_or_zero(Result[i32, String] value) -> i32 {
+func unwrap_or_zero(Result[int32, string] value) int32 {
     match value {
         Ok(number) => number,
         Err(_) => 0,
     }
 }
 
-func unwrap_or_default(Option[String] value) -> String {
+func unwrap_or_default(Option[string] value) string {
     match value {
         Some(text) => text,
         None => "fallback",
@@ -131,7 +131,7 @@ func unwrap_or_default(Option[String] value) -> String {
         result = check_source(parse_source(source))
         self.assertTrue(result.ok, [d.message for d in result.diagnostics])
 
-    def test_std_use_imported_functions_and_fields(self) -> None:
+    def test_std_use_imported_functions_and_fields(self)  None:
         source = """
 package demo.std
 
@@ -141,7 +141,7 @@ use std.process.RunProcess
 use std.result.Result
 use std.vec.Vec
 
-func main() -> i32 {
+func main() int32 {
     var args = Args()
     var text =
         match ReadToString("demo.txt") {
@@ -158,13 +158,13 @@ func main() -> i32 {
         result = check_source(parse_source(source))
         self.assertTrue(result.ok, [d.message for d in result.diagnostics])
 
-    def test_never_branch_from_early_return(self) -> None:
+    def test_never_branch_from_early_return(self)  None:
         source = """
 package demo.never_branch
 
 use std.result.Result
 
-func pick(Result[i32, String] value) -> Result[i32, String] {
+func pick(Result[int32, string] value) Result[int32, string] {
     var number =
         match value {
             Ok(v) => v,
@@ -178,7 +178,7 @@ func pick(Result[i32, String] value) -> Result[i32, String] {
         result = check_source(parse_source(source))
         self.assertTrue(result.ok, [d.message for d in result.diagnostics])
 
-    def test_cli_build_sum_success(self) -> None:
+    def test_cli_build_sum_success(self)  None:
         proc = subprocess.run(
             [sys.executable, "-m", "compiler", "build", "/app/s/misc/examples/s/sum.s", "-o", "/tmp/s_sum_test"],
             cwd="/app/s/src",
@@ -189,7 +189,7 @@ func pick(Result[i32, String] value) -> Result[i32, String] {
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("built:", proc.stdout)
 
-    def test_cli_build_sum_binary_output(self) -> None:
+    def test_cli_build_sum_binary_output(self)  None:
         build = subprocess.run(
             [sys.executable, "-m", "compiler", "build", "/app/s/misc/examples/s/sum.s", "-o", "/tmp/s_sum_test"],
             cwd="/app/s/src",
@@ -209,7 +209,7 @@ func pick(Result[i32, String] value) -> Result[i32, String] {
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "5050")
 
-    def test_hosted_build_sum_binary_output(self) -> None:
+    def test_hosted_build_sum_binary_output(self)  None:
         code = run_cli(["build", "/app/s/misc/examples/s/sum.s", "-o", "/tmp/s_sum_hosted"])
         self.assertEqual(code, 0)
 
@@ -223,7 +223,7 @@ func pick(Result[i32, String] value) -> Result[i32, String] {
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "5050")
 
-    def test_hosted_build_relative_output_goes_to_app_tmp(self) -> None:
+    def test_hosted_build_relative_output_goes_to_app_tmp(self)  None:
         output_path = Path("/app/tmp/s_sum_relative_test")
         if output_path.exists():
             output_path.unlink()
@@ -242,15 +242,15 @@ func pick(Result[i32, String] value) -> Result[i32, String] {
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "5050")
 
-    def test_hosted_build_vec_push_and_string_concat(self) -> None:
+    def test_hosted_build_vec_push_and_string_concat(self)  None:
         source = """
 package demo.vec_concat
 
 use std.io.println
 use std.vec.Vec
 
-func main() -> int {
-    var parts = Vec[String]()
+func main() int {
+    var parts = Vec[string]()
     parts.push("4");
     parts.push("2");
     println(parts[0] + parts[1]);
@@ -275,7 +275,7 @@ func main() -> int {
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(run.stdout.strip(), "42")
 
-    def test_hosted_build_match_while_vec_index(self) -> None:
+    def test_hosted_build_match_while_vec_index(self)  None:
         source = """
 package demo.match_while_vec
 
@@ -283,19 +283,19 @@ use std.io.println
 use std.option.Option
 use std.vec.Vec
 
-func pick(Option[String] value) -> String {
+func pick(Option[string] value) string {
     return match value {
         Some(text) => text,
         None => "2",
     }
 }
 
-func tail() -> Option[String] {
+func tail() Option[string] {
     return Some("2")
 }
 
-func main() -> int {
-    var parts = Vec[String]()
+func main() int {
+    var parts = Vec[string]()
     var index = 0
     while index <= 0 {
         parts.push("4");
@@ -325,7 +325,7 @@ func main() -> int {
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(run.stdout.strip(), "42")
 
-    def test_hosted_build_s_native_runner_binary_output(self) -> None:
+    def test_hosted_build_s_native_runner_binary_output(self)  None:
         code = run_cli(["build", "/app/s/src/runtime/runner.s", "-o", "/tmp/s_native_hosted"])
         self.assertEqual(code, 0)
         binary = Path("/tmp/s_native_hosted").read_bytes()
@@ -360,7 +360,7 @@ func main() -> int {
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "5050")
 
-    def test_cmd_s_hosted_build_sum_binary_output(self) -> None:
+    def test_cmd_s_hosted_build_sum_binary_output(self)  None:
         result = run_cmd_s(["build", "/app/s/misc/examples/s/sum.s", "-o", "/tmp/s_sum_cmd_s"])
         self.assertEqual(result.exit_code, 0)
 
@@ -374,7 +374,7 @@ func main() -> int {
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "5050")
 
-    def test_native_runner_build_sum_binary_output(self) -> None:
+    def test_native_runner_build_sum_binary_output(self)  None:
         build_runner = subprocess.run(
             ["/app/s/misc/scripts/build_native_runner.sh", "/tmp/s_native_test"],
             cwd="/app",
@@ -403,17 +403,17 @@ func main() -> int {
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual(run.stdout.strip(), "5050")
 
-    def test_s_native_runner_interprets_int_literal_shape(self) -> None:
+    def test_s_native_runner_interprets_int_literal_shape(self)  None:
         runner = Interpreter(parse_source(Path("/app/s/src/runtime/runner.s").read_text()))
         result = runner.call_function(
             "compileMessageForSource",
             [
-                "package demo.literal\n\nuse std.io.println\n\nfunc main() -> int {\n    println(42);\n    0\n}\n"
+                "package demo.literal\n\nuse std.io.println\n\nfunc main() int {\n    println(42);\n    0\n}\n"
             ],
         )
         self.assertEqual(result, ("Some", "42\n"))
 
-    def test_s_native_runner_encodes_extended_ascii(self) -> None:
+    def test_s_native_runner_encodes_extended_ascii(self)  None:
         runner = Interpreter(parse_source(Path("/app/s/src/runtime/runner.s").read_text()))
         result = runner.call_function("encodeBytes", ["@[]{}~"])
         self.assertEqual(result, "64, 91, 93, 123, 125, 126")

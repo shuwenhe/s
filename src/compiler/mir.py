@@ -82,11 +82,11 @@ class Terminator:
     edges: List[ControlEdge] = field(default_factory=list)
 
     @property
-    def targets(self) -> List[int]:
+    def targets(self)  List[int]:
         return [edge.target for edge in self.edges]
 
     @property
-    def target_args(self) -> List[tuple[Operand, ...]]:
+    def target_args(self)  List[tuple[Operand, ...]]:
         return [edge.args for edge in self.edges]
 
 
@@ -111,7 +111,7 @@ def lower_block(
     param_names: Optional[List[str]] = None,
     type_env: Optional[Dict[str, Type]] = None,
     ownership_plan: Optional[Dict[str, OwnershipDecision]] = None,
-) -> MIRGraph:
+)  MIRGraph:
     builder = _MIRBuilder(param_names or [], type_env or {}, ownership_plan or {})
     entry, exits = builder.lower_block(block)
     exit_id = builder.new_block()
@@ -126,7 +126,7 @@ class _MIRBuilder:
         param_names: List[str],
         type_env: Dict[str, Type],
         ownership_plan: Dict[str, OwnershipDecision],
-    ) -> None:
+    )  None:
         self.blocks: Dict[int, BasicBlock] = {}
         self.locals: Dict[int, LocalSlot] = {}
         self.name_to_slot: Dict[str, int] = {}
@@ -139,24 +139,24 @@ class _MIRBuilder:
         for name in param_names:
             self.bind_name(name, "param", self.type_env.get(name, UnknownType()))
 
-    def new_block(self) -> int:
+    def new_block(self)  int:
         block_id = self.next_block_id
         self.next_block_id += 1
         self.blocks[block_id] = BasicBlock(block_id)
         return block_id
 
-    def new_temp(self) -> int:
+    def new_temp(self)  int:
         slot_id = self.next_local_id
         self.next_local_id += 1
         self.locals[slot_id] = LocalSlot(slot_id, f"_t{slot_id}", "temp", 0, UnknownType())
         return slot_id
 
-    def edge(self, target: int, args: tuple[Operand, ...] = (), label: str = "edge") -> ControlEdge:
+    def edge(self, target: int, args: tuple[Operand, ...] = (), label: str = "edge")  ControlEdge:
         edge_id = f"{label}:{self.next_edge_id}"
         self.next_edge_id += 1
         return ControlEdge(edge_id, target, args)
 
-    def bind_name(self, name: str, kind: str, ty: Optional[Type] = None) -> int:
+    def bind_name(self, name: str, kind: str, ty: Optional[Type] = None)  int:
         if kind == "param" and name in self.name_to_slot:
             return self.name_to_slot[name]
         version = self.name_versions.get(name, -1) + 1
@@ -167,23 +167,23 @@ class _MIRBuilder:
         self.name_to_slot[name] = slot_id
         return slot_id
 
-    def slot_for_name(self, name: str) -> int:
+    def slot_for_name(self, name: str)  int:
         return self.bind_name(name, "local", self.type_env.get(name, UnknownType()))
 
-    def _decision_for_slot(self, slot_id: int) -> OwnershipDecision:
+    def _decision_for_slot(self, slot_id: int)  OwnershipDecision:
         slot = self.locals[slot_id]
         if slot.name in self.ownership_plan:
             return self.ownership_plan[slot.name]
         return make_decision(slot.ty)
 
-    def _consume_stmt(self, target: int, value: Operand) -> object:
+    def _consume_stmt(self, target: int, value: Operand)  object:
         if value.kind == "slot":
             decision = self._decision_for_slot(value.value)
             if not decision.copyable:
                 return MoveStmt(target, value)
         return CopyStmt(target, value)
 
-    def lower_block(self, block: BlockExpr) -> tuple[int, List[int]]:
+    def lower_block(self, block: BlockExpr)  tuple[int, List[int]]:
         entry = self.new_block()
         current = entry
         for stmt in block.statements:
@@ -196,7 +196,7 @@ class _MIRBuilder:
             self._emit_drops(block_id)
         return entry, exits
 
-    def _lower_stmt(self, stmt, current: int) -> int:
+    def _lower_stmt(self, stmt, current: int)  int:
         if isinstance(stmt, LetStmt):
             inferred = parse_type(stmt.type_name) if stmt.type_name else self._infer_expr_type(stmt.value)
             slot = self.bind_name(stmt.name, "local", inferred)
@@ -216,7 +216,7 @@ class _MIRBuilder:
         self.blocks[current].statements.append(EvalStmt("stmt", (stmt,)))
         return current
 
-    def _lower_tail_expr(self, expr: Expr, current: int, entry: int) -> tuple[int, List[int]]:
+    def _lower_tail_expr(self, expr: Expr, current: int, entry: int)  tuple[int, List[int]]:
         if isinstance(expr, IfExpr):
             cond = self._lower_expr(expr.condition, current)
             then_entry, then_exits = self.lower_block(expr.then_branch)
@@ -343,7 +343,7 @@ class _MIRBuilder:
         self.blocks[current].statements.append(EvalStmt("yield", (value,)))
         return entry, [current]
 
-    def _lower_expr(self, expr: Expr, current: int) -> Operand:
+    def _lower_expr(self, expr: Expr, current: int)  Operand:
         if isinstance(expr, NameExpr):
             return Operand("slot", self.slot_for_name(expr.name))
         if isinstance(expr, BorrowExpr):
@@ -393,31 +393,31 @@ class _MIRBuilder:
         self.locals[slot] = LocalSlot(slot, f"_t{slot}", "temp", 0, self._infer_expr_type(expr))
         return Operand("slot", slot)
 
-    def _emit_drops(self, block_id: int) -> None:
+    def _emit_drops(self, block_id: int)  None:
         for slot_id, slot in sorted(self.locals.items(), reverse=True):
             if slot.kind in {"local", "loop", "param"} and self._decision_for_slot(slot_id).droppable:
                 self.blocks[block_id].statements.append(DropStmt(slot_id))
 
-    def _operand_type(self, operand: Operand) -> Type:
+    def _operand_type(self, operand: Operand)  Type:
         if operand.kind == "slot":
             return self.locals[operand.value].ty
         return UnknownType("literal")
 
-    def _infer_expr_type(self, expr: Expr) -> Type:
+    def _infer_expr_type(self, expr: Expr)  Type:
         if hasattr(expr, "inferred_type") and getattr(expr, "inferred_type", None):
             return parse_type(expr.inferred_type)
         if hasattr(expr, "value") and isinstance(getattr(expr, "value"), str) and getattr(expr, "value").isdigit():
-            return parse_type("i32")
+            return parse_type("int32")
         return UnknownType("expr")
 
-    def _infer_binary_type(self, op: str, left: Operand, right: Operand) -> Type:
+    def _infer_binary_type(self, op: str, left: Operand, right: Operand)  Type:
         if op in {"+", "-", "*", "/", "%"}:
-            return parse_type("i32")
+            return parse_type("int32")
         if op in {"==", "!=", "<", "<=", ">", ">=", "&&", "||"}:
             return parse_type("bool")
         return UnknownType("binary")
 
-    def _infer_iter_type(self, operand: Operand) -> Type:
+    def _infer_iter_type(self, operand: Operand)  Type:
         if operand.kind == "slot":
             ty = self.locals[operand.value].ty
             if hasattr(ty, "args") and getattr(ty, "args", None):

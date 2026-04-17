@@ -17,7 +17,7 @@ class HostedCommandResult:
     exit_code: int
 
 
-def run_cmd_s(argv: list[str]) -> HostedCommandResult:
+def run_cmd_s(argv: list[str])  HostedCommandResult:
     """
     Hosted execution model for /app/s/src/cmd/s/main.s:
 
@@ -34,7 +34,7 @@ def run_cmd_s(argv: list[str]) -> HostedCommandResult:
         return HostedCommandResult(exit_code=exc.code)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None)  int:
     args = list(sys.argv[1:] if argv is None else argv)
     result = run_cmd_s(args)
     return result.exit_code

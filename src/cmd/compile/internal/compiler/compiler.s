@@ -1,19 +1,19 @@
 package compile.internal.compiler
 
 use compile.internal.arch.Init as archInit
-use compile.internal.build.Main as buildMain
+use compile.internal.build.main as buildMain
 use internal.buildcfg.Check as buildcfgCheck
 use internal.buildcfg.GOARCH as buildcfgGOARCH
 use std.vec.Vec
 
-func Main(Vec[string] args) int32 {
-    var buildcfg_err = buildcfgCheck()
-    if buildcfg_err != "" {
+func main(Vec[string] args) int32 {
+    var buildcfgErr = buildcfgCheck()
+    if buildcfgErr != "" {
         return 2
     }
 
-    var arch_err = archInit(buildcfgGOARCH())
-    if arch_err != "" {
+    var archErr = archInit(buildcfgGOARCH())
+    if archErr != "" {
         return 2
     }
 

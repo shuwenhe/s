@@ -43,12 +43,12 @@ source file
 ```s
 use std.fs.read_to_string
 
-func read_to_string(String path) Result[String, FsError]
+func read_to_string(string path) Result[string, FsError]
 ```
 
 当前只依赖这些性质：
 
-- 输入是拥有型 `String`
+- 输入是拥有型 `string`
 - 成功时返回完整源码文本
 - 失败时返回某种错误值
 - driver 只关心成功或失败，不依赖 `FsError` 的详细字段
@@ -61,8 +61,8 @@ func read_to_string(String path) Result[String, FsError]
 use std.io.println
 use std.io.eprintln
 
-func println(String text) ()
-func eprintln(String text) ()
+func println(string text) ()
+func eprintln(string text) ()
 ```
 
 当前要求仍然只是最小输出能力：
@@ -75,16 +75,16 @@ func eprintln(String text) ()
 `ast_dump` 当前假设 parser 提供如下最小接口：
 
 ```s
-func parse_source(String source) Result[SourceFile, ParseError]
+func parse_source(string source) Result[SourceFile, ParseError]
 ```
 
 以及如下最小错误形状：
 
 ```s
 struct ParseError {
-    String message
-    i32 line
-    i32 column
+    string message
+    int32 line
+    int32 column
 }
 ```
 
@@ -99,7 +99,7 @@ struct ParseError {
 当前入口约定如下：
 
 ```s
-func main(Vec[String] args) i32
+func main(Vec[string] args) int32
 ```
 
 最小调用形状：

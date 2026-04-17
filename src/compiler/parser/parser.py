@@ -49,7 +49,7 @@ class ParseError(Exception):
     pass
 
 
-def parse_source(source: str) -> SourceFile:
+def parse_source(source: str)  SourceFile:
     tokens = Lexer(source).tokenize()
     return Parser(tokens).parse_source_file()
 
@@ -58,10 +58,10 @@ def parse_source(source: str) -> SourceFile:
 class Parser:
     tokens: List[Token]
 
-    def __post_init__(self) -> None:
+    def __post_init__(self)  None:
         self.index = 0
 
-    def parse_source_file(self) -> SourceFile:
+    def parse_source_file(self)  SourceFile:
         self._expect_keyword("package")
         package = self._parse_path()
         uses: List[UseDecl] = []
@@ -72,7 +72,7 @@ class Parser:
             items.append(self._parse_item())
         return SourceFile(package=package, uses=uses, items=items)
 
-    def _parse_use_decl(self) -> UseDecl:
+    def _parse_use_decl(self)  UseDecl:
         self._expect_keyword("use")
         path = self._parse_use_path()
         alias = None
@@ -81,7 +81,7 @@ class Parser:
             alias = self._expect_ident()
         return UseDecl(path=path, alias=alias)
 
-    def _parse_item(self) -> object:
+    def _parse_item(self)  object:
         is_public = self._eat_keyword("pub")
         if self._at_keyword("func"):
             return self._parse_function_decl(is_public)
@@ -96,11 +96,11 @@ class Parser:
         token = self._peek()
         raise ParseError(f"unexpected token {token.value!r} at {token.line}:{token.column}")
 
-    def _parse_function_decl(self, is_public: bool) -> FunctionDecl:
+    def _parse_function_decl(self, is_public: bool)  FunctionDecl:
         sig, body = self._parse_function(require_body=True)
         return FunctionDecl(sig=sig, body=body, is_public=is_public)
 
-    def _parse_struct_decl(self, is_public: bool) -> StructDecl:
+    def _parse_struct_decl(self, is_public: bool)  StructDecl:
         self._expect_keyword("struct")
         name = self._expect_ident()
         generics = self._parse_generic_params()
@@ -113,7 +113,7 @@ class Parser:
             self._eat_symbol(",")
         return StructDecl(name=name, generics=generics, fields=fields, is_public=is_public)
 
-    def _parse_enum_decl(self, is_public: bool) -> EnumDecl:
+    def _parse_enum_decl(self, is_public: bool)  EnumDecl:
         self._expect_keyword("enum")
         name = self._expect_ident()
         generics = self._parse_generic_params()
@@ -129,7 +129,7 @@ class Parser:
             self._eat_symbol(",")
         return EnumDecl(name=name, generics=generics, variants=variants, is_public=is_public)
 
-    def _parse_trait_decl(self, is_public: bool) -> TraitDecl:
+    def _parse_trait_decl(self, is_public: bool)  TraitDecl:
         self._expect_keyword("trait")
         name = self._expect_ident()
         generics = self._parse_generic_params()
@@ -141,7 +141,7 @@ class Parser:
             self._expect_symbol(";")
         return TraitDecl(name=name, generics=generics, methods=methods, is_public=is_public)
 
-    def _parse_impl_decl(self) -> ImplDecl:
+    def _parse_impl_decl(self)  ImplDecl:
         self._expect_keyword("impl")
         generics = self._parse_generic_params()
         first = self._parse_path()
@@ -158,7 +158,7 @@ class Parser:
             methods.append(self._parse_function_decl(is_public))
         return ImplDecl(target=target, trait_name=trait_name, generics=generics, methods=methods)
 
-    def _parse_function(self, require_body: bool) -> tuple[FunctionSig, Optional[BlockExpr]]:
+    def _parse_function(self, require_body: bool)  tuple[FunctionSig, Optional[BlockExpr]]:
         self._expect_keyword("func")
         name = self._expect_ident()
         generics = self._parse_generic_params()
@@ -184,7 +184,7 @@ class Parser:
         body = self._parse_block_expr() if require_body else None
         return FunctionSig(name=name, generics=generics, params=params, return_type=return_type), body
 
-    def _parse_params(self) -> List[Param]:
+    def _parse_params(self)  List[Param]:
         params: List[Param] = []
         if self._at_symbol(")"):
             return params
@@ -197,7 +197,7 @@ class Parser:
                 break
         return params
 
-    def _parse_generic_params(self) -> List[str]:
+    def _parse_generic_params(self)  List[str]:
         generics: List[str] = []
         if not self._eat_symbol("["):
             return generics
@@ -212,7 +212,7 @@ class Parser:
             self._eat_symbol(",")
         return generics
 
-    def _parse_where_clause(self) -> None:
+    def _parse_where_clause(self)  None:
         if not self._eat_keyword("where"):
             return
         while True:
@@ -222,7 +222,7 @@ class Parser:
             if self._at_symbol("{") or self._at_symbol(";"):
                 break
 
-    def _parse_block_expr(self) -> BlockExpr:
+    def _parse_block_expr(self)  BlockExpr:
         self._expect_symbol("{")
         statements = []
         final_expr = None
@@ -239,7 +239,7 @@ class Parser:
         self._expect_symbol("}")
         return BlockExpr(statements=statements, final_expr=final_expr)
 
-    def _starts_stmt(self) -> bool:
+    def _starts_stmt(self)  bool:
         return (
             self._at_keyword("let")
             or self._at_keyword("var")
@@ -275,7 +275,7 @@ class Parser:
         token = self._peek()
         raise ParseError(f"unexpected statement {token.value!r} at {token.line}:{token.column}")
 
-    def _parse_let_stmt(self, keyword: str = "let", consume_semicolon: bool = True) -> LetStmt:
+    def _parse_let_stmt(self, keyword: str = "let", consume_semicolon: bool = True)  LetStmt:
         self._expect_keyword(keyword)
         name = self._expect_ident()
         type_name = None
@@ -287,10 +287,10 @@ class Parser:
             self._eat_symbol(";")
         return LetStmt(name=name, type_name=type_name, value=value)
 
-    def _parse_var_stmt(self, consume_semicolon: bool = True) -> LetStmt:
+    def _parse_var_stmt(self, consume_semicolon: bool = True)  LetStmt:
         return self._parse_let_stmt(keyword="var", consume_semicolon=consume_semicolon)
 
-    def _parse_typed_let_stmt(self, consume_semicolon: bool = True) -> LetStmt:
+    def _parse_typed_let_stmt(self, consume_semicolon: bool = True)  LetStmt:
         type_name = self._advance().value
         name = self._expect_ident()
         self._expect_symbol("=")
@@ -299,7 +299,7 @@ class Parser:
             self._eat_symbol(";")
         return LetStmt(name=name, type_name=type_name, value=value)
 
-    def _parse_assign_stmt(self, consume_semicolon: bool = True) -> AssignStmt:
+    def _parse_assign_stmt(self, consume_semicolon: bool = True)  AssignStmt:
         name = self._expect_ident()
         self._expect_symbol("=")
         value = self._parse_expr()
@@ -307,14 +307,14 @@ class Parser:
             self._eat_symbol(";")
         return AssignStmt(name=name, value=value)
 
-    def _parse_increment_stmt(self, consume_semicolon: bool = True) -> IncrementStmt:
+    def _parse_increment_stmt(self, consume_semicolon: bool = True)  IncrementStmt:
         name = self._expect_ident()
         self._expect_symbol("++")
         if consume_semicolon:
             self._eat_symbol(";")
         return IncrementStmt(name=name)
 
-    def _parse_c_for_stmt(self) -> CForStmt:
+    def _parse_c_for_stmt(self)  CForStmt:
         self._expect_keyword("for")
         self._expect_symbol("(")
         init = self._parse_for_clause_stmt()
@@ -340,7 +340,7 @@ class Parser:
         token = self._peek()
         raise ParseError(f"unexpected for clause {token.value!r} at {token.line}:{token.column}")
 
-    def _parse_return_stmt(self) -> ReturnStmt:
+    def _parse_return_stmt(self)  ReturnStmt:
         self._expect_keyword("return")
         if self._eat_symbol(";"):
             return ReturnStmt(value=None)
@@ -348,7 +348,7 @@ class Parser:
         self._eat_symbol(";")
         return ReturnStmt(value=value)
 
-    def _parse_expr(self) -> Expr:
+    def _parse_expr(self)  Expr:
         if self._at_keyword("match"):
             return self._parse_match_expr()
         if self._at_keyword("if"):
@@ -359,7 +359,7 @@ class Parser:
             return self._parse_for_expr()
         return self._parse_binary_expr(0)
 
-    def _parse_match_expr(self) -> MatchExpr:
+    def _parse_match_expr(self)  MatchExpr:
         self._expect_keyword("match")
         subject = self._parse_expr()
         self._expect_symbol("{")
@@ -372,7 +372,7 @@ class Parser:
             self._eat_symbol(",")
         return MatchExpr(subject=subject, arms=arms)
 
-    def _parse_if_expr(self) -> IfExpr:
+    def _parse_if_expr(self)  IfExpr:
         self._expect_keyword("if")
         condition = self._parse_expr()
         then_branch = self._parse_block_expr()
@@ -384,13 +384,13 @@ class Parser:
                 else_branch = self._parse_block_expr()
         return IfExpr(condition=condition, then_branch=then_branch, else_branch=else_branch)
 
-    def _parse_while_expr(self) -> WhileExpr:
+    def _parse_while_expr(self)  WhileExpr:
         self._expect_keyword("while")
         condition = self._parse_expr()
         body = self._parse_block_expr()
         return WhileExpr(condition=condition, body=body)
 
-    def _parse_for_expr(self) -> ForExpr:
+    def _parse_for_expr(self)  ForExpr:
         self._expect_keyword("for")
         name = self._expect_ident()
         self._expect_keyword("in")
@@ -398,7 +398,7 @@ class Parser:
         body = self._parse_block_expr()
         return ForExpr(name=name, iterable=iterable, body=body)
 
-    def _parse_pattern(self) -> Pattern:
+    def _parse_pattern(self)  Pattern:
         if self._eat_ident_value("_"):
             return WildcardPattern()
         path = self._parse_path()
@@ -417,7 +417,7 @@ class Parser:
             return VariantPattern(path=path)
         return NamePattern(name=path)
 
-    def _parse_binary_expr(self, min_precedence: int) -> Expr:
+    def _parse_binary_expr(self, min_precedence: int)  Expr:
         expr = self._parse_unary_expr()
         while True:
             token = self._peek()
@@ -429,13 +429,13 @@ class Parser:
             expr = BinaryExpr(left=expr, op=op, right=rhs)
         return expr
 
-    def _parse_unary_expr(self) -> Expr:
+    def _parse_unary_expr(self)  Expr:
         if self._eat_symbol("&"):
             mutable = self._eat_keyword("mut")
             return BorrowExpr(target=self._parse_unary_expr(), mutable=mutable)
         return self._parse_call_expr()
 
-    def _parse_call_expr(self) -> Expr:
+    def _parse_call_expr(self)  Expr:
         expr = self._parse_primary_expr()
         while True:
             if self._eat_symbol("("):
@@ -461,7 +461,7 @@ class Parser:
             break
         return expr
 
-    def _parse_primary_expr(self) -> Expr:
+    def _parse_primary_expr(self)  Expr:
         token = self._peek()
         if token.kind == TokenKind.INT:
             self._advance()
@@ -483,7 +483,7 @@ class Parser:
             return expr
         return NameExpr(name=self._parse_expr_name())
 
-    def _binary_precedence(self, op: str) -> int:
+    def _binary_precedence(self, op: str)  int:
         table = {
             "||": 1,
             "&&": 2,
@@ -501,7 +501,7 @@ class Parser:
         }
         return table.get(op, -1)
 
-    def _parse_use_path(self) -> str:
+    def _parse_use_path(self)  str:
         parts = [self._expect_ident()]
         while self._eat_symbol("."):
             if self._eat_symbol("{"):
@@ -516,7 +516,7 @@ class Parser:
             parts.append(self._expect_ident())
         return ".".join(parts)
 
-    def _parse_path(self) -> str:
+    def _parse_path(self)  str:
         parts = [self._expect_ident()]
         while self._eat_symbol("."):
             parts.append(self._expect_ident())
@@ -524,10 +524,10 @@ class Parser:
             parts[-1] += self._parse_bracket_group()
         return ".".join(parts)
 
-    def _parse_expr_name(self) -> str:
+    def _parse_expr_name(self)  str:
         return self._expect_ident()
 
-    def _parse_type_text(self, stop_values: set[str]) -> str:
+    def _parse_type_text(self, stop_values: set[str])  str:
         parts: List[str] = []
         bracket = 0
         paren = 0
@@ -550,10 +550,10 @@ class Parser:
             parts.append(self._advance().value)
         return self._normalize_type_text(" ".join(parts))
 
-    def _parse_named_type(self, stop_values: set[str]) -> tuple[str, str]:
+    def _parse_named_type(self, stop_values: set[str])  tuple[str, str]:
         return self._decode_named_type(self._parse_token_segment(stop_values))
 
-    def _parse_token_segment(self, stop_values: set[str]) -> List[Token]:
+    def _parse_token_segment(self, stop_values: set[str])  List[Token]:
         segment: List[Token] = []
         bracket = 0
         paren = 0
@@ -576,7 +576,7 @@ class Parser:
             segment.append(self._advance())
         return segment
 
-    def _decode_named_type(self, tokens: List[Token]) -> tuple[str, str]:
+    def _decode_named_type(self, tokens: List[Token])  tuple[str, str]:
         colon = self._find_token_value(tokens, ":")
         if colon >= 0:
             name_text = self._normalize_type_text(self._join_token_values(tokens[:colon]))
@@ -590,7 +590,7 @@ class Parser:
         type_text = self._normalize_type_text(self._join_token_values(tokens[:split]))
         return self._normalize_receiver_decl(name_text, type_text)
 
-    def _normalize_receiver_decl(self, name_text: str, type_text: str) -> tuple[str, str]:
+    def _normalize_receiver_decl(self, name_text: str, type_text: str)  tuple[str, str]:
         if name_text == "self":
             return name_text, type_text
         if name_text == "&self":
@@ -601,7 +601,7 @@ class Parser:
             return "self", self._normalize_type_text("mut " + type_text)
         return name_text, type_text
 
-    def _normalize_type_text(self, text: str) -> str:
+    def _normalize_type_text(self, text: str)  str:
         text = text.replace(" . ", ".")
         text = text.replace("[ ", "[").replace(" ]", "]")
         text = text.replace("( ", "(").replace(" )", ")")
@@ -611,10 +611,10 @@ class Parser:
         text = text.replace(" [", "[")
         return text.strip()
 
-    def _join_token_values(self, tokens: List[Token]) -> str:
+    def _join_token_values(self, tokens: List[Token])  str:
         return " ".join(token.value for token in tokens)
 
-    def _find_token_value(self, tokens: List[Token], value: str) -> int:
+    def _find_token_value(self, tokens: List[Token], value: str)  int:
         bracket = 0
         paren = 0
         for i, token in enumerate(tokens):
@@ -630,7 +630,7 @@ class Parser:
                 return i
         return -1
 
-    def _find_decl_name_index(self, tokens: List[Token]) -> int:
+    def _find_decl_name_index(self, tokens: List[Token])  int:
         bracket = 0
         paren = 0
         index = -1
@@ -647,7 +647,7 @@ class Parser:
                 index = i
         return index
 
-    def _parse_bracket_group(self) -> str:
+    def _parse_bracket_group(self)  str:
         parts = [self._advance().value]
         depth = 1
         while depth > 0:
@@ -660,10 +660,10 @@ class Parser:
         text = " ".join(parts).replace("[ ", "[").replace(" ]", "]").replace(" ,", ",")
         return text
 
-    def _at(self, kind: TokenKind) -> bool:
+    def _at(self, kind: TokenKind)  bool:
         return self._peek().kind == kind
 
-    def _looks_like_typed_let(self) -> bool:
+    def _looks_like_typed_let(self)  bool:
         return (
             self._peek().kind in {TokenKind.IDENT, TokenKind.KEYWORD}
             and self._peek(1).kind == TokenKind.IDENT
@@ -671,60 +671,60 @@ class Parser:
             and self._peek(2).value == "="
         )
 
-    def _looks_like_assignment(self) -> bool:
+    def _looks_like_assignment(self)  bool:
         return (
             self._peek().kind == TokenKind.IDENT
             and self._peek(1).kind == TokenKind.SYMBOL
             and self._peek(1).value == "="
         )
 
-    def _looks_like_increment(self) -> bool:
+    def _looks_like_increment(self)  bool:
         return (
             self._peek().kind == TokenKind.IDENT
             and self._peek(1).kind == TokenKind.SYMBOL
             and self._peek(1).value == "++"
         )
 
-    def _at_keyword(self, value: str) -> bool:
+    def _at_keyword(self, value: str)  bool:
         token = self._peek()
         return token.kind == TokenKind.KEYWORD and token.value == value
 
-    def _at_symbol(self, value: str) -> bool:
+    def _at_symbol(self, value: str)  bool:
         token = self._peek()
         return token.kind == TokenKind.SYMBOL and token.value == value
 
-    def _eat_keyword(self, value: str) -> bool:
+    def _eat_keyword(self, value: str)  bool:
         if self._at_keyword(value):
             self._advance()
             return True
         return False
 
-    def _eat_ident_value(self, value: str) -> bool:
+    def _eat_ident_value(self, value: str)  bool:
         token = self._peek()
         if token.kind == TokenKind.IDENT and token.value == value:
             self._advance()
             return True
         return False
 
-    def _eat_symbol(self, value: str) -> bool:
+    def _eat_symbol(self, value: str)  bool:
         if self._at_symbol(value):
             self._advance()
             return True
         return False
 
-    def _expect_keyword(self, value: str) -> Token:
+    def _expect_keyword(self, value: str)  Token:
         token = self._peek()
         if token.kind == TokenKind.KEYWORD and token.value == value:
             return self._advance()
         raise ParseError(f"expected keyword {value!r} at {token.line}:{token.column}")
 
-    def _expect_symbol(self, value: str) -> Token:
+    def _expect_symbol(self, value: str)  Token:
         token = self._peek()
         if token.kind == TokenKind.SYMBOL and token.value == value:
             return self._advance()
         raise ParseError(f"expected symbol {value!r} at {token.line}:{token.column}")
 
-    def _expect_ident(self) -> str:
+    def _expect_ident(self)  str:
         token = self._peek()
         if token.kind == TokenKind.KEYWORD and token.value == "self":
             self._advance()
@@ -734,11 +734,11 @@ class Parser:
             return token.value
         raise ParseError(f"expected identifier at {token.line}:{token.column}")
 
-    def _peek(self, offset: int = 0) -> Token:
+    def _peek(self, offset: int = 0)  Token:
         index = min(self.index + offset, len(self.tokens) - 1)
         return self.tokens[index]
 
-    def _advance(self) -> Token:
+    def _advance(self)  Token:
         token = self.tokens[self.index]
         self.index += 1
         return token

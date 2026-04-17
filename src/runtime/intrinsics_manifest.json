@@ -4,33 +4,33 @@
     {
       "name": "__runtime_len",
       "arity": 1,
-      "returns": "i32",
+      "returns": "int32",
       "notes": "len for string, host arrays, and Vec-like values"
     },
     {
       "name": "__int_to_string",
       "arity": 1,
-      "returns": "String"
+      "returns": "string"
     },
     {
       "name": "__string_concat",
       "arity": 2,
-      "returns": "String"
+      "returns": "string"
     },
     {
       "name": "__string_replace",
       "arity": 3,
-      "returns": "String"
+      "returns": "string"
     },
     {
       "name": "__string_char_at",
       "arity": 2,
-      "returns": "String"
+      "returns": "string"
     },
     {
       "name": "__string_slice",
       "arity": 3,
-      "returns": "String"
+      "returns": "string"
     },
     {
       "name": "__vec_new_array",
@@ -50,7 +50,7 @@
     {
       "name": "__host_read_to_string",
       "arity": 1,
-      "returns": "String",
+      "returns": "string",
       "notes": "bridge success path returns payload; host failures raise RuntimeTrap"
     },
     {
@@ -62,19 +62,13 @@
     {
       "name": "__host_make_temp_dir",
       "arity": 1,
-      "returns": "String",
+      "returns": "string",
       "notes": "bridge success path returns payload; host failures raise RuntimeTrap"
     },
     {
       "name": "__host_build_executable",
       "arity": 2,
-      "returns": "i32",
-      "notes": "bridge success path returns exit code; host failures raise RuntimeTrap"
-    },
-    {
-      "name": "__host_run_executable",
-      "arity": 1,
-      "returns": "i32",
+      "returns": "int32",
       "notes": "bridge success path returns exit code; host failures raise RuntimeTrap"
     },
     {
@@ -86,37 +80,37 @@
     {
       "name": "__host_run_process1",
       "arity": 1,
-      "returns": "i32",
+      "returns": "int32",
       "notes": "bridge success path returns exit code; host failures raise RuntimeTrap"
     },
     {
       "name": "__host_run_process5",
       "arity": 5,
-      "returns": "i32",
+      "returns": "int32",
       "notes": "bridge success path returns exit code; host failures raise RuntimeTrap"
     },
     {
       "name": "__host_run_process_argv",
       "arity": 1,
-      "returns": "i32",
+      "returns": "int32",
       "notes": "bridge success path returns exit code; host failures raise RuntimeTrap"
     },
     {
       "name": "__host_run_shell",
       "arity": 1,
-      "returns": "i32",
+      "returns": "int32",
       "notes": "bridge success path returns the shell exit code; host failures raise RuntimeTrap"
     },
     {
       "name": "__host_args",
       "arity": 0,
-      "returns": "Vec[String]",
+      "returns": "Vec[string]",
       "notes": "bridge success path returns argv without the executable name"
     },
     {
       "name": "__host_get_env",
       "arity": 1,
-      "returns": "Option[String]",
+      "returns": "Option[string]",
       "notes": "bridge success path returns environment values when present"
     },
     {

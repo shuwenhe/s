@@ -53,7 +53,7 @@ class Token:
     column: int
 
 
-def dump_tokens(tokens: list[Token]) -> str:
+def dump_tokens(tokens: list[Token])  str:
     return "\n".join(
         f"{token.line}:{token.column} {token.kind.name} {token.value}" for token in tokens
     )

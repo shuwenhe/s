@@ -23,11 +23,11 @@ class WriteOp:
 
 
 class RecordingInterpreter(Interpreter):
-    def __init__(self, source: SourceFile) -> None:
+    def __init__(self, source: SourceFile)  None:
         super().__init__(source)
         self.ops: list[WriteOp] = []
 
-    def call_function(self, name: str, args: list[object]) -> object:
+    def call_function(self, name: str, args: list[object])  object:
         if name == "println":
             self.ops.append(WriteOp(fd=1, text=("" if not args else self._stringify(args[0])) + "\n"))
             return None
@@ -37,7 +37,7 @@ class RecordingInterpreter(Interpreter):
         return super().call_function(name, args)
 
 
-def build_executable(source: SourceFile, output_path: Path) -> None:
+def build_executable(source: SourceFile, output_path: Path)  None:
     BUILD_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     program = _compile_program(source)
@@ -56,7 +56,7 @@ def build_executable(source: SourceFile, output_path: Path) -> None:
             raise BackendError(f"toolchain failed with exit code {exc.returncode}") from exc
 
 
-def _compile_program(source: SourceFile) -> tuple[list[WriteOp], int]:
+def _compile_program(source: SourceFile)  tuple[list[WriteOp], int]:
     interpreter = RecordingInterpreter(source)
     try:
         exit_code = interpreter.run_main()
@@ -65,7 +65,7 @@ def _compile_program(source: SourceFile) -> tuple[list[WriteOp], int]:
     return interpreter.ops, int(exit_code)
 
 
-def _emit_asm(program: tuple[list[WriteOp], int]) -> str:
+def _emit_asm(program: tuple[list[WriteOp], int])  str:
     ops, exit_code = program
     data_lines: list[str] = [".section .data"]
     text_lines: list[str] = [".section .text", ".global _start", "_start:"]

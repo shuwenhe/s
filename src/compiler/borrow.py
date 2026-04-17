@@ -26,12 +26,12 @@ def analyze_block(
     block,
     initial: Dict[str, VarState],
     ownership_plan: Optional[Dict[str, OwnershipDecision]] = None,
-) -> List[BorrowDiagnostic]:
+)  List[BorrowDiagnostic]:
     type_env = {name: state.ty for name, state in initial.items()}
     return analyze_mir(lower_block(block, list(initial.keys()), type_env, ownership_plan), initial)
 
 
-def analyze_mir(graph: MIRGraph, initial: Dict[str, VarState]) -> List[BorrowDiagnostic]:
+def analyze_mir(graph: MIRGraph, initial: Dict[str, VarState])  List[BorrowDiagnostic]:
     diagnostics: List[BorrowDiagnostic] = []
     in_states: Dict[int, Dict[str, VarState]] = {graph.entry: _clone_scope(initial)}
     worklist = [graph.entry]
@@ -62,7 +62,7 @@ def _apply_stmt(
     scope: Dict[str, VarState],
     diagnostics: List[BorrowDiagnostic],
     locals_map: Dict[int, LocalSlot],
-) -> None:
+)  None:
     if isinstance(stmt, MoveStmt):
         _apply_move(stmt, scope, diagnostics, locals_map)
         return
@@ -92,7 +92,7 @@ def _apply_move(
     scope: Dict[str, VarState],
     diagnostics: List[BorrowDiagnostic],
     locals_map: Dict[int, LocalSlot],
-) -> None:
+)  None:
     _apply_operand(stmt.source, scope, diagnostics, locals_map, consume=True)
 
 def _apply_copy(
@@ -100,11 +100,11 @@ def _apply_copy(
     scope: Dict[str, VarState],
     diagnostics: List[BorrowDiagnostic],
     locals_map: Dict[int, LocalSlot],
-) -> None:
+)  None:
     _apply_operand(stmt.source, scope, diagnostics, locals_map, consume=False)
 
 
-def _apply_drop(stmt: DropStmt, scope: Dict[str, VarState], locals_map: Dict[int, LocalSlot]) -> None:
+def _apply_drop(stmt: DropStmt, scope: Dict[str, VarState], locals_map: Dict[int, LocalSlot])  None:
     slot_name = _slot_name(stmt.slot, locals_map)
     if slot_name is None or slot_name not in scope:
         return
@@ -117,7 +117,7 @@ def _apply_eval(
     scope: Dict[str, VarState],
     diagnostics: List[BorrowDiagnostic],
     locals_map: Dict[int, LocalSlot],
-) -> None:
+)  None:
     for arg in stmt.args:
         _apply_operand(arg, scope, diagnostics, locals_map, consume=True)
 
@@ -128,7 +128,7 @@ def _apply_block_args(
     args,
     diagnostics: List[BorrowDiagnostic],
     locals_map: Dict[int, LocalSlot],
-) -> None:
+)  None:
     for slot_id, operand in zip(block.params, args):
         slot_name = _slot_name(slot_id, locals_map)
         if slot_name is None:
@@ -136,7 +136,7 @@ def _apply_block_args(
         _apply_operand(operand, scope, diagnostics, locals_map, consume=False)
 
 
-def _apply_operand(value, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic], locals_map, consume: bool) -> None:
+def _apply_operand(value, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic], locals_map, consume: bool)  None:
     if isinstance(value, Operand):
         if value.kind == "slot":
             slot_name = _slot_name(value.value, locals_map)
@@ -152,7 +152,7 @@ def _apply_operand(value, scope: Dict[str, VarState], diagnostics: List[BorrowDi
             _apply_operand(item, scope, diagnostics, locals_map, consume)
 
 
-def _apply_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic]) -> None:
+def _apply_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic])  None:
     from compiler.ast import BinaryExpr, BlockExpr, BorrowExpr, CallExpr, IfExpr, IndexExpr, MatchExpr, MemberExpr, NameExpr
 
     if isinstance(expr, NameExpr):
@@ -210,7 +210,7 @@ def _apply_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiagno
         _apply_block_expr(expr, scope, diagnostics)
 
 
-def _apply_block_expr(block, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic]) -> None:
+def _apply_block_expr(block, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic])  None:
     for stmt in block.statements:
         if isinstance(stmt, LetStmt) and isinstance(stmt.value, NameExpr):
             _consume_name(stmt.value.name, scope, diagnostics)
@@ -222,7 +222,7 @@ def _apply_block_expr(block, scope: Dict[str, VarState], diagnostics: List[Borro
         _apply_expr(block.final_expr, scope, diagnostics)
 
 
-def _join_scopes(left: Dict[str, VarState], right: Dict[str, VarState]) -> Dict[str, VarState]:
+def _join_scopes(left: Dict[str, VarState], right: Dict[str, VarState])  Dict[str, VarState]:
     result = _clone_scope(left)
     for name, state in right.items():
         if name not in result:
@@ -238,11 +238,11 @@ def _join_scopes(left: Dict[str, VarState], right: Dict[str, VarState]) -> Dict[
     return result
 
 
-def _clone_scope(scope: Dict[str, VarState]) -> Dict[str, VarState]:
+def _clone_scope(scope: Dict[str, VarState])  Dict[str, VarState]:
     return {name: VarState(**vars(state)) for name, state in scope.items()}
 
 
-def _consume_name(name: str, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic]) -> None:
+def _consume_name(name: str, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic])  None:
     state = scope.get(name)
     if state is None:
         return
@@ -252,7 +252,7 @@ def _consume_name(name: str, scope: Dict[str, VarState], diagnostics: List[Borro
         state.moved = True
 
 
-def _inspect_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic]) -> None:
+def _inspect_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic])  None:
     from compiler.ast import IndexExpr, MemberExpr, NameExpr
 
     if isinstance(expr, NameExpr):
@@ -268,13 +268,13 @@ def _inspect_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiag
         _apply_expr(expr.index, scope, diagnostics)
 
 
-def _inspect_name(name: str, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic]) -> None:
+def _inspect_name(name: str, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic])  None:
     state = scope.get(name)
     if state is not None and state.moved:
         diagnostics.append(BorrowDiagnostic(f"use of moved value {name}"))
 
 
-def _slot_name(slot_id: int, locals_map: Dict[int, LocalSlot]) -> str | None:
+def _slot_name(slot_id: int, locals_map: Dict[int, LocalSlot])  str | None:
     slot = locals_map.get(slot_id)
     if slot is None:
         return None

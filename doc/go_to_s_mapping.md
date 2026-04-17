@@ -27,7 +27,7 @@
   - `type T struct { ... }` → S: `StructDecl { name: T, fields: [...] }`
     - 字段名/类型映射到 `Field { name, type_name }`；若无命名字段（匿名嵌入）则用类型文本放到 `type_name`，字段名可设为 `_embed_N`。
   - `type T interface { ... }` → S: `TraitDecl { name: T, methods: [...] }`（接口映射为 trait）
-    - interface 方法签名映射为 `FunctionSig`（返回 `Option[String] return_type`），保留参数名/类型文本。
+    - interface 方法签名映射为 `FunctionSig`（返回 `Option[string] return_type`），保留参数名/类型文本。
   - 其他类型别名或自定义类型（例如 `type MyInt int`）→ 生成 `StructDecl` 不合适，建议作为 `use`/`type_text` 的注记：在 AST 中以 `StructDecl` 或 `EnumDecl` 之外保留到 `impl`/注释，或扩展 AST（后续）。
 
 3. 变量与常量
@@ -47,7 +47,7 @@
     - 方法本体映射成 `FunctionDecl`，`is_public` 根据首字母大小写决定
 
 5. 语句与表达式（逐项）
-- 基础字面量：`BasicLit`（INT/STRING）→ `Expr::Int` / `Expr::String`（保留文字）
+- 基础字面量：`BasicLit`（INT/STRING）→ `Expr::Int` / `Expr::string`（保留文字）
 - 标识符：`Ident` → `Expr::Name`（`name` 字段）
 - 二元/一元表达式：`BinaryExpr` / `UnaryExpr` → `Expr::Binary` / 以 `Borrow` 表示的借用（若用 `&`）
 - 函数调用：`CallExpr` → `Expr::Call`（callee 映射，args 列表映射）

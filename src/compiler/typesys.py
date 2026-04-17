@@ -52,13 +52,13 @@ class UnknownType(Type):
 
 
 BOOL = PrimitiveType("bool")
-I32 = PrimitiveType("i32")
-STRING = NamedType("String")
+I32 = PrimitiveType("int32")
+STRING = NamedType("string")
 UNIT = UnitType()
 NEVER = NeverType()
 
 
-def parse_type(text: str) -> Type:
+def parse_type(text: str)  Type:
     text = text.strip()
     if not text:
         return UnknownType()
@@ -68,9 +68,9 @@ def parse_type(text: str) -> Type:
         return NEVER
     if text == "bool":
         return BOOL
-    if text in {"i32", "int"}:
+    if text in {"int32", "int32", "int"}:
         return I32
-    if text == "String":
+    if text in {"string", "string"}:
         return STRING
     if text.startswith("&mut "):
         return ReferenceType(parse_type(text[5:].strip()), mutable=True)
@@ -86,7 +86,7 @@ def parse_type(text: str) -> Type:
     return NamedType(text)
 
 
-def dump_type(ty: Type) -> str:
+def dump_type(ty: Type)  str:
     if isinstance(ty, PrimitiveType):
         return ty.name
     if isinstance(ty, NamedType):
@@ -99,7 +99,7 @@ def dump_type(ty: Type) -> str:
     if isinstance(ty, SliceType):
         return "[]" + dump_type(ty.inner)
     if isinstance(ty, FunctionType):
-        return f"func({', '.join(dump_type(param) for param in ty.params)}) -> {dump_type(ty.return_type or UNIT)}"
+        return f"func({', '.join(dump_type(param) for param in ty.params)}) {dump_type(ty.return_type or UNIT)}"
     if isinstance(ty, UnitType):
         return "()"
     if isinstance(ty, NeverType):
@@ -109,7 +109,7 @@ def dump_type(ty: Type) -> str:
     return repr(ty)
 
 
-def is_copy_type(ty: Type) -> bool:
+def is_copy_type(ty: Type)  bool:
     if isinstance(ty, PrimitiveType):
         return True
     if isinstance(ty, ReferenceType):
@@ -119,7 +119,7 @@ def is_copy_type(ty: Type) -> bool:
     return False
 
 
-def substitute_type(ty: Type, mapping: dict[str, Type]) -> Type:
+def substitute_type(ty: Type, mapping: dict[str, Type])  Type:
     if isinstance(ty, NamedType) and not ty.args and ty.name in mapping:
         return mapping[ty.name]
     if isinstance(ty, NamedType):
@@ -136,7 +136,7 @@ def substitute_type(ty: Type, mapping: dict[str, Type]) -> Type:
     return ty
 
 
-def _split_args(text: str) -> list[str]:
+def _split_args(text: str)  list[str]:
     parts: list[str] = []
     current: list[str] = []
     depth = 0

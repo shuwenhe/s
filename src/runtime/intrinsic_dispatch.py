@@ -21,16 +21,16 @@ class DispatchResult:
     source: str = ""
 
 
-def dispatch(call: IntrinsicCall) -> DispatchResult:
+def dispatch(call: IntrinsicCall)  DispatchResult:
     value = invoke_intrinsic(call.symbol, *call.args)
     return DispatchResult(symbol=call.symbol, value=value, source=call.source)
 
 
-def dispatch_symbol(symbol: str, *args: Any, source: str = "") -> Any:
+def dispatch_symbol(symbol: str, *args: Any, source: str = "")  Any:
     return dispatch(IntrinsicCall(symbol=symbol, args=args, source=source)).value
 
 
-def format_call(call: IntrinsicCall) -> str:
+def format_call(call: IntrinsicCall)  str:
     rendered_args = ", ".join(repr(arg) for arg in call.args)
     rendered_types = ""
     if call.type_args:

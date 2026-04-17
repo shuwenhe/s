@@ -9,7 +9,7 @@ _LIB: CDLL | None = None
 _INITIALIZED = False
 
 
-def _load_library() -> CDLL:
+def _load_library()  CDLL:
     global _LIB
     if _LIB is not None:
         return _LIB
@@ -33,7 +33,7 @@ def _load_library() -> CDLL:
     return lib
 
 
-def initialize(argv: list[str] | None = None) -> None:
+def initialize(argv: list[str] | None = None)  None:
     global _INITIALIZED
     if _INITIALIZED:
         return
@@ -48,7 +48,7 @@ def initialize(argv: list[str] | None = None) -> None:
     _INITIALIZED = True
 
 
-def args() -> list[str]:
+def args()  list[str]:
     initialize()
     lib = _load_library()
     count = int(lib.host_intrinsics_argc())
@@ -60,7 +60,7 @@ def args() -> list[str]:
     return values
 
 
-def get_env(key: str) -> str | None:
+def get_env(key: str)  str | None:
     initialize()
     lib = _load_library()
     raw = lib.host_intrinsics_get_env(key.encode("utf-8"))
@@ -69,13 +69,13 @@ def get_env(key: str) -> str | None:
     return raw.decode("utf-8")
 
 
-def println(text: str) -> None:
+def println(text: str)  None:
     initialize()
     lib = _load_library()
     lib.host_intrinsics_println(text.encode("utf-8"))
 
 
-def eprintln(text: str) -> None:
+def eprintln(text: str)  None:
     initialize()
     lib = _load_library()
     lib.host_intrinsics_eprintln(text.encode("utf-8"))

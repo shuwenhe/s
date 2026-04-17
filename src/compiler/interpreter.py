@@ -46,7 +46,7 @@ class ReturnSignal(Exception):
 
 
 class Interpreter:
-    def __init__(self, source: SourceFile) -> None:
+    def __init__(self, source: SourceFile)  None:
         self.source = source
         self.functions = {
             item.sig.name: item
@@ -58,7 +58,7 @@ class Interpreter:
         self.argv: list[str] = []
         self._package_cache: dict[str, Interpreter] = {}
 
-    def run_main(self) -> int:
+    def run_main(self)  int:
         if "main" in self.functions:
             entry = "main"
         elif "Main" in self.functions:
@@ -75,9 +75,9 @@ class Interpreter:
             return int(result)
         if isinstance(result, int):
             return result
-        raise InterpreterError(f"entry function must return i32/unit, got {type(result).__name__}")
+        raise InterpreterError(f"entry function must return int32/unit, got {type(result).__name__}")
 
-    def call_function(self, name: str, args: list[Any]) -> Any:
+    def call_function(self, name: str, args: list[Any])  Any:
         handled, value = dispatch_special_call(self, name, args)
         if handled:
             return value
@@ -104,7 +104,7 @@ class Interpreter:
         except ReturnSignal as signal:
             return signal.value
 
-    def _call_imported_function(self, imported_path: str, args: list[Any]) -> Any:
+    def _call_imported_function(self, imported_path: str, args: list[Any])  Any:
         package_path, func_name = imported_path.rsplit(".", 1)
         imported_interpreter = self._load_imported_package(package_path)
         result = imported_interpreter.call_function(func_name, args)
@@ -112,7 +112,7 @@ class Interpreter:
             self.explicit_exit_code = imported_interpreter.explicit_exit_code
         return result
 
-    def _load_imported_package(self, package_path: str) -> "Interpreter":
+    def _load_imported_package(self, package_path: str)  "Interpreter":
         cached = self._package_cache.get(package_path)
         if cached is not None:
             return cached
@@ -128,7 +128,7 @@ class Interpreter:
         self._package_cache[package_path] = child
         return child
 
-    def _source_path_for_package(self, package_path: str) -> Path | None:
+    def _source_path_for_package(self, package_path: str)  Path | None:
         root = Path(__file__).resolve().parent.parent
         if package_path == "compile.internal":
             return root / "cmd" / "compile" / "internal" / "main.s"
@@ -163,20 +163,20 @@ class Interpreter:
             return root / Path(*parts) / f"{parts[-1]}.s"
         return None
 
-    def eval_block(self, block: BlockExpr | None, env: dict[str, Any]) -> Any:
+    def eval_block(self, block: BlockExpr | None, env: dict[str, Any])  Any:
         if block is None:
             return None
         local = dict(env)
         return self._eval_block_in_place(block, local)
 
-    def _eval_block_in_place(self, block: BlockExpr, env: dict[str, Any]) -> Any:
+    def _eval_block_in_place(self, block: BlockExpr, env: dict[str, Any])  Any:
         for stmt in block.statements:
             self.eval_stmt(stmt, env)
         if block.final_expr is not None:
             return self.eval_expr(block.final_expr, env)
         return None
 
-    def eval_stmt(self, stmt: LetStmt | AssignStmt | IncrementStmt | CForStmt | ReturnStmt | ExprStmt, env: dict[str, Any]) -> None:
+    def eval_stmt(self, stmt: LetStmt | AssignStmt | IncrementStmt | CForStmt | ReturnStmt | ExprStmt, env: dict[str, Any])  None:
         if isinstance(stmt, LetStmt):
             env[stmt.name] = self.eval_expr(stmt.value, env)
             return
@@ -208,7 +208,7 @@ class Interpreter:
             return
         raise InterpreterError(f"unsupported statement {type(stmt).__name__}")
 
-    def eval_expr(self, expr: Expr | None, env: dict[str, Any]) -> Any:
+    def eval_expr(self, expr: Expr | None, env: dict[str, Any])  Any:
         if expr is None:
             return None
         if isinstance(expr, IntExpr):
@@ -273,12 +273,12 @@ class Interpreter:
             return self.eval_block(expr, env)
         raise InterpreterError(f"unsupported expression {type(expr).__name__}")
 
-    def eval_callee(self, expr: Expr) -> str:
+    def eval_callee(self, expr: Expr)  str:
         if isinstance(expr, NameExpr):
             return expr.name
         raise InterpreterError(f"unsupported callee {type(expr).__name__}")
 
-    def eval_method_call(self, receiver: Any, member: str, args: list[Any]) -> Any:
+    def eval_method_call(self, receiver: Any, member: str, args: list[Any])  Any:
         if member == "push" and isinstance(receiver, list):
             if args:
                 receiver.append(args[0])
@@ -301,7 +301,7 @@ class Interpreter:
                 raise InterpreterError("called Result.unwrap_err() on Ok")
         raise InterpreterError(f"unsupported method {member}")
 
-    def _eval_type_constructor(self, callee: Expr, args: list[Expr], env: dict[str, Any]) -> Any:
+    def _eval_type_constructor(self, callee: Expr, args: list[Expr], env: dict[str, Any])  Any:
         if args:
             return None
         if isinstance(callee, IndexExpr) and isinstance(callee.target, NameExpr) and callee.target.name == "Vec":
@@ -310,7 +310,7 @@ class Interpreter:
             return []
         return None
 
-    def _match_pattern(self, pattern: Pattern, value: Any) -> dict[str, Any] | None:
+    def _match_pattern(self, pattern: Pattern, value: Any)  dict[str, Any] | None:
         if isinstance(pattern, WildcardPattern):
             return {}
         if isinstance(pattern, NamePattern):
@@ -331,7 +331,7 @@ class Interpreter:
             return bindings
         return None
 
-    def eval_binary(self, op: str, left: Any, right: Any) -> Any:
+    def eval_binary(self, op: str, left: Any, right: Any)  Any:
         if op == "+":
             return left + right
         if op == "-":
@@ -358,7 +358,7 @@ class Interpreter:
             return bool(left) or bool(right)
         raise InterpreterError(f"unsupported binary operator {op}")
 
-    def _stringify(self, value: Any) -> str:
+    def _stringify(self, value: Any)  str:
         if value is None:
             return "()"
         if isinstance(value, tuple) and len(value) == 2:
@@ -371,7 +371,7 @@ class Interpreter:
             return "false"
         return str(value)
 
-    def _decode_string_literal(self, literal: str) -> str:
+    def _decode_string_literal(self, literal: str)  str:
         text = literal[1:-1]
         out: list[str] = []
         index = 0

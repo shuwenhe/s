@@ -93,7 +93,7 @@ Status: Working Draft
   - 在 S 中实现类型节点、类型解析、类型打印、替换和 copy 判断
   - 保持 `parse_type` 与 `dump_type` 的往返稳定性
 - 验收标准：
-  - `bool`、`i32`、`String`、引用、切片、泛型类型都能正确解析和打印
+  - `bool`、`int32`、`string`、引用、切片、泛型类型都能正确解析和打印
   - `substitute_type` 行为与 Python 实现一致
   - 所有现有 semantic 测试依赖的类型文本都能被 S 版本处理
 
