@@ -110,7 +110,21 @@ class Interpreter:
     def _call_imported_function(self, imported_path: str, args: list[Any]) -> Any:
         package_path, func_name = imported_path.rsplit(".", 1)
         imported_interpreter = self._load_imported_package(package_path)
-        result = imported_interpreter.call_function(func_name, args)
+        try:
+            result = imported_interpreter.call_function(func_name, args)
+        except InterpreterError as exc:
+            # Fallback: some packages expose `main` (lowercase) while callers
+            # request `Main` (capitalized). Try the lowercase variant before
+            # giving up to improve compatibility during bootstrap.
+            msg = str(exc)
+            if "unknown function" in msg:
+                alt_name = func_name[0].lower() + func_name[1:]
+                try:
+                    result = imported_interpreter.call_function(alt_name, args)
+                except InterpreterError:
+                    raise
+            else:
+                raise
         if imported_interpreter.explicit_exit_code is not None:
             self.explicit_exit_code = imported_interpreter.explicit_exit_code
         return result
