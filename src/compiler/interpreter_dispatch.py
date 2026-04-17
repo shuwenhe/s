@@ -46,6 +46,11 @@ def dispatch_special_call(interpreter: Any, name: str, args: list[Any]) -> tuple
             return True, ("Ok", path)
         except OSError as exc:
             return True, ("Err", {"message": str(exc)})
+    if name == "__host_run_executable":
+        try:
+            return True, host_run_argv([str(args[0])])
+        except OSError:
+            return True, 1
     if name == "__host_run_process":
         try:
             code = host_run_argv([str(arg) for arg in (args[0] if args else [])])
