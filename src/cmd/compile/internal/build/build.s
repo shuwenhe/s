@@ -1,59 +1,35 @@
 package compile.internal.build
 
-use compile.internal.backend.Build as BuildBinary
-use compile.internal.backend.Run as RunBinary
-use compile.internal.semantic.CheckText
-use std.fs.ReadToString
+use compile.internal.build.exec.Run as ExecRun
+use compile.internal.build.parse.ParseOptions
+use compile.internal.build.report.Error as ReportError
 use std.vec.Vec
 
 func Main(Vec[String] args) -> i32 {
-    if args.len() < 2 {
-        return 0
+    var parsed = ParseOptions(args)
+    if parsed.is_err() {
+        report_error("parse failed")
     }
-
-    var command = args[1]
-    if command == "help" {
-        return 0
-    }
-
-    if command == "check" {
-        if args.len() < 3 {
-            return 1
-        }
-        var source_result = ReadToString(args[2])
-        if source_result.is_err() {
-            return 1
-        }
-        if CheckText(source_result.unwrap()) != 0 {
-            return 1
-        }
-        return 0
-    }
-
-    if command == "build" {
-        if args.len() < 5 {
-            return 1
-        }
-        if args[3] != "-o" {
-            return 1
-        }
-        var build_result = BuildBinary(args[2], args[4])
-        if build_result == 0 {
-            return 0
-        }
+    if parsed.is_err() {
         return 1
     }
 
-    if command == "run" {
-        if args.len() < 3 {
-            return 1
-        }
-        var run_result = RunBinary(args[2])
-        if run_result == 0 {
-            return 0
-        }
+    var options = parsed.unwrap()
+    if options.command == "help" {
+        return 0
+    }
+
+    var exec_result = ExecRun(options)
+    if exec_result.is_err() {
+        report_error("execution failed")
+    }
+    if exec_result.is_err() {
         return 1
     }
 
     0
+}
+
+func report_error(String message) -> () {
+    ReportError(message)
 }
