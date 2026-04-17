@@ -76,14 +76,14 @@ The minimum expression set is:
 - block expressions
 - `if`
 - `while`
-- `match`
+- `switch`
 
 ### Keywords
 
 The current stable keyword set should be treated as the language contract for
 Phase 1. It lives in `/app/s/src/s/tokens.s` and includes the core words needed
 by examples and the compiler itself, including `package`, `use`, `func`, `let`,
-`var`, `return`, `if`, `else`, `while`, `for`, `match`, `struct`, `enum`,
+`var`, `return`, `if`, `else`, `while`, `for`, `switch`, `struct`, `enum`,
 `trait`, `impl`, `pub`, `true`, and `false`.
 
 ## 2. Frontend Boundary

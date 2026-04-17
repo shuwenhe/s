@@ -98,7 +98,7 @@
           "patterns": [
             {
               "name": "constant.character.escape.s",
-              "match": "\\\\."
+              "switch": "\\\\."
             }
           ]
         },
@@ -119,7 +119,7 @@
           "patterns": [
             {
               "name": "constant.character.escape.s",
-              "match": "\\\\."
+              "switch": "\\\\."
             }
           ]
         }
@@ -129,7 +129,7 @@
       "patterns": [
         {
           "name": "constant.numeric.s",
-          "match": "\\b(?:0x[0-9A-Fa-f_]+|0b[01_]+|0o[0-7_]+|\\d+(?:_\\d+)*(?:\\.\\d+(?:_\\d+)*)?)\\b"
+          "switch": "\\b(?:0x[0-9A-Fa-f_]+|0b[01_]+|0o[0-7_]+|\\d+(?:_\\d+)*(?:\\.\\d+(?:_\\d+)*)?)\\b"
         }
       ]
     },
@@ -137,15 +137,15 @@
       "patterns": [
         {
           "name": "keyword.control.s",
-          "match": "\\b(?:if|else|for|while|match|return|break|continue)\\b"
+          "switch": "\\b(?:if|else|for|while|switch|return|break|continue)\\b"
         },
         {
           "name": "keyword.other.s",
-          "match": "\\b(?:package|use|as|in|where|unsafe|extern|mut|pub|let)\\b"
+          "switch": "\\b(?:package|use|as|in|where|unsafe|extern|mut|pub|let)\\b"
         },
         {
           "name": "constant.language.boolean.s",
-          "match": "\\b(?:true|false)\\b"
+          "switch": "\\b(?:true|false)\\b"
         }
       ]
     },
@@ -153,15 +153,15 @@
       "patterns": [
         {
           "name": "entity.name.namespace.package.s",
-          "match": "(?<=\\bpackage\\s)([a-zA-Z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*)"
+          "switch": "(?<=\\bpackage\\s)([a-zA-Z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*)"
         },
         {
           "name": "entity.name.namespace.import.s",
-          "match": "(?<=\\buse\\s)([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*)"
+          "switch": "(?<=\\buse\\s)([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*)"
         },
         {
           "name": "entity.name.namespace.import.alias.s",
-          "match": "(?<=\\bas\\s)([A-Za-z_][A-Za-z0-9_]*)"
+          "switch": "(?<=\\bas\\s)([A-Za-z_][A-Za-z0-9_]*)"
         }
       ]
     },
@@ -169,11 +169,11 @@
       "patterns": [
         {
           "name": "storage.modifier.s",
-          "match": "\\b(?:const|static|mut)\\b"
+          "switch": "\\b(?:const|static|mut)\\b"
         },
         {
           "name": "storage.type.declaration.s",
-          "match": "\\b(?:func|fn|let|var|struct|enum|trait|impl|for)\\b"
+          "switch": "\\b(?:func|fn|let|var|struct|enum|trait|impl|for)\\b"
         }
       ]
     },
@@ -181,19 +181,19 @@
       "patterns": [
         {
           "name": "entity.name.type.trait.s",
-          "match": "(?<=\\btrait\\s)([A-Z][A-Za-z0-9_]*)"
+          "switch": "(?<=\\btrait\\s)([A-Z][A-Za-z0-9_]*)"
         },
         {
           "name": "entity.name.type.struct.s",
-          "match": "(?<=\\bstruct\\s)([A-Z][A-Za-z0-9_]*)"
+          "switch": "(?<=\\bstruct\\s)([A-Z][A-Za-z0-9_]*)"
         },
         {
           "name": "entity.name.type.enum.s",
-          "match": "(?<=\\benum\\s)([A-Z][A-Za-z0-9_]*)"
+          "switch": "(?<=\\benum\\s)([A-Z][A-Za-z0-9_]*)"
         },
         {
           "name": "entity.name.type.impl-target.s",
-          "match": "(?<=\\bfor\\s)([A-Z][A-Za-z0-9_]*(?:\\[[^\\]]+\\])?)"
+          "switch": "(?<=\\bfor\\s)([A-Z][A-Za-z0-9_]*(?:\\[[^\\]]+\\])?)"
         }
       ]
     },
@@ -201,15 +201,15 @@
       "patterns": [
         {
           "name": "support.type.primitive.s",
-          "match": "\\b(?:bool|int|int32|i64|u8|u32|u64|f32|f64|usize|string|Self)\\b"
+          "switch": "\\b(?:bool|int|int32|i64|u8|u32|u64|f32|f64|usize|string|Self)\\b"
         },
         {
           "name": "entity.name.type.s",
-          "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+          "switch": "\\b[A-Z][A-Za-z0-9_]*\\b"
         },
         {
           "name": "variable.language.self.s",
-          "match": "\\bself\\b"
+          "switch": "\\bself\\b"
         }
       ]
     },
@@ -232,15 +232,15 @@
           "patterns": [
             {
               "name": "entity.name.type.parameter.s",
-              "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+              "switch": "\\b[A-Z][A-Za-z0-9_]*\\b"
             },
             {
               "name": "support.type.primitive.s",
-              "match": "\\b(?:bool|int|int32|i64|u8|u32|u64|f32|f64|usize|string|Self)\\b"
+              "switch": "\\b(?:bool|int|int32|i64|u8|u32|u64|f32|f64|usize|string|Self)\\b"
             },
             {
               "name": "keyword.operator.bound.s",
-              "match": "[:,+]"
+              "switch": "[:,+]"
             }
           ]
         }
@@ -249,7 +249,7 @@
     "functions": {
       "patterns": [
         {
-          "match": "\\b(func|fn)\\s+([a-zA-Z_][A-Za-z0-9_]*)",
+          "switch": "\\b(func|fn)\\s+([a-zA-Z_][A-Za-z0-9_]*)",
           "captures": {
             "1": {
               "name": "storage.type.declaration.s"
@@ -261,15 +261,15 @@
         },
         {
           "name": "meta.function.call.s",
-          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()"
+          "switch": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()"
         },
         {
           "name": "entity.name.function.method.s",
-          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\b(?=\\s*::)"
+          "switch": "\\b([A-Za-z_][A-Za-z0-9_]*)\\b(?=\\s*::)"
         },
         {
           "name": "variable.other.member.s",
-          "match": "(?<=\\.)[a-z_][A-Za-z0-9_]*\\b"
+          "switch": "(?<=\\.)[a-z_][A-Za-z0-9_]*\\b"
         }
       ]
     },
@@ -277,11 +277,11 @@
       "patterns": [
         {
           "name": "entity.other.inherited-class.s",
-          "match": "\\b[A-Z][A-Za-z0-9_]*\\b(?=\\s+for\\s+[A-Z][A-Za-z0-9_]*\\b)"
+          "switch": "\\b[A-Z][A-Za-z0-9_]*\\b(?=\\s+for\\s+[A-Z][A-Za-z0-9_]*\\b)"
         },
         {
           "name": "entity.name.type.trait.impl.s",
-          "match": "(?<=\\bimpl\\s)([A-Z][A-Za-z0-9_]*)(?=\\s+for\\s)"
+          "switch": "(?<=\\bimpl\\s)([A-Z][A-Za-z0-9_]*)(?=\\s+for\\s)"
         }
       ]
     },
@@ -289,23 +289,23 @@
       "patterns": [
         {
           "name": "entity.name.constant.enum-variant.s",
-          "match": "\\b[A-Z][A-Za-z0-9_]*\\b(?=\\s*(?:\\(|,|=>|\\}))"
+          "switch": "\\b[A-Z][A-Za-z0-9_]*\\b(?=\\s*(?:\\(|,|:|\\}))"
         }
       ]
     },
-    "matchPatterns": {
+    "switchPatterns": {
       "patterns": [
         {
-          "name": "keyword.control.match.s",
-          "match": "\\bmatch\\b"
+          "name": "keyword.control.switch.s",
+          "switch": "\\bswitch\\b"
         },
         {
           "name": "variable.parameter.pattern.wildcard.s",
-          "match": "\\b_\\b"
+          "switch": "\\b_\\b"
         },
         {
           "name": "keyword.operator.pattern.s",
-          "match": "=>"
+          "switch": ":"
         }
       ]
     },
@@ -313,7 +313,7 @@
       "patterns": [
         {
           "name": "constant.other.s",
-          "match": "\\b[A-Z][A-Z0-9_]*\\b"
+          "switch": "\\b[A-Z][A-Z0-9_]*\\b"
         }
       ]
     },
@@ -321,7 +321,7 @@
       "patterns": [
         {
           "name": "keyword.operator.s",
-          "match": "\\.\\.=|\\.\\.|==|!=|<=|>=|&&|\\|\\||<<|>>|[-+*/%=&|^!<>?:.]"
+          "switch": "\\.\\.=|\\.\\.|==|!=|<=|>=|&&|\\|\\||<<|>>|[-+*/%=&|^!<>?:.]"
         }
       ]
     }

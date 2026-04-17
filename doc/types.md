@@ -274,7 +274,7 @@ enum Result[T, E] {
 
 ### 9.2 Exhaustiveness
 
-对 `enum` 进行 `match` 时，编译器应进行穷尽性检查。
+对 `enum` 进行 `switch` 时，编译器应进行穷尽性检查。
 
 ### 9.3 Discriminant Layout
 
@@ -321,7 +321,7 @@ let ok = true
 
 ### 12.2 Branch Unification
 
-`if`、`match` 等表达式各分支必须可统一为单一类型。
+`if`、`switch` 等表达式各分支必须可统一为单一类型。
 
 示例：
 
@@ -593,9 +593,9 @@ Draft 0.1 只固定方向，不冻结具体语法。
 示例：
 
 ```s
-match result {
-    Ok(value) => println(value),
-    Err(err) => eprintln(err.message()),
+switch result {
+    Ok(value) : println(value),
+    Err(err) : eprintln(err.message()),
 }
 ```
 
@@ -644,7 +644,7 @@ trait Error {
 - 哪个 trait 约束未满足
 - 为什么某类型不能 `Copy`
 - 为什么某值不能跨线程发送
-- 为什么某个 `match` 分支类型不一致
+- 为什么某个 `switch` 分支类型不一致
 
 推荐诊断包含：
 
@@ -661,7 +661,7 @@ trait Error {
 3. 函数签名匹配
 4. 基础泛型参数替换
 5. 基础 trait bound 检查
-6. `Result` / `Option` 和 `match` 的类型检查
+6. `Result` / `Option` 和 `switch` 的类型检查
 7. `Copy` / `Drop` / `Send` / `Sync` 的最小语义判断
 
 可以后置的高级能力包括：

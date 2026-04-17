@@ -51,6 +51,11 @@ class VariantPattern(Pattern):
     args: List[Pattern] = field(default_factory=list)
 
 
+@dataclass
+class LiteralPattern(Pattern):
+    value: "Expr"
+
+
 class Expr:
     inferred_type: Optional[str] = None
 
@@ -82,6 +87,12 @@ class BorrowExpr(Expr):
 
 
 @dataclass
+class UnaryExpr(Expr):
+    op: str
+    operand: Expr
+
+
+@dataclass
 class BinaryExpr(Expr):
     left: Expr
     op: str
@@ -107,15 +118,31 @@ class CallExpr(Expr):
 
 
 @dataclass
-class MatchArm:
+class StructFieldInit:
+    name: str
+    value: Expr
+
+
+@dataclass
+class StructLiteralExpr(Expr):
+    callee: Expr
+    fields: List[StructFieldInit] = field(default_factory=list)
+
+
+@dataclass
+class SwitchArm:
     pattern: Pattern
     expr: Expr
 
 
 @dataclass
-class MatchExpr(Expr):
+class SwitchExpr(Expr):
     subject: Expr
-    arms: List[MatchArm] = field(default_factory=list)
+    arms: List[SwitchArm] = field(default_factory=list)
+
+
+SwitchArm = SwitchArm
+SwitchExpr = SwitchExpr
 
 
 @dataclass
@@ -365,6 +392,8 @@ def _dump_expr(expr: Optional[Expr]) -> str:
     if isinstance(expr, BorrowExpr):
         prefix = "&mut " if expr.mutable else "&"
         return f"{prefix}{_dump_expr(expr.target)}"
+    if isinstance(expr, UnaryExpr):
+        return f"({expr.op}{_dump_expr(expr.operand)})"
     if isinstance(expr, BinaryExpr):
         return f"({_dump_expr(expr.left)} {expr.op} {_dump_expr(expr.right)})"
     if isinstance(expr, MemberExpr):
@@ -374,9 +403,12 @@ def _dump_expr(expr: Optional[Expr]) -> str:
     if isinstance(expr, CallExpr):
         args = ", ".join(_dump_expr(arg) for arg in expr.args)
         return f"call {_dump_expr(expr.callee)}({args})"
-    if isinstance(expr, MatchExpr):
-        arms = "; ".join(f"{_dump_pattern(arm.pattern)} => {_dump_expr(arm.expr)}" for arm in expr.arms)
-        return f"match {_dump_expr(expr.subject)} {{ {arms} }}"
+    if isinstance(expr, StructLiteralExpr):
+        fields = ", ".join(f"{field.name}: {_dump_expr(field.value)}" for field in expr.fields)
+        return f"{_dump_expr(expr.callee)} {{ {fields} }}"
+    if isinstance(expr, SwitchExpr):
+        arms = "; ".join(f"{_dump_pattern(arm.pattern)} : {_dump_expr(arm.expr)}" for arm in expr.arms)
+        return f"switch {_dump_expr(expr.subject)} {{ {arms} }}"
     if isinstance(expr, IfExpr):
         text = f"if {_dump_expr(expr.condition)} {{...}}"
         if expr.else_branch is not None:
@@ -401,6 +433,8 @@ def _dump_pattern(pattern: Pattern) -> str:
             return pattern.path
         args = ", ".join(_dump_pattern(arg) for arg in pattern.args)
         return f"{pattern.path}({args})"
+    if isinstance(pattern, LiteralPattern):
+        return _dump_expr(pattern.value)
     return type(pattern).__name__
 
 

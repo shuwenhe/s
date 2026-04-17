@@ -6,8 +6,8 @@ enum Option[T] {
 }
 
 func unwrapOrZero(Option[int32] value) int32 {
-    match value {
-        Some(inner) => inner,
-        None => 0,
+    switch value {
+        Some(inner) : inner,
+        None : 0,
     }
 }

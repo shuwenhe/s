@@ -19,18 +19,21 @@ from compiler.ast import (
     IndexExpr,
     IntExpr,
     LetStmt,
-    MatchExpr,
-    MatchArm,
+    StructLiteralExpr,
+    SwitchExpr,
+    SwitchArm,
     MemberExpr,
     NameExpr,
     Pattern,
     ReturnStmt,
     SourceFile,
     StringExpr,
+    UnaryExpr,
     VariantPattern,
     WhileExpr,
     WildcardPattern,
     NamePattern,
+    LiteralPattern,
 )
 from compiler.parser import parse_source
 from compiler.interpreter_dispatch import dispatch_imported_call, dispatch_special_call
@@ -238,6 +241,11 @@ class Interpreter:
             left = self.eval_expr(expr.left, env)
             right = self.eval_expr(expr.right, env)
             return self.eval_binary(expr.op, left, right)
+        if isinstance(expr, UnaryExpr):
+            operand = self.eval_expr(expr.operand, env)
+            if expr.op == "!":
+                return not bool(operand)
+            raise InterpreterError(f"unsupported unary operator {expr.op}")
         if isinstance(expr, MemberExpr):
             target = self.eval_expr(expr.target, env)
             if isinstance(target, dict):
@@ -259,7 +267,12 @@ class Interpreter:
             while self.eval_expr(expr.condition, env):
                 self._eval_block_in_place(expr.body, env)
             return None
-        if isinstance(expr, MatchExpr):
+        if isinstance(expr, StructLiteralExpr):
+            value: dict[str, Any] = {}
+            for field in expr.fields:
+                value[field.name] = self.eval_expr(field.value, env)
+            return value
+        if isinstance(expr, SwitchExpr):
             subject = self.eval_expr(expr.subject, env)
             for arm in expr.arms:
                 bindings = self._match_pattern(arm.pattern, subject)
@@ -302,12 +315,10 @@ class Interpreter:
         raise InterpreterError(f"unsupported method {member}")
 
     def _eval_type_constructor(self, callee: Expr, args: list[Expr], env: dict[str, Any]) -> Any:
-        if args:
-            return None
         if isinstance(callee, IndexExpr) and isinstance(callee.target, NameExpr) and callee.target.name == "Vec":
-            return []
+            return [self.eval_expr(arg, env) for arg in args]
         if isinstance(callee, NameExpr) and callee.name == "Vec":
-            return []
+            return [self.eval_expr(arg, env) for arg in args]
         return None
 
     def _match_pattern(self, pattern: Pattern, value: Any) -> dict[str, Any] | None:
@@ -315,6 +326,15 @@ class Interpreter:
             return {}
         if isinstance(pattern, NamePattern):
             return {pattern.name: value}
+        if isinstance(pattern, LiteralPattern):
+            literal = pattern.value
+            if isinstance(literal, IntExpr):
+                return {} if int(literal.value.replace("_", "")) == value else None
+            if isinstance(literal, StringExpr):
+                return {} if self._decode_string_literal(literal.value) == value else None
+            if isinstance(literal, BoolExpr):
+                return {} if literal.value == value else None
+            return None
         if isinstance(pattern, VariantPattern):
             tag = pattern.path.split("::")[-1].split(".")[-1]
             if not isinstance(value, tuple) or len(value) != 2 or value[0] != tag:

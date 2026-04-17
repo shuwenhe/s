@@ -7,9 +7,9 @@ enum Result[T, E] {
 
 impl Result[T, E] {
     func isOk(self) bool {
-        match self {
-            Result::Ok(_) => true,
-            Result::Err(_) => false,
+        switch self {
+            Result::Ok(_) : true,
+            Result::Err(_) : false,
         }
     }
 
@@ -18,16 +18,16 @@ impl Result[T, E] {
     }
 
     func unwrap(self) T {
-        match self {
-            Result::Ok(value) => value,
-            Result::Err(_) => __result_panic_unwrap(),
+        switch self {
+            Result::Ok(value) : value,
+            Result::Err(_) : __result_panic_unwrap(),
         }
     }
 
     func unwrapErr(self) E {
-        match self {
-            Result::Ok(_) => __result_panic_unwrap_err(),
-            Result::Err(err) => err,
+        switch self {
+            Result::Ok(_) : __result_panic_unwrap_err(),
+            Result::Err(err) : err,
         }
     }
 }
