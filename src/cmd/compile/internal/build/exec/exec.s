@@ -1,7 +1,6 @@
 package compile.internal.build.exec
 
-use compile.internal.backend.Build as BuildBinary
-use compile.internal.backend.Run as RunBinary
+use std.io.eprintln
 use compile.internal.build.emit.Ast as EmitAst
 use compile.internal.build.emit.Built as EmitBuilt
 use compile.internal.build.emit.CheckOk as EmitCheckOk
@@ -11,75 +10,57 @@ use compile.internal.syntax.ParseSource
 use compile.internal.syntax.ReadSource
 use compile.internal.syntax.Tokenize
 use compile.internal.build.parse.CompileOptions
-use std.result.Result
 
-struct ExecError {
-    String message,
-}
-
-func Run(CompileOptions options) -> Result[(), ExecError] {
+func Run(CompileOptions options) -> i32 {
     if options.command == "help" {
-        return Result::Ok(())
+        return 0
     }
 
     var source_result = ReadSource(options.path)
     if source_result.is_err() {
-        return Result::Err(new_exec_error())
+        return 1
     }
 
     var source = source_result.unwrap()
     if options.command == "check" {
         var parse_result = ParseSource(source)
         if parse_result.is_err() {
-            return Result::Err(new_exec_error())
+            return 1
         }
         if CheckText(source) != 0 {
-            return Result::Err(new_exec_error())
+            return 1
         }
-        EmitCheckOk(options.path)
-        return Result::Ok(())
+        EmitCheckOk(options.path);
+        return 0
     }
 
     if options.command == "tokens" {
         var tokens_result = Tokenize(source)
         if tokens_result.is_err() {
-            return Result::Err(new_exec_error())
+            return 1
         }
-        EmitTokens(tokens_result.unwrap())
-        return Result::Ok(())
+        EmitTokens(tokens_result.unwrap());
+        return 0
     }
 
     if options.command == "ast" {
         var ast_result = ParseSource(source)
         if ast_result.is_err() {
-            return Result::Err(new_exec_error())
+            return 1
         }
-        EmitAst(ast_result.unwrap())
-        return Result::Ok(())
+        EmitAst(ast_result.unwrap());
+        return 0
     }
 
     if options.command == "build" {
-        var build_result = BuildBinary(options.path, options.output)
-        if build_result.is_ok() {
-            EmitBuilt(options.output)
-            return Result::Ok(())
-        }
-        return Result::Err(new_exec_error())
+        eprintln("error: build command depends on deprecated backend module; use hosted compiler or self-hosted build path")
+        return 1
     }
 
     if options.command == "run" {
-        var run_result = RunBinary(options.path)
-        if run_result.is_ok() {
-            return Result::Ok(())
-        }
-        return Result::Err(new_exec_error())
+        eprintln("error: run command depends on deprecated backend module; run compiled binaries directly or use the hosted runner")
+        return 1
     }
 
-    Result::Err(new_exec_error())
-}
-
-func new_exec_error() -> ExecError {
-    ExecError {
-        message: "",
-    }
+    1
 }
