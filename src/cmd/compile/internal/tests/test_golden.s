@@ -1,7 +1,7 @@
 package compile.internal.tests.test_golden
 
 use std.fs.ReadToString
-use std.result.Result
+use std.io.println
 use compile.internal.syntax.ReadSource
 use compile.internal.syntax.Tokenize
 use compile.internal.syntax.DumpTokensText
@@ -11,40 +11,35 @@ func RunGoldenSuite(String fixtures_root) -> i32 {
     var source_path = fixtures_root + "/sample.s"
     var tokens_path = fixtures_root + "/sample.tokens"
 
-    match ReadSource(source_path) {
-        Result::Err(err) => {
-            println("failed to read sample.s: " + err.message)
-            return 1
-        }
-        Result::Ok(source) => {
-            match Tokenize(source) {
-                Result::Err(err2) => {
-                    println("lexer error: " + err2.message)
-                    return 1
-                }
-                Result::Ok(tokens) => {
-                    var actual = DumpTokensText(tokens)
-                    match ReadToString(tokens_path) {
-                        Result::Err(err3) => {
-                            println("failed to read sample.tokens: " + err3.message)
-                            return 1
-                        }
-                        Result::Ok(expected_raw) => {
-                            var expected = expected_raw.trim()
-                            if actual.trim() == expected {
-                                println("lex_dump: OK")
-                                return 0
-                            }
-                            println("lex_dump: MISMATCH")
-                            println("--- expected ---")
-                            println(expected)
-                            println("--- actual ---")
-                            println(actual)
-                            return 2
-                        }
-                    }
-                }
-            }
-        }
+    var source_result = ReadSource(source_path)
+    if source_result.is_err() {
+        println("failed to read sample.s");
+        return 1
     }
+
+    var token_result = Tokenize(source_result.unwrap())
+    if token_result.is_err() {
+        println("lexer error");
+        return 1
+    }
+
+    var actual = DumpTokensText(token_result.unwrap())
+
+    var expected_result = ReadToString(tokens_path)
+    if expected_result.is_err() {
+        println("failed to read sample.tokens");
+        return 1
+    }
+
+    var expected = expected_result.unwrap()
+    if actual == expected {
+        println("lex_dump: OK");
+        return 0
+    }
+    println("lex_dump: MISMATCH");
+    println("--- expected ---");
+    println(expected);
+    println("--- actual ---");
+    println(actual);
+    2
 }
