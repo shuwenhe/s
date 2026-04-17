@@ -11,22 +11,22 @@ func Build(string path, string output) int32 {
 }
 
 func Run(string path) int32 {
-    var tempDirResult = MakeTempDir("s-build-")
-    if tempDirResult.is_err() {
+    var temp_dir_result = MakeTempDir("s-build-")
+    if temp_dir_result.is_err() {
         eprintln("run failed: could not create temporary output directory");
         return 1
     }
 
-    var outputPath = tempDirResult.unwrap() + "/a.out"
-    if Build(path, outputPath) != 0 {
+    var output_path = temp_dir_result.unwrap() + "/a.out"
+    if Build(path, output_path) != 0 {
         eprintln("run failed: build step failed");
         return 1
     }
 
-    var runArgv = Vec[string]()
-    runArgv.push(outputPath);
-    var runResult = RunProcess(runArgv)
-    if runResult.is_err() {
+    var run_argv = Vec[string]()
+    run_argv.push(output_path);
+    var run_result = RunProcess(run_argv)
+    if run_result.is_err() {
         eprintln("run failed: process execution failed");
         return 1
     }

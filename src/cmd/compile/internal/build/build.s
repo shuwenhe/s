@@ -11,18 +11,18 @@ func main(Vec[string] args)  int32 {
         return 0
     }
 
-    var execResult = ExecRun(options)
+    var exec_result = ExecRun(options)
     if options[0] == "run" {
-        return execResult
+        return exec_result
     }
-    if execResult != 0 {
-        reportError("execution failed");
+    if exec_result != 0 {
+        report_error("execution failed");
         return 1
     }
 
     0
 }
 
-func reportError(string message)  () {
+func report_error(string message)  () {
     ReportError(message)
 }
