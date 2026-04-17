@@ -23,8 +23,9 @@ def run_cmd_s(argv: list[str]) -> HostedCommandResult:
 
         Exit(compiler.main(Args()))
 
-    This keeps the command entry shape aligned with the S-side wrapper while the
-    project still depends on the Python bootstrap for actual execution.
+    This keeps the command entry shape aligned with the S-side wrapper while
+    the launcher prefers the self-hosted native path and falls back to Python
+    only when the native launcher is not available.
     """
 
     try:
