@@ -2,10 +2,7 @@ from __future__ import annotations
 
 import argparse
 
-from compiler.interpreter import Interpreter, InterpreterError
 from compiler.hosted_compiler import run_cli
-from compiler.parser import ParseError, parse_source
-from compiler.semantic import check_source
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,33 +32,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "build":
         return run_cli([args.command, args.path, "-o", args.output])
     if args.command == "run":
-        return run_source(args.path)
+        return run_cli([args.command, args.path])
     parser.error("unknown command")
     return 2
-
-def run_source(path: str) -> int:
-    import sys
-    from pathlib import Path
-
-    source_path = Path(path)
-    source = source_path.read_text()
-    try:
-        parsed = parse_source(source)
-    except ParseError as exc:
-        print(f"parse error: {exc}", file=sys.stderr)
-        return 1
-
-    result = check_source(parsed)
-    if not result.ok:
-        for diagnostic in result.diagnostics:
-            print(f"error: {diagnostic.message}", file=sys.stderr)
-        return 1
-
-    try:
-        return Interpreter(parsed).run_main()
-    except InterpreterError as exc:
-        print(f"runtime error: {exc}", file=sys.stderr)
-        return 1
 
 
 if __name__ == "__main__":

@@ -40,7 +40,7 @@ from compiler.ast import (
 )
 from compiler.borrow import analyze_block
 from compiler.ownership import make_plan
-from compiler.prelude import lookup_builtin_methods, lookup_builtin_type, lookup_index_type
+from compiler.prelude import BuiltinMethodDecl, lookup_builtin_methods, lookup_builtin_type, lookup_index_type
 from compiler.typesys import (
     BOOL,
     FunctionType,
@@ -712,6 +712,13 @@ class Checker:
         if isinstance(target, ReferenceType):
             return self._resolve_member(target.inner, member)
         if isinstance(target, NamedType):
+            if target.name == "Option":
+                if member == "is_some" or member == "is_none":
+                    return BOOL
+                if member == "unwrap" and target.args:
+                    return target.args[0]
+                if member == "unwrap_or" and target.args:
+                    return target.args[0]
             struct_info = self.structs.get(target.name)
             if struct_info and member in struct_info.fields:
                 return struct_info.fields[member]
@@ -787,6 +794,32 @@ class Checker:
         expr_args: List[Expr],
         scope: Dict[str, VarState],
     ):
+        if isinstance(receiver_type, NamedType) and receiver_type.name == "Option":
+            option_inner = receiver_type.args[0] if receiver_type.args else UnknownType()
+            if method_name == "is_some" or method_name == "is_none":
+                return BuiltinMethodDecl(
+                    name=method_name,
+                    trait_name=None,
+                    receiver_mode="ref",
+                    receiver_policy="shared_or_addressable",
+                    signature=FunctionType([], BOOL),
+                )
+            if method_name == "unwrap":
+                return BuiltinMethodDecl(
+                    name=method_name,
+                    trait_name=None,
+                    receiver_mode="ref",
+                    receiver_policy="shared_or_addressable",
+                    signature=FunctionType([], option_inner),
+                )
+            if method_name == "unwrap_or":
+                return BuiltinMethodDecl(
+                    name=method_name,
+                    trait_name=None,
+                    receiver_mode="ref",
+                    receiver_policy="shared_or_addressable",
+                    signature=FunctionType([option_inner], option_inner),
+                )
         candidates = list(lookup_builtin_methods(receiver_type, method_name))
         if not candidates:
             return None
@@ -865,6 +898,36 @@ class Checker:
             "CompileOptions",
             StructInfo(fields={"command": STRING, "path": STRING, "output": STRING}),
         )
+        self.structs.setdefault("UseDecl", StructInfo(fields={"path": STRING, "alias": parse_type("Option[String]")}))
+        self.structs.setdefault(
+            "Field",
+            StructInfo(fields={"name": STRING, "type_name": STRING, "is_public": BOOL}),
+        )
+        self.structs.setdefault(
+            "Param",
+            StructInfo(fields={"name": STRING, "type_name": STRING}),
+        )
+        self.structs.setdefault(
+            "FunctionSig",
+            StructInfo(
+                fields={
+                    "name": STRING,
+                    "generics": parse_type("Vec[String]"),
+                    "params": parse_type("Vec[Param]"),
+                    "return_type": parse_type("Option[String]"),
+                }
+            ),
+        )
+        self.structs.setdefault(
+            "BlockExpr",
+            StructInfo(
+                fields={
+                    "statements": parse_type("Vec[Stmt]"),
+                    "final_expr": parse_type("Option[Expr]"),
+                }
+            ),
+        )
+        self.structs.setdefault("FunctionDecl", StructInfo(fields={"sig": NamedType("FunctionSig"), "body": parse_type("Option[BlockExpr]"), "is_public": BOOL}))
         self.structs.setdefault("ParseError", StructInfo(fields={"message": STRING}))
         self.structs.setdefault("ExecError", StructInfo(fields={"message": STRING}))
 
@@ -910,6 +973,42 @@ class Checker:
             "std.prelude.to_string": TraitMethodInfo(owner="std.prelude", generics=[], params=[I32], return_type=STRING),
             "std.prelude.char_at": TraitMethodInfo(owner="std.prelude", generics=[], params=[STRING, I32], return_type=STRING),
             "std.prelude.slice": TraitMethodInfo(owner="std.prelude", generics=[], params=[STRING, I32, I32], return_type=STRING),
+            "s.dump_stmt": TraitMethodInfo(
+                owner="s",
+                generics=[],
+                params=[parse_type("Stmt"), STRING],
+                return_type=parse_type("Vec[String]"),
+            ),
+            "s.dump_expr": TraitMethodInfo(
+                owner="s",
+                generics=[],
+                params=[parse_type("Expr")],
+                return_type=STRING,
+            ),
+            "compile.internal.typesys.BaseTypeName": TraitMethodInfo(
+                owner="compile.internal.typesys",
+                generics=[],
+                params=[STRING],
+                return_type=STRING,
+            ),
+            "compile.internal.typesys.IsCopyType": TraitMethodInfo(
+                owner="compile.internal.typesys",
+                generics=[],
+                params=[STRING],
+                return_type=BOOL,
+            ),
+            "compile.internal.check.LoadFrontend": TraitMethodInfo(
+                owner="compile.internal.check",
+                generics=[],
+                params=[STRING],
+                return_type=STRING,
+            ),
+            "compile.internal.semantic.CheckText": TraitMethodInfo(
+                owner="compile.internal.semantic",
+                generics=[],
+                params=[STRING],
+                return_type=I32,
+            ),
             "std.process.Exit": TraitMethodInfo(owner="std.process", generics=[], params=[I32], return_type=UNIT),
             "std.process.RunProcess": TraitMethodInfo(
                 owner="std.process",
@@ -947,11 +1046,71 @@ class Checker:
                 params=[STRING, STRING],
                 return_type=I32,
             ),
+            "compile.internal.backend.BuildTrace": TraitMethodInfo(
+                owner="compile.internal.backend",
+                generics=[],
+                params=[STRING, STRING],
+                return_type=STRING,
+            ),
             "compile.internal.backend.Run": TraitMethodInfo(
                 owner="compile.internal.backend",
                 generics=[],
                 params=[STRING],
                 return_type=I32,
+            ),
+            "compile.internal.borrow.AnalyzeBlock": TraitMethodInfo(
+                owner="compile.internal.borrow",
+                generics=[],
+                params=[],
+                return_type=I32,
+            ),
+            "compile.internal.borrow.AnalyzeTrace": TraitMethodInfo(
+                owner="compile.internal.borrow",
+                generics=[],
+                params=[STRING, parse_type("Vec[String]"), STRING],
+                return_type=STRING,
+            ),
+            "compile.internal.borrow.AnalyzeFunction": TraitMethodInfo(
+                owner="compile.internal.borrow",
+                generics=[],
+                params=[STRING, parse_type("Vec[String]"), STRING],
+                return_type=STRING,
+            ),
+            "compile.internal.borrow.AnalyzeExpr": TraitMethodInfo(
+                owner="compile.internal.borrow",
+                generics=[],
+                params=[STRING, STRING],
+                return_type=STRING,
+            ),
+            "compile.internal.mir.LowerFunction": TraitMethodInfo(
+                owner="compile.internal.mir",
+                generics=[],
+                params=[STRING, STRING],
+                return_type=STRING,
+            ),
+            "compile.internal.mir.LowerBlock": TraitMethodInfo(
+                owner="compile.internal.mir",
+                generics=[],
+                params=[STRING, STRING, STRING],
+                return_type=STRING,
+            ),
+            "compile.internal.mir.TraceBranch": TraitMethodInfo(
+                owner="compile.internal.mir",
+                generics=[],
+                params=[STRING, STRING, STRING],
+                return_type=STRING,
+            ),
+            "compile.internal.mir.TraceLoop": TraitMethodInfo(
+                owner="compile.internal.mir",
+                generics=[],
+                params=[STRING, STRING, STRING],
+                return_type=STRING,
+            ),
+            "compile.internal.mir.TraceMatch": TraitMethodInfo(
+                owner="compile.internal.mir",
+                generics=[],
+                params=[STRING, STRING],
+                return_type=STRING,
             ),
             "compile.internal.dispatch.Main": TraitMethodInfo(
                 owner="compile.internal.dispatch",

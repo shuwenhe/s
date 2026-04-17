@@ -2,6 +2,8 @@ package compile.internal.build
 
 use compile.internal.backend.Build as BuildBinary
 use compile.internal.backend.Run as RunBinary
+use compile.internal.semantic.CheckText
+use std.fs.ReadToString
 use std.vec.Vec
 
 func Main(Vec[String] args) -> i32 {
@@ -11,6 +13,20 @@ func Main(Vec[String] args) -> i32 {
 
     var command = args[1]
     if command == "help" {
+        return 0
+    }
+
+    if command == "check" {
+        if args.len() < 3 {
+            return 1
+        }
+        var source_result = ReadToString(args[2])
+        if source_result.is_err() {
+            return 1
+        }
+        if CheckText(source_result.unwrap()) != 0 {
+            return 1
+        }
         return 0
     }
 
