@@ -190,7 +190,7 @@ impl Lexer {
         var multi = Vec[String] {
             "++",
             ":=",
-            " ",
+            "->",
             "=>",
             "==",
             "!=",
