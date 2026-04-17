@@ -61,7 +61,7 @@ invoke_intrinsic("__string_slice", "hello", 1, 4)
 
 三者必须一致。
 
-The manifest is now the ABI source of truth. The Python bridge must match it at
+The manifest is now the ABI source of truth. The Python bridge must switch it at
 import time.
 
 当前已接通的符号包括：

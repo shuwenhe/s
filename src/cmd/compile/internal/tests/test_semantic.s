@@ -68,52 +68,52 @@ func RunSemanticSuite(string fixturesRoot) int32 {
         return 1
     }
 
-    var optionMatchOk = "package demo.match\nfunc f(Option[int32] value) int32 {\n  match value {\n    Some(v) => v,\n    None => 0,\n  }\n}"
+    var optionMatchOk = "package demo.switch\nfunc f(Option[int32] value) int32 {\n  switch value {\n    Some(v) : v,\n    None : 0,\n  }\n}"
     if CheckText(optionMatchOk) != 0 {
         return 1
     }
 
-    var optionMatchExhaustFail = "package demo.match\nfunc f(Option[int32] value) int32 {\n  match value {\n    Some(v) => v,\n  }\n}"
+    var optionMatchExhaustFail = "package demo.switch\nfunc f(Option[int32] value) int32 {\n  switch value {\n    Some(v) : v,\n  }\n}"
     if CheckText(optionMatchExhaustFail) == 0 {
         return 1
     }
 
-    var optionMatchDuplicateFail = "package demo.match\nfunc f(Option[int32] value) int32 {\n  match value {\n    Some(v) => v,\n    Some(w) => w,\n    None => 0,\n  }\n}"
+    var optionMatchDuplicateFail = "package demo.switch\nfunc f(Option[int32] value) int32 {\n  switch value {\n    Some(v) : v,\n    Some(w) : w,\n    None : 0,\n  }\n}"
     if CheckText(optionMatchDuplicateFail) == 0 {
         return 1
     }
 
-    var optionMatchUnreachableFail = "package demo.match\nfunc f(Option[int32] value) int32 {\n  match value {\n    _ => 0,\n    Some(v) => v,\n  }\n}"
+    var optionMatchUnreachableFail = "package demo.switch\nfunc f(Option[int32] value) int32 {\n  switch value {\n    _ : 0,\n    Some(v) : v,\n  }\n}"
     if CheckText(optionMatchUnreachableFail) == 0 {
         return 1
     }
 
-    var optionMatchBindTypeFail = "package demo.match\nfunc f(Option[int32] value) bool {\n  match value {\n    Some(v) => v,\n    None => false,\n  }\n}"
+    var optionMatchBindTypeFail = "package demo.switch\nfunc f(Option[int32] value) bool {\n  switch value {\n    Some(v) : v,\n    None : false,\n  }\n}"
     if CheckText(optionMatchBindTypeFail) == 0 {
         return 1
     }
 
-    var resultMatchOk = "package demo.match\nfunc f(Result[int32, string] value) int32 {\n  match value {\n    Ok(v) => v,\n    Err(e) => 0,\n  }\n}"
+    var resultMatchOk = "package demo.switch\nfunc f(Result[int32, string] value) int32 {\n  switch value {\n    Ok(v) : v,\n    Err(e) : 0,\n  }\n}"
     if CheckText(resultMatchOk) != 0 {
         return 1
     }
 
-    var resultMatchExhaustFail = "package demo.match\nfunc f(Result[int32, string] value) int32 {\n  match value {\n    Ok(v) => v,\n  }\n}"
+    var resultMatchExhaustFail = "package demo.switch\nfunc f(Result[int32, string] value) int32 {\n  switch value {\n    Ok(v) : v,\n  }\n}"
     if CheckText(resultMatchExhaustFail) == 0 {
         return 1
     }
 
-    var resultMatchDuplicateFail = "package demo.match\nfunc f(Result[int32, string] value) int32 {\n  match value {\n    Ok(v) => v,\n    Err(e) => 0,\n    Err(e2) => 1,\n  }\n}"
+    var resultMatchDuplicateFail = "package demo.switch\nfunc f(Result[int32, string] value) int32 {\n  switch value {\n    Ok(v) : v,\n    Err(e) : 0,\n    Err(e2) : 1,\n  }\n}"
     if CheckText(resultMatchDuplicateFail) == 0 {
         return 1
     }
 
-    var optionNestedPayloadFail = "package demo.match\nfunc f(Option[int32] value) int32 {\n  match value {\n    Some(Ok(v)) => v,\n    None => 0,\n  }\n}"
+    var optionNestedPayloadFail = "package demo.switch\nfunc f(Option[int32] value) int32 {\n  switch value {\n    Some(Ok(v)) : v,\n    None : 0,\n  }\n}"
     if CheckText(optionNestedPayloadFail) == 0 {
         return 1
     }
 
-    var nestedOk = "package demo.match\nfunc f(Option[Result[int32, string]] value) int32 {\n  match value {\n    Some(Ok(v)) => v,\n    Some(Err(e)) => 0,\n    None => 0,\n  }\n}"
+    var nestedOk = "package demo.switch\nfunc f(Option[Result[int32, string]] value) int32 {\n  switch value {\n    Some(Ok(v)) : v,\n    Some(Err(e)) : 0,\n    None : 0,\n  }\n}"
     if CheckText(nestedOk) != 0 {
         return 1
     }

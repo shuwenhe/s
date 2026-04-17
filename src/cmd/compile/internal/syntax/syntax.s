@@ -17,9 +17,9 @@ struct SyntaxError {
 }
 
 func ReadSource(string path) Result[string, SyntaxError] {
-    match ReadToString(path) {
-        Result::Ok(source) => Result::Ok(source),
-        Result::Err(err) => Result::Err(SyntaxError {
+    switch ReadToString(path) {
+        Result::Ok(source) : Result::Ok(source),
+        Result::Err(err) : Result::Err(SyntaxError {
             message: "failed to read source file: " + path + ": " + err.message,
             line: 0,
             column: 0,
@@ -28,9 +28,9 @@ func ReadSource(string path) Result[string, SyntaxError] {
 }
 
 func Tokenize(string source) Result[Vec[Token], SyntaxError] {
-    match newLexer(source).tokenize() {
-        Result::Ok(tokens) => Result::Ok(tokens),
-        Result::Err(err) => Result::Err(SyntaxError {
+    switch newLexer(source).tokenize() {
+        Result::Ok(tokens) : Result::Ok(tokens),
+        Result::Err(err) : Result::Err(SyntaxError {
             message: err.message,
             line: err.line,
             column: err.column,
@@ -44,9 +44,9 @@ func ParseSource(string source) Result[SourceFile, SyntaxError] {
 }
 
 func ParseTokens(Vec[Token] tokens) Result[SourceFile, SyntaxError] {
-    match parseTokens(tokens) {
-        Result::Ok(ast) => Result::Ok(ast),
-        Result::Err(err) => Result::Err(SyntaxError {
+    switch parseTokens(tokens) {
+        Result::Ok(ast) : Result::Ok(ast),
+        Result::Err(err) : Result::Err(SyntaxError {
             message: err.message,
             line: err.line,
             column: err.column,

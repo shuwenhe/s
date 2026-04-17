@@ -20,13 +20,13 @@ struct Token {
 }
 
 func tokenKindName(TokenKind kind) string {
-    match kind {
-        TokenKind::Ident => "IDENT",
-        TokenKind::Int => "INT",
-        TokenKind::string => "STRING",
-        TokenKind::Keyword => "KEYWORD",
-        TokenKind::Symbol => "SYMBOL",
-        TokenKind::Eof => "EOF",
+    switch kind {
+        TokenKind::Ident : "IDENT",
+        TokenKind::Int : "INT",
+        TokenKind::string : "STRING",
+        TokenKind::Keyword : "KEYWORD",
+        TokenKind::Symbol : "SYMBOL",
+        TokenKind::Eof : "EOF",
     }
 }
 
@@ -51,35 +51,35 @@ func dumpTokens(Vec[Token] tokens) string {
 }
 
 func isKeyword(string text) bool {
-    match text {
-        "package" => true,
-        "use" => true,
-        "as" => true,
-        "pub" => true,
-        "func" => true,
-        "let" => true,
-        "var" => true,
-        "const" => true,
-        "static" => true,
-        "struct" => true,
-        "enum" => true,
-        "trait" => true,
-        "impl" => true,
-        "for" => true,
-        "if" => true,
-        "else" => true,
-        "while" => true,
-        "match" => true,
-        "return" => true,
-        "break" => true,
-        "continue" => true,
-        "true" => true,
-        "false" => true,
-        "unsafe" => true,
-        "extern" => true,
-        "mut" => true,
-        "where" => true,
-        "in" => true,
-        _ => false,
+    switch text {
+        "package" : true,
+        "use" : true,
+        "as" : true,
+        "pub" : true,
+        "func" : true,
+        "let" : true,
+        "var" : true,
+        "const" : true,
+        "static" : true,
+        "struct" : true,
+        "enum" : true,
+        "trait" : true,
+        "impl" : true,
+        "for" : true,
+        "if" : true,
+        "else" : true,
+        "while" : true,
+        "switch" : true,
+        "return" : true,
+        "break" : true,
+        "continue" : true,
+        "true" : true,
+        "false" : true,
+        "unsafe" : true,
+        "extern" : true,
+        "mut" : true,
+        "where" : true,
+        "in" : true,
+        _ : false,
     }
 }

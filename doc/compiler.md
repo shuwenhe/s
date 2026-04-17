@@ -99,14 +99,14 @@ Source
 
 - 支持 `struct` / `enum` / `trait`
 - 支持 `Result` / `Option`
-- 支持 `match`
+- 支持 `switch`
 - 支持基础泛型
 
 交付物：
 
 - HIR
 - trait bound 检查
-- `match` 穷尽性检查
+- `switch` 穷尽性检查
 
 ### 4.4 Phase 3: Ownership
 
@@ -296,7 +296,7 @@ MIR 适合包含：
 - 推导表达式类型
 - 检查函数调用和返回类型
 - 检查 `struct` / `enum` 构造
-- 检查 `match` 分支一致性
+- 检查 `switch` 分支一致性
 - 检查 trait bound
 
 ### 9.2 Type Representation
@@ -335,7 +335,7 @@ MVP 可以先支持：
 
 ## 10. Exhaustiveness Checking
 
-`match` 的穷尽性检查应作为类型检查的一部分或紧邻其后执行。
+`switch` 的穷尽性检查应作为类型检查的一部分或紧邻其后执行。
 
 MVP 建议先支持：
 
@@ -522,7 +522,7 @@ AST  Typed HIR  LLVM IR
 对能成功编译的样例，建立端到端运行测试：
 
 - hello world
-- struct / enum / match
+- struct / enum / switch
 - Result / Option
 - borrow 合法/非法样例
 - IO 和文件样例
@@ -564,7 +564,7 @@ tests/
 
 - 名称解析
 - 基础类型检查
-- `struct` / `enum` / `match`
+- `struct` / `enum` / `switch`
 
 ### M3
 
