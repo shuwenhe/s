@@ -380,26 +380,36 @@ static result_t build_source(const char *path, const char *output_path) {
             fprintf(stderr, "[debug] S_COMPILER failed: %s\n", r.message ? r.message : "(null)");
         }
 
-        /* Try `s` on PATH */
+        /* Fallback to python hosted compiler first to avoid accidentally
+           delegating to an incompatible `s` on PATH that may return
+           success without producing the requested output. */
+        char *py_argv[] = {"python3", "-m", "compiler", "build", found, "-o", (char *)output_path, NULL};
+        fprintf(stderr, "[debug] attempting python hosted compiler: %s %s %s %s %s %s\n",
+                py_argv[0], py_argv[1], py_argv[2], py_argv[3], py_argv[4], py_argv[5]);
+        result_t r_py = run_process(py_argv, "python hosted compiler failed");
+        if (r_py.ok) {
+            fprintf(stderr, "[debug] delegated to python succeeded\n");
+            return r_py;
+        }
+        fprintf(stderr, "[debug] python hosted compiler failed: %s\n", r_py.message ? r_py.message : "(null)");
+
+        /* Try `s` on PATH as a last resort. */
         char *s_on_path_argv[] = {"s", "build", found, "-o", (char *)output_path, NULL};
         fprintf(stderr, "[debug] attempting to use 's' on PATH\n");
         result_t r_path = run_process(s_on_path_argv, "s on PATH failed");
         if (r_path.ok) {
-            fprintf(stderr, "[debug] delegated to s on PATH succeeded\n");
-            return r_path;
+            /* Verify the requested output was actually produced. Some
+               `s` implementations may exit 0 without writing the
+               output file; treat that as failure and continue to the
+               next fallback. */
+            if (access((char *)output_path, R_OK) == 0) {
+                fprintf(stderr, "[debug] delegated to s on PATH succeeded and output exists\n");
+                return r_path;
+            }
+            fprintf(stderr, "[debug] s on PATH returned success but output missing: %s\n", (char *)output_path);
         }
         fprintf(stderr, "[debug] s on PATH failed: %s\n", r_path.message ? r_path.message : "(null)");
 
-        /* Fallback to python hosted compiler */
-        char *py_argv[] = {"python3", "-m", "compiler", "build", found, "-o", (char *)output_path, NULL};
-        fprintf(stderr, "[debug] falling back to python: %s %s %s %s %s %s\n",
-                py_argv[0], py_argv[1], py_argv[2], py_argv[3], py_argv[4], py_argv[5]);
-        result_t r_py = run_process(py_argv, "python hosted compiler failed");
-        if (!r_py.ok) {
-            fprintf(stderr, "[debug] delegated python failed: %s\n", r_py.message ? r_py.message : "(null)");
-        } else {
-            fprintf(stderr, "[debug] delegated python succeeded\n");
-        }
         return r_py;
     }
 
