@@ -6,15 +6,15 @@ enum Result[T, E] {
 }
 
 impl Result[T, E] {
-    func isOk(self) bool {
+    func is_ok(self) bool {
         switch self {
             Result::Ok(_) : true,
             Result::Err(_) : false,
         }
     }
 
-    func isErr(self) bool {
-        !self.isOk()
+    func is_err(self) bool {
+        !self.is_ok()
     }
 
     func unwrap(self) T {
@@ -24,7 +24,7 @@ impl Result[T, E] {
         }
     }
 
-    func unwrapErr(self) E {
+    func unwrap_err(self) E {
         switch self {
             Result::Ok(_) : __result_panic_unwrap_err(),
             Result::Err(err) : err,

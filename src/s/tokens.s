@@ -1,6 +1,6 @@
 package s
 
-use std.prelude.toString
+use std.prelude.to_string
 use std.vec.Vec
 
 enum TokenKind {
@@ -19,7 +19,7 @@ struct Token {
     int32 column,
 }
 
-func tokenKindName(TokenKind kind) string {
+func token_kind_name(TokenKind kind) string {
     switch kind {
         TokenKind::Ident : "IDENT",
         TokenKind::Int : "INT",
@@ -30,7 +30,7 @@ func tokenKindName(TokenKind kind) string {
     }
 }
 
-func dumpTokens(Vec[Token] tokens) string {
+func dump_tokens(Vec[Token] tokens) string {
     // Golden tests depend on this exact one-token-per-line format.
     var out = ""
     for token in tokens {
@@ -39,18 +39,18 @@ func dumpTokens(Vec[Token] tokens) string {
         }
         out =
             out
-            + toString(token.line)
+            + to_string(token.line)
             + ":"
-            + toString(token.column)
+            + to_string(token.column)
             + " "
-            + tokenKindName(token.kind)
+            + token_kind_name(token.kind)
             + " "
             + token.value
     }
     out
 }
 
-func isKeyword(string text) bool {
+func is_keyword(string text) bool {
     switch text {
         "package" : true,
         "use" : true,

@@ -15,7 +15,7 @@ func Exit(int code) () {
     __host_exit(code)
 }
 
-func runProcess(Vec[string] argv) Result[(), ProcessError] {
+func run_process(Vec[string] argv) Result[(), ProcessError] {
     RunProcess(argv)
 }
 

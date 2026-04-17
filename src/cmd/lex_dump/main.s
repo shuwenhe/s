@@ -1,6 +1,6 @@
 package cmd
 
-use std.env.Args as hostArgs
+use std.env.Args as host_args
 use std.result.Result
 use std.io.println
 use compile.internal.syntax.ReadSource
@@ -8,7 +8,7 @@ use compile.internal.syntax.DumpTokensText
 use compile.internal.syntax.Tokenize
 
 func main() int32 {
-    var args = hostArgs()
+    var args = host_args()
     if args.len() < 2 {
         println("usage: lexDump <path>");
         return 1

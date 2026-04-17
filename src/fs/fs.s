@@ -18,7 +18,7 @@ func MakeTempDir(string prefix) Result[string, FsError] {
     __host_make_temp_dir(prefix)
 }
 
-func readToString(string path) Result[string, FsError] {
+func read_to_string(string path) Result[string, FsError] {
     ReadToString(path)
 }
 
