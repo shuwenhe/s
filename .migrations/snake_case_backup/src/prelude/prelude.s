@@ -1,0 +1,33 @@
+package std.prelude
+
+struct Box[T] {
+    T value,
+}
+
+func box[T](T value) Box[T] {
+    Box[T] { value: value }
+}
+
+func len[T](T value) int32 {
+    __runtime_len[T](value)
+}
+
+func toString(int32 value) string {
+    __int_to_string(value)
+}
+
+func charAt(string text, int32 index) string {
+    __string_char_at(text, index)
+}
+
+func slice(string text, int32 start, int32 end) string {
+    __string_slice(text, start, end)
+}
+
+extern "intrinsic" func __runtime_len[T](T value) int32
+
+extern "intrinsic" func __int_to_string(int32 value) string
+
+extern "intrinsic" func __string_char_at(string text, int32 index) string
+
+extern "intrinsic" func __string_slice(string text, int32 start, int32 end) string

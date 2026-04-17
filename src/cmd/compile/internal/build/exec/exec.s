@@ -17,14 +17,14 @@ func Run(Vec[string] options) int32 {
         return 0
     }
 
-    var sourceResult = ReadSource(options[1])
-    if sourceResult.is_err() {
+    var source_result = ReadSource(options[1])
+    if source_result.is_err() {
         return 1
     }
-    var source = sourceResult.unwrap()
+    var source = source_result.unwrap()
     if options[0] == "check" {
-        var parseResult = ParseSource(source)
-        if parseResult.is_err() {
+        var parse_result = ParseSource(source)
+        if parse_result.is_err() {
             return 1
         }
         if CheckText(source) != 0 {
@@ -35,20 +35,20 @@ func Run(Vec[string] options) int32 {
     }
 
     if options[0] == "tokens" {
-        var tokensResult = Tokenize(source)
-        if tokensResult.is_err() {
+        var tokens_result = Tokenize(source)
+        if tokens_result.is_err() {
             return 1
         }
-        EmitTokens(tokensResult.unwrap());
+        EmitTokens(tokens_result.unwrap());
         return 0
     }
 
     if options[0] == "ast" {
-        var astResult = ParseSource(source)
-        if astResult.is_err() {
+        var ast_result = ParseSource(source)
+        if ast_result.is_err() {
             return 1
         }
-        EmitAst(astResult.unwrap());
+        EmitAst(ast_result.unwrap());
         return 0
     }
 
