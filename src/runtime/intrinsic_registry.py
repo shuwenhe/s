@@ -46,6 +46,13 @@ _LOCAL_INTRINSICS: dict[str, IntrinsicSpec] = {
         "i32",
         "bridge success path returns exit code; host failures raise RuntimeTrap",
     ),
+    "__host_run_executable": IntrinsicSpec(
+        "__host_run_executable",
+        impl.__host_run_executable,
+        1,
+        "i32",
+        "bridge success path returns exit code; host failures raise RuntimeTrap",
+    ),
     "__host_run_process": IntrinsicSpec(
         "__host_run_process",
         impl.__host_run_process,

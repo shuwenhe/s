@@ -1,6 +1,7 @@
 package compile.internal.build.exec
 
-use std.io.eprintln
+use compile.internal.build.backend.Build as BuildBinary
+use compile.internal.build.backend.Run as RunBinary
 use compile.internal.build.emit.Ast as EmitAst
 use compile.internal.build.emit.Built as EmitBuilt
 use compile.internal.build.emit.CheckOk as EmitCheckOk
@@ -53,14 +54,16 @@ func Run(CompileOptions options) -> i32 {
     }
 
     if options.command == "build" {
-        eprintln("error: build command depends on deprecated backend module; use hosted compiler or self-hosted build path")
+        if BuildBinary(options.path, options.output) == 0 {
+            EmitBuilt(options.output);
+            return 0
+        }
         return 1
     }
 
     if options.command == "run" {
-        eprintln("error: run command depends on deprecated backend module; run compiled binaries directly or use the hosted runner")
-        return 1
+        return RunBinary(options.path)
     }
 
-    1
+    return 1
 }
