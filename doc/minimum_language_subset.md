@@ -127,7 +127,7 @@ Success means these commands stay working:
 
 ```bash
 cd /app/s/src
-python3 -m compiler check /app/s/src/cmd/compile/internal/compiler/tests/fixtures/check_ok.s
+python3 -m compiler check /app/s/src/cmd/compile/internal/tests/fixtures/check_ok.s
 python3 -m compiler build /app/s/misc/examples/s/hello.s -o /app/tmp/s_hello
 python3 -m compiler build /app/s/misc/examples/s/sum.s -o /app/tmp/s_sum
 ```

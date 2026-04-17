@@ -1,4 +1,4 @@
-package compiler
+package compile.internal.ownership
 
 use std.vec.Vec
 

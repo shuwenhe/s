@@ -74,9 +74,9 @@ Current status:
 
 当前已经开始对应的 S 入口：
 
-- [compiler/tests/test_golden.s](/app/s/src/cmd/compile/internal/compiler/tests/test_golden.s)
-- [compiler/tests/test_semantic.s](/app/s/src/cmd/compile/internal/compiler/tests/test_semantic.s)
-- [compiler/tests/test_mir.s](/app/s/src/cmd/compile/internal/compiler/tests/test_mir.s)
+- [test_golden.s](/app/s/src/cmd/compile/internal/tests/test_golden.s)
+- [test_semantic.s](/app/s/src/cmd/compile/internal/tests/test_semantic.s)
+- [test_mir.s](/app/s/src/cmd/compile/internal/tests/test_mir.s)
 
 完成标准：
 
@@ -147,7 +147,7 @@ Current progress:
 
 当前状态：
 
-- 已新增统一 runner [test_compiler.s](/app/s/src/cmd/test_compiler/main.s)
+- 已新增统一 runner [main.s](/app/s/src/cmd/test_compiler/main.s)
 - 下一步更适合转到 intrinsic manifest 和 host adapter 拆分
 
 ## 5. Exit Criteria

@@ -28,9 +28,9 @@ Status: Working Draft
 - `tokens.py` 已有对应 S 版 [s/tokens.s](/app/s/src/s/tokens.s)
 - `lexer.py` 已有对应 S 版 [s/lexer.s](/app/s/src/s/lexer.s)
 - `parser.py` 已有对应 S 版 [s/parser.s](/app/s/src/s/parser.s)
-- 本次新增 `typesys.py` 对应的 [compiler/typesys.s](/app/s/src/cmd/compile/internal/compiler/typesys.s)
-- 本次新增 `ownership.py` 对应的 [compiler/ownership.s](/app/s/src/cmd/compile/internal/compiler/ownership.s)
-- 本次新增最小 golden 验证入口 [compiler/golden.s](/app/s/src/cmd/compile/internal/compiler/golden.s)
+- 本次新增 `typesys.py` 对应的 [typesys.s](/app/s/src/cmd/compile/internal/typesys.s)
+- 本次新增 `ownership.py` 对应的 [ownership.s](/app/s/src/cmd/compile/internal/ownership.s)
+- 本次新增最小 golden 验证入口 [golden.s](/app/s/src/cmd/compile/internal/golden.s)
 
 ### Group B: Replace After Core Frontend Stabilizes
 
@@ -44,11 +44,11 @@ Status: Working Draft
 
 当前状态：
 
-- `prelude.py` 已有最小 S 版 [compiler/prelude.s](/app/s/src/cmd/compile/internal/compiler/prelude.s)
-- `__main__.py` 已有最小 S 版 [compiler/main.s](/app/s/src/cmd/compile/internal/compiler/main.s)
-- `semantic.py` 已有最小 S 版 [compiler/semantic.s](/app/s/src/cmd/compile/internal/compiler/semantic.s)
-- `mir.py` 已有最小 S 版 [compiler/mir.s](/app/s/src/cmd/compile/internal/compiler/mir.s)
-- `borrow.py` 已有最小 S 版 [compiler/borrow.s](/app/s/src/cmd/compile/internal/compiler/borrow.s)
+- `prelude.py` 已有最小 S 版 [prelude.s](/app/s/src/cmd/compile/internal/prelude.s)
+- `__main__.py` 已有最小 S 版 [main.s](/app/s/src/cmd/compile/internal/main.s)
+- `semantic.py` 已有最小 S 版 [semantic.s](/app/s/src/cmd/compile/internal/semantic.s)
+- `mir.py` 已有最小 S 版 [mir.s](/app/s/src/cmd/compile/internal/mir.s)
+- `borrow.py` 已有最小 S 版 [borrow.s](/app/s/src/cmd/compile/internal/borrow.s)
 
 ### Group C: Python Packaging / Test Glue
 
@@ -70,11 +70,11 @@ Status: Working Draft
 
 当前状态：
 
-- `golden.py` 已有最小 S 版对应物 [compiler/golden.s](/app/s/src/cmd/compile/internal/compiler/golden.s)
-- `test_golden.py` 已有对应入口 [compiler/tests/test_golden.s](/app/s/src/cmd/compile/internal/compiler/tests/test_golden.s)
-- `test_semantic.py` 已有对应入口 [compiler/tests/test_semantic.s](/app/s/src/cmd/compile/internal/compiler/tests/test_semantic.s)
-- `test_mir.py` 已有对应入口 [compiler/tests/test_mir.s](/app/s/src/cmd/compile/internal/compiler/tests/test_mir.s)
-- 新增统一 S 侧测试入口 [test_compiler.s](/app/s/src/cmd/test_compiler/main.s)
+- `golden.py` 已有最小 S 版对应物 [golden.s](/app/s/src/cmd/compile/internal/golden.s)
+- `test_golden.py` 已有对应入口 [test_golden.s](/app/s/src/cmd/compile/internal/tests/test_golden.s)
+- `test_semantic.py` 已有对应入口 [test_semantic.s](/app/s/src/cmd/compile/internal/tests/test_semantic.s)
+- `test_mir.py` 已有对应入口 [test_mir.s](/app/s/src/cmd/compile/internal/tests/test_mir.s)
+- 新增统一 S 侧测试入口 [main.s](/app/s/src/cmd/test_compiler/main.s)
 - Python 测试文件仍保留，继续作为宿主验证入口
 
 ### Group D: Host Bridge Must Stay For Now
