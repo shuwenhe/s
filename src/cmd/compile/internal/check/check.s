@@ -3,10 +3,10 @@ package compile.internal.check
 use compile.internal.semantic.CheckText
 use std.fs.ReadToString
 
-func LoadFrontend(String path) -> String {
+func LoadFrontend(string path) string {
     return ReadToString(path).unwrap()
 }
 
-func CheckFrontend(String frontend) -> i32 {
+func CheckFrontend(string frontend) int32 {
     return CheckText(frontend)
 }

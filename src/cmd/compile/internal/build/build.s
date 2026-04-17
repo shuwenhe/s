@@ -5,7 +5,7 @@ use compile.internal.build.parse.ParseOptions
 use compile.internal.build.report.Error as ReportError
 use std.vec.Vec
 
-func Main(Vec[String] args) -> i32 {
+func Main(Vec[string] args) int32 {
     var parsed = ParseOptions(args)
     if parsed.is_err() {
         report_error("parse failed")
@@ -15,12 +15,12 @@ func Main(Vec[String] args) -> i32 {
     }
 
     var options = parsed.unwrap()
-    if options.command == "help" {
+    if options[0] == "help" {
         return 0
     }
 
     var exec_result = ExecRun(options)
-    if options.command == "run" {
+    if options[0] == "run" {
         return exec_result
     }
     if exec_result != 0 {
@@ -31,6 +31,6 @@ func Main(Vec[String] args) -> i32 {
     0
 }
 
-func report_error(String message) -> () {
+func report_error(string message) () {
     ReportError(message)
 }

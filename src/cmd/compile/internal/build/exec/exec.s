@@ -10,20 +10,17 @@ use compile.internal.semantic.CheckText
 use compile.internal.syntax.ParseSource
 use compile.internal.syntax.ReadSource
 use compile.internal.syntax.Tokenize
-use compile.internal.build.parse.CompileOptions
-
-func Run(CompileOptions options) -> i32 {
-    if options.command == "help" {
+func Run(Vec[string] options) int32 {
+    if options[0] == "help" {
         return 0
     }
 
-    var source_result = ReadSource(options.path)
+    var source_result = ReadSource(options[1])
     if source_result.is_err() {
         return 1
     }
-
     var source = source_result.unwrap()
-    if options.command == "check" {
+    if options[0] == "check" {
         var parse_result = ParseSource(source)
         if parse_result.is_err() {
             return 1
@@ -31,11 +28,11 @@ func Run(CompileOptions options) -> i32 {
         if CheckText(source) != 0 {
             return 1
         }
-        EmitCheckOk(options.path);
+        EmitCheckOk(options[1]);
         return 0
     }
 
-    if options.command == "tokens" {
+    if options[0] == "tokens" {
         var tokens_result = Tokenize(source)
         if tokens_result.is_err() {
             return 1
@@ -44,7 +41,7 @@ func Run(CompileOptions options) -> i32 {
         return 0
     }
 
-    if options.command == "ast" {
+    if options[0] == "ast" {
         var ast_result = ParseSource(source)
         if ast_result.is_err() {
             return 1
@@ -53,16 +50,16 @@ func Run(CompileOptions options) -> i32 {
         return 0
     }
 
-    if options.command == "build" {
-        if BuildBinary(options.path, options.output) == 0 {
-            EmitBuilt(options.output);
+    if options[0] == "build" {
+        if BuildBinary(options[1], options[2]) == 0 {
+            EmitBuilt(options[2]);
             return 0
         }
         return 1
     }
 
-    if options.command == "run" {
-        return RunBinary(options.path)
+    if options[0] == "run" {
+        return RunBinary(options[1])
     }
 
     return 1

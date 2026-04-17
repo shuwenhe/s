@@ -7,7 +7,7 @@ use compile.internal.syntax.DumpSourceText
 use compile.internal.syntax.ParseSource
 use compile.internal.syntax.ReadSource
 
-func main() -> i32 {
+func main() int32 {
     var args = hostArgs()
     if args.len() < 2 {
         println("usage: ast_dump <path>");

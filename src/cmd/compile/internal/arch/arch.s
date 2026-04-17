@@ -1,6 +1,6 @@
 package compile.internal.arch
 
-func Init(String arch) -> String {
+func Init(string arch) string {
     if arch == "amd64" {
         return ""
     } else if arch == "arm64" {

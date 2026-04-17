@@ -4,11 +4,11 @@ use std.prelude.len
 use std.prelude.slice
 use std.vec.Vec
 
-func AnalyzeBlock() -> i32 {
+func AnalyzeBlock() int32 {
     return 0
 }
 
-func AnalyzeTrace(String scope, Vec[String] type_env, String block_text) -> String {
+func AnalyzeTrace(string scope, Vec[string] type_env, string block_text) string {
     var plan = make_plan_trace(type_env)
     var text = "borrow " + scope
     if block_text != "" {
@@ -20,18 +20,18 @@ func AnalyzeTrace(String scope, Vec[String] type_env, String block_text) -> Stri
     return text + " | plan " + join_text(plan, ", ")
 }
 
-func AnalyzeFunction(String name, Vec[String] type_env, String body_text) -> String {
+func AnalyzeFunction(string name, Vec[string] type_env, string body_text) string {
     return AnalyzeTrace(name, type_env, body_text)
 }
 
-func AnalyzeExpr(String scope, String expr_text) -> String {
+func AnalyzeExpr(string scope, string expr_text) string {
     if expr_text == "" {
         return "expr " + scope + " | <empty>"
     }
     return "expr " + scope + " | " + expr_text
 }
 
-func join_text(Vec[String] values, String sep) -> String {
+func join_text(Vec[string] values, string sep) string {
     var out = ""
     var i = 0
     while i < values.len() {
@@ -44,8 +44,8 @@ func join_text(Vec[String] values, String sep) -> String {
     return out
 }
 
-func make_plan_trace(Vec[String] type_env) -> Vec[String] {
-    var plan = Vec[String]()
+func make_plan_trace(Vec[string] type_env) Vec[string] {
+    var plan = Vec[string]()
     var i = 0
     while i < type_env.len() {
         var ty = type_env[i]
@@ -61,7 +61,7 @@ func make_plan_trace(Vec[String] type_env) -> Vec[String] {
     return plan
 }
 
-func starts_with(String text, String prefix) -> bool {
+func starts_with(string text, string prefix) bool {
     var prefix_len = len(prefix)
     if prefix_len > len(text) {
         return false

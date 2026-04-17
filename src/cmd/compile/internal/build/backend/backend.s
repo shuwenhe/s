@@ -3,11 +3,11 @@ package compile.internal.build.backend
 use std.fs.MakeTempDir
 use std.io.eprintln
 
-func Build(String path, String output) -> i32 {
+func Build(string path, string output) int32 {
     __host_build_executable(path, output)
 }
 
-func Run(String path) -> i32 {
+func Run(string path) int32 {
     var temp_dir_result = MakeTempDir("s-build-")
     if temp_dir_result.is_err() {
         eprintln("run failed: could not create temporary output directory");
