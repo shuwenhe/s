@@ -25,23 +25,23 @@ func LookupBuiltinType(string name) bool {
         || base == "Toolchain"
 }
 
-func LookupBuiltinFieldType(string typeName, string fieldName) string {
-    var base = BaseTypeName(typeName)
+func LookupBuiltinFieldType(string type_name, string field_name) string {
+    var base = BaseTypeName(type_name)
     if base == "FileInfo" {
-        if fieldName == "size" || fieldName == "hidden" {
+        if field_name == "size" || field_name == "hidden" {
             return "int32"
         }
     }
     if base == "Target" {
-        if fieldName == "os" || fieldName == "arch" {
+        if field_name == "os" || field_name == "arch" {
             return "string"
         }
     }
     ""
 }
 
-func LookupBuiltinIndexType(string typeName) string {
-    var base = BaseTypeName(typeName)
+func LookupBuiltinIndexType(string type_name) string {
+    var base = BaseTypeName(type_name)
     if base == "Vec" || base == "Array" {
         return "firstTypeArg"
     }
@@ -51,8 +51,8 @@ func LookupBuiltinIndexType(string typeName) string {
     ""
 }
 
-func LookupBuiltinMethodType(string typeName, string member) string {
-    var base = BaseTypeName(typeName)
+func LookupBuiltinMethodType(string type_name, string member) string {
+    var base = BaseTypeName(type_name)
     if base == "string" && member == "len" {
         return "int32"
     }
@@ -101,8 +101,8 @@ func LookupBuiltinMethodType(string typeName, string member) string {
     ""
 }
 
-func LookupBuiltinMethodArity(string typeName, string member) int32 {
-    var base = BaseTypeName(typeName)
+func LookupBuiltinMethodArity(string type_name, string member) int32 {
+    var base = BaseTypeName(type_name)
     if base == "Vec" && member == "push" {
         return 1
     }

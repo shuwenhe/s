@@ -1,4 +1,4 @@
-package compile.internal.tests.testMir
+package compile.internal.tests.test_mir
 
 use compile.internal.mir.TraceBranch
 use compile.internal.mir.TraceLoop
