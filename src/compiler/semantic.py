@@ -1016,6 +1016,12 @@ class Checker:
                 params=[parse_type("Vec[String]")],
                 return_type=parse_type("Result[(), ProcessError]"),
             ),
+            "compile.internal.compiler.Main": TraitMethodInfo(
+                owner="compile.internal.compiler",
+                generics=[],
+                params=[parse_type("Vec[String]")],
+                return_type=I32,
+            ),
             "compile.internal.gc.Main": TraitMethodInfo(
                 owner="compile.internal.gc",
                 generics=[],
@@ -1027,6 +1033,12 @@ class Checker:
                 generics=[],
                 params=[parse_type("Vec[String]")],
                 return_type=I32,
+            ),
+            "compile.internal.build.report.Error": TraitMethodInfo(
+                owner="compile.internal.build.report",
+                generics=[],
+                params=[STRING],
+                return_type=UNIT,
             ),
             "compile.internal.build.parse.ParseOptions": TraitMethodInfo(
                 owner="compile.internal.build.parse",
