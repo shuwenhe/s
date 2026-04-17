@@ -1,7 +1,7 @@
 package compile.internal.dispatch
 
-use compile.internal.build.Main as buildMain
+use compile.internal.compiler.Main as compilerMain
 
 func Main(Vec[String] args) -> i32 {
-    buildMain(args)
+    return compilerMain(args)
 }
