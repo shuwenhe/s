@@ -1,12 +1,13 @@
 package compile.internal.build.backend
 
+use compile.internal.backend_elf64.Build as BuildBinary
 use std.fs.MakeTempDir
 use std.io.eprintln
 use std.process.RunProcess
 use std.vec.Vec
 
 func Build(string path, string output) int32 {
-    __host_build_executable(path, output)
+    BuildBinary(path, output)
 }
 
 func Run(string path) int32 {

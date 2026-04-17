@@ -1,0 +1,416 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+
+@dataclass
+class UseDecl:
+    path: str
+    alias: Optional[str] = None
+
+
+@dataclass
+class Field:
+    name: str
+    type_name: str
+    is_public: bool = False
+
+
+@dataclass
+class Param:
+    name: str
+    type_name: str
+
+
+@dataclass
+class FunctionSig:
+    name: str
+    generics: List[str] = field(default_factory=list)
+    params: List[Param] = field(default_factory=list)
+    return_type: Optional[str] = None
+
+
+class Pattern:
+    pass
+
+
+@dataclass
+class NamePattern(Pattern):
+    name: str
+
+
+@dataclass
+class WildcardPattern(Pattern):
+    pass
+
+
+@dataclass
+class VariantPattern(Pattern):
+    path: str
+    args: List[Pattern] = field(default_factory=list)
+
+
+class Expr:
+    inferred_type: Optional[str] = None
+
+
+@dataclass
+class IntExpr(Expr):
+    value: str
+
+
+@dataclass
+class StringExpr(Expr):
+    value: str
+
+
+@dataclass
+class BoolExpr(Expr):
+    value: bool
+
+
+@dataclass
+class NameExpr(Expr):
+    name: str
+
+
+@dataclass
+class BorrowExpr(Expr):
+    target: Expr
+    mutable: bool = False
+
+
+@dataclass
+class BinaryExpr(Expr):
+    left: Expr
+    op: str
+    right: Expr
+
+
+@dataclass
+class MemberExpr(Expr):
+    target: Expr
+    member: str
+
+
+@dataclass
+class IndexExpr(Expr):
+    target: Expr
+    index: Expr
+
+
+@dataclass
+class CallExpr(Expr):
+    callee: Expr
+    args: List[Expr] = field(default_factory=list)
+
+
+@dataclass
+class MatchArm:
+    pattern: Pattern
+    expr: Expr
+
+
+@dataclass
+class MatchExpr(Expr):
+    subject: Expr
+    arms: List[MatchArm] = field(default_factory=list)
+
+
+@dataclass
+class IfExpr(Expr):
+    condition: Expr
+    then_branch: "BlockExpr"
+    else_branch: Optional[Expr] = None
+
+
+@dataclass
+class WhileExpr(Expr):
+    condition: Expr
+    body: "BlockExpr"
+
+
+@dataclass
+class ForExpr(Expr):
+    name: str
+    iterable: Expr
+    body: "BlockExpr"
+
+
+@dataclass
+class BlockExpr(Expr):
+    statements: List["Stmt"] = field(default_factory=list)
+    final_expr: Optional[Expr] = None
+
+
+class Stmt:
+    pass
+
+
+@dataclass
+class LetStmt(Stmt):
+    name: str
+    type_name: Optional[str]
+    value: Expr
+
+
+@dataclass
+class AssignStmt(Stmt):
+    name: str
+    value: Expr
+
+
+@dataclass
+class IncrementStmt(Stmt):
+    name: str
+
+
+@dataclass
+class CForStmt(Stmt):
+    init: Stmt
+    condition: Expr
+    step: Stmt
+    body: "BlockExpr"
+
+
+@dataclass
+class ReturnStmt(Stmt):
+    value: Optional[Expr]
+
+
+@dataclass
+class ExprStmt(Stmt):
+    expr: Expr
+
+
+@dataclass
+class FunctionDecl:
+    sig: FunctionSig
+    body: Optional[BlockExpr] = None
+    is_public: bool = False
+
+
+@dataclass
+class StructDecl:
+    name: str
+    generics: List[str] = field(default_factory=list)
+    fields: List[Field] = field(default_factory=list)
+    is_public: bool = False
+
+
+@dataclass
+class EnumVariant:
+    name: str
+    payload: Optional[str] = None
+
+
+@dataclass
+class EnumDecl:
+    name: str
+    generics: List[str] = field(default_factory=list)
+    variants: List[EnumVariant] = field(default_factory=list)
+    is_public: bool = False
+
+
+@dataclass
+class TraitDecl:
+    name: str
+    generics: List[str] = field(default_factory=list)
+    methods: List[FunctionSig] = field(default_factory=list)
+    is_public: bool = False
+
+
+@dataclass
+class ImplDecl:
+    target: str
+    trait_name: Optional[str] = None
+    generics: List[str] = field(default_factory=list)
+    methods: List[FunctionDecl] = field(default_factory=list)
+
+
+@dataclass
+class SourceFile:
+    package: str
+    uses: List[UseDecl] = field(default_factory=list)
+    items: List[object] = field(default_factory=list)
+
+
+def dump_source_file(source: SourceFile) -> -> str:
+    lines = [f"package {source.package}"]
+    for use in source.uses:
+        text = f"use {use.path}"
+        if use.alias:
+            text += f" as {use.alias}"
+        lines.append(text)
+    for item in source.items:
+        if isinstance(item, FunctionDecl):
+            lines.extend(_dump_function(item))
+        elif isinstance(item, StructDecl):
+            lines.extend(_dump_struct(item))
+        elif isinstance(item, EnumDecl):
+            lines.extend(_dump_enum(item))
+        elif isinstance(item, TraitDecl):
+            lines.extend(_dump_trait(item))
+        elif isinstance(item, ImplDecl):
+            lines.extend(_dump_impl(item))
+        else:
+            lines.append(f"unknown {type(item).__name__}")
+    return "\n".join(lines)
+
+
+def _fmt_generics(generics: List[str]) -> -> str:
+    if not generics:
+        return ""
+    return "[" + ", ".join(generics) + "]"
+
+
+def _dump_function(item: FunctionDecl, indent: str = "") -> -> List[str]:
+    sig = item.sig
+    prefix = "pub " if item.is_public else ""
+    params = ", ".join(f"{p.type_name} {p.name}" for p in sig.params)
+    # Emit return type in Go-style: put the type after the parameter list
+    ret = f" {sig.return_type}" if sig.return_type else ""
+    lines = [f"{indent}{prefix}func {sig.name}{_fmt_generics(sig.generics)}({params}){ret}"]
+    if item.body is not None:
+        lines.extend(_dump_block(item.body, indent + "  "))
+    return lines
+
+
+def _dump_struct(item: StructDecl) -> -> List[str]:
+    prefix = "pub " if item.is_public else ""
+    lines = [f"{prefix}struct {item.name}{_fmt_generics(item.generics)}"]
+    for field in item.fields:
+        fp = "pub " if field.is_public else ""
+        lines.append(f"  {fp}{field.type_name} {field.name}")
+    return lines
+
+
+def _dump_enum(item: EnumDecl) -> -> List[str]:
+    prefix = "pub " if item.is_public else ""
+    lines = [f"{prefix}enum {item.name}{_fmt_generics(item.generics)}"]
+    for variant in item.variants:
+        if variant.payload:
+            lines.append(f"  {variant.name}({variant.payload})")
+        else:
+            lines.append(f"  {variant.name}")
+    return lines
+
+
+def _dump_trait(item: TraitDecl) -> -> List[str]:
+    prefix = "pub " if item.is_public else ""
+    lines = [f"{prefix}trait {item.name}{_fmt_generics(item.generics)}"]
+    for method in item.methods:
+        params = ", ".join(f"{p.type_name} {p.name}" for p in method.params)
+        ret = f" -> {method.return_type}" if method.return_type else ""
+        lines.append(f"  func {method.name}{_fmt_generics(method.generics)}({params}){ret}")
+    return lines
+
+
+def _dump_impl(item: ImplDecl) -> -> List[str]:
+    head = item.target
+    if item.trait_name:
+        head = f"{item.trait_name} for {head}"
+    lines = [f"impl {_fmt_generics(item.generics)} {head}".replace("impl  ", "impl ")]
+    for method in item.methods:
+        lines.extend(_dump_function(method, "  "))
+    return lines
+
+
+def _dump_block(block: BlockExpr, indent: str) -> -> List[str]:
+    lines: List[str] = []
+    for stmt in block.statements:
+        lines.extend(_dump_stmt(stmt, indent))
+    if block.final_expr is not None:
+        lines.append(f"{indent}final {_dump_expr(block.final_expr)}")
+    return lines
+
+
+def _dump_stmt(stmt: Stmt, indent: str) -> -> List[str]:
+    if isinstance(stmt, LetStmt):
+        if stmt.type_name:
+            text = f"{indent}{stmt.type_name} {stmt.name} = {_dump_expr(stmt.value)}"
+        else:
+            text = f"{indent}let {stmt.name} = {_dump_expr(stmt.value)}"
+        return [text]
+    if isinstance(stmt, AssignStmt):
+        return [f"{indent}{stmt.name} = {_dump_expr(stmt.value)}"]
+    if isinstance(stmt, IncrementStmt):
+        return [f"{indent}{stmt.name}++"]
+    if isinstance(stmt, CForStmt):
+        lines = [
+            f"{indent}for ({_dump_for_part(stmt.init)}; {_dump_expr(stmt.condition)}; {_dump_for_part(stmt.step)})"
+        ]
+        lines.extend(_dump_block(stmt.body, indent + "  "))
+        return lines
+    if isinstance(stmt, ReturnStmt):
+        value = _dump_expr(stmt.value) if stmt.value is not None else "()"
+        return [f"{indent}return {value}"]
+    if isinstance(stmt, ExprStmt):
+        return [f"{indent}expr {_dump_expr(stmt.expr)}"]
+    return [f"{indent}stmt {type(stmt).__name__}"]
+
+
+def _dump_expr(expr: Optional[Expr]) -> -> str:
+    if expr is None:
+        return "()"
+    if isinstance(expr, IntExpr):
+        return expr.value
+    if isinstance(expr, StringExpr):
+        return expr.value
+    if isinstance(expr, BoolExpr):
+        return "true" if expr.value else "false"
+    if isinstance(expr, NameExpr):
+        return expr.name
+    if isinstance(expr, BorrowExpr):
+        prefix = "&mut " if expr.mutable else "&"
+        return f"{prefix}{_dump_expr(expr.target)}"
+    if isinstance(expr, BinaryExpr):
+        return f"({_dump_expr(expr.left)} {expr.op} {_dump_expr(expr.right)})"
+    if isinstance(expr, MemberExpr):
+        return f"{_dump_expr(expr.target)}.{expr.member}"
+    if isinstance(expr, IndexExpr):
+        return f"{_dump_expr(expr.target)}[{_dump_expr(expr.index)}]"
+    if isinstance(expr, CallExpr):
+        args = ", ".join(_dump_expr(arg) for arg in expr.args)
+        return f"call {_dump_expr(expr.callee)}({args})"
+    if isinstance(expr, MatchExpr):
+        arms = "; ".join(f"{_dump_pattern(arm.pattern)} => {_dump_expr(arm.expr)}" for arm in expr.arms)
+        return f"match {_dump_expr(expr.subject)} {{ {arms} }}"
+    if isinstance(expr, IfExpr):
+        text = f"if {_dump_expr(expr.condition)} {{...}}"
+        if expr.else_branch is not None:
+            text += f" else {_dump_expr(expr.else_branch)}"
+        return text
+    if isinstance(expr, WhileExpr):
+        return f"while {_dump_expr(expr.condition)} {{...}}"
+    if isinstance(expr, ForExpr):
+        return f"for {expr.name} in {_dump_expr(expr.iterable)} {{...}}"
+    if isinstance(expr, BlockExpr):
+        return "{...}"
+    return type(expr).__name__
+
+
+def _dump_pattern(pattern: Pattern) -> -> str:
+    if isinstance(pattern, NamePattern):
+        return pattern.name
+    if isinstance(pattern, WildcardPattern):
+        return "_"
+    if isinstance(pattern, VariantPattern):
+        if not pattern.args:
+            return pattern.path
+        args = ", ".join(_dump_pattern(arg) for arg in pattern.args)
+        return f"{pattern.path}({args})"
+    return type(pattern).__name__
+
+
+def _dump_for_part(stmt: Stmt) -> -> str:
+    if isinstance(stmt, LetStmt):
+        if stmt.type_name:
+            return f"{stmt.type_name} {stmt.name} = {_dump_expr(stmt.value)}"
+        return f"let {stmt.name} = {_dump_expr(stmt.value)}"
+    if isinstance(stmt, AssignStmt):
+        return f"{stmt.name} = {_dump_expr(stmt.value)}"
+    if isinstance(stmt, IncrementStmt):
+        return f"{stmt.name}++"
+    return type(stmt).__name__
