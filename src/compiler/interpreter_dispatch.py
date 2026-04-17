@@ -8,7 +8,7 @@ from runtime.host_intrinsics import args as host_args, eprintln as host_eprintln
 from runtime.host_process import run_argv as host_run_argv
 
 
-def dispatch_special_call(interpreter: Any, name: str, args: list[Any])  tuple[bool, Any]:
+def dispatch_special_call(interpreter: Any, name: str, args: list[Any]) -> tuple[bool, Any]:
     if name in {"Ok", "Err", "Some"}:
         payload = None if not args else args[0]
         return True, (name, payload)
@@ -79,7 +79,7 @@ def dispatch_special_call(interpreter: Any, name: str, args: list[Any])  tuple[b
     return False, None
 
 
-def dispatch_imported_call(interpreter: Any, imported_path: str, args: list[Any])  tuple[bool, Any]:
+def dispatch_imported_call(interpreter: Any, imported_path: str, args: list[Any]) -> tuple[bool, Any]:
     if imported_path == "std.env.Args":
         return True, list(interpreter.argv)
     if imported_path == "std.process.Exit":

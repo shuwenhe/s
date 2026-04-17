@@ -110,7 +110,7 @@ _LOCAL_INTRINSICS: dict[str, IntrinsicSpec] = {
 }
 
 
-def _load_manifest()  dict[str, IntrinsicSpec]:
+def _load_manifest() -> dict[str, IntrinsicSpec]:
     manifest_path = Path(__file__).with_name("intrinsics_manifest.json")
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest_specs: dict[str, IntrinsicSpec] = {}
@@ -129,7 +129,7 @@ def _load_manifest()  dict[str, IntrinsicSpec]:
     return manifest_specs
 
 
-def _validate_manifest(manifest_specs: dict[str, IntrinsicSpec])  None:
+def _validate_manifest(manifest_specs: dict[str, IntrinsicSpec]) -> None:
     local_names = set(_LOCAL_INTRINSICS)
     manifest_names = set(manifest_specs)
     missing = sorted(local_names - manifest_names)
@@ -153,14 +153,14 @@ INTRINSICS = _load_manifest()
 _validate_manifest(INTRINSICS)
 
 
-def get_intrinsic(name: str)  IntrinsicSpec:
+def get_intrinsic(name: str) -> IntrinsicSpec:
     try:
         return INTRINSICS[name]
     except KeyError as exc:
         raise RuntimeTrap(f"unknown intrinsic {name}") from exc
 
 
-def invoke_intrinsic(name: str, *args: Any)  Any:
+def invoke_intrinsic(name: str, *args: Any) -> Any:
     spec = get_intrinsic(name)
     if len(args) != spec.arity:
         raise RuntimeTrap(
@@ -169,9 +169,9 @@ def invoke_intrinsic(name: str, *args: Any)  Any:
     return spec.func(*args)
 
 
-def list_intrinsics()  Iterable[str]:
+def list_intrinsics() -> Iterable[str]:
     return sorted(INTRINSICS)
 
 
-def list_specs()  list[IntrinsicSpec]:
+def list_specs() -> list[IntrinsicSpec]:
     return [INTRINSICS[name] for name in list_intrinsics()]

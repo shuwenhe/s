@@ -105,7 +105,7 @@ class CheckResult:
     diagnostics: List[Diagnostic] = field(default_factory=list)
 
     @property
-    def ok(self)  bool:
+    def ok(self) -> bool:
         return not self.diagnostics
 
 
@@ -117,7 +117,7 @@ class VarState:
     mut_borrowed: bool = False
 
 
-def check_source(source: SourceFile)  CheckResult:
+def check_source(source: SourceFile) -> CheckResult:
     checker = Checker()
     checker.load_items(source)
     checker.check(source)
@@ -125,7 +125,7 @@ def check_source(source: SourceFile)  CheckResult:
 
 
 class Checker:
-    def __init__(self)  None:
+    def __init__(self) -> None:
         self.diagnostics: List[Diagnostic] = []
         self.functions: Dict[str, FunctionInfo] = {}
         self.enums: Dict[str, EnumInfo] = {}
@@ -185,7 +185,7 @@ class Checker:
         }
         self._load_stdlib_primitives()
 
-    def load_items(self, source: SourceFile)  None:
+    def load_items(self, source: SourceFile) -> None:
         self._load_use_decls(source.uses)
         for item in source.items:
             if isinstance(item, FunctionDecl):
@@ -239,12 +239,12 @@ class Checker:
                     self.traits.add(item.trait_name)
                     self.impl_traits.setdefault(item.target, set()).add(item.trait_name)
 
-    def check(self, source: SourceFile)  None:
+    def check(self, source: SourceFile) -> None:
         for item in source.items:
             if isinstance(item, FunctionDecl) and item.body is not None:
                 self._check_function(item)
 
-    def _check_function(self, item: FunctionDecl)  None:
+    def _check_function(self, item: FunctionDecl) -> None:
         scope: Dict[str, VarState] = {}
         self._current_type_env = {}
         previous_return = self._current_return_type
@@ -260,7 +260,7 @@ class Checker:
             self._error(diag.message)
         self._current_return_type = previous_return
 
-    def _check_block(self, block: BlockExpr, scope: Dict[str, VarState], expected_return: Type)  Type:
+    def _check_block(self, block: BlockExpr, scope: Dict[str, VarState], expected_return: Type) -> Type:
         local_scope = self._clone_scope(scope)
         terminated = False
         for stmt in block.statements:
@@ -277,7 +277,7 @@ class Checker:
         self._merge_back(scope, local_scope)
         return final_type
 
-    def _check_stmt(self, stmt, scope: Dict[str, VarState], expected_return: Type)  bool:
+    def _check_stmt(self, stmt, scope: Dict[str, VarState], expected_return: Type) -> bool:
         if isinstance(stmt, LetStmt):
             value_type = self._infer_expr(stmt.value, scope)
             declared = self._normalize_type(parse_type(stmt.type_name)) if stmt.type_name else None
@@ -325,10 +325,10 @@ class Checker:
             return self._is_never(self._infer_expr(stmt.expr, scope))
         return False
 
-    def _infer_expr(self, expr: Optional[Expr], scope: Dict[str, VarState])  Type:
+    def _infer_expr(self, expr: Optional[Expr], scope: Dict[str, VarState]) -> Type:
         return self._infer_expr_with_hint(expr, scope, None)
 
-    def _infer_expr_with_hint(self, expr: Optional[Expr], scope: Dict[str, VarState], expected_type: Optional[Type])  Type:
+    def _infer_expr_with_hint(self, expr: Optional[Expr], scope: Dict[str, VarState], expected_type: Optional[Type]) -> Type:
         if expr is None:
             return UNIT
         if isinstance(expr, IntExpr):
@@ -522,7 +522,7 @@ class Checker:
         expr: CallExpr,
         scope: Dict[str, VarState],
         expected_type: Optional[Type],
-    )  Optional[Type]:
+    ) -> Optional[Type]:
         if not isinstance(expr.callee, NameExpr):
             return None
         variant_name = self._variant_name(expr.callee.name)
@@ -547,7 +547,7 @@ class Checker:
             self._error(f"call {variant_name} expected {dump_type(payload_type)}, got {dump_type(actual_payload)}")
         return expected_type
 
-    def _infer_unit_variant_name(self, name: str, expected_type: Optional[Type])  Type:
+    def _infer_unit_variant_name(self, name: str, expected_type: Optional[Type]) -> Type:
         variant_name = self._variant_name(name)
         enum_name = self.variant_to_enum.get(variant_name)
         normalized_expected = self._normalize_type(expected_type) if expected_type is not None else None
@@ -557,7 +557,7 @@ class Checker:
                 return normalized_expected
         return NamedType(name)
 
-    def _infer_type_constructor_call(self, callee: Expr, args: List[Expr])  Optional[Type]:
+    def _infer_type_constructor_call(self, callee: Expr, args: List[Expr]) -> Optional[Type]:
         if args:
             return None
         if isinstance(callee, IndexExpr) and isinstance(callee.target, NameExpr):
@@ -572,10 +572,10 @@ class Checker:
                 return NamedType("Vec")
         return None
 
-    def _is_never(self, ty: Type)  bool:
+    def _is_never(self, ty: Type) -> bool:
         return isinstance(self._normalize_type(ty), type(NEVER))
 
-    def _consume_tail_expr(self, expr: Expr, scope: Dict[str, VarState])  None:
+    def _consume_tail_expr(self, expr: Expr, scope: Dict[str, VarState]) -> None:
         if isinstance(expr, NameExpr):
             state = scope.get(expr.name)
             if state is None:
@@ -583,7 +583,7 @@ class Checker:
             if not is_copy_type(state.ty):
                 state.moved = True
 
-    def _type_from_expr(self, expr: Expr)  Optional[Type]:
+    def _type_from_expr(self, expr: Expr) -> Optional[Type]:
         if isinstance(expr, NameExpr):
             return self._normalize_type(parse_type(expr.name))
         if isinstance(expr, IndexExpr) and isinstance(expr.target, NameExpr):
@@ -593,7 +593,7 @@ class Checker:
                 return NamedType(base, [inner])
         return None
 
-    def _bind_pattern(self, pattern: Pattern, subject_type: Type, scope: Dict[str, VarState])  None:
+    def _bind_pattern(self, pattern: Pattern, subject_type: Type, scope: Dict[str, VarState]) -> None:
         if isinstance(pattern, WildcardPattern):
             return
         if isinstance(pattern, NamePattern):
@@ -611,7 +611,7 @@ class Checker:
             for arg in pattern.args:
                 self._bind_pattern(arg, expected_payload or UnknownType(), scope)
 
-    def _resolve_variant_payload_type(self, variant_name: str, subject_type: Type)  Optional[Type]:
+    def _resolve_variant_payload_type(self, variant_name: str, subject_type: Type) -> Optional[Type]:
         subject_type = self._normalize_type(subject_type)
         enum_name = self.variant_to_enum.get(variant_name)
         if enum_name is None:
@@ -627,7 +627,7 @@ class Checker:
             return substitute_type(payload, mapping)
         return payload
 
-    def _infer_binary(self, op: str, left: Type, right: Type)  Type:
+    def _infer_binary(self, op: str, left: Type, right: Type) -> Type:
         left = self._normalize_type(left)
         right = self._normalize_type(right)
         if op == "+":
@@ -655,10 +655,10 @@ class Checker:
         self._error(f"unknown operator {op}")
         return UnknownType()
 
-    def _type_eq(self, left: Type, right: Type)  bool:
+    def _type_eq(self, left: Type, right: Type) -> bool:
         return dump_type(self._normalize_type(left)) == dump_type(self._normalize_type(right))
 
-    def _unify_types(self, expected: Type, actual: Type, subst: Dict[str, Type])  bool:
+    def _unify_types(self, expected: Type, actual: Type, subst: Dict[str, Type]) -> bool:
         if isinstance(expected, NamedType) and not expected.args and expected.name.isupper():
             bound = subst.get(expected.name)
             if bound is None:
@@ -675,7 +675,7 @@ class Checker:
             return self._unify_types(expected.inner, actual.inner, subst)
         return self._type_eq(expected, actual)
 
-    def _check_generic_bounds(self, generic_specs: List[str], subst: Dict[str, Type])  bool:
+    def _check_generic_bounds(self, generic_specs: List[str], subst: Dict[str, Type]) -> bool:
         ok = True
         for spec in generic_specs:
             if ":" not in spec:
@@ -690,7 +690,7 @@ class Checker:
                     ok = False
         return ok
 
-    def _implements_trait(self, ty: Type, trait_name: str)  bool:
+    def _implements_trait(self, ty: Type, trait_name: str) -> bool:
         if trait_name == "Copy":
             return is_copy_type(ty)
         if trait_name == "Clone":
@@ -701,7 +701,7 @@ class Checker:
         name = dump_type(ty)
         return trait_name in self.impl_traits.get(name, set())
 
-    def _infer_iter_item(self, ty: Type)  Type:
+    def _infer_iter_item(self, ty: Type) -> Type:
         if isinstance(ty, NamedType) and ty.name == "Vec" and ty.args:
             return ty.args[0]
         if isinstance(ty, SliceType):
@@ -710,11 +710,11 @@ class Checker:
             return ty.inner
         return UnknownType("iter_item")
 
-    def _resolve_index(self, target: Type)  Type:
+    def _resolve_index(self, target: Type) -> Type:
         resolved = lookup_index_type(target)
         return resolved or UnknownType("index")
 
-    def _resolve_member(self, target: Type, member: str)  Optional[Type]:
+    def _resolve_member(self, target: Type, member: str) -> Optional[Type]:
         if isinstance(target, ReferenceType):
             return self._resolve_member(target.inner, member)
         if isinstance(target, NamedType):
@@ -751,7 +751,7 @@ class Checker:
         callee: MemberExpr,
         args: List[Expr],
         scope: Dict[str, VarState],
-    )  Optional[TraitMethodInfo]:
+    ) -> Optional[TraitMethodInfo]:
         receiver_type = self._inspect_expr_type(callee.target, scope)
         method_sig = self._lookup_method(receiver_type, callee.member)
         if method_sig is None:
@@ -780,7 +780,7 @@ class Checker:
             receiver_mode=method_sig.receiver_mode,
         )
 
-    def _lookup_method(self, receiver_type: Type, method_name: str)  Optional[TraitMethodInfo]:
+    def _lookup_method(self, receiver_type: Type, method_name: str) -> Optional[TraitMethodInfo]:
         receiver_name = dump_type(receiver_type.inner if isinstance(receiver_type, ReferenceType) else receiver_type)
         candidates: List[TraitMethodInfo] = []
         for impl_info in self.impls:
@@ -799,7 +799,7 @@ class Checker:
         receiver_expr: Expr,
         expr_args: List[Expr],
         scope: Dict[str, VarState],
-    )  Optional[TraitMethodInfo]:
+    ) -> Optional[TraitMethodInfo]:
         if isinstance(receiver_type, NamedType) and receiver_type.name == "Option":
             option_inner = receiver_type.args[0] if receiver_type.args else UnknownType()
             if method_name == "is_some" or method_name == "is_none":
@@ -852,7 +852,7 @@ class Checker:
         scope: Dict[str, VarState],
         name: str,
         owner_expr: Expr,
-    )  Type:
+    ) -> Type:
         if len(info.params) != len(args):
             self._error(f"call {name} expected {len(info.params)} args, got {len(args)}")
         subst: Dict[str, Type] = {}
@@ -867,7 +867,7 @@ class Checker:
         owner_expr.inferred_type = dump_type(resolved_return)
         return resolved_return
 
-    def _inspect_expr_type(self, expr: Expr, scope: Dict[str, VarState])  Type:
+    def _inspect_expr_type(self, expr: Expr, scope: Dict[str, VarState]) -> Type:
         if isinstance(expr, NameExpr):
             state = scope.get(expr.name)
             if state is None:
@@ -883,7 +883,7 @@ class Checker:
             return state.ty
         return self._infer_expr(expr, scope)
 
-    def _load_stdlib_primitives(self)  None:
+    def _load_stdlib_primitives(self) -> None:
         self.enums["Option"] = EnumInfo(generics=["T"], variants={"Some": NamedType("T"), "None": None})
         self.enums["Result"] = EnumInfo(
             generics=["T", "E"],
@@ -956,7 +956,7 @@ class Checker:
             ),
         )
 
-    def _load_use_decls(self, uses: List[UseDecl])  None:
+    def _load_use_decls(self, uses: List[UseDecl]) -> None:
         for use in uses:
             local_name = use.alias or use.path.split(".")[-1]
             canonical_name = use.path.split(".")[-1]
@@ -965,7 +965,7 @@ class Checker:
             if imported is not None:
                 self.imported_functions[local_name] = imported
 
-    def _builtin_for_use(self, path: str, local_name: str)  Optional[TraitMethodInfo]:
+    def _builtin_for_use(self, path: str, local_name: str) -> Optional[TraitMethodInfo]:
         std_functions = {
             "std.env.Args": TraitMethodInfo(owner="std.env", generics=[], params=[], return_type=parse_type("Vec[string]")),
             "std.env.Get": TraitMethodInfo(
@@ -1125,6 +1125,12 @@ class Checker:
                 params=[STRING],
                 return_type=I32,
             ),
+            "compile.internal.backend_elf64.Build": TraitMethodInfo(
+                owner="compile.internal.backend_elf64",
+                generics=[],
+                params=[STRING, STRING],
+                return_type=I32,
+            ),
             "compile.internal.tests.test_semantic.RunSemanticSuite": TraitMethodInfo(
                 owner="compile.internal.tests.test_semantic",
                 generics=[],
@@ -1264,7 +1270,7 @@ class Checker:
             receiver_mode=builtin.receiver_mode,
         )
 
-    def _normalize_type(self, ty: Type)  Type:
+    def _normalize_type(self, ty: Type) -> Type:
         if isinstance(ty, NamedType):
             name = self.type_aliases.get(ty.name, ty.name)
             return NamedType(name, [self._normalize_type(arg) for arg in ty.args])
@@ -1279,14 +1285,14 @@ class Checker:
             )
         return ty
 
-    def _variant_name(self, path: str)  str:
+    def _variant_name(self, path: str) -> str:
         if "::" in path:
             return path.split("::")[-1]
         if "." in path:
             return path.split(".")[-1]
         return path
 
-    def _receiver_mode(self, param: Optional[Param])  str:
+    def _receiver_mode(self, param: Optional[Param]) -> str:
         if param is None or param.name != "self":
             return "value"
         if param.type_name.startswith("&mut "):
@@ -1295,7 +1301,7 @@ class Checker:
             return "ref"
         return "value"
 
-    def _validate_receiver(self, method: TraitMethodInfo, receiver_type: Type, receiver_expr: Expr, method_name: str)  None:
+    def _validate_receiver(self, method: TraitMethodInfo, receiver_type: Type, receiver_expr: Expr, method_name: str) -> None:
         if not method.has_receiver:
             return
         if method.receiver_mode == "mut_ref":
@@ -1315,13 +1321,13 @@ class Checker:
         receiver_type: Type,
         receiver_expr: Expr,
         method_name: str,
-    )  None:
+    ) -> None:
         if self._builtin_receiver_ok(method, receiver_type, receiver_expr):
             return
         if method.receiver_mode == "mut":
             self._error(f"method {method_name} requires mutable receiver")
 
-    def _builtin_receiver_ok(self, method, receiver_type: Type, receiver_expr: Expr)  bool:
+    def _builtin_receiver_ok(self, method, receiver_type: Type, receiver_expr: Expr) -> bool:
         if method.receiver_mode == "mut":
             if isinstance(receiver_type, ReferenceType):
                 return receiver_type.mutable
@@ -1335,10 +1341,10 @@ class Checker:
                 return self._can_auto_borrow_shared(receiver_expr)
         return True
 
-    def _clone_scope(self, scope: Dict[str, VarState])  Dict[str, VarState]:
+    def _clone_scope(self, scope: Dict[str, VarState]) -> Dict[str, VarState]:
         return {name: VarState(**vars(state)) for name, state in scope.items()}
 
-    def _merge_back(self, dest: Dict[str, VarState], source: Dict[str, VarState])  None:
+    def _merge_back(self, dest: Dict[str, VarState], source: Dict[str, VarState]) -> None:
         for name, state in source.items():
             if name in dest:
                 dest[name] = VarState(**vars(state))
@@ -1348,7 +1354,7 @@ class Checker:
         dest: Dict[str, VarState],
         left: Dict[str, VarState],
         right: Dict[str, VarState],
-    )  None:
+    ) -> None:
         for name, original in list(dest.items()):
             l = left.get(name, original)
             r = right.get(name, original)
@@ -1359,11 +1365,11 @@ class Checker:
                 mut_borrowed=l.mut_borrowed or r.mut_borrowed,
             )
 
-    def _error(self, message: str)  None:
+    def _error(self, message: str) -> None:
         self.diagnostics.append(Diagnostic(message=message))
 
-    def _can_auto_borrow_mut(self, expr: Expr)  bool:
+    def _can_auto_borrow_mut(self, expr: Expr) -> bool:
         return isinstance(expr, (NameExpr, MemberExpr, IndexExpr))
 
-    def _can_auto_borrow_shared(self, expr: Expr)  bool:
+    def _can_auto_borrow_shared(self, expr: Expr) -> bool:
         return isinstance(expr, (NameExpr, MemberExpr, IndexExpr))
