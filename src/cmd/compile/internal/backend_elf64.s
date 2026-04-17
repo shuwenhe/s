@@ -1,4 +1,4 @@
-package compile.internal.backend_elf64
+package compile.internal.backendElf64
 
 use compile.internal.build.backend.Build as BuildBinary
 

@@ -5,10 +5,10 @@ use std.result.Result
 use std.vec.Vec
 use s.SourceFile
 use s.Token
-use s.dump_source_file
-use s.dump_tokens
-use s.new_lexer
-use s.parse_tokens
+use s.dumpSourceFile
+use s.dumpTokens
+use s.newLexer
+use s.parseTokens
 
 struct SyntaxError {
     string message,
@@ -28,7 +28,7 @@ func ReadSource(string path) Result[string, SyntaxError] {
 }
 
 func Tokenize(string source) Result[Vec[Token], SyntaxError] {
-    match new_lexer(source).tokenize() {
+    match newLexer(source).tokenize() {
         Result::Ok(tokens) => Result::Ok(tokens),
         Result::Err(err) => Result::Err(SyntaxError {
             message: err.message,
@@ -44,7 +44,7 @@ func ParseSource(string source) Result[SourceFile, SyntaxError] {
 }
 
 func ParseTokens(Vec[Token] tokens) Result[SourceFile, SyntaxError] {
-    match parse_tokens(tokens) {
+    match parseTokens(tokens) {
         Result::Ok(ast) => Result::Ok(ast),
         Result::Err(err) => Result::Err(SyntaxError {
             message: err.message,
@@ -55,9 +55,9 @@ func ParseTokens(Vec[Token] tokens) Result[SourceFile, SyntaxError] {
 }
 
 func DumpTokensText(Vec[Token] tokens) string {
-    dump_tokens(tokens)
+    dumpTokens(tokens)
 }
 
 func DumpSourceText(SourceFile source) string {
-    dump_source_file(source)
+    dumpSourceFile(source)
 }

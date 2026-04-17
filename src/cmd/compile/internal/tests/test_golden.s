@@ -1,4 +1,4 @@
-package compile.internal.tests.test_golden
+package compile.internal.tests.testGolden
 
 use std.fs.ReadToString
 use std.io.println
@@ -6,37 +6,37 @@ use compile.internal.syntax.ReadSource
 use compile.internal.syntax.Tokenize
 use compile.internal.syntax.DumpTokensText
 
-func RunGoldenSuite(string fixtures_root) int32 {
-    // Expect fixtures_root to contain sample.s and sample.tokens
-    var source_path = fixtures_root + "/sample.s"
-    var tokens_path = fixtures_root + "/sample.tokens"
+func RunGoldenSuite(string fixturesRoot) int32 {
+    // Expect fixturesRoot to contain sample.s and sample.tokens
+    var sourcePath = fixturesRoot + "/sample.s"
+    var tokensPath = fixturesRoot + "/sample.tokens"
 
-    var source_result = ReadSource(source_path)
-    if source_result.is_err() {
+    var sourceResult = ReadSource(sourcePath)
+    if sourceResult.isErr() {
         println("failed to read sample.s");
         return 1
     }
 
-    var token_result = Tokenize(source_result.unwrap())
-    if token_result.is_err() {
+    var tokenResult = Tokenize(sourceResult.unwrap())
+    if tokenResult.isErr() {
         println("lexer error");
         return 1
     }
 
-    var actual = DumpTokensText(token_result.unwrap())
+    var actual = DumpTokensText(tokenResult.unwrap())
 
-    var expected_result = ReadToString(tokens_path)
-    if expected_result.is_err() {
+    var expectedResult = ReadToString(tokensPath)
+    if expectedResult.isErr() {
         println("failed to read sample.tokens");
         return 1
     }
 
-    var expected = expected_result.unwrap()
+    var expected = expectedResult.unwrap()
     if actual == expected {
-        println("lex_dump: OK");
+        println("lexDump: OK");
         return 0
     }
-    println("lex_dump: MISMATCH");
+    println("lexDump: MISMATCH");
     println("--- expected ---");
     println(expected);
     println("--- actual ---");

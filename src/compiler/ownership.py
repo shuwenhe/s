@@ -13,10 +13,10 @@ class OwnershipDecision:
     droppable: bool
 
 
-def make_decision(ty: Type) -> OwnershipDecision:
+def make_decision(ty: Type)  OwnershipDecision:
     copyable = is_copy_type(ty)
     return OwnershipDecision(ty=ty, copyable=copyable, droppable=not copyable)
 
 
-def make_plan(type_env: Dict[str, Type]) -> Dict[str, OwnershipDecision]:
+def make_plan(type_env: Dict[str, Type])  Dict[str, OwnershipDecision]:
     return {name: make_decision(ty) for name, ty in type_env.items()}

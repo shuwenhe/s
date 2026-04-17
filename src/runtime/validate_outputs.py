@@ -14,19 +14,19 @@ from runtime.hosted_frontend import run_ast_dump, run_lex_dump
 FIXTURES = ROOT / "compiler" / "tests" / "fixtures"
 
 
-def validate_lex() -> bool:
+def validate_lex()  bool:
     expected = (FIXTURES / "sample.tokens").read_text().strip()
     actual = run_lex_dump(FIXTURES / "sample.s").output.strip()
     return report_case("lex_dump", expected, actual)
 
 
-def validate_ast() -> bool:
+def validate_ast()  bool:
     expected = (FIXTURES / "sample.ast").read_text().strip()
     actual = run_ast_dump(FIXTURES / "sample.s").output.strip()
     return report_case("ast_dump", expected, actual)
 
 
-def report_case(name: str, expected: str, actual: str) -> bool:
+def report_case(name: str, expected: str, actual: str)  bool:
     if expected == actual:
         print(f"[ok] {name}")
         return True
@@ -38,7 +38,7 @@ def report_case(name: str, expected: str, actual: str) -> bool:
     return False
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None)  int:
     parser = argparse.ArgumentParser(prog="validate_outputs")
     parser.add_argument(
         "target",

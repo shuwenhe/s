@@ -93,7 +93,7 @@ Supporting structs:
 
 ```s
 struct WriteOp {
-    String text,
+    string text,
 }
 
 struct ExitOp {
@@ -108,7 +108,7 @@ Suggested value model:
 ```s
 enum Value {
     Int(int),
-    String(String),
+    string(string),
     Bool(bool),
     Unit(()),
 }

@@ -1,25 +1,25 @@
 package compile.internal.typesys
 
-use std.prelude.char_at
+use std.prelude.charAt
 use std.prelude.len
 use std.prelude.slice
 use std.vec.Vec
 
 func ParseType(string text) string {
-    var clean = normalize_type_text(trim_text(text))
+    var clean = normalizeTypeText(trimText(text))
     if clean == "" {
         return "unknown"
     }
     if clean == "()" || clean == "never" || clean == "bool" || clean == "int32" || clean == "usize" || clean == "u8" || clean == "string" {
         return clean
     }
-    if starts_with(clean, "&mut ") {
+    if startsWith(clean, "&mut ") {
         return "&mut " + ParseType(slice(clean, 5, len(clean)))
     }
-    if starts_with(clean, "&") {
+    if startsWith(clean, "&") {
         return "&" + ParseType(slice(clean, 1, len(clean)))
     }
-    if starts_with(clean, "[]") {
+    if startsWith(clean, "[]") {
         return "[]" + ParseType(slice(clean, 2, len(clean)))
     }
     return clean
@@ -31,26 +31,26 @@ func DumpType(string ty) string {
 
 func BaseTypeName(string ty) string {
     var clean = ParseType(ty)
-    if starts_with(clean, "&mut ") {
+    if startsWith(clean, "&mut ") {
         return BaseTypeName(slice(clean, 5, len(clean)))
     }
-    if starts_with(clean, "&") {
+    if startsWith(clean, "&") {
         return BaseTypeName(slice(clean, 1, len(clean)))
     }
-    if starts_with(clean, "[]") {
+    if startsWith(clean, "[]") {
         return BaseTypeName(slice(clean, 2, len(clean)))
     }
-    var bracket = find_char(clean, "[")
+    var bracket = findChar(clean, "[")
     if bracket >= 0 {
-        return trim_text(slice(clean, 0, bracket))
+        return trimText(slice(clean, 0, bracket))
     }
-    var angle = find_char(clean, "<")
+    var angle = findChar(clean, "<")
     if angle >= 0 {
-        return trim_text(slice(clean, 0, angle))
+        return trimText(slice(clean, 0, angle))
     }
-    var paren = find_char(clean, "(")
+    var paren = findChar(clean, "(")
     if paren >= 0 {
-        return trim_text(slice(clean, 0, paren))
+        return trimText(slice(clean, 0, paren))
     }
     return clean
 }
@@ -69,63 +69,63 @@ func IsCopyType(string ty) bool {
     if clean == "()" || clean == "never" || clean == "bool" || clean == "int32" || clean == "usize" || clean == "u8" {
         return true
     }
-    if starts_with(clean, "&") {
+    if startsWith(clean, "&") {
         return true
     }
     return false
 }
 
 func IsReferenceType(string ty) bool {
-    return starts_with(trim_text(ty), "&")
+    return startsWith(trimText(ty), "&")
 }
 
 func IsSliceType(string ty) bool {
-    return starts_with(trim_text(ty), "[]")
+    return startsWith(trimText(ty), "[]")
 }
 
 func IsGenericType(string ty) bool {
-    var clean = trim_text(ty)
-    return find_char(clean, "[") >= 0 || find_char(clean, "<") >= 0
+    var clean = trimText(ty)
+    return findChar(clean, "[") >= 0 || findChar(clean, "<") >= 0
 }
 
-func normalize_type_text(string text) string {
-    return trim_text(text)
+func normalizeTypeText(string text) string {
+    return trimText(text)
 }
 
-func trim_text(string text) string {
+func trimText(string text) string {
     var start = 0
     var end = len(text)
-    while start < end && is_space(char_at(text, start)) {
+    while start < end && isSpace(charAt(text, start)) {
         start = start + 1
     }
-    while end > start && is_space(char_at(text, end - 1)) {
+    while end > start && isSpace(charAt(text, end - 1)) {
         end = end - 1
     }
     return slice(text, start, end)
 }
 
-func starts_with(string text, string prefix) bool {
-    var prefix_len = len(prefix)
-    if prefix_len > len(text) {
+func startsWith(string text, string prefix) bool {
+    var prefixLen = len(prefix)
+    if prefixLen > len(text) {
         return false
     }
-    return slice(text, 0, prefix_len) == prefix
+    return slice(text, 0, prefixLen) == prefix
 }
 
-func ends_with(string text, string suffix) bool {
-    var suffix_len = len(suffix)
-    var text_len = len(text)
-    if suffix_len > text_len {
+func endsWith(string text, string suffix) bool {
+    var suffixLen = len(suffix)
+    var textLen = len(text)
+    if suffixLen > textLen {
         return false
     }
-    return slice(text, text_len - suffix_len, text_len) == suffix
+    return slice(text, textLen - suffixLen, textLen) == suffix
 }
 
-func is_space(string ch) bool {
+func isSpace(string ch) bool {
     return ch == " " || ch == "\n" || ch == "\t" || ch == "\r"
 }
 
-func find_char(string text, string needle) int32 {
+func findChar(string text, string needle) int32 {
     var i = 0
     while i < len(text) {
         if slice(text, i, i + 1) == needle {
@@ -136,8 +136,8 @@ func find_char(string text, string needle) int32 {
     return 0 - 1
 }
 
-func extract_section(string text, string open, string close) string {
-    var start = find_char(text, open)
+func extractSection(string text, string open, string close) string {
+    var start = findChar(text, open)
     if start < 0 {
         return ""
     }

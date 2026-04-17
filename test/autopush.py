@@ -19,14 +19,14 @@ import time
 from pathlib import Path
 
 
-def current_branch() -> str:
+def current_branch()  str:
     p = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True)
     if p.returncode != 0:
         return "main"
     return p.stdout.strip()
 
 
-def scan_mtimes(root: Path) -> dict:
+def scan_mtimes(root: Path)  dict:
     mt = {}
     for p in root.rglob("*"):
         try:
@@ -37,12 +37,12 @@ def scan_mtimes(root: Path) -> dict:
     return mt
 
 
-def git_has_staged_changes() -> bool:
+def git_has_staged_changes()  bool:
     p = subprocess.run(["git", "diff", "--cached", "--quiet", "--exit-code"])
     return p.returncode != 0
 
 
-def run_git_commit_and_push(remote: str, branch: str, commit_msg: str, author_name: str | None, author_email: str | None) -> None:
+def run_git_commit_and_push(remote: str, branch: str, commit_msg: str, author_name: str | None, author_email: str | None)  None:
     env = os.environ.copy()
     if author_name:
         env["GIT_AUTHOR_NAME"] = author_name
@@ -70,7 +70,7 @@ def run_git_commit_and_push(remote: str, branch: str, commit_msg: str, author_na
         print("git push failed", file=sys.stderr)
 
 
-def main() -> None:
+def main()  None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", default=".", help="Path to watch (git repo root)")
     parser.add_argument("--debounce", type=float, default=2.0, help="Debounce seconds to coalesce changes")
