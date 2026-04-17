@@ -22,7 +22,7 @@ from compiler.ast import (
     IndexExpr,
     IntExpr,
     LetStmt,
-    MatchExpr,
+    LiteralPattern,
     MemberExpr,
     NameExpr,
     NamePattern,
@@ -31,6 +31,9 @@ from compiler.ast import (
     ReturnStmt,
     SourceFile,
     StringExpr,
+    StructLiteralExpr,
+    UnaryExpr,
+    SwitchExpr,
     StructDecl,
     TraitDecl,
     UseDecl,
@@ -379,6 +382,15 @@ class Checker:
                 return ty
             self._error("borrow target must be a name in MVP")
             return UnknownType()
+        if isinstance(expr, UnaryExpr):
+            operand = self._infer_expr(expr.operand, scope)
+            if expr.op == "!":
+                if not self._type_eq(operand, BOOL):
+                    self._error(f"operator ! expects bool, got {dump_type(operand)}")
+                expr.inferred_type = dump_type(BOOL)
+                return BOOL
+            self._error(f"unknown unary operator {expr.op}")
+            return UnknownType()
         if isinstance(expr, BinaryExpr):
             left = self._infer_expr(expr.left, scope)
             right = self._infer_expr(expr.right, scope)
@@ -443,6 +455,38 @@ class Checker:
             for arg in expr.args:
                 self._infer_expr(arg, scope)
             return UnknownType()
+        if isinstance(expr, StructLiteralExpr):
+            struct_type = self._infer_struct_literal_type(expr.callee)
+            if struct_type is None:
+                for field in expr.fields:
+                    self._infer_expr(field.value, scope)
+                self._error("unknown struct literal target")
+                return UnknownType()
+            struct_name = dump_type(struct_type)
+            struct_info = self.structs.get(struct_name)
+            if struct_info is None:
+                for field in expr.fields:
+                    self._infer_expr(field.value, scope)
+                self._error(f"unknown struct {struct_name}")
+                expr.inferred_type = dump_type(struct_type)
+                return struct_type
+            seen: set[str] = set()
+            for field in expr.fields:
+                if field.name in seen:
+                    self._error(f"duplicate struct field {field.name}")
+                    continue
+                seen.add(field.name)
+                expected_field_type = struct_info.fields.get(field.name)
+                actual_field_type = self._infer_expr(field.value, scope)
+                if expected_field_type is None:
+                    self._error(f"unknown field {field.name} on {struct_name}")
+                    continue
+                if not self._type_eq(expected_field_type, actual_field_type):
+                    self._error(
+                        f"field {field.name} expected {dump_type(expected_field_type)}, got {dump_type(actual_field_type)}"
+                    )
+            expr.inferred_type = dump_type(struct_type)
+            return struct_type
         if isinstance(expr, BlockExpr):
             ty = self._check_block(expr, scope, UNIT)
             expr.inferred_type = dump_type(ty)
@@ -491,7 +535,7 @@ class Checker:
             self._join_scopes(scope, body_scope, scope)
             expr.inferred_type = dump_type(UNIT)
             return UNIT
-        if isinstance(expr, MatchExpr):
+        if isinstance(expr, SwitchExpr):
             subject_type = self._infer_expr(expr.subject, scope)
             arm_type: Optional[Type] = None
             arm_scopes = []
@@ -505,7 +549,7 @@ class Checker:
                 if arm_type is None or self._is_never(arm_type):
                     arm_type = current
                 elif not self._type_eq(arm_type, current):
-                    self._error(f"match arm type mismatch: {dump_type(arm_type)} vs {dump_type(current)}")
+                    self._error(f"switch arm type mismatch: {dump_type(arm_type)} vs {dump_type(current)}")
             if arm_scopes:
                 merged = arm_scopes[0]
                 for extra in arm_scopes[1:]:
@@ -558,8 +602,6 @@ class Checker:
         return NamedType(name)
 
     def _infer_type_constructor_call(self, callee: Expr, args: List[Expr]) -> Optional[Type]:
-        if args:
-            return None
         if isinstance(callee, IndexExpr) and isinstance(callee.target, NameExpr):
             base = self.type_aliases.get(callee.target.name, callee.target.name)
             if base == "Vec":
@@ -571,6 +613,16 @@ class Checker:
             if base == "Vec":
                 return NamedType("Vec")
         return None
+
+    def _infer_struct_literal_type(self, callee: Expr) -> Optional[Type]:
+        if isinstance(callee, NameExpr):
+            return self._normalize_type(parse_type(callee.name))
+        if isinstance(callee, IndexExpr) and isinstance(callee.target, NameExpr):
+            base = self.type_aliases.get(callee.target.name, callee.target.name)
+            inner = self._type_from_expr(callee.index)
+            if inner is not None:
+                return NamedType(base, [inner])
+        return self._type_from_expr(callee)
 
     def _is_never(self, ty: Type) -> bool:
         return isinstance(self._normalize_type(ty), type(NEVER))
@@ -599,11 +651,19 @@ class Checker:
         if isinstance(pattern, NamePattern):
             scope[pattern.name] = VarState(subject_type)
             return
+        if isinstance(pattern, LiteralPattern):
+            literal_type = self._literal_pattern_type(pattern)
+            if literal_type is None:
+                self._error(f"unsupported literal pattern {type(pattern.value).__name__}")
+                return
+            if not self._type_eq(literal_type, subject_type):
+                self._error(f"literal pattern type mismatch: {dump_type(literal_type)} vs {dump_type(subject_type)}")
+            return
         if isinstance(pattern, VariantPattern):
             variant_name = self._variant_name(pattern.path)
             expected_payload = self._resolve_variant_payload_type(variant_name, subject_type)
             if variant_name not in self.variant_to_enum:
-                self._error(f"unknown match variant {pattern.path}")
+                self._error(f"unknown switch variant {pattern.path}")
             if expected_payload is None and pattern.args:
                 self._error(f"variant {pattern.path} does not take payload")
             if expected_payload is not None and len(pattern.args) != 1:
@@ -626,6 +686,15 @@ class Checker:
             mapping = {name: arg for name, arg in zip(enum_info.generics, subject_type.args)}
             return substitute_type(payload, mapping)
         return payload
+
+    def _literal_pattern_type(self, pattern: LiteralPattern) -> Optional[Type]:
+        if isinstance(pattern.value, IntExpr):
+            return I32
+        if isinstance(pattern.value, StringExpr):
+            return STRING
+        if isinstance(pattern.value, BoolExpr):
+            return BOOL
+        return None
 
     def _infer_binary(self, op: str, left: Type, right: Type) -> Type:
         left = self._normalize_type(left)
@@ -1221,7 +1290,7 @@ class Checker:
                 params=[STRING, STRING, STRING],
                 return_type=STRING,
             ),
-            "compile.internal.mir.TraceMatch": TraitMethodInfo(
+            "compile.internal.mir.TraceSwitch": TraitMethodInfo(
                 owner="compile.internal.mir",
                 generics=[],
                 params=[STRING, STRING],

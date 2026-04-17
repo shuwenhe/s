@@ -119,11 +119,11 @@ func TraceLoop(string loopKind, string conditionText, string bodyText) string {
     return loopKind + " " + conditionText + " | " + indent(1) + "body " + bodyText
 }
 
-func TraceMatch(string subjectText, string armsText) string {
+func TraceSwitch(string subjectText, string armsText) string {
     if armsText == "" {
-        return "match " + subjectText
+        return "switch " + subjectText
     }
-    return "match " + subjectText + " | " + armsText
+    return "switch " + subjectText + " | " + armsText
 }
 
 func indent(int32 depth) string {

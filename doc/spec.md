@@ -128,7 +128,7 @@ S 支持以下注释形式：
 
 ```text
 package use func var const struct enum trait impl
-if else for while match return break continue
+if else for while switch return break continue
 true false unsafe extern as mut
 ```
 
@@ -169,7 +169,7 @@ Expr         = Literal
              | IndexExpr
              | UnaryExpr
              | BinaryExpr
-             | MatchExpr
+             | SwitchExpr
              | BlockExpr
 ```
 
@@ -380,7 +380,7 @@ S 支持：
 - `if`
 - `for`
 - `while`
-- `match`
+- `switch`
 - `break`
 - `continue`
 - `return`
@@ -397,12 +397,12 @@ if ready {
 
 ### 11.3 Match
 
-`match` 必须覆盖所有可能情况，除非存在显式的通配分支。
+`switch` 必须覆盖所有可能情况，除非存在显式的通配分支。
 
 ```s
-match result {
-    Ok(value) => println(value),
-    Err(err) => eprintln(err.message()),
+switch result {
+    Ok(value) : println(value),
+    Err(err) : eprintln(err.message()),
 }
 ```
 
@@ -837,7 +837,7 @@ S 的最小可用版本应至少支持：
 - `func`
 - `struct`
 - `enum`
-- `if` / `for` / `while` / `match`
+- `if` / `for` / `while` / `switch`
 - `Result` / `Option`
 - `impl`
 - `trait`
@@ -858,7 +858,7 @@ S 的最小可用版本应至少支持：
 
 1. 支持本规范定义的核心声明形式
 2. 支持静态类型检查
-3. 支持 `Result` / `Option` 与 `match`
+3. 支持 `Result` / `Option` 与 `switch`
 4. 支持基础所有权与借用检查
 5. 支持 `unsafe` 边界
 6. 支持 `package` / `use` 基础模块系统

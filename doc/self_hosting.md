@@ -164,7 +164,7 @@ Status: Working Draft
   - `compiler/ownership.py`
   - parser 全面可用
 - 迁移目标：
-  - 在 S 中实现名称加载、类型检查、成员访问检查、match 检查、trait/impl 基础校验
+  - 在 S 中实现名称加载、类型检查、成员访问检查、switch 检查、trait/impl 基础校验
   - 保持诊断文本和失败场景尽量稳定
 - 验收标准：
   - `test_semantic.py` 核心测试可在 S 版本 checker 下通过
@@ -203,7 +203,7 @@ Status: Working Draft
 - 验收标准：
   - `borrow_fail.s`、`branch_move_fail.s`、`receiver_auto_borrow_ok.s` 等样例行为一致
   - 关键诊断结果与 Python 版本一致
-  - 对控制流合流和 match 分支的状态合并行为一致
+  - 对控制流合流和 switch 分支的状态合并行为一致
 
 ## 4. Recommended Phase Plan
 

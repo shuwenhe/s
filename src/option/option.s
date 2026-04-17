@@ -7,9 +7,9 @@ enum Option[T] {
 
 impl Option[T] {
     func isSome(self) bool {
-        match self {
-            Option::Some(_) => true,
-            Option::None => false,
+        switch self {
+            Option::Some(_) : true,
+            Option::None : false,
         }
     }
 
@@ -18,16 +18,16 @@ impl Option[T] {
     }
 
     func unwrap(self) T {
-        match self {
-            Option::Some(value) => value,
-            Option::None => __option_panic_unwrap(),
+        switch self {
+            Option::Some(value) : value,
+            Option::None : __option_panic_unwrap(),
         }
     }
 
     func unwrapOr(self, T default) T {
-        match self {
-            Option::Some(value) => value,
-            Option::None => default,
+        switch self {
+            Option::Some(value) : value,
+            Option::None : default,
         }
     }
 }
