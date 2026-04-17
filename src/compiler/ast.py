@@ -269,7 +269,8 @@ def _dump_function(item: FunctionDecl, indent: str = "") -> List[str]:
     sig = item.sig
     prefix = "pub " if item.is_public else ""
     params = ", ".join(f"{p.type_name} {p.name}" for p in sig.params)
-    ret = f" -> {sig.return_type}" if sig.return_type else ""
+    # Emit return type in Go-style: put the type after the parameter list
+    ret = f" {sig.return_type}" if sig.return_type else ""
     lines = [f"{indent}{prefix}func {sig.name}{_fmt_generics(sig.generics)}({params}){ret}"]
     if item.body is not None:
         lines.extend(_dump_block(item.body, indent + "  "))

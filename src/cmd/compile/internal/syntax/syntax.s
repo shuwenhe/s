@@ -11,12 +11,12 @@ use s.new_lexer
 use s.parse_tokens
 
 struct SyntaxError {
-    String message,
+    string message,
     int32 line,
     int32 column,
 }
 
-func ReadSource(String path) -> Result[String, SyntaxError] {
+func ReadSource(string path) Result[string, SyntaxError] {
     match ReadToString(path) {
         Result::Ok(source) => Result::Ok(source),
         Result::Err(err) => Result::Err(SyntaxError {
@@ -27,7 +27,7 @@ func ReadSource(String path) -> Result[String, SyntaxError] {
     }
 }
 
-func Tokenize(String source) -> Result[Vec[Token], SyntaxError] {
+func Tokenize(string source) Result[Vec[Token], SyntaxError] {
     match new_lexer(source).tokenize() {
         Result::Ok(tokens) => Result::Ok(tokens),
         Result::Err(err) => Result::Err(SyntaxError {
@@ -38,12 +38,12 @@ func Tokenize(String source) -> Result[Vec[Token], SyntaxError] {
     }
 }
 
-func ParseSource(String source) -> Result[SourceFile, SyntaxError] {
+func ParseSource(string source) Result[SourceFile, SyntaxError] {
     var tokens = Tokenize(source)?
     ParseTokens(tokens)
 }
 
-func ParseTokens(Vec[Token] tokens) -> Result[SourceFile, SyntaxError] {
+func ParseTokens(Vec[Token] tokens) Result[SourceFile, SyntaxError] {
     match parse_tokens(tokens) {
         Result::Ok(ast) => Result::Ok(ast),
         Result::Err(err) => Result::Err(SyntaxError {
@@ -54,10 +54,10 @@ func ParseTokens(Vec[Token] tokens) -> Result[SourceFile, SyntaxError] {
     }
 }
 
-func DumpTokensText(Vec[Token] tokens) -> String {
+func DumpTokensText(Vec[Token] tokens) string {
     dump_tokens(tokens)
 }
 
-func DumpSourceText(SourceFile source) -> String {
+func DumpSourceText(SourceFile source) string {
     dump_source_file(source)
 }
