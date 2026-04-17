@@ -3,15 +3,15 @@ package compile.internal.mir
 use compile.internal.borrow.AnalyzeFunction as AnalyzeBorrowFunction
 use s.BlockExpr
 use s.FunctionDecl
-use s.dumpExpr
-use s.dumpStmt
+use s.dump_expr
+use s.dump_stmt
 use std.option.Option
 use std.vec.Vec
 
 struct MirOperand {
     string kind,
     string value,
-    string typeName,
+    string type_name,
 }
 
 struct MirLocalSlot {
@@ -19,7 +19,7 @@ struct MirLocalSlot {
     string name,
     string kind,
     int32 version,
-    string typeName,
+    string type_name,
     bool copyable,
 }
 
@@ -83,7 +83,7 @@ struct MIRGraph {
 }
 
 func LowerFunction(FunctionDecl function) string {
-    if function.body.isSome() {
+    if function.body.is_some() {
         var body = function.body.unwrap()
         return AnalyzeBorrowFunction(function.sig.name, Vec[string](), LowerBlock(body))
     }
@@ -95,35 +95,35 @@ func LowerBlock(BlockExpr block) string {
 
     var index = 0
     while index < block.statements.len() {
-        var stmtText = joinText(dumpStmt(block.statements[index], indent(1)), " | ")
-        text = text + " | " + indent(1) + stmtText
+        var stmt_text = join_text(dump_stmt(block.statements[index], indent(1)), " | ")
+        text = text + " | " + indent(1) + stmt_text
         index = index + 1
     }
 
-    if block.finalExpr.isSome() {
-        var tail = block.finalExpr.unwrap()
-        return text + " | " + indent(1) + "yield " + dumpExpr(tail)
+    if block.final_expr.is_some() {
+        var tail = block.final_expr.unwrap()
+        return text + " | " + indent(1) + "yield " + dump_expr(tail)
     } else {
         return text + " | " + indent(1) + "yield unit"
     }
 }
 
-func TraceBranch(string conditionText, string thenText, string elseText) string {
-    if elseText == "" {
-        return "branch " + conditionText + " | " + indent(1) + "then " + thenText + " | " + indent(1) + "else <missing>"
+func TraceBranch(string condition_text, string then_text, string else_text) string {
+    if else_text == "" {
+        return "branch " + condition_text + " | " + indent(1) + "then " + then_text + " | " + indent(1) + "else <missing>"
     }
-    return "branch " + conditionText + " | " + indent(1) + "then " + thenText + " | " + indent(1) + "else " + elseText
+    return "branch " + condition_text + " | " + indent(1) + "then " + then_text + " | " + indent(1) + "else " + else_text
 }
 
-func TraceLoop(string loopKind, string conditionText, string bodyText) string {
-    return loopKind + " " + conditionText + " | " + indent(1) + "body " + bodyText
+func TraceLoop(string loop_kind, string condition_text, string body_text) string {
+    return loop_kind + " " + condition_text + " | " + indent(1) + "body " + body_text
 }
 
-func TraceSwitch(string subjectText, string armsText) string {
-    if armsText == "" {
-        return "switch " + subjectText
+func TraceSwitch(string subject_text, string arms_text) string {
+    if arms_text == "" {
+        return "switch " + subject_text
     }
-    return "switch " + subjectText + " | " + armsText
+    return "switch " + subject_text + " | " + arms_text
 }
 
 func indent(int32 depth) string {
@@ -136,7 +136,7 @@ func indent(int32 depth) string {
     return out
 }
 
-func joinText(Vec[string] values, string sep) string {
+func join_text(Vec[string] values, string sep) string {
     var out = ""
     var i = 0
     while i < values.len() {
