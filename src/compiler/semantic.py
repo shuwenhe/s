@@ -1065,6 +1065,12 @@ class Checker:
                 params=[parse_type("Vec[String]")],
                 return_type=parse_type("Result[(), ProcessError]"),
             ),
+            "__host_build_executable": TraitMethodInfo(
+                owner="runtime",
+                generics=[],
+                params=[STRING, STRING],
+                return_type=I32,
+            ),
             "compile.internal.compiler.Main": TraitMethodInfo(
                 owner="compile.internal.compiler",
                 generics=[],
@@ -1154,24 +1160,6 @@ class Checker:
                 generics=[],
                 params=[STRING],
                 return_type=UNIT,
-            ),
-            "compile.internal.backend.Build": TraitMethodInfo(
-                owner="compile.internal.backend",
-                generics=[],
-                params=[STRING, STRING],
-                return_type=I32,
-            ),
-            "compile.internal.backend.BuildTrace": TraitMethodInfo(
-                owner="compile.internal.backend",
-                generics=[],
-                params=[STRING, STRING],
-                return_type=STRING,
-            ),
-            "compile.internal.backend.Run": TraitMethodInfo(
-                owner="compile.internal.backend",
-                generics=[],
-                params=[STRING],
-                return_type=I32,
             ),
             "compile.internal.borrow.AnalyzeBlock": TraitMethodInfo(
                 owner="compile.internal.borrow",
