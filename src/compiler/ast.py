@@ -236,7 +236,7 @@ class SourceFile:
     items: List[object] = field(default_factory=list)
 
 
-def dump_source_file(source: SourceFile) -> str:
+def dump_source_file(source: SourceFile)  str:
     lines = [f"package {source.package}"]
     for use in source.uses:
         text = f"use {use.path}"
@@ -259,13 +259,13 @@ def dump_source_file(source: SourceFile) -> str:
     return "\n".join(lines)
 
 
-def _fmt_generics(generics: List[str]) -> str:
+def _fmt_generics(generics: List[str])  str:
     if not generics:
         return ""
     return "[" + ", ".join(generics) + "]"
 
 
-def _dump_function(item: FunctionDecl, indent: str = "") -> List[str]:
+def _dump_function(item: FunctionDecl, indent: str = "")  List[str]:
     sig = item.sig
     prefix = "pub " if item.is_public else ""
     params = ", ".join(f"{p.type_name} {p.name}" for p in sig.params)
@@ -277,7 +277,7 @@ def _dump_function(item: FunctionDecl, indent: str = "") -> List[str]:
     return lines
 
 
-def _dump_struct(item: StructDecl) -> List[str]:
+def _dump_struct(item: StructDecl)  List[str]:
     prefix = "pub " if item.is_public else ""
     lines = [f"{prefix}struct {item.name}{_fmt_generics(item.generics)}"]
     for field in item.fields:
@@ -286,7 +286,7 @@ def _dump_struct(item: StructDecl) -> List[str]:
     return lines
 
 
-def _dump_enum(item: EnumDecl) -> List[str]:
+def _dump_enum(item: EnumDecl)  List[str]:
     prefix = "pub " if item.is_public else ""
     lines = [f"{prefix}enum {item.name}{_fmt_generics(item.generics)}"]
     for variant in item.variants:
@@ -297,7 +297,7 @@ def _dump_enum(item: EnumDecl) -> List[str]:
     return lines
 
 
-def _dump_trait(item: TraitDecl) -> List[str]:
+def _dump_trait(item: TraitDecl)  List[str]:
     prefix = "pub " if item.is_public else ""
     lines = [f"{prefix}trait {item.name}{_fmt_generics(item.generics)}"]
     for method in item.methods:
@@ -307,7 +307,7 @@ def _dump_trait(item: TraitDecl) -> List[str]:
     return lines
 
 
-def _dump_impl(item: ImplDecl) -> List[str]:
+def _dump_impl(item: ImplDecl)  List[str]:
     head = item.target
     if item.trait_name:
         head = f"{item.trait_name} for {head}"
@@ -317,7 +317,7 @@ def _dump_impl(item: ImplDecl) -> List[str]:
     return lines
 
 
-def _dump_block(block: BlockExpr, indent: str) -> List[str]:
+def _dump_block(block: BlockExpr, indent: str)  List[str]:
     lines: List[str] = []
     for stmt in block.statements:
         lines.extend(_dump_stmt(stmt, indent))
@@ -326,7 +326,7 @@ def _dump_block(block: BlockExpr, indent: str) -> List[str]:
     return lines
 
 
-def _dump_stmt(stmt: Stmt, indent: str) -> List[str]:
+def _dump_stmt(stmt: Stmt, indent: str)  List[str]:
     if isinstance(stmt, LetStmt):
         if stmt.type_name:
             text = f"{indent}{stmt.type_name} {stmt.name} = {_dump_expr(stmt.value)}"
@@ -351,7 +351,7 @@ def _dump_stmt(stmt: Stmt, indent: str) -> List[str]:
     return [f"{indent}stmt {type(stmt).__name__}"]
 
 
-def _dump_expr(expr: Optional[Expr]) -> str:
+def _dump_expr(expr: Optional[Expr])  str:
     if expr is None:
         return "()"
     if isinstance(expr, IntExpr):
@@ -391,7 +391,7 @@ def _dump_expr(expr: Optional[Expr]) -> str:
     return type(expr).__name__
 
 
-def _dump_pattern(pattern: Pattern) -> str:
+def _dump_pattern(pattern: Pattern)  str:
     if isinstance(pattern, NamePattern):
         return pattern.name
     if isinstance(pattern, WildcardPattern):
@@ -404,7 +404,7 @@ def _dump_pattern(pattern: Pattern) -> str:
     return type(pattern).__name__
 
 
-def _dump_for_part(stmt: Stmt) -> str:
+def _dump_for_part(stmt: Stmt)  str:
     if isinstance(stmt, LetStmt):
         if stmt.type_name:
             return f"{stmt.type_name} {stmt.name} = {_dump_expr(stmt.value)}"

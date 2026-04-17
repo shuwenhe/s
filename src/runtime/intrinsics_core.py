@@ -7,7 +7,7 @@ from pathlib import Path
 _LIB: CDLL | None = None
 
 
-def _load_library() -> CDLL:
+def _load_library()  CDLL:
     global _LIB
     if _LIB is not None:
         return _LIB
@@ -33,7 +33,7 @@ def _load_library() -> CDLL:
     return lib
 
 
-def _take_string(ptr: int) -> str:
+def _take_string(ptr: int)  str:
     if not ptr:
         raise RuntimeError("intrinsic core returned null")
     lib = _load_library()
@@ -44,33 +44,33 @@ def _take_string(ptr: int) -> str:
         lib.intrinsics_core_free(c_void_p(ptr))
 
 
-def string_len(text: str) -> int:
+def string_len(text: str)  int:
     lib = _load_library()
     return int(lib.intrinsics_core_string_len(text.encode("utf-8")))
 
 
-def int_to_string(value: int) -> str:
+def int_to_string(value: int)  str:
     lib = _load_library()
     return _take_string(int(lib.intrinsics_core_int_to_string(int(value))))
 
 
-def string_concat(left: str, right: str) -> str:
+def string_concat(left: str, right: str)  str:
     lib = _load_library()
     return _take_string(int(lib.intrinsics_core_string_concat(left.encode("utf-8"), right.encode("utf-8"))))
 
 
-def string_replace(text: str, old: str, new: str) -> str:
+def string_replace(text: str, old: str, new: str)  str:
     lib = _load_library()
     return _take_string(
         int(lib.intrinsics_core_string_replace(text.encode("utf-8"), old.encode("utf-8"), new.encode("utf-8")))
     )
 
 
-def string_char_at(text: str, index: int) -> str:
+def string_char_at(text: str, index: int)  str:
     lib = _load_library()
     return _take_string(int(lib.intrinsics_core_string_char_at(text.encode("utf-8"), int(index))))
 
 
-def string_slice(text: str, start: int, end: int) -> str:
+def string_slice(text: str, start: int, end: int)  str:
     lib = _load_library()
     return _take_string(int(lib.intrinsics_core_string_slice(text.encode("utf-8"), int(start), int(end))))

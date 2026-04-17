@@ -7,7 +7,7 @@ from pathlib import Path
 _LIB: CDLL | None = None
 
 
-def _load_library() -> CDLL:
+def _load_library()  CDLL:
     global _LIB
     if _LIB is not None:
         return _LIB
@@ -27,7 +27,7 @@ def _load_library() -> CDLL:
     return lib
 
 
-def _take_string(ptr: int) -> str:
+def _take_string(ptr: int)  str:
     if not ptr:
         raise RuntimeError("host fs returned null")
     lib = _load_library()
@@ -39,18 +39,18 @@ def _take_string(ptr: int) -> str:
         lib.host_fs_free(c_void_p(ptr))
 
 
-def read_to_string(path: str) -> str:
+def read_to_string(path: str)  str:
     lib = _load_library()
     return _take_string(int(lib.host_fs_read_to_string(path.encode("utf-8"))))
 
 
-def write_text_file(path: str, contents: str) -> None:
+def write_text_file(path: str, contents: str)  None:
     lib = _load_library()
     code = int(lib.host_fs_write_text_file(path.encode("utf-8"), contents.encode("utf-8")))
     if code != 0:
         raise RuntimeError(f"write_text_file failed for {path}")
 
 
-def make_temp_dir(prefix: str, base_dir: str = "/app/tmp") -> str:
+def make_temp_dir(prefix: str, base_dir: str = "/app/tmp")  str:
     lib = _load_library()
     return _take_string(int(lib.host_fs_make_temp_dir(prefix.encode("utf-8"), base_dir.encode("utf-8"))))

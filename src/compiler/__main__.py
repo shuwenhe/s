@@ -5,7 +5,7 @@ import argparse
 from compiler.hosted_compiler import run_cli
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None)  int:
     parser = argparse.ArgumentParser(prog="s")
     sub = parser.add_subparsers(dest="command", required=True)
 

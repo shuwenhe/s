@@ -43,12 +43,12 @@ source file
 ```s
 use std.fs.read_to_string
 
-func read_to_string(String path) Result[String, FsError]
+func read_to_string(string path) Result[string, FsError]
 ```
 
 当前自举阶段对这个接口的约束只有这些：
 
-- 输入是拥有型 `String` 路径
+- 输入是拥有型 `string` 路径
 - 成功时返回完整源码文本
 - 失败时返回某种错误值
 - `lex_dump` 当前不会依赖 `FsError` 的具体结构，只关心成功或失败
@@ -56,7 +56,7 @@ func read_to_string(String path) Result[String, FsError]
 这意味着：
 
 - 后续可以把 `FsError` 替换成更正式的 `IoError`
-- 也可以把 `String` 路径升级成 `Path` / `PathBuf`
+- 也可以把 `string` 路径升级成 `Path` / `PathBuf`
 - 只要调用形状兼容，`lex_dump` 代码不需要大改
 
 ## 4. `std.io` Assumptions
@@ -67,8 +67,8 @@ func read_to_string(String path) Result[String, FsError]
 use std.io.println
 use std.io.eprintln
 
-func println(String text) ()
-func eprintln(String text) ()
+func println(string text) ()
+func eprintln(string text) ()
 ```
 
 当前约束：
@@ -84,7 +84,7 @@ func eprintln(String text) ()
 `lex_dump` 当前还假设运行时能把命令行参数以如下形式交给入口：
 
 ```s
-func main(Vec[String] args) i32
+func main(Vec[string] args) int32
 ```
 
 约定：
@@ -104,7 +104,7 @@ lex_dump path/to/file.s
 
 ```s
 struct CliError {
-    String message
+    string message
 }
 ```
 

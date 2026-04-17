@@ -345,8 +345,8 @@ GenericArgList =
 示例：
 
 ```s
-Vec[i32] v
-Result[String, IoError] r
+Vec[int32] v
+Result[string, IoError] r
 ```
 
 ## 8. Types

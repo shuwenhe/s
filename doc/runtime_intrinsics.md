@@ -27,22 +27,22 @@ Current host bridge files:
 - [python_bridge.py](/app/s/src/runtime/python_bridge.py)
 - [validate_outputs.py](/app/s/src/runtime/validate_outputs.py)
 
-## 2. String Intrinsics
+## 2. string Intrinsics
 
 Current [prelude.s](/app/s/src/prelude/prelude.s) declares:
 
 ```s
-extern "intrinsic" func __runtime_len[T](T value) i32
-extern "intrinsic" func __int_to_string(i32 value) String
-extern "intrinsic" func __string_char_at(String text, i32 index) String
-extern "intrinsic" func __string_slice(String text, i32 start, i32 end) String
+extern "intrinsic" func __runtime_len[T](T value) int32
+extern "intrinsic" func __int_to_string(int32 value) string
+extern "intrinsic" func __string_char_at(string text, int32 index) string
+extern "intrinsic" func __string_slice(string text, int32 start, int32 end) string
 ```
 
 ### `__runtime_len`
 
 Requirements:
 
-- 对 `String` 返回字符长度或当前 runtime 约定下的索引长度
+- 对 `string` 返回字符长度或当前 runtime 约定下的索引长度
 - 对 `Vec[T]` 返回逻辑元素个数
 - 对其他运行时支持的集合类型可扩展
 
@@ -54,7 +54,7 @@ Notes:
 
 Requirements:
 
-- 支持 `i32  String`
+- 支持 `int32  string`
 - 至少正确处理 `0`、正数、负数
 
 ### `__string_char_at`
@@ -81,9 +81,9 @@ Requirements:
 Current [vec.s](/app/s/src/vec/vec.s) declares:
 
 ```s
-extern "intrinsic" func __vec_new_array[T](i32 size) Array[T]
-extern "intrinsic" func __vec_array_get[T](Array[T] array, i32 index) T
-extern "intrinsic" func __vec_array_set[T](Array[T] array, i32 index, T value) ()
+extern "intrinsic" func __vec_new_array[T](int32 size) Array[T]
+extern "intrinsic" func __vec_array_get[T](Array[T] array, int32 index) T
+extern "intrinsic" func __vec_array_set[T](Array[T] array, int32 index, T value) ()
 ```
 
 Requirements:
@@ -128,14 +128,14 @@ The new std-layer host boundary is now:
 Current declarations:
 
 ```s
-extern "intrinsic" func __host_read_to_string(String path) Result[String, FsError]
-extern "intrinsic" func __host_write_text_file(String path, String contents) Result[(), FsError]
-extern "intrinsic" func __host_make_temp_dir(String prefix) Result[String, FsError]
-extern "intrinsic" func __host_run_process(Vec[String] argv) Result[(), ProcessError]
-extern "intrinsic" func __host_args() Vec[String]
+extern "intrinsic" func __host_read_to_string(string path) Result[string, FsError]
+extern "intrinsic" func __host_write_text_file(string path, string contents) Result[(), FsError]
+extern "intrinsic" func __host_make_temp_dir(string prefix) Result[string, FsError]
+extern "intrinsic" func __host_run_process(Vec[string] argv) Result[(), ProcessError]
+extern "intrinsic" func __host_args() Vec[string]
 extern "intrinsic" func __host_exit(int code) ()
-extern "intrinsic" func __host_println(String text) ()
-extern "intrinsic" func __host_eprintln(String text) ()
+extern "intrinsic" func __host_println(string text) ()
+extern "intrinsic" func __host_eprintln(string text) ()
 ```
 
 Bridge behavior in the current Python prototype:

@@ -201,7 +201,7 @@
       "patterns": [
         {
           "name": "support.type.primitive.s",
-          "match": "\\b(?:bool|int|i32|i64|u8|u32|u64|f32|f64|usize|String|Self)\\b"
+          "match": "\\b(?:bool|int|int32|i64|u8|u32|u64|f32|f64|usize|string|Self)\\b"
         },
         {
           "name": "entity.name.type.s",
@@ -236,7 +236,7 @@
             },
             {
               "name": "support.type.primitive.s",
-              "match": "\\b(?:bool|int|i32|i64|u8|u32|u64|f32|f64|usize|String|Self)\\b"
+              "match": "\\b(?:bool|int|int32|i64|u8|u32|u64|f32|f64|usize|string|Self)\\b"
             },
             {
               "name": "keyword.operator.bound.s",

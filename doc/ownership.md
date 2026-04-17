@@ -53,11 +53,11 @@ S 中的值可按语义分为三类：
 示例：
 
 ```s
-String name = String::from("alice")
+string name = string::from("alice")
 Vec[u8] buf = Vec::with_capacity(1024)
 ```
 
-`String` 和 `Vec[u8]` 是拥有型对象，它们通常持有堆资源，因此必须有清晰的析构责任。
+`string` 和 `Vec[u8]` 是拥有型对象，它们通常持有堆资源，因此必须有清晰的析构责任。
 
 ### 3.2 Borrowed Values
 
@@ -91,13 +91,13 @@ Copy 类型是否自动推导或要求显式声明，属于后续细化议题；
 绑定本身不是资源，绑定只是资源拥有关系的承载位置。
 
 ```s
-let a = String::from("hello")
+let a = string::from("hello")
 let b = a
 ```
 
 上例中：
 
-- `a` 初始拥有该 `String`
+- `a` 初始拥有该 `string`
 - 赋值给 `b` 后，所有权转移到 `b`
 - `a` 在移动后不再可用
 
@@ -163,7 +163,7 @@ use(x)
 典型 `Copy` 类型包括：
 
 - `bool`
-- `i32`
+- `int32`
 - `u64`
 - `f64`
 - 由 `Copy` 字段组成的简单结构体
@@ -178,7 +178,7 @@ S 应区分：
 示例：
 
 ```s
-let a = String::from("hello")
+let a = string::from("hello")
 let b = a.clone()
 ```
 
@@ -266,7 +266,7 @@ let b = &mut user
 非法示例：
 
 ```s
-let x = String::from("a")
+let x = string::from("a")
 let y = x
 println(x)
 ```
@@ -279,7 +279,7 @@ println(x)
 
 ```s
 func bad() &str {
-    let s = String::from("hello")
+    let s = string::from("hello")
     s.as_str()
 }
 ```
@@ -363,7 +363,7 @@ func len(&str s) usize
 ### 10.3 By Mutable Borrow
 
 ```s
-func push(&mut Vec[i32] v, i32 value)
+func push(&mut Vec[int32] v, int32 value)
 ```
 
 表示调用方保留所有权，但临时把唯一修改权交给被调用方。
@@ -415,7 +415,7 @@ func clear(&mut Self self)
 示例：
 
 ```s
-func load() Result[String, IoError] {
+func load() Result[string, IoError] {
     let file = File::open("config.toml")?
     let data = file.read_all()?
     Ok(data)
@@ -470,7 +470,7 @@ Draft 0.1 建议支持三种捕获方式：
 示例方向：
 
 ```s
-let name = String::from("alice")
+let name = string::from("alice")
 
 let f = || {
     println(name)
@@ -590,7 +590,7 @@ let b = &mut user
 ### 17.4 Illegal Use After Move
 
 ```s
-let s = String::from("hello")
+let s = string::from("hello")
 consume(s)
 println(s)
 ```
@@ -602,7 +602,7 @@ println(s)
 ### 17.5 Legal Clone
 
 ```s
-let s = String::from("hello")
+let s = string::from("hello")
 let t = s.clone()
 println(s, t)
 ```

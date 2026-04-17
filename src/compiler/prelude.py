@@ -49,7 +49,7 @@ class BuiltinModuleDecl:
     types: Dict[str, BuiltinTypeDecl] = field(default_factory=dict)
 
 
-def load_prelude() -> BuiltinModuleDecl:
+def load_prelude()  BuiltinModuleDecl:
     path = Path(__file__).resolve().parent / "builtins" / "prelude.json"
     data = json.loads(path.read_text())
     traits: Dict[str, BuiltinTraitDecl] = {}
@@ -85,14 +85,14 @@ def load_prelude() -> BuiltinModuleDecl:
     return BuiltinModuleDecl(name=data["module"], traits=traits, types=types)
 
 
-def _load_overloads(method_name: str, method_data: dict) -> tuple[BuiltinMethodDecl, ...]:
+def _load_overloads(method_name: str, method_data: dict)  tuple[BuiltinMethodDecl, ...]:
     overloads = method_data.get("overloads")
     if overloads is None:
         overloads = [method_data]
     return tuple(_build_method(method_name, overload) for overload in overloads)
 
 
-def _build_method(method_name: str, method_data: dict) -> BuiltinMethodDecl:
+def _build_method(method_name: str, method_data: dict)  BuiltinMethodDecl:
     params = [parse_type(param) for param in method_data.get("params", [])]
     return BuiltinMethodDecl(
         name=method_name,
@@ -106,14 +106,14 @@ def _build_method(method_name: str, method_data: dict) -> BuiltinMethodDecl:
 PRELUDE = load_prelude()
 
 
-def lookup_builtin_type(receiver_type: Type) -> Optional[BuiltinTypeDecl]:
+def lookup_builtin_type(receiver_type: Type)  Optional[BuiltinTypeDecl]:
     base = _base_name(receiver_type)
     if base is None:
         return None
     return PRELUDE.types.get(base)
 
 
-def lookup_builtin_methods(receiver_type: Type, member: str) -> tuple[BuiltinMethodDecl, ...]:
+def lookup_builtin_methods(receiver_type: Type, member: str)  tuple[BuiltinMethodDecl, ...]:
     builtin_type = lookup_builtin_type(receiver_type)
     if builtin_type is None:
         return ()
@@ -167,14 +167,14 @@ def lookup_builtin_methods(receiver_type: Type, member: str) -> tuple[BuiltinMet
     return methods
 
 
-def lookup_builtin_method(receiver_type: Type, member: str) -> Optional[BuiltinMethodDecl]:
+def lookup_builtin_method(receiver_type: Type, member: str)  Optional[BuiltinMethodDecl]:
     methods = lookup_builtin_methods(receiver_type, member)
     if len(methods) == 1:
         return methods[0]
     return None
 
 
-def lookup_index_type(receiver_type: Type) -> Optional[Type]:
+def lookup_index_type(receiver_type: Type)  Optional[Type]:
     inner = _unwrap_refs(receiver_type)
     builtin_type = lookup_builtin_type(inner)
     if builtin_type is not None and builtin_type.index_result_kind == "first_type_arg":
@@ -185,7 +185,7 @@ def lookup_index_type(receiver_type: Type) -> Optional[Type]:
     return None
 
 
-def _unwrap_refs(ty: Type) -> Type:
+def _unwrap_refs(ty: Type)  Type:
     from compiler.typesys import ReferenceType
 
     while isinstance(ty, ReferenceType):
@@ -193,7 +193,7 @@ def _unwrap_refs(ty: Type) -> Type:
     return ty
 
 
-def _base_name(ty: Type) -> Optional[str]:
+def _base_name(ty: Type)  Optional[str]:
     inner = _unwrap_refs(ty)
     if isinstance(inner, NamedType):
         return inner.name

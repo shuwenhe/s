@@ -44,7 +44,7 @@ S 的标准库建议分为三层：
 
 - `Option[T]`
 - `Result[T, E]`
-- `String`
+- `string`
 - `Vec[T]`
 - `Box[T]`
 - `Copy` / `Clone` / `Drop`
@@ -248,7 +248,7 @@ Draft 0.1 先固定最小接口。
 
 这些类型应与 `Send` / `Sync` 语义紧密协作。
 
-## 8. String and Text
+## 8. string and Text
 
 ### 8.1 `std.str`
 
@@ -262,7 +262,7 @@ Draft 0.1 先固定最小接口。
 
 ### 8.2 `std.string`
 
-定义拥有型字符串 `String`。
+定义拥有型字符串 `string`。
 
 最小 API 方向：
 
@@ -370,7 +370,7 @@ trait Writer {
 
 - `File::open(path: &Path) Result[File, IoError]`
 - `File::create(path: &Path) Result[File, IoError]`
-- `read_to_string(path: &Path) Result[String, IoError]`
+- `read_to_string(path: &Path) Result[string, IoError]`
 
 ### 10.3 `std.path`
 
@@ -379,7 +379,7 @@ trait Writer {
 - `Path`：借用路径视图
 - `PathBuf`：拥有型路径对象
 
-这能与 `str` / `String` 的设计保持一致。
+这能与 `str` / `string` 的设计保持一致。
 
 ## 11. Concurrency and Tasks
 
