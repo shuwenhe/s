@@ -103,7 +103,7 @@ Done means:
 
 Primary directories:
 
-- `/app/s/src/cmd/compile/internal/compiler/tests`
+- `/app/s/src/cmd/compile/internal/tests`
 - `/app/s/src/testing`
 
 Tasks:
@@ -239,7 +239,7 @@ Done means:
 2. Stabilize semantic checking in `/app/s/src/cmd/compile/internal/compiler`
 3. Make the build path solid in `/app/s/src/cmd/compile/internal/compiler` and `/app/s/src/cmd`
 4. Keep `/app/s/src/runtime` small and stable
-5. Strengthen `/app/s/src/cmd/compile/internal/compiler/tests` and `/app/s/src/testing`
+5. Strengthen `/app/s/src/cmd/compile/internal/tests` and `/app/s/src/testing`
 6. Refine ownership and borrow analysis
 7. Consolidate reusable package boundaries in `/app/s/src/s`
 8. Tighten command-line tooling and minimal standard library support

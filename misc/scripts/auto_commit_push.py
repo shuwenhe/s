@@ -81,7 +81,7 @@ def has_upstream(repo):
 def summarize_paths(paths):
     labels = []
     mapping = [
-        ("src/cmd/compile/internal/compiler/", "compiler"),
+        ("src/cmd/compile/internal/", "compiler"),
         ("src/s/", "language packages"),
         ("src/runtime/", "runtime"),
         ("src/prelude/", "standard library"),
