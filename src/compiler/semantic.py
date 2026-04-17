@@ -176,6 +176,18 @@ class Checker:
                 params=[STRING],
                 return_type=I32,
             ),
+            "__host_build_executable": TraitMethodInfo(
+                owner="builtin",
+                generics=[],
+                params=[STRING, STRING],
+                return_type=I32,
+            ),
+            "__host_run_executable": TraitMethodInfo(
+                owner="builtin",
+                generics=[],
+                params=[STRING],
+                return_type=I32,
+            ),
         }
         self._load_stdlib_primitives()
 

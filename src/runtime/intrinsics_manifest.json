@@ -72,6 +72,12 @@
       "notes": "bridge success path returns exit code; host failures raise RuntimeTrap"
     },
     {
+      "name": "__host_run_executable",
+      "arity": 1,
+      "returns": "i32",
+      "notes": "bridge success path returns exit code; host failures raise RuntimeTrap"
+    },
+    {
       "name": "__host_run_process",
       "arity": 1,
       "returns": "()",

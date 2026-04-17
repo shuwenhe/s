@@ -8,7 +8,9 @@ from runtime.host_fs import make_temp_dir as host_make_temp_dir, read_to_string 
 from runtime.host_intrinsics import args as host_args, eprintln as host_eprintln, get_env as host_get_env, println as host_println
 from runtime.host_process import run_argv as host_run_argv
 from compiler.backend_elf64 import BackendError, build_executable
-from compiler.hosted_compiler import read_source as hosted_read_source, parse_checked_source as hosted_parse_checked_source, resolve_output_path
+from compiler.hosted_compiler import resolve_output_path
+from compiler.parser import ParseError, parse_source
+from compiler.semantic import check_source
 from runtime.intrinsics_core import int_to_string, string_char_at, string_concat, string_len, string_replace, string_slice
 
 BUILD_OUTPUT_ROOT = Path("/tmp/s-runtime")
@@ -135,15 +137,22 @@ def __host_make_temp_dir(prefix: str) -> str:
 
 def __host_build_executable(path: str, output: str) -> int:
     try:
-        source = hosted_read_source(path)
-        parsed = hosted_parse_checked_source(
-            type("Command", (), {"command": "build", "path": path, "output": output, "dump_tokens": False, "dump_ast": False})(),
-            source,
-        )
+        source = Path(path).read_text()
+        parsed = parse_source(source)
+        result = check_source(parsed)
+        if not result.ok:
+            raise RuntimeTrap("semantic check failed")
         build_executable(parsed, resolve_output_path(output))
         return 0
-    except (RuntimeError, BackendError) as exc:
+    except (ParseError, RuntimeError, BackendError) as exc:
         raise RuntimeTrap(f"build_executable failed for {path}: {exc}") from exc
+
+
+def __host_run_executable(path: str) -> int:
+    try:
+        return host_run_argv([path])
+    except OSError as exc:
+        raise RuntimeTrap(f"run_executable failed for {path}: {exc}") from exc
 
 
 def _coerce_argv(argv: object) -> list[str]:
