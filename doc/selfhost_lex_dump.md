@@ -121,7 +121,7 @@ struct CliError {
 - `std.fs` / `std.io` 还没有真实 S 实现
 - 命令行参数注入机制还只是接口约定
 - `dump_tokens` 依赖 `to_string`、`len` 等基础库能力，这些也还没有真正落地
-- 还没有 golden test runner 去自动比对 [sample.tokens](/app/s/src/cmd/compile/internal/compiler/tests/fixtures/sample.tokens)
+- 还没有 golden test runner 去自动比对 [sample.tokens](/app/s/src/cmd/compile/internal/tests/fixtures/sample.tokens)
 
 ## 8. Next Step
 
@@ -129,5 +129,5 @@ struct CliError {
 
 1. 给自举 runtime 补最小 `std.fs.read_to_string`
 2. 给自举 runtime 补最小 `std.io.println` / `std.io.eprintln`
-3. 用 [sample.s](/app/s/src/cmd/compile/internal/compiler/tests/fixtures/sample.s) 跑出和 [sample.tokens](/app/s/src/cmd/compile/internal/compiler/tests/fixtures/sample.tokens) 对齐的输出
+3. 用 [sample.s](/app/s/src/cmd/compile/internal/tests/fixtures/sample.s) 跑出和 [sample.tokens](/app/s/src/cmd/compile/internal/tests/fixtures/sample.tokens) 对齐的输出
 4. 把 parser 接到 `token stream  AST` 路径上
