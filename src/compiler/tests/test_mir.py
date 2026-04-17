@@ -10,7 +10,7 @@ from compiler.typesys import parse_type
 
 
 class MIRTests(unittest.TestCase):
-    def test_if_lowering_emits_block_param_join(self)  None:
+    def test_if_lowering_emits_block_param_join(self) -> None:
         source = """
 package demo.mir
 
@@ -34,7 +34,7 @@ pub func choose(flag: bool) int32 {
         )
         self.assertTrue(all(edge.id for edge in arg_edges))
 
-    def test_locals_are_versioned(self)  None:
+    def test_locals_are_versioned(self) -> None:
         source = """
 package demo.mir
 
@@ -51,7 +51,7 @@ pub func shadow(x: int32) int32 {
         self.assertIn(0, versions)
         self.assertIn(1, versions)
 
-    def test_ownership_plan_drives_move_and_drop(self)  None:
+    def test_ownership_plan_drives_move_and_drop(self) -> None:
         source = """
 package demo.mir
 
@@ -73,7 +73,7 @@ pub func take(text: string) string {
         self.assertTrue(moves)
         self.assertTrue(drops)
 
-    def test_prelude_decl_has_traits_and_index(self)  None:
+    def test_prelude_decl_has_traits_and_index(self) -> None:
         self.assertEqual(PRELUDE.name, "std.prelude")
         self.assertIn("Len", PRELUDE.traits)
         self.assertIn("Clone", PRELUDE.types["string"].traits)

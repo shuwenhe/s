@@ -58,7 +58,7 @@ UNIT = UnitType()
 NEVER = NeverType()
 
 
-def parse_type(text: str)  Type:
+def parse_type(text: str) -> Type:
     text = text.strip()
     if not text:
         return UnknownType()
@@ -86,7 +86,7 @@ def parse_type(text: str)  Type:
     return NamedType(text)
 
 
-def dump_type(ty: Type)  str:
+def dump_type(ty: Type) -> str:
     if isinstance(ty, PrimitiveType):
         return ty.name
     if isinstance(ty, NamedType):
@@ -109,7 +109,7 @@ def dump_type(ty: Type)  str:
     return repr(ty)
 
 
-def is_copy_type(ty: Type)  bool:
+def is_copy_type(ty: Type) -> bool:
     if isinstance(ty, PrimitiveType):
         return True
     if isinstance(ty, ReferenceType):
@@ -119,7 +119,7 @@ def is_copy_type(ty: Type)  bool:
     return False
 
 
-def substitute_type(ty: Type, mapping: dict[str, Type])  Type:
+def substitute_type(ty: Type, mapping: dict[str, Type]) -> Type:
     if isinstance(ty, NamedType) and not ty.args and ty.name in mapping:
         return mapping[ty.name]
     if isinstance(ty, NamedType):
@@ -136,7 +136,7 @@ def substitute_type(ty: Type, mapping: dict[str, Type])  Type:
     return ty
 
 
-def _split_args(text: str)  list[str]:
+def _split_args(text: str) -> list[str]:
     parts: list[str] = []
     current: list[str] = []
     depth = 0
