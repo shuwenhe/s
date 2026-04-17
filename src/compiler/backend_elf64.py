@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 import os
 import subprocess
 import tempfile
+from pathlib import Path
 
 from compiler.ast import SourceFile
 from compiler.interpreter import Interpreter, InterpreterError
 
-PACKAGE_ROOT = Path(__file__).resolve().parent
 BUILD_OUTPUT_ROOT = Path(os.environ.get("S_BUILD_OUTPUT_ROOT", "/tmp/s-build"))
 
 
@@ -41,9 +40,6 @@ class RecordingInterpreter(Interpreter):
 def build_executable(source: SourceFile, output_path: Path) -> None:
     BUILD_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    if source.package == "runtime.runner":
-        _build_native_runner(output_path)
-        return
     program = _compile_program(source)
     asm = _emit_asm(program)
 
@@ -58,17 +54,6 @@ def build_executable(source: SourceFile, output_path: Path) -> None:
             subprocess.run(["ld", "-o", str(output_path), str(obj_path)], check=True)
         except subprocess.CalledProcessError as exc:
             raise BackendError(f"toolchain failed with exit code {exc.returncode}") from exc
-
-
-def _build_native_runner(output_path: Path) -> None:
-    template = PACKAGE_ROOT / "backend_elf64_runner_bootstrap.c"
-    try:
-        subprocess.run(
-            ["cc", "-O2", "-std=c11", str(template), "-o", str(output_path)],
-            check=True,
-        )
-    except subprocess.CalledProcessError as exc:
-        raise BackendError(f"native runner bootstrap failed with exit code {exc.returncode}") from exc
 
 
 def _compile_program(source: SourceFile) -> tuple[list[WriteOp], int]:
