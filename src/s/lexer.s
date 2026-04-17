@@ -188,8 +188,6 @@ impl Lexer {
 
     func read_symbol(mut self) Result[String, LexError] {
         var multi = Vec[String] {
-            "++",
-            ":=",
             "->",
             "=>",
             "==",
@@ -198,11 +196,13 @@ impl Lexer {
             ">=",
             "&&",
             "||",
+            "++",
+            "..=",
+            "..",
+            ":=",
             "<<",
             ">>",
             "::",
-            "..=",
-            "..",
         }
 
         for symbol in multi {
