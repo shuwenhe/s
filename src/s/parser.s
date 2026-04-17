@@ -18,9 +18,9 @@ struct Parser {
 }
 
 func parseSource(string source) Result[SourceFile, ParseError] {
-    match newLexer(source).tokenize() {
-        Result::Ok(tokens) => parseTokens(tokens),
-        Result::Err(err) => Result::Err(ParseError {
+    switch newLexer(source).tokenize() {
+        Result::Ok(tokens) : parseTokens(tokens),
+        Result::Err(err) : Result::Err(ParseError {
             message: err.message,
             line: err.line,
             column: err.column,
@@ -39,7 +39,7 @@ func parseTokens(Vec[Token] tokens) Result[SourceFile, ParseError] {
 impl Parser {
     func parseSourceFile(mut self) Result[SourceFile, ParseError] {
         self.expectKeyword("package")?
-        var package = self.parsePath()?
+        var pkg = self.parsePath()?
         var uses = Vec[UseDecl]()
         var items = Vec[Item]()
 
@@ -52,7 +52,7 @@ impl Parser {
         }
 
         Result::Ok(SourceFile {
-            pkg: package,
+            pkg: pkg,
             uses: uses,
             items: items,
         })
@@ -78,23 +78,23 @@ impl Parser {
         if self.atKeyword("func") {
             // parse a function; if it has a receiver, convert to an impl item
             var parsed = self.parseFunction(true)?
-            match parsed.receiver {
-                Option::Some(r) => {
+            switch parsed.receiver {
+                Option::Some(r) : {
                     // build FunctionDecl for method
                     var method = FunctionDecl {
                         sig: parsed.sig,
                         body: parsed.body,
                         isPublic: startsWithUpper(parsed.sig.name),
                     }
-                    var impl = ImplDecl {
+                    var implDecl = ImplDecl {
                         target: r.typeName,
                         traitName: Option::None,
                         generics: Vec[string](),
                         methods: Vec[FunctionDecl] { method },
                     }
-                    return Result::Ok(Item::Impl(impl))
+                    return Result::Ok(Item::Impl(implDecl))
                 }
-                Option::None => return Result::Ok(Item::Function(self.parseFunctionDecl()?)),
+                Option::None : return Result::Ok(Item::Function(self.parseFunctionDecl()?)),
             }
         }
         if self.atKeyword("struct") {
@@ -579,8 +579,8 @@ impl Parser {
     }
 
     func parseExpr(mut self) Result[Expr, ParseError] {
-        if self.atKeyword("match") {
-            return self.parseMatchExpr()
+        if self.atKeyword("switch") {
+            return self.parseSwitchExpr()
         }
         if self.atKeyword("if") {
             return self.parseIfExpr()
@@ -594,24 +594,24 @@ impl Parser {
         self.parseBinaryExpr(0)
     }
 
-    func parseMatchExpr(mut self) Result[Expr, ParseError] {
-        self.expectKeyword("match")?
+    func parseSwitchExpr(mut self) Result[Expr, ParseError] {
+        self.expectKeyword("switch")?
         var subject = self.parseExpr()?
         self.expectSymbol("{")?
-        var arms = Vec[MatchArm]()
+        var arms = Vec[SwitchArm]()
 
         while !self.eatSymbol("}") {
             var pattern = self.parsePattern()?
-            self.expectSymbol("=>")?
+            self.expectSymbol(":")?
             var expr = self.parseExpr()?
-            arms.push(MatchArm {
+            arms.push(SwitchArm {
                 pattern: pattern,
                 expr: expr,
             })
             self.eatSymbol(",")
         }
 
-        Result::Ok(Expr::Match(MatchExpr {
+        Result::Ok(Expr::Switch(SwitchExpr {
             subject: Box(subject),
             arms: arms,
             inferredType: Option::None,
@@ -669,6 +669,44 @@ impl Parser {
     func parsePattern(mut self) Result[Pattern, ParseError] {
         if self.eatIdentValue("_") {
             return Result::Ok(Pattern::Wildcard(WildcardPattern {}))
+        }
+
+        var token = self.peek()?
+        if token.kind == TokenKind::Int {
+            self.advance()?
+            return Result::Ok(Pattern::Literal(LiteralPattern {
+                value: Expr::Int(IntExpr {
+                    value: token.value,
+                    inferredType: Option::None,
+                }),
+            }))
+        }
+        if token.kind == TokenKind::string {
+            self.advance()?
+            return Result::Ok(Pattern::Literal(LiteralPattern {
+                value: Expr::string(StringExpr {
+                    value: token.value,
+                    inferredType: Option::None,
+                }),
+            }))
+        }
+        if self.atKeyword("true") {
+            self.advance()?
+            return Result::Ok(Pattern::Literal(LiteralPattern {
+                value: Expr::Bool(BoolExpr {
+                    value: true,
+                    inferredType: Option::None,
+                }),
+            }))
+        }
+        if self.atKeyword("false") {
+            self.advance()?
+            return Result::Ok(Pattern::Literal(LiteralPattern {
+                value: Expr::Bool(BoolExpr {
+                    value: false,
+                    inferredType: Option::None,
+                }),
+            }))
         }
 
         var path = self.parsePath()?
@@ -754,6 +792,15 @@ impl Parser {
                 continue
             }
             if self.eatSymbol(".") {
+                expr = Expr::Member(MemberExpr {
+                    target: Box(expr),
+                    member: self.expectIdent()?,
+                    inferredType: Option::None,
+                })
+                continue
+            }
+            if self.eatSymbol(":") {
+                self.expectSymbol(":")?
                 expr = Expr::Member(MemberExpr {
                     target: Box(expr),
                     member: self.expectIdent()?,
@@ -873,21 +920,21 @@ impl Parser {
     }
 
     func binaryPrecedence(self, string op) int32 {
-        match op {
-            "||" => 1,
-            "&&" => 2,
-            "==" => 3,
-            "!=" => 3,
-            "<" => 4,
-            "<=" => 4,
-            ">" => 4,
-            ">=" => 4,
-            "+" => 5,
-            "-" => 5,
-            "*" => 6,
-            "/" => 6,
-            "%" => 6,
-            _ => -1,
+        switch op {
+            "||" : 1,
+            "&&" : 2,
+            "==" : 3,
+            "!=" : 3,
+            "<" : 4,
+            "<=" : 4,
+            ">" : 4,
+            ">=" : 4,
+            "+" : 5,
+            "-" : 5,
+            "*" : 6,
+            "/" : 6,
+            "%" : 6,
+            _ : -1,
         }
     }
 
@@ -919,6 +966,11 @@ impl Parser {
         var parts = Vec[string]()
         parts.push(self.expectIdent()?)
         while self.eatSymbol(".") {
+            parts.push(self.expectIdent()?)
+        }
+        while self.atSymbol(":") && self.peekAt(1).unwrap().kind == TokenKind::Symbol && self.peekAt(1).unwrap().value == ":" {
+            self.expectSymbol(":")?
+            self.expectSymbol(":")?
             parts.push(self.expectIdent()?)
         }
         if self.atSymbol("[") {
@@ -1307,33 +1359,33 @@ func startsWithUpper(string text) bool {
         return false
     }
     var ch = charAt(text, 0)
-    match ch {
-        "A" => true,
-        "B" => true,
-        "C" => true,
-        "D" => true,
-        "E" => true,
-        "F" => true,
-        "G" => true,
-        "H" => true,
-        "I" => true,
-        "J" => true,
-        "K" => true,
-        "L" => true,
-        "M" => true,
-        "N" => true,
-        "O" => true,
-        "P" => true,
-        "Q" => true,
-        "R" => true,
-        "S" => true,
-        "T" => true,
-        "U" => true,
-        "V" => true,
-        "W" => true,
-        "X" => true,
-        "Y" => true,
-        "Z" => true,
-        _ => false,
+    switch ch {
+        "A" : true,
+        "B" : true,
+        "C" : true,
+        "D" : true,
+        "E" : true,
+        "F" : true,
+        "G" : true,
+        "H" : true,
+        "I" : true,
+        "J" : true,
+        "K" : true,
+        "L" : true,
+        "M" : true,
+        "N" : true,
+        "O" : true,
+        "P" : true,
+        "Q" : true,
+        "R" : true,
+        "S" : true,
+        "T" : true,
+        "U" : true,
+        "V" : true,
+        "W" : true,
+        "X" : true,
+        "Y" : true,
+        "Z" : true,
+        _ : false,
     }
 }

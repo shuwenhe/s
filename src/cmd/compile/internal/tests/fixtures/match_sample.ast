@@ -1,6 +1,6 @@
-package demo.matching
+package demo.switching
 enum Option[T]
   Some(T)
   None
 func unwrap_or_zero(Option[int32] value) int32
-  final match value { Some(inner) => inner; None => 0 }
+  final switch value { Some(inner) : inner; None : 0 }

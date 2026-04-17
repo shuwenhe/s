@@ -153,7 +153,7 @@ def _apply_operand(value, scope: Dict[str, VarState], diagnostics: List[BorrowDi
 
 
 def _apply_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiagnostic]) -> None:
-    from compiler.ast import BinaryExpr, BlockExpr, BorrowExpr, CallExpr, IfExpr, IndexExpr, MatchExpr, MemberExpr, NameExpr
+    from compiler.ast import BinaryExpr, BlockExpr, BorrowExpr, CallExpr, IfExpr, IndexExpr, SwitchExpr, MemberExpr, NameExpr, StructLiteralExpr, UnaryExpr
 
     if isinstance(expr, NameExpr):
         _consume_name(expr.name, scope, diagnostics)
@@ -177,6 +177,9 @@ def _apply_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiagno
         _apply_expr(expr.left, scope, diagnostics)
         _apply_expr(expr.right, scope, diagnostics)
         return
+    if isinstance(expr, UnaryExpr):
+        _apply_expr(expr.operand, scope, diagnostics)
+        return
     if isinstance(expr, CallExpr):
         if isinstance(expr.callee, MemberExpr):
             _inspect_expr(expr.callee.target, scope, diagnostics)
@@ -185,6 +188,11 @@ def _apply_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiagno
         for arg in expr.args:
             _apply_expr(arg, scope, diagnostics)
         return
+    if isinstance(expr, StructLiteralExpr):
+        _apply_expr(expr.callee, scope, diagnostics)
+        for field in expr.fields:
+            _apply_expr(field.value, scope, diagnostics)
+        return
     if isinstance(expr, MemberExpr):
         _inspect_expr(expr.target, scope, diagnostics)
         return
@@ -192,7 +200,7 @@ def _apply_expr(expr, scope: Dict[str, VarState], diagnostics: List[BorrowDiagno
         _inspect_expr(expr.target, scope, diagnostics)
         _apply_expr(expr.index, scope, diagnostics)
         return
-    if isinstance(expr, MatchExpr):
+    if isinstance(expr, SwitchExpr):
         _apply_expr(expr.subject, scope, diagnostics)
         for arm in expr.arms:
             arm_scope = _clone_scope(scope)

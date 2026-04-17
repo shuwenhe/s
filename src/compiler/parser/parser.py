@@ -25,8 +25,7 @@ from compiler.ast import (
     IndexExpr,
     IntExpr,
     LetStmt,
-    MatchArm,
-    MatchExpr,
+    LiteralPattern,
     MemberExpr,
     NameExpr,
     NamePattern,
@@ -35,6 +34,11 @@ from compiler.ast import (
     ReturnStmt,
     SourceFile,
     StringExpr,
+    StructFieldInit,
+    StructLiteralExpr,
+    UnaryExpr,
+    SwitchArm,
+    SwitchExpr,
     StructDecl,
     TraitDecl,
     UseDecl,
@@ -234,6 +238,9 @@ class Parser:
             if self._eat_symbol(";"):
                 statements.append(ExprStmt(expr))
                 continue
+            if not self._at_symbol("}"):
+                statements.append(ExprStmt(expr))
+                continue
             final_expr = expr
             break
         self._expect_symbol("}")
@@ -246,7 +253,7 @@ class Parser:
             or self._at_keyword("return")
             or self._at_keyword("if")
             or self._at_keyword("while")
-            or self._at_keyword("match")
+            or self._at_keyword("switch")
             or self._at_keyword("for")
             or self._looks_like_typed_let()
             or self._looks_like_assignment()
@@ -260,7 +267,7 @@ class Parser:
             return self._parse_var_stmt()
         if self._at_keyword("return"):
             return self._parse_return_stmt()
-        if self._at_keyword("if") or self._at_keyword("while") or self._at_keyword("match"):
+        if self._at_keyword("if") or self._at_keyword("while") or self._at_keyword("switch"):
             expr = self._parse_expr()
             self._eat_symbol(";")
             return ExprStmt(expr)
@@ -349,8 +356,8 @@ class Parser:
         return ReturnStmt(value=value)
 
     def _parse_expr(self) -> Expr:
-        if self._at_keyword("match"):
-            return self._parse_match_expr()
+        if self._at_keyword("switch") or self._at_keyword("switch"):
+            return self._parse_switch_expr()
         if self._at_keyword("if"):
             return self._parse_if_expr()
         if self._at_keyword("while"):
@@ -359,18 +366,30 @@ class Parser:
             return self._parse_for_expr()
         return self._parse_binary_expr(0)
 
-    def _parse_match_expr(self) -> MatchExpr:
-        self._expect_keyword("match")
+    def _parse_switch_expr(self) -> SwitchExpr:
+        if self._at_keyword("switch"):
+            self._expect_keyword("switch")
+        else:
+            self._expect_keyword("switch")
         subject = self._parse_expr()
         self._expect_symbol("{")
-        arms: List[MatchArm] = []
+        arms: List[SwitchArm] = []
         while not self._eat_symbol("}"):
-            pattern = self._parse_pattern()
-            self._expect_symbol("=>")
+            if self._eat_keyword("case"):
+                pattern = self._parse_pattern()
+                self._expect_symbol(":")
+            elif self._eat_keyword("default"):
+                pattern = WildcardPattern()
+                self._expect_symbol(":")
+            else:
+                pattern = self._parse_pattern()
+                if not (self._eat_symbol(":") or self._eat_symbol(":")):
+                    token = self._peek()
+                    raise ParseError(f"expected ':' in switch arm at {token.line}:{token.column}")
             expr = self._parse_expr()
-            arms.append(MatchArm(pattern=pattern, expr=expr))
+            arms.append(SwitchArm(pattern=pattern, expr=expr))
             self._eat_symbol(",")
-        return MatchExpr(subject=subject, arms=arms)
+        return SwitchExpr(subject=subject, arms=arms)
 
     def _parse_if_expr(self) -> IfExpr:
         self._expect_keyword("if")
@@ -401,6 +420,19 @@ class Parser:
     def _parse_pattern(self) -> Pattern:
         if self._eat_ident_value("_"):
             return WildcardPattern()
+        token = self._peek()
+        if token.kind == TokenKind.INT:
+            self._advance()
+            return LiteralPattern(value=IntExpr(value=token.value))
+        if token.kind == TokenKind.STRING:
+            self._advance()
+            return LiteralPattern(value=StringExpr(value=token.value))
+        if self._at_keyword("true"):
+            self._advance()
+            return LiteralPattern(value=BoolExpr(value=True))
+        if self._at_keyword("false"):
+            self._advance()
+            return LiteralPattern(value=BoolExpr(value=False))
         path = self._parse_path()
         if self._eat_symbol("("):
             args: List[Pattern] = []
@@ -433,6 +465,8 @@ class Parser:
         if self._eat_symbol("&"):
             mutable = self._eat_keyword("mut")
             return BorrowExpr(target=self._parse_unary_expr(), mutable=mutable)
+        if self._eat_symbol("!"):
+            return UnaryExpr(op="!", operand=self._parse_unary_expr())
         return self._parse_call_expr()
 
     def _parse_call_expr(self) -> Expr:
@@ -453,10 +487,56 @@ class Parser:
             if self._eat_symbol("."):
                 expr = MemberExpr(target=expr, member=self._expect_ident())
                 continue
+            if self._eat_symbol(":"):
+                self._expect_symbol(":")
+                expr = MemberExpr(target=expr, member=self._expect_ident())
+                continue
+            if (
+                self._at_symbol("{")
+                and (
+                    (isinstance(expr, NameExpr) and expr.name == "Vec")
+                    or (
+                        isinstance(expr, IndexExpr)
+                        and isinstance(expr.target, NameExpr)
+                        and expr.target.name == "Vec"
+                    )
+                )
+                and not self._looks_like_struct_literal()
+            ):
+                self._eat_symbol("{")
+                items: List[Expr] = []
+                if not self._at_symbol("}"):
+                    while True:
+                        items.append(self._parse_expr())
+                        if not self._eat_symbol(","):
+                            break
+                        if self._at_symbol("}"):
+                            break
+                self._expect_symbol("}")
+                expr = CallExpr(callee=expr, args=items)
+                continue
+            if self._looks_like_struct_literal():
+                self._eat_symbol("{")
+                fields: List[StructFieldInit] = []
+                if not self._at_symbol("}"):
+                    while True:
+                        name = self._expect_ident()
+                        self._expect_symbol(":")
+                        value = self._parse_expr()
+                        fields.append(StructFieldInit(name=name, value=value))
+                        if not self._eat_symbol(","):
+                            break
+                        if self._at_symbol("}"):
+                            break
+                self._expect_symbol("}")
+                expr = StructLiteralExpr(callee=expr, fields=fields)
+                continue
             if self._eat_symbol("["):
                 index = self._parse_expr()
                 self._expect_symbol("]")
                 expr = IndexExpr(target=expr, index=index)
+                continue
+            if self._eat_symbol("?"):
                 continue
             break
         return expr
@@ -520,12 +600,29 @@ class Parser:
         parts = [self._expect_ident()]
         while self._eat_symbol("."):
             parts.append(self._expect_ident())
+        while self._at_symbol(":") and self._peek(1).kind == TokenKind.SYMBOL and self._peek(1).value == ":":
+            self._eat_symbol(":")
+            self._expect_symbol(":")
+            parts.append(self._expect_ident())
         if self._at_symbol("["):
             parts[-1] += self._parse_bracket_group()
         return ".".join(parts)
 
     def _parse_expr_name(self) -> str:
         return self._expect_ident()
+
+    def _looks_like_struct_literal(self) -> bool:
+        if not self._at_symbol("{"):
+            return False
+        first = self._peek(1)
+        second = self._peek(2)
+        third = self._peek(3)
+        return (
+            first.kind in {TokenKind.IDENT, TokenKind.KEYWORD}
+            and second.kind == TokenKind.SYMBOL
+            and second.value == ":"
+            and not (third.kind == TokenKind.SYMBOL and third.value == ":")
+        )
 
     def _parse_type_text(self, stop_values: set[str]) -> str:
         parts: List[str] = []

@@ -60,8 +60,8 @@
     - `for init; cond; post` → `Stmt::CFor`（C-style for）
     - `for range` → `Expr::For`（将 range target 映射到 `iterable`，`names` 为迭代变量）
     - `for {}`（无限循环）→ `Expr::While` with `true` 或 `CFor` with empty clauses
-  - `switch` → 首先映射为 `match` 风格的 `Expr::Match`（将 switch-case 转为 match arms，case 表达式映射为 `Pattern` 或 `Expr`）
-  - `select`（channels）→ 无直接对应，映射为 `match` 或保留为 `Expr::Call` 带 `type_text` 注记（后续实现并发/通道需要扩展 runtime）
+  - `switch` → 首先映射为 `switch` 风格的 `Expr::Switch`（将 switch-case 转为 switch arms，case 表达式映射为 `Pattern` 或 `Expr`）
+  - `select`（channels）→ 无直接对应，映射为 `switch` 或保留为 `Expr::Call` 带 `type_text` 注记（后续实现并发/通道需要扩展 runtime）
 
 6. 类型表达式
 - 所有类型文本（复杂类型）建议保存在 `type_text` 与 `Param.type_name` / `Field.type_name` 中，使用 `normalize_type_text` 风格处理空格与符号。

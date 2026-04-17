@@ -61,7 +61,7 @@ Before broadening the language, the following source subset should stay stable:
 - top-level items: `func`, `struct`, `enum`, `trait`, `impl`
 - statements: variable declaration, assignment, increment, return, expr stmt
 - expressions: literals, names, binary, call, member, index, block, `if`,
-  `while`, and `match`
+  `while`, and `switch`
 
 This is the subset that parser, semantic checking, build, and runtime support
 should protect first. The fuller contract lives in
@@ -74,7 +74,7 @@ The current AST is intentionally split into a few predictable layers:
 - top level: `SourceFile  UseDecl + Item`
 - declarations: `FunctionDecl`, `StructDecl`, `EnumDecl`, `TraitDecl`, `ImplDecl`
 - statements: `Var`, `Assign`, `Increment`, `CFor`, `Return`, `Expr`
-- expressions: literals, names, borrow, binary, member, index, call, match, if,
+- expressions: literals, names, borrow, binary, member, index, call, switch, if,
   while, for, and block
 - patterns: `Name`, `Wildcard`, `Variant`
 

@@ -86,7 +86,7 @@ IDENT = XID_Start { XID_Continue }
 package use as pub
 func let var const static
 struct enum trait impl for
-if else for while match
+if else for while switch
 return break continue
 true false
 unsafe extern mut
@@ -592,7 +592,7 @@ PrimaryExpr =
   | IfExpr
   | WhileExpr
   | ForExpr
-  | MatchExpr
+  | SwitchExpr
   | "(" Expr ")"
 ```
 
@@ -660,14 +660,14 @@ ForExpr =
 ### 11.17 Match Expression
 
 ```text
-MatchExpr =
-    "match" Expr "{" MatchArmList? "}"
+SwitchExpr =
+    "switch" Expr "{" SwitchArmList? "}"
 
-MatchArmList =
-    MatchArm ("," MatchArm)* ","?
+SwitchArmList =
+    SwitchArm ("," SwitchArm)* ","?
 
-MatchArm =
-    Pattern MatchGuard? "=>" Expr
+SwitchArm =
+    Pattern MatchGuard? ":" Expr
 
 MatchGuard =
     "if" Expr
@@ -799,7 +799,7 @@ S 的基本规则如下：
 
 1. 泛型参数列表 `[]` 与数组/切片语法都使用方括号，parser 需要依赖上下文区分
 2. `TypePath "{" ... "}"` 可能是结构体构造，也可能与块表达式相邻，需要按表达式上下文解析
-3. `PathExpr` 与 `EnumPattern` 在 `match` 中共享前缀，需要在模式上下文解析
+3. `PathExpr` 与 `EnumPattern` 在 `switch` 中共享前缀，需要在模式上下文解析
 4. `for Pattern in Expr` 中的 `in` 建议作为上下文关键字处理
 5. 元组表达式与括号表达式需要依赖逗号区分
 
@@ -811,7 +811,7 @@ S 的基本规则如下：
 2. `func` / `struct` / `enum` / `trait` / `impl`
 3. 基础类型语法
 4. `let` / `var` / `return`
-5. `if` / `while` / `for` / `match`
+5. `if` / `while` / `for` / `switch`
 6. 函数调用、成员访问、下标、`?`
 7. 泛型参数和泛型实参
 8. 基础模式匹配
@@ -844,7 +844,7 @@ S 的基本规则如下：
 - 明确的顶层声明结构
 - 明确的类型与泛型写法
 - 表达式优先级和后缀链规则
-- `match` 与模式匹配的基础形状
+- `switch` 与模式匹配的基础形状
 - 方法、借用和 `unsafe` 在语法层的位置
 
 下一步若继续细化，最适合拆出的子议题是：
