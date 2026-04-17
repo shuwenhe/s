@@ -1,7 +1,7 @@
 # Minimal `backend_elf64` Design
 
 This document defines the smallest executable backend we want for
-[`backend_elf64.s`](/app/s/src/cmd/compile/internal/compiler/backend_elf64.s).
+[`backend_elf64.s`](/app/s/src/cmd/compile/internal/backend_elf64.s).
 
 The goal is not a general-purpose optimizer or a full code generator.
 The goal is to make the S compiler's own `build` path real with the
@@ -264,8 +264,8 @@ The MVP is complete when all of these are true:
 
 Right now:
 
-- [main.s](/app/s/src/cmd/compile/internal/compiler/main.s) already has a `build` command path
-- [backend_elf64.s](/app/s/src/cmd/compile/internal/compiler/backend_elf64.s) is still a stub
+- [main.s](/app/s/src/cmd/compile/internal/main.s) already has a `build` command path
+- [backend_elf64.s](/app/s/src/cmd/compile/internal/backend_elf64.s) is still a stub
 - the runnable implementation still lives in
   [backend_elf64.py](/app/s/src/compiler/backend_elf64.py)
 

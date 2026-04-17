@@ -130,8 +130,25 @@ class Interpreter:
 
     def _source_path_for_package(self, package_path: str) -> Path | None:
         root = Path(__file__).resolve().parent.parent
+        if package_path == "compile.internal":
+            return root / "cmd" / "compile" / "internal" / "main.s"
+        if package_path.startswith("compile.internal.tests."):
+            tail = package_path.removeprefix("compile.internal.tests.")
+            return root / "cmd" / "compile" / "internal" / "tests" / f"{tail}.s"
         if package_path.startswith("compile.internal."):
             tail = package_path.removeprefix("compile.internal.")
+            if tail in {
+                "main",
+                "prelude",
+                "semantic",
+                "mir",
+                "ownership",
+                "typesys",
+                "golden",
+                "borrow",
+                "backend_elf64",
+            }:
+                return root / "cmd" / "compile" / "internal" / f"{tail}.s"
             parts = tail.split(".")
             return root / "cmd" / "compile" / "internal" / Path(*parts) / f"{parts[-1]}.s"
         if package_path.startswith("internal."):
