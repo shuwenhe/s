@@ -52,7 +52,7 @@ impl Parser {
         }
 
         Result::Ok(SourceFile {
-            package: package,
+            pkg: package,
             uses: uses,
             items: items,
         })
