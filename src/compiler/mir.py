@@ -14,10 +14,12 @@ from compiler.ast import (
     IfExpr,
     IndexExpr,
     LetStmt,
-    MatchExpr,
+    StructLiteralExpr,
+    SwitchExpr,
     MemberExpr,
     NameExpr,
     ReturnStmt,
+    UnaryExpr,
     WhileExpr,
 )
 from compiler.ownership import OwnershipDecision, make_decision
@@ -270,7 +272,7 @@ class _MIRBuilder:
                 for block_id in then_exits + else_exits:
                     self.blocks[block_id].terminator = Terminator("goto", [self.edge(join_block, label="if_join")])
             return entry, [join_block]
-        if isinstance(expr, MatchExpr):
+        if isinstance(expr, SwitchExpr):
             subject = self._lower_expr(expr.subject, current)
             self.blocks[current].statements.append(EvalStmt("match_subject", (subject,)))
             exits: List[int] = []
@@ -354,6 +356,12 @@ class _MIRBuilder:
             )
             self.locals[slot] = LocalSlot(slot, f"_t{slot}", "temp", 0, self._operand_type(target))
             return Operand("slot", slot)
+        if isinstance(expr, UnaryExpr):
+            operand = self._lower_expr(expr.operand, current)
+            slot = self.new_temp()
+            self.blocks[current].statements.append(AssignStmt(slot, f"unary:{expr.op}", (operand,)))
+            self.locals[slot] = LocalSlot(slot, f"_t{slot}", "temp", 0, UnknownType("unary"))
+            return Operand("slot", slot)
         if isinstance(expr, BinaryExpr):
             left = self._lower_expr(expr.left, current)
             right = self._lower_expr(expr.right, current)
@@ -380,6 +388,13 @@ class _MIRBuilder:
             slot = self.new_temp()
             self.blocks[current].statements.append(AssignStmt(slot, "call", (callee, *args)))
             self.locals[slot] = LocalSlot(slot, f"_t{slot}", "temp", 0, UnknownType("call"))
+            return Operand("slot", slot)
+        if isinstance(expr, StructLiteralExpr):
+            callee = self._lower_expr(expr.callee, current)
+            fields = tuple((field.name, self._lower_expr(field.value, current)) for field in expr.fields)
+            slot = self.new_temp()
+            self.blocks[current].statements.append(AssignStmt(slot, "struct", (callee, *fields)))
+            self.locals[slot] = LocalSlot(slot, f"_t{slot}", "temp", 0, UnknownType("struct"))
             return Operand("slot", slot)
         if isinstance(expr, BlockExpr):
             slot = self.new_temp()

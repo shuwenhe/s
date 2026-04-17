@@ -115,16 +115,16 @@ use std.option.Option
 use std.result.Result
 
 func unwrap_or_zero(Result[int32, string] value) int32 {
-    match value {
-        Ok(number) => number,
-        Err(_) => 0,
+    switch value {
+        Ok(number) : number,
+        Err(_) : 0,
     }
 }
 
 func unwrap_or_default(Option[string] value) string {
-    match value {
-        Some(text) => text,
-        None => "fallback",
+    switch value {
+        Some(text) : text,
+        None : "fallback",
     }
 }
 """
@@ -144,14 +144,14 @@ use std.vec.Vec
 func main() int32 {
     var args = Args()
     var text =
-        match ReadToString("demo.txt") {
-            Ok(value) => value,
-            Err(err) => err.message,
+        switch ReadToString("demo.txt") {
+            Ok(value) : value,
+            Err(err) : err.message,
         }
     var proc = RunProcess(args)
-    match proc {
-        Ok(_) => 0,
-        Err(err) => err.message.len(),
+    switch proc {
+        Ok(_) : 0,
+        Err(err) : err.message.len(),
     }
 }
 """
@@ -166,9 +166,9 @@ use std.result.Result
 
 func pick(Result[int32, string] value) Result[int32, string] {
     var number =
-        match value {
-            Ok(v) => v,
-            Err(err) => {
+        switch value {
+            Ok(v) : v,
+            Err(err) : {
                 return Err(err)
             },
         }
@@ -284,9 +284,9 @@ use std.option.Option
 use std.vec.Vec
 
 func pick(Option[string] value) string {
-    return match value {
-        Some(text) => text,
-        None => "2",
+    return switch value {
+        Some(text) : text,
+        None : "2",
     }
 }
 

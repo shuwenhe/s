@@ -48,13 +48,13 @@
     "description": "Insert an S impl block"
   },
   "Match": {
-    "prefix": "match",
+    "prefix": "switch",
     "body": [
-      "match ${1:value} {",
-      "\t${2:Pattern} => ${3:expr},",
-      "\t_ => ${4:expr},",
+      "switch ${1:value} {",
+      "\t${2:Pattern} : ${3:expr},",
+      "\t_ : ${4:expr},",
       "}"
     ],
-    "description": "Insert an S match expression"
+    "description": "Insert an S switch expression"
   }
 }

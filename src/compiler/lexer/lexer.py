@@ -102,7 +102,7 @@ class Lexer:
         raise LexError("unterminated string literal")
 
     def _read_symbol(self) -> str:
-        for symbol in ("->", "=>", "==", "!=", "<=", ">=", "&&", "||", "++", "..=", ".."):
+        for symbol in ("->", ":", "==", "!=", "<=", ">=", "&&", "||", "++", "..=", ".."):
             if self._match(symbol):
                 for _ in symbol:
                     self._advance()

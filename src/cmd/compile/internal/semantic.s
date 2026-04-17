@@ -61,9 +61,9 @@ struct SemanticError {
 }
 
 func CheckText(string source) int32 {
-    var diagnostics = CheckDetailed(source)
+    var diagnostics = CheckDetailed(source);
     if diagnostics.len() > 0 {
-        return 1
+        return 1;
     }
     0
 }
@@ -93,9 +93,9 @@ func collectFunctions(Vec[Item] items) Vec[FunctionBinding] {
     var out = Vec[FunctionBinding]()
     var i = 0
     while i < items.len() {
-        match items[i] {
-            Item.Function(functionDecl) => out.push(makeFunctionBinding(functionDecl)),
-            _ => {},
+        switch items[i] {
+            Item.Function(functionDecl) : out.push(makeFunctionBinding(functionDecl)),
+            _ : {},
         }
         i = i + 1
     }
@@ -118,24 +118,24 @@ func makeFunctionBinding(FunctionDecl functionDecl) FunctionBinding {
     }
 
     var returnType =
-        match functionDecl.sig.returnType {
-            Option.Some(typeName) => ParseType(typeName),
-            Option.None => "()",
+        switch functionDecl.sig.returnType {
+            Option.Some(typeName) : ParseType(typeName),
+            Option.None : "()",
         }
 
-    FunctionBinding {
+    return FunctionBinding {
         name: functionDecl.sig.name,
         genericNames: genericNames,
         paramTypes: params,
         returnType: returnType,
-    }
+    };
 }
 
 func checkItem(Item item, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
-    match item {
-        Item.Function(functionDecl) => checkFunction(functionDecl, functions, source, diagnostics),
-        Item.Impl(implDecl) => checkImpl(implDecl, functions, source, diagnostics),
-        _ => 0,
+    switch item {
+        Item.Function(functionDecl) : checkFunction(functionDecl, functions, source, diagnostics),
+        Item.Impl(implDecl) : checkImpl(implDecl, functions, source, diagnostics),
+        _ : 0,
     }
 }
 
@@ -155,9 +155,9 @@ func checkFunction(FunctionDecl functionDecl, Vec[FunctionBinding] functions, st
     }
 
     var expectedReturn =
-        match functionDecl.sig.returnType {
-            Option.Some(typeName) => ParseType(typeName),
-            Option.None => "()",
+        switch functionDecl.sig.returnType {
+            Option.Some(typeName) : ParseType(typeName),
+            Option.None : "()",
         }
 
     var env = Vec[TypeBinding]()
@@ -191,15 +191,15 @@ func inferBlockExpr(BlockExpr block, Vec[TypeBinding] outerEnv, string expectedR
         i = i + 1
     }
 
-    match block.finalExpr {
-        Option.Some(finalExpr) => {
+    switch block.finalExpr {
+        Option.Some(finalExpr) : {
             var finalResult = inferExpr(finalExpr, localEnv, expectedReturn, functions, source, diagnostics)
             CheckResult {
                 typeName: finalResult.typeName,
                 errors: errors + finalResult.errors,
             }
         }
-        Option.None => CheckResult {
+        Option.None : CheckResult {
             typeName: "()",
             errors: errors,
         },
@@ -207,8 +207,8 @@ func inferBlockExpr(BlockExpr block, Vec[TypeBinding] outerEnv, string expectedR
 }
 
 func checkStmt(Stmt stmt, Vec[TypeBinding] mut env, string expectedReturn, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
-    match stmt {
-        Stmt.Var(value) => {
+    switch stmt {
+        Stmt.Var(value) : {
             var rhs = inferExpr(value.value, env, expectedReturn, functions, source, diagnostics)
             var errors = rhs.errors
 
@@ -228,7 +228,7 @@ func checkStmt(Stmt stmt, Vec[TypeBinding] mut env, string expectedReturn, Vec[F
             ;
             errors
         }
-        Stmt.Assign(value) => {
+        Stmt.Assign(value) : {
             var targetType = lookupNameType(env, value.name)
             var rhs = inferExpr(value.value, env, expectedReturn, functions, source, diagnostics)
             var errors = rhs.errors
@@ -240,14 +240,14 @@ func checkStmt(Stmt stmt, Vec[TypeBinding] mut env, string expectedReturn, Vec[F
             }
             errors
         }
-        Stmt.Increment(value) => {
+        Stmt.Increment(value) : {
             var ty = lookupNameType(env, value.name)
             if !typesCompatible("int32", ty) {
                 return addError(source, diagnostics, "E3005", "increment requires int32", value.name)
             }
             0
         }
-        Stmt.CFor(value) => {
+        Stmt.CFor(value) : {
             var errors = 0
             errors = errors + checkStmt(value.init.value, env, expectedReturn, functions, source, diagnostics)
             var cond = inferExpr(value.condition, env, expectedReturn, functions, source, diagnostics)
@@ -260,9 +260,9 @@ func checkStmt(Stmt stmt, Vec[TypeBinding] mut env, string expectedReturn, Vec[F
             errors = errors + bodyResult.errors
             errors
         }
-        Stmt.Return(value) => {
-            match value.value {
-                Option.Some(expr) => {
+        Stmt.Return(value) : {
+            switch value.value {
+                Option.Some(expr) : {
                     var exprResult = inferExpr(expr, env, expectedReturn, functions, source, diagnostics)
                     if expectedReturn == "()" {
                         return exprResult.errors + addError(source, diagnostics, "E3007", "unexpected return value", "return")
@@ -272,7 +272,7 @@ func checkStmt(Stmt stmt, Vec[TypeBinding] mut env, string expectedReturn, Vec[F
                     }
                     exprResult.errors
                 }
-                Option.None => {
+                Option.None : {
                     if expectedReturn == "()" {
                         return 0
                     }
@@ -280,21 +280,21 @@ func checkStmt(Stmt stmt, Vec[TypeBinding] mut env, string expectedReturn, Vec[F
                 }
             }
         }
-        Stmt.Expr(value) => {
+        Stmt.Expr(value) : {
             inferExpr(value.expr, env, expectedReturn, functions, source, diagnostics).errors
         }
-        Stmt.Defer(value) => {
+        Stmt.Defer(value) : {
             inferExpr(value.expr, env, expectedReturn, functions, source, diagnostics).errors
         }
     }
 }
 
 func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) CheckResult {
-    match expr {
-        Expr::Int(_) => okType("int32"),
-        Expr::String(_) => okType("string"),
-        Expr::Bool(_) => okType("bool"),
-        Expr::Name(value) => {
+    switch expr {
+        Expr::Int(_) : okType("int32"),
+        Expr::String(_) : okType("string"),
+        Expr::Bool(_) : okType("bool"),
+        Expr::Name(value) : {
             var ty = lookupNameType(env, value.name)
             if isUnknown(ty) {
                 return CheckResult {
@@ -304,7 +304,7 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
             }
             okType(ty)
         }
-        Expr::Borrow(value) => {
+        Expr::Borrow(value) : {
             var base = inferExpr(value.target.value, env, expectedReturn, functions, source, diagnostics)
             if isUnknown(base.typeName) {
                 return base
@@ -315,12 +315,12 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                 errors: base.errors,
             }
         }
-        Expr::Binary(value) => {
+        Expr::Binary(value) : {
             var left = inferExpr(value.left.value, env, expectedReturn, functions, source, diagnostics)
             var right = inferExpr(value.right.value, env, expectedReturn, functions, source, diagnostics)
             inferBinary(value.op, left, right, source, diagnostics)
         }
-        Expr::Member(value) => {
+        Expr::Member(value) : {
             var target = inferExpr(value.target.value, env, expectedReturn, functions, source, diagnostics)
             var fieldType = LookupBuiltinFieldType(target.typeName, value.member)
             if fieldType == "" {
@@ -334,7 +334,7 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                 errors: target.errors,
             }
         }
-        Expr::Index(value) => {
+        Expr::Index(value) : {
             var target = inferExpr(value.target.value, env, expectedReturn, functions, source, diagnostics)
             var index = inferExpr(value.index.value, env, expectedReturn, functions, source, diagnostics)
             var errors = target.errors + index.errors
@@ -358,7 +358,7 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                 errors: errors + addError(source, diagnostics, "E3013", "index target is not indexable", "["),
             }
         }
-        Expr::Call(value) => {
+        Expr::Call(value) : {
             var errors = 0
             var argTypes = Vec[string]()
             var i = 0
@@ -369,8 +369,8 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                 i = i + 1
             }
 
-            match value.callee.value {
-                Expr::Member(member) => {
+            switch value.callee.value {
+                Expr::Member(member) : {
                     var target = inferExpr(member.target.value, env, expectedReturn, functions, source, diagnostics)
                     errors = errors + target.errors
 
@@ -391,7 +391,7 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                         errors: errors,
                     }
                 }
-                Expr::Name(calleeName) => {
+                Expr::Name(calleeName) : {
                     var candidates = lookupFunctions(functions, calleeName.name)
                     if candidates.len() == 0 {
                         return CheckResult {
@@ -442,7 +442,7 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                         errors: errors,
                     }
                 }
-                _ => {
+                _ : {
                     var callee = inferExpr(value.callee.value, env, expectedReturn, functions, source, diagnostics)
                     CheckResult {
                         typeName: "unknown",
@@ -451,7 +451,7 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                 }
             }
         }
-        Expr::Match(value) => {
+        Expr::Switch(value) : {
             var subject = inferExpr(value.subject.value, env, expectedReturn, functions, source, diagnostics)
             var errors = subject.errors
             var armType = "unknown"
@@ -461,11 +461,11 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
             while i < value.arms.len() {
                 var arm = value.arms[i]
                 if patternUnreachable(seenPatterns, arm.pattern, subject.typeName) {
-                    errors = errors + addError(source, diagnostics, "E2003", "unreachable match arm", patternAnchor(arm.pattern))
+                    errors = errors + addError(source, diagnostics, "E2003", "unreachable switch arm", patternAnchor(arm.pattern))
                 }
 
                 if patternDuplicate(seenPatterns, arm.pattern, subject.typeName) {
-                    errors = errors + addError(source, diagnostics, "E2002", "duplicate match arm", patternAnchor(arm.pattern))
+                    errors = errors + addError(source, diagnostics, "E2002", "duplicate switch arm", patternAnchor(arm.pattern))
                 }
 
                 var patternResult = checkPattern(arm.pattern, subject.typeName, source, diagnostics)
@@ -479,7 +479,7 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                 if isUnknown(armType) {
                     armType = armResult.typeName
                 } else if !typesCompatible(armType, armResult.typeName) {
-                    errors = errors + addError(source, diagnostics, "E2005", "match arm result type mismatch", "match")
+                    errors = errors + addError(source, diagnostics, "E2005", "switch arm result type mismatch", "switch")
                 }
 
                 seenPatterns.push(arm.pattern);
@@ -488,7 +488,7 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
 
             var base = BaseTypeName(subject.typeName)
             if (base == "Option" || base == "Result") && !patternsCoverType(seenPatterns, subject.typeName) {
-                errors = errors + addError(source, diagnostics, "E2001", "non-exhaustive match", "match")
+                errors = errors + addError(source, diagnostics, "E2001", "non-exhaustive switch", "switch")
             }
 
             CheckResult {
@@ -496,15 +496,15 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                 errors: errors,
             }
         }
-        Expr::If(value) => {
+        Expr::If(value) : {
             var cond = inferExpr(value.condition.value, env, expectedReturn, functions, source, diagnostics)
             var thenResult = inferBlockExpr(value.thenBranch, env, expectedReturn, functions, source, diagnostics)
             var errors = cond.errors + thenResult.errors
             if !typesCompatible("bool", cond.typeName) {
                 errors = errors + addError(source, diagnostics, "E3014", "if condition must be bool", "if")
             }
-            match value.elseBranch {
-                Option::Some(elseExpr) => {
+            switch value.elseBranch {
+                Option::Some(elseExpr) : {
                     var elseResult = inferExpr(elseExpr.value, env, expectedReturn, functions, source, diagnostics)
                     errors = errors + elseResult.errors
                     if !typesCompatible(thenResult.typeName, elseResult.typeName) {
@@ -515,13 +515,13 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                         errors: errors,
                     }
                 }
-                Option::None => CheckResult {
+                Option::None : CheckResult {
                     typeName: "()",
                     errors: errors,
                 },
             }
         }
-        Expr::While(value) => {
+        Expr::While(value) : {
             var cond = inferExpr(value.condition.value, env, expectedReturn, functions, source, diagnostics)
             var bodyResult = inferBlockExpr(value.body, env, expectedReturn, functions, source, diagnostics)
             var errors = cond.errors + bodyResult.errors
@@ -533,7 +533,7 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                 errors: errors,
             }
         }
-        Expr::For(value) => {
+        Expr::For(value) : {
             var iter = inferExpr(value.iterable.value, env, expectedReturn, functions, source, diagnostics)
             var bodyResult = inferBlockExpr(value.body, env, expectedReturn, functions, source, diagnostics)
             CheckResult {
@@ -541,10 +541,10 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                 errors: iter.errors + bodyResult.errors,
             }
         }
-        Expr::Block(value) => {
+        Expr::Block(value) : {
             inferBlockExpr(value, env, expectedReturn, functions, source, diagnostics)
         }
-        Expr::Array(value) => {
+        Expr::Array(value) : {
             if value.items.len() == 0 {
                 return okType("[]unknown")
             }
@@ -565,7 +565,7 @@ func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[Funct
                 errors: errors,
             }
         }
-        Expr::Map(value) => {
+        Expr::Map(value) : {
             var errors = 0
             var i = 0
             while i < value.entries.len() {
@@ -595,12 +595,19 @@ func bindPattern(Pattern pattern, string expectedType, Vec[TypeBinding] mut bind
         return addError(source, diagnostics, "E2007", "pattern expected type is unknown", patternAnchor(pattern))
     }
 
-    match pattern {
-        Pattern::Name(value) => {
+    switch pattern {
+        Pattern::Name(value) : {
             addBinding(bindings, value.name, expectedType, source, diagnostics)
         }
-        Pattern::Wildcard(_) => 0,
-        Pattern::Variant(value) => {
+        Pattern::Wildcard(_) : 0,
+        Pattern::Literal(value) : {
+            var literalType = literalPatternType(value)
+            if !typesCompatible(expectedType, literalType) {
+                return addError(source, diagnostics, "E2006", "literal pattern type mismatch", literalPatternText(value))
+            }
+            0
+        }
+        Pattern::Variant(value) : {
             var variant = lastPathSegment(value.path)
             var base = BaseTypeName(expectedType)
             if base == "Option" {
@@ -704,10 +711,16 @@ func patternSubsumes(Pattern left, Pattern right, string expectedType) bool {
         return false
     }
 
-    match left {
-        Pattern::Variant(lv) => {
-            match right {
-                Pattern::Variant(rv) => {
+    switch left {
+        Pattern::Literal(lv) : {
+            switch right {
+                Pattern::Literal(rv) : literalPatternEquals(lv, rv),
+                _ : false,
+            }
+        }
+        Pattern::Variant(lv) : {
+            switch right {
+                Pattern::Variant(rv) : {
                     var lctor = lastPathSegment(lv.path)
                     var rctor = lastPathSegment(rv.path)
                     if lctor != rctor {
@@ -726,10 +739,10 @@ func patternSubsumes(Pattern left, Pattern right, string expectedType) bool {
                     }
                     return patternSubsumes(lv.args[0], rv.args[0], payloadType)
                 }
-                _ => false,
+                _ : false,
             }
         }
-        _ => false,
+        _ : false,
     }
 }
 
@@ -759,8 +772,8 @@ func optionPatternsCover(Vec[Pattern] patterns, string expectedType) bool {
 
     var i = 0
     while i < patterns.len() {
-        match patterns[i] {
-            Pattern::Variant(value) => {
+        switch patterns[i] {
+            Pattern::Variant(value) : {
                 var ctor = lastPathSegment(value.path)
                 if ctor == "None" {
                     seenNone = true
@@ -768,7 +781,7 @@ func optionPatternsCover(Vec[Pattern] patterns, string expectedType) bool {
                     somePatterns.push(value.args[0]);
                 }
             }
-            _ => (),
+            _ : (),
         }
         i = i + 1
     }
@@ -785,8 +798,8 @@ func resultPatternsCover(Vec[Pattern] patterns, string expectedType) bool {
 
     var i = 0
     while i < patterns.len() {
-        match patterns[i] {
-            Pattern::Variant(value) => {
+        switch patterns[i] {
+            Pattern::Variant(value) : {
                 var ctor = lastPathSegment(value.path)
                 if ctor == "Ok" && value.args.len() == 1 {
                     okPatterns.push(value.args[0]);
@@ -794,7 +807,7 @@ func resultPatternsCover(Vec[Pattern] patterns, string expectedType) bool {
                     errPatterns.push(value.args[0]);
                 }
             }
-            _ => (),
+            _ : (),
         }
         i = i + 1
     }
@@ -806,19 +819,42 @@ func resultPatternsCover(Vec[Pattern] patterns, string expectedType) bool {
 }
 
 func patternIsWild(Pattern pattern) bool {
-    match pattern {
-        Pattern::Wildcard(_) => true,
-        Pattern::Name(_) => true,
-        _ => false,
+    switch pattern {
+        Pattern::Wildcard(_) : true,
+        Pattern::Name(_) : true,
+        _ : false,
     }
 }
 
 func patternAnchor(Pattern pattern) string {
-    match pattern {
-        Pattern::Name(value) => value.name,
-        Pattern::Wildcard(_) => "_",
-        Pattern::Variant(value) => value.path,
+    switch pattern {
+        Pattern::Name(value) : value.name,
+        Pattern::Wildcard(_) : "_",
+        Pattern::Literal(value) : literalPatternText(value),
+        Pattern::Variant(value) : value.path,
     }
+}
+
+func literalPatternType(LiteralPattern value) string {
+    switch value.value {
+        Expr::Int(_) : "int32",
+        Expr::string(_) : "string",
+        Expr::Bool(_) : "bool",
+        _ : "unknown",
+    }
+}
+
+func literalPatternText(LiteralPattern value) string {
+    switch value.value {
+        Expr::Int(v) : v.value,
+        Expr::string(v) : v.value,
+        Expr::Bool(v) : if v.value { "true" } else { "false" },
+        _ : "<literal>",
+    }
+}
+
+func literalPatternEquals(LiteralPattern left, LiteralPattern right) bool {
+    literalPatternType(left) == literalPatternType(right) && literalPatternText(left) == literalPatternText(right)
 }
 
 func variantPayloadType(string expectedType, string ctor) string {

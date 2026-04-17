@@ -55,7 +55,7 @@ Tasks:
 - finish basic name resolution
 - finish basic type checking
 - validate function signatures and returns
-- validate control flow constructs such as `if`, `while`, `match`, and `return`
+- validate control flow constructs such as `if`, `while`, `switch`, and `return`
 - validate `struct`, `enum`, `trait`, and `impl` consistency
 
 Done means:

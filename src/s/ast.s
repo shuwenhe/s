@@ -39,10 +39,15 @@ struct VariantPattern {
     Vec[Pattern] args,
 }
 
+struct LiteralPattern {
+    Expr value,
+}
+
 enum Pattern {
     Name(NamePattern),
     Wildcard(WildcardPattern),
     Variant(VariantPattern),
+    Literal(LiteralPattern),
 }
 
 struct IntExpr {
@@ -96,14 +101,14 @@ struct CallExpr {
     Option[string] inferredType,
 }
 
-struct MatchArm {
+struct SwitchArm {
     Pattern pattern,
     Expr expr,
 }
 
-struct MatchExpr {
+struct SwitchExpr {
     Box[Expr] subject,
-    Vec[MatchArm] arms,
+    Vec[SwitchArm] arms,
     Option[string] inferredType,
 }
 
@@ -159,7 +164,7 @@ enum Expr {
     Member(MemberExpr),
     Index(IndexExpr),
     Call(CallExpr),
-    Match(MatchExpr),
+    Switch(SwitchExpr),
     If(IfExpr),
     While(WhileExpr),
     For(ForExpr),
@@ -272,9 +277,9 @@ func dumpSourceFile(SourceFile source) string {
     while ui < source.uses.len() {
         var useDecl = source.uses[ui]
         var text =
-            match useDecl.alias {
-                Option.Some(alias) => "use " + useDecl.path + " as " + alias,
-                Option.None => "use " + useDecl.path,
+            switch useDecl.alias {
+                Option.Some(alias) : "use " + useDecl.path + " as " + alias,
+                Option.None : "use " + useDecl.path,
             }
         lines.push(text);
         ui = ui + 1
@@ -289,12 +294,12 @@ func dumpSourceFile(SourceFile source) string {
 }
 
 func appendItemDump(Vec[string] lines, Item item) () {
-    match item {
-        Item.Function(value) => appendLines(lines, dumpFunction(value, "")),
-        Item.Struct(value) => appendLines(lines, dumpStruct(value)),
-        Item.Enum(value) => appendLines(lines, dumpEnum(value)),
-        Item.Trait(value) => appendLines(lines, dumpTrait(value)),
-        Item.Impl(value) => appendLines(lines, dumpImpl(value)),
+    switch item {
+        Item.Function(value) : appendLines(lines, dumpFunction(value, "")),
+        Item.Struct(value) : appendLines(lines, dumpStruct(value)),
+        Item.Enum(value) : appendLines(lines, dumpEnum(value)),
+        Item.Trait(value) : appendLines(lines, dumpTrait(value)),
+        Item.Impl(value) : appendLines(lines, dumpImpl(value)),
     }
 }
 
@@ -315,9 +320,9 @@ func dumpFunction(FunctionDecl item, string indent) Vec[string] {
         _pi = _pi + 1
     }
     var ret =
-        match item.sig.returnType {
-            Option.Some(value) => " -> " + value,
-            Option.None => "",
+        switch item.sig.returnType {
+            Option.Some(value) : " -> " + value,
+            Option.None : "",
         }
     var prefix = if item.isPublic { "pub " } else { "" }
     lines.push(
@@ -331,9 +336,9 @@ func dumpFunction(FunctionDecl item, string indent) Vec[string] {
             + ")"
             + ret
     )
-    match item.body {
-        Option.Some(body) => appendLines(lines, dumpBlock(body, indent + "  ")),
-        Option.None => (),
+    switch item.body {
+        Option.Some(body) : appendLines(lines, dumpBlock(body, indent + "  ")),
+        Option.None : (),
     }
     lines
 }
@@ -358,9 +363,9 @@ func dumpEnum(EnumDecl item) Vec[string] {
     var _vi = 0
     while _vi < item.variants.len() {
         var variant = item.variants[_vi]
-        match variant.payload {
-            Option.Some(payload) => lines.push("  " + variant.name + "(" + payload + ")"),
-            Option.None => lines.push("  " + variant.name),
+        switch variant.payload {
+            Option.Some(payload) : lines.push("  " + variant.name + "(" + payload + ")"),
+            Option.None : lines.push("  " + variant.name),
         }
         _vi = _vi + 1
     }
@@ -382,9 +387,9 @@ func dumpTrait(TraitDecl item) Vec[string] {
             _mpi = _mpi + 1
         }
         var ret =
-            match method.returnType {
-                Option.Some(value) => " -> " + value,
-                Option.None => "",
+            switch method.returnType {
+                Option.Some(value) : " -> " + value,
+                Option.None : "",
             }
         lines.push(
             "  func "
@@ -402,9 +407,9 @@ func dumpTrait(TraitDecl item) Vec[string] {
 func dumpImpl(ImplDecl item) Vec[string] {
     var lines = Vec[string]()
     var head =
-        match item.traitName {
-            Option.Some(name) => name + " for " + item.target,
-            Option.None => item.target,
+        switch item.traitName {
+            Option.Some(name) : name + " for " + item.target,
+            Option.None : item.target,
         }
     var title = replaceOnce("impl " + fmtGenerics(item.generics) + " " + head, "impl  ", "impl ")
     lines.push(title)
@@ -425,30 +430,30 @@ func dumpBlock(BlockExpr block, string indent) Vec[string] {
         appendLines(lines, dumpStmt(stmt, indent))
         _si = _si + 1
     }
-    match block.finalExpr {
-        Option.Some(expr) => lines.push(indent + "final " + dumpExpr(expr)),
-        Option.None => (),
+    switch block.finalExpr {
+        Option.Some(expr) : lines.push(indent + "final " + dumpExpr(expr)),
+        Option.None : (),
     }
     lines
 }
 
 func dumpStmt(Stmt stmt, string indent) Vec[string] {
-    match stmt {
-        Stmt.Var(value) => {
+    switch stmt {
+        Stmt.Var(value) : {
             var text =
-                match value.typeName {
-                    Option.Some(typeName) => indent + typeName + " " + value.name + " = " + dumpExpr(value.value),
-                    Option.None => indent + "var " + value.name + " = " + dumpExpr(value.value),
+                switch value.typeName {
+                    Option.Some(typeName) : indent + typeName + " " + value.name + " = " + dumpExpr(value.value),
+                    Option.None : indent + "var " + value.name + " = " + dumpExpr(value.value),
             }
             singleLine(text)
         }
-        Stmt.Assign(value) => {
+        Stmt.Assign(value) : {
             singleLine(indent + value.name + " = " + dumpExpr(value.value))
         }
-        Stmt.Increment(value) => {
+        Stmt.Increment(value) : {
             singleLine(indent + value.name + "++")
         }
-        Stmt.CFor(value) => {
+        Stmt.CFor(value) : {
             var lines = Vec[string]()
             lines.push(
                 indent
@@ -463,53 +468,53 @@ func dumpStmt(Stmt stmt, string indent) Vec[string] {
             appendLines(lines, dumpBlock(value.body, indent + "  "))
             lines
         }
-        Stmt.Return(value) => {
+        Stmt.Return(value) : {
             var text =
-                match value.value {
-                    Option.Some(expr) => indent + "return " + dumpExpr(expr),
-                    Option.None => indent + "return ()",
+                switch value.value {
+                    Option.Some(expr) : indent + "return " + dumpExpr(expr),
+                    Option.None : indent + "return ()",
                 }
             singleLine(text)
         }
-        Stmt.Expr(value) => singleLine(indent + "expr " + dumpExpr(value.expr)),
-        Stmt.Defer(value) => singleLine(indent + "defer " + dumpExpr(value.expr)),
+        Stmt.Expr(value) : singleLine(indent + "expr " + dumpExpr(value.expr)),
+        Stmt.Defer(value) : singleLine(indent + "defer " + dumpExpr(value.expr)),
     }
 }
 
 func dumpForClause(Stmt stmt) string {
-    match stmt {
-        Stmt.Var(value) => {
-            match value.typeName {
-                Option.Some(typeName) => typeName + " " + value.name + " = " + dumpExpr(value.value),
-                Option.None => "var " + value.name + " = " + dumpExpr(value.value),
+    switch stmt {
+        Stmt.Var(value) : {
+            switch value.typeName {
+                Option.Some(typeName) : typeName + " " + value.name + " = " + dumpExpr(value.value),
+                Option.None : "var " + value.name + " = " + dumpExpr(value.value),
             }
         }
-        Stmt.Assign(value) => value.name + " = " + dumpExpr(value.value),
-        Stmt.Increment(value) => value.name + "++",
-        Stmt.Expr(value) => dumpExpr(value.expr),
-        Stmt.Return(_) => "return",
-        Stmt.CFor(_) => "for (...)",
+        Stmt.Assign(value) : value.name + " = " + dumpExpr(value.value),
+        Stmt.Increment(value) : value.name + "++",
+        Stmt.Expr(value) : dumpExpr(value.expr),
+        Stmt.Return(_) : "return",
+        Stmt.CFor(_) : "for (...)",
     }
 }
 
 func dumpExpr(Expr expr) string {
-    match expr {
-        Expr.Int(value) => value.value,
-        Expr.string(value) => value.value,
-        Expr.Bool(value) => if value.value { "true" } else { "false" },
-        Expr.Name(value) => value.name,
-        Expr.Borrow(value) => {
+    switch expr {
+        Expr.Int(value) : value.value,
+        Expr.string(value) : value.value,
+        Expr.Bool(value) : if value.value { "true" } else { "false" },
+        Expr.Name(value) : value.name,
+        Expr.Borrow(value) : {
             var prefix = if value.mutable { "&mut " } else { "&" }
             prefix + dumpExpr(value.target.value)
         }
-        Expr.Binary(value) => "(" + dumpExpr(value.left.value) + " " + value.op + " " + dumpExpr(value.right.value) + ")",
-        Expr.Member(value) => dumpExpr(value.target.value) + "." + value.member,
-        Expr.Index(value) => dumpExpr(value.target.value) + "[" + dumpExpr(value.index.value) + "]",
-        Expr.Call(value) => "call " + dumpExpr(value.callee.value) + "(" + joinExprs(value.args) + ")",
-        Expr.Match(value) => "match " + dumpExpr(value.subject.value) + " { " + joinMatchArms(value.arms) + " }",
-        Expr.If(value) => dumpIfExpr(value),
-        Expr.While(value) => "while " + dumpExpr(value.condition.value) + " {...}",
-        Expr.For(value) => {
+        Expr.Binary(value) : "(" + dumpExpr(value.left.value) + " " + value.op + " " + dumpExpr(value.right.value) + ")",
+        Expr.Member(value) : dumpExpr(value.target.value) + "." + value.member,
+        Expr.Index(value) : dumpExpr(value.target.value) + "[" + dumpExpr(value.index.value) + "]",
+        Expr.Call(value) : "call " + dumpExpr(value.callee.value) + "(" + joinExprs(value.args) + ")",
+        Expr.Switch(value) : "switch " + dumpExpr(value.subject.value) + " { " + joinSwitchArms(value.arms) + " }",
+        Expr.If(value) : dumpIfExpr(value),
+        Expr.While(value) : "while " + dumpExpr(value.condition.value) + " {...}",
+        Expr.For(value) : {
             var names = ""
             var i = 0
             while i < value.names.len() {
@@ -522,14 +527,14 @@ func dumpExpr(Expr expr) string {
             var decl = if value.declare { " := " } else { " in " }
             "for " + names + decl + dumpExpr(value.iterable.value) + " {...}"
         }
-        Expr.Block(_) => "{...}",
-        Expr.Array(value) => {
+        Expr.Block(_) : "{...}",
+        Expr.Array(value) : {
             var elems = Vec[string]()
             var _ei = 0
             while _ei < value.items.len() { elems.push(dumpExpr(value.items[_ei])); _ei = _ei + 1 }
             "[" + joinWith(elems, ", ") + "]"
         }
-        Expr.Map(value) => {
+        Expr.Map(value) : {
             var parts = Vec[string]()
             var _en = 0
             while _en < value.entries.len() { var entry = value.entries[_en]; parts.push(dumpExpr(entry.key) + ": " + dumpExpr(entry.value)); _en = _en + 1 }
@@ -540,17 +545,18 @@ func dumpExpr(Expr expr) string {
 
 func dumpIfExpr(IfExpr value) string {
     var text = "if " + dumpExpr(value.condition.value) + " {...}"
-    match value.elseBranch {
-        Option.Some(expr) => text + " else " + dumpExpr(expr.value),
-        Option.None => text,
+    switch value.elseBranch {
+        Option.Some(expr) : text + " else " + dumpExpr(expr.value),
+        Option.None : text,
     }
 }
 
 func dumpPattern(Pattern pattern) string {
-    match pattern {
-        Pattern.Name(value) => value.name,
-        Pattern.Wildcard(_) => "_",
-        Pattern.Variant(value) => {
+    switch pattern {
+        Pattern.Name(value) : value.name,
+        Pattern.Wildcard(_) : "_",
+        Pattern.Literal(value) : dumpExpr(value.value),
+        Pattern.Variant(value) : {
             if len(value.args) == 0 {
                 return value.path
             }
@@ -577,12 +583,12 @@ func joinPatterns(Vec[Pattern] values) string {
     joinWith(parts, ", ")
 }
 
-func joinMatchArms(Vec[MatchArm] values) string {
+func joinSwitchArms(Vec[SwitchArm] values) string {
     var parts = Vec[string]()
     var _mv = 0
     while _mv < values.len() {
         var value = values[_mv]
-        parts.push(dumpPattern(value.pattern) + " => " + dumpExpr(value.expr))
+        parts.push(dumpPattern(value.pattern) + " : " + dumpExpr(value.expr))
         _mv = _mv + 1
     }
     joinWith(parts, "; ")

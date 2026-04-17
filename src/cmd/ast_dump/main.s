@@ -15,18 +15,18 @@ func main() int32 {
     }
 
     var path = args[1]
-    match ReadSource(path) {
-        Result.Err(err) => {
+    switch ReadSource(path) {
+        Result.Err(err) : {
             println("error: " + err.message);
             return 1
         },
-        Result.Ok(source) => {
-            match ParseSource(source) {
-                Result.Err(err2) => {
+        Result.Ok(source) : {
+            switch ParseSource(source) {
+                Result.Err(err2) : {
                     println("error: " + err2.message);
                     return 1
                 },
-                Result.Ok(ast) => {
+                Result.Ok(ast) : {
                     println(DumpSourceText(ast));
                     return 0
                 },

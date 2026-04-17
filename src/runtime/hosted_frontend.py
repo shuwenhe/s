@@ -116,7 +116,7 @@ class HostedLexer:
         raise HostedLexError("unterminated string literal", self.line, self.column)
 
     def read_symbol(self) -> str:
-        for symbol in ("->", "=>", "==", "!=", "<=", ">=", "&&", "||", "..=", ".."):
+        for symbol in ("->", ":", "==", "!=", "<=", ">=", "&&", "||", "..=", ".."):
             if self.match_text(symbol):
                 out = []
                 for _ in symbol:
