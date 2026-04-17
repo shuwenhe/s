@@ -1,9 +1,9 @@
 package compile.internal.main
 
-use compile.internal.gc.Main as gcMain
+use compile.internal.compiler.Main as compilerMain
 
 func Main(Vec[String] args) -> i32 {
-    gcMain(args)
+    return compilerMain(args)
 }
 
 func main() -> i32 {

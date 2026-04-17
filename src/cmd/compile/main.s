@@ -1,8 +1,8 @@
 package cmd
 
-use compile.internal.gc.Main as gcMain
+use compile.internal.compiler.Main as compilerMain
 use std.env.Args as hostArgs
 
 func main() -> i32 {
-    return gcMain(hostArgs())
+    return compilerMain(hostArgs())
 }

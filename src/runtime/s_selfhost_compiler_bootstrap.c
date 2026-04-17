@@ -100,8 +100,13 @@ static int run_check(int argc, char **argv) {
         fprintf(stderr, "error: expected check <path>\n");
         return 1;
     }
-
-    char temp_template[] = "/app/tmp/s-check-XXXXXX";
+    const char *tmpdir_env = getenv("S_TMPDIR");
+    char temp_template[S_PATH_CAP];
+    if (tmpdir_env != NULL && tmpdir_env[0] != '\0') {
+        snprintf(temp_template, sizeof(temp_template), "%s/s-check-XXXXXX", tmpdir_env);
+    } else {
+        snprintf(temp_template, sizeof(temp_template), "/tmp/s-check-XXXXXX");
+    }
     char *temp_dir = mkdtemp(temp_template);
     if (temp_dir == NULL) {
         perror("mkdtemp");
@@ -151,8 +156,13 @@ static int run_run(int argc, char **argv) {
         fprintf(stderr, "error: expected run <path> [arg ...]\n");
         return 1;
     }
-
-    char temp_template[] = "/app/tmp/s-run-XXXXXX";
+    const char *tmpdir_env = getenv("S_TMPDIR");
+    char temp_template[S_PATH_CAP];
+    if (tmpdir_env != NULL && tmpdir_env[0] != '\0') {
+        snprintf(temp_template, sizeof(temp_template), "%s/s-run-XXXXXX", tmpdir_env);
+    } else {
+        snprintf(temp_template, sizeof(temp_template), "/tmp/s-run-XXXXXX");
+    }
     char *temp_dir = mkdtemp(temp_template);
     if (temp_dir == NULL) {
         perror("mkdtemp");
