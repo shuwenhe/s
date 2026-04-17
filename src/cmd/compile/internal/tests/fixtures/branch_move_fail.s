@@ -1,6 +1,6 @@
 package demo.branch
 
-func bad(bool flag, String text) -> String {
+func bad(bool flag, string text) string {
     if flag {
         text
     } else {

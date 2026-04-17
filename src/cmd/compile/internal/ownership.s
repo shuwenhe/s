@@ -3,15 +3,15 @@ package compile.internal.ownership
 use compile.internal.typesys.IsCopyType
 use std.vec.Vec
 
-func MakeDecision(String ty) -> String {
+func MakeDecision(string ty) string {
     if IsCopyType(ty) {
         return "copy:" + ty
     }
     "drop:" + ty
 }
 
-func MakePlan(Vec[String] type_env) -> Vec[String] {
-    var plan = Vec[String]()
+func MakePlan(Vec[string] type_env) Vec[string] {
+    var plan = Vec[string]()
     var i = 0
     while i < type_env.len() {
         var ty = type_env[i]

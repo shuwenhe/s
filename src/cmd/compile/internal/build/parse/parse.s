@@ -2,85 +2,74 @@ package compile.internal.build.parse
 
 use std.result.Result
 use std.vec.Vec
+use vec.new_vec
 
 struct CompileOptions {
-    String command,
-    String path,
-    String output,
+    string command,
+    string path,
+    string output,
 }
 
-struct ParseError {
-    String message,
-}
+// ParseError struct not needed when using string-based errors
 
-func ParseOptions(Vec[String] args) -> Result[CompileOptions, ParseError] {
+func ParseOptions(Vec[string] args) Result[Vec[string], string] {
     if args.len() < 2 {
-        return Result::Ok(CompileOptions {
-            command: "help",
-            path: "",
-            output: "",
-        })
+        var v = new_vec[string]()
+        v.push("help");
+        v.push("");
+        v.push("");
+        return Result.Ok(v);
     }
 
     var command = args[1]
     if command == "help" || command == "--help" || command == "-h" {
-        return Result::Ok(CompileOptions {
-            command: "help",
-            path: "",
-            output: "",
-        })
+        var v = new_vec[string]()
+        v.push("help");
+        v.push("");
+        v.push("");
+        return Result.Ok(v);
     }
 
     if command == "check" || command == "tokens" || command == "ast" {
         if args.len() < 3 {
-            return Result::Err(ParseError {
-                message: "usage: compile " + command + " <path>",
-            })
+            return Result.Err("usage: compile " + command + " <path>")
         }
-        return Result::Ok(CompileOptions {
-            command: command,
-            path: args[2],
-            output: "",
-        })
+        var v = new_vec[string]()
+        v.push(command);
+        v.push(args[2]);
+        v.push("");
+        return Result.Ok(v);
     }
 
     if command == "build" {
         if args.len() < 5 {
-            return Result::Err(ParseError {
-                message: "usage: compile build <path> -o <output>",
-            })
+            return Result.Err("usage: compile build <path> -o <output>")
         }
         if args[3] != "-o" {
-            return Result::Err(ParseError {
-                message: "expected -o before output path",
-            })
+            return Result.Err("expected -o before output path")
         }
-        return Result::Ok(CompileOptions {
-            command: command,
-            path: args[2],
-            output: args[4],
-        })
+        var v = new_vec[string]()
+        v.push(command);
+        v.push(args[2]);
+        v.push(args[4]);
+        return Result.Ok(v);
     }
 
     if command == "run" {
         if args.len() < 3 {
-            return Result::Err(ParseError {
-                message: "usage: compile run <path>",
-            })
+            return Result.Err("usage: compile run <path>")
         }
-        return Result::Ok(CompileOptions {
-            command: command,
-            path: args[2],
-            output: "",
-        })
+        var v = new_vec[string]()
+        v.push(command);
+        v.push(args[2]);
+        v.push("");
+        return Result.Ok(v);
     }
 
-    Result::Err(ParseError {
-        message: "unknown command: " + command,
-    })
+    Result.Err("unknown command: " + command)
 }
 
-func Usage() -> String {
+func Usage() string {
     "usage:\n"
         + "  compile check <path>\n"
         + "  compile tokens <path>\n"

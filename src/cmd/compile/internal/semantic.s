@@ -21,46 +21,46 @@ use std.prelude.slice
 use std.vec.Vec
 
 struct TypeBinding {
-    String name,
-    String type_name,
+    string name,
+    string type_name,
 }
 
 struct FunctionBinding {
-    String name,
-    Vec[String] generic_names,
-    Vec[String] param_types,
-    String return_type,
+    string name,
+    Vec[string] generic_names,
+    Vec[string] param_types,
+    string return_type,
 }
 
 struct SignatureMatch {
     bool ok,
-    String return_type,
-    i32 score,
+    string return_type,
+    int32 score,
 }
 
 struct CheckResult {
-    String type_name,
-    i32 errors,
+    string type_name,
+    int32 errors,
 }
 
 struct PatternCheckResult {
     Vec[TypeBinding] bindings,
-    i32 errors,
+    int32 errors,
 }
 
 struct SourcePos {
-    i32 line,
-    i32 column,
+    int32 line,
+    int32 column,
 }
 
 struct SemanticError {
-    String code,
-    String message,
-    i32 line,
-    i32 column,
+    string code,
+    string message,
+    int32 line,
+    int32 column,
 }
 
-func CheckText(String source) -> i32 {
+func CheckText(string source) int32 {
     var diagnostics = CheckDetailed(source)
     if diagnostics.len() > 0 {
         return 1
@@ -68,7 +68,7 @@ func CheckText(String source) -> i32 {
     0
 }
 
-func CheckDetailed(String source) -> Vec[SemanticError] {
+func CheckDetailed(string source) Vec[SemanticError] {
     var diagnostics = Vec[SemanticError]()
 
     var parsed = parse_source(source)
@@ -89,7 +89,7 @@ func CheckDetailed(String source) -> Vec[SemanticError] {
     diagnostics
 }
 
-func collect_functions(Vec[Item] items) -> Vec[FunctionBinding] {
+func collect_functions(Vec[Item] items) Vec[FunctionBinding] {
     var out = Vec[FunctionBinding]()
     var i = 0
     while i < items.len() {
@@ -102,15 +102,15 @@ func collect_functions(Vec[Item] items) -> Vec[FunctionBinding] {
     out
 }
 
-func make_function_binding(FunctionDecl function_decl) -> FunctionBinding {
-    var generic_names = Vec[String]()
+func make_function_binding(FunctionDecl function_decl) FunctionBinding {
+    var generic_names = Vec[string]()
     var i = 0
     while i < function_decl.sig.generics.len() {
         generic_names.push(generic_name(function_decl.sig.generics[i]))
         i = i + 1
     }
 
-    var params = Vec[String]()
+    var params = Vec[string]()
     i = 0
     while i < function_decl.sig.params.len() {
         params.push(ParseType(function_decl.sig.params[i].type_name))
@@ -131,7 +131,7 @@ func make_function_binding(FunctionDecl function_decl) -> FunctionBinding {
     }
 }
 
-func check_item(Item item, Vec[FunctionBinding] functions, String source, Vec[SemanticError] mut diagnostics) -> i32 {
+func check_item(Item item, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
     match item {
         Item::Function(function_decl) => check_function(function_decl, functions, source, diagnostics),
         Item::Impl(impl_decl) => check_impl(impl_decl, functions, source, diagnostics),
@@ -139,7 +139,7 @@ func check_item(Item item, Vec[FunctionBinding] functions, String source, Vec[Se
     }
 }
 
-func check_impl(ImplDecl impl_decl, Vec[FunctionBinding] functions, String source, Vec[SemanticError] mut diagnostics) -> i32 {
+func check_impl(ImplDecl impl_decl, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
     var errors = 0
     var i = 0
     while i < impl_decl.methods.len() {
@@ -149,7 +149,7 @@ func check_impl(ImplDecl impl_decl, Vec[FunctionBinding] functions, String sourc
     errors
 }
 
-func check_function(FunctionDecl function_decl, Vec[FunctionBinding] functions, String source, Vec[SemanticError] mut diagnostics) -> i32 {
+func check_function(FunctionDecl function_decl, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
     if function_decl.body.is_none() {
         return 0
     }
@@ -180,7 +180,7 @@ func check_function(FunctionDecl function_decl, Vec[FunctionBinding] functions, 
     result.errors
 }
 
-func infer_block_expr(BlockExpr block, Vec[TypeBinding] outer_env, String expected_return, Vec[FunctionBinding] functions, String source, Vec[SemanticError] mut diagnostics) -> CheckResult {
+func infer_block_expr(BlockExpr block, Vec[TypeBinding] outer_env, string expected_return, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) CheckResult {
     var local_env = clone_env(outer_env)
     var errors = 0
 
@@ -205,7 +205,7 @@ func infer_block_expr(BlockExpr block, Vec[TypeBinding] outer_env, String expect
     }
 }
 
-func check_stmt(Stmt stmt, Vec[TypeBinding] mut env, String expected_return, Vec[FunctionBinding] functions, String source, Vec[SemanticError] mut diagnostics) -> i32 {
+func check_stmt(Stmt stmt, Vec[TypeBinding] mut env, string expected_return, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
     match stmt {
         Stmt::Var(value) => {
             var rhs = infer_expr(value.value, env, expected_return, functions, source, diagnostics)
@@ -240,8 +240,8 @@ func check_stmt(Stmt stmt, Vec[TypeBinding] mut env, String expected_return, Vec
         }
         Stmt::Increment(value) => {
             var ty = lookup_name_type(env, value.name)
-            if !types_compatible("i32", ty) {
-                return add_error(source, diagnostics, "E3005", "increment requires i32", value.name)
+            if !types_compatible("int32", ty) {
+                return add_error(source, diagnostics, "E3005", "increment requires int32", value.name)
             }
             0
         }
@@ -287,10 +287,10 @@ func check_stmt(Stmt stmt, Vec[TypeBinding] mut env, String expected_return, Vec
     }
 }
 
-func infer_expr(Expr expr, Vec[TypeBinding] env, String expected_return, Vec[FunctionBinding] functions, String source, Vec[SemanticError] mut diagnostics) -> CheckResult {
+func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) CheckResult {
     match expr {
-        Expr::Int(_) => ok_type("i32"),
-        Expr::String(_) => ok_type("String"),
+        Expr::Int(_) => ok_type("int32"),
+        Expr::string(_) => ok_type("string"),
         Expr::Bool(_) => ok_type("bool"),
         Expr::Name(value) => {
             var ty = lookup_name_type(env, value.name)
@@ -336,8 +336,8 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, String expected_return, Vec[Fun
             var target = infer_expr(value.target.value, env, expected_return, functions, source, diagnostics)
             var index = infer_expr(value.index.value, env, expected_return, functions, source, diagnostics)
             var errors = target.errors + index.errors
-            if !types_compatible("i32", index.type_name) {
-                errors = errors + add_error(source, diagnostics, "E3012", "index must be i32", "[")
+            if !types_compatible("int32", index.type_name) {
+                errors = errors + add_error(source, diagnostics, "E3012", "index must be int32", "[")
             }
             if starts_with(target.type_name, "[]") {
                 return CheckResult {
@@ -345,7 +345,7 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, String expected_return, Vec[Fun
                     errors: errors,
                 }
             }
-            if starts_with(target.type_name, "String") {
+            if starts_with(target.type_name, "string") {
                 return CheckResult {
                     type_name: "u8",
                     errors: errors,
@@ -358,7 +358,7 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, String expected_return, Vec[Fun
         }
         Expr::Call(value) => {
             var errors = 0
-            var arg_types = Vec[String]()
+            var arg_types = Vec[string]()
             var i = 0
             while i < value.args.len() {
                 var arg_result = infer_expr(value.args[i], env, expected_return, functions, source, diagnostics)
@@ -579,7 +579,7 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, String expected_return, Vec[Fun
     }
 }
 
-func check_pattern(Pattern pattern, String expected_type, String source, Vec[SemanticError] mut diagnostics) -> PatternCheckResult {
+func check_pattern(Pattern pattern, string expected_type, string source, Vec[SemanticError] mut diagnostics) PatternCheckResult {
     var bindings = Vec[TypeBinding]()
     var errors = bind_pattern(pattern, expected_type, bindings, source, diagnostics)
     PatternCheckResult {
@@ -588,7 +588,7 @@ func check_pattern(Pattern pattern, String expected_type, String source, Vec[Sem
     }
 }
 
-func bind_pattern(Pattern pattern, String expected_type, Vec[TypeBinding] mut bindings, String source, Vec[SemanticError] mut diagnostics) -> i32 {
+func bind_pattern(Pattern pattern, string expected_type, Vec[TypeBinding] mut bindings, string source, Vec[SemanticError] mut diagnostics) int32 {
     if is_unknown(expected_type) {
         return add_error(source, diagnostics, "E2007", "pattern expected type is unknown", pattern_anchor(pattern))
     }
@@ -636,7 +636,7 @@ func bind_pattern(Pattern pattern, String expected_type, Vec[TypeBinding] mut bi
     }
 }
 
-func add_binding(Vec[TypeBinding] mut bindings, String name, String type_name, String source, Vec[SemanticError] mut diagnostics) -> i32 {
+func add_binding(Vec[TypeBinding] mut bindings, string name, string type_name, string source, Vec[SemanticError] mut diagnostics) int32 {
     if name == "_" {
         return 0
     }
@@ -659,7 +659,7 @@ func add_binding(Vec[TypeBinding] mut bindings, String name, String type_name, S
     0
 }
 
-func append_bindings(Vec[TypeBinding] mut target, Vec[TypeBinding] source) -> () {
+func append_bindings(Vec[TypeBinding] mut target, Vec[TypeBinding] source) () {
     var i = 0
     while i < source.len() {
         target.push(source[i])
@@ -667,7 +667,7 @@ func append_bindings(Vec[TypeBinding] mut target, Vec[TypeBinding] source) -> ()
     }
 }
 
-func pattern_duplicate(Vec[Pattern] seen, Pattern current, String expected_type) -> bool {
+func pattern_duplicate(Vec[Pattern] seen, Pattern current, string expected_type) bool {
     var i = 0
     while i < seen.len() {
         if pattern_equivalent(seen[i], current, expected_type) {
@@ -678,7 +678,7 @@ func pattern_duplicate(Vec[Pattern] seen, Pattern current, String expected_type)
     false
 }
 
-func pattern_unreachable(Vec[Pattern] seen, Pattern current, String expected_type) -> bool {
+func pattern_unreachable(Vec[Pattern] seen, Pattern current, string expected_type) bool {
     var i = 0
     while i < seen.len() {
         if pattern_subsumes(seen[i], current, expected_type) {
@@ -689,11 +689,11 @@ func pattern_unreachable(Vec[Pattern] seen, Pattern current, String expected_typ
     false
 }
 
-func pattern_equivalent(Pattern left, Pattern right, String expected_type) -> bool {
+func pattern_equivalent(Pattern left, Pattern right, string expected_type) bool {
     pattern_subsumes(left, right, expected_type) && pattern_subsumes(right, left, expected_type)
 }
 
-func pattern_subsumes(Pattern left, Pattern right, String expected_type) -> bool {
+func pattern_subsumes(Pattern left, Pattern right, string expected_type) bool {
     if pattern_is_wild(left) {
         return true
     }
@@ -730,7 +730,7 @@ func pattern_subsumes(Pattern left, Pattern right, String expected_type) -> bool
     }
 }
 
-func patterns_cover_type(Vec[Pattern] patterns, String expected_type) -> bool {
+func patterns_cover_type(Vec[Pattern] patterns, string expected_type) bool {
     var i = 0
     while i < patterns.len() {
         if pattern_is_wild(patterns[i]) {
@@ -750,7 +750,7 @@ func patterns_cover_type(Vec[Pattern] patterns, String expected_type) -> bool {
     false
 }
 
-func option_patterns_cover(Vec[Pattern] patterns, String expected_type) -> bool {
+func option_patterns_cover(Vec[Pattern] patterns, string expected_type) bool {
     var seen_none = false
     var some_patterns = Vec[Pattern]()
 
@@ -776,7 +776,7 @@ func option_patterns_cover(Vec[Pattern] patterns, String expected_type) -> bool 
     patterns_cover_type(some_patterns, first_type_arg(expected_type))
 }
 
-func result_patterns_cover(Vec[Pattern] patterns, String expected_type) -> bool {
+func result_patterns_cover(Vec[Pattern] patterns, string expected_type) bool {
     var ok_patterns = Vec[Pattern]()
     var err_patterns = Vec[Pattern]()
 
@@ -802,7 +802,7 @@ func result_patterns_cover(Vec[Pattern] patterns, String expected_type) -> bool 
     patterns_cover_type(err_patterns, second_type_arg(expected_type))
 }
 
-func pattern_is_wild(Pattern pattern) -> bool {
+func pattern_is_wild(Pattern pattern) bool {
     match pattern {
         Pattern::Wildcard(_) => true,
         Pattern::Name(_) => true,
@@ -810,7 +810,7 @@ func pattern_is_wild(Pattern pattern) -> bool {
     }
 }
 
-func pattern_anchor(Pattern pattern) -> String {
+func pattern_anchor(Pattern pattern) string {
     match pattern {
         Pattern::Name(value) => value.name,
         Pattern::Wildcard(_) => "_",
@@ -818,7 +818,7 @@ func pattern_anchor(Pattern pattern) -> String {
     }
 }
 
-func variant_payload_type(String expected_type, String ctor) -> String {
+func variant_payload_type(string expected_type, string ctor) string {
     var base = BaseTypeName(expected_type)
     if base == "Option" {
         if ctor == "Some" {
@@ -839,22 +839,22 @@ func variant_payload_type(String expected_type, String ctor) -> String {
     "unknown"
 }
 
-func infer_binary(String op, CheckResult left, CheckResult right, String source, Vec[SemanticError] mut diagnostics) -> CheckResult {
+func infer_binary(string op, CheckResult left, CheckResult right, string source, Vec[SemanticError] mut diagnostics) CheckResult {
     var errors = left.errors + right.errors
 
     if op == "+" || op == "-" || op == "*" || op == "/" || op == "%" {
-        if !types_compatible("i32", left.type_name) || !types_compatible("i32", right.type_name) {
-            errors = errors + add_error(source, diagnostics, "E3018", "arithmetic requires i32", op)
+        if !types_compatible("int32", left.type_name) || !types_compatible("int32", right.type_name) {
+            errors = errors + add_error(source, diagnostics, "E3018", "arithmetic requires int32", op)
         }
         return CheckResult {
-            type_name: "i32",
+            type_name: "int32",
             errors: errors,
         }
     }
 
     if op == "<" || op == "<=" || op == ">" || op == ">=" {
-        if !types_compatible("i32", left.type_name) || !types_compatible("i32", right.type_name) {
-            errors = errors + add_error(source, diagnostics, "E3019", "ordering compare requires i32", op)
+        if !types_compatible("int32", left.type_name) || !types_compatible("int32", right.type_name) {
+            errors = errors + add_error(source, diagnostics, "E3019", "ordering compare requires int32", op)
         }
         return CheckResult {
             type_name: "bool",
@@ -888,7 +888,7 @@ func infer_binary(String op, CheckResult left, CheckResult right, String source,
     }
 }
 
-func lookup_functions(Vec[FunctionBinding] functions, String name) -> Vec[FunctionBinding] {
+func lookup_functions(Vec[FunctionBinding] functions, string name) Vec[FunctionBinding] {
     var out = Vec[FunctionBinding]()
     var i = 0
     while i < functions.len() {
@@ -900,7 +900,7 @@ func lookup_functions(Vec[FunctionBinding] functions, String name) -> Vec[Functi
     out
 }
 
-func try_match_signature(FunctionBinding binding, Vec[String] arg_types) -> SignatureMatch {
+func try_match_signature(FunctionBinding binding, Vec[string] arg_types) SignatureMatch {
     if binding.param_types.len() != arg_types.len() {
         return SignatureMatch {
             ok: false,
@@ -935,7 +935,7 @@ func try_match_signature(FunctionBinding binding, Vec[String] arg_types) -> Sign
     }
 }
 
-func match_type_pattern(String param_type, String arg_type, Vec[String] generic_names, Vec[TypeBinding] mut generic_bindings) -> bool {
+func match_type_pattern(string param_type, string arg_type, Vec[string] generic_names, Vec[TypeBinding] mut generic_bindings) bool {
     var p = ParseType(param_type)
     var a = ParseType(arg_type)
 
@@ -992,7 +992,7 @@ func match_type_pattern(String param_type, String arg_type, Vec[String] generic_
     true
 }
 
-func instantiate_type(String ty, Vec[String] generic_names, Vec[TypeBinding] generic_bindings) -> String {
+func instantiate_type(string ty, Vec[string] generic_names, Vec[TypeBinding] generic_bindings) string {
     var clean = ParseType(ty)
     if is_generic_name(generic_names, clean) {
         var bound = lookup_name_type(generic_bindings, clean)
@@ -1029,7 +1029,7 @@ func instantiate_type(String ty, Vec[String] generic_names, Vec[TypeBinding] gen
     built + "]"
 }
 
-func type_contains_generic(String ty, Vec[String] generic_names) -> bool {
+func type_contains_generic(string ty, Vec[string] generic_names) bool {
     var clean = ParseType(ty)
     if is_generic_name(generic_names, clean) {
         return true
@@ -1056,7 +1056,7 @@ func type_contains_generic(String ty, Vec[String] generic_names) -> bool {
     false
 }
 
-func is_generic_name(Vec[String] generic_names, String name) -> bool {
+func is_generic_name(Vec[string] generic_names, string name) bool {
     var i = 0
     while i < generic_names.len() {
         if generic_names[i] == name {
@@ -1067,7 +1067,7 @@ func is_generic_name(Vec[String] generic_names, String name) -> bool {
     false
 }
 
-func generic_name(String raw) -> String {
+func generic_name(string raw) string {
     var i = 0
     while i < len(raw) {
         if char_at(raw, i) == ":" {
@@ -1078,7 +1078,7 @@ func generic_name(String raw) -> String {
     trim_text(raw)
 }
 
-func clone_env(Vec[TypeBinding] env) -> Vec[TypeBinding] {
+func clone_env(Vec[TypeBinding] env) Vec[TypeBinding] {
     var out = Vec[TypeBinding]()
     var i = 0
     while i < env.len() {
@@ -1088,7 +1088,7 @@ func clone_env(Vec[TypeBinding] env) -> Vec[TypeBinding] {
     out
 }
 
-func lookup_name_type(Vec[TypeBinding] env, String name) -> String {
+func lookup_name_type(Vec[TypeBinding] env, string name) string {
     var i = env.len()
     while i > 0 {
         i = i - 1
@@ -1099,26 +1099,26 @@ func lookup_name_type(Vec[TypeBinding] env, String name) -> String {
     "unknown"
 }
 
-func ok_type(String type_name) -> CheckResult {
+func ok_type(string type_name) CheckResult {
     CheckResult {
         type_name: ParseType(type_name),
         errors: 0,
     }
 }
 
-func types_compatible(String left, String right) -> bool {
+func types_compatible(string left, string right) bool {
     if is_unknown(left) || is_unknown(right) {
         return true
     }
     SameType(left, right)
 }
 
-func is_unknown(String type_name) -> bool {
+func is_unknown(string type_name) bool {
     var clean = ParseType(type_name)
     clean == "" || clean == "unknown"
 }
 
-func resolve_method_return(String target_type, String method_type) -> String {
+func resolve_method_return(string target_type, string method_type) string {
     if method_type == "T" {
         return first_type_arg(target_type)
     }
@@ -1135,7 +1135,7 @@ func resolve_method_return(String target_type, String method_type) -> String {
     ParseType(method_type)
 }
 
-func first_type_arg(String type_name) -> String {
+func first_type_arg(string type_name) string {
     var args = extract_type_args(type_name)
     if args.len() > 0 {
         return ParseType(args[0])
@@ -1143,7 +1143,7 @@ func first_type_arg(String type_name) -> String {
     "unknown"
 }
 
-func second_type_arg(String type_name) -> String {
+func second_type_arg(string type_name) string {
     var args = extract_type_args(type_name)
     if args.len() > 1 {
         return ParseType(args[1])
@@ -1151,8 +1151,8 @@ func second_type_arg(String type_name) -> String {
     "unknown"
 }
 
-func extract_type_args(String type_name) -> Vec[String] {
-    var out = Vec[String]()
+func extract_type_args(string type_name) Vec[string] {
+    var out = Vec[string]()
     var open = find_char(type_name, "[")
     var close = find_last_char(type_name, "]")
     if open < 0 || close <= open + 1 {
@@ -1183,7 +1183,7 @@ func extract_type_args(String type_name) -> Vec[String] {
     out
 }
 
-func add_error(String source, Vec[SemanticError] mut diagnostics, String code, String message, String anchor) -> i32 {
+func add_error(string source, Vec[SemanticError] mut diagnostics, string code, string message, string anchor) int32 {
     var pos = locate_anchor(source, anchor)
     diagnostics.push(SemanticError {
         code: code,
@@ -1194,7 +1194,7 @@ func add_error(String source, Vec[SemanticError] mut diagnostics, String code, S
     1
 }
 
-func locate_anchor(String source, String anchor) -> SourcePos {
+func locate_anchor(string source, string anchor) SourcePos {
     if anchor == "" {
         return SourcePos {
             line: 0,
@@ -1211,7 +1211,7 @@ func locate_anchor(String source, String anchor) -> SourcePos {
     index_to_pos(source, idx)
 }
 
-func find_substring(String haystack, String needle) -> i32 {
+func find_substring(string haystack, string needle) int32 {
     if needle == "" {
         return 0
     }
@@ -1228,7 +1228,7 @@ func find_substring(String haystack, String needle) -> i32 {
     0 - 1
 }
 
-func index_to_pos(String source, i32 index) -> SourcePos {
+func index_to_pos(string source, int32 index) SourcePos {
     var line = 1
     var column = 1
     var i = 0
@@ -1247,14 +1247,14 @@ func index_to_pos(String source, i32 index) -> SourcePos {
     }
 }
 
-func starts_with(String text, String prefix) -> bool {
+func starts_with(string text, string prefix) bool {
     if len(prefix) > len(text) {
         return false
     }
     slice(text, 0, len(prefix)) == prefix
 }
 
-func find_char(String text, String needle) -> i32 {
+func find_char(string text, string needle) int32 {
     var i = 0
     while i < len(text) {
         if char_at(text, i) == needle {
@@ -1265,7 +1265,7 @@ func find_char(String text, String needle) -> i32 {
     0 - 1
 }
 
-func find_last_char(String text, String needle) -> i32 {
+func find_last_char(string text, string needle) int32 {
     var i = len(text)
     while i > 0 {
         i = i - 1
@@ -1276,7 +1276,7 @@ func find_last_char(String text, String needle) -> i32 {
     0 - 1
 }
 
-func last_path_segment(String path) -> String {
+func last_path_segment(string path) string {
     var i = len(path)
     while i > 0 {
         i = i - 1
@@ -1287,7 +1287,7 @@ func last_path_segment(String path) -> String {
     path
 }
 
-func trim_text(String text) -> String {
+func trim_text(string text) string {
     var start = 0
     var end = len(text)
     while start < end && is_space(char_at(text, start)) {
@@ -1299,6 +1299,6 @@ func trim_text(String text) -> String {
     slice(text, start, end)
 }
 
-func is_space(String ch) -> bool {
+func is_space(string ch) bool {
     ch == " " || ch == "\n" || ch == "\t" || ch == "\r"
 }

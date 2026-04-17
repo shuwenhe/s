@@ -6,7 +6,7 @@ use compile.internal.syntax.ReadSource
 use compile.internal.syntax.Tokenize
 use compile.internal.syntax.DumpTokensText
 
-func RunGoldenSuite(String fixtures_root) -> i32 {
+func RunGoldenSuite(string fixtures_root) int32 {
     // Expect fixtures_root to contain sample.s and sample.tokens
     var source_path = fixtures_root + "/sample.s"
     var tokens_path = fixtures_root + "/sample.tokens"

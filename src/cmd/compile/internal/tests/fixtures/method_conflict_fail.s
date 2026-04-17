@@ -1,29 +1,29 @@
 package demo.conflict
 
 struct Point {
-    i32 x,
+    int32 x,
 }
 
 trait MeasureA {
-    func size(Point self) -> i32;
+    func size(Point self) int32;
 }
 
 trait MeasureB {
-    func size(Point self) -> i32;
+    func size(Point self) int32;
 }
 
 impl MeasureA for Point {
-    func size(Point self) -> i32 {
+    func size(Point self) int32 {
         self.x
     }
 }
 
 impl MeasureB for Point {
-    func size(Point self) -> i32 {
+    func size(Point self) int32 {
         self.x
     }
 }
 
-func bad(Point p) -> i32 {
+func bad(Point p) int32 {
     p.size()
 }

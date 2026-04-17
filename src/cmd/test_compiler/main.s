@@ -8,7 +8,7 @@ use std.env.Get
 use std.io.eprintln
 use std.io.println
 
-func default_fixtures_root() -> String {
+func default_fixtures_root() string {
     var env_root = Get("S_TEST_FIXTURES_ROOT")
     if env_root.is_some() {
         return env_root.unwrap()
@@ -16,7 +16,7 @@ func default_fixtures_root() -> String {
     "cmd/compile/internal/tests/fixtures"
 }
 
-func main() -> i32 {
+func main() int32 {
     var args = hostArgs()
     if args.len() >= 2 {
         var command = args[1]

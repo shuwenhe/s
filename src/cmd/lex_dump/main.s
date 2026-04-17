@@ -7,7 +7,7 @@ use compile.internal.syntax.ReadSource
 use compile.internal.syntax.DumpTokensText
 use compile.internal.syntax.Tokenize
 
-func main() -> i32 {
+func main() int32 {
     var args = hostArgs()
     if args.len() < 2 {
         println("usage: lex_dump <path>");

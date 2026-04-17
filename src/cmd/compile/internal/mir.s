@@ -9,29 +9,29 @@ use std.option.Option
 use std.vec.Vec
 
 struct MirOperand {
-    String kind,
-    String value,
-    String type_name,
+    string kind,
+    string value,
+    string type_name,
 }
 
 struct MirLocalSlot {
     int32 id,
-    String name,
-    String kind,
+    string name,
+    string kind,
     int32 version,
-    String type_name,
+    string type_name,
     bool copyable,
 }
 
 struct MirAssignStmt {
     int32 target,
-    String op,
-    Vec[String] args,
+    string op,
+    Vec[string] args,
 }
 
 struct MirEvalStmt {
-    String op,
-    Vec[String] args,
+    string op,
+    Vec[string] args,
 }
 
 struct MirMoveStmt {
@@ -57,40 +57,40 @@ enum MirStatement {
 }
 
 struct MirControlEdge {
-    String label,
+    string label,
     int32 target,
     Vec[MirOperand] args,
 }
 
 struct MirTerminator {
-    String kind,
+    string kind,
     Vec[MirControlEdge] edges,
 }
 
 struct MirBasicBlock {
     int32 id,
-    String label,
+    string label,
     Vec[MirStatement] statements,
     MirTerminator terminator,
 }
 
 struct MIRGraph {
-    Vec[String] blocks,
-    Vec[String] locals,
-    Vec[String] trace,
+    Vec[string] blocks,
+    Vec[string] locals,
+    Vec[string] trace,
     int32 entry,
     int32 exit,
 }
 
-func LowerFunction(FunctionDecl function) -> String {
+func LowerFunction(FunctionDecl function) string {
     if function.body.is_some() {
         var body = function.body.unwrap()
-        return AnalyzeBorrowFunction(function.sig.name, Vec[String](), LowerBlock(body))
+        return AnalyzeBorrowFunction(function.sig.name, Vec[string](), LowerBlock(body))
     }
-    return AnalyzeBorrowFunction(function.sig.name, Vec[String](), "")
+    return AnalyzeBorrowFunction(function.sig.name, Vec[string](), "")
 }
 
-func LowerBlock(BlockExpr block) -> String {
+func LowerBlock(BlockExpr block) string {
     var text = "block"
 
     var index = 0
@@ -108,25 +108,25 @@ func LowerBlock(BlockExpr block) -> String {
     }
 }
 
-func TraceBranch(String condition_text, String then_text, String else_text) -> String {
+func TraceBranch(string condition_text, string then_text, string else_text) string {
     if else_text == "" {
         return "branch " + condition_text + " | " + indent(1) + "then " + then_text + " | " + indent(1) + "else <missing>"
     }
     return "branch " + condition_text + " | " + indent(1) + "then " + then_text + " | " + indent(1) + "else " + else_text
 }
 
-func TraceLoop(String loop_kind, String condition_text, String body_text) -> String {
+func TraceLoop(string loop_kind, string condition_text, string body_text) string {
     return loop_kind + " " + condition_text + " | " + indent(1) + "body " + body_text
 }
 
-func TraceMatch(String subject_text, String arms_text) -> String {
+func TraceMatch(string subject_text, string arms_text) string {
     if arms_text == "" {
         return "match " + subject_text
     }
     return "match " + subject_text + " | " + arms_text
 }
 
-func indent(i32 depth) -> String {
+func indent(int32 depth) string {
     var out = ""
     var i = 0
     while i < depth {
@@ -136,7 +136,7 @@ func indent(i32 depth) -> String {
     return out
 }
 
-func join_text(Vec[String] values, String sep) -> String {
+func join_text(Vec[string] values, string sep) string {
     var out = ""
     var i = 0
     while i < values.len() {

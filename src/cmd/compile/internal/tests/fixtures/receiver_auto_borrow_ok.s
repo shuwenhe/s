@@ -1,5 +1,5 @@
 package demo.receiver
 
-func ok(Vec[i32] items) -> () {
+func ok(Vec[int32] items) () {
     items.push(1)
 }

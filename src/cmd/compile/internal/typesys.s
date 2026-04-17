@@ -5,12 +5,12 @@ use std.prelude.len
 use std.prelude.slice
 use std.vec.Vec
 
-func ParseType(String text) -> String {
+func ParseType(string text) string {
     var clean = normalize_type_text(trim_text(text))
     if clean == "" {
         return "unknown"
     }
-    if clean == "()" || clean == "never" || clean == "bool" || clean == "i32" || clean == "usize" || clean == "u8" || clean == "String" {
+    if clean == "()" || clean == "never" || clean == "bool" || clean == "int32" || clean == "usize" || clean == "u8" || clean == "string" {
         return clean
     }
     if starts_with(clean, "&mut ") {
@@ -25,11 +25,11 @@ func ParseType(String text) -> String {
     return clean
 }
 
-func DumpType(String ty) -> String {
+func DumpType(string ty) string {
     return ParseType(ty)
 }
 
-func BaseTypeName(String ty) -> String {
+func BaseTypeName(string ty) string {
     var clean = ParseType(ty)
     if starts_with(clean, "&mut ") {
         return BaseTypeName(slice(clean, 5, len(clean)))
@@ -55,18 +55,18 @@ func BaseTypeName(String ty) -> String {
     return clean
 }
 
-func SameType(String left, String right) -> bool {
+func SameType(string left, string right) bool {
     return ParseType(left) == ParseType(right)
 }
 
-func IsBuiltinPrimitive(String ty) -> bool {
+func IsBuiltinPrimitive(string ty) bool {
     var clean = ParseType(ty)
-    return clean == "()" || clean == "never" || clean == "bool" || clean == "i32" || clean == "usize" || clean == "u8" || clean == "String"
+    return clean == "()" || clean == "never" || clean == "bool" || clean == "int32" || clean == "usize" || clean == "u8" || clean == "string"
 }
 
-func IsCopyType(String ty) -> bool {
+func IsCopyType(string ty) bool {
     var clean = ParseType(ty)
-    if clean == "()" || clean == "never" || clean == "bool" || clean == "i32" || clean == "usize" || clean == "u8" {
+    if clean == "()" || clean == "never" || clean == "bool" || clean == "int32" || clean == "usize" || clean == "u8" {
         return true
     }
     if starts_with(clean, "&") {
@@ -75,24 +75,24 @@ func IsCopyType(String ty) -> bool {
     return false
 }
 
-func IsReferenceType(String ty) -> bool {
+func IsReferenceType(string ty) bool {
     return starts_with(trim_text(ty), "&")
 }
 
-func IsSliceType(String ty) -> bool {
+func IsSliceType(string ty) bool {
     return starts_with(trim_text(ty), "[]")
 }
 
-func IsGenericType(String ty) -> bool {
+func IsGenericType(string ty) bool {
     var clean = trim_text(ty)
     return find_char(clean, "[") >= 0 || find_char(clean, "<") >= 0
 }
 
-func normalize_type_text(String text) -> String {
+func normalize_type_text(string text) string {
     return trim_text(text)
 }
 
-func trim_text(String text) -> String {
+func trim_text(string text) string {
     var start = 0
     var end = len(text)
     while start < end && is_space(char_at(text, start)) {
@@ -104,7 +104,7 @@ func trim_text(String text) -> String {
     return slice(text, start, end)
 }
 
-func starts_with(String text, String prefix) -> bool {
+func starts_with(string text, string prefix) bool {
     var prefix_len = len(prefix)
     if prefix_len > len(text) {
         return false
@@ -112,7 +112,7 @@ func starts_with(String text, String prefix) -> bool {
     return slice(text, 0, prefix_len) == prefix
 }
 
-func ends_with(String text, String suffix) -> bool {
+func ends_with(string text, string suffix) bool {
     var suffix_len = len(suffix)
     var text_len = len(text)
     if suffix_len > text_len {
@@ -121,11 +121,11 @@ func ends_with(String text, String suffix) -> bool {
     return slice(text, text_len - suffix_len, text_len) == suffix
 }
 
-func is_space(String ch) -> bool {
+func is_space(string ch) bool {
     return ch == " " || ch == "\n" || ch == "\t" || ch == "\r"
 }
 
-func find_char(String text, String needle) -> i32 {
+func find_char(string text, string needle) int32 {
     var i = 0
     while i < len(text) {
         if slice(text, i, i + 1) == needle {
@@ -136,7 +136,7 @@ func find_char(String text, String needle) -> i32 {
     return 0 - 1
 }
 
-func extract_section(String text, String open, String close) -> String {
+func extract_section(string text, string open, string close) string {
     var start = find_char(text, open)
     if start < 0 {
         return ""
