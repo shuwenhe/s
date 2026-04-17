@@ -4,7 +4,7 @@ use compile.internal.mir.TraceBranch
 use compile.internal.mir.TraceLoop
 use compile.internal.mir.TraceMatch
 
-func RunMirSuite() -> i32 {
+func RunMirSuite() int32 {
     if TraceBranch("flag", "then", "else") != "branch flag |   then then |   else else" {
         return 1
     }

@@ -1,5 +1,5 @@
 package compile.internal.golden
 
-func RunLexerCase() -> i32 {
+func RunLexerCase() int32 {
     return 0
 }
