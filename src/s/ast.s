@@ -310,8 +310,10 @@ func dump_function(FunctionDecl item, String indent) Vec[String] {
             Option::Some(value) => " " + value,
             Option::None => "",
         }
+    var prefix = if item.is_public { "pub " } else { "" }
     lines.push(
         indent
+            + prefix
             + "func "
             + item.sig.name
             + fmt_generics(item.sig.generics)
@@ -329,9 +331,11 @@ func dump_function(FunctionDecl item, String indent) Vec[String] {
 
 func dump_struct(StructDecl item) Vec[String] {
     var lines = Vec[String]()
-    lines.push("struct " + item.name + fmt_generics(item.generics))
+    var prefix = if item.is_public { "pub " } else { "" }
+    lines.push(prefix + "struct " + item.name + fmt_generics(item.generics))
     for field in item.fields {
-        lines.push("  " + field.type_name + " " + field.name)
+        var fp = if field.is_public { "pub " } else { "" }
+        lines.push("  " + fp + field.type_name + " " + field.name)
     }
     lines
 }
@@ -350,7 +354,8 @@ func dump_enum(EnumDecl item) Vec[String] {
 
 func dump_trait(TraitDecl item) Vec[String] {
     var lines = Vec[String]()
-    lines.push("trait " + item.name + fmt_generics(item.generics))
+    var prefix = if item.is_public { "pub " } else { "" }
+    lines.push(prefix + "trait " + item.name + fmt_generics(item.generics))
     for method in item.methods {
         var params = Vec[String]()
         for param in method.params {
