@@ -166,8 +166,20 @@ class Parser:
         params = self._parse_params()
         self._expect_symbol(")")
         return_type = None
+        # Accept either explicit '-> Type' or Go-style return type directly after parameter list.
         if self._eat_symbol("->"):
             return_type = self._parse_type_text(stop_values={"where", "{", ";"})
+        else:
+            # If the next token looks like a type (ident, keyword like 'mut' or 'self',
+            # a parenthesized tuple, or a bracketed generic), parse it as the return type.
+            next_tok = self._peek()
+            if not (next_tok.kind == TokenKind.KEYWORD and next_tok.value == "where") and not (
+                next_tok.kind == TokenKind.SYMBOL and next_tok.value in {"{", ";"}
+            ):
+                # token values that can start a type: IDENT, KEYWORD (like 'mut'/'self'),
+                # symbol '(' for tuple returns, symbol '[' for generic starts
+                if next_tok.kind in {TokenKind.IDENT, TokenKind.KEYWORD} or self._at_symbol("(") or self._at_symbol("["):
+                    return_type = self._parse_type_text(stop_values={"where", "{", ";"})
         self._parse_where_clause()
         body = self._parse_block_expr() if require_body else None
         return FunctionSig(name=name, generics=generics, params=params, return_type=return_type), body

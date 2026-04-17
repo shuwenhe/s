@@ -6,7 +6,7 @@ use internal.buildcfg.Check as buildcfgCheck
 use internal.buildcfg.GOARCH as buildcfgGOARCH
 use std.vec.Vec
 
-func Main(Vec[String] args) -> i32 {
+func Main(Vec[string] args) int32 {
     var buildcfg_err = buildcfgCheck()
     if buildcfg_err != "" {
         return 2

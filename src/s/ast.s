@@ -6,36 +6,36 @@ use std.prelude.to_string
 use std.vec.Vec
 
 struct UseDecl {
-    String path,
-    Option[String] alias,
+    string path,
+    Option[string] alias,
 }
 
 struct Field {
-    String name,
-    String type_name,
+    string name,
+    string type_name,
     bool is_public,
 }
 
 struct Param {
-    String name,
-    String type_name,
+    string name,
+    string type_name,
 }
 
 struct FunctionSig {
-    String name,
-    Vec[String] generics,
+    string name,
+    Vec[string] generics,
     Vec[Param] params,
-    Option[String] return_type,
+    Option[string] return_type,
 }
 
 struct NamePattern {
-    String name,
+    string name,
 }
 
 struct WildcardPattern {}
 
 struct VariantPattern {
-    String path,
+    string path,
     Vec[Pattern] args,
 }
 
@@ -46,54 +46,54 @@ enum Pattern {
 }
 
 struct IntExpr {
-    String value,
-    Option[String] inferred_type,
+    string value,
+    Option[string] inferred_type,
 }
 
 struct StringExpr {
-    String value,
-    Option[String] inferred_type,
+    string value,
+    Option[string] inferred_type,
 }
 
 struct BoolExpr {
     bool value,
-    Option[String] inferred_type,
+    Option[string] inferred_type,
 }
 
 struct NameExpr {
-    String name,
-    Option[String] inferred_type,
+    string name,
+    Option[string] inferred_type,
 }
 
 struct BorrowExpr {
     Box[Expr] target,
     bool mutable,
-    Option[String] inferred_type,
+    Option[string] inferred_type,
 }
 
 struct BinaryExpr {
     Box[Expr] left,
-    String op,
+    string op,
     Box[Expr] right,
-    Option[String] inferred_type,
+    Option[string] inferred_type,
 }
 
 struct MemberExpr {
     Box[Expr] target,
-    String member,
-    Option[String] inferred_type,
+    string member,
+    Option[string] inferred_type,
 }
 
 struct IndexExpr {
     Box[Expr] target,
     Box[Expr] index,
-    Option[String] inferred_type,
+    Option[string] inferred_type,
 }
 
 struct CallExpr {
     Box[Expr] callee,
     Vec[Expr] args,
-    Option[String] inferred_type,
+    Option[string] inferred_type,
 }
 
 struct MatchArm {
@@ -104,38 +104,38 @@ struct MatchArm {
 struct MatchExpr {
     Box[Expr] subject,
     Vec[MatchArm] arms,
-    Option[String] inferred_type,
+    Option[string] inferred_type,
 }
 
 struct IfExpr {
     Box[Expr] condition,
     BlockExpr then_branch,
     Option[Box[Expr]] else_branch,
-    Option[String] inferred_type,
+    Option[string] inferred_type,
 }
 
 struct WhileExpr {
     Box[Expr] condition,
     BlockExpr body,
-    Option[String] inferred_type,
+    Option[string] inferred_type,
 }
 
 struct ForExpr {
-    Vec[String] names,
+    Vec[string] names,
     bool declare,
     Box[Expr] iterable,
     BlockExpr body,
-    Option[String] inferred_type,
+    Option[string] inferred_type,
 }
 
 struct BlockExpr {
     Vec[Stmt] statements,
     Option[Expr] final_expr,
-    Option[String] inferred_type,
+    Option[string] inferred_type,
 }
 
 struct ArrayLiteral {
-    Option[String] type_text,
+    Option[string] type_text,
     Vec[Expr] items,
 }
 
@@ -145,13 +145,13 @@ struct MapEntry {
 }
 
 struct MapLiteral {
-    Option[String] type_text,
+    Option[string] type_text,
     Vec[MapEntry] entries,
 }
 
 enum Expr {
     Int(IntExpr),
-    String(StringExpr),
+    string(StringExpr),
     Bool(BoolExpr),
     Name(NameExpr),
     Borrow(BorrowExpr),
@@ -169,18 +169,18 @@ enum Expr {
 }
 
 struct VarStmt {
-    String name,
-    Option[String] type_name,
+    string name,
+    Option[string] type_name,
     Expr value,
 }
 
 struct AssignStmt {
-    String name,
+    string name,
     Expr value,
 }
 
 struct IncrementStmt {
-    String name,
+    string name,
 }
 
 struct CForStmt {
@@ -219,35 +219,35 @@ struct FunctionDecl {
 }
 
 struct StructDecl {
-    String name,
-    Vec[String] generics,
+    string name,
+    Vec[string] generics,
     Vec[Field] fields,
     bool is_public,
 }
 
 struct EnumVariant {
-    String name,
-    Option[String] payload,
+    string name,
+    Option[string] payload,
 }
 
 struct EnumDecl {
-    String name,
-    Vec[String] generics,
+    string name,
+    Vec[string] generics,
     Vec[EnumVariant] variants,
     bool is_public,
 }
 
 struct TraitDecl {
-    String name,
-    Vec[String] generics,
+    string name,
+    Vec[string] generics,
     Vec[FunctionSig] methods,
     bool is_public,
 }
 
 struct ImplDecl {
-    String target,
-    Option[String] trait_name,
-    Vec[String] generics,
+    string target,
+    Option[string] trait_name,
+    Vec[string] generics,
     Vec[FunctionDecl] methods,
 }
 
@@ -260,13 +260,13 @@ enum Item {
 }
 
 struct SourceFile {
-    String pkg,
+    string pkg,
     Vec[UseDecl] uses,
     Vec[Item] items,
 }
 
-func dump_source_file(SourceFile source) -> String {
-    var lines = Vec[String]()
+func dump_source_file(SourceFile source) string {
+    var lines = Vec[string]()
     lines.push("package " + source.pkg);
     var ui = 0
     while ui < source.uses.len() {
@@ -288,7 +288,7 @@ func dump_source_file(SourceFile source) -> String {
     join_lines(lines)
 }
 
-func append_item_dump(Vec[String] lines, Item item) -> () {
+func append_item_dump(Vec[string] lines, Item item) () {
     match item {
         Item.Function(value) => append_lines(lines, dump_function(value, "")),
         Item.Struct(value) => append_lines(lines, dump_struct(value)),
@@ -298,16 +298,16 @@ func append_item_dump(Vec[String] lines, Item item) -> () {
     }
 }
 
-func fmt_generics(Vec[String] generics) -> String {
+func fmt_generics(Vec[string] generics) string {
     if len(generics) == 0 {
         return ""
     }
     "[" + join_with(generics, ", ") + "]"
 }
 
-func dump_function(FunctionDecl item, String indent) -> Vec[String] {
-    var lines = Vec[String]()
-    var params = Vec[String]()
+func dump_function(FunctionDecl item, string indent) Vec[string] {
+    var lines = Vec[string]()
+    var params = Vec[string]()
     var _pi = 0
     while _pi < item.sig.params.len() {
         var param = item.sig.params[_pi]
@@ -338,8 +338,8 @@ func dump_function(FunctionDecl item, String indent) -> Vec[String] {
     lines
 }
 
-func dump_struct(StructDecl item) -> Vec[String] {
-    var lines = Vec[String]()
+func dump_struct(StructDecl item) Vec[string] {
+    var lines = Vec[string]()
     var prefix = if item.is_public { "pub " } else { "" }
     lines.push(prefix + "struct " + item.name + fmt_generics(item.generics))
     var _fi = 0
@@ -352,8 +352,8 @@ func dump_struct(StructDecl item) -> Vec[String] {
     lines
 }
 
-func dump_enum(EnumDecl item) -> Vec[String] {
-    var lines = Vec[String]()
+func dump_enum(EnumDecl item) Vec[string] {
+    var lines = Vec[string]()
     lines.push("enum " + item.name + fmt_generics(item.generics))
     var _vi = 0
     while _vi < item.variants.len() {
@@ -367,14 +367,14 @@ func dump_enum(EnumDecl item) -> Vec[String] {
     lines
 }
 
-func dump_trait(TraitDecl item) -> Vec[String] {
-    var lines = Vec[String]()
+func dump_trait(TraitDecl item) Vec[string] {
+    var lines = Vec[string]()
     var prefix = if item.is_public { "pub " } else { "" }
     lines.push(prefix + "trait " + item.name + fmt_generics(item.generics))
     var _mi = 0
     while _mi < item.methods.len() {
         var method = item.methods[_mi]
-        var params = Vec[String]()
+        var params = Vec[string]()
         var _mpi = 0
         while _mpi < method.params.len() {
             var param = method.params[_mpi]
@@ -399,8 +399,8 @@ func dump_trait(TraitDecl item) -> Vec[String] {
     lines
 }
 
-func dump_impl(ImplDecl item) -> Vec[String] {
-    var lines = Vec[String]()
+func dump_impl(ImplDecl item) Vec[string] {
+    var lines = Vec[string]()
     var head =
         match item.trait_name {
             Option.Some(name) => name + " for " + item.target,
@@ -417,8 +417,8 @@ func dump_impl(ImplDecl item) -> Vec[String] {
     lines
 }
 
-func dump_block(BlockExpr block, String indent) -> Vec[String] {
-    var lines = Vec[String]()
+func dump_block(BlockExpr block, string indent) Vec[string] {
+    var lines = Vec[string]()
     var _si = 0
     while _si < block.statements.len() {
         var stmt = block.statements[_si]
@@ -432,7 +432,7 @@ func dump_block(BlockExpr block, String indent) -> Vec[String] {
     lines
 }
 
-func dump_stmt(Stmt stmt, String indent) -> Vec[String] {
+func dump_stmt(Stmt stmt, string indent) Vec[string] {
     match stmt {
         Stmt.Var(value) => {
             var text =
@@ -449,7 +449,7 @@ func dump_stmt(Stmt stmt, String indent) -> Vec[String] {
             single_line(indent + value.name + "++")
         }
         Stmt.CFor(value) => {
-            var lines = Vec[String]()
+            var lines = Vec[string]()
             lines.push(
                 indent
                     + "for ("
@@ -476,7 +476,7 @@ func dump_stmt(Stmt stmt, String indent) -> Vec[String] {
     }
 }
 
-func dump_for_clause(Stmt stmt) -> String {
+func dump_for_clause(Stmt stmt) string {
     match stmt {
         Stmt.Var(value) => {
             match value.type_name {
@@ -492,10 +492,10 @@ func dump_for_clause(Stmt stmt) -> String {
     }
 }
 
-func dump_expr(Expr expr) -> String {
+func dump_expr(Expr expr) string {
     match expr {
         Expr.Int(value) => value.value,
-        Expr.String(value) => value.value,
+        Expr.string(value) => value.value,
         Expr.Bool(value) => if value.value { "true" } else { "false" },
         Expr.Name(value) => value.name,
         Expr.Borrow(value) => {
@@ -524,13 +524,13 @@ func dump_expr(Expr expr) -> String {
         }
         Expr.Block(_) => "{...}",
         Expr.Array(value) => {
-            var elems = Vec[String]()
+            var elems = Vec[string]()
             var _ei = 0
             while _ei < value.items.len() { elems.push(dump_expr(value.items[_ei])); _ei = _ei + 1 }
             "[" + join_with(elems, ", ") + "]"
         }
         Expr.Map(value) => {
-            var parts = Vec[String]()
+            var parts = Vec[string]()
             var _en = 0
             while _en < value.entries.len() { var entry = value.entries[_en]; parts.push(dump_expr(entry.key) + ": " + dump_expr(entry.value)); _en = _en + 1 }
             "{" + join_with(parts, ", ") + "}"
@@ -538,7 +538,7 @@ func dump_expr(Expr expr) -> String {
     }
 }
 
-func dump_if_expr(IfExpr value) -> String {
+func dump_if_expr(IfExpr value) string {
     var text = "if " + dump_expr(value.condition.value) + " {...}"
     match value.else_branch {
         Option.Some(expr) => text + " else " + dump_expr(expr.value),
@@ -546,7 +546,7 @@ func dump_if_expr(IfExpr value) -> String {
     }
 }
 
-func dump_pattern(Pattern pattern) -> String {
+func dump_pattern(Pattern pattern) string {
     match pattern {
         Pattern.Name(value) => value.name,
         Pattern.Wildcard(_) => "_",
@@ -559,8 +559,8 @@ func dump_pattern(Pattern pattern) -> String {
     }
 }
 
-func join_exprs(Vec[Expr] values) -> String {
-    var parts = Vec[String]()
+func join_exprs(Vec[Expr] values) string {
+    var parts = Vec[string]()
     var _iv = 0
     while _iv < values.len() {
         var value = values[_iv]
@@ -570,15 +570,15 @@ func join_exprs(Vec[Expr] values) -> String {
     join_with(parts, ", ")
 }
 
-func join_patterns(Vec[Pattern] values) -> String {
-    var parts = Vec[String]()
+func join_patterns(Vec[Pattern] values) string {
+    var parts = Vec[string]()
     var _pv = 0
     while _pv < values.len() { parts.push(dump_pattern(values[_pv])); _pv = _pv + 1 }
     join_with(parts, ", ")
 }
 
-func join_match_arms(Vec[MatchArm] values) -> String {
-    var parts = Vec[String]()
+func join_match_arms(Vec[MatchArm] values) string {
+    var parts = Vec[string]()
     var _mv = 0
     while _mv < values.len() {
         var value = values[_mv]
@@ -588,7 +588,7 @@ func join_match_arms(Vec[MatchArm] values) -> String {
     join_with(parts, "; ")
 }
 
-func append_lines(Vec[String] dest, Vec[String] source) -> () {
+func append_lines(Vec[string] dest, Vec[string] source) () {
     var _li = 0
     while _li < source.len() {
         dest.push(source[_li])
@@ -596,16 +596,16 @@ func append_lines(Vec[String] dest, Vec[String] source) -> () {
     }
 }
 
-func single_line(String text) -> Vec[String] {
-    var lines = Vec[String]()
+func single_line(string text) Vec[string] {
+    var lines = Vec[string]()
     lines.push(text)
     lines
 }
 
-func join_lines(Vec[String] lines) -> String {
+func join_lines(Vec[string] lines) string {
     join_with(lines, "\n")
 }
-func join_with(Vec[String] values, String sep) -> String {
+func join_with(Vec[string] values, string sep) string {
     var out = ""
     var first = true
     var _j = 0
@@ -621,6 +621,6 @@ func join_with(Vec[String] values, String sep) -> String {
     out
 }
 
-func replace_once(String text, String from, String to) -> String {
+func replace_once(string text, string from, string to) string {
     text
 }

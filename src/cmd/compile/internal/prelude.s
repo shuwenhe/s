@@ -2,13 +2,13 @@ package compile.internal.prelude
 
 use compile.internal.typesys.BaseTypeName
 
-func LoadPrelude() -> i32 {
+func LoadPrelude() int32 {
     0
 }
 
-func LookupBuiltinType(String name) -> bool {
+func LookupBuiltinType(string name) bool {
     var base = BaseTypeName(name)
-    base == "String"
+    base == "string"
         || base == "Vec"
         || base == "Result"
         || base == "Option"
@@ -25,42 +25,42 @@ func LookupBuiltinType(String name) -> bool {
         || base == "Toolchain"
 }
 
-func LookupBuiltinFieldType(String type_name, String field_name) -> String {
+func LookupBuiltinFieldType(string type_name, string field_name) string {
     var base = BaseTypeName(type_name)
     if base == "FileInfo" {
         if field_name == "size" || field_name == "hidden" {
-            return "i32"
+            return "int32"
         }
     }
     if base == "Target" {
         if field_name == "os" || field_name == "arch" {
-            return "String"
+            return "string"
         }
     }
     ""
 }
 
-func LookupBuiltinIndexType(String type_name) -> String {
+func LookupBuiltinIndexType(string type_name) string {
     var base = BaseTypeName(type_name)
     if base == "Vec" || base == "Array" {
         return "first_type_arg"
     }
-    if base == "String" {
+    if base == "string" {
         return "u8"
     }
     ""
 }
 
-func LookupBuiltinMethodType(String type_name, String member) -> String {
+func LookupBuiltinMethodType(string type_name, string member) string {
     var base = BaseTypeName(type_name)
-    if base == "String" && member == "len" {
-        return "i32"
+    if base == "string" && member == "len" {
+        return "int32"
     }
-    if base == "String" && member == "is_empty" {
+    if base == "string" && member == "is_empty" {
         return "bool"
     }
     if base == "Vec" && member == "len" {
-        return "i32"
+        return "int32"
     }
     if base == "Vec" && member == "push" {
         return "()"
@@ -101,7 +101,7 @@ func LookupBuiltinMethodType(String type_name, String member) -> String {
     ""
 }
 
-func LookupBuiltinMethodArity(String type_name, String member) -> i32 {
+func LookupBuiltinMethodArity(string type_name, string member) int32 {
     var base = BaseTypeName(type_name)
     if base == "Vec" && member == "push" {
         return 1
@@ -121,10 +121,10 @@ func LookupBuiltinMethodArity(String type_name, String member) -> i32 {
     if base == "Box" && member == "unwrap" {
         return 0
     }
-    if (base == "String" || base == "Vec") && member == "len" {
+    if (base == "string" || base == "Vec") && member == "len" {
         return 0
     }
-    if base == "String" && member == "is_empty" {
+    if base == "string" && member == "is_empty" {
         return 0
     }
     0 - 1
