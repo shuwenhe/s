@@ -20,10 +20,10 @@ func Main(Vec[String] args) -> i32 {
     }
 
     var exec_result = ExecRun(options)
-    if exec_result.is_err() {
+    if exec_result != 0 {
         report_error("execution failed")
     }
-    if exec_result.is_err() {
+    if exec_result != 0 {
         return 1
     }
 

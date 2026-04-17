@@ -928,8 +928,27 @@ class Checker:
             ),
         )
         self.structs.setdefault("FunctionDecl", StructInfo(fields={"sig": NamedType("FunctionSig"), "body": parse_type("Option[BlockExpr]"), "is_public": BOOL}))
+        self.structs.setdefault(
+            "SourceFile",
+            StructInfo(fields={"pkg": STRING, "uses": parse_type("Vec[UseDecl]"), "items": parse_type("Vec[Item]")}),
+        )
+        self.structs.setdefault("SyntaxError", StructInfo(fields={"message": STRING, "line": I32, "column": I32}))
         self.structs.setdefault("ParseError", StructInfo(fields={"message": STRING}))
         self.structs.setdefault("ExecError", StructInfo(fields={"message": STRING}))
+        self.structs.setdefault("BackendError", StructInfo(fields={"message": STRING}))
+        self.enums.setdefault(
+            "Item",
+            EnumInfo(
+                generics=[],
+                variants={
+                    "Function": NamedType("FunctionDecl"),
+                    "Struct": NamedType("StructDecl"),
+                    "Enum": NamedType("EnumDecl"),
+                    "Trait": NamedType("TraitDecl"),
+                    "Impl": NamedType("ImplDecl"),
+                },
+            ),
+        )
 
     def _load_use_decls(self, uses: List[UseDecl]) -> None:
         for use in uses:
@@ -983,6 +1002,36 @@ class Checker:
                 owner="s",
                 generics=[],
                 params=[parse_type("Expr")],
+                return_type=STRING,
+            ),
+            "compile.internal.syntax.ReadSource": TraitMethodInfo(
+                owner="compile.internal.syntax",
+                generics=[],
+                params=[STRING],
+                return_type=parse_type("Result[String, SyntaxError]"),
+            ),
+            "compile.internal.syntax.Tokenize": TraitMethodInfo(
+                owner="compile.internal.syntax",
+                generics=[],
+                params=[STRING],
+                return_type=parse_type("Result[Vec[Token], SyntaxError]"),
+            ),
+            "compile.internal.syntax.ParseSource": TraitMethodInfo(
+                owner="compile.internal.syntax",
+                generics=[],
+                params=[STRING],
+                return_type=parse_type("Result[SourceFile, SyntaxError]"),
+            ),
+            "compile.internal.syntax.DumpTokensText": TraitMethodInfo(
+                owner="compile.internal.syntax",
+                generics=[],
+                params=[parse_type("Vec[Token]")],
+                return_type=STRING,
+            ),
+            "compile.internal.syntax.DumpSourceText": TraitMethodInfo(
+                owner="compile.internal.syntax",
+                generics=[],
+                params=[parse_type("SourceFile")],
                 return_type=STRING,
             ),
             "compile.internal.typesys.BaseTypeName": TraitMethodInfo(
@@ -1050,7 +1099,61 @@ class Checker:
                 owner="compile.internal.build.exec",
                 generics=[],
                 params=[parse_type("CompileOptions")],
-                return_type=parse_type("Result[(), ExecError]"),
+                return_type=I32,
+            ),
+            "compile.internal.build.backend.Build": TraitMethodInfo(
+                owner="compile.internal.build.backend",
+                generics=[],
+                params=[STRING, STRING],
+                return_type=I32,
+            ),
+            "compile.internal.build.backend.Run": TraitMethodInfo(
+                owner="compile.internal.build.backend",
+                generics=[],
+                params=[STRING],
+                return_type=I32,
+            ),
+            "compile.internal.tests.test_semantic.RunSemanticSuite": TraitMethodInfo(
+                owner="compile.internal.tests.test_semantic",
+                generics=[],
+                params=[STRING],
+                return_type=I32,
+            ),
+            "compile.internal.tests.test_golden.RunGoldenSuite": TraitMethodInfo(
+                owner="compile.internal.tests.test_golden",
+                generics=[],
+                params=[STRING],
+                return_type=I32,
+            ),
+            "compile.internal.tests.test_mir.RunMirSuite": TraitMethodInfo(
+                owner="compile.internal.tests.test_mir",
+                generics=[],
+                params=[],
+                return_type=I32,
+            ),
+            "compile.internal.build.emit.CheckOk": TraitMethodInfo(
+                owner="compile.internal.build.emit",
+                generics=[],
+                params=[STRING],
+                return_type=UNIT,
+            ),
+            "compile.internal.build.emit.Tokens": TraitMethodInfo(
+                owner="compile.internal.build.emit",
+                generics=[],
+                params=[parse_type("Vec[Token]")],
+                return_type=UNIT,
+            ),
+            "compile.internal.build.emit.Ast": TraitMethodInfo(
+                owner="compile.internal.build.emit",
+                generics=[],
+                params=[parse_type("SourceFile")],
+                return_type=UNIT,
+            ),
+            "compile.internal.build.emit.Built": TraitMethodInfo(
+                owner="compile.internal.build.emit",
+                generics=[],
+                params=[STRING],
+                return_type=UNIT,
             ),
             "compile.internal.backend.Build": TraitMethodInfo(
                 owner="compile.internal.backend",
@@ -1097,13 +1200,13 @@ class Checker:
             "compile.internal.mir.LowerFunction": TraitMethodInfo(
                 owner="compile.internal.mir",
                 generics=[],
-                params=[STRING, STRING],
+                params=[parse_type("FunctionDecl")],
                 return_type=STRING,
             ),
             "compile.internal.mir.LowerBlock": TraitMethodInfo(
                 owner="compile.internal.mir",
                 generics=[],
-                params=[STRING, STRING, STRING],
+                params=[parse_type("BlockExpr")],
                 return_type=STRING,
             ),
             "compile.internal.mir.TraceBranch": TraitMethodInfo(
