@@ -10,7 +10,7 @@ use compile.internal.syntax.ReadSource
 func main() int32 {
     var args = hostArgs()
     if args.len() < 2 {
-        println("usage: ast_dump <path>");
+        println("usage: astDump <path>");
         return 1
     }
 

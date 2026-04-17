@@ -10,7 +10,7 @@ use compile.internal.syntax.Tokenize
 func main() int32 {
     var args = hostArgs()
     if args.len() < 2 {
-        println("usage: lex_dump <path>");
+        println("usage: lexDump <path>");
         return 1
     }
 

@@ -1,7 +1,7 @@
 package compile.internal.dispatch
 
-use compile.internal.compiler.Main as compilerMain
+use compile.internal.compiler.main as compilerMain
 
-func Main(Vec[string] args) int32 {
+func main(Vec[string] args) int32 {
     return compilerMain(args)
 }

@@ -8,30 +8,30 @@ func AnalyzeBlock() int32 {
     return 0
 }
 
-func AnalyzeTrace(string scope, Vec[string] type_env, string block_text) string {
-    var plan = make_plan_trace(type_env)
+func AnalyzeTrace(string scope, Vec[string] typeEnv, string blockText) string {
+    var plan = makePlanTrace(typeEnv)
     var text = "borrow " + scope
-    if block_text != "" {
-        text = text + " | " + block_text
+    if blockText != "" {
+        text = text + " | " + blockText
     }
     if plan.len() == 0 {
         return text + " | plan <empty>"
     }
-    return text + " | plan " + join_text(plan, ", ")
+    return text + " | plan " + joinText(plan, ", ")
 }
 
-func AnalyzeFunction(string name, Vec[string] type_env, string body_text) string {
-    return AnalyzeTrace(name, type_env, body_text)
+func AnalyzeFunction(string name, Vec[string] typeEnv, string bodyText) string {
+    return AnalyzeTrace(name, typeEnv, bodyText)
 }
 
-func AnalyzeExpr(string scope, string expr_text) string {
-    if expr_text == "" {
+func AnalyzeExpr(string scope, string exprText) string {
+    if exprText == "" {
         return "expr " + scope + " | <empty>"
     }
-    return "expr " + scope + " | " + expr_text
+    return "expr " + scope + " | " + exprText
 }
 
-func join_text(Vec[string] values, string sep) string {
+func joinText(Vec[string] values, string sep) string {
     var out = ""
     var i = 0
     while i < values.len() {
@@ -44,14 +44,14 @@ func join_text(Vec[string] values, string sep) string {
     return out
 }
 
-func make_plan_trace(Vec[string] type_env) Vec[string] {
+func makePlanTrace(Vec[string] typeEnv) Vec[string] {
     var plan = Vec[string]()
     var i = 0
-    while i < type_env.len() {
-        var ty = type_env[i]
+    while i < typeEnv.len() {
+        var ty = typeEnv[i]
         if ty == "" {
             plan.push("borrow:<empty>")
-        } else if starts_with(ty, "&") {
+        } else if startsWith(ty, "&") {
             plan.push("copy:" + ty)
         } else {
             plan.push("drop:" + ty)
@@ -61,10 +61,10 @@ func make_plan_trace(Vec[string] type_env) Vec[string] {
     return plan
 }
 
-func starts_with(string text, string prefix) bool {
-    var prefix_len = len(prefix)
-    if prefix_len > len(text) {
+func startsWith(string text, string prefix) bool {
+    var prefixLen = len(prefix)
+    if prefixLen > len(text) {
         return false
     }
-    return slice(text, 0, prefix_len) == prefix
+    return slice(text, 0, prefixLen) == prefix
 }

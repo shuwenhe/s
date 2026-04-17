@@ -12,11 +12,11 @@ func len[T](T value) int32 {
     __runtime_len[T](value)
 }
 
-func to_string(int32 value) string {
+func toString(int32 value) string {
     __int_to_string(value)
 }
 
-func char_at(string text, int32 index) string {
+func charAt(string text, int32 index) string {
     __string_char_at(text, index)
 }
 

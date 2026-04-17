@@ -10,13 +10,13 @@ func MakeDecision(string ty) string {
     "drop:" + ty
 }
 
-func MakePlan(Vec[string] type_env) Vec[string] {
+func MakePlan(Vec[string] typeEnv) Vec[string] {
     var plan = Vec[string]()
     var i = 0
-    while i < type_env.len() {
-        var ty = type_env[i]
-        var next_i = i + 1
-        i = next_i
+    while i < typeEnv.len() {
+        var ty = typeEnv[i]
+        var nextI = i + 1
+        i = nextI
         plan.push(MakeDecision(ty))
     }
     return plan

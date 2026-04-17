@@ -25,7 +25,7 @@ SELFHOSTED_RUNNER_PATHS = (
 class CliError(Exception):
     message: str
 
-    def __str__(self) -> str:
+    def __str__(self)  str:
         return self.message
 
 
@@ -38,7 +38,7 @@ class CheckOptions:
     dump_ast: bool = False
 
 
-def run_cli(argv: list[str]) -> int:
+def run_cli(argv: list[str])  int:
     try:
         command = parse_command(argv)
         selfhosted_runner = resolve_selfhosted_runner()
@@ -64,11 +64,11 @@ def run_cli(argv: list[str]) -> int:
         return 1
 
 
-def can_selfhosted_handle(command: CheckOptions) -> bool:
+def can_selfhosted_handle(command: CheckOptions)  bool:
     return not command.dump_tokens and not command.dump_ast
 
 
-def resolve_selfhosted_runner() -> Path | None:
+def resolve_selfhosted_runner()  Path | None:
     for candidate in SELFHOSTED_RUNNER_PATHS:
         if candidate is None:
             continue
@@ -77,7 +77,7 @@ def resolve_selfhosted_runner() -> Path | None:
     return None
 
 
-def run_selfhosted_cli(selfhosted_runner: Path, command: CheckOptions) -> int:
+def run_selfhosted_cli(selfhosted_runner: Path, command: CheckOptions)  int:
     if command.command == "check":
         args = [str(selfhosted_runner), "check", command.path]
         if command.dump_tokens:
@@ -95,7 +95,7 @@ def run_selfhosted_cli(selfhosted_runner: Path, command: CheckOptions) -> int:
     return int(completed.returncode)
 
 
-def parse_command(argv: list[str]) -> CheckOptions:
+def parse_command(argv: list[str])  CheckOptions:
     if len(argv) < 2:
         raise _usage_error()
     command = argv[0]
@@ -137,7 +137,7 @@ def parse_command(argv: list[str]) -> CheckOptions:
     )
 
 
-def read_source(path: str) -> str:
+def read_source(path: str)  str:
     source_path = Path(path)
     try:
         return source_path.read_text()
@@ -145,7 +145,7 @@ def read_source(path: str) -> str:
         raise CliError(f"failed to read source file: {path}") from exc
 
 
-def parse_checked_source(command: CheckOptions, source: str) -> SourceFile:
+def parse_checked_source(command: CheckOptions, source: str)  SourceFile:
     if command.dump_tokens:
         print(dump_tokens(Lexer(source).tokenize()))
 
@@ -166,18 +166,18 @@ def parse_checked_source(command: CheckOptions, source: str) -> SourceFile:
     return parsed
 
 
-def emit_binary(parsed: SourceFile, output_path: str) -> None:
+def emit_binary(parsed: SourceFile, output_path: str)  None:
     try:
         build_executable(parsed, resolve_output_path(output_path))
     except BackendError as exc:
         raise CliError(f"backend error: {exc}") from exc
 
 
-def run_checked_source(parsed: SourceFile) -> int:
+def run_checked_source(parsed: SourceFile)  int:
     return Interpreter(parsed).run_main()
 
 
-def resolve_output_path(output_path: str) -> Path:
+def resolve_output_path(output_path: str)  Path:
     target = Path(output_path)
     if not target.is_absolute():
         target = BUILD_OUTPUT_ROOT / target.name
@@ -185,7 +185,7 @@ def resolve_output_path(output_path: str) -> Path:
     return target.resolve()
 
 
-def _usage_error() -> CliError:
+def _usage_error()  CliError:
     return CliError(
         "usage: s check <path> [--dump-tokens] [--dump-ast] | "
         "s build <path> -o <output> | s run <path>"

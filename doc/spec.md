@@ -67,7 +67,7 @@ use std.io.Reader
 use net.http.{Request, Response}
 
 struct Config {
-    String addr
+    string addr
 }
 
 func main() Result[(), Error] {
@@ -224,7 +224,7 @@ S 的内建基础类型包括：
 
 ```text
 bool
-i8 i16 i32 i64 isize
+i8 i16 int32 i64 isize
 u8 u16 u32 u64 usize
 f32 f64
 char
@@ -236,14 +236,14 @@ str
 - `bool` 的值仅为 `true` 或 `false`
 - `char` 表示一个 Unicode 标量值
 - `str` 表示 UTF-8 字符串切片视图
-- `String` 不是内建原语，而是标准库拥有型字符串
+- `string` 不是内建原语，而是标准库拥有型字符串
 
 ### 8.1 Numeric Conversions
 
 S 默认不进行隐式数值扩宽或截断。
 
 ```s
-i32 a = 1
+int32 a = 1
 i64 b = 2
 let c = a as i64 + b
 ```
@@ -262,8 +262,8 @@ Draft 0.1 建议采用如下形式：
 示例：
 
 ```s
-[i32; 4] a = [1, 2, 3, 4]
-[]i32 s = a[1..3]
+[int32; 4] a = [1, 2, 3, 4]
+[]int32 s = a[1..3]
 ```
 
 ### 9.2 Struct Types
@@ -273,7 +273,7 @@ Draft 0.1 建议采用如下形式：
 ```s
 struct User {
     u64 id
-    String name
+    string name
     bool active
 }
 ```
@@ -307,7 +307,7 @@ Draft 0.1 推荐同时支持上述几类形式。
 函数声明形式如下：
 
 ```s
-func add(i32 a, i32 b) i32 {
+func add(int32 a, int32 b) int32 {
     a + b
 }
 ```
@@ -330,7 +330,7 @@ func add(i32 a, i32 b) i32 {
 
 ```s
 func len(&str s) usize
-func push(&mut Vec[i32] v, i32 value)
+func push(&mut Vec[int32] v, int32 value)
 func consume(Buf buf) Result[(), Error]
 ```
 
@@ -484,7 +484,7 @@ S 使用基于作用域的资源释放模型。
 示例：
 
 ```s
-func load() Result[String, IoError] {
+func load() Result[string, IoError] {
     let file = File::open("config.toml")?
     file.read_all()
 }
@@ -761,7 +761,7 @@ S 应优先支持 C ABI。
 示例：
 
 ```s
-extern "C" func puts(*const u8 s) i32
+extern "C" func puts(*const u8 s) int32
 ```
 
 FFI 至少应支持：

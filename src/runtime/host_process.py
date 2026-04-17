@@ -7,7 +7,7 @@ from pathlib import Path
 _LIB: CDLL | None = None
 
 
-def _load_library() -> CDLL:
+def _load_library()  CDLL:
     global _LIB
     if _LIB is not None:
         return _LIB
@@ -21,7 +21,7 @@ def _load_library() -> CDLL:
     return lib
 
 
-def run_argv(argv: list[str]) -> int:
+def run_argv(argv: list[str])  int:
     lib = _load_library()
     encoded = [arg.encode("utf-8") for arg in argv]
     array_type = c_char_p * (len(encoded) + 1)

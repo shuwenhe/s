@@ -32,7 +32,7 @@ S source
 S 侧当前把 intrinsic 写成：
 
 ```s
-extern "intrinsic" func __string_slice(String text, i32 start, i32 end) String
+extern "intrinsic" func __string_slice(string text, int32 start, int32 end) string
 ```
 
 在宿主桥接层，这会映射为：
@@ -94,7 +94,7 @@ import time.
 例如：
 
 ```s
-extern "intrinsic" func __vec_array_set[T](Array[T] array, i32 index, T value) ()
+extern "intrinsic" func __vec_array_set[T](Array[T] array, int32 index, T value) ()
 ```
 
 对应：
@@ -107,8 +107,8 @@ invoke_intrinsic("__vec_array_set", array, index, value)
 
 当前宿主值采用最小 Python 编码：
 
-- `String`  Python `str`
-- `i32`  Python `int`
+- `string`  Python `str`
+- `int32`  Python `int`
 - `Array[T]`  `HostArray`
 - `()`  `None`
 

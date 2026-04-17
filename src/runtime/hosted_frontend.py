@@ -16,7 +16,7 @@ class HostedLexError(Exception):
     line: int
     column: int
 
-    def __str__(self) -> str:
+    def __str__(self)  str:
         return f"{self.message} at {self.line}:{self.column}"
 
 
@@ -28,7 +28,7 @@ class HostedLexer:
     line: int = 1
     column: int = 1
 
-    def tokenize(self) -> list[Token]:
+    def tokenize(self)  list[Token]:
         tokens: list[Token] = []
         while not self.is_eof():
             self.skip_ignored()
@@ -52,7 +52,7 @@ class HostedLexer:
         tokens.append(Token(TokenKind.EOF, "<eof>", self.line, self.column))
         return tokens
 
-    def skip_ignored(self) -> None:
+    def skip_ignored(self)  None:
         while not self.is_eof():
             ch = self.peek()
             if ch in " \t\r\n":
@@ -83,7 +83,7 @@ class HostedLexer:
                 continue
             break
 
-    def read_identifier(self) -> str:
+    def read_identifier(self)  str:
         chars: list[str] = []
         while not self.is_eof():
             ch = self.peek()
@@ -92,7 +92,7 @@ class HostedLexer:
             chars.append(self.advance())
         return "".join(chars)
 
-    def read_number(self) -> str:
+    def read_number(self)  str:
         chars: list[str] = []
         while not self.is_eof():
             ch = self.peek()
@@ -101,7 +101,7 @@ class HostedLexer:
             chars.append(self.advance())
         return "".join(chars)
 
-    def read_string(self) -> str:
+    def read_string(self)  str:
         out = [self.advance()]
         while not self.is_eof():
             ch = self.advance()
@@ -115,7 +115,7 @@ class HostedLexer:
                 return "".join(out)
         raise HostedLexError("unterminated string literal", self.line, self.column)
 
-    def read_symbol(self) -> str:
+    def read_symbol(self)  str:
         for symbol in ("->", "=>", "==", "!=", "<=", ">=", "&&", "||", "..=", ".."):
             if self.match_text(symbol):
                 out = []
@@ -127,15 +127,15 @@ class HostedLexer:
             return self.advance()
         raise HostedLexError(f"unexpected character {ch!r}", self.line, self.column)
 
-    def match_text(self, text: str) -> bool:
+    def match_text(self, text: str)  bool:
         return self._slice(self.index, self.index + self._len(text)) == text
 
-    def peek(self) -> str:
+    def peek(self)  str:
         if self.is_eof():
             raise HostedLexError("unexpected eof", self.line, self.column)
         return self._char_at(self.index)
 
-    def advance(self) -> str:
+    def advance(self)  str:
         if self.is_eof():
             raise HostedLexError("unexpected eof", self.line, self.column)
         ch = self._char_at(self.index)
@@ -147,15 +147,15 @@ class HostedLexer:
             self.column += 1
         return ch
 
-    def is_eof(self) -> bool:
+    def is_eof(self)  bool:
         return self.index >= self._len(self.source)
 
-    def _len(self, value: object) -> int:
+    def _len(self, value: object)  int:
         call = IntrinsicCall(symbol="__runtime_len", args=(value,), source="HostedLexer")
         self.trace.append(call)
         return dispatch(call).value
 
-    def _char_at(self, index: int) -> str:
+    def _char_at(self, index: int)  str:
         call = IntrinsicCall(
             symbol="__string_char_at",
             args=(self.source, index),
@@ -164,7 +164,7 @@ class HostedLexer:
         self.trace.append(call)
         return dispatch(call).value
 
-    def _slice(self, start: int, end: int) -> str:
+    def _slice(self, start: int, end: int)  str:
         call = IntrinsicCall(
             symbol="__string_slice",
             args=(self.source, start, end),
@@ -197,7 +197,7 @@ class HostedParser(Parser):
             return VariantPattern(path=path)
         return NamePattern(name=path)
 
-    def _parse_use_path(self) -> str:
+    def _parse_use_path(self)  str:
         parts = [self._expect_ident()]
         while self._eat_symbol("."):
             if self._eat_symbol("{"):
@@ -215,7 +215,7 @@ class HostedParser(Parser):
             parts.append(self._expect_ident())
         return self._join_strings(parts, ".")
 
-    def _parse_path(self) -> str:
+    def _parse_path(self)  str:
         parts = [self._expect_ident()]
         while self._eat_symbol("."):
             parts.append(self._expect_ident())
@@ -236,7 +236,7 @@ class HostedParser(Parser):
             return self._advance()
         raise self._make_error(self._concat("expected symbol ", value), token.line, token.column)
 
-    def _expect_ident(self) -> str:
+    def _expect_ident(self)  str:
         token = self._peek()
         if token.kind == TokenKind.IDENT:
             self._advance()
@@ -246,7 +246,7 @@ class HostedParser(Parser):
             return token.value
         raise self._make_error("expected identifier", token.line, token.column)
 
-    def _path_contains_dot(self, path: str) -> bool:
+    def _path_contains_dot(self, path: str)  bool:
         i = 0
         while i < self._len(path):
             if self._char_at(path, i) == ".":
@@ -254,13 +254,13 @@ class HostedParser(Parser):
             i += 1
         return False
 
-    def _starts_with_upper(self, text: str) -> bool:
+    def _starts_with_upper(self, text: str)  bool:
         if text == "":
             return False
         ch = self._char_at(text, 0)
         return "A" <= ch <= "Z"
 
-    def _parse_type_text(self, stop_values: set[str]) -> str:
+    def _parse_type_text(self, stop_values: set[str])  str:
         parts: list[str] = []
         bracket = 0
         paren = 0
@@ -285,7 +285,7 @@ class HostedParser(Parser):
 
         return self._normalize_type_text(self._join_strings(parts, " "))
 
-    def _parse_bracket_group(self) -> str:
+    def _parse_bracket_group(self)  str:
         parts = [self._advance().value]
         depth = 1
         while depth > 0:
@@ -301,7 +301,7 @@ class HostedParser(Parser):
         text = self._replace(text, " ,", ",")
         return text
 
-    def _normalize_type_text(self, text: str) -> str:
+    def _normalize_type_text(self, text: str)  str:
         text = self._replace(text, " . ", ".")
         text = self._replace(text, "[ ", "[")
         text = self._replace(text, " ]", "]")
@@ -313,7 +313,7 @@ class HostedParser(Parser):
         text = self._replace(text, " [", "[")
         return text
 
-    def _join_strings(self, values: list[str], sep: str) -> str:
+    def _join_strings(self, values: list[str], sep: str)  str:
         out = ""
         first = True
         for value in values:
@@ -323,12 +323,12 @@ class HostedParser(Parser):
             first = False
         return out
 
-    def _len(self, value: object) -> int:
+    def _len(self, value: object)  int:
         call = IntrinsicCall(symbol="__runtime_len", args=(value,), source="HostedParser")
         self.trace.append(call)
         return dispatch(call).value
 
-    def _char_at(self, text: str, index: int) -> str:
+    def _char_at(self, text: str, index: int)  str:
         call = IntrinsicCall(
             symbol="__string_char_at",
             args=(text, index),
@@ -337,7 +337,7 @@ class HostedParser(Parser):
         self.trace.append(call)
         return dispatch(call).value
 
-    def _concat(self, left: str, right: str) -> str:
+    def _concat(self, left: str, right: str)  str:
         call = IntrinsicCall(
             symbol="__string_concat",
             args=(left, right),
@@ -346,7 +346,7 @@ class HostedParser(Parser):
         self.trace.append(call)
         return dispatch(call).value
 
-    def _replace(self, text: str, old: str, new: str) -> str:
+    def _replace(self, text: str, old: str, new: str)  str:
         call = IntrinsicCall(
             symbol="__string_replace",
             args=(text, old, new),
@@ -362,10 +362,10 @@ class HostedParser(Parser):
     def _make_error(self, message: str, line: int, column: int):
         return ParseError(f"{message} at {line}:{column}")
 
-    def _peek(self, offset: int = 0) -> Token:
+    def _peek(self, offset: int = 0)  Token:
         return super()._peek(offset)
 
-    def _advance(self) -> Token:
+    def _advance(self)  Token:
         return super()._advance()
 
 
@@ -389,7 +389,7 @@ class ExecutionResult:
     plan: ExecutionPlan
 
 
-def run_lex_dump(path: Path) -> ExecutionResult:
+def run_lex_dump(path: Path)  ExecutionResult:
     plan = ExecutionPlan(name="lex_dump", path=path)
     source = _host_read_to_string(path, plan)
     lexer = HostedLexer(source)
@@ -402,7 +402,7 @@ def run_lex_dump(path: Path) -> ExecutionResult:
     return ExecutionResult(output=output, plan=plan)
 
 
-def run_ast_dump(path: Path) -> ExecutionResult:
+def run_ast_dump(path: Path)  ExecutionResult:
     plan = ExecutionPlan(name="ast_dump", path=path)
     source = _host_read_to_string(path, plan)
     lexer = HostedLexer(source)
@@ -419,7 +419,7 @@ def run_ast_dump(path: Path) -> ExecutionResult:
     return ExecutionResult(output=output, plan=plan)
 
 
-def _host_read_to_string(path: Path, plan: ExecutionPlan) -> str:
+def _host_read_to_string(path: Path, plan: ExecutionPlan)  str:
     call = IntrinsicCall(
         symbol="__host_read_to_string",
         args=(str(path),),
@@ -430,7 +430,7 @@ def _host_read_to_string(path: Path, plan: ExecutionPlan) -> str:
     return dispatch(call).value
 
 
-def _host_println(text: str, plan: ExecutionPlan, source: str) -> str:
+def _host_println(text: str, plan: ExecutionPlan, source: str)  str:
     call = IntrinsicCall(
         symbol="__host_println",
         args=(text,),

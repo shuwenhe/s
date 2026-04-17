@@ -25,25 +25,25 @@ func LookupBuiltinType(string name) bool {
         || base == "Toolchain"
 }
 
-func LookupBuiltinFieldType(string type_name, string field_name) string {
-    var base = BaseTypeName(type_name)
+func LookupBuiltinFieldType(string typeName, string fieldName) string {
+    var base = BaseTypeName(typeName)
     if base == "FileInfo" {
-        if field_name == "size" || field_name == "hidden" {
+        if fieldName == "size" || fieldName == "hidden" {
             return "int32"
         }
     }
     if base == "Target" {
-        if field_name == "os" || field_name == "arch" {
+        if fieldName == "os" || fieldName == "arch" {
             return "string"
         }
     }
     ""
 }
 
-func LookupBuiltinIndexType(string type_name) string {
-    var base = BaseTypeName(type_name)
+func LookupBuiltinIndexType(string typeName) string {
+    var base = BaseTypeName(typeName)
     if base == "Vec" || base == "Array" {
-        return "first_type_arg"
+        return "firstTypeArg"
     }
     if base == "string" {
         return "u8"
@@ -51,12 +51,12 @@ func LookupBuiltinIndexType(string type_name) string {
     ""
 }
 
-func LookupBuiltinMethodType(string type_name, string member) string {
-    var base = BaseTypeName(type_name)
+func LookupBuiltinMethodType(string typeName, string member) string {
+    var base = BaseTypeName(typeName)
     if base == "string" && member == "len" {
         return "int32"
     }
-    if base == "string" && member == "is_empty" {
+    if base == "string" && member == "isEmpty" {
         return "bool"
     }
     if base == "Vec" && member == "len" {
@@ -74,22 +74,22 @@ func LookupBuiltinMethodType(string type_name, string member) string {
     if base == "Vec" && member == "set" {
         return "bool"
     }
-    if base == "Result" && member == "is_ok" {
+    if base == "Result" && member == "isOk" {
         return "bool"
     }
-    if base == "Result" && member == "is_err" {
+    if base == "Result" && member == "isErr" {
         return "bool"
     }
     if base == "Result" && member == "unwrap" {
         return "T"
     }
-    if base == "Result" && member == "unwrap_err" {
+    if base == "Result" && member == "unwrapErr" {
         return "E"
     }
-    if base == "Option" && member == "is_some" {
+    if base == "Option" && member == "isSome" {
         return "bool"
     }
-    if base == "Option" && member == "is_none" {
+    if base == "Option" && member == "isNone" {
         return "bool"
     }
     if base == "Option" && member == "unwrap" {
@@ -101,8 +101,8 @@ func LookupBuiltinMethodType(string type_name, string member) string {
     ""
 }
 
-func LookupBuiltinMethodArity(string type_name, string member) int32 {
-    var base = BaseTypeName(type_name)
+func LookupBuiltinMethodArity(string typeName, string member) int32 {
+    var base = BaseTypeName(typeName)
     if base == "Vec" && member == "push" {
         return 1
     }
@@ -112,10 +112,10 @@ func LookupBuiltinMethodArity(string type_name, string member) int32 {
     if base == "Vec" && (member == "pop" || member == "clear" || member == "len") {
         return 0
     }
-    if base == "Result" && (member == "unwrap" || member == "unwrap_err" || member == "is_ok" || member == "is_err") {
+    if base == "Result" && (member == "unwrap" || member == "unwrapErr" || member == "isOk" || member == "isErr") {
         return 0
     }
-    if base == "Option" && (member == "unwrap" || member == "is_some" || member == "is_none") {
+    if base == "Option" && (member == "unwrap" || member == "isSome" || member == "isNone") {
         return 0
     }
     if base == "Box" && member == "unwrap" {
@@ -124,7 +124,7 @@ func LookupBuiltinMethodArity(string type_name, string member) int32 {
     if (base == "string" || base == "Vec") && member == "len" {
         return 0
     }
-    if base == "string" && member == "is_empty" {
+    if base == "string" && member == "isEmpty" {
         return 0
     }
     0 - 1

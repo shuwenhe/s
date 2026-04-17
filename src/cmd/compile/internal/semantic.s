@@ -13,33 +13,33 @@ use s.ImplDecl
 use s.Item
 use s.Pattern
 use s.Stmt
-use s.parse_source
+use s.parseSource
 use std.option.Option
-use std.prelude.char_at
+use std.prelude.charAt
 use std.prelude.len
 use std.prelude.slice
 use std.vec.Vec
 
 struct TypeBinding {
     string name,
-    string type_name,
+    string typeName,
 }
 
 struct FunctionBinding {
     string name,
-    Vec[string] generic_names,
-    Vec[string] param_types,
-    string return_type,
+    Vec[string] genericNames,
+    Vec[string] paramTypes,
+    string returnType,
 }
 
 struct SignatureMatch {
     bool ok,
-    string return_type,
+    string returnType,
     int32 score,
 }
 
 struct CheckResult {
-    string type_name,
+    string typeName,
     int32 errors,
 }
 
@@ -71,30 +71,30 @@ func CheckText(string source) int32 {
 func CheckDetailed(string source) Vec[SemanticError] {
     var diagnostics = Vec[SemanticError]()
 
-    var parsed = parse_source(source)
-    if parsed.is_err() {
-        add_error(source, diagnostics, "E0001", "parse failed", "package")
+    var parsed = parseSource(source)
+    if parsed.isErr() {
+        addError(source, diagnostics, "E0001", "parse failed", "package")
         return diagnostics
     }
 
     var file = parsed.unwrap()
-    var functions = collect_functions(file.items)
+    var functions = collectFunctions(file.items)
 
     var i = 0
     while i < file.items.len() {
-        var ignored = check_item(file.items[i], functions, source, diagnostics)
+        var ignored = checkItem(file.items[i], functions, source, diagnostics)
         i = i + 1
     }
 
     diagnostics
 }
 
-func collect_functions(Vec[Item] items) Vec[FunctionBinding] {
+func collectFunctions(Vec[Item] items) Vec[FunctionBinding] {
     var out = Vec[FunctionBinding]()
     var i = 0
     while i < items.len() {
         match items[i] {
-            Item::Function(function_decl) => out.push(make_function_binding(function_decl)),
+            Item::Function(functionDecl) => out.push(makeFunctionBinding(functionDecl)),
             _ => (),
         }
         i = i + 1
@@ -102,306 +102,306 @@ func collect_functions(Vec[Item] items) Vec[FunctionBinding] {
     out
 }
 
-func make_function_binding(FunctionDecl function_decl) FunctionBinding {
-    var generic_names = Vec[string]()
+func makeFunctionBinding(FunctionDecl functionDecl) FunctionBinding {
+    var genericNames = Vec[string]()
     var i = 0
-    while i < function_decl.sig.generics.len() {
-        generic_names.push(generic_name(function_decl.sig.generics[i]))
+    while i < functionDecl.sig.generics.len() {
+        genericNames.push(genericName(functionDecl.sig.generics[i]))
         i = i + 1
     }
 
     var params = Vec[string]()
     i = 0
-    while i < function_decl.sig.params.len() {
-        params.push(ParseType(function_decl.sig.params[i].type_name))
+    while i < functionDecl.sig.params.len() {
+        params.push(ParseType(functionDecl.sig.params[i].typeName))
         i = i + 1
     }
 
-    var return_type =
-        match function_decl.sig.return_type {
-            Option::Some(type_name) => ParseType(type_name),
+    var returnType =
+        match functionDecl.sig.returnType {
+            Option::Some(typeName) => ParseType(typeName),
             Option::None => "()",
         }
 
     FunctionBinding {
-        name: function_decl.sig.name,
-        generic_names: generic_names,
-        param_types: params,
-        return_type: return_type,
+        name: functionDecl.sig.name,
+        genericNames: genericNames,
+        paramTypes: params,
+        returnType: returnType,
     }
 }
 
-func check_item(Item item, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
+func checkItem(Item item, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
     match item {
-        Item::Function(function_decl) => check_function(function_decl, functions, source, diagnostics),
-        Item::Impl(impl_decl) => check_impl(impl_decl, functions, source, diagnostics),
+        Item::Function(functionDecl) => checkFunction(functionDecl, functions, source, diagnostics),
+        Item::Impl(implDecl) => checkImpl(implDecl, functions, source, diagnostics),
         _ => 0,
     }
 }
 
-func check_impl(ImplDecl impl_decl, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
+func checkImpl(ImplDecl implDecl, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
     var errors = 0
     var i = 0
-    while i < impl_decl.methods.len() {
-        errors = errors + check_function(impl_decl.methods[i], functions, source, diagnostics)
+    while i < implDecl.methods.len() {
+        errors = errors + checkFunction(implDecl.methods[i], functions, source, diagnostics)
         i = i + 1
     }
     errors
 }
 
-func check_function(FunctionDecl function_decl, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
-    if function_decl.body.is_none() {
+func checkFunction(FunctionDecl functionDecl, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
+    if functionDecl.body.isNone() {
         return 0
     }
 
-    var expected_return =
-        match function_decl.sig.return_type {
-            Option::Some(type_name) => ParseType(type_name),
+    var expectedReturn =
+        match functionDecl.sig.returnType {
+            Option::Some(typeName) => ParseType(typeName),
             Option::None => "()",
         }
 
     var env = Vec[TypeBinding]()
     var i = 0
-    while i < function_decl.sig.params.len() {
-        var param = function_decl.sig.params[i]
+    while i < functionDecl.sig.params.len() {
+        var param = functionDecl.sig.params[i]
         env.push(TypeBinding {
             name: param.name,
-            type_name: ParseType(param.type_name),
+            typeName: ParseType(param.typeName),
         })
         i = i + 1
     }
 
-    var result = infer_block_expr(function_decl.body.unwrap(), env, expected_return, functions, source, diagnostics)
-    if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
-        if !SameType(expected_return, result.type_name) {
-            return result.errors + add_error(source, diagnostics, "E3004", "function return type mismatch", function_decl.sig.name)
+    var result = inferBlockExpr(functionDecl.body.unwrap(), env, expectedReturn, functions, source, diagnostics)
+    if expectedReturn != "()" && !isUnknown(expectedReturn) && !isUnknown(result.typeName) {
+        if !SameType(expectedReturn, result.typeName) {
+            return result.errors + addError(source, diagnostics, "E3004", "function return type mismatch", functionDecl.sig.name)
         }
     }
     result.errors
 }
 
-func infer_block_expr(BlockExpr block, Vec[TypeBinding] outer_env, string expected_return, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) CheckResult {
-    var local_env = clone_env(outer_env)
+func inferBlockExpr(BlockExpr block, Vec[TypeBinding] outerEnv, string expectedReturn, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) CheckResult {
+    var localEnv = cloneEnv(outerEnv)
     var errors = 0
 
     var i = 0
     while i < block.statements.len() {
-        errors = errors + check_stmt(block.statements[i], local_env, expected_return, functions, source, diagnostics)
+        errors = errors + checkStmt(block.statements[i], localEnv, expectedReturn, functions, source, diagnostics)
         i = i + 1
     }
 
-    match block.final_expr {
-        Option::Some(final_expr) => {
-            var final_result = infer_expr(final_expr, local_env, expected_return, functions, source, diagnostics)
+    match block.finalExpr {
+        Option::Some(finalExpr) => {
+            var finalResult = inferExpr(finalExpr, localEnv, expectedReturn, functions, source, diagnostics)
             CheckResult {
-                type_name: final_result.type_name,
-                errors: errors + final_result.errors,
+                typeName: finalResult.typeName,
+                errors: errors + finalResult.errors,
             }
         }
         Option::None => CheckResult {
-            type_name: "()",
+            typeName: "()",
             errors: errors,
         },
     }
 }
 
-func check_stmt(Stmt stmt, Vec[TypeBinding] mut env, string expected_return, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
+func checkStmt(Stmt stmt, Vec[TypeBinding] mut env, string expectedReturn, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
     match stmt {
         Stmt::Var(value) => {
-            var rhs = infer_expr(value.value, env, expected_return, functions, source, diagnostics)
+            var rhs = inferExpr(value.value, env, expectedReturn, functions, source, diagnostics)
             var errors = rhs.errors
 
-            var binding_type = rhs.type_name
-            if value.type_name.is_some() {
-                var declared = ParseType(value.type_name.unwrap())
-                if !types_compatible(declared, rhs.type_name) {
-                    errors = errors + add_error(source, diagnostics, "E3001", "variable initializer type mismatch", value.name)
+            var bindingType = rhs.typeName
+            if value.typeName.isSome() {
+                var declared = ParseType(value.typeName.unwrap())
+                if !typesCompatible(declared, rhs.typeName) {
+                    errors = errors + addError(source, diagnostics, "E3001", "variable initializer type mismatch", value.name)
                 }
-                binding_type = declared
+                bindingType = declared
             }
 
             env.push(TypeBinding {
                 name: value.name,
-                type_name: binding_type,
+                typeName: bindingType,
             })
             errors
         }
         Stmt::Assign(value) => {
-            var target_type = lookup_name_type(env, value.name)
-            var rhs = infer_expr(value.value, env, expected_return, functions, source, diagnostics)
+            var targetType = lookupNameType(env, value.name)
+            var rhs = inferExpr(value.value, env, expectedReturn, functions, source, diagnostics)
             var errors = rhs.errors
-            if is_unknown(target_type) {
-                return errors + add_error(source, diagnostics, "E3002", "assignment to undefined name", value.name)
+            if isUnknown(targetType) {
+                return errors + addError(source, diagnostics, "E3002", "assignment to undefined name", value.name)
             }
-            if !types_compatible(target_type, rhs.type_name) {
-                return errors + add_error(source, diagnostics, "E3003", "assignment type mismatch", value.name)
+            if !typesCompatible(targetType, rhs.typeName) {
+                return errors + addError(source, diagnostics, "E3003", "assignment type mismatch", value.name)
             }
             errors
         }
         Stmt::Increment(value) => {
-            var ty = lookup_name_type(env, value.name)
-            if !types_compatible("int32", ty) {
-                return add_error(source, diagnostics, "E3005", "increment requires int32", value.name)
+            var ty = lookupNameType(env, value.name)
+            if !typesCompatible("int32", ty) {
+                return addError(source, diagnostics, "E3005", "increment requires int32", value.name)
             }
             0
         }
         Stmt::CFor(value) => {
             var errors = 0
-            errors = errors + check_stmt(value.init.value, env, expected_return, functions, source, diagnostics)
-            var cond = infer_expr(value.condition, env, expected_return, functions, source, diagnostics)
+            errors = errors + checkStmt(value.init.value, env, expectedReturn, functions, source, diagnostics)
+            var cond = inferExpr(value.condition, env, expectedReturn, functions, source, diagnostics)
             errors = errors + cond.errors
-            if !types_compatible("bool", cond.type_name) {
-                errors = errors + add_error(source, diagnostics, "E3006", "for condition must be bool", "for")
+            if !typesCompatible("bool", cond.typeName) {
+                errors = errors + addError(source, diagnostics, "E3006", "for condition must be bool", "for")
             }
-            errors = errors + check_stmt(value.step.value, env, expected_return, functions, source, diagnostics)
-            var body_result = infer_block_expr(value.body, env, expected_return, functions, source, diagnostics)
-            errors = errors + body_result.errors
+            errors = errors + checkStmt(value.step.value, env, expectedReturn, functions, source, diagnostics)
+            var bodyResult = inferBlockExpr(value.body, env, expectedReturn, functions, source, diagnostics)
+            errors = errors + bodyResult.errors
             errors
         }
         Stmt::Return(value) => {
             match value.value {
                 Option::Some(expr) => {
-                    var expr_result = infer_expr(expr, env, expected_return, functions, source, diagnostics)
-                    if expected_return == "()" {
-                        return expr_result.errors + add_error(source, diagnostics, "E3007", "unexpected return value", "return")
+                    var exprResult = inferExpr(expr, env, expectedReturn, functions, source, diagnostics)
+                    if expectedReturn == "()" {
+                        return exprResult.errors + addError(source, diagnostics, "E3007", "unexpected return value", "return")
                     }
-                    if !types_compatible(expected_return, expr_result.type_name) {
-                        return expr_result.errors + add_error(source, diagnostics, "E3008", "return type mismatch", "return")
+                    if !typesCompatible(expectedReturn, exprResult.typeName) {
+                        return exprResult.errors + addError(source, diagnostics, "E3008", "return type mismatch", "return")
                     }
-                    expr_result.errors
+                    exprResult.errors
                 }
                 Option::None => {
-                    if expected_return == "()" {
+                    if expectedReturn == "()" {
                         return 0
                     }
-                    add_error(source, diagnostics, "E3009", "missing return value", "return")
+                    addError(source, diagnostics, "E3009", "missing return value", "return")
                 }
             }
         }
         Stmt::Expr(value) => {
-            infer_expr(value.expr, env, expected_return, functions, source, diagnostics).errors
+            inferExpr(value.expr, env, expectedReturn, functions, source, diagnostics).errors
         }
         Stmt::Defer(value) => {
-            infer_expr(value.expr, env, expected_return, functions, source, diagnostics).errors
+            inferExpr(value.expr, env, expectedReturn, functions, source, diagnostics).errors
         }
     }
 }
 
-func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) CheckResult {
+func inferExpr(Expr expr, Vec[TypeBinding] env, string expectedReturn, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) CheckResult {
     match expr {
-        Expr::Int(_) => ok_type("int32"),
-        Expr::string(_) => ok_type("string"),
-        Expr::Bool(_) => ok_type("bool"),
+        Expr::Int(_) => okType("int32"),
+        Expr::string(_) => okType("string"),
+        Expr::Bool(_) => okType("bool"),
         Expr::Name(value) => {
-            var ty = lookup_name_type(env, value.name)
-            if is_unknown(ty) {
+            var ty = lookupNameType(env, value.name)
+            if isUnknown(ty) {
                 return CheckResult {
-                    type_name: "unknown",
-                    errors: add_error(source, diagnostics, "E3010", "undefined identifier", value.name),
+                    typeName: "unknown",
+                    errors: addError(source, diagnostics, "E3010", "undefined identifier", value.name),
                 }
             }
-            ok_type(ty)
+            okType(ty)
         }
         Expr::Borrow(value) => {
-            var base = infer_expr(value.target.value, env, expected_return, functions, source, diagnostics)
-            if is_unknown(base.type_name) {
+            var base = inferExpr(value.target.value, env, expectedReturn, functions, source, diagnostics)
+            if isUnknown(base.typeName) {
                 return base
             }
             var prefix = if value.mutable { "&mut " } else { "&" }
             CheckResult {
-                type_name: prefix + base.type_name,
+                typeName: prefix + base.typeName,
                 errors: base.errors,
             }
         }
         Expr::Binary(value) => {
-            var left = infer_expr(value.left.value, env, expected_return, functions, source, diagnostics)
-            var right = infer_expr(value.right.value, env, expected_return, functions, source, diagnostics)
-            infer_binary(value.op, left, right, source, diagnostics)
+            var left = inferExpr(value.left.value, env, expectedReturn, functions, source, diagnostics)
+            var right = inferExpr(value.right.value, env, expectedReturn, functions, source, diagnostics)
+            inferBinary(value.op, left, right, source, diagnostics)
         }
         Expr::Member(value) => {
-            var target = infer_expr(value.target.value, env, expected_return, functions, source, diagnostics)
-            var field_type = LookupBuiltinFieldType(target.type_name, value.member)
-            if field_type == "" {
+            var target = inferExpr(value.target.value, env, expectedReturn, functions, source, diagnostics)
+            var fieldType = LookupBuiltinFieldType(target.typeName, value.member)
+            if fieldType == "" {
                 return CheckResult {
-                    type_name: "unknown",
-                    errors: target.errors + add_error(source, diagnostics, "E3011", "unknown member", value.member),
+                    typeName: "unknown",
+                    errors: target.errors + addError(source, diagnostics, "E3011", "unknown member", value.member),
                 }
             }
             CheckResult {
-                type_name: ParseType(field_type),
+                typeName: ParseType(fieldType),
                 errors: target.errors,
             }
         }
         Expr::Index(value) => {
-            var target = infer_expr(value.target.value, env, expected_return, functions, source, diagnostics)
-            var index = infer_expr(value.index.value, env, expected_return, functions, source, diagnostics)
+            var target = inferExpr(value.target.value, env, expectedReturn, functions, source, diagnostics)
+            var index = inferExpr(value.index.value, env, expectedReturn, functions, source, diagnostics)
             var errors = target.errors + index.errors
-            if !types_compatible("int32", index.type_name) {
-                errors = errors + add_error(source, diagnostics, "E3012", "index must be int32", "[")
+            if !typesCompatible("int32", index.typeName) {
+                errors = errors + addError(source, diagnostics, "E3012", "index must be int32", "[")
             }
-            if starts_with(target.type_name, "[]") {
+            if startsWith(target.typeName, "[]") {
                 return CheckResult {
-                    type_name: ParseType(slice(target.type_name, 2, len(target.type_name))),
+                    typeName: ParseType(slice(target.typeName, 2, len(target.typeName))),
                     errors: errors,
                 }
             }
-            if starts_with(target.type_name, "string") {
+            if startsWith(target.typeName, "string") {
                 return CheckResult {
-                    type_name: "u8",
+                    typeName: "u8",
                     errors: errors,
                 }
             }
             CheckResult {
-                type_name: "unknown",
-                errors: errors + add_error(source, diagnostics, "E3013", "index target is not indexable", "["),
+                typeName: "unknown",
+                errors: errors + addError(source, diagnostics, "E3013", "index target is not indexable", "["),
             }
         }
         Expr::Call(value) => {
             var errors = 0
-            var arg_types = Vec[string]()
+            var argTypes = Vec[string]()
             var i = 0
             while i < value.args.len() {
-                var arg_result = infer_expr(value.args[i], env, expected_return, functions, source, diagnostics)
-                errors = errors + arg_result.errors
-                arg_types.push(arg_result.type_name)
+                var argResult = inferExpr(value.args[i], env, expectedReturn, functions, source, diagnostics)
+                errors = errors + argResult.errors
+                argTypes.push(argResult.typeName)
                 i = i + 1
             }
 
             match value.callee.value {
                 Expr::Member(member) => {
-                    var target = infer_expr(member.target.value, env, expected_return, functions, source, diagnostics)
+                    var target = inferExpr(member.target.value, env, expectedReturn, functions, source, diagnostics)
                     errors = errors + target.errors
 
-                    var arity = LookupBuiltinMethodArity(target.type_name, member.member)
+                    var arity = LookupBuiltinMethodArity(target.typeName, member.member)
                     if arity >= 0 && arity != value.args.len() {
-                        errors = errors + add_error(source, diagnostics, "E1005", "builtin method arity mismatch", member.member)
+                        errors = errors + addError(source, diagnostics, "E1005", "builtin method arity mismatch", member.member)
                     }
 
-                    var method_type = LookupBuiltinMethodType(target.type_name, member.member)
-                    if method_type == "" {
+                    var methodType = LookupBuiltinMethodType(target.typeName, member.member)
+                    if methodType == "" {
                         return CheckResult {
-                            type_name: "unknown",
-                            errors: errors + add_error(source, diagnostics, "E1006", "unknown builtin method", member.member),
+                            typeName: "unknown",
+                            errors: errors + addError(source, diagnostics, "E1006", "unknown builtin method", member.member),
                         }
                     }
                     CheckResult {
-                        type_name: resolve_method_return(target.type_name, method_type),
+                        typeName: resolveMethodReturn(target.typeName, methodType),
                         errors: errors,
                     }
                 }
-                Expr::Name(callee_name) => {
-                    var candidates = lookup_functions(functions, callee_name.name)
+                Expr::Name(calleeName) => {
+                    var candidates = lookupFunctions(functions, calleeName.name)
                     if candidates.len() == 0 {
                         return CheckResult {
-                            type_name: "unknown",
-                            errors: errors + add_error(source, diagnostics, "E1001", "undefined function", callee_name.name),
+                            typeName: "unknown",
+                            errors: errors + addError(source, diagnostics, "E1001", "undefined function", calleeName.name),
                         }
                     }
 
                     var matches = Vec[SignatureMatch]()
                     var j = 0
                     while j < candidates.len() {
-                        var m = try_match_signature(candidates[j], arg_types)
+                        var m = tryMatchSignature(candidates[j], argTypes)
                         if m.ok {
                             matches.push(m)
                         }
@@ -410,8 +410,8 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
 
                     if matches.len() == 0 {
                         return CheckResult {
-                            type_name: "unknown",
-                            errors: errors + add_error(source, diagnostics, "E1002", "no matching overload", callee_name.name),
+                            typeName: "unknown",
+                            errors: errors + addError(source, diagnostics, "E1002", "no matching overload", calleeName.name),
                         }
                     }
 
@@ -430,136 +430,136 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
 
                     if ambiguous {
                         return CheckResult {
-                            type_name: "unknown",
-                            errors: errors + add_error(source, diagnostics, "E1003", "ambiguous overload", callee_name.name),
+                            typeName: "unknown",
+                            errors: errors + addError(source, diagnostics, "E1003", "ambiguous overload", calleeName.name),
                         }
                     }
 
                     CheckResult {
-                        type_name: best.return_type,
+                        typeName: best.returnType,
                         errors: errors,
                     }
                 }
                 _ => {
-                    var callee = infer_expr(value.callee.value, env, expected_return, functions, source, diagnostics)
+                    var callee = inferExpr(value.callee.value, env, expectedReturn, functions, source, diagnostics)
                     CheckResult {
-                        type_name: "unknown",
+                        typeName: "unknown",
                         errors: errors + callee.errors,
                     }
                 }
             }
         }
         Expr::Match(value) => {
-            var subject = infer_expr(value.subject.value, env, expected_return, functions, source, diagnostics)
+            var subject = inferExpr(value.subject.value, env, expectedReturn, functions, source, diagnostics)
             var errors = subject.errors
-            var arm_type = "unknown"
-            var seen_patterns = Vec[Pattern]()
+            var armType = "unknown"
+            var seenPatterns = Vec[Pattern]()
 
             var i = 0
             while i < value.arms.len() {
                 var arm = value.arms[i]
-                if pattern_unreachable(seen_patterns, arm.pattern, subject.type_name) {
-                    errors = errors + add_error(source, diagnostics, "E2003", "unreachable match arm", pattern_anchor(arm.pattern))
+                if patternUnreachable(seenPatterns, arm.pattern, subject.typeName) {
+                    errors = errors + addError(source, diagnostics, "E2003", "unreachable match arm", patternAnchor(arm.pattern))
                 }
 
-                if pattern_duplicate(seen_patterns, arm.pattern, subject.type_name) {
-                    errors = errors + add_error(source, diagnostics, "E2002", "duplicate match arm", pattern_anchor(arm.pattern))
+                if patternDuplicate(seenPatterns, arm.pattern, subject.typeName) {
+                    errors = errors + addError(source, diagnostics, "E2002", "duplicate match arm", patternAnchor(arm.pattern))
                 }
 
-                var pattern_result = check_pattern(arm.pattern, subject.type_name, source, diagnostics)
-                errors = errors + pattern_result.errors
+                var patternResult = checkPattern(arm.pattern, subject.typeName, source, diagnostics)
+                errors = errors + patternResult.errors
 
-                var arm_env = clone_env(env)
-                append_bindings(arm_env, pattern_result.bindings)
+                var armEnv = cloneEnv(env)
+                appendBindings(armEnv, patternResult.bindings)
 
-                var arm_result = infer_expr(arm.expr, arm_env, expected_return, functions, source, diagnostics)
-                errors = errors + arm_result.errors
-                if is_unknown(arm_type) {
-                    arm_type = arm_result.type_name
-                } else if !types_compatible(arm_type, arm_result.type_name) {
-                    errors = errors + add_error(source, diagnostics, "E2005", "match arm result type mismatch", "match")
+                var armResult = inferExpr(arm.expr, armEnv, expectedReturn, functions, source, diagnostics)
+                errors = errors + armResult.errors
+                if isUnknown(armType) {
+                    armType = armResult.typeName
+                } else if !typesCompatible(armType, armResult.typeName) {
+                    errors = errors + addError(source, diagnostics, "E2005", "match arm result type mismatch", "match")
                 }
 
-                seen_patterns.push(arm.pattern)
+                seenPatterns.push(arm.pattern)
                 i = i + 1
             }
 
-            var base = BaseTypeName(subject.type_name)
-            if (base == "Option" || base == "Result") && !patterns_cover_type(seen_patterns, subject.type_name) {
-                errors = errors + add_error(source, diagnostics, "E2001", "non-exhaustive match", "match")
+            var base = BaseTypeName(subject.typeName)
+            if (base == "Option" || base == "Result") && !patternsCoverType(seenPatterns, subject.typeName) {
+                errors = errors + addError(source, diagnostics, "E2001", "non-exhaustive match", "match")
             }
 
             CheckResult {
-                type_name: arm_type,
+                typeName: armType,
                 errors: errors,
             }
         }
         Expr::If(value) => {
-            var cond = infer_expr(value.condition.value, env, expected_return, functions, source, diagnostics)
-            var then_result = infer_block_expr(value.then_branch, env, expected_return, functions, source, diagnostics)
-            var errors = cond.errors + then_result.errors
-            if !types_compatible("bool", cond.type_name) {
-                errors = errors + add_error(source, diagnostics, "E3014", "if condition must be bool", "if")
+            var cond = inferExpr(value.condition.value, env, expectedReturn, functions, source, diagnostics)
+            var thenResult = inferBlockExpr(value.thenBranch, env, expectedReturn, functions, source, diagnostics)
+            var errors = cond.errors + thenResult.errors
+            if !typesCompatible("bool", cond.typeName) {
+                errors = errors + addError(source, diagnostics, "E3014", "if condition must be bool", "if")
             }
-            match value.else_branch {
-                Option::Some(else_expr) => {
-                    var else_result = infer_expr(else_expr.value, env, expected_return, functions, source, diagnostics)
-                    errors = errors + else_result.errors
-                    if !types_compatible(then_result.type_name, else_result.type_name) {
-                        errors = errors + add_error(source, diagnostics, "E3015", "if/else type mismatch", "if")
+            match value.elseBranch {
+                Option::Some(elseExpr) => {
+                    var elseResult = inferExpr(elseExpr.value, env, expectedReturn, functions, source, diagnostics)
+                    errors = errors + elseResult.errors
+                    if !typesCompatible(thenResult.typeName, elseResult.typeName) {
+                        errors = errors + addError(source, diagnostics, "E3015", "if/else type mismatch", "if")
                     }
                     CheckResult {
-                        type_name: then_result.type_name,
+                        typeName: thenResult.typeName,
                         errors: errors,
                     }
                 }
                 Option::None => CheckResult {
-                    type_name: "()",
+                    typeName: "()",
                     errors: errors,
                 },
             }
         }
         Expr::While(value) => {
-            var cond = infer_expr(value.condition.value, env, expected_return, functions, source, diagnostics)
-            var body_result = infer_block_expr(value.body, env, expected_return, functions, source, diagnostics)
-            var errors = cond.errors + body_result.errors
-            if !types_compatible("bool", cond.type_name) {
-                errors = errors + add_error(source, diagnostics, "E3016", "while condition must be bool", "while")
+            var cond = inferExpr(value.condition.value, env, expectedReturn, functions, source, diagnostics)
+            var bodyResult = inferBlockExpr(value.body, env, expectedReturn, functions, source, diagnostics)
+            var errors = cond.errors + bodyResult.errors
+            if !typesCompatible("bool", cond.typeName) {
+                errors = errors + addError(source, diagnostics, "E3016", "while condition must be bool", "while")
             }
             CheckResult {
-                type_name: "()",
+                typeName: "()",
                 errors: errors,
             }
         }
         Expr::For(value) => {
-            var iter = infer_expr(value.iterable.value, env, expected_return, functions, source, diagnostics)
-            var body_result = infer_block_expr(value.body, env, expected_return, functions, source, diagnostics)
+            var iter = inferExpr(value.iterable.value, env, expectedReturn, functions, source, diagnostics)
+            var bodyResult = inferBlockExpr(value.body, env, expectedReturn, functions, source, diagnostics)
             CheckResult {
-                type_name: "()",
-                errors: iter.errors + body_result.errors,
+                typeName: "()",
+                errors: iter.errors + bodyResult.errors,
             }
         }
         Expr::Block(value) => {
-            infer_block_expr(value, env, expected_return, functions, source, diagnostics)
+            inferBlockExpr(value, env, expectedReturn, functions, source, diagnostics)
         }
         Expr::Array(value) => {
             if value.items.len() == 0 {
-                return ok_type("[]unknown")
+                return okType("[]unknown")
             }
 
-            var first = infer_expr(value.items[0], env, expected_return, functions, source, diagnostics)
+            var first = inferExpr(value.items[0], env, expectedReturn, functions, source, diagnostics)
             var errors = first.errors
             var i = 1
             while i < value.items.len() {
-                var item = infer_expr(value.items[i], env, expected_return, functions, source, diagnostics)
+                var item = inferExpr(value.items[i], env, expectedReturn, functions, source, diagnostics)
                 errors = errors + item.errors
-                if !types_compatible(first.type_name, item.type_name) {
-                    errors = errors + add_error(source, diagnostics, "E3017", "array item type mismatch", "[")
+                if !typesCompatible(first.typeName, item.typeName) {
+                    errors = errors + addError(source, diagnostics, "E3017", "array item type mismatch", "[")
                 }
                 i = i + 1
             }
             CheckResult {
-                type_name: "[]" + first.type_name,
+                typeName: "[]" + first.typeName,
                 errors: errors,
             }
         }
@@ -567,76 +567,76 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
             var errors = 0
             var i = 0
             while i < value.entries.len() {
-                errors = errors + infer_expr(value.entries[i].key, env, expected_return, functions, source, diagnostics).errors
-                errors = errors + infer_expr(value.entries[i].value, env, expected_return, functions, source, diagnostics).errors
+                errors = errors + inferExpr(value.entries[i].key, env, expectedReturn, functions, source, diagnostics).errors
+                errors = errors + inferExpr(value.entries[i].value, env, expectedReturn, functions, source, diagnostics).errors
                 i = i + 1
             }
             CheckResult {
-                type_name: "map",
+                typeName: "map",
                 errors: errors,
             }
         }
     }
 }
 
-func check_pattern(Pattern pattern, string expected_type, string source, Vec[SemanticError] mut diagnostics) PatternCheckResult {
+func checkPattern(Pattern pattern, string expectedType, string source, Vec[SemanticError] mut diagnostics) PatternCheckResult {
     var bindings = Vec[TypeBinding]()
-    var errors = bind_pattern(pattern, expected_type, bindings, source, diagnostics)
+    var errors = bindPattern(pattern, expectedType, bindings, source, diagnostics)
     PatternCheckResult {
         bindings: bindings,
         errors: errors,
     }
 }
 
-func bind_pattern(Pattern pattern, string expected_type, Vec[TypeBinding] mut bindings, string source, Vec[SemanticError] mut diagnostics) int32 {
-    if is_unknown(expected_type) {
-        return add_error(source, diagnostics, "E2007", "pattern expected type is unknown", pattern_anchor(pattern))
+func bindPattern(Pattern pattern, string expectedType, Vec[TypeBinding] mut bindings, string source, Vec[SemanticError] mut diagnostics) int32 {
+    if isUnknown(expectedType) {
+        return addError(source, diagnostics, "E2007", "pattern expected type is unknown", patternAnchor(pattern))
     }
 
     match pattern {
         Pattern::Name(value) => {
-            add_binding(bindings, value.name, expected_type, source, diagnostics)
+            addBinding(bindings, value.name, expectedType, source, diagnostics)
         }
         Pattern::Wildcard(_) => 0,
         Pattern::Variant(value) => {
-            var variant = last_path_segment(value.path)
-            var base = BaseTypeName(expected_type)
+            var variant = lastPathSegment(value.path)
+            var base = BaseTypeName(expectedType)
             if base == "Option" {
                 if variant == "Some" {
                     if value.args.len() != 1 {
-                        return add_error(source, diagnostics, "E2004", "Some payload arity mismatch", value.path)
+                        return addError(source, diagnostics, "E2004", "Some payload arity mismatch", value.path)
                     }
-                    return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics)
+                    return bindPattern(value.args[0], firstTypeArg(expectedType), bindings, source, diagnostics)
                 }
                 if variant == "None" {
                     if value.args.len() == 0 {
                         return 0
                     }
-                    return add_error(source, diagnostics, "E2004", "None must not have payload", value.path)
+                    return addError(source, diagnostics, "E2004", "None must not have payload", value.path)
                 }
-                return add_error(source, diagnostics, "E2006", "invalid Option constructor", value.path)
+                return addError(source, diagnostics, "E2006", "invalid Option constructor", value.path)
             }
             if base == "Result" {
                 if variant == "Ok" {
                     if value.args.len() != 1 {
-                        return add_error(source, diagnostics, "E2004", "Ok payload arity mismatch", value.path)
+                        return addError(source, diagnostics, "E2004", "Ok payload arity mismatch", value.path)
                     }
-                    return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics)
+                    return bindPattern(value.args[0], firstTypeArg(expectedType), bindings, source, diagnostics)
                 }
                 if variant == "Err" {
                     if value.args.len() != 1 {
-                        return add_error(source, diagnostics, "E2004", "Err payload arity mismatch", value.path)
+                        return addError(source, diagnostics, "E2004", "Err payload arity mismatch", value.path)
                     }
-                    return bind_pattern(value.args[0], second_type_arg(expected_type), bindings, source, diagnostics)
+                    return bindPattern(value.args[0], secondTypeArg(expectedType), bindings, source, diagnostics)
                 }
-                return add_error(source, diagnostics, "E2006", "invalid Result constructor", value.path)
+                return addError(source, diagnostics, "E2006", "invalid Result constructor", value.path)
             }
-            add_error(source, diagnostics, "E2006", "variant pattern not allowed for this type", value.path)
+            addError(source, diagnostics, "E2006", "variant pattern not allowed for this type", value.path)
         }
     }
 }
 
-func add_binding(Vec[TypeBinding] mut bindings, string name, string type_name, string source, Vec[SemanticError] mut diagnostics) int32 {
+func addBinding(Vec[TypeBinding] mut bindings, string name, string typeName, string source, Vec[SemanticError] mut diagnostics) int32 {
     if name == "_" {
         return 0
     }
@@ -644,8 +644,8 @@ func add_binding(Vec[TypeBinding] mut bindings, string name, string type_name, s
     var i = 0
     while i < bindings.len() {
         if bindings[i].name == name {
-            if !types_compatible(bindings[i].type_name, type_name) {
-                return add_error(source, diagnostics, "E2008", "conflicting binding type in pattern", name)
+            if !typesCompatible(bindings[i].typeName, typeName) {
+                return addError(source, diagnostics, "E2008", "conflicting binding type in pattern", name)
             }
             return 0
         }
@@ -654,12 +654,12 @@ func add_binding(Vec[TypeBinding] mut bindings, string name, string type_name, s
 
     bindings.push(TypeBinding {
         name: name,
-        type_name: ParseType(type_name),
+        typeName: ParseType(typeName),
     })
     0
 }
 
-func append_bindings(Vec[TypeBinding] mut target, Vec[TypeBinding] source) () {
+func appendBindings(Vec[TypeBinding] mut target, Vec[TypeBinding] source) () {
     var i = 0
     while i < source.len() {
         target.push(source[i])
@@ -667,10 +667,10 @@ func append_bindings(Vec[TypeBinding] mut target, Vec[TypeBinding] source) () {
     }
 }
 
-func pattern_duplicate(Vec[Pattern] seen, Pattern current, string expected_type) bool {
+func patternDuplicate(Vec[Pattern] seen, Pattern current, string expectedType) bool {
     var i = 0
     while i < seen.len() {
-        if pattern_equivalent(seen[i], current, expected_type) {
+        if patternEquivalent(seen[i], current, expectedType) {
             return true
         }
         i = i + 1
@@ -678,10 +678,10 @@ func pattern_duplicate(Vec[Pattern] seen, Pattern current, string expected_type)
     false
 }
 
-func pattern_unreachable(Vec[Pattern] seen, Pattern current, string expected_type) bool {
+func patternUnreachable(Vec[Pattern] seen, Pattern current, string expectedType) bool {
     var i = 0
     while i < seen.len() {
-        if pattern_subsumes(seen[i], current, expected_type) {
+        if patternSubsumes(seen[i], current, expectedType) {
             return true
         }
         i = i + 1
@@ -689,15 +689,15 @@ func pattern_unreachable(Vec[Pattern] seen, Pattern current, string expected_typ
     false
 }
 
-func pattern_equivalent(Pattern left, Pattern right, string expected_type) bool {
-    pattern_subsumes(left, right, expected_type) && pattern_subsumes(right, left, expected_type)
+func patternEquivalent(Pattern left, Pattern right, string expectedType) bool {
+    patternSubsumes(left, right, expectedType) && patternSubsumes(right, left, expectedType)
 }
 
-func pattern_subsumes(Pattern left, Pattern right, string expected_type) bool {
-    if pattern_is_wild(left) {
+func patternSubsumes(Pattern left, Pattern right, string expectedType) bool {
+    if patternIsWild(left) {
         return true
     }
-    if pattern_is_wild(right) {
+    if patternIsWild(right) {
         return false
     }
 
@@ -705,8 +705,8 @@ func pattern_subsumes(Pattern left, Pattern right, string expected_type) bool {
         Pattern::Variant(lv) => {
             match right {
                 Pattern::Variant(rv) => {
-                    var lctor = last_path_segment(lv.path)
-                    var rctor = last_path_segment(rv.path)
+                    var lctor = lastPathSegment(lv.path)
+                    var rctor = lastPathSegment(rv.path)
                     if lctor != rctor {
                         return false
                     }
@@ -717,11 +717,11 @@ func pattern_subsumes(Pattern left, Pattern right, string expected_type) bool {
                         return false
                     }
 
-                    var payload_type = variant_payload_type(expected_type, lctor)
-                    if is_unknown(payload_type) {
+                    var payloadType = variantPayloadType(expectedType, lctor)
+                    if isUnknown(payloadType) {
                         return false
                     }
-                    return pattern_subsumes(lv.args[0], rv.args[0], payload_type)
+                    return patternSubsumes(lv.args[0], rv.args[0], payloadType)
                 }
                 _ => false,
             }
@@ -730,39 +730,39 @@ func pattern_subsumes(Pattern left, Pattern right, string expected_type) bool {
     }
 }
 
-func patterns_cover_type(Vec[Pattern] patterns, string expected_type) bool {
+func patternsCoverType(Vec[Pattern] patterns, string expectedType) bool {
     var i = 0
     while i < patterns.len() {
-        if pattern_is_wild(patterns[i]) {
+        if patternIsWild(patterns[i]) {
             return true
         }
         i = i + 1
     }
 
-    var base = BaseTypeName(expected_type)
+    var base = BaseTypeName(expectedType)
     if base == "Option" {
-        return option_patterns_cover(patterns, expected_type)
+        return optionPatternsCover(patterns, expectedType)
     }
     if base == "Result" {
-        return result_patterns_cover(patterns, expected_type)
+        return resultPatternsCover(patterns, expectedType)
     }
 
     false
 }
 
-func option_patterns_cover(Vec[Pattern] patterns, string expected_type) bool {
-    var seen_none = false
-    var some_patterns = Vec[Pattern]()
+func optionPatternsCover(Vec[Pattern] patterns, string expectedType) bool {
+    var seenNone = false
+    var somePatterns = Vec[Pattern]()
 
     var i = 0
     while i < patterns.len() {
         match patterns[i] {
             Pattern::Variant(value) => {
-                var ctor = last_path_segment(value.path)
+                var ctor = lastPathSegment(value.path)
                 if ctor == "None" {
-                    seen_none = true
+                    seenNone = true
                 } else if ctor == "Some" && value.args.len() == 1 {
-                    some_patterns.push(value.args[0])
+                    somePatterns.push(value.args[0])
                 }
             }
             _ => (),
@@ -770,25 +770,25 @@ func option_patterns_cover(Vec[Pattern] patterns, string expected_type) bool {
         i = i + 1
     }
 
-    if !seen_none {
+    if !seenNone {
         return false
     }
-    patterns_cover_type(some_patterns, first_type_arg(expected_type))
+    patternsCoverType(somePatterns, firstTypeArg(expectedType))
 }
 
-func result_patterns_cover(Vec[Pattern] patterns, string expected_type) bool {
-    var ok_patterns = Vec[Pattern]()
-    var err_patterns = Vec[Pattern]()
+func resultPatternsCover(Vec[Pattern] patterns, string expectedType) bool {
+    var okPatterns = Vec[Pattern]()
+    var errPatterns = Vec[Pattern]()
 
     var i = 0
     while i < patterns.len() {
         match patterns[i] {
             Pattern::Variant(value) => {
-                var ctor = last_path_segment(value.path)
+                var ctor = lastPathSegment(value.path)
                 if ctor == "Ok" && value.args.len() == 1 {
-                    ok_patterns.push(value.args[0])
+                    okPatterns.push(value.args[0])
                 } else if ctor == "Err" && value.args.len() == 1 {
-                    err_patterns.push(value.args[0])
+                    errPatterns.push(value.args[0])
                 }
             }
             _ => (),
@@ -796,13 +796,13 @@ func result_patterns_cover(Vec[Pattern] patterns, string expected_type) bool {
         i = i + 1
     }
 
-    if !patterns_cover_type(ok_patterns, first_type_arg(expected_type)) {
+    if !patternsCoverType(okPatterns, firstTypeArg(expectedType)) {
         return false
     }
-    patterns_cover_type(err_patterns, second_type_arg(expected_type))
+    patternsCoverType(errPatterns, secondTypeArg(expectedType))
 }
 
-func pattern_is_wild(Pattern pattern) bool {
+func patternIsWild(Pattern pattern) bool {
     match pattern {
         Pattern::Wildcard(_) => true,
         Pattern::Name(_) => true,
@@ -810,7 +810,7 @@ func pattern_is_wild(Pattern pattern) bool {
     }
 }
 
-func pattern_anchor(Pattern pattern) string {
+func patternAnchor(Pattern pattern) string {
     match pattern {
         Pattern::Name(value) => value.name,
         Pattern::Wildcard(_) => "_",
@@ -818,11 +818,11 @@ func pattern_anchor(Pattern pattern) string {
     }
 }
 
-func variant_payload_type(string expected_type, string ctor) string {
-    var base = BaseTypeName(expected_type)
+func variantPayloadType(string expectedType, string ctor) string {
+    var base = BaseTypeName(expectedType)
     if base == "Option" {
         if ctor == "Some" {
-            return first_type_arg(expected_type)
+            return firstTypeArg(expectedType)
         }
         if ctor == "None" {
             return "()"
@@ -830,65 +830,65 @@ func variant_payload_type(string expected_type, string ctor) string {
     }
     if base == "Result" {
         if ctor == "Ok" {
-            return first_type_arg(expected_type)
+            return firstTypeArg(expectedType)
         }
         if ctor == "Err" {
-            return second_type_arg(expected_type)
+            return secondTypeArg(expectedType)
         }
     }
     "unknown"
 }
 
-func infer_binary(string op, CheckResult left, CheckResult right, string source, Vec[SemanticError] mut diagnostics) CheckResult {
+func inferBinary(string op, CheckResult left, CheckResult right, string source, Vec[SemanticError] mut diagnostics) CheckResult {
     var errors = left.errors + right.errors
 
     if op == "+" || op == "-" || op == "*" || op == "/" || op == "%" {
-        if !types_compatible("int32", left.type_name) || !types_compatible("int32", right.type_name) {
-            errors = errors + add_error(source, diagnostics, "E3018", "arithmetic requires int32", op)
+        if !typesCompatible("int32", left.typeName) || !typesCompatible("int32", right.typeName) {
+            errors = errors + addError(source, diagnostics, "E3018", "arithmetic requires int32", op)
         }
         return CheckResult {
-            type_name: "int32",
+            typeName: "int32",
             errors: errors,
         }
     }
 
     if op == "<" || op == "<=" || op == ">" || op == ">=" {
-        if !types_compatible("int32", left.type_name) || !types_compatible("int32", right.type_name) {
-            errors = errors + add_error(source, diagnostics, "E3019", "ordering compare requires int32", op)
+        if !typesCompatible("int32", left.typeName) || !typesCompatible("int32", right.typeName) {
+            errors = errors + addError(source, diagnostics, "E3019", "ordering compare requires int32", op)
         }
         return CheckResult {
-            type_name: "bool",
+            typeName: "bool",
             errors: errors,
         }
     }
 
     if op == "==" || op == "!=" {
-        if !types_compatible(left.type_name, right.type_name) {
-            errors = errors + add_error(source, diagnostics, "E3020", "equality compare requires same type", op)
+        if !typesCompatible(left.typeName, right.typeName) {
+            errors = errors + addError(source, diagnostics, "E3020", "equality compare requires same type", op)
         }
         return CheckResult {
-            type_name: "bool",
+            typeName: "bool",
             errors: errors,
         }
     }
 
     if op == "&&" || op == "||" {
-        if !types_compatible("bool", left.type_name) || !types_compatible("bool", right.type_name) {
-            errors = errors + add_error(source, diagnostics, "E3021", "logical op requires bool", op)
+        if !typesCompatible("bool", left.typeName) || !typesCompatible("bool", right.typeName) {
+            errors = errors + addError(source, diagnostics, "E3021", "logical op requires bool", op)
         }
         return CheckResult {
-            type_name: "bool",
+            typeName: "bool",
             errors: errors,
         }
     }
 
     CheckResult {
-        type_name: "unknown",
+        typeName: "unknown",
         errors: errors,
     }
 }
 
-func lookup_functions(Vec[FunctionBinding] functions, string name) Vec[FunctionBinding] {
+func lookupFunctions(Vec[FunctionBinding] functions, string name) Vec[FunctionBinding] {
     var out = Vec[FunctionBinding]()
     var i = 0
     while i < functions.len() {
@@ -900,29 +900,29 @@ func lookup_functions(Vec[FunctionBinding] functions, string name) Vec[FunctionB
     out
 }
 
-func try_match_signature(FunctionBinding binding, Vec[string] arg_types) SignatureMatch {
-    if binding.param_types.len() != arg_types.len() {
+func tryMatchSignature(FunctionBinding binding, Vec[string] argTypes) SignatureMatch {
+    if binding.paramTypes.len() != argTypes.len() {
         return SignatureMatch {
             ok: false,
-            return_type: "unknown",
+            returnType: "unknown",
             score: 0,
         }
     }
 
-    var generic_bindings = Vec[TypeBinding]()
+    var genericBindings = Vec[TypeBinding]()
     var score = 0
 
     var i = 0
-    while i < arg_types.len() {
-        var matched = match_type_pattern(binding.param_types[i], arg_types[i], binding.generic_names, generic_bindings)
+    while i < argTypes.len() {
+        var matched = matchTypePattern(binding.paramTypes[i], argTypes[i], binding.genericNames, genericBindings)
         if !matched {
             return SignatureMatch {
                 ok: false,
-                return_type: "unknown",
+                returnType: "unknown",
                 score: 0,
             }
         }
-        if !type_contains_generic(binding.param_types[i], binding.generic_names) {
+        if !typeContainsGeneric(binding.paramTypes[i], binding.genericNames) {
             score = score + 1
         }
         i = i + 1
@@ -930,61 +930,61 @@ func try_match_signature(FunctionBinding binding, Vec[string] arg_types) Signatu
 
     SignatureMatch {
         ok: true,
-        return_type: instantiate_type(binding.return_type, binding.generic_names, generic_bindings),
+        returnType: instantiateType(binding.returnType, binding.genericNames, genericBindings),
         score: score,
     }
 }
 
-func match_type_pattern(string param_type, string arg_type, Vec[string] generic_names, Vec[TypeBinding] mut generic_bindings) bool {
-    var p = ParseType(param_type)
-    var a = ParseType(arg_type)
+func matchTypePattern(string paramType, string argType, Vec[string] genericNames, Vec[TypeBinding] mut genericBindings) bool {
+    var p = ParseType(paramType)
+    var a = ParseType(argType)
 
-    if is_generic_name(generic_names, p) {
-        var bound = lookup_name_type(generic_bindings, p)
-        if is_unknown(bound) {
-            generic_bindings.push(TypeBinding {
+    if isGenericName(genericNames, p) {
+        var bound = lookupNameType(genericBindings, p)
+        if isUnknown(bound) {
+            genericBindings.push(TypeBinding {
                 name: p,
-                type_name: a,
+                typeName: a,
             })
             return true
         }
         return SameType(bound, a)
     }
 
-    if starts_with(p, "&mut ") {
-        if !starts_with(a, "&mut ") {
+    if startsWith(p, "&mut ") {
+        if !startsWith(a, "&mut ") {
             return false
         }
-        return match_type_pattern(slice(p, 5, len(p)), slice(a, 5, len(a)), generic_names, generic_bindings)
+        return matchTypePattern(slice(p, 5, len(p)), slice(a, 5, len(a)), genericNames, genericBindings)
     }
-    if starts_with(p, "&") {
-        if !starts_with(a, "&") {
+    if startsWith(p, "&") {
+        if !startsWith(a, "&") {
             return false
         }
-        return match_type_pattern(slice(p, 1, len(p)), slice(a, 1, len(a)), generic_names, generic_bindings)
+        return matchTypePattern(slice(p, 1, len(p)), slice(a, 1, len(a)), genericNames, genericBindings)
     }
-    if starts_with(p, "[]") {
-        if !starts_with(a, "[]") {
+    if startsWith(p, "[]") {
+        if !startsWith(a, "[]") {
             return false
         }
-        return match_type_pattern(slice(p, 2, len(p)), slice(a, 2, len(a)), generic_names, generic_bindings)
+        return matchTypePattern(slice(p, 2, len(p)), slice(a, 2, len(a)), genericNames, genericBindings)
     }
 
-    var p_base = BaseTypeName(p)
-    var a_base = BaseTypeName(a)
-    if p_base != a_base {
+    var pBase = BaseTypeName(p)
+    var aBase = BaseTypeName(a)
+    if pBase != aBase {
         return false
     }
 
-    var p_args = extract_type_args(p)
-    var a_args = extract_type_args(a)
-    if p_args.len() != a_args.len() {
+    var pArgs = extractTypeArgs(p)
+    var aArgs = extractTypeArgs(a)
+    if pArgs.len() != aArgs.len() {
         return SameType(p, a)
     }
 
     var i = 0
-    while i < p_args.len() {
-        if !match_type_pattern(p_args[i], a_args[i], generic_names, generic_bindings) {
+    while i < pArgs.len() {
+        if !matchTypePattern(pArgs[i], aArgs[i], genericNames, genericBindings) {
             return false
         }
         i = i + 1
@@ -992,26 +992,26 @@ func match_type_pattern(string param_type, string arg_type, Vec[string] generic_
     true
 }
 
-func instantiate_type(string ty, Vec[string] generic_names, Vec[TypeBinding] generic_bindings) string {
+func instantiateType(string ty, Vec[string] genericNames, Vec[TypeBinding] genericBindings) string {
     var clean = ParseType(ty)
-    if is_generic_name(generic_names, clean) {
-        var bound = lookup_name_type(generic_bindings, clean)
-        if !is_unknown(bound) {
+    if isGenericName(genericNames, clean) {
+        var bound = lookupNameType(genericBindings, clean)
+        if !isUnknown(bound) {
             return bound
         }
     }
 
-    if starts_with(clean, "&mut ") {
-        return "&mut " + instantiate_type(slice(clean, 5, len(clean)), generic_names, generic_bindings)
+    if startsWith(clean, "&mut ") {
+        return "&mut " + instantiateType(slice(clean, 5, len(clean)), genericNames, genericBindings)
     }
-    if starts_with(clean, "&") {
-        return "&" + instantiate_type(slice(clean, 1, len(clean)), generic_names, generic_bindings)
+    if startsWith(clean, "&") {
+        return "&" + instantiateType(slice(clean, 1, len(clean)), genericNames, genericBindings)
     }
-    if starts_with(clean, "[]") {
-        return "[]" + instantiate_type(slice(clean, 2, len(clean)), generic_names, generic_bindings)
+    if startsWith(clean, "[]") {
+        return "[]" + instantiateType(slice(clean, 2, len(clean)), genericNames, genericBindings)
     }
 
-    var args = extract_type_args(clean)
+    var args = extractTypeArgs(clean)
     if args.len() == 0 {
         return clean
     }
@@ -1023,32 +1023,32 @@ func instantiate_type(string ty, Vec[string] generic_names, Vec[TypeBinding] gen
         if i > 0 {
             built = built + ", "
         }
-        built = built + instantiate_type(args[i], generic_names, generic_bindings)
+        built = built + instantiateType(args[i], genericNames, genericBindings)
         i = i + 1
     }
     built + "]"
 }
 
-func type_contains_generic(string ty, Vec[string] generic_names) bool {
+func typeContainsGeneric(string ty, Vec[string] genericNames) bool {
     var clean = ParseType(ty)
-    if is_generic_name(generic_names, clean) {
+    if isGenericName(genericNames, clean) {
         return true
     }
 
-    if starts_with(clean, "&mut ") {
-        return type_contains_generic(slice(clean, 5, len(clean)), generic_names)
+    if startsWith(clean, "&mut ") {
+        return typeContainsGeneric(slice(clean, 5, len(clean)), genericNames)
     }
-    if starts_with(clean, "&") {
-        return type_contains_generic(slice(clean, 1, len(clean)), generic_names)
+    if startsWith(clean, "&") {
+        return typeContainsGeneric(slice(clean, 1, len(clean)), genericNames)
     }
-    if starts_with(clean, "[]") {
-        return type_contains_generic(slice(clean, 2, len(clean)), generic_names)
+    if startsWith(clean, "[]") {
+        return typeContainsGeneric(slice(clean, 2, len(clean)), genericNames)
     }
 
-    var args = extract_type_args(clean)
+    var args = extractTypeArgs(clean)
     var i = 0
     while i < args.len() {
-        if type_contains_generic(args[i], generic_names) {
+        if typeContainsGeneric(args[i], genericNames) {
             return true
         }
         i = i + 1
@@ -1056,10 +1056,10 @@ func type_contains_generic(string ty, Vec[string] generic_names) bool {
     false
 }
 
-func is_generic_name(Vec[string] generic_names, string name) bool {
+func isGenericName(Vec[string] genericNames, string name) bool {
     var i = 0
-    while i < generic_names.len() {
-        if generic_names[i] == name {
+    while i < genericNames.len() {
+        if genericNames[i] == name {
             return true
         }
         i = i + 1
@@ -1067,18 +1067,18 @@ func is_generic_name(Vec[string] generic_names, string name) bool {
     false
 }
 
-func generic_name(string raw) string {
+func genericName(string raw) string {
     var i = 0
     while i < len(raw) {
-        if char_at(raw, i) == ":" {
-            return trim_text(slice(raw, 0, i))
+        if charAt(raw, i) == ":" {
+            return trimText(slice(raw, 0, i))
         }
         i = i + 1
     }
-    trim_text(raw)
+    trimText(raw)
 }
 
-func clone_env(Vec[TypeBinding] env) Vec[TypeBinding] {
+func cloneEnv(Vec[TypeBinding] env) Vec[TypeBinding] {
     var out = Vec[TypeBinding]()
     var i = 0
     while i < env.len() {
@@ -1088,103 +1088,103 @@ func clone_env(Vec[TypeBinding] env) Vec[TypeBinding] {
     out
 }
 
-func lookup_name_type(Vec[TypeBinding] env, string name) string {
+func lookupNameType(Vec[TypeBinding] env, string name) string {
     var i = env.len()
     while i > 0 {
         i = i - 1
         if env[i].name == name {
-            return env[i].type_name
+            return env[i].typeName
         }
     }
     "unknown"
 }
 
-func ok_type(string type_name) CheckResult {
+func okType(string typeName) CheckResult {
     CheckResult {
-        type_name: ParseType(type_name),
+        typeName: ParseType(typeName),
         errors: 0,
     }
 }
 
-func types_compatible(string left, string right) bool {
-    if is_unknown(left) || is_unknown(right) {
+func typesCompatible(string left, string right) bool {
+    if isUnknown(left) || isUnknown(right) {
         return true
     }
     SameType(left, right)
 }
 
-func is_unknown(string type_name) bool {
-    var clean = ParseType(type_name)
+func isUnknown(string typeName) bool {
+    var clean = ParseType(typeName)
     clean == "" || clean == "unknown"
 }
 
-func resolve_method_return(string target_type, string method_type) string {
-    if method_type == "T" {
-        return first_type_arg(target_type)
+func resolveMethodReturn(string targetType, string methodType) string {
+    if methodType == "T" {
+        return firstTypeArg(targetType)
     }
-    if method_type == "E" {
-        return second_type_arg(target_type)
+    if methodType == "E" {
+        return secondTypeArg(targetType)
     }
-    if method_type == "Option[T]" {
-        var arg = first_type_arg(target_type)
-        if is_unknown(arg) {
+    if methodType == "Option[T]" {
+        var arg = firstTypeArg(targetType)
+        if isUnknown(arg) {
             return "Option[unknown]"
         }
         return "Option[" + arg + "]"
     }
-    ParseType(method_type)
+    ParseType(methodType)
 }
 
-func first_type_arg(string type_name) string {
-    var args = extract_type_args(type_name)
+func firstTypeArg(string typeName) string {
+    var args = extractTypeArgs(typeName)
     if args.len() > 0 {
         return ParseType(args[0])
     }
     "unknown"
 }
 
-func second_type_arg(string type_name) string {
-    var args = extract_type_args(type_name)
+func secondTypeArg(string typeName) string {
+    var args = extractTypeArgs(typeName)
     if args.len() > 1 {
         return ParseType(args[1])
     }
     "unknown"
 }
 
-func extract_type_args(string type_name) Vec[string] {
+func extractTypeArgs(string typeName) Vec[string] {
     var out = Vec[string]()
-    var open = find_char(type_name, "[")
-    var close = find_last_char(type_name, "]")
+    var open = findChar(typeName, "[")
+    var close = findLastChar(typeName, "]")
     if open < 0 || close <= open + 1 {
         return out
     }
 
-    var inner = slice(type_name, open + 1, close)
+    var inner = slice(typeName, open + 1, close)
     var depth = 0
     var start = 0
     var i = 0
     while i < len(inner) {
-        var ch = char_at(inner, i)
+        var ch = charAt(inner, i)
         if ch == "[" {
             depth = depth + 1
         } else if ch == "]" {
             depth = depth - 1
         } else if ch == "," && depth == 0 {
-            out.push(trim_text(slice(inner, start, i)))
+            out.push(trimText(slice(inner, start, i)))
             start = i + 1
         }
         i = i + 1
     }
 
     if start < len(inner) {
-        out.push(trim_text(slice(inner, start, len(inner))))
+        out.push(trimText(slice(inner, start, len(inner))))
     }
 
     out
 }
 
-func add_error(string source, Vec[SemanticError] mut diagnostics, string code, string message, string anchor) int32 {
-    var pos = locate_anchor(source, anchor)
+func addError(string source, Vec[SemanticError] mut diagnostics, string code, string message, string anchor) int32 {
+    var pos = locateAnchor(source, anchor)
     diagnostics.push(SemanticError {
         code: code,
         message: message,
@@ -1194,24 +1194,24 @@ func add_error(string source, Vec[SemanticError] mut diagnostics, string code, s
     1
 }
 
-func locate_anchor(string source, string anchor) SourcePos {
+func locateAnchor(string source, string anchor) SourcePos {
     if anchor == "" {
         return SourcePos {
             line: 0,
             column: 0,
         }
     }
-    var idx = find_substring(source, anchor)
+    var idx = findSubstring(source, anchor)
     if idx < 0 {
         return SourcePos {
             line: 0,
             column: 0,
         }
     }
-    index_to_pos(source, idx)
+    indexToPos(source, idx)
 }
 
-func find_substring(string haystack, string needle) int32 {
+func findSubstring(string haystack, string needle) int32 {
     if needle == "" {
         return 0
     }
@@ -1228,12 +1228,12 @@ func find_substring(string haystack, string needle) int32 {
     0 - 1
 }
 
-func index_to_pos(string source, int32 index) SourcePos {
+func indexToPos(string source, int32 index) SourcePos {
     var line = 1
     var column = 1
     var i = 0
     while i < index {
-        if char_at(source, i) == "\n" {
+        if charAt(source, i) == "\n" {
             line = line + 1
             column = 1
         } else {
@@ -1247,17 +1247,17 @@ func index_to_pos(string source, int32 index) SourcePos {
     }
 }
 
-func starts_with(string text, string prefix) bool {
+func startsWith(string text, string prefix) bool {
     if len(prefix) > len(text) {
         return false
     }
     slice(text, 0, len(prefix)) == prefix
 }
 
-func find_char(string text, string needle) int32 {
+func findChar(string text, string needle) int32 {
     var i = 0
     while i < len(text) {
-        if char_at(text, i) == needle {
+        if charAt(text, i) == needle {
             return i
         }
         i = i + 1
@@ -1265,40 +1265,40 @@ func find_char(string text, string needle) int32 {
     0 - 1
 }
 
-func find_last_char(string text, string needle) int32 {
+func findLastChar(string text, string needle) int32 {
     var i = len(text)
     while i > 0 {
         i = i - 1
-        if char_at(text, i) == needle {
+        if charAt(text, i) == needle {
             return i
         }
     }
     0 - 1
 }
 
-func last_path_segment(string path) string {
+func lastPathSegment(string path) string {
     var i = len(path)
     while i > 0 {
         i = i - 1
-        if char_at(path, i) == "." {
+        if charAt(path, i) == "." {
             return slice(path, i + 1, len(path))
         }
     }
     path
 }
 
-func trim_text(string text) string {
+func trimText(string text) string {
     var start = 0
     var end = len(text)
-    while start < end && is_space(char_at(text, start)) {
+    while start < end && isSpace(charAt(text, start)) {
         start = start + 1
     }
-    while end > start && is_space(char_at(text, end - 1)) {
+    while end > start && isSpace(charAt(text, end - 1)) {
         end = end - 1
     }
     slice(text, start, end)
 }
 
-func is_space(string ch) bool {
+func isSpace(string ch) bool {
     ch == " " || ch == "\n" || ch == "\t" || ch == "\r"
 }

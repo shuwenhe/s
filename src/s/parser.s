@@ -1,7 +1,7 @@
 package s
 
 use std.option.Option
-use std.prelude.char_at
+use std.prelude.charAt
 use std.prelude.len
 use std.result.Result
 use std.vec.Vec
@@ -17,9 +17,9 @@ struct Parser {
     int32 index,
 }
 
-func parse_source(string source) Result[SourceFile, ParseError] {
-    match new_lexer(source).tokenize() {
-        Result::Ok(tokens) => parse_tokens(tokens),
+func parseSource(string source) Result[SourceFile, ParseError] {
+    match newLexer(source).tokenize() {
+        Result::Ok(tokens) => parseTokens(tokens),
         Result::Err(err) => Result::Err(ParseError {
             message: err.message,
             line: err.line,
@@ -28,27 +28,27 @@ func parse_source(string source) Result[SourceFile, ParseError] {
     }
 }
 
-func parse_tokens(Vec[Token] tokens) Result[SourceFile, ParseError] {
+func parseTokens(Vec[Token] tokens) Result[SourceFile, ParseError] {
     var parser = Parser {
         tokens: tokens,
         index: 0,
     }
-    parser.parse_source_file()
+    parser.parseSourceFile()
 }
 
 impl Parser {
-    func parse_source_file(mut self) Result[SourceFile, ParseError] {
-        self.expect_keyword("package")?
-        var package = self.parse_path()?
+    func parseSourceFile(mut self) Result[SourceFile, ParseError] {
+        self.expectKeyword("package")?
+        var package = self.parsePath()?
         var uses = Vec[UseDecl]()
         var items = Vec[Item]()
 
-        while self.at_keyword("use") {
-            uses.push(self.parse_use_decl()?)
+        while self.atKeyword("use") {
+            uses.push(self.parseUseDecl()?)
         }
 
         while !self.at(TokenKind::Eof) {
-            items.push(self.parse_item()?)
+            items.push(self.parseItem()?)
         }
 
         Result::Ok(SourceFile {
@@ -58,13 +58,13 @@ impl Parser {
         })
     }
 
-    func parse_use_decl(mut self) Result[UseDecl, ParseError] {
-        self.expect_keyword("use")?
-        var path = self.parse_use_path()?
+    func parseUseDecl(mut self) Result[UseDecl, ParseError] {
+        self.expectKeyword("use")?
+        var path = self.parseUsePath()?
         var alias =
-            if self.at_keyword("as") {
+            if self.atKeyword("as") {
                 self.advance()?
-                Option::Some(self.expect_ident()?)
+                Option::Some(self.expectIdent()?)
             } else {
                 Option::None
             }
@@ -74,197 +74,197 @@ impl Parser {
         })
     }
 
-    func parse_item(mut self) Result[Item, ParseError] {
-        if self.at_keyword("func") {
+    func parseItem(mut self) Result[Item, ParseError] {
+        if self.atKeyword("func") {
             // parse a function; if it has a receiver, convert to an impl item
-            var parsed = self.parse_function(true)?
+            var parsed = self.parseFunction(true)?
             match parsed.receiver {
                 Option::Some(r) => {
                     // build FunctionDecl for method
                     var method = FunctionDecl {
                         sig: parsed.sig,
                         body: parsed.body,
-                        is_public: starts_with_upper(parsed.sig.name),
+                        isPublic: startsWithUpper(parsed.sig.name),
                     }
                     var impl = ImplDecl {
-                        target: r.type_name,
-                        trait_name: Option::None,
+                        target: r.typeName,
+                        traitName: Option::None,
                         generics: Vec[string](),
                         methods: Vec[FunctionDecl] { method },
                     }
                     return Result::Ok(Item::Impl(impl))
                 }
-                Option::None => return Result::Ok(Item::Function(self.parse_function_decl()?)),
+                Option::None => return Result::Ok(Item::Function(self.parseFunctionDecl()?)),
             }
         }
-        if self.at_keyword("struct") {
-            return Result::Ok(Item::Struct(self.parse_struct_decl()?))
+        if self.atKeyword("struct") {
+            return Result::Ok(Item::Struct(self.parseStructDecl()?))
         }
-        if self.at_keyword("enum") {
-            return Result::Ok(Item::Enum(self.parse_enum_decl()?))
+        if self.atKeyword("enum") {
+            return Result::Ok(Item::Enum(self.parseEnumDecl()?))
         }
-        if self.at_keyword("trait") {
-            return Result::Ok(Item::Trait(self.parse_trait_decl()?))
+        if self.atKeyword("trait") {
+            return Result::Ok(Item::Trait(self.parseTraitDecl()?))
         }
-        if self.at_keyword("impl") {
-            return Result::Ok(Item::Impl(self.parse_impl_decl()?))
+        if self.atKeyword("impl") {
+            return Result::Ok(Item::Impl(self.parseImplDecl()?))
         }
-        Result::Err(self.error_here("unexpected token"))
+        Result::Err(self.errorHere("unexpected token"))
     }
 
-    func parse_function_decl(mut self) Result[FunctionDecl, ParseError] {
-        var pair = self.parse_function(true)?
-        if pair.receiver.is_some() {
-            return Result::Err(self.error_here("method receiver not allowed in this context"))
+    func parseFunctionDecl(mut self) Result[FunctionDecl, ParseError] {
+        var pair = self.parseFunction(true)?
+        if pair.receiver.isSome() {
+            return Result::Err(self.errorHere("method receiver not allowed in this context"))
         }
         Result::Ok(FunctionDecl {
             sig: pair.sig,
             body: pair.body,
-            is_public: starts_with_upper(pair.sig.name),
+            isPublic: startsWithUpper(pair.sig.name),
         })
     }
 
-    func parse_struct_decl(mut self) Result[StructDecl, ParseError] {
-        self.expect_keyword("struct")?
-        var name = self.expect_ident()?
-        var generics = self.parse_generic_params()?
-        self.expect_symbol("{")?
+    func parseStructDecl(mut self) Result[StructDecl, ParseError] {
+        self.expectKeyword("struct")?
+        var name = self.expectIdent()?
+        var generics = self.parseGenericParams()?
+        self.expectSymbol("{")?
         var fields = Vec[Field]()
 
-        while !self.eat_symbol("}") {
-            var field = self.parse_named_type(Vec[string] { ",", "}" })?
+        while !self.eatSymbol("}") {
+            var field = self.parseNamedType(Vec[string] { ",", "}" })?
             fields.push(Field {
                 name: field.name,
-                type_name: field.type_name,
-                is_public: starts_with_upper(field.name),
+                typeName: field.typeName,
+                isPublic: startsWithUpper(field.name),
             })
-            self.eat_symbol(",")
+            self.eatSymbol(",")
         }
 
         Result::Ok(StructDecl {
             name: name,
             generics: generics,
             fields: fields,
-            is_public: starts_with_upper(name),
+            isPublic: startsWithUpper(name),
         })
     }
 
-    func parse_enum_decl(mut self) Result[EnumDecl, ParseError] {
-        self.expect_keyword("enum")?
-        var name = self.expect_ident()?
-        var generics = self.parse_generic_params()?
-        self.expect_symbol("{")?
+    func parseEnumDecl(mut self) Result[EnumDecl, ParseError] {
+        self.expectKeyword("enum")?
+        var name = self.expectIdent()?
+        var generics = self.parseGenericParams()?
+        self.expectSymbol("{")?
         var variants = Vec[EnumVariant]()
 
-        while !self.eat_symbol("}") {
-            var variant_name = self.expect_ident()?
+        while !self.eatSymbol("}") {
+            var variantName = self.expectIdent()?
             var payload =
-                if self.eat_symbol("(") {
-                    var ty = self.parse_type_text(Vec[string] { ")" })?
-                    self.expect_symbol(")")?
+                if self.eatSymbol("(") {
+                    var ty = self.parseTypeText(Vec[string] { ")" })?
+                    self.expectSymbol(")")?
                     Option::Some(ty)
                 } else {
                     Option::None
                 }
             variants.push(EnumVariant {
-                name: variant_name,
+                name: variantName,
                 payload: payload,
             })
-            self.eat_symbol(",")
+            self.eatSymbol(",")
         }
 
         Result::Ok(EnumDecl {
             name: name,
             generics: generics,
             variants: variants,
-            is_public: starts_with_upper(name),
+            isPublic: startsWithUpper(name),
         })
     }
 
-    func parse_trait_decl(mut self) Result[TraitDecl, ParseError] {
-        self.expect_keyword("trait")?
-        var name = self.expect_ident()?
-        var generics = self.parse_generic_params()?
-        self.expect_symbol("{")?
+    func parseTraitDecl(mut self) Result[TraitDecl, ParseError] {
+        self.expectKeyword("trait")?
+        var name = self.expectIdent()?
+        var generics = self.parseGenericParams()?
+        self.expectSymbol("{")?
         var methods = Vec[FunctionSig]()
 
-        while !self.eat_symbol("}") {
-            var pair = self.parse_function(false)?
+        while !self.eatSymbol("}") {
+            var pair = self.parseFunction(false)?
             methods.push(pair.sig)
-            self.expect_symbol(";")?
+            self.expectSymbol(";")?
         }
 
         Result::Ok(TraitDecl {
             name: name,
             generics: generics,
             methods: methods,
-            is_public: starts_with_upper(name),
+            isPublic: startsWithUpper(name),
         })
     }
 
-    func parse_impl_decl(mut self) Result[ImplDecl, ParseError] {
-        self.expect_keyword("impl")?
-        var generics = self.parse_generic_params()?
-        var first = self.parse_path()?
-        var trait_name = Option::None
+    func parseImplDecl(mut self) Result[ImplDecl, ParseError] {
+        self.expectKeyword("impl")?
+        var generics = self.parseGenericParams()?
+        var first = self.parsePath()?
+        var traitName = Option::None
         var target = first
 
-        if self.eat_keyword("for") {
-            trait_name = Option::Some(first)
-            target = self.parse_path()?
+        if self.eatKeyword("for") {
+            traitName = Option::Some(first)
+            target = self.parsePath()?
         }
 
-        self.parse_where_clause()?
-        self.expect_symbol("{")?
+        self.parseWhereClause()?
+        self.expectSymbol("{")?
         var methods = Vec[FunctionDecl]()
 
-        while !self.eat_symbol("}") {
-            methods.push(self.parse_function_decl()?)
+        while !self.eatSymbol("}") {
+            methods.push(self.parseFunctionDecl()?)
         }
 
         Result::Ok(ImplDecl {
             target: target,
-            trait_name: trait_name,
+            traitName: traitName,
             generics: generics,
             methods: methods,
         })
     }
 
-    func parse_function(mut self, bool require_body) Result[ParsedFunction, ParseError] {
-        self.expect_keyword("func")?
+    func parseFunction(mut self, bool requireBody) Result[ParsedFunction, ParseError] {
+        self.expectKeyword("func")?
         // optional receiver syntax: (name type)
         var receiver = Option::None
-        if self.at_symbol("(") {
-            self.expect_symbol("(")?
-            var named = self.parse_named_type(Vec[string] { ")" })?
-            self.expect_symbol(")")?
+        if self.atSymbol("(") {
+            self.expectSymbol("(")?
+            var named = self.parseNamedType(Vec[string] { ")" })?
+            self.expectSymbol(")")?
             receiver = Option::Some(named)
         }
-        var name = self.expect_ident()?
-        var generics = self.parse_generic_params()?
-        self.expect_symbol("(")?
-        var params = self.parse_params()?
-        self.expect_symbol(")")?
+        var name = self.expectIdent()?
+        var generics = self.parseGenericParams()?
+        self.expectSymbol("(")?
+        var params = self.parseParams()?
+        self.expectSymbol(")")?
 
         // Parse return type in Go-style: return type is written after
         // the parameter list (no arrow). We accept absence of return
         // type if the next token is a where-clause, block start, or
         // semicolon. This keeps compatibility with trait/method
         // declarations that may omit a body.
-        var return_type = Option::None
+        var returnType = Option::None
         var next = self.peek()?
         if !(next.kind == TokenKind::Symbol && (next.value == "{" || next.value == ";")) && !(
             next.kind == TokenKind::Keyword && next.value == "where"
         ) {
             // treat following token sequence as a type until where/{/;
-            return_type = Option::Some(self.parse_type_text(Vec[string] { "where", "{", ";" })?)
+            returnType = Option::Some(self.parseTypeText(Vec[string] { "where", "{", ";" })?)
         }
 
-        self.parse_where_clause()?
+        self.parseWhereClause()?
 
         var body =
-            if require_body {
-                Option::Some(self.parse_block_expr()?)
+            if requireBody {
+                Option::Some(self.parseBlockExpr()?)
             } else {
                 Option::None
             }
@@ -274,26 +274,26 @@ impl Parser {
                 name: name,
                 generics: generics,
                 params: params,
-                return_type: return_type,
+                returnType: returnType,
             },
             body: body,
             receiver: receiver,
         })
     }
 
-    func parse_params(mut self) Result[Vec[Param], ParseError] {
+    func parseParams(mut self) Result[Vec[Param], ParseError] {
         var params = Vec[Param]()
-        if self.at_symbol(")") {
+        if self.atSymbol(")") {
             return Result::Ok(params)
         }
 
         while true {
-            var part = self.parse_named_type(Vec[string] { ",", ")" })?
+            var part = self.parseNamedType(Vec[string] { ",", ")" })?
             params.push(Param {
                 name: part.name,
-                type_name: part.type_name,
+                typeName: part.typeName,
             })
-            if !self.eat_symbol(",") || self.at_symbol(")") {
+            if !self.eatSymbol(",") || self.atSymbol(")") {
                 break
             }
         }
@@ -301,51 +301,51 @@ impl Parser {
         Result::Ok(params)
     }
 
-    func parse_generic_params(mut self) Result[Vec[string], ParseError] {
+    func parseGenericParams(mut self) Result[Vec[string], ParseError] {
         var generics = Vec[string]()
-        if !self.eat_symbol("[") {
+        if !self.eatSymbol("[") {
             return Result::Ok(generics)
         }
 
-        while !self.eat_symbol("]") {
-            var name = self.expect_ident()?
+        while !self.eatSymbol("]") {
+            var name = self.expectIdent()?
             var item =
-                if self.eat_symbol(":") {
+                if self.eatSymbol(":") {
                     var bounds = Vec[string]()
-                    bounds.push(self.parse_path()?)
-                    while self.eat_symbol("+") {
-                        bounds.push(self.parse_path()?)
+                    bounds.push(self.parsePath()?)
+                    while self.eatSymbol("+") {
+                        bounds.push(self.parsePath()?)
                     }
-                    name + ": " + join_strings(bounds, " + ")
+                    name + ": " + joinStrings(bounds, " + ")
                 } else {
                     name
                 }
             generics.push(item)
-            self.eat_symbol(",")
+            self.eatSymbol(",")
         }
 
         Result::Ok(generics)
     }
 
-    func parse_where_clause(mut self) Result[(), ParseError] {
-        if !self.eat_keyword("where") {
+    func parseWhereClause(mut self) Result[(), ParseError] {
+        if !self.eatKeyword("where") {
             return Result::Ok(())
         }
         while true {
-            self.parse_type_text(Vec[string] { ",", "{", ";" })?
-            if !self.eat_symbol(",") || self.at_symbol("{") || self.at_symbol(";") {
+            self.parseTypeText(Vec[string] { ",", "{", ";" })?
+            if !self.eatSymbol(",") || self.atSymbol("{") || self.atSymbol(";") {
                 break
             }
         }
         Result::Ok(())
     }
 
-    func parse_named_type(mut self, Vec[string] stop_values) Result[NamedType, ParseError] {
-        var segment = self.parse_token_segment(stop_values)?
-        decode_named_type(segment)
+    func parseNamedType(mut self, Vec[string] stopValues) Result[NamedType, ParseError] {
+        var segment = self.parseTokenSegment(stopValues)?
+        decodeNamedType(segment)
     }
 
-    func parse_token_segment(mut self, Vec[string] stop_values) Result[Vec[Token], ParseError] {
+    func parseTokenSegment(mut self, Vec[string] stopValues) Result[Vec[Token], ParseError] {
         var segment = Vec[Token]()
         var bracket = 0
         var paren = 0
@@ -355,7 +355,7 @@ impl Parser {
             if token.kind == TokenKind::Eof {
                 break
             }
-            if bracket == 0 && paren == 0 && contains_string(stop_values, token.value) {
+            if bracket == 0 && paren == 0 && containsString(stopValues, token.value) {
                 break
             }
             if token.value == "[" {
@@ -376,139 +376,139 @@ impl Parser {
         Result::Ok(segment)
     }
 
-    func parse_block_expr(mut self) Result[BlockExpr, ParseError] {
-        self.expect_symbol("{")?
+    func parseBlockExpr(mut self) Result[BlockExpr, ParseError] {
+        self.expectSymbol("{")?
         var statements = Vec[Stmt]()
-        var final_expr = Option::None
+        var finalExpr = Option::None
 
-        while !self.at_symbol("}") {
-            if self.starts_stmt() {
-                statements.push(self.parse_stmt()?)
+        while !self.atSymbol("}") {
+            if self.startsStmt() {
+                statements.push(self.parseStmt()?)
                 continue
             }
-            var expr = self.parse_expr()?
-            if self.eat_symbol(";") {
+            var expr = self.parseExpr()?
+            if self.eatSymbol(";") {
                 statements.push(Stmt::Expr(ExprStmt { expr: expr }))
                 continue
             }
-            if !self.at_symbol("}") {
+            if !self.atSymbol("}") {
                 statements.push(Stmt::Expr(ExprStmt { expr: expr }))
                 continue
             }
-            final_expr = Option::Some(expr)
+            finalExpr = Option::Some(expr)
             break
         }
 
-        self.expect_symbol("}")?
+        self.expectSymbol("}")?
         Result::Ok(BlockExpr {
             statements: statements,
-            final_expr: final_expr,
-            inferred_type: Option::None,
+            finalExpr: finalExpr,
+            inferredType: Option::None,
         })
     }
 
-    func starts_stmt(self) bool {
-        self.at_keyword("var")
-            || self.at_keyword("return")
-            || self.at_keyword("defer")
-            || self.at_cfor_start()
-            || self.looks_like_typed_var_stmt()
-            || self.looks_like_increment_stmt()
-            || self.looks_like_assignment_stmt()
-            || self.looks_like_short_var_stmt()
+    func startsStmt(self) bool {
+        self.atKeyword("var")
+            || self.atKeyword("return")
+            || self.atKeyword("defer")
+            || self.atCforStart()
+            || self.looksLikeTypedVarStmt()
+            || self.looksLikeIncrementStmt()
+            || self.looksLikeAssignmentStmt()
+            || self.looksLikeShortVarStmt()
     }
 
-    func parse_stmt(mut self) Result[Stmt, ParseError] {
-        if self.at_keyword("var") {
-            return Result::Ok(Stmt::Var(self.parse_var_stmt(true)?))
+    func parseStmt(mut self) Result[Stmt, ParseError] {
+        if self.atKeyword("var") {
+            return Result::Ok(Stmt::Var(self.parseVarStmt(true)?))
         }
-        if self.at_keyword("defer") {
-            return Result::Ok(Stmt::Defer(self.parse_defer_stmt()?))
+        if self.atKeyword("defer") {
+            return Result::Ok(Stmt::Defer(self.parseDeferStmt()?))
         }
-        if self.at_keyword("return") {
-            return Result::Ok(Stmt::Return(self.parse_return_stmt()?))
+        if self.atKeyword("return") {
+            return Result::Ok(Stmt::Return(self.parseReturnStmt()?))
         }
-        if self.at_cfor_start() {
-            return Result::Ok(Stmt::CFor(self.parse_cfor_stmt()?))
+        if self.atCforStart() {
+            return Result::Ok(Stmt::CFor(self.parseCforStmt()?))
         }
-        if self.looks_like_typed_var_stmt() {
-            return Result::Ok(Stmt::Var(self.parse_typed_var_stmt(true)?))
+        if self.looksLikeTypedVarStmt() {
+            return Result::Ok(Stmt::Var(self.parseTypedVarStmt(true)?))
         }
-        if self.looks_like_increment_stmt() {
-            return Result::Ok(Stmt::Increment(self.parse_increment_stmt(true)?))
+        if self.looksLikeIncrementStmt() {
+            return Result::Ok(Stmt::Increment(self.parseIncrementStmt(true)?))
         }
-        if self.looks_like_assignment_stmt() {
-            return Result::Ok(Stmt::Assign(self.parse_assign_stmt(true)?))
+        if self.looksLikeAssignmentStmt() {
+            return Result::Ok(Stmt::Assign(self.parseAssignStmt(true)?))
         }
-        if self.looks_like_short_var_stmt() {
-            return Result::Ok(Stmt::Var(self.parse_short_var_stmt(true)?))
+        if self.looksLikeShortVarStmt() {
+            return Result::Ok(Stmt::Var(self.parseShortVarStmt(true)?))
         }
-        Result::Err(self.error_here("unexpected statement"))
+        Result::Err(self.errorHere("unexpected statement"))
     }
 
-    func parse_var_stmt(mut self, bool consume_semicolon) Result[VarStmt, ParseError] {
-        self.expect_keyword("var")?
-        var name = self.expect_ident()?
-        var type_name =
-            if self.eat_symbol(":") {
-                Option::Some(self.parse_type_text(Vec[string] { "=" })?)
+    func parseVarStmt(mut self, bool consumeSemicolon) Result[VarStmt, ParseError] {
+        self.expectKeyword("var")?
+        var name = self.expectIdent()?
+        var typeName =
+            if self.eatSymbol(":") {
+                Option::Some(self.parseTypeText(Vec[string] { "=" })?)
             } else {
                 Option::None
             }
-        self.expect_symbol("=")?
-        var value = self.parse_expr()?
-        if consume_semicolon {
-            self.eat_symbol(";")
+        self.expectSymbol("=")?
+        var value = self.parseExpr()?
+        if consumeSemicolon {
+            self.eatSymbol(";")
         }
         Result::Ok(VarStmt {
             name: name,
-            type_name: type_name,
+            typeName: typeName,
             value: value,
         })
     }
 
-    func parse_short_var_stmt(mut self, bool consume_semicolon) Result[VarStmt, ParseError] {
-        var name = self.expect_ident()?
-        self.expect_symbol(":=")?
-        var value = self.parse_expr()?
-        if consume_semicolon {
-            self.eat_symbol(";")
+    func parseShortVarStmt(mut self, bool consumeSemicolon) Result[VarStmt, ParseError] {
+        var name = self.expectIdent()?
+        self.expectSymbol(":=")?
+        var value = self.parseExpr()?
+        if consumeSemicolon {
+            self.eatSymbol(";")
         }
         Result::Ok(VarStmt {
             name: name,
-            type_name: Option::None,
+            typeName: Option::None,
             value: value,
         })
     }
 
-    func parse_defer_stmt(mut self) Result[DeferStmt, ParseError] {
-        self.expect_keyword("defer")?
-        var expr = self.parse_expr()?
-        self.eat_symbol(";")
+    func parseDeferStmt(mut self) Result[DeferStmt, ParseError] {
+        self.expectKeyword("defer")?
+        var expr = self.parseExpr()?
+        self.eatSymbol(";")
         Result::Ok(DeferStmt { expr: expr })
     }
 
-    func parse_typed_var_stmt(mut self, bool consume_semicolon) Result[VarStmt, ParseError] {
-        var segment = self.parse_token_segment(Vec[string] { "=" })?
-        var named = decode_named_type(segment)?
-        self.expect_symbol("=")?
-        var value = self.parse_expr()?
-        if consume_semicolon {
-            self.eat_symbol(";")
+    func parseTypedVarStmt(mut self, bool consumeSemicolon) Result[VarStmt, ParseError] {
+        var segment = self.parseTokenSegment(Vec[string] { "=" })?
+        var named = decodeNamedType(segment)?
+        self.expectSymbol("=")?
+        var value = self.parseExpr()?
+        if consumeSemicolon {
+            self.eatSymbol(";")
         }
         Result::Ok(VarStmt {
             name: named.name,
-            type_name: Option::Some(named.type_name),
+            typeName: Option::Some(named.typeName),
             value: value,
         })
     }
 
-    func parse_assign_stmt(mut self, bool consume_semicolon) Result[AssignStmt, ParseError] {
-        var name = self.expect_ident()?
-        self.expect_symbol("=")?
-        var value = self.parse_expr()?
-        if consume_semicolon {
-            self.eat_symbol(";")
+    func parseAssignStmt(mut self, bool consumeSemicolon) Result[AssignStmt, ParseError] {
+        var name = self.expectIdent()?
+        self.expectSymbol("=")?
+        var value = self.parseExpr()?
+        if consumeSemicolon {
+            self.eatSymbol(";")
         }
         Result::Ok(AssignStmt {
             name: name,
@@ -516,27 +516,27 @@ impl Parser {
         })
     }
 
-    func parse_increment_stmt(mut self, bool consume_semicolon) Result[IncrementStmt, ParseError] {
-        var name = self.expect_ident()?
-        self.expect_symbol("++")?
-        if consume_semicolon {
-            self.eat_symbol(";")
+    func parseIncrementStmt(mut self, bool consumeSemicolon) Result[IncrementStmt, ParseError] {
+        var name = self.expectIdent()?
+        self.expectSymbol("++")?
+        if consumeSemicolon {
+            self.eatSymbol(";")
         }
         Result::Ok(IncrementStmt {
             name: name,
         })
     }
 
-    func parse_cfor_stmt(mut self) Result[CForStmt, ParseError] {
-        self.expect_keyword("for")?
-        self.expect_symbol("(")?
-        var init = self.parse_for_clause_stmt()?
-        self.expect_symbol(";")?
-        var condition = self.parse_expr()?
-        self.expect_symbol(";")?
-        var step = self.parse_for_clause_stmt()?
-        self.expect_symbol(")")?
-        var body = self.parse_block_expr()?
+    func parseCforStmt(mut self) Result[CForStmt, ParseError] {
+        self.expectKeyword("for")?
+        self.expectSymbol("(")?
+        var init = self.parseForClauseStmt()?
+        self.expectSymbol(";")?
+        var condition = self.parseExpr()?
+        self.expectSymbol(";")?
+        var step = self.parseForClauseStmt()?
+        self.expectSymbol(")")?
+        var body = self.parseBlockExpr()?
         Result::Ok(CForStmt {
             init: box(init),
             condition: condition,
@@ -545,89 +545,89 @@ impl Parser {
         })
     }
 
-    func parse_for_clause_stmt(mut self) Result[Stmt, ParseError] {
-        if self.at_keyword("var") {
-            return Result::Ok(Stmt::Var(self.parse_var_stmt(false)?))
+    func parseForClauseStmt(mut self) Result[Stmt, ParseError] {
+        if self.atKeyword("var") {
+            return Result::Ok(Stmt::Var(self.parseVarStmt(false)?))
         }
-        if self.looks_like_short_var_stmt() {
-            return Result::Ok(Stmt::Var(self.parse_short_var_stmt(false)?))
+        if self.looksLikeShortVarStmt() {
+            return Result::Ok(Stmt::Var(self.parseShortVarStmt(false)?))
         }
-        if self.looks_like_typed_var_stmt() {
-            return Result::Ok(Stmt::Var(self.parse_typed_var_stmt(false)?))
+        if self.looksLikeTypedVarStmt() {
+            return Result::Ok(Stmt::Var(self.parseTypedVarStmt(false)?))
         }
-        if self.looks_like_increment_stmt() {
-            return Result::Ok(Stmt::Increment(self.parse_increment_stmt(false)?))
+        if self.looksLikeIncrementStmt() {
+            return Result::Ok(Stmt::Increment(self.parseIncrementStmt(false)?))
         }
-        if self.looks_like_assignment_stmt() {
-            return Result::Ok(Stmt::Assign(self.parse_assign_stmt(false)?))
+        if self.looksLikeAssignmentStmt() {
+            return Result::Ok(Stmt::Assign(self.parseAssignStmt(false)?))
         }
-        Result::Err(self.error_here("unexpected for clause"))
+        Result::Err(self.errorHere("unexpected for clause"))
     }
 
-    func parse_return_stmt(mut self) Result[ReturnStmt, ParseError] {
-        self.expect_keyword("return")?
-        if self.eat_symbol(";") {
+    func parseReturnStmt(mut self) Result[ReturnStmt, ParseError] {
+        self.expectKeyword("return")?
+        if self.eatSymbol(";") {
             return Result::Ok(ReturnStmt {
                 value: Option::None,
             })
         }
-        var value = self.parse_expr()?
-        self.eat_symbol(";")
+        var value = self.parseExpr()?
+        self.eatSymbol(";")
         Result::Ok(ReturnStmt {
             value: Option::Some(value),
         })
     }
 
-    func parse_expr(mut self) Result[Expr, ParseError] {
-        if self.at_keyword("match") {
-            return self.parse_match_expr()
+    func parseExpr(mut self) Result[Expr, ParseError] {
+        if self.atKeyword("match") {
+            return self.parseMatchExpr()
         }
-        if self.at_keyword("if") {
-            return self.parse_if_expr()
+        if self.atKeyword("if") {
+            return self.parseIfExpr()
         }
-        if self.at_keyword("while") {
-            return self.parse_while_expr()
+        if self.atKeyword("while") {
+            return self.parseWhileExpr()
         }
-        if self.at_keyword("for") {
-            return self.parse_for_expr()
+        if self.atKeyword("for") {
+            return self.parseForExpr()
         }
-        self.parse_binary_expr(0)
+        self.parseBinaryExpr(0)
     }
 
-    func parse_match_expr(mut self) Result[Expr, ParseError] {
-        self.expect_keyword("match")?
-        var subject = self.parse_expr()?
-        self.expect_symbol("{")?
+    func parseMatchExpr(mut self) Result[Expr, ParseError] {
+        self.expectKeyword("match")?
+        var subject = self.parseExpr()?
+        self.expectSymbol("{")?
         var arms = Vec[MatchArm]()
 
-        while !self.eat_symbol("}") {
-            var pattern = self.parse_pattern()?
-            self.expect_symbol("=>")?
-            var expr = self.parse_expr()?
+        while !self.eatSymbol("}") {
+            var pattern = self.parsePattern()?
+            self.expectSymbol("=>")?
+            var expr = self.parseExpr()?
             arms.push(MatchArm {
                 pattern: pattern,
                 expr: expr,
             })
-            self.eat_symbol(",")
+            self.eatSymbol(",")
         }
 
         Result::Ok(Expr::Match(MatchExpr {
             subject: Box(subject),
             arms: arms,
-            inferred_type: Option::None,
+            inferredType: Option::None,
         }))
     }
 
-    func parse_if_expr(mut self) Result[Expr, ParseError] {
-        self.expect_keyword("if")?
-        var condition = self.parse_expr()?
-        var then_branch = self.parse_block_expr()?
-        var else_branch =
-            if self.eat_keyword("else") {
-                if self.at_keyword("if") {
-                    Option::Some(Box(self.parse_if_expr()?))
+    func parseIfExpr(mut self) Result[Expr, ParseError] {
+        self.expectKeyword("if")?
+        var condition = self.parseExpr()?
+        var thenBranch = self.parseBlockExpr()?
+        var elseBranch =
+            if self.eatKeyword("else") {
+                if self.atKeyword("if") {
+                    Option::Some(Box(self.parseIfExpr()?))
                 } else {
-                    Option::Some(Box(Expr::Block(self.parse_block_expr()?)))
+                    Option::Some(Box(Expr::Block(self.parseBlockExpr()?)))
                 }
             } else {
                 Option::None
@@ -635,61 +635,61 @@ impl Parser {
 
         Result::Ok(Expr::If(IfExpr {
             condition: Box(condition),
-            then_branch: then_branch,
-            else_branch: else_branch,
-            inferred_type: Option::None,
+            thenBranch: thenBranch,
+            elseBranch: elseBranch,
+            inferredType: Option::None,
         }))
     }
 
-    func parse_while_expr(mut self) Result[Expr, ParseError] {
-        self.expect_keyword("while")?
-        var condition = self.parse_expr()?
-        var body = self.parse_block_expr()?
+    func parseWhileExpr(mut self) Result[Expr, ParseError] {
+        self.expectKeyword("while")?
+        var condition = self.parseExpr()?
+        var body = self.parseBlockExpr()?
         Result::Ok(Expr::While(WhileExpr {
             condition: Box(condition),
             body: body,
-            inferred_type: Option::None,
+            inferredType: Option::None,
         }))
     }
 
-    func parse_for_expr(mut self) Result[Expr, ParseError] {
-        self.expect_keyword("for")?
-        var name = self.expect_ident()?
-        self.expect_keyword("in")?
-        var iterable = self.parse_expr()?
-        var body = self.parse_block_expr()?
+    func parseForExpr(mut self) Result[Expr, ParseError] {
+        self.expectKeyword("for")?
+        var name = self.expectIdent()?
+        self.expectKeyword("in")?
+        var iterable = self.parseExpr()?
+        var body = self.parseBlockExpr()?
         Result::Ok(Expr::For(ForExpr {
             name: name,
             iterable: Box(iterable),
             body: body,
-            inferred_type: Option::None,
+            inferredType: Option::None,
         }))
     }
 
-    func parse_pattern(mut self) Result[Pattern, ParseError] {
-        if self.eat_ident_value("_") {
+    func parsePattern(mut self) Result[Pattern, ParseError] {
+        if self.eatIdentValue("_") {
             return Result::Ok(Pattern::Wildcard(WildcardPattern {}))
         }
 
-        var path = self.parse_path()?
-        if self.eat_symbol("(") {
+        var path = self.parsePath()?
+        if self.eatSymbol("(") {
             var args = Vec[Pattern]()
-            if !self.at_symbol(")") {
+            if !self.atSymbol(")") {
                 while true {
-                    args.push(self.parse_pattern()?)
-                    if !self.eat_symbol(",") || self.at_symbol(")") {
+                    args.push(self.parsePattern()?)
+                    if !self.eatSymbol(",") || self.atSymbol(")") {
                         break
                     }
                 }
             }
-            self.expect_symbol(")")?
+            self.expectSymbol(")")?
             return Result::Ok(Pattern::Variant(VariantPattern {
                 path: path,
                 args: args,
             }))
         }
 
-        if path_contains_dot(path) || starts_with_upper(path) {
+        if pathContainsDot(path) || startsWithUpper(path) {
             return Result::Ok(Pattern::Variant(VariantPattern {
                 path: path,
                 args: Vec[Pattern](),
@@ -699,75 +699,75 @@ impl Parser {
         Result::Ok(Pattern::Name(NamePattern { name: path }))
     }
 
-    func parse_binary_expr(mut self, int32 min_precedence) Result[Expr, ParseError] {
-        var expr = self.parse_unary_expr()?
+    func parseBinaryExpr(mut self, int32 minPrecedence) Result[Expr, ParseError] {
+        var expr = self.parseUnaryExpr()?
         while true {
             var token = self.peek()?
-            var precedence = self.binary_precedence(token.value)
-            if precedence < min_precedence {
+            var precedence = self.binaryPrecedence(token.value)
+            if precedence < minPrecedence {
                 break
             }
             var op = self.advance()?.value
-            var rhs = self.parse_binary_expr(precedence + 1)?
+            var rhs = self.parseBinaryExpr(precedence + 1)?
             expr = Expr::Binary(BinaryExpr {
                 left: Box(expr),
                 op: op,
                 right: Box(rhs),
-                inferred_type: Option::None,
+                inferredType: Option::None,
             })
         }
         Result::Ok(expr)
     }
 
-    func parse_unary_expr(mut self) Result[Expr, ParseError] {
-        if self.eat_symbol("&") {
-            var mutable = self.eat_keyword("mut")
-            var target = self.parse_unary_expr()?
+    func parseUnaryExpr(mut self) Result[Expr, ParseError] {
+        if self.eatSymbol("&") {
+            var mutable = self.eatKeyword("mut")
+            var target = self.parseUnaryExpr()?
             return Result::Ok(Expr::Borrow(BorrowExpr {
                 target: Box(target),
                 mutable: mutable,
-                inferred_type: Option::None,
+                inferredType: Option::None,
             }))
         }
-        self.parse_call_expr()
+        self.parseCallExpr()
     }
 
-    func parse_call_expr(mut self) Result[Expr, ParseError] {
-        var expr = self.parse_primary_expr()?
+    func parseCallExpr(mut self) Result[Expr, ParseError] {
+        var expr = self.parsePrimaryExpr()?
         while true {
-            if self.eat_symbol("(") {
+            if self.eatSymbol("(") {
                 var args = Vec[Expr]()
-                if !self.at_symbol(")") {
+                if !self.atSymbol(")") {
                     while true {
-                        args.push(self.parse_expr()?)
-                        if !self.eat_symbol(",") || self.at_symbol(")") {
+                        args.push(self.parseExpr()?)
+                        if !self.eatSymbol(",") || self.atSymbol(")") {
                             break
                         }
                     }
                 }
-                self.expect_symbol(")")?
+                self.expectSymbol(")")?
                 expr = Expr::Call(CallExpr {
                     callee: Box(expr),
                     args: args,
-                    inferred_type: Option::None,
+                    inferredType: Option::None,
                 })
                 continue
             }
-            if self.eat_symbol(".") {
+            if self.eatSymbol(".") {
                 expr = Expr::Member(MemberExpr {
                     target: Box(expr),
-                    member: self.expect_ident()?,
-                    inferred_type: Option::None,
+                    member: self.expectIdent()?,
+                    inferredType: Option::None,
                 })
                 continue
             }
-            if self.eat_symbol("[") {
-                var index = self.parse_expr()?
-                self.expect_symbol("]")?
+            if self.eatSymbol("[") {
+                var index = self.parseExpr()?
+                self.expectSymbol("]")?
                 expr = Expr::Index(IndexExpr {
                     target: Box(expr),
                     index: Box(index),
-                    inferred_type: Option::None,
+                    inferredType: Option::None,
                 })
                 continue
             }
@@ -776,103 +776,103 @@ impl Parser {
         Result::Ok(expr)
     }
 
-    func parse_primary_expr(mut self) Result[Expr, ParseError] {
+    func parsePrimaryExpr(mut self) Result[Expr, ParseError] {
         var token = self.peek()?
         if token.kind == TokenKind::Int {
             self.advance()?
             return Result::Ok(Expr::Int(IntExpr {
                 value: token.value,
-                inferred_type: Option::None,
+                inferredType: Option::None,
             }))
         }
         if token.kind == TokenKind::string {
             self.advance()?
             return Result::Ok(Expr::string(StringExpr {
                 value: token.value,
-                inferred_type: Option::None,
+                inferredType: Option::None,
             }))
         }
-        if self.at_keyword("true") {
+        if self.atKeyword("true") {
             self.advance()?
             return Result::Ok(Expr::Bool(BoolExpr {
                 value: true,
-                inferred_type: Option::None,
+                inferredType: Option::None,
             }))
         }
-        if self.at_keyword("false") {
+        if self.atKeyword("false") {
             self.advance()?
             return Result::Ok(Expr::Bool(BoolExpr {
                 value: false,
-                inferred_type: Option::None,
+                inferredType: Option::None,
             }))
         }
-        if self.at_symbol("{") {
-            return Result::Ok(Expr::Block(self.parse_block_expr()?))
+        if self.atSymbol("{") {
+            return Result::Ok(Expr::Block(self.parseBlockExpr()?))
         }
-        if self.eat_symbol("(") {
-            var expr = self.parse_expr()?
-            self.expect_symbol(")")?
+        if self.eatSymbol("(") {
+            var expr = self.parseExpr()?
+            self.expectSymbol(")")?
             return Result::Ok(expr)
         }
         // composite literals: array literal syntax like []T{...}
-        if self.at_symbol("[") {
+        if self.atSymbol("[") {
             // consume bracket group (e.g., "[]")
-            var bracket = self.parse_bracket_group()?
-            var type_text = bracket
+            var bracket = self.parseBracketGroup()?
+            var typeText = bracket
             // if there are more type tokens before '{', grab them
             var token = self.peek().unwrap()
             if token.kind != TokenKind::Symbol || token.value != "{" {
-                var seg = self.parse_token_segment(Vec[string] { "{" })?
-                type_text = type_text + " " + join_token_values(seg)
+                var seg = self.parseTokenSegment(Vec[string] { "{" })?
+                typeText = typeText + " " + joinTokenValues(seg)
             }
-            self.expect_symbol("{")?
+            self.expectSymbol("{")?
             var items = Vec[Expr]()
-            if !self.at_symbol("}") {
+            if !self.atSymbol("}") {
                 while true {
-                    items.push(self.parse_expr()?)
-                    if !self.eat_symbol(",") || self.at_symbol("}") {
+                    items.push(self.parseExpr()?)
+                    if !self.eatSymbol(",") || self.atSymbol("}") {
                         break
                     }
                 }
             }
-            self.expect_symbol("}")?
-            return Result::Ok(Expr::Array(ArrayLiteral { type_text: Option::Some(type_text.trim()), items: items }))
+            self.expectSymbol("}")?
+            return Result::Ok(Expr::Array(ArrayLiteral { typeText: Option::Some(typeText.trim()), items: items }))
         }
         // map literal: map[K]V{ key: value, ... }
         if token.kind == TokenKind::Ident && token.value == "map" {
             // consume 'map'
             self.advance()?
-            var bracket = self.parse_bracket_group()?
-            var type_text = "map" + bracket
+            var bracket = self.parseBracketGroup()?
+            var typeText = "map" + bracket
             // optional value type after bracket
             var token2 = self.peek().unwrap()
             if token2.kind == TokenKind::Ident || token2.kind == TokenKind::Symbol {
-                var seg = self.parse_token_segment(Vec[string] { "{" })?
-                type_text = type_text + " " + join_token_values(seg)
+                var seg = self.parseTokenSegment(Vec[string] { "{" })?
+                typeText = typeText + " " + joinTokenValues(seg)
             }
-            self.expect_symbol("{")?
+            self.expectSymbol("{")?
             var entries = Vec[MapEntry]()
-            if !self.at_symbol("}") {
+            if !self.atSymbol("}") {
                 while true {
-                    var key = self.parse_expr()?
-                    self.expect_symbol(":")?
-                    var value = self.parse_expr()?
+                    var key = self.parseExpr()?
+                    self.expectSymbol(":")?
+                    var value = self.parseExpr()?
                     entries.push(MapEntry { key: key, value: value })
-                    if !self.eat_symbol(",") || self.at_symbol("}") {
+                    if !self.eatSymbol(",") || self.atSymbol("}") {
                         break
                     }
                 }
             }
-            self.expect_symbol("}")?
-            return Result::Ok(Expr::Map(MapLiteral { type_text: Option::Some(type_text.trim()), entries: entries }))
+            self.expectSymbol("}")?
+            return Result::Ok(Expr::Map(MapLiteral { typeText: Option::Some(typeText.trim()), entries: entries }))
         }
         Result::Ok(Expr::Name(NameExpr {
-            name: self.expect_ident()?,
-            inferred_type: Option::None,
+            name: self.expectIdent()?,
+            inferredType: Option::None,
         }))
     }
 
-    func binary_precedence(self, string op) int32 {
+    func binaryPrecedence(self, string op) int32 {
         match op {
             "||" => 1,
             "&&" => 2,
@@ -891,44 +891,44 @@ impl Parser {
         }
     }
 
-    func parse_use_path(mut self) Result[string, ParseError] {
+    func parseUsePath(mut self) Result[string, ParseError] {
         var parts = Vec[string]()
-        parts.push(self.expect_ident()?)
-        while self.eat_symbol(".") {
-            if self.eat_symbol("{") {
+        parts.push(self.expectIdent()?)
+        while self.eatSymbol(".") {
+            if self.eatSymbol("{") {
                 var members = Vec[string]()
-                while !self.eat_symbol("}") {
-                    var member = self.expect_ident()?
+                while !self.eatSymbol("}") {
+                    var member = self.expectIdent()?
                     var text =
-                        if self.eat_keyword("as") {
-                            member + " as " + self.expect_ident()?
+                        if self.eatKeyword("as") {
+                            member + " as " + self.expectIdent()?
                         } else {
                             member
                         }
                     members.push(text)
-                    self.eat_symbol(",")
+                    self.eatSymbol(",")
                 }
-                return Result::Ok(join_strings(parts, ".") + ".{" + join_strings(members, ", ") + "}")
+                return Result::Ok(joinStrings(parts, ".") + ".{" + joinStrings(members, ", ") + "}")
             }
-            parts.push(self.expect_ident()?)
+            parts.push(self.expectIdent()?)
         }
-        Result::Ok(join_strings(parts, "."))
+        Result::Ok(joinStrings(parts, "."))
     }
 
-    func parse_path(mut self) Result[string, ParseError] {
+    func parsePath(mut self) Result[string, ParseError] {
         var parts = Vec[string]()
-        parts.push(self.expect_ident()?)
-        while self.eat_symbol(".") {
-            parts.push(self.expect_ident()?)
+        parts.push(self.expectIdent()?)
+        while self.eatSymbol(".") {
+            parts.push(self.expectIdent()?)
         }
-        if self.at_symbol("[") {
+        if self.atSymbol("[") {
             var last = parts.pop().unwrap()
-            parts.push(last + self.parse_bracket_group()?)
+            parts.push(last + self.parseBracketGroup()?)
         }
-        Result::Ok(join_strings(parts, "."))
+        Result::Ok(joinStrings(parts, "."))
     }
 
-    func parse_type_text(mut self, Vec[string] stop_values) Result[string, ParseError] {
+    func parseTypeText(mut self, Vec[string] stopValues) Result[string, ParseError] {
         var parts = Vec[string]()
         var bracket = 0
         var paren = 0
@@ -938,7 +938,7 @@ impl Parser {
             if token.kind == TokenKind::Eof {
                 break
             }
-            if bracket == 0 && paren == 0 && contains_string(stop_values, token.value) {
+            if bracket == 0 && paren == 0 && containsString(stopValues, token.value) {
                 break
             }
             if token.value == "[" {
@@ -956,10 +956,10 @@ impl Parser {
             parts.push(self.advance()?.value)
         }
 
-        Result::Ok(normalize_type_text(join_strings(parts, " ")))
+        Result::Ok(normalizeTypeText(joinStrings(parts, " ")))
     }
 
-    func parse_bracket_group(mut self) Result[string, ParseError] {
+    func parseBracketGroup(mut self) Result[string, ParseError] {
         var parts = Vec[string]()
         parts.push(self.advance()?.value)
         var depth = 1
@@ -973,7 +973,7 @@ impl Parser {
             }
         }
         Result::Ok(
-            join_strings(parts, " ")
+            joinStrings(parts, " ")
                 .replace("[ ", "[")
                 .replace(" ]", "]")
                 .replace(" ,", ",")
@@ -984,55 +984,55 @@ impl Parser {
         self.peek().unwrap().kind == kind
     }
 
-    func at_keyword(self, string value) bool {
+    func atKeyword(self, string value) bool {
         var token = self.peek().unwrap()
         token.kind == TokenKind::Keyword && token.value == value
     }
 
-    func at_symbol(self, string value) bool {
+    func atSymbol(self, string value) bool {
         var token = self.peek().unwrap()
         token.kind == TokenKind::Symbol && token.value == value
     }
 
-    func at_cfor_start(self) bool {
-        self.at_keyword("for") && self.peek_at(1).unwrap().kind == TokenKind::Symbol && self.peek_at(1).unwrap().value == "("
+    func atCforStart(self) bool {
+        self.atKeyword("for") && self.peekAt(1).unwrap().kind == TokenKind::Symbol && self.peekAt(1).unwrap().value == "("
     }
 
-    func looks_like_assignment_stmt(self) bool {
+    func looksLikeAssignmentStmt(self) bool {
         var first = self.peek().unwrap()
-        var second = self.peek_at(1).unwrap()
+        var second = self.peekAt(1).unwrap()
         first.kind == TokenKind::Ident && second.kind == TokenKind::Symbol && second.value == "="
     }
 
-    func looks_like_short_var_stmt(self) bool {
+    func looksLikeShortVarStmt(self) bool {
         var first = self.peek().unwrap()
-        var second = self.peek_at(1).unwrap()
+        var second = self.peekAt(1).unwrap()
         first.kind == TokenKind::Ident && second.kind == TokenKind::Symbol && second.value == ":="
     }
 
-    func looks_like_increment_stmt(self) bool {
+    func looksLikeIncrementStmt(self) bool {
         var first = self.peek().unwrap()
-        var second = self.peek_at(1).unwrap()
+        var second = self.peekAt(1).unwrap()
         first.kind == TokenKind::Ident && second.kind == TokenKind::Symbol && second.value == "++"
     }
 
-    func looks_like_typed_var_stmt(self) bool {
-        var offset = self.find_top_level_symbol_offset("=")
+    func looksLikeTypedVarStmt(self) bool {
+        var offset = self.findTopLevelSymbolOffset("=")
         if offset <= 0 {
             return false
         }
-        decode_named_type(slice_tokens(self.tokens, self.index, self.index + offset)).is_ok()
+        decodeNamedType(sliceTokens(self.tokens, self.index, self.index + offset)).isOk()
     }
 
-    func eat_keyword(mut self, string value) bool {
-        if self.at_keyword(value) {
+    func eatKeyword(mut self, string value) bool {
+        if self.atKeyword(value) {
             self.advance().unwrap()
             return true
         }
         false
     }
 
-    func eat_ident_value(mut self, string value) bool {
+    func eatIdentValue(mut self, string value) bool {
         var token = self.peek().unwrap()
         if token.kind == TokenKind::Ident && token.value == value {
             self.advance().unwrap()
@@ -1041,15 +1041,15 @@ impl Parser {
         false
     }
 
-    func eat_symbol(mut self, string value) bool {
-        if self.at_symbol(value) {
+    func eatSymbol(mut self, string value) bool {
+        if self.atSymbol(value) {
             self.advance().unwrap()
             return true
         }
         false
     }
 
-    func expect_keyword(mut self, string value) Result[Token, ParseError] {
+    func expectKeyword(mut self, string value) Result[Token, ParseError] {
         var token = self.peek()?
         if token.kind == TokenKind::Keyword && token.value == value {
             return self.advance()
@@ -1061,7 +1061,7 @@ impl Parser {
         })
     }
 
-    func expect_symbol(mut self, string value) Result[Token, ParseError] {
+    func expectSymbol(mut self, string value) Result[Token, ParseError] {
         var token = self.peek()?
         if token.kind == TokenKind::Symbol && token.value == value {
             return self.advance()
@@ -1073,7 +1073,7 @@ impl Parser {
         })
     }
 
-    func expect_ident(mut self) Result[string, ParseError] {
+    func expectIdent(mut self) Result[string, ParseError] {
         var token = self.peek()?
         if token.kind == TokenKind::Ident {
             self.advance()?
@@ -1091,10 +1091,10 @@ impl Parser {
     }
 
     func peek(self) Result[Token, ParseError] {
-        self.peek_at(0)
+        self.peekAt(0)
     }
 
-    func peek_at(self, int32 offset) Result[Token, ParseError] {
+    func peekAt(self, int32 offset) Result[Token, ParseError] {
         if self.index >= len(self.tokens) {
             return Result::Err(ParseError {
                 message: "unexpected eof",
@@ -1115,7 +1115,7 @@ impl Parser {
         Result::Ok(token)
     }
 
-    func error_here(self, string message) ParseError {
+    func errorHere(self, string message) ParseError {
         var token = self.peek().unwrap()
         ParseError {
             message: message,
@@ -1126,7 +1126,7 @@ impl Parser {
 }
 
 impl Parser {
-    func find_top_level_symbol_offset(self, string value) int32 {
+    func findTopLevelSymbolOffset(self, string value) int32 {
         var bracket = 0
         var paren = 0
         var offset = 0
@@ -1165,21 +1165,21 @@ struct ParsedFunction {
 
 struct NamedType {
     string name,
-    string type_name,
+    string typeName,
 }
 
-func decode_named_type(Vec[Token] tokens) Result[NamedType, ParseError] {
-    var colon = find_token_value(tokens, ":")
+func decodeNamedType(Vec[Token] tokens) Result[NamedType, ParseError] {
+    var colon = findTokenValue(tokens, ":")
     if colon >= 0 {
-        var name_tokens = slice_tokens(tokens, 0, colon)
-        var type_tokens = slice_tokens(tokens, colon + 1, len(tokens))
+        var nameTokens = sliceTokens(tokens, 0, colon)
+        var typeTokens = sliceTokens(tokens, colon + 1, len(tokens))
         return Result::Ok(NamedType {
-            name: normalize_type_text(join_token_values(name_tokens)),
-            type_name: normalize_type_text(join_token_values(type_tokens)),
+            name: normalizeTypeText(joinTokenValues(nameTokens)),
+            typeName: normalizeTypeText(joinTokenValues(typeTokens)),
         })
     }
 
-    var split = find_decl_name_index(tokens)
+    var split = findDeclNameIndex(tokens)
     if split <= 0 {
         return Result::Err(ParseError {
             message: "expected typed name",
@@ -1189,11 +1189,11 @@ func decode_named_type(Vec[Token] tokens) Result[NamedType, ParseError] {
     }
     Result::Ok(NamedType {
         name: tokens[split].value,
-        type_name: normalize_type_text(join_token_values(slice_tokens(tokens, 0, split))),
+        typeName: normalizeTypeText(joinTokenValues(sliceTokens(tokens, 0, split))),
     })
 }
 
-func slice_tokens(Vec[Token] tokens, int32 start, int32 end) Vec[Token] {
+func sliceTokens(Vec[Token] tokens, int32 start, int32 end) Vec[Token] {
     var out = Vec[Token]()
     var i = start
     while i < end {
@@ -1203,15 +1203,15 @@ func slice_tokens(Vec[Token] tokens, int32 start, int32 end) Vec[Token] {
     out
 }
 
-func join_token_values(Vec[Token] tokens) string {
+func joinTokenValues(Vec[Token] tokens) string {
     var parts = Vec[string]()
     for token in tokens {
         parts.push(token.value)
     }
-    join_strings(parts, " ")
+    joinStrings(parts, " ")
 }
 
-func find_token_value(Vec[Token] tokens, string value) int32 {
+func findTokenValue(Vec[Token] tokens, string value) int32 {
     var bracket = 0
     var paren = 0
     var i = 0
@@ -1233,7 +1233,7 @@ func find_token_value(Vec[Token] tokens, string value) int32 {
     -1
 }
 
-func find_decl_name_index(Vec[Token] tokens) int32 {
+func findDeclNameIndex(Vec[Token] tokens) int32 {
     var bracket = 0
     var paren = 0
     var index = -1
@@ -1256,7 +1256,7 @@ func find_decl_name_index(Vec[Token] tokens) int32 {
     index
 }
 
-func normalize_type_text(string text) string {
+func normalizeTypeText(string text) string {
     text
         .replace(" . ", ".")
         .replace("[ ", "[")
@@ -1269,7 +1269,7 @@ func normalize_type_text(string text) string {
         .replace(" [", "[")
 }
 
-func contains_string(Vec[string] values, string target) bool {
+func containsString(Vec[string] values, string target) bool {
     for value in values {
         if value == target {
             return true
@@ -1278,7 +1278,7 @@ func contains_string(Vec[string] values, string target) bool {
     false
 }
 
-func join_strings(Vec[string] values, string sep) string {
+func joinStrings(Vec[string] values, string sep) string {
     var out = ""
     var first = true
     for value in values {
@@ -1291,10 +1291,10 @@ func join_strings(Vec[string] values, string sep) string {
     out
 }
 
-func path_contains_dot(string path) bool {
+func pathContainsDot(string path) bool {
     var i = 0
     while i < len(path) {
-        if char_at(path, i) == "." {
+        if charAt(path, i) == "." {
             return true
         }
         i = i + 1
@@ -1302,11 +1302,11 @@ func path_contains_dot(string path) bool {
     false
 }
 
-func starts_with_upper(string text) bool {
+func startsWithUpper(string text) bool {
     if text == "" {
         return false
     }
-    var ch = char_at(text, 0)
+    var ch = charAt(text, 0)
     match ch {
         "A" => true,
         "B" => true,
