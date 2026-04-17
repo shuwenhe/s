@@ -6,6 +6,7 @@ use compile.internal.build.emit.Ast as EmitAst
 use compile.internal.build.emit.Built as EmitBuilt
 use compile.internal.build.emit.CheckOk as EmitCheckOk
 use compile.internal.build.emit.Tokens as EmitTokens
+use compile.internal.semantic.CheckText
 use compile.internal.syntax.ParseSource
 use compile.internal.syntax.ReadSource
 use compile.internal.syntax.Tokenize
@@ -30,6 +31,9 @@ func Run(CompileOptions options) -> Result[(), ExecError] {
     if options.command == "check" {
         var parse_result = ParseSource(source)
         if parse_result.is_err() {
+            return Result::Err(new_exec_error())
+        }
+        if CheckText(source) != 0 {
             return Result::Err(new_exec_error())
         }
         EmitCheckOk(options.path)
