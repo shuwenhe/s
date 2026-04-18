@@ -2,7 +2,7 @@ package compile.internal.build.parse
 
 use std.vec.Vec
 
-func ParseOptions(Vec[string] args)  Vec[string] {
+func parse_options(Vec[string] args)  Vec[string] {
     if args.len() < 2 {
         return make_options("help", "", "")
     }
