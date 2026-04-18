@@ -1,23 +1,23 @@
 package compile.internal.compiler
 
-use compile.internal.arch.Init as archInit
-use compile.internal.build.Main as buildMain
-use internal.buildcfg.Check as buildcfgCheck
-use internal.buildcfg.GOARCH as buildcfgGOARCH
+use compile.internal.arch.Init as arch_init
+use compile.internal.build.Main as build_main
+use internal.buildcfg.Check as buildcfg_check
+use internal.buildcfg.goarch as buildcfg_goarch
 use std.vec.Vec
 
 func main(Vec[string] args) int32 {
-    var buildcfgErr = buildcfgCheck()
-    if buildcfgErr != "" {
+    var buildcfg_err = buildcfg_check()
+    if buildcfg_err != "" {
         return 2
     }
 
-    var archErr = archInit(buildcfgGOARCH())
-    if archErr != "" {
+    var arch_err = arch_init(buildcfg_goarch())
+    if arch_err != "" {
         return 2
     }
 
-    return buildMain(args)
+    return build_main(args)
 }
 
 // Compatibility wrapper expected by some bootstrap imports.

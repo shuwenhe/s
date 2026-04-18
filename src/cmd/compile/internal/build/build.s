@@ -1,17 +1,17 @@
 package compile.internal.build
 
-use compile.internal.build.exec.Run as ExecRun
-use compile.internal.build.parse.ParseOptions
-use compile.internal.build.report.Error as ReportError
+use compile.internal.build.exec.Run as exec_run
+use compile.internal.build.parse.parse_options
+use compile.internal.build.report.Error as report_error
 use std.vec.Vec
 
 func main(Vec[string] args)  int32 {
-    var options = ParseOptions(args)
+    var options = parse_options(args)
     if options[0] == "help" {
         return 0
     }
 
-    var exec_result = ExecRun(options)
+    var exec_result = exec_run(options)
     if options[0] == "run" {
         return exec_result
     }
@@ -24,5 +24,5 @@ func main(Vec[string] args)  int32 {
 }
 
 func report_error(string message)  () {
-    ReportError(message)
+    report_error(message)
 }

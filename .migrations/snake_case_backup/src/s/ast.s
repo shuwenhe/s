@@ -2,284 +2,284 @@ package s
 
 use std.option.Option
 use std.prelude.box
-use std.prelude.toString
+use std.prelude.to_string
 use std.vec.Vec
 
-struct UseDecl {
+struct use_decl {
     string path,
     Option[string] alias,
 }
 
 struct Field {
     string name,
-    string typeName,
-    bool isPublic,
+    string type_name,
+    bool is_public,
 }
 
 struct Param {
     string name,
-    string typeName,
+    string type_name,
 }
 
-struct FunctionSig {
+struct function_sig {
     string name,
     Vec[string] generics,
     Vec[Param] params,
-    Option[string] returnType,
+    Option[string] return_type,
 }
 
-struct NamePattern {
+struct name_pattern {
     string name,
 }
 
-struct WildcardPattern {}
+struct wildcard_pattern {}
 
-struct VariantPattern {
+struct variant_pattern {
     string path,
     Vec[Pattern] args,
 }
 
-struct LiteralPattern {
+struct literal_pattern {
     Expr value,
 }
 
 enum Pattern {
-    Name(NamePattern),
-    Wildcard(WildcardPattern),
-    Variant(VariantPattern),
-    Literal(LiteralPattern),
+    Name(name_pattern),
+    Wildcard(wildcard_pattern),
+    Variant(variant_pattern),
+    Literal(literal_pattern),
 }
 
-struct IntExpr {
+struct int_expr {
     string value,
-    Option[string] inferredType,
+    Option[string] inferred_type,
 }
 
-struct StringExpr {
+struct string_expr {
     string value,
-    Option[string] inferredType,
+    Option[string] inferred_type,
 }
 
-struct BoolExpr {
+struct bool_expr {
     bool value,
-    Option[string] inferredType,
+    Option[string] inferred_type,
 }
 
-struct NameExpr {
+struct name_expr {
     string name,
-    Option[string] inferredType,
+    Option[string] inferred_type,
 }
 
-struct BorrowExpr {
+struct borrow_expr {
     Box[Expr] target,
     bool mutable,
-    Option[string] inferredType,
+    Option[string] inferred_type,
 }
 
-struct BinaryExpr {
+struct binary_expr {
     Box[Expr] left,
     string op,
     Box[Expr] right,
-    Option[string] inferredType,
+    Option[string] inferred_type,
 }
 
-struct MemberExpr {
+struct member_expr {
     Box[Expr] target,
     string member,
-    Option[string] inferredType,
+    Option[string] inferred_type,
 }
 
-struct IndexExpr {
+struct index_expr {
     Box[Expr] target,
     Box[Expr] index,
-    Option[string] inferredType,
+    Option[string] inferred_type,
 }
 
-struct CallExpr {
+struct call_expr {
     Box[Expr] callee,
     Vec[Expr] args,
-    Option[string] inferredType,
+    Option[string] inferred_type,
 }
 
-struct SwitchArm {
+struct switch_arm {
     Pattern pattern,
     Expr expr,
 }
 
-struct SwitchExpr {
+struct switch_expr {
     Box[Expr] subject,
-    Vec[SwitchArm] arms,
-    Option[string] inferredType,
+    Vec[switch_arm] arms,
+    Option[string] inferred_type,
 }
 
-struct IfExpr {
+struct if_expr {
     Box[Expr] condition,
-    BlockExpr thenBranch,
-    Option[Box[Expr]] elseBranch,
-    Option[string] inferredType,
+    block_expr then_branch,
+    Option[Box[Expr]] else_branch,
+    Option[string] inferred_type,
 }
 
-struct WhileExpr {
+struct while_expr {
     Box[Expr] condition,
-    BlockExpr body,
-    Option[string] inferredType,
+    block_expr body,
+    Option[string] inferred_type,
 }
 
-struct ForExpr {
+struct for_expr {
     Vec[string] names,
     bool declare,
     Box[Expr] iterable,
-    BlockExpr body,
-    Option[string] inferredType,
+    block_expr body,
+    Option[string] inferred_type,
 }
 
-struct BlockExpr {
+struct block_expr {
     Vec[Stmt] statements,
-    Option[Expr] finalExpr,
-    Option[string] inferredType,
+    Option[Expr] final_expr,
+    Option[string] inferred_type,
 }
 
-struct ArrayLiteral {
-    Option[string] typeText,
+struct array_literal {
+    Option[string] type_text,
     Vec[Expr] items,
 }
 
-struct MapEntry {
+struct map_entry {
     Expr key,
     Expr value,
 }
 
-struct MapLiteral {
-    Option[string] typeText,
-    Vec[MapEntry] entries,
+struct map_literal {
+    Option[string] type_text,
+    Vec[map_entry] entries,
 }
 
 enum Expr {
-    Int(IntExpr),
-    string(StringExpr),
-    Bool(BoolExpr),
-    Name(NameExpr),
-    Borrow(BorrowExpr),
-    Binary(BinaryExpr),
-    Member(MemberExpr),
-    Index(IndexExpr),
-    Call(CallExpr),
-    Switch(SwitchExpr),
-    If(IfExpr),
-    While(WhileExpr),
-    For(ForExpr),
-    Block(BlockExpr),
-    Array(ArrayLiteral),
-    Map(MapLiteral),
+    Int(int_expr),
+    string(string_expr),
+    Bool(bool_expr),
+    Name(name_expr),
+    Borrow(borrow_expr),
+    Binary(binary_expr),
+    Member(member_expr),
+    Index(index_expr),
+    Call(call_expr),
+    Switch(switch_expr),
+    If(if_expr),
+    While(while_expr),
+    For(for_expr),
+    Block(block_expr),
+    Array(array_literal),
+    Map(map_literal),
 }
 
-struct VarStmt {
+struct var_stmt {
     string name,
-    Option[string] typeName,
+    Option[string] type_name,
     Expr value,
 }
 
-struct AssignStmt {
+struct assign_stmt {
     string name,
     Expr value,
 }
 
-struct IncrementStmt {
+struct increment_stmt {
     string name,
 }
 
-struct CForStmt {
+struct c_for_stmt {
     Box[Stmt] init,
     Expr condition,
     Box[Stmt] step,
-    BlockExpr body,
+    block_expr body,
 }
 
-struct ReturnStmt {
+struct return_stmt {
     Option[Expr] value,
 }
 
-struct ExprStmt {
+struct expr_stmt {
     Expr expr,
 }
 
-struct DeferStmt {
+struct defer_stmt {
     Expr expr,
 }
 
 enum Stmt {
-    Var(VarStmt),
-    Assign(AssignStmt),
-    Increment(IncrementStmt),
-    CFor(CForStmt),
-    Return(ReturnStmt),
-    Expr(ExprStmt),
-    Defer(DeferStmt),
+    Var(var_stmt),
+    Assign(assign_stmt),
+    Increment(increment_stmt),
+    c_for(c_for_stmt),
+    Return(return_stmt),
+    Expr(expr_stmt),
+    Defer(defer_stmt),
 }
 
-struct FunctionDecl {
-    FunctionSig sig,
-    Option[BlockExpr] body,
-    bool isPublic,
+struct function_decl {
+    function_sig sig,
+    Option[block_expr] body,
+    bool is_public,
 }
 
-struct StructDecl {
+struct struct_decl {
     string name,
     Vec[string] generics,
     Vec[Field] fields,
-    bool isPublic,
+    bool is_public,
 }
 
-struct EnumVariant {
+struct enum_variant {
     string name,
     Option[string] payload,
 }
 
-struct EnumDecl {
+struct enum_decl {
     string name,
     Vec[string] generics,
-    Vec[EnumVariant] variants,
-    bool isPublic,
+    Vec[enum_variant] variants,
+    bool is_public,
 }
 
-struct TraitDecl {
+struct trait_decl {
     string name,
     Vec[string] generics,
-    Vec[FunctionSig] methods,
-    bool isPublic,
+    Vec[function_sig] methods,
+    bool is_public,
 }
 
-struct ImplDecl {
+struct impl_decl {
     string target,
-    Option[string] traitName,
+    Option[string] trait_name,
     Vec[string] generics,
-    Vec[FunctionDecl] methods,
+    Vec[function_decl] methods,
 }
 
 enum Item {
-    Function(FunctionDecl),
-    Struct(StructDecl),
-    Enum(EnumDecl),
-    Trait(TraitDecl),
-    Impl(ImplDecl),
+    Function(function_decl),
+    Struct(struct_decl),
+    Enum(enum_decl),
+    Trait(trait_decl),
+    Impl(impl_decl),
 }
 
-struct SourceFile {
+struct source_file {
     string pkg,
-    Vec[UseDecl] uses,
+    Vec[use_decl] uses,
     Vec[Item] items,
 }
 
-func dumpSourceFile(SourceFile source) string {
+func dump_source_file(source_file source) string {
     var lines = Vec[string]()
     lines.push("package " + source.pkg);
     var ui = 0
     while ui < source.uses.len() {
-        var useDecl = source.uses[ui]
+        var use_decl = source.uses[ui]
         var text =
-            switch useDecl.alias {
-                Option.Some(alias) : "use " + useDecl.path + " as " + alias,
-                Option.None : "use " + useDecl.path,
+            switch use_decl.alias {
+                Option.Some(alias) : "use " + use_decl.path + " as " + alias,
+                Option.None : "use " + use_decl.path,
             }
         lines.push(text);
         ui = ui + 1
@@ -287,79 +287,79 @@ func dumpSourceFile(SourceFile source) string {
     var ii = 0
     while ii < source.items.len() {
         var item = source.items[ii]
-        appendItemDump(lines, item);
+        append_item_dump(lines, item);
         ii = ii + 1
     }
-    joinLines(lines)
+    join_lines(lines)
 }
 
-func appendItemDump(Vec[string] lines, Item item) () {
+func append_item_dump(Vec[string] lines, Item item) () {
     switch item {
-        Item.Function(value) : appendLines(lines, dumpFunction(value, "")),
-        Item.Struct(value) : appendLines(lines, dumpStruct(value)),
-        Item.Enum(value) : appendLines(lines, dumpEnum(value)),
-        Item.Trait(value) : appendLines(lines, dumpTrait(value)),
-        Item.Impl(value) : appendLines(lines, dumpImpl(value)),
+        Item.Function(value) : append_lines(lines, dump_function(value, "")),
+        Item.Struct(value) : append_lines(lines, dump_struct(value)),
+        Item.Enum(value) : append_lines(lines, dump_enum(value)),
+        Item.Trait(value) : append_lines(lines, dump_trait(value)),
+        Item.Impl(value) : append_lines(lines, dump_impl(value)),
     }
 }
 
-func fmtGenerics(Vec[string] generics) string {
+func fmt_generics(Vec[string] generics) string {
     if len(generics) == 0 {
         return ""
     }
-    "[" + joinWith(generics, ", ") + "]"
+    "[" + join_with(generics, ", ") + "]"
 }
 
-func dumpFunction(FunctionDecl item, string indent) Vec[string] {
+func dump_function(function_decl item, string indent) Vec[string] {
     var lines = Vec[string]()
     var params = Vec[string]()
     var _pi = 0
     while _pi < item.sig.params.len() {
         var param = item.sig.params[_pi]
-        params.push(param.typeName + " " + param.name)
+        params.push(param.type_name + " " + param.name)
         _pi = _pi + 1
     }
     var ret =
-        switch item.sig.returnType {
+        switch item.sig.return_type {
             Option.Some(value) : " -> " + value,
             Option.None : "",
         }
-    var prefix = if item.isPublic { "pub " } else { "" }
+    var prefix = if item.is_public { "pub " } else { "" }
     lines.push(
         indent
             + prefix
             + "func "
             + item.sig.name
-            + fmtGenerics(item.sig.generics)
+            + fmt_generics(item.sig.generics)
             + "("
-            + joinWith(params, ", ")
+            + join_with(params, ", ")
             + ")"
             + ret
     )
     switch item.body {
-        Option.Some(body) : appendLines(lines, dumpBlock(body, indent + "  ")),
+        Option.Some(body) : append_lines(lines, dump_block(body, indent + "  ")),
         Option.None : (),
     }
     lines
 }
 
-func dumpStruct(StructDecl item) Vec[string] {
+func dump_struct(struct_decl item) Vec[string] {
     var lines = Vec[string]()
-    var prefix = if item.isPublic { "pub " } else { "" }
-    lines.push(prefix + "struct " + item.name + fmtGenerics(item.generics))
+    var prefix = if item.is_public { "pub " } else { "" }
+    lines.push(prefix + "struct " + item.name + fmt_generics(item.generics))
     var _fi = 0
     while _fi < item.fields.len() {
         var field = item.fields[_fi]
-        var fp = if field.isPublic { "pub " } else { "" }
-        lines.push("  " + fp + field.typeName + " " + field.name)
+        var fp = if field.is_public { "pub " } else { "" }
+        lines.push("  " + fp + field.type_name + " " + field.name)
         _fi = _fi + 1
     }
     lines
 }
 
-func dumpEnum(EnumDecl item) Vec[string] {
+func dump_enum(enum_decl item) Vec[string] {
     var lines = Vec[string]()
-    lines.push("enum " + item.name + fmtGenerics(item.generics))
+    lines.push("enum " + item.name + fmt_generics(item.generics))
     var _vi = 0
     while _vi < item.variants.len() {
         var variant = item.variants[_vi]
@@ -372,10 +372,10 @@ func dumpEnum(EnumDecl item) Vec[string] {
     lines
 }
 
-func dumpTrait(TraitDecl item) Vec[string] {
+func dump_trait(trait_decl item) Vec[string] {
     var lines = Vec[string]()
-    var prefix = if item.isPublic { "pub " } else { "" }
-    lines.push(prefix + "trait " + item.name + fmtGenerics(item.generics))
+    var prefix = if item.is_public { "pub " } else { "" }
+    lines.push(prefix + "trait " + item.name + fmt_generics(item.generics))
     var _mi = 0
     while _mi < item.methods.len() {
         var method = item.methods[_mi]
@@ -383,20 +383,20 @@ func dumpTrait(TraitDecl item) Vec[string] {
         var _mpi = 0
         while _mpi < method.params.len() {
             var param = method.params[_mpi]
-            params.push(param.typeName + " " + param.name)
+            params.push(param.type_name + " " + param.name)
             _mpi = _mpi + 1
         }
         var ret =
-            switch method.returnType {
+            switch method.return_type {
                 Option.Some(value) : " -> " + value,
                 Option.None : "",
             }
         lines.push(
             "  func "
                 + method.name
-                + fmtGenerics(method.generics)
+                + fmt_generics(method.generics)
                 + "("
-                + joinWith(params, ", ")
+                + join_with(params, ", ")
                 + ")"
                 + ret
         )
@@ -404,100 +404,100 @@ func dumpTrait(TraitDecl item) Vec[string] {
     lines
 }
 
-func dumpImpl(ImplDecl item) Vec[string] {
+func dump_impl(impl_decl item) Vec[string] {
     var lines = Vec[string]()
     var head =
-        switch item.traitName {
+        switch item.trait_name {
             Option.Some(name) : name + " for " + item.target,
             Option.None : item.target,
         }
-    var title = replaceOnce("impl " + fmtGenerics(item.generics) + " " + head, "impl  ", "impl ")
+    var title = replace_once("impl " + fmt_generics(item.generics) + " " + head, "impl  ", "impl ")
     lines.push(title)
     var _mi2 = 0
     while _mi2 < item.methods.len() {
         var method = item.methods[_mi2]
-        appendLines(lines, dumpFunction(method, "  "))
+        append_lines(lines, dump_function(method, "  "))
         _mi2 = _mi2 + 1
     }
     lines
 }
 
-func dumpBlock(BlockExpr block, string indent) Vec[string] {
+func dump_block(block_expr block, string indent) Vec[string] {
     var lines = Vec[string]()
     var _si = 0
     while _si < block.statements.len() {
         var stmt = block.statements[_si]
-        appendLines(lines, dumpStmt(stmt, indent))
+        append_lines(lines, dump_stmt(stmt, indent))
         _si = _si + 1
     }
-    switch block.finalExpr {
-        Option.Some(expr) : lines.push(indent + "final " + dumpExpr(expr)),
+    switch block.final_expr {
+        Option.Some(expr) : lines.push(indent + "final " + dump_expr(expr)),
         Option.None : (),
     }
     lines
 }
 
-func dumpStmt(Stmt stmt, string indent) Vec[string] {
+func dump_stmt(Stmt stmt, string indent) Vec[string] {
     switch stmt {
         Stmt.Var(value) : {
             var text =
-                switch value.typeName {
-                    Option.Some(typeName) : indent + typeName + " " + value.name + " = " + dumpExpr(value.value),
-                    Option.None : indent + "var " + value.name + " = " + dumpExpr(value.value),
+                switch value.type_name {
+                    Option.Some(type_name) : indent + type_name + " " + value.name + " = " + dump_expr(value.value),
+                    Option.None : indent + "var " + value.name + " = " + dump_expr(value.value),
             }
-            singleLine(text)
+            single_line(text)
         }
         Stmt.Assign(value) : {
-            singleLine(indent + value.name + " = " + dumpExpr(value.value))
+            single_line(indent + value.name + " = " + dump_expr(value.value))
         }
         Stmt.Increment(value) : {
-            singleLine(indent + value.name + "++")
+            single_line(indent + value.name + "++")
         }
-        Stmt.CFor(value) : {
+        Stmt.c_for(value) : {
             var lines = Vec[string]()
             lines.push(
                 indent
                     + "for ("
-                    + dumpForClause(value.init.value)
+                    + dump_for_clause(value.init.value)
                     + "; "
-                    + dumpExpr(value.condition)
+                    + dump_expr(value.condition)
                     + "; "
-                    + dumpForClause(value.step.value)
+                    + dump_for_clause(value.step.value)
                     + ")"
             )
-            appendLines(lines, dumpBlock(value.body, indent + "  "))
+            append_lines(lines, dump_block(value.body, indent + "  "))
             lines
         }
         Stmt.Return(value) : {
             var text =
                 switch value.value {
-                    Option.Some(expr) : indent + "return " + dumpExpr(expr),
+                    Option.Some(expr) : indent + "return " + dump_expr(expr),
                     Option.None : indent + "return ()",
                 }
-            singleLine(text)
+            single_line(text)
         }
-        Stmt.Expr(value) : singleLine(indent + "expr " + dumpExpr(value.expr)),
-        Stmt.Defer(value) : singleLine(indent + "defer " + dumpExpr(value.expr)),
+        Stmt.Expr(value) : single_line(indent + "expr " + dump_expr(value.expr)),
+        Stmt.Defer(value) : single_line(indent + "defer " + dump_expr(value.expr)),
     }
 }
 
-func dumpForClause(Stmt stmt) string {
+func dump_for_clause(Stmt stmt) string {
     switch stmt {
         Stmt.Var(value) : {
-            switch value.typeName {
-                Option.Some(typeName) : typeName + " " + value.name + " = " + dumpExpr(value.value),
-                Option.None : "var " + value.name + " = " + dumpExpr(value.value),
+            switch value.type_name {
+                Option.Some(type_name) : type_name + " " + value.name + " = " + dump_expr(value.value),
+                Option.None : "var " + value.name + " = " + dump_expr(value.value),
             }
         }
-        Stmt.Assign(value) : value.name + " = " + dumpExpr(value.value),
+        Stmt.Assign(value) : value.name + " = " + dump_expr(value.value),
         Stmt.Increment(value) : value.name + "++",
-        Stmt.Expr(value) : dumpExpr(value.expr),
+        Stmt.Expr(value) : dump_expr(value.expr),
         Stmt.Return(_) : "return",
-        Stmt.CFor(_) : "for (...)",
+        Stmt.c_for(_) : "for (...)",
     }
 }
 
-func dumpExpr(Expr expr) string {
+func dump_expr(Expr expr) string {
     switch expr {
         Expr.Int(value) : value.value,
         Expr.string(value) : value.value,
@@ -505,15 +505,15 @@ func dumpExpr(Expr expr) string {
         Expr.Name(value) : value.name,
         Expr.Borrow(value) : {
             var prefix = if value.mutable { "&mut " } else { "&" }
-            prefix + dumpExpr(value.target.value)
+            prefix + dump_expr(value.target.value)
         }
-        Expr.Binary(value) : "(" + dumpExpr(value.left.value) + " " + value.op + " " + dumpExpr(value.right.value) + ")",
-        Expr.Member(value) : dumpExpr(value.target.value) + "." + value.member,
-        Expr.Index(value) : dumpExpr(value.target.value) + "[" + dumpExpr(value.index.value) + "]",
-        Expr.Call(value) : "call " + dumpExpr(value.callee.value) + "(" + joinExprs(value.args) + ")",
-        Expr.Switch(value) : "switch " + dumpExpr(value.subject.value) + " { " + joinSwitchArms(value.arms) + " }",
-        Expr.If(value) : dumpIfExpr(value),
-        Expr.While(value) : "while " + dumpExpr(value.condition.value) + " {...}",
+        Expr.Binary(value) : "(" + dump_expr(value.left.value) + " " + value.op + " " + dump_expr(value.right.value) + ")",
+        Expr.Member(value) : dump_expr(value.target.value) + "." + value.member,
+        Expr.Index(value) : dump_expr(value.target.value) + "[" + dump_expr(value.index.value) + "]",
+        Expr.Call(value) : "call " + dump_expr(value.callee.value) + "(" + join_exprs(value.args) + ")",
+        Expr.Switch(value) : "switch " + dump_expr(value.subject.value) + " { " + join_switch_arms(value.arms) + " }",
+        Expr.If(value) : dump_if_expr(value),
+        Expr.While(value) : "while " + dump_expr(value.condition.value) + " {...}",
         Expr.For(value) : {
             var names = ""
             var i = 0
@@ -525,76 +525,76 @@ func dumpExpr(Expr expr) string {
                 i = i + 1
             }
             var decl = if value.declare { " := " } else { " in " }
-            "for " + names + decl + dumpExpr(value.iterable.value) + " {...}"
+            "for " + names + decl + dump_expr(value.iterable.value) + " {...}"
         }
         Expr.Block(_) : "{...}",
         Expr.Array(value) : {
             var elems = Vec[string]()
             var _ei = 0
-            while _ei < value.items.len() { elems.push(dumpExpr(value.items[_ei])); _ei = _ei + 1 }
-            "[" + joinWith(elems, ", ") + "]"
+            while _ei < value.items.len() { elems.push(dump_expr(value.items[_ei])); _ei = _ei + 1 }
+            "[" + join_with(elems, ", ") + "]"
         }
         Expr.Map(value) : {
             var parts = Vec[string]()
             var _en = 0
-            while _en < value.entries.len() { var entry = value.entries[_en]; parts.push(dumpExpr(entry.key) + ": " + dumpExpr(entry.value)); _en = _en + 1 }
-            "{" + joinWith(parts, ", ") + "}"
+            while _en < value.entries.len() { var entry = value.entries[_en]; parts.push(dump_expr(entry.key) + ": " + dump_expr(entry.value)); _en = _en + 1 }
+            "{" + join_with(parts, ", ") + "}"
         }
     }
 }
 
-func dumpIfExpr(IfExpr value) string {
-    var text = "if " + dumpExpr(value.condition.value) + " {...}"
-    switch value.elseBranch {
-        Option.Some(expr) : text + " else " + dumpExpr(expr.value),
+func dump_if_expr(if_expr value) string {
+    var text = "if " + dump_expr(value.condition.value) + " {...}"
+    switch value.else_branch {
+        Option.Some(expr) : text + " else " + dump_expr(expr.value),
         Option.None : text,
     }
 }
 
-func dumpPattern(Pattern pattern) string {
+func dump_pattern(Pattern pattern) string {
     switch pattern {
         Pattern.Name(value) : value.name,
         Pattern.Wildcard(_) : "_",
-        Pattern.Literal(value) : dumpExpr(value.value),
+        Pattern.Literal(value) : dump_expr(value.value),
         Pattern.Variant(value) : {
             if len(value.args) == 0 {
                 return value.path
             }
-            value.path + "(" + joinPatterns(value.args) + ")"
+            value.path + "(" + join_patterns(value.args) + ")"
         }
     }
 }
 
-func joinExprs(Vec[Expr] values) string {
+func join_exprs(Vec[Expr] values) string {
     var parts = Vec[string]()
     var _iv = 0
     while _iv < values.len() {
         var value = values[_iv]
-        parts.push(dumpExpr(value))
+        parts.push(dump_expr(value))
         _iv = _iv + 1
     }
-    joinWith(parts, ", ")
+    join_with(parts, ", ")
 }
 
-func joinPatterns(Vec[Pattern] values) string {
+func join_patterns(Vec[Pattern] values) string {
     var parts = Vec[string]()
     var _pv = 0
-    while _pv < values.len() { parts.push(dumpPattern(values[_pv])); _pv = _pv + 1 }
-    joinWith(parts, ", ")
+    while _pv < values.len() { parts.push(dump_pattern(values[_pv])); _pv = _pv + 1 }
+    join_with(parts, ", ")
 }
 
-func joinSwitchArms(Vec[SwitchArm] values) string {
+func join_switch_arms(Vec[switch_arm] values) string {
     var parts = Vec[string]()
     var _mv = 0
     while _mv < values.len() {
         var value = values[_mv]
-        parts.push(dumpPattern(value.pattern) + " : " + dumpExpr(value.expr))
+        parts.push(dump_pattern(value.pattern) + " : " + dump_expr(value.expr))
         _mv = _mv + 1
     }
-    joinWith(parts, "; ")
+    join_with(parts, "; ")
 }
 
-func appendLines(Vec[string] dest, Vec[string] source) () {
+func append_lines(Vec[string] dest, Vec[string] source) () {
     var _li = 0
     while _li < source.len() {
         dest.push(source[_li])
@@ -602,16 +602,16 @@ func appendLines(Vec[string] dest, Vec[string] source) () {
     }
 }
 
-func singleLine(string text) Vec[string] {
+func single_line(string text) Vec[string] {
     var lines = Vec[string]()
     lines.push(text)
     lines
 }
 
-func joinLines(Vec[string] lines) string {
-    joinWith(lines, "\n")
+func join_lines(Vec[string] lines) string {
+    join_with(lines, "\n")
 }
-func joinWith(Vec[string] values, string sep) string {
+func join_with(Vec[string] values, string sep) string {
     var out = ""
     var first = true
     var _j = 0
@@ -627,6 +627,6 @@ func joinWith(Vec[string] values, string sep) string {
     out
 }
 
-func replaceOnce(string text, string from, string to) string {
+func replace_once(string text, string from, string to) string {
     text
 }

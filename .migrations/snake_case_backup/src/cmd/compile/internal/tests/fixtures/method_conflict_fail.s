@@ -4,21 +4,21 @@ struct Point {
     int32 x,
 }
 
-trait MeasureA {
+trait measure_a {
     func size(Point self) int32;
 }
 
-trait MeasureB {
+trait measure_b {
     func size(Point self) int32;
 }
 
-impl MeasureA for Point {
+impl measure_a for Point {
     func size(Point self) int32 {
         self.x
     }
 }
 
-impl MeasureB for Point {
+impl measure_b for Point {
     func size(Point self) int32 {
         self.x
     }

@@ -1,8 +1,8 @@
 package cmd
 
-use compile.internal.tests.test_golden.RunGoldenSuite
-use compile.internal.tests.test_mir.RunMirSuite
-use compile.internal.tests.test_semantic.RunSemanticSuite
+use compile.internal.tests.test_golden.run_golden_suite
+use compile.internal.tests.test_mir.run_mir_suite
+use compile.internal.tests.test_semantic.run_semantic_suite
 use std.env.Args as host_args
 use std.env.Get
 use std.io.eprintln
@@ -31,19 +31,19 @@ func main() int32 {
         fixtures_root = args[1]
     }
 
-    var semantic_result = RunSemanticSuite(fixtures_root)
+    var semantic_result = run_semantic_suite(fixtures_root)
     if semantic_result != 0 {
         eprintln("semantic suite failed");
         return semantic_result
     }
 
-    var golden_result = RunGoldenSuite(fixtures_root)
+    var golden_result = run_golden_suite(fixtures_root)
     if golden_result != 0 {
         eprintln("golden suite failed");
         return golden_result
     }
 
-    var mir_result = RunMirSuite()
+    var mir_result = run_mir_suite()
     if mir_result != 0 {
         eprintln("mir suite failed");
         return mir_result

@@ -1,17 +1,17 @@
 package compile.internal.build.backend
 
-use compile.internal.backend_elf64.Build as BuildBinary
-use std.fs.MakeTempDir
+use compile.internal.backend_elf64.Build as build_binary
+use std.fs.make_temp_dir
 use std.io.eprintln
-use std.process.RunProcess
+use std.process.run_process
 use std.vec.Vec
 
 func Build(string path, string output) int32 {
-    BuildBinary(path, output)
+    build_binary(path, output)
 }
 
 func Run(string path) int32 {
-    var temp_dir_result = MakeTempDir("s-build-")
+    var temp_dir_result = make_temp_dir("s-build-")
     if temp_dir_result.is_err() {
         eprintln("run failed: could not create temporary output directory");
         return 1
@@ -25,7 +25,7 @@ func Run(string path) int32 {
 
     var run_argv = Vec[string]()
     run_argv.push(output_path);
-    var run_result = RunProcess(run_argv)
+    var run_result = run_process(run_argv)
     if run_result.is_err() {
         eprintln("run failed: process execution failed");
         return 1
