@@ -1,23 +1,23 @@
 package compile.internal.ownership
 
-use compile.internal.typesys.IsCopyType
-use std.vec.Vec
+use compile.internal.typesys.is_copy_type
+use std.vec.vec
 
-func MakeDecision(string ty) string {
-    if IsCopyType(ty) {
+func make_decision(string ty) string {
+    if is_copy_type(ty) {
         return "copy:" + ty
     }
     "drop:" + ty
 }
 
-func MakePlan(Vec[string] typeEnv) Vec[string] {
-    var plan = Vec[string]()
+func make_plan(vec[string] type_env) vec[string] {
+    var plan = vec[string]()
     var i = 0
-    while i < typeEnv.len() {
-        var ty = typeEnv[i]
-        var nextI = i + 1
-        i = nextI
-        plan.push(MakeDecision(ty))
+    while i < type_env.len() {
+        var ty = type_env[i]
+        var next_i = i + 1
+        i = next_i
+        plan.push(make_decision(ty))
     }
     return plan
 }

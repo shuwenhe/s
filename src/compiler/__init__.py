@@ -1,1 +1,1 @@
-"""S compiler prototype package."""
+"""s compiler prototype package."""

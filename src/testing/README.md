@@ -1,13 +1,13 @@
-# Testing Support Packages
+# testing support packages
 
-This directory holds reusable test infrastructure for the S repository.
+this directory holds reusable test infrastructure for the s repository.
 
-Planned responsibilities:
+planned responsibilities:
 
 - `golden/`: golden-file comparison helpers
 - `harness/`: shared test runner and suite orchestration utilities
 - `testdata/`: reusable repository-level test fixtures
 
-Package-specific tests can continue to live beside their implementations.
-Shared testing code should move here as it becomes reusable across the repo.
+package-specific tests can continue to live beside their implementations.
+shared testing code should move here as it becomes reusable across the repo.
 

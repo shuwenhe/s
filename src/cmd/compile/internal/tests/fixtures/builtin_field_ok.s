@@ -1,5 +1,5 @@
-package demo.builtinField
+package demo.builtin_field
 
-func read(FileInfo info) int32 {
+func read(file_info info) int32 {
     info.size
 }

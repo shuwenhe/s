@@ -1,33 +1,33 @@
-#define _POSIX_C_SOURCE 200809L
+#define _posix_c_source 200809l
 
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static char **g_args = NULL;
+static char **g_args = null;
 static size_t g_argc = 0;
 
 static void free_args(void) {
-    if (g_args == NULL) {
+    if (g_args == null) {
         return;
     }
     for (size_t i = 0; i < g_argc; i++) {
         free(g_args[i]);
     }
     free(g_args);
-    g_args = NULL;
+    g_args = null;
     g_argc = 0;
 }
 
 static char *dup_cstr(const char *text) {
-    if (text == NULL) {
-        return NULL;
+    if (text == null) {
+        return null;
     }
     size_t len = strlen(text);
     char *out = (char *)malloc(len + 1);
-    if (out == NULL) {
-        return NULL;
+    if (out == null) {
+        return null;
     }
     memcpy(out, text, len);
     out[len] = '\0';
@@ -36,7 +36,7 @@ static char *dup_cstr(const char *text) {
 
 int host_intrinsics_init(size_t argc, const char *const *argv) {
     free_args();
-    if (argc == 0 || argv == NULL) {
+    if (argc == 0 || argv == null) {
         return 0;
     }
     if (argc <= 1) {
@@ -44,13 +44,13 @@ int host_intrinsics_init(size_t argc, const char *const *argv) {
     }
     g_argc = argc - 1;
     g_args = (char **)calloc(g_argc, sizeof(char *));
-    if (g_args == NULL) {
+    if (g_args == null) {
         g_argc = 0;
         return -1;
     }
     for (size_t i = 0; i < g_argc; i++) {
         g_args[i] = dup_cstr(argv[i + 1]);
-        if (g_args[i] == NULL) {
+        if (g_args[i] == null) {
             free_args();
             return -1;
         }
@@ -63,27 +63,27 @@ size_t host_intrinsics_argc(void) {
 }
 
 const char *host_intrinsics_argv(size_t index) {
-    if (index >= g_argc || g_args == NULL) {
-        return NULL;
+    if (index >= g_argc || g_args == null) {
+        return null;
     }
     return g_args[index];
 }
 
 const char *host_intrinsics_get_env(const char *key) {
-    if (key == NULL) {
-        return NULL;
+    if (key == null) {
+        return null;
     }
     return getenv(key);
 }
 
 void host_intrinsics_println(const char *text) {
-    fputs(text == NULL ? "" : text, stdout);
+    fputs(text == null ? "" : text, stdout);
     fputc('\n', stdout);
     fflush(stdout);
 }
 
 void host_intrinsics_eprintln(const char *text) {
-    fputs(text == NULL ? "" : text, stderr);
+    fputs(text == null ? "" : text, stderr);
     fputc('\n', stderr);
     fflush(stderr);
 }

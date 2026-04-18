@@ -1,13 +1,13 @@
 package demo.check
 
-enum Option[T] {
-    Some(T),
-    None,
+enum option[t] {
+    some(t),
+    none,
 }
 
-func unwrapOrZero(Option[int32] value) int32 {
+func unwrap_or_zero(option[int32] value) int32 {
     switch value {
-        Some(inner) : inner,
-        None : 0,
+        some(inner) : inner,
+        none : 0,
     }
 }

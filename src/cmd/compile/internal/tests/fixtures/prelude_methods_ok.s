@@ -1,6 +1,6 @@
 package demo.prelude
 
-func ok(&string name, &mut Vec[int32] items, int32 index) int32 {
+func ok(&string name, &mut vec[int32] items, int32 index) int32 {
     items.push(1);
     name.len() + items.len() + items[index]
 }

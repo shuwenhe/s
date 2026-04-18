@@ -1,4 +1,4 @@
 package compile.internal.s390x
 
-func Init() () {
+func init() () {
 }

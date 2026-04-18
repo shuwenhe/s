@@ -1,38 +1,38 @@
 #!/usr/bin/env python3
-"""Autopush: watch a directory and auto-commit & push changes to Git.
+"""autopush: watch a directory and auto-commit & push changes to git.
 
-Lightweight polling watcher (no external deps). Intended for Linux/local use.
+lightweight polling watcher (no external deps). intended for linux/local use.
 
-Usage: set up SSH or credential helper for pushing, then run:
+usage: set up ssh or credential helper for pushing, then run:
   python3 s/tools/autopush.py --path /home/shuwen/s --debounce 2
 
-Environment variables:
-  GIT_REMOTE: git remote name (default: origin)
-  GIT_BRANCH: branch to push (default: current branch)
-  GIT_AUTHOR_NAME / GIT_AUTHOR_EMAIL: optional commit author
+environment variables:
+  git_remote: git remote name (default: origin)
+  git_branch: branch to push (default: current branch)
+  git_author_name / git_author_email: optional commit author
 """
 import argparse
 import os
 import subprocess
 import sys
 import time
-from pathlib import Path
+from pathlib import path
 
 
 def current_branch()  str:
-    p = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True)
+    p = subprocess.run(["git", "rev-parse", "--abbrev-ref", "head"], capture_output=true, text=true)
     if p.returncode != 0:
         return "main"
     return p.stdout.strip()
 
 
-def scan_mtimes(root: Path)  dict:
+def scan_mtimes(root: path)  dict:
     mt = {}
     for p in root.rglob("*"):
         try:
             if p.is_file():
                 mt[str(p)] = p.stat().st_mtime
-        except Exception:
+        except exception:
             continue
     return mt
 
@@ -42,62 +42,62 @@ def git_has_staged_changes()  bool:
     return p.returncode != 0
 
 
-def run_git_commit_and_push(remote: str, branch: str, commit_msg: str, author_name: str | None, author_email: str | None)  None:
+def run_git_commit_and_push(remote: str, branch: str, commit_msg: str, author_name: str | none, author_email: str | none)  none:
     env = os.environ.copy()
     if author_name:
-        env["GIT_AUTHOR_NAME"] = author_name
+        env["git_author_name"] = author_name
     if author_email:
-        env["GIT_AUTHOR_EMAIL"] = author_email
+        env["git_author_email"] = author_email
 
     # git add all
-    subprocess.run(["git", "add", "-A"])
+    subprocess.run(["git", "add", "-a"])
 
     if not git_has_staged_changes():
-        print("No changes to commit.")
+        print("no changes to commit.")
         return
 
     commit_cmd = ["git", "commit", "-m", commit_msg]
-    print("Committing: ", " ".join(commit_cmd))
+    print("committing: ", " ".join(commit_cmd))
     p = subprocess.run(commit_cmd, env=env)
     if p.returncode != 0:
         print("git commit failed", file=sys.stderr)
         return
 
     push_cmd = ["git", "push", remote, branch]
-    print("Pushing: ", " ".join(push_cmd))
+    print("pushing: ", " ".join(push_cmd))
     p2 = subprocess.run(push_cmd)
     if p2.returncode != 0:
         print("git push failed", file=sys.stderr)
 
 
-def main()  None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--path", default=".", help="Path to watch (git repo root)")
-    parser.add_argument("--debounce", type=float, default=2.0, help="Debounce seconds to coalesce changes")
-    parser.add_argument("--remote", default=os.environ.get("GIT_REMOTE", "origin"), help="Git remote name")
-    parser.add_argument("--branch", default=os.environ.get("GIT_BRANCH"), help="Git branch (defaults to current)")
+def main()  none:
+    parser = argparse.argumentparser()
+    parser.add_argument("--path", default=".", help="path to watch (git repo root)")
+    parser.add_argument("--debounce", type=float, default=2.0, help="debounce seconds to coalesce changes")
+    parser.add_argument("--remote", default=os.environ.get("git_remote", "origin"), help="git remote name")
+    parser.add_argument("--branch", default=os.environ.get("git_branch"), help="git branch (defaults to current)")
     args = parser.parse_args()
 
-    root = Path(args.path).resolve()
+    root = path(args.path).resolve()
     if not (root / ".git").exists():
-        print(f"Error: {root} is not a git repository", file=sys.stderr)
+        print(f"error: {root} is not a git repository", file=sys.stderr)
         sys.exit(1)
 
     os.chdir(root)
 
     branch = args.branch or current_branch()
-    author_name = os.environ.get("GIT_AUTHOR_NAME")
-    author_email = os.environ.get("GIT_AUTHOR_EMAIL")
+    author_name = os.environ.get("git_author_name")
+    author_email = os.environ.get("git_author_email")
     remote = args.remote
 
-    print(f"Watching {root}  (push -> {remote}/{branch})")
+    print(f"watching {root}  (push -> {remote}/{branch})")
 
     last_scan = scan_mtimes(root)
-    pending = False
+    pending = false
     last_event_time = 0.0
 
     try:
-        while True:
+        while true:
             time.sleep(max(0.1, args.debounce / 2))
             now = time.time()
             mt = scan_mtimes(root)
@@ -113,23 +113,23 @@ def main()  None:
                     changed.append(p)
 
             if changed:
-                pending = True
+                pending = true
                 last_event_time = now
-                print(f"Detected {len(changed)} change(s). Debouncing for {args.debounce}s.")
+                print(f"detected {len(changed)} change(s). debouncing for {args.debounce}s.")
 
             if pending and (now - last_event_time) >= args.debounce:
                 # perform commit+push
-                files_short = ", ".join(Path(p).name for p in changed[:8])
+                files_short = ", ".join(path(p).name for p in changed[:8])
                 if len(changed) > 8:
                     files_short += ", ..."
-                msg = f"Auto-update: {files_short}"
+                msg = f"auto-update: {files_short}"
                 run_git_commit_and_push(remote, branch, msg, author_name, author_email)
-                pending = False
+                pending = false
                 # refresh base scan
                 last_scan = scan_mtimes(root)
 
-    except KeyboardInterrupt:
-        print("Stopped by user")
+    except keyboardinterrupt:
+        print("stopped by user")
 
 
 if __name__ == "__main__":

@@ -1,34 +1,34 @@
 package internal.buildcfg
 
-struct BuildCfgError {
+struct build_cfg_error {
     string message,
 }
 
-struct Target {
+struct target {
     string goos,
     string goarch,
 }
 
-struct Toolchain {
+struct toolchain {
     string compiler,
     string assembler,
     string linker,
     string archiver,
 }
 
-struct BuildCfg {
-    Target target,
-    Toolchain toolchain,
+struct build_cfg {
+    target target,
+    toolchain toolchain,
 }
 
-func GOOS() string {
+func goos() string {
     "linux"
 }
 
-func GOARCH() string {
+func goarch() string {
     "amd64"
 }
 
-func Check() string {
+func check() string {
     ""
 }

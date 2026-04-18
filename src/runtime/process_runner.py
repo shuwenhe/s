@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
+from pathlib import path
 
 
-DEFAULT_EXECUTABLE_PATH = Path(__file__).with_name("process_runner")
+default_executable_path = path(__file__).with_name("process_runner")
 
 
-def get_executable() -> Path:
-    return Path(os.environ.get("S_PROCESS_RUNNER_EXECUTABLE", DEFAULT_EXECUTABLE_PATH))
+def get_executable() -> path:
+    return path(os.environ.get("s_process_runner_executable", default_executable_path))
 

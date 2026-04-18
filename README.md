@@ -1,28 +1,28 @@
-# S Language
+# s language
 
-S is a draft programming language for systems software, infrastructure, and high-performance services.
+s is a draft programming language for systems software, infrastructure, and high-performance services.
 
-It aims to take the most valuable parts of C, Go, Rust, and C++, while avoiding the parts that most often drag down engineering experience:
+it aims to take the most valuable parts of c, go, rust, and c++, while avoiding the parts that most often drag down engineering experience:
 
-- From C: hardware-level control, predictable layout, and ABI friendliness
-- From Go: a unified toolchain, simple syntax, and efficient engineering workflows
-- From Rust: safety by default, explicit unsafe boundaries, and robust error modeling
-- From C++: RAII, zero-cost abstractions, and expressive value semantics
+- from c: hardware-level control, predictable layout, and abi friendliness
+- from go: a unified toolchain, simple syntax, and efficient engineering workflows
+- from rust: safety by default, explicit unsafe boundaries, and robust error modeling
+- from c++: raii, zero-cost abstractions, and expressive value semantics
 
-S is not trying to become a loose mixture of four languages. The goal is a modern systems language that is safe by default, direct to read, and backed by a complete toolchain.
+s is not trying to become a loose mixture of four languages. the goal is a modern systems language that is safe by default, direct to read, and backed by a complete toolchain.
 
-## Design Statement
+## design statement
 
-S is trying to answer a practical question:
+s is trying to answer a practical question:
 
-Why do we always have to choose one side of the same trade-offs when building systems software?
+why do we always have to choose one side of the same trade-offs when building systems software?
 
-- If we want performance, we often lose safety
-- If we want safety, we often lose predictability
-- If we want abstraction, we often lose compile speed and readability
-- If we want engineering efficiency, we often lose low-level control
+- if we want performance, we often lose safety
+- if we want safety, we often lose predictability
+- if we want abstraction, we often lose compile speed and readability
+- if we want engineering efficiency, we often lose low-level control
 
-S answers with:
+s answers with:
 
 - safety by default, without giving up low-level control
 - value semantics first, with explicit references and controlled sharing
@@ -30,64 +30,64 @@ S answers with:
 - a single official toolchain instead of ecosystem fragmentation
 - dangerous capabilities that exist, but are explicitly isolated behind `unsafe`
 
-In one line:
+in one line:
 
-> S = C's control + Go's tooling experience + Rust's safety boundaries + C++'s zero-cost abstractions
+> s = c's control + go's tooling experience + rust's safety boundaries + c++'s zero-cost abstractions
 
-## Language Positioning
+## language positioning
 
-S is intended for:
+s is intended for:
 
 - server-side infrastructure
 - network services and gateways
 - data processing and storage engines
 - compilers, runtimes, and middleware
 - embedded and system components
-- high-performance modules that need C ABI interoperability
+- high-performance modules that need c abi interoperability
 
-S is not currently trying to be:
+s is not currently trying to be:
 
-- a business scripting language centered on GC
+- a business scripting language centered on gc
 - a research language centered on metaprogramming
 - an academic language centered on extreme type-level tricks
 
-## Core Principles
+## core principles
 
-### 1. Safety By Default
+### 1. safety by default
 
-Ordinary S code should not allow obvious sources of undefined behavior by default:
+ordinary s code should not allow obvious sources of undefined behavior by default:
 
 - dangling references
 - double free
 - out-of-bounds access
 - data races
 
-Raw pointers, manual memory management, and unsafe FFI must live inside explicit `unsafe` boundaries.
+raw pointers, manual memory management, and unsafe ffi must live inside explicit `unsafe` boundaries.
 
-### 2. Value Semantics First
+### 2. value semantics first
 
-S encourages:
+s encourages:
 
 - passing small objects by value
 - releasing resources automatically when scopes end
 - making ownership flow explicit
 
-References and sharing are not the default. They are explicit choices.
+references and sharing are not the default. they are explicit choices.
 
-### 3. Predictable Performance
+### 3. predictable performance
 
-S should not encourage implicit heap allocation, and it should not depend on GC for normal programming.
+s should not encourage implicit heap allocation, and it should not depend on gc for normal programming.
 
-Developers should be able to answer questions like:
+developers should be able to answer questions like:
 
-- Will this code allocate?
-- Will this function call copy values?
-- When is this object released?
-- Does this concurrent path require synchronization?
+- will this code allocate?
+- will this function call copy values?
+- when is this object released?
+- does this concurrent path require synchronization?
 
-### 4. Engineering Over Cleverness
+### 4. engineering over cleverness
 
-S values:
+s values:
 
 - readability
 - learnability
@@ -95,11 +95,11 @@ S values:
 - compile speed
 - deployability
 
-The language should not force people to "defeat the language" with tricks.
+the language should not force people to "defeat the language" with tricks.
 
-### 5. One Official Toolchain
+### 5. one official toolchain
 
-S is intended to ship with a unified set of tools:
+s is intended to ship with a unified set of tools:
 
 - `s build`
 - `s run`
@@ -109,23 +109,23 @@ S is intended to ship with a unified set of tools:
 - `s doc`
 - `s pkg`
 
-Language tooling, package management, testing, formatting, documentation, and builds should feel like one coherent experience.
+language tooling, package management, testing, formatting, documentation, and builds should feel like one coherent experience.
 
-## Syntax Draft
+## syntax draft
 
-S aims for syntax that is close to Go in clarity, while still keeping the explicitness expected from a systems language.
+s aims for syntax that is close to go in clarity, while still keeping the explicitness expected from a systems language.
 
-### Hello World
+### hello world
 
 ```s
 package main
 
-func Main() {
+func main() {
     println("hello, world")
 }
 ```
 
-### Variables And Constants
+### variables and constants
 
 ```s
 let x = 42
@@ -134,13 +134,13 @@ var count = 0
 const max_conn = 1024
 ```
 
-Conventions:
+conventions:
 
 - `let` means an immutable binding by default
 - `var` means a mutable binding
 - `const` means a compile-time constant
 
-### Primitive Types
+### primitive types
 
 ```s
 bool
@@ -151,21 +151,21 @@ char
 str
 ```
 
-Notes:
+notes:
 
-- `str` is a UTF-8 string slice view
+- `str` is a utf-8 string slice view
 - growable heap strings use `string`
 - byte sequences use `[]u8`
 
-### Control Flow
+### control flow
 
 ```s
 if score > 90 {
-    grade = "A"
+    grade = "a"
 } else if score > 80 {
-    grade = "B"
+    grade = "b"
 } else {
-    grade = "C"
+    grade = "c"
 }
 
 for item in items {
@@ -181,88 +181,88 @@ while running {
 }
 ```
 
-### Functions
+### functions
 
 ```s
-func Add(int32 a, int32 b) int32 {
+func add(int32 a, int32 b) int32 {
     a + b
 }
 
-func openFile(str path) Result<File, IoError> {
+func openfile(str path) result<file, ioerror> {
     ...
 }
 ```
 
-Default rules:
+default rules:
 
 - function signatures must be explicit
 - return values use ` `
 - a single-expression body may implicitly return its final expression
-- visibility follows a Go-style rule: uppercase exports, lowercase stays module-local, without relying on `pub`
+- visibility follows a go-style rule: uppercase exports, lowercase stays module-local, without relying on `pub`
 
-### Structs And Methods
+### structs and methods
 
 ```s
-struct User {
+struct user {
     u64 id
     string name
     bool active
 }
 
-impl User {
-    func Activate(mut Self self) {
+impl user {
+    func activate(mut self self) {
         self.active = true
     }
 
-    func displayName(Self self) str {
+    func displayname(self self) str {
         self.name.as_str()
     }
 }
 ```
 
-### Enums And Pattern Matching
+### enums and pattern matching
 
 ```s
-enum Option[T] {
-    Some(T)
-    None
+enum option[t] {
+    some(t)
+    none
 }
 
-enum Result[T, E] {
-    Ok(T)
-    Err(E)
+enum result[t, e] {
+    ok(t)
+    err(e)
 }
 
 match result {
-    Ok(value) => println(value),
-    Err(err) => eprintln(err.message()),
+    ok(value) => println(value),
+    err(err) => eprintln(err.message()),
 }
 ```
 
-### Generics
+### generics
 
 ```s
-func max[T: Ord](T a, T b) T {
+func max[t: ord](t a, t b) t {
     if a > b { a } else { b }
 }
 ```
 
-S supports generics, but only to the degree that they stay practical, readable, and compilable. It is not aiming for template-metaprogramming complexity.
+s supports generics, but only to the degree that they stay practical, readable, and compilable. it is not aiming for template-metaprogramming complexity.
 
-## Type System
+## type system
 
-S uses a statically typed, strongly typed system. Type inference is supported, but unclear implicit conversions are intentionally rejected.
+s uses a statically typed, strongly typed system. type inference is supported, but unclear implicit conversions are intentionally rejected.
 
-### Type System Goals
+### type system goals
 
 - friendly to newcomers
 - strong enough for systems programming
 - able to surface mistakes early
 - controlled enough for compiler implementation
 
-### Design Points
+### design points
 
-#### 1. No Implicit Numeric Conversion By Default
+#### 1. no implicit numeric conversion by default
 
 ```s
 int32 a = 1
@@ -270,114 +270,114 @@ i64 b = 2
 let c = a as i64 + b
 ```
 
-This is slightly stricter, but it avoids a large class of boundary bugs in systems code.
+this is slightly stricter, but it avoids a large class of boundary bugs in systems code.
 
-#### 2. Algebraic Data Types
+#### 2. algebraic data types
 
-S should support:
+s should support:
 
 - `enum`
-- `Option[T]`
-- `Result[T, E]`
+- `option[t]`
+- `result[t, e]`
 - pattern matching
 
-That makes error handling, state modeling, and protocol modeling much more natural.
+that makes error handling, state modeling, and protocol modeling much more natural.
 
-#### 3. Trait-Style Constraints
+#### 3. trait-style constraints
 
 ```s
-trait Writer {
-    func write(mut Self self, []u8 data) Result[usize, IoError]
+trait writer {
+    func write(mut self self, []u8 data) result[usize, ioerror]
 }
 ```
 
-Use cases:
+use cases:
 
 - behavior abstraction
 - generic constraints
 - avoiding complex inheritance trees
 
-#### 4. Clear Distinction Between Values, Borrows, And Ownership
+#### 4. clear distinction between values, borrows, and ownership
 
-S does not need to expose Rust-level lifetime complexity everywhere, but it should still preserve the core semantics:
+s does not need to expose rust-level lifetime complexity everywhere, but it should still preserve the core semantics:
 
 - values have a single clear owner
 - temporary borrows are scope-bound
 - mutable borrows must be unique at any moment
 
-A more engineering-oriented borrow-lite approach is possible:
+a more engineering-oriented borrow-lite approach is possible:
 
 - most lifetimes are inferred by the compiler
 - explicit annotation is only needed in more complex cross-function borrowed return paths
 
-### Suggested Reference Model
+### suggested reference model
 
 ```s
 func len(&str s) usize
-func push(&mut Vec[int32] v, int32 value)
-func consume(Buf buf) Result[(), Error]
+func push(&mut vec[int32] v, int32 value)
+func consume(buf buf) result[(), error]
 ```
 
-Meaning:
+meaning:
 
-- `T` means an owned value
-- `&T` means an immutable borrow
-- `&mut T` means a mutable borrow
+- `t` means an owned value
+- `&t` means an immutable borrow
+- `&mut t` means a mutable borrow
 
-This keeps the precision expected from a systems language without losing all familiarity.
+this keeps the precision expected from a systems language without losing all familiarity.
 
-## Memory And Resource Management
+## memory and resource management
 
-This is one of the core pillars of S.
+this is one of the core pillars of s.
 
-### Main Path: RAII + Move Semantics
+### main path: raii + move semantics
 
-S uses scope-based resource release by default.
+s uses scope-based resource release by default.
 
 ```s
-func main() Result[(), IoError] {
-    let file = File::open("a.txt")?
+func main() result[(), ioerror] {
+    let file = file::open("a.txt")?
     let data = file.read_all()?
     println(data)
-    Ok(())
+    ok(())
 }
 ```
 
-When `file` leaves scope, its resources are released automatically.
+when `file` leaves scope, its resources are released automatically.
 
-### Not GC-First
+### not gc-first
 
-S does not treat garbage collection as the default assumption. That helps preserve:
+s does not treat garbage collection as the default assumption. that helps preserve:
 
 - steadier latency
 - more predictable memory behavior
 - better fit for system components and high-performance services
 
-### Layered Memory Model
+### layered memory model
 
-S should support three layers of memory capability:
+s should support three layers of memory capability:
 
-#### 1. Safe Default Layer
+#### 1. safe default layer
 
 - stack objects
-- RAII resource objects
+- raii resource objects
 - standard containers
 
-#### 2. High-Performance Control Layer
+#### 2. high-performance control layer
 
 - arena allocation
 - pool allocators
 - custom allocators
 
-#### 3. Dangerous Capability Layer
+#### 3. dangerous capability layer
 
 - raw pointers
 - manual deallocation
 - unmanaged memory
 
-These capabilities should be exposed through `unsafe`.
+these capabilities should be exposed through `unsafe`.
 
-### Unsafe Boundaries
+### unsafe boundaries
 
 ```s
 unsafe {
@@ -387,75 +387,75 @@ unsafe {
 }
 ```
 
-Principles:
+principles:
 
 - `unsafe` is a capability switch, not a performance switch
 - safe code may call well-encapsulated unsafe libraries
 - unsafe implementations should be kept in a small number of modules
 
-## Error Handling
+## error handling
 
-S uses `Result[T, E]` as the primary error model. Exceptions are not intended to be the default mechanism.
+s uses `result[t, e]` as the primary error model. exceptions are not intended to be the default mechanism.
 
-### Basic Form
+### basic form
 
 ```s
-func parse_port(str s) Result[u16, ParseError] {
+func parse_port(str s) result[u16, parseerror] {
     ...
 }
 ```
 
-### Propagation Operator
+### propagation operator
 
 ```s
-func run() Result[(), Error] {
+func run() result[(), error] {
     let cfg = load_config("app.conf")?
     let conn = connect(cfg.addr)?
     conn.start()?
-    Ok(())
+    ok(())
 }
 ```
 
-### Unrecoverable Errors
+### unrecoverable errors
 
-For truly unrecoverable situations, the language may provide:
+for truly unrecoverable situations, the language may provide:
 
 - `panic`
 - `assert`
 - `unreachable`
 
-But those should not replace normal error modeling.
+but those should not replace normal error modeling.
 
-### Error Design Principles
+### error design principles
 
 - errors should compose
 - errors should carry context
 - error printing should be friendly
 - the standard library should provide a unified error trait
 
-For example:
+for example:
 
 ```s
-trait Error {
+trait error {
     func message(self) str
-    func source(self) Option[&Error]
+    func source(self) option[&error]
 }
 ```
 
-## Concurrency Model
+## concurrency model
 
-The concurrency model of S should learn from both Go and Rust:
+the concurrency model of s should learn from both go and rust:
 
 - syntax should remain simple
 - data safety should remain strong
 
-### Suggested Main Model: Structured Concurrency
+### suggested main model: structured concurrency
 
 ```s
-func main() Result[(), Error] {
+func main() result[(), error] {
     task::scope(|scope| {
-        let a = scope.spawn(|| fetch_price("BTC-USDT"))
-        let b = scope.spawn(|| fetch_price("ETH-USDT"))
+        let a = scope.spawn(|| fetch_price("btc-usdt"))
+        let b = scope.spawn(|| fetch_price("eth-usdt"))
 
         let pa = a.join()?
         let pb = b.join()?
@@ -464,16 +464,16 @@ func main() Result[(), Error] {
 }
 ```
 
-Properties:
+properties:
 
 - child task lifetimes are bound to the parent scope
 - goroutine-leak-style problems are reduced
 - this is a better fit for server-side engineering
 
-### Channel Communication
+### channel communication
 
 ```s
-let (tx, rx) = channel[Job](1024)
+let (tx, rx) = channel[job](1024)
 
 spawn || {
     tx.send(job)?
@@ -482,60 +482,60 @@ spawn || {
 let item = rx.recv()?
 ```
 
-### Concurrency Safety Constraints
+### concurrency safety constraints
 
-S can borrow the Rust idea in a lighter form:
+s can borrow the rust idea in a lighter form:
 
-- only `Send` types may move across threads
-- only `Sync` types may be shared by reference across threads
+- only `send` types may move across threads
+- only `sync` types may be shared by reference across threads
 
 ```s
-trait Send
-trait Sync
+trait send
+trait sync
 ```
 
-### Shared Mutable State Should Not Be The Default
+### shared mutable state should not be the default
 
-Preferred patterns:
+preferred patterns:
 
 - message passing
 - scoped tasks
-- explicit `Mutex` / `RwLock` / `Atomic`
+- explicit `mutex` / `rwlock` / `atomic`
 
-Not unrestricted shared mutation by default.
+not unrestricted shared mutation by default.
 
-## Modules And Packages
+## modules and packages
 
-S should not use the C/C++ header model.
+s should not use the c/c++ header model.
 
-### Modules
+### modules
 
 ```s
 package net.http
 
-struct Request { ... }
+struct request { ... }
 
-func parse_header(...) Header { ... }
+func parse_header(...) header { ... }
 ```
 
-Suggested rules:
+suggested rules:
 
 - one file belongs to one module
 - one directory forms one package
 - uppercase controls export
 - lowercase stays module-local
 
-### Imports
+### imports
 
 ```s
-use net.http.Request
-use io.{Reader, Writer}
+use net.http.request
+use io.{reader, writer}
 use math as m
 ```
 
-### Package Management
+### package management
 
-Each project should have a clear manifest:
+each project should have a clear manifest:
 
 ```toml
 [package]
@@ -548,108 +548,108 @@ http = "1.2"
 json = "0.8"
 ```
 
-### Versioning And Builds
+### versioning and builds
 
-S should support:
+s should support:
 
 - lock files
 - reproducible builds
 - workspaces
 - monorepo-friendly workflows
 
-## Standard Library Direction
+## standard library direction
 
-The standard library should be small and stable at the core, with layered packages around it.
+the standard library should be small and stable at the core, with layered packages around it.
 
-At minimum it should include:
+at minimum it should include:
 
 - core types and containers
-- strings and UTF-8
-- files and IO
+- strings and utf-8
+- files and io
 - networking
 - concurrency primitives
 - time
 - serialization interfaces
 - a test framework
-- FFI support
+- ffi support
 
-## FFI And System Capabilities
+## ffi and system capabilities
 
-If S wants to become a real systems language, C ABI interoperability has to be a first-class priority.
+if s wants to become a real systems language, c abi interoperability has to be a first-class priority.
 
-### C FFI Example
+### c ffi example
 
 ```s
-extern "C" func puts(*const u8 s) int32
+extern "c" func puts(*const u8 s) int32
 ```
 
-Design goals:
+design goals:
 
-- import C functions
-- export S functions to C
+- import c functions
+- export s functions to c
 - control struct layout
 - make calling conventions explicit
 
-If C FFI is weak, S will struggle to become a practical systems language.
+if c ffi is weak, s will struggle to become a practical systems language.
 
-## Trade-Offs Against C / Go / Rust / C++
+## trade-offs against c / go / rust / c++
 
-### What To Learn From C
+### what to learn from c
 
 - simplicity
 - predictable layout
 - hardware closeness
-- FFI friendliness
+- ffi friendliness
 
-### What Not To Learn From C
+### what not to learn from c
 
 - raw pointers by default
 - macros standing in for language mechanisms
 - widespread undefined behavior
 
-### What To Learn From Go
+### what to learn from go
 
 - unified tooling
 - a consistent build experience
 - built-in package management and testing
 - simple syntax
 
-### What Not To Learn From Go
+### what not to learn from go
 
-- deep dependence on GC
+- deep dependence on gc
 - error patterns that become repetitive boilerplate
 
-### What To Learn From Rust
+### what to learn from rust
 
 - safety by default
-- `Option` / `Result`
+- `option` / `result`
 - trait abstractions
 - pattern matching
 - `unsafe` boundaries
 
-### What Not To Learn From Rust
+### what not to learn from rust
 
 - exposing all complexity directly to users
 - forcing simple programs to drown in lifetime syntax
 
-### What To Learn From C++
+### what to learn from c++
 
-- RAII
+- raii
 - move semantics
 - zero-cost abstractions
 - strong library expressiveness
 
-### What Not To Learn From C++
+### what not to learn from c++
 
 - excessive historical baggage
 - rule explosion
 - catastrophic template errors
 
-## A Possible Minimal Language Subset
+## a possible minimal language subset
 
-The first usable version of S does not need to solve everything at once.
+the first usable version of s does not need to solve everything at once.
 
-A practical minimal subset could include only:
+a practical minimal subset could include only:
 
 - primitive types
 - `struct`
@@ -657,7 +657,7 @@ A practical minimal subset could include only:
 - `func`
 - `let / var / const`
 - `if / for / while / match`
-- `Result` / `Option`
+- `result` / `option`
 - `&` / `&mut`
 - `impl` / `trait`
 - `package` / `use`
@@ -665,121 +665,121 @@ A practical minimal subset could include only:
 - a minimal standard library
 - `s build` / `s run` / `s test` / `s fmt`
 
-That is already enough to build:
+that is already enough to build:
 
-- CLI tools
+- cli tools
 - simple network services
 - file-processing programs
 - small systems components
 
-## Roadmap
+## roadmap
 
-### Phase 0: Vision And Specification
+### phase 0: vision and specification
 
-Goals:
+goals:
 
 - make the language positioning explicit
 - freeze the core syntax direction
 - define the memory and error models
 
-Deliverables:
+deliverables:
 
 - language manifesto
 - syntax draft
 - type system draft
 - minimal standard library checklist
 
-### Phase 1: Minimal Compiler
+### phase 1: minimal compiler
 
-Goals:
+goals:
 
 - compile a minimal executable program
 - support basic types, functions, control flow, and modules
 
-Priority work:
+priority work:
 
 - lexer
 - parser
-- AST
+- ast
 - type checker
-- simple IR
-- LLVM backend or a custom minimal backend
+- simple ir
+- llvm backend or a custom minimal backend
 
-### Phase 2: Resource And Error Model
+### phase 2: resource and error model
 
-Goals:
+goals:
 
-- implement `Result`
-- implement RAII
+- implement `result`
+- implement raii
 - implement the basics of move and borrow rules
 
-Priority work:
+priority work:
 
 - scope-based destruction
 - ownership transfer
 - the `?` operator
 - pattern matching
 
-### Phase 3: Standard Library And Toolchain
+### phase 3: standard library and toolchain
 
-Goals:
+goals:
 
 - make the language usable for real small projects
 
-Priority work:
+priority work:
 
 - `string`
-- `Vec`
-- `Map`
-- IO
+- `vec`
+- `map`
+- io
 - filesystem
 - testing framework
 - formatter
 - package manager
 
-### Phase 4: Concurrency And Runtime
+### phase 4: concurrency and runtime
 
-Goals:
+goals:
 
 - support server-side workloads
 
-Priority work:
+priority work:
 
 - task runtime
 - channels
 - timers
-- socket APIs
+- socket apis
 - structured concurrency
 
-### Phase 5: FFI And Ecosystem Integration
+### phase 5: ffi and ecosystem integration
 
-Goals:
+goals:
 
-- coexist with the C ecosystem
+- coexist with the c ecosystem
 - build system modules and high-performance services
 
-Priority work:
+priority work:
 
-- C ABI
+- c abi
 - shared/static library output
-- allocator APIs
+- allocator apis
 - profiling hooks
 
-## Success Criteria
+## success criteria
 
-If S is successful, it should satisfy the following:
+if s is successful, it should satisfy the following:
 
-- an engineer familiar with Go can become productive in a few days
-- an engineer familiar with Rust does not feel it is too unsafe to use
-- an engineer familiar with C/C++ does not feel that it has lost control
-- a medium-sized service can be built naturally without depending on GC
+- an engineer familiar with go can become productive in a few days
+- an engineer familiar with rust does not feel it is too unsafe to use
+- an engineer familiar with c/c++ does not feel that it has lost control
+- a medium-sized service can be built naturally without depending on gc
 - the toolchain experience is more unified than in traditional systems languages
 
-## Current Status
+## current status
 
-S is still in the design-draft stage in this repository.
+s is still in the design-draft stage in this repository.
 
-At the same time, self-hosting work has already started. The first S-native compiler skeleton lives in:
+at the same time, self-hosting work has already started. the first s-native compiler skeleton lives in:
 
 - [selfhost.md](/app/s/doc/selfhost.md)
 - [ast.s](/app/s/src/s/ast.s)
@@ -790,22 +790,22 @@ At the same time, self-hosting work has already started. The first S-native comp
 - [backend_elf64.md](/app/s/doc/backend_elf64.md)
 - [self_hosting.md](/app/s/doc/self_hosting.md)
 
-The most valuable next steps are:
+the most valuable next steps are:
 
 1. write a formal syntax draft
 2. define precise borrow-lite rules
 3. design the `trait` and generic instantiation strategy
-4. design the minimal standard-library API
-5. decide on the compiler implementation path and IR strategy
+4. design the minimal standard-library api
+5. decide on the compiler implementation path and ir strategy
 
-## License And Collaboration Direction
+## license and collaboration direction
 
-Discussion and iteration are especially welcome around:
+discussion and iteration are especially welcome around:
 
 - whether the syntax is simple enough
 - whether the ownership model is practical enough
-- whether concurrency should lean more toward Go or Rust
+- whether concurrency should lean more toward go or rust
 - where the standard library boundary should sit
 - whether an edition mechanism is needed for future evolution
 
-S is not trying to reinvent everything. It is trying to recombine modern systems-language ideas that have already proven valuable into something more unified, more learnable, and better suited to real engineering work.
+s is not trying to reinvent everything. it is trying to recombine modern systems-language ideas that have already proven valuable into something more unified, more learnable, and better suited to real engineering work.

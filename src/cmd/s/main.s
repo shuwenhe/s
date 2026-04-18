@@ -1,8 +1,8 @@
 package cmd
 
-use compile.internal.dispatch.Main as dispatchMain
-use std.env.Args as hostArgs
+use compile.internal.dispatch.main as dispatch_main
+use std.env.args as host_args
 
 func main() int32 {
-    return dispatchMain(hostArgs())
+    return dispatch_main(host_args())
 }
