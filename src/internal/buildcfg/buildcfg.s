@@ -1,6 +1,6 @@
 package internal.buildcfg
 
-struct BuildCfgError {
+struct build_cfg_error {
     string message,
 }
 
@@ -16,16 +16,16 @@ struct Toolchain {
     string archiver,
 }
 
-struct BuildCfg {
+struct build_cfg {
     Target target,
     Toolchain toolchain,
 }
 
-func GOOS() string {
+func goos() string {
     "linux"
 }
 
-func GOARCH() string {
+func goarch() string {
     "amd64"
 }
 

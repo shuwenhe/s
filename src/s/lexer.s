@@ -6,7 +6,7 @@ use std.prelude.slice
 use std.vec.Vec
 use std.result.Result
 
-struct LexError {
+struct lex_error {
     string message,
     int32 line,
     int32 column,
@@ -29,7 +29,7 @@ func new_lexer(string source) Lexer {
 }
 
 impl Lexer {
-    func tokenize(mut self) Result[Vec[Token], LexError] {
+    func tokenize(mut self) Result[Vec[Token], lex_error] {
         var tokens = Vec[Token]()
         while !self.is_eof() {
             self.skip_ignored()?
@@ -45,9 +45,9 @@ impl Lexer {
                 var value = self.read_identifier()?
                 var kind =
                     if is_keyword(value) {
-                        TokenKind::Keyword
+                        token_kind::Keyword
                     } else {
-                        TokenKind::Ident
+                        token_kind::Ident
                     }
                 tokens.push(Token {
                     kind: kind,
@@ -60,7 +60,7 @@ impl Lexer {
 
             if is_digit(ch) {
                 tokens.push(Token {
-                    kind: TokenKind::Int,
+                    kind: token_kind::Int,
                     value: self.read_number()?,
                     line: start_line,
                     column: start_column,
@@ -70,7 +70,7 @@ impl Lexer {
 
             if ch == "\"" {
                 tokens.push(Token {
-                    kind: TokenKind::string,
+                    kind: token_kind::string,
                     value: self.read_string()?,
                     line: start_line,
                     column: start_column,
@@ -79,7 +79,7 @@ impl Lexer {
             }
 
             tokens.push(Token {
-                kind: TokenKind::Symbol,
+                kind: token_kind::Symbol,
                 value: self.read_symbol()?,
                 line: start_line,
                 column: start_column,
@@ -87,7 +87,7 @@ impl Lexer {
         }
 
         tokens.push(Token {
-            kind: TokenKind::Eof,
+            kind: token_kind::Eof,
             value: "<eof>",
             line: self.line,
             column: self.column,
@@ -96,7 +96,7 @@ impl Lexer {
         Result::Ok(tokens)
     }
 
-    func skip_ignored(mut self) Result[(), LexError] {
+    func skip_ignored(mut self) Result[(), lex_error] {
         while !self.is_eof() {
             var ch = self.peek()?
 
@@ -143,7 +143,7 @@ impl Lexer {
         Result::Ok(())
     }
 
-    func read_identifier(mut self) Result[string, LexError] {
+    func read_identifier(mut self) Result[string, lex_error] {
         var out = ""
         while !self.is_eof() {
             var ch = self.peek()?
@@ -155,7 +155,7 @@ impl Lexer {
         Result::Ok(out)
     }
 
-    func read_number(mut self) Result[string, LexError] {
+    func read_number(mut self) Result[string, lex_error] {
         var out = ""
         while !self.is_eof() {
             var ch = self.peek()?
@@ -167,7 +167,7 @@ impl Lexer {
         Result::Ok(out)
     }
 
-    func read_string(mut self) Result[string, LexError] {
+    func read_string(mut self) Result[string, lex_error] {
         var out = self.advance()?
         while !self.is_eof() {
             var ch = self.advance()?
@@ -186,7 +186,7 @@ impl Lexer {
         Result::Err(self.error("unterminated string literal"))
     }
 
-    func read_symbol(mut self) Result[string, LexError] {
+    func read_symbol(mut self) Result[string, lex_error] {
         var multi = Vec[string] {
             "->",
             ":",
@@ -233,14 +233,14 @@ impl Lexer {
         slice(self.source, self.index, self.index + len(text)) == text
     }
 
-    func peek(self) Result[string, LexError] {
+    func peek(self) Result[string, lex_error] {
         if self.is_eof() {
             return Result::Err(self.error("unexpected eof"))
         }
         Result::Ok(char_at(self.source, self.index))
     }
 
-    func advance(mut self) Result[string, LexError] {
+    func advance(mut self) Result[string, lex_error] {
         if self.is_eof() {
             return Result::Err(self.error("unexpected eof"))
         }
@@ -262,8 +262,8 @@ impl Lexer {
         self.index >= len(self.source)
     }
 
-    func error(self, string message) LexError {
-        LexError {
+    func error(self, string message) lex_error {
+        lex_error {
             message: message,
             line: self.line,
             column: self.column,

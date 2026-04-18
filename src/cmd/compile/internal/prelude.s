@@ -1,13 +1,13 @@
 package compile.internal.prelude
 
-use compile.internal.typesys.BaseTypeName
+use compile.internal.typesys.base_type_name
 
-func LoadPrelude() int32 {
+func load_prelude() int32 {
     0
 }
 
-func LookupBuiltinType(string name) bool {
-    var base = BaseTypeName(name)
+func lookup_builtin_type(string name) bool {
+    var base = base_type_name(name)
     base == "string"
         || base == "Vec"
         || base == "Result"
@@ -25,8 +25,8 @@ func LookupBuiltinType(string name) bool {
         || base == "Toolchain"
 }
 
-func LookupBuiltinFieldType(string type_name, string field_name) string {
-    var base = BaseTypeName(type_name)
+func lookup_builtin_field_type(string type_name, string field_name) string {
+    var base = base_type_name(type_name)
     if base == "FileInfo" {
         if field_name == "size" || field_name == "hidden" {
             return "int32"
@@ -40,8 +40,8 @@ func LookupBuiltinFieldType(string type_name, string field_name) string {
     ""
 }
 
-func LookupBuiltinIndexType(string type_name) string {
-    var base = BaseTypeName(type_name)
+func lookup_builtin_index_type(string type_name) string {
+    var base = base_type_name(type_name)
     if base == "Vec" || base == "Array" {
         return "firstTypeArg"
     }
@@ -51,8 +51,8 @@ func LookupBuiltinIndexType(string type_name) string {
     ""
 }
 
-func LookupBuiltinMethodType(string type_name, string member) string {
-    var base = BaseTypeName(type_name)
+func lookup_builtin_method_type(string type_name, string member) string {
+    var base = base_type_name(type_name)
     if base == "string" && member == "len" {
         return "int32"
     }
@@ -101,8 +101,8 @@ func LookupBuiltinMethodType(string type_name, string member) string {
     ""
 }
 
-func LookupBuiltinMethodArity(string type_name, string member) int32 {
-    var base = BaseTypeName(type_name)
+func lookup_builtin_method_arity(string type_name, string member) int32 {
+    var base = base_type_name(type_name)
     if base == "Vec" && member == "push" {
         return 1
     }

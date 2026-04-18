@@ -2,28 +2,28 @@ package std.fs
 
 use std.result.Result
 
-struct FsError {
+struct fs_error {
     string message,
 }
 
-func ReadToString(string path) Result[string, FsError] {
+func read_to_string(string path) Result[string, fs_error] {
     __host_read_to_string(path)
 }
 
-func WriteTextFile(string path, string contents) Result[(), FsError] {
+func write_text_file(string path, string contents) Result[(), fs_error] {
     __host_write_text_file(path, contents)
 }
 
-func MakeTempDir(string prefix) Result[string, FsError] {
+func make_temp_dir(string prefix) Result[string, fs_error] {
     __host_make_temp_dir(prefix)
 }
 
-func read_to_string(string path) Result[string, FsError] {
-    ReadToString(path)
+func read_to_string(string path) Result[string, fs_error] {
+    read_to_string(path)
 }
 
-extern "intrinsic" func __host_read_to_string(string path) Result[string, FsError]
+extern "intrinsic" func __host_read_to_string(string path) Result[string, fs_error]
 
-extern "intrinsic" func __host_write_text_file(string path, string contents) Result[(), FsError]
+extern "intrinsic" func __host_write_text_file(string path, string contents) Result[(), fs_error]
 
-extern "intrinsic" func __host_make_temp_dir(string prefix) Result[string, FsError]
+extern "intrinsic" func __host_make_temp_dir(string prefix) Result[string, fs_error]
