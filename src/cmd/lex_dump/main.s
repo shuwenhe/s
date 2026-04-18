@@ -1,33 +1,33 @@
 package cmd
 
-use std.env.Args as hostArgs
-use std.result.Result
+use std.env.args as host_args
+use std.result.result
 use std.io.println
-use compile.internal.syntax.ReadSource
-use compile.internal.syntax.DumpTokensText
-use compile.internal.syntax.Tokenize
+use compile.internal.syntax.read_source
+use compile.internal.syntax.dump_tokens_text
+use compile.internal.syntax.tokenize
 
 func main() int32 {
-    var args = hostArgs()
+    var args = host_args()
     if args.len() < 2 {
-        println("usage: lexDump <path>");
+        println("usage: lex_dump <path>");
         return 1
     }
 
     var path = args[1]
-    switch ReadSource(path) {
-        Result.Err(err) : {
+    switch read_source(path) {
+        result.err(err) : {
             println("error: " + err.message);
             return 1
         },
-        Result.Ok(source) : {
-            switch Tokenize(source) {
-                Result.Err(err2) : {
+        result.ok(source) : {
+            switch tokenize(source) {
+                result.err(err2) : {
                     println("error: " + err2.message);
                     return 1
                 },
-                Result.Ok(tokens) : {
-                    println(DumpTokensText(tokens));
+                result.ok(tokens) : {
+                    println(dump_tokens_text(tokens));
                     return 0
                 },
             }

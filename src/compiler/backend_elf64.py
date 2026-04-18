@@ -4,68 +4,68 @@ from dataclasses import dataclass
 import os
 import subprocess
 import tempfile
-from pathlib import Path
+from pathlib import path
 
-from compiler.ast import SourceFile
-from compiler.interpreter import Interpreter, InterpreterError
+from compiler.ast import sourcefile
+from compiler.interpreter import interpreter, interpretererror
 
-BUILD_OUTPUT_ROOT = Path(os.environ.get("S_BUILD_OUTPUT_ROOT", "/tmp/s-build"))
+build_output_root = path(os.environ.get("s_build_output_root", "/tmp/s-build"))
 
 
-class BackendError(Exception):
+class backenderror(exception):
     pass
 
 
 @dataclass
-class WriteOp:
+class writeop:
     fd: int
     text: str
 
 
-class RecordingInterpreter(Interpreter):
-    def __init__(self, source: SourceFile) -> None:
+class recordinginterpreter(interpreter):
+    def __init__(self, source: sourcefile) -> none:
         super().__init__(source)
-        self.ops: list[WriteOp] = []
+        self.ops: list[writeop] = []
 
     def call_function(self, name: str, args: list[object]) -> object:
         if name == "println":
-            self.ops.append(WriteOp(fd=1, text=("" if not args else self._stringify(args[0])) + "\n"))
-            return None
+            self.ops.append(writeop(fd=1, text=("" if not args else self._stringify(args[0])) + "\n"))
+            return none
         if name == "eprintln":
-            self.ops.append(WriteOp(fd=2, text=("" if not args else self._stringify(args[0])) + "\n"))
-            return None
+            self.ops.append(writeop(fd=2, text=("" if not args else self._stringify(args[0])) + "\n"))
+            return none
         return super().call_function(name, args)
 
 
-def build_executable(source: SourceFile, output_path: Path) -> None:
-    BUILD_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+def build_executable(source: sourcefile, output_path: path) -> none:
+    build_output_root.mkdir(parents=true, exist_ok=true)
+    output_path.parent.mkdir(parents=true, exist_ok=true)
     program = _compile_program(source)
     asm = _emit_asm(program)
 
-    with tempfile.TemporaryDirectory(prefix="s-build-", dir=str(BUILD_OUTPUT_ROOT)) as tmp:
-        workdir = Path(tmp)
+    with tempfile.temporarydirectory(prefix="s-build-", dir=str(build_output_root)) as tmp:
+        workdir = path(tmp)
         asm_path = workdir / "out.s"
         obj_path = workdir / "out.o"
         asm_path.write_text(asm)
 
         try:
-            subprocess.run(["as", "-o", str(obj_path), str(asm_path)], check=True)
-            subprocess.run(["ld", "-o", str(output_path), str(obj_path)], check=True)
-        except subprocess.CalledProcessError as exc:
-            raise BackendError(f"toolchain failed with exit code {exc.returncode}") from exc
+            subprocess.run(["as", "-o", str(obj_path), str(asm_path)], check=true)
+            subprocess.run(["ld", "-o", str(output_path), str(obj_path)], check=true)
+        except subprocess.calledprocesserror as exc:
+            raise backenderror(f"toolchain failed with exit code {exc.returncode}") from exc
 
 
-def _compile_program(source: SourceFile) -> tuple[list[WriteOp], int]:
-    interpreter = RecordingInterpreter(source)
+def _compile_program(source: sourcefile) -> tuple[list[writeop], int]:
+    interpreter = recordinginterpreter(source)
     try:
         exit_code = interpreter.run_main()
-    except InterpreterError as exc:
-        raise BackendError(str(exc)) from exc
+    except interpretererror as exc:
+        raise backenderror(str(exc)) from exc
     return interpreter.ops, int(exit_code)
 
 
-def _emit_asm(program: tuple[list[WriteOp], int]) -> str:
+def _emit_asm(program: tuple[list[writeop], int]) -> str:
     ops, exit_code = program
     data_lines: list[str] = [".section .data"]
     text_lines: list[str] = [".section .text", ".global _start", "_start:"]

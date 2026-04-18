@@ -1,1 +1,1 @@
-"""Go-style internal compiler packages for S."""
+"""go-style internal compiler packages for s."""

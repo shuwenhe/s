@@ -1,4 +1,4 @@
-from .golden import GoldenTests
+from .golden import goldentests
 
 
-__all__ = ["GoldenTests"]
+__all__ = ["goldentests"]

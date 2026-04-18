@@ -1,8 +1,8 @@
 package compile.internal.build.parse
 
-use std.vec.Vec
+use std.vec.vec
 
-func ParseOptions(Vec[string] args)  Vec[string] {
+func parse_options(vec[string] args)  vec[string] {
     if args.len() < 2 {
         return make_options("help", "", "")
     }
@@ -39,7 +39,7 @@ func ParseOptions(Vec[string] args)  Vec[string] {
     make_options("help", "", "")
 }
 
-func Usage()  string {
+func usage()  string {
     "usage:\n"
         + "  compile check <path>\n"
         + "  compile tokens <path>\n"
@@ -48,8 +48,8 @@ func Usage()  string {
         + "  compile run <path>\n"
 }
 
-func make_options(string command, string path, string output)  Vec[string] {
-    var options = Vec[string]()
+func make_options(string command, string path, string output)  vec[string] {
+    var options = vec[string]()
     options.push(command);
     options.push(path);
     options.push(output);

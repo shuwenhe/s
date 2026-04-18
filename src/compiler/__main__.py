@@ -5,20 +5,20 @@ import argparse
 from compiler.hosted_compiler import run_cli
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="s")
-    sub = parser.add_subparsers(dest="command", required=True)
+def main(argv: list[str] | none = none) -> int:
+    parser = argparse.argumentparser(prog="s")
+    sub = parser.add_subparsers(dest="command", required=true)
 
-    check_cmd = sub.add_parser("check", help="parse and type-check an S source file")
+    check_cmd = sub.add_parser("check", help="parse and type-check an s source file")
     check_cmd.add_argument("path")
     check_cmd.add_argument("--dump-tokens", action="store_true")
     check_cmd.add_argument("--dump-ast", action="store_true")
 
-    build_cmd = sub.add_parser("build", help="build a minimal S source file into a native binary")
+    build_cmd = sub.add_parser("build", help="build a minimal s source file into a native binary")
     build_cmd.add_argument("path")
-    build_cmd.add_argument("-o", "--output", required=True)
+    build_cmd.add_argument("-o", "--output", required=true)
 
-    run_cmd = sub.add_parser("run", help="interpret a minimal S source file")
+    run_cmd = sub.add_parser("run", help="interpret a minimal s source file")
     run_cmd.add_argument("path")
 
     args = parser.parse_args(argv)
@@ -38,4 +38,4 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise systemexit(main())

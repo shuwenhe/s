@@ -1,24 +1,24 @@
 package std.process
 
-use std.result.Result
-use std.vec.Vec
+use std.result.result
+use std.vec.vec
 
-struct ProcessError {
+struct process_error {
     string message,
 }
 
-func RunProcess(Vec[string] argv) Result[(), ProcessError] {
+func run_process(vec[string] argv) result[(), process_error] {
     __host_run_process(argv)
 }
 
-func Exit(int code) () {
+func exit(int code) () {
     __host_exit(code)
 }
 
-func runProcess(Vec[string] argv) Result[(), ProcessError] {
-    RunProcess(argv)
+func run_process(vec[string] argv) result[(), process_error] {
+    run_process(argv)
 }
 
-extern "intrinsic" func __host_run_process(Vec[string] argv) Result[(), ProcessError]
+extern "intrinsic" func __host_run_process(vec[string] argv) result[(), process_error]
 
 extern "intrinsic" func __host_exit(int code) ()
