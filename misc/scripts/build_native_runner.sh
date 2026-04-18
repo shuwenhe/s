@@ -11,15 +11,13 @@ SRC_ROOT="${SRC_ROOT:-$ROOT/src}"
 OUT="${1:-/tmp/s_native}"
 
 # Transitional bootstrap chain:
-# - use the hosted compiler build path (python) if available
+# - prefer a stage1 S compiler if S_COMPILER is available
 # - build the current runner entrypoint through the hosted compiler bridge
 
-if command -v python3 >/dev/null 2>&1; then
-    if (cd "$SRC_ROOT" && python3 -m compiler build "$SRC_ROOT/runtime/runner.s" -o "$OUT"); then
-        echo "built runner through backend build path: $OUT"
-        exit 0
-    fi
+if [ -n "${S_COMPILER:-}" ] && [ -x "${S_COMPILER:-}" ]; then
+    S_DISABLE_SELFHOSTED=1 "$S_COMPILER" build "$SRC_ROOT/runtime/runner.s" -o "$OUT"
+    echo "built runner through S_COMPILER stage1: $OUT"
+    exit 0
 fi
-
-echo "python3 with hosted compiler support is required to build the runner" >&2
+echo "S_COMPILER stage1 compiler is required to build the runner" >&2
 exit 1
