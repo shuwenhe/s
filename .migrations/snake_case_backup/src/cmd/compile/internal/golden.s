@@ -1,5 +1,5 @@
 package compile.internal.golden
 
-func RunLexerCase() int32 {
+func run_lexer_case() int32 {
     return 0
 }

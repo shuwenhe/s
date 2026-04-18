@@ -1,98 +1,98 @@
 package compile.internal.backend_elf64
 
-use compile.internal.semantic.CheckText
-use compile.internal.syntax.ParseSource
-use s.AssignStmt
-use s.BinaryExpr
-use s.BlockExpr
-use s.BoolExpr
-use s.CForStmt
-use s.CallExpr
+use compile.internal.semantic.check_text
+use compile.internal.syntax.parse_source
+use s.assign_stmt
+use s.binary_expr
+use s.block_expr
+use s.bool_expr
+use s.c_for_stmt
+use s.call_expr
 use s.Expr
-use s.ExprStmt
-use s.FunctionDecl
-use s.IfExpr
-use s.IncrementStmt
-use s.IntExpr
+use s.expr_stmt
+use s.function_decl
+use s.if_expr
+use s.increment_stmt
+use s.int_expr
 use s.Item
-use s.NameExpr
-use s.SourceFile
+use s.name_expr
+use s.source_file
 use s.Stmt
-use s.StringExpr
-use s.VarStmt
-use s.WhileExpr
-use std.fs.MakeTempDir
-use std.fs.ReadToString
-use std.fs.WriteTextFile
+use s.string_expr
+use s.var_stmt
+use s.while_expr
+use std.fs.make_temp_dir
+use std.fs.read_to_string
+use std.fs.write_text_file
 use std.io.eprintln
 use std.option.Option
-use std.process.RunProcess
+use std.process.run_process
 use std.prelude.char_at
 use std.prelude.len
 use std.prelude.to_string
 use std.vec.Vec
 
-struct BackendError {
+struct backend_error {
     string message,
 }
 
-func ok_function(FunctionDecl value) Result[FunctionDecl, BackendError] {
+func ok_function(function_decl value) Result[function_decl, backend_error] {
     Result.Ok(value);
 }
 
-func fail_function(string message) Result[FunctionDecl, BackendError] {
-    Result.Err(BackendError {
+func fail_function(string message) Result[function_decl, backend_error] {
+    Result.Err(backend_error {
         message: message,
     });
 }
 
-func ok_write_ops(Vec[WriteOp] value) Result[Vec[WriteOp], BackendError] {
+func ok_write_ops(Vec[write_op] value) Result[Vec[write_op], backend_error] {
     Result.Ok(value);
 }
 
-func fail_write_ops(string message) Result[Vec[WriteOp], BackendError] {
-    Result.Err(BackendError {
+func fail_write_ops(string message) Result[Vec[write_op], backend_error] {
+    Result.Err(backend_error {
         message: message,
     });
 }
 
-func ok_value(Value value) Result[Value, BackendError] {
+func ok_value(Value value) Result[Value, backend_error] {
     Result.Ok(value);
 }
 
-func fail_value(string message) Result[Value, BackendError] {
-    Result.Err(BackendError {
+func fail_value(string message) Result[Value, backend_error] {
+    Result.Err(backend_error {
         message: message,
     });
 }
 
-func ok_unit() Result[(), BackendError] {
+func ok_unit() Result[(), backend_error] {
     Result.Ok(());
 }
 
-func fail_unit(string message) Result[(), BackendError] {
-    Result.Err(BackendError {
+func fail_unit(string message) Result[(), backend_error] {
+    Result.Err(backend_error {
         message: message,
     });
 }
 
-func ok_int(int32 value) Result[int32, BackendError] {
+func ok_int(int32 value) Result[int32, backend_error] {
     Result.Ok(value);
 }
 
-func fail_int(string message) Result[int32, BackendError] {
-    Result.Err(BackendError {
+func fail_int(string message) Result[int32, backend_error] {
+    Result.Err(backend_error {
         message: message,
     });
 }
 
-struct UnitValue {}
+struct unit_value {}
 
 enum Value {
     Int(int32),
     String(string),
     Bool(bool),
-    Unit(UnitValue),
+    Unit(unit_value),
 }
 
 struct Binding {
@@ -100,24 +100,24 @@ struct Binding {
     Value value,
 }
 
-struct WriteOp {
+struct write_op {
     int32 fd,
     string text,
 }
 
 func Build(string path, string output) int32 {
-    var source_result = ReadToString(path)
+    var source_result = read_to_string(path)
     if source_result.is_err() {
         return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message)
     }
 
     var source = source_result.unwrap()
-    var parsed_result = ParseSource(source)
+    var parsed_result = parse_source(source)
     if parsed_result.is_err() {
         return report_failure("parse failed: " + parsed_result.unwrap_err().message)
     }
 
-    if CheckText(source) != 0 {
+    if check_text(source) != 0 {
         return report_failure("semantic check failed")
     }
 
@@ -132,7 +132,7 @@ func Build(string path, string output) int32 {
     }
 
     var asm_text = emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
-    var temp_dir_result = MakeTempDir("s-build-")
+    var temp_dir_result = make_temp_dir("s-build-")
     if temp_dir_result.is_err() {
         return report_failure("could not create temporary output directory: " + temp_dir_result.unwrap_err().message)
     }
@@ -141,7 +141,7 @@ func Build(string path, string output) int32 {
     var asm_path = temp_dir + "/out.s"
     var obj_path = temp_dir + "/out.o"
 
-    var write_result = WriteTextFile(asm_path, asm_text)
+    var write_result = write_text_file(asm_path, asm_text)
     if write_result.is_err() {
         return report_failure("failed to write assembly: " + write_result.unwrap_err().message)
     }
@@ -151,7 +151,7 @@ func Build(string path, string output) int32 {
     as_argv.push("-o");
     as_argv.push(obj_path);
     as_argv.push(asm_path);
-    var as_result = RunProcess(as_argv)
+    var as_result = run_process(as_argv)
     if as_result.is_err() {
         return report_failure("toolchain failed: " + as_result.unwrap_err().message)
     }
@@ -161,7 +161,7 @@ func Build(string path, string output) int32 {
     ld_argv.push("-o");
     ld_argv.push(output);
     ld_argv.push(obj_path);
-    var ld_result = RunProcess(ld_argv)
+    var ld_result = run_process(ld_argv)
     if ld_result.is_err() {
         return report_failure("toolchain failed: " + ld_result.unwrap_err().message)
     }
@@ -169,11 +169,11 @@ func Build(string path, string output) int32 {
     0
 }
 
-func compile_writes(SourceFile source) Result[Vec[WriteOp], BackendError] {
+func compile_writes(source_file source) Result[Vec[write_op], backend_error] {
     switch find_main(source) {
         Result.Err(err) : Result.Err(err),
         Result.Ok(main_function) : {
-            var writes = Vec[WriteOp]()
+            var writes = Vec[write_op]()
             var main_result_value = call_function(source, main_function.sig.name, Vec[Value](), writes)
             switch main_result_value {
                 Result.Err(err) : Result.Err(err),
@@ -185,11 +185,11 @@ func compile_writes(SourceFile source) Result[Vec[WriteOp], BackendError] {
     }
 }
 
-func compile_exit_code(SourceFile source) Result[int32, BackendError] {
+func compile_exit_code(source_file source) Result[int32, backend_error] {
     switch find_main(source) {
         Result.Err(err) : Result.Err(err),
         Result.Ok(main_function) : {
-            var writes = Vec[WriteOp]()
+            var writes = Vec[write_op]()
             var main_result_value = call_function(source, main_function.sig.name, Vec[Value](), writes)
             switch main_result_value {
                 Result.Err(err) : Result.Err(err),
@@ -199,7 +199,7 @@ func compile_exit_code(SourceFile source) Result[int32, BackendError] {
     }
 }
 
-func find_main(SourceFile source) Result[FunctionDecl, BackendError] {
+func find_main(source_file source) Result[function_decl, backend_error] {
     var i = 0
     while i < source.items.len() {
         switch source.items[i] {
@@ -215,7 +215,7 @@ func find_main(SourceFile source) Result[FunctionDecl, BackendError] {
     fail_function("backend error: entry function main not found")
 }
 
-func call_function(SourceFile source, string name, Vec[Value] args, Vec[WriteOp] mut writes) Result[Value, BackendError] {
+func call_function(source_file source, string name, Vec[Value] args, Vec[write_op] mut writes) Result[Value, backend_error] {
     var fn_result = find_function(source, name)
     if fn_result.is_err() {
         return fail_value(fn_result.unwrap_err().message)
@@ -253,7 +253,7 @@ func call_function(SourceFile source, string name, Vec[Value] args, Vec[WriteOp]
     ok_value(body_result.unwrap())
 }
 
-func find_function(SourceFile source, string name) Result[FunctionDecl, BackendError] {
+func find_function(source_file source, string name) Result[function_decl, backend_error] {
     var i = 0
     while i < source.items.len() {
         switch source.items[i] {
@@ -266,10 +266,10 @@ func find_function(SourceFile source, string name) Result[FunctionDecl, BackendE
         }
         i = i + 1
     }
-    Result::Err(BackendError { message: "backend error: unknown function " + name })
+    Result::Err(backend_error { message: "backend error: unknown function " + name })
 }
 
-func execute_block(BlockExpr block, SourceFile source, Vec[Binding] mut env, Vec[WriteOp] mut writes) Result[Value, BackendError] {
+func execute_block(block_expr block, source_file source, Vec[Binding] mut env, Vec[write_op] mut writes) Result[Value, backend_error] {
     var local_env = copy_bindings(env)
     var result = execute_block_in_place(block, source, local_env, writes)
     if result.is_err() {
@@ -278,7 +278,7 @@ func execute_block(BlockExpr block, SourceFile source, Vec[Binding] mut env, Vec
     Result::Ok(result.unwrap())
 }
 
-func execute_block_in_place(BlockExpr block, SourceFile source, Vec[Binding] mut env, Vec[WriteOp] mut writes) Result[Value, BackendError] {
+func execute_block_in_place(block_expr block, source_file source, Vec[Binding] mut env, Vec[write_op] mut writes) Result[Value, backend_error] {
     var si = 0
     while si < block.statements.len() {
         var stmt_result = execute_stmt(block.statements[si], source, env, writes)
@@ -290,11 +290,11 @@ func execute_block_in_place(BlockExpr block, SourceFile source, Vec[Binding] mut
 
     switch block.final_expr {
         Option.Some(expr) : eval_expr(expr, source, env, ops),
-        Option.None : Result::Ok(Value::Unit(UnitValue {})),
+        Option.None : Result::Ok(Value::Unit(unit_value {})),
     }
 }
 
-func execute_stmt(Stmt stmt, SourceFile source, Vec[Binding] mut env, Vec[WriteOp] mut writes) Result[(), BackendError] {
+func execute_stmt(Stmt stmt, source_file source, Vec[Binding] mut env, Vec[write_op] mut writes) Result[(), backend_error] {
     switch stmt {
         Stmt.Var(value) : {
             var expr_result = eval_expr(value.value, source, env, writes)
@@ -314,7 +314,7 @@ func execute_stmt(Stmt stmt, SourceFile source, Vec[Binding] mut env, Vec[WriteO
             }
             var index = find_binding_index(env, value.name)
             if index < 0 {
-                Result::Err(BackendError { message: "backend error: unknown name " + value.name })
+                Result::Err(backend_error { message: "backend error: unknown name " + value.name })
             }
             env.set(index, Binding {
                 name: value.name,
@@ -325,7 +325,7 @@ func execute_stmt(Stmt stmt, SourceFile source, Vec[Binding] mut env, Vec[WriteO
         Stmt.Increment(value) : {
             var index = find_binding_index(env, value.name)
             if index < 0 {
-                Result::Err(BackendError { message: "backend error: unknown name " + value.name })
+                Result::Err(backend_error { message: "backend error: unknown name " + value.name })
             }
             var current = env.get(index).unwrap().value
             switch current {
@@ -336,11 +336,11 @@ func execute_stmt(Stmt stmt, SourceFile source, Vec[Binding] mut env, Vec[WriteO
                     })
                     Result::Ok(())
                 }
-                _ : Result::Err(BackendError { message: "backend error: increment expects int32 for " + value.name }),
+                _ : Result::Err(backend_error { message: "backend error: increment expects int32 for " + value.name }),
             }
         }
-        Stmt.CFor(value) : execute_c_for(value, source, env, writes),
-        Stmt.Return(_) : Result::Err(BackendError { message: "backend error: return statements are not supported in the MVP backend" }),
+        Stmt.c_for(value) : execute_c_for(value, source, env, writes),
+        Stmt.Return(_) : Result::Err(backend_error { message: "backend error: return statements are not supported in the MVP backend" }),
         Stmt.Expr(value) : {
             var expr_result = eval_expr(value.expr, source, env, writes)
             if expr_result.is_err() {
@@ -348,11 +348,11 @@ func execute_stmt(Stmt stmt, SourceFile source, Vec[Binding] mut env, Vec[WriteO
             }
             Result::Ok(())
         }
-        Stmt.Defer(_) : Result::Err(BackendError { message: "backend error: defer statements are not supported in the MVP backend" }),
+        Stmt.Defer(_) : Result::Err(backend_error { message: "backend error: defer statements are not supported in the MVP backend" }),
     }
 }
 
-func execute_c_for(CForStmt value, SourceFile source, Vec[Binding] mut env, Vec[WriteOp] mut writes) Result[(), BackendError] {
+func execute_c_for(c_for_stmt value, source_file source, Vec[Binding] mut env, Vec[write_op] mut writes) Result[(), backend_error] {
     var loop_env = copy_bindings(env)
 
     var init_result = execute_stmt(value.init.value, source, loop_env, writes)
@@ -372,7 +372,7 @@ func execute_c_for(CForStmt value, SourceFile source, Vec[Binding] mut env, Vec[
                     break
                 }
             }
-            _ : Result::Err(BackendError { message: "backend error: for condition must be bool" }),
+            _ : Result::Err(backend_error { message: "backend error: for condition must be bool" }),
         }
 
         var body_result = execute_block_in_place(value.body, source, loop_env, writes)
@@ -390,7 +390,7 @@ func execute_c_for(CForStmt value, SourceFile source, Vec[Binding] mut env, Vec[
     Result::Ok(())
 }
 
-func eval_expr(Expr expr, SourceFile source, Vec[Binding] mut env, Vec[WriteOp] mut writes) Result[Value, BackendError] {
+func eval_expr(Expr expr, source_file source, Vec[Binding] mut env, Vec[write_op] mut writes) Result[Value, backend_error] {
     switch expr {
         Expr.Int(value) : Result::Ok(Value.Int(parse_int_literal(value.value))),
         Expr.string(value) : Result::Ok(Value.String(decode_string_literal(value.value))),
@@ -401,17 +401,17 @@ func eval_expr(Expr expr, SourceFile source, Vec[Binding] mut env, Vec[WriteOp] 
         Expr.If(value) : eval_if_expr(value, source, env, writes),
         Expr.While(value) : eval_while_expr(value, source, env, writes),
         Expr.Block(value) : execute_block(value, source, env, writes),
-        Expr.For(_) : Result::Err(BackendError { message: "backend error: for expressions are not supported in the MVP backend" }),
-        Expr.Switch(_) : Result::Err(BackendError { message: "backend error: switch expressions are not supported in the MVP backend" }),
-        Expr.Borrow(_) : Result::Err(BackendError { message: "backend error: borrow expressions are not supported in the MVP backend" }),
-        Expr.Member(_) : Result::Err(BackendError { message: "backend error: member expressions are not supported in the MVP backend" }),
-        Expr.Index(_) : Result::Err(BackendError { message: "backend error: index expressions are not supported in the MVP backend" }),
-        Expr.Array(_) : Result::Err(BackendError { message: "backend error: array literals are not supported in the MVP backend" }),
-        Expr.Map(_) : Result::Err(BackendError { message: "backend error: map literals are not supported in the MVP backend" }),
+        Expr.For(_) : Result::Err(backend_error { message: "backend error: for expressions are not supported in the MVP backend" }),
+        Expr.Switch(_) : Result::Err(backend_error { message: "backend error: switch expressions are not supported in the MVP backend" }),
+        Expr.Borrow(_) : Result::Err(backend_error { message: "backend error: borrow expressions are not supported in the MVP backend" }),
+        Expr.Member(_) : Result::Err(backend_error { message: "backend error: member expressions are not supported in the MVP backend" }),
+        Expr.Index(_) : Result::Err(backend_error { message: "backend error: index expressions are not supported in the MVP backend" }),
+        Expr.Array(_) : Result::Err(backend_error { message: "backend error: array literals are not supported in the MVP backend" }),
+        Expr.Map(_) : Result::Err(backend_error { message: "backend error: map literals are not supported in the MVP backend" }),
     }
 }
 
-func eval_binary(BinaryExpr value, SourceFile source, Vec[Binding] mut env, Vec[WriteOp] mut writes) Result[Value, BackendError] {
+func eval_binary(binary_expr value, source_file source, Vec[Binding] mut env, Vec[write_op] mut writes) Result[Value, backend_error] {
     var left_result = eval_expr(value.left.value, source, env, writes)
     if left_result.is_err() {
         Result::Err(left_result.unwrap_err())
@@ -437,11 +437,11 @@ func eval_binary(BinaryExpr value, SourceFile source, Vec[Binding] mut env, Vec[
         ">=" : ordered_compare(left, right, value.op),
         "&&" : logical_binary(left, right, true),
         "||" : logical_binary(left, right, false),
-        _ : Result::Err(BackendError { message: "backend error: unsupported binary operator " + value.op }),
+        _ : Result::Err(backend_error { message: "backend error: unsupported binary operator " + value.op }),
     }
 }
 
-func eval_call(CallExpr value, SourceFile source, Vec[Binding] mut env, Vec[WriteOp] mut writes) Result[Value, BackendError] {
+func eval_call(call_expr value, source_file source, Vec[Binding] mut env, Vec[write_op] mut writes) Result[Value, backend_error] {
     switch value.callee.value {
         Expr.Name(callee_name) : {
             if callee_name.name == "println" || callee_name.name == "eprintln" {
@@ -460,13 +460,13 @@ func eval_call(CallExpr value, SourceFile source, Vec[Binding] mut env, Vec[Writ
             }
             call_function(source, callee_name.name, arg_values, writes)
         }
-        _ : Result::Err(BackendError { message: "backend error: unsupported call target" }),
+        _ : Result::Err(backend_error { message: "backend error: unsupported call target" }),
     }
 }
 
-func eval_print_call(string name, Vec[Expr] args, SourceFile source, Vec[Binding] mut env, Vec[WriteOp] mut writes) Result[Value, BackendError] {
+func eval_print_call(string name, Vec[Expr] args, source_file source, Vec[Binding] mut env, Vec[write_op] mut writes) Result[Value, backend_error] {
     if args.len() > 1 {
-        Result::Err(BackendError { message: "backend error: " + name + " expects at most one argument" })
+        Result::Err(backend_error { message: "backend error: " + name + " expects at most one argument" })
     }
 
     var text = ""
@@ -480,14 +480,14 @@ func eval_print_call(string name, Vec[Expr] args, SourceFile source, Vec[Binding
 
     var op_text = text + "\n"
     if name == "println" {
-        writes.push(WriteOp { fd: 1, text: op_text });
+        writes.push(write_op { fd: 1, text: op_text });
     } else {
-        writes.push(WriteOp { fd: 2, text: op_text });
+        writes.push(write_op { fd: 2, text: op_text });
     }
-    Result::Ok(Value.Unit(UnitValue {}))
+    Result::Ok(Value.Unit(unit_value {}))
 }
 
-func eval_if_expr(IfExpr value, SourceFile source, Vec[Binding] mut env, Vec[WriteOp] mut writes) Result[Value, BackendError] {
+func eval_if_expr(if_expr value, source_file source, Vec[Binding] mut env, Vec[write_op] mut writes) Result[Value, backend_error] {
     var cond_result = eval_expr(value.condition.value, source, env, writes)
     if cond_result.is_err() {
         Result::Err(cond_result.unwrap_err())
@@ -500,15 +500,15 @@ func eval_if_expr(IfExpr value, SourceFile source, Vec[Binding] mut env, Vec[Wri
             } else {
                 switch value.else_branch {
                     Option.Some(expr) : eval_expr(expr.value, source, env, writes),
-                    Option.None : Result::Ok(Value.Unit(UnitValue {})),
+                    Option.None : Result::Ok(Value.Unit(unit_value {})),
                 }
             }
         }
-        _ : Result::Err(BackendError { message: "backend error: if condition must be bool" }),
+        _ : Result::Err(backend_error { message: "backend error: if condition must be bool" }),
     }
 }
 
-func eval_while_expr(WhileExpr value, SourceFile source, Vec[Binding] mut env, Vec[WriteOp] mut writes) Result[Value, BackendError] {
+func eval_while_expr(while_expr value, source_file source, Vec[Binding] mut env, Vec[write_op] mut writes) Result[Value, backend_error] {
     while true {
         var cond_result = eval_expr(value.condition.value, source, env, writes)
         if cond_result.is_err() {
@@ -520,7 +520,7 @@ func eval_while_expr(WhileExpr value, SourceFile source, Vec[Binding] mut env, V
                     break
                 }
             }
-            _ : Result::Err(BackendError { message: "backend error: while condition must be bool" }),
+            _ : Result::Err(backend_error { message: "backend error: while condition must be bool" }),
         }
 
         var body_result = execute_block_in_place(value.body, source, env, writes)
@@ -528,36 +528,36 @@ func eval_while_expr(WhileExpr value, SourceFile source, Vec[Binding] mut env, V
             Result::Err(body_result.unwrap_err())
         }
     }
-    Result::Ok(Value.Unit(UnitValue {}))
+    Result::Ok(Value.Unit(unit_value {}))
 }
 
-func lookup_value(Vec[Binding] env, string name) Result[Value, BackendError] {
+func lookup_value(Vec[Binding] env, string name) Result[Value, backend_error] {
     var index = find_binding_index(env, name)
     if index < 0 {
-        Result::Err(BackendError { message: "backend error: unknown name " + name })
+        Result::Err(backend_error { message: "backend error: unknown name " + name })
     }
     Result::Ok(env[index].value)
 }
 
-func add_values(Value left, Value right) Result[Value, BackendError] {
+func add_values(Value left, Value right) Result[Value, backend_error] {
     switch left {
         Value.Int(left_int) : {
             switch right {
                 Value.Int(right_int) : Result::Ok(Value.Int(left_int + right_int)),
-                _ : Result::Err(BackendError { message: "backend error: + expects matching types" }),
+                _ : Result::Err(backend_error { message: "backend error: + expects matching types" }),
             }
         }
         Value.String(left_text) : {
             switch right {
                 Value.String(right_text) : Result::Ok(Value.String(left_text + right_text)),
-                _ : Result::Err(BackendError { message: "backend error: + expects matching string types" }),
+                _ : Result::Err(backend_error { message: "backend error: + expects matching string types" }),
             }
         }
-        _ : Result::Err(BackendError { message: "backend error: unsupported + operands" }),
+        _ : Result::Err(backend_error { message: "backend error: unsupported + operands" }),
     }
 }
 
-func numeric_binary(Value left, Value right, string op) Result[Value, BackendError] {
+func numeric_binary(Value left, Value right, string op) Result[Value, backend_error] {
     switch left {
         Value.Int(left_int) : {
             switch right {
@@ -568,46 +568,46 @@ func numeric_binary(Value left, Value right, string op) Result[Value, BackendErr
                         Result::Ok(Value.Int(left_int * right_int))
                     } else if op == "/" {
                         if right_int == 0 {
-                            Result::Err(BackendError { message: "backend error: division by zero" })
+                            Result::Err(backend_error { message: "backend error: division by zero" })
                         } else {
                             Result::Ok(Value.Int(left_int / right_int))
                         }
                     } else {
-                        Result::Err(BackendError { message: "backend error: unsupported numeric operator " + op })
+                        Result::Err(backend_error { message: "backend error: unsupported numeric operator " + op })
                     }
                 }
-                _ : Result::Err(BackendError { message: "backend error: numeric operator expects int32 operands" }),
+                _ : Result::Err(backend_error { message: "backend error: numeric operator expects int32 operands" }),
             }
         }
-        _ : Result::Err(BackendError { message: "backend error: numeric operator expects int32 operands" }),
+        _ : Result::Err(backend_error { message: "backend error: numeric operator expects int32 operands" }),
     }
 }
 
-func compare_values(Value left, Value right, bool equal) Result[Value, BackendError] {
+func compare_values(Value left, Value right, bool equal) Result[Value, backend_error] {
     var same = false
     switch left {
         Value.Int(left_int) : {
             switch right {
                 Value.Int(right_int) : same = left_int == right_int,
-                _ : Result::Err(BackendError { message: "backend error: comparison expects matching types" }),
+                _ : Result::Err(backend_error { message: "backend error: comparison expects matching types" }),
             }
         }
         Value.String(left_text) : {
             switch right {
                 Value.String(right_text) : same = left_text == right_text,
-                _ : Result::Err(BackendError { message: "backend error: comparison expects matching types" }),
+                _ : Result::Err(backend_error { message: "backend error: comparison expects matching types" }),
             }
         }
         Value.Bool(left_bool) : {
             switch right {
                 Value.Bool(right_bool) : same = left_bool == right_bool,
-                _ : Result::Err(BackendError { message: "backend error: comparison expects matching types" }),
+                _ : Result::Err(backend_error { message: "backend error: comparison expects matching types" }),
             }
         }
         Value.Unit(_) : {
             switch right {
                 Value.Unit(_) : same = true,
-                _ : Result::Err(BackendError { message: "backend error: comparison expects matching types" }),
+                _ : Result::Err(backend_error { message: "backend error: comparison expects matching types" }),
             }
         }
     }
@@ -619,7 +619,7 @@ func compare_values(Value left, Value right, bool equal) Result[Value, BackendEr
     }
 }
 
-func ordered_compare(Value left, Value right, string op) Result[Value, BackendError] {
+func ordered_compare(Value left, Value right, string op) Result[Value, backend_error] {
     switch left {
         Value.Int(left_int) : {
             switch right {
@@ -633,17 +633,17 @@ func ordered_compare(Value left, Value right, string op) Result[Value, BackendEr
                     } else if op == ">=" {
                         Result::Ok(Value.Bool(left_int >= right_int))
                     } else {
-                        Result::Err(BackendError { message: "backend error: unsupported ordered comparison " + op })
+                        Result::Err(backend_error { message: "backend error: unsupported ordered comparison " + op })
                     }
                 }
-                _ : Result::Err(BackendError { message: "backend error: ordered comparison expects int32 operands" }),
+                _ : Result::Err(backend_error { message: "backend error: ordered comparison expects int32 operands" }),
             }
         }
-        _ : Result::Err(BackendError { message: "backend error: ordered comparison expects int32 operands" }),
+        _ : Result::Err(backend_error { message: "backend error: ordered comparison expects int32 operands" }),
     }
 }
 
-func logical_binary(Value left, Value right, bool and_op) Result[Value, BackendError] {
+func logical_binary(Value left, Value right, bool and_op) Result[Value, backend_error] {
     switch left {
         Value.Bool(left_bool) : {
             switch right {
@@ -654,19 +654,19 @@ func logical_binary(Value left, Value right, bool and_op) Result[Value, BackendE
                         Result::Ok(Value.Bool(left_bool || right_bool))
                     }
                 }
-                _ : Result::Err(BackendError { message: "backend error: logical operator expects bool operands" }),
+                _ : Result::Err(backend_error { message: "backend error: logical operator expects bool operands" }),
             }
         }
-        _ : Result::Err(BackendError { message: "backend error: logical operator expects bool operands" }),
+        _ : Result::Err(backend_error { message: "backend error: logical operator expects bool operands" }),
     }
 }
 
-func value_to_exit_code(Value value) Result[int32, BackendError] {
+func value_to_exit_code(Value value) Result[int32, backend_error] {
     switch value {
         Value.Int(number) : Result::Ok(number),
         Value.Bool(flag) : Result::Ok(if flag { 1 } else { 0 }),
         Value.Unit(_) : Result::Ok(0),
-        Value.String(_) : Result::Err(BackendError { message: "backend error: main cannot return string" }),
+        Value.String(_) : Result::Err(backend_error { message: "backend error: main cannot return string" }),
     }
 }
 
@@ -777,7 +777,7 @@ func decode_string_literal(string literal) string {
     out
 }
 
-func emit_asm(Vec[WriteOp] writes, int32 exit_code) string {
+func emit_asm(Vec[write_op] writes, int32 exit_code) string {
     var data_lines = Vec[string]()
     var text_lines = Vec[string]()
     data_lines.push(".section .data")
@@ -800,7 +800,7 @@ func emit_asm(Vec[WriteOp] writes, int32 exit_code) string {
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
 
-func append_write_op(Vec[string] data_lines, Vec[string] text_lines, WriteOp op, int32 index) () {
+func append_write_op(Vec[string] data_lines, Vec[string] text_lines, write_op op, int32 index) () {
     var label = "message_" + to_string(index)
     data_lines.push(label + ":")
     data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")

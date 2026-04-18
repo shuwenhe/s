@@ -4,11 +4,11 @@ use std.prelude.len
 use std.prelude.slice
 use std.vec.Vec
 
-func AnalyzeBlock() int32 {
+func analyze_block() int32 {
     return 0
 }
 
-func AnalyzeTrace(string scope, Vec[string] type_env, string block_text) string {
+func analyze_trace(string scope, Vec[string] type_env, string block_text) string {
     var plan = make_plan_trace(type_env)
     var text = "borrow " + scope
     if block_text != "" {
@@ -20,11 +20,11 @@ func AnalyzeTrace(string scope, Vec[string] type_env, string block_text) string 
     return text + " | plan " + join_text(plan, ", ")
 }
 
-func AnalyzeFunction(string name, Vec[string] type_env, string body_text) string {
-    return AnalyzeTrace(name, type_env, body_text)
+func analyze_function(string name, Vec[string] type_env, string body_text) string {
+    return analyze_trace(name, type_env, body_text)
 }
 
-func AnalyzeExpr(string scope, string expr_text) string {
+func analyze_expr(string scope, string expr_text) string {
     if expr_text == "" {
         return "expr " + scope + " | <empty>"
     }

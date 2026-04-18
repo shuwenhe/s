@@ -1,13 +1,13 @@
 package compile.internal.prelude
 
-use compile.internal.typesys.BaseTypeName
+use compile.internal.typesys.base_type_name
 
-func LoadPrelude() int32 {
+func load_prelude() int32 {
     0
 }
 
-func LookupBuiltinType(string name) bool {
-    var base = BaseTypeName(name)
+func lookup_builtin_type(string name) bool {
+    var base = base_type_name(name)
     base == "string"
         || base == "Vec"
         || base == "Result"
@@ -25,23 +25,23 @@ func LookupBuiltinType(string name) bool {
         || base == "Toolchain"
 }
 
-func LookupBuiltinFieldType(string typeName, string fieldName) string {
-    var base = BaseTypeName(typeName)
+func lookup_builtin_field_type(string type_name, string field_name) string {
+    var base = base_type_name(type_name)
     if base == "FileInfo" {
-        if fieldName == "size" || fieldName == "hidden" {
+        if field_name == "size" || field_name == "hidden" {
             return "int32"
         }
     }
     if base == "Target" {
-        if fieldName == "os" || fieldName == "arch" {
+        if field_name == "os" || field_name == "arch" {
             return "string"
         }
     }
     ""
 }
 
-func LookupBuiltinIndexType(string typeName) string {
-    var base = BaseTypeName(typeName)
+func lookup_builtin_index_type(string type_name) string {
+    var base = base_type_name(type_name)
     if base == "Vec" || base == "Array" {
         return "firstTypeArg"
     }
@@ -51,8 +51,8 @@ func LookupBuiltinIndexType(string typeName) string {
     ""
 }
 
-func LookupBuiltinMethodType(string typeName, string member) string {
-    var base = BaseTypeName(typeName)
+func lookup_builtin_method_type(string type_name, string member) string {
+    var base = base_type_name(type_name)
     if base == "string" && member == "len" {
         return "int32"
     }
@@ -101,8 +101,8 @@ func LookupBuiltinMethodType(string typeName, string member) string {
     ""
 }
 
-func LookupBuiltinMethodArity(string typeName, string member) int32 {
-    var base = BaseTypeName(typeName)
+func lookup_builtin_method_arity(string type_name, string member) int32 {
+    var base = base_type_name(type_name)
     if base == "Vec" && member == "push" {
         return 1
     }

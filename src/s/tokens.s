@@ -3,7 +3,7 @@ package s
 use std.prelude.to_string
 use std.vec.Vec
 
-enum TokenKind {
+enum token_kind {
     Ident,
     Int,
     string,
@@ -13,20 +13,20 @@ enum TokenKind {
 }
 
 struct Token {
-    TokenKind kind,
+    token_kind kind,
     string value,
     int32 line,
     int32 column,
 }
 
-func token_kind_name(TokenKind kind) string {
+func token_kind_name(token_kind kind) string {
     switch kind {
-        TokenKind::Ident : "IDENT",
-        TokenKind::Int : "INT",
-        TokenKind::string : "STRING",
-        TokenKind::Keyword : "KEYWORD",
-        TokenKind::Symbol : "SYMBOL",
-        TokenKind::Eof : "EOF",
+        token_kind::Ident : "IDENT",
+        token_kind::Int : "INT",
+        token_kind::string : "STRING",
+        token_kind::Keyword : "KEYWORD",
+        token_kind::Symbol : "SYMBOL",
+        token_kind::Eof : "EOF",
     }
 }
 
