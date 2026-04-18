@@ -1,4 +1,4 @@
-#define _posix_c_source 200809l
+#define _POSIX_C_SOURCE 200809L
 
 #include <errno.h>
 #include <stdbool.h>
@@ -18,8 +18,8 @@ typedef struct {
 static char *dup_text(const char *text) {
     size_t len = strlen(text);
     char *copy = malloc(len + 1);
-    if (copy == null) {
-        return null;
+    if (copy == NULL) {
+        return NULL;
     }
     memcpy(copy, text, len + 1);
     return copy;
@@ -30,8 +30,8 @@ static char *join3(const char *a, const char *b, const char *c) {
     size_t lb = strlen(b);
     size_t lc = strlen(c);
     char *text = malloc(la + lb + lc + 1);
-    if (text == null) {
-        return null;
+    if (text == NULL) {
+        return NULL;
     }
     memcpy(text, a, la);
     memcpy(text + la, b, lb);
@@ -41,7 +41,7 @@ static char *join3(const char *a, const char *b, const char *c) {
 }
 
 static result_t ok_result(void) {
-    result_t result = {true, null};
+    result_t result = {true, NULL};
     return result;
 }
 
@@ -52,7 +52,7 @@ static result_t err_result(char *message) {
 
 static result_t err_message(const char *message) {
     char *copy = dup_text(message);
-    if (copy == null) {
+    if (copy == NULL) {
         return err_result(dup_text("out of memory"));
     }
     return err_result(copy);
@@ -72,34 +72,34 @@ static result_t run_process(char *const argv[], const char *message) {
     if (waitpid(pid, &status, 0) < 0) {
         return err_result(join3(message, ": ", strerror(errno)));
     }
-    if (wifexited(status) && wexitstatus(status) == 0) {
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
         return ok_result();
     }
     return err_result(join3(message, ": ", "command failed"));
 }
 
 static char *read_text(const char *path) {
-    file *file = fopen(path, "rb");
-    if (file == null) {
-        return null;
+    FILE *file = fopen(path, "rb");
+    if (file == NULL) {
+        return NULL;
     }
-    if (fseek(file, 0, seek_end) != 0) {
+    if (fseek(file, 0, SEEK_END) != 0) {
         fclose(file);
-        return null;
+        return NULL;
     }
     long size = ftell(file);
     if (size < 0) {
         fclose(file);
-        return null;
+        return NULL;
     }
-    if (fseek(file, 0, seek_set) != 0) {
+    if (fseek(file, 0, SEEK_SET) != 0) {
         fclose(file);
-        return null;
+        return NULL;
     }
     char *text = malloc((size_t)size + 1);
-    if (text == null) {
+    if (text == NULL) {
         fclose(file);
-        return null;
+        return NULL;
     }
     size_t read_size = fread(text, 1, (size_t)size, file);
     fclose(file);
@@ -108,8 +108,8 @@ static char *read_text(const char *path) {
 }
 
 static result_t write_text(const char *path, const char *text) {
-    file *file = fopen(path, "wb");
-    if (file == null) {
+    FILE *file = fopen(path, "wb");
+    if (file == NULL) {
         return err_result(join3("failed to write file", ": ", strerror(errno)));
     }
     size_t size = strlen(text);
@@ -122,7 +122,7 @@ static result_t write_text(const char *path, const char *text) {
 }
 
 static bool contains_text(const char *text, const char *needle) {
-    return strstr(text, needle) != null;
+    return strstr(text, needle) != NULL;
 }
 
 static bool is_self_host_source(const char *source) {
@@ -132,17 +132,17 @@ static bool is_self_host_source(const char *source) {
 static bool extract_quoted_println(const char *source, char **out_text) {
     const char *prefix = "println(\"";
     const char *start = strstr(source, prefix);
-    if (start == null) {
+    if (start == NULL) {
         return false;
     }
     start += strlen(prefix);
     const char *end = strchr(start, '"');
-    if (end == null) {
+    if (end == NULL) {
         return false;
     }
     size_t len = (size_t)(end - start);
     char *text = malloc(len + 2);
-    if (text == null) {
+    if (text == NULL) {
         return false;
     }
     memcpy(text, start, len);
@@ -153,7 +153,7 @@ static bool extract_quoted_println(const char *source, char **out_text) {
 }
 
 static bool parse_signed_int(const char *text, int *out_value) {
-    char *end = null;
+    char *end = NULL;
     long value = strtol(text, &end, 10);
     if (end == text) {
         return false;
@@ -165,7 +165,7 @@ static bool parse_signed_int(const char *text, int *out_value) {
 static bool extract_printed_int_literal(const char *source, char **out_text) {
     const char *prefix = "println(";
     const char *start = strstr(source, prefix);
-    if (start == null) {
+    if (start == NULL) {
         return false;
     }
     start += strlen(prefix);
@@ -186,12 +186,12 @@ static bool extract_printed_int_literal(const char *source, char **out_text) {
     char buffer[64];
     snprintf(buffer, sizeof(buffer), "%d\n", value);
     *out_text = dup_text(buffer);
-    return *out_text != null;
+    return *out_text != NULL;
 }
 
 static bool parse_int_after(const char *source, const char *needle, int *out_value) {
     const char *start = strstr(source, needle);
-    if (start == null) {
+    if (start == NULL) {
         return false;
     }
     start += strlen(needle);
@@ -227,7 +227,7 @@ static bool compile_message_for_source(const char *source, char **out_text) {
     char buffer[64];
     snprintf(buffer, sizeof(buffer), "%ld\n", total);
     *out_text = dup_text(buffer);
-    return *out_text != null;
+    return *out_text != NULL;
 }
 
 static int ascii_code(char ch) {
@@ -237,8 +237,8 @@ static int ascii_code(char ch) {
 static char *emit_asm(const char *message) {
     size_t cap = strlen(message) * 8 + 512;
     char *asm_text = malloc(cap);
-    if (asm_text == null) {
-        return null;
+    if (asm_text == NULL) {
+        return NULL;
     }
     size_t offset = 0;
     offset += (size_t)snprintf(
@@ -275,7 +275,7 @@ static char *emit_asm(const char *message) {
 static result_t assemble_and_link(const char *asm_text, const char *output_path) {
     char temp_template[] = "/tmp/s-native-xxxxxx";
     char *temp_dir = mkdtemp(temp_template);
-    if (temp_dir == null) {
+    if (temp_dir == NULL) {
         return err_result(join3("failed to create temp dir", ": ", strerror(errno)));
     }
 
@@ -289,13 +289,13 @@ static result_t assemble_and_link(const char *asm_text, const char *output_path)
         return write;
     }
 
-    char *as_argv[] = {"as", "-o", obj_path, asm_path, null};
+    char *as_argv[] = {"as", "-o", obj_path, asm_path, NULL};
     result_t as_result = run_process(as_argv, "assembler failed");
     if (!as_result.ok) {
         return as_result;
     }
 
-    char *ld_argv[] = {"ld", "-o", (char *)output_path, obj_path, null};
+    char *ld_argv[] = {"ld", "-o", (char *)output_path, obj_path, NULL};
     return run_process(ld_argv, "linker failed");
 }
 
@@ -304,10 +304,10 @@ static result_t build_self_hosted_runner(const char *output_path) {
         "cc",
         "-o2",
         "-std=c11",
-        "/app/s/src/compiler/backend_elf64_runner_bootstrap.c",
+        "/home/shuwen/s/src/compiler/backend_elf64_runner_bootstrap.c",
         "-o",
         (char *)output_path,
-        null,
+        NULL,
     };
     result_t result = run_process(cc_argv, "native runner bootstrap failed");
     if (result.ok) {
@@ -326,7 +326,7 @@ static result_t build_source(const char *path, const char *output_path) {
        basic package/multi-file build support for the native runner mvp.
     */
     struct stat st;
-    if (stat(path, &st) == 0 && s_isdir(st.st_mode)) {
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
         char cmd[1024];
         /* search for a candidate .s file under the directory. */
         /* prefer known compiler entry if present: <repo>/src/cmd/compile/main.s */
@@ -336,11 +336,11 @@ static result_t build_source(const char *path, const char *output_path) {
         char main_path[512];
         snprintf(main_path, sizeof(main_path), "%s/main.s", path);
         char found[512];
-        if (access(candidate_entry, r_ok) == 0) {
+        if (access(candidate_entry, R_OK) == 0) {
             strncpy(found, candidate_entry, sizeof(found));
             found[sizeof(found)-1] = '\0';
             fprintf(stderr, "[debug] using repo compiler entry: %s\n", found);
-        } else if (access(main_path, r_ok) == 0) {
+        } else if (access(main_path, R_OK) == 0) {
             strncpy(found, main_path, sizeof(found));
             found[sizeof(found)-1] = '\0';
             fprintf(stderr, "[debug] using explicit main: %s\n", found);
@@ -348,12 +348,12 @@ static result_t build_source(const char *path, const char *output_path) {
             /* search only .s files and exclude test/fixture paths */
             snprintf(cmd, sizeof(cmd), "grep -r -l -e 'func main(' -e 'package main' --include='*.s' %s | grep -v -e '/tests/|/fixtures/' | head -n1", path);
             fprintf(stderr, "[debug] running search cmd: %s\n", cmd);
-            file *p = popen(cmd, "r");
-            if (p == null) {
+            FILE *p = popen(cmd, "r");
+            if (p == NULL) {
                 fprintf(stderr, "[debug] popen failed\n");
                 return err_message("failed to search directory for entrypoint");
             }
-            if (fgets(found, sizeof(found), p) == null) {
+            if (fgets(found, sizeof(found), p) == NULL) {
                 pclose(p);
                 fprintf(stderr, "[debug] no entrypoint found in dir: %s\n", path);
                 return err_message("no entrypoint (.s) found in directory");
@@ -369,8 +369,8 @@ static result_t build_source(const char *path, const char *output_path) {
         /* prefer an explicit s compiler binary if provided via env var s_compiler,
            or a system `s` found in path. fall back to python3 if neither works. */
         const char *env_s = getenv("s_compiler");
-        if (env_s != null && access(env_s, x_ok) == 0) {
-            char *s_argv[] = {(char *)env_s, "build", found, "-o", (char *)output_path, null};
+        if (env_s != NULL && access(env_s, X_OK) == 0) {
+            char *s_argv[] = {(char *)env_s, "build", found, "-o", (char *)output_path, NULL};
             fprintf(stderr, "[debug] delegating to s_compiler: %s %s %s %s %s\n", s_argv[0], s_argv[1], s_argv[2], s_argv[3], s_argv[4]);
             result_t r = run_process(s_argv, "self-hosted compiler failed");
             if (r.ok) {
@@ -383,7 +383,7 @@ static result_t build_source(const char *path, const char *output_path) {
         /* fallback to python hosted compiler first to avoid accidentally
            delegating to an incompatible `s` on path that may return
            success without producing the requested output. */
-        char *py_argv[] = {"python3", "-m", "compiler", "build", found, "-o", (char *)output_path, null};
+        char *py_argv[] = {"python3", "-m", "compiler", "build", found, "-o", (char *)output_path, NULL};
         fprintf(stderr, "[debug] attempting python hosted compiler: %s %s %s %s %s %s\n",
                 py_argv[0], py_argv[1], py_argv[2], py_argv[3], py_argv[4], py_argv[5]);
         result_t r_py = run_process(py_argv, "python hosted compiler failed");
@@ -394,7 +394,7 @@ static result_t build_source(const char *path, const char *output_path) {
         fprintf(stderr, "[debug] python hosted compiler failed: %s\n", r_py.message ? r_py.message : "(null)");
 
         /* try `s` on path as a last resort. */
-        char *s_on_path_argv[] = {"s", "build", found, "-o", (char *)output_path, null};
+        char *s_on_path_argv[] = {"s", "build", found, "-o", (char *)output_path, NULL};
         fprintf(stderr, "[debug] attempting to use 's' on path\n");
         result_t r_path = run_process(s_on_path_argv, "s on path failed");
         if (r_path.ok) {
@@ -402,7 +402,7 @@ static result_t build_source(const char *path, const char *output_path) {
                `s` implementations may exit 0 without writing the
                output file; treat that as failure and continue to the
                next fallback. */
-            if (access((char *)output_path, r_ok) == 0) {
+            if (access((char *)output_path, R_OK) == 0) {
                 fprintf(stderr, "[debug] delegated to s on path succeeded and output exists\n");
                 return r_path;
             }
@@ -414,7 +414,7 @@ static result_t build_source(const char *path, const char *output_path) {
     }
 
     char *source = read_text(path);
-    if (source == null) {
+    if (source == NULL) {
         return err_result(join3("failed to read source file", ": ", path));
     }
     if (is_self_host_source(source)) {
@@ -422,7 +422,7 @@ static result_t build_source(const char *path, const char *output_path) {
         return build_self_hosted_runner(output_path);
     }
 
-    char *message = null;
+    char *message = NULL;
     if (!compile_message_for_source(source, &message)) {
         free(source);
         return err_message("unsupported source shape for native runner mvp");
@@ -431,7 +431,7 @@ static result_t build_source(const char *path, const char *output_path) {
 
     char *asm_text = emit_asm(message);
     free(message);
-    if (asm_text == null) {
+    if (asm_text == NULL) {
         return err_message("failed to emit assembly");
     }
     result_t result = assemble_and_link(asm_text, output_path);
@@ -457,7 +457,7 @@ static int run_main(int argc, char **argv) {
     }
     result_t result = build_source(argv[1], argv[3]);
     if (!result.ok) {
-        fprintf(stderr, "error: %s\n", result.message == null ? "unknown error" : result.message);
+        fprintf(stderr, "error: %s\n", result.message == NULL ? "unknown error" : result.message);
         free(result.message);
         return 1;
     }
