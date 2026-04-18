@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import re
-from pathlib import path
+from pathlib import Path
 from datetime import datetime
 
 root = path('/home/shuwen/s')

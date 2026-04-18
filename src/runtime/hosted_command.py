@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import path
+from pathlib import Path
 import sys
 
 src_root = path(__file__).resolve().parents[1]
