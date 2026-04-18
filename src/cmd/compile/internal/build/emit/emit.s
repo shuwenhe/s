@@ -1,24 +1,24 @@
 package compile.internal.build.emit
 
-use s.SourceFile
-use s.Token
-use s.dumpSourceFile
-use s.dumpTokens
+use s.source_file
+use s.token
+use s.dump_source_file
+use s.dump_tokens
 use std.io.println
-use std.vec.Vec
+use std.vec.vec
 
-func CheckOk(string path) () {
+func check_ok(string path) () {
     println("ok: " + path)
 }
 
-func Tokens(Vec[Token] tokens) () {
-    println(dumpTokens(tokens))
+func tokens(vec[token] tokens) () {
+    println(dump_tokens(tokens))
 }
 
-func Ast(SourceFile ast) () {
-    println(dumpSourceFile(ast))
+func ast(source_file ast) () {
+    println(dump_source_file(ast))
 }
 
-func Built(string output) () {
+func built(string output) () {
     println("built: " + output)
 }

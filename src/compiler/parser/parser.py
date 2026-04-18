@@ -1,89 +1,89 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import list, optional
 
 from compiler.ast import (
-    AssignStmt,
-    BlockExpr,
-    BinaryExpr,
-    BoolExpr,
-    BorrowExpr,
-    CallExpr,
-    CForStmt,
-    EnumDecl,
-    EnumVariant,
-    Expr,
-    ExprStmt,
-    Field,
-    FunctionDecl,
-    FunctionSig,
-    ForExpr,
-    IfExpr,
-    ImplDecl,
-    IncrementStmt,
-    IndexExpr,
-    IntExpr,
-    LetStmt,
-    LiteralPattern,
-    MemberExpr,
-    NameExpr,
-    NamePattern,
-    Param,
-    Pattern,
-    ReturnStmt,
-    SourceFile,
-    StringExpr,
-    StructFieldInit,
-    StructLiteralExpr,
-    UnaryExpr,
-    SwitchArm,
-    SwitchExpr,
-    StructDecl,
-    TraitDecl,
-    UseDecl,
-    VariantPattern,
-    WhileExpr,
-    WildcardPattern,
+    assignstmt,
+    blockexpr,
+    binaryexpr,
+    boolexpr,
+    borrowexpr,
+    callexpr,
+    cforstmt,
+    enumdecl,
+    enumvariant,
+    expr,
+    exprstmt,
+    field,
+    functiondecl,
+    functionsig,
+    forexpr,
+    ifexpr,
+    impldecl,
+    incrementstmt,
+    indexexpr,
+    intexpr,
+    letstmt,
+    literalpattern,
+    memberexpr,
+    nameexpr,
+    namepattern,
+    param,
+    pattern,
+    returnstmt,
+    sourcefile,
+    stringexpr,
+    structfieldinit,
+    structliteralexpr,
+    unaryexpr,
+    switcharm,
+    switchexpr,
+    structdecl,
+    traitdecl,
+    usedecl,
+    variantpattern,
+    whileexpr,
+    wildcardpattern,
 )
-from compiler.lexer import Lexer, Token, TokenKind
+from compiler.lexer import lexer, token, tokenkind
 
 
-class ParseError(Exception):
+class parseerror(exception):
     pass
 
 
-def parse_source(source: str) -> SourceFile:
-    tokens = Lexer(source).tokenize()
-    return Parser(tokens).parse_source_file()
+def parse_source(source: str) -> sourcefile:
+    tokens = lexer(source).tokenize()
+    return parser(tokens).parse_source_file()
 
 
 @dataclass
-class Parser:
-    tokens: List[Token]
+class parser:
+    tokens: list[token]
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> none:
         self.index = 0
 
-    def parse_source_file(self) -> SourceFile:
+    def parse_source_file(self) -> sourcefile:
         self._expect_keyword("package")
         package = self._parse_path()
-        uses: List[UseDecl] = []
-        items: List[object] = []
+        uses: list[usedecl] = []
+        items: list[object] = []
         while self._at_keyword("use"):
             uses.append(self._parse_use_decl())
-        while not self._at(TokenKind.EOF):
+        while not self._at(tokenkind.eof):
             items.append(self._parse_item())
-        return SourceFile(package=package, uses=uses, items=items)
+        return sourcefile(package=package, uses=uses, items=items)
 
-    def _parse_use_decl(self) -> UseDecl:
+    def _parse_use_decl(self) -> usedecl:
         self._expect_keyword("use")
         path = self._parse_use_path()
-        alias = None
+        alias = none
         if self._at_keyword("as"):
             self._advance()
             alias = self._expect_ident()
-        return UseDecl(path=path, alias=alias)
+        return usedecl(path=path, alias=alias)
 
     def _parse_item(self) -> object:
         is_public = self._eat_keyword("pub")
@@ -98,111 +98,111 @@ class Parser:
         if self._at_keyword("impl"):
             return self._parse_impl_decl()
         token = self._peek()
-        raise ParseError(f"unexpected token {token.value!r} at {token.line}:{token.column}")
+        raise parseerror(f"unexpected token {token.value!r} at {token.line}:{token.column}")
 
-    def _parse_function_decl(self, is_public: bool) -> FunctionDecl:
-        sig, body = self._parse_function(require_body=True)
-        return FunctionDecl(sig=sig, body=body, is_public=is_public)
+    def _parse_function_decl(self, is_public: bool) -> functiondecl:
+        sig, body = self._parse_function(require_body=true)
+        return functiondecl(sig=sig, body=body, is_public=is_public)
 
-    def _parse_struct_decl(self, is_public: bool) -> StructDecl:
+    def _parse_struct_decl(self, is_public: bool) -> structdecl:
         self._expect_keyword("struct")
         name = self._expect_ident()
         generics = self._parse_generic_params()
         self._expect_symbol("{")
-        fields: List[Field] = []
+        fields: list[field] = []
         while not self._eat_symbol("}"):
             field_public = self._eat_keyword("pub")
             field_name, field_type = self._parse_named_type(stop_values={",", "}"})
-            fields.append(Field(name=field_name, type_name=field_type, is_public=field_public))
+            fields.append(field(name=field_name, type_name=field_type, is_public=field_public))
             self._eat_symbol(",")
-        return StructDecl(name=name, generics=generics, fields=fields, is_public=is_public)
+        return structdecl(name=name, generics=generics, fields=fields, is_public=is_public)
 
-    def _parse_enum_decl(self, is_public: bool) -> EnumDecl:
+    def _parse_enum_decl(self, is_public: bool) -> enumdecl:
         self._expect_keyword("enum")
         name = self._expect_ident()
         generics = self._parse_generic_params()
         self._expect_symbol("{")
-        variants: List[EnumVariant] = []
+        variants: list[enumvariant] = []
         while not self._eat_symbol("}"):
             variant_name = self._expect_ident()
-            payload = None
+            payload = none
             if self._eat_symbol("("):
                 payload = self._parse_type_text(stop_values={")"})
                 self._expect_symbol(")")
-            variants.append(EnumVariant(name=variant_name, payload=payload))
+            variants.append(enumvariant(name=variant_name, payload=payload))
             self._eat_symbol(",")
-        return EnumDecl(name=name, generics=generics, variants=variants, is_public=is_public)
+        return enumdecl(name=name, generics=generics, variants=variants, is_public=is_public)
 
-    def _parse_trait_decl(self, is_public: bool) -> TraitDecl:
+    def _parse_trait_decl(self, is_public: bool) -> traitdecl:
         self._expect_keyword("trait")
         name = self._expect_ident()
         generics = self._parse_generic_params()
         self._expect_symbol("{")
-        methods: List[FunctionSig] = []
+        methods: list[functionsig] = []
         while not self._eat_symbol("}"):
-            sig, _ = self._parse_function(require_body=False)
+            sig, _ = self._parse_function(require_body=false)
             methods.append(sig)
             self._expect_symbol(";")
-        return TraitDecl(name=name, generics=generics, methods=methods, is_public=is_public)
+        return traitdecl(name=name, generics=generics, methods=methods, is_public=is_public)
 
-    def _parse_impl_decl(self) -> ImplDecl:
+    def _parse_impl_decl(self) -> impldecl:
         self._expect_keyword("impl")
         generics = self._parse_generic_params()
         first = self._parse_path()
-        trait_name: Optional[str] = None
+        trait_name: optional[str] = none
         target = first
         if self._eat_keyword("for"):
             trait_name = first
             target = self._parse_path()
         self._parse_where_clause()
         self._expect_symbol("{")
-        methods: List[FunctionDecl] = []
+        methods: list[functiondecl] = []
         while not self._eat_symbol("}"):
             is_public = self._eat_keyword("pub")
             methods.append(self._parse_function_decl(is_public))
-        return ImplDecl(target=target, trait_name=trait_name, generics=generics, methods=methods)
+        return impldecl(target=target, trait_name=trait_name, generics=generics, methods=methods)
 
-    def _parse_function(self, require_body: bool) -> tuple[FunctionSig, Optional[BlockExpr]]:
+    def _parse_function(self, require_body: bool) -> tuple[functionsig, optional[blockexpr]]:
         self._expect_keyword("func")
         name = self._expect_ident()
         generics = self._parse_generic_params()
         self._expect_symbol("(")
         params = self._parse_params()
         self._expect_symbol(")")
-        return_type = None
-        # Accept either explicit '-> Type' or Go-style return type directly after parameter list.
+        return_type = none
+        # accept either explicit '-> type' or go-style return type directly after parameter list.
         if self._eat_symbol("->"):
             return_type = self._parse_type_text(stop_values={"where", "{", ";"})
         else:
-            # If the next token looks like a type (ident, keyword like 'mut' or 'self',
+            # if the next token looks like a type (ident, keyword like 'mut' or 'self',
             # a parenthesized tuple, or a bracketed generic), parse it as the return type.
             next_tok = self._peek()
-            if not (next_tok.kind == TokenKind.KEYWORD and next_tok.value == "where") and not (
-                next_tok.kind == TokenKind.SYMBOL and next_tok.value in {"{", ";"}
+            if not (next_tok.kind == tokenkind.keyword and next_tok.value == "where") and not (
+                next_tok.kind == tokenkind.symbol and next_tok.value in {"{", ";"}
             ):
-                # token values that can start a type: IDENT, KEYWORD (like 'mut'/'self'),
+                # token values that can start a type: ident, keyword (like 'mut'/'self'),
                 # symbol '(' for tuple returns, symbol '[' for generic starts
-                if next_tok.kind in {TokenKind.IDENT, TokenKind.KEYWORD} or self._at_symbol("(") or self._at_symbol("["):
+                if next_tok.kind in {tokenkind.ident, tokenkind.keyword} or self._at_symbol("(") or self._at_symbol("["):
                     return_type = self._parse_type_text(stop_values={"where", "{", ";"})
         self._parse_where_clause()
-        body = self._parse_block_expr() if require_body else None
-        return FunctionSig(name=name, generics=generics, params=params, return_type=return_type), body
+        body = self._parse_block_expr() if require_body else none
+        return functionsig(name=name, generics=generics, params=params, return_type=return_type), body
 
-    def _parse_params(self) -> List[Param]:
-        params: List[Param] = []
+    def _parse_params(self) -> list[param]:
+        params: list[param] = []
         if self._at_symbol(")"):
             return params
-        while True:
+        while true:
             name, type_name = self._parse_named_type(stop_values={",", ")"})
-            params.append(Param(name=name, type_name=type_name))
+            params.append(param(name=name, type_name=type_name))
             if not self._eat_symbol(","):
                 break
             if self._at_symbol(")"):
                 break
         return params
 
-    def _parse_generic_params(self) -> List[str]:
-        generics: List[str] = []
+    def _parse_generic_params(self) -> list[str]:
+        generics: list[str] = []
         if not self._eat_symbol("["):
             return generics
         while not self._eat_symbol("]"):
@@ -216,35 +216,35 @@ class Parser:
             self._eat_symbol(",")
         return generics
 
-    def _parse_where_clause(self) -> None:
+    def _parse_where_clause(self) -> none:
         if not self._eat_keyword("where"):
             return
-        while True:
+        while true:
             self._parse_type_text(stop_values={",", "{", ";"})
             if not self._eat_symbol(","):
                 break
             if self._at_symbol("{") or self._at_symbol(";"):
                 break
 
-    def _parse_block_expr(self) -> BlockExpr:
+    def _parse_block_expr(self) -> blockexpr:
         self._expect_symbol("{")
         statements = []
-        final_expr = None
+        final_expr = none
         while not self._at_symbol("}"):
             if self._starts_stmt():
                 statements.append(self._parse_stmt())
                 continue
             expr = self._parse_expr()
             if self._eat_symbol(";"):
-                statements.append(ExprStmt(expr))
+                statements.append(exprstmt(expr))
                 continue
             if not self._at_symbol("}"):
-                statements.append(ExprStmt(expr))
+                statements.append(exprstmt(expr))
                 continue
             final_expr = expr
             break
         self._expect_symbol("}")
-        return BlockExpr(statements=statements, final_expr=final_expr)
+        return blockexpr(statements=statements, final_expr=final_expr)
 
     def _starts_stmt(self) -> bool:
         return (
@@ -270,7 +270,7 @@ class Parser:
         if self._at_keyword("if") or self._at_keyword("while") or self._at_keyword("switch"):
             expr = self._parse_expr()
             self._eat_symbol(";")
-            return ExprStmt(expr)
+            return exprstmt(expr)
         if self._at_keyword("for"):
             return self._parse_c_for_stmt()
         if self._looks_like_typed_let():
@@ -280,48 +280,48 @@ class Parser:
         if self._looks_like_increment():
             return self._parse_increment_stmt()
         token = self._peek()
-        raise ParseError(f"unexpected statement {token.value!r} at {token.line}:{token.column}")
+        raise parseerror(f"unexpected statement {token.value!r} at {token.line}:{token.column}")
 
-    def _parse_let_stmt(self, keyword: str = "let", consume_semicolon: bool = True) -> LetStmt:
+    def _parse_let_stmt(self, keyword: str = "let", consume_semicolon: bool = true) -> letstmt:
         self._expect_keyword(keyword)
         name = self._expect_ident()
-        type_name = None
+        type_name = none
         if self._eat_symbol(":"):
             type_name = self._parse_type_text(stop_values={"="})
         self._expect_symbol("=")
         value = self._parse_expr()
         if consume_semicolon:
             self._eat_symbol(";")
-        return LetStmt(name=name, type_name=type_name, value=value)
+        return letstmt(name=name, type_name=type_name, value=value)
 
-    def _parse_var_stmt(self, consume_semicolon: bool = True) -> LetStmt:
+    def _parse_var_stmt(self, consume_semicolon: bool = true) -> letstmt:
         return self._parse_let_stmt(keyword="var", consume_semicolon=consume_semicolon)
 
-    def _parse_typed_let_stmt(self, consume_semicolon: bool = True) -> LetStmt:
+    def _parse_typed_let_stmt(self, consume_semicolon: bool = true) -> letstmt:
         type_name = self._advance().value
         name = self._expect_ident()
         self._expect_symbol("=")
         value = self._parse_expr()
         if consume_semicolon:
             self._eat_symbol(";")
-        return LetStmt(name=name, type_name=type_name, value=value)
+        return letstmt(name=name, type_name=type_name, value=value)
 
-    def _parse_assign_stmt(self, consume_semicolon: bool = True) -> AssignStmt:
+    def _parse_assign_stmt(self, consume_semicolon: bool = true) -> assignstmt:
         name = self._expect_ident()
         self._expect_symbol("=")
         value = self._parse_expr()
         if consume_semicolon:
             self._eat_symbol(";")
-        return AssignStmt(name=name, value=value)
+        return assignstmt(name=name, value=value)
 
-    def _parse_increment_stmt(self, consume_semicolon: bool = True) -> IncrementStmt:
+    def _parse_increment_stmt(self, consume_semicolon: bool = true) -> incrementstmt:
         name = self._expect_ident()
         self._expect_symbol("++")
         if consume_semicolon:
             self._eat_symbol(";")
-        return IncrementStmt(name=name)
+        return incrementstmt(name=name)
 
-    def _parse_c_for_stmt(self) -> CForStmt:
+    def _parse_c_for_stmt(self) -> cforstmt:
         self._expect_keyword("for")
         self._expect_symbol("(")
         init = self._parse_for_clause_stmt()
@@ -331,31 +331,31 @@ class Parser:
         step = self._parse_for_clause_stmt()
         self._expect_symbol(")")
         body = self._parse_block_expr()
-        return CForStmt(init=init, condition=condition, step=step, body=body)
+        return cforstmt(init=init, condition=condition, step=step, body=body)
 
     def _parse_for_clause_stmt(self):
         if self._at_keyword("let"):
-            return self._parse_let_stmt(consume_semicolon=False)
+            return self._parse_let_stmt(consume_semicolon=false)
         if self._at_keyword("var"):
-            return self._parse_var_stmt(consume_semicolon=False)
+            return self._parse_var_stmt(consume_semicolon=false)
         if self._looks_like_typed_let():
-            return self._parse_typed_let_stmt(consume_semicolon=False)
+            return self._parse_typed_let_stmt(consume_semicolon=false)
         if self._looks_like_assignment():
-            return self._parse_assign_stmt(consume_semicolon=False)
+            return self._parse_assign_stmt(consume_semicolon=false)
         if self._looks_like_increment():
-            return self._parse_increment_stmt(consume_semicolon=False)
+            return self._parse_increment_stmt(consume_semicolon=false)
         token = self._peek()
-        raise ParseError(f"unexpected for clause {token.value!r} at {token.line}:{token.column}")
+        raise parseerror(f"unexpected for clause {token.value!r} at {token.line}:{token.column}")
 
-    def _parse_return_stmt(self) -> ReturnStmt:
+    def _parse_return_stmt(self) -> returnstmt:
         self._expect_keyword("return")
         if self._eat_symbol(";"):
-            return ReturnStmt(value=None)
+            return returnstmt(value=none)
         value = self._parse_expr()
         self._eat_symbol(";")
-        return ReturnStmt(value=value)
+        return returnstmt(value=value)
 
-    def _parse_expr(self) -> Expr:
+    def _parse_expr(self) -> expr:
         if self._at_keyword("switch") or self._at_keyword("switch"):
             return self._parse_switch_expr()
         if self._at_keyword("if"):
@@ -366,202 +366,202 @@ class Parser:
             return self._parse_for_expr()
         return self._parse_binary_expr(0)
 
-    def _parse_switch_expr(self) -> SwitchExpr:
+    def _parse_switch_expr(self) -> switchexpr:
         if self._at_keyword("switch"):
             self._expect_keyword("switch")
         else:
             self._expect_keyword("switch")
         subject = self._parse_expr()
         self._expect_symbol("{")
-        arms: List[SwitchArm] = []
+        arms: list[switcharm] = []
         while not self._eat_symbol("}"):
             if self._eat_keyword("case"):
                 pattern = self._parse_pattern()
                 self._expect_symbol(":")
             elif self._eat_keyword("default"):
-                pattern = WildcardPattern()
+                pattern = wildcardpattern()
                 self._expect_symbol(":")
             else:
                 pattern = self._parse_pattern()
                 if not (self._eat_symbol(":") or self._eat_symbol(":")):
                     token = self._peek()
-                    raise ParseError(f"expected ':' in switch arm at {token.line}:{token.column}")
+                    raise parseerror(f"expected ':' in switch arm at {token.line}:{token.column}")
             expr = self._parse_expr()
-            arms.append(SwitchArm(pattern=pattern, expr=expr))
+            arms.append(switcharm(pattern=pattern, expr=expr))
             self._eat_symbol(",")
-        return SwitchExpr(subject=subject, arms=arms)
+        return switchexpr(subject=subject, arms=arms)
 
-    def _parse_if_expr(self) -> IfExpr:
+    def _parse_if_expr(self) -> ifexpr:
         self._expect_keyword("if")
         condition = self._parse_expr()
         then_branch = self._parse_block_expr()
-        else_branch: Optional[Expr] = None
+        else_branch: optional[expr] = none
         if self._eat_keyword("else"):
             if self._at_keyword("if"):
                 else_branch = self._parse_if_expr()
             else:
                 else_branch = self._parse_block_expr()
-        return IfExpr(condition=condition, then_branch=then_branch, else_branch=else_branch)
+        return ifexpr(condition=condition, then_branch=then_branch, else_branch=else_branch)
 
-    def _parse_while_expr(self) -> WhileExpr:
+    def _parse_while_expr(self) -> whileexpr:
         self._expect_keyword("while")
         condition = self._parse_expr()
         body = self._parse_block_expr()
-        return WhileExpr(condition=condition, body=body)
+        return whileexpr(condition=condition, body=body)
 
-    def _parse_for_expr(self) -> ForExpr:
+    def _parse_for_expr(self) -> forexpr:
         self._expect_keyword("for")
         name = self._expect_ident()
         self._expect_keyword("in")
         iterable = self._parse_expr()
         body = self._parse_block_expr()
-        return ForExpr(name=name, iterable=iterable, body=body)
+        return forexpr(name=name, iterable=iterable, body=body)
 
-    def _parse_pattern(self) -> Pattern:
+    def _parse_pattern(self) -> pattern:
         if self._eat_ident_value("_"):
-            return WildcardPattern()
+            return wildcardpattern()
         token = self._peek()
-        if token.kind == TokenKind.INT:
+        if token.kind == tokenkind.int:
             self._advance()
-            return LiteralPattern(value=IntExpr(value=token.value))
-        if token.kind == TokenKind.STRING:
+            return literalpattern(value=intexpr(value=token.value))
+        if token.kind == tokenkind.string:
             self._advance()
-            return LiteralPattern(value=StringExpr(value=token.value))
+            return literalpattern(value=stringexpr(value=token.value))
         if self._at_keyword("true"):
             self._advance()
-            return LiteralPattern(value=BoolExpr(value=True))
+            return literalpattern(value=boolexpr(value=true))
         if self._at_keyword("false"):
             self._advance()
-            return LiteralPattern(value=BoolExpr(value=False))
+            return literalpattern(value=boolexpr(value=false))
         path = self._parse_path()
         if self._eat_symbol("("):
-            args: List[Pattern] = []
+            args: list[pattern] = []
             if not self._at_symbol(")"):
-                while True:
+                while true:
                     args.append(self._parse_pattern())
                     if not self._eat_symbol(","):
                         break
                     if self._at_symbol(")"):
                         break
             self._expect_symbol(")")
-            return VariantPattern(path=path, args=args)
+            return variantpattern(path=path, args=args)
         if "." in path or path[:1].isupper():
-            return VariantPattern(path=path)
-        return NamePattern(name=path)
+            return variantpattern(path=path)
+        return namepattern(name=path)
 
-    def _parse_binary_expr(self, min_precedence: int) -> Expr:
+    def _parse_binary_expr(self, min_precedence: int) -> expr:
         expr = self._parse_unary_expr()
-        while True:
+        while true:
             token = self._peek()
             precedence = self._binary_precedence(token.value)
             if precedence < min_precedence:
                 break
             op = self._advance().value
             rhs = self._parse_binary_expr(precedence + 1)
-            expr = BinaryExpr(left=expr, op=op, right=rhs)
+            expr = binaryexpr(left=expr, op=op, right=rhs)
         return expr
 
-    def _parse_unary_expr(self) -> Expr:
+    def _parse_unary_expr(self) -> expr:
         if self._eat_symbol("&"):
             mutable = self._eat_keyword("mut")
-            return BorrowExpr(target=self._parse_unary_expr(), mutable=mutable)
+            return borrowexpr(target=self._parse_unary_expr(), mutable=mutable)
         if self._eat_symbol("!"):
-            return UnaryExpr(op="!", operand=self._parse_unary_expr())
+            return unaryexpr(op="!", operand=self._parse_unary_expr())
         return self._parse_call_expr()
 
-    def _parse_call_expr(self) -> Expr:
+    def _parse_call_expr(self) -> expr:
         expr = self._parse_primary_expr()
-        while True:
+        while true:
             if self._eat_symbol("("):
-                args: List[Expr] = []
+                args: list[expr] = []
                 if not self._at_symbol(")"):
-                    while True:
+                    while true:
                         args.append(self._parse_expr())
                         if not self._eat_symbol(","):
                             break
                         if self._at_symbol(")"):
                             break
                 self._expect_symbol(")")
-                expr = CallExpr(callee=expr, args=args)
+                expr = callexpr(callee=expr, args=args)
                 continue
             if self._eat_symbol("."):
-                expr = MemberExpr(target=expr, member=self._expect_ident())
+                expr = memberexpr(target=expr, member=self._expect_ident())
                 continue
             if self._eat_symbol(":"):
                 self._expect_symbol(":")
-                expr = MemberExpr(target=expr, member=self._expect_ident())
+                expr = memberexpr(target=expr, member=self._expect_ident())
                 continue
             if (
                 self._at_symbol("{")
                 and (
-                    (isinstance(expr, NameExpr) and expr.name == "Vec")
+                    (isinstance(expr, nameexpr) and expr.name == "vec")
                     or (
-                        isinstance(expr, IndexExpr)
-                        and isinstance(expr.target, NameExpr)
-                        and expr.target.name == "Vec"
+                        isinstance(expr, indexexpr)
+                        and isinstance(expr.target, nameexpr)
+                        and expr.target.name == "vec"
                     )
                 )
                 and not self._looks_like_struct_literal()
             ):
                 self._eat_symbol("{")
-                items: List[Expr] = []
+                items: list[expr] = []
                 if not self._at_symbol("}"):
-                    while True:
+                    while true:
                         items.append(self._parse_expr())
                         if not self._eat_symbol(","):
                             break
                         if self._at_symbol("}"):
                             break
                 self._expect_symbol("}")
-                expr = CallExpr(callee=expr, args=items)
+                expr = callexpr(callee=expr, args=items)
                 continue
             if self._looks_like_struct_literal():
                 self._eat_symbol("{")
-                fields: List[StructFieldInit] = []
+                fields: list[structfieldinit] = []
                 if not self._at_symbol("}"):
-                    while True:
+                    while true:
                         name = self._expect_ident()
                         self._expect_symbol(":")
                         value = self._parse_expr()
-                        fields.append(StructFieldInit(name=name, value=value))
+                        fields.append(structfieldinit(name=name, value=value))
                         if not self._eat_symbol(","):
                             break
                         if self._at_symbol("}"):
                             break
                 self._expect_symbol("}")
-                expr = StructLiteralExpr(callee=expr, fields=fields)
+                expr = structliteralexpr(callee=expr, fields=fields)
                 continue
             if self._eat_symbol("["):
                 index = self._parse_expr()
                 self._expect_symbol("]")
-                expr = IndexExpr(target=expr, index=index)
+                expr = indexexpr(target=expr, index=index)
                 continue
             if self._eat_symbol("?"):
                 continue
             break
         return expr
 
-    def _parse_primary_expr(self) -> Expr:
+    def _parse_primary_expr(self) -> expr:
         token = self._peek()
-        if token.kind == TokenKind.INT:
+        if token.kind == tokenkind.int:
             self._advance()
-            return IntExpr(value=token.value)
-        if token.kind == TokenKind.STRING:
+            return intexpr(value=token.value)
+        if token.kind == tokenkind.string:
             self._advance()
-            return StringExpr(value=token.value)
+            return stringexpr(value=token.value)
         if self._at_keyword("true"):
             self._advance()
-            return BoolExpr(value=True)
+            return boolexpr(value=true)
         if self._at_keyword("false"):
             self._advance()
-            return BoolExpr(value=False)
+            return boolexpr(value=false)
         if self._at_symbol("{"):
             return self._parse_block_expr()
         if self._eat_symbol("("):
             expr = self._parse_expr()
             self._expect_symbol(")")
             return expr
-        return NameExpr(name=self._parse_expr_name())
+        return nameexpr(name=self._parse_expr_name())
 
     def _binary_precedence(self, op: str) -> int:
         table = {
@@ -600,7 +600,7 @@ class Parser:
         parts = [self._expect_ident()]
         while self._eat_symbol("."):
             parts.append(self._expect_ident())
-        while self._at_symbol(":") and self._peek(1).kind == TokenKind.SYMBOL and self._peek(1).value == ":":
+        while self._at_symbol(":") and self._peek(1).kind == tokenkind.symbol and self._peek(1).value == ":":
             self._eat_symbol(":")
             self._expect_symbol(":")
             parts.append(self._expect_ident())
@@ -613,24 +613,24 @@ class Parser:
 
     def _looks_like_struct_literal(self) -> bool:
         if not self._at_symbol("{"):
-            return False
+            return false
         first = self._peek(1)
         second = self._peek(2)
         third = self._peek(3)
         return (
-            first.kind in {TokenKind.IDENT, TokenKind.KEYWORD}
-            and second.kind == TokenKind.SYMBOL
+            first.kind in {tokenkind.ident, tokenkind.keyword}
+            and second.kind == tokenkind.symbol
             and second.value == ":"
-            and not (third.kind == TokenKind.SYMBOL and third.value == ":")
+            and not (third.kind == tokenkind.symbol and third.value == ":")
         )
 
     def _parse_type_text(self, stop_values: set[str]) -> str:
-        parts: List[str] = []
+        parts: list[str] = []
         bracket = 0
         paren = 0
-        while True:
+        while true:
             token = self._peek()
-            if token.kind == TokenKind.EOF:
+            if token.kind == tokenkind.eof:
                 break
             if bracket == 0 and paren == 0 and token.value in stop_values:
                 break
@@ -650,13 +650,13 @@ class Parser:
     def _parse_named_type(self, stop_values: set[str]) -> tuple[str, str]:
         return self._decode_named_type(self._parse_token_segment(stop_values))
 
-    def _parse_token_segment(self, stop_values: set[str]) -> List[Token]:
-        segment: List[Token] = []
+    def _parse_token_segment(self, stop_values: set[str]) -> list[token]:
+        segment: list[token] = []
         bracket = 0
         paren = 0
-        while True:
+        while true:
             token = self._peek()
-            if token.kind == TokenKind.EOF:
+            if token.kind == tokenkind.eof:
                 break
             if bracket == 0 and paren == 0 and token.value in stop_values:
                 break
@@ -673,7 +673,7 @@ class Parser:
             segment.append(self._advance())
         return segment
 
-    def _decode_named_type(self, tokens: List[Token]) -> tuple[str, str]:
+    def _decode_named_type(self, tokens: list[token]) -> tuple[str, str]:
         colon = self._find_token_value(tokens, ":")
         if colon >= 0:
             name_text = self._normalize_type_text(self._join_token_values(tokens[:colon]))
@@ -682,7 +682,7 @@ class Parser:
         split = self._find_decl_name_index(tokens)
         if split <= 0:
             token = tokens[0] if tokens else self._peek()
-            raise ParseError(f"expected typed name at {token.line}:{token.column}")
+            raise parseerror(f"expected typed name at {token.line}:{token.column}")
         name_text = tokens[split].value
         type_text = self._normalize_type_text(self._join_token_values(tokens[:split]))
         return self._normalize_receiver_decl(name_text, type_text)
@@ -708,10 +708,10 @@ class Parser:
         text = text.replace(" [", "[")
         return text.strip()
 
-    def _join_token_values(self, tokens: List[Token]) -> str:
+    def _join_token_values(self, tokens: list[token]) -> str:
         return " ".join(token.value for token in tokens)
 
-    def _find_token_value(self, tokens: List[Token], value: str) -> int:
+    def _find_token_value(self, tokens: list[token], value: str) -> int:
         bracket = 0
         paren = 0
         for i, token in enumerate(tokens):
@@ -727,7 +727,7 @@ class Parser:
                 return i
         return -1
 
-    def _find_decl_name_index(self, tokens: List[Token]) -> int:
+    def _find_decl_name_index(self, tokens: list[token]) -> int:
         bracket = 0
         paren = 0
         index = -1
@@ -740,7 +740,7 @@ class Parser:
                 paren += 1
             elif token.value == ")":
                 paren -= 1
-            elif bracket == 0 and paren == 0 and token.kind == TokenKind.IDENT:
+            elif bracket == 0 and paren == 0 and token.kind == tokenkind.ident:
                 index = i
         return index
 
@@ -757,85 +757,85 @@ class Parser:
         text = " ".join(parts).replace("[ ", "[").replace(" ]", "]").replace(" ,", ",")
         return text
 
-    def _at(self, kind: TokenKind) -> bool:
+    def _at(self, kind: tokenkind) -> bool:
         return self._peek().kind == kind
 
     def _looks_like_typed_let(self) -> bool:
         return (
-            self._peek().kind in {TokenKind.IDENT, TokenKind.KEYWORD}
-            and self._peek(1).kind == TokenKind.IDENT
-            and self._peek(2).kind == TokenKind.SYMBOL
+            self._peek().kind in {tokenkind.ident, tokenkind.keyword}
+            and self._peek(1).kind == tokenkind.ident
+            and self._peek(2).kind == tokenkind.symbol
             and self._peek(2).value == "="
         )
 
     def _looks_like_assignment(self) -> bool:
         return (
-            self._peek().kind == TokenKind.IDENT
-            and self._peek(1).kind == TokenKind.SYMBOL
+            self._peek().kind == tokenkind.ident
+            and self._peek(1).kind == tokenkind.symbol
             and self._peek(1).value == "="
         )
 
     def _looks_like_increment(self) -> bool:
         return (
-            self._peek().kind == TokenKind.IDENT
-            and self._peek(1).kind == TokenKind.SYMBOL
+            self._peek().kind == tokenkind.ident
+            and self._peek(1).kind == tokenkind.symbol
             and self._peek(1).value == "++"
         )
 
     def _at_keyword(self, value: str) -> bool:
         token = self._peek()
-        return token.kind == TokenKind.KEYWORD and token.value == value
+        return token.kind == tokenkind.keyword and token.value == value
 
     def _at_symbol(self, value: str) -> bool:
         token = self._peek()
-        return token.kind == TokenKind.SYMBOL and token.value == value
+        return token.kind == tokenkind.symbol and token.value == value
 
     def _eat_keyword(self, value: str) -> bool:
         if self._at_keyword(value):
             self._advance()
-            return True
-        return False
+            return true
+        return false
 
     def _eat_ident_value(self, value: str) -> bool:
         token = self._peek()
-        if token.kind == TokenKind.IDENT and token.value == value:
+        if token.kind == tokenkind.ident and token.value == value:
             self._advance()
-            return True
-        return False
+            return true
+        return false
 
     def _eat_symbol(self, value: str) -> bool:
         if self._at_symbol(value):
             self._advance()
-            return True
-        return False
+            return true
+        return false
 
-    def _expect_keyword(self, value: str) -> Token:
+    def _expect_keyword(self, value: str) -> token:
         token = self._peek()
-        if token.kind == TokenKind.KEYWORD and token.value == value:
+        if token.kind == tokenkind.keyword and token.value == value:
             return self._advance()
-        raise ParseError(f"expected keyword {value!r} at {token.line}:{token.column}")
+        raise parseerror(f"expected keyword {value!r} at {token.line}:{token.column}")
 
-    def _expect_symbol(self, value: str) -> Token:
+    def _expect_symbol(self, value: str) -> token:
         token = self._peek()
-        if token.kind == TokenKind.SYMBOL and token.value == value:
+        if token.kind == tokenkind.symbol and token.value == value:
             return self._advance()
-        raise ParseError(f"expected symbol {value!r} at {token.line}:{token.column}")
+        raise parseerror(f"expected symbol {value!r} at {token.line}:{token.column}")
 
     def _expect_ident(self) -> str:
         token = self._peek()
-        if token.kind == TokenKind.KEYWORD and token.value == "self":
+        if token.kind == tokenkind.keyword and token.value == "self":
             self._advance()
             return token.value
-        if token.kind == TokenKind.IDENT:
+        if token.kind == tokenkind.ident:
             self._advance()
             return token.value
-        raise ParseError(f"expected identifier at {token.line}:{token.column}")
+        raise parseerror(f"expected identifier at {token.line}:{token.column}")
 
-    def _peek(self, offset: int = 0) -> Token:
+    def _peek(self, offset: int = 0) -> token:
         index = min(self.index + offset, len(self.tokens) - 1)
         return self.tokens[index]
 
-    def _advance(self) -> Token:
+    def _advance(self) -> token:
         token = self.tokens[self.index]
         self.index += 1
         return token

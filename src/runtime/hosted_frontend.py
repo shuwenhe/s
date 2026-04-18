@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Iterable
+from pathlib import path
+from typing import iterable
 
-from compiler.ast import NamePattern, VariantPattern, WildcardPattern, dump_source_file
-from compiler.lexer.tokens import KEYWORDS, Token, TokenKind, dump_tokens
-from compiler.parser.parser import ParseError, Parser
-from runtime.intrinsic_dispatch import IntrinsicCall, dispatch
+from compiler.ast import namepattern, variantpattern, wildcardpattern, dump_source_file
+from compiler.lexer.tokens import keywords, token, tokenkind, dump_tokens
+from compiler.parser.parser import parseerror, parser
+from runtime.intrinsic_dispatch import intrinsiccall, dispatch
 
 
 @dataclass
-class HostedLexError(Exception):
+class hostedlexerror(exception):
     message: str
     line: int
     column: int
@@ -21,15 +21,15 @@ class HostedLexError(Exception):
 
 
 @dataclass
-class HostedLexer:
+class hostedlexer:
     source: str
-    trace: list[IntrinsicCall] = field(default_factory=list)
+    trace: list[intrinsiccall] = field(default_factory=list)
     index: int = 0
     line: int = 1
     column: int = 1
 
-    def tokenize(self) -> list[Token]:
-        tokens: list[Token] = []
+    def tokenize(self) -> list[token]:
+        tokens: list[token] = []
         while not self.is_eof():
             self.skip_ignored()
             if self.is_eof():
@@ -39,20 +39,20 @@ class HostedLexer:
             ch = self.peek()
             if ch.isalpha() or ch == "_":
                 value = self.read_identifier()
-                kind = TokenKind.KEYWORD if value in KEYWORDS else TokenKind.IDENT
-                tokens.append(Token(kind, value, start_line, start_col))
+                kind = tokenkind.keyword if value in keywords else tokenkind.ident
+                tokens.append(token(kind, value, start_line, start_col))
                 continue
             if ch.isdigit():
-                tokens.append(Token(TokenKind.INT, self.read_number(), start_line, start_col))
+                tokens.append(token(tokenkind.int, self.read_number(), start_line, start_col))
                 continue
             if ch == '"':
-                tokens.append(Token(TokenKind.STRING, self.read_string(), start_line, start_col))
+                tokens.append(token(tokenkind.string, self.read_string(), start_line, start_col))
                 continue
-            tokens.append(Token(TokenKind.SYMBOL, self.read_symbol(), start_line, start_col))
-        tokens.append(Token(TokenKind.EOF, "<eof>", self.line, self.column))
+            tokens.append(token(tokenkind.symbol, self.read_symbol(), start_line, start_col))
+        tokens.append(token(tokenkind.eof, "<eof>", self.line, self.column))
         return tokens
 
-    def skip_ignored(self) -> None:
+    def skip_ignored(self) -> none:
         while not self.is_eof():
             ch = self.peek()
             if ch in " \t\r\n":
@@ -68,7 +68,7 @@ class HostedLexer:
                 depth = 1
                 while depth > 0:
                     if self.is_eof():
-                        raise HostedLexError("unterminated block comment", self.line, self.column)
+                        raise hostedlexerror("unterminated block comment", self.line, self.column)
                     if self.match_text("/*"):
                         depth += 1
                         self.advance()
@@ -108,12 +108,12 @@ class HostedLexer:
             out.append(ch)
             if ch == "\\":
                 if self.is_eof():
-                    raise HostedLexError("unterminated escape sequence", self.line, self.column)
+                    raise hostedlexerror("unterminated escape sequence", self.line, self.column)
                 out.append(self.advance())
                 continue
             if ch == '"':
                 return "".join(out)
-        raise HostedLexError("unterminated string literal", self.line, self.column)
+        raise hostedlexerror("unterminated string literal", self.line, self.column)
 
     def read_symbol(self) -> str:
         for symbol in ("->", ":", "==", "!=", "<=", ">=", "&&", "||", "..=", ".."):
@@ -125,19 +125,19 @@ class HostedLexer:
         ch = self.peek()
         if ch in "()[]{}.,:;+-*/%!=<>?&|":
             return self.advance()
-        raise HostedLexError(f"unexpected character {ch!r}", self.line, self.column)
+        raise hostedlexerror(f"unexpected character {ch!r}", self.line, self.column)
 
     def match_text(self, text: str) -> bool:
         return self._slice(self.index, self.index + self._len(text)) == text
 
     def peek(self) -> str:
         if self.is_eof():
-            raise HostedLexError("unexpected eof", self.line, self.column)
+            raise hostedlexerror("unexpected eof", self.line, self.column)
         return self._char_at(self.index)
 
     def advance(self) -> str:
         if self.is_eof():
-            raise HostedLexError("unexpected eof", self.line, self.column)
+            raise hostedlexerror("unexpected eof", self.line, self.column)
         ch = self._char_at(self.index)
         self.index += 1
         if ch == "\n":
@@ -151,51 +151,51 @@ class HostedLexer:
         return self.index >= self._len(self.source)
 
     def _len(self, value: object) -> int:
-        call = IntrinsicCall(symbol="__runtime_len", args=(value,), source="HostedLexer")
+        call = intrinsiccall(symbol="__runtime_len", args=(value,), source="hostedlexer")
         self.trace.append(call)
         return dispatch(call).value
 
     def _char_at(self, index: int) -> str:
-        call = IntrinsicCall(
+        call = intrinsiccall(
             symbol="__string_char_at",
             args=(self.source, index),
-            source="HostedLexer",
+            source="hostedlexer",
         )
         self.trace.append(call)
         return dispatch(call).value
 
     def _slice(self, start: int, end: int) -> str:
-        call = IntrinsicCall(
+        call = intrinsiccall(
             symbol="__string_slice",
             args=(self.source, start, end),
-            source="HostedLexer",
+            source="hostedlexer",
         )
         self.trace.append(call)
         return dispatch(call).value
 
 
 @dataclass
-class HostedParser(Parser):
-    trace: list[IntrinsicCall] = field(default_factory=list)
+class hostedparser(parser):
+    trace: list[intrinsiccall] = field(default_factory=list)
 
     def _parse_pattern(self):
         if self._eat_ident_value("_"):
-            return WildcardPattern()
+            return wildcardpattern()
         path = self._parse_path()
         if self._eat_symbol("("):
             args = []
             if not self._at_symbol(")"):
-                while True:
+                while true:
                     args.append(self._parse_pattern())
                     if not self._eat_symbol(","):
                         break
                     if self._at_symbol(")"):
                         break
             self._expect_symbol(")")
-            return VariantPattern(path=path, args=args)
+            return variantpattern(path=path, args=args)
         if self._path_contains_dot(path) or self._starts_with_upper(path):
-            return VariantPattern(path=path)
-        return NamePattern(name=path)
+            return variantpattern(path=path)
+        return namepattern(name=path)
 
     def _parse_use_path(self) -> str:
         parts = [self._expect_ident()]
@@ -226,22 +226,22 @@ class HostedParser(Parser):
 
     def _expect_keyword(self, value: str):
         token = self._peek()
-        if token.kind == TokenKind.KEYWORD and token.value == value:
+        if token.kind == tokenkind.keyword and token.value == value:
             return self._advance()
         raise self._make_error(self._concat("expected keyword ", value), token.line, token.column)
 
     def _expect_symbol(self, value: str):
         token = self._peek()
-        if token.kind == TokenKind.SYMBOL and token.value == value:
+        if token.kind == tokenkind.symbol and token.value == value:
             return self._advance()
         raise self._make_error(self._concat("expected symbol ", value), token.line, token.column)
 
     def _expect_ident(self) -> str:
         token = self._peek()
-        if token.kind == TokenKind.IDENT:
+        if token.kind == tokenkind.ident:
             self._advance()
             return token.value
-        if token.kind == TokenKind.KEYWORD and token.value == "self":
+        if token.kind == tokenkind.keyword and token.value == "self":
             self._advance()
             return token.value
         raise self._make_error("expected identifier", token.line, token.column)
@@ -250,24 +250,24 @@ class HostedParser(Parser):
         i = 0
         while i < self._len(path):
             if self._char_at(path, i) == ".":
-                return True
+                return true
             i += 1
-        return False
+        return false
 
     def _starts_with_upper(self, text: str) -> bool:
         if text == "":
-            return False
+            return false
         ch = self._char_at(text, 0)
-        return "A" <= ch <= "Z"
+        return "a" <= ch <= "z"
 
     def _parse_type_text(self, stop_values: set[str]) -> str:
         parts: list[str] = []
         bracket = 0
         paren = 0
 
-        while True:
+        while true:
             token = self._peek()
-            if token.kind == TokenKind.EOF:
+            if token.kind == tokenkind.eof:
                 break
             if bracket == 0 and paren == 0 and token.value in stop_values:
                 break
@@ -315,42 +315,42 @@ class HostedParser(Parser):
 
     def _join_strings(self, values: list[str], sep: str) -> str:
         out = ""
-        first = True
+        first = true
         for value in values:
             if not first:
                 out = self._concat(out, sep)
             out = self._concat(out, value)
-            first = False
+            first = false
         return out
 
     def _len(self, value: object) -> int:
-        call = IntrinsicCall(symbol="__runtime_len", args=(value,), source="HostedParser")
+        call = intrinsiccall(symbol="__runtime_len", args=(value,), source="hostedparser")
         self.trace.append(call)
         return dispatch(call).value
 
     def _char_at(self, text: str, index: int) -> str:
-        call = IntrinsicCall(
+        call = intrinsiccall(
             symbol="__string_char_at",
             args=(text, index),
-            source="HostedParser",
+            source="hostedparser",
         )
         self.trace.append(call)
         return dispatch(call).value
 
     def _concat(self, left: str, right: str) -> str:
-        call = IntrinsicCall(
+        call = intrinsiccall(
             symbol="__string_concat",
             args=(left, right),
-            source="HostedParser",
+            source="hostedparser",
         )
         self.trace.append(call)
         return dispatch(call).value
 
     def _replace(self, text: str, old: str, new: str) -> str:
-        call = IntrinsicCall(
+        call = intrinsiccall(
             symbol="__string_replace",
             args=(text, old, new),
-            source="HostedParser",
+            source="hostedparser",
         )
         self.trace.append(call)
         return dispatch(call).value
@@ -360,83 +360,83 @@ class HostedParser(Parser):
         return self._make_error(message, token.line, token.column)
 
     def _make_error(self, message: str, line: int, column: int):
-        return ParseError(f"{message} at {line}:{column}")
+        return parseerror(f"{message} at {line}:{column}")
 
-    def _peek(self, offset: int = 0) -> Token:
+    def _peek(self, offset: int = 0) -> token:
         return super()._peek(offset)
 
-    def _advance(self) -> Token:
+    def _advance(self) -> token:
         return super()._advance()
 
 
-@dataclass(frozen=True)
-class PlanStep:
+@dataclass(frozen=true)
+class planstep:
     kind: str
     detail: str
 
 
 @dataclass
-class ExecutionPlan:
+class executionplan:
     name: str
-    path: Path
-    steps: list[PlanStep] = field(default_factory=list)
-    intrinsic_calls: list[IntrinsicCall] = field(default_factory=list)
+    path: path
+    steps: list[planstep] = field(default_factory=list)
+    intrinsic_calls: list[intrinsiccall] = field(default_factory=list)
 
 
 @dataclass
-class ExecutionResult:
+class executionresult:
     output: str
-    plan: ExecutionPlan
+    plan: executionplan
 
 
-def run_lex_dump(path: Path) -> ExecutionResult:
-    plan = ExecutionPlan(name="lex_dump", path=path)
+def run_lex_dump(path: path) -> executionresult:
+    plan = executionplan(name="lex_dump", path=path)
     source = _host_read_to_string(path, plan)
-    lexer = HostedLexer(source)
+    lexer = hostedlexer(source)
     tokens = lexer.tokenize()
     text = dump_tokens(tokens)
     output = _host_println(text, plan, source="lex_dump")
-    plan.steps.append(PlanStep("tokenize", f"{len(tokens)} tokens"))
-    plan.steps.append(PlanStep("dump_tokens", "render token stream"))
+    plan.steps.append(planstep("tokenize", f"{len(tokens)} tokens"))
+    plan.steps.append(planstep("dump_tokens", "render token stream"))
     plan.intrinsic_calls.extend(lexer.trace)
-    return ExecutionResult(output=output, plan=plan)
+    return executionresult(output=output, plan=plan)
 
 
-def run_ast_dump(path: Path) -> ExecutionResult:
-    plan = ExecutionPlan(name="ast_dump", path=path)
+def run_ast_dump(path: path) -> executionresult:
+    plan = executionplan(name="ast_dump", path=path)
     source = _host_read_to_string(path, plan)
-    lexer = HostedLexer(source)
+    lexer = hostedlexer(source)
     tokens = lexer.tokenize()
-    parser = HostedParser(tokens)
+    parser = hostedparser(tokens)
     ast = parser.parse_source_file()
     output = _host_println(dump_source_file(ast), plan, source="ast_dump")
-    plan.steps.append(PlanStep("tokenize", f"{len(tokens)} tokens"))
-    plan.steps.append(PlanStep("parse_source_file", "build SourceFile AST"))
-    plan.steps.append(PlanStep("parse_pattern_helpers", "dispatch hosted parser string helpers"))
-    plan.steps.append(PlanStep("dump_source_file", "render AST dump"))
+    plan.steps.append(planstep("tokenize", f"{len(tokens)} tokens"))
+    plan.steps.append(planstep("parse_source_file", "build sourcefile ast"))
+    plan.steps.append(planstep("parse_pattern_helpers", "dispatch hosted parser string helpers"))
+    plan.steps.append(planstep("dump_source_file", "render ast dump"))
     plan.intrinsic_calls.extend(lexer.trace)
     plan.intrinsic_calls.extend(parser.trace)
-    return ExecutionResult(output=output, plan=plan)
+    return executionresult(output=output, plan=plan)
 
 
-def _host_read_to_string(path: Path, plan: ExecutionPlan) -> str:
-    call = IntrinsicCall(
+def _host_read_to_string(path: path, plan: executionplan) -> str:
+    call = intrinsiccall(
         symbol="__host_read_to_string",
         args=(str(path),),
-        source="HostedCommand",
+        source="hostedcommand",
     )
     plan.intrinsic_calls.append(call)
-    plan.steps.append(PlanStep("read_source", str(path)))
+    plan.steps.append(planstep("read_source", str(path)))
     return dispatch(call).value
 
 
-def _host_println(text: str, plan: ExecutionPlan, source: str) -> str:
-    call = IntrinsicCall(
+def _host_println(text: str, plan: executionplan, source: str) -> str:
+    call = intrinsiccall(
         symbol="__host_println",
         args=(text,),
         source=source,
     )
     plan.intrinsic_calls.append(call)
-    plan.steps.append(PlanStep("println", source))
+    plan.steps.append(planstep("println", source))
     dispatch(call)
     return text

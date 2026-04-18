@@ -1,11 +1,11 @@
-# S Syntax Specification
+# s syntax specification
 
-Version: Draft 0.1  
-Status: Working Draft
+version: draft 0.1  
+status: working draft
 
-## 1. Purpose
+## 1. purpose
 
-本文档定义 S 的表面语法草案。
+本文档定义 s 的表面语法草案。
 
 它的目标是：
 
@@ -13,30 +13,30 @@ Status: Working Draft
 - 固定源文件和声明的基本形状
 - 固定表达式与语句的主要产生式
 - 固定模式匹配与泛型语法方向
-- 为后续 parser 实现提供接近 EBNF 的语法依据
+- 为后续 parser 实现提供接近 ebnf 的语法依据
 
 本文档是 [spec.md](/app/s/doc/spec.md) 的语法补充，与 [types.md](/app/s/doc/types.md) 和 [ownership.md](/app/s/doc/ownership.md) 配套使用。
 
-## 2. Notation
+## 2. notation
 
-本文档采用接近 EBNF 的记号：
+本文档采用接近 ebnf 的记号：
 
-- `A = B` 表示定义
-- `A | B` 表示二选一
-- `A?` 表示可选
-- `A*` 表示零次或多次
-- `A+` 表示一次或多次
+- `a = b` 表示定义
+- `a | b` 表示二选一
+- `a?` 表示可选
+- `a*` 表示零次或多次
+- `a+` 表示一次或多次
 - `()` 表示分组
 - 字面终结符使用引号，例如 `"func"`
-- 词法类使用大写名称，例如 `IDENT`
+- 词法类使用大写名称，例如 `ident`
 
 为保持可读性，本文档不追求完全形式化的 parser grammar，而追求“足够严格、可落地实现”。
 
-## 3. Lexical Structure
+## 3. lexical structure
 
-### 3.1 Source Text
+### 3.1 source text
 
-源文件必须采用 UTF-8 编码。
+源文件必须采用 utf-8 编码。
 
 词法分析器应将源文本切分为：
 
@@ -50,27 +50,27 @@ Status: Working Draft
 
 注释和空白符通常不进入语法分析阶段，除非实现需要保留位置信息。
 
-### 3.2 Whitespace
+### 3.2 whitespace
 
 ```text
-WHITESPACE = " " | "\t" | "\r" | "\n"
+whitespace = " " | "\t" | "\r" | "\n"
 ```
 
 空白用于分隔 token，本身没有语义。
 
-### 3.3 Comments
+### 3.3 comments
 
 ```text
-LINE_COMMENT  = "//" { not_newline } newline?
-BLOCK_COMMENT = "/*" { any_char } "*/"
+line_comment  = "//" { not_newline } newline?
+block_comment = "/*" { any_char } "*/"
 ```
 
-Draft 0.1 推荐支持嵌套块注释，但这不是语义层强制要求。
+draft 0.1 推荐支持嵌套块注释，但这不是语义层强制要求。
 
-### 3.4 Identifiers
+### 3.4 identifiers
 
 ```text
-IDENT = XID_Start { XID_Continue }
+ident = xid_start { xid_continue }
 ```
 
 约束：
@@ -78,9 +78,9 @@ IDENT = XID_Start { XID_Continue }
 - 不得与关键字完全相同
 - 不得以数字开头
 
-标准库和公共 API 推荐使用 ASCII 标识符。
+标准库和公共 api 推荐使用 ascii 标识符。
 
-### 3.5 Keywords
+### 3.5 keywords
 
 ```text
 package use as pub
@@ -92,27 +92,27 @@ true false
 unsafe extern mut
 ```
 
-### 3.6 Literals
+### 3.6 literals
 
 ```text
-INT_LITERAL    = DEC_INT | HEX_INT | BIN_INT | OCT_INT
-FLOAT_LITERAL  = DIGITS "." DIGITS EXP?
-STRING_LITERAL = "\"" { string_char | escape } "\""
-CHAR_LITERAL   = "'" char_or_escape "'"
+int_literal    = dec_int | hex_int | bin_int | oct_int
+float_literal  = digits "." digits exp?
+string_literal = "\"" { string_char | escape } "\""
+char_literal   = "'" char_or_escape "'"
 ```
 
 说明：
 
 - 整数字面量的精确后缀系统留待后续版本决定
 - 浮点字面量至少支持十进制表示
-- 字符串字面量默认为 UTF-8
+- 字符串字面量默认为 utf-8
 
-### 3.7 Delimiters and Operators
+### 3.7 delimiters and operators
 
 ```text
-DELIMITERS = "(" ")" "[" "]" "{" "}" "," ":" ";" "." " "
+delimiters = "(" ")" "[" "]" "{" "}" "," ":" ";" "." " "
 
-OPERATORS =
+operators =
     "="
   | "+"
   | "-"
@@ -138,312 +138,312 @@ OPERATORS =
   | "?"
 ```
 
-## 4. Compilation Unit
+## 4. compilation unit
 
-### 4.1 Source File
+### 4.1 source file
 
 ```text
-SourceFile = PackageDecl UseDecl* Item*
+sourcefile = packagedecl usedecl* item*
 ```
 
-### 4.2 Package Declaration
+### 4.2 package declaration
 
 ```text
-PackageDecl = "package" PackagePath
-PackagePath = IDENT ("." IDENT)*
+packagedecl = "package" packagepath
+packagepath = ident ("." ident)*
 ```
 
 每个源文件必须恰有一个 `package` 声明，并位于文件开头。
 
-### 4.3 Imports
+### 4.3 imports
 
 ```text
-UseDecl      = "use" ImportTree
-ImportTree   = ImportPath ("as" IDENT)?
-ImportPath   = IDENT ("." IDENT)* ImportGroup?
-ImportGroup  = "." "{" ImportItem ("," ImportItem)* ","? "}"
-ImportItem   = IDENT ("as" IDENT)?
+usedecl      = "use" importtree
+importtree   = importpath ("as" ident)?
+importpath   = ident ("." ident)* importgroup?
+importgroup  = "." "{" importitem ("," importitem)* ","? "}"
+importitem   = ident ("as" ident)?
 ```
 
 示例：
 
 ```s
-use net.http.Request
-use io.{Reader, Writer}
+use net.http.request
+use io.{reader, writer}
 use math as m
 ```
 
-## 5. Top-Level Items
+## 5. top-level items
 
 ```text
-Item =
-    FunctionDecl
-  | StructDecl
-  | EnumDecl
-  | TraitDecl
-  | ImplDecl
-  | ConstDecl
-  | StaticDecl
+item =
+    functiondecl
+  | structdecl
+  | enumdecl
+  | traitdecl
+  | impldecl
+  | constdecl
+  | staticdecl
 ```
 
 ```text
-Visibility = "pub"
+visibility = "pub"
 ```
 
-## 6. Declarations
+## 6. declarations
 
-### 6.1 Function Declaration
-
-```text
-FunctionDecl =
-    "func" IDENT GenericParamList?
-    "(" ParamList? ")" ReturnType?
-    WhereClause? BlockExpr
-```
+### 6.1 function declaration
 
 ```text
-ParamList   = Param ("," Param)* ","?
-Param       = Pattern ":" Type
-ReturnType  = " " Type
-```
-
-### 6.2 Struct Declaration
-
-```text
-StructDecl =
-    Visibility? "struct" IDENT GenericParamList?
-    StructBody
-
-StructBody =
-    "{" StructFieldList? "}"
-
-StructFieldList =
-    StructField ("," StructField)* ","?
-
-StructField =
-    Visibility? IDENT ":" Type
-```
-
-### 6.3 Enum Declaration
-
-```text
-EnumDecl =
-    Visibility? "enum" IDENT GenericParamList?
-    EnumBody
-
-EnumBody =
-    "{" EnumVariantList? "}"
-
-EnumVariantList =
-    EnumVariant ("," EnumVariant)* ","?
-
-EnumVariant =
-    IDENT EnumVariantBody?
-
-EnumVariantBody =
-    TupleVariantBody
-  | RecordVariantBody
-
-TupleVariantBody  = "(" TypeList? ")"
-RecordVariantBody = "{" StructFieldList? "}"
-```
-
-### 6.4 Trait Declaration
-
-```text
-TraitDecl =
-    Visibility? "trait" IDENT GenericParamList?
-    TraitBody
-
-TraitBody =
-    "{" TraitItem* "}"
-
-TraitItem =
-    FunctionSig ";"
+functiondecl =
+    "func" ident genericparamlist?
+    "(" paramlist? ")" returntype?
+    whereclause? blockexpr
 ```
 
 ```text
-FunctionSig =
-    "func" IDENT GenericParamList?
-    "(" ParamList? ")" ReturnType?
-    WhereClause?
+paramlist   = param ("," param)* ","?
+param       = pattern ":" type
+returntype  = " " type
 ```
 
-### 6.5 Impl Declaration
+### 6.2 struct declaration
 
 ```text
-ImplDecl =
-    "impl" GenericParamList? ImplHead WhereClause? ImplBody
+structdecl =
+    visibility? "struct" ident genericparamlist?
+    structbody
 
-ImplHead =
-    Type
-  | TraitRef "for" Type
+structbody =
+    "{" structfieldlist? "}"
 
-ImplBody =
-    "{" ImplItem* "}"
+structfieldlist =
+    structfield ("," structfield)* ","?
 
-ImplItem =
-    FunctionDecl
+structfield =
+    visibility? ident ":" type
 ```
 
-### 6.6 Constants and Statics
+### 6.3 enum declaration
 
 ```text
-ConstDecl =
-    Visibility? "const" IDENT ":" Type "=" Expr ";"
+enumdecl =
+    visibility? "enum" ident genericparamlist?
+    enumbody
 
-StaticDecl =
-    Visibility? "static" IDENT ":" Type "=" Expr ";"
+enumbody =
+    "{" enumvariantlist? "}"
+
+enumvariantlist =
+    enumvariant ("," enumvariant)* ","?
+
+enumvariant =
+    ident enumvariantbody?
+
+enumvariantbody =
+    tuplevariantbody
+  | recordvariantbody
+
+tuplevariantbody  = "(" typelist? ")"
+recordvariantbody = "{" structfieldlist? "}"
 ```
 
-## 7. Generic Syntax
-
-### 7.1 Generic Parameter List
+### 6.4 trait declaration
 
 ```text
-GenericParamList =
-    "[" GenericParam ("," GenericParam)* ","? "]"
+traitdecl =
+    visibility? "trait" ident genericparamlist?
+    traitbody
 
-GenericParam =
-    IDENT TraitBoundList?
+traitbody =
+    "{" traititem* "}"
+
+traititem =
+    functionsig ";"
 ```
 
 ```text
-TraitBoundList =
-    ":" TraitBound ("+" TraitBound)*
+functionsig =
+    "func" ident genericparamlist?
+    "(" paramlist? ")" returntype?
+    whereclause?
+```
 
-TraitBound =
-    TypePath
+### 6.5 impl declaration
+
+```text
+impldecl =
+    "impl" genericparamlist? implhead whereclause? implbody
+
+implhead =
+    type
+  | traitref "for" type
+
+implbody =
+    "{" implitem* "}"
+
+implitem =
+    functiondecl
+```
+
+### 6.6 constants and statics
+
+```text
+constdecl =
+    visibility? "const" ident ":" type "=" expr ";"
+
+staticdecl =
+    visibility? "static" ident ":" type "=" expr ";"
+```
+
+## 7. generic syntax
+
+### 7.1 generic parameter list
+
+```text
+genericparamlist =
+    "[" genericparam ("," genericparam)* ","? "]"
+
+genericparam =
+    ident traitboundlist?
+```
+
+```text
+traitboundlist =
+    ":" traitbound ("+" traitbound)*
+
+traitbound =
+    typepath
 ```
 
 示例：
 
 ```s
-func max[T: Ord](T a, T b) T
-func copy_pair[T: Copy + Clone](T a, T b) (T, T)
+func max[t: ord](t a, t b) t
+func copy_pair[t: copy + clone](t a, t b) (t, t)
 ```
 
-### 7.2 Where Clause
+### 7.2 where clause
 
 ```text
-WhereClause =
-    "where" WherePredicate ("," WherePredicate)* ","?
+whereclause =
+    "where" wherepredicate ("," wherepredicate)* ","?
 
-WherePredicate =
-    Type ":" TraitBound ("+" TraitBound)*
+wherepredicate =
+    type ":" traitbound ("+" traitbound)*
 ```
 
-`where` 子句用于较复杂的约束表达。Draft 0.1 固定方向，具体排版规则由 formatter 决定。
+`where` 子句用于较复杂的约束表达。draft 0.1 固定方向，具体排版规则由 formatter 决定。
 
-### 7.3 Generic Arguments
+### 7.3 generic arguments
 
 ```text
-GenericArgList =
-    "[" Type ("," Type)* ","? "]"
+genericarglist =
+    "[" type ("," type)* ","? "]"
 ```
 
 示例：
 
 ```s
-Vec[int32] v
-Result[string, IoError] r
+vec[int32] v
+result[string, ioerror] r
 ```
 
-## 8. Types
+## 8. types
 
-### 8.1 Type Grammar
+### 8.1 type grammar
 
 ```text
-Type =
-    RefType
-  | SliceType
-  | ArrayType
-  | TupleType
-  | FunctionType
-  | TypePath
-  | "(" Type ")"
+type =
+    reftype
+  | slicetype
+  | arraytype
+  | tupletype
+  | functiontype
+  | typepath
+  | "(" type ")"
 ```
 
-### 8.2 Reference Types
+### 8.2 reference types
 
 ```text
-RefType =
-    "&" "mut"? Type
+reftype =
+    "&" "mut"? type
 ```
 
-### 8.3 Slice and Array Types
+### 8.3 slice and array types
 
 ```text
-SliceType =
-    "[" "]" Type
+slicetype =
+    "[" "]" type
 
-ArrayType =
-    "[" Type ";" ConstExpr "]"
+arraytype =
+    "[" type ";" constexpr "]"
 ```
 
-### 8.4 Tuple Types
+### 8.4 tuple types
 
 ```text
-TupleType =
-    "(" TypeList? ")"
+tupletype =
+    "(" typelist? ")"
 
-TypeList =
-    Type ("," Type)* ","?
+typelist =
+    type ("," type)* ","?
 ```
 
-### 8.5 Function Types
+### 8.5 function types
 
 ```text
-FunctionType =
-    "func" "(" TypeList? ")" " " Type
+functiontype =
+    "func" "(" typelist? ")" " " type
 ```
 
-### 8.6 Paths
+### 8.6 paths
 
 ```text
-TypePath =
-    IDENT ("." IDENT)* GenericArgList?
+typepath =
+    ident ("." ident)* genericarglist?
 
-TraitRef =
-    TypePath
+traitref =
+    typepath
 ```
 
-## 9. Statements
+## 9. statements
 
 ```text
-Stmt =
-    LetStmt
-  | VarStmt
-  | ExprStmt
-  | SemiStmt
-  | ReturnStmt
-  | BreakStmt
-  | ContinueStmt
+stmt =
+    letstmt
+  | varstmt
+  | exprstmt
+  | semistmt
+  | returnstmt
+  | breakstmt
+  | continuestmt
 ```
 
-### 9.1 Let and Var Statements
+### 9.1 let and var statements
 
 ```text
-LetStmt =
-    "let" Pattern TypeAnnotation? ("=" Expr)? ";"
+letstmt =
+    "let" pattern typeannotation? ("=" expr)? ";"
 
-VarStmt =
-    "var" Pattern TypeAnnotation? ("=" Expr)? ";"
+varstmt =
+    "var" pattern typeannotation? ("=" expr)? ";"
 
-TypeAnnotation =
-    ":" Type
+typeannotation =
+    ":" type
 ```
 
-Draft 0.1 允许无初始化绑定是否最终保留，属于后续实现策略议题；若保留，编译器必须确保值在读取前已初始化。
+draft 0.1 允许无初始化绑定是否最终保留，属于后续实现策略议题；若保留，编译器必须确保值在读取前已初始化。
 
-### 9.2 Expression Statements
+### 9.2 expression statements
 
 ```text
-ExprStmt =
-    Expr
+exprstmt =
+    expr
 
-SemiStmt =
-    Expr ";"
+semistmt =
+    expr ";"
 ```
 
 约定：
@@ -451,36 +451,36 @@ SemiStmt =
 - 块内最后一个无分号表达式可作为块值
 - 带分号的表达式语句值为 `()`
 
-### 9.3 Control Transfer Statements
+### 9.3 control transfer statements
 
 ```text
-ReturnStmt   = "return" Expr? ";"
-BreakStmt    = "break" Expr? ";"
-ContinueStmt = "continue" ";"
+returnstmt   = "return" expr? ";"
+breakstmt    = "break" expr? ";"
+continuestmt = "continue" ";"
 ```
 
-## 10. Block Expressions
+## 10. block expressions
 
 ```text
-BlockExpr =
-    "{" Stmt* FinalExpr? "}"
+blockexpr =
+    "{" stmt* finalexpr? "}"
 
-FinalExpr =
-    Expr
+finalexpr =
+    expr
 ```
 
 块既是语句容器，也是表达式。
 
-## 11. Expressions
+## 11. expressions
 
-### 11.1 Expression Categories
+### 11.1 expression categories
 
 ```text
-Expr =
-    AssignmentExpr
+expr =
+    assignmentexpr
 ```
 
-### 11.2 Precedence Overview
+### 11.2 precedence overview
 
 从低到高：
 
@@ -496,59 +496,59 @@ Expr =
 10. postfix
 11. primary
 
-### 11.3 Assignment
+### 11.3 assignment
 
 ```text
-AssignmentExpr =
-    LogicalOrExpr
-  | UnaryExpr "=" AssignmentExpr
+assignmentexpr =
+    logicalorexpr
+  | unaryexpr "=" assignmentexpr
 ```
 
 左值是否合法由语义层检查。
 
-### 11.4 Logical Operators
+### 11.4 logical operators
 
 ```text
-LogicalOrExpr  = LogicalAndExpr ("||" LogicalAndExpr)*
-LogicalAndExpr = EqualityExpr ("&&" EqualityExpr)*
+logicalorexpr  = logicalandexpr ("||" logicalandexpr)*
+logicalandexpr = equalityexpr ("&&" equalityexpr)*
 ```
 
-### 11.5 Equality and Comparison
+### 11.5 equality and comparison
 
 ```text
-EqualityExpr =
-    CompareExpr (("==" | "!=") CompareExpr)*
+equalityexpr =
+    compareexpr (("==" | "!=") compareexpr)*
 
-CompareExpr =
-    RangeExpr (("<" | "<=" | ">" | ">=") RangeExpr)*
+compareexpr =
+    rangeexpr (("<" | "<=" | ">" | ">=") rangeexpr)*
 ```
 
-### 11.6 Range
+### 11.6 range
 
 ```text
-RangeExpr =
-    AddExpr ((".." | "..=") AddExpr)?
+rangeexpr =
+    addexpr ((".." | "..=") addexpr)?
 ```
 
-### 11.7 Additive and Multiplicative
+### 11.7 additive and multiplicative
 
 ```text
-AddExpr =
-    MulExpr (("+" | "-") MulExpr)*
+addexpr =
+    mulexpr (("+" | "-") mulexpr)*
 
-MulExpr =
-    UnaryExpr (("*" | "/" | "%") UnaryExpr)*
+mulexpr =
+    unaryexpr (("*" | "/" | "%") unaryexpr)*
 ```
 
-### 11.8 Unary
+### 11.8 unary
 
 ```text
-UnaryExpr =
-    PostfixExpr
-  | ("!" | "-" | "&") UnaryExpr
-  | "&" "mut" UnaryExpr
-  | "*" UnaryExpr
-  | "unsafe" BlockExpr
+unaryexpr =
+    postfixexpr
+  | ("!" | "-" | "&") unaryexpr
+  | "&" "mut" unaryexpr
+  | "*" unaryexpr
+  | "unsafe" blockexpr
 ```
 
 说明：
@@ -556,254 +556,254 @@ UnaryExpr =
 - `*` 作为解引用操作的合法性由类型和安全规则决定
 - `unsafe` 作为表达式前缀时引入不安全块
 
-### 11.9 Postfix
+### 11.9 postfix
 
 ```text
-PostfixExpr =
-    PrimaryExpr PostfixOp*
+postfixexpr =
+    primaryexpr postfixop*
 
-PostfixOp =
-    CallSuffix
-  | MemberSuffix
-  | IndexSuffix
-  | TrySuffix
+postfixop =
+    callsuffix
+  | membersuffix
+  | indexsuffix
+  | trysuffix
 ```
 
 ```text
-CallSuffix   = "(" ArgList? ")"
-MemberSuffix = "." IDENT
-IndexSuffix  = "[" Expr "]"
-TrySuffix    = "?"
+callsuffix   = "(" arglist? ")"
+membersuffix = "." ident
+indexsuffix  = "[" expr "]"
+trysuffix    = "?"
 
-ArgList =
-    Expr ("," Expr)* ","?
+arglist =
+    expr ("," expr)* ","?
 ```
 
-### 11.10 Primary Expressions
+### 11.10 primary expressions
 
 ```text
-PrimaryExpr =
-    Literal
-  | PathExpr
-  | TupleExpr
-  | ArrayExpr
-  | StructExpr
-  | BlockExpr
-  | IfExpr
-  | WhileExpr
-  | ForExpr
-  | SwitchExpr
-  | "(" Expr ")"
+primaryexpr =
+    literal
+  | pathexpr
+  | tupleexpr
+  | arrayexpr
+  | structexpr
+  | blockexpr
+  | ifexpr
+  | whileexpr
+  | forexpr
+  | switchexpr
+  | "(" expr ")"
 ```
 
-### 11.11 Path Expressions
+### 11.11 path expressions
 
 ```text
-PathExpr =
-    IDENT ("." IDENT)* GenericArgList?
+pathexpr =
+    ident ("." ident)* genericarglist?
 ```
 
-### 11.12 Tuple and Array Expressions
+### 11.12 tuple and array expressions
 
 ```text
-TupleExpr =
-    "(" ExprList? ")"
+tupleexpr =
+    "(" exprlist? ")"
 
-ArrayExpr =
-    "[" ExprList? "]"
+arrayexpr =
+    "[" exprlist? "]"
 
-ExprList =
-    Expr ("," Expr)* ","?
+exprlist =
+    expr ("," expr)* ","?
 ```
 
-### 11.13 Struct Expressions
+### 11.13 struct expressions
 
 ```text
-StructExpr =
-    TypePath "{" FieldInitList? "}"
+structexpr =
+    typepath "{" fieldinitlist? "}"
 
-FieldInitList =
-    FieldInit ("," FieldInit)* ","?
+fieldinitlist =
+    fieldinit ("," fieldinit)* ","?
 
-FieldInit =
-    IDENT ":" Expr
-  | IDENT
+fieldinit =
+    ident ":" expr
+  | ident
 ```
 
-### 11.14 If Expression
+### 11.14 if expression
 
 ```text
-IfExpr =
-    "if" Expr BlockExpr ("else" ElseBranch)?
+ifexpr =
+    "if" expr blockexpr ("else" elsebranch)?
 
-ElseBranch =
-    BlockExpr
-  | IfExpr
+elsebranch =
+    blockexpr
+  | ifexpr
 ```
 
-### 11.15 While Expression
+### 11.15 while expression
 
 ```text
-WhileExpr =
-    "while" Expr BlockExpr
+whileexpr =
+    "while" expr blockexpr
 ```
 
-### 11.16 For Expression
+### 11.16 for expression
 
 ```text
-ForExpr =
-    "for" Pattern "in" Expr BlockExpr
+forexpr =
+    "for" pattern "in" expr blockexpr
 ```
 
-`for` 依赖 `in` 关键语义，但 `in` 是否作为保留关键字还是上下文关键字，可由 lexer/parser 联合决定。Draft 0.1 建议将其视为上下文关键字。
+`for` 依赖 `in` 关键语义，但 `in` 是否作为保留关键字还是上下文关键字，可由 lexer/parser 联合决定。draft 0.1 建议将其视为上下文关键字。
 
-### 11.17 Match Expression
+### 11.17 match expression
 
 ```text
-SwitchExpr =
-    "switch" Expr "{" SwitchArmList? "}"
+switchexpr =
+    "switch" expr "{" switcharmlist? "}"
 
-SwitchArmList =
-    SwitchArm ("," SwitchArm)* ","?
+switcharmlist =
+    switcharm ("," switcharm)* ","?
 
-SwitchArm =
-    Pattern MatchGuard? ":" Expr
+switcharm =
+    pattern matchguard? ":" expr
 
-MatchGuard =
-    "if" Expr
+matchguard =
+    "if" expr
 ```
 
-## 12. Patterns
+## 12. patterns
 
-### 12.1 Pattern Grammar
+### 12.1 pattern grammar
 
 ```text
-Pattern =
-    WildcardPattern
-  | BindingPattern
-  | LiteralPattern
-  | TuplePattern
-  | ArrayPattern
-  | StructPattern
-  | EnumPattern
-  | RefPattern
+pattern =
+    wildcardpattern
+  | bindingpattern
+  | literalpattern
+  | tuplepattern
+  | arraypattern
+  | structpattern
+  | enumpattern
+  | refpattern
 ```
 
-### 12.2 Basic Patterns
+### 12.2 basic patterns
 
 ```text
-WildcardPattern = "_"
+wildcardpattern = "_"
 
-BindingPattern =
-    "mut"? IDENT
+bindingpattern =
+    "mut"? ident
 
-LiteralPattern =
-    Literal
+literalpattern =
+    literal
 ```
 
-### 12.3 Tuple and Array Patterns
+### 12.3 tuple and array patterns
 
 ```text
-TuplePattern =
-    "(" PatternList? ")"
+tuplepattern =
+    "(" patternlist? ")"
 
-ArrayPattern =
-    "[" PatternList? "]"
+arraypattern =
+    "[" patternlist? "]"
 
-PatternList =
-    Pattern ("," Pattern)* ","?
+patternlist =
+    pattern ("," pattern)* ","?
 ```
 
-### 12.4 Struct and Enum Patterns
+### 12.4 struct and enum patterns
 
 ```text
-StructPattern =
-    TypePath "{" PatternFieldList? "}"
+structpattern =
+    typepath "{" patternfieldlist? "}"
 
-PatternFieldList =
-    PatternField ("," PatternField)* ","?
+patternfieldlist =
+    patternfield ("," patternfield)* ","?
 
-PatternField =
-    IDENT ":" Pattern
-  | IDENT
+patternfield =
+    ident ":" pattern
+  | ident
 ```
 
 ```text
-EnumPattern =
-    TypePath
-  | TypePath "(" PatternList? ")"
-  | TypePath "{" PatternFieldList? "}"
+enumpattern =
+    typepath
+  | typepath "(" patternlist? ")"
+  | typepath "{" patternfieldlist? "}"
 ```
 
-### 12.5 Reference Patterns
+### 12.5 reference patterns
 
 ```text
-RefPattern =
-    "&" "mut"? Pattern
+refpattern =
+    "&" "mut"? pattern
 ```
 
-## 13. Literals
+## 13. literals
 
 ```text
-Literal =
-    INT_LITERAL
-  | FLOAT_LITERAL
-  | STRING_LITERAL
-  | CHAR_LITERAL
+literal =
+    int_literal
+  | float_literal
+  | string_literal
+  | char_literal
   | "true"
   | "false"
 ```
 
-## 14. Function Parameters and Receivers
+## 14. function parameters and receivers
 
-### 14.1 Parameters
+### 14.1 parameters
 
 参数语法复用普通模式：
 
 ```text
-Param = Pattern ":" Type
+param = pattern ":" type
 ```
 
-### 14.2 Method Receivers
+### 14.2 method receivers
 
-Draft 0.1 推荐在语法层把方法接收者视为参数列表中的特殊首参数，允许以下写法：
+draft 0.1 推荐在语法层把方法接收者视为参数列表中的特殊首参数，允许以下写法：
 
 ```text
-Receiver =
+receiver =
     "self"
   | "&" "self"
   | "&" "mut" "self"
 ```
 
 ```text
-MethodParam =
-    Receiver
-  | Param
+methodparam =
+    receiver
+  | param
 ```
 
-若函数位于 `impl` 块中，则首个参数可以是 `Receiver`。
+若函数位于 `impl` 块中，则首个参数可以是 `receiver`。
 
-## 15. Semicolons and Newlines
+## 15. semicolons and newlines
 
-S 的基本规则如下：
+s 的基本规则如下：
 
 - 语句分隔主要依靠显式分号
 - 块中的最后一个表达式可以省略分号，以产生块值
 - 顶层声明之间不依赖换行作为语法边界
 
-换行不参与语义，除非后续版本引入自动分号推断。Draft 0.1 不建议依赖自动分号插入。
+换行不参与语义，除非后续版本引入自动分号推断。draft 0.1 不建议依赖自动分号插入。
 
-## 16. Ambiguity Notes
+## 16. ambiguity notes
 
 以下语法点在实现时需要特别注意：
 
 1. 泛型参数列表 `[]` 与数组/切片语法都使用方括号，parser 需要依赖上下文区分
-2. `TypePath "{" ... "}"` 可能是结构体构造，也可能与块表达式相邻，需要按表达式上下文解析
-3. `PathExpr` 与 `EnumPattern` 在 `switch` 中共享前缀，需要在模式上下文解析
-4. `for Pattern in Expr` 中的 `in` 建议作为上下文关键字处理
+2. `typepath "{" ... "}"` 可能是结构体构造，也可能与块表达式相邻，需要按表达式上下文解析
+3. `pathexpr` 与 `enumpattern` 在 `switch` 中共享前缀，需要在模式上下文解析
+4. `for pattern in expr` 中的 `in` 建议作为上下文关键字处理
 5. 元组表达式与括号表达式需要依赖逗号区分
 
-## 17. Minimal Parser Scope
+## 17. minimal parser scope
 
 最小版本的 parser 建议优先支持：
 
@@ -824,22 +824,22 @@ S 的基本规则如下：
 - `async` / `await`
 - 更复杂的模式展开
 
-## 18. Open Questions
+## 18. open questions
 
 当前仍需进一步冻结的语法问题包括：
 
 1. 泛型统一使用 `[]` 是否会与数组语法造成过高认知负担
 2. 元组是否进入最小语言版本
-3. 是否引入属性语法，例如 `@repr(C)` 或 `#[derive(...)]`
+3. 是否引入属性语法，例如 `@repr(c)` 或 `#[derive(...)]`
 4. 闭包字面量的最终语法形式
 5. `unsafe` 是否仅支持块，还是也支持函数/trait 级别修饰
 6. 是否为模式匹配引入更丰富的 `..` 模式和守卫语法
 
-## 19. Summary
+## 19. summary
 
-这份语法规范的目的不是一次性把 S 的每个字符都锁死，而是先把最关键的表面结构冻结到足以实现 parser 和 formatter 的程度。
+这份语法规范的目的不是一次性把 s 的每个字符都锁死，而是先把最关键的表面结构冻结到足以实现 parser 和 formatter 的程度。
 
-当前 Draft 0.1 已经固定了这些核心方向：
+当前 draft 0.1 已经固定了这些核心方向：
 
 - 明确的顶层声明结构
 - 明确的类型与泛型写法
@@ -852,4 +852,4 @@ S 的基本规则如下：
 - 闭包语法
 - 属性与派生语法
 - `async` / `await`
-- 完整 EBNF 和 lexer token 规范
+- 完整 ebnf 和 lexer token 规范

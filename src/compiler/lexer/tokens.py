@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import enum, auto
 
 
-class TokenKind(Enum):
-    IDENT = auto()
-    INT = auto()
-    STRING = auto()
-    KEYWORD = auto()
-    SYMBOL = auto()
-    EOF = auto()
+class tokenkind(enum):
+    ident = auto()
+    int = auto()
+    string = auto()
+    keyword = auto()
+    symbol = auto()
+    eof = auto()
 
 
-KEYWORDS = {
+keywords = {
     "package",
     "use",
     "as",
@@ -47,15 +47,15 @@ KEYWORDS = {
 }
 
 
-@dataclass(frozen=True)
-class Token:
-    kind: TokenKind
+@dataclass(frozen=true)
+class token:
+    kind: tokenkind
     value: str
     line: int
     column: int
 
 
-def dump_tokens(tokens: list[Token]) -> str:
+def dump_tokens(tokens: list[token]) -> str:
     return "\n".join(
         f"{token.line}:{token.column} {token.kind.name} {token.value}" for token in tokens
     )

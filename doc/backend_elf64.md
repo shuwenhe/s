@@ -1,28 +1,28 @@
-# Minimal `backend_elf64` Design
+# minimal `backend_elf64` design
 
-This document defines the smallest executable backend we want for
+this document defines the smallest executable backend we want for
 [`backend_elf64.s`](/app/s/src/cmd/compile/internal/backend_elf64.s).
 
-The goal is not a general-purpose optimizer or a full code generator.
-The goal is to make the S compiler's own `build` path real with the
-smallest Linux `x86_64` ELF backend that can compile the current examples.
+the goal is not a general-purpose optimizer or a full code generator.
+the goal is to make the s compiler's own `build` path real with the
+smallest linux `x86_64` elf backend that can compile the current examples.
 
-## Target
+## target
 
-- OS: Linux
-- Architecture: `x86_64`
-- Output: static ELF executable
-- Entry: `_start`
-- Toolchain contract: emit assembly, then invoke host `as` and `ld`
+- os: linux
+- architecture: `x86_64`
+- output: static elf executable
+- entry: `_start`
+- toolchain contract: emit assembly, then invoke host `as` and `ld`
 
-## MVP Scope
+## mvp scope
 
-The first executable version only needs to support the subset already used by:
+the first executable version only needs to support the subset already used by:
 
 - [hello.s](/app/s/misc/examples/s/hello.s)
 - [sum.s](/app/s/misc/examples/s/sum.s)
 
-That means:
+that means:
 
 - `package main`
 - `func main()`
@@ -38,26 +38,26 @@ That means:
 - `eprintln(...)`
 - integer return from `main`
 
-Anything outside this subset can return `BackendError` during MVP.
+anything outside this subset can return `backenderror` during mvp.
 
-## Backend Strategy
+## backend strategy
 
-The minimal backend should stay intentionally simple:
+the minimal backend should stay intentionally simple:
 
-1. Evaluate the current front-end AST with a tiny compile-time executor
-2. Record observable effects as a linear program
-3. Lower that linear program to Linux syscalls in assembly
-4. Call `as` and `ld`
+1. evaluate the current front-end ast with a tiny compile-time executor
+2. record observable effects as a linear program
+3. lower that linear program to linux syscalls in assembly
+4. call `as` and `ld`
 
-This is the same shape as the current Python backend in
+this is the same shape as the current python backend in
 [`backend_elf64.py`](/app/s/src/compiler/backend_elf64.py), but rewritten as an
-explicit S-side backend contract.
+explicit s-side backend contract.
 
-## Why This Shape
+## why this shape
 
-This is the fastest path to a real self-hosted `build`.
+this is the fastest path to a real self-hosted `build`.
 
-Instead of first building a full register allocator, instruction selector,
+instead of first building a full register allocator, instruction selector,
 stack frame layout, and relocation model, we start with a backend that only
 needs to emit:
 
@@ -65,73 +65,73 @@ needs to emit:
 - write-to-stderr
 - process exit
 
-That is enough for the current example programs.
+that is enough for the current example programs.
 
-## Execution Model
+## execution model
 
-The MVP backend has two layers.
+the mvp backend has two layers.
 
-### Layer 1: Compile-Time Executor
+### layer 1: compile-time executor
 
-It walks the checked AST and produces a linear list of operations:
+it walks the checked ast and produces a linear list of operations:
 
-- `WriteStdout(text)`
-- `WriteStderr(text)`
-- `Exit(code)`
+- `writestdout(text)`
+- `writestderr(text)`
+- `exit(code)`
 
-Suggested S-side shape:
+suggested s-side shape:
 
 ```s
-enum ProgramOp {
-    WriteStdout(WriteOp),
-    WriteStderr(WriteOp),
-    Exit(ExitOp),
+enum programop {
+    writestdout(writeop),
+    writestderr(writeop),
+    exit(exitop),
 }
 ```
 
-Supporting structs:
+supporting structs:
 
 ```s
-struct WriteOp {
+struct writeop {
     string text,
 }
 
-struct ExitOp {
+struct exitop {
     int code,
 }
 ```
 
-The executor only needs an environment of local integer/string values.
+the executor only needs an environment of local integer/string values.
 
-Suggested value model:
+suggested value model:
 
 ```s
-enum Value {
-    Int(int),
+enum value {
+    int(int),
     string(string),
-    Bool(bool),
-    Unit(()),
+    bool(bool),
+    unit(()),
 }
 ```
 
-### Layer 2: Assembly Emitter
+### layer 2: assembly emitter
 
-It lowers those `ProgramOp` values into assembly text.
+it lowers those `programop` values into assembly text.
 
-For each write operation:
+for each write operation:
 
 - put payload bytes into `.data`
 - emit syscall `write(1|2, ptr, len)`
 
-For exit:
+for exit:
 
 - emit syscall `exit(code)`
 
-## Assembly Contract
+## assembly contract
 
-The generated assembly can stay extremely small.
+the generated assembly can stay extremely small.
 
-Expected structure:
+expected structure:
 
 ```asm
 .global _start
@@ -145,7 +145,7 @@ _start:
     mov $1, %rax
     mov $1, %rdi
     lea message_0(%rip), %rsi
-    mov $LEN, %rdx
+    mov $len, %rdx
     syscall
 
     mov $60, %rax
@@ -153,14 +153,14 @@ _start:
     syscall
 ```
 
-Syscall numbers:
+syscall numbers:
 
 - `1`: `write`
 - `60`: `exit`
 
-## Required S-Side Functions
+## required s-side functions
 
-The backend file should eventually split into these functions:
+the backend file should eventually split into these functions:
 
 - `build_executable(source, output_path)`
 - `compile_program(source)`
@@ -173,28 +173,28 @@ The backend file should eventually split into these functions:
 - `emit_text_section(ops)`
 - `assemble_and_link(asm_text, output_path)`
 
-## Host Interface
+## host interface
 
-There is one unavoidable host boundary in the MVP:
+there is one unavoidable host boundary in the mvp:
 
 - writing temporary assembly/object files
 - running `as`
 - running `ld`
 
-So the S backend should depend on a tiny standard-library host contract:
+so the s backend should depend on a tiny standard-library host contract:
 
-- `std.fs.WriteTextFile(path, contents)`
-- `std.process.RunProcess(argv)`
-- `std.fs.MakeTempDir(prefix)`
+- `std.fs.writetextfile(path, contents)`
+- `std.process.runprocess(argv)`
+- `std.fs.maketempdir(prefix)`
 
-These should be modeled as runtime intrinsics or standard-library host calls,
-not hidden logic inside the parser or CLI.
+these should be modeled as runtime intrinsics or standard-library host calls,
+not hidden logic inside the parser or cli.
 
-## Semantic Restrictions
+## semantic restrictions
 
-The backend should reject unsupported constructs explicitly.
+the backend should reject unsupported constructs explicitly.
 
-Examples:
+examples:
 
 - non-`main` entry expectations
 - unsupported calls other than `println` / `eprintln`
@@ -202,7 +202,7 @@ Examples:
 - unsupported non-constant side effects
 - unsupported heap values or closures
 
-That means MVP failure mode should be:
+that means mvp failure mode should be:
 
 ```text
 backend error: unsupported <feature>
@@ -210,67 +210,76 @@ backend error: unsupported <feature>
 
 not silent miscompilation.
 
-## Immediate Implementation Plan
+## immediate implementation plan
 
-### Phase 1
+### phase 1
 
-Match the current Python backend exactly:
+match the current python backend exactly:
 
 - evaluate `main`
 - collect stdout/stderr writes
 
-There is now also a native bootstrap runner in
+there is now also a native bootstrap runner in
 [`runner.s`](/app/s/src/runtime/runner.s) that proves the current
-`hello.s` / `sum.s` subset can be built without Python, while still staying far
-smaller than the eventual full S runtime.
+`hello.s` / `sum.s` subset can be built without python, while still staying far
+smaller than the eventual full s runtime.
 
-The current transitional native bootstrap template now lives under the backend
+the current transitional native bootstrap template now lives under the backend
 implementation itself at
 [`backend_elf64_runner_bootstrap.c`](/app/s/src/compiler/backend_elf64_runner_bootstrap.c),
 instead of under `runtime/`, so the bootstrap path is anchored in the backend
 rather than in runtime-specific scaffolding.
+
+the full script-level flow is documented in
+[`bootstrap_flow.md`](/app/s/doc/bootstrap_flow.md). in short:
+
+1. build `stage1` with `python3 -m compiler build` and `s_disable_selfhosted=1`
+2. pass that `stage1` compiler through `s_compiler`
+3. build `runner.s` without python fallback
+4. install the self-host launcher and native runner artifacts
+
 - collect exit code
 - emit one `.s`
 - invoke `as`
 - invoke `ld`
 
-### Phase 2
+### phase 2
 
-Remove direct AST interpretation assumptions:
+remove direct ast interpretation assumptions:
 
-- isolate a backend-side `Value`
-- isolate an explicit `ProgramOp`
+- isolate a backend-side `value`
+- isolate an explicit `programop`
 - isolate environment mutation helpers
 
-### Phase 3
+### phase 3
 
-Replace “compile-time execution” with a real lowerer:
+replace “compile-time execution” with a real lowerer:
 
-- lower AST/MIR to explicit backend ops
+- lower ast/mir to explicit backend ops
 - keep the same assembly emission path
 
-## Acceptance Criteria
+## acceptance criteria
 
-The MVP is complete when all of these are true:
+the mvp is complete when all of these are true:
 
 - `s build /app/s/misc/examples/s/hello.s -o /tmp/hello` succeeds
 - `/tmp/hello` prints `hello, world`
 - `s build /app/s/misc/examples/s/sum.s -o /tmp/s_sum` succeeds
 - `/tmp/s_sum` prints `5050`
-- unsupported constructs fail with `BackendError`
-- no Python-only backend logic is required to describe the backend algorithm
+- unsupported constructs fail with `backenderror`
+- no python-only backend logic is required to describe the backend algorithm
 
-## Current Gap
+## current gap
 
-Right now:
+right now:
 
 - [main.s](/app/s/src/cmd/compile/internal/main.s) already has a `build` command path
 - [backend_elf64.s](/app/s/src/cmd/compile/internal/backend_elf64.s) is still a stub
 - the runnable implementation still lives in
   [backend_elf64.py](/app/s/src/compiler/backend_elf64.py)
 
-So the next engineering step is straightforward:
+so the next engineering step is straightforward:
 
-move the algorithm from `backend_elf64.py` into explicit S-side functions,
-then leave only the host syscall/toolchain boundary in Python or runtime
+move the algorithm from `backend_elf64.py` into explicit s-side functions,
+then leave only the host syscall/toolchain boundary in python or runtime
 intrinsics until the runtime layer is ready.

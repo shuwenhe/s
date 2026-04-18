@@ -1,23 +1,23 @@
-# Runtime Bridge Dispatch
+# runtime bridge dispatch
 
-Version: Draft 0.1  
-Status: Working Draft
+version: draft 0.1  
+status: working draft
 
-## 1. Purpose
+## 1. purpose
 
-本文档定义从 S 侧 intrinsic 调用到 Python bridge 函数的最小映射层。
+本文档定义从 s 侧 intrinsic 调用到 python bridge 函数的最小映射层。
 
-目标不是立即执行完整 S 程序，而是先固定一层稳定协议：
+目标不是立即执行完整 s 程序，而是先固定一层稳定协议：
 
 ```text
-S source
-   intrinsic symbol in S code
-   host-side IntrinsicCall
-   Python bridge dispatch
+s source
+   intrinsic symbol in s code
+   host-side intrinsiccall
+   python bridge dispatch
    concrete host value
 ```
 
-## 2. Runtime Files
+## 2. runtime files
 
 当前相关文件：
 
@@ -27,9 +27,9 @@ S source
 - [hosted_frontend.py](/app/s/src/runtime/hosted_frontend.py)
 - [check_bridge.py](/app/s/src/runtime/check_bridge.py)
 
-## 3. Call Model
+## 3. call model
 
-S 侧当前把 intrinsic 写成：
+s 侧当前把 intrinsic 写成：
 
 ```s
 extern "intrinsic" func __string_slice(string text, int32 start, int32 end) string
@@ -38,7 +38,7 @@ extern "intrinsic" func __string_slice(string text, int32 start, int32 end) stri
 在宿主桥接层，这会映射为：
 
 ```python
-IntrinsicCall(
+intrinsiccall(
     symbol="__string_slice",
     args=("hello", 1, 4),
     type_args=(),
@@ -51,17 +51,17 @@ IntrinsicCall(
 invoke_intrinsic("__string_slice", "hello", 1, 4)
 ```
 
-## 4. Symbol Mapping
+## 4. symbol mapping
 
 当前 dispatcher 采用“符号名直接映射”的策略：
 
-- S 侧 intrinsic 名字
-- Python bridge registry key
-- dispatcher `IntrinsicCall.symbol`
+- s 侧 intrinsic 名字
+- python bridge registry key
+- dispatcher `intrinsiccall.symbol`
 
 三者必须一致。
 
-The manifest is now the ABI source of truth. The Python bridge must switch it at
+the manifest is now the abi source of truth. the python bridge must switch it at
 import time.
 
 当前已接通的符号包括：
@@ -87,14 +87,14 @@ import time.
 - `__result_panic_unwrap`
 - `__result_panic_unwrap_err`
 
-## 5. Argument Order
+## 5. argument order
 
-参数顺序采用“S 声明顺序即 host 调用顺序”的最小规则。
+参数顺序采用“s 声明顺序即 host 调用顺序”的最小规则。
 
 例如：
 
 ```s
-extern "intrinsic" func __vec_array_set[T](Array[T] array, int32 index, T value) ()
+extern "intrinsic" func __vec_array_set[t](array[t] array, int32 index, t value) ()
 ```
 
 对应：
@@ -103,42 +103,42 @@ extern "intrinsic" func __vec_array_set[T](Array[T] array, int32 index, T value)
 invoke_intrinsic("__vec_array_set", array, index, value)
 ```
 
-## 6. Host Value Encoding
+## 6. host value encoding
 
-当前宿主值采用最小 Python 编码：
+当前宿主值采用最小 python 编码：
 
-- `string`  Python `str`
-- `int32`  Python `int`
-- `Array[T]`  `HostArray`
-- `()`  `None`
+- `string`  python `str`
+- `int32`  python `int`
+- `array[t]`  `hostarray`
+- `()`  `none`
 
-For the std-layer host intrinsics, the current bridge uses a success-path model:
+for the std-layer host intrinsics, the current bridge uses a success-path model:
 
-- `__host_read_to_string`  Python `str`
-- `__host_make_temp_dir`  Python `str`
-- `__host_write_text_file`  `None`
-- `__host_run_process`  `None`
-- `__host_args`  Python `list[str]`
-- `__host_println` / `__host_eprintln`  `None`
-- `__host_exit`  raises `RuntimeExit`
+- `__host_read_to_string`  python `str`
+- `__host_make_temp_dir`  python `str`
+- `__host_write_text_file`  `none`
+- `__host_run_process`  `none`
+- `__host_args`  python `list[str]`
+- `__host_println` / `__host_eprintln`  `none`
+- `__host_exit`  raises `runtimeexit`
 
-S declarations currently expose these as `Result[...]` for `std.fs` and
-`std.process`, but the Python prototype does not yet materialize a host-side
-`Result[T, E]` wrapper. Instead, success returns the payload and failures raise
-`RuntimeTrap`.
+s declarations currently expose these as `result[...]` for `std.fs` and
+`std.process`, but the python prototype does not yet materialize a host-side
+`result[t, e]` wrapper. instead, success returns the payload and failures raise
+`runtimetrap`.
 
 后续如需支持：
 
-- `Vec[T]`
-- `Option[T]`
-- `Result[T, E]`
-- `Box[T]`
+- `vec[t]`
+- `option[t]`
+- `result[t, e]`
+- `box[t]`
 
 可以继续引入更明确的 host wrapper 类型。
 
-## 7. Error Model
+## 7. error model
 
-桥接层错误统一抛出 `RuntimeTrap`。
+桥接层错误统一抛出 `runtimetrap`。
 
 包括：
 
@@ -148,7 +148,7 @@ S declarations currently expose these as `Result[...]` for `std.fs` and
 - 数组越界
 - unwrap 失败
 
-## 8. Current Validation
+## 8. current validation
 
 当前可直接运行：
 
@@ -176,24 +176,24 @@ python3 /app/s/src/runtime/check_bridge.py
 python3 /app/s/src/runtime/validate_outputs.py all
 ```
 
-现在已经不再直接走 Python 原型 lexer，而是通过 [hosted_frontend.py](/app/s/src/runtime/hosted_frontend.py) 中的 `HostedLexer` 真实产出并执行 `IntrinsicCall`，再完成 `lex_dump` / `ast_dump` 的 golden 对比。
+现在已经不再直接走 python 原型 lexer，而是通过 [hosted_frontend.py](/app/s/src/runtime/hosted_frontend.py) 中的 `hostedlexer` 真实产出并执行 `intrinsiccall`，再完成 `lex_dump` / `ast_dump` 的 golden 对比。
 
 当前 parser 侧也已经开始接入这条链：
 
-- `HostedParser._parse_pattern`
-- `HostedParser._parse_use_path`
-- `HostedParser._parse_path`
-- `HostedParser._path_contains_dot`
-- `HostedParser._starts_with_upper`
-- `HostedParser._join_strings`
-- `HostedParser._normalize_type_text`
-- `HostedParser._parse_type_text`
-- `HostedParser._parse_bracket_group`
-- `HostedParser._expect_keyword`
-- `HostedParser._expect_symbol`
-- `HostedParser._expect_ident`
+- `hostedparser._parse_pattern`
+- `hostedparser._parse_use_path`
+- `hostedparser._parse_path`
+- `hostedparser._path_contains_dot`
+- `hostedparser._starts_with_upper`
+- `hostedparser._join_strings`
+- `hostedparser._normalize_type_text`
+- `hostedparser._parse_type_text`
+- `hostedparser._parse_bracket_group`
+- `hostedparser._expect_keyword`
+- `hostedparser._expect_symbol`
+- `hostedparser._expect_ident`
 
-这些 helper 现在会通过 `__runtime_len` / `__string_char_at` / `__string_concat` / `__string_replace` 产出并执行显式 `IntrinsicCall`，而不是直接依赖 Python 原生字符串语义。
+这些 helper 现在会通过 `__runtime_len` / `__string_char_at` / `__string_concat` / `__string_replace` 产出并执行显式 `intrinsiccall`，而不是直接依赖 python 原生字符串语义。
 
 另外，command 边界现在也已经开始进入统一执行计划：
 
@@ -202,22 +202,22 @@ python3 /app/s/src/runtime/validate_outputs.py all
 
 编译器后端当前也已经切到 std-layer host boundary：
 
-- [main.s](/app/s/src/cmd/compile/internal/main.s) 通过 `std.fs.ReadToString`
+- [main.s](/app/s/src/cmd/compile/internal/main.s) 通过 `std.fs.readtostring`
 - [backend_elf64.s](/app/s/src/cmd/compile/internal/backend_elf64.s) 通过
-  `std.fs.WriteTextFile` / `std.fs.MakeTempDir` / `std.process.RunProcess`
+  `std.fs.writetextfile` / `std.fs.maketempdir` / `std.process.runprocess`
 
-命令入口 ABI 也已经有了 S 侧包装：
+命令入口 abi 也已经有了 s 侧包装：
 
 - [env.s](/app/s/src/env/env.s) 通过 `__host_args`
 - [process.s](/app/s/src/process/process.s) 通过 `__host_exit`
-- [s.s](/app/s/src/cmd/s/main.s) 通过 `Args() compiler.main(args) Exit(code)`
+- [s.s](/app/s/src/cmd/s/main.s) 通过 `args() compiler.main(args) exit(code)`
 
-这意味着 `ExecutionPlan` 已经不只记录 parser/lexer 内部 intrinsic，也开始覆盖宿主 IO 边界。
+这意味着 `executionplan` 已经不只记录 parser/lexer 内部 intrinsic，也开始覆盖宿主 io 边界。
 
-## 9. Next Step
+## 9. next step
 
 下一步最值得推进的是：
 
-1. 让 parser 的更多辅助路径和后续 lowering 阶段也显式产出 `IntrinsicCall`
-2. 给 `Vec`、`Option`、`Result` 增加 host wrapper
+1. 让 parser 的更多辅助路径和后续 lowering 阶段也显式产出 `intrinsiccall`
+2. 给 `vec`、`option`、`result` 增加 host wrapper
 3. 让 `read_to_string` / `println` 这类宿主边界也进入统一执行计划

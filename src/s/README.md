@@ -1,61 +1,61 @@
-# S Language Packages
+# s language packages
 
-This directory is the reusable language-facing surface for S. It plays the role
-that `src/go/*` plays in Go: public syntax and parsing building blocks that can
+this directory is the reusable language-facing surface for s. it plays the role
+that `src/go/*` plays in go: public syntax and parsing building blocks that can
 be shared by the compiler and other tools.
 
-Current implementation files:
+current implementation files:
 
 - `ast.s`
 - `tokens.s`
 - `lexer.s`
 - `parser.s`
 
-## Current Public Entry Points
+## current public entry points
 
-The current public surface is intentionally small:
+the current public surface is intentionally small:
 
-- `TokenKind`
-- `Token`
+- `tokenkind`
+- `token`
 - `token_kind_name`
 - `dump_tokens`
 - `is_keyword`
-- `LexError`
-- `Lexer`
+- `lexerror`
+- `lexer`
 - `new_lexer`
-- `ParseError`
-- `Parser`
+- `parseerror`
+- `parser`
 - `parse_source`
 - `parse_tokens`
-- `SourceFile`
-- `UseDecl`
-- `Item`
-- `FunctionDecl`
-- `StructDecl`
-- `EnumDecl`
-- `TraitDecl`
-- `ImplDecl`
-- `Stmt`
-- `Expr`
-- `Pattern`
+- `sourcefile`
+- `usedecl`
+- `item`
+- `functiondecl`
+- `structdecl`
+- `enumdecl`
+- `traitdecl`
+- `impldecl`
+- `stmt`
+- `expr`
+- `pattern`
 - `dump_source_file`
 
-## Stable Contract For Phase 1
+## stable contract for phase 1
 
-These parts should be treated as stable during Phase 1:
+these parts should be treated as stable during phase 1:
 
 - `parse_source(source)` is the main parsing entry point
-- `parse_tokens(tokens)` is the token-to-AST entry point
+- `parse_tokens(tokens)` is the token-to-ast entry point
 - `new_lexer(source).tokenize()` is the lexer entry point
 - `dump_tokens(tokens)` keeps a one-token-per-line golden format
-- `SourceFile` stays the top-level syntax container with:
+- `sourcefile` stays the top-level syntax container with:
   - `package`
   - `uses`
   - `items`
 
-## Minimum Language Subset
+## minimum language subset
 
-Before broadening the language, the following source subset should stay stable:
+before broadening the language, the following source subset should stay stable:
 
 - top-level file shape: `package`, then `use`, then items
 - top-level items: `func`, `struct`, `enum`, `trait`, `impl`
@@ -63,54 +63,54 @@ Before broadening the language, the following source subset should stay stable:
 - expressions: literals, names, binary, call, member, index, block, `if`,
   `while`, and `switch`
 
-This is the subset that parser, semantic checking, build, and runtime support
-should protect first. The fuller contract lives in
+this is the subset that parser, semantic checking, build, and runtime support
+should protect first. the fuller contract lives in
 `/app/s/doc/minimum_language_subset.md`.
 
-## AST Model Summary
+## ast model summary
 
-The current AST is intentionally split into a few predictable layers:
+the current ast is intentionally split into a few predictable layers:
 
-- top level: `SourceFile  UseDecl + Item`
-- declarations: `FunctionDecl`, `StructDecl`, `EnumDecl`, `TraitDecl`, `ImplDecl`
-- statements: `Var`, `Assign`, `Increment`, `CFor`, `Return`, `Expr`
+- top level: `sourcefile  usedecl + item`
+- declarations: `functiondecl`, `structdecl`, `enumdecl`, `traitdecl`, `impldecl`
+- statements: `var`, `assign`, `increment`, `cfor`, `return`, `expr`
 - expressions: literals, names, borrow, binary, member, index, call, switch, if,
   while, for, and block
-- patterns: `Name`, `Wildcard`, `Variant`
+- patterns: `name`, `wildcard`, `variant`
 
-The repeated `inferred_type` field on expressions is intentional for now. It is
+the repeated `inferred_type` field on expressions is intentional for now. it is
 the current semantic-analysis attachment point, so it should not be removed
 until the compiler has a replacement type-carrying strategy.
 
-## Compiler Dependency Surface
+## compiler dependency surface
 
-The current compiler and command packages rely mainly on:
+the current compiler and command packages rely mainly on:
 
 - `parse_source`
 - `new_lexer`
 - `dump_tokens`
 - `dump_source_file`
-- `SourceFile`
+- `sourcefile`
 - expression, statement, item, and pattern node types consumed by semantic and
   backend code
 
-That means the highest-risk churn in `src/s` is:
+that means the highest-risk churn in `src/s` is:
 
-- changing `SourceFile`
-- renaming `Item` variants
-- renaming `Stmt` variants
-- renaming `Expr` variants
-- changing `Token` fields or `dump_tokens` output format
+- changing `sourcefile`
+- renaming `item` variants
+- renaming `stmt` variants
+- renaming `expr` variants
+- changing `token` fields or `dump_tokens` output format
 
-## Phase 1 Direction
+## phase 1 direction
 
-Short term:
+short term:
 
 - keep `ast.s`, `tokens.s`, `lexer.s`, and `parser.s` stable
-- avoid broad API expansion
+- avoid broad api expansion
 - move compiler-private helpers into `src/compiler` or `src/internal`
 
-Later:
+later:
 
-- split reusable APIs into subpackages such as `ast/`, `token/`, `parse/`,
+- split reusable apis into subpackages such as `ast/`, `token/`, `parse/`,
   `types/`, and `format/` once the current surface has settled

@@ -1,1 +1,1 @@
-"""Golden tests for the S compiler prototype."""
+"""golden tests for the s compiler prototype."""

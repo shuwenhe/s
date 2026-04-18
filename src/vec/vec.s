@@ -1,52 +1,52 @@
 package std.vec
 
-use std.option.Option
-use std.prelude.Box
+use std.option.option
+use std.prelude.box
 use std.prelude.box
 
-struct RawVec[T] {
-    Box[Array[T]] storage,
+struct raw_vec[t] {
+    box[array[t]] storage,
     int32 capacity,
 }
 
-struct Vec[T] {
-    RawVec[T] raw,
+struct vec[t] {
+    raw_vec[t] raw,
     int32 length,
 }
 
-func newVec[T]() Vec[T] {
-    withCapacity[T](4)
+func new_vec[t]() vec[t] {
+    with_capacity[t](4)
 }
 
-func withCapacity[T](int32 capacity) Vec[T] {
+func with_capacity[t](int32 capacity) vec[t] {
     var initial =
         if capacity > 0 {
             capacity
         } else {
             4
         }
-    Vec[T] {
-        raw: RawVec[T] {
-            storage: box(newArray[T](initial)),
+    vec[t] {
+        raw: raw_vec[t] {
+            storage: box(new_array[t](initial)),
             capacity: initial,
         },
         length: 0,
     }
 }
 
-impl Vec[T] {
-    func push(mut self, T value) () {
-        ensureCapacity(self, self.length + 1)
-        arraySet(self.raw.storage.value, self.length, value)
+impl vec[t] {
+    func push(mut self, t value) () {
+        ensure_capacity(self, self.length + 1)
+        array_set(self.raw.storage.value, self.length, value)
         self.length = self.length + 1
     }
 
-    func pop(mut self) Option[T] {
+    func pop(mut self) option[t] {
         if self.length == 0 {
-            return Option::None
+            return option::none
         }
         self.length = self.length - 1
-        Option::Some(arrayGet(self.raw.storage.value, self.length))
+        option::some(array_get(self.raw.storage.value, self.length))
     }
 
     func len(self) int32 {
@@ -57,22 +57,22 @@ impl Vec[T] {
         self.raw.capacity
     }
 
-    func isEmpty(self) bool {
+    func is_empty(self) bool {
         self.length == 0
     }
 
-    func get(self, int32 index) Option[T] {
+    func get(self, int32 index) option[t] {
         if index < 0 || index >= self.length {
-            return Option::None
+            return option::none
         }
-        Option::Some(arrayGet(self.raw.storage.value, index))
+        option::some(array_get(self.raw.storage.value, index))
     }
 
-    func set(mut self, int32 index, T value) bool {
+    func set(mut self, int32 index, t value) bool {
         if index < 0 || index >= self.length {
             return false
         }
-        arraySet(self.raw.storage.value, index, value)
+        array_set(self.raw.storage.value, index, value)
         true
     }
 
@@ -81,23 +81,23 @@ impl Vec[T] {
     }
 }
 
-func ensureCapacity[T](Vec[T] mut vec, int32 wanted) () {
+func ensure_capacity[t](vec[t] mut vec, int32 wanted) () {
     if wanted <= vec.raw.capacity {
         return
     }
 
-    var next = growCapacity(vec.raw.capacity, wanted)
-    var nextStorage = newArray[T](next)
+    var next = grow_capacity(vec.raw.capacity, wanted)
+    var next_storage = new_array[t](next)
     var i = 0
     while i < vec.length {
-        arraySet(nextStorage, i, arrayGet(vec.raw.storage.value, i))
+        array_set(next_storage, i, array_get(vec.raw.storage.value, i))
         i = i + 1
     }
-    vec.raw.storage = box(nextStorage)
+    vec.raw.storage = box(next_storage)
     vec.raw.capacity = next
 }
 
-func growCapacity(int32 current, int32 wanted) int32 {
+func grow_capacity(int32 current, int32 wanted) int32 {
     var next = current
     if next <= 0 {
         next = 4
@@ -108,22 +108,22 @@ func growCapacity(int32 current, int32 wanted) int32 {
     next
 }
 
-struct Array[T] {}
+struct array[t] {}
 
-func newArray[T](int32 size) Array[T] {
-    __vec_new_array[T](size)
+func new_array[t](int32 size) array[t] {
+    __vec_new_array[t](size)
 }
 
-func arrayGet[T](Array[T] array, int32 index) T {
-    __vec_array_get[T](array, index)
+func array_get[t](array[t] array, int32 index) t {
+    __vec_array_get[t](array, index)
 }
 
-func arraySet[T](Array[T] array, int32 index, T value) () {
-    __vec_array_set[T](array, index, value)
+func array_set[t](array[t] array, int32 index, t value) () {
+    __vec_array_set[t](array, index, value)
 }
 
-extern "intrinsic" func __vec_new_array[T](int32 size) Array[T]
+extern "intrinsic" func __vec_new_array[t](int32 size) array[t]
 
-extern "intrinsic" func __vec_array_get[T](Array[T] array, int32 index) T
+extern "intrinsic" func __vec_array_get[t](array[t] array, int32 index) t
 
-extern "intrinsic" func __vec_array_set[T](Array[T] array, int32 index, T value) ()
+extern "intrinsic" func __vec_array_set[t](array[t] array, int32 index, t value) ()

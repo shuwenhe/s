@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
+from pathlib import path
 
 
-DEFAULT_EXECUTABLE_PATH = Path(__file__).with_name("launcher")
-DEFAULT_LIBRARY_PATH = Path(__file__).with_name("liblauncher.so")
+default_executable_path = path(__file__).with_name("launcher")
+default_library_path = path(__file__).with_name("liblauncher.so")
 
 
-def get_executable() -> Path:
-    return Path(os.environ.get("S_LAUNCHER_EXECUTABLE", DEFAULT_EXECUTABLE_PATH))
+def get_executable() -> path:
+    return path(os.environ.get("s_launcher_executable", default_executable_path))
 
 
-def get_library_path() -> Path:
-    return Path(os.environ.get("S_LAUNCHER_LIBRARY", DEFAULT_LIBRARY_PATH))
+def get_library_path() -> path:
+    return path(os.environ.get("s_launcher_library", default_library_path))

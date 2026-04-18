@@ -1,4 +1,4 @@
 package compile.internal.amd64
 
-func Init() () {
+func init() () {
 }

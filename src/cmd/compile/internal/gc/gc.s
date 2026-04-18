@@ -1,8 +1,8 @@
 package compile.internal.gc
 
-use compile.internal.compiler.Main as compilerMain
-use std.vec.Vec
+use compile.internal.compiler.main as compiler_main
+use std.vec.vec
 
-func main(Vec[string] args) int32 {
-    return compilerMain(args)
+func main(vec[string] args) int32 {
+    return compiler_main(args)
 }

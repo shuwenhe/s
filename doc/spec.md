@@ -1,13 +1,13 @@
-# S Language Specification
+# s language specification
 
-Version: Draft 0.1  
-Status: Working Draft
+version: draft 0.1  
+status: working draft
 
-## 1. Overview
+## 1. overview
 
-S 是一门面向系统软件、基础设施和高性能服务的静态类型编程语言。
+s 是一门面向系统软件、基础设施和高性能服务的静态类型编程语言。
 
-本规范定义 S 的核心语言行为，包括：
+本规范定义 s 的核心语言行为，包括：
 
 - 词法与语法
 - 声明与作用域
@@ -16,31 +16,31 @@ S 是一门面向系统软件、基础设施和高性能服务的静态类型编
 - 错误处理
 - 并发模型
 - 模块与包系统
-- `unsafe` 与 FFI 边界
+- `unsafe` 与 ffi 边界
 
 本规范暂不定义：
 
-- 完整标准库 API
+- 完整标准库 api
 - 完整 runtime 实现细节
 - 优化器与 backend 的实现策略
 - 调试信息、反射与宏系统
 
 除特别说明外，本规范中的“必须”、“应当”、“可以”分别表示强制要求、推荐要求和允许行为。
 
-## 2. Design Goals
+## 2. design goals
 
-S 的设计目标如下：
+s 的设计目标如下：
 
 1. 默认安全
 2. 可预测性能
 3. 值语义优先
 4. 零成本抽象导向
 5. 单一官方工具链
-6. 对 C ABI 友好
+6. 对 c abi 友好
 
-S 不以垃圾回收为前提，不以面向继承为核心，也不把复杂元编程作为主设计方向。
+s 不以垃圾回收为前提，不以面向继承为核心，也不把复杂元编程作为主设计方向。
 
-## 3. Terminology
+## 3. terminology
 
 本规范使用以下术语：
 
@@ -48,29 +48,29 @@ S 不以垃圾回收为前提，不以面向继承为核心，也不把复杂元
 - 值：拥有完整语义的运行时对象
 - 拥有者：负责某个值生命周期的绑定或对象
 - 借用：对某值的临时引用，不转移所有权
-- 只读借用：`&T`
-- 可变借用：`&mut T`
+- 只读借用：`&t`
+- 可变借用：`&mut t`
 - 移动：将值的所有权从一个位置转移到另一个位置
 - 复制：保留源值，同时创建语义等价的新值
 - 析构：值离开作用域时触发的资源释放逻辑
 - 模块：单个源文件声明的命名空间单元
 - 包：由一个或多个模块组成的分发与编译单元
 
-## 4. Source File Structure
+## 4. source file structure
 
-一个 S 源文件应满足如下高层结构：
+一个 s 源文件应满足如下高层结构：
 
 ```s
 package pkg.name
 
-use std.io.Reader
-use net.http.{Request, Response}
+use std.io.reader
+use net.http.{request, response}
 
-struct Config {
+struct config {
     string addr
 }
 
-func main() Result[(), Error] {
+func main() result[(), error] {
     ...
 }
 ```
@@ -87,21 +87,21 @@ func main() Result[(), Error] {
 
 每个源文件必须且只能声明一个 `package`。
 
-## 5. Lexical Elements
+## 5. lexical elements
 
-### 5.1 Character Set
+### 5.1 character set
 
-S 源文件应采用 UTF-8 编码。
+s 源文件应采用 utf-8 编码。
 
-标识符可以包含 Unicode 字符，但标准库和公共 API 推荐使用 ASCII 标识符。
+标识符可以包含 unicode 字符，但标准库和公共 api 推荐使用 ascii 标识符。
 
-### 5.2 Whitespace
+### 5.2 whitespace
 
-空格、Tab、换行用于分隔 token。除字符串字面量和字符字面量外，连续空白字符没有语义差异。
+空格、tab、换行用于分隔 token。除字符串字面量和字符字面量外，连续空白字符没有语义差异。
 
-### 5.3 Comments
+### 5.3 comments
 
-S 支持以下注释形式：
+s 支持以下注释形式：
 
 ```s
 // line comment
@@ -109,9 +109,9 @@ S 支持以下注释形式：
 /* block comment */
 ```
 
-块注释可以跨多行。是否支持嵌套块注释属于实现定义，Draft 0.1 推荐支持。
+块注释可以跨多行。是否支持嵌套块注释属于实现定义，draft 0.1 推荐支持。
 
-### 5.4 Identifiers
+### 5.4 identifiers
 
 标识符用于命名：
 
@@ -132,52 +132,52 @@ if else for while switch return break continue
 true false unsafe extern as mut
 ```
 
-## 6. Grammar Sketch
+## 6. grammar sketch
 
-本节给出非正式语法草图，用于固定表面语法方向。正式 EBNF 可在后续版本补充。
+本节给出非正式语法草图，用于固定表面语法方向。正式 ebnf 可在后续版本补充。
 
 ```text
-SourceFile   = PackageDecl UseDecl* Item*
-PackageDecl  = "package" PackagePath
-UseDecl      = "use" ImportPath
+sourcefile   = packagedecl usedecl* item*
+packagedecl  = "package" packagepath
+usedecl      = "use" importpath
 
-Item         = FunctionDecl
-             | StructDecl
-             | EnumDecl
-             | TraitDecl
-             | ImplDecl
-             | ConstDecl
-             | StaticDecl
+item         = functiondecl
+             | structdecl
+             | enumdecl
+             | traitdecl
+             | impldecl
+             | constdecl
+             | staticdecl
 
-FunctionDecl = "func" Ident GenericParams? "(" ParamList? ")" ReturnType? Block
-StructDecl   = Visibility? "struct" Ident GenericParams? StructBody
-EnumDecl     = Visibility? "enum" Ident GenericParams? EnumBody
-TraitDecl    = Visibility? "trait" Ident GenericParams? TraitBody
-ImplDecl     = "impl" Type GenericParams? ImplBody
+functiondecl = "func" ident genericparams? "(" paramlist? ")" returntype? block
+structdecl   = visibility? "struct" ident genericparams? structbody
+enumdecl     = visibility? "enum" ident genericparams? enumbody
+traitdecl    = visibility? "trait" ident genericparams? traitbody
+impldecl     = "impl" type genericparams? implbody
 
-Stmt         = LetStmt
-             | VarStmt
-             | ExprStmt
-             | ReturnStmt
-             | BreakStmt
-             | ContinueStmt
+stmt         = letstmt
+             | varstmt
+             | exprstmt
+             | returnstmt
+             | breakstmt
+             | continuestmt
 
-Expr         = Literal
-             | PathExpr
-             | CallExpr
-             | MemberExpr
-             | IndexExpr
-             | UnaryExpr
-             | BinaryExpr
-             | SwitchExpr
-             | BlockExpr
+expr         = literal
+             | pathexpr
+             | callexpr
+             | memberexpr
+             | indexexpr
+             | unaryexpr
+             | binaryexpr
+             | switchexpr
+             | blockexpr
 ```
 
-## 7. Declarations and Visibility
+## 7. declarations and visibility
 
-### 7.1 Visibility
+### 7.1 visibility
 
-S 采用 Go 风格的可见性规则。
+s 采用 go 风格的可见性规则。
 
 - 首字母小写的顶层项仅在当前包内可见
 - 首字母大写的顶层项可被其他包导入
@@ -187,12 +187,12 @@ S 采用 Go 风格的可见性规则。
 ```s
 struct tokenizer { ... }
 
-struct Parser { ... }
+struct parser { ... }
 ```
 
-### 7.2 Bindings
+### 7.2 bindings
 
-S 支持两种基础绑定形式：
+s 支持两种基础绑定形式：
 
 ```s
 var y = 2
@@ -204,7 +204,7 @@ const max_conn = 1024
 - `var` 绑定可变
 - `const` 必须在编译期可求值
 
-### 7.3 Shadowing
+### 7.3 shadowing
 
 内层作用域可以遮蔽外层同名绑定：
 
@@ -218,9 +218,9 @@ var x = 1
 
 是否对重复遮蔽发出 lint 警告由工具链决定，但语言层面允许。
 
-## 8. Primitive Types
+## 8. primitive types
 
-S 的内建基础类型包括：
+s 的内建基础类型包括：
 
 ```text
 bool
@@ -234,13 +234,13 @@ str
 规则：
 
 - `bool` 的值仅为 `true` 或 `false`
-- `char` 表示一个 Unicode 标量值
-- `str` 表示 UTF-8 字符串切片视图
+- `char` 表示一个 unicode 标量值
+- `str` 表示 utf-8 字符串切片视图
 - `string` 不是内建原语，而是标准库拥有型字符串
 
-### 8.1 Numeric Conversions
+### 8.1 numeric conversions
 
-S 默认不进行隐式数值扩宽或截断。
+s 默认不进行隐式数值扩宽或截断。
 
 ```s
 int32 a = 1
@@ -250,14 +250,14 @@ let c = a as i64 + b
 
 所有可能改变数值范围、符号或精度的转换都必须显式使用 `as`。
 
-## 9. Composite Types
+## 9. composite types
 
-### 9.1 Arrays and Slices
+### 9.1 arrays and slices
 
-Draft 0.1 建议采用如下形式：
+draft 0.1 建议采用如下形式：
 
-- 固定长度数组：`[T; N]`
-- 切片：`[]T`
+- 固定长度数组：`[t; n]`
+- 切片：`[]t`
 
 示例：
 
@@ -266,28 +266,28 @@ Draft 0.1 建议采用如下形式：
 []int32 s = a[1..3]
 ```
 
-### 9.2 Struct Types
+### 9.2 struct types
 
 结构体定义具名字段聚合类型：
 
 ```s
-struct User {
+struct user {
     u64 id
     string name
     bool active
 }
 ```
 
-字段默认遵循声明顺序布局，但 ABI 稳定布局是否默认保证属于后续版本议题。
+字段默认遵循声明顺序布局，但 abi 稳定布局是否默认保证属于后续版本议题。
 
-### 9.3 Enum Types
+### 9.3 enum types
 
 枚举用于定义代数数据类型：
 
 ```s
-enum Result[T, E] {
-    Ok(T)
-    Err(E)
+enum result[t, e] {
+    ok(t)
+    err(e)
 }
 ```
 
@@ -298,11 +298,11 @@ enum Result[T, E] {
 - 多字段元组分支
 - 具名字段分支
 
-Draft 0.1 推荐同时支持上述几类形式。
+draft 0.1 推荐同时支持上述几类形式。
 
-## 10. Functions
+## 10. functions
 
-### 10.1 Function Declaration
+### 10.1 function declaration
 
 函数声明形式如下：
 
@@ -318,49 +318,49 @@ func add(int32 a, int32 b) int32 {
 - 返回类型可以省略，省略时表示返回 `()`
 - 函数体最后一个表达式可以作为隐式返回值
 
-### 10.2 Parameter Passing
+### 10.2 parameter passing
 
 参数传递遵循签名中写明的语义：
 
-- `T`：按值传递，可能发生移动或复制
-- `&T`：只读借用
-- `&mut T`：可变借用
+- `t`：按值传递，可能发生移动或复制
+- `&t`：只读借用
+- `&mut t`：可变借用
 
 示例：
 
 ```s
 func len(&str s) usize
-func push(&mut Vec[int32] v, int32 value)
-func consume(Buf buf) Result[(), Error]
+func push(&mut vec[int32] v, int32 value)
+func consume(buf buf) result[(), error]
 ```
 
-### 10.3 Methods
+### 10.3 methods
 
 方法通过 `impl` 块声明：
 
 ```s
-impl User {
-    func activate(&mut Self self) {
+impl user {
+    func activate(&mut self self) {
         self.active = true
     }
 
-    func name(&Self self) str {
+    func name(&self self) str {
         self.name.as_str()
     }
 }
 ```
 
-Draft 0.1 推荐将方法接收者统一建模为显式的：
+draft 0.1 推荐将方法接收者统一建模为显式的：
 
 - `self`
-- `&Self self`
-- `&mut Self self`
+- `&self self`
+- `&mut self self`
 
-## 11. Expressions and Statements
+## 11. expressions and statements
 
-S 是表达式优先的语言，但仍保留清晰的语句结构。
+s 是表达式优先的语言，但仍保留清晰的语句结构。
 
-### 11.1 Block Expressions
+### 11.1 block expressions
 
 块既是语句容器，也是表达式：
 
@@ -373,9 +373,9 @@ let port = {
 
 块的值为其最后一个表达式的值；若最后一项不是表达式，则块值为 `()`。
 
-### 11.2 Control Flow
+### 11.2 control flow
 
-S 支持：
+s 支持：
 
 - `if`
 - `for`
@@ -395,24 +395,24 @@ if ready {
 }
 ```
 
-### 11.3 Match
+### 11.3 match
 
 `switch` 必须覆盖所有可能情况，除非存在显式的通配分支。
 
 ```s
 switch result {
-    Ok(value) : println(value),
-    Err(err) : eprintln(err.message()),
+    ok(value) : println(value),
+    err(err) : eprintln(err.message()),
 }
 ```
 
 对于布尔值、枚举和有限状态类型，编译器应进行穷尽性检查。
 
-## 12. Ownership, Move, and Borrowing
+## 12. ownership, move, and borrowing
 
-### 12.1 Ownership Model
+### 12.1 ownership model
 
-S 采用“单一拥有者 + 显式借用”的基础模型。
+s 采用“单一拥有者 + 显式借用”的基础模型。
 
 规则如下：
 
@@ -421,9 +421,9 @@ S 采用“单一拥有者 + 显式借用”的基础模型。
 3. 值可以被临时借用
 4. 离开作用域时，拥有者负责触发析构
 
-### 12.2 Move Semantics
+### 12.2 move semantics
 
-默认情况下，非 `Copy` 类型按值传递时发生移动：
+默认情况下，非 `copy` 类型按值传递时发生移动：
 
 ```s
 let a = make_buffer()
@@ -431,19 +431,19 @@ let b = a
 // a 在此后不可再使用
 ```
 
-### 12.3 Copy Semantics
+### 12.3 copy semantics
 
-对小型、纯值、无资源语义的类型，可以实现 `Copy`：
+对小型、纯值、无资源语义的类型，可以实现 `copy`：
 
 ```s
-trait Copy
+trait copy
 ```
 
-`Copy` 类型在赋值和传参时复制而非移动。
+`copy` 类型在赋值和传参时复制而非移动。
 
-### 12.4 Borrowing Rules
+### 12.4 borrowing rules
 
-S 借用模型的核心约束如下：
+s 借用模型的核心约束如下：
 
 1. 任意时刻允许存在多个只读借用
 2. 任意时刻至多存在一个可变借用
@@ -465,9 +465,9 @@ let a = &user
 let b = &mut user
 ```
 
-### 12.5 Lifetime Inference
+### 12.5 lifetime inference
 
-Draft 0.1 采用 borrow-lite 方向：
+draft 0.1 采用 borrow-lite 方向：
 
 - 大多数局部借用生命周期由编译器推断
 - 简单函数参数与返回借用可使用省略规则
@@ -475,38 +475,38 @@ Draft 0.1 采用 borrow-lite 方向：
 
 这意味着生命周期是语言语义的一部分，但不要求在最小版本里全面暴露为显式语法。
 
-## 13. Resource Management
+## 13. resource management
 
-### 13.1 RAII
+### 13.1 raii
 
-S 使用基于作用域的资源释放模型。
+s 使用基于作用域的资源释放模型。
 
 示例：
 
 ```s
-func load() Result[string, IoError] {
-    let file = File::open("config.toml")?
+func load() result[string, ioerror] {
+    let file = file::open("config.toml")?
     file.read_all()
 }
 ```
 
 当 `file` 离开作用域时，其资源应自动释放。
 
-### 13.2 Drop
+### 13.2 drop
 
-拥有外部资源的类型可以定义析构行为。Draft 0.1 建议提供一个类似 `Drop` 的 trait：
+拥有外部资源的类型可以定义析构行为。draft 0.1 建议提供一个类似 `drop` 的 trait：
 
 ```s
-trait Drop {
-    func drop(&mut Self self)
+trait drop {
+    func drop(&mut self self)
 }
 ```
 
 当值离开作用域时，编译器自动插入相应析构逻辑。
 
-### 13.3 Allocation Model
+### 13.3 allocation model
 
-S 的默认执行模型不依赖 GC。分配策略分层如下：
+s 的默认执行模型不依赖 gc。分配策略分层如下：
 
 1. 栈上值
 2. 标准库拥有型堆对象
@@ -515,15 +515,15 @@ S 的默认执行模型不依赖 GC。分配策略分层如下：
 
 语言应尽量避免隐式堆分配。
 
-## 14. Traits and Generics
+## 14. traits and generics
 
-### 14.1 Traits
+### 14.1 traits
 
 trait 用于描述共享行为约束：
 
 ```s
-trait Writer {
-    func write(&mut Self self, []u8 data) Result[usize, IoError]
+trait writer {
+    func write(&mut self self, []u8 data) result[usize, ioerror]
 }
 ```
 
@@ -531,12 +531,12 @@ trait 的用途包括：
 
 - 约束泛型参数
 - 统一接口行为
-- 描述能力边界，如 `Copy`、`Send`、`Sync`
+- 描述能力边界，如 `copy`、`send`、`sync`
 
-### 14.2 Generic Functions
+### 14.2 generic functions
 
 ```s
-func max[T: Ord](T a, T b) T {
+func max[t: ord](t a, t b) t {
     if a > b { a } else { b }
 }
 ```
@@ -547,53 +547,53 @@ func max[T: Ord](T a, T b) T {
 - 约束使用 `:` 指定
 - 一个参数可以拥有多个 trait 约束，具体分隔语法留待后续版本确定
 
-### 14.3 Instantiation Strategy
+### 14.3 instantiation strategy
 
 泛型实例化策略属于实现层议题，但语言层面应允许以下两种实现路线：
 
 - 单态化
 - 基于字典或 witness table 的共享实例化
 
-Draft 0.1 不强制固定 backend 策略，但要求表面语义独立于实现选择。
+draft 0.1 不强制固定 backend 策略，但要求表面语义独立于实现选择。
 
-## 15. Error Handling
+## 15. error handling
 
-### 15.1 Result and Option
+### 15.1 result and option
 
-S 采用 `Result[T, E]` 作为可恢复错误的标准建模方式，采用 `Option[T]` 表示值可能缺失。
+s 采用 `result[t, e]` 作为可恢复错误的标准建模方式，采用 `option[t]` 表示值可能缺失。
 
 ```s
-enum Option[T] {
-    Some(T)
-    None
+enum option[t] {
+    some(t)
+    none
 }
 
-enum Result[T, E] {
-    Ok(T)
-    Err(E)
+enum result[t, e] {
+    ok(t)
+    err(e)
 }
 ```
 
-### 15.2 Error Propagation
+### 15.2 error propagation
 
-S 支持 `?` 用于传播错误：
+s 支持 `?` 用于传播错误：
 
 ```s
-func run() Result[(), Error] {
+func run() result[(), error] {
     let cfg = load_config("app.conf")?
     let conn = connect(cfg.addr)?
     conn.start()?
-    Ok(())
+    ok(())
 }
 ```
 
 规则：
 
-- `?` 只能用于返回 `Result` 或兼容错误载体的上下文
+- `?` 只能用于返回 `result` 或兼容错误载体的上下文
 - 若表达式结果为错误，则立即返回
 - 若表达式结果为成功值，则解包继续执行
 
-### 15.3 Panic
+### 15.3 panic
 
 `panic` 表示不可恢复错误，不应用于普通业务错误流。
 
@@ -605,16 +605,16 @@ func run() Result[(), Error] {
 
 标准库应为其提供明确语义，但代码风格上应限制其滥用。
 
-## 16. Concurrency
+## 16. concurrency
 
-### 16.1 Model
+### 16.1 model
 
-S 推荐采用结构化并发作为主模型。
+s 推荐采用结构化并发作为主模型。
 
 ```s
 task::scope(|scope| {
-    let a = scope.spawn(|| fetch_price("BTC-USDT"))
-    let b = scope.spawn(|| fetch_price("ETH-USDT"))
+    let a = scope.spawn(|| fetch_price("btc-usdt"))
+    let b = scope.spawn(|| fetch_price("eth-usdt"))
 
     let pa = a.join()?
     let pb = b.join()?
@@ -628,12 +628,12 @@ task::scope(|scope| {
 - 离开作用域前必须完成、取消或转交任务所有权
 - 不鼓励无边界后台任务泄漏
 
-### 16.2 Channels
+### 16.2 channels
 
 消息传递是推荐并发通信方式：
 
 ```s
-let (tx, rx) = channel[Job](1024)
+let (tx, rx) = channel[job](1024)
 ```
 
 标准库应提供：
@@ -643,47 +643,47 @@ let (tx, rx) = channel[Job](1024)
 - 关闭语义
 - 超时与取消机制
 
-### 16.3 Shared State
+### 16.3 shared state
 
-S 允许共享状态，但必须显式同步。
+s 允许共享状态，但必须显式同步。
 
 建议标准并发原语包括：
 
-- `Mutex[T]`
-- `RwLock[T]`
-- `Atomic*`
+- `mutex[t]`
+- `rwlock[t]`
+- `atomic*`
 
-### 16.4 Send and Sync
+### 16.4 send and sync
 
 跨线程传递和共享应由 trait 约束控制：
 
 ```s
-trait Send
-trait Sync
+trait send
+trait sync
 ```
 
 规则建议如下：
 
-- 满足 `Send` 的类型可以跨线程移动
-- 满足 `Sync` 的类型可以被多线程共享只读引用
+- 满足 `send` 的类型可以跨线程移动
+- 满足 `sync` 的类型可以被多线程共享只读引用
 
 编译器应阻止不满足约束的类型进入并发边界。
 
-## 17. Modules and Packages
+## 17. modules and packages
 
-### 17.1 Modules
+### 17.1 modules
 
 模块是源文件级命名空间单元。每个源文件属于一个 `package`。
 
 导入语法建议如下：
 
 ```s
-use net.http.Request
-use io.{Reader, Writer}
+use net.http.request
+use io.{reader, writer}
 use math as m
 ```
 
-### 17.2 Packages
+### 17.2 packages
 
 包是构建、发布和版本管理单元。
 
@@ -706,9 +706,9 @@ http = "1.2"
 json = "0.8"
 ```
 
-### 17.3 Editions
+### 17.3 editions
 
-S 推荐引入 edition 机制，用于承载语言演化而不破坏既有项目。
+s 推荐引入 edition 机制，用于承载语言演化而不破坏既有项目。
 
 edition 主要用于：
 
@@ -716,9 +716,9 @@ edition 主要用于：
 - 标准库默认行为调整
 - 编译器 lint 与保守规则升级
 
-## 18. Unsafe Code
+## 18. unsafe code
 
-### 18.1 Unsafe Boundary
+### 18.1 unsafe boundary
 
 任何可能绕过语言安全保证的操作都必须位于 `unsafe` 上下文中。
 
@@ -732,17 +732,17 @@ unsafe {
 }
 ```
 
-### 18.2 Unsafe Operations
+### 18.2 unsafe operations
 
 以下操作应被归类为 `unsafe`：
 
 - 解引用裸指针
-- 调用未经验证的 FFI
+- 调用未经验证的 ffi
 - 访问未初始化内存
 - 手工管理非托管资源
 - 承诺编译器无法自行验证的不变量
 
-### 18.3 Safety Contract
+### 18.3 safety contract
 
 `unsafe` 代码必须承担额外义务：
 
@@ -752,39 +752,39 @@ unsafe {
 
 安全代码可以调用内部使用 `unsafe` 实现、但接口已被封装证明安全的库。
 
-## 19. Foreign Function Interface
+## 19. foreign function interface
 
-### 19.1 C ABI
+### 19.1 c abi
 
-S 应优先支持 C ABI。
+s 应优先支持 c abi。
 
 示例：
 
 ```s
-extern "C" func puts(*const u8 s) int32
+extern "c" func puts(*const u8 s) int32
 ```
 
-FFI 至少应支持：
+ffi 至少应支持：
 
 - 声明外部函数
-- 导出 S 函数
+- 导出 s 函数
 - 指定调用约定
 - 明确结构体布局
 
-### 19.2 Layout Control
+### 19.2 layout control
 
-为满足 FFI 和系统场景需要，后续版本建议引入属性或修饰符以控制：
+为满足 ffi 和系统场景需要，后续版本建议引入属性或修饰符以控制：
 
 - 结构体字段布局
 - 对齐
 - 调用约定
 - 符号导出名
 
-Draft 0.1 先固定方向，不强制固定具体语法。
+draft 0.1 先固定方向，不强制固定具体语法。
 
-## 20. Standard Toolchain
+## 20. standard toolchain
 
-S 官方工具链至少应包括：
+s 官方工具链至少应包括：
 
 - `s build`
 - `s run`
@@ -801,9 +801,9 @@ S 官方工具链至少应包括：
 - workspace 友好
 - monorepo 友好
 
-## 21. Undefined and Implementation-Defined Areas
+## 21. undefined and implementation-defined areas
 
-为避免过早冻结设计，以下内容在 Draft 0.1 中属于未定或实现定义区域：
+为避免过早冻结设计，以下内容在 draft 0.1 中属于未定或实现定义区域：
 
 - 块注释是否嵌套
 - 泛型实例化的 backend 策略
@@ -816,21 +816,21 @@ S 官方工具链至少应包括：
 
 后续版本应将这些区域逐步收束成正式规范。
 
-## 22. Open Questions
+## 22. open questions
 
 当前仍需明确的关键设计问题包括：
 
 1. 借用规则中哪些场景需要显式生命周期语法
-2. `Copy`、`Drop`、`Send`、`Sync` 是内建 trait 还是标准库 trait
+2. `copy`、`drop`、`send`、`sync` 是内建 trait 还是标准库 trait
 3. 结构体默认布局是否承诺稳定
 4. 泛型更偏单态化还是混合实例化
 5. 并发 runtime 是语言绑定还是标准库实现
 6. `async` 是否成为一等语法，还是保持库级模型
-7. 错误类型是否要求统一实现 `Error` trait
+7. 错误类型是否要求统一实现 `error` trait
 
-## 23. Minimal Viable Language
+## 23. minimal viable language
 
-S 的最小可用版本应至少支持：
+s 的最小可用版本应至少支持：
 
 - 基本类型
 - `let` / `var` / `const`
@@ -838,34 +838,34 @@ S 的最小可用版本应至少支持：
 - `struct`
 - `enum`
 - `if` / `for` / `while` / `switch`
-- `Result` / `Option`
+- `result` / `option`
 - `impl`
 - `trait`
 - `&` / `&mut`
 - `unsafe`
 - 模块与包导入
 
-只要这些能力稳定，S 就已经足以支撑：
+只要这些能力稳定，s 就已经足以支撑：
 
-- CLI 工具
+- cli 工具
 - 配置与文件处理程序
 - 小型网络服务
 - 系统组件原型
 
-## 24. Conformance
+## 24. conformance
 
-一个实现若要声称支持本规范 Draft 0.1，至少应：
+一个实现若要声称支持本规范 draft 0.1，至少应：
 
 1. 支持本规范定义的核心声明形式
 2. 支持静态类型检查
-3. 支持 `Result` / `Option` 与 `switch`
+3. 支持 `result` / `option` 与 `switch`
 4. 支持基础所有权与借用检查
 5. 支持 `unsafe` 边界
 6. 支持 `package` / `use` 基础模块系统
 
 若某实现对未定区域作出具体选择，应在文档中明确说明。
 
-## 25. Evolution Notes
+## 25. evolution notes
 
 本规范是工作草案，不承诺当前语法最终冻结。
 
@@ -878,4 +878,4 @@ S 的最小可用版本应至少支持：
 - `ffi.md`
 - `toolchain.md`
 
-这样可以让 S 在保持整体方向稳定的前提下，逐步把各部分从设计草案推进为可执行规范。
+这样可以让 s 在保持整体方向稳定的前提下，逐步把各部分从设计草案推进为可执行规范。

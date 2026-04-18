@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 200809L
+#define _posix_c_source 200809l
 
 #include <stddef.h>
 

@@ -1,17 +1,17 @@
-#define _POSIX_C_SOURCE 200809L
+#define _posix_c_source 200809l
 
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#ifndef PROCESS_RUNNER_EXECUTABLE_PATH
-#define PROCESS_RUNNER_EXECUTABLE_PATH "/home/shuwen/s/src/runtime/process_runner"
+#ifndef process_runner_executable_path
+#define process_runner_executable_path "/home/shuwen/s/src/runtime/process_runner"
 #endif
 
 int main(int argc, char **argv) {
     (void)argc;
 
-    execv(PROCESS_RUNNER_EXECUTABLE_PATH, argv);
+    execv(process_runner_executable_path, argv);
     perror("launcher");
     return errno == 0 ? 127 : errno;
 }

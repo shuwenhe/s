@@ -8,8 +8,8 @@ def check_source(source):
 
 
 def __getattr__(name: str):
-    if name in {"CheckResult", "Diagnostic"}:
+    if name in {"checkresult", "diagnostic"}:
         from . import check as check_module
 
         return getattr(check_module, name)
-    raise AttributeError(name)
+    raise attributeerror(name)

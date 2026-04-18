@@ -1,137 +1,137 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import list
 
 
-class Type:
+class type:
     pass
 
 
-@dataclass(frozen=True)
-class PrimitiveType(Type):
+@dataclass(frozen=true)
+class primitivetype(type):
     name: str
 
 
-@dataclass(frozen=True)
-class NamedType(Type):
+@dataclass(frozen=true)
+class namedtype(type):
     name: str
-    args: List[Type] = field(default_factory=list)
+    args: list[type] = field(default_factory=list)
 
 
-@dataclass(frozen=True)
-class ReferenceType(Type):
-    inner: Type
-    mutable: bool = False
+@dataclass(frozen=true)
+class referencetype(type):
+    inner: type
+    mutable: bool = false
 
 
-@dataclass(frozen=True)
-class SliceType(Type):
-    inner: Type
+@dataclass(frozen=true)
+class slicetype(type):
+    inner: type
 
 
-@dataclass(frozen=True)
-class FunctionType(Type):
-    params: List[Type] = field(default_factory=list)
-    return_type: Type | None = None
+@dataclass(frozen=true)
+class functiontype(type):
+    params: list[type] = field(default_factory=list)
+    return_type: type | none = none
 
 
-@dataclass(frozen=True)
-class UnitType(Type):
+@dataclass(frozen=true)
+class unittype(type):
     pass
 
 
-@dataclass(frozen=True)
-class NeverType(Type):
+@dataclass(frozen=true)
+class nevertype(type):
     pass
 
 
-@dataclass(frozen=True)
-class UnknownType(Type):
+@dataclass(frozen=true)
+class unknowntype(type):
     label: str = "unknown"
 
 
-BOOL = PrimitiveType("bool")
-I32 = PrimitiveType("int32")
-STRING = NamedType("string")
-UNIT = UnitType()
-NEVER = NeverType()
+bool = primitivetype("bool")
+i32 = primitivetype("int32")
+string = namedtype("string")
+unit = unittype()
+never = nevertype()
 
 
-def parse_type(text: str) -> Type:
+def parse_type(text: str) -> type:
     text = text.strip()
     if not text:
-        return UnknownType()
+        return unknowntype()
     if text == "()":
-        return UNIT
+        return unit
     if text == "never":
-        return NEVER
+        return never
     if text == "bool":
-        return BOOL
+        return bool
     if text in {"int32", "int32", "int"}:
-        return I32
+        return i32
     if text in {"string", "string"}:
-        return STRING
+        return string
     if text.startswith("&mut "):
-        return ReferenceType(parse_type(text[5:].strip()), mutable=True)
+        return referencetype(parse_type(text[5:].strip()), mutable=true)
     if text.startswith("&"):
-        return ReferenceType(parse_type(text[1:].strip()), mutable=False)
+        return referencetype(parse_type(text[1:].strip()), mutable=false)
     if text.startswith("[]"):
-        return SliceType(parse_type(text[2:].strip()))
+        return slicetype(parse_type(text[2:].strip()))
     if "[" in text and text.endswith("]"):
         name, args_text = text.split("[", 1)
         inner = args_text[:-1]
         args = [_part for _part in _split_args(inner) if _part]
-        return NamedType(name.strip(), [parse_type(arg) for arg in args])
-    return NamedType(text)
+        return namedtype(name.strip(), [parse_type(arg) for arg in args])
+    return namedtype(text)
 
 
-def dump_type(ty: Type) -> str:
-    if isinstance(ty, PrimitiveType):
+def dump_type(ty: type) -> str:
+    if isinstance(ty, primitivetype):
         return ty.name
-    if isinstance(ty, NamedType):
+    if isinstance(ty, namedtype):
         if not ty.args:
             return ty.name
         return f"{ty.name}[{', '.join(dump_type(arg) for arg in ty.args)}]"
-    if isinstance(ty, ReferenceType):
+    if isinstance(ty, referencetype):
         prefix = "&mut " if ty.mutable else "&"
         return prefix + dump_type(ty.inner)
-    if isinstance(ty, SliceType):
+    if isinstance(ty, slicetype):
         return "[]" + dump_type(ty.inner)
-    if isinstance(ty, FunctionType):
-        return f"func({', '.join(dump_type(param) for param in ty.params)}) {dump_type(ty.return_type or UNIT)}"
-    if isinstance(ty, UnitType):
+    if isinstance(ty, functiontype):
+        return f"func({', '.join(dump_type(param) for param in ty.params)}) {dump_type(ty.return_type or unit)}"
+    if isinstance(ty, unittype):
         return "()"
-    if isinstance(ty, NeverType):
+    if isinstance(ty, nevertype):
         return "never"
-    if isinstance(ty, UnknownType):
+    if isinstance(ty, unknowntype):
         return ty.label
     return repr(ty)
 
 
-def is_copy_type(ty: Type) -> bool:
-    if isinstance(ty, PrimitiveType):
-        return True
-    if isinstance(ty, ReferenceType):
-        return True
-    if isinstance(ty, NeverType):
-        return True
-    return False
+def is_copy_type(ty: type) -> bool:
+    if isinstance(ty, primitivetype):
+        return true
+    if isinstance(ty, referencetype):
+        return true
+    if isinstance(ty, nevertype):
+        return true
+    return false
 
 
-def substitute_type(ty: Type, mapping: dict[str, Type]) -> Type:
-    if isinstance(ty, NamedType) and not ty.args and ty.name in mapping:
+def substitute_type(ty: type, mapping: dict[str, type]) -> type:
+    if isinstance(ty, namedtype) and not ty.args and ty.name in mapping:
         return mapping[ty.name]
-    if isinstance(ty, NamedType):
-        return NamedType(ty.name, [substitute_type(arg, mapping) for arg in ty.args])
-    if isinstance(ty, ReferenceType):
-        return ReferenceType(substitute_type(ty.inner, mapping), mutable=ty.mutable)
-    if isinstance(ty, SliceType):
-        return SliceType(substitute_type(ty.inner, mapping))
-    if isinstance(ty, FunctionType):
-        return FunctionType(
+    if isinstance(ty, namedtype):
+        return namedtype(ty.name, [substitute_type(arg, mapping) for arg in ty.args])
+    if isinstance(ty, referencetype):
+        return referencetype(substitute_type(ty.inner, mapping), mutable=ty.mutable)
+    if isinstance(ty, slicetype):
+        return slicetype(substitute_type(ty.inner, mapping))
+    if isinstance(ty, functiontype):
+        return functiontype(
             [substitute_type(param, mapping) for param in ty.params],
-            substitute_type(ty.return_type or UNIT, mapping),
+            substitute_type(ty.return_type or unit, mapping),
         )
     return ty
 

@@ -1,22 +1,22 @@
 from __future__ import annotations
 
-from ctypes import CDLL, c_char_p, c_longlong, c_size_t, c_void_p, string_at
-from pathlib import Path
+from ctypes import cdll, c_char_p, c_longlong, c_size_t, c_void_p, string_at
+from pathlib import path
 
 
-_LIB: CDLL | None = None
+_lib: cdll | none = none
 
 
-def _load_library() -> CDLL:
-    global _LIB
-    if _LIB is not None:
-        return _LIB
-    library_path = Path(__file__).with_name("libintrinsics_core.so")
+def _load_library() -> cdll:
+    global _lib
+    if _lib is not none:
+        return _lib
+    library_path = path(__file__).with_name("libintrinsics_core.so")
     if not library_path.exists():
-        raise RuntimeError(f"missing intrinsic core library: {library_path}")
-    lib = CDLL(str(library_path))
+        raise runtimeerror(f"missing intrinsic core library: {library_path}")
+    lib = cdll(str(library_path))
     lib.intrinsics_core_free.argtypes = [c_void_p]
-    lib.intrinsics_core_free.restype = None
+    lib.intrinsics_core_free.restype = none
     lib.intrinsics_core_string_len.argtypes = [c_char_p]
     lib.intrinsics_core_string_len.restype = c_size_t
     lib.intrinsics_core_int_to_string.argtypes = [c_longlong]
@@ -29,13 +29,13 @@ def _load_library() -> CDLL:
     lib.intrinsics_core_string_char_at.restype = c_void_p
     lib.intrinsics_core_string_slice.argtypes = [c_char_p, c_longlong, c_longlong]
     lib.intrinsics_core_string_slice.restype = c_void_p
-    _LIB = lib
+    _lib = lib
     return lib
 
 
 def _take_string(ptr: int) -> str:
     if not ptr:
-        raise RuntimeError("intrinsic core returned null")
+        raise runtimeerror("intrinsic core returned null")
     lib = _load_library()
     try:
         data = string_at(ptr)

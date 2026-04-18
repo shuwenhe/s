@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Installs the repository's sample post-commit hook into .git/hooks
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-HOOK_SRC="$ROOT_DIR/scripts/post-commit-auto-push.sh"
-HOOK_DST="$ROOT_DIR/.git/hooks/post-commit"
+# installs the repository's sample post-commit hook into .git/hooks
+root_dir="$(cd "$(dirname "$0")/.." && pwd)"
+hook_src="$root_dir/scripts/post-commit-auto-push.sh"
+hook_dst="$root_dir/.git/hooks/post-commit"
 
-if [ ! -f "$HOOK_SRC" ]; then
-  echo "hook source not found: $HOOK_SRC"
+if [ ! -f "$hook_src" ]; then
+  echo "hook source not found: $hook_src"
   exit 1
 fi
 
-if [ ! -d "$ROOT_DIR/.git" ]; then
-  echo "No .git directory found in $ROOT_DIR; run this from the repository root"
+if [ ! -d "$root_dir/.git" ]; then
+  echo "no .git directory found in $root_dir; run this from the repository root"
   exit 1
 fi
 
-cp "$HOOK_SRC" "$HOOK_DST"
-chmod +x "$HOOK_DST"
-echo "Installed post-commit hook to $HOOK_DST"
+cp "$hook_src" "$hook_dst"
+chmod +x "$hook_dst"
+echo "installed post-commit hook to $hook_dst"

@@ -1,14 +1,14 @@
-# Build outputs
+# build outputs
 bin/
 build/
 out/
 dist/
 
-# Temporary files and dirs
+# temporary files and dirs
 tmp/
 *.tmp
 
-# Compiled objects and libraries
+# compiled objects and libraries
 *.o
 *.a
 *.so
@@ -16,7 +16,7 @@ tmp/
 *.dylib
 *.exe
 
-# Python
+# python
 .venv/
 venv/
 env/
@@ -25,31 +25,31 @@ __pycache__/
 pip-wheel-metadata/
 *.egg-info/
 
-# Logs and coverage
+# logs and coverage
 logs/
 *.log
 .pytest_cache/
 .coverage
 coverage/
 
-# Editors and IDEs
+# editors and ides
 .vscode/
 .idea/
 *.swp
 *~
-.DS_Store
+.ds_store
 tags
 ctags
 
-# Caches
+# caches
 .cache/
 .mypy_cache/
 
-# Generated tools/artifacts
+# generated tools/artifacts
 misc/tools/*.o
 misc/tools/*.exe
 
-# Node
+# node
 node_modules/
 __pycache__/
 *.py[cod]
@@ -58,7 +58,7 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
-.Python
+.python
 .coverage
 htmlcov/
 *.log
@@ -75,8 +75,8 @@ build/
 !src/cmd/compile/internal/build/
 !src/cmd/compile/internal/build/**
 *.egg-info/
-.DS_Store
+.ds_store
 editor/vscode/*.vsix
 
-# Build outputs
+# build outputs
 # /s/out/
