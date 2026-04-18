@@ -1,0 +1,5 @@
+package demo.binary
+
+func calc(int32 a, int32 b, int32 c) int32 {
+    a + b * c
+}
