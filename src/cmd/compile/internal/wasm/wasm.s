@@ -1,4 +1,4 @@
 package compile.internal.wasm
 
-func Init() () {
+func init() () {
 }

@@ -1,12 +1,12 @@
 package compile.internal.check
 
-use compile.internal.semantic.CheckText
-use std.fs.ReadToString
+use compile.internal.semantic.check_text
+use std.fs.read_to_string
 
-func LoadFrontend(string path) string {
-    return ReadToString(path).unwrap()
+func load_frontend(string path) string {
+    return read_to_string(path).unwrap()
 }
 
-func CheckFrontend(string frontend) int32 {
-    return CheckText(frontend)
+func check_frontend(string frontend) int32 {
+    return check_text(frontend)
 }

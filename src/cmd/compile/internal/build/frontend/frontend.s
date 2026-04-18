@@ -1,7 +1,7 @@
 package compile.internal.build.frontend
 
-use compile.internal.check.LoadFrontend
+use compile.internal.check.load_frontend
 
-func Load(string path) string {
-    return LoadFrontend(path)
+func load(string path) string {
+    return load_frontend(path)
 }

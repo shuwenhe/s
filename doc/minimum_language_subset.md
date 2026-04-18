@@ -1,14 +1,14 @@
-# S Minimum Language Subset
+# s minimum language subset
 
-This document fixes the smallest language-and-toolchain subset that S should
+this document fixes the smallest language-and-toolchain subset that s should
 keep stable before broadening the language further.
 
-The goal is the same as Go's early implementation goal: establish a complete
+the goal is the same as go's early implementation goal: establish a complete
 loop before chasing a large feature surface.
 
-## Phase 1 Core Loop
+## phase 1 core loop
 
-The minimum complete loop is:
+the minimum complete loop is:
 
 1. define a small language subset
 2. lex and parse it reliably
@@ -16,34 +16,34 @@ The minimum complete loop is:
 4. build it through one stable command path
 5. run the generated program through the current runtime bridge
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/s`
 - `/app/s/src/cmd/compile/internal/compiler`
 - `/app/s/src/runtime`
 - `/app/s/src/cmd`
 
-## 1. Stable Language Subset
+## 1. stable language subset
 
-This is the source subset that should remain stable first.
+this is the source subset that should remain stable first.
 
-### File Shape
+### file shape
 
-Each source file follows this top-level shape:
+each source file follows this top-level shape:
 
 1. `package <name>`
 2. zero or more `use ...`
 3. zero or more top-level items
 
-The top-level AST container is `SourceFile` with:
+the top-level ast container is `sourcefile` with:
 
 - `package`
 - `uses`
 - `items`
 
-### Top-Level Items
+### top-level items
 
-Phase 1 keeps these declarations as the core public syntax surface:
+phase 1 keeps these declarations as the core public syntax surface:
 
 - `func`
 - `struct`
@@ -51,9 +51,9 @@ Phase 1 keeps these declarations as the core public syntax surface:
 - `trait`
 - `impl`
 
-### Statements
+### statements
 
-The minimum statement set is:
+the minimum statement set is:
 
 - variable declaration
 - assignment
@@ -61,9 +61,9 @@ The minimum statement set is:
 - return
 - expression statement
 
-### Expressions
+### expressions
 
-The minimum expression set is:
+the minimum expression set is:
 
 - integer literals
 - string literals
@@ -78,52 +78,52 @@ The minimum expression set is:
 - `while`
 - `switch`
 
-### Keywords
+### keywords
 
-The current stable keyword set should be treated as the language contract for
-Phase 1. It lives in `/app/s/src/s/tokens.s` and includes the core words needed
+the current stable keyword set should be treated as the language contract for
+phase 1. it lives in `/app/s/src/s/tokens.s` and includes the core words needed
 by examples and the compiler itself, including `package`, `use`, `func`, `let`,
 `var`, `return`, `if`, `else`, `while`, `for`, `switch`, `struct`, `enum`,
 `trait`, `impl`, `pub`, `true`, and `false`.
 
-## 2. Frontend Boundary
+## 2. frontend boundary
 
-The public frontend lives in `/app/s/src/s`.
+the public frontend lives in `/app/s/src/s`.
 
-Phase 1 public entry points:
+phase 1 public entry points:
 
-- `TokenKind`
-- `Token`
+- `tokenkind`
+- `token`
 - `dump_tokens`
-- `LexError`
-- `Lexer`
+- `lexerror`
+- `lexer`
 - `new_lexer`
-- `ParseError`
-- `Parser`
+- `parseerror`
+- `parser`
 - `parse_source`
 - `parse_tokens`
-- `SourceFile`
-- `Item`
-- `Stmt`
-- `Expr`
-- `Pattern`
+- `sourcefile`
+- `item`
+- `stmt`
+- `expr`
+- `pattern`
 - `dump_source_file`
 
-The compiler should treat these as the reusable language-facing surface, similar
-to how Go keeps reusable syntax packages under `src/go/*`.
+the compiler should treat these as the reusable language-facing surface, similar
+to how go keeps reusable syntax packages under `src/go/*`.
 
-## 3. Minimal Compiler Boundary
+## 3. minimal compiler boundary
 
-The compiler implementation lives in `/app/s/src/cmd/compile/internal/compiler`.
+the compiler implementation lives in `/app/s/src/cmd/compile/internal/compiler`.
 
-Phase 1 compiler responsibilities:
+phase 1 compiler responsibilities:
 
 - parse source through `src/s`
 - run semantic checking
 - keep diagnostics stable enough for fixtures
 - build simple native executables
 
-Success means these commands stay working:
+success means these commands stay working:
 
 ```bash
 cd /app/s/src
@@ -132,30 +132,30 @@ python3 -m compiler build /app/s/misc/examples/s/hello.s -o /app/tmp/s_hello
 python3 -m compiler build /app/s/misc/examples/s/sum.s -o /app/tmp/s_sum
 ```
 
-## 4. Minimal Runtime And Command Entry
+## 4. minimal runtime and command entry
 
-The runtime bridge lives in `/app/s/src/runtime`.
+the runtime bridge lives in `/app/s/src/runtime`.
 
-The command entry layer lives in:
+the command entry layer lives in:
 
 - `/app/s/src/cmd/s/main.s`
 - `/app/s/src/cmd/lex_dump/main.s`
 - `/app/s/src/cmd/ast_dump/main.s`
 - `/app/s/src/cmd/test_compiler/main.s`
 
-Phase 1 runtime scope:
+phase 1 runtime scope:
 
 - keep hosted command execution working
 - keep native runner bootstrap working
 - keep intrinsic boundaries explicit
 - avoid pushing parser or semantic logic into runtime
 
-## 5. Current Working Examples
+## 5. current working examples
 
-The current minimum example set is:
+the current minimum example set is:
 
 - `/app/s/misc/examples/s/hello.s`
 - `/app/s/misc/examples/s/sum.s`
 
-If a language or compiler change breaks these programs, it is a Phase 1
+if a language or compiler change breaks these programs, it is a phase 1
 regression unless the change deliberately updates the minimum subset contract.

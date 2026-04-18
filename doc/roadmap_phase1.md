@@ -1,9 +1,9 @@
-# S Roadmap: Phase 1
+# s roadmap: phase 1
 
-This document translates the "Go first phase" mindset into a practical task
-list for S.
+this document translates the "go first phase" mindset into a practical task
+list for s.
 
-Phase 1 is not about building a large standard library or ecosystem. It is
+phase 1 is not about building a large standard library or ecosystem. it is
 about finishing the smallest complete language-toolchain loop:
 
 - parse source
@@ -12,45 +12,45 @@ about finishing the smallest complete language-toolchain loop:
 - run basic programs
 - support continued self-hosting work
 
-## Success Target
+## success target
 
-At the end of Phase 1, S should be able to:
+at the end of phase 1, s should be able to:
 
 - parse and type-check core language examples reliably
 - build minimal native executables through a stable command path
 - run self-hosting support flows without fragile ad hoc steps
 - protect the core toolchain with repeatable regression tests
 
-## P0
+## p0
 
-These are the tasks that unlock the basic language and toolchain loop.
+these are the tasks that unlock the basic language and toolchain loop.
 
-### 1. Stabilize Lexing, Parsing, and AST
+### 1. stabilize lexing, parsing, and ast
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/s`
 
-Tasks:
+tasks:
 
 - stabilize token definitions
 - stabilize lexer behavior and diagnostics
 - stabilize parser output shape
-- stabilize AST node structure for declarations, statements, and expressions
+- stabilize ast node structure for declarations, statements, and expressions
 - keep `dump_tokens` and `dump_ast` output deterministic
 
-Done means:
+done means:
 
-- the same source always produces the same token and AST output
-- examples and fixtures stop breaking because of AST churn
+- the same source always produces the same token and ast output
+- examples and fixtures stop breaking because of ast churn
 
-### 2. Stabilize Semantic Checking
+### 2. stabilize semantic checking
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/cmd/compile/internal/compiler`
 
-Tasks:
+tasks:
 
 - finish basic name resolution
 - finish basic type checking
@@ -58,121 +58,121 @@ Tasks:
 - validate control flow constructs such as `if`, `while`, `switch`, and `return`
 - validate `struct`, `enum`, `trait`, and `impl` consistency
 
-Done means:
+done means:
 
 - `s check` becomes a reliable gate for "can this compile"
 - diagnostics are consistent enough to use in tests
 
-### 3. Make the Build Path Real
+### 3. make the build path real
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/cmd/compile/internal/compiler`
 - `/app/s/src/cmd`
 
-Tasks:
+tasks:
 
 - keep `s build` stable for the current example set
 - expand backend support only for constructs already needed by examples
 - keep `backend_elf64.py` and `backend_elf64.s` behavior aligned
 - ensure output-path handling, assembler invocation, and linker invocation are predictable
 
-Done means:
+done means:
 
 - `hello.s` and `sum.s` build and run reliably
 - the command-line build path is no longer fragile
 
-### 4. Keep the Runtime Bridge Minimal and Stable
+### 4. keep the runtime bridge minimal and stable
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/runtime`
 
-Tasks:
+tasks:
 
 - keep hosted execution working
-- shrink Python bridge responsibilities where possible
+- shrink python bridge responsibilities where possible
 - keep intrinsic boundaries explicit
 - make the native runner path stable enough for repeated use
 
-Done means:
+done means:
 
 - runtime support remains a small, well-defined layer instead of becoming a second compiler
 
-### 5. Protect the Core with Tests
+### 5. protect the core with tests
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/cmd/compile/internal/tests`
 - `/app/s/src/testing`
 
-Tasks:
+tasks:
 
 - keep golden outputs stable
 - expand semantic fixtures for common failure cases
 - keep build-and-run smoke tests working
 - start moving reusable testing helpers into `src/testing`
 
-Done means:
+done means:
 
 - parser, semantic, and backend changes can be checked quickly and repeatedly
 
-## P1
+## p1
 
-These tasks make the Phase 1 toolchain cleaner and easier to extend.
+these tasks make the phase 1 toolchain cleaner and easier to extend.
 
-### 6. Consolidate Reusable Language Packages
+### 6. consolidate reusable language packages
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/s`
 
-Tasks:
+tasks:
 
 - keep reusable language-facing code in `src/s`
 - separate public language utilities from compiler-private logic
 - begin organizing `ast`, `token`, `parse`, `types`, and `format` responsibilities clearly
 
-Done means:
+done means:
 
-- S has a clean equivalent to Go's reusable `go/*` analysis packages
+- s has a clean equivalent to go's reusable `go/*` analysis packages
 
-### 7. Refine Ownership and Borrow Checking
+### 7. refine ownership and borrow checking
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/cmd/compile/internal/compiler`
 
-Tasks:
+tasks:
 
 - tighten move checking
 - improve borrow conflict detection
 - improve diagnostics for ownership mistakes
 - cover more branch and control-flow-sensitive cases
 
-Done means:
+done means:
 
 - the ownership model becomes trustworthy for everyday compiler work
 
-### 8. Strengthen Command-Line Tooling
+### 8. strengthen command-line tooling
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/cmd`
 
-Tasks:
+tasks:
 
 - keep `s check` and `s build` stable
 - keep `lex_dump`, `ast_dump`, and `test_compiler` usable as internal tools
 - reduce reliance on one-off helper scripts for common workflows
 
-Done means:
+done means:
 
 - developers interact mainly through consistent commands instead of internal entry points
 
-### 9. Keep the Standard Library Minimal but Cohesive
+### 9. keep the standard library minimal but cohesive
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/prelude`
 - `/app/s/src/result`
@@ -183,27 +183,27 @@ Primary directories:
 - `/app/s/src/env`
 - `/app/s/src/process`
 
-Tasks:
+tasks:
 
 - maintain `result`, `option`, `vec`, `io`, `fs`, `env`, `process`, and `prelude`
 - fill only the missing pieces required by the compiler and basic programs
 - avoid premature expansion into broad application-level libraries
 
-Done means:
+done means:
 
 - the standard library supports self-hosting needs without becoming a distraction
 
-## P2
+## p2
 
-These tasks prepare S for the next phase after the core loop is stable.
+these tasks prepare s for the next phase after the core loop is stable.
 
-### 10. Isolate Toolchain-Private Infrastructure
+### 10. isolate toolchain-private infrastructure
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/internal`
 
-Tasks:
+tasks:
 
 - move bootstrap-only code toward `internal/bootstrap`
 - organize build configuration under `internal/buildcfg`
@@ -211,46 +211,46 @@ Tasks:
 - isolate platform-specific logic under `internal/platform`
 - isolate test-only environment helpers under `internal/testenv`
 
-Done means:
+done means:
 
 - compiler and runtime packages stay focused instead of collecting every internal helper
 
-### 11. Prepare for Reduced Python Dependence
+### 11. prepare for reduced python dependence
 
-Primary directories:
+primary directories:
 
 - `/app/s/src/runtime`
 - `/app/s/src/internal/bootstrap`
 - `/app/s/src/cmd/compile/internal/compiler`
 
-Tasks:
+tasks:
 
 - clarify which hosted paths are temporary
-- replace temporary Python-hosted logic with S-native logic where realistic
+- replace temporary python-hosted logic with s-native logic where realistic
 - keep the self-hosting transition incremental and testable
 
-Done means:
+done means:
 
 - the project is ready to move from a mixed bootstrap model toward deeper self-hosting
 
-## Recommended Execution Order
+## recommended execution order
 
-1. Stabilize `/app/s/src/s`
-2. Stabilize semantic checking in `/app/s/src/cmd/compile/internal/compiler`
-3. Make the build path solid in `/app/s/src/cmd/compile/internal/compiler` and `/app/s/src/cmd`
-4. Keep `/app/s/src/runtime` small and stable
-5. Strengthen `/app/s/src/cmd/compile/internal/tests` and `/app/s/src/testing`
-6. Refine ownership and borrow analysis
-7. Consolidate reusable package boundaries in `/app/s/src/s`
-8. Tighten command-line tooling and minimal standard library support
-9. Isolate internal infrastructure in `/app/s/src/internal`
-10. Reduce bootstrap dependence on Python
+1. stabilize `/app/s/src/s`
+2. stabilize semantic checking in `/app/s/src/cmd/compile/internal/compiler`
+3. make the build path solid in `/app/s/src/cmd/compile/internal/compiler` and `/app/s/src/cmd`
+4. keep `/app/s/src/runtime` small and stable
+5. strengthen `/app/s/src/cmd/compile/internal/tests` and `/app/s/src/testing`
+6. refine ownership and borrow analysis
+7. consolidate reusable package boundaries in `/app/s/src/s`
+8. tighten command-line tooling and minimal standard library support
+9. isolate internal infrastructure in `/app/s/src/internal`
+10. reduce bootstrap dependence on python
 
-## Short Version
+## short version
 
-Phase 1 is:
+phase 1 is:
 
 `s  compiler  runtime  cmd  std(min) tests`
 
-The goal is to make that loop solid before chasing a larger library surface or
+the goal is to make that loop solid before chasing a larger library surface or
 broader ecosystem work.

@@ -1,48 +1,48 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import path
 import os
 import subprocess
 import sys
 
-from compiler.ast import SourceFile, dump_source_file
-from compiler.backend_elf64 import BackendError, build_executable
-from compiler.interpreter import Interpreter, InterpreterError
-from compiler.lexer import Lexer, dump_tokens
-from compiler.parser import ParseError, parse_source
+from compiler.ast import sourcefile, dump_source_file
+from compiler.backend_elf64 import backenderror, build_executable
+from compiler.interpreter import interpreter, interpretererror
+from compiler.lexer import lexer, dump_tokens
+from compiler.parser import parseerror, parse_source
 from compiler.semantic import check_source
 
-BUILD_OUTPUT_ROOT = Path(os.environ.get("S_BUILD_OUTPUT_ROOT", "/tmp/s-build"))
-SELFHOSTED_RUNNER_PATHS = (
-    Path(os.environ.get("S_SELFHOSTED_RUNNER", "")) if os.environ.get("S_SELFHOSTED_RUNNER") else None,
-    Path("/app/s/bin/s-selfhosted"),
-    Path(__file__).resolve().parents[2] / "bin" / "s-selfhosted",
+build_output_root = path(os.environ.get("s_build_output_root", "/tmp/s-build"))
+selfhosted_runner_paths = (
+    path(os.environ.get("s_selfhosted_runner", "")) if os.environ.get("s_selfhosted_runner") else none,
+    path("/app/s/bin/s-selfhosted"),
+    path(__file__).resolve().parents[2] / "bin" / "s-selfhosted",
 )
 
 
-@dataclass(frozen=True)
-class CliError(Exception):
+@dataclass(frozen=true)
+class clierror(exception):
     message: str
 
     def __str__(self) -> str:
         return self.message
 
 
-@dataclass(frozen=True)
-class CheckOptions:
+@dataclass(frozen=true)
+class checkoptions:
     command: str
     path: str
     output: str = ""
-    dump_tokens: bool = False
-    dump_ast: bool = False
+    dump_tokens: bool = false
+    dump_ast: bool = false
 
 
 def run_cli(argv: list[str]) -> int:
     try:
         command = parse_command(argv)
         selfhosted_runner = resolve_selfhosted_runner()
-        if selfhosted_runner is not None and can_selfhosted_handle(command):
+        if selfhosted_runner is not none and can_selfhosted_handle(command):
             return run_selfhosted_cli(selfhosted_runner, command)
         source = read_source(command.path)
         parsed = parse_checked_source(command, source)
@@ -55,29 +55,29 @@ def run_cli(argv: list[str]) -> int:
             return 0
         if command.command == "run":
             return run_checked_source(parsed)
-        raise CliError(f"unknown command: {command.command}")
-    except CliError as exc:
+        raise clierror(f"unknown command: {command.command}")
+    except clierror as exc:
         print(f"error: {exc.message}", file=sys.stderr)
         return 1
-    except InterpreterError as exc:
+    except interpretererror as exc:
         print(f"runtime error: {exc}", file=sys.stderr)
         return 1
 
 
-def can_selfhosted_handle(command: CheckOptions) -> bool:
+def can_selfhosted_handle(command: checkoptions) -> bool:
     return not command.dump_tokens and not command.dump_ast
 
 
-def resolve_selfhosted_runner() -> Path | None:
-    for candidate in SELFHOSTED_RUNNER_PATHS:
-        if candidate is None:
+def resolve_selfhosted_runner() -> path | none:
+    for candidate in selfhosted_runner_paths:
+        if candidate is none:
             continue
-        if candidate.is_file() and os.access(candidate, os.X_OK):
+        if candidate.is_file() and os.access(candidate, os.x_ok):
             return candidate
-    return None
+    return none
 
 
-def run_selfhosted_cli(selfhosted_runner: Path, command: CheckOptions) -> int:
+def run_selfhosted_cli(selfhosted_runner: path, command: checkoptions) -> int:
     if command.command == "check":
         args = [str(selfhosted_runner), "check", command.path]
         if command.dump_tokens:
@@ -89,13 +89,13 @@ def run_selfhosted_cli(selfhosted_runner: Path, command: CheckOptions) -> int:
     elif command.command == "run":
         args = [str(selfhosted_runner), "run", command.path]
     else:
-        raise CliError(f"unknown command: {command.command}")
+        raise clierror(f"unknown command: {command.command}")
 
-    completed = subprocess.run(args, check=False)
+    completed = subprocess.run(args, check=false)
     return int(completed.returncode)
 
 
-def parse_command(argv: list[str]) -> CheckOptions:
+def parse_command(argv: list[str]) -> checkoptions:
     if len(argv) < 2:
         raise _usage_error()
     command = argv[0]
@@ -108,27 +108,27 @@ def parse_command(argv: list[str]) -> CheckOptions:
         if len(argv) < 4:
             raise _usage_error()
         if argv[2] != "-o":
-            raise CliError("expected -o before output path")
-        return CheckOptions(command=command, path=argv[1], output=str(resolve_output_path(argv[3])))
+            raise clierror("expected -o before output path")
+        return checkoptions(command=command, path=argv[1], output=str(resolve_output_path(argv[3])))
     if command == "run":
         if len(argv) != 2:
             raise _usage_error()
-        return CheckOptions(command=command, path=argv[1])
+        return checkoptions(command=command, path=argv[1])
 
-    options = CheckOptions(command=command, path=argv[1])
+    options = checkoptions(command=command, path=argv[1])
     index = 2
-    dump_tokens_flag = False
-    dump_ast_flag = False
+    dump_tokens_flag = false
+    dump_ast_flag = false
     while index < len(argv):
         flag = argv[index]
         if flag == "--dump-tokens":
-            dump_tokens_flag = True
+            dump_tokens_flag = true
         elif flag == "--dump-ast":
-            dump_ast_flag = True
+            dump_ast_flag = true
         else:
-            raise CliError(f"unknown flag: {flag}")
+            raise clierror(f"unknown flag: {flag}")
         index += 1
-    return CheckOptions(
+    return checkoptions(
         command=options.command,
         path=options.path,
         output=options.output,
@@ -138,21 +138,21 @@ def parse_command(argv: list[str]) -> CheckOptions:
 
 
 def read_source(path: str) -> str:
-    source_path = Path(path)
+    source_path = path(path)
     try:
         return source_path.read_text()
-    except OSError as exc:
-        raise CliError(f"failed to read source file: {path}") from exc
+    except oserror as exc:
+        raise clierror(f"failed to read source file: {path}") from exc
 
 
-def parse_checked_source(command: CheckOptions, source: str) -> SourceFile:
+def parse_checked_source(command: checkoptions, source: str) -> sourcefile:
     if command.dump_tokens:
-        print(dump_tokens(Lexer(source).tokenize()))
+        print(dump_tokens(lexer(source).tokenize()))
 
     try:
         parsed = parse_source(source)
-    except ParseError as exc:
-        raise CliError(f"parse error: {exc}") from exc
+    except parseerror as exc:
+        raise clierror(f"parse error: {exc}") from exc
 
     if command.dump_ast:
         print(dump_source_file(parsed))
@@ -161,32 +161,32 @@ def parse_checked_source(command: CheckOptions, source: str) -> SourceFile:
     if not result.ok:
         for diagnostic in result.diagnostics:
             print(f"error: {diagnostic.message}", file=sys.stderr)
-        raise CliError("semantic check failed")
+        raise clierror("semantic check failed")
 
     return parsed
 
 
-def emit_binary(parsed: SourceFile, output_path: str) -> None:
+def emit_binary(parsed: sourcefile, output_path: str) -> none:
     try:
         build_executable(parsed, resolve_output_path(output_path))
-    except BackendError as exc:
-        raise CliError(f"backend error: {exc}") from exc
+    except backenderror as exc:
+        raise clierror(f"backend error: {exc}") from exc
 
 
-def run_checked_source(parsed: SourceFile) -> int:
-    return Interpreter(parsed).run_main()
+def run_checked_source(parsed: sourcefile) -> int:
+    return interpreter(parsed).run_main()
 
 
-def resolve_output_path(output_path: str) -> Path:
-    target = Path(output_path)
+def resolve_output_path(output_path: str) -> path:
+    target = path(output_path)
     if not target.is_absolute():
-        target = BUILD_OUTPUT_ROOT / target.name
-    target.parent.mkdir(parents=True, exist_ok=True)
+        target = build_output_root / target.name
+    target.parent.mkdir(parents=true, exist_ok=true)
     return target.resolve()
 
 
-def _usage_error() -> CliError:
-    return CliError(
+def _usage_error() -> clierror:
+    return clierror(
         "usage: s check <path> [--dump-tokens] [--dump-ast] | "
         "s build <path> -o <output> | s run <path>"
     )

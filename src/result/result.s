@@ -1,37 +1,37 @@
 package std.result
 
-enum Result[T, E] {
-    Ok(T),
-    Err(E),
+enum result[t, e] {
+    ok(t),
+    err(e),
 }
 
-impl Result[T, E] {
-    func isOk(self) bool {
+impl result[t, e] {
+    func is_ok(self) bool {
         switch self {
-            Result::Ok(_) : true,
-            Result::Err(_) : false,
+            result::ok(_) : true,
+            result::err(_) : false,
         }
     }
 
-    func isErr(self) bool {
-        !self.isOk()
+    func is_err(self) bool {
+        !self.is_ok()
     }
 
-    func unwrap(self) T {
+    func unwrap(self) t {
         switch self {
-            Result::Ok(value) : value,
-            Result::Err(_) : __result_panic_unwrap(),
+            result::ok(value) : value,
+            result::err(_) : __result_panic_unwrap(),
         }
     }
 
-    func unwrapErr(self) E {
+    func unwrap_err(self) e {
         switch self {
-            Result::Ok(_) : __result_panic_unwrap_err(),
-            Result::Err(err) : err,
+            result::ok(_) : __result_panic_unwrap_err(),
+            result::err(err) : err,
         }
     }
 }
 
-extern "intrinsic" func __result_panic_unwrap[T]() T
+extern "intrinsic" func __result_panic_unwrap[t]() t
 
-extern "intrinsic" func __result_panic_unwrap_err[E]() E
+extern "intrinsic" func __result_panic_unwrap_err[e]() e
