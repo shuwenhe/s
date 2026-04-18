@@ -5,7 +5,7 @@ use std.prelude.len
 use std.prelude.slice
 use std.vec.Vec
 
-func ParseType(string text) string {
+func parse_type(string text) string {
     var clean = normalize_type_text(trim_text(text))
     if clean == "" {
         return "unknown"
@@ -14,31 +14,31 @@ func ParseType(string text) string {
         return clean
     }
     if starts_with(clean, "&mut ") {
-        return "&mut " + ParseType(slice(clean, 5, len(clean)))
+        return "&mut " + parse_type(slice(clean, 5, len(clean)))
     }
     if starts_with(clean, "&") {
-        return "&" + ParseType(slice(clean, 1, len(clean)))
+        return "&" + parse_type(slice(clean, 1, len(clean)))
     }
     if starts_with(clean, "[]") {
-        return "[]" + ParseType(slice(clean, 2, len(clean)))
+        return "[]" + parse_type(slice(clean, 2, len(clean)))
     }
     return clean
 }
 
-func DumpType(string ty) string {
-    return ParseType(ty)
+func dump_type(string ty) string {
+    return parse_type(ty)
 }
 
-func BaseTypeName(string ty) string {
-    var clean = ParseType(ty)
+func base_type_name(string ty) string {
+    var clean = parse_type(ty)
     if starts_with(clean, "&mut ") {
-        return BaseTypeName(slice(clean, 5, len(clean)))
+        return base_type_name(slice(clean, 5, len(clean)))
     }
     if starts_with(clean, "&") {
-        return BaseTypeName(slice(clean, 1, len(clean)))
+        return base_type_name(slice(clean, 1, len(clean)))
     }
     if starts_with(clean, "[]") {
-        return BaseTypeName(slice(clean, 2, len(clean)))
+        return base_type_name(slice(clean, 2, len(clean)))
     }
     var bracket = find_char(clean, "[")
     if bracket >= 0 {
@@ -55,17 +55,17 @@ func BaseTypeName(string ty) string {
     return clean
 }
 
-func SameType(string left, string right) bool {
-    return ParseType(left) == ParseType(right)
+func same_type(string left, string right) bool {
+    return parse_type(left) == parse_type(right)
 }
 
-func IsBuiltinPrimitive(string ty) bool {
-    var clean = ParseType(ty)
+func is_builtin_primitive(string ty) bool {
+    var clean = parse_type(ty)
     return clean == "()" || clean == "never" || clean == "bool" || clean == "int32" || clean == "usize" || clean == "u8" || clean == "string"
 }
 
-func IsCopyType(string ty) bool {
-    var clean = ParseType(ty)
+func is_copy_type(string ty) bool {
+    var clean = parse_type(ty)
     if clean == "()" || clean == "never" || clean == "bool" || clean == "int32" || clean == "usize" || clean == "u8" {
         return true
     }
@@ -75,15 +75,15 @@ func IsCopyType(string ty) bool {
     return false
 }
 
-func IsReferenceType(string ty) bool {
+func is_reference_type(string ty) bool {
     return starts_with(trim_text(ty), "&")
 }
 
-func IsSliceType(string ty) bool {
+func is_slice_type(string ty) bool {
     return starts_with(trim_text(ty), "[]")
 }
 
-func IsGenericType(string ty) bool {
+func is_generic_type(string ty) bool {
     var clean = trim_text(ty)
     return find_char(clean, "[") >= 0 || find_char(clean, "<") >= 0
 }

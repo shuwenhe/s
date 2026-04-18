@@ -13,17 +13,17 @@ enum Option[T] {
     None,
 }
 
-trait ReaderLike[T] {
-    func read(&mut Self self, []u8 buf) Result[usize, IoError];
+trait reader_like[T] {
+    func read(&mut Self self, []u8 buf) Result[usize, io_error];
 }
 
-func load[T: Reader](T reader, string path) Result[string, IoError] {
+func load[T: Reader](T reader, string path) Result[string, io_error] {
     var value = 1
     value
 }
 
-impl ReaderLike[File] for File {
-    func read(&mut Self self, []u8 buf) Result[usize, IoError] {
+impl reader_like[File] for File {
+    func read(&mut Self self, []u8 buf) Result[usize, io_error] {
         buf
     }
 }

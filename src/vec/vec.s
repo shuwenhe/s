@@ -4,13 +4,13 @@ use std.option.Option
 use std.prelude.Box
 use std.prelude.box
 
-struct RawVec[T] {
+struct raw_vec[T] {
     Box[Array[T]] storage,
     int32 capacity,
 }
 
 struct Vec[T] {
-    RawVec[T] raw,
+    raw_vec[T] raw,
     int32 length,
 }
 
@@ -26,7 +26,7 @@ func with_capacity[T](int32 capacity) Vec[T] {
             4
         }
     Vec[T] {
-        raw: RawVec[T] {
+        raw: raw_vec[T] {
             storage: box(new_array[T](initial)),
             capacity: initial,
         },
