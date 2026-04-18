@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ctypes import cdll, c_char_p, c_longlong, c_size_t, c_void_p, string_at
-from pathlib import path
+from pathlib import Path
 
 
 _lib: cdll | none = none
