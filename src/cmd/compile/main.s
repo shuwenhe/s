@@ -1,8 +1,8 @@
 package cmd
 
-use compile.internal.compiler.Main as compilerMain
-use std.env.Args as hostArgs
+use compile.internal.compiler.Main as compiler_main
+use std.env.Args as host_args
 
 func main() int32 {
-    return compilerMain(hostArgs())
+    return compiler_main(host_args())
 }

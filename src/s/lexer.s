@@ -1,12 +1,12 @@
 package s
 
-use std.prelude.charAt
+use std.prelude.char_at
 use std.prelude.len
 use std.prelude.slice
 use std.vec.Vec
 use std.result.Result
 
-struct LexError {
+struct lex_error {
     string message,
     int32 line,
     int32 column,
@@ -19,7 +19,7 @@ struct Lexer {
     int32 column,
 }
 
-func newLexer(string source) Lexer {
+func new_lexer(string source) Lexer {
     Lexer {
         source: source,
         index: 0,
@@ -29,65 +29,65 @@ func newLexer(string source) Lexer {
 }
 
 impl Lexer {
-    func tokenize(mut self) Result[Vec[Token], LexError] {
+    func tokenize(mut self) Result[Vec[Token], lex_error] {
         var tokens = Vec[Token]()
-        while !self.isEof() {
-            self.skipIgnored()?
-            if self.isEof() {
+        while !self.is_eof() {
+            self.skip_ignored()?
+            if self.is_eof() {
                 break
             }
 
-            var startLine = self.line
-            var startColumn = self.column
+            var start_line = self.line
+            var start_column = self.column
             var ch = self.peek()?
 
-            if isIdentStart(ch) {
-                var value = self.readIdentifier()?
+            if is_ident_start(ch) {
+                var value = self.read_identifier()?
                 var kind =
-                    if isKeyword(value) {
-                        TokenKind::Keyword
+                    if is_keyword(value) {
+                        token_kind::Keyword
                     } else {
-                        TokenKind::Ident
+                        token_kind::Ident
                     }
                 tokens.push(Token {
                     kind: kind,
                     value: value,
-                    line: startLine,
-                    column: startColumn,
+                    line: start_line,
+                    column: start_column,
                 })
                 continue
             }
 
-            if isDigit(ch) {
+            if is_digit(ch) {
                 tokens.push(Token {
-                    kind: TokenKind::Int,
-                    value: self.readNumber()?,
-                    line: startLine,
-                    column: startColumn,
+                    kind: token_kind::Int,
+                    value: self.read_number()?,
+                    line: start_line,
+                    column: start_column,
                 })
                 continue
             }
 
             if ch == "\"" {
                 tokens.push(Token {
-                    kind: TokenKind::string,
-                    value: self.readString()?,
-                    line: startLine,
-                    column: startColumn,
+                    kind: token_kind::string,
+                    value: self.read_string()?,
+                    line: start_line,
+                    column: start_column,
                 })
                 continue
             }
 
             tokens.push(Token {
-                kind: TokenKind::Symbol,
-                value: self.readSymbol()?,
-                line: startLine,
-                column: startColumn,
+                kind: token_kind::Symbol,
+                value: self.read_symbol()?,
+                line: start_line,
+                column: start_column,
             })
         }
 
         tokens.push(Token {
-            kind: TokenKind::Eof,
+            kind: token_kind::Eof,
             value: "<eof>",
             line: self.line,
             column: self.column,
@@ -96,37 +96,37 @@ impl Lexer {
         Result::Ok(tokens)
     }
 
-    func skipIgnored(mut self) Result[(), LexError] {
-        while !self.isEof() {
+    func skip_ignored(mut self) Result[(), lex_error] {
+        while !self.is_eof() {
             var ch = self.peek()?
 
-            if isWhitespace(ch) {
+            if is_whitespace(ch) {
                 self.advance()?
                 continue
             }
 
-            if self.matchText("//") {
-                while !self.isEof() && self.peek()? != "\n" {
+            if self.match_text("//") {
+                while !self.is_eof() && self.peek()? != "\n" {
                     self.advance()?
                 }
                 continue
             }
 
-            if self.matchText("/*") {
+            if self.match_text("/*") {
                 self.advance()?
                 self.advance()?
                 var depth = 1
                 while depth > 0 {
-                    if self.isEof() {
+                    if self.is_eof() {
                         return err(self.error("unterminated block comment"))
                     }
-                    if self.matchText("/*") {
+                    if self.match_text("/*") {
                         depth = depth + 1
                         self.advance()?
                         self.advance()?
                         continue
                     }
-                    if self.matchText("*/") {
+                    if self.match_text("*/") {
                         depth = depth - 1
                         self.advance()?
                         self.advance()?
@@ -143,11 +143,11 @@ impl Lexer {
         Result::Ok(())
     }
 
-    func readIdentifier(mut self) Result[string, LexError] {
+    func read_identifier(mut self) Result[string, lex_error] {
         var out = ""
-        while !self.isEof() {
+        while !self.is_eof() {
             var ch = self.peek()?
-            if !isIdentContinue(ch) {
+            if !is_ident_continue(ch) {
                 break
             }
             out = out + self.advance()?
@@ -155,11 +155,11 @@ impl Lexer {
         Result::Ok(out)
     }
 
-    func readNumber(mut self) Result[string, LexError] {
+    func read_number(mut self) Result[string, lex_error] {
         var out = ""
-        while !self.isEof() {
+        while !self.is_eof() {
             var ch = self.peek()?
-            if !isNumberContinue(ch) {
+            if !is_number_continue(ch) {
                 break
             }
             out = out + self.advance()?
@@ -167,13 +167,13 @@ impl Lexer {
         Result::Ok(out)
     }
 
-    func readString(mut self) Result[string, LexError] {
+    func read_string(mut self) Result[string, lex_error] {
         var out = self.advance()?
-        while !self.isEof() {
+        while !self.is_eof() {
             var ch = self.advance()?
             out = out + ch
             if ch == "\\" {
-                if self.isEof() {
+                if self.is_eof() {
                     return Result::Err(self.error("unterminated escape sequence"))
                 }
                 out = out + self.advance()?
@@ -186,7 +186,7 @@ impl Lexer {
         Result::Err(self.error("unterminated string literal"))
     }
 
-    func readSymbol(mut self) Result[string, LexError] {
+    func read_symbol(mut self) Result[string, lex_error] {
         var multi = Vec[string] {
             "->",
             ":",
@@ -206,7 +206,7 @@ impl Lexer {
         }
 
         for symbol in multi {
-            if self.matchText(symbol) {
+            if self.match_text(symbol) {
                 var out = ""
                 var count = len(symbol)
                 var i = 0
@@ -219,33 +219,33 @@ impl Lexer {
         }
 
         var ch = self.peek()?
-        if isSingleSymbol(ch) {
+        if is_single_symbol(ch) {
             return Result::Ok(self.advance()?)
         }
 
         Result::Err(self.error("unexpected character"))
     }
 
-    func matchText(self, string text) bool {
+    func match_text(self, string text) bool {
         if self.index + len(text) > len(self.source) {
             return false
         }
         slice(self.source, self.index, self.index + len(text)) == text
     }
 
-    func peek(self) Result[string, LexError] {
-        if self.isEof() {
+    func peek(self) Result[string, lex_error] {
+        if self.is_eof() {
             return Result::Err(self.error("unexpected eof"))
         }
-        Result::Ok(charAt(self.source, self.index))
+        Result::Ok(char_at(self.source, self.index))
     }
 
-    func advance(mut self) Result[string, LexError] {
-        if self.isEof() {
+    func advance(mut self) Result[string, lex_error] {
+        if self.is_eof() {
             return Result::Err(self.error("unexpected eof"))
         }
 
-        var ch = charAt(self.source, self.index)
+        var ch = char_at(self.source, self.index)
         self.index = self.index + 1
 
         if ch == "\n" {
@@ -258,12 +258,12 @@ impl Lexer {
         Result::Ok(ch)
     }
 
-    func isEof(self) bool {
+    func is_eof(self) bool {
         self.index >= len(self.source)
     }
 
-    func error(self, string message) LexError {
-        LexError {
+    func error(self, string message) lex_error {
+        lex_error {
             message: message,
             line: self.line,
             column: self.column,
@@ -271,7 +271,7 @@ impl Lexer {
     }
 }
 
-func isWhitespace(string ch) bool {
+func is_whitespace(string ch) bool {
     switch ch {
         " " : true,
         "\t" : true,
@@ -281,7 +281,7 @@ func isWhitespace(string ch) bool {
     }
 }
 
-func isDigit(string ch) bool {
+func is_digit(string ch) bool {
     switch ch {
         "0" : true,
         "1" : true,
@@ -297,22 +297,22 @@ func isDigit(string ch) bool {
     }
 }
 
-func isNumberContinue(string ch) bool {
-    isDigit(ch) || ch == "_"
+func is_number_continue(string ch) bool {
+    is_digit(ch) || ch == "_"
 }
 
-func isIdentStart(string ch) bool {
+func is_ident_start(string ch) bool {
     if ch == "_" {
         return true
     }
-    isAsciiAlpha(ch)
+    is_ascii_alpha(ch)
 }
 
-func isIdentContinue(string ch) bool {
-    isIdentStart(ch) || isDigit(ch)
+func is_ident_continue(string ch) bool {
+    is_ident_start(ch) || is_digit(ch)
 }
 
-func isAsciiAlpha(string ch) bool {
+func is_ascii_alpha(string ch) bool {
     switch ch {
         "a" : true,
         "b" : true,
@@ -370,7 +370,7 @@ func isAsciiAlpha(string ch) bool {
     }
 }
 
-func isSingleSymbol(string ch) bool {
+func is_single_symbol(string ch) bool {
     switch ch {
         "(" : true,
         ")" : true,
