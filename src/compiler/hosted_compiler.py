@@ -14,11 +14,9 @@ from compiler.parser import ParseError, parse_source
 from compiler.semantic import check_source
 
 BUILD_OUTPUT_ROOT = Path(os.environ.get("S_BUILD_OUTPUT_ROOT", "/tmp/s-build"))
-SELFHOSTED_RUNNER_PATHS = (
-    Path(os.environ.get("S_SELFHOSTED_RUNNER", "")) if os.environ.get("S_SELFHOSTED_RUNNER") else None,
-    Path("/app/s/bin/s-selfhosted"),
-    Path(__file__).resolve().parents[2] / "bin" / "s-selfhosted",
-)
+DISABLE_SELFHOSTED = os.environ.get("S_DISABLE_SELFHOSTED", "") not in {"", "0", "false", "False"}
+ENABLE_SELFHOSTED = os.environ.get("S_ENABLE_SELFHOSTED", "") not in {"", "0", "false", "False"}
+SELFHOSTED_RUNNER = os.environ.get("S_SELFHOSTED_RUNNER", "")
 
 
 @dataclass(frozen=True)
@@ -69,11 +67,11 @@ def can_selfhosted_handle(command: CheckOptions) -> bool:
 
 
 def resolve_selfhosted_runner() -> Path | None:
-    for candidate in SELFHOSTED_RUNNER_PATHS:
-        if candidate is None:
-            continue
-        if candidate.is_file() and os.access(candidate, os.X_OK):
-            return candidate
+    if DISABLE_SELFHOSTED or not ENABLE_SELFHOSTED or SELFHOSTED_RUNNER == "":
+        return None
+    candidate = Path(SELFHOSTED_RUNNER)
+    if candidate.is_file() and os.access(candidate, os.X_OK):
+        return candidate
     return None
 
 
