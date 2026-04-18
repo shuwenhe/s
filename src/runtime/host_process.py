@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 from ctypes import cdll, pointer, c_char_p, c_int, c_size_t
-from pathlib import path
+from pathlib import Path
 
 
-_lib: cdll | none = none
+_lib: cdll | None = None
 
 
 def _load_library() -> cdll:
     global _lib
-    if _lib is not none:
+    if _lib is not None:
         return _lib
-    library_path = path(__file__).with_name("libhost_process.so")
+    library_path = Path(__file__).with_name("libhost_process.so")
     if not library_path.exists():
-        raise runtimeerror(f"missing host process library: {library_path}")
+        raise RuntimeError(f"missing host process library: {library_path}")
     lib = cdll(str(library_path))
     lib.host_process_run_argv.argtypes = [c_size_t, pointer(c_char_p)]
     lib.host_process_run_argv.restype = c_int
@@ -25,5 +25,5 @@ def run_argv(argv: list[str]) -> int:
     lib = _load_library()
     encoded = [arg.encode("utf-8") for arg in argv]
     array_type = c_char_p * (len(encoded) + 1)
-    array = array_type(*encoded, none)
+    array = array_type(*encoded, None)
     return int(lib.host_process_run_argv(len(encoded), array))

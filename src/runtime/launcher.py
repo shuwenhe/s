@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from pathlib import path
+from pathlib import Path
 
 
 default_executable_path = path(__file__).with_name("launcher")
