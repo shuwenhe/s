@@ -1,22 +1,22 @@
 from __future__ import annotations
 
 from ctypes import cdll, c_char_p, c_int, c_void_p
-from pathlib import path
+from pathlib import Path
 
 
-_lib: cdll | none = none
+_lib: cdll | None = None
 
 
 def _load_library() -> cdll:
     global _lib
-    if _lib is not none:
+    if _lib is not None:
         return _lib
-    library_path = path(__file__).with_name("libhost_fs.so")
+    library_path = Path(__file__).with_name("libhost_fs.so")
     if not library_path.exists():
-        raise runtimeerror(f"missing host fs library: {library_path}")
+        raise RuntimeError(f"missing host fs library: {library_path}")
     lib = cdll(str(library_path))
     lib.host_fs_free.argtypes = [c_void_p]
-    lib.host_fs_free.restype = none
+    lib.host_fs_free.restype = None
     lib.host_fs_read_to_string.argtypes = [c_char_p]
     lib.host_fs_read_to_string.restype = c_void_p
     lib.host_fs_write_text_file.argtypes = [c_char_p, c_char_p]
@@ -29,7 +29,7 @@ def _load_library() -> cdll:
 
 def _take_string(ptr: int) -> str:
     if not ptr:
-        raise runtimeerror("host fs returned null")
+        raise RuntimeError("host fs returned null")
     lib = _load_library()
     try:
         from ctypes import string_at
@@ -44,11 +44,11 @@ def read_to_string(path: str) -> str:
     return _take_string(int(lib.host_fs_read_to_string(path.encode("utf-8"))))
 
 
-def write_text_file(path: str, contents: str) -> none:
+def write_text_file(path: str, contents: str) -> None:
     lib = _load_library()
     code = int(lib.host_fs_write_text_file(path.encode("utf-8"), contents.encode("utf-8")))
     if code != 0:
-        raise runtimeerror(f"write_text_file failed for {path}")
+        raise RuntimeError(f"write_text_file failed for {path}")
 
 
 def make_temp_dir(prefix: str, base_dir: str = "/app/tmp") -> str:
