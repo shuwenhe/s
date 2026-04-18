@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import path
+from pathlib import Path
 import sys
 
 root = path(__file__).resolve().parents[1]

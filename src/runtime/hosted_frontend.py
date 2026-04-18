@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import path
+from pathlib import Path
 from typing import iterable
 
 from compiler.ast import namepattern, variantpattern, wildcardpattern, dump_source_file
