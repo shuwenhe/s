@@ -1,25 +1,25 @@
 package compile.internal.syntax
 
-use std.fs.ReadToString
+use std.fs.read_to_string
 use std.result.Result
 use std.vec.Vec
-use s.SourceFile
+use s.source_file
 use s.Token
-use s.dumpSourceFile
-use s.dumpTokens
-use s.newLexer
-use s.parseTokens
+use s.dump_source_file
+use s.dump_tokens
+use s.new_lexer
+use s.parse_tokens
 
-struct SyntaxError {
+struct syntax_error {
     string message,
     int32 line,
     int32 column,
 }
 
-func ReadSource(string path) Result[string, SyntaxError] {
-    switch ReadToString(path) {
+func read_source(string path) Result[string, syntax_error] {
+    switch read_to_string(path) {
         Result::Ok(source) : Result::Ok(source),
-        Result::Err(err) : Result::Err(SyntaxError {
+        Result::Err(err) : Result::Err(syntax_error {
             message: "failed to read source file: " + path + ": " + err.message,
             line: 0,
             column: 0,
@@ -27,10 +27,10 @@ func ReadSource(string path) Result[string, SyntaxError] {
     }
 }
 
-func Tokenize(string source) Result[Vec[Token], SyntaxError] {
-    switch newLexer(source).tokenize() {
+func Tokenize(string source) Result[Vec[Token], syntax_error] {
+    switch new_lexer(source).tokenize() {
         Result::Ok(tokens) : Result::Ok(tokens),
-        Result::Err(err) : Result::Err(SyntaxError {
+        Result::Err(err) : Result::Err(syntax_error {
             message: err.message,
             line: err.line,
             column: err.column,
@@ -38,15 +38,15 @@ func Tokenize(string source) Result[Vec[Token], SyntaxError] {
     }
 }
 
-func ParseSource(string source) Result[SourceFile, SyntaxError] {
+func parse_source(string source) Result[source_file, syntax_error] {
     var tokens = Tokenize(source)?
-    ParseTokens(tokens)
+    parse_tokens(tokens)
 }
 
-func ParseTokens(Vec[Token] tokens) Result[SourceFile, SyntaxError] {
-    switch parseTokens(tokens) {
+func parse_tokens(Vec[Token] tokens) Result[source_file, syntax_error] {
+    switch parse_tokens(tokens) {
         Result::Ok(ast) : Result::Ok(ast),
-        Result::Err(err) : Result::Err(SyntaxError {
+        Result::Err(err) : Result::Err(syntax_error {
             message: err.message,
             line: err.line,
             column: err.column,
@@ -54,10 +54,10 @@ func ParseTokens(Vec[Token] tokens) Result[SourceFile, SyntaxError] {
     }
 }
 
-func DumpTokensText(Vec[Token] tokens) string {
-    dumpTokens(tokens)
+func dump_tokens_text(Vec[Token] tokens) string {
+    dump_tokens(tokens)
 }
 
-func DumpSourceText(SourceFile source) string {
-    dumpSourceFile(source)
+func dump_source_text(source_file source) string {
+    dump_source_file(source)
 }

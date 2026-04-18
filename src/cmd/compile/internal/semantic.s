@@ -1,15 +1,15 @@
 package compile.internal.semantic
 
-use compile.internal.prelude.LookupBuiltinFieldType
-use compile.internal.prelude.LookupBuiltinMethodArity
-use compile.internal.prelude.LookupBuiltinMethodType
-use compile.internal.typesys.BaseTypeName
-use compile.internal.typesys.ParseType
-use compile.internal.typesys.SameType
-use s.BlockExpr
+use compile.internal.prelude.lookup_builtin_field_type
+use compile.internal.prelude.lookup_builtin_method_arity
+use compile.internal.prelude.lookup_builtin_method_type
+use compile.internal.typesys.base_type_name
+use compile.internal.typesys.parse_type
+use compile.internal.typesys.same_type
+use s.block_expr
 use s.Expr
-use s.FunctionDecl
-use s.ImplDecl
+use s.function_decl
+use s.impl_decl
 use s.Item
 use s.Pattern
 use s.Stmt
@@ -20,56 +20,56 @@ use std.prelude.len
 use std.prelude.slice
 use std.vec.Vec
 
-struct TypeBinding {
+struct type_binding {
     string name,
     string type_name,
 }
 
-struct FunctionBinding {
+struct function_binding {
     string name,
     Vec[string] generic_names,
     Vec[string] param_types,
     string return_type,
 }
 
-struct SignatureMatch {
+struct signature_match {
     bool ok,
     string return_type,
     int32 score,
 }
 
-struct CheckResult {
+struct check_result {
     string type_name,
     int32 errors,
 }
 
-struct PatternCheckResult {
-    Vec[TypeBinding] bindings,
+struct pattern_check_result {
+    Vec[type_binding] bindings,
     int32 errors,
 }
 
-struct SourcePos {
+struct source_pos {
     int32 line,
     int32 column,
 }
 
-struct SemanticError {
+struct semantic_error {
     string code,
     string message,
     int32 line,
     int32 column,
 }
 
-func CheckText(string source) int32 {
-    var diagnostics = CheckDetailed(source);
+func check_text(string source) int32 {
+    var diagnostics = check_detailed(source);
     if diagnostics.len() > 0 {
         return 1;
     }
     0
 }
 
-func CheckDetailed(string source) Vec[SemanticError] {
-    var diagnostics = Vec[SemanticError]()
+func check_detailed(string source) Vec[semantic_error] {
+    var diagnostics = Vec[semantic_error]()
 
     var parsed = parse_source(source)
     if parsed.is_err() {
@@ -89,8 +89,8 @@ func CheckDetailed(string source) Vec[SemanticError] {
     diagnostics
 }
 
-func collect_functions(Vec[Item] items) Vec[FunctionBinding] {
-    var out = Vec[FunctionBinding]()
+func collect_functions(Vec[Item] items) Vec[function_binding] {
+    var out = Vec[function_binding]()
     var i = 0
     while i < items.len() {
         switch items[i] {
@@ -102,7 +102,7 @@ func collect_functions(Vec[Item] items) Vec[FunctionBinding] {
     out
 }
 
-func make_function_binding(FunctionDecl function_decl) FunctionBinding {
+func make_function_binding(function_decl function_decl) function_binding {
     var generic_names = Vec[string]()
     var i = 0
     while i < function_decl.sig.generics.len() {
@@ -113,17 +113,17 @@ func make_function_binding(FunctionDecl function_decl) FunctionBinding {
     var params = Vec[string]()
     i = 0
     while i < function_decl.sig.params.len() {
-        params.push(ParseType(function_decl.sig.params[i].type_name));
+        params.push(parse_type(function_decl.sig.params[i].type_name));
         i = i + 1
     }
 
     var return_type =
         switch function_decl.sig.return_type {
-            Option.Some(type_name) : ParseType(type_name),
+            Option.Some(type_name) : parse_type(type_name),
             Option.None : "()",
         }
 
-    return FunctionBinding {
+    return function_binding {
         name: function_decl.sig.name,
         generic_names: generic_names,
         param_types: params,
@@ -131,7 +131,7 @@ func make_function_binding(FunctionDecl function_decl) FunctionBinding {
     };
 }
 
-func check_item(Item item, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
+func check_item(Item item, Vec[function_binding] functions, string source, Vec[semantic_error] mut diagnostics) int32 {
     switch item {
         Item.Function(function_decl) : check_function(function_decl, functions, source, diagnostics),
         Item.Impl(impl_decl) : check_impl(impl_decl, functions, source, diagnostics),
@@ -139,7 +139,7 @@ func check_item(Item item, Vec[FunctionBinding] functions, string source, Vec[Se
     }
 }
 
-func check_impl(ImplDecl impl_decl, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
+func check_impl(impl_decl impl_decl, Vec[function_binding] functions, string source, Vec[semantic_error] mut diagnostics) int32 {
     var errors = 0
     var i = 0
     while i < impl_decl.methods.len() {
@@ -149,24 +149,24 @@ func check_impl(ImplDecl impl_decl, Vec[FunctionBinding] functions, string sourc
     errors
 }
 
-func check_function(FunctionDecl function_decl, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
+func check_function(function_decl function_decl, Vec[function_binding] functions, string source, Vec[semantic_error] mut diagnostics) int32 {
     if function_decl.body.is_none() {
         return 0
     }
 
     var expected_return =
         switch function_decl.sig.return_type {
-            Option.Some(type_name) : ParseType(type_name),
+            Option.Some(type_name) : parse_type(type_name),
             Option.None : "()",
         }
 
-    var env = Vec[TypeBinding]()
+    var env = Vec[type_binding]()
     var i = 0
     while i < function_decl.sig.params.len() {
         var param = function_decl.sig.params[i]
-        env.push(TypeBinding {
+        env.push(type_binding {
             name: param.name,
-            type_name: ParseType(param.type_name),
+            type_name: parse_type(param.type_name),
         })
         ;
         i = i + 1
@@ -174,14 +174,14 @@ func check_function(FunctionDecl function_decl, Vec[FunctionBinding] functions, 
 
     var result = infer_block_expr(function_decl.body.unwrap(), env, expected_return, functions, source, diagnostics)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
-        if !SameType(expected_return, result.type_name) {
+        if !same_type(expected_return, result.type_name) {
             return result.errors + add_error(source, diagnostics, "E3004", "function return type mismatch", function_decl.sig.name)
         }
     }
     result.errors
 }
 
-func infer_block_expr(BlockExpr block, Vec[TypeBinding] outer_env, string expected_return, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) CheckResult {
+func infer_block_expr(block_expr block, Vec[type_binding] outer_env, string expected_return, Vec[function_binding] functions, string source, Vec[semantic_error] mut diagnostics) check_result {
     var local_env = clone_env(outer_env)
     var errors = 0
 
@@ -194,19 +194,19 @@ func infer_block_expr(BlockExpr block, Vec[TypeBinding] outer_env, string expect
     switch block.final_expr {
         Option.Some(final_expr) : {
             var final_result = infer_expr(final_expr, local_env, expected_return, functions, source, diagnostics)
-            CheckResult {
+            check_result {
                 type_name: final_result.type_name,
                 errors: errors + final_result.errors,
             }
         }
-        Option.None : CheckResult {
+        Option.None : check_result {
             type_name: "()",
             errors: errors,
         },
     }
 }
 
-func check_stmt(Stmt stmt, Vec[TypeBinding] mut env, string expected_return, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) int32 {
+func check_stmt(Stmt stmt, Vec[type_binding] mut env, string expected_return, Vec[function_binding] functions, string source, Vec[semantic_error] mut diagnostics) int32 {
     switch stmt {
         Stmt.Var(value) : {
             var rhs = infer_expr(value.value, env, expected_return, functions, source, diagnostics)
@@ -214,14 +214,14 @@ func check_stmt(Stmt stmt, Vec[TypeBinding] mut env, string expected_return, Vec
 
             var binding_type = rhs.type_name
             if value.type_name.is_some() {
-                var declared = ParseType(value.type_name.unwrap())
+                var declared = parse_type(value.type_name.unwrap())
                 if !types_compatible(declared, rhs.type_name) {
                     errors = errors + add_error(source, diagnostics, "E3001", "variable initializer type mismatch", value.name)
                 }
                 binding_type = declared
             }
 
-            env.push(TypeBinding {
+            env.push(type_binding {
                 name: value.name,
                 type_name: binding_type,
             })
@@ -247,7 +247,7 @@ func check_stmt(Stmt stmt, Vec[TypeBinding] mut env, string expected_return, Vec
             }
             0
         }
-        Stmt.CFor(value) : {
+        Stmt.c_for(value) : {
             var errors = 0
             errors = errors + check_stmt(value.init.value, env, expected_return, functions, source, diagnostics)
             var cond = infer_expr(value.condition, env, expected_return, functions, source, diagnostics)
@@ -289,7 +289,7 @@ func check_stmt(Stmt stmt, Vec[TypeBinding] mut env, string expected_return, Vec
     }
 }
 
-func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[FunctionBinding] functions, string source, Vec[SemanticError] mut diagnostics) CheckResult {
+func infer_expr(Expr expr, Vec[type_binding] env, string expected_return, Vec[function_binding] functions, string source, Vec[semantic_error] mut diagnostics) check_result {
     switch expr {
         Expr::Int(_) : ok_type("int32"),
         Expr::String(_) : ok_type("string"),
@@ -297,7 +297,7 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
         Expr::Name(value) : {
             var ty = lookup_name_type(env, value.name)
             if is_unknown(ty) {
-                return CheckResult {
+                return check_result {
                     type_name: "unknown",
                     errors: add_error(source, diagnostics, "E3010", "undefined identifier", value.name),
                 }
@@ -310,7 +310,7 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
                 return base
             }
             var prefix = if value.mutable { "&mut " } else { "&" }
-            CheckResult {
+            check_result {
                 type_name: prefix + base.type_name,
                 errors: base.errors,
             }
@@ -322,15 +322,15 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
         }
         Expr::Member(value) : {
             var target = infer_expr(value.target.value, env, expected_return, functions, source, diagnostics)
-            var field_type = LookupBuiltinFieldType(target.type_name, value.member)
+            var field_type = lookup_builtin_field_type(target.type_name, value.member)
             if field_type == "" {
-                return CheckResult {
+                return check_result {
                     type_name: "unknown",
                     errors: target.errors + add_error(source, diagnostics, "E3011", "unknown member", value.member),
                 }
             }
-            CheckResult {
-                type_name: ParseType(field_type),
+            check_result {
+                type_name: parse_type(field_type),
                 errors: target.errors,
             }
         }
@@ -342,18 +342,18 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
                 errors = errors + add_error(source, diagnostics, "E3012", "index must be int32", "[")
             }
             if starts_with(target.type_name, "[]") {
-                return CheckResult {
-                    type_name: ParseType(slice(target.type_name, 2, len(target.type_name))),
+                return check_result {
+                    type_name: parse_type(slice(target.type_name, 2, len(target.type_name))),
                     errors: errors,
                 }
             }
             if starts_with(target.type_name, "string") {
-                return CheckResult {
+                return check_result {
                     type_name: "u8",
                     errors: errors,
                 }
             }
-            CheckResult {
+            check_result {
                 type_name: "unknown",
                 errors: errors + add_error(source, diagnostics, "E3013", "index target is not indexable", "["),
             }
@@ -374,19 +374,19 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
                     var target = infer_expr(member.target.value, env, expected_return, functions, source, diagnostics)
                     errors = errors + target.errors
 
-                    var arity = LookupBuiltinMethodArity(target.type_name, member.member)
+                    var arity = lookup_builtin_method_arity(target.type_name, member.member)
                     if arity >= 0 && arity != value.args.len() {
                         errors = errors + add_error(source, diagnostics, "E1005", "builtin method arity mismatch", member.member)
                     }
 
-                    var method_type = LookupBuiltinMethodType(target.type_name, member.member)
+                    var method_type = lookup_builtin_method_type(target.type_name, member.member)
                     if method_type == "" {
-                        return CheckResult {
+                        return check_result {
                             type_name: "unknown",
                             errors: errors + add_error(source, diagnostics, "E1006", "unknown builtin method", member.member),
                         }
                     }
-                    CheckResult {
+                    check_result {
                         type_name: resolve_method_return(target.type_name, method_type),
                         errors: errors,
                     }
@@ -394,13 +394,13 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
                 Expr::Name(callee_name) : {
                     var candidates = lookup_functions(functions, callee_name.name)
                     if candidates.len() == 0 {
-                        return CheckResult {
+                        return check_result {
                             type_name: "unknown",
                             errors: errors + add_error(source, diagnostics, "E1001", "undefined function", callee_name.name),
                         }
                     }
 
-                    var matches = Vec[SignatureMatch]()
+                    var matches = Vec[signature_match]()
                     var j = 0
                     while j < candidates.len() {
                         var m = try_match_signature(candidates[j], arg_types)
@@ -411,7 +411,7 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
                     }
 
                     if matches.len() == 0 {
-                        return CheckResult {
+                        return check_result {
                             type_name: "unknown",
                             errors: errors + add_error(source, diagnostics, "E1002", "no matching overload", callee_name.name),
                         }
@@ -431,20 +431,20 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
                     }
 
                     if ambiguous {
-                        return CheckResult {
+                        return check_result {
                             type_name: "unknown",
                             errors: errors + add_error(source, diagnostics, "E1003", "ambiguous overload", callee_name.name),
                         }
                     }
 
-                    CheckResult {
+                    check_result {
                         type_name: best.return_type,
                         errors: errors,
                     }
                 }
                 _ : {
                     var callee = infer_expr(value.callee.value, env, expected_return, functions, source, diagnostics)
-                    CheckResult {
+                    check_result {
                         type_name: "unknown",
                         errors: errors + callee.errors,
                     }
@@ -486,12 +486,12 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
                 i = i + 1
             }
 
-            var base = BaseTypeName(subject.type_name)
+            var base = base_type_name(subject.type_name)
             if (base == "Option" || base == "Result") && !patterns_cover_type(seen_patterns, subject.type_name) {
                 errors = errors + add_error(source, diagnostics, "E2001", "non-exhaustive switch", "switch")
             }
 
-            CheckResult {
+            check_result {
                 type_name: arm_type,
                 errors: errors,
             }
@@ -510,12 +510,12 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
                     if !types_compatible(then_result.type_name, else_result.type_name) {
                         errors = errors + add_error(source, diagnostics, "E3015", "if/else type mismatch", "if")
                     }
-                    CheckResult {
+                    check_result {
                         type_name: then_result.type_name,
                         errors: errors,
                     }
                 }
-                Option::None : CheckResult {
+                Option::None : check_result {
                     type_name: "()",
                     errors: errors,
                 },
@@ -528,7 +528,7 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
             if !types_compatible("bool", cond.type_name) {
                 errors = errors + add_error(source, diagnostics, "E3016", "while condition must be bool", "while")
             }
-            CheckResult {
+            check_result {
                 type_name: "()",
                 errors: errors,
             }
@@ -536,7 +536,7 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
         Expr::For(value) : {
             var iter = infer_expr(value.iterable.value, env, expected_return, functions, source, diagnostics)
             var body_result = infer_block_expr(value.body, env, expected_return, functions, source, diagnostics)
-            CheckResult {
+            check_result {
                 type_name: "()",
                 errors: iter.errors + body_result.errors,
             }
@@ -560,7 +560,7 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
                 }
                 i = i + 1
             }
-            CheckResult {
+            check_result {
                 type_name: "[]" + first.type_name,
                 errors: errors,
             }
@@ -573,7 +573,7 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
                 errors = errors + infer_expr(value.entries[i].value, env, expected_return, functions, source, diagnostics).errors
                 i = i + 1
             }
-            CheckResult {
+            check_result {
                 type_name: "map",
                 errors: errors,
             }
@@ -581,16 +581,16 @@ func infer_expr(Expr expr, Vec[TypeBinding] env, string expected_return, Vec[Fun
     }
 }
 
-func check_pattern(Pattern pattern, string expected_type, string source, Vec[SemanticError] mut diagnostics) PatternCheckResult {
-    var bindings = Vec[TypeBinding]()
+func check_pattern(Pattern pattern, string expected_type, string source, Vec[semantic_error] mut diagnostics) pattern_check_result {
+    var bindings = Vec[type_binding]()
     var errors = bind_pattern(pattern, expected_type, bindings, source, diagnostics)
-    PatternCheckResult {
+    pattern_check_result {
         bindings: bindings,
         errors: errors,
     }
 }
 
-func bind_pattern(Pattern pattern, string expected_type, Vec[TypeBinding] mut bindings, string source, Vec[SemanticError] mut diagnostics) int32 {
+func bind_pattern(Pattern pattern, string expected_type, Vec[type_binding] mut bindings, string source, Vec[semantic_error] mut diagnostics) int32 {
     if is_unknown(expected_type) {
         return add_error(source, diagnostics, "E2007", "pattern expected type is unknown", pattern_anchor(pattern))
     }
@@ -609,7 +609,7 @@ func bind_pattern(Pattern pattern, string expected_type, Vec[TypeBinding] mut bi
         }
         Pattern::Variant(value) : {
             var variant = last_path_segment(value.path)
-            var base = BaseTypeName(expected_type)
+            var base = base_type_name(expected_type)
             if base == "Option" {
                 if variant == "Some" {
                     if value.args.len() != 1 {
@@ -645,7 +645,7 @@ func bind_pattern(Pattern pattern, string expected_type, Vec[TypeBinding] mut bi
     }
 }
 
-func add_binding(Vec[TypeBinding] mut bindings, string name, string type_name, string source, Vec[SemanticError] mut diagnostics) int32 {
+func add_binding(Vec[type_binding] mut bindings, string name, string type_name, string source, Vec[semantic_error] mut diagnostics) int32 {
     if name == "_" {
         return 0
     }
@@ -661,15 +661,15 @@ func add_binding(Vec[TypeBinding] mut bindings, string name, string type_name, s
         i = i + 1
     }
 
-    bindings.push(TypeBinding {
+    bindings.push(type_binding {
         name: name,
-        type_name: ParseType(type_name),
+        type_name: parse_type(type_name),
     })
     ;
     0
 }
 
-func append_bindings(Vec[TypeBinding] mut target, Vec[TypeBinding] source) () {
+func append_bindings(Vec[type_binding] mut target, Vec[type_binding] source) () {
     var i = 0
     while i < source.len() {
         target.push(source[i]);
@@ -755,7 +755,7 @@ func patterns_cover_type(Vec[Pattern] patterns, string expected_type) bool {
         i = i + 1
     }
 
-    var base = BaseTypeName(expected_type)
+    var base = base_type_name(expected_type)
     if base == "Option" {
         return option_patterns_cover(patterns, expected_type)
     }
@@ -835,7 +835,7 @@ func pattern_anchor(Pattern pattern) string {
     }
 }
 
-func literal_pattern_type(LiteralPattern value) string {
+func literal_pattern_type(literal_pattern value) string {
     switch value.value {
         Expr::Int(_) : "int32",
         Expr::string(_) : "string",
@@ -844,7 +844,7 @@ func literal_pattern_type(LiteralPattern value) string {
     }
 }
 
-func literal_pattern_text(LiteralPattern value) string {
+func literal_pattern_text(literal_pattern value) string {
     switch value.value {
         Expr::Int(v) : v.value,
         Expr::string(v) : v.value,
@@ -853,12 +853,12 @@ func literal_pattern_text(LiteralPattern value) string {
     }
 }
 
-func literal_pattern_equals(LiteralPattern left, LiteralPattern right) bool {
+func literal_pattern_equals(literal_pattern left, literal_pattern right) bool {
     literal_pattern_type(left) == literal_pattern_type(right) && literal_pattern_text(left) == literal_pattern_text(right)
 }
 
 func variant_payload_type(string expected_type, string ctor) string {
-    var base = BaseTypeName(expected_type)
+    var base = base_type_name(expected_type)
     if base == "Option" {
         if ctor == "Some" {
             return first_type_arg(expected_type)
@@ -878,14 +878,14 @@ func variant_payload_type(string expected_type, string ctor) string {
     "unknown"
 }
 
-func infer_binary(string op, CheckResult left, CheckResult right, string source, Vec[SemanticError] mut diagnostics) CheckResult {
+func infer_binary(string op, check_result left, check_result right, string source, Vec[semantic_error] mut diagnostics) check_result {
     var errors = left.errors + right.errors
 
     if op == "+" || op == "-" || op == "*" || op == "/" || op == "%" {
         if !types_compatible("int32", left.type_name) || !types_compatible("int32", right.type_name) {
             errors = errors + add_error(source, diagnostics, "E3018", "arithmetic requires int32", op)
         }
-        return CheckResult {
+        return check_result {
             type_name: "int32",
             errors: errors,
         }
@@ -895,7 +895,7 @@ func infer_binary(string op, CheckResult left, CheckResult right, string source,
         if !types_compatible("int32", left.type_name) || !types_compatible("int32", right.type_name) {
             errors = errors + add_error(source, diagnostics, "E3019", "ordering compare requires int32", op)
         }
-        return CheckResult {
+        return check_result {
             type_name: "bool",
             errors: errors,
         }
@@ -905,7 +905,7 @@ func infer_binary(string op, CheckResult left, CheckResult right, string source,
         if !types_compatible(left.type_name, right.type_name) {
             errors = errors + add_error(source, diagnostics, "E3020", "equality compare requires same type", op)
         }
-        return CheckResult {
+        return check_result {
             type_name: "bool",
             errors: errors,
         }
@@ -915,20 +915,20 @@ func infer_binary(string op, CheckResult left, CheckResult right, string source,
         if !types_compatible("bool", left.type_name) || !types_compatible("bool", right.type_name) {
             errors = errors + add_error(source, diagnostics, "E3021", "logical op requires bool", op)
         }
-        return CheckResult {
+        return check_result {
             type_name: "bool",
             errors: errors,
         }
     }
 
-    CheckResult {
+    check_result {
         type_name: "unknown",
         errors: errors,
     }
 }
 
-func lookup_functions(Vec[FunctionBinding] functions, string name) Vec[FunctionBinding] {
-    var out = Vec[FunctionBinding]()
+func lookup_functions(Vec[function_binding] functions, string name) Vec[function_binding] {
+    var out = Vec[function_binding]()
     var i = 0
     while i < functions.len() {
         if functions[i].name == name {
@@ -939,23 +939,23 @@ func lookup_functions(Vec[FunctionBinding] functions, string name) Vec[FunctionB
     out
 }
 
-func try_match_signature(FunctionBinding binding, Vec[string] arg_types) SignatureMatch {
+func try_match_signature(function_binding binding, Vec[string] arg_types) signature_match {
     if binding.param_types.len() != arg_types.len() {
-        return SignatureMatch {
+        return signature_match {
             ok: false,
             return_type: "unknown",
             score: 0,
         }
     }
 
-    var generic_bindings = Vec[TypeBinding]()
+    var generic_bindings = Vec[type_binding]()
     var score = 0
 
     var i = 0
     while i < arg_types.len() {
         var matched = match_type_pattern(binding.param_types[i], arg_types[i], binding.generic_names, generic_bindings)
         if !matched {
-            return SignatureMatch {
+            return signature_match {
                 ok: false,
                 return_type: "unknown",
                 score: 0,
@@ -967,28 +967,28 @@ func try_match_signature(FunctionBinding binding, Vec[string] arg_types) Signatu
         i = i + 1
     }
 
-    SignatureMatch {
+    signature_match {
         ok: true,
         return_type: instantiate_type(binding.return_type, binding.generic_names, generic_bindings),
         score: score,
     }
 }
 
-func match_type_pattern(string param_type, string arg_type, Vec[string] generic_names, Vec[TypeBinding] mut generic_bindings) bool {
-    var p = ParseType(param_type)
-    var a = ParseType(arg_type)
+func match_type_pattern(string param_type, string arg_type, Vec[string] generic_names, Vec[type_binding] mut generic_bindings) bool {
+    var p = parse_type(param_type)
+    var a = parse_type(arg_type)
 
     if is_generic_name(generic_names, p) {
         var bound = lookup_name_type(generic_bindings, p)
         if is_unknown(bound) {
-            generic_bindings.push(TypeBinding {
+            generic_bindings.push(type_binding {
                 name: p,
                 type_name: a,
             })
             ;
             return true
         }
-        return SameType(bound, a)
+        return same_type(bound, a)
     }
 
     if starts_with(p, "&mut ") {
@@ -1010,8 +1010,8 @@ func match_type_pattern(string param_type, string arg_type, Vec[string] generic_
         return match_type_pattern(slice(p, 2, len(p)), slice(a, 2, len(a)), generic_names, generic_bindings)
     }
 
-    var p_base = BaseTypeName(p)
-    var a_base = BaseTypeName(a)
+    var p_base = base_type_name(p)
+    var a_base = base_type_name(a)
     if p_base != a_base {
         return false
     }
@@ -1019,7 +1019,7 @@ func match_type_pattern(string param_type, string arg_type, Vec[string] generic_
     var p_args = extract_type_args(p)
     var a_args = extract_type_args(a)
     if p_args.len() != a_args.len() {
-        return SameType(p, a)
+        return same_type(p, a)
     }
 
     var i = 0
@@ -1032,8 +1032,8 @@ func match_type_pattern(string param_type, string arg_type, Vec[string] generic_
     true
 }
 
-func instantiate_type(string ty, Vec[string] generic_names, Vec[TypeBinding] generic_bindings) string {
-    var clean = ParseType(ty)
+func instantiate_type(string ty, Vec[string] generic_names, Vec[type_binding] generic_bindings) string {
+    var clean = parse_type(ty)
     if is_generic_name(generic_names, clean) {
         var bound = lookup_name_type(generic_bindings, clean)
         if !is_unknown(bound) {
@@ -1056,7 +1056,7 @@ func instantiate_type(string ty, Vec[string] generic_names, Vec[TypeBinding] gen
         return clean
     }
 
-    var base = BaseTypeName(clean)
+    var base = base_type_name(clean)
     var built = base + "["
     var i = 0
     while i < args.len() {
@@ -1070,7 +1070,7 @@ func instantiate_type(string ty, Vec[string] generic_names, Vec[TypeBinding] gen
 }
 
 func type_contains_generic(string ty, Vec[string] generic_names) bool {
-    var clean = ParseType(ty)
+    var clean = parse_type(ty)
     if is_generic_name(generic_names, clean) {
         return true
     }
@@ -1118,8 +1118,8 @@ func generic_name(string raw) string {
     trim_text(raw)
 }
 
-func clone_env(Vec[TypeBinding] env) Vec[TypeBinding] {
-    var out = Vec[TypeBinding]()
+func clone_env(Vec[type_binding] env) Vec[type_binding] {
+    var out = Vec[type_binding]()
     var i = 0
     while i < env.len() {
         out.push(env[i]);
@@ -1128,7 +1128,7 @@ func clone_env(Vec[TypeBinding] env) Vec[TypeBinding] {
     out
 }
 
-func lookup_name_type(Vec[TypeBinding] env, string name) string {
+func lookup_name_type(Vec[type_binding] env, string name) string {
     var i = env.len()
     while i > 0 {
         i = i - 1
@@ -1139,9 +1139,9 @@ func lookup_name_type(Vec[TypeBinding] env, string name) string {
     "unknown"
 }
 
-func ok_type(string type_name) CheckResult {
-    CheckResult {
-        type_name: ParseType(type_name),
+func ok_type(string type_name) check_result {
+    check_result {
+        type_name: parse_type(type_name),
         errors: 0,
     }
 }
@@ -1150,11 +1150,11 @@ func types_compatible(string left, string right) bool {
     if is_unknown(left) || is_unknown(right) {
         return true
     }
-    SameType(left, right)
+    same_type(left, right)
 }
 
 func is_unknown(string type_name) bool {
-    var clean = ParseType(type_name)
+    var clean = parse_type(type_name)
     clean == "" || clean == "unknown"
 }
 
@@ -1172,13 +1172,13 @@ func resolve_method_return(string target_type, string method_type) string {
         }
         return "Option[" + arg + "]"
     }
-    ParseType(method_type)
+    parse_type(method_type)
 }
 
 func first_type_arg(string type_name) string {
     var args = extract_type_args(type_name)
     if args.len() > 0 {
-        return ParseType(args[0])
+        return parse_type(args[0])
     }
     "unknown"
 }
@@ -1186,7 +1186,7 @@ func first_type_arg(string type_name) string {
 func second_type_arg(string type_name) string {
     var args = extract_type_args(type_name)
     if args.len() > 1 {
-        return ParseType(args[1])
+        return parse_type(args[1])
     }
     "unknown"
 }
@@ -1223,9 +1223,9 @@ func extract_type_args(string type_name) Vec[string] {
     out
 }
 
-func add_error(string source, Vec[SemanticError] mut diagnostics, string code, string message, string anchor) int32 {
+func add_error(string source, Vec[semantic_error] mut diagnostics, string code, string message, string anchor) int32 {
     var pos = locate_anchor(source, anchor)
-    diagnostics.push(SemanticError {
+    diagnostics.push(semantic_error {
         code: code,
         message: message,
         line: pos.line,
@@ -1235,16 +1235,16 @@ func add_error(string source, Vec[SemanticError] mut diagnostics, string code, s
     1
 }
 
-func locate_anchor(string source, string anchor) SourcePos {
+func locate_anchor(string source, string anchor) source_pos {
     if anchor == "" {
-        return SourcePos {
+        return source_pos {
             line: 0,
             column: 0,
         }
     }
     var idx = find_substring(source, anchor)
     if idx < 0 {
-        return SourcePos {
+        return source_pos {
             line: 0,
             column: 0,
         }
@@ -1269,7 +1269,7 @@ func find_substring(string haystack, string needle) int32 {
     0 - 1
 }
 
-func index_to_pos(string source, int32 index) SourcePos {
+func index_to_pos(string source, int32 index) source_pos {
     var line = 1
     var column = 1
     var i = 0
@@ -1282,7 +1282,7 @@ func index_to_pos(string source, int32 index) SourcePos {
         }
         i = i + 1
     }
-    SourcePos {
+    source_pos {
         line: line,
         column: column,
     }

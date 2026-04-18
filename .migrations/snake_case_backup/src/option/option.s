@@ -6,15 +6,15 @@ enum Option[T] {
 }
 
 impl Option[T] {
-    func isSome(self) bool {
+    func is_some(self) bool {
         switch self {
             Option::Some(_) : true,
             Option::None : false,
         }
     }
 
-    func isNone(self) bool {
-        !self.isSome()
+    func is_none(self) bool {
+        !self.is_some()
     }
 
     func unwrap(self) T {
@@ -24,7 +24,7 @@ impl Option[T] {
         }
     }
 
-    func unwrapOr(self, T default) T {
+    func unwrap_or(self, T default) T {
         switch self {
             Option::Some(value) : value,
             Option::None : default,

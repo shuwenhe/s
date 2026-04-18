@@ -1,20 +1,20 @@
 package compile.internal.mir
 
-use compile.internal.borrow.AnalyzeFunction as AnalyzeBorrowFunction
-use s.BlockExpr
-use s.FunctionDecl
+use compile.internal.borrow.analyze_function as analyze_borrow_function
+use s.block_expr
+use s.function_decl
 use s.dump_expr
 use s.dump_stmt
 use std.option.Option
 use std.vec.Vec
 
-struct MirOperand {
+struct mir_operand {
     string kind,
     string value,
     string type_name,
 }
 
-struct MirLocalSlot {
+struct mir_local_slot {
     int32 id,
     string name,
     string kind,
@@ -23,58 +23,58 @@ struct MirLocalSlot {
     bool copyable,
 }
 
-struct MirAssignStmt {
+struct mir_assign_stmt {
     int32 target,
     string op,
     Vec[string] args,
 }
 
-struct MirEvalStmt {
+struct mir_eval_stmt {
     string op,
     Vec[string] args,
 }
 
-struct MirMoveStmt {
+struct mir_move_stmt {
     int32 target,
-    MirOperand source,
+    mir_operand source,
 }
 
-struct MirCopyStmt {
+struct mir_copy_stmt {
     int32 target,
-    MirOperand source,
+    mir_operand source,
 }
 
-struct MirDropStmt {
+struct mir_drop_stmt {
     int32 slot,
 }
 
-enum MirStatement {
-    Assign(MirAssignStmt),
-    Eval(MirEvalStmt),
-    Move(MirMoveStmt),
-    Copy(MirCopyStmt),
-    Drop(MirDropStmt),
+enum mir_statement {
+    Assign(mir_assign_stmt),
+    Eval(mir_eval_stmt),
+    Move(mir_move_stmt),
+    Copy(mir_copy_stmt),
+    Drop(mir_drop_stmt),
 }
 
-struct MirControlEdge {
+struct mir_control_edge {
     string label,
     int32 target,
-    Vec[MirOperand] args,
+    Vec[mir_operand] args,
 }
 
-struct MirTerminator {
+struct mir_terminator {
     string kind,
-    Vec[MirControlEdge] edges,
+    Vec[mir_control_edge] edges,
 }
 
-struct MirBasicBlock {
+struct mir_basic_block {
     int32 id,
     string label,
-    Vec[MirStatement] statements,
-    MirTerminator terminator,
+    Vec[mir_statement] statements,
+    mir_terminator terminator,
 }
 
-struct MIRGraph {
+struct mir_graph {
     Vec[string] blocks,
     Vec[string] locals,
     Vec[string] trace,
@@ -82,15 +82,15 @@ struct MIRGraph {
     int32 exit,
 }
 
-func LowerFunction(FunctionDecl function) string {
+func lower_function(function_decl function) string {
     if function.body.is_some() {
         var body = function.body.unwrap()
-        return AnalyzeBorrowFunction(function.sig.name, Vec[string](), LowerBlock(body))
+        return analyze_borrow_function(function.sig.name, Vec[string](), lower_block(body))
     }
-    return AnalyzeBorrowFunction(function.sig.name, Vec[string](), "")
+    return analyze_borrow_function(function.sig.name, Vec[string](), "")
 }
 
-func LowerBlock(BlockExpr block) string {
+func lower_block(block_expr block) string {
     var text = "block"
 
     var index = 0
@@ -108,18 +108,18 @@ func LowerBlock(BlockExpr block) string {
     }
 }
 
-func TraceBranch(string condition_text, string then_text, string else_text) string {
+func trace_branch(string condition_text, string then_text, string else_text) string {
     if else_text == "" {
         return "branch " + condition_text + " | " + indent(1) + "then " + then_text + " | " + indent(1) + "else <missing>"
     }
     return "branch " + condition_text + " | " + indent(1) + "then " + then_text + " | " + indent(1) + "else " + else_text
 }
 
-func TraceLoop(string loop_kind, string condition_text, string body_text) string {
+func trace_loop(string loop_kind, string condition_text, string body_text) string {
     return loop_kind + " " + condition_text + " | " + indent(1) + "body " + body_text
 }
 
-func TraceSwitch(string subject_text, string arms_text) string {
+func trace_switch(string subject_text, string arms_text) string {
     if arms_text == "" {
         return "switch " + subject_text
     }
