@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import path
-from typing import any, iterable
+from pathlib import Path
+from typing import Any, Iterable
 
 import runtime.intrinsics_impl as impl
 from runtime.intrinsics_impl import hostarray, intrinsicspec, runtimeexit, runtimetrap
