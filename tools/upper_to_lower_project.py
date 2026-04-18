@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from pathlib import path
+from pathlib import Path
 from datetime import datetime
 import sys
 
