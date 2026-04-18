@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+from typing import List
+
 import argparse
+import sys
 
 from compiler.hosted_compiler import run_cli
 
 
-def main(argv: list[str] | none = none) -> int:
-    parser = argparse.argumentparser(prog="s")
-    sub = parser.add_subparsers(dest="command", required=true)
+def main(argv: List[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="s")
+    sub = parser.add_subparsers(dest="command", required=True)
 
     check_cmd = sub.add_parser("check", help="parse and type-check an s source file")
     check_cmd.add_argument("path")
@@ -16,7 +19,7 @@ def main(argv: list[str] | none = none) -> int:
 
     build_cmd = sub.add_parser("build", help="build a minimal s source file into a native binary")
     build_cmd.add_argument("path")
-    build_cmd.add_argument("-o", "--output", required=true)
+    build_cmd.add_argument("-o", "--output", required=True)
 
     run_cmd = sub.add_parser("run", help="interpret a minimal s source file")
     run_cmd.add_argument("path")
@@ -38,4 +41,4 @@ def main(argv: list[str] | none = none) -> int:
 
 
 if __name__ == "__main__":
-    raise systemexit(main())
+    raise SystemExit(main())
