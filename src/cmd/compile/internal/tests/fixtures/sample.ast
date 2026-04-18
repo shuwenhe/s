@@ -1,17 +1,17 @@
 package demo.core
-use std.io.Reader
-use std.result.Result as Res
-struct Config[T]
-  string Addr
+use std.io.reader
+use std.result.result as res
+struct config[t]
+  string addr
   int32 retries
-enum Option[T]
-  Some(T)
-  None
-trait ReaderLike[T]
-  func read(&mut Self self, []u8 buf) Result[usize, IoError]
-func load[T: Reader](T reader, string path) Result[string, IoError]
+enum option[t]
+  some(t)
+  none
+trait readerlike[t]
+  func read(&mut self self, []u8 buf) result[usize, ioerror]
+func load[t: reader](t reader, string path) result[string, ioerror]
   let value = 1
   final value
-impl ReaderLike[File] for File
-  func read(&mut Self self, []u8 buf) Result[usize, IoError]
+impl readerlike[file] for file
+  func read(&mut self self, []u8 buf) result[usize, ioerror]
     final buf

@@ -1,7 +1,7 @@
 {
   "module": "std.prelude",
   "traits": {
-    "Len": {
+    "len": {
       "methods": {
         "len": {
           "overloads": [
@@ -15,7 +15,7 @@
         }
       }
     },
-    "Push": {
+    "push": {
       "methods": {
         "push": {
           "overloads": [
@@ -23,7 +23,7 @@
               "receiver_mode": "mut",
               "receiver_policy": "addressable",
               "params": [
-                "T"
+                "t"
               ],
               "return_type": "()"
             }
@@ -35,14 +35,14 @@
   "types": {
     "string": {
       "traits": [
-        "Clone"
+        "clone"
       ],
       "fields": {},
       "methods": {
         "len": {
           "overloads": [
             {
-              "trait": "Len",
+              "trait": "len",
               "receiver_mode": "ref",
               "receiver_policy": "shared_or_addressable",
               "params": [],
@@ -53,19 +53,19 @@
       },
       "index": null,
       "default_impls": [
-        "Len"
+        "len"
       ]
     },
-    "Vec": {
+    "vec": {
       "traits": [
-        "Clone"
+        "clone"
       ],
       "fields": {},
       "methods": {
         "len": {
           "overloads": [
             {
-              "trait": "Len",
+              "trait": "len",
               "receiver_mode": "ref",
               "receiver_policy": "shared_or_addressable",
               "params": [],
@@ -76,11 +76,11 @@
         "push": {
           "overloads": [
             {
-              "trait": "Push",
+              "trait": "push",
               "receiver_mode": "mut",
               "receiver_policy": "addressable",
               "params": [
-                "T"
+                "t"
               ],
               "return_type": "()"
             }
@@ -91,11 +91,11 @@
         "result_kind": "first_type_arg"
       },
       "default_impls": [
-        "Len",
-        "Push"
+        "len",
+        "push"
       ]
     },
-    "Result": {
+    "result": {
       "traits": [],
       "fields": {},
       "methods": {
@@ -125,7 +125,7 @@
               "receiver_mode": "ref",
               "receiver_policy": "shared_or_addressable",
               "params": [],
-              "return_type": "T"
+              "return_type": "t"
             }
           ]
         },
@@ -135,7 +135,7 @@
               "receiver_mode": "ref",
               "receiver_policy": "shared_or_addressable",
               "params": [],
-              "return_type": "E"
+              "return_type": "e"
             }
           ]
         }
@@ -143,7 +143,7 @@
       "index": null,
       "default_impls": []
     },
-    "FileInfo": {
+    "fileinfo": {
       "traits": [],
       "fields": {
         "size": {

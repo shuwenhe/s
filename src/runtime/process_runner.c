@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 200809L
+#define _posix_c_source 200809l
 
 #include <errno.h>
 #include <stdbool.h>
@@ -13,17 +13,17 @@ static int wait_for_child(pid_t pid) {
     if (waitpid(pid, &status, 0) < 0) {
         return errno == 0 ? 127 : errno;
     }
-    if (WIFEXITED(status)) {
-        return WEXITSTATUS(status);
+    if (wifexited(status)) {
+        return wexitstatus(status);
     }
-    if (WIFSIGNALED(status)) {
-        return 128 + WTERMSIG(status);
+    if (wifsignaled(status)) {
+        return 128 + wtermsig(status);
     }
     return 1;
 }
 
 int process_runner_run_argv(size_t argc, const char *const *argv) {
-    if (argc == 0 || argv == NULL || argv[0] == NULL) {
+    if (argc == 0 || argv == null || argv[0] == null) {
         return 127;
     }
 
@@ -39,7 +39,7 @@ int process_runner_run_argv(size_t argc, const char *const *argv) {
 }
 
 int process_runner_run_shell(const char *command) {
-    if (command == NULL || command[0] == '\0') {
+    if (command == null || command[0] == '\0') {
         return 127;
     }
 
@@ -48,7 +48,7 @@ int process_runner_run_shell(const char *command) {
         return errno == 0 ? 127 : errno;
     }
     if (pid == 0) {
-        execl("/bin/sh", "sh", "-c", command, (char *)NULL);
+        execl("/bin/sh", "sh", "-c", command, (char *)null);
         _exit(errno == 0 ? 127 : errno);
     }
     return wait_for_child(pid);

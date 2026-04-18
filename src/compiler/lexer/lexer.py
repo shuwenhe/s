@@ -2,24 +2,24 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .tokens import KEYWORDS, Token, TokenKind
+from .tokens import keywords, token, tokenkind
 
 
-class LexError(Exception):
+class lexerror(exception):
     pass
 
 
 @dataclass
-class Lexer:
+class lexer:
     source: str
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> none:
         self.index = 0
         self.line = 1
         self.column = 1
 
-    def tokenize(self) -> list[Token]:
-        tokens: list[Token] = []
+    def tokenize(self) -> list[token]:
+        tokens: list[token] = []
         while not self._is_eof():
             self._skip_ignored()
             if self._is_eof():
@@ -29,21 +29,21 @@ class Lexer:
             ch = self._peek()
             if ch.isalpha() or ch == "_":
                 value = self._read_identifier()
-                kind = TokenKind.KEYWORD if value in KEYWORDS else TokenKind.IDENT
-                tokens.append(Token(kind, value, start_line, start_col))
+                kind = tokenkind.keyword if value in keywords else tokenkind.ident
+                tokens.append(token(kind, value, start_line, start_col))
                 continue
             if ch.isdigit():
-                tokens.append(Token(TokenKind.INT, self._read_number(), start_line, start_col))
+                tokens.append(token(tokenkind.int, self._read_number(), start_line, start_col))
                 continue
             if ch == '"':
-                tokens.append(Token(TokenKind.STRING, self._read_string(), start_line, start_col))
+                tokens.append(token(tokenkind.string, self._read_string(), start_line, start_col))
                 continue
             symbol = self._read_symbol()
-            tokens.append(Token(TokenKind.SYMBOL, symbol, start_line, start_col))
-        tokens.append(Token(TokenKind.EOF, "<eof>", self.line, self.column))
+            tokens.append(token(tokenkind.symbol, symbol, start_line, start_col))
+        tokens.append(token(tokenkind.eof, "<eof>", self.line, self.column))
         return tokens
 
-    def _skip_ignored(self) -> None:
+    def _skip_ignored(self) -> none:
         while not self._is_eof():
             ch = self._peek()
             if ch in " \t\r\n":
@@ -59,7 +59,7 @@ class Lexer:
                 depth = 1
                 while depth > 0:
                     if self._is_eof():
-                        raise LexError("unterminated block comment")
+                        raise lexerror("unterminated block comment")
                     if self._match("/*"):
                         depth += 1
                         self._advance()
@@ -94,12 +94,12 @@ class Lexer:
             chars.append(ch)
             if ch == "\\":
                 if self._is_eof():
-                    raise LexError("unterminated escape sequence")
+                    raise lexerror("unterminated escape sequence")
                 chars.append(self._advance())
                 continue
             if ch == '"':
                 return "".join(chars)
-        raise LexError("unterminated string literal")
+        raise lexerror("unterminated string literal")
 
     def _read_symbol(self) -> str:
         for symbol in ("->", ":", "==", "!=", "<=", ">=", "&&", "||", "++", "..=", ".."):
@@ -110,7 +110,7 @@ class Lexer:
         ch = self._peek()
         if ch in "()[]{}.,:;+-*/%!=<>?&|":
             return self._advance()
-        raise LexError(f"unexpected character {ch!r} at {self.line}:{self.column}")
+        raise lexerror(f"unexpected character {ch!r} at {self.line}:{self.column}")
 
     def _match(self, text: str) -> bool:
         return self.source[self.index : self.index + len(text)] == text

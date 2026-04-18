@@ -1,22 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import dict
 
-from compiler.typesys import Type, is_copy_type
+from compiler.typesys import type, is_copy_type
 
 
-@dataclass(frozen=True)
-class OwnershipDecision:
-    ty: Type
+@dataclass(frozen=true)
+class ownershipdecision:
+    ty: type
     copyable: bool
     droppable: bool
 
 
-def make_decision(ty: Type) -> OwnershipDecision:
+def make_decision(ty: type) -> ownershipdecision:
     copyable = is_copy_type(ty)
-    return OwnershipDecision(ty=ty, copyable=copyable, droppable=not copyable)
+    return ownershipdecision(ty=ty, copyable=copyable, droppable=not copyable)
 
 
-def make_plan(type_env: Dict[str, Type]) -> Dict[str, OwnershipDecision]:
+def make_plan(type_env: dict[str, type]) -> dict[str, ownershipdecision]:
     return {name: make_decision(ty) for name, ty in type_env.items()}

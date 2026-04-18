@@ -1,20 +1,20 @@
-# Internal Toolchain Packages
+# internal toolchain packages
 
-This directory is reserved for implementation details that should stay private
-to the S toolchain.
+this directory is reserved for implementation details that should stay private
+to the s toolchain.
 
-Planned responsibilities:
+planned responsibilities:
 
-- `bootstrap/`: Python-hosted and migration-only bootstrap layers
+- `bootstrap/`: python-hosted and migration-only bootstrap layers
 - `buildcfg/`: build-mode and target configuration
 - `toolchain/`: assembler, linker, and host tool invocation helpers
-- `platform/`: OS and architecture specific support code
+- `platform/`: os and architecture specific support code
 - `testenv/`: test-only environment setup and host capability checks
 
-Current code is still centered in `src/compiler` and `src/runtime`. New
+current code is still centered in `src/compiler` and `src/runtime`. new
 non-public helpers should land here first instead of growing those packages.
 
-Implemented building blocks currently include the `buildcfg/` skeleton.
-The current `buildcfg/` skeleton exposes `Target`, `Toolchain`, and `BuildCfg`
+implemented building blocks currently include the `buildcfg/` skeleton.
+the current `buildcfg/` skeleton exposes `target`, `toolchain`, and `buildcfg`
 records for the compiler entry path.
-The current arch dispatch layer lives under `cmd/compile/internal/arch/`.
+the current arch dispatch layer lives under `cmd/compile/internal/arch/`.

@@ -1,16 +1,16 @@
 package std.env
 
-use std.option.Option
-use std.vec.Vec
+use std.option.option
+use std.vec.vec
 
-func Args() Vec[string] {
+func args() vec[string] {
     __host_args()
 }
 
-func Get(string key) Option[string] {
+func get(string key) option[string] {
     __host_get_env(key)
 }
 
-extern "intrinsic" func __host_args() Vec[string]
+extern "intrinsic" func __host_args() vec[string]
 
-extern "intrinsic" func __host_get_env(string key) Option[string]
+extern "intrinsic" func __host_get_env(string key) option[string]

@@ -1,37 +1,37 @@
 package s
 
-use std.prelude.toString
-use std.vec.Vec
+use std.prelude.to_string
+use std.vec.vec
 
-enum TokenKind {
-    Ident,
-    Int,
+enum token_kind {
+    ident,
+    int,
     string,
-    Keyword,
-    Symbol,
-    Eof,
+    keyword,
+    symbol,
+    eof,
 }
 
-struct Token {
-    TokenKind kind,
+struct token {
+    token_kind kind,
     string value,
     int32 line,
     int32 column,
 }
 
-func tokenKindName(TokenKind kind) string {
+func token_kind_name(token_kind kind) string {
     switch kind {
-        TokenKind::Ident : "IDENT",
-        TokenKind::Int : "INT",
-        TokenKind::string : "STRING",
-        TokenKind::Keyword : "KEYWORD",
-        TokenKind::Symbol : "SYMBOL",
-        TokenKind::Eof : "EOF",
+        token_kind::ident : "ident",
+        token_kind::int : "int",
+        token_kind::string : "string",
+        token_kind::keyword : "keyword",
+        token_kind::symbol : "symbol",
+        token_kind::eof : "eof",
     }
 }
 
-func dumpTokens(Vec[Token] tokens) string {
-    // Golden tests depend on this exact one-token-per-line format.
+func dump_tokens(vec[token] tokens) string {
+    // golden tests depend on this exact one-token-per-line format.
     var out = ""
     for token in tokens {
         if out != "" {
@@ -39,18 +39,18 @@ func dumpTokens(Vec[Token] tokens) string {
         }
         out =
             out
-            + toString(token.line)
+            + to_string(token.line)
             + ":"
-            + toString(token.column)
+            + to_string(token.column)
             + " "
-            + tokenKindName(token.kind)
+            + token_kind_name(token.kind)
             + " "
             + token.value
     }
     out
 }
 
-func isKeyword(string text) bool {
+func is_keyword(string text) bool {
     switch text {
         "package" : true,
         "use" : true,

@@ -1,4 +1,4 @@
-from .lexer import Lexer, LexError
-from .tokens import KEYWORDS, Token, TokenKind, dump_tokens
+from .lexer import lexer, lexerror
+from .tokens import keywords, token, tokenkind, dump_tokens
 
-__all__ = ["KEYWORDS", "Lexer", "LexError", "Token", "TokenKind", "dump_tokens"]
+__all__ = ["keywords", "lexer", "lexerror", "token", "tokenkind", "dump_tokens"]

@@ -1,45 +1,45 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
+from pathlib import path
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+root = path(__file__).resolve().parents[1]
+if str(root) not in sys.path:
+    sys.path.insert(0, str(root))
 
 from runtime.hosted_frontend import run_ast_dump, run_lex_dump
 
 
-FIXTURES = ROOT / "compiler" / "tests" / "fixtures"
+fixtures = root / "compiler" / "tests" / "fixtures"
 
 
 def validate_lex() -> bool:
-    expected = (FIXTURES / "sample.tokens").read_text().strip()
-    actual = run_lex_dump(FIXTURES / "sample.s").output.strip()
+    expected = (fixtures / "sample.tokens").read_text().strip()
+    actual = run_lex_dump(fixtures / "sample.s").output.strip()
     return report_case("lex_dump", expected, actual)
 
 
 def validate_ast() -> bool:
-    expected = (FIXTURES / "sample.ast").read_text().strip()
-    actual = run_ast_dump(FIXTURES / "sample.s").output.strip()
+    expected = (fixtures / "sample.ast").read_text().strip()
+    actual = run_ast_dump(fixtures / "sample.s").output.strip()
     return report_case("ast_dump", expected, actual)
 
 
 def report_case(name: str, expected: str, actual: str) -> bool:
     if expected == actual:
         print(f"[ok] {name}")
-        return True
+        return true
     print(f"[fail] {name}", file=sys.stderr)
     print("--- expected ---", file=sys.stderr)
     print(expected, file=sys.stderr)
     print("--- actual ---", file=sys.stderr)
     print(actual, file=sys.stderr)
-    return False
+    return false
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="validate_outputs")
+def main(argv: list[str] | none = none) -> int:
+    parser = argparse.argumentparser(prog="validate_outputs")
     parser.add_argument(
         "target",
         choices=["lex", "ast", "all"],
@@ -58,4 +58,4 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise systemexit(main())

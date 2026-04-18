@@ -2,199 +2,199 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
-from pathlib import Path
-from typing import Dict, Optional
+from pathlib import path
+from typing import dict, optional
 
-from compiler.typesys import FunctionType, SliceType, Type, UNIT, NamedType, parse_type
+from compiler.typesys import functiontype, slicetype, type, unit, namedtype, parse_type
 
 
-@dataclass(frozen=True)
-class BuiltinMethodDecl:
+@dataclass(frozen=true)
+class builtinmethoddecl:
     name: str
-    trait_name: str | None
+    trait_name: str | none
     receiver_mode: str
-    signature: FunctionType
+    signature: functiontype
     receiver_policy: str = "addressable"
 
 
-@dataclass(frozen=True)
-class BuiltinFieldDecl:
+@dataclass(frozen=true)
+class builtinfielddecl:
     name: str
-    ty: Type
+    ty: type
     visibility: str
-    readable: bool = True
-    writable: bool = False
+    readable: bool = true
+    writable: bool = false
 
 
-@dataclass(frozen=True)
-class BuiltinTraitDecl:
+@dataclass(frozen=true)
+class builtintraitdecl:
     name: str
-    methods: Dict[str, tuple[BuiltinMethodDecl, ...]] = field(default_factory=dict)
+    methods: dict[str, tuple[builtinmethoddecl, ...]] = field(default_factory=dict)
 
 
-@dataclass(frozen=True)
-class BuiltinTypeDecl:
+@dataclass(frozen=true)
+class builtintypedecl:
     name: str
     traits: tuple[str, ...] = ()
-    fields: Dict[str, BuiltinFieldDecl] = field(default_factory=dict)
-    methods: Dict[str, tuple[BuiltinMethodDecl, ...]] = field(default_factory=dict)
-    index_result_kind: Optional[str] = None
+    fields: dict[str, builtinfielddecl] = field(default_factory=dict)
+    methods: dict[str, tuple[builtinmethoddecl, ...]] = field(default_factory=dict)
+    index_result_kind: optional[str] = none
     default_impls: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True)
-class BuiltinModuleDecl:
+@dataclass(frozen=true)
+class builtinmoduledecl:
     name: str
-    traits: Dict[str, BuiltinTraitDecl] = field(default_factory=dict)
-    types: Dict[str, BuiltinTypeDecl] = field(default_factory=dict)
+    traits: dict[str, builtintraitdecl] = field(default_factory=dict)
+    types: dict[str, builtintypedecl] = field(default_factory=dict)
 
 
-def load_prelude() -> BuiltinModuleDecl:
-    path = Path(__file__).resolve().parent / "builtins" / "prelude.json"
+def load_prelude() -> builtinmoduledecl:
+    path = path(__file__).resolve().parent / "builtins" / "prelude.json"
     data = json.loads(path.read_text())
-    traits: Dict[str, BuiltinTraitDecl] = {}
+    traits: dict[str, builtintraitdecl] = {}
     for trait_name, trait_data in data.get("traits", {}).items():
-        methods: Dict[str, tuple[BuiltinMethodDecl, ...]] = {}
+        methods: dict[str, tuple[builtinmethoddecl, ...]] = {}
         for method_name, method_data in trait_data.get("methods", {}).items():
             methods[method_name] = _load_overloads(method_name, method_data)
-        traits[trait_name] = BuiltinTraitDecl(name=trait_name, methods=methods)
-    types: Dict[str, BuiltinTypeDecl] = {}
+        traits[trait_name] = builtintraitdecl(name=trait_name, methods=methods)
+    types: dict[str, builtintypedecl] = {}
     for type_name, type_data in data["types"].items():
-        methods: Dict[str, tuple[BuiltinMethodDecl, ...]] = {}
+        methods: dict[str, tuple[builtinmethoddecl, ...]] = {}
         for method_name, method_data in type_data.get("methods", {}).items():
             methods[method_name] = _load_overloads(method_name, method_data)
         fields = {
-            field_name: BuiltinFieldDecl(
+            field_name: builtinfielddecl(
                 name=field_name,
                 ty=parse_type(field_data["type"]),
                 visibility=field_data.get("visibility", "priv"),
-                readable=field_data.get("readable", True),
-                writable=field_data.get("writable", False),
+                readable=field_data.get("readable", true),
+                writable=field_data.get("writable", false),
             )
             for field_name, field_data in type_data.get("fields", {}).items()
         }
         index_info = type_data.get("index")
-        types[type_name] = BuiltinTypeDecl(
+        types[type_name] = builtintypedecl(
             name=type_name,
             traits=tuple(type_data.get("traits", [])),
             fields=fields,
             methods=methods,
-            index_result_kind=index_info.get("result_kind") if index_info else None,
+            index_result_kind=index_info.get("result_kind") if index_info else none,
             default_impls=tuple(type_data.get("default_impls", [])),
         )
-    return BuiltinModuleDecl(name=data["module"], traits=traits, types=types)
+    return builtinmoduledecl(name=data["module"], traits=traits, types=types)
 
 
-def _load_overloads(method_name: str, method_data: dict) -> tuple[BuiltinMethodDecl, ...]:
+def _load_overloads(method_name: str, method_data: dict) -> tuple[builtinmethoddecl, ...]:
     overloads = method_data.get("overloads")
-    if overloads is None:
+    if overloads is none:
         overloads = [method_data]
     return tuple(_build_method(method_name, overload) for overload in overloads)
 
 
-def _build_method(method_name: str, method_data: dict) -> BuiltinMethodDecl:
+def _build_method(method_name: str, method_data: dict) -> builtinmethoddecl:
     params = [parse_type(param) for param in method_data.get("params", [])]
-    return BuiltinMethodDecl(
+    return builtinmethoddecl(
         name=method_name,
         trait_name=method_data.get("trait"),
         receiver_mode=method_data["receiver_mode"],
         receiver_policy=method_data.get("receiver_policy", "addressable"),
-        signature=FunctionType(params, parse_type(method_data.get("return_type", "()"))),
+        signature=functiontype(params, parse_type(method_data.get("return_type", "()"))),
     )
 
 
-PRELUDE = load_prelude()
+prelude = load_prelude()
 
 
-def lookup_builtin_type(receiver_type: Type) -> Optional[BuiltinTypeDecl]:
+def lookup_builtin_type(receiver_type: type) -> optional[builtintypedecl]:
     base = _base_name(receiver_type)
-    if base is None:
-        return None
-    return PRELUDE.types.get(base)
+    if base is none:
+        return none
+    return prelude.types.get(base)
 
 
-def lookup_builtin_methods(receiver_type: Type, member: str) -> tuple[BuiltinMethodDecl, ...]:
+def lookup_builtin_methods(receiver_type: type, member: str) -> tuple[builtinmethoddecl, ...]:
     builtin_type = lookup_builtin_type(receiver_type)
-    if builtin_type is None:
+    if builtin_type is none:
         return ()
     methods = builtin_type.methods.get(member, ())
-    if builtin_type.name == "Vec" and member == "push":
+    if builtin_type.name == "vec" and member == "push":
         inner = _unwrap_refs(receiver_type)
-        if isinstance(inner, NamedType) and inner.args:
+        if isinstance(inner, namedtype) and inner.args:
             rewritten = []
             for method in methods:
                 params = list(method.signature.params)
-                if params and isinstance(params[0], NamedType) and params[0].name == "T":
+                if params and isinstance(params[0], namedtype) and params[0].name == "t":
                     params[0] = inner.args[0]
                 rewritten.append(
-                    BuiltinMethodDecl(
+                    builtinmethoddecl(
                         name=method.name,
                         trait_name=method.trait_name,
                         receiver_mode=method.receiver_mode,
                         receiver_policy=method.receiver_policy,
-                        signature=FunctionType(params, method.signature.return_type or UNIT),
+                        signature=functiontype(params, method.signature.return_type or unit),
                     )
                 )
             return tuple(rewritten)
-    if builtin_type.name == "Result":
+    if builtin_type.name == "result":
         inner = _unwrap_refs(receiver_type)
-        if isinstance(inner, NamedType) and len(inner.args) >= 2:
+        if isinstance(inner, namedtype) and len(inner.args) >= 2:
             ok_type = inner.args[0]
             err_type = inner.args[1]
             rewritten = []
             for method in methods:
                 params = [
-                    ok_type if isinstance(param, NamedType) and param.name == "T" else
-                    err_type if isinstance(param, NamedType) and param.name == "E" else
+                    ok_type if isinstance(param, namedtype) and param.name == "t" else
+                    err_type if isinstance(param, namedtype) and param.name == "e" else
                     param
                     for param in method.signature.params
                 ]
                 return_type = method.signature.return_type
-                if isinstance(return_type, NamedType) and return_type.name == "T":
+                if isinstance(return_type, namedtype) and return_type.name == "t":
                     return_type = ok_type
-                elif isinstance(return_type, NamedType) and return_type.name == "E":
+                elif isinstance(return_type, namedtype) and return_type.name == "e":
                     return_type = err_type
                 rewritten.append(
-                    BuiltinMethodDecl(
+                    builtinmethoddecl(
                         name=method.name,
                         trait_name=method.trait_name,
                         receiver_mode=method.receiver_mode,
                         receiver_policy=method.receiver_policy,
-                        signature=FunctionType(params, return_type or UNIT),
+                        signature=functiontype(params, return_type or unit),
                     )
                 )
             return tuple(rewritten)
     return methods
 
 
-def lookup_builtin_method(receiver_type: Type, member: str) -> Optional[BuiltinMethodDecl]:
+def lookup_builtin_method(receiver_type: type, member: str) -> optional[builtinmethoddecl]:
     methods = lookup_builtin_methods(receiver_type, member)
     if len(methods) == 1:
         return methods[0]
-    return None
+    return none
 
 
-def lookup_index_type(receiver_type: Type) -> Optional[Type]:
+def lookup_index_type(receiver_type: type) -> optional[type]:
     inner = _unwrap_refs(receiver_type)
     builtin_type = lookup_builtin_type(inner)
-    if builtin_type is not None and builtin_type.index_result_kind == "first_type_arg":
-        if isinstance(inner, NamedType) and inner.args:
+    if builtin_type is not none and builtin_type.index_result_kind == "first_type_arg":
+        if isinstance(inner, namedtype) and inner.args:
             return inner.args[0]
-    if isinstance(inner, SliceType):
+    if isinstance(inner, slicetype):
         return inner.inner
-    return None
+    return none
 
 
-def _unwrap_refs(ty: Type) -> Type:
-    from compiler.typesys import ReferenceType
+def _unwrap_refs(ty: type) -> type:
+    from compiler.typesys import referencetype
 
-    while isinstance(ty, ReferenceType):
+    while isinstance(ty, referencetype):
         ty = ty.inner
     return ty
 
 
-def _base_name(ty: Type) -> Optional[str]:
+def _base_name(ty: type) -> optional[str]:
     inner = _unwrap_refs(ty)
-    if isinstance(inner, NamedType):
+    if isinstance(inner, namedtype):
         return inner.name
-    return None
+    return none

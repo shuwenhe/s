@@ -1,35 +1,35 @@
 from __future__ import annotations
 
-from ctypes import CDLL, c_char_p, c_int, c_void_p
-from pathlib import Path
+from ctypes import cdll, c_char_p, c_int, c_void_p
+from pathlib import path
 
 
-_LIB: CDLL | None = None
+_lib: cdll | none = none
 
 
-def _load_library() -> CDLL:
-    global _LIB
-    if _LIB is not None:
-        return _LIB
-    library_path = Path(__file__).with_name("libhost_fs.so")
+def _load_library() -> cdll:
+    global _lib
+    if _lib is not none:
+        return _lib
+    library_path = path(__file__).with_name("libhost_fs.so")
     if not library_path.exists():
-        raise RuntimeError(f"missing host fs library: {library_path}")
-    lib = CDLL(str(library_path))
+        raise runtimeerror(f"missing host fs library: {library_path}")
+    lib = cdll(str(library_path))
     lib.host_fs_free.argtypes = [c_void_p]
-    lib.host_fs_free.restype = None
+    lib.host_fs_free.restype = none
     lib.host_fs_read_to_string.argtypes = [c_char_p]
     lib.host_fs_read_to_string.restype = c_void_p
     lib.host_fs_write_text_file.argtypes = [c_char_p, c_char_p]
     lib.host_fs_write_text_file.restype = c_int
     lib.host_fs_make_temp_dir.argtypes = [c_char_p, c_char_p]
     lib.host_fs_make_temp_dir.restype = c_void_p
-    _LIB = lib
+    _lib = lib
     return lib
 
 
 def _take_string(ptr: int) -> str:
     if not ptr:
-        raise RuntimeError("host fs returned null")
+        raise runtimeerror("host fs returned null")
     lib = _load_library()
     try:
         from ctypes import string_at
@@ -44,11 +44,11 @@ def read_to_string(path: str) -> str:
     return _take_string(int(lib.host_fs_read_to_string(path.encode("utf-8"))))
 
 
-def write_text_file(path: str, contents: str) -> None:
+def write_text_file(path: str, contents: str) -> none:
     lib = _load_library()
     code = int(lib.host_fs_write_text_file(path.encode("utf-8"), contents.encode("utf-8")))
     if code != 0:
-        raise RuntimeError(f"write_text_file failed for {path}")
+        raise runtimeerror(f"write_text_file failed for {path}")
 
 
 def make_temp_dir(prefix: str, base_dir: str = "/app/tmp") -> str:

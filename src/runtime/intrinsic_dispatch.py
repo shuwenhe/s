@@ -1,36 +1,36 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import any
 
-from runtime.python_bridge import RuntimeTrap, invoke_intrinsic
+from runtime.python_bridge import runtimetrap, invoke_intrinsic
 
 
-@dataclass(frozen=True)
-class IntrinsicCall:
+@dataclass(frozen=true)
+class intrinsiccall:
     symbol: str
-    args: tuple[Any, ...] = ()
+    args: tuple[any, ...] = ()
     type_args: tuple[str, ...] = ()
     source: str = ""
 
 
-@dataclass(frozen=True)
-class DispatchResult:
+@dataclass(frozen=true)
+class dispatchresult:
     symbol: str
-    value: Any
+    value: any
     source: str = ""
 
 
-def dispatch(call: IntrinsicCall) -> DispatchResult:
+def dispatch(call: intrinsiccall) -> dispatchresult:
     value = invoke_intrinsic(call.symbol, *call.args)
-    return DispatchResult(symbol=call.symbol, value=value, source=call.source)
+    return dispatchresult(symbol=call.symbol, value=value, source=call.source)
 
 
-def dispatch_symbol(symbol: str, *args: Any, source: str = "") -> Any:
-    return dispatch(IntrinsicCall(symbol=symbol, args=args, source=source)).value
+def dispatch_symbol(symbol: str, *args: any, source: str = "") -> any:
+    return dispatch(intrinsiccall(symbol=symbol, args=args, source=source)).value
 
 
-def format_call(call: IntrinsicCall) -> str:
+def format_call(call: intrinsiccall) -> str:
     rendered_args = ", ".join(repr(arg) for arg in call.args)
     rendered_types = ""
     if call.type_args:

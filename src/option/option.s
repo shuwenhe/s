@@ -1,35 +1,35 @@
 package std.option
 
-enum Option[T] {
-    Some(T),
-    None,
+enum option[t] {
+    some(t),
+    none,
 }
 
-impl Option[T] {
-    func isSome(self) bool {
+impl option[t] {
+    func is_some(self) bool {
         switch self {
-            Option::Some(_) : true,
-            Option::None : false,
+            option::some(_) : true,
+            option::none : false,
         }
     }
 
-    func isNone(self) bool {
-        !self.isSome()
+    func is_none(self) bool {
+        !self.is_some()
     }
 
-    func unwrap(self) T {
+    func unwrap(self) t {
         switch self {
-            Option::Some(value) : value,
-            Option::None : __option_panic_unwrap(),
+            option::some(value) : value,
+            option::none : __option_panic_unwrap(),
         }
     }
 
-    func unwrapOr(self, T default) T {
+    func unwrap_or(self, t default) t {
         switch self {
-            Option::Some(value) : value,
-            Option::None : default,
+            option::some(value) : value,
+            option::none : default,
         }
     }
 }
 
-extern "intrinsic" func __option_panic_unwrap[T]() T
+extern "intrinsic" func __option_panic_unwrap[t]() t
