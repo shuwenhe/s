@@ -100,7 +100,7 @@ class parser :
         if self ._at_keyword ("impl"):
             return self ._parse_impl_decl ()
         token =self ._peek ()
-        raise parseerror (f"unexpected token {token .value !r } at {token .line }:{token .column }")
+        raise parseerror (f"unexpected token {token.value!r} at {token.line}:{token.column}")
 
     def _parse_extern_decl (self ,is_public :bool )->functiondecl :
         self ._expect_keyword ("extern")
@@ -294,7 +294,7 @@ class parser :
         if self ._looks_like_increment ():
             return self ._parse_increment_stmt ()
         token =self ._peek ()
-        raise parseerror (f"unexpected statement {token .value !r } at {token .line }:{token .column }")
+        raise parseerror (f"unexpected statement {token.value!r} at {token.line}:{token.column}")
 
     def _parse_let_stmt (self ,keyword :str ="let",consume_semicolon :bool =True )->letstmt :
         self ._expect_keyword (keyword )
@@ -359,7 +359,7 @@ class parser :
         if self ._looks_like_increment ():
             return self ._parse_increment_stmt (consume_semicolon =False )
         token =self ._peek ()
-        raise parseerror (f"unexpected for clause {token .value !r } at {token .line }:{token .column }")
+        raise parseerror (f"unexpected for clause {token.value!r} at {token.line}:{token.column}")
 
     def _parse_return_stmt (self )->returnstmt :
         self ._expect_keyword ("return")
@@ -399,7 +399,7 @@ class parser :
                 pattern =self ._parse_pattern ()
                 if not (self ._eat_symbol (":")or self ._eat_symbol (":")):
                     token =self ._peek ()
-                    raise parseerror (f"expected ':' in switch arm at {token .line }:{token .column }")
+                    raise parseerror (f"expected ':' in switch arm at {token.line}:{token.column}")
             expr =self ._parse_expr ()
             arms .append (switcharm (pattern =pattern ,expr =expr ))
             self ._eat_symbol (",")
@@ -696,7 +696,7 @@ class parser :
         split =self ._find_decl_name_index (tokens )
         if split <=0 :
             token =tokens [0 ]if tokens else self ._peek ()
-            raise parseerror (f"expected typed name at {token .line }:{token .column }")
+            raise parseerror (f"expected typed name at {token.line}:{token.column}")
         name_text =tokens [split ].value 
         type_text =self ._normalize_type_text (self ._join_token_values (tokens [:split ]))
         return self ._normalize_receiver_decl (name_text ,type_text )
@@ -827,13 +827,13 @@ class parser :
         token =self ._peek ()
         if token .kind ==tokenkind .keyword and token .value ==value :
             return self ._advance ()
-        raise parseerror (f"expected keyword {value !r } at {token .line }:{token .column }")
+        raise parseerror (f"expected keyword {value!r} at {token.line}:{token.column}")
 
     def _expect_symbol (self ,value :str )->token :
         token =self ._peek ()
         if token .kind ==tokenkind .symbol and token .value ==value :
             return self ._advance ()
-        raise parseerror (f"expected symbol {value !r } at {token .line }:{token .column }")
+        raise parseerror (f"expected symbol {value!r} at {token.line}:{token.column}")
 
     def _expect_ident (self )->str :
         token =self ._peek ()
@@ -843,7 +843,7 @@ class parser :
         if token .kind ==tokenkind .ident :
             self ._advance ()
             return token .value 
-        raise parseerror (f"expected identifier at {token .line }:{token .column }")
+        raise parseerror (f"expected identifier at {token.line}:{token.column}")
 
     def _peek (self ,offset :int =0 )->token :
         index =min (self .index +offset ,len (self .tokens )-1 )
