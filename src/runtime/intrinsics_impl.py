@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Callable, Generic, TypeVar
+
+from runtime.compat import *
 
 from runtime.host_fs import make_temp_dir as host_make_temp_dir, read_to_string as host_read_to_string, write_text_file as host_write_text_file
 from runtime.host_intrinsics import args as host_args, eprintln as host_eprintln, get_env as host_get_env, println as host_println
