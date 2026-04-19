@@ -1,16 +1,15 @@
 package compile.internal.build.exec
 
-use compile.internal.build.backend.build as build_binary
-use compile.internal.build.backend.run as run_binary
-use compile.internal.build.emit.ast as emit_ast
-use compile.internal.build.emit.built as emit_built
-use compile.internal.build.emit.check_ok as emit_check_ok
-use compile.internal.build.emit.tokens as emit_tokens
+use compile.internal.build.utils.build as build_binary
+use compile.internal.build.utils.run as run_binary
+use compile.internal.build.utils.emit_ast as emit_ast
+use compile.internal.build.utils.emit_built as emit_built
+use compile.internal.build.utils.emit_check_ok as emit_check_ok
+use compile.internal.build.utils.emit_tokens as emit_tokens
 use compile.internal.semantic.check_text
 use compile.internal.syntax.parse_source
 use compile.internal.syntax.read_source
 use compile.internal.syntax.tokenize
-use compile.internal.build.parse.compile_options
 
 func run(vec[string] options) int32 {
     if options[0] == "help" {
