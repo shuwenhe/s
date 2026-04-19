@@ -1,23 +1,23 @@
 from __future__ import annotations
 
-from ctypes import cdll, pointer, c_char_p, c_int, c_size_t
+from ctypes import CDLL, POINTER, c_char_p, c_int, c_size_t
 from pathlib import Path
 import sys
 
 
-_lib: cdll | None = None
+_lib: CDLL | None = None
 _initialized = False
 
 
-def _load_library() -> cdll:
+def _load_library() -> CDLL:
     global _lib
     if _lib is not None:
         return _lib
     library_path = Path(__file__).with_name("libhost_intrinsics.so")
     if not library_path.exists():
         raise RuntimeError(f"missing host intrinsics library: {library_path}")
-    lib = cdll(str(library_path))
-    lib.host_intrinsics_init.argtypes = [c_size_t, pointer(c_char_p)]
+    lib = CDLL(str(library_path))
+    lib.host_intrinsics_init.argtypes = [c_size_t, POINTER(c_char_p)]
     lib.host_intrinsics_init.restype = c_int
     lib.host_intrinsics_argc.argtypes = []
     lib.host_intrinsics_argc.restype = c_size_t
