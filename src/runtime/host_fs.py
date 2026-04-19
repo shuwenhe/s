@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from ctypes import cdll, c_char_p, c_int, c_void_p
+from ctypes import CDLL, c_char_p, c_int, c_void_p
 from pathlib import Path
 
 
-_lib: cdll | None = None
+_lib: CDLL | None = None
 
 
-def _load_library() -> cdll:
+def _load_library() -> CDLL:
     global _lib
     if _lib is not None:
         return _lib
     library_path = Path(__file__).with_name("libhost_fs.so")
     if not library_path.exists():
         raise RuntimeError(f"missing host fs library: {library_path}")
-    lib = cdll(str(library_path))
+    lib = CDLL(str(library_path))
     lib.host_fs_free.argtypes = [c_void_p]
     lib.host_fs_free.restype = None
     lib.host_fs_read_to_string.argtypes = [c_char_p]
