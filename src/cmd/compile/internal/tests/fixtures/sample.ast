@@ -7,11 +7,11 @@ struct config[t]
 enum option[t]
   some(t)
   none
-trait readerlike[t]
-  func read(&mut self self, []u8 buf) result[usize, ioerror]
-func load[t: reader](t reader, string path) result[string, ioerror]
+trait reader_like[t]
+  func read(&mut self self, []u8 buf) -> result[usize, io_error]
+func load[t: reader](t reader, string path) result[string, io_error]
   let value = 1
   final value
-impl readerlike[file] for file
-  func read(&mut self self, []u8 buf) result[usize, ioerror]
+impl reader_like[file] for file
+  func read(&mut self self, []u8 buf) result[usize, io_error]
     final buf

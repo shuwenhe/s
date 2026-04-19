@@ -17,7 +17,9 @@ from compiler .semantic import check_source
 build_output_root =Path (os .environ .get ("s_build_output_root","/tmp/s-build"))
 selfhosted_runner_paths =(
 Path (os .environ .get ("s_selfhosted_runner",""))if os .environ .get ("s_selfhosted_runner")else None ,
+Path (os .environ .get ("S_SELFHOSTED_RUNNER",""))if os .environ .get ("S_SELFHOSTED_RUNNER")else None ,
 Path ("/home/shuwen/s/bin/s-selfhosted"),
+Path ("/app/s/bin/s-selfhosted"),
 Path (__file__ ).resolve ().parents [2 ]/"bin"/"s-selfhosted",
 )
 
@@ -70,6 +72,8 @@ def can_selfhosted_handle (command :checkoptions )->bool :
 
 
 def resolve_selfhosted_runner ()->Path |None :
+    if os .environ .get ("s_disable_selfhosted") or os .environ .get ("S_DISABLE_SELFHOSTED"):
+        return None 
     for candidate in selfhosted_runner_paths:
         if candidate is None:
             continue
