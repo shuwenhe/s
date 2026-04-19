@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
+from runtime.compat import *
 from runtime.python_bridge import runtimetrap, invoke_intrinsic
 
 
