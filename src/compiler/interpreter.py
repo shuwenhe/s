@@ -166,7 +166,9 @@ class interpreter :
             }:
                 return root /"cmd"/"compile"/"internal"/f"{tail }.s"
             parts =tail .split (".")
-            return root /"cmd"/"compile"/"internal"/Path (*parts )/f"{parts [-1 ]}.s"
+            if tail == "build.utils":
+                return root / "cmd" / "compile" / "internal" / "build" / "utils.s"
+            return root / "cmd" / "compile" / "internal" / Path(*parts) / f"{parts[-1]}.s"
         if package_path .startswith ("internal."):
             tail =package_path .removeprefix ("internal.")
             parts =tail .split (".")
