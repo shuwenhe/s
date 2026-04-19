@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
 import sys
+
+from runtime.compat import *
+
 
 root = path(__file__).resolve().parents[1]
 if str(root) not in sys.path:

@@ -21,7 +21,8 @@ for the current mvp there are now two runtime tracks:
 
 - python-hosted execution for the broader self-hosting workflow
 - an s-side runner entrypoint in `runner.s` that now goes through the hosted compiler bridge
-- a project-local launcher target at `/app/s/bin/s-selfhosted` for command wrappers
+- a project-local command launcher target at `/app/s/bin/s-selfhosted`
+- a project-local compiler launcher target at `/app/s/bin/s-native`
 
 `build` and `run` now execute through host intrinsics instead of a separate native runner hop.
 that removes the extra runner dependency from the active path, while the remaining bridge code
@@ -31,6 +32,8 @@ the bootstrap sequence that produces `s_compiler_stage1`, `s_final_compiler`,
 and `bin/s-native` is documented in
 [`doc/bootstrap_flow.md`](/app/s/doc/bootstrap_flow.md). that document is the
 canonical reference for the current stage1/full-build ordering.
+[`misc/scripts/verify_bootstrap_flow.sh`](/app/s/misc/scripts/verify_bootstrap_flow.sh)
+is the smoke test for that flow.
 
 this bridge is intentionally transitional. the long-term goal is to replace it with a real s runtime or a lower-level execution backend.
 

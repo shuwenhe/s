@@ -21,6 +21,4 @@ func main(vec[string] args) int32 {
 }
 
 // compatibility wrapper expected by some bootstrap imports.
-func main(vec[string] args) int32 {
-    return main(args)
-}
+// (Removed duplicate same-signature wrapper that caused accidental recursion.)
