@@ -87,6 +87,8 @@ class parser :
 
     def _parse_item (self )->object :
         is_public =self ._eat_keyword ("pub")
+        if self ._at_keyword ("extern"):
+            return self ._parse_extern_decl (is_public )
         if self ._at_keyword ("func"):
             return self ._parse_function_decl (is_public )
         if self ._at_keyword ("struct"):
@@ -100,8 +102,17 @@ class parser :
         token =self ._peek ()
         raise parseerror (f"unexpected token {token .value !r } at {token .line }:{token .column }")
 
+    def _parse_extern_decl (self ,is_public :bool )->functiondecl :
+        self ._expect_keyword ("extern")
+        if self ._peek ().kind ==tokenkind .string :
+            self ._advance ()
+        return self ._parse_function_decl_like (is_public ,require_body =False )
+
     def _parse_function_decl (self ,is_public :bool )->functiondecl :
-        sig ,body =self ._parse_function (require_body =True )
+        return self ._parse_function_decl_like (is_public ,require_body =True )
+
+    def _parse_function_decl_like (self ,is_public :bool ,require_body :bool )->functiondecl :
+        sig ,body =self ._parse_function (require_body =require_body )
         return functiondecl (sig =sig ,body =body ,is_public =is_public )
 
     def _parse_struct_decl (self ,is_public :bool )->structdecl :
@@ -170,9 +181,12 @@ class parser :
         params =self ._parse_params ()
         self ._expect_symbol (")")
         return_type =None 
+        end_stops = {"where","{",";"}
+        if not require_body:
+            end_stops = end_stops | {"extern","func","struct","enum","trait","impl","pub"}
         # accept either explicit '-> type' or go-style return type directly after parameter list.
         if self ._eat_symbol ("->"):
-            return_type =self ._parse_type_text (stop_values ={"where","{",";"})
+            return_type =self ._parse_type_text (stop_values =end_stops)
         else :
         # if the next token looks like a type (ident, keyword like 'mut' or 'self',
         # a parenthesized tuple, or a bracketed generic), parse it as the return type.
@@ -183,7 +197,7 @@ class parser :
             # token values that can start a type: ident, keyword (like 'mut'/'self'),
             # symbol '(' for tuple returns, symbol '[' for generic starts
                 if next_tok .kind in {tokenkind .ident ,tokenkind .keyword }or self ._at_symbol ("(")or self ._at_symbol ("["):
-                    return_type =self ._parse_type_text (stop_values ={"where","{",";"})
+                    return_type =self ._parse_type_text (stop_values =end_stops)
         self ._parse_where_clause ()
         body =self ._parse_block_expr ()if require_body else None 
         return functionsig (name =name ,generics =generics ,params =params ,return_type =return_type ),body 
