@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import iterable
 
+from runtime.compat import *
 from compiler.ast import namepattern, variantpattern, wildcardpattern, dump_source_file
 from compiler.lexer.tokens import keywords, token, tokenkind, dump_tokens
 from compiler.parser.parser import parseerror, parser

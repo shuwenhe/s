@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
 import sys
+
+from runtime.compat import *
+
 
 root = path(__file__).resolve().parents[1]
 if str(root) not in sys.path:
@@ -11,7 +12,7 @@ if str(root) not in sys.path:
 from runtime.hosted_frontend import run_ast_dump, run_lex_dump
 
 
-fixtures = root / "compiler" / "tests" / "fixtures"
+fixtures = root / "cmd" / "compile" / "internal" / "tests" / "fixtures"
 
 
 def validate_lex() -> bool:
@@ -39,7 +40,7 @@ def report_case(name: str, expected: str, actual: str) -> bool:
 
 
 def main(argv: list[str] | none = none) -> int:
-    parser = argparse.argumentparser(prog="validate_outputs")
+    parser = argumentparser(prog="validate_outputs")
     parser.add_argument(
         "target",
         choices=["lex", "ast", "all"],
