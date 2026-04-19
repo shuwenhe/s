@@ -121,10 +121,10 @@ class varstate :
 
 
 def check_source (source :sourcefile )->checkresult :
-    checker =checker ()
-    checker .load_items (source )
-    checker .check (source )
-    return checkresult (diagnostics =checker .diagnostics )
+    checker_instance =checker ()
+    checker_instance .load_items (source )
+    checker_instance .check (source )
+    return checkresult (diagnostics =checker_instance .diagnostics )
 
 
 class checker :
@@ -1049,13 +1049,31 @@ class checker :
         params =[string ],
         return_type =parse_type ("result[string, fserror]"),
         ),
+        "std.fs.read_to_string":traitmethodinfo (
+        owner ="std.fs",
+        generics =[],
+        params =[string ],
+        return_type =parse_type ("result[string, fserror]"),
+        ),
         "std.fs.writetextfile":traitmethodinfo (
         owner ="std.fs",
         generics =[],
         params =[string ,string ],
         return_type =parse_type ("result[(), fserror]"),
         ),
+        "std.fs.write_text_file":traitmethodinfo (
+        owner ="std.fs",
+        generics =[],
+        params =[string ,string ],
+        return_type =parse_type ("result[(), fserror]"),
+        ),
         "std.fs.maketempdir":traitmethodinfo (
+        owner ="std.fs",
+        generics =[],
+        params =[string ],
+        return_type =parse_type ("result[string, fserror]"),
+        ),
+        "std.fs.make_temp_dir":traitmethodinfo (
         owner ="std.fs",
         generics =[],
         params =[string ],
@@ -1135,6 +1153,12 @@ class checker :
         ),
         "std.process.exit":traitmethodinfo (owner ="std.process",generics =[],params =[i32 ],return_type =unit ),
         "std.process.runprocess":traitmethodinfo (
+        owner ="std.process",
+        generics =[],
+        params =[parse_type ("vec[string]")],
+        return_type =parse_type ("result[(), processerror]"),
+        ),
+        "std.process.run_process":traitmethodinfo (
         owner ="std.process",
         generics =[],
         params =[parse_type ("vec[string]")],
