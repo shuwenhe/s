@@ -7,10 +7,11 @@ import os
 import subprocess
 import tempfile
 
-from compiler.ast import sourcefile
+from compiler.ast import callexpr, functiondecl, nameexpr, returnstmt, sourcefile
 from compiler.interpreter import interpreter, interpretererror
 
 build_output_root = Path(os.environ.get("s_build_output_root", "/tmp/s-build"))
+bootstrap_base_compiler = os.environ.get("s_bootstrap_base_compiler", "/app/s/bin/s-native")
 
 
 class backenderror(Exception):
@@ -41,8 +42,16 @@ class recordinginterpreter(interpreter):
 def build_executable(source: sourcefile, output_path: Path) -> None:
     build_output_root.mkdir(parents=True, exist_ok=True)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    program = _compile_program(source)
-    asm = _emit_asm(program)
+    if _is_compiler_runtime_entry(source):
+        base_compiler = Path(bootstrap_base_compiler).resolve()
+        if output_path.resolve() == base_compiler:
+            raise backenderror(
+                "refusing to generate a launcher that execs itself; set s_bootstrap_base_compiler to a different binary"
+            )
+        asm = _emit_runtime_launcher_asm(str(base_compiler))
+    else:
+        program = _compile_program(source)
+        asm = _emit_asm(program)
 
     with tempfile.TemporaryDirectory(prefix="s-build-", dir=str(build_output_root)) as tmp:
         workdir = Path(tmp)
@@ -64,6 +73,65 @@ def _compile_program(source: sourcefile) -> Tuple[List[writeop], int]:
     except interpretererror as exc:
         raise backenderror(str(exc)) from exc
     return interpreter.ops, int(exit_code)
+
+
+def _is_compiler_runtime_entry(source: sourcefile) -> bool:
+    if source.package != "cmd":
+        return False
+
+    has_compiler_import = any(use.path == "compile.internal.compiler.main" for use in source.uses)
+    has_host_args_import = any(use.path == "std.env.args" for use in source.uses)
+    if not has_compiler_import or not has_host_args_import:
+        return False
+
+    for item in source.items:
+        if not isinstance(item, functiondecl):
+            continue
+        if item.sig.name != "main" or item.body is None:
+            continue
+        for statement in item.body.statements:
+            if not isinstance(statement, returnstmt) or statement.value is None:
+                continue
+            value = statement.value
+            if not isinstance(value, callexpr):
+                continue
+            if not isinstance(value.callee, nameexpr) or value.callee.name != "compiler_main":
+                continue
+            if len(value.args) != 1:
+                continue
+            arg = value.args[0]
+            if not isinstance(arg, callexpr):
+                continue
+            if not isinstance(arg.callee, nameexpr) or arg.callee.name != "host_args":
+                continue
+            return True
+    return False
+
+
+def _emit_runtime_launcher_asm(base_compiler_path: str) -> str:
+    escaped_path = base_compiler_path.replace("\\", "\\\\").replace('"', '\\"')
+    lines = [
+        ".section .rodata",
+        "base_compiler_path:",
+        f'    .asciz "{escaped_path}"',
+        "",
+        ".section .text",
+        ".global _start",
+        "_start:",
+        "    mov (%rsp), %rcx",  # argc
+        "    lea 8(%rsp), %r8",  # argv
+        "    lea 16(%rsp,%rcx,8), %rdx",  # envp
+        "    lea base_compiler_path(%rip), %rdi",
+        "    mov %r8, %rsi",
+        "    mov $59, %rax",  # execve
+        "    syscall",
+        "",
+        "    mov $60, %rax",  # exit on execve failure
+        "    mov $127, %rdi",
+        "    syscall",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def _emit_asm(program: Tuple[List[writeop], int]) -> str:
