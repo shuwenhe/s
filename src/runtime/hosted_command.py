@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 import sys
+
+from runtime.compat import *
+
 
 src_root = path(__file__).resolve().parents[1]
 if str(src_root) not in sys.path:

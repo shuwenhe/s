@@ -1,20 +1,21 @@
 from __future__ import annotations
 
-from ctypes import cdll, c_char_p, c_longlong, c_size_t, c_void_p, string_at
-from pathlib import Path
+from ctypes import CDLL, c_char_p, c_longlong, c_size_t, c_void_p, string_at
+
+from runtime.compat import *
 
 
-_lib: cdll | none = none
+_lib: CDLL | none = none
 
 
-def _load_library() -> cdll:
+def _load_library() -> CDLL:
     global _lib
     if _lib is not none:
         return _lib
     library_path = path(__file__).with_name("libintrinsics_core.so")
     if not library_path.exists():
         raise runtimeerror(f"missing intrinsic core library: {library_path}")
-    lib = cdll(str(library_path))
+    lib = CDLL(str(library_path))
     lib.intrinsics_core_free.argtypes = [c_void_p]
     lib.intrinsics_core_free.restype = none
     lib.intrinsics_core_string_len.argtypes = [c_char_p]
