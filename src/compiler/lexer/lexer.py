@@ -16,8 +16,8 @@ class lexer :
 
     def __post_init__ (self )->None :
         self .index =0 
-        self .line =1 
-        self .column =1 
+        self.line=1 
+        self.column=1 
 
     def tokenize (self )->List [token ]:
         tokens :List [token ]=[]
@@ -25,8 +25,8 @@ class lexer :
             self ._skip_ignored ()
             if self ._is_eof ():
                 break 
-            start_line =self .line 
-            start_col =self .column 
+            start_line =self.line
+            start_col =self.column
             ch =self ._peek ()
             if ch .isalpha ()or ch =="_":
                 value =self ._read_identifier ()
@@ -41,7 +41,7 @@ class lexer :
                 continue 
             symbol =self ._read_symbol ()
             tokens .append (token (tokenkind .symbol ,symbol ,start_line ,start_col ))
-        tokens .append (token (tokenkind .eof ,"<eof>",self .line ,self .column ))
+        tokens .append (token (tokenkind .eof ,"<eof>",self.line,self.column))
         return tokens 
 
     def _skip_ignored (self )->None :
@@ -111,7 +111,7 @@ class lexer :
         ch =self ._peek ()
         if ch in "()[]{}.,:;+-*/%!=<>?&|":
             return self ._advance ()
-        raise lexerror (f"unexpected character {ch !r } at {self .line }:{self .column }")
+        raise lexerror (f"unexpected character {ch!r} at {self.line}:{self.column}")
 
     def _match (self ,text :str )->bool :
         return self .source [self .index :self .index +len (text )]==text 
@@ -123,10 +123,10 @@ class lexer :
         ch =self .source [self .index ]
         self .index +=1 
         if ch =="\n":
-            self .line +=1 
-            self .column =1 
+            self.line+=1 
+            self.column=1 
         else :
-            self .column +=1 
+            self.column+=1 
         return ch 
 
     def _is_eof (self )->bool :
