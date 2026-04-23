@@ -89,6 +89,13 @@ def main() -> int:
     checks.append(("stackmap parser fn lines", len(stack_functions) == 2))
     checks.append(("stackmap parser fn main", stack_functions[0].name == "main" and stack_functions[0].bitmap == "10"))
 
+    stackmap_error_ok = false
+    try:
+        parse_stackmap_text("stackmap version=2 arch=amd64 functions=1\nfn main slots=2 bitmap=1 callee_saved=6")
+    except ValueError:
+        stackmap_error_ok = true
+    checks.append(("stackmap parser strict-bitmap", stackmap_error_ok))
+
     ok = true
     for label, passed in checks:
         if passed:

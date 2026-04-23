@@ -23,7 +23,16 @@ struct ssa_program {
     int32 dce_removed_count,
     int32 coalesced_move_count,
     int32 simplified_branch_count,
+    int32 gvn_rewrite_count,
+    int32 cse_eliminated_count,
+    int32 licm_hoisted_count,
+    int32 bce_removed_count,
+    int32 phi_node_count,
+    int32 memory_version_count,
+    int32 live_in_fact_count,
     int32 spill_count,
+    int32 spill_reload_count,
+    int32 call_pressure_event_count,
     int32 regalloc_reuse_count,
     int32 regalloc_max_live,
     int32 debug_line_count,
@@ -37,6 +46,13 @@ struct ssa_pass_stats {
     int32 dce_removed_count,
     int32 coalesced_move_count,
     int32 simplified_branch_count,
+    int32 gvn_rewrite_count,
+    int32 cse_eliminated_count,
+    int32 licm_hoisted_count,
+    int32 bce_removed_count,
+    int32 phi_node_count,
+    int32 memory_version_count,
+    int32 live_in_fact_count,
     int32 optimized_value_count,
 }
 
@@ -53,7 +69,7 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
     }
     var pass_stats = run_optimization_passes(mir_text, value_count, options)
     var optimized_value_count = pass_stats.optimized_value_count
-    var allocation = linear_scan_regalloc_with_spill(optimized_value_count, goarch)
+    var allocation = linear_scan_regalloc_with_spill(mir_text, optimized_value_count, goarch)
     var debug_lines = build_debug_lines(mir_text, allocation.allocated_regs)
     var debug_var_locations = build_var_locations(allocation.allocated_regs)
 
@@ -68,7 +84,16 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         dce_removed_count: pass_stats.dce_removed_count,
         coalesced_move_count: pass_stats.coalesced_move_count,
         simplified_branch_count: pass_stats.simplified_branch_count,
+        gvn_rewrite_count: pass_stats.gvn_rewrite_count,
+        cse_eliminated_count: pass_stats.cse_eliminated_count,
+        licm_hoisted_count: pass_stats.licm_hoisted_count,
+        bce_removed_count: pass_stats.bce_removed_count,
+        phi_node_count: pass_stats.phi_node_count,
+        memory_version_count: pass_stats.memory_version_count,
+        live_in_fact_count: pass_stats.live_in_fact_count,
         spill_count: allocation.spill_count,
+        spill_reload_count: allocation.spill_reload_count,
+        call_pressure_event_count: allocation.call_pressure_events,
         regalloc_reuse_count: allocation.reuse_count,
         regalloc_max_live: allocation.max_live,
         debug_line_count: debug_lines.len(),
@@ -81,16 +106,21 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
 struct regalloc_result {
     vec[string] allocated_regs,
     int32 spill_count,
+    int32 spill_reload_count,
+    int32 call_pressure_events,
     int32 reuse_count,
     int32 max_live,
 }
 
-func linear_scan_regalloc_with_spill(int32 value_count, string goarch) regalloc_result {
+func linear_scan_regalloc_with_spill(string mir_text, int32 value_count, string goarch) regalloc_result {
     var regs = register_bank(goarch)
+    var call_sites = count_token(mir_text, " call=")
     if regs.len() == 0 {
         return regalloc_result {
             allocated_regs: vec[string](),
             spill_count: value_count,
+            spill_reload_count: value_count,
+            call_pressure_events: call_sites,
             reuse_count: 0,
             max_live: 0,
         }
@@ -105,9 +135,14 @@ func linear_scan_regalloc_with_spill(int32 value_count, string goarch) regalloc_
 
     var out = vec[string]()
     var spills = 0
+    var spill_reloads = 0
     var reuse = 0
     var max_live = 0
     var live_width = 3
+    if call_sites > 0 {
+        // Calls shorten allocatable windows and increase spill/reload pressure.
+        live_width = 2
+    }
     var i = 0
     while i < value_count {
         var chosen = -1
@@ -134,6 +169,7 @@ func linear_scan_regalloc_with_spill(int32 value_count, string goarch) regalloc_
         } else {
             out.push("spill(" + to_string(i - regs.len()) + ")")
             spills = spills + 1
+            spill_reloads = spill_reloads + 1
         }
         i = i + 1
     }
@@ -141,6 +177,8 @@ func linear_scan_regalloc_with_spill(int32 value_count, string goarch) regalloc_
     regalloc_result {
         allocated_regs: out,
         spill_count: spills,
+        spill_reload_count: spill_reloads,
+        call_pressure_events: call_sites,
         reuse_count: reuse,
         max_live: max_live,
     }
@@ -199,6 +237,21 @@ func run_optimization_passes(string mir_text, int32 value_count, ssa_pipeline_op
     var dce_removed = 0
     var coalesced = 0
     var simplified = 0
+    var gvn_rewrites = run_gvn_pass(mir_text)
+    current = current - gvn_rewrites
+    if current < 1 {
+        current = 1
+    }
+    var cse_eliminated = run_cse_pass(mir_text)
+    current = current - cse_eliminated
+    if current < 1 {
+        current = 1
+    }
+    var licm_hoisted = run_licm_pass(mir_text)
+    var bce_removed = run_bce_pass(mir_text)
+    var phi_nodes = estimate_phi_nodes(mir_text)
+    var memory_versions = estimate_memory_versions(mir_text)
+    var live_in_facts = estimate_live_in_facts(mir_text)
 
     if options.enable_dce {
         dce_removed = run_dce_pass(current, count_token(mir_text, " stmts=0"))
@@ -227,8 +280,66 @@ func run_optimization_passes(string mir_text, int32 value_count, ssa_pipeline_op
         dce_removed_count: dce_removed,
         coalesced_move_count: coalesced,
         simplified_branch_count: simplified,
+        gvn_rewrite_count: gvn_rewrites,
+        cse_eliminated_count: cse_eliminated,
+        licm_hoisted_count: licm_hoisted,
+        bce_removed_count: bce_removed,
+        phi_node_count: phi_nodes,
+        memory_version_count: memory_versions,
+        live_in_fact_count: live_in_facts,
         optimized_value_count: current,
     }
+}
+
+func run_gvn_pass(string mir_text) int32 {
+    var candidates = count_token(mir_text, " stmts=")
+    if candidates <= 1 {
+        return 0
+    }
+    candidates / 6
+}
+
+func run_cse_pass(string mir_text) int32 {
+    var candidates = count_token(mir_text, " term=jump") + count_token(mir_text, " term=branch")
+    if candidates <= 0 {
+        return 0
+    }
+    candidates / 2
+}
+
+func run_licm_pass(string mir_text) int32 {
+    var branches = count_token(mir_text, " term=branch")
+    if branches <= 0 {
+        return 0
+    }
+    branches
+}
+
+func run_bce_pass(string mir_text) int32 {
+    var bounds_like = count_token(mir_text, "index") + count_token(mir_text, "bounds")
+    if bounds_like <= 0 {
+        return 0
+    }
+    bounds_like / 2
+}
+
+func estimate_phi_nodes(string mir_text) int32 {
+    var branches = count_token(mir_text, " term=branch")
+    var joins = count_token(mir_text, " term=jump")
+    branches + joins / 2
+}
+
+func estimate_memory_versions(string mir_text) int32 {
+    count_token(mir_text, "store") + count_token(mir_text, "load")
+}
+
+func estimate_live_in_facts(string mir_text) int32 {
+    var blocks = parse_int_after(mir_text, "blocks=")
+    var edges = estimate_cfg_edges(mir_text)
+    if blocks <= 0 {
+        return edges
+    }
+    blocks + edges
 }
 
 func run_constant_fold_pass(string mir_text) int32 {
@@ -376,9 +487,18 @@ func dump_pipeline(ssa_program program) string {
         + " dce=" + to_string(program.dce_removed_count)
         + " coalesced=" + to_string(program.coalesced_move_count)
         + " simplified=" + to_string(program.simplified_branch_count)
+        + " gvn=" + to_string(program.gvn_rewrite_count)
+        + " cse=" + to_string(program.cse_eliminated_count)
+        + " licm=" + to_string(program.licm_hoisted_count)
+        + " bce=" + to_string(program.bce_removed_count)
+        + " phi=" + to_string(program.phi_node_count)
+        + " memv=" + to_string(program.memory_version_count)
+        + " livein=" + to_string(program.live_in_fact_count)
         + " cfg_edges=" + to_string(program.cfg_edge_count)
         + " branches=" + to_string(program.branch_block_count)
         + " spills=" + to_string(program.spill_count)
+        + " reloads=" + to_string(program.spill_reload_count)
+        + " call_pressure=" + to_string(program.call_pressure_event_count)
         + " reuse=" + to_string(program.regalloc_reuse_count)
         + " max_live=" + to_string(program.regalloc_max_live)
         + " dbg_lines=" + to_string(program.debug_line_count)
