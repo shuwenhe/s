@@ -132,6 +132,9 @@ func validate_control_flow_semantics(string source, vec[semantic_error] mut diag
     if goto_uses > label_defs {
         errors = errors + add_error(source, diagnostics, "e3023", "goto/label count mismatch", "goto")
     }
+    if label_defs > 0 && count_token_text(source, "break ") > 0 && goto_uses > 0 {
+        errors = errors + add_error(source, diagnostics, "e3031", "goto mixed with break/label requires structured-control proof", "goto")
+    }
     if goto_uses > 0 && count_token_text(source, "defer ") > 0 {
         errors = errors + add_error(source, diagnostics, "e3024", "goto across deferred region requires strict control-flow proof", "defer")
     }
@@ -153,6 +156,12 @@ func validate_recovery_semantics(string source, vec[semantic_error] mut diagnost
     if recover_count > defer_count {
         errors = errors + add_error(source, diagnostics, "e3027", "recover coverage exceeds deferred handlers", "recover")
     }
+    if panic_count > 0 && count_token_text(source, "return") == 0 {
+        errors = errors + add_error(source, diagnostics, "e3032", "panic path requires explicit return or recovery bridge", "panic")
+    }
+    if recover_count > 0 && panic_count == 0 {
+        errors = errors + add_error(source, diagnostics, "e3033", "recover without panic path may break semantic equivalence", "recover")
+    }
     errors
 }
 
@@ -171,6 +180,9 @@ func validate_method_interface_semantics(string source, vec[semantic_error] mut 
     }
     if count_token_text(source, "[") > 0 && count_token_text(source, "]") > 0 && count_token_text(source, " where ") == 0 {
         errors = errors + add_error(source, diagnostics, "e3030", "generic constraints are incomplete without explicit where-clause", "where")
+    }
+    if impl_count > 0 && count_token_text(source, "impl[") > 1 && count_token_text(source, "for ") == 0 {
+        errors = errors + add_error(source, diagnostics, "e3034", "generic impl instantiation conflict requires explicit target", "impl")
     }
     errors
 }
