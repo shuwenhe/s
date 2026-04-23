@@ -66,7 +66,9 @@ struct semantic_error {
     string code
     string message
     string severity
+    string hint
     int32 tier
+    int32 repeat_count
     int32 line
     int32 column
 }
@@ -84,13 +86,13 @@ func check_detailed(string source) vec[semantic_error] {
 
     if !rules_consistent() {
         add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
-        return diagnostics
+        return finalize_diagnostics(diagnostics)
     }
 
     var parsed = parse_source(source)
     if parsed.is_err() {
         add_error(source, diagnostics, "e0001", "parse failed", "package");
-        return diagnostics
+        return finalize_diagnostics(diagnostics)
     }
 
     var file = parsed.unwrap()
@@ -104,18 +106,129 @@ func check_detailed(string source) vec[semantic_error] {
         i = i + 1
     }
 
-    apply_diagnostic_budget(diagnostics)
+    finalize_diagnostics(diagnostics)
+}
+
+func finalize_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
+    var deduped = dedupe_diagnostics(diagnostics)
+    var ordered = sort_diagnostics(deduped)
+    apply_diagnostic_budget(ordered)
+}
+
+func dedupe_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
+    var out = vec[semantic_error]()
+    var i = 0
+    while i < diagnostics.len() {
+        var d = diagnostics[i]
+        var idx = find_diagnostic_index(out, d)
+        if idx < 0 {
+            out.push(d)
+        } else {
+            out[idx].repeat_count = out[idx].repeat_count + 1
+            if out[idx].hint == "" {
+                out[idx].hint = d.hint
+            }
+        }
+        i = i + 1
+    }
+    out
+}
+
+func find_diagnostic_index(vec[semantic_error] diagnostics, semantic_error candidate) int32 {
+    var i = 0
+    while i < diagnostics.len() {
+        if diagnostics[i].code == candidate.code
+            && diagnostics[i].message == candidate.message
+            && diagnostics[i].line == candidate.line
+            && diagnostics[i].column == candidate.column {
+            return i
+        }
+        i = i + 1
+    }
+    0 - 1
+}
+
+func sort_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
+    var out = vec[semantic_error]()
+    var i = 0
+    while i < diagnostics.len() {
+        var item = diagnostics[i]
+        var insert = out.len()
+        var j = 0
+        while j < out.len() {
+            if diagnostic_before(item, out[j]) {
+                insert = j
+                j = out.len()
+            } else {
+                j = j + 1
+            }
+        }
+        insert_diagnostic(out, insert, item)
+        i = i + 1
+    }
+    out
+}
+
+func insert_diagnostic(vec[semantic_error] mut diagnostics, int32 at, semantic_error item) () {
+    diagnostics.push(item)
+    var i = diagnostics.len() - 1
+    while i > at {
+        diagnostics[i] = diagnostics[i - 1]
+        i = i - 1
+    }
+    diagnostics[at] = item
+}
+
+func diagnostic_before(semantic_error left, semantic_error right) bool {
+    if left.tier != right.tier {
+        return left.tier < right.tier
+    }
+    var ls = severity_rank(left.severity)
+    var rs = severity_rank(right.severity)
+    if ls != rs {
+        return ls < rs
+    }
+    if left.line != right.line {
+        return left.line < right.line
+    }
+    if left.column != right.column {
+        return left.column < right.column
+    }
+    left.code < right.code
+}
+
+func severity_rank(string severity) int32 {
+    if severity == "fatal" {
+        return 0
+    }
+    if severity == "error" {
+        return 1
+    }
+    if severity == "warning" {
+        return 2
+    }
+    3
 }
 
 func apply_diagnostic_budget(vec[semantic_error] diagnostics) vec[semantic_error] {
-    var max_errors = 128
-    if diagnostics.len() <= max_errors {
+    var max_total = 128
+    var max_warnings = 24
+    if diagnostics.len() <= max_total {
         return diagnostics
     }
     var out = vec[semantic_error]()
+    var warnings = 0
     var i = 0
-    while i < max_errors {
-        out.push(diagnostics[i])
+    while i < diagnostics.len() && out.len() < max_total {
+        var d = diagnostics[i]
+        if d.severity == "warning" {
+            if warnings >= max_warnings {
+                i = i + 1
+                continue
+            }
+            warnings = warnings + 1
+        }
+        out.push(d)
         i = i + 1
     }
     out
@@ -1334,16 +1447,35 @@ func add_error(string source, vec[semantic_error] mut diagnostics, string code, 
     var pos = locate_anchor(source, anchor)
     var severity = diagnostic_severity(code)
     var tier = diagnostic_tier(code)
+    var hint = diagnostic_hint(code, anchor)
     diagnostics.push(semantic_error {
         code: code,
         message: message,
         severity: severity,
+        hint: hint,
         tier: tier,
+        repeat_count: 1,
         line: pos.line,
         column: pos.column,
     })
     ;
     1
+}
+
+func diagnostic_hint(string code, string anchor) string {
+    if starts_with_text(code, "e100") {
+        return "check overload candidates and argument types near " + anchor
+    }
+    if starts_with_text(code, "e200") {
+        return "check switch exhaustiveness and pattern binding near " + anchor
+    }
+    if starts_with_text(code, "e300") {
+        return "check declared vs inferred type around " + anchor
+    }
+    if starts_with_text(code, "e000") {
+        return "fix parse/type-rule preconditions first"
+    }
+    "review surrounding declaration near " + anchor
 }
 
 func diagnostic_severity(string code) string {
