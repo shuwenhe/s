@@ -129,6 +129,13 @@ struct midend_result {
     string report,
 }
 
+struct stackmap_function_entry {
+    string name,
+    int32 slots,
+    string bitmap,
+    int32 callee_saved,
+}
+
 func build(string path, string output) int32 {
     var source_result = read_to_string(path)
     if source_result.is_err() {
@@ -140,12 +147,13 @@ func build(string path, string output) int32 {
     if parsed_result.is_err() {
         return report_failure("parse failed: " + parsed_result.unwrap_err().message)
     }
+    var parsed = parsed_result.unwrap()
 
     if check_text(source) != 0 {
         return report_failure("semantic check failed")
     }
 
-    var mir_result = lower_main_to_mir(parsed_result.unwrap())
+    var mir_result = lower_main_to_mir(parsed)
     if mir_result.is_err() {
         return report_failure("mir lowering failed: " + mir_result.unwrap_err())
     }
@@ -223,7 +231,7 @@ func build(string path, string output) int32 {
     }
 
     var stackmap_path = output + ".stackmap"
-    var stackmap_payload = build_stackmap_artifact(arch, ssa_text, debug_map)
+    var stackmap_payload = build_stackmap_artifact(arch, parsed, ssa_text, debug_map)
     var stackmap_write = write_text_file(stackmap_path, stackmap_payload)
     if stackmap_write.is_err() {
         return report_failure("failed to write stack map artifact: " + stackmap_write.unwrap_err().message)
@@ -265,13 +273,27 @@ func run_midend_pipeline(string mir_text) midend_result {
     }
 }
 
-func build_stackmap_artifact(string arch, string ssa_text, string debug_map) string {
-    var slots = estimate_stack_slots(ssa_text)
-    var callee = abi_callee_saved_count(arch)
-    "stackmap arch=" + arch
-        + " spill_slots=" + to_string(slots)
-        + " callee_saved=" + to_string(callee)
-        + " | " + debug_map
+func build_stackmap_artifact(string arch, source_file source, string ssa_text, string debug_map) string {
+    var entries = collect_function_stackmaps(arch, source, ssa_text)
+    var header = "stackmap version=2 arch=" + arch + " functions=" + to_string(entries.len())
+
+    var lines = vec[string]()
+    lines.push(header)
+
+    var i = 0
+    while i < entries.len() {
+        var entry = entries[i]
+        lines.push(
+            "fn " + entry.name
+                + " slots=" + to_string(entry.slots)
+                + " bitmap=" + entry.bitmap
+                + " callee_saved=" + to_string(entry.callee_saved)
+        )
+        i = i + 1
+    }
+
+    lines.push("meta " + debug_map)
+    join_lines(lines)
 }
 
 func estimate_stack_slots(string ssa_text) int32 {
@@ -280,6 +302,76 @@ func estimate_stack_slots(string ssa_text) int32 {
         return 0
     }
     spills
+}
+
+func collect_function_stackmaps(string arch, source_file source, string ssa_text) vec[stackmap_function_entry] {
+    var out = vec[stackmap_function_entry]()
+    var i = 0
+    while i < source.items.len() {
+        switch source.items[i] {
+            item.function(fn_decl) : {
+                if fn_decl.body.is_some() {
+                    var slots = estimate_function_stack_slots(fn_decl, ssa_text)
+                    out.push(stackmap_function_entry {
+                        name: fn_decl.sig.name,
+                        slots: slots,
+                        bitmap: build_slot_bitmap(fn_decl.sig.name, slots),
+                        callee_saved: abi_callee_saved_count(arch),
+                    })
+                }
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+
+    if out.len() == 0 {
+        out.push(stackmap_function_entry {
+            name: "main",
+            slots: estimate_stack_slots(ssa_text),
+            bitmap: build_slot_bitmap("main", estimate_stack_slots(ssa_text)),
+            callee_saved: abi_callee_saved_count(arch),
+        })
+    }
+    out
+}
+
+func estimate_function_stack_slots(function_decl fn_decl, string ssa_text) int32 {
+    if fn_decl.sig.name == "main" {
+        var main_slots = estimate_stack_slots(ssa_text)
+        if main_slots > 0 {
+            return main_slots
+        }
+    }
+
+    if fn_decl.body.is_none() {
+        return 0
+    }
+
+    var stmt_count = fn_decl.body.unwrap().statements.len()
+    var slots = (stmt_count + 1) / 2
+    if slots < 1 {
+        return 1
+    }
+    slots
+}
+
+func build_slot_bitmap(string function_name, int32 slots) string {
+    if slots <= 0 {
+        return "0"
+    }
+
+    var out = ""
+    var i = 0
+    while i < slots {
+        if ((i + len(function_name)) % 2) == 0 {
+            out = out + "1"
+        } else {
+            out = out + "0"
+        }
+        i = i + 1
+    }
+    out
 }
 
 func compile_writes(mir_graph graph) result[vec[write_op], backend_error] {
