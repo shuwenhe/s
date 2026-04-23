@@ -6,12 +6,12 @@ use std.prelude.slice
 use std.vec.vec
 
 struct type_ref {
-    string canonical,
-    string base,
-    bool is_ref,
-    bool is_mut_ref,
-    bool is_slice,
-    vec[string] args,
+    string canonical
+    string base
+    bool is_ref
+    bool is_mut_ref
+    bool is_slice
+    vec[string] args
 }
 
 func parse_type(string text) string {
