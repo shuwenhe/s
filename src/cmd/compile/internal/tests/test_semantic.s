@@ -2,6 +2,7 @@ package compile.internal.tests.test_semantic
 
 use compile.internal.semantic.check_text
 use compile.internal.semantic.check_detailed
+use compile.internal.semantic.semantic_error
 use std.fs.read_to_string
 
 func run_semantic_suite(string fixtures_root) int32 {
@@ -158,5 +159,34 @@ func run_semantic_suite(string fixtures_root) int32 {
         return 1
     }
 
+    var control_src = "package demo.ctrl\nfunc main() int32 {\n  goto L1\n  0\n}"
+    var control_diags = check_detailed(control_src)
+    if !has_code(control_diags, "e3022") {
+        return 1
+    }
+
+    var recover_src = "package demo.recover\nfunc main() int32 {\n  recover()\n  0\n}"
+    var recover_diags = check_detailed(recover_src)
+    if !has_code(recover_diags, "e3025") {
+        return 1
+    }
+
+    var impl_src = "package demo.impl\nimpl Box[T] {\n}"
+    var impl_diags = check_detailed(impl_src)
+    if !has_code(impl_diags, "e3028") {
+        return 1
+    }
+
     0
+}
+
+func has_code(vec[semantic_error] diagnostics, string code) bool {
+    var i = 0
+    while i < diagnostics.len() {
+        if diagnostics[i].code == code {
+            return true
+        }
+        i = i + 1
+    }
+    false
 }

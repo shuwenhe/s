@@ -18,6 +18,7 @@ struct dep_graph_state {
     int32 dep_count
     int32 pruned_count
     string direct_signature
+    string pruned_signature
 }
 
 func cache_hit(string source_path, string source_text, string phase) bool {
@@ -31,6 +32,19 @@ func cache_hit_target(string source_path, string source_text, string phase, stri
         return false
     }
     cached.unwrap() == dependency_fingerprint(source_path, source_text, phase, target_key)
+}
+
+func cache_hit_explain_target(string source_path, string source_text, string phase, string target_key) string {
+    var stamp_path = cache_stamp_path(source_path, phase, target_key)
+    var cached = read_to_string(stamp_path)
+    if cached.is_err() {
+        return "miss:no-stamp"
+    }
+    var now = dependency_fingerprint(source_path, source_text, phase, target_key)
+    if cached.unwrap() == now {
+        return "hit:exact-fingerprint"
+    }
+    "miss:fingerprint-drift"
 }
 
 func update_cache(string source_path, string source_text, string phase) bool {
@@ -81,6 +95,8 @@ func update_cache_target(string source_path, string source_text, string phase, s
         + ";target=" + sanitize_key(target_key)
         + ";deps=" + graph_state.direct_signature
         + ";pruned=" + to_string(graph_state.pruned_count)
+        + ";pruned_deps=" + graph_state.pruned_signature
+        + ";explain=" + cache_hit_explain_target(source_path, source_text, phase, target_key)
     var version_write = write_text_file(version_stamp, version_payload)
     !version_write.is_err()
 }
@@ -174,6 +190,7 @@ func dependency_layer_version_signature(string source_text, string phase, string
         + ":count=" + to_string(graph.dep_count)
         + ":pruned=" + to_string(graph.pruned_count)
         + ":direct=" + graph.direct_signature
+        + ":pruned_direct=" + graph.pruned_signature
     sig
 }
 
@@ -183,6 +200,7 @@ func dependency_graph_state(string source_text, string phase, string target_key)
     var dep_count = 0
     var pruned_count = 0
     var direct_signature = ""
+    var pruned_signature = ""
     var source_pkg = package_name(source_text)
     var phase_budget = phase_depth_budget(phase)
     var cursor = 0
@@ -197,6 +215,7 @@ func dependency_graph_state(string source_text, string phase, string target_key)
             var dep_state = read_dep_version_state(path)
             if should_prune_dependency(path, source_pkg, dep_state, phase_budget, target_key) {
                 pruned_count = pruned_count + 1
+                pruned_signature = pruned_signature + "|" + path
                 cursor = line_end + 1
                 continue
             }
@@ -221,6 +240,7 @@ func dependency_graph_state(string source_text, string phase, string target_key)
         dep_count: dep_count,
         pruned_count: pruned_count,
         direct_signature: direct_signature,
+        pruned_signature: pruned_signature,
     }
 }
 
