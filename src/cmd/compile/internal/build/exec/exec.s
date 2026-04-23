@@ -23,8 +23,10 @@ func run(vec[string] options) int32 {
         return 1
     }
     var source = source_result.unwrap()
+    var source_key = options[1]
     if options[0] == "check" {
-        if cache_hit_target(options[1], source, "check", "semantic") {
+        var check_target = "semantic@" + source_key
+        if cache_hit_target(options[1], source, "check", check_target) {
             emit_check_ok(options[1]);
             return 0
         }
@@ -35,7 +37,7 @@ func run(vec[string] options) int32 {
         if check_text(source) != 0 {
             return 1
         }
-        var ignored_cache = update_cache_target(options[1], source, "check", "semantic")
+        var ignored_cache = update_cache_target(options[1], source, "check", check_target)
         emit_check_ok(options[1]);
         return 0
     }
@@ -59,12 +61,13 @@ func run(vec[string] options) int32 {
     }
 
     if options[0] == "build" {
-        if cache_hit_target(options[1], source, "build", options[2]) {
+        var build_target = options[2] + "@" + source_key
+        if cache_hit_target(options[1], source, "build", build_target) {
             emit_built(options[2]);
             return 0
         }
         if build_binary(options[1], options[2]) == 0 {
-            var ignored_cache = update_cache_target(options[1], source, "build", options[2])
+            var ignored_cache = update_cache_target(options[1], source, "build", build_target)
             emit_built(options[2]);
             return 0
         }
