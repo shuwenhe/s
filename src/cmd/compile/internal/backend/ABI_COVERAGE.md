@@ -64,15 +64,15 @@ Current backend enforces that each target has a non-empty callee-saved register 
 - Variadic register-budget validation (`gp/fp` limits).
 - Extra architecture mapping coverage for `riscv64`, `s390x`, and `wasm` object-chain mode (`clang -c` + `wasm-ld`).
 - SSA ABI runtime contract validation (`spill/reload`, `call_pressure`, `tailcall` legality).
+- Callsite preserve contract validation (`callee_saved_clobber`, `caller_restore_missing`, `call_preserve`).
 - CFI artifact emission and structural validation (`.cfi_startproc/.cfi_endproc/.cfi_def_cfa`).
 - WASI source contract validation for imports/entry (`fd_write`, `proc_exit`, `_start`).
+- WASI binary-level probe validation from linked artifact (`wasm-objdump -x` + import/export grep).
 
 ## Remaining Full-Coverage Work
 
 - ABI classes by concrete frontend type layout (scalar/vector/aggregate splitting).
-- Caller/callee-saved register preservation verification at every lowered call site.
 - Spill-slot home locations wired to SSA allocator live ranges.
-- Full binary-level WASI import/export validation from linked wasm artifact.
 
 ## Validation Contract
 
