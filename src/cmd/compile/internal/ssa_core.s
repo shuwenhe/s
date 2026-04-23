@@ -33,6 +33,7 @@ struct ssa_program {
     int32 memory_version_count
     int32 live_in_fact_count
     int32 loop_header_count
+    int32 semantic_rewrite_count
     int32 spill_count
     int32 spill_reload_count
     int32 call_pressure_event_count
@@ -42,6 +43,11 @@ struct ssa_program {
     vec[string] allocated_regs
     vec[string] debug_lines
     vec[string] debug_var_locations
+}
+
+struct ssa_rewrite_result {
+    string rewritten_mir
+    int32 rewrite_count
 }
 
 struct ssa_pass_stats {
@@ -83,25 +89,28 @@ func build_pipeline(string mir_text, string goarch) ssa_program {
 }
 
 func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_options options) ssa_program {
-    var function_name = parse_function_name(mir_text)
-    var block_count = parse_int_after(mir_text, "blocks=")
-    var value_count = parse_total_stmt_count(mir_text)
+    var rewrite = canonicalize_mir(mir_text)
+    var rewritten = rewrite.rewritten_mir
+
+    var function_name = parse_function_name(rewritten)
+    var block_count = parse_int_after(rewritten, "blocks=")
+    var value_count = parse_total_stmt_count(rewritten)
     if value_count == 0 {
         value_count = block_count
     }
-    var model = build_dataflow_model(mir_text, block_count, value_count)
-    var pass_stats = run_optimization_passes(mir_text, model, options)
+    var model = build_dataflow_model(rewritten, block_count, value_count)
+    var pass_stats = run_optimization_passes(rewritten, model, options)
     var optimized_value_count = pass_stats.optimized_value_count
-    var allocation = linear_scan_regalloc_with_spill(mir_text, optimized_value_count, goarch)
-    var debug_lines = build_debug_lines(mir_text, allocation.allocated_regs)
+    var allocation = linear_scan_regalloc_with_spill(rewritten, optimized_value_count, goarch)
+    var debug_lines = build_debug_lines(rewritten, allocation.allocated_regs)
     var debug_var_locations = build_var_locations(allocation.allocated_regs)
 
     ssa_program {
         function_name: function_name,
         block_count: block_count,
         value_count: value_count,
-        cfg_edge_count: estimate_cfg_edges(mir_text),
-        branch_block_count: count_token(mir_text, " term=branch"),
+        cfg_edge_count: estimate_cfg_edges(rewritten),
+        branch_block_count: count_token(rewritten, " term=branch"),
         optimized_value_count: optimized_value_count,
         folded_constant_count: pass_stats.folded_constant_count,
         dce_removed_count: pass_stats.dce_removed_count,
@@ -117,6 +126,7 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         memory_version_count: pass_stats.memory_version_count,
         live_in_fact_count: pass_stats.live_in_fact_count,
         loop_header_count: pass_stats.loop_header_count,
+        semantic_rewrite_count: rewrite.rewrite_count,
         spill_count: allocation.spill_count,
         spill_reload_count: allocation.spill_reload_count,
         call_pressure_event_count: allocation.call_pressure_events,
@@ -126,6 +136,48 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         allocated_regs: allocation.allocated_regs,
         debug_lines: debug_lines,
         debug_var_locations: debug_var_locations,
+    }
+}
+
+func canonicalize_mir(string mir_text) ssa_rewrite_result {
+    var rewritten = mir_text
+    var rewrites = 0
+
+    var r0 = replace_first_token(rewritten, " term=jump |", " term=return |")
+    if r0.changed {
+        rewritten = r0.text
+        rewrites = rewrites + 1
+    }
+
+    var r1 = replace_first_token(rewritten, " stmts=0 term=branch", " stmts=0 term=jump")
+    if r1.changed {
+        rewritten = r1.text
+        rewrites = rewrites + 1
+    }
+
+    ssa_rewrite_result {
+        rewritten_mir: rewritten,
+        rewrite_count: rewrites,
+    }
+}
+
+struct replace_result {
+    string text
+    bool changed
+}
+
+func replace_first_token(string text, string needle, string replacement) replace_result {
+    var pos = find_token(text, needle)
+    if pos > text.len() {
+        return replace_result {
+            text: text,
+            changed: false,
+        }
+    }
+
+    replace_result {
+        text: slice(text, 0, pos) + replacement + slice(text, pos + needle.len(), text.len()),
+        changed: true,
     }
 }
 
@@ -591,6 +643,7 @@ func dump_pipeline(ssa_program program) string {
         + " memv=" + to_string(program.memory_version_count)
         + " livein=" + to_string(program.live_in_fact_count)
         + " loops=" + to_string(program.loop_header_count)
+        + " rewrites=" + to_string(program.semantic_rewrite_count)
         + " cfg_edges=" + to_string(program.cfg_edge_count)
         + " branches=" + to_string(program.branch_block_count)
         + " spills=" + to_string(program.spill_count)
