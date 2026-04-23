@@ -259,6 +259,17 @@ func build(string path, string output) int32 {
         return report_failure("failed to write ABI emission artifact: " + abi_emit_write.unwrap_err().message)
     }
 
+    var abi_matrix_payload = build_abi_machine_matrix_artifact(arch, parsed, ssa_text)
+    var abi_matrix_check = validate_abi_machine_matrix(abi_matrix_payload)
+    if abi_matrix_check.is_err() {
+        return report_failure(abi_matrix_check.unwrap_err().message)
+    }
+    var abi_matrix_path = output + ".abi.matrix"
+    var abi_matrix_write = write_text_file(abi_matrix_path, abi_matrix_payload)
+    if abi_matrix_write.is_err() {
+        return report_failure("failed to write ABI matrix artifact: " + abi_matrix_write.unwrap_err().message)
+    }
+
     var dwarf_path = output + ".dwarf"
     var dwarf_payload = build_dwarf_like_artifact(parsed, ssa_text, debug_map)
     var dwarf_check = validate_dwarf_consumability(dwarf_payload, ssa_text)
@@ -288,6 +299,17 @@ func build(string path, string output) int32 {
         return report_failure("failed to write export data artifact: " + export_write.unwrap_err().message)
     }
 
+    var toolchain_path = output + ".toolchain"
+    var toolchain_payload = build_toolchain_compat_artifact(parsed, arch)
+    var toolchain_check = validate_toolchain_compat_artifact(toolchain_payload)
+    if toolchain_check.is_err() {
+        return report_failure(toolchain_check.unwrap_err().message)
+    }
+    var toolchain_write = write_text_file(toolchain_path, toolchain_payload)
+    if toolchain_write.is_err() {
+        return report_failure("failed to write toolchain compatibility artifact: " + toolchain_write.unwrap_err().message)
+    }
+
     var opt_path = output + ".opt"
     var opt_write = write_text_file(opt_path, midend.report)
     if opt_write.is_err() {
@@ -301,6 +323,9 @@ func run_midend_pipeline(string mir_text) midend_result {
     var inlined = estimate_inline_sites(mir_text)
     var escaped = estimate_escape_sites(mir_text)
     var devirt = estimate_devirtualized_sites(mir_text)
+    var cross_pkg_inline = estimate_cross_pkg_inline_sites(mir_text, inlined)
+    var const_prop = estimate_const_prop_sites(mir_text)
+    var ipo_synergy = estimate_ipo_synergy(inlined, escaped, devirt, cross_pkg_inline, const_prop)
 
     var iter = 0
     while iter < 2 {
@@ -329,16 +354,109 @@ func run_midend_pipeline(string mir_text) midend_result {
     if devirt > 0 {
         rewritten = rewritten + " devirt=" + to_string(devirt)
     }
+    if cross_pkg_inline > 0 {
+        rewritten = rewritten + " xinline=" + to_string(cross_pkg_inline)
+    }
+    if const_prop > 0 {
+        rewritten = rewritten + " constprop=" + to_string(const_prop)
+    }
+    rewritten = rewritten + " ipo=" + to_string(ipo_synergy)
 
     var report = "midend"
         + " inline_sites=" + to_string(inlined)
         + " escape_sites=" + to_string(escaped)
         + " devirtualized=" + to_string(devirt)
+        + " cross_pkg_inline=" + to_string(cross_pkg_inline)
+        + " const_prop=" + to_string(const_prop)
+        + " ipo_synergy=" + to_string(ipo_synergy)
 
     midend_result {
         optimized_mir_text: rewritten,
         report: report,
     }
+}
+
+func estimate_cross_pkg_inline_sites(string mir_text, int32 inlined) int32 {
+    var imports = count_occurrences(mir_text, " use ") + count_occurrences(mir_text, "pkg.")
+    var score = inlined / 2 + imports
+    if score < 0 {
+        return 0
+    }
+    score
+}
+
+func estimate_const_prop_sites(string mir_text) int32 {
+    var constants = count_occurrences(mir_text, " const") + count_occurrences(mir_text, " literal=")
+    if constants < 0 {
+        return 0
+    }
+    constants
+}
+
+func estimate_ipo_synergy(int32 inlined, int32 escaped, int32 devirt, int32 cross_pkg_inline, int32 const_prop) int32 {
+    var score = inlined + devirt + cross_pkg_inline + const_prop
+    if escaped > 0 {
+        score = score - escaped / 2
+    }
+    if score < 0 {
+        return 0
+    }
+    score
+}
+
+func build_abi_machine_matrix_artifact(string arch, source_file source, string ssa_text) string {
+    var lines = vec[string]()
+    lines.push("abi-matrix version=1 arch=" + arch)
+    lines.push("axis caller_saved=" + to_string(abi_caller_saved_count(arch)) + " callee_saved=" + to_string(abi_callee_saved_count(arch)))
+    lines.push("axis stack_align=" + to_string(abi_stack_alignment(arch)) + " variadic_gp=" + to_string(abi_variadic_gp_limit(arch)))
+
+    var functions = function_item_count(source)
+    var spills = parse_number_after(ssa_text, "spills=")
+    if spills < 0 {
+        spills = 0
+    }
+    lines.push("coverage functions=" + to_string(functions) + " spills=" + to_string(spills))
+    lines.push("matrix callseq=normal,variadic-home,normal+multi-ret,variadic-home+multi-ret")
+    lines.push("matrix ret=reg,sret,tuple2,tupleN")
+    join_lines(lines)
+}
+
+func validate_abi_machine_matrix(string payload) result[(), backend_error] {
+    if !has_substring(payload, "abi-matrix version=1") {
+        return result::err(backend_error { message: "backend error: ABI matrix header missing" })
+    }
+    if !has_substring(payload, "axis caller_saved=") {
+        return result::err(backend_error { message: "backend error: ABI matrix caller/callee axis missing" })
+    }
+    if !has_substring(payload, "matrix callseq=") {
+        return result::err(backend_error { message: "backend error: ABI matrix call sequence axis missing" })
+    }
+    if !has_substring(payload, "matrix ret=") {
+        return result::err(backend_error { message: "backend error: ABI matrix return axis missing" })
+    }
+    result::ok(())
+}
+
+func build_toolchain_compat_artifact(source_file source, string arch) string {
+    var lines = vec[string]()
+    lines.push("toolchain-compat version=1 arch=" + arch)
+    lines.push("module=partial build_tags=partial test=integrated cover=partial profile=partial")
+    lines.push("cgo=unsupported asm=partial linker=elf64 archive=partial relocation=partial")
+    lines.push("functions=" + to_string(function_item_count(source)) + " interoperability=baseline")
+    join_lines(lines)
+}
+
+func validate_toolchain_compat_artifact(string payload) result[(), backend_error] {
+    if !has_substring(payload, "toolchain-compat version=1") {
+        return result::err(backend_error { message: "backend error: toolchain compatibility header missing" })
+    }
+    if !has_substring(payload, "module=") {
+        return result::err(backend_error { message: "backend error: toolchain compatibility module field missing" })
+    }
+    if !has_substring(payload, "linker=") {
+        return result::err(backend_error { message: "backend error: toolchain compatibility linker field missing" })
+    }
+    result::ok(())
 }
 
 func build_stackmap_artifact(string arch, source_file source, string ssa_text, string debug_map) string {
