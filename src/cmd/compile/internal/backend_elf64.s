@@ -261,6 +261,10 @@ func build(string path, string output) int32 {
 
     var dwarf_path = output + ".dwarf"
     var dwarf_payload = build_dwarf_like_artifact(parsed, ssa_text, debug_map)
+    var dwarf_check = validate_dwarf_consumability(dwarf_payload, ssa_text)
+    if dwarf_check.is_err() {
+        return report_failure(dwarf_check.unwrap_err().message)
+    }
     var dwarf_write = write_text_file(dwarf_path, dwarf_payload)
     if dwarf_write.is_err() {
         return report_failure("failed to write DWARF-like artifact: " + dwarf_write.unwrap_err().message)
@@ -268,6 +272,10 @@ func build(string path, string output) int32 {
 
     var gc_path = output + ".gcmap"
     var gc_payload = build_gc_metadata_artifact(arch, parsed, ssa_text)
+    var gc_check = validate_gc_contract_chain(gc_payload, parsed, ssa_text)
+    if gc_check.is_err() {
+        return report_failure(gc_check.unwrap_err().message)
+    }
     var gc_write = write_text_file(gc_path, gc_payload)
     if gc_write.is_err() {
         return report_failure("failed to write GC metadata artifact: " + gc_write.unwrap_err().message)
@@ -692,7 +700,26 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
         }
         i = i + 1
     }
+    lines.push(build_dwarf_regression_gate(ssa_text, debug_map))
     join_lines(lines)
+}
+
+func build_dwarf_regression_gate(string ssa_text, string debug_map) string {
+    var budget = parse_number_after(ssa_text, "dbg_budget=")
+    if budget < 0 {
+        budget = 0
+    }
+    var locs = count_occurrences(debug_map, "var v")
+    if locs < 1 {
+        locs = 1
+    }
+    var status = "pass"
+    if budget < 15 {
+        status = "fail"
+    }
+    "gate dwarf_consumable=" + status
+        + " budget=" + to_string(budget)
+        + " locs=" + to_string(locs)
 }
 
 func append_debug_loc_section(vec[string] lines, string debug_map) () {
@@ -802,7 +829,75 @@ func build_gc_metadata_artifact(string arch, source_file source, string ssa_text
         }
         i = i + 1
     }
+    lines.push("proof rollback=" + to_string(parse_number_after(ssa_text, "rollback=")) + " proof_fail=" + to_string(parse_number_after(ssa_text, "proof_fail=")))
     join_lines(lines)
+}
+
+func validate_dwarf_consumability(string dwarf_payload, string ssa_text) result[(), backend_error] {
+    if !has_substring(dwarf_payload, "section .debug_info") {
+        return result::err(backend_error { message: "backend error: dwarf consumability gate missing .debug_info" })
+    }
+    if !has_substring(dwarf_payload, "section .debug_line") {
+        return result::err(backend_error { message: "backend error: dwarf consumability gate missing .debug_line" })
+    }
+    if !has_substring(dwarf_payload, "section .debug_loc") {
+        return result::err(backend_error { message: "backend error: dwarf consumability gate missing .debug_loc" })
+    }
+    if !has_substring(dwarf_payload, "section .debug_ranges") {
+        return result::err(backend_error { message: "backend error: dwarf consumability gate missing .debug_ranges" })
+    }
+    if !has_substring(dwarf_payload, "gate dwarf_consumable=") {
+        return result::err(backend_error { message: "backend error: dwarf consumability gate marker missing" })
+    }
+
+    var budget = parse_number_after(ssa_text, "dbg_budget=")
+    if budget >= 0 && budget < 15 {
+        return result::err(backend_error { message: "backend error: dwarf consumability budget too low" })
+    }
+    if count_occurrences(dwarf_payload, "loc#") <= 0 {
+        return result::err(backend_error { message: "backend error: dwarf consumability has no variable locations" })
+    }
+    result::ok(())
+}
+
+func validate_gc_contract_chain(string gc_payload, source_file source, string ssa_text) result[(), backend_error] {
+    if !has_substring(gc_payload, "gcmap version=1") {
+        return result::err(backend_error { message: "backend error: gc contract missing gcmap header" })
+    }
+    if count_occurrences(gc_payload, " safepoints=") <= 0 {
+        return result::err(backend_error { message: "backend error: gc contract missing safepoints" })
+    }
+    if count_occurrences(gc_payload, " ptr_bitmap=") <= 0 {
+        return result::err(backend_error { message: "backend error: gc contract missing pointer bitmap" })
+    }
+
+    var expected = function_item_count(source)
+    var got = count_occurrences(gc_payload, "\nfn ")
+    if has_substring(gc_payload, "fn ") && got == 0 {
+        got = 1
+    }
+    if expected > 0 && got < expected {
+        return result::err(backend_error { message: "backend error: gc contract function coverage mismatch" })
+    }
+
+    var proof_fail = parse_number_after(ssa_text, "proof_fail=")
+    if proof_fail > 0 {
+        return result::err(backend_error { message: "backend error: gc contract blocked by failed SSA proofs" })
+    }
+    result::ok(())
+}
+
+func function_item_count(source_file source) int32 {
+    var out = 0
+    var i = 0
+    while i < source.items.len() {
+        switch source.items[i] {
+            item.function(_) : out = out + 1,
+            _ : (),
+        }
+        i = i + 1
+    }
+    out
 }
 
 func build_gc_pointer_bitmap(string fn_name, int32 slots) string {
@@ -2044,6 +2139,24 @@ func propagate_bindings(vec[binding] mut outer, vec[binding] inner) () {
 
 func join_lines(vec[string] lines) string {
     join_with(lines, "\n")
+}
+
+func count_occurrences(string text, string token) int32 {
+    if token == "" {
+        return 0
+    }
+
+    var total = 0
+    var cursor = 0
+    while true {
+        var at = index_of_from(text, token, cursor)
+        if at < 0 {
+            break
+        }
+        total = total + 1
+        cursor = at + len(token)
+    }
+    total
 }
 
 func join_with(vec[string] values, string sep) string {

@@ -49,6 +49,8 @@ struct ssa_program {
     int32 invalidation_rerun_count
     int32 replay_step_count
     int32 debug_budget_score
+    string pass_dsl
+    string invalidation_policy
     string pass_topology_log
     string pass_replay_log
     string rollback_node
@@ -99,6 +101,8 @@ struct ssa_pass_stats {
     int32 rollback_checkpoint_count
     int32 invalidation_rerun_count
     int32 replay_step_count
+    string pass_dsl
+    string invalidation_policy
     string pass_topology_log
     string pass_replay_log
     string rollback_node
@@ -189,6 +193,8 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         invalidation_rerun_count: pass_stats.invalidation_rerun_count,
         replay_step_count: pass_stats.replay_step_count,
         debug_budget_score: debug_budget,
+        pass_dsl: pass_stats.pass_dsl,
+        invalidation_policy: pass_stats.invalidation_policy,
         pass_topology_log: pass_stats.pass_topology_log,
         pass_replay_log: pass_stats.pass_replay_log,
         rollback_node: pass_stats.rollback_node,
@@ -513,6 +519,8 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     var replay_steps = 0
     var stable_iters = 0
     var rollback_value = current
+    var pass_dsl = build_pass_dsl(model)
+    var invalidation_policy = "blocked->rerun;alias-high->gvn,sccp;loop-heavy->licm;memory-pressure->bce"
     var topology_log = ""
     var replay_log = ""
     var rollback_node = "none"
@@ -550,6 +558,10 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         blocked_passes = blocked_passes + sccp_node.blocked
         if sccp_node.blocked > 0 {
             rollback_node = "sccp"
+            if should_auto_invalidate_pass("sccp", model, fixed_iters, blocked_passes) {
+                invalidation_reruns = invalidation_reruns + 1
+                sccp_node.replay_token = sccp_node.replay_token + "+invalidate"
+            }
         }
 
         var pre_ready = pass_dependency_ready_pre(model, gvn_i, cse_i)
@@ -558,6 +570,10 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         blocked_passes = blocked_passes + pre_node.blocked
         if pre_node.blocked > 0 {
             rollback_node = "pre"
+            if should_auto_invalidate_pass("pre", model, fixed_iters, blocked_passes) {
+                invalidation_reruns = invalidation_reruns + 1
+                pre_node.replay_token = pre_node.replay_token + "+invalidate"
+            }
         }
 
         var licm_ready = pass_dependency_ready_licm(model, gvn_i + sccp_i + pre_i)
@@ -566,6 +582,10 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         blocked_passes = blocked_passes + licm_node.blocked
         if licm_node.blocked > 0 {
             rollback_node = "licm"
+            if should_auto_invalidate_pass("licm", model, fixed_iters, blocked_passes) {
+                invalidation_reruns = invalidation_reruns + 1
+                licm_node.replay_token = licm_node.replay_token + "+invalidate"
+            }
         }
 
         var bce_ready = pass_dependency_ready_bce(model)
@@ -574,6 +594,10 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         blocked_passes = blocked_passes + bce_node.blocked
         if bce_node.blocked > 0 {
             rollback_node = "bce"
+            if should_auto_invalidate_pass("bce", model, fixed_iters, blocked_passes) {
+                invalidation_reruns = invalidation_reruns + 1
+                bce_node.replay_token = bce_node.replay_token + "+invalidate"
+            }
         }
 
         var iter_replay = gvn_node.replay_token
@@ -604,7 +628,6 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
             stable_iters = stable_iters + 1
             if blocked_passes > 0 && fixed_iters + 1 < max_iters {
                 reruns = reruns + 1
-                invalidation_reruns = invalidation_reruns + blocked_passes
             }
         } else {
             stable_iters = 0
@@ -675,11 +698,42 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         rollback_checkpoint_count: rollback_points,
         invalidation_rerun_count: invalidation_reruns,
         replay_step_count: replay_steps,
+        pass_dsl: pass_dsl,
+        invalidation_policy: invalidation_policy,
         pass_topology_log: topology_log,
         pass_replay_log: replay_log,
         rollback_node: rollback_node,
         optimized_value_count: current,
     }
+}
+
+func build_pass_dsl(ssa_dataflow_model model) string {
+    var dsl = "pass gvn -> sccp,pre,cse;"
+    dsl = dsl + "pass sccp requires(branch|phi|livein);"
+    dsl = dsl + "pass pre requires(edges|defuse);"
+    dsl = dsl + "pass licm requires(loop|memory);"
+    dsl = dsl + "pass bce requires(load|branch);"
+    dsl = dsl + "graph loops=" + to_string(model.loop_headers) + " alias=" + to_string(model.alias_set_count)
+    dsl
+}
+
+func should_auto_invalidate_pass(string pass_name, ssa_dataflow_model model, int32 iter, int32 blocked_count) bool {
+    if blocked_count <= 0 {
+        return false
+    }
+    if pass_name == "sccp" {
+        return model.alias_set_count > 1 || iter > 0
+    }
+    if pass_name == "pre" {
+        return model.def_use_edges > model.value_count
+    }
+    if pass_name == "licm" {
+        return model.loop_headers > 0
+    }
+    if pass_name == "bce" {
+        return model.load_count > 0 && model.branch_count > 0
+    }
+    false
 }
 
 func execute_pass_node(string name, bool ready, int32 raw_rewrites) pass_node_result {
@@ -1099,6 +1153,8 @@ func dump_pipeline(ssa_program program) string {
         + " invalid_reruns=" + to_string(program.invalidation_rerun_count)
         + " replay_steps=" + to_string(program.replay_step_count)
         + " dbg_budget=" + to_string(program.debug_budget_score)
+        + " pass_dsl=" + program.pass_dsl
+        + " inv_policy=" + program.invalidation_policy
         + " rollback_node=" + program.rollback_node
         + " pass_topo=" + program.pass_topology_log
         + " pass_replay=" + program.pass_replay_log

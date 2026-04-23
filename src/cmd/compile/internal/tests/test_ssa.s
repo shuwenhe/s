@@ -114,6 +114,12 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, "dbg_budget=") {
         return 1
     }
+    if !contains(arm64_dump, "pass_dsl=") {
+        return 1
+    }
+    if !contains(arm64_dump, "inv_policy=") {
+        return 1
+    }
 
     var amd64_program = build_pipeline(mir_text, "amd64")
     var amd64_dump = dump_pipeline(amd64_program)
@@ -164,6 +170,9 @@ func run_ssa_suite() int32 {
         return 1
     }
     if !contains(heavy_dump, "gvn:ok") {
+        return 1
+    }
+    if !contains(heavy_dump, "invalidate") {
         return 1
     }
 
