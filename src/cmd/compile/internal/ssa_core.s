@@ -49,6 +49,13 @@ struct ssa_program {
     int32 invalidation_rerun_count
     int32 replay_step_count
     int32 debug_budget_score
+    int32 scheduler_priority_score
+    int32 scheduler_conflict_count
+    int32 replay_stability_hash
+    int32 alias_precision_level
+    int32 memory_ssa_chain_count
+    int32 global_value_number_count
+    int32 loop_proof_chain_count
     string pass_dsl
     string invalidation_policy
     string pass_topology_log
@@ -101,6 +108,13 @@ struct ssa_pass_stats {
     int32 rollback_checkpoint_count
     int32 invalidation_rerun_count
     int32 replay_step_count
+    int32 scheduler_priority_score
+    int32 scheduler_conflict_count
+    int32 replay_stability_hash
+    int32 alias_precision_level
+    int32 memory_ssa_chain_count
+    int32 global_value_number_count
+    int32 loop_proof_chain_count
     string pass_dsl
     string invalidation_policy
     string pass_topology_log
@@ -193,6 +207,13 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         invalidation_rerun_count: pass_stats.invalidation_rerun_count,
         replay_step_count: pass_stats.replay_step_count,
         debug_budget_score: debug_budget,
+        scheduler_priority_score: pass_stats.scheduler_priority_score,
+        scheduler_conflict_count: pass_stats.scheduler_conflict_count,
+        replay_stability_hash: pass_stats.replay_stability_hash,
+        alias_precision_level: pass_stats.alias_precision_level,
+        memory_ssa_chain_count: pass_stats.memory_ssa_chain_count,
+        global_value_number_count: pass_stats.global_value_number_count,
+        loop_proof_chain_count: pass_stats.loop_proof_chain_count,
         pass_dsl: pass_stats.pass_dsl,
         invalidation_policy: pass_stats.invalidation_policy,
         pass_topology_log: pass_stats.pass_topology_log,
@@ -517,6 +538,8 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     var rollback_points = 0
     var invalidation_reruns = 0
     var replay_steps = 0
+    var scheduler_priority = 0
+    var scheduler_conflicts = 0
     var stable_iters = 0
     var rollback_value = current
     var pass_dsl = build_pass_dsl(model)
@@ -545,6 +568,13 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         var raw_bce = run_bce_pass(model)
         scheduled_passes = scheduled_passes + 6
         dag_levels = dag_levels + pass_dag_level_count(model)
+        scheduler_priority = scheduler_priority
+            + pass_priority_score("gvn", model, current, fixed_iters)
+            + pass_priority_score("sccp", model, current, fixed_iters)
+            + pass_priority_score("pre", model, current, fixed_iters)
+            + pass_priority_score("cse", model, current, fixed_iters)
+            + pass_priority_score("licm", model, current, fixed_iters)
+            + pass_priority_score("bce", model, current, fixed_iters)
 
         var gvn_node = execute_pass_node("gvn", true, raw_gvn)
         var gvn_i = gvn_node.rewrites
@@ -597,6 +627,17 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
             if should_auto_invalidate_pass("bce", model, fixed_iters, blocked_passes) {
                 invalidation_reruns = invalidation_reruns + 1
                 bce_node.replay_token = bce_node.replay_token + "+invalidate"
+            }
+        }
+
+        if has_scheduler_conflict(pre_i, cse_i, model) {
+            scheduler_conflicts = scheduler_conflicts + 1
+            if pre_i >= cse_i {
+                cse_i = 0
+                cse_node.replay_token = "cse:conflict-drop"
+            } else {
+                pre_i = 0
+                pre_node.replay_token = "pre:conflict-drop"
             }
         }
 
@@ -698,6 +739,13 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         rollback_checkpoint_count: rollback_points,
         invalidation_rerun_count: invalidation_reruns,
         replay_step_count: replay_steps,
+        scheduler_priority_score: scheduler_priority,
+        scheduler_conflict_count: scheduler_conflicts,
+        replay_stability_hash: hash_text(replay_log),
+        alias_precision_level: estimate_alias_precision_level(model),
+        memory_ssa_chain_count: estimate_memory_ssa_chain_count(model, pre_eliminated),
+        global_value_number_count: gvn_rewrites + cse_eliminated,
+        loop_proof_chain_count: estimate_loop_proof_chain_count(model, licm_hoisted, proof_obligations),
         pass_dsl: pass_dsl,
         invalidation_policy: invalidation_policy,
         pass_topology_log: topology_log,
@@ -705,6 +753,96 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         rollback_node: rollback_node,
         optimized_value_count: current,
     }
+}
+
+func pass_priority_score(string pass_name, ssa_dataflow_model model, int32 current_values, int32 iter) int32 {
+    var base = 1 + iter
+    if pass_name == "gvn" {
+        return base + model.def_use_edges / 4
+    }
+    if pass_name == "sccp" {
+        return base + model.live_in_facts / 4 + model.branch_count
+    }
+    if pass_name == "pre" {
+        return base + model.edge_count / 3
+    }
+    if pass_name == "cse" {
+        return base + model.jump_count + model.phi_count
+    }
+    if pass_name == "licm" {
+        return base + model.loop_headers * 2
+    }
+    if pass_name == "bce" {
+        return base + model.load_count + model.branch_count
+    }
+    base + current_values / 8
+}
+
+func has_scheduler_conflict(int32 pre_i, int32 cse_i, ssa_dataflow_model model) bool {
+    if pre_i <= 0 || cse_i <= 0 {
+        return false
+    }
+    if model.edge_count <= 1 {
+        return false
+    }
+    model.alias_set_count > 1 || model.loop_headers > 0
+}
+
+func hash_text(string text) int32 {
+    var h = 17
+    var i = 0
+    while i < text.len() {
+        h = (h * 31 + parse_digit_safe(char_at(text, i))) % 1000003
+        i = i + 1
+    }
+    h
+}
+
+func parse_digit_safe(string ch) int32 {
+    var d = parse_digit(ch)
+    if d >= 0 {
+        return d
+    }
+    if ch >= "a" && ch <= "z" {
+        return 10
+    }
+    if ch >= "A" && ch <= "Z" {
+        return 11
+    }
+    1
+}
+
+func estimate_alias_precision_level(ssa_dataflow_model model) int32 {
+    var level = 1
+    if model.alias_set_count > 1 {
+        level = level + 1
+    }
+    if model.load_count + model.store_count > model.value_count / 2 {
+        level = level + 1
+    }
+    if level > 3 {
+        return 3
+    }
+    level
+}
+
+func estimate_memory_ssa_chain_count(ssa_dataflow_model model, int32 pre_eliminated) int32 {
+    var chain = model.store_count + model.load_count + model.phi_count
+    if pre_eliminated > 0 {
+        chain = chain + pre_eliminated
+    }
+    if chain < 1 {
+        return 1
+    }
+    chain
+}
+
+func estimate_loop_proof_chain_count(ssa_dataflow_model model, int32 licm_hoisted, int32 proof_obligations) int32 {
+    var chain = model.loop_headers + licm_hoisted + proof_obligations / 4
+    if chain < 1 {
+        return 1
+    }
+    chain
 }
 
 func build_pass_dsl(ssa_dataflow_model model) string {
@@ -1153,6 +1291,13 @@ func dump_pipeline(ssa_program program) string {
         + " invalid_reruns=" + to_string(program.invalidation_rerun_count)
         + " replay_steps=" + to_string(program.replay_step_count)
         + " dbg_budget=" + to_string(program.debug_budget_score)
+        + " sched_prio=" + to_string(program.scheduler_priority_score)
+        + " sched_conflicts=" + to_string(program.scheduler_conflict_count)
+        + " replay_hash=" + to_string(program.replay_stability_hash)
+        + " alias_level=" + to_string(program.alias_precision_level)
+        + " memssa_chain=" + to_string(program.memory_ssa_chain_count)
+        + " gvn_total=" + to_string(program.global_value_number_count)
+        + " loop_proofs=" + to_string(program.loop_proof_chain_count)
         + " pass_dsl=" + program.pass_dsl
         + " inv_policy=" + program.invalidation_policy
         + " rollback_node=" + program.rollback_node
