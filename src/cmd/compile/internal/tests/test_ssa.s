@@ -33,6 +33,21 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, "max_live=") {
         return 1
     }
+    if !contains(arm64_dump, "gvn=") {
+        return 1
+    }
+    if !contains(arm64_dump, "cse=") {
+        return 1
+    }
+    if !contains(arm64_dump, "licm=") {
+        return 1
+    }
+    if !contains(arm64_dump, "phi=") {
+        return 1
+    }
+    if !contains(arm64_dump, "livein=") {
+        return 1
+    }
 
     var amd64_program = build_pipeline(mir_text, "amd64")
     var amd64_dump = dump_pipeline(amd64_program)
@@ -56,6 +71,12 @@ func run_ssa_suite() int32 {
     var heavy_mir = "mir heavy blocks=3 entry=0 exit=2 | bb0(entry) stmts=12 term=branch | bb1(mid) stmts=8 term=jump | bb2(exit) stmts=0 term=return"
     var heavy_dump = dump_pipeline(build_pipeline(heavy_mir, "amd64"))
     if !contains(heavy_dump, "spills=") {
+        return 1
+    }
+    if !contains(heavy_dump, "reloads=") {
+        return 1
+    }
+    if !contains(heavy_dump, "call_pressure=") {
         return 1
     }
     if !contains(heavy_dump, "spill(") {

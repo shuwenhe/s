@@ -136,6 +136,14 @@ struct stackmap_function_entry {
     int32 callee_saved,
 }
 
+struct abi_behavior_entry {
+    string name,
+    int32 param_count,
+    bool variadic,
+    string pass_mode,
+    string return_mode,
+}
+
 func build(string path, string output) int32 {
     var source_result = read_to_string(path)
     if source_result.is_err() {
@@ -237,6 +245,20 @@ func build(string path, string output) int32 {
         return report_failure("failed to write stack map artifact: " + stackmap_write.unwrap_err().message)
     }
 
+    var abi_path = output + ".abi"
+    var abi_payload = build_abi_behavior_artifact(arch, parsed)
+    var abi_write = write_text_file(abi_path, abi_payload)
+    if abi_write.is_err() {
+        return report_failure("failed to write ABI behavior artifact: " + abi_write.unwrap_err().message)
+    }
+
+    var dwarf_path = output + ".dwarf"
+    var dwarf_payload = build_dwarf_like_artifact(parsed, ssa_text, debug_map)
+    var dwarf_write = write_text_file(dwarf_path, dwarf_payload)
+    if dwarf_write.is_err() {
+        return report_failure("failed to write DWARF-like artifact: " + dwarf_write.unwrap_err().message)
+    }
+
     var opt_path = output + ".opt"
     var opt_write = write_text_file(opt_path, midend.report)
     if opt_write.is_err() {
@@ -250,6 +272,16 @@ func run_midend_pipeline(string mir_text) midend_result {
     var inlined = estimate_inline_sites(mir_text)
     var escaped = estimate_escape_sites(mir_text)
     var devirt = estimate_devirtualized_sites(mir_text)
+
+    if inlined > escaped {
+        escaped = escaped + inlined / 3
+    }
+    if escaped > 0 && devirt > 0 {
+        inlined = inlined + devirt / 2
+    }
+    if devirt > inlined {
+        devirt = inlined
+    }
 
     var rewritten = mir_text
     if inlined > 0 {
@@ -372,6 +404,92 @@ func build_slot_bitmap(string function_name, int32 slots) string {
         i = i + 1
     }
     out
+}
+
+func build_abi_behavior_artifact(string arch, source_file source) string {
+    var entries = collect_abi_behavior(arch, source)
+    var lines = vec[string]()
+    lines.push("abi version=1 arch=" + arch + " functions=" + to_string(entries.len()))
+
+    var i = 0
+    while i < entries.len() {
+        var entry = entries[i]
+        lines.push(
+            "fn " + entry.name
+                + " params=" + to_string(entry.param_count)
+                + " variadic=" + bool_string(entry.variadic)
+                + " pass=" + entry.pass_mode
+                + " ret=" + entry.return_mode
+        )
+        i = i + 1
+    }
+    join_lines(lines)
+}
+
+func collect_abi_behavior(string arch, source_file source) vec[abi_behavior_entry] {
+    var out = vec[abi_behavior_entry]()
+    var i = 0
+    while i < source.items.len() {
+        switch source.items[i] {
+            item.function(fn_decl) : {
+                var param_count = fn_decl.sig.params.len()
+                var variadic = param_count > abi_variadic_gp_limit(arch)
+                var aggregate_size = param_count * 8
+                out.push(abi_behavior_entry {
+                    name: fn_decl.sig.name,
+                    param_count: param_count,
+                    variadic: variadic,
+                    pass_mode: abi_aggregate_pass_mode(arch, aggregate_size),
+                    return_mode: abi_return_mode(arch, "aggregate", aggregate_size),
+                })
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    out
+}
+
+func build_dwarf_like_artifact(source_file source, string ssa_text, string debug_map) string {
+    var lines = vec[string]()
+    lines.push("dwarf-lite version=1")
+    lines.push("section .debug_info")
+    lines.push("  compile_unit name=" + parse_name_after(ssa_text, "ssa "))
+    lines.push("section .debug_line")
+    lines.push("  " + debug_map)
+    lines.push("section .debug_frame")
+    lines.push("  cfa=sp+16 ra=lr")
+    lines.push("section .debug_inlining")
+
+    var i = 0
+    while i < source.items.len() {
+        switch source.items[i] {
+            item.function(fn_decl) : lines.push("  fn=" + fn_decl.sig.name + " inline_depth=0"),
+            _ : (),
+        }
+        i = i + 1
+    }
+    join_lines(lines)
+}
+
+func parse_name_after(string text, string marker) string {
+    var at = index_of(text, marker)
+    if at < 0 {
+        return "main"
+    }
+    var start = at + len(marker)
+    var end = index_of_from(text, " ", start)
+    if end < 0 {
+        return slice(text, start, len(text))
+    }
+    slice(text, start, end)
+}
+
+func bool_string(bool value) string {
+    if value {
+        return "true"
+    }
+    "false"
 }
 
 func compile_writes(mir_graph graph) result[vec[write_op], backend_error] {
