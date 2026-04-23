@@ -6,6 +6,10 @@ use compile.internal.backend_elf64.build_gc_metadata_artifact
 use compile.internal.backend_elf64.build_abi_machine_matrix_artifact
 use compile.internal.backend_elf64.build_toolchain_compat_artifact
 use compile.internal.backend_elf64.build_backend_perf_baseline_artifact
+use compile.internal.backend_elf64.build_cfi_artifact
+use compile.internal.backend_elf64.validate_cfi_artifact
+use compile.internal.backend_elf64.validate_ssa_abi_contracts
+use compile.internal.backend_elf64.validate_wasi_contract_source
 use compile.internal.syntax.parse_source
 use std.prelude.slice
 
@@ -162,6 +166,29 @@ func run_backend_abi_suite() int32 {
         return 1
     }
     if !contains(perf, "regression_gate_arch ") {
+        return 1
+    }
+
+    var cfi = build_cfi_artifact("amd64", "ssa pair blocks=2 spills=1 reloads=1", "ssa.debug pair")
+    if !contains(cfi, ".cfi_startproc") {
+        return 1
+    }
+    if !contains(cfi, ".cfi_endproc") {
+        return 1
+    }
+    if validate_cfi_artifact(cfi).is_err() {
+        return 1
+    }
+
+    if validate_ssa_abi_contracts("amd64", "spills=3 reloads=1 call_pressure=2").is_ok() {
+        return 1
+    }
+    if validate_ssa_abi_contracts("amd64", "spills=1 reloads=2 call_pressure=2").is_err() {
+        return 1
+    }
+
+    var wasm_source = "__attribute__((__import_module__(\"wasi_snapshot_preview1\"), __import_name__(\"fd_write\")))\nextern int fd_write();\n__attribute__((__import_module__(\"wasi_snapshot_preview1\"), __import_name__(\"proc_exit\")))\nextern void proc_exit(int);\nint s_main(void){return 0;}\nvoid _start(void){proc_exit(s_main());}"
+    if validate_wasi_contract_source(wasm_source).is_err() {
         return 1
     }
 

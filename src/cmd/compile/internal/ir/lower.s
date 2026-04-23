@@ -19,8 +19,8 @@ use compile.internal.mir.mir_operand
 use compile.internal.backend_elf64.parse_int_literal as parse_int_literal
 use std.vec.vec
 
-func from_syntax(source_file src) ir_ast.Package {
-    var pkg = ir_ast.Package { name: src.pkg, decls: vec[ir_ast.Decl]() }
+func from_syntax(source_file src) ir_ast.package_ir {
+    var pkg = ir_ast.package_ir { name: src.pkg, decls: vec[ir_ast.decl_ir]() }
 
     var i = 0
     while i < src.items.len() {
@@ -28,25 +28,25 @@ func from_syntax(source_file src) ir_ast.Package {
         switch it {
             item.function(function_decl) : {
                 var fd = convert_function(function_decl)
-                pkg.decls.push(ir_ast.Decl::func(fd))
+                pkg.decls.push(ir_ast.decl_ir::func(fd))
             }
             item.struct(struct_decl) : {
-                pkg.decls.push(ir_ast.Decl::r#type(ir_ast.TypeDecl { name: struct_decl.name, type_expr: "struct" }))
+                pkg.decls.push(ir_ast.decl_ir::r#type(ir_ast.type_decl { name: struct_decl.name, type_expr: "struct" }))
             }
             item.enum(enum_decl) : {
-                pkg.decls.push(ir_ast.Decl::r#type(ir_ast.TypeDecl { name: enum_decl.name, type_expr: "enum" }))
+                pkg.decls.push(ir_ast.decl_ir::r#type(ir_ast.type_decl { name: enum_decl.name, type_expr: "enum" }))
             }
             item.trait(trait_decl) : {
-                pkg.decls.push(ir_ast.Decl::r#type(ir_ast.TypeDecl { name: trait_decl.name, type_expr: "trait" }))
+                pkg.decls.push(ir_ast.decl_ir::r#type(ir_ast.type_decl { name: trait_decl.name, type_expr: "trait" }))
             }
             item.impl(impl_decl) : {
-                var methods = vec[ir_ast.FuncDecl]()
+                var methods = vec[ir_ast.func_decl]()
                 var mi = 0
                 while mi < impl_decl.methods.len() {
                     methods.push(convert_function(impl_decl.methods[mi]))
                     mi = mi + 1
                 }
-                pkg.decls.push(ir_ast.Decl::impl(ir_ast.ImplDecl { type_name: impl_decl.target, methods: methods }))
+                pkg.decls.push(ir_ast.decl_ir::impl(ir_ast.impl_decl { type_name: impl_decl.target, methods: methods }))
             }
         }
         i = i + 1
@@ -55,12 +55,12 @@ func from_syntax(source_file src) ir_ast.Package {
     pkg
 }
 
-func convert_function(function_decl fd) ir_ast.FuncDecl {
-    var sig = ir_ast.FuncSig { params: vec[ir_ast.Param](), return_type_name: option[string].none, generics: fd.sig.generics }
+func convert_function(function_decl fd) ir_ast.func_decl {
+    var sig = ir_ast.func_sig { params: vec[ir_ast.param](), return_type_name: option[string].none, generics: fd.sig.generics }
     var pi = 0
     while pi < fd.sig.params.len() {
         var p = fd.sig.params[pi]
-        sig.params.push(ir_ast.Param { name: p.name, type_name: p.type_name })
+        sig.params.push(ir_ast.param { name: p.name, type_name: p.type_name })
         pi = pi + 1
     }
     var ret = option[string].none
@@ -69,71 +69,75 @@ func convert_function(function_decl fd) ir_ast.FuncDecl {
     }
     sig.return_type_name = ret
 
-    var body = option[ir_ast.Block].none
+    var body = option[ir_ast.block_ir].none
     if fd.body.is_some() {
-        body = option[ir_ast.Block].some(convert_block(fd.body.unwrap()))
+        body = option[ir_ast.block_ir].some(convert_block(fd.body.unwrap()))
     }
 
-    ir_ast.FuncDecl { name: fd.sig.name, sig: sig, body: body }
+    ir_ast.func_decl { name: fd.sig.name, sig: sig, body: body }
 }
 
-func convert_block(block_expr b) ir_ast.Block {
-    var stmts = vec[ir_ast.Stmt]()
+func convert_block(block_expr b) ir_ast.block_ir {
+    var stmts = vec[ir_ast.stmt_ir]()
     var si = 0
     while si < b.statements.len() {
         stmts.push(convert_stmt(b.statements[si]))
         si = si + 1
     }
 
-    var final = option[ir_ast.Expr].none
+    var final = option[ir_ast.expr_ir].none
     if b.final_expr.is_some() {
-        final = option[ir_ast.Expr].some(convert_expr(b.final_expr.unwrap()))
+        final = option[ir_ast.expr_ir].some(convert_expr(b.final_expr.unwrap()))
     }
-    ir_ast.Block { statements: stmts, final_expr: final }
+    ir_ast.block_ir { statements: stmts, final_expr: final }
 }
 
-func convert_stmt(stmt s) ir_ast.Stmt {
+func convert_stmt(stmt s) ir_ast.stmt_ir {
     switch s {
         stmt.var(var_stmt) : {
-            ir_ast.Stmt::var(ir_ast.VarStmt { name: var_stmt.name, type_name: var_stmt.type_name, value: convert_expr(var_stmt.value) })
+            ir_ast.stmt_ir::var(ir_ast.var_stmt { name: var_stmt.name, type_name: var_stmt.type_name, value: convert_expr(var_stmt.value) })
         }
         stmt.assign(assign_stmt) : {
-            ir_ast.Stmt::assign(ir_ast.AssignStmt { name: assign_stmt.name, value: convert_expr(assign_stmt.value) })
+            ir_ast.stmt_ir::assign(ir_ast.assign_stmt { name: assign_stmt.name, value: convert_expr(assign_stmt.value) })
         }
         stmt.increment(increment_stmt) : {
-            ir_ast.Stmt::increment(ir_ast.IncrementStmt { name: increment_stmt.name })
+            ir_ast.stmt_ir::increment(ir_ast.increment_stmt { name: increment_stmt.name })
         }
         stmt.c_for(c_for_stmt) : {
-
-            ir_ast.Stmt::expr(ir_ast.ExprStmt { expr: ir_ast.Expr::name("<c_for_unlowered>") })
+            ir_ast.stmt_ir::cfor(ir_ast.c_for_stmt {
+                init: convert_stmt(c_for_stmt.init.value),
+                condition: convert_expr(c_for_stmt.condition),
+                step: convert_stmt(c_for_stmt.step.value),
+                body: convert_block(c_for_stmt.body),
+            })
         }
         stmt.return(return_stmt) : {
             if return_stmt.value.is_some() {
-                ir_ast.Stmt::r#return(ir_ast.ReturnStmt { value: option[ir_ast.Expr].some(convert_expr(return_stmt.value.unwrap())) })
+                ir_ast.stmt_ir::r#return(ir_ast.return_stmt { value: option[ir_ast.expr_ir].some(convert_expr(return_stmt.value.unwrap())) })
             } else {
-                ir_ast.Stmt::r#return(ir_ast.ReturnStmt { value: option[ir_ast.Expr].none })
+                ir_ast.stmt_ir::r#return(ir_ast.return_stmt { value: option[ir_ast.expr_ir].none })
             }
         }
         stmt.expr(expr_stmt) : {
-            ir_ast.Stmt::expr(ir_ast.ExprStmt { expr: convert_expr(expr_stmt.expr) })
+            ir_ast.stmt_ir::expr(ir_ast.expr_stmt { expr: convert_expr(expr_stmt.expr) })
         }
         stmt.defer(defer_stmt) : {
-            ir_ast.Stmt::expr(ir_ast.ExprStmt { expr: convert_expr(defer_stmt.expr) })
+            ir_ast.stmt_ir::expr(ir_ast.expr_stmt { expr: convert_expr(defer_stmt.expr) })
         }
     }
 }
 
-func convert_expr(expr e) ir_ast.Expr {
+func convert_expr(expr e) ir_ast.expr_ir {
     switch e {
         expr.int(int_expr) : {
             var n = parse_int_literal(int_expr.value)
-            ir_ast.Expr::int(n)
+            ir_ast.expr_ir::int(n)
         }
-        expr.string(string_expr) : ir_ast.Expr::string(string_expr.value),
-        expr.bool(bool_expr) : ir_ast.Expr::bool(bool_expr.value),
-        expr.name(name_expr) : ir_ast.Expr::name(name_expr.name),
-        expr.borrow(borrow_expr) : ir_ast.Expr::borrow(ir_ast.BorrowExpr { target: convert_expr(borrow_expr.target.unwrap()), mutable: borrow_expr.mutable }),
-        expr.binary(binary_expr) : ir_ast.Expr::binary(ir_ast.BinaryExpr { op: binary_expr.op, left: convert_expr(binary_expr.left.unwrap()), right: convert_expr(binary_expr.right.unwrap()) }),
+        expr.string(string_expr) : ir_ast.expr_ir::string(string_expr.value),
+        expr.bool(bool_expr) : ir_ast.expr_ir::bool(bool_expr.value),
+        expr.name(name_expr) : ir_ast.expr_ir::name(name_expr.name),
+        expr.borrow(borrow_expr) : ir_ast.expr_ir::borrow(ir_ast.borrow_expr { target: convert_expr(borrow_expr.target.unwrap()), mutable: borrow_expr.mutable }),
+        expr.binary(binary_expr) : ir_ast.expr_ir::binary(ir_ast.binary_expr { op: binary_expr.op, left: convert_expr(binary_expr.left.unwrap()), right: convert_expr(binary_expr.right.unwrap()) }),
         expr.call(call_expr) : {
 
             var callee_name = "<call>"
@@ -141,33 +145,44 @@ func convert_expr(expr e) ir_ast.Expr {
                 expr.name(name_expr) : callee_name = name_expr.name,
                 _ : callee_name = "<expr-callee>",
             }
-            var args = vec[ir_ast.Expr]()
+            var args = vec[ir_ast.expr_ir]()
             var ai = 0
             while ai < call_expr.args.len() {
                 args.push(convert_expr(call_expr.args[ai]))
                 ai = ai + 1
             }
-            ir_ast.Expr::call(ir_ast.CallExpr { callee: callee_name, args: args })
+            ir_ast.expr_ir::call(ir_ast.call_expr { callee: callee_name, args: args })
         }
-        expr.if(if_expr) : ir_ast.Expr::call(ir_ast.CallExpr { callee: "if_expr", args: vec[ir_ast.Expr]() }),
-        expr.block(block_expr) : ir_ast.Expr::name("<block-expr-unlowered>"),
-        expr.switch(switch_expr) : ir_ast.Expr::call(ir_ast.CallExpr { callee: "switch_expr", args: vec[ir_ast.Expr]() }),
-        expr.while(while_expr) : ir_ast.Expr::call(ir_ast.CallExpr { callee: "while_expr", args: vec[ir_ast.Expr]() }),
-        expr.for(for_expr) : ir_ast.Expr::call(ir_ast.CallExpr { callee: "for_expr", args: vec[ir_ast.Expr]() }),
-        expr.member(member_expr) : ir_ast.Expr::name("<member-expr-unlowered>"),
-        expr.index(index_expr) : ir_ast.Expr::name("<index-expr-unlowered>"),
-        expr.array(array_literal) : ir_ast.Expr::name("<array-expr-unlowered>"),
-        expr.map(map_literal) : ir_ast.Expr::name("<map-expr-unlowered>"),
+        expr.if(if_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "if_expr", args: vec[ir_ast.expr_ir]() }),
+        expr.block(block_expr) : ir_ast.expr_ir::block(convert_block(block_expr)),
+        expr.switch(switch_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "switch_expr", args: vec[ir_ast.expr_ir]() }),
+        expr.while(while_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "while_expr", args: vec[ir_ast.expr_ir]() }),
+        expr.for(for_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "for_expr", args: vec[ir_ast.expr_ir]() }),
+        expr.member(member_expr) : ir_ast.expr_ir::member(ir_ast.member_expr {
+            target: convert_expr(member_expr.target.value),
+            member: member_expr.member,
+        }),
+        expr.index(index_expr) : ir_ast.expr_ir::index(ir_ast.index_expr {
+            target: convert_expr(index_expr.target.value),
+            index: convert_expr(index_expr.index.value),
+        }),
+        expr.array(array_literal) : array_to_expr(array_literal),
+        expr.map(map_literal) : map_to_expr(map_literal),
     }
 }
 
 func lower_main_to_mir(source_file src) result[mir_graph, string] {
+    return lower_package_to_mir(src)
+}
+
+func lower_package_to_mir(source_file src) result[mir_graph, string] {
+    var fn_count = 0
     var i = 0
     while i < src.items.len() {
         switch src.items[i] {
             item.function(function_decl) : {
-                if function_decl.sig.name == "main" {
-                    return result::ok(lower_function_to_mir(function_decl))
+                if function_decl.body.is_some() {
+                    fn_count = fn_count + 1
                 }
             }
             _ : (),
@@ -175,7 +190,134 @@ func lower_main_to_mir(source_file src) result[mir_graph, string] {
         i = i + 1
     }
 
-    result::err("entry function main not found")
+    if fn_count == 0 {
+        return result::err("entry function not found: package has no function body")
+    }
+
+    var picked = option[function_decl].none
+    var fallback = option[function_decl].none
+    var i = 0
+    while i < src.items.len() {
+        switch src.items[i] {
+            item.function(function_decl) : {
+                if function_decl.body.is_some() {
+                    if fallback.is_none() {
+                        fallback = option[function_decl].some(function_decl)
+                    }
+                    if function_decl.sig.name == "main" {
+                        picked = option[function_decl].some(function_decl)
+                    }
+                }
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+
+    if picked.is_none() {
+        picked = fallback
+    }
+    if picked.is_none() {
+        return result::err("entry function not found")
+    }
+
+    var graph = lower_function_to_mir(picked.unwrap())
+    graph.trace.push("package.functions=" + to_string(fn_count))
+    var t = 0
+    while t < src.items.len() {
+        switch src.items[t] {
+            item.function(function_decl) : {
+                if function_decl.body.is_some() {
+                    graph.trace.push("package.fn " + function_decl.sig.name)
+                }
+            }
+            _ : (),
+        }
+        t = t + 1
+    }
+    result::ok(graph)
+}
+
+func stmt_to_expr(stmt s) ir_ast.expr_ir {
+    switch s {
+        stmt.var(var_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
+            callee: "stmt.var",
+            args: vec[ir_ast.expr_ir] { ir_ast.expr_ir::string(var_stmt.name), convert_expr(var_stmt.value) },
+        }),
+        stmt.assign(assign_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
+            callee: "stmt.assign",
+            args: vec[ir_ast.expr_ir] { ir_ast.expr_ir::string(assign_stmt.name), convert_expr(assign_stmt.value) },
+        }),
+        stmt.increment(increment_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
+            callee: "stmt.increment",
+            args: vec[ir_ast.expr_ir] { ir_ast.expr_ir::string(increment_stmt.name) },
+        }),
+        stmt.return(return_stmt) : {
+            if return_stmt.value.is_some() {
+                return ir_ast.expr_ir::call(ir_ast.call_expr {
+                    callee: "stmt.return",
+                    args: vec[ir_ast.expr_ir] { convert_expr(return_stmt.value.unwrap()) },
+                })
+            }
+            ir_ast.expr_ir::call(ir_ast.call_expr {
+                callee: "stmt.return",
+                args: vec[ir_ast.expr_ir](),
+            })
+        }
+        stmt.expr(expr_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
+            callee: "stmt.expr",
+            args: vec[ir_ast.expr_ir] { convert_expr(expr_stmt.expr) },
+        }),
+        stmt.defer(defer_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
+            callee: "stmt.defer",
+            args: vec[ir_ast.expr_ir] { convert_expr(defer_stmt.expr) },
+        }),
+        stmt.c_for(c_for_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
+            callee: "stmt.c_for",
+            args: vec[ir_ast.expr_ir] {
+                stmt_to_expr(c_for_stmt.init.value),
+                convert_expr(c_for_stmt.condition),
+                stmt_to_expr(c_for_stmt.step.value),
+                block_to_expr(c_for_stmt.body),
+            },
+        }),
+    }
+}
+
+func block_to_expr(block_expr block) ir_ast.expr_ir {
+    ir_ast.expr_ir::block(convert_block(block))
+}
+
+func array_to_expr(array_literal lit) ir_ast.expr_ir {
+    var items = vec[ir_ast.expr_ir]()
+    var i = 0
+    while i < lit.items.len() {
+        items.push(convert_expr(lit.items[i]))
+        i = i + 1
+    }
+
+    ir_ast.expr_ir::array(ir_ast.array_expr {
+        type_name: lit.type_text,
+        items: items,
+    })
+}
+
+func map_to_expr(map_literal lit) ir_ast.expr_ir {
+    var entries = vec[ir_ast.map_entry_expr]()
+    var i = 0
+    while i < lit.entries.len() {
+        var entry = lit.entries[i]
+        entries.push(ir_ast.map_entry_expr {
+            key: convert_expr(entry.key),
+            value: convert_expr(entry.value),
+        })
+        i = i + 1
+    }
+
+    ir_ast.expr_ir::map(ir_ast.map_expr {
+        type_name: lit.type_text,
+        entries: entries,
+    })
 }
 
 func lower_function_to_mir(function_decl fd) mir_graph {
