@@ -1,5 +1,11 @@
 package compile.internal.backend_elf64
 
+use compile.internal.ir.lower.lower_main_to_mir
+use compile.internal.mir.mir_graph
+use compile.internal.mir.mir_basic_block
+use compile.internal.mir.mir_statement
+use compile.internal.mir.mir_control_edge
+use internal.buildcfg.goarch as buildcfg_goarch
 use compile.internal.semantic.check_text
 use compile.internal.syntax.parse_source
 use s.assign_stmt
@@ -29,6 +35,7 @@ use std.option.option
 use std.process.run_process
 use std.prelude.char_at
 use std.prelude.len
+use std.prelude.slice
 use std.prelude.to_string
 use std.vec.vec
 
@@ -105,6 +112,11 @@ struct write_op {
     string text,
 }
 
+struct mir_execution_result {
+    vec[write_op] writes,
+    int32 exit_code,
+}
+
 func build(string path, string output) int32 {
     var source_result = read_to_string(path)
     if source_result.is_err() {
@@ -121,12 +133,18 @@ func build(string path, string output) int32 {
         return report_failure("semantic check failed")
     }
 
-    var writes_result = compile_writes(parsed_result.unwrap())
+    var mir_result = lower_main_to_mir(parsed_result.unwrap())
+    if mir_result.is_err() {
+        return report_failure("mir lowering failed: " + mir_result.unwrap_err())
+    }
+    var graph = mir_result.unwrap()
+
+    var writes_result = compile_writes(graph)
     if writes_result.is_err() {
         return report_failure(writes_result.unwrap_err().message)
     }
 
-    var exit_code_result = compile_exit_code(parsed_result.unwrap())
+    var exit_code_result = compile_exit_code(graph)
     if exit_code_result.is_err() {
         return report_failure(exit_code_result.unwrap_err().message)
     }
@@ -169,34 +187,227 @@ func build(string path, string output) int32 {
     0
 }
 
-func compile_writes(source_file source) result[vec[write_op], backend_error] {
-    switch find_main(source) {
-        result.err(err) : result.err(err),
-        result.ok(main_function) : {
-            var writes = vec[write_op]()
-            var main_result_value = call_function(source, main_function.sig.name, vec[value](), writes)
-            switch main_result_value {
-                result.err(err) : result.err(err),
-                result.ok(value) : {
-                    result.ok(writes)
-                }
-            }
+func compile_writes(mir_graph graph) result[vec[write_op], backend_error] {
+    if graph.blocks.len() == 0 {
+        return fail_write_ops("backend error: mir graph has no blocks")
+    }
+
+    var exec_result = execute_mir_graph(graph)
+    if exec_result.is_err() {
+        return fail_write_ops(exec_result.unwrap_err().message)
+    }
+
+    result::ok(exec_result.unwrap().writes)
+}
+
+func compile_exit_code(mir_graph graph) result[int32, backend_error] {
+    if graph.blocks.len() == 0 {
+        return fail_int("backend error: mir graph has no blocks")
+    }
+
+    var exec_result = execute_mir_graph(graph)
+    if exec_result.is_err() {
+        return fail_int(exec_result.unwrap_err().message)
+    }
+
+    result::ok(exec_result.unwrap().exit_code)
+}
+
+func execute_mir_graph(mir_graph graph) result[mir_execution_result, backend_error] {
+    var writes = vec[write_op]()
+    var current = graph.entry
+    var steps = 0
+    var max_steps = 100000
+
+    while steps < max_steps {
+        var block_result = find_mir_block(graph, current)
+        if block_result.is_err() {
+            return result::err(block_result.unwrap_err())
         }
+        var block = block_result.unwrap()
+
+        var si = 0
+        while si < block.statements.len() {
+            var stmt_result = execute_mir_statement(block.statements[si], writes)
+            if stmt_result.is_err() {
+                return result::err(stmt_result.unwrap_err())
+            }
+            si = si + 1
+        }
+
+        if block.terminator.kind == "return" {
+            return result::ok(mir_execution_result {
+                writes: writes,
+                exit_code: 0,
+            })
+        }
+
+        if block.terminator.kind == "jump" {
+            if block.terminator.edges.len() == 0 {
+                return result::err(backend_error { message: "backend error: jump terminator has no target" })
+            }
+            current = block.terminator.edges[0].target
+            steps = steps + 1
+            continue
+        }
+
+        if block.terminator.kind == "branch" {
+            var target = select_branch_target(block.terminator.edges)
+            if target < 0 {
+                return result::err(backend_error { message: "backend error: branch terminator has no target" })
+            }
+            current = target
+            steps = steps + 1
+            continue
+        }
+
+        return result::err(backend_error { message: "backend error: unsupported mir terminator kind " + block.terminator.kind })
+    }
+
+    result::err(backend_error { message: "backend error: mir execution exceeded step limit" })
+}
+
+func find_mir_block(mir_graph graph, int32 id) result[mir_basic_block, backend_error] {
+    var i = 0
+    while i < graph.blocks.len() {
+        if graph.blocks[i].id == id {
+            return result::ok(graph.blocks[i])
+        }
+        i = i + 1
+    }
+
+    result::err(backend_error { message: "backend error: missing mir block id " + to_string(id) })
+}
+
+func execute_mir_statement(mir_statement statement, vec[write_op] mut writes) result[(), backend_error] {
+    switch statement {
+        mir_statement.eval(eval_stmt) : {
+            if eval_stmt.args.len() > 0 {
+                emit_print_from_line(eval_stmt.args[0], writes)
+            }
+            result::ok(())
+        }
+        _ : result::ok(()),
     }
 }
 
-func compile_exit_code(source_file source) result[int32, backend_error] {
-    switch find_main(source) {
-        result.err(err) : result.err(err),
-        result.ok(main_function) : {
-            var writes = vec[write_op]()
-            var main_result_value = call_function(source, main_function.sig.name, vec[value](), writes)
-            switch main_result_value {
-                result.err(err) : result.err(err),
-                result.ok(value) : value_to_exit_code(value),
-            }
-        }
+func emit_print_from_line(string line, vec[write_op] mut writes) () {
+    if has_substring(line, "eprintln(") {
+        emit_call_line_to_write(line, "eprintln(", 2, writes)
+        return
     }
+    if has_substring(line, "println(") {
+        emit_call_line_to_write(line, "println(", 1, writes)
+        return
+    }
+}
+
+func emit_call_line_to_write(string line, string callee, int32 fd, vec[write_op] mut writes) () {
+    var arg_opt = extract_call_arg(line, callee)
+    if arg_opt.is_none() {
+        return
+    }
+
+    var rendered = render_literal_text(arg_opt.unwrap())
+    writes.push(write_op {
+        fd: fd,
+        text: rendered + "\n",
+    })
+}
+
+func render_literal_text(string raw_arg) string {
+    var arg = trim_spaces(raw_arg)
+    if is_quoted_literal(arg) {
+        return decode_string_literal(arg)
+    }
+    if arg == "true" || arg == "false" {
+        return arg
+    }
+    return to_string(parse_int_literal(arg))
+}
+
+func extract_call_arg(string line, string callee) option[string] {
+    var call_index = index_of(line, callee)
+    if call_index < 0 {
+        return option.none
+    }
+
+    var start = call_index + len(callee)
+    var end = index_of_from(line, ")", start)
+    if end < 0 || end < start {
+        return option.none
+    }
+
+    option.some(slice(line, start, end))
+}
+
+func is_quoted_literal(string text) bool {
+    if len(text) < 2 {
+        return false
+    }
+    char_at(text, 0) == "\"" && char_at(text, len(text) - 1) == "\""
+}
+
+func trim_spaces(string text) string {
+    var start = 0
+    var end = len(text)
+
+    while start < end && is_space(char_at(text, start)) {
+        start = start + 1
+    }
+    while end > start && is_space(char_at(text, end - 1)) {
+        end = end - 1
+    }
+
+    slice(text, start, end)
+}
+
+func is_space(string ch) bool {
+    ch == " " || ch == "\t" || ch == "\n" || ch == "\r"
+}
+
+func has_substring(string text, string needle) bool {
+    index_of(text, needle) >= 0
+}
+
+func index_of(string text, string needle) int32 {
+    index_of_from(text, needle, 0)
+}
+
+func index_of_from(string text, string needle, int32 start) int32 {
+    if len(needle) == 0 {
+        return start
+    }
+    if len(text) < len(needle) || start >= len(text) {
+        return -1
+    }
+
+    var i = start
+    var limit = len(text) - len(needle)
+    while i <= limit {
+        if slice(text, i, i + len(needle)) == needle {
+            return i
+        }
+        i = i + 1
+    }
+    -1
+}
+
+func select_branch_target(vec[mir_control_edge] edges) int32 {
+    if edges.len() == 0 {
+        return -1
+    }
+
+    // Prefer explicit exits to avoid infinite loops in MVP walker.
+    var i = 0
+    while i < edges.len() {
+        if edges[i].label == "false" || edges[i].label == "exit" || edges[i].label == "default" {
+            return edges[i].target
+        }
+        i = i + 1
+    }
+
+    edges[0].target
 }
 
 func find_main(source_file source) result[function_decl, backend_error] {
@@ -289,7 +500,7 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
     }
 
     switch block.final_expr {
-        option.some(expr) : eval_expr(expr, source, env, ops),
+        option.some(expr) : eval_expr(expr, source, env, writes),
         option.none : result::ok(value::unit(unit_value {})),
     }
 }
@@ -778,6 +989,14 @@ func decode_string_literal(string literal) string {
 }
 
 func emit_asm(vec[write_op] writes, int32 exit_code) string {
+    var arch = buildcfg_goarch()
+    if arch == "arm64" {
+        return emit_asm_arm64(writes, exit_code)
+    }
+    return emit_asm_amd64(writes, exit_code)
+}
+
+func emit_asm_amd64(vec[write_op] writes, int32 exit_code) string {
     var data_lines = vec[string]()
     var text_lines = vec[string]()
     data_lines.push(".section .data")
@@ -800,6 +1019,29 @@ func emit_asm(vec[write_op] writes, int32 exit_code) string {
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
 
+func emit_asm_arm64(vec[write_op] writes, int32 exit_code) string {
+    var data_lines = vec[string]()
+    var text_lines = vec[string]()
+    data_lines.push(".section .data")
+    text_lines.push(".section .text")
+    text_lines.push(".global _start")
+    text_lines.push("_start:")
+
+    var message_index = 0
+    var i = 0
+    while i < writes.len() {
+        append_write_op_arm64(data_lines, text_lines, writes[i], message_index)
+        message_index = message_index + 1
+        i = i + 1
+    }
+
+    text_lines.push("    mov x8, #93")
+    text_lines.push("    mov x0, #" + to_string(exit_code))
+    text_lines.push("    svc #0")
+
+    join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
+}
+
 func append_write_op(vec[string] data_lines, vec[string] text_lines, write_op op, int32 index) () {
     var label = "message_" + to_string(index)
     data_lines.push(label + ":")
@@ -809,6 +1051,19 @@ func append_write_op(vec[string] data_lines, vec[string] text_lines, write_op op
     text_lines.push("    lea " + label + "(%rip), %rsi")
     text_lines.push("    mov $" + to_string(len(op.text)) + ", %rdx")
     text_lines.push("    syscall")
+}
+
+func append_write_op_arm64(vec[string] data_lines, vec[string] text_lines, write_op op, int32 index) () {
+    var label = "message_" + to_string(index)
+    data_lines.push(label + ":")
+    data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")
+
+    text_lines.push("    mov x8, #64")
+    text_lines.push("    mov x0, #" + to_string(op.fd))
+    text_lines.push("    adrp x1, " + label)
+    text_lines.push("    add x1, x1, :lo12:" + label)
+    text_lines.push("    ldr x2, =" + to_string(len(op.text)))
+    text_lines.push("    svc #0")
 }
 
 func escape_asm_string(string text) string {
