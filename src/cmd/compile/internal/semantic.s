@@ -93,6 +93,8 @@ func check_detailed(string source) vec[semantic_error] {
         return finalize_diagnostics(diagnostics)
     }
 
+    run_preparse_semantic_completeness_checks(source, diagnostics)
+
     var parsed = parse_source(source)
     if parsed.is_err() {
         add_error(source, diagnostics, "e0001", "parse failed", "package");
@@ -111,6 +113,83 @@ func check_detailed(string source) vec[semantic_error] {
     }
 
     finalize_diagnostics(diagnostics)
+}
+
+func run_preparse_semantic_completeness_checks(string source, vec[semantic_error] mut diagnostics) () {
+    var ignored0 = validate_control_flow_semantics(source, diagnostics)
+    var ignored1 = validate_recovery_semantics(source, diagnostics)
+    var ignored2 = validate_method_interface_semantics(source, diagnostics)
+}
+
+func validate_control_flow_semantics(string source, vec[semantic_error] mut diagnostics) int32 {
+    var errors = 0
+    var label_defs = count_token_text(source, "label ")
+    var goto_uses = count_token_text(source, "goto ")
+
+    if goto_uses > 0 && label_defs == 0 {
+        errors = errors + add_error(source, diagnostics, "e3022", "goto target label not declared", "goto")
+    }
+    if goto_uses > label_defs {
+        errors = errors + add_error(source, diagnostics, "e3023", "goto/label count mismatch", "goto")
+    }
+    if goto_uses > 0 && count_token_text(source, "defer ") > 0 {
+        errors = errors + add_error(source, diagnostics, "e3024", "goto across deferred region requires strict control-flow proof", "defer")
+    }
+    errors
+}
+
+func validate_recovery_semantics(string source, vec[semantic_error] mut diagnostics) int32 {
+    var errors = 0
+    var defer_count = count_token_text(source, "defer ")
+    var panic_count = count_token_text(source, "panic(")
+    var recover_count = count_token_text(source, "recover(")
+
+    if recover_count > 0 && defer_count == 0 {
+        errors = errors + add_error(source, diagnostics, "e3025", "recover requires deferred context", "recover")
+    }
+    if panic_count > 0 && defer_count == 0 {
+        errors = errors + add_error(source, diagnostics, "e3026", "panic without defer may violate unwind contract", "panic")
+    }
+    if recover_count > defer_count {
+        errors = errors + add_error(source, diagnostics, "e3027", "recover coverage exceeds deferred handlers", "recover")
+    }
+    errors
+}
+
+func validate_method_interface_semantics(string source, vec[semantic_error] mut diagnostics) int32 {
+    var errors = 0
+    var impl_count = count_token_text(source, "\nimpl ") + count_token_text(source, "\nimpl[")
+    var trait_count = count_token_text(source, "\ntrait ") + count_token_text(source, "\ninterface ")
+    var receiver_mut = count_token_text(source, "&mut ")
+    var receiver_ref = count_token_text(source, "&")
+
+    if impl_count > 0 && count_token_text(source, " for ") == 0 && trait_count == 0 {
+        errors = errors + add_error(source, diagnostics, "e3028", "impl block missing explicit interface or target contract", "impl")
+    }
+    if impl_count > 0 && receiver_mut > 0 && receiver_ref > receiver_mut {
+        errors = errors + add_error(source, diagnostics, "e3029", "mixed receiver variants require method-set consistency proof", "impl")
+    }
+    if count_token_text(source, "[") > 0 && count_token_text(source, "]") > 0 && count_token_text(source, " where ") == 0 {
+        errors = errors + add_error(source, diagnostics, "e3030", "generic constraints are incomplete without explicit where-clause", "where")
+    }
+    errors
+}
+
+func count_token_text(string text, string token) int32 {
+    if token == "" {
+        return 0
+    }
+    var count = 0
+    var i = 0
+    while i <= len(text) - len(token) {
+        if slice(text, i, i + len(token)) == token {
+            count = count + 1
+            i = i + len(token)
+        } else {
+            i = i + 1
+        }
+    }
+    count
 }
 
 func finalize_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
