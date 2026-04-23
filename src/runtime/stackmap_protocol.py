@@ -5,8 +5,16 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class stackmaprecord:
+    version: int
     arch: str
-    spill_slots: int
+    functions: int
+
+
+@dataclass(frozen=True)
+class stackmapfunction:
+    name: str
+    slots: int
+    bitmap: str
     callee_saved: int
 
 
@@ -25,6 +33,44 @@ def parse_stackmap_header(line: str) -> stackmaprecord:
     if arch == "":
         raise ValueError("stackmap header missing arch")
 
-    spill_slots = int(fields.get("spill_slots", "0"))
+    version = int(fields.get("version", "1"))
+    functions = int(fields.get("functions", "0"))
+    return stackmaprecord(version=version, arch=arch, functions=functions)
+
+
+def parse_stackmap_function_line(line: str) -> stackmapfunction:
+    if not line.startswith("fn "):
+        raise ValueError("stackmap function line must start with 'fn '")
+
+    tokens = line.split()
+    if len(tokens) < 2:
+        raise ValueError("stackmap function line missing function name")
+
+    name = tokens[1]
+    fields = {}
+    for token in tokens[2:]:
+        if "=" not in token:
+            continue
+        key, value = token.split("=", 1)
+        fields[key] = value
+
+    slots = int(fields.get("slots", "0"))
+    bitmap = fields.get("bitmap", "")
     callee_saved = int(fields.get("callee_saved", "0"))
-    return stackmaprecord(arch=arch, spill_slots=spill_slots, callee_saved=callee_saved)
+    if bitmap == "":
+        raise ValueError("stackmap function line missing bitmap")
+    return stackmapfunction(name=name, slots=slots, bitmap=bitmap, callee_saved=callee_saved)
+
+
+def parse_stackmap_text(text: str) -> tuple[stackmaprecord, list[stackmapfunction]]:
+    lines = [line.strip() for line in text.splitlines() if line.strip() != ""]
+    if len(lines) == 0:
+        raise ValueError("empty stackmap text")
+
+    header = parse_stackmap_header(lines[0])
+    functions: list[stackmapfunction] = []
+    for line in lines[1:]:
+        if line.startswith("fn "):
+            functions.append(parse_stackmap_function_line(line))
+
+    return header, functions
