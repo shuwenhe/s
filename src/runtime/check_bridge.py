@@ -11,7 +11,7 @@ if str(root) not in sys.path:
 
 from runtime.intrinsic_dispatch import intrinsiccall, dispatch
 from runtime.python_bridge import intrinsics, runtimeexit, invoke_intrinsic
-from runtime.stackmap_protocol import parse_stackmap_header
+from runtime.stackmap_protocol import parse_stackmap_text
 
 
 def main() -> int:
@@ -74,10 +74,20 @@ def main() -> int:
     )
     checks.append(("dispatch int_to_string", dispatched.value == "42"))
 
-    stackmap = parse_stackmap_header("stackmap arch=amd64 spill_slots=2 callee_saved=6")
+    stackmap_text = "\n".join(
+        [
+            "stackmap version=2 arch=amd64 functions=2",
+            "fn main slots=2 bitmap=10 callee_saved=6",
+            "fn helper slots=1 bitmap=1 callee_saved=6",
+            "meta ssa.debug main values=2 spills=1",
+        ]
+    )
+    stackmap, stack_functions = parse_stackmap_text(stackmap_text)
     checks.append(("stackmap parser arch", stackmap.arch == "amd64"))
-    checks.append(("stackmap parser spills", stackmap.spill_slots == 2))
-    checks.append(("stackmap parser callee", stackmap.callee_saved == 6))
+    checks.append(("stackmap parser version", stackmap.version == 2))
+    checks.append(("stackmap parser function-count", stackmap.functions == 2))
+    checks.append(("stackmap parser fn lines", len(stack_functions) == 2))
+    checks.append(("stackmap parser fn main", stack_functions[0].name == "main" and stack_functions[0].bitmap == "10"))
 
     ok = true
     for label, passed in checks:
