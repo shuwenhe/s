@@ -28,8 +28,11 @@ struct ssa_program {
     int32 licm_hoisted_count
     int32 bce_removed_count
     int32 phi_node_count
+    int32 def_use_edge_count
+    int32 alias_set_count
     int32 memory_version_count
     int32 live_in_fact_count
+    int32 loop_header_count
     int32 spill_count
     int32 spill_reload_count
     int32 call_pressure_event_count
@@ -51,9 +54,28 @@ struct ssa_pass_stats {
     int32 licm_hoisted_count
     int32 bce_removed_count
     int32 phi_node_count
+    int32 def_use_edge_count
+    int32 alias_set_count
     int32 memory_version_count
     int32 live_in_fact_count
+    int32 loop_header_count
     int32 optimized_value_count
+}
+
+struct ssa_dataflow_model {
+    int32 block_count
+    int32 edge_count
+    int32 value_count
+    int32 branch_count
+    int32 jump_count
+    int32 call_count
+    int32 load_count
+    int32 store_count
+    int32 phi_count
+    int32 alias_set_count
+    int32 def_use_edges
+    int32 live_in_facts
+    int32 loop_headers
 }
 
 func build_pipeline(string mir_text, string goarch) ssa_program {
@@ -67,7 +89,8 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
     if value_count == 0 {
         value_count = block_count
     }
-    var pass_stats = run_optimization_passes(mir_text, value_count, options)
+    var model = build_dataflow_model(mir_text, block_count, value_count)
+    var pass_stats = run_optimization_passes(mir_text, model, options)
     var optimized_value_count = pass_stats.optimized_value_count
     var allocation = linear_scan_regalloc_with_spill(mir_text, optimized_value_count, goarch)
     var debug_lines = build_debug_lines(mir_text, allocation.allocated_regs)
@@ -89,8 +112,11 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         licm_hoisted_count: pass_stats.licm_hoisted_count,
         bce_removed_count: pass_stats.bce_removed_count,
         phi_node_count: pass_stats.phi_node_count,
+        def_use_edge_count: pass_stats.def_use_edge_count,
+        alias_set_count: pass_stats.alias_set_count,
         memory_version_count: pass_stats.memory_version_count,
         live_in_fact_count: pass_stats.live_in_fact_count,
+        loop_header_count: pass_stats.loop_header_count,
         spill_count: allocation.spill_count,
         spill_reload_count: allocation.spill_reload_count,
         call_pressure_event_count: allocation.call_pressure_events,
@@ -226,8 +252,38 @@ func default_options() ssa_pipeline_options {
     }
 }
 
-func run_optimization_passes(string mir_text, int32 value_count, ssa_pipeline_options options) ssa_pass_stats {
-    var current = value_count
+func build_dataflow_model(string mir_text, int32 block_count, int32 value_count) ssa_dataflow_model {
+    var jumps = count_token(mir_text, " term=jump")
+    var branches = count_token(mir_text, " term=branch")
+    var calls = count_token(mir_text, " call=")
+    var loads = count_token(mir_text, "load")
+    var stores = count_token(mir_text, "store")
+    var edges = estimate_cfg_edges(mir_text)
+    var phi = estimate_phi_nodes(mir_text)
+    var alias_sets = estimate_alias_sets(mir_text, calls, loads, stores)
+    var def_use = estimate_def_use_edges(value_count, edges, phi)
+    var live_in = estimate_live_in_facts_with_model(block_count, edges, calls)
+    var loops = estimate_loop_headers(branches, jumps)
+
+    ssa_dataflow_model {
+        block_count: block_count,
+        edge_count: edges,
+        value_count: value_count,
+        branch_count: branches,
+        jump_count: jumps,
+        call_count: calls,
+        load_count: loads,
+        store_count: stores,
+        phi_count: phi,
+        alias_set_count: alias_sets,
+        def_use_edges: def_use,
+        live_in_facts: live_in,
+        loop_headers: loops,
+    }
+}
+
+func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipeline_options options) ssa_pass_stats {
+    var current = model.value_count
     var folded = run_constant_fold_pass(mir_text)
     current = current - folded
     if current < 1 {
@@ -237,21 +293,21 @@ func run_optimization_passes(string mir_text, int32 value_count, ssa_pipeline_op
     var dce_removed = 0
     var coalesced = 0
     var simplified = 0
-    var gvn_rewrites = run_gvn_pass(mir_text)
+    var gvn_rewrites = run_gvn_pass(model)
     current = current - gvn_rewrites
     if current < 1 {
         current = 1
     }
-    var cse_eliminated = run_cse_pass(mir_text)
+    var cse_eliminated = run_cse_pass(model)
     current = current - cse_eliminated
     if current < 1 {
         current = 1
     }
-    var licm_hoisted = run_licm_pass(mir_text)
-    var bce_removed = run_bce_pass(mir_text)
-    var phi_nodes = estimate_phi_nodes(mir_text)
-    var memory_versions = estimate_memory_versions(mir_text)
-    var live_in_facts = estimate_live_in_facts(mir_text)
+    var licm_hoisted = run_licm_pass(model)
+    var bce_removed = run_bce_pass(model)
+    var phi_nodes = model.phi_count
+    var memory_versions = model.store_count + model.load_count
+    var live_in_facts = model.live_in_facts
 
     if options.enable_dce {
         dce_removed = run_dce_pass(current, count_token(mir_text, " stmts=0"))
@@ -285,38 +341,40 @@ func run_optimization_passes(string mir_text, int32 value_count, ssa_pipeline_op
         licm_hoisted_count: licm_hoisted,
         bce_removed_count: bce_removed,
         phi_node_count: phi_nodes,
+        def_use_edge_count: model.def_use_edges,
+        alias_set_count: model.alias_set_count,
         memory_version_count: memory_versions,
         live_in_fact_count: live_in_facts,
+        loop_header_count: model.loop_headers,
         optimized_value_count: current,
     }
 }
 
-func run_gvn_pass(string mir_text) int32 {
-    var candidates = count_token(mir_text, " stmts=")
+func run_gvn_pass(ssa_dataflow_model model) int32 {
+    var candidates = model.def_use_edges / 3
     if candidates <= 1 {
         return 0
     }
-    candidates / 6
+    candidates / 4
 }
 
-func run_cse_pass(string mir_text) int32 {
-    var candidates = count_token(mir_text, " term=jump") + count_token(mir_text, " term=branch")
+func run_cse_pass(ssa_dataflow_model model) int32 {
+    var candidates = model.jump_count + model.branch_count + model.phi_count
     if candidates <= 0 {
         return 0
     }
     candidates / 2
 }
 
-func run_licm_pass(string mir_text) int32 {
-    var branches = count_token(mir_text, " term=branch")
-    if branches <= 0 {
+func run_licm_pass(ssa_dataflow_model model) int32 {
+    if model.loop_headers <= 0 {
         return 0
     }
-    branches
+    model.loop_headers
 }
 
-func run_bce_pass(string mir_text) int32 {
-    var bounds_like = count_token(mir_text, "index") + count_token(mir_text, "bounds")
+func run_bce_pass(ssa_dataflow_model model) int32 {
+    var bounds_like = model.load_count + model.branch_count
     if bounds_like <= 0 {
         return 0
     }
@@ -340,6 +398,42 @@ func estimate_live_in_facts(string mir_text) int32 {
         return edges
     }
     blocks + edges
+}
+
+func estimate_alias_sets(string mir_text, int32 calls, int32 loads, int32 stores) int32 {
+    var refs = count_token(mir_text, "borrow") + count_token(mir_text, "&")
+    var sets = refs + calls + (loads + stores) / 2
+    if sets < 1 {
+        return 1
+    }
+    sets
+}
+
+func estimate_def_use_edges(int32 values, int32 edges, int32 phi) int32 {
+    var out = values + edges + phi * 2
+    if out < values {
+        return values
+    }
+    out
+}
+
+func estimate_live_in_facts_with_model(int32 blocks, int32 edges, int32 calls) int32 {
+    var base = blocks + edges
+    if calls > 0 {
+        base = base + calls
+    }
+    if base < 1 {
+        return 1
+    }
+    base
+}
+
+func estimate_loop_headers(int32 branches, int32 jumps) int32 {
+    var loops = branches / 2 + jumps / 4
+    if loops < 0 {
+        return 0
+    }
+    loops
 }
 
 func run_constant_fold_pass(string mir_text) int32 {
@@ -492,8 +586,11 @@ func dump_pipeline(ssa_program program) string {
         + " licm=" + to_string(program.licm_hoisted_count)
         + " bce=" + to_string(program.bce_removed_count)
         + " phi=" + to_string(program.phi_node_count)
+        + " defuse=" + to_string(program.def_use_edge_count)
+        + " alias=" + to_string(program.alias_set_count)
         + " memv=" + to_string(program.memory_version_count)
         + " livein=" + to_string(program.live_in_fact_count)
+        + " loops=" + to_string(program.loop_header_count)
         + " cfg_edges=" + to_string(program.cfg_edge_count)
         + " branches=" + to_string(program.branch_block_count)
         + " spills=" + to_string(program.spill_count)
