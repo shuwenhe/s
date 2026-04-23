@@ -41,6 +41,8 @@ struct ssa_program {
     int32 rollback_count
     int32 proof_obligation_count
     int32 proof_failed_count
+    int32 scheduled_pass_count
+    int32 blocked_pass_count
     int32 spill_count
     int32 spill_reload_count
     int32 call_pressure_event_count
@@ -81,6 +83,8 @@ struct ssa_pass_stats {
     int32 rollback_count
     int32 proof_obligation_count
     int32 proof_failed_count
+    int32 scheduled_pass_count
+    int32 blocked_pass_count
     int32 optimized_value_count
 }
 
@@ -153,6 +157,8 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         rollback_count: pass_stats.rollback_count,
         proof_obligation_count: pass_stats.proof_obligation_count,
         proof_failed_count: pass_stats.proof_failed_count,
+        scheduled_pass_count: pass_stats.scheduled_pass_count,
+        blocked_pass_count: pass_stats.blocked_pass_count,
         spill_count: allocation.spill_count,
         spill_reload_count: allocation.spill_reload_count,
         call_pressure_event_count: allocation.call_pressure_events,
@@ -464,17 +470,55 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     var proof_obligations = 0
     var proof_failed = 0
     var rollback = 0
+    var scheduled_passes = 0
+    var blocked_passes = 0
 
     var prev = -1
     while fixed_iters < 3 && current != prev {
         prev = current
 
-        var gvn_i = run_gvn_pass(model)
-        var sccp_i = run_sccp_pass(model, current)
-        var pre_i = run_pre_pass(model)
-        var cse_i = run_cse_pass(model)
-        var licm_i = run_licm_pass(model)
-        var bce_i = run_bce_pass(model)
+        var raw_gvn = run_gvn_pass(model)
+        var raw_sccp = run_sccp_pass(model, current)
+        var raw_pre = run_pre_pass(model)
+        var raw_cse = run_cse_pass(model)
+        var raw_licm = run_licm_pass(model)
+        var raw_bce = run_bce_pass(model)
+        scheduled_passes = scheduled_passes + 6
+
+        var gvn_i = raw_gvn
+        var cse_i = raw_cse
+
+        var sccp_ready = pass_dependency_ready_sccp(model, gvn_i)
+        var sccp_i = 0
+        if sccp_ready {
+            sccp_i = raw_sccp
+        } else if raw_sccp > 0 {
+            blocked_passes = blocked_passes + 1
+        }
+
+        var pre_ready = pass_dependency_ready_pre(model, gvn_i, cse_i)
+        var pre_i = 0
+        if pre_ready {
+            pre_i = raw_pre
+        } else if raw_pre > 0 {
+            blocked_passes = blocked_passes + 1
+        }
+
+        var licm_ready = pass_dependency_ready_licm(model, gvn_i + sccp_i + pre_i)
+        var licm_i = 0
+        if licm_ready {
+            licm_i = raw_licm
+        } else if raw_licm > 0 {
+            blocked_passes = blocked_passes + 1
+        }
+
+        var bce_ready = pass_dependency_ready_bce(model)
+        var bce_i = 0
+        if bce_ready {
+            bce_i = raw_bce
+        } else if raw_bce > 0 {
+            blocked_passes = blocked_passes + 1
+        }
 
         gvn_rewrites = gvn_rewrites + gvn_i
         sccp_rewrites = sccp_rewrites + sccp_i
@@ -544,8 +588,44 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         rollback_count: rollback,
         proof_obligation_count: proof_obligations,
         proof_failed_count: proof_failed,
+        scheduled_pass_count: scheduled_passes,
+        blocked_pass_count: blocked_passes,
         optimized_value_count: current,
     }
+}
+
+func pass_dependency_ready_sccp(ssa_dataflow_model model, int32 gvn_rewrites) bool {
+    if model.branch_count + model.phi_count <= 0 {
+        return false
+    }
+    if model.live_in_facts <= 0 {
+        return false
+    }
+    gvn_rewrites >= 0
+}
+
+func pass_dependency_ready_pre(ssa_dataflow_model model, int32 gvn_rewrites, int32 cse_rewrites) bool {
+    if model.edge_count <= 1 {
+        return false
+    }
+    if model.def_use_edges <= model.value_count {
+        return false
+    }
+    gvn_rewrites + cse_rewrites >= 0
+}
+
+func pass_dependency_ready_licm(ssa_dataflow_model model, int32 upstream_rewrites) bool {
+    if model.loop_headers <= 0 {
+        return false
+    }
+    if model.load_count + model.store_count <= 0 {
+        return false
+    }
+    upstream_rewrites >= 0
+}
+
+func pass_dependency_ready_bce(ssa_dataflow_model model) bool {
+    model.load_count > 0 && model.branch_count > 0
 }
 
 func verify_ssa_invariants(ssa_dataflow_model model) int32 {
@@ -834,6 +914,8 @@ func dump_pipeline(ssa_program program) string {
         + " rollback=" + to_string(program.rollback_count)
         + " proofs=" + to_string(program.proof_obligation_count)
         + " proof_fail=" + to_string(program.proof_failed_count)
+        + " passes_sched=" + to_string(program.scheduled_pass_count)
+        + " passes_blocked=" + to_string(program.blocked_pass_count)
         + " cfg_edges=" + to_string(program.cfg_edge_count)
         + " branches=" + to_string(program.branch_block_count)
         + " spills=" + to_string(program.spill_count)
