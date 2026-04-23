@@ -102,6 +102,18 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, "pass_topo=") {
         return 1
     }
+    if !contains(arm64_dump, "pass_replay=") {
+        return 1
+    }
+    if !contains(arm64_dump, "replay_steps=") {
+        return 1
+    }
+    if !contains(arm64_dump, "invalid_reruns=") {
+        return 1
+    }
+    if !contains(arm64_dump, "dbg_budget=") {
+        return 1
+    }
 
     var amd64_program = build_pipeline(mir_text, "amd64")
     var amd64_dump = dump_pipeline(amd64_program)
@@ -149,6 +161,9 @@ func run_ssa_suite() int32 {
         return 1
     }
     if !contains(heavy_dump, "L0{") {
+        return 1
+    }
+    if !contains(heavy_dump, "gvn:ok") {
         return 1
     }
 

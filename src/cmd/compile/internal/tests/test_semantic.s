@@ -136,12 +136,21 @@ func run_semantic_suite(string fixtures_root) int32 {
     if diagnostics[0].anchor == "" {
         return 1
     }
+    if diagnostics[0].stage != "semantic" {
+        return 1
+    }
+    if diagnostics[0].chain_id == "" {
+        return 1
+    }
 
     var saw_summary = false
     var i = 0
     while i < diagnostics.len() {
         if diagnostics[i].code == "s0001" {
             saw_summary = true
+            if diagnostics[i].upstream_code == "" {
+                return 1
+            }
         }
         i = i + 1
     }
