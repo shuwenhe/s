@@ -8,7 +8,7 @@ func estimate_inline_sites(string mir_text) int32 {
     if calls <= 0 {
         return 0
     }
-    // Conservative inlining threshold for MVP backend.
+
     calls / 2
 }
 

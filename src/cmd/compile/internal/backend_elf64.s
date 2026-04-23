@@ -466,9 +466,21 @@ func build_abi_emit_plan(string arch, source_file source) string {
                 var p = 0
                 while p < fn_decl.sig.params.len() {
                     line = line + " | a" + to_string(p) + "->" + abi_param_location(arch, p)
+                    line = line + " | f" + to_string(p) + "->" + abi_float_param_location(arch, p)
                     p = p + 1
                 }
-                line = line + " | ret->" + abi_int_ret_reg(arch)
+                var variadic = fn_decl.sig.params.len() > abi_variadic_gp_limit(arch)
+                line = line + " | variadic=" + bool_string(variadic)
+                var ret_type =
+                    switch fn_decl.sig.return_type {
+                        option.some(value) : trim_spaces(value),
+                        option.none : "",
+                    }
+                var ret_parts = count_top_level_type_parts(ret_type)
+                var aggregate_size = abi_emit_aggregate_size_hint(fn_decl.sig.params.len(), ret_type)
+                line = line + " | ret_arity=" + to_string(ret_parts)
+                line = line + " | agg_mode=" + abi_emit_aggregate_mode(ret_type, ret_parts, aggregate_size)
+                line = line + " | " + abi_emit_ret_plan(arch, ret_type, ret_parts, aggregate_size)
                 lines.push(line)
             }
             _ : (),
@@ -484,6 +496,114 @@ func abi_param_location(string arch, int32 index) string {
         return "stack+" + to_string((index - abi_variadic_gp_limit(arch)) * 8)
     }
     reg
+}
+
+func abi_float_param_location(string arch, int32 index) string {
+    var reg = abi_float_arg_reg(arch, index)
+    if reg == "" {
+        return "stackf+" + to_string(index * 8)
+    }
+    reg
+}
+
+func abi_emit_ret_location(string arch, int32 aggregate_size) string {
+    if aggregate_size > 16 {
+        return "sret:" + abi_sret_reg(arch)
+    }
+    abi_int_ret_reg(arch)
+}
+
+func abi_emit_aggregate_size_hint(int32 param_count, string ret_type) int32 {
+    var size = param_count * 8
+    var parts = count_top_level_type_parts(ret_type)
+    if parts > 1 {
+        size = parts * 8
+    }
+    if has_substring(ret_type, "[") {
+        size = size + 16
+    }
+    if has_substring(ret_type, "{") {
+        size = size + 32
+    }
+    size
+}
+
+func abi_emit_aggregate_mode(string ret_type, int32 ret_parts, int32 aggregate_size) string {
+    if ret_type == "" {
+        return "void"
+    }
+    if ret_parts == 1 {
+        if aggregate_size > 16 || has_substring(ret_type, "[") || has_substring(ret_type, "{") {
+            return "complex"
+        }
+        return "scalar"
+    }
+    if ret_parts == 2 && aggregate_size <= 16 {
+        return "tuple2"
+    }
+    if aggregate_size > 16 || ret_parts > 2 {
+        return "tupleN"
+    }
+    "scalar"
+}
+
+func abi_emit_ret_plan(string arch, string ret_type, int32 ret_parts, int32 aggregate_size) string {
+    if ret_type == "" {
+        return "ret->void"
+    }
+
+    if ret_parts <= 1 {
+        return "ret->" + abi_emit_ret_location(arch, aggregate_size)
+    }
+
+    if ret_parts == 2 && aggregate_size <= 16 {
+        return "ret0->" + abi_int_ret_reg(arch) + " | ret1->" + abi_second_int_ret_reg(arch)
+    }
+
+    if aggregate_size > 16 || ret_parts > 2 {
+        return "ret->sret:" + abi_sret_reg(arch) + " | tuple_parts=" + to_string(ret_parts)
+    }
+
+    "ret->" + abi_int_ret_reg(arch)
+}
+
+func abi_second_int_ret_reg(string arch) string {
+    if arch == "arm64" {
+        return "x1"
+    }
+    "%rdx"
+}
+
+func count_top_level_type_parts(string type_text) int32 {
+    var t = trim_spaces(type_text)
+    if t == "" {
+        return 0
+    }
+
+    var paren = 0
+    var bracket = 0
+    var count = 1
+    var i = 0
+    while i < len(t) {
+        var ch = char_at(t, i)
+        if ch == "(" {
+            paren = paren + 1
+        } else if ch == ")" {
+            if paren > 0 {
+                paren = paren - 1
+            }
+        } else if ch == "[" {
+            bracket = bracket + 1
+        } else if ch == "]" {
+            if bracket > 0 {
+                bracket = bracket - 1
+            }
+        } else if ch == "," && paren <= 1 && bracket == 0 {
+            count = count + 1
+        }
+        i = i + 1
+    }
+    count
 }
 
 func collect_abi_behavior(string arch, source_file source) vec[abi_behavior_entry] {
@@ -552,6 +672,7 @@ func build_gc_metadata_artifact(string arch, source_file source, string ssa_text
                         + " slots=" + to_string(slots)
                         + " ptr_bitmap=" + ptr_bitmap
                         + " write_barrier=" + gc_write_barrier_mode(fn_decl.sig.name)
+                        + " safepoints=" + to_string(gc_safepoint_count(fn_decl, ssa_text))
                 )
             }
             _ : (),
@@ -584,6 +705,19 @@ func gc_write_barrier_mode(string fn_name) string {
         return "required"
     }
     "elided"
+}
+
+func gc_safepoint_count(function_decl fn_decl, string ssa_text) int32 {
+    var base = fn_decl.sig.params.len()
+    var loops = parse_number_after(ssa_text, "loops=")
+    if loops < 0 {
+        loops = 0
+    }
+    var total = 1 + base + loops
+    if total < 1 {
+        return 1
+    }
+    total
 }
 
 func build_export_data_artifact(source_file source, string arch) string {
@@ -870,7 +1004,6 @@ func select_branch_target(vec[mir_control_edge] edges) int32 {
         return -1
     }
 
-    // Prefer explicit exits to avoid infinite loops in MVP walker.
     var i = 0
     while i < edges.len() {
         if edges[i].label == "false" || edges[i].label == "exit" || edges[i].label == "default" {
