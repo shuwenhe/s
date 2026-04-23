@@ -179,6 +179,7 @@ func make_function_binding(function_decl function_decl) function_binding {
 func check_item(item item, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int32 {
     switch item {
         item.function(function_decl) : check_function(function_decl, functions, source, diagnostics),
+        item.impl(impl_item) : check_impl(impl_item, functions, source, diagnostics),
         _ : 0,
     }
 }
