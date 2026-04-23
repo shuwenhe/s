@@ -99,8 +99,8 @@ def main() -> int:
     gcmap_text = "\n".join(
         [
             "gcmap version=1 arch=amd64 spills=2",
-            "fn main slots=2 ptr_bitmap=10 write_barrier=elided",
-            "fn gc_scan slots=1 ptr_bitmap=1 write_barrier=required",
+            "fn main slots=2 ptr_bitmap=10 write_barrier=elided safepoints=1",
+            "fn gc_scan slots=1 ptr_bitmap=1 write_barrier=required safepoints=2",
         ]
     )
     gc_header, gc_functions = parse_gcmap_text(gcmap_text)
@@ -108,6 +108,7 @@ def main() -> int:
     checks.append(("gcmap parser spills", gc_header.spills == 2))
     checks.append(("gcmap parser fn count", len(gc_functions) == 2))
     checks.append(("gcmap parser barrier", gc_functions[1].write_barrier == "required"))
+    checks.append(("gcmap parser safepoints", gc_functions[1].safepoints == 2))
 
     ok = true
     for label, passed in checks:

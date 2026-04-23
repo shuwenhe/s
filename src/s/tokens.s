@@ -31,7 +31,7 @@ func token_kind_name(token_kind kind) string {
 }
 
 func dump_tokens(vec[token] tokens) string {
-    // golden tests depend on this exact one-token-per-line format.
+
     var out = ""
     for token in tokens {
         if out != "" {
