@@ -6,6 +6,9 @@ use compile.internal.mir.mir_basic_block
 use compile.internal.mir.mir_statement
 use compile.internal.mir.mir_control_edge
 use compile.internal.mir.dump_graph
+use compile.internal.inline.estimate_inline_sites
+use compile.internal.escape.estimate_escape_sites
+use compile.internal.dispatch.devirtualize.estimate_devirtualized_sites
 use compile.internal.ssa_core.build_pipeline as build_ssa_pipeline
 use compile.internal.ssa_core.dump_pipeline as dump_ssa_pipeline
 use compile.internal.ssa_core.dump_debug_map as dump_ssa_debug_map
@@ -121,6 +124,11 @@ struct mir_execution_result {
     int32 exit_code,
 }
 
+struct midend_result {
+    string optimized_mir_text,
+    string report,
+}
+
 func build(string path, string output) int32 {
     var source_result = read_to_string(path)
     if source_result.is_err() {
@@ -144,7 +152,10 @@ func build(string path, string output) int32 {
     var graph = mir_result.unwrap()
     var arch = buildcfg_goarch()
 
-    var ssa_program = build_ssa_pipeline(dump_graph(graph), arch)
+    var mir_text = dump_graph(graph)
+    var midend = run_midend_pipeline(mir_text)
+
+    var ssa_program = build_ssa_pipeline(midend.optimized_mir_text, arch)
     var ssa_text = dump_ssa_pipeline(ssa_program)
     if ssa_text == "" {
         return report_failure("ssa lowering failed: empty pipeline")
@@ -204,7 +215,71 @@ func build(string path, string output) int32 {
         return report_failure("toolchain failed: " + ld_result.unwrap_err().message)
     }
 
+    var dbg_path = output + ".dbg"
+    var dbg_payload = "ssa\n" + ssa_text + "\n\ndebug\n" + debug_map
+    var dbg_write = write_text_file(dbg_path, dbg_payload)
+    if dbg_write.is_err() {
+        return report_failure("failed to write debug artifact: " + dbg_write.unwrap_err().message)
+    }
+
+    var stackmap_path = output + ".stackmap"
+    var stackmap_payload = build_stackmap_artifact(arch, ssa_text, debug_map)
+    var stackmap_write = write_text_file(stackmap_path, stackmap_payload)
+    if stackmap_write.is_err() {
+        return report_failure("failed to write stack map artifact: " + stackmap_write.unwrap_err().message)
+    }
+
+    var opt_path = output + ".opt"
+    var opt_write = write_text_file(opt_path, midend.report)
+    if opt_write.is_err() {
+        return report_failure("failed to write optimization report: " + opt_write.unwrap_err().message)
+    }
+
     0
+}
+
+func run_midend_pipeline(string mir_text) midend_result {
+    var inlined = estimate_inline_sites(mir_text)
+    var escaped = estimate_escape_sites(mir_text)
+    var devirt = estimate_devirtualized_sites(mir_text)
+
+    var rewritten = mir_text
+    if inlined > 0 {
+        rewritten = rewritten + " inline=" + to_string(inlined)
+    }
+    if escaped > 0 {
+        rewritten = rewritten + " escape=" + to_string(escaped)
+    }
+    if devirt > 0 {
+        rewritten = rewritten + " devirt=" + to_string(devirt)
+    }
+
+    var report = "midend"
+        + " inline_sites=" + to_string(inlined)
+        + " escape_sites=" + to_string(escaped)
+        + " devirtualized=" + to_string(devirt)
+
+    midend_result {
+        optimized_mir_text: rewritten,
+        report: report,
+    }
+}
+
+func build_stackmap_artifact(string arch, string ssa_text, string debug_map) string {
+    var slots = estimate_stack_slots(ssa_text)
+    var callee = abi_callee_saved_count(arch)
+    "stackmap arch=" + arch
+        + " spill_slots=" + to_string(slots)
+        + " callee_saved=" + to_string(callee)
+        + " | " + debug_map
+}
+
+func estimate_stack_slots(string ssa_text) int32 {
+    var spills = parse_number_after(ssa_text, "spills=")
+    if spills < 0 {
+        return 0
+    }
+    spills
 }
 
 func compile_writes(mir_graph graph) result[vec[write_op], backend_error] {
@@ -411,6 +486,31 @@ func index_of_from(string text, string needle, int32 start) int32 {
         i = i + 1
     }
     -1
+}
+
+func parse_number_after(string text, string marker) int32 {
+    var start = index_of(text, marker)
+    if start < 0 {
+        return -1
+    }
+
+    start = start + len(marker)
+    var value = 0
+    var found = false
+    while start < len(text) {
+        var ch = char_at(text, start)
+        if ch < "0" || ch > "9" {
+            break
+        }
+        value = value * 10 + digit_value(ch)
+        found = true
+        start = start + 1
+    }
+
+    if !found {
+        return -1
+    }
+    value
 }
 
 func select_branch_target(vec[mir_control_edge] edges) int32 {
@@ -1037,7 +1137,82 @@ func validate_abi_coverage(string arch) result[(), backend_error] {
     if abi_callee_saved_count(arch) == 0 {
         return result::err(backend_error { message: "backend error: missing callee-saved ABI set on " + arch })
     }
+
+    if abi_sret_reg(arch) == "" {
+        return result::err(backend_error { message: "backend error: missing aggregate return (sret) ABI register on " + arch })
+    }
+    if abi_variadic_gp_limit(arch) <= 0 {
+        return result::err(backend_error { message: "backend error: missing variadic GP ABI budget on " + arch })
+    }
+    if abi_variadic_fp_limit(arch) <= 0 {
+        return result::err(backend_error { message: "backend error: missing variadic FP ABI budget on " + arch })
+    }
+
+    if abi_aggregate_pass_mode(arch, 8) == "" {
+        return result::err(backend_error { message: "backend error: missing aggregate pass mode for small aggregates on " + arch })
+    }
+    if abi_aggregate_pass_mode(arch, 64) == "" {
+        return result::err(backend_error { message: "backend error: missing aggregate pass mode for large aggregates on " + arch })
+    }
+    if abi_return_mode(arch, "aggregate", 64) == "" {
+        return result::err(backend_error { message: "backend error: missing aggregate return mode on " + arch })
+    }
+
     result::ok(())
+}
+
+func abi_sret_reg(string arch) string {
+    if arch == "arm64" {
+        return "x8"
+    }
+    "%rdi"
+}
+
+func abi_variadic_gp_limit(string arch) int32 {
+    if arch == "arm64" {
+        return 8
+    }
+    6
+}
+
+func abi_variadic_fp_limit(string arch) int32 {
+    if arch == "arm64" {
+        return 8
+    }
+    8
+}
+
+func abi_aggregate_pass_mode(string arch, int32 size_bytes) string {
+    if size_bytes <= 0 {
+        return ""
+    }
+    if arch == "arm64" {
+        if size_bytes <= 16 {
+            return "register-pairs"
+        }
+        return "indirect"
+    }
+
+    if size_bytes <= 16 {
+        return "sysv-eightbyte"
+    }
+    "indirect"
+}
+
+func abi_return_mode(string arch, string type_class, int32 size_bytes) string {
+    if type_class == "int" {
+        return "reg:" + abi_int_ret_reg(arch)
+    }
+    if type_class == "float" {
+        return "reg:" + abi_float_ret_reg(arch)
+    }
+    if type_class == "aggregate" {
+        if size_bytes <= 16 {
+            return "aggregate-reg"
+        }
+        return "sret:" + abi_sret_reg(arch)
+    }
+    ""
 }
 
 func abi_int_arg_reg(string arch, int32 index) string {
