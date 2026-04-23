@@ -1010,7 +1010,18 @@ func emit_asm_amd64(vec[write_op] writes, int32 exit_code) string {
     data_lines.push(".section .data")
     text_lines.push(".section .text")
     text_lines.push(".global _start")
+    text_lines.push(".global s_main")
     text_lines.push("_start:")
+    text_lines.push("    andq $-16, %rsp")
+    text_lines.push("    call s_main")
+    text_lines.push("    mov %eax, %edi")
+    text_lines.push("    mov $60, %rax")
+    text_lines.push("    syscall")
+    text_lines.push("")
+    text_lines.push("s_main:")
+    text_lines.push("    push %rbp")
+    text_lines.push("    mov %rsp, %rbp")
+    text_lines.push("    sub $16, %rsp")
 
     var message_index = 0
     var i = 0
@@ -1020,9 +1031,9 @@ func emit_asm_amd64(vec[write_op] writes, int32 exit_code) string {
         i = i + 1
     }
 
-    text_lines.push("    mov $60, %rax")
-    text_lines.push("    mov $" + to_string(exit_code) + ", %rdi")
-    text_lines.push("    syscall")
+    text_lines.push("    mov $" + to_string(exit_code) + ", %eax")
+    text_lines.push("    leave")
+    text_lines.push("    ret")
 
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
@@ -1033,7 +1044,15 @@ func emit_asm_arm64(vec[write_op] writes, int32 exit_code) string {
     data_lines.push(".section .data")
     text_lines.push(".section .text")
     text_lines.push(".global _start")
+    text_lines.push(".global s_main")
     text_lines.push("_start:")
+    text_lines.push("    bl s_main")
+    text_lines.push("    mov x8, #93")
+    text_lines.push("    svc #0")
+    text_lines.push("")
+    text_lines.push("s_main:")
+    text_lines.push("    stp x29, x30, [sp, #-16]!")
+    text_lines.push("    mov x29, sp")
 
     var message_index = 0
     var i = 0
@@ -1043,9 +1062,9 @@ func emit_asm_arm64(vec[write_op] writes, int32 exit_code) string {
         i = i + 1
     }
 
-    text_lines.push("    mov x8, #93")
     text_lines.push("    mov x0, #" + to_string(exit_code))
-    text_lines.push("    svc #0")
+    text_lines.push("    ldp x29, x30, [sp], #16")
+    text_lines.push("    ret")
 
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }

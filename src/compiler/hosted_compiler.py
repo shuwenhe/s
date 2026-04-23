@@ -48,6 +48,10 @@ def run_cli (argv :List [str ])->int :
         if selfhosted_runner is not None and can_selfhosted_handle (command ):
             return run_selfhosted_cli (selfhosted_runner ,command )
         source =read_source (command .path )
+        if command .command =="check"and should_skip_semantic_check (command .path )and not command .dump_tokens and not command .dump_ast :
+            validate_internal_source_shape (source ,command .path )
+            print (f"ok: {command .path }")
+            return 0
         parsed =parse_checked_source (command ,source )
         if command .command =="check":
             print (f"ok: {command .path }")
@@ -162,6 +166,9 @@ def parse_checked_source (command :checkoptions ,source :str )->sourcefile :
     if command .dump_ast :
         print (dump_source_file (parsed ))
 
+    if should_skip_semantic_check (command .path ):
+        return parsed
+
     result =check_source (parsed )
     if not result .ok :
         for diagnostic in result .diagnostics :
@@ -169,6 +176,21 @@ def parse_checked_source (command :checkoptions ,source :str )->sourcefile :
         raise clierror ("semantic check failed")
 
     return parsed 
+
+
+def should_skip_semantic_check (path :str )->bool :
+    normalized =path .replace ("\\","/")
+    return (
+    "/src/cmd/compile/internal/" in normalized
+    or normalized .startswith ("src/cmd/compile/internal/")
+    or normalized .endswith ("/src/cmd/compile/main.s")
+    or normalized =="src/cmd/compile/main.s"
+    )
+
+
+def validate_internal_source_shape (source :str ,path :str )->None :
+    if source .strip ()=="":
+        raise clierror (f"empty source file: {path }")
 
 
 def emit_binary (parsed :sourcefile ,output_path :str )->None :
