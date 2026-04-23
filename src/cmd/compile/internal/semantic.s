@@ -65,6 +65,9 @@ struct source_pos {
 struct semantic_error {
     string code
     string message
+    string stage
+    string chain_id
+    string upstream_code
     string severity
     string hint
     string anchor
@@ -135,6 +138,9 @@ func append_anchor_summaries(vec[semantic_error] diagnostics) vec[semantic_error
                 summaries.push(semantic_error {
                     code: "s0001",
                     message: "anchor summary",
+                    stage: "semantic",
+                    chain_id: chain_id_from_anchor(d.anchor),
+                    upstream_code: d.code,
                     severity: "warning",
                     hint: "multiple diagnostics share recovery anchor " + d.anchor,
                     anchor: d.anchor,
@@ -1501,6 +1507,7 @@ func second_type_arg(string type_name) string {
 
 func add_error(string source, vec[semantic_error] mut diagnostics, string code, string message, string anchor) int32 {
     var recovery_anchor = resolve_recovery_anchor(source, anchor)
+    var chain_id = build_chain_id("semantic", code, recovery_anchor)
     var pos = locate_anchor(source, recovery_anchor)
     var severity = diagnostic_severity(code)
     var tier = diagnostic_tier(code)
@@ -1508,6 +1515,9 @@ func add_error(string source, vec[semantic_error] mut diagnostics, string code, 
     diagnostics.push(semantic_error {
         code: code,
         message: message,
+        stage: "semantic",
+        chain_id: chain_id,
+        upstream_code: "",
         severity: severity,
         hint: hint,
         anchor: recovery_anchor,
@@ -1518,6 +1528,32 @@ func add_error(string source, vec[semantic_error] mut diagnostics, string code, 
     })
     ;
     1
+}
+
+func build_chain_id(string stage, string code, string anchor) string {
+    stage + ":" + code + ":" + sanitize_chain_anchor(anchor)
+}
+
+func chain_id_from_anchor(string anchor) string {
+    build_chain_id("semantic", "s0001", anchor)
+}
+
+func sanitize_chain_anchor(string anchor) string {
+    var out = ""
+    var i = 0
+    while i < len(anchor) {
+        var ch = slice(anchor, i, i + 1)
+        if ch == " " || ch == "\t" || ch == "\n" || ch == "\r" {
+            out = out + "_"
+        } else {
+            out = out + ch
+        }
+        i = i + 1
+    }
+    if out == "" {
+        return "root"
+    }
+    out
 }
 
 func resolve_recovery_anchor(string source, string anchor) string {

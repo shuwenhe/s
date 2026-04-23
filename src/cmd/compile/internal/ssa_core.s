@@ -46,7 +46,11 @@ struct ssa_program {
     int32 dag_level_count
     int32 rerun_count
     int32 rollback_checkpoint_count
+    int32 invalidation_rerun_count
+    int32 replay_step_count
+    int32 debug_budget_score
     string pass_topology_log
+    string pass_replay_log
     string rollback_node
     int32 spill_count
     int32 spill_reload_count
@@ -93,9 +97,18 @@ struct ssa_pass_stats {
     int32 dag_level_count
     int32 rerun_count
     int32 rollback_checkpoint_count
+    int32 invalidation_rerun_count
+    int32 replay_step_count
     string pass_topology_log
+    string pass_replay_log
     string rollback_node
     int32 optimized_value_count
+}
+
+struct pass_node_result {
+    int32 rewrites
+    int32 blocked
+    string replay_token
 }
 
 struct ssa_dataflow_model {
@@ -135,6 +148,7 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         optimized_value_count = value_count
     }
     var allocation = linear_scan_regalloc_with_spill(rewritten, optimized_value_count, goarch)
+    var debug_budget = compute_debug_budget(pass_stats, allocation)
     var debug_lines = build_debug_lines(rewritten, allocation.allocated_regs)
     var debug_var_locations = build_var_locations(allocation.allocated_regs)
 
@@ -172,7 +186,11 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         dag_level_count: pass_stats.dag_level_count,
         rerun_count: pass_stats.rerun_count,
         rollback_checkpoint_count: pass_stats.rollback_checkpoint_count,
+        invalidation_rerun_count: pass_stats.invalidation_rerun_count,
+        replay_step_count: pass_stats.replay_step_count,
+        debug_budget_score: debug_budget,
         pass_topology_log: pass_stats.pass_topology_log,
+        pass_replay_log: pass_stats.pass_replay_log,
         rollback_node: pass_stats.rollback_node,
         spill_count: allocation.spill_count,
         spill_reload_count: allocation.spill_reload_count,
@@ -491,9 +509,12 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     var dag_levels = 0
     var reruns = 0
     var rollback_points = 0
+    var invalidation_reruns = 0
+    var replay_steps = 0
     var stable_iters = 0
     var rollback_value = current
     var topology_log = ""
+    var replay_log = ""
     var rollback_node = "none"
 
     var prev = -1
@@ -517,44 +538,55 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         scheduled_passes = scheduled_passes + 6
         dag_levels = dag_levels + pass_dag_level_count(model)
 
-        var gvn_i = raw_gvn
-        var cse_i = raw_cse
+        var gvn_node = execute_pass_node("gvn", true, raw_gvn)
+        var gvn_i = gvn_node.rewrites
+
+        var cse_node = execute_pass_node("cse", true, raw_cse)
+        var cse_i = cse_node.rewrites
 
         var sccp_ready = pass_dependency_ready_sccp(model, gvn_i)
-        var sccp_i = 0
-        if sccp_ready {
-            sccp_i = raw_sccp
-        } else if raw_sccp > 0 {
-            blocked_passes = blocked_passes + 1
+        var sccp_node = execute_pass_node("sccp", sccp_ready, raw_sccp)
+        var sccp_i = sccp_node.rewrites
+        blocked_passes = blocked_passes + sccp_node.blocked
+        if sccp_node.blocked > 0 {
             rollback_node = "sccp"
         }
 
         var pre_ready = pass_dependency_ready_pre(model, gvn_i, cse_i)
-        var pre_i = 0
-        if pre_ready {
-            pre_i = raw_pre
-        } else if raw_pre > 0 {
-            blocked_passes = blocked_passes + 1
+        var pre_node = execute_pass_node("pre", pre_ready, raw_pre)
+        var pre_i = pre_node.rewrites
+        blocked_passes = blocked_passes + pre_node.blocked
+        if pre_node.blocked > 0 {
             rollback_node = "pre"
         }
 
         var licm_ready = pass_dependency_ready_licm(model, gvn_i + sccp_i + pre_i)
-        var licm_i = 0
-        if licm_ready {
-            licm_i = raw_licm
-        } else if raw_licm > 0 {
-            blocked_passes = blocked_passes + 1
+        var licm_node = execute_pass_node("licm", licm_ready, raw_licm)
+        var licm_i = licm_node.rewrites
+        blocked_passes = blocked_passes + licm_node.blocked
+        if licm_node.blocked > 0 {
             rollback_node = "licm"
         }
 
         var bce_ready = pass_dependency_ready_bce(model)
-        var bce_i = 0
-        if bce_ready {
-            bce_i = raw_bce
-        } else if raw_bce > 0 {
-            blocked_passes = blocked_passes + 1
+        var bce_node = execute_pass_node("bce", bce_ready, raw_bce)
+        var bce_i = bce_node.rewrites
+        blocked_passes = blocked_passes + bce_node.blocked
+        if bce_node.blocked > 0 {
             rollback_node = "bce"
         }
+
+        var iter_replay = gvn_node.replay_token
+            + "," + sccp_node.replay_token
+            + "," + pre_node.replay_token
+            + "," + cse_node.replay_token
+            + "," + licm_node.replay_token
+            + "," + bce_node.replay_token
+        if replay_log != "" {
+            replay_log = replay_log + ";"
+        }
+        replay_log = replay_log + "iter" + to_string(fixed_iters) + "=" + iter_replay
+        replay_steps = replay_steps + replay_step_count_from_iter(iter_replay)
 
         gvn_rewrites = gvn_rewrites + gvn_i
         sccp_rewrites = sccp_rewrites + sccp_i
@@ -572,6 +604,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
             stable_iters = stable_iters + 1
             if blocked_passes > 0 && fixed_iters + 1 < max_iters {
                 reruns = reruns + 1
+                invalidation_reruns = invalidation_reruns + blocked_passes
             }
         } else {
             stable_iters = 0
@@ -640,10 +673,61 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         dag_level_count: dag_levels,
         rerun_count: reruns,
         rollback_checkpoint_count: rollback_points,
+        invalidation_rerun_count: invalidation_reruns,
+        replay_step_count: replay_steps,
         pass_topology_log: topology_log,
+        pass_replay_log: replay_log,
         rollback_node: rollback_node,
         optimized_value_count: current,
     }
+}
+
+func execute_pass_node(string name, bool ready, int32 raw_rewrites) pass_node_result {
+    if ready {
+        return pass_node_result {
+            rewrites: raw_rewrites,
+            blocked: 0,
+            replay_token: name + ":ok(" + to_string(raw_rewrites) + ")",
+        }
+    }
+    if raw_rewrites > 0 {
+        return pass_node_result {
+            rewrites: 0,
+            blocked: 1,
+            replay_token: name + ":blocked",
+        }
+    }
+    pass_node_result {
+        rewrites: 0,
+        blocked: 0,
+        replay_token: name + ":idle",
+    }
+}
+
+func replay_step_count_from_iter(string iter_replay) int32 {
+    count_token(iter_replay, ",") + 1
+}
+
+func compute_debug_budget(ssa_pass_stats pass_stats, regalloc_result allocation) int32 {
+    var score = 100
+    score = score - pass_stats.gvn_rewrite_count
+    score = score - pass_stats.sccp_rewrite_count
+    score = score - pass_stats.pre_eliminated_count
+    score = score - pass_stats.cse_eliminated_count
+    score = score - pass_stats.licm_hoisted_count
+    score = score - pass_stats.bce_removed_count
+    score = score - allocation.spill_count * 2
+    score = score - allocation.live_range_splits
+    if pass_stats.rollback_count > 0 {
+        score = score - 10
+    }
+    if score < 0 {
+        return 0
+    }
+    if score > 100 {
+        return 100
+    }
+    score
 }
 
 func pass_topological_order(ssa_dataflow_model model) string {
@@ -1012,8 +1096,12 @@ func dump_pipeline(ssa_program program) string {
         + " dag_levels=" + to_string(program.dag_level_count)
         + " reruns=" + to_string(program.rerun_count)
         + " rollback_pts=" + to_string(program.rollback_checkpoint_count)
+        + " invalid_reruns=" + to_string(program.invalidation_rerun_count)
+        + " replay_steps=" + to_string(program.replay_step_count)
+        + " dbg_budget=" + to_string(program.debug_budget_score)
         + " rollback_node=" + program.rollback_node
         + " pass_topo=" + program.pass_topology_log
+        + " pass_replay=" + program.pass_replay_log
         + " cfg_edges=" + to_string(program.cfg_edge_count)
         + " branches=" + to_string(program.branch_block_count)
         + " spills=" + to_string(program.spill_count)
