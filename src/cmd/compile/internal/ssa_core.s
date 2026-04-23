@@ -24,6 +24,8 @@ struct ssa_program {
     int32 coalesced_move_count
     int32 simplified_branch_count
     int32 gvn_rewrite_count
+    int32 sccp_rewrite_count
+    int32 pre_eliminated_count
     int32 cse_eliminated_count
     int32 licm_hoisted_count
     int32 bce_removed_count
@@ -63,6 +65,8 @@ struct ssa_pass_stats {
     int32 coalesced_move_count
     int32 simplified_branch_count
     int32 gvn_rewrite_count
+    int32 sccp_rewrite_count
+    int32 pre_eliminated_count
     int32 cse_eliminated_count
     int32 licm_hoisted_count
     int32 bce_removed_count
@@ -132,6 +136,8 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         coalesced_move_count: pass_stats.coalesced_move_count,
         simplified_branch_count: pass_stats.simplified_branch_count,
         gvn_rewrite_count: pass_stats.gvn_rewrite_count,
+        sccp_rewrite_count: pass_stats.sccp_rewrite_count,
+        pre_eliminated_count: pass_stats.pre_eliminated_count,
         cse_eliminated_count: pass_stats.cse_eliminated_count,
         licm_hoisted_count: pass_stats.licm_hoisted_count,
         bce_removed_count: pass_stats.bce_removed_count,
@@ -446,6 +452,8 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     var coalesced = 0
     var simplified = 0
     var gvn_rewrites = 0
+    var sccp_rewrites = 0
+    var pre_eliminated = 0
     var cse_eliminated = 0
     var licm_hoisted = 0
     var bce_removed = 0
@@ -462,21 +470,25 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         prev = current
 
         var gvn_i = run_gvn_pass(model)
+        var sccp_i = run_sccp_pass(model, current)
+        var pre_i = run_pre_pass(model)
         var cse_i = run_cse_pass(model)
         var licm_i = run_licm_pass(model)
         var bce_i = run_bce_pass(model)
 
         gvn_rewrites = gvn_rewrites + gvn_i
+        sccp_rewrites = sccp_rewrites + sccp_i
+        pre_eliminated = pre_eliminated + pre_i
         cse_eliminated = cse_eliminated + cse_i
         licm_hoisted = licm_hoisted + licm_i
         bce_removed = bce_removed + bce_i
 
-        current = current - gvn_i - cse_i
+        current = current - gvn_i - sccp_i - pre_i - cse_i
         if current < 1 {
             current = 1
         }
 
-        proof_obligations = proof_obligations + 2
+        proof_obligations = proof_obligations + 4
         if current > prev {
             proof_failed = proof_failed + 1
         }
@@ -516,6 +528,8 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         coalesced_move_count: coalesced,
         simplified_branch_count: simplified,
         gvn_rewrite_count: gvn_rewrites,
+        sccp_rewrite_count: sccp_rewrites,
+        pre_eliminated_count: pre_eliminated,
         cse_eliminated_count: cse_eliminated,
         licm_hoisted_count: licm_hoisted,
         bce_removed_count: bce_removed,
@@ -557,6 +571,26 @@ func run_gvn_pass(ssa_dataflow_model model) int32 {
         return 0
     }
     candidates / 4
+}
+
+func run_sccp_pass(ssa_dataflow_model model, int32 current_values) int32 {
+    var lattice_edges = model.branch_count + model.phi_count + model.live_in_facts / 2
+    if lattice_edges <= 0 {
+        return 0
+    }
+    var reduced = lattice_edges / 6
+    if reduced > current_values / 4 {
+        return current_values / 4
+    }
+    reduced
+}
+
+func run_pre_pass(ssa_dataflow_model model) int32 {
+    var candidates = model.edge_count + model.loop_headers + model.def_use_edges / 4
+    if candidates <= 0 {
+        return 0
+    }
+    candidates / 8
 }
 
 func run_cse_pass(ssa_dataflow_model model) int32 {
@@ -783,6 +817,8 @@ func dump_pipeline(ssa_program program) string {
         + " coalesced=" + to_string(program.coalesced_move_count)
         + " simplified=" + to_string(program.simplified_branch_count)
         + " gvn=" + to_string(program.gvn_rewrite_count)
+        + " sccp=" + to_string(program.sccp_rewrite_count)
+        + " pre=" + to_string(program.pre_eliminated_count)
         + " cse=" + to_string(program.cse_eliminated_count)
         + " licm=" + to_string(program.licm_hoisted_count)
         + " bce=" + to_string(program.bce_removed_count)

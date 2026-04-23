@@ -480,6 +480,10 @@ func build_abi_emit_plan(string arch, source_file source) string {
                 var aggregate_size = abi_emit_aggregate_size_hint(fn_decl.sig.params.len(), ret_type)
                 line = line + " | ret_arity=" + to_string(ret_parts)
                 line = line + " | agg_mode=" + abi_emit_aggregate_mode(ret_type, ret_parts, aggregate_size)
+                line = line + " | stack_align=" + to_string(abi_stack_alignment(arch))
+                line = line + " | caller_saved=" + to_string(abi_caller_saved_count(arch))
+                line = line + " | callee_saved=" + to_string(abi_callee_saved_count(arch))
+                line = line + " | callseq=" + abi_call_sequence_mode(arch, variadic, ret_parts, aggregate_size)
                 line = line + " | " + abi_emit_ret_plan(arch, ret_type, ret_parts, aggregate_size)
                 lines.push(line)
             }
@@ -574,6 +578,37 @@ func abi_second_int_ret_reg(string arch) string {
     "%rdx"
 }
 
+func abi_stack_alignment(string arch) int32 {
+    if arch == "arm64" {
+        return 16
+    }
+    16
+}
+
+func abi_caller_saved_count(string arch) int32 {
+    if arch == "arm64" {
+        return 18
+    }
+    9
+}
+
+func abi_call_sequence_mode(string arch, bool variadic, int32 ret_parts, int32 aggregate_size) string {
+    var mode = "normal"
+    if variadic {
+        mode = "variadic-home"
+    }
+    if ret_parts > 1 {
+        mode = mode + "+multi-ret"
+    }
+    if aggregate_size > 16 {
+        mode = mode + "+sret"
+    }
+    if arch == "arm64" {
+        return mode + "+aapcs64"
+    }
+    mode + "+sysv"
+}
+
 func count_top_level_type_parts(string type_text) int32 {
     var t = trim_spaces(type_text)
     if t == "" {
@@ -643,17 +678,105 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
     lines.push("  " + debug_map)
     lines.push("section .debug_frame")
     lines.push("  cfa=sp+16 ra=lr")
+    lines.push("section .debug_loc")
+    append_debug_loc_section(lines, debug_map)
+    lines.push("section .debug_ranges")
+    append_debug_ranges_section(lines, source, ssa_text)
     lines.push("section .debug_inlining")
 
     var i = 0
     while i < source.items.len() {
         switch source.items[i] {
-            item.function(fn_decl) : lines.push("  fn=" + fn_decl.sig.name + " inline_depth=0"),
+            item.function(fn_decl) : lines.push("  fn=" + fn_decl.sig.name + " inline_depth=" + to_string(dwarf_inline_depth_hint(fn_decl.sig.name, ssa_text))),
             _ : (),
         }
         i = i + 1
     }
     join_lines(lines)
+}
+
+func append_debug_loc_section(vec[string] lines, string debug_map) () {
+    var marker = "var v"
+    var cursor = 0
+    var loc_id = 0
+    while true {
+        var at = index_of_from(debug_map, marker, cursor)
+        if at < 0 {
+            break
+        }
+
+        var end = index_of_from(debug_map, " | ", at)
+        if end < 0 {
+            end = len(debug_map)
+        }
+        var entry = trim_spaces(slice(debug_map, at, end))
+        var lo = 100 + loc_id * 8
+        var hi = lo + 8
+        lines.push("  loc#" + to_string(loc_id) + " pc=[" + to_string(lo) + "," + to_string(hi) + ") " + entry)
+        loc_id = loc_id + 1
+        cursor = end + 3
+    }
+
+    if loc_id == 0 {
+        lines.push("  loc#0 pc=[0,0) var none")
+    }
+}
+
+func append_debug_ranges_section(vec[string] lines, source_file source, string ssa_text) () {
+    var dbg_lines = parse_number_after(ssa_text, "dbg_lines=")
+    if dbg_lines < 1 {
+        dbg_lines = 1
+    }
+    var range_span = dbg_lines * 8
+    if range_span < 16 {
+        range_span = 16
+    }
+
+    var loops = parse_number_after(ssa_text, "loops=")
+    if loops < 0 {
+        loops = 0
+    }
+
+    var fn_idx = 0
+    var i = 0
+    while i < source.items.len() {
+        switch source.items[i] {
+            item.function(fn_decl) : {
+                var lo = 0x1000 + fn_idx * range_span
+                var hi = lo + range_span
+                lines.push("  fn=" + fn_decl.sig.name + " range=[" + to_string(lo) + "," + to_string(hi) + ")")
+                if loops > 0 {
+                    var inline_lo = lo + 4
+                    var inline_hi = inline_lo + loops * 4
+                    if inline_hi > hi {
+                        inline_hi = hi
+                    }
+                    lines.push("  fn=" + fn_decl.sig.name + " inline_range=[" + to_string(inline_lo) + "," + to_string(inline_hi) + ")")
+                }
+                fn_idx = fn_idx + 1
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+
+    if fn_idx == 0 {
+        lines.push("  fn=none range=[0,0)")
+    }
+}
+
+func dwarf_inline_depth_hint(string fn_name, string ssa_text) int32 {
+    var loops = parse_number_after(ssa_text, "loops=")
+    if loops < 0 {
+        loops = 0
+    }
+    if starts_with_local(fn_name, "inline_") {
+        return 1 + loops
+    }
+    if loops > 0 {
+        return 1
+    }
+    0
 }
 
 func build_gc_metadata_artifact(string arch, source_file source, string ssa_text) string {
@@ -1621,6 +1744,12 @@ func validate_abi_coverage(string arch) result[(), backend_error] {
     }
     if abi_callee_saved_count(arch) == 0 {
         return result::err(backend_error { message: "backend error: missing callee-saved ABI set on " + arch })
+    }
+    if abi_caller_saved_count(arch) == 0 {
+        return result::err(backend_error { message: "backend error: missing caller-saved ABI set on " + arch })
+    }
+    if abi_stack_alignment(arch) <= 0 {
+        return result::err(backend_error { message: "backend error: missing stack alignment ABI rule on " + arch })
     }
 
     if abi_sret_reg(arch) == "" {

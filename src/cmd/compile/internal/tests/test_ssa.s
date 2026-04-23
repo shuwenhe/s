@@ -36,6 +36,12 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, "gvn=") {
         return 1
     }
+    if !contains(arm64_dump, "sccp=") {
+        return 1
+    }
+    if !contains(arm64_dump, "pre=") {
+        return 1
+    }
     if !contains(arm64_dump, "cse=") {
         return 1
     }
