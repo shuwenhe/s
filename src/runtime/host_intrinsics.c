@@ -5,29 +5,29 @@
 #include <stdlib.h>
 #include <string.h>
 
-static char **g_args = null;
+static char **g_args = NULL;
 static size_t g_argc = 0;
 
 static void free_args(void) {
-    if (g_args == null) {
+    if (g_args == NULL) {
         return;
     }
     for (size_t i = 0; i < g_argc; i++) {
         free(g_args[i]);
     }
     free(g_args);
-    g_args = null;
+    g_args = NULL;
     g_argc = 0;
 }
 
 static char *dup_cstr(const char *text) {
-    if (text == null) {
-        return null;
+    if (text == NULL) {
+        return NULL;
     }
     size_t len = strlen(text);
     char *out = (char *)malloc(len + 1);
-    if (out == null) {
-        return null;
+    if (out == NULL) {
+        return NULL;
     }
     memcpy(out, text, len);
     out[len] = '\0';
@@ -36,7 +36,7 @@ static char *dup_cstr(const char *text) {
 
 int host_intrinsics_init(size_t argc, const char *const *argv) {
     free_args();
-    if (argc == 0 || argv == null) {
+    if (argc == 0 || argv == NULL) {
         return 0;
     }
     if (argc <= 1) {
@@ -44,13 +44,13 @@ int host_intrinsics_init(size_t argc, const char *const *argv) {
     }
     g_argc = argc - 1;
     g_args = (char **)calloc(g_argc, sizeof(char *));
-    if (g_args == null) {
+    if (g_args == NULL) {
         g_argc = 0;
         return -1;
     }
     for (size_t i = 0; i < g_argc; i++) {
         g_args[i] = dup_cstr(argv[i + 1]);
-        if (g_args[i] == null) {
+        if (g_args[i] == NULL) {
             free_args();
             return -1;
         }
@@ -63,27 +63,27 @@ size_t host_intrinsics_argc(void) {
 }
 
 const char *host_intrinsics_argv(size_t index) {
-    if (index >= g_argc || g_args == null) {
-        return null;
+    if (index >= g_argc || g_args == NULL) {
+        return NULL;
     }
     return g_args[index];
 }
 
 const char *host_intrinsics_get_env(const char *key) {
-    if (key == null) {
-        return null;
+    if (key == NULL) {
+        return NULL;
     }
     return getenv(key);
 }
 
 void host_intrinsics_println(const char *text) {
-    fputs(text == null ? "" : text, stdout);
+    fputs(text == NULL ? "" : text, stdout);
     fputc('\n', stdout);
     fflush(stdout);
 }
 
 void host_intrinsics_eprintln(const char *text) {
-    fputs(text == null ? "" : text, stderr);
+    fputs(text == NULL ? "" : text, stderr);
     fputc('\n', stderr);
     fflush(stderr);
 }
