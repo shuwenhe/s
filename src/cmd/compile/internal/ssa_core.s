@@ -6,47 +6,102 @@ use std.prelude.slice
 use std.prelude.to_string
 use std.vec.vec
 
+struct ssa_pipeline_options {
+    bool enable_dce,
+    bool enable_coalesce,
+    bool enable_simplify_cfg,
+}
+
 struct ssa_program {
     string function_name,
     int32 block_count,
     int32 value_count,
+    int32 cfg_edge_count,
+    int32 branch_block_count,
+    int32 optimized_value_count,
+    int32 folded_constant_count,
+    int32 dce_removed_count,
+    int32 coalesced_move_count,
+    int32 simplified_branch_count,
+    int32 spill_count,
+    int32 debug_line_count,
     vec[string] allocated_regs,
+    vec[string] debug_lines,
+}
+
+struct ssa_pass_stats {
+    int32 folded_constant_count,
+    int32 dce_removed_count,
+    int32 coalesced_move_count,
+    int32 simplified_branch_count,
+    int32 optimized_value_count,
 }
 
 func build_pipeline(string mir_text, string goarch) ssa_program {
+    return build_pipeline_with_options(mir_text, goarch, default_options())
+}
+
+func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_options options) ssa_program {
     var function_name = parse_function_name(mir_text)
     var block_count = parse_int_after(mir_text, "blocks=")
-    var value_count = count_token(mir_text, " stmts=")
+    var value_count = parse_total_stmt_count(mir_text)
     if value_count == 0 {
         value_count = block_count
     }
+    var pass_stats = run_optimization_passes(mir_text, value_count, options)
+    var optimized_value_count = pass_stats.optimized_value_count
+    var allocation = linear_scan_regalloc_with_spill(optimized_value_count, goarch)
+    var debug_lines = build_debug_lines(mir_text, allocation.allocated_regs)
 
     ssa_program {
         function_name: function_name,
         block_count: block_count,
         value_count: value_count,
-        allocated_regs: linear_scan_regalloc(value_count, goarch),
+        cfg_edge_count: estimate_cfg_edges(mir_text),
+        branch_block_count: count_token(mir_text, " term=branch"),
+        optimized_value_count: optimized_value_count,
+        folded_constant_count: pass_stats.folded_constant_count,
+        dce_removed_count: pass_stats.dce_removed_count,
+        coalesced_move_count: pass_stats.coalesced_move_count,
+        simplified_branch_count: pass_stats.simplified_branch_count,
+        spill_count: allocation.spill_count,
+        debug_line_count: debug_lines.len(),
+        allocated_regs: allocation.allocated_regs,
+        debug_lines: debug_lines,
     }
 }
 
-func linear_scan_regalloc(int32 value_count, string goarch) vec[string] {
+struct regalloc_result {
+    vec[string] allocated_regs,
+    int32 spill_count,
+}
+
+func linear_scan_regalloc_with_spill(int32 value_count, string goarch) regalloc_result {
     var regs = register_bank(goarch)
     if regs.len() == 0 {
-        return vec[string]()
+        return regalloc_result {
+            allocated_regs: vec[string](),
+            spill_count: value_count,
+        }
     }
 
     var out = vec[string]()
+    var spills = 0
     var i = 0
     while i < value_count {
-        var reg_index = i
-        while reg_index >= regs.len() {
-            reg_index = reg_index - regs.len()
+        if i < regs.len() {
+            out.push(regs[i])
+        } else {
+            out.push("spill(" + to_string(i - regs.len()) + ")")
+            spills = spills + 1
         }
-        out.push(regs[reg_index])
         i = i + 1
     }
 
-    out
+    regalloc_result {
+        allocated_regs: out,
+        spill_count: spills,
+    }
 }
 
 func register_bank(string goarch) vec[string] {
@@ -69,6 +124,94 @@ func register_bank(string goarch) vec[string] {
     regs.push("r14")
     regs.push("r15")
     regs
+}
+
+func default_options() ssa_pipeline_options {
+    ssa_pipeline_options {
+        enable_dce: true,
+        enable_coalesce: true,
+        enable_simplify_cfg: true,
+    }
+}
+
+func run_optimization_passes(string mir_text, int32 value_count, ssa_pipeline_options options) ssa_pass_stats {
+    var current = value_count
+    var folded = run_constant_fold_pass(mir_text)
+    current = current - folded
+    if current < 1 {
+        current = 1
+    }
+
+    var dce_removed = 0
+    var coalesced = 0
+    var simplified = 0
+
+    if options.enable_dce {
+        dce_removed = run_dce_pass(current, count_token(mir_text, " stmts=0"))
+        current = current - dce_removed
+        if current < 1 {
+            current = 1
+        }
+    }
+    if options.enable_coalesce {
+        coalesced = run_coalesce_pass(current, count_token(mir_text, " term=jump"))
+        current = current - coalesced
+        if current < 1 {
+            current = 1
+        }
+    }
+    if options.enable_simplify_cfg {
+        simplified = run_cfg_simplify_pass(current, count_token(mir_text, " term=branch"))
+        current = current - simplified
+        if current < 1 {
+            current = 1
+        }
+    }
+
+    ssa_pass_stats {
+        folded_constant_count: folded,
+        dce_removed_count: dce_removed,
+        coalesced_move_count: coalesced,
+        simplified_branch_count: simplified,
+        optimized_value_count: current,
+    }
+}
+
+func run_constant_fold_pass(string mir_text) int32 {
+    var fold_sites = count_token(mir_text, " term=return") + count_token(mir_text, " term=jump")
+    if fold_sites <= 0 {
+        return 0
+    }
+    fold_sites / 2
+}
+
+func run_dce_pass(int32 value_count, int32 empty_blocks) int32 {
+    var reduced = value_count - empty_blocks
+    if reduced < 0 {
+        return 0
+    }
+    value_count - reduced
+}
+
+func run_coalesce_pass(int32 value_count, int32 jump_blocks) int32 {
+    var reduce = jump_blocks / 2
+    if reduce < 0 {
+        return 0
+    }
+    if reduce > value_count {
+        return value_count
+    }
+    reduce
+}
+
+func run_cfg_simplify_pass(int32 value_count, int32 branch_blocks) int32 {
+    if branch_blocks == 0 {
+        return 0
+    }
+    if value_count <= 1 {
+        return 0
+    }
+    1
 }
 
 func parse_function_name(string mir_text) string {
@@ -113,10 +256,66 @@ func count_token(string text, string token) int32 {
     total
 }
 
+func parse_total_stmt_count(string mir_text) int32 {
+    var total = 0
+    var marker = " stmts="
+    var i = 0
+    while i <= mir_text.len() - marker.len() {
+        if slice(mir_text, i, i + marker.len()) == marker {
+            var cursor = i + marker.len()
+            var value = 0
+            while cursor < mir_text.len() && is_digit(char_at(mir_text, cursor)) {
+                value = value * 10 + parse_digit(char_at(mir_text, cursor))
+                cursor = cursor + 1
+            }
+            total = total + value
+            i = cursor
+        } else {
+            i = i + 1
+        }
+    }
+    total
+}
+
+func estimate_cfg_edges(string mir_text) int32 {
+    var jumps = count_token(mir_text, " term=jump")
+    var branches = count_token(mir_text, " term=branch")
+    var returns = count_token(mir_text, " term=return")
+    jumps + branches * 2 + returns
+}
+
+func build_debug_lines(string mir_text, vec[string] allocated_regs) vec[string] {
+    var out = vec[string]()
+    var blocks = parse_int_after(mir_text, "blocks=")
+    if blocks <= 0 {
+        blocks = 1
+    }
+
+    var i = 0
+    while i < allocated_regs.len() {
+        var block = i
+        while block >= blocks {
+            block = block - blocks
+        }
+        out.push("line " + to_string(100 + i) + " -> bb" + to_string(block) + " -> " + allocated_regs[i])
+        i = i + 1
+    }
+    out
+}
+
 func dump_pipeline(ssa_program program) string {
     var out = "ssa " + program.function_name
         + " blocks=" + to_string(program.block_count)
         + " values=" + to_string(program.value_count)
+        + " opt_values=" + to_string(program.optimized_value_count)
+        + " folded=" + to_string(program.folded_constant_count)
+        + " dce=" + to_string(program.dce_removed_count)
+        + " coalesced=" + to_string(program.coalesced_move_count)
+        + " simplified=" + to_string(program.simplified_branch_count)
+        + " cfg_edges=" + to_string(program.cfg_edge_count)
+        + " branches=" + to_string(program.branch_block_count)
+        + " spills=" + to_string(program.spill_count)
+        + " dbg_lines=" + to_string(program.debug_line_count)
 
     var i = 0
     while i < program.allocated_regs.len() {
@@ -124,6 +323,24 @@ func dump_pipeline(ssa_program program) string {
         i = i + 1
     }
 
+    out
+}
+
+func dump_debug_map(ssa_program program) string {
+    var out = "ssa.debug " + program.function_name
+        + " values=" + to_string(program.optimized_value_count)
+        + " spills=" + to_string(program.spill_count)
+
+    var i = 0
+    while i < program.allocated_regs.len() {
+        out = out + " | value#" + to_string(i) + " reg=" + program.allocated_regs[i]
+        i = i + 1
+    }
+    i = 0
+    while i < program.debug_lines.len() {
+        out = out + " | " + program.debug_lines[i]
+        i = i + 1
+    }
     out
 }
 

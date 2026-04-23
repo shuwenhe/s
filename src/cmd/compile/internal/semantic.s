@@ -7,6 +7,7 @@ use compile.internal.typesys.base_type_name
 use compile.internal.typesys.extract_type_args
 use compile.internal.typesys.parse_type
 use compile.internal.typesys.parse_type_ref
+use compile.internal.typesys.rules_consistent
 use compile.internal.typesys.same_type
 use compile.internal.typesys.same_type_ref
 use compile.internal.typesys.type_arg
@@ -77,6 +78,11 @@ func check_text(string source) int32 {
 
 func check_detailed(string source) vec[semantic_error] {
     var diagnostics = vec[semantic_error]()
+
+    if !rules_consistent() {
+        add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
+        return diagnostics
+    }
 
     var parsed = parse_source(source)
     if parsed.is_err() {

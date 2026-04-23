@@ -80,6 +80,32 @@ func type_arg(type_ref ty, int32 index) string {
     parse_type(ty.args[index])
 }
 
+func rules_consistent() bool {
+    if parse_type("  int32  ") != "int32" {
+        return false
+    }
+    if !same_type("[]int32", "[]int32") {
+        return false
+    }
+
+    var result_ref = parse_type_ref("result[int32, string]")
+    if result_ref.base != "result" {
+        return false
+    }
+    if type_arg(result_ref, 0) != "int32" {
+        return false
+    }
+    if type_arg(result_ref, 1) != "string" {
+        return false
+    }
+
+    var ref_ref = parse_type_ref("&mut []int32")
+    if !ref_ref.is_ref || !ref_ref.is_mut_ref {
+        return false
+    }
+    true
+}
+
 func dump_type(string ty) string {
     return parse_type(ty)
 }
