@@ -473,6 +473,8 @@ func build_toolchain_compat_artifact(source_file source, string arch) string {
     lines.push("cgo=unsupported asm=partial linker=elf64 archive=partial relocation=partial")
     lines.push("functions=" + to_string(function_item_count(source)) + " interoperability=baseline build_cache=phase-aware")
     lines.push("matrix module,build_tags,test,cover,profile,cgo,asm,linker,archive,relocation")
+    lines.push("gate coverage=min profile=min fuzz=planned stability=rolling")
+    lines.push("interop cgo=roadmap asm=bridge linker=elf64-only")
     join_lines(lines)
 }
 
@@ -491,6 +493,12 @@ func validate_toolchain_compat_artifact(string payload) result[(), backend_error
     }
     if !has_substring(payload, "matrix ") {
         return result::err(backend_error { message: "backend error: toolchain compatibility matrix missing" })
+    }
+    if !has_substring(payload, "gate coverage=") {
+        return result::err(backend_error { message: "backend error: toolchain compatibility gate missing" })
+    }
+    if !has_substring(payload, "interop cgo=") {
+        return result::err(backend_error { message: "backend error: toolchain compatibility interop roadmap missing" })
     }
     result::ok(())
 }
@@ -1078,6 +1086,7 @@ func build_backend_perf_baseline_artifact(string arch, string ssa_text, string m
         + " sched_lat=" + to_string(parse_number_after(ssa_text, "sched_lat=")))
     lines.push("midend " + midend_report)
     lines.push("regression_gate p95_latency=stable throughput=stable")
+    lines.push("regression_gate_long p99_latency=watch code_size=watch compile_time=watch")
     join_lines(lines)
 }
 
@@ -1090,6 +1099,9 @@ func validate_backend_perf_baseline(string payload) result[(), backend_error] {
     }
     if !has_substring(payload, "ssa spills=") {
         return result::err(backend_error { message: "backend error: perf baseline SSA metrics missing" })
+    }
+    if !has_substring(payload, "regression_gate_long ") {
+        return result::err(backend_error { message: "backend error: perf baseline long regression gate missing" })
     }
     result::ok(())
 }

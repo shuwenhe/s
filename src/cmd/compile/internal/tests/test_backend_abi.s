@@ -135,12 +135,21 @@ func run_backend_abi_suite() int32 {
     if !contains(toolchain, "matrix ") {
         return 1
     }
+    if !contains(toolchain, "gate coverage=") {
+        return 1
+    }
+    if !contains(toolchain, "interop cgo=") {
+        return 1
+    }
 
     var perf = build_backend_perf_baseline_artifact("amd64", "ssa pair blocks=2 values=4 spills=2 splits=1 remat=1 sched_tp=8 sched_lat=5", "midend inline_sites=2")
     if !contains(perf, "perf-baseline version=1") {
         return 1
     }
     if !contains(perf, "regression_gate ") {
+        return 1
+    }
+    if !contains(perf, "regression_gate_long ") {
         return 1
     }
 
