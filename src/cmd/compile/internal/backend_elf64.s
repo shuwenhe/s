@@ -252,6 +252,13 @@ func build(string path, string output) int32 {
         return report_failure("failed to write ABI behavior artifact: " + abi_write.unwrap_err().message)
     }
 
+    var abi_emit_path = output + ".abi.emit"
+    var abi_emit_payload = build_abi_emit_plan(arch, parsed)
+    var abi_emit_write = write_text_file(abi_emit_path, abi_emit_payload)
+    if abi_emit_write.is_err() {
+        return report_failure("failed to write ABI emission artifact: " + abi_emit_write.unwrap_err().message)
+    }
+
     var dwarf_path = output + ".dwarf"
     var dwarf_payload = build_dwarf_like_artifact(parsed, ssa_text, debug_map)
     var dwarf_write = write_text_file(dwarf_path, dwarf_payload)
@@ -445,6 +452,38 @@ func build_abi_behavior_artifact(string arch, source_file source) string {
         i = i + 1
     }
     join_lines(lines)
+}
+
+func build_abi_emit_plan(string arch, source_file source) string {
+    var lines = vec[string]()
+    lines.push("abi-emit version=1 arch=" + arch)
+
+    var i = 0
+    while i < source.items.len() {
+        switch source.items[i] {
+            item.function(fn_decl) : {
+                var line = "fn " + fn_decl.sig.name
+                var p = 0
+                while p < fn_decl.sig.params.len() {
+                    line = line + " | a" + to_string(p) + "->" + abi_param_location(arch, p)
+                    p = p + 1
+                }
+                line = line + " | ret->" + abi_int_ret_reg(arch)
+                lines.push(line)
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    join_lines(lines)
+}
+
+func abi_param_location(string arch, int32 index) string {
+    var reg = abi_int_arg_reg(arch, index)
+    if reg == "" {
+        return "stack+" + to_string((index - abi_variadic_gp_limit(arch)) * 8)
+    }
+    reg
 }
 
 func collect_abi_behavior(string arch, source_file source) vec[abi_behavior_entry] {

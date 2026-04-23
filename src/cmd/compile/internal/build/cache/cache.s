@@ -25,7 +25,41 @@ func fingerprint(string source_text) string {
     var funcs = count_token(source_text, "func ")
     var structs = count_token(source_text, "struct ")
     var calls = count_token(source_text, " call")
-    to_string(len(source_text)) + ":" + to_string(funcs) + ":" + to_string(structs) + ":" + to_string(calls)
+    var uses = count_token(source_text, "\nuse ")
+    var pkg = package_name(source_text)
+    pkg + ":" + to_string(len(source_text)) + ":" + to_string(funcs) + ":" + to_string(structs) + ":" + to_string(calls) + ":" + to_string(uses)
+}
+
+func package_name(string source_text) string {
+    var marker = "package "
+    var start = index_of(source_text, marker)
+    if start < 0 {
+        return "unknown"
+    }
+    start = start + len(marker)
+    var end = start
+    while end < len(source_text) {
+        var ch = slice(source_text, end, end + 1)
+        if ch == " " || ch == "\n" || ch == "\r" || ch == "\t" {
+            break
+        }
+        end = end + 1
+    }
+    slice(source_text, start, end)
+}
+
+func index_of(string text, string token) int32 {
+    if token == "" {
+        return 0
+    }
+    var i = 0
+    while i <= len(text) - len(token) {
+        if slice(text, i, i + len(token)) == token {
+            return i
+        }
+        i = i + 1
+    }
+    -1
 }
 
 func count_token(string text, string token) int32 {
