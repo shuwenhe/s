@@ -192,6 +192,18 @@ func run_semantic_suite(string fixtures_root) int32 {
         return 1
     }
 
+    var embed_src = "package demo.impl\nembed Foo\n"
+    var embed_diags = check_detailed(embed_src)
+    if !has_code(embed_diags, "e3035") {
+        return 1
+    }
+
+    var complex_goto_src = "package demo.ctrl\nfunc main() int32 {\n  label L1\n  if true {\n    switch 1 {\n      1 : goto L1,\n      _ : 0,\n    }\n  }\n  0\n}"
+    var complex_diags = check_detailed(complex_goto_src)
+    if !has_code(complex_diags, "e3037") {
+        return 1
+    }
+
     0
 }
 
