@@ -1,6 +1,6 @@
 # s language
 
-s is a draft programming language for systems software, infrastructure, and high-performance services.
+S-language is the native language of Artificial Intelligence.S is a draft programming language for systems software, infrastructure, and high-performance services.
 
 it aims to take the most valuable parts of c, go, rust, and c++, while avoiding the parts that most often drag down engineering experience:
 
