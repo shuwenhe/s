@@ -1,5 +1,8 @@
 package compile.internal.ssa_core
 
+use compile.internal.mir.mir_graph
+use compile.internal.mir.mir_statement
+use compile.internal.mir.dump_graph
 use std.prelude.char_at
 use std.prelude.len
 use std.prelude.slice
@@ -159,6 +162,58 @@ struct ssa_dataflow_model {
 
 func build_pipeline(string mir_text, string goarch) ssa_program {
     return build_pipeline_with_options(mir_text, goarch, default_options())
+}
+
+func build_pipeline_with_graph_hints(mir_graph graph, string mir_text, string goarch) ssa_program {
+    var program = build_pipeline(mir_text, goarch)
+
+    var graph_blocks = graph.blocks.len()
+    var graph_values = 0
+    var graph_branches = 0
+    var graph_edges = 0
+    var i = 0
+    while i < graph.blocks.len() {
+        var block = graph.blocks[i]
+        graph_values = graph_values + block.statements.len()
+        graph_edges = graph_edges + block.terminator.edges.len()
+        if block.terminator.kind == "branch" {
+            graph_branches = graph_branches + 1
+        }
+
+        var j = 0
+        while j < block.statements.len() {
+            switch block.statements[j] {
+                mir_statement::assign(assign_stmt) : {
+                    if assign_stmt.op == "phi" {
+                        program.phi_node_count = program.phi_node_count + 1
+                    }
+                }
+                _ : (),
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+
+    if graph_blocks > 0 {
+        program.block_count = graph_blocks
+    }
+    if graph_values > 0 {
+        program.value_count = graph_values
+    }
+    if graph_edges > 0 {
+        program.cfg_edge_count = graph_edges
+    }
+    if graph_branches > 0 {
+        program.branch_block_count = graph_branches
+    }
+    if program.block_count > 0 && program.value_count > 0 {
+        program.def_use_edge_count = program.value_count + program.block_count
+    }
+
+    program.debug_lines = build_debug_lines(dump_graph(graph), program.allocated_regs)
+    program.debug_line_count = program.debug_lines.len()
+    program
 }
 
 func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_options options) ssa_program {

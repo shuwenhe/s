@@ -3,6 +3,8 @@ package cmd
 use compile.internal.tests.test_golden.run_golden_suite
 use compile.internal.tests.test_backend_abi.run_backend_abi_suite
 use compile.internal.tests.test_mir.run_mir_suite
+use compile.internal.tests.test_ssa.run_ssa_suite
+use compile.internal.tests.test_pipeline_regression.run_pipeline_regression_suite
 use compile.internal.tests.test_semantic.run_semantic_suite
 use std.env.args as host_args
 use std.env.get
@@ -54,6 +56,18 @@ func main() int32 {
     if mir_result != 0 {
         eprintln("mir suite failed");
         return mir_result
+    }
+
+    var ssa_result = run_ssa_suite()
+    if ssa_result != 0 {
+        eprintln("ssa suite failed");
+        return ssa_result
+    }
+
+    var pipeline_result = run_pipeline_regression_suite()
+    if pipeline_result != 0 {
+        eprintln("pipeline regression suite failed");
+        return pipeline_result
     }
 
     println("test_compiler: ok");

@@ -1,4 +1,4 @@
-# ABI Coverage Matrix (amd64 / arm64)
+# ABI Coverage Matrix (amd64 / arm64 / riscv64 / s390x / wasm)
 
 This document tracks scenario coverage beyond baseline ABI notes.
 
@@ -60,16 +60,19 @@ Current backend enforces that each target has a non-empty callee-saved register 
 - Argument register mapping validation for floating arguments 0..7.
 - Return register mapping validation (int + float).
 - Callee-saved register set presence validation.
+- Aggregate return register validation (`sret`) and return-mode contract checks.
+- Variadic register-budget validation (`gp/fp` limits).
+- Extra architecture mapping coverage for `riscv64`, `s390x`, and `wasm` object-chain mode (`clang -c` + `wasm-ld`).
+- SSA ABI runtime contract validation (`spill/reload`, `call_pressure`, `tailcall` legality).
+- CFI artifact emission and structural validation (`.cfi_startproc/.cfi_endproc/.cfi_def_cfa`).
+- WASI source contract validation for imports/entry (`fd_write`, `proc_exit`, `_start`).
 
 ## Remaining Full-Coverage Work
 
-- Floating-point argument and return classification.
-- Struct/aggregate passing and return-value ABI classes.
-- Caller/callee-saved register preservation checks at all call sites.
-- Variadic call ABI handling.
-- Stack spill slot layout tied to SSA allocator output.
-- Tail-call legality checks.
-- Unwind/debug ABI data (CFI / line mappings).
+- ABI classes by concrete frontend type layout (scalar/vector/aggregate splitting).
+- Caller/callee-saved register preservation verification at every lowered call site.
+- Spill-slot home locations wired to SSA allocator live ranges.
+- Full binary-level WASI import/export validation from linked wasm artifact.
 
 ## Validation Contract
 

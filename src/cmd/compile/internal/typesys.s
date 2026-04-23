@@ -19,7 +19,7 @@ func parse_type(string text) string {
     if clean == "" {
         return "unknown"
     }
-    if clean == "()" || clean == "never" || clean == "bool" || clean == "int32" || clean == "usize" || clean == "u8" || clean == "string" {
+    if is_builtin_primitive(clean) {
         return clean
     }
     if starts_with(clean, "&mut ") {
@@ -196,14 +196,80 @@ func same_type(string left, string right) bool {
     return parse_type(left) == parse_type(right)
 }
 
+func compatible_type(string left, string right) bool {
+    var l = parse_type(left)
+    var r = parse_type(right)
+
+    if l == r {
+        return true
+    }
+    if l == "unknown" || r == "unknown" {
+        return false
+    }
+
+    var lt = parse_type_ref(l)
+    var rt = parse_type_ref(r)
+
+    if lt.is_ref != rt.is_ref || lt.is_mut_ref != rt.is_mut_ref || lt.is_slice != rt.is_slice {
+        return false
+    }
+    if lt.base != rt.base {
+        return false
+    }
+    if lt.args.len() != rt.args.len() {
+        return false
+    }
+
+    var i = 0
+    while i < lt.args.len() {
+        if !compatible_type(lt.args[i], rt.args[i]) {
+            return false
+        }
+        i = i + 1
+    }
+    true
+}
+
 func is_builtin_primitive(string ty) bool {
     var clean = parse_type(ty)
-    return clean == "()" || clean == "never" || clean == "bool" || clean == "int32" || clean == "usize" || clean == "u8" || clean == "string"
+    return clean == "()"
+        || clean == "never"
+        || clean == "bool"
+        || clean == "char"
+        || clean == "str"
+        || clean == "string"
+        || clean == "i8"
+        || clean == "i16"
+        || clean == "int32"
+        || clean == "i64"
+        || clean == "isize"
+        || clean == "u8"
+        || clean == "u16"
+        || clean == "u32"
+        || clean == "u64"
+        || clean == "usize"
+        || clean == "f32"
+        || clean == "f64"
 }
 
 func is_copy_type(string ty) bool {
     var clean = parse_type(ty)
-    if clean == "()" || clean == "never" || clean == "bool" || clean == "int32" || clean == "usize" || clean == "u8" {
+    if clean == "()"
+        || clean == "never"
+        || clean == "bool"
+        || clean == "char"
+        || clean == "i8"
+        || clean == "i16"
+        || clean == "int32"
+        || clean == "i64"
+        || clean == "isize"
+        || clean == "u8"
+        || clean == "u16"
+        || clean == "u32"
+        || clean == "u64"
+        || clean == "usize"
+        || clean == "f32"
+        || clean == "f64" {
         return true
     }
     if starts_with(clean, "&") {

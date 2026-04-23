@@ -6,10 +6,11 @@ use compile.internal.mir.mir_basic_block
 use compile.internal.mir.mir_statement
 use compile.internal.mir.mir_control_edge
 use compile.internal.mir.dump_graph
-use compile.internal.inline.estimate_inline_sites
-use compile.internal.escape.estimate_escape_sites
-use compile.internal.dispatch.devirtualize.estimate_devirtualized_sites
+use compile.internal.inline.estimate_inline_sites_graph
+use compile.internal.escape.estimate_escape_sites_graph
+use compile.internal.dispatch.devirtualize.estimate_devirtualized_sites_graph
 use compile.internal.ssa_core.build_pipeline as build_ssa_pipeline
+use compile.internal.ssa_core.build_pipeline_with_graph_hints as build_ssa_pipeline_with_graph_hints
 use compile.internal.ssa_core.dump_pipeline as dump_ssa_pipeline
 use compile.internal.ssa_core.dump_debug_map as dump_ssa_debug_map
 use internal.buildcfg.goarch as buildcfg_goarch
@@ -168,10 +169,9 @@ func build(string path, string output) int32 {
     var graph = mir_result.unwrap()
     var arch = buildcfg_goarch()
 
-    var mir_text = dump_graph(graph)
-    var midend = run_midend_pipeline(mir_text)
+    var midend = run_midend_pipeline(graph)
 
-    var ssa_program = build_ssa_pipeline(midend.optimized_mir_text, arch)
+    var ssa_program = build_ssa_pipeline_with_graph_hints(graph, midend.optimized_mir_text, arch)
     var ssa_text = dump_ssa_pipeline(ssa_program)
     if ssa_text == "" {
         return report_failure("ssa lowering failed: empty pipeline")
@@ -179,6 +179,11 @@ func build(string path, string output) int32 {
     var debug_map = dump_ssa_debug_map(ssa_program)
     if debug_map == "" {
         return report_failure("ssa debug map failed: empty map")
+    }
+
+    var abi_runtime_check = validate_ssa_abi_contracts(arch, ssa_text)
+    if abi_runtime_check.is_err() {
+        return report_failure(abi_runtime_check.unwrap_err().message)
     }
 
     var abi_check = validate_abi_coverage(arch)
@@ -196,39 +201,46 @@ func build(string path, string output) int32 {
         return report_failure(exit_code_result.unwrap_err().message)
     }
 
-    var asm_text = emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
     var temp_dir_result = make_temp_dir("s-build-")
     if temp_dir_result.is_err() {
         return report_failure("could not create temporary output directory: " + temp_dir_result.unwrap_err().message)
     }
 
     var temp_dir = temp_dir_result.unwrap()
-    var asm_path = temp_dir + "/out.s"
-    var obj_path = temp_dir + "/out.o"
+    if arch == "wasm" {
+        var wasm_result = build_wasm_object_chain(temp_dir, output, writes_result.unwrap(), exit_code_result.unwrap())
+        if wasm_result.is_err() {
+            return report_failure(wasm_result.unwrap_err().message)
+        }
+    } else {
+        var asm_text = emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
+        var asm_path = temp_dir + "/out.s"
+        var obj_path = temp_dir + "/out.o"
 
-    var write_result = write_text_file(asm_path, asm_text)
-    if write_result.is_err() {
-        return report_failure("failed to write assembly: " + write_result.unwrap_err().message)
-    }
+        var write_result = write_text_file(asm_path, asm_text)
+        if write_result.is_err() {
+            return report_failure("failed to write assembly: " + write_result.unwrap_err().message)
+        }
 
-    var as_argv = vec[string]()
-    as_argv.push("as");
-    as_argv.push("-o");
-    as_argv.push(obj_path);
-    as_argv.push(asm_path);
-    var as_result = run_process(as_argv)
-    if as_result.is_err() {
-        return report_failure("toolchain failed: " + as_result.unwrap_err().message)
-    }
+        var as_argv = vec[string]()
+        as_argv.push("as");
+        as_argv.push("-o");
+        as_argv.push(obj_path);
+        as_argv.push(asm_path);
+        var as_result = run_process(as_argv)
+        if as_result.is_err() {
+            return report_failure("toolchain failed: " + as_result.unwrap_err().message)
+        }
 
-    var ld_argv = vec[string]()
-    ld_argv.push("ld");
-    ld_argv.push("-o");
-    ld_argv.push(output);
-    ld_argv.push(obj_path);
-    var ld_result = run_process(ld_argv)
-    if ld_result.is_err() {
-        return report_failure("toolchain failed: " + ld_result.unwrap_err().message)
+        var ld_argv = vec[string]()
+        ld_argv.push("ld");
+        ld_argv.push("-o");
+        ld_argv.push(output);
+        ld_argv.push(obj_path);
+        var ld_result = run_process(ld_argv)
+        if ld_result.is_err() {
+            return report_failure("toolchain failed: " + ld_result.unwrap_err().message)
+        }
     }
 
     var dbg_path = output + ".dbg"
@@ -281,6 +293,17 @@ func build(string path, string output) int32 {
         return report_failure("failed to write DWARF-like artifact: " + dwarf_write.unwrap_err().message)
     }
 
+    var cfi_path = output + ".cfi"
+    var cfi_payload = build_cfi_artifact(arch, ssa_text, debug_map)
+    var cfi_check = validate_cfi_artifact(cfi_payload)
+    if cfi_check.is_err() {
+        return report_failure(cfi_check.unwrap_err().message)
+    }
+    var cfi_write = write_text_file(cfi_path, cfi_payload)
+    if cfi_write.is_err() {
+        return report_failure("failed to write CFI artifact: " + cfi_write.unwrap_err().message)
+    }
+
     var gc_path = output + ".gcmap"
     var gc_payload = build_gc_metadata_artifact(arch, parsed, ssa_text)
     var gc_check = validate_gc_contract_chain(gc_payload, parsed, ssa_text)
@@ -330,12 +353,15 @@ func build(string path, string output) int32 {
     0
 }
 
-func run_midend_pipeline(string mir_text) midend_result {
-    var inlined = estimate_inline_sites(mir_text)
-    var escaped = estimate_escape_sites(mir_text)
-    var devirt = estimate_devirtualized_sites(mir_text)
-    var cross_pkg_inline = estimate_cross_pkg_inline_sites(mir_text, inlined)
-    var const_prop = estimate_const_prop_sites(mir_text)
+func run_midend_pipeline(mir_graph graph) midend_result {
+    var pass = apply_midend_pass_pipeline(graph)
+    var rewritten_graph = pass.graph
+
+    var inlined = estimate_inline_sites_graph(rewritten_graph)
+    var escaped = estimate_escape_sites_graph(rewritten_graph)
+    var devirt = estimate_devirtualized_sites_graph(rewritten_graph)
+    var cross_pkg_inline = estimate_cross_pkg_inline_sites_graph(rewritten_graph, inlined)
+    var const_prop = estimate_const_prop_sites_graph(rewritten_graph)
     var ipo_synergy = estimate_ipo_synergy(inlined, escaped, devirt, cross_pkg_inline, const_prop)
 
     var iter = 0
@@ -355,7 +381,7 @@ func run_midend_pipeline(string mir_text) midend_result {
         iter = iter + 1
     }
 
-    var rewritten = mir_text
+    var rewritten = dump_graph(rewritten_graph)
     if inlined > 0 {
         rewritten = rewritten + " inline=" + to_string(inlined)
     }
@@ -372,6 +398,9 @@ func run_midend_pipeline(string mir_text) midend_result {
         rewritten = rewritten + " constprop=" + to_string(const_prop)
     }
     rewritten = rewritten + " ipo=" + to_string(ipo_synergy)
+    rewritten = rewritten + " pass.simplify_j2r=" + to_string(pass.simplified_jump_to_return)
+    rewritten = rewritten + " pass.trim_unit=" + to_string(pass.removed_unit_lines)
+    rewritten = rewritten + " pass.dedup=" + to_string(pass.dedup_lines)
 
     var report = "midend"
         + " inline_sites=" + to_string(inlined)
@@ -380,6 +409,9 @@ func run_midend_pipeline(string mir_text) midend_result {
         + " cross_pkg_inline=" + to_string(cross_pkg_inline)
         + " const_prop=" + to_string(const_prop)
         + " ipo_synergy=" + to_string(ipo_synergy)
+        + " pass_simplify_j2r=" + to_string(pass.simplified_jump_to_return)
+        + " pass_trim_unit=" + to_string(pass.removed_unit_lines)
+        + " pass_dedup=" + to_string(pass.dedup_lines)
 
     midend_result {
         optimized_mir_text: rewritten,
@@ -387,8 +419,207 @@ func run_midend_pipeline(string mir_text) midend_result {
     }
 }
 
-func estimate_cross_pkg_inline_sites(string mir_text, int32 inlined) int32 {
-    var imports = count_occurrences(mir_text, " use ") + count_occurrences(mir_text, "pkg.")
+struct midend_pass_result {
+    mir_graph graph
+    int32 simplified_jump_to_return
+    int32 removed_unit_lines
+    int32 dedup_lines
+}
+
+func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
+    var rewritten = graph
+    var simplified = simplify_jump_to_return_pass(rewritten)
+    rewritten = simplified.graph
+
+    var trimmed = trim_unit_line_pass(rewritten)
+    rewritten = trimmed.graph
+
+    var deduped = dedup_eval_line_pass(rewritten)
+    rewritten = deduped.graph
+
+    midend_pass_result {
+        graph: rewritten,
+        simplified_jump_to_return: simplified.count,
+        removed_unit_lines: trimmed.count,
+        dedup_lines: deduped.count,
+    }
+}
+
+struct graph_pass_count_result {
+    mir_graph graph
+    int32 count
+}
+
+func simplify_jump_to_return_pass(mir_graph graph) graph_pass_count_result {
+    var rewritten = graph
+    var changed = 0
+
+    var i = 0
+    while i < rewritten.blocks.len() {
+        var block = rewritten.blocks[i]
+        if block.terminator.kind == "jump" && block.terminator.edges.len() == 1 {
+            var target_id = block.terminator.edges[0].target
+            var ti = find_block_index_by_id(rewritten, target_id)
+            if ti >= 0 {
+                var target = rewritten.blocks[ti]
+                if target.terminator.kind == "return" && target.statements.len() == 0 {
+                    rewritten.blocks[i].terminator.kind = "return"
+                    rewritten.blocks[i].terminator.edges = vec[mir_control_edge]()
+                    changed = changed + 1
+                }
+            }
+        }
+        i = i + 1
+    }
+
+    graph_pass_count_result { graph: rewritten, count: changed }
+}
+
+func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
+    var rewritten = graph
+    var changed = 0
+
+    var i = 0
+    while i < rewritten.blocks.len() {
+        if rewritten.blocks[i].terminator.kind == "return" {
+            var filtered = vec[mir_statement]()
+            var j = 0
+            while j < rewritten.blocks[i].statements.len() {
+                var keep = true
+                switch rewritten.blocks[i].statements[j] {
+                    mir_statement::eval(eval_stmt) : {
+                        if eval_stmt.op == "line" && eval_stmt.args.len() > 0 && eval_stmt.args[0] == "yield unit" {
+                            keep = false
+                            changed = changed + 1
+                        }
+                    }
+                    _ : (),
+                }
+                if keep {
+                    filtered.push(rewritten.blocks[i].statements[j])
+                }
+                j = j + 1
+            }
+            rewritten.blocks[i].statements = filtered
+        }
+        i = i + 1
+    }
+
+    graph_pass_count_result { graph: rewritten, count: changed }
+}
+
+func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
+    var rewritten = graph
+    var changed = 0
+
+    var i = 0
+    while i < rewritten.blocks.len() {
+        var filtered = vec[mir_statement]()
+        var last_line = ""
+        var j = 0
+        while j < rewritten.blocks[i].statements.len() {
+            var push_stmt = true
+            switch rewritten.blocks[i].statements[j] {
+                mir_statement::eval(eval_stmt) : {
+                    if eval_stmt.op == "line" && eval_stmt.args.len() > 0 {
+                        var current = eval_stmt.args[0]
+                        if current == last_line {
+                            push_stmt = false
+                            changed = changed + 1
+                        }
+                        last_line = current
+                    } else {
+                        last_line = ""
+                    }
+                }
+                _ : {
+                    last_line = ""
+                }
+            }
+            if push_stmt {
+                filtered.push(rewritten.blocks[i].statements[j])
+            }
+            j = j + 1
+        }
+        rewritten.blocks[i].statements = filtered
+        i = i + 1
+    }
+
+    graph_pass_count_result { graph: rewritten, count: changed }
+}
+
+func find_block_index_by_id(mir_graph graph, int32 id) int32 {
+    var i = 0
+    while i < graph.blocks.len() {
+        if graph.blocks[i].id == id {
+            return i
+        }
+        i = i + 1
+    }
+    0 - 1
+}
+
+func validate_ssa_abi_contracts(string arch, string ssa_text) result[(), backend_error] {
+    var spills = parse_number_after(ssa_text, "spills=")
+    var reloads = parse_number_after(ssa_text, "reloads=")
+    var pressure = parse_number_after(ssa_text, "call_pressure=")
+    if spills > 0 && reloads >= 0 && reloads < spills {
+        return result::err(backend_error { message: "backend error: reload count lower than spill count" })
+    }
+
+    if pressure > 0 {
+        var budget = abi_caller_saved_count(arch) * 4
+        if budget > 0 && pressure > budget {
+            return result::err(backend_error { message: "backend error: call pressure exceeds ABI budget" })
+        }
+    }
+
+    if has_substring(ssa_text, "tailcall") {
+        if arch == "wasm" {
+            return result::err(backend_error { message: "backend error: tailcall is not legal on wasm path" })
+        }
+        if spills > 0 {
+            return result::err(backend_error { message: "backend error: tailcall with spill slots is not legal" })
+        }
+    }
+
+    result::ok(())
+}
+
+func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
+    var lines = vec[string]()
+    lines.push("cfi version=1 arch=" + arch)
+    lines.push(".cfi_startproc")
+    lines.push(".cfi_def_cfa sp, " + to_string(abi_stack_alignment(arch)))
+    lines.push(".cfi_offset ra, -8")
+    lines.push("ssa " + ssa_text)
+    lines.push("debug " + debug_map)
+    lines.push(".cfi_endproc")
+    join_lines(lines)
+}
+
+func validate_cfi_artifact(string payload) result[(), backend_error] {
+    if !has_substring(payload, "cfi version=1") {
+        return result::err(backend_error { message: "backend error: cfi header missing" })
+    }
+    if !has_substring(payload, ".cfi_startproc") || !has_substring(payload, ".cfi_endproc") {
+        return result::err(backend_error { message: "backend error: cfi proc markers missing" })
+    }
+    if !has_substring(payload, ".cfi_def_cfa") {
+        return result::err(backend_error { message: "backend error: cfi cfa rule missing" })
+    }
+    result::ok(())
+}
+
+func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int32 inlined) int32 {
+    var imports = 0
+    var i = 0
+    while i < graph.trace.len() {
+        if has_substring(graph.trace[i], "package.fn ") {
+            imports = imports + 1
+        }
+        i = i + 1
+    }
     var score = inlined / 2 + imports
     if score < 0 {
         return 0
@@ -396,12 +627,138 @@ func estimate_cross_pkg_inline_sites(string mir_text, int32 inlined) int32 {
     score
 }
 
-func estimate_const_prop_sites(string mir_text) int32 {
-    var constants = count_occurrences(mir_text, " const") + count_occurrences(mir_text, " literal=")
+func estimate_const_prop_sites_graph(mir_graph graph) int32 {
+    var constants = 0
+    var i = 0
+    while i < graph.blocks.len() {
+        var block = graph.blocks[i]
+        var j = 0
+        while j < block.statements.len() {
+            switch block.statements[j] {
+                mir_statement::assign(assign_stmt) : {
+                    if assign_stmt.op == "const" || assign_stmt.op == "literal" {
+                        constants = constants + 1
+                    }
+                }
+                mir_statement::eval(eval_stmt) : {
+                    if eval_stmt.args.len() > 0 {
+                        constants = constants + count_occurrences(eval_stmt.args[0], "const")
+                        constants = constants + count_occurrences(eval_stmt.args[0], "literal")
+                    }
+                }
+                _ : (),
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
     if constants < 0 {
         return 0
     }
     constants
+}
+
+func build_wasm_toolchain_plan(string c_path, string obj_path, string output) string {
+    return "clang --target=wasm32-wasi -c " + c_path
+        + " -o " + obj_path
+        + " && wasm-ld --no-entry --export=_start --allow-undefined " + obj_path
+        + " -o " + output
+}
+
+func build_wasm_object_chain(string temp_dir, string output, vec[write_op] writes, int32 exit_code) result[(), backend_error] {
+    var c_path = temp_dir + "/out_wasm.c"
+    var obj_path = temp_dir + "/out_wasm.o"
+    var c_source = emit_wasm_c_source(writes, exit_code)
+
+    var wasi_check = validate_wasi_contract_source(c_source)
+    if wasi_check.is_err() {
+        return wasi_check
+    }
+
+    var write_result = write_text_file(c_path, c_source)
+    if write_result.is_err() {
+        return result::err(backend_error { message: "failed to write wasm c source: " + write_result.unwrap_err().message })
+    }
+
+    var cc_argv = vec[string]()
+    cc_argv.push("clang")
+    cc_argv.push("--target=wasm32-wasi")
+    cc_argv.push("-c")
+    cc_argv.push(c_path)
+    cc_argv.push("-o")
+    cc_argv.push(obj_path)
+    var cc_result = run_process(cc_argv)
+    if cc_result.is_err() {
+        return result::err(backend_error {
+            message: "wasm object compile failed: " + cc_result.unwrap_err().message + " | plan: " + build_wasm_toolchain_plan(c_path, obj_path, output),
+        })
+    }
+
+    var ld_argv = vec[string]()
+    ld_argv.push("wasm-ld")
+    ld_argv.push("--no-entry")
+    ld_argv.push("--export=_start")
+    ld_argv.push("--allow-undefined")
+    ld_argv.push(obj_path)
+    ld_argv.push("-o")
+    ld_argv.push(output)
+    var ld_result = run_process(ld_argv)
+    if ld_result.is_err() {
+        return result::err(backend_error {
+            message: "wasm link failed: " + ld_result.unwrap_err().message + " | plan: " + build_wasm_toolchain_plan(c_path, obj_path, output),
+        })
+    }
+    result::ok(())
+}
+
+func validate_wasi_contract_source(string source) result[(), backend_error] {
+    if !has_substring(source, "__import_module__(\"wasi_snapshot_preview1\")") {
+        return result::err(backend_error { message: "backend error: wasi import module annotation missing" })
+    }
+    if !has_substring(source, "fd_write") {
+        return result::err(backend_error { message: "backend error: wasi fd_write import missing" })
+    }
+    if !has_substring(source, "proc_exit") {
+        return result::err(backend_error { message: "backend error: wasi proc_exit import missing" })
+    }
+    if !has_substring(source, "void _start(void)") {
+        return result::err(backend_error { message: "backend error: wasi _start entry missing" })
+    }
+    if !has_substring(source, "proc_exit(s_main())") {
+        return result::err(backend_error { message: "backend error: wasi startup contract missing proc_exit(s_main())" })
+    }
+    result::ok(())
+}
+
+func emit_wasm_c_source(vec[write_op] writes, int32 exit_code) string {
+    var lines = vec[string]()
+    lines.push("typedef unsigned int u32;")
+    lines.push("typedef unsigned int usize;")
+    lines.push("struct ciovec { const char* buf; usize len; };")
+    lines.push("__attribute__((__import_module__(\"wasi_snapshot_preview1\"), __import_name__(\"fd_write\")))")
+    lines.push("extern int fd_write(int fd, const struct ciovec* iovs, int iovs_len, u32* nwritten);")
+    lines.push("__attribute__((__import_module__(\"wasi_snapshot_preview1\"), __import_name__(\"proc_exit\")))")
+    lines.push("extern void proc_exit(int code);")
+    lines.push("")
+    lines.push("int s_main(void) {")
+
+    var i = 0
+    while i < writes.len() {
+        var label = "message_" + to_string(i)
+        lines.push("  static const char " + label + "[] = \"" + escape_asm_string(writes[i].text) + "\";")
+        lines.push("  struct ciovec iov_" + to_string(i) + " = { " + label + ", " + to_string(len(writes[i].text)) + "u };")
+        lines.push("  u32 nw_" + to_string(i) + " = 0;")
+        lines.push("  fd_write(" + to_string(writes[i].fd) + ", &iov_" + to_string(i) + ", 1, &nw_" + to_string(i) + ");")
+        i = i + 1
+    }
+
+    lines.push("  return " + to_string(exit_code) + ";")
+    lines.push("}")
+    lines.push("")
+    lines.push("void _start(void) {")
+    lines.push("  proc_exit(s_main());")
+    lines.push("}")
+    join_lines(lines) + "\n"
 }
 
 func estimate_ipo_synergy(int32 inlined, int32 escaped, int32 devirt, int32 cross_pkg_inline, int32 const_prop) int32 {
@@ -749,11 +1106,20 @@ func abi_second_int_ret_reg(string arch) string {
     if arch == "arm64" {
         return "x1"
     }
+    if arch == "riscv64" {
+        return "a1"
+    }
+    if arch == "s390x" {
+        return "%r3"
+    }
+    if arch == "wasm" {
+        return "local1"
+    }
     "%rdx"
 }
 
 func abi_stack_alignment(string arch) int32 {
-    if arch == "arm64" {
+    if arch == "arm64" || arch == "riscv64" || arch == "s390x" || arch == "wasm" {
         return 16
     }
     16
@@ -762,6 +1128,15 @@ func abi_stack_alignment(string arch) int32 {
 func abi_caller_saved_count(string arch) int32 {
     if arch == "arm64" {
         return 18
+    }
+    if arch == "riscv64" {
+        return 15
+    }
+    if arch == "s390x" {
+        return 12
+    }
+    if arch == "wasm" {
+        return 8
     }
     9
 }
@@ -2067,6 +2442,15 @@ func emit_asm(vec[write_op] writes, int32 exit_code) string {
     if arch == "arm64" {
         return emit_asm_arm64(writes, exit_code)
     }
+    if arch == "riscv64" {
+        return emit_asm_riscv64(writes, exit_code)
+    }
+    if arch == "s390x" {
+        return emit_asm_s390x(writes, exit_code)
+    }
+    if arch == "amd64p32" {
+        return emit_asm_amd64(writes, exit_code)
+    }
     return emit_asm_amd64(writes, exit_code)
 }
 
@@ -2125,6 +2509,15 @@ func abi_sret_reg(string arch) string {
     if arch == "arm64" {
         return "x8"
     }
+    if arch == "riscv64" {
+        return "a0"
+    }
+    if arch == "s390x" {
+        return "%r2"
+    }
+    if arch == "wasm" {
+        return "local0"
+    }
     "%rdi"
 }
 
@@ -2132,11 +2525,29 @@ func abi_variadic_gp_limit(string arch) int32 {
     if arch == "arm64" {
         return 8
     }
+    if arch == "riscv64" {
+        return 8
+    }
+    if arch == "s390x" {
+        return 8
+    }
+    if arch == "wasm" {
+        return 8
+    }
     6
 }
 
 func abi_variadic_fp_limit(string arch) int32 {
     if arch == "arm64" {
+        return 8
+    }
+    if arch == "riscv64" {
+        return 8
+    }
+    if arch == "s390x" {
+        return 8
+    }
+    if arch == "wasm" {
         return 8
     }
     8
@@ -2188,6 +2599,42 @@ func abi_int_arg_reg(string arch, int32 index) string {
         return ""
     }
 
+    if arch == "riscv64" {
+        if index == 0 { return "a0" }
+        if index == 1 { return "a1" }
+        if index == 2 { return "a2" }
+        if index == 3 { return "a3" }
+        if index == 4 { return "a4" }
+        if index == 5 { return "a5" }
+        if index == 6 { return "a6" }
+        if index == 7 { return "a7" }
+        return ""
+    }
+
+    if arch == "s390x" {
+        if index == 0 { return "%r2" }
+        if index == 1 { return "%r3" }
+        if index == 2 { return "%r4" }
+        if index == 3 { return "%r5" }
+        if index == 4 { return "%r6" }
+        if index == 5 { return "%r7" }
+        if index == 6 { return "%r8" }
+        if index == 7 { return "%r9" }
+        return ""
+    }
+
+    if arch == "wasm" {
+        if index == 0 { return "local0" }
+        if index == 1 { return "local1" }
+        if index == 2 { return "local2" }
+        if index == 3 { return "local3" }
+        if index == 4 { return "local4" }
+        if index == 5 { return "local5" }
+        if index == 6 { return "local6" }
+        if index == 7 { return "local7" }
+        return ""
+    }
+
     if index == 0 { return "%rdi" }
     if index == 1 { return "%rsi" }
     if index == 2 { return "%rdx" }
@@ -2212,6 +2659,42 @@ func abi_float_arg_reg(string arch, int32 index) string {
         return ""
     }
 
+    if arch == "riscv64" {
+        if index == 0 { return "fa0" }
+        if index == 1 { return "fa1" }
+        if index == 2 { return "fa2" }
+        if index == 3 { return "fa3" }
+        if index == 4 { return "fa4" }
+        if index == 5 { return "fa5" }
+        if index == 6 { return "fa6" }
+        if index == 7 { return "fa7" }
+        return ""
+    }
+
+    if arch == "s390x" {
+        if index == 0 { return "%f0" }
+        if index == 1 { return "%f2" }
+        if index == 2 { return "%f4" }
+        if index == 3 { return "%f6" }
+        if index == 4 { return "%f8" }
+        if index == 5 { return "%f10" }
+        if index == 6 { return "%f12" }
+        if index == 7 { return "%f14" }
+        return ""
+    }
+
+    if arch == "wasm" {
+        if index == 0 { return "localf0" }
+        if index == 1 { return "localf1" }
+        if index == 2 { return "localf2" }
+        if index == 3 { return "localf3" }
+        if index == 4 { return "localf4" }
+        if index == 5 { return "localf5" }
+        if index == 6 { return "localf6" }
+        if index == 7 { return "localf7" }
+        return ""
+    }
+
     if index == 0 { return "%xmm0" }
     if index == 1 { return "%xmm1" }
     if index == 2 { return "%xmm2" }
@@ -2227,6 +2710,15 @@ func abi_int_ret_reg(string arch) string {
     if arch == "arm64" {
         return "x0"
     }
+    if arch == "riscv64" {
+        return "a0"
+    }
+    if arch == "s390x" {
+        return "%r2"
+    }
+    if arch == "wasm" {
+        return "local0"
+    }
     "%rax"
 }
 
@@ -2234,12 +2726,30 @@ func abi_float_ret_reg(string arch) string {
     if arch == "arm64" {
         return "v0"
     }
+    if arch == "riscv64" {
+        return "fa0"
+    }
+    if arch == "s390x" {
+        return "%f0"
+    }
+    if arch == "wasm" {
+        return "localf0"
+    }
     "%xmm0"
 }
 
 func abi_callee_saved_count(string arch) int32 {
     if arch == "arm64" {
         return 12
+    }
+    if arch == "riscv64" {
+        return 12
+    }
+    if arch == "s390x" {
+        return 10
+    }
+    if arch == "wasm" {
+        return 4
     }
     6
 }
@@ -2309,6 +2819,66 @@ func emit_asm_arm64(vec[write_op] writes, int32 exit_code) string {
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
 
+func emit_asm_riscv64(vec[write_op] writes, int32 exit_code) string {
+    var data_lines = vec[string]()
+    var text_lines = vec[string]()
+    data_lines.push(".section .data")
+    text_lines.push(".section .text")
+    text_lines.push(".global _start")
+    text_lines.push(".global s_main")
+    text_lines.push("_start:")
+    text_lines.push("    call s_main")
+    text_lines.push("    li a7, 93")
+    text_lines.push("    ecall")
+    text_lines.push("")
+    text_lines.push("s_main:")
+    text_lines.push("    addi sp, sp, -16")
+    text_lines.push("    sd ra, 8(sp)")
+
+    var message_index = 0
+    var i = 0
+    while i < writes.len() {
+        append_write_op_riscv64(data_lines, text_lines, writes[i], message_index)
+        message_index = message_index + 1
+        i = i + 1
+    }
+
+    text_lines.push("    li a0, " + to_string(exit_code))
+    text_lines.push("    ld ra, 8(sp)")
+    text_lines.push("    addi sp, sp, 16")
+    text_lines.push("    ret")
+
+    join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
+}
+
+func emit_asm_s390x(vec[write_op] writes, int32 exit_code) string {
+    var data_lines = vec[string]()
+    var text_lines = vec[string]()
+    data_lines.push(".section .data")
+    text_lines.push(".section .text")
+    text_lines.push(".globl _start")
+    text_lines.push(".globl s_main")
+    text_lines.push("_start:")
+    text_lines.push("    brasl %r14, s_main")
+    text_lines.push("    lghi %r1, 1")
+    text_lines.push("    svc 0")
+    text_lines.push("")
+    text_lines.push("s_main:")
+
+    var message_index = 0
+    var i = 0
+    while i < writes.len() {
+        append_write_op_s390x(data_lines, text_lines, writes[i], message_index)
+        message_index = message_index + 1
+        i = i + 1
+    }
+
+    text_lines.push("    lghi %r2, " + to_string(exit_code))
+    text_lines.push("    br %r14")
+
+    join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
+}
+
 func append_write_op(vec[string] data_lines, vec[string] text_lines, write_op op, int32 index) () {
     var label = "message_" + to_string(index)
     data_lines.push(label + ":")
@@ -2331,6 +2901,30 @@ func append_write_op_arm64(vec[string] data_lines, vec[string] text_lines, write
     text_lines.push("    add x1, x1, :lo12:" + label)
     text_lines.push("    ldr x2, =" + to_string(len(op.text)))
     text_lines.push("    svc #0")
+}
+
+func append_write_op_riscv64(vec[string] data_lines, vec[string] text_lines, write_op op, int32 index) () {
+    var label = "message_" + to_string(index)
+    data_lines.push(label + ":")
+    data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")
+
+    text_lines.push("    li a7, 64")
+    text_lines.push("    li a0, " + to_string(op.fd))
+    text_lines.push("    la a1, " + label)
+    text_lines.push("    li a2, " + to_string(len(op.text)))
+    text_lines.push("    ecall")
+}
+
+func append_write_op_s390x(vec[string] data_lines, vec[string] text_lines, write_op op, int32 index) () {
+    var label = "message_" + to_string(index)
+    data_lines.push(label + ":")
+    data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")
+
+    text_lines.push("    lghi %r1, 4")
+    text_lines.push("    lghi %r2, " + to_string(op.fd))
+    text_lines.push("    larl %r3, " + label)
+    text_lines.push("    lghi %r4, " + to_string(len(op.text)))
+    text_lines.push("    svc 0")
 }
 
 func escape_asm_string(string text) string {
