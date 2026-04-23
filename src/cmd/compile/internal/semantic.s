@@ -3,6 +3,7 @@ package compile.internal.semantic
 use compile.internal.prelude.lookup_builtin_field_type
 use compile.internal.prelude.lookup_builtin_method_arity
 use compile.internal.prelude.lookup_builtin_method_type
+use compile.internal.typesys.assignable_type
 use compile.internal.typesys.base_type_name
 use compile.internal.typesys.compatible_type
 use compile.internal.typesys.extract_type_args
@@ -1589,7 +1590,7 @@ func types_compatible(string left, string right) bool {
     if is_unknown(left) || is_unknown(right) {
         return is_unknown(left) && is_unknown(right)
     }
-    compatible_type(left, right)
+    assignable_type(left, right) || compatible_type(left, right)
 }
 
 func is_unknown(string type_name) bool {
