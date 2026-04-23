@@ -1,6 +1,7 @@
 package compile.internal.tests.test_backend_abi
 
 use compile.internal.backend_elf64.build_abi_emit_plan
+use compile.internal.backend_elf64.build_dwarf_like_artifact
 use compile.internal.syntax.parse_source
 use std.prelude.slice
 
@@ -30,6 +31,18 @@ func run_backend_abi_suite() int32 {
     if !contains(plan, "ret1->%rdx") {
         return 1
     }
+    if !contains(plan, "stack_align=16") {
+        return 1
+    }
+    if !contains(plan, "caller_saved=") {
+        return 1
+    }
+    if !contains(plan, "callee_saved=") {
+        return 1
+    }
+    if !contains(plan, "callseq=") {
+        return 1
+    }
 
     if !contains(plan, "fn big") {
         return 1
@@ -45,6 +58,20 @@ func run_backend_abi_suite() int32 {
         return 1
     }
     if !contains(plan, "tuple_parts=3") {
+        return 1
+    }
+
+    var dwarf = build_dwarf_like_artifact(parsed.unwrap(), "ssa pair blocks=2 values=4 loops=1 dbg_lines=3", "ssa.debug pair | value#0 reg=r10 | var v0 -> r10")
+    if !contains(dwarf, "section .debug_loc") {
+        return 1
+    }
+    if !contains(dwarf, "loc#0") {
+        return 1
+    }
+    if !contains(dwarf, "section .debug_ranges") {
+        return 1
+    }
+    if !contains(dwarf, "inline_range=") {
         return 1
     }
 
