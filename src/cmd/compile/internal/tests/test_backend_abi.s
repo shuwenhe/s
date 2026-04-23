@@ -2,6 +2,7 @@ package compile.internal.tests.test_backend_abi
 
 use compile.internal.backend_elf64.build_abi_emit_plan
 use compile.internal.backend_elf64.build_dwarf_like_artifact
+use compile.internal.backend_elf64.build_gc_metadata_artifact
 use compile.internal.syntax.parse_source
 use std.prelude.slice
 
@@ -72,6 +73,23 @@ func run_backend_abi_suite() int32 {
         return 1
     }
     if !contains(dwarf, "inline_range=") {
+        return 1
+    }
+    if !contains(dwarf, "gate dwarf_consumable=") {
+        return 1
+    }
+
+    var gcmap = build_gc_metadata_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 loops=1 spills=2 rollback=0 proof_fail=0")
+    if !contains(gcmap, "gcmap version=1") {
+        return 1
+    }
+    if !contains(gcmap, "safepoints=") {
+        return 1
+    }
+    if !contains(gcmap, "ptr_bitmap=") {
+        return 1
+    }
+    if !contains(gcmap, "proof rollback=0 proof_fail=0") {
         return 1
     }
 
