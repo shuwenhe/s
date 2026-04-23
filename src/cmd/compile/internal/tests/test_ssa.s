@@ -81,6 +81,12 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, "proof_fail=") {
         return 1
     }
+    if !contains(arm64_dump, "passes_sched=") {
+        return 1
+    }
+    if !contains(arm64_dump, "passes_blocked=") {
+        return 1
+    }
 
     var amd64_program = build_pipeline(mir_text, "amd64")
     var amd64_dump = dump_pipeline(amd64_program)
