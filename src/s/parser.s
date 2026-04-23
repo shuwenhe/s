@@ -76,11 +76,11 @@ impl parser {
 
     func parse_item(mut self) result[item, parse_error] {
         if self.at_keyword("func") {
-            // parse a function; if it has a receiver, convert to an impl item
+
             var parsed = self.parse_function(true)?
             switch parsed.receiver {
                 option::some(r) : {
-                    // build function_decl for method
+
                     var method = function_decl {
                         sig: parsed.sig,
                         body: parsed.body,
@@ -232,7 +232,7 @@ impl parser {
 
     func parse_function(mut self, bool require_body) result[parsed_function, parse_error] {
         self.expect_keyword("func")?
-        // optional receiver syntax: (name type)
+
         var receiver = option::none
         if self.at_symbol("(") {
             self.expect_symbol("(")?
@@ -246,17 +246,12 @@ impl parser {
         var params = self.parse_params()?
         self.expect_symbol(")")?
 
-        // parse return type in go-style: return type is written after
-        // the parameter list (no arrow). we accept absence of return
-        // type if the next token is a where-clause, block start, or
-        // semicolon. this keeps compatibility with trait/method
-        // declarations that may omit a body.
         var return_type = option::none
         var next = self.peek()?
         if !(next.kind == token_kind::symbol && (next.value == "{" || next.value == ";")) && !(
             next.kind == token_kind::keyword && next.value == "where"
         ) {
-            // treat following token sequence as a type until where/{/;
+
             return_type = option::some(self.parse_type_text(vec[string] { "where", "{", ";" })?)
         }
 
@@ -861,12 +856,12 @@ impl parser {
             self.expect_symbol(")")?
             return result::ok(expr)
         }
-        // composite literals: array literal syntax like []t{...}
+
         if self.at_symbol("[") {
-            // consume bracket group (e.g., "[]")
+
             var bracket = self.parse_bracket_group()?
             var type_text = bracket
-            // if there are more type tokens before '{', grab them
+
             var token = self.peek().unwrap()
             if token.kind != token_kind::symbol || token.value != "{" {
                 var seg = self.parse_token_segment(vec[string] { "{" })?
@@ -885,13 +880,13 @@ impl parser {
             self.expect_symbol("}")?
             return result::ok(expr::array(array_literal { type_text: option::some(type_text.trim()), items: items }))
         }
-        // map literal: map[k]v{ key: value, ... }
+
         if token.kind == token_kind::ident && token.value == "map" {
-            // consume 'map'
+
             self.advance()?
             var bracket = self.parse_bracket_group()?
             var type_text = "map" + bracket
-            // optional value type after bracket
+
             var token2 = self.peek().unwrap()
             if token2.kind == token_kind::ident || token2.kind == token_kind::symbol {
                 var seg = self.parse_token_segment(vec[string] { "{" })?
