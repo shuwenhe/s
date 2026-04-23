@@ -3,7 +3,7 @@ package compile.internal.tests.test_pipeline_regression
 use compile.internal.backend_elf64.build_abi_emit_plan
 use compile.internal.backend_elf64.build_wasm_toolchain_plan
 use compile.internal.backend_elf64.run_midend_pipeline
-use compile.internal.ir.lower.from_syntax
+use compile.internal.ir.lower.from_syntax_checked
 use compile.internal.ir.lower.lower_main_to_mir
 use compile.internal.ssa_core.build_pipeline_with_graph_hints
 use compile.internal.ssa_core.dump_pipeline
@@ -28,7 +28,11 @@ func run_pipeline_regression_suite() int32 {
         return 1
     }
 
-    var lowered = from_syntax(parsed.unwrap())
+    var lowered_checked = from_syntax_checked(parsed.unwrap())
+    if lowered_checked.is_err() {
+        return 1
+    }
+    var lowered = lowered_checked.unwrap()
     var features = collect_ir_package_features(lowered)
     if (features & 1) == 0 {
         return 1
@@ -72,6 +76,12 @@ func run_pipeline_regression_suite() int32 {
         return 1
     }
     if !contains(midend.report, "devirtualized=") {
+        return 1
+    }
+    if !contains(midend.report, "pass_rm_unreachable=") {
+        return 1
+    }
+    if !contains(midend.report, "pass_fold_branch=") {
         return 1
     }
 

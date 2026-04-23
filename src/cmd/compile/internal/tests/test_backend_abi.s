@@ -7,6 +7,7 @@ use compile.internal.backend_elf64.build_abi_machine_matrix_artifact
 use compile.internal.backend_elf64.build_toolchain_compat_artifact
 use compile.internal.backend_elf64.build_backend_perf_baseline_artifact
 use compile.internal.backend_elf64.build_cfi_artifact
+use compile.internal.backend_elf64.build_wasm_binary_probe_plan
 use compile.internal.backend_elf64.validate_cfi_artifact
 use compile.internal.backend_elf64.validate_ssa_abi_contracts
 use compile.internal.backend_elf64.validate_wasi_contract_source
@@ -184,6 +185,23 @@ func run_backend_abi_suite() int32 {
         return 1
     }
     if validate_ssa_abi_contracts("amd64", "spills=1 reloads=2 call_pressure=2").is_err() {
+        return 1
+    }
+    if validate_ssa_abi_contracts("amd64", "spills=1 reloads=2 call_pressure=2 callee_saved_clobber=1").is_ok() {
+        return 1
+    }
+    if validate_ssa_abi_contracts("amd64", "spills=1 reloads=2 call_pressure=2 caller_restore_missing=1").is_ok() {
+        return 1
+    }
+
+    var wasm_probe = build_wasm_binary_probe_plan("/tmp/out.wasm")
+    if !contains(wasm_probe, "wasm-objdump -x /tmp/out.wasm") {
+        return 1
+    }
+    if !contains(wasm_probe, "grep -q wasi_snapshot_preview1") {
+        return 1
+    }
+    if !contains(wasm_probe, "grep -q _start") {
         return 1
     }
 
