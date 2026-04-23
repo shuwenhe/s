@@ -67,6 +67,7 @@ struct semantic_error {
     string message
     string severity
     string hint
+    string anchor
     int32 tier
     int32 repeat_count
     int32 line
@@ -111,8 +112,63 @@ func check_detailed(string source) vec[semantic_error] {
 
 func finalize_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
     var deduped = dedupe_diagnostics(diagnostics)
-    var ordered = sort_diagnostics(deduped)
+    var anchored = append_anchor_summaries(deduped)
+    var ordered = sort_diagnostics(anchored)
     apply_diagnostic_budget(ordered)
+}
+
+func append_anchor_summaries(vec[semantic_error] diagnostics) vec[semantic_error] {
+    var out = vec[semantic_error]()
+    var i = 0
+    while i < diagnostics.len() {
+        out.push(diagnostics[i])
+        i = i + 1
+    }
+
+    var summaries = vec[semantic_error]()
+    i = 0
+    while i < diagnostics.len() {
+        var d = diagnostics[i]
+        if d.anchor != "" {
+            var at = find_anchor_summary_index(summaries, d.anchor)
+            if at < 0 {
+                summaries.push(semantic_error {
+                    code: "s0001",
+                    message: "anchor summary",
+                    severity: "warning",
+                    hint: "multiple diagnostics share recovery anchor " + d.anchor,
+                    anchor: d.anchor,
+                    tier: 3,
+                    repeat_count: d.repeat_count,
+                    line: d.line,
+                    column: d.column,
+                })
+            } else {
+                summaries[at].repeat_count = summaries[at].repeat_count + d.repeat_count
+            }
+        }
+        i = i + 1
+    }
+
+    i = 0
+    while i < summaries.len() {
+        if summaries[i].repeat_count > 1 {
+            out.push(summaries[i])
+        }
+        i = i + 1
+    }
+    out
+}
+
+func find_anchor_summary_index(vec[semantic_error] diagnostics, string anchor) int32 {
+    var i = 0
+    while i < diagnostics.len() {
+        if diagnostics[i].anchor == anchor {
+            return i
+        }
+        i = i + 1
+    }
+    0 - 1
 }
 
 func dedupe_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
@@ -1444,15 +1500,17 @@ func second_type_arg(string type_name) string {
 }
 
 func add_error(string source, vec[semantic_error] mut diagnostics, string code, string message, string anchor) int32 {
-    var pos = locate_anchor(source, anchor)
+    var recovery_anchor = resolve_recovery_anchor(source, anchor)
+    var pos = locate_anchor(source, recovery_anchor)
     var severity = diagnostic_severity(code)
     var tier = diagnostic_tier(code)
-    var hint = diagnostic_hint(code, anchor)
+    var hint = diagnostic_hint(code, recovery_anchor)
     diagnostics.push(semantic_error {
         code: code,
         message: message,
         severity: severity,
         hint: hint,
+        anchor: recovery_anchor,
         tier: tier,
         repeat_count: 1,
         line: pos.line,
@@ -1460,6 +1518,22 @@ func add_error(string source, vec[semantic_error] mut diagnostics, string code, 
     })
     ;
     1
+}
+
+func resolve_recovery_anchor(string source, string anchor) string {
+    if anchor != "" && find_substring(source, anchor) >= 0 {
+        return anchor
+    }
+    if find_substring(source, "return") >= 0 {
+        return "return"
+    }
+    if find_substring(source, "switch") >= 0 {
+        return "switch"
+    }
+    if find_substring(source, "func ") >= 0 {
+        return "func"
+    }
+    "package"
 }
 
 func diagnostic_hint(string code, string anchor) string {
