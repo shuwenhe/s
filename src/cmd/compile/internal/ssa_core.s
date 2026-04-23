@@ -46,6 +46,8 @@ struct ssa_program {
     int32 dag_level_count
     int32 rerun_count
     int32 rollback_checkpoint_count
+    string pass_topology_log
+    string rollback_node
     int32 spill_count
     int32 spill_reload_count
     int32 call_pressure_event_count
@@ -91,6 +93,8 @@ struct ssa_pass_stats {
     int32 dag_level_count
     int32 rerun_count
     int32 rollback_checkpoint_count
+    string pass_topology_log
+    string rollback_node
     int32 optimized_value_count
 }
 
@@ -168,6 +172,8 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         dag_level_count: pass_stats.dag_level_count,
         rerun_count: pass_stats.rerun_count,
         rollback_checkpoint_count: pass_stats.rollback_checkpoint_count,
+        pass_topology_log: pass_stats.pass_topology_log,
+        rollback_node: pass_stats.rollback_node,
         spill_count: allocation.spill_count,
         spill_reload_count: allocation.spill_reload_count,
         call_pressure_event_count: allocation.call_pressure_events,
@@ -487,12 +493,20 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     var rollback_points = 0
     var stable_iters = 0
     var rollback_value = current
+    var topology_log = ""
+    var rollback_node = "none"
 
     var prev = -1
     while fixed_iters < max_iters && stable_iters < 2 {
         prev = current
         rollback_value = current
         rollback_points = rollback_points + 1
+
+        var iter_topology = pass_topological_order(model)
+        if topology_log != "" {
+            topology_log = topology_log + ";"
+        }
+        topology_log = topology_log + "iter" + to_string(fixed_iters) + "=" + iter_topology
 
         var raw_gvn = run_gvn_pass(model)
         var raw_sccp = run_sccp_pass(model, current)
@@ -512,6 +526,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
             sccp_i = raw_sccp
         } else if raw_sccp > 0 {
             blocked_passes = blocked_passes + 1
+            rollback_node = "sccp"
         }
 
         var pre_ready = pass_dependency_ready_pre(model, gvn_i, cse_i)
@@ -520,6 +535,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
             pre_i = raw_pre
         } else if raw_pre > 0 {
             blocked_passes = blocked_passes + 1
+            rollback_node = "pre"
         }
 
         var licm_ready = pass_dependency_ready_licm(model, gvn_i + sccp_i + pre_i)
@@ -528,6 +544,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
             licm_i = raw_licm
         } else if raw_licm > 0 {
             blocked_passes = blocked_passes + 1
+            rollback_node = "licm"
         }
 
         var bce_ready = pass_dependency_ready_bce(model)
@@ -536,6 +553,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
             bce_i = raw_bce
         } else if raw_bce > 0 {
             blocked_passes = blocked_passes + 1
+            rollback_node = "bce"
         }
 
         gvn_rewrites = gvn_rewrites + gvn_i
@@ -570,6 +588,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     if verify_errors > 0 || proof_failed > 0 {
         rollback = rollback + 1
         current = rollback_value
+        rollback_node = "verify"
     }
 
     if options.enable_dce {
@@ -621,8 +640,40 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         dag_level_count: dag_levels,
         rerun_count: reruns,
         rollback_checkpoint_count: rollback_points,
+        pass_topology_log: topology_log,
+        rollback_node: rollback_node,
         optimized_value_count: current,
     }
+}
+
+func pass_topological_order(ssa_dataflow_model model) string {
+    var level0 = "gvn"
+    var level1 = ""
+    var level2 = ""
+
+    if pass_dependency_ready_sccp(model, 0) {
+        level1 = append_pass_name(level1, "sccp")
+    }
+    if pass_dependency_ready_pre(model, 0, 0) {
+        level1 = append_pass_name(level1, "pre")
+    }
+    level1 = append_pass_name(level1, "cse")
+
+    if pass_dependency_ready_licm(model, 0) {
+        level2 = append_pass_name(level2, "licm")
+    }
+    if pass_dependency_ready_bce(model) {
+        level2 = append_pass_name(level2, "bce")
+    }
+
+    "L0{" + level0 + "}->L1{" + level1 + "}->L2{" + level2 + "}"
+}
+
+func append_pass_name(string base, string name) string {
+    if base == "" {
+        return name
+    }
+    base + "," + name
 }
 
 func pass_dag_level_count(ssa_dataflow_model model) int32 {
@@ -961,6 +1012,8 @@ func dump_pipeline(ssa_program program) string {
         + " dag_levels=" + to_string(program.dag_level_count)
         + " reruns=" + to_string(program.rerun_count)
         + " rollback_pts=" + to_string(program.rollback_checkpoint_count)
+        + " rollback_node=" + program.rollback_node
+        + " pass_topo=" + program.pass_topology_log
         + " cfg_edges=" + to_string(program.cfg_edge_count)
         + " branches=" + to_string(program.branch_block_count)
         + " spills=" + to_string(program.spill_count)
