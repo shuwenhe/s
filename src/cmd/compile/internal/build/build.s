@@ -3,6 +3,9 @@ package compile.internal.build
 use compile.internal.build.exec.run as exec_run
 use compile.internal.build.utils.parse_options
 use compile.internal.build.utils.report_error as report_error
+use internal.buildcfg.goarch as buildcfg_goarch
+use internal.buildcfg.goos as buildcfg_goos
+use std.io.println
 use std.vec.vec
 
 func main(vec[string] args)  int32 {
@@ -10,6 +13,8 @@ func main(vec[string] args)  int32 {
     if options[0] == "help" {
         return 0
     }
+
+    emit_target_log(options[0])
 
     var exec_result = exec_run(options)
     if options[0] == "run" {
@@ -25,4 +30,10 @@ func main(vec[string] args)  int32 {
 
 func report_error_local(string message)  () {
     report_error(message)
+}
+
+func emit_target_log(string command) () {
+    if command == "check" || command == "build" {
+        println("buildcfg: target=" + buildcfg_goos() + "/" + buildcfg_goarch())
+    }
 }
