@@ -141,6 +141,24 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, "loop_proofs=") {
         return 1
     }
+    if !contains(arm64_dump, "spill_cost=") {
+        return 1
+    }
+    if !contains(arm64_dump, "split_quality=") {
+        return 1
+    }
+    if !contains(arm64_dump, "cross_block_gain=") {
+        return 1
+    }
+    if !contains(arm64_dump, "sched_tp=") {
+        return 1
+    }
+    if !contains(arm64_dump, "sched_lat=") {
+        return 1
+    }
+    if !contains(arm64_dump, "microarch=") {
+        return 1
+    }
 
     var amd64_program = build_pipeline(mir_text, "amd64")
     var amd64_dump = dump_pipeline(amd64_program)
