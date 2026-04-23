@@ -572,6 +572,8 @@ class parser :
         if self ._at_symbol ("{"):
             return self ._parse_block_expr ()
         if self ._eat_symbol ("("):
+            if self ._eat_symbol (")"):
+                return nameexpr (name ="()")
             expr =self ._parse_expr ()
             self ._expect_symbol (")")
             return expr 
@@ -838,6 +840,9 @@ class parser :
     def _expect_ident (self )->str :
         token =self ._peek ()
         if token .kind ==tokenkind .keyword and token .value =="self":
+            self ._advance ()
+            return token .value 
+        if token .kind ==tokenkind .keyword :
             self ._advance ()
             return token .value 
         if token .kind ==tokenkind .ident :
