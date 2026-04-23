@@ -120,6 +120,27 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, "inv_policy=") {
         return 1
     }
+    if !contains(arm64_dump, "sched_prio=") {
+        return 1
+    }
+    if !contains(arm64_dump, "sched_conflicts=") {
+        return 1
+    }
+    if !contains(arm64_dump, "replay_hash=") {
+        return 1
+    }
+    if !contains(arm64_dump, "alias_level=") {
+        return 1
+    }
+    if !contains(arm64_dump, "memssa_chain=") {
+        return 1
+    }
+    if !contains(arm64_dump, "gvn_total=") {
+        return 1
+    }
+    if !contains(arm64_dump, "loop_proofs=") {
+        return 1
+    }
 
     var amd64_program = build_pipeline(mir_text, "amd64")
     var amd64_dump = dump_pipeline(amd64_program)

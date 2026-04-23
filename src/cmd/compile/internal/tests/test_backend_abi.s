@@ -3,6 +3,8 @@ package compile.internal.tests.test_backend_abi
 use compile.internal.backend_elf64.build_abi_emit_plan
 use compile.internal.backend_elf64.build_dwarf_like_artifact
 use compile.internal.backend_elf64.build_gc_metadata_artifact
+use compile.internal.backend_elf64.build_abi_machine_matrix_artifact
+use compile.internal.backend_elf64.build_toolchain_compat_artifact
 use compile.internal.syntax.parse_source
 use std.prelude.slice
 
@@ -90,6 +92,28 @@ func run_backend_abi_suite() int32 {
         return 1
     }
     if !contains(gcmap, "proof rollback=0 proof_fail=0") {
+        return 1
+    }
+
+    var matrix = build_abi_machine_matrix_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 spills=2")
+    if !contains(matrix, "abi-matrix version=1") {
+        return 1
+    }
+    if !contains(matrix, "matrix callseq=") {
+        return 1
+    }
+    if !contains(matrix, "matrix ret=") {
+        return 1
+    }
+
+    var toolchain = build_toolchain_compat_artifact(parsed.unwrap(), "amd64")
+    if !contains(toolchain, "toolchain-compat version=1") {
+        return 1
+    }
+    if !contains(toolchain, "module=") {
+        return 1
+    }
+    if !contains(toolchain, "linker=") {
         return 1
     }
 

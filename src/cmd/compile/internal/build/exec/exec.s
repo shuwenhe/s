@@ -7,6 +7,7 @@ use compile.internal.build.utils.emit_built as emit_built
 use compile.internal.build.utils.emit_check_ok as emit_check_ok
 use compile.internal.build.utils.emit_tokens as emit_tokens
 use compile.internal.build.cache.cache_hit_target
+use compile.internal.build.cache.cache_hit_explain_target
 use compile.internal.build.cache.update_cache_target
 use compile.internal.semantic.check_text
 use compile.internal.syntax.parse_source
@@ -26,7 +27,9 @@ func run(vec[string] options) int32 {
     var source_key = options[1]
     if options[0] == "check" {
         var check_target = "semantic@" + source_key
+        var check_explain = cache_hit_explain_target(options[1], source, "check", check_target)
         if cache_hit_target(options[1], source, "check", check_target) {
+            var ignored = check_explain
             emit_check_ok(options[1]);
             return 0
         }
@@ -62,7 +65,9 @@ func run(vec[string] options) int32 {
 
     if options[0] == "build" {
         var build_target = options[2] + "@" + source_key
+        var build_explain = cache_hit_explain_target(options[1], source, "build", build_target)
         if cache_hit_target(options[1], source, "build", build_target) {
+            var ignored0 = build_explain
             emit_built(options[2]);
             return 0
         }
