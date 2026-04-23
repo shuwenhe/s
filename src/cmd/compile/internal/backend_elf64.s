@@ -5,6 +5,9 @@ use compile.internal.mir.mir_graph
 use compile.internal.mir.mir_basic_block
 use compile.internal.mir.mir_statement
 use compile.internal.mir.mir_control_edge
+use compile.internal.mir.dump_graph
+use compile.internal.ssa_core.build_pipeline as build_ssa_pipeline
+use compile.internal.ssa_core.dump_pipeline as dump_ssa_pipeline
 use internal.buildcfg.goarch as buildcfg_goarch
 use compile.internal.semantic.check_text
 use compile.internal.syntax.parse_source
@@ -138,6 +141,11 @@ func build(string path, string output) int32 {
         return report_failure("mir lowering failed: " + mir_result.unwrap_err())
     }
     var graph = mir_result.unwrap()
+
+    var ssa_text = dump_ssa_pipeline(build_ssa_pipeline(dump_graph(graph), buildcfg_goarch()))
+    if ssa_text == "" {
+        return report_failure("ssa lowering failed: empty pipeline")
+    }
 
     var writes_result = compile_writes(graph)
     if writes_result.is_err() {
