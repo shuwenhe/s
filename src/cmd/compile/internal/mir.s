@@ -10,43 +10,43 @@ use std.prelude.to_string
 use std.vec.vec
 
 struct mir_operand {
-    string kind,
-    string value,
-    string type_name,
+    string kind
+    string value
+    string type_name
 }
 
 struct mir_local_slot {
-    int32 id,
-    string name,
-    string kind,
-    int32 version,
-    string type_name,
-    bool copyable,
+    int32 id
+    string name
+    string kind
+    int32 version
+    string type_name
+    bool copyable
 }
 
 struct mir_assign_stmt {
-    int32 target,
-    string op,
-    vec[string] args,
+    int32 target
+    string op
+    vec[string] args
 }
 
 struct mir_eval_stmt {
-    string op,
-    vec[string] args,
+    string op
+    vec[string] args
 }
 
 struct mir_move_stmt {
-    int32 target,
-    mir_operand source,
+    int32 target
+    mir_operand source
 }
 
 struct mir_copy_stmt {
-    int32 target,
-    mir_operand source,
+    int32 target
+    mir_operand source
 }
 
 struct mir_drop_stmt {
-    int32 slot,
+    int32 slot
 }
 
 enum mir_statement {
@@ -58,30 +58,30 @@ enum mir_statement {
 }
 
 struct mir_control_edge {
-    string label,
-    int32 target,
-    vec[mir_operand] args,
+    string label
+    int32 target
+    vec[mir_operand] args
 }
 
 struct mir_terminator {
-    string kind,
-    vec[mir_control_edge] edges,
+    string kind
+    vec[mir_control_edge] edges
 }
 
 struct mir_basic_block {
-    int32 id,
-    string label,
-    vec[mir_statement] statements,
-    mir_terminator terminator,
+    int32 id
+    string label
+    vec[mir_statement] statements
+    mir_terminator terminator
 }
 
 struct mir_graph {
-    string function_name,
-    vec[mir_basic_block] blocks,
-    vec[mir_local_slot] locals,
-    vec[string] trace,
-    int32 entry,
-    int32 exit,
+    string function_name
+    vec[mir_basic_block] blocks
+    vec[mir_local_slot] locals
+    vec[string] trace
+    int32 entry
+    int32 exit
 }
 
 func lower_function_graph(function_decl function) mir_graph {

@@ -11,7 +11,7 @@ enum TypeKind {
 }
 
 struct Type {
-    TypeKind kind,
+    TypeKind kind
     string name, // e.g. "int32", or base name for named/generic
     option[Type] inner, // pointer/slice inner type
     vec[Type] params, // generic params

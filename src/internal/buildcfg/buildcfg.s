@@ -6,24 +6,24 @@ use std.prelude.slice
 use std.vec.vec
 
 struct build_cfg_error {
-    string message,
+    string message
 }
 
 struct target {
-    string goos,
-    string goarch,
+    string goos
+    string goarch
 }
 
 struct toolchain {
-    string compiler,
-    string assembler,
-    string linker,
-    string archiver,
+    string compiler
+    string assembler
+    string linker
+    string archiver
 }
 
 struct build_cfg {
-    target target,
-    toolchain toolchain,
+    target target
+    toolchain toolchain
 }
 
 func goos() string {

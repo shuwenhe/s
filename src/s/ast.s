@@ -6,41 +6,41 @@ use std.prelude.to_string
 use std.vec.vec
 
 struct use_decl {
-    string path,
-    option[string] alias,
+    string path
+    option[string] alias
 }
 
 struct field {
-    string name,
-    string type_name,
-    bool is_public,
+    string name
+    string type_name
+    bool is_public
 }
 
 struct param {
-    string name,
-    string type_name,
+    string name
+    string type_name
 }
 
 struct function_sig {
-    string name,
-    vec[string] generics,
-    vec[param] params,
-    option[string] return_type,
+    string name
+    vec[string] generics
+    vec[param] params
+    option[string] return_type
 }
 
 struct name_pattern {
-    string name,
+    string name
 }
 
 struct wildcard_pattern {}
 
 struct variant_pattern {
-    string path,
-    vec[pattern] args,
+    string path
+    vec[pattern] args
 }
 
 struct literal_pattern {
-    expr value,
+    expr value
 }
 
 enum pattern {
@@ -51,107 +51,107 @@ enum pattern {
 }
 
 struct int_expr {
-    string value,
-    option[string] inferred_type,
+    string value
+    option[string] inferred_type
 }
 
 struct string_expr {
-    string value,
-    option[string] inferred_type,
+    string value
+    option[string] inferred_type
 }
 
 struct bool_expr {
-    bool value,
-    option[string] inferred_type,
+    bool value
+    option[string] inferred_type
 }
 
 struct name_expr {
-    string name,
-    option[string] inferred_type,
+    string name
+    option[string] inferred_type
 }
 
 struct borrow_expr {
-    box[expr] target,
-    bool mutable,
-    option[string] inferred_type,
+    box[expr] target
+    bool mutable
+    option[string] inferred_type
 }
 
 struct binary_expr {
-    box[expr] left,
-    string op,
-    box[expr] right,
-    option[string] inferred_type,
+    box[expr] left
+    string op
+    box[expr] right
+    option[string] inferred_type
 }
 
 struct member_expr {
-    box[expr] target,
-    string member,
-    option[string] inferred_type,
+    box[expr] target
+    string member
+    option[string] inferred_type
 }
 
 struct index_expr {
-    box[expr] target,
-    box[expr] index,
-    option[string] inferred_type,
+    box[expr] target
+    box[expr] index
+    option[string] inferred_type
 }
 
 struct call_expr {
-    box[expr] callee,
-    vec[expr] args,
-    option[string] inferred_type,
+    box[expr] callee
+    vec[expr] args
+    option[string] inferred_type
 }
 
 struct switch_arm {
-    pattern pattern,
-    expr expr,
+    pattern pattern
+    expr expr
 }
 
 struct switch_expr {
-    box[expr] subject,
-    vec[switch_arm] arms,
-    option[string] inferred_type,
+    box[expr] subject
+    vec[switch_arm] arms
+    option[string] inferred_type
 }
 
 struct if_expr {
-    box[expr] condition,
-    block_expr then_branch,
-    option[box[expr]] else_branch,
-    option[string] inferred_type,
+    box[expr] condition
+    block_expr then_branch
+    option[box[expr]] else_branch
+    option[string] inferred_type
 }
 
 struct while_expr {
-    box[expr] condition,
-    block_expr body,
-    option[string] inferred_type,
+    box[expr] condition
+    block_expr body
+    option[string] inferred_type
 }
 
 struct for_expr {
-    vec[string] names,
-    bool declare,
-    box[expr] iterable,
-    block_expr body,
-    option[string] inferred_type,
+    vec[string] names
+    bool declare
+    box[expr] iterable
+    block_expr body
+    option[string] inferred_type
 }
 
 struct block_expr {
-    vec[stmt] statements,
-    option[expr] final_expr,
-    option[string] inferred_type,
+    vec[stmt] statements
+    option[expr] final_expr
+    option[string] inferred_type
 }
 
 struct array_literal {
-    option[string] type_text,
-    vec[expr] items,
+    option[string] type_text
+    vec[expr] items
 }
 
 struct map_entry {
-    expr key,
-    expr value,
+    expr key
+    expr value
 }
 
 struct map_literal {
-    option[string] type_text,
-    vec[map_entry] entries,
+    option[string] type_text
+    vec[map_entry] entries
 }
 
 enum expr {
@@ -174,37 +174,37 @@ enum expr {
 }
 
 struct var_stmt {
-    string name,
-    option[string] type_name,
-    expr value,
+    string name
+    option[string] type_name
+    expr value
 }
 
 struct assign_stmt {
-    string name,
-    expr value,
+    string name
+    expr value
 }
 
 struct increment_stmt {
-    string name,
+    string name
 }
 
 struct c_for_stmt {
-    box[stmt] init,
-    expr condition,
-    box[stmt] step,
-    block_expr body,
+    box[stmt] init
+    expr condition
+    box[stmt] step
+    block_expr body
 }
 
 struct return_stmt {
-    option[expr] value,
+    option[expr] value
 }
 
 struct expr_stmt {
-    expr expr,
+    expr expr
 }
 
 struct defer_stmt {
-    expr expr,
+    expr expr
 }
 
 enum stmt {
@@ -218,42 +218,42 @@ enum stmt {
 }
 
 struct function_decl {
-    function_sig sig,
-    option[block_expr] body,
-    bool is_public,
+    function_sig sig
+    option[block_expr] body
+    bool is_public
 }
 
 struct struct_decl {
-    string name,
-    vec[string] generics,
-    vec[field] fields,
-    bool is_public,
+    string name
+    vec[string] generics
+    vec[field] fields
+    bool is_public
 }
 
 struct enum_variant {
-    string name,
-    option[string] payload,
+    string name
+    option[string] payload
 }
 
 struct enum_decl {
-    string name,
-    vec[string] generics,
-    vec[enum_variant] variants,
-    bool is_public,
+    string name
+    vec[string] generics
+    vec[enum_variant] variants
+    bool is_public
 }
 
 struct trait_decl {
-    string name,
-    vec[string] generics,
-    vec[function_sig] methods,
-    bool is_public,
+    string name
+    vec[string] generics
+    vec[function_sig] methods
+    bool is_public
 }
 
 struct impl_decl {
-    string target,
-    option[string] trait_name,
-    vec[string] generics,
-    vec[function_decl] methods,
+    string target
+    option[string] trait_name
+    vec[string] generics
+    vec[function_decl] methods
 }
 
 enum item {
@@ -265,9 +265,9 @@ enum item {
 }
 
 struct source_file {
-    string pkg,
-    vec[use_decl] uses,
-    vec[item] items,
+    string pkg
+    vec[use_decl] uses
+    vec[item] items
 }
 
 func dump_source_file(source_file source) string {
