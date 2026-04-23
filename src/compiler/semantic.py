@@ -240,7 +240,7 @@ class checker :
                 self .impls .append (implinfo (trait_name =item .trait_name ,target =item .target ,methods =methods ))
                 if item .trait_name :
                     self .traits .add (item .trait_name )
-                    self .impl_traits .setdefault (item .target ,Set ()).add (item .trait_name )
+                    self .impl_traits .setdefault (item .target ,set ()).add (item .trait_name )
 
     def check (self ,source :sourcefile )->None :
         for item in source .items :
@@ -470,7 +470,7 @@ class checker :
                 self ._error (f"unknown struct {struct_name }")
                 expr .inferred_type =dump_type (struct_type )
                 return struct_type 
-            seen :Set [str ]=Set ()
+            seen :Set [str ]=set ()
             for field in expr .fields :
                 if field .name in seen :
                     self ._error (f"duplicate struct field {field .name }")
@@ -625,7 +625,7 @@ class checker :
         return self ._type_from_expr (callee )
 
     def _is_never (self ,ty :type )->bool :
-        return isinstance (self ._normalize_type (ty ),type (never ))
+        return self ._normalize_type (ty )is never
 
     def _consume_tail_expr (self ,expr :expr ,scope :Dict [str ,varstate ])->None :
         if isinstance (expr ,nameexpr ):
@@ -768,7 +768,7 @@ class checker :
         if builtin is not None and trait_name in builtin .traits :
             return True 
         name =dump_type (ty )
-        return trait_name in self .impl_traits .get (name ,Set ())
+        return trait_name in self .impl_traits .get (name ,set ())
 
     def _infer_iter_item (self ,ty :type )->type :
         if isinstance (ty ,namedtype )and ty .name =="vec"and ty .args :
