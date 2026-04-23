@@ -207,6 +207,10 @@ func compatible_type(string left, string right) bool {
         return false
     }
 
+    if is_tuple_type(l) || is_tuple_type(r) {
+        return compatible_tuple_type(l, r)
+    }
+
     var lt = parse_type_ref(l)
     var rt = parse_type_ref(r)
 
@@ -228,6 +232,147 @@ func compatible_type(string left, string right) bool {
         i = i + 1
     }
     true
+}
+
+func assignable_type(string target, string source) bool {
+    var t = parse_type(target)
+    var s = parse_type(source)
+    if t == s {
+        return true
+    }
+    if t == "unknown" || s == "unknown" {
+        return false
+    }
+
+    if compatible_type(t, s) {
+        return true
+    }
+
+    if is_numeric_primitive(t) && is_numeric_primitive(s) {
+        return numeric_rank(t) >= numeric_rank(s)
+    }
+
+    if is_tuple_type(t) || is_tuple_type(s) {
+        return assignable_tuple_type(t, s)
+    }
+
+    false
+}
+
+func compatible_tuple_type(string left, string right) bool {
+    var l = parse_type(left)
+    var r = parse_type(right)
+    if !is_tuple_type(l) || !is_tuple_type(r) {
+        return false
+    }
+
+    var la = extract_tuple_args(l)
+    var ra = extract_tuple_args(r)
+    if la.len() != ra.len() {
+        return false
+    }
+
+    var i = 0
+    while i < la.len() {
+        if !compatible_type(la[i], ra[i]) {
+            return false
+        }
+        i = i + 1
+    }
+    true
+}
+
+func assignable_tuple_type(string target, string source) bool {
+    var t = parse_type(target)
+    var s = parse_type(source)
+    if !is_tuple_type(t) || !is_tuple_type(s) {
+        return false
+    }
+
+    var ta = extract_tuple_args(t)
+    var sa = extract_tuple_args(s)
+    if ta.len() != sa.len() {
+        return false
+    }
+
+    var i = 0
+    while i < ta.len() {
+        if !assignable_type(ta[i], sa[i]) {
+            return false
+        }
+        i = i + 1
+    }
+    true
+}
+
+func is_tuple_type(string ty) bool {
+    var clean = parse_type(ty)
+    if clean.len() < 2 {
+        return false
+    }
+    return starts_with(clean, "(") && ends_with(clean, ")")
+}
+
+func extract_tuple_args(string type_name) vec[string] {
+    var out = vec[string]()
+    var clean = parse_type(type_name)
+    if !is_tuple_type(clean) {
+        return out
+    }
+
+    var inner = slice(clean, 1, clean.len() - 1)
+    var depth = 0
+    var start = 0
+    var i = 0
+    while i < inner.len() {
+        var ch = char_at(inner, i)
+        if ch == "(" || ch == "[" {
+            depth = depth + 1
+        } else if ch == ")" || ch == "]" {
+            depth = depth - 1
+        } else if ch == "," && depth == 0 {
+            out.push(trim_text(slice(inner, start, i)))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    if start < inner.len() {
+        out.push(trim_text(slice(inner, start, inner.len())))
+    }
+    out
+}
+
+func is_numeric_primitive(string ty) bool {
+    var clean = parse_type(ty)
+    return clean == "i8"
+        || clean == "i16"
+        || clean == "int32"
+        || clean == "i64"
+        || clean == "isize"
+        || clean == "u8"
+        || clean == "u16"
+        || clean == "u32"
+        || clean == "u64"
+        || clean == "usize"
+        || clean == "f32"
+        || clean == "f64"
+}
+
+func numeric_rank(string ty) int32 {
+    var clean = parse_type(ty)
+    if clean == "i8" || clean == "u8" {
+        return 1
+    }
+    if clean == "i16" || clean == "u16" {
+        return 2
+    }
+    if clean == "int32" || clean == "u32" || clean == "f32" {
+        return 3
+    }
+    if clean == "i64" || clean == "u64" || clean == "isize" || clean == "usize" || clean == "f64" {
+        return 4
+    }
+    0
 }
 
 func is_builtin_primitive(string ty) bool {

@@ -55,6 +55,171 @@ func from_syntax(source_file src) ir_ast.package_ir {
     pkg
 }
 
+func from_syntax_checked(source_file src) result[ir_ast.package_ir, string] {
+    var pkg = from_syntax(src)
+    var check = validate_lowering_contract(pkg)
+    if check.is_err() {
+        return result::err(check.unwrap_err())
+    }
+    result::ok(pkg)
+}
+
+func validate_lowering_contract(ir_ast.package_ir pkg) result[(), string] {
+    var i = 0
+    while i < pkg.decls.len() {
+        switch pkg.decls[i] {
+            ir_ast.decl_ir::func(fd) : {
+                if fd.body.is_some() {
+                    var checked = validate_block_contract(fd.body.unwrap())
+                    if checked.is_err() {
+                        return checked
+                    }
+                }
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    result::ok(())
+}
+
+func validate_block_contract(ir_ast.block_ir block) result[(), string] {
+    var i = 0
+    while i < block.statements.len() {
+        switch block.statements[i] {
+            ir_ast.stmt_ir::var(var_stmt) : {
+                var checked = validate_expr_contract(var_stmt.value)
+                if checked.is_err() {
+                    return checked
+                }
+            }
+            ir_ast.stmt_ir::assign(assign_stmt) : {
+                var checked = validate_expr_contract(assign_stmt.value)
+                if checked.is_err() {
+                    return checked
+                }
+            }
+            ir_ast.stmt_ir::expr(expr_stmt) : {
+                var checked = validate_expr_contract(expr_stmt.expr)
+                if checked.is_err() {
+                    return checked
+                }
+            }
+            ir_ast.stmt_ir::r#return(return_stmt) : {
+                if return_stmt.value.is_some() {
+                    var checked = validate_expr_contract(return_stmt.value.unwrap())
+                    if checked.is_err() {
+                        return checked
+                    }
+                }
+            }
+            ir_ast.stmt_ir::cfor(c_for_stmt) : {
+                var cond_checked = validate_expr_contract(c_for_stmt.condition)
+                if cond_checked.is_err() {
+                    return cond_checked
+                }
+                var body_checked = validate_block_contract(c_for_stmt.body)
+                if body_checked.is_err() {
+                    return body_checked
+                }
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+
+    if block.final_expr.is_some() {
+        return validate_expr_contract(block.final_expr.unwrap())
+    }
+    result::ok(())
+}
+
+func validate_expr_contract(ir_ast.expr_ir expression) result[(), string] {
+    switch expression {
+        ir_ast.expr_ir::name(name) : {
+            if contains_text(name, "_unlowered") {
+                return result::err("lowering contract violation: placeholder expression remains")
+            }
+        }
+        ir_ast.expr_ir::call(call_expr) : {
+            var i = 0
+            while i < call_expr.args.len() {
+                var checked = validate_expr_contract(call_expr.args[i])
+                if checked.is_err() {
+                    return checked
+                }
+                i = i + 1
+            }
+        }
+        ir_ast.expr_ir::binary(binary_expr) : {
+            var l = validate_expr_contract(binary_expr.left)
+            if l.is_err() {
+                return l
+            }
+            return validate_expr_contract(binary_expr.right)
+        }
+        ir_ast.expr_ir::borrow(borrow_expr) : {
+            return validate_expr_contract(borrow_expr.target)
+        }
+        ir_ast.expr_ir::member(member_expr) : {
+            return validate_expr_contract(member_expr.target)
+        }
+        ir_ast.expr_ir::index(index_expr) : {
+            var t = validate_expr_contract(index_expr.target)
+            if t.is_err() {
+                return t
+            }
+            return validate_expr_contract(index_expr.index)
+        }
+        ir_ast.expr_ir::array(array_expr) : {
+            var i = 0
+            while i < array_expr.items.len() {
+                var checked = validate_expr_contract(array_expr.items[i])
+                if checked.is_err() {
+                    return checked
+                }
+                i = i + 1
+            }
+        }
+        ir_ast.expr_ir::map(map_expr) : {
+            var i = 0
+            while i < map_expr.entries.len() {
+                var key_checked = validate_expr_contract(map_expr.entries[i].key)
+                if key_checked.is_err() {
+                    return key_checked
+                }
+                var value_checked = validate_expr_contract(map_expr.entries[i].value)
+                if value_checked.is_err() {
+                    return value_checked
+                }
+                i = i + 1
+            }
+        }
+        ir_ast.expr_ir::block(block_expr) : {
+            return validate_block_contract(block_expr)
+        }
+        _ : (),
+    }
+    result::ok(())
+}
+
+func contains_text(string text, string needle) bool {
+    if needle == "" {
+        return true
+    }
+    if text.len() < needle.len() {
+        return false
+    }
+    var i = 0
+    while i <= text.len() - needle.len() {
+        if slice(text, i, i + needle.len()) == needle {
+            return true
+        }
+        i = i + 1
+    }
+    false
+}
+
 func convert_function(function_decl fd) ir_ast.func_decl {
     var sig = ir_ast.func_sig { params: vec[ir_ast.param](), return_type_name: option[string].none, generics: fd.sig.generics }
     var pi = 0

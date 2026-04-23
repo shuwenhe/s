@@ -1,6 +1,6 @@
-# IR 设计草案（AST / Types / MIR）
+# IR 设计（AST / Types / MIR）
 
-目的：为将 `s` 编译器对齐到 Go 编译器的分层管线，定义统一的中间表示（IR）边界与数据结构草案，作为后续实现 `noder`、`mir->ssa` 降级与后端生成的参考。
+目的：为将 `s` 编译器对齐到 Go 编译器的分层管线，定义统一的中间表示（IR）边界与数据结构，作为持续演进 `noder`、`mir->ssa` 降级与后端生成的参考。
 
 基本原则：
 - 明确分层：Syntax -> Typed AST -> MIR -> SSA/Backend
@@ -13,7 +13,7 @@
 - `internal/ir/types.s`：编译器内部类型表示（Size/Ptr/泛型占位）
 - `internal/ir/mir.s`：函数级中间表示（控制流图、局部槽、终结器）
 
-核心数据结构草案（概要）
+核心数据结构（概要）
 - program_ir: 包含若干 `package_ir`（或单一文件包）
 - package_ir: 名称、文件列表、Top-level decls
 - decl_ir: `func_decl` | `type_decl` | `const_decl` | `var_decl` | `impl_decl`
@@ -41,4 +41,4 @@ MIR（概要）
 - 后端实现逐步消费 MIR：先实现简单直接生成 asm，再逐步引入 SSA 降级与优化
 
 下一步
-- 在 `internal/ir/` 下添加 `ast.s`、`types.s` 骨架并实现基本构造与打印函数（已开始）
+- 在 `internal/ir/` 上继续补齐类型注解传播、包级 lowering 契约与更强的控制流语义保持。

@@ -5,6 +5,7 @@ use compile.internal.tests.test_backend_abi.run_backend_abi_suite
 use compile.internal.tests.test_mir.run_mir_suite
 use compile.internal.tests.test_ssa.run_ssa_suite
 use compile.internal.tests.test_pipeline_regression.run_pipeline_regression_suite
+use compile.internal.tests.test_typesys.run_typesys_suite
 use compile.internal.tests.test_semantic.run_semantic_suite
 use std.env.args as host_args
 use std.env.get
@@ -68,6 +69,12 @@ func main() int32 {
     if pipeline_result != 0 {
         eprintln("pipeline regression suite failed");
         return pipeline_result
+    }
+
+    var typesys_result = run_typesys_suite()
+    if typesys_result != 0 {
+        eprintln("typesys suite failed");
+        return typesys_result
     }
 
     println("test_compiler: ok");

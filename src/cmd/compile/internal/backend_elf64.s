@@ -212,6 +212,10 @@ func build(string path, string output) int32 {
         if wasm_result.is_err() {
             return report_failure(wasm_result.unwrap_err().message)
         }
+        var wasm_binary_check = validate_wasi_binary_artifact(output)
+        if wasm_binary_check.is_err() {
+            return report_failure(wasm_binary_check.unwrap_err().message)
+        }
     } else {
         var asm_text = emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
         var asm_path = temp_dir + "/out.s"
@@ -398,6 +402,8 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         rewritten = rewritten + " constprop=" + to_string(const_prop)
     }
     rewritten = rewritten + " ipo=" + to_string(ipo_synergy)
+    rewritten = rewritten + " pass.rm_unreachable=" + to_string(pass.removed_unreachable_blocks)
+    rewritten = rewritten + " pass.fold_branch=" + to_string(pass.folded_redundant_branches)
     rewritten = rewritten + " pass.simplify_j2r=" + to_string(pass.simplified_jump_to_return)
     rewritten = rewritten + " pass.trim_unit=" + to_string(pass.removed_unit_lines)
     rewritten = rewritten + " pass.dedup=" + to_string(pass.dedup_lines)
@@ -409,6 +415,8 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         + " cross_pkg_inline=" + to_string(cross_pkg_inline)
         + " const_prop=" + to_string(const_prop)
         + " ipo_synergy=" + to_string(ipo_synergy)
+        + " pass_rm_unreachable=" + to_string(pass.removed_unreachable_blocks)
+        + " pass_fold_branch=" + to_string(pass.folded_redundant_branches)
         + " pass_simplify_j2r=" + to_string(pass.simplified_jump_to_return)
         + " pass_trim_unit=" + to_string(pass.removed_unit_lines)
         + " pass_dedup=" + to_string(pass.dedup_lines)
@@ -424,10 +432,19 @@ struct midend_pass_result {
     int32 simplified_jump_to_return
     int32 removed_unit_lines
     int32 dedup_lines
+    int32 removed_unreachable_blocks
+    int32 folded_redundant_branches
 }
 
 func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
     var rewritten = graph
+
+    var unreachable = remove_unreachable_blocks_pass(rewritten)
+    rewritten = unreachable.graph
+
+    var folded = simplify_redundant_branch_pass(rewritten)
+    rewritten = folded.graph
+
     var simplified = simplify_jump_to_return_pass(rewritten)
     rewritten = simplified.graph
 
@@ -442,7 +459,118 @@ func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
         simplified_jump_to_return: simplified.count,
         removed_unit_lines: trimmed.count,
         dedup_lines: deduped.count,
+        removed_unreachable_blocks: unreachable.count,
+        folded_redundant_branches: folded.count,
     }
+}
+
+func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
+    var rewritten = graph
+    var reachable = vec[int32]()
+    var work = vec[int32]()
+    work.push(rewritten.entry)
+
+    while work.len() > 0 {
+        var id = work[work.len() - 1]
+        work.pop()
+        if contains_int32(reachable, id) {
+            continue
+        }
+        reachable.push(id)
+
+        var bi = find_block_index_by_id(rewritten, id)
+        if bi < 0 {
+            continue
+        }
+
+        var ei = 0
+        while ei < rewritten.blocks[bi].terminator.edges.len() {
+            var next = rewritten.blocks[bi].terminator.edges[ei].target
+            if !contains_int32(reachable, next) {
+                work.push(next)
+            }
+            ei = ei + 1
+        }
+    }
+
+    var filtered_blocks = vec[mir_basic_block]()
+    var i = 0
+    while i < rewritten.blocks.len() {
+        if contains_int32(reachable, rewritten.blocks[i].id) {
+            filtered_blocks.push(rewritten.blocks[i])
+        }
+        i = i + 1
+    }
+
+    var removed = rewritten.blocks.len() - filtered_blocks.len()
+    rewritten.blocks = filtered_blocks
+
+    i = 0
+    while i < rewritten.blocks.len() {
+        var kept_edges = vec[mir_control_edge]()
+        var j = 0
+        while j < rewritten.blocks[i].terminator.edges.len() {
+            var edge = rewritten.blocks[i].terminator.edges[j]
+            if contains_int32(reachable, edge.target) {
+                kept_edges.push(edge)
+            }
+            j = j + 1
+        }
+        rewritten.blocks[i].terminator.edges = kept_edges
+        i = i + 1
+    }
+
+    if !contains_int32(reachable, rewritten.exit) {
+        rewritten.exit = rewritten.entry
+    }
+
+    graph_pass_count_result { graph: rewritten, count: removed }
+}
+
+func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
+    var rewritten = graph
+    var changed = 0
+
+    var i = 0
+    while i < rewritten.blocks.len() {
+        var block = rewritten.blocks[i]
+        if block.terminator.kind == "branch" && block.terminator.edges.len() > 1 {
+            var target = block.terminator.edges[0].target
+            var same_target = true
+            var j = 1
+            while j < block.terminator.edges.len() {
+                if block.terminator.edges[j].target != target {
+                    same_target = false
+                }
+                j = j + 1
+            }
+            if same_target {
+                var folded = vec[mir_control_edge]()
+                folded.push(mir_control_edge {
+                    label: "folded",
+                    target: target,
+                    args: vec[mir_operand](),
+                })
+                rewritten.blocks[i].terminator.kind = "jump"
+                rewritten.blocks[i].terminator.edges = folded
+                changed = changed + 1
+            }
+        }
+        i = i + 1
+    }
+
+    graph_pass_count_result { graph: rewritten, count: changed }
+}
+
+func contains_int32(vec[int32] values, int32 needle) bool {
+    var i = 0
+    while i < values.len() {
+        if values[i] == needle {
+            return true
+        }
+        i = i + 1
+    }
+    false
 }
 
 struct graph_pass_count_result {
@@ -583,6 +711,29 @@ func validate_ssa_abi_contracts(string arch, string ssa_text) result[(), backend
         }
     }
 
+    var preserve = validate_callsite_preservation(ssa_text)
+    if preserve.is_err() {
+        return preserve
+    }
+
+    result::ok(())
+}
+
+func validate_callsite_preservation(string ssa_text) result[(), backend_error] {
+    var clobber = parse_number_after(ssa_text, "callee_saved_clobber=")
+    if clobber > 0 {
+        return result::err(backend_error { message: "backend error: callee-saved registers clobbered at callsite" })
+    }
+
+    var restore_missing = parse_number_after(ssa_text, "caller_restore_missing=")
+    if restore_missing > 0 {
+        return result::err(backend_error { message: "backend error: caller restore is missing at callsite" })
+    }
+
+    if has_substring(ssa_text, "call_preserve=fail") {
+        return result::err(backend_error { message: "backend error: callsite preserve contract failed" })
+    }
+
     result::ok(())
 }
 
@@ -663,6 +814,27 @@ func build_wasm_toolchain_plan(string c_path, string obj_path, string output) st
         + " -o " + obj_path
         + " && wasm-ld --no-entry --export=_start --allow-undefined " + obj_path
         + " -o " + output
+}
+
+func build_wasm_binary_probe_plan(string output) string {
+    return "wasm-objdump -x " + output + " | grep -q wasi_snapshot_preview1"
+        + " && wasm-objdump -x " + output + " | grep -q fd_write"
+        + " && wasm-objdump -x " + output + " | grep -q proc_exit"
+        + " && wasm-objdump -x " + output + " | grep -q _start"
+}
+
+func validate_wasi_binary_artifact(string output) result[(), backend_error] {
+    var probe = vec[string]()
+    probe.push("sh")
+    probe.push("-c")
+    probe.push(build_wasm_binary_probe_plan(output))
+    var run = run_process(probe)
+    if run.is_err() {
+        return result::err(backend_error {
+            message: "backend error: wasi binary probe failed (requires wasm-objdump and expected imports/exports): " + run.unwrap_err().message,
+        })
+    }
+    result::ok(())
 }
 
 func build_wasm_object_chain(string temp_dir, string output, vec[write_op] writes, int32 exit_code) result[(), backend_error] {
