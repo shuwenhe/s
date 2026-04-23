@@ -5,6 +5,7 @@ use compile.internal.backend_elf64.build_dwarf_like_artifact
 use compile.internal.backend_elf64.build_gc_metadata_artifact
 use compile.internal.backend_elf64.build_abi_machine_matrix_artifact
 use compile.internal.backend_elf64.build_toolchain_compat_artifact
+use compile.internal.backend_elf64.build_backend_perf_baseline_artifact
 use compile.internal.syntax.parse_source
 use std.prelude.slice
 
@@ -80,6 +81,9 @@ func run_backend_abi_suite() int32 {
     if !contains(dwarf, "gate dwarf_consumable=") {
         return 1
     }
+    if !contains(dwarf, "policy debug_budget_mode=") {
+        return 1
+    }
 
     var gcmap = build_gc_metadata_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 loops=1 spills=2 rollback=0 proof_fail=0")
     if !contains(gcmap, "gcmap version=1") {
@@ -94,6 +98,12 @@ func run_backend_abi_suite() int32 {
     if !contains(gcmap, "proof rollback=0 proof_fail=0") {
         return 1
     }
+    if !contains(gcmap, "fault_inject ") {
+        return 1
+    }
+    if !contains(gcmap, "stress baseline=enabled") {
+        return 1
+    }
 
     var matrix = build_abi_machine_matrix_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 spills=2")
     if !contains(matrix, "abi-matrix version=1") {
@@ -105,6 +115,9 @@ func run_backend_abi_suite() int32 {
     if !contains(matrix, "matrix ret=") {
         return 1
     }
+    if !contains(matrix, "cross_arch_consistency=") {
+        return 1
+    }
 
     var toolchain = build_toolchain_compat_artifact(parsed.unwrap(), "amd64")
     if !contains(toolchain, "toolchain-compat version=1") {
@@ -114,6 +127,20 @@ func run_backend_abi_suite() int32 {
         return 1
     }
     if !contains(toolchain, "linker=") {
+        return 1
+    }
+    if !contains(toolchain, "go_cmd_equiv=") {
+        return 1
+    }
+    if !contains(toolchain, "matrix ") {
+        return 1
+    }
+
+    var perf = build_backend_perf_baseline_artifact("amd64", "ssa pair blocks=2 values=4 spills=2 splits=1 remat=1 sched_tp=8 sched_lat=5", "midend inline_sites=2")
+    if !contains(perf, "perf-baseline version=1") {
+        return 1
+    }
+    if !contains(perf, "regression_gate ") {
         return 1
     }
 

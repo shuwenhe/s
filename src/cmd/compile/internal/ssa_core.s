@@ -56,6 +56,12 @@ struct ssa_program {
     int32 memory_ssa_chain_count
     int32 global_value_number_count
     int32 loop_proof_chain_count
+    int32 spill_cost_score
+    int32 split_quality_score
+    int32 cross_block_gain_score
+    int32 sched_throughput_score
+    int32 sched_latency_balance_score
+    int32 microarch_specialization_score
     string pass_dsl
     string invalidation_policy
     string pass_topology_log
@@ -167,6 +173,8 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
     }
     var allocation = linear_scan_regalloc_with_spill(rewritten, optimized_value_count, goarch)
     var debug_budget = compute_debug_budget(pass_stats, allocation)
+    var regalloc_quality = compute_regalloc_quality(allocation, block_count)
+    var sched_quality = compute_schedule_quality(pass_stats, model, goarch)
     var debug_lines = build_debug_lines(rewritten, allocation.allocated_regs)
     var debug_var_locations = build_var_locations(allocation.allocated_regs)
 
@@ -214,6 +222,12 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         memory_ssa_chain_count: pass_stats.memory_ssa_chain_count,
         global_value_number_count: pass_stats.global_value_number_count,
         loop_proof_chain_count: pass_stats.loop_proof_chain_count,
+        spill_cost_score: regalloc_quality.spill_cost_score,
+        split_quality_score: regalloc_quality.split_quality_score,
+        cross_block_gain_score: regalloc_quality.cross_block_gain_score,
+        sched_throughput_score: sched_quality.throughput_score,
+        sched_latency_balance_score: sched_quality.latency_balance_score,
+        microarch_specialization_score: sched_quality.microarch_specialization_score,
         pass_dsl: pass_stats.pass_dsl,
         invalidation_policy: pass_stats.invalidation_policy,
         pass_topology_log: pass_stats.pass_topology_log,
@@ -284,6 +298,18 @@ struct regalloc_result {
     int32 rematerialized_values
     int32 reuse_count
     int32 max_live
+}
+
+struct regalloc_quality_result {
+    int32 spill_cost_score
+    int32 split_quality_score
+    int32 cross_block_gain_score
+}
+
+struct schedule_quality_result {
+    int32 throughput_score
+    int32 latency_balance_score
+    int32 microarch_specialization_score
 }
 
 func linear_scan_regalloc_with_spill(string mir_text, int32 value_count, string goarch) regalloc_result {
@@ -799,9 +825,8 @@ func hash_text(string text) int32 {
 }
 
 func parse_digit_safe(string ch) int32 {
-    var d = parse_digit(ch)
-    if d >= 0 {
-        return d
+    if ch >= "0" && ch <= "9" {
+        return parse_digit(ch)
     }
     if ch >= "a" && ch <= "z" {
         return 10
@@ -810,6 +835,57 @@ func parse_digit_safe(string ch) int32 {
         return 11
     }
     1
+}
+
+func compute_regalloc_quality(regalloc_result allocation, int32 block_count) regalloc_quality_result {
+    var spill_cost = allocation.spill_count * 4 + allocation.spill_reload_count * 2
+    if spill_cost < 0 {
+        spill_cost = 0
+    }
+
+    var split_quality = allocation.live_range_splits * 3 + allocation.rematerialized_values * 2 - allocation.spill_count
+    if split_quality < 0 {
+        split_quality = 0
+    }
+
+    var cross_block = allocation.reuse_count + allocation.max_live
+    if block_count > 1 {
+        cross_block = cross_block + block_count
+    }
+
+    regalloc_quality_result {
+        spill_cost_score: spill_cost,
+        split_quality_score: split_quality,
+        cross_block_gain_score: cross_block,
+    }
+}
+
+func compute_schedule_quality(ssa_pass_stats pass_stats, ssa_dataflow_model model, string goarch) schedule_quality_result {
+    var throughput = pass_stats.scheduler_priority_score - pass_stats.scheduler_conflict_count * 2 + pass_stats.global_value_number_count
+    if throughput < 0 {
+        throughput = 0
+    }
+
+    var latency = pass_stats.loop_proof_chain_count + model.loop_headers * 2 - pass_stats.proof_failed_count * 3
+    if latency < 0 {
+        latency = 0
+    }
+
+    var microarch = 10
+    if goarch == "arm64" {
+        microarch = microarch + model.load_count + model.store_count
+    } else {
+        microarch = microarch + model.branch_count + model.jump_count
+    }
+    if microarch < 0 {
+        microarch = 0
+    }
+
+    schedule_quality_result {
+        throughput_score: throughput,
+        latency_balance_score: latency,
+        microarch_specialization_score: microarch,
+    }
 }
 
 func estimate_alias_precision_level(ssa_dataflow_model model) int32 {
@@ -1298,6 +1374,12 @@ func dump_pipeline(ssa_program program) string {
         + " memssa_chain=" + to_string(program.memory_ssa_chain_count)
         + " gvn_total=" + to_string(program.global_value_number_count)
         + " loop_proofs=" + to_string(program.loop_proof_chain_count)
+        + " spill_cost=" + to_string(program.spill_cost_score)
+        + " split_quality=" + to_string(program.split_quality_score)
+        + " cross_block_gain=" + to_string(program.cross_block_gain_score)
+        + " sched_tp=" + to_string(program.sched_throughput_score)
+        + " sched_lat=" + to_string(program.sched_latency_balance_score)
+        + " microarch=" + to_string(program.microarch_specialization_score)
         + " pass_dsl=" + program.pass_dsl
         + " inv_policy=" + program.invalidation_policy
         + " rollback_node=" + program.rollback_node

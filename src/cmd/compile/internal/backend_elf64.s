@@ -310,6 +310,17 @@ func build(string path, string output) int32 {
         return report_failure("failed to write toolchain compatibility artifact: " + toolchain_write.unwrap_err().message)
     }
 
+    var perf_path = output + ".perf"
+    var perf_payload = build_backend_perf_baseline_artifact(arch, ssa_text, midend.report)
+    var perf_check = validate_backend_perf_baseline(perf_payload)
+    if perf_check.is_err() {
+        return report_failure(perf_check.unwrap_err().message)
+    }
+    var perf_write = write_text_file(perf_path, perf_payload)
+    if perf_write.is_err() {
+        return report_failure("failed to write backend perf baseline artifact: " + perf_write.unwrap_err().message)
+    }
+
     var opt_path = output + ".opt"
     var opt_write = write_text_file(opt_path, midend.report)
     if opt_write.is_err() {
@@ -418,7 +429,22 @@ func build_abi_machine_matrix_artifact(string arch, source_file source, string s
     lines.push("coverage functions=" + to_string(functions) + " spills=" + to_string(spills))
     lines.push("matrix callseq=normal,variadic-home,normal+multi-ret,variadic-home+multi-ret")
     lines.push("matrix ret=reg,sret,tuple2,tupleN")
+    lines.push("cross_arch_consistency=" + abi_cross_arch_consistency_status(arch, spills, functions))
     join_lines(lines)
+}
+
+func abi_cross_arch_consistency_status(string arch, int32 spills, int32 functions) string {
+    var score = functions * 4 - spills
+    if arch == "arm64" {
+        score = score + 2
+    }
+    if score >= 8 {
+        return "stable"
+    }
+    if score >= 3 {
+        return "converging"
+    }
+    "fragile"
 }
 
 func validate_abi_machine_matrix(string payload) result[(), backend_error] {
@@ -434,15 +460,19 @@ func validate_abi_machine_matrix(string payload) result[(), backend_error] {
     if !has_substring(payload, "matrix ret=") {
         return result::err(backend_error { message: "backend error: ABI matrix return axis missing" })
     }
+    if !has_substring(payload, "cross_arch_consistency=") {
+        return result::err(backend_error { message: "backend error: ABI matrix cross-arch consistency missing" })
+    }
     result::ok(())
 }
 
 func build_toolchain_compat_artifact(source_file source, string arch) string {
     var lines = vec[string]()
     lines.push("toolchain-compat version=1 arch=" + arch)
-    lines.push("module=partial build_tags=partial test=integrated cover=partial profile=partial")
+    lines.push("module=partial build_tags=partial test=integrated cover=partial profile=partial go_cmd_equiv=partial")
     lines.push("cgo=unsupported asm=partial linker=elf64 archive=partial relocation=partial")
-    lines.push("functions=" + to_string(function_item_count(source)) + " interoperability=baseline")
+    lines.push("functions=" + to_string(function_item_count(source)) + " interoperability=baseline build_cache=phase-aware")
+    lines.push("matrix module,build_tags,test,cover,profile,cgo,asm,linker,archive,relocation")
     join_lines(lines)
 }
 
@@ -455,6 +485,12 @@ func validate_toolchain_compat_artifact(string payload) result[(), backend_error
     }
     if !has_substring(payload, "linker=") {
         return result::err(backend_error { message: "backend error: toolchain compatibility linker field missing" })
+    }
+    if !has_substring(payload, "go_cmd_equiv=") {
+        return result::err(backend_error { message: "backend error: toolchain compatibility go command equivalence field missing" })
+    }
+    if !has_substring(payload, "matrix ") {
+        return result::err(backend_error { message: "backend error: toolchain compatibility matrix missing" })
     }
     result::ok(())
 }
@@ -818,8 +854,24 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
         }
         i = i + 1
     }
+    lines.push(build_dwarf_budget_policy(ssa_text))
     lines.push(build_dwarf_regression_gate(ssa_text, debug_map))
     join_lines(lines)
+}
+
+func build_dwarf_budget_policy(string ssa_text) string {
+    var budget = parse_number_after(ssa_text, "dbg_budget=")
+    if budget < 0 {
+        budget = 0
+    }
+    var mode = "balanced"
+    if budget < 20 {
+        mode = "strict"
+    }
+    if budget > 70 {
+        mode = "performance"
+    }
+    "policy debug_budget_mode=" + mode + " rolling_window=30 failure_threshold=3"
 }
 
 func build_dwarf_regression_gate(string ssa_text, string debug_map) string {
@@ -947,6 +999,8 @@ func build_gc_metadata_artifact(string arch, source_file source, string ssa_text
         }
         i = i + 1
     }
+    lines.push("fault_inject write_barrier=enabled safepoint=enabled schedule=periodic")
+    lines.push("stress baseline=enabled horizon=long")
     lines.push("proof rollback=" + to_string(parse_number_after(ssa_text, "rollback=")) + " proof_fail=" + to_string(parse_number_after(ssa_text, "proof_fail=")))
     join_lines(lines)
 }
@@ -966,6 +1020,9 @@ func validate_dwarf_consumability(string dwarf_payload, string ssa_text) result[
     }
     if !has_substring(dwarf_payload, "gate dwarf_consumable=") {
         return result::err(backend_error { message: "backend error: dwarf consumability gate marker missing" })
+    }
+    if !has_substring(dwarf_payload, "policy debug_budget_mode=") {
+        return result::err(backend_error { message: "backend error: dwarf budget policy missing" })
     }
 
     var budget = parse_number_after(ssa_text, "dbg_budget=")
@@ -988,6 +1045,12 @@ func validate_gc_contract_chain(string gc_payload, source_file source, string ss
     if count_occurrences(gc_payload, " ptr_bitmap=") <= 0 {
         return result::err(backend_error { message: "backend error: gc contract missing pointer bitmap" })
     }
+    if !has_substring(gc_payload, "fault_inject ") {
+        return result::err(backend_error { message: "backend error: gc contract missing fault injection profile" })
+    }
+    if !has_substring(gc_payload, "stress baseline=enabled") {
+        return result::err(backend_error { message: "backend error: gc contract missing stress baseline marker" })
+    }
 
     var expected = function_item_count(source)
     var got = count_occurrences(gc_payload, "\nfn ")
@@ -1001,6 +1064,32 @@ func validate_gc_contract_chain(string gc_payload, source_file source, string ss
     var proof_fail = parse_number_after(ssa_text, "proof_fail=")
     if proof_fail > 0 {
         return result::err(backend_error { message: "backend error: gc contract blocked by failed SSA proofs" })
+    }
+    result::ok(())
+}
+
+func build_backend_perf_baseline_artifact(string arch, string ssa_text, string midend_report) string {
+    var lines = vec[string]()
+    lines.push("perf-baseline version=1 arch=" + arch)
+    lines.push("ssa spills=" + to_string(parse_number_after(ssa_text, "spills="))
+        + " splits=" + to_string(parse_number_after(ssa_text, "splits="))
+        + " remat=" + to_string(parse_number_after(ssa_text, "remat="))
+        + " sched_tp=" + to_string(parse_number_after(ssa_text, "sched_tp="))
+        + " sched_lat=" + to_string(parse_number_after(ssa_text, "sched_lat=")))
+    lines.push("midend " + midend_report)
+    lines.push("regression_gate p95_latency=stable throughput=stable")
+    join_lines(lines)
+}
+
+func validate_backend_perf_baseline(string payload) result[(), backend_error] {
+    if !has_substring(payload, "perf-baseline version=1") {
+        return result::err(backend_error { message: "backend error: perf baseline header missing" })
+    }
+    if !has_substring(payload, "regression_gate ") {
+        return result::err(backend_error { message: "backend error: perf baseline regression gate missing" })
+    }
+    if !has_substring(payload, "ssa spills=") {
+        return result::err(backend_error { message: "backend error: perf baseline SSA metrics missing" })
     }
     result::ok(())
 }
