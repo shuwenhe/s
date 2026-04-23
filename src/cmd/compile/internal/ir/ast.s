@@ -6,13 +6,13 @@ use compile.internal.ir.types
 // Typed AST core node definitions (草案)
 
 struct Program {
-    string package_name,
-    vec[Package] packages,
+    string package_name
+    vec[Package] packages
 }
 
 struct Package {
-    string name,
-    vec[Decl] decls,
+    string name
+    vec[Decl] decls
 }
 
 enum Decl {
@@ -24,15 +24,15 @@ enum Decl {
 }
 
 struct FuncDecl {
-    string name,
-    FuncSig sig,
-    option[Block] body,
+    string name
+    FuncSig sig
+    option[Block] body
 }
 
 struct FuncSig {
-    vec[Param] params,
-    option[string] return_type_name,
-    vec[string] generics,
+    vec[Param] params
+    option[string] return_type_name
+    vec[string] generics
 }
 
 struct Param { string name, string type_name }

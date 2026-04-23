@@ -7,53 +7,53 @@ use std.prelude.to_string
 use std.vec.vec
 
 struct ssa_pipeline_options {
-    bool enable_dce,
-    bool enable_coalesce,
-    bool enable_simplify_cfg,
+    bool enable_dce
+    bool enable_coalesce
+    bool enable_simplify_cfg
 }
 
 struct ssa_program {
-    string function_name,
-    int32 block_count,
-    int32 value_count,
-    int32 cfg_edge_count,
-    int32 branch_block_count,
-    int32 optimized_value_count,
-    int32 folded_constant_count,
-    int32 dce_removed_count,
-    int32 coalesced_move_count,
-    int32 simplified_branch_count,
-    int32 gvn_rewrite_count,
-    int32 cse_eliminated_count,
-    int32 licm_hoisted_count,
-    int32 bce_removed_count,
-    int32 phi_node_count,
-    int32 memory_version_count,
-    int32 live_in_fact_count,
-    int32 spill_count,
-    int32 spill_reload_count,
-    int32 call_pressure_event_count,
-    int32 regalloc_reuse_count,
-    int32 regalloc_max_live,
-    int32 debug_line_count,
-    vec[string] allocated_regs,
-    vec[string] debug_lines,
-    vec[string] debug_var_locations,
+    string function_name
+    int32 block_count
+    int32 value_count
+    int32 cfg_edge_count
+    int32 branch_block_count
+    int32 optimized_value_count
+    int32 folded_constant_count
+    int32 dce_removed_count
+    int32 coalesced_move_count
+    int32 simplified_branch_count
+    int32 gvn_rewrite_count
+    int32 cse_eliminated_count
+    int32 licm_hoisted_count
+    int32 bce_removed_count
+    int32 phi_node_count
+    int32 memory_version_count
+    int32 live_in_fact_count
+    int32 spill_count
+    int32 spill_reload_count
+    int32 call_pressure_event_count
+    int32 regalloc_reuse_count
+    int32 regalloc_max_live
+    int32 debug_line_count
+    vec[string] allocated_regs
+    vec[string] debug_lines
+    vec[string] debug_var_locations
 }
 
 struct ssa_pass_stats {
-    int32 folded_constant_count,
-    int32 dce_removed_count,
-    int32 coalesced_move_count,
-    int32 simplified_branch_count,
-    int32 gvn_rewrite_count,
-    int32 cse_eliminated_count,
-    int32 licm_hoisted_count,
-    int32 bce_removed_count,
-    int32 phi_node_count,
-    int32 memory_version_count,
-    int32 live_in_fact_count,
-    int32 optimized_value_count,
+    int32 folded_constant_count
+    int32 dce_removed_count
+    int32 coalesced_move_count
+    int32 simplified_branch_count
+    int32 gvn_rewrite_count
+    int32 cse_eliminated_count
+    int32 licm_hoisted_count
+    int32 bce_removed_count
+    int32 phi_node_count
+    int32 memory_version_count
+    int32 live_in_fact_count
+    int32 optimized_value_count
 }
 
 func build_pipeline(string mir_text, string goarch) ssa_program {
@@ -104,12 +104,12 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
 }
 
 struct regalloc_result {
-    vec[string] allocated_regs,
-    int32 spill_count,
-    int32 spill_reload_count,
-    int32 call_pressure_events,
-    int32 reuse_count,
-    int32 max_live,
+    vec[string] allocated_regs
+    int32 spill_count
+    int32 spill_reload_count
+    int32 call_pressure_events
+    int32 reuse_count
+    int32 max_live
 }
 
 func linear_scan_regalloc_with_spill(string mir_text, int32 value_count, string goarch) regalloc_result {

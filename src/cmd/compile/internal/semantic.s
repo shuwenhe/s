@@ -27,45 +27,45 @@ use std.prelude.slice
 use std.vec.vec
 
 struct type_binding {
-    string name,
-    string type_name,
+    string name
+    string type_name
 }
 
 struct function_binding {
-    string name,
-    vec[string] generic_names,
-    vec[string] param_types,
-    string return_type,
+    string name
+    vec[string] generic_names
+    vec[string] param_types
+    string return_type
 }
 
 struct signature_match {
-    bool ok,
-    string return_type,
-    int32 score,
-    int32 generic_bind_count,
-    int32 unknown_arg_count,
+    bool ok
+    string return_type
+    int32 score
+    int32 generic_bind_count
+    int32 unknown_arg_count
 }
 
 struct check_result {
-    string type_name,
-    int32 errors,
+    string type_name
+    int32 errors
 }
 
 struct pattern_check_result {
-    vec[type_binding] bindings,
-    int32 errors,
+    vec[type_binding] bindings
+    int32 errors
 }
 
 struct source_pos {
-    int32 line,
-    int32 column,
+    int32 line
+    int32 column
 }
 
 struct semantic_error {
-    string code,
-    string message,
-    int32 line,
-    int32 column,
+    string code
+    string message
+    int32 line
+    int32 column
 }
 
 func check_text(string source) int32 {

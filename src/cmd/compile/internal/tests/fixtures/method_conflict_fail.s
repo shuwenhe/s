@@ -1,7 +1,7 @@
 package demo.conflict
 
 struct point {
-    int32 x,
+    int32 x
 }
 
 trait measure_a {
