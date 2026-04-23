@@ -4,8 +4,13 @@ use compile.internal.prelude.lookup_builtin_field_type
 use compile.internal.prelude.lookup_builtin_method_arity
 use compile.internal.prelude.lookup_builtin_method_type
 use compile.internal.typesys.base_type_name
+use compile.internal.typesys.extract_type_args
 use compile.internal.typesys.parse_type
+use compile.internal.typesys.parse_type_ref
 use compile.internal.typesys.same_type
+use compile.internal.typesys.same_type_ref
+use compile.internal.typesys.type_arg
+use compile.internal.typesys.type_ref
 use s.block_expr
 use s.expr
 use s.function_decl
@@ -36,6 +41,8 @@ struct signature_match {
     bool ok,
     string return_type,
     int32 score,
+    int32 generic_bind_count,
+    int32 unknown_arg_count,
 }
 
 struct check_result {
@@ -134,16 +141,15 @@ func make_function_binding(function_decl function_decl) function_binding {
 func check_item(item item, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int32 {
     switch item {
         item.function(function_decl) : check_function(function_decl, functions, source, diagnostics),
-        item.impl(impl_decl) : check_impl(impl_decl, functions, source, diagnostics),
         _ : 0,
     }
 }
 
-func check_impl(impl_decl impl_decl, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int32 {
+func check_impl(impl_decl impl_item, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int32 {
     var errors = 0
     var i = 0
-    while i < impl_decl.methods.len() {
-        errors = errors + check_function(impl_decl.methods[i], functions, source, diagnostics)
+    while i < impl_item.methods.len() {
+        errors = errors + check_function(impl_item.methods[i], functions, source, diagnostics)
         i = i + 1
     }
     errors
@@ -421,10 +427,10 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
                     var ambiguous = false
                     j = 1
                     while j < matches.len() {
-                        if matches[j].score > best.score {
+                        if better_match(matches[j], best) {
                             best = matches[j]
                             ambiguous = false
-                        } else if matches[j].score == best.score {
+                        } else if same_match_rank(matches[j], best) {
                             ambiguous = true
                         }
                         j = j + 1
@@ -945,25 +951,34 @@ func try_match_signature(function_binding binding, vec[string] arg_types) signat
             ok: false,
             return_type: "unknown",
             score: 0,
+            generic_bind_count: 0,
+            unknown_arg_count: 0,
         }
     }
 
     var generic_bindings = vec[type_binding]()
     var score = 0
+    var unknown_arg_count = 0
 
     var i = 0
     while i < arg_types.len() {
-        var matched = match_type_pattern(binding.param_types[i], arg_types[i], binding.generic_names, generic_bindings)
+        var expected_ref = parse_type_ref(binding.param_types[i])
+        var actual_ref = parse_type_ref(arg_types[i])
+        if is_unknown(actual_ref.canonical) {
+            unknown_arg_count = unknown_arg_count + 1
+        }
+
+        var matched = match_type_pattern_ref(expected_ref, actual_ref, binding.generic_names, generic_bindings)
         if !matched {
             return signature_match {
                 ok: false,
                 return_type: "unknown",
                 score: 0,
+                generic_bind_count: 0,
+                unknown_arg_count: 0,
             }
         }
-        if !type_contains_generic(binding.param_types[i], binding.generic_names) {
-            score = score + 1
-        }
+        score = score + match_specificity(expected_ref, actual_ref, binding.generic_names)
         i = i + 1
     }
 
@@ -971,12 +986,33 @@ func try_match_signature(function_binding binding, vec[string] arg_types) signat
         ok: true,
         return_type: instantiate_type(binding.return_type, binding.generic_names, generic_bindings),
         score: score,
+        generic_bind_count: generic_bindings.len(),
+        unknown_arg_count: unknown_arg_count,
     }
 }
 
-func match_type_pattern(string param_type, string arg_type, vec[string] generic_names, vec[type_binding] mut generic_bindings) bool {
-    var p = parse_type(param_type)
-    var a = parse_type(arg_type)
+func better_match(signature_match left, signature_match right) bool {
+    if left.score != right.score {
+        return left.score > right.score
+    }
+    if left.unknown_arg_count != right.unknown_arg_count {
+        return left.unknown_arg_count < right.unknown_arg_count
+    }
+    if left.generic_bind_count != right.generic_bind_count {
+        return left.generic_bind_count < right.generic_bind_count
+    }
+    false
+}
+
+func same_match_rank(signature_match left, signature_match right) bool {
+    left.score == right.score
+        && left.unknown_arg_count == right.unknown_arg_count
+        && left.generic_bind_count == right.generic_bind_count
+}
+
+func match_type_pattern_ref(type_ref param_type, type_ref arg_type, vec[string] generic_names, vec[type_binding] mut generic_bindings) bool {
+    var p = param_type.canonical
+    var a = arg_type.canonical
 
     if is_generic_name(generic_names, p) {
         var bound = lookup_name_type(generic_bindings, p)
@@ -991,45 +1027,57 @@ func match_type_pattern(string param_type, string arg_type, vec[string] generic_
         return same_type(bound, a)
     }
 
-    if starts_with(p, "&mut ") {
-        if !starts_with(a, "&mut ") {
-            return false
-        }
-        return match_type_pattern(slice(p, 5, len(p)), slice(a, 5, len(a)), generic_names, generic_bindings)
+    if param_type.is_ref != arg_type.is_ref {
+        return false
     }
-    if starts_with(p, "&") {
-        if !starts_with(a, "&") {
-            return false
-        }
-        return match_type_pattern(slice(p, 1, len(p)), slice(a, 1, len(a)), generic_names, generic_bindings)
+    if param_type.is_mut_ref != arg_type.is_mut_ref {
+        return false
     }
-    if starts_with(p, "[]") {
-        if !starts_with(a, "[]") {
-            return false
-        }
-        return match_type_pattern(slice(p, 2, len(p)), slice(a, 2, len(a)), generic_names, generic_bindings)
-    }
-
-    var p_base = base_type_name(p)
-    var a_base = base_type_name(a)
-    if p_base != a_base {
+    if param_type.is_slice != arg_type.is_slice {
         return false
     }
 
-    var p_args = extract_type_args(p)
-    var a_args = extract_type_args(a)
+    if param_type.base != arg_type.base {
+        return false
+    }
+
+    var p_args = param_type.args
+    var a_args = arg_type.args
     if p_args.len() != a_args.len() {
-        return same_type(p, a)
+        return same_type_ref(param_type, arg_type)
     }
 
     var i = 0
     while i < p_args.len() {
-        if !match_type_pattern(p_args[i], a_args[i], generic_names, generic_bindings) {
+        var p_next = parse_type_ref(p_args[i])
+        var a_next = parse_type_ref(a_args[i])
+        if !match_type_pattern_ref(p_next, a_next, generic_names, generic_bindings) {
             return false
         }
         i = i + 1
     }
     true
+}
+
+func match_specificity(type_ref expected, type_ref actual, vec[string] generic_names) int32 {
+    if same_type_ref(expected, actual) {
+        return 5
+    }
+    if is_generic_name(generic_names, expected.canonical) {
+        return 1
+    }
+
+    var score = 0
+    if expected.base == actual.base {
+        score = score + 2
+    }
+    if expected.is_ref == actual.is_ref && expected.is_mut_ref == actual.is_mut_ref {
+        score = score + 1
+    }
+    if expected.is_slice == actual.is_slice {
+        score = score + 1
+    }
+    score
 }
 
 func instantiate_type(string ty, vec[string] generic_names, vec[type_binding] generic_bindings) string {
@@ -1159,14 +1207,15 @@ func is_unknown(string type_name) bool {
 }
 
 func resolve_method_return(string target_type, string method_type) string {
+    var target_ref = parse_type_ref(target_type)
     if method_type == "t" {
-        return first_type_arg(target_type)
+        return type_arg(target_ref, 0)
     }
     if method_type == "e" {
-        return second_type_arg(target_type)
+        return type_arg(target_ref, 1)
     }
     if method_type == "option[t]" {
-        var arg = first_type_arg(target_type)
+        var arg = type_arg(target_ref, 0)
         if is_unknown(arg) {
             return "option[unknown]"
         }
@@ -1176,51 +1225,11 @@ func resolve_method_return(string target_type, string method_type) string {
 }
 
 func first_type_arg(string type_name) string {
-    var args = extract_type_args(type_name)
-    if args.len() > 0 {
-        return parse_type(args[0])
-    }
-    "unknown"
+    type_arg(parse_type_ref(type_name), 0)
 }
 
 func second_type_arg(string type_name) string {
-    var args = extract_type_args(type_name)
-    if args.len() > 1 {
-        return parse_type(args[1])
-    }
-    "unknown"
-}
-
-func extract_type_args(string type_name) vec[string] {
-    var out = vec[string]()
-    var open = find_char(type_name, "[")
-    var close = find_last_char(type_name, "]")
-    if open < 0 || close <= open + 1 {
-        return out
-    }
-
-    var inner = slice(type_name, open + 1, close)
-    var depth = 0
-    var start = 0
-    var i = 0
-    while i < len(inner) {
-        var ch = char_at(inner, i)
-        if ch == "[" {
-            depth = depth + 1
-        } else if ch == "]" {
-            depth = depth - 1
-        } else if ch == "," && depth == 0 {
-            out.push(trim_text(slice(inner, start, i)));
-            start = i + 1
-        }
-        i = i + 1
-    }
-
-    if start < len(inner) {
-        out.push(trim_text(slice(inner, start, len(inner))));
-    }
-
-    out
+    type_arg(parse_type_ref(type_name), 1)
 }
 
 func add_error(string source, vec[semantic_error] mut diagnostics, string code, string message, string anchor) int32 {
