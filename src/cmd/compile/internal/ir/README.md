@@ -14,12 +14,12 @@
 - `internal/ir/mir.s`：函数级中间表示（控制流图、局部槽、终结器）
 
 核心数据结构草案（概要）
-- Program: 包含若干 `Package`（或单一文件包）
-- Package: 名称、文件列表、Top-level Decls
-- Decl: `FuncDecl` | `TypeDecl` | `ConstDecl` | `VarDecl` | `ImplDecl`
-- FuncDecl: 名称、签名（params, returns, generics）、Typed Body (Block)
-- Expr: 各种表达式节点，且每个 Expr 有 `type: Type` 字段
-- Stmt / Block: 语句序列 + 最终表达式
+- program_ir: 包含若干 `package_ir`（或单一文件包）
+- package_ir: 名称、文件列表、Top-level decls
+- decl_ir: `func_decl` | `type_decl` | `const_decl` | `var_decl` | `impl_decl`
+- func_decl: 名称、签名（params, returns, generics）、Typed Body (`block_ir`)
+- expr_ir: 各种表达式节点，且每个 expr 有 `type: type` 字段
+- stmt_ir / block_ir: 语句序列 + 最终表达式
 
 Types（概要）
 - Primitive: Int32/Bool/String/Unit
@@ -35,9 +35,9 @@ MIR（概要）
 - Terminator: return, branch(cond, then, else), jump(target)
 
 接口约定
-- Parser -> `internal/ir/ast.s`: 提供 `FromSyntax(syntax.File) -> ir.Package` 的转换
-- `semantic`（类型检查）为 Typed AST 注入 `Type` 字段并返回错误列表
-- `mir` 接受 Typed AST 并生成 `mir.Function`（可打印/序列化），便于单元测试
+- Parser -> `internal/ir/ast.s`: 提供 `from_syntax(syntax.file) -> ir.package_ir` 的转换
+- `semantic`（类型检查）为 Typed AST 注入 `type` 字段并返回错误列表
+- `mir` 接受 Typed AST 并生成 `mir.function`（可打印/序列化），便于单元测试
 - 后端实现逐步消费 MIR：先实现简单直接生成 asm，再逐步引入 SSA 降级与优化
 
 下一步

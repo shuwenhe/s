@@ -4,6 +4,7 @@ use compile.internal.prelude.lookup_builtin_field_type
 use compile.internal.prelude.lookup_builtin_method_arity
 use compile.internal.prelude.lookup_builtin_method_type
 use compile.internal.typesys.base_type_name
+use compile.internal.typesys.compatible_type
 use compile.internal.typesys.extract_type_args
 use compile.internal.typesys.parse_type
 use compile.internal.typesys.parse_type_ref
@@ -1586,9 +1587,9 @@ func ok_type(string type_name) check_result {
 
 func types_compatible(string left, string right) bool {
     if is_unknown(left) || is_unknown(right) {
-        return true
+        return is_unknown(left) && is_unknown(right)
     }
-    same_type(left, right)
+    compatible_type(left, right)
 }
 
 func is_unknown(string type_name) bool {
