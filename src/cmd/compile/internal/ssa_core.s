@@ -43,6 +43,9 @@ struct ssa_program {
     int32 proof_failed_count
     int32 scheduled_pass_count
     int32 blocked_pass_count
+    int32 dag_level_count
+    int32 rerun_count
+    int32 rollback_checkpoint_count
     int32 spill_count
     int32 spill_reload_count
     int32 call_pressure_event_count
@@ -85,6 +88,9 @@ struct ssa_pass_stats {
     int32 proof_failed_count
     int32 scheduled_pass_count
     int32 blocked_pass_count
+    int32 dag_level_count
+    int32 rerun_count
+    int32 rollback_checkpoint_count
     int32 optimized_value_count
 }
 
@@ -159,6 +165,9 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         proof_failed_count: pass_stats.proof_failed_count,
         scheduled_pass_count: pass_stats.scheduled_pass_count,
         blocked_pass_count: pass_stats.blocked_pass_count,
+        dag_level_count: pass_stats.dag_level_count,
+        rerun_count: pass_stats.rerun_count,
+        rollback_checkpoint_count: pass_stats.rollback_checkpoint_count,
         spill_count: allocation.spill_count,
         spill_reload_count: allocation.spill_reload_count,
         call_pressure_event_count: allocation.call_pressure_events,
@@ -467,15 +476,23 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     var memory_versions = model.store_count + model.load_count
     var live_in_facts = model.live_in_facts
     var fixed_iters = 0
+    var max_iters = 5
     var proof_obligations = 0
     var proof_failed = 0
     var rollback = 0
     var scheduled_passes = 0
     var blocked_passes = 0
+    var dag_levels = 0
+    var reruns = 0
+    var rollback_points = 0
+    var stable_iters = 0
+    var rollback_value = current
 
     var prev = -1
-    while fixed_iters < 3 && current != prev {
+    while fixed_iters < max_iters && stable_iters < 2 {
         prev = current
+        rollback_value = current
+        rollback_points = rollback_points + 1
 
         var raw_gvn = run_gvn_pass(model)
         var raw_sccp = run_sccp_pass(model, current)
@@ -484,6 +501,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         var raw_licm = run_licm_pass(model)
         var raw_bce = run_bce_pass(model)
         scheduled_passes = scheduled_passes + 6
+        dag_levels = dag_levels + pass_dag_level_count(model)
 
         var gvn_i = raw_gvn
         var cse_i = raw_cse
@@ -532,6 +550,15 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
             current = 1
         }
 
+        if current == prev {
+            stable_iters = stable_iters + 1
+            if blocked_passes > 0 && fixed_iters + 1 < max_iters {
+                reruns = reruns + 1
+            }
+        } else {
+            stable_iters = 0
+        }
+
         proof_obligations = proof_obligations + 4
         if current > prev {
             proof_failed = proof_failed + 1
@@ -541,7 +568,8 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
 
     var verify_errors = verify_ssa_invariants(model)
     if verify_errors > 0 || proof_failed > 0 {
-        rollback = 1
+        rollback = rollback + 1
+        current = rollback_value
     }
 
     if options.enable_dce {
@@ -590,8 +618,22 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         proof_failed_count: proof_failed,
         scheduled_pass_count: scheduled_passes,
         blocked_pass_count: blocked_passes,
+        dag_level_count: dag_levels,
+        rerun_count: reruns,
+        rollback_checkpoint_count: rollback_points,
         optimized_value_count: current,
     }
+}
+
+func pass_dag_level_count(ssa_dataflow_model model) int32 {
+    var levels = 1
+    if model.branch_count + model.phi_count > 0 {
+        levels = levels + 1
+    }
+    if model.loop_headers > 0 || model.load_count > 0 {
+        levels = levels + 1
+    }
+    levels
 }
 
 func pass_dependency_ready_sccp(ssa_dataflow_model model, int32 gvn_rewrites) bool {
@@ -916,6 +958,9 @@ func dump_pipeline(ssa_program program) string {
         + " proof_fail=" + to_string(program.proof_failed_count)
         + " passes_sched=" + to_string(program.scheduled_pass_count)
         + " passes_blocked=" + to_string(program.blocked_pass_count)
+        + " dag_levels=" + to_string(program.dag_level_count)
+        + " reruns=" + to_string(program.rerun_count)
+        + " rollback_pts=" + to_string(program.rollback_checkpoint_count)
         + " cfg_edges=" + to_string(program.cfg_edge_count)
         + " branches=" + to_string(program.branch_block_count)
         + " spills=" + to_string(program.spill_count)
