@@ -59,6 +59,8 @@ def parse_stackmap_function_line(line: str) -> stackmapfunction:
     callee_saved = int(fields.get("callee_saved", "0"))
     if bitmap == "":
         raise ValueError("stackmap function line missing bitmap")
+    if slots > 0 and len(bitmap) != slots:
+        raise ValueError("stackmap bitmap length must match slots")
     return stackmapfunction(name=name, slots=slots, bitmap=bitmap, callee_saved=callee_saved)
 
 
@@ -72,5 +74,8 @@ def parse_stackmap_text(text: str) -> tuple[stackmaprecord, list[stackmapfunctio
     for line in lines[1:]:
         if line.startswith("fn "):
             functions.append(parse_stackmap_function_line(line))
+
+    if header.functions != 0 and len(functions) != header.functions:
+        raise ValueError("stackmap function count does not match header")
 
     return header, functions

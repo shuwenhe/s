@@ -93,6 +93,8 @@ func check_detailed(string source) vec[semantic_error] {
     var file = parsed.unwrap()
     var functions = collect_functions(file.items)
 
+    validate_function_set(functions, source, diagnostics)
+
     var i = 0
     while i < file.items.len() {
         var ignored = check_item(file.items[i], functions, source, diagnostics)
@@ -100,6 +102,35 @@ func check_detailed(string source) vec[semantic_error] {
     }
 
     diagnostics
+}
+
+func validate_function_set(vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int32 {
+    var errors = 0
+    var i = 0
+    var has_main = false
+    while i < functions.len() {
+        if functions[i].name == "main" {
+            has_main = true
+        }
+
+        var j = i + 1
+        while j < functions.len() {
+            if functions[i].name == functions[j].name {
+                errors = errors + add_error(source, diagnostics, "e3010", "duplicate function declaration", functions[i].name)
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+
+    if is_main_package(source) && !has_main {
+        errors = errors + add_error(source, diagnostics, "e3011", "entry function main not found", "main")
+    }
+    errors
+}
+
+func is_main_package(string source) bool {
+    contains_token(source, "package main")
 }
 
 func collect_functions(vec[item] items) vec[function_binding] {
@@ -1308,6 +1339,13 @@ func starts_with(string text, string prefix) bool {
         return false
     }
     slice(text, 0, len(prefix)) == prefix
+}
+
+func contains_token(string text, string token) bool {
+    if token == "" {
+        return true
+    }
+    index_of(text, token) >= 0
 }
 
 func find_char(string text, string needle) int32 {
