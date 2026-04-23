@@ -31,6 +31,7 @@ class gcmapfunction:
     slots: int
     ptr_bitmap: str
     write_barrier: str
+    safepoints: int
 
 
 def parse_stackmap_header(line: str) -> stackmaprecord:
@@ -134,11 +135,12 @@ def parse_gcmap_function_line(line: str) -> gcmapfunction:
     slots = int(fields.get("slots", "0"))
     ptr_bitmap = fields.get("ptr_bitmap", "")
     write_barrier = fields.get("write_barrier", "")
+    safepoints = int(fields.get("safepoints", "0"))
     if slots > 0 and len(ptr_bitmap) != slots:
         raise ValueError("gcmap pointer bitmap length must match slots")
     if write_barrier == "":
         raise ValueError("gcmap function line missing write_barrier")
-    return gcmapfunction(name=name, slots=slots, ptr_bitmap=ptr_bitmap, write_barrier=write_barrier)
+    return gcmapfunction(name=name, slots=slots, ptr_bitmap=ptr_bitmap, write_barrier=write_barrier, safepoints=safepoints)
 
 
 def parse_gcmap_text(text: str) -> tuple[gcmaprecord, list[gcmapfunction]]:

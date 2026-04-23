@@ -19,8 +19,6 @@ use compile.internal.mir.mir_operand
 use compile.internal.backend_elf64.parse_int_literal as parse_int_literal
 use std.vec.vec
 
-// 从 syntax.source_file 降级到 ir.ast.Package 的基本实现（草案）
-
 func from_syntax(source_file src) ir_ast.Package {
     var pkg = ir_ast.Package { name: src.pkg, decls: vec[ir_ast.Decl]() }
 
@@ -106,7 +104,7 @@ func convert_stmt(stmt s) ir_ast.Stmt {
             ir_ast.Stmt::increment(ir_ast.IncrementStmt { name: increment_stmt.name })
         }
         stmt.c_for(c_for_stmt) : {
-            // c_for lowering not implemented yet - emit an expr placeholder
+
             ir_ast.Stmt::expr(ir_ast.ExprStmt { expr: ir_ast.Expr::name("<c_for_unlowered>") })
         }
         stmt.return(return_stmt) : {
@@ -137,7 +135,7 @@ func convert_expr(expr e) ir_ast.Expr {
         expr.borrow(borrow_expr) : ir_ast.Expr::borrow(ir_ast.BorrowExpr { target: convert_expr(borrow_expr.target.unwrap()), mutable: borrow_expr.mutable }),
         expr.binary(binary_expr) : ir_ast.Expr::binary(ir_ast.BinaryExpr { op: binary_expr.op, left: convert_expr(binary_expr.left.unwrap()), right: convert_expr(binary_expr.right.unwrap()) }),
         expr.call(call_expr) : {
-            // only handle simple callee names for now
+
             var callee_name = "<call>"
             switch call_expr.callee.unwrap() {
                 expr.name(name_expr) : callee_name = name_expr.name,

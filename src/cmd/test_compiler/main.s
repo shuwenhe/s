@@ -1,6 +1,7 @@
 package cmd
 
 use compile.internal.tests.test_golden.run_golden_suite
+use compile.internal.tests.test_backend_abi.run_backend_abi_suite
 use compile.internal.tests.test_mir.run_mir_suite
 use compile.internal.tests.test_semantic.run_semantic_suite
 use std.env.args as host_args
@@ -41,6 +42,12 @@ func main() int32 {
     if golden_result != 0 {
         eprintln("golden suite failed");
         return golden_result
+    }
+
+    var backend_abi_result = run_backend_abi_suite()
+    if backend_abi_result != 0 {
+        eprintln("backend abi suite failed");
+        return backend_abi_result
     }
 
     var mir_result = run_mir_suite()
