@@ -65,6 +65,8 @@ struct source_pos {
 struct semantic_error {
     string code
     string message
+    string severity
+    int32 tier
     int32 line
     int32 column
 }
@@ -102,7 +104,21 @@ func check_detailed(string source) vec[semantic_error] {
         i = i + 1
     }
 
-    diagnostics
+    apply_diagnostic_budget(diagnostics)
+}
+
+func apply_diagnostic_budget(vec[semantic_error] diagnostics) vec[semantic_error] {
+    var max_errors = 128
+    if diagnostics.len() <= max_errors {
+        return diagnostics
+    }
+    var out = vec[semantic_error]()
+    var i = 0
+    while i < max_errors {
+        out.push(diagnostics[i])
+        i = i + 1
+    }
+    out
 }
 
 func validate_function_set(vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int32 {
@@ -1316,14 +1332,45 @@ func second_type_arg(string type_name) string {
 
 func add_error(string source, vec[semantic_error] mut diagnostics, string code, string message, string anchor) int32 {
     var pos = locate_anchor(source, anchor)
+    var severity = diagnostic_severity(code)
+    var tier = diagnostic_tier(code)
     diagnostics.push(semantic_error {
         code: code,
         message: message,
+        severity: severity,
+        tier: tier,
         line: pos.line,
         column: pos.column,
     })
     ;
     1
+}
+
+func diagnostic_severity(string code) string {
+    if starts_with_text(code, "e000") {
+        return "fatal"
+    }
+    if starts_with_text(code, "e1") {
+        return "warning"
+    }
+    "error"
+}
+
+func diagnostic_tier(string code) int32 {
+    if starts_with_text(code, "e000") {
+        return 0
+    }
+    if starts_with_text(code, "e1") {
+        return 2
+    }
+    1
+}
+
+func starts_with_text(string text, string prefix) bool {
+    if len(prefix) > len(text) {
+        return false
+    }
+    slice(text, 0, len(prefix)) == prefix
 }
 
 func locate_anchor(string source, string anchor) source_pos {
