@@ -6,8 +6,8 @@ use compile.internal.build.utils.emit_ast as emit_ast
 use compile.internal.build.utils.emit_built as emit_built
 use compile.internal.build.utils.emit_check_ok as emit_check_ok
 use compile.internal.build.utils.emit_tokens as emit_tokens
-use compile.internal.build.cache.cache_hit
-use compile.internal.build.cache.update_cache
+use compile.internal.build.cache.cache_hit_target
+use compile.internal.build.cache.update_cache_target
 use compile.internal.semantic.check_text
 use compile.internal.syntax.parse_source
 use compile.internal.syntax.read_source
@@ -24,7 +24,7 @@ func run(vec[string] options) int32 {
     }
     var source = source_result.unwrap()
     if options[0] == "check" {
-        if cache_hit(options[1], source, "check") {
+        if cache_hit_target(options[1], source, "check", "semantic") {
             emit_check_ok(options[1]);
             return 0
         }
@@ -35,7 +35,7 @@ func run(vec[string] options) int32 {
         if check_text(source) != 0 {
             return 1
         }
-        var ignored_cache = update_cache(options[1], source, "check")
+        var ignored_cache = update_cache_target(options[1], source, "check", "semantic")
         emit_check_ok(options[1]);
         return 0
     }
@@ -59,12 +59,12 @@ func run(vec[string] options) int32 {
     }
 
     if options[0] == "build" {
-        if cache_hit(options[1], source, "build") {
+        if cache_hit_target(options[1], source, "build", options[2]) {
             emit_built(options[2]);
             return 0
         }
         if build_binary(options[1], options[2]) == 0 {
-            var ignored_cache = update_cache(options[1], source, "build")
+            var ignored_cache = update_cache_target(options[1], source, "build", options[2])
             emit_built(options[2]);
             return 0
         }
