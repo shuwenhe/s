@@ -1,6 +1,7 @@
 package compile.internal.tests.test_semantic
 
 use compile.internal.semantic.check_text
+use compile.internal.semantic.check_detailed
 use std.fs.read_to_string
 
 func run_semantic_suite(string fixtures_root) int32 {
@@ -115,6 +116,21 @@ func run_semantic_suite(string fixtures_root) int32 {
 
     var nested_ok = "package demo.switch\nfunc f(option[result[int32, string]] value) int32 {\n  switch value {\n    some(ok(v)) : v,\n    some(err(e)) : 0,\n    none : 0,\n  }\n}"
     if check_text(nested_ok) != 0 {
+        return 1
+    }
+
+    var diag_src = "package main\nfunc main() int32 {\n  missing(1)\n  missing(1)\n  0\n}"
+    var diagnostics = check_detailed(diag_src)
+    if diagnostics.len() == 0 {
+        return 1
+    }
+    if diagnostics[0].severity == "" {
+        return 1
+    }
+    if diagnostics[0].hint == "" {
+        return 1
+    }
+    if diagnostics[0].repeat_count < 1 {
         return 1
     }
 
