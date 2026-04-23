@@ -47,7 +47,7 @@ use std.prelude.to_string
 use std.vec.vec
 
 struct backend_error {
-    string message,
+    string message
 }
 
 func ok_function(function_decl value) result[function_decl, backend_error] {
@@ -110,38 +110,38 @@ enum value {
 }
 
 struct binding {
-    string name,
-    value value,
+    string name
+    value value
 }
 
 struct write_op {
-    int32 fd,
-    string text,
+    int32 fd
+    string text
 }
 
 struct mir_execution_result {
-    vec[write_op] writes,
-    int32 exit_code,
+    vec[write_op] writes
+    int32 exit_code
 }
 
 struct midend_result {
-    string optimized_mir_text,
-    string report,
+    string optimized_mir_text
+    string report
 }
 
 struct stackmap_function_entry {
-    string name,
-    int32 slots,
-    string bitmap,
-    int32 callee_saved,
+    string name
+    int32 slots
+    string bitmap
+    int32 callee_saved
 }
 
 struct abi_behavior_entry {
-    string name,
-    int32 param_count,
-    bool variadic,
-    string pass_mode,
-    string return_mode,
+    string name
+    int32 param_count
+    bool variadic
+    string pass_mode
+    string return_mode
 }
 
 func build(string path, string output) int32 {

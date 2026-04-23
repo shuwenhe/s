@@ -3,7 +3,7 @@ package std.fs
 use std.result.result
 
 struct fs_error {
-    string message,
+    string message
 }
 
 func read_to_string(string path) result[string, fs_error] {

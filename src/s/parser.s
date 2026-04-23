@@ -7,14 +7,14 @@ use std.result.result
 use std.vec.vec
 
 struct parse_error {
-    string message,
-    int32 line,
-    int32 column,
+    string message
+    int32 line
+    int32 column
 }
 
 struct parser {
-    vec[token] tokens,
-    int32 index,
+    vec[token] tokens
+    int32 index
 }
 
 func parse_source(string source) result[source_file, parse_error] {
@@ -1210,14 +1210,14 @@ impl parser {
 }
 
 struct parsed_function {
-    function_sig sig,
-    option[block_expr] body,
-    option[named_type] receiver,
+    function_sig sig
+    option[block_expr] body
+    option[named_type] receiver
 }
 
 struct named_type {
-    string name,
-    string type_name,
+    string name
+    string type_name
 }
 
 func decode_named_type(vec[token] tokens) result[named_type, parse_error] {

@@ -1,8 +1,8 @@
 package demo.member
 
 struct point {
-    int32 x,
-    int32 y,
+    int32 x
+    int32 y
 }
 
 trait measure {

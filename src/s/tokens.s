@@ -13,10 +13,10 @@ enum token_kind {
 }
 
 struct token {
-    token_kind kind,
-    string value,
-    int32 line,
-    int32 column,
+    token_kind kind
+    string value
+    int32 line
+    int32 column
 }
 
 func token_kind_name(token_kind kind) string {
