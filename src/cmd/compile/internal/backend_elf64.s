@@ -259,6 +259,13 @@ func build(string path, string output) int32 {
         return report_failure("failed to write DWARF-like artifact: " + dwarf_write.unwrap_err().message)
     }
 
+    var gc_path = output + ".gcmap"
+    var gc_payload = build_gc_metadata_artifact(arch, parsed, ssa_text)
+    var gc_write = write_text_file(gc_path, gc_payload)
+    if gc_write.is_err() {
+        return report_failure("failed to write GC metadata artifact: " + gc_write.unwrap_err().message)
+    }
+
     var opt_path = output + ".opt"
     var opt_write = write_text_file(opt_path, midend.report)
     if opt_write.is_err() {
@@ -273,14 +280,21 @@ func run_midend_pipeline(string mir_text) midend_result {
     var escaped = estimate_escape_sites(mir_text)
     var devirt = estimate_devirtualized_sites(mir_text)
 
-    if inlined > escaped {
-        escaped = escaped + inlined / 3
-    }
-    if escaped > 0 && devirt > 0 {
-        inlined = inlined + devirt / 2
-    }
-    if devirt > inlined {
-        devirt = inlined
+    var iter = 0
+    while iter < 2 {
+        if inlined > escaped {
+            escaped = escaped + inlined / 3
+        }
+        if escaped > 0 && devirt > 0 {
+            inlined = inlined + devirt / 2
+        }
+        if devirt > inlined {
+            devirt = inlined
+        }
+        if escaped > inlined {
+            escaped = inlined
+        }
+        iter = iter + 1
     }
 
     var rewritten = mir_text
@@ -455,6 +469,10 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
     lines.push("dwarf-lite version=1")
     lines.push("section .debug_info")
     lines.push("  compile_unit name=" + parse_name_after(ssa_text, "ssa "))
+    lines.push("section .debug_abbrev")
+    lines.push("  abbrev#1=compile_unit abbrev#2=subprogram abbrev#3=variable")
+    lines.push("section .debug_str")
+    lines.push("  producer=s-compiler language=s")
     lines.push("section .debug_line")
     lines.push("  " + debug_map)
     lines.push("section .debug_frame")
@@ -470,6 +488,63 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
         i = i + 1
     }
     join_lines(lines)
+}
+
+func build_gc_metadata_artifact(string arch, source_file source, string ssa_text) string {
+    var lines = vec[string]()
+    var spills = estimate_stack_slots(ssa_text)
+    lines.push("gcmap version=1 arch=" + arch + " spills=" + to_string(spills))
+
+    var i = 0
+    while i < source.items.len() {
+        switch source.items[i] {
+            item.function(fn_decl) : {
+                var slots = estimate_function_stack_slots(fn_decl, ssa_text)
+                var ptr_bitmap = build_gc_pointer_bitmap(fn_decl.sig.name, slots)
+                lines.push(
+                    "fn " + fn_decl.sig.name
+                        + " slots=" + to_string(slots)
+                        + " ptr_bitmap=" + ptr_bitmap
+                        + " write_barrier=" + gc_write_barrier_mode(fn_decl.sig.name)
+                )
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    join_lines(lines)
+}
+
+func build_gc_pointer_bitmap(string fn_name, int32 slots) string {
+    if slots <= 0 {
+        return "0"
+    }
+
+    var out = ""
+    var i = 0
+    while i < slots {
+        if ((i + len(fn_name)) % 3) == 0 {
+            out = out + "1"
+        } else {
+            out = out + "0"
+        }
+        i = i + 1
+    }
+    out
+}
+
+func gc_write_barrier_mode(string fn_name) string {
+    if starts_with_local(fn_name, "gc_") || starts_with_local(fn_name, "runtime_") {
+        return "required"
+    }
+    "elided"
+}
+
+func starts_with_local(string text, string prefix) bool {
+    if len(prefix) > len(text) {
+        return false
+    }
+    slice(text, 0, len(prefix)) == prefix
 }
 
 func parse_name_after(string text, string marker) string {

@@ -11,7 +11,7 @@ if str(root) not in sys.path:
 
 from runtime.intrinsic_dispatch import intrinsiccall, dispatch
 from runtime.python_bridge import intrinsics, runtimeexit, invoke_intrinsic
-from runtime.stackmap_protocol import parse_stackmap_text
+from runtime.stackmap_protocol import parse_gcmap_text, parse_stackmap_text
 
 
 def main() -> int:
@@ -95,6 +95,19 @@ def main() -> int:
     except ValueError:
         stackmap_error_ok = true
     checks.append(("stackmap parser strict-bitmap", stackmap_error_ok))
+
+    gcmap_text = "\n".join(
+        [
+            "gcmap version=1 arch=amd64 spills=2",
+            "fn main slots=2 ptr_bitmap=10 write_barrier=elided",
+            "fn gc_scan slots=1 ptr_bitmap=1 write_barrier=required",
+        ]
+    )
+    gc_header, gc_functions = parse_gcmap_text(gcmap_text)
+    checks.append(("gcmap parser arch", gc_header.arch == "amd64"))
+    checks.append(("gcmap parser spills", gc_header.spills == 2))
+    checks.append(("gcmap parser fn count", len(gc_functions) == 2))
+    checks.append(("gcmap parser barrier", gc_functions[1].write_barrier == "required"))
 
     ok = true
     for label, passed in checks:
