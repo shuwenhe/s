@@ -266,6 +266,13 @@ func build(string path, string output) int32 {
         return report_failure("failed to write GC metadata artifact: " + gc_write.unwrap_err().message)
     }
 
+    var export_path = output + ".export"
+    var export_payload = build_export_data_artifact(parsed, arch)
+    var export_write = write_text_file(export_path, export_payload)
+    if export_write.is_err() {
+        return report_failure("failed to write export data artifact: " + export_write.unwrap_err().message)
+    }
+
     var opt_path = output + ".opt"
     var opt_write = write_text_file(opt_path, midend.report)
     if opt_write.is_err() {
@@ -538,6 +545,27 @@ func gc_write_barrier_mode(string fn_name) string {
         return "required"
     }
     "elided"
+}
+
+func build_export_data_artifact(source_file source, string arch) string {
+    var lines = vec[string]()
+    lines.push("export-data version=1 arch=" + arch)
+
+    var i = 0
+    while i < source.items.len() {
+        switch source.items[i] {
+            item.function(fn_decl) : {
+                lines.push(
+                    "fn " + fn_decl.sig.name
+                        + " params=" + to_string(fn_decl.sig.params.len())
+                        + " generics=" + to_string(fn_decl.sig.generics.len())
+                )
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    join_lines(lines)
 }
 
 func starts_with_local(string text, string prefix) bool {
