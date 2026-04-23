@@ -119,6 +119,7 @@ func run_preparse_semantic_completeness_checks(string source, vec[semantic_error
     var ignored0 = validate_control_flow_semantics(source, diagnostics)
     var ignored1 = validate_recovery_semantics(source, diagnostics)
     var ignored2 = validate_method_interface_semantics(source, diagnostics)
+    var ignored3 = validate_semantic_proof_chain(source, diagnostics)
 }
 
 func validate_control_flow_semantics(string source, vec[semantic_error] mut diagnostics) int32 {
@@ -183,6 +184,31 @@ func validate_method_interface_semantics(string source, vec[semantic_error] mut 
     }
     if impl_count > 0 && count_token_text(source, "impl[") > 1 && count_token_text(source, "for ") == 0 {
         errors = errors + add_error(source, diagnostics, "e3034", "generic impl instantiation conflict requires explicit target", "impl")
+    }
+    if count_token_text(source, "embed ") > 0 && count_token_text(source, "interface ") == 0 {
+        errors = errors + add_error(source, diagnostics, "e3035", "embedded method set requires explicit interface boundary", "embed")
+    }
+    errors
+}
+
+func validate_semantic_proof_chain(string source, vec[semantic_error] mut diagnostics) int32 {
+    var errors = 0
+    var defer_count = count_token_text(source, "defer ")
+    var panic_count = count_token_text(source, "panic(")
+    var recover_count = count_token_text(source, "recover(")
+    var goto_count = count_token_text(source, "goto ")
+    var label_count = count_token_text(source, "label ")
+    var nested_if = count_token_text(source, "if ")
+    var nested_switch = count_token_text(source, "switch ")
+
+    if panic_count > 0 && recover_count > 0 && defer_count == 0 {
+        errors = errors + add_error(source, diagnostics, "e3036", "panic/recover equivalence chain requires defer checkpoint", "defer")
+    }
+    if goto_count > 0 && label_count > 0 && (nested_if + nested_switch) > 2 {
+        errors = errors + add_error(source, diagnostics, "e3037", "complex nested goto/label requires full control-flow proof chain", "goto")
+    }
+    if count_token_text(source, "impl[") > 0 && count_token_text(source, "trait ") > 0 && count_token_text(source, "where ") == 0 {
+        errors = errors + add_error(source, diagnostics, "e3038", "generic trait implementation requires explicit constraint proof", "where")
     }
     errors
 }

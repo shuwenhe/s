@@ -475,6 +475,7 @@ func build_toolchain_compat_artifact(source_file source, string arch) string {
     lines.push("matrix module,build_tags,test,cover,profile,cgo,asm,linker,archive,relocation")
     lines.push("gate coverage=min profile=min fuzz=planned stability=rolling")
     lines.push("interop cgo=roadmap asm=bridge linker=elf64-only")
+    lines.push("go_equiv module=planned build_tags=planned test=partial cover=partial profile=planned")
     join_lines(lines)
 }
 
@@ -499,6 +500,9 @@ func validate_toolchain_compat_artifact(string payload) result[(), backend_error
     }
     if !has_substring(payload, "interop cgo=") {
         return result::err(backend_error { message: "backend error: toolchain compatibility interop roadmap missing" })
+    }
+    if !has_substring(payload, "go_equiv ") {
+        return result::err(backend_error { message: "backend error: toolchain compatibility go equivalence marker missing" })
     }
     result::ok(())
 }
@@ -862,9 +866,26 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
         }
         i = i + 1
     }
+    lines.push(build_dwarf_continuity_metric(ssa_text, debug_map))
     lines.push(build_dwarf_budget_policy(ssa_text))
     lines.push(build_dwarf_regression_gate(ssa_text, debug_map))
     join_lines(lines)
+}
+
+func build_dwarf_continuity_metric(string ssa_text, string debug_map) string {
+    var lines = parse_number_after(ssa_text, "dbg_lines=")
+    if lines < 1 {
+        lines = 1
+    }
+    var vars = count_occurrences(debug_map, "var v")
+    if vars < 1 {
+        vars = 1
+    }
+    var continuity = (vars * 100) / lines
+    if continuity > 100 {
+        continuity = 100
+    }
+    "metric location_continuity=" + to_string(continuity)
 }
 
 func build_dwarf_budget_policy(string ssa_text) string {
@@ -1009,6 +1030,7 @@ func build_gc_metadata_artifact(string arch, source_file source, string ssa_text
     }
     lines.push("fault_inject write_barrier=enabled safepoint=enabled schedule=periodic")
     lines.push("stress baseline=enabled horizon=long")
+    lines.push("contract e2e_safepoint=planned e2e_stackmap=planned escape_gc_coupling=planned")
     lines.push("proof rollback=" + to_string(parse_number_after(ssa_text, "rollback=")) + " proof_fail=" + to_string(parse_number_after(ssa_text, "proof_fail=")))
     join_lines(lines)
 }
@@ -1031,6 +1053,9 @@ func validate_dwarf_consumability(string dwarf_payload, string ssa_text) result[
     }
     if !has_substring(dwarf_payload, "policy debug_budget_mode=") {
         return result::err(backend_error { message: "backend error: dwarf budget policy missing" })
+    }
+    if !has_substring(dwarf_payload, "metric location_continuity=") {
+        return result::err(backend_error { message: "backend error: dwarf continuity metric missing" })
     }
 
     var budget = parse_number_after(ssa_text, "dbg_budget=")
@@ -1058,6 +1083,9 @@ func validate_gc_contract_chain(string gc_payload, source_file source, string ss
     }
     if !has_substring(gc_payload, "stress baseline=enabled") {
         return result::err(backend_error { message: "backend error: gc contract missing stress baseline marker" })
+    }
+    if !has_substring(gc_payload, "contract e2e_safepoint=") {
+        return result::err(backend_error { message: "backend error: gc contract end-to-end marker missing" })
     }
 
     var expected = function_item_count(source)
@@ -1087,6 +1115,7 @@ func build_backend_perf_baseline_artifact(string arch, string ssa_text, string m
     lines.push("midend " + midend_report)
     lines.push("regression_gate p95_latency=stable throughput=stable")
     lines.push("regression_gate_long p99_latency=watch code_size=watch compile_time=watch")
+    lines.push("regression_gate_arch amd64=watch arm64=watch tail_cases=watch")
     join_lines(lines)
 }
 
@@ -1102,6 +1131,9 @@ func validate_backend_perf_baseline(string payload) result[(), backend_error] {
     }
     if !has_substring(payload, "regression_gate_long ") {
         return result::err(backend_error { message: "backend error: perf baseline long regression gate missing" })
+    }
+    if !has_substring(payload, "regression_gate_arch ") {
+        return result::err(backend_error { message: "backend error: perf baseline arch gate missing" })
     }
     result::ok(())
 }
