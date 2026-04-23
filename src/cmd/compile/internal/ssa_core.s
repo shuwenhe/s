@@ -36,6 +36,9 @@ struct ssa_program {
     int32 semantic_rewrite_count
     int32 fixed_point_iterations
     int32 verification_error_count
+    int32 rollback_count
+    int32 proof_obligation_count
+    int32 proof_failed_count
     int32 spill_count
     int32 spill_reload_count
     int32 call_pressure_event_count
@@ -71,6 +74,9 @@ struct ssa_pass_stats {
     int32 loop_header_count
     int32 fixed_point_iterations
     int32 verification_error_count
+    int32 rollback_count
+    int32 proof_obligation_count
+    int32 proof_failed_count
     int32 optimized_value_count
 }
 
@@ -107,6 +113,9 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
     var model = build_dataflow_model(rewritten, block_count, value_count)
     var pass_stats = run_optimization_passes(rewritten, model, options)
     var optimized_value_count = pass_stats.optimized_value_count
+    if pass_stats.verification_error_count > 0 {
+        optimized_value_count = value_count
+    }
     var allocation = linear_scan_regalloc_with_spill(rewritten, optimized_value_count, goarch)
     var debug_lines = build_debug_lines(rewritten, allocation.allocated_regs)
     var debug_var_locations = build_var_locations(allocation.allocated_regs)
@@ -135,6 +144,9 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         semantic_rewrite_count: rewrite.rewrite_count,
         fixed_point_iterations: pass_stats.fixed_point_iterations,
         verification_error_count: pass_stats.verification_error_count,
+        rollback_count: pass_stats.rollback_count,
+        proof_obligation_count: pass_stats.proof_obligation_count,
+        proof_failed_count: pass_stats.proof_failed_count,
         spill_count: allocation.spill_count,
         spill_reload_count: allocation.spill_reload_count,
         call_pressure_event_count: allocation.call_pressure_events,
@@ -205,6 +217,11 @@ struct regalloc_result {
 func linear_scan_regalloc_with_spill(string mir_text, int32 value_count, string goarch) regalloc_result {
     var regs = register_bank(goarch)
     var call_sites = count_token(mir_text, " call=")
+    var remat_sites = count_token(mir_text, " const") + count_token(mir_text, " imm") + count_token(mir_text, " literal=")
+    var blocks = parse_number_after(mir_text, "blocks=")
+    if blocks < 1 {
+        blocks = 1
+    }
     if regs.len() == 0 {
         return regalloc_result {
             allocated_regs: vec[string](),
@@ -234,9 +251,10 @@ func linear_scan_regalloc_with_spill(string mir_text, int32 value_count, string 
     var max_live = 0
     var live_width = 3
     if call_sites > 0 {
-        // Calls shorten allocatable windows and increase spill/reload pressure.
+
         live_width = 2
     }
+
     var i = 0
     while i < value_count {
         var chosen = -1
@@ -253,7 +271,8 @@ func linear_scan_regalloc_with_spill(string mir_text, int32 value_count, string 
             if i >= regs.len() {
                 reuse = reuse + 1
             }
-            active_until[chosen] = i + live_width
+            var hold = choose_live_width(i, value_count, live_width, call_sites)
+            active_until[chosen] = i + hold
             out.push(regs[chosen])
 
             var live_now = count_live_regs(active_until, i)
@@ -261,17 +280,23 @@ func linear_scan_regalloc_with_spill(string mir_text, int32 value_count, string 
                 max_live = live_now
             }
         } else {
-            if call_sites > 0 && (i % 2) == 0 {
+            var victim = pick_split_victim(active_until)
+            var victim_live_until = active_until[victim]
+            var remat_candidate = should_rematerialize_value(i, remat_sites, call_sites, value_count)
+            var split_candidate = should_split_live_range(i, victim_live_until, value_count, call_sites, blocks)
+
+            if remat_candidate {
                 out.push("remat(v" + to_string(i) + ")")
                 remat = remat + 1
+            } else if split_candidate {
+                active_until[victim] = i + choose_live_width(i, value_count, live_width, call_sites)
+                out.push("split(v" + to_string(i) + "->" + regs[victim] + ")")
+                splits = splits + 1
+                spill_reloads = spill_reloads + 1
             } else {
                 out.push("spill(" + to_string(i - regs.len()) + ")")
                 spills = spills + 1
                 spill_reloads = spill_reloads + 1
-            }
-
-            if i > regs.len() {
-                splits = splits + 1
             }
         }
         i = i + 1
@@ -287,6 +312,54 @@ func linear_scan_regalloc_with_spill(string mir_text, int32 value_count, string 
         reuse_count: reuse,
         max_live: max_live,
     }
+}
+
+func choose_live_width(int32 index, int32 value_count, int32 base_width, int32 call_sites) int32 {
+    var width = base_width
+    if call_sites > 0 && index > (value_count / 2) {
+        width = width - 1
+    }
+    if width < 1 {
+        return 1
+    }
+    width
+}
+
+func pick_split_victim(vec[int32] active_until) int32 {
+    var victim = 0
+    var max_until = active_until[0]
+    var i = 1
+    while i < active_until.len() {
+        if active_until[i] > max_until {
+            max_until = active_until[i]
+            victim = i
+        }
+        i = i + 1
+    }
+    victim
+}
+
+func should_rematerialize_value(int32 index, int32 remat_sites, int32 call_sites, int32 value_count) bool {
+    if remat_sites == 0 {
+        return false
+    }
+    if call_sites == 0 && index < value_count / 2 {
+        return false
+    }
+    (index % 3) != 1
+}
+
+func should_split_live_range(int32 index, int32 victim_live_until, int32 value_count, int32 call_sites, int32 blocks) bool {
+    if index <= 0 {
+        return false
+    }
+    if victim_live_until <= index + 1 {
+        return false
+    }
+    if call_sites > 0 {
+        return true
+    }
+    index > (value_count / 2) && blocks > 1
 }
 
 func count_live_regs(vec[int32] active_until, int32 cursor) int32 {
@@ -380,6 +453,9 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     var memory_versions = model.store_count + model.load_count
     var live_in_facts = model.live_in_facts
     var fixed_iters = 0
+    var proof_obligations = 0
+    var proof_failed = 0
+    var rollback = 0
 
     var prev = -1
     while fixed_iters < 3 && current != prev {
@@ -399,10 +475,18 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         if current < 1 {
             current = 1
         }
+
+        proof_obligations = proof_obligations + 2
+        if current > prev {
+            proof_failed = proof_failed + 1
+        }
         fixed_iters = fixed_iters + 1
     }
 
     var verify_errors = verify_ssa_invariants(model)
+    if verify_errors > 0 || proof_failed > 0 {
+        rollback = 1
+    }
 
     if options.enable_dce {
         dce_removed = run_dce_pass(current, count_token(mir_text, " stmts=0"))
@@ -443,6 +527,9 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         loop_header_count: model.loop_headers,
         fixed_point_iterations: fixed_iters,
         verification_error_count: verify_errors,
+        rollback_count: rollback,
+        proof_obligation_count: proof_obligations,
+        proof_failed_count: proof_failed,
         optimized_value_count: current,
     }
 }
@@ -708,6 +795,9 @@ func dump_pipeline(ssa_program program) string {
         + " rewrites=" + to_string(program.semantic_rewrite_count)
         + " fix_iters=" + to_string(program.fixed_point_iterations)
         + " verify_errs=" + to_string(program.verification_error_count)
+        + " rollback=" + to_string(program.rollback_count)
+        + " proofs=" + to_string(program.proof_obligation_count)
+        + " proof_fail=" + to_string(program.proof_failed_count)
         + " cfg_edges=" + to_string(program.cfg_edge_count)
         + " branches=" + to_string(program.branch_block_count)
         + " spills=" + to_string(program.spill_count)

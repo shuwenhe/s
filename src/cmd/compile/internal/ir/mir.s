@@ -2,10 +2,8 @@ package compile.internal.ir.mir
 
 use std.vec.vec
 
-// MIR（中间表示）草案 - 控制流图和基础块定义
-
 struct MirOperand {
-    string kind, // "local", "const", "arg"
+    string kind,
     string value
     option[string] type_name
 }
@@ -33,7 +31,7 @@ enum MirStatement {
 }
 
 struct MirTerminator {
-    string kind, // "return", "branch", "jump"
+    string kind,
     vec[int32] targets
 }
 

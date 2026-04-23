@@ -1,7 +1,5 @@
 package compile.internal.ir.types
 
-// Compiler internal type representations (草案)
-
 enum TypeKind {
     primitive,
     pointer,
@@ -12,9 +10,9 @@ enum TypeKind {
 
 struct Type {
     TypeKind kind
-    string name, // e.g. "int32", or base name for named/generic
-    option[Type] inner, // pointer/slice inner type
-    vec[Type] params, // generic params
+    string name,
+    option[Type] inner,
+    vec[Type] params,
 }
 
 func NewPrimitive(string name) Type { Type { kind: TypeKind::primitive, name: name } }

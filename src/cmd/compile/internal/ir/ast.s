@@ -3,8 +3,6 @@ package compile.internal.ir.ast
 use std.vec.vec
 use compile.internal.ir.types
 
-// Typed AST core node definitions (草案)
-
 struct Program {
     string package_name
     vec[Package] packages
@@ -61,7 +59,6 @@ struct IncrementStmt { string name }
 struct ExprStmt { Expr expr }
 struct ReturnStmt { option[Expr] value }
 
-// Minimal expression enum; each Expr should carry a resolved `types.Type` at semantic phase.
 enum Expr {
     int(int32),
     string(string),
@@ -76,7 +73,6 @@ struct BinaryExpr { string op, Expr left, Expr right }
 struct CallExpr { string callee, vec[Expr] args }
 struct BorrowExpr { Expr target, bool mutable }
 
-// Helpers
 func make_empty_package(string name) Package {
     Package { name: name, decls: vec[Decl]() }
 }
