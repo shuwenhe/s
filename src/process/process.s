@@ -4,7 +4,7 @@ use std.result.result
 use std.vec.vec
 
 struct process_error {
-    string message,
+    string message
 }
 
 func run_process(vec[string] argv) result[(), process_error] {

@@ -7,16 +7,16 @@ use std.vec.vec
 use std.result.result
 
 struct lex_error {
-    string message,
-    int32 line,
-    int32 column,
+    string message
+    int32 line
+    int32 column
 }
 
 struct lexer {
-    string source,
-    int32 index,
-    int32 line,
-    int32 column,
+    string source
+    int32 index
+    int32 line
+    int32 column
 }
 
 func new_lexer(string source) lexer {

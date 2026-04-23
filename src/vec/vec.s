@@ -5,13 +5,13 @@ use std.prelude.box
 use std.prelude.box
 
 struct raw_vec[t] {
-    box[array[t]] storage,
-    int32 capacity,
+    box[array[t]] storage
+    int32 capacity
 }
 
 struct vec[t] {
-    raw_vec[t] raw,
-    int32 length,
+    raw_vec[t] raw
+    int32 length
 }
 
 func new_vec[t]() vec[t] {

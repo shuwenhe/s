@@ -1,7 +1,7 @@
 package std.prelude
 
 struct box[t] {
-    t value,
+    t value
 }
 
 func box[t](t value) box[t] {
