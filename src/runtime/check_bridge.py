@@ -11,6 +11,7 @@ if str(root) not in sys.path:
 
 from runtime.intrinsic_dispatch import intrinsiccall, dispatch
 from runtime.python_bridge import intrinsics, runtimeexit, invoke_intrinsic
+from runtime.stackmap_protocol import parse_stackmap_header
 
 
 def main() -> int:
@@ -72,6 +73,11 @@ def main() -> int:
         )
     )
     checks.append(("dispatch int_to_string", dispatched.value == "42"))
+
+    stackmap = parse_stackmap_header("stackmap arch=amd64 spill_slots=2 callee_saved=6")
+    checks.append(("stackmap parser arch", stackmap.arch == "amd64"))
+    checks.append(("stackmap parser spills", stackmap.spill_slots == 2))
+    checks.append(("stackmap parser callee", stackmap.callee_saved == 6))
 
     ok = true
     for label, passed in checks:
