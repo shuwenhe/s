@@ -24,9 +24,12 @@ struct ssa_program {
     int32 coalesced_move_count,
     int32 simplified_branch_count,
     int32 spill_count,
+    int32 regalloc_reuse_count,
+    int32 regalloc_max_live,
     int32 debug_line_count,
     vec[string] allocated_regs,
     vec[string] debug_lines,
+    vec[string] debug_var_locations,
 }
 
 struct ssa_pass_stats {
@@ -52,6 +55,7 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
     var optimized_value_count = pass_stats.optimized_value_count
     var allocation = linear_scan_regalloc_with_spill(optimized_value_count, goarch)
     var debug_lines = build_debug_lines(mir_text, allocation.allocated_regs)
+    var debug_var_locations = build_var_locations(allocation.allocated_regs)
 
     ssa_program {
         function_name: function_name,
@@ -65,15 +69,20 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         coalesced_move_count: pass_stats.coalesced_move_count,
         simplified_branch_count: pass_stats.simplified_branch_count,
         spill_count: allocation.spill_count,
+        regalloc_reuse_count: allocation.reuse_count,
+        regalloc_max_live: allocation.max_live,
         debug_line_count: debug_lines.len(),
         allocated_regs: allocation.allocated_regs,
         debug_lines: debug_lines,
+        debug_var_locations: debug_var_locations,
     }
 }
 
 struct regalloc_result {
     vec[string] allocated_regs,
     int32 spill_count,
+    int32 reuse_count,
+    int32 max_live,
 }
 
 func linear_scan_regalloc_with_spill(int32 value_count, string goarch) regalloc_result {
@@ -82,15 +91,46 @@ func linear_scan_regalloc_with_spill(int32 value_count, string goarch) regalloc_
         return regalloc_result {
             allocated_regs: vec[string](),
             spill_count: value_count,
+            reuse_count: 0,
+            max_live: 0,
         }
+    }
+
+    var active_until = vec[int32]()
+    var ri = 0
+    while ri < regs.len() {
+        active_until.push(0)
+        ri = ri + 1
     }
 
     var out = vec[string]()
     var spills = 0
+    var reuse = 0
+    var max_live = 0
+    var live_width = 3
     var i = 0
     while i < value_count {
-        if i < regs.len() {
-            out.push(regs[i])
+        var chosen = -1
+        ri = 0
+        while ri < regs.len() {
+            if i >= active_until[ri] {
+                chosen = ri
+                break
+            }
+            ri = ri + 1
+        }
+
+        if chosen >= 0 {
+            if i >= regs.len() {
+                reuse = reuse + 1
+            }
+            active_until[chosen] = i + live_width
+            out.push(regs[chosen])
+
+            var live_now = count_live_regs(active_until, i)
+            if live_now > max_live {
+                max_live = live_now
+            }
         } else {
             out.push("spill(" + to_string(i - regs.len()) + ")")
             spills = spills + 1
@@ -101,7 +141,21 @@ func linear_scan_regalloc_with_spill(int32 value_count, string goarch) regalloc_
     regalloc_result {
         allocated_regs: out,
         spill_count: spills,
+        reuse_count: reuse,
+        max_live: max_live,
     }
+}
+
+func count_live_regs(vec[int32] active_until, int32 cursor) int32 {
+    var count = 0
+    var i = 0
+    while i < active_until.len() {
+        if active_until[i] > cursor {
+            count = count + 1
+        }
+        i = i + 1
+    }
+    count
 }
 
 func register_bank(string goarch) vec[string] {
@@ -303,6 +357,16 @@ func build_debug_lines(string mir_text, vec[string] allocated_regs) vec[string] 
     out
 }
 
+func build_var_locations(vec[string] allocated_regs) vec[string] {
+    var out = vec[string]()
+    var i = 0
+    while i < allocated_regs.len() {
+        out.push("var v" + to_string(i) + " -> " + allocated_regs[i])
+        i = i + 1
+    }
+    out
+}
+
 func dump_pipeline(ssa_program program) string {
     var out = "ssa " + program.function_name
         + " blocks=" + to_string(program.block_count)
@@ -315,6 +379,8 @@ func dump_pipeline(ssa_program program) string {
         + " cfg_edges=" + to_string(program.cfg_edge_count)
         + " branches=" + to_string(program.branch_block_count)
         + " spills=" + to_string(program.spill_count)
+        + " reuse=" + to_string(program.regalloc_reuse_count)
+        + " max_live=" + to_string(program.regalloc_max_live)
         + " dbg_lines=" + to_string(program.debug_line_count)
 
     var i = 0
@@ -339,6 +405,11 @@ func dump_debug_map(ssa_program program) string {
     i = 0
     while i < program.debug_lines.len() {
         out = out + " | " + program.debug_lines[i]
+        i = i + 1
+    }
+    i = 0
+    while i < program.debug_var_locations.len() {
+        out = out + " | " + program.debug_var_locations[i]
         i = i + 1
     }
     out

@@ -27,6 +27,12 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, "cfg_edges=") {
         return 1
     }
+    if !contains(arm64_dump, "reuse=") {
+        return 1
+    }
+    if !contains(arm64_dump, "max_live=") {
+        return 1
+    }
 
     var amd64_program = build_pipeline(mir_text, "amd64")
     var amd64_dump = dump_pipeline(amd64_program)
@@ -41,6 +47,9 @@ func run_ssa_suite() int32 {
         return 1
     }
     if !contains(debug_map, "line 100") {
+        return 1
+    }
+    if !contains(debug_map, "var v0") {
         return 1
     }
 
