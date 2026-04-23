@@ -12,6 +12,7 @@ use compile.internal.typesys.same_type
 use compile.internal.typesys.same_type_ref
 use compile.internal.typesys.type_arg
 use compile.internal.typesys.type_ref
+use compile.internal.typesys.has_unknown_component
 use s.block_expr
 use s.expr
 use s.function_decl
@@ -197,6 +198,8 @@ func check_function(function_decl function_decl, vec[function_binding] functions
         return 0
     }
 
+    var pre_errors = validate_function_signature(function_decl, source, diagnostics)
+
     var expected_return =
         switch function_decl.sig.return_type {
             option.some(type_name) : parse_type(type_name),
@@ -218,10 +221,51 @@ func check_function(function_decl function_decl, vec[function_binding] functions
     var result = infer_block_expr(function_decl.body.unwrap(), env, expected_return, functions, source, diagnostics)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
         if !same_type(expected_return, result.type_name) {
-            return result.errors + add_error(source, diagnostics, "e3004", "function return type mismatch", function_decl.sig.name)
+            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "function return type mismatch", function_decl.sig.name)
         }
     }
-    result.errors
+    pre_errors + result.errors
+}
+
+func validate_function_signature(function_decl function_decl, string source, vec[semantic_error] mut diagnostics) int32 {
+    var errors = 0
+
+    var i = 0
+    while i < function_decl.sig.generics.len() {
+        var gi = generic_name(function_decl.sig.generics[i])
+        var j = i + 1
+        while j < function_decl.sig.generics.len() {
+            if gi == generic_name(function_decl.sig.generics[j]) {
+                errors = errors + add_error(source, diagnostics, "e3012", "duplicate generic parameter", gi)
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+
+    i = 0
+    while i < function_decl.sig.params.len() {
+        var pi = function_decl.sig.params[i].name
+        var pj = i + 1
+        while pj < function_decl.sig.params.len() {
+            if pi == function_decl.sig.params[pj].name {
+                errors = errors + add_error(source, diagnostics, "e3013", "duplicate parameter name", pi)
+            }
+            pj = pj + 1
+        }
+        i = i + 1
+    }
+
+    switch function_decl.sig.return_type {
+        option.some(rt) : {
+            if has_unknown_component(rt) {
+                errors = errors + add_error(source, diagnostics, "e3014", "return type has unknown component", function_decl.sig.name)
+            }
+        }
+        option.none : (),
+    }
+
+    errors
 }
 
 func infer_block_expr(block_expr block, vec[type_binding] outer_env, string expected_return, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) check_result {

@@ -80,6 +80,27 @@ func type_arg(type_ref ty, int32 index) string {
     parse_type(ty.args[index])
 }
 
+func generic_arity(string ty) int32 {
+    var args = extract_type_args(ty)
+    args.len()
+}
+
+func has_unknown_component(string ty) bool {
+    var clean = parse_type(ty)
+    if clean == "unknown" {
+        return true
+    }
+    var args = extract_type_args(clean)
+    var i = 0
+    while i < args.len() {
+        if parse_type(args[i]) == "unknown" {
+            return true
+        }
+        i = i + 1
+    }
+    false
+}
+
 func rules_consistent() bool {
     if parse_type("  int32  ") != "int32" {
         return false
@@ -96,6 +117,9 @@ func rules_consistent() bool {
         return false
     }
     if type_arg(result_ref, 1) != "string" {
+        return false
+    }
+    if generic_arity("result[int32, string]") != 2 {
         return false
     }
 
