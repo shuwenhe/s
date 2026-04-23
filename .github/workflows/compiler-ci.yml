@@ -17,6 +17,7 @@ jobs:
           chmod +x ./bin/s-native || true
           chmod +x ./scripts/benchmark-compiler.sh
           chmod +x ./scripts/fuzz-check.sh
+          chmod +x ./scripts/repro-build-check.sh
 
       - name: compiler checks
         run: |
@@ -31,3 +32,6 @@ jobs:
 
       - name: smoke fuzz
         run: ./scripts/fuzz-check.sh
+
+      - name: reproducible build
+        run: ./scripts/repro-build-check.sh
