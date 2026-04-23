@@ -170,10 +170,25 @@ func run_semantic_suite(string fixtures_root) int32 {
     if !has_code(recover_diags, "e3025") {
         return 1
     }
+    if !has_code(recover_diags, "e3033") {
+        return 1
+    }
+
+    var panic_src = "package demo.recover\nfunc main() int32 {\n  panic(\"x\")\n}"
+    var panic_diags = check_detailed(panic_src)
+    if !has_code(panic_diags, "e3026") {
+        return 1
+    }
+    if !has_code(panic_diags, "e3032") {
+        return 1
+    }
 
     var impl_src = "package demo.impl\nimpl Box[T] {\n}"
     var impl_diags = check_detailed(impl_src)
     if !has_code(impl_diags, "e3028") {
+        return 1
+    }
+    if !has_code(impl_diags, "e3030") {
         return 1
     }
 
