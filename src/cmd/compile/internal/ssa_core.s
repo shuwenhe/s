@@ -62,6 +62,9 @@ struct ssa_program {
     int32 sched_throughput_score
     int32 sched_latency_balance_score
     int32 microarch_specialization_score
+    int32 cost_model_score
+    int32 solver_convergence_score
+    int32 replay_determinism_score
     string pass_dsl
     string invalidation_policy
     string pass_topology_log
@@ -117,6 +120,9 @@ struct ssa_pass_stats {
     int32 scheduler_priority_score
     int32 scheduler_conflict_count
     int32 replay_stability_hash
+    int32 cost_model_score
+    int32 solver_convergence_score
+    int32 replay_determinism_score
     int32 alias_precision_level
     int32 memory_ssa_chain_count
     int32 global_value_number_count
@@ -228,6 +234,9 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         sched_throughput_score: sched_quality.throughput_score,
         sched_latency_balance_score: sched_quality.latency_balance_score,
         microarch_specialization_score: sched_quality.microarch_specialization_score,
+        cost_model_score: pass_stats.cost_model_score,
+        solver_convergence_score: pass_stats.solver_convergence_score,
+        replay_determinism_score: pass_stats.replay_determinism_score,
         pass_dsl: pass_stats.pass_dsl,
         invalidation_policy: pass_stats.invalidation_policy,
         pass_topology_log: pass_stats.pass_topology_log,
@@ -566,6 +575,8 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     var replay_steps = 0
     var scheduler_priority = 0
     var scheduler_conflicts = 0
+    var cost_model_score = 0
+    var solver_convergence = 100
     var stable_iters = 0
     var rollback_value = current
     var pass_dsl = build_pass_dsl(model)
@@ -658,6 +669,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
 
         if has_scheduler_conflict(pre_i, cse_i, model) {
             scheduler_conflicts = scheduler_conflicts + 1
+            solver_convergence = solver_convergence - 8
             if pre_i >= cse_i {
                 cse_i = 0
                 cse_node.replay_token = "cse:conflict-drop"
@@ -666,6 +678,8 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
                 pre_node.replay_token = "pre:conflict-drop"
             }
         }
+
+        cost_model_score = cost_model_score + evaluate_pass_cost_model(model, current, pre_i, cse_i, licm_i, bce_i)
 
         var iter_replay = gvn_node.replay_token
             + "," + sccp_node.replay_token
@@ -693,11 +707,13 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
 
         if current == prev {
             stable_iters = stable_iters + 1
+            solver_convergence = solver_convergence + 3
             if blocked_passes > 0 && fixed_iters + 1 < max_iters {
                 reruns = reruns + 1
             }
         } else {
             stable_iters = 0
+            solver_convergence = solver_convergence - 2
         }
 
         proof_obligations = proof_obligations + 4
@@ -768,6 +784,9 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         scheduler_priority_score: scheduler_priority,
         scheduler_conflict_count: scheduler_conflicts,
         replay_stability_hash: hash_text(replay_log),
+        cost_model_score: normalize_score(cost_model_score, 0, 1000),
+        solver_convergence_score: normalize_score(solver_convergence, 0, 100),
+        replay_determinism_score: replay_determinism_score(replay_log, scheduler_conflicts),
         alias_precision_level: estimate_alias_precision_level(model),
         memory_ssa_chain_count: estimate_memory_ssa_chain_count(model, pre_eliminated),
         global_value_number_count: gvn_rewrites + cse_eliminated,
@@ -779,6 +798,36 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         rollback_node: rollback_node,
         optimized_value_count: current,
     }
+}
+
+func evaluate_pass_cost_model(ssa_dataflow_model model, int32 current_values, int32 pre_i, int32 cse_i, int32 licm_i, int32 bce_i) int32 {
+    var value_pressure = current_values / 2
+    var memory_pressure = model.load_count + model.store_count
+    var reduction = pre_i + cse_i + licm_i + bce_i
+    var score = reduction * 5 + model.def_use_edges - value_pressure - memory_pressure
+    if score < 0 {
+        return 0
+    }
+    score
+}
+
+func normalize_score(int32 score, int32 minv, int32 maxv) int32 {
+    if score < minv {
+        return minv
+    }
+    if score > maxv {
+        return maxv
+    }
+    score
+}
+
+func replay_determinism_score(string replay_log, int32 conflicts) int32 {
+    var base = 100 - conflicts * 10
+    var iters = count_token(replay_log, "iter")
+    if iters > 0 {
+        base = base + 5
+    }
+    normalize_score(base, 0, 100)
 }
 
 func pass_priority_score(string pass_name, ssa_dataflow_model model, int32 current_values, int32 iter) int32 {
@@ -1380,6 +1429,9 @@ func dump_pipeline(ssa_program program) string {
         + " sched_tp=" + to_string(program.sched_throughput_score)
         + " sched_lat=" + to_string(program.sched_latency_balance_score)
         + " microarch=" + to_string(program.microarch_specialization_score)
+        + " cost_model=" + to_string(program.cost_model_score)
+        + " solver_conv=" + to_string(program.solver_convergence_score)
+        + " replay_det=" + to_string(program.replay_determinism_score)
         + " pass_dsl=" + program.pass_dsl
         + " inv_policy=" + program.invalidation_policy
         + " rollback_node=" + program.rollback_node

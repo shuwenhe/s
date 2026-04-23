@@ -159,6 +159,15 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, "microarch=") {
         return 1
     }
+    if !contains(arm64_dump, "cost_model=") {
+        return 1
+    }
+    if !contains(arm64_dump, "solver_conv=") {
+        return 1
+    }
+    if !contains(arm64_dump, "replay_det=") {
+        return 1
+    }
 
     var amd64_program = build_pipeline(mir_text, "amd64")
     var amd64_dump = dump_pipeline(amd64_program)
