@@ -8,6 +8,7 @@ use compile.internal.mir.mir_control_edge
 use compile.internal.mir.dump_graph
 use compile.internal.ssa_core.build_pipeline as build_ssa_pipeline
 use compile.internal.ssa_core.dump_pipeline as dump_ssa_pipeline
+use compile.internal.ssa_core.dump_debug_map as dump_ssa_debug_map
 use internal.buildcfg.goarch as buildcfg_goarch
 use compile.internal.semantic.check_text
 use compile.internal.syntax.parse_source
@@ -141,10 +142,21 @@ func build(string path, string output) int32 {
         return report_failure("mir lowering failed: " + mir_result.unwrap_err())
     }
     var graph = mir_result.unwrap()
+    var arch = buildcfg_goarch()
 
-    var ssa_text = dump_ssa_pipeline(build_ssa_pipeline(dump_graph(graph), buildcfg_goarch()))
+    var ssa_program = build_ssa_pipeline(dump_graph(graph), arch)
+    var ssa_text = dump_ssa_pipeline(ssa_program)
     if ssa_text == "" {
         return report_failure("ssa lowering failed: empty pipeline")
+    }
+    var debug_map = dump_ssa_debug_map(ssa_program)
+    if debug_map == "" {
+        return report_failure("ssa debug map failed: empty map")
+    }
+
+    var abi_check = validate_abi_coverage(arch)
+    if abi_check.is_err() {
+        return report_failure(abi_check.unwrap_err().message)
     }
 
     var writes_result = compile_writes(graph)
@@ -1002,6 +1014,99 @@ func emit_asm(vec[write_op] writes, int32 exit_code) string {
         return emit_asm_arm64(writes, exit_code)
     }
     return emit_asm_amd64(writes, exit_code)
+}
+
+func validate_abi_coverage(string arch) result[(), backend_error] {
+    var i = 0
+    while i < 8 {
+        if abi_int_arg_reg(arch, i) == "" {
+            return result::err(backend_error { message: "backend error: missing integer argument ABI mapping for arg " + to_string(i) + " on " + arch })
+        }
+        if abi_float_arg_reg(arch, i) == "" {
+            return result::err(backend_error { message: "backend error: missing float argument ABI mapping for arg " + to_string(i) + " on " + arch })
+        }
+        i = i + 1
+    }
+
+    if abi_int_ret_reg(arch) == "" {
+        return result::err(backend_error { message: "backend error: missing integer return ABI mapping on " + arch })
+    }
+    if abi_float_ret_reg(arch) == "" {
+        return result::err(backend_error { message: "backend error: missing float return ABI mapping on " + arch })
+    }
+    if abi_callee_saved_count(arch) == 0 {
+        return result::err(backend_error { message: "backend error: missing callee-saved ABI set on " + arch })
+    }
+    result::ok(())
+}
+
+func abi_int_arg_reg(string arch, int32 index) string {
+    if arch == "arm64" {
+        if index == 0 { return "x0" }
+        if index == 1 { return "x1" }
+        if index == 2 { return "x2" }
+        if index == 3 { return "x3" }
+        if index == 4 { return "x4" }
+        if index == 5 { return "x5" }
+        if index == 6 { return "x6" }
+        if index == 7 { return "x7" }
+        return ""
+    }
+
+    if index == 0 { return "%rdi" }
+    if index == 1 { return "%rsi" }
+    if index == 2 { return "%rdx" }
+    if index == 3 { return "%rcx" }
+    if index == 4 { return "%r8" }
+    if index == 5 { return "%r9" }
+    if index == 6 { return "stack+0" }
+    if index == 7 { return "stack+8" }
+    ""
+}
+
+func abi_float_arg_reg(string arch, int32 index) string {
+    if arch == "arm64" {
+        if index == 0 { return "v0" }
+        if index == 1 { return "v1" }
+        if index == 2 { return "v2" }
+        if index == 3 { return "v3" }
+        if index == 4 { return "v4" }
+        if index == 5 { return "v5" }
+        if index == 6 { return "v6" }
+        if index == 7 { return "v7" }
+        return ""
+    }
+
+    if index == 0 { return "%xmm0" }
+    if index == 1 { return "%xmm1" }
+    if index == 2 { return "%xmm2" }
+    if index == 3 { return "%xmm3" }
+    if index == 4 { return "%xmm4" }
+    if index == 5 { return "%xmm5" }
+    if index == 6 { return "%xmm6" }
+    if index == 7 { return "%xmm7" }
+    ""
+}
+
+func abi_int_ret_reg(string arch) string {
+    if arch == "arm64" {
+        return "x0"
+    }
+    "%rax"
+}
+
+func abi_float_ret_reg(string arch) string {
+    if arch == "arm64" {
+        return "v0"
+    }
+    "%xmm0"
+}
+
+func abi_callee_saved_count(string arch) int32 {
+    if arch == "arm64" {
+        return 12
+    }
+    6
 }
 
 func emit_asm_amd64(vec[write_op] writes, int32 exit_code) string {
