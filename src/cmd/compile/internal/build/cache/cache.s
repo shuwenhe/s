@@ -16,6 +16,7 @@ struct dep_graph_state {
     int32 max_depth
     int32 epoch_acc
     int32 dep_count
+    int32 pruned_count
     string direct_signature
 }
 
@@ -59,7 +60,7 @@ func update_cache_target(string source_path, string source_text, string phase, s
         next_version = next_version + 1
     }
 
-    var graph_state = dependency_graph_state(source_text)
+    var graph_state = dependency_graph_state(source_text, phase, target_key)
     var next_depth = graph_state.max_depth + 1
     if next_depth < 1 {
         next_depth = 1
@@ -79,6 +80,7 @@ func update_cache_target(string source_path, string source_text, string phase, s
         + ";phase_epoch=" + to_string(read_phase_epoch(phase, domain))
         + ";target=" + sanitize_key(target_key)
         + ";deps=" + graph_state.direct_signature
+        + ";pruned=" + to_string(graph_state.pruned_count)
     var version_write = write_text_file(version_stamp, version_payload)
     !version_write.is_err()
 }
@@ -88,7 +90,7 @@ func dependency_fingerprint(string source_path, string source_text, string phase
     var pkg = package_name(source_text)
     var imports = import_signature(source_text)
     var exports = export_signature(source_text)
-    var propagated = dependency_layer_version_signature(source_text)
+    var propagated = dependency_layer_version_signature(source_text, phase, target_key)
     var domain = invalidation_domain(source_path, source_text, phase, target_key)
     var epoch = read_phase_epoch(phase, domain)
     phase + ":" + source_path + ":" + pkg + ":" + own + ":" + imports + ":" + exports + ":" + propagated + ":domain=" + domain + ":epoch=" + to_string(epoch) + ":target=" + sanitize_key(target_key)
@@ -100,7 +102,8 @@ func cache_stamp_path(string source_path, string phase, string target_key) strin
 
 func invalidation_domain(string source_path, string source_text, string phase, string target_key) string {
     var pkg = package_name(source_text)
-    phase + ":" + pkg + ":" + sanitize_key(source_path) + ":" + sanitize_key(target_key)
+    var lane = target_parallel_lane(target_key)
+    phase + ":" + pkg + ":" + sanitize_key(source_path) + ":" + sanitize_key(target_key) + ":lane" + to_string(lane)
 }
 
 func phase_stamp_path(string phase, string domain) string {
@@ -163,21 +166,25 @@ func export_signature(string source_text) string {
     "exports:" + to_string(pub_funcs) + ":" + to_string(pub_structs) + ":" + to_string(pub_enums) + ":" + to_string(pub_traits) + ":" + to_string(pub_impls)
 }
 
-func dependency_layer_version_signature(string source_text) string {
-    var graph = dependency_graph_state(source_text)
+func dependency_layer_version_signature(string source_text, string phase, string target_key) string {
+    var graph = dependency_graph_state(source_text, phase, target_key)
     var sig = "dep-layer"
         + ":max_depth=" + to_string(graph.max_depth)
         + ":epoch=" + to_string(graph.epoch_acc)
         + ":count=" + to_string(graph.dep_count)
+        + ":pruned=" + to_string(graph.pruned_count)
         + ":direct=" + graph.direct_signature
     sig
 }
 
-func dependency_graph_state(string source_text) dep_graph_state {
+func dependency_graph_state(string source_text, string phase, string target_key) dep_graph_state {
     var max_depth = 0
     var epoch_acc = 0
     var dep_count = 0
+    var pruned_count = 0
     var direct_signature = ""
+    var source_pkg = package_name(source_text)
+    var phase_budget = phase_depth_budget(phase)
     var cursor = 0
     while cursor < len(source_text) {
         var line_end = index_of_from(source_text, "\n", cursor)
@@ -188,6 +195,11 @@ func dependency_graph_state(string source_text) dep_graph_state {
         if starts_with(line, "use ") {
             var path = use_path_from_line(line)
             var dep_state = read_dep_version_state(path)
+            if should_prune_dependency(path, source_pkg, dep_state, phase_budget, target_key) {
+                pruned_count = pruned_count + 1
+                cursor = line_end + 1
+                continue
+            }
             if dep_state.depth > max_depth {
                 max_depth = dep_state.depth
             }
@@ -207,8 +219,72 @@ func dependency_graph_state(string source_text) dep_graph_state {
         max_depth: max_depth,
         epoch_acc: epoch_acc,
         dep_count: dep_count,
+        pruned_count: pruned_count,
         direct_signature: direct_signature,
     }
+}
+
+func phase_depth_budget(string phase) int32 {
+    if phase == "check" {
+        return 1
+    }
+    if phase == "build" {
+        return 3
+    }
+    2
+}
+
+func should_prune_dependency(string dep_path, string source_pkg, dep_version_state dep_state, int32 depth_budget, string target_key) bool {
+    if dep_state.depth > depth_budget {
+        return true
+    }
+    if dep_state.version == 0 && dep_state.layer_epoch == 0 {
+        return true
+    }
+    if starts_with(dep_path, "std.") {
+        return true
+    }
+    if !same_root_package(dep_path, source_pkg) && target_parallel_lane(target_key) > 1 && dep_state.depth > 0 {
+        return true
+    }
+    false
+}
+
+func same_root_package(string left, string right) bool {
+    var l = root_package(left)
+    var r = root_package(right)
+    l != "" && l == r
+}
+
+func root_package(string pkg) string {
+    var dot = index_of(pkg, ".")
+    if dot < 0 {
+        return pkg
+    }
+    slice(pkg, 0, dot)
+}
+
+func target_parallel_lane(string target_key) int32 {
+    var hash = 0
+    var i = 0
+    while i < len(target_key) {
+        hash = (hash * 33 + digit_fallback(slice(target_key, i, i + 1))) % 4
+        i = i + 1
+    }
+    hash
+}
+
+func digit_fallback(string ch) int32 {
+    if ch >= "0" && ch <= "9" {
+        return digit_value(ch)
+    }
+    if ch >= "a" && ch <= "z" {
+        return 10 + index_of("abcdefghijklmnopqrstuvwxyz", ch)
+    }
+    if ch >= "A" && ch <= "Z" {
+        return 10 + index_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ", ch)
+    }
+    1
 }
 
 func export_stamp_path(string pkg_or_use_path) string {
