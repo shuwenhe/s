@@ -17,6 +17,8 @@ struct dep_graph_state {
     int32 epoch_acc
     int32 dep_count
     int32 pruned_count
+    int32 minimal_invalidation_score
+    int32 parallel_wave_count
     string direct_signature
     string pruned_signature
 }
@@ -95,6 +97,8 @@ func update_cache_target(string source_path, string source_text, string phase, s
         + ";target=" + sanitize_key(target_key)
         + ";deps=" + graph_state.direct_signature
         + ";pruned=" + to_string(graph_state.pruned_count)
+        + ";min_inval=" + to_string(graph_state.minimal_invalidation_score)
+        + ";waves=" + to_string(graph_state.parallel_wave_count)
         + ";pruned_deps=" + graph_state.pruned_signature
         + ";explain=" + cache_hit_explain_target(source_path, source_text, phase, target_key)
     var version_write = write_text_file(version_stamp, version_payload)
@@ -189,6 +193,8 @@ func dependency_layer_version_signature(string source_text, string phase, string
         + ":epoch=" + to_string(graph.epoch_acc)
         + ":count=" + to_string(graph.dep_count)
         + ":pruned=" + to_string(graph.pruned_count)
+        + ":min_inval=" + to_string(graph.minimal_invalidation_score)
+        + ":waves=" + to_string(graph.parallel_wave_count)
         + ":direct=" + graph.direct_signature
         + ":pruned_direct=" + graph.pruned_signature
     sig
@@ -199,6 +205,8 @@ func dependency_graph_state(string source_text, string phase, string target_key)
     var epoch_acc = 0
     var dep_count = 0
     var pruned_count = 0
+    var minimal_invalidation = 100
+    var waves = 1
     var direct_signature = ""
     var pruned_signature = ""
     var source_pkg = package_name(source_text)
@@ -216,6 +224,7 @@ func dependency_graph_state(string source_text, string phase, string target_key)
             if should_prune_dependency(path, source_pkg, dep_state, phase_budget, target_key) {
                 pruned_count = pruned_count + 1
                 pruned_signature = pruned_signature + "|" + path
+                minimal_invalidation = minimal_invalidation - 2
                 cursor = line_end + 1
                 continue
             }
@@ -225,6 +234,11 @@ func dependency_graph_state(string source_text, string phase, string target_key)
             var weighted = dep_state.layer_epoch + dep_state.version * (dep_state.depth + 1)
             epoch_acc = epoch_acc + weighted
             dep_count = dep_count + 1
+            var lane = target_parallel_lane(target_key)
+            if lane + 1 > waves {
+                waves = lane + 1
+            }
+            minimal_invalidation = minimal_invalidation - dep_state.depth - dep_state.version
             direct_signature = direct_signature
                 + "|" + path
                 + "@v" + to_string(dep_state.version)
@@ -234,11 +248,17 @@ func dependency_graph_state(string source_text, string phase, string target_key)
         cursor = line_end + 1
     }
 
+    if minimal_invalidation < 0 {
+        minimal_invalidation = 0
+    }
+
     dep_graph_state {
         max_depth: max_depth,
         epoch_acc: epoch_acc,
         dep_count: dep_count,
         pruned_count: pruned_count,
+        minimal_invalidation_score: minimal_invalidation,
+        parallel_wave_count: waves,
         direct_signature: direct_signature,
         pruned_signature: pruned_signature,
     }
