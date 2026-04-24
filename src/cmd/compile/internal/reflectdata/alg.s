@@ -1,5 +1,9 @@
 package compile.internal.reflectdata
 
-func stub_alg() int {
-    0
+func alg_unit_name() string {
+    "reflectdata/alg.s"
+}
+
+func alg_unit_ready() int {
+    1
 }

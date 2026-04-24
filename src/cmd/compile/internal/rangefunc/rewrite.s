@@ -1,5 +1,9 @@
 package compile.internal.rangefunc
 
-func stub_rewrite() int {
-    0
+func rewrite_unit_name() string {
+    "rangefunc/rewrite.s"
+}
+
+func rewrite_unit_ready() int {
+    1
 }
