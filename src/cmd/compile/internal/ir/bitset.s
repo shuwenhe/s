@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_bitset() int {
-    0
+func bitset_unit_name() string {
+    "ir/bitset.s"
+}
+
+func bitset_unit_ready() int {
+    1
 }

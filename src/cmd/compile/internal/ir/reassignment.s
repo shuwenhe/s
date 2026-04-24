@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_reassignment() int {
-    0
+func reassignment_unit_name() string {
+    "ir/reassignment.s"
+}
+
+func reassignment_unit_ready() int {
+    1
 }

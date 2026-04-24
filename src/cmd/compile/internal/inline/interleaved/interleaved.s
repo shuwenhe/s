@@ -1,5 +1,9 @@
 package compile.internal.inline.interleaved
 
-func stub_interleaved() int {
-    0
+func interleaved_unit_name() string {
+    "inline/interleaved/interleaved.s"
+}
+
+func interleaved_unit_ready() int {
+    1
 }
