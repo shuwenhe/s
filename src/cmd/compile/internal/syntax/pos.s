@@ -1,5 +1,9 @@
 package compile.internal.syntax
 
-func stub_pos() int {
-    0
+func pos_unit_name() string {
+    "syntax/pos.s"
+}
+
+func pos_unit_ready() int {
+    1
 }

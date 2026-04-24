@@ -1,5 +1,9 @@
 package compile.internal.ssa.testdata
 
-func stub_b53456() int {
-    0
+func b53456_unit_name() string {
+    "ssa/testdata/b53456.s"
+}
+
+func b53456_unit_ready() int {
+    1
 }

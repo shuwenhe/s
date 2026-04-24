@@ -1,5 +1,9 @@
 package compile.internal.syntax
 
-func stub_operator_string() int {
-    0
+func operator_string_unit_name() string {
+    "syntax/operator_string.s"
+}
+
+func operator_string_unit_ready() int {
+    1
 }

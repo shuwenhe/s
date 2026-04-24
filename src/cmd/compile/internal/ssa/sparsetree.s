@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_sparsetree() int {
-    0
+func sparsetree_unit_name() string {
+    "ssa/sparsetree.s"
+}
+
+func sparsetree_unit_ready() int {
+    1
 }
