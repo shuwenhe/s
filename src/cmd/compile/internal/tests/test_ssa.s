@@ -1,6 +1,7 @@
 package compile.internal.tests.test_ssa
 
 use compile.internal.ssa_core.build_pipeline
+use compile.internal.ssa_core.build_pipeline_with_margin
 use compile.internal.ssa_core.dump_pipeline
 use compile.internal.ssa_core.dump_debug_map
 use std.prelude.slice
@@ -171,13 +172,98 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, "mir_trace=input=") {
         return 1
     }
-    if !contains(arm64_dump, ";summary=mir main") {
+    if !contains(arm64_dump, ";constfold=mir main") {
+        return 1
+    }
+    if !contains(arm64_dump, ";gvn=mir main") {
+        return 1
+    }
+    if !contains(arm64_dump, ";sccp=mir main") {
+        return 1
+    }
+    if !contains(arm64_dump, ";pre=mir main") {
+        return 1
+    }
+    if !contains(arm64_dump, ";cse=mir main") {
+        return 1
+    }
+    if !contains(arm64_dump, ";licm=mir main") {
+        return 1
+    }
+    if !contains(arm64_dump, ";bce=mir main") {
         return 1
     }
     if !contains(arm64_dump, ";cfg=mir main") {
         return 1
     }
     if !contains(arm64_dump, ";rerun=mir main") {
+        return 1
+    }
+    if !contains(arm64_dump, "mir_delta=constfold:") {
+        return 1
+    }
+    if !contains(arm64_dump, ";gvn:") {
+        return 1
+    }
+    if !contains(arm64_dump, ";cfg:") {
+        return 1
+    }
+    if !contains(arm64_dump, ";rerun:") {
+        return 1
+    }
+    if !contains(arm64_dump, ";rerun[0]:nochange") {
+        return 1
+    }
+    if !contains(arm64_dump, "delta_summary=constfold=") {
+        return 1
+    }
+    if !contains(arm64_dump, ",rerun=0") {
+        return 1
+    }
+    if !contains(arm64_dump, "delta_struct=constfold=") {
+        return 1
+    }
+    if !contains(arm64_dump, "delta_value=constfold=") {
+        return 1
+    }
+    if !contains(arm64_dump, "delta_hot=struct=") {
+        return 1
+    }
+    if !contains(arm64_dump, "),value=") {
+        return 1
+    }
+    if !contains(arm64_dump, "/") {
+        return 1
+    }
+    if !contains(arm64_dump, ",margin=") {
+        return 1
+    }
+    if !contains(arm64_dump, ",dominant=") {
+        return 1
+    }
+
+    var margin_override_dump = dump_pipeline(build_pipeline_with_margin(mir_text, "arm64", 99))
+    if !contains(margin_override_dump, "delta_hot=") {
+        return 1
+    }
+    if !contains(margin_override_dump, ",margin=99,") {
+        return 1
+    }
+
+    var hot_balanced = build_pass_delta_hot_summary("constfold=1,gvn=1", "constfold=1,gvn=2", -1)
+    if !contains(hot_balanced, ",dominant=balanced") {
+        return 1
+    }
+    var hot_struct = build_pass_delta_hot_summary("constfold=6,gvn=4", "constfold=1,gvn=0", -1)
+    if !contains(hot_struct, ",dominant=struct") {
+        return 1
+    }
+    var hot_value = build_pass_delta_hot_summary("constfold=1,gvn=0", "constfold=5,gvn=3", -1)
+    if !contains(hot_value, ",dominant=value") {
+        return 1
+    }
+    var hot_forced_balanced = build_pass_delta_hot_summary("constfold=6,gvn=4", "constfold=1,gvn=0", 99)
+    if !contains(hot_forced_balanced, ",margin=99,dominant=balanced") {
         return 1
     }
 
@@ -310,10 +396,46 @@ func run_ssa_suite() int32 {
     if !contains(value_dump, "mir_trace=input=mir value") {
         return 1
     }
-    if !contains(value_dump, ";summary=mir value") {
+    if !contains(value_dump, ";pre=mir value") {
         return 1
     }
     if !contains(memory_dump, ";cfg=mir memory") {
+        return 1
+    }
+    if !contains(memory_dump, ";licm=mir memory") {
+        return 1
+    }
+    if !contains(memory_dump, ";bce=mir memory") {
+        return 1
+    }
+    if !contains(memory_dump, "mir_delta=constfold:") {
+        return 1
+    }
+    if !contains(memory_dump, ";bce:") {
+        return 1
+    }
+    if !contains(memory_dump, "delta_summary=") {
+        return 1
+    }
+    if !contains(memory_dump, "delta_struct=") {
+        return 1
+    }
+    if !contains(memory_dump, "delta_value=") {
+        return 1
+    }
+    if !contains(memory_dump, "delta_hot=struct=") {
+        return 1
+    }
+    if !contains(memory_dump, "),value=") {
+        return 1
+    }
+    if !contains(memory_dump, "/") {
+        return 1
+    }
+    if !contains(memory_dump, ",margin=") {
+        return 1
+    }
+    if !contains(memory_dump, ",dominant=") {
         return 1
     }
 

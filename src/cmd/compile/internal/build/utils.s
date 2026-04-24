@@ -42,12 +42,12 @@ func report_usage(string text) () {
     report_usage_impl(text)
 }
 
-func build(string path, string output) int32 {
-    return backend_build_impl(path, output)
+func build(string path, string output, string ssa_margin) int32 {
+    return backend_build_impl(path, output, ssa_margin)
 }
 
-func run(string path) int32 {
-    return backend_run_impl(path)
+func run(string path, string ssa_margin) int32 {
+    return backend_run_impl(path, ssa_margin)
 }
 
 func load_frontend(string path) string {
