@@ -1,5 +1,9 @@
 package compile.internal.ssa._gen
 
-func stub_arm64ops() int {
-    0
+func ARM64Ops_unit_name() string {
+    "ssa/_gen/ARM64Ops.s"
+}
+
+func ARM64Ops_unit_ready() int {
+    1
 }

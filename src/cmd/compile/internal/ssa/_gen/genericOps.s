@@ -1,5 +1,9 @@
 package compile.internal.ssa._gen
 
-func stub_genericops() int {
-    0
+func genericOps_unit_name() string {
+    "ssa/_gen/genericOps.s"
+}
+
+func genericOps_unit_ready() int {
+    1
 }

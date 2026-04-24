@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_biasedsparsemap() int {
-    0
+func biasedsparsemap_unit_name() string {
+    "ssa/biasedsparsemap.s"
+}
+
+func biasedsparsemap_unit_ready() int {
+    1
 }

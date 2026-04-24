@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_checkbce() int {
-    0
+func checkbce_unit_name() string {
+    "ssa/checkbce.s"
+}
+
+func checkbce_unit_ready() int {
+    1
 }

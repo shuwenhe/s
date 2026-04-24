@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_expand_calls() int {
-    0
+func expand_calls_unit_name() string {
+    "ssa/expand_calls.s"
+}
+
+func expand_calls_unit_ready() int {
+    1
 }

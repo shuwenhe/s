@@ -1,5 +1,9 @@
 package compile.internal.ssa._gen
 
-func stub_ppc64ops() int {
-    0
+func PPC64Ops_unit_name() string {
+    "ssa/_gen/PPC64Ops.s"
+}
+
+func PPC64Ops_unit_ready() int {
+    1
 }
