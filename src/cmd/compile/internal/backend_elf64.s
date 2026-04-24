@@ -1049,11 +1049,12 @@ func build_toolchain_compat_artifact(source_file source, string arch) string {
     var lines = vec[string]()
     lines.push("toolchain-compat version=1 arch=" + arch)
     lines.push("module=partial build_tags=partial test=integrated cover=partial profile=partial go_cmd_equiv=partial")
-    lines.push("cgo=unsupported asm=partial linker=elf64 archive=partial relocation=partial")
+    lines.push("cgo=unsupported asm=go-plan9-min linker=elf64 archive=partial relocation=partial")
     lines.push("functions=" + to_string(function_item_count(source)) + " interoperability=baseline build_cache=phase-aware")
     lines.push("matrix module,build_tags,test,cover,profile,cgo,asm,linker,archive,relocation")
     lines.push("gate coverage=min profile=min fuzz=planned stability=rolling")
-    lines.push("interop cgo=roadmap asm=bridge linker=elf64-only")
+    lines.push("interop cgo=roadmap asm=go-plan9-min linker=elf64-only")
+    lines.push("go_asm syntax=plan9 translator=enabled status=ok")
     lines.push("go_equiv module=planned build_tags=planned test=partial cover=partial profile=planned")
     join_lines(lines)
 }
@@ -1080,10 +1081,418 @@ func validate_toolchain_compat_artifact(string payload) result[(), backend_error
     if !has_substring(payload, "interop cgo=") {
         return result::err(backend_error { message: "backend error: toolchain compatibility interop roadmap missing" })
     }
+    if !has_substring(payload, "go_asm syntax=plan9") {
+        return result::err(backend_error { message: "backend error: toolchain compatibility go asm marker missing" })
+    }
     if !has_substring(payload, "go_equiv ") {
         return result::err(backend_error { message: "backend error: toolchain compatibility go equivalence marker missing" })
     }
     result::ok(())
+}
+
+func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
+    var lines = vec[string]()
+    lines.push("go-asm version=1 arch=" + arch + " syntax=plan9")
+    var translated = translate_go_plan9_to_gas(arch, plan9_source)
+    if translated.is_err() {
+        lines.push("status=error")
+        lines.push("reason=" + translated.unwrap_err().message)
+        return join_lines(lines)
+    }
+
+    lines.push("status=ok")
+    lines.push("translator=plan9-to-gas")
+    lines.push("gas_preview=" + flatten_multiline(translated.unwrap()))
+    join_lines(lines)
+}
+
+func validate_go_asm_bridge_artifact(string payload) result[(), backend_error] {
+    if !has_substring(payload, "go-asm version=1") {
+        return result::err(backend_error { message: "backend error: go asm artifact header missing" })
+    }
+    if !has_substring(payload, "syntax=plan9") {
+        return result::err(backend_error { message: "backend error: go asm artifact syntax marker missing" })
+    }
+    if !has_substring(payload, "status=ok") {
+        return result::err(backend_error { message: "backend error: go asm artifact status is not ok" })
+    }
+    if !has_substring(payload, "gas_preview=") {
+        return result::err(backend_error { message: "backend error: go asm artifact preview missing" })
+    }
+    result::ok(())
+}
+
+func translate_go_plan9_to_gas(string arch, string plan9_source) result[string, backend_error] {
+    var input_lines = split_lines_local(plan9_source)
+    var output_lines = vec[string]()
+    var saw_text_directive = false
+
+    var i = 0
+    while i < input_lines.len() {
+        var cleaned = trim_spaces(strip_go_asm_comment(input_lines[i]))
+        if cleaned == "" {
+            i = i + 1
+            continue
+        }
+
+        if starts_with_local(cleaned, "TEXT ") {
+            var symbol_result = parse_go_text_symbol(cleaned)
+            if symbol_result.is_err() {
+                return result::err(symbol_result.unwrap_err())
+            }
+            var symbol = symbol_result.unwrap()
+            saw_text_directive = true
+            output_lines.push("    .text")
+            output_lines.push("    .globl " + symbol)
+            output_lines.push("    .type " + symbol + ", @function")
+            output_lines.push(symbol + ":")
+            i = i + 1
+            continue
+        }
+
+        if ends_with_local(cleaned, ":") {
+            var label = trim_spaces(slice(cleaned, 0, len(cleaned) - 1))
+            if label == "" {
+                return result::err(backend_error { message: "go asm translation error: empty label" })
+            }
+            output_lines.push(normalize_go_symbol(label) + ":")
+            i = i + 1
+            continue
+        }
+
+        if !saw_text_directive {
+            return result::err(backend_error { message: "go asm translation error: missing TEXT directive" })
+        }
+
+        if starts_with_local(cleaned, "RET") {
+            output_lines.push("    ret")
+            i = i + 1
+            continue
+        }
+
+        var instr_result = translate_go_instruction_line(cleaned, arch)
+        if instr_result.is_err() {
+            return result::err(instr_result.unwrap_err())
+        }
+        output_lines.push(instr_result.unwrap())
+        i = i + 1
+    }
+
+    if !saw_text_directive {
+        return result::err(backend_error { message: "go asm translation error: no TEXT directive found" })
+    }
+
+    result::ok(join_lines(output_lines))
+}
+
+func parse_go_text_symbol(string line) result[string, backend_error] {
+    var after = trim_spaces(slice(line, len("TEXT "), len(line)))
+    var comma = index_of(after, ",")
+    if comma < 0 {
+        return result::err(backend_error { message: "go asm translation error: malformed TEXT directive" })
+    }
+
+    var symbol_ref = trim_spaces(slice(after, 0, comma))
+    if !ends_with_local(symbol_ref, "(SB)") {
+        return result::err(backend_error { message: "go asm translation error: TEXT symbol must use (SB)" })
+    }
+
+    var symbol = normalize_go_symbol(slice(symbol_ref, 0, len(symbol_ref) - len("(SB)")))
+    if symbol == "" {
+        return result::err(backend_error { message: "go asm translation error: empty TEXT symbol" })
+    }
+
+    result::ok(symbol)
+}
+
+func translate_go_instruction_line(string line, string arch) result[string, backend_error] {
+    var first_space = index_of(line, " ")
+    var op = line
+    var args_text = ""
+    if first_space >= 0 {
+        op = trim_spaces(slice(line, 0, first_space))
+        args_text = trim_spaces(slice(line, first_space + 1, len(line)))
+    }
+
+    var gas_op = map_go_opcode(op)
+    if gas_op == "" {
+        return result::err(backend_error { message: "go asm translation error: unsupported opcode " + op })
+    }
+
+    if args_text == "" {
+        return result::ok("    " + gas_op)
+    }
+
+    var comma = index_of(args_text, ",")
+    if comma < 0 {
+        var one = convert_go_operand_to_gas(args_text, arch)
+        if one.is_err() {
+            return result::err(one.unwrap_err())
+        }
+        return result::ok("    " + gas_op + " " + one.unwrap())
+    }
+
+    var left_raw = trim_spaces(slice(args_text, 0, comma))
+    var right_raw = trim_spaces(slice(args_text, comma + 1, len(args_text)))
+    var left = convert_go_operand_to_gas(left_raw, arch)
+    if left.is_err() {
+        return result::err(left.unwrap_err())
+    }
+    var right = convert_go_operand_to_gas(right_raw, arch)
+    if right.is_err() {
+        return result::err(right.unwrap_err())
+    }
+
+    result::ok("    " + gas_op + " " + left.unwrap() + ", " + right.unwrap())
+}
+
+func map_go_opcode(string op) string {
+    if op == "MOVQ" {
+        return "movq"
+    }
+    if op == "MOVL" {
+        return "movl"
+    }
+    if op == "ADDQ" {
+        return "addq"
+    }
+    if op == "ADDL" {
+        return "addl"
+    }
+    if op == "SUBQ" {
+        return "subq"
+    }
+    if op == "SUBL" {
+        return "subl"
+    }
+    if op == "CMPQ" {
+        return "cmpq"
+    }
+    if op == "CMPL" {
+        return "cmpl"
+    }
+    if op == "CMPB" {
+        return "cmpb"
+    }
+    if op == "TESTQ" {
+        return "testq"
+    }
+    if op == "LEAQ" {
+        return "leaq"
+    }
+    if op == "XORQ" {
+        return "xorq"
+    }
+    if op == "CALL" {
+        return "call"
+    }
+    if op == "JMP" {
+        return "jmp"
+    }
+    if op == "JE" {
+        return "je"
+    }
+    if op == "JNE" {
+        return "jne"
+    }
+    if op == "JLT" {
+        return "jl"
+    }
+    if op == "JLE" {
+        return "jle"
+    }
+    if op == "JGT" {
+        return "jg"
+    }
+    if op == "JGE" {
+        return "jge"
+    }
+    if op == "PUSHQ" {
+        return "pushq"
+    }
+    if op == "POPQ" {
+        return "popq"
+    }
+    if op == "NOP" {
+        return "nop"
+    }
+    ""
+}
+
+func convert_go_operand_to_gas(string raw, string arch) result[string, backend_error] {
+    var operand = trim_spaces(raw)
+    if operand == "" {
+        return result::err(backend_error { message: "go asm translation error: empty operand" })
+    }
+
+    if starts_with_local(operand, "$") {
+        var imm = slice(operand, 1, len(operand))
+        if ends_with_local(imm, "(SB)") {
+            return result::ok("$" + normalize_go_symbol(slice(imm, 0, len(imm) - len("(SB)"))))
+        }
+        return result::ok("$" + normalize_go_symbol(imm))
+    }
+
+    if ends_with_local(operand, "(SB)") {
+        var sym = normalize_go_symbol(slice(operand, 0, len(operand) - len("(SB)")))
+        if sym == "" {
+            return result::err(backend_error { message: "go asm translation error: empty symbol operand" })
+        }
+        return result::ok(sym)
+    }
+
+    var paren = index_of(operand, "(")
+    if paren >= 0 && ends_with_local(operand, ")") {
+        var base = slice(operand, paren + 1, len(operand) - 1)
+        if base == "SB" {
+            return result::ok(normalize_go_symbol(slice(operand, 0, paren)))
+        }
+        var mapped_base = map_go_register(base, arch)
+        if mapped_base == "" {
+            return result::err(backend_error { message: "go asm translation error: unsupported base register " + base })
+        }
+        var disp = parse_go_disp(slice(operand, 0, paren))
+        return result::ok(disp + "(" + mapped_base + ")")
+    }
+
+    var mapped_reg = map_go_register(operand, arch)
+    if mapped_reg != "" {
+        return result::ok(mapped_reg)
+    }
+
+    if starts_with_local(operand, ".") {
+        return result::ok(normalize_go_symbol(operand))
+    }
+
+    result::ok(normalize_go_symbol(operand))
+}
+
+func map_go_register(string reg, string arch) string {
+    if arch != "amd64" && arch != "amd64p32" {
+        return ""
+    }
+
+    if reg == "AX" {
+        return "%rax"
+    }
+    if reg == "BX" {
+        return "%rbx"
+    }
+    if reg == "CX" {
+        return "%rcx"
+    }
+    if reg == "DX" {
+        return "%rdx"
+    }
+    if reg == "SP" {
+        return "%rsp"
+    }
+    if reg == "FP" {
+        return "%rbp"
+    }
+    if reg == "BP" {
+        return "%rbp"
+    }
+    if reg == "SI" {
+        return "%rsi"
+    }
+    if reg == "DI" {
+        return "%rdi"
+    }
+    if reg == "R8" {
+        return "%r8"
+    }
+    if reg == "R9" {
+        return "%r9"
+    }
+    if reg == "R10" {
+        return "%r10"
+    }
+    if reg == "R11" {
+        return "%r11"
+    }
+    if reg == "R12" {
+        return "%r12"
+    }
+    if reg == "R13" {
+        return "%r13"
+    }
+    if reg == "R14" {
+        return "%r14"
+    }
+    if reg == "R15" {
+        return "%r15"
+    }
+    ""
+}
+
+func parse_go_disp(string text) string {
+    var disp = trim_spaces(text)
+    if disp == "" {
+        return "0"
+    }
+
+    var plus = index_of(disp, "+")
+    if plus >= 0 {
+        var tail = trim_spaces(slice(disp, plus + 1, len(disp)))
+        if tail == "" {
+            return "0"
+        }
+        return tail
+    }
+    disp
+}
+
+func normalize_go_symbol(string text) string {
+    var out = trim_spaces(text)
+    if starts_with_local(out, "*") {
+        out = trim_spaces(slice(out, 1, len(out)))
+    }
+    out
+}
+
+func strip_go_asm_comment(string line) string {
+    var out = line
+    var slash = index_of(out, "//")
+    if slash >= 0 {
+        out = slice(out, 0, slash)
+    }
+    var hash = index_of(out, "#")
+    if hash >= 0 {
+        out = slice(out, 0, hash)
+    }
+    out
+}
+
+func split_lines_local(string text) vec[string] {
+    var lines = vec[string]()
+    var start = 0
+    var i = 0
+    while i < len(text) {
+        if char_at(text, i) == "\n" {
+            lines.push(slice(text, start, i))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    if start <= len(text) {
+        lines.push(slice(text, start, len(text)))
+    }
+    lines
+}
+
+func flatten_multiline(string text) string {
+    var lines = split_lines_local(text)
+    var out = vec[string]()
+    var i = 0
+    while i < lines.len() {
+        var line = trim_spaces(lines[i])
+        if line != "" {
+            out.push(line)
+        }
+        i = i + 1
+    }
+    join_with(out, " | ")
 }
 
 func build_stackmap_artifact(string arch, source_file source, string ssa_text, string debug_map) string {
@@ -1812,6 +2221,13 @@ func starts_with_local(string text, string prefix) bool {
         return false
     }
     slice(text, 0, len(prefix)) == prefix
+}
+
+func ends_with_local(string text, string suffix) bool {
+    if len(suffix) > len(text) {
+        return false
+    }
+    slice(text, len(text) - len(suffix), len(text)) == suffix
 }
 
 func parse_name_after(string text, string marker) string {
