@@ -1,5 +1,9 @@
 package compile.internal.syntax.testdata
 
-func stub_linalg() int {
-    0
+func linalg_unit_name() string {
+    "syntax/testdata/linalg.s"
+}
+
+func linalg_unit_ready() int {
+    1
 }
