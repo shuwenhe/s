@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func stackalloc_unit_name() string {
+func stackalloc_module_name() string {
     "ssa/stackalloc.s"
 }
 
-func stackalloc_unit_ready() int {
-    1
+func stackalloc_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

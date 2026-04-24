@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func rewritedec_unit_name() string {
+func rewritedec_rule_name() string {
     "ssa/rewritedec.s"
 }
 
-func rewritedec_unit_ready() int {
-    1
+func rewritedec_rule_count() int {
+    0
 }

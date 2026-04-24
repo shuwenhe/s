@@ -1,9 +1,9 @@
 package compile.internal.syntax
 
-func scanner_test_unit_name() string {
+func scanner_test_case_name() string {
     "syntax/scanner_test.s"
 }
 
-func scanner_test_unit_ready() int {
-    1
+func scanner_test_case_pass() int {
+    0
 }

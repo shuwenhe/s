@@ -1,9 +1,9 @@
 package compile.internal.ssa._gen
 
-func divisibleOps_unit_name() string {
+func divisibleOps_rule_name() string {
     "ssa/_gen/divisibleOps.s"
 }
 
-func divisibleOps_unit_ready() int {
-    1
+func divisibleOps_rule_count() int {
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.inline
 
-func inl_unit_name() string {
+func inl_module_name() string {
     "inline/inl.s"
 }
 
-func inl_unit_ready() int {
-    1
+func inl_module_apply() int {
+    0
 }

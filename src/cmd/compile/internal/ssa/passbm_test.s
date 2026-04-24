@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func passbm_test_unit_name() string {
+func passbm_test_case_name() string {
     "ssa/passbm_test.s"
 }
 
-func passbm_test_unit_ready() int {
-    1
+func passbm_test_case_pass() int {
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.ir
 
-func op_string_unit_name() string {
+func op_string_module_name() string {
     "ir/op_string.s"
 }
 
-func op_string_unit_ready() int {
-    1
+func op_string_module_apply() int {
+    0
 }

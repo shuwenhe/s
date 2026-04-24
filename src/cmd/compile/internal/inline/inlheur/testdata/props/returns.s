@@ -1,9 +1,9 @@
 package compile.internal.inline.inlheur.testdata.props
 
-func returns_unit_name() string {
+func returns_case_name() string {
     "inline/inlheur/testdata/props/returns.s"
 }
 
-func returns_unit_ready() int {
-    1
+func returns_case_pass() int {
+    0
 }

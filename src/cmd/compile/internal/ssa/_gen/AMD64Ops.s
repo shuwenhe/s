@@ -1,9 +1,9 @@
 package compile.internal.ssa._gen
 
-func AMD64Ops_unit_name() string {
+func AMD64Ops_rule_name() string {
     "ssa/_gen/AMD64Ops.s"
 }
 
-func AMD64Ops_unit_ready() int {
-    1
+func AMD64Ops_rule_count() int {
+    0
 }

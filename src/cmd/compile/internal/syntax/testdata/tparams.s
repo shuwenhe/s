@@ -1,9 +1,9 @@
 package compile.internal.syntax.testdata
 
-func tparams_unit_name() string {
+func tparams_case_name() string {
     "syntax/testdata/tparams.s"
 }
 
-func tparams_unit_ready() int {
-    1
+func tparams_case_pass() int {
+    0
 }

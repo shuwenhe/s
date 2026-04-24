@@ -1,9 +1,9 @@
 package compile.internal.typecheck
 
-func target_unit_name() string {
+func target_module_name() string {
     "typecheck/target.s"
 }
 
-func target_unit_ready() int {
-    1
+func target_module_apply() int {
+    0
 }

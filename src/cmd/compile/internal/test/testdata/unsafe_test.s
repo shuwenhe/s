@@ -1,9 +1,9 @@
 package compile.internal.test.testdata
 
-func unsafe_test_unit_name() string {
+func unsafe_test_case_name() string {
     "test/testdata/unsafe_test.s"
 }
 
-func unsafe_test_unit_ready() int {
-    1
+func unsafe_test_case_pass() int {
+    0
 }

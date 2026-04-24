@@ -1,9 +1,9 @@
 package compile.internal.ir
 
-func scc_unit_name() string {
+func scc_module_name() string {
     "ir/scc.s"
 }
 
-func scc_unit_ready() int {
-    1
+func scc_module_apply() int {
+    0
 }

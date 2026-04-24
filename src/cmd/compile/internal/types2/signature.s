@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func signature_unit_name() string {
+func signature_module_name() string {
     "types2/signature.s"
 }
 
-func signature_unit_ready() int {
-    1
+func signature_module_apply() int {
+    0
 }

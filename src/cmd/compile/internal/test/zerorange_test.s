@@ -1,9 +1,9 @@
 package compile.internal.test
 
-func zerorange_test_unit_name() string {
+func zerorange_test_case_name() string {
     "test/zerorange_test.s"
 }
 
-func zerorange_test_unit_ready() int {
-    1
+func zerorange_test_case_pass() int {
+    0
 }

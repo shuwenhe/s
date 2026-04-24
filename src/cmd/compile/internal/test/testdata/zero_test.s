@@ -1,9 +1,9 @@
 package compile.internal.test.testdata
 
-func zero_test_unit_name() string {
+func zero_test_case_name() string {
     "test/testdata/zero_test.s"
 }
 
-func zero_test_unit_ready() int {
-    1
+func zero_test_case_pass() int {
+    0
 }

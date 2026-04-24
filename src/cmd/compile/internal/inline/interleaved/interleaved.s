@@ -1,9 +1,9 @@
 package compile.internal.inline.interleaved
 
-func interleaved_unit_name() string {
+func interleaved_module_name() string {
     "inline/interleaved/interleaved.s"
 }
 
-func interleaved_unit_ready() int {
-    1
+func interleaved_module_apply() int {
+    0
 }

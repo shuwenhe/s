@@ -1,9 +1,9 @@
 package compile.internal.types
 
-func goversion_unit_name() string {
+func goversion_module_name() string {
     "types/goversion.s"
 }
 
-func goversion_unit_ready() int {
-    1
+func goversion_module_apply() int {
+    0
 }

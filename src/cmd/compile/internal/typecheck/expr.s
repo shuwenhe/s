@@ -1,9 +1,9 @@
 package compile.internal.typecheck
 
-func expr_unit_name() string {
+func expr_module_name() string {
     "typecheck/expr.s"
 }
 
-func expr_unit_ready() int {
-    1
+func expr_module_apply() int {
+    0
 }

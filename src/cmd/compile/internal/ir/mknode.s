@@ -1,9 +1,9 @@
 package compile.internal.ir
 
-func mknode_unit_name() string {
+func mknode_module_name() string {
     "ir/mknode.s"
 }
 
-func mknode_unit_ready() int {
-    1
+func mknode_module_apply() int {
+    0
 }
