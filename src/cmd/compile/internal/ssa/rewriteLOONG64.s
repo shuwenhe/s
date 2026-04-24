@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_rewriteloong64() int {
-    0
+func rewriteLOONG64_unit_name() string {
+    "ssa/rewriteLOONG64.s"
+}
+
+func rewriteLOONG64_unit_ready() int {
+    1
 }

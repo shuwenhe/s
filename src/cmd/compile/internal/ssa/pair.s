@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_pair() int {
-    0
+func pair_unit_name() string {
+    "ssa/pair.s"
+}
+
+func pair_unit_ready() int {
+    1
 }
