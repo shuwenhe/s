@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_debug_test() int {
-    0
+func debug_test_unit_name() string {
+    "ssa/debug_test.s"
+}
+
+func debug_test_unit_ready() int {
+    1
 }

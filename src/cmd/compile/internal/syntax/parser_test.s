@@ -1,5 +1,9 @@
 package compile.internal.syntax
 
-func stub_parser_test() int {
-    0
+func parser_test_unit_name() string {
+    "syntax/parser_test.s"
+}
+
+func parser_test_unit_ready() int {
+    1
 }

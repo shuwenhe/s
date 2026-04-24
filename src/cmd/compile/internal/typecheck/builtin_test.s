@@ -1,5 +1,9 @@
 package compile.internal.typecheck
 
-func stub_builtin_test() int {
-    0
+func builtin_test_unit_name() string {
+    "typecheck/builtin_test.s"
+}
+
+func builtin_test_unit_ready() int {
+    1
 }

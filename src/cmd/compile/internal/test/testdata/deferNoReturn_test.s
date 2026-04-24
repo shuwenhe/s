@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_defernoreturn_test() int {
-    0
+func deferNoReturn_test_unit_name() string {
+    "test/testdata/deferNoReturn_test.s"
+}
+
+func deferNoReturn_test_unit_ready() int {
+    1
 }

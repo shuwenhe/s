@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_compound_test() int {
-    0
+func compound_test_unit_name() string {
+    "test/testdata/compound_test.s"
+}
+
+func compound_test_unit_ready() int {
+    1
 }

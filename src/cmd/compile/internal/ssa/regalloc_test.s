@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_regalloc_test() int {
-    0
+func regalloc_test_unit_name() string {
+    "ssa/regalloc_test.s"
+}
+
+func regalloc_test_unit_ready() int {
+    1
 }

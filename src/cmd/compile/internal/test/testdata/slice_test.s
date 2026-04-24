@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_slice_test() int {
-    0
+func slice_test_unit_name() string {
+    "test/testdata/slice_test.s"
+}
+
+func slice_test_unit_ready() int {
+    1
 }

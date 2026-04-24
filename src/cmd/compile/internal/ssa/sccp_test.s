@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_sccp_test() int {
-    0
+func sccp_test_unit_name() string {
+    "ssa/sccp_test.s"
+}
+
+func sccp_test_unit_ready() int {
+    1
 }
