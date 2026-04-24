@@ -1,5 +1,9 @@
 package compile.internal.ssagen
 
-func stub_abi() int {
-    0
+func abi_unit_name() string {
+    "ssagen/abi.s"
+}
+
+func abi_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssagen
 
-func stub_pgen() int {
-    0
+func pgen_unit_name() string {
+    "ssagen/pgen.s"
+}
+
+func pgen_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssagen
 
-func stub_nowb() int {
-    0
+func nowb_unit_name() string {
+    "ssagen/nowb.s"
+}
+
+func nowb_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_fuse() int {
-    0
+func fuse_unit_name() string {
+    "ssa/fuse.s"
+}
+
+func fuse_unit_ready() int {
+    1
 }

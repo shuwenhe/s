@@ -1,5 +1,9 @@
 package compile.internal.ssa._gen
 
-func stub_dec64ops() int {
-    0
+func dec64Ops_unit_name() string {
+    "ssa/_gen/dec64Ops.s"
+}
+
+func dec64Ops_unit_ready() int {
+    1
 }

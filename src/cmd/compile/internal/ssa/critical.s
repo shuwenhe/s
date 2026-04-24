@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_critical() int {
-    0
+func critical_unit_name() string {
+    "ssa/critical.s"
+}
+
+func critical_unit_ready() int {
+    1
 }

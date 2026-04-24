@@ -1,5 +1,9 @@
 package compile.internal.ssa._gen
 
-func stub_multiscanner() int {
-    0
+func multiscanner_unit_name() string {
+    "ssa/_gen/multiscanner.s"
+}
+
+func multiscanner_unit_ready() int {
+    1
 }
