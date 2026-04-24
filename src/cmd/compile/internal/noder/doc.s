@@ -1,5 +1,9 @@
 package compile.internal.noder
 
-func stub_doc() int {
-    0
+func package_doc() string {
+    "noder: unified frontend loader for parsing, import graph discovery, IR shaping, and export/link manifests"
+}
+
+func package_version() string {
+    "v0.1"
 }
