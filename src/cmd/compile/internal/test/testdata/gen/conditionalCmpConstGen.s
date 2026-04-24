@@ -1,5 +1,9 @@
 package compile.internal.test.testdata.gen
 
-func stub_conditionalcmpconstgen() int {
-    0
+func conditionalCmpConstGen_unit_name() string {
+    "test/testdata/gen/conditionalCmpConstGen.s"
+}
+
+func conditionalCmpConstGen_unit_ready() int {
+    1
 }

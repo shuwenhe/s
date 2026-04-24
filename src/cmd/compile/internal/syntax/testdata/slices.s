@@ -1,5 +1,9 @@
 package compile.internal.syntax.testdata
 
-func stub_slices() int {
-    0
+func slices_unit_name() string {
+    "syntax/testdata/slices.s"
+}
+
+func slices_unit_ready() int {
+    1
 }

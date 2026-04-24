@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_race() int {
-    0
+func race_unit_name() string {
+    "test/race.s"
+}
+
+func race_unit_ready() int {
+    1
 }

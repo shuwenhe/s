@@ -1,5 +1,9 @@
 package compile.internal.test.testdata.gen
 
-func stub_zerogen() int {
-    0
+func zeroGen_unit_name() string {
+    "test/testdata/gen/zeroGen.s"
+}
+
+func zeroGen_unit_ready() int {
+    1
 }
