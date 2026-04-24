@@ -13,7 +13,7 @@ struct ssa_pipeline_options {
     bool enable_dce
     bool enable_coalesce
     bool enable_simplify_cfg
-    int32 dominant_margin_override
+    int dominant_margin_override
 }
 
 struct ssa_program {
@@ -25,97 +25,97 @@ struct ssa_program {
     string pass_delta_structural_summary
     string pass_delta_value_summary
     string pass_delta_hot_summary
-    int32 instruction_block_count
-    int32 instruction_value_count
-    int32 dominator_tree_depth
-    int32 loop_backedge_count
-    int32 instruction_verifier_error_count
-    int32 instruction_verifier_error_code
+    int instruction_block_count
+    int instruction_value_count
+    int dominator_tree_depth
+    int loop_backedge_count
+    int instruction_verifier_error_count
+    int instruction_verifier_error_code
     string instruction_verifier_flags
     string instruction_verifier_primary
     string instruction_verifier_stage_hint
     string instruction_verifier_stage_evidence
     bool instruction_verifier_pick_matches_top
     string instruction_verifier_pick_reason
-    int32 memory_ssa_node_count
-    int32 points_to_set_count
-    int32 load_store_proof_count
-    int32 spill_reload_pair_count
-    int32 parallel_copy_resolution_count
-    int32 escape_stack_alloc_count
-    int32 escape_heap_alloc_count
-    int32 inline_budget_score
-    int32 devirtualization_gain_score
+    int memory_ssa_node_count
+    int points_to_set_count
+    int load_store_proof_count
+    int spill_reload_pair_count
+    int parallel_copy_resolution_count
+    int escape_stack_alloc_count
+    int escape_heap_alloc_count
+    int inline_budget_score
+    int devirtualization_gain_score
     string instruction_block_graph
     string instruction_value_graph
     string instruction_dominator_tree
     string instruction_loop_forest
     string instruction_memory_dep_graph
     string instruction_regalloc_plan
-    int32 block_count
-    int32 value_count
-    int32 cfg_edge_count
-    int32 branch_block_count
-    int32 optimized_value_count
-    int32 folded_constant_count
-    int32 dce_removed_count
-    int32 coalesced_move_count
-    int32 simplified_branch_count
-    int32 gvn_rewrite_count
-    int32 sccp_rewrite_count
-    int32 pre_eliminated_count
-    int32 cse_eliminated_count
-    int32 licm_hoisted_count
-    int32 bce_removed_count
-    int32 phi_node_count
-    int32 def_use_edge_count
-    int32 alias_set_count
-    int32 memory_version_count
-    int32 live_in_fact_count
-    int32 loop_header_count
-    int32 semantic_rewrite_count
-    int32 fixed_point_iterations
-    int32 verification_error_count
-    int32 rollback_count
-    int32 proof_obligation_count
-    int32 proof_failed_count
-    int32 scheduled_pass_count
-    int32 blocked_pass_count
-    int32 dag_level_count
-    int32 rerun_count
-    int32 rollback_checkpoint_count
-    int32 invalidation_rerun_count
-    int32 replay_step_count
-    int32 debug_budget_score
-    int32 scheduler_priority_score
-    int32 scheduler_conflict_count
-    int32 replay_stability_hash
-    int32 alias_precision_level
-    int32 memory_ssa_chain_count
-    int32 global_value_number_count
-    int32 loop_proof_chain_count
-    int32 spill_cost_score
-    int32 split_quality_score
-    int32 cross_block_gain_score
-    int32 sched_throughput_score
-    int32 sched_latency_balance_score
-    int32 microarch_specialization_score
-    int32 cost_model_score
-    int32 solver_convergence_score
-    int32 replay_determinism_score
+    int block_count
+    int value_count
+    int cfg_edge_count
+    int branch_block_count
+    int optimized_value_count
+    int folded_constant_count
+    int dce_removed_count
+    int coalesced_move_count
+    int simplified_branch_count
+    int gvn_rewrite_count
+    int sccp_rewrite_count
+    int pre_eliminated_count
+    int cse_eliminated_count
+    int licm_hoisted_count
+    int bce_removed_count
+    int phi_node_count
+    int def_use_edge_count
+    int alias_set_count
+    int memory_version_count
+    int live_in_fact_count
+    int loop_header_count
+    int semantic_rewrite_count
+    int fixed_point_iterations
+    int verification_error_count
+    int rollback_count
+    int proof_obligation_count
+    int proof_failed_count
+    int scheduled_pass_count
+    int blocked_pass_count
+    int dag_level_count
+    int rerun_count
+    int rollback_checkpoint_count
+    int invalidation_rerun_count
+    int replay_step_count
+    int debug_budget_score
+    int scheduler_priority_score
+    int scheduler_conflict_count
+    int replay_stability_hash
+    int alias_precision_level
+    int memory_ssa_chain_count
+    int global_value_number_count
+    int loop_proof_chain_count
+    int spill_cost_score
+    int split_quality_score
+    int cross_block_gain_score
+    int sched_throughput_score
+    int sched_latency_balance_score
+    int microarch_specialization_score
+    int cost_model_score
+    int solver_convergence_score
+    int replay_determinism_score
     string pass_dsl
     string invalidation_policy
     string pass_topology_log
     string pass_replay_log
     string rollback_node
-    int32 spill_count
-    int32 spill_reload_count
-    int32 call_pressure_event_count
-    int32 live_range_split_count
-    int32 rematerialized_value_count
-    int32 regalloc_reuse_count
-    int32 regalloc_max_live
-    int32 debug_line_count
+    int spill_count
+    int spill_reload_count
+    int call_pressure_event_count
+    int live_range_split_count
+    int rematerialized_value_count
+    int regalloc_reuse_count
+    int regalloc_max_live
+    int debug_line_count
     vec[string] allocated_regs
     vec[string] debug_lines
     vec[string] debug_var_locations
@@ -123,116 +123,116 @@ struct ssa_program {
 
 struct ssa_rewrite_result {
     string rewritten_mir
-    int32 rewrite_count
+    int rewrite_count
 }
 
 struct mir_metrics {
-    int32 blocks
-    int32 stmts
-    int32 branches
-    int32 jumps
-    int32 consts
-    int32 imms
-    int32 literals
-    int32 phi
-    int32 memphi
-    int32 copy
-    int32 load
-    int32 store
+    int blocks
+    int stmts
+    int branches
+    int jumps
+    int consts
+    int imms
+    int literals
+    int phi
+    int memphi
+    int copy
+    int load
+    int store
 }
 
 struct ssa_pass_stats {
-    int32 folded_constant_count
-    int32 dce_removed_count
-    int32 coalesced_move_count
-    int32 simplified_branch_count
-    int32 gvn_rewrite_count
-    int32 sccp_rewrite_count
-    int32 pre_eliminated_count
-    int32 cse_eliminated_count
-    int32 licm_hoisted_count
-    int32 bce_removed_count
-    int32 phi_node_count
-    int32 def_use_edge_count
-    int32 alias_set_count
-    int32 memory_version_count
-    int32 live_in_fact_count
-    int32 loop_header_count
-    int32 fixed_point_iterations
-    int32 verification_error_count
-    int32 rollback_count
-    int32 proof_obligation_count
-    int32 proof_failed_count
-    int32 scheduled_pass_count
-    int32 blocked_pass_count
-    int32 dag_level_count
-    int32 rerun_count
-    int32 rollback_checkpoint_count
-    int32 invalidation_rerun_count
-    int32 replay_step_count
-    int32 scheduler_priority_score
-    int32 scheduler_conflict_count
-    int32 replay_stability_hash
-    int32 cost_model_score
-    int32 solver_convergence_score
-    int32 replay_determinism_score
-    int32 alias_precision_level
-    int32 memory_ssa_chain_count
-    int32 global_value_number_count
-    int32 loop_proof_chain_count
+    int folded_constant_count
+    int dce_removed_count
+    int coalesced_move_count
+    int simplified_branch_count
+    int gvn_rewrite_count
+    int sccp_rewrite_count
+    int pre_eliminated_count
+    int cse_eliminated_count
+    int licm_hoisted_count
+    int bce_removed_count
+    int phi_node_count
+    int def_use_edge_count
+    int alias_set_count
+    int memory_version_count
+    int live_in_fact_count
+    int loop_header_count
+    int fixed_point_iterations
+    int verification_error_count
+    int rollback_count
+    int proof_obligation_count
+    int proof_failed_count
+    int scheduled_pass_count
+    int blocked_pass_count
+    int dag_level_count
+    int rerun_count
+    int rollback_checkpoint_count
+    int invalidation_rerun_count
+    int replay_step_count
+    int scheduler_priority_score
+    int scheduler_conflict_count
+    int replay_stability_hash
+    int cost_model_score
+    int solver_convergence_score
+    int replay_determinism_score
+    int alias_precision_level
+    int memory_ssa_chain_count
+    int global_value_number_count
+    int loop_proof_chain_count
     string pass_dsl
     string invalidation_policy
     string pass_topology_log
     string pass_replay_log
     string rollback_node
-    int32 optimized_value_count
+    int optimized_value_count
 }
 
 struct pass_node_result {
-    int32 rewrites
-    int32 blocked
+    int rewrites
+    int blocked
     string replay_token
 }
 
 struct ssa_dataflow_model {
-    int32 block_count
-    int32 edge_count
-    int32 value_count
-    int32 branch_count
-    int32 jump_count
-    int32 call_count
-    int32 load_count
-    int32 store_count
-    int32 phi_count
-    int32 memphi_count
-    int32 alias_set_count
-    int32 def_use_edges
-    int32 live_in_facts
-    int32 loop_headers
+    int block_count
+    int edge_count
+    int value_count
+    int branch_count
+    int jump_count
+    int call_count
+    int load_count
+    int store_count
+    int phi_count
+    int memphi_count
+    int alias_set_count
+    int def_use_edges
+    int live_in_facts
+    int loop_headers
 }
 
 struct instruction_ssa_summary {
-    int32 instruction_block_count
-    int32 instruction_value_count
-    int32 dominator_tree_depth
-    int32 loop_backedge_count
-    int32 instruction_verifier_error_count
-    int32 instruction_verifier_error_code
+    int instruction_block_count
+    int instruction_value_count
+    int dominator_tree_depth
+    int loop_backedge_count
+    int instruction_verifier_error_count
+    int instruction_verifier_error_code
     string instruction_verifier_flags
     string instruction_verifier_primary
     string instruction_verifier_stage_hint
     string instruction_verifier_stage_evidence
     bool instruction_verifier_pick_matches_top
     string instruction_verifier_pick_reason
-    int32 memory_ssa_node_count
-    int32 points_to_set_count
-    int32 load_store_proof_count
-    int32 spill_reload_pair_count
-    int32 parallel_copy_resolution_count
-    int32 escape_stack_alloc_count
-    int32 escape_heap_alloc_count
-    int32 inline_budget_score
-    int32 devirtualization_gain_score
+    int memory_ssa_node_count
+    int points_to_set_count
+    int load_store_proof_count
+    int spill_reload_pair_count
+    int parallel_copy_resolution_count
+    int escape_stack_alloc_count
+    int escape_heap_alloc_count
+    int inline_budget_score
+    int devirtualization_gain_score
     string instruction_block_graph
     string instruction_value_graph
     string instruction_dominator_tree
@@ -242,15 +242,15 @@ struct instruction_ssa_summary {
 }
 
 struct instruction_verify_result {
-    int32 error_count
-    int32 error_code
+    int error_count
+    int error_code
 }
 
 func build_pipeline(string mir_text, string goarch) ssa_program {
     return build_pipeline_with_options(mir_text, goarch, default_options())
 }
 
-func build_pipeline_with_margin(string mir_text, string goarch, int32 dominant_margin_override) ssa_program {
+func build_pipeline_with_margin(string mir_text, string goarch, int dominant_margin_override) ssa_program {
     var options = default_options()
     options.dominant_margin_override = dominant_margin_override
     return build_pipeline_with_options(mir_text, goarch, options)
@@ -308,7 +308,7 @@ func build_pipeline_with_graph_hints(mir_graph graph, string mir_text, string go
     program
 }
 
-func build_pipeline_with_graph_hints_and_margin(mir_graph graph, string mir_text, string goarch, int32 dominant_margin_override) ssa_program {
+func build_pipeline_with_graph_hints_and_margin(mir_graph graph, string mir_text, string goarch, int dominant_margin_override) ssa_program {
     var program = build_pipeline_with_margin(mir_text, goarch, dominant_margin_override)
 
     var graph_blocks = graph.blocks.len()
@@ -761,7 +761,7 @@ func stage_candidates_for_verify_primary(string primary) vec[string] {
     out
 }
 
-func stage_delta_count(string summary, string stage) int32 {
+func stage_delta_count(string summary, string stage) int {
     if summary == "" {
         return 0
     }
@@ -792,7 +792,7 @@ func stage_delta_count(string summary, string stage) int32 {
     0
 }
 
-func build_instruction_block_graph(int32 blocks, int32 edges, int32 branches, int32 jumps) string {
+func build_instruction_block_graph(int blocks, int edges, int branches, int jumps) string {
     var sample = "none"
     if blocks >= 2 {
         sample = "bb0->bb1"
@@ -808,7 +808,7 @@ func build_instruction_block_graph(int32 blocks, int32 edges, int32 branches, in
         + ")"
 }
 
-func build_instruction_value_graph(int32 values, int32 def_use_edges, int32 phi_nodes, int32 memphi_nodes) string {
+func build_instruction_value_graph(int values, int def_use_edges, int phi_nodes, int memphi_nodes) string {
     var sample = "none"
     if values >= 2 {
         sample = "v0->v1"
@@ -824,7 +824,7 @@ func build_instruction_value_graph(int32 values, int32 def_use_edges, int32 phi_
         + ")"
 }
 
-func build_instruction_dominator_tree(int32 blocks, int32 depth, int32 backedges) string {
+func build_instruction_dominator_tree(int blocks, int depth, int backedges) string {
     var dom_edges = blocks - 1
     if dom_edges < 0 {
         dom_edges = 0
@@ -843,13 +843,13 @@ func build_instruction_dominator_tree(int32 blocks, int32 depth, int32 backedges
         + ")"
 }
 
-func build_instruction_loop_forest(int32 headers, int32 backedges) string {
+func build_instruction_loop_forest(int headers, int backedges) string {
     "loops(headers=" + to_string(headers)
         + ",backedges=" + to_string(backedges)
         + ")"
 }
 
-func build_instruction_memory_dep_graph(int32 loads, int32 stores, int32 memphi, int32 proofs) string {
+func build_instruction_memory_dep_graph(int loads, int stores, int memphi, int proofs) string {
     var sample = "none"
     if stores > 0 && loads > 0 {
         sample = "store0->load0"
@@ -864,7 +864,7 @@ func build_instruction_memory_dep_graph(int32 loads, int32 stores, int32 memphi,
         + ")"
 }
 
-func build_instruction_regalloc_plan(int32 spill_pairs, int32 parallel_copies, int32 splits, int32 remat) string {
+func build_instruction_regalloc_plan(int spill_pairs, int parallel_copies, int splits, int remat) string {
     var sample = "none"
     if parallel_copies > 0 {
         sample = "pcopy(v0->v1)"
@@ -879,7 +879,7 @@ func build_instruction_regalloc_plan(int32 spill_pairs, int32 parallel_copies, i
         + ")"
 }
 
-func estimate_loop_backedges(string mir_text, ssa_dataflow_model model) int32 {
+func estimate_loop_backedges(string mir_text, ssa_dataflow_model model) int {
     var explicit = count_token(mir_text, " backedge")
     if explicit > 0 {
         return explicit
@@ -890,7 +890,7 @@ func estimate_loop_backedges(string mir_text, ssa_dataflow_model model) int32 {
     0
 }
 
-func estimate_dominator_depth(int32 blocks, int32 edges, int32 backedges) int32 {
+func estimate_dominator_depth(int blocks, int edges, int backedges) int {
     if blocks <= 0 {
         return 1
     }
@@ -911,10 +911,10 @@ func verify_instruction_ssa(
     string mir_text,
     ssa_dataflow_model model,
     ssa_pass_stats pass_stats,
-    int32 blocks,
-    int32 values,
-    int32 memory_nodes,
-    int32 parallel_copies,
+    int blocks,
+    int values,
+    int memory_nodes,
+    int parallel_copies,
     string block_graph,
     string value_graph,
     string dominator_tree,
@@ -1021,7 +1021,7 @@ func verify_instruction_ssa(
     }
 }
 
-func format_instruction_verify_flags(int32 code) string {
+func format_instruction_verify_flags(int code) string {
     if code == 0 {
         return "ok"
     }
@@ -1048,7 +1048,7 @@ func format_instruction_verify_flags(int32 code) string {
     out
 }
 
-func primary_instruction_verify_flag(int32 code) string {
+func primary_instruction_verify_flag(int code) string {
     if code == 0 {
         return "ok"
     }
@@ -1098,7 +1098,7 @@ func primary_instruction_verify_flag(int32 code) string {
     "unknown"
 }
 
-func append_verify_flag(string out, int32 code, int32 flag, string name) string {
+func append_verify_flag(string out, int code, int flag, string name) string {
     if !has_error_flag(code, flag) {
         return out
     }
@@ -1108,29 +1108,29 @@ func append_verify_flag(string out, int32 code, int32 flag, string name) string 
     out + "|" + name
 }
 
-func verify_flag_format() int32 { 1 }
-func verify_flag_shape() int32 { 2 }
-func verify_flag_defuse() int32 { 4 }
-func verify_flag_mem_node() int32 { 8 }
-func verify_flag_mem_chain() int32 { 16 }
-func verify_flag_block_sample() int32 { 32 }
-func verify_flag_value_sample() int32 { 64 }
-func verify_flag_dom_sample() int32 { 128 }
-func verify_flag_mem_sample() int32 { 256 }
-func verify_flag_regalloc_sample() int32 { 512 }
-func verify_flag_block_count() int32 { 1024 }
-func verify_flag_value_count() int32 { 2048 }
-func verify_flag_dom_count() int32 { 4096 }
-func verify_flag_mem_count() int32 { 8192 }
+func verify_flag_format() int { 1 }
+func verify_flag_shape() int { 2 }
+func verify_flag_defuse() int { 4 }
+func verify_flag_mem_node() int { 8 }
+func verify_flag_mem_chain() int { 16 }
+func verify_flag_block_sample() int { 32 }
+func verify_flag_value_sample() int { 64 }
+func verify_flag_dom_sample() int { 128 }
+func verify_flag_mem_sample() int { 256 }
+func verify_flag_regalloc_sample() int { 512 }
+func verify_flag_block_count() int { 1024 }
+func verify_flag_value_count() int { 2048 }
+func verify_flag_dom_count() int { 4096 }
+func verify_flag_mem_count() int { 8192 }
 
-func set_error_flag(int32 code, int32 flag) int32 {
+func set_error_flag(int code, int flag) int {
     if has_error_flag(code, flag) {
         return code
     }
     code + flag
 }
 
-func has_error_flag(int32 code, int32 flag) bool {
+func has_error_flag(int code, int flag) bool {
     if flag <= 0 {
         return false
     }
@@ -1142,7 +1142,7 @@ func has_error_flag(int32 code, int32 flag) bool {
     (bucket % 2) == 1
 }
 
-func estimate_escape_heap_allocs(ssa_dataflow_model model, ssa_pass_stats pass_stats) int32 {
+func estimate_escape_heap_allocs(ssa_dataflow_model model, ssa_pass_stats pass_stats) int {
     var heap = model.call_count + model.store_count / 2 + model.alias_set_count / 4
     if pass_stats.alias_precision_level <= 1 {
         heap = heap + 1
@@ -1153,7 +1153,7 @@ func estimate_escape_heap_allocs(ssa_dataflow_model model, ssa_pass_stats pass_s
     heap
 }
 
-func estimate_escape_stack_allocs(int32 values, int32 heap_allocs) int32 {
+func estimate_escape_stack_allocs(int values, int heap_allocs) int {
     var stack = values - heap_allocs
     if stack < 0 {
         return 0
@@ -1161,7 +1161,7 @@ func estimate_escape_stack_allocs(int32 values, int32 heap_allocs) int32 {
     stack
 }
 
-func estimate_inline_budget(ssa_dataflow_model model, ssa_pass_stats pass_stats) int32 {
+func estimate_inline_budget(ssa_dataflow_model model, ssa_pass_stats pass_stats) int {
     var budget = 120 - model.value_count - model.call_count * 4 - model.loop_headers * 2 + pass_stats.gvn_rewrite_count
     if budget < 0 {
         return 0
@@ -1169,7 +1169,7 @@ func estimate_inline_budget(ssa_dataflow_model model, ssa_pass_stats pass_stats)
     budget
 }
 
-func estimate_devirtualization_gain(ssa_dataflow_model model, ssa_pass_stats pass_stats) int32 {
+func estimate_devirtualization_gain(ssa_dataflow_model model, ssa_pass_stats pass_stats) int {
     var gain = model.call_count * 2 + pass_stats.gvn_rewrite_count / 2 + model.alias_set_count / 3
     if gain < 0 {
         return 0
@@ -1177,7 +1177,7 @@ func estimate_devirtualization_gain(ssa_dataflow_model model, ssa_pass_stats pas
     gain
 }
 
-func int32_min(int32 left, int32 right) int32 {
+func int32_min(int left, int right) int {
     if left < right {
         return left
     }
@@ -1228,28 +1228,28 @@ func replace_first_token(string text, string needle, string replacement) replace
 
 struct regalloc_result {
     vec[string] allocated_regs
-    int32 spill_count
-    int32 spill_reload_count
-    int32 call_pressure_events
-    int32 live_range_splits
-    int32 rematerialized_values
-    int32 reuse_count
-    int32 max_live
+    int spill_count
+    int spill_reload_count
+    int call_pressure_events
+    int live_range_splits
+    int rematerialized_values
+    int reuse_count
+    int max_live
 }
 
 struct regalloc_quality_result {
-    int32 spill_cost_score
-    int32 split_quality_score
-    int32 cross_block_gain_score
+    int spill_cost_score
+    int split_quality_score
+    int cross_block_gain_score
 }
 
 struct schedule_quality_result {
-    int32 throughput_score
-    int32 latency_balance_score
-    int32 microarch_specialization_score
+    int throughput_score
+    int latency_balance_score
+    int microarch_specialization_score
 }
 
-func linear_scan_regalloc_with_spill(string mir_text, int32 value_count, string goarch) regalloc_result {
+func linear_scan_regalloc_with_spill(string mir_text, int value_count, string goarch) regalloc_result {
     var regs = register_bank(goarch)
     var call_sites = count_token(mir_text, " call=")
     var remat_sites = count_token(mir_text, " const") + count_token(mir_text, " imm") + count_token(mir_text, " literal=")
@@ -1270,7 +1270,7 @@ func linear_scan_regalloc_with_spill(string mir_text, int32 value_count, string 
         }
     }
 
-    var active_until = vec[int32]()
+    var active_until = vec[int]()
     var ri = 0
     while ri < regs.len() {
         active_until.push(0)
@@ -1349,7 +1349,7 @@ func linear_scan_regalloc_with_spill(string mir_text, int32 value_count, string 
     }
 }
 
-func choose_live_width(int32 index, int32 value_count, int32 base_width, int32 call_sites) int32 {
+func choose_live_width(int index, int value_count, int base_width, int call_sites) int {
     var width = base_width
     if call_sites > 0 && index > (value_count / 2) {
         width = width - 1
@@ -1360,7 +1360,7 @@ func choose_live_width(int32 index, int32 value_count, int32 base_width, int32 c
     width
 }
 
-func pick_split_victim(vec[int32] active_until) int32 {
+func pick_split_victim(vec[int] active_until) int {
     var victim = 0
     var max_until = active_until[0]
     var i = 1
@@ -1374,7 +1374,7 @@ func pick_split_victim(vec[int32] active_until) int32 {
     victim
 }
 
-func should_rematerialize_value(int32 index, int32 remat_sites, int32 call_sites, int32 value_count) bool {
+func should_rematerialize_value(int index, int remat_sites, int call_sites, int value_count) bool {
     if remat_sites == 0 {
         return false
     }
@@ -1384,7 +1384,7 @@ func should_rematerialize_value(int32 index, int32 remat_sites, int32 call_sites
     (index % 3) != 1
 }
 
-func should_split_live_range(int32 index, int32 victim_live_until, int32 value_count, int32 call_sites, int32 blocks) bool {
+func should_split_live_range(int index, int victim_live_until, int value_count, int call_sites, int blocks) bool {
     if index <= 0 {
         return false
     }
@@ -1397,7 +1397,7 @@ func should_split_live_range(int32 index, int32 victim_live_until, int32 value_c
     index > (value_count / 2) && blocks > 1
 }
 
-func count_live_regs(vec[int32] active_until, int32 cursor) int32 {
+func count_live_regs(vec[int] active_until, int cursor) int {
     var count = 0
     var i = 0
     while i < active_until.len() {
@@ -1612,7 +1612,7 @@ func build_pass_delta_category_summary(string delta_trace, bool structural) stri
     out
 }
 
-func count_delta_category_changes(string details, bool structural) int32 {
+func count_delta_category_changes(string details, bool structural) int {
     if details == "" || details == "nochange" {
         return 0
     }
@@ -1636,7 +1636,7 @@ func count_delta_category_changes(string details, bool structural) int32 {
     count
 }
 
-func build_pass_delta_hot_summary(string structural_summary, string value_summary, int32 margin_override) string {
+func build_pass_delta_hot_summary(string structural_summary, string value_summary, int margin_override) string {
     var structural_active = count_delta_summary_active_entries(structural_summary)
     var structural_total_passes = count_delta_summary_entries(structural_summary)
     var structural_total_changes = sum_delta_summary_counts(structural_summary)
@@ -1666,7 +1666,7 @@ func build_pass_delta_hot_summary(string structural_summary, string value_summar
         + ",dominant=" + dominant
 }
 
-func compute_dominant_margin(int32 total_changes, int32 margin_override) int32 {
+func compute_dominant_margin(int total_changes, int margin_override) int {
     if margin_override >= 0 {
         return margin_override
     }
@@ -1679,7 +1679,7 @@ func compute_dominant_margin(int32 total_changes, int32 margin_override) int32 {
     1
 }
 
-func count_delta_summary_entries(string summary) int32 {
+func count_delta_summary_entries(string summary) int {
     if summary == "" {
         return 0
     }
@@ -1701,7 +1701,7 @@ func count_delta_summary_entries(string summary) int32 {
     count
 }
 
-func count_delta_summary_active_entries(string summary) int32 {
+func count_delta_summary_active_entries(string summary) int {
     if summary == "" {
         return 0
     }
@@ -1732,7 +1732,7 @@ func count_delta_summary_active_entries(string summary) int32 {
     count
 }
 
-func sum_delta_summary_counts(string summary) int32 {
+func sum_delta_summary_counts(string summary) int {
     if summary == "" {
         return 0
     }
@@ -1761,7 +1761,7 @@ func sum_delta_summary_counts(string summary) int32 {
     total
 }
 
-func parse_delta_count(string text, int32 start, int32 end) int32 {
+func parse_delta_count(string text, int start, int end) int {
     var value = 0
     var i = start
     while i < end && i < text.len() {
@@ -1828,10 +1828,10 @@ func append_delta(string trace, string stage, string before_text, string after_t
 
 struct append_metric_result {
     string details
-    int32 changed
+    int changed
 }
 
-func append_changed_metric(string details, string label, int32 before, int32 after) append_metric_result {
+func append_changed_metric(string details, string label, int before, int after) append_metric_result {
     if before == after {
         return append_metric_result {
             details: details,
@@ -1868,7 +1868,7 @@ func collect_mir_metrics(string mir_text) mir_metrics {
     }
 }
 
-func format_metric_delta(string label, int32 before, int32 after) string {
+func format_metric_delta(string label, int before, int after) string {
     label + "(" + to_string(before) + "->" + to_string(after) + ")"
 }
 
@@ -1936,7 +1936,7 @@ func apply_invalidation_reruns(string mir_text, ssa_pass_stats pass_stats, ssa_p
     rewritten
 }
 
-func remove_empty_jump_blocks(string mir_text, int32 budget) string {
+func remove_empty_jump_blocks(string mir_text, int budget) string {
     if budget <= 0 {
         return mir_text
     }
@@ -1975,7 +1975,7 @@ func contains_token_text(string text, string needle) bool {
     find_token(text, needle) <= text.len()
 }
 
-func normalize_stmt_counts(string mir_text, int32 target_total) string {
+func normalize_stmt_counts(string mir_text, int target_total) string {
     var current_total = parse_total_stmt_count(mir_text)
     if current_total <= 0 || target_total >= current_total {
         return mir_text
@@ -1983,7 +1983,7 @@ func normalize_stmt_counts(string mir_text, int32 target_total) string {
     return reduce_numeric_marker_budget(mir_text, " stmts=", current_total - target_total)
 }
 
-func reduce_numeric_marker_budget(string text, string marker, int32 budget) string {
+func reduce_numeric_marker_budget(string text, string marker, int budget) string {
     if budget <= 0 {
         return text
     }
@@ -2021,7 +2021,7 @@ func reduce_numeric_marker_budget(string text, string marker, int32 budget) stri
     out
 }
 
-func replace_first_n_tokens(string text, string needle, string replacement, int32 count) string {
+func replace_first_n_tokens(string text, string needle, string replacement, int count) string {
     if count <= 0 {
         return text
     }
@@ -2039,7 +2039,7 @@ func replace_first_n_tokens(string text, string needle, string replacement, int3
     out
 }
 
-func find_token_from(string text, string needle, int32 start) int32 {
+func find_token_from(string text, string needle, int start) int {
     var i = start
     while i <= text.len() - needle.len() {
         if slice(text, i, i + needle.len()) == needle {
@@ -2050,7 +2050,7 @@ func find_token_from(string text, string needle, int32 start) int32 {
     text.len() + 1
 }
 
-func build_dataflow_model(string mir_text, int32 block_count, int32 value_count) ssa_dataflow_model {
+func build_dataflow_model(string mir_text, int block_count, int value_count) ssa_dataflow_model {
     var jumps = count_token(mir_text, " term=jump")
     var branches = count_token(mir_text, " term=branch")
     var calls = count_token(mir_text, " call=")
@@ -2347,7 +2347,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     }
 }
 
-func evaluate_pass_cost_model(ssa_dataflow_model model, int32 current_values, int32 pre_i, int32 cse_i, int32 licm_i, int32 bce_i) int32 {
+func evaluate_pass_cost_model(ssa_dataflow_model model, int current_values, int pre_i, int cse_i, int licm_i, int bce_i) int {
     var value_pressure = current_values / 2
     var memory_pressure = model.load_count + model.store_count
     var reduction = pre_i + cse_i + licm_i + bce_i
@@ -2358,7 +2358,7 @@ func evaluate_pass_cost_model(ssa_dataflow_model model, int32 current_values, in
     score
 }
 
-func normalize_score(int32 score, int32 minv, int32 maxv) int32 {
+func normalize_score(int score, int minv, int maxv) int {
     if score < minv {
         return minv
     }
@@ -2368,7 +2368,7 @@ func normalize_score(int32 score, int32 minv, int32 maxv) int32 {
     score
 }
 
-func replay_determinism_score(string replay_log, int32 conflicts) int32 {
+func replay_determinism_score(string replay_log, int conflicts) int {
     var base = 100 - conflicts * 10
     var iters = count_token(replay_log, "iter")
     if iters > 0 {
@@ -2377,7 +2377,7 @@ func replay_determinism_score(string replay_log, int32 conflicts) int32 {
     normalize_score(base, 0, 100)
 }
 
-func pass_priority_score(string pass_name, ssa_dataflow_model model, int32 current_values, int32 iter) int32 {
+func pass_priority_score(string pass_name, ssa_dataflow_model model, int current_values, int iter) int {
     var base = 1 + iter
     if pass_name == "gvn" {
         return base + model.def_use_edges / 4
@@ -2400,7 +2400,7 @@ func pass_priority_score(string pass_name, ssa_dataflow_model model, int32 curre
     base + current_values / 8
 }
 
-func has_scheduler_conflict(int32 pre_i, int32 cse_i, ssa_dataflow_model model) bool {
+func has_scheduler_conflict(int pre_i, int cse_i, ssa_dataflow_model model) bool {
     if pre_i <= 0 || cse_i <= 0 {
         return false
     }
@@ -2410,7 +2410,7 @@ func has_scheduler_conflict(int32 pre_i, int32 cse_i, ssa_dataflow_model model) 
     model.alias_set_count > 1 || model.loop_headers > 0
 }
 
-func hash_text(string text) int32 {
+func hash_text(string text) int {
     var h = 17
     var i = 0
     while i < text.len() {
@@ -2420,7 +2420,7 @@ func hash_text(string text) int32 {
     h
 }
 
-func parse_digit_safe(string ch) int32 {
+func parse_digit_safe(string ch) int {
     if ch >= "0" && ch <= "9" {
         return parse_digit(ch)
     }
@@ -2433,7 +2433,7 @@ func parse_digit_safe(string ch) int32 {
     1
 }
 
-func compute_regalloc_quality(regalloc_result allocation, int32 block_count) regalloc_quality_result {
+func compute_regalloc_quality(regalloc_result allocation, int block_count) regalloc_quality_result {
     var spill_cost = allocation.spill_count * 4 + allocation.spill_reload_count * 2
     if spill_cost < 0 {
         spill_cost = 0
@@ -2484,7 +2484,7 @@ func compute_schedule_quality(ssa_pass_stats pass_stats, ssa_dataflow_model mode
     }
 }
 
-func estimate_alias_precision_level(ssa_dataflow_model model) int32 {
+func estimate_alias_precision_level(ssa_dataflow_model model) int {
     var level = 1
     if model.alias_set_count > 1 {
         level = level + 1
@@ -2498,7 +2498,7 @@ func estimate_alias_precision_level(ssa_dataflow_model model) int32 {
     level
 }
 
-func estimate_memory_ssa_chain_count(ssa_dataflow_model model, int32 pre_eliminated) int32 {
+func estimate_memory_ssa_chain_count(ssa_dataflow_model model, int pre_eliminated) int {
     var chain = model.store_count + model.load_count + model.phi_count + model.memphi_count
     if pre_eliminated > 0 {
         chain = chain + pre_eliminated
@@ -2509,7 +2509,7 @@ func estimate_memory_ssa_chain_count(ssa_dataflow_model model, int32 pre_elimina
     chain
 }
 
-func estimate_loop_proof_chain_count(ssa_dataflow_model model, int32 licm_hoisted, int32 proof_obligations) int32 {
+func estimate_loop_proof_chain_count(ssa_dataflow_model model, int licm_hoisted, int proof_obligations) int {
     var chain = model.loop_headers + licm_hoisted + proof_obligations / 4
     if chain < 1 {
         return 1
@@ -2527,7 +2527,7 @@ func build_pass_dsl(ssa_dataflow_model model) string {
     dsl
 }
 
-func should_auto_invalidate_pass(string pass_name, ssa_dataflow_model model, int32 iter, int32 blocked_count) bool {
+func should_auto_invalidate_pass(string pass_name, ssa_dataflow_model model, int iter, int blocked_count) bool {
     if blocked_count <= 0 {
         return false
     }
@@ -2546,7 +2546,7 @@ func should_auto_invalidate_pass(string pass_name, ssa_dataflow_model model, int
     false
 }
 
-func execute_pass_node(string name, bool ready, int32 raw_rewrites) pass_node_result {
+func execute_pass_node(string name, bool ready, int raw_rewrites) pass_node_result {
     if ready {
         return pass_node_result {
             rewrites: raw_rewrites,
@@ -2568,11 +2568,11 @@ func execute_pass_node(string name, bool ready, int32 raw_rewrites) pass_node_re
     }
 }
 
-func replay_step_count_from_iter(string iter_replay) int32 {
+func replay_step_count_from_iter(string iter_replay) int {
     count_token(iter_replay, ",") + 1
 }
 
-func compute_debug_budget(ssa_pass_stats pass_stats, regalloc_result allocation) int32 {
+func compute_debug_budget(ssa_pass_stats pass_stats, regalloc_result allocation) int {
     var score = 100
     score = score - pass_stats.gvn_rewrite_count
     score = score - pass_stats.sccp_rewrite_count
@@ -2624,7 +2624,7 @@ func append_pass_name(string base, string name) string {
     base + "," + name
 }
 
-func pass_dag_level_count(ssa_dataflow_model model) int32 {
+func pass_dag_level_count(ssa_dataflow_model model) int {
     var levels = 1
     if model.branch_count + model.phi_count > 0 {
         levels = levels + 1
@@ -2635,7 +2635,7 @@ func pass_dag_level_count(ssa_dataflow_model model) int32 {
     levels
 }
 
-func pass_dependency_ready_sccp(ssa_dataflow_model model, int32 gvn_rewrites) bool {
+func pass_dependency_ready_sccp(ssa_dataflow_model model, int gvn_rewrites) bool {
     if model.branch_count + model.phi_count <= 0 {
         return false
     }
@@ -2645,7 +2645,7 @@ func pass_dependency_ready_sccp(ssa_dataflow_model model, int32 gvn_rewrites) bo
     gvn_rewrites >= 0
 }
 
-func pass_dependency_ready_pre(ssa_dataflow_model model, int32 gvn_rewrites, int32 cse_rewrites) bool {
+func pass_dependency_ready_pre(ssa_dataflow_model model, int gvn_rewrites, int cse_rewrites) bool {
     if model.edge_count <= 1 {
         return false
     }
@@ -2655,7 +2655,7 @@ func pass_dependency_ready_pre(ssa_dataflow_model model, int32 gvn_rewrites, int
     gvn_rewrites + cse_rewrites >= 0
 }
 
-func pass_dependency_ready_licm(ssa_dataflow_model model, int32 upstream_rewrites) bool {
+func pass_dependency_ready_licm(ssa_dataflow_model model, int upstream_rewrites) bool {
     if model.loop_headers <= 0 {
         return false
     }
@@ -2669,7 +2669,7 @@ func pass_dependency_ready_bce(ssa_dataflow_model model) bool {
     model.load_count > 0 && model.branch_count > 0
 }
 
-func verify_ssa_invariants(ssa_dataflow_model model) int32 {
+func verify_ssa_invariants(ssa_dataflow_model model) int {
     var errors = 0
     if model.phi_count > model.branch_count + model.jump_count {
         errors = errors + 1
@@ -2686,7 +2686,7 @@ func verify_ssa_invariants(ssa_dataflow_model model) int32 {
     errors
 }
 
-func run_gvn_pass(ssa_dataflow_model model) int32 {
+func run_gvn_pass(ssa_dataflow_model model) int {
     var candidates = model.def_use_edges / 3
     if candidates <= 1 {
         return 0
@@ -2694,7 +2694,7 @@ func run_gvn_pass(ssa_dataflow_model model) int32 {
     candidates / 4
 }
 
-func run_sccp_pass(ssa_dataflow_model model, int32 current_values) int32 {
+func run_sccp_pass(ssa_dataflow_model model, int current_values) int {
     var lattice_edges = model.branch_count + model.phi_count + model.live_in_facts / 2
     if lattice_edges <= 0 {
         return 0
@@ -2706,7 +2706,7 @@ func run_sccp_pass(ssa_dataflow_model model, int32 current_values) int32 {
     reduced
 }
 
-func run_pre_pass(ssa_dataflow_model model) int32 {
+func run_pre_pass(ssa_dataflow_model model) int {
     var candidates = model.edge_count + model.loop_headers + model.def_use_edges / 4
     if candidates <= 0 {
         return 0
@@ -2714,7 +2714,7 @@ func run_pre_pass(ssa_dataflow_model model) int32 {
     candidates / 8
 }
 
-func run_cse_pass(ssa_dataflow_model model) int32 {
+func run_cse_pass(ssa_dataflow_model model) int {
     var candidates = model.jump_count + model.branch_count + model.phi_count
     if candidates <= 0 {
         return 0
@@ -2722,14 +2722,14 @@ func run_cse_pass(ssa_dataflow_model model) int32 {
     candidates / 2
 }
 
-func run_licm_pass(ssa_dataflow_model model) int32 {
+func run_licm_pass(ssa_dataflow_model model) int {
     if model.loop_headers <= 0 {
         return 0
     }
     model.loop_headers
 }
 
-func run_bce_pass(ssa_dataflow_model model) int32 {
+func run_bce_pass(ssa_dataflow_model model) int {
     var bounds_like = model.load_count + model.branch_count
     if bounds_like <= 0 {
         return 0
@@ -2737,7 +2737,7 @@ func run_bce_pass(ssa_dataflow_model model) int32 {
     bounds_like / 2
 }
 
-func estimate_phi_nodes(string mir_text) int32 {
+func estimate_phi_nodes(string mir_text) int {
     var explicit = count_numeric_marker_total(mir_text, " phi=")
     if explicit > 0 {
         return explicit
@@ -2747,7 +2747,7 @@ func estimate_phi_nodes(string mir_text) int32 {
     branches + joins / 2
 }
 
-func count_numeric_marker_total(string text, string marker) int32 {
+func count_numeric_marker_total(string text, string marker) int {
     var total = 0
     var cursor = 0
     while cursor < text.len() {
@@ -2767,11 +2767,11 @@ func count_numeric_marker_total(string text, string marker) int32 {
     total
 }
 
-func estimate_memory_versions(string mir_text) int32 {
+func estimate_memory_versions(string mir_text) int {
     count_token(mir_text, "store") + count_token(mir_text, "load")
 }
 
-func estimate_live_in_facts(string mir_text) int32 {
+func estimate_live_in_facts(string mir_text) int {
     var blocks = parse_int_after(mir_text, "blocks=")
     var edges = estimate_cfg_edges(mir_text)
     if blocks <= 0 {
@@ -2780,7 +2780,7 @@ func estimate_live_in_facts(string mir_text) int32 {
     blocks + edges
 }
 
-func estimate_alias_sets(string mir_text, int32 calls, int32 loads, int32 stores) int32 {
+func estimate_alias_sets(string mir_text, int calls, int loads, int stores) int {
     var refs = count_token(mir_text, "borrow") + count_token(mir_text, "&")
     var sets = refs + calls + (loads + stores) / 2
     if sets < 1 {
@@ -2789,7 +2789,7 @@ func estimate_alias_sets(string mir_text, int32 calls, int32 loads, int32 stores
     sets
 }
 
-func estimate_def_use_edges(int32 values, int32 edges, int32 phi) int32 {
+func estimate_def_use_edges(int values, int edges, int phi) int {
     var out = values + edges + phi * 2
     if out < values {
         return values
@@ -2797,7 +2797,7 @@ func estimate_def_use_edges(int32 values, int32 edges, int32 phi) int32 {
     out
 }
 
-func estimate_live_in_facts_with_model(int32 blocks, int32 edges, int32 calls) int32 {
+func estimate_live_in_facts_with_model(int blocks, int edges, int calls) int {
     var base = blocks + edges
     if calls > 0 {
         base = base + calls
@@ -2808,7 +2808,7 @@ func estimate_live_in_facts_with_model(int32 blocks, int32 edges, int32 calls) i
     base
 }
 
-func estimate_loop_headers(int32 branches, int32 jumps) int32 {
+func estimate_loop_headers(int branches, int jumps) int {
     var loops = branches / 2 + jumps / 4
     if loops < 0 {
         return 0
@@ -2816,7 +2816,7 @@ func estimate_loop_headers(int32 branches, int32 jumps) int32 {
     loops
 }
 
-func run_constant_fold_pass(string mir_text) int32 {
+func run_constant_fold_pass(string mir_text) int {
     var fold_sites = count_token(mir_text, " term=return") + count_token(mir_text, " term=jump")
     if fold_sites <= 0 {
         return 0
@@ -2824,7 +2824,7 @@ func run_constant_fold_pass(string mir_text) int32 {
     fold_sites / 2
 }
 
-func run_dce_pass(int32 value_count, int32 empty_blocks) int32 {
+func run_dce_pass(int value_count, int empty_blocks) int {
     var reduced = value_count - empty_blocks
     if reduced < 0 {
         return 0
@@ -2832,7 +2832,7 @@ func run_dce_pass(int32 value_count, int32 empty_blocks) int32 {
     value_count - reduced
 }
 
-func run_coalesce_pass(int32 value_count, int32 jump_blocks) int32 {
+func run_coalesce_pass(int value_count, int jump_blocks) int {
     var reduce = jump_blocks / 2
     if reduce < 0 {
         return 0
@@ -2843,7 +2843,7 @@ func run_coalesce_pass(int32 value_count, int32 jump_blocks) int32 {
     reduce
 }
 
-func run_cfg_simplify_pass(int32 value_count, int32 branch_blocks) int32 {
+func run_cfg_simplify_pass(int value_count, int branch_blocks) int {
     if branch_blocks == 0 {
         return 0
     }
@@ -2865,7 +2865,7 @@ func parse_function_name(string mir_text) string {
     slice(mir_text, begin, end)
 }
 
-func parse_int_after(string text, string marker) int32 {
+func parse_int_after(string text, string marker) int {
     var start = find_token(text, marker)
     if start > text.len() {
         return 0
@@ -2881,7 +2881,7 @@ func parse_int_after(string text, string marker) int32 {
     value
 }
 
-func count_token(string text, string token) int32 {
+func count_token(string text, string token) int {
     var total = 0
     var i = 0
     while i <= text.len() - token.len() {
@@ -2895,7 +2895,7 @@ func count_token(string text, string token) int32 {
     total
 }
 
-func parse_total_stmt_count(string mir_text) int32 {
+func parse_total_stmt_count(string mir_text) int {
     var total = 0
     var marker = " stmts="
     var i = 0
@@ -2916,7 +2916,7 @@ func parse_total_stmt_count(string mir_text) int32 {
     total
 }
 
-func estimate_cfg_edges(string mir_text) int32 {
+func estimate_cfg_edges(string mir_text) int {
     var jumps = count_token(mir_text, " term=jump")
     var branches = count_token(mir_text, " term=branch")
     var returns = count_token(mir_text, " term=return")
@@ -3085,7 +3085,7 @@ func dump_debug_map(ssa_program program) string {
     out
 }
 
-func parse_digit(string ch) int32 {
+func parse_digit(string ch) int {
     if ch == "0" { return 0 }
     if ch == "1" { return 1 }
     if ch == "2" { return 2 }
@@ -3103,7 +3103,7 @@ func is_digit(string ch) bool {
     ch >= "0" && ch <= "9"
 }
 
-func find_token(string text, string token) int32 {
+func find_token(string text, string token) int {
     if token == "" {
         return 0
     }

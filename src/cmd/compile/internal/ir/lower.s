@@ -23,7 +23,7 @@ struct const_rewrite_entry {
     string name
     string expr_text
     string value_kind
-    int32 int_value
+    int int_value
     string string_value
     bool bool_value
 }
@@ -431,7 +431,7 @@ func lower_package_to_mir(source_file src) result[mir_graph, string] {
     result::ok(graph)
 }
 
-func count_const_hits_block(block_expr block, vec[const_rewrite_entry] const_entries) int32 {
+func count_const_hits_block(block_expr block, vec[const_rewrite_entry] const_entries) int {
     var total = 0
     var i = 0
     while i < block.statements.len() {
@@ -444,7 +444,7 @@ func count_const_hits_block(block_expr block, vec[const_rewrite_entry] const_ent
     total
 }
 
-func count_const_hits_stmt(stmt s, vec[const_rewrite_entry] const_entries) int32 {
+func count_const_hits_stmt(stmt s, vec[const_rewrite_entry] const_entries) int {
     switch s {
         stmt.var(var_stmt) : count_const_hits_expr(var_stmt.value, const_entries),
         stmt.assign(assign_stmt) : count_const_hits_expr(assign_stmt.value, const_entries),
@@ -467,7 +467,7 @@ func count_const_hits_stmt(stmt s, vec[const_rewrite_entry] const_entries) int32
     }
 }
 
-func count_const_hits_expr(expr e, vec[const_rewrite_entry] const_entries) int32 {
+func count_const_hits_expr(expr e, vec[const_rewrite_entry] const_entries) int {
     switch e {
         expr.int(_) : 0,
         expr.string(_) : 0,
@@ -799,7 +799,7 @@ func collect_const_rewrite_entries(source_file src) vec[const_rewrite_entry] {
     out
 }
 
-func render_const_folded_entry(string name, expr value, vec[const_rewrite_entry] out, int32 iota_index) const_rewrite_entry {
+func render_const_folded_entry(string name, expr value, vec[const_rewrite_entry] out, int iota_index) const_rewrite_entry {
     var folded = eval_const_fold_value(value, out, iota_index)
     if folded.value_kind != "unknown" {
         return const_rewrite_entry {
@@ -824,12 +824,12 @@ func render_const_folded_entry(string name, expr value, vec[const_rewrite_entry]
 
 struct const_fold_value {
     string value_kind
-    int32 int_value
+    int int_value
     string string_value
     bool bool_value
 }
 
-func eval_const_fold_value(expr value, vec[const_rewrite_entry] out, int32 iota_index) const_fold_value {
+func eval_const_fold_value(expr value, vec[const_rewrite_entry] out, int iota_index) const_fold_value {
     switch value {
         expr.int(int_expr) : const_fold_value {
             value_kind: "int",
@@ -1069,7 +1069,7 @@ func clone_lines(vec[string] lines) vec[string] {
     out
 }
 
-func make_edge(string label, int32 target) mir_control_edge {
+func make_edge(string label, int target) mir_control_edge {
     mir_control_edge {
         label: label,
         target: target,
@@ -1077,13 +1077,13 @@ func make_edge(string label, int32 target) mir_control_edge {
     }
 }
 
-func vec1_edge(string label, int32 target) vec[mir_control_edge] {
+func vec1_edge(string label, int target) vec[mir_control_edge] {
     var edges = vec[mir_control_edge]()
     edges.push(make_edge(label, target))
     edges
 }
 
-func make_block(int32 id, string label, vec[string] lines, string term_kind, vec[mir_control_edge] edges) mir_basic_block {
+func make_block(int id, string label, vec[string] lines, string term_kind, vec[mir_control_edge] edges) mir_basic_block {
     var statements = vec[mir_statement]()
     var i = 0
     while i < lines.len() {
@@ -1107,7 +1107,7 @@ func make_block(int32 id, string label, vec[string] lines, string term_kind, vec
     }
 }
 
-func make_graph(string function_name, vec[mir_basic_block] blocks, vec[string] trace, int32 entry, int32 exit) mir_graph {
+func make_graph(string function_name, vec[mir_basic_block] blocks, vec[string] trace, int entry, int exit) mir_graph {
     mir_graph {
         function_name: function_name,
         blocks: blocks,

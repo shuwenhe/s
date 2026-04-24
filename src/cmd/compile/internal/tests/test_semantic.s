@@ -5,7 +5,7 @@ use compile.internal.semantic.check_detailed
 use compile.internal.semantic.semantic_error
 use std.fs.read_to_string
 
-func run_semantic_suite(string fixtures_root) int32 {
+func run_semantic_suite(string fixtures_root) int {
     var ok_path = fixtures_root + "/check_ok.s"
     var fail_path = fixtures_root + "/check_fail.s"
 
@@ -25,7 +25,7 @@ func run_semantic_suite(string fixtures_root) int32 {
         return 1
     }
 
-    var inline_ok = "package demo.inline\nfunc add(int32 a, int32 b) int32 {\n    var sum: int32 = a + b\n    sum\n}"
+    var inline_ok = "package demo.inline\nfunc add(int a, int b) int {\n    var sum: int = a + b\n    sum\n}"
     if check_text(inline_ok) != 0 {
         return 1
     }
@@ -35,92 +35,92 @@ func run_semantic_suite(string fixtures_root) int32 {
         return 1
     }
 
-    var call_ok = "package demo.call\nfunc add(int32 a, int32 b) int32 {\n  a + b\n}\nfunc main() int32 {\n  add(1, 2)\n}"
+    var call_ok = "package demo.call\nfunc add(int a, int b) int {\n  a + b\n}\nfunc main() int {\n  add(1, 2)\n}"
     if check_text(call_ok) != 0 {
         return 1
     }
 
-    var call_fail = "package demo.call\nfunc add(int32 a, int32 b) int32 {\n  a + b\n}\nfunc main() int32 {\n  add(1, true)\n}"
+    var call_fail = "package demo.call\nfunc add(int a, int b) int {\n  a + b\n}\nfunc main() int {\n  add(1, true)\n}"
     if check_text(call_fail) == 0 {
         return 1
     }
 
-    var call_undefined_fail = "package demo.call\nfunc main() int32 {\n  missing(1)\n}"
+    var call_undefined_fail = "package demo.call\nfunc main() int {\n  missing(1)\n}"
     if check_text(call_undefined_fail) == 0 {
         return 1
     }
 
-    var overload_ok = "package demo.call\nfunc f[t](t v) t {\n  v\n}\nfunc f(int32 v) int32 {\n  v + 1\n}\nfunc main() int32 {\n  f(1)\n}"
+    var overload_ok = "package demo.call\nfunc f[t](t v) t {\n  v\n}\nfunc f(int v) int {\n  v + 1\n}\nfunc main() int {\n  f(1)\n}"
     if check_text(overload_ok) != 0 {
         return 1
     }
 
-    var overload_generic_ok = "package demo.call\nfunc pick[t](t a, t b) t {\n  a\n}\nfunc main() int32 {\n  pick(1, 2)\n}"
+    var overload_generic_ok = "package demo.call\nfunc pick[t](t a, t b) t {\n  a\n}\nfunc main() int {\n  pick(1, 2)\n}"
     if check_text(overload_generic_ok) != 0 {
         return 1
     }
 
-    var overload_generic_fail = "package demo.call\nfunc pick[t](t a, t b) t {\n  a\n}\nfunc main() int32 {\n  pick(1, true)\n}"
+    var overload_generic_fail = "package demo.call\nfunc pick[t](t a, t b) t {\n  a\n}\nfunc main() int {\n  pick(1, true)\n}"
     if check_text(overload_generic_fail) == 0 {
         return 1
     }
 
-    var overload_ambiguous_fail = "package demo.call\nfunc g[t](t v) t {\n  v\n}\nfunc g[u](u v) u {\n  v\n}\nfunc main() int32 {\n  g(1)\n}"
+    var overload_ambiguous_fail = "package demo.call\nfunc g[t](t v) t {\n  v\n}\nfunc g[u](u v) u {\n  v\n}\nfunc main() int {\n  g(1)\n}"
     if check_text(overload_ambiguous_fail) == 0 {
         return 1
     }
 
-    var option_match_ok = "package demo.switch\nfunc f(option[int32] value) int32 {\n  switch value {\n    some(v) : v,\n    none : 0,\n  }\n}"
+    var option_match_ok = "package demo.switch\nfunc f(option[int] value) int {\n  switch value {\n    some(v) : v,\n    none : 0,\n  }\n}"
     if check_text(option_match_ok) != 0 {
         return 1
     }
 
-    var option_match_exhaust_fail = "package demo.switch\nfunc f(option[int32] value) int32 {\n  switch value {\n    some(v) : v,\n  }\n}"
+    var option_match_exhaust_fail = "package demo.switch\nfunc f(option[int] value) int {\n  switch value {\n    some(v) : v,\n  }\n}"
     if check_text(option_match_exhaust_fail) == 0 {
         return 1
     }
 
-    var option_match_duplicate_fail = "package demo.switch\nfunc f(option[int32] value) int32 {\n  switch value {\n    some(v) : v,\n    some(w) : w,\n    none : 0,\n  }\n}"
+    var option_match_duplicate_fail = "package demo.switch\nfunc f(option[int] value) int {\n  switch value {\n    some(v) : v,\n    some(w) : w,\n    none : 0,\n  }\n}"
     if check_text(option_match_duplicate_fail) == 0 {
         return 1
     }
 
-    var option_match_unreachable_fail = "package demo.switch\nfunc f(option[int32] value) int32 {\n  switch value {\n    _ : 0,\n    some(v) : v,\n  }\n}"
+    var option_match_unreachable_fail = "package demo.switch\nfunc f(option[int] value) int {\n  switch value {\n    _ : 0,\n    some(v) : v,\n  }\n}"
     if check_text(option_match_unreachable_fail) == 0 {
         return 1
     }
 
-    var option_match_bind_type_fail = "package demo.switch\nfunc f(option[int32] value) bool {\n  switch value {\n    some(v) : v,\n    none : false,\n  }\n}"
+    var option_match_bind_type_fail = "package demo.switch\nfunc f(option[int] value) bool {\n  switch value {\n    some(v) : v,\n    none : false,\n  }\n}"
     if check_text(option_match_bind_type_fail) == 0 {
         return 1
     }
 
-    var result_match_ok = "package demo.switch\nfunc f(result[int32, string] value) int32 {\n  switch value {\n    ok(v) : v,\n    err(e) : 0,\n  }\n}"
+    var result_match_ok = "package demo.switch\nfunc f(result[int, string] value) int {\n  switch value {\n    ok(v) : v,\n    err(e) : 0,\n  }\n}"
     if check_text(result_match_ok) != 0 {
         return 1
     }
 
-    var result_match_exhaust_fail = "package demo.switch\nfunc f(result[int32, string] value) int32 {\n  switch value {\n    ok(v) : v,\n  }\n}"
+    var result_match_exhaust_fail = "package demo.switch\nfunc f(result[int, string] value) int {\n  switch value {\n    ok(v) : v,\n  }\n}"
     if check_text(result_match_exhaust_fail) == 0 {
         return 1
     }
 
-    var result_match_duplicate_fail = "package demo.switch\nfunc f(result[int32, string] value) int32 {\n  switch value {\n    ok(v) : v,\n    err(e) : 0,\n    err(e2) : 1,\n  }\n}"
+    var result_match_duplicate_fail = "package demo.switch\nfunc f(result[int, string] value) int {\n  switch value {\n    ok(v) : v,\n    err(e) : 0,\n    err(e2) : 1,\n  }\n}"
     if check_text(result_match_duplicate_fail) == 0 {
         return 1
     }
 
-    var option_nested_payload_fail = "package demo.switch\nfunc f(option[int32] value) int32 {\n  switch value {\n    some(ok(v)) : v,\n    none : 0,\n  }\n}"
+    var option_nested_payload_fail = "package demo.switch\nfunc f(option[int] value) int {\n  switch value {\n    some(ok(v)) : v,\n    none : 0,\n  }\n}"
     if check_text(option_nested_payload_fail) == 0 {
         return 1
     }
 
-    var nested_ok = "package demo.switch\nfunc f(option[result[int32, string]] value) int32 {\n  switch value {\n    some(ok(v)) : v,\n    some(err(e)) : 0,\n    none : 0,\n  }\n}"
+    var nested_ok = "package demo.switch\nfunc f(option[result[int, string]] value) int {\n  switch value {\n    some(ok(v)) : v,\n    some(err(e)) : 0,\n    none : 0,\n  }\n}"
     if check_text(nested_ok) != 0 {
         return 1
     }
 
-    var diag_src = "package main\nfunc main() int32 {\n  missing(1)\n  missing(1)\n  0\n}"
+    var diag_src = "package main\nfunc main() int {\n  missing(1)\n  missing(1)\n  0\n}"
     var diagnostics = check_detailed(diag_src)
     if diagnostics.len() == 0 {
         return 1
@@ -159,13 +159,13 @@ func run_semantic_suite(string fixtures_root) int32 {
         return 1
     }
 
-    var control_src = "package demo.ctrl\nfunc main() int32 {\n  goto L1\n  0\n}"
+    var control_src = "package demo.ctrl\nfunc main() int {\n  goto L1\n  0\n}"
     var control_diags = check_detailed(control_src)
     if !has_code(control_diags, "e3022") {
         return 1
     }
 
-    var recover_src = "package demo.recover\nfunc main() int32 {\n  recover()\n  0\n}"
+    var recover_src = "package demo.recover\nfunc main() int {\n  recover()\n  0\n}"
     var recover_diags = check_detailed(recover_src)
     if !has_code(recover_diags, "e3025") {
         return 1
@@ -174,37 +174,37 @@ func run_semantic_suite(string fixtures_root) int32 {
         return 1
     }
 
-    var go_uncoordinated_src = "package demo.conc\nfunc worker() int32 {\n  0\n}\nfunc main() int32 {\n  go(\"worker\")\n  0\n}"
+    var go_uncoordinated_src = "package demo.conc\nfunc worker() int {\n  0\n}\nfunc main() int {\n  go(\"worker\")\n  0\n}"
     var go_uncoordinated_diags = check_detailed(go_uncoordinated_src)
     if !has_code(go_uncoordinated_diags, "e3047") {
         return 1
     }
 
-    var sroutine_uncoordinated_src = "package demo.conc\nfunc worker() int32 {\n  0\n}\nfunc main() int32 {\n  sroutine worker()\n  0\n}"
+    var sroutine_uncoordinated_src = "package demo.conc\nfunc worker() int {\n  0\n}\nfunc main() int {\n  sroutine worker()\n  0\n}"
     var sroutine_uncoordinated_diags = check_detailed(sroutine_uncoordinated_src)
     if !has_code(sroutine_uncoordinated_diags, "e3047") {
         return 1
     }
 
-    var send_without_recv_src = "package demo.conc\nfunc main() int32 {\n  var ch = chan_make(1)\n  chan_send(ch, 1)\n  0\n}"
+    var send_without_recv_src = "package demo.conc\nfunc main() int {\n  var ch = chan_make(1)\n  chan_send(ch, 1)\n  0\n}"
     var send_without_recv_diags = check_detailed(send_without_recv_src)
     if !has_code(send_without_recv_diags, "e3050") {
         return 1
     }
 
-    var select_without_recv_src = "package demo.conc\nfunc main() int32 {\n  var chs = vec[chan]()\n  select_recv(chs)\n  0\n}"
+    var select_without_recv_src = "package demo.conc\nfunc main() int {\n  var chs = vec[chan]()\n  select_recv(chs)\n  0\n}"
     var select_without_recv_diags = check_detailed(select_without_recv_src)
     if !has_code(select_without_recv_diags, "e3048") {
         return 1
     }
 
-    var close_overflow_src = "package demo.conc\nfunc main() int32 {\n  var ch = chan_make(1)\n  chan_close(ch)\n  chan_close(ch)\n  0\n}"
+    var close_overflow_src = "package demo.conc\nfunc main() int {\n  var ch = chan_make(1)\n  chan_close(ch)\n  chan_close(ch)\n  0\n}"
     var close_overflow_diags = check_detailed(close_overflow_src)
     if !has_code(close_overflow_diags, "e3049") {
         return 1
     }
 
-    var panic_src = "package demo.recover\nfunc main() int32 {\n  panic(\"x\")\n}"
+    var panic_src = "package demo.recover\nfunc main() int {\n  panic(\"x\")\n}"
     var panic_diags = check_detailed(panic_src)
     if !has_code(panic_diags, "e3026") {
         return 1
@@ -228,129 +228,129 @@ func run_semantic_suite(string fixtures_root) int32 {
         return 1
     }
 
-    var complex_goto_src = "package demo.ctrl\nfunc main() int32 {\n  label L1\n  if true {\n    switch 1 {\n      1 : goto L1,\n      _ : 0,\n    }\n  }\n  0\n}"
+    var complex_goto_src = "package demo.ctrl\nfunc main() int {\n  label L1\n  if true {\n    switch 1 {\n      1 : goto L1,\n      _ : 0,\n    }\n  }\n  0\n}"
     var complex_diags = check_detailed(complex_goto_src)
     if !has_code(complex_diags, "e3037") {
         return 1
     }
 
-    var non_comparable_eq_src = "package demo.eq\nfunc main() int32 {\n  var a = map[string]func() int32{}\n  var b = map[string]func() int32{}\n  if a == b {\n    1\n  } else {\n    0\n  }\n}"
+    var non_comparable_eq_src = "package demo.eq\nfunc main() int {\n  var a = map[string]func() int{}\n  var b = map[string]func() int{}\n  if a == b {\n    1\n  } else {\n    0\n  }\n}"
     var non_comparable_eq_diags = check_detailed(non_comparable_eq_src)
     if !has_code(non_comparable_eq_diags, "e3039") {
         return 1
     }
 
-    var trait_impl_ok = "package demo.iface\ntrait Adder {\n  func add(int32 a, int32 b) int32;\n}\nimpl Adder for Calc where Calc {\n  func add(int32 a, int32 b) int32 {\n    a + b\n  }\n}\nfunc main() int32 {\n  0\n}"
+    var trait_impl_ok = "package demo.iface\ntrait Adder {\n  func add(int a, int b) int;\n}\nimpl Adder for Calc where Calc {\n  func add(int a, int b) int {\n    a + b\n  }\n}\nfunc main() int {\n  0\n}"
     if check_text(trait_impl_ok) != 0 {
         return 1
     }
 
-    var trait_impl_missing = "package demo.iface\ntrait Adder {\n  func add(int32 a, int32 b) int32;\n}\nimpl Adder for Calc where Calc {\n  func sub(int32 a, int32 b) int32 {\n    a - b\n  }\n}\nfunc main() int32 {\n  0\n}"
+    var trait_impl_missing = "package demo.iface\ntrait Adder {\n  func add(int a, int b) int;\n}\nimpl Adder for Calc where Calc {\n  func sub(int a, int b) int {\n    a - b\n  }\n}\nfunc main() int {\n  0\n}"
     var trait_impl_missing_diags = check_detailed(trait_impl_missing)
     if !has_code(trait_impl_missing_diags, "e3041") {
         return 1
     }
 
-    var trait_impl_sig_mismatch = "package demo.iface\ntrait Adder {\n  func add(int32 a, int32 b) int32;\n}\nimpl Adder for Calc where Calc {\n  func add(bool a, int32 b) int32 {\n    b\n  }\n}\nfunc main() int32 {\n  0\n}"
+    var trait_impl_sig_mismatch = "package demo.iface\ntrait Adder {\n  func add(int a, int b) int;\n}\nimpl Adder for Calc where Calc {\n  func add(bool a, int b) int {\n    b\n  }\n}\nfunc main() int {\n  0\n}"
     var trait_impl_sig_diags = check_detailed(trait_impl_sig_mismatch)
     if !has_code(trait_impl_sig_diags, "e3043") {
         return 1
     }
 
-    var trait_impl_receiver_mismatch = "package demo.iface\ntrait Reader {\n  func read(File self, int32 count) int32;\n}\nimpl Reader for File where File {\n  func read(&File self, int32 count) int32 {\n    count\n  }\n}\nfunc main() int32 {\n  0\n}"
+    var trait_impl_receiver_mismatch = "package demo.iface\ntrait Reader {\n  func read(File self, int count) int;\n}\nimpl Reader for File where File {\n  func read(&File self, int count) int {\n    count\n  }\n}\nfunc main() int {\n  0\n}"
     var trait_impl_receiver_diags = check_detailed(trait_impl_receiver_mismatch)
     if !has_code(trait_impl_receiver_diags, "e3043") {
         return 1
     }
 
-    var method_call_ok = "package demo.method\nstruct Point {\n  int32 x\n}\ntrait Measure {\n  func size(Point self) int32;\n}\nimpl Measure for Point where Point {\n  func size(Point self) int32 {\n    self.x\n  }\n}\nfunc main() int32 {\n  var p = Point { x: 4 }\n  p.size()\n}"
+    var method_call_ok = "package demo.method\nstruct Point {\n  int x\n}\ntrait Measure {\n  func size(Point self) int;\n}\nimpl Measure for Point where Point {\n  func size(Point self) int {\n    self.x\n  }\n}\nfunc main() int {\n  var p = Point { x: 4 }\n  p.size()\n}"
     if check_text(method_call_ok) != 0 {
         return 1
     }
 
-    var method_ref_ok = "package demo.method\nstruct Reader {\n  int32 count\n}\ntrait Peek {\n  func peek(&Reader self) int32;\n}\nimpl Peek for Reader where Reader {\n  func peek(&Reader self) int32 {\n    self.count\n  }\n}\nfunc main() int32 {\n  var reader = Reader { count: 2 }\n  reader.peek()\n}"
+    var method_ref_ok = "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek(&Reader self) int;\n}\nimpl Peek for Reader where Reader {\n  func peek(&Reader self) int {\n    self.count\n  }\n}\nfunc main() int {\n  var reader = Reader { count: 2 }\n  reader.peek()\n}"
     if check_text(method_ref_ok) != 0 {
         return 1
     }
 
-    var method_temp_ref_fail = "package demo.method\nstruct Reader {\n  int32 count\n}\ntrait Peek {\n  func peek(&Reader self) int32;\n}\nimpl Peek for Reader where Reader {\n  func peek(&Reader self) int32 {\n    self.count\n  }\n}\nfunc make_reader() Reader {\n  Reader { count: 2 }\n}\nfunc main() int32 {\n  make_reader().peek()\n}"
+    var method_temp_ref_fail = "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek(&Reader self) int;\n}\nimpl Peek for Reader where Reader {\n  func peek(&Reader self) int {\n    self.count\n  }\n}\nfunc make_reader() Reader {\n  Reader { count: 2 }\n}\nfunc main() int {\n  make_reader().peek()\n}"
     var method_temp_ref_diags = check_detailed(method_temp_ref_fail)
     if !has_code(method_temp_ref_diags, "e3051") {
         return 1
     }
 
-    var method_mut_ref_ok = "package demo.method\nstruct Counter {\n  int32 count\n}\ntrait Bump {\n  func bump(&mut Counter self) int32;\n}\nimpl Bump for Counter where Counter {\n  func bump(&mut Counter self) int32 {\n    self.count\n  }\n}\nfunc main() int32 {\n  var counter = Counter { count: 2 }\n  counter.bump()\n}"
+    var method_mut_ref_ok = "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump(&mut Counter self) int;\n}\nimpl Bump for Counter where Counter {\n  func bump(&mut Counter self) int {\n    self.count\n  }\n}\nfunc main() int {\n  var counter = Counter { count: 2 }\n  counter.bump()\n}"
     if check_text(method_mut_ref_ok) != 0 {
         return 1
     }
 
-    var method_temp_mut_ref_fail = "package demo.method\nstruct Counter {\n  int32 count\n}\ntrait Bump {\n  func bump(&mut Counter self) int32;\n}\nimpl Bump for Counter where Counter {\n  func bump(&mut Counter self) int32 {\n    self.count\n  }\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() int32 {\n  make_counter().bump()\n}"
+    var method_temp_mut_ref_fail = "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump(&mut Counter self) int;\n}\nimpl Bump for Counter where Counter {\n  func bump(&mut Counter self) int {\n    self.count\n  }\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() int {\n  make_counter().bump()\n}"
     var method_temp_mut_ref_diags = check_detailed(method_temp_mut_ref_fail)
     if !has_code(method_temp_mut_ref_diags, "e3051") {
         return 1
     }
 
-    var trait_impl_unknown = "package demo.iface\nimpl MissingTrait for Calc where Calc {\n  func add(int32 a, int32 b) int32 {\n    a + b\n  }\n}\nfunc main() int32 {\n  0\n}"
+    var trait_impl_unknown = "package demo.iface\nimpl MissingTrait for Calc where Calc {\n  func add(int a, int b) int {\n    a + b\n  }\n}\nfunc main() int {\n  0\n}"
     var trait_impl_unknown_diags = check_detailed(trait_impl_unknown)
     if !has_code(trait_impl_unknown_diags, "e3040") {
         return 1
     }
 
-    var trait_impl_duplicate_method = "package demo.iface\ntrait Adder {\n  func add(int32 a, int32 b) int32;\n}\nimpl Adder for Calc where Calc {\n  func add(int32 a, int32 b) int32 {\n    a + b\n  }\n  func add(int32 a, int32 b) int32 {\n    a\n  }\n}\nfunc main() int32 {\n  0\n}"
+    var trait_impl_duplicate_method = "package demo.iface\ntrait Adder {\n  func add(int a, int b) int;\n}\nimpl Adder for Calc where Calc {\n  func add(int a, int b) int {\n    a + b\n  }\n  func add(int a, int b) int {\n    a\n  }\n}\nfunc main() int {\n  0\n}"
     var trait_impl_dup_diags = check_detailed(trait_impl_duplicate_method)
     if !has_code(trait_impl_dup_diags, "e3042") {
         return 1
     }
 
-    var const_iota_ok = "package demo.consts\nconst A = iota\nconst B = iota\nfunc main() int32 {\n  A + B\n}"
+    var const_iota_ok = "package demo.consts\nconst A = iota\nconst B = iota\nfunc main() int {\n  A + B\n}"
     if check_text(const_iota_ok) != 0 {
         return 1
     }
 
-    var const_ref_ok = "package demo.consts\nconst Base = 3\nconst Sum = Base + 2\nfunc main() int32 {\n  Sum\n}"
+    var const_ref_ok = "package demo.consts\nconst Base = 3\nconst Sum = Base + 2\nfunc main() int {\n  Sum\n}"
     if check_text(const_ref_ok) != 0 {
         return 1
     }
 
-    var iota_outside_const_fail = "package demo.consts\nfunc main() int32 {\n  iota\n}"
+    var iota_outside_const_fail = "package demo.consts\nfunc main() int {\n  iota\n}"
     if check_text(iota_outside_const_fail) == 0 {
         return 1
     }
 
-    var duplicate_const_fail = "package demo.consts\nconst A = 1\nconst A = 2\nfunc main() int32 {\n  A\n}"
+    var duplicate_const_fail = "package demo.consts\nconst A = 1\nconst A = 2\nfunc main() int {\n  A\n}"
     var duplicate_const_diags = check_detailed(duplicate_const_fail)
     if !has_code(duplicate_const_diags, "e3044") {
         return 1
     }
 
-    var const_group_ok = "package demo.consts\nconst (\n  A = iota\n  B\n  C = A + 1\n)\nfunc main() int32 {\n  C\n}"
+    var const_group_ok = "package demo.consts\nconst (\n  A = iota\n  B\n  C = A + 1\n)\nfunc main() int {\n  C\n}"
     if check_text(const_group_ok) != 0 {
         return 1
     }
 
-    var const_group_missing_init_fail = "package demo.consts\nconst (\n  A\n)\nfunc main() int32 {\n  0\n}"
+    var const_group_missing_init_fail = "package demo.consts\nconst (\n  A\n)\nfunc main() int {\n  0\n}"
     var const_group_missing_diags = check_detailed(const_group_missing_init_fail)
     if !has_code(const_group_missing_diags, "e3045") {
         return 1
     }
 
-    var const_iota_increment_value_ok = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() int32 {\n  C\n}"
+    var const_iota_increment_value_ok = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() int {\n  C\n}"
     if check_text(const_iota_increment_value_ok) != 0 {
         return 1
     }
 
-    var const_iota_div_zero_fail = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() int32 {\n  0\n}"
+    var const_iota_div_zero_fail = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() int {\n  0\n}"
     var const_iota_div_zero_diags = check_detailed(const_iota_div_zero_fail)
     if !has_code(const_iota_div_zero_diags, "e3046") {
         return 1
     }
 
-    var nil_assign_ok = "package demo.nil\nfunc main() int32 {\n  var f: fn = nil\n  if f == nil {\n    0\n  } else {\n    1\n  }\n}"
+    var nil_assign_ok = "package demo.nil\nfunc main() int {\n  var f: fn = nil\n  if f == nil {\n    0\n  } else {\n    1\n  }\n}"
     if check_text(nil_assign_ok) != 0 {
         return 1
     }
 
-    var nil_assign_fail = "package demo.nil\nfunc main() int32 {\n  var x: int32 = nil\n  x\n}"
+    var nil_assign_fail = "package demo.nil\nfunc main() int {\n  var x: int = nil\n  x\n}"
     if check_text(nil_assign_fail) == 0 {
         return 1
     }

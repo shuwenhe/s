@@ -62,36 +62,36 @@ struct const_binding {
     string name
     string type_name
     bool has_int_value
-    int32 int_value
+    int int_value
 }
 
 struct const_eval_int_result {
     bool ok
-    int32 value
+    int value
     string error
 }
 
 struct signature_match {
     bool ok
     string return_type
-    int32 score
-    int32 generic_bind_count
-    int32 unknown_arg_count
+    int score
+    int generic_bind_count
+    int unknown_arg_count
 }
 
 struct check_result {
     string type_name
-    int32 errors
+    int errors
 }
 
 struct pattern_check_result {
     vec[type_binding] bindings
-    int32 errors
+    int errors
 }
 
 struct source_pos {
-    int32 line
-    int32 column
+    int line
+    int column
 }
 
 struct semantic_error {
@@ -103,13 +103,13 @@ struct semantic_error {
     string severity
     string hint
     string anchor
-    int32 tier
-    int32 repeat_count
-    int32 line
-    int32 column
+    int tier
+    int repeat_count
+    int line
+    int column
 }
 
-func check_text(string source) int32 {
+func check_text(string source) int {
     var diagnostics = check_detailed(source);
     if diagnostics.len() > 0 {
         return 1;
@@ -157,14 +157,14 @@ func run_preparse_semantic_completeness_checks(string source, vec[semantic_error
     var ignored4 = validate_semantic_proof_chain(source, diagnostics)
 }
 
-func validate_concurrency_semantics(string source, vec[semantic_error] mut diagnostics) int32 {
+func validate_concurrency_semantics(string source, vec[semantic_error] mut diagnostics) int {
     var errors = 0
     var go_count = count_token_text(source, "\ngo(") + count_token_text(source, "\ngo ")
     var sroutine_count = count_token_text(source, "\nsroutine ")
     var launch_count = go_count + sroutine_count
     var make_count = count_token_text(source, "chan_make(")
-    var send_count = count_token_text(source, "chan_send(") + count_token_text(source, "select_send(") + count_token_text(source, "select_send_default(") + count_token_text(source, "select_send_timeout(")
-    var recv_count = count_token_text(source, "chan_recv(")
+    var send_count = count_token_text(source, "chan_send(") + count_token_text(source, "select_send(") + count_token_text(source, "select_send_default(") + count_token_text(source, "select_send_timeout(") + count_token_text(source, "case send(")
+    var recv_count = count_token_text(source, "chan_recv(") + count_token_text(source, "case recv(")
     var close_count = count_token_text(source, "chan_close(")
     var select_count = count_token_text(source, "select_recv(")
         + count_token_text(source, "select_recv_default(")
@@ -173,6 +173,7 @@ func validate_concurrency_semantics(string source, vec[semantic_error] mut diagn
         + count_token_text(source, "select_send(")
         + count_token_text(source, "select_send_default(")
         + count_token_text(source, "select_send_timeout(")
+        + count_token_text(source, "select {")
 
     if launch_count > 0 && make_count == 0 && select_count == 0 {
         errors = errors + add_error(source, diagnostics, "e3047", "routine launched without channel/select coordination", "go")
@@ -189,7 +190,7 @@ func validate_concurrency_semantics(string source, vec[semantic_error] mut diagn
     errors
 }
 
-func validate_control_flow_semantics(string source, vec[semantic_error] mut diagnostics) int32 {
+func validate_control_flow_semantics(string source, vec[semantic_error] mut diagnostics) int {
     var errors = 0
     var label_defs = count_token_text(source, "label ")
     var goto_uses = count_token_text(source, "goto ")
@@ -209,7 +210,7 @@ func validate_control_flow_semantics(string source, vec[semantic_error] mut diag
     errors
 }
 
-func validate_recovery_semantics(string source, vec[semantic_error] mut diagnostics) int32 {
+func validate_recovery_semantics(string source, vec[semantic_error] mut diagnostics) int {
     var errors = 0
     var defer_count = count_token_text(source, "defer ")
     var panic_count = count_token_text(source, "panic(")
@@ -233,7 +234,7 @@ func validate_recovery_semantics(string source, vec[semantic_error] mut diagnost
     errors
 }
 
-func validate_method_interface_semantics(string source, vec[semantic_error] mut diagnostics) int32 {
+func validate_method_interface_semantics(string source, vec[semantic_error] mut diagnostics) int {
     var errors = 0
     var impl_count = count_token_text(source, "\nimpl ") + count_token_text(source, "\nimpl[")
     var trait_count = count_token_text(source, "\ntrait ") + count_token_text(source, "\ninterface ")
@@ -258,7 +259,7 @@ func validate_method_interface_semantics(string source, vec[semantic_error] mut 
     errors
 }
 
-func validate_semantic_proof_chain(string source, vec[semantic_error] mut diagnostics) int32 {
+func validate_semantic_proof_chain(string source, vec[semantic_error] mut diagnostics) int {
     var errors = 0
     var defer_count = count_token_text(source, "defer ")
     var panic_count = count_token_text(source, "panic(")
@@ -280,7 +281,7 @@ func validate_semantic_proof_chain(string source, vec[semantic_error] mut diagno
     errors
 }
 
-func count_token_text(string text, string token) int32 {
+func count_token_text(string text, string token) int {
     if token == "" {
         return 0
     }
@@ -350,7 +351,7 @@ func append_anchor_summaries(vec[semantic_error] diagnostics) vec[semantic_error
     out
 }
 
-func find_anchor_summary_index(vec[semantic_error] diagnostics, string anchor) int32 {
+func find_anchor_summary_index(vec[semantic_error] diagnostics, string anchor) int {
     var i = 0
     while i < diagnostics.len() {
         if diagnostics[i].anchor == anchor {
@@ -380,7 +381,7 @@ func dedupe_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
     out
 }
 
-func find_diagnostic_index(vec[semantic_error] diagnostics, semantic_error candidate) int32 {
+func find_diagnostic_index(vec[semantic_error] diagnostics, semantic_error candidate) int {
     var i = 0
     while i < diagnostics.len() {
         if diagnostics[i].code == candidate.code
@@ -415,7 +416,7 @@ func sort_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
     out
 }
 
-func insert_diagnostic(vec[semantic_error] mut diagnostics, int32 at, semantic_error item) () {
+func insert_diagnostic(vec[semantic_error] mut diagnostics, int at, semantic_error item) () {
     diagnostics.push(item)
     var i = diagnostics.len() - 1
     while i > at {
@@ -443,7 +444,7 @@ func diagnostic_before(semantic_error left, semantic_error right) bool {
     left.code < right.code
 }
 
-func severity_rank(string severity) int32 {
+func severity_rank(string severity) int {
     if severity == "fatal" {
         return 0
     }
@@ -480,7 +481,7 @@ func apply_diagnostic_budget(vec[semantic_error] diagnostics) vec[semantic_error
     out
 }
 
-func validate_function_set(vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int32 {
+func validate_function_set(vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int {
     var errors = 0
     var i = 0
     var has_main = false
@@ -569,7 +570,7 @@ func make_method_binding(string owner_type, function_decl function_decl) functio
     binding
 }
 
-func check_item(item item, vec[function_binding] functions, vec[trait_binding] traits, vec[const_binding] consts, string source, vec[semantic_error] mut diagnostics) int32 {
+func check_item(item item, vec[function_binding] functions, vec[trait_binding] traits, vec[const_binding] consts, string source, vec[semantic_error] mut diagnostics) int {
     switch item {
         item.function(function_decl) : check_function(function_decl, functions, consts, source, diagnostics),
         item.impl(impl_item) : check_impl(impl_item, functions, consts, traits, source, diagnostics),
@@ -593,7 +594,7 @@ func collect_consts(vec[item] items, vec[function_binding] functions, string sou
                 var local_env = clone_env(type_env)
                 local_env.push(type_binding {
                     name: "iota",
-                    type_name: "int32",
+                    type_name: "int",
                 })
                 ;
 
@@ -616,7 +617,7 @@ func collect_consts(vec[item] items, vec[function_binding] functions, string sou
                     ty = inferred.type_name
                     if is_unknown(ty) {
                         ty = "unknown"
-                    } else if same_type(ty, "int32") {
+                    } else if same_type(ty, "int") {
                         var eval_result = eval_const_int_expr(expr_to_check.unwrap(), out, const_decl.iota_index)
                         if eval_result.ok {
                             has_int_value = true
@@ -647,7 +648,7 @@ func collect_consts(vec[item] items, vec[function_binding] functions, string sou
     out
 }
 
-func eval_const_int_expr(expr value, vec[const_binding] known_consts, int32 iota_value) const_eval_int_result {
+func eval_const_int_expr(expr value, vec[const_binding] known_consts, int iota_value) const_eval_int_result {
     switch value {
         expr::int(int_expr) : const_eval_int_result {
             ok: true,
@@ -734,7 +735,7 @@ func eval_const_int_expr(expr value, vec[const_binding] known_consts, int32 iota
     }
 }
 
-func parse_const_int_literal(string literal) int32 {
+func parse_const_int_literal(string literal) int {
     var text = literal
     var sign = 1
     var i = 0
@@ -754,7 +755,7 @@ func parse_const_int_literal(string literal) int32 {
     sign * out
 }
 
-func const_digit_value(string ch) int32 {
+func const_digit_value(string ch) int {
     if ch == "0" {
         return 0
     }
@@ -833,7 +834,7 @@ func collect_traits(vec[item] items) vec[trait_binding] {
     out
 }
 
-func check_impl(impl_decl impl_item, vec[function_binding] functions, vec[const_binding] consts, vec[trait_binding] traits, string source, vec[semantic_error] mut diagnostics) int32 {
+func check_impl(impl_decl impl_item, vec[function_binding] functions, vec[const_binding] consts, vec[trait_binding] traits, string source, vec[semantic_error] mut diagnostics) int {
     var errors = 0
 
     var i = 0
@@ -954,7 +955,7 @@ func receiver_mode_from_params(vec[param_decl] params) string {
     "value"
 }
 
-func check_function(function_decl function_decl, vec[function_binding] functions, vec[const_binding] consts, string source, vec[semantic_error] mut diagnostics) int32 {
+func check_function(function_decl function_decl, vec[function_binding] functions, vec[const_binding] consts, string source, vec[semantic_error] mut diagnostics) int {
     if function_decl.body.is_none() {
         return 0
     }
@@ -998,7 +999,7 @@ func check_function(function_decl function_decl, vec[function_binding] functions
     pre_errors + result.errors
 }
 
-func validate_function_signature(function_decl function_decl, string source, vec[semantic_error] mut diagnostics) int32 {
+func validate_function_signature(function_decl function_decl, string source, vec[semantic_error] mut diagnostics) int {
     var errors = 0
 
     var i = 0
@@ -1064,7 +1065,7 @@ func infer_block_expr(block_expr block, vec[type_binding] outer_env, string expe
     }
 }
 
-func check_stmt(stmt stmt, vec[type_binding] mut env, string expected_return, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int32 {
+func check_stmt(stmt stmt, vec[type_binding] mut env, string expected_return, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int {
     switch stmt {
         stmt.var(value) : {
             var rhs = infer_expr(value.value, env, expected_return, functions, source, diagnostics)
@@ -1100,8 +1101,8 @@ func check_stmt(stmt stmt, vec[type_binding] mut env, string expected_return, ve
         }
         stmt.increment(value) : {
             var ty = lookup_name_type(env, value.name)
-            if !types_compatible("int32", ty) {
-                return add_error(source, diagnostics, "e3005", "increment requires int32", value.name)
+            if !types_compatible("int", ty) {
+                return add_error(source, diagnostics, "e3005", "increment requires int", value.name)
             }
             0
         }
@@ -1152,7 +1153,7 @@ func check_stmt(stmt stmt, vec[type_binding] mut env, string expected_return, ve
 
 func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) check_result {
     switch expr {
-        expr::int(_) : ok_type("int32"),
+        expr::int(_) : ok_type("int"),
         expr::string(_) : ok_type("string"),
         expr::bool(_) : ok_type("bool"),
         expr::name(value) : {
@@ -1208,8 +1209,8 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
             var errors = target.errors + index.errors
 
             if starts_with(target.type_name, "[]") {
-                if !types_compatible("int32", index.type_name) {
-                    errors = errors + add_error(source, diagnostics, "e3012", "index must be int32", "[")
+                if !types_compatible("int", index.type_name) {
+                    errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
                 }
                 return check_result {
                     type_name: parse_type(slice(target.type_name, 2, len(target.type_name))),
@@ -1217,8 +1218,8 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
                 }
             }
             if starts_with(target.type_name, "string") {
-                if !types_compatible("int32", index.type_name) {
-                    errors = errors + add_error(source, diagnostics, "e3012", "index must be int32", "[")
+                if !types_compatible("int", index.type_name) {
+                    errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
                 }
                 return check_result {
                     type_name: "u8",
@@ -1528,7 +1529,7 @@ func check_pattern(pattern pattern, string expected_type, string source, vec[sem
     }
 }
 
-func bind_pattern(pattern pattern, string expected_type, vec[type_binding] mut bindings, string source, vec[semantic_error] mut diagnostics) int32 {
+func bind_pattern(pattern pattern, string expected_type, vec[type_binding] mut bindings, string source, vec[semantic_error] mut diagnostics) int {
     if is_unknown(expected_type) {
         return add_error(source, diagnostics, "e2007", "pattern expected type is unknown", pattern_anchor(pattern))
     }
@@ -1583,7 +1584,7 @@ func bind_pattern(pattern pattern, string expected_type, vec[type_binding] mut b
     }
 }
 
-func add_binding(vec[type_binding] mut bindings, string name, string type_name, string source, vec[semantic_error] mut diagnostics) int32 {
+func add_binding(vec[type_binding] mut bindings, string name, string type_name, string source, vec[semantic_error] mut diagnostics) int {
     if name == "_" {
         return 0
     }
@@ -1775,7 +1776,7 @@ func pattern_anchor(pattern pattern) string {
 
 func literal_pattern_type(literal_pattern value) string {
     switch value.value {
-        expr::int(_) : "int32",
+        expr::int(_) : "int",
         expr::string(_) : "string",
         expr::bool(_) : "bool",
         _ : "unknown",
@@ -1820,18 +1821,18 @@ func infer_binary(string op, check_result left, check_result right, string sourc
     var errors = left.errors + right.errors
 
     if op == "+" || op == "-" || op == "*" || op == "/" || op == "%" {
-        if !types_compatible("int32", left.type_name) || !types_compatible("int32", right.type_name) {
-            errors = errors + add_error(source, diagnostics, "e3018", "arithmetic requires int32", op)
+        if !types_compatible("int", left.type_name) || !types_compatible("int", right.type_name) {
+            errors = errors + add_error(source, diagnostics, "e3018", "arithmetic requires int", op)
         }
         return check_result {
-            type_name: "int32",
+            type_name: "int",
             errors: errors,
         }
     }
 
     if op == "<" || op == "<=" || op == ">" || op == ">=" {
-        if !types_compatible("int32", left.type_name) || !types_compatible("int32", right.type_name) {
-            errors = errors + add_error(source, diagnostics, "e3019", "ordering compare requires int32", op)
+        if !types_compatible("int", left.type_name) || !types_compatible("int", right.type_name) {
+            errors = errors + add_error(source, diagnostics, "e3019", "ordering compare requires int", op)
         }
         return check_result {
             type_name: "bool",
@@ -2083,7 +2084,7 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, vec[string] 
     true
 }
 
-func match_specificity(type_ref expected, type_ref actual, vec[string] generic_names) int32 {
+func match_specificity(type_ref expected, type_ref actual, vec[string] generic_names) int {
     if same_type_ref(expected, actual) {
         return 5
     }
@@ -2291,7 +2292,7 @@ func second_type_arg(string type_name) string {
     type_arg(parse_type_ref(type_name), 1)
 }
 
-func add_error(string source, vec[semantic_error] mut diagnostics, string code, string message, string anchor) int32 {
+func add_error(string source, vec[semantic_error] mut diagnostics, string code, string message, string anchor) int {
     var recovery_anchor = resolve_recovery_anchor(source, anchor)
     var chain_id = build_chain_id("semantic", code, recovery_anchor)
     var pos = locate_anchor(source, recovery_anchor)
@@ -2384,7 +2385,7 @@ func diagnostic_severity(string code) string {
     "error"
 }
 
-func diagnostic_tier(string code) int32 {
+func diagnostic_tier(string code) int {
     if starts_with_text(code, "e000") {
         return 0
     }
@@ -2418,7 +2419,7 @@ func locate_anchor(string source, string anchor) source_pos {
     index_to_pos(source, idx)
 }
 
-func find_substring(string haystack, string needle) int32 {
+func find_substring(string haystack, string needle) int {
     if needle == "" {
         return 0
     }
@@ -2435,7 +2436,7 @@ func find_substring(string haystack, string needle) int32 {
     0 - 1
 }
 
-func index_to_pos(string source, int32 index) source_pos {
+func index_to_pos(string source, int index) source_pos {
     var line = 1
     var column = 1
     var i = 0
@@ -2468,7 +2469,7 @@ func contains_token(string text, string token) bool {
     index_of(text, token) >= 0
 }
 
-func find_char(string text, string needle) int32 {
+func find_char(string text, string needle) int {
     var i = 0
     while i < len(text) {
         if char_at(text, i) == needle {
@@ -2479,7 +2480,7 @@ func find_char(string text, string needle) int32 {
     0 - 1
 }
 
-func find_last_char(string text, string needle) int32 {
+func find_last_char(string text, string needle) int {
     var i = len(text)
     while i > 0 {
         i = i - 1

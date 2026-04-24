@@ -20,7 +20,7 @@ func default_fixtures_root() string {
     "cmd/compile/internal/tests/fixtures"
 }
 
-func main() int32 {
+func main() int {
     var args = host_args()
     if args.len() >= 2 {
         var command = args[1]

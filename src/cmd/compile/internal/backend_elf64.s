@@ -1,6 +1,13 @@
 package compile.internal.backend_elf64
 
 use compile.internal.ir.lower.lower_main_to_mir
+use compile.internal.abi.new_abi_config
+use compile.internal.abi.abi_analyze_types
+use compile.internal.abi.in_registers_used as abiutils_in_registers_used
+use compile.internal.abi.out_registers_used as abiutils_out_registers_used
+use compile.internal.abi.spill_area_size as abiutils_spill_area_size
+use compile.internal.abi.arg_width as abiutils_arg_width
+use compile.internal.abi.info_string as abiutils_info_string
 use compile.internal.mir.mir_graph
 use compile.internal.mir.mir_basic_block
 use compile.internal.mir.mir_statement
@@ -91,11 +98,11 @@ func fail_unit(string message) result[(), backend_error] {
     });
 }
 
-func ok_int(int32 value) result[int32, backend_error] {
+func ok_int(int value) result[int, backend_error] {
     result.ok(value);
 }
 
-func fail_int(string message) result[int32, backend_error] {
+func fail_int(string message) result[int, backend_error] {
     result.err(backend_error {
         message: message,
     });
@@ -113,16 +120,16 @@ struct fn_map_entry_value {
 }
 
 struct channel_handle_value {
-    int32 id
+    int id
 }
 
 struct channel_runtime_state {
-    int32 id
-    int32 capacity
+    int id
+    int capacity
     vec[value] buffer
     bool closed
-    int32 sends
-    int32 recvs
+    int sends
+    int recvs
     bool marked
 }
 
@@ -141,50 +148,50 @@ struct sroutine_task {
 struct runtime_state {
     vec[sroutine_task] runq
     vec[channel_runtime_state] channels
-    int32 next_channel_id
-    int32 select_rr_cursor
-    int32 sroutine_scheduled
-    int32 sroutine_completed
-    int32 sroutine_panics
-    int32 sroutine_recovered
-    int32 sroutine_yields
-    int32 select_attempts
-    int32 select_default_fallbacks
-    int32 select_timeouts
-    int32 gc_cycles
-    int32 gc_freed_channels
-    int32 gc_root_scans
-    int32 gc_write_barriers
-    int32 gc_triggered_cycles
-    int32 gc_heap_goal
-    int32 gc_alloc_since_cycle
+    int next_channel_id
+    int select_rr_cursor
+    int sroutine_scheduled
+    int sroutine_completed
+    int sroutine_panics
+    int sroutine_recovered
+    int sroutine_yields
+    int select_attempts
+    int select_default_fallbacks
+    int select_timeouts
+    int gc_cycles
+    int gc_freed_channels
+    int gc_root_scans
+    int gc_write_barriers
+    int gc_triggered_cycles
+    int gc_heap_goal
+    int gc_alloc_since_cycle
 }
 
 struct runtime_metrics {
-    int32 sroutine_scheduled
-    int32 sroutine_completed
-    int32 sroutine_panics
-    int32 sroutine_recovered
-    int32 sroutine_yields
-    int32 select_attempts
-    int32 select_default_fallbacks
-    int32 select_timeouts
-    int32 channels
-    int32 channel_sends
-    int32 channel_recvs
-    int32 channel_closed
-    int32 gc_cycles
-    int32 gc_freed_channels
-    int32 gc_live_channels
-    int32 gc_root_scans
-    int32 gc_write_barriers
-    int32 gc_triggered_cycles
-    int32 gc_heap_goal
-    int32 gc_alloc_since_cycle
+    int sroutine_scheduled
+    int sroutine_completed
+    int sroutine_panics
+    int sroutine_recovered
+    int sroutine_yields
+    int select_attempts
+    int select_default_fallbacks
+    int select_timeouts
+    int channels
+    int channel_sends
+    int channel_recvs
+    int channel_closed
+    int gc_cycles
+    int gc_freed_channels
+    int gc_live_channels
+    int gc_root_scans
+    int gc_write_barriers
+    int gc_triggered_cycles
+    int gc_heap_goal
+    int gc_alloc_since_cycle
 }
 
 enum value {
-    int(int32),
+    int(int),
     string(string),
     bool(bool),
     unit(unit_value),
@@ -199,13 +206,13 @@ struct binding {
 }
 
 struct write_op {
-    int32 fd
+    int fd
     string text
 }
 
 struct mir_execution_result {
     vec[write_op] writes
-    int32 exit_code
+    int exit_code
     runtime_metrics runtime
 }
 
@@ -216,20 +223,25 @@ struct midend_result {
 
 struct stackmap_function_entry {
     string name
-    int32 slots
+    int slots
     string bitmap
-    int32 callee_saved
+    int callee_saved
 }
 
 struct abi_behavior_entry {
     string name
-    int32 param_count
+    int param_count
     bool variadic
     string pass_mode
     string return_mode
+    int abi_in_regs
+    int abi_out_regs
+    int abi_spill_size
+    int abi_arg_width
+    string abi_summary
 }
 
-func build(string path, string output, string ssa_margin_override) int32 {
+func build(string path, string output, string ssa_margin_override) int {
     var source_result = read_to_string(path)
     if source_result.is_err() {
         return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message)
@@ -549,7 +561,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     }
 }
 
-func estimate_sroutine_sites_graph(mir_graph graph) int32 {
+func estimate_sroutine_sites_graph(mir_graph graph) int {
     var total = 0
     var i = 0
     while i < graph.trace.len() {
@@ -561,7 +573,7 @@ func estimate_sroutine_sites_graph(mir_graph graph) int32 {
     total
 }
 
-func estimate_trace_call_sites_graph(mir_graph graph, string marker) int32 {
+func estimate_trace_call_sites_graph(mir_graph graph, string marker) int {
     var total = 0
     var i = 0
     while i < graph.trace.len() {
@@ -573,7 +585,7 @@ func estimate_trace_call_sites_graph(mir_graph graph, string marker) int32 {
     total
 }
 
-func estimate_const_fold_hits_graph(mir_graph graph) int32 {
+func estimate_const_fold_hits_graph(mir_graph graph) int {
     var prefix = "constfold.hits="
     var i = 0
     while i < graph.trace.len() {
@@ -586,7 +598,7 @@ func estimate_const_fold_hits_graph(mir_graph graph) int32 {
     0
 }
 
-func parse_non_negative_int(string raw) int32 {
+func parse_non_negative_int(string raw) int {
     var text = trim_spaces(raw)
     if text == "" {
         return 0
@@ -607,11 +619,11 @@ func parse_non_negative_int(string raw) int32 {
 
 struct midend_pass_result {
     mir_graph graph
-    int32 simplified_jump_to_return
-    int32 removed_unit_lines
-    int32 dedup_lines
-    int32 removed_unreachable_blocks
-    int32 folded_redundant_branches
+    int simplified_jump_to_return
+    int removed_unit_lines
+    int dedup_lines
+    int removed_unreachable_blocks
+    int folded_redundant_branches
 }
 
 func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
@@ -644,8 +656,8 @@ func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
 
 func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     var rewritten = graph
-    var reachable = vec[int32]()
-    var work = vec[int32]()
+    var reachable = vec[int]()
+    var work = vec[int]()
     work.push(rewritten.entry)
 
     while work.len() > 0 {
@@ -740,7 +752,7 @@ func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
     graph_pass_count_result { graph: rewritten, count: changed }
 }
 
-func contains_int32(vec[int32] values, int32 needle) bool {
+func contains_int32(vec[int] values, int needle) bool {
     var i = 0
     while i < values.len() {
         if values[i] == needle {
@@ -753,7 +765,7 @@ func contains_int32(vec[int32] values, int32 needle) bool {
 
 struct graph_pass_count_result {
     mir_graph graph
-    int32 count
+    int count
 }
 
 func simplify_jump_to_return_pass(mir_graph graph) graph_pass_count_result {
@@ -854,7 +866,7 @@ func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
     graph_pass_count_result { graph: rewritten, count: changed }
 }
 
-func find_block_index_by_id(mir_graph graph, int32 id) int32 {
+func find_block_index_by_id(mir_graph graph, int id) int {
     var i = 0
     while i < graph.blocks.len() {
         if graph.blocks[i].id == id {
@@ -940,7 +952,7 @@ func validate_cfi_artifact(string payload) result[(), backend_error] {
     result::ok(())
 }
 
-func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int32 inlined) int32 {
+func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int inlined) int {
     var imports = 0
     var i = 0
     while i < graph.trace.len() {
@@ -956,7 +968,7 @@ func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int32 inlined) int32
     score
 }
 
-func estimate_const_prop_sites_graph(mir_graph graph) int32 {
+func estimate_const_prop_sites_graph(mir_graph graph) int {
     var constants = 0
     var i = 0
     while i < graph.blocks.len() {
@@ -1015,7 +1027,7 @@ func validate_wasi_binary_artifact(string output) result[(), backend_error] {
     result::ok(())
 }
 
-func build_wasm_object_chain(string temp_dir, string output, vec[write_op] writes, int32 exit_code) result[(), backend_error] {
+func build_wasm_object_chain(string temp_dir, string output, vec[write_op] writes, int exit_code) result[(), backend_error] {
     var c_path = temp_dir + "/out_wasm.c"
     var obj_path = temp_dir + "/out_wasm.o"
     var c_source = emit_wasm_c_source(writes, exit_code)
@@ -1080,7 +1092,7 @@ func validate_wasi_contract_source(string source) result[(), backend_error] {
     result::ok(())
 }
 
-func emit_wasm_c_source(vec[write_op] writes, int32 exit_code) string {
+func emit_wasm_c_source(vec[write_op] writes, int exit_code) string {
     var lines = vec[string]()
     lines.push("typedef unsigned int u32;")
     lines.push("typedef unsigned int usize;")
@@ -1111,7 +1123,7 @@ func emit_wasm_c_source(vec[write_op] writes, int32 exit_code) string {
     join_lines(lines) + "\n"
 }
 
-func estimate_ipo_synergy(int32 inlined, int32 escaped, int32 devirt, int32 cross_pkg_inline, int32 const_prop) int32 {
+func estimate_ipo_synergy(int inlined, int escaped, int devirt, int cross_pkg_inline, int const_prop) int {
     var score = inlined + devirt + cross_pkg_inline + const_prop
     if escaped > 0 {
         score = score - escaped / 2
@@ -1140,7 +1152,7 @@ func build_abi_machine_matrix_artifact(string arch, source_file source, string s
     join_lines(lines)
 }
 
-func abi_cross_arch_consistency_status(string arch, int32 spills, int32 functions) string {
+func abi_cross_arch_consistency_status(string arch, int spills, int functions) string {
     var score = functions * 4 - spills
     if arch == "arm64" {
         score = score + 2
@@ -1646,7 +1658,7 @@ func build_stackmap_artifact(string arch, source_file source, string ssa_text, s
     join_lines(lines)
 }
 
-func estimate_stack_slots(string ssa_text) int32 {
+func estimate_stack_slots(string ssa_text) int {
     var spills = parse_number_after(ssa_text, "spills=")
     if spills < 0 {
         return 0
@@ -1686,7 +1698,7 @@ func collect_function_stackmaps(string arch, source_file source, string ssa_text
     out
 }
 
-func estimate_function_stack_slots(function_decl fn_decl, string ssa_text) int32 {
+func estimate_function_stack_slots(function_decl fn_decl, string ssa_text) int {
     if fn_decl.sig.name == "main" {
         var main_slots = estimate_stack_slots(ssa_text)
         if main_slots > 0 {
@@ -1706,7 +1718,7 @@ func estimate_function_stack_slots(function_decl fn_decl, string ssa_text) int32
     slots
 }
 
-func build_slot_bitmap(string function_name, int32 slots) string {
+func build_slot_bitmap(string function_name, int slots) string {
     if slots <= 0 {
         return "0"
     }
@@ -1738,6 +1750,11 @@ func build_abi_behavior_artifact(string arch, source_file source) string {
                 + " variadic=" + bool_string(entry.variadic)
                 + " pass=" + entry.pass_mode
                 + " ret=" + entry.return_mode
+                + " abi_in_regs=" + to_string(entry.abi_in_regs)
+                + " abi_out_regs=" + to_string(entry.abi_out_regs)
+                + " abi_spill=" + to_string(entry.abi_spill_size)
+                + " abi_argw=" + to_string(entry.abi_arg_width)
+                + " abi_summary=" + flatten_multiline(entry.abi_summary)
         )
         i = i + 1
     }
@@ -1753,6 +1770,11 @@ func build_abi_emit_plan(string arch, source_file source) string {
         switch source.items[i] {
             item.function(fn_decl) : {
                 var line = "fn " + fn_decl.sig.name
+                var abi_info = abi_analyze_types(
+                    new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
+                    collect_fn_param_types(fn_decl),
+                    collect_fn_result_types(fn_decl)
+                )
                 var p = 0
                 while p < fn_decl.sig.params.len() {
                     line = line + " | a" + to_string(p) + "->" + abi_param_location(arch, p)
@@ -1775,6 +1797,9 @@ func build_abi_emit_plan(string arch, source_file source) string {
                 line = line + " | callee_saved=" + to_string(abi_callee_saved_count(arch))
                 line = line + " | callseq=" + abi_call_sequence_mode(arch, variadic, ret_parts, aggregate_size)
                 line = line + " | " + abi_emit_ret_plan(arch, ret_type, ret_parts, aggregate_size)
+                line = line + " | abi_in_regs=" + to_string(abiutils_in_registers_used(abi_info))
+                line = line + " | abi_out_regs=" + to_string(abiutils_out_registers_used(abi_info))
+                line = line + " | abi_spill=" + to_string(abiutils_spill_area_size(abi_info))
                 lines.push(line)
             }
             _ : (),
@@ -1784,7 +1809,7 @@ func build_abi_emit_plan(string arch, source_file source) string {
     join_lines(lines)
 }
 
-func abi_param_location(string arch, int32 index) string {
+func abi_param_location(string arch, int index) string {
     var reg = abi_int_arg_reg(arch, index)
     if reg == "" {
         return "stack+" + to_string((index - abi_variadic_gp_limit(arch)) * 8)
@@ -1792,7 +1817,7 @@ func abi_param_location(string arch, int32 index) string {
     reg
 }
 
-func abi_float_param_location(string arch, int32 index) string {
+func abi_float_param_location(string arch, int index) string {
     var reg = abi_float_arg_reg(arch, index)
     if reg == "" {
         return "stackf+" + to_string(index * 8)
@@ -1800,14 +1825,14 @@ func abi_float_param_location(string arch, int32 index) string {
     reg
 }
 
-func abi_emit_ret_location(string arch, int32 aggregate_size) string {
+func abi_emit_ret_location(string arch, int aggregate_size) string {
     if aggregate_size > 16 {
         return "sret:" + abi_sret_reg(arch)
     }
     abi_int_ret_reg(arch)
 }
 
-func abi_emit_aggregate_size_hint(int32 param_count, string ret_type) int32 {
+func abi_emit_aggregate_size_hint(int param_count, string ret_type) int {
     var size = param_count * 8
     var parts = count_top_level_type_parts(ret_type)
     if parts > 1 {
@@ -1822,7 +1847,7 @@ func abi_emit_aggregate_size_hint(int32 param_count, string ret_type) int32 {
     size
 }
 
-func abi_emit_aggregate_mode(string ret_type, int32 ret_parts, int32 aggregate_size) string {
+func abi_emit_aggregate_mode(string ret_type, int ret_parts, int aggregate_size) string {
     if ret_type == "" {
         return "void"
     }
@@ -1841,7 +1866,7 @@ func abi_emit_aggregate_mode(string ret_type, int32 ret_parts, int32 aggregate_s
     "scalar"
 }
 
-func abi_emit_ret_plan(string arch, string ret_type, int32 ret_parts, int32 aggregate_size) string {
+func abi_emit_ret_plan(string arch, string ret_type, int ret_parts, int aggregate_size) string {
     if ret_type == "" {
         return "ret->void"
     }
@@ -1877,14 +1902,14 @@ func abi_second_int_ret_reg(string arch) string {
     "%rdx"
 }
 
-func abi_stack_alignment(string arch) int32 {
+func abi_stack_alignment(string arch) int {
     if arch == "arm64" || arch == "riscv64" || arch == "s390x" || arch == "wasm" {
         return 16
     }
     16
 }
 
-func abi_caller_saved_count(string arch) int32 {
+func abi_caller_saved_count(string arch) int {
     if arch == "arm64" {
         return 18
     }
@@ -1900,7 +1925,7 @@ func abi_caller_saved_count(string arch) int32 {
     9
 }
 
-func abi_call_sequence_mode(string arch, bool variadic, int32 ret_parts, int32 aggregate_size) string {
+func abi_call_sequence_mode(string arch, bool variadic, int ret_parts, int aggregate_size) string {
     var mode = "normal"
     if variadic {
         mode = "variadic-home"
@@ -1917,7 +1942,7 @@ func abi_call_sequence_mode(string arch, bool variadic, int32 ret_parts, int32 a
     mode + "+sysv"
 }
 
-func count_top_level_type_parts(string type_text) int32 {
+func count_top_level_type_parts(string type_text) int {
     var t = trim_spaces(type_text)
     if t == "" {
         return 0
@@ -1955,6 +1980,11 @@ func collect_abi_behavior(string arch, source_file source) vec[abi_behavior_entr
     while i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
+                var abi_info = abi_analyze_types(
+                    new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
+                    collect_fn_param_types(fn_decl),
+                    collect_fn_result_types(fn_decl)
+                )
                 var param_count = fn_decl.sig.params.len()
                 var variadic = param_count > abi_variadic_gp_limit(arch)
                 var aggregate_size = param_count * 8
@@ -1964,6 +1994,11 @@ func collect_abi_behavior(string arch, source_file source) vec[abi_behavior_entr
                     variadic: variadic,
                     pass_mode: abi_aggregate_pass_mode(arch, aggregate_size),
                     return_mode: abi_return_mode(arch, "aggregate", aggregate_size),
+                    abi_in_regs: abiutils_in_registers_used(abi_info),
+                    abi_out_regs: abiutils_out_registers_used(abi_info),
+                    abi_spill_size: abiutils_spill_area_size(abi_info),
+                    abi_arg_width: abiutils_arg_width(abi_info),
+                    abi_summary: abiutils_info_string(abi_info),
                 })
             }
             _ : (),
@@ -1971,6 +2006,95 @@ func collect_abi_behavior(string arch, source_file source) vec[abi_behavior_entr
         i = i + 1
     }
     out
+}
+
+func collect_fn_param_types(function_decl fn_decl) vec[string] {
+    var out = vec[string]()
+    var i = 0
+    while i < fn_decl.sig.params.len() {
+        out.push(trim_spaces(fn_decl.sig.params[i].type_name))
+        i = i + 1
+    }
+    out
+}
+
+func collect_fn_result_types(function_decl fn_decl) vec[string] {
+    switch fn_decl.sig.return_type {
+        option.some(value) : return split_signature_types(trim_spaces(value)),
+        option.none : return vec[string](),
+    }
+}
+
+func split_signature_types(string type_text) vec[string] {
+    var t = trim_spaces(type_text)
+    if t == "" {
+        return vec[string]()
+    }
+
+    if abi_text_starts_with(t, "(") && abi_text_ends_with(t, ")") {
+        t = trim_spaces(slice(t, 1, len(t) - 1))
+    }
+    if t == "" {
+        return vec[string]()
+    }
+
+    var out = vec[string]()
+    var start = 0
+    var paren = 0
+    var bracket = 0
+    var i = 0
+    while i < len(t) {
+        var ch = char_at(t, i)
+        if ch == "(" {
+            paren = paren + 1
+        } else if ch == ")" {
+            if paren > 0 {
+                paren = paren - 1
+            }
+        } else if ch == "[" {
+            bracket = bracket + 1
+        } else if ch == "]" {
+            if bracket > 0 {
+                bracket = bracket - 1
+            }
+        } else if ch == "," && paren == 0 && bracket == 0 {
+            out.push(trim_spaces(slice(t, start, i)))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    out.push(trim_spaces(slice(t, start, len(t))))
+    out
+}
+
+func abi_text_starts_with(string text, string prefix) bool {
+    if len(text) < len(prefix) {
+        return false
+    }
+    return slice(text, 0, len(prefix)) == prefix
+}
+
+func abi_text_ends_with(string text, string suffix) bool {
+    if len(text) < len(suffix) {
+        return false
+    }
+    return slice(text, len(text) - len(suffix), len(text)) == suffix
+}
+
+func abi_float_param_reg_limit(string arch) int {
+    if arch == "arm64" {
+        return 8
+    }
+    if arch == "riscv64" {
+        return 8
+    }
+    if arch == "s390x" {
+        return 8
+    }
+    if arch == "wasm" {
+        return 0
+    }
+    return 8
 }
 
 func build_dwarf_like_artifact(source_file source, string ssa_text, string debug_map) string {
@@ -2125,7 +2249,7 @@ func append_debug_ranges_section(vec[string] lines, source_file source, string s
     }
 }
 
-func dwarf_inline_depth_hint(string fn_name, string ssa_text) int32 {
+func dwarf_inline_depth_hint(string fn_name, string ssa_text) int {
     var loops = parse_number_after(ssa_text, "loops=")
     if loops < 0 {
         loops = 0
@@ -2362,7 +2486,7 @@ func validate_midend_opt_artifact(string payload) result[(), backend_error] {
     result::ok(())
 }
 
-func function_item_count(source_file source) int32 {
+func function_item_count(source_file source) int {
     var out = 0
     var i = 0
     while i < source.items.len() {
@@ -2375,7 +2499,7 @@ func function_item_count(source_file source) int32 {
     out
 }
 
-func build_gc_pointer_bitmap(string fn_name, int32 slots) string {
+func build_gc_pointer_bitmap(string fn_name, int slots) string {
     if slots <= 0 {
         return "0"
     }
@@ -2400,7 +2524,7 @@ func gc_write_barrier_mode(string fn_name) string {
     "elided"
 }
 
-func gc_safepoint_count(function_decl fn_decl, string ssa_text) int32 {
+func gc_safepoint_count(function_decl fn_decl, string ssa_text) int {
     var base = fn_decl.sig.params.len()
     var loops = parse_number_after(ssa_text, "loops=")
     if loops < 0 {
@@ -2592,7 +2716,7 @@ func compile_writes(source_file source, mir_graph graph) result[vec[write_op], b
     result::ok(exec_result.unwrap().writes)
 }
 
-func compile_exit_code(source_file source, mir_graph graph) result[int32, backend_error] {
+func compile_exit_code(source_file source, mir_graph graph) result[int, backend_error] {
     if graph.blocks.len() == 0 {
         return fail_int("backend error: mir graph has no blocks")
     }
@@ -2740,7 +2864,7 @@ func execute_mir_graph(mir_graph graph) result[mir_execution_result, backend_err
     result::err(backend_error { message: "backend error: mir execution exceeded step limit" })
 }
 
-func find_mir_block(mir_graph graph, int32 id) result[mir_basic_block, backend_error] {
+func find_mir_block(mir_graph graph, int id) result[mir_basic_block, backend_error] {
     var i = 0
     while i < graph.blocks.len() {
         if graph.blocks[i].id == id {
@@ -2775,7 +2899,7 @@ func emit_print_from_line(string line, vec[write_op] mut writes) () {
     }
 }
 
-func emit_call_line_to_write(string line, string callee, int32 fd, vec[write_op] mut writes) () {
+func emit_call_line_to_write(string line, string callee, int fd, vec[write_op] mut writes) () {
     var arg_opt = extract_call_arg(line, callee)
     if arg_opt.is_none() {
         return
@@ -2843,11 +2967,11 @@ func has_substring(string text, string needle) bool {
     index_of(text, needle) >= 0
 }
 
-func index_of(string text, string needle) int32 {
+func index_of(string text, string needle) int {
     index_of_from(text, needle, 0)
 }
 
-func index_of_from(string text, string needle, int32 start) int32 {
+func index_of_from(string text, string needle, int start) int {
     if len(needle) == 0 {
         return start
     }
@@ -2866,7 +2990,7 @@ func index_of_from(string text, string needle, int32 start) int32 {
     -1
 }
 
-func parse_number_after(string text, string marker) int32 {
+func parse_number_after(string text, string marker) int {
     var start = index_of(text, marker)
     if start < 0 {
         return -1
@@ -2891,7 +3015,7 @@ func parse_number_after(string text, string marker) int32 {
     value
 }
 
-func select_branch_target(vec[mir_control_edge] edges) int32 {
+func select_branch_target(vec[mir_control_edge] edges) int {
     if edges.len() == 0 {
         return -1
     }
@@ -3136,7 +3260,7 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write
                     })
                     result::ok(())
                 }
-                _ : result::err(backend_error { message: "backend error: increment expects int32 for " + value.name }),
+                _ : result::err(backend_error { message: "backend error: increment expects int for " + value.name }),
             }
         }
         stmt.c_for(value) : execute_c_for(value, source, env, writes, runtime),
@@ -3409,7 +3533,7 @@ func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] mut en
                 cap = n
             }
         }
-        _ : return result::err(backend_error { message: "backend error: chan_make capacity must be int32" }),
+        _ : return result::err(backend_error { message: "backend error: chan_make capacity must be int" }),
     }
 
     var id = runtime.next_channel_id
@@ -3528,7 +3652,7 @@ func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[bind
                     copies = n
                 }
             }
-            _ : return result::err(backend_error { message: "backend error: select_recv_weighted weights must be int32" }),
+            _ : return result::err(backend_error { message: "backend error: select_recv_weighted weights must be int" }),
         }
         var wi = 0
         while wi < copies {
@@ -3565,7 +3689,7 @@ func eval_select_recv_timeout_call(vec[expr] args, source_file source, vec[bindi
     }
     switch timeout.unwrap() {
         value.int(_) : (),
-        _ : return result::err(backend_error { message: "backend error: select_recv_timeout timeout must be int32" }),
+        _ : return result::err(backend_error { message: "backend error: select_recv_timeout timeout must be int" }),
     }
 
     var ch_args = vec[expr]()
@@ -3642,7 +3766,7 @@ func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[bindi
     }
     switch timeout.unwrap() {
         value.int(_) : (),
-        _ : return result::err(backend_error { message: "backend error: select_send_timeout timeout must be int32" }),
+        _ : return result::err(backend_error { message: "backend error: select_send_timeout timeout must be int" }),
     }
 
     var send_args = vec[expr]()
@@ -3659,7 +3783,7 @@ func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[bindi
     result::ok(value.unit(unit_value {}))
 }
 
-func choose_ready_channel(runtime_state mut runtime, vec[value] channels) option[int32] {
+func choose_ready_channel(runtime_state mut runtime, vec[value] channels) option[int] {
     if channels.len() == 0 {
         return option.none
     }
@@ -3681,7 +3805,7 @@ func choose_ready_channel(runtime_state mut runtime, vec[value] channels) option
     option.none
 }
 
-func choose_closed_channel(runtime_state runtime, vec[value] channels) option[int32] {
+func choose_closed_channel(runtime_state runtime, vec[value] channels) option[int] {
     if channels.len() == 0 {
         return option.none
     }
@@ -3702,7 +3826,7 @@ func choose_closed_channel(runtime_state runtime, vec[value] channels) option[in
     option.none
 }
 
-func choose_sendable_channel(runtime_state mut runtime, vec[value] channels) option[int32] {
+func choose_sendable_channel(runtime_state mut runtime, vec[value] channels) option[int] {
     if channels.len() == 0 {
         return option.none
     }
@@ -3725,7 +3849,7 @@ func choose_sendable_channel(runtime_state mut runtime, vec[value] channels) opt
     option.none
 }
 
-func drain_selected_channel(runtime_state mut runtime, int32 idx) result[value, backend_error] {
+func drain_selected_channel(runtime_state mut runtime, int idx) result[value, backend_error] {
     if idx < 0 {
         return result::err(backend_error { message: "backend error: recv target is not channel" })
     }
@@ -3779,7 +3903,7 @@ func eval_chan_close_call(vec[expr] args, source_file source, vec[binding] mut e
     result::ok(value.unit(unit_value {}))
 }
 
-func find_channel_index(runtime_state runtime, value v) int32 {
+func find_channel_index(runtime_state runtime, value v) int {
     var id = -1
     switch v {
         value.channel(handle) : id = handle.id,
@@ -3871,7 +3995,7 @@ func mark_value_channels(value v, runtime_state mut runtime) () {
     }
 }
 
-func mark_channel_id(int32 id, runtime_state mut runtime) () {
+func mark_channel_id(int id, runtime_state mut runtime) () {
     var i = 0
     while i < runtime.channels.len() {
         if runtime.channels[i].id == id {
@@ -4088,7 +4212,7 @@ func collect_const_bindings(source_file source) result[vec[binding], backend_err
     result::ok(out)
 }
 
-func eval_const_value_expr(expr value, vec[binding] const_env, int32 iota_value) result[value, backend_error] {
+func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) result[value, backend_error] {
     switch value {
         expr.int(int_expr) : result::ok(value.int(parse_int_literal(int_expr.value))),
         expr.string(string_expr) : result::ok(value.string(decode_string_literal(string_expr.value))),
@@ -4327,10 +4451,10 @@ func numeric_binary(value left, value right, string op) result[value, backend_er
                         result::err(backend_error { message: "backend error: unsupported numeric operator " + op })
                     }
                 }
-                _ : result::err(backend_error { message: "backend error: numeric operator expects int32 operands" }),
+                _ : result::err(backend_error { message: "backend error: numeric operator expects int operands" }),
             }
         }
-        _ : result::err(backend_error { message: "backend error: numeric operator expects int32 operands" }),
+        _ : result::err(backend_error { message: "backend error: numeric operator expects int operands" }),
     }
 }
 
@@ -4402,10 +4526,10 @@ func ordered_compare(value left, value right, string op) result[value, backend_e
                         result::err(backend_error { message: "backend error: unsupported ordered comparison " + op })
                     }
                 }
-                _ : result::err(backend_error { message: "backend error: ordered comparison expects int32 operands" }),
+                _ : result::err(backend_error { message: "backend error: ordered comparison expects int operands" }),
             }
         }
-        _ : result::err(backend_error { message: "backend error: ordered comparison expects int32 operands" }),
+        _ : result::err(backend_error { message: "backend error: ordered comparison expects int operands" }),
     }
 }
 
@@ -4427,7 +4551,7 @@ func logical_binary(value left, value right, bool and_op) result[value, backend_
     }
 }
 
-func value_to_exit_code(value value) result[int32, backend_error] {
+func value_to_exit_code(value value) result[int, backend_error] {
     switch value {
         value.int(number) : result::ok(number),
         value.bool(flag) : result::ok(if flag { 1 } else { 0 }),
@@ -4451,7 +4575,7 @@ func stringify_value(value value) string {
     }
 }
 
-func parse_int_literal(string literal) int32 {
+func parse_int_literal(string literal) int {
     var value = literal
     var sign = 1
     var index = 0
@@ -4475,7 +4599,7 @@ func parse_int_literal(string literal) int32 {
     sign * out
 }
 
-func parse_ssa_margin_override(string text) result[int32, backend_error] {
+func parse_ssa_margin_override(string text) result[int, backend_error] {
     if text == "" {
         return ok_int(-1)
     }
@@ -4492,7 +4616,7 @@ func parse_ssa_margin_override(string text) result[int32, backend_error] {
     return ok_int(parse_int_literal(text))
 }
 
-func digit_value(string ch) int32 {
+func digit_value(string ch) int {
     if ch == "0" {
         return 0
     }
@@ -4566,7 +4690,7 @@ func decode_string_literal(string literal) string {
     out
 }
 
-func emit_asm(vec[write_op] writes, int32 exit_code) string {
+func emit_asm(vec[write_op] writes, int exit_code) string {
     var arch = buildcfg_goarch()
     if arch == "arm64" {
         return emit_asm_arm64(writes, exit_code)
@@ -4650,7 +4774,7 @@ func abi_sret_reg(string arch) string {
     "%rdi"
 }
 
-func abi_variadic_gp_limit(string arch) int32 {
+func abi_variadic_gp_limit(string arch) int {
     if arch == "arm64" {
         return 8
     }
@@ -4666,7 +4790,7 @@ func abi_variadic_gp_limit(string arch) int32 {
     6
 }
 
-func abi_variadic_fp_limit(string arch) int32 {
+func abi_variadic_fp_limit(string arch) int {
     if arch == "arm64" {
         return 8
     }
@@ -4682,7 +4806,7 @@ func abi_variadic_fp_limit(string arch) int32 {
     8
 }
 
-func abi_aggregate_pass_mode(string arch, int32 size_bytes) string {
+func abi_aggregate_pass_mode(string arch, int size_bytes) string {
     if size_bytes <= 0 {
         return ""
     }
@@ -4699,7 +4823,7 @@ func abi_aggregate_pass_mode(string arch, int32 size_bytes) string {
     "indirect"
 }
 
-func abi_return_mode(string arch, string type_class, int32 size_bytes) string {
+func abi_return_mode(string arch, string type_class, int size_bytes) string {
     if type_class == "int" {
         return "reg:" + abi_int_ret_reg(arch)
     }
@@ -4715,7 +4839,7 @@ func abi_return_mode(string arch, string type_class, int32 size_bytes) string {
     ""
 }
 
-func abi_int_arg_reg(string arch, int32 index) string {
+func abi_int_arg_reg(string arch, int index) string {
     if arch == "arm64" {
         if index == 0 { return "x0" }
         if index == 1 { return "x1" }
@@ -4775,7 +4899,7 @@ func abi_int_arg_reg(string arch, int32 index) string {
     ""
 }
 
-func abi_float_arg_reg(string arch, int32 index) string {
+func abi_float_arg_reg(string arch, int index) string {
     if arch == "arm64" {
         if index == 0 { return "v0" }
         if index == 1 { return "v1" }
@@ -4867,7 +4991,7 @@ func abi_float_ret_reg(string arch) string {
     "%xmm0"
 }
 
-func abi_callee_saved_count(string arch) int32 {
+func abi_callee_saved_count(string arch) int {
     if arch == "arm64" {
         return 12
     }
@@ -4883,7 +5007,7 @@ func abi_callee_saved_count(string arch) int32 {
     6
 }
 
-func emit_asm_amd64(vec[write_op] writes, int32 exit_code) string {
+func emit_asm_amd64(vec[write_op] writes, int exit_code) string {
     var data_lines = vec[string]()
     var text_lines = vec[string]()
     data_lines.push(".section .data")
@@ -4917,7 +5041,7 @@ func emit_asm_amd64(vec[write_op] writes, int32 exit_code) string {
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
 
-func emit_asm_arm64(vec[write_op] writes, int32 exit_code) string {
+func emit_asm_arm64(vec[write_op] writes, int exit_code) string {
     var data_lines = vec[string]()
     var text_lines = vec[string]()
     data_lines.push(".section .data")
@@ -4948,7 +5072,7 @@ func emit_asm_arm64(vec[write_op] writes, int32 exit_code) string {
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
 
-func emit_asm_riscv64(vec[write_op] writes, int32 exit_code) string {
+func emit_asm_riscv64(vec[write_op] writes, int exit_code) string {
     var data_lines = vec[string]()
     var text_lines = vec[string]()
     data_lines.push(".section .data")
@@ -4980,7 +5104,7 @@ func emit_asm_riscv64(vec[write_op] writes, int32 exit_code) string {
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
 
-func emit_asm_s390x(vec[write_op] writes, int32 exit_code) string {
+func emit_asm_s390x(vec[write_op] writes, int exit_code) string {
     var data_lines = vec[string]()
     var text_lines = vec[string]()
     data_lines.push(".section .data")
@@ -5008,7 +5132,7 @@ func emit_asm_s390x(vec[write_op] writes, int32 exit_code) string {
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
 
-func append_write_op(vec[string] data_lines, vec[string] text_lines, write_op op, int32 index) () {
+func append_write_op(vec[string] data_lines, vec[string] text_lines, write_op op, int index) () {
     var label = "message_" + to_string(index)
     data_lines.push(label + ":")
     data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")
@@ -5019,7 +5143,7 @@ func append_write_op(vec[string] data_lines, vec[string] text_lines, write_op op
     text_lines.push("    syscall")
 }
 
-func append_write_op_arm64(vec[string] data_lines, vec[string] text_lines, write_op op, int32 index) () {
+func append_write_op_arm64(vec[string] data_lines, vec[string] text_lines, write_op op, int index) () {
     var label = "message_" + to_string(index)
     data_lines.push(label + ":")
     data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")
@@ -5032,7 +5156,7 @@ func append_write_op_arm64(vec[string] data_lines, vec[string] text_lines, write
     text_lines.push("    svc #0")
 }
 
-func append_write_op_riscv64(vec[string] data_lines, vec[string] text_lines, write_op op, int32 index) () {
+func append_write_op_riscv64(vec[string] data_lines, vec[string] text_lines, write_op op, int index) () {
     var label = "message_" + to_string(index)
     data_lines.push(label + ":")
     data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")
@@ -5044,7 +5168,7 @@ func append_write_op_riscv64(vec[string] data_lines, vec[string] text_lines, wri
     text_lines.push("    ecall")
 }
 
-func append_write_op_s390x(vec[string] data_lines, vec[string] text_lines, write_op op, int32 index) () {
+func append_write_op_s390x(vec[string] data_lines, vec[string] text_lines, write_op op, int index) () {
     var label = "message_" + to_string(index)
     data_lines.push(label + ":")
     data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")
@@ -5089,7 +5213,7 @@ func copy_bindings(vec[binding] source) vec[binding] {
     out
 }
 
-func find_binding_index(vec[binding] env, string name) int32 {
+func find_binding_index(vec[binding] env, string name) int {
     var i = env.len()
     while i > 0 {
         i = i - 1
@@ -5115,7 +5239,7 @@ func join_lines(vec[string] lines) string {
     join_with(lines, "\n")
 }
 
-func count_occurrences(string text, string token) int32 {
+func count_occurrences(string text, string token) int {
     if token == "" {
         return 0
     }
@@ -5148,7 +5272,7 @@ func join_with(vec[string] values, string sep) string {
     out
 }
 
-func report_failure(string message) int32 {
+func report_failure(string message) int {
     eprintln("backend error: " + message)
     1
 }

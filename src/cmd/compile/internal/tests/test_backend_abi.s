@@ -30,8 +30,8 @@ use std.fs.read_to_string
 use std.fs.write_text_file
 use std.prelude.slice
 
-func run_backend_abi_suite() int32 {
-    var src = "package demo.abi\nfunc pair(int32 a, int32 b) (int32, int32) {\n  a\n}\nfunc big(result[int32, string] a, result[int32, string] b, result[int32, string] c) result[int32, string] {\n  a\n}\nfunc triple(int32 a, int32 b, int32 c) (int32, int32, int32) {\n  a\n}"
+func run_backend_abi_suite() int {
+    var src = "package demo.abi\nfunc pair(int a, int b) (int, int) {\n  a\n}\nfunc big(result[int, string] a, result[int, string] b, result[int, string] c) result[int, string] {\n  a\n}\nfunc triple(int a, int b, int c) (int, int, int) {\n  a\n}"
     var parsed = parse_source(src)
     if parsed.is_err() {
         return 1
@@ -66,6 +66,12 @@ func run_backend_abi_suite() int32 {
         return 1
     }
     if !contains(plan, "callseq=") {
+        return 1
+    }
+    if !contains(plan, "abi_in_regs=") {
+        return 1
+    }
+    if !contains(plan, "abi_spill=") {
         return 1
     }
 
@@ -295,7 +301,7 @@ func run_backend_abi_suite() int32 {
     var e2e_dir = e2e_temp.unwrap()
     var e2e_src_path = e2e_dir + "/select_opt_demo.s"
     var e2e_out_path = e2e_dir + "/select_opt_demo"
-    var e2e_src = "package demo.opte2e\nfunc worker() int32 {\n  chan_send(ch1, 7)\n  0\n}\nfunc main() int32 {\n  var ch1 = chan_make(1)\n  sroutine worker()\n  println(select_recv_timeout(ch1, 2))\n  select_send(ch1, 9)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  0\n}"
+    var e2e_src = "package demo.opte2e\nfunc worker() int {\n  chan_send(ch1, 7)\n  0\n}\nfunc main() int {\n  var ch1 = chan_make(1)\n  sroutine worker()\n  println(select_recv_timeout(ch1, 2))\n  select_send(ch1, 9)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  0\n}"
     if write_text_file(e2e_src_path, e2e_src).is_err() {
         return 1
     }
@@ -311,7 +317,7 @@ func run_backend_abi_suite() int32 {
 
     var e2e_nomaint_src_path = e2e_dir + "/missing_main_demo.s"
     var e2e_nomaint_out_path = e2e_dir + "/missing_main_demo"
-    var e2e_missing_main_src = "package demo.nomian\nfunc helper() int32 {\n  0\n}"
+    var e2e_missing_main_src = "package demo.nomian\nfunc helper() int {\n  0\n}"
     if write_text_file(e2e_nomaint_src_path, e2e_missing_main_src).is_err() {
         return 1
     }
@@ -321,7 +327,7 @@ func run_backend_abi_suite() int32 {
 
     var e2e_semantic_src_path = e2e_dir + "/semantic_fail_demo.s"
     var e2e_semantic_out_path = e2e_dir + "/semantic_fail_demo"
-    var e2e_semantic_fail_src = "package demo.semanticfail\nfunc main() int32 {\n  missing()\n  0\n}"
+    var e2e_semantic_fail_src = "package demo.semanticfail\nfunc main() int {\n  missing()\n  0\n}"
     if write_text_file(e2e_semantic_src_path, e2e_semantic_fail_src).is_err() {
         return 1
     }
@@ -369,7 +375,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var fn_map_src = "package demo.fnmap\nfunc arm64_init() int32 {\n  println(\"arm64\")\n  0\n}\nfunc amd64_init() int32 {\n  println(\"amd64\")\n  0\n}\nfunc main() int32 {\n  var archInits = map[string]func() int32{\"amd64\": amd64_init, \"arm64\": arm64_init}\n  var goarch = \"arm64\"\n  var init = archInits[goarch]\n  init()\n  0\n}"
+    var fn_map_src = "package demo.fnmap\nfunc arm64_init() int {\n  println(\"arm64\")\n  0\n}\nfunc amd64_init() int {\n  println(\"amd64\")\n  0\n}\nfunc main() int {\n  var archInits = map[string]func() int{\"amd64\": amd64_init, \"arm64\": arm64_init}\n  var goarch = \"arm64\"\n  var init = archInits[goarch]\n  init()\n  0\n}"
     var fn_map_parsed = parse_source(fn_map_src)
     if fn_map_parsed.is_err() {
         return 1
@@ -396,7 +402,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var defer_src = "package demo.defer\nfunc main() int32 {\n  defer println(\"cleanup\")\n  println(\"work\")\n  0\n}"
+    var defer_src = "package demo.defer\nfunc main() int {\n  defer println(\"cleanup\")\n  println(\"work\")\n  0\n}"
     var defer_parsed = parse_source(defer_src)
     if defer_parsed.is_err() {
         return 1
@@ -426,7 +432,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var recover_src = "package demo.recover\nfunc handle() int32 {\n  recover()\n  println(\"recovered\")\n  0\n}\nfunc main() int32 {\n  defer handle()\n  panic(\"boom\")\n  0\n}"
+    var recover_src = "package demo.recover\nfunc handle() int {\n  recover()\n  println(\"recovered\")\n  0\n}\nfunc main() int {\n  defer handle()\n  panic(\"boom\")\n  0\n}"
     var recover_parsed = parse_source(recover_src)
     if recover_parsed.is_err() {
         return 1
@@ -453,7 +459,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var sroutine_src = "package demo.sroutine\nfunc worker() int32 {\n  println(\"worker\")\n  0\n}\nfunc main() int32 {\n  sroutine worker()\n  println(\"main\")\n  0\n}"
+    var sroutine_src = "package demo.sroutine\nfunc worker() int {\n  println(\"worker\")\n  0\n}\nfunc main() int {\n  sroutine worker()\n  println(\"main\")\n  0\n}"
     var sroutine_parsed = parse_source(sroutine_src)
     if sroutine_parsed.is_err() {
         return 1
@@ -483,7 +489,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var sroutine_chan_src = "package demo.sroutinechan\nfunc producer1() int32 {\n  chan_send(ch1, 1)\n  chan_send(ch1, 4)\n  0\n}\nfunc producer2() int32 {\n  chan_send(ch2, 2)\n  0\n}\nfunc main() int32 {\n  var ch1 = chan_make(3)\n  var ch2 = chan_make(3)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv_default(ch1, ch2))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
+    var sroutine_chan_src = "package demo.sroutinechan\nfunc producer1() int {\n  chan_send(ch1, 1)\n  chan_send(ch1, 4)\n  0\n}\nfunc producer2() int {\n  chan_send(ch2, 2)\n  0\n}\nfunc main() int {\n  var ch1 = chan_make(3)\n  var ch2 = chan_make(3)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv_default(ch1, ch2))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
     var sroutine_chan_parsed = parse_source(sroutine_chan_src)
     if sroutine_chan_parsed.is_err() {
         return 1
@@ -528,7 +534,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var gc_collect_src = "package demo.gc\nfunc allocate_temp() int32 {\n  var temp = chan_make(1)\n  0\n}\nfunc main() int32 {\n  var survivor = chan_make(1)\n  allocate_temp()\n  gc_collect()\n  println(survivor)\n  0\n}"
+    var gc_collect_src = "package demo.gc\nfunc allocate_temp() int {\n  var temp = chan_make(1)\n  0\n}\nfunc main() int {\n  var survivor = chan_make(1)\n  allocate_temp()\n  gc_collect()\n  println(survivor)\n  0\n}"
     var gc_collect_parsed = parse_source(gc_collect_src)
     if gc_collect_parsed.is_err() {
         return 1
@@ -561,7 +567,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var gc_barrier_src = "package demo.gcbarrier\nfunc main() int32 {\n  var outer = chan_make(1)\n  var inner = chan_make(1)\n  select_send(outer, inner)\n  gc_collect()\n  println(chan_recv(outer))\n  0\n}"
+    var gc_barrier_src = "package demo.gcbarrier\nfunc main() int {\n  var outer = chan_make(1)\n  var inner = chan_make(1)\n  select_send(outer, inner)\n  gc_collect()\n  println(chan_recv(outer))\n  0\n}"
     var gc_barrier_parsed = parse_source(gc_barrier_src)
     if gc_barrier_parsed.is_err() {
         return 1
@@ -591,7 +597,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var gc_auto_src = "package demo.gcauto\nfunc alloc_many() int32 {\n  var a = chan_make(1)\n  var b = chan_make(1)\n  var c = chan_make(1)\n  0\n}\nfunc main() int32 {\n  var survivor = chan_make(1)\n  alloc_many()\n  println(survivor)\n  0\n}"
+    var gc_auto_src = "package demo.gcauto\nfunc alloc_many() int {\n  var a = chan_make(1)\n  var b = chan_make(1)\n  var c = chan_make(1)\n  0\n}\nfunc main() int {\n  var survivor = chan_make(1)\n  alloc_many()\n  println(survivor)\n  0\n}"
     var gc_auto_parsed = parse_source(gc_auto_src)
     if gc_auto_parsed.is_err() {
         return 1
@@ -621,7 +627,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var weighted_timeout_src = "package demo.weighted\nfunc producer1() int32 {\n  chan_send(ch1, 7)\n  0\n}\nfunc producer2() int32 {\n  chan_send(ch2, 9)\n  0\n}\nfunc main() int32 {\n  var ch1 = chan_make(2)\n  var ch2 = chan_make(2)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv_weighted(ch1, 2, ch2, 1))\n  println(select_recv_timeout(ch1, ch2, 3))\n  println(select_recv_timeout(ch1, ch2, 3))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
+    var weighted_timeout_src = "package demo.weighted\nfunc producer1() int {\n  chan_send(ch1, 7)\n  0\n}\nfunc producer2() int {\n  chan_send(ch2, 9)\n  0\n}\nfunc main() int {\n  var ch1 = chan_make(2)\n  var ch2 = chan_make(2)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv_weighted(ch1, 2, ch2, 1))\n  println(select_recv_timeout(ch1, ch2, 3))\n  println(select_recv_timeout(ch1, ch2, 3))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
     var weighted_timeout_parsed = parse_source(weighted_timeout_src)
     if weighted_timeout_parsed.is_err() {
         return 1
@@ -660,7 +666,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var select_send_src = "package demo.selectsend\nfunc main() int32 {\n  var ch1 = chan_make(1)\n  var ch2 = chan_make(1)\n  select_send(ch1, 5, ch2, 6)\n  println(chan_recv(ch1))\n  select_send_default(ch1, 7, ch2, 8)\n  println(chan_recv(ch2))\n  select_send_timeout(ch1, 9, ch2, 10, 2)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
+    var select_send_src = "package demo.selectsend\nfunc main() int {\n  var ch1 = chan_make(1)\n  var ch2 = chan_make(1)\n  select_send(ch1, 5, ch2, 6)\n  println(chan_recv(ch1))\n  select_send_default(ch1, 7, ch2, 8)\n  println(chan_recv(ch2))\n  select_send_timeout(ch1, 9, ch2, 10, 2)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
     var select_send_parsed = parse_source(select_send_src)
     if select_send_parsed.is_err() {
         return 1
@@ -702,7 +708,43 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var sroutine_recover_src = "package demo.srrecover\nfunc recover_worker() int32 {\n  recover()\n  println(\"recover-ok\")\n  0\n}\nfunc worker() int32 {\n  defer recover_worker()\n  println(msg)\n  panic(\"boom\")\n  0\n}\nfunc main() int32 {\n  var msg = \"captured\"\n  sroutine worker()\n  println(\"main\")\n  0\n}"
+    var select_syntax_src = "package demo.selectsyntax\nfunc main() int {\n  var ch1 = chan_make(1)\n  var ch2 = chan_make(1)\n  chan_send(ch1, 5)\n  chan_send(ch2, 7)\n  println(select {\n    case recv(ch1, ch2):\n  })\n  select {\n    case recv(ch1, ch2):\n    case timeout(3):\n  }\n  select {\n    case send(ch1, 8, ch2, 9):\n    case default:\n  }\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
+    var select_syntax_parsed = parse_source(select_syntax_src)
+    if select_syntax_parsed.is_err() {
+        return 1
+    }
+    var select_syntax_graph = lower_main_to_mir(select_syntax_parsed.unwrap())
+    if select_syntax_graph.is_err() {
+        return 1
+    }
+    var select_syntax_writes = compile_writes(select_syntax_parsed.unwrap(), select_syntax_graph.unwrap())
+    if select_syntax_writes.is_err() {
+        return 1
+    }
+    if select_syntax_writes.unwrap().len() != 2 {
+        return 1
+    }
+    if select_syntax_writes.unwrap()[0].text != "5\n" {
+        return 1
+    }
+    if select_syntax_writes.unwrap()[1].text != "8\n" {
+        return 1
+    }
+    var select_syntax_metrics = compile_runtime_metrics(select_syntax_parsed.unwrap(), select_syntax_graph.unwrap())
+    if select_syntax_metrics.is_err() {
+        return 1
+    }
+    if select_syntax_metrics.unwrap().select_attempts != 3 {
+        return 1
+    }
+    if select_syntax_metrics.unwrap().select_timeouts != 1 {
+        return 1
+    }
+    if select_syntax_metrics.unwrap().select_default_fallbacks != 0 {
+        return 1
+    }
+
+    var sroutine_recover_src = "package demo.srrecover\nfunc recover_worker() int {\n  recover()\n  println(\"recover-ok\")\n  0\n}\nfunc worker() int {\n  defer recover_worker()\n  println(msg)\n  panic(\"boom\")\n  0\n}\nfunc main() int {\n  var msg = \"captured\"\n  sroutine worker()\n  println(\"main\")\n  0\n}"
     var sroutine_recover_parsed = parse_source(sroutine_recover_src)
     if sroutine_recover_parsed.is_err() {
         return 1
@@ -728,7 +770,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var const_iota_src = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() int32 {\n  println(C)\n  0\n}"
+    var const_iota_src = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() int {\n  println(C)\n  0\n}"
     var const_iota_parsed = parse_source(const_iota_src)
     if const_iota_parsed.is_err() {
         return 1
@@ -748,7 +790,7 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var const_iota_fail_src = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() int32 {\n  0\n}"
+    var const_iota_fail_src = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() int {\n  0\n}"
     var const_iota_fail_parsed = parse_source(const_iota_fail_src)
     if const_iota_fail_parsed.is_err() {
         return 1
@@ -849,10 +891,10 @@ func validate_emitted_artifacts(string out_path) bool {
     if require_artifact_markers(out_path + ".stackmap", vec[string]("stackmap version=1", "fn main slots=", "bitmap=", "callee_saved=")) == "" {
         return false
     }
-    if require_artifact_markers(out_path + ".abi", vec[string]("abi version=1", "fn main params=0", "pass=", "ret=")) == "" {
+    if require_artifact_markers(out_path + ".abi", vec[string]("abi version=1", "fn main params=0", "pass=", "ret=", "abi_in_regs=", "abi_summary=")) == "" {
         return false
     }
-    if require_artifact_markers(out_path + ".abi.emit", vec[string]("abi-emit version=1", "fn main", "ret_arity=1", "callseq=")) == "" {
+    if require_artifact_markers(out_path + ".abi.emit", vec[string]("abi-emit version=1", "fn main", "ret_arity=1", "callseq=", "abi_in_regs=")) == "" {
         return false
     }
     if require_artifact_markers(out_path + ".export", vec[string]("export-data version=1", "fn worker params=0 generics=0", "fn main params=0 generics=0")) == "" {

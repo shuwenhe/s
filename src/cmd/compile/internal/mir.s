@@ -16,16 +16,16 @@ struct mir_operand {
 }
 
 struct mir_local_slot {
-    int32 id
+    int id
     string name
     string kind
-    int32 version
+    int version
     string type_name
     bool copyable
 }
 
 struct mir_assign_stmt {
-    int32 target
+    int target
     string op
     vec[string] args
 }
@@ -36,17 +36,17 @@ struct mir_eval_stmt {
 }
 
 struct mir_move_stmt {
-    int32 target
+    int target
     mir_operand source
 }
 
 struct mir_copy_stmt {
-    int32 target
+    int target
     mir_operand source
 }
 
 struct mir_drop_stmt {
-    int32 slot
+    int slot
 }
 
 enum mir_statement {
@@ -59,7 +59,7 @@ enum mir_statement {
 
 struct mir_control_edge {
     string label
-    int32 target
+    int target
     vec[mir_operand] args
 }
 
@@ -69,7 +69,7 @@ struct mir_terminator {
 }
 
 struct mir_basic_block {
-    int32 id
+    int id
     string label
     vec[mir_statement] statements
     mir_terminator terminator
@@ -80,8 +80,8 @@ struct mir_graph {
     vec[mir_basic_block] blocks
     vec[mir_local_slot] locals
     vec[string] trace
-    int32 entry
-    int32 exit
+    int entry
+    int exit
 }
 
 func lower_function_graph(function_decl function) mir_graph {
@@ -185,7 +185,7 @@ func dump_graph(mir_graph graph) string {
     out
 }
 
-func block_count(mir_graph graph) int32 {
+func block_count(mir_graph graph) int {
     graph.blocks.len()
 }
 
@@ -230,7 +230,7 @@ func trace_switch(string subject_text, string arms_text) string {
     return "switch " + subject_text + " | " + arms_text
 }
 
-func indent(int32 depth) string {
+func indent(int depth) string {
     var out = ""
     var i = 0
     while i < depth {

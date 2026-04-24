@@ -13,7 +13,7 @@ use compile.internal.mir.mir_terminator
 use compile.internal.mir.mir_statement
 use std.vec.vec
 
-func run_mir_suite() int32 {
+func run_mir_suite() int {
     if trace_branch("flag", "then", "else") != "branch flag |   then then |   else else" {
         return 1
     }
