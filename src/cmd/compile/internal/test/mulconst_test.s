@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_mulconst_test() int {
-    0
+func mulconst_test_unit_name() string {
+    "test/mulconst_test.s"
+}
+
+func mulconst_test_unit_ready() int {
+    1
 }

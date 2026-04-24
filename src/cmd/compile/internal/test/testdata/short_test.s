@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_short_test() int {
-    0
+func short_test_unit_name() string {
+    "test/testdata/short_test.s"
+}
+
+func short_test_unit_ready() int {
+    1
 }

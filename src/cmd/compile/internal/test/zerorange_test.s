@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_zerorange_test() int {
-    0
+func zerorange_test_unit_name() string {
+    "test/zerorange_test.s"
+}
+
+func zerorange_test_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_passbm_test() int {
-    0
+func passbm_test_unit_name() string {
+    "ssa/passbm_test.s"
+}
+
+func passbm_test_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_export_test() int {
-    0
+func export_test_unit_name() string {
+    "ssa/export_test.s"
+}
+
+func export_test_unit_ready() int {
+    1
 }

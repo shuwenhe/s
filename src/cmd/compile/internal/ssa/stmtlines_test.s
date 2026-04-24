@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_stmtlines_test() int {
-    0
+func stmtlines_test_unit_name() string {
+    "ssa/stmtlines_test.s"
+}
+
+func stmtlines_test_unit_ready() int {
+    1
 }

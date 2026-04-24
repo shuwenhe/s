@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_writebarrier_test() int {
-    0
+func writebarrier_test_unit_name() string {
+    "ssa/writebarrier_test.s"
+}
+
+func writebarrier_test_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_cmp_test() int {
-    0
+func cmp_test_unit_name() string {
+    "test/testdata/cmp_test.s"
+}
+
+func cmp_test_unit_ready() int {
+    1
 }

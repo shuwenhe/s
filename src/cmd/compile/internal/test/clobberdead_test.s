@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_clobberdead_test() int {
-    0
+func clobberdead_test_unit_name() string {
+    "test/clobberdead_test.s"
+}
+
+func clobberdead_test_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_loadstore_test() int {
-    0
+func loadstore_test_unit_name() string {
+    "test/testdata/loadstore_test.s"
+}
+
+func loadstore_test_unit_ready() int {
+    1
 }

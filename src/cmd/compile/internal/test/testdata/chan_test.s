@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_chan_test() int {
-    0
+func chan_test_unit_name() string {
+    "test/testdata/chan_test.s"
+}
+
+func chan_test_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_sizeof_test() int {
-    0
+func sizeof_test_unit_name() string {
+    "ir/sizeof_test.s"
+}
+
+func sizeof_test_unit_ready() int {
+    1
 }

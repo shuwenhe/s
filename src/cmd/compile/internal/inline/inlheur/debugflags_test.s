@@ -1,5 +1,9 @@
 package compile.internal.inline.inlheur
 
-func stub_debugflags_test() int {
-    0
+func debugflags_test_unit_name() string {
+    "inline/inlheur/debugflags_test.s"
+}
+
+func debugflags_test_unit_ready() int {
+    1
 }

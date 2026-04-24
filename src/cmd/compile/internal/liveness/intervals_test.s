@@ -1,5 +1,9 @@
 package compile.internal.liveness
 
-func stub_intervals_test() int {
-    0
+func intervals_test_unit_name() string {
+    "liveness/intervals_test.s"
+}
+
+func intervals_test_unit_ready() int {
+    1
 }

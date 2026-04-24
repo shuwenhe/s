@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_deadcode_test() int {
-    0
+func deadcode_test_unit_name() string {
+    "ssa/deadcode_test.s"
+}
+
+func deadcode_test_unit_ready() int {
+    1
 }

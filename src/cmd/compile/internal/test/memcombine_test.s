@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_memcombine_test() int {
-    0
+func memcombine_test_unit_name() string {
+    "test/memcombine_test.s"
+}
+
+func memcombine_test_unit_ready() int {
+    1
 }

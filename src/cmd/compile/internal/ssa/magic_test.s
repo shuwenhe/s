@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_magic_test() int {
-    0
+func magic_test_unit_name() string {
+    "ssa/magic_test.s"
+}
+
+func magic_test_unit_ready() int {
+    1
 }

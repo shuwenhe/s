@@ -1,5 +1,9 @@
 package compile.internal.importer
 
-func stub_gcimporter_test() int {
-    0
+func gcimporter_test_unit_name() string {
+    "importer/gcimporter_test.s"
+}
+
+func gcimporter_test_unit_ready() int {
+    1
 }
