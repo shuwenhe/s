@@ -241,6 +241,105 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, ",dominant=") {
         return 1
     }
+    if !contains(arm64_dump, "issa_blocks=") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_values=") {
+        return 1
+    }
+    if !contains(arm64_dump, "dom_depth=") {
+        return 1
+    }
+    if !contains(arm64_dump, "backedges=") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_verify=") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_verify=0") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_verify_code=0") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_verify_flags=ok") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_verify_primary=ok") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_verify_stage=none") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_verify_evidence=none") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_verify_pick_top=true") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_verify_pick_reason=ok") {
+        return 1
+    }
+    if !contains(arm64_dump, "memssa_nodes=") {
+        return 1
+    }
+    if !contains(arm64_dump, "pts_sets=") {
+        return 1
+    }
+    if !contains(arm64_dump, "ls_proofs=") {
+        return 1
+    }
+    if !contains(arm64_dump, "spill_pairs=") {
+        return 1
+    }
+    if !contains(arm64_dump, "pcopy_resolved=") {
+        return 1
+    }
+    if !contains(arm64_dump, "esc_stack=") {
+        return 1
+    }
+    if !contains(arm64_dump, "esc_heap=") {
+        return 1
+    }
+    if !contains(arm64_dump, "inl_budget=") {
+        return 1
+    }
+    if !contains(arm64_dump, "devirt_gain=") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_bbg=bbg(") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_vgraph=vgraph(") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_dom=dom(") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_loops=loops(") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_mdep=mdep(") {
+        return 1
+    }
+    if !contains(arm64_dump, "issa_rplan=rplan(") {
+        return 1
+    }
+    if !contains(arm64_dump, "bb0->bb1") {
+        return 1
+    }
+    if !contains(arm64_dump, "v0->v1") {
+        return 1
+    }
+    if !contains(arm64_dump, "bb0>bb1") {
+        return 1
+    }
+    if !contains(arm64_dump, "sample=store0->load0") {
+        return 1
+    }
+    if !contains(arm64_dump, "sample=pcopy(v0->v1)") {
+        return 1
+    }
 
     var margin_override_dump = dump_pipeline(build_pipeline_with_margin(mir_text, "arm64", 99))
     if !contains(margin_override_dump, "delta_hot=") {
@@ -264,6 +363,74 @@ func run_ssa_suite() int32 {
     }
     var hot_forced_balanced = build_pass_delta_hot_summary("constfold=6,gvn=4", "constfold=1,gvn=0", 99)
     if !contains(hot_forced_balanced, ",margin=99,dominant=balanced") {
+        return 1
+    }
+
+    var tie_reason = instruction_verify_pick_reason("shape", "cfg=1,rerun=1", "cfg")
+    if tie_reason != "tie-break" {
+        return 1
+    }
+    var fallback_reason = instruction_verify_pick_reason("shape", "cfg=2,rerun=1", "rerun")
+    if fallback_reason != "fallback" {
+        return 1
+    }
+
+    var invalid_dump = dump_pipeline(build_pipeline("broken", "amd64"))
+    if !contains(invalid_dump, "issa_verify=") {
+        return 1
+    }
+    if contains(invalid_dump, "issa_verify=0") {
+        return 1
+    }
+    if !contains(invalid_dump, "issa_verify_code=") {
+        return 1
+    }
+    if contains(invalid_dump, "issa_verify_code=0") {
+        return 1
+    }
+    if !contains(invalid_dump, "issa_verify_flags=") {
+        return 1
+    }
+    if contains(invalid_dump, "issa_verify_flags=ok") {
+        return 1
+    }
+    if !contains(invalid_dump, "issa_verify_primary=") {
+        return 1
+    }
+    if contains(invalid_dump, "issa_verify_primary=ok") {
+        return 1
+    }
+    if !contains(invalid_dump, "issa_verify_stage=") {
+        return 1
+    }
+    if contains(invalid_dump, "issa_verify_stage=none") {
+        return 1
+    }
+    if !contains(invalid_dump, "issa_verify_evidence=") {
+        return 1
+    }
+    if contains(invalid_dump, "issa_verify_evidence=none") {
+        return 1
+    }
+    if !contains(invalid_dump, "primary=") {
+        return 1
+    }
+    if !contains(invalid_dump, "picked=") {
+        return 1
+    }
+    if !contains(invalid_dump, "top=") {
+        return 1
+    }
+    if !contains(invalid_dump, "second=") {
+        return 1
+    }
+    if !contains(invalid_dump, "issa_verify_pick_top=true") {
+        return 1
+    }
+    if !contains(invalid_dump, "issa_verify_pick_reason=") {
+        return 1
+    }
+    if contains(invalid_dump, "issa_verify_pick_reason=ok") {
         return 1
     }
 
