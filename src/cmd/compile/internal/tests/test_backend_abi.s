@@ -5,12 +5,15 @@ use compile.internal.backend_elf64.build_dwarf_like_artifact
 use compile.internal.backend_elf64.build_gc_metadata_artifact
 use compile.internal.backend_elf64.build_abi_machine_matrix_artifact
 use compile.internal.backend_elf64.build_toolchain_compat_artifact
+use compile.internal.backend_elf64.build_go_asm_bridge_artifact
 use compile.internal.backend_elf64.build_backend_perf_baseline_artifact
 use compile.internal.backend_elf64.build_cfi_artifact
 use compile.internal.backend_elf64.build_wasm_binary_probe_plan
 use compile.internal.backend_elf64.compile_writes
 use compile.internal.backend_elf64.compile_exit_code
+use compile.internal.backend_elf64.translate_go_plan9_to_gas
 use compile.internal.backend_elf64.validate_cfi_artifact
+use compile.internal.backend_elf64.validate_go_asm_bridge_artifact
 use compile.internal.backend_elf64.validate_ssa_abi_contracts
 use compile.internal.backend_elf64.validate_wasi_contract_source
 use compile.internal.ir.lower.lower_main_to_mir
@@ -155,7 +158,67 @@ func run_backend_abi_suite() int32 {
     if !contains(toolchain, "interop cgo=") {
         return 1
     }
+    if !contains(toolchain, "asm=go-plan9-min") {
+        return 1
+    }
+    if !contains(toolchain, "go_asm syntax=plan9 translator=enabled status=ok") {
+        return 1
+    }
     if !contains(toolchain, "go_equiv ") {
+        return 1
+    }
+
+    var go_asm_src = "TEXT main(SB),$0-0\nMOVQ $7, AX\nADDQ $3, AX\nRET\n"
+    var gas = translate_go_plan9_to_gas("amd64", go_asm_src)
+    if gas.is_err() {
+        return 1
+    }
+    if !contains(gas.unwrap(), ".globl main") {
+        return 1
+    }
+    if !contains(gas.unwrap(), "movq $7, %rax") {
+        return 1
+    }
+    if !contains(gas.unwrap(), "addq $3, %rax") {
+        return 1
+    }
+    if !contains(gas.unwrap(), "ret") {
+        return 1
+    }
+
+    var asm_artifact = build_go_asm_bridge_artifact("amd64", go_asm_src)
+    if validate_go_asm_bridge_artifact(asm_artifact).is_err() {
+        return 1
+    }
+
+    var bad_go_asm = "MOVQ $1, AX\nRET\n"
+    if translate_go_plan9_to_gas("amd64", bad_go_asm).is_ok() {
+        return 1
+    }
+
+    var go_asm_ctrl = "TEXT helper(SB),$0-0\nMOVQ ret+8(FP), AX\nRET\nTEXT main(SB),$0-0\nCALL helper(SB)\nCMPQ AX, AX\nJE done\nJMP done\ndone:\nRET\n"
+    var gas_ctrl = translate_go_plan9_to_gas("amd64", go_asm_ctrl)
+    if gas_ctrl.is_err() {
+        return 1
+    }
+    if !contains(gas_ctrl.unwrap(), "helper:") {
+        return 1
+    }
+    if !contains(gas_ctrl.unwrap(), "movq 8(%rbp), %rax") {
+        return 1
+    }
+    if !contains(gas_ctrl.unwrap(), "call helper") {
+        return 1
+    }
+    if !contains(gas_ctrl.unwrap(), "je done") {
+        return 1
+    }
+    if !contains(gas_ctrl.unwrap(), "done:") {
+        return 1
+    }
+
+    var bad_go_asm_base = "TEXT main(SB),$0-0\nMOVQ 0(X0), AX\nRET\n"
+    if translate_go_plan9_to_gas("amd64", bad_go_asm_base).is_ok() {
         return 1
     }
 
