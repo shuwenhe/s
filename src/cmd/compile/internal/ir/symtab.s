@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_symtab() int {
-    0
+func symtab_unit_name() string {
+    "ir/symtab.s"
+}
+
+func symtab_unit_ready() int {
+    1
 }

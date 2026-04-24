@@ -1,5 +1,9 @@
 package compile.internal.inline.inlheur.testdata.props
 
-func stub_returns() int {
-    0
+func returns_unit_name() string {
+    "inline/inlheur/testdata/props/returns.s"
+}
+
+func returns_unit_ready() int {
+    1
 }

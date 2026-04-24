@@ -1,5 +1,9 @@
 package compile.internal.liveness
 
-func stub_arg() int {
-    0
+func arg_unit_name() string {
+    "liveness/arg.s"
+}
+
+func arg_unit_ready() int {
+    1
 }

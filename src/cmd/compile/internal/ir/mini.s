@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_mini() int {
-    0
+func mini_unit_name() string {
+    "ir/mini.s"
+}
+
+func mini_unit_ready() int {
+    1
 }

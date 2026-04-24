@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_reassign_consistency_check() int {
-    0
+func reassign_consistency_check_unit_name() string {
+    "ir/reassign_consistency_check.s"
+}
+
+func reassign_consistency_check_unit_ready() int {
+    1
 }
