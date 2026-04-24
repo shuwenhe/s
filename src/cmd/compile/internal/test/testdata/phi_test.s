@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_phi_test() int {
-    0
+func phi_test_unit_name() string {
+    "test/testdata/phi_test.s"
+}
+
+func phi_test_unit_ready() int {
+    1
 }

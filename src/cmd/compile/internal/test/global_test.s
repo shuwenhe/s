@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_global_test() int {
-    0
+func global_test_unit_name() string {
+    "test/global_test.s"
+}
+
+func global_test_unit_ready() int {
+    1
 }

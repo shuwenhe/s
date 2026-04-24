@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_arithboundary_test() int {
-    0
+func arithBoundary_test_unit_name() string {
+    "test/testdata/arithBoundary_test.s"
+}
+
+func arithBoundary_test_unit_ready() int {
+    1
 }

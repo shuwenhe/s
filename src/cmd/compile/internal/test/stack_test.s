@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_stack_test() int {
-    0
+func stack_test_unit_name() string {
+    "test/stack_test.s"
+}
+
+func stack_test_unit_ready() int {
+    1
 }

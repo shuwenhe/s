@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_rewrite_test() int {
-    0
+func rewrite_test_unit_name() string {
+    "ssa/rewrite_test.s"
+}
+
+func rewrite_test_unit_ready() int {
+    1
 }

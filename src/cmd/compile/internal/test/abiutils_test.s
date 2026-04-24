@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_abiutils_test() int {
-    0
+func abiutils_test_unit_name() string {
+    "test/abiutils_test.s"
+}
+
+func abiutils_test_unit_ready() int {
+    1
 }

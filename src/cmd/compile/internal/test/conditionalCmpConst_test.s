@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_conditionalcmpconst_test() int {
-    0
+func conditionalCmpConst_test_unit_name() string {
+    "test/conditionalCmpConst_test.s"
+}
+
+func conditionalCmpConst_test_unit_ready() int {
+    1
 }

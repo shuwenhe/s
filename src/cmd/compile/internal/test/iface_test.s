@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_iface_test() int {
-    0
+func iface_test_unit_name() string {
+    "test/iface_test.s"
+}
+
+func iface_test_unit_ready() int {
+    1
 }

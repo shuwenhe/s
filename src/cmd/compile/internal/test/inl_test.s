@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_inl_test() int {
-    0
+func inl_test_unit_name() string {
+    "test/inl_test.s"
+}
+
+func inl_test_unit_ready() int {
+    1
 }

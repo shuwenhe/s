@@ -1,5 +1,9 @@
 package compile.internal.loopvar
 
-func stub_loopvar_test() int {
-    0
+func loopvar_test_unit_name() string {
+    "loopvar/loopvar_test.s"
+}
+
+func loopvar_test_unit_ready() int {
+    1
 }

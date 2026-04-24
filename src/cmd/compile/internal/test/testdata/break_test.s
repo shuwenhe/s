@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_break_test() int {
-    0
+func break_test_unit_name() string {
+    "test/testdata/break_test.s"
+}
+
+func break_test_unit_ready() int {
+    1
 }

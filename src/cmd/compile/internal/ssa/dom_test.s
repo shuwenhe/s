@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_dom_test() int {
-    0
+func dom_test_unit_name() string {
+    "ssa/dom_test.s"
+}
+
+func dom_test_unit_ready() int {
+    1
 }

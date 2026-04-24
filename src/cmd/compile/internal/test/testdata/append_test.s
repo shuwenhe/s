@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_append_test() int {
-    0
+func append_test_unit_name() string {
+    "test/testdata/append_test.s"
+}
+
+func append_test_unit_ready() int {
+    1
 }

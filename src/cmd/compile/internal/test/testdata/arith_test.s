@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_arith_test() int {
-    0
+func arith_test_unit_name() string {
+    "test/testdata/arith_test.s"
+}
+
+func arith_test_unit_ready() int {
+    1
 }

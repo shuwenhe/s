@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_closure_test() int {
-    0
+func closure_test_unit_name() string {
+    "test/testdata/closure_test.s"
+}
+
+func closure_test_unit_ready() int {
+    1
 }

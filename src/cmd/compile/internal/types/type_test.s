@@ -1,5 +1,9 @@
 package compile.internal.types
 
-func stub_type_test() int {
-    0
+func type_test_unit_name() string {
+    "types/type_test.s"
+}
+
+func type_test_unit_ready() int {
+    1
 }

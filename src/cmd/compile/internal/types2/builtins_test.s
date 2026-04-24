@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_builtins_test() int {
-    0
+func builtins_test_unit_name() string {
+    "types2/builtins_test.s"
+}
+
+func builtins_test_unit_ready() int {
+    1
 }

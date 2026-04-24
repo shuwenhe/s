@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_addressed_test() int {
-    0
+func addressed_test_unit_name() string {
+    "test/testdata/addressed_test.s"
+}
+
+func addressed_test_unit_ready() int {
+    1
 }

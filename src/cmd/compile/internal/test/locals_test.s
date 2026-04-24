@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_locals_test() int {
-    0
+func locals_test_unit_name() string {
+    "test/locals_test.s"
+}
+
+func locals_test_unit_ready() int {
+    1
 }
