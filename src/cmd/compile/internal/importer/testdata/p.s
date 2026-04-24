@@ -1,5 +1,9 @@
 package compile.internal.importer.testdata
 
-func stub_p() int {
-    0
+func p_unit_name() string {
+    "importer/testdata/p.s"
+}
+
+func p_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.escape
 
-func stub_call() int {
-    0
+func call_unit_name() string {
+    "escape/call.s"
+}
+
+func call_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.escape
 
-func stub_leaks() int {
-    0
+func leaks_unit_name() string {
+    "escape/leaks.s"
+}
+
+func leaks_unit_ready() int {
+    1
 }

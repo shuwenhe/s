@@ -1,5 +1,9 @@
 package compile.internal.escape
 
-func stub_solve() int {
-    0
+func solve_unit_name() string {
+    "escape/solve.s"
+}
+
+func solve_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.inline.inlheur
 
-func stub_eclassify() int {
-    0
+func eclassify_unit_name() string {
+    "inline/inlheur/eclassify.s"
+}
+
+func eclassify_unit_ready() int {
+    1
 }

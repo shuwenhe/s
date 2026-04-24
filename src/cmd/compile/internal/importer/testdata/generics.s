@@ -1,5 +1,9 @@
 package compile.internal.importer.testdata
 
-func stub_generics() int {
-    0
+func generics_unit_name() string {
+    "importer/testdata/generics.s"
+}
+
+func generics_unit_ready() int {
+    1
 }

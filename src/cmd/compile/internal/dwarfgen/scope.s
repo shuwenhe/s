@@ -1,5 +1,9 @@
 package compile.internal.dwarfgen
 
-func stub_scope() int {
-    0
+func scope_unit_name() string {
+    "dwarfgen/scope.s"
+}
+
+func scope_unit_ready() int {
+    1
 }

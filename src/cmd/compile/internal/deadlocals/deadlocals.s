@@ -1,5 +1,9 @@
 package compile.internal.deadlocals
 
-func stub_deadlocals() int {
-    0
+func deadlocals_unit_name() string {
+    "deadlocals/deadlocals.s"
+}
+
+func deadlocals_unit_ready() int {
+    1
 }

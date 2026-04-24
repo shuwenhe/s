@@ -1,5 +1,9 @@
 package compile.internal.inline.inlheur
 
-func stub_parampropbits_string() int {
-    0
+func parampropbits_string_unit_name() string {
+    "inline/inlheur/parampropbits_string.s"
+}
+
+func parampropbits_string_unit_ready() int {
+    1
 }
