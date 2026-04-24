@@ -1,5 +1,9 @@
 package compile.internal.ssa._gen
 
-func stub_simdamd64ops() int {
-    0
+func simdAMD64ops_unit_name() string {
+    "ssa/_gen/simdAMD64ops.s"
+}
+
+func simdAMD64ops_unit_ready() int {
+    1
 }

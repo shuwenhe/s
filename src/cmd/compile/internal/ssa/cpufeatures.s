@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_cpufeatures() int {
-    0
+func cpufeatures_unit_name() string {
+    "ssa/cpufeatures.s"
+}
+
+func cpufeatures_unit_ready() int {
+    1
 }

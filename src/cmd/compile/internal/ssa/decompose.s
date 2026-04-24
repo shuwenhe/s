@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_decompose() int {
-    0
+func decompose_unit_name() string {
+    "ssa/decompose.s"
+}
+
+func decompose_unit_ready() int {
+    1
 }

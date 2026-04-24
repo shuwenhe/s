@@ -1,5 +1,9 @@
 package compile.internal.ssa._gen
 
-func stub_armops() int {
-    0
+func ARMOps_unit_name() string {
+    "ssa/_gen/ARMOps.s"
+}
+
+func ARMOps_unit_ready() int {
+    1
 }
