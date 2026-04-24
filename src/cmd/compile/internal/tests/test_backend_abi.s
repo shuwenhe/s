@@ -7,17 +7,27 @@ use compile.internal.backend_elf64.build_abi_machine_matrix_artifact
 use compile.internal.backend_elf64.build_toolchain_compat_artifact
 use compile.internal.backend_elf64.build_go_asm_bridge_artifact
 use compile.internal.backend_elf64.build_backend_perf_baseline_artifact
+use compile.internal.backend_elf64.build_midend_opt_artifact
+use compile.internal.backend_elf64.build
 use compile.internal.backend_elf64.build_cfi_artifact
 use compile.internal.backend_elf64.build_wasm_binary_probe_plan
 use compile.internal.backend_elf64.compile_writes
 use compile.internal.backend_elf64.compile_exit_code
+use compile.internal.backend_elf64.compile_runtime_metrics
 use compile.internal.backend_elf64.translate_go_plan9_to_gas
+use compile.internal.backend_elf64.validate_backend_perf_baseline
 use compile.internal.backend_elf64.validate_cfi_artifact
+use compile.internal.backend_elf64.validate_dwarf_consumability
 use compile.internal.backend_elf64.validate_go_asm_bridge_artifact
+use compile.internal.backend_elf64.validate_midend_opt_artifact
 use compile.internal.backend_elf64.validate_ssa_abi_contracts
+use compile.internal.backend_elf64.validate_toolchain_compat_artifact
 use compile.internal.backend_elf64.validate_wasi_contract_source
 use compile.internal.ir.lower.lower_main_to_mir
 use compile.internal.syntax.parse_source
+use std.fs.make_temp_dir
+use std.fs.read_to_string
+use std.fs.write_text_file
 use std.prelude.slice
 
 func run_backend_abi_suite() int32 {
@@ -222,7 +232,12 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
-    var perf = build_backend_perf_baseline_artifact("amd64", "ssa pair blocks=2 values=4 spills=2 splits=1 remat=1 sched_tp=8 sched_lat=5", "midend inline_sites=2")
+    var perf = build_backend_perf_baseline_artifact(
+        "amd64",
+        "ssa pair blocks=2 values=4 spills=2 splits=1 remat=1 sched_tp=8 sched_lat=5",
+        "midend inline_sites=2 sroutine_sites=1 select_weighted_sites=1 select_timeout_sites=1 select_send_sites=1",
+        "runtime_sched sroutine_scheduled=1 sroutine_completed=1 sroutine_panics=0 sroutine_recovered=0 sroutine_yields=1 select_attempts=2 select_default_fallbacks=1 select_timeouts=1 channels=1 channel_sends=1 channel_recvs=1 channel_closed=1"
+    )
     if !contains(perf, "perf-baseline version=1") {
         return 1
     }
@@ -233,6 +248,78 @@ func run_backend_abi_suite() int32 {
         return 1
     }
     if !contains(perf, "regression_gate_arch ") {
+        return 1
+    }
+    if !contains(perf, "scheduler queue_policy=priority-rr select_policy=multi-chan-priority-rr") {
+        return 1
+    }
+    if !contains(perf, "select_weighted_sites=1 select_timeout_sites=1 select_send_sites=1") {
+        return 1
+    }
+    if !contains(perf, "runtime_sched sroutine_scheduled=") {
+        return 1
+    }
+    if !contains(perf, "scheduler_counters select_default_fallbacks=1 select_timeouts=1") {
+        return 1
+    }
+
+    var opt = build_midend_opt_artifact(
+        "midend inline_sites=2 escape_sites=1 devirtualized=1 cross_pkg_inline=0 const_prop=1 sroutine_sites=1 select_weighted_sites=1 select_timeout_sites=1 select_send_sites=1 const_fold_hits=2 ipo_synergy=3 pass_rm_unreachable=1 pass_fold_branch=1 pass_simplify_j2r=0 pass_trim_unit=0 pass_dedup=1"
+    )
+    if !contains(opt, "midend-opt version=1") {
+        return 1
+    }
+    if !contains(opt, "report midend inline_sites=2") {
+        return 1
+    }
+    if !contains(opt, "scheduler_opt sroutine_sites=1 select_weighted_sites=1 select_timeout_sites=1 select_send_sites=1") {
+        return 1
+    }
+    if !contains(opt, "passes rm_unreachable=1 fold_branch=1 simplify_j2r=0 trim_unit=0 dedup=1 ipo_synergy=3") {
+        return 1
+    }
+    if validate_midend_opt_artifact(opt).is_err() {
+        return 1
+    }
+
+    var e2e_temp = make_temp_dir("s-opt-e2e-")
+    if e2e_temp.is_err() {
+        return 1
+    }
+    var e2e_dir = e2e_temp.unwrap()
+    var e2e_src_path = e2e_dir + "/select_opt_demo.s"
+    var e2e_out_path = e2e_dir + "/select_opt_demo"
+    var e2e_src = "package demo.opte2e\nfunc worker() int32 {\n  chan_send(ch1, 7)\n  0\n}\nfunc main() int32 {\n  var ch1 = chan_make(1)\n  sroutine worker()\n  println(select_recv_timeout(ch1, 2))\n  select_send(ch1, 9)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  0\n}"
+    if write_text_file(e2e_src_path, e2e_src).is_err() {
+        return 1
+    }
+    if build(e2e_src_path, e2e_out_path, "") != 0 {
+        return 1
+    }
+    if !validate_emitted_artifacts(e2e_out_path) {
+        return 1
+    }
+    if build(e2e_src_path, e2e_out_path + ".badmargin", "oops") == 0 {
+        return 1
+    }
+
+    var e2e_nomaint_src_path = e2e_dir + "/missing_main_demo.s"
+    var e2e_nomaint_out_path = e2e_dir + "/missing_main_demo"
+    var e2e_missing_main_src = "package demo.nomian\nfunc helper() int32 {\n  0\n}"
+    if write_text_file(e2e_nomaint_src_path, e2e_missing_main_src).is_err() {
+        return 1
+    }
+    if build(e2e_nomaint_src_path, e2e_nomaint_out_path, "") == 0 {
+        return 1
+    }
+
+    var e2e_semantic_src_path = e2e_dir + "/semantic_fail_demo.s"
+    var e2e_semantic_out_path = e2e_dir + "/semantic_fail_demo"
+    var e2e_semantic_fail_src = "package demo.semanticfail\nfunc main() int32 {\n  missing()\n  0\n}"
+    if write_text_file(e2e_semantic_src_path, e2e_semantic_fail_src).is_err() {
+        return 1
+    }
+    if build(e2e_semantic_src_path, e2e_semantic_out_path, "") == 0 {
         return 1
     }
 
@@ -360,6 +447,188 @@ func run_backend_abi_suite() int32 {
         return 1
     }
 
+    var sroutine_src = "package demo.sroutine\nfunc worker() int32 {\n  println(\"worker\")\n  0\n}\nfunc main() int32 {\n  sroutine worker()\n  println(\"main\")\n  0\n}"
+    var sroutine_parsed = parse_source(sroutine_src)
+    if sroutine_parsed.is_err() {
+        return 1
+    }
+    var sroutine_graph = lower_main_to_mir(sroutine_parsed.unwrap())
+    if sroutine_graph.is_err() {
+        return 1
+    }
+    var sroutine_writes = compile_writes(sroutine_parsed.unwrap(), sroutine_graph.unwrap())
+    if sroutine_writes.is_err() {
+        return 1
+    }
+    if sroutine_writes.unwrap().len() != 2 {
+        return 1
+    }
+    if sroutine_writes.unwrap()[0].text != "worker\n" {
+        return 1
+    }
+    if sroutine_writes.unwrap()[1].text != "main\n" {
+        return 1
+    }
+    var sroutine_exit = compile_exit_code(sroutine_parsed.unwrap(), sroutine_graph.unwrap())
+    if sroutine_exit.is_err() {
+        return 1
+    }
+    if sroutine_exit.unwrap() != 0 {
+        return 1
+    }
+
+    var sroutine_chan_src = "package demo.sroutinechan\nfunc producer1() int32 {\n  chan_send(ch1, 1)\n  chan_send(ch1, 4)\n  0\n}\nfunc producer2() int32 {\n  chan_send(ch2, 2)\n  0\n}\nfunc main() int32 {\n  var ch1 = chan_make(3)\n  var ch2 = chan_make(3)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv_default(ch1, ch2))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
+    var sroutine_chan_parsed = parse_source(sroutine_chan_src)
+    if sroutine_chan_parsed.is_err() {
+        return 1
+    }
+    var sroutine_chan_graph = lower_main_to_mir(sroutine_chan_parsed.unwrap())
+    if sroutine_chan_graph.is_err() {
+        return 1
+    }
+    var sroutine_chan_writes = compile_writes(sroutine_chan_parsed.unwrap(), sroutine_chan_graph.unwrap())
+    if sroutine_chan_writes.is_err() {
+        return 1
+    }
+    if sroutine_chan_writes.unwrap().len() != 4 {
+        return 1
+    }
+    if sroutine_chan_writes.unwrap()[0].text != "1\n" {
+        return 1
+    }
+    if sroutine_chan_writes.unwrap()[1].text != "2\n" {
+        return 1
+    }
+    if sroutine_chan_writes.unwrap()[2].text != "4\n" {
+        return 1
+    }
+    if sroutine_chan_writes.unwrap()[3].text != "()\n" {
+        return 1
+    }
+    var sroutine_chan_metrics = compile_runtime_metrics(sroutine_chan_parsed.unwrap(), sroutine_chan_graph.unwrap())
+    if sroutine_chan_metrics.is_err() {
+        return 1
+    }
+    if sroutine_chan_metrics.unwrap().select_attempts != 4 {
+        return 1
+    }
+    if sroutine_chan_metrics.unwrap().select_default_fallbacks != 1 {
+        return 1
+    }
+    if sroutine_chan_metrics.unwrap().channel_sends != 3 {
+        return 1
+    }
+    if sroutine_chan_metrics.unwrap().channel_recvs != 3 {
+        return 1
+    }
+
+    var weighted_timeout_src = "package demo.weighted\nfunc producer1() int32 {\n  chan_send(ch1, 7)\n  0\n}\nfunc producer2() int32 {\n  chan_send(ch2, 9)\n  0\n}\nfunc main() int32 {\n  var ch1 = chan_make(2)\n  var ch2 = chan_make(2)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv_weighted(ch1, 2, ch2, 1))\n  println(select_recv_timeout(ch1, ch2, 3))\n  println(select_recv_timeout(ch1, ch2, 3))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
+    var weighted_timeout_parsed = parse_source(weighted_timeout_src)
+    if weighted_timeout_parsed.is_err() {
+        return 1
+    }
+    var weighted_timeout_graph = lower_main_to_mir(weighted_timeout_parsed.unwrap())
+    if weighted_timeout_graph.is_err() {
+        return 1
+    }
+    var weighted_timeout_writes = compile_writes(weighted_timeout_parsed.unwrap(), weighted_timeout_graph.unwrap())
+    if weighted_timeout_writes.is_err() {
+        return 1
+    }
+    if weighted_timeout_writes.unwrap().len() != 3 {
+        return 1
+    }
+    if weighted_timeout_writes.unwrap()[0].text != "7\n" {
+        return 1
+    }
+    if weighted_timeout_writes.unwrap()[1].text != "9\n" {
+        return 1
+    }
+    if weighted_timeout_writes.unwrap()[2].text != "()\n" {
+        return 1
+    }
+    var weighted_timeout_metrics = compile_runtime_metrics(weighted_timeout_parsed.unwrap(), weighted_timeout_graph.unwrap())
+    if weighted_timeout_metrics.is_err() {
+        return 1
+    }
+    if weighted_timeout_metrics.unwrap().select_attempts != 3 {
+        return 1
+    }
+    if weighted_timeout_metrics.unwrap().select_timeouts != 1 {
+        return 1
+    }
+    if weighted_timeout_metrics.unwrap().select_default_fallbacks != 0 {
+        return 1
+    }
+
+    var select_send_src = "package demo.selectsend\nfunc main() int32 {\n  var ch1 = chan_make(1)\n  var ch2 = chan_make(1)\n  select_send(ch1, 5, ch2, 6)\n  println(chan_recv(ch1))\n  select_send_default(ch1, 7, ch2, 8)\n  println(chan_recv(ch2))\n  select_send_timeout(ch1, 9, ch2, 10, 2)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
+    var select_send_parsed = parse_source(select_send_src)
+    if select_send_parsed.is_err() {
+        return 1
+    }
+    var select_send_graph = lower_main_to_mir(select_send_parsed.unwrap())
+    if select_send_graph.is_err() {
+        return 1
+    }
+    var select_send_writes = compile_writes(select_send_parsed.unwrap(), select_send_graph.unwrap())
+    if select_send_writes.is_err() {
+        return 1
+    }
+    if select_send_writes.unwrap().len() != 3 {
+        return 1
+    }
+    if select_send_writes.unwrap()[0].text != "5\n" {
+        return 1
+    }
+    if select_send_writes.unwrap()[1].text != "8\n" {
+        return 1
+    }
+    if select_send_writes.unwrap()[2].text != "7\n" {
+        return 1
+    }
+    var select_send_metrics = compile_runtime_metrics(select_send_parsed.unwrap(), select_send_graph.unwrap())
+    if select_send_metrics.is_err() {
+        return 1
+    }
+    if select_send_metrics.unwrap().select_attempts != 3 {
+        return 1
+    }
+    if select_send_metrics.unwrap().select_default_fallbacks != 0 {
+        return 1
+    }
+    if select_send_metrics.unwrap().select_timeouts != 0 {
+        return 1
+    }
+    if select_send_metrics.unwrap().channel_sends != 3 {
+        return 1
+    }
+
+    var sroutine_recover_src = "package demo.srrecover\nfunc recover_worker() int32 {\n  recover()\n  println(\"recover-ok\")\n  0\n}\nfunc worker() int32 {\n  defer recover_worker()\n  println(msg)\n  panic(\"boom\")\n  0\n}\nfunc main() int32 {\n  var msg = \"captured\"\n  sroutine worker()\n  println(\"main\")\n  0\n}"
+    var sroutine_recover_parsed = parse_source(sroutine_recover_src)
+    if sroutine_recover_parsed.is_err() {
+        return 1
+    }
+    var sroutine_recover_graph = lower_main_to_mir(sroutine_recover_parsed.unwrap())
+    if sroutine_recover_graph.is_err() {
+        return 1
+    }
+    var sroutine_recover_writes = compile_writes(sroutine_recover_parsed.unwrap(), sroutine_recover_graph.unwrap())
+    if sroutine_recover_writes.is_err() {
+        return 1
+    }
+    if sroutine_recover_writes.unwrap().len() != 3 {
+        return 1
+    }
+    if sroutine_recover_writes.unwrap()[0].text != "captured\n" {
+        return 1
+    }
+    if sroutine_recover_writes.unwrap()[1].text != "recover-ok\n" {
+        return 1
+    }
+    if sroutine_recover_writes.unwrap()[2].text != "main\n" {
+        return 1
+    }
+
     var const_iota_src = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() int32 {\n  println(C)\n  0\n}"
     var const_iota_parsed = parse_source(const_iota_src)
     if const_iota_parsed.is_err() {
@@ -416,4 +685,86 @@ func contains(string text, string needle) bool {
         i = i + 1
     }
     false
+}
+
+func contains_all(string text, vec[string] needles) bool {
+    var i = 0
+    while i < needles.len() {
+        if !contains(text, needles[i]) {
+            return false
+        }
+        i = i + 1
+    }
+    true
+}
+
+func read_artifact_or_empty(string path) string {
+    var content = read_to_string(path)
+    if content.is_err() {
+        return ""
+    }
+    content.unwrap()
+}
+
+func require_artifact_markers(string path, vec[string] markers) string {
+    var content = read_artifact_or_empty(path)
+    if content == "" {
+        return ""
+    }
+    if !contains_all(content, markers) {
+        return ""
+    }
+    content
+}
+
+func validate_emitted_artifacts(string out_path) bool {
+    var opt = require_artifact_markers(out_path + ".opt", vec[string]("midend-opt version=1", "scheduler_opt sroutine_sites=1", "select_timeout_sites=1", "select_send_sites=1"))
+    if opt == "" || validate_midend_opt_artifact(opt).is_err() {
+        return false
+    }
+
+    var perf = require_artifact_markers(out_path + ".perf", vec[string]("perf-baseline version=1", "scheduler queue_policy=priority-rr select_policy=multi-chan-priority-rr", "select_timeout_sites=1", "select_send_sites=1", "scheduler_counters", "runtime_sched sroutine_scheduled=1"))
+    if perf == "" || validate_backend_perf_baseline(perf).is_err() {
+        return false
+    }
+
+    var toolchain = require_artifact_markers(out_path + ".toolchain", vec[string]("toolchain-compat version=1", "asm=go-plan9-min", "go_asm syntax=plan9 translator=enabled status=ok"))
+    if toolchain == "" || validate_toolchain_compat_artifact(toolchain).is_err() {
+        return false
+    }
+
+    if require_artifact_markers(out_path + ".gcmap", vec[string]("gcmap version=1", "safepoints=", "ptr_bitmap=", "contract e2e_safepoint=")) == "" {
+        return false
+    }
+
+    var cfi = require_artifact_markers(out_path + ".cfi", vec[string]("cfi version=1", ".cfi_startproc", ".cfi_def_cfa", ".cfi_endproc"))
+    if cfi == "" || validate_cfi_artifact(cfi).is_err() {
+        return false
+    }
+
+    var dwarf = require_artifact_markers(out_path + ".dwarf", vec[string]("section .debug_info", "section .debug_line", "section .debug_loc", "section .debug_ranges", "policy debug_budget_mode=", "metric location_continuity="))
+    if dwarf == "" || validate_dwarf_consumability(dwarf, "ssa dbg_budget=30").is_err() {
+        return false
+    }
+
+    if require_artifact_markers(out_path + ".stackmap", vec[string]("stackmap version=1", "fn main slots=", "bitmap=", "callee_saved=")) == "" {
+        return false
+    }
+    if require_artifact_markers(out_path + ".abi", vec[string]("abi version=1", "fn main params=0", "pass=", "ret=")) == "" {
+        return false
+    }
+    if require_artifact_markers(out_path + ".abi.emit", vec[string]("abi-emit version=1", "fn main", "ret_arity=1", "callseq=")) == "" {
+        return false
+    }
+    if require_artifact_markers(out_path + ".export", vec[string]("export-data version=1", "fn worker params=0 generics=0", "fn main params=0 generics=0")) == "" {
+        return false
+    }
+    if require_artifact_markers(out_path + ".abi.matrix", vec[string]("abi-matrix version=1", "axis caller_saved=", "matrix callseq=", "cross_arch_consistency=")) == "" {
+        return false
+    }
+    if require_artifact_markers(out_path + ".dbg", vec[string]("ssa\n", "\n\ndebug\n", "value#", "dbg_lines=")) == "" {
+        return false
+    }
+
+    true
 }

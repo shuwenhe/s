@@ -32,6 +32,7 @@ use s.name_expr
 use s.source_file
 use s.stmt
 use s.string_expr
+use s.sroutine_stmt
 use s.var_stmt
 use s.while_expr
 use std.fs.make_temp_dir
@@ -111,11 +112,67 @@ struct fn_map_entry_value {
     string func_name
 }
 
+struct channel_handle_value {
+    int32 id
+}
+
+struct channel_runtime_state {
+    int32 id
+    int32 capacity
+    vec[value] buffer
+    bool closed
+    int32 sends
+    int32 recvs
+}
+
+struct captured_binding {
+    string name
+    value value
+}
+
+struct sroutine_task {
+    string fn_name
+    vec[value] args
+    vec[captured_binding] captured_env
+    string origin
+}
+
+struct runtime_state {
+    vec[sroutine_task] runq
+    vec[channel_runtime_state] channels
+    int32 next_channel_id
+    int32 select_rr_cursor
+    int32 sroutine_scheduled
+    int32 sroutine_completed
+    int32 sroutine_panics
+    int32 sroutine_recovered
+    int32 sroutine_yields
+    int32 select_attempts
+    int32 select_default_fallbacks
+    int32 select_timeouts
+}
+
+struct runtime_metrics {
+    int32 sroutine_scheduled
+    int32 sroutine_completed
+    int32 sroutine_panics
+    int32 sroutine_recovered
+    int32 sroutine_yields
+    int32 select_attempts
+    int32 select_default_fallbacks
+    int32 select_timeouts
+    int32 channels
+    int32 channel_sends
+    int32 channel_recvs
+    int32 channel_closed
+}
+
 enum value {
     int(int32),
     string(string),
     bool(bool),
     unit(unit_value),
+    channel(channel_handle_value),
     fn_ref(string),
     fn_map(vec[fn_map_entry_value]),
 }
@@ -133,6 +190,7 @@ struct write_op {
 struct mir_execution_result {
     vec[write_op] writes
     int32 exit_code
+    runtime_metrics runtime
 }
 
 struct midend_result {
@@ -214,6 +272,11 @@ func build(string path, string output, string ssa_margin_override) int32 {
     var exit_code_result = compile_exit_code(parsed, graph)
     if exit_code_result.is_err() {
         return report_failure(exit_code_result.unwrap_err().message)
+    }
+
+    var runtime_metrics_result = compile_runtime_metrics(parsed, graph)
+    if runtime_metrics_result.is_err() {
+        return report_failure(runtime_metrics_result.unwrap_err().message)
     }
 
     var temp_dir_result = make_temp_dir("s-build-")
@@ -353,7 +416,7 @@ func build(string path, string output, string ssa_margin_override) int32 {
     }
 
     var perf_path = output + ".perf"
-    var perf_payload = build_backend_perf_baseline_artifact(arch, ssa_text, midend.report)
+    var perf_payload = build_backend_perf_baseline_artifact(arch, ssa_text, midend.report, runtime_metrics_text(runtime_metrics_result.unwrap()))
     var perf_check = validate_backend_perf_baseline(perf_payload)
     if perf_check.is_err() {
         return report_failure(perf_check.unwrap_err().message)
@@ -364,7 +427,12 @@ func build(string path, string output, string ssa_margin_override) int32 {
     }
 
     var opt_path = output + ".opt"
-    var opt_write = write_text_file(opt_path, midend.report)
+    var opt_payload = build_midend_opt_artifact(midend.report)
+    var opt_check = validate_midend_opt_artifact(opt_payload)
+    if opt_check.is_err() {
+        return report_failure(opt_check.unwrap_err().message)
+    }
+    var opt_write = write_text_file(opt_path, opt_payload)
     if opt_write.is_err() {
         return report_failure("failed to write optimization report: " + opt_write.unwrap_err().message)
     }
@@ -381,6 +449,10 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     var devirt = estimate_devirtualized_sites_graph(rewritten_graph)
     var cross_pkg_inline = estimate_cross_pkg_inline_sites_graph(rewritten_graph, inlined)
     var const_prop = estimate_const_prop_sites_graph(rewritten_graph)
+    var sroutine_sites = estimate_sroutine_sites_graph(rewritten_graph)
+    var select_weighted_sites = estimate_trace_call_sites_graph(rewritten_graph, "select_recv_weighted(")
+    var select_timeout_sites = estimate_trace_call_sites_graph(rewritten_graph, "select_recv_timeout(")
+    var select_send_sites = estimate_trace_call_sites_graph(rewritten_graph, "select_send(")
     var ipo_synergy = estimate_ipo_synergy(inlined, escaped, devirt, cross_pkg_inline, const_prop)
 
     var iter = 0
@@ -416,6 +488,18 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     if const_prop > 0 {
         rewritten = rewritten + " constprop=" + to_string(const_prop)
     }
+    if sroutine_sites > 0 {
+        rewritten = rewritten + " sroutine=" + to_string(sroutine_sites)
+    }
+    if select_weighted_sites > 0 {
+        rewritten = rewritten + " selectw=" + to_string(select_weighted_sites)
+    }
+    if select_timeout_sites > 0 {
+        rewritten = rewritten + " selectt=" + to_string(select_timeout_sites)
+    }
+    if select_send_sites > 0 {
+        rewritten = rewritten + " selects=" + to_string(select_send_sites)
+    }
     var const_fold_hits = estimate_const_fold_hits_graph(graph)
     rewritten = rewritten + " constfold=" + to_string(const_fold_hits)
     rewritten = rewritten + " ipo=" + to_string(ipo_synergy)
@@ -431,6 +515,10 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         + " devirtualized=" + to_string(devirt)
         + " cross_pkg_inline=" + to_string(cross_pkg_inline)
         + " const_prop=" + to_string(const_prop)
+        + " sroutine_sites=" + to_string(sroutine_sites)
+        + " select_weighted_sites=" + to_string(select_weighted_sites)
+        + " select_timeout_sites=" + to_string(select_timeout_sites)
+        + " select_send_sites=" + to_string(select_send_sites)
         + " const_fold_hits=" + to_string(const_fold_hits)
         + " ipo_synergy=" + to_string(ipo_synergy)
         + " pass_rm_unreachable=" + to_string(pass.removed_unreachable_blocks)
@@ -443,6 +531,30 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         optimized_mir_text: rewritten,
         report: report,
     }
+}
+
+func estimate_sroutine_sites_graph(mir_graph graph) int32 {
+    var total = 0
+    var i = 0
+    while i < graph.trace.len() {
+        if has_substring(graph.trace[i], "stmt sroutine ") {
+            total = total + 1
+        }
+        i = i + 1
+    }
+    total
+}
+
+func estimate_trace_call_sites_graph(mir_graph graph, string marker) int32 {
+    var total = 0
+    var i = 0
+    while i < graph.trace.len() {
+        if has_substring(graph.trace[i], marker) {
+            total = total + 1
+        }
+        i = i + 1
+    }
+    total
 }
 
 func estimate_const_fold_hits_graph(mir_graph graph) int32 {
@@ -2110,7 +2222,7 @@ func validate_gc_contract_chain(string gc_payload, source_file source, string ss
     result::ok(())
 }
 
-func build_backend_perf_baseline_artifact(string arch, string ssa_text, string midend_report) string {
+func build_backend_perf_baseline_artifact(string arch, string ssa_text, string midend_report, string runtime_report) string {
     var lines = vec[string]()
     lines.push("perf-baseline version=1 arch=" + arch)
     lines.push("ssa spills=" + to_string(parse_number_after(ssa_text, "spills="))
@@ -2119,6 +2231,17 @@ func build_backend_perf_baseline_artifact(string arch, string ssa_text, string m
         + " sched_tp=" + to_string(parse_number_after(ssa_text, "sched_tp="))
         + " sched_lat=" + to_string(parse_number_after(ssa_text, "sched_lat=")))
     lines.push("midend " + midend_report)
+    lines.push("scheduler queue_policy=priority-rr select_policy=multi-chan-priority-rr"
+        + " sroutine_sites=" + to_string(parse_number_after(midend_report, "sroutine_sites="))
+        + " select_weighted_sites=" + to_string(parse_number_after(midend_report, "select_weighted_sites="))
+        + " select_timeout_sites=" + to_string(parse_number_after(midend_report, "select_timeout_sites="))
+        + " select_send_sites=" + to_string(parse_number_after(midend_report, "select_send_sites="))
+        + " sched_tp=" + to_string(parse_number_after(ssa_text, "sched_tp="))
+        + " sched_lat=" + to_string(parse_number_after(ssa_text, "sched_lat=")))
+    lines.push("scheduler_counters"
+        + " select_default_fallbacks=" + to_string(parse_number_after(runtime_report, "select_default_fallbacks="))
+        + " select_timeouts=" + to_string(parse_number_after(runtime_report, "select_timeouts=")))
+    lines.push(runtime_report)
     lines.push("regression_gate p95_latency=stable throughput=stable")
     lines.push("regression_gate_long p99_latency=watch code_size=watch compile_time=watch")
     lines.push("regression_gate_arch amd64=watch arm64=watch tail_cases=watch")
@@ -2135,11 +2258,74 @@ func validate_backend_perf_baseline(string payload) result[(), backend_error] {
     if !has_substring(payload, "ssa spills=") {
         return result::err(backend_error { message: "backend error: perf baseline SSA metrics missing" })
     }
+    if !has_substring(payload, "scheduler queue_policy=") {
+        return result::err(backend_error { message: "backend error: perf baseline scheduler metrics missing" })
+    }
+    if !has_substring(payload, "runtime_sched sroutine_scheduled=") {
+        return result::err(backend_error { message: "backend error: perf baseline runtime scheduler metrics missing" })
+    }
+    if !has_substring(payload, "scheduler_counters select_default_fallbacks=") {
+        return result::err(backend_error { message: "backend error: perf baseline scheduler counter metrics missing" })
+    }
     if !has_substring(payload, "regression_gate_long ") {
         return result::err(backend_error { message: "backend error: perf baseline long regression gate missing" })
     }
     if !has_substring(payload, "regression_gate_arch ") {
         return result::err(backend_error { message: "backend error: perf baseline arch gate missing" })
+    }
+    result::ok(())
+}
+
+func build_midend_opt_artifact(string midend_report) string {
+    var lines = vec[string]()
+    lines.push("midend-opt version=1")
+    lines.push("report " + midend_report)
+    lines.push("summary"
+        + " inline_sites=" + to_string(parse_number_after(midend_report, "inline_sites="))
+        + " escape_sites=" + to_string(parse_number_after(midend_report, "escape_sites="))
+        + " devirtualized=" + to_string(parse_number_after(midend_report, "devirtualized="))
+        + " cross_pkg_inline=" + to_string(parse_number_after(midend_report, "cross_pkg_inline="))
+        + " const_prop=" + to_string(parse_number_after(midend_report, "const_prop="))
+        + " const_fold_hits=" + to_string(parse_number_after(midend_report, "const_fold_hits=")))
+    lines.push("scheduler_opt"
+        + " sroutine_sites=" + to_string(parse_number_after(midend_report, "sroutine_sites="))
+        + " select_weighted_sites=" + to_string(parse_number_after(midend_report, "select_weighted_sites="))
+        + " select_timeout_sites=" + to_string(parse_number_after(midend_report, "select_timeout_sites="))
+        + " select_send_sites=" + to_string(parse_number_after(midend_report, "select_send_sites=")))
+    lines.push("passes"
+        + " rm_unreachable=" + to_string(parse_number_after(midend_report, "pass_rm_unreachable="))
+        + " fold_branch=" + to_string(parse_number_after(midend_report, "pass_fold_branch="))
+        + " simplify_j2r=" + to_string(parse_number_after(midend_report, "pass_simplify_j2r="))
+        + " trim_unit=" + to_string(parse_number_after(midend_report, "pass_trim_unit="))
+        + " dedup=" + to_string(parse_number_after(midend_report, "pass_dedup="))
+        + " ipo_synergy=" + to_string(parse_number_after(midend_report, "ipo_synergy=")))
+    join_lines(lines)
+}
+
+func validate_midend_opt_artifact(string payload) result[(), backend_error] {
+    if !has_substring(payload, "midend-opt version=1") {
+        return result::err(backend_error { message: "backend error: midend opt artifact header missing" })
+    }
+    if !has_substring(payload, "report midend ") {
+        return result::err(backend_error { message: "backend error: midend opt artifact raw report missing" })
+    }
+    if !has_substring(payload, "summary inline_sites=") {
+        return result::err(backend_error { message: "backend error: midend opt artifact summary missing" })
+    }
+    if !has_substring(payload, "scheduler_opt sroutine_sites=") {
+        return result::err(backend_error { message: "backend error: midend opt artifact scheduler section missing" })
+    }
+    if !has_substring(payload, "select_weighted_sites=") {
+        return result::err(backend_error { message: "backend error: midend opt artifact weighted select metric missing" })
+    }
+    if !has_substring(payload, "select_timeout_sites=") {
+        return result::err(backend_error { message: "backend error: midend opt artifact timeout select metric missing" })
+    }
+    if !has_substring(payload, "select_send_sites=") {
+        return result::err(backend_error { message: "backend error: midend opt artifact send select metric missing" })
+    }
+    if !has_substring(payload, "passes rm_unreachable=") {
+        return result::err(backend_error { message: "backend error: midend opt artifact pass section missing" })
     }
     result::ok(())
 }
@@ -2250,6 +2436,89 @@ func bool_string(bool value) string {
     "false"
 }
 
+func make_runtime_state() runtime_state {
+    runtime_state {
+        runq: vec[sroutine_task](),
+        channels: vec[channel_runtime_state](),
+        next_channel_id: 1,
+        select_rr_cursor: 0,
+        sroutine_scheduled: 0,
+        sroutine_completed: 0,
+        sroutine_panics: 0,
+        sroutine_recovered: 0,
+        sroutine_yields: 0,
+        select_attempts: 0,
+        select_default_fallbacks: 0,
+        select_timeouts: 0,
+    }
+}
+
+func collect_runtime_metrics(runtime_state runtime) runtime_metrics {
+    var sends = 0
+    var recvs = 0
+    var closed = 0
+    var i = 0
+    while i < runtime.channels.len() {
+        sends = sends + runtime.channels[i].sends
+        recvs = recvs + runtime.channels[i].recvs
+        if runtime.channels[i].closed {
+            closed = closed + 1
+        }
+        i = i + 1
+    }
+
+    runtime_metrics {
+        sroutine_scheduled: runtime.sroutine_scheduled,
+        sroutine_completed: runtime.sroutine_completed,
+        sroutine_panics: runtime.sroutine_panics,
+        sroutine_recovered: runtime.sroutine_recovered,
+        sroutine_yields: runtime.sroutine_yields,
+        select_attempts: runtime.select_attempts,
+        select_default_fallbacks: runtime.select_default_fallbacks,
+        select_timeouts: runtime.select_timeouts,
+        channels: runtime.channels.len(),
+        channel_sends: sends,
+        channel_recvs: recvs,
+        channel_closed: closed,
+    }
+}
+
+func runtime_metrics_text(runtime_metrics metrics) string {
+    "runtime_sched"
+        + " sroutine_scheduled=" + to_string(metrics.sroutine_scheduled)
+        + " sroutine_completed=" + to_string(metrics.sroutine_completed)
+        + " sroutine_panics=" + to_string(metrics.sroutine_panics)
+        + " sroutine_recovered=" + to_string(metrics.sroutine_recovered)
+        + " sroutine_yields=" + to_string(metrics.sroutine_yields)
+        + " select_attempts=" + to_string(metrics.select_attempts)
+        + " select_default_fallbacks=" + to_string(metrics.select_default_fallbacks)
+        + " select_timeouts=" + to_string(metrics.select_timeouts)
+        + " channels=" + to_string(metrics.channels)
+        + " channel_sends=" + to_string(metrics.channel_sends)
+        + " channel_recvs=" + to_string(metrics.channel_recvs)
+        + " channel_closed=" + to_string(metrics.channel_closed)
+}
+
+func snapshot_captured_bindings(vec[binding] env) vec[captured_binding] {
+    var out = vec[captured_binding]()
+    var i = 0
+    while i < env.len() {
+        out.push(captured_binding { name: env[i].name, value: env[i].value })
+        i = i + 1
+    }
+    out
+}
+
+func restore_captured_bindings(vec[captured_binding] captured) vec[binding] {
+    var out = vec[binding]()
+    var i = 0
+    while i < captured.len() {
+        out.push(binding { name: captured[i].name, value: captured[i].value })
+        i = i + 1
+    }
+    out
+}
+
 func compile_writes(source_file source, mir_graph graph) result[vec[write_op], backend_error] {
     if graph.blocks.len() == 0 {
         return fail_write_ops("backend error: mir graph has no blocks")
@@ -2286,6 +2555,24 @@ func compile_exit_code(source_file source, mir_graph graph) result[int32, backen
     result::ok(exec_result.unwrap().exit_code)
 }
 
+func compile_runtime_metrics(source_file source, mir_graph graph) result[runtime_metrics, backend_error] {
+    if graph.blocks.len() == 0 {
+        return result::err(backend_error { message: "backend error: mir graph has no blocks" })
+    }
+
+    var source_exec = execute_source_main(source)
+    if source_exec.is_ok() {
+        return result::ok(source_exec.unwrap().runtime)
+    }
+
+    var exec_result = execute_mir_graph(graph)
+    if exec_result.is_err() {
+        return result::err(source_exec.unwrap_err())
+    }
+
+    result::ok(exec_result.unwrap().runtime)
+}
+
 func execute_source_main(source_file source) result[mir_execution_result, backend_error] {
     var main_result = find_main(source)
     if main_result.is_err() {
@@ -2298,13 +2585,14 @@ func execute_source_main(source_file source) result[mir_execution_result, backen
     }
 
     var writes = vec[write_op]()
+    var runtime = make_runtime_state()
     var const_bindings = collect_const_bindings(source)
     if const_bindings.is_err() {
         return result::err(const_bindings.unwrap_err())
     }
 
     var env = copy_bindings(const_bindings.unwrap())
-    var eval_result = execute_block_in_place(main_fn.body.unwrap(), source, env, writes)
+    var eval_result = execute_block_in_place(main_fn.body.unwrap(), source, env, writes, runtime)
     if eval_result.is_err() {
         return result::err(eval_result.unwrap_err())
     }
@@ -2317,6 +2605,7 @@ func execute_source_main(source_file source) result[mir_execution_result, backen
     result::ok(mir_execution_result {
         writes: writes,
         exit_code: code_result.unwrap(),
+        runtime: collect_runtime_metrics(runtime),
     })
 }
 
@@ -2346,6 +2635,20 @@ func execute_mir_graph(mir_graph graph) result[mir_execution_result, backend_err
             return result::ok(mir_execution_result {
                 writes: writes,
                 exit_code: 0,
+                runtime: runtime_metrics {
+                    sroutine_scheduled: 0,
+                    sroutine_completed: 0,
+                    sroutine_panics: 0,
+                    sroutine_recovered: 0,
+                    sroutine_yields: 0,
+                    select_attempts: 0,
+                    select_default_fallbacks: 0,
+                    select_timeouts: 0,
+                    channels: 0,
+                    channel_sends: 0,
+                    channel_recvs: 0,
+                    channel_closed: 0,
+                },
             })
         }
 
@@ -2557,7 +2860,20 @@ func find_main(source_file source) result[function_decl, backend_error] {
     fail_function("backend error: entry function main not found")
 }
 
-func call_function(source_file source, string name, vec[value] args, vec[binding] mut caller_env, vec[write_op] mut writes) result[value, backend_error] {
+func call_function(source_file source, string name, vec[value] args, vec[binding] mut caller_env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    var captured = vec[captured_binding]()
+    call_function_with_capture(source, name, args, caller_env, writes, runtime, captured)
+}
+
+func call_function_with_capture(
+    source_file source,
+    string name,
+    vec[value] args,
+    vec[binding] mut caller_env,
+    vec[write_op] mut writes,
+    runtime_state mut runtime,
+    vec[captured_binding] captured_env
+) result[value, backend_error] {
     var fn_result = find_function(source, name)
     if fn_result.is_err() {
         return fail_value(fn_result.unwrap_err().message)
@@ -2585,6 +2901,10 @@ func call_function(source_file source, string name, vec[value] args, vec[binding
     }
     env = copy_bindings(const_bindings.unwrap())
 
+    var captured = restore_captured_bindings(captured_env)
+    propagate_bindings(env, captured)
+    propagate_bindings(captured, env)
+
     copy_control_bindings(caller_env, env)
     var pi = 0
     while pi < function.sig.params.len() {
@@ -2595,7 +2915,7 @@ func call_function(source_file source, string name, vec[value] args, vec[binding
         pi = pi + 1
     }
 
-    var body_result = execute_block_in_place(function.body.unwrap(), source, env, writes)
+    var body_result = execute_block_in_place(function.body.unwrap(), source, env, writes, runtime)
     if body_result.is_err() {
         return fail_value(body_result.unwrap_err().message)
     }
@@ -2619,16 +2939,16 @@ func find_function(source_file source, string name) result[function_decl, backen
     result::err(backend_error { message: "backend error: unknown function " + name })
 }
 
-func execute_block(block_expr block, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+func execute_block(block_expr block, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
     var local_env = copy_bindings(env)
-    var result = execute_block_in_place(block, source, local_env, writes)
+    var result = execute_block_in_place(block, source, local_env, writes, runtime)
     if result.is_err() {
         result::err(result.unwrap_err())
     }
     result::ok(result.unwrap())
 }
 
-func execute_block_in_place(block_expr block, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+func execute_block_in_place(block_expr block, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
     var deferred = vec[expr]()
 
     var si = 0
@@ -2642,11 +2962,26 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
             _ : (),
         }
 
-        var stmt_result = execute_stmt(block.statements[si], source, env, writes)
+        var stmt_result = execute_stmt(block.statements[si], source, env, writes, runtime)
         if stmt_result.is_err() {
             var err = stmt_result.unwrap_err()
             if is_panic_error(err) {
-                var run_deferred = execute_deferred(deferred, source, env, writes, panic_payload(err))
+                var run_deferred = execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
+                if run_deferred.is_err() {
+                    return result::err(run_deferred.unwrap_err())
+                }
+                if control_panic_is_active(env) {
+                    return result::err(panic_error(control_panic_payload_text(env)))
+                }
+                return result::ok(value.unit(unit_value {}))
+            }
+            return result::err(err)
+        }
+        var schedule_step = run_sroutine_scheduler_step(source, env, writes, runtime)
+        if schedule_step.is_err() {
+            var err = schedule_step.unwrap_err()
+            if is_panic_error(err) {
+                var run_deferred = execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                 if run_deferred.is_err() {
                     return result::err(run_deferred.unwrap_err())
                 }
@@ -2663,11 +2998,11 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
     var final_value = value.unit(unit_value {})
     switch block.final_expr {
         option.some(expr) : {
-            var final_result = eval_expr(expr, source, env, writes)
+            var final_result = eval_expr(expr, source, env, writes, runtime)
             if final_result.is_err() {
                 var err = final_result.unwrap_err()
                 if is_panic_error(err) {
-                    var run_deferred = execute_deferred(deferred, source, env, writes, panic_payload(err))
+                    var run_deferred = execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                     if run_deferred.is_err() {
                         return result::err(run_deferred.unwrap_err())
                     }
@@ -2683,17 +3018,21 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
         option.none : (),
     }
 
-    var run_deferred = execute_deferred(deferred, source, env, writes, "")
+    var run_deferred = execute_deferred(deferred, source, env, writes, runtime, "")
     if run_deferred.is_err() {
         return result::err(run_deferred.unwrap_err())
+    }
+    var schedule_flush = run_sroutine_scheduler_flush(source, env, writes, runtime)
+    if schedule_flush.is_err() {
+        return result::err(schedule_flush.unwrap_err())
     }
     result::ok(final_value)
 }
 
-func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[(), backend_error] {
+func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
     switch stmt {
         stmt.var(value) : {
-            var expr_result = eval_expr(value.value, source, env, writes)
+            var expr_result = eval_expr(value.value, source, env, writes, runtime)
             if expr_result.is_err() {
                 result::err(expr_result.unwrap_err())
             }
@@ -2704,7 +3043,7 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write
             result::ok(())
         }
         stmt.assign(value) : {
-            var expr_result = eval_expr(value.value, source, env, writes)
+            var expr_result = eval_expr(value.value, source, env, writes, runtime)
             if expr_result.is_err() {
                 result::err(expr_result.unwrap_err())
             }
@@ -2735,29 +3074,69 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write
                 _ : result::err(backend_error { message: "backend error: increment expects int32 for " + value.name }),
             }
         }
-        stmt.c_for(value) : execute_c_for(value, source, env, writes),
+        stmt.c_for(value) : execute_c_for(value, source, env, writes, runtime),
         stmt.return(_) : result::err(backend_error { message: "backend error: return statements are not supported in the mvp backend" }),
         stmt.expr(value) : {
-            var expr_result = eval_expr(value.expr, source, env, writes)
+            var expr_result = eval_expr(value.expr, source, env, writes, runtime)
             if expr_result.is_err() {
                 result::err(expr_result.unwrap_err())
             }
             result::ok(())
         }
         stmt.defer(_) : result::ok(()),
+        stmt.sroutine(value) : execute_sroutine_stmt(value, source, env, writes, runtime),
     }
 }
 
-func execute_c_for(c_for_stmt value, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[(), backend_error] {
+func execute_sroutine_stmt(sroutine_stmt value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
+    switch value.expr {
+        expr.call(call_expr) : {
+            var callee_result = eval_expr(call_expr.callee.value, source, env, writes, runtime)
+            if callee_result.is_err() {
+                return result::err(callee_result.unwrap_err())
+            }
+
+            var fn_name = ""
+            switch callee_result.unwrap() {
+                value.fn_ref(name) : fn_name = name,
+                _ : return result::err(backend_error { message: "backend error: sroutine expects function call target" }),
+            }
+
+            var arg_values = vec[value]()
+            var ai = 0
+            while ai < call_expr.args.len() {
+                var arg_result = eval_expr(call_expr.args[ai], source, env, writes, runtime)
+                if arg_result.is_err() {
+                    return result::err(arg_result.unwrap_err())
+                }
+                arg_values.push(arg_result.unwrap())
+                ai = ai + 1
+            }
+
+            runtime.runq.push(sroutine_task {
+                fn_name: fn_name,
+                args: arg_values,
+                captured_env: snapshot_captured_bindings(env),
+                origin: fn_name,
+            })
+            runtime.sroutine_scheduled = runtime.sroutine_scheduled + 1
+            runtime.sroutine_yields = runtime.sroutine_yields + 1
+            return result::ok(())
+        }
+        _ : result::err(backend_error { message: "backend error: sroutine expects a call expression" }),
+    }
+}
+
+func execute_c_for(c_for_stmt value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
     var loop_env = copy_bindings(env)
 
-    var init_result = execute_stmt(value.init.value, source, loop_env, writes)
+    var init_result = execute_stmt(value.init.value, source, loop_env, writes, runtime)
     if init_result.is_err() {
         result::err(init_result.unwrap_err())
     }
 
     while true {
-        var cond_result = eval_expr(value.condition, source, loop_env, writes)
+        var cond_result = eval_expr(value.condition, source, loop_env, writes, runtime)
         if cond_result.is_err() {
             result::err(cond_result.unwrap_err())
         }
@@ -2771,12 +3150,12 @@ func execute_c_for(c_for_stmt value, source_file source, vec[binding] mut env, v
             _ : result::err(backend_error { message: "backend error: for condition must be bool" }),
         }
 
-        var body_result = execute_block_in_place(value.body, source, loop_env, writes)
+        var body_result = execute_block_in_place(value.body, source, loop_env, writes, runtime)
         if body_result.is_err() {
             result::err(body_result.unwrap_err())
         }
 
-        var step_result = execute_stmt(value.step.value, source, loop_env, writes)
+        var step_result = execute_stmt(value.step.value, source, loop_env, writes, runtime)
         if step_result.is_err() {
             result::err(step_result.unwrap_err())
         }
@@ -2786,33 +3165,33 @@ func execute_c_for(c_for_stmt value, source_file source, vec[binding] mut env, v
     result::ok(())
 }
 
-func eval_expr(expr expr, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+func eval_expr(expr expr, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
     switch expr {
         expr.int(value) : result::ok(value.int(parse_int_literal(value.value))),
         expr.string(value) : result::ok(value.string(decode_string_literal(value.value))),
         expr.bool(value) : result::ok(value.bool(value.value)),
         expr.name(value) : lookup_name_or_function(env, source, value.name),
-        expr.binary(value) : eval_binary(value, source, env, writes),
-        expr.call(value) : eval_call(value, source, env, writes),
-        expr.if(value) : eval_if_expr(value, source, env, writes),
-        expr.while(value) : eval_while_expr(value, source, env, writes),
-        expr.block(value) : execute_block(value, source, env, writes),
+        expr.binary(value) : eval_binary(value, source, env, writes, runtime),
+        expr.call(value) : eval_call(value, source, env, writes, runtime),
+        expr.if(value) : eval_if_expr(value, source, env, writes, runtime),
+        expr.while(value) : eval_while_expr(value, source, env, writes, runtime),
+        expr.block(value) : execute_block(value, source, env, writes, runtime),
         expr.for(_) : result::err(backend_error { message: "backend error: for expressions are not supported in the mvp backend" }),
         expr.switch(_) : result::err(backend_error { message: "backend error: switch expressions are not supported in the mvp backend" }),
         expr.borrow(_) : result::err(backend_error { message: "backend error: borrow expressions are not supported in the mvp backend" }),
         expr.member(_) : result::err(backend_error { message: "backend error: member expressions are not supported in the mvp backend" }),
-        expr.index(value) : eval_index_expr(value, source, env, writes),
+        expr.index(value) : eval_index_expr(value, source, env, writes, runtime),
         expr.array(_) : result::err(backend_error { message: "backend error: array literals are not supported in the mvp backend" }),
-        expr.map(value) : eval_map_literal(value, source, env, writes),
+        expr.map(value) : eval_map_literal(value, source, env, writes, runtime),
     }
 }
 
-func eval_binary(binary_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
-    var left_result = eval_expr(value.left.value, source, env, writes)
+func eval_binary(binary_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    var left_result = eval_expr(value.left.value, source, env, writes, runtime)
     if left_result.is_err() {
         result::err(left_result.unwrap_err())
     }
-    var right_result = eval_expr(value.right.value, source, env, writes)
+    var right_result = eval_expr(value.right.value, source, env, writes, runtime)
     if right_result.is_err() {
         result::err(right_result.unwrap_err())
     }
@@ -2838,23 +3217,56 @@ func eval_binary(binary_expr value, source_file source, vec[binding] mut env, ve
     }
 }
 
-func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
     switch value.callee.value {
         expr.name(callee_name) : {
             if callee_name.name == "println" || callee_name.name == "eprintln" {
-                return eval_print_call(callee_name.name, value.args, source, env, writes)
+                return eval_print_call(callee_name.name, value.args, source, env, writes, runtime)
             }
             if callee_name.name == "panic" {
-                return eval_panic_call(value.args, source, env, writes)
+                return eval_panic_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "recover" {
-                return eval_recover_call(env)
+                return eval_recover_call(env, runtime)
+            }
+            if callee_name.name == "chan_make" {
+                return eval_chan_make_call(value.args, source, env, writes, runtime)
+            }
+            if callee_name.name == "chan_send" {
+                return eval_chan_send_call(value.args, source, env, writes, runtime)
+            }
+            if callee_name.name == "chan_recv" {
+                return eval_chan_recv_call(value.args, source, env, writes, runtime, false)
+            }
+            if callee_name.name == "select_recv" {
+                return eval_chan_recv_call(value.args, source, env, writes, runtime, true)
+            }
+            if callee_name.name == "select_recv_weighted" {
+                return eval_select_recv_weighted_call(value.args, source, env, writes, runtime)
+            }
+            if callee_name.name == "select_recv_default" {
+                return eval_select_recv_default_call(value.args, source, env, writes, runtime)
+            }
+            if callee_name.name == "select_recv_timeout" {
+                return eval_select_recv_timeout_call(value.args, source, env, writes, runtime)
+            }
+            if callee_name.name == "select_send" {
+                return eval_select_send_call(value.args, source, env, writes, runtime)
+            }
+            if callee_name.name == "select_send_default" {
+                return eval_select_send_default_call(value.args, source, env, writes, runtime)
+            }
+            if callee_name.name == "select_send_timeout" {
+                return eval_select_send_timeout_call(value.args, source, env, writes, runtime)
+            }
+            if callee_name.name == "chan_close" {
+                return eval_chan_close_call(value.args, source, env, writes, runtime)
             }
         }
         _ : (),
     }
 
-    var callee_result = eval_expr(value.callee.value, source, env, writes)
+    var callee_result = eval_expr(value.callee.value, source, env, writes, runtime)
     if callee_result.is_err() {
         return callee_result
     }
@@ -2862,7 +3274,7 @@ func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[wr
     var arg_values = vec[value]()
     var ai = 0
     while ai < value.args.len() {
-        var arg_result = eval_expr(value.args[ai], source, env, writes)
+        var arg_result = eval_expr(value.args[ai], source, env, writes, runtime)
         if arg_result.is_err() {
             return result::err(arg_result.unwrap_err())
         }
@@ -2871,17 +3283,17 @@ func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[wr
     }
 
     switch callee_result.unwrap() {
-        value.fn_ref(name) : call_function(source, name, arg_values, env, writes),
+        value.fn_ref(name) : call_function(source, name, arg_values, env, writes, runtime),
         _ : result::err(backend_error { message: "backend error: unsupported call target" }),
     }
 }
 
-func eval_panic_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+    func eval_panic_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
     if args.len() != 1 {
         return result::err(backend_error { message: "backend error: panic expects exactly one argument" })
     }
 
-    var arg_result = eval_expr(args[0], source, env, writes)
+    var arg_result = eval_expr(args[0], source, env, writes, runtime)
     if arg_result.is_err() {
         return arg_result
     }
@@ -2889,7 +3301,7 @@ func eval_panic_call(vec[expr] args, source_file source, vec[binding] mut env, v
     return result::err(panic_error(stringify_value(arg_result.unwrap())))
 }
 
-func eval_recover_call(vec[binding] mut env) result[value, backend_error] {
+func eval_recover_call(vec[binding] mut env, runtime_state mut runtime) result[value, backend_error] {
     if !control_in_defer_mode(env) {
         return result::ok(value.unit(unit_value {}))
     }
@@ -2900,10 +3312,410 @@ func eval_recover_call(vec[binding] mut env) result[value, backend_error] {
     var payload = control_panic_payload_text(env)
     set_control(env, control_panic_active, value.bool(false))
     set_control(env, control_panic_payload, value.string(""))
+    runtime.sroutine_recovered = runtime.sroutine_recovered + 1
     result::ok(value.string(payload))
 }
 
-func execute_deferred(vec[expr] deferred, source_file source, vec[binding] mut env, vec[write_op] mut writes, string panic_payload_text) result[(), backend_error] {
+func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    if args.len() != 1 {
+        return result::err(backend_error { message: "backend error: chan_make expects one capacity argument" })
+    }
+
+    var cap_value = eval_expr(args[0], source, env, writes, runtime)
+    if cap_value.is_err() {
+        return cap_value
+    }
+
+    var cap = 1
+    switch cap_value.unwrap() {
+        value.int(n) : {
+            if n > 0 {
+                cap = n
+            }
+        }
+        _ : return result::err(backend_error { message: "backend error: chan_make capacity must be int32" }),
+    }
+
+    var id = runtime.next_channel_id
+    runtime.next_channel_id = runtime.next_channel_id + 1
+    runtime.channels.push(channel_runtime_state {
+        id: id,
+        capacity: cap,
+        buffer: vec[value](),
+        closed: false,
+        sends: 0,
+        recvs: 0,
+    })
+    result::ok(value.channel(channel_handle_value { id: id }))
+}
+
+func eval_chan_send_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    if args.len() != 2 {
+        return result::err(backend_error { message: "backend error: chan_send expects channel and value" })
+    }
+
+    var ch = eval_expr(args[0], source, env, writes, runtime)
+    if ch.is_err() {
+        return ch
+    }
+    var payload = eval_expr(args[1], source, env, writes, runtime)
+    if payload.is_err() {
+        return payload
+    }
+
+    var idx = find_channel_index(runtime, ch.unwrap())
+    if idx < 0 {
+        return result::err(backend_error { message: "backend error: chan_send target is not channel" })
+    }
+    if runtime.channels[idx].closed {
+        return result::err(backend_error { message: "backend error: chan_send on closed channel" })
+    }
+    if runtime.channels[idx].buffer.len() >= runtime.channels[idx].capacity {
+        return result::err(backend_error { message: "backend error: chan_send would block" })
+    }
+
+    var ch_state = runtime.channels[idx]
+    ch_state.buffer.push(payload.unwrap())
+    ch_state.sends = ch_state.sends + 1
+    runtime.channels.set(idx, ch_state)
+    result::ok(value.unit(unit_value {}))
+}
+
+func eval_chan_recv_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime, bool is_select) result[value, backend_error] {
+    if args.len() == 0 {
+        return result::err(backend_error { message: "backend error: chan_recv/select_recv expects at least one channel argument" })
+    }
+    if !is_select && args.len() != 1 {
+        return result::err(backend_error { message: "backend error: chan_recv expects exactly one channel argument" })
+    }
+
+    var channels = vec[value]()
+    var ai = 0
+    while ai < args.len() {
+        var ch = eval_expr(args[ai], source, env, writes, runtime)
+        if ch.is_err() {
+            return ch
+        }
+        channels.push(ch.unwrap())
+        ai = ai + 1
+    }
+
+    if is_select {
+        runtime.select_attempts = runtime.select_attempts + 1
+    }
+
+    var selected = choose_ready_channel(runtime, channels)
+    if selected.is_some() {
+        return drain_selected_channel(runtime, selected.unwrap())
+    }
+
+    var closed_pick = choose_closed_channel(runtime, channels)
+    if closed_pick.is_some() {
+        if is_select && channels.len() > 0 {
+            runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % channels.len()
+        }
+        return result::ok(value.unit(unit_value {}))
+    }
+
+    if is_select {
+        return result::err(backend_error { message: "backend error: select_recv has no ready channel" })
+    }
+    result::ok(value.unit(unit_value {}))
+}
+
+func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    if args.len() < 2 || (args.len() % 2) != 0 {
+        return result::err(backend_error { message: "backend error: select_recv_weighted expects channel/weight pairs" })
+    }
+
+    runtime.select_attempts = runtime.select_attempts + 1
+    var weighted = vec[value]()
+    var ai = 0
+    while ai < args.len() {
+        var ch = eval_expr(args[ai], source, env, writes, runtime)
+        if ch.is_err() {
+            return ch
+        }
+        var weight = eval_expr(args[ai + 1], source, env, writes, runtime)
+        if weight.is_err() {
+            return weight
+        }
+        var copies = 1
+        switch weight.unwrap() {
+            value.int(n) : {
+                if n > 1 {
+                    copies = n
+                }
+            }
+            _ : return result::err(backend_error { message: "backend error: select_recv_weighted weights must be int32" }),
+        }
+        var wi = 0
+        while wi < copies {
+            weighted.push(ch.unwrap())
+            wi = wi + 1
+        }
+        ai = ai + 2
+    }
+
+    var selected = choose_ready_channel(runtime, weighted)
+    if selected.is_some() {
+        return drain_selected_channel(runtime, selected.unwrap())
+    }
+
+    var closed_pick = choose_closed_channel(runtime, weighted)
+    if closed_pick.is_some() {
+        if weighted.len() > 0 {
+            runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % weighted.len()
+        }
+        return result::ok(value.unit(unit_value {}))
+    }
+
+    return result::err(backend_error { message: "backend error: select_recv_weighted has no ready channel" })
+}
+
+func eval_select_recv_timeout_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    if args.len() < 2 {
+        return result::err(backend_error { message: "backend error: select_recv_timeout expects channels followed by timeout ticks" })
+    }
+
+    var timeout = eval_expr(args[args.len() - 1], source, env, writes, runtime)
+    if timeout.is_err() {
+        return timeout
+    }
+    switch timeout.unwrap() {
+        value.int(_) : (),
+        _ : return result::err(backend_error { message: "backend error: select_recv_timeout timeout must be int32" }),
+    }
+
+    var ch_args = vec[expr]()
+    var i = 0
+    while i < args.len() - 1 {
+        ch_args.push(args[i])
+        i = i + 1
+    }
+    var recv = eval_chan_recv_call(ch_args, source, env, writes, runtime, true)
+    if recv.is_ok() {
+        return recv
+    }
+    runtime.select_timeouts = runtime.select_timeouts + 1
+    result::ok(value.unit(unit_value {}))
+}
+
+func eval_select_send_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    if args.len() < 2 || (args.len() % 2) != 0 {
+        return result::err(backend_error { message: "backend error: select_send expects channel/value pairs" })
+    }
+
+    runtime.select_attempts = runtime.select_attempts + 1
+    var channels = vec[value]()
+    var payloads = vec[value]()
+    var ai = 0
+    while ai < args.len() {
+        var ch = eval_expr(args[ai], source, env, writes, runtime)
+        if ch.is_err() {
+            return ch
+        }
+        var payload = eval_expr(args[ai + 1], source, env, writes, runtime)
+        if payload.is_err() {
+            return payload
+        }
+        channels.push(ch.unwrap())
+        payloads.push(payload.unwrap())
+        ai = ai + 2
+    }
+
+    var pick = choose_sendable_channel(runtime, channels)
+    if pick.is_none() {
+        return result::err(backend_error { message: "backend error: select_send has no ready channel" })
+    }
+    if pick.unwrap() < 0 {
+        return result::err(backend_error { message: "backend error: select_send target is not channel" })
+    }
+
+    var pi = pick.unwrap()
+    var idx = find_channel_index(runtime, channels[pi])
+    var ch_state = runtime.channels[idx]
+    ch_state.buffer.push(payloads[pi])
+    ch_state.sends = ch_state.sends + 1
+    runtime.channels.set(idx, ch_state)
+    result::ok(value.unit(unit_value {}))
+}
+
+func eval_select_send_default_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    var sent = eval_select_send_call(args, source, env, writes, runtime)
+    if sent.is_ok() {
+        return sent
+    }
+    runtime.select_default_fallbacks = runtime.select_default_fallbacks + 1
+    result::ok(value.unit(unit_value {}))
+}
+
+func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    if args.len() < 3 || ((args.len() - 1) % 2) != 0 {
+        return result::err(backend_error { message: "backend error: select_send_timeout expects channel/value pairs followed by timeout ticks" })
+    }
+
+    var timeout = eval_expr(args[args.len() - 1], source, env, writes, runtime)
+    if timeout.is_err() {
+        return timeout
+    }
+    switch timeout.unwrap() {
+        value.int(_) : (),
+        _ : return result::err(backend_error { message: "backend error: select_send_timeout timeout must be int32" }),
+    }
+
+    var send_args = vec[expr]()
+    var i = 0
+    while i < args.len() - 1 {
+        send_args.push(args[i])
+        i = i + 1
+    }
+    var sent = eval_select_send_call(send_args, source, env, writes, runtime)
+    if sent.is_ok() {
+        return sent
+    }
+    runtime.select_timeouts = runtime.select_timeouts + 1
+    result::ok(value.unit(unit_value {}))
+}
+
+func choose_ready_channel(runtime_state mut runtime, vec[value] channels) option[int32] {
+    if channels.len() == 0 {
+        return option.none
+    }
+
+    var start = runtime.select_rr_cursor % channels.len()
+    var offset = 0
+    while offset < channels.len() {
+        var pick = (start + offset) % channels.len()
+        var idx = find_channel_index(runtime, channels[pick])
+        if idx < 0 {
+            return option.some(-1)
+        }
+        if runtime.channels[idx].buffer.len() > 0 {
+            runtime.select_rr_cursor = (pick + 1) % channels.len()
+            return option.some(idx)
+        }
+        offset = offset + 1
+    }
+    option.none
+}
+
+func choose_closed_channel(runtime_state runtime, vec[value] channels) option[int32] {
+    if channels.len() == 0 {
+        return option.none
+    }
+
+    var start = runtime.select_rr_cursor % channels.len()
+    var offset = 0
+    while offset < channels.len() {
+        var pick = (start + offset) % channels.len()
+        var idx = find_channel_index(runtime, channels[pick])
+        if idx < 0 {
+            return option.some(-1)
+        }
+        if runtime.channels[idx].closed {
+            return option.some(pick)
+        }
+        offset = offset + 1
+    }
+    option.none
+}
+
+func choose_sendable_channel(runtime_state mut runtime, vec[value] channels) option[int32] {
+    if channels.len() == 0 {
+        return option.none
+    }
+
+    var start = runtime.select_rr_cursor % channels.len()
+    var offset = 0
+    while offset < channels.len() {
+        var pick = (start + offset) % channels.len()
+        var idx = find_channel_index(runtime, channels[pick])
+        if idx < 0 {
+            return option.some(-1)
+        }
+        var ch_state = runtime.channels[idx]
+        if !ch_state.closed && ch_state.buffer.len() < ch_state.capacity {
+            runtime.select_rr_cursor = (pick + 1) % channels.len()
+            return option.some(pick)
+        }
+        offset = offset + 1
+    }
+    option.none
+}
+
+func drain_selected_channel(runtime_state mut runtime, int32 idx) result[value, backend_error] {
+    if idx < 0 {
+        return result::err(backend_error { message: "backend error: recv target is not channel" })
+    }
+
+    var ch_state = runtime.channels[idx]
+    if ch_state.buffer.len() == 0 {
+        return result::ok(value.unit(unit_value {}))
+    }
+
+    var first = ch_state.buffer[0]
+    var rest = vec[value]()
+    var i = 1
+    while i < ch_state.buffer.len() {
+        rest.push(ch_state.buffer[i])
+        i = i + 1
+    }
+    ch_state.buffer = rest
+    ch_state.recvs = ch_state.recvs + 1
+    runtime.channels.set(idx, ch_state)
+    result::ok(first)
+}
+
+func eval_select_recv_default_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    var recv = eval_chan_recv_call(args, source, env, writes, runtime, true)
+    if recv.is_ok() {
+        return recv
+    }
+    runtime.select_default_fallbacks = runtime.select_default_fallbacks + 1
+    result::ok(value.unit(unit_value {}))
+}
+
+func eval_chan_close_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    if args.len() != 1 {
+        return result::err(backend_error { message: "backend error: chan_close expects one channel argument" })
+    }
+    var ch = eval_expr(args[0], source, env, writes, runtime)
+    if ch.is_err() {
+        return ch
+    }
+
+    var idx = find_channel_index(runtime, ch.unwrap())
+    if idx < 0 {
+        return result::err(backend_error { message: "backend error: chan_close target is not channel" })
+    }
+    var ch_state = runtime.channels[idx]
+    if ch_state.closed {
+        return result::err(backend_error { message: "backend error: chan_close on closed channel" })
+    }
+    ch_state.closed = true
+    runtime.channels.set(idx, ch_state)
+    result::ok(value.unit(unit_value {}))
+}
+
+func find_channel_index(runtime_state runtime, value v) int32 {
+    var id = -1
+    switch v {
+        value.channel(handle) : id = handle.id,
+        _ : return -1,
+    }
+
+    var i = 0
+    while i < runtime.channels.len() {
+        if runtime.channels[i].id == id {
+            return i
+        }
+        i = i + 1
+    }
+    -1
+}
+
+func execute_deferred(vec[expr] deferred, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime, string panic_payload_text) result[(), backend_error] {
     if panic_payload_text != "" {
         set_control(env, control_panic_active, value.bool(true))
         set_control(env, control_panic_payload, value.string(panic_payload_text))
@@ -2914,7 +3726,7 @@ func execute_deferred(vec[expr] deferred, source_file source, vec[binding] mut e
     var i = deferred.len()
     while i > 0 {
         i = i - 1
-        var call_result = eval_expr(deferred[i], source, env, writes)
+        var call_result = eval_expr(deferred[i], source, env, writes, runtime)
         if call_result.is_err() {
             var err = call_result.unwrap_err()
             if is_panic_error(err) {
@@ -2928,6 +3740,48 @@ func execute_deferred(vec[expr] deferred, source_file source, vec[binding] mut e
     }
 
     set_control(env, control_in_defer, value.bool(false))
+    result::ok(())
+}
+
+func run_sroutine_scheduler_step(source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
+    if runtime.runq.len() == 0 {
+        return result::ok(())
+    }
+
+    var task = runtime.runq[0]
+    var rest = vec[sroutine_task]()
+    var i = 1
+    while i < runtime.runq.len() {
+        rest.push(runtime.runq[i])
+        i = i + 1
+    }
+    runtime.runq = rest
+
+    var task_env = copy_bindings(env)
+    var captured = restore_captured_bindings(task.captured_env)
+    propagate_bindings(task_env, captured)
+
+    var task_result = call_function_with_capture(source, task.fn_name, task.args, task_env, writes, runtime, task.captured_env)
+    if task_result.is_err() {
+        var err = task_result.unwrap_err()
+        if is_panic_error(err) {
+            runtime.sroutine_panics = runtime.sroutine_panics + 1
+            return result::err(err)
+        }
+        return result::err(err)
+    }
+
+    runtime.sroutine_completed = runtime.sroutine_completed + 1
+    result::ok(())
+}
+
+func run_sroutine_scheduler_flush(source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
+    while runtime.runq.len() > 0 {
+        var step = run_sroutine_scheduler_step(source, env, writes, runtime)
+        if step.is_err() {
+            return step
+        }
+    }
     result::ok(())
 }
 
@@ -3113,16 +3967,16 @@ func lookup_name_or_function(vec[binding] env, source_file source, string name) 
     result::err(backend_error { message: "backend error: unknown name " + name })
 }
 
-func eval_map_literal(map_literal value, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+func eval_map_literal(map_literal value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
     var entries = vec[fn_map_entry_value]()
     var i = 0
     while i < value.entries.len() {
-        var key_result = eval_expr(value.entries[i].key, source, env, writes)
+        var key_result = eval_expr(value.entries[i].key, source, env, writes, runtime)
         if key_result.is_err() {
             return result::err(key_result.unwrap_err())
         }
 
-        var val_result = eval_expr(value.entries[i].value, source, env, writes)
+        var val_result = eval_expr(value.entries[i].value, source, env, writes, runtime)
         if val_result.is_err() {
             return result::err(val_result.unwrap_err())
         }
@@ -3143,12 +3997,12 @@ func eval_map_literal(map_literal value, source_file source, vec[binding] mut en
     result::ok(value.fn_map(entries))
 }
 
-func eval_index_expr(index_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
-    var target_result = eval_expr(value.target.value, source, env, writes)
+func eval_index_expr(index_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    var target_result = eval_expr(value.target.value, source, env, writes, runtime)
     if target_result.is_err() {
         return target_result
     }
-    var index_result = eval_expr(value.index.value, source, env, writes)
+    var index_result = eval_expr(value.index.value, source, env, writes, runtime)
     if index_result.is_err() {
         return index_result
     }
@@ -3169,14 +4023,14 @@ func eval_index_expr(index_expr value, source_file source, vec[binding] mut env,
     }
 }
 
-func eval_print_call(string name, vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+func eval_print_call(string name, vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
     if args.len() > 1 {
         result::err(backend_error { message: "backend error: " + name + " expects at most one argument" })
     }
 
     var text = ""
     if args.len() == 1 {
-        var arg_result = eval_expr(args[0], source, env, writes)
+        var arg_result = eval_expr(args[0], source, env, writes, runtime)
         if arg_result.is_err() {
             result::err(arg_result.unwrap_err())
         }
@@ -3192,8 +4046,8 @@ func eval_print_call(string name, vec[expr] args, source_file source, vec[bindin
     result::ok(value.unit(unit_value {}))
 }
 
-func eval_if_expr(if_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
-    var cond_result = eval_expr(value.condition.value, source, env, writes)
+func eval_if_expr(if_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    var cond_result = eval_expr(value.condition.value, source, env, writes, runtime)
     if cond_result.is_err() {
         result::err(cond_result.unwrap_err())
     }
@@ -3201,10 +4055,10 @@ func eval_if_expr(if_expr value, source_file source, vec[binding] mut env, vec[w
     switch cond_result.unwrap() {
         value.bool(flag) : {
             if flag {
-                execute_block_in_place(value.then_branch, source, env, writes)
+                execute_block_in_place(value.then_branch, source, env, writes, runtime)
             } else {
                 switch value.else_branch {
-                    option.some(expr) : eval_expr(expr.value, source, env, writes),
+                    option.some(expr) : eval_expr(expr.value, source, env, writes, runtime),
                     option.none : result::ok(value.unit(unit_value {})),
                 }
             }
@@ -3213,9 +4067,9 @@ func eval_if_expr(if_expr value, source_file source, vec[binding] mut env, vec[w
     }
 }
 
-func eval_while_expr(while_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+func eval_while_expr(while_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
     while true {
-        var cond_result = eval_expr(value.condition.value, source, env, writes)
+        var cond_result = eval_expr(value.condition.value, source, env, writes, runtime)
         if cond_result.is_err() {
             result::err(cond_result.unwrap_err())
         }
@@ -3228,7 +4082,7 @@ func eval_while_expr(while_expr value, source_file source, vec[binding] mut env,
             _ : result::err(backend_error { message: "backend error: while condition must be bool" }),
         }
 
-        var body_result = execute_block_in_place(value.body, source, env, writes)
+        var body_result = execute_block_in_place(value.body, source, env, writes, runtime)
         if body_result.is_err() {
             result::err(body_result.unwrap_err())
         }
@@ -3327,6 +4181,12 @@ func compare_values(value left, value right, bool equal) result[value, backend_e
                 _ : result::err(backend_error { message: "backend error: comparison expects matching types" }),
             }
         }
+        value.channel(left_handle) : {
+            switch right {
+                value.channel(right_handle) : same = left_handle.id == right_handle.id,
+                _ : result::err(backend_error { message: "backend error: comparison expects matching types" }),
+            }
+        }
         value.fn_map(_) : {
             return result::err(backend_error { message: "backend error: function maps are not comparable" })
         }
@@ -3387,6 +4247,7 @@ func value_to_exit_code(value value) result[int32, backend_error] {
         value.bool(flag) : result::ok(if flag { 1 } else { 0 }),
         value.unit(_) : result::ok(0),
         value.string(_) : result::err(backend_error { message: "backend error: main cannot return string" }),
+        value.channel(_) : result::err(backend_error { message: "backend error: main cannot return channel" }),
         value.fn_ref(_) : result::err(backend_error { message: "backend error: main cannot return function reference" }),
         value.fn_map(_) : result::err(backend_error { message: "backend error: main cannot return function map" }),
     }
@@ -3398,6 +4259,7 @@ func stringify_value(value value) string {
         value.string(text) : text,
         value.bool(flag) : if flag { "true" } else { "false" },
         value.unit(_) : "()",
+        value.channel(handle) : "<chan:" + to_string(handle.id) + ">",
         value.fn_ref(name) : "<func:" + name + ">",
         value.fn_map(entries) : "<func-map:" + to_string(entries.len()) + ">",
     }
