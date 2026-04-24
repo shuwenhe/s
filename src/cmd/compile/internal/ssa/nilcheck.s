@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_nilcheck() int {
-    0
+func nilcheck_unit_name() string {
+    "ssa/nilcheck.s"
+}
+
+func nilcheck_unit_ready() int {
+    1
 }

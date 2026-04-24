@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_location() int {
-    0
+func location_unit_name() string {
+    "ssa/location.s"
+}
+
+func location_unit_ready() int {
+    1
 }

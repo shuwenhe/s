@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_rewritedivisible() int {
-    0
+func rewritedivisible_unit_name() string {
+    "ssa/rewritedivisible.s"
+}
+
+func rewritedivisible_unit_ready() int {
+    1
 }

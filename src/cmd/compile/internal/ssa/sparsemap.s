@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_sparsemap() int {
-    0
+func sparsemap_unit_name() string {
+    "ssa/sparsemap.s"
+}
+
+func sparsemap_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_layout() int {
-    0
+func layout_unit_name() string {
+    "ssa/layout.s"
+}
+
+func layout_unit_ready() int {
+    1
 }

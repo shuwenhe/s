@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_numberlines() int {
-    0
+func numberlines_unit_name() string {
+    "ssa/numberlines.s"
+}
+
+func numberlines_unit_ready() int {
+    1
 }

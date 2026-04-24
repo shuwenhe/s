@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_memcombine() int {
-    0
+func memcombine_unit_name() string {
+    "ssa/memcombine.s"
+}
+
+func memcombine_unit_ready() int {
+    1
 }

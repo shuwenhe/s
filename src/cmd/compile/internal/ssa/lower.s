@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_lower() int {
-    0
+func lower_unit_name() string {
+    "ssa/lower.s"
+}
+
+func lower_unit_ready() int {
+    1
 }

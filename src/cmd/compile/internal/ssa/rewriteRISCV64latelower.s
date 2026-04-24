@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_rewriteriscv64latelower() int {
-    0
+func rewriteRISCV64latelower_unit_name() string {
+    "ssa/rewriteRISCV64latelower.s"
+}
+
+func rewriteRISCV64latelower_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_rewriteamd64splitload() int {
-    0
+func rewriteAMD64splitload_unit_name() string {
+    "ssa/rewriteAMD64splitload.s"
+}
+
+func rewriteAMD64splitload_unit_ready() int {
+    1
 }
