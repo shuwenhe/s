@@ -1,5 +1,5 @@
 package demo.binary
 
-func calc(int32 a, int32 b, int32 c) int32 {
+func calc(int a, int b, int c) int {
     a + b * c
 }

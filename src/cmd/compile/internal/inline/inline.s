@@ -5,7 +5,7 @@ use compile.internal.mir.mir_statement
 use std.prelude.len
 use std.prelude.slice
 
-func estimate_inline_sites(string mir_text) int32 {
+func estimate_inline_sites(string mir_text) int {
     var calls = count_token(mir_text, " call=")
     if calls <= 0 {
         return 0
@@ -14,7 +14,7 @@ func estimate_inline_sites(string mir_text) int32 {
     calls / 2
 }
 
-func estimate_inline_sites_graph(mir_graph graph) int32 {
+func estimate_inline_sites_graph(mir_graph graph) int {
     var call_sites = 0
     var i = 0
     while i < graph.blocks.len() {
@@ -44,7 +44,7 @@ func estimate_inline_sites_graph(mir_graph graph) int32 {
     call_sites / 2
 }
 
-func count_token(string text, string token) int32 {
+func count_token(string text, string token) int {
     if token == "" {
         return 0
     }

@@ -5,7 +5,7 @@ use std.result.result as res
 
 struct config[t] {
     string addr
-    int32 retries
+    int retries
 }
 
 enum option[t] {

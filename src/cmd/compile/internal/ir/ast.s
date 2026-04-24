@@ -62,7 +62,7 @@ struct expr_stmt { expr_ir expr }
 struct return_stmt { option[expr_ir] value }
 
 enum expr_ir {
-    int(int32),
+    int(int),
     string(string),
     bool(bool),
     name(string),

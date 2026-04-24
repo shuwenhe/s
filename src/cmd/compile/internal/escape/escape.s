@@ -5,11 +5,11 @@ use compile.internal.mir.mir_statement
 use std.prelude.len
 use std.prelude.slice
 
-func estimate_escape_sites(string mir_text) int32 {
+func estimate_escape_sites(string mir_text) int {
     count_token(mir_text, "alloc") + count_token(mir_text, "borrow")
 }
 
-func estimate_escape_sites_graph(mir_graph graph) int32 {
+func estimate_escape_sites_graph(mir_graph graph) int {
     var total = 0
     var i = 0
     while i < graph.blocks.len() {
@@ -36,7 +36,7 @@ func estimate_escape_sites_graph(mir_graph graph) int32 {
     total
 }
 
-func count_token(string text, string token) int32 {
+func count_token(string text, string token) int {
     if token == "" {
         return 0
     }

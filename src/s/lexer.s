@@ -8,15 +8,15 @@ use std.result.result
 
 struct lex_error {
     string message
-    int32 line
-    int32 column
+    int line
+    int column
 }
 
 struct lexer {
     string source
-    int32 index
-    int32 line
-    int32 column
+    int index
+    int line
+    int column
 }
 
 func new_lexer(string source) lexer {

@@ -67,7 +67,7 @@ func make_options(string command, string path, string output, string ssa_margin)
     options
 }
 
-func parse_optional_margin(vec[string] args, int32 start_index) string {
+func parse_optional_margin(vec[string] args, int start_index) string {
     if args.len() <= start_index {
         return ""
     }

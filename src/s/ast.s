@@ -264,7 +264,7 @@ struct impl_decl {
 struct const_decl {
     string name
     option[expr] value
-    int32 iota_index
+    int iota_index
 }
 
 enum item {
