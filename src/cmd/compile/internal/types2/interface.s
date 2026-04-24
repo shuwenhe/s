@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_interface() int {
-    0
+func interface_unit_name() string {
+    "types2/interface.s"
+}
+
+func interface_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_decl() int {
-    0
+func decl_unit_name() string {
+    "types2/decl.s"
+}
+
+func decl_unit_ready() int {
+    1
 }

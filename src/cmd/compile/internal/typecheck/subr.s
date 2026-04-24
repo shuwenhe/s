@@ -1,5 +1,9 @@
 package compile.internal.typecheck
 
-func stub_subr() int {
-    0
+func subr_unit_name() string {
+    "typecheck/subr.s"
+}
+
+func subr_unit_ready() int {
+    1
 }
