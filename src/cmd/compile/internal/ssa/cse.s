@@ -1,5 +1,30 @@
 package compile.internal.ssa
 
-func stub_cse() int {
-    0
+func run_cse(mut ssa_func f) int {
+    var changed = 0
+    var i = 0
+    while i < f.values.len() {
+        if f.values[i].removed || !(op_is_pure(f.values[i].op)) {
+            i = i + 1
+            continue
+        }
+        var key_i = value_key(f.values[i])
+        var j = 0
+        while j < i {
+            if !f.values[j].removed && op_is_pure(f.values[j].op) {
+                if value_key(f.values[j]) == key_i {
+                    rewrite_value_references(f, i, j)
+                    f.values[i].removed = true
+                    changed = changed + 1
+                    break
+                }
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    if changed > 0 {
+        recompute_uses(f)
+    }
+    changed
 }
