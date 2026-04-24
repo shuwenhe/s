@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_likelyadjust() int {
-    0
+func likelyadjust_unit_name() string {
+    "ssa/likelyadjust.s"
+}
+
+func likelyadjust_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_loopreschedchecks() int {
-    0
+func loopreschedchecks_unit_name() string {
+    "ssa/loopreschedchecks.s"
+}
+
+func loopreschedchecks_unit_ready() int {
+    1
 }

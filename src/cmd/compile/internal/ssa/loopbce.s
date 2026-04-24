@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_loopbce() int {
-    0
+func loopbce_unit_name() string {
+    "ssa/loopbce.s"
+}
+
+func loopbce_unit_ready() int {
+    1
 }

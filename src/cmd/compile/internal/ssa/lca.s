@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_lca() int {
-    0
+func lca_unit_name() string {
+    "ssa/lca.s"
+}
+
+func lca_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_known_bits() int {
-    0
+func known_bits_unit_name() string {
+    "ssa/known_bits.s"
+}
+
+func known_bits_unit_ready() int {
+    1
 }

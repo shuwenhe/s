@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_rewritetern() int {
-    0
+func rewritetern_unit_name() string {
+    "ssa/rewritetern.s"
+}
+
+func rewritetern_unit_ready() int {
+    1
 }

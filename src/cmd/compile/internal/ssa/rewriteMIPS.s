@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_rewritemips() int {
-    0
+func rewriteMIPS_unit_name() string {
+    "ssa/rewriteMIPS.s"
+}
+
+func rewriteMIPS_unit_ready() int {
+    1
 }
