@@ -1,5 +1,9 @@
 package compile.internal.liveness
 
-func stub_mergelocals() int {
-    0
+func mergelocals_unit_name() string {
+    "liveness/mergelocals.s"
+}
+
+func mergelocals_unit_ready() int {
+    1
 }

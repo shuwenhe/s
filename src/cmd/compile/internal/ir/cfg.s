@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_cfg() int {
-    0
+func cfg_unit_name() string {
+    "ir/cfg.s"
+}
+
+func cfg_unit_ready() int {
+    1
 }
