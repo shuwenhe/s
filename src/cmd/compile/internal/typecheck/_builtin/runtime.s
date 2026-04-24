@@ -1,5 +1,9 @@
 package compile.internal.typecheck._builtin
 
-func stub_runtime() int {
-    0
+func runtime_unit_name() string {
+    "typecheck/_builtin/runtime.s"
+}
+
+func runtime_unit_ready() int {
+    1
 }

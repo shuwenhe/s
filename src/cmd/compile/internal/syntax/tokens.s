@@ -1,5 +1,9 @@
 package compile.internal.syntax
 
-func stub_tokens() int {
-    0
+func tokens_unit_name() string {
+    "syntax/tokens.s"
+}
+
+func tokens_unit_ready() int {
+    1
 }

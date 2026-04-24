@@ -1,5 +1,9 @@
 package compile.internal.syntax.testdata
 
-func stub_typeset() int {
-    0
+func typeset_unit_name() string {
+    "syntax/testdata/typeset.s"
+}
+
+func typeset_unit_ready() int {
+    1
 }

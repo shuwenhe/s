@@ -1,5 +1,9 @@
 package compile.internal.test.testdata.gen
 
-func stub_arithconstgen() int {
-    0
+func arithConstGen_unit_name() string {
+    "test/testdata/gen/arithConstGen.s"
+}
+
+func arithConstGen_unit_ready() int {
+    1
 }

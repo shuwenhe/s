@@ -1,5 +1,9 @@
 package compile.internal.test.testdata.mysort
 
-func stub_mysort() int {
-    0
+func mysort_unit_name() string {
+    "test/testdata/mysort/mysort.s"
+}
+
+func mysort_unit_ready() int {
+    1
 }

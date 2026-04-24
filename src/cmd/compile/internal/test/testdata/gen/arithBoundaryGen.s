@@ -1,5 +1,9 @@
 package compile.internal.test.testdata.gen
 
-func stub_arithboundarygen() int {
-    0
+func arithBoundaryGen_unit_name() string {
+    "test/testdata/gen/arithBoundaryGen.s"
+}
+
+func arithBoundaryGen_unit_ready() int {
+    1
 }
