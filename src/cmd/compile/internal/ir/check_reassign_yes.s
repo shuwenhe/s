@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_check_reassign_yes() int {
-    0
+func check_reassign_yes_unit_name() string {
+    "ir/check_reassign_yes.s"
+}
+
+func check_reassign_yes_unit_ready() int {
+    1
 }
