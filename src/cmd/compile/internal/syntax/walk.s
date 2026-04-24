@@ -1,5 +1,9 @@
 package compile.internal.syntax
 
-func stub_walk() int {
-    0
+func walk_unit_name() string {
+    "syntax/walk.s"
+}
+
+func walk_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.syntax
 
-func stub_testing() int {
-    0
+func testing_unit_name() string {
+    "syntax/testing.s"
+}
+
+func testing_unit_ready() int {
+    1
 }

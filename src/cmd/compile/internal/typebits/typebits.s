@@ -1,5 +1,9 @@
 package compile.internal.typebits
 
-func stub_typebits() int {
-    0
+func typebits_unit_name() string {
+    "typebits/typebits.s"
+}
+
+func typebits_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.typecheck
 
-func stub_const() int {
-    0
+func const_unit_name() string {
+    "typecheck/const.s"
+}
+
+func const_unit_ready() int {
+    1
 }

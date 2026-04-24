@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_flowgraph_generator1() int {
-    0
+func flowgraph_generator1_unit_name() string {
+    "test/testdata/flowgraph_generator1.s"
+}
+
+func flowgraph_generator1_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.test.testdata.gen
 
-func stub_constfoldgen() int {
-    0
+func constFoldGen_unit_name() string {
+    "test/testdata/gen/constFoldGen.s"
+}
+
+func constFoldGen_unit_ready() int {
+    1
 }
