@@ -8,13 +8,13 @@ use std.vec.vec
 
 struct parse_error {
     string message
-    int32 line
-    int32 column
+    int line
+    int column
 }
 
 struct parser {
     vec[token] tokens
-    int32 index
+    int index
 }
 
 func parse_source(string source) result[source_file, parse_error] {
@@ -148,7 +148,7 @@ impl parser {
         result::ok(out)
     }
 
-    func parse_const_entry(mut self, bool allow_omitted_value, int32 iota_index) result[const_decl, parse_error] {
+    func parse_const_entry(mut self, bool allow_omitted_value, int iota_index) result[const_decl, parse_error] {
         var name = self.expect_ident()?
         var value = option::none
         if self.eat_symbol("=") {
@@ -636,6 +636,9 @@ impl parser {
     }
 
     func parse_expr(mut self) result[expr, parse_error] {
+        if self.at_keyword("select") {
+            return self.parse_select_expr()
+        }
         if self.at_keyword("switch") {
             return self.parse_switch_expr()
         }
@@ -649,6 +652,127 @@ impl parser {
             return self.parse_for_expr()
         }
         self.parse_binary_expr(0)
+    }
+
+    func parse_select_expr(mut self) result[expr, parse_error] {
+        self.expect_keyword("select")?
+        self.expect_symbol("{")?
+
+        var mode = ""
+        var recv_args = vec[expr]()
+        var send_args = vec[expr]()
+        var timeout_arg = option[expr].none
+        var has_default = false
+
+        while !self.eat_symbol("}") {
+            self.expect_keyword("case")?
+            if self.eat_keyword("default") {
+                if has_default {
+                    return result::err(self.error_here("duplicate default case in select"))
+                }
+                has_default = true
+                self.expect_symbol(":")?
+                self.eat_symbol(";")
+                continue
+            }
+
+            var case_expr = self.parse_expr()?
+            self.expect_symbol(":")?
+            self.eat_symbol(";")
+
+            switch case_expr {
+                expr.call(call_value) : {
+                    switch call_value.callee.value {
+                        expr.name(name_value) : {
+                            if name_value.name == "recv" {
+                                if mode != "" && mode != "recv" {
+                                    return result::err(self.error_here("select cannot mix recv and send cases"))
+                                }
+                                mode = "recv"
+                                if call_value.args.len() == 0 {
+                                    return result::err(self.error_here("select recv case requires at least one channel"))
+                                }
+                                var ri = 0
+                                while ri < call_value.args.len() {
+                                    recv_args.push(call_value.args[ri])
+                                    ri = ri + 1
+                                }
+                            } else if name_value.name == "send" {
+                                if mode != "" && mode != "send" {
+                                    return result::err(self.error_here("select cannot mix recv and send cases"))
+                                }
+                                mode = "send"
+                                if call_value.args.len() < 2 || (call_value.args.len() % 2) != 0 {
+                                    return result::err(self.error_here("select send case expects channel/value pairs"))
+                                }
+                                var si = 0
+                                while si < call_value.args.len() {
+                                    send_args.push(call_value.args[si])
+                                    si = si + 1
+                                }
+                            } else if name_value.name == "timeout" || name_value.name == "after" {
+                                if timeout_arg.is_some() {
+                                    return result::err(self.error_here("duplicate timeout case in select"))
+                                }
+                                if call_value.args.len() != 1 {
+                                    return result::err(self.error_here("select timeout case expects one tick argument"))
+                                }
+                                timeout_arg = option[expr].some(call_value.args[0])
+                            } else {
+                                return result::err(self.error_here("unsupported select case expression"))
+                            }
+                        }
+                        _ : return result::err(self.error_here("select case must be recv/send/timeout call")),
+                    }
+                }
+                _ : return result::err(self.error_here("select case must be call expression")),
+            }
+        }
+
+        if timeout_arg.is_some() && has_default {
+            return result::err(self.error_here("select cannot combine timeout and default"))
+        }
+        if mode == "" {
+            return result::err(self.error_here("select requires recv(...) or send(...) case"))
+        }
+
+        var callee_name = ""
+        var args = vec[expr]()
+        if mode == "recv" {
+            if recv_args.len() == 0 {
+                return result::err(self.error_here("select recv requires at least one channel"))
+            }
+            callee_name = "select_recv"
+            var ri = 0
+            while ri < recv_args.len() {
+                args.push(recv_args[ri])
+                ri = ri + 1
+            }
+            if timeout_arg.is_some() {
+                callee_name = "select_recv_timeout"
+                args.push(timeout_arg.unwrap())
+            } else if has_default {
+                callee_name = "select_recv_default"
+            }
+        } else {
+            if send_args.len() < 2 || (send_args.len() % 2) != 0 {
+                return result::err(self.error_here("select send requires channel/value pairs"))
+            }
+            callee_name = "select_send"
+            var si = 0
+            while si < send_args.len() {
+                args.push(send_args[si])
+                si = si + 1
+            }
+            if timeout_arg.is_some() {
+                callee_name = "select_send_timeout"
+                args.push(timeout_arg.unwrap())
+            } else if has_default {
+                callee_name = "select_send_default"
+            }
+        }
+
+        result::ok(build_call_expr(callee_name, args))
     }
 
     func parse_switch_expr(mut self) result[expr, parse_error] {
@@ -794,7 +918,7 @@ impl parser {
         result::ok(pattern::name(name_pattern { name: path }))
     }
 
-    func parse_binary_expr(mut self, int32 min_precedence) result[expr, parse_error] {
+    func parse_binary_expr(mut self, int min_precedence) result[expr, parse_error] {
         var expr = self.parse_unary_expr()?
         while true {
             var token = self.peek()?
@@ -983,7 +1107,7 @@ impl parser {
         }))
     }
 
-    func binary_precedence(self, string op) int32 {
+    func binary_precedence(self, string op) int {
         switch op {
             "||" : 1,
             "&&" : 2,
@@ -1219,7 +1343,7 @@ impl parser {
         self.peek_at(0)
     }
 
-    func peek_at(self, int32 offset) result[token, parse_error] {
+    func peek_at(self, int offset) result[token, parse_error] {
         if self.index >= len(self.tokens) {
             return result::err(parse_error {
                 message: "unexpected eof",
@@ -1251,7 +1375,7 @@ impl parser {
 }
 
 impl parser {
-    func find_top_level_symbol_offset(self, string value) int32 {
+    func find_top_level_symbol_offset(self, string value) int {
         var bracket = 0
         var paren = 0
         var offset = 0
@@ -1280,6 +1404,17 @@ impl parser {
         }
         -1
     }
+}
+
+func build_call_expr(string callee_name, vec[expr] args) expr {
+    expr::call(call_expr {
+        callee: box(expr::name(name_expr {
+            name: callee_name,
+            inferred_type: option::none,
+        })),
+        args: args,
+        inferred_type: option::none,
+    })
 }
 
 struct parsed_function {
@@ -1318,7 +1453,7 @@ func decode_named_type(vec[token] tokens) result[named_type, parse_error] {
     })
 }
 
-func slice_tokens(vec[token] tokens, int32 start, int32 end) vec[token] {
+func slice_tokens(vec[token] tokens, int start, int end) vec[token] {
     var out = vec[token]()
     var i = start
     while i < end {
@@ -1336,7 +1471,7 @@ func join_token_values(vec[token] tokens) string {
     join_strings(parts, " ")
 }
 
-func find_token_value(vec[token] tokens, string value) int32 {
+func find_token_value(vec[token] tokens, string value) int {
     var bracket = 0
     var paren = 0
     var i = 0
@@ -1358,7 +1493,7 @@ func find_token_value(vec[token] tokens, string value) int32 {
     -1
 }
 
-func find_decl_name_index(vec[token] tokens) int32 {
+func find_decl_name_index(vec[token] tokens) int {
     var bracket = 0
     var paren = 0
     var index = -1

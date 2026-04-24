@@ -6,7 +6,7 @@ use internal.buildcfg.check as buildcfg_check
 use internal.buildcfg.goarch as buildcfg_goarch
 use std.vec.vec
 
-func main(vec[string] args) int32 {
+func main(vec[string] args) int {
     var buildcfg_err = buildcfg_check()
     if buildcfg_err != "" {
         return 2

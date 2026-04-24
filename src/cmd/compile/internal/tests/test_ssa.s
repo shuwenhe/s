@@ -6,7 +6,7 @@ use compile.internal.ssa_core.dump_pipeline
 use compile.internal.ssa_core.dump_debug_map
 use std.prelude.slice
 
-func run_ssa_suite() int32 {
+func run_ssa_suite() int {
     var mir_text = "mir main blocks=2 entry=0 exit=1 | bb0(entry) stmts=1 term=jump | bb1(exit) stmts=0 term=return"
 
     var arm64_dump = dump_pipeline(build_pipeline(mir_text, "arm64"))

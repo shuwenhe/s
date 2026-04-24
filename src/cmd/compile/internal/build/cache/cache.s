@@ -7,18 +7,18 @@ use std.prelude.slice
 use std.prelude.to_string
 
 struct dep_version_state {
-    int32 version
-    int32 depth
-    int32 layer_epoch
+    int version
+    int depth
+    int layer_epoch
 }
 
 struct dep_graph_state {
-    int32 max_depth
-    int32 epoch_acc
-    int32 dep_count
-    int32 pruned_count
-    int32 minimal_invalidation_score
-    int32 parallel_wave_count
+    int max_depth
+    int epoch_acc
+    int dep_count
+    int pruned_count
+    int minimal_invalidation_score
+    int parallel_wave_count
     string direct_signature
     string pruned_signature
 }
@@ -130,7 +130,7 @@ func phase_stamp_path(string phase, string domain) string {
     ".s.cache.phase." + sanitize_key(phase) + "." + sanitize_key(domain)
 }
 
-func read_phase_epoch(string phase, string domain) int32 {
+func read_phase_epoch(string phase, string domain) int {
     var stamp = read_to_string(phase_stamp_path(phase, domain))
     if stamp.is_err() {
         return 0
@@ -264,7 +264,7 @@ func dependency_graph_state(string source_text, string phase, string target_key)
     }
 }
 
-func phase_depth_budget(string phase) int32 {
+func phase_depth_budget(string phase) int {
     if phase == "check" {
         return 1
     }
@@ -274,7 +274,7 @@ func phase_depth_budget(string phase) int32 {
     2
 }
 
-func should_prune_dependency(string dep_path, string source_pkg, dep_version_state dep_state, int32 depth_budget, string target_key) bool {
+func should_prune_dependency(string dep_path, string source_pkg, dep_version_state dep_state, int depth_budget, string target_key) bool {
     if dep_state.depth > depth_budget {
         return true
     }
@@ -304,7 +304,7 @@ func root_package(string pkg) string {
     slice(pkg, 0, dot)
 }
 
-func target_parallel_lane(string target_key) int32 {
+func target_parallel_lane(string target_key) int {
     var hash = 0
     var i = 0
     while i < len(target_key) {
@@ -314,7 +314,7 @@ func target_parallel_lane(string target_key) int32 {
     hash
 }
 
-func digit_fallback(string ch) int32 {
+func digit_fallback(string ch) int {
     if ch >= "0" && ch <= "9" {
         return digit_value(ch)
     }
@@ -366,7 +366,7 @@ func read_dep_version_state(string pkg_or_use_path) dep_version_state {
     }
 }
 
-func parse_field_int(string text, string marker) int32 {
+func parse_field_int(string text, string marker) int {
     var start = index_of(text, marker)
     if start < 0 {
         return -1
@@ -389,7 +389,7 @@ func parse_field_int(string text, string marker) int32 {
     value
 }
 
-func digit_value(string ch) int32 {
+func digit_value(string ch) int {
     if ch == "0" { return 0 }
     if ch == "1" { return 1 }
     if ch == "2" { return 2 }
@@ -472,7 +472,7 @@ func package_name(string source_text) string {
     slice(source_text, start, end)
 }
 
-func index_of(string text, string token) int32 {
+func index_of(string text, string token) int {
     if token == "" {
         return 0
     }
@@ -486,7 +486,7 @@ func index_of(string text, string token) int32 {
     -1
 }
 
-func index_of_from(string text, string token, int32 start) int32 {
+func index_of_from(string text, string token, int start) int {
     if token == "" {
         return start
     }
@@ -500,7 +500,7 @@ func index_of_from(string text, string token, int32 start) int32 {
     -1
 }
 
-func count_token(string text, string token) int32 {
+func count_token(string text, string token) int {
     if token == "" {
         return 0
     }

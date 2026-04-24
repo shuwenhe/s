@@ -9,13 +9,13 @@ struct MirOperand {
 }
 
 struct MirLocalSlot {
-    int32 id
+    int id
     string name
     option[string] type_name
 }
 
 struct MirAssignStmt {
-    int32 target
+    int target
     string op
     vec[string] args
 }
@@ -32,11 +32,11 @@ enum MirStatement {
 
 struct MirTerminator {
     string kind,
-    vec[int32] targets
+    vec[int] targets
 }
 
 struct MirBasicBlock {
-    int32 id
+    int id
     string label
     vec[MirStatement] statements
     MirTerminator terminator
@@ -46,8 +46,8 @@ struct MirFunction {
     string name
     vec[MirLocalSlot] locals
     vec[MirBasicBlock] blocks
-    int32 entry
-    int32 exit
+    int entry
+    int exit
 }
 
 func new_empty_function(string name) MirFunction {

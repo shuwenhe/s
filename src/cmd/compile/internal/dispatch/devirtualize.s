@@ -5,7 +5,7 @@ use compile.internal.mir.mir_statement
 use std.prelude.len
 use std.prelude.slice
 
-func estimate_devirtualized_sites(string mir_text) int32 {
+func estimate_devirtualized_sites(string mir_text) int {
     var candidates = count_token(mir_text, "dyn") + count_token(mir_text, "iface")
     if candidates <= 0 {
         return 0
@@ -13,7 +13,7 @@ func estimate_devirtualized_sites(string mir_text) int32 {
     candidates / 2
 }
 
-func estimate_devirtualized_sites_graph(mir_graph graph) int32 {
+func estimate_devirtualized_sites_graph(mir_graph graph) int {
     var candidates = 0
     var i = 0
     while i < graph.blocks.len() {
@@ -43,7 +43,7 @@ func estimate_devirtualized_sites_graph(mir_graph graph) int32 {
     candidates / 2
 }
 
-func count_token(string text, string token) int32 {
+func count_token(string text, string token) int {
     if token == "" {
         return 0
     }
