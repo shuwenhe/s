@@ -101,13 +101,24 @@ func fail_int(string message) result[int32, backend_error] {
     });
 }
 
+var control_panic_active = "@panic.active"
+var control_panic_payload = "@panic.payload"
+var control_in_defer = "@defer.active"
+
 struct unit_value {}
+
+struct fn_map_entry_value {
+    string key
+    string func_name
+}
 
 enum value {
     int(int32),
     string(string),
     bool(bool),
     unit(unit_value),
+    fn_ref(string),
+    fn_map(vec[fn_map_entry_value]),
 }
 
 struct binding {
@@ -191,12 +202,12 @@ func build(string path, string output) int32 {
         return report_failure(abi_check.unwrap_err().message)
     }
 
-    var writes_result = compile_writes(graph)
+    var writes_result = compile_writes(parsed, graph)
     if writes_result.is_err() {
         return report_failure(writes_result.unwrap_err().message)
     }
 
-    var exit_code_result = compile_exit_code(graph)
+    var exit_code_result = compile_exit_code(parsed, graph)
     if exit_code_result.is_err() {
         return report_failure(exit_code_result.unwrap_err().message)
     }
@@ -401,6 +412,8 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     if const_prop > 0 {
         rewritten = rewritten + " constprop=" + to_string(const_prop)
     }
+    var const_fold_hits = estimate_const_fold_hits_text(rewritten)
+    rewritten = rewritten + " constfold=" + to_string(const_fold_hits)
     rewritten = rewritten + " ipo=" + to_string(ipo_synergy)
     rewritten = rewritten + " pass.rm_unreachable=" + to_string(pass.removed_unreachable_blocks)
     rewritten = rewritten + " pass.fold_branch=" + to_string(pass.folded_redundant_branches)
@@ -414,6 +427,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         + " devirtualized=" + to_string(devirt)
         + " cross_pkg_inline=" + to_string(cross_pkg_inline)
         + " const_prop=" + to_string(const_prop)
+        + " const_fold_hits=" + to_string(const_fold_hits)
         + " ipo_synergy=" + to_string(ipo_synergy)
         + " pass_rm_unreachable=" + to_string(pass.removed_unreachable_blocks)
         + " pass_fold_branch=" + to_string(pass.folded_redundant_branches)
@@ -425,6 +439,14 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         optimized_mir_text: rewritten,
         report: report,
     }
+}
+
+func estimate_const_fold_hits_text(string rewritten_mir) int32 {
+    var hits = count_occurrences(rewritten_mir, "yield ")
+    if hits < 0 {
+        return 0
+    }
+    hits
 }
 
 struct midend_pass_result {
@@ -1784,30 +1806,74 @@ func bool_string(bool value) string {
     "false"
 }
 
-func compile_writes(mir_graph graph) result[vec[write_op], backend_error] {
+func compile_writes(source_file source, mir_graph graph) result[vec[write_op], backend_error] {
     if graph.blocks.len() == 0 {
         return fail_write_ops("backend error: mir graph has no blocks")
     }
 
+    var source_exec = execute_source_main(source)
+    if source_exec.is_ok() {
+        return result::ok(source_exec.unwrap().writes)
+    }
+
     var exec_result = execute_mir_graph(graph)
     if exec_result.is_err() {
-        return fail_write_ops(exec_result.unwrap_err().message)
+        return fail_write_ops(source_exec.unwrap_err().message)
     }
 
     result::ok(exec_result.unwrap().writes)
 }
 
-func compile_exit_code(mir_graph graph) result[int32, backend_error] {
+func compile_exit_code(source_file source, mir_graph graph) result[int32, backend_error] {
     if graph.blocks.len() == 0 {
         return fail_int("backend error: mir graph has no blocks")
     }
 
+    var source_exec = execute_source_main(source)
+    if source_exec.is_ok() {
+        return result::ok(source_exec.unwrap().exit_code)
+    }
+
     var exec_result = execute_mir_graph(graph)
     if exec_result.is_err() {
-        return fail_int(exec_result.unwrap_err().message)
+        return fail_int(source_exec.unwrap_err().message)
     }
 
     result::ok(exec_result.unwrap().exit_code)
+}
+
+func execute_source_main(source_file source) result[mir_execution_result, backend_error] {
+    var main_result = find_main(source)
+    if main_result.is_err() {
+        return result::err(main_result.unwrap_err())
+    }
+
+    var main_fn = main_result.unwrap()
+    if main_fn.body.is_none() {
+        return result::err(backend_error { message: "backend error: entry function main has no body" })
+    }
+
+    var writes = vec[write_op]()
+    var const_bindings = collect_const_bindings(source)
+    if const_bindings.is_err() {
+        return result::err(const_bindings.unwrap_err())
+    }
+
+    var env = copy_bindings(const_bindings.unwrap())
+    var eval_result = execute_block_in_place(main_fn.body.unwrap(), source, env, writes)
+    if eval_result.is_err() {
+        return result::err(eval_result.unwrap_err())
+    }
+
+    var code_result = value_to_exit_code(eval_result.unwrap())
+    if code_result.is_err() {
+        return result::err(code_result.unwrap_err())
+    }
+
+    result::ok(mir_execution_result {
+        writes: writes,
+        exit_code: code_result.unwrap(),
+    })
 }
 
 func execute_mir_graph(mir_graph graph) result[mir_execution_result, backend_error] {
@@ -2047,7 +2113,7 @@ func find_main(source_file source) result[function_decl, backend_error] {
     fail_function("backend error: entry function main not found")
 }
 
-func call_function(source_file source, string name, vec[value] args, vec[write_op] mut writes) result[value, backend_error] {
+func call_function(source_file source, string name, vec[value] args, vec[binding] mut caller_env, vec[write_op] mut writes) result[value, backend_error] {
     var fn_result = find_function(source, name)
     if fn_result.is_err() {
         return fail_value(fn_result.unwrap_err().message)
@@ -2069,6 +2135,13 @@ func call_function(source_file source, string name, vec[value] args, vec[write_o
     }
 
     var env = vec[binding]()
+    var const_bindings = collect_const_bindings(source)
+    if const_bindings.is_err() {
+        return fail_value(const_bindings.unwrap_err().message)
+    }
+    env = copy_bindings(const_bindings.unwrap())
+
+    copy_control_bindings(caller_env, env)
     var pi = 0
     while pi < function.sig.params.len() {
         env.push(binding {
@@ -2082,6 +2155,7 @@ func call_function(source_file source, string name, vec[value] args, vec[write_o
     if body_result.is_err() {
         return fail_value(body_result.unwrap_err().message)
     }
+    copy_control_bindings(env, caller_env)
     ok_value(body_result.unwrap())
 }
 
@@ -2111,19 +2185,65 @@ func execute_block(block_expr block, source_file source, vec[binding] mut env, v
 }
 
 func execute_block_in_place(block_expr block, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+    var deferred = vec[expr]()
+
     var si = 0
     while si < block.statements.len() {
+        switch block.statements[si] {
+            stmt.defer(value) : {
+                deferred.push(value.expr);
+                si = si + 1
+                continue
+            }
+            _ : (),
+        }
+
         var stmt_result = execute_stmt(block.statements[si], source, env, writes)
         if stmt_result.is_err() {
-            result::err(stmt_result.unwrap_err())
+            var err = stmt_result.unwrap_err()
+            if is_panic_error(err) {
+                var run_deferred = execute_deferred(deferred, source, env, writes, panic_payload(err))
+                if run_deferred.is_err() {
+                    return result::err(run_deferred.unwrap_err())
+                }
+                if control_panic_is_active(env) {
+                    return result::err(panic_error(control_panic_payload_text(env)))
+                }
+                return result::ok(value.unit(unit_value {}))
+            }
+            return result::err(err)
         }
         si = si + 1
     }
 
+    var final_value = value.unit(unit_value {})
     switch block.final_expr {
-        option.some(expr) : eval_expr(expr, source, env, writes),
-        option.none : result::ok(value::unit(unit_value {})),
+        option.some(expr) : {
+            var final_result = eval_expr(expr, source, env, writes)
+            if final_result.is_err() {
+                var err = final_result.unwrap_err()
+                if is_panic_error(err) {
+                    var run_deferred = execute_deferred(deferred, source, env, writes, panic_payload(err))
+                    if run_deferred.is_err() {
+                        return result::err(run_deferred.unwrap_err())
+                    }
+                    if control_panic_is_active(env) {
+                        return result::err(panic_error(control_panic_payload_text(env)))
+                    }
+                    return result::ok(value.unit(unit_value {}))
+                }
+                return result::err(err)
+            }
+            final_value = final_result.unwrap()
+        }
+        option.none : (),
     }
+
+    var run_deferred = execute_deferred(deferred, source, env, writes, "")
+    if run_deferred.is_err() {
+        return result::err(run_deferred.unwrap_err())
+    }
+    result::ok(final_value)
 }
 
 func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[(), backend_error] {
@@ -2180,7 +2300,7 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write
             }
             result::ok(())
         }
-        stmt.defer(_) : result::err(backend_error { message: "backend error: defer statements are not supported in the mvp backend" }),
+        stmt.defer(_) : result::ok(()),
     }
 }
 
@@ -2227,7 +2347,7 @@ func eval_expr(expr expr, source_file source, vec[binding] mut env, vec[write_op
         expr.int(value) : result::ok(value.int(parse_int_literal(value.value))),
         expr.string(value) : result::ok(value.string(decode_string_literal(value.value))),
         expr.bool(value) : result::ok(value.bool(value.value)),
-        expr.name(value) : lookup_value(env, value.name),
+        expr.name(value) : lookup_name_or_function(env, source, value.name),
         expr.binary(value) : eval_binary(value, source, env, writes),
         expr.call(value) : eval_call(value, source, env, writes),
         expr.if(value) : eval_if_expr(value, source, env, writes),
@@ -2237,9 +2357,9 @@ func eval_expr(expr expr, source_file source, vec[binding] mut env, vec[write_op
         expr.switch(_) : result::err(backend_error { message: "backend error: switch expressions are not supported in the mvp backend" }),
         expr.borrow(_) : result::err(backend_error { message: "backend error: borrow expressions are not supported in the mvp backend" }),
         expr.member(_) : result::err(backend_error { message: "backend error: member expressions are not supported in the mvp backend" }),
-        expr.index(_) : result::err(backend_error { message: "backend error: index expressions are not supported in the mvp backend" }),
+        expr.index(value) : eval_index_expr(value, source, env, writes),
         expr.array(_) : result::err(backend_error { message: "backend error: array literals are not supported in the mvp backend" }),
-        expr.map(_) : result::err(backend_error { message: "backend error: map literals are not supported in the mvp backend" }),
+        expr.map(value) : eval_map_literal(value, source, env, writes),
     }
 }
 
@@ -2261,6 +2381,7 @@ func eval_binary(binary_expr value, source_file source, vec[binding] mut env, ve
         "-" : numeric_binary(left, right, value.op),
         "*" : numeric_binary(left, right, value.op),
         "/" : numeric_binary(left, right, value.op),
+        "%" : numeric_binary(left, right, value.op),
         "==" : compare_values(left, right, true),
         "!=" : compare_values(left, right, false),
         "<" : ordered_compare(left, right, value.op),
@@ -2279,20 +2400,324 @@ func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[wr
             if callee_name.name == "println" || callee_name.name == "eprintln" {
                 return eval_print_call(callee_name.name, value.args, source, env, writes)
             }
-
-            var arg_values = vec[value]()
-            var ai = 0
-            while ai < value.args.len() {
-                var arg_result = eval_expr(value.args[ai], source, env, writes)
-                if arg_result.is_err() {
-                    result::err(arg_result.unwrap_err())
-                }
-                arg_values.push(arg_result.unwrap())
-                ai = ai + 1
+            if callee_name.name == "panic" {
+                return eval_panic_call(value.args, source, env, writes)
             }
-            call_function(source, callee_name.name, arg_values, writes)
+            if callee_name.name == "recover" {
+                return eval_recover_call(env)
+            }
         }
+        _ : (),
+    }
+
+    var callee_result = eval_expr(value.callee.value, source, env, writes)
+    if callee_result.is_err() {
+        return callee_result
+    }
+
+    var arg_values = vec[value]()
+    var ai = 0
+    while ai < value.args.len() {
+        var arg_result = eval_expr(value.args[ai], source, env, writes)
+        if arg_result.is_err() {
+            return result::err(arg_result.unwrap_err())
+        }
+        arg_values.push(arg_result.unwrap())
+        ai = ai + 1
+    }
+
+    switch callee_result.unwrap() {
+        value.fn_ref(name) : call_function(source, name, arg_values, env, writes),
         _ : result::err(backend_error { message: "backend error: unsupported call target" }),
+    }
+}
+
+func eval_panic_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+    if args.len() != 1 {
+        return result::err(backend_error { message: "backend error: panic expects exactly one argument" })
+    }
+
+    var arg_result = eval_expr(args[0], source, env, writes)
+    if arg_result.is_err() {
+        return arg_result
+    }
+
+    return result::err(panic_error(stringify_value(arg_result.unwrap())))
+}
+
+func eval_recover_call(vec[binding] mut env) result[value, backend_error] {
+    if !control_in_defer_mode(env) {
+        return result::ok(value.unit(unit_value {}))
+    }
+    if !control_panic_is_active(env) {
+        return result::ok(value.unit(unit_value {}))
+    }
+
+    var payload = control_panic_payload_text(env)
+    set_control(env, control_panic_active, value.bool(false))
+    set_control(env, control_panic_payload, value.string(""))
+    result::ok(value.string(payload))
+}
+
+func execute_deferred(vec[expr] deferred, source_file source, vec[binding] mut env, vec[write_op] mut writes, string panic_payload_text) result[(), backend_error] {
+    if panic_payload_text != "" {
+        set_control(env, control_panic_active, value.bool(true))
+        set_control(env, control_panic_payload, value.string(panic_payload_text))
+    }
+
+    set_control(env, control_in_defer, value.bool(true))
+
+    var i = deferred.len()
+    while i > 0 {
+        i = i - 1
+        var call_result = eval_expr(deferred[i], source, env, writes)
+        if call_result.is_err() {
+            var err = call_result.unwrap_err()
+            if is_panic_error(err) {
+                set_control(env, control_panic_active, value.bool(true))
+                set_control(env, control_panic_payload, value.string(panic_payload(err)))
+                continue
+            }
+            set_control(env, control_in_defer, value.bool(false))
+            return result::err(err)
+        }
+    }
+
+    set_control(env, control_in_defer, value.bool(false))
+    result::ok(())
+}
+
+func panic_error(string payload) backend_error {
+    backend_error { message: "panic:" + payload }
+}
+
+func is_panic_error(backend_error err) bool {
+    starts_with_local(err.message, "panic:")
+}
+
+func panic_payload(backend_error err) string {
+    if !is_panic_error(err) {
+        return ""
+    }
+    slice(err.message, 6, len(err.message))
+}
+
+func copy_control_bindings(vec[binding] from_env, vec[binding] mut to_env) () {
+    copy_control_binding(from_env, to_env, control_panic_active)
+    copy_control_binding(from_env, to_env, control_panic_payload)
+    copy_control_binding(from_env, to_env, control_in_defer)
+}
+
+func copy_control_binding(vec[binding] from_env, vec[binding] mut to_env, string name) () {
+    var source_index = find_binding_index(from_env, name)
+    if source_index < 0 {
+        return
+    }
+    set_control(to_env, name, from_env[source_index].value)
+}
+
+func set_control(vec[binding] mut env, string name, value v) () {
+    var index = find_binding_index(env, name)
+    if index >= 0 {
+        env.set(index, binding { name: name, value: v })
+        return
+    }
+    env.push(binding { name: name, value: v });
+}
+
+func control_in_defer_mode(vec[binding] env) bool {
+    var index = find_binding_index(env, control_in_defer)
+    if index < 0 {
+        return false
+    }
+    switch env[index].value {
+        value.bool(flag) : flag,
+        _ : false,
+    }
+}
+
+func control_panic_is_active(vec[binding] env) bool {
+    var index = find_binding_index(env, control_panic_active)
+    if index < 0 {
+        return false
+    }
+    switch env[index].value {
+        value.bool(flag) : flag,
+        _ : false,
+    }
+}
+
+func control_panic_payload_text(vec[binding] env) string {
+    var index = find_binding_index(env, control_panic_payload)
+    if index < 0 {
+        return ""
+    }
+    switch env[index].value {
+        value.string(text) : text,
+        value.int(number) : to_string(number),
+        value.bool(flag) : if flag { "true" } else { "false" },
+        _ : "",
+    }
+}
+
+func collect_const_bindings(source_file source) result[vec[binding], backend_error] {
+    var out = vec[binding]()
+    var last_expr = option::none
+
+    var i = 0
+    while i < source.items.len() {
+        switch source.items[i] {
+            item.const(const_decl) : {
+                if find_binding_index(out, const_decl.name) >= 0 {
+                    return result::err(backend_error { message: "backend error: duplicate const declaration " + const_decl.name })
+                }
+
+                var expr_to_eval = option::none
+                switch const_decl.value {
+                    option.some(value) : {
+                        expr_to_eval = option::some(value)
+                        last_expr = option::some(value)
+                    }
+                    option.none : expr_to_eval = last_expr,
+                }
+
+                if expr_to_eval.is_none() {
+                    return result::err(backend_error { message: "backend error: const declaration missing initializer " + const_decl.name })
+                }
+
+                var value_result = eval_const_value_expr(expr_to_eval.unwrap(), out, const_decl.iota_index)
+                if value_result.is_err() {
+                    return result::err(backend_error { message: "backend error: const evaluation failed for " + const_decl.name + ": " + value_result.unwrap_err().message })
+                }
+
+                out.push(binding {
+                    name: const_decl.name,
+                    value: value_result.unwrap(),
+                })
+                ;
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+
+    result::ok(out)
+}
+
+func eval_const_value_expr(expr value, vec[binding] const_env, int32 iota_value) result[value, backend_error] {
+    switch value {
+        expr.int(int_expr) : result::ok(value.int(parse_int_literal(int_expr.value))),
+        expr.string(string_expr) : result::ok(value.string(decode_string_literal(string_expr.value))),
+        expr.bool(bool_expr) : result::ok(value.bool(bool_expr.value)),
+        expr.name(name_expr) : {
+            if name_expr.name == "iota" {
+                return result::ok(value.int(iota_value))
+            }
+
+            var const_value = lookup_value(const_env, name_expr.name)
+            if const_value.is_err() {
+                return result::err(backend_error { message: "unknown const name " + name_expr.name })
+            }
+            result::ok(const_value.unwrap())
+        }
+        expr.binary(binary_expr) : {
+            var left = eval_const_value_expr(binary_expr.left.value, const_env, iota_value)
+            if left.is_err() {
+                return left
+            }
+            var right = eval_const_value_expr(binary_expr.right.value, const_env, iota_value)
+            if right.is_err() {
+                return right
+            }
+
+            switch binary_expr.op {
+                "+" : add_values(left.unwrap(), right.unwrap()),
+                "-" : numeric_binary(left.unwrap(), right.unwrap(), binary_expr.op),
+                "*" : numeric_binary(left.unwrap(), right.unwrap(), binary_expr.op),
+                "/" : numeric_binary(left.unwrap(), right.unwrap(), binary_expr.op),
+                "%" : numeric_binary(left.unwrap(), right.unwrap(), binary_expr.op),
+                "==" : compare_values(left.unwrap(), right.unwrap(), true),
+                "!=" : compare_values(left.unwrap(), right.unwrap(), false),
+                "<" : ordered_compare(left.unwrap(), right.unwrap(), binary_expr.op),
+                "<=" : ordered_compare(left.unwrap(), right.unwrap(), binary_expr.op),
+                ">" : ordered_compare(left.unwrap(), right.unwrap(), binary_expr.op),
+                ">=" : ordered_compare(left.unwrap(), right.unwrap(), binary_expr.op),
+                "&&" : logical_binary(left.unwrap(), right.unwrap(), true),
+                "||" : logical_binary(left.unwrap(), right.unwrap(), false),
+                _ : result::err(backend_error { message: "unsupported const operator " + binary_expr.op }),
+            }
+        }
+        _ : result::err(backend_error { message: "unsupported const expression kind" }),
+    }
+}
+
+func lookup_name_or_function(vec[binding] env, source_file source, string name) result[value, backend_error] {
+    var local = lookup_value(env, name)
+    if local.is_ok() {
+        return local
+    }
+
+    var fn_result = find_function(source, name)
+    if fn_result.is_ok() {
+        return result::ok(value.fn_ref(name))
+    }
+
+    result::err(backend_error { message: "backend error: unknown name " + name })
+}
+
+func eval_map_literal(map_literal value, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+    var entries = vec[fn_map_entry_value]()
+    var i = 0
+    while i < value.entries.len() {
+        var key_result = eval_expr(value.entries[i].key, source, env, writes)
+        if key_result.is_err() {
+            return result::err(key_result.unwrap_err())
+        }
+
+        var val_result = eval_expr(value.entries[i].value, source, env, writes)
+        if val_result.is_err() {
+            return result::err(val_result.unwrap_err())
+        }
+
+        var mapped_name = ""
+        switch val_result.unwrap() {
+            value.fn_ref(fn_name) : mapped_name = fn_name,
+            _ : return result::err(backend_error { message: "backend error: map literal currently supports function values only" }),
+        }
+
+        entries.push(fn_map_entry_value {
+            key: stringify_value(key_result.unwrap()),
+            func_name: mapped_name,
+        })
+        i = i + 1
+    }
+
+    result::ok(value.fn_map(entries))
+}
+
+func eval_index_expr(index_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes) result[value, backend_error] {
+    var target_result = eval_expr(value.target.value, source, env, writes)
+    if target_result.is_err() {
+        return target_result
+    }
+    var index_result = eval_expr(value.index.value, source, env, writes)
+    if index_result.is_err() {
+        return index_result
+    }
+
+    var key = stringify_value(index_result.unwrap())
+    switch target_result.unwrap() {
+        value.fn_map(entries) : {
+            var i = 0
+            while i < entries.len() {
+                if entries[i].key == key {
+                    return result::ok(value.fn_ref(entries[i].func_name))
+                }
+                i = i + 1
+            }
+            result::err(backend_error { message: "backend error: map key not found " + key })
+        }
+        _ : result::err(backend_error { message: "backend error: index target is not a function map" }),
     }
 }
 
@@ -2404,6 +2829,12 @@ func numeric_binary(value left, value right, string op) result[value, backend_er
                         } else {
                             result::ok(value.int(left_int / right_int))
                         }
+                    } else if op == "%" {
+                        if right_int == 0 {
+                            result::err(backend_error { message: "backend error: modulo by zero" })
+                        } else {
+                            result::ok(value.int(left_int % right_int))
+                        }
                     } else {
                         result::err(backend_error { message: "backend error: unsupported numeric operator " + op })
                     }
@@ -2441,6 +2872,15 @@ func compare_values(value left, value right, bool equal) result[value, backend_e
                 value.unit(_) : same = true,
                 _ : result::err(backend_error { message: "backend error: comparison expects matching types" }),
             }
+        }
+        value.fn_ref(left_name) : {
+            switch right {
+                value.fn_ref(right_name) : same = left_name == right_name,
+                _ : result::err(backend_error { message: "backend error: comparison expects matching types" }),
+            }
+        }
+        value.fn_map(_) : {
+            return result::err(backend_error { message: "backend error: function maps are not comparable" })
         }
     }
 
@@ -2499,6 +2939,8 @@ func value_to_exit_code(value value) result[int32, backend_error] {
         value.bool(flag) : result::ok(if flag { 1 } else { 0 }),
         value.unit(_) : result::ok(0),
         value.string(_) : result::err(backend_error { message: "backend error: main cannot return string" }),
+        value.fn_ref(_) : result::err(backend_error { message: "backend error: main cannot return function reference" }),
+        value.fn_map(_) : result::err(backend_error { message: "backend error: main cannot return function map" }),
     }
 }
 
@@ -2508,6 +2950,8 @@ func stringify_value(value value) string {
         value.string(text) : text,
         value.bool(flag) : if flag { "true" } else { "false" },
         value.unit(_) : "()",
+        value.fn_ref(name) : "<func:" + name + ">",
+        value.fn_map(entries) : "<func-map:" + to_string(entries.len()) + ">",
     }
 }
 
