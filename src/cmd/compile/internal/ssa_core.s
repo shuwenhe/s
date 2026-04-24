@@ -17,6 +17,8 @@ struct ssa_pipeline_options {
 
 struct ssa_program {
     string function_name
+    string optimized_mir_text
+    string pass_mir_trace
     int32 block_count
     int32 value_count
     int32 cfg_edge_count
@@ -154,6 +156,7 @@ struct ssa_dataflow_model {
     int32 load_count
     int32 store_count
     int32 phi_count
+    int32 memphi_count
     int32 alias_set_count
     int32 def_use_edges
     int32 live_in_facts
@@ -228,23 +231,36 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
     }
     var model = build_dataflow_model(rewritten, block_count, value_count)
     var pass_stats = run_optimization_passes(rewritten, model, options)
+    var pass_mir_trace = build_pass_mir_trace(rewritten, pass_stats, options)
+    var optimized_mir = apply_pipeline_rewrites(rewritten, pass_stats, options)
+    var optimized_block_count = parse_int_after(optimized_mir, "blocks=")
+    if optimized_block_count <= 0 {
+        optimized_block_count = block_count
+    }
     var optimized_value_count = pass_stats.optimized_value_count
+    var optimized_text_value_count = parse_total_stmt_count(optimized_mir)
+    if optimized_text_value_count > 0 {
+        optimized_value_count = optimized_text_value_count
+    }
     if pass_stats.verification_error_count > 0 {
         optimized_value_count = value_count
+        optimized_mir = rewritten
     }
-    var allocation = linear_scan_regalloc_with_spill(rewritten, optimized_value_count, goarch)
+    var allocation = linear_scan_regalloc_with_spill(optimized_mir, optimized_value_count, goarch)
     var debug_budget = compute_debug_budget(pass_stats, allocation)
-    var regalloc_quality = compute_regalloc_quality(allocation, block_count)
+    var regalloc_quality = compute_regalloc_quality(allocation, optimized_block_count)
     var sched_quality = compute_schedule_quality(pass_stats, model, goarch)
-    var debug_lines = build_debug_lines(rewritten, allocation.allocated_regs)
+    var debug_lines = build_debug_lines(optimized_mir, allocation.allocated_regs)
     var debug_var_locations = build_var_locations(allocation.allocated_regs)
 
     ssa_program {
         function_name: function_name,
-        block_count: block_count,
+        optimized_mir_text: optimized_mir,
+        pass_mir_trace: pass_mir_trace,
+        block_count: optimized_block_count,
         value_count: value_count,
-        cfg_edge_count: estimate_cfg_edges(rewritten),
-        branch_block_count: count_token(rewritten, " term=branch"),
+        cfg_edge_count: estimate_cfg_edges(optimized_mir),
+        branch_block_count: count_token(optimized_mir, " term=branch"),
         optimized_value_count: optimized_value_count,
         folded_constant_count: pass_stats.folded_constant_count,
         dce_removed_count: pass_stats.dce_removed_count,
@@ -566,12 +582,203 @@ func default_options() ssa_pipeline_options {
     }
 }
 
+func apply_pipeline_rewrites(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
+    var rewritten = mir_text
+
+    rewritten = apply_summary_rewrites(rewritten, pass_stats)
+    rewritten = apply_cfg_rewrites(rewritten, pass_stats, options)
+    rewritten = apply_invalidation_reruns(rewritten, pass_stats, options)
+
+    rewritten
+}
+
+func build_pass_mir_trace(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
+    var trace = "input=" + mir_text
+    var current = mir_text
+
+    var summary = apply_summary_rewrites(current, pass_stats)
+    trace = trace + ";summary=" + summary
+    current = summary
+
+    var cfg = apply_cfg_rewrites(current, pass_stats, options)
+    trace = trace + ";cfg=" + cfg
+    current = cfg
+
+    var rerun = apply_invalidation_reruns(current, pass_stats, options)
+    trace = trace + ";rerun=" + rerun
+    trace
+}
+
+func apply_summary_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
+    var rewritten = mir_text
+    rewritten = normalize_stmt_counts(rewritten, pass_stats.optimized_value_count)
+    rewritten = reduce_numeric_marker_budget(rewritten, " const=", pass_stats.folded_constant_count)
+    rewritten = reduce_numeric_marker_budget(rewritten, " imm=", pass_stats.folded_constant_count)
+    rewritten = reduce_numeric_marker_budget(rewritten, " literal=", pass_stats.folded_constant_count)
+    rewritten = reduce_numeric_marker_budget(rewritten, " phi=", pass_stats.pre_eliminated_count)
+    rewritten = reduce_numeric_marker_budget(rewritten, " memphi=", pass_stats.pre_eliminated_count)
+    rewritten = reduce_numeric_marker_budget(rewritten, " copy=", pass_stats.gvn_rewrite_count + pass_stats.cse_eliminated_count)
+    rewritten = reduce_numeric_marker_budget(rewritten, " load=", pass_stats.bce_removed_count)
+    rewritten = reduce_numeric_marker_budget(rewritten, " store=", pass_stats.licm_hoisted_count)
+    rewritten
+}
+
+func apply_cfg_rewrites(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
+    var rewritten = mir_text
+    if options.enable_simplify_cfg {
+        rewritten = replace_first_n_tokens(rewritten, " term=branch", " term=jump", pass_stats.simplified_branch_count)
+    }
+    if options.enable_coalesce {
+        rewritten = remove_empty_jump_blocks(rewritten, pass_stats.coalesced_move_count)
+    }
+    rewritten
+}
+
+func apply_invalidation_reruns(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
+    if pass_stats.invalidation_rerun_count <= 0 {
+        return mir_text
+    }
+
+    var rewritten = mir_text
+    var reruns = pass_stats.invalidation_rerun_count
+
+    if options.enable_simplify_cfg {
+        rewritten = replace_first_n_tokens(rewritten, " term=branch", " term=jump", reruns)
+    }
+    if options.enable_coalesce {
+        rewritten = remove_empty_jump_blocks(rewritten, reruns)
+    }
+
+    rewritten
+}
+
+func remove_empty_jump_blocks(string mir_text, int32 budget) string {
+    if budget <= 0 {
+        return mir_text
+    }
+
+    var out = ""
+    var cursor = 0
+    var removed = 0
+    while cursor < mir_text.len() {
+        var block_pos = find_token_from(mir_text, " | bb", cursor)
+        if block_pos > mir_text.len() - 5 {
+            out = out + slice(mir_text, cursor, mir_text.len())
+            break
+        }
+
+        out = out + slice(mir_text, cursor, block_pos)
+        var next_block = find_token_from(mir_text, " | bb", block_pos + 1)
+        if next_block > mir_text.len() {
+            next_block = mir_text.len()
+        }
+        var block_text = slice(mir_text, block_pos, next_block)
+        if removed < budget && contains_token_text(block_text, " stmts=0 term=jump") {
+            removed = removed + 1
+        } else {
+            out = out + block_text
+        }
+        cursor = next_block
+    }
+
+    if removed > 0 {
+        out = reduce_numeric_marker_budget(out, "blocks=", removed)
+    }
+    out
+}
+
+func contains_token_text(string text, string needle) bool {
+    find_token(text, needle) <= text.len()
+}
+
+func normalize_stmt_counts(string mir_text, int32 target_total) string {
+    var current_total = parse_total_stmt_count(mir_text)
+    if current_total <= 0 || target_total >= current_total {
+        return mir_text
+    }
+    return reduce_numeric_marker_budget(mir_text, " stmts=", current_total - target_total)
+}
+
+func reduce_numeric_marker_budget(string text, string marker, int32 budget) string {
+    if budget <= 0 {
+        return text
+    }
+
+    var out = ""
+    var cursor = 0
+    var remaining = budget
+    while cursor < text.len() {
+        var pos = find_token_from(text, marker, cursor)
+        if pos > text.len() - marker.len() {
+            return out + slice(text, cursor, text.len())
+        }
+
+        out = out + slice(text, cursor, pos) + marker
+        var digits_start = pos + marker.len()
+        var digits_end = digits_start
+        var value = 0
+        while digits_end < text.len() && is_digit(char_at(text, digits_end)) {
+            value = value * 10 + parse_digit(char_at(text, digits_end))
+            digits_end = digits_end + 1
+        }
+
+        var reduce = 0
+        if remaining > 0 && value > 0 {
+            reduce = remaining
+            if reduce > value {
+                reduce = value
+            }
+        }
+        out = out + to_string(value - reduce)
+        remaining = remaining - reduce
+        cursor = digits_end
+    }
+
+    out
+}
+
+func replace_first_n_tokens(string text, string needle, string replacement, int32 count) string {
+    if count <= 0 {
+        return text
+    }
+
+    var out = text
+    var i = 0
+    while i < count {
+        var next = replace_first_token(out, needle, replacement)
+        if !next.changed {
+            return out
+        }
+        out = next.text
+        i = i + 1
+    }
+    out
+}
+
+func find_token_from(string text, string needle, int32 start) int32 {
+    var i = start
+    while i <= text.len() - needle.len() {
+        if slice(text, i, i + needle.len()) == needle {
+            return i
+        }
+        i = i + 1
+    }
+    text.len() + 1
+}
+
 func build_dataflow_model(string mir_text, int32 block_count, int32 value_count) ssa_dataflow_model {
     var jumps = count_token(mir_text, " term=jump")
     var branches = count_token(mir_text, " term=branch")
     var calls = count_token(mir_text, " call=")
-    var loads = count_token(mir_text, "load")
-    var stores = count_token(mir_text, "store")
+    var loads = count_numeric_marker_total(mir_text, " load=")
+    if loads == 0 {
+        loads = count_token(mir_text, "load")
+    }
+    var stores = count_numeric_marker_total(mir_text, " store=")
+    if stores == 0 {
+        stores = count_token(mir_text, "store")
+    }
+    var memphi = count_numeric_marker_total(mir_text, " memphi=")
     var edges = estimate_cfg_edges(mir_text)
     var phi = estimate_phi_nodes(mir_text)
     var alias_sets = estimate_alias_sets(mir_text, calls, loads, stores)
@@ -589,6 +796,7 @@ func build_dataflow_model(string mir_text, int32 block_count, int32 value_count)
         load_count: loads,
         store_count: stores,
         phi_count: phi,
+        memphi_count: memphi,
         alias_set_count: alias_sets,
         def_use_edges: def_use,
         live_in_facts: live_in,
@@ -1007,7 +1215,7 @@ func estimate_alias_precision_level(ssa_dataflow_model model) int32 {
 }
 
 func estimate_memory_ssa_chain_count(ssa_dataflow_model model, int32 pre_eliminated) int32 {
-    var chain = model.store_count + model.load_count + model.phi_count
+    var chain = model.store_count + model.load_count + model.phi_count + model.memphi_count
     if pre_eliminated > 0 {
         chain = chain + pre_eliminated
     }
@@ -1246,9 +1454,33 @@ func run_bce_pass(ssa_dataflow_model model) int32 {
 }
 
 func estimate_phi_nodes(string mir_text) int32 {
+    var explicit = count_numeric_marker_total(mir_text, " phi=")
+    if explicit > 0 {
+        return explicit
+    }
     var branches = count_token(mir_text, " term=branch")
     var joins = count_token(mir_text, " term=jump")
     branches + joins / 2
+}
+
+func count_numeric_marker_total(string text, string marker) int32 {
+    var total = 0
+    var cursor = 0
+    while cursor < text.len() {
+        var pos = find_token_from(text, marker, cursor)
+        if pos > text.len() - marker.len() {
+            return total
+        }
+        var digits = pos + marker.len()
+        var value = 0
+        while digits < text.len() && is_digit(char_at(text, digits)) {
+            value = value * 10 + parse_digit(char_at(text, digits))
+            digits = digits + 1
+        }
+        total = total + value
+        cursor = digits
+    }
+    total
 }
 
 func estimate_memory_versions(string mir_text) int32 {
@@ -1438,6 +1670,8 @@ func build_var_locations(vec[string] allocated_regs) vec[string] {
 
 func dump_pipeline(ssa_program program) string {
     var out = "ssa " + program.function_name
+        + " mir_opt=" + program.optimized_mir_text
+        + " mir_trace=" + program.pass_mir_trace
         + " blocks=" + to_string(program.block_count)
         + " values=" + to_string(program.value_count)
         + " opt_values=" + to_string(program.optimized_value_count)
