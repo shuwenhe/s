@@ -1,9 +1,9 @@
 package compile.internal.syntax.testdata
 
-func fallthrough_unit_name() string {
+func fallthrough_case_name() string {
     "syntax/testdata/fallthrough.s"
 }
 
-func fallthrough_unit_ready() int {
-    1
+func fallthrough_case_pass() int {
+    0
 }

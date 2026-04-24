@@ -1,9 +1,9 @@
 package compile.internal.test.testdata.gen
 
-func constFoldGen_unit_name() string {
+func constFoldGen_case_name() string {
     "test/testdata/gen/constFoldGen.s"
 }
 
-func constFoldGen_unit_ready() int {
-    1
+func constFoldGen_case_pass() int {
+    0
 }

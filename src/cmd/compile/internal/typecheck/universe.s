@@ -1,9 +1,9 @@
 package compile.internal.typecheck
 
-func universe_unit_name() string {
+func universe_module_name() string {
     "typecheck/universe.s"
 }
 
-func universe_unit_ready() int {
-    1
+func universe_module_apply() int {
+    0
 }

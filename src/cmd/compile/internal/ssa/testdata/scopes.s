@@ -1,9 +1,9 @@
 package compile.internal.ssa.testdata
 
-func scopes_unit_name() string {
+func scopes_case_name() string {
     "ssa/testdata/scopes.s"
 }
 
-func scopes_unit_ready() int {
-    1
+func scopes_case_pass() int {
+    0
 }

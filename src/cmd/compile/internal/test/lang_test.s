@@ -1,9 +1,9 @@
 package compile.internal.test
 
-func lang_test_unit_name() string {
+func lang_test_case_name() string {
     "test/lang_test.s"
 }
 
-func lang_test_unit_ready() int {
-    1
+func lang_test_case_pass() int {
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.types
 
-func sym_unit_name() string {
+func sym_module_name() string {
     "types/sym.s"
 }
 
-func sym_unit_ready() int {
-    1
+func sym_module_apply() int {
+    0
 }

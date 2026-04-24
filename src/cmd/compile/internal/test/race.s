@@ -1,9 +1,9 @@
 package compile.internal.test
 
-func race_unit_name() string {
+func race_module_name() string {
     "test/race.s"
 }
 
-func race_unit_ready() int {
-    1
+func race_module_apply() int {
+    0
 }

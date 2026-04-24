@@ -1,9 +1,9 @@
 package compile.internal.syntax
 
-func parser_unit_name() string {
+func parser_module_name() string {
     "syntax/parser.s"
 }
 
-func parser_unit_ready() int {
-    1
+func parser_module_apply() int {
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.typecheck
 
-func export_unit_name() string {
+func export_module_name() string {
     "typecheck/export.s"
 }
 
-func export_unit_ready() int {
-    1
+func export_module_apply() int {
+    0
 }
