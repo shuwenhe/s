@@ -58,7 +58,7 @@ func run_pipeline_regression_suite() int32 {
         return 1
     }
 
-    var source = "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int32 {\n  1\n}\nfunc main() int32 {\n  var arr = [int32]{1, 2}\n  var mp = [string]int32{\"k\": 1}\n  var idx = arr[0]\n  var bx = { idx + 1 }\n  idx = idx + bx\n  for (var i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
+    var source = "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int32 {\n  1\n}\nfunc worker() int32 {\n  helper()\n  0\n}\nfunc main() int32 {\n  var arr = [int32]{1, 2}\n  var mp = [string]int32{\"k\": 1}\n  var idx = arr[0]\n  var bx = { idx + 1 }\n  idx = idx + bx\n  sroutine worker()\n  for (var i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
 
     var parsed = parse_source(source)
     if parsed.is_err() {
@@ -154,7 +154,42 @@ func run_pipeline_regression_suite() int32 {
     if !contains(midend.report, "const_fold_hits=") {
         return 1
     }
+    if !contains(midend.report, "sroutine_sites=") {
+        return 1
+    }
+    if !contains(midend.report, "select_weighted_sites=0") {
+        return 1
+    }
+    if !contains(midend.report, "select_timeout_sites=0") {
+        return 1
+    }
+    if !contains(midend.report, "select_send_sites=0") {
+        return 1
+    }
     if !contains(midend.report, "const_fold_hits=1") {
+        return 1
+    }
+
+    var metric_graph = mir_graph {
+        blocks: vec[mir_block](),
+        trace: vec[string](
+            "stmt sroutine worker()",
+            "expr call select_recv_weighted(ch1, 2, ch2, 1)",
+            "expr call select_recv_timeout(ch1, ch2, 3)",
+            "expr call select_send(ch1, 7, ch2, 8)",
+        ),
+    }
+    var metric_midend = run_midend_pipeline(metric_graph)
+    if !contains(metric_midend.report, "sroutine_sites=1") {
+        return 1
+    }
+    if !contains(metric_midend.report, "select_weighted_sites=1") {
+        return 1
+    }
+    if !contains(metric_midend.report, "select_timeout_sites=1") {
+        return 1
+    }
+    if !contains(metric_midend.report, "select_send_sites=1") {
         return 1
     }
 

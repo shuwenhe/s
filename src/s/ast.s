@@ -207,6 +207,10 @@ struct defer_stmt {
     expr expr
 }
 
+struct sroutine_stmt {
+    expr expr
+}
+
 enum stmt {
     var(var_stmt),
     assign(assign_stmt),
@@ -215,6 +219,7 @@ enum stmt {
     return(return_stmt),
     expr(expr_stmt),
     defer(defer_stmt),
+    sroutine(sroutine_stmt),
 }
 
 struct function_decl {
@@ -493,6 +498,7 @@ func dump_stmt(stmt stmt, string indent) vec[string] {
         }
         stmt.expr(value) : single_line(indent + "expr " + dump_expr(value.expr)),
         stmt.defer(value) : single_line(indent + "defer " + dump_expr(value.expr)),
+        stmt.sroutine(value) : single_line(indent + "sroutine " + dump_expr(value.expr)),
     }
 }
 
@@ -509,6 +515,8 @@ func dump_for_clause(stmt stmt) string {
         stmt.expr(value) : dump_expr(value.expr),
         stmt.return(_) : "return",
         stmt.c_for(_) : "for (...)",
+        stmt.defer(_) : "defer",
+        stmt.sroutine(_) : "sroutine",
     }
 }
 
