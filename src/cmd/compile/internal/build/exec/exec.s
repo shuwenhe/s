@@ -64,14 +64,14 @@ func run(vec[string] options) int32 {
     }
 
     if options[0] == "build" {
-        var build_target = options[2] + "@" + source_key
+        var build_target = options[2] + "@" + source_key + "#ssa_margin=" + options[3]
         var build_explain = cache_hit_explain_target(options[1], source, "build", build_target)
         if cache_hit_target(options[1], source, "build", build_target) {
             var ignored0 = build_explain
             emit_built(options[2]);
             return 0
         }
-        if build_binary(options[1], options[2]) == 0 {
+        if build_binary(options[1], options[2], options[3]) == 0 {
             var ignored_cache = update_cache_target(options[1], source, "build", build_target)
             emit_built(options[2]);
             return 0
@@ -80,7 +80,7 @@ func run(vec[string] options) int32 {
     }
 
     if options[0] == "run" {
-        return run_binary(options[1])
+        return run_binary(options[1], options[3])
     }
 
     return 1
