@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_alias() int {
-    0
+func alias_unit_name() string {
+    "types2/alias.s"
+}
+
+func alias_unit_ready() int {
+    1
 }
