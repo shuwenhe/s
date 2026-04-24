@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_typeterm() int {
-    0
+func typeterm_unit_name() string {
+    "types2/typeterm.s"
+}
+
+func typeterm_unit_ready() int {
+    1
 }

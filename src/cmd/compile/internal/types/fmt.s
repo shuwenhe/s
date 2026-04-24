@@ -1,5 +1,9 @@
 package compile.internal.types
 
-func stub_fmt() int {
-    0
+func fmt_unit_name() string {
+    "types/fmt.s"
+}
+
+func fmt_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.walk
 
-func stub_builtin() int {
-    0
+func builtin_unit_name() string {
+    "walk/builtin.s"
+}
+
+func builtin_unit_ready() int {
+    1
 }

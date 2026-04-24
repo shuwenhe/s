@@ -1,5 +1,9 @@
 package compile.internal.types
 
-func stub_goversion() int {
-    0
+func goversion_unit_name() string {
+    "types/goversion.s"
+}
+
+func goversion_unit_ready() int {
+    1
 }
