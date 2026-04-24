@@ -1,5 +1,9 @@
 package compile.internal.syntax
 
-func stub_nodes() int {
-    0
+func nodes_unit_name() string {
+    "syntax/nodes.s"
+}
+
+func nodes_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_stackalloc() int {
-    0
+func stackalloc_unit_name() string {
+    "ssa/stackalloc.s"
+}
+
+func stackalloc_unit_ready() int {
+    1
 }

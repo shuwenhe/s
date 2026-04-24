@@ -1,5 +1,9 @@
 package compile.internal.staticdata
 
-func stub_embed() int {
-    0
+func embed_unit_name() string {
+    "staticdata/embed.s"
+}
+
+func embed_unit_ready() int {
+    1
 }

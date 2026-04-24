@@ -1,5 +1,9 @@
 package compile.internal.ssa.testdata
 
-func stub_pushback() int {
-    0
+func pushback_unit_name() string {
+    "ssa/testdata/pushback.s"
+}
+
+func pushback_unit_ready() int {
+    1
 }

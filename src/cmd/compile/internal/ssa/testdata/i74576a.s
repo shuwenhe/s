@@ -1,5 +1,9 @@
 package compile.internal.ssa.testdata
 
-func stub_i74576a() int {
-    0
+func i74576a_unit_name() string {
+    "ssa/testdata/i74576a.s"
+}
+
+func i74576a_unit_ready() int {
+    1
 }

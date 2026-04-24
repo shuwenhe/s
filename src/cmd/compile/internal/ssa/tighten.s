@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_tighten() int {
-    0
+func tighten_unit_name() string {
+    "ssa/tighten.s"
+}
+
+func tighten_unit_ready() int {
+    1
 }
