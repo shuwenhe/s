@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_allocators() int {
-    0
+func allocators_unit_name() string {
+    "ssa/allocators.s"
+}
+
+func allocators_unit_ready() int {
+    1
 }

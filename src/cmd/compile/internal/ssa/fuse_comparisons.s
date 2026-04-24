@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_fuse_comparisons() int {
-    0
+func fuse_comparisons_unit_name() string {
+    "ssa/fuse_comparisons.s"
+}
+
+func fuse_comparisons_unit_ready() int {
+    1
 }

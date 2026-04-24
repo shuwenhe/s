@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_branchelim() int {
-    0
+func branchelim_unit_name() string {
+    "ssa/branchelim.s"
+}
+
+func branchelim_unit_ready() int {
+    1
 }

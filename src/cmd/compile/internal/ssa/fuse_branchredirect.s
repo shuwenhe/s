@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_fuse_branchredirect() int {
-    0
+func fuse_branchredirect_unit_name() string {
+    "ssa/fuse_branchredirect.s"
+}
+
+func fuse_branchredirect_unit_ready() int {
+    1
 }
