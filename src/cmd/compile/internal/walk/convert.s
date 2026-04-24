@@ -1,5 +1,9 @@
 package compile.internal.walk
 
-func stub_convert() int {
-    0
+func convert_unit_name() string {
+    "walk/convert.s"
+}
+
+func convert_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.walk
 
-func stub_compare() int {
-    0
+func compare_unit_name() string {
+    "walk/compare.s"
+}
+
+func compare_unit_ready() int {
+    1
 }

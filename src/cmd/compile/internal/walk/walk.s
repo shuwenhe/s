@@ -1,5 +1,9 @@
 package compile.internal.walk
 
-func stub_walk() int {
-    0
+func walk_unit_name() string {
+    "walk/walk.s"
+}
+
+func walk_unit_ready() int {
+    1
 }
