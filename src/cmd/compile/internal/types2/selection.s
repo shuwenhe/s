@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_selection() int {
-    0
+func selection_unit_name() string {
+    "types2/selection.s"
+}
+
+func selection_unit_ready() int {
+    1
 }

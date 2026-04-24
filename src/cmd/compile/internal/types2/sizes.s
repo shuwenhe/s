@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_sizes() int {
-    0
+func sizes_unit_name() string {
+    "types2/sizes.s"
+}
+
+func sizes_unit_ready() int {
+    1
 }

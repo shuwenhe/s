@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_predicates() int {
-    0
+func predicates_unit_name() string {
+    "types2/predicates.s"
+}
+
+func predicates_unit_ready() int {
+    1
 }

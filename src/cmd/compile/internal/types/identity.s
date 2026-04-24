@@ -1,5 +1,9 @@
 package compile.internal.types
 
-func stub_identity() int {
-    0
+func identity_unit_name() string {
+    "types/identity.s"
+}
+
+func identity_unit_ready() int {
+    1
 }

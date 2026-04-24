@@ -1,5 +1,9 @@
 package compile.internal.walk
 
-func stub_assign() int {
-    0
+func assign_unit_name() string {
+    "walk/assign.s"
+}
+
+func assign_unit_ready() int {
+    1
 }
