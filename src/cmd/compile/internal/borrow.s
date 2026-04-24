@@ -4,7 +4,7 @@ use std.prelude.len
 use std.prelude.slice
 use std.vec.vec
 
-func analyze_block() int32 {
+func analyze_block() int {
     return 0
 }
 

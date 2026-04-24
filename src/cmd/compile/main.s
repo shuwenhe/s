@@ -7,7 +7,7 @@ use internal.buildcfg.goarch as buildcfg_goarch
 use std.env.args as host_args
 use std.io.eprintln
 
-func main() int32 {
+func main() int {
     var args = host_args()
     var goarch = buildcfg_goarch()
 

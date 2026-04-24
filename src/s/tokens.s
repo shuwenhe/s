@@ -15,8 +15,8 @@ enum token_kind {
 struct token {
     token_kind kind
     string value
-    int32 line
-    int32 column
+    int line
+    int column
 }
 
 func token_kind_name(token_kind kind) string {
@@ -70,6 +70,9 @@ func is_keyword(string text) bool {
         "else" : true,
         "while" : true,
         "switch" : true,
+        "select" : true,
+        "case" : true,
+        "default" : true,
         "return" : true,
         "break" : true,
         "continue" : true,
