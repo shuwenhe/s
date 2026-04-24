@@ -899,6 +899,13 @@ impl parser {
                 inferred_type: option::none,
             }))
         }
+        if self.at_keyword("nil") {
+            self.advance()?
+            return result::ok(expr::name(name_expr {
+                name: "nil",
+                inferred_type: option::none,
+            }))
+        }
         if self.at_symbol("{") {
             return result::ok(expr::block(self.parse_block_expr()?))
         }

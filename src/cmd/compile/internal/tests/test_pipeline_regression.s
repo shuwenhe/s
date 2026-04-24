@@ -117,6 +117,9 @@ func run_pipeline_regression_suite() int32 {
     if !contains(midend.report, "const_fold_hits=") {
         return 1
     }
+    if !contains(midend.report, "const_fold_hits=1") {
+        return 1
+    }
 
     var hinted = build_pipeline_with_graph_hints(graph, midend.optimized_mir_text, "amd64")
     var hinted_dump = dump_pipeline(hinted)

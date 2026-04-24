@@ -284,6 +284,12 @@ func assignable_type(string target, string source) bool {
     if t == s {
         return true
     }
+    if s == "nil" {
+        return is_nilable_type(t)
+    }
+    if t == "nil" {
+        return s == "nil"
+    }
     if t == "unknown" || s == "unknown" {
         return false
     }
@@ -301,6 +307,18 @@ func assignable_type(string target, string source) bool {
     }
 
     false
+}
+
+func is_nilable_type(string ty) bool {
+    var clean = parse_type(ty)
+    if clean == "map" || clean == "fn" {
+        return true
+    }
+    if starts_with(clean, "[]") || starts_with(clean, "&") {
+        return true
+    }
+    var base = base_type_name(clean)
+    return base == "interface" || base == "trait"
 }
 
 func compatible_tuple_type(string left, string right) bool {
