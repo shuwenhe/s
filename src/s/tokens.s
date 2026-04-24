@@ -75,6 +75,7 @@ func is_keyword(string text) bool {
         "continue" : true,
         "true" : true,
         "false" : true,
+        "nil" : true,
         "unsafe" : true,
         "extern" : true,
         "mut" : true,

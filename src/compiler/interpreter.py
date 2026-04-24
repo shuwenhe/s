@@ -59,6 +59,10 @@ class interpreter :
         self .explicit_exit_code :int |None =None 
         self .argv :List [str ]=[]
         self ._package_cache :Dict [str ,interpreter ]={}
+        self ._chan_next_id =1 
+        self ._channels :Dict [int ,Dict [str ,Any ]]={}
+        self ._go_queue :List [Tuple [str ,List [Any ]]]=[]
+        self ._select_cursor =0 
 
     def run_main (self )->int :
         if "main"in self .functions :
@@ -242,6 +246,8 @@ class interpreter :
         if isinstance (expr ,nameexpr ):
             if expr .name in env :
                 return env [expr .name ]
+            if expr .name =="nil":
+                return None
             if expr .name =="none":
                 return ("none",None )
             raise interpretererror (f"unknown name {expr .name }")
@@ -436,3 +442,98 @@ class interpreter :
                 out .append (esc )
             index +=2 
         return "".join (out )
+
+    def chan_make (self ,capacity :Any )->Tuple [str ,int ]:
+        cap =int (capacity )
+        if cap <0 :
+            raise interpretererror ("chan_make capacity must be non-negative")
+        chan_id =self ._chan_next_id 
+        self ._chan_next_id +=1 
+        self ._channels [chan_id ]={
+        "cap":cap ,
+        "buf":[],
+        "closed":False ,
+        }
+        return ("chan",chan_id )
+
+    def chan_send (self ,channel :Any ,value :Any )->bool :
+        state =self ._chan_state (channel )
+        if state ["closed"]:
+            raise interpretererror ("send on closed channel")
+        cap =int (state ["cap"])
+        if cap ==0 :
+            return False 
+        if len (state ["buf"])>=cap :
+            return False 
+        state ["buf"].append (value )
+        return True 
+
+    def chan_recv (self ,channel :Any )->Tuple [str ,Any ]:
+        state =self ._chan_state (channel )
+        if state ["buf"]:
+            value =state ["buf"].pop (0 )
+            return ("some",value )
+        return ("none",None )
+
+    def chan_close (self ,channel :Any )->None :
+        state =self ._chan_state (channel )
+        if state ["closed"]:
+            raise interpretererror ("close of closed channel")
+        state ["closed"]=True 
+
+    def chan_len (self ,channel :Any )->int :
+        state =self ._chan_state (channel )
+        return len (state ["buf"])
+
+    def go_spawn (self ,func_name :Any ,args :List [Any ])->None :
+        name =str (func_name )
+        self ._go_queue .append ((name ,list(args )))
+
+    def go_run_one (self )->bool :
+        if not self ._go_queue :
+            return False 
+        task =self ._go_queue .pop (0 )
+        self .call_function (task [0 ],task [1 ])
+        return True 
+
+    def go_drain (self )->int :
+        count =0 
+        while self .go_run_one ():
+            count +=1 
+        return count
+
+    def select_recv (self ,channels :Any )->Tuple [str ,Any ]:
+        if not isinstance (channels ,list ):
+            raise interpretererror ("select_recv expects vec[chan]")
+        if not channels :
+            return ("none",None )
+        start =self ._select_cursor %len (channels )
+        i =0 
+        while i <len (channels ):
+            idx =(start +i )%len (channels )
+            state =self ._chan_state (channels [idx ])
+            if state ["buf"]:
+                self ._select_cursor =idx +1 
+                value =state ["buf"].pop (0 )
+                return ("some",{"index":idx ,"value":value })
+            if state ["closed"]:
+                self ._select_cursor =idx +1 
+                return ("some",{"index":idx ,"value":None })
+            i +=1 
+        self ._select_cursor =start +1 
+        return ("none",None )
+
+    def select_recv_default (self ,channels :Any ,default_value :Any )->Any :
+        picked =self .select_recv (channels )
+        if picked [0 ]=="some":
+            return picked [1 ]
+        return default_value 
+
+    def _chan_state (self ,channel :Any )->Dict [str ,Any ]:
+        if not isinstance (channel ,tuple )or len (channel )!=2 or channel [0 ]!="chan":
+            raise interpretererror ("channel value expected")
+        chan_id =int (channel [1 ])
+        state =self ._channels .get (chan_id )
+        if state is None :
+            raise interpretererror ("unknown channel")
+        return state

@@ -174,6 +174,30 @@ func run_semantic_suite(string fixtures_root) int32 {
         return 1
     }
 
+    var go_uncoordinated_src = "package demo.conc\nfunc worker() int32 {\n  0\n}\nfunc main() int32 {\n  go(\"worker\")\n  0\n}"
+    var go_uncoordinated_diags = check_detailed(go_uncoordinated_src)
+    if !has_code(go_uncoordinated_diags, "e3047") {
+        return 1
+    }
+
+    var send_without_recv_src = "package demo.conc\nfunc main() int32 {\n  var ch = chan_make(1)\n  chan_send(ch, 1)\n  0\n}"
+    var send_without_recv_diags = check_detailed(send_without_recv_src)
+    if !has_code(send_without_recv_diags, "e3050") {
+        return 1
+    }
+
+    var select_without_recv_src = "package demo.conc\nfunc main() int32 {\n  var chs = vec[chan]()\n  select_recv(chs)\n  0\n}"
+    var select_without_recv_diags = check_detailed(select_without_recv_src)
+    if !has_code(select_without_recv_diags, "e3048") {
+        return 1
+    }
+
+    var close_overflow_src = "package demo.conc\nfunc main() int32 {\n  var ch = chan_make(1)\n  chan_close(ch)\n  chan_close(ch)\n  0\n}"
+    var close_overflow_diags = check_detailed(close_overflow_src)
+    if !has_code(close_overflow_diags, "e3049") {
+        return 1
+    }
+
     var panic_src = "package demo.recover\nfunc main() int32 {\n  panic(\"x\")\n}"
     var panic_diags = check_detailed(panic_src)
     if !has_code(panic_diags, "e3026") {
@@ -224,6 +248,39 @@ func run_semantic_suite(string fixtures_root) int32 {
     var trait_impl_sig_mismatch = "package demo.iface\ntrait Adder {\n  func add(int32 a, int32 b) int32;\n}\nimpl Adder for Calc where Calc {\n  func add(bool a, int32 b) int32 {\n    b\n  }\n}\nfunc main() int32 {\n  0\n}"
     var trait_impl_sig_diags = check_detailed(trait_impl_sig_mismatch)
     if !has_code(trait_impl_sig_diags, "e3043") {
+        return 1
+    }
+
+    var trait_impl_receiver_mismatch = "package demo.iface\ntrait Reader {\n  func read(File self, int32 count) int32;\n}\nimpl Reader for File where File {\n  func read(&File self, int32 count) int32 {\n    count\n  }\n}\nfunc main() int32 {\n  0\n}"
+    var trait_impl_receiver_diags = check_detailed(trait_impl_receiver_mismatch)
+    if !has_code(trait_impl_receiver_diags, "e3043") {
+        return 1
+    }
+
+    var method_call_ok = "package demo.method\nstruct Point {\n  int32 x\n}\ntrait Measure {\n  func size(Point self) int32;\n}\nimpl Measure for Point where Point {\n  func size(Point self) int32 {\n    self.x\n  }\n}\nfunc main() int32 {\n  var p = Point { x: 4 }\n  p.size()\n}"
+    if check_text(method_call_ok) != 0 {
+        return 1
+    }
+
+    var method_ref_ok = "package demo.method\nstruct Reader {\n  int32 count\n}\ntrait Peek {\n  func peek(&Reader self) int32;\n}\nimpl Peek for Reader where Reader {\n  func peek(&Reader self) int32 {\n    self.count\n  }\n}\nfunc main() int32 {\n  var reader = Reader { count: 2 }\n  reader.peek()\n}"
+    if check_text(method_ref_ok) != 0 {
+        return 1
+    }
+
+    var method_temp_ref_fail = "package demo.method\nstruct Reader {\n  int32 count\n}\ntrait Peek {\n  func peek(&Reader self) int32;\n}\nimpl Peek for Reader where Reader {\n  func peek(&Reader self) int32 {\n    self.count\n  }\n}\nfunc make_reader() Reader {\n  Reader { count: 2 }\n}\nfunc main() int32 {\n  make_reader().peek()\n}"
+    var method_temp_ref_diags = check_detailed(method_temp_ref_fail)
+    if !has_code(method_temp_ref_diags, "e3051") {
+        return 1
+    }
+
+    var method_mut_ref_ok = "package demo.method\nstruct Counter {\n  int32 count\n}\ntrait Bump {\n  func bump(&mut Counter self) int32;\n}\nimpl Bump for Counter where Counter {\n  func bump(&mut Counter self) int32 {\n    self.count\n  }\n}\nfunc main() int32 {\n  var counter = Counter { count: 2 }\n  counter.bump()\n}"
+    if check_text(method_mut_ref_ok) != 0 {
+        return 1
+    }
+
+    var method_temp_mut_ref_fail = "package demo.method\nstruct Counter {\n  int32 count\n}\ntrait Bump {\n  func bump(&mut Counter self) int32;\n}\nimpl Bump for Counter where Counter {\n  func bump(&mut Counter self) int32 {\n    self.count\n  }\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() int32 {\n  make_counter().bump()\n}"
+    var method_temp_mut_ref_diags = check_detailed(method_temp_mut_ref_fail)
+    if !has_code(method_temp_mut_ref_diags, "e3051") {
         return 1
     }
 
@@ -279,6 +336,16 @@ func run_semantic_suite(string fixtures_root) int32 {
     var const_iota_div_zero_fail = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() int32 {\n  0\n}"
     var const_iota_div_zero_diags = check_detailed(const_iota_div_zero_fail)
     if !has_code(const_iota_div_zero_diags, "e3046") {
+        return 1
+    }
+
+    var nil_assign_ok = "package demo.nil\nfunc main() int32 {\n  var f: fn = nil\n  if f == nil {\n    0\n  } else {\n    1\n  }\n}"
+    if check_text(nil_assign_ok) != 0 {
+        return 1
+    }
+
+    var nil_assign_fail = "package demo.nil\nfunc main() int32 {\n  var x: int32 = nil\n  x\n}"
+    if check_text(nil_assign_fail) == 0 {
         return 1
     }
 

@@ -14,6 +14,46 @@ from runtime .host_process import run_argv as host_run_argv
 
 
 def dispatch_special_call (interpreter :Any ,name :str ,args :List [Any ])->Tuple [bool ,Any ]:
+    if name =="chan_make":
+        cap =0 if not args else int (args [0 ])
+        return True ,interpreter .chan_make (cap )
+    if name =="chan_send":
+        if len (args )<2 :
+            return True ,False 
+        return True ,interpreter .chan_send (args [0 ],args [1 ])
+    if name =="chan_recv":
+        if not args :
+            return True ,("none",None )
+        return True ,interpreter .chan_recv (args [0 ])
+    if name =="chan_close":
+        if args :
+            interpreter .chan_close (args [0 ])
+        return True ,None 
+    if name =="chan_len":
+        if not args :
+            return True ,0 
+        return True ,interpreter .chan_len (args [0 ])
+    if name =="go":
+        if not args :
+            return True ,None 
+        fn_name =args [0 ]
+        fn_args =args [1 :]
+        interpreter .go_spawn (fn_name ,fn_args )
+        return True ,None 
+    if name =="go_run":
+        return True ,interpreter .go_run_one ()
+    if name =="go_drain":
+        return True ,interpreter .go_drain ()
+    if name =="select_recv":
+        if not args :
+            return True ,("none",None )
+        return True ,interpreter .select_recv (args [0 ])
+    if name =="select_recv_default":
+        if not args :
+            return True ,None 
+        default_value =None if len (args )<2 else args [1 ]
+        return True ,interpreter .select_recv_default (args [0 ],default_value )
+
     if name in {"ok","err","some"}:
         payload =None if not args else args [0 ]
         return True ,(name ,payload )
