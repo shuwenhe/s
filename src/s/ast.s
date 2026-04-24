@@ -256,8 +256,15 @@ struct impl_decl {
     vec[function_decl] methods
 }
 
+struct const_decl {
+    string name
+    option[expr] value
+    int32 iota_index
+}
+
 enum item {
     function(function_decl),
+    const(const_decl),
     struct(struct_decl),
     enum(enum_decl),
     trait(trait_decl),
@@ -296,10 +303,18 @@ func dump_source_file(source_file source) string {
 func append_item_dump(vec[string] lines, item item) () {
     switch item {
         item.function(value) : append_lines(lines, dump_function(value, "")),
+        item.const(value) : append_lines(lines, dump_const(value)),
         item.struct(value) : append_lines(lines, dump_struct(value)),
         item.enum(value) : append_lines(lines, dump_enum(value)),
         item.trait(value) : append_lines(lines, dump_trait(value)),
         item.impl(value) : append_lines(lines, dump_impl(value)),
+    }
+}
+
+func dump_const(const_decl item) vec[string] {
+    switch item.value {
+        option.some(value) : vec[string] { "const " + item.name + " = " + dump_expr(value) },
+        option.none : vec[string] { "const " + item.name },
     }
 }
 

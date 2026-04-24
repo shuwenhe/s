@@ -8,9 +8,12 @@ use compile.internal.backend_elf64.build_toolchain_compat_artifact
 use compile.internal.backend_elf64.build_backend_perf_baseline_artifact
 use compile.internal.backend_elf64.build_cfi_artifact
 use compile.internal.backend_elf64.build_wasm_binary_probe_plan
+use compile.internal.backend_elf64.compile_writes
+use compile.internal.backend_elf64.compile_exit_code
 use compile.internal.backend_elf64.validate_cfi_artifact
 use compile.internal.backend_elf64.validate_ssa_abi_contracts
 use compile.internal.backend_elf64.validate_wasi_contract_source
+use compile.internal.ir.lower.lower_main_to_mir
 use compile.internal.syntax.parse_source
 use std.prelude.slice
 
@@ -207,6 +210,127 @@ func run_backend_abi_suite() int32 {
 
     var wasm_source = "__attribute__((__import_module__(\"wasi_snapshot_preview1\"), __import_name__(\"fd_write\")))\nextern int fd_write();\n__attribute__((__import_module__(\"wasi_snapshot_preview1\"), __import_name__(\"proc_exit\")))\nextern void proc_exit(int);\nint s_main(void){return 0;}\nvoid _start(void){proc_exit(s_main());}"
     if validate_wasi_contract_source(wasm_source).is_err() {
+        return 1
+    }
+
+    var fn_map_src = "package demo.fnmap\nfunc arm64_init() int32 {\n  println(\"arm64\")\n  0\n}\nfunc amd64_init() int32 {\n  println(\"amd64\")\n  0\n}\nfunc main() int32 {\n  var archInits = map[string]func() int32{\"amd64\": amd64_init, \"arm64\": arm64_init}\n  var goarch = \"arm64\"\n  var init = archInits[goarch]\n  init()\n  0\n}"
+    var fn_map_parsed = parse_source(fn_map_src)
+    if fn_map_parsed.is_err() {
+        return 1
+    }
+    var fn_map_graph = lower_main_to_mir(fn_map_parsed.unwrap())
+    if fn_map_graph.is_err() {
+        return 1
+    }
+    var fn_map_writes = compile_writes(fn_map_parsed.unwrap(), fn_map_graph.unwrap())
+    if fn_map_writes.is_err() {
+        return 1
+    }
+    if fn_map_writes.unwrap().len() == 0 {
+        return 1
+    }
+    if fn_map_writes.unwrap()[0].text != "arm64\n" {
+        return 1
+    }
+    var fn_map_exit = compile_exit_code(fn_map_parsed.unwrap(), fn_map_graph.unwrap())
+    if fn_map_exit.is_err() {
+        return 1
+    }
+    if fn_map_exit.unwrap() != 0 {
+        return 1
+    }
+
+    var defer_src = "package demo.defer\nfunc main() int32 {\n  defer println(\"cleanup\")\n  println(\"work\")\n  0\n}"
+    var defer_parsed = parse_source(defer_src)
+    if defer_parsed.is_err() {
+        return 1
+    }
+    var defer_graph = lower_main_to_mir(defer_parsed.unwrap())
+    if defer_graph.is_err() {
+        return 1
+    }
+    var defer_writes = compile_writes(defer_parsed.unwrap(), defer_graph.unwrap())
+    if defer_writes.is_err() {
+        return 1
+    }
+    if defer_writes.unwrap().len() != 2 {
+        return 1
+    }
+    if defer_writes.unwrap()[0].text != "work\n" {
+        return 1
+    }
+    if defer_writes.unwrap()[1].text != "cleanup\n" {
+        return 1
+    }
+    var defer_exit = compile_exit_code(defer_parsed.unwrap(), defer_graph.unwrap())
+    if defer_exit.is_err() {
+        return 1
+    }
+    if defer_exit.unwrap() != 0 {
+        return 1
+    }
+
+    var recover_src = "package demo.recover\nfunc handle() int32 {\n  recover()\n  println(\"recovered\")\n  0\n}\nfunc main() int32 {\n  defer handle()\n  panic(\"boom\")\n  0\n}"
+    var recover_parsed = parse_source(recover_src)
+    if recover_parsed.is_err() {
+        return 1
+    }
+    var recover_graph = lower_main_to_mir(recover_parsed.unwrap())
+    if recover_graph.is_err() {
+        return 1
+    }
+    var recover_writes = compile_writes(recover_parsed.unwrap(), recover_graph.unwrap())
+    if recover_writes.is_err() {
+        return 1
+    }
+    if recover_writes.unwrap().len() != 1 {
+        return 1
+    }
+    if recover_writes.unwrap()[0].text != "recovered\n" {
+        return 1
+    }
+    var recover_exit = compile_exit_code(recover_parsed.unwrap(), recover_graph.unwrap())
+    if recover_exit.is_err() {
+        return 1
+    }
+    if recover_exit.unwrap() != 0 {
+        return 1
+    }
+
+    var const_iota_src = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() int32 {\n  println(C)\n  0\n}"
+    var const_iota_parsed = parse_source(const_iota_src)
+    if const_iota_parsed.is_err() {
+        return 1
+    }
+    var const_iota_graph = lower_main_to_mir(const_iota_parsed.unwrap())
+    if const_iota_graph.is_err() {
+        return 1
+    }
+    var const_iota_writes = compile_writes(const_iota_parsed.unwrap(), const_iota_graph.unwrap())
+    if const_iota_writes.is_err() {
+        return 1
+    }
+    if const_iota_writes.unwrap().len() == 0 {
+        return 1
+    }
+    if const_iota_writes.unwrap()[0].text != "10\n" {
+        return 1
+    }
+
+    var const_iota_fail_src = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() int32 {\n  0\n}"
+    var const_iota_fail_parsed = parse_source(const_iota_fail_src)
+    if const_iota_fail_parsed.is_err() {
+        return 1
+    }
+    var const_iota_fail_graph = lower_main_to_mir(const_iota_fail_parsed.unwrap())
+    if const_iota_fail_graph.is_err() {
+        return 1
+    }
+    var const_iota_fail_writes = compile_writes(const_iota_fail_parsed.unwrap(), const_iota_fail_graph.unwrap())
+    if const_iota_fail_writes.is_ok() {
+        return 1
+    }
+    if !contains(const_iota_fail_writes.unwrap_err().message, "const evaluation failed") {
         return 1
     }
 
