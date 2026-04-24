@@ -1,5 +1,9 @@
 package compile.internal.importer.testdata
 
-func stub_issue15920() int {
-    0
+func issue15920_unit_name() string {
+    "importer/testdata/issue15920.s"
+}
+
+func issue15920_unit_ready() int {
+    1
 }
