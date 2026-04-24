@@ -101,7 +101,7 @@ func x86_init() string {
 }
 
 func arm_init() string {
-    not_wired("arm")
+    ""
 }
 
 func arm64_init() string {
