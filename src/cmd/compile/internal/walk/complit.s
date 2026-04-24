@@ -1,5 +1,9 @@
 package compile.internal.walk
 
-func stub_complit() int {
-    0
+func complit_unit_name() string {
+    "walk/complit.s"
+}
+
+func complit_unit_ready() int {
+    1
 }
