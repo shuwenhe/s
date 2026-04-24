@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_api() int {
-    0
+func api_unit_name() string {
+    "types2/api.s"
+}
+
+func api_unit_ready() int {
+    1
 }

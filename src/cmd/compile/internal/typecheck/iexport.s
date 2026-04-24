@@ -1,5 +1,9 @@
 package compile.internal.typecheck
 
-func stub_iexport() int {
-    0
+func iexport_unit_name() string {
+    "typecheck/iexport.s"
+}
+
+func iexport_unit_ready() int {
+    1
 }
