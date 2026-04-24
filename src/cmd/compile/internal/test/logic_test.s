@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_logic_test() int {
-    0
+func logic_test_unit_name() string {
+    "test/logic_test.s"
+}
+
+func logic_test_unit_ready() int {
+    1
 }

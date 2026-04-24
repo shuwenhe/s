@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_mergelocals_test() int {
-    0
+func mergelocals_test_unit_name() string {
+    "test/mergelocals_test.s"
+}
+
+func mergelocals_test_unit_ready() int {
+    1
 }

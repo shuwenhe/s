@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_zero_test() int {
-    0
+func zero_test_unit_name() string {
+    "test/testdata/zero_test.s"
+}
+
+func zero_test_unit_ready() int {
+    1
 }

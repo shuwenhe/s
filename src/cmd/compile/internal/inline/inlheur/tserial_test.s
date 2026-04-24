@@ -1,5 +1,9 @@
 package compile.internal.inline.inlheur
 
-func stub_tserial_test() int {
-    0
+func tserial_test_unit_name() string {
+    "inline/inlheur/tserial_test.s"
+}
+
+func tserial_test_unit_ready() int {
+    1
 }

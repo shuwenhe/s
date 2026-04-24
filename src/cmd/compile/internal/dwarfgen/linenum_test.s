@@ -1,5 +1,9 @@
 package compile.internal.dwarfgen
 
-func stub_linenum_test() int {
-    0
+func linenum_test_unit_name() string {
+    "dwarfgen/linenum_test.s"
+}
+
+func linenum_test_unit_ready() int {
+    1
 }

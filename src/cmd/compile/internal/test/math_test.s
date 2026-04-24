@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_math_test() int {
-    0
+func math_test_unit_name() string {
+    "test/math_test.s"
+}
+
+func math_test_unit_ready() int {
+    1
 }

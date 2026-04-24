@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_divconst_test() int {
-    0
+func divconst_test_unit_name() string {
+    "test/divconst_test.s"
+}
+
+func divconst_test_unit_ready() int {
+    1
 }

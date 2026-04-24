@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_lookup_test() int {
-    0
+func lookup_test_unit_name() string {
+    "types2/lookup_test.s"
+}
+
+func lookup_test_unit_ready() int {
+    1
 }

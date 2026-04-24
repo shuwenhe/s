@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_intrinsics_test() int {
-    0
+func intrinsics_test_unit_name() string {
+    "test/intrinsics_test.s"
+}
+
+func intrinsics_test_unit_ready() int {
+    1
 }
