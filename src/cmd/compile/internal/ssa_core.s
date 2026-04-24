@@ -13,12 +13,18 @@ struct ssa_pipeline_options {
     bool enable_dce
     bool enable_coalesce
     bool enable_simplify_cfg
+    int32 dominant_margin_override
 }
 
 struct ssa_program {
     string function_name
     string optimized_mir_text
     string pass_mir_trace
+    string pass_delta_trace
+    string pass_delta_summary
+    string pass_delta_structural_summary
+    string pass_delta_value_summary
+    string pass_delta_hot_summary
     int32 block_count
     int32 value_count
     int32 cfg_edge_count
@@ -91,6 +97,21 @@ struct ssa_program {
 struct ssa_rewrite_result {
     string rewritten_mir
     int32 rewrite_count
+}
+
+struct mir_metrics {
+    int32 blocks
+    int32 stmts
+    int32 branches
+    int32 jumps
+    int32 consts
+    int32 imms
+    int32 literals
+    int32 phi
+    int32 memphi
+    int32 copy
+    int32 load
+    int32 store
 }
 
 struct ssa_pass_stats {
@@ -167,6 +188,12 @@ func build_pipeline(string mir_text, string goarch) ssa_program {
     return build_pipeline_with_options(mir_text, goarch, default_options())
 }
 
+func build_pipeline_with_margin(string mir_text, string goarch, int32 dominant_margin_override) ssa_program {
+    var options = default_options()
+    options.dominant_margin_override = dominant_margin_override
+    return build_pipeline_with_options(mir_text, goarch, options)
+}
+
 func build_pipeline_with_graph_hints(mir_graph graph, string mir_text, string goarch) ssa_program {
     var program = build_pipeline(mir_text, goarch)
 
@@ -219,6 +246,59 @@ func build_pipeline_with_graph_hints(mir_graph graph, string mir_text, string go
     program
 }
 
+func build_pipeline_with_graph_hints_and_margin(mir_graph graph, string mir_text, string goarch, int32 dominant_margin_override) ssa_program {
+    var program = build_pipeline_with_margin(mir_text, goarch, dominant_margin_override)
+
+    var graph_blocks = graph.blocks.len()
+    var graph_values = 0
+    var graph_branches = 0
+    var graph_edges = 0
+    var i = 0
+    while i < graph.blocks.len() {
+        var block = graph.blocks[i]
+        graph_values = graph_values + block.statements.len()
+        graph_edges = graph_edges + block.terminator.edges.len()
+        if block.terminator.kind == "branch" {
+            graph_branches = graph_branches + 1
+        }
+
+        var j = 0
+        while j < block.statements.len() {
+            switch block.statements[j] {
+                mir_statement::assign(assign_stmt) : {
+                    if assign_stmt.op == "phi" {
+                        program.phi_node_count = program.phi_node_count + 1
+                    }
+                }
+                _ : ()
+            }
+            j = j + 1
+        }
+
+        i = i + 1
+    }
+
+    if graph_blocks > 0 {
+        program.block_count = graph_blocks
+    }
+    if graph_values > 0 {
+        program.value_count = graph_values
+    }
+    if graph_edges > 0 {
+        program.cfg_edge_count = graph_edges
+    }
+    if graph_branches > 0 {
+        program.branch_block_count = graph_branches
+    }
+    if program.block_count > 0 && program.value_count > 0 {
+        program.def_use_edge_count = program.value_count + program.block_count
+    }
+
+    program.debug_lines = build_debug_lines(dump_graph(graph), program.allocated_regs)
+    program.debug_line_count = program.debug_lines.len()
+    program
+}
+
 func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_options options) ssa_program {
     var rewrite = canonicalize_mir(mir_text)
     var rewritten = rewrite.rewritten_mir
@@ -232,6 +312,11 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
     var model = build_dataflow_model(rewritten, block_count, value_count)
     var pass_stats = run_optimization_passes(rewritten, model, options)
     var pass_mir_trace = build_pass_mir_trace(rewritten, pass_stats, options)
+    var pass_delta_trace = build_pass_delta_trace(rewritten, pass_stats, options)
+    var pass_delta_summary = build_pass_delta_summary(pass_delta_trace)
+    var pass_delta_structural_summary = build_pass_delta_category_summary(pass_delta_trace, true)
+    var pass_delta_value_summary = build_pass_delta_category_summary(pass_delta_trace, false)
+    var pass_delta_hot_summary = build_pass_delta_hot_summary(pass_delta_structural_summary, pass_delta_value_summary, options.dominant_margin_override)
     var optimized_mir = apply_pipeline_rewrites(rewritten, pass_stats, options)
     var optimized_block_count = parse_int_after(optimized_mir, "blocks=")
     if optimized_block_count <= 0 {
@@ -257,6 +342,11 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         function_name: function_name,
         optimized_mir_text: optimized_mir,
         pass_mir_trace: pass_mir_trace,
+        pass_delta_trace: pass_delta_trace,
+        pass_delta_summary: pass_delta_summary,
+        pass_delta_structural_summary: pass_delta_structural_summary,
+        pass_delta_value_summary: pass_delta_value_summary,
+        pass_delta_hot_summary: pass_delta_hot_summary,
         block_count: optimized_block_count,
         value_count: value_count,
         cfg_edge_count: estimate_cfg_edges(optimized_mir),
@@ -579,13 +669,20 @@ func default_options() ssa_pipeline_options {
         enable_dce: true,
         enable_coalesce: true,
         enable_simplify_cfg: true,
+        dominant_margin_override: -1,
     }
 }
 
 func apply_pipeline_rewrites(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
     var rewritten = mir_text
 
-    rewritten = apply_summary_rewrites(rewritten, pass_stats)
+    rewritten = apply_constfold_rewrites(rewritten, pass_stats)
+    rewritten = apply_gvn_rewrites(rewritten, pass_stats)
+    rewritten = apply_sccp_rewrites(rewritten, pass_stats)
+    rewritten = apply_pre_rewrites(rewritten, pass_stats)
+    rewritten = apply_cse_rewrites(rewritten, pass_stats)
+    rewritten = apply_licm_rewrites(rewritten, pass_stats)
+    rewritten = apply_bce_rewrites(rewritten, pass_stats)
     rewritten = apply_cfg_rewrites(rewritten, pass_stats, options)
     rewritten = apply_invalidation_reruns(rewritten, pass_stats, options)
 
@@ -596,9 +693,33 @@ func build_pass_mir_trace(string mir_text, ssa_pass_stats pass_stats, ssa_pipeli
     var trace = "input=" + mir_text
     var current = mir_text
 
-    var summary = apply_summary_rewrites(current, pass_stats)
-    trace = trace + ";summary=" + summary
-    current = summary
+    var constfold = apply_constfold_rewrites(current, pass_stats)
+    trace = trace + ";constfold=" + constfold
+    current = constfold
+
+    var gvn = apply_gvn_rewrites(current, pass_stats)
+    trace = trace + ";gvn=" + gvn
+    current = gvn
+
+    var sccp = apply_sccp_rewrites(current, pass_stats)
+    trace = trace + ";sccp=" + sccp
+    current = sccp
+
+    var pre = apply_pre_rewrites(current, pass_stats)
+    trace = trace + ";pre=" + pre
+    current = pre
+
+    var cse = apply_cse_rewrites(current, pass_stats)
+    trace = trace + ";cse=" + cse
+    current = cse
+
+    var licm = apply_licm_rewrites(current, pass_stats)
+    trace = trace + ";licm=" + licm
+    current = licm
+
+    var bce = apply_bce_rewrites(current, pass_stats)
+    trace = trace + ";bce=" + bce
+    current = bce
 
     var cfg = apply_cfg_rewrites(current, pass_stats, options)
     trace = trace + ";cfg=" + cfg
@@ -609,18 +730,414 @@ func build_pass_mir_trace(string mir_text, ssa_pass_stats pass_stats, ssa_pipeli
     trace
 }
 
-func apply_summary_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
+func build_pass_delta_trace(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
+    var trace = ""
+    var before = mir_text
+
+    var constfold = apply_constfold_rewrites(before, pass_stats)
+    trace = append_delta(trace, "constfold", before, constfold)
+    before = constfold
+
+    var gvn = apply_gvn_rewrites(before, pass_stats)
+    trace = append_delta(trace, "gvn", before, gvn)
+    before = gvn
+
+    var sccp = apply_sccp_rewrites(before, pass_stats)
+    trace = append_delta(trace, "sccp", before, sccp)
+    before = sccp
+
+    var pre = apply_pre_rewrites(before, pass_stats)
+    trace = append_delta(trace, "pre", before, pre)
+    before = pre
+
+    var cse = apply_cse_rewrites(before, pass_stats)
+    trace = append_delta(trace, "cse", before, cse)
+    before = cse
+
+    var licm = apply_licm_rewrites(before, pass_stats)
+    trace = append_delta(trace, "licm", before, licm)
+    before = licm
+
+    var bce = apply_bce_rewrites(before, pass_stats)
+    trace = append_delta(trace, "bce", before, bce)
+    before = bce
+
+    var cfg = apply_cfg_rewrites(before, pass_stats, options)
+    trace = append_delta(trace, "cfg", before, cfg)
+    before = cfg
+
+    var rerun = apply_invalidation_reruns(before, pass_stats, options)
+    trace = append_delta(trace, "rerun", before, rerun)
+
+    trace
+}
+
+func build_pass_delta_summary(string delta_trace) string {
+    if delta_trace == "" {
+        return ""
+    }
+
+    var out = ""
+    var cursor = 0
+    while cursor < delta_trace.len() {
+        var sep = find_token_from(delta_trace, ";", cursor)
+        if sep > delta_trace.len() {
+            sep = delta_trace.len()
+        }
+
+        var entry = slice(delta_trace, cursor, sep)
+        var lb = find_token(entry, "[")
+        var rb = find_token(entry, "]:")
+        if lb <= entry.len() && rb <= entry.len() && rb > lb {
+            var stage = slice(entry, 0, lb)
+            var count = parse_delta_count(entry, lb + 1, rb)
+            if out != "" {
+                out = out + ","
+            }
+            out = out + stage + "=" + to_string(count)
+        }
+
+        if sep >= delta_trace.len() {
+            break
+        }
+        cursor = sep + 1
+    }
+
+    out
+}
+
+func build_pass_delta_category_summary(string delta_trace, bool structural) string {
+    if delta_trace == "" {
+        return ""
+    }
+
+    var out = ""
+    var cursor = 0
+    while cursor < delta_trace.len() {
+        var sep = find_token_from(delta_trace, ";", cursor)
+        if sep > delta_trace.len() {
+            sep = delta_trace.len()
+        }
+
+        var entry = slice(delta_trace, cursor, sep)
+        var lb = find_token(entry, "[")
+        var rb = find_token(entry, "]:")
+        if lb <= entry.len() && rb <= entry.len() && rb > lb {
+            var stage = slice(entry, 0, lb)
+            var detail_start = rb + 2
+            var details = ""
+            if detail_start <= entry.len() {
+                details = slice(entry, detail_start, entry.len())
+            }
+            var changed = count_delta_category_changes(details, structural)
+            if out != "" {
+                out = out + ","
+            }
+            out = out + stage + "=" + to_string(changed)
+        }
+
+        if sep >= delta_trace.len() {
+            break
+        }
+        cursor = sep + 1
+    }
+
+    out
+}
+
+func count_delta_category_changes(string details, bool structural) int32 {
+    if details == "" || details == "nochange" {
+        return 0
+    }
+
+    var count = 0
+    if structural {
+        count = count + count_token(details, "blocks(")
+        count = count + count_token(details, "stmts(")
+        count = count + count_token(details, "br(")
+        count = count + count_token(details, "jmp(")
+    } else {
+        count = count + count_token(details, "const(")
+        count = count + count_token(details, "imm(")
+        count = count + count_token(details, "lit(")
+        count = count + count_token(details, "phi(")
+        count = count + count_token(details, "memphi(")
+        count = count + count_token(details, "copy(")
+        count = count + count_token(details, "load(")
+        count = count + count_token(details, "store(")
+    }
+    count
+}
+
+func build_pass_delta_hot_summary(string structural_summary, string value_summary, int32 margin_override) string {
+    var structural_active = count_delta_summary_active_entries(structural_summary)
+    var structural_total_passes = count_delta_summary_entries(structural_summary)
+    var structural_total_changes = sum_delta_summary_counts(structural_summary)
+
+    var value_active = count_delta_summary_active_entries(value_summary)
+    var value_total_passes = count_delta_summary_entries(value_summary)
+    var value_total_changes = sum_delta_summary_counts(value_summary)
+
+    var diff = structural_total_changes - value_total_changes
+    if diff < 0 {
+        diff = 0 - diff
+    }
+    var dominant_margin = compute_dominant_margin(structural_total_changes + value_total_changes, margin_override)
+
+    var dominant = "balanced"
+    if diff > dominant_margin && structural_total_changes > value_total_changes {
+        dominant = "struct"
+    } else if diff > dominant_margin && value_total_changes > structural_total_changes {
+        dominant = "value"
+    }
+
+    "struct=" + to_string(structural_active) + "/" + to_string(structural_total_passes)
+        + "(" + to_string(structural_total_changes) + ")"
+        + ",value=" + to_string(value_active) + "/" + to_string(value_total_passes)
+        + "(" + to_string(value_total_changes) + ")"
+        + ",margin=" + to_string(dominant_margin)
+        + ",dominant=" + dominant
+}
+
+func compute_dominant_margin(int32 total_changes, int32 margin_override) int32 {
+    if margin_override >= 0 {
+        return margin_override
+    }
+    if total_changes >= 32 {
+        return 3
+    }
+    if total_changes >= 16 {
+        return 2
+    }
+    1
+}
+
+func count_delta_summary_entries(string summary) int32 {
+    if summary == "" {
+        return 0
+    }
+
+    var count = 0
+    var cursor = 0
+    while cursor < summary.len() {
+        var sep = find_token_from(summary, ",", cursor)
+        if sep > summary.len() {
+            sep = summary.len()
+        }
+        count = count + 1
+        if sep >= summary.len() {
+            break
+        }
+        cursor = sep + 1
+    }
+
+    count
+}
+
+func count_delta_summary_active_entries(string summary) int32 {
+    if summary == "" {
+        return 0
+    }
+
+    var count = 0
+    var cursor = 0
+    while cursor < summary.len() {
+        var sep = find_token_from(summary, ",", cursor)
+        if sep > summary.len() {
+            sep = summary.len()
+        }
+
+        var entry = slice(summary, cursor, sep)
+        var eq = find_token(entry, "=")
+        if eq <= entry.len() {
+            var count_text = slice(entry, eq + 1, entry.len())
+            if parse_delta_count(count_text, 0, count_text.len()) > 0 {
+                count = count + 1
+            }
+        }
+
+        if sep >= summary.len() {
+            break
+        }
+        cursor = sep + 1
+    }
+
+    count
+}
+
+func sum_delta_summary_counts(string summary) int32 {
+    if summary == "" {
+        return 0
+    }
+
+    var total = 0
+    var cursor = 0
+    while cursor < summary.len() {
+        var sep = find_token_from(summary, ",", cursor)
+        if sep > summary.len() {
+            sep = summary.len()
+        }
+
+        var entry = slice(summary, cursor, sep)
+        var eq = find_token(entry, "=")
+        if eq <= entry.len() {
+            var count_text = slice(entry, eq + 1, entry.len())
+            total = total + parse_delta_count(count_text, 0, count_text.len())
+        }
+
+        if sep >= summary.len() {
+            break
+        }
+        cursor = sep + 1
+    }
+
+    total
+}
+
+func parse_delta_count(string text, int32 start, int32 end) int32 {
+    var value = 0
+    var i = start
+    while i < end && i < text.len() {
+        var ch = char_at(text, i)
+        if is_digit(ch) {
+            value = value * 10 + parse_digit(ch)
+        }
+        i = i + 1
+    }
+    value
+}
+
+func append_delta(string trace, string stage, string before_text, string after_text) string {
+    var before = collect_mir_metrics(before_text)
+    var after = collect_mir_metrics(after_text)
+    var details = ""
+    var changed = 0
+    var r0 = append_changed_metric(details, "blocks", before.blocks, after.blocks)
+    details = r0.details
+    changed = changed + r0.changed
+    var r1 = append_changed_metric(details, "stmts", before.stmts, after.stmts)
+    details = r1.details
+    changed = changed + r1.changed
+    var r2 = append_changed_metric(details, "br", before.branches, after.branches)
+    details = r2.details
+    changed = changed + r2.changed
+    var r3 = append_changed_metric(details, "jmp", before.jumps, after.jumps)
+    details = r3.details
+    changed = changed + r3.changed
+    var r4 = append_changed_metric(details, "const", before.consts, after.consts)
+    details = r4.details
+    changed = changed + r4.changed
+    var r5 = append_changed_metric(details, "imm", before.imms, after.imms)
+    details = r5.details
+    changed = changed + r5.changed
+    var r6 = append_changed_metric(details, "lit", before.literals, after.literals)
+    details = r6.details
+    changed = changed + r6.changed
+    var r7 = append_changed_metric(details, "phi", before.phi, after.phi)
+    details = r7.details
+    changed = changed + r7.changed
+    var r8 = append_changed_metric(details, "memphi", before.memphi, after.memphi)
+    details = r8.details
+    changed = changed + r8.changed
+    var r9 = append_changed_metric(details, "copy", before.copy, after.copy)
+    details = r9.details
+    changed = changed + r9.changed
+    var r10 = append_changed_metric(details, "load", before.load, after.load)
+    details = r10.details
+    changed = changed + r10.changed
+    var r11 = append_changed_metric(details, "store", before.store, after.store)
+    details = r11.details
+    changed = changed + r11.changed
+    if changed == 0 {
+        details = "nochange"
+    }
+    var entry = stage + "[" + to_string(changed) + "]:" + details
+
+    if trace == "" {
+        return entry
+    }
+    trace + ";" + entry
+}
+
+struct append_metric_result {
+    string details
+    int32 changed
+}
+
+func append_changed_metric(string details, string label, int32 before, int32 after) append_metric_result {
+    if before == after {
+        return append_metric_result {
+            details: details,
+            changed: 0,
+        }
+    }
+    var part = format_metric_delta(label, before, after)
+    if details == "" {
+        return append_metric_result {
+            details: part,
+            changed: 1,
+        }
+    }
+    append_metric_result {
+        details: details + "," + part,
+        changed: 1,
+    }
+}
+
+func collect_mir_metrics(string mir_text) mir_metrics {
+    mir_metrics {
+        blocks: parse_int_after(mir_text, "blocks="),
+        stmts: parse_total_stmt_count(mir_text),
+        branches: count_token(mir_text, " term=branch"),
+        jumps: count_token(mir_text, " term=jump"),
+        consts: count_numeric_marker_total(mir_text, " const="),
+        imms: count_numeric_marker_total(mir_text, " imm="),
+        literals: count_numeric_marker_total(mir_text, " literal="),
+        phi: count_numeric_marker_total(mir_text, " phi="),
+        memphi: count_numeric_marker_total(mir_text, " memphi="),
+        copy: count_numeric_marker_total(mir_text, " copy="),
+        load: count_numeric_marker_total(mir_text, " load="),
+        store: count_numeric_marker_total(mir_text, " store="),
+    }
+}
+
+func format_metric_delta(string label, int32 before, int32 after) string {
+    label + "(" + to_string(before) + "->" + to_string(after) + ")"
+}
+
+func apply_constfold_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
     var rewritten = mir_text
-    rewritten = normalize_stmt_counts(rewritten, pass_stats.optimized_value_count)
     rewritten = reduce_numeric_marker_budget(rewritten, " const=", pass_stats.folded_constant_count)
     rewritten = reduce_numeric_marker_budget(rewritten, " imm=", pass_stats.folded_constant_count)
     rewritten = reduce_numeric_marker_budget(rewritten, " literal=", pass_stats.folded_constant_count)
+    rewritten
+}
+
+func apply_gvn_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
+    reduce_numeric_marker_budget(mir_text, " copy=", pass_stats.gvn_rewrite_count)
+}
+
+func apply_sccp_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
+    normalize_stmt_counts(mir_text, pass_stats.optimized_value_count)
+}
+
+func apply_pre_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
+    var rewritten = mir_text
     rewritten = reduce_numeric_marker_budget(rewritten, " phi=", pass_stats.pre_eliminated_count)
     rewritten = reduce_numeric_marker_budget(rewritten, " memphi=", pass_stats.pre_eliminated_count)
-    rewritten = reduce_numeric_marker_budget(rewritten, " copy=", pass_stats.gvn_rewrite_count + pass_stats.cse_eliminated_count)
-    rewritten = reduce_numeric_marker_budget(rewritten, " load=", pass_stats.bce_removed_count)
-    rewritten = reduce_numeric_marker_budget(rewritten, " store=", pass_stats.licm_hoisted_count)
     rewritten
+}
+
+func apply_cse_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
+    reduce_numeric_marker_budget(mir_text, " copy=", pass_stats.cse_eliminated_count)
+}
+
+func apply_licm_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
+    reduce_numeric_marker_budget(mir_text, " store=", pass_stats.licm_hoisted_count)
+}
+
+func apply_bce_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
+    reduce_numeric_marker_budget(mir_text, " load=", pass_stats.bce_removed_count)
 }
 
 func apply_cfg_rewrites(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
@@ -1672,6 +2189,11 @@ func dump_pipeline(ssa_program program) string {
     var out = "ssa " + program.function_name
         + " mir_opt=" + program.optimized_mir_text
         + " mir_trace=" + program.pass_mir_trace
+        + " mir_delta=" + program.pass_delta_trace
+        + " delta_summary=" + program.pass_delta_summary
+        + " delta_struct=" + program.pass_delta_structural_summary
+        + " delta_value=" + program.pass_delta_value_summary
+        + " delta_hot=" + program.pass_delta_hot_summary
         + " blocks=" + to_string(program.block_count)
         + " values=" + to_string(program.value_count)
         + " opt_values=" + to_string(program.optimized_value_count)

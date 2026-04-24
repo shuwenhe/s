@@ -5,7 +5,9 @@ use compile.internal.backend_elf64.build_wasm_toolchain_plan
 use compile.internal.backend_elf64.run_midend_pipeline
 use compile.internal.ir.lower.from_syntax_checked
 use compile.internal.ir.lower.lower_main_to_mir
+use compile.internal.build.parse.parse_options
 use compile.internal.ssa_core.build_pipeline_with_graph_hints
+use compile.internal.ssa_core.build_pipeline_with_graph_hints_and_margin
 use compile.internal.ssa_core.dump_pipeline
 use compile.internal.syntax.parse_source
 use compile.internal.ir.ast as ir_ast
@@ -21,6 +23,41 @@ use std.prelude.slice
 use std.vec.vec
 
 func run_pipeline_regression_suite() int32 {
+    var cli_build_eq = vec[string]()
+    cli_build_eq.push("compile")
+    cli_build_eq.push("build")
+    cli_build_eq.push("demo.s")
+    cli_build_eq.push("-o")
+    cli_build_eq.push("a.out")
+    cli_build_eq.push("--ssa-dominant-margin=5")
+    var parsed_build_eq = parse_options(cli_build_eq)
+    if parsed_build_eq.len() < 4 || parsed_build_eq[3] != "5" {
+        return 1
+    }
+
+    var cli_run_split = vec[string]()
+    cli_run_split.push("compile")
+    cli_run_split.push("run")
+    cli_run_split.push("demo.s")
+    cli_run_split.push("--ssa-dominant-margin")
+    cli_run_split.push("7")
+    var parsed_run_split = parse_options(cli_run_split)
+    if parsed_run_split.len() < 4 || parsed_run_split[3] != "7" {
+        return 1
+    }
+
+    var cli_bad_margin = vec[string]()
+    cli_bad_margin.push("compile")
+    cli_bad_margin.push("build")
+    cli_bad_margin.push("demo.s")
+    cli_bad_margin.push("-o")
+    cli_bad_margin.push("a.out")
+    cli_bad_margin.push("--ssa-dominant-margin=oops")
+    var parsed_bad_margin = parse_options(cli_bad_margin)
+    if parsed_bad_margin[0] != "help" {
+        return 1
+    }
+
     var source = "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int32 {\n  1\n}\nfunc main() int32 {\n  var arr = [int32]{1, 2}\n  var mp = [string]int32{\"k\": 1}\n  var idx = arr[0]\n  var bx = { idx + 1 }\n  idx = idx + bx\n  for (var i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
 
     var parsed = parse_source(source)
@@ -127,6 +164,22 @@ func run_pipeline_regression_suite() int32 {
         return 1
     }
     if !contains(hinted_dump, "dbg_lines=") {
+        return 1
+    }
+
+    var hot_mir = "mir hot blocks=4 entry=0 exit=3 | bb0(entry) stmts=2 term=branch | bb1(path) stmts=0 term=jump | bb2(path2) stmts=0 term=jump | bb3(exit) stmts=0 term=return"
+    var hot_low = build_pipeline_with_graph_hints_and_margin(graph, hot_mir, "amd64", 0)
+    var hot_low_dump = dump_pipeline(hot_low)
+    if !contains(hot_low_dump, "delta_hot=") {
+        return 1
+    }
+    if !contains(hot_low_dump, ",margin=0,dominant=struct") {
+        return 1
+    }
+
+    var hot_high = build_pipeline_with_graph_hints_and_margin(graph, hot_mir, "amd64", 1000000)
+    var hot_high_dump = dump_pipeline(hot_high)
+    if !contains(hot_high_dump, ",margin=1000000,dominant=balanced") {
         return 1
     }
 

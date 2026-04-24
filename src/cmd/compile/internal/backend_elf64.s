@@ -9,8 +9,7 @@ use compile.internal.mir.dump_graph
 use compile.internal.inline.estimate_inline_sites_graph
 use compile.internal.escape.estimate_escape_sites_graph
 use compile.internal.dispatch.devirtualize.estimate_devirtualized_sites_graph
-use compile.internal.ssa_core.build_pipeline as build_ssa_pipeline
-use compile.internal.ssa_core.build_pipeline_with_graph_hints as build_ssa_pipeline_with_graph_hints
+use compile.internal.ssa_core.build_pipeline_with_graph_hints_and_margin as build_ssa_pipeline_with_graph_hints_and_margin
 use compile.internal.ssa_core.dump_pipeline as dump_ssa_pipeline
 use compile.internal.ssa_core.dump_debug_map as dump_ssa_debug_map
 use internal.buildcfg.goarch as buildcfg_goarch
@@ -156,7 +155,7 @@ struct abi_behavior_entry {
     string return_mode
 }
 
-func build(string path, string output) int32 {
+func build(string path, string output, string ssa_margin_override) int32 {
     var source_result = read_to_string(path)
     if source_result.is_err() {
         return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message)
@@ -179,10 +178,15 @@ func build(string path, string output) int32 {
     }
     var graph = mir_result.unwrap()
     var arch = buildcfg_goarch()
+    var margin_result = parse_ssa_margin_override(ssa_margin_override)
+    if margin_result.is_err() {
+        return report_failure(margin_result.unwrap_err().message)
+    }
+    var dominant_margin = margin_result.unwrap()
 
     var midend = run_midend_pipeline(graph)
 
-    var ssa_program = build_ssa_pipeline_with_graph_hints(graph, midend.optimized_mir_text, arch)
+    var ssa_program = build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
     var ssa_text = dump_ssa_pipeline(ssa_program)
     if ssa_text == "" {
         return report_failure("ssa lowering failed: empty pipeline")
@@ -3005,6 +3009,23 @@ func parse_int_literal(string literal) int32 {
         index = index + 1
     }
     sign * out
+}
+
+func parse_ssa_margin_override(string text) result[int32, backend_error] {
+    if text == "" {
+        return ok_int(-1)
+    }
+
+    var i = 0
+    while i < len(text) {
+        var ch = char_at(text, i)
+        if digit_value(ch) < 0 {
+            return fail_int("invalid --ssa-dominant-margin value: " + text)
+        }
+        i = i + 1
+    }
+
+    return ok_int(parse_int_literal(text))
 }
 
 func digit_value(string ch) int32 {
