@@ -1,0 +1,686 @@
+# De-stub Checklist
+
+## Summary
+- Total stub files: 633
+- Non-test stubs: 465
+- Test stubs: 168
+- Go-mapped non-test stubs: 465
+- Go-mapped test stubs: 168
+- s-only non-test stubs: 0
+
+## Top Directories (Go-mapped non-test)
+- ssa: 116
+- types2: 73
+- syntax: 46
+- inline: 31
+- ir: 29
+- test: 20
+- typecheck: 19
+- loopvar: 19
+- importer: 16
+- walk: 14
+- types: 12
+- escape: 9
+- ssagen: 8
+- liveness: 5
+- riscv64: 4
+- reflectdata: 4
+- ppc64: 4
+- dwarfgen: 4
+- x86: 3
+- s390x: 3
+- mips64: 3
+- mips: 3
+- loong64: 3
+- staticdata: 2
+- pkginit: 2
+- objw: 2
+- devirtualize: 2
+- wasm: 1
+- typebits: 1
+- staticinit: 1
+
+## Batch Files
+- Generated 10 batches, each up to 50 files.
+
+### Batch 00
+- deadlocals/deadlocals.s
+- devirtualize/devirtualize.s
+- devirtualize/pgo.s
+- dwarfgen/dwarf.s
+- dwarfgen/dwinl.s
+- dwarfgen/marker.s
+- dwarfgen/scope.s
+- escape/alias.s
+- escape/assign.s
+- escape/call.s
+- escape/expr.s
+- escape/graph.s
+- escape/leaks.s
+- escape/solve.s
+- escape/stmt.s
+- escape/utils.s
+- importer/gcimporter.s
+- importer/support.s
+- importer/testdata/a.s
+- importer/testdata/b.s
+- importer/testdata/exports.s
+- importer/testdata/generics.s
+- importer/testdata/genmeth.s
+- importer/testdata/issue15920.s
+- importer/testdata/issue20046.s
+- importer/testdata/issue25301.s
+- importer/testdata/issue25596.s
+- importer/testdata/issue63285.s
+- importer/testdata/issue69912.s
+- importer/testdata/p.s
+- importer/testdata/versions/test.s
+- importer/ureader.s
+- inline/inl.s
+- inline/inlheur/actualexprpropbits_string.s
+- inline/inlheur/analyze.s
+- inline/inlheur/analyze_func_callsites.s
+- inline/inlheur/analyze_func_flags.s
+- inline/inlheur/analyze_func_params.s
+- inline/inlheur/analyze_func_returns.s
+- inline/inlheur/callsite.s
+- inline/inlheur/cspropbits_string.s
+- inline/inlheur/eclassify.s
+- inline/inlheur/funcpropbits_string.s
+- inline/inlheur/funcprop_string.s
+- inline/inlheur/function_properties.s
+- inline/inlheur/names.s
+- inline/inlheur/parampropbits_string.s
+- inline/inlheur/pstate_string.s
+- inline/inlheur/resultpropbits_string.s
+- inline/inlheur/scoreadjusttyp_string.s
+
+### Batch 01
+- inline/inlheur/score_callresult_uses.s
+- inline/inlheur/scoring.s
+- inline/inlheur/serialize.s
+- inline/inlheur/testdata/dumpscores.s
+- inline/inlheur/testdata/props/acrosscall.s
+- inline/inlheur/testdata/props/calls.s
+- inline/inlheur/testdata/props/funcflags.s
+- inline/inlheur/testdata/props/params.s
+- inline/inlheur/testdata/props/returns.s
+- inline/inlheur/testdata/props/returns2.s
+- inline/inlheur/trace_off.s
+- inline/inlheur/trace_on.s
+- inline/interleaved/interleaved.s
+- ir/abi.s
+- ir/bitset.s
+- ir/cfg.s
+- ir/check_reassign_no.s
+- ir/check_reassign_yes.s
+- ir/class_string.s
+- ir/const.s
+- ir/copy.s
+- ir/dump.s
+- ir/expr.s
+- ir/fmt.s
+- ir/func.s
+- ir/html.s
+- ir/ir.s
+- ir/mini.s
+- ir/mknode.s
+- ir/name.s
+- ir/node.s
+- ir/node_gen.s
+- ir/op_string.s
+- ir/package.s
+- ir/reassign_consistency_check.s
+- ir/reassignment.s
+- ir/scc.s
+- ir/stmt.s
+- ir/symtab.s
+- ir/type.s
+- ir/val.s
+- ir/visit.s
+- liveness/arg.s
+- liveness/bvset.s
+- liveness/intervals.s
+- liveness/mergelocals.s
+- liveness/plive.s
+- logopt/log_opts.s
+- loong64/galign.s
+- loong64/ggen.s
+
+### Batch 02
+- loong64/ssa.s
+- loopvar/loopvar.s
+- loopvar/testdata/for_complicated_esc_address.s
+- loopvar/testdata/for_esc_address.s
+- loopvar/testdata/for_esc_closure.s
+- loopvar/testdata/for_esc_method.s
+- loopvar/testdata/for_esc_minimal_closure.s
+- loopvar/testdata/for_nested.s
+- loopvar/testdata/inlines/a/a.s
+- loopvar/testdata/inlines/b/b.s
+- loopvar/testdata/inlines/c/c.s
+- loopvar/testdata/inlines/main.s
+- loopvar/testdata/opt.s
+- loopvar/testdata/opt-121.s
+- loopvar/testdata/opt-122.s
+- loopvar/testdata/range_esc_address.s
+- loopvar/testdata/range_esc_closure.s
+- loopvar/testdata/range_esc_closure_linedir.s
+- loopvar/testdata/range_esc_method.s
+- loopvar/testdata/range_esc_minimal_closure.s
+- mips64/galign.s
+- mips64/ggen.s
+- mips64/ssa.s
+- mips/galign.s
+- mips/ggen.s
+- mips/ssa.s
+- objw/objw.s
+- objw/prog.s
+- pgoir/irgraph.s
+- pkginit/init.s
+- pkginit/initAsanGlobals.s
+- ppc64/galign.s
+- ppc64/ggen.s
+- ppc64/opt.s
+- ppc64/ssa.s
+- rangefunc/rewrite.s
+- reflectdata/alg.s
+- reflectdata/helpers.s
+- reflectdata/map.s
+- reflectdata/reflect.s
+- riscv64/galign.s
+- riscv64/ggen.s
+- riscv64/gsubr.s
+- riscv64/ssa.s
+- rttype/rttype.s
+- s390x/galign.s
+- s390x/ggen.s
+- s390x/ssa.s
+- slice/slice.s
+- ssa/addressingmodes.s
+
+### Batch 03
+- ssa/allocators.s
+- ssa/biasedsparsemap.s
+- ssa/branchelim.s
+- ssa/cache.s
+- ssa/checkbce.s
+- ssa/cpufeatures.s
+- ssa/critical.s
+- ssa/deadstore.s
+- ssa/debug.s
+- ssa/decompose.s
+- ssa/downward_counting_loop.s
+- ssa/expand_calls.s
+- ssa/flagalloc.s
+- ssa/fuse.s
+- ssa/fuse_branchredirect.s
+- ssa/fuse_comparisons.s
+- ssa/_gen/386Ops.s
+- ssagen/abi.s
+- ssa/_gen/allocators.s
+- ssa/_gen/AMD64Ops.s
+- ssagen/arch.s
+- ssa/_gen/ARM64Ops.s
+- ssa/_gen/ARMOps.s
+- ssa/_gen/dec64Ops.s
+- ssa/_gen/decOps.s
+- ssa/_gen/divisibleOps.s
+- ssa/_gen/divmodOps.s
+- ssa/generate.s
+- ssa/_gen/genericOps.s
+- ssagen/intrinsics.s
+- ssa/_gen/LOONG64Ops.s
+- ssa/_gen/main.s
+- ssa/_gen/MIPS64Ops.s
+- ssa/_gen/MIPSOps.s
+- ssa/_gen/multiscanner.s
+- ssagen/nowb.s
+- ssagen/pgen.s
+- ssagen/phi.s
+- ssa/_gen/PPC64Ops.s
+- ssa/_gen/RISCV64Ops.s
+- ssa/_gen/rulegen.s
+- ssa/_gen/S390XOps.s
+- ssa/_gen/simdAMD64ops.s
+- ssa/_gen/simdgenericOps.s
+- ssagen/simdintrinsics.s
+- ssagen/ssa.s
+- ssa/_gen/vendor/golang.org/x/tools/go/ast/astutil/enclosing.s
+- ssa/_gen/vendor/golang.org/x/tools/go/ast/astutil/imports.s
+- ssa/_gen/vendor/golang.org/x/tools/go/ast/astutil/rewrite.s
+- ssa/_gen/vendor/golang.org/x/tools/go/ast/astutil/util.s
+
+### Batch 04
+- ssa/_gen/WasmOps.s
+- ssa/html.s
+- ssa/id.s
+- ssa/known_bits.s
+- ssa/layout.s
+- ssa/lca.s
+- ssa/licm.s
+- ssa/likelyadjust.s
+- ssa/location.s
+- ssa/loopbce.s
+- ssa/loopreschedchecks.s
+- ssa/looprotate.s
+- ssa/lower.s
+- ssa/magic.s
+- ssa/memcombine.s
+- ssa/merge_conditional_branches.s
+- ssa/nilcheck.s
+- ssa/numberlines.s
+- ssa/opGen.s
+- ssa/opt.s
+- ssa/pair.s
+- ssa/phiopt.s
+- ssa/poset.s
+- ssa/rewrite386.s
+- ssa/rewrite386splitload.s
+- ssa/rewriteAMD64latelower.s
+- ssa/rewriteAMD64splitload.s
+- ssa/rewriteARM64latelower.s
+- ssa/rewritedec.s
+- ssa/rewritedec64.s
+- ssa/rewritedivisible.s
+- ssa/rewritedivmod.s
+- ssa/rewriteLOONG64.s
+- ssa/rewriteLOONG64latelower.s
+- ssa/rewriteMIPS.s
+- ssa/rewriteMIPS64.s
+- ssa/rewriteMIPS64latelower.s
+- ssa/rewritePPC64.s
+- ssa/rewritePPC64latelower.s
+- ssa/rewriteRISCV64.s
+- ssa/rewriteRISCV64latelower.s
+- ssa/rewriteS390X.s
+- ssa/rewritetern.s
+- ssa/rewriteWasm.s
+- ssa/sccp.s
+- ssa/shortcircuit.s
+- ssa/softfloat.s
+- ssa/sparsemap.s
+- ssa/sparsemappos.s
+- ssa/sparseset.s
+
+### Batch 05
+- ssa/sparsetree.s
+- ssa/stackalloc.s
+- ssa/tern_helpers.s
+- ssa/testdata/b53456.s
+- ssa/testdata/convertline.s
+- ssa/testdata/fma.s
+- ssa/testdata/hist.s
+- ssa/testdata/i22558.s
+- ssa/testdata/i22600.s
+- ssa/testdata/i74576a.s
+- ssa/testdata/i74576b.s
+- ssa/testdata/i74576c.s
+- ssa/testdata/infloop.s
+- ssa/testdata/inline-dump.s
+- ssa/testdata/pushback.s
+- ssa/testdata/sayhi.s
+- ssa/testdata/scopes.s
+- ssa/tighten.s
+- ssa/trim.s
+- ssa/tuple.s
+- ssa/writebarrier.s
+- ssa/xposmap.s
+- ssa/zcse.s
+- staticdata/data.s
+- staticdata/embed.s
+- staticinit/sched.s
+- syntax/branches.s
+- syntax/dumper.s
+- syntax/nodes.s
+- syntax/operator_string.s
+- syntax/parser.s
+- syntax/pos.s
+- syntax/positions.s
+- syntax/printer.s
+- syntax/scanner.s
+- syntax/source.s
+- syntax/testdata/chans.s
+- syntax/testdata/fallthrough.s
+- syntax/testdata/interface.s
+- syntax/testdata/issue20789.s
+- syntax/testdata/issue23385.s
+- syntax/testdata/issue23434.s
+- syntax/testdata/issue31092.s
+- syntax/testdata/issue43527.s
+- syntax/testdata/issue43674.s
+- syntax/testdata/issue46558.s
+- syntax/testdata/issue47704.s
+- syntax/testdata/issue48382.s
+- syntax/testdata/issue49205.s
+- syntax/testdata/issue49482.s
+
+### Batch 06
+- syntax/testdata/issue52391.s
+- syntax/testdata/issue56022.s
+- syntax/testdata/issue60599.s
+- syntax/testdata/issue63835.s
+- syntax/testdata/issue65790.s
+- syntax/testdata/issue68589.s
+- syntax/testdata/issue69506.s
+- syntax/testdata/issue70957.s
+- syntax/testdata/issue70974.s
+- syntax/testdata/linalg.s
+- syntax/testdata/map.s
+- syntax/testdata/map2.s
+- syntax/testdata/sample.s
+- syntax/testdata/slices.s
+- syntax/testdata/smoketest.s
+- syntax/testdata/tparams.s
+- syntax/testdata/typeset.s
+- syntax/testing.s
+- syntax/tokens.s
+- syntax/token_string.s
+- syntax/type.s
+- syntax/walk.s
+- test/race.s
+- test/test.s
+- test/testdata/flowgraph_generator1.s
+- test/testdata/gen/arithBoundaryGen.s
+- test/testdata/gen/arithConstGen.s
+- test/testdata/gen/cmpConstGen.s
+- test/testdata/gen/conditionalCmpConstGen.s
+- test/testdata/gen/constFoldGen.s
+- test/testdata/gen/copyGen.s
+- test/testdata/gen/zeroGen.s
+- test/testdata/mergelocals/integration.s
+- test/testdata/mysort/mysort.s
+- test/testdata/pgo/devirtualize/devirt.s
+- test/testdata/pgo/devirtualize/mult.pkg/mult.s
+- test/testdata/pgo/inline/inline_hot.s
+- test/testdata/ptrsort.s
+- test/testdata/reproducible/issue20272.s
+- test/testdata/reproducible/issue27013.s
+- test/testdata/reproducible/issue30202.s
+- test/testdata/reproducible/issue38068.s
+- typebits/typebits.s
+- typecheck/bexport.s
+- typecheck/builtin.s
+- typecheck/_builtin/coverage.s
+- typecheck/_builtin/runtime.s
+- typecheck/const.s
+- typecheck/dcl.s
+- typecheck/export.s
+
+### Batch 07
+- typecheck/expr.s
+- typecheck/func.s
+- typecheck/iexport.s
+- typecheck/iimport.s
+- typecheck/mkbuiltin.s
+- typecheck/stmt.s
+- typecheck/subr.s
+- typecheck/syms.s
+- typecheck/target.s
+- typecheck/type.s
+- typecheck/typecheck.s
+- typecheck/universe.s
+- types2/alias.s
+- types2/api.s
+- types2/api_predicates.s
+- types2/array.s
+- types2/assignments.s
+- types2/basic.s
+- types2/builtins.s
+- types2/call.s
+- types2/chan.s
+- types2/check.s
+- types2/compiler_internal.s
+- types2/compilersupport.s
+- types2/const.s
+- types2/context.s
+- types2/conversions.s
+- types2/cycles.s
+- types2/decl.s
+- types2/errors.s
+- types2/errsupport.s
+- types2/expr.s
+- types2/format.s
+- types2/gccgosizes.s
+- types2/gcsizes.s
+- types2/index.s
+- types2/infer.s
+- types2/initorder.s
+- types2/instantiate.s
+- types2/interface.s
+- types2/labels.s
+- types2/literals.s
+- types2/lookup.s
+- types2/map.s
+- types2/mono.s
+- types2/named.s
+- types2/object.s
+- types2/objset.s
+- types2/operand.s
+- types2/package.s
+
+### Batch 08
+- types2/pointer.s
+- types2/predicates.s
+- types2/range.s
+- types2/recording.s
+- types2/resolver.s
+- types2/return.s
+- types2/scope.s
+- types2/selection.s
+- types2/signature.s
+- types2/sizes.s
+- types2/slice.s
+- types2/stmt.s
+- types2/struct.s
+- types2/subst.s
+- types2/termlist.s
+- types2/testdata/local/issue47996.s
+- types2/testdata/local/issue68183.s
+- types2/testdata/local/issue71254.s
+- types2/testdata/manual.s
+- types2/trie.s
+- types2/tuple.s
+- types2/type.s
+- types2/typelists.s
+- types2/typeparam.s
+- types2/typeset.s
+- types2/typestring.s
+- types2/typeterm.s
+- types2/typexpr.s
+- types2/under.s
+- types2/unify.s
+- types2/union.s
+- types2/universe.s
+- types2/util.s
+- types2/validtype.s
+- types2/version.s
+- types/alg.s
+- types/algkind_string.s
+- types/fmt.s
+- types/goversion.s
+- types/identity.s
+- types/kind_string.s
+- types/pkg.s
+- types/size.s
+- types/sym.s
+- types/type.s
+- types/universe.s
+- types/utils.s
+- walk/assign.s
+- walk/builtin.s
+- walk/closure.s
+
+### Batch 09
+- walk/compare.s
+- walk/complit.s
+- walk/convert.s
+- walk/expr.s
+- walk/order.s
+- walk/range.s
+- walk/select.s
+- walk/stmt.s
+- walk/switch.s
+- walk/temp.s
+- walk/walk.s
+- wasm/ssa.s
+- x86/galign.s
+- x86/ggen.s
+- x86/ssa.s
+
+## SSA First 80
+- ssa/addressingmodes.s
+- ssa/allocators.s
+- ssa/biasedsparsemap.s
+- ssa/branchelim.s
+- ssa/cache.s
+- ssa/checkbce.s
+- ssa/cpufeatures.s
+- ssa/critical.s
+- ssa/deadstore.s
+- ssa/debug.s
+- ssa/decompose.s
+- ssa/downward_counting_loop.s
+- ssa/expand_calls.s
+- ssa/flagalloc.s
+- ssa/fuse.s
+- ssa/fuse_branchredirect.s
+- ssa/fuse_comparisons.s
+- ssa/_gen/386Ops.s
+- ssa/_gen/allocators.s
+- ssa/_gen/AMD64Ops.s
+- ssa/_gen/ARM64Ops.s
+- ssa/_gen/ARMOps.s
+- ssa/_gen/dec64Ops.s
+- ssa/_gen/decOps.s
+- ssa/_gen/divisibleOps.s
+- ssa/_gen/divmodOps.s
+- ssa/generate.s
+- ssa/_gen/genericOps.s
+- ssa/_gen/LOONG64Ops.s
+- ssa/_gen/main.s
+- ssa/_gen/MIPS64Ops.s
+- ssa/_gen/MIPSOps.s
+- ssa/_gen/multiscanner.s
+- ssa/_gen/PPC64Ops.s
+- ssa/_gen/RISCV64Ops.s
+- ssa/_gen/rulegen.s
+- ssa/_gen/S390XOps.s
+- ssa/_gen/simdAMD64ops.s
+- ssa/_gen/simdgenericOps.s
+- ssa/_gen/vendor/golang.org/x/tools/go/ast/astutil/enclosing.s
+- ssa/_gen/vendor/golang.org/x/tools/go/ast/astutil/imports.s
+- ssa/_gen/vendor/golang.org/x/tools/go/ast/astutil/rewrite.s
+- ssa/_gen/vendor/golang.org/x/tools/go/ast/astutil/util.s
+- ssa/_gen/WasmOps.s
+- ssa/html.s
+- ssa/id.s
+- ssa/known_bits.s
+- ssa/layout.s
+- ssa/lca.s
+- ssa/licm.s
+- ssa/likelyadjust.s
+- ssa/location.s
+- ssa/loopbce.s
+- ssa/loopreschedchecks.s
+- ssa/looprotate.s
+- ssa/lower.s
+- ssa/magic.s
+- ssa/memcombine.s
+- ssa/merge_conditional_branches.s
+- ssa/nilcheck.s
+- ssa/numberlines.s
+- ssa/opGen.s
+- ssa/opt.s
+- ssa/pair.s
+- ssa/phiopt.s
+- ssa/poset.s
+- ssa/rewrite386.s
+- ssa/rewrite386splitload.s
+- ssa/rewriteAMD64latelower.s
+- ssa/rewriteAMD64splitload.s
+- ssa/rewriteARM64latelower.s
+- ssa/rewritedec.s
+- ssa/rewritedec64.s
+- ssa/rewritedivisible.s
+- ssa/rewritedivmod.s
+- ssa/rewriteLOONG64.s
+- ssa/rewriteLOONG64latelower.s
+- ssa/rewriteMIPS.s
+- ssa/rewriteMIPS64.s
+- ssa/rewriteMIPS64latelower.s
+
+## Types2 First 73
+- types2/alias.s
+- types2/api.s
+- types2/api_predicates.s
+- types2/array.s
+- types2/assignments.s
+- types2/basic.s
+- types2/builtins.s
+- types2/call.s
+- types2/chan.s
+- types2/check.s
+- types2/compiler_internal.s
+- types2/compilersupport.s
+- types2/const.s
+- types2/context.s
+- types2/conversions.s
+- types2/cycles.s
+- types2/decl.s
+- types2/errors.s
+- types2/errsupport.s
+- types2/expr.s
+- types2/format.s
+- types2/gccgosizes.s
+- types2/gcsizes.s
+- types2/index.s
+- types2/infer.s
+- types2/initorder.s
+- types2/instantiate.s
+- types2/interface.s
+- types2/labels.s
+- types2/literals.s
+- types2/lookup.s
+- types2/map.s
+- types2/mono.s
+- types2/named.s
+- types2/object.s
+- types2/objset.s
+- types2/operand.s
+- types2/package.s
+- types2/pointer.s
+- types2/predicates.s
+- types2/range.s
+- types2/recording.s
+- types2/resolver.s
+- types2/return.s
+- types2/scope.s
+- types2/selection.s
+- types2/signature.s
+- types2/sizes.s
+- types2/slice.s
+- types2/stmt.s
+- types2/struct.s
+- types2/subst.s
+- types2/termlist.s
+- types2/testdata/local/issue47996.s
+- types2/testdata/local/issue68183.s
+- types2/testdata/local/issue71254.s
+- types2/testdata/manual.s
+- types2/trie.s
+- types2/tuple.s
+- types2/type.s
+- types2/typelists.s
+- types2/typeparam.s
+- types2/typeset.s
+- types2/typestring.s
+- types2/typeterm.s
+- types2/typexpr.s
+- types2/under.s
+- types2/unify.s
+- types2/union.s
+- types2/universe.s
+- types2/util.s
+- types2/validtype.s
+- types2/version.s
