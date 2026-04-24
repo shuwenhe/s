@@ -123,6 +123,7 @@ struct channel_runtime_state {
     bool closed
     int32 sends
     int32 recvs
+    bool marked
 }
 
 struct captured_binding {
@@ -150,6 +151,13 @@ struct runtime_state {
     int32 select_attempts
     int32 select_default_fallbacks
     int32 select_timeouts
+    int32 gc_cycles
+    int32 gc_freed_channels
+    int32 gc_root_scans
+    int32 gc_write_barriers
+    int32 gc_triggered_cycles
+    int32 gc_heap_goal
+    int32 gc_alloc_since_cycle
 }
 
 struct runtime_metrics {
@@ -165,6 +173,14 @@ struct runtime_metrics {
     int32 channel_sends
     int32 channel_recvs
     int32 channel_closed
+    int32 gc_cycles
+    int32 gc_freed_channels
+    int32 gc_live_channels
+    int32 gc_root_scans
+    int32 gc_write_barriers
+    int32 gc_triggered_cycles
+    int32 gc_heap_goal
+    int32 gc_alloc_since_cycle
 }
 
 enum value {
@@ -2127,6 +2143,7 @@ func build_gc_metadata_artifact(string arch, source_file source, string ssa_text
     var lines = vec[string]()
     var spills = estimate_stack_slots(ssa_text)
     lines.push("gcmap version=1 arch=" + arch + " spills=" + to_string(spills))
+    lines.push("collector plan=go-like-mark-sweep roots=env+runq+chan-buffer barriers=hybrid safepoints=alloc-trigger")
 
     var i = 0
     while i < source.items.len() {
@@ -2199,6 +2216,9 @@ func validate_gc_contract_chain(string gc_payload, source_file source, string ss
     if !has_substring(gc_payload, "fault_inject ") {
         return result::err(backend_error { message: "backend error: gc contract missing fault injection profile" })
     }
+    if !has_substring(gc_payload, "collector plan=go-like-mark-sweep") {
+        return result::err(backend_error { message: "backend error: gc contract collector plan missing" })
+    }
     if !has_substring(gc_payload, "stress baseline=enabled") {
         return result::err(backend_error { message: "backend error: gc contract missing stress baseline marker" })
     }
@@ -2241,6 +2261,15 @@ func build_backend_perf_baseline_artifact(string arch, string ssa_text, string m
     lines.push("scheduler_counters"
         + " select_default_fallbacks=" + to_string(parse_number_after(runtime_report, "select_default_fallbacks="))
         + " select_timeouts=" + to_string(parse_number_after(runtime_report, "select_timeouts=")))
+    lines.push("runtime_gc"
+        + " cycles=" + to_string(parse_number_after(runtime_report, "gc_cycles="))
+        + " freed_channels=" + to_string(parse_number_after(runtime_report, "gc_freed_channels="))
+        + " live_channels=" + to_string(parse_number_after(runtime_report, "gc_live_channels="))
+        + " root_scans=" + to_string(parse_number_after(runtime_report, "gc_root_scans="))
+        + " write_barriers=" + to_string(parse_number_after(runtime_report, "gc_write_barriers="))
+        + " triggered_cycles=" + to_string(parse_number_after(runtime_report, "gc_triggered_cycles="))
+        + " heap_goal=" + to_string(parse_number_after(runtime_report, "gc_heap_goal="))
+        + " alloc_since_cycle=" + to_string(parse_number_after(runtime_report, "gc_alloc_since_cycle=")))
     lines.push(runtime_report)
     lines.push("regression_gate p95_latency=stable throughput=stable")
     lines.push("regression_gate_long p99_latency=watch code_size=watch compile_time=watch")
@@ -2266,6 +2295,9 @@ func validate_backend_perf_baseline(string payload) result[(), backend_error] {
     }
     if !has_substring(payload, "scheduler_counters select_default_fallbacks=") {
         return result::err(backend_error { message: "backend error: perf baseline scheduler counter metrics missing" })
+    }
+    if !has_substring(payload, "runtime_gc cycles=") {
+        return result::err(backend_error { message: "backend error: perf baseline runtime gc metrics missing" })
     }
     if !has_substring(payload, "regression_gate_long ") {
         return result::err(backend_error { message: "backend error: perf baseline long regression gate missing" })
@@ -2450,6 +2482,13 @@ func make_runtime_state() runtime_state {
         select_attempts: 0,
         select_default_fallbacks: 0,
         select_timeouts: 0,
+        gc_cycles: 0,
+        gc_freed_channels: 0,
+        gc_root_scans: 0,
+        gc_write_barriers: 0,
+        gc_triggered_cycles: 0,
+        gc_heap_goal: 2,
+        gc_alloc_since_cycle: 0,
     }
 }
 
@@ -2480,6 +2519,14 @@ func collect_runtime_metrics(runtime_state runtime) runtime_metrics {
         channel_sends: sends,
         channel_recvs: recvs,
         channel_closed: closed,
+        gc_cycles: runtime.gc_cycles,
+        gc_freed_channels: runtime.gc_freed_channels,
+        gc_live_channels: runtime.channels.len(),
+        gc_root_scans: runtime.gc_root_scans,
+        gc_write_barriers: runtime.gc_write_barriers,
+        gc_triggered_cycles: runtime.gc_triggered_cycles,
+        gc_heap_goal: runtime.gc_heap_goal,
+        gc_alloc_since_cycle: runtime.gc_alloc_since_cycle,
     }
 }
 
@@ -2497,6 +2544,14 @@ func runtime_metrics_text(runtime_metrics metrics) string {
         + " channel_sends=" + to_string(metrics.channel_sends)
         + " channel_recvs=" + to_string(metrics.channel_recvs)
         + " channel_closed=" + to_string(metrics.channel_closed)
+        + " gc_cycles=" + to_string(metrics.gc_cycles)
+        + " gc_freed_channels=" + to_string(metrics.gc_freed_channels)
+        + " gc_live_channels=" + to_string(metrics.gc_live_channels)
+        + " gc_root_scans=" + to_string(metrics.gc_root_scans)
+        + " gc_write_barriers=" + to_string(metrics.gc_write_barriers)
+        + " gc_triggered_cycles=" + to_string(metrics.gc_triggered_cycles)
+        + " gc_heap_goal=" + to_string(metrics.gc_heap_goal)
+        + " gc_alloc_since_cycle=" + to_string(metrics.gc_alloc_since_cycle)
 }
 
 func snapshot_captured_bindings(vec[binding] env) vec[captured_binding] {
@@ -2648,6 +2703,14 @@ func execute_mir_graph(mir_graph graph) result[mir_execution_result, backend_err
                     channel_sends: 0,
                     channel_recvs: 0,
                     channel_closed: 0,
+                    gc_cycles: 0,
+                    gc_freed_channels: 0,
+                    gc_live_channels: 0,
+                    gc_root_scans: 0,
+                    gc_write_barriers: 0,
+                    gc_triggered_cycles: 0,
+                    gc_heap_goal: 0,
+                    gc_alloc_since_cycle: 0,
                 },
             })
         }
@@ -2992,6 +3055,7 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
             }
             return result::err(err)
         }
+        run_gc_safepoint(env, runtime)
         si = si + 1
     }
 
@@ -3026,6 +3090,7 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
     if schedule_flush.is_err() {
         return result::err(schedule_flush.unwrap_err())
     }
+    run_gc_safepoint(env, runtime)
     result::ok(final_value)
 }
 
@@ -3229,6 +3294,9 @@ func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[wr
             if callee_name.name == "recover" {
                 return eval_recover_call(env, runtime)
             }
+            if callee_name.name == "gc_collect" {
+                return eval_gc_collect_call(value.args, source, env, writes, runtime)
+            }
             if callee_name.name == "chan_make" {
                 return eval_chan_make_call(value.args, source, env, writes, runtime)
             }
@@ -3316,6 +3384,14 @@ func eval_recover_call(vec[binding] mut env, runtime_state mut runtime) result[v
     result::ok(value.string(payload))
 }
 
+func eval_gc_collect_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    if args.len() != 0 {
+        return result::err(backend_error { message: "backend error: gc_collect expects no arguments" })
+    }
+    run_gc_cycle(env, runtime)
+    result::ok(value.unit(unit_value {}))
+}
+
 func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
     if args.len() != 1 {
         return result::err(backend_error { message: "backend error: chan_make expects one capacity argument" })
@@ -3338,6 +3414,7 @@ func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] mut en
 
     var id = runtime.next_channel_id
     runtime.next_channel_id = runtime.next_channel_id + 1
+    runtime.gc_alloc_since_cycle = runtime.gc_alloc_since_cycle + 1
     runtime.channels.push(channel_runtime_state {
         id: id,
         capacity: cap,
@@ -3345,6 +3422,7 @@ func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] mut en
         closed: false,
         sends: 0,
         recvs: 0,
+        marked: false,
     })
     result::ok(value.channel(channel_handle_value { id: id }))
 }
@@ -3375,6 +3453,9 @@ func eval_chan_send_call(vec[expr] args, source_file source, vec[binding] mut en
     }
 
     var ch_state = runtime.channels[idx]
+    if value_contains_channel(payload.unwrap()) {
+        runtime.gc_write_barriers = runtime.gc_write_barriers + 1
+    }
     ch_state.buffer.push(payload.unwrap())
     ch_state.sends = ch_state.sends + 1
     runtime.channels.set(idx, ch_state)
@@ -3715,6 +3796,110 @@ func find_channel_index(runtime_state runtime, value v) int32 {
     -1
 }
 
+func run_gc_safepoint(vec[binding] mut env, runtime_state mut runtime) () {
+    if runtime.channels.len() == 0 {
+        return
+    }
+    if runtime.gc_heap_goal <= 0 {
+        runtime.gc_heap_goal = 2
+    }
+    if runtime.gc_alloc_since_cycle < runtime.gc_heap_goal {
+        return
+    }
+    runtime.gc_triggered_cycles = runtime.gc_triggered_cycles + 1
+    run_gc_cycle(env, runtime)
+}
+
+func run_gc_cycle(vec[binding] env, runtime_state mut runtime) () {
+    runtime.gc_cycles = runtime.gc_cycles + 1
+    runtime.gc_root_scans = runtime.gc_root_scans + env.len() + runtime.runq.len()
+
+    var i = 0
+    while i < runtime.channels.len() {
+        var ch = runtime.channels[i]
+        ch.marked = false
+        runtime.channels.set(i, ch)
+        i = i + 1
+    }
+
+    i = 0
+    while i < env.len() {
+        mark_value_channels(env[i].value, runtime)
+        i = i + 1
+    }
+
+    i = 0
+    while i < runtime.runq.len() {
+        var ai = 0
+        while ai < runtime.runq[i].args.len() {
+            mark_value_channels(runtime.runq[i].args[ai], runtime)
+            ai = ai + 1
+        }
+        ai = 0
+        while ai < runtime.runq[i].captured_env.len() {
+            mark_value_channels(runtime.runq[i].captured_env[ai].value, runtime)
+            ai = ai + 1
+        }
+        i = i + 1
+    }
+
+    var kept = vec[channel_runtime_state]()
+    i = 0
+    while i < runtime.channels.len() {
+        var ch = runtime.channels[i]
+        if ch.marked {
+            ch.marked = false
+            kept.push(ch)
+        } else {
+            runtime.gc_freed_channels = runtime.gc_freed_channels + 1
+        }
+        i = i + 1
+    }
+    runtime.channels = kept
+    runtime.gc_alloc_since_cycle = 0
+    var next_goal = runtime.channels.len() * 2 + 1
+    if next_goal < 2 {
+        next_goal = 2
+    }
+    runtime.gc_heap_goal = next_goal
+}
+
+func mark_value_channels(value v, runtime_state mut runtime) () {
+    switch v {
+        value.channel(handle) : mark_channel_id(handle.id, runtime),
+        _ : (),
+    }
+}
+
+func mark_channel_id(int32 id, runtime_state mut runtime) () {
+    var i = 0
+    while i < runtime.channels.len() {
+        if runtime.channels[i].id == id {
+            if runtime.channels[i].marked {
+                return
+            }
+            var ch = runtime.channels[i]
+            ch.marked = true
+            runtime.channels.set(i, ch)
+
+            var bi = 0
+            while bi < ch.buffer.len() {
+                mark_value_channels(ch.buffer[bi], runtime)
+                bi = bi + 1
+            }
+            return
+        }
+        i = i + 1
+    }
+}
+
+func value_contains_channel(value v) bool {
+    switch v {
+        value.channel(_) : true,
+        _ : false,
+    }
+}
+
 func execute_deferred(vec[expr] deferred, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime, string panic_payload_text) result[(), backend_error] {
     if panic_payload_text != "" {
         set_control(env, control_panic_active, value.bool(true))
@@ -3772,6 +3957,7 @@ func run_sroutine_scheduler_step(source_file source, vec[binding] mut env, vec[w
     }
 
     runtime.sroutine_completed = runtime.sroutine_completed + 1
+    run_gc_safepoint(env, runtime)
     result::ok(())
 }
 
