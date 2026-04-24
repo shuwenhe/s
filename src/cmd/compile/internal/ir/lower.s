@@ -407,6 +407,11 @@ func lower_package_to_mir(source_file src) result[mir_graph, string] {
     }
 
     var graph = lower_function_to_mir(picked.unwrap(), const_entries)
+    var const_fold_hits = 0
+    if picked.unwrap().body.is_some() {
+        const_fold_hits = count_const_hits_block(picked.unwrap().body.unwrap(), const_entries)
+    }
+    graph.trace.push("constfold.hits=" + to_string(const_fold_hits))
     graph.trace.push("package.functions=" + to_string(fn_count))
     var t = 0
     while t < src.items.len() {
@@ -421,6 +426,107 @@ func lower_package_to_mir(source_file src) result[mir_graph, string] {
         t = t + 1
     }
     result::ok(graph)
+}
+
+func count_const_hits_block(block_expr block, vec[const_rewrite_entry] const_entries) int32 {
+    var total = 0
+    var i = 0
+    while i < block.statements.len() {
+        total = total + count_const_hits_stmt(block.statements[i], const_entries)
+        i = i + 1
+    }
+    if block.final_expr.is_some() {
+        total = total + count_const_hits_expr(block.final_expr.unwrap(), const_entries)
+    }
+    total
+}
+
+func count_const_hits_stmt(stmt s, vec[const_rewrite_entry] const_entries) int32 {
+    switch s {
+        stmt.var(var_stmt) : count_const_hits_expr(var_stmt.value, const_entries),
+        stmt.assign(assign_stmt) : count_const_hits_expr(assign_stmt.value, const_entries),
+        stmt.increment(_) : 0,
+        stmt.return(return_stmt) : {
+            if return_stmt.value.is_some() {
+                return count_const_hits_expr(return_stmt.value.unwrap(), const_entries)
+            }
+            0
+        }
+        stmt.expr(expr_stmt) : count_const_hits_expr(expr_stmt.expr, const_entries),
+        stmt.defer(defer_stmt) : count_const_hits_expr(defer_stmt.expr, const_entries),
+        stmt.c_for(c_for_stmt) : {
+            count_const_hits_stmt(c_for_stmt.init.value, const_entries)
+                + count_const_hits_expr(c_for_stmt.condition, const_entries)
+                + count_const_hits_stmt(c_for_stmt.step.value, const_entries)
+                + count_const_hits_block(c_for_stmt.body, const_entries)
+        }
+    }
+}
+
+func count_const_hits_expr(expr e, vec[const_rewrite_entry] const_entries) int32 {
+    switch e {
+        expr.int(_) : 0,
+        expr.string(_) : 0,
+        expr.bool(_) : 0,
+        expr.name(name_expr) : {
+            if lookup_const_entry(const_entries, name_expr.name).is_some() {
+                return 1
+            }
+            0
+        }
+        expr.borrow(borrow_expr) : count_const_hits_expr(borrow_expr.target.value, const_entries),
+        expr.binary(binary_expr) : count_const_hits_expr(binary_expr.left.value, const_entries) + count_const_hits_expr(binary_expr.right.value, const_entries),
+        expr.member(member_expr) : count_const_hits_expr(member_expr.target.value, const_entries),
+        expr.index(index_expr) : count_const_hits_expr(index_expr.target.value, const_entries) + count_const_hits_expr(index_expr.index.value, const_entries),
+        expr.call(call_expr) : {
+            var total = count_const_hits_expr(call_expr.callee.value, const_entries)
+            var i = 0
+            while i < call_expr.args.len() {
+                total = total + count_const_hits_expr(call_expr.args[i], const_entries)
+                i = i + 1
+            }
+            total
+        }
+        expr.switch(switch_expr) : {
+            var total = count_const_hits_expr(switch_expr.subject.value, const_entries)
+            var i = 0
+            while i < switch_expr.arms.len() {
+                total = total + count_const_hits_expr(switch_expr.arms[i].expr, const_entries)
+                i = i + 1
+            }
+            total
+        }
+        expr.if(if_expr) : {
+            var total = count_const_hits_expr(if_expr.condition.value, const_entries)
+                + count_const_hits_block(if_expr.then_branch, const_entries)
+            if if_expr.else_branch.is_some() {
+                total = total + count_const_hits_expr(if_expr.else_branch.unwrap().value, const_entries)
+            }
+            total
+        }
+        expr.while(while_expr) : count_const_hits_expr(while_expr.condition.value, const_entries) + count_const_hits_block(while_expr.body, const_entries),
+        expr.for(for_expr) : count_const_hits_expr(for_expr.iterable.value, const_entries) + count_const_hits_block(for_expr.body, const_entries),
+        expr.block(block_expr) : count_const_hits_block(block_expr, const_entries),
+        expr.array(array_literal) : {
+            var total = 0
+            var i = 0
+            while i < array_literal.items.len() {
+                total = total + count_const_hits_expr(array_literal.items[i], const_entries)
+                i = i + 1
+            }
+            total
+        }
+        expr.map(map_literal) : {
+            var total = 0
+            var i = 0
+            while i < map_literal.entries.len() {
+                total = total + count_const_hits_expr(map_literal.entries[i].key, const_entries)
+                total = total + count_const_hits_expr(map_literal.entries[i].value, const_entries)
+                i = i + 1
+            }
+            total
+        }
+    }
 }
 
 func stmt_to_expr(stmt s, vec[const_rewrite_entry] const_entries) ir_ast.expr_ir {

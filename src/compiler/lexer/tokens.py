@@ -40,6 +40,7 @@ keywords ={
 "continue",
 "true",
 "false",
+"nil",
 "unsafe",
 "extern",
 "mut",

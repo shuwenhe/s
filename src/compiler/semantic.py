@@ -185,6 +185,66 @@ class checker :
         params =[string ,string ],
         return_type =i32 ,
         ),
+        "chan_make":traitmethodinfo (
+        owner ="builtin",
+        generics =[],
+        params =[i32 ],
+        return_type =parse_type ("chan"),
+        ),
+        "chan_send":traitmethodinfo (
+        owner ="builtin",
+        generics =["T"],
+        params =[parse_type ("chan"),namedtype ("T")],
+        return_type =bool ,
+        ),
+        "chan_recv":traitmethodinfo (
+        owner ="builtin",
+        generics =[],
+        params =[parse_type ("chan")],
+        return_type =parse_type ("option[unknown]"),
+        ),
+        "chan_close":traitmethodinfo (
+        owner ="builtin",
+        generics =[],
+        params =[parse_type ("chan")],
+        return_type =unit ,
+        ),
+        "chan_len":traitmethodinfo (
+        owner ="builtin",
+        generics =[],
+        params =[parse_type ("chan")],
+        return_type =i32 ,
+        ),
+        "go":traitmethodinfo (
+        owner ="builtin",
+        generics =[],
+        params =[string ],
+        return_type =unit ,
+        ),
+        "go_run":traitmethodinfo (
+        owner ="builtin",
+        generics =[],
+        params =[],
+        return_type =bool ,
+        ),
+        "go_drain":traitmethodinfo (
+        owner ="builtin",
+        generics =[],
+        params =[],
+        return_type =i32 ,
+        ),
+        "select_recv":traitmethodinfo (
+        owner ="builtin",
+        generics =[],
+        params =[parse_type ("vec[chan]")],
+        return_type =parse_type ("option[unknown]"),
+        ),
+        "select_recv_default":traitmethodinfo (
+        owner ="builtin",
+        generics =["T"],
+        params =[parse_type ("vec[chan]"),namedtype ("T")],
+        return_type =namedtype ("T"),
+        ),
         }
         self ._load_stdlib_primitives ()
 
@@ -220,7 +280,7 @@ class checker :
                 generics =method .generics ,
                 params =[self ._normalize_type (parse_type (param .type_name ))for param in method .params ],
                 return_type =self ._normalize_type (parse_type (method .return_type or "()")),
-                has_receiver =bool (method .params and method .params [0 ].name =="self"),
+                has_receiver =True if method .params and method .params [0 ].name =="self" else False,
                 receiver_mode =self ._receiver_mode (method .params [0 ]if method .params else None ),
                 )
                 for method in item .methods 
@@ -232,7 +292,7 @@ class checker :
                 generics =method .sig .generics ,
                 params =[self ._normalize_type (parse_type (param .type_name ))for param in method .sig .params ],
                 return_type =self ._normalize_type (parse_type (method .sig .return_type or "()")),
-                has_receiver =bool (method .sig .params and method .sig .params [0 ].name =="self"),
+                has_receiver =True if method .sig .params and method .sig .params [0 ].name =="self" else False,
                 receiver_mode =self ._receiver_mode (method .sig .params [0 ]if method .sig .params else None ),
                 )
                 for method in item .methods 
@@ -243,9 +303,38 @@ class checker :
                     self .impl_traits .setdefault (item .target ,set ()).add (item .trait_name )
 
     def check (self ,source :sourcefile )->None :
+        self ._validate_impl_contracts ()
         for item in source .items :
             if isinstance (item ,functiondecl )and item .body is not None :
                 self ._check_function (item )
+
+    def _validate_impl_contracts (self )->None :
+        for impl_info in self .impls :
+            if impl_info .trait_name is None :
+                continue
+            trait_methods =self .trait_methods .get (impl_info .trait_name )
+            if trait_methods is None :
+                self ._error (f"impl references unknown trait {impl_info .trait_name }")
+                continue
+            for method_name ,trait_method in trait_methods .items ():
+                impl_method =impl_info .methods .get (method_name )
+                if impl_method is None :
+                    self ._error (f"impl missing required trait method {method_name }")
+                    continue
+                if not self ._method_signature_compatible (trait_method ,impl_method ):
+                    self ._error (f"impl method signature mismatch {method_name }")
+
+    def _method_signature_compatible (self ,expected :traitmethodinfo ,actual :traitmethodinfo )->bool :
+        if expected .has_receiver !=actual .has_receiver :
+            return False
+        if expected .receiver_mode !=actual .receiver_mode :
+            return False
+        if len (expected .params )!=len (actual .params ):
+            return False
+        for e ,a in zip (expected .params ,actual .params ):
+            if not self ._type_eq (e ,a ):
+                return False
+        return self ._type_eq (expected .return_type ,actual .return_type )
 
     def _check_function (self ,item :functiondecl )->None :
         scope :Dict [str ,varstate ]={}
@@ -284,7 +373,7 @@ class checker :
         if isinstance (stmt ,letstmt ):
             value_type =self ._infer_expr (stmt .value ,scope )
             declared =self ._normalize_type (parse_type (stmt .type_name ))if stmt .type_name else None 
-            if declared and not self ._type_eq (declared ,value_type ):
+            if declared and not self ._assignable_type (declared ,value_type ):
                 self ._error (f"let {stmt .name } expected {dump_type (declared )}, got {dump_type (value_type )}")
             resolved =declared or value_type 
             scope [stmt .name ]=varstate (resolved )
@@ -297,7 +386,7 @@ class checker :
                 self ._infer_expr (stmt .value ,scope )
                 return False 
             value_type =self ._infer_expr (stmt .value ,scope )
-            if not self ._type_eq (state .ty ,value_type ):
+            if not self ._assignable_type (state .ty ,value_type ):
                 self ._error (f"assign {stmt .name } expected {dump_type (state .ty )}, got {dump_type (value_type )}")
             return False 
         if isinstance (stmt ,incrementstmt ):
@@ -321,7 +410,7 @@ class checker :
             return False 
         if isinstance (stmt ,returnstmt ):
             actual =self ._infer_expr_with_hint (stmt .value ,scope ,self ._current_return_type )if stmt .value is not None else unit 
-            if not self ._type_eq (self ._current_return_type ,actual ):
+            if not self ._assignable_type (self ._current_return_type ,actual ):
                 self ._error (f"return expected {dump_type (self ._current_return_type )}, got {dump_type (actual )}")
             return True 
         if isinstance (stmt ,exprstmt ):
@@ -344,6 +433,10 @@ class checker :
             expr .inferred_type =dump_type (bool )
             return bool 
         if isinstance (expr ,nameexpr ):
+            if expr .name =="nil":
+                ty =namedtype ("nil")
+                expr .inferred_type =dump_type (ty )
+                return ty
             state =scope .get (expr .name )
             if state is None :
                 if expr .name in self .variant_to_enum :
@@ -712,7 +805,7 @@ class checker :
             self ._error (f"operator {op } expects int32 operands, got {dump_type (left )} and {dump_type (right )}")
             return unknowntype ()
         if op in {"==","!=","<","<=",">",">="}:
-            if self ._type_eq (left ,right ):
+            if self ._type_eq (left ,right )or self ._nil_comparable_pair (left ,right ):
                 return bool 
             self ._error (f"operator {op } expects matching operand types, got {dump_type (left )} and {dump_type (right )}")
             return bool 
@@ -726,6 +819,32 @@ class checker :
 
     def _type_eq (self ,left :type ,right :type )->bool :
         return dump_type (self ._normalize_type (left ))==dump_type (self ._normalize_type (right ))
+
+    def _assignable_type (self ,target :type ,source :type )->bool :
+        if self ._type_eq (target ,source ):
+            return True
+        if self ._is_nil_type (source ):
+            return self ._is_nilable_type (target )
+        return False
+
+    def _nil_comparable_pair (self ,left :type ,right :type )->bool :
+        if self ._is_nil_type (left ):
+            return self ._is_nil_type (right )or self ._is_nilable_type (right )
+        if self ._is_nil_type (right ):
+            return self ._is_nilable_type (left )
+        return False
+
+    def _is_nil_type (self ,ty :type )->bool :
+        normalized =self ._normalize_type (ty )
+        return isinstance (normalized ,namedtype )and normalized .name =="nil"and not normalized .args
+
+    def _is_nilable_type (self ,ty :type )->bool :
+        normalized =self ._normalize_type (ty )
+        if isinstance (normalized ,referencetype )or isinstance (normalized ,slicetype )or isinstance (normalized ,functiontype ):
+            return True
+        if isinstance (normalized ,namedtype ):
+            return normalized .name in {"fn","map","option","result","trait","interface"}
+        return False
 
     def _unify_types (self ,expected :type ,actual :type ,subst :Dict [str ,type ])->bool :
         if isinstance (expected ,namedtype )and not expected .args and expected .name .isupper ():
@@ -822,7 +941,7 @@ class checker :
     scope :Dict [str ,varstate ],
     )->Optional [traitmethodinfo ]:
         receiver_type =self ._inspect_expr_type (callee .target ,scope )
-        method_sig =self ._lookup_method (receiver_type ,callee .member )
+        method_sig =self ._lookup_method (receiver_type ,callee .member ,callee .target )
         if method_sig is None :
             builtin =self ._select_builtin_method (receiver_type ,callee .member ,callee .target ,args ,scope )
             if builtin is not None :
@@ -849,17 +968,36 @@ class checker :
         receiver_mode =method_sig .receiver_mode ,
         )
 
-    def _lookup_method (self ,receiver_type :type ,method_name :str )->Optional [traitmethodinfo ]:
+    def _lookup_method (self ,receiver_type :type ,method_name :str ,receiver_expr :Optional [expr ]=None )->Optional [traitmethodinfo ]:
         receiver_name =dump_type (receiver_type .inner if isinstance (receiver_type ,referencetype )else receiver_type )
         candidates :List [traitmethodinfo ]=[]
         for impl_info in self .impls :
             if impl_info .target ==receiver_name and method_name in impl_info .methods :
-                candidates .append (impl_info .methods [method_name ])
+                candidate =impl_info .methods [method_name ]
+                if self ._method_visible_for_receiver (candidate ,receiver_type ,receiver_expr ):
+                    candidates .append (candidate )
         if len (candidates )>1 :
             owners =", ".join (candidate .owner for candidate in candidates )
             self ._error (f"multiple method candidates for {receiver_name }.{method_name }: {owners }")
             return candidates [0 ]
         return candidates [0 ]if candidates else None 
+
+    def _method_visible_for_receiver (self ,method :traitmethodinfo ,receiver_type :type ,receiver_expr :Optional [expr ])->bool :
+        if not method .has_receiver :
+            return True
+        if method .receiver_mode =="value":
+            return True
+        if isinstance (receiver_type ,referencetype ):
+            if method .receiver_mode =="mut_ref":
+                return receiver_type .mutable
+            return True
+        if receiver_expr is None :
+            return False
+        if method .receiver_mode =="mut_ref":
+            return self ._can_auto_borrow_mut (receiver_expr )
+        if method .receiver_mode =="ref":
+            return self ._can_auto_borrow_shared (receiver_expr )
+        return True
 
     def _select_builtin_method (
     self ,
@@ -938,6 +1076,8 @@ class checker :
 
     def _inspect_expr_type (self ,expr :expr ,scope :Dict [str ,varstate ])->type :
         if isinstance (expr ,nameexpr ):
+            if expr .name =="nil":
+                return namedtype ("nil")
             state =scope .get (expr .name )
             if state is None :
                 if expr .name in self .variant_to_enum :
