@@ -25,6 +25,33 @@ struct ssa_program {
     string pass_delta_structural_summary
     string pass_delta_value_summary
     string pass_delta_hot_summary
+    int32 instruction_block_count
+    int32 instruction_value_count
+    int32 dominator_tree_depth
+    int32 loop_backedge_count
+    int32 instruction_verifier_error_count
+    int32 instruction_verifier_error_code
+    string instruction_verifier_flags
+    string instruction_verifier_primary
+    string instruction_verifier_stage_hint
+    string instruction_verifier_stage_evidence
+    bool instruction_verifier_pick_matches_top
+    string instruction_verifier_pick_reason
+    int32 memory_ssa_node_count
+    int32 points_to_set_count
+    int32 load_store_proof_count
+    int32 spill_reload_pair_count
+    int32 parallel_copy_resolution_count
+    int32 escape_stack_alloc_count
+    int32 escape_heap_alloc_count
+    int32 inline_budget_score
+    int32 devirtualization_gain_score
+    string instruction_block_graph
+    string instruction_value_graph
+    string instruction_dominator_tree
+    string instruction_loop_forest
+    string instruction_memory_dep_graph
+    string instruction_regalloc_plan
     int32 block_count
     int32 value_count
     int32 cfg_edge_count
@@ -184,6 +211,41 @@ struct ssa_dataflow_model {
     int32 loop_headers
 }
 
+struct instruction_ssa_summary {
+    int32 instruction_block_count
+    int32 instruction_value_count
+    int32 dominator_tree_depth
+    int32 loop_backedge_count
+    int32 instruction_verifier_error_count
+    int32 instruction_verifier_error_code
+    string instruction_verifier_flags
+    string instruction_verifier_primary
+    string instruction_verifier_stage_hint
+    string instruction_verifier_stage_evidence
+    bool instruction_verifier_pick_matches_top
+    string instruction_verifier_pick_reason
+    int32 memory_ssa_node_count
+    int32 points_to_set_count
+    int32 load_store_proof_count
+    int32 spill_reload_pair_count
+    int32 parallel_copy_resolution_count
+    int32 escape_stack_alloc_count
+    int32 escape_heap_alloc_count
+    int32 inline_budget_score
+    int32 devirtualization_gain_score
+    string instruction_block_graph
+    string instruction_value_graph
+    string instruction_dominator_tree
+    string instruction_loop_forest
+    string instruction_memory_dep_graph
+    string instruction_regalloc_plan
+}
+
+struct instruction_verify_result {
+    int32 error_count
+    int32 error_code
+}
+
 func build_pipeline(string mir_text, string goarch) ssa_program {
     return build_pipeline_with_options(mir_text, goarch, default_options())
 }
@@ -335,6 +397,7 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
     var debug_budget = compute_debug_budget(pass_stats, allocation)
     var regalloc_quality = compute_regalloc_quality(allocation, optimized_block_count)
     var sched_quality = compute_schedule_quality(pass_stats, model, goarch)
+    var instruction_summary = analyze_instruction_ssa(optimized_mir, model, pass_stats, allocation, pass_delta_summary)
     var debug_lines = build_debug_lines(optimized_mir, allocation.allocated_regs)
     var debug_var_locations = build_var_locations(allocation.allocated_regs)
 
@@ -347,6 +410,33 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         pass_delta_structural_summary: pass_delta_structural_summary,
         pass_delta_value_summary: pass_delta_value_summary,
         pass_delta_hot_summary: pass_delta_hot_summary,
+        instruction_block_count: instruction_summary.instruction_block_count,
+        instruction_value_count: instruction_summary.instruction_value_count,
+        dominator_tree_depth: instruction_summary.dominator_tree_depth,
+        loop_backedge_count: instruction_summary.loop_backedge_count,
+        instruction_verifier_error_count: instruction_summary.instruction_verifier_error_count,
+        instruction_verifier_error_code: instruction_summary.instruction_verifier_error_code,
+        instruction_verifier_flags: instruction_summary.instruction_verifier_flags,
+        instruction_verifier_primary: instruction_summary.instruction_verifier_primary,
+        instruction_verifier_stage_hint: instruction_summary.instruction_verifier_stage_hint,
+        instruction_verifier_stage_evidence: instruction_summary.instruction_verifier_stage_evidence,
+        instruction_verifier_pick_matches_top: instruction_summary.instruction_verifier_pick_matches_top,
+        instruction_verifier_pick_reason: instruction_summary.instruction_verifier_pick_reason,
+        memory_ssa_node_count: instruction_summary.memory_ssa_node_count,
+        points_to_set_count: instruction_summary.points_to_set_count,
+        load_store_proof_count: instruction_summary.load_store_proof_count,
+        spill_reload_pair_count: instruction_summary.spill_reload_pair_count,
+        parallel_copy_resolution_count: instruction_summary.parallel_copy_resolution_count,
+        escape_stack_alloc_count: instruction_summary.escape_stack_alloc_count,
+        escape_heap_alloc_count: instruction_summary.escape_heap_alloc_count,
+        inline_budget_score: instruction_summary.inline_budget_score,
+        devirtualization_gain_score: instruction_summary.devirtualization_gain_score,
+        instruction_block_graph: instruction_summary.instruction_block_graph,
+        instruction_value_graph: instruction_summary.instruction_value_graph,
+        instruction_dominator_tree: instruction_summary.instruction_dominator_tree,
+        instruction_loop_forest: instruction_summary.instruction_loop_forest,
+        instruction_memory_dep_graph: instruction_summary.instruction_memory_dep_graph,
+        instruction_regalloc_plan: instruction_summary.instruction_regalloc_plan,
         block_count: optimized_block_count,
         value_count: value_count,
         cfg_edge_count: estimate_cfg_edges(optimized_mir),
@@ -415,6 +505,683 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         debug_lines: debug_lines,
         debug_var_locations: debug_var_locations,
     }
+}
+
+func analyze_instruction_ssa(string mir_text, ssa_dataflow_model model, ssa_pass_stats pass_stats, regalloc_result allocation, string pass_delta_summary) instruction_ssa_summary {
+    var instruction_blocks = parse_int_after(mir_text, "blocks=")
+    if instruction_blocks <= 0 {
+        instruction_blocks = count_token(mir_text, " | bb")
+    }
+
+    var instruction_values = parse_total_stmt_count(mir_text)
+    if instruction_values <= 0 {
+        instruction_values = model.value_count
+    }
+
+    var backedges = estimate_loop_backedges(mir_text, model)
+    var dom_depth = estimate_dominator_depth(instruction_blocks, model.edge_count, backedges)
+    var memory_nodes = model.memphi_count + model.load_count + model.store_count
+    var load_store_proofs = int32_min(model.load_count, model.store_count) + model.memphi_count
+
+    var spill_pairs = int32_min(allocation.spill_count, allocation.spill_reload_count)
+    var parallel_copies = pass_stats.coalesced_move_count + model.phi_count + model.memphi_count
+
+    var heap_allocs = estimate_escape_heap_allocs(model, pass_stats)
+    var stack_allocs = estimate_escape_stack_allocs(instruction_values, heap_allocs)
+
+    var inline_budget = estimate_inline_budget(model, pass_stats)
+    var devirt_gain = estimate_devirtualization_gain(model, pass_stats)
+
+    var block_graph = build_instruction_block_graph(instruction_blocks, model.edge_count, model.branch_count, model.jump_count)
+    var value_graph = build_instruction_value_graph(instruction_values, model.def_use_edges, model.phi_count, model.memphi_count)
+    var dominator_tree = build_instruction_dominator_tree(instruction_blocks, dom_depth, backedges)
+    var loop_forest = build_instruction_loop_forest(model.loop_headers, backedges)
+    var memory_dep_graph = build_instruction_memory_dep_graph(model.load_count, model.store_count, model.memphi_count, load_store_proofs)
+    var regalloc_plan = build_instruction_regalloc_plan(spill_pairs, parallel_copies, allocation.live_range_splits, allocation.rematerialized_values)
+
+    var verifier = verify_instruction_ssa(
+        mir_text,
+        model,
+        pass_stats,
+        instruction_blocks,
+        instruction_values,
+        memory_nodes,
+        parallel_copies,
+        block_graph,
+        value_graph,
+        dominator_tree,
+        memory_dep_graph,
+        regalloc_plan,
+    )
+    var verify_primary = primary_instruction_verify_flag(verifier.error_code)
+    var verify_stage_hint = choose_instruction_verify_stage(verify_primary, pass_delta_summary)
+    var verify_stage_evidence = build_instruction_verify_stage_evidence(verify_primary, pass_delta_summary, verify_stage_hint)
+    var verify_pick_matches_top = instruction_verify_pick_matches_top(verify_primary, pass_delta_summary, verify_stage_hint)
+    var verify_pick_reason = instruction_verify_pick_reason(verify_primary, pass_delta_summary, verify_stage_hint)
+
+    instruction_ssa_summary {
+        instruction_block_count: instruction_blocks,
+        instruction_value_count: instruction_values,
+        dominator_tree_depth: dom_depth,
+        loop_backedge_count: backedges,
+        instruction_verifier_error_count: verifier.error_count,
+        instruction_verifier_error_code: verifier.error_code,
+        instruction_verifier_flags: format_instruction_verify_flags(verifier.error_code),
+        instruction_verifier_primary: verify_primary,
+        instruction_verifier_stage_hint: verify_stage_hint,
+        instruction_verifier_stage_evidence: verify_stage_evidence,
+        instruction_verifier_pick_matches_top: verify_pick_matches_top,
+        instruction_verifier_pick_reason: verify_pick_reason,
+        memory_ssa_node_count: memory_nodes,
+        points_to_set_count: model.alias_set_count,
+        load_store_proof_count: load_store_proofs,
+        spill_reload_pair_count: spill_pairs,
+        parallel_copy_resolution_count: parallel_copies,
+        escape_stack_alloc_count: stack_allocs,
+        escape_heap_alloc_count: heap_allocs,
+        inline_budget_score: inline_budget,
+        devirtualization_gain_score: devirt_gain,
+        instruction_block_graph: block_graph,
+        instruction_value_graph: value_graph,
+        instruction_dominator_tree: dominator_tree,
+        instruction_loop_forest: loop_forest,
+        instruction_memory_dep_graph: memory_dep_graph,
+        instruction_regalloc_plan: regalloc_plan,
+    }
+}
+
+func choose_instruction_verify_stage(string primary, string pass_delta_summary) string {
+    if primary == "ok" {
+        return "none"
+    }
+
+    var candidates = stage_candidates_for_verify_primary(primary)
+    if candidates.len() == 0 {
+        return "unknown"
+    }
+
+    var best = candidates[0]
+    var best_count = stage_delta_count(pass_delta_summary, best)
+    var i = 1
+    while i < candidates.len() {
+        var stage = candidates[i]
+        var count = stage_delta_count(pass_delta_summary, stage)
+        if count > best_count {
+            best = stage
+            best_count = count
+        }
+        i = i + 1
+    }
+
+    best
+}
+
+func build_instruction_verify_stage_evidence(string primary, string pass_delta_summary, string picked) string {
+    if primary == "ok" {
+        return "none"
+    }
+
+    var candidates = stage_candidates_for_verify_primary(primary)
+    if candidates.len() == 0 {
+        return "unknown"
+    }
+
+    var top_stage = candidates[0]
+    var top_count = stage_delta_count(pass_delta_summary, top_stage)
+    var second_stage = "none"
+    var second_count = 0
+
+    var i = 1
+    while i < candidates.len() {
+        var stage = candidates[i]
+        var count = stage_delta_count(pass_delta_summary, stage)
+        if count > top_count {
+            second_stage = top_stage
+            second_count = top_count
+            top_stage = stage
+            top_count = count
+        } else if second_stage == "none" || count > second_count {
+            second_stage = stage
+            second_count = count
+        }
+        i = i + 1
+    }
+
+    "primary=" + primary
+        + ",picked=" + picked
+        + ",top=" + top_stage + ":" + to_string(top_count)
+        + ",second=" + second_stage + ":" + to_string(second_count)
+}
+
+func instruction_verify_pick_matches_top(string primary, string pass_delta_summary, string picked) bool {
+    if primary == "ok" {
+        return picked == "none"
+    }
+
+    var candidates = stage_candidates_for_verify_primary(primary)
+    if candidates.len() == 0 {
+        return picked == "unknown"
+    }
+
+    var top_stage = candidates[0]
+    var top_count = stage_delta_count(pass_delta_summary, top_stage)
+    var i = 1
+    while i < candidates.len() {
+        var stage = candidates[i]
+        var count = stage_delta_count(pass_delta_summary, stage)
+        if count > top_count {
+            top_stage = stage
+            top_count = count
+        }
+        i = i + 1
+    }
+
+    picked == top_stage
+}
+
+func instruction_verify_pick_reason(string primary, string pass_delta_summary, string picked) string {
+    if primary == "ok" {
+        return "ok"
+    }
+
+    var candidates = stage_candidates_for_verify_primary(primary)
+    if candidates.len() == 0 {
+        return "unknown"
+    }
+
+    var top_stage = candidates[0]
+    var top_count = stage_delta_count(pass_delta_summary, top_stage)
+    var tie_count = 1
+    var i = 1
+    while i < candidates.len() {
+        var stage = candidates[i]
+        var count = stage_delta_count(pass_delta_summary, stage)
+        if count > top_count {
+            top_stage = stage
+            top_count = count
+            tie_count = 1
+        } else if count == top_count {
+            tie_count = tie_count + 1
+        }
+        i = i + 1
+    }
+
+    if picked == top_stage {
+        if tie_count > 1 {
+            return "tie-break"
+        }
+        return "top-match"
+    }
+    "fallback"
+}
+
+func stage_candidates_for_verify_primary(string primary) vec[string] {
+    var out = vec[string]()
+
+    if primary == "format" {
+        out.push("constfold")
+        out.push("sccp")
+        return out
+    }
+    if primary == "shape" {
+        out.push("cfg")
+        out.push("rerun")
+        return out
+    }
+    if primary == "defuse" {
+        out.push("gvn")
+        out.push("cse")
+        out.push("pre")
+        return out
+    }
+    if primary == "mem-node" || primary == "mem-chain" || primary == "mem-sample" || primary == "mem-count" {
+        out.push("bce")
+        out.push("licm")
+        out.push("pre")
+        return out
+    }
+    if primary == "block-sample" || primary == "block-count" || primary == "dom-sample" || primary == "dom-count" {
+        out.push("cfg")
+        out.push("rerun")
+        return out
+    }
+    if primary == "value-sample" || primary == "value-count" {
+        out.push("sccp")
+        out.push("gvn")
+        out.push("cse")
+        return out
+    }
+    if primary == "regalloc-sample" {
+        out.push("rerun")
+        out.push("cfg")
+        return out
+    }
+
+    out.push("constfold")
+    out
+}
+
+func stage_delta_count(string summary, string stage) int32 {
+    if summary == "" {
+        return 0
+    }
+
+    var cursor = 0
+    while cursor < summary.len() {
+        var sep = find_token_from(summary, ",", cursor)
+        if sep > summary.len() {
+            sep = summary.len()
+        }
+
+        var entry = slice(summary, cursor, sep)
+        var eq = find_token(entry, "=")
+        if eq <= entry.len() {
+            var entry_stage = slice(entry, 0, eq)
+            if entry_stage == stage {
+                var count_text = slice(entry, eq + 1, entry.len())
+                return parse_delta_count(count_text, 0, count_text.len())
+            }
+        }
+
+        if sep >= summary.len() {
+            break
+        }
+        cursor = sep + 1
+    }
+
+    0
+}
+
+func build_instruction_block_graph(int32 blocks, int32 edges, int32 branches, int32 jumps) string {
+    var sample = "none"
+    if blocks >= 2 {
+        sample = "bb0->bb1"
+    }
+    if blocks >= 3 {
+        sample = sample + "|bb1->bb2"
+    }
+    "bbg(nodes=" + to_string(blocks)
+        + ",edges=" + to_string(edges)
+        + ",br=" + to_string(branches)
+        + ",jmp=" + to_string(jumps)
+        + ",sample=" + sample
+        + ")"
+}
+
+func build_instruction_value_graph(int32 values, int32 def_use_edges, int32 phi_nodes, int32 memphi_nodes) string {
+    var sample = "none"
+    if values >= 2 {
+        sample = "v0->v1"
+    }
+    if values >= 3 {
+        sample = sample + "|v1->v2"
+    }
+    "vgraph(values=" + to_string(values)
+        + ",defuse=" + to_string(def_use_edges)
+        + ",phi=" + to_string(phi_nodes)
+        + ",memphi=" + to_string(memphi_nodes)
+        + ",sample=" + sample
+        + ")"
+}
+
+func build_instruction_dominator_tree(int32 blocks, int32 depth, int32 backedges) string {
+    var dom_edges = blocks - 1
+    if dom_edges < 0 {
+        dom_edges = 0
+    }
+    var sample = "none"
+    if blocks >= 2 {
+        sample = "bb0>bb1"
+    }
+    if blocks >= 3 {
+        sample = sample + "|bb1>bb2"
+    }
+    "dom(root=bb0,depth=" + to_string(depth)
+        + ",edges=" + to_string(dom_edges)
+        + ",backedges=" + to_string(backedges)
+        + ",sample=" + sample
+        + ")"
+}
+
+func build_instruction_loop_forest(int32 headers, int32 backedges) string {
+    "loops(headers=" + to_string(headers)
+        + ",backedges=" + to_string(backedges)
+        + ")"
+}
+
+func build_instruction_memory_dep_graph(int32 loads, int32 stores, int32 memphi, int32 proofs) string {
+    var sample = "none"
+    if stores > 0 && loads > 0 {
+        sample = "store0->load0"
+    } else if memphi > 0 {
+        sample = "memphi0->load0"
+    }
+    "mdep(load=" + to_string(loads)
+        + ",store=" + to_string(stores)
+        + ",memphi=" + to_string(memphi)
+        + ",proofs=" + to_string(proofs)
+        + ",sample=" + sample
+        + ")"
+}
+
+func build_instruction_regalloc_plan(int32 spill_pairs, int32 parallel_copies, int32 splits, int32 remat) string {
+    var sample = "none"
+    if parallel_copies > 0 {
+        sample = "pcopy(v0->v1)"
+    } else if spill_pairs > 0 {
+        sample = "spill0<->reload0"
+    }
+    "rplan(spill_pairs=" + to_string(spill_pairs)
+        + ",pcopy=" + to_string(parallel_copies)
+        + ",splits=" + to_string(splits)
+        + ",remat=" + to_string(remat)
+        + ",sample=" + sample
+        + ")"
+}
+
+func estimate_loop_backedges(string mir_text, ssa_dataflow_model model) int32 {
+    var explicit = count_token(mir_text, " backedge")
+    if explicit > 0 {
+        return explicit
+    }
+    if model.loop_headers > 0 {
+        return model.loop_headers
+    }
+    0
+}
+
+func estimate_dominator_depth(int32 blocks, int32 edges, int32 backedges) int32 {
+    if blocks <= 0 {
+        return 1
+    }
+    var depth = 1 + (edges / blocks)
+    if backedges > 0 {
+        depth = depth + 1
+    }
+    if depth > blocks {
+        return blocks
+    }
+    if depth < 1 {
+        return 1
+    }
+    depth
+}
+
+func verify_instruction_ssa(
+    string mir_text,
+    ssa_dataflow_model model,
+    ssa_pass_stats pass_stats,
+    int32 blocks,
+    int32 values,
+    int32 memory_nodes,
+    int32 parallel_copies,
+    string block_graph,
+    string value_graph,
+    string dominator_tree,
+    string memory_dep_graph,
+    string regalloc_plan,
+) instruction_verify_result {
+    var errors = 0
+    var code = 0
+
+    var E_FORMAT = verify_flag_format()
+    var E_SHAPE = verify_flag_shape()
+    var E_DEFUSE = verify_flag_defuse()
+    var E_MEM_NODE = verify_flag_mem_node()
+    var E_MEM_CHAIN = verify_flag_mem_chain()
+    var E_BLOCK_SAMPLE = verify_flag_block_sample()
+    var E_VALUE_SAMPLE = verify_flag_value_sample()
+    var E_DOM_SAMPLE = verify_flag_dom_sample()
+    var E_MEM_SAMPLE = verify_flag_mem_sample()
+    var E_REGALLOC_SAMPLE = verify_flag_regalloc_sample()
+    var E_BLOCK_COUNT = verify_flag_block_count()
+    var E_VALUE_COUNT = verify_flag_value_count()
+    var E_DOM_COUNT = verify_flag_dom_count()
+    var E_MEM_COUNT = verify_flag_mem_count()
+
+    if !starts_with(mir_text, "mir ") {
+        errors = errors + 1
+        code = set_error_flag(code, E_FORMAT)
+    }
+    if blocks <= 0 || values <= 0 {
+        errors = errors + 1
+        code = set_error_flag(code, E_SHAPE)
+    }
+    if model.def_use_edges < values {
+        errors = errors + 1
+        code = set_error_flag(code, E_DEFUSE)
+    }
+    if memory_nodes < model.memphi_count {
+        errors = errors + 1
+        code = set_error_flag(code, E_MEM_NODE)
+    }
+    if pass_stats.memory_ssa_chain_count < model.memphi_count {
+        errors = errors + 1
+        code = set_error_flag(code, E_MEM_CHAIN)
+    }
+
+    if blocks >= 2 && !contains_token_text(block_graph, "bb0->bb1") {
+        errors = errors + 1
+        code = set_error_flag(code, E_BLOCK_SAMPLE)
+    }
+    if values >= 2 && !contains_token_text(value_graph, "v0->v1") {
+        errors = errors + 1
+        code = set_error_flag(code, E_VALUE_SAMPLE)
+    }
+    if blocks >= 2 && !contains_token_text(dominator_tree, "bb0>bb1") {
+        errors = errors + 1
+        code = set_error_flag(code, E_DOM_SAMPLE)
+    }
+
+    if model.store_count > 0 && model.load_count > 0 {
+        if !contains_token_text(memory_dep_graph, "store0->load0") {
+            errors = errors + 1
+            code = set_error_flag(code, E_MEM_SAMPLE)
+        }
+    }
+
+    if parallel_copies > 0 {
+        if !contains_token_text(regalloc_plan, "pcopy(v0->v1)") {
+            errors = errors + 1
+            code = set_error_flag(code, E_REGALLOC_SAMPLE)
+        }
+    }
+
+    var block_rel = count_token(block_graph, "->")
+    var block_cap = blocks - 1
+    if block_cap < 0 {
+        block_cap = 0
+    }
+    if block_rel > block_cap || block_rel > model.edge_count {
+        errors = errors + 1
+        code = set_error_flag(code, E_BLOCK_COUNT)
+    }
+
+    var value_rel = count_token(value_graph, "->")
+    if value_rel > model.def_use_edges {
+        errors = errors + 1
+        code = set_error_flag(code, E_VALUE_COUNT)
+    }
+
+    var dom_rel = count_token(dominator_tree, ">")
+    if dom_rel > block_cap {
+        errors = errors + 1
+        code = set_error_flag(code, E_DOM_COUNT)
+    }
+
+    var mem_rel = count_token(memory_dep_graph, "->")
+    if mem_rel > (model.load_count + model.store_count + model.memphi_count) {
+        errors = errors + 1
+        code = set_error_flag(code, E_MEM_COUNT)
+    }
+
+    instruction_verify_result {
+        error_count: errors,
+        error_code: code,
+    }
+}
+
+func format_instruction_verify_flags(int32 code) string {
+    if code == 0 {
+        return "ok"
+    }
+
+    var out = ""
+    out = append_verify_flag(out, code, verify_flag_format(), "format")
+    out = append_verify_flag(out, code, verify_flag_shape(), "shape")
+    out = append_verify_flag(out, code, verify_flag_defuse(), "defuse")
+    out = append_verify_flag(out, code, verify_flag_mem_node(), "mem-node")
+    out = append_verify_flag(out, code, verify_flag_mem_chain(), "mem-chain")
+    out = append_verify_flag(out, code, verify_flag_block_sample(), "block-sample")
+    out = append_verify_flag(out, code, verify_flag_value_sample(), "value-sample")
+    out = append_verify_flag(out, code, verify_flag_dom_sample(), "dom-sample")
+    out = append_verify_flag(out, code, verify_flag_mem_sample(), "mem-sample")
+    out = append_verify_flag(out, code, verify_flag_regalloc_sample(), "regalloc-sample")
+    out = append_verify_flag(out, code, verify_flag_block_count(), "block-count")
+    out = append_verify_flag(out, code, verify_flag_value_count(), "value-count")
+    out = append_verify_flag(out, code, verify_flag_dom_count(), "dom-count")
+    out = append_verify_flag(out, code, verify_flag_mem_count(), "mem-count")
+
+    if out == "" {
+        return "unknown"
+    }
+    out
+}
+
+func primary_instruction_verify_flag(int32 code) string {
+    if code == 0 {
+        return "ok"
+    }
+
+    if has_error_flag(code, verify_flag_format()) {
+        return "format"
+    }
+    if has_error_flag(code, verify_flag_shape()) {
+        return "shape"
+    }
+    if has_error_flag(code, verify_flag_defuse()) {
+        return "defuse"
+    }
+    if has_error_flag(code, verify_flag_mem_node()) {
+        return "mem-node"
+    }
+    if has_error_flag(code, verify_flag_mem_chain()) {
+        return "mem-chain"
+    }
+    if has_error_flag(code, verify_flag_block_sample()) {
+        return "block-sample"
+    }
+    if has_error_flag(code, verify_flag_value_sample()) {
+        return "value-sample"
+    }
+    if has_error_flag(code, verify_flag_dom_sample()) {
+        return "dom-sample"
+    }
+    if has_error_flag(code, verify_flag_mem_sample()) {
+        return "mem-sample"
+    }
+    if has_error_flag(code, verify_flag_regalloc_sample()) {
+        return "regalloc-sample"
+    }
+    if has_error_flag(code, verify_flag_block_count()) {
+        return "block-count"
+    }
+    if has_error_flag(code, verify_flag_value_count()) {
+        return "value-count"
+    }
+    if has_error_flag(code, verify_flag_dom_count()) {
+        return "dom-count"
+    }
+    if has_error_flag(code, verify_flag_mem_count()) {
+        return "mem-count"
+    }
+    "unknown"
+}
+
+func append_verify_flag(string out, int32 code, int32 flag, string name) string {
+    if !has_error_flag(code, flag) {
+        return out
+    }
+    if out == "" {
+        return name
+    }
+    out + "|" + name
+}
+
+func verify_flag_format() int32 { 1 }
+func verify_flag_shape() int32 { 2 }
+func verify_flag_defuse() int32 { 4 }
+func verify_flag_mem_node() int32 { 8 }
+func verify_flag_mem_chain() int32 { 16 }
+func verify_flag_block_sample() int32 { 32 }
+func verify_flag_value_sample() int32 { 64 }
+func verify_flag_dom_sample() int32 { 128 }
+func verify_flag_mem_sample() int32 { 256 }
+func verify_flag_regalloc_sample() int32 { 512 }
+func verify_flag_block_count() int32 { 1024 }
+func verify_flag_value_count() int32 { 2048 }
+func verify_flag_dom_count() int32 { 4096 }
+func verify_flag_mem_count() int32 { 8192 }
+
+func set_error_flag(int32 code, int32 flag) int32 {
+    if has_error_flag(code, flag) {
+        return code
+    }
+    code + flag
+}
+
+func has_error_flag(int32 code, int32 flag) bool {
+    if flag <= 0 {
+        return false
+    }
+
+    var bucket = code / flag
+    if bucket <= 0 {
+        return false
+    }
+    (bucket % 2) == 1
+}
+
+func estimate_escape_heap_allocs(ssa_dataflow_model model, ssa_pass_stats pass_stats) int32 {
+    var heap = model.call_count + model.store_count / 2 + model.alias_set_count / 4
+    if pass_stats.alias_precision_level <= 1 {
+        heap = heap + 1
+    }
+    if heap < 0 {
+        return 0
+    }
+    heap
+}
+
+func estimate_escape_stack_allocs(int32 values, int32 heap_allocs) int32 {
+    var stack = values - heap_allocs
+    if stack < 0 {
+        return 0
+    }
+    stack
+}
+
+func estimate_inline_budget(ssa_dataflow_model model, ssa_pass_stats pass_stats) int32 {
+    var budget = 120 - model.value_count - model.call_count * 4 - model.loop_headers * 2 + pass_stats.gvn_rewrite_count
+    if budget < 0 {
+        return 0
+    }
+    budget
+}
+
+func estimate_devirtualization_gain(ssa_dataflow_model model, ssa_pass_stats pass_stats) int32 {
+    var gain = model.call_count * 2 + pass_stats.gvn_rewrite_count / 2 + model.alias_set_count / 3
+    if gain < 0 {
+        return 0
+    }
+    gain
+}
+
+func int32_min(int32 left, int32 right) int32 {
+    if left < right {
+        return left
+    }
+    right
 }
 
 func canonicalize_mir(string mir_text) ssa_rewrite_result {
@@ -2194,6 +2961,33 @@ func dump_pipeline(ssa_program program) string {
         + " delta_struct=" + program.pass_delta_structural_summary
         + " delta_value=" + program.pass_delta_value_summary
         + " delta_hot=" + program.pass_delta_hot_summary
+        + " issa_blocks=" + to_string(program.instruction_block_count)
+        + " issa_values=" + to_string(program.instruction_value_count)
+        + " dom_depth=" + to_string(program.dominator_tree_depth)
+        + " backedges=" + to_string(program.loop_backedge_count)
+        + " issa_verify=" + to_string(program.instruction_verifier_error_count)
+        + " issa_verify_code=" + to_string(program.instruction_verifier_error_code)
+        + " issa_verify_flags=" + program.instruction_verifier_flags
+        + " issa_verify_primary=" + program.instruction_verifier_primary
+        + " issa_verify_stage=" + program.instruction_verifier_stage_hint
+        + " issa_verify_evidence=" + program.instruction_verifier_stage_evidence
+        + " issa_verify_pick_top=" + if program.instruction_verifier_pick_matches_top { "true" } else { "false" }
+        + " issa_verify_pick_reason=" + program.instruction_verifier_pick_reason
+        + " memssa_nodes=" + to_string(program.memory_ssa_node_count)
+        + " pts_sets=" + to_string(program.points_to_set_count)
+        + " ls_proofs=" + to_string(program.load_store_proof_count)
+        + " spill_pairs=" + to_string(program.spill_reload_pair_count)
+        + " pcopy_resolved=" + to_string(program.parallel_copy_resolution_count)
+        + " esc_stack=" + to_string(program.escape_stack_alloc_count)
+        + " esc_heap=" + to_string(program.escape_heap_alloc_count)
+        + " inl_budget=" + to_string(program.inline_budget_score)
+        + " devirt_gain=" + to_string(program.devirtualization_gain_score)
+        + " issa_bbg=" + program.instruction_block_graph
+        + " issa_vgraph=" + program.instruction_value_graph
+        + " issa_dom=" + program.instruction_dominator_tree
+        + " issa_loops=" + program.instruction_loop_forest
+        + " issa_mdep=" + program.instruction_memory_dep_graph
+        + " issa_rplan=" + program.instruction_regalloc_plan
         + " blocks=" + to_string(program.block_count)
         + " values=" + to_string(program.value_count)
         + " opt_values=" + to_string(program.optimized_value_count)
