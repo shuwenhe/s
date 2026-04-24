@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_flagalloc() int {
-    0
+func flagalloc_unit_name() string {
+    "ssa/flagalloc.s"
+}
+
+func flagalloc_unit_ready() int {
+    1
 }

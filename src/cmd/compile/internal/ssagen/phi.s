@@ -1,5 +1,9 @@
 package compile.internal.ssagen
 
-func stub_phi() int {
-    0
+func phi_unit_name() string {
+    "ssagen/phi.s"
+}
+
+func phi_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssa._gen
 
-func stub_decops() int {
-    0
+func decOps_unit_name() string {
+    "ssa/_gen/decOps.s"
+}
+
+func decOps_unit_ready() int {
+    1
 }
