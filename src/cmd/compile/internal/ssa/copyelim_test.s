@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func copyelim_test_unit_name() string {
+func copyelim_test_case_name() string {
     "ssa/copyelim_test.s"
 }
 
-func copyelim_test_unit_ready() int {
-    1
+func copyelim_test_case_pass() int {
+    0
 }

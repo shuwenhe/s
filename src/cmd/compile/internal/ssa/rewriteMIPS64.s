@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func rewriteMIPS64_unit_name() string {
+func rewriteMIPS64_rule_name() string {
     "ssa/rewriteMIPS64.s"
 }
 
-func rewriteMIPS64_unit_ready() int {
-    1
+func rewriteMIPS64_rule_count() int {
+    0
 }

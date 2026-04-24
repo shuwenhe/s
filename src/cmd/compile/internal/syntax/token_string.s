@@ -1,9 +1,9 @@
 package compile.internal.syntax
 
-func token_string_unit_name() string {
+func token_string_module_name() string {
     "syntax/token_string.s"
 }
 
-func token_string_unit_ready() int {
-    1
+func token_string_module_apply() int {
+    0
 }

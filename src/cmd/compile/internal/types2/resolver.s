@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func resolver_unit_name() string {
+func resolver_module_name() string {
     "types2/resolver.s"
 }
 
-func resolver_unit_ready() int {
-    1
+func resolver_module_apply() int {
+    0
 }

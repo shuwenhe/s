@@ -1,9 +1,9 @@
 package compile.internal.ssa._gen
 
-func multiscanner_unit_name() string {
+func multiscanner_rule_name() string {
     "ssa/_gen/multiscanner.s"
 }
 
-func multiscanner_unit_ready() int {
-    1
+func multiscanner_rule_count() int {
+    0
 }

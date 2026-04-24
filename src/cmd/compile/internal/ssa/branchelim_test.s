@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func branchelim_test_unit_name() string {
+func branchelim_test_case_name() string {
     "ssa/branchelim_test.s"
 }
 
-func branchelim_test_unit_ready() int {
-    1
+func branchelim_test_case_pass() int {
+    0
 }

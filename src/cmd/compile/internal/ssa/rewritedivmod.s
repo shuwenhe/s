@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func rewritedivmod_unit_name() string {
+func rewritedivmod_rule_name() string {
     "ssa/rewritedivmod.s"
 }
 
-func rewritedivmod_unit_ready() int {
-    1
+func rewritedivmod_rule_count() int {
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.types
 
-func alg_unit_name() string {
+func alg_module_name() string {
     "types/alg.s"
 }
 
-func alg_unit_ready() int {
-    1
+func alg_module_apply() int {
+    0
 }

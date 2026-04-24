@@ -1,9 +1,9 @@
 package compile.internal.syntax
 
-func nodes_unit_name() string {
+func nodes_module_name() string {
     "syntax/nodes.s"
 }
 
-func nodes_unit_ready() int {
-    1
+func nodes_module_apply() int {
+    0
 }

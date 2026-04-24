@@ -1,9 +1,9 @@
 package compile.internal.typecheck
 
-func const_unit_name() string {
+func const_module_name() string {
     "typecheck/const.s"
 }
 
-func const_unit_ready() int {
-    1
+func const_module_apply() int {
+    0
 }

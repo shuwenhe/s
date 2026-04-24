@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func lookup_test_unit_name() string {
+func lookup_test_case_name() string {
     "types2/lookup_test.s"
 }
 
-func lookup_test_unit_ready() int {
-    1
+func lookup_test_case_pass() int {
+    0
 }

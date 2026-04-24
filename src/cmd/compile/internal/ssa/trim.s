@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func trim_unit_name() string {
+func trim_module_name() string {
     "ssa/trim.s"
 }
 
-func trim_unit_ready() int {
-    1
+func trim_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

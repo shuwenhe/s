@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func lower_unit_name() string {
+func lower_module_name() string {
     "ssa/lower.s"
 }
 
-func lower_unit_ready() int {
-    1
+func lower_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

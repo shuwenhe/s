@@ -1,9 +1,9 @@
 package compile.internal.test.testdata.gen
 
-func conditionalCmpConstGen_unit_name() string {
+func conditionalCmpConstGen_case_name() string {
     "test/testdata/gen/conditionalCmpConstGen.s"
 }
 
-func conditionalCmpConstGen_unit_ready() int {
-    1
+func conditionalCmpConstGen_case_pass() int {
+    0
 }

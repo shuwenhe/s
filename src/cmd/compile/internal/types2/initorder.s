@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func initorder_unit_name() string {
+func initorder_module_name() string {
     "types2/initorder.s"
 }
 
-func initorder_unit_ready() int {
-    1
+func initorder_module_apply() int {
+    0
 }

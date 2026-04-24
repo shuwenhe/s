@@ -1,9 +1,9 @@
 package compile.internal.ir
 
-func const_unit_name() string {
+func const_module_name() string {
     "ir/const.s"
 }
 
-func const_unit_ready() int {
-    1
+func const_module_apply() int {
+    0
 }

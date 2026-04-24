@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func generate_test_unit_name() string {
+func generate_test_case_name() string {
     "ssa/generate_test.s"
 }
 
-func generate_test_unit_ready() int {
-    1
+func generate_test_case_pass() int {
+    0
 }

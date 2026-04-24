@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func array_unit_name() string {
+func array_module_name() string {
     "types2/array.s"
 }
 
-func array_unit_ready() int {
-    1
+func array_module_apply() int {
+    0
 }

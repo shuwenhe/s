@@ -1,9 +1,9 @@
 package compile.internal.walk
 
-func closure_unit_name() string {
+func closure_module_name() string {
     "walk/closure.s"
 }
 
-func closure_unit_ready() int {
-    1
+func closure_module_apply() int {
+    0
 }

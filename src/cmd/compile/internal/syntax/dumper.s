@@ -1,9 +1,9 @@
 package compile.internal.syntax
 
-func dumper_unit_name() string {
+func dumper_module_name() string {
     "syntax/dumper.s"
 }
 
-func dumper_unit_ready() int {
-    1
+func dumper_module_apply() int {
+    0
 }

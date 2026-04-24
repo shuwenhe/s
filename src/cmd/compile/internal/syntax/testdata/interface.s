@@ -1,9 +1,9 @@
 package compile.internal.syntax.testdata
 
-func interface_unit_name() string {
+func interface_case_name() string {
     "syntax/testdata/interface.s"
 }
 
-func interface_unit_ready() int {
-    1
+func interface_case_pass() int {
+    0
 }

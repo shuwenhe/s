@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func compilersupport_unit_name() string {
+func compilersupport_module_name() string {
     "types2/compilersupport.s"
 }
 
-func compilersupport_unit_ready() int {
-    1
+func compilersupport_module_apply() int {
+    0
 }

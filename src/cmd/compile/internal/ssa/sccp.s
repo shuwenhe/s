@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func sccp_unit_name() string {
+func sccp_module_name() string {
     "ssa/sccp.s"
 }
 
-func sccp_unit_ready() int {
-    1
+func sccp_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

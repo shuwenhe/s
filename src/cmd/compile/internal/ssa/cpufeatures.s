@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func cpufeatures_unit_name() string {
+func cpufeatures_module_name() string {
     "ssa/cpufeatures.s"
 }
 
-func cpufeatures_unit_ready() int {
-    1
+func cpufeatures_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

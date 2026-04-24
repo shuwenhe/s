@@ -1,9 +1,9 @@
 package compile.internal.ssa._gen
 
-func RISCV64Ops_unit_name() string {
+func RISCV64Ops_rule_name() string {
     "ssa/_gen/RISCV64Ops.s"
 }
 
-func RISCV64Ops_unit_ready() int {
-    1
+func RISCV64Ops_rule_count() int {
+    0
 }

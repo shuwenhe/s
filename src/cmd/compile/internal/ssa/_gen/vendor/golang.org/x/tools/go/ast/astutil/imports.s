@@ -1,9 +1,9 @@
 package compile.internal.ssa._gen.vendor.golang.org.x.tools.go.ast.astutil
 
-func imports_unit_name() string {
+func imports_rule_name() string {
     "ssa/_gen/vendor/golang.org/x/tools/go/ast/astutil/imports.s"
 }
 
-func imports_unit_ready() int {
-    1
+func imports_rule_count() int {
+    0
 }

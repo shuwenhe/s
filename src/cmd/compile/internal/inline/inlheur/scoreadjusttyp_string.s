@@ -1,9 +1,9 @@
 package compile.internal.inline.inlheur
 
-func scoreadjusttyp_string_unit_name() string {
+func scoreadjusttyp_string_module_name() string {
     "inline/inlheur/scoreadjusttyp_string.s"
 }
 
-func scoreadjusttyp_string_unit_ready() int {
-    1
+func scoreadjusttyp_string_module_apply() int {
+    0
 }

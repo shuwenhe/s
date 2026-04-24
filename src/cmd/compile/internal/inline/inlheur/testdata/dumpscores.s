@@ -1,9 +1,9 @@
 package compile.internal.inline.inlheur.testdata
 
-func dumpscores_unit_name() string {
+func dumpscores_case_name() string {
     "inline/inlheur/testdata/dumpscores.s"
 }
 
-func dumpscores_unit_ready() int {
-    1
+func dumpscores_case_pass() int {
+    0
 }

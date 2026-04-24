@@ -1,9 +1,9 @@
 package compile.internal.ir
 
-func func_unit_name() string {
+func func_module_name() string {
     "ir/func.s"
 }
 
-func func_unit_ready() int {
-    1
+func func_module_apply() int {
+    0
 }

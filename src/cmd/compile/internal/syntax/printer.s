@@ -1,9 +1,9 @@
 package compile.internal.syntax
 
-func printer_unit_name() string {
+func printer_module_name() string {
     "syntax/printer.s"
 }
 
-func printer_unit_ready() int {
-    1
+func printer_module_apply() int {
+    0
 }

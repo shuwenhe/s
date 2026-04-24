@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func objset_unit_name() string {
+func objset_module_name() string {
     "types2/objset.s"
 }
 
-func objset_unit_ready() int {
-    1
+func objset_module_apply() int {
+    0
 }

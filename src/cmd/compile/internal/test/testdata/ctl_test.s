@@ -1,9 +1,9 @@
 package compile.internal.test.testdata
 
-func ctl_test_unit_name() string {
+func ctl_test_case_name() string {
     "test/testdata/ctl_test.s"
 }
 
-func ctl_test_unit_ready() int {
-    1
+func ctl_test_case_pass() int {
+    0
 }

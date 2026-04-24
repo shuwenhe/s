@@ -1,9 +1,9 @@
 package compile.internal.inline.inlheur.testdata.props
 
-func acrosscall_unit_name() string {
+func acrosscall_case_name() string {
     "inline/inlheur/testdata/props/acrosscall.s"
 }
 
-func acrosscall_unit_ready() int {
-    1
+func acrosscall_case_pass() int {
+    0
 }

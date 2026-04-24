@@ -1,9 +1,9 @@
 package compile.internal.typecheck
 
-func dcl_unit_name() string {
+func dcl_module_name() string {
     "typecheck/dcl.s"
 }
 
-func dcl_unit_ready() int {
-    1
+func dcl_module_apply() int {
+    0
 }

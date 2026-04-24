@@ -1,9 +1,9 @@
 package compile.internal.test
 
-func divconst_test_unit_name() string {
+func divconst_test_case_name() string {
     "test/divconst_test.s"
 }
 
-func divconst_test_unit_ready() int {
-    1
+func divconst_test_case_pass() int {
+    0
 }

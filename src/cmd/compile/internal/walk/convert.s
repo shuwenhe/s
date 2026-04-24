@@ -1,9 +1,9 @@
 package compile.internal.walk
 
-func convert_unit_name() string {
+func convert_module_name() string {
     "walk/convert.s"
 }
 
-func convert_unit_ready() int {
-    1
+func convert_module_apply() int {
+    0
 }

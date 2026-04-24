@@ -1,9 +1,9 @@
 package compile.internal.ir
 
-func node_unit_name() string {
+func node_module_name() string {
     "ir/node.s"
 }
 
-func node_unit_ready() int {
-    1
+func node_module_apply() int {
+    0
 }
