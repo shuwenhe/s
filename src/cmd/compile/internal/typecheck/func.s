@@ -1,5 +1,9 @@
 package compile.internal.typecheck
 
-func stub_func() int {
-    0
+func func_unit_name() string {
+    "typecheck/func.s"
+}
+
+func func_unit_ready() int {
+    1
 }
