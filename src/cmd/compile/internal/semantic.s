@@ -160,14 +160,22 @@ func run_preparse_semantic_completeness_checks(string source, vec[semantic_error
 func validate_concurrency_semantics(string source, vec[semantic_error] mut diagnostics) int32 {
     var errors = 0
     var go_count = count_token_text(source, "\ngo(") + count_token_text(source, "\ngo ")
+    var sroutine_count = count_token_text(source, "\nsroutine ")
+    var launch_count = go_count + sroutine_count
     var make_count = count_token_text(source, "chan_make(")
-    var send_count = count_token_text(source, "chan_send(")
+    var send_count = count_token_text(source, "chan_send(") + count_token_text(source, "select_send(") + count_token_text(source, "select_send_default(") + count_token_text(source, "select_send_timeout(")
     var recv_count = count_token_text(source, "chan_recv(")
     var close_count = count_token_text(source, "chan_close(")
-    var select_count = count_token_text(source, "select_recv(") + count_token_text(source, "select_recv_default(")
+    var select_count = count_token_text(source, "select_recv(")
+        + count_token_text(source, "select_recv_default(")
+        + count_token_text(source, "select_recv_weighted(")
+        + count_token_text(source, "select_recv_timeout(")
+        + count_token_text(source, "select_send(")
+        + count_token_text(source, "select_send_default(")
+        + count_token_text(source, "select_send_timeout(")
 
-    if go_count > 0 && make_count == 0 && select_count == 0 {
-        errors = errors + add_error(source, diagnostics, "e3047", "go routine launched without channel/select coordination", "go")
+    if launch_count > 0 && make_count == 0 && select_count == 0 {
+        errors = errors + add_error(source, diagnostics, "e3047", "routine launched without channel/select coordination", "go")
     }
     if select_count > 0 && recv_count == 0 {
         errors = errors + add_error(source, diagnostics, "e3048", "select requires at least one receive path", "select")
@@ -1134,6 +1142,9 @@ func check_stmt(stmt stmt, vec[type_binding] mut env, string expected_return, ve
             infer_expr(value.expr, env, expected_return, functions, source, diagnostics).errors
         }
         stmt.defer(value) : {
+            infer_expr(value.expr, env, expected_return, functions, source, diagnostics).errors
+        }
+        stmt.sroutine(value) : {
             infer_expr(value.expr, env, expected_return, functions, source, diagnostics).errors
         }
     }

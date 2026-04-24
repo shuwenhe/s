@@ -180,6 +180,12 @@ func run_semantic_suite(string fixtures_root) int32 {
         return 1
     }
 
+    var sroutine_uncoordinated_src = "package demo.conc\nfunc worker() int32 {\n  0\n}\nfunc main() int32 {\n  sroutine worker()\n  0\n}"
+    var sroutine_uncoordinated_diags = check_detailed(sroutine_uncoordinated_src)
+    if !has_code(sroutine_uncoordinated_diags, "e3047") {
+        return 1
+    }
+
     var send_without_recv_src = "package demo.conc\nfunc main() int32 {\n  var ch = chan_make(1)\n  chan_send(ch, 1)\n  0\n}"
     var send_without_recv_diags = check_detailed(send_without_recv_src)
     if !has_code(send_without_recv_diags, "e3050") {

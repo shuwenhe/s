@@ -73,6 +73,7 @@ func is_keyword(string text) bool {
         "return" : true,
         "break" : true,
         "continue" : true,
+        "sroutine" : true,
         "true" : true,
         "false" : true,
         "nil" : true,
