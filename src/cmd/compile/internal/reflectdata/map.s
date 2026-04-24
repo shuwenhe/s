@@ -1,5 +1,9 @@
 package compile.internal.reflectdata
 
-func stub_map() int {
-    0
+func map_unit_name() string {
+    "reflectdata/map.s"
+}
+
+func map_unit_ready() int {
+    1
 }

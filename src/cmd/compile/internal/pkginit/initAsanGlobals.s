@@ -1,5 +1,9 @@
 package compile.internal.pkginit
 
-func stub_initasanglobals() int {
-    0
+func initAsanGlobals_unit_name() string {
+    "pkginit/initAsanGlobals.s"
+}
+
+func initAsanGlobals_unit_ready() int {
+    1
 }
