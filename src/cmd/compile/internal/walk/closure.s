@@ -1,5 +1,9 @@
 package compile.internal.walk
 
-func stub_closure() int {
-    0
+func closure_unit_name() string {
+    "walk/closure.s"
+}
+
+func closure_unit_ready() int {
+    1
 }

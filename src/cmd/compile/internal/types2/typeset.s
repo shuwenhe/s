@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_typeset() int {
-    0
+func typeset_unit_name() string {
+    "types2/typeset.s"
+}
+
+func typeset_unit_ready() int {
+    1
 }
