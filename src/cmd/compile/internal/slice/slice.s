@@ -1,5 +1,9 @@
 package compile.internal.slice
 
-func stub_slice() int {
-    0
+func slice_unit_name() string {
+    "slice/slice.s"
+}
+
+func slice_unit_ready() int {
+    1
 }

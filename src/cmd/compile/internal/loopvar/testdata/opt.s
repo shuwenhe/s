@@ -1,5 +1,9 @@
 package compile.internal.loopvar.testdata
 
-func stub_opt() int {
-    0
+func opt_unit_name() string {
+    "loopvar/testdata/opt.s"
+}
+
+func opt_unit_ready() int {
+    1
 }

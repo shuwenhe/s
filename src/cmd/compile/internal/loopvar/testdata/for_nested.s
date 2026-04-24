@@ -1,5 +1,9 @@
 package compile.internal.loopvar.testdata
 
-func stub_for_nested() int {
-    0
+func for_nested_unit_name() string {
+    "loopvar/testdata/for_nested.s"
+}
+
+func for_nested_unit_ready() int {
+    1
 }

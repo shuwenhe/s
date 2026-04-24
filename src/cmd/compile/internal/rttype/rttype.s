@@ -1,5 +1,9 @@
 package compile.internal.rttype
 
-func stub_rttype() int {
-    0
+func rttype_unit_name() string {
+    "rttype/rttype.s"
+}
+
+func rttype_unit_ready() int {
+    1
 }
