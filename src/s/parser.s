@@ -48,6 +48,15 @@ impl parser {
         }
 
         while !self.at(token_kind::eof) {
+            if self.at_keyword("const") && self.at_symbol_after_keyword("(") {
+                var consts = self.parse_const_group_items()?
+                var ci = 0
+                while ci < consts.len() {
+                    items.push(item::const(consts[ci]));
+                    ci = ci + 1
+                }
+                continue
+            }
             items.push(self.parse_item()?)
         }
 
@@ -97,6 +106,9 @@ impl parser {
                 option::none : return result::ok(item::function(self.parse_function_decl()?)),
             }
         }
+        if self.at_keyword("const") {
+            return result::ok(item::const(self.parse_const_decl()?))
+        }
         if self.at_keyword("struct") {
             return result::ok(item::struct(self.parse_struct_decl()?))
         }
@@ -110,6 +122,45 @@ impl parser {
             return result::ok(item::impl(self.parse_impl_decl()?))
         }
         result::err(self.error_here("unexpected token"))
+    }
+
+    func parse_const_decl(mut self) result[const_decl, parse_error] {
+        self.expect_keyword("const")?
+        var entry = self.parse_const_entry(false, 0)?
+        self.eat_symbol(";")
+        result::ok(entry)
+    }
+
+    func parse_const_group_items(mut self) result[vec[const_decl], parse_error] {
+        self.expect_keyword("const")?
+        self.expect_symbol("(")?
+        var out = vec[const_decl]()
+        var iota_index = 0
+        while !self.eat_symbol(")") {
+            if self.eat_symbol(";") || self.eat_symbol(",") {
+                continue
+            }
+            out.push(self.parse_const_entry(true, iota_index)?);
+            iota_index = iota_index + 1
+            self.eat_symbol(";")
+            self.eat_symbol(",")
+        }
+        result::ok(out)
+    }
+
+    func parse_const_entry(mut self, bool allow_omitted_value, int32 iota_index) result[const_decl, parse_error] {
+        var name = self.expect_ident()?
+        var value = option::none
+        if self.eat_symbol("=") {
+            value = option::some(self.parse_expr()?)
+        } else if !allow_omitted_value {
+            return result::err(self.error_here("expected symbol ="))
+        }
+        result::ok(const_decl {
+            name: name,
+            value: value,
+            iota_index: iota_index,
+        })
     }
 
     func parse_function_decl(mut self) result[function_decl, parse_error] {
@@ -1039,6 +1090,15 @@ impl parser {
     func at_symbol(self, string value) bool {
         var token = self.peek().unwrap()
         token.kind == token_kind::symbol && token.value == value
+    }
+
+    func at_symbol_after_keyword(self, string value) bool {
+        var first = self.peek().unwrap()
+        if first.kind != token_kind::keyword {
+            return false
+        }
+        var second = self.peek_at(1).unwrap()
+        second.kind == token_kind::symbol && second.value == value
     }
 
     func at_cfor_start(self) bool {

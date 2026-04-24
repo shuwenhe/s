@@ -21,7 +21,7 @@ use std.prelude.slice
 use std.vec.vec
 
 func run_pipeline_regression_suite() int32 {
-    var source = "package demo.reg\nfunc helper() int32 {\n  1\n}\nfunc main() int32 {\n  var arr = [int32]{1, 2}\n  var mp = [string]int32{\"k\": 1}\n  var idx = arr[0]\n  var bx = { idx + 1 }\n  idx = idx + bx\n  for (var i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  mp[\"k\"]\n}"
+    var source = "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int32 {\n  1\n}\nfunc main() int32 {\n  var arr = [int32]{1, 2}\n  var mp = [string]int32{\"k\": 1}\n  var idx = arr[0]\n  var bx = { idx + 1 }\n  idx = idx + bx\n  for (var i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
 
     var parsed = parse_source(source)
     if parsed.is_err() {
@@ -33,6 +33,29 @@ func run_pipeline_regression_suite() int32 {
         return 1
     }
     var lowered = lowered_checked.unwrap()
+    if count_const_decls(lowered) != 2 {
+        return 1
+    }
+    if !has_const_decl(lowered, "A", "1") {
+        return 1
+    }
+    if !has_const_decl(lowered, "B", "1") {
+        return 1
+    }
+
+    var const_only_source = "package demo.constonly\nconst (\n  A = 1\n  B\n)\nfunc main() int32 {\n  B\n}"
+    var const_only_parsed = parse_source(const_only_source)
+    if const_only_parsed.is_err() {
+        return 1
+    }
+    var const_only_lowered = from_syntax_checked(const_only_parsed.unwrap())
+    if const_only_lowered.is_err() {
+        return 1
+    }
+    if !main_final_is_int_literal(const_only_lowered.unwrap(), 1) {
+        return 1
+    }
+
     var features = collect_ir_package_features(lowered)
     if (features & 1) == 0 {
         return 1
@@ -55,6 +78,13 @@ func run_pipeline_regression_suite() int32 {
         return 1
     }
     var graph = graph_result.unwrap()
+    var graph_text = dump_graph(graph)
+    if !contains(graph_text, "yield 1") {
+        return 1
+    }
+    if contains(graph_text, "yield B") {
+        return 1
+    }
 
     var saw_pkg_functions = false
     var ti = 0
@@ -84,6 +114,9 @@ func run_pipeline_regression_suite() int32 {
     if !contains(midend.report, "pass_fold_branch=") {
         return 1
     }
+    if !contains(midend.report, "const_fold_hits=") {
+        return 1
+    }
 
     var hinted = build_pipeline_with_graph_hints(graph, midend.optimized_mir_text, "amd64")
     var hinted_dump = dump_pipeline(hinted)
@@ -108,6 +141,60 @@ func run_pipeline_regression_suite() int32 {
     }
 
     0
+}
+
+func count_const_decls(ir_ast.package_ir pkg) int32 {
+    var count = 0
+    var i = 0
+    while i < pkg.decls.len() {
+        switch pkg.decls[i] {
+            ir_ast.decl_ir::const(_) : count = count + 1,
+            _ : (),
+        }
+        i = i + 1
+    }
+    count
+}
+
+func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
+    var i = 0
+    while i < pkg.decls.len() {
+        switch pkg.decls[i] {
+            ir_ast.decl_ir::const(cd) : {
+                if cd.name == name && cd.value == value {
+                    return true
+                }
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    false
+}
+
+func main_final_is_int_literal(ir_ast.package_ir pkg, int32 expected) bool {
+    var i = 0
+    while i < pkg.decls.len() {
+        switch pkg.decls[i] {
+            ir_ast.decl_ir::func(fd) : {
+                if fd.name == "main" && fd.body.is_some() {
+                    var body = fd.body.unwrap()
+                    if body.final_expr.is_some() {
+                        switch body.final_expr.unwrap() {
+                            ir_ast.expr_ir::int(value) : {
+                                return value == expected
+                            }
+                            _ : return false,
+                        }
+                    }
+                    return false
+                }
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    false
 }
 
 func collect_ir_package_features(ir_ast.package_ir pkg) int32 {

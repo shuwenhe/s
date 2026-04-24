@@ -5,6 +5,7 @@ use compile.internal.prelude.lookup_builtin_method_arity
 use compile.internal.prelude.lookup_builtin_method_type
 use compile.internal.typesys.assignable_type
 use compile.internal.typesys.base_type_name
+use compile.internal.typesys.comparable_type
 use compile.internal.typesys.compatible_type
 use compile.internal.typesys.extract_type_args
 use compile.internal.typesys.parse_type
@@ -39,6 +40,30 @@ struct function_binding {
     vec[string] generic_names
     vec[string] param_types
     string return_type
+}
+
+struct method_binding {
+    string name
+    vec[string] param_types
+    string return_type
+}
+
+struct trait_binding {
+    string name
+    vec[method_binding] methods
+}
+
+struct const_binding {
+    string name
+    string type_name
+    bool has_int_value
+    int32 int_value
+}
+
+struct const_eval_int_result {
+    bool ok
+    int32 value
+    string error
 }
 
 struct signature_match {
@@ -105,12 +130,14 @@ func check_detailed(string source) vec[semantic_error] {
 
     var file = parsed.unwrap()
     var functions = collect_functions(file.items)
+    var traits = collect_traits(file.items)
+    var consts = collect_consts(file.items, functions, source, diagnostics)
 
     validate_function_set(functions, source, diagnostics)
 
     var i = 0
     while i < file.items.len() {
-        var ignored = check_item(file.items[i], functions, source, diagnostics)
+        var ignored = check_item(file.items[i], functions, traits, consts, source, diagnostics)
         i = i + 1
     }
 
@@ -486,25 +513,363 @@ func make_function_binding(function_decl function_decl) function_binding {
     };
 }
 
-func check_item(item item, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int32 {
+func check_item(item item, vec[function_binding] functions, vec[trait_binding] traits, vec[const_binding] consts, string source, vec[semantic_error] mut diagnostics) int32 {
     switch item {
-        item.function(function_decl) : check_function(function_decl, functions, source, diagnostics),
-        item.impl(impl_item) : check_impl(impl_item, functions, source, diagnostics),
+        item.function(function_decl) : check_function(function_decl, functions, consts, source, diagnostics),
+        item.impl(impl_item) : check_impl(impl_item, functions, consts, traits, source, diagnostics),
         _ : 0,
     }
 }
 
-func check_impl(impl_decl impl_item, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int32 {
+func collect_consts(vec[item] items, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) vec[const_binding] {
+    var out = vec[const_binding]()
+    var type_env = vec[type_binding]()
+    var last_const_expr = option::none
+
+    var i = 0
+    while i < items.len() {
+        switch items[i] {
+            item.const(const_decl) : {
+                if lookup_name_type(type_env, const_decl.name) != "unknown" {
+                    var ignored = add_error(source, diagnostics, "e3044", "duplicate const declaration", const_decl.name)
+                }
+
+                var local_env = clone_env(type_env)
+                local_env.push(type_binding {
+                    name: "iota",
+                    type_name: "int32",
+                })
+                ;
+
+                var expr_to_check = option::none
+                switch const_decl.value {
+                    option.some(value) : {
+                        expr_to_check = option::some(value)
+                        last_const_expr = option::some(value)
+                    }
+                    option.none : expr_to_check = last_const_expr,
+                }
+
+                var ty = "unknown"
+                var has_int_value = false
+                var int_value = 0
+                if expr_to_check.is_none() {
+                    var ignored2 = add_error(source, diagnostics, "e3045", "const declaration missing initializer and no prior expression in group", const_decl.name)
+                } else {
+                    var inferred = infer_expr(expr_to_check.unwrap(), local_env, "()", functions, source, diagnostics)
+                    ty = inferred.type_name
+                    if is_unknown(ty) {
+                        ty = "unknown"
+                    } else if same_type(ty, "int32") {
+                        var eval_result = eval_const_int_expr(expr_to_check.unwrap(), out, const_decl.iota_index)
+                        if eval_result.ok {
+                            has_int_value = true
+                            int_value = eval_result.value
+                        } else {
+                            var ignored3 = add_error(source, diagnostics, "e3046", "const int expression evaluation failed: " + eval_result.error, const_decl.name)
+                        }
+                    }
+                }
+
+                out.push(const_binding {
+                    name: const_decl.name,
+                    type_name: ty,
+                    has_int_value: has_int_value,
+                    int_value: int_value,
+                })
+                ;
+                type_env.push(type_binding {
+                    name: const_decl.name,
+                    type_name: ty,
+                })
+                ;
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    out
+}
+
+func eval_const_int_expr(expr value, vec[const_binding] known_consts, int32 iota_value) const_eval_int_result {
+    switch value {
+        expr::int(int_expr) : const_eval_int_result {
+            ok: true,
+            value: parse_const_int_literal(int_expr.value),
+            error: "",
+        },
+        expr::name(name_expr) : {
+            if name_expr.name == "iota" {
+                return const_eval_int_result {
+                    ok: true,
+                    value: iota_value,
+                    error: "",
+                }
+            }
+
+            var i = known_consts.len()
+            while i > 0 {
+                i = i - 1
+                if known_consts[i].name == name_expr.name {
+                    if known_consts[i].has_int_value {
+                        return const_eval_int_result {
+                            ok: true,
+                            value: known_consts[i].int_value,
+                            error: "",
+                        }
+                    }
+                    return const_eval_int_result {
+                        ok: false,
+                        value: 0,
+                        error: "name " + name_expr.name + " is not an int constant",
+                    }
+                }
+            }
+
+            const_eval_int_result {
+                ok: false,
+                value: 0,
+                error: "unknown constant name " + name_expr.name,
+            }
+        }
+        expr::binary(binary_expr) : {
+            var left = eval_const_int_expr(binary_expr.left.value, known_consts, iota_value)
+            if !left.ok {
+                return left
+            }
+            var right = eval_const_int_expr(binary_expr.right.value, known_consts, iota_value)
+            if !right.ok {
+                return right
+            }
+
+            if binary_expr.op == "+" {
+                return const_eval_int_result { ok: true, value: left.value + right.value, error: "" }
+            }
+            if binary_expr.op == "-" {
+                return const_eval_int_result { ok: true, value: left.value - right.value, error: "" }
+            }
+            if binary_expr.op == "*" {
+                return const_eval_int_result { ok: true, value: left.value * right.value, error: "" }
+            }
+            if binary_expr.op == "/" {
+                if right.value == 0 {
+                    return const_eval_int_result { ok: false, value: 0, error: "division by zero" }
+                }
+                return const_eval_int_result { ok: true, value: left.value / right.value, error: "" }
+            }
+            if binary_expr.op == "%" {
+                if right.value == 0 {
+                    return const_eval_int_result { ok: false, value: 0, error: "modulo by zero" }
+                }
+                return const_eval_int_result { ok: true, value: left.value % right.value, error: "" }
+            }
+
+            const_eval_int_result {
+                ok: false,
+                value: 0,
+                error: "unsupported int operator " + binary_expr.op,
+            }
+        }
+        _ : const_eval_int_result {
+            ok: false,
+            value: 0,
+            error: "expression is not a supported int const form",
+        },
+    }
+}
+
+func parse_const_int_literal(string literal) int32 {
+    var text = literal
+    var sign = 1
+    var i = 0
+    if len(text) > 0 && char_at(text, 0) == "-" {
+        sign = -1
+        i = 1
+    }
+
+    var out = 0
+    while i < len(text) {
+        var ch = char_at(text, i)
+        if ch != "_" {
+            out = out * 10 + const_digit_value(ch)
+        }
+        i = i + 1
+    }
+    sign * out
+}
+
+func const_digit_value(string ch) int32 {
+    if ch == "0" {
+        return 0
+    }
+    if ch == "1" {
+        return 1
+    }
+    if ch == "2" {
+        return 2
+    }
+    if ch == "3" {
+        return 3
+    }
+    if ch == "4" {
+        return 4
+    }
+    if ch == "5" {
+        return 5
+    }
+    if ch == "6" {
+        return 6
+    }
+    if ch == "7" {
+        return 7
+    }
+    if ch == "8" {
+        return 8
+    }
+    if ch == "9" {
+        return 9
+    }
+    0
+}
+
+func collect_traits(vec[item] items) vec[trait_binding] {
+    var out = vec[trait_binding]()
+    var i = 0
+    while i < items.len() {
+        switch items[i] {
+            item.trait(trait_decl) : {
+                var methods = vec[method_binding]()
+                var mi = 0
+                while mi < trait_decl.methods.len() {
+                    var params = vec[string]()
+                    var pi = 0
+                    while pi < trait_decl.methods[mi].params.len() {
+                        params.push(parse_type(trait_decl.methods[mi].params[pi].type_name));
+                        pi = pi + 1
+                    }
+
+                    var return_type =
+                        switch trait_decl.methods[mi].return_type {
+                            option.some(type_name) : parse_type(type_name),
+                            option.none : "()",
+                        }
+
+                    methods.push(method_binding {
+                        name: trait_decl.methods[mi].name,
+                        param_types: params,
+                        return_type: return_type,
+                    })
+                    ;
+                    mi = mi + 1
+                }
+
+                out.push(trait_binding {
+                    name: trait_decl.name,
+                    methods: methods,
+                })
+                ;
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    out
+}
+
+func check_impl(impl_decl impl_item, vec[function_binding] functions, vec[const_binding] consts, vec[trait_binding] traits, string source, vec[semantic_error] mut diagnostics) int32 {
     var errors = 0
+
     var i = 0
     while i < impl_item.methods.len() {
-        errors = errors + check_function(impl_item.methods[i], functions, source, diagnostics)
+        var j = i + 1
+        while j < impl_item.methods.len() {
+            if impl_item.methods[i].sig.name == impl_item.methods[j].sig.name {
+                errors = errors + add_error(source, diagnostics, "e3042", "duplicate impl method", impl_item.methods[i].sig.name)
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+
+    switch impl_item.trait_name {
+        option.some(trait_name) : {
+            var trait_result = find_trait_binding(traits, trait_name)
+            if trait_result.is_none() {
+                errors = errors + add_error(source, diagnostics, "e3040", "impl references unknown trait", trait_name)
+            } else {
+                var trait_info = trait_result.unwrap()
+                var mi = 0
+                while mi < trait_info.methods.len() {
+                    var impl_method = find_impl_method(impl_item.methods, trait_info.methods[mi].name)
+                    if impl_method.is_none() {
+                        errors = errors + add_error(source, diagnostics, "e3041", "impl missing required trait method", trait_info.methods[mi].name)
+                        mi = mi + 1
+                        continue
+                    }
+
+                    if !method_signature_matches(impl_method.unwrap(), trait_info.methods[mi]) {
+                        errors = errors + add_error(source, diagnostics, "e3043", "impl method signature mismatch", trait_info.methods[mi].name)
+                    }
+                    mi = mi + 1
+                }
+            }
+        }
+        option.none : (),
+    }
+
+    var i = 0
+    while i < impl_item.methods.len() {
+        errors = errors + check_function(impl_item.methods[i], functions, consts, source, diagnostics)
         i = i + 1
     }
     errors
 }
 
-func check_function(function_decl function_decl, vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int32 {
+func find_trait_binding(vec[trait_binding] traits, string name) option[trait_binding] {
+    var i = 0
+    while i < traits.len() {
+        if traits[i].name == name {
+            return option.some(traits[i])
+        }
+        i = i + 1
+    }
+    option.none
+}
+
+func find_impl_method(vec[function_decl] methods, string name) option[function_decl] {
+    var i = 0
+    while i < methods.len() {
+        if methods[i].sig.name == name {
+            return option.some(methods[i])
+        }
+        i = i + 1
+    }
+    option.none
+}
+
+func method_signature_matches(function_decl impl_method, method_binding trait_method) bool {
+    if impl_method.sig.params.len() != trait_method.param_types.len() {
+        return false
+    }
+
+    var i = 0
+    while i < impl_method.sig.params.len() {
+        if !same_type(parse_type(impl_method.sig.params[i].type_name), trait_method.param_types[i]) {
+            return false
+        }
+        i = i + 1
+    }
+
+    var impl_return =
+        switch impl_method.sig.return_type {
+            option.some(type_name) : parse_type(type_name),
+            option.none : "()",
+        }
+
+    same_type(impl_return, trait_method.return_type)
+}
+
+func check_function(function_decl function_decl, vec[function_binding] functions, vec[const_binding] consts, string source, vec[semantic_error] mut diagnostics) int32 {
     if function_decl.body.is_none() {
         return 0
     }
@@ -519,6 +884,16 @@ func check_function(function_decl function_decl, vec[function_binding] functions
 
     var env = vec[type_binding]()
     var i = 0
+    while i < consts.len() {
+        env.push(type_binding {
+            name: consts[i].name,
+            type_name: consts[i].type_name,
+        })
+        ;
+        i = i + 1
+    }
+
+    i = 0
     while i < function_decl.sig.params.len() {
         var param = function_decl.sig.params[i]
         env.push(type_binding {
@@ -695,6 +1070,10 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
         expr::name(value) : {
             var ty = lookup_name_type(env, value.name)
             if is_unknown(ty) {
+                var fn_candidates = lookup_functions(functions, value.name)
+                if fn_candidates.len() > 0 {
+                    return ok_type("fn")
+                }
                 return check_result {
                     type_name: "unknown",
                     errors: add_error(source, diagnostics, "e3010", "undefined identifier", value.name),
@@ -736,18 +1115,28 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
             var target = infer_expr(value.target.value, env, expected_return, functions, source, diagnostics)
             var index = infer_expr(value.index.value, env, expected_return, functions, source, diagnostics)
             var errors = target.errors + index.errors
-            if !types_compatible("int32", index.type_name) {
-                errors = errors + add_error(source, diagnostics, "e3012", "index must be int32", "[")
-            }
+
             if starts_with(target.type_name, "[]") {
+                if !types_compatible("int32", index.type_name) {
+                    errors = errors + add_error(source, diagnostics, "e3012", "index must be int32", "[")
+                }
                 return check_result {
                     type_name: parse_type(slice(target.type_name, 2, len(target.type_name))),
                     errors: errors,
                 }
             }
             if starts_with(target.type_name, "string") {
+                if !types_compatible("int32", index.type_name) {
+                    errors = errors + add_error(source, diagnostics, "e3012", "index must be int32", "[")
+                }
                 return check_result {
                     type_name: "u8",
+                    errors: errors,
+                }
+            }
+            if target.type_name == "map" {
+                return check_result {
+                    type_name: "fn",
                     errors: errors,
                 }
             }
@@ -1302,6 +1691,11 @@ func infer_binary(string op, check_result left, check_result right, string sourc
     if op == "==" || op == "!=" {
         if !types_compatible(left.type_name, right.type_name) {
             errors = errors + add_error(source, diagnostics, "e3020", "equality compare requires same type", op)
+        }
+        if !is_unknown(left.type_name) && !is_unknown(right.type_name) {
+            if !comparable_type(left.type_name) || !comparable_type(right.type_name) {
+                errors = errors + add_error(source, diagnostics, "e3039", "equality compare requires comparable types", op)
+            }
         }
         return check_result {
             type_name: "bool",
