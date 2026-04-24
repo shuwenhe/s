@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_licm_test() int {
-    0
+func licm_test_unit_name() string {
+    "ssa/licm_test.s"
+}
+
+func licm_test_unit_ready() int {
+    1
 }

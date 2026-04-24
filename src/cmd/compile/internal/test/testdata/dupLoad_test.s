@@ -1,5 +1,9 @@
 package compile.internal.test.testdata
 
-func stub_dupload_test() int {
-    0
+func dupLoad_test_unit_name() string {
+    "test/testdata/dupLoad_test.s"
+}
+
+func dupLoad_test_unit_ready() int {
+    1
 }

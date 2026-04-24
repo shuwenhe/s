@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_align_test() int {
-    0
+func align_test_unit_name() string {
+    "test/align_test.s"
+}
+
+func align_test_unit_ready() int {
+    1
 }

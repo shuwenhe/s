@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_eq_test() int {
-    0
+func eq_test_unit_name() string {
+    "test/eq_test.s"
+}
+
+func eq_test_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_reproduciblebuilds_test() int {
-    0
+func reproduciblebuilds_test_unit_name() string {
+    "test/reproduciblebuilds_test.s"
+}
+
+func reproduciblebuilds_test_unit_ready() int {
+    1
 }

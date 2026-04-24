@@ -1,5 +1,9 @@
 package compile.internal.test
 
-func stub_constfold_test() int {
-    0
+func constFold_test_unit_name() string {
+    "test/constFold_test.s"
+}
+
+func constFold_test_unit_ready() int {
+    1
 }

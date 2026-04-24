@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_cse_test() int {
-    0
+func cse_test_unit_name() string {
+    "ssa/cse_test.s"
+}
+
+func cse_test_unit_ready() int {
+    1
 }
