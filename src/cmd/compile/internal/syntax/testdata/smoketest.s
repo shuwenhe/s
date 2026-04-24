@@ -1,5 +1,9 @@
 package compile.internal.syntax.testdata
 
-func stub_smoketest() int {
-    0
+func smoketest_unit_name() string {
+    "syntax/testdata/smoketest.s"
+}
+
+func smoketest_unit_ready() int {
+    1
 }
