@@ -1,5 +1,9 @@
 package compile.internal.staticinit
 
-func stub_sched() int {
-    0
+func sched_unit_name() string {
+    "staticinit/sched.s"
+}
+
+func sched_unit_ready() int {
+    1
 }

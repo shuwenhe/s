@@ -1,5 +1,9 @@
 package compile.internal.syntax.testdata
 
-func stub_fallthrough() int {
-    0
+func fallthrough_unit_name() string {
+    "syntax/testdata/fallthrough.s"
+}
+
+func fallthrough_unit_ready() int {
+    1
 }

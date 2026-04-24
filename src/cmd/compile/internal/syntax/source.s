@@ -1,5 +1,9 @@
 package compile.internal.syntax
 
-func stub_source() int {
-    0
+func source_unit_name() string {
+    "syntax/source.s"
+}
+
+func source_unit_ready() int {
+    1
 }

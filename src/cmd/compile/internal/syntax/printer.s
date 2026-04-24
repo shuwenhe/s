@@ -1,5 +1,9 @@
 package compile.internal.syntax
 
-func stub_printer() int {
-    0
+func printer_unit_name() string {
+    "syntax/printer.s"
+}
+
+func printer_unit_ready() int {
+    1
 }

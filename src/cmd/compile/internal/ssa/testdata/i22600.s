@@ -1,5 +1,9 @@
 package compile.internal.ssa.testdata
 
-func stub_i22600() int {
-    0
+func i22600_unit_name() string {
+    "ssa/testdata/i22600.s"
+}
+
+func i22600_unit_ready() int {
+    1
 }

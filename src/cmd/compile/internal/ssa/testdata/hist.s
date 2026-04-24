@@ -1,5 +1,9 @@
 package compile.internal.ssa.testdata
 
-func stub_hist() int {
-    0
+func hist_unit_name() string {
+    "ssa/testdata/hist.s"
+}
+
+func hist_unit_ready() int {
+    1
 }
