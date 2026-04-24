@@ -1,5 +1,9 @@
 package compile.internal.ssa.testdata
 
-func stub_fma() int {
-    0
+func fma_unit_name() string {
+    "ssa/testdata/fma.s"
+}
+
+func fma_unit_ready() int {
+    1
 }

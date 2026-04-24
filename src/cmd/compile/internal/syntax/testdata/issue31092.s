@@ -1,5 +1,9 @@
 package compile.internal.syntax.testdata
 
-func stub_issue31092() int {
-    0
+func issue31092_unit_name() string {
+    "syntax/testdata/issue31092.s"
+}
+
+func issue31092_unit_ready() int {
+    1
 }

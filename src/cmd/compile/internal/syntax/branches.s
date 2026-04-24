@@ -1,5 +1,9 @@
 package compile.internal.syntax
 
-func stub_branches() int {
-    0
+func branches_unit_name() string {
+    "syntax/branches.s"
+}
+
+func branches_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.ssa.testdata
 
-func stub_inline_dump() int {
-    0
+func inline_dump_unit_name() string {
+    "ssa/testdata/inline-dump.s"
+}
+
+func inline_dump_unit_ready() int {
+    1
 }

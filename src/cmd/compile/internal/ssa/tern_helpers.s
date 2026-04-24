@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_tern_helpers() int {
-    0
+func tern_helpers_unit_name() string {
+    "ssa/tern_helpers.s"
+}
+
+func tern_helpers_unit_ready() int {
+    1
 }
