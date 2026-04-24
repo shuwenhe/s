@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_zcse() int {
-    0
+func zcse_unit_name() string {
+    "ssa/zcse.s"
+}
+
+func zcse_unit_ready() int {
+    1
 }

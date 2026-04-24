@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_trim() int {
-    0
+func trim_unit_name() string {
+    "ssa/trim.s"
+}
+
+func trim_unit_ready() int {
+    1
 }

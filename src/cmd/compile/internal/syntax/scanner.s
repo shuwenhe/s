@@ -1,5 +1,9 @@
 package compile.internal.syntax
 
-func stub_scanner() int {
-    0
+func scanner_unit_name() string {
+    "syntax/scanner.s"
+}
+
+func scanner_unit_ready() int {
+    1
 }
