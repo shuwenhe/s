@@ -1,6 +1,6 @@
 package compile.internal.compiler
 
-use compile.internal.arch.init as arch_init
+use compile.internal.arch.dispatch_init as arch_dispatch_init
 use compile.internal.build.main as build_main
 use internal.buildcfg.check as buildcfg_check
 use internal.buildcfg.goarch as buildcfg_goarch
@@ -12,7 +12,7 @@ func main(vec[string] args) int32 {
         return 2
     }
 
-    var arch_err = arch_init(buildcfg_goarch())
+    var arch_err = arch_dispatch_init(buildcfg_goarch())
     if arch_err != "" {
         return 2
     }

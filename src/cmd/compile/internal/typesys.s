@@ -234,6 +234,50 @@ func compatible_type(string left, string right) bool {
     true
 }
 
+func comparable_type(string ty) bool {
+    var clean = parse_type(ty)
+    if clean == "unknown" || clean == "map" || clean == "fn" {
+        return false
+    }
+
+    if is_builtin_primitive(clean) {
+        return true
+    }
+    if starts_with(clean, "&") {
+        return true
+    }
+    if starts_with(clean, "[]") {
+        return false
+    }
+
+    if is_tuple_type(clean) {
+        var items = extract_tuple_args(clean)
+        var i = 0
+        while i < items.len() {
+            if !comparable_type(items[i]) {
+                return false
+            }
+            i = i + 1
+        }
+        return true
+    }
+
+    var base = base_type_name(clean)
+    if base == "option" || base == "result" {
+        var args = extract_type_args(clean)
+        var i = 0
+        while i < args.len() {
+            if !comparable_type(args[i]) {
+                return false
+            }
+            i = i + 1
+        }
+        return true
+    }
+
+    false
+}
+
 func assignable_type(string target, string source) bool {
     var t = parse_type(target)
     var s = parse_type(source)

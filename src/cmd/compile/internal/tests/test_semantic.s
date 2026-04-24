@@ -204,6 +204,84 @@ func run_semantic_suite(string fixtures_root) int32 {
         return 1
     }
 
+    var non_comparable_eq_src = "package demo.eq\nfunc main() int32 {\n  var a = map[string]func() int32{}\n  var b = map[string]func() int32{}\n  if a == b {\n    1\n  } else {\n    0\n  }\n}"
+    var non_comparable_eq_diags = check_detailed(non_comparable_eq_src)
+    if !has_code(non_comparable_eq_diags, "e3039") {
+        return 1
+    }
+
+    var trait_impl_ok = "package demo.iface\ntrait Adder {\n  func add(int32 a, int32 b) int32;\n}\nimpl Adder for Calc where Calc {\n  func add(int32 a, int32 b) int32 {\n    a + b\n  }\n}\nfunc main() int32 {\n  0\n}"
+    if check_text(trait_impl_ok) != 0 {
+        return 1
+    }
+
+    var trait_impl_missing = "package demo.iface\ntrait Adder {\n  func add(int32 a, int32 b) int32;\n}\nimpl Adder for Calc where Calc {\n  func sub(int32 a, int32 b) int32 {\n    a - b\n  }\n}\nfunc main() int32 {\n  0\n}"
+    var trait_impl_missing_diags = check_detailed(trait_impl_missing)
+    if !has_code(trait_impl_missing_diags, "e3041") {
+        return 1
+    }
+
+    var trait_impl_sig_mismatch = "package demo.iface\ntrait Adder {\n  func add(int32 a, int32 b) int32;\n}\nimpl Adder for Calc where Calc {\n  func add(bool a, int32 b) int32 {\n    b\n  }\n}\nfunc main() int32 {\n  0\n}"
+    var trait_impl_sig_diags = check_detailed(trait_impl_sig_mismatch)
+    if !has_code(trait_impl_sig_diags, "e3043") {
+        return 1
+    }
+
+    var trait_impl_unknown = "package demo.iface\nimpl MissingTrait for Calc where Calc {\n  func add(int32 a, int32 b) int32 {\n    a + b\n  }\n}\nfunc main() int32 {\n  0\n}"
+    var trait_impl_unknown_diags = check_detailed(trait_impl_unknown)
+    if !has_code(trait_impl_unknown_diags, "e3040") {
+        return 1
+    }
+
+    var trait_impl_duplicate_method = "package demo.iface\ntrait Adder {\n  func add(int32 a, int32 b) int32;\n}\nimpl Adder for Calc where Calc {\n  func add(int32 a, int32 b) int32 {\n    a + b\n  }\n  func add(int32 a, int32 b) int32 {\n    a\n  }\n}\nfunc main() int32 {\n  0\n}"
+    var trait_impl_dup_diags = check_detailed(trait_impl_duplicate_method)
+    if !has_code(trait_impl_dup_diags, "e3042") {
+        return 1
+    }
+
+    var const_iota_ok = "package demo.consts\nconst A = iota\nconst B = iota\nfunc main() int32 {\n  A + B\n}"
+    if check_text(const_iota_ok) != 0 {
+        return 1
+    }
+
+    var const_ref_ok = "package demo.consts\nconst Base = 3\nconst Sum = Base + 2\nfunc main() int32 {\n  Sum\n}"
+    if check_text(const_ref_ok) != 0 {
+        return 1
+    }
+
+    var iota_outside_const_fail = "package demo.consts\nfunc main() int32 {\n  iota\n}"
+    if check_text(iota_outside_const_fail) == 0 {
+        return 1
+    }
+
+    var duplicate_const_fail = "package demo.consts\nconst A = 1\nconst A = 2\nfunc main() int32 {\n  A\n}"
+    var duplicate_const_diags = check_detailed(duplicate_const_fail)
+    if !has_code(duplicate_const_diags, "e3044") {
+        return 1
+    }
+
+    var const_group_ok = "package demo.consts\nconst (\n  A = iota\n  B\n  C = A + 1\n)\nfunc main() int32 {\n  C\n}"
+    if check_text(const_group_ok) != 0 {
+        return 1
+    }
+
+    var const_group_missing_init_fail = "package demo.consts\nconst (\n  A\n)\nfunc main() int32 {\n  0\n}"
+    var const_group_missing_diags = check_detailed(const_group_missing_init_fail)
+    if !has_code(const_group_missing_diags, "e3045") {
+        return 1
+    }
+
+    var const_iota_increment_value_ok = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() int32 {\n  C\n}"
+    if check_text(const_iota_increment_value_ok) != 0 {
+        return 1
+    }
+
+    var const_iota_div_zero_fail = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() int32 {\n  0\n}"
+    var const_iota_div_zero_diags = check_detailed(const_iota_div_zero_fail)
+    if !has_code(const_iota_div_zero_diags, "e3046") {
+        return 1
+    }
+
     0
 }
 
