@@ -1,5 +1,9 @@
 package compile.internal.types
 
-func stub_size() int {
-    0
+func size_unit_name() string {
+    "types/size.s"
+}
+
+func size_unit_ready() int {
+    1
 }

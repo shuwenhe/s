@@ -1,5 +1,9 @@
 package compile.internal.types
 
-func stub_universe() int {
-    0
+func universe_unit_name() string {
+    "types/universe.s"
+}
+
+func universe_unit_ready() int {
+    1
 }

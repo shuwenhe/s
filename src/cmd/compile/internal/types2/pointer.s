@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_pointer() int {
-    0
+func pointer_unit_name() string {
+    "types2/pointer.s"
+}
+
+func pointer_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.types
 
-func stub_algkind_string() int {
-    0
+func algkind_string_unit_name() string {
+    "types/algkind_string.s"
+}
+
+func algkind_string_unit_ready() int {
+    1
 }

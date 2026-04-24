@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_stmt() int {
-    0
+func stmt_unit_name() string {
+    "types2/stmt.s"
+}
+
+func stmt_unit_ready() int {
+    1
 }

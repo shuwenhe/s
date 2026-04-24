@@ -1,5 +1,9 @@
 package compile.internal.types2
 
-func stub_slice() int {
-    0
+func slice_unit_name() string {
+    "types2/slice.s"
+}
+
+func slice_unit_ready() int {
+    1
 }
