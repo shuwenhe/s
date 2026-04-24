@@ -20,7 +20,7 @@ struct compile_report {
 func optimize(mut ssa_func f, ssa_config cfg) vec[pass_stat] {
     var stats = vec[pass_stat]()
     if cfg.enable_rewrite {
-        stats.push(pass_stat { name: "rewrite", changed: run_rewrite(f) })
+        stats.push(pass_stat { name: "rewrite", changed: run_rewrite(f, cfg.target_arch) })
     }
     if cfg.enable_cse {
         stats.push(pass_stat { name: "cse", changed: run_cse(f) })
