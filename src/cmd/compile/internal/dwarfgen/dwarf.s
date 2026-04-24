@@ -1,5 +1,9 @@
 package compile.internal.dwarfgen
 
-func stub_dwarf() int {
-    0
+func dwarf_unit_name() string {
+    "dwarfgen/dwarf.s"
+}
+
+func dwarf_unit_ready() int {
+    1
 }

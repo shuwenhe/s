@@ -1,5 +1,9 @@
 package compile.internal.inline.inlheur
 
-func stub_analyze_func_callsites() int {
-    0
+func analyze_func_callsites_unit_name() string {
+    "inline/inlheur/analyze_func_callsites.s"
+}
+
+func analyze_func_callsites_unit_ready() int {
+    1
 }

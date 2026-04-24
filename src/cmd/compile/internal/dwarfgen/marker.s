@@ -1,5 +1,9 @@
 package compile.internal.dwarfgen
 
-func stub_marker() int {
-    0
+func marker_unit_name() string {
+    "dwarfgen/marker.s"
+}
+
+func marker_unit_ready() int {
+    1
 }
