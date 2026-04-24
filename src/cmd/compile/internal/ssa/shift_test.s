@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func shift_test_unit_name() string {
+func shift_test_case_name() string {
     "ssa/shift_test.s"
 }
 
-func shift_test_unit_ready() int {
-    1
+func shift_test_case_pass() int {
+    0
 }

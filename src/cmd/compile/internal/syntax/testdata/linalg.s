@@ -1,9 +1,9 @@
 package compile.internal.syntax.testdata
 
-func linalg_unit_name() string {
+func linalg_case_name() string {
     "syntax/testdata/linalg.s"
 }
 
-func linalg_unit_ready() int {
-    1
+func linalg_case_pass() int {
+    0
 }

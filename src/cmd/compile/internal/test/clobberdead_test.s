@@ -1,9 +1,9 @@
 package compile.internal.test
 
-func clobberdead_test_unit_name() string {
+func clobberdead_test_case_name() string {
     "test/clobberdead_test.s"
 }
 
-func clobberdead_test_unit_ready() int {
-    1
+func clobberdead_test_case_pass() int {
+    0
 }

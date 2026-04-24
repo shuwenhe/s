@@ -1,9 +1,9 @@
 package compile.internal.syntax
 
-func error_test_unit_name() string {
+func error_test_case_name() string {
     "syntax/error_test.s"
 }
 
-func error_test_unit_ready() int {
-    1
+func error_test_case_pass() int {
+    0
 }

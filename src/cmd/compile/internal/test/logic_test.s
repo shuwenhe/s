@@ -1,9 +1,9 @@
 package compile.internal.test
 
-func logic_test_unit_name() string {
+func logic_test_case_name() string {
     "test/logic_test.s"
 }
 
-func logic_test_unit_ready() int {
-    1
+func logic_test_case_pass() int {
+    0
 }

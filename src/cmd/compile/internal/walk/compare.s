@@ -1,9 +1,9 @@
 package compile.internal.walk
 
-func compare_unit_name() string {
+func compare_module_name() string {
     "walk/compare.s"
 }
 
-func compare_unit_ready() int {
-    1
+func compare_module_apply() int {
+    0
 }

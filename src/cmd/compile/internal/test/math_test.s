@@ -1,9 +1,9 @@
 package compile.internal.test
 
-func math_test_unit_name() string {
+func math_test_case_name() string {
     "test/math_test.s"
 }
 
-func math_test_unit_ready() int {
-    1
+func math_test_case_pass() int {
+    0
 }

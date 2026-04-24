@@ -1,9 +1,9 @@
 package compile.internal.walk
 
-func range_unit_name() string {
+func range_module_name() string {
     "walk/range.s"
 }
 
-func range_unit_ready() int {
-    1
+func range_module_apply() int {
+    0
 }

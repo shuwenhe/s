@@ -1,9 +1,9 @@
 package compile.internal.types
 
-func size_unit_name() string {
+func size_module_name() string {
     "types/size.s"
 }
 
-func size_unit_ready() int {
-    1
+func size_module_apply() int {
+    0
 }

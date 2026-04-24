@@ -1,9 +1,9 @@
 package compile.internal.test
 
-func moveload_test_unit_name() string {
+func moveload_test_case_name() string {
     "test/moveload_test.s"
 }
 
-func moveload_test_unit_ready() int {
-    1
+func moveload_test_case_pass() int {
+    0
 }

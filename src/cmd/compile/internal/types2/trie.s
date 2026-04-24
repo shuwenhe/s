@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func trie_unit_name() string {
+func trie_module_name() string {
     "types2/trie.s"
 }
 
-func trie_unit_ready() int {
-    1
+func trie_module_apply() int {
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func context_test_unit_name() string {
+func context_test_case_name() string {
     "types2/context_test.s"
 }
 
-func context_test_unit_ready() int {
-    1
+func context_test_case_pass() int {
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.ir
 
-func abi_unit_name() string {
+func abi_module_name() string {
     "ir/abi.s"
 }
 
-func abi_unit_ready() int {
-    1
+func abi_module_apply() int {
+    0
 }

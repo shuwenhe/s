@@ -1,9 +1,9 @@
 package compile.internal.inline.inlheur
 
-func analyze_unit_name() string {
+func analyze_module_name() string {
     "inline/inlheur/analyze.s"
 }
 
-func analyze_unit_ready() int {
-    1
+func analyze_module_apply() int {
+    0
 }

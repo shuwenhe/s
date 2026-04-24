@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func object_test_unit_name() string {
+func object_test_case_name() string {
     "types2/object_test.s"
 }
 
-func object_test_unit_ready() int {
-    1
+func object_test_case_pass() int {
+    0
 }

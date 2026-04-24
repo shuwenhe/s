@@ -1,9 +1,9 @@
 package compile.internal.syntax.testdata
 
-func chans_unit_name() string {
+func chans_case_name() string {
     "syntax/testdata/chans.s"
 }
 
-func chans_unit_ready() int {
-    1
+func chans_case_pass() int {
+    0
 }

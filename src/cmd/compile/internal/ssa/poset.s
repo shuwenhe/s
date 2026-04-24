@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func poset_unit_name() string {
+func poset_module_name() string {
     "ssa/poset.s"
 }
 
-func poset_unit_ready() int {
-    1
+func poset_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

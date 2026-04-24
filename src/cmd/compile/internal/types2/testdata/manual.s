@@ -1,9 +1,9 @@
 package compile.internal.types2.testdata
 
-func manual_unit_name() string {
+func manual_case_name() string {
     "types2/testdata/manual.s"
 }
 
-func manual_unit_ready() int {
-    1
+func manual_case_pass() int {
+    0
 }

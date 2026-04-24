@@ -1,9 +1,9 @@
 package compile.internal.ir
 
-func dump_test_unit_name() string {
+func dump_test_case_name() string {
     "ir/dump_test.s"
 }
 
-func dump_test_unit_ready() int {
-    1
+func dump_test_case_pass() int {
+    0
 }

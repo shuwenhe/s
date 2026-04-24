@@ -1,9 +1,9 @@
 package compile.internal.test.testdata.mergelocals
 
-func integration_unit_name() string {
+func integration_case_name() string {
     "test/testdata/mergelocals/integration.s"
 }
 
-func integration_unit_ready() int {
-    1
+func integration_case_pass() int {
+    0
 }

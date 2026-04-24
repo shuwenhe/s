@@ -1,9 +1,9 @@
 package compile.internal.ssa._gen
 
-func MIPSOps_unit_name() string {
+func MIPSOps_rule_name() string {
     "ssa/_gen/MIPSOps.s"
 }
 
-func MIPSOps_unit_ready() int {
-    1
+func MIPSOps_rule_count() int {
+    0
 }

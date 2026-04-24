@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func flagalloc_unit_name() string {
+func flagalloc_module_name() string {
     "ssa/flagalloc.s"
 }
 
-func flagalloc_unit_ready() int {
-    1
+func flagalloc_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

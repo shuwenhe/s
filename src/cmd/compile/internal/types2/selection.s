@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func selection_unit_name() string {
+func selection_module_name() string {
     "types2/selection.s"
 }
 
-func selection_unit_ready() int {
-    1
+func selection_module_apply() int {
+    0
 }

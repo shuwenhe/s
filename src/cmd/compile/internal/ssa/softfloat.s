@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func softfloat_unit_name() string {
+func softfloat_module_name() string {
     "ssa/softfloat.s"
 }
 
-func softfloat_unit_ready() int {
-    1
+func softfloat_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

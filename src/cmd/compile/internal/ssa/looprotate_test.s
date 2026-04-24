@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func looprotate_test_unit_name() string {
+func looprotate_test_case_name() string {
     "ssa/looprotate_test.s"
 }
 
-func looprotate_test_unit_ready() int {
-    1
+func looprotate_test_case_pass() int {
+    0
 }

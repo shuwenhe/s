@@ -1,9 +1,9 @@
 package compile.internal.walk
 
-func order_unit_name() string {
+func order_module_name() string {
     "walk/order.s"
 }
 
-func order_unit_ready() int {
-    1
+func order_module_apply() int {
+    0
 }

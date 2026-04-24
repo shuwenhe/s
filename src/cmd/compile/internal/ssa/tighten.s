@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func tighten_unit_name() string {
+func tighten_module_name() string {
     "ssa/tighten.s"
 }
 
-func tighten_unit_ready() int {
-    1
+func tighten_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

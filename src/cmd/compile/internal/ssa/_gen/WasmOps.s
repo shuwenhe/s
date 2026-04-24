@@ -1,9 +1,9 @@
 package compile.internal.ssa._gen
 
-func WasmOps_unit_name() string {
+func WasmOps_rule_name() string {
     "ssa/_gen/WasmOps.s"
 }
 
-func WasmOps_unit_ready() int {
-    1
+func WasmOps_rule_count() int {
+    0
 }

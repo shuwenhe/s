@@ -1,9 +1,9 @@
 package compile.internal.ir
 
-func mini_unit_name() string {
+func mini_module_name() string {
     "ir/mini.s"
 }
 
-func mini_unit_ready() int {
-    1
+func mini_module_apply() int {
+    0
 }

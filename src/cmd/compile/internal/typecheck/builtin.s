@@ -1,9 +1,9 @@
 package compile.internal.typecheck
 
-func builtin_unit_name() string {
+func builtin_module_name() string {
     "typecheck/builtin.s"
 }
 
-func builtin_unit_ready() int {
-    1
+func builtin_module_apply() int {
+    0
 }

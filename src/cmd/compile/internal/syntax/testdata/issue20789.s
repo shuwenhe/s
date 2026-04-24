@@ -1,9 +1,9 @@
 package compile.internal.syntax.testdata
 
-func issue20789_unit_name() string {
+func issue20789_case_name() string {
     "syntax/testdata/issue20789.s"
 }
 
-func issue20789_unit_ready() int {
-    1
+func issue20789_case_pass() int {
+    0
 }

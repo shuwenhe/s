@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func zeroextension_test_unit_name() string {
+func zeroextension_test_case_name() string {
     "ssa/zeroextension_test.s"
 }
 
-func zeroextension_test_unit_ready() int {
-    1
+func zeroextension_test_case_pass() int {
+    0
 }

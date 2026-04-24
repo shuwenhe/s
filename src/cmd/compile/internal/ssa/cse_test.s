@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func cse_test_unit_name() string {
+func cse_test_case_name() string {
     "ssa/cse_test.s"
 }
 
-func cse_test_unit_ready() int {
-    1
+func cse_test_case_pass() int {
+    0
 }

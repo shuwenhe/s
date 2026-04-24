@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func memcombine_unit_name() string {
+func memcombine_module_name() string {
     "ssa/memcombine.s"
 }
 
-func memcombine_unit_ready() int {
-    1
+func memcombine_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

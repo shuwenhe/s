@@ -1,9 +1,9 @@
 package compile.internal.ssa._gen
 
-func rulegen_unit_name() string {
+func rulegen_rule_name() string {
     "ssa/_gen/rulegen.s"
 }
 
-func rulegen_unit_ready() int {
-    1
+func rulegen_rule_count() int {
+    0
 }

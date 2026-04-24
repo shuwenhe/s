@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func branchelim_unit_name() string {
+func branchelim_module_name() string {
     "ssa/branchelim.s"
 }
 
-func branchelim_unit_ready() int {
-    1
+func branchelim_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }
