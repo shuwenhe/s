@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_sparsemappos() int {
-    0
+func sparsemappos_unit_name() string {
+    "ssa/sparsemappos.s"
+}
+
+func sparsemappos_unit_ready() int {
+    1
 }

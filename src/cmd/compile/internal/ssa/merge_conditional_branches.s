@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_merge_conditional_branches() int {
-    0
+func merge_conditional_branches_unit_name() string {
+    "ssa/merge_conditional_branches.s"
+}
+
+func merge_conditional_branches_unit_ready() int {
+    1
 }

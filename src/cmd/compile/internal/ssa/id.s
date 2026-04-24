@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_id() int {
-    0
+func id_unit_name() string {
+    "ssa/id.s"
+}
+
+func id_unit_ready() int {
+    1
 }

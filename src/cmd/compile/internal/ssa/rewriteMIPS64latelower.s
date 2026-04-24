@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_rewritemips64latelower() int {
-    0
+func rewriteMIPS64latelower_unit_name() string {
+    "ssa/rewriteMIPS64latelower.s"
+}
+
+func rewriteMIPS64latelower_unit_ready() int {
+    1
 }

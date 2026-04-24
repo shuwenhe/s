@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_opgen() int {
-    0
+func opGen_unit_name() string {
+    "ssa/opGen.s"
+}
+
+func opGen_unit_ready() int {
+    1
 }

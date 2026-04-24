@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_poset() int {
-    0
+func poset_unit_name() string {
+    "ssa/poset.s"
+}
+
+func poset_unit_ready() int {
+    1
 }

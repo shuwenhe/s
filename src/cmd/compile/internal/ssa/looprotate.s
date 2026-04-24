@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_looprotate() int {
-    0
+func looprotate_unit_name() string {
+    "ssa/looprotate.s"
+}
+
+func looprotate_unit_ready() int {
+    1
 }

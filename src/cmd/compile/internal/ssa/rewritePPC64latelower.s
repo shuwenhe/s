@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_rewriteppc64latelower() int {
-    0
+func rewritePPC64latelower_unit_name() string {
+    "ssa/rewritePPC64latelower.s"
+}
+
+func rewritePPC64latelower_unit_ready() int {
+    1
 }

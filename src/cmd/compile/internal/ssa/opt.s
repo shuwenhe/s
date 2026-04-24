@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_opt() int {
-    0
+func opt_unit_name() string {
+    "ssa/opt.s"
+}
+
+func opt_unit_ready() int {
+    1
 }
