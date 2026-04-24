@@ -1,5 +1,9 @@
 package compile.internal.inline
 
-func stub_inl() int {
-    0
+func inl_unit_name() string {
+    "inline/inl.s"
+}
+
+func inl_unit_ready() int {
+    1
 }

@@ -1,5 +1,9 @@
 package compile.internal.escape
 
-func stub_graph() int {
-    0
+func graph_unit_name() string {
+    "escape/graph.s"
+}
+
+func graph_unit_ready() int {
+    1
 }

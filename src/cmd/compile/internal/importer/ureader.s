@@ -1,5 +1,9 @@
 package compile.internal.importer
 
-func stub_ureader() int {
-    0
+func ureader_unit_name() string {
+    "importer/ureader.s"
+}
+
+func ureader_unit_ready() int {
+    1
 }

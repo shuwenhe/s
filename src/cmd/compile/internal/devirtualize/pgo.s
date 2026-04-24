@@ -1,5 +1,9 @@
 package compile.internal.devirtualize
 
-func stub_pgo() int {
-    0
+func pgo_unit_name() string {
+    "devirtualize/pgo.s"
+}
+
+func pgo_unit_ready() int {
+    1
 }
