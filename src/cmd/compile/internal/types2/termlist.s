@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func termlist_unit_name() string {
+func termlist_module_name() string {
     "types2/termlist.s"
 }
 
-func termlist_unit_ready() int {
-    1
+func termlist_module_apply() int {
+    0
 }

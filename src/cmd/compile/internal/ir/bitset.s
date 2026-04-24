@@ -1,9 +1,9 @@
 package compile.internal.ir
 
-func bitset_unit_name() string {
+func bitset_module_name() string {
     "ir/bitset.s"
 }
 
-func bitset_unit_ready() int {
-    1
+func bitset_module_apply() int {
+    0
 }

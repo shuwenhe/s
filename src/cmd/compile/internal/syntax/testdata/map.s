@@ -1,9 +1,9 @@
 package compile.internal.syntax.testdata
 
-func map_unit_name() string {
+func map_case_name() string {
     "syntax/testdata/map.s"
 }
 
-func map_unit_ready() int {
-    1
+func map_case_pass() int {
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.types
 
-func type_unit_name() string {
+func type_module_name() string {
     "types/type.s"
 }
 
-func type_unit_ready() int {
-    1
+func type_module_apply() int {
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func rewriteLOONG64latelower_unit_name() string {
+func rewriteLOONG64latelower_rule_name() string {
     "ssa/rewriteLOONG64latelower.s"
 }
 
-func rewriteLOONG64latelower_unit_ready() int {
-    1
+func rewriteLOONG64latelower_rule_count() int {
+    0
 }

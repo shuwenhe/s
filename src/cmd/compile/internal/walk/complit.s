@@ -1,9 +1,9 @@
 package compile.internal.walk
 
-func complit_unit_name() string {
+func complit_module_name() string {
     "walk/complit.s"
 }
 
-func complit_unit_ready() int {
-    1
+func complit_module_apply() int {
+    0
 }

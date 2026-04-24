@@ -1,9 +1,9 @@
 package compile.internal.typecheck
 
-func iimport_unit_name() string {
+func iimport_module_name() string {
     "typecheck/iimport.s"
 }
 
-func iimport_unit_ready() int {
-    1
+func iimport_module_apply() int {
+    0
 }

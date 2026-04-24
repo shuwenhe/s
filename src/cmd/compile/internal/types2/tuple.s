@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func tuple_unit_name() string {
+func tuple_module_name() string {
     "types2/tuple.s"
 }
 
-func tuple_unit_ready() int {
-    1
+func tuple_module_apply() int {
+    0
 }

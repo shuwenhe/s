@@ -1,9 +1,9 @@
 package compile.internal.test
 
-func intrinsics_test_unit_name() string {
+func intrinsics_test_case_name() string {
     "test/intrinsics_test.s"
 }
 
-func intrinsics_test_unit_ready() int {
-    1
+func intrinsics_test_case_pass() int {
+    0
 }

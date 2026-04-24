@@ -1,9 +1,9 @@
 package compile.internal.ssa.testdata
 
-func infloop_unit_name() string {
+func infloop_case_name() string {
     "ssa/testdata/infloop.s"
 }
 
-func infloop_unit_ready() int {
-    1
+func infloop_case_pass() int {
+    0
 }

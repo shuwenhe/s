@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func pointer_unit_name() string {
+func pointer_module_name() string {
     "types2/pointer.s"
 }
 
-func pointer_unit_ready() int {
-    1
+func pointer_module_apply() int {
+    0
 }

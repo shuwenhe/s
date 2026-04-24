@@ -1,9 +1,9 @@
 package compile.internal.inline.inlheur
 
-func callsite_unit_name() string {
+func callsite_module_name() string {
     "inline/inlheur/callsite.s"
 }
 
-func callsite_unit_ready() int {
-    1
+func callsite_module_apply() int {
+    0
 }

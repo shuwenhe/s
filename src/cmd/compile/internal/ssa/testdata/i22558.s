@@ -1,9 +1,9 @@
 package compile.internal.ssa.testdata
 
-func i22558_unit_name() string {
+func i22558_case_name() string {
     "ssa/testdata/i22558.s"
 }
 
-func i22558_unit_ready() int {
-    1
+func i22558_case_pass() int {
+    0
 }

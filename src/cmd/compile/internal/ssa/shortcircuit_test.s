@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func shortcircuit_test_unit_name() string {
+func shortcircuit_test_case_name() string {
     "ssa/shortcircuit_test.s"
 }
 
-func shortcircuit_test_unit_ready() int {
-    1
+func shortcircuit_test_case_pass() int {
+    0
 }

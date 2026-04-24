@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func lca_unit_name() string {
+func lca_module_name() string {
     "ssa/lca.s"
 }
 
-func lca_unit_ready() int {
-    1
+func lca_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

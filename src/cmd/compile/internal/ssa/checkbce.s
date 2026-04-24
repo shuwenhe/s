@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func checkbce_unit_name() string {
+func checkbce_module_name() string {
     "ssa/checkbce.s"
 }
 
-func checkbce_unit_ready() int {
-    1
+func checkbce_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

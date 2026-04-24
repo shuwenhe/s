@@ -1,9 +1,9 @@
 package compile.internal.ir
 
-func fmt_unit_name() string {
+func fmt_module_name() string {
     "ir/fmt.s"
 }
 
-func fmt_unit_ready() int {
-    1
+func fmt_module_apply() int {
+    0
 }

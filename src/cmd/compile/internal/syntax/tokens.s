@@ -1,9 +1,9 @@
 package compile.internal.syntax
 
-func tokens_unit_name() string {
+func tokens_module_name() string {
     "syntax/tokens.s"
 }
 
-func tokens_unit_ready() int {
-    1
+func tokens_module_apply() int {
+    0
 }

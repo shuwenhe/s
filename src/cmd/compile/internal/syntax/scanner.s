@@ -1,9 +1,9 @@
 package compile.internal.syntax
 
-func scanner_unit_name() string {
+func scanner_module_name() string {
     "syntax/scanner.s"
 }
 
-func scanner_unit_ready() int {
-    1
+func scanner_module_apply() int {
+    0
 }

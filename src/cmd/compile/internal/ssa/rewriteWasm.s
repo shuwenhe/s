@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func rewriteWasm_unit_name() string {
+func rewriteWasm_rule_name() string {
     "ssa/rewriteWasm.s"
 }
 
-func rewriteWasm_unit_ready() int {
-    1
+func rewriteWasm_rule_count() int {
+    0
 }

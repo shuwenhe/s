@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func conversions_unit_name() string {
+func conversions_module_name() string {
     "types2/conversions.s"
 }
 
-func conversions_unit_ready() int {
-    1
+func conversions_module_apply() int {
+    0
 }

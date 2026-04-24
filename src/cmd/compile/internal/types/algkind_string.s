@@ -1,9 +1,9 @@
 package compile.internal.types
 
-func algkind_string_unit_name() string {
+func algkind_string_module_name() string {
     "types/algkind_string.s"
 }
 
-func algkind_string_unit_ready() int {
-    1
+func algkind_string_module_apply() int {
+    0
 }

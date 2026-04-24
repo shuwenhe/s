@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func gcsizes_unit_name() string {
+func gcsizes_module_name() string {
     "types2/gcsizes.s"
 }
 
-func gcsizes_unit_ready() int {
-    1
+func gcsizes_module_apply() int {
+    0
 }

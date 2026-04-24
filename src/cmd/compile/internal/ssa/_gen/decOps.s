@@ -1,9 +1,9 @@
 package compile.internal.ssa._gen
 
-func decOps_unit_name() string {
+func decOps_rule_name() string {
     "ssa/_gen/decOps.s"
 }
 
-func decOps_unit_ready() int {
-    1
+func decOps_rule_count() int {
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func call_unit_name() string {
+func call_module_name() string {
     "types2/call.s"
 }
 
-func call_unit_ready() int {
-    1
+func call_module_apply() int {
+    0
 }

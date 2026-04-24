@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func validtype_unit_name() string {
+func validtype_module_name() string {
     "types2/validtype.s"
 }
 
-func validtype_unit_ready() int {
-    1
+func validtype_module_apply() int {
+    0
 }

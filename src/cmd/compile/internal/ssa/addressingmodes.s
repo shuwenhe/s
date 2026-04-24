@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func addressingmodes_unit_name() string {
+func addressingmodes_module_name() string {
     "ssa/addressingmodes.s"
 }
 
-func addressingmodes_unit_ready() int {
-    1
+func addressingmodes_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

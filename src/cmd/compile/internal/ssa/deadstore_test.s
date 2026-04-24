@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func deadstore_test_unit_name() string {
+func deadstore_test_case_name() string {
     "ssa/deadstore_test.s"
 }
 
-func deadstore_test_unit_ready() int {
-    1
+func deadstore_test_case_pass() int {
+    0
 }

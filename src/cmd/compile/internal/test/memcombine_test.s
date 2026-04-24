@@ -1,9 +1,9 @@
 package compile.internal.test
 
-func memcombine_test_unit_name() string {
+func memcombine_test_case_name() string {
     "test/memcombine_test.s"
 }
 
-func memcombine_test_unit_ready() int {
-    1
+func memcombine_test_case_pass() int {
+    0
 }

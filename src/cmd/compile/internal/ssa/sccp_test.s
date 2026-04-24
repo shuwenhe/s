@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func sccp_test_unit_name() string {
+func sccp_test_case_name() string {
     "ssa/sccp_test.s"
 }
 
-func sccp_test_unit_ready() int {
-    1
+func sccp_test_case_pass() int {
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func api_unit_name() string {
+func api_module_name() string {
     "types2/api.s"
 }
 
-func api_unit_ready() int {
-    1
+func api_module_apply() int {
+    0
 }

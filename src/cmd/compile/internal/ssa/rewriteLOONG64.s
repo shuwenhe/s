@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func rewriteLOONG64_unit_name() string {
+func rewriteLOONG64_rule_name() string {
     "ssa/rewriteLOONG64.s"
 }
 
-func rewriteLOONG64_unit_ready() int {
-    1
+func rewriteLOONG64_rule_count() int {
+    0
 }

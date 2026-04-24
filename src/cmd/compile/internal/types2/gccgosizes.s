@@ -1,9 +1,9 @@
 package compile.internal.types2
 
-func gccgosizes_unit_name() string {
+func gccgosizes_module_name() string {
     "types2/gccgosizes.s"
 }
 
-func gccgosizes_unit_ready() int {
-    1
+func gccgosizes_module_apply() int {
+    0
 }

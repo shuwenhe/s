@@ -1,9 +1,9 @@
 package compile.internal.test.testdata.mysort
 
-func mysort_unit_name() string {
+func mysort_case_name() string {
     "test/testdata/mysort/mysort.s"
 }
 
-func mysort_unit_ready() int {
-    1
+func mysort_case_pass() int {
+    0
 }

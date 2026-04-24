@@ -1,9 +1,9 @@
 package compile.internal.test
 
-func memoverlap_test_unit_name() string {
+func memoverlap_test_case_name() string {
     "test/memoverlap_test.s"
 }
 
-func memoverlap_test_unit_ready() int {
-    1
+func memoverlap_test_case_pass() int {
+    0
 }

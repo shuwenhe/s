@@ -1,9 +1,9 @@
 package compile.internal.test.testdata.gen
 
-func arithBoundaryGen_unit_name() string {
+func arithBoundaryGen_case_name() string {
     "test/testdata/gen/arithBoundaryGen.s"
 }
 
-func arithBoundaryGen_unit_ready() int {
-    1
+func arithBoundaryGen_case_pass() int {
+    0
 }

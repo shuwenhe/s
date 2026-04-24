@@ -1,9 +1,10 @@
 package compile.internal.ssa
 
-func deadstore_unit_name() string {
+func deadstore_module_name() string {
     "ssa/deadstore.s"
 }
 
-func deadstore_unit_ready() int {
-    1
+func deadstore_module_apply(mut ssa_func f) int {
+    recompute_uses(f)
+    0
 }

@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func rewriteRISCV64latelower_unit_name() string {
+func rewriteRISCV64latelower_rule_name() string {
     "ssa/rewriteRISCV64latelower.s"
 }
 
-func rewriteRISCV64latelower_unit_ready() int {
-    1
+func rewriteRISCV64latelower_rule_count() int {
+    0
 }

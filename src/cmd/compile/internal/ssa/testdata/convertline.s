@@ -1,9 +1,9 @@
 package compile.internal.ssa.testdata
 
-func convertline_unit_name() string {
+func convertline_case_name() string {
     "ssa/testdata/convertline.s"
 }
 
-func convertline_unit_ready() int {
-    1
+func convertline_case_pass() int {
+    0
 }
