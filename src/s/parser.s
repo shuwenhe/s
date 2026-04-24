@@ -457,6 +457,7 @@ impl parser {
         self.at_keyword("var")
             || self.at_keyword("return")
             || self.at_keyword("defer")
+            || self.at_keyword("sroutine")
             || self.at_cfor_start()
             || self.looks_like_typed_var_stmt()
             || self.looks_like_increment_stmt()
@@ -470,6 +471,9 @@ impl parser {
         }
         if self.at_keyword("defer") {
             return result::ok(stmt::defer(self.parse_defer_stmt()?))
+        }
+        if self.at_keyword("sroutine") {
+            return result::ok(stmt::sroutine(self.parse_sroutine_stmt()?))
         }
         if self.at_keyword("return") {
             return result::ok(stmt::return(self.parse_return_stmt()?))
@@ -532,6 +536,13 @@ impl parser {
         var expr = self.parse_expr()?
         self.eat_symbol(";")
         result::ok(defer_stmt { expr: expr })
+    }
+
+    func parse_sroutine_stmt(mut self) result[sroutine_stmt, parse_error] {
+        self.expect_keyword("sroutine")?
+        var expr = self.parse_expr()?
+        self.eat_symbol(";")
+        result::ok(sroutine_stmt { expr: expr })
     }
 
     func parse_typed_var_stmt(mut self, bool consume_semicolon) result[var_stmt, parse_error] {

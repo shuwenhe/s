@@ -307,6 +307,9 @@ func convert_stmt(stmt s, vec[const_rewrite_entry] const_entries) ir_ast.stmt_ir
         stmt.defer(defer_stmt) : {
             ir_ast.stmt_ir::expr(ir_ast.expr_stmt { expr: convert_expr(defer_stmt.expr, const_entries) })
         }
+        stmt.sroutine(sroutine_stmt) : {
+            ir_ast.stmt_ir::expr(ir_ast.expr_stmt { expr: convert_expr(sroutine_stmt.expr, const_entries) })
+        }
     }
 }
 
@@ -454,6 +457,7 @@ func count_const_hits_stmt(stmt s, vec[const_rewrite_entry] const_entries) int32
         }
         stmt.expr(expr_stmt) : count_const_hits_expr(expr_stmt.expr, const_entries),
         stmt.defer(defer_stmt) : count_const_hits_expr(defer_stmt.expr, const_entries),
+        stmt.sroutine(sroutine_stmt) : count_const_hits_expr(sroutine_stmt.expr, const_entries),
         stmt.c_for(c_for_stmt) : {
             count_const_hits_stmt(c_for_stmt.init.value, const_entries)
                 + count_const_hits_expr(c_for_stmt.condition, const_entries)
@@ -562,6 +566,10 @@ func stmt_to_expr(stmt s, vec[const_rewrite_entry] const_entries) ir_ast.expr_ir
         stmt.defer(defer_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
             callee: "stmt.defer",
             args: vec[ir_ast.expr_ir] { convert_expr(defer_stmt.expr, const_entries) },
+        }),
+        stmt.sroutine(sroutine_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
+            callee: "stmt.sroutine",
+            args: vec[ir_ast.expr_ir] { convert_expr(sroutine_stmt.expr, const_entries) },
         }),
         stmt.c_for(c_for_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
             callee: "stmt.c_for",
@@ -736,6 +744,7 @@ func dump_expr_stmt(stmt s, vec[const_rewrite_entry] const_entries) string {
         stmt.return(return_stmt) : "return",
         stmt.expr(expr_stmt) : "expr " + substitute_const_text(dump_expr(expr_stmt.expr), const_entries),
         stmt.defer(defer_stmt) : "defer " + substitute_const_text(dump_expr(defer_stmt.expr), const_entries),
+        stmt.sroutine(sroutine_stmt) : "sroutine " + substitute_const_text(dump_expr(sroutine_stmt.expr), const_entries),
         stmt.c_for(c_for_stmt) : "c_for",
     }
 }
