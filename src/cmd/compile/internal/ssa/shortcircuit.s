@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_shortcircuit() int {
-    0
+func shortcircuit_unit_name() string {
+    "ssa/shortcircuit.s"
+}
+
+func shortcircuit_unit_ready() int {
+    1
 }

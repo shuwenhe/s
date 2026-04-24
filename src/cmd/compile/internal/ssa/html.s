@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_html() int {
-    0
+func html_unit_name() string {
+    "ssa/html.s"
+}
+
+func html_unit_ready() int {
+    1
 }

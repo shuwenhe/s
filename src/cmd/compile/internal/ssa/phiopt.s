@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_phiopt() int {
-    0
+func phiopt_unit_name() string {
+    "ssa/phiopt.s"
+}
+
+func phiopt_unit_ready() int {
+    1
 }
