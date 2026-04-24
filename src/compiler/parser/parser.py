@@ -569,6 +569,9 @@ class parser :
         if self ._at_keyword ("false"):
             self ._advance ()
             return boolexpr (value =False )
+        if self ._at_keyword ("nil"):
+            self ._advance ()
+            return nameexpr (name ="nil")
         if self ._at_symbol ("{"):
             return self ._parse_block_expr ()
         if self ._eat_symbol ("("):

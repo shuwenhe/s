@@ -412,7 +412,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     if const_prop > 0 {
         rewritten = rewritten + " constprop=" + to_string(const_prop)
     }
-    var const_fold_hits = estimate_const_fold_hits_text(rewritten)
+    var const_fold_hits = estimate_const_fold_hits_graph(graph)
     rewritten = rewritten + " constfold=" + to_string(const_fold_hits)
     rewritten = rewritten + " ipo=" + to_string(ipo_synergy)
     rewritten = rewritten + " pass.rm_unreachable=" + to_string(pass.removed_unreachable_blocks)
@@ -441,12 +441,36 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     }
 }
 
-func estimate_const_fold_hits_text(string rewritten_mir) int32 {
-    var hits = count_occurrences(rewritten_mir, "yield ")
-    if hits < 0 {
+func estimate_const_fold_hits_graph(mir_graph graph) int32 {
+    var prefix = "constfold.hits="
+    var i = 0
+    while i < graph.trace.len() {
+        var line = trim_spaces(graph.trace[i])
+        if starts_with_local(line, prefix) {
+            return parse_non_negative_int(slice(line, len(prefix), len(line)))
+        }
+        i = i + 1
+    }
+    0
+}
+
+func parse_non_negative_int(string raw) int32 {
+    var text = trim_spaces(raw)
+    if text == "" {
         return 0
     }
-    hits
+    var value = 0
+    var i = 0
+    while i < len(text) {
+        var ch = char_at(text, i)
+        var digit = digit_value(ch)
+        if digit < 0 {
+            return 0
+        }
+        value = value * 10 + digit
+        i = i + 1
+    }
+    value
 }
 
 struct midend_pass_result {
@@ -2652,6 +2676,10 @@ func eval_const_value_expr(expr value, vec[binding] const_env, int32 iota_value)
 }
 
 func lookup_name_or_function(vec[binding] env, source_file source, string name) result[value, backend_error] {
+    if name == "nil" {
+        return result::ok(value.unit(unit_value {}))
+    }
+
     var local = lookup_value(env, name)
     if local.is_ok() {
         return local

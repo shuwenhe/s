@@ -24,6 +24,7 @@ use s.item
 use s.pattern
 use s.stmt
 use s.parse_source
+use s.param_decl
 use std.option.option
 use std.prelude.char_at
 use std.prelude.len
@@ -37,6 +38,9 @@ struct type_binding {
 
 struct function_binding {
     string name
+    string owner_type
+    bool has_receiver
+    string receiver_mode
     vec[string] generic_names
     vec[string] param_types
     string return_type
@@ -44,6 +48,7 @@ struct function_binding {
 
 struct method_binding {
     string name
+    string receiver_mode
     vec[string] param_types
     string return_type
 }
@@ -148,7 +153,32 @@ func run_preparse_semantic_completeness_checks(string source, vec[semantic_error
     var ignored0 = validate_control_flow_semantics(source, diagnostics)
     var ignored1 = validate_recovery_semantics(source, diagnostics)
     var ignored2 = validate_method_interface_semantics(source, diagnostics)
-    var ignored3 = validate_semantic_proof_chain(source, diagnostics)
+    var ignored3 = validate_concurrency_semantics(source, diagnostics)
+    var ignored4 = validate_semantic_proof_chain(source, diagnostics)
+}
+
+func validate_concurrency_semantics(string source, vec[semantic_error] mut diagnostics) int32 {
+    var errors = 0
+    var go_count = count_token_text(source, "\ngo(") + count_token_text(source, "\ngo ")
+    var make_count = count_token_text(source, "chan_make(")
+    var send_count = count_token_text(source, "chan_send(")
+    var recv_count = count_token_text(source, "chan_recv(")
+    var close_count = count_token_text(source, "chan_close(")
+    var select_count = count_token_text(source, "select_recv(") + count_token_text(source, "select_recv_default(")
+
+    if go_count > 0 && make_count == 0 && select_count == 0 {
+        errors = errors + add_error(source, diagnostics, "e3047", "go routine launched without channel/select coordination", "go")
+    }
+    if select_count > 0 && recv_count == 0 {
+        errors = errors + add_error(source, diagnostics, "e3048", "select requires at least one receive path", "select")
+    }
+    if close_count > make_count {
+        errors = errors + add_error(source, diagnostics, "e3049", "channel close count exceeds channel creation count", "chan_close")
+    }
+    if send_count > 0 && recv_count == 0 && select_count == 0 {
+        errors = errors + add_error(source, diagnostics, "e3050", "channel send path has no receive/select consumer", "chan_send")
+    }
+    errors
 }
 
 func validate_control_flow_semantics(string source, vec[semantic_error] mut diagnostics) int32 {
@@ -447,13 +477,13 @@ func validate_function_set(vec[function_binding] functions, string source, vec[s
     var i = 0
     var has_main = false
     while i < functions.len() {
-        if functions[i].name == "main" {
+        if !functions[i].has_receiver && functions[i].name == "main" {
             has_main = true
         }
 
         var j = i + 1
         while j < functions.len() {
-            if functions[i].name == functions[j].name {
+            if !functions[i].has_receiver && !functions[j].has_receiver && functions[i].name == functions[j].name {
                 errors = errors + add_error(source, diagnostics, "e3010", "duplicate function declaration", functions[i].name)
             }
             j = j + 1
@@ -477,6 +507,13 @@ func collect_functions(vec[item] items) vec[function_binding] {
     while i < items.len() {
         switch items[i] {
             item.function(function_decl) : out.push(make_function_binding(function_decl)),
+            item.impl(impl_decl) : {
+                var mi = 0
+                while mi < impl_decl.methods.len() {
+                    out.push(make_method_binding(impl_decl.target, impl_decl.methods[mi]))
+                    mi = mi + 1
+                }
+            }
             _ : {},
         }
         i = i + 1
@@ -507,10 +544,21 @@ func make_function_binding(function_decl function_decl) function_binding {
 
     return function_binding {
         name: function_decl.sig.name,
+        owner_type: "",
+        has_receiver: false,
+        receiver_mode: "value",
         generic_names: generic_names,
         param_types: params,
         return_type: return_type,
     };
+}
+
+func make_method_binding(string owner_type, function_decl function_decl) function_binding {
+    var binding = make_function_binding(function_decl)
+    binding.owner_type = parse_type(owner_type)
+    binding.has_receiver = function_decl.sig.params.len() > 0 && function_decl.sig.params[0].name == "self"
+    binding.receiver_mode = receiver_mode_from_signature(function_decl)
+    binding
 }
 
 func check_item(item item, vec[function_binding] functions, vec[trait_binding] traits, vec[const_binding] consts, string source, vec[semantic_error] mut diagnostics) int32 {
@@ -756,6 +804,7 @@ func collect_traits(vec[item] items) vec[trait_binding] {
 
                     methods.push(method_binding {
                         name: trait_decl.methods[mi].name,
+                        receiver_mode: receiver_mode_from_param_name(trait_decl.methods[mi].params),
                         param_types: params,
                         return_type: return_type,
                     })
@@ -848,6 +897,10 @@ func find_impl_method(vec[function_decl] methods, string name) option[function_d
 }
 
 func method_signature_matches(function_decl impl_method, method_binding trait_method) bool {
+    if receiver_mode_from_signature(impl_method) != trait_method.receiver_mode {
+        return false
+    }
+
     if impl_method.sig.params.len() != trait_method.param_types.len() {
         return false
     }
@@ -867,6 +920,30 @@ func method_signature_matches(function_decl impl_method, method_binding trait_me
         }
 
     same_type(impl_return, trait_method.return_type)
+}
+
+func receiver_mode_from_signature(function_decl method_decl) string {
+    receiver_mode_from_params(method_decl.sig.params)
+}
+
+func receiver_mode_from_param_name(vec[param_decl] params) string {
+    receiver_mode_from_params(params)
+}
+
+func receiver_mode_from_params(vec[param_decl] params) string {
+    if params.len() == 0 {
+        return "value"
+    }
+    if params[0].name != "self" {
+        return "value"
+    }
+    if starts_with(params[0].type_name, "&mut ") {
+        return "mut_ref"
+    }
+    if starts_with(params[0].type_name, "&") {
+        return "ref"
+    }
+    "value"
 }
 
 func check_function(function_decl function_decl, vec[function_binding] functions, vec[const_binding] consts, string source, vec[semantic_error] mut diagnostics) int32 {
@@ -1068,6 +1145,9 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
         expr::string(_) : ok_type("string"),
         expr::bool(_) : ok_type("bool"),
         expr::name(value) : {
+            if value.name == "nil" {
+                return ok_type("nil")
+            }
             var ty = lookup_name_type(env, value.name)
             if is_unknown(ty) {
                 var fn_candidates = lookup_functions(functions, value.name)
@@ -1161,6 +1241,66 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
                     var target = infer_expr(member.target.value, env, expected_return, functions, source, diagnostics)
                     errors = errors + target.errors
 
+                    var named_methods = lookup_named_methods(functions, target.type_name, member.member)
+                    var methods = lookup_methods(functions, target.type_name, member.member, member.target.value)
+                    if methods.len() > 0 {
+                        var matches = vec[signature_match]()
+                        var j = 0
+                        while j < methods.len() {
+                            var method_arg_types = vec[string]()
+                            method_arg_types.push(method_receiver_arg_type(target.type_name, methods[j].receiver_mode));
+                            var ai = 0
+                            while ai < arg_types.len() {
+                                method_arg_types.push(arg_types[ai]);
+                                ai = ai + 1
+                            }
+                            var m = try_match_signature(methods[j], method_arg_types)
+                            if m.ok {
+                                matches.push(m);
+                            }
+                            j = j + 1
+                        }
+
+                        if matches.len() == 0 {
+                            return check_result {
+                                type_name: "unknown",
+                                errors: errors + add_error(source, diagnostics, "e1002", "no matching overload", member.member),
+                            }
+                        }
+
+                        var best = matches[0]
+                        var ambiguous = false
+                        j = 1
+                        while j < matches.len() {
+                            if better_match(matches[j], best) {
+                                best = matches[j]
+                                ambiguous = false
+                            } else if same_match_rank(matches[j], best) {
+                                ambiguous = true
+                            }
+                            j = j + 1
+                        }
+
+                        if ambiguous {
+                            return check_result {
+                                type_name: "unknown",
+                                errors: errors + add_error(source, diagnostics, "e1003", "ambiguous overload", member.member),
+                            }
+                        }
+
+                        return check_result {
+                            type_name: best.return_type,
+                            errors: errors,
+                        }
+                    }
+
+                    if named_methods.len() > 0 {
+                        return check_result {
+                            type_name: "unknown",
+                            errors: errors + add_error(source, diagnostics, "e3051", receiver_requirement_message(member.member, named_methods[0].receiver_mode), member.member),
+                        }
+                    }
+
                     var arity = lookup_builtin_method_arity(target.type_name, member.member)
                     if arity >= 0 && arity != value.args.len() {
                         errors = errors + add_error(source, diagnostics, "e1005", "builtin method arity mismatch", member.member)
@@ -1170,7 +1310,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
                     if method_type == "" {
                         return check_result {
                             type_name: "unknown",
-                            errors: errors + add_error(source, diagnostics, "e1006", "unknown builtin method", member.member),
+                            errors: errors + add_error(source, diagnostics, "e1006", "unknown method", member.member),
                         }
                     }
                     check_result {
@@ -1692,7 +1832,7 @@ func infer_binary(string op, check_result left, check_result right, string sourc
         if !types_compatible(left.type_name, right.type_name) {
             errors = errors + add_error(source, diagnostics, "e3020", "equality compare requires same type", op)
         }
-        if !is_unknown(left.type_name) && !is_unknown(right.type_name) {
+        if !is_unknown(left.type_name) && !is_unknown(right.type_name) && !nil_comparable_pair(left.type_name, right.type_name) {
             if !comparable_type(left.type_name) || !comparable_type(right.type_name) {
                 errors = errors + add_error(source, diagnostics, "e3039", "equality compare requires comparable types", op)
             }
@@ -1723,12 +1863,99 @@ func lookup_functions(vec[function_binding] functions, string name) vec[function
     var out = vec[function_binding]()
     var i = 0
     while i < functions.len() {
-        if functions[i].name == name {
+        if !functions[i].has_receiver && functions[i].name == name {
             out.push(functions[i]);
         }
         i = i + 1
     }
     out
+}
+
+func lookup_named_methods(vec[function_binding] functions, string receiver_type, string name) vec[function_binding] {
+    var out = vec[function_binding]()
+    var normalized_receiver = method_owner_type(receiver_type)
+    var i = 0
+    while i < functions.len() {
+        if functions[i].has_receiver && functions[i].owner_type == normalized_receiver && functions[i].name == name {
+            out.push(functions[i]);
+        }
+        i = i + 1
+    }
+    out
+}
+
+func lookup_methods(vec[function_binding] functions, string receiver_type, string name, expr receiver_expr) vec[function_binding] {
+    var out = vec[function_binding]()
+    var normalized_receiver = method_owner_type(receiver_type)
+    var i = 0
+    while i < functions.len() {
+        if functions[i].has_receiver && functions[i].owner_type == normalized_receiver && functions[i].name == name {
+            if receiver_allows_method(receiver_type, receiver_expr, functions[i].receiver_mode) {
+                out.push(functions[i]);
+            }
+        }
+        i = i + 1
+    }
+    out
+}
+
+func method_owner_type(string receiver_type) string {
+    if starts_with(receiver_type, "&mut ") {
+        return slice(receiver_type, 5, len(receiver_type))
+    }
+    if starts_with(receiver_type, "&") {
+        return slice(receiver_type, 1, len(receiver_type))
+    }
+    receiver_type
+}
+
+func receiver_allows_method(string receiver_type, expr receiver_expr, string receiver_mode) bool {
+    if receiver_mode == "value" {
+        return true
+    }
+    if receiver_mode == "mut_ref" {
+        if starts_with(receiver_type, "&mut ") {
+            return true
+        }
+        return is_addressable_expr(receiver_expr)
+    }
+    if receiver_mode == "ref" {
+        if starts_with(receiver_type, "&") {
+            return true
+        }
+        return is_addressable_expr(receiver_expr)
+    }
+    false
+}
+
+func is_addressable_expr(expr value) bool {
+    switch value {
+        expr::name(_) : true,
+        expr::member(_) : true,
+        expr::index(_) : true,
+        _ : false,
+    }
+}
+
+func method_receiver_arg_type(string receiver_type, string receiver_mode) string {
+    var owner_type = method_owner_type(receiver_type)
+    if receiver_mode == "mut_ref" {
+        return "&mut " + owner_type
+    }
+    if receiver_mode == "ref" {
+        return "&" + owner_type
+    }
+    owner_type
+}
+
+func receiver_requirement_message(string method_name, string receiver_mode) string {
+    if receiver_mode == "mut_ref" {
+        return "method " + method_name + " requires mutable receiver"
+    }
+    if receiver_mode == "ref" {
+        return "method " + method_name + " requires addressable receiver"
+    }
+    "method " + method_name + " requires compatible receiver"
 }
 
 func try_match_signature(function_binding binding, vec[string] arg_types) signature_match {
@@ -1984,7 +2211,42 @@ func types_compatible(string left, string right) bool {
     if is_unknown(left) || is_unknown(right) {
         return is_unknown(left) && is_unknown(right)
     }
+    if is_nil(left) && is_nil(right) {
+        return true
+    }
+    if is_nil(left) {
+        return is_nilable_type(right)
+    }
+    if is_nil(right) {
+        return is_nilable_type(left)
+    }
     assignable_type(left, right) || compatible_type(left, right)
+}
+
+func nil_comparable_pair(string left, string right) bool {
+    if is_nil(left) {
+        return is_nil(right) || is_nilable_type(right)
+    }
+    if is_nil(right) {
+        return is_nilable_type(left)
+    }
+    false
+}
+
+func is_nil(string type_name) bool {
+    parse_type(type_name) == "nil"
+}
+
+func is_nilable_type(string type_name) bool {
+    var clean = parse_type(type_name)
+    if clean == "fn" || clean == "map" {
+        return true
+    }
+    if starts_with(clean, "[]") || starts_with(clean, "&") {
+        return true
+    }
+    var base = base_type_name(clean)
+    base == "interface" || base == "trait"
 }
 
 func is_unknown(string type_name) bool {

@@ -25,6 +25,18 @@ func run_typesys_suite() int32 {
     if assignable_type("(u8, u16)", "(int32, u64)") {
         return 1
     }
+    if !assignable_type("[]int32", "nil") {
+        return 1
+    }
+    if !assignable_type("&int32", "nil") {
+        return 1
+    }
+    if !assignable_type("fn", "nil") {
+        return 1
+    }
+    if assignable_type("int32", "nil") {
+        return 1
+    }
 
     if !comparable_type("int32") {
         return 1

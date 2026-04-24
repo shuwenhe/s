@@ -15,7 +15,7 @@ from compiler .interpreter import interpreter
 from compiler .semantic import check_source 
 
 
-fixtures =path (__file__ ).resolve ().parent /"fixtures"
+fixtures =Path (__file__ ).resolve ().parent /"fixtures"
 
 
 class semantictests (unittest .testcase ):
@@ -29,6 +29,35 @@ class semantictests (unittest .testcase ):
         result =check_source (parse_source (source ))
         self .assertfalse (result .ok )
         self .assertin ("let value expected bool, got int32",[d .message for d in result .diagnostics ])
+
+    def test_nil_fn_assignment_and_compare_success (self )->None :
+        source ="""
+package demo.nil
+
+func main() int32 {
+    var f: fn = nil
+    if f == nil {
+        0
+    } else {
+        1
+    }
+}
+"""
+        result =check_source (parse_source (source ))
+        self .asserttrue (result .ok ,[d .message for d in result .diagnostics ])
+
+    def test_nil_int_assignment_failure (self )->None :
+        source ="""
+package demo.nil
+
+func main() int32 {
+    var x: int32 = nil
+    x
+}
+"""
+        result =check_source (parse_source (source ))
+        self .assertfalse (result .ok )
+        self .assertin ("let x expected int32, got nil",[d .message for d in result .diagnostics ])
 
     def test_cli_check_success (self )->None :
         proc =subprocess .run (
