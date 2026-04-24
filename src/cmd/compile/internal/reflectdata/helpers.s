@@ -1,5 +1,9 @@
 package compile.internal.reflectdata
 
-func stub_helpers() int {
-    0
+func helpers_unit_name() string {
+    "reflectdata/helpers.s"
+}
+
+func helpers_unit_ready() int {
+    1
 }

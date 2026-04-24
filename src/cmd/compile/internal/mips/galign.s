@@ -1,5 +1,9 @@
 package compile.internal.mips
 
-func stub_galign() int {
-    0
+func galign_unit_name() string {
+    "mips/galign.s"
+}
+
+func galign_unit_ready() int {
+    1
 }

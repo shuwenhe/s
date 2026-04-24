@@ -1,5 +1,9 @@
 package compile.internal.loopvar.testdata
 
-func stub_for_complicated_esc_address() int {
-    0
+func for_complicated_esc_address_unit_name() string {
+    "loopvar/testdata/for_complicated_esc_address.s"
+}
+
+func for_complicated_esc_address_unit_ready() int {
+    1
 }
