@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_node() int {
-    0
+func node_unit_name() string {
+    "ir/node.s"
+}
+
+func node_unit_ready() int {
+    1
 }

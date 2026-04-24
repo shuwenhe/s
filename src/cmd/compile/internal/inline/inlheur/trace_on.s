@@ -1,5 +1,9 @@
 package compile.internal.inline.inlheur
 
-func stub_trace_on() int {
-    0
+func trace_on_unit_name() string {
+    "inline/inlheur/trace_on.s"
+}
+
+func trace_on_unit_ready() int {
+    1
 }

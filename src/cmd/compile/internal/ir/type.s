@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_type() int {
-    0
+func type_unit_name() string {
+    "ir/type.s"
+}
+
+func type_unit_ready() int {
+    1
 }

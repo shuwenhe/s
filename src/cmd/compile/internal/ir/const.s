@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_const() int {
-    0
+func const_unit_name() string {
+    "ir/const.s"
+}
+
+func const_unit_ready() int {
+    1
 }

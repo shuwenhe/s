@@ -1,5 +1,9 @@
 package compile.internal.ir
 
-func stub_func() int {
-    0
+func func_unit_name() string {
+    "ir/func.s"
+}
+
+func func_unit_ready() int {
+    1
 }
