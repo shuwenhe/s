@@ -12,8 +12,8 @@ use s.parse_tokens
 
 struct syntax_error {
     string message
-    int32 line
-    int32 column
+    int line
+    int column
 }
 
 func read_source(string path) result[string, syntax_error] {

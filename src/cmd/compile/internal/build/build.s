@@ -8,7 +8,7 @@ use internal.buildcfg.goos as buildcfg_goos
 use std.io.println
 use std.vec.vec
 
-func main(vec[string] args)  int32 {
+func main(vec[string] args)  int {
     var options = parse_options(args)
     if options[0] == "help" {
         return 0

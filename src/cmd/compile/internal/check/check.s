@@ -7,6 +7,6 @@ func load_frontend(string path) string {
     return read_to_string(path).unwrap()
 }
 
-func check_frontend(string frontend) int32 {
+func check_frontend(string frontend) int {
     return check_text(frontend)
 }

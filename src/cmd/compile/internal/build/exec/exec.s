@@ -14,7 +14,7 @@ use compile.internal.syntax.parse_source
 use compile.internal.syntax.read_source
 use compile.internal.syntax.tokenize
 
-func run(vec[string] options) int32 {
+func run(vec[string] options) int {
     if options[0] == "help" {
         return 0
     }

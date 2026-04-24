@@ -73,14 +73,14 @@ func same_type_ref(type_ref left, type_ref right) bool {
     left.canonical == right.canonical
 }
 
-func type_arg(type_ref ty, int32 index) string {
+func type_arg(type_ref ty, int index) string {
     if index < 0 || index >= ty.args.len() {
         return "unknown"
     }
     parse_type(ty.args[index])
 }
 
-func generic_arity(string ty) int32 {
+func generic_arity(string ty) int {
     var args = extract_type_args(ty)
     args.len()
 }
@@ -102,28 +102,28 @@ func has_unknown_component(string ty) bool {
 }
 
 func rules_consistent() bool {
-    if parse_type("  int32  ") != "int32" {
+    if parse_type("  int  ") != "int" {
         return false
     }
-    if !same_type("[]int32", "[]int32") {
+    if !same_type("[]int", "[]int") {
         return false
     }
 
-    var result_ref = parse_type_ref("result[int32, string]")
+    var result_ref = parse_type_ref("result[int, string]")
     if result_ref.base != "result" {
         return false
     }
-    if type_arg(result_ref, 0) != "int32" {
+    if type_arg(result_ref, 0) != "int" {
         return false
     }
     if type_arg(result_ref, 1) != "string" {
         return false
     }
-    if generic_arity("result[int32, string]") != 2 {
+    if generic_arity("result[int, string]") != 2 {
         return false
     }
 
-    var ref_ref = parse_type_ref("&mut []int32")
+    var ref_ref = parse_type_ref("&mut []int")
     if !ref_ref.is_ref || !ref_ref.is_mut_ref {
         return false
     }
@@ -408,7 +408,7 @@ func is_numeric_primitive(string ty) bool {
     var clean = parse_type(ty)
     return clean == "i8"
         || clean == "i16"
-        || clean == "int32"
+        || clean == "int"
         || clean == "i64"
         || clean == "isize"
         || clean == "u8"
@@ -420,7 +420,7 @@ func is_numeric_primitive(string ty) bool {
         || clean == "f64"
 }
 
-func numeric_rank(string ty) int32 {
+func numeric_rank(string ty) int {
     var clean = parse_type(ty)
     if clean == "i8" || clean == "u8" {
         return 1
@@ -428,7 +428,7 @@ func numeric_rank(string ty) int32 {
     if clean == "i16" || clean == "u16" {
         return 2
     }
-    if clean == "int32" || clean == "u32" || clean == "f32" {
+    if clean == "int" || clean == "u32" || clean == "f32" {
         return 3
     }
     if clean == "i64" || clean == "u64" || clean == "isize" || clean == "usize" || clean == "f64" {
@@ -447,7 +447,7 @@ func is_builtin_primitive(string ty) bool {
         || clean == "string"
         || clean == "i8"
         || clean == "i16"
-        || clean == "int32"
+        || clean == "int"
         || clean == "i64"
         || clean == "isize"
         || clean == "u8"
@@ -467,7 +467,7 @@ func is_copy_type(string ty) bool {
         || clean == "char"
         || clean == "i8"
         || clean == "i16"
-        || clean == "int32"
+        || clean == "int"
         || clean == "i64"
         || clean == "isize"
         || clean == "u8"
@@ -535,7 +535,7 @@ func is_space(string ch) bool {
     return ch == " " || ch == "\n" || ch == "\t" || ch == "\r"
 }
 
-func find_char(string text, string needle) int32 {
+func find_char(string text, string needle) int {
     var i = 0
     while i < text.len() {
         if slice(text, i, i + 1) == needle {
@@ -546,7 +546,7 @@ func find_char(string text, string needle) int32 {
     return 0 - 1
 }
 
-func find_last_char(string text, string needle) int32 {
+func find_last_char(string text, string needle) int {
     var i = text.len()
     while i > 0 {
         i = i - 1

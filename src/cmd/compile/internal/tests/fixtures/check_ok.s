@@ -5,7 +5,7 @@ enum option[t] {
     none,
 }
 
-func unwrap_or_zero(option[int32] value) int32 {
+func unwrap_or_zero(option[int] value) int {
     switch value {
         some(inner) : inner,
         none : 0,

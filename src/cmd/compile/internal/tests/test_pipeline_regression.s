@@ -22,7 +22,7 @@ use compile.internal.mir.dump_graph
 use std.prelude.slice
 use std.vec.vec
 
-func run_pipeline_regression_suite() int32 {
+func run_pipeline_regression_suite() int {
     var cli_build_eq = vec[string]()
     cli_build_eq.push("compile")
     cli_build_eq.push("build")
@@ -58,7 +58,7 @@ func run_pipeline_regression_suite() int32 {
         return 1
     }
 
-    var source = "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int32 {\n  1\n}\nfunc worker() int32 {\n  helper()\n  0\n}\nfunc main() int32 {\n  var arr = [int32]{1, 2}\n  var mp = [string]int32{\"k\": 1}\n  var idx = arr[0]\n  var bx = { idx + 1 }\n  idx = idx + bx\n  sroutine worker()\n  for (var i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
+    var source = "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int {\n  1\n}\nfunc worker() int {\n  helper()\n  0\n}\nfunc main() int {\n  var arr = [int]{1, 2}\n  var mp = [string]int{\"k\": 1}\n  var idx = arr[0]\n  var bx = { idx + 1 }\n  idx = idx + bx\n  sroutine worker()\n  for (var i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
 
     var parsed = parse_source(source)
     if parsed.is_err() {
@@ -80,7 +80,7 @@ func run_pipeline_regression_suite() int32 {
         return 1
     }
 
-    var const_only_source = "package demo.constonly\nconst (\n  A = 1\n  B\n)\nfunc main() int32 {\n  B\n}"
+    var const_only_source = "package demo.constonly\nconst (\n  A = 1\n  B\n)\nfunc main() int {\n  B\n}"
     var const_only_parsed = parse_source(const_only_source)
     if const_only_parsed.is_err() {
         return 1
@@ -234,7 +234,7 @@ func run_pipeline_regression_suite() int32 {
     0
 }
 
-func count_const_decls(ir_ast.package_ir pkg) int32 {
+func count_const_decls(ir_ast.package_ir pkg) int {
     var count = 0
     var i = 0
     while i < pkg.decls.len() {
@@ -263,7 +263,7 @@ func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
     false
 }
 
-func main_final_is_int_literal(ir_ast.package_ir pkg, int32 expected) bool {
+func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
     var i = 0
     while i < pkg.decls.len() {
         switch pkg.decls[i] {
@@ -288,7 +288,7 @@ func main_final_is_int_literal(ir_ast.package_ir pkg, int32 expected) bool {
     false
 }
 
-func collect_ir_package_features(ir_ast.package_ir pkg) int32 {
+func collect_ir_package_features(ir_ast.package_ir pkg) int {
     var features = 0
     var i = 0
     while i < pkg.decls.len() {
@@ -331,7 +331,7 @@ func collect_ir_package_features(ir_ast.package_ir pkg) int32 {
     features
 }
 
-func collect_ir_block_features(ir_ast.block_ir block) int32 {
+func collect_ir_block_features(ir_ast.block_ir block) int {
     var features = 2
     var i = 0
     while i < block.statements.len() {
@@ -361,7 +361,7 @@ func collect_ir_block_features(ir_ast.block_ir block) int32 {
     features
 }
 
-func collect_ir_expr_features(ir_ast.expr_ir expression) int32 {
+func collect_ir_expr_features(ir_ast.expr_ir expression) int {
     var features = 0
     switch expression {
         ir_ast.expr_ir::name(name) : {
