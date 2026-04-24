@@ -168,6 +168,18 @@ func run_ssa_suite() int32 {
     if !contains(arm64_dump, "replay_det=") {
         return 1
     }
+    if !contains(arm64_dump, "mir_trace=input=") {
+        return 1
+    }
+    if !contains(arm64_dump, ";summary=mir main") {
+        return 1
+    }
+    if !contains(arm64_dump, ";cfg=mir main") {
+        return 1
+    }
+    if !contains(arm64_dump, ";rerun=mir main") {
+        return 1
+    }
 
     var amd64_program = build_pipeline(mir_text, "amd64")
     var amd64_dump = dump_pipeline(amd64_program)
@@ -221,6 +233,87 @@ func run_ssa_suite() int32 {
         return 1
     }
     if !contains(heavy_dump, "invalidate") {
+        return 1
+    }
+    if !contains(heavy_dump, "mir_opt=mir heavy") {
+        return 1
+    }
+    if !contains(heavy_dump, "const=2") {
+        return 1
+    }
+    if !contains(heavy_dump, "bb0(entry) stmts=") {
+        return 1
+    }
+    if !contains(heavy_dump, "bb0(entry) stmts=5 const=2 term=jump") {
+        return 1
+    }
+
+    var coalesce_mir = "mir coalesce blocks=3 entry=0 exit=2 | bb0(entry) stmts=1 term=jump | bb1(dead) stmts=0 term=jump | bb2(exit) stmts=0 term=return"
+    var coalesce_dump = dump_pipeline(build_pipeline(coalesce_mir, "amd64"))
+    if !contains(coalesce_dump, "mir_opt=mir coalesce blocks=2") {
+        return 1
+    }
+    if contains(coalesce_dump, "bb1(dead) stmts=0 term=jump") {
+        return 1
+    }
+    if !contains(coalesce_dump, "blocks=2") {
+        return 1
+    }
+
+    var rerun_mir = "mir rerun blocks=3 entry=0 exit=2 | bb0(entry) stmts=0 term=branch | bb1(mid) stmts=0 term=jump | bb2(exit) stmts=0 term=return"
+    var rerun_dump = dump_pipeline(build_pipeline(rerun_mir, "amd64"))
+    if !contains(rerun_dump, "invalid_reruns=") {
+        return 1
+    }
+    if !contains(rerun_dump, "mir_opt=mir rerun blocks=2") {
+        return 1
+    }
+    if contains(rerun_dump, "bb0(entry) stmts=0 term=jump | bb1(mid) stmts=0 term=jump") {
+        return 1
+    }
+
+    var value_mir = "mir value blocks=5 entry=0 exit=4 | bb0(entry) stmts=4 phi=3 copy=4 term=branch | bb1(left) stmts=2 term=jump | bb2(right) stmts=2 term=jump | bb3(join) stmts=1 copy=1 term=branch | bb4(exit) stmts=1 term=return"
+    var value_dump = dump_pipeline(build_pipeline(value_mir, "amd64"))
+    if !contains(value_dump, "mir_opt=mir value") {
+        return 1
+    }
+    if !contains(value_dump, "phi=2") {
+        return 1
+    }
+    if !contains(value_dump, "copy=1") {
+        return 1
+    }
+
+    var memory_mir = "mir memory blocks=4 entry=0 exit=3 | bb0(entry) stmts=5 load=4 store=2 term=branch | bb1(loop) stmts=1 term=branch | bb2(latch) stmts=0 term=jump | bb3(exit) stmts=1 term=return"
+    var memory_dump = dump_pipeline(build_pipeline(memory_mir, "amd64"))
+    if !contains(memory_dump, "mir_opt=mir memory") {
+        return 1
+    }
+    if !contains(memory_dump, "load=2") {
+        return 1
+    }
+    if !contains(memory_dump, "store=1") {
+        return 1
+    }
+
+    var memphi_mir = "mir memphi blocks=4 entry=0 exit=3 | bb0(entry) stmts=4 memphi=3 load=2 store=1 term=branch | bb1(left) stmts=1 term=jump | bb2(join) stmts=1 phi=1 term=jump | bb3(exit) stmts=1 term=return"
+    var memphi_dump = dump_pipeline(build_pipeline(memphi_mir, "amd64"))
+    if !contains(memphi_dump, "mir_opt=mir memphi") {
+        return 1
+    }
+    if !contains(memphi_dump, "memphi=2") {
+        return 1
+    }
+    if !contains(memphi_dump, "memssa_chain=") {
+        return 1
+    }
+    if !contains(value_dump, "mir_trace=input=mir value") {
+        return 1
+    }
+    if !contains(value_dump, ";summary=mir value") {
+        return 1
+    }
+    if !contains(memory_dump, ";cfg=mir memory") {
         return 1
     }
 
