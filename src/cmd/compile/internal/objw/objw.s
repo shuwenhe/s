@@ -1,5 +1,9 @@
 package compile.internal.objw
 
-func stub_objw() int {
-    0
+func objw_unit_name() string {
+    "objw/objw.s"
+}
+
+func objw_unit_ready() int {
+    1
 }

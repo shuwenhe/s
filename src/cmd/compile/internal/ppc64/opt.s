@@ -1,5 +1,9 @@
 package compile.internal.ppc64
 
-func stub_opt() int {
-    0
+func opt_unit_name() string {
+    "ppc64/opt.s"
+}
+
+func opt_unit_ready() int {
+    1
 }

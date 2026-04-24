@@ -1,5 +1,9 @@
 package compile.internal.ssa
 
-func stub_addressingmodes() int {
-    0
+func addressingmodes_unit_name() string {
+    "ssa/addressingmodes.s"
+}
+
+func addressingmodes_unit_ready() int {
+    1
 }

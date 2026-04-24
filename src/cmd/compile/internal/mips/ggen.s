@@ -1,5 +1,9 @@
 package compile.internal.mips
 
-func stub_ggen() int {
-    0
+func ggen_unit_name() string {
+    "mips/ggen.s"
+}
+
+func ggen_unit_ready() int {
+    1
 }

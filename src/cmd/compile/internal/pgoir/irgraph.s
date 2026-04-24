@@ -1,5 +1,9 @@
 package compile.internal.pgoir
 
-func stub_irgraph() int {
-    0
+func irgraph_unit_name() string {
+    "pgoir/irgraph.s"
+}
+
+func irgraph_unit_ready() int {
+    1
 }
