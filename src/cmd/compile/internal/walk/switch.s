@@ -1,5 +1,9 @@
 package compile.internal.walk
 
-func stub_switch() int {
-    0
+func switch_unit_name() string {
+    "walk/switch.s"
+}
+
+func switch_unit_ready() int {
+    1
 }
