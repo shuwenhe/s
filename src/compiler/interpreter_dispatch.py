@@ -1,7 +1,6 @@
 from __future__ import annotations 
 
-from pathlib import Path 
-import tempfile 
+from runtime .host_fs import make_temp_dir as host_make_temp_dir ,read_to_string as host_read_to_string ,write_text_file as host_write_text_file 
 from typing import Any ,List ,Tuple 
 
 from runtime .host_intrinsics import (
@@ -76,18 +75,18 @@ def dispatch_special_call (interpreter :Any ,name :str ,args :List [Any ])->Tupl
         return True ,("some",value )
     if name =="__host_read_to_string":
         try :
-            return True ,("ok",Path (str (args [0 ])).read_text ())
+            return True ,("ok",host_read_to_string (str (args [0 ])))
         except OSError as exc :
             return True ,("err",{"message":str (exc )})
     if name =="__host_write_text_file":
         try :
-            Path (str (args [0 ])).write_text (""if len (args )<2 else str (args [1 ]))
+            host_write_text_file (str (args [0 ]),""if len (args )<2 else str (args [1 ]))
             return True ,("ok",None )
         except OSError as exc :
             return True ,("err",{"message":str (exc )})
     if name =="__host_make_temp_dir":
         try :
-            temp_path =tempfile .mkdtemp (prefix =""if not args else str (args [0 ]))
+            temp_path =host_make_temp_dir (""if not args else str (args [0 ]))
             return True ,("ok",temp_path )
         except OSError as exc :
             return True ,("err",{"message":str (exc )})
@@ -132,18 +131,18 @@ def dispatch_imported_call (interpreter :Any ,imported_path :str ,args :List [An
         return True ,None 
     if imported_path =="std.fs.read_to_string":
         try :
-            return True ,("ok",Path (str (args [0 ])).read_text ())
+            return True ,("ok",host_read_to_string (str (args [0 ])))
         except OSError as exc :
             return True ,("err",{"message":str (exc )})
     if imported_path =="std.fs.write_text_file":
         try :
-            Path (str (args [0 ])).write_text (""if len (args )<2 else str (args [1 ]))
+            host_write_text_file (str (args [0 ]),""if len (args )<2 else str (args [1 ]))
             return True ,("ok",None )
         except OSError as exc :
             return True ,("err",{"message":str (exc )})
     if imported_path =="std.fs.make_temp_dir":
         try :
-            temp_path =tempfile .mkdtemp (prefix =""if not args else str (args [0 ]))
+            temp_path =host_make_temp_dir (""if not args else str (args [0 ]))
             return True ,("ok",temp_path )
         except OSError as exc :
             return True ,("err",{"message":str (exc )})
