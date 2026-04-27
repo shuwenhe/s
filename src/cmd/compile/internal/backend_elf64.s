@@ -2652,7 +2652,7 @@ func resolve_bootstrap_base_compiler() string {
         }
         option.none : (),
     }
-    "/app/s/bin/s-native"
+    "/app/s/bin/s_arm64"
 }
 
 func emit_runtime_launcher_asm(string base_compiler) result[string, backend_error] {
