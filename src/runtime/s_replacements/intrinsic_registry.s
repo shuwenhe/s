@@ -1,0 +1,2 @@
+fn intrinsic_registry() {
+}

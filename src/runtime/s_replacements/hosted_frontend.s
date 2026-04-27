@@ -1,0 +1,2 @@
+fn hosted_frontend() {
+}
