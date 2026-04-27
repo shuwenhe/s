@@ -131,6 +131,15 @@ static bool output_exists(const char *path) {
     return path != NULL && path[0] != '\0' && access(path, R_OK) == 0;
 }
 
+static const char *first_existing_readable(const char *const paths[]) {
+    for (size_t i = 0; paths[i] != NULL; i++) {
+        if (access(paths[i], R_OK) == 0) {
+            return paths[i];
+        }
+    }
+    return NULL;
+}
+
 static const char *get_build_output_root(void) {
     const char *root = getenv("s_build_output_root");
     if (root != NULL && root[0] != '\0') {
@@ -457,6 +466,23 @@ static char *emit_asm(const char *message) {
             ascii_code(message[i])
         );
     }
+#if defined(__aarch64__)
+    offset += (size_t)snprintf(
+        asm_text + offset,
+        cap - offset,
+        "\n\n.section .text\n.global _start\n_start:\n"
+        "    mov x0, #1\n"
+        "    adrp x1, message_0\n"
+        "    add x1, x1, :lo12:message_0\n"
+        "    mov x2, #%zu\n"
+        "    mov x8, #64\n"
+        "    svc #0\n"
+        "    mov x0, #0\n"
+        "    mov x8, #93\n"
+        "    svc #0\n",
+        strlen(message)
+    );
+#elif defined(__x86_64__)
     offset += (size_t)snprintf(
         asm_text + offset,
         cap - offset,
@@ -471,6 +497,10 @@ static char *emit_asm(const char *message) {
         "    syscall\n",
         strlen(message)
     );
+#else
+    free(asm_text);
+    return NULL;
+#endif
     return asm_text;
 }
 
@@ -502,11 +532,24 @@ static result_t assemble_and_link(const char *asm_text, const char *output_path)
 }
 
 static result_t build_self_hosted_runner(const char *output_path) {
+    const char *source = get_env_any("S_BOOTSTRAP_RUNNER_SRC", "s_bootstrap_runner_src");
+    if (source == NULL) {
+        static const char *const candidates[] = {
+            "/app/s/src/compiler/backend_elf64_runner_bootstrap.c",
+            "/home/shuwen/s/src/compiler/backend_elf64_runner_bootstrap.c",
+            NULL,
+        };
+        source = first_existing_readable(candidates);
+    }
+    if (source == NULL) {
+        return err_message("native runner bootstrap source not found");
+    }
+
     char *cc_argv[] = {
         "cc",
         "-O2",
         "-std=c11",
-        "/home/shuwen/s/src/compiler/backend_elf64_runner_bootstrap.c",
+        (char *)source,
         "-o",
         (char *)output_path,
         NULL,
@@ -519,20 +562,27 @@ static result_t build_self_hosted_runner(const char *output_path) {
 }
 
 static result_t build_self_hosted_compiler_launcher(const char *output_path) {
-    char *cc_argv[] = {
-        "cc",
-        "-O2",
-        "-std=c11",
-        "/home/shuwen/s/src/runtime/s_selfhost_compiler_bootstrap.c",
-        "-o",
-        (char *)output_path,
-        NULL,
-    };
-    result_t result = run_process(cc_argv, "compiler launcher bootstrap failed");
-    if (result.ok) {
-        printf("built: %s\n", output_path);
+    const char *source_s = get_env_any("S_BOOTSTRAP_LAUNCHER_S_SRC", "s_bootstrap_launcher_s_src");
+    if (source_s == NULL) {
+        static const char *const candidates_s[] = {
+            "/app/s/src/runtime/s_selfhost_compiler_bootstrap.s",
+            "/home/shuwen/s/src/runtime/s_selfhost_compiler_bootstrap.s",
+            NULL,
+        };
+        source_s = first_existing_readable(candidates_s);
     }
-    return result;
+
+    if (source_s == NULL) {
+        return err_message("S compiler launcher source not found");
+    }
+
+    result_t build_s = run_hosted_compiler_command("build", source_s, output_path, false, false);
+    if (build_s.ok) {
+        printf("built: %s\n", output_path);
+        return build_s;
+    }
+
+    return build_s;
 }
 
 static bool is_compiler_entry_source(const char *path, const char *source) {
