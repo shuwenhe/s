@@ -10,14 +10,15 @@ if str(root) not in sys.path:
     sys.path.insert(0, str(root))
 
 from runtime.intrinsic_dispatch import intrinsiccall, dispatch
-from runtime.python_bridge import intrinsics, runtimeexit, invoke_intrinsic
+from runtime.intrinsic_registry import intrinsics, invoke_intrinsic
+
 from runtime.stackmap_protocol import parse_gcmap_text, parse_stackmap_text
 
 
 def main() -> int:
     env_value = invoke_intrinsic("__host_get_env", "path")
     checks = [
-        ("manifest loaded", "__host_exit" in intrinsics),
+        ("registry loaded", "__host_exit" in intrinsics),
         ("host env", env_value is none or isinstance(env_value, str)),
         ("len(string)", invoke_intrinsic("__runtime_len", "demo") == 4),
         ("concat", invoke_intrinsic("__string_concat", "de", "mo") == "demo"),
@@ -61,8 +62,9 @@ def main() -> int:
     exit_ok = false
     try:
         invoke_intrinsic("__host_exit", 7)
-    except runtimeexit as exc:
-        exit_ok = exc.code == 7
+    except Exception as exc:
+        if str(exc).startswith("S_EXIT:7"):
+            exit_ok = true
     checks.append(("host exit", exit_ok))
 
     dispatched = dispatch(
