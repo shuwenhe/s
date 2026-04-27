@@ -21,7 +21,7 @@ for the current mvp there are now two runtime tracks:
 
 - python-hosted execution for the broader self-hosting workflow
 - an s-side runner entrypoint in `runner.s` that now goes through the hosted compiler bridge
-- a project-local command launcher target at `/app/s/bin/s-selfhosted`
+- a project-local command launcher target at `/app/s/bin/s_arm64`
 - a project-local compiler launcher target at `/app/s/bin/s_arm64`
 
 `build` and `run` now execute through host intrinsics instead of a separate native runner hop.

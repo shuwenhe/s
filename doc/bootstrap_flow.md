@@ -18,7 +18,7 @@ current transition path explicit, reproducible, and fail-fast.
 - `tmp/s_compiler_stage1`: the first compiler binary produced by the bootstrap
 - `tmp/s_final_compiler`: the launcher used for the current selfhosted path
 - `bin/s_arm64`: the current native runner built from the bootstrap backend
-- `bin/s-selfhosted`: the current launcher wrapper for the command surface
+- `bin/s_arm64`: the current launcher wrapper for the command surface
 
 ## sequence
 
@@ -33,7 +33,7 @@ the current bootstrap driver is `misc/scripts/full_nopy_bootstrap.sh`.
 when `S_COMPILER` is unset, the bootstrap scripts now prefer a repo-local
 `bin/s_arm64` seed first, then `bin/s`, and only then the legacy
 `/home/shuwen/tmp/s_compiler_improved` path.
-the launcher install script now installs `bin/s_arm64` and `bin/s-selfhosted`
+the launcher install script now installs `bin/s_arm64`
 in the same pass, and can additionally materialize `s_final_compiler` for the
 current bootstrap handoff.
 
@@ -44,9 +44,9 @@ once the bootstrap is complete, these commands are expected to work:
 - `s_arm64 check <path> [--dump-tokens] [--dump-ast]`
 - `s_arm64 build <path> -o <output>`
 - `s_arm64 run <path>`
-- `s-selfhosted check <path> [--dump-tokens] [--dump-ast]`
-- `s-selfhosted build <path> -o <output>`
-- `s-selfhosted run <path>`
+- `s_arm64 check <path> [--dump-tokens] [--dump-ast]`
+- `s_arm64 build <path> -o <output>`
+- `s_arm64 run <path>`
 
 ## acceptance
 
