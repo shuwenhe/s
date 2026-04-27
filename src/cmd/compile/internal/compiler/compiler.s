@@ -20,3 +20,7 @@ func main(vec[string] args) int {
     return build_main(args)
 }
 
+func run_cli(vec[string] args) int {
+    main(args)
+}
+
