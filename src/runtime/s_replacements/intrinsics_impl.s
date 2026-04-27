@@ -1,0 +1,2 @@
+fn intrinsics_impl() {
+}

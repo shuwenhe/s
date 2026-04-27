@@ -1,0 +1,2 @@
+fn check_bridge() {
+}
