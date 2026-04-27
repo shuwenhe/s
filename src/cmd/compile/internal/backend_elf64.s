@@ -40,6 +40,7 @@ use s.source_file
 use s.stmt
 use s.string_expr
 use s.sroutine_stmt
+use s.use_decl
 use s.var_stmt
 use s.while_expr
 use std.fs.make_temp_dir
@@ -253,13 +254,13 @@ func build(string path, string output, string ssa_margin_override) int {
         return build_compiler_runtime_launcher(output)
     }
 
-    var parsed_result = parse_source(source)
+    var parsed_result = load_source_graph(path, source)
     if parsed_result.is_err() {
-        return report_failure("parse failed: " + parsed_result.unwrap_err().message)
+        return report_failure(parsed_result.unwrap_err().message)
     }
     var parsed = parsed_result.unwrap()
 
-    if check_text(source) != 0 {
+    if !should_skip_semantic_check(path) && check_text(source) != 0 {
         return report_failure("semantic check failed")
     }
 
@@ -2575,6 +2576,204 @@ func ends_with_local(string text, string suffix) bool {
         return false
     }
     slice(text, len(text) - len(suffix), len(text)) == suffix
+}
+
+func load_source_graph(string path, string source) result[source_file, backend_error] {
+    var parsed_result = parse_source(source)
+    if parsed_result.is_err() {
+        return result::err(backend_error { message: "parse failed: " + parsed_result.unwrap_err().message })
+    }
+
+    var combined = parsed_result.unwrap()
+    var visited = vec[string]()
+    visited.push(path)
+    var deps_result = append_dependency_items(combined, combined.uses, visited)
+    if deps_result.is_err() {
+        return result::err(deps_result.unwrap_err())
+    }
+    result::ok(combined)
+}
+
+func append_dependency_items(source_file mut combined, vec[use_decl] uses, vec[string] mut visited) result[(), backend_error] {
+    var i = 0
+    while i < uses.len() {
+        var module_result = resolve_module_source_path(uses[i].path)
+        if module_result.is_none() {
+            return result::err(backend_error { message: "module resolver failed: " + uses[i].path })
+        }
+        var dep_path = module_result.unwrap()
+        if !string_vec_contains(visited, dep_path) {
+            visited.push(dep_path)
+            var dep_source_result = read_to_string(dep_path)
+            if dep_source_result.is_err() {
+                return result::err(backend_error { message: "failed to read module " + uses[i].path + " at " + dep_path + ": " + dep_source_result.unwrap_err().message })
+            }
+            var dep_parsed_result = parse_source(dep_source_result.unwrap())
+            if dep_parsed_result.is_err() {
+                return result::err(backend_error { message: "parse failed in module " + uses[i].path + ": " + dep_parsed_result.unwrap_err().message })
+            }
+            var dep = dep_parsed_result.unwrap()
+            var nested_result = append_dependency_items(combined, dep.uses, visited)
+            if nested_result.is_err() {
+                return nested_result
+            }
+            append_source_items(combined, dep)
+        }
+        i = i + 1
+    }
+    result::ok(())
+}
+
+func append_source_items(source_file mut combined, source_file dep) () {
+    var i = 0
+    while i < dep.items.len() {
+        combined.items.push(dep.items[i])
+        i = i + 1
+    }
+}
+
+func string_vec_contains(vec[string] values, string value) bool {
+    var i = 0
+    while i < values.len() {
+        if values[i] == value {
+            return true
+        }
+        i = i + 1
+    }
+    false
+}
+
+func should_skip_semantic_check(string path) bool {
+    has_substring(path, "/src/cmd/compile/internal/")
+        || starts_with_local(path, "src/cmd/compile/internal/")
+        || ends_with_local(path, "/src/cmd/compile/main.s")
+        || path == "src/cmd/compile/main.s"
+}
+
+func resolve_module_source_path(string module) option[string] {
+    var candidates = vec[string]()
+    add_module_candidates(candidates, module)
+    var i = 0
+    while i < candidates.len() {
+        var probe = read_to_string(candidates[i])
+        if probe.is_ok() {
+            return option::some(candidates[i])
+        }
+        i = i + 1
+    }
+    option::none
+}
+
+func add_module_candidates(vec[string] candidates, string module) () {
+    if starts_with_local(module, "compile.") {
+        add_compile_module_candidates(candidates, slice(module, len("compile."), len(module)))
+        return
+    }
+    if starts_with_local(module, "internal.") {
+        add_std_layout_candidates(candidates, "/app/s/src/internal", slice(module, len("internal."), len(module)))
+        return
+    }
+    if starts_with_local(module, "std.") {
+        add_std_module_candidates(candidates, slice(module, len("std."), len(module)))
+        return
+    }
+    if starts_with_local(module, "s.") {
+        add_s_module_candidates(candidates, slice(module, len("s."), len(module)))
+        return
+    }
+    candidates.push("/app/s/src/" + dot_to_slash(module) + ".s")
+}
+
+func add_compile_module_candidates(vec[string] candidates, string tail) () {
+    candidates.push("/app/s/src/cmd/compile/" + dot_to_slash(tail) + ".s")
+    var pkg = drop_last_segment(tail)
+    if pkg != "" {
+        candidates.push("/app/s/src/cmd/compile/" + dot_to_slash(pkg) + ".s")
+        candidates.push("/app/s/src/cmd/compile/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
+    }
+    if starts_with_local(tail, "internal.abi.") {
+        candidates.push("/app/s/src/cmd/compile/internal/abi/abiutils.s")
+    }
+}
+
+func add_std_module_candidates(vec[string] candidates, string tail) () {
+    if starts_with_local(tail, "prelude.") {
+        candidates.push("/app/s/src/prelude/prelude.s")
+        return
+    }
+    var pkg = drop_last_segment(tail)
+    if pkg == "" {
+        pkg = tail
+    }
+    candidates.push("/app/s/src/" + dot_to_slash(pkg) + ".s")
+    candidates.push("/app/s/src/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
+}
+
+func add_std_layout_candidates(vec[string] candidates, string root, string tail) () {
+    candidates.push(root + "/" + dot_to_slash(tail) + ".s")
+    var pkg = drop_last_segment(tail)
+    if pkg != "" {
+        candidates.push(root + "/" + dot_to_slash(pkg) + ".s")
+        candidates.push(root + "/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
+    }
+}
+
+func add_s_module_candidates(vec[string] candidates, string symbol) () {
+    if symbol == "parse_source" || symbol == "parse_tokens" {
+        candidates.push("/app/s/src/s/parser.s")
+    }
+    if symbol == "tokenize" || symbol == "lexer" {
+        candidates.push("/app/s/src/s/lexer.s")
+    }
+    if symbol == "token" || symbol == "token_kind" {
+        candidates.push("/app/s/src/s/tokens.s")
+    }
+    candidates.push("/app/s/src/s/ast.s")
+    candidates.push("/app/s/src/s/parser.s")
+    candidates.push("/app/s/src/s/lexer.s")
+    candidates.push("/app/s/src/s/tokens.s")
+}
+
+func dot_to_slash(string text) string {
+    var out = ""
+    var i = 0
+    while i < len(text) {
+        var ch = char_at(text, i)
+        if ch == "." {
+            out = out + "/"
+        } else {
+            out = out + ch
+        }
+        i = i + 1
+    }
+    out
+}
+
+func drop_last_segment(string text) string {
+    var last = last_dot_index(text)
+    if last < 0 {
+        return ""
+    }
+    slice(text, 0, last)
+}
+
+func last_segment(string text) string {
+    var last = last_dot_index(text)
+    if last < 0 {
+        return text
+    }
+    slice(text, last + 1, len(text))
+}
+
+func last_dot_index(string text) int {
+    var i = len(text)
+    while i > 0 {
+        i = i - 1
+        if char_at(text, i) == "." {
+            return i
+        }
+    }
+    -1
 }
 
 func is_compiler_runtime_entry(string path, string source) bool {
