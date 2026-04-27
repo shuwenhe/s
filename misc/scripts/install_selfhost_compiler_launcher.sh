@@ -8,7 +8,8 @@ TMPDIR="${TMPDIR:-/tmp}"
 SELFHOST_OUT="$ROOT/bin/s-selfhosted"
 FINAL_OUT="${1:-}"
 NATIVE_OUT="$ROOT/bin/s-native"
-SRC_S="$ROOT/src/runtime/s_selfhost_compiler_bootstrap.s"
+SOURCE_ENTRY="$ROOT/src/cmd/compile/main.s"
+BOOTSTRAP_COMPILER="${S_COMPILER:-$NATIVE_OUT}"
 WORKDIR="$(mktemp -d "${TMPDIR%/}/s-selfhost-XXXXXX")"
 
 cleanup() {
@@ -16,20 +17,20 @@ cleanup() {
 }
 trap cleanup EXIT
 
-build_launcher() {
+build_compiler() {
   local output="$1"
 
-  if [ ! -f "$SRC_S" ]; then
-    echo "missing S launcher source: $SRC_S" >&2
+  if [ ! -f "$SOURCE_ENTRY" ]; then
+    echo "missing compiler entry source: $SOURCE_ENTRY" >&2
     return 1
   fi
 
-  if [ ! -x "$NATIVE_OUT" ]; then
-    echo "missing native runner: $NATIVE_OUT" >&2
+  if [ ! -x "$BOOTSTRAP_COMPILER" ]; then
+    echo "missing bootstrap compiler: $BOOTSTRAP_COMPILER" >&2
     return 1
   fi
 
-  "$NATIVE_OUT" build "$SRC_S" -o "$output"
+  "$BOOTSTRAP_COMPILER" build "$SOURCE_ENTRY" -o "$output"
 }
 
 install_launcher() {
@@ -40,18 +41,20 @@ install_launcher() {
   chmod 0755 "$output_path"
 }
 
-"$ROOT/misc/scripts/build_native_runner.sh" "$NATIVE_OUT"
-
-LAUNCHER_TMP="$WORKDIR/s_selfhost_compiler_launcher"
-build_launcher "$LAUNCHER_TMP"
-install_launcher "$LAUNCHER_TMP" "$SELFHOST_OUT"
-
-if [ -n "$FINAL_OUT" ]; then
-  install_launcher "$LAUNCHER_TMP" "$FINAL_OUT"
+if [ ! -x "$NATIVE_OUT" ]; then
+  "$ROOT/misc/scripts/build_native_runner.sh" "$NATIVE_OUT"
 fi
 
-echo "installed selfhost compiler launcher: $SELFHOST_OUT"
+COMPILER_TMP="$WORKDIR/s_selfhost_compiler"
+build_compiler "$COMPILER_TMP"
+install_launcher "$COMPILER_TMP" "$SELFHOST_OUT"
+
 if [ -n "$FINAL_OUT" ]; then
-  echo "installed final compiler launcher: $FINAL_OUT"
+  install_launcher "$COMPILER_TMP" "$FINAL_OUT"
 fi
-echo "installed runner: $NATIVE_OUT"
+
+echo "installed selfhost compiler: $SELFHOST_OUT"
+if [ -n "$FINAL_OUT" ]; then
+  echo "installed final compiler: $FINAL_OUT"
+fi
+echo "bootstrap compiler used: $BOOTSTRAP_COMPILER"
