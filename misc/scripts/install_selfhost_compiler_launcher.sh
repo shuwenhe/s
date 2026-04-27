@@ -8,7 +8,7 @@ TMPDIR="${TMPDIR:-/tmp}"
 SELFHOST_OUT="$ROOT/bin/s-selfhosted"
 FINAL_OUT="${1:-}"
 NATIVE_OUT="$ROOT/bin/s-native"
-SRC="$ROOT/src/runtime/s_selfhost_compiler_bootstrap.c"
+SRC_S="$ROOT/src/runtime/s_selfhost_compiler_bootstrap.s"
 WORKDIR="$(mktemp -d "${TMPDIR%/}/s-selfhost-XXXXXX")"
 
 cleanup() {
@@ -18,7 +18,18 @@ trap cleanup EXIT
 
 build_launcher() {
   local output="$1"
-  cc -O2 -std=c11 "$SRC" -o "$output"
+
+  if [ ! -f "$SRC_S" ]; then
+    echo "missing S launcher source: $SRC_S" >&2
+    return 1
+  fi
+
+  if [ ! -x "$NATIVE_OUT" ]; then
+    echo "missing native runner: $NATIVE_OUT" >&2
+    return 1
+  fi
+
+  "$NATIVE_OUT" build "$SRC_S" -o "$output"
 }
 
 install_launcher() {
