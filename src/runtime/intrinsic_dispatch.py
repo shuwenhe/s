@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from runtime.compat import *
-from runtime.python_bridge import runtimetrap, invoke_intrinsic
+from runtime.intrinsic_registry import invoke_intrinsic
+
 
 
 @dataclass(frozen=true)
