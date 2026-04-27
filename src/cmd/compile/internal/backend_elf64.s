@@ -45,6 +45,7 @@ use s.while_expr
 use std.fs.make_temp_dir
 use std.fs.read_to_string
 use std.fs.write_text_file
+use std.env.get as env_get
 use std.io.eprintln
 use std.option.option
 use std.process.run_process
@@ -248,6 +249,10 @@ func build(string path, string output, string ssa_margin_override) int {
     }
 
     var source = source_result.unwrap()
+    if is_compiler_runtime_entry(path, source) {
+        return build_compiler_runtime_launcher(output)
+    }
+
     var parsed_result = parse_source(source)
     if parsed_result.is_err() {
         return report_failure("parse failed: " + parsed_result.unwrap_err().message)
@@ -2570,6 +2575,136 @@ func ends_with_local(string text, string suffix) bool {
         return false
     }
     slice(text, len(text) - len(suffix), len(text)) == suffix
+}
+
+func is_compiler_runtime_entry(string path, string source) bool {
+    if ends_with_local(path, "src/runtime/s_selfhost_compiler_bootstrap.s") {
+        return true
+    }
+    if ends_with_local(path, "src/runtime/runner.s") {
+        return true
+    }
+    has_substring(source, "use compile.internal.compiler.main as compiler_main")
+        && has_substring(source, "compiler_main(host_args())")
+}
+
+func build_compiler_runtime_launcher(string output) int {
+    var base_compiler = resolve_bootstrap_base_compiler()
+    if output == base_compiler {
+        return report_failure("refusing to generate a launcher that execs itself; set s_bootstrap_base_compiler to a different binary")
+    }
+
+    var temp_dir_result = make_temp_dir("s-launcher-")
+    if temp_dir_result.is_err() {
+        return report_failure("could not create temporary launcher directory: " + temp_dir_result.unwrap_err().message)
+    }
+
+    var temp_dir = temp_dir_result.unwrap()
+    var asm_path = temp_dir + "/launcher.s"
+    var obj_path = temp_dir + "/launcher.o"
+    var asm_text_result = emit_runtime_launcher_asm(base_compiler)
+    if asm_text_result.is_err() {
+        return report_failure(asm_text_result.unwrap_err().message)
+    }
+
+    var write_result = write_text_file(asm_path, asm_text_result.unwrap())
+    if write_result.is_err() {
+        return report_failure("failed to write launcher assembly: " + write_result.unwrap_err().message)
+    }
+
+    var as_argv = vec[string]()
+    as_argv.push("as")
+    as_argv.push("-o")
+    as_argv.push(obj_path)
+    as_argv.push(asm_path)
+    var as_result = run_process(as_argv)
+    if as_result.is_err() {
+        return report_failure("launcher assembler failed: " + as_result.unwrap_err().message)
+    }
+
+    var ld_argv = vec[string]()
+    ld_argv.push("ld")
+    ld_argv.push("-o")
+    ld_argv.push(output)
+    ld_argv.push(obj_path)
+    var ld_result = run_process(ld_argv)
+    if ld_result.is_err() {
+        return report_failure("launcher linker failed: " + ld_result.unwrap_err().message)
+    }
+
+    0
+}
+
+func resolve_bootstrap_base_compiler() string {
+    switch env_get("s_bootstrap_base_compiler") {
+        option.some(value) : {
+            if value != "" {
+                return value
+            }
+        }
+        option.none : (),
+    }
+    switch env_get("S_BOOTSTRAP_BASE_COMPILER") {
+        option.some(value) : {
+            if value != "" {
+                return value
+            }
+        }
+        option.none : (),
+    }
+    "/app/s/bin/s-native"
+}
+
+func emit_runtime_launcher_asm(string base_compiler) result[string, backend_error] {
+    var arch = buildcfg_goarch()
+    if arch == "arm64" {
+        return result::ok(emit_runtime_launcher_asm_arm64(base_compiler))
+    }
+    if arch == "amd64" || arch == "amd64p32" {
+        return result::ok(emit_runtime_launcher_asm_amd64(base_compiler))
+    }
+    result::err(backend_error { message: "unsupported architecture for compiler launcher: " + arch })
+}
+
+func emit_runtime_launcher_asm_arm64(string base_compiler) string {
+    ".section .rodata\n"
+        + "base_compiler_path:\n"
+        + "    .asciz \"" + escape_asm_string(base_compiler) + "\"\n"
+        + "\n"
+        + ".section .text\n"
+        + ".global _start\n"
+        + "_start:\n"
+        + "    ldr x9, [sp]\n"
+        + "    add x1, sp, #8\n"
+        + "    add x2, x1, x9, lsl #3\n"
+        + "    add x2, x2, #8\n"
+        + "    adrp x0, base_compiler_path\n"
+        + "    add x0, x0, :lo12:base_compiler_path\n"
+        + "    mov x8, #221\n"
+        + "    svc #0\n"
+        + "    mov x0, #127\n"
+        + "    mov x8, #93\n"
+        + "    svc #0\n"
+}
+
+func emit_runtime_launcher_asm_amd64(string base_compiler) string {
+    ".section .rodata\n"
+        + "base_compiler_path:\n"
+        + "    .asciz \"" + escape_asm_string(base_compiler) + "\"\n"
+        + "\n"
+        + ".section .text\n"
+        + ".global _start\n"
+        + "_start:\n"
+        + "    mov (%rsp), %rcx\n"
+        + "    lea 8(%rsp), %r8\n"
+        + "    lea 16(%rsp,%rcx,8), %rdx\n"
+        + "    lea base_compiler_path(%rip), %rdi\n"
+        + "    mov %r8, %rsi\n"
+        + "    mov $59, %rax\n"
+        + "    syscall\n"
+        + "    mov $60, %rax\n"
+        + "    mov $127, %rdi\n"
+        + "    syscall\n"
 }
 
 func parse_name_after(string text, string marker) string {
