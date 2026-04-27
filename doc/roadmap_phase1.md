@@ -226,7 +226,7 @@ primary directories:
 tasks:
 
 - clarify which hosted paths are temporary
-- replace temporary python-hosted logic with s-native logic where realistic
+- replace temporary python-hosted logic with s_arm64 logic where realistic
 - keep the self-hosting transition incremental and testable
 
 done means:

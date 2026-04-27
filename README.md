@@ -779,7 +779,7 @@ if s is successful, it should satisfy the following:
 
 s is still in the design-draft stage in this repository.
 
-at the same time, self-hosting work has already started. the first s-native compiler skeleton lives in:
+at the same time, self-hosting work has already started. the first s_arm64 compiler skeleton lives in:
 
 - [selfhost.md](/app/s/doc/selfhost.md)
 - [ast.s](/app/s/src/s/ast.s)
