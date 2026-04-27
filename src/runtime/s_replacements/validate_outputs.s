@@ -1,0 +1,2 @@
+fn validate_outputs() {
+}
