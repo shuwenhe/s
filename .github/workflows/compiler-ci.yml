@@ -12,19 +12,34 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
 
+      - name: resolve native compiler binary
+        run: |
+          case "$(uname -m)" in
+            aarch64|arm64)
+              echo "S_NATIVE_BIN=./bin/s_arm64" >> "$GITHUB_ENV"
+              ;;
+            x86_64|amd64)
+              echo "S_NATIVE_BIN=./bin/s_x86_64" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "unsupported host architecture: $(uname -m)" >&2
+              exit 1
+              ;;
+          esac
+
       - name: set executable bits
         run: |
-          chmod +x ./bin/s-native || true
+          chmod +x "$S_NATIVE_BIN"
           chmod +x ./scripts/benchmark-compiler.sh
           chmod +x ./scripts/fuzz-check.sh
           chmod +x ./scripts/repro-build-check.sh
 
       - name: compiler checks
         run: |
-          ./bin/s-native check src/cmd/compile/internal/ssa_core.s
-          ./bin/s-native check src/cmd/compile/internal/backend_elf64.s
-          ./bin/s-native check src/cmd/compile/internal/semantic.s
-          ./bin/s-native check src/cmd/compile/internal/tests/test_ssa.s
+          "$S_NATIVE_BIN" check src/cmd/compile/internal/ssa_core.s
+          "$S_NATIVE_BIN" check src/cmd/compile/internal/backend_elf64.s
+          "$S_NATIVE_BIN" check src/cmd/compile/internal/semantic.s
+          "$S_NATIVE_BIN" check src/cmd/compile/internal/tests/test_ssa.s
 
       - name: runtime py checks
         run: |
