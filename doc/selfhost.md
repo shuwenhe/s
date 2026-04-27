@@ -1,15 +1,15 @@
 # self-hosting sources
 
-this directory contains the first s-native compiler building blocks.
+this directory contains the first s_arm64 compiler building blocks.
 
 current scope:
 
 - `std/*.s`: minimal self-hosting runtime skeleton for option / result / vec / io / fs / prelude helpers
 - `std/env.s` and `std/process.s`: command-entry abi for argv / exit during self-hosted execution
-- `s/ast.s`: s-native ast data model mirroring `compiler/ast.py`
-- `s/tokens.s`: s-native token definitions mirroring `compiler/lexer/tokens.py`
-- `s/lexer.s`: s-native lexer mirroring `compiler/lexer/lexer.py`
-- `s/parser.s`: s-native parser skeleton mirroring `compiler/parser/parser.py`
+- `s/ast.s`: s_arm64 ast data model mirroring `compiler/ast.py`
+- `s/tokens.s`: s_arm64 token definitions mirroring `compiler/lexer/tokens.py`
+- `s/lexer.s`: s_arm64 lexer mirroring `compiler/lexer/lexer.py`
+- `s/parser.s`: s_arm64 parser skeleton mirroring `compiler/parser/parser.py`
 - `cmd/lex_dump.s`: minimal self-hosting driver for `source  tokens  dump`
 - `cmd/ast_dump.s`: minimal self-hosting driver for `source  ast dump`
 - `cmd/s.s`: minimal self-hosted compiler command wrapper around `compiler.main`
