@@ -10,7 +10,10 @@ typedef enum ast_kind {
 	AST_BLOCK,
 
 	AST_LET_STMT,
+	AST_ASSIGN_STMT,
 	AST_RETURN_STMT,
+	AST_BREAK_STMT,
+	AST_CONTINUE_STMT,
 	AST_EXPR_STMT,
 	AST_PACKAGE_DECL,
 	AST_USE_DECL,
@@ -20,9 +23,11 @@ typedef enum ast_kind {
 	AST_FN_STMT,
 
 	AST_BINARY_EXPR,
+	AST_ASSIGN_EXPR,
 	AST_UNARY_EXPR,
 	AST_IDENT_EXPR,
 	AST_NUMBER_EXPR,
+	AST_BOOL_EXPR,
 	AST_STRING_EXPR,
 	AST_CALL_EXPR,
 } ast_kind;
@@ -52,6 +57,11 @@ struct ast_node {
 			char *name;
 			ast_node *value;
 		} let_stmt;
+
+		struct {
+			char *name;
+			ast_node *value;
+		} assign_stmt;
 
 		struct {
 			ast_node *value;
@@ -104,6 +114,11 @@ struct ast_node {
 		} binary_expr;
 
 		struct {
+			char *name;
+			ast_node *value;
+		} assign_expr;
+
+		struct {
 			token_type op;
 			ast_node *operand;
 		} unary_expr;
@@ -115,6 +130,10 @@ struct ast_node {
 		struct {
 			char *literal;
 		} number_expr;
+
+		struct {
+			int value;
+		} bool_expr;
 
 		struct {
 			char *literal;
