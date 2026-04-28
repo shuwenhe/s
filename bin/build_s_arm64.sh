@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BIN_DIR="$ROOT_DIR/bin"
 STAMP="$(TZ=Asia/Shanghai date +%Y%m%d%H%M%S)"
-OUT="$BIN_DIR/s_arm64_${STAMP}"
+OUT="$BIN_DIR/c_arm64_${STAMP}"
 
 mkdir -p "$BIN_DIR"
 
@@ -19,6 +19,7 @@ gcc -std=c11 -Wall -Wextra -Werror \
   src/cmd/compile/seed/semantic/analyzer.c \
   src/cmd/compile/seed/intermediate/ir.c \
   src/cmd/compile/seed/code/generator.c \
+  src/cmd/compile/seed/code/native_backend.c \
   src/cmd/compile/seed/runtime/runtime.c
 
 chmod +x "$OUT"
