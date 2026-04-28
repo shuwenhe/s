@@ -12,6 +12,9 @@ typedef enum token_type {
 
 	TOKEN_FN,
 	TOKEN_LET,
+	TOKEN_PACKAGE,
+	TOKEN_USE,
+	TOKEN_AS,
 	TOKEN_IF,
 	TOKEN_ELSE,
 	TOKEN_FOR,
@@ -25,6 +28,8 @@ typedef enum token_type {
 	TOKEN_ASSIGN,
 	TOKEN_EQ,
 	TOKEN_NE,
+	TOKEN_AND_AND,
+	TOKEN_OR_OR,
 	TOKEN_LT,
 	TOKEN_LE,
 	TOKEN_GT,
@@ -35,6 +40,7 @@ typedef enum token_type {
 	TOKEN_LBRACE,
 	TOKEN_RBRACE,
 	TOKEN_COMMA,
+	TOKEN_DOT,
 	TOKEN_SEMICOLON,
 } token_type;
 
