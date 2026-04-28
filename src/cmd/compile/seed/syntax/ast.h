@@ -12,6 +12,8 @@ typedef enum ast_kind {
 	AST_LET_STMT,
 	AST_RETURN_STMT,
 	AST_EXPR_STMT,
+	AST_PACKAGE_DECL,
+	AST_USE_DECL,
 	AST_IF_STMT,
 	AST_WHILE_STMT,
 	AST_FOR_STMT,
@@ -22,6 +24,7 @@ typedef enum ast_kind {
 	AST_IDENT_EXPR,
 	AST_NUMBER_EXPR,
 	AST_STRING_EXPR,
+	AST_CALL_EXPR,
 } ast_kind;
 
 typedef struct ast_node ast_node;
@@ -59,6 +62,15 @@ struct ast_node {
 		} expr_stmt;
 
 		struct {
+			char *name;
+		} package_decl;
+
+		struct {
+			char *module_path;
+			char *alias;
+		} use_decl;
+
+		struct {
 			ast_node *condition;
 			ast_node *then_branch;
 			ast_node *else_branch;
@@ -79,7 +91,9 @@ struct ast_node {
 		struct {
 			char *name;
 			char **params;
+			char **param_types;
 			size_t param_count;
+			char *return_type;
 			ast_node *body;
 		} fn_stmt;
 
@@ -105,6 +119,11 @@ struct ast_node {
 		struct {
 			char *literal;
 		} string_expr;
+
+		struct {
+			ast_node *callee;
+			ast_vec args;
+		} call_expr;
 	} as;
 };
 

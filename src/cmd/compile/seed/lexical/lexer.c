@@ -56,6 +56,9 @@ const char *token_type_name(token_type type) {
 		case TOKEN_STRING: return "STRING";
 		case TOKEN_FN: return "FN";
 		case TOKEN_LET: return "LET";
+		case TOKEN_PACKAGE: return "PACKAGE";
+		case TOKEN_USE: return "USE";
+		case TOKEN_AS: return "AS";
 		case TOKEN_IF: return "IF";
 		case TOKEN_ELSE: return "ELSE";
 		case TOKEN_FOR: return "FOR";
@@ -68,6 +71,8 @@ const char *token_type_name(token_type type) {
 		case TOKEN_ASSIGN: return "=";
 		case TOKEN_EQ: return "==";
 		case TOKEN_NE: return "!=";
+		case TOKEN_AND_AND: return "&&";
+		case TOKEN_OR_OR: return "||";
 		case TOKEN_LT: return "<";
 		case TOKEN_LE: return "<=";
 		case TOKEN_GT: return ">";
@@ -77,6 +82,7 @@ const char *token_type_name(token_type type) {
 		case TOKEN_LBRACE: return "{";
 		case TOKEN_RBRACE: return "}";
 		case TOKEN_COMMA: return ",";
+		case TOKEN_DOT: return ".";
 		case TOKEN_SEMICOLON: return ";";
 		default: return "UNKNOWN";
 	}
@@ -84,7 +90,12 @@ const char *token_type_name(token_type type) {
 
 static token_type keyword_or_identifier(const char *lexeme) {
 	if (strcmp(lexeme, "fn") == 0) return TOKEN_FN;
+	if (strcmp(lexeme, "func") == 0) return TOKEN_FN;
 	if (strcmp(lexeme, "let") == 0) return TOKEN_LET;
+	if (strcmp(lexeme, "var") == 0) return TOKEN_LET;
+	if (strcmp(lexeme, "package") == 0) return TOKEN_PACKAGE;
+	if (strcmp(lexeme, "use") == 0) return TOKEN_USE;
+	if (strcmp(lexeme, "as") == 0) return TOKEN_AS;
 	if (strcmp(lexeme, "if") == 0) return TOKEN_IF;
 	if (strcmp(lexeme, "else") == 0) return TOKEN_ELSE;
 	if (strcmp(lexeme, "for") == 0) return TOKEN_FOR;
@@ -190,6 +201,11 @@ bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error 
 			col++;
 			start = i;
 			while (source[i] != '\0' && source[i] != '"' && source[i] != '\n') {
+				if (source[i] == '\\' && source[i + 1] != '\0' && source[i + 1] != '\n') {
+					i += 2;
+					col += 2;
+					continue;
+				}
 				i++;
 				col++;
 			}
@@ -257,6 +273,27 @@ bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error 
 			continue;
 		}
 
+		if (c == '&' && source[i + 1] == '&') {
+			if (!push_simple(out_tokens, TOKEN_AND_AND, "&&", tok_line, tok_col)) {
+				error_set(err, ERR_OUT_OF_MEMORY, tok_line, tok_col, "out of memory");
+				token_vec_free(out_tokens);
+				return false;
+			}
+			i += 2;
+			col += 2;
+			continue;
+		}
+		if (c == '|' && source[i + 1] == '|') {
+			if (!push_simple(out_tokens, TOKEN_OR_OR, "||", tok_line, tok_col)) {
+				error_set(err, ERR_OUT_OF_MEMORY, tok_line, tok_col, "out of memory");
+				token_vec_free(out_tokens);
+				return false;
+			}
+			i += 2;
+			col += 2;
+			continue;
+		}
+
 		switch (c) {
 			case '+': if (!push_simple(out_tokens, TOKEN_PLUS, "+", tok_line, tok_col)) goto oom; break;
 			case '-': if (!push_simple(out_tokens, TOKEN_MINUS, "-", tok_line, tok_col)) goto oom; break;
@@ -270,6 +307,7 @@ bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error 
 			case '{': if (!push_simple(out_tokens, TOKEN_LBRACE, "{", tok_line, tok_col)) goto oom; break;
 			case '}': if (!push_simple(out_tokens, TOKEN_RBRACE, "}", tok_line, tok_col)) goto oom; break;
 			case ',': if (!push_simple(out_tokens, TOKEN_COMMA, ",", tok_line, tok_col)) goto oom; break;
+			case '.': if (!push_simple(out_tokens, TOKEN_DOT, ".", tok_line, tok_col)) goto oom; break;
 			case ';': if (!push_simple(out_tokens, TOKEN_SEMICOLON, ";", tok_line, tok_col)) goto oom; break;
 			default:
 				error_set(err, ERR_ILLEGAL_CHAR, tok_line, tok_col, "illegal character: %c", c);

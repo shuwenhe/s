@@ -8,11 +8,14 @@ typedef enum symbol_kind {
 	SYMBOL_VAR = 0,
 	SYMBOL_FN,
 	SYMBOL_PARAM,
+	SYMBOL_IMPORT,
 } symbol_kind;
 
 typedef struct symbol {
 	char *name;
 	symbol_kind kind;
+	int arity;
+	char *type_name;
 	struct symbol *next;
 } symbol;
 
@@ -25,7 +28,14 @@ typedef struct semantic_ctx {
 	scope *current_scope;
 	compile_error *err;
 	int function_depth;
+	const char *current_return_type;
 } semantic_ctx;
+
+static const char *TYPE_ANY = "any";
+static const char *TYPE_INT = "int";
+static const char *TYPE_STRING = "string";
+static const char *TYPE_BOOL = "bool";
+static const char *TYPE_UNIT = "()";
 
 static char *dup_cstr(const char *s) {
 	size_t n = strlen(s);
@@ -56,6 +66,7 @@ static void scope_free(scope *s) {
 	while (cur) {
 		next = cur->next;
 		free(cur->name);
+		free(cur->type_name);
 		free(cur);
 		cur = next;
 	}
@@ -85,7 +96,7 @@ static symbol *scope_lookup(scope *s, const char *name) {
 	return NULL;
 }
 
-static int scope_define(scope *s, const char *name, symbol_kind kind) {
+static int scope_define(scope *s, const char *name, symbol_kind kind, int arity, const char *type_name) {
 	symbol *sym;
 	if (!s) {
 		return 0;
@@ -102,13 +113,40 @@ static int scope_define(scope *s, const char *name, symbol_kind kind) {
 		free(sym);
 		return -1;
 	}
+	sym->type_name = dup_cstr(type_name ? type_name : TYPE_ANY);
+	if (!sym->type_name) {
+		free(sym->name);
+		free(sym);
+		return -1;
+	}
 	sym->kind = kind;
+	sym->arity = arity;
 	sym->next = s->symbols;
 	s->symbols = sym;
 	return 1;
 }
 
+static int is_type_any(const char *type_name) {
+	return !type_name || strcmp(type_name, TYPE_ANY) == 0;
+}
+
+static int is_type_assignable(const char *expected, const char *actual) {
+	if (is_type_any(expected) || is_type_any(actual)) {
+		return 1;
+	}
+	return strcmp(expected, actual) == 0;
+}
+
+static int is_truthy_type(const char *type_name) {
+	return is_type_any(type_name) || strcmp(type_name, TYPE_BOOL) == 0 || strcmp(type_name, TYPE_INT) == 0;
+}
+
+static int is_ordered_type(const char *type_name) {
+	return is_type_any(type_name) || strcmp(type_name, TYPE_INT) == 0 || strcmp(type_name, TYPE_STRING) == 0;
+}
+
 static int analyze_node(semantic_ctx *ctx, ast_node *node);
+static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type);
 
 static int enter_child_scope(semantic_ctx *ctx, scope **old_scope) {
 	scope *child;
@@ -144,9 +182,151 @@ static int analyze_block_with_new_scope(semantic_ctx *ctx, ast_node *block) {
 	return 1;
 }
 
+static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type) {
+	size_t i;
+	const char *lhs_type;
+	const char *rhs_type;
+	symbol *sym;
+	if (!node) {
+		*out_type = TYPE_UNIT;
+		return 1;
+	}
+
+	switch (node->kind) {
+		case AST_NUMBER_EXPR:
+			*out_type = TYPE_INT;
+			return 1;
+		case AST_STRING_EXPR:
+			*out_type = TYPE_STRING;
+			return 1;
+		case AST_IDENT_EXPR:
+			sym = scope_lookup(ctx->current_scope, node->as.ident_expr.name);
+			if (!sym) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"use of undeclared symbol '%s'", node->as.ident_expr.name);
+				return 0;
+			}
+			*out_type = sym->type_name;
+			return 1;
+		case AST_UNARY_EXPR:
+			if (!analyze_expr(ctx, node->as.unary_expr.operand, &rhs_type)) {
+				return 0;
+			}
+			if (node->as.unary_expr.op == TOKEN_MINUS && !is_type_assignable(TYPE_INT, rhs_type)) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"unary '-' expects int, got '%s'", rhs_type ? rhs_type : TYPE_ANY);
+				return 0;
+			}
+			*out_type = TYPE_INT;
+			return 1;
+		case AST_BINARY_EXPR:
+			if (!analyze_expr(ctx, node->as.binary_expr.left, &lhs_type) ||
+				!analyze_expr(ctx, node->as.binary_expr.right, &rhs_type)) {
+				return 0;
+			}
+			switch (node->as.binary_expr.op) {
+				case TOKEN_PLUS:
+					if (is_type_assignable(TYPE_INT, lhs_type) && is_type_assignable(TYPE_INT, rhs_type)) {
+						*out_type = TYPE_INT;
+						return 1;
+					}
+					if (is_type_assignable(TYPE_STRING, lhs_type) && is_type_assignable(TYPE_STRING, rhs_type)) {
+						*out_type = TYPE_STRING;
+						return 1;
+					}
+					if (is_type_any(lhs_type) || is_type_any(rhs_type)) {
+						*out_type = TYPE_ANY;
+						return 1;
+					}
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"operator '+' type mismatch: '%s' and '%s'", lhs_type, rhs_type);
+					return 0;
+				case TOKEN_MINUS:
+				case TOKEN_STAR:
+				case TOKEN_SLASH:
+					if (!is_type_assignable(TYPE_INT, lhs_type) || !is_type_assignable(TYPE_INT, rhs_type)) {
+						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+							"arithmetic operator expects int operands, got '%s' and '%s'", lhs_type, rhs_type);
+						return 0;
+					}
+					*out_type = TYPE_INT;
+					return 1;
+				case TOKEN_EQ:
+				case TOKEN_NE:
+					if (!is_type_assignable(lhs_type, rhs_type) && !is_type_assignable(rhs_type, lhs_type)) {
+						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+							"comparison type mismatch: '%s' and '%s'", lhs_type, rhs_type);
+						return 0;
+					}
+					*out_type = TYPE_BOOL;
+					return 1;
+				case TOKEN_LT:
+				case TOKEN_LE:
+				case TOKEN_GT:
+				case TOKEN_GE:
+					if (!is_ordered_type(lhs_type) || !is_ordered_type(rhs_type) ||
+						(!is_type_any(lhs_type) && !is_type_any(rhs_type) && strcmp(lhs_type, rhs_type) != 0)) {
+						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+							"ordered comparison type mismatch: '%s' and '%s'", lhs_type, rhs_type);
+						return 0;
+					}
+					*out_type = TYPE_BOOL;
+					return 1;
+				case TOKEN_AND_AND:
+				case TOKEN_OR_OR:
+					if (!is_truthy_type(lhs_type) || !is_truthy_type(rhs_type)) {
+						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+							"logical operator expects bool/int operands, got '%s' and '%s'", lhs_type, rhs_type);
+						return 0;
+					}
+					*out_type = TYPE_BOOL;
+					return 1;
+				default:
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"unsupported binary operator");
+					return 0;
+			}
+		case AST_CALL_EXPR:
+			for (i = 0; i < node->as.call_expr.args.len; i++) {
+				if (!analyze_expr(ctx, node->as.call_expr.args.data[i], &rhs_type)) {
+					return 0;
+				}
+			}
+			if (!node->as.call_expr.callee || node->as.call_expr.callee->kind != AST_IDENT_EXPR) {
+				if (!analyze_expr(ctx, node->as.call_expr.callee, &lhs_type)) {
+					return 0;
+				}
+				*out_type = TYPE_ANY;
+				return 1;
+			}
+			sym = scope_lookup(ctx->current_scope, node->as.call_expr.callee->as.ident_expr.name);
+			if (!sym) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"call to undeclared symbol '%s'", node->as.call_expr.callee->as.ident_expr.name);
+				return 0;
+			}
+			if (sym->kind == SYMBOL_VAR || sym->kind == SYMBOL_PARAM) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"symbol '%s' is not callable", sym->name);
+				return 0;
+			}
+			if (sym->kind == SYMBOL_FN && sym->arity >= 0 && (size_t)sym->arity != node->as.call_expr.args.len) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"function '%s' expects %d arguments, got %zu", sym->name, sym->arity, node->as.call_expr.args.len);
+				return 0;
+			}
+			*out_type = sym->kind == SYMBOL_FN ? sym->type_name : TYPE_ANY;
+			return 1;
+		default:
+			error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "unsupported expression node kind");
+			return 0;
+	}
+}
+
 static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 	size_t i;
 	int status;
+	const char *expr_type;
 	if (!node) {
 		return 1;
 	}
@@ -154,18 +334,54 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 	switch (node->kind) {
 		case AST_PROGRAM:
 			for (i = 0; i < node->as.program.statements.len; i++) {
+				ast_node *decl = node->as.program.statements.data[i];
+				if (decl->kind == AST_FN_STMT) {
+					status = scope_define(
+						ctx->current_scope,
+						decl->as.fn_stmt.name,
+						SYMBOL_FN,
+						(int)decl->as.fn_stmt.param_count,
+						decl->as.fn_stmt.return_type ? decl->as.fn_stmt.return_type : TYPE_ANY
+					);
+					if (status == 0) {
+						error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
+							"redefinition of function '%s'", decl->as.fn_stmt.name);
+						return 0;
+					}
+					if (status < 0) {
+						error_set(ctx->err, ERR_OUT_OF_MEMORY, decl->pos.line, decl->pos.column, "out of memory");
+						return 0;
+					}
+				}
+				if (decl->kind == AST_USE_DECL && decl->as.use_decl.alias && decl->as.use_decl.alias[0] != '\0') {
+					status = scope_define(ctx->current_scope, decl->as.use_decl.alias, SYMBOL_IMPORT, -1, TYPE_ANY);
+					if (status == 0) {
+						error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
+							"redefinition of import alias '%s'", decl->as.use_decl.alias);
+						return 0;
+					}
+					if (status < 0) {
+						error_set(ctx->err, ERR_OUT_OF_MEMORY, decl->pos.line, decl->pos.column, "out of memory");
+						return 0;
+					}
+				}
+			}
+			for (i = 0; i < node->as.program.statements.len; i++) {
 				if (!analyze_node(ctx, node->as.program.statements.data[i])) {
 					return 0;
 				}
 			}
 			return 1;
+		case AST_PACKAGE_DECL:
+		case AST_USE_DECL:
+			return 1;
 		case AST_BLOCK:
 			return analyze_block_with_new_scope(ctx, node);
 		case AST_LET_STMT:
-			if (!analyze_node(ctx, node->as.let_stmt.value)) {
+			if (!analyze_expr(ctx, node->as.let_stmt.value, &expr_type)) {
 				return 0;
 			}
-			status = scope_define(ctx->current_scope, node->as.let_stmt.name, SYMBOL_VAR);
+			status = scope_define(ctx->current_scope, node->as.let_stmt.name, SYMBOL_VAR, -1, expr_type);
 			if (status == 0) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"redefinition of symbol '%s'", node->as.let_stmt.name);
@@ -182,11 +398,26 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					"return statement outside function");
 				return 0;
 			}
-			return analyze_node(ctx, node->as.return_stmt.value);
+			if (!analyze_expr(ctx, node->as.return_stmt.value, &expr_type)) {
+				return 0;
+			}
+			if (!is_type_assignable(ctx->current_return_type, expr_type)) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"return type mismatch: expected '%s', got '%s'",
+					ctx->current_return_type ? ctx->current_return_type : TYPE_ANY,
+					expr_type ? expr_type : TYPE_ANY);
+				return 0;
+			}
+			return 1;
 		case AST_EXPR_STMT:
-			return analyze_node(ctx, node->as.expr_stmt.expr);
+			return analyze_expr(ctx, node->as.expr_stmt.expr, &expr_type);
 		case AST_IF_STMT:
-			if (!analyze_node(ctx, node->as.if_stmt.condition)) {
+			if (!analyze_expr(ctx, node->as.if_stmt.condition, &expr_type)) {
+				return 0;
+			}
+			if (!is_truthy_type(expr_type)) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"if condition expects bool/int, got '%s'", expr_type ? expr_type : TYPE_ANY);
 				return 0;
 			}
 			if (!analyze_node(ctx, node->as.if_stmt.then_branch)) {
@@ -194,7 +425,12 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			}
 			return analyze_node(ctx, node->as.if_stmt.else_branch);
 		case AST_WHILE_STMT:
-			if (!analyze_node(ctx, node->as.while_stmt.condition)) {
+			if (!analyze_expr(ctx, node->as.while_stmt.condition, &expr_type)) {
+				return 0;
+			}
+			if (!is_truthy_type(expr_type)) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"while condition expects bool/int, got '%s'", expr_type ? expr_type : TYPE_ANY);
 				return 0;
 			}
 			return analyze_node(ctx, node->as.while_stmt.body);
@@ -203,9 +439,19 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			if (!enter_child_scope(ctx, &old_scope)) {
 				return 0;
 			}
-			if (!analyze_node(ctx, node->as.for_stmt.init) ||
-				!analyze_node(ctx, node->as.for_stmt.condition) ||
-				!analyze_node(ctx, node->as.for_stmt.post) ||
+			if (!analyze_node(ctx, node->as.for_stmt.init)) {
+				leave_child_scope(ctx, old_scope);
+				return 0;
+			}
+			if (node->as.for_stmt.condition) {
+				if (!analyze_expr(ctx, node->as.for_stmt.condition, &expr_type) || !is_truthy_type(expr_type)) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"for condition expects bool/int");
+					leave_child_scope(ctx, old_scope);
+					return 0;
+				}
+			}
+			if (!analyze_expr(ctx, node->as.for_stmt.post, &expr_type) ||
 				!analyze_node(ctx, node->as.for_stmt.body)) {
 				leave_child_scope(ctx, old_scope);
 				return 0;
@@ -215,21 +461,18 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		}
 		case AST_FN_STMT: {
 			scope *old_scope;
-			status = scope_define(ctx->current_scope, node->as.fn_stmt.name, SYMBOL_FN);
-			if (status == 0) {
-				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
-					"redefinition of function '%s'", node->as.fn_stmt.name);
-				return 0;
-			}
-			if (status < 0) {
-				error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
-				return 0;
-			}
+			const char *old_return_type;
 			if (!enter_child_scope(ctx, &old_scope)) {
 				return 0;
 			}
 			for (i = 0; i < node->as.fn_stmt.param_count; i++) {
-				status = scope_define(ctx->current_scope, node->as.fn_stmt.params[i], SYMBOL_PARAM);
+				status = scope_define(
+					ctx->current_scope,
+					node->as.fn_stmt.params[i],
+					SYMBOL_PARAM,
+					-1,
+					node->as.fn_stmt.param_types ? node->as.fn_stmt.param_types[i] : TYPE_ANY
+				);
 				if (status == 0) {
 					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 						"duplicate parameter '%s'", node->as.fn_stmt.params[i]);
@@ -242,30 +485,27 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					return 0;
 				}
 			}
+			old_return_type = ctx->current_return_type;
+			ctx->current_return_type = node->as.fn_stmt.return_type ? node->as.fn_stmt.return_type : TYPE_ANY;
 			ctx->function_depth++;
 			if (!analyze_node(ctx, node->as.fn_stmt.body)) {
 				ctx->function_depth--;
+				ctx->current_return_type = old_return_type;
 				leave_child_scope(ctx, old_scope);
 				return 0;
 			}
 			ctx->function_depth--;
+			ctx->current_return_type = old_return_type;
 			leave_child_scope(ctx, old_scope);
 			return 1;
 		}
 		case AST_BINARY_EXPR:
-			return analyze_node(ctx, node->as.binary_expr.left) && analyze_node(ctx, node->as.binary_expr.right);
 		case AST_UNARY_EXPR:
-			return analyze_node(ctx, node->as.unary_expr.operand);
 		case AST_IDENT_EXPR:
-			if (!scope_lookup(ctx->current_scope, node->as.ident_expr.name)) {
-				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
-					"use of undeclared symbol '%s'", node->as.ident_expr.name);
-				return 0;
-			}
-			return 1;
+		case AST_CALL_EXPR:
 		case AST_NUMBER_EXPR:
 		case AST_STRING_EXPR:
-			return 1;
+			return analyze_expr(ctx, node, &expr_type);
 	}
 
 	error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "unknown AST node kind");
@@ -286,6 +526,7 @@ bool semantic_analyze(ast_node *root, compile_error *err) {
 	ctx.current_scope = global_scope;
 	ctx.err = err;
 	ctx.function_depth = 0;
+	ctx.current_return_type = TYPE_ANY;
 
 	ok = analyze_node(&ctx, root) ? true : false;
 	scope_free(global_scope);
