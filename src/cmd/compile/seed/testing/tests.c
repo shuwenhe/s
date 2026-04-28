@@ -479,6 +479,197 @@ static bool test_semantic_unreachable_after_return(void) {
 	return ok;
 }
 
+static bool test_semantic_nested_if_dead_code(void) {
+	const char *src =
+		"fn main() int { "
+		"  if true { "
+		"    if true { return 1; } else { return 2; } "
+		"  } else { "
+		"    return 3; "
+		"  } "
+		"  let x = 0; "
+		"  return x; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "after return") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_short_circuit_assignment_propagation(void) {
+	const char *src =
+		"fn id(any x) any { return x; } "
+		"fn need_int(int x) int { return x; } "
+		"fn main() int { "
+		"  let flag = false; "
+		"  let b = id(0); "
+		"  flag && (b = \"x\"); "
+		"  return need_int(b); "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_builtin_signature_check(void) {
+	const char *src = "fn main() int { len(); return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "at least 1") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_import_signature_check(void) {
+	const char *src =
+		"use std.io.eprintln as say "
+		"fn main() int { say(); return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "at least 1") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_path_sensitive_narrowing_if_and(void) {
+	const char *src =
+		"fn id(any x) any { return x; } "
+		"fn takes_int(int x) int { return x; } "
+		"fn takes_string(string s) int { return 1; } "
+		"fn main() int { "
+		"  let x = id(1); "
+		"  let y = id(\"ok\"); "
+		"  if x == 1 && y == \"ok\" { "
+		"    return takes_int(x) + takes_string(y); "
+		"  } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_path_sensitive_narrowing_if_or_else(void) {
+	const char *src =
+		"fn id(any x) any { return x; } "
+		"fn takes_int(int x) int { return x; } "
+		"fn takes_string(string s) int { return 1; } "
+		"fn main() int { "
+		"  let x = id(2); "
+		"  let y = id(\"s\"); "
+		"  if x == 1 || y == \"ok\" { "
+		"    return 0; "
+		"  } else { "
+		"    return takes_int(x) + takes_string(y); "
+		"  } "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_metadata_import_signature_success(void) {
+	const char *src =
+		"use internal.buildcfg.goarch as goarch "
+		"fn main() int { "
+		"  let arch = goarch(); "
+		"  if arch == \"amd64\" { return 1; } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
 static bool test_semantic_call_callee_boundary(void) {
 	const char *src = "fn main() int { let x = 0; return (x = 1)(2); }";
 	token_vec tokens;
@@ -850,8 +1041,15 @@ int main(void) {
 	ok = ok && test_semantic_unreachable_after_break();
 	ok = ok && test_semantic_unreachable_after_continue();
 	ok = ok && test_semantic_unreachable_after_return();
+	ok = ok && test_semantic_nested_if_dead_code();
 	ok = ok && test_semantic_call_callee_boundary();
 	ok = ok && test_semantic_chained_assignment_in_call_args();
+	ok = ok && test_semantic_short_circuit_assignment_propagation();
+	ok = ok && test_semantic_builtin_signature_check();
+	ok = ok && test_semantic_import_signature_check();
+	ok = ok && test_semantic_path_sensitive_narrowing_if_and();
+	ok = ok && test_semantic_path_sensitive_narrowing_if_or_else();
+	ok = ok && test_semantic_metadata_import_signature_success();
 	ok = ok && test_parser_assignment_expression();
 	ok = ok && test_ir_generation_entry();
 	ok = ok && test_codegen_end_to_end();
