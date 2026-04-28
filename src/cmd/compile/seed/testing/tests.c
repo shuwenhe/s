@@ -98,6 +98,46 @@ static bool test_unterminated_string_error(void) {
 	return err.code == ERR_UNTERMINATED_STRING;
 }
 
+static bool test_line_comment_lexing(void) {
+	const char *src = "let x = 1; // comment\nlet y = 2;";
+	token_vec tokens;
+	compile_error err;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (!ok) {
+		return false;
+	}
+	ok = tokens.len >= 11;
+	ok = ok && tokens.data[0].type == TOKEN_LET;
+	ok = ok && tokens.data[5].type == TOKEN_LET;
+	token_vec_free(&tokens);
+	return ok;
+}
+
+static bool test_block_comment_lexing_and_error(void) {
+	const char *ok_src = "let x = 1; /* block\ncomment */ let y = 2;";
+	const char *bad_src = "let x = 1; /* unterminated";
+	token_vec tokens;
+	compile_error err;
+	bool ok = lexer_scan(ok_src, &tokens, &err);
+	if (!ok) {
+		return false;
+	}
+	ok = tokens.len >= 11;
+	ok = ok && tokens.data[0].type == TOKEN_LET;
+	ok = ok && tokens.data[5].type == TOKEN_LET;
+	token_vec_free(&tokens);
+	if (!ok) {
+		return false;
+	}
+
+	ok = lexer_scan(bad_src, &tokens, &err);
+	if (ok) {
+		token_vec_free(&tokens);
+		return false;
+	}
+	return err.code == ERR_SYNTAX;
+}
+
 static bool test_parser_let_and_precedence(void) {
 	const char *src = "let x = 1 + 2 * 3;";
 	token_vec tokens;
@@ -915,6 +955,91 @@ static bool test_runtime_function_call_and_tail_expr_return(void) {
 	return ok;
 }
 
+static bool test_runtime_string_value_semantics(void) {
+	const char *target_text =
+		"SSEED-TARGET-V1\n"
+		"FUNC_BEGIN|main|_|_\n"
+		"CMP_EQ|eq1|\"ab\"|\"ab\"\n"
+		"JUMP_IF_FALSE|fail|eq1|_\n"
+		"ADD|s|\"a\"|\"b\"\n"
+		"CMP_EQ|eq2|s|\"ab\"\n"
+		"JUMP_IF_FALSE|fail|eq2|_\n"
+		"RET|7|_|_\n"
+		"LABEL|fail|_|_\n"
+		"RET|0|_|_\n"
+		"FUNC_END|main|_|_\n";
+	compile_error err;
+	long ret = 0;
+	bool ok = runtime_execute_text(target_text, "main", &ret, &err);
+	return ok && ret == 7;
+}
+
+static bool test_runtime_string_mixed_compare_error(void) {
+	const char *target_text =
+		"SSEED-TARGET-V1\n"
+		"FUNC_BEGIN|main|_|_\n"
+		"CMP_EQ|bad|\"1\"|1\n"
+		"RET|bad|_|_\n"
+		"FUNC_END|main|_|_\n";
+	compile_error err;
+	long ret = 0;
+	bool ok = runtime_execute_text(target_text, "main", &ret, &err);
+	(void)ret;
+	if (ok) {
+		return false;
+	}
+	if (err.code != ERR_SEMANTIC) {
+		return false;
+	}
+	return strstr(err.message, "operand types to match") != NULL;
+}
+
+static bool test_runtime_string_escape_sequences(void) {
+	const char *target_text =
+		"SSEED-TARGET-V1\n"
+		"FUNC_BEGIN|main|_|_\n"
+		"ADD|s1|\"\\n\"|\"\\t\"\n"
+		"ADD|s2|\"\\\\\"|\"x\"\n"
+		"ADD|s|s1|s2\n"
+		"RET|s|_|_\n"
+		"FUNC_END|main|_|_\n";
+	compile_error err;
+	long ret = 0;
+	bool ok = runtime_execute_text(target_text, "main", &ret, &err);
+	return ok && ret == 4;
+}
+
+static bool test_runtime_string_long_boundary(void) {
+	char lit[304];
+	char target_text[768];
+	compile_error err;
+	long ret = 0;
+	size_t i;
+	bool ok;
+
+	lit[0] = '"';
+	for (i = 1; i <= 300; i++) {
+		lit[i] = 'a';
+	}
+	lit[301] = '"';
+	lit[302] = '\0';
+
+	if (snprintf(
+			target_text,
+			sizeof(target_text),
+			"SSEED-TARGET-V1\n"
+			"FUNC_BEGIN|main|_|_\n"
+			"RET|%s|_|_\n"
+			"FUNC_END|main|_|_\n",
+			lit
+		) < 0) {
+		return false;
+	}
+
+	ok = runtime_execute_text(target_text, "main", &ret, &err);
+	return ok && ret == 300;
+}
+
 static bool test_ir_generation_entry(void) {
 	const char *src = "fn add(a, b) { let c = a + b; if (c > 0) { return c; } return a; }";
 	token_vec tokens;
@@ -1085,6 +1210,8 @@ int main(void) {
 	ok = ok && test_function_header();
 	ok = ok && test_illegal_char_error();
 	ok = ok && test_unterminated_string_error();
+	ok = ok && test_line_comment_lexing();
+	ok = ok && test_block_comment_lexing_and_error();
 	ok = ok && test_parser_let_and_precedence();
 	ok = ok && test_parser_return_and_block();
 	ok = ok && test_parser_control_flow_and_function();
@@ -1116,6 +1243,10 @@ int main(void) {
 	ok = ok && test_runtime_short_circuit_or();
 	ok = ok && test_runtime_short_circuit_and_side_effect_order();
 	ok = ok && test_runtime_function_call_and_tail_expr_return();
+	ok = ok && test_runtime_string_value_semantics();
+	ok = ok && test_runtime_string_mixed_compare_error();
+	ok = ok && test_runtime_string_escape_sequences();
+	ok = ok && test_runtime_string_long_boundary();
 
 	if (!ok) {
 		fprintf(stderr, "seed parser/semantic/ir tests failed\n");
