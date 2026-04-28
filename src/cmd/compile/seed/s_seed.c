@@ -142,12 +142,26 @@ bool seed_compile_file(const char *input_path, const char *output_path, compile_
 static void print_usage(const char *argv0) {
 	fprintf(stderr, "usage:\n");
 	fprintf(stderr, "  %s <input.s> <output.ir>\n", argv0);
+	fprintf(stderr, "  %s --emit-bin <input.ir> <output.bin>\n", argv0);
 	fprintf(stderr, "  %s --bootstrap <compiler_source.s> [output_dir]\n", argv0);
 }
 
 int main(int argc, char **argv) {
 	compile_error err;
 	error_clear(&err);
+
+	if (argc >= 2 && strcmp(argv[1], "--emit-bin") == 0) {
+		if (argc != 4) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (!emit_native_from_ir_file(argv[2], argv[3], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("compiled %s -> %s\n", argv[2], argv[3]);
+		return 0;
+	}
 
 	if (argc >= 2 && strcmp(argv[1], "--bootstrap") == 0) {
 		const char *compiler_src;
