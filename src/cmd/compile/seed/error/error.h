@@ -1,0 +1,1 @@
+// Error definitions for S language
