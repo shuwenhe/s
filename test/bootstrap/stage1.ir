@@ -1,0 +1,13 @@
+FUNC_BEGIN     add
+PARAM          a
+PARAM          b
+ADD            t0, a, b
+MOV            c, t0
+CMP_GT         t1, c, 0
+JUMP_IF_FALSE  t1, L0
+RET            c
+JUMP           L1
+LABEL          L0
+LABEL          L1
+RET            a
+FUNC_END       add
