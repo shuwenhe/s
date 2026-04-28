@@ -9,6 +9,9 @@ typedef struct ir_builder {
 	compile_error *err;
 	int temp_counter;
 	int label_counter;
+	char break_labels[64][64];
+	char continue_labels[64][64];
+	int loop_depth;
 } ir_builder;
 
 static void copy_str(char dst[64], const char *src) {
@@ -92,6 +95,36 @@ static void next_label(ir_builder *b, char out[64]) {
 	snprintf(out, 64, "L%d", b->label_counter++);
 }
 
+static int push_loop(ir_builder *b, const char *break_label, const char *continue_label) {
+	if (b->loop_depth >= 64) {
+		return 0;
+	}
+	snprintf(b->break_labels[b->loop_depth], 64, "%s", break_label);
+	snprintf(b->continue_labels[b->loop_depth], 64, "%s", continue_label);
+	b->loop_depth++;
+	return 1;
+}
+
+static void pop_loop(ir_builder *b) {
+	if (b->loop_depth > 0) {
+		b->loop_depth--;
+	}
+}
+
+static const char *current_break_label(ir_builder *b) {
+	if (b->loop_depth <= 0) {
+		return NULL;
+	}
+	return b->break_labels[b->loop_depth - 1];
+}
+
+static const char *current_continue_label(ir_builder *b) {
+	if (b->loop_depth <= 0) {
+		return NULL;
+	}
+	return b->continue_labels[b->loop_depth - 1];
+}
+
 static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]);
 static bool lower_stmt(ir_builder *b, ast_node *stmt);
 
@@ -99,28 +132,79 @@ static bool lower_binary(ir_builder *b, ast_node *expr, char out[64]) {
 	char lhs[64];
 	char rhs[64];
 	ir_op op;
-	if (!lower_expr(b, expr->as.binary_expr.left, lhs) || !lower_expr(b, expr->as.binary_expr.right, rhs)) {
+	if (!lower_expr(b, expr->as.binary_expr.left, lhs)) {
 		return false;
 	}
 	if (expr->as.binary_expr.op == TOKEN_OR_OR || expr->as.binary_expr.op == TOKEN_AND_AND) {
 		char lhs_bool[64];
 		char rhs_bool[64];
+		char eval_rhs_label[64];
+		char false_label[64];
+		char end_label[64];
 		next_temp(b, lhs_bool);
 		next_temp(b, rhs_bool);
+		next_temp(b, out);
+		next_label(b, eval_rhs_label);
+		next_label(b, false_label);
+		next_label(b, end_label);
 		if (!emit_ins(b, IR_CMP_NE, lhs_bool, lhs, "0", expr->pos)) {
+			return false;
+		}
+		if (expr->as.binary_expr.op == TOKEN_OR_OR) {
+			if (!emit_ins(b, IR_JUMP_IF_FALSE, eval_rhs_label, lhs_bool, "", expr->pos)) {
+				return false;
+			}
+			if (!emit_ins(b, IR_MOV, out, "1", "", expr->pos)) {
+				return false;
+			}
+			if (!emit_ins(b, IR_JUMP, end_label, "", "", expr->pos)) {
+				return false;
+			}
+			if (!emit_ins(b, IR_LABEL, eval_rhs_label, "", "", expr->pos)) {
+				return false;
+			}
+			if (!lower_expr(b, expr->as.binary_expr.right, rhs)) {
+				return false;
+			}
+			if (!emit_ins(b, IR_CMP_NE, rhs_bool, rhs, "0", expr->pos)) {
+				return false;
+			}
+			if (!emit_ins(b, IR_MOV, out, rhs_bool, "", expr->pos)) {
+				return false;
+			}
+			return emit_ins(b, IR_LABEL, end_label, "", "", expr->pos);
+		}
+		if (!emit_ins(b, IR_JUMP_IF_FALSE, false_label, lhs_bool, "", expr->pos)) {
+			return false;
+		}
+		if (!emit_ins(b, IR_JUMP, eval_rhs_label, "", "", expr->pos)) {
+			return false;
+		}
+		if (!emit_ins(b, IR_LABEL, eval_rhs_label, "", "", expr->pos)) {
+			return false;
+		}
+		if (!lower_expr(b, expr->as.binary_expr.right, rhs)) {
 			return false;
 		}
 		if (!emit_ins(b, IR_CMP_NE, rhs_bool, rhs, "0", expr->pos)) {
 			return false;
 		}
-		next_temp(b, out);
-		if (expr->as.binary_expr.op == TOKEN_AND_AND) {
-			return emit_ins(b, IR_MUL, out, lhs_bool, rhs_bool, expr->pos);
-		}
-		if (!emit_ins(b, IR_ADD, out, lhs_bool, rhs_bool, expr->pos)) {
+		if (!emit_ins(b, IR_MOV, out, rhs_bool, "", expr->pos)) {
 			return false;
 		}
-		return emit_ins(b, IR_CMP_GT, out, out, "0", expr->pos);
+		if (!emit_ins(b, IR_JUMP, end_label, "", "", expr->pos)) {
+			return false;
+		}
+		if (!emit_ins(b, IR_LABEL, false_label, "", "", expr->pos)) {
+			return false;
+		}
+		if (!emit_ins(b, IR_MOV, out, "0", "", expr->pos)) {
+			return false;
+		}
+		return emit_ins(b, IR_LABEL, end_label, "", "", expr->pos);
+	}
+	if (!lower_expr(b, expr->as.binary_expr.right, rhs)) {
+		return false;
 	}
 	switch (expr->as.binary_expr.op) {
 		case TOKEN_PLUS: op = IR_ADD; break;
@@ -151,6 +235,9 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]) {
 		case AST_NUMBER_EXPR:
 			snprintf(out, 64, "%s", expr->as.number_expr.literal);
 			return true;
+		case AST_BOOL_EXPR:
+			snprintf(out, 64, "%d", expr->as.bool_expr.value ? 1 : 0);
+			return true;
 		case AST_STRING_EXPR:
 			snprintf(out, 64, "\"%s\"", expr->as.string_expr.literal);
 			return true;
@@ -166,11 +253,23 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]) {
 			if (expr->as.unary_expr.op == TOKEN_MINUS) {
 				return emit_ins(b, IR_SUB, out, "0", rhs, expr->pos);
 			}
+			if (expr->as.unary_expr.op == TOKEN_BANG) {
+				return emit_ins(b, IR_CMP_EQ, out, rhs, "0", expr->pos);
+			}
 			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "unsupported unary operator for IR");
 			return false;
 		}
 		case AST_BINARY_EXPR:
 			return lower_binary(b, expr, out);
+		case AST_ASSIGN_EXPR:
+			if (!lower_expr(b, expr->as.assign_expr.value, out)) {
+				return false;
+			}
+			if (!emit_ins(b, IR_MOV, expr->as.assign_expr.name, out, "", expr->pos)) {
+				return false;
+			}
+			snprintf(out, 64, "%s", expr->as.assign_expr.name);
+			return true;
 			case AST_CALL_EXPR: {
 				size_t i;
 				char callee[64] = "call";
@@ -247,9 +346,15 @@ static bool lower_while(ir_builder *b, ast_node *stmt) {
 	if (!emit_ins(b, IR_JUMP_IF_FALSE, end_label, cond, "", stmt->pos)) {
 		return false;
 	}
-	if (!lower_stmt(b, stmt->as.while_stmt.body)) {
+	if (!push_loop(b, end_label, start_label)) {
+		error_set(b->err, ERR_SEMANTIC, stmt->pos.line, stmt->pos.column, "loop nesting too deep");
 		return false;
 	}
+	if (!lower_stmt(b, stmt->as.while_stmt.body)) {
+		pop_loop(b);
+		return false;
+	}
+	pop_loop(b);
 	if (!emit_ins(b, IR_JUMP, start_label, "", "", stmt->pos)) {
 		return false;
 	}
@@ -258,12 +363,14 @@ static bool lower_while(ir_builder *b, ast_node *stmt) {
 
 static bool lower_for(ir_builder *b, ast_node *stmt) {
 	char start_label[64];
+	char post_label[64];
 	char end_label[64];
 	char cond[64];
 	if (stmt->as.for_stmt.init && !lower_stmt(b, stmt->as.for_stmt.init)) {
 		return false;
 	}
 	next_label(b, start_label);
+	next_label(b, post_label);
 	next_label(b, end_label);
 	if (!emit_ins(b, IR_LABEL, start_label, "", "", stmt->pos)) {
 		return false;
@@ -276,18 +383,33 @@ static bool lower_for(ir_builder *b, ast_node *stmt) {
 			return false;
 		}
 	}
+	if (!push_loop(b, end_label, post_label)) {
+		error_set(b->err, ERR_SEMANTIC, stmt->pos.line, stmt->pos.column, "loop nesting too deep");
+		return false;
+	}
 	if (!lower_stmt(b, stmt->as.for_stmt.body)) {
+		pop_loop(b);
+		return false;
+	}
+	pop_loop(b);
+	if (!emit_ins(b, IR_LABEL, post_label, "", "", stmt->pos)) {
 		return false;
 	}
 	if (stmt->as.for_stmt.post) {
-		char unused[64];
-		if (!lower_expr(b, stmt->as.for_stmt.post, unused)) {
-			return false;
+		if (stmt->as.for_stmt.post->kind == AST_ASSIGN_STMT) {
+			if (!lower_stmt(b, stmt->as.for_stmt.post)) {
+				return false;
+			}
+		} else {
+			char unused[64];
+			if (!lower_expr(b, stmt->as.for_stmt.post, unused)) {
+				return false;
+			}
 		}
 	}
 	if (!emit_ins(b, IR_JUMP, start_label, "", "", stmt->pos)) {
-		return false;
-	}
+			return false;
+		}
 	return emit_ins(b, IR_LABEL, end_label, "", "", stmt->pos);
 }
 
@@ -323,11 +445,32 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 				return false;
 			}
 			return emit_ins(b, IR_MOV, stmt->as.let_stmt.name, value, "", stmt->pos);
+		case AST_ASSIGN_STMT:
+			if (!lower_expr(b, stmt->as.assign_stmt.value, value)) {
+				return false;
+			}
+			return emit_ins(b, IR_MOV, stmt->as.assign_stmt.name, value, "", stmt->pos);
 		case AST_RETURN_STMT:
 			if (!lower_expr(b, stmt->as.return_stmt.value, value)) {
 				return false;
 			}
 			return emit_ins(b, IR_RET, value, "", "", stmt->pos);
+		case AST_BREAK_STMT: {
+			const char *break_label = current_break_label(b);
+			if (!break_label) {
+				error_set(b->err, ERR_SEMANTIC, stmt->pos.line, stmt->pos.column, "break outside loop");
+				return false;
+			}
+			return emit_ins(b, IR_JUMP, break_label, "", "", stmt->pos);
+		}
+		case AST_CONTINUE_STMT: {
+			const char *continue_label = current_continue_label(b);
+			if (!continue_label) {
+				error_set(b->err, ERR_SEMANTIC, stmt->pos.line, stmt->pos.column, "continue outside loop");
+				return false;
+			}
+			return emit_ins(b, IR_JUMP, continue_label, "", "", stmt->pos);
+		}
 		case AST_EXPR_STMT:
 			return lower_expr(b, stmt->as.expr_stmt.expr, value);
 		case AST_IF_STMT:
@@ -363,5 +506,6 @@ bool ir_generate_from_ast(ast_node *root, IR *ir, compile_error *err) {
 	b.err = err;
 	b.temp_counter = 0;
 	b.label_counter = 0;
+	b.loop_depth = 0;
 	return lower_stmt(&b, root);
 }

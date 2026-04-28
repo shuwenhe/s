@@ -307,6 +307,364 @@ static bool test_semantic_return_type_mismatch(void) {
 	return ok;
 }
 
+static bool test_semantic_call_arg_type_mismatch(void) {
+	const char *src =
+		"fn add(int a, int b) int { return a + b; } "
+		"fn main() int { return add(1, \"x\"); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_missing_return_path(void) {
+	const char *src = "fn classify(int x) int { if (x > 0) { return 1; } }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_assignment_and_loop_control(void) {
+	const char *src =
+		"fn main() int { "
+		"  let i = 0; "
+		"  while i < 10 { "
+		"    i = i + 1; "
+		"    if i == 3 { continue; } "
+		"    if i == 5 { break; } "
+		"  } "
+		"  return i; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_bool_flow(void) {
+	const char *src = "fn main() int { if !false && true { return 1; } return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_unreachable_after_break(void) {
+	const char *src =
+		"fn main() int { "
+		"  while true { "
+		"    break; "
+		"    let x = 1; "
+		"  } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "after break") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_unreachable_after_continue(void) {
+	const char *src =
+		"fn main() int { "
+		"  while true { "
+		"    continue; "
+		"    let x = 1; "
+		"  } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "after continue") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_unreachable_after_return(void) {
+	const char *src =
+		"fn main() int { "
+		"  return 1; "
+		"  let x = 2; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "after return") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_call_callee_boundary(void) {
+	const char *src = "fn main() int { let x = 0; return (x = 1)(2); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "callee must be an identifier") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_chained_assignment_in_call_args(void) {
+	const char *src =
+		"fn sum(int a, int b) int { return a + b; } "
+		"fn main() int { let x = 0; return sum((x = 1), (x = x + 1)); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_assignment_expression(void) {
+	const char *src =
+		"fn main() int { "
+		"  let i = 0; "
+		"  let j = (i = i + 1); "
+		"  return j; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_runtime_short_circuit_or(void) {
+	const char *src =
+		"fn main() int { "
+		"  let x = 0; "
+		"  if true || (1 / x > 0) { return 1; } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	FILE *tmp;
+	char buf[4096];
+	size_t n;
+	long ret = 0;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, &err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	tmp = tmpfile();
+	if (!tmp) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	generate_code(&ir, tmp);
+	fflush(tmp);
+	fseek(tmp, 0, SEEK_SET);
+	n = fread(buf, 1, sizeof(buf) - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
+
+	ok = runtime_execute_text(buf, "main", &ret, &err);
+	ok = ok && ret == 1;
+
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_runtime_short_circuit_and_side_effect_order(void) {
+	const char *src =
+		"fn main() int { "
+		"  let x = 0; "
+		"  if false && ((x = 1) > 0) { return 2; } "
+		"  return x; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	FILE *tmp;
+	char buf[4096];
+	size_t n;
+	long ret = 0;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, &err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	tmp = tmpfile();
+	if (!tmp) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	generate_code(&ir, tmp);
+	fflush(tmp);
+	fseek(tmp, 0, SEEK_SET);
+	n = fread(buf, 1, sizeof(buf) - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
+
+	ok = runtime_execute_text(buf, "main", &ret, &err);
+	ok = ok && ret == 0;
+
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
 static bool test_ir_generation_entry(void) {
 	const char *src = "fn add(a, b) { let c = a + b; if (c > 0) { return c; } return a; }";
 	token_vec tokens;
@@ -485,9 +843,21 @@ int main(void) {
 	ok = ok && test_semantic_return_outside_function();
 	ok = ok && test_semantic_call_arity_mismatch();
 	ok = ok && test_semantic_return_type_mismatch();
+	ok = ok && test_semantic_call_arg_type_mismatch();
+	ok = ok && test_semantic_missing_return_path();
+	ok = ok && test_semantic_assignment_and_loop_control();
+	ok = ok && test_semantic_bool_flow();
+	ok = ok && test_semantic_unreachable_after_break();
+	ok = ok && test_semantic_unreachable_after_continue();
+	ok = ok && test_semantic_unreachable_after_return();
+	ok = ok && test_semantic_call_callee_boundary();
+	ok = ok && test_semantic_chained_assignment_in_call_args();
+	ok = ok && test_parser_assignment_expression();
 	ok = ok && test_ir_generation_entry();
 	ok = ok && test_codegen_end_to_end();
 	ok = ok && test_runtime_minimal_loop();
+	ok = ok && test_runtime_short_circuit_or();
+	ok = ok && test_runtime_short_circuit_and_side_effect_order();
 
 	if (!ok) {
 		fprintf(stderr, "seed parser/semantic/ir tests failed\n");
