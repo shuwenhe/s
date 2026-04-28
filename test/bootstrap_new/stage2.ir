@@ -1,0 +1,14 @@
+SSEED-TARGET-V1
+FUNC_BEGIN|add|_|_
+PARAM|a|_|_
+PARAM|b|_|_
+ADD|t0|a|b
+MOV|c|t0|_
+CMP_GT|t1|c|0
+JUMP_IF_FALSE|L0|t1|_
+RET|c|_|_
+JUMP|L1|_|_
+LABEL|L0|_|_
+LABEL|L1|_|_
+RET|a|_|_
+FUNC_END|add|_|_
