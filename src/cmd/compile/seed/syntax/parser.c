@@ -57,6 +57,8 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_LET_STMT: return "LET_STMT";
 		case AST_RETURN_STMT: return "RETURN_STMT";
 		case AST_EXPR_STMT: return "EXPR_STMT";
+		case AST_PACKAGE_DECL: return "PACKAGE_DECL";
+		case AST_USE_DECL: return "USE_DECL";
 		case AST_IF_STMT: return "IF_STMT";
 		case AST_WHILE_STMT: return "WHILE_STMT";
 		case AST_FOR_STMT: return "FOR_STMT";
@@ -66,6 +68,7 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_IDENT_EXPR: return "IDENT_EXPR";
 		case AST_NUMBER_EXPR: return "NUMBER_EXPR";
 		case AST_STRING_EXPR: return "STRING_EXPR";
+		case AST_CALL_EXPR: return "CALL_EXPR";
 		default: return "UNKNOWN_AST";
 	}
 }
@@ -81,6 +84,8 @@ ast_node *ast_new(ast_kind kind, source_pos pos) {
 		ast_vec_init(&node->as.program.statements);
 	} else if (kind == AST_BLOCK) {
 		ast_vec_init(&node->as.block.statements);
+	} else if (kind == AST_CALL_EXPR) {
+		ast_vec_init(&node->as.call_expr.args);
 	}
 	return node;
 }
@@ -114,6 +119,13 @@ void ast_free(ast_node *node) {
 		case AST_EXPR_STMT:
 			ast_free(node->as.expr_stmt.expr);
 			break;
+		case AST_PACKAGE_DECL:
+			free(node->as.package_decl.name);
+			break;
+		case AST_USE_DECL:
+			free(node->as.use_decl.module_path);
+			free(node->as.use_decl.alias);
+			break;
 		case AST_IF_STMT:
 			ast_free(node->as.if_stmt.condition);
 			ast_free(node->as.if_stmt.then_branch);
@@ -133,8 +145,11 @@ void ast_free(ast_node *node) {
 			free(node->as.fn_stmt.name);
 			for (i = 0; i < node->as.fn_stmt.param_count; i++) {
 				free(node->as.fn_stmt.params[i]);
+				free(node->as.fn_stmt.param_types[i]);
 			}
 			free(node->as.fn_stmt.params);
+			free(node->as.fn_stmt.param_types);
+			free(node->as.fn_stmt.return_type);
 			ast_free(node->as.fn_stmt.body);
 			break;
 		case AST_BINARY_EXPR:
@@ -153,12 +168,26 @@ void ast_free(ast_node *node) {
 		case AST_STRING_EXPR:
 			free(node->as.string_expr.literal);
 			break;
+		case AST_CALL_EXPR:
+			ast_free(node->as.call_expr.callee);
+			for (i = 0; i < node->as.call_expr.args.len; i++) {
+				ast_free(node->as.call_expr.args.data[i]);
+			}
+			ast_vec_free(&node->as.call_expr.args);
+			break;
 	}
 	free(node);
 }
 
 static const token *peek(parser *p) {
 	return &p->tokens->data[p->current];
+}
+
+static const token *peek_next(parser *p) {
+	if (p->current + 1 >= p->tokens->len) {
+		return &p->tokens->data[p->tokens->len - 1];
+	}
+	return &p->tokens->data[p->current + 1];
 }
 
 static const token *prev(parser *p) {
@@ -181,6 +210,13 @@ static int check(parser *p, token_type t) {
 		return t == TOKEN_EOF;
 	}
 	return peek(p)->type == t;
+}
+
+static int check_next(parser *p, token_type t) {
+	if (is_at_end(p)) {
+		return 0;
+	}
+	return peek_next(p)->type == t;
 }
 
 static int match(parser *p, token_type t) {
@@ -208,6 +244,13 @@ static int expect(parser *p, token_type t, const char *what) {
 	}
 	parse_error(p, peek(p), "expected %s, got %s", what, token_type_name(peek(p)->type));
 	return 0;
+}
+
+static int consume_optional_semicolon(parser *p) {
+	if (match(p, TOKEN_SEMICOLON)) {
+		return 1;
+	}
+	return 1;
 }
 
 static ast_node *parse_expression(parser *p);
@@ -263,6 +306,46 @@ static ast_node *parse_primary(parser *p) {
 	return NULL;
 }
 
+static ast_node *parse_call(parser *p) {
+	ast_node *expr = parse_primary(p);
+	if (!expr) {
+		return NULL;
+	}
+
+	while (match(p, TOKEN_LPAREN)) {
+		ast_node *call = ast_new(AST_CALL_EXPR, prev(p)->pos);
+		if (!call) {
+			ast_free(expr);
+			return NULL;
+		}
+		call->as.call_expr.callee = expr;
+		if (!check(p, TOKEN_RPAREN)) {
+			for (;;) {
+				ast_node *arg = parse_expression(p);
+				if (!arg) {
+					ast_free(call);
+					return NULL;
+				}
+				if (!ast_vec_push(&call->as.call_expr.args, arg)) {
+					ast_free(arg);
+					ast_free(call);
+					return NULL;
+				}
+				if (!match(p, TOKEN_COMMA)) {
+					break;
+				}
+			}
+		}
+		if (!expect(p, TOKEN_RPAREN, ")")) {
+			ast_free(call);
+			return NULL;
+		}
+		expr = call;
+	}
+
+	return expr;
+}
+
 static ast_node *parse_unary(parser *p) {
 	const token *tok = peek(p);
 	ast_node *node;
@@ -283,7 +366,7 @@ static ast_node *parse_unary(parser *p) {
 		return node;
 	}
 
-	return parse_primary(p);
+	return parse_call(p);
 }
 
 static ast_node *parse_factor(parser *p) {
@@ -382,8 +465,56 @@ static ast_node *parse_equality(parser *p) {
 	return expr;
 }
 
+static ast_node *parse_logic_and(parser *p) {
+	ast_node *expr = parse_equality(p);
+	while (expr && check(p, TOKEN_AND_AND)) {
+		const token *op = advance_tok(p);
+		ast_node *rhs = parse_equality(p);
+		ast_node *parent;
+		if (!rhs) {
+			ast_free(expr);
+			return NULL;
+		}
+		parent = ast_new(AST_BINARY_EXPR, op->pos);
+		if (!parent) {
+			ast_free(expr);
+			ast_free(rhs);
+			return NULL;
+		}
+		parent->as.binary_expr.op = op->type;
+		parent->as.binary_expr.left = expr;
+		parent->as.binary_expr.right = rhs;
+		expr = parent;
+	}
+	return expr;
+}
+
+static ast_node *parse_logic_or(parser *p) {
+	ast_node *expr = parse_logic_and(p);
+	while (expr && check(p, TOKEN_OR_OR)) {
+		const token *op = advance_tok(p);
+		ast_node *rhs = parse_logic_and(p);
+		ast_node *parent;
+		if (!rhs) {
+			ast_free(expr);
+			return NULL;
+		}
+		parent = ast_new(AST_BINARY_EXPR, op->pos);
+		if (!parent) {
+			ast_free(expr);
+			ast_free(rhs);
+			return NULL;
+		}
+		parent->as.binary_expr.op = op->type;
+		parent->as.binary_expr.left = expr;
+		parent->as.binary_expr.right = rhs;
+		expr = parent;
+	}
+	return expr;
+}
+
 static ast_node *parse_expression(parser *p) {
-	return parse_equality(p);
+	return parse_logic_or(p);
 }
 
 static ast_node *parse_block(parser *p) {
@@ -418,7 +549,6 @@ static ast_node *parse_let_statement(parser *p) {
 	if (!node) {
 		return NULL;
 	}
-
 	if (!expect(p, TOKEN_IDENTIFIER, "identifier")) {
 		ast_free(node);
 		return NULL;
@@ -441,7 +571,7 @@ static ast_node *parse_let_statement(parser *p) {
 		return NULL;
 	}
 
-	if (!expect(p, TOKEN_SEMICOLON, ";")) {
+	if (!consume_optional_semicolon(p)) {
 		ast_free(node);
 		return NULL;
 	}
@@ -454,13 +584,15 @@ static ast_node *parse_return_statement(parser *p) {
 		return NULL;
 	}
 
-	node->as.return_stmt.value = parse_expression(p);
-	if (!node->as.return_stmt.value) {
-		ast_free(node);
-		return NULL;
+	if (!check(p, TOKEN_SEMICOLON) && !check(p, TOKEN_RBRACE)) {
+		node->as.return_stmt.value = parse_expression(p);
+		if (!node->as.return_stmt.value) {
+			ast_free(node);
+			return NULL;
+		}
 	}
 
-	if (!expect(p, TOKEN_SEMICOLON, ";")) {
+	if (!consume_optional_semicolon(p)) {
 		ast_free(node);
 		return NULL;
 	}
@@ -479,7 +611,7 @@ static ast_node *parse_expr_statement(parser *p) {
 		return NULL;
 	}
 
-	if (!expect(p, TOKEN_SEMICOLON, ";")) {
+	if (!consume_optional_semicolon(p)) {
 		ast_free(node);
 		return NULL;
 	}
@@ -534,20 +666,18 @@ static ast_node *parse_for_init(parser *p) {
 
 static ast_node *parse_if_statement(parser *p) {
 	ast_node *node = ast_new(AST_IF_STMT, prev(p)->pos);
+	int has_paren;
 	if (!node) {
 		return NULL;
 	}
 
-	if (!expect(p, TOKEN_LPAREN, "(")) {
-		ast_free(node);
-		return NULL;
-	}
+	has_paren = match(p, TOKEN_LPAREN);
 	node->as.if_stmt.condition = parse_expression(p);
 	if (!node->as.if_stmt.condition) {
 		ast_free(node);
 		return NULL;
 	}
-	if (!expect(p, TOKEN_RPAREN, ")")) {
+	if (has_paren && !expect(p, TOKEN_RPAREN, ")")) {
 		ast_free(node);
 		return NULL;
 	}
@@ -569,19 +699,17 @@ static ast_node *parse_if_statement(parser *p) {
 
 static ast_node *parse_while_statement(parser *p) {
 	ast_node *node = ast_new(AST_WHILE_STMT, prev(p)->pos);
+	int has_paren;
 	if (!node) {
 		return NULL;
 	}
-	if (!expect(p, TOKEN_LPAREN, "(")) {
-		ast_free(node);
-		return NULL;
-	}
+	has_paren = match(p, TOKEN_LPAREN);
 	node->as.while_stmt.condition = parse_expression(p);
 	if (!node->as.while_stmt.condition) {
 		ast_free(node);
 		return NULL;
 	}
-	if (!expect(p, TOKEN_RPAREN, ")")) {
+	if (has_paren && !expect(p, TOKEN_RPAREN, ")")) {
 		ast_free(node);
 		return NULL;
 	}
@@ -647,43 +775,78 @@ static ast_node *parse_for_statement(parser *p) {
 
 static int parse_params(parser *p, ast_node *fn_node) {
 	char **params = NULL;
+	char **param_types = NULL;
 	size_t count = 0;
 	size_t cap = 0;
 
 	if (check(p, TOKEN_RPAREN)) {
 		fn_node->as.fn_stmt.params = NULL;
+		fn_node->as.fn_stmt.param_types = NULL;
 		fn_node->as.fn_stmt.param_count = 0;
 		return 1;
 	}
 
 	for (;;) {
+		const token *first_tok;
+		const token *type_tok = NULL;
 		const token *name_tok;
 		char *name;
-		if (!expect(p, TOKEN_IDENTIFIER, "parameter name")) {
+		char *type_name;
+		if (!expect(p, TOKEN_IDENTIFIER, "parameter")) {
 			goto fail;
 		}
-		name_tok = prev(p);
+		first_tok = prev(p);
+		name_tok = first_tok;
+
+		if (check(p, TOKEN_IDENTIFIER) && (check_next(p, TOKEN_COMMA) || check_next(p, TOKEN_RPAREN))) {
+			advance_tok(p);
+			type_tok = first_tok;
+			name_tok = prev(p);
+		}
+
 		name = dup_cstr(name_tok->lexeme);
 		if (!name) {
 			goto fail;
 		}
+		type_name = dup_cstr(type_tok ? type_tok->lexeme : "any");
+		if (!type_name) {
+			free(name);
+			goto fail;
+		}
 		if (count == cap) {
 			size_t next_cap = (cap == 0) ? 4 : cap * 2;
-			char **next_params = (char **)realloc(params, next_cap * sizeof(char *));
+			char **next_params = (char **)malloc(next_cap * sizeof(char *));
+			char **next_param_types = (char **)malloc(next_cap * sizeof(char *));
 			if (!next_params) {
 				free(name);
+				free(type_name);
 				goto fail;
 			}
+			if (!next_param_types) {
+				free(next_params);
+				free(name);
+				free(type_name);
+				goto fail;
+			}
+			if (count > 0) {
+				memcpy(next_params, params, count * sizeof(char *));
+				memcpy(next_param_types, param_types, count * sizeof(char *));
+			}
+			free(params);
+			free(param_types);
 			params = next_params;
+			param_types = next_param_types;
 			cap = next_cap;
 		}
 		params[count++] = name;
+		param_types[count - 1] = type_name;
 		if (!match(p, TOKEN_COMMA)) {
 			break;
 		}
 	}
 
 	fn_node->as.fn_stmt.params = params;
+	fn_node->as.fn_stmt.param_types = param_types;
 	fn_node->as.fn_stmt.param_count = count;
 	return 1;
 
@@ -693,8 +856,10 @@ fail:
 	}
 	while (count > 0) {
 		free(params[--count]);
+		free(param_types[count]);
 	}
 	free(params);
+	free(param_types);
 	return 0;
 }
 
@@ -716,6 +881,12 @@ static ast_node *parse_fn_statement(parser *p) {
 		ast_free(node);
 		return NULL;
 	}
+	node->as.fn_stmt.return_type = dup_cstr("any");
+	if (!node->as.fn_stmt.return_type) {
+		error_set(p->err, ERR_OUT_OF_MEMORY, name_tok->pos.line, name_tok->pos.column, "out of memory");
+		ast_free(node);
+		return NULL;
+	}
 
 	if (!expect(p, TOKEN_LPAREN, "(")) {
 		ast_free(node);
@@ -729,6 +900,35 @@ static ast_node *parse_fn_statement(parser *p) {
 		ast_free(node);
 		return NULL;
 	}
+
+	if (check(p, TOKEN_IDENTIFIER) && check_next(p, TOKEN_LBRACE)) {
+		char *ret_type;
+		advance_tok(p);
+		ret_type = dup_cstr(prev(p)->lexeme);
+		if (!ret_type) {
+			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
+			ast_free(node);
+			return NULL;
+		}
+		free(node->as.fn_stmt.return_type);
+		node->as.fn_stmt.return_type = ret_type;
+	} else if (check(p, TOKEN_LPAREN)) {
+		char *ret_type;
+		advance_tok(p);
+		if (!expect(p, TOKEN_RPAREN, ")")) {
+			ast_free(node);
+			return NULL;
+		}
+		ret_type = dup_cstr("()");
+		if (!ret_type) {
+			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
+			ast_free(node);
+			return NULL;
+		}
+		free(node->as.fn_stmt.return_type);
+		node->as.fn_stmt.return_type = ret_type;
+	}
+
 	if (!expect(p, TOKEN_LBRACE, "{")) {
 		ast_free(node);
 		return NULL;
@@ -738,6 +938,89 @@ static ast_node *parse_fn_statement(parser *p) {
 		ast_free(node);
 		return NULL;
 	}
+	return node;
+}
+
+static ast_node *parse_package_decl(parser *p) {
+	ast_node *node = ast_new(AST_PACKAGE_DECL, prev(p)->pos);
+	const token *name_tok;
+	if (!node) {
+		return NULL;
+	}
+	if (!expect(p, TOKEN_IDENTIFIER, "package name")) {
+		ast_free(node);
+		return NULL;
+	}
+	name_tok = prev(p);
+	node->as.package_decl.name = dup_cstr(name_tok->lexeme);
+	if (!node->as.package_decl.name) {
+		ast_free(node);
+		return NULL;
+	}
+	consume_optional_semicolon(p);
+	return node;
+}
+
+static ast_node *parse_use_decl(parser *p) {
+	ast_node *node = ast_new(AST_USE_DECL, prev(p)->pos);
+	char path[256];
+	char alias_buf[64];
+	size_t path_len = 0;
+	if (!node) {
+		return NULL;
+	}
+	path[0] = '\0';
+	alias_buf[0] = '\0';
+
+	if (!expect(p, TOKEN_IDENTIFIER, "module path")) {
+		ast_free(node);
+		return NULL;
+	}
+	snprintf(path, sizeof(path), "%s", prev(p)->lexeme);
+	snprintf(alias_buf, sizeof(alias_buf), "%s", prev(p)->lexeme);
+	path_len = strlen(path);
+
+	while (match(p, TOKEN_DOT)) {
+		if (!expect(p, TOKEN_IDENTIFIER, "path segment")) {
+			ast_free(node);
+			return NULL;
+		}
+		if (path_len + 1 + strlen(prev(p)->lexeme) + 1 >= sizeof(path)) {
+			error_set(p->err, ERR_SYNTAX, prev(p)->pos.line, prev(p)->pos.column, "module path too long");
+			ast_free(node);
+			return NULL;
+		}
+		strcat(path, ".");
+		strcat(path, prev(p)->lexeme);
+		snprintf(alias_buf, sizeof(alias_buf), "%s", prev(p)->lexeme);
+		path_len = strlen(path);
+	}
+
+	node->as.use_decl.module_path = dup_cstr(path);
+	if (!node->as.use_decl.module_path) {
+		ast_free(node);
+		return NULL;
+	}
+
+	if (match(p, TOKEN_AS)) {
+		if (!expect(p, TOKEN_IDENTIFIER, "alias")) {
+			ast_free(node);
+			return NULL;
+		}
+		node->as.use_decl.alias = dup_cstr(prev(p)->lexeme);
+		if (!node->as.use_decl.alias) {
+			ast_free(node);
+			return NULL;
+		}
+	} else {
+		node->as.use_decl.alias = dup_cstr(alias_buf);
+		if (!node->as.use_decl.alias) {
+			ast_free(node);
+			return NULL;
+		}
+	}
+
+	consume_optional_semicolon(p);
 	return node;
 }
 
@@ -766,6 +1049,16 @@ static ast_node *parse_statement(parser *p) {
 	return parse_expr_statement(p);
 }
 
+static ast_node *parse_top_level(parser *p) {
+	if (match(p, TOKEN_PACKAGE)) {
+		return parse_package_decl(p);
+	}
+	if (match(p, TOKEN_USE)) {
+		return parse_use_decl(p);
+	}
+	return parse_statement(p);
+}
+
 parse_result parser_parse_tokens(const token_vec *tokens, compile_error *err) {
 	parser p;
 	parse_result out;
@@ -782,7 +1075,7 @@ parse_result parser_parse_tokens(const token_vec *tokens, compile_error *err) {
 	}
 
 	while (!is_at_end(&p)) {
-		ast_node *stmt = parse_statement(&p);
+		ast_node *stmt = parse_top_level(&p);
 		if (!stmt) {
 			if (!error_is_set(err)) {
 				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");

@@ -102,6 +102,26 @@ static bool lower_binary(ir_builder *b, ast_node *expr, char out[64]) {
 	if (!lower_expr(b, expr->as.binary_expr.left, lhs) || !lower_expr(b, expr->as.binary_expr.right, rhs)) {
 		return false;
 	}
+	if (expr->as.binary_expr.op == TOKEN_OR_OR || expr->as.binary_expr.op == TOKEN_AND_AND) {
+		char lhs_bool[64];
+		char rhs_bool[64];
+		next_temp(b, lhs_bool);
+		next_temp(b, rhs_bool);
+		if (!emit_ins(b, IR_CMP_NE, lhs_bool, lhs, "0", expr->pos)) {
+			return false;
+		}
+		if (!emit_ins(b, IR_CMP_NE, rhs_bool, rhs, "0", expr->pos)) {
+			return false;
+		}
+		next_temp(b, out);
+		if (expr->as.binary_expr.op == TOKEN_AND_AND) {
+			return emit_ins(b, IR_MUL, out, lhs_bool, rhs_bool, expr->pos);
+		}
+		if (!emit_ins(b, IR_ADD, out, lhs_bool, rhs_bool, expr->pos)) {
+			return false;
+		}
+		return emit_ins(b, IR_CMP_GT, out, out, "0", expr->pos);
+	}
 	switch (expr->as.binary_expr.op) {
 		case TOKEN_PLUS: op = IR_ADD; break;
 		case TOKEN_MINUS: op = IR_SUB; break;
@@ -151,6 +171,24 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]) {
 		}
 		case AST_BINARY_EXPR:
 			return lower_binary(b, expr, out);
+			case AST_CALL_EXPR: {
+				size_t i;
+				char callee[64] = "call";
+				for (i = 0; i < expr->as.call_expr.args.len; i++) {
+					char arg_tmp[64];
+					if (!lower_expr(b, expr->as.call_expr.args.data[i], arg_tmp)) {
+						return false;
+					}
+				}
+				if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_IDENT_EXPR) {
+					snprintf(callee, sizeof(callee), "%s", expr->as.call_expr.callee->as.ident_expr.name);
+				}
+				next_temp(b, out);
+				if (!emit_ins(b, IR_NOP, callee, "", "", expr->pos)) {
+					return false;
+				}
+				return emit_ins(b, IR_MOV, out, "0", "", expr->pos);
+			}
 		default:
 			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "unsupported expression in IR lowering");
 			return false;
@@ -275,6 +313,9 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		return true;
 	}
 	switch (stmt->kind) {
+			case AST_PACKAGE_DECL:
+			case AST_USE_DECL:
+				return true;
 		case AST_BLOCK:
 			return lower_block(b, stmt);
 		case AST_LET_STMT:
