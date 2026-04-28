@@ -40,6 +40,20 @@ typedef struct runtime_program {
 	size_t cap;
 } runtime_program;
 
+typedef struct runtime_function {
+	char name[64];
+	size_t start_pc;
+	size_t end_pc;
+	char params[32][64];
+	size_t param_count;
+} runtime_function;
+
+typedef struct runtime_functions {
+	runtime_function *data;
+	size_t len;
+	size_t cap;
+} runtime_functions;
+
 static int is_blank(const char *s) {
 	while (*s) {
 		if (!isspace((unsigned char)*s)) {
@@ -151,6 +165,37 @@ static void program_free(runtime_program *prog) {
 	prog->cap = 0;
 }
 
+static void functions_free(runtime_functions *funcs) {
+	free(funcs->data);
+	funcs->data = NULL;
+	funcs->len = 0;
+	funcs->cap = 0;
+}
+
+static int functions_add(runtime_functions *funcs, const runtime_function *fn) {
+	if (funcs->len == funcs->cap) {
+		size_t next_cap = funcs->cap == 0 ? 16 : funcs->cap * 2;
+		runtime_function *next = (runtime_function *)realloc(funcs->data, next_cap * sizeof(runtime_function));
+		if (!next) {
+			return 0;
+		}
+		funcs->data = next;
+		funcs->cap = next_cap;
+	}
+	funcs->data[funcs->len++] = *fn;
+	return 1;
+}
+
+static const runtime_function *functions_find(const runtime_functions *funcs, const char *name) {
+	size_t i;
+	for (i = 0; i < funcs->len; i++) {
+		if (strcmp(funcs->data[i].name, name) == 0) {
+			return &funcs->data[i];
+		}
+	}
+	return NULL;
+}
+
 static int program_push(runtime_program *prog, const runtime_ins *ins) {
 	if (prog->len == prog->cap) {
 		size_t next_cap = prog->cap == 0 ? 32 : prog->cap * 2;
@@ -198,6 +243,20 @@ static int resolve_value(const runtime_values *vals, const char *name, long *out
 		return 1;
 	}
 	return values_get(vals, name, out);
+}
+
+static int parse_size_t(const char *text, size_t *out) {
+	char *end = NULL;
+	long v;
+	if (!text || !*text) {
+		return 0;
+	}
+	v = strtol(text, &end, 10);
+	if (*end != '\0' || v < 0) {
+		return 0;
+	}
+	*out = (size_t)v;
+	return 1;
 }
 
 static int parse_program_text(const char *target_text, runtime_program *prog, runtime_labels *labels, compile_error *err) {
@@ -260,12 +319,255 @@ static int parse_program_text(const char *target_text, runtime_program *prog, ru
 	return 1;
 }
 
+static int build_function_table(const runtime_program *prog, runtime_functions *funcs, compile_error *err) {
+	size_t i = 0;
+	while (i < prog->len) {
+		if (strcmp(prog->data[i].op, "FUNC_BEGIN") == 0) {
+			runtime_function fn;
+			size_t j;
+			size_t body_start;
+			memset(&fn, 0, sizeof(fn));
+			snprintf(fn.name, sizeof(fn.name), "%s", prog->data[i].result);
+			j = i + 1;
+			while (j < prog->len && strcmp(prog->data[j].op, "PARAM") == 0) {
+				if (fn.param_count >= 32) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "too many params in function: %s", fn.name);
+					return 0;
+				}
+				snprintf(fn.params[fn.param_count], sizeof(fn.params[fn.param_count]), "%s", prog->data[j].result);
+				fn.param_count++;
+				j++;
+			}
+			body_start = j;
+			while (j < prog->len) {
+				if (strcmp(prog->data[j].op, "FUNC_END") == 0 && strcmp(prog->data[j].result, fn.name) == 0) {
+					fn.start_pc = body_start;
+					fn.end_pc = j;
+					if (!functions_add(funcs, &fn)) {
+						error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+						return 0;
+					}
+					i = j + 1;
+					break;
+				}
+				j++;
+			}
+			if (j >= prog->len) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "missing FUNC_END for function: %s", fn.name);
+				return 0;
+			}
+			continue;
+		}
+		i++;
+	}
+	return 1;
+}
+
+static int execute_function(
+	const runtime_program *prog,
+	const runtime_labels *labels,
+	const runtime_functions *funcs,
+	const runtime_function *fn,
+	const long *args,
+	size_t argc,
+	long *out_return,
+	compile_error *err,
+	int depth
+) {
+	runtime_values vals = {0};
+	long pending_args[128];
+	size_t pending_len = 0;
+	size_t pc = fn->start_pc;
+	size_t i;
+
+	if (depth > 256) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "call depth exceeded");
+		return 0;
+	}
+	if (argc != fn->param_count) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "call arity mismatch for function: %s", fn->name);
+		return 0;
+	}
+
+	for (i = 0; i < argc; i++) {
+		if (!values_set(&vals, fn->params[i], args[i])) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			values_free(&vals);
+			return 0;
+		}
+	}
+
+	while (pc < fn->end_pc) {
+		runtime_ins *ins = &prog->data[pc];
+		long a = 0;
+		long b = 0;
+
+		if (strcmp(ins->op, "NOP") == 0 || strcmp(ins->op, "LABEL") == 0 || strcmp(ins->op, "PARAM") == 0) {
+			pc++;
+			continue;
+		}
+		if (strcmp(ins->op, "JUMP") == 0) {
+			size_t target;
+			if (!labels_find(labels, ins->result, &target)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unknown label: %s", ins->result);
+				values_free(&vals);
+				return 0;
+			}
+			if (target < fn->start_pc || target >= fn->end_pc) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "jump out of function: %s", ins->result);
+				values_free(&vals);
+				return 0;
+			}
+			pc = target;
+			continue;
+		}
+		if (strcmp(ins->op, "JUMP_IF_FALSE") == 0) {
+			size_t target;
+			if (!resolve_value(&vals, ins->op1, &a)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unknown value: %s", ins->op1);
+				values_free(&vals);
+				return 0;
+			}
+			if (a == 0) {
+				if (!labels_find(labels, ins->result, &target)) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "unknown label: %s", ins->result);
+					values_free(&vals);
+					return 0;
+				}
+				if (target < fn->start_pc || target >= fn->end_pc) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "jump out of function: %s", ins->result);
+					values_free(&vals);
+					return 0;
+				}
+				pc = target;
+			} else {
+				pc++;
+			}
+			continue;
+		}
+		if (strcmp(ins->op, "MOV") == 0) {
+			if (!resolve_value(&vals, ins->op1, &a)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unknown value: %s", ins->op1);
+				values_free(&vals);
+				return 0;
+			}
+			if (!values_set(&vals, ins->result, a)) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				values_free(&vals);
+				return 0;
+			}
+			pc++;
+			continue;
+		}
+		if (strcmp(ins->op, "ADD") == 0 || strcmp(ins->op, "SUB") == 0 || strcmp(ins->op, "MUL") == 0 || strcmp(ins->op, "DIV") == 0 ||
+			strcmp(ins->op, "CMP_EQ") == 0 || strcmp(ins->op, "CMP_NE") == 0 || strcmp(ins->op, "CMP_LT") == 0 || strcmp(ins->op, "CMP_LE") == 0 ||
+			strcmp(ins->op, "CMP_GT") == 0 || strcmp(ins->op, "CMP_GE") == 0) {
+			long r = 0;
+			if (!resolve_value(&vals, ins->op1, &a) || !resolve_value(&vals, ins->op2, &b)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unknown value in op: %s", ins->op);
+				values_free(&vals);
+				return 0;
+			}
+			if (strcmp(ins->op, "ADD") == 0) r = a + b;
+			else if (strcmp(ins->op, "SUB") == 0) r = a - b;
+			else if (strcmp(ins->op, "MUL") == 0) r = a * b;
+			else if (strcmp(ins->op, "DIV") == 0) {
+				if (b == 0) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "division by zero");
+					values_free(&vals);
+					return 0;
+				}
+				r = a / b;
+			} else if (strcmp(ins->op, "CMP_EQ") == 0) r = (a == b);
+			else if (strcmp(ins->op, "CMP_NE") == 0) r = (a != b);
+			else if (strcmp(ins->op, "CMP_LT") == 0) r = (a < b);
+			else if (strcmp(ins->op, "CMP_LE") == 0) r = (a <= b);
+			else if (strcmp(ins->op, "CMP_GT") == 0) r = (a > b);
+			else if (strcmp(ins->op, "CMP_GE") == 0) r = (a >= b);
+			if (!values_set(&vals, ins->result, r)) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				values_free(&vals);
+				return 0;
+			}
+			pc++;
+			continue;
+		}
+		if (strcmp(ins->op, "ARG") == 0) {
+			if (!resolve_value(&vals, ins->result, &a)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unknown arg value: %s", ins->result);
+				values_free(&vals);
+				return 0;
+			}
+			if (pending_len >= 128) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "too many pending call arguments");
+				values_free(&vals);
+				return 0;
+			}
+			pending_args[pending_len++] = a;
+			pc++;
+			continue;
+		}
+		if (strcmp(ins->op, "CALL") == 0) {
+			size_t call_argc = 0;
+			long callee_ret = 0;
+			const runtime_function *callee;
+			if (!parse_size_t(ins->op2, &call_argc)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "invalid call argc: %s", ins->op2);
+				values_free(&vals);
+				return 0;
+			}
+			if (call_argc > pending_len) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "insufficient call arguments for: %s", ins->op1);
+				values_free(&vals);
+				return 0;
+			}
+			callee = functions_find(funcs, ins->op1);
+			if (!callee) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unknown function: %s", ins->op1);
+				values_free(&vals);
+				return 0;
+			}
+			if (!execute_function(prog, labels, funcs, callee, &pending_args[pending_len - call_argc], call_argc, &callee_ret, err, depth + 1)) {
+				values_free(&vals);
+				return 0;
+			}
+			pending_len -= call_argc;
+			if (!values_set(&vals, ins->result, callee_ret)) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				values_free(&vals);
+				return 0;
+			}
+			pc++;
+			continue;
+		}
+		if (strcmp(ins->op, "RET") == 0) {
+			if (!resolve_value(&vals, ins->result, out_return)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unknown return value: %s", ins->result);
+				values_free(&vals);
+				return 0;
+			}
+			values_free(&vals);
+			return 1;
+		}
+
+		error_set(err, ERR_SEMANTIC, 0, 0, "unsupported runtime op: %s", ins->op);
+		values_free(&vals);
+		return 0;
+	}
+
+	*out_return = 0;
+	values_free(&vals);
+	return 1;
+}
+
 bool runtime_execute_text(const char *target_text, const char *entry_function, long *out_return, compile_error *err) {
 	runtime_program prog = {0};
 	runtime_labels labels = {0};
-	runtime_values vals = {0};
-	size_t pc = 0;
-	int in_selected_function = entry_function == NULL;
+	runtime_functions funcs = {0};
+	const runtime_function *entry = NULL;
+	const char *entry_name = entry_function;
+	long no_args[1] = {0};
+	int ok;
 
 	error_clear(err);
 	if (!target_text || !out_return) {
@@ -279,124 +581,30 @@ bool runtime_execute_text(const char *target_text, const char *entry_function, l
 		return false;
 	}
 
-	while (pc < prog.len) {
-		runtime_ins *ins = &prog.data[pc];
-		long a = 0;
-		long b = 0;
-
-		if (strcmp(ins->op, "FUNC_BEGIN") == 0) {
-			if (!entry_function || strcmp(ins->result, entry_function) == 0) {
-				in_selected_function = 1;
-			} else {
-				in_selected_function = 0;
-			}
-			pc++;
-			continue;
-		}
-		if (strcmp(ins->op, "FUNC_END") == 0) {
-			in_selected_function = entry_function == NULL;
-			pc++;
-			continue;
-		}
-		if (!in_selected_function) {
-			pc++;
-			continue;
-		}
-
-		if (strcmp(ins->op, "NOP") == 0 || strcmp(ins->op, "LABEL") == 0 || strcmp(ins->op, "PARAM") == 0) {
-			pc++;
-			continue;
-		}
-		if (strcmp(ins->op, "JUMP") == 0) {
-			size_t target;
-			if (!labels_find(&labels, ins->result, &target)) {
-				error_set(err, ERR_SEMANTIC, 0, 0, "unknown label: %s", ins->result);
-				goto fail;
-			}
-			pc = target;
-			continue;
-		}
-		if (strcmp(ins->op, "JUMP_IF_FALSE") == 0) {
-			size_t target;
-			if (!resolve_value(&vals, ins->op1, &a)) {
-				error_set(err, ERR_SEMANTIC, 0, 0, "unknown value: %s", ins->op1);
-				goto fail;
-			}
-			if (a == 0) {
-				if (!labels_find(&labels, ins->result, &target)) {
-					error_set(err, ERR_SEMANTIC, 0, 0, "unknown label: %s", ins->result);
-					goto fail;
-				}
-				pc = target;
-			} else {
-				pc++;
-			}
-			continue;
-		}
-		if (strcmp(ins->op, "MOV") == 0) {
-			if (!resolve_value(&vals, ins->op1, &a)) {
-				error_set(err, ERR_SEMANTIC, 0, 0, "unknown value: %s", ins->op1);
-				goto fail;
-			}
-			if (!values_set(&vals, ins->result, a)) {
-				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
-				goto fail;
-			}
-			pc++;
-			continue;
-		}
-		if (strcmp(ins->op, "ADD") == 0 || strcmp(ins->op, "SUB") == 0 || strcmp(ins->op, "MUL") == 0 || strcmp(ins->op, "DIV") == 0 ||
-			strcmp(ins->op, "CMP_EQ") == 0 || strcmp(ins->op, "CMP_NE") == 0 || strcmp(ins->op, "CMP_LT") == 0 || strcmp(ins->op, "CMP_LE") == 0 ||
-			strcmp(ins->op, "CMP_GT") == 0 || strcmp(ins->op, "CMP_GE") == 0) {
-			long r = 0;
-			if (!resolve_value(&vals, ins->op1, &a) || !resolve_value(&vals, ins->op2, &b)) {
-				error_set(err, ERR_SEMANTIC, 0, 0, "unknown value in op: %s", ins->op);
-				goto fail;
-			}
-			if (strcmp(ins->op, "ADD") == 0) r = a + b;
-			else if (strcmp(ins->op, "SUB") == 0) r = a - b;
-			else if (strcmp(ins->op, "MUL") == 0) r = a * b;
-			else if (strcmp(ins->op, "DIV") == 0) {
-				if (b == 0) {
-					error_set(err, ERR_SEMANTIC, 0, 0, "division by zero");
-					goto fail;
-				}
-				r = a / b;
-			} else if (strcmp(ins->op, "CMP_EQ") == 0) r = (a == b);
-			else if (strcmp(ins->op, "CMP_NE") == 0) r = (a != b);
-			else if (strcmp(ins->op, "CMP_LT") == 0) r = (a < b);
-			else if (strcmp(ins->op, "CMP_LE") == 0) r = (a <= b);
-			else if (strcmp(ins->op, "CMP_GT") == 0) r = (a > b);
-			else if (strcmp(ins->op, "CMP_GE") == 0) r = (a >= b);
-			if (!values_set(&vals, ins->result, r)) {
-				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
-				goto fail;
-			}
-			pc++;
-			continue;
-		}
-		if (strcmp(ins->op, "RET") == 0) {
-			if (!resolve_value(&vals, ins->result, out_return)) {
-				error_set(err, ERR_SEMANTIC, 0, 0, "unknown return value: %s", ins->result);
-				goto fail;
-			}
-			program_free(&prog);
-			labels_free(&labels);
-			values_free(&vals);
-			return true;
-		}
-
-		error_set(err, ERR_SEMANTIC, 0, 0, "unsupported runtime op: %s", ins->op);
-		goto fail;
+	if (!build_function_table(&prog, &funcs, err)) {
+		program_free(&prog);
+		labels_free(&labels);
+		functions_free(&funcs);
+		return false;
 	}
 
-	error_set(err, ERR_SEMANTIC, 0, 0, "program terminated without RET");
+	if (!entry_name || entry_name[0] == '\0') {
+		entry_name = "main";
+	}
+	entry = functions_find(&funcs, entry_name);
+	if (!entry) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "entry function not found: %s", entry_name);
+		program_free(&prog);
+		labels_free(&labels);
+		functions_free(&funcs);
+		return false;
+	}
 
-fail:
+	ok = execute_function(&prog, &labels, &funcs, entry, no_args, 0, out_return, err, 0);
 	program_free(&prog);
 	labels_free(&labels);
-	values_free(&vals);
-	return false;
+	functions_free(&funcs);
+	return ok ? true : false;
 }
 
 bool runtime_execute_file(const char *target_path, const char *entry_function, long *out_return, compile_error *err) {
