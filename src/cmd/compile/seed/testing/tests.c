@@ -6,6 +6,7 @@
 #include "../error/error.h"
 #include "../intermediate/ir.h"
 #include "../lexical/token.h"
+#include "../runtime/memory.h"
 #include "../semantic/scope.h"
 #include "../syntax/ast.h"
 
@@ -264,6 +265,48 @@ static bool test_semantic_return_outside_function(void) {
 	return ok;
 }
 
+static bool test_semantic_call_arity_mismatch(void) {
+	const char *src =
+		"fn add(int a, int b) int { return a + b; } "
+		"fn main() int { return add(1); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_semantic_return_type_mismatch(void) {
+	const char *src = "fn main() int { return \"oops\"; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
 static bool test_ir_generation_entry(void) {
 	const char *src = "fn add(a, b) { let c = a + b; if (c > 0) { return c; } return a; }";
 	token_vec tokens;
@@ -358,9 +401,69 @@ static bool test_codegen_end_to_end(void) {
 	fclose(tmp);
 
 	ok = strstr(buf, "FUNC_BEGIN") != NULL;
+	ok = ok && strstr(buf, "SSEED-TARGET-V1") != NULL;
+	ok = ok && strstr(buf, "FUNC_BEGIN|") != NULL;
+	ok = ok && strstr(buf, "LABEL|") != NULL;
+	ok = ok && strstr(buf, "JUMP_IF_FALSE|") != NULL;
+	ok = ok && strstr(buf, "RET|") != NULL;
+	ok = ok && strstr(buf, "|_|") != NULL;
 	ok = ok && strstr(buf, "LABEL") != NULL;
 	ok = ok && strstr(buf, "JUMP_IF_FALSE") != NULL;
 	ok = ok && strstr(buf, "RET") != NULL;
+
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_runtime_minimal_loop(void) {
+	const char *src = "fn main() { let x = 1 + 2; return x; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	FILE *tmp;
+	char buf[4096];
+	size_t n;
+	long ret = 0;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, &err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	tmp = tmpfile();
+	if (!tmp) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	generate_code(&ir, tmp);
+	fflush(tmp);
+	fseek(tmp, 0, SEEK_SET);
+	n = fread(buf, 1, sizeof(buf) - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
+
+	ok = runtime_execute_text(buf, "main", &ret, &err);
+	ok = ok && ret == 3;
 
 	ir_free(&ir);
 	parser_parse_result_free(&result);
@@ -380,8 +483,11 @@ int main(void) {
 	ok = ok && test_semantic_ok();
 	ok = ok && test_semantic_undeclared_symbol();
 	ok = ok && test_semantic_return_outside_function();
+	ok = ok && test_semantic_call_arity_mismatch();
+	ok = ok && test_semantic_return_type_mismatch();
 	ok = ok && test_ir_generation_entry();
 	ok = ok && test_codegen_end_to_end();
+	ok = ok && test_runtime_minimal_loop();
 
 	if (!ok) {
 		fprintf(stderr, "seed parser/semantic/ir tests failed\n");
