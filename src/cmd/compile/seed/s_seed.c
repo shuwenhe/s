@@ -1,109 +1,183 @@
-// Include necessary standard headers
+#include <errno.h>
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-// Placeholder definition for token_vec to resolve compilation errors
-typedef struct token_vec {
-    char text[128];
-    int size;
-    struct token_vec *items;
-} token_vec;
+#include "code/target.h"
+#include "error/error.h"
+#include "intermediate/ir.h"
+#include "lexical/token.h"
+#include "semantic/scope.h"
+#include "syntax/ast.h"
 
-// Move ASTNode definition to the very top of the file to ensure visibility
-typedef struct ASTNode {
-    char kind[16];
-    char value[128];
-    struct ASTNode *children;
-    int child_count;
-} ASTNode;
+bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char *output_dir, compile_error *err);
 
-// Ensure all forward declarations are at the top
-static ASTNode *create_ast_node(const char *kind, const char *value);
-static bool add_child_node(ASTNode *parent, ASTNode *child);
-static ASTNode *parse_expression(token_vec *tokens, int *index);
-static ASTNode *parse_statement(token_vec *tokens, int *index);
-static ASTNode *parse_if_statement(token_vec *tokens, int *index);
-static ASTNode *parse_function_definition(token_vec *tokens, int *index);
-static ASTNode *parse_program(token_vec *tokens);
-static bool semantic_analysis(ASTNode *ast, char *error, size_t error_size);
-static void generate_code(ASTNode *ast, FILE *output);
-static void run_tests();
-
-// Ensure all function implementations are in the correct order
-// Implement missing functions if necessary
-
-// Add a main function to serve as the program entry point
-int main() {
-    run_tests();
-    return 0;
+static void print_compile_error(const compile_error *err) {
+	if (!err || !error_is_set(err)) {
+		return;
+	}
+	fprintf(stderr, "error[%d] at %zu:%zu: %s\n", (int)err->code, err->line, err->column, err->message);
 }
 
-// Implement a basic run_tests function
-static void run_tests() {
-    printf("Running tests...\n");
-    // Add test cases for parsing, semantic analysis, and code generation
-    printf("All tests passed!\n");
+static bool read_file_text(const char *path, char **out_text, compile_error *err) {
+	FILE *fp;
+	long n;
+	size_t read_n;
+	char *buf;
+
+	*out_text = NULL;
+	fp = fopen(path, "rb");
+	if (!fp) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open input: %s", path);
+		return false;
+	}
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		fclose(fp);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to seek input: %s", path);
+		return false;
+	}
+	n = ftell(fp);
+	if (n < 0) {
+		fclose(fp);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to tell input size: %s", path);
+		return false;
+	}
+	if (fseek(fp, 0, SEEK_SET) != 0) {
+		fclose(fp);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to rewind input: %s", path);
+		return false;
+	}
+
+	buf = (char *)malloc((size_t)n + 1);
+	if (!buf) {
+		fclose(fp);
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+		return false;
+	}
+
+	read_n = fread(buf, 1, (size_t)n, fp);
+	fclose(fp);
+	if (read_n != (size_t)n) {
+		free(buf);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to read input: %s", path);
+		return false;
+	}
+	buf[n] = '\0';
+	*out_text = buf;
+	return true;
 }
 
-// Function to create a new AST node
-static ASTNode *create_ast_node(const char *kind, const char *value) {
-    ASTNode *node = malloc(sizeof(ASTNode));
-    if (!node) return NULL;
-    strncpy(node->kind, kind, sizeof(node->kind));
-    strncpy(node->value, value, sizeof(node->value));
-    node->children = NULL;
-    node->child_count = 0;
-    return node;
+bool seed_compile_source_text(const char *source_text, FILE *output, compile_error *err) {
+	token_vec tokens;
+	parse_result parsed;
+	IR ir;
+	bool ok = false;
+
+	error_clear(err);
+	if (!source_text || !output) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "invalid compile input");
+		return false;
+	}
+
+	if (!lexer_scan(source_text, &tokens, err)) {
+		return false;
+	}
+
+	parsed = parser_parse_tokens(&tokens, err);
+	token_vec_free(&tokens);
+	if (!parsed.root) {
+		return false;
+	}
+
+	if (!semantic_analyze(parsed.root, err)) {
+		parser_parse_result_free(&parsed);
+		return false;
+	}
+
+	ir_init(&ir);
+	if (!ir_generate_from_ast(parsed.root, &ir, err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&parsed);
+		return false;
+	}
+
+	generate_code(&ir, output);
+	if (ferror(output)) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed writing compiler output");
+	} else {
+		ok = true;
+	}
+
+	ir_free(&ir);
+	parser_parse_result_free(&parsed);
+	return ok;
 }
 
-// Function to add a child node to an AST node
-static bool add_child_node(ASTNode *parent, ASTNode *child) {
-    if (!parent || !child) return false;
-    parent->children = realloc(parent->children, sizeof(ASTNode) * (parent->child_count + 1));
-    if (!parent->children) return false;
-    parent->children[parent->child_count++] = *child;
-    return true;
+bool seed_compile_file(const char *input_path, const char *output_path, compile_error *err) {
+	char *source_text = NULL;
+	FILE *out;
+	bool ok;
+
+	if (!read_file_text(input_path, &source_text, err)) {
+		return false;
+	}
+
+	out = fopen(output_path, "wb");
+	if (!out) {
+		free(source_text);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open output: %s", output_path);
+		return false;
+	}
+
+	ok = seed_compile_source_text(source_text, out, err);
+	free(source_text);
+	if (fclose(out) != 0) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to close output: %s", output_path);
+		return false;
+	}
+	return ok;
 }
 
-// Placeholder for parsing expressions
-static ASTNode *parse_expression(token_vec *tokens, int *index) {
-    // Implement expression parsing logic here
-    return create_ast_node("expression", "");
+static void print_usage(const char *argv0) {
+	fprintf(stderr, "usage:\n");
+	fprintf(stderr, "  %s <input.s> <output.ir>\n", argv0);
+	fprintf(stderr, "  %s --bootstrap <compiler_source.s> [output_dir]\n", argv0);
 }
 
-// Placeholder for parsing statements
-static ASTNode *parse_statement(token_vec *tokens, int *index) {
-    // Implement statement parsing logic here
-    return create_ast_node("statement", "");
-}
+int main(int argc, char **argv) {
+	compile_error err;
+	error_clear(&err);
 
-// Placeholder for parsing if statements
-static ASTNode *parse_if_statement(token_vec *tokens, int *index) {
-    // Implement if-statement parsing logic here
-    return create_ast_node("if", "");
-}
+	if (argc >= 2 && strcmp(argv[1], "--bootstrap") == 0) {
+		const char *compiler_src;
+		const char *out_dir = ".";
+		if (argc < 3 || argc > 4) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		compiler_src = argv[2];
+		if (argc == 4) {
+			out_dir = argv[3];
+		}
+		if (!seed_bootstrap_two_stage_check(compiler_src, out_dir, &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("bootstrap two-stage check passed\n");
+		return 0;
+	}
 
-// Placeholder for parsing function definitions
-static ASTNode *parse_function_definition(token_vec *tokens, int *index) {
-    // Implement function definition parsing logic here
-    return create_ast_node("function", "");
-}
+	if (argc != 3) {
+		print_usage(argv[0]);
+		return 2;
+	}
 
-// Placeholder for parsing the entire program
-static ASTNode *parse_program(token_vec *tokens) {
-    // Implement program parsing logic here
-    return create_ast_node("program", "");
-}
+	if (!seed_compile_file(argv[1], argv[2], &err)) {
+		print_compile_error(&err);
+		return 1;
+	}
 
-// Placeholder for semantic analysis
-static bool semantic_analysis(ASTNode *ast, char *error, size_t error_size) {
-    // Implement semantic analysis logic here
-    return true;
-}
-
-// Placeholder for code generation
-static void generate_code(ASTNode *ast, FILE *output) {
-    // Implement code generation logic here
-    fprintf(output, "// Generated code\n");
+	printf("compiled %s -> %s\n", argv[1], argv[2]);
+	return 0;
 }
