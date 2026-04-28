@@ -64,10 +64,15 @@ const char *token_type_name(token_type type) {
 		case TOKEN_FOR: return "FOR";
 		case TOKEN_WHILE: return "WHILE";
 		case TOKEN_RETURN: return "RETURN";
+		case TOKEN_BREAK: return "BREAK";
+		case TOKEN_CONTINUE: return "CONTINUE";
+		case TOKEN_TRUE: return "TRUE";
+		case TOKEN_FALSE: return "FALSE";
 		case TOKEN_PLUS: return "+";
 		case TOKEN_MINUS: return "-";
 		case TOKEN_STAR: return "*";
 		case TOKEN_SLASH: return "/";
+		case TOKEN_BANG: return "!";
 		case TOKEN_ASSIGN: return "=";
 		case TOKEN_EQ: return "==";
 		case TOKEN_NE: return "!=";
@@ -101,6 +106,10 @@ static token_type keyword_or_identifier(const char *lexeme) {
 	if (strcmp(lexeme, "for") == 0) return TOKEN_FOR;
 	if (strcmp(lexeme, "while") == 0) return TOKEN_WHILE;
 	if (strcmp(lexeme, "return") == 0) return TOKEN_RETURN;
+	if (strcmp(lexeme, "break") == 0) return TOKEN_BREAK;
+	if (strcmp(lexeme, "continue") == 0) return TOKEN_CONTINUE;
+	if (strcmp(lexeme, "true") == 0) return TOKEN_TRUE;
+	if (strcmp(lexeme, "false") == 0) return TOKEN_FALSE;
 	return TOKEN_IDENTIFIER;
 }
 
@@ -299,6 +308,7 @@ bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error 
 			case '-': if (!push_simple(out_tokens, TOKEN_MINUS, "-", tok_line, tok_col)) goto oom; break;
 			case '*': if (!push_simple(out_tokens, TOKEN_STAR, "*", tok_line, tok_col)) goto oom; break;
 			case '/': if (!push_simple(out_tokens, TOKEN_SLASH, "/", tok_line, tok_col)) goto oom; break;
+			case '!': if (!push_simple(out_tokens, TOKEN_BANG, "!", tok_line, tok_col)) goto oom; break;
 			case '=': if (!push_simple(out_tokens, TOKEN_ASSIGN, "=", tok_line, tok_col)) goto oom; break;
 			case '<': if (!push_simple(out_tokens, TOKEN_LT, "<", tok_line, tok_col)) goto oom; break;
 			case '>': if (!push_simple(out_tokens, TOKEN_GT, ">", tok_line, tok_col)) goto oom; break;

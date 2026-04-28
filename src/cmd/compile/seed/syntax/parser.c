@@ -55,7 +55,10 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_PROGRAM: return "PROGRAM";
 		case AST_BLOCK: return "BLOCK";
 		case AST_LET_STMT: return "LET_STMT";
+			case AST_ASSIGN_STMT: return "ASSIGN_STMT";
 		case AST_RETURN_STMT: return "RETURN_STMT";
+			case AST_BREAK_STMT: return "BREAK_STMT";
+			case AST_CONTINUE_STMT: return "CONTINUE_STMT";
 		case AST_EXPR_STMT: return "EXPR_STMT";
 		case AST_PACKAGE_DECL: return "PACKAGE_DECL";
 		case AST_USE_DECL: return "USE_DECL";
@@ -64,9 +67,11 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_FOR_STMT: return "FOR_STMT";
 		case AST_FN_STMT: return "FN_STMT";
 		case AST_BINARY_EXPR: return "BINARY_EXPR";
+		case AST_ASSIGN_EXPR: return "ASSIGN_EXPR";
 		case AST_UNARY_EXPR: return "UNARY_EXPR";
 		case AST_IDENT_EXPR: return "IDENT_EXPR";
 		case AST_NUMBER_EXPR: return "NUMBER_EXPR";
+			case AST_BOOL_EXPR: return "BOOL_EXPR";
 		case AST_STRING_EXPR: return "STRING_EXPR";
 		case AST_CALL_EXPR: return "CALL_EXPR";
 		default: return "UNKNOWN_AST";
@@ -113,9 +118,16 @@ void ast_free(ast_node *node) {
 			free(node->as.let_stmt.name);
 			ast_free(node->as.let_stmt.value);
 			break;
+			case AST_ASSIGN_STMT:
+				free(node->as.assign_stmt.name);
+				ast_free(node->as.assign_stmt.value);
+				break;
 		case AST_RETURN_STMT:
 			ast_free(node->as.return_stmt.value);
 			break;
+			case AST_BREAK_STMT:
+			case AST_CONTINUE_STMT:
+				break;
 		case AST_EXPR_STMT:
 			ast_free(node->as.expr_stmt.expr);
 			break;
@@ -156,6 +168,10 @@ void ast_free(ast_node *node) {
 			ast_free(node->as.binary_expr.left);
 			ast_free(node->as.binary_expr.right);
 			break;
+		case AST_ASSIGN_EXPR:
+			free(node->as.assign_expr.name);
+			ast_free(node->as.assign_expr.value);
+			break;
 		case AST_UNARY_EXPR:
 			ast_free(node->as.unary_expr.operand);
 			break;
@@ -165,6 +181,8 @@ void ast_free(ast_node *node) {
 		case AST_NUMBER_EXPR:
 			free(node->as.number_expr.literal);
 			break;
+			case AST_BOOL_EXPR:
+				break;
 		case AST_STRING_EXPR:
 			free(node->as.string_expr.literal);
 			break;
@@ -270,6 +288,18 @@ static ast_node *parse_primary(parser *p) {
 		}
 		return node;
 	}
+	if (match(p, TOKEN_TRUE)) {
+		node = ast_new(AST_BOOL_EXPR, tok->pos);
+		if (!node) return NULL;
+		node->as.bool_expr.value = 1;
+		return node;
+	}
+	if (match(p, TOKEN_FALSE)) {
+		node = ast_new(AST_BOOL_EXPR, tok->pos);
+		if (!node) return NULL;
+		node->as.bool_expr.value = 0;
+		return node;
+	}
 	if (match(p, TOKEN_STRING)) {
 		node = ast_new(AST_STRING_EXPR, tok->pos);
 		if (!node) return NULL;
@@ -351,7 +381,8 @@ static ast_node *parse_unary(parser *p) {
 	ast_node *node;
 	ast_node *rhs;
 
-	if (match(p, TOKEN_MINUS)) {
+	if (match(p, TOKEN_MINUS) || match(p, TOKEN_BANG)) {
+		token_type unary_op = prev(p)->type;
 		rhs = parse_unary(p);
 		if (!rhs) {
 			return NULL;
@@ -361,7 +392,7 @@ static ast_node *parse_unary(parser *p) {
 			ast_free(rhs);
 			return NULL;
 		}
-		node->as.unary_expr.op = TOKEN_MINUS;
+		node->as.unary_expr.op = unary_op;
 		node->as.unary_expr.operand = rhs;
 		return node;
 	}
@@ -513,8 +544,45 @@ static ast_node *parse_logic_or(parser *p) {
 	return expr;
 }
 
+static ast_node *parse_assignment(parser *p) {
+	ast_node *expr = parse_logic_or(p);
+	ast_node *node;
+	char *name;
+	if (!expr) {
+		return NULL;
+	}
+	if (!match(p, TOKEN_ASSIGN)) {
+		return expr;
+	}
+	if (expr->kind != AST_IDENT_EXPR) {
+		parse_error(p, prev(p), "invalid assignment target");
+		ast_free(expr);
+		return NULL;
+	}
+	name = dup_cstr(expr->as.ident_expr.name);
+	if (!name) {
+		ast_free(expr);
+		error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
+		return NULL;
+	}
+	node = ast_new(AST_ASSIGN_EXPR, expr->pos);
+	if (!node) {
+		free(name);
+		ast_free(expr);
+		return NULL;
+	}
+	node->as.assign_expr.name = name;
+	node->as.assign_expr.value = parse_assignment(p);
+	ast_free(expr);
+	if (!node->as.assign_expr.value) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
+}
+
 static ast_node *parse_expression(parser *p) {
-	return parse_logic_or(p);
+	return parse_assignment(p);
 }
 
 static ast_node *parse_block(parser *p) {
@@ -592,6 +660,30 @@ static ast_node *parse_return_statement(parser *p) {
 		}
 	}
 
+	if (!consume_optional_semicolon(p)) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
+}
+
+static ast_node *parse_break_statement(parser *p) {
+	ast_node *node = ast_new(AST_BREAK_STMT, prev(p)->pos);
+	if (!node) {
+		return NULL;
+	}
+	if (!consume_optional_semicolon(p)) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
+}
+
+static ast_node *parse_continue_statement(parser *p) {
+	ast_node *node = ast_new(AST_CONTINUE_STMT, prev(p)->pos);
+	if (!node) {
+		return NULL;
+	}
 	if (!consume_optional_semicolon(p)) {
 		ast_free(node);
 		return NULL;
@@ -1030,6 +1122,12 @@ static ast_node *parse_statement(parser *p) {
 	}
 	if (match(p, TOKEN_RETURN)) {
 		return parse_return_statement(p);
+	}
+	if (match(p, TOKEN_BREAK)) {
+		return parse_break_statement(p);
+	}
+	if (match(p, TOKEN_CONTINUE)) {
+		return parse_continue_statement(p);
 	}
 	if (match(p, TOKEN_IF)) {
 		return parse_if_statement(p);
