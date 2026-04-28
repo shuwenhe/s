@@ -3,7 +3,244 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../code/target.h"
+#include "../intermediate/ir.h"
+#include "../lexical/token.h"
+#include "../semantic/scope.h"
+#include "../syntax/ast.h"
 #include "memory.h"
+
+static int g_host_argc = 0;
+static char **g_host_argv = NULL;
+
+static unsigned long hash_cstr(const char *s) {
+	unsigned long h = 1469598103934665603ULL;
+	while (*s) {
+		h ^= (unsigned long)(unsigned char)(*s++);
+		h *= 1099511628211ULL;
+	}
+	return h;
+}
+
+static int is_string_literal(const char *s) {
+	size_t n;
+	if (!s) {
+		return 0;
+	}
+	n = strlen(s);
+	return n >= 2 && s[0] == '"' && s[n - 1] == '"';
+}
+
+static long string_literal_value(const char *s) {
+	char buf[256];
+	size_t n;
+	if (!is_string_literal(s)) {
+		return 0;
+	}
+	n = strlen(s);
+	if (n <= 2) {
+		return 0;
+	}
+	if (n - 2 >= sizeof(buf)) {
+		n = sizeof(buf) + 1;
+	}
+	if (n > sizeof(buf) + 1) {
+		return (long)hash_cstr(s + 1);
+	}
+	memcpy(buf, s + 1, n - 2);
+	buf[n - 2] = '\0';
+	return (long)hash_cstr(buf);
+}
+
+static long hash_plain_string(const char *s) {
+	if (!s || s[0] == '\0') {
+		return 0;
+	}
+	return (long)hash_cstr(s);
+}
+
+static void print_compile_error_local(const compile_error *err) {
+	if (!err || !error_is_set(err)) {
+		return;
+	}
+	fprintf(stderr, "error[%d] at %zu:%zu: %s\n", (int)err->code, err->line, err->column, err->message);
+}
+
+static int read_source_text_file(const char *path, char **out_text, compile_error *err) {
+	FILE *fp;
+	long n;
+	size_t read_n;
+	char *buf;
+
+	*out_text = NULL;
+	fp = fopen(path, "rb");
+	if (!fp) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open input: %s", path);
+		return 0;
+	}
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		fclose(fp);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to seek input: %s", path);
+		return 0;
+	}
+	n = ftell(fp);
+	if (n < 0) {
+		fclose(fp);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to tell input size: %s", path);
+		return 0;
+	}
+	if (fseek(fp, 0, SEEK_SET) != 0) {
+		fclose(fp);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to rewind input: %s", path);
+		return 0;
+	}
+
+	buf = (char *)malloc((size_t)n + 1);
+	if (!buf) {
+		fclose(fp);
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+		return 0;
+	}
+
+	read_n = fread(buf, 1, (size_t)n, fp);
+	fclose(fp);
+	if (read_n != (size_t)n) {
+		free(buf);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to read input: %s", path);
+		return 0;
+	}
+	buf[n] = '\0';
+	*out_text = buf;
+	return 1;
+}
+
+static int compile_s_file_to_ir(const char *input_path, const char *output_path, compile_error *err) {
+	char *source_text = NULL;
+	token_vec tokens;
+	parse_result parsed;
+	IR ir;
+	FILE *out = NULL;
+	int ok = 0;
+
+	if (!read_source_text_file(input_path, &source_text, err)) {
+		return 0;
+	}
+	if (!lexer_scan(source_text, &tokens, err)) {
+		free(source_text);
+		return 0;
+	}
+	parsed = parser_parse_tokens(&tokens, err);
+	token_vec_free(&tokens);
+	if (!parsed.root) {
+		free(source_text);
+		return 0;
+	}
+	if (!semantic_analyze(parsed.root, err)) {
+		parser_parse_result_free(&parsed);
+		free(source_text);
+		return 0;
+	}
+
+	ir_init(&ir);
+	if (!ir_generate_from_ast(parsed.root, &ir, err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&parsed);
+		free(source_text);
+		return 0;
+	}
+
+	out = fopen(output_path, "wb");
+	if (!out) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open output: %s", output_path);
+		goto done;
+	}
+	generate_code(&ir, out);
+	if (ferror(out)) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed writing compiler output");
+		goto done;
+	}
+	ok = 1;
+
+done:
+	if (out) {
+		fclose(out);
+	}
+	ir_free(&ir);
+	parser_parse_result_free(&parsed);
+	free(source_text);
+	return ok;
+}
+
+static int host_dispatch_call(const char *name, const long *args, size_t argc, long *out, compile_error *err) {
+	if (strcmp(name, "host_args") == 0) {
+		(void)args;
+		if (argc != 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "host_args expects 0 args");
+			return 0;
+		}
+		*out = 1;
+		return 1;
+	}
+	if (strcmp(name, "buildcfg_goarch") == 0) {
+		(void)args;
+		if (argc != 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "buildcfg_goarch expects 0 args");
+			return 0;
+		}
+		*out = hash_plain_string("arm64");
+		return 1;
+	}
+	if (strcmp(name, "buildcfg_check") == 0) {
+		(void)args;
+		if (argc != 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "buildcfg_check expects 0 args");
+			return 0;
+		}
+		*out = 0;
+		return 1;
+	}
+	if (strcmp(name, "arch_dispatch_init") == 0) {
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "arch_dispatch_init expects 1 arg");
+			return 0;
+		}
+		*out = 0;
+		return 1;
+	}
+	if (strcmp(name, "eprintln") == 0) {
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "eprintln expects 1 arg");
+			return 0;
+		}
+		fprintf(stderr, "runtime message id=%ld\n", args[0]);
+		*out = 0;
+		return 1;
+	}
+	if (strcmp(name, "build_main") == 0) {
+		compile_error compile_err;
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "build_main expects 1 arg");
+			return 0;
+		}
+		if (g_host_argc != 3 || !g_host_argv) {
+			fprintf(stderr, "usage:\n  <compiler> <input.s> <output.ir>\n");
+			*out = 2;
+			return 1;
+		}
+		error_clear(&compile_err);
+		if (!compile_s_file_to_ir(g_host_argv[1], g_host_argv[2], &compile_err)) {
+			print_compile_error_local(&compile_err);
+			*out = 1;
+			return 1;
+		}
+		printf("compiled %s -> %s\n", g_host_argv[1], g_host_argv[2]);
+		*out = 0;
+		return 1;
+	}
+
+	error_set(err, ERR_SEMANTIC, 0, 0, "unknown function: %s", name);
+	return 0;
+}
 
 typedef struct runtime_value {
 	char name[64];
@@ -240,6 +477,10 @@ static int parse_record_line(const char *line, runtime_ins *out) {
 static int resolve_value(const runtime_values *vals, const char *name, long *out) {
 	if (is_int_literal(name)) {
 		*out = strtol(name, NULL, 10);
+		return 1;
+	}
+	if (is_string_literal(name)) {
+		*out = string_literal_value(name);
 		return 1;
 	}
 	return values_get(vals, name, out);
@@ -523,13 +764,15 @@ static int execute_function(
 			}
 			callee = functions_find(funcs, ins->op1);
 			if (!callee) {
-				error_set(err, ERR_SEMANTIC, 0, 0, "unknown function: %s", ins->op1);
-				values_free(&vals);
-				return 0;
-			}
-			if (!execute_function(prog, labels, funcs, callee, &pending_args[pending_len - call_argc], call_argc, &callee_ret, err, depth + 1)) {
-				values_free(&vals);
-				return 0;
+				if (!host_dispatch_call(ins->op1, &pending_args[pending_len - call_argc], call_argc, &callee_ret, err)) {
+					values_free(&vals);
+					return 0;
+				}
+			} else {
+				if (!execute_function(prog, labels, funcs, callee, &pending_args[pending_len - call_argc], call_argc, &callee_ret, err, depth + 1)) {
+					values_free(&vals);
+					return 0;
+				}
 			}
 			pending_len -= call_argc;
 			if (!values_set(&vals, ins->result, callee_ret)) {
@@ -560,7 +803,14 @@ static int execute_function(
 	return 1;
 }
 
-bool runtime_execute_text(const char *target_text, const char *entry_function, long *out_return, compile_error *err) {
+bool runtime_execute_text_with_argv(
+	const char *target_text,
+	const char *entry_function,
+	long *out_return,
+	compile_error *err,
+	int argc,
+	char **argv
+) {
 	runtime_program prog = {0};
 	runtime_labels labels = {0};
 	runtime_functions funcs = {0};
@@ -575,9 +825,14 @@ bool runtime_execute_text(const char *target_text, const char *entry_function, l
 		return false;
 	}
 
+	g_host_argc = argc;
+	g_host_argv = argv;
+
 	if (!parse_program_text(target_text, &prog, &labels, err)) {
 		program_free(&prog);
 		labels_free(&labels);
+		g_host_argc = 0;
+		g_host_argv = NULL;
 		return false;
 	}
 
@@ -585,6 +840,8 @@ bool runtime_execute_text(const char *target_text, const char *entry_function, l
 		program_free(&prog);
 		labels_free(&labels);
 		functions_free(&funcs);
+		g_host_argc = 0;
+		g_host_argv = NULL;
 		return false;
 	}
 
@@ -597,6 +854,8 @@ bool runtime_execute_text(const char *target_text, const char *entry_function, l
 		program_free(&prog);
 		labels_free(&labels);
 		functions_free(&funcs);
+		g_host_argc = 0;
+		g_host_argv = NULL;
 		return false;
 	}
 
@@ -604,7 +863,13 @@ bool runtime_execute_text(const char *target_text, const char *entry_function, l
 	program_free(&prog);
 	labels_free(&labels);
 	functions_free(&funcs);
+	g_host_argc = 0;
+	g_host_argv = NULL;
 	return ok ? true : false;
+}
+
+bool runtime_execute_text(const char *target_text, const char *entry_function, long *out_return, compile_error *err) {
+	return runtime_execute_text_with_argv(target_text, entry_function, out_return, err, 0, NULL);
 }
 
 bool runtime_execute_file(const char *target_path, const char *entry_function, long *out_return, compile_error *err) {
