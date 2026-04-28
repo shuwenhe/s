@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BIN_DIR="$ROOT_DIR/bin"
 STAMP="$(TZ=Asia/Shanghai date +%Y%m%d%H%M%S)"
-OUT="$BIN_DIR/c_arm64_${STAMP}"
+OUT="$BIN_DIR/s_arm64_${STAMP}"
 
 mkdir -p "$BIN_DIR"
 

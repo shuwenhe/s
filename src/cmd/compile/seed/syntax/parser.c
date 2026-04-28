@@ -73,6 +73,8 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_NUMBER_EXPR: return "NUMBER_EXPR";
 			case AST_BOOL_EXPR: return "BOOL_EXPR";
 		case AST_STRING_EXPR: return "STRING_EXPR";
+		case AST_ARRAY_EXPR: return "ARRAY_EXPR";
+		case AST_MEMBER_EXPR: return "MEMBER_EXPR";
 		case AST_CALL_EXPR: return "CALL_EXPR";
 		default: return "UNKNOWN_AST";
 	}
@@ -89,6 +91,8 @@ ast_node *ast_new(ast_kind kind, source_pos pos) {
 		ast_vec_init(&node->as.program.statements);
 	} else if (kind == AST_BLOCK) {
 		ast_vec_init(&node->as.block.statements);
+	} else if (kind == AST_ARRAY_EXPR) {
+		ast_vec_init(&node->as.array_expr.items);
 	} else if (kind == AST_CALL_EXPR) {
 		ast_vec_init(&node->as.call_expr.args);
 	}
@@ -137,6 +141,10 @@ void ast_free(ast_node *node) {
 		case AST_USE_DECL:
 			free(node->as.use_decl.module_path);
 			free(node->as.use_decl.alias);
+			for (i = 0; i < node->as.use_decl.selector_count; i++) {
+				free(node->as.use_decl.selectors[i]);
+			}
+			free(node->as.use_decl.selectors);
 			break;
 		case AST_IF_STMT:
 			ast_free(node->as.if_stmt.condition);
@@ -185,6 +193,16 @@ void ast_free(ast_node *node) {
 				break;
 		case AST_STRING_EXPR:
 			free(node->as.string_expr.literal);
+			break;
+		case AST_ARRAY_EXPR:
+			for (i = 0; i < node->as.array_expr.items.len; i++) {
+				ast_free(node->as.array_expr.items.data[i]);
+			}
+			ast_vec_free(&node->as.array_expr.items);
+			break;
+		case AST_MEMBER_EXPR:
+			ast_free(node->as.member_expr.object);
+			free(node->as.member_expr.member);
 			break;
 		case AST_CALL_EXPR:
 			ast_free(node->as.call_expr.callee);
@@ -273,6 +291,14 @@ static int consume_optional_semicolon(parser *p) {
 
 static ast_node *parse_expression(parser *p);
 static ast_node *parse_statement(parser *p);
+static int skip_brace_initializer(parser *p);
+static int parse_dotted_path(parser *p,
+	char *path,
+	size_t path_size,
+	char *alias_buf,
+	size_t alias_size,
+	const char *what,
+	int allow_selector_suffix);
 
 static ast_node *parse_primary(parser *p) {
 	const token *tok = peek(p);
@@ -310,11 +336,46 @@ static ast_node *parse_primary(parser *p) {
 		}
 		return node;
 	}
+	if (match(p, TOKEN_LBRACKET)) {
+		node = ast_new(AST_ARRAY_EXPR, tok->pos);
+		if (!node) {
+			return NULL;
+		}
+		if (!check(p, TOKEN_RBRACKET)) {
+			for (;;) {
+				ast_node *item = parse_expression(p);
+				if (!item) {
+					ast_free(node);
+					return NULL;
+				}
+				if (!ast_vec_push(&node->as.array_expr.items, item)) {
+					ast_free(item);
+					ast_free(node);
+					return NULL;
+				}
+				if (!match(p, TOKEN_COMMA)) {
+					break;
+				}
+				if (check(p, TOKEN_RBRACKET)) {
+					break;
+				}
+			}
+		}
+		if (!expect(p, TOKEN_RBRACKET, "]")) {
+			ast_free(node);
+			return NULL;
+		}
+		return node;
+	}
 	if (match(p, TOKEN_IDENTIFIER)) {
 		node = ast_new(AST_IDENT_EXPR, tok->pos);
 		if (!node) return NULL;
 		node->as.ident_expr.name = dup_cstr(tok->lexeme);
 		if (!node->as.ident_expr.name) {
+			ast_free(node);
+			return NULL;
+		}
+		if (!skip_brace_initializer(p)) {
 			ast_free(node);
 			return NULL;
 		}
@@ -342,35 +403,61 @@ static ast_node *parse_call(parser *p) {
 		return NULL;
 	}
 
-	while (match(p, TOKEN_LPAREN)) {
-		ast_node *call = ast_new(AST_CALL_EXPR, prev(p)->pos);
-		if (!call) {
-			ast_free(expr);
-			return NULL;
-		}
-		call->as.call_expr.callee = expr;
-		if (!check(p, TOKEN_RPAREN)) {
-			for (;;) {
-				ast_node *arg = parse_expression(p);
-				if (!arg) {
-					ast_free(call);
-					return NULL;
-				}
-				if (!ast_vec_push(&call->as.call_expr.args, arg)) {
-					ast_free(arg);
-					ast_free(call);
-					return NULL;
-				}
-				if (!match(p, TOKEN_COMMA)) {
-					break;
+	for (;;) {
+		if (match(p, TOKEN_LPAREN)) {
+			ast_node *call = ast_new(AST_CALL_EXPR, prev(p)->pos);
+			if (!call) {
+				ast_free(expr);
+				return NULL;
+			}
+			call->as.call_expr.callee = expr;
+			if (!check(p, TOKEN_RPAREN)) {
+				for (;;) {
+					ast_node *arg = parse_expression(p);
+					if (!arg) {
+						ast_free(call);
+						return NULL;
+					}
+					if (!ast_vec_push(&call->as.call_expr.args, arg)) {
+						ast_free(arg);
+						ast_free(call);
+						return NULL;
+					}
+					if (!match(p, TOKEN_COMMA)) {
+						break;
+					}
 				}
 			}
+			if (!expect(p, TOKEN_RPAREN, ")")) {
+				ast_free(call);
+				return NULL;
+			}
+			expr = call;
+			continue;
 		}
-		if (!expect(p, TOKEN_RPAREN, ")")) {
-			ast_free(call);
-			return NULL;
+
+		if (match(p, TOKEN_DOT)) {
+			ast_node *member = ast_new(AST_MEMBER_EXPR, prev(p)->pos);
+			if (!member) {
+				ast_free(expr);
+				return NULL;
+			}
+			if (!expect(p, TOKEN_IDENTIFIER, "member name")) {
+				ast_free(member);
+				ast_free(expr);
+				return NULL;
+			}
+			member->as.member_expr.object = expr;
+			member->as.member_expr.member = dup_cstr(prev(p)->lexeme);
+			if (!member->as.member_expr.member) {
+				ast_free(member);
+				return NULL;
+			}
+			expr = member;
+			continue;
 		}
-		expr = call;
+
+		break;
 	}
 
 	return expr;
@@ -865,128 +952,76 @@ static ast_node *parse_for_statement(parser *p) {
 	return node;
 }
 
-static int parse_params(parser *p, ast_node *fn_node) {
-	char **params = NULL;
-	char **param_types = NULL;
-	size_t count = 0;
-	size_t cap = 0;
-
-	if (check(p, TOKEN_RPAREN)) {
-		fn_node->as.fn_stmt.params = NULL;
-		fn_node->as.fn_stmt.param_types = NULL;
-		fn_node->as.fn_stmt.param_count = 0;
-		return 1;
-	}
-
-	for (;;) {
-		const token *first_tok;
-		const token *type_tok = NULL;
-		const token *name_tok;
-		char *name;
-		char *type_name;
-		if (!expect(p, TOKEN_IDENTIFIER, "parameter")) {
-			goto fail;
-		}
-		first_tok = prev(p);
-		name_tok = first_tok;
-
-		if (check(p, TOKEN_IDENTIFIER) && (check_next(p, TOKEN_COMMA) || check_next(p, TOKEN_RPAREN))) {
-			advance_tok(p);
-			type_tok = first_tok;
-			name_tok = prev(p);
-		}
-
-		name = dup_cstr(name_tok->lexeme);
-		if (!name) {
-			goto fail;
-		}
-		type_name = dup_cstr(type_tok ? type_tok->lexeme : "any");
-		if (!type_name) {
-			free(name);
-			goto fail;
-		}
-		if (count == cap) {
-			size_t next_cap = (cap == 0) ? 4 : cap * 2;
-			char **next_params = (char **)malloc(next_cap * sizeof(char *));
-			char **next_param_types = (char **)malloc(next_cap * sizeof(char *));
-			if (!next_params) {
-				free(name);
-				free(type_name);
-				goto fail;
-			}
-			if (!next_param_types) {
-				free(next_params);
-				free(name);
-				free(type_name);
-				goto fail;
-			}
-			if (count > 0) {
-				memcpy(next_params, params, count * sizeof(char *));
-				memcpy(next_param_types, param_types, count * sizeof(char *));
-			}
-			free(params);
-			free(param_types);
-			params = next_params;
-			param_types = next_param_types;
-			cap = next_cap;
-		}
-		params[count++] = name;
-		param_types[count - 1] = type_name;
-		if (!match(p, TOKEN_COMMA)) {
-			break;
-		}
-	}
-
-	fn_node->as.fn_stmt.params = params;
-	fn_node->as.fn_stmt.param_types = param_types;
-	fn_node->as.fn_stmt.param_count = count;
-	return 1;
-
-fail:
-	if (!error_is_set(p->err)) {
-		error_set(p->err, ERR_OUT_OF_MEMORY, peek(p)->pos.line, peek(p)->pos.column, "out of memory");
-	}
-	while (count > 0) {
-		free(params[--count]);
-		free(param_types[count]);
-	}
-	free(params);
-	free(param_types);
-	return 0;
-}
-
 static ast_node *parse_fn_statement(parser *p) {
 	ast_node *node = ast_new(AST_FN_STMT, prev(p)->pos);
-	const token *name_tok;
+	size_t cap = 0;
+	char *ret_type;
 	if (!node) {
 		return NULL;
 	}
-
 	if (!expect(p, TOKEN_IDENTIFIER, "function name")) {
 		ast_free(node);
 		return NULL;
 	}
-	name_tok = prev(p);
-	node->as.fn_stmt.name = dup_cstr(name_tok->lexeme);
+	node->as.fn_stmt.name = dup_cstr(prev(p)->lexeme);
 	if (!node->as.fn_stmt.name) {
-		error_set(p->err, ERR_OUT_OF_MEMORY, name_tok->pos.line, name_tok->pos.column, "out of memory");
 		ast_free(node);
 		return NULL;
 	}
-	node->as.fn_stmt.return_type = dup_cstr("any");
-	if (!node->as.fn_stmt.return_type) {
-		error_set(p->err, ERR_OUT_OF_MEMORY, name_tok->pos.line, name_tok->pos.column, "out of memory");
-		ast_free(node);
-		return NULL;
-	}
-
 	if (!expect(p, TOKEN_LPAREN, "(")) {
 		ast_free(node);
 		return NULL;
 	}
-	if (!parse_params(p, node)) {
-		ast_free(node);
-		return NULL;
+	while (!check(p, TOKEN_RPAREN)) {
+		char *param_name;
+		char *param_type;
+		if (!expect(p, TOKEN_IDENTIFIER, "parameter")) {
+			ast_free(node);
+			return NULL;
+		}
+		param_name = dup_cstr(prev(p)->lexeme);
+		if (!param_name) {
+			ast_free(node);
+			return NULL;
+		}
+		param_type = dup_cstr("any");
+		if (!param_type) {
+			free(param_name);
+			ast_free(node);
+			return NULL;
+		}
+		if (check(p, TOKEN_IDENTIFIER) && !check_next(p, TOKEN_COMMA) && !check_next(p, TOKEN_RPAREN)) {
+			advance_tok(p);
+			free(param_type);
+			param_type = dup_cstr(prev(p)->lexeme);
+			if (!param_type) {
+				free(param_name);
+				ast_free(node);
+				return NULL;
+			}
+		}
+		if (node->as.fn_stmt.param_count == cap) {
+			size_t next_cap = (cap == 0) ? 4 : cap * 2;
+			char **next_params = (char **)realloc(node->as.fn_stmt.params, next_cap * sizeof(char *));
+			char **next_types = (char **)realloc(node->as.fn_stmt.param_types, next_cap * sizeof(char *));
+			if (!next_params || !next_types) {
+				free(next_params);
+				free(next_types);
+				free(param_name);
+				free(param_type);
+				ast_free(node);
+				return NULL;
+			}
+			node->as.fn_stmt.params = next_params;
+			node->as.fn_stmt.param_types = next_types;
+			cap = next_cap;
+		}
+		node->as.fn_stmt.params[node->as.fn_stmt.param_count] = param_name;
+		node->as.fn_stmt.param_types[node->as.fn_stmt.param_count] = param_type;
+		node->as.fn_stmt.param_count++;
+		if (!match(p, TOKEN_COMMA)) {
+			break;
+		}
 	}
 	if (!expect(p, TOKEN_RPAREN, ")")) {
 		ast_free(node);
@@ -994,7 +1029,6 @@ static ast_node *parse_fn_statement(parser *p) {
 	}
 
 	if (check(p, TOKEN_IDENTIFIER) && check_next(p, TOKEN_LBRACE)) {
-		char *ret_type;
 		advance_tok(p);
 		ret_type = dup_cstr(prev(p)->lexeme);
 		if (!ret_type) {
@@ -1005,7 +1039,6 @@ static ast_node *parse_fn_statement(parser *p) {
 		free(node->as.fn_stmt.return_type);
 		node->as.fn_stmt.return_type = ret_type;
 	} else if (check(p, TOKEN_LPAREN)) {
-		char *ret_type;
 		advance_tok(p);
 		if (!expect(p, TOKEN_RPAREN, ")")) {
 			ast_free(node);
@@ -1035,16 +1068,16 @@ static ast_node *parse_fn_statement(parser *p) {
 
 static ast_node *parse_package_decl(parser *p) {
 	ast_node *node = ast_new(AST_PACKAGE_DECL, prev(p)->pos);
-	const token *name_tok;
+	char package_path[256];
+	char alias_buf[64];
 	if (!node) {
 		return NULL;
 	}
-	if (!expect(p, TOKEN_IDENTIFIER, "package name")) {
+	if (!parse_dotted_path(p, package_path, sizeof(package_path), alias_buf, sizeof(alias_buf), "package name", 0)) {
 		ast_free(node);
 		return NULL;
 	}
-	name_tok = prev(p);
-	node->as.package_decl.name = dup_cstr(name_tok->lexeme);
+	node->as.package_decl.name = dup_cstr(package_path);
 	if (!node->as.package_decl.name) {
 		ast_free(node);
 		return NULL;
@@ -1057,59 +1090,127 @@ static ast_node *parse_use_decl(parser *p) {
 	ast_node *node = ast_new(AST_USE_DECL, prev(p)->pos);
 	char path[256];
 	char alias_buf[64];
-	size_t path_len = 0;
+	char *selectors_local[64];
+	size_t selector_count = 0;
+	size_t i;
 	if (!node) {
 		return NULL;
 	}
 	path[0] = '\0';
 	alias_buf[0] = '\0';
+	for (i = 0; i < 64; i++) {
+		selectors_local[i] = NULL;
+	}
 
-	if (!expect(p, TOKEN_IDENTIFIER, "module path")) {
+	if (!parse_dotted_path(p, path, sizeof(path), alias_buf, sizeof(alias_buf), "module path", 1)) {
 		ast_free(node);
 		return NULL;
 	}
-	snprintf(path, sizeof(path), "%s", prev(p)->lexeme);
-	snprintf(alias_buf, sizeof(alias_buf), "%s", prev(p)->lexeme);
-	path_len = strlen(path);
 
-	while (match(p, TOKEN_DOT)) {
-		if (!expect(p, TOKEN_IDENTIFIER, "path segment")) {
+	if (match(p, TOKEN_DOT)) {
+		if (!expect(p, TOKEN_LBRACE, "{")) {
 			ast_free(node);
 			return NULL;
 		}
-		if (path_len + 1 + strlen(prev(p)->lexeme) + 1 >= sizeof(path)) {
-			error_set(p->err, ERR_SYNTAX, prev(p)->pos.line, prev(p)->pos.column, "module path too long");
+		if (!expect(p, TOKEN_IDENTIFIER, "import symbol")) {
 			ast_free(node);
 			return NULL;
 		}
-		strcat(path, ".");
-		strcat(path, prev(p)->lexeme);
-		snprintf(alias_buf, sizeof(alias_buf), "%s", prev(p)->lexeme);
-		path_len = strlen(path);
+		selectors_local[selector_count] = dup_cstr(prev(p)->lexeme);
+		if (!selectors_local[selector_count]) {
+			ast_free(node);
+			return NULL;
+		}
+		selector_count++;
+		while (match(p, TOKEN_COMMA)) {
+			if (check(p, TOKEN_RBRACE)) {
+				break;
+			}
+			if (!expect(p, TOKEN_IDENTIFIER, "import symbol")) {
+				for (i = 0; i < selector_count; i++) {
+					free(selectors_local[i]);
+				}
+				ast_free(node);
+				return NULL;
+			}
+			if (selector_count >= 64) {
+				error_set(p->err, ERR_SYNTAX, prev(p)->pos.line, prev(p)->pos.column, "too many import symbols");
+				for (i = 0; i < selector_count; i++) {
+					free(selectors_local[i]);
+				}
+				ast_free(node);
+				return NULL;
+			}
+			selectors_local[selector_count] = dup_cstr(prev(p)->lexeme);
+			if (!selectors_local[selector_count]) {
+				for (i = 0; i < selector_count; i++) {
+					free(selectors_local[i]);
+				}
+				ast_free(node);
+				return NULL;
+			}
+			selector_count++;
+		}
+		if (!expect(p, TOKEN_RBRACE, "}")) {
+			for (i = 0; i < selector_count; i++) {
+				free(selectors_local[i]);
+			}
+			ast_free(node);
+			return NULL;
+		}
 	}
 
 	node->as.use_decl.module_path = dup_cstr(path);
 	if (!node->as.use_decl.module_path) {
+		for (i = 0; i < selector_count; i++) {
+			free(selectors_local[i]);
+		}
 		ast_free(node);
 		return NULL;
 	}
 
 	if (match(p, TOKEN_AS)) {
 		if (!expect(p, TOKEN_IDENTIFIER, "alias")) {
+			for (i = 0; i < selector_count; i++) {
+				free(selectors_local[i]);
+			}
 			ast_free(node);
 			return NULL;
 		}
 		node->as.use_decl.alias = dup_cstr(prev(p)->lexeme);
 		if (!node->as.use_decl.alias) {
+			for (i = 0; i < selector_count; i++) {
+				free(selectors_local[i]);
+			}
 			ast_free(node);
 			return NULL;
 		}
 	} else {
 		node->as.use_decl.alias = dup_cstr(alias_buf);
 		if (!node->as.use_decl.alias) {
+			for (i = 0; i < selector_count; i++) {
+				free(selectors_local[i]);
+			}
 			ast_free(node);
 			return NULL;
 		}
+	}
+
+	node->as.use_decl.selector_count = selector_count;
+	if (selector_count > 0) {
+		node->as.use_decl.selectors = (char **)calloc(selector_count, sizeof(char *));
+		if (!node->as.use_decl.selectors) {
+			for (i = 0; i < selector_count; i++) {
+				free(selectors_local[i]);
+			}
+			ast_free(node);
+			return NULL;
+		}
+		for (i = 0; i < selector_count; i++) {
+			node->as.use_decl.selectors[i] = selectors_local[i];
+		}
+	} else {
+		node->as.use_decl.selectors = NULL;
 	}
 
 	consume_optional_semicolon(p);
@@ -1200,4 +1301,51 @@ void parser_parse_result_free(parse_result *res) {
 	}
 	ast_free(res->root);
 	res->root = NULL;
+}
+
+static int skip_brace_initializer(parser *p) {
+    if (match(p, TOKEN_LBRACE)) {
+        while (!match(p, TOKEN_RBRACE)) {
+            if (is_at_end(p)) {
+                error_set(p->err, ERR_SYNTAX, peek(p)->pos.line, peek(p)->pos.column, "Unterminated brace initializer");
+                return 0;
+            }
+            advance_tok(p);
+        }
+        return 1;
+    }
+    return 0;
+}
+
+static int parse_dotted_path(parser *p,
+                             char *path,
+                             size_t path_size,
+                             char *alias_buf,
+                             size_t alias_size,
+                             const char *what,
+                             int allow_selector_suffix) {
+    size_t len = 0;
+    if (!match(p, TOKEN_IDENTIFIER)) {
+        error_set(p->err, ERR_SYNTAX, peek(p)->pos.line, peek(p)->pos.column, "Expected %s", what);
+        return 0;
+    }
+    len += snprintf(path + len, path_size - len, "%s", prev(p)->lexeme);
+
+    while (match(p, TOKEN_DOT)) {
+        if (!match(p, TOKEN_IDENTIFIER)) {
+            error_set(p->err, ERR_SYNTAX, peek(p)->pos.line, peek(p)->pos.column, "Expected identifier after '.' in %s", what);
+            return 0;
+        }
+        len += snprintf(path + len, path_size - len, ".%s", prev(p)->lexeme);
+    }
+
+    if (allow_selector_suffix && match(p, TOKEN_AS)) {
+        if (!match(p, TOKEN_IDENTIFIER)) {
+            error_set(p->err, ERR_SYNTAX, peek(p)->pos.line, peek(p)->pos.column, "Expected alias after 'as'");
+            return 0;
+        }
+        snprintf(alias_buf, alias_size, "%s", prev(p)->lexeme);
+    }
+
+    return 1;
 }

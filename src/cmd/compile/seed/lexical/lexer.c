@@ -84,10 +84,13 @@ const char *token_type_name(token_type type) {
 		case TOKEN_GE: return ">=";
 		case TOKEN_LPAREN: return "(";
 		case TOKEN_RPAREN: return ")";
+		case TOKEN_LBRACKET: return "[";
+		case TOKEN_RBRACKET: return "]";
 		case TOKEN_LBRACE: return "{";
 		case TOKEN_RBRACE: return "}";
 		case TOKEN_COMMA: return ",";
 		case TOKEN_DOT: return ".";
+		case TOKEN_COLON: return ":";
 		case TOKEN_SEMICOLON: return ";";
 		default: return "UNKNOWN";
 	}
@@ -224,6 +227,14 @@ bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error 
 				i++;
 				col++;
 			}
+			if (source[i] == '.' && isdigit((unsigned char)source[i + 1])) {
+				i++;
+				col++;
+				while (isdigit((unsigned char)source[i])) {
+					i++;
+					col++;
+				}
+			}
 			{
 				token tok;
 				tok.type = TOKEN_NUMBER;
@@ -350,10 +361,13 @@ bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error 
 			case '>': if (!push_simple(out_tokens, TOKEN_GT, ">", tok_line, tok_col)) goto oom; break;
 			case '(': if (!push_simple(out_tokens, TOKEN_LPAREN, "(", tok_line, tok_col)) goto oom; break;
 			case ')': if (!push_simple(out_tokens, TOKEN_RPAREN, ")", tok_line, tok_col)) goto oom; break;
+			case '[': if (!push_simple(out_tokens, TOKEN_LBRACKET, "[", tok_line, tok_col)) goto oom; break;
+			case ']': if (!push_simple(out_tokens, TOKEN_RBRACKET, "]", tok_line, tok_col)) goto oom; break;
 			case '{': if (!push_simple(out_tokens, TOKEN_LBRACE, "{", tok_line, tok_col)) goto oom; break;
 			case '}': if (!push_simple(out_tokens, TOKEN_RBRACE, "}", tok_line, tok_col)) goto oom; break;
 			case ',': if (!push_simple(out_tokens, TOKEN_COMMA, ",", tok_line, tok_col)) goto oom; break;
 			case '.': if (!push_simple(out_tokens, TOKEN_DOT, ".", tok_line, tok_col)) goto oom; break;
+			case ':': if (!push_simple(out_tokens, TOKEN_COLON, ":", tok_line, tok_col)) goto oom; break;
 			case ';': if (!push_simple(out_tokens, TOKEN_SEMICOLON, ";", tok_line, tok_col)) goto oom; break;
 			default:
 				error_set(err, ERR_ILLEGAL_CHAR, tok_line, tok_col, "illegal character: %c", c);
