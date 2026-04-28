@@ -130,6 +130,66 @@ static const char *current_continue_label(ir_builder *b) {
 static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]);
 static bool lower_stmt(ir_builder *b, ast_node *stmt);
 
+static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[64]) {
+	size_t i;
+	int written;
+	size_t used = 0;
+
+	if (!expr || expr->kind != AST_ARRAY_EXPR) {
+		return false;
+	}
+
+	if (used + 2 >= 64) {
+		error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "array literal too long for IR operand");
+		return false;
+	}
+	out[used++] = '"';
+	out[used++] = '[';
+
+	for (i = 0; i < expr->as.array_expr.items.len; i++) {
+		ast_node *item = expr->as.array_expr.items.data[i];
+		char item_text[64];
+		if (!item) {
+			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "invalid array literal item");
+			return false;
+		}
+		switch (item->kind) {
+			case AST_NUMBER_EXPR:
+				snprintf(item_text, sizeof(item_text), "%s", item->as.number_expr.literal);
+				break;
+			case AST_BOOL_EXPR:
+				snprintf(item_text, sizeof(item_text), "%s", item->as.bool_expr.value ? "true" : "false");
+				break;
+			case AST_STRING_EXPR:
+				snprintf(item_text, sizeof(item_text), "\"%s\"", item->as.string_expr.literal);
+				break;
+			case AST_IDENT_EXPR:
+				snprintf(item_text, sizeof(item_text), "%s", item->as.ident_expr.name);
+				break;
+			default:
+				error_set(b->err, ERR_SEMANTIC, item->pos.line, item->pos.column,
+					"array literal currently supports number/bool/string/identifier items in IR lowering");
+				return false;
+		}
+
+		written = snprintf(out + used, 64 - used, "%s%s", (i == 0) ? "" : ", ", item_text);
+		if (written < 0 || (size_t)written >= 64 - used) {
+			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "array literal too long for IR operand");
+			return false;
+		}
+		used += (size_t)written;
+	}
+
+	if (used + 2 >= 64) {
+		error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "array literal too long for IR operand");
+		return false;
+	}
+	out[used++] = ']';
+	out[used++] = '"';
+	out[used] = '\0';
+	return true;
+}
+
 static bool is_non_unit_return_type(const char *return_type) {
 	return return_type && return_type[0] != '\0' && strcmp(return_type, "()") != 0;
 }
@@ -263,9 +323,22 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]) {
 		case AST_STRING_EXPR:
 			snprintf(out, 64, "\"%s\"", expr->as.string_expr.literal);
 			return true;
+		case AST_ARRAY_EXPR:
+			return lower_array_literal(b, expr, out);
 		case AST_IDENT_EXPR:
 			snprintf(out, 64, "%s", expr->as.ident_expr.name);
 			return true;
+		case AST_MEMBER_EXPR: {
+			char object_name[64];
+			if (!lower_expr(b, expr->as.member_expr.object, object_name)) {
+				return false;
+			}
+			if (snprintf(out, 64, "%s.%s", object_name, expr->as.member_expr.member) >= 64) {
+				error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "member expression too long for IR operand");
+				return false;
+			}
+			return true;
+		}
 		case AST_UNARY_EXPR: {
 			char rhs[64];
 			if (!lower_expr(b, expr->as.unary_expr.operand, rhs)) {

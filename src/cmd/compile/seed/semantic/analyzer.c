@@ -62,6 +62,7 @@ static const char *TYPE_ANY = "any";
 static const char *TYPE_INT = "int";
 static const char *TYPE_STRING = "string";
 static const char *TYPE_BOOL = "bool";
+static const char *TYPE_ARRAY = "array";
 static const char *TYPE_UNIT = "()";
 
 static const char *IMPORT_SIGNATURE_META_PATH = "src/cmd/compile/seed/semantic/import_signatures.meta";
@@ -667,6 +668,14 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 		case AST_STRING_EXPR:
 			*out_type = TYPE_STRING;
 			return 1;
+		case AST_ARRAY_EXPR:
+			for (i = 0; i < node->as.array_expr.items.len; i++) {
+				if (!analyze_expr(ctx, node->as.array_expr.items.data[i], &rhs_type)) {
+					return 0;
+				}
+			}
+			*out_type = TYPE_ARRAY;
+			return 1;
 		case AST_IDENT_EXPR:
 			sym = scope_lookup(ctx->current_scope, node->as.ident_expr.name);
 			if (!sym) {
@@ -675,6 +684,12 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				return 0;
 			}
 			*out_type = sym->type_name;
+			return 1;
+		case AST_MEMBER_EXPR:
+			if (!analyze_expr(ctx, node->as.member_expr.object, &lhs_type)) {
+				return 0;
+			}
+			*out_type = TYPE_ANY;
 			return 1;
 		case AST_UNARY_EXPR:
 			if (!analyze_expr(ctx, node->as.unary_expr.operand, &rhs_type)) {
@@ -801,14 +816,12 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					rhs_type ? rhs_type : TYPE_ANY);
 				return 0;
 			}
-			if (is_type_any(sym->type_name) && !is_type_any(rhs_type)) {
-				if (ctx->short_circuit_rhs_depth == 0) {
-					free(sym->type_name);
-					sym->type_name = dup_cstr(rhs_type);
-					if (!sym->type_name) {
-						error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
-						return 0;
-					}
+			if (is_type_any(sym->type_name) && !is_type_any(rhs_type) && ctx->short_circuit_rhs_depth == 0) {
+				free(sym->type_name);
+				sym->type_name = dup_cstr(rhs_type);
+				if (!sym->type_name) {
+					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+					return 0;
 				}
 			}
 			*out_type = sym->type_name;
@@ -925,6 +938,40 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					if (status < 0) {
 						error_set(ctx->err, ERR_OUT_OF_MEMORY, decl->pos.line, decl->pos.column, "out of memory");
 						return 0;
+					}
+				}
+				if (decl->kind == AST_USE_DECL && decl->as.use_decl.selector_count > 0) {
+					size_t j;
+					for (j = 0; j < decl->as.use_decl.selector_count; j++) {
+						char full_path[256];
+						int min_arity;
+						int max_arity;
+						const char *ret_type;
+						if (!decl->as.use_decl.selectors[j]) {
+							continue;
+						}
+						if (snprintf(full_path, sizeof(full_path), "%s.%s", decl->as.use_decl.module_path, decl->as.use_decl.selectors[j]) >= (int)sizeof(full_path)) {
+							error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column, "import selector path too long");
+							return 0;
+						}
+						resolve_import_signature(full_path, &min_arity, &max_arity, &ret_type);
+						status = scope_define(ctx->current_scope,
+							decl->as.use_decl.selectors[j],
+							SYMBOL_IMPORT,
+							min_arity,
+							max_arity,
+							ret_type,
+							NULL,
+							0);
+						if (status == 0) {
+							error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
+								"redefinition of import alias '%s'", decl->as.use_decl.selectors[j]);
+							return 0;
+						}
+						if (status < 0) {
+							error_set(ctx->err, ERR_OUT_OF_MEMORY, decl->pos.line, decl->pos.column, "out of memory");
+							return 0;
+						}
 					}
 				}
 			}
@@ -1138,10 +1185,12 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_ASSIGN_EXPR:
 		case AST_UNARY_EXPR:
 		case AST_IDENT_EXPR:
+		case AST_MEMBER_EXPR:
 		case AST_CALL_EXPR:
 		case AST_NUMBER_EXPR:
 		case AST_BOOL_EXPR:
 		case AST_STRING_EXPR:
+		case AST_ARRAY_EXPR:
 			return analyze_expr(ctx, node, &expr_type);
 	}
 

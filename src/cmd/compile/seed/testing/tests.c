@@ -113,6 +113,33 @@ static bool test_line_comment_lexing(void) {
 	return ok;
 }
 
+static bool test_array_literal_lexing(void) {
+	const char *src = "let xs = [1.0, 2.0, 3.0];";
+	token_type expected[] = {
+		TOKEN_LET,
+		TOKEN_IDENTIFIER,
+		TOKEN_ASSIGN,
+		TOKEN_LBRACKET,
+		TOKEN_NUMBER,
+		TOKEN_COMMA,
+		TOKEN_NUMBER,
+		TOKEN_COMMA,
+		TOKEN_NUMBER,
+		TOKEN_RBRACKET,
+		TOKEN_SEMICOLON,
+		TOKEN_EOF,
+	};
+	token_vec tokens;
+	compile_error err;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (!ok) {
+		return false;
+	}
+	ok = expect_tokens(&tokens, expected, sizeof(expected) / sizeof(expected[0]));
+	token_vec_free(&tokens);
+	return ok;
+}
+
 static bool test_block_comment_lexing_and_error(void) {
 	const char *ok_src = "let x = 1; /* block\ncomment */ let y = 2;";
 	const char *bad_src = "let x = 1; /* unterminated";
@@ -208,6 +235,178 @@ static bool test_parser_return_and_block(void) {
 	}
 	if (ok) {
 		ok = block_stmt->as.block.statements.data[1]->kind == AST_RETURN_STMT;
+	}
+
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_array_literal(void) {
+	const char *src = "let xs = [1.0, 2.0, 3.0];";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	ast_node *stmt;
+	ast_node *expr;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+
+	ok = result.root->kind == AST_PROGRAM && result.root->as.program.statements.len == 1;
+	if (!ok) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	stmt = result.root->as.program.statements.data[0];
+	ok = stmt->kind == AST_LET_STMT;
+	if (!ok) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	expr = stmt->as.let_stmt.value;
+	ok = expr->kind == AST_ARRAY_EXPR;
+	ok = ok && expr->as.array_expr.items.len == 3;
+
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_dotted_package_decl(void) {
+	const char *src = "package neurx.test_tensor; fn main() int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len >= 1;
+	if (ok) {
+		ast_node *decl = result.root->as.program.statements.data[0];
+		ok = decl->kind == AST_PACKAGE_DECL;
+		ok = ok && strcmp(decl->as.package_decl.name, "neurx.test_tensor") == 0;
+	}
+
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_dotted_use_decl(void) {
+	const char *src = "use neurx.tensor.ops as ops; fn main() int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len >= 1;
+	if (ok) {
+		ast_node *decl = result.root->as.program.statements.data[0];
+		ok = decl->kind == AST_USE_DECL;
+		ok = ok && strcmp(decl->as.use_decl.module_path, "neurx.tensor.ops") == 0;
+		ok = ok && strcmp(decl->as.use_decl.alias, "ops") == 0;
+	}
+
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_use_selector_list(void) {
+	const char *src = "use neurx.tensor.{Tensor, new, add}; fn main() int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len >= 1;
+	if (ok) {
+		ast_node *decl = result.root->as.program.statements.data[0];
+		ok = decl->kind == AST_USE_DECL;
+		ok = ok && strcmp(decl->as.use_decl.module_path, "neurx.tensor") == 0;
+		ok = ok && strcmp(decl->as.use_decl.alias, "tensor") == 0;
+	}
+
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_member_access_expr(void) {
+	const char *src = "fn main() int { let a = 1; println(a.data); return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len == 1;
+	if (ok) {
+		ast_node *fn = result.root->as.program.statements.data[0];
+		ast_node *stmt;
+		ast_node *call;
+		ast_node *arg;
+		ok = fn->kind == AST_FN_STMT;
+		ok = ok && fn->as.fn_stmt.body != NULL;
+		ok = ok && fn->as.fn_stmt.body->kind == AST_BLOCK;
+		ok = ok && fn->as.fn_stmt.body->as.block.statements.len >= 2;
+		if (ok) {
+			stmt = fn->as.fn_stmt.body->as.block.statements.data[1];
+			ok = stmt->kind == AST_EXPR_STMT;
+			if (ok) {
+				call = stmt->as.expr_stmt.expr;
+				ok = call->kind == AST_CALL_EXPR;
+				ok = ok && call->as.call_expr.args.len == 1;
+				if (ok) {
+					arg = call->as.call_expr.args.data[0];
+					ok = arg->kind == AST_MEMBER_EXPR;
+					ok = ok && strcmp(arg->as.member_expr.member, "data") == 0;
+				}
+			}
+		}
 	}
 
 	parser_parse_result_free(&result);
@@ -1211,9 +1410,15 @@ int main(void) {
 	ok = ok && test_illegal_char_error();
 	ok = ok && test_unterminated_string_error();
 	ok = ok && test_line_comment_lexing();
+	ok = ok && test_array_literal_lexing();
 	ok = ok && test_block_comment_lexing_and_error();
 	ok = ok && test_parser_let_and_precedence();
 	ok = ok && test_parser_return_and_block();
+	ok = ok && test_parser_array_literal();
+	ok = ok && test_parser_dotted_package_decl();
+	ok = ok && test_parser_dotted_use_decl();
+	ok = ok && test_parser_use_selector_list();
+	ok = ok && test_parser_member_access_expr();
 	ok = ok && test_parser_control_flow_and_function();
 	ok = ok && test_semantic_ok();
 	ok = ok && test_semantic_undeclared_symbol();
