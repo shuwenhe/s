@@ -1,0 +1,1 @@
+// Scope management for S language
