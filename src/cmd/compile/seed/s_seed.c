@@ -1126,9 +1126,31 @@ typedef struct {
     int cap;
 } function_vec;
 
+typedef struct {
+    char alias[128];
+    char module[256];
+    char symbol[128];
+    char path[2048];
+} seed_import;
+
+typedef struct {
+    seed_import *items;
+    int len;
+    int cap;
+} import_vec;
+
+typedef struct {
+    token_vec tokens;
+    function_vec functions;
+    import_vec imports;
+} seed_module;
+
 static bool token_is_kind(token_vec *tokens, int at, const char *kind);
 static bool token_is_text(token_vec *tokens, int at, const char *text);
 static int find_matching_symbol(token_vec *tokens, int open_index, const char *open_text, const char *close_text);
+static bool collect_functions(token_vec *tokens, function_vec *functions);
+static bool load_seed_module(const char *path, seed_module *module, char *error, size_t error_size);
+static void free_seed_module(seed_module *module);
 
 static void free_seed_value(seed_value value) {
     if (value.kind == seed_value_string) {
@@ -1301,6 +1323,104 @@ static void free_functions(function_vec *functions) {
     functions->cap = 0;
 }
 
+static bool import_vec_push(import_vec *imports, seed_import value) {
+    if (imports->len == imports->cap) {
+        int next_cap = imports->cap == 0 ? 16 : imports->cap * 2;
+        seed_import *next = realloc(imports->items, sizeof(seed_import) * (size_t)next_cap);
+        if (next == NULL) {
+            return false;
+        }
+        imports->items = next;
+        imports->cap = next_cap;
+    }
+    imports->items[imports->len++] = value;
+    return true;
+}
+
+static void free_imports(import_vec *imports) {
+    free(imports->items);
+    imports->items = NULL;
+    imports->len = 0;
+    imports->cap = 0;
+}
+
+static const seed_import *find_import(import_vec *imports, const char *alias) {
+    for (int i = 0; i < imports->len; i++) {
+        if (strcmp(imports->items[i].alias, alias) == 0) {
+            return &imports->items[i];
+        }
+    }
+    return NULL;
+}
+
+static bool collect_imports(token_vec *tokens, import_vec *imports) {
+    for (int i = 0; i < tokens->len; i++) {
+        if (!token_is_text(tokens, i, "use")) {
+            continue;
+        }
+        seed_import entry = {0};
+        int j = i + 1;
+        while (j < tokens->len) {
+            if (token_is_text(tokens, j, "as")) {
+                break;
+            }
+            if (strcmp(tokens->items[j].kind, "ident") == 0 || token_is_text(tokens, j, ".")) {
+                strncat(entry.module, tokens->items[j].text, sizeof(entry.module) - strlen(entry.module) - 1);
+                j++;
+                continue;
+            }
+            break;
+        }
+        if (entry.module[0] == '\0') {
+            continue;
+        }
+        snprintf(entry.symbol, sizeof(entry.symbol), "%s", last_module_segment(entry.module));
+        snprintf(entry.alias, sizeof(entry.alias), "%s", entry.symbol);
+        if (j + 1 < tokens->len && token_is_text(tokens, j, "as") && token_is_kind(tokens, j + 1, "ident")) {
+            snprintf(entry.alias, sizeof(entry.alias), "%s", tokens->items[j + 1].text);
+        }
+        if (!resolve_direct_use_path(entry.module, entry.path, sizeof(entry.path))) {
+            entry.path[0] = '\0';
+        }
+        if (!import_vec_push(imports, entry)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool load_seed_module(const char *path, seed_module *module, char *error, size_t error_size) {
+    memset(module, 0, sizeof(*module));
+    char *source = read_text(path);
+    if (source == NULL) {
+        snprintf(error, error_size, "subset ast lowering failed: failed to read module: %s", path);
+        return false;
+    }
+    if (!lex_source(source, &module->tokens, error, error_size)) {
+        free(source);
+        free_seed_module(module);
+        return false;
+    }
+    free(source);
+    if (!collect_functions(&module->tokens, &module->functions)) {
+        snprintf(error, error_size, "subset ast lowering failed: function table OOM");
+        free_seed_module(module);
+        return false;
+    }
+    if (!collect_imports(&module->tokens, &module->imports)) {
+        snprintf(error, error_size, "subset ast lowering failed: import table OOM");
+        free_seed_module(module);
+        return false;
+    }
+    return true;
+}
+
+static void free_seed_module(seed_module *module) {
+    free_imports(&module->imports);
+    free_functions(&module->functions);
+    free_tokens(&module->tokens);
+}
+
 static seed_function *find_function(function_vec *functions, const char *name) {
     for (int i = 0; i < functions->len; i++) {
         if (strcmp(functions->items[i].name, name) == 0) {
@@ -1432,14 +1552,14 @@ static char *unquote_string_literal(const char *quoted) {
     return out;
 }
 
-static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int call_depth, int start, int end, binding_vec *bindings, text_builder *builder, bool *out_returned, seed_value *out_return_value, char *error, size_t error_size);
+static bool execute_stmt_range(seed_module *module, int call_depth, int start, int end, binding_vec *bindings, text_builder *builder, bool *out_returned, seed_value *out_return_value, char *error, size_t error_size);
 
-static bool execute_seed_function(token_vec *tokens, function_vec *functions, int call_depth, const char *name, seed_value *args, int arg_count, seed_value *out, char *error, size_t error_size) {
+static bool execute_seed_function(seed_module *module, int call_depth, const char *name, seed_value *args, int arg_count, seed_value *out, char *error, size_t error_size) {
     if (call_depth > 32) {
         snprintf(error, error_size, "subset ast lowering failed: call depth exceeded for %s", name);
         return false;
     }
-    seed_function *function = find_function(functions, name);
+    seed_function *function = find_function(&module->functions, name);
     if (function == NULL) {
         snprintf(error, error_size, "subset ast lowering failed: function not found: %s", name);
         return false;
@@ -1460,7 +1580,7 @@ static bool execute_seed_function(token_vec *tokens, function_vec *functions, in
 
     bool returned = false;
     seed_value return_value = make_unit_value();
-    if (!execute_stmt_range(tokens, functions, call_depth + 1, function->body_open + 1, function->body_close, &locals, NULL, &returned, &return_value, error, error_size)) {
+    if (!execute_stmt_range(module, call_depth + 1, function->body_open + 1, function->body_close, &locals, NULL, &returned, &return_value, error, error_size)) {
         free_bindings(&locals);
         free_seed_value(return_value);
         return false;
@@ -1475,26 +1595,26 @@ static bool execute_seed_function(token_vec *tokens, function_vec *functions, in
     return true;
 }
 
-static bool eval_simple_expr(token_vec *tokens, function_vec *functions, int call_depth, int start, int end, binding_vec *bindings, seed_value *out, char *error, size_t error_size) {
-        if (token_is_kind(tokens, start, "ident") && start + 2 < end && token_is_text(tokens, start + 1, "(")) {
-            int call_close = find_matching_symbol(tokens, start + 1, "(", ")");
+static bool eval_simple_expr(seed_module *module, int call_depth, int start, int end, binding_vec *bindings, seed_value *out, char *error, size_t error_size) {
+        if (token_is_kind(&module->tokens, start, "ident") && start + 2 < end && token_is_text(&module->tokens, start + 1, "(")) {
+            int call_close = find_matching_symbol(&module->tokens, start + 1, "(", ")");
             if (call_close == end - 1) {
                 seed_value args[16];
                 int arg_count = 0;
                 int arg_start = start + 2;
                 int depth = 0;
                 for (int i = start + 2; i < call_close; i++) {
-                    if (token_is_text(tokens, i, "(") || token_is_text(tokens, i, "[") || token_is_text(tokens, i, "{")) {
+                    if (token_is_text(&module->tokens, i, "(") || token_is_text(&module->tokens, i, "[") || token_is_text(&module->tokens, i, "{")) {
                         depth++;
-                    } else if (token_is_text(tokens, i, ")") || token_is_text(tokens, i, "]") || token_is_text(tokens, i, "}")) {
+                    } else if (token_is_text(&module->tokens, i, ")") || token_is_text(&module->tokens, i, "]") || token_is_text(&module->tokens, i, "}")) {
                         depth--;
-                    } else if (depth == 0 && token_is_text(tokens, i, ",")) {
+                    } else if (depth == 0 && token_is_text(&module->tokens, i, ",")) {
                         if (arg_count >= 16) {
                             snprintf(error, error_size, "subset ast lowering failed: too many call args");
                             return false;
                         }
                         args[arg_count] = make_unit_value();
-                        if (!eval_simple_expr(tokens, functions, call_depth, arg_start, i, bindings, &args[arg_count], error, error_size)) {
+                        if (!eval_simple_expr(module, call_depth, arg_start, i, bindings, &args[arg_count], error, error_size)) {
                             for (int r = 0; r <= arg_count; r++) {
                                 free_seed_value(args[r]);
                             }
@@ -1510,7 +1630,7 @@ static bool eval_simple_expr(token_vec *tokens, function_vec *functions, int cal
                         return false;
                     }
                     args[arg_count] = make_unit_value();
-                    if (!eval_simple_expr(tokens, functions, call_depth, arg_start, call_close, bindings, &args[arg_count], error, error_size)) {
+                    if (!eval_simple_expr(module, call_depth, arg_start, call_close, bindings, &args[arg_count], error, error_size)) {
                         for (int r = 0; r <= arg_count; r++) {
                             free_seed_value(args[r]);
                         }
@@ -1519,7 +1639,25 @@ static bool eval_simple_expr(token_vec *tokens, function_vec *functions, int cal
                     arg_count++;
                 }
                 seed_value call_value = make_unit_value();
-                bool ok = execute_seed_function(tokens, functions, call_depth, tokens->items[start].text, args, arg_count, &call_value, error, error_size);
+                bool ok = false;
+                seed_function *local_function = find_function(&module->functions, module->tokens.items[start].text);
+                if (local_function != NULL) {
+                    ok = execute_seed_function(module, call_depth, module->tokens.items[start].text, args, arg_count, &call_value, error, error_size);
+                } else {
+                    const seed_import *imported = find_import(&module->imports, module->tokens.items[start].text);
+                    if (imported == NULL) {
+                        snprintf(error, error_size, "subset ast lowering failed: function not found: %s", module->tokens.items[start].text);
+                    } else if (imported->path[0] == '\0') {
+                        snprintf(error, error_size, "subset ast lowering failed: import not resolved: %s", imported->module);
+                    } else {
+                        seed_module imported_module = {0};
+                        ok = load_seed_module(imported->path, &imported_module, error, error_size);
+                        if (ok) {
+                            ok = execute_seed_function(&imported_module, call_depth, imported->symbol, args, arg_count, &call_value, error, error_size);
+                        }
+                        free_seed_module(&imported_module);
+                    }
+                }
                 for (int r = 0; r < arg_count; r++) {
                     free_seed_value(args[r]);
                 }
@@ -1536,11 +1674,11 @@ static bool eval_simple_expr(token_vec *tokens, function_vec *functions, int cal
         return false;
     }
 
-    if (token_is_text(tokens, start, "true") && start + 1 == end) {
+        if (token_is_text(&module->tokens, start, "true") && start + 1 == end) {
         *out = make_bool_value(true);
         return true;
     }
-    if (token_is_text(tokens, start, "false") && start + 1 == end) {
+        if (token_is_text(&module->tokens, start, "false") && start + 1 == end) {
         *out = make_bool_value(false);
         return true;
     }
@@ -1548,19 +1686,19 @@ static bool eval_simple_expr(token_vec *tokens, function_vec *functions, int cal
     int cmp_index = -1;
     const char *cmp_op = NULL;
     for (int i = start; i < end; i++) {
-        if (token_is_text(tokens, i, "==") || token_is_text(tokens, i, "!=") || token_is_text(tokens, i, "<") || token_is_text(tokens, i, "<=") || token_is_text(tokens, i, ">") || token_is_text(tokens, i, ">=")) {
+        if (token_is_text(&module->tokens, i, "==") || token_is_text(&module->tokens, i, "!=") || token_is_text(&module->tokens, i, "<") || token_is_text(&module->tokens, i, "<=") || token_is_text(&module->tokens, i, ">") || token_is_text(&module->tokens, i, ">=")) {
             cmp_index = i;
-            cmp_op = tokens->items[i].text;
+            cmp_op = module->tokens.items[i].text;
             break;
         }
     }
     if (cmp_index > start && cmp_index + 1 < end) {
         seed_value left = make_unit_value();
         seed_value right = make_unit_value();
-        if (!eval_simple_expr(tokens, functions, call_depth, start, cmp_index, bindings, &left, error, error_size)) {
+        if (!eval_simple_expr(module, call_depth, start, cmp_index, bindings, &left, error, error_size)) {
             return false;
         }
-        if (!eval_simple_expr(tokens, functions, call_depth, cmp_index + 1, end, bindings, &right, error, error_size)) {
+        if (!eval_simple_expr(module, call_depth, cmp_index + 1, end, bindings, &right, error, error_size)) {
             free_seed_value(left);
             return false;
         }
@@ -1591,8 +1729,8 @@ static bool eval_simple_expr(token_vec *tokens, function_vec *functions, int cal
         return true;
     }
 
-    if (token_is_kind(tokens, start, "string") && start + 1 == end) {
-        char *raw = unquote_string_literal(tokens->items[start].text);
+    if (token_is_kind(&module->tokens, start, "string") && start + 1 == end) {
+        char *raw = unquote_string_literal(module->tokens.items[start].text);
         if (raw == NULL) {
             snprintf(error, error_size, "invalid string literal");
             return false;
@@ -1602,19 +1740,19 @@ static bool eval_simple_expr(token_vec *tokens, function_vec *functions, int cal
         return out->string_value != NULL;
     }
 
-    if (token_is_kind(tokens, start, "int") && start + 1 == end) {
+    if (token_is_kind(&module->tokens, start, "int") && start + 1 == end) {
         int value = 0;
-        if (!parse_signed_int(tokens->items[start].text, &value)) {
-            snprintf(error, error_size, "invalid int literal: %s", tokens->items[start].text);
+        if (!parse_signed_int(module->tokens.items[start].text, &value)) {
+            snprintf(error, error_size, "invalid int literal: %s", module->tokens.items[start].text);
             return false;
         }
         *out = make_int_value(value);
         return true;
     }
 
-    if (token_is_kind(tokens, start, "ident") && start + 1 == end) {
-        if (!binding_get(bindings, tokens->items[start].text, out)) {
-            snprintf(error, error_size, "unknown name: %s", tokens->items[start].text);
+    if (token_is_kind(&module->tokens, start, "ident") && start + 1 == end) {
+        if (!binding_get(bindings, module->tokens.items[start].text, out)) {
+            snprintf(error, error_size, "unknown name: %s", module->tokens.items[start].text);
             return false;
         }
         return true;
@@ -1622,7 +1760,7 @@ static bool eval_simple_expr(token_vec *tokens, function_vec *functions, int cal
 
     int plus_index = -1;
     for (int i = start; i < end; i++) {
-        if (token_is_text(tokens, i, "+")) {
+        if (token_is_text(&module->tokens, i, "+")) {
             plus_index = i;
             break;
         }
@@ -1630,10 +1768,10 @@ static bool eval_simple_expr(token_vec *tokens, function_vec *functions, int cal
     if (plus_index > start && plus_index + 1 < end) {
         seed_value left = make_unit_value();
         seed_value right = make_unit_value();
-        if (!eval_simple_expr(tokens, functions, call_depth, start, plus_index, bindings, &left, error, error_size)) {
+        if (!eval_simple_expr(module, call_depth, start, plus_index, bindings, &left, error, error_size)) {
             return false;
         }
-        if (!eval_simple_expr(tokens, functions, call_depth, plus_index + 1, end, bindings, &right, error, error_size)) {
+        if (!eval_simple_expr(module, call_depth, plus_index + 1, end, bindings, &right, error, error_size)) {
             free_seed_value(left);
             return false;
         }
@@ -1687,7 +1825,7 @@ static bool eval_simple_expr(token_vec *tokens, function_vec *functions, int cal
         return false;
     }
 
-    snprintf(error, error_size, "unsupported expression near token: %s", tokens->items[start].text);
+    snprintf(error, error_size, "unsupported expression near token: %s", module->tokens.items[start].text);
     return false;
 }
 
@@ -1716,7 +1854,7 @@ static int skip_to_line_end(token_vec *tokens, int at, int end) {
     return cursor;
 }
 
-static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int call_depth, int start, int end, binding_vec *bindings, text_builder *builder, bool *out_returned, seed_value *out_return_value, char *error, size_t error_size) {
+static bool execute_stmt_range(seed_module *module, int call_depth, int start, int end, binding_vec *bindings, text_builder *builder, bool *out_returned, seed_value *out_return_value, char *error, size_t error_size) {
     int i = start;
     int guard = 0;
     while (i < end) {
@@ -1724,18 +1862,18 @@ static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int c
             snprintf(error, error_size, "subset ast lowering failed: statement guard triggered");
             return false;
         }
-        if (token_is_text(tokens, i, "}") || token_is_text(tokens, i, "eof") || token_is_text(tokens, i, ";")) {
+        if (token_is_text(&module->tokens, i, "}") || token_is_text(&module->tokens, i, "eof") || token_is_text(&module->tokens, i, ";")) {
             i++;
             continue;
         }
 
-        int stmt_end = skip_to_line_end(tokens, i, end);
-        int line = tokens->items[i].line;
+        int stmt_end = skip_to_line_end(&module->tokens, i, end);
+        int line = module->tokens.items[i].line;
 
-        if (token_is_text(tokens, i, "var") && token_is_kind(tokens, i + 1, "ident")) {
+        if (token_is_text(&module->tokens, i, "var") && token_is_kind(&module->tokens, i + 1, "ident")) {
             int eq = -1;
             for (int p = i + 2; p < stmt_end; p++) {
-                if (token_is_text(tokens, p, "=")) {
+                if (token_is_text(&module->tokens, p, "=")) {
                     eq = p;
                     break;
                 }
@@ -1745,10 +1883,10 @@ static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int c
                 return false;
             }
             seed_value value = make_unit_value();
-            if (!eval_simple_expr(tokens, functions, call_depth, eq + 1, stmt_end, bindings, &value, error, error_size)) {
+            if (!eval_simple_expr(module, call_depth, eq + 1, stmt_end, bindings, &value, error, error_size)) {
                 return false;
             }
-            bool ok = binding_set(bindings, tokens->items[i + 1].text, value);
+            bool ok = binding_set(bindings, module->tokens.items[i + 1].text, value);
             free_seed_value(value);
             if (!ok) {
                 snprintf(error, error_size, "subset ast lowering failed: binding set OOM");
@@ -1758,12 +1896,12 @@ static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int c
             continue;
         }
 
-        if (token_is_kind(tokens, i, "ident") && i + 1 < stmt_end && token_is_text(tokens, i + 1, "=")) {
+        if (token_is_kind(&module->tokens, i, "ident") && i + 1 < stmt_end && token_is_text(&module->tokens, i + 1, "=")) {
             seed_value value = make_unit_value();
-            if (!eval_simple_expr(tokens, functions, call_depth, i + 2, stmt_end, bindings, &value, error, error_size)) {
+            if (!eval_simple_expr(module, call_depth, i + 2, stmt_end, bindings, &value, error, error_size)) {
                 return false;
             }
-            bool ok = binding_set(bindings, tokens->items[i].text, value);
+            bool ok = binding_set(bindings, module->tokens.items[i].text, value);
             free_seed_value(value);
             if (!ok) {
                 snprintf(error, error_size, "subset ast lowering failed: assignment OOM");
@@ -1773,11 +1911,11 @@ static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int c
             continue;
         }
 
-        if (token_is_text(tokens, i, "return")) {
+        if (token_is_text(&module->tokens, i, "return")) {
             free_seed_value(*out_return_value);
             *out_return_value = make_unit_value();
             if (i + 1 < stmt_end) {
-                if (!eval_simple_expr(tokens, functions, call_depth, i + 1, stmt_end, bindings, out_return_value, error, error_size)) {
+                if (!eval_simple_expr(module, call_depth, i + 1, stmt_end, bindings, out_return_value, error, error_size)) {
                     return false;
                 }
             }
@@ -1785,20 +1923,20 @@ static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int c
             return true;
         }
 
-        if (token_is_kind(tokens, i, "ident") && token_is_text(tokens, i, "println") && i + 1 < stmt_end && token_is_text(tokens, i + 1, "(")) {
+        if (token_is_kind(&module->tokens, i, "ident") && token_is_text(&module->tokens, i, "println") && i + 1 < stmt_end && token_is_text(&module->tokens, i + 1, "(")) {
             if (builder == NULL) {
                 snprintf(error, error_size, "subset ast lowering failed: println inside non-main function is not supported yet");
                 return false;
             }
             int arg_start = i + 2;
-            int call_close = find_matching_symbol(tokens, i + 1, "(", ")");
+            int call_close = find_matching_symbol(&module->tokens, i + 1, "(", ")");
             if (call_close < 0 || call_close >= stmt_end) {
                 snprintf(error, error_size, "subset ast lowering failed: malformed println call at line %d", line);
                 return false;
             }
             int arg_end = call_close;
             seed_value value = make_unit_value();
-            if (!eval_simple_expr(tokens, functions, call_depth, arg_start, arg_end, bindings, &value, error, error_size)) {
+            if (!eval_simple_expr(module, call_depth, arg_start, arg_end, bindings, &value, error, error_size)) {
                 return false;
             }
             bool ok = append_print_value(builder, value, error, error_size);
@@ -1813,31 +1951,31 @@ static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int c
             continue;
         }
 
-        if (token_is_text(tokens, i, "if")) {
+        if (token_is_text(&module->tokens, i, "if")) {
             int cond_start = i + 1;
             int brace_open = cond_start;
-            while (brace_open < end && !token_is_text(tokens, brace_open, "{")) {
+            while (brace_open < end && !token_is_text(&module->tokens, brace_open, "{")) {
                 brace_open++;
             }
             if (brace_open >= end) {
                 snprintf(error, error_size, "subset ast lowering failed: if missing block at line %d", line);
                 return false;
             }
-            int then_close = find_matching_symbol(tokens, brace_open, "{", "}");
+            int then_close = find_matching_symbol(&module->tokens, brace_open, "{", "}");
             if (then_close < 0 || then_close > end) {
                 snprintf(error, error_size, "subset ast lowering failed: if block not closed at line %d", line);
                 return false;
             }
 
             seed_value cond = make_unit_value();
-            if (!eval_simple_expr(tokens, functions, call_depth, cond_start, brace_open, bindings, &cond, error, error_size)) {
+            if (!eval_simple_expr(module, call_depth, cond_start, brace_open, bindings, &cond, error, error_size)) {
                 return false;
             }
             bool cond_true = seed_value_truthy(cond);
             free_seed_value(cond);
 
             if (cond_true) {
-                if (!execute_stmt_range(tokens, functions, call_depth, brace_open + 1, then_close, bindings, builder, out_returned, out_return_value, error, error_size)) {
+                if (!execute_stmt_range(module, call_depth, brace_open + 1, then_close, bindings, builder, out_returned, out_return_value, error, error_size)) {
                     return false;
                 }
                 if (*out_returned) {
@@ -1846,25 +1984,25 @@ static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int c
             }
 
             int cursor = then_close + 1;
-            while (cursor < end && token_is_text(tokens, cursor, ";")) {
+            while (cursor < end && token_is_text(&module->tokens, cursor, ";")) {
                 cursor++;
             }
-            if (cursor < end && token_is_text(tokens, cursor, "else")) {
+            if (cursor < end && token_is_text(&module->tokens, cursor, "else")) {
                 int else_open = cursor + 1;
-                while (else_open < end && !token_is_text(tokens, else_open, "{")) {
+                while (else_open < end && !token_is_text(&module->tokens, else_open, "{")) {
                     else_open++;
                 }
                 if (else_open >= end) {
-                    snprintf(error, error_size, "subset ast lowering failed: else missing block at line %d", tokens->items[cursor].line);
+                    snprintf(error, error_size, "subset ast lowering failed: else missing block at line %d", module->tokens.items[cursor].line);
                     return false;
                 }
-                int else_close = find_matching_symbol(tokens, else_open, "{", "}");
+                int else_close = find_matching_symbol(&module->tokens, else_open, "{", "}");
                 if (else_close < 0 || else_close > end) {
                     snprintf(error, error_size, "subset ast lowering failed: else block not closed");
                     return false;
                 }
                 if (!cond_true) {
-                    if (!execute_stmt_range(tokens, functions, call_depth, else_open + 1, else_close, bindings, builder, out_returned, out_return_value, error, error_size)) {
+                    if (!execute_stmt_range(module, call_depth, else_open + 1, else_close, bindings, builder, out_returned, out_return_value, error, error_size)) {
                         return false;
                     }
                     if (*out_returned) {
@@ -1878,17 +2016,17 @@ static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int c
             continue;
         }
 
-        if (token_is_text(tokens, i, "while")) {
+        if (token_is_text(&module->tokens, i, "while")) {
             int cond_start = i + 1;
             int brace_open = cond_start;
-            while (brace_open < end && !token_is_text(tokens, brace_open, "{")) {
+            while (brace_open < end && !token_is_text(&module->tokens, brace_open, "{")) {
                 brace_open++;
             }
             if (brace_open >= end) {
                 snprintf(error, error_size, "subset ast lowering failed: while missing block at line %d", line);
                 return false;
             }
-            int body_close = find_matching_symbol(tokens, brace_open, "{", "}");
+            int body_close = find_matching_symbol(&module->tokens, brace_open, "{", "}");
             if (body_close < 0 || body_close > end) {
                 snprintf(error, error_size, "subset ast lowering failed: while block not closed at line %d", line);
                 return false;
@@ -1900,7 +2038,7 @@ static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int c
                     return false;
                 }
                 seed_value cond = make_unit_value();
-                if (!eval_simple_expr(tokens, functions, call_depth, cond_start, brace_open, bindings, &cond, error, error_size)) {
+                if (!eval_simple_expr(module, call_depth, cond_start, brace_open, bindings, &cond, error, error_size)) {
                     return false;
                 }
                 bool cond_true = seed_value_truthy(cond);
@@ -1908,7 +2046,7 @@ static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int c
                 if (!cond_true) {
                     break;
                 }
-                if (!execute_stmt_range(tokens, functions, call_depth, brace_open + 1, body_close, bindings, builder, out_returned, out_return_value, error, error_size)) {
+                if (!execute_stmt_range(module, call_depth, brace_open + 1, body_close, bindings, builder, out_returned, out_return_value, error, error_size)) {
                     return false;
                 }
                 if (*out_returned) {
@@ -1919,21 +2057,21 @@ static bool execute_stmt_range(token_vec *tokens, function_vec *functions, int c
             continue;
         }
 
-        if (token_is_text(tokens, i, "for") || token_is_text(tokens, i, "switch")) {
+        if (token_is_text(&module->tokens, i, "for") || token_is_text(&module->tokens, i, "switch")) {
             snprintf(error, error_size, "subset ast lowering failed: control flow not supported yet at line %d", line);
             return false;
         }
 
-        snprintf(error, error_size, "subset ast lowering failed: unsupported statement starting with '%s' at line %d", tokens->items[i].text, line);
+        snprintf(error, error_size, "subset ast lowering failed: unsupported statement starting with '%s' at line %d", module->tokens.items[i].text, line);
         return false;
     }
     return true;
 }
 
-static bool execute_simple_main_ast(token_vec *tokens, function_vec *functions, char **out_text, char *error, size_t error_size) {
+static bool execute_simple_main_ast(seed_module *module, char **out_text, char *error, size_t error_size) {
     int func_index = -1;
-    for (int i = 0; i < tokens->len - 1; i++) {
-        if (token_is_text(tokens, i, "func") && token_is_text(tokens, i + 1, "main")) {
+    for (int i = 0; i < module->tokens.len - 1; i++) {
+        if (token_is_text(&module->tokens, i, "func") && token_is_text(&module->tokens, i + 1, "main")) {
             func_index = i;
             break;
         }
@@ -1944,8 +2082,8 @@ static bool execute_simple_main_ast(token_vec *tokens, function_vec *functions, 
     }
 
     int block_open = -1;
-    for (int i = func_index; i < tokens->len; i++) {
-        if (token_is_text(tokens, i, "{")) {
+    for (int i = func_index; i < module->tokens.len; i++) {
+        if (token_is_text(&module->tokens, i, "{")) {
             block_open = i;
             break;
         }
@@ -1954,7 +2092,7 @@ static bool execute_simple_main_ast(token_vec *tokens, function_vec *functions, 
         snprintf(error, error_size, "subset ast lowering failed: main block start not found");
         return false;
     }
-    int block_close = find_matching_symbol(tokens, block_open, "{", "}");
+    int block_close = find_matching_symbol(&module->tokens, block_open, "{", "}");
     if (block_close < 0) {
         snprintf(error, error_size, "subset ast lowering failed: main block end not found");
         return false;
@@ -1964,7 +2102,7 @@ static bool execute_simple_main_ast(token_vec *tokens, function_vec *functions, 
     text_builder builder = {0};
     bool has_return = false;
     seed_value return_value = make_unit_value();
-    if (!execute_stmt_range(tokens, functions, 0, block_open + 1, block_close, &bindings, &builder, &has_return, &return_value, error, error_size)) {
+    if (!execute_stmt_range(module, 0, block_open + 1, block_close, &bindings, &builder, &has_return, &return_value, error, error_size)) {
         free_bindings(&bindings);
         free(builder.data);
         free_seed_value(return_value);
@@ -1992,20 +2130,13 @@ static bool execute_simple_main_ast(token_vec *tokens, function_vec *functions, 
     return true;
 }
 
-static bool compile_via_ast_lowering(const char *source, char **out_text, char *error, size_t error_size) {
-    token_vec tokens = {0};
-    if (!lex_source(source, &tokens, error, error_size)) {
-        return false;
+static bool compile_via_ast_lowering(const char *path, char **out_text, char *error, size_t error_size) {
+    seed_module module = {0};
+    bool ok = load_seed_module(path, &module, error, error_size);
+    if (ok) {
+        ok = execute_simple_main_ast(&module, out_text, error, error_size);
     }
-    function_vec functions = {0};
-    if (!collect_functions(&tokens, &functions)) {
-        free_tokens(&tokens);
-        snprintf(error, error_size, "subset ast lowering failed: function table OOM");
-        return false;
-    }
-    bool ok = execute_simple_main_ast(&tokens, &functions, out_text, error, error_size);
-    free_functions(&functions);
-    free_tokens(&tokens);
+    free_seed_module(&module);
     return ok;
 }
 
@@ -2160,7 +2291,7 @@ static int build_source(const char *path, const char *output_path) {
     }
     char *message = NULL;
     char ast_error[256] = {0};
-    if (!compile_via_ast_lowering(source, &message, ast_error, sizeof(ast_error))) {
+    if (!compile_via_ast_lowering(path, &message, ast_error, sizeof(ast_error))) {
         if (ast_error[0] == '\0') {
             snprintf(ast_error, sizeof(ast_error), "subset ast lowering failed: no detail (internal path)");
         }
