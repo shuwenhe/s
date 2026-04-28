@@ -1,6 +1,8 @@
 #include "scope.h"
 
+#include <ctype.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,7 +16,8 @@ typedef enum symbol_kind {
 typedef struct symbol {
 	char *name;
 	symbol_kind kind;
-	int arity;
+	int min_arity;
+	int max_arity;
 	char *type_name;
 	char **param_types;
 	size_t param_count;
@@ -31,6 +34,7 @@ typedef struct semantic_ctx {
 	compile_error *err;
 	int function_depth;
 	int loop_depth;
+	int short_circuit_rhs_depth;
 	const char *current_return_type;
 } semantic_ctx;
 
@@ -42,11 +46,35 @@ typedef enum flow_exit_kind {
 	FLOW_EXIT_MIXED,
 } flow_exit_kind;
 
+typedef struct signature_spec {
+	char *name;
+	int min_arity;
+	int max_arity;
+	char *return_type;
+} signature_spec;
+
+typedef struct narrow_fact {
+	char name[64];
+	const char *type_name;
+} narrow_fact;
+
 static const char *TYPE_ANY = "any";
 static const char *TYPE_INT = "int";
 static const char *TYPE_STRING = "string";
 static const char *TYPE_BOOL = "bool";
 static const char *TYPE_UNIT = "()";
+
+static const char *IMPORT_SIGNATURE_META_PATH = "src/cmd/compile/seed/semantic/import_signatures.meta";
+
+static const signature_spec builtin_signatures[] = {
+	{(char *)"print", 1, -1, (char *)"()"},
+	{(char *)"println", 0, -1, (char *)"()"},
+	{(char *)"len", 1, 1, (char *)"int"},
+};
+
+static signature_spec *import_signatures = NULL;
+static size_t import_signatures_len = 0;
+static int import_signatures_loaded = 0;
 
 static char *dup_cstr(const char *s) {
 	size_t n = strlen(s);
@@ -56,6 +84,140 @@ static char *dup_cstr(const char *s) {
 	}
 	memcpy(out, s, n + 1);
 	return out;
+}
+
+static char *trim_inplace(char *s) {
+	char *end;
+	while (*s && isspace((unsigned char)*s)) {
+		s++;
+	}
+	end = s + strlen(s);
+	while (end > s && isspace((unsigned char)end[-1])) {
+		end--;
+	}
+	*end = '\0';
+	return s;
+}
+
+static int parse_int_field(const char *s, int *out) {
+	char *end;
+	long v;
+	if (strcmp(s, "*") == 0) {
+		*out = -1;
+		return 1;
+	}
+	v = strtol(s, &end, 10);
+	if (*s == '\0' || *end != '\0') {
+		return 0;
+	}
+	*out = (int)v;
+	return 1;
+}
+
+static int load_import_signatures(compile_error *err) {
+	FILE *fp;
+	char line[512];
+	size_t line_no = 0;
+
+	if (import_signatures_loaded) {
+		return 1;
+	}
+	import_signatures_loaded = 1;
+
+	fp = fopen(IMPORT_SIGNATURE_META_PATH, "rb");
+	if (!fp) {
+		/* Metadata is optional; unknown imports will remain permissive. */
+		return 1;
+	}
+
+	while (fgets(line, sizeof(line), fp)) {
+		char *fields[4] = {0};
+		char *p;
+		size_t i;
+		signature_spec spec;
+		signature_spec *next;
+		char *trimmed;
+		line_no++;
+		trimmed = trim_inplace(line);
+		if (trimmed[0] == '\0' || trimmed[0] == '#') {
+			continue;
+		}
+		p = trimmed;
+		for (i = 0; i < 4; i++) {
+			fields[i] = p;
+			p = strchr(p, '|');
+			if (!p && i < 3) {
+				fclose(fp);
+				error_set(err, ERR_SEMANTIC, line_no, 1, "invalid import signature record");
+				return 0;
+			}
+			if (p) {
+				*p = '\0';
+				p++;
+			}
+			fields[i] = trim_inplace(fields[i]);
+		}
+		if (fields[0][0] == '\0' || fields[3][0] == '\0') {
+			fclose(fp);
+			error_set(err, ERR_SEMANTIC, line_no, 1, "import signature fields cannot be empty");
+			return 0;
+		}
+		if (!parse_int_field(fields[1], &spec.min_arity) || !parse_int_field(fields[2], &spec.max_arity)) {
+			fclose(fp);
+			error_set(err, ERR_SEMANTIC, line_no, 1, "invalid arity in import signature");
+			return 0;
+		}
+		if (spec.max_arity >= 0 && spec.min_arity > spec.max_arity) {
+			fclose(fp);
+			error_set(err, ERR_SEMANTIC, line_no, 1, "import signature min arity exceeds max arity");
+			return 0;
+		}
+		spec.name = dup_cstr(fields[0]);
+		spec.return_type = dup_cstr(fields[3]);
+		if (!spec.name || !spec.return_type) {
+			free(spec.name);
+			free(spec.return_type);
+			fclose(fp);
+			error_set(err, ERR_OUT_OF_MEMORY, line_no, 1, "out of memory");
+			return 0;
+		}
+		next = (signature_spec *)realloc(import_signatures, (import_signatures_len + 1) * sizeof(signature_spec));
+		if (!next) {
+			free(spec.name);
+			free(spec.return_type);
+			fclose(fp);
+			error_set(err, ERR_OUT_OF_MEMORY, line_no, 1, "out of memory");
+			return 0;
+		}
+		import_signatures = next;
+		import_signatures[import_signatures_len++] = spec;
+	}
+
+	fclose(fp);
+	return 1;
+}
+
+static const signature_spec *find_signature(const signature_spec *table, size_t table_len, const char *name) {
+	size_t i;
+	for (i = 0; i < table_len; i++) {
+		if (strcmp(table[i].name, name) == 0) {
+			return &table[i];
+		}
+	}
+	return NULL;
+}
+
+static void resolve_import_signature(const char *module_path, int *min_arity, int *max_arity, const char **return_type) {
+	const signature_spec *spec = find_signature(import_signatures, import_signatures_len, module_path);
+	if (!spec) {
+		*min_arity = 0;
+		*max_arity = -1;
+		*return_type = TYPE_ANY;
+		return;
+	}
+	*min_arity = spec->min_arity;
+	*max_arity = spec->max_arity;
+	*return_type = spec->return_type;
 }
 
 static scope *scope_push(scope *parent) {
@@ -115,7 +277,8 @@ static symbol *scope_lookup(scope *s, const char *name) {
 static int scope_define(scope *s,
 	const char *name,
 	symbol_kind kind,
-	int arity,
+	int min_arity,
+	int max_arity,
 	const char *type_name,
 	char **param_types,
 	size_t param_count) {
@@ -143,7 +306,8 @@ static int scope_define(scope *s,
 		return -1;
 	}
 	sym->kind = kind;
-	sym->arity = arity;
+	sym->min_arity = min_arity;
+	sym->max_arity = max_arity;
 	if (param_count > 0) {
 		sym->param_types = (char **)calloc(param_count, sizeof(char *));
 		if (!sym->param_types) {
@@ -172,6 +336,30 @@ static int scope_define(scope *s,
 	return 1;
 }
 
+static int define_builtins(scope *global_scope, compile_error *err) {
+	size_t i;
+	for (i = 0; i < sizeof(builtin_signatures) / sizeof(builtin_signatures[0]); i++) {
+		const signature_spec *spec = &builtin_signatures[i];
+		int status = scope_define(global_scope,
+			spec->name,
+			SYMBOL_FN,
+			spec->min_arity,
+			spec->max_arity,
+			spec->return_type,
+			NULL,
+			0);
+		if (status == 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "redefinition of builtin '%s'", spec->name);
+			return 0;
+		}
+		if (status < 0) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return 0;
+		}
+	}
+	return 1;
+}
+
 static int is_type_any(const char *type_name) {
 	return !type_name || strcmp(type_name, TYPE_ANY) == 0;
 }
@@ -194,20 +382,10 @@ static int is_ordered_type(const char *type_name) {
 static int analyze_node(semantic_ctx *ctx, ast_node *node);
 static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type);
 
-static flow_exit_kind merge_flow_exit_kind(flow_exit_kind a, flow_exit_kind b) {
-	if (a == FLOW_EXIT_NONE) {
-		return b;
-	}
-	if (b == FLOW_EXIT_NONE) {
-		return a;
-	}
-	if (a == b) {
-		return a;
-	}
-	return FLOW_EXIT_MIXED;
-}
-
 static flow_exit_kind stmt_exit_kind(ast_node *node) {
+	flow_exit_kind then_kind;
+	flow_exit_kind else_kind;
+	size_t i;
 	if (!node) {
 		return FLOW_EXIT_NONE;
 	}
@@ -222,24 +400,23 @@ static flow_exit_kind stmt_exit_kind(ast_node *node) {
 			if (!node->as.if_stmt.else_branch) {
 				return FLOW_EXIT_NONE;
 			}
-			return merge_flow_exit_kind(
-				stmt_exit_kind(node->as.if_stmt.then_branch),
-				stmt_exit_kind(node->as.if_stmt.else_branch)
-			);
-		case AST_BLOCK: {
-			size_t i;
-			flow_exit_kind kind = FLOW_EXIT_NONE;
+			then_kind = stmt_exit_kind(node->as.if_stmt.then_branch);
+			else_kind = stmt_exit_kind(node->as.if_stmt.else_branch);
+			if (then_kind == FLOW_EXIT_NONE || else_kind == FLOW_EXIT_NONE) {
+				return FLOW_EXIT_NONE;
+			}
+			if (then_kind == else_kind) {
+				return then_kind;
+			}
+			return FLOW_EXIT_MIXED;
+		case AST_BLOCK:
 			for (i = 0; i < node->as.block.statements.len; i++) {
 				flow_exit_kind next_kind = stmt_exit_kind(node->as.block.statements.data[i]);
 				if (next_kind != FLOW_EXIT_NONE) {
-					kind = merge_flow_exit_kind(kind, next_kind);
-					if (kind == FLOW_EXIT_MIXED || i + 1 < node->as.block.statements.len) {
-						return kind;
-					}
+					return next_kind;
 				}
 			}
-			return kind;
-		}
+			return FLOW_EXIT_NONE;
 		default:
 			return FLOW_EXIT_NONE;
 	}
@@ -261,6 +438,141 @@ static void leave_child_scope(semantic_ctx *ctx, scope *old_scope) {
 	scope *child = ctx->current_scope;
 	ctx->current_scope = old_scope;
 	scope_free(child);
+}
+
+static const char *literal_node_type(ast_node *node) {
+	if (!node) {
+		return NULL;
+	}
+	switch (node->kind) {
+		case AST_NUMBER_EXPR: return TYPE_INT;
+		case AST_STRING_EXPR: return TYPE_STRING;
+		case AST_BOOL_EXPR: return TYPE_BOOL;
+		default: return NULL;
+	}
+}
+
+static int add_narrow_fact(narrow_fact *facts, size_t *fact_count, const char *name, const char *type_name) {
+	size_t i;
+	if (!name || !type_name || name[0] == '\0') {
+		return 1;
+	}
+	for (i = 0; i < *fact_count; i++) {
+		if (strcmp(facts[i].name, name) == 0) {
+			if (strcmp(facts[i].type_name, type_name) != 0) {
+				facts[i].type_name = TYPE_ANY;
+			}
+			return 1;
+		}
+	}
+	if (*fact_count >= 16) {
+		return 1;
+	}
+	snprintf(facts[*fact_count].name, sizeof(facts[*fact_count].name), "%s", name);
+	facts[*fact_count].type_name = type_name;
+	(*fact_count)++;
+	return 1;
+}
+
+static int collect_condition_facts(ast_node *cond, int when_true, narrow_fact *facts, size_t *fact_count) {
+	const char *literal_type;
+	if (!cond) {
+		return 1;
+	}
+	if (cond->kind == AST_UNARY_EXPR && cond->as.unary_expr.op == TOKEN_BANG) {
+		return collect_condition_facts(cond->as.unary_expr.operand, !when_true, facts, fact_count);
+	}
+	if (cond->kind == AST_BINARY_EXPR) {
+		token_type op = cond->as.binary_expr.op;
+		if (op == TOKEN_AND_AND) {
+			if (when_true) {
+				if (!collect_condition_facts(cond->as.binary_expr.left, 1, facts, fact_count)) return 0;
+				if (!collect_condition_facts(cond->as.binary_expr.right, 1, facts, fact_count)) return 0;
+			}
+			return 1;
+		}
+		if (op == TOKEN_OR_OR) {
+			if (!when_true) {
+				if (!collect_condition_facts(cond->as.binary_expr.left, 0, facts, fact_count)) return 0;
+				if (!collect_condition_facts(cond->as.binary_expr.right, 0, facts, fact_count)) return 0;
+			}
+			return 1;
+		}
+		if (op == TOKEN_EQ || op == TOKEN_NE) {
+			ast_node *left = cond->as.binary_expr.left;
+			ast_node *right = cond->as.binary_expr.right;
+			if (left && left->kind == AST_IDENT_EXPR) {
+				literal_type = literal_node_type(right);
+				if (literal_type) {
+					add_narrow_fact(facts, fact_count, left->as.ident_expr.name, literal_type);
+				}
+			}
+			if (right && right->kind == AST_IDENT_EXPR) {
+				literal_type = literal_node_type(left);
+				if (literal_type) {
+					add_narrow_fact(facts, fact_count, right->as.ident_expr.name, literal_type);
+				}
+			}
+			return 1;
+		}
+	}
+	return 1;
+}
+
+static int apply_narrow_facts(semantic_ctx *ctx, const narrow_fact *facts, size_t fact_count, source_pos pos) {
+	size_t i;
+	for (i = 0; i < fact_count; i++) {
+		symbol *existing = scope_lookup(ctx->current_scope->parent, facts[i].name);
+		int status;
+		if (!existing) {
+			continue;
+		}
+		if (existing->kind != SYMBOL_VAR && existing->kind != SYMBOL_PARAM) {
+			continue;
+		}
+		if (!is_type_any(existing->type_name) && !is_type_assignable(existing->type_name, facts[i].type_name)) {
+			continue;
+		}
+		status = scope_define(ctx->current_scope,
+			existing->name,
+			existing->kind,
+			existing->min_arity,
+			existing->max_arity,
+			is_type_any(existing->type_name) ? facts[i].type_name : existing->type_name,
+			existing->param_types,
+			existing->param_count);
+		if (status == 0) {
+			continue;
+		}
+		if (status < 0) {
+			error_set(ctx->err, ERR_OUT_OF_MEMORY, pos.line, pos.column, "out of memory");
+			return 0;
+		}
+	}
+	return 1;
+}
+
+static int analyze_node_with_narrowing(semantic_ctx *ctx, ast_node *branch, ast_node *cond, int when_true) {
+	scope *old_scope;
+	narrow_fact facts[16];
+	size_t fact_count = 0;
+	if (!enter_child_scope(ctx, &old_scope)) {
+		return 0;
+	}
+	if (!collect_condition_facts(cond, when_true, facts, &fact_count)) {
+		leave_child_scope(ctx, old_scope);
+		return 0;
+	}
+	if (!apply_narrow_facts(ctx, facts, fact_count, branch ? branch->pos : cond->pos)) {
+		leave_child_scope(ctx, old_scope);
+		return 0;
+	}
+	if (!analyze_node(ctx, branch)) {
+		leave_child_scope(ctx, old_scope);
+		return 0;
+	}
+	leave_child_scope(ctx, old_scope);
+	return 1;
 }
 
 static int analyze_block_with_new_scope(semantic_ctx *ctx, ast_node *block) {
@@ -389,9 +701,20 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "unsupported unary operator");
 			return 0;
 		case AST_BINARY_EXPR:
-			if (!analyze_expr(ctx, node->as.binary_expr.left, &lhs_type) ||
-				!analyze_expr(ctx, node->as.binary_expr.right, &rhs_type)) {
+			if (!analyze_expr(ctx, node->as.binary_expr.left, &lhs_type)) {
 				return 0;
+			}
+			if (node->as.binary_expr.op == TOKEN_AND_AND || node->as.binary_expr.op == TOKEN_OR_OR) {
+				ctx->short_circuit_rhs_depth++;
+				if (!analyze_expr(ctx, node->as.binary_expr.right, &rhs_type)) {
+					ctx->short_circuit_rhs_depth--;
+					return 0;
+				}
+				ctx->short_circuit_rhs_depth--;
+			} else {
+				if (!analyze_expr(ctx, node->as.binary_expr.right, &rhs_type)) {
+					return 0;
+				}
 			}
 			switch (node->as.binary_expr.op) {
 				case TOKEN_PLUS:
@@ -479,11 +802,13 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				return 0;
 			}
 			if (is_type_any(sym->type_name) && !is_type_any(rhs_type)) {
-				free(sym->type_name);
-				sym->type_name = dup_cstr(rhs_type);
-				if (!sym->type_name) {
-					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
-					return 0;
+				if (ctx->short_circuit_rhs_depth == 0) {
+					free(sym->type_name);
+					sym->type_name = dup_cstr(rhs_type);
+					if (!sym->type_name) {
+						error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+						return 0;
+					}
 				}
 			}
 			*out_type = sym->type_name;
@@ -505,9 +830,20 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					"symbol '%s' is not callable", sym->name);
 				return 0;
 			}
-			if (sym->kind == SYMBOL_FN && sym->arity >= 0 && (size_t)sym->arity != node->as.call_expr.args.len) {
+			if (sym->min_arity >= 0 && (int)node->as.call_expr.args.len < sym->min_arity) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
-					"function '%s' expects %d arguments, got %zu", sym->name, sym->arity, node->as.call_expr.args.len);
+					"call to '%s' expects at least %d arguments, got %zu",
+					sym->name,
+					sym->min_arity,
+					node->as.call_expr.args.len);
+				return 0;
+			}
+			if (sym->max_arity >= 0 && (int)node->as.call_expr.args.len > sym->max_arity) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"call to '%s' expects at most %d arguments, got %zu",
+					sym->name,
+					sym->max_arity,
+					node->as.call_expr.args.len);
 				return 0;
 			}
 			for (i = 0; i < node->as.call_expr.args.len; i++) {
@@ -526,7 +862,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					return 0;
 				}
 			}
-			*out_type = sym->kind == SYMBOL_FN ? sym->type_name : TYPE_ANY;
+			*out_type = sym->type_name;
 			return 1;
 		default:
 			error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "unsupported expression node kind");
@@ -553,6 +889,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						decl->as.fn_stmt.name,
 						SYMBOL_FN,
 						(int)decl->as.fn_stmt.param_count,
+						(int)decl->as.fn_stmt.param_count,
 						decl->as.fn_stmt.return_type ? decl->as.fn_stmt.return_type : TYPE_ANY,
 						decl->as.fn_stmt.param_types,
 						decl->as.fn_stmt.param_count
@@ -568,7 +905,18 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					}
 				}
 				if (decl->kind == AST_USE_DECL && decl->as.use_decl.alias && decl->as.use_decl.alias[0] != '\0') {
-					status = scope_define(ctx->current_scope, decl->as.use_decl.alias, SYMBOL_IMPORT, -1, TYPE_ANY, NULL, 0);
+					int min_arity;
+					int max_arity;
+					const char *ret_type;
+					resolve_import_signature(decl->as.use_decl.module_path, &min_arity, &max_arity, &ret_type);
+					status = scope_define(ctx->current_scope,
+						decl->as.use_decl.alias,
+						SYMBOL_IMPORT,
+						min_arity,
+						max_arity,
+						ret_type,
+						NULL,
+						0);
 					if (status == 0) {
 						error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
 							"redefinition of import alias '%s'", decl->as.use_decl.alias);
@@ -595,7 +943,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			if (!analyze_expr(ctx, node->as.let_stmt.value, &expr_type)) {
 				return 0;
 			}
-			status = scope_define(ctx->current_scope, node->as.let_stmt.name, SYMBOL_VAR, -1, expr_type, NULL, 0);
+			status = scope_define(ctx->current_scope, node->as.let_stmt.name, SYMBOL_VAR, -1, -1, expr_type, NULL, 0);
 			if (status == 0) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"redefinition of symbol '%s'", node->as.let_stmt.name);
@@ -629,7 +977,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					expr_type ? expr_type : TYPE_ANY);
 				return 0;
 			}
-			if (is_type_any(target->type_name) && !is_type_any(expr_type)) {
+			if (is_type_any(target->type_name) && !is_type_any(expr_type) && ctx->short_circuit_rhs_depth == 0) {
 				free(target->type_name);
 				target->type_name = dup_cstr(expr_type);
 				if (!target->type_name) {
@@ -678,10 +1026,13 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					"if condition expects bool/int, got '%s'", expr_type ? expr_type : TYPE_ANY);
 				return 0;
 			}
-			if (!analyze_node(ctx, node->as.if_stmt.then_branch)) {
+			if (!analyze_node_with_narrowing(ctx, node->as.if_stmt.then_branch, node->as.if_stmt.condition, 1)) {
 				return 0;
 			}
-			return analyze_node(ctx, node->as.if_stmt.else_branch);
+			if (!node->as.if_stmt.else_branch) {
+				return 1;
+			}
+			return analyze_node_with_narrowing(ctx, node->as.if_stmt.else_branch, node->as.if_stmt.condition, 0);
 		case AST_WHILE_STMT:
 			if (!analyze_expr(ctx, node->as.while_stmt.condition, &expr_type)) {
 				return 0;
@@ -692,7 +1043,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				return 0;
 			}
 			ctx->loop_depth++;
-			status = analyze_node(ctx, node->as.while_stmt.body);
+			status = analyze_node_with_narrowing(ctx, node->as.while_stmt.body, node->as.while_stmt.condition, 1);
 			ctx->loop_depth--;
 			return status;
 		case AST_FOR_STMT: {
@@ -717,12 +1068,16 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				return 0;
 			}
 			ctx->loop_depth++;
-			if (!analyze_node(ctx, node->as.for_stmt.body)) {
-				ctx->loop_depth--;
+			if (node->as.for_stmt.condition) {
+				status = analyze_node_with_narrowing(ctx, node->as.for_stmt.body, node->as.for_stmt.condition, 1);
+			} else {
+				status = analyze_node(ctx, node->as.for_stmt.body);
+			}
+			ctx->loop_depth--;
+			if (!status) {
 				leave_child_scope(ctx, old_scope);
 				return 0;
 			}
-			ctx->loop_depth--;
 			leave_child_scope(ctx, old_scope);
 			return 1;
 		}
@@ -737,6 +1092,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					ctx->current_scope,
 					node->as.fn_stmt.params[i],
 					SYMBOL_PARAM,
+					-1,
 					-1,
 					node->as.fn_stmt.param_types ? node->as.fn_stmt.param_types[i] : TYPE_ANY,
 					NULL,
@@ -798,6 +1154,9 @@ bool semantic_analyze(ast_node *root, compile_error *err) {
 	scope *global_scope;
 	bool ok;
 	error_clear(err);
+	if (!load_import_signatures(err)) {
+		return false;
+	}
 	global_scope = scope_push(NULL);
 	if (!global_scope) {
 		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
@@ -808,7 +1167,13 @@ bool semantic_analyze(ast_node *root, compile_error *err) {
 	ctx.err = err;
 	ctx.function_depth = 0;
 	ctx.loop_depth = 0;
+	ctx.short_circuit_rhs_depth = 0;
 	ctx.current_return_type = TYPE_ANY;
+
+	if (!define_builtins(global_scope, err)) {
+		scope_free(global_scope);
+		return false;
+	}
 
 	ok = analyze_node(&ctx, root) ? true : false;
 	scope_free(global_scope);
