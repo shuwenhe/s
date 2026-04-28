@@ -29,6 +29,8 @@ typedef enum ast_kind {
 	AST_NUMBER_EXPR,
 	AST_BOOL_EXPR,
 	AST_STRING_EXPR,
+	AST_ARRAY_EXPR,
+	AST_MEMBER_EXPR,
 	AST_CALL_EXPR,
 } ast_kind;
 
@@ -78,6 +80,8 @@ struct ast_node {
 		struct {
 			char *module_path;
 			char *alias;
+			char **selectors;
+			size_t selector_count;
 		} use_decl;
 
 		struct {
@@ -138,6 +142,15 @@ struct ast_node {
 		struct {
 			char *literal;
 		} string_expr;
+
+		struct {
+			ast_vec items;
+		} array_expr;
+
+		struct {
+			ast_node *object;
+			char *member;
+		} member_expr;
 
 		struct {
 			ast_node *callee;
