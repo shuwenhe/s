@@ -1,0 +1,7 @@
+# module_path|min_arity|max_arity|return_type
+std.env.args|0|0|any
+std.io.eprintln|1|*|()
+compile.internal.arch.dispatch_init|1|1|string
+compile.internal.build.main|1|1|int
+internal.buildcfg.check|0|0|string
+internal.buildcfg.goarch|0|0|string
