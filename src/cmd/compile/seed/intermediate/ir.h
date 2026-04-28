@@ -14,6 +14,8 @@ typedef enum ir_op {
 	IR_JUMP,
 	IR_JUMP_IF_FALSE,
 	IR_PARAM,
+	IR_ARG,
+	IR_CALL,
 	IR_MOV,
 	IR_ADD,
 	IR_SUB,

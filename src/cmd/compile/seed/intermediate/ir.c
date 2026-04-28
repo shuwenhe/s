@@ -63,6 +63,8 @@ const char *ir_op_name(ir_op op) {
 		case IR_JUMP: return "JUMP";
 		case IR_JUMP_IF_FALSE: return "JUMP_IF_FALSE";
 		case IR_PARAM: return "PARAM";
+		case IR_ARG: return "ARG";
+		case IR_CALL: return "CALL";
 		case IR_MOV: return "MOV";
 		case IR_ADD: return "ADD";
 		case IR_SUB: return "SUB";
@@ -127,6 +129,26 @@ static const char *current_continue_label(ir_builder *b) {
 
 static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]);
 static bool lower_stmt(ir_builder *b, ast_node *stmt);
+
+static bool is_non_unit_return_type(const char *return_type) {
+	return return_type && return_type[0] != '\0' && strcmp(return_type, "()") != 0;
+}
+
+static const char *fallback_return_literal(const char *return_type) {
+	if (!return_type) {
+		return "0";
+	}
+	if (strcmp(return_type, "string") == 0) {
+		return "\"\"";
+	}
+	if (strcmp(return_type, "bool") == 0) {
+		return "0";
+	}
+	if (strcmp(return_type, "int") == 0) {
+		return "0";
+	}
+	return "0";
+}
 
 static bool lower_binary(ir_builder *b, ast_node *expr, char out[64]) {
 	char lhs[64];
@@ -273,20 +295,22 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]) {
 			case AST_CALL_EXPR: {
 				size_t i;
 				char callee[64] = "call";
+				char argc_text[64];
 				for (i = 0; i < expr->as.call_expr.args.len; i++) {
 					char arg_tmp[64];
 					if (!lower_expr(b, expr->as.call_expr.args.data[i], arg_tmp)) {
+						return false;
+					}
+					if (!emit_ins(b, IR_ARG, arg_tmp, "", "", expr->pos)) {
 						return false;
 					}
 				}
 				if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_IDENT_EXPR) {
 					snprintf(callee, sizeof(callee), "%s", expr->as.call_expr.callee->as.ident_expr.name);
 				}
+				snprintf(argc_text, sizeof(argc_text), "%zu", expr->as.call_expr.args.len);
 				next_temp(b, out);
-				if (!emit_ins(b, IR_NOP, callee, "", "", expr->pos)) {
-					return false;
-				}
-				return emit_ins(b, IR_MOV, out, "0", "", expr->pos);
+				return emit_ins(b, IR_CALL, out, callee, argc_text, expr->pos);
 			}
 		default:
 			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "unsupported expression in IR lowering");
@@ -415,6 +439,8 @@ static bool lower_for(ir_builder *b, ast_node *stmt) {
 
 static bool lower_fn(ir_builder *b, ast_node *stmt) {
 	size_t i;
+	int has_tail_expr_return = 0;
+	int non_unit = is_non_unit_return_type(stmt->as.fn_stmt.return_type);
 	if (!emit_ins(b, IR_FUNC_BEGIN, stmt->as.fn_stmt.name, "", "", stmt->pos)) {
 		return false;
 	}
@@ -423,8 +449,34 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
 			return false;
 		}
 	}
-	if (!lower_stmt(b, stmt->as.fn_stmt.body)) {
-		return false;
+	if (stmt->as.fn_stmt.body && stmt->as.fn_stmt.body->kind == AST_BLOCK) {
+		size_t n = stmt->as.fn_stmt.body->as.block.statements.len;
+		for (i = 0; i < n; i++) {
+			ast_node *child = stmt->as.fn_stmt.body->as.block.statements.data[i];
+			if (non_unit && i + 1 == n && child && child->kind == AST_EXPR_STMT) {
+				char ret_value[64];
+				if (!lower_expr(b, child->as.expr_stmt.expr, ret_value)) {
+					return false;
+				}
+				if (!emit_ins(b, IR_RET, ret_value, "", "", child->pos)) {
+					return false;
+				}
+				has_tail_expr_return = 1;
+				continue;
+			}
+			if (!lower_stmt(b, child)) {
+				return false;
+			}
+		}
+	} else {
+		if (!lower_stmt(b, stmt->as.fn_stmt.body)) {
+			return false;
+		}
+	}
+	if (non_unit && !has_tail_expr_return) {
+		if (!emit_ins(b, IR_RET, fallback_return_literal(stmt->as.fn_stmt.return_type), "", "", stmt->pos)) {
+			return false;
+		}
 	}
 	return emit_ins(b, IR_FUNC_END, stmt->as.fn_stmt.name, "", "", stmt->pos);
 }

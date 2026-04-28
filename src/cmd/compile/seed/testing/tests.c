@@ -856,6 +856,65 @@ static bool test_runtime_short_circuit_and_side_effect_order(void) {
 	return ok;
 }
 
+static bool test_runtime_function_call_and_tail_expr_return(void) {
+	const char *src =
+		"fn id(x) int { x } "
+		"fn add(a, b) int { return a + b; } "
+		"fn main() int { return add(id(2), 3); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	FILE *tmp;
+	char buf[4096];
+	size_t n;
+	long ret = 0;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, &err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	tmp = tmpfile();
+	if (!tmp) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	generate_code(&ir, tmp);
+	fflush(tmp);
+	fseek(tmp, 0, SEEK_SET);
+	n = fread(buf, 1, sizeof(buf) - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
+
+	ok = strstr(buf, "ARG|") != NULL;
+	ok = ok && strstr(buf, "CALL|") != NULL;
+	ok = ok && runtime_execute_text(buf, "main", &ret, &err);
+	ok = ok && ret == 5;
+
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
 static bool test_ir_generation_entry(void) {
 	const char *src = "fn add(a, b) { let c = a + b; if (c > 0) { return c; } return a; }";
 	token_vec tokens;
@@ -1056,6 +1115,7 @@ int main(void) {
 	ok = ok && test_runtime_minimal_loop();
 	ok = ok && test_runtime_short_circuit_or();
 	ok = ok && test_runtime_short_circuit_and_side_effect_order();
+	ok = ok && test_runtime_function_call_and_tail_expr_return();
 
 	if (!ok) {
 		fprintf(stderr, "seed parser/semantic/ir tests failed\n");
