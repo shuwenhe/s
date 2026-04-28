@@ -154,6 +154,42 @@ bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error 
 			continue;
 		}
 
+		if (c == '/' && source[i + 1] == '/') {
+			i += 2;
+			col += 2;
+			while (source[i] != '\0' && source[i] != '\n') {
+				i++;
+				col++;
+			}
+			continue;
+		}
+
+		if (c == '/' && source[i + 1] == '*') {
+			i += 2;
+			col += 2;
+			while (source[i] != '\0') {
+				if (source[i] == '*' && source[i + 1] == '/') {
+					i += 2;
+					col += 2;
+					break;
+				}
+				if (source[i] == '\n') {
+					i++;
+					line++;
+					col = 1;
+					continue;
+				}
+				i++;
+				col++;
+			}
+			if (source[i] == '\0') {
+				error_set(err, ERR_SYNTAX, tok_line, tok_col, "unterminated block comment");
+				token_vec_free(out_tokens);
+				return false;
+			}
+			continue;
+		}
+
 		if (isalpha((unsigned char)c) || c == '_') {
 			size_t start = i;
 			while (isalnum((unsigned char)source[i]) || source[i] == '_') {

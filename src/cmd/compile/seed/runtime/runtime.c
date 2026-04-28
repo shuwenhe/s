@@ -13,13 +13,65 @@
 static int g_host_argc = 0;
 static char **g_host_argv = NULL;
 
-static unsigned long hash_cstr(const char *s) {
-	unsigned long h = 1469598103934665603ULL;
-	while (*s) {
-		h ^= (unsigned long)(unsigned char)(*s++);
-		h *= 1099511628211ULL;
+typedef enum runtime_value_kind {
+	RUNTIME_INT = 0,
+	RUNTIME_STRING,
+} runtime_value_kind;
+
+typedef struct runtime_data_value {
+	runtime_value_kind kind;
+	long int_value;
+	char *str_value;
+} runtime_data_value;
+
+static runtime_data_value value_make_int(long v) {
+	runtime_data_value out;
+	out.kind = RUNTIME_INT;
+	out.int_value = v;
+	out.str_value = NULL;
+	return out;
+}
+
+static runtime_data_value value_make_string_owned(char *s) {
+	runtime_data_value out;
+	out.kind = RUNTIME_STRING;
+	out.int_value = 0;
+	out.str_value = s;
+	return out;
+}
+
+static runtime_data_value value_make_string_copy(const char *s) {
+	char *dup;
+	if (!s) {
+		s = "";
 	}
-	return h;
+	dup = (char *)malloc(strlen(s) + 1);
+	if (!dup) {
+		return value_make_string_owned(NULL);
+	}
+	strcpy(dup, s);
+	return value_make_string_owned(dup);
+}
+
+static void value_clear(runtime_data_value *v) {
+	if (!v) {
+		return;
+	}
+	if (v->kind == RUNTIME_STRING) {
+		free(v->str_value);
+	}
+	v->kind = RUNTIME_INT;
+	v->int_value = 0;
+	v->str_value = NULL;
+}
+
+static int value_copy(runtime_data_value *dst, const runtime_data_value *src) {
+	if (src->kind == RUNTIME_INT) {
+		*dst = value_make_int(src->int_value);
+		return 1;
+	}
+	*dst = value_make_string_copy(src->str_value ? src->str_value : "");
+	return dst->str_value != NULL;
 }
 
 static int is_string_literal(const char *s) {
@@ -31,32 +83,81 @@ static int is_string_literal(const char *s) {
 	return n >= 2 && s[0] == '"' && s[n - 1] == '"';
 }
 
-static long string_literal_value(const char *s) {
-	char buf[256];
+static runtime_data_value parse_string_literal(const char *s) {
+	char *buf;
+	size_t i;
 	size_t n;
+	size_t o = 0;
+
 	if (!is_string_literal(s)) {
-		return 0;
+		return value_make_string_copy("");
 	}
 	n = strlen(s);
-	if (n <= 2) {
-		return 0;
+	buf = (char *)malloc(n + 1);
+	if (!buf) {
+		return value_make_string_owned(NULL);
 	}
-	if (n - 2 >= sizeof(buf)) {
-		n = sizeof(buf) + 1;
+	for (i = 1; i + 1 < n; i++) {
+		if (s[i] == '\\' && i + 1 < n - 1) {
+			i++;
+			switch (s[i]) {
+				case 'n': buf[o++] = '\n'; break;
+				case 't': buf[o++] = '\t'; break;
+				case 'r': buf[o++] = '\r'; break;
+				case '\\': buf[o++] = '\\'; break;
+				case '"': buf[o++] = '"'; break;
+				default: buf[o++] = s[i]; break;
+			}
+		} else {
+			buf[o++] = s[i];
+		}
 	}
-	if (n > sizeof(buf) + 1) {
-		return (long)hash_cstr(s + 1);
-	}
-	memcpy(buf, s + 1, n - 2);
-	buf[n - 2] = '\0';
-	return (long)hash_cstr(buf);
+	buf[o] = '\0';
+	return value_make_string_owned(buf);
 }
 
-static long hash_plain_string(const char *s) {
-	if (!s || s[0] == '\0') {
+static int value_truthy(const runtime_data_value *v) {
+	if (v->kind == RUNTIME_INT) {
+		return v->int_value != 0;
+	}
+	return v->str_value && v->str_value[0] != '\0';
+}
+
+static int value_as_cstr(const runtime_data_value *v, char *tmp, size_t tmp_size, const char **out) {
+	if (v->kind == RUNTIME_STRING) {
+		*out = v->str_value ? v->str_value : "";
+		return 1;
+	}
+	if (snprintf(tmp, tmp_size, "%ld", v->int_value) < 0) {
 		return 0;
 	}
-	return (long)hash_cstr(s);
+	*out = tmp;
+	return 1;
+}
+
+static int value_concat(runtime_data_value *out, const runtime_data_value *lhs, const runtime_data_value *rhs) {
+	char ltmp[64];
+	char rtmp[64];
+	const char *ls;
+	const char *rs;
+	char *buf;
+	size_t ln;
+	size_t rn;
+
+	if (!value_as_cstr(lhs, ltmp, sizeof(ltmp), &ls) || !value_as_cstr(rhs, rtmp, sizeof(rtmp), &rs)) {
+		return 0;
+	}
+	ln = strlen(ls);
+	rn = strlen(rs);
+	buf = (char *)malloc(ln + rn + 1);
+	if (!buf) {
+		return 0;
+	}
+	memcpy(buf, ls, ln);
+	memcpy(buf + ln, rs, rn);
+	buf[ln + rn] = '\0';
+	*out = value_make_string_owned(buf);
+	return 1;
 }
 
 static void print_compile_error_local(const compile_error *err) {
@@ -171,14 +272,20 @@ done:
 	return ok;
 }
 
-static int host_dispatch_call(const char *name, const long *args, size_t argc, long *out, compile_error *err) {
+static int host_dispatch_call(
+	const char *name,
+	const runtime_data_value *args,
+	size_t argc,
+	runtime_data_value *out,
+	compile_error *err
+) {
 	if (strcmp(name, "host_args") == 0) {
 		(void)args;
 		if (argc != 0) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "host_args expects 0 args");
 			return 0;
 		}
-		*out = 1;
+		*out = value_make_int(1);
 		return 1;
 	}
 	if (strcmp(name, "buildcfg_goarch") == 0) {
@@ -187,7 +294,11 @@ static int host_dispatch_call(const char *name, const long *args, size_t argc, l
 			error_set(err, ERR_SEMANTIC, 0, 0, "buildcfg_goarch expects 0 args");
 			return 0;
 		}
-		*out = hash_plain_string("arm64");
+		*out = value_make_string_copy("arm64");
+		if (!out->str_value) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return 0;
+		}
 		return 1;
 	}
 	if (strcmp(name, "buildcfg_check") == 0) {
@@ -196,7 +307,11 @@ static int host_dispatch_call(const char *name, const long *args, size_t argc, l
 			error_set(err, ERR_SEMANTIC, 0, 0, "buildcfg_check expects 0 args");
 			return 0;
 		}
-		*out = 0;
+		*out = value_make_string_copy("");
+		if (!out->str_value) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return 0;
+		}
 		return 1;
 	}
 	if (strcmp(name, "arch_dispatch_init") == 0) {
@@ -204,16 +319,26 @@ static int host_dispatch_call(const char *name, const long *args, size_t argc, l
 			error_set(err, ERR_SEMANTIC, 0, 0, "arch_dispatch_init expects 1 arg");
 			return 0;
 		}
-		*out = 0;
+		*out = value_make_string_copy("");
+		if (!out->str_value) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return 0;
+		}
 		return 1;
 	}
 	if (strcmp(name, "eprintln") == 0) {
+		char num_buf[64];
+		const char *msg = NULL;
 		if (argc != 1) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "eprintln expects 1 arg");
 			return 0;
 		}
-		fprintf(stderr, "runtime message id=%ld\n", args[0]);
-		*out = 0;
+		if (!value_as_cstr(&args[0], num_buf, sizeof(num_buf), &msg)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render eprintln argument");
+			return 0;
+		}
+		fprintf(stderr, "%s\n", msg);
+		*out = value_make_int(0);
 		return 1;
 	}
 	if (strcmp(name, "build_main") == 0) {
@@ -224,17 +349,17 @@ static int host_dispatch_call(const char *name, const long *args, size_t argc, l
 		}
 		if (g_host_argc != 3 || !g_host_argv) {
 			fprintf(stderr, "usage:\n  <compiler> <input.s> <output.ir>\n");
-			*out = 2;
+			*out = value_make_int(2);
 			return 1;
 		}
 		error_clear(&compile_err);
 		if (!compile_s_file_to_ir(g_host_argv[1], g_host_argv[2], &compile_err)) {
 			print_compile_error_local(&compile_err);
-			*out = 1;
+			*out = value_make_int(1);
 			return 1;
 		}
 		printf("compiled %s -> %s\n", g_host_argv[1], g_host_argv[2]);
-		*out = 0;
+		*out = value_make_int(0);
 		return 1;
 	}
 
@@ -244,7 +369,7 @@ static int host_dispatch_call(const char *name, const long *args, size_t argc, l
 
 typedef struct runtime_value {
 	char name[64];
-	long value;
+	runtime_data_value value;
 } runtime_value;
 
 typedef struct runtime_values {
@@ -266,9 +391,9 @@ typedef struct runtime_labels {
 
 typedef struct runtime_ins {
 	char op[32];
-	char result[64];
-	char op1[64];
-	char op2[64];
+	char result[1024];
+	char op1[1024];
+	char op2[1024];
 } runtime_ins;
 
 typedef struct runtime_program {
@@ -321,17 +446,26 @@ static int is_int_literal(const char *s) {
 }
 
 static void values_free(runtime_values *vals) {
+	size_t i;
+	for (i = 0; i < vals->len; i++) {
+		value_clear(&vals->data[i].value);
+	}
 	free(vals->data);
 	vals->data = NULL;
 	vals->len = 0;
 	vals->cap = 0;
 }
 
-static int values_set(runtime_values *vals, const char *name, long value) {
+static int values_set(runtime_values *vals, const char *name, const runtime_data_value *value) {
 	size_t i;
 	for (i = 0; i < vals->len; i++) {
 		if (strcmp(vals->data[i].name, name) == 0) {
-			vals->data[i].value = value;
+			runtime_data_value tmp;
+			if (!value_copy(&tmp, value)) {
+				return 0;
+			}
+			value_clear(&vals->data[i].value);
+			vals->data[i].value = tmp;
 			return 1;
 		}
 	}
@@ -345,17 +479,18 @@ static int values_set(runtime_values *vals, const char *name, long value) {
 		vals->cap = next_cap;
 	}
 	snprintf(vals->data[vals->len].name, sizeof(vals->data[vals->len].name), "%s", name);
-	vals->data[vals->len].value = value;
+	if (!value_copy(&vals->data[vals->len].value, value)) {
+		return 0;
+	}
 	vals->len++;
 	return 1;
 }
 
-static int values_get(const runtime_values *vals, const char *name, long *out) {
+static int values_get(const runtime_values *vals, const char *name, runtime_data_value *out) {
 	size_t i;
 	for (i = 0; i < vals->len; i++) {
 		if (strcmp(vals->data[i].name, name) == 0) {
-			*out = vals->data[i].value;
-			return 1;
+			return value_copy(out, &vals->data[i].value);
 		}
 	}
 	return 0;
@@ -378,7 +513,10 @@ static int labels_add(runtime_labels *labels, const char *name, size_t pc) {
 		labels->data = next;
 		labels->cap = next_cap;
 	}
-	snprintf(labels->data[labels->len].name, sizeof(labels->data[labels->len].name), "%s", name);
+	if (strlen(name) >= sizeof(labels->data[labels->len].name)) {
+		return 0;
+	}
+	strcpy(labels->data[labels->len].name, name);
 	labels->data[labels->len].pc = pc;
 	labels->len++;
 	return 1;
@@ -448,7 +586,7 @@ static int program_push(runtime_program *prog, const runtime_ins *ins) {
 }
 
 static int parse_record_line(const char *line, runtime_ins *out) {
-	char tmp[320];
+	char tmp[4096];
 	char *parts[4];
 	char *p;
 	int i;
@@ -474,14 +612,14 @@ static int parse_record_line(const char *line, runtime_ins *out) {
 	return 1;
 }
 
-static int resolve_value(const runtime_values *vals, const char *name, long *out) {
+static int resolve_value(const runtime_values *vals, const char *name, runtime_data_value *out) {
 	if (is_int_literal(name)) {
-		*out = strtol(name, NULL, 10);
+		*out = value_make_int(strtol(name, NULL, 10));
 		return 1;
 	}
 	if (is_string_literal(name)) {
-		*out = string_literal_value(name);
-		return 1;
+		*out = parse_string_literal(name);
+		return out->str_value != NULL;
 	}
 	return values_get(vals, name, out);
 }
@@ -568,14 +706,22 @@ static int build_function_table(const runtime_program *prog, runtime_functions *
 			size_t j;
 			size_t body_start;
 			memset(&fn, 0, sizeof(fn));
-			snprintf(fn.name, sizeof(fn.name), "%s", prog->data[i].result);
+			if (strlen(prog->data[i].result) >= sizeof(fn.name)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "function name too long");
+				return 0;
+			}
+			strcpy(fn.name, prog->data[i].result);
 			j = i + 1;
 			while (j < prog->len && strcmp(prog->data[j].op, "PARAM") == 0) {
 				if (fn.param_count >= 32) {
 					error_set(err, ERR_SEMANTIC, 0, 0, "too many params in function: %s", fn.name);
 					return 0;
 				}
-				snprintf(fn.params[fn.param_count], sizeof(fn.params[fn.param_count]), "%s", prog->data[j].result);
+				if (strlen(prog->data[j].result) >= sizeof(fn.params[fn.param_count])) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "parameter name too long in function: %s", fn.name);
+					return 0;
+				}
+				strcpy(fn.params[fn.param_count], prog->data[j].result);
 				fn.param_count++;
 				j++;
 			}
@@ -609,14 +755,14 @@ static int execute_function(
 	const runtime_labels *labels,
 	const runtime_functions *funcs,
 	const runtime_function *fn,
-	const long *args,
+	const runtime_data_value *args,
 	size_t argc,
-	long *out_return,
+	runtime_data_value *out_return,
 	compile_error *err,
 	int depth
 ) {
 	runtime_values vals = {0};
-	long pending_args[128];
+	runtime_data_value pending_args[128];
 	size_t pending_len = 0;
 	size_t pc = fn->start_pc;
 	size_t i;
@@ -631,7 +777,7 @@ static int execute_function(
 	}
 
 	for (i = 0; i < argc; i++) {
-		if (!values_set(&vals, fn->params[i], args[i])) {
+		if (!values_set(&vals, fn->params[i], &args[i])) {
 			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 			values_free(&vals);
 			return 0;
@@ -640,8 +786,8 @@ static int execute_function(
 
 	while (pc < fn->end_pc) {
 		runtime_ins *ins = &prog->data[pc];
-		long a = 0;
-		long b = 0;
+		runtime_data_value a = value_make_int(0);
+		runtime_data_value b = value_make_int(0);
 
 		if (strcmp(ins->op, "NOP") == 0 || strcmp(ins->op, "LABEL") == 0 || strcmp(ins->op, "PARAM") == 0) {
 			pc++;
@@ -666,17 +812,20 @@ static int execute_function(
 			size_t target;
 			if (!resolve_value(&vals, ins->op1, &a)) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "unknown value: %s", ins->op1);
+				value_clear(&a);
 				values_free(&vals);
 				return 0;
 			}
-			if (a == 0) {
+			if (!value_truthy(&a)) {
 				if (!labels_find(labels, ins->result, &target)) {
 					error_set(err, ERR_SEMANTIC, 0, 0, "unknown label: %s", ins->result);
+					value_clear(&a);
 					values_free(&vals);
 					return 0;
 				}
 				if (target < fn->start_pc || target >= fn->end_pc) {
 					error_set(err, ERR_SEMANTIC, 0, 0, "jump out of function: %s", ins->result);
+					value_clear(&a);
 					values_free(&vals);
 					return 0;
 				}
@@ -684,63 +833,134 @@ static int execute_function(
 			} else {
 				pc++;
 			}
+			value_clear(&a);
 			continue;
 		}
 		if (strcmp(ins->op, "MOV") == 0) {
 			if (!resolve_value(&vals, ins->op1, &a)) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "unknown value: %s", ins->op1);
+				value_clear(&a);
 				values_free(&vals);
 				return 0;
 			}
-			if (!values_set(&vals, ins->result, a)) {
+			if (!values_set(&vals, ins->result, &a)) {
 				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				value_clear(&a);
 				values_free(&vals);
 				return 0;
 			}
+			value_clear(&a);
 			pc++;
 			continue;
 		}
 		if (strcmp(ins->op, "ADD") == 0 || strcmp(ins->op, "SUB") == 0 || strcmp(ins->op, "MUL") == 0 || strcmp(ins->op, "DIV") == 0 ||
 			strcmp(ins->op, "CMP_EQ") == 0 || strcmp(ins->op, "CMP_NE") == 0 || strcmp(ins->op, "CMP_LT") == 0 || strcmp(ins->op, "CMP_LE") == 0 ||
 			strcmp(ins->op, "CMP_GT") == 0 || strcmp(ins->op, "CMP_GE") == 0) {
-			long r = 0;
+			runtime_data_value r = value_make_int(0);
+			int ok = 1;
 			if (!resolve_value(&vals, ins->op1, &a) || !resolve_value(&vals, ins->op2, &b)) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "unknown value in op: %s", ins->op);
+				value_clear(&a);
+				value_clear(&b);
 				values_free(&vals);
 				return 0;
 			}
-			if (strcmp(ins->op, "ADD") == 0) r = a + b;
-			else if (strcmp(ins->op, "SUB") == 0) r = a - b;
-			else if (strcmp(ins->op, "MUL") == 0) r = a * b;
-			else if (strcmp(ins->op, "DIV") == 0) {
-				if (b == 0) {
-					error_set(err, ERR_SEMANTIC, 0, 0, "division by zero");
-					values_free(&vals);
-					return 0;
+			if (strcmp(ins->op, "ADD") == 0) {
+				if (a.kind == RUNTIME_INT && b.kind == RUNTIME_INT) {
+					r = value_make_int(a.int_value + b.int_value);
+				} else if (!value_concat(&r, &a, &b)) {
+					ok = 0;
 				}
-				r = a / b;
-			} else if (strcmp(ins->op, "CMP_EQ") == 0) r = (a == b);
-			else if (strcmp(ins->op, "CMP_NE") == 0) r = (a != b);
-			else if (strcmp(ins->op, "CMP_LT") == 0) r = (a < b);
-			else if (strcmp(ins->op, "CMP_LE") == 0) r = (a <= b);
-			else if (strcmp(ins->op, "CMP_GT") == 0) r = (a > b);
-			else if (strcmp(ins->op, "CMP_GE") == 0) r = (a >= b);
-			if (!values_set(&vals, ins->result, r)) {
-				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			} else if (strcmp(ins->op, "SUB") == 0) {
+				if (a.kind != RUNTIME_INT || b.kind != RUNTIME_INT) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "SUB expects int operands");
+					ok = 0;
+				} else {
+					r = value_make_int(a.int_value - b.int_value);
+				}
+			} else if (strcmp(ins->op, "MUL") == 0) {
+				if (a.kind != RUNTIME_INT || b.kind != RUNTIME_INT) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "MUL expects int operands");
+					ok = 0;
+				} else {
+					r = value_make_int(a.int_value * b.int_value);
+				}
+			} else if (strcmp(ins->op, "DIV") == 0) {
+				if (a.kind != RUNTIME_INT || b.kind != RUNTIME_INT) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "DIV expects int operands");
+					ok = 0;
+				} else if (b.int_value == 0) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "division by zero");
+					ok = 0;
+				} else {
+					r = value_make_int(a.int_value / b.int_value);
+				}
+			} else if (strcmp(ins->op, "CMP_EQ") == 0) {
+				if (a.kind != b.kind) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "CMP_EQ expects operand types to match");
+					ok = 0;
+				} else if (a.kind == RUNTIME_INT) {
+					r = value_make_int(a.int_value == b.int_value);
+				} else {
+					r = value_make_int(strcmp(a.str_value ? a.str_value : "", b.str_value ? b.str_value : "") == 0);
+				}
+			} else if (strcmp(ins->op, "CMP_NE") == 0) {
+				if (a.kind != b.kind) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "CMP_NE expects operand types to match");
+					ok = 0;
+				} else if (a.kind == RUNTIME_INT) {
+					r = value_make_int(a.int_value != b.int_value);
+				} else {
+					r = value_make_int(strcmp(a.str_value ? a.str_value : "", b.str_value ? b.str_value : "") != 0);
+				}
+			} else {
+				int cmp;
+				if (a.kind != b.kind) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "%s expects operand types to match", ins->op);
+					ok = 0;
+				} else {
+					if (a.kind == RUNTIME_INT) {
+						cmp = (a.int_value > b.int_value) - (a.int_value < b.int_value);
+					} else {
+						cmp = strcmp(a.str_value ? a.str_value : "", b.str_value ? b.str_value : "");
+					}
+					if (strcmp(ins->op, "CMP_LT") == 0) r = value_make_int(cmp < 0);
+					else if (strcmp(ins->op, "CMP_LE") == 0) r = value_make_int(cmp <= 0);
+					else if (strcmp(ins->op, "CMP_GT") == 0) r = value_make_int(cmp > 0);
+					else if (strcmp(ins->op, "CMP_GE") == 0) r = value_make_int(cmp >= 0);
+				}
+			}
+			if (!ok) {
+				value_clear(&a);
+				value_clear(&b);
+				value_clear(&r);
 				values_free(&vals);
 				return 0;
 			}
+			if (!values_set(&vals, ins->result, &r)) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				value_clear(&a);
+				value_clear(&b);
+				value_clear(&r);
+				values_free(&vals);
+				return 0;
+			}
+			value_clear(&a);
+			value_clear(&b);
+			value_clear(&r);
 			pc++;
 			continue;
 		}
 		if (strcmp(ins->op, "ARG") == 0) {
 			if (!resolve_value(&vals, ins->result, &a)) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "unknown arg value: %s", ins->result);
+				value_clear(&a);
 				values_free(&vals);
 				return 0;
 			}
 			if (pending_len >= 128) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "too many pending call arguments");
+				value_clear(&a);
 				values_free(&vals);
 				return 0;
 			}
@@ -750,8 +970,10 @@ static int execute_function(
 		}
 		if (strcmp(ins->op, "CALL") == 0) {
 			size_t call_argc = 0;
-			long callee_ret = 0;
+			runtime_data_value callee_ret = value_make_int(0);
 			const runtime_function *callee;
+			size_t call_base;
+			size_t j;
 			if (!parse_size_t(ins->op2, &call_argc)) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "invalid call argc: %s", ins->op2);
 				values_free(&vals);
@@ -762,24 +984,38 @@ static int execute_function(
 				values_free(&vals);
 				return 0;
 			}
+			call_base = pending_len - call_argc;
 			callee = functions_find(funcs, ins->op1);
 			if (!callee) {
-				if (!host_dispatch_call(ins->op1, &pending_args[pending_len - call_argc], call_argc, &callee_ret, err)) {
+				if (!host_dispatch_call(ins->op1, &pending_args[call_base], call_argc, &callee_ret, err)) {
+					for (j = call_base; j < pending_len; j++) {
+						value_clear(&pending_args[j]);
+					}
+					pending_len = call_base;
 					values_free(&vals);
 					return 0;
 				}
 			} else {
-				if (!execute_function(prog, labels, funcs, callee, &pending_args[pending_len - call_argc], call_argc, &callee_ret, err, depth + 1)) {
+				if (!execute_function(prog, labels, funcs, callee, &pending_args[call_base], call_argc, &callee_ret, err, depth + 1)) {
+					for (j = call_base; j < pending_len; j++) {
+						value_clear(&pending_args[j]);
+					}
+					pending_len = call_base;
 					values_free(&vals);
 					return 0;
 				}
 			}
-			pending_len -= call_argc;
-			if (!values_set(&vals, ins->result, callee_ret)) {
+			for (j = call_base; j < pending_len; j++) {
+				value_clear(&pending_args[j]);
+			}
+			pending_len = call_base;
+			if (!values_set(&vals, ins->result, &callee_ret)) {
 				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				value_clear(&callee_ret);
 				values_free(&vals);
 				return 0;
 			}
+			value_clear(&callee_ret);
 			pc++;
 			continue;
 		}
@@ -798,7 +1034,7 @@ static int execute_function(
 		return 0;
 	}
 
-	*out_return = 0;
+	*out_return = value_make_int(0);
 	values_free(&vals);
 	return 1;
 }
@@ -816,7 +1052,8 @@ bool runtime_execute_text_with_argv(
 	runtime_functions funcs = {0};
 	const runtime_function *entry = NULL;
 	const char *entry_name = entry_function;
-	long no_args[1] = {0};
+	runtime_data_value no_args[1] = { value_make_int(0) };
+	runtime_data_value ret = value_make_int(0);
 	int ok;
 
 	error_clear(err);
@@ -859,7 +1096,15 @@ bool runtime_execute_text_with_argv(
 		return false;
 	}
 
-	ok = execute_function(&prog, &labels, &funcs, entry, no_args, 0, out_return, err, 0);
+	ok = execute_function(&prog, &labels, &funcs, entry, no_args, 0, &ret, err, 0);
+	if (ok) {
+		if (ret.kind == RUNTIME_INT) {
+			*out_return = ret.int_value;
+		} else {
+			*out_return = ret.str_value ? (long)strlen(ret.str_value) : 0;
+		}
+	}
+	value_clear(&ret);
 	program_free(&prog);
 	labels_free(&labels);
 	functions_free(&funcs);
