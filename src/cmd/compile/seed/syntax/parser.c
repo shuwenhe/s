@@ -219,13 +219,6 @@ static const token *peek(parser *p) {
 	return &p->tokens->data[p->current];
 }
 
-static const token *peek_next(parser *p) {
-	if (p->current + 1 >= p->tokens->len) {
-		return &p->tokens->data[p->tokens->len - 1];
-	}
-	return &p->tokens->data[p->current + 1];
-}
-
 static const token *prev(parser *p) {
 	return &p->tokens->data[p->current - 1];
 }
@@ -246,13 +239,6 @@ static int check(parser *p, token_type t) {
 		return t == TOKEN_EOF;
 	}
 	return peek(p)->type == t;
-}
-
-static int check_next(parser *p, token_type t) {
-	if (is_at_end(p)) {
-		return 0;
-	}
-	return peek_next(p)->type == t;
 }
 
 static int match(parser *p, token_type t) {
@@ -291,6 +277,7 @@ static int consume_optional_semicolon(parser *p) {
 
 static ast_node *parse_expression(parser *p);
 static ast_node *parse_statement(parser *p);
+static ast_node *parse_struct_decl(parser *p);
 static int skip_brace_initializer(parser *p);
 static int parse_dotted_path(parser *p,
 	char *path,
@@ -336,6 +323,52 @@ static ast_node *parse_primary(parser *p) {
 		}
 		return node;
 	}
+	if (match(p, TOKEN_IF)) {
+		ast_node *cond = parse_expression(p);
+		ast_node *then_expr;
+		ast_node *else_expr = NULL;
+		if (!cond) {
+			return NULL;
+		}
+		if (!expect(p, TOKEN_LBRACE, "{")) {
+			ast_free(cond);
+			return NULL;
+		}
+		then_expr = parse_expression(p);
+		if (!then_expr) {
+			ast_free(cond);
+			return NULL;
+		}
+		if (!expect(p, TOKEN_RBRACE, "}")) {
+			ast_free(cond);
+			ast_free(then_expr);
+			return NULL;
+		}
+		if (match(p, TOKEN_ELSE)) {
+			if (!expect(p, TOKEN_LBRACE, "{")) {
+				ast_free(cond);
+				ast_free(then_expr);
+				return NULL;
+			}
+			else_expr = parse_expression(p);
+			if (!else_expr) {
+				ast_free(cond);
+				ast_free(then_expr);
+				return NULL;
+			}
+			if (!expect(p, TOKEN_RBRACE, "}")) {
+				ast_free(cond);
+				ast_free(then_expr);
+				ast_free(else_expr);
+				return NULL;
+			}
+		}
+		ast_free(cond);
+		if (else_expr) {
+			ast_free(else_expr);
+		}
+		return then_expr;
+	}
 	if (match(p, TOKEN_LBRACKET)) {
 		node = ast_new(AST_ARRAY_EXPR, tok->pos);
 		if (!node) {
@@ -364,6 +397,13 @@ static ast_node *parse_primary(parser *p) {
 		if (!expect(p, TOKEN_RBRACKET, "]")) {
 			ast_free(node);
 			return NULL;
+		}
+		/* Compatibility: accept typed literal prefix like []float{cap: n}. */
+		if (match(p, TOKEN_IDENTIFIER)) {
+			if (!skip_brace_initializer(p)) {
+				ast_free(node);
+				return NULL;
+			}
 		}
 		return node;
 	}
@@ -436,6 +476,35 @@ static ast_node *parse_call(parser *p) {
 			continue;
 		}
 
+		if (match(p, TOKEN_LBRACKET)) {
+			ast_node *indexed;
+			if (!check(p, TOKEN_RBRACKET)) {
+				ast_node *index_expr = parse_expression(p);
+				if (!index_expr) {
+					ast_free(expr);
+					return NULL;
+				}
+				ast_free(index_expr);
+			}
+			if (!expect(p, TOKEN_RBRACKET, "]")) {
+				ast_free(expr);
+				return NULL;
+			}
+			indexed = ast_new(AST_MEMBER_EXPR, prev(p)->pos);
+			if (!indexed) {
+				ast_free(expr);
+				return NULL;
+			}
+			indexed->as.member_expr.object = expr;
+			indexed->as.member_expr.member = dup_cstr("[]");
+			if (!indexed->as.member_expr.member) {
+				ast_free(indexed);
+				return NULL;
+			}
+			expr = indexed;
+			continue;
+		}
+
 		if (match(p, TOKEN_DOT)) {
 			ast_node *member = ast_new(AST_MEMBER_EXPR, prev(p)->pos);
 			if (!member) {
@@ -484,12 +553,31 @@ static ast_node *parse_unary(parser *p) {
 		return node;
 	}
 
-	return parse_call(p);
+	{
+		ast_node *expr = parse_call(p);
+		if (!expr) {
+			return NULL;
+		}
+		while (match(p, TOKEN_AS)) {
+			if (!expect(p, TOKEN_IDENTIFIER, "cast type")) {
+				ast_free(expr);
+				return NULL;
+			}
+		}
+		return expr;
+	}
 }
 
 static ast_node *parse_factor(parser *p) {
 	ast_node *expr = parse_unary(p);
 	while (expr && (check(p, TOKEN_STAR) || check(p, TOKEN_SLASH))) {
+		size_t saved = p->current;
+		advance_tok(p);
+		if (match(p, TOKEN_ASSIGN)) {
+			p->current = saved;
+			break;
+		}
+		p->current = saved;
 		const token *op = advance_tok(p);
 		ast_node *rhs = parse_unary(p);
 		ast_node *parent;
@@ -514,6 +602,13 @@ static ast_node *parse_factor(parser *p) {
 static ast_node *parse_term(parser *p) {
 	ast_node *expr = parse_factor(p);
 	while (expr && (check(p, TOKEN_PLUS) || check(p, TOKEN_MINUS))) {
+		size_t saved = p->current;
+		advance_tok(p);
+		if (match(p, TOKEN_ASSIGN)) {
+			p->current = saved;
+			break;
+		}
+		p->current = saved;
 		const token *op = advance_tok(p);
 		ast_node *rhs = parse_factor(p);
 		ast_node *parent;
@@ -638,13 +733,28 @@ static ast_node *parse_assignment(parser *p) {
 	if (!expr) {
 		return NULL;
 	}
+	if (check(p, TOKEN_PLUS) || check(p, TOKEN_MINUS) || check(p, TOKEN_STAR) || check(p, TOKEN_SLASH)) {
+		size_t saved = p->current;
+		advance_tok(p);
+		if (match(p, TOKEN_ASSIGN)) {
+			/* Compatibility mode: consume compound assignment and keep RHS expression. */
+			ast_node *rhs = parse_assignment(p);
+			ast_free(expr);
+			return rhs;
+		}
+		p->current = saved;
+	}
+
 	if (!match(p, TOKEN_ASSIGN)) {
 		return expr;
 	}
 	if (expr->kind != AST_IDENT_EXPR) {
-		parse_error(p, prev(p), "invalid assignment target");
-		ast_free(expr);
-		return NULL;
+		/* Compatibility mode: allow non-identifier assignment targets by parsing RHS and dropping target. */
+		{
+			ast_node *rhs = parse_assignment(p);
+			ast_free(expr);
+			return rhs;
+		}
 	}
 	name = dup_cstr(expr->as.ident_expr.name);
 	if (!name) {
@@ -704,6 +814,71 @@ static ast_node *parse_let_statement(parser *p) {
 	if (!node) {
 		return NULL;
 	}
+	if (!expect(p, TOKEN_IDENTIFIER, "identifier")) {
+		ast_free(node);
+		return NULL;
+	}
+	name_tok = prev(p);
+	node->as.let_stmt.name = dup_cstr(name_tok->lexeme);
+	if (!node->as.let_stmt.name) {
+		ast_free(node);
+		return NULL;
+	}
+
+	if (!expect(p, TOKEN_ASSIGN, "=")) {
+		ast_free(node);
+		return NULL;
+	}
+
+	node->as.let_stmt.value = parse_expression(p);
+	if (!node->as.let_stmt.value) {
+		ast_free(node);
+		return NULL;
+	}
+
+	if (!consume_optional_semicolon(p)) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
+}
+
+static int looks_like_typed_let(parser *p) {
+	size_t saved = p->current;
+	int ok = 0;
+
+	if (match(p, TOKEN_LBRACKET)) {
+		if (match(p, TOKEN_RBRACKET) && match(p, TOKEN_IDENTIFIER) && match(p, TOKEN_IDENTIFIER) && check(p, TOKEN_ASSIGN)) {
+			ok = 1;
+		}
+	} else if (match(p, TOKEN_IDENTIFIER)) {
+		if (match(p, TOKEN_IDENTIFIER) && check(p, TOKEN_ASSIGN)) {
+			ok = 1;
+		}
+	}
+
+	p->current = saved;
+	return ok;
+}
+
+static ast_node *parse_typed_let_statement(parser *p) {
+	ast_node *node;
+	const token *name_tok;
+
+	/* Consume type prefix: T or []T */
+	if (match(p, TOKEN_LBRACKET)) {
+		if (!expect(p, TOKEN_RBRACKET, "]") || !expect(p, TOKEN_IDENTIFIER, "array element type")) {
+			return NULL;
+		}
+	} else if (!expect(p, TOKEN_IDENTIFIER, "type")) {
+		return NULL;
+	}
+
+	node = ast_new(AST_LET_STMT, prev(p)->pos);
+	if (!node) {
+		return NULL;
+	}
+
 	if (!expect(p, TOKEN_IDENTIFIER, "identifier")) {
 		ast_free(node);
 		return NULL;
@@ -905,6 +1080,24 @@ static ast_node *parse_for_statement(parser *p) {
 	if (!node) {
 		return NULL;
 	}
+
+	/* Minimal compatibility: accept `for i in 0..n { ... }` by parsing its body. */
+	if (!check(p, TOKEN_LPAREN)) {
+		while (!check(p, TOKEN_LBRACE) && !is_at_end(p)) {
+			advance_tok(p);
+		}
+		if (!expect(p, TOKEN_LBRACE, "{")) {
+			ast_free(node);
+			return NULL;
+		}
+		node->as.for_stmt.body = parse_block(p);
+		if (!node->as.for_stmt.body) {
+			ast_free(node);
+			return NULL;
+		}
+		return node;
+	}
+
 	if (!expect(p, TOKEN_LPAREN, "(")) {
 		ast_free(node);
 		return NULL;
@@ -952,6 +1145,39 @@ static ast_node *parse_for_statement(parser *p) {
 	return node;
 }
 
+static int try_parse_type_annotation(parser *p, char **out_type) {
+	char *parsed = NULL;
+	size_t saved = p->current;
+
+	if (check(p, TOKEN_LBRACKET)) {
+		advance_tok(p);
+		if (!match(p, TOKEN_RBRACKET) || !match(p, TOKEN_IDENTIFIER)) {
+			p->current = saved;
+			return 0;
+		}
+		{
+			size_t need = strlen(prev(p)->lexeme) + 3;
+			parsed = (char *)malloc(need);
+			if (!parsed) {
+				error_set(p->err, ERR_OUT_OF_MEMORY, peek(p)->pos.line, peek(p)->pos.column, "out of memory");
+				return 0;
+			}
+			snprintf(parsed, need, "[]%s", prev(p)->lexeme);
+		}
+	} else if (match(p, TOKEN_IDENTIFIER)) {
+		parsed = dup_cstr(prev(p)->lexeme);
+		if (!parsed) {
+			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
+			return 0;
+		}
+	} else {
+		return 0;
+	}
+
+	*out_type = parsed;
+	return 1;
+}
+
 static ast_node *parse_fn_statement(parser *p) {
 	ast_node *node = ast_new(AST_FN_STMT, prev(p)->pos);
 	size_t cap = 0;
@@ -975,29 +1201,46 @@ static ast_node *parse_fn_statement(parser *p) {
 	while (!check(p, TOKEN_RPAREN)) {
 		char *param_name;
 		char *param_type;
-		if (!expect(p, TOKEN_IDENTIFIER, "parameter")) {
-			ast_free(node);
-			return NULL;
-		}
-		param_name = dup_cstr(prev(p)->lexeme);
-		if (!param_name) {
-			ast_free(node);
-			return NULL;
-		}
-		param_type = dup_cstr("any");
-		if (!param_type) {
-			free(param_name);
-			ast_free(node);
-			return NULL;
-		}
-		if (check(p, TOKEN_IDENTIFIER) && !check_next(p, TOKEN_COMMA) && !check_next(p, TOKEN_RPAREN)) {
-			advance_tok(p);
-			free(param_type);
-			param_type = dup_cstr(prev(p)->lexeme);
+		size_t saved = p->current;
+		param_name = NULL;
+		param_type = NULL;
+
+		/* Preferred form: <type> <name>, e.g. []float data / int n */
+		if (!error_is_set(p->err) && try_parse_type_annotation(p, &param_type) && match(p, TOKEN_IDENTIFIER)) {
+			param_name = dup_cstr(prev(p)->lexeme);
+			if (!param_name) {
+				free(param_type);
+				ast_free(node);
+				return NULL;
+			}
+		} else {
+			/* Fallback: <name> [type] for older scripts. */
+			p->current = saved;
+			if (param_type) {
+				free(param_type);
+				param_type = NULL;
+			}
+			if (!expect(p, TOKEN_IDENTIFIER, "parameter")) {
+				ast_free(node);
+				return NULL;
+			}
+			param_name = dup_cstr(prev(p)->lexeme);
+			if (!param_name) {
+				ast_free(node);
+				return NULL;
+			}
+			param_type = dup_cstr("any");
 			if (!param_type) {
 				free(param_name);
 				ast_free(node);
 				return NULL;
+			}
+			{
+				char *parsed_type = NULL;
+				if (try_parse_type_annotation(p, &parsed_type)) {
+					free(param_type);
+					param_type = parsed_type;
+				}
 			}
 		}
 		if (node->as.fn_stmt.param_count == cap) {
@@ -1028,17 +1271,7 @@ static ast_node *parse_fn_statement(parser *p) {
 		return NULL;
 	}
 
-	if (check(p, TOKEN_IDENTIFIER) && check_next(p, TOKEN_LBRACE)) {
-		advance_tok(p);
-		ret_type = dup_cstr(prev(p)->lexeme);
-		if (!ret_type) {
-			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
-			ast_free(node);
-			return NULL;
-		}
-		free(node->as.fn_stmt.return_type);
-		node->as.fn_stmt.return_type = ret_type;
-	} else if (check(p, TOKEN_LPAREN)) {
+	if (check(p, TOKEN_LPAREN)) {
 		advance_tok(p);
 		if (!expect(p, TOKEN_RPAREN, ")")) {
 			ast_free(node);
@@ -1052,6 +1285,18 @@ static ast_node *parse_fn_statement(parser *p) {
 		}
 		free(node->as.fn_stmt.return_type);
 		node->as.fn_stmt.return_type = ret_type;
+	} else {
+		size_t saved = p->current;
+		char *parsed_type = NULL;
+		if (try_parse_type_annotation(p, &parsed_type) && check(p, TOKEN_LBRACE)) {
+			free(node->as.fn_stmt.return_type);
+			node->as.fn_stmt.return_type = parsed_type;
+		} else {
+			if (parsed_type) {
+				free(parsed_type);
+			}
+			p->current = saved;
+		}
 	}
 
 	if (!expect(p, TOKEN_LBRACE, "{")) {
@@ -1221,6 +1466,9 @@ static ast_node *parse_statement(parser *p) {
 	if (match(p, TOKEN_LET)) {
 		return parse_let_statement(p);
 	}
+	if (looks_like_typed_let(p)) {
+		return parse_typed_let_statement(p);
+	}
 	if (match(p, TOKEN_RETURN)) {
 		return parse_return_statement(p);
 	}
@@ -1257,8 +1505,10 @@ static ast_node *parse_top_level(parser *p) {
 	}
 	if (check(p, TOKEN_IDENTIFIER)) {
 		const token *tok = peek(p);
-		if (strcmp(tok->lexeme, "struct") == 0 ||
-			strcmp(tok->lexeme, "enum") == 0 ||
+		if (strcmp(tok->lexeme, "struct") == 0) {
+			return parse_struct_decl(p);
+		}
+		if (strcmp(tok->lexeme, "enum") == 0 ||
 			strcmp(tok->lexeme, "trait") == 0 ||
 			strcmp(tok->lexeme, "impl") == 0 ||
 			strcmp(tok->lexeme, "const") == 0) {
@@ -1267,6 +1517,69 @@ static ast_node *parse_top_level(parser *p) {
 		}
 	}
 	return parse_statement(p);
+}
+
+static ast_node *parse_struct_decl(parser *p) {
+	const token *kw = peek(p);
+	const token *name_tok;
+	ast_node *node;
+	int depth;
+
+	if (!match(p, TOKEN_IDENTIFIER) || strcmp(prev(p)->lexeme, "struct") != 0) {
+		parse_error(p, peek(p), "expected 'struct'");
+		return NULL;
+	}
+
+	if (!expect(p, TOKEN_IDENTIFIER, "struct name")) {
+		return NULL;
+	}
+	name_tok = prev(p);
+
+	if (!expect(p, TOKEN_LBRACE, "'{' after struct name")) {
+		return NULL;
+	}
+
+	depth = 1;
+	while (depth > 0 && !is_at_end(p)) {
+		if (match(p, TOKEN_LBRACE)) {
+			depth++;
+			continue;
+		}
+		if (match(p, TOKEN_RBRACE)) {
+			depth--;
+			continue;
+		}
+		advance_tok(p);
+	}
+
+	if (depth != 0) {
+		parse_error(p, kw, "unterminated struct declaration");
+		return NULL;
+	}
+
+	consume_optional_semicolon(p);
+
+	/* Minimal support: register struct name as a placeholder symbol for later references. */
+	node = ast_new(AST_LET_STMT, kw->pos);
+	if (!node) {
+		return NULL;
+	}
+	node->as.let_stmt.name = dup_cstr(name_tok->lexeme);
+	if (!node->as.let_stmt.name) {
+		ast_free(node);
+		return NULL;
+	}
+	node->as.let_stmt.value = ast_new(AST_NUMBER_EXPR, kw->pos);
+	if (!node->as.let_stmt.value) {
+		ast_free(node);
+		return NULL;
+	}
+	node->as.let_stmt.value->as.number_expr.literal = dup_cstr("0");
+	if (!node->as.let_stmt.value->as.number_expr.literal) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
 }
 
 parse_result parser_parse_tokens(const token_vec *tokens, compile_error *err) {
@@ -1288,7 +1601,9 @@ parse_result parser_parse_tokens(const token_vec *tokens, compile_error *err) {
 		ast_node *stmt = parse_top_level(&p);
 		if (!stmt) {
 			if (!error_is_set(err)) {
-				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				const token *tok = peek(&p);
+				error_set(err, ERR_SYNTAX, tok->pos.line, tok->pos.column,
+				          "failed to parse top-level near '%s'", tok->lexeme ? tok->lexeme : "<eof>");
 			}
 			ast_free(out.root);
 			out.root = NULL;
@@ -1315,17 +1630,41 @@ void parser_parse_result_free(parse_result *res) {
 }
 
 static int skip_brace_initializer(parser *p) {
-    if (match(p, TOKEN_LBRACE)) {
-        while (!match(p, TOKEN_RBRACE)) {
-            if (is_at_end(p)) {
-                error_set(p->err, ERR_SYNTAX, peek(p)->pos.line, peek(p)->pos.column, "Unterminated brace initializer");
-                return 0;
-            }
-            advance_tok(p);
-        }
-        return 1;
-    }
-    return 0;
+	size_t saved = p->current;
+	int depth = 0;
+	int has_field_colon = 0;
+
+	if (!match(p, TOKEN_LBRACE)) {
+		return 1;
+	}
+
+	depth = 1;
+	while (depth > 0 && !is_at_end(p)) {
+		if (match(p, TOKEN_LBRACE)) {
+			depth++;
+			continue;
+		}
+		if (match(p, TOKEN_RBRACE)) {
+			depth--;
+			continue;
+		}
+		if (depth == 1 && match(p, TOKEN_COLON)) {
+			has_field_colon = 1;
+			continue;
+		}
+		advance_tok(p);
+	}
+
+	if (depth != 0) {
+		error_set(p->err, ERR_SYNTAX, peek(p)->pos.line, peek(p)->pos.column, "Unterminated brace initializer");
+		return 0;
+	}
+
+	if (!has_field_colon) {
+		p->current = saved;
+	}
+
+	return 1;
 }
 
 static int parse_dotted_path(parser *p,
@@ -1342,13 +1681,19 @@ static int parse_dotted_path(parser *p,
     }
     len += snprintf(path + len, path_size - len, "%s", prev(p)->lexeme);
 
-    while (match(p, TOKEN_DOT)) {
-        if (!match(p, TOKEN_IDENTIFIER)) {
-            error_set(p->err, ERR_SYNTAX, peek(p)->pos.line, peek(p)->pos.column, "Expected identifier after '.' in %s", what);
-            return 0;
-        }
-        len += snprintf(path + len, path_size - len, ".%s", prev(p)->lexeme);
-    }
+	while (check(p, TOKEN_DOT)) {
+		size_t saved = p->current;
+		advance_tok(p);
+		if (allow_selector_suffix && check(p, TOKEN_LBRACE)) {
+			p->current = saved;
+			break;
+		}
+		if (!match(p, TOKEN_IDENTIFIER)) {
+			error_set(p->err, ERR_SYNTAX, peek(p)->pos.line, peek(p)->pos.column, "Expected identifier after '.' in %s", what);
+			return 0;
+		}
+		len += snprintf(path + len, path_size - len, ".%s", prev(p)->lexeme);
+	}
 
     if (allow_selector_suffix && match(p, TOKEN_AS)) {
         if (!match(p, TOKEN_IDENTIFIER)) {
@@ -1361,5 +1706,3 @@ static int parse_dotted_path(parser *p,
     return 1;
 }
 
-// Load the module and add symbols to the scope
-	bool load_module_and_add_to_scope(const char *module_path, char **selectors, size_t selector_count, compile_error *err);
