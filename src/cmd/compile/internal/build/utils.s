@@ -4,6 +4,7 @@ use s.source_file
 use s.token
 
 use compile.internal.build.parse.parse_options as parse_options_impl
+use compile.internal.build.parse.usage as usage_impl
 use compile.internal.build.emit.check_ok as emit_check_ok_impl
 use compile.internal.build.emit.tokens as emit_tokens_impl
 use compile.internal.build.emit.ast as emit_ast_impl
@@ -16,6 +17,10 @@ use compile.internal.build.frontend.load as frontend_load_impl
 
 func parse_options(vec[string] args)  vec[string] {
     return parse_options_impl(args)
+}
+
+func usage() string {
+    return usage_impl()
 }
 
 func emit_check_ok(string path) () {
