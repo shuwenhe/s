@@ -15,16 +15,7 @@ WORK_DIR ?= /tmp/s_ir_selfhost_work
 .PHONY: help build-arm64 selfhost-bin
 
 help:
-	@echo "Available targets:"
-	@grep -E '^[a-zA-Z0-9_-]+:' Makefile | grep -vE '^\.' | awk '{print "  make", $$1}' | sed 's/://g'
-	@echo "  make build-arm64                    # build a new arm64 C-seed compiler (c_arm64_*)"
-	@echo "  make selfhost-bin [COMPILER=...]    # IR -> executable compiler -> compile main.s"
-	@echo ""
-	@echo "Variables for selfhost-bin:"
-	@echo "  COMPILER=$(COMPILER)"
-	@echo "  OUT_BIN=$(OUT_BIN)"
-	@echo "  OUT_IR=$(OUT_IR)"
-	@echo "  WORK_DIR=$(WORK_DIR)"
+	@echo "  make run"
 
 build-arm64:
 	./bin/build_s_arm64.sh
