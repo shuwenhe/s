@@ -1,3 +1,6 @@
+func print(string text) () {
+    println(text)
+}
 package std.io
 
 func println(string text) () {
