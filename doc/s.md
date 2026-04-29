@@ -1,98 +1,315 @@
-# S 语言语法指南
+# S 语言语法规则（按编译器源码提取）
 
-## 关键字
-- `func`：定义函数。
-- `struct`：定义结构体。
-- `use`：导入模块。
-- `if` / `else`：条件语句。
-- `for`：循环语句。
-- `return`：返回值。
+本文基于以下实现提取：
+- `src/s/parser.s`
+- `src/s/lexer.s`
+- `src/s/tokens.s`
 
-## 数据类型
-- `int`：整数类型。
-- `float`：浮点数类型。
-- `bool`：布尔类型。
-- `string`：字符串类型。
-- `[]type`：数组类型。
+以下规则描述的是当前解析器实际接受的语法，而不是设想语法。
 
-## 变量定义
-### 基本变量声明
-```s
-int x = 10
-char y = 'a'
-float z = 3.14
+## 1. 词法规则
+
+### 1.1 Token 类型
+- ident
+- int
+- string
+- keyword
+- symbol
+- eof
+
+### 1.2 关键字（`is_keyword`）
+package, use, as, pub, func, let, var, const, static, struct, enum, trait, impl, for, if, else, while, switch, select, case, default, return, break, continue, sroutine, true, false, nil, unsafe, extern, mut, where, in
+
+说明：词法层识别了 `let`，但当前 `parser.s` 的语句解析主路径主要使用 `var`、`:=`、`类型 名 = 值` 等形式。
+
+### 1.3 注释与空白
+- 空白：空格、tab、CR、LF
+- 行注释：`// ...`
+- 块注释：`/* ... */`，支持嵌套
+
+### 1.4 符号
+多字符优先匹配：
+`-> : == != <= >= && || ++ ..= .. := << >> ::`
+
+单字符符号：
+`( ) [ ] { } . , : ; + - * / % ! = < > ? & | ^`
+
+### 1.5 标识符与字面量
+- 标识符首字符：字母或 `_`
+- 后续字符：字母、数字或 `_`
+- 整数字面量：数字及 `_` 组成（如 `1_000`）
+- 字符串字面量：双引号包裹，支持转义
+
+## 2. 源文件结构
+
+源码入口 `parse_source_file` 对应结构：
+
+```ebnf
+source_file = "package" path, { use_decl }, { item | const_group } ;
+use_decl    = "use" use_path, [ "as" ident ] ;
 ```
 
-### 多变量声明
-```s
-int a = 1, b = 2, c = 3
+约束：
+- 文件必须以 `package` 开头。
+- `use` 声明位于顶层 item 之前。
+
+## 3. 顶层声明（item）
+
+```ebnf
+item = function_decl
+     | const_decl
+     | struct_decl
+     | enum_decl
+     | trait_decl
+     | impl_decl ;
 ```
 
-### 未初始化变量
-```s
-int x  // x 的值是未定义的
+### 3.1 const
+
+```ebnf
+const_decl  = "const" ident "=" expr [";"] ;
+const_group = "const" "(" { const_entry [";"|","] } ")" ;
+const_entry = ident ["=" expr] ;
 ```
 
-### 常量声明
-```s
-const int x = 10  // x 是一个常量，不能被修改
+组常量中允许省略值（用于 iota 风格索引）。
+
+### 3.2 struct
+
+```ebnf
+struct_decl = "struct" ident [generic_params] "{" { named_type [","] } "}" ;
+named_type  = ident ":" type_text | type_text ident ;
 ```
 
-## 函数定义
-```s
-func add(int a, int b) int {
-    return a + b
-}
+### 3.3 enum
+
+```ebnf
+enum_decl   = "enum" ident [generic_params] "{" { enum_variant [","] } "}" ;
+enum_variant = ident ["(" type_text ")"] ;
 ```
 
-## 条件语句
-```s
-if x > 10 {
-    // 条件为真时执行
-} else {
-    // 条件为假时执行
-}
+### 3.4 trait
+
+```ebnf
+trait_decl = "trait" ident [generic_params] "{" { func_sig ";" } "}" ;
 ```
 
-## 循环语句
-```s
-for i in 0..10 {
-    // 循环体
-}
+### 3.5 impl
+
+```ebnf
+impl_decl = "impl" [generic_params]
+            path ["for" path]
+            [where_clause]
+            "{" { function_decl } "}" ;
 ```
 
-## 结构体定义
+`impl Trait for Type` 与 `impl Type` 两种形式都支持。
+
+### 3.6 function / method
+
+```ebnf
+function_decl = "func"
+                ["(" named_type ")"]
+                ident
+                [generic_params]
+                "(" [params] ")"
+                [return_type]
+                [where_clause]
+                block_expr ;
+
+params       = named_type { "," named_type } ;
+return_type  = type_text ;
+generic_params = "[" ident_or_bound { "," ident_or_bound } "]" ;
+ident_or_bound = ident | ident ":" path { "+" path } ;
+where_clause = "where" type_text { "," type_text } ;
+```
+
+说明：
+- 有接收者 `("..." )` 时，解析器会按方法处理。
+- trait 方法签名无函数体，且以 `;` 结尾。
+
+## 4. 路径与 use 选择器
+
+```ebnf
+path     = ident { "." ident | "::" ident } [bracket_group] ;
+use_path = ident { "." ident }
+         | ident { "." ident } "." "{" use_member { "," use_member } "}" ;
+use_member = ident ["as" ident] ;
+```
+
+示例：
+- `use a.b.c`
+- `use a.b.{c, d as dd}`
+
+## 5. 语句（statement）
+
+语句出现在 `block_expr` 中。分号多数是可选消费（解析器 `eat_symbol(";")`）。
+
+```ebnf
+stmt = var_stmt
+     | typed_var_stmt
+     | short_var_stmt
+     | assign_stmt
+     | increment_stmt
+     | return_stmt
+     | defer_stmt
+     | sroutine_stmt
+     | cfor_stmt
+     | expr_stmt ;
+```
+
+### 5.1 变量与赋值
+
+```ebnf
+var_stmt       = "var" ident [":" type_text] "=" expr [";"] ;
+typed_var_stmt = named_type "=" expr [";"] ;
+short_var_stmt = ident ":=" expr [";"] ;
+assign_stmt    = ident "=" expr [";"] ;
+increment_stmt = ident "++" [";"] ;
+```
+
+### 5.2 控制与其他语句
+
+```ebnf
+return_stmt  = "return" [expr] [";"] ;
+defer_stmt   = "defer" expr [";"] ;
+sroutine_stmt = "sroutine" expr [";"] ;
+
+cfor_stmt    = "for" "(" for_clause ";" expr ";" for_clause ")" block_expr ;
+for_clause   = var_stmt(no_semicolon)
+             | typed_var_stmt(no_semicolon)
+             | short_var_stmt(no_semicolon)
+             | assign_stmt(no_semicolon)
+             | increment_stmt(no_semicolon) ;
+```
+
+## 6. 表达式（expression）
+
+入口优先级：
+`select` > `switch` > `if` > `while` > `for-in` > 二元表达式
+
+### 6.1 结构化表达式
+
+```ebnf
+if_expr    = "if" expr block_expr ["else" (if_expr | block_expr)] ;
+while_expr = "while" expr block_expr ;
+for_expr   = "for" ident "in" expr block_expr ;
+
+switch_expr = "switch" expr "{" { pattern ":" expr [","] } "}" ;
+```
+
+### 6.2 select 表达式
+
+```ebnf
+select_expr = "select" "{" { "case" select_case ":" [";"] } "}" ;
+select_case = "default"
+            | recv_call
+            | send_call
+            | timeout_call ;
+```
+
+语义限制（解析阶段检查）：
+- 不能混用 recv 与 send case。
+- default 不能重复。
+- timeout/after 不能重复。
+- timeout 与 default 不能同时存在。
+
+### 6.3 模式匹配 pattern
+
+```ebnf
+pattern = "_"
+        | int_lit
+        | string_lit
+        | "true"
+        | "false"
+        | path ["(" [pattern {"," pattern}] ")"] ;
+```
+
+若 `path` 含 `.` 或首字母大写，会按 variant 模式处理。
+
+### 6.4 运算符优先级（高到低）
+1. `* / %`
+2. `+ -`
+3. `< <= > >=`
+4. `== !=`
+5. `&&`
+6. `||`
+
+### 6.5 一元与后缀
+
+```ebnf
+unary_expr = ["&" ["mut"]] unary_expr | call_expr ;
+
+call_expr = primary_expr
+            { "(" [expr {"," expr}] ")"
+            | "." ident
+            | "::" ident
+            | "[" expr "]" } ;
+```
+
+### 6.6 primary
+
+```ebnf
+primary_expr = int_lit
+             | string_lit
+             | "true"
+             | "false"
+             | "nil"
+             | block_expr
+             | "(" expr ")"
+             | array_literal
+             | map_literal
+             | ident ;
+```
+
+数组与 map：
+
+```ebnf
+array_literal = bracket_group [type_tail] "{" [expr {"," expr}] "}" ;
+map_literal   = "map" bracket_group [type_tail] "{" [map_entry {"," map_entry}] "}" ;
+map_entry     = expr ":" expr ;
+```
+
+## 7. block 表达式与末尾表达式
+
+```ebnf
+block_expr = "{" { stmt | expr_stmt } [final_expr] "}" ;
+```
+
+规则：
+- 语句按 `starts_stmt` 判定。
+- 表达式后若有 `;`，作为表达式语句。
+- 最后一个无分号表达式可作为 `final_expr`。
+
+## 8. 当前实现差异与注意点
+
+- 词法关键字包含 `let`，但当前主解析路径并未提供 `let` 语句分支。
+- `break`/`continue` 在关键字表中存在，但当前 `parse_stmt` 未直接解析这两类语句。
+- 分号在多数场景可省略，是否需要由具体 `parse_*` 分支决定。
+
+## 9. 最小可解析示例
+
 ```s
+package demo
+
+use std.vec.vec
+
+const Pi = 3
+
 struct Point {
-    int x
-    int y
+    x: int,
+    y: int,
 }
 
-func new_point(int x, int y) Point {
-    Point {
-        x: x,
-        y: y,
+func add(a: int, b: int) int {
+    var sum = a + b
+    return sum
+}
+
+func main() {
+    x := add(1, 2)
+    if x > 0 {
+        x = x + 1
     }
 }
 ```
-
-## 模块导入
-```s
-use mymodule.submodule
-```
-
-## 数组操作
-```s
-let arr = []int{1, 2, 3}
-let mut dynamic_arr = []int{cap: 10}
-dynamic_arr[0] = 42
-```
-
-## 错误处理
-- 当前版本未支持显式错误处理。
-
-## 注意事项
-- S 语言是强类型语言，类型必须显式声明。
-- 数组需要预分配容量以优化性能。
-
-更多内容请参考官方文档。
