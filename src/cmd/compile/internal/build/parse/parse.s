@@ -9,7 +9,7 @@ func parse_options(vec[string] args)  vec[string] {
         return make_options("help", "", "", "")
     }
 
-    var command = args[1]
+    let command = args[1]
     if command == "help" || command == "--help" || command == "-h" {
         return make_options("help", "", "", "")
     }
@@ -28,7 +28,7 @@ func parse_options(vec[string] args)  vec[string] {
         if args[3] != "-o" {
             return make_options("help", "", "", "")
         }
-        var margin = parse_optional_margin(args, 5)
+        let margin = parse_optional_margin(args, 5)
         if margin == "__invalid_margin__" {
             return make_options("help", "", "", "")
         }
@@ -39,7 +39,7 @@ func parse_options(vec[string] args)  vec[string] {
         if args.len() < 3 {
             return make_options("help", "", "", "")
         }
-        var margin = parse_optional_margin(args, 3)
+        let margin = parse_optional_margin(args, 3)
         if margin == "__invalid_margin__" {
             return make_options("help", "", "", "")
         }
@@ -59,7 +59,7 @@ func usage()  string {
 }
 
 func make_options(string command, string path, string output, string ssa_margin)  vec[string] {
-    var options = vec[string]()
+    let options = vec[string]()
     options.push(command);
     options.push(path);
     options.push(output);
@@ -76,7 +76,7 @@ func parse_optional_margin(vec[string] args, int start_index) string {
         if args.len() <= start_index + 1 {
             return "__invalid_margin__"
         }
-        var value = args[start_index + 1]
+        let value = args[start_index + 1]
         if !is_non_negative_integer(value) {
             return "__invalid_margin__"
         }
@@ -87,7 +87,7 @@ func parse_optional_margin(vec[string] args, int start_index) string {
     }
 
     if starts_with(args[start_index], "--ssa-dominant-margin=") {
-        var value = slice_after(args[start_index], "--ssa-dominant-margin=")
+        let value = slice_after(args[start_index], "--ssa-dominant-margin=")
         if !is_non_negative_integer(value) {
             return "__invalid_margin__"
         }
@@ -116,9 +116,9 @@ func is_non_negative_integer(string text) bool {
         return false
     }
 
-    var i = 0
+    let i = 0
     while i < text.len() {
-        var ch = char_at(text, i)
+        let ch = char_at(text, i)
         if !is_digit_char(ch) {
             return false
         }

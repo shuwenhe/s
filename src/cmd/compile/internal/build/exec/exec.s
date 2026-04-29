@@ -19,34 +19,34 @@ func run(vec[string] options) int {
         return 0
     }
 
-    var source_result = read_source(options[1])
+    let source_result = read_source(options[1])
     if source_result.is_err() {
         return 1
     }
-    var source = source_result.unwrap()
-    var source_key = options[1]
+    let source = source_result.unwrap()
+    let source_key = options[1]
     if options[0] == "check" {
-        var check_target = "semantic@" + source_key
-        var check_explain = cache_hit_explain_target(options[1], source, "check", check_target)
+        let check_target = "semantic@" + source_key
+        let check_explain = cache_hit_explain_target(options[1], source, "check", check_target)
         if cache_hit_target(options[1], source, "check", check_target) {
-            var ignored = check_explain
+            let ignored = check_explain
             emit_check_ok(options[1]);
             return 0
         }
-        var parse_result = parse_source(source)
+        let parse_result = parse_source(source)
         if parse_result.is_err() {
             return 1
         }
         if check_text(source) != 0 {
             return 1
         }
-        var ignored_cache = update_cache_target(options[1], source, "check", check_target)
+        let ignored_cache = update_cache_target(options[1], source, "check", check_target)
         emit_check_ok(options[1]);
         return 0
     }
 
     if options[0] == "tokens" {
-        var tokens_result = tokenize(source)
+        let tokens_result = tokenize(source)
         if tokens_result.is_err() {
             return 1
         }
@@ -55,7 +55,7 @@ func run(vec[string] options) int {
     }
 
     if options[0] == "ast" {
-        var ast_result = parse_source(source)
+        let ast_result = parse_source(source)
         if ast_result.is_err() {
             return 1
         }
@@ -64,15 +64,15 @@ func run(vec[string] options) int {
     }
 
     if options[0] == "build" {
-        var build_target = options[2] + "@" + source_key + "#ssa_margin=" + options[3]
-        var build_explain = cache_hit_explain_target(options[1], source, "build", build_target)
+        let build_target = options[2] + "@" + source_key + "#ssa_margin=" + options[3]
+        let build_explain = cache_hit_explain_target(options[1], source, "build", build_target)
         if cache_hit_target(options[1], source, "build", build_target) {
-            var ignored0 = build_explain
+            let ignored0 = build_explain
             emit_built(options[2]);
             return 0
         }
         if build_binary(options[1], options[2], options[3]) == 0 {
-            var ignored_cache = update_cache_target(options[1], source, "build", build_target)
+            let ignored_cache = update_cache_target(options[1], source, "build", build_target)
             emit_built(options[2]);
             return 0
         }

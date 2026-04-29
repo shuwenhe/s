@@ -5,8 +5,8 @@ use s.source_file
 use std.vec.vec
 
 func lower_to_ir(source_file ast) vec[ir_node] {
-    var out = vec[ir_node]()
-    var i = 0
+    let out = vec[ir_node]()
+    let i = 0
     while i < ast.items.len() {
         switch ast.items[i] {
             item.function(fn) : out.push(ir_node {

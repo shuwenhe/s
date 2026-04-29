@@ -39,7 +39,7 @@ func tokenize(string source) result[vec[token], syntax_error] {
 }
 
 func parse_source(string source) result[source_file, syntax_error] {
-    var tokens = tokenize(source)?
+    let tokens = tokenize(source)?
     parse_tokens(tokens)
 }
 
