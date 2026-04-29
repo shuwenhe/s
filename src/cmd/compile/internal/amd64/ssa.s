@@ -1,8 +1,8 @@
 package compile.internal.amd64
 
 func ssa_mark_moves(ssa_block mut block) ssa_block {
-    var flive = block.flags_live_at_end
-    var ci = 0
+    let flive = block.flags_live_at_end
+    let ci = 0
     while ci < block.controls.len() {
         if block.controls[ci].flags {
             flive = true
@@ -10,9 +10,9 @@ func ssa_mark_moves(ssa_block mut block) ssa_block {
         ci = ci + 1
     }
 
-    var i = block.values.len() - 1
+    let i = block.values.len() - 1
     while i >= 0 {
-        var v = block.values[i]
+        let v = block.values[i]
         if flive && (v.op == "OpAMD64MOVLconst" || v.op == "OpAMD64MOVQconst") {
             v.marked = true
             v.aux = "mark"
@@ -21,7 +21,7 @@ func ssa_mark_moves(ssa_block mut block) ssa_block {
         if v.flags {
             flive = false
         }
-        var ai = 0
+        let ai = 0
         while ai < v.args.len() {
             if v.args[ai] == "flags" {
                 flive = true
@@ -184,7 +184,7 @@ func starts_with(string text, string prefix) bool {
     if text.len() < prefix.len() {
         return false
     }
-    var i = 0
+    let i = 0
     while i < prefix.len() {
         if text[i] != prefix[i] {
             return false

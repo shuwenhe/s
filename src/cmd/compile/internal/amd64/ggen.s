@@ -8,9 +8,9 @@ func zerorange(vec[prog] insns, int off, int cnt) vec[prog] {
         return insns
     }
 
-    var out = insns
-    var at = off
-    var left = cnt
+    let out = insns
+    let at = off
+    let left = cnt
     while left >= 16 {
         out.push(prog {
             op: "MOVUPS",
@@ -33,7 +33,7 @@ func zerorange(vec[prog] insns, int off, int cnt) vec[prog] {
 }
 
 func ginsnop(vec[prog] insns) vec[prog] {
-    var out = insns
+    let out = insns
     out.push(prog {
         op: "XCHGL",
         from: "AX",

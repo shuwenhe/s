@@ -27,7 +27,7 @@ func run_mir_suite() int {
         return 1
     }
 
-    var blocks = vec[mir_basic_block]()
+    let blocks = vec[mir_basic_block]()
     blocks.push(mir_basic_block {
         id: 0,
         label: "entry",
@@ -37,7 +37,7 @@ func run_mir_suite() int {
             edges: vec[mir_control_edge](),
         },
     })
-    var graph = mir_graph {
+    let graph = mir_graph {
         function_name: "main",
         blocks: blocks,
         locals: vec[mir_local_slot](),

@@ -2,9 +2,9 @@ package compile.internal.abt
 
 use std.vec.vec
 
-var leaf_height = 1
-var zero_height = 0
-var not_key32 = -2147483648
+let leaf_height = 1
+let zero_height = 0
+let not_key32 = -2147483648
 
 struct kv32 {
     int key
@@ -47,8 +47,8 @@ func size(t tree) int {
 }
 
 func copy_tree(t tree) t {
-    var copied = vec[kv32]()
-    var i = 0
+    let copied = vec[kv32]()
+    let i = 0
     while i < tree.items.len() {
         copied.push(tree.items[i])
         i = i + 1
@@ -60,7 +60,7 @@ func copy_tree(t tree) t {
 }
 
 func find(t tree, int key) string {
-    var i = index_of_key(tree, key)
+    let i = index_of_key(tree, key)
     if i < 0 {
         return ""
     }
@@ -72,16 +72,16 @@ func insert(t mut tree, int key, string data) string {
         return ""
     }
 
-    var i = index_of_key(tree, key)
+    let i = index_of_key(tree, key)
     if i >= 0 {
-        var old = tree.items[i].data
+        let old = tree.items[i].data
         tree.items.set(i, kv32 { key: key, data: data })
         return old
     }
 
-    var pos = lower_bound(tree, key)
-    var out = vec[kv32]()
-    var p = 0
+    let pos = lower_bound(tree, key)
+    let out = vec[kv32]()
+    let p = 0
     while p < pos {
         out.push(tree.items[p])
         p = p + 1
@@ -97,14 +97,14 @@ func insert(t mut tree, int key, string data) string {
 }
 
 func delete(t mut tree, int key) string {
-    var i = index_of_key(tree, key)
+    let i = index_of_key(tree, key)
     if i < 0 {
         return ""
     }
 
-    var old = tree.items[i].data
-    var out = vec[kv32]()
-    var p = 0
+    let old = tree.items[i].data
+    let out = vec[kv32]()
+    let p = 0
     while p < tree.items.len() {
         if p != i {
             out.push(tree.items[p])
@@ -120,7 +120,7 @@ func min(t tree) find_result {
     if tree.items.len() == 0 {
         return find_result { ok: false, key: not_key32, data: "" }
     }
-    var v = tree.items[0]
+    let v = tree.items[0]
     find_result { ok: true, key: v.key, data: v.data }
 }
 
@@ -128,30 +128,30 @@ func max(t tree) find_result {
     if tree.items.len() == 0 {
         return find_result { ok: false, key: not_key32, data: "" }
     }
-    var v = tree.items[tree.items.len() - 1]
+    let v = tree.items[tree.items.len() - 1]
     find_result { ok: true, key: v.key, data: v.data }
 }
 
 func delete_min(t mut tree) find_result {
-    var m = min(tree)
+    let m = min(tree)
     if !m.ok {
         return m
     }
-    var ignored = delete(tree, m.key)
+    let ignored = delete(tree, m.key)
     m
 }
 
 func delete_max(t mut tree) find_result {
-    var m = max(tree)
+    let m = max(tree)
     if !m.ok {
         return m
     }
-    var ignored = delete(tree, m.key)
+    let ignored = delete(tree, m.key)
     m
 }
 
 func glb(t tree, int key) find_result {
-    var i = tree.items.len() - 1
+    let i = tree.items.len() - 1
     while i >= 0 {
         if tree.items[i].key < key {
             return find_result { ok: true, key: tree.items[i].key, data: tree.items[i].data }
@@ -162,7 +162,7 @@ func glb(t tree, int key) find_result {
 }
 
 func glb_eq(t tree, int key) find_result {
-    var i = tree.items.len() - 1
+    let i = tree.items.len() - 1
     while i >= 0 {
         if tree.items[i].key <= key {
             return find_result { ok: true, key: tree.items[i].key, data: tree.items[i].data }
@@ -173,7 +173,7 @@ func glb_eq(t tree, int key) find_result {
 }
 
 func lub(t tree, int key) find_result {
-    var i = 0
+    let i = 0
     while i < tree.items.len() {
         if tree.items[i].key > key {
             return find_result { ok: true, key: tree.items[i].key, data: tree.items[i].data }
@@ -184,7 +184,7 @@ func lub(t tree, int key) find_result {
 }
 
 func lub_eq(t tree, int key) find_result {
-    var i = 0
+    let i = 0
     while i < tree.items.len() {
         if tree.items[i].key >= key {
             return find_result { ok: true, key: tree.items[i].key, data: tree.items[i].data }
@@ -209,7 +209,7 @@ func next(iter32 mut it) find_result {
     if done(it) {
         return find_result { ok: false, key: not_key32, data: "" }
     }
-    var v = it.items[it.index]
+    let v = it.items[it.index]
     it.index = it.index + 1
     find_result { ok: true, key: v.key, data: v.data }
 }
@@ -218,7 +218,7 @@ func equals(t left, t right) bool {
     if left.size != right.size {
         return false
     }
-    var i = 0
+    let i = 0
     while i < left.items.len() {
         if left.items[i].key != right.items[i].key {
             return false
@@ -232,22 +232,22 @@ func equals(t left, t right) bool {
 }
 
 func union(t left, t right) t {
-    var out = copy_tree(left)
-    var i = 0
+    let out = copy_tree(left)
+    let i = 0
     while i < right.items.len() {
-        var ignored = insert(out, right.items[i].key, right.items[i].data)
+        let ignored = insert(out, right.items[i].key, right.items[i].data)
         i = i + 1
     }
     out
 }
 
 func intersection(t left, t right) t {
-    var out = new_tree()
-    var i = 0
+    let out = new_tree()
+    let i = 0
     while i < left.items.len() {
-        var d = find(right, left.items[i].key)
+        let d = find(right, left.items[i].key)
         if d != "" {
-            var ignored = insert(out, left.items[i].key, left.items[i].data)
+            let ignored = insert(out, left.items[i].key, left.items[i].data)
         }
         i = i + 1
     }
@@ -255,12 +255,12 @@ func intersection(t left, t right) t {
 }
 
 func difference(t left, t right) t {
-    var out = new_tree()
-    var i = 0
+    let out = new_tree()
+    let i = 0
     while i < left.items.len() {
-        var d = find(right, left.items[i].key)
+        let d = find(right, left.items[i].key)
         if d == "" {
-            var ignored = insert(out, left.items[i].key, left.items[i].data)
+            let ignored = insert(out, left.items[i].key, left.items[i].data)
         }
         i = i + 1
     }
@@ -268,8 +268,8 @@ func difference(t left, t right) t {
 }
 
 func to_string(t tree) string {
-    var out = ""
-    var i = 0
+    let out = ""
+    let i = 0
     while i < tree.items.len() {
         if i > 0 {
             out = out + "; "
@@ -281,7 +281,7 @@ func to_string(t tree) string {
 }
 
 func index_of_key(t tree, int key) int {
-    var i = 0
+    let i = 0
     while i < tree.items.len() {
         if tree.items[i].key == key {
             return i
@@ -292,7 +292,7 @@ func index_of_key(t tree, int key) int {
 }
 
 func lower_bound(t tree, int key) int {
-    var i = 0
+    let i = 0
     while i < tree.items.len() {
         if tree.items[i].key > key {
             return i

@@ -19,12 +19,12 @@ func make_field(string name, int offset, int size, bool regular_memory, string t
 }
 
 func run_compare_tests() int {
-    var fields = vec[compare_field]()
+    let fields = vec[compare_field]()
     fields.push(make_field("a", 0, 4, true, "int32"))
     fields.push(make_field("b", 4, 4, true, "int32"))
     fields.push(make_field("s", 8, 16, false, "string"))
 
-    var t = compare_struct {
+    let t = compare_struct {
         fields: fields,
         alignment: 8,
         reg_size: 8,
@@ -36,27 +36,27 @@ func run_compare_tests() int {
         return 1
     }
 
-    var sres = eq_string("x", "y")
+    let sres = eq_string("x", "y")
     if sres.eqlen != "len(x) == len(y)" {
         return 1
     }
 
-    var ires = eq_interface("a", "b", true)
+    let ires = eq_interface("a", "b", true)
     if ires.eqdata != "efaceeq(itab(a), idata(a), idata(b))" {
         return 1
     }
 
-    var cmp = eq_struct(t, "p", "q")
+    let cmp = eq_struct(t, "p", "q")
     if cmp.conds.len() == 0 {
         return 1
     }
 
-    var m16 = eq_mem_func(16, 8, 8, true)
+    let m16 = eq_mem_func(16, 8, 8, true)
     if m16.name != "memequal128" || m16.need_size {
         return 1
     }
 
-    var md = eq_mem_func(24, 8, 8, true)
+    let md = eq_mem_func(24, 8, 8, true)
     if md.name != "memequal" || !md.need_size {
         return 1
     }

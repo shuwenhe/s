@@ -11,7 +11,7 @@ struct start_heap_state {
     bool active
 }
 
-var start_heap = start_heap_state {
+let start_heap = start_heap_state {
     requested_heap_goal: 0,
     derate_break: 600,
     derate_lo_pct: 70,
@@ -46,8 +46,8 @@ func adjust_starting_heap(int requested_heap_goal, int derate_break, int derate_
     }
     start_heap.log_heap_tweaks = log_heap_tweaks
 
-    var current_goal = 4 * 1000 * 1000
-    var want_gogc = (100 * requested_heap_goal) / current_goal
+    let current_goal = 4 * 1000 * 1000
+    let want_gogc = (100 * requested_heap_goal) / current_goal
     want_gogc = gogc_derate(want_gogc)
     if want_gogc <= 125 {
         start_heap.active = false

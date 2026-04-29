@@ -9,13 +9,13 @@ func apply_quirk(string name, source_unit mut unit) result[(), noder_error] {
         return result::ok(())
     }
     if name == "normalize-import-quotes" {
-        var lines = split_lines(unit.text)
-        var out = ""
-        var i = 0
+        let lines = split_lines(unit.text)
+        let out = ""
+        let i = 0
         while i < lines.len() {
-            var line = trim_spaces(lines[i])
+            let line = trim_spaces(lines[i])
             if starts_with(line, "use ") {
-                var words = split_words(line)
+                let words = split_words(line)
                 if words.len() >= 2 {
                     line = "use \"" + normalize_import_path(words[1]) + "\""
                     if words.len() >= 4 && words[2] == "as" {
@@ -37,9 +37,9 @@ func apply_quirk(string name, source_unit mut unit) result[(), noder_error] {
 }
 
 func apply_quirks(vec[string] quirks, source_unit mut unit) result[(), noder_error] {
-    var i = 0
+    let i = 0
     while i < quirks.len() {
-        var r = apply_quirk(quirks[i], unit)
+        let r = apply_quirk(quirks[i], unit)
         if r.is_err() {
             return r
         }

@@ -9,8 +9,8 @@ func analyze_block() int {
 }
 
 func analyze_trace(string scope, vec[string] type_env, string block_text) string {
-    var plan = make_plan_trace(type_env)
-    var text = "borrow " + scope
+    let plan = make_plan_trace(type_env)
+    let text = "borrow " + scope
     if block_text != "" {
         text = text + " | " + block_text
     }
@@ -32,8 +32,8 @@ func analyze_expr(string scope, string expr_text) string {
 }
 
 func join_text(vec[string] values, string sep) string {
-    var out = ""
-    var i = 0
+    let out = ""
+    let i = 0
     while i < values.len() {
         if i > 0 {
             out = out + sep
@@ -45,10 +45,10 @@ func join_text(vec[string] values, string sep) string {
 }
 
 func make_plan_trace(vec[string] type_env) vec[string] {
-    var plan = vec[string]()
-    var i = 0
+    let plan = vec[string]()
+    let i = 0
     while i < type_env.len() {
-        var ty = type_env[i]
+        let ty = type_env[i]
         if ty == "" {
             plan.push("borrow:<empty>")
         } else if starts_with(ty, "&") {
@@ -62,7 +62,7 @@ func make_plan_trace(vec[string] type_env) vec[string] {
 }
 
 func starts_with(string text, string prefix) bool {
-    var prefix_len = len(prefix)
+    let prefix_len = len(prefix)
     if prefix_len > len(text) {
         return false
     }

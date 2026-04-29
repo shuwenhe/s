@@ -15,11 +15,11 @@ struct live_event {
 }
 
 func build_live_intervals(vec[live_event] events) vec[live_interval] {
-    var out = vec[live_interval]()
-    var i = 0
+    let out = vec[live_interval]()
+    let i = 0
     while i < events.len() {
-        var ev = events[i]
-        var idx = find_interval_index(out, ev.value_id)
+        let ev = events[i]
+        let idx = find_interval_index(out, ev.value_id)
         if ev.on {
             if idx < 0 {
                 out.push(live_interval { value_id: ev.value_id, start: ev.point, end: ev.point })
@@ -54,11 +54,11 @@ func intervals_overlap(live_interval a, live_interval b) bool {
 }
 
 func merge_intervals(live_interval a, live_interval b) live_interval {
-    var start = a.start
+    let start = a.start
     if b.start < start {
         start = b.start
     }
-    var end = a.end
+    let end = a.end
     if b.end > end {
         end = b.end
     }
@@ -66,7 +66,7 @@ func merge_intervals(live_interval a, live_interval b) live_interval {
 }
 
 func find_interval_index(vec[live_interval] ivs, int value_id) int {
-    var i = 0
+    let i = 0
     while i < ivs.len() {
         if ivs[i].value_id == value_id {
             return i

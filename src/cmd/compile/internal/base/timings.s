@@ -18,7 +18,7 @@ struct timings {
     vec[timing_event] events
 }
 
-var timer = timings {
+let timer = timings {
     list: vec[timestamp](),
     events: vec[timing_event](),
 }
@@ -51,10 +51,10 @@ func timings_add_event(int size, string unit) () {
 }
 
 func timings_write(string prefix) string {
-    var out = ""
-    var i = 0
+    let out = ""
+    let i = 0
     while i < timer.list.len() {
-        var phase = timer.list[i]
+        let phase = timer.list[i]
         out = out + prefix + phase.label + "\t" + (if phase.start { "start" } else { "stop" }) + "\n"
         i = i + 1
     }
@@ -70,8 +70,8 @@ func join_with_colon(vec[string] labels) string {
     if labels.len() == 0 {
         return ""
     }
-    var out = labels[0]
-    var i = 1
+    let out = labels[0]
+    let i = 1
     while i < labels.len() {
         out = out + ":" + labels[i]
         i = i + 1

@@ -9,10 +9,10 @@ struct error_msg {
     bool warning
 }
 
-var pos = ""
-var error_msgs = vec[error_msg]()
-var num_errors = 0
-var num_syntax_errors = 0
+let pos = ""
+let error_msgs = vec[error_msg]()
+let num_errors = 0
+let num_syntax_errors = 0
 
 func errors() int {
     num_errors
@@ -23,7 +23,7 @@ func syntax_errors() int {
 }
 
 func add_error_msg(string at, int code, string message, bool warning) () {
-    var full = message
+    let full = message
     if at != "" {
         full = at + ": " + message
     }
@@ -36,8 +36,8 @@ func add_error_msg(string at, int code, string message, bool warning) () {
 }
 
 func flush_errors() string {
-    var out = ""
-    var i = 0
+    let out = ""
+    let i = 0
     while i < error_msgs.len() {
         out = out + error_msgs[i].msg + "\n"
         i = i + 1
@@ -73,13 +73,13 @@ func fatalf_at(string at, string message) string {
 
 func assert(bool ok) () {
     if !ok {
-        var ignored = fatalf("assertion failed")
+        let ignored = fatalf("assertion failed")
     }
 }
 
 func assertf(bool ok, string message) () {
     if !ok {
-        var ignored = fatalf(message)
+        let ignored = fatalf(message)
     }
 }
 

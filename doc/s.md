@@ -20,7 +20,7 @@ token_kind = ident | int | string | keyword | symbol | eof
 
 ### 1.2 关键字集合
 
-`package use as pub func var const static struct enum trait impl for if else while switch select case default return break continue sroutine true false nil unsafe extern mut where in`
+`package use as pub func const static struct enum trait impl for if else while switch select case default return break continue sroutine true false nil unsafe extern mut where in`
 
 说明：
 - 关键字被词法识别，不代表都已在语法层完整实现。
@@ -49,7 +49,7 @@ string_literal = '"' , { char | escape } , '"'
 
 多字符优先匹配：
 
-`-> : == != <= >= && || ++ ..= .. := << >> ::`
+`-> : == != <= >= && || ++ ..= .. << >> ::`
 
 单字符符号：
 
@@ -187,9 +187,7 @@ use_member = ident [ "as" ident ]
 ## 5. 语句语法（statement）
 
 ```ebnf
-stmt = var_stmt
-     | typed_var_stmt
-     | short_var_stmt
+stmt = typed_var_stmt
      | assign_stmt
      | increment_stmt
      | c_for_stmt
@@ -202,9 +200,7 @@ stmt = var_stmt
 ### 5.1 变量与赋值
 
 ```ebnf
-var_stmt       = "var" ident [ ":" type_text ] "=" expr [";"]
 typed_var_stmt = named_type "=" expr [";"]
-short_var_stmt = ident ":=" expr [";"]
 assign_stmt    = ident "=" expr [";"]
 increment_stmt = ident "++" [";"]
 ```
@@ -218,9 +214,7 @@ sroutine_stmt = "sroutine" expr [";"]
 
 c_for_stmt = "for" "(" for_clause_stmt ";" expr ";" for_clause_stmt ")" block_expr
 
-for_clause_stmt = var_stmt_no_semi
-                | typed_var_stmt_no_semi
-                | short_var_stmt_no_semi
+for_clause_stmt = typed_var_stmt_no_semi
                 | assign_stmt_no_semi
                 | increment_stmt_no_semi
 ```
@@ -413,12 +407,12 @@ struct Point {
 }
 
 func add(a: int, b: int) int {
-    var sum = a + b
+    int sum = a + b
     return sum
 }
 
 func main() {
-    x := add(1, 2)
+    int x = add(1, 2)
     if x > 0 {
         x = x + 1
     }

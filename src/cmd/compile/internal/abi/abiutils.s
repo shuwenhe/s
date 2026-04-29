@@ -134,14 +134,14 @@ func reg_string(reg_amounts amounts, int r) string {
 }
 
 func assignment_string(abi_param_assignment assignment, abi_config config, bool extra) string {
-    var regs = "R{"
-    var offname = "spilloffset"
+    let regs = "R{"
+    let offname = "spilloffset"
     if assignment.registers.len() == 0 {
         offname = "offset"
     }
-    var i = 0
+    let i = 0
     while i < assignment.registers.len() {
-        var r = assignment.registers[i]
+        let r = assignment.registers[i]
         regs = regs + " " + reg_string(config.reg_amounts, r)
         if extra {
             regs = regs + "(" + to_string(r) + ")"
@@ -155,8 +155,8 @@ func assignment_string(abi_param_assignment assignment, abi_config config, bool 
 }
 
 func info_string(abi_param_result_info info) string {
-    var out = ""
-    var i = 0
+    let out = ""
+    let i = 0
     while i < info.inparams.len() {
         out = out + "IN " + to_string(i) + ": " + assignment_string(info.inparams[i], info.config, false) + "\n"
         i = i + 1
@@ -170,7 +170,7 @@ func info_string(abi_param_result_info info) string {
 }
 
 func num_param_regs(abi_config config, string type_name) int {
-    var need = reg_amounts_for_type(type_name)
+    let need = reg_amounts_for_type(type_name)
     if need.int_regs > config.reg_amounts.int_regs || need.float_regs > config.reg_amounts.float_regs {
         return -1
     }
@@ -178,24 +178,24 @@ func num_param_regs(abi_config config, string type_name) int {
 }
 
 func abi_analyze_types(abi_config config, vec[string] params, vec[string] results) abi_param_result_info {
-    var state = assign_state {
+    let state = assign_state {
         r_total: config.reg_amounts,
         r_used: reg_amounts { int_regs: 0, float_regs: 0 },
         stack_offset: config.offset_for_locals,
         spill_offset: 0,
     }
 
-    var inparams = vec[abi_param_assignment]()
-    var i = 0
+    let inparams = vec[abi_param_assignment]()
+    let i = 0
     while i < params.len() {
         inparams.push(assign_param(state, params[i], "", false))
         i = i + 1
     }
     state.stack_offset = align_to(state.stack_offset, reg_size())
-    var in_regs_used = state.r_used.int_regs + state.r_used.float_regs
+    let in_regs_used = state.r_used.int_regs + state.r_used.float_regs
 
     state.r_used = reg_amounts { int_regs: 0, float_regs: 0 }
-    var outparams = vec[abi_param_assignment]()
+    let outparams = vec[abi_param_assignment]()
     i = 0
     while i < results.len() {
         outparams.push(assign_param(state, results[i], "", true))
@@ -214,8 +214,8 @@ func abi_analyze_types(abi_config config, vec[string] params, vec[string] result
 }
 
 func register_types(vec[abi_param_assignment] assignments) vec[string] {
-    var rts = vec[string]()
-    var i = 0
+    let rts = vec[string]()
+    let i = 0
     while i < assignments.len() {
         if assignments[i].registers.len() > 0 {
             rts = append_param_types(rts, assignments[i].type_name)
@@ -233,8 +233,8 @@ func register_types_and_offsets(abi_param_assignment assignment) register_layout
         }
     }
 
-    var types = append_param_types(vec[string](), assignment.type_name)
-    var pair = append_param_offsets(vec[int](), 0, assignment.type_name)
+    let types = append_param_types(vec[string](), assignment.type_name)
+    let pair = append_param_offsets(vec[int](), 0, assignment.type_name)
     register_layout {
         types: types,
         offsets: pair.offsets,
@@ -242,8 +242,8 @@ func register_types_and_offsets(abi_param_assignment assignment) register_layout
 }
 
 func compute_padding(abi_param_assignment assignment, int slots) vec[int] {
-    var padding = vec[int]()
-    var i = 0
+    let padding = vec[int]()
+    let i = 0
     while i < slots {
         padding.push(0)
         i = i + 1
@@ -252,11 +252,11 @@ func compute_padding(abi_param_assignment assignment, int slots) vec[int] {
         return padding
     }
 
-    var layout = register_types_and_offsets(assignment)
+    let layout = register_types_and_offsets(assignment)
     i = 0
     while i + 1 < layout.types.len() && i < padding.len() {
-        var at = layout.offsets[i] + type_size(layout.types[i])
-        var next = layout.offsets[i + 1]
+        let at = layout.offsets[i] + type_size(layout.types[i])
+        let next = layout.offsets[i + 1]
         if next > at {
             padding.set(i, next - at)
         }
@@ -271,13 +271,13 @@ struct offset_result {
 }
 
 func append_param_offsets(vec[int] offsets, int at, string type_name) offset_result {
-    var size = type_size(type_name)
+    let size = type_size(type_name)
     if size == 0 {
         return offset_result { offsets: offsets, next: at }
     }
 
     if is_complex_type(type_name) || size > reg_size() {
-        var half = size / 2
+        let half = size / 2
         offsets.push(at)
         offsets.push(at + half)
         return offset_result { offsets: offsets, next: at + size }
@@ -326,8 +326,8 @@ func append_param_types(vec[string] rts, string type_name) vec[string] {
 }
 
 func assign_param(assign_state mut state, string type_name, string name, bool is_result) abi_param_assignment {
-    var alloc = try_alloc_regs(state, type_name)
-    var offset = -1
+    let alloc = try_alloc_regs(state, type_name)
+    let offset = -1
     if !alloc.ok {
         offset = next_slot(state.stack_offset, type_name)
         state.stack_offset = align_to(offset + type_size(type_name), alignment_for_type(type_name))
@@ -349,7 +349,7 @@ func try_alloc_regs(assign_state mut state, string type_name) reg_alloc_result {
         return reg_alloc_result { ok: false, regs: vec[int]() }
     }
 
-    var need = reg_amounts_for_type(type_name)
+    let need = reg_amounts_for_type(type_name)
     if need.int_regs > state.r_total.int_regs - state.r_used.int_regs {
         return reg_alloc_result { ok: false, regs: vec[int]() }
     }
@@ -357,8 +357,8 @@ func try_alloc_regs(assign_state mut state, string type_name) reg_alloc_result {
         return reg_alloc_result { ok: false, regs: vec[int]() }
     }
 
-    var regs = vec[int]()
-    var i = 0
+    let regs = vec[int]()
+    let i = 0
     while i < need.int_regs {
         regs.push(state.r_used.int_regs + i)
         i = i + 1
@@ -398,7 +398,7 @@ func reg_amounts_for_type(string type_name) reg_amounts {
         return reg_amounts { int_regs: 2, float_regs: 0 }
     }
 
-    var words = (type_size(type_name) + reg_size() - 1) / reg_size()
+    let words = (type_size(type_name) + reg_size() - 1) / reg_size()
     if words < 1 {
         words = 1
     }
@@ -453,7 +453,7 @@ func type_size(string type_name) int {
 }
 
 func alignment_for_type(string type_name) int {
-    var size = type_size(type_name)
+    let size = type_size(type_name)
     if size <= 1 {
         return 1
     }
@@ -470,7 +470,7 @@ func align_to(int value, int to) int {
     if to <= 0 {
         return value
     }
-    var m = value % to
+    let m = value % to
     if m == 0 {
         return value
     }
@@ -509,7 +509,7 @@ func starts_with(string text, string prefix) bool {
     if text.len() < prefix.len() {
         return false
     }
-    var i = 0
+    let i = 0
     while i < prefix.len() {
         if text[i] != prefix[i] {
             return false

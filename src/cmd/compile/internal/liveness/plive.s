@@ -22,12 +22,12 @@ struct liveness_emit_blob {
 }
 
 func plive_emit(string fn_name, vec[live_stack_slot] slots, vec[vec[int]] stack_maps) liveness_emit_blob {
-    var args_bits = max_bitmap_words(slots, true)
-    var locals_bits = max_bitmap_words(slots, false)
+    let args_bits = max_bitmap_words(slots, true)
+    let locals_bits = max_bitmap_words(slots, false)
 
-    var args_maps = vec[string]()
-    var locals_maps = vec[string]()
-    var i = 0
+    let args_maps = vec[string]()
+    let locals_maps = vec[string]()
+    let i = 0
     while i < stack_maps.len() {
         args_maps.push(build_bitmap(args_bits, slots, stack_maps[i], true))
         locals_maps.push(build_bitmap(locals_bits, slots, stack_maps[i], false))
@@ -47,13 +47,13 @@ func plive_emit(string fn_name, vec[live_stack_slot] slots, vec[vec[int]] stack_
 }
 
 func max_bitmap_words(vec[live_stack_slot] slots, bool want_args) int {
-    var out = 0
-    var i = 0
+    let out = 0
+    let i = 0
     while i < slots.len() {
-        var s = slots[i]
+        let s = slots[i]
         if (want_args && s.is_arg) || (!want_args && !s.is_arg) {
-            var start = slot_word_index(s)
-            var end = start + s.ptr_words
+            let start = slot_word_index(s)
+            let end = start + s.ptr_words
             if end > out {
                 out = end
             }
@@ -74,21 +74,21 @@ func build_bitmap(int width, vec[live_stack_slot] slots, vec[int] live, bool wan
     if width <= 0 {
         return ""
     }
-    var bits = vec[int]()
-    var i = 0
+    let bits = vec[int]()
+    let i = 0
     while i < width {
         bits.push(0)
         i = i + 1
     }
 
-    var k = 0
+    let k = 0
     while k < slots.len() && k < live.len() {
-        var s = slots[k]
+        let s = slots[k]
         if live[k] != 0 && ((want_args && s.is_arg) || (!want_args && !s.is_arg)) {
-            var start = slot_word_index(s)
-            var w = 0
+            let start = slot_word_index(s)
+            let w = 0
             while w < s.ptr_words {
-                var idx = start + w
+                let idx = start + w
                 if idx >= 0 && idx < bits.len() {
                     bits[idx] = 1
                 }
@@ -102,10 +102,10 @@ func build_bitmap(int width, vec[live_stack_slot] slots, vec[int] live, bool wan
 }
 
 func emit_stack_objects(vec[live_stack_slot] slots) vec[string] {
-    var out = vec[string]()
-    var i = 0
+    let out = vec[string]()
+    let i = 0
     while i < slots.len() {
-        var s = slots[i]
+        let s = slots[i]
         if !s.is_arg && s.addr_taken && s.ptr_words > 0 {
             out.push(s.name + "@" + to_string(s.frame_offset) + ":" + to_string(s.ptr_words))
         }
@@ -115,8 +115,8 @@ func emit_stack_objects(vec[live_stack_slot] slots) vec[string] {
 }
 
 func encode_bitmap(vec[int] bits) string {
-    var out = ""
-    var i = 0
+    let out = ""
+    let i = 0
     while i < bits.len() {
         if bits[i] != 0 {
             out = out + "1"

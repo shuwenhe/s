@@ -5,8 +5,8 @@ use s.source_file
 use std.vec.vec
 
 func collect_exports(source_file ast) vec[export_record] {
-    var out = vec[export_record]()
-    var i = 0
+    let out = vec[export_record]()
+    let i = 0
     while i < ast.items.len() {
         switch ast.items[i] {
             item.function(fn) : {
@@ -38,8 +38,8 @@ func collect_exports(source_file ast) vec[export_record] {
 }
 
 func emit_export_payload(vec[export_record] exports) string {
-    var out = "export-data version=1\n"
-    var i = 0
+    let out = "export-data version=1\n"
+    let i = 0
     while i < exports.len() {
         out = out + exports[i].kind + " " + exports[i].name + "\n"
         i = i + 1

@@ -31,8 +31,8 @@ func value_is_const_zero(ssa_value v) bool {
 }
 
 func value_key(ssa_value v) string {
-    var key = v.op + "|" + v.ty + "|" + v.literal
-    var i = 0
+    let key = v.op + "|" + v.ty + "|" + v.literal
+    let i = 0
     while i < v.args.len() {
         key = key + "#" + to_string(v.args[i])
         i = i + 1

@@ -22,9 +22,9 @@ func zerorange(vec[prog] insns, int off, int cnt, bool ignored) vec[prog] {
         return insns
     }
 
-    var out = insns
-    var at = off + 8
-    var left = cnt
+    let out = insns
+    let at = off + 8
+    let left = cnt
 
     while left >= 16 && at < 512 {
         out.push(prog {
@@ -54,7 +54,7 @@ func zerorange(vec[prog] insns, int off, int cnt, bool ignored) vec[prog] {
 }
 
 func ginsnop(vec[prog] insns) vec[prog] {
-    var out = insns
+    let out = insns
     out.push(prog {
         op: "HINT",
         from: "$0",
