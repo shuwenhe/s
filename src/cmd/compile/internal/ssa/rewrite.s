@@ -14,12 +14,12 @@ func run_arch_rewrite(mut ssa_func f, string arch) int {
 }
 
 func run_rewrite(mut ssa_func f, string arch) int {
-    var total = 0
-    var rounds = 0
+    let total = 0
+    let rounds = 0
     while rounds < 6 {
-        var g = run_rewrite_generic(f)
-        var a = run_arch_rewrite(f, arch)
-        var changed = g + a
+        let g = run_rewrite_generic(f)
+        let a = run_arch_rewrite(f, arch)
+        let changed = g + a
         total = total + changed
         if changed == 0 {
             break

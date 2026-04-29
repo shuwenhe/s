@@ -16,14 +16,14 @@ struct merged_locals {
 }
 
 func merge_locals(vec[local_slot] a, vec[local_slot] b) merged_locals {
-    var slots = vec[local_slot]()
+    let slots = vec[local_slot]()
     append_unique_slots(slots, a)
     append_unique_slots(slots, b)
 
-    var cursor = 0
-    var i = 0
+    let cursor = 0
+    let i = 0
     while i < slots.len() {
-        var align = slots[i].align
+        let align = slots[i].align
         if align <= 0 {
             align = 8
         }
@@ -40,9 +40,9 @@ func merge_locals(vec[local_slot] a, vec[local_slot] b) merged_locals {
 }
 
 func append_unique_slots(vec[local_slot] dst, vec[local_slot] src) () {
-    var i = 0
+    let i = 0
     while i < src.len() {
-        var idx = find_slot_index(dst, src[i].name)
+        let idx = find_slot_index(dst, src[i].name)
         if idx < 0 {
             dst.push(src[i])
         } else {
@@ -61,7 +61,7 @@ func append_unique_slots(vec[local_slot] dst, vec[local_slot] src) () {
 }
 
 func find_slot_index(vec[local_slot] slots, string name) int {
-    var i = 0
+    let i = 0
     while i < slots.len() {
         if slots[i].name == name {
             return i

@@ -3,10 +3,10 @@ package compile.internal.noder
 use std.vec.vec
 
 func build_pos_map(string source) vec[pos_entry] {
-    var out = vec[pos_entry]()
-    var lines = split_lines(source)
-    var offset = 0
-    var i = 0
+    let out = vec[pos_entry]()
+    let lines = split_lines(source)
+    let offset = 0
+    let i = 0
     while i < lines.len() {
         out.push(pos_entry {
             offset: offset,
@@ -24,8 +24,8 @@ func offset_to_pos(vec[pos_entry] table, int offset) pos_entry {
         return pos_entry { offset: offset, line: 1, column: 1 }
     }
 
-    var i = 0
-    var last = table[0]
+    let i = 0
+    let last = table[0]
     while i < table.len() {
         if table[i].offset > offset {
             break

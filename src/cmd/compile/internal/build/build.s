@@ -9,14 +9,14 @@ use std.io.println
 use std.vec.vec
 
 func main(vec[string] args)  int {
-    var options = parse_options(args)
+    let options = parse_options(args)
     if options[0] == "help" {
         return 0
     }
 
     emit_target_log(options[0])
 
-    var exec_result = exec_run(options)
+    let exec_result = exec_run(options)
     if options[0] == "run" {
         return exec_result
     }

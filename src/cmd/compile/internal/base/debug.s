@@ -25,7 +25,7 @@ struct debug_flags {
     bool concurrent_ok
 }
 
-var debug = default_debug_flags()
+let debug = default_debug_flags()
 
 func default_debug_flags() debug_flags {
     debug_flags {

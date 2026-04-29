@@ -39,7 +39,7 @@ struct cmd_flags {
     cmd_cfg cfg
 }
 
-var flag = default_cmd_flags()
+let flag = default_cmd_flags()
 
 func default_cmd_flags() cmd_flags {
     cmd_flags {

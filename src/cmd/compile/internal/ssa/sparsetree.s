@@ -15,8 +15,8 @@ struct sparse_tree {
 }
 
 func new_sparse_tree(int n) sparse_tree {
-    var nodes = vec[sparse_tree_node]()
-    var i = 0
+    let nodes = vec[sparse_tree_node]()
+    let i = 0
     while i < n {
         nodes.push(sparse_tree_node {
             parent: -1,
@@ -44,12 +44,12 @@ func number_subtree(mut sparse_tree t, int root, int n) int_pair {
     if root < 0 || root >= t.nodes.len() {
         return make_int_pair(n, 0)
     }
-    var next = n + 1
+    let next = n + 1
     t.nodes[root].entry = next
     next = next + 2
-    var child = t.nodes[root].child
+    let child = t.nodes[root].child
     while child >= 0 {
-        var r = number_subtree(t, child, next)
+        let r = number_subtree(t, child, next)
         next = r.left
         child = t.nodes[child].sibling
     }

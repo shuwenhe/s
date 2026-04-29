@@ -1,15 +1,15 @@
 package compile.internal.noder
 
 func run_lex_tests() int {
-    var unit = source_unit {
+    let unit = source_unit {
         path: "demo.s",
         text: "package demo\nuse \"std.io\"\nfunc main() int { 0 }\n",
     }
-    var tokens_result = lex_source(unit)
+    let tokens_result = lex_source(unit)
     if tokens_result.is_err() {
         return 1
     }
-    var tokens = tokens_result.unwrap()
+    let tokens = tokens_result.unwrap()
     if tokens.len() == 0 {
         return 1
     }

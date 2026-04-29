@@ -170,7 +170,7 @@ func ssa_gen_value(ssa_value value) string {
 }
 
 func ssa_gen_block(string kind, int next_succ, int likely) vec[string] {
-    var out = vec[string]()
+    let out = vec[string]()
     if kind == "BlockPlain" || kind == "BlockDefer" {
         if next_succ != 0 {
             out.push("B")
@@ -213,7 +213,7 @@ func starts_with(string text, string prefix) bool {
     if text.len() < prefix.len() {
         return false
     }
-    var i = 0
+    let i = 0
     while i < prefix.len() {
         if text[i] != prefix[i] {
             return false

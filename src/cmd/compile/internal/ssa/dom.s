@@ -9,7 +9,7 @@ struct dom_tree {
 }
 
 func dom_index(dom_tree t, int block_id) int {
-    var i = 0
+    let i = 0
     while i < t.block_ids.len() {
         if t.block_ids[i] == block_id {
             return i
@@ -20,11 +20,11 @@ func dom_index(dom_tree t, int block_id) int {
 }
 
 func run_dom(ssa_func f) dom_tree {
-    var ids = vec[int]()
-    var idom = vec[int]()
-    var depth = vec[int]()
+    let ids = vec[int]()
+    let idom = vec[int]()
+    let depth = vec[int]()
 
-    var bi = 0
+    let bi = 0
     while bi < f.blocks.len() {
         ids.push(f.blocks[bi].id)
         if f.blocks[bi].id == f.entry {
@@ -45,11 +45,11 @@ func run_dom(ssa_func f) dom_tree {
 
     bi = 0
     while bi < ids.len() {
-        var d = 0
-        var cur = ids[bi]
-        var guard = 0
+        let d = 0
+        let cur = ids[bi]
+        let guard = 0
         while cur != -1 && cur != f.entry && guard < ids.len() + 1 {
-            var ci = dom_index(dom_tree { block_ids: ids, idom: idom, depth: depth }, cur)
+            let ci = dom_index(dom_tree { block_ids: ids, idom: idom, depth: depth }, cur)
             if ci < 0 {
                 break
             }
@@ -72,10 +72,10 @@ func dominates(dom_tree t, int a, int b) bool {
     if a == b {
         return true
     }
-    var cur = b
-    var guard = 0
+    let cur = b
+    let guard = 0
     while cur != -1 && guard < t.block_ids.len() + 1 {
-        var ci = dom_index(t, cur)
+        let ci = dom_index(t, cur)
         if ci < 0 {
             return false
         }

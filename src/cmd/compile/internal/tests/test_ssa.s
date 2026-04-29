@@ -7,9 +7,9 @@ use compile.internal.ssa_core.dump_debug_map
 use std.prelude.slice
 
 func run_ssa_suite() int {
-    var mir_text = "mir main blocks=2 entry=0 exit=1 | bb0(entry) stmts=1 term=jump | bb1(exit) stmts=0 term=return"
+    let mir_text = "mir main blocks=2 entry=0 exit=1 | bb0(entry) stmts=1 term=jump | bb1(exit) stmts=0 term=return"
 
-    var arm64_dump = dump_pipeline(build_pipeline(mir_text, "arm64"))
+    let arm64_dump = dump_pipeline(build_pipeline(mir_text, "arm64"))
     if !contains(arm64_dump, "blocks=2") {
         return 1
     }
@@ -341,7 +341,7 @@ func run_ssa_suite() int {
         return 1
     }
 
-    var margin_override_dump = dump_pipeline(build_pipeline_with_margin(mir_text, "arm64", 99))
+    let margin_override_dump = dump_pipeline(build_pipeline_with_margin(mir_text, "arm64", 99))
     if !contains(margin_override_dump, "delta_hot=") {
         return 1
     }
@@ -349,33 +349,33 @@ func run_ssa_suite() int {
         return 1
     }
 
-    var hot_balanced = build_pass_delta_hot_summary("constfold=1,gvn=1", "constfold=1,gvn=2", -1)
+    let hot_balanced = build_pass_delta_hot_summary("constfold=1,gvn=1", "constfold=1,gvn=2", -1)
     if !contains(hot_balanced, ",dominant=balanced") {
         return 1
     }
-    var hot_struct = build_pass_delta_hot_summary("constfold=6,gvn=4", "constfold=1,gvn=0", -1)
+    let hot_struct = build_pass_delta_hot_summary("constfold=6,gvn=4", "constfold=1,gvn=0", -1)
     if !contains(hot_struct, ",dominant=struct") {
         return 1
     }
-    var hot_value = build_pass_delta_hot_summary("constfold=1,gvn=0", "constfold=5,gvn=3", -1)
+    let hot_value = build_pass_delta_hot_summary("constfold=1,gvn=0", "constfold=5,gvn=3", -1)
     if !contains(hot_value, ",dominant=value") {
         return 1
     }
-    var hot_forced_balanced = build_pass_delta_hot_summary("constfold=6,gvn=4", "constfold=1,gvn=0", 99)
+    let hot_forced_balanced = build_pass_delta_hot_summary("constfold=6,gvn=4", "constfold=1,gvn=0", 99)
     if !contains(hot_forced_balanced, ",margin=99,dominant=balanced") {
         return 1
     }
 
-    var tie_reason = instruction_verify_pick_reason("shape", "cfg=1,rerun=1", "cfg")
+    let tie_reason = instruction_verify_pick_reason("shape", "cfg=1,rerun=1", "cfg")
     if tie_reason != "tie-break" {
         return 1
     }
-    var fallback_reason = instruction_verify_pick_reason("shape", "cfg=2,rerun=1", "rerun")
+    let fallback_reason = instruction_verify_pick_reason("shape", "cfg=2,rerun=1", "rerun")
     if fallback_reason != "fallback" {
         return 1
     }
 
-    var invalid_dump = dump_pipeline(build_pipeline("broken", "amd64"))
+    let invalid_dump = dump_pipeline(build_pipeline("broken", "amd64"))
     if !contains(invalid_dump, "issa_verify=") {
         return 1
     }
@@ -434,12 +434,12 @@ func run_ssa_suite() int {
         return 1
     }
 
-    var amd64_program = build_pipeline(mir_text, "amd64")
-    var amd64_dump = dump_pipeline(amd64_program)
+    let amd64_program = build_pipeline(mir_text, "amd64")
+    let amd64_dump = dump_pipeline(amd64_program)
     if !contains(amd64_dump, "v0->r10") {
         return 1
     }
-    var debug_map = dump_debug_map(amd64_program)
+    let debug_map = dump_debug_map(amd64_program)
     if !contains(debug_map, "ssa.debug") {
         return 1
     }
@@ -449,12 +449,12 @@ func run_ssa_suite() int {
     if !contains(debug_map, "line 100") {
         return 1
     }
-    if !contains(debug_map, "var v0") {
+    if !contains(debug_map, "let v0") {
         return 1
     }
 
-    var heavy_mir = "mir heavy blocks=3 entry=0 exit=2 call=hot | bb0(entry) stmts=12 const=3 term=branch | bb1(mid) stmts=8 imm=2 term=jump | bb2(exit) stmts=0 literal=1 term=return"
-    var heavy_dump = dump_pipeline(build_pipeline(heavy_mir, "amd64"))
+    let heavy_mir = "mir heavy blocks=3 entry=0 exit=2 call=hot | bb0(entry) stmts=12 const=3 term=branch | bb1(mid) stmts=8 imm=2 term=jump | bb2(exit) stmts=0 literal=1 term=return"
+    let heavy_dump = dump_pipeline(build_pipeline(heavy_mir, "amd64"))
     if !contains(heavy_dump, "spills=") {
         return 1
     }
@@ -501,8 +501,8 @@ func run_ssa_suite() int {
         return 1
     }
 
-    var coalesce_mir = "mir coalesce blocks=3 entry=0 exit=2 | bb0(entry) stmts=1 term=jump | bb1(dead) stmts=0 term=jump | bb2(exit) stmts=0 term=return"
-    var coalesce_dump = dump_pipeline(build_pipeline(coalesce_mir, "amd64"))
+    let coalesce_mir = "mir coalesce blocks=3 entry=0 exit=2 | bb0(entry) stmts=1 term=jump | bb1(dead) stmts=0 term=jump | bb2(exit) stmts=0 term=return"
+    let coalesce_dump = dump_pipeline(build_pipeline(coalesce_mir, "amd64"))
     if !contains(coalesce_dump, "mir_opt=mir coalesce blocks=2") {
         return 1
     }
@@ -513,8 +513,8 @@ func run_ssa_suite() int {
         return 1
     }
 
-    var rerun_mir = "mir rerun blocks=3 entry=0 exit=2 | bb0(entry) stmts=0 term=branch | bb1(mid) stmts=0 term=jump | bb2(exit) stmts=0 term=return"
-    var rerun_dump = dump_pipeline(build_pipeline(rerun_mir, "amd64"))
+    let rerun_mir = "mir rerun blocks=3 entry=0 exit=2 | bb0(entry) stmts=0 term=branch | bb1(mid) stmts=0 term=jump | bb2(exit) stmts=0 term=return"
+    let rerun_dump = dump_pipeline(build_pipeline(rerun_mir, "amd64"))
     if !contains(rerun_dump, "invalid_reruns=") {
         return 1
     }
@@ -525,8 +525,8 @@ func run_ssa_suite() int {
         return 1
     }
 
-    var value_mir = "mir value blocks=5 entry=0 exit=4 | bb0(entry) stmts=4 phi=3 copy=4 term=branch | bb1(left) stmts=2 term=jump | bb2(right) stmts=2 term=jump | bb3(join) stmts=1 copy=1 term=branch | bb4(exit) stmts=1 term=return"
-    var value_dump = dump_pipeline(build_pipeline(value_mir, "amd64"))
+    let value_mir = "mir value blocks=5 entry=0 exit=4 | bb0(entry) stmts=4 phi=3 copy=4 term=branch | bb1(left) stmts=2 term=jump | bb2(right) stmts=2 term=jump | bb3(join) stmts=1 copy=1 term=branch | bb4(exit) stmts=1 term=return"
+    let value_dump = dump_pipeline(build_pipeline(value_mir, "amd64"))
     if !contains(value_dump, "mir_opt=mir value") {
         return 1
     }
@@ -537,8 +537,8 @@ func run_ssa_suite() int {
         return 1
     }
 
-    var memory_mir = "mir memory blocks=4 entry=0 exit=3 | bb0(entry) stmts=5 load=4 store=2 term=branch | bb1(loop) stmts=1 term=branch | bb2(latch) stmts=0 term=jump | bb3(exit) stmts=1 term=return"
-    var memory_dump = dump_pipeline(build_pipeline(memory_mir, "amd64"))
+    let memory_mir = "mir memory blocks=4 entry=0 exit=3 | bb0(entry) stmts=5 load=4 store=2 term=branch | bb1(loop) stmts=1 term=branch | bb2(latch) stmts=0 term=jump | bb3(exit) stmts=1 term=return"
+    let memory_dump = dump_pipeline(build_pipeline(memory_mir, "amd64"))
     if !contains(memory_dump, "mir_opt=mir memory") {
         return 1
     }
@@ -549,8 +549,8 @@ func run_ssa_suite() int {
         return 1
     }
 
-    var memphi_mir = "mir memphi blocks=4 entry=0 exit=3 | bb0(entry) stmts=4 memphi=3 load=2 store=1 term=branch | bb1(left) stmts=1 term=jump | bb2(join) stmts=1 phi=1 term=jump | bb3(exit) stmts=1 term=return"
-    var memphi_dump = dump_pipeline(build_pipeline(memphi_mir, "amd64"))
+    let memphi_mir = "mir memphi blocks=4 entry=0 exit=3 | bb0(entry) stmts=4 memphi=3 load=2 store=1 term=branch | bb1(left) stmts=1 term=jump | bb2(join) stmts=1 phi=1 term=jump | bb3(exit) stmts=1 term=return"
+    let memphi_dump = dump_pipeline(build_pipeline(memphi_mir, "amd64"))
     if !contains(memphi_dump, "mir_opt=mir memphi") {
         return 1
     }
@@ -617,7 +617,7 @@ func contains(string text, string needle) bool {
         return false
     }
 
-    var i = 0
+    let i = 0
     while i <= text.len() - needle.len() {
         if slice(text, i, i + needle.len()) == needle {
             return true

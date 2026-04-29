@@ -18,7 +18,7 @@ trait reader_like[t] {
 }
 
 func load[t: reader](t reader, string path) result[string, io_error] {
-    var value = 1
+    let value = 1
     value
 }
 

@@ -1,15 +1,15 @@
 package compile.internal.ssa
 
 func run_cse(mut ssa_func f) int {
-    var changed = 0
-    var i = 0
+    let changed = 0
+    let i = 0
     while i < f.values.len() {
         if f.values[i].removed || !(op_is_pure(f.values[i].op)) {
             i = i + 1
             continue
         }
-        var key_i = value_key(f.values[i])
-        var j = 0
+        let key_i = value_key(f.values[i])
+        let j = 0
         while j < i {
             if !f.values[j].removed && op_is_pure(f.values[j].op) {
                 if value_key(f.values[j]) == key_i {
