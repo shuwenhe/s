@@ -84,8 +84,8 @@ func get_bfc(int v) bfc_result {
         return bfc_result { ok: false, lsb: -1, width: 0 }
     }
 
-    var lsb = 0
-    var t = v
+    let lsb = 0
+    let t = v
     while lsb < 32 {
         if (t % 2) == 1 {
             break
@@ -94,8 +94,8 @@ func get_bfc(int v) bfc_result {
         lsb = lsb + 1
     }
 
-    var width = 0
-    var u = t
+    let width = 0
+    let u = t
     while width < 32 && (u % 2) == 1 {
         u = u / 2
         width = width + 1
@@ -150,7 +150,7 @@ func ssa_gen_value(ssa_value value) string {
 }
 
 func ssa_gen_block(string kind, int next_succ, int likely) vec[string] {
-    var out = vec[string]()
+    let out = vec[string]()
 
     if kind == "BlockPlain" || kind == "BlockDefer" {
         if next_succ != 0 {
@@ -201,7 +201,7 @@ func starts_with(string text, string prefix) bool {
     if text.len() < prefix.len() {
         return false
     }
-    var i = 0
+    let i = 0
     while i < prefix.len() {
         if text[i] != prefix[i] {
             return false

@@ -11,8 +11,8 @@ func read_unit(string path) result[source_unit, noder_error] {
 }
 
 func read_units(vec[string] paths) result[vec[source_unit], noder_error] {
-    var out = vec[source_unit]()
-    var i = 0
+    let out = vec[source_unit]()
+    let i = 0
     while i < paths.len() {
         switch read_unit(paths[i]) {
             result::ok(unit) : out.push(unit),

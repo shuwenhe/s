@@ -4,7 +4,7 @@ func is_const_with(ssa_func f, int id, string lit) bool {
     if id < 0 || id >= f.values.len() {
         return false
     }
-    var v = f.values[id]
+    let v = f.values[id]
     v.op == op_const() && v.literal == lit
 }
 
@@ -12,7 +12,7 @@ func rewrite_value_generic(mut ssa_func f, int id) bool {
     if id < 0 || id >= f.values.len() {
         return false
     }
-    var v = f.values[id]
+    let v = f.values[id]
     if v.removed {
         return false
     }
@@ -75,8 +75,8 @@ func rewrite_value_generic(mut ssa_func f, int id) bool {
 }
 
 func run_rewrite_generic(mut ssa_func f) int {
-    var changed = 0
-    var i = 0
+    let changed = 0
+    let i = 0
     while i < f.values.len() {
         if rewrite_value_generic(f, i) {
             changed = changed + 1

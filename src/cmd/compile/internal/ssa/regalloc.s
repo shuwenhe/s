@@ -27,12 +27,12 @@ func interval_less(live_interval a, live_interval b) bool {
 }
 
 func sort_intervals(mut vec[live_interval] ivs) {
-    var i = 0
+    let i = 0
     while i < ivs.len() {
-        var j = i + 1
+        let j = i + 1
         while j < ivs.len() {
             if interval_less(ivs[j], ivs[i]) {
-                var t = ivs[i]
+                let t = ivs[i]
                 ivs[i] = ivs[j]
                 ivs[j] = t
             }
@@ -43,18 +43,18 @@ func sort_intervals(mut vec[live_interval] ivs) {
 }
 
 func build_positions(ssa_func f) vec[int] {
-    var pos = vec[int]()
-    var i = 0
+    let pos = vec[int]()
+    let i = 0
     while i < f.values.len() {
         pos.push(-1)
         i = i + 1
     }
-    var p = 0
-    var bi = 0
+    let p = 0
+    let bi = 0
     while bi < f.blocks.len() {
-        var j = 0
+        let j = 0
         while j < f.blocks[bi].values.len() {
-            var id = f.blocks[bi].values[j]
+            let id = f.blocks[bi].values[j]
             if id >= 0 && id < pos.len() && pos[id] < 0 {
                 pos[id] = p
                 p = p + 1
@@ -75,12 +75,12 @@ func build_positions(ssa_func f) vec[int] {
 }
 
 func compute_live_intervals(ssa_func f) vec[live_interval] {
-    var pos = build_positions(f)
-    var ivs = vec[live_interval]()
-    var i = 0
+    let pos = build_positions(f)
+    let ivs = vec[live_interval]()
+    let i = 0
     while i < f.values.len() {
         if !f.values[i].removed {
-            var need = f.values[i].uses > 0 || op_has_side_effect(f.values[i].op)
+            let need = f.values[i].uses > 0 || op_has_side_effect(f.values[i].op)
             if need {
                 ivs.push(live_interval {
                     value_id: i,
@@ -98,11 +98,11 @@ func compute_live_intervals(ssa_func f) vec[live_interval] {
             i = i + 1
             continue
         }
-        var use_pos = pos[i]
-        var j = 0
+        let use_pos = pos[i]
+        let j = 0
         while j < f.values[i].args.len() {
-            var arg = f.values[i].args[j]
-            var k = 0
+            let arg = f.values[i].args[j]
+            let k = 0
             while k < ivs.len() {
                 if ivs[k].value_id == arg && use_pos > ivs[k].end {
                     ivs[k].end = use_pos
@@ -115,16 +115,16 @@ func compute_live_intervals(ssa_func f) vec[live_interval] {
         i = i + 1
     }
 
-    var bi = 0
+    let bi = 0
     while bi < f.blocks.len() {
-        var ctrl = f.blocks[bi].control
+        let ctrl = f.blocks[bi].control
         if ctrl >= 0 {
-            var use_pos = 0
+            let use_pos = 0
             if f.blocks[bi].values.len() > 0 {
-                var tail = f.blocks[bi].values[f.blocks[bi].values.len() - 1]
+                let tail = f.blocks[bi].values[f.blocks[bi].values.len() - 1]
                 use_pos = pos[tail]
             }
-            var k = 0
+            let k = 0
             while k < ivs.len() {
                 if ivs[k].value_id == ctrl && use_pos > ivs[k].end {
                     ivs[k].end = use_pos
@@ -141,8 +141,8 @@ func compute_live_intervals(ssa_func f) vec[live_interval] {
 }
 
 func active_expire(mut vec[live_interval] active, int point) {
-    var keep = vec[live_interval]()
-    var i = 0
+    let keep = vec[live_interval]()
+    let i = 0
     while i < active.len() {
         if active[i].end >= point {
             keep.push(active[i])
@@ -153,7 +153,7 @@ func active_expire(mut vec[live_interval] active, int point) {
 }
 
 func assigned_reg(vec[reg_assign] assigns, int value_id) string {
-    var i = 0
+    let i = 0
     while i < assigns.len() {
         if assigns[i].value_id == value_id {
             return assigns[i].reg
@@ -164,14 +164,14 @@ func assigned_reg(vec[reg_assign] assigns, int value_id) string {
 }
 
 func run_regalloc(ssa_func f, int reg_count) regalloc_result {
-    var ivs = compute_live_intervals(f)
-    var assigns = vec[reg_assign]()
-    var active = vec[live_interval]()
-    var spills = 0
+    let ivs = compute_live_intervals(f)
+    let assigns = vec[reg_assign]()
+    let active = vec[live_interval]()
+    let spills = 0
 
-    var i = 0
+    let i = 0
     while i < ivs.len() {
-        var cur = ivs[i]
+        let cur = ivs[i]
         active_expire(active, cur.start)
 
         if reg_count <= 0 {
@@ -182,21 +182,21 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
         }
 
         if active.len() < reg_count {
-            var used = vec[string]()
-            var ai = 0
+            let used = vec[string]()
+            let ai = 0
             while ai < active.len() {
-                var r = assigned_reg(assigns, active[ai].value_id)
+                let r = assigned_reg(assigns, active[ai].value_id)
                 if r != "" {
                     used.push(r)
                 }
                 ai = ai + 1
             }
-            var picked = ""
-            var rix = 0
+            let picked = ""
+            let rix = 0
             while rix < reg_count {
-                var cand = "r" + to_string(rix)
-                var seen = false
-                var ui = 0
+                let cand = "r" + to_string(rix)
+                let seen = false
+                let ui = 0
                 while ui < used.len() {
                     if used[ui] == cand {
                         seen = true
@@ -216,8 +216,8 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
             assigns.push(reg_assign { value_id: cur.value_id, reg: picked, spilled: false })
             active.push(cur)
         } else {
-            var far_i = 0
-            var k = 1
+            let far_i = 0
+            let k = 1
             while k < active.len() {
                 if active[k].end > active[far_i].end {
                     far_i = k
@@ -225,7 +225,7 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
                 k = k + 1
             }
             if active[far_i].end > cur.end {
-                var stolen_reg = assigned_reg(assigns, active[far_i].value_id)
+                let stolen_reg = assigned_reg(assigns, active[far_i].value_id)
                 assigns.push(reg_assign { value_id: cur.value_id, reg: stolen_reg, spilled: false })
                 assigns.push(reg_assign {
                     value_id: active[far_i].value_id,

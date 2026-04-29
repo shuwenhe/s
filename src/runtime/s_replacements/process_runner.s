@@ -1,6 +1,6 @@
 
 fn wait_for_child(pid: int): int {
-    var status = os.waitpid(pid)
+    let status = os.waitpid(pid)
     if status.type == "exit" {
         return status.code
     }
@@ -14,7 +14,7 @@ fn process_runner_run_argv(argv: [string]): int {
     if argv.len() == 0 || argv[0] == nil {
         return 127
     }
-    var pid = os.fork()
+    let pid = os.fork()
     if pid < 0 {
         return 127
     }
@@ -29,7 +29,7 @@ fn process_runner_run_shell(command: string): int {
     if command == nil || command == "" {
         return 127
     }
-    var pid = os.fork()
+    let pid = os.fork()
     if pid < 0 {
         return 127
     }

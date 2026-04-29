@@ -21,10 +21,10 @@ func ends_with(string text, string suffix) bool {
 }
 
 func trim_spaces(string text) string {
-    var start = 0
-    var end = len(text)
+    let start = 0
+    let end = len(text)
     while start < end {
-        var ch = char_at(text, start)
+        let ch = char_at(text, start)
         if ch == " " || ch == "\t" || ch == "\n" || ch == "\r" {
             start = start + 1
         } else {
@@ -32,7 +32,7 @@ func trim_spaces(string text) string {
         }
     }
     while end > start {
-        var ch = char_at(text, end - 1)
+        let ch = char_at(text, end - 1)
         if ch == " " || ch == "\t" || ch == "\n" || ch == "\r" {
             end = end - 1
         } else {
@@ -43,9 +43,9 @@ func trim_spaces(string text) string {
 }
 
 func split_lines(string text) vec[string] {
-    var out = vec[string]()
-    var start = 0
-    var i = 0
+    let out = vec[string]()
+    let start = 0
+    let i = 0
     while i < len(text) {
         if char_at(text, i) == "\n" {
             out.push(slice(text, start, i))
@@ -58,11 +58,11 @@ func split_lines(string text) vec[string] {
 }
 
 func split_words(string line) vec[string] {
-    var out = vec[string]()
-    var current = ""
-    var i = 0
+    let out = vec[string]()
+    let current = ""
+    let i = 0
     while i < len(line) {
-        var ch = char_at(line, i)
+        let ch = char_at(line, i)
         if ch == " " || ch == "\t" {
             if current != "" {
                 out.push(current)
@@ -80,7 +80,7 @@ func split_words(string line) vec[string] {
 }
 
 func normalize_import_path(string raw) string {
-    var text = trim_spaces(raw)
+    let text = trim_spaces(raw)
     if starts_with(text, "\"") && ends_with(text, "\"") && len(text) >= 2 {
         return slice(text, 1, len(text) - 1)
     }
@@ -91,8 +91,8 @@ func join_path(vec[string] parts) string {
     if parts.len() == 0 {
         return ""
     }
-    var out = parts[0]
-    var i = 1
+    let out = parts[0]
+    let i = 1
     while i < parts.len() {
         out = out + "/" + parts[i]
         i = i + 1
@@ -101,7 +101,7 @@ func join_path(vec[string] parts) string {
 }
 
 func ident_or_default(string name, string fallback) string {
-    var t = trim_spaces(name)
+    let t = trim_spaces(name)
     if t == "" {
         return fallback
     }

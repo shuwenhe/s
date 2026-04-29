@@ -6,7 +6,7 @@ use std.prelude.len
 use std.prelude.slice
 
 func estimate_inline_sites(string mir_text) int {
-    var calls = count_token(mir_text, " call=")
+    let calls = count_token(mir_text, " call=")
     if calls <= 0 {
         return 0
     }
@@ -15,11 +15,11 @@ func estimate_inline_sites(string mir_text) int {
 }
 
 func estimate_inline_sites_graph(mir_graph graph) int {
-    var call_sites = 0
-    var i = 0
+    let call_sites = 0
+    let i = 0
     while i < graph.blocks.len() {
-        var block = graph.blocks[i]
-        var j = 0
+        let block = graph.blocks[i]
+        let j = 0
         while j < block.statements.len() {
             switch block.statements[j] {
                 mir_statement::eval(eval_stmt) : {
@@ -49,8 +49,8 @@ func count_token(string text, string token) int {
         return 0
     }
 
-    var total = 0
-    var i = 0
+    let total = 0
+    let i = 0
     while i <= len(text) - len(token) {
         if slice(text, i, i + len(token)) == token {
             total = total + 1

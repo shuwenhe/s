@@ -3,16 +3,16 @@ package compile.internal.ssa
 use std.vec.vec
 
 func run_schedule(mut ssa_func f) int {
-    var changed = 0
-    var bi = 0
+    let changed = 0
+    let bi = 0
     while bi < f.blocks.len() {
-        var vals = f.blocks[bi].values
-        var i = 0
+        let vals = f.blocks[bi].values
+        let i = 0
         while i < vals.len() {
-            var j = i + 1
+            let j = i + 1
             while j < vals.len() {
                 if vals[j] < vals[i] {
-                    var t = vals[i]
+                    let t = vals[i]
                     vals[i] = vals[j]
                     vals[j] = t
                     changed = changed + 1

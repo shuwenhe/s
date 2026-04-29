@@ -17,18 +17,18 @@ func classify_token(string token) string {
 }
 
 func lex_source(source_unit unit) result[vec[token_item], noder_error] {
-    var out = vec[token_item]()
-    var lines = split_lines(unit.text)
-    var li = 0
+    let out = vec[token_item]()
+    let lines = split_lines(unit.text)
+    let li = 0
     while li < lines.len() {
-        var line = lines[li]
-        var trimmed = trim_spaces(line)
+        let line = lines[li]
+        let trimmed = trim_spaces(line)
         if starts_with(trimmed, "//") {
             li = li + 1
             continue
         }
-        var words = split_words(line)
-        var wi = 0
+        let words = split_words(line)
+        let wi = 0
         while wi < words.len() {
             out.push(token_item {
                 kind: classify_token(words[wi]),

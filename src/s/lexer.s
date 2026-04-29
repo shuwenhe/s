@@ -30,20 +30,20 @@ func new_lexer(string source) lexer {
 
 impl lexer {
     func tokenize(mut self) result[vec[token], lex_error] {
-        var tokens = vec[token]()
+        let tokens = vec[token]()
         while !self.is_eof() {
             self.skip_ignored()?
             if self.is_eof() {
                 break
             }
 
-            var start_line = self.line
-            var start_column = self.column
-            var ch = self.peek()?
+            let start_line = self.line
+            let start_column = self.column
+            let ch = self.peek()?
 
             if is_ident_start(ch) {
-                var value = self.read_identifier()?
-                var kind =
+                let value = self.read_identifier()?
+                let kind =
                     if is_keyword(value) {
                         token_kind::keyword
                     } else {
@@ -98,7 +98,7 @@ impl lexer {
 
     func skip_ignored(mut self) result[(), lex_error] {
         while !self.is_eof() {
-            var ch = self.peek()?
+            let ch = self.peek()?
 
             if is_whitespace(ch) {
                 self.advance()?
@@ -115,7 +115,7 @@ impl lexer {
             if self.match_text("/*") {
                 self.advance()?
                 self.advance()?
-                var depth = 1
+                let depth = 1
                 while depth > 0 {
                     if self.is_eof() {
                         return err(self.error("unterminated block comment"))
@@ -144,9 +144,9 @@ impl lexer {
     }
 
     func read_identifier(mut self) result[string, lex_error] {
-        var out = ""
+        let out = ""
         while !self.is_eof() {
-            var ch = self.peek()?
+            let ch = self.peek()?
             if !is_ident_continue(ch) {
                 break
             }
@@ -156,9 +156,9 @@ impl lexer {
     }
 
     func read_number(mut self) result[string, lex_error] {
-        var out = ""
+        let out = ""
         while !self.is_eof() {
-            var ch = self.peek()?
+            let ch = self.peek()?
             if !is_number_continue(ch) {
                 break
             }
@@ -168,9 +168,9 @@ impl lexer {
     }
 
     func read_string(mut self) result[string, lex_error] {
-        var out = self.advance()?
+        let out = self.advance()?
         while !self.is_eof() {
-            var ch = self.advance()?
+            let ch = self.advance()?
             out = out + ch
             if ch == "\\" {
                 if self.is_eof() {
@@ -187,7 +187,7 @@ impl lexer {
     }
 
     func read_symbol(mut self) result[string, lex_error] {
-        var multi = vec[string] {
+        let multi = vec[string] {
             "->",
             ":",
             "==",
@@ -199,7 +199,6 @@ impl lexer {
             "++",
             "..=",
             "..",
-            ":=",
             "<<",
             ">>",
             "::",
@@ -207,9 +206,9 @@ impl lexer {
 
         for symbol in multi {
             if self.match_text(symbol) {
-                var out = ""
-                var count = len(symbol)
-                var i = 0
+                let out = ""
+                let count = len(symbol)
+                let i = 0
                 while i < count {
                     out = out + self.advance()?
                     i = i + 1
@@ -218,7 +217,7 @@ impl lexer {
             }
         }
 
-        var ch = self.peek()?
+        let ch = self.peek()?
         if is_single_symbol(ch) {
             return result::ok(self.advance()?)
         }
@@ -245,7 +244,7 @@ impl lexer {
             return result::err(self.error("unexpected eof"))
         }
 
-        var ch = char_at(self.source, self.index)
+        let ch = char_at(self.source, self.index)
         self.index = self.index + 1
 
         if ch == "\n" {

@@ -9,7 +9,7 @@ func mode_linker_obj() int {
 }
 
 func dump_object_bundle(string pkg_name, string compiler_payload, string linker_payload, int mode) string {
-    var out = "!<arch>\n"
+    let out = "!<arch>\n"
     if (mode & mode_compiler_obj()) != 0 {
         out = out + "__.PKGDEF\n"
         out = out + "package=" + pkg_name + "\n"

@@ -32,7 +32,7 @@ func token_kind_name(token_kind kind) string {
 
 func dump_tokens(vec[token] tokens) string {
 
-    var out = ""
+    let out = ""
     for token in tokens {
         if out != "" {
             out = out + "\n"
@@ -57,7 +57,6 @@ func is_keyword(string text) bool {
         "as" : true,
         "pub" : true,
         "func" : true,
-        "var" : true,
         "const" : true,
         "static" : true,
         "struct" : true,

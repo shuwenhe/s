@@ -11,8 +11,8 @@ func new_bv_set() bv_set {
 }
 
 func bvset_add(vec[vec[int]] rows, vec[int] bits) vec[vec[int]] {
-    var normalized = normalize_bits(bits)
-    var i = 0
+    let normalized = normalize_bits(bits)
+    let i = 0
     while i < rows.len() {
         if bitmap_equal(rows[i], normalized) {
             return rows
@@ -28,8 +28,8 @@ func bvset_extract_unique(bv_set set) vec[vec[int]] {
 }
 
 func normalize_bits(vec[int] bits) vec[int] {
-    var out = vec[int]()
-    var i = 0
+    let out = vec[int]()
+    let i = 0
     while i < bits.len() {
         if bits[i] != 0 {
             out.push(1)
@@ -45,7 +45,7 @@ func bitmap_equal(vec[int] left, vec[int] right) bool {
     if left.len() != right.len() {
         return false
     }
-    var i = 0
+    let i = 0
     while i < left.len() {
         if left[i] != right[i] {
             return false
