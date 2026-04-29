@@ -1,24 +1,43 @@
 run:
-	$(MAKE) build-arm64
-	$(MAKE) selfhost-bin
-	install -m 755 $$(ls -1t bin/s_arm64_* 2>/dev/null | head -n 1) /usr/local/bin/s
-	@echo "Installed S compiler to /usr/local/bin/s"
-SHELL := /usr/bin/env bash
+	@echo "Building and installing S compiler for $(shell uname -m)..."
+	@set -e; \
+	OUT_BIN=""; \
+	case "$(shell uname -m)" in \
+		x86_64) \
+			if [ ! -x ./bin/build_s_x86_64.sh ]; then \
+				echo "Missing builder: ./bin/build_s_x86_64.sh"; \
+				exit 1; \
+			fi; \
+			OUT_BIN="$$(./bin/build_s_x86_64.sh)"; \
+			;; \
+		aarch64|arm64) \
+			OUT_BIN="$$(./bin/build_s_arm64.sh)"; \
+			;; \
+		*) \
+			echo "Unsupported architecture: $(shell uname -m)"; \
+			exit 1; \
+			;; \
+	esac; \
+	if [ ! -f "$$OUT_BIN" ]; then \
+		echo "Build succeeded but output not found: $$OUT_BIN"; \
+		exit 1; \
+	fi; \
+	echo "Installing $$OUT_BIN to /usr/local/bin/s..."; \
+	install -m 0755 "$$OUT_BIN" /usr/local/bin/s; \
+	echo "S compiler installed successfully."
 
-.DEFAULT_GOAL := help
+build-x86_64:
+	@echo "Building S compiler for x86_64..."
+	@./bin/build_s_x86_64.sh
 
-COMPILER ?= $(shell ls -1t bin/c_arm64_* 2>/dev/null | head -n 1)
-OUT_BIN ?= $(shell TZ=Asia/Shanghai date +"bin/s_arm64_%Y%m%d%H%M%S")
-OUT_IR ?= /tmp/s_ir_selfhost_main.ir
-WORK_DIR ?= /tmp/s_ir_selfhost_work
+build-arm64:
+	@echo "Building S compiler for ARM64..."
+	@./bin/build_s_arm64.sh
 
-.PHONY: help build-arm64 selfhost-bin
+.PHONY: help selfhost-bin
 
 help:
 	@echo "  make run"
-
-build-arm64:
-	./bin/build_s_arm64.sh
 
 selfhost-bin:
 	@if [[ -z "$(COMPILER)" ]]; then \
