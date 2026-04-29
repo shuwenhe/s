@@ -16,6 +16,7 @@ WORK_DIR ?= /tmp/s_ir_selfhost_work
 
 help:
 	@echo "Available targets:"
+	@grep -E '^[a-zA-Z0-9_-]+:' Makefile | grep -vE '^\.' | awk '{print "  make", $$1}' | sed 's/://g'
 	@echo "  make build-arm64                    # build a new arm64 C-seed compiler (c_arm64_*)"
 	@echo "  make selfhost-bin [COMPILER=...]    # IR -> executable compiler -> compile main.s"
 	@echo ""
