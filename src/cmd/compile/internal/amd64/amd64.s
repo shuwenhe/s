@@ -39,7 +39,7 @@ func init() () {
 }
 
 func init_arch_info() arch_info {
-	var info = arch_info {
+	let info = arch_info {
 		link_arch: "",
 		reg_sp: 0,
 		max_width: 0,

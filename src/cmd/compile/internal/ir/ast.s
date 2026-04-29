@@ -16,7 +16,7 @@ struct package_ir {
 enum decl_ir {
     func(func_decl),
     r#type(type_decl),
-    var(var_decl),
+    let(var_decl),
     const(const_decl),
     impl(impl_decl),
 }
@@ -46,7 +46,7 @@ struct impl_decl { string type_name, vec[func_decl] methods }
 struct block_ir { vec[stmt_ir] statements, option[expr_ir] final_expr }
 
 enum stmt_ir {
-    var(var_stmt),
+    let(var_stmt),
     assign(assign_stmt),
     increment(increment_stmt),
     cfor(c_for_stmt),

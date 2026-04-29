@@ -18,7 +18,7 @@ struct compile_report {
 }
 
 func optimize(mut ssa_func f, ssa_config cfg) vec[pass_stat] {
-    var stats = vec[pass_stat]()
+    let stats = vec[pass_stat]()
     if cfg.enable_rewrite {
         stats.push(pass_stat { name: "rewrite", changed: run_rewrite(f, cfg.target_arch) })
     }
@@ -38,17 +38,17 @@ func optimize(mut ssa_func f, ssa_config cfg) vec[pass_stat] {
 }
 
 func compile_func(mut ssa_func f, ssa_config cfg) compile_report {
-    var stats = optimize(f, cfg)
-    var facts = vec[prove_fact]()
+    let stats = optimize(f, cfg)
+    let facts = vec[prove_fact]()
     if cfg.enable_prove {
         facts = run_prove(f)
         stats.push(pass_stat { name: "prove", changed: facts.len() })
     }
-    var dominfo = run_dom(f)
+    let dominfo = run_dom(f)
     if cfg.enable_dom {
         stats.push(pass_stat { name: "dom", changed: dominfo.block_ids.len() })
     }
-    var regs = regalloc_result {
+    let regs = regalloc_result {
         assigns: vec[reg_assign](),
         spills: 0,
     }
@@ -56,7 +56,7 @@ func compile_func(mut ssa_func f, ssa_config cfg) compile_report {
         regs = run_regalloc(f, cfg.regalloc_register_count)
         stats.push(pass_stat { name: "regalloc", changed: regs.assigns.len() })
     }
-    var code = check_func(f)
+    let code = check_func(f)
     compile_report {
         f: f,
         stats: stats,

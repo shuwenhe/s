@@ -65,7 +65,7 @@ func is_regular_memory(compare_field field_value) bool {
 }
 
 func memrun(compare_struct t, int start) memrun_result {
-    var next = start
+    let next = start
     while true {
         next = next + 1
         if next >= t.fields.len() {
@@ -74,17 +74,17 @@ func memrun(compare_struct t, int start) memrun_result {
         if t.fields[next - 1].padded {
             break
         }
-        var f = t.fields[next]
+        let f = t.fields[next]
         if f.name == "_" || !is_regular_memory(f) {
             break
         }
         if t.arch_alignment > 1 {
-            var align = t.alignment
-            var off = t.fields[start].offset
+            let align = t.alignment
+            let off = t.fields[start].offset
             if (off % align) != 0 {
                 align = least_alignment(off)
             }
-            var size = field_end(t.fields[next]) - t.fields[start].offset
+            let size = field_end(t.fields[next]) - t.fields[start].offset
             if size > align {
                 break
             }
@@ -98,9 +98,9 @@ func memrun(compare_struct t, int start) memrun_result {
 }
 
 func eq_can_panic(compare_struct t) bool {
-    var i = 0
+    let i = 0
     while i < t.fields.len() {
-        var f = t.fields[i]
+        let f = t.fields[i]
         if f.name != "_" && (f.can_panic || (f.type_kind == "array" && f.elem_can_panic)) {
             return true
         }
@@ -110,15 +110,15 @@ func eq_can_panic(compare_struct t) bool {
 }
 
 func eq_struct_cost(compare_struct t) int {
-    var cost = 0
-    var i = 0
+    let cost = 0
+    let i = 0
     while i < t.fields.len() {
-        var f = t.fields[i]
+        let f = t.fields[i]
         if f.name == "_" {
             i = i + 1
             continue
         }
-        var fc = eq_struct_field_cost(t, i)
+        let fc = eq_struct_field_cost(t, i)
         cost = cost + fc.cost
         i = fc.next
     }
@@ -127,8 +127,8 @@ func eq_struct_cost(compare_struct t) int {
 
 func eq_struct_field_cost(compare_struct t, int i) field_cost_result {
     if t.can_merge_loads {
-        var run = memrun(t, i)
-        var cost = run.size / t.reg_size
+        let run = memrun(t, i)
+        let cost = run.size / t.reg_size
         if (run.size % t.reg_size) != 0 {
             cost = cost + 1
         }
@@ -139,7 +139,7 @@ func eq_struct_field_cost(compare_struct t, int i) field_cost_result {
         }
     }
 
-    var f = t.fields[i]
+    let f = t.fields[i]
     field_cost_result {
         cost: calculate_cost_for_field(f, t.reg_size),
         size: f.size,
@@ -161,7 +161,7 @@ func calculate_cost_for_field(compare_field f, int reg_size) int {
         return 2
     }
     if f.type_kind == "int64" || f.type_kind == "uint64" {
-        var c = 8 / reg_size
+        let c = 8 / reg_size
         if c <= 0 {
             return 1
         }
@@ -171,24 +171,24 @@ func calculate_cost_for_field(compare_field f, int reg_size) int {
 }
 
 func eq_struct(compare_struct t, string np, string nq) eq_struct_result {
-    var segments = vec[vec[compare_node]]()
+    let segments = vec[vec[compare_node]]()
     segments.push(vec[compare_node]())
 
-    var i = 0
+    let i = 0
     while i < t.fields.len() {
-        var f = t.fields[i]
+        let f = t.fields[i]
         if f.name == "_" {
             i = i + 1
             continue
         }
 
-        var type_can_panic = f.can_panic || (f.type_kind == "array" && f.elem_can_panic)
+        let type_can_panic = f.can_panic || (f.type_kind == "array" && f.elem_can_panic)
         if !f.regular_memory {
             if type_can_panic {
                 segments.push(vec[compare_node]())
             }
             if f.type_kind == "string" {
-                var sres = eq_string(np + "." + f.name, nq + "." + f.name)
+                let sres = eq_string(np + "." + f.name, nq + "." + f.name)
                 append_segment_node(segments, compare_node { expr: sres.eqlen, is_call: false })
                 append_segment_node(segments, compare_node { expr: sres.eqmem, is_call: true })
             } else {
@@ -204,11 +204,11 @@ func eq_struct(compare_struct t, string np, string nq) eq_struct_result {
             continue
         }
 
-        var fc = eq_struct_field_cost(t, i)
+        let fc = eq_struct_field_cost(t, i)
         if fc.cost <= 4 {
-            var j = i
+            let j = i
             while j < fc.next {
-                var fj = t.fields[j]
+                let fj = t.fields[j]
                 append_segment_node(segments, compare_node {
                     expr: eq_field(np, nq, fj.name),
                     is_call: false,
@@ -224,11 +224,11 @@ func eq_struct(compare_struct t, string np, string nq) eq_struct_result {
         i = fc.next
     }
 
-    var flat = vec[compare_node]()
-    var s = 0
+    let flat = vec[compare_node]()
+    let s = 0
     while s < segments.len() {
-        var sorted = sort_calls_last(segments[s])
-        var k = 0
+        let sorted = sort_calls_last(segments[s])
+        let k = 0
         while k < sorted.len() {
             flat.push(sorted[k])
             k = k + 1
@@ -250,7 +250,7 @@ func eq_string(string s, string t) eq_string_result {
 }
 
 func eq_interface(string s, string t, bool is_empty_interface) eq_interface_result {
-    var fn_name = "ifaceeq"
+    let fn_name = "ifaceeq"
     if is_empty_interface {
         fn_name = "efaceeq"
     }
@@ -265,7 +265,7 @@ func eq_field(string p, string q, string field_name) string {
 }
 
 func eq_mem(string p, string q, string field_name, int size, int alignment, int arch_alignment, bool can_merge_loads) string {
-    var plan = eq_mem_func(size, alignment, arch_alignment, can_merge_loads)
+    let plan = eq_mem_func(size, alignment, arch_alignment, can_merge_loads)
     if plan.need_size {
         return plan.name + "(&" + p + "." + field_name + ", &" + q + "." + field_name + ", " + to_string(size) + ")"
     }
@@ -299,13 +299,13 @@ func append_segment_node(vec[vec[compare_node]] mut segments, compare_node node)
     if segments.len() == 0 {
         segments.push(vec[compare_node]())
     }
-    var last = segments.len() - 1
+    let last = segments.len() - 1
     segments[last].push(node)
 }
 
 func sort_calls_last(vec[compare_node] nodes) vec[compare_node] {
-    var out = vec[compare_node]()
-    var i = 0
+    let out = vec[compare_node]()
+    let i = 0
     while i < nodes.len() {
         if !nodes[i].is_call {
             out.push(nodes[i])
@@ -330,8 +330,8 @@ func least_alignment(int off) int {
     if off == 0 {
         return 1
     }
-    var v = off
-    var align = 1
+    let v = off
+    let align = 1
     while (v % 2) == 0 {
         align = align * 2
         v = v / 2

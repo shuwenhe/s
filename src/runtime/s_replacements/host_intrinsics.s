@@ -1,7 +1,7 @@
 // S 实现：host_intrinsics.c
 // 提供命令行参数、环境变量、打印等功能
 
-var g_args: [string] = []
+let g_args: [string] = []
 
 fn host_intrinsics_init(args: [string]) {
     g_args = args[1:]

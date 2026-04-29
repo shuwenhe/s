@@ -9,11 +9,11 @@ use std.io.eprintln
 
 func main() int {
     print("[S MAIN] enter main")
-    var args = host_args()
-    var goarch = buildcfg_goarch()
+    let args = host_args()
+    let goarch = buildcfg_goarch()
 
     print("[S MAIN] after get args/goarch")
-    var buildcfg_err = buildcfg_check()
+    let buildcfg_err = buildcfg_check()
     if buildcfg_err != "" {
         print("[S MAIN] buildcfg_check error: " + buildcfg_err)
         report_compile_error(buildcfg_err)
@@ -21,7 +21,7 @@ func main() int {
     }
 
     print("[S MAIN] after buildcfg_check")
-    var arch_init_name = resolve_arch_init_name(goarch)
+    let arch_init_name = resolve_arch_init_name(goarch)
     if arch_init_name == "" {
         print("[S MAIN] unknown arch: " + goarch)
         report_compile_error("unknown architecture \"" + goarch + "\"")
@@ -29,7 +29,7 @@ func main() int {
     }
 
     print("[S MAIN] after resolve_arch_init_name")
-    var arch_err = arch_dispatch_init(goarch)
+    let arch_err = arch_dispatch_init(goarch)
     if arch_err != "" {
         print("[S MAIN] arch_dispatch_init error: " + arch_err)
         report_compile_error(arch_err)
@@ -37,7 +37,7 @@ func main() int {
     }
 
     print("[S MAIN] before build_main")
-    var ret = build_main(args)
+    let ret = build_main(args)
     print("[S MAIN] after build_main")
     return ret
 }
