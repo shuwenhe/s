@@ -24,4 +24,13 @@ gcc -std=c11 -Wall -Wextra -Werror \
 
 chmod +x "$OUT"
 
+# Keep only the freshly built arm64 compiler artifact.
+shopt -s nullglob
+for old in "$BIN_DIR"/s_arm64_*; do
+  if [[ "$old" != "$OUT" ]]; then
+    rm -f "$old"
+  fi
+done
+shopt -u nullglob
+
 echo "$OUT"
