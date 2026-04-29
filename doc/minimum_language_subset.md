@@ -82,7 +82,7 @@ the minimum expression set is:
 
 the current stable keyword set should be treated as the language contract for
 phase 1. it lives in `/app/s/src/s/tokens.s` and includes the core words needed
-by examples and the compiler itself, including `package`, `use`, `func`, `let`,
+by examples and the compiler itself, including `package`, `use`, `func`, `var`,
 `var`, `return`, `if`, `else`, `while`, `for`, `switch`, `struct`, `enum`,
 `trait`, `impl`, `pub`, `true`, and `false`.
 
