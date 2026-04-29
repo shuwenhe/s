@@ -84,7 +84,7 @@ ident = xid_start { xid_continue }
 
 ```text
 package use as pub
-func let var const static
+func var var const static
 struct enum trait impl for
 if else for while switch
 return break continue
@@ -421,11 +421,11 @@ stmt =
   | continuestmt
 ```
 
-### 9.1 let and var statements
+### 9.1 var and var statements
 
 ```text
 letstmt =
-    "let" pattern typeannotation? ("=" expr)? ";"
+    "var" pattern typeannotation? ("=" expr)? ";"
 
 varstmt =
     "var" pattern typeannotation? ("=" expr)? ";"
@@ -810,7 +810,7 @@ s 的基本规则如下：
 1. `package` 和 `use`
 2. `func` / `struct` / `enum` / `trait` / `impl`
 3. 基础类型语法
-4. `let` / `var` / `return`
+4. `var` / `var` / `return`
 5. `if` / `while` / `for` / `switch`
 6. 函数调用、成员访问、下标、`?`
 7. 泛型参数和泛型实参

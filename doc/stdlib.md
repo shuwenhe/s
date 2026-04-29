@@ -398,7 +398,7 @@ trait writer {
 
 ```s
 task::scope(|scope| {
-    let h = scope.spawn(|| work())
+    var h = scope.spawn(|| work())
     h.join()
 })
 ```

@@ -91,8 +91,8 @@ copy 类型是否自动推导或要求显式声明，属于后续细化议题；
 绑定本身不是资源，绑定只是资源拥有关系的承载位置。
 
 ```s
-let a = string::from("hello")
-let b = a
+var a = string::from("hello")
+var b = a
 ```
 
 上例中：
@@ -116,8 +116,8 @@ let b = a
 示例：
 
 ```s
-let a = make_buffer()
-let b = a
+var a = make_buffer()
+var b = a
 use(a) // illegal
 ```
 
@@ -139,7 +139,7 @@ draft 0.1 推荐采取保守策略：
 示例：
 
 ```s
-let x = make_buffer()
+var x = make_buffer()
 
 if flag {
     consume(x)
@@ -178,8 +178,8 @@ s 应区分：
 示例：
 
 ```s
-let a = string::from("hello")
-let b = a.clone()
+var a = string::from("hello")
+var b = a.clone()
 ```
 
 这里 `clone()` 是显式语义，提醒开发者这可能涉及分配和数据复制。
@@ -198,8 +198,8 @@ s 支持两种借用：
 只读借用允许多个并存：
 
 ```s
-let a = &user
-let b = &user
+var a = &user
+var b = &user
 println(a.name(), b.name())
 ```
 
@@ -210,7 +210,7 @@ println(a.name(), b.name())
 可变借用是独占借用：
 
 ```s
-let u = &mut user
+var u = &mut user
 u.activate()
 ```
 
@@ -231,10 +231,10 @@ draft 0.1 建议采用“非词法生命周期”方向：
 示例：
 
 ```s
-let a = &user
+var a = &user
 println(a.name())
 
-let b = &mut user
+var b = &mut user
 b.activate()
 ```
 
@@ -255,8 +255,8 @@ b.activate()
 非法示例：
 
 ```s
-let a = &user
-let b = &mut user
+var a = &user
+var b = &mut user
 ```
 
 ### 8.2 use-after-move rule
@@ -266,8 +266,8 @@ let b = &mut user
 非法示例：
 
 ```s
-let x = string::from("a")
-let y = x
+var x = string::from("a")
+var y = x
 println(x)
 ```
 
@@ -279,7 +279,7 @@ println(x)
 
 ```s
 func bad() &str {
-    let s = string::from("hello")
+    var s = string::from("hello")
     s.as_str()
 }
 ```
@@ -416,8 +416,8 @@ func clear(&mut self self)
 
 ```s
 func load() result[string, ioerror] {
-    let file = file::open("config.toml")?
-    let data = file.read_all()?
+    var file = file::open("config.toml")?
+    var data = file.read_all()?
     ok(data)
 }
 ```
@@ -470,9 +470,9 @@ draft 0.1 建议支持三种捕获方式：
 示例方向：
 
 ```s
-let name = string::from("alice")
+var name = string::from("alice")
 
-let f = || {
+var f = || {
     println(name)
 }
 ```
@@ -493,7 +493,7 @@ let f = || {
 当值被传入新任务时，默认应发生所有权移动：
 
 ```s
-let buf = make_buffer()
+var buf = make_buffer()
 
 spawn move || {
     process(buf)
@@ -561,9 +561,9 @@ trait sync
 ### 17.1 legal shared borrow
 
 ```s
-let user = get_user()
-let a = &user
-let b = &user
+var user = get_user()
+var a = &user
+var b = &user
 
 println(a.name(), b.name())
 ```
@@ -571,16 +571,16 @@ println(a.name(), b.name())
 ### 17.2 legal mutable borrow
 
 ```s
-let mut user = get_user()
-let u = &mut user
+var mut user = get_user()
+var u = &mut user
 u.activate()
 ```
 
 ### 17.3 illegal mixed borrow
 
 ```s
-let a = &user
-let b = &mut user
+var a = &user
+var b = &mut user
 ```
 
 原因：
@@ -590,7 +590,7 @@ let b = &mut user
 ### 17.4 illegal use after move
 
 ```s
-let s = string::from("hello")
+var s = string::from("hello")
 consume(s)
 println(s)
 ```
@@ -602,8 +602,8 @@ println(s)
 ### 17.5 legal clone
 
 ```s
-let s = string::from("hello")
-let t = s.clone()
+var s = string::from("hello")
+var t = s.clone()
 println(s, t)
 ```
 

@@ -10,7 +10,7 @@ enum option[t]
 trait reader_like[t]
   func read(&mut self self, []u8 buf) -> result[usize, io_error]
 func load[t: reader](t reader, string path) result[string, io_error]
-  let value = 1
+  var value = 1
   final value
 impl reader_like[file] for file
   func read(&mut self self, []u8 buf) result[usize, io_error]
