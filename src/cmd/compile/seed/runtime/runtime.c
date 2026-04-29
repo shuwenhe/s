@@ -341,6 +341,21 @@ static int host_dispatch_call(
 		*out = value_make_int(0);
 		return 1;
 	}
+	if (strcmp(name, "print") == 0) {
+		char num_buf[64];
+		const char *msg = NULL;
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "print expects 1 arg");
+			return 0;
+		}
+		if (!value_as_cstr(&args[0], num_buf, sizeof(num_buf), &msg)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render print argument");
+			return 0;
+		}
+		printf("%s\n", msg);
+		*out = value_make_int(0);
+		return 1;
+	}
 	if (strcmp(name, "build_main") == 0) {
 		compile_error compile_err;
 		if (argc != 1) {
