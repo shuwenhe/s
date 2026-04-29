@@ -99,7 +99,7 @@ const char *token_type_name(token_type type) {
 static token_type keyword_or_identifier(const char *lexeme) {
 	if (strcmp(lexeme, "fn") == 0) return TOKEN_FN;
 	if (strcmp(lexeme, "func") == 0) return TOKEN_FN;
-	if (strcmp(lexeme, "let") == 0) return TOKEN_LET;
+	if (strcmp(lexeme, "var") == 0) return TOKEN_LET;
 	if (strcmp(lexeme, "var") == 0) return TOKEN_LET;
 	if (strcmp(lexeme, "package") == 0) return TOKEN_PACKAGE;
 	if (strcmp(lexeme, "use") == 0) return TOKEN_USE;

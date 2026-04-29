@@ -10,7 +10,7 @@ function activate(context) {
       const stack = [];
       const lines = document.getText().split(/\r?\n/);
 
-      for (let index = 0; index < lines.length; index += 1) {
+      for (var index = 0; index < lines.length; index += 1) {
         const line = lines[index];
         const trimmed = line.trim();
 
@@ -19,7 +19,7 @@ function activate(context) {
         }
 
         const closingCount = countChar(line, "}");
-        for (let i = 0; i < closingCount && stack.length > 0; i += 1) {
+        for (var i = 0; i < closingCount && stack.length > 0; i += 1) {
           stack.pop();
         }
 
@@ -65,7 +65,7 @@ function activate(context) {
           },
         ];
 
-        let createdSymbol = null;
+        var createdSymbol = null;
         for (const matcher of matchers) {
           const match = line.match(matcher.regex);
           if (!match) {
@@ -101,7 +101,7 @@ function createSymbol(document, line, name, kind) {
 }
 
 function countChar(text, ch) {
-  let count = 0;
+  var count = 0;
   for (const current of text) {
     if (current === ch) {
       count += 1;

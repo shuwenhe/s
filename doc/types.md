@@ -99,8 +99,8 @@ s 支持局部类型推导，但不允许推导变成阅读负担或隐藏成本
 示例：
 
 ```s
-let x = 42
-let s = string::from("hello")
+var x = 42
+var s = string::from("hello")
 ```
 
 编译器应能推导 `x` 和 `s` 的类型。
@@ -315,8 +315,8 @@ s 默认采用名义类型与结构类型混合但偏名义的策略：
 局部绑定可以依赖初始化表达式推导类型：
 
 ```s
-let x = 1
-let ok = true
+var x = 1
+var ok = true
 ```
 
 ### 12.2 branch unification
@@ -326,7 +326,7 @@ let ok = true
 示例：
 
 ```s
-let value = if flag { 1 } else { 2 }
+var value = if flag { 1 } else { 2 }
 ```
 
 合法，因为两边都是 `int32` 候选。
@@ -334,7 +334,7 @@ let value = if flag { 1 } else { 2 }
 以下应视为非法，除非存在显式转换：
 
 ```s
-let value = if flag { 1 } else { "x" }
+var value = if flag { 1 } else { "x" }
 ```
 
 ### 12.3 generic inference
@@ -344,7 +344,7 @@ let value = if flag { 1 } else { "x" }
 示例：
 
 ```s
-let m = max(1, 2)
+var m = max(1, 2)
 ```
 
 若约束和上下文足够明确，则 `t` 可推导为 `int32`。
@@ -360,7 +360,7 @@ s 默认不允许隐式数值转换。
 ```s
 int32 a = 1
 i64 b = 2
-let c = a as i64 + b
+var c = a as i64 + b
 ```
 
 ### 13.2 safe vs potentially lossy conversions
