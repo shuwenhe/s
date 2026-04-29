@@ -245,7 +245,7 @@ s 默认不进行隐式数值扩宽或截断。
 ```s
 int32 a = 1
 i64 b = 2
-let c = a as i64 + b
+var c = a as i64 + b
 ```
 
 所有可能改变数值范围、符号或精度的转换都必须显式使用 `as`。
@@ -365,8 +365,8 @@ s 是表达式优先的语言，但仍保留清晰的语句结构。
 块既是语句容器，也是表达式：
 
 ```s
-let port = {
-    let base = 8000
+var port = {
+    var base = 8000
     base + 80
 }
 ```
@@ -426,8 +426,8 @@ s 采用“单一拥有者 + 显式借用”的基础模型。
 默认情况下，非 `copy` 类型按值传递时发生移动：
 
 ```s
-let a = make_buffer()
-let b = a
+var a = make_buffer()
+var b = a
 // a 在此后不可再使用
 ```
 
@@ -453,16 +453,16 @@ s 借用模型的核心约束如下：
 示例：
 
 ```s
-let n = user.name()
-let a = &user
-let b = &user
+var n = user.name()
+var a = &user
+var b = &user
 ```
 
 以下情形应视为非法：
 
 ```s
-let a = &user
-let b = &mut user
+var a = &user
+var b = &mut user
 ```
 
 ### 12.5 lifetime inference
@@ -485,7 +485,7 @@ s 使用基于作用域的资源释放模型。
 
 ```s
 func load() result[string, ioerror] {
-    let file = file::open("config.toml")?
+    var file = file::open("config.toml")?
     file.read_all()
 }
 ```
@@ -580,8 +580,8 @@ s 支持 `?` 用于传播错误：
 
 ```s
 func run() result[(), error] {
-    let cfg = load_config("app.conf")?
-    let conn = connect(cfg.addr)?
+    var cfg = load_config("app.conf")?
+    var conn = connect(cfg.addr)?
     conn.start()?
     ok(())
 }
@@ -613,11 +613,11 @@ s 推荐采用结构化并发作为主模型。
 
 ```s
 task::scope(|scope| {
-    let a = scope.spawn(|| fetch_price("btc-usdt"))
-    let b = scope.spawn(|| fetch_price("eth-usdt"))
+    var a = scope.spawn(|| fetch_price("btc-usdt"))
+    var b = scope.spawn(|| fetch_price("eth-usdt"))
 
-    let pa = a.join()?
-    let pb = b.join()?
+    var pa = a.join()?
+    var pb = b.join()?
     println(pa, pb)
 })
 ```
@@ -633,7 +633,7 @@ task::scope(|scope| {
 消息传递是推荐并发通信方式：
 
 ```s
-let (tx, rx) = channel[job](1024)
+var (tx, rx) = channel[job](1024)
 ```
 
 标准库应提供：
@@ -833,7 +833,7 @@ s 官方工具链至少应包括：
 s 的最小可用版本应至少支持：
 
 - 基本类型
-- `let` / `var` / `const`
+- `var` / `var` / `const`
 - `func`
 - `struct`
 - `enum`

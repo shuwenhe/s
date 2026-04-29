@@ -141,7 +141,7 @@
         },
         {
           "name": "keyword.other.s",
-          "switch": "\\b(?:package|use|as|in|where|unsafe|extern|mut|pub|let)\\b"
+          "switch": "\\b(?:package|use|as|in|where|unsafe|extern|mut|pub|var)\\b"
         },
         {
           "name": "constant.language.boolean.s",
@@ -173,7 +173,7 @@
         },
         {
           "name": "storage.type.declaration.s",
-          "switch": "\\b(?:func|fn|let|var|struct|enum|trait|impl|for)\\b"
+          "switch": "\\b(?:func|fn|var|var|struct|enum|trait|impl|for)\\b"
         }
       ]
     },

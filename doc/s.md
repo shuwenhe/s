@@ -20,7 +20,7 @@ token_kind = ident | int | string | keyword | symbol | eof
 
 ### 1.2 关键字集合
 
-`package use as pub func let var const static struct enum trait impl for if else while switch select case default return break continue sroutine true false nil unsafe extern mut where in`
+`package use as pub func var const static struct enum trait impl for if else while switch select case default return break continue sroutine true false nil unsafe extern mut where in`
 
 说明：
 - 关键字被词法识别，不代表都已在语法层完整实现。
@@ -337,7 +337,6 @@ final_expr = expr     ; 仅当它是 block 内最后一个且无分号
 
 ### 8.1 词法存在但语法层未直接解析为 stmt 的关键字
 
-- `let`
 - `break`
 - `continue`
 - `pub`

@@ -57,7 +57,6 @@ func is_keyword(string text) bool {
         "as" : true,
         "pub" : true,
         "func" : true,
-        "let" : true,
         "var" : true,
         "const" : true,
         "static" : true,

@@ -128,7 +128,7 @@ func main() {
 ### variables and constants
 
 ```s
-let x = 42
+var x = 42
 f64 price = 12.5
 var count = 0
 const max_conn = 1024
@@ -136,7 +136,7 @@ const max_conn = 1024
 
 conventions:
 
-- `let` means an immutable binding by default
+- `var` means an immutable binding by default
 - `var` means a mutable binding
 - `const` means a compile-time constant
 
@@ -267,7 +267,7 @@ s uses a statically typed, strongly typed system. type inference is supported, b
 ```s
 int32 a = 1
 i64 b = 2
-let c = a as i64 + b
+var c = a as i64 + b
 ```
 
 this is slightly stricter, but it avoids a large class of boundary bugs in systems code.
@@ -336,8 +336,8 @@ s uses scope-based resource release by default.
 
 ```s
 func main() result[(), ioerror] {
-    let file = file::open("a.txt")?
-    let data = file.read_all()?
+    var file = file::open("a.txt")?
+    var data = file.read_all()?
     println(data)
     ok(())
 }
@@ -409,8 +409,8 @@ func parse_port(str s) result[u16, parseerror] {
 
 ```s
 func run() result[(), error] {
-    let cfg = load_config("app.conf")?
-    let conn = connect(cfg.addr)?
+    var cfg = load_config("app.conf")?
+    var conn = connect(cfg.addr)?
     conn.start()?
     ok(())
 }
@@ -454,11 +454,11 @@ the concurrency model of s should learn from both go and rust:
 ```s
 func main() result[(), error] {
     task::scope(|scope| {
-        let a = scope.spawn(|| fetch_price("btc-usdt"))
-        let b = scope.spawn(|| fetch_price("eth-usdt"))
+        var a = scope.spawn(|| fetch_price("btc-usdt"))
+        var b = scope.spawn(|| fetch_price("eth-usdt"))
 
-        let pa = a.join()?
-        let pb = b.join()?
+        var pa = a.join()?
+        var pb = b.join()?
         println(pa, pb)
     })
 }
@@ -473,13 +473,13 @@ properties:
 ### channel communication
 
 ```s
-let (tx, rx) = channel[job](1024)
+var (tx, rx) = channel[job](1024)
 
 spawn || {
     tx.send(job)?
 }
 
-let item = rx.recv()?
+var item = rx.recv()?
 ```
 
 ### concurrency safety constraints
@@ -655,7 +655,7 @@ a practical minimal subset could include only:
 - `struct`
 - `enum`
 - `func`
-- `let / var / const`
+- `var / var / const`
 - `if / for / while / match`
 - `result` / `option`
 - `&` / `&mut`
