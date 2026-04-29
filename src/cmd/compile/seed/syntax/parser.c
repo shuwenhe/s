@@ -1362,10 +1362,4 @@ static int parse_dotted_path(parser *p,
 }
 
 // Load the module and add symbols to the scope
-	if (!load_module_and_add_to_scope(path, selectors_local, selector_count, p->err)) {
-		for (i = 0; i < selector_count; i++) {
-			free(selectors_local[i]);
-		}
-		ast_free(node);
-		return NULL;
-	}
+	bool load_module_and_add_to_scope(const char *module_path, char **selectors, size_t selector_count, compile_error *err);
