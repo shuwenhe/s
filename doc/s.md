@@ -1,3 +1,64 @@
+
+## S 语言变量声明
+
+### A.1 基本声明（可初始化）
+
+```s
+int x = 10
+char y = 'a'
+float z = 3.14f
+```
+
+### A.2 先声明后赋值
+
+```s
+int n
+n = 42
+```
+
+### A.3 同类型多变量声明
+
+```s
+int a = 1, b = 2, c = 3
+```
+
+### A.4 常量声明
+
+```s
+const int max_count = 100
+```
+
+### A.5 指针变量
+
+```s
+int v = 10
+int *p = &v
+```
+
+### A.6 数组变量
+
+```s
+int arr[3] = {1, 2, 3}
+char name[6] = "hello"
+```
+
+### A.7 结构体变量
+
+```s
+struct Point {
+    int x
+    int y
+}
+
+struct Point p = {1, 2}
+```
+
+### A.8 静态变量
+
+```s
+static int counter = 0
+```
+
 # S 语言语法规则（按编译器源码提取）
 
 本文基于以下实现提取：
@@ -183,6 +244,17 @@ for_clause   = var_stmt(no_semicolon)
              | increment_stmt(no_semicolon) ;
 ```
 
+### 5.3 当前支持的变量形式
+
+- `var` 声明：`var name = expr` 或 `var name: Type = expr`
+- 短变量声明：`name := expr`
+- 类型前置声明：`Type name = expr`
+- 变量赋值：`name = expr`
+- 自增语句：`name++`
+
+说明：
+- 词法层包含 `let` 关键字，但当前语句解析主路径未将 `let` 作为变量声明分支。
+
 ## 6. 表达式（expression）
 
 入口优先级：
@@ -297,8 +369,8 @@ use std.vec.vec
 const Pi = 3
 
 struct Point {
-    x: int,
-    y: int,
+    x: int
+    y: int
 }
 
 func add(a: int, b: int) int {
