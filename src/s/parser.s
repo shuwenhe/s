@@ -37,7 +37,14 @@ func parse_tokens(vec[token] tokens) result[source_file, parse_error] {
 }
 
 impl parser {
+    var global_parse_depth = 0
+    func log_depth(string msg) {
+        print(msg)
+    }
+
     func parse_source_file(mut self) result[source_file, parse_error] {
+        global_parse_depth = global_parse_depth + 1
+        log_depth("parse_source_file depth: " + to_string(global_parse_depth))
         self.expect_keyword("package")?
         var pkg = self.parse_path()?
         var uses = vec[use_decl]()
@@ -60,6 +67,8 @@ impl parser {
             items.push(self.parse_item()?)
         }
 
+        global_parse_depth = global_parse_depth - 1
+        log_depth("parse_source_file exit depth: " + to_string(global_parse_depth))
         result::ok(source_file {
             pkg: pkg,
             uses: uses,
