@@ -1228,28 +1228,3 @@ bool semantic_analyze(ast_node *root, compile_error *err) {
 	scope_free(global_scope);
 	return ok;
 }
-
-static bool load_module_and_add_to_scope(const char *module_path, char **selectors, size_t selector_count, compile_error *err) {
-	scope *current_scope = scope_push(NULL); // Push a new scope
-	if (!current_scope) {
-		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "Failed to allocate scope for module");
-		return false;
-	}
-
-	for (size_t i = 0; i < selector_count; i++) {
-		// Add each selector to the scope
-		symbol *sym = (symbol *)calloc(1, sizeof(symbol));
-		if (!sym) {
-			scope_free(current_scope);
-			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "Failed to allocate symbol for selector");
-			return false;
-		}
-		sym->name = strdup(selectors[i]);
-		sym->kind = SYMBOL_IMPORT;
-		sym->type_name = strdup("imported_symbol");
-		sym->next = current_scope->symbols;
-		current_scope->symbols = sym;
-	}
-
-	return true;
-}
