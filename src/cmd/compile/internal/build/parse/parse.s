@@ -46,16 +46,46 @@ func parse_options(vec[string] args)  vec[string] {
         return make_options(command, args[2], "", margin)
     }
 
+    if command == "test" {
+        if args.len() >= 3 {
+            return make_options(command, args[2], "", "")
+        }
+        return make_options(command, "", "", "")
+    }
+
+    if command == "mod" {
+        if args.len() < 3 {
+            return make_options("help", "", "", "")
+        }
+        let mod_command = args[2]
+        if mod_command == "init" {
+            if args.len() != 4 {
+                return make_options("help", "", "", "")
+            }
+            return make_options(command, "init", args[3], "")
+        }
+        if mod_command == "tidy" {
+            if args.len() != 3 {
+                return make_options("help", "", "", "")
+            }
+            return make_options(command, "tidy", "", "")
+        }
+        return make_options("help", "", "", "")
+    }
+
     make_options("help", "", "", "")
 }
 
 func usage()  string {
     "usage:\n"
-        + "  compile check <path>\n"
-        + "  compile tokens <path>\n"
-        + "  compile ast <path>\n"
-        + "  compile build <path> -o <output> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>]\n"
-        + "  compile run <path> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>]\n"
+    + "  s check <path>\n"
+    + "  s tokens <path>\n"
+    + "  s ast <path>\n"
+    + "  s build <path> -o <output> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>]\n"
+    + "  s run <path> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>]\n"
+    + "  s test [fixtures_root]\n"
+    + "  s mod init <module>\n"
+    + "  s mod tidy\n"
 }
 
 func make_options(string command, string path, string output, string ssa_margin)  vec[string] {
