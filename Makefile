@@ -1,3 +1,8 @@
+run:
+	$(MAKE) build-arm64
+	$(MAKE) selfhost-bin
+	install -m 755 $$(ls -1t bin/s_arm64_* 2>/dev/null | head -n 1) /usr/local/bin/s
+	@echo "Installed S compiler to /usr/local/bin/s"
 SHELL := /usr/bin/env bash
 
 .DEFAULT_GOAL := help
