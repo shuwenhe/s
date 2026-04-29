@@ -387,5 +387,310 @@ s check /app/s/misc/examples/s/hello.s \
 
 如果以上三步都通过，说明最小工具链链路（前端 + 中端 + 后端 + 运行）已打通。
 
+## EBNF 语法草案（按当前实现）
+
+本节按当前 `src/s/parser.s`、`src/s/lexer.s`、`src/s/ast.s` 的实际实现整理。
+
+说明：
+
+1. 这是“实现语法”，不是理想化设计语法。
+2. 某些关键字在词法层存在，但 parser 未完整支持。
+3. 类型文本当前大量按原样字符串保留，语义阶段再处理。
+
+### 1. 词法层
+
+```ebnf
+letter            = "a" ... "z" | "A" ... "Z" | "_" ;
+digit             = "0" ... "9" ;
+
+ident_start       = letter ;
+ident_continue    = letter | digit ;
+identifier        = ident_start , { ident_continue } ;
+
+int_literal       = digit , { digit | "_" } ;
+string_literal    = '"' , { char | escape } , '"' ;
+bool_literal      = "true" | "false" ;
+
+whitespace        = " " | "\t" | "\r" | "\n" ;
+line_comment      = "//" , { char - "\n" } ;
+block_comment     = "/*" , { block_comment | char } , "*/" ;
+
+keyword           = "package" | "use" | "as" | "pub" | "func" | "const"
+				  | "static" | "struct" | "enum" | "trait" | "impl"
+				  | "for" | "if" | "else" | "while" | "switch" | "select"
+				  | "case" | "default" | "return" | "break" | "continue"
+				  | "sroutine" | "true" | "false" | "nil" | "unsafe"
+				  | "extern" | "mut" | "where" | "in" ;
+
+multi_symbol      = "->" | ":" | "==" | "!=" | "<=" | ">=" | "&&" | "||"
+				  | "++" | "..=" | ".." | "<<" | ">>" | "::" ;
+
+single_symbol     = "(" | ")" | "[" | "]" | "{" | "}" | "." | "," | ":"
+				  | ";" | "+" | "-" | "*" | "/" | "%" | "!" | "=" | "<"
+				  | ">" | "?" | "&" | "|" | "^" ;
+```
+
+### 2. 文件级结构
+
+```ebnf
+source_file       = package_decl , { use_decl } , { top_level_item } ;
+
+package_decl      = "package" , path ;
+use_decl          = "use" , use_path , [ "as" , identifier ] ;
+```
+
+### 3. 导入与路径
+
+```ebnf
+path              = identifier , { "." , identifier | "::" , identifier } , [ bracket_group ] ;
+
+use_path          = identifier , { "." , identifier }
+				  | identifier , { "." , identifier } , "." , "{" , use_member , { "," , use_member } , "}" ;
+
+use_member        = identifier , [ "as" , identifier ] ;
+
+bracket_group     = "[" , { token } , "]" ;
+```
+
+### 4. 顶层声明
+
+```ebnf
+top_level_item    = function_decl
+				  | const_decl
+				  | const_group
+				  | struct_decl
+				  | enum_decl
+				  | trait_decl
+				  | impl_decl ;
+```
+
+#### 4.1 常量
+
+```ebnf
+const_decl        = "const" , identifier , "=" , expr , [ ";" ] ;
+
+const_group       = "const" , "(" , { const_entry , [ "," | ";" ] } , ")" ;
+const_entry       = identifier , [ "=" , expr ] ;
+```
+
+#### 4.2 函数
+
+```ebnf
+function_decl     = "func" , [ receiver ] , identifier , [ generic_params ] ,
+					"(" , [ param_list ] , ")" , [ return_type ] ,
+					[ where_clause ] , block_expr ;
+
+trait_method_decl = "func" , [ receiver ] , identifier , [ generic_params ] ,
+					"(" , [ param_list ] , ")" , [ return_type ] ,
+					[ where_clause ] , ";" ;
+
+receiver          = "(" , named_type , ")" ;
+param_list        = named_type , { "," , named_type } ;
+return_type       = type_text ;
+```
+
+#### 4.3 结构体 / 枚举 / trait / impl
+
+```ebnf
+struct_decl       = "struct" , identifier , [ generic_params ] ,
+					"{" , { named_type , [ "," ] } , "}" ;
+
+enum_decl         = "enum" , identifier , [ generic_params ] ,
+					"{" , { enum_variant , [ "," ] } , "}" ;
+enum_variant      = identifier , [ "(" , type_text , ")" ] ;
+
+trait_decl        = "trait" , identifier , [ generic_params ] ,
+					"{" , { trait_method_decl } , "}" ;
+
+impl_decl         = "impl" , [ generic_params ] , path , [ "for" , path ] ,
+					[ where_clause ] ,
+					"{" , { function_decl } , "}" ;
+```
+
+### 5. 泛型与类型文本
+
+```ebnf
+generic_params    = "[" , generic_param , { "," , generic_param } , "]" ;
+generic_param     = identifier | identifier , ":" , path , { "+" , path } ;
+
+where_clause      = "where" , type_text , { "," , type_text } ;
+
+named_type        = identifier , ":" , type_text
+				  | type_text , identifier ;
+
+type_text         = { token - stop_symbol } ;
+```
+
+说明：
+
+1. `type_text` 在当前实现中不是完整独立 parser，而是按停止符号切片后规范化。
+2. 因此 `[]int`、`map[string]int`、`result[int, string]` 一类文本通常在语法层都能通过。
+
+### 6. 语句
+
+```ebnf
+stmt              = typed_var_stmt
+				  | assign_stmt
+				  | increment_stmt
+				  | c_for_stmt
+				  | return_stmt
+				  | defer_stmt
+				  | sroutine_stmt
+				  | expr_stmt ;
+
+typed_var_stmt    = named_type , "=" , expr , [ ";" ] ;
+assign_stmt       = identifier , "=" , expr , [ ";" ] ;
+increment_stmt    = identifier , "++" , [ ";" ] ;
+
+return_stmt       = "return" , [ expr ] , [ ";" ] ;
+defer_stmt        = "defer" , expr , [ ";" ] ;
+sroutine_stmt     = "sroutine" , expr , [ ";" ] ;
+
+expr_stmt         = expr , [ ";" ] ;
+```
+
+#### 6.1 C 风格 for
+
+```ebnf
+c_for_stmt        = "for" , "(" , for_clause_stmt , ";" , expr , ";" , for_clause_stmt , ")" , block_expr ;
+
+for_clause_stmt   = typed_var_stmt_no_semi
+				  | assign_stmt_no_semi
+				  | increment_stmt_no_semi ;
+```
+
+说明：
+
+1. 当前实现不支持 `let` / `var` 风格声明。
+2. 当前实现不支持 `:=` 短声明。
+
+### 7. 表达式
+
+```ebnf
+expr              = select_expr
+				  | switch_expr
+				  | if_expr
+				  | while_expr
+				  | for_in_expr
+				  | binary_expr ;
+```
+
+#### 7.1 控制流表达式
+
+```ebnf
+if_expr           = "if" , expr , block_expr , [ "else" , ( if_expr | block_expr ) ] ;
+
+while_expr        = "while" , expr , block_expr ;
+
+for_in_expr       = "for" , identifier , "in" , expr , block_expr ;
+
+switch_expr       = "switch" , expr , "{" , { switch_arm , [ "," ] } , "}" ;
+switch_arm        = pattern , ":" , expr ;
+```
+
+#### 7.2 select 表达式
+
+```ebnf
+select_expr       = "select" , "{" , { select_case } , "}" ;
+select_case       = "case" , "default" , ":" , [ ";" ]
+				  | "case" , expr , ":" , [ ";" ] ;
+```
+
+说明：
+
+1. parser 约束 `case expr` 实际必须是 `recv(...)`、`send(...)`、`timeout(...)` 或 `after(...)` 调用。
+2. `select` 最终会被重写为内部调用表达式，而不是保留独立 AST 节点。
+
+#### 7.3 模式
+
+```ebnf
+pattern           = "_"
+				  | int_literal
+				  | string_literal
+				  | "true"
+				  | "false"
+				  | path , [ "(" , [ pattern , { "," , pattern } ] , ")" ]
+				  | identifier ;
+```
+
+#### 7.4 二元表达式
+
+```ebnf
+binary_expr       = unary_expr , { binary_op , unary_expr } ;
+
+binary_op         = "||" | "&&" | "==" | "!="
+				  | "<" | "<=" | ">" | ">="
+				  | "+" | "-" | "*" | "/" | "%" ;
+```
+
+优先级从低到高：
+
+1. `||`
+2. `&&`
+3. `==` `!=`
+4. `<` `<=` `>` `>=`
+5. `+` `-`
+6. `*` `/` `%`
+
+#### 7.5 一元 / 调用 / 成员 / 索引
+
+```ebnf
+unary_expr        = "&" , [ "mut" ] , unary_expr
+				  | call_expr ;
+
+call_expr         = primary_expr , { call_suffix | member_suffix | index_suffix } ;
+
+call_suffix       = "(" , [ expr , { "," , expr } ] , ")" ;
+member_suffix     = "." , identifier | "::" , identifier ;
+index_suffix      = "[" , expr , "]" ;
+```
+
+#### 7.6 primary
+
+```ebnf
+primary_expr      = int_literal
+				  | string_literal
+				  | bool_literal
+				  | "nil"
+				  | identifier
+				  | block_expr
+				  | "(" , expr , ")"
+				  | array_literal
+				  | map_literal ;
+
+array_literal     = bracket_group , [ type_text ] , "{" , [ expr , { "," , expr } ] , "}" ;
+
+map_literal       = "map" , bracket_group , [ type_text ] ,
+					"{" , [ map_entry , { "," , map_entry } ] , "}" ;
+map_entry         = expr , ":" , expr ;
+```
+
+### 8. block 表达式
+
+```ebnf
+block_expr        = "{" , { block_item } , [ final_expr ] , "}" ;
+block_item        = stmt | expr_stmt ;
+final_expr        = expr ;
+```
+
+说明：
+
+1. 如果块尾表达式后没有分号，并且后面紧跟 `}`，则记为 `final_expr`。
+2. 否则按 `expr_stmt` 处理。
+
+### 9. 当前实现中的保留与不完整区域
+
+以下内容在词法或 AST 层出现，但当前 parser/语义闭环并不完整，规范上应视为未正式纳入 MVP：
+
+- `break`
+- `continue`
+- `pub`
+- `unsafe`
+- `extern`
+- `let`
+- `var`
+- `:=`
+```
+
 
 
