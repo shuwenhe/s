@@ -810,17 +810,93 @@ discussion and iteration are especially welcome around:
 
 s is not trying to reinvent everything. it is trying to recombine modern systems-language ideas that have already proven valuable into something more unified, more learnable, and better suited to real engineering work.
 
-## mainline smoke test (from source to running binary)
+## mainline smoke test (current closure)
 
-To verify the S toolchain end-to-end, run:
+To verify the current S toolchain closure, run:
 
 ```bash
-./scripts/mainline_smoketest.sh
+./bin/scripts/mainline_smoketest.sh
 ```
 
 This will:
-- Compile misc/examples/s/hello.s to a native binary
-- Run the binary and check for the expected output
-- Print 'mainline smoke test passed' if successful
+- Check misc/examples/s/hello.s
+- Compile misc/examples/s/hello.s to IR
+- Emit a native artifact from IR and validate outputs exist
 
-This script is also suitable for CI and as最小主线闭环验收。
+This script is suitable for CI as the current minimal closure acceptance.
+
+## how to compile
+
+current minimal compile flow uses the repo-local wrapper:
+
+```bash
+./bin/s check misc/examples/s/hello.s
+./bin/s ir misc/examples/s/hello.s -o /tmp/hello.ir
+./bin/s emit-bin /tmp/hello.ir -o /tmp/s_compiler_from_hello
+```
+
+expected result:
+- `check` prints `ok: misc/examples/s/hello.s`
+- `ir` writes `/tmp/hello.ir`
+- `emit-bin` writes `/tmp/s_compiler_from_hello`
+
+## how to run
+
+current native output from `emit-bin` is a compiler artifact, so run mode is:
+
+```bash
+/tmp/s_compiler_from_hello --help
+```
+
+for one-command closure verification, run:
+
+```bash
+./bin/scripts/mainline_smoketest.sh
+```
+
+## example program
+
+the minimal example is:
+
+```s
+package main
+
+func main() {
+    println("hello, world")
+}
+```
+
+source file:
+- `misc/examples/s/hello.s`
+
+quick check command:
+
+```bash
+./bin/s check misc/examples/s/hello.s
+```
+
+## local run example (/app/test/main.s)
+
+example source:
+
+```s
+package main
+
+func main() {
+    print("hello, world")
+}
+```
+
+run command:
+
+```bash
+cd /app/test
+s run main.s
+```
+
+expected output:
+
+```text
+warning: println is not runtime-native yet; mapped to print for 's run'
+hello, world
+```

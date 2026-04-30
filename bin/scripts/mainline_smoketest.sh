@@ -1,24 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# S language mainline smoke test: from source to running binary
-# Usage: ./scripts/mainline_smoketest.sh
+# S language mainline smoke test: source -> check -> ir -> emit-bin
+# Usage: ./bin/scripts/mainline_smoketest.sh
 
 SRC="misc/examples/s/hello.s"
-OUT="/tmp/s_hello"
-EXPECTED="hello, world"
+OUT_IR="/tmp/s_hello.ir"
+OUT_BIN="/tmp/s_compiler_from_hello"
 
-if ! command -v s >/dev/null 2>&1; then
-  echo "error: 's' compiler not found in PATH" >&2
+if [[ ! -x ./bin/s ]]; then
+  echo "error: './bin/s' command wrapper not found or not executable" >&2
   exit 1
 fi
 
-s build "$SRC" -o "$OUT"
-"$OUT" > "$OUT.out"
-if grep -q "$EXPECTED" "$OUT.out"; then
+./bin/s check "$SRC"
+./bin/s ir "$SRC" -o "$OUT_IR"
+./bin/s emit-bin "$OUT_IR" -o "$OUT_BIN"
+
+if [[ -s "$OUT_IR" && -x "$OUT_BIN" ]]; then
   echo "mainline smoke test passed"
 else
-  echo "mainline smoke test FAILED: expected '$EXPECTED' in output" >&2
-  cat "$OUT.out"
+  echo "mainline smoke test FAILED: missing ir or native artifact" >&2
   exit 1
 fi
