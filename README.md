@@ -809,3 +809,18 @@ discussion and iteration are especially welcome around:
 - whether an edition mechanism is needed for future evolution
 
 s is not trying to reinvent everything. it is trying to recombine modern systems-language ideas that have already proven valuable into something more unified, more learnable, and better suited to real engineering work.
+
+## mainline smoke test (from source to running binary)
+
+To verify the S toolchain end-to-end, run:
+
+```bash
+./scripts/mainline_smoketest.sh
+```
+
+This will:
+- Compile misc/examples/s/hello.s to a native binary
+- Run the binary and check for the expected output
+- Print 'mainline smoke test passed' if successful
+
+This script is also suitable for CI and as最小主线闭环验收。
