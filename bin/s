@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+readonly EXIT_OK=0
+readonly EXIT_USAGE=2
+readonly EXIT_ENV=3
+readonly EXIT_IO=4
+readonly EXIT_COMPILE=10
+readonly EXIT_RUNTIME=11
+readonly EXIT_TEST=12
+readonly EXIT_LINT=13
+readonly EXIT_INTERNAL=20
+
 if [[ -n "${S_ROOT:-}" ]]; then
   ROOT_DIR="$S_ROOT"
 elif [[ -d "/app/s/bin" ]]; then
@@ -27,6 +37,13 @@ register_tmp_file() {
 
 trap cleanup_tmp_files EXIT
 
+fail() {
+  local code="$1"
+  shift
+  echo "error: $*" >&2
+  exit "$code"
+}
+
 pick_compiler() {
   local arch
   arch="$(uname -m)"
@@ -51,34 +68,51 @@ pick_compiler() {
 usage() {
   cat <<'EOF'
 usage:
+  s env
   s check <input.s>
+  s list [path]
   s ir <input.s> -o <output.ir>
   s build <input.s> -o <output.bin>
+  s install <input.s> [--to <dir>]
   s run <input.s>
   s test [fixtures_root]
   s test --all [fixtures_root]
+  s vet [path ...]
   s fmt [path ...]
   s lint [path ...]
+  s clean [path ...]
   s mod init <module>
   s mod tidy
   s mod show
   s doc [path]
   s pkg list [path]
+  s work init [dir ...]
+  s work use <dir ...>
+  s work show
   s emit-bin <input.ir> -o <output.bin>
   s bootstrap <compiler_source.s> [output_dir]
 
 notes:
   - current native backend supports source -> ir and ir -> native compiler artifact.
   - s build generates an executable launcher script plus a sibling .ir file.
+  - s install copies the built launcher and its sibling .ir file into the target bin directory.
   - s run executes IR through the seed runtime interpreter path.
   - s test defaults to a stable smoke fixture set.
   - use s test --all to run all fixtures for capability tracking.
-  - s fmt/s lint/s mod are not implemented in this wrapper yet.
+  - exit codes are stable: 2 usage, 3 env, 10 compile, 11 runtime, 12 test, 13 lint.
 EOF
 }
 
 default_test_root() {
   echo "$ROOT_DIR/src/cmd/compile/internal/tests/fixtures"
+}
+
+default_install_root() {
+  echo "/usr/local/bin"
+}
+
+default_work_file() {
+  echo "$(pwd)/s.work"
 }
 
 collect_s_files() {
@@ -102,6 +136,68 @@ collect_s_files() {
 extract_package_name() {
   local file="$1"
   awk '/^[[:space:]]*package[[:space:]]+[A-Za-z0-9_.]+[[:space:]]*$/ { print $2; exit }' "$file"
+}
+
+build_launcher() {
+  local in_src="$1"
+  local out_bin="$2"
+  local out_ir out_dir out_ir_base runner
+
+  out_ir="${out_bin}.ir"
+  out_dir="$(dirname "$out_bin")"
+  out_ir_base="$(basename "$out_ir")"
+
+  mkdir -p "$out_dir"
+  if ! "$COMPILER" "$in_src" "$out_ir" >/dev/null; then
+    fail "$EXIT_COMPILE" "build failed: $in_src"
+  fi
+
+  runner="$(ensure_ir_runner)"
+  cat >"$out_bin" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+HERE="\$(cd "\$(dirname "\$0")" && pwd)"
+exec "$runner" "\$HERE/$out_ir_base"
+EOF
+  chmod +x "$out_bin"
+}
+
+list_packages() {
+  local pkg_path="${1:-.}"
+  local tmp_pkg
+  tmp_pkg="$(mktemp /tmp/s_list.XXXXXX)"
+  register_tmp_file "$tmp_pkg"
+
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    pkg_name="$(extract_package_name "$file" || true)"
+    [[ -z "$pkg_name" ]] && pkg_name="unknown"
+    printf "%s\t%s\n" "$pkg_name" "$file" >>"$tmp_pkg"
+  done < <(collect_s_files "$pkg_path")
+
+  if [[ ! -s "$tmp_pkg" ]]; then
+    fail "$EXIT_IO" "no .s files found under $pkg_path"
+  fi
+
+  awk -F '\t' '{count[$1]++} END {for (k in count) printf "%s\t%d\n", k, count[k]}' "$tmp_pkg" | sort
+}
+
+write_workspace_file() {
+  local work_file="$1"
+  shift
+  {
+    echo "[workspace]"
+    for dir in "$@"; do
+      echo "use = \"$dir\""
+    done
+  } >"$work_file"
+}
+
+read_workspace_dirs() {
+  local work_file="$1"
+  if [[ -f "$work_file" ]]; then
+    awk -F '"' '/^use = "/ { print $2 }' "$work_file"
+  fi
 }
 
 smoke_fixture_list() {
@@ -175,95 +271,126 @@ EOF
 fail_unimplemented() {
   echo "error: '$1' is not implemented in this wrapper yet" >&2
   echo "hint: use 's check', 's ir', 's build', 's run', 's test', 's fmt', 's lint', 's mod', 's doc', 's pkg', 's emit-bin', or 's bootstrap'" >&2
-  exit 2
+  exit "$EXIT_USAGE"
 }
 
 if [[ $# -lt 1 ]]; then
   usage
-  exit 2
+  exit "$EXIT_USAGE"
 fi
 
 COMPILER="$(pick_compiler || true)"
 if [[ -z "$COMPILER" || ! -x "$COMPILER" ]]; then
-  echo "error: no runnable native s compiler found for arch '$(uname -m)'" >&2
-  exit 1
+  fail "$EXIT_ENV" "no runnable native s compiler found for arch '$(uname -m)'"
 fi
 
 cmd="$1"
 shift
 
 case "$cmd" in
+  env)
+    if [[ $# -ne 0 ]]; then
+      fail "$EXIT_USAGE" "usage: s env"
+    fi
+    echo "S_ROOT=$ROOT_DIR"
+    echo "S_COMPILER=$COMPILER"
+    echo "S_ARCH=$(uname -m)"
+    echo "S_INSTALL_ROOT=$(default_install_root)"
+    echo "S_TEST_DEFAULT_ROOT=$(default_test_root)"
+    echo "S_PERF_BASELINE=$ROOT_DIR/doc/perf_baseline.env"
+    ;;
   check)
     if [[ $# -ne 1 ]]; then
-      echo "error: usage: s check <input.s>" >&2
-      exit 2
+      fail "$EXIT_USAGE" "usage: s check <input.s>"
     fi
     tmp_ir="$(mktemp /tmp/s_check.XXXXXX.ir)"
     trap 'rm -f "$tmp_ir"' EXIT
-    "$COMPILER" "$1" "$tmp_ir" >/dev/null
+    if ! "$COMPILER" "$1" "$tmp_ir" >/dev/null; then
+      fail "$EXIT_COMPILE" "check failed: $1"
+    fi
     echo "ok: $1"
+    ;;
+  list)
+    if [[ $# -gt 1 ]]; then
+      fail "$EXIT_USAGE" "usage: s list [path]"
+    fi
+    list_packages "${1:-.}"
     ;;
   ir)
     if [[ $# -ne 3 || "$2" != "-o" ]]; then
-      echo "error: usage: s ir <input.s> -o <output.ir>" >&2
-      exit 2
+      fail "$EXIT_USAGE" "usage: s ir <input.s> -o <output.ir>"
     fi
-    "$COMPILER" "$1" "$3"
+    if ! "$COMPILER" "$1" "$3"; then
+      fail "$EXIT_COMPILE" "ir generation failed: $1"
+    fi
     ;;
   emit-bin)
     if [[ $# -ne 3 || "$2" != "-o" ]]; then
-      echo "error: usage: s emit-bin <input.ir> -o <output.bin>" >&2
-      exit 2
+      fail "$EXIT_USAGE" "usage: s emit-bin <input.ir> -o <output.bin>"
     fi
-    "$COMPILER" --emit-bin "$1" "$3"
+    if ! "$COMPILER" --emit-bin "$1" "$3"; then
+      fail "$EXIT_COMPILE" "emit-bin failed: $1"
+    fi
     ;;
   build)
     if [[ $# -ne 3 || "$2" != "-o" ]]; then
-      echo "error: usage: s build <input.s> -o <output.bin>" >&2
-      exit 2
+      fail "$EXIT_USAGE" "usage: s build <input.s> -o <output.bin>"
     fi
     in_src="$1"
     out_bin="$3"
-    out_ir="${out_bin}.ir"
-    out_dir="$(dirname "$out_bin")"
-    out_ir_base="$(basename "$out_ir")"
-
-    mkdir -p "$out_dir"
-    "$COMPILER" "$in_src" "$out_ir" >/dev/null
-    runner="$(ensure_ir_runner)"
-
-    cat >"$out_bin" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-HERE="\$(cd "\$(dirname "\$0")" && pwd)"
-exec "$runner" "\$HERE/$out_ir_base"
-EOF
-    chmod +x "$out_bin"
+    build_launcher "$in_src" "$out_bin"
     echo "built $in_src -> $out_bin"
+    ;;
+  install)
+    if [[ $# -ne 1 && $# -ne 3 ]]; then
+      fail "$EXIT_USAGE" "usage: s install <input.s> [--to <dir>]"
+    fi
+    in_src="$1"
+    install_root="$(default_install_root)"
+    if [[ $# -eq 3 ]]; then
+      if [[ "$2" != "--to" ]]; then
+        fail "$EXIT_USAGE" "usage: s install <input.s> [--to <dir>]"
+      fi
+      install_root="$3"
+    fi
+    if [[ ! -f "$in_src" ]]; then
+      fail "$EXIT_IO" "source file not found: $in_src"
+    fi
+    mkdir -p "$install_root"
+    bin_name="$(basename "$in_src" .s)"
+    out_bin="$install_root/$bin_name"
+    build_launcher "$in_src" "$out_bin"
+    echo "installed $in_src -> $out_bin"
     ;;
   bootstrap)
     if [[ $# -lt 1 || $# -gt 2 ]]; then
-      echo "error: usage: s bootstrap <compiler_source.s> [output_dir]" >&2
-      exit 2
+      fail "$EXIT_USAGE" "usage: s bootstrap <compiler_source.s> [output_dir]"
     fi
     if [[ $# -eq 1 ]]; then
-      "$COMPILER" --bootstrap "$1"
+      if ! "$COMPILER" --bootstrap "$1"; then
+        fail "$EXIT_COMPILE" "bootstrap failed: $1"
+      fi
     else
-      "$COMPILER" --bootstrap "$1" "$2"
+      if ! "$COMPILER" --bootstrap "$1" "$2"; then
+        fail "$EXIT_COMPILE" "bootstrap failed: $1"
+      fi
     fi
     ;;
   run)
     if [[ $# -ne 1 ]]; then
-      echo "error: usage: s run <input.s>" >&2
-      exit 2
+      fail "$EXIT_USAGE" "usage: s run <input.s>"
     fi
     run_src="$1"
     tmp_ir="$(mktemp /tmp/s_run.XXXXXX.ir)"
     register_tmp_file "$tmp_ir"
 
-    "$COMPILER" "$run_src" "$tmp_ir" >/dev/null
+    if ! "$COMPILER" "$run_src" "$tmp_ir" >/dev/null; then
+      fail "$EXIT_COMPILE" "run compile failed: $run_src"
+    fi
     runner="$(ensure_ir_runner)"
-    "$runner" "$tmp_ir"
+    if ! "$runner" "$tmp_ir"; then
+      fail "$EXIT_RUNTIME" "run execution failed: $run_src"
+    fi
     ;;
   test)
     mode="smoke"
@@ -275,8 +402,7 @@ EOF
     fi
 
     if [[ $# -gt 1 ]]; then
-      echo "error: usage: s test [fixtures_root] | s test --all [fixtures_root]" >&2
-      exit 2
+      fail "$EXIT_USAGE" "usage: s test [fixtures_root] | s test --all [fixtures_root]"
     fi
 
     if [[ $# -eq 1 ]]; then
@@ -284,8 +410,7 @@ EOF
     fi
 
     if [[ ! -d "$fixtures_root" ]]; then
-      echo "error: fixtures root not found: $fixtures_root" >&2
-      exit 1
+      fail "$EXIT_IO" "fixtures root not found: $fixtures_root"
     fi
 
     total=0
@@ -339,7 +464,61 @@ EOF
 
     echo "test summary: total=$total passed=$passed failed=$failed"
     if [[ $failed -ne 0 ]]; then
-      exit 1
+      exit "$EXIT_TEST"
+    fi
+    ;;
+  vet)
+    vet_total=0
+    vet_failed=0
+    tmp_dirs="$(mktemp /tmp/s_vet_dirs.XXXXXX)"
+    register_tmp_file "$tmp_dirs"
+
+    while IFS= read -r file; do
+      [[ -z "$file" ]] && continue
+      vet_total=$((vet_total + 1))
+      dir_name="$(dirname "$file")"
+      printf "%s\n" "$dir_name" >>"$tmp_dirs"
+
+      if [[ "$file" == *_fail.s ]]; then
+        echo "vet skip (expected-fail fixture): $file"
+        continue
+      fi
+
+      if grep -n $'\t' "$file" >/dev/null 2>&1; then
+        echo "vet FAIL (tab indentation): $file"
+        vet_failed=$((vet_failed + 1))
+        continue
+      fi
+
+      pkg_name="$(extract_package_name "$file" || true)"
+      if [[ -z "$pkg_name" ]]; then
+        echo "vet FAIL (missing package declaration): $file"
+        vet_failed=$((vet_failed + 1))
+        continue
+      fi
+
+      tmp_ir="$(mktemp /tmp/s_vet.XXXXXX.ir)"
+      register_tmp_file "$tmp_ir"
+      if "$COMPILER" "$file" "$tmp_ir" >/dev/null 2>&1; then
+        echo "vet ok: $file"
+      else
+        echo "vet FAIL (compile check): $file"
+        vet_failed=$((vet_failed + 1))
+      fi
+    done < <(collect_s_files "$@")
+
+    while IFS= read -r dir_name; do
+      [[ -z "$dir_name" ]] && continue
+      pkg_count="$(find "$dir_name" -maxdepth 1 -type f -name '*.s' -print0 | xargs -0 -r awk '/^[[:space:]]*package[[:space:]]+[A-Za-z0-9_.]+[[:space:]]*$/ { print $2 }' | sort -u | wc -l)"
+      if [[ "$pkg_count" -gt 1 ]]; then
+        echo "vet FAIL (mixed packages in dir): $dir_name"
+        vet_failed=$((vet_failed + 1))
+      fi
+    done < <(sort -u "$tmp_dirs")
+
+    echo "vet summary: files=$vet_total failed=$vet_failed"
+    if [[ $vet_failed -ne 0 ]]; then
+      exit "$EXIT_LINT"
     fi
     ;;
   fmt)
@@ -405,13 +584,34 @@ EOF
 
     echo "lint summary: files=$lint_total failed=$lint_failed"
     if [[ $lint_failed -ne 0 ]]; then
-      exit 1
+      exit "$EXIT_LINT"
     fi
+    ;;
+  clean)
+    removed=0
+    while IFS= read -r file; do
+      [[ -z "$file" ]] && continue
+      rm -f "$file"
+      echo "clean: $file"
+      removed=$((removed + 1))
+    done < <(
+      if [[ $# -eq 0 ]]; then
+        find . -type f \( -name '*.ir' -o -name '*.out' \)
+      else
+        for path in "$@"; do
+          if [[ -f "$path" ]]; then
+            printf "%s\n" "$path"
+          elif [[ -d "$path" ]]; then
+            find "$path" -type f \( -name '*.ir' -o -name '*.out' \)
+          fi
+        done
+      fi | sort -u
+    )
+    echo "clean summary: removed=$removed"
     ;;
   mod)
     if [[ $# -lt 1 ]]; then
-      echo "error: usage: s mod <init|tidy|show> [args]" >&2
-      exit 2
+      fail "$EXIT_USAGE" "usage: s mod <init|tidy|show> [args]"
     fi
 
     mod_cmd="$1"
@@ -421,12 +621,10 @@ EOF
     case "$mod_cmd" in
       init)
         if [[ $# -ne 1 ]]; then
-          echo "error: usage: s mod init <module>" >&2
-          exit 2
+          fail "$EXIT_USAGE" "usage: s mod init <module>"
         fi
         if [[ -f "$mod_file" ]]; then
-          echo "error: s.mod already exists: $mod_file" >&2
-          exit 1
+          fail "$EXIT_IO" "s.mod already exists: $mod_file"
         fi
         cat >"$mod_file" <<EOF
 [module]
@@ -440,16 +638,13 @@ EOF
         ;;
       tidy)
         if [[ $# -ne 0 ]]; then
-          echo "error: usage: s mod tidy" >&2
-          exit 2
+          fail "$EXIT_USAGE" "usage: s mod tidy"
         fi
         if [[ ! -f "$mod_file" ]]; then
-          echo "error: s.mod not found in $(pwd)" >&2
-          exit 1
+          fail "$EXIT_IO" "s.mod not found in $(pwd)"
         fi
         if ! rg -n '^\[module\]' "$mod_file" >/dev/null 2>&1; then
-          echo "error: invalid s.mod: missing [module]" >&2
-          exit 1
+          fail "$EXIT_IO" "invalid s.mod: missing [module]"
         fi
         if ! rg -n '^\[dependencies\]' "$mod_file" >/dev/null 2>&1; then
           echo "[dependencies]" >>"$mod_file"
@@ -458,26 +653,21 @@ EOF
         ;;
       show)
         if [[ $# -ne 0 ]]; then
-          echo "error: usage: s mod show" >&2
-          exit 2
+          fail "$EXIT_USAGE" "usage: s mod show"
         fi
         if [[ ! -f "$mod_file" ]]; then
-          echo "error: s.mod not found in $(pwd)" >&2
-          exit 1
+          fail "$EXIT_IO" "s.mod not found in $(pwd)"
         fi
         cat "$mod_file"
         ;;
       *)
-        echo "error: unknown mod subcommand '$mod_cmd'" >&2
-        echo "usage: s mod <init|tidy|show>" >&2
-        exit 2
+        fail "$EXIT_USAGE" "unknown mod subcommand '$mod_cmd' (usage: s mod <init|tidy|show>)"
         ;;
     esac
     ;;
   doc)
     if [[ $# -gt 1 ]]; then
-      echo "error: usage: s doc [path]" >&2
-      exit 2
+      fail "$EXIT_USAGE" "usage: s doc [path]"
     fi
 
     doc_path="${1:-.}"
@@ -487,8 +677,7 @@ EOF
     done < <(collect_s_files "$doc_path")
 
     if [[ ${#files[@]} -eq 0 ]]; then
-      echo "error: no .s files found under $doc_path" >&2
-      exit 1
+      fail "$EXIT_IO" "no .s files found under $doc_path"
     fi
 
     for file in "${files[@]}"; do
@@ -513,8 +702,7 @@ EOF
     ;;
   pkg)
     if [[ $# -lt 1 || $# -gt 2 ]]; then
-      echo "error: usage: s pkg list [path]" >&2
-      exit 2
+      fail "$EXIT_USAGE" "usage: s pkg list [path]"
     fi
 
     pkg_cmd="$1"
@@ -533,16 +721,63 @@ EOF
         done < <(collect_s_files "$pkg_path")
 
         if [[ ! -s "$tmp_pkg" ]]; then
-          echo "error: no .s files found under $pkg_path" >&2
-          exit 1
+          fail "$EXIT_IO" "no .s files found under $pkg_path"
         fi
 
         awk -F '\t' '{count[$1]++} END {for (k in count) printf "%s\t%d\n", k, count[k]}' "$tmp_pkg" | sort
         ;;
       *)
-        echo "error: unknown pkg subcommand '$pkg_cmd'" >&2
-        echo "usage: s pkg list [path]" >&2
-        exit 2
+        fail "$EXIT_USAGE" "unknown pkg subcommand '$pkg_cmd' (usage: s pkg list [path])"
+        ;;
+    esac
+    ;;
+  work)
+    if [[ $# -lt 1 ]]; then
+      fail "$EXIT_USAGE" "usage: s work <init|use|show> [args]"
+    fi
+
+    work_cmd="$1"
+    shift
+    work_file="$(default_work_file)"
+
+    case "$work_cmd" in
+      init)
+        if [[ -f "$work_file" ]]; then
+          fail "$EXIT_IO" "s.work already exists: $work_file"
+        fi
+        if [[ $# -eq 0 ]]; then
+          write_workspace_file "$work_file" "."
+        else
+          write_workspace_file "$work_file" "$@"
+        fi
+        echo "work init: created $work_file"
+        ;;
+      use)
+        if [[ $# -lt 1 ]]; then
+          fail "$EXIT_USAGE" "usage: s work use <dir ...>"
+        fi
+        existing=()
+        while IFS= read -r dir_name; do
+          [[ -n "$dir_name" ]] && existing+=("$dir_name")
+        done < <(read_workspace_dirs "$work_file")
+        for dir_name in "$@"; do
+          existing+=("$dir_name")
+        done
+        mapfile -t deduped < <(printf '%s\n' "${existing[@]}" | awk 'NF { seen[$0]=1 } END { for (k in seen) print k }' | sort)
+        write_workspace_file "$work_file" "${deduped[@]}"
+        echo "work use: updated $work_file"
+        ;;
+      show)
+        if [[ $# -ne 0 ]]; then
+          fail "$EXIT_USAGE" "usage: s work show"
+        fi
+        if [[ ! -f "$work_file" ]]; then
+          fail "$EXIT_IO" "s.work not found in $(pwd)"
+        fi
+        cat "$work_file"
+        ;;
+      *)
+        fail "$EXIT_USAGE" "unknown work subcommand '$work_cmd' (usage: s work <init|use|show>)"
         ;;
     esac
     ;;
@@ -552,6 +787,6 @@ EOF
   *)
     echo "error: unknown command '$cmd'" >&2
     usage
-    exit 2
+    exit "$EXIT_USAGE"
     ;;
 esac
