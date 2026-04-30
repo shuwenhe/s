@@ -883,7 +883,7 @@ example source:
 package main
 
 func main() {
-    print("hello, world")
+    println("hello, world")
 }
 ```
 
@@ -897,6 +897,63 @@ s run main.s
 expected output:
 
 ```text
-warning: println is not runtime-native yet; mapped to print for 's run'
 hello, world
+```
+
+## how to test
+
+`s test` now supports two modes:
+
+- smoke mode (default): stable green subset for day-to-day checks
+- full mode (`--all`): full fixture sweep for capability tracking
+
+### smoke mode (default)
+
+command:
+
+```bash
+s test
+```
+
+example output:
+
+```text
+running smoke fixture suite: /app/s/src/cmd/compile/internal/tests/fixtures
+ok: /app/s/src/cmd/compile/internal/tests/fixtures/binary_sample.s
+ok (expected fail): /app/s/src/cmd/compile/internal/tests/fixtures/borrow_fail.s
+ok (expected fail): /app/s/src/cmd/compile/internal/tests/fixtures/branch_move_fail.s
+ok: /app/s/src/cmd/compile/internal/tests/fixtures/builtin_field_ok.s
+ok (expected fail): /app/s/src/cmd/compile/internal/tests/fixtures/check_fail.s
+ok (expected fail): /app/s/src/cmd/compile/internal/tests/fixtures/generic_bound_fail.s
+ok (expected fail): /app/s/src/cmd/compile/internal/tests/fixtures/method_conflict_fail.s
+test summary: total=7 passed=7 failed=0
+```
+
+### full mode (capability tracking)
+
+command:
+
+```bash
+s test --all
+```
+
+example output:
+
+```text
+running full fixture suite: /app/s/src/cmd/compile/internal/tests/fixtures
+ok: /app/s/src/cmd/compile/internal/tests/fixtures/binary_sample.s
+ok (expected fail): /app/s/src/cmd/compile/internal/tests/fixtures/borrow_fail.s
+ok (expected fail): /app/s/src/cmd/compile/internal/tests/fixtures/branch_move_fail.s
+ok: /app/s/src/cmd/compile/internal/tests/fixtures/builtin_field_ok.s
+FAIL (unexpected error): /app/s/src/cmd/compile/internal/tests/fixtures/cfor_sample.s
+ok (expected fail): /app/s/src/cmd/compile/internal/tests/fixtures/check_fail.s
+...
+test summary: total=15 passed=7 failed=8
+```
+
+you can also pass a custom fixtures root:
+
+```bash
+s test /app/s/src/cmd/compile/internal/tests/fixtures
+s test --all /app/s/src/cmd/compile/internal/tests/fixtures
 ```
