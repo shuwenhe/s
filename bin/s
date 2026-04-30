@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -n "${S_ROOT:-}" ]]; then
+  ROOT_DIR="$S_ROOT"
+elif [[ -d "/app/s/bin" ]]; then
+  ROOT_DIR="/app/s"
+else
+  ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+fi
+
+pick_compiler() {
+  local arch
+  arch="$(uname -m)"
+
+  case "$arch" in
+    aarch64|arm64)
+      ls -1t "$ROOT_DIR"/bin/s_arm64_* 2>/dev/null | head -n 1
+      ;;
+    x86_64|amd64)
+      if [[ -x "$ROOT_DIR/bin/s_x86_64" ]]; then
+        echo "$ROOT_DIR/bin/s_x86_64"
+      else
+        ls -1t "$ROOT_DIR"/bin/s_x86_64_* 2>/dev/null | head -n 1
+      fi
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+usage() {
+  cat <<'EOF'
+usage:
+  s check <input.s>
+  s ir <input.s> -o <output.ir>
+  s run <input.s>
+  s emit-bin <input.ir> -o <output.bin>
+  s bootstrap <compiler_source.s> [output_dir]
+
+notes:
+  - current native backend supports source -> ir and ir -> native compiler artifact.
+  - s run executes IR through the seed runtime interpreter path.
+  - s build/s test/s fmt/s lint/s mod are not implemented in this wrapper yet.
+EOF
+}
+
+ensure_ir_runner() {
+  local arch runner src
+  arch="$(uname -m)"
+  runner="/tmp/s_ir_runner_${arch}"
+  src="/tmp/s_ir_runner_main_${arch}.c"
+
+  if [[ -x "$runner" ]]; then
+    echo "$runner"
+    return 0
+  fi
+
+  cat >"$src" <<'EOF'
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "runtime/memory.h"
+
+int main(int argc, char **argv) {
+  compile_error err;
+  long ret = 0;
+  const char *entry = "main";
+
+  if (argc < 2 || argc > 3) {
+    fprintf(stderr, "usage: %s <input.ir> [entry]\n", argv[0]);
+    return 2;
+  }
+  if (argc == 3) {
+    entry = argv[2];
+  }
+
+  if (!runtime_execute_file(argv[1], entry, &ret, &err)) {
+    fprintf(stderr, "error[%d] at %zu:%zu: %s\n", (int)err.code, err.line, err.column, err.message);
+    return 1;
+  }
+
+  return (int)ret;
+}
+EOF
+
+  gcc -std=c11 -Wall -Wextra -Werror -O2 \
+    -I"$ROOT_DIR/src/cmd/compile/seed" \
+    -o "$runner" \
+    "$src" \
+    "$ROOT_DIR/src/cmd/compile/seed/lexical/lexer.c" \
+    "$ROOT_DIR/src/cmd/compile/seed/syntax/parser.c" \
+    "$ROOT_DIR/src/cmd/compile/seed/semantic/analyzer.c" \
+    "$ROOT_DIR/src/cmd/compile/seed/intermediate/ir.c" \
+    "$ROOT_DIR/src/cmd/compile/seed/code/generator.c" \
+    "$ROOT_DIR/src/cmd/compile/seed/code/native_backend.c" \
+    "$ROOT_DIR/src/cmd/compile/seed/runtime/runtime.c" \
+    "$ROOT_DIR/src/cmd/compile/seed/error/error.c"
+
+  echo "$runner"
+}
+
+fail_unimplemented() {
+  echo "error: '$1' is not implemented in this wrapper yet" >&2
+  echo "hint: use 's check', 's ir', 's emit-bin', or 's bootstrap'" >&2
+  exit 2
+}
+
+if [[ $# -lt 1 ]]; then
+  usage
+  exit 2
+fi
+
+COMPILER="$(pick_compiler || true)"
+if [[ -z "$COMPILER" || ! -x "$COMPILER" ]]; then
+  echo "error: no runnable native s compiler found for arch '$(uname -m)'" >&2
+  exit 1
+fi
+
+cmd="$1"
+shift
+
+case "$cmd" in
+  check)
+    if [[ $# -ne 1 ]]; then
+      echo "error: usage: s check <input.s>" >&2
+      exit 2
+    fi
+    tmp_ir="$(mktemp /tmp/s_check.XXXXXX.ir)"
+    trap 'rm -f "$tmp_ir"' EXIT
+    "$COMPILER" "$1" "$tmp_ir" >/dev/null
+    echo "ok: $1"
+    ;;
+  ir)
+    if [[ $# -ne 3 || "$2" != "-o" ]]; then
+      echo "error: usage: s ir <input.s> -o <output.ir>" >&2
+      exit 2
+    fi
+    "$COMPILER" "$1" "$3"
+    ;;
+  emit-bin)
+    if [[ $# -ne 3 || "$2" != "-o" ]]; then
+      echo "error: usage: s emit-bin <input.ir> -o <output.bin>" >&2
+      exit 2
+    fi
+    "$COMPILER" --emit-bin "$1" "$3"
+    ;;
+  bootstrap)
+    if [[ $# -lt 1 || $# -gt 2 ]]; then
+      echo "error: usage: s bootstrap <compiler_source.s> [output_dir]" >&2
+      exit 2
+    fi
+    if [[ $# -eq 1 ]]; then
+      "$COMPILER" --bootstrap "$1"
+    else
+      "$COMPILER" --bootstrap "$1" "$2"
+    fi
+    ;;
+  run)
+    if [[ $# -ne 1 ]]; then
+      echo "error: usage: s run <input.s>" >&2
+      exit 2
+    fi
+    run_src="$1"
+    compat_src=""
+    tmp_ir="$(mktemp /tmp/s_run.XXXXXX.ir)"
+
+    if grep -Eq '\bprintln\(' "$run_src"; then
+      compat_src="$(mktemp /tmp/s_run_src.XXXXXX.s)"
+      sed -E 's/\bprintln\(/print(/g' "$run_src" > "$compat_src"
+      run_src="$compat_src"
+      echo "warning: println is not runtime-native yet; mapped to print for 's run'" >&2
+    fi
+
+    trap 'rm -f "$tmp_ir" "$compat_src"' EXIT
+    "$COMPILER" "$run_src" "$tmp_ir" >/dev/null
+    runner="$(ensure_ir_runner)"
+    "$runner" "$tmp_ir"
+    ;;
+  build|test|fmt|lint|doc|pkg|mod)
+    fail_unimplemented "$cmd"
+    ;;
+  help|--help|-h)
+    usage
+    ;;
+  *)
+    echo "error: unknown command '$cmd'" >&2
+    usage
+    exit 2
+    ;;
+esac
