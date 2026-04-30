@@ -35,14 +35,17 @@ usage() {
 usage:
   s check <input.s>
   s ir <input.s> -o <output.ir>
+  s build <input.s> -o <output.bin>
   s run <input.s>
+  s test [fixtures_root]
   s emit-bin <input.ir> -o <output.bin>
   s bootstrap <compiler_source.s> [output_dir]
 
 notes:
   - current native backend supports source -> ir and ir -> native compiler artifact.
+  - s build generates an executable launcher script plus a sibling .ir file.
   - s run executes IR through the seed runtime interpreter path.
-  - s build/s test/s fmt/s lint/s mod are not implemented in this wrapper yet.
+  - s fmt/s lint/s mod are not implemented in this wrapper yet.
 EOF
 }
 
@@ -103,7 +106,7 @@ EOF
 
 fail_unimplemented() {
   echo "error: '$1' is not implemented in this wrapper yet" >&2
-  echo "hint: use 's check', 's ir', 's emit-bin', or 's bootstrap'" >&2
+  echo "hint: use 's check', 's ir', 's build', 's run', 's test', 's emit-bin', or 's bootstrap'" >&2
   exit 2
 }
 
@@ -146,6 +149,30 @@ case "$cmd" in
     fi
     "$COMPILER" --emit-bin "$1" "$3"
     ;;
+  build)
+    if [[ $# -ne 3 || "$2" != "-o" ]]; then
+      echo "error: usage: s build <input.s> -o <output.bin>" >&2
+      exit 2
+    fi
+    in_src="$1"
+    out_bin="$3"
+    out_ir="${out_bin}.ir"
+    out_dir="$(dirname "$out_bin")"
+    out_ir_base="$(basename "$out_ir")"
+
+    mkdir -p "$out_dir"
+    "$COMPILER" "$in_src" "$out_ir" >/dev/null
+    runner="$(ensure_ir_runner)"
+
+    cat >"$out_bin" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+HERE="\$(cd "\$(dirname "\$0")" && pwd)"
+exec "$runner" "\$HERE/$out_ir_base"
+EOF
+    chmod +x "$out_bin"
+    echo "built $in_src -> $out_bin"
+    ;;
   bootstrap)
     if [[ $# -lt 1 || $# -gt 2 ]]; then
       echo "error: usage: s bootstrap <compiler_source.s> [output_dir]" >&2
@@ -178,7 +205,53 @@ case "$cmd" in
     runner="$(ensure_ir_runner)"
     "$runner" "$tmp_ir"
     ;;
-  build|test|fmt|lint|doc|pkg|mod)
+  test)
+    if [[ $# -gt 1 ]]; then
+      echo "error: usage: s test [fixtures_root]" >&2
+      exit 2
+    fi
+
+    fixtures_root="${1:-$ROOT_DIR/src/cmd/compile/internal/tests/fixtures}"
+    if [[ ! -d "$fixtures_root" ]]; then
+      echo "error: fixtures root not found: $fixtures_root" >&2
+      exit 1
+    fi
+
+    total=0
+    passed=0
+    failed=0
+
+    while IFS= read -r file; do
+      total=$((total + 1))
+      tmp_ir="$(mktemp /tmp/s_test.XXXXXX.ir)"
+
+      if [[ "$file" == *_fail.s ]]; then
+        if "$COMPILER" "$file" "$tmp_ir" >/dev/null 2>&1; then
+          echo "FAIL (expected error): $file"
+          failed=$((failed + 1))
+        else
+          echo "ok (expected fail): $file"
+          passed=$((passed + 1))
+        fi
+      else
+        if "$COMPILER" "$file" "$tmp_ir" >/dev/null 2>&1; then
+          echo "ok: $file"
+          passed=$((passed + 1))
+        else
+          echo "FAIL (unexpected error): $file"
+          failed=$((failed + 1))
+        fi
+      fi
+
+      rm -f "$tmp_ir"
+    done < <(find "$fixtures_root" -type f -name '*.s' | sort)
+
+    echo "test summary: total=$total passed=$passed failed=$failed"
+    if [[ $failed -ne 0 ]]; then
+      exit 1
+    fi
+    ;;
+  fmt|lint|doc|pkg|mod)
     fail_unimplemented "$cmd"
     ;;
   help|--help|-h)
