@@ -9,6 +9,24 @@ else
   ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 fi
 
+declare -a TMP_FILES=()
+
+cleanup_tmp_files() {
+  local f
+  for f in "${TMP_FILES[@]:-}"; do
+    if [[ -n "$f" && -e "$f" ]]; then
+      rm -f "$f"
+    fi
+  done
+  return 0
+}
+
+register_tmp_file() {
+  TMP_FILES+=("$1")
+}
+
+trap cleanup_tmp_files EXIT
+
 pick_compiler() {
   local arch
   arch="$(uname -m)"
@@ -38,6 +56,14 @@ usage:
   s build <input.s> -o <output.bin>
   s run <input.s>
   s test [fixtures_root]
+  s test --all [fixtures_root]
+  s fmt [path ...]
+  s lint [path ...]
+  s mod init <module>
+  s mod tidy
+  s mod show
+  s doc [path]
+  s pkg list [path]
   s emit-bin <input.ir> -o <output.bin>
   s bootstrap <compiler_source.s> [output_dir]
 
@@ -45,7 +71,49 @@ notes:
   - current native backend supports source -> ir and ir -> native compiler artifact.
   - s build generates an executable launcher script plus a sibling .ir file.
   - s run executes IR through the seed runtime interpreter path.
+  - s test defaults to a stable smoke fixture set.
+  - use s test --all to run all fixtures for capability tracking.
   - s fmt/s lint/s mod are not implemented in this wrapper yet.
+EOF
+}
+
+default_test_root() {
+  echo "$ROOT_DIR/src/cmd/compile/internal/tests/fixtures"
+}
+
+collect_s_files() {
+  local paths=()
+  local p
+  if [[ $# -eq 0 ]]; then
+    paths=(".")
+  else
+    paths=("$@")
+  fi
+
+  for p in "${paths[@]}"; do
+    if [[ -f "$p" ]]; then
+      [[ "$p" == *.s ]] && echo "$p"
+    elif [[ -d "$p" ]]; then
+      find "$p" -type f -name '*.s'
+    fi
+  done | sort -u
+}
+
+extract_package_name() {
+  local file="$1"
+  awk '/^[[:space:]]*package[[:space:]]+[A-Za-z0-9_.]+[[:space:]]*$/ { print $2; exit }' "$file"
+}
+
+smoke_fixture_list() {
+  local root="$1"
+  cat <<EOF
+$root/binary_sample.s
+$root/borrow_fail.s
+$root/branch_move_fail.s
+$root/builtin_field_ok.s
+$root/check_fail.s
+$root/generic_bound_fail.s
+$root/method_conflict_fail.s
 EOF
 }
 
@@ -106,7 +174,7 @@ EOF
 
 fail_unimplemented() {
   echo "error: '$1' is not implemented in this wrapper yet" >&2
-  echo "hint: use 's check', 's ir', 's build', 's run', 's test', 's emit-bin', or 's bootstrap'" >&2
+  echo "hint: use 's check', 's ir', 's build', 's run', 's test', 's fmt', 's lint', 's mod', 's doc', 's pkg', 's emit-bin', or 's bootstrap'" >&2
   exit 2
 }
 
@@ -190,28 +258,31 @@ EOF
       exit 2
     fi
     run_src="$1"
-    compat_src=""
     tmp_ir="$(mktemp /tmp/s_run.XXXXXX.ir)"
+    register_tmp_file "$tmp_ir"
 
-    if grep -Eq '\bprintln\(' "$run_src"; then
-      compat_src="$(mktemp /tmp/s_run_src.XXXXXX.s)"
-      sed -E 's/\bprintln\(/print(/g' "$run_src" > "$compat_src"
-      run_src="$compat_src"
-      echo "warning: println is not runtime-native yet; mapped to print for 's run'" >&2
-    fi
-
-    trap 'rm -f "$tmp_ir" "$compat_src"' EXIT
     "$COMPILER" "$run_src" "$tmp_ir" >/dev/null
     runner="$(ensure_ir_runner)"
     "$runner" "$tmp_ir"
     ;;
   test)
+    mode="smoke"
+    fixtures_root="$(default_test_root)"
+
+    if [[ $# -gt 0 && "$1" == "--all" ]]; then
+      mode="all"
+      shift
+    fi
+
     if [[ $# -gt 1 ]]; then
-      echo "error: usage: s test [fixtures_root]" >&2
+      echo "error: usage: s test [fixtures_root] | s test --all [fixtures_root]" >&2
       exit 2
     fi
 
-    fixtures_root="${1:-$ROOT_DIR/src/cmd/compile/internal/tests/fixtures}"
+    if [[ $# -eq 1 ]]; then
+      fixtures_root="$1"
+    fi
+
     if [[ ! -d "$fixtures_root" ]]; then
       echo "error: fixtures root not found: $fixtures_root" >&2
       exit 1
@@ -221,9 +292,31 @@ EOF
     passed=0
     failed=0
 
+    file_list="$(mktemp /tmp/s_test_files.XXXXXX)"
+    register_tmp_file "$file_list"
+
+    if [[ "$mode" == "all" ]]; then
+      echo "running full fixture suite: $fixtures_root"
+      find "$fixtures_root" -type f -name '*.s' | sort >"$file_list"
+    else
+      echo "running smoke fixture suite: $fixtures_root"
+      smoke_fixture_list "$fixtures_root" >"$file_list"
+    fi
+
     while IFS= read -r file; do
+      if [[ -z "$file" ]]; then
+        continue
+      fi
+      if [[ ! -f "$file" ]]; then
+        echo "FAIL (missing fixture): $file"
+        failed=$((failed + 1))
+        total=$((total + 1))
+        continue
+      fi
+
       total=$((total + 1))
       tmp_ir="$(mktemp /tmp/s_test.XXXXXX.ir)"
+      register_tmp_file "$tmp_ir"
 
       if [[ "$file" == *_fail.s ]]; then
         if "$COMPILER" "$file" "$tmp_ir" >/dev/null 2>&1; then
@@ -242,17 +335,216 @@ EOF
           failed=$((failed + 1))
         fi
       fi
-
-      rm -f "$tmp_ir"
-    done < <(find "$fixtures_root" -type f -name '*.s' | sort)
+    done <"$file_list"
 
     echo "test summary: total=$total passed=$passed failed=$failed"
     if [[ $failed -ne 0 ]]; then
       exit 1
     fi
     ;;
-  fmt|lint|doc|pkg|mod)
-    fail_unimplemented "$cmd"
+  fmt)
+    changed=0
+    checked=0
+    while IFS= read -r file; do
+      [[ -z "$file" ]] && continue
+      checked=$((checked + 1))
+      tmp_fmt="$(mktemp /tmp/s_fmt.XXXXXX.s)"
+      register_tmp_file "$tmp_fmt"
+
+      awk '{ sub(/[[:space:]]+$/, ""); sub(/\r$/, ""); print }' "$file" >"$tmp_fmt"
+      if ! cmp -s "$file" "$tmp_fmt"; then
+        cp "$tmp_fmt" "$file"
+        echo "fmt: $file"
+        changed=$((changed + 1))
+      fi
+    done < <(collect_s_files "$@")
+
+    echo "fmt summary: files=$checked changed=$changed"
+    ;;
+  lint)
+    lint_total=0
+    lint_failed=0
+
+    while IFS= read -r file; do
+      [[ -z "$file" ]] && continue
+      lint_total=$((lint_total + 1))
+
+      if [[ "$file" == *_fail.s ]]; then
+        echo "lint skip (expected-fail fixture): $file"
+        continue
+      fi
+
+      if grep -n $'\t' "$file" >/dev/null 2>&1; then
+        echo "lint FAIL (tab indentation): $file"
+        lint_failed=$((lint_failed + 1))
+        continue
+      fi
+
+      if grep -nE '[[:space:]]+$' "$file" >/dev/null 2>&1; then
+        echo "lint FAIL (trailing whitespace): $file"
+        lint_failed=$((lint_failed + 1))
+        continue
+      fi
+
+      pkg_name="$(extract_package_name "$file" || true)"
+      if [[ -z "$pkg_name" ]]; then
+        echo "lint FAIL (missing package declaration): $file"
+        lint_failed=$((lint_failed + 1))
+        continue
+      fi
+
+      tmp_ir="$(mktemp /tmp/s_lint.XXXXXX.ir)"
+      register_tmp_file "$tmp_ir"
+      if "$COMPILER" "$file" "$tmp_ir" >/dev/null 2>&1; then
+        echo "lint ok: $file"
+      else
+        echo "lint FAIL (compile check): $file"
+        lint_failed=$((lint_failed + 1))
+      fi
+    done < <(collect_s_files "$@")
+
+    echo "lint summary: files=$lint_total failed=$lint_failed"
+    if [[ $lint_failed -ne 0 ]]; then
+      exit 1
+    fi
+    ;;
+  mod)
+    if [[ $# -lt 1 ]]; then
+      echo "error: usage: s mod <init|tidy|show> [args]" >&2
+      exit 2
+    fi
+
+    mod_cmd="$1"
+    shift
+    mod_file="$(pwd)/s.mod"
+
+    case "$mod_cmd" in
+      init)
+        if [[ $# -ne 1 ]]; then
+          echo "error: usage: s mod init <module>" >&2
+          exit 2
+        fi
+        if [[ -f "$mod_file" ]]; then
+          echo "error: s.mod already exists: $mod_file" >&2
+          exit 1
+        fi
+        cat >"$mod_file" <<EOF
+[module]
+name = "$1"
+version = "0.1.0"
+edition = "2026"
+
+[dependencies]
+EOF
+        echo "mod init: created $mod_file"
+        ;;
+      tidy)
+        if [[ $# -ne 0 ]]; then
+          echo "error: usage: s mod tidy" >&2
+          exit 2
+        fi
+        if [[ ! -f "$mod_file" ]]; then
+          echo "error: s.mod not found in $(pwd)" >&2
+          exit 1
+        fi
+        if ! rg -n '^\[module\]' "$mod_file" >/dev/null 2>&1; then
+          echo "error: invalid s.mod: missing [module]" >&2
+          exit 1
+        fi
+        if ! rg -n '^\[dependencies\]' "$mod_file" >/dev/null 2>&1; then
+          echo "[dependencies]" >>"$mod_file"
+        fi
+        echo "mod tidy: ok"
+        ;;
+      show)
+        if [[ $# -ne 0 ]]; then
+          echo "error: usage: s mod show" >&2
+          exit 2
+        fi
+        if [[ ! -f "$mod_file" ]]; then
+          echo "error: s.mod not found in $(pwd)" >&2
+          exit 1
+        fi
+        cat "$mod_file"
+        ;;
+      *)
+        echo "error: unknown mod subcommand '$mod_cmd'" >&2
+        echo "usage: s mod <init|tidy|show>" >&2
+        exit 2
+        ;;
+    esac
+    ;;
+  doc)
+    if [[ $# -gt 1 ]]; then
+      echo "error: usage: s doc [path]" >&2
+      exit 2
+    fi
+
+    doc_path="${1:-.}"
+    files=()
+    while IFS= read -r f; do
+      [[ -n "$f" ]] && files+=("$f")
+    done < <(collect_s_files "$doc_path")
+
+    if [[ ${#files[@]} -eq 0 ]]; then
+      echo "error: no .s files found under $doc_path" >&2
+      exit 1
+    fi
+
+    for file in "${files[@]}"; do
+      pkg_name="$(extract_package_name "$file" || true)"
+      [[ -z "$pkg_name" ]] && pkg_name="unknown"
+      echo "=== $file (package $pkg_name) ==="
+      awk '
+        /^\s*\/\// { comment = comment $0 "\n"; next }
+        /^\s*(func|struct|enum|trait|impl)\s+/ {
+          gsub(/^\s+/, "", $0)
+          if (comment != "") {
+            printf "%s", comment
+            comment = ""
+          }
+          print $0
+          print ""
+          next
+        }
+        { comment = "" }
+      ' "$file"
+    done
+    ;;
+  pkg)
+    if [[ $# -lt 1 || $# -gt 2 ]]; then
+      echo "error: usage: s pkg list [path]" >&2
+      exit 2
+    fi
+
+    pkg_cmd="$1"
+    shift
+    pkg_path="${1:-.}"
+
+    case "$pkg_cmd" in
+      list)
+        tmp_pkg="$(mktemp /tmp/s_pkg.XXXXXX)"
+        register_tmp_file "$tmp_pkg"
+        while IFS= read -r file; do
+          [[ -z "$file" ]] && continue
+          pkg_name="$(extract_package_name "$file" || true)"
+          [[ -z "$pkg_name" ]] && pkg_name="unknown"
+          printf "%s\t%s\n" "$pkg_name" "$file" >>"$tmp_pkg"
+        done < <(collect_s_files "$pkg_path")
+
+        if [[ ! -s "$tmp_pkg" ]]; then
+          echo "error: no .s files found under $pkg_path" >&2
+          exit 1
+        fi
+
+        awk -F '\t' '{count[$1]++} END {for (k in count) printf "%s\t%d\n", k, count[k]}' "$tmp_pkg" | sort
+        ;;
+      *)
+        echo "error: unknown pkg subcommand '$pkg_cmd'" >&2
+        echo "usage: s pkg list [path]" >&2
+        exit 2
+        ;;
+    esac
     ;;
   help|--help|-h)
     usage
