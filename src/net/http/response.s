@@ -1,9 +1,11 @@
 package src.net.http
 
-func response_unit_name() string {
-    "src/net/http/response"
+struct response {
+    string body
+    int status
+    map[string, string] headers
 }
 
-func response_unit_ready() int {
-    1
+func (r *response) write(string data) {
+    r.body = data
 }
