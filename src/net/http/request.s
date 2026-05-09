@@ -1,9 +1,12 @@
 package src.net.http
 
-func request_unit_name() string {
-    "src/net/http/request"
+struct Request {
+    string method
+    string path
+    map[string, string] headers
+    string body
 }
 
-func request_unit_ready() int {
-    1
+func (r *Request) Body() string {
+    r.body
 }
