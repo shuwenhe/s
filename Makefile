@@ -23,7 +23,7 @@ run:
 		exit 1; \
 	fi; \
 	echo "Installing $$OUT_BIN to /usr/local/bin/s..."; \
-	install -m 0755 "$$OUT_BIN" /usr/local/bin/s; \
+	sudo install -m 0755 "$$OUT_BIN" /usr/local/bin/s; \
 	echo "S compiler installed successfully."
 
 build-x86_64:

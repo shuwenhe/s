@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export S_ROOT="/mnt/c/Users/shuwen/s"
+exec "$S_ROOT/bin/s" "$@"

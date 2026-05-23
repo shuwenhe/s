@@ -5,12 +5,19 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#ifdef _WIN32
+#include <direct.h>
+#define mkdir_compat(p) _mkdir(p)
+#else
+#define mkdir_compat(p) mkdir((p), 0755)
+#endif
+
 #include "../error/error.h"
 
 bool seed_compile_source_text(const char *source_text, FILE *output, compile_error *err);
 
 static bool ensure_dir(const char *path, compile_error *err) {
-	if (mkdir(path, 0755) == 0) {
+	if (mkdir_compat(path) == 0) {
 		return true;
 	}
 	if (errno == EEXIST) {
