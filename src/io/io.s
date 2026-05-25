@@ -1,7 +1,8 @@
+package std.io
+
 func print(string text) () {
     println(text)
 }
-package std.io
 
 func println(string text) () {
     __host_println(text)
