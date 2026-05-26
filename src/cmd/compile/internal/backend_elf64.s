@@ -2665,48 +2665,63 @@ func resolve_module_source_path(string module) option[string] {
 }
 
 func add_module_candidates(vec[string] candidates, string module) () {
+    let roots = module_search_roots()
+    let i = 0
+    while i < roots.len() {
+        add_module_candidates_in_root(candidates, roots[i], module)
+        i = i + 1
+    }
+}
+
+func add_module_candidates_in_root(vec[string] candidates, string root, string module) () {
+    if root == "" {
+        return
+    }
     if starts_with_local(module, "compile.") {
-        add_compile_module_candidates(candidates, slice(module, len("compile."), len(module)))
+        add_compile_module_candidates(candidates, root, slice(module, len("compile."), len(module)))
         return
     }
     if starts_with_local(module, "internal.") {
-        add_std_layout_candidates(candidates, "/app/s/src/internal", slice(module, len("internal."), len(module)))
+        add_std_layout_candidates(candidates, root + "/src/internal", slice(module, len("internal."), len(module)))
         return
     }
     if starts_with_local(module, "std.") {
-        add_std_module_candidates(candidates, slice(module, len("std."), len(module)))
+        add_std_module_candidates(candidates, root, slice(module, len("std."), len(module)))
         return
     }
     if starts_with_local(module, "s.") {
-        add_s_module_candidates(candidates, slice(module, len("s."), len(module)))
+        add_s_module_candidates(candidates, root, slice(module, len("s."), len(module)))
         return
     }
-    candidates.push("/app/s/src/" + dot_to_slash(module) + ".s")
+    candidates.push(root + "/" + dot_to_slash(module) + ".s")
+    candidates.push(root + "/" + dot_to_slash(module) + "/" + last_segment(module) + ".s")
 }
 
-func add_compile_module_candidates(vec[string] candidates, string tail) () {
-    candidates.push("/app/s/src/cmd/compile/" + dot_to_slash(tail) + ".s")
+func add_compile_module_candidates(vec[string] candidates, string root, string tail) () {
+    candidates.push(root + "/src/cmd/compile/" + dot_to_slash(tail) + ".s")
+    // also try dir/name.s layout (e.g. internal/build/exec/exec.s)
+    candidates.push(root + "/src/cmd/compile/" + dot_to_slash(tail) + "/" + last_segment(tail) + ".s")
     let pkg = drop_last_segment(tail)
     if pkg != "" {
-        candidates.push("/app/s/src/cmd/compile/" + dot_to_slash(pkg) + ".s")
-        candidates.push("/app/s/src/cmd/compile/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
+        candidates.push(root + "/src/cmd/compile/" + dot_to_slash(pkg) + ".s")
+        candidates.push(root + "/src/cmd/compile/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
     }
     if starts_with_local(tail, "internal.abi.") {
-        candidates.push("/app/s/src/cmd/compile/internal/abi/abiutils.s")
+        candidates.push(root + "/src/cmd/compile/internal/abi/abiutils.s")
     }
 }
 
-func add_std_module_candidates(vec[string] candidates, string tail) () {
+func add_std_module_candidates(vec[string] candidates, string root, string tail) () {
     if starts_with_local(tail, "prelude.") {
-        candidates.push("/app/s/src/prelude/prelude.s")
+        candidates.push(root + "/src/prelude/prelude.s")
         return
     }
     let pkg = drop_last_segment(tail)
     if pkg == "" {
         pkg = tail
     }
-    candidates.push("/app/s/src/" + dot_to_slash(pkg) + ".s")
-    candidates.push("/app/s/src/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
+    candidates.push(root + "/src/" + dot_to_slash(pkg) + ".s")
+    candidates.push(root + "/src/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
 }
 
 func add_std_layout_candidates(vec[string] candidates, string root, string tail) () {
@@ -2718,20 +2733,104 @@ func add_std_layout_candidates(vec[string] candidates, string root, string tail)
     }
 }
 
-func add_s_module_candidates(vec[string] candidates, string symbol) () {
+func add_s_module_candidates(vec[string] candidates, string root, string symbol) () {
     if symbol == "parse_source" || symbol == "parse_tokens" {
-        candidates.push("/app/s/src/s/parser.s")
+        candidates.push(root + "/src/s/parser.s")
     }
     if symbol == "tokenize" || symbol == "lexer" {
-        candidates.push("/app/s/src/s/lexer.s")
+        candidates.push(root + "/src/s/lexer.s")
     }
     if symbol == "token" || symbol == "token_kind" {
-        candidates.push("/app/s/src/s/tokens.s")
+        candidates.push(root + "/src/s/tokens.s")
     }
-    candidates.push("/app/s/src/s/ast.s")
-    candidates.push("/app/s/src/s/parser.s")
-    candidates.push("/app/s/src/s/lexer.s")
-    candidates.push("/app/s/src/s/tokens.s")
+    candidates.push(root + "/src/s/ast.s")
+    candidates.push(root + "/src/s/parser.s")
+    candidates.push(root + "/src/s/lexer.s")
+    candidates.push(root + "/src/s/tokens.s")
+}
+
+func module_search_roots() vec[string] {
+    let roots = vec[string]()
+    push_module_search_root(roots, resolve_s_root())
+    push_module_search_root(roots, resolve_project_root())
+    push_workspace_roots(roots)
+    push_module_search_root(roots, "/app/s")
+    roots
+}
+
+func push_workspace_roots(vec[string] roots) () {
+    switch env_get("S_WORK_FILE") {
+        option.some(path) : {
+            if path != "" {
+                let work = read_to_string(path)
+                if work.is_ok() {
+                    append_workspace_roots(roots, work.unwrap())
+                }
+            }
+        }
+        option.none : (),
+    }
+}
+
+func append_workspace_roots(vec[string] roots, string text) () {
+    let lines = split_lines_local(text)
+    let i = 0
+    while i < lines.len() {
+        let line = trim_spaces(lines[i])
+        if starts_with_local(line, "use = \"") {
+            let start = len("use = \"")
+            let end = find_quote_from(line, start)
+            if end > start {
+                push_module_search_root(roots, slice(line, start, end))
+            }
+        }
+        i = i + 1
+    }
+}
+
+func resolve_s_root() string {
+    switch env_get("S_ROOT") {
+        option.some(value) : {
+            if value != "" {
+                return value
+            }
+        }
+        option.none : (),
+    }
+    "/app/s"
+}
+
+func resolve_project_root() string {
+    switch env_get("S_PROJECT_ROOT") {
+        option.some(value) : {
+            if value != "" {
+                return value
+            }
+        }
+        option.none : (),
+    }
+    ""
+}
+
+func push_module_search_root(vec[string] roots, string root) () {
+    if root == "" {
+        return
+    }
+    if string_vec_contains(roots, root) {
+        return
+    }
+    roots.push(root)
+}
+
+func find_quote_from(string text, int start) int {
+    let i = start
+    while i < len(text) {
+        if char_at(text, i) == "\"" {
+            return i
+        }
+        i = i + 1
+    }
+    -1
 }
 
 func dot_to_slash(string text) string {

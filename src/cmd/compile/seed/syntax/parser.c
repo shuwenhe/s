@@ -13,6 +13,8 @@ typedef struct parser {
 	struct compile_error *err;
 } parser;
 
+static ast_node *parse_extern_decl(parser *p);
+
 static char *dup_cstr(const char *s) {
 	size_t n = strlen(s);
 	char *out = (char *)malloc(n + 1);
@@ -1505,6 +1507,9 @@ static ast_node *parse_top_level(parser *p) {
 	}
 	if (check(p, TOKEN_IDENTIFIER)) {
 		const token *tok = peek(p);
+		if (strcmp(tok->lexeme, "extern") == 0) {
+			return parse_extern_decl(p);
+		}
 		if (strcmp(tok->lexeme, "struct") == 0) {
 			return parse_struct_decl(p);
 		}
@@ -1517,6 +1522,82 @@ static ast_node *parse_top_level(parser *p) {
 		}
 	}
 	return parse_statement(p);
+}
+
+static ast_node *parse_extern_decl(parser *p) {
+	const token *kw = peek(p);
+	ast_node *node;
+	int depth;
+
+	if (!match(p, TOKEN_IDENTIFIER) || strcmp(prev(p)->lexeme, "extern") != 0) {
+		parse_error(p, peek(p), "expected 'extern'");
+		return NULL;
+	}
+
+	if (check(p, TOKEN_STRING)) {
+		advance_tok(p);
+	}
+
+	if (!match(p, TOKEN_FN)) {
+		parse_error(p, peek(p), "expected 'func' after extern");
+		return NULL;
+	}
+
+	if (!expect(p, TOKEN_IDENTIFIER, "extern function name")) {
+		return NULL;
+	}
+	if (!expect(p, TOKEN_LPAREN, "'(' after extern function name")) {
+		return NULL;
+	}
+
+	depth = 1;
+	while (depth > 0 && !is_at_end(p)) {
+		if (match(p, TOKEN_LPAREN)) {
+			depth++;
+			continue;
+		}
+		if (match(p, TOKEN_RPAREN)) {
+			depth--;
+			continue;
+		}
+		advance_tok(p);
+	}
+	if (depth != 0) {
+		parse_error(p, kw, "unterminated extern parameter list");
+		return NULL;
+	}
+
+	if (check(p, TOKEN_LPAREN)) {
+		advance_tok(p);
+		depth = 1;
+		while (depth > 0 && !is_at_end(p)) {
+			if (match(p, TOKEN_LPAREN)) {
+				depth++;
+				continue;
+			}
+			if (match(p, TOKEN_RPAREN)) {
+				depth--;
+				continue;
+			}
+			advance_tok(p);
+		}
+		if (depth != 0) {
+			parse_error(p, kw, "unterminated extern return type");
+			return NULL;
+		}
+	}
+
+	consume_optional_semicolon(p);
+	node = ast_new(AST_PACKAGE_DECL, kw->pos);
+	if (!node) {
+		return NULL;
+	}
+	node->as.package_decl.name = dup_cstr("");
+	if (!node->as.package_decl.name) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
 }
 
 static ast_node *parse_struct_decl(parser *p) {
@@ -1705,4 +1786,3 @@ static int parse_dotted_path(parser *p,
 
     return 1;
 }
-

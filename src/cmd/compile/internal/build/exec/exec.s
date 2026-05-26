@@ -20,6 +20,7 @@ use compile.internal.semantic.check_text
 use compile.internal.syntax.parse_source
 use compile.internal.syntax.read_source
 use compile.internal.syntax.tokenize
+use compile.internal.backend_elf64.resolve_module_source_path
 use std.env.get
 use std.fs.read_to_string
 use std.fs.write_text_file
@@ -39,6 +40,19 @@ func run(vec[string] options) int {
 
     if options[0] == "mod" {
         return run_mod_command(options)
+    }
+
+    // Resolve module notation (e.g. "neurx.agent.runtime") to a file path
+    // before any file I/O.  A module name has no "/", contains ".", and does
+    // not end with ".s".
+    if is_module_name(options[1]) {
+        let resolved = resolve_module_source_path(options[1])
+        if resolved.is_none() {
+            eprintln("error: module not found: " + options[1])
+            eprintln("hint: set S_PROJECT_ROOT=<workspace> or S_ROOT=<s-root> so the module can be located")
+            return 1
+        }
+        let ignored_set = options.set(1, resolved.unwrap())
     }
 
     let source_result = read_source(options[1])
@@ -229,6 +243,37 @@ func is_valid_module_name(string name) bool {
             return false
         }
         i = i + 1
+    }
+    true
+}
+
+// is_module_name returns true when the argument looks like a dotted module path
+// (e.g. "neurx.agent.runtime") rather than a file-system path.
+// Heuristic: contains ".", has no "/", and does not end with ".s".
+func is_module_name(string path) bool {
+    if path == "" {
+        return false
+    }
+    let has_dot = false
+    let i = 0
+    while i < len(path) {
+        let ch = char_at(path, i)
+        if ch == "/" {
+            return false
+        }
+        if ch == "." {
+            has_dot = true
+        }
+        i = i + 1
+    }
+    if !has_dot {
+        return false
+    }
+    // ends with ".s" → it is a plain file name like "foo.s", not a module
+    if len(path) >= 2 {
+        if char_at(path, len(path) - 2) == "." && char_at(path, len(path) - 1) == "s" {
+            return false
+        }
     }
     true
 }
