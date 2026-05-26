@@ -189,8 +189,46 @@ func run_mod_command(vec[string] options) int {
     if options[1] == "tidy" {
         return run_mod_tidy()
     }
+    if options[1] == "index" {
+        return run_mod_index(options[2])
+    }
     eprintln("mod command is not supported")
     return 1
+}
+
+func run_mod_index(string dir) int {
+    if dir == "" {
+        eprintln("mod index failed: directory path required")
+        return 1
+    }
+
+    println("mod index: scanning " + dir + "...")
+
+    let cmd = vec[string]()
+    cmd.push("sh")
+    cmd.push("-c")
+    // Scan for package declarations and match with file paths
+    let script = "find " + dir + " -name '*.s' -not -path '*/.*' | while read f; do " +
+                 "pkg=$(grep -h '^package ' \"$f\" | head -n1 | sed 's/package //;s/[[:space:]]*$//'); " +
+                 "if [ -n \"$pkg\" ]; then printf \"%s\\t%s\\n\" \"$pkg\" \"$f\"; fi; " +
+                 "done"
+    cmd.push(script)
+
+    let result = run_process_output(cmd)
+    if result.is_err() {
+        eprintln("mod index failed: " + result.unwrap_err().message)
+        return 1
+    }
+
+    let index_content = result.unwrap()
+    let write_res = write_text_file("s-package-index.tsv", index_content)
+    if write_res.is_err() {
+        eprintln("failed to save index: " + write_res.unwrap_err().message)
+        return 1
+    }
+
+    println("mod index: generated s-package-index.tsv")
+    0
 }
 
 func run_mod_init(string module_name) int {
