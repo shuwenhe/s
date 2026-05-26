@@ -53,11 +53,7 @@ pick_compiler() {
       ls -1t "$ROOT_DIR"/bin/s_arm64_* 2>/dev/null | head -n 1
       ;;
     x86_64|amd64)
-      if [[ -x "$ROOT_DIR/bin/s_x86_64" ]]; then
-        echo "$ROOT_DIR/bin/s_x86_64"
-      else
-        ls -1t "$ROOT_DIR"/bin/s_x86_64_* 2>/dev/null | head -n 1
-      fi
+      ls -1t "$ROOT_DIR"/bin/s_x86_64 "$ROOT_DIR"/bin/s_x86_64_* 2>/dev/null | head -n 1
       ;;
     *)
       return 1
@@ -69,12 +65,12 @@ usage() {
   cat <<'EOF'
 usage:
   s env
-  s check <input.s>
+  s check <input.s|module>
   s list [path]
-  s ir <input.s> -o <output.ir>
-  s build <input.s> -o <output.bin>
-  s install <input.s> [--to <dir>]
-  s run <input.s>
+  s ir <input.s|module> -o <output.ir>
+  s build <input.s|module> -o <output.bin>
+  s install <input.s|module> [--to <dir>]
+  s run <input.s|module>
   s test [fixtures_root]
   s test --all [fixtures_root]
   s vet [path ...]
@@ -97,10 +93,50 @@ notes:
   - s build generates an executable launcher script plus a sibling .ir file.
   - s install copies the built launcher and its sibling .ir file into the target bin directory.
   - s run executes IR through the seed runtime interpreter path.
+  - wrapper commands export S_PROJECT_ROOT and S_WORK_FILE so self-hosted backends can resolve workspace modules.
   - s test defaults to a stable smoke fixture set.
   - use s test --all to run all fixtures for capability tracking.
   - exit codes are stable: 2 usage, 3 env, 10 compile, 11 runtime, 12 test, 13 lint.
 EOF
+}
+
+project_root_for() {
+  local input="${1:-}"
+  local dir
+
+  if [[ -n "$input" && -f "$input" ]]; then
+    dir="$(cd "$(dirname "$input")" && pwd)"
+    while [[ "$dir" != "/" ]]; do
+      if [[ -f "$dir/s.work" || -f "$dir/s.mod" || -d "$dir/.git" ]]; then
+        echo "$dir"
+        return 0
+      fi
+      dir="$(dirname "$dir")"
+    done
+  fi
+
+  pwd
+}
+
+compiler_env_prefix() {
+  local input="${1:-}"
+  local project_root work_file
+
+  project_root="$(project_root_for "$input")"
+  work_file="$project_root/s.work"
+  printf 'S_ROOT=%q S_PROJECT_ROOT=%q' "$ROOT_DIR" "$project_root"
+  if [[ -f "$work_file" ]]; then
+    printf ' S_WORK_FILE=%q' "$work_file"
+  fi
+}
+
+run_compiler() {
+  local input="${1:-}"
+  shift || true
+  local env_prefix
+
+  env_prefix="$(compiler_env_prefix "$input")"
+  eval "$env_prefix \"\$COMPILER\" \"\$@\""
 }
 
 default_test_root() {
@@ -148,7 +184,7 @@ build_launcher() {
   out_ir_base="$(basename "$out_ir")"
 
   mkdir -p "$out_dir"
-  if ! "$COMPILER" "$in_src" "$out_ir" >/dev/null; then
+  if ! run_compiler "$in_src" "$in_src" "$out_ir" >/dev/null; then
     fail "$EXIT_COMPILE" "build failed: $in_src"
   fi
 
@@ -200,6 +236,96 @@ read_workspace_dirs() {
   fi
 }
 
+# module_to_file: resolve a dotted module name (e.g. neurx.agent.runtime) to an
+# absolute .s file path.  Returns empty string (non-zero exit) when not found.
+module_to_file() {
+  local module="$1"
+  local rel sub candidate root dir
+
+  rel="${module//.//}"   # dots -> slashes
+
+  if [[ "$module" == compile.* ]]; then
+    sub="${module#compile.}"
+    sub="${sub//.//}"
+    candidate="$ROOT_DIR/src/cmd/compile/${sub}.s"
+    [[ -f "$candidate" ]] && echo "$candidate" && return 0
+    # package-as-dir/name.s layout (e.g. internal/build/exec/exec.s)
+    candidate="$ROOT_DIR/src/cmd/compile/${sub}/${sub##*/}.s"
+    [[ -f "$candidate" ]] && echo "$candidate" && return 0
+    # parent-dir flat layout
+    candidate="$ROOT_DIR/src/cmd/compile/${sub%/*}/${sub##*/}.s"
+    [[ -f "$candidate" ]] && echo "$candidate" && return 0
+    return 1
+  fi
+
+  if [[ "$module" == std.* ]]; then
+    sub="${module#std.}"
+    sub="${sub//.//}"
+    candidate="$ROOT_DIR/src/${sub}.s"
+    [[ -f "$candidate" ]] && echo "$candidate" && return 0
+    candidate="$ROOT_DIR/src/${sub}/${sub##*/}.s"
+    [[ -f "$candidate" ]] && echo "$candidate" && return 0
+    candidate="$ROOT_DIR/src/${sub%/*}/${sub##*/}.s"
+    [[ -f "$candidate" ]] && echo "$candidate" && return 0
+    return 1
+  fi
+
+  if [[ "$module" == internal.* ]]; then
+    sub="${module#internal.}"
+    sub="${sub//.//}"
+    candidate="$ROOT_DIR/src/internal/${sub}.s"
+    [[ -f "$candidate" ]] && echo "$candidate" && return 0
+    return 1
+  fi
+
+  # User / workspace module: search roots in priority order.
+  local roots=()
+  [[ -n "${S_PROJECT_ROOT:-}" ]] && roots+=("$S_PROJECT_ROOT")
+  [[ -n "${S_ROOT:-}" ]]         && roots+=("$S_ROOT")
+  roots+=("$ROOT_DIR" "$(pwd)")
+
+  for root in "${roots[@]}"; do
+    candidate="$root/${rel}.s"
+    [[ -f "$candidate" ]] && echo "$candidate" && return 0
+    dir="${rel%/*}"
+    if [[ "$dir" != "$rel" ]]; then
+      candidate="$root/${dir}/${rel##*/}.s"
+      [[ -f "$candidate" ]] && echo "$candidate" && return 0
+    fi
+  done
+
+  # Try workspace dirs from s.work
+  if [[ -n "${S_WORK_FILE:-}" && -f "${S_WORK_FILE}" ]]; then
+    while IFS= read -r wdir; do
+      candidate="$wdir/${rel}.s"
+      [[ -f "$candidate" ]] && echo "$candidate" && return 0
+    done < <(read_workspace_dirs "${S_WORK_FILE}")
+  fi
+
+  return 1
+}
+
+# resolve_source_arg: if the argument looks like a dotted module name rather than
+# a file path, resolve it to a .s file path.  File paths (containing "/" or
+# ending in ".s") are returned unchanged.
+resolve_source_arg() {
+  local arg="$1"
+  # Already a file path: has "/", ends with ".s", or has no "."
+  if [[ "$arg" == *"/"* || "$arg" == *.s || "$arg" != *"."* ]]; then
+    echo "$arg"
+    return 0
+  fi
+  local resolved
+  resolved="$(module_to_file "$arg")" || true
+  if [[ -n "$resolved" ]]; then
+    echo "$resolved"
+    return 0
+  fi
+  # Not resolved — return original so the compiler produces a proper error
+  echo "$arg"
+  return 0
+}
+
 smoke_fixture_list() {
   local root="$1"
   cat <<EOF
@@ -216,8 +342,8 @@ EOF
 ensure_ir_runner() {
   local arch runner src
   arch="$(uname -m)"
-  runner="/tmp/s_ir_runner_${arch}"
-  src="/tmp/s_ir_runner_main_${arch}.c"
+  runner="/tmp/s_ir_runner_${arch}_modrun_v8"
+  src="/tmp/s_ir_runner_main_${arch}_modrun_v8.c"
 
   if [[ -x "$runner" ]]; then
     echo "$runner"
@@ -301,11 +427,12 @@ case "$cmd" in
     ;;
   check)
     if [[ $# -ne 1 ]]; then
-      fail "$EXIT_USAGE" "usage: s check <input.s>"
+      fail "$EXIT_USAGE" "usage: s check <input.s|module>"
     fi
+    src="$(resolve_source_arg "$1")"
     tmp_ir="$(mktemp /tmp/s_check.XXXXXX.ir)"
     trap 'rm -f "$tmp_ir"' EXIT
-    if ! "$COMPILER" "$1" "$tmp_ir" >/dev/null; then
+    if ! run_compiler "$src" "$src" "$tmp_ir" >/dev/null; then
       fail "$EXIT_COMPILE" "check failed: $1"
     fi
     echo "ok: $1"
@@ -318,9 +445,10 @@ case "$cmd" in
     ;;
   ir)
     if [[ $# -ne 3 || "$2" != "-o" ]]; then
-      fail "$EXIT_USAGE" "usage: s ir <input.s> -o <output.ir>"
+      fail "$EXIT_USAGE" "usage: s ir <input.s|module> -o <output.ir>"
     fi
-    if ! "$COMPILER" "$1" "$3"; then
+    src="$(resolve_source_arg "$1")"
+    if ! run_compiler "$src" "$src" "$3"; then
       fail "$EXIT_COMPILE" "ir generation failed: $1"
     fi
     ;;
@@ -334,33 +462,33 @@ case "$cmd" in
     ;;
   build)
     if [[ $# -ne 3 || "$2" != "-o" ]]; then
-      fail "$EXIT_USAGE" "usage: s build <input.s> -o <output.bin>"
+      fail "$EXIT_USAGE" "usage: s build <input.s|module> -o <output.bin>"
     fi
-    in_src="$1"
+    in_src="$(resolve_source_arg "$1")"
     out_bin="$3"
     build_launcher "$in_src" "$out_bin"
-    echo "built $in_src -> $out_bin"
+    echo "built $1 -> $out_bin"
     ;;
   install)
     if [[ $# -ne 1 && $# -ne 3 ]]; then
-      fail "$EXIT_USAGE" "usage: s install <input.s> [--to <dir>]"
+      fail "$EXIT_USAGE" "usage: s install <input.s|module> [--to <dir>]"
     fi
-    in_src="$1"
+    in_src="$(resolve_source_arg "$1")"
     install_root="$(default_install_root)"
     if [[ $# -eq 3 ]]; then
       if [[ "$2" != "--to" ]]; then
-        fail "$EXIT_USAGE" "usage: s install <input.s> [--to <dir>]"
+        fail "$EXIT_USAGE" "usage: s install <input.s|module> [--to <dir>]"
       fi
       install_root="$3"
     fi
     if [[ ! -f "$in_src" ]]; then
-      fail "$EXIT_IO" "source file not found: $in_src"
+      fail "$EXIT_IO" "source file not found: $1"
     fi
     mkdir -p "$install_root"
     bin_name="$(basename "$in_src" .s)"
     out_bin="$install_root/$bin_name"
     build_launcher "$in_src" "$out_bin"
-    echo "installed $in_src -> $out_bin"
+    echo "installed $1 -> $out_bin"
     ;;
   bootstrap)
     if [[ $# -lt 1 || $# -gt 2 ]]; then
@@ -378,18 +506,18 @@ case "$cmd" in
     ;;
   run)
     if [[ $# -ne 1 ]]; then
-      fail "$EXIT_USAGE" "usage: s run <input.s>"
+      fail "$EXIT_USAGE" "usage: s run <input.s|module>"
     fi
-    run_src="$1"
+    run_src="$(resolve_source_arg "$1")"
     tmp_ir="$(mktemp /tmp/s_run.XXXXXX.ir)"
     register_tmp_file "$tmp_ir"
 
-    if ! "$COMPILER" "$run_src" "$tmp_ir" >/dev/null; then
-      fail "$EXIT_COMPILE" "run compile failed: $run_src"
+    if ! run_compiler "$run_src" "$run_src" "$tmp_ir" >/dev/null; then
+      fail "$EXIT_COMPILE" "run compile failed: $1"
     fi
     runner="$(ensure_ir_runner)"
     if ! "$runner" "$tmp_ir"; then
-      fail "$EXIT_RUNTIME" "run execution failed: $run_src"
+      fail "$EXIT_RUNTIME" "run execution failed: $1"
     fi
     ;;
   test)
@@ -444,7 +572,7 @@ case "$cmd" in
       register_tmp_file "$tmp_ir"
 
       if [[ "$file" == *_fail.s ]]; then
-        if "$COMPILER" "$file" "$tmp_ir" >/dev/null 2>&1; then
+        if run_compiler "$file" "$file" "$tmp_ir" >/dev/null 2>&1; then
           echo "FAIL (expected error): $file"
           failed=$((failed + 1))
         else
@@ -452,7 +580,7 @@ case "$cmd" in
           passed=$((passed + 1))
         fi
       else
-        if "$COMPILER" "$file" "$tmp_ir" >/dev/null 2>&1; then
+        if run_compiler "$file" "$file" "$tmp_ir" >/dev/null 2>&1; then
           echo "ok: $file"
           passed=$((passed + 1))
         else
