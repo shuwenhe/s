@@ -11,10 +11,16 @@ func run_process(vec[string] argv) result[(), process_error] {
     __host_run_process(argv)
 }
 
+func run_process_output(vec[string] argv) result[string, process_error] {
+    __host_run_process_output(argv)
+}
+
 func exit(int code) () {
     __host_exit(code)
 }
 
 extern "intrinsic" func __host_run_process(vec[string] argv) result[(), process_error]
+
+extern "intrinsic" func __host_run_process_output(vec[string] argv) result[string, process_error]
 
 extern "intrinsic" func __host_exit(int code) ()

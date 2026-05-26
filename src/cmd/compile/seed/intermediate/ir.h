@@ -30,11 +30,13 @@ typedef enum ir_op {
 	IR_RET,
 } ir_op;
 
+#define IR_OPERAND_CAP 1024
+
 typedef struct IRInstruction {
 	ir_op type;
-	char result[64];
-	char operand1[64];
-	char operand2[64];
+	char result[IR_OPERAND_CAP];
+	char operand1[IR_OPERAND_CAP];
+	char operand2[IR_OPERAND_CAP];
 } IRInstruction;
 
 typedef struct IR {

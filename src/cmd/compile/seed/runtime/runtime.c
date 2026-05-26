@@ -1,7 +1,9 @@
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "../code/target.h"
 #include "../intermediate/ir.h"
@@ -160,6 +162,77 @@ static int value_concat(runtime_data_value *out, const runtime_data_value *lhs, 
 	return 1;
 }
 
+static char *join_args_text(const runtime_data_value *args, size_t argc) {
+	size_t i;
+	size_t total = 0;
+	char num_buf[64];
+	const char *msg = NULL;
+	char *out;
+	size_t used = 0;
+	for (i = 0; i < argc; i++) {
+		if (!value_as_cstr(&args[i], num_buf, sizeof(num_buf), &msg)) {
+			return NULL;
+		}
+		total += strlen(msg);
+	}
+	out = (char *)malloc(total + 1);
+	if (!out) {
+		return NULL;
+	}
+	for (i = 0; i < argc; i++) {
+		if (!value_as_cstr(&args[i], num_buf, sizeof(num_buf), &msg)) {
+			free(out);
+			return NULL;
+		}
+		memcpy(out + used, msg, strlen(msg));
+		used += strlen(msg);
+	}
+	out[used] = '\0';
+	return out;
+}
+
+static char *trim_copy(const char *text) {
+	size_t start = 0;
+	size_t end;
+	char *out;
+	if (!text) {
+		return value_make_string_copy("").str_value;
+	}
+	end = strlen(text);
+	while (start < end && isspace((unsigned char)text[start])) {
+		start++;
+	}
+	while (end > start && isspace((unsigned char)text[end - 1])) {
+		end--;
+	}
+	out = (char *)malloc(end - start + 1);
+	if (!out) {
+		return NULL;
+	}
+	memcpy(out, text + start, end - start);
+	out[end - start] = '\0';
+	return out;
+}
+
+static char *lower_copy(const char *text) {
+	size_t i;
+	size_t n;
+	char *out;
+	if (!text) {
+		return value_make_string_copy("").str_value;
+	}
+	n = strlen(text);
+	out = (char *)malloc(n + 1);
+	if (!out) {
+		return NULL;
+	}
+	for (i = 0; i < n; i++) {
+		out[i] = (char)tolower((unsigned char)text[i]);
+	}
+	out[n] = '\0';
+	return out;
+}
+
 static void print_compile_error_local(const compile_error *err) {
 	if (!err || !error_is_set(err)) {
 		return;
@@ -213,6 +286,29 @@ static int read_source_text_file(const char *path, char **out_text, compile_erro
 	buf[n] = '\0';
 	*out_text = buf;
 	return 1;
+}
+
+static char *run_command_capture_output(const char *command, compile_error *err) {
+	char temp_path[256];
+	char system_command[4096];
+	char *captured = NULL;
+	snprintf(temp_path, sizeof(temp_path), "/tmp/s_runtime_cmd_%ld.txt", (long)getpid());
+	if (snprintf(system_command, sizeof(system_command), "%s > %s", command, temp_path) >= (int)sizeof(system_command)) {
+		remove(temp_path);
+		error_set(err, ERR_SEMANTIC, 0, 0, "command too long");
+		return NULL;
+	}
+	if (system(system_command) != 0) {
+		remove(temp_path);
+		error_set(err, ERR_SEMANTIC, 0, 0, "command failed");
+		return NULL;
+	}
+	if (!read_source_text_file(temp_path, &captured, err)) {
+		remove(temp_path);
+		return NULL;
+	}
+	remove(temp_path);
+	return captured;
 }
 
 static int compile_s_file_to_ir(const char *input_path, const char *output_path, compile_error *err) {
@@ -327,33 +423,183 @@ static int host_dispatch_call(
 		return 1;
 	}
 	if (strcmp(name, "eprintln") == 0) {
-		char num_buf[64];
-		const char *msg = NULL;
-		if (argc != 1) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "eprintln expects 1 arg");
+		char *joined = join_args_text(args, argc);
+		if (!joined) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "failed to render eprintln argument");
 			return 0;
 		}
-		if (!value_as_cstr(&args[0], num_buf, sizeof(num_buf), &msg)) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render eprintln argument");
-			return 0;
-		}
-		fprintf(stderr, "%s\n", msg);
+		fprintf(stderr, "%s\n", joined);
+		free(joined);
 		*out = value_make_int(0);
 		return 1;
 	}
 	if (strcmp(name, "print") == 0) {
-		char num_buf[64];
-		const char *msg = NULL;
-		if (argc != 1) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "print expects 1 arg");
+		char *joined = join_args_text(args, argc);
+		if (!joined) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "failed to render print argument");
 			return 0;
 		}
-		if (!value_as_cstr(&args[0], num_buf, sizeof(num_buf), &msg)) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render print argument");
-			return 0;
-		}
-		printf("%s\n", msg);
+		printf("%s\n", joined);
+		free(joined);
 		*out = value_make_int(0);
+		return 1;
+	}
+	if (strcmp(name, "println") == 0) {
+		char *joined = join_args_text(args, argc);
+		if (!joined) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "failed to render println argument");
+			return 0;
+		}
+		printf("%s\n", joined);
+		free(joined);
+		*out = value_make_int(0);
+		return 1;
+	}
+	if (strcmp(name, "__host_println") == 0) {
+		char *joined = join_args_text(args, argc);
+		if (!joined) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "failed to render __host_println argument");
+			return 0;
+		}
+		printf("%s\n", joined);
+		free(joined);
+		*out = value_make_int(0);
+		return 1;
+	}
+	if (strcmp(name, "__host_eprintln") == 0) {
+		char *joined = join_args_text(args, argc);
+		if (!joined) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "failed to render __host_eprintln argument");
+			return 0;
+		}
+		fprintf(stderr, "%s\n", joined);
+		free(joined);
+		*out = value_make_int(0);
+		return 1;
+	}
+	if (strcmp(name, "runtime_env_get") == 0) {
+		const char *key = NULL;
+		const char *fallback = NULL;
+		char key_buf[64];
+		char fallback_buf[64];
+		const char *value = NULL;
+		if (argc != 2) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "runtime_env_get expects 2 args");
+			return 0;
+		}
+		if (!value_as_cstr(&args[0], key_buf, sizeof(key_buf), &key)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render runtime_env_get key");
+			return 0;
+		}
+		if (!value_as_cstr(&args[1], fallback_buf, sizeof(fallback_buf), &fallback)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render runtime_env_get default");
+			return 0;
+		}
+		value = getenv(key);
+		*out = value_make_string_copy(value ? value : fallback);
+		if (!out->str_value) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return 0;
+		}
+		return 1;
+	}
+	if (strcmp(name, "runtime_run_command_output") == 0) {
+		const char *command = NULL;
+		char command_buf[64];
+		char *captured;
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "runtime_run_command_output expects 1 arg");
+			return 0;
+		}
+		if (!value_as_cstr(&args[0], command_buf, sizeof(command_buf), &command)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render runtime_run_command_output command");
+			return 0;
+		}
+		captured = run_command_capture_output(command, err);
+		if (!captured) {
+			return 0;
+		}
+		*out = value_make_string_owned(captured);
+		return 1;
+	}
+	if (strcmp(name, "trim") == 0) {
+		const char *text = NULL;
+		char text_buf[64];
+		char *trimmed;
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "trim expects 1 arg");
+			return 0;
+		}
+		if (!value_as_cstr(&args[0], text_buf, sizeof(text_buf), &text)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render trim argument");
+			return 0;
+		}
+		trimmed = trim_copy(text);
+		if (!trimmed) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return 0;
+		}
+		*out = value_make_string_owned(trimmed);
+		return 1;
+	}
+	if (strcmp(name, "lower") == 0) {
+		const char *text = NULL;
+		char text_buf[64];
+		char *lowered;
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "lower expects 1 arg");
+			return 0;
+		}
+		if (!value_as_cstr(&args[0], text_buf, sizeof(text_buf), &text)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render lower argument");
+			return 0;
+		}
+		lowered = lower_copy(text);
+		if (!lowered) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return 0;
+		}
+		*out = value_make_string_owned(lowered);
+		return 1;
+	}
+	if (strcmp(name, "len") == 0) {
+		const char *text = NULL;
+		char text_buf[64];
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "len expects 1 arg");
+			return 0;
+		}
+		if (!value_as_cstr(&args[0], text_buf, sizeof(text_buf), &text)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render len argument");
+			return 0;
+		}
+		*out = value_make_int((long)strlen(text));
+		return 1;
+	}
+	if (strcmp(name, "string") == 0) {
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "string expects 1 arg");
+			return 0;
+		}
+		if (args[0].kind == RUNTIME_STRING) {
+			if (!value_copy(out, &args[0])) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				return 0;
+			}
+			return 1;
+		}
+		if (args[0].int_value >= 0 && args[0].int_value <= 255) {
+			char buf[2];
+			buf[0] = (char)args[0].int_value;
+			buf[1] = '\0';
+			*out = value_make_string_copy(buf);
+		} else {
+			*out = value_make_string_copy("");
+		}
+		if (!out->str_value) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return 0;
+		}
 		return 1;
 	}
 	if (strcmp(name, "build_main") == 0) {
@@ -602,28 +848,61 @@ static int program_push(runtime_program *prog, const runtime_ins *ins) {
 
 static int parse_record_line(const char *line, runtime_ins *out) {
 	char tmp[4096];
-	char *parts[4];
-	char *p;
-	int i;
+	char parts[4][1024];
+	int part = 0;
+	size_t idx = 0;
+	size_t i = 0;
 
+	memset(parts, 0, sizeof(parts));
 	snprintf(tmp, sizeof(tmp), "%s", line);
-	p = tmp;
-	for (i = 0; i < 4; i++) {
-		parts[i] = p;
-		p = strchr(p, '|');
-		if (!p && i < 3) {
+	while (tmp[i] != '\0') {
+		char ch = tmp[i++];
+		if (ch == '\\') {
+			char esc = tmp[i++];
+			if (esc == '\0') {
+				return 0;
+			}
+			if (idx + 1 >= sizeof(parts[part])) {
+				return 0;
+			}
+			if (esc == 'n') {
+				parts[part][idx++] = '\n';
+			} else if (esc == 'r') {
+				parts[part][idx++] = '\r';
+			} else if (esc == 't') {
+				parts[part][idx++] = '\t';
+			} else {
+				parts[part][idx++] = esc;
+			}
+			continue;
+		}
+		if (ch == '|') {
+			if (part >= 3) {
+				return 0;
+			}
+			part++;
+			idx = 0;
+			continue;
+		}
+		if (idx + 1 >= sizeof(parts[part])) {
 			return 0;
 		}
-		if (p) {
-			*p = '\0';
-			p++;
-		}
+		parts[part][idx++] = ch;
+	}
+	if (part != 3) {
+		return 0;
 	}
 
-	snprintf(out->op, sizeof(out->op), "%s", parts[0]);
-	snprintf(out->result, sizeof(out->result), "%s", strcmp(parts[1], "_") == 0 ? "" : parts[1]);
-	snprintf(out->op1, sizeof(out->op1), "%s", strcmp(parts[2], "_") == 0 ? "" : parts[2]);
-	snprintf(out->op2, sizeof(out->op2), "%s", strcmp(parts[3], "_") == 0 ? "" : parts[3]);
+	if (strlen(parts[0]) >= sizeof(out->op) ||
+	    strlen(strcmp(parts[1], "_") == 0 ? "" : parts[1]) >= sizeof(out->result) ||
+	    strlen(strcmp(parts[2], "_") == 0 ? "" : parts[2]) >= sizeof(out->op1) ||
+	    strlen(strcmp(parts[3], "_") == 0 ? "" : parts[3]) >= sizeof(out->op2)) {
+		return 0;
+	}
+	strcpy(out->op, parts[0]);
+	strcpy(out->result, strcmp(parts[1], "_") == 0 ? "" : parts[1]);
+	strcpy(out->op1, strcmp(parts[2], "_") == 0 ? "" : parts[2]);
+	strcpy(out->op2, strcmp(parts[3], "_") == 0 ? "" : parts[3]);
 	return 1;
 }
 

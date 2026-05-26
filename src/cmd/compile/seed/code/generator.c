@@ -7,8 +7,42 @@ static const char *nz(const char *s) {
     return (s && s[0] != '\0') ? s : "_";
 }
 
+static void emit_field(FILE *out, const char *text) {
+    const unsigned char *p = (const unsigned char *)nz(text);
+    while (*p) {
+        switch (*p) {
+            case '\\':
+                fputs("\\\\", out);
+                break;
+            case '|':
+                fputs("\\|", out);
+                break;
+            case '\n':
+                fputs("\\n", out);
+                break;
+            case '\r':
+                fputs("\\r", out);
+                break;
+            case '\t':
+                fputs("\\t", out);
+                break;
+            default:
+                fputc(*p, out);
+                break;
+        }
+        p++;
+    }
+}
+
 static void emit_record(FILE *out, const char *op, const char *result, const char *op1, const char *op2) {
-    fprintf(out, "%s|%s|%s|%s\n", op, nz(result), nz(op1), nz(op2));
+    emit_field(out, op);
+    fputc('|', out);
+    emit_field(out, result);
+    fputc('|', out);
+    emit_field(out, op1);
+    fputc('|', out);
+    emit_field(out, op2);
+    fputc('\n', out);
 }
 
 void generate_code(IR *ir, FILE *output) {

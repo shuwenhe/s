@@ -14,12 +14,12 @@ typedef struct ir_builder {
 	int loop_depth;
 } ir_builder;
 
-static void copy_str(char dst[64], const char *src) {
+static void copy_str(char dst[IR_OPERAND_CAP], const char *src) {
 	if (!src) {
 		dst[0] = '\0';
 		return;
 	}
-	snprintf(dst, 64, "%s", src);
+	snprintf(dst, IR_OPERAND_CAP, "%s", src);
 }
 
 void ir_init(IR *ir) {
@@ -89,12 +89,12 @@ static bool emit_ins(ir_builder *b, ir_op type, const char *result, const char *
 	return true;
 }
 
-static void next_temp(ir_builder *b, char out[64]) {
-	snprintf(out, 64, "t%d", b->temp_counter++);
+static void next_temp(ir_builder *b, char out[IR_OPERAND_CAP]) {
+	snprintf(out, IR_OPERAND_CAP, "t%d", b->temp_counter++);
 }
 
-static void next_label(ir_builder *b, char out[64]) {
-	snprintf(out, 64, "L%d", b->label_counter++);
+static void next_label(ir_builder *b, char out[IR_OPERAND_CAP]) {
+	snprintf(out, IR_OPERAND_CAP, "L%d", b->label_counter++);
 }
 
 static int push_loop(ir_builder *b, const char *break_label, const char *continue_label) {
@@ -127,10 +127,10 @@ static const char *current_continue_label(ir_builder *b) {
 	return b->continue_labels[b->loop_depth - 1];
 }
 
-static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]);
+static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]);
 static bool lower_stmt(ir_builder *b, ast_node *stmt);
 
-static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[64]) {
+static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
 	size_t i;
 	int written;
 	size_t used = 0;
@@ -139,7 +139,7 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[64]) {
 		return false;
 	}
 
-	if (used + 2 >= 64) {
+	if (used + 2 >= IR_OPERAND_CAP) {
 		error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "array literal too long for IR operand");
 		return false;
 	}
@@ -148,7 +148,7 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[64]) {
 
 	for (i = 0; i < expr->as.array_expr.items.len; i++) {
 		ast_node *item = expr->as.array_expr.items.data[i];
-		char item_text[64];
+		char item_text[IR_OPERAND_CAP];
 		if (!item) {
 			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "invalid array literal item");
 			return false;
@@ -172,15 +172,15 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[64]) {
 				return false;
 		}
 
-		written = snprintf(out + used, 64 - used, "%s%s", (i == 0) ? "" : ", ", item_text);
-		if (written < 0 || (size_t)written >= 64 - used) {
+		written = snprintf(out + used, IR_OPERAND_CAP - used, "%s%s", (i == 0) ? "" : ", ", item_text);
+		if (written < 0 || (size_t)written >= IR_OPERAND_CAP - used) {
 			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "array literal too long for IR operand");
 			return false;
 		}
 		used += (size_t)written;
 	}
 
-	if (used + 2 >= 64) {
+	if (used + 2 >= IR_OPERAND_CAP) {
 		error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "array literal too long for IR operand");
 		return false;
 	}
@@ -210,19 +210,19 @@ static const char *fallback_return_literal(const char *return_type) {
 	return "0";
 }
 
-static bool lower_binary(ir_builder *b, ast_node *expr, char out[64]) {
-	char lhs[64];
-	char rhs[64];
+static bool lower_binary(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
+	char lhs[IR_OPERAND_CAP];
+	char rhs[IR_OPERAND_CAP];
 	ir_op op;
 	if (!lower_expr(b, expr->as.binary_expr.left, lhs)) {
 		return false;
 	}
 	if (expr->as.binary_expr.op == TOKEN_OR_OR || expr->as.binary_expr.op == TOKEN_AND_AND) {
-		char lhs_bool[64];
-		char rhs_bool[64];
-		char eval_rhs_label[64];
-		char false_label[64];
-		char end_label[64];
+		char lhs_bool[IR_OPERAND_CAP];
+		char rhs_bool[IR_OPERAND_CAP];
+		char eval_rhs_label[IR_OPERAND_CAP];
+		char false_label[IR_OPERAND_CAP];
+		char end_label[IR_OPERAND_CAP];
 		next_temp(b, lhs_bool);
 		next_temp(b, rhs_bool);
 		next_temp(b, out);
@@ -307,7 +307,7 @@ static bool lower_binary(ir_builder *b, ast_node *expr, char out[64]) {
 	return emit_ins(b, op, out, lhs, rhs, expr->pos);
 }
 
-static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]) {
+static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
 	if (!expr) {
 		out[0] = '\0';
 		return true;
@@ -315,32 +315,32 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]) {
 
 	switch (expr->kind) {
 		case AST_NUMBER_EXPR:
-			snprintf(out, 64, "%s", expr->as.number_expr.literal);
+			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.number_expr.literal);
 			return true;
 		case AST_BOOL_EXPR:
-			snprintf(out, 64, "%d", expr->as.bool_expr.value ? 1 : 0);
+			snprintf(out, IR_OPERAND_CAP, "%d", expr->as.bool_expr.value ? 1 : 0);
 			return true;
 		case AST_STRING_EXPR:
-			snprintf(out, 64, "\"%s\"", expr->as.string_expr.literal);
+			snprintf(out, IR_OPERAND_CAP, "\"%s\"", expr->as.string_expr.literal);
 			return true;
 		case AST_ARRAY_EXPR:
 			return lower_array_literal(b, expr, out);
 		case AST_IDENT_EXPR:
-			snprintf(out, 64, "%s", expr->as.ident_expr.name);
+			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.ident_expr.name);
 			return true;
 		case AST_MEMBER_EXPR: {
-			char object_name[64];
+			char object_name[IR_OPERAND_CAP];
 			if (!lower_expr(b, expr->as.member_expr.object, object_name)) {
 				return false;
 			}
-			if (snprintf(out, 64, "%s.%s", object_name, expr->as.member_expr.member) >= 64) {
+			if (snprintf(out, IR_OPERAND_CAP, "%s.%s", object_name, expr->as.member_expr.member) >= IR_OPERAND_CAP) {
 				error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "member expression too long for IR operand");
 				return false;
 			}
 			return true;
 		}
 		case AST_UNARY_EXPR: {
-			char rhs[64];
+			char rhs[IR_OPERAND_CAP];
 			if (!lower_expr(b, expr->as.unary_expr.operand, rhs)) {
 				return false;
 			}
@@ -363,14 +363,14 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[64]) {
 			if (!emit_ins(b, IR_MOV, expr->as.assign_expr.name, out, "", expr->pos)) {
 				return false;
 			}
-			snprintf(out, 64, "%s", expr->as.assign_expr.name);
+			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.assign_expr.name);
 			return true;
 			case AST_CALL_EXPR: {
 				size_t i;
-				char callee[64] = "call";
-				char argc_text[64];
+				char callee[IR_OPERAND_CAP] = "call";
+				char argc_text[IR_OPERAND_CAP];
 				for (i = 0; i < expr->as.call_expr.args.len; i++) {
-					char arg_tmp[64];
+					char arg_tmp[IR_OPERAND_CAP];
 					if (!lower_expr(b, expr->as.call_expr.args.data[i], arg_tmp)) {
 						return false;
 					}
@@ -402,9 +402,9 @@ static bool lower_block(ir_builder *b, ast_node *block) {
 }
 
 static bool lower_if(ir_builder *b, ast_node *stmt) {
-	char cond[64];
-	char else_label[64];
-	char end_label[64];
+	char cond[IR_OPERAND_CAP];
+	char else_label[IR_OPERAND_CAP];
+	char end_label[IR_OPERAND_CAP];
 	if (!lower_expr(b, stmt->as.if_stmt.condition, cond)) {
 		return false;
 	}
@@ -429,9 +429,9 @@ static bool lower_if(ir_builder *b, ast_node *stmt) {
 }
 
 static bool lower_while(ir_builder *b, ast_node *stmt) {
-	char start_label[64];
-	char end_label[64];
-	char cond[64];
+	char start_label[IR_OPERAND_CAP];
+	char end_label[IR_OPERAND_CAP];
+	char cond[IR_OPERAND_CAP];
 	next_label(b, start_label);
 	next_label(b, end_label);
 	if (!emit_ins(b, IR_LABEL, start_label, "", "", stmt->pos)) {
@@ -459,10 +459,10 @@ static bool lower_while(ir_builder *b, ast_node *stmt) {
 }
 
 static bool lower_for(ir_builder *b, ast_node *stmt) {
-	char start_label[64];
-	char post_label[64];
-	char end_label[64];
-	char cond[64];
+	char start_label[IR_OPERAND_CAP];
+	char post_label[IR_OPERAND_CAP];
+	char end_label[IR_OPERAND_CAP];
+	char cond[IR_OPERAND_CAP];
 	if (stmt->as.for_stmt.init && !lower_stmt(b, stmt->as.for_stmt.init)) {
 		return false;
 	}
@@ -498,7 +498,7 @@ static bool lower_for(ir_builder *b, ast_node *stmt) {
 				return false;
 			}
 		} else {
-			char unused[64];
+			char unused[IR_OPERAND_CAP];
 			if (!lower_expr(b, stmt->as.for_stmt.post, unused)) {
 				return false;
 			}
@@ -527,7 +527,7 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
 		for (i = 0; i < n; i++) {
 			ast_node *child = stmt->as.fn_stmt.body->as.block.statements.data[i];
 			if (non_unit && i + 1 == n && child && child->kind == AST_EXPR_STMT) {
-				char ret_value[64];
+				char ret_value[IR_OPERAND_CAP];
 				if (!lower_expr(b, child->as.expr_stmt.expr, ret_value)) {
 					return false;
 				}
@@ -555,7 +555,7 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
 }
 
 static bool lower_stmt(ir_builder *b, ast_node *stmt) {
-	char value[64];
+	char value[IR_OPERAND_CAP];
 	if (!stmt) {
 		return true;
 	}
