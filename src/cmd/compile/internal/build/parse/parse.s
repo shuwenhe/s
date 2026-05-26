@@ -78,14 +78,17 @@ func parse_options(vec[string] args)  vec[string] {
 
 func usage()  string {
     "usage:\n"
-    + "  s check <path>\n"
-    + "  s tokens <path>\n"
-    + "  s ast <path>\n"
-    + "  s build <path> -o <output> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>]\n"
-    + "  s run <path> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>]\n"
+    + "  s check <path|module>\n"
+    + "  s tokens <path|module>\n"
+    + "  s ast <path|module>\n"
+    + "  s build <path|module> -o <output> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>]\n"
+    + "  s run <path|module> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>]\n"
     + "  s test [fixtures_root]\n"
     + "  s mod init <module>\n"
     + "  s mod tidy\n"
+    + "\n"
+    + "  <module> is a dot-separated package path, e.g. neurx.agent.code_agent\n"
+    + "  Set S_PROJECT_ROOT=<dir> so non-stdlib modules can be located.\n"
 }
 
 func make_options(string command, string path, string output, string ssa_margin)  vec[string] {
