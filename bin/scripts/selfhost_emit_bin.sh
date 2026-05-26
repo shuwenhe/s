@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 DEFAULT_COMPILER="$(ls -1t "$ROOT_DIR"/bin/c_arm64_* 2>/dev/null | head -n 1 || ls -1t "$ROOT_DIR"/bin/s_arm64_* 2>/dev/null | head -n 1 || true)"
 
 COMPILER_PATH="${1:-$DEFAULT_COMPILER}"

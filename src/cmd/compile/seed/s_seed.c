@@ -13,12 +13,14 @@
 
 bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char *output_dir, compile_error *err);
 
+#ifndef SEED_COMPILE_ONLY
 static void print_compile_error(const compile_error *err) {
 	if (!err || !error_is_set(err)) {
 		return;
 	}
 	fprintf(stderr, "error[%d] at %zu:%zu: %s\n", (int)err->code, err->line, err->column, err->message);
 }
+#endif
 
 static bool read_file_text(const char *path, char **out_text, compile_error *err) {
 	FILE *fp;
@@ -139,6 +141,7 @@ bool seed_compile_file(const char *input_path, const char *output_path, compile_
 	return ok;
 }
 
+#ifndef SEED_COMPILE_ONLY
 static void print_usage(const char *argv0) {
 	fprintf(stderr, "usage:\n");
 	fprintf(stderr, "  %s <input.s> <output.ir>\n", argv0);
@@ -195,3 +198,4 @@ int main(int argc, char **argv) {
 	printf("compiled %s -> %s\n", argv[1], argv[2]);
 	return 0;
 }
+#endif

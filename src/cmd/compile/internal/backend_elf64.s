@@ -2651,6 +2651,11 @@ func should_skip_semantic_check(string path) bool {
 }
 
 func resolve_module_source_path(string module) option[string] {
+    let indexed = lookup_package_index(module)
+    if indexed.is_some() {
+        return indexed
+    }
+
     let candidates = vec[string]()
     add_module_candidates(candidates, module)
     let i = 0
@@ -2662,6 +2667,91 @@ func resolve_module_source_path(string module) option[string] {
         i = i + 1
     }
     option::none
+}
+
+func lookup_package_index(string module) option[string] {
+    let paths = package_index_candidate_paths()
+    let pi = 0
+    while pi < paths.len() {
+        let read_result = read_to_string(paths[pi])
+        if read_result.is_ok() {
+            let found = lookup_module_in_package_index_text(read_result.unwrap(), module)
+            if found.is_some() {
+                let path = found.unwrap()
+                let probe = read_to_string(path)
+                if probe.is_ok() {
+                    return option::some(path)
+                }
+            }
+        }
+        pi = pi + 1
+    }
+    option::none
+}
+
+func package_index_candidate_paths() vec[string] {
+    let paths = vec[string]()
+    switch env_get("S_PACKAGE_INDEX") {
+        option.some(value) : {
+            if value != "" {
+                paths.push(value)
+            }
+        }
+        option.none : (),
+    }
+    let project = resolve_project_root()
+    if project != "" {
+        paths.push(project + "/build/s-package-index.tsv")
+        paths.push(project + "/s-package-index.tsv")
+    }
+    paths
+}
+
+func lookup_module_in_package_index_text(string text, string module) option[string] {
+    let lines = split_lines_local(text)
+    let project = resolve_project_root()
+    let i = 0
+    while i < lines.len() {
+        let line = trim_spaces(lines[i])
+        if line == "" || starts_with_local(line, "#") {
+            i = i + 1
+            continue
+        }
+        let tab = find_tab_index(line)
+        if tab > 0 {
+            let name = trim_spaces(slice(line, 0, tab))
+            let path = trim_spaces(slice(line, tab + 1, len(line)))
+            if name == module && path != "" {
+                return option::some(normalize_package_index_path(project, path))
+            }
+        }
+        i = i + 1
+    }
+    option::none
+}
+
+func normalize_package_index_path(string project, string path) string {
+    if path == "" {
+        return path
+    }
+    if starts_with_local(path, "/") {
+        return path
+    }
+    if project == "" {
+        return path
+    }
+    project + "/" + path
+}
+
+func find_tab_index(string text) int {
+    let i = 0
+    while i < len(text) {
+        if char_at(text, i) == "\t" {
+            return i
+        }
+        i = i + 1
+    }
+    -1
 }
 
 func add_module_candidates(vec[string] candidates, string module) () {
@@ -2693,8 +2783,41 @@ func add_module_candidates_in_root(vec[string] candidates, string root, string m
         add_s_module_candidates(candidates, root, slice(module, len("s."), len(module)))
         return
     }
+    if starts_with_local(module, "neurx.") {
+        add_neurx_module_candidates(candidates, root, slice(module, len("neurx."), len(module)))
+        return
+    }
     candidates.push(root + "/" + dot_to_slash(module) + ".s")
     candidates.push(root + "/" + dot_to_slash(module) + "/" + last_segment(module) + ".s")
+}
+
+// NeurX packages are declared as neurx.* but live under the repo root without a neurx/ prefix.
+// We also support common NeurX layouts like task/planner.s for neurx.planner.
+func add_neurx_module_candidates(vec[string] candidates, string root, string tail) () {
+    // 1. Try standard layouts (e.g., neurx.agent.runtime -> agent/runtime.s)
+    add_std_layout_candidates(candidates, root, tail)
+
+    // 2. Try flattened layout for sub-packages (e.g., neurx.agent.memory -> memory/memory.s)
+    if has_dot_local(tail) {
+        let last = last_segment(tail)
+        candidates.push(root + "/" + last + "/" + last + ".s")
+        candidates.push(root + "/" + last + ".s")
+    }
+
+    // 3. Try platform/app specific layouts
+    candidates.push(root + "/app/" + dot_to_slash(tail) + ".s")
+    candidates.push(root + "/platform/" + dot_to_slash(tail) + ".s")
+}
+
+func has_dot_local(string text) bool {
+    let i = 0
+    while i < len(text) {
+        if char_at(text, i) == "." {
+            return true
+        }
+        i = i + 1
+    }
+    false
 }
 
 func add_compile_module_candidates(vec[string] candidates, string root, string tail) () {
@@ -2725,11 +2848,15 @@ func add_std_module_candidates(vec[string] candidates, string root, string tail)
 }
 
 func add_std_layout_candidates(vec[string] candidates, string root, string tail) () {
-    candidates.push(root + "/" + dot_to_slash(tail) + ".s")
+    let slash_path = dot_to_slash(tail)
+    candidates.push(root + "/" + slash_path + ".s")
+    candidates.push(root + "/" + slash_path + "/" + last_segment(tail) + ".s")
+
     let pkg = drop_last_segment(tail)
     if pkg != "" {
-        candidates.push(root + "/" + dot_to_slash(pkg) + ".s")
-        candidates.push(root + "/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
+        let pkg_slash = dot_to_slash(pkg)
+        candidates.push(root + "/" + pkg_slash + ".s")
+        candidates.push(root + "/" + pkg_slash + "/" + last_segment(pkg) + ".s")
     }
 }
 
@@ -3544,18 +3671,43 @@ func call_function_with_capture(
 }
 
 func find_function(source_file source, string name) result[function_decl, backend_error] {
+    let visited = vec[string]()
+    return find_function_in_source_graph(source, name, visited)
+}
+
+func find_function_in_source_graph(source_file source, string name, vec[string] mut visited) result[function_decl, backend_error] {
+    if string_vec_contains(visited, source.pkg) {
+        return result::err(backend_error { message: "backend error: unknown function " + name })
+    }
+    visited.push(source.pkg)
+
     let i = 0
     while i < source.items.len() {
         switch source.items[i] {
             item.function(value) : {
                 if value.sig.name == name {
-                    result::ok(value)
+                    return result::ok(value)
                 }
             }
             _ : (),
         }
         i = i + 1
     }
+
+    let ui = 0
+    while ui < source.uses.len() {
+        let dep_result = load_source_graph_for_use(source.uses[ui].path)
+        if dep_result.is_err() {
+            return result::err(dep_result.unwrap_err())
+        }
+
+        let found = find_function_in_source_graph(dep_result.unwrap(), name, visited)
+        if found.is_ok() {
+            return found
+        }
+        ui = ui + 1
+    }
+
     result::err(backend_error { message: "backend error: unknown function " + name })
 }
 
@@ -4603,6 +4755,20 @@ func control_panic_payload_text(vec[binding] env) string {
 
 func collect_const_bindings(source_file source) result[vec[binding], backend_error] {
     let out = vec[binding]()
+    let visited = vec[string]()
+    let collect_result = collect_const_bindings_in_source(source, out, visited)
+    if collect_result.is_err() {
+        return result::err(collect_result.unwrap_err())
+    }
+    result::ok(out)
+}
+
+func collect_const_bindings_in_source(source_file source, vec[binding] mut out, vec[string] mut visited) result[(), backend_error] {
+    if string_vec_contains(visited, source.pkg) {
+        return result::ok(())
+    }
+    visited.push(source.pkg)
+
     let last_expr = option::none
 
     let i = 0
@@ -4642,7 +4808,39 @@ func collect_const_bindings(source_file source) result[vec[binding], backend_err
         i = i + 1
     }
 
-    result::ok(out)
+    let ui = 0
+    while ui < source.uses.len() {
+        let dep_result = load_source_graph_for_use(source.uses[ui].path)
+        if dep_result.is_err() {
+            return result::err(dep_result.unwrap_err())
+        }
+        let nested_result = collect_const_bindings_in_source(dep_result.unwrap(), out, visited)
+        if nested_result.is_err() {
+            return nested_result
+        }
+        ui = ui + 1
+    }
+
+    result::ok(())
+}
+
+func load_source_graph_for_use(string module_path) result[source_file, backend_error] {
+    let module_result = resolve_module_source_path(module_path)
+    if module_result.is_none() {
+        return result::err(backend_error { message: "backend error: module resolver failed: " + module_path })
+    }
+
+    let dep_source_result = read_to_string(module_result.unwrap())
+    if dep_source_result.is_err() {
+        return result::err(backend_error { message: "backend error: failed to read module " + module_path + ": " + dep_source_result.unwrap_err().message })
+    }
+
+    let dep_parsed_result = parse_source(dep_source_result.unwrap())
+    if dep_parsed_result.is_err() {
+        return result::err(backend_error { message: "backend error: parse failed in module " + module_path + ": " + dep_parsed_result.unwrap_err().message })
+    }
+
+    result::ok(dep_parsed_result.unwrap())
 }
 
 func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) result[value, backend_error] {
