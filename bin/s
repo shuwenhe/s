@@ -53,7 +53,8 @@ pick_compiler() {
       ls -1t "$ROOT_DIR"/bin/s_arm64_* 2>/dev/null | head -n 1
       ;;
     x86_64|amd64)
-      ls -1t "$ROOT_DIR"/bin/s_x86_64 "$ROOT_DIR"/bin/s_x86_64_* 2>/dev/null | head -n 1
+      ls -1t "$ROOT_DIR"/bin/s_x86_64 "$ROOT_DIR"/bin/s_x86_64_* 2>/dev/null \
+        | grep -v "_final_v3" | head -n 1
       ;;
     *)
       return 1

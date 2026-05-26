@@ -70,6 +70,12 @@ func parse_options(vec[string] args)  vec[string] {
             }
             return make_options(command, "tidy", "", "")
         }
+        if mod_command == "index" {
+            if args.len() != 4 {
+                return make_options("help", "", "", "")
+            }
+            return make_options(command, "index", args[3], "")
+        }
         return make_options("help", "", "", "")
     }
 
@@ -86,9 +92,11 @@ func usage()  string {
     + "  s test [fixtures_root]\n"
     + "  s mod init <module>\n"
     + "  s mod tidy\n"
+    + "  s mod index <dir>\n"
     + "\n"
     + "  <module> is a dot-separated package path, e.g. neurx.agent.code_agent\n"
-    + "  Set S_PROJECT_ROOT=<dir> so non-stdlib modules can be located.\n"
+    + "  Set S_PROJECT_ROOT=<dir> for neurx.* modules (strip neurx. prefix for paths).\n"
+    + "  Run 's mod index' in the project to generate build/s-package-index.tsv for mismatched packages.\n"
 }
 
 func make_options(string command, string path, string output, string ssa_margin)  vec[string] {
