@@ -77,6 +77,7 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_STRING_EXPR: return "STRING_EXPR";
 		case AST_ARRAY_EXPR: return "ARRAY_EXPR";
 		case AST_MEMBER_EXPR: return "MEMBER_EXPR";
+		case AST_INDEX_EXPR: return "INDEX_EXPR";
 		case AST_CALL_EXPR: return "CALL_EXPR";
 		default: return "UNKNOWN_AST";
 	}
@@ -205,6 +206,10 @@ void ast_free(ast_node *node) {
 		case AST_MEMBER_EXPR:
 			ast_free(node->as.member_expr.object);
 			free(node->as.member_expr.member);
+			break;
+		case AST_INDEX_EXPR:
+			ast_free(node->as.index_expr.object);
+			ast_free(node->as.index_expr.index);
 			break;
 		case AST_CALL_EXPR:
 			ast_free(node->as.call_expr.callee);
@@ -480,29 +485,27 @@ static ast_node *parse_call(parser *p) {
 
 		if (match(p, TOKEN_LBRACKET)) {
 			ast_node *indexed;
+			ast_node *index_expr = NULL;
 			if (!check(p, TOKEN_RBRACKET)) {
-				ast_node *index_expr = parse_expression(p);
+				index_expr = parse_expression(p);
 				if (!index_expr) {
 					ast_free(expr);
 					return NULL;
 				}
-				ast_free(index_expr);
 			}
 			if (!expect(p, TOKEN_RBRACKET, "]")) {
+				ast_free(index_expr);
 				ast_free(expr);
 				return NULL;
 			}
-			indexed = ast_new(AST_MEMBER_EXPR, prev(p)->pos);
+			indexed = ast_new(AST_INDEX_EXPR, prev(p)->pos);
 			if (!indexed) {
+				ast_free(index_expr);
 				ast_free(expr);
 				return NULL;
 			}
-			indexed->as.member_expr.object = expr;
-			indexed->as.member_expr.member = dup_cstr("[]");
-			if (!indexed->as.member_expr.member) {
-				ast_free(indexed);
-				return NULL;
-			}
+			indexed->as.index_expr.object = expr;
+			indexed->as.index_expr.index = index_expr;
 			expr = indexed;
 			continue;
 		}
