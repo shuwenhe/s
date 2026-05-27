@@ -604,6 +604,32 @@ static int host_dispatch_call(
 		}
 		return 1;
 	}
+	if (strcmp(name, "__index_get") == 0) {
+		size_t text_len;
+		if (argc != 2) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__index_get expects 2 args");
+			return 0;
+		}
+		if (args[1].kind != RUNTIME_INT) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__index_get expects int index");
+			return 0;
+		}
+		if (args[0].kind != RUNTIME_STRING) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__index_get currently supports string targets only");
+			return 0;
+		}
+		if (!args[0].str_value) {
+			*out = value_make_int(0);
+			return 1;
+		}
+		text_len = strlen(args[0].str_value);
+		if (args[1].int_value < 0 || (size_t)args[1].int_value >= text_len) {
+			*out = value_make_int(0);
+			return 1;
+		}
+		*out = value_make_int((unsigned char)args[0].str_value[args[1].int_value]);
+		return 1;
+	}
 	if (strcmp(name, "build_main") == 0) {
 		compile_error compile_err;
 		char **s_argv = NULL;

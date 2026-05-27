@@ -341,10 +341,11 @@ EOF
 }
 
 ensure_ir_runner() {
-  local arch runner src
+  local arch runner src seed_obj
   arch="$(uname -m)"
   runner="/tmp/s_ir_runner_${arch}_modrun_v8"
   src="/tmp/s_ir_runner_main_${arch}_modrun_v8.c"
+  seed_obj="/tmp/s_seed_${arch}_modrun_v8.o"
 
   if [[ -x "$runner" ]]; then
     echo "$runner"
@@ -381,8 +382,15 @@ EOF
 
   gcc -std=c11 -Wall -Wextra -Werror -O2 \
     -I"$ROOT_DIR/src/cmd/compile/seed" \
+    -Dmain=s_seed_compiler_main \
+    -c "$ROOT_DIR/src/cmd/compile/seed/s_seed.c" \
+    -o "$seed_obj"
+
+  gcc -std=c11 -Wall -Wextra -Werror -O2 \
+    -I"$ROOT_DIR/src/cmd/compile/seed" \
     -o "$runner" \
     "$src" \
+    "$seed_obj" \
     "$ROOT_DIR/src/cmd/compile/seed/lexical/lexer.c" \
     "$ROOT_DIR/src/cmd/compile/seed/syntax/parser.c" \
     "$ROOT_DIR/src/cmd/compile/seed/semantic/analyzer.c" \
@@ -390,7 +398,8 @@ EOF
     "$ROOT_DIR/src/cmd/compile/seed/code/generator.c" \
     "$ROOT_DIR/src/cmd/compile/seed/code/native_backend.c" \
     "$ROOT_DIR/src/cmd/compile/seed/runtime/runtime.c" \
-    "$ROOT_DIR/src/cmd/compile/seed/error/error.c"
+    "$ROOT_DIR/src/cmd/compile/seed/error/error.c" \
+    "$ROOT_DIR/src/cmd/compile/seed/bootstrap/bootstrap.c"
 
   echo "$runner"
 }
