@@ -339,6 +339,24 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			}
 			return true;
 		}
+		case AST_INDEX_EXPR: {
+			char object_name[IR_OPERAND_CAP];
+			char index_name[IR_OPERAND_CAP];
+			if (!lower_expr(b, expr->as.index_expr.object, object_name)) {
+				return false;
+			}
+			if (!lower_expr(b, expr->as.index_expr.index, index_name)) {
+				return false;
+			}
+			if (!emit_ins(b, IR_ARG, object_name, "", "", expr->pos)) {
+				return false;
+			}
+			if (!emit_ins(b, IR_ARG, index_name, "", "", expr->pos)) {
+				return false;
+			}
+			next_temp(b, out);
+			return emit_ins(b, IR_CALL, out, "__index_get", "2", expr->pos);
+		}
 		case AST_UNARY_EXPR: {
 			char rhs[IR_OPERAND_CAP];
 			if (!lower_expr(b, expr->as.unary_expr.operand, rhs)) {

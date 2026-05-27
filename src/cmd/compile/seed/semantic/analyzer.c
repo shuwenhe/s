@@ -713,6 +713,24 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			}
 			*out_type = TYPE_ANY;
 			return 1;
+		case AST_INDEX_EXPR:
+			if (!analyze_expr(ctx, node->as.index_expr.object, &lhs_type)) {
+				return 0;
+			}
+			if (!analyze_expr(ctx, node->as.index_expr.index, &rhs_type)) {
+				return 0;
+			}
+			if (!is_type_assignable(TYPE_INT, rhs_type)) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"index expression expects int index, got '%s'", rhs_type ? rhs_type : TYPE_ANY);
+				return 0;
+			}
+			if (is_type_assignable(TYPE_STRING, lhs_type)) {
+				*out_type = TYPE_INT;
+				return 1;
+			}
+			*out_type = TYPE_ANY;
+			return 1;
 		case AST_UNARY_EXPR:
 			if (!analyze_expr(ctx, node->as.unary_expr.operand, &rhs_type)) {
 				return 0;
@@ -1243,6 +1261,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_UNARY_EXPR:
 		case AST_IDENT_EXPR:
 		case AST_MEMBER_EXPR:
+		case AST_INDEX_EXPR:
 		case AST_CALL_EXPR:
 		case AST_NUMBER_EXPR:
 		case AST_BOOL_EXPR:
