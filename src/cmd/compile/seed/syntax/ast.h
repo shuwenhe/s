@@ -31,6 +31,7 @@ typedef enum ast_kind {
 	AST_STRING_EXPR,
 	AST_ARRAY_EXPR,
 	AST_MEMBER_EXPR,
+	AST_INDEX_EXPR,
 	AST_CALL_EXPR,
 } ast_kind;
 
@@ -151,6 +152,11 @@ struct ast_node {
 			ast_node *object;
 			char *member;
 		} member_expr;
+
+		struct {
+			ast_node *object;
+			ast_node *index;
+		} index_expr;
 
 		struct {
 			ast_node *callee;
