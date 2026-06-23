@@ -70,6 +70,7 @@ const char *ir_op_name(ir_op op) {
 		case IR_SUB: return "SUB";
 		case IR_MUL: return "MUL";
 		case IR_DIV: return "DIV";
+		case IR_MOD: return "MOD";
 		case IR_CMP_EQ: return "CMP_EQ";
 		case IR_CMP_NE: return "CMP_NE";
 		case IR_CMP_LT: return "CMP_LT";
@@ -323,6 +324,7 @@ static bool lower_binary(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]
 		case TOKEN_MINUS: op = IR_SUB; break;
 		case TOKEN_STAR: op = IR_MUL; break;
 		case TOKEN_SLASH: op = IR_DIV; break;
+		case TOKEN_PERCENT: op = IR_MOD; break;
 		case TOKEN_EQ: op = IR_CMP_EQ; break;
 		case TOKEN_NE: op = IR_CMP_NE; break;
 		case TOKEN_LT: op = IR_CMP_LT; break;
