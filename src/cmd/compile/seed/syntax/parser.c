@@ -76,6 +76,7 @@ const char *ast_kind_name(ast_kind kind) {
 			case AST_BOOL_EXPR: return "BOOL_EXPR";
 		case AST_STRING_EXPR: return "STRING_EXPR";
 		case AST_ARRAY_EXPR: return "ARRAY_EXPR";
+		case AST_STRUCT_EXPR: return "STRUCT_EXPR";
 		case AST_MEMBER_EXPR: return "MEMBER_EXPR";
 		case AST_INDEX_EXPR: return "INDEX_EXPR";
 		case AST_CALL_EXPR: return "CALL_EXPR";
@@ -203,6 +204,19 @@ void ast_free(ast_node *node) {
 			}
 			ast_vec_free(&node->as.array_expr.items);
 			break;
+		case AST_STRUCT_EXPR:
+			free(node->as.struct_expr.type_name);
+			if (node->as.struct_expr.field_names) {
+				for (i = 0; i < node->as.struct_expr.field_count; i++) {
+					free(node->as.struct_expr.field_names[i]);
+				}
+				free(node->as.struct_expr.field_names);
+			}
+			for (i = 0; i < node->as.struct_expr.field_values.len; i++) {
+				ast_free(node->as.struct_expr.field_values.data[i]);
+			}
+			ast_vec_free(&node->as.struct_expr.field_values);
+			break;
 		case AST_MEMBER_EXPR:
 			ast_free(node->as.member_expr.object);
 			free(node->as.member_expr.member);
@@ -286,6 +300,8 @@ static ast_node *parse_expression(parser *p);
 static ast_node *parse_statement(parser *p);
 static ast_node *parse_struct_decl(parser *p);
 static int skip_brace_initializer(parser *p);
+static ast_node *parse_struct_literal_expr(parser *p, const token *type_tok);
+static int looks_like_struct_literal(parser *p);
 static int parse_dotted_path(parser *p,
 	char *path,
 	size_t path_size,
@@ -422,9 +438,10 @@ static ast_node *parse_primary(parser *p) {
 			ast_free(node);
 			return NULL;
 		}
-		if (!skip_brace_initializer(p)) {
+		if (check(p, TOKEN_LBRACE) && looks_like_struct_literal(p)) {
+			ast_node *struct_expr = parse_struct_literal_expr(p, tok);
 			ast_free(node);
-			return NULL;
+			return struct_expr;
 		}
 		return node;
 	}
@@ -451,6 +468,12 @@ static ast_node *parse_call(parser *p) {
 	}
 
 	for (;;) {
+		const token *next_tok = peek(p);
+		const token *last_tok = prev(p);
+		if (next_tok && last_tok && next_tok->pos.line > last_tok->pos.line) {
+			break;
+		}
+
 		if (match(p, TOKEN_LPAREN)) {
 			ast_node *call = ast_new(AST_CALL_EXPR, prev(p)->pos);
 			if (!call) {
@@ -1711,6 +1734,137 @@ void parser_parse_result_free(parse_result *res) {
 	}
 	ast_free(res->root);
 	res->root = NULL;
+}
+
+static ast_node *parse_struct_literal_expr(parser *p, const token *type_tok) {
+	ast_node *node;
+	char **next_names;
+
+	if (!expect(p, TOKEN_LBRACE, "{")) {
+		return NULL;
+	}
+
+	node = ast_new(AST_STRUCT_EXPR, type_tok->pos);
+	if (!node) {
+		return NULL;
+	}
+	node->as.struct_expr.type_name = dup_cstr(type_tok->lexeme);
+	if (!node->as.struct_expr.type_name) {
+		ast_free(node);
+		return NULL;
+	}
+
+	while (!check(p, TOKEN_RBRACE)) {
+		ast_node *value;
+		if (!expect(p, TOKEN_IDENTIFIER, "struct field name")) {
+			ast_free(node);
+			return NULL;
+		}
+		next_names = (char **)realloc(
+			node->as.struct_expr.field_names,
+			(node->as.struct_expr.field_count + 1) * sizeof(char *)
+		);
+		if (!next_names) {
+			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
+			ast_free(node);
+			return NULL;
+		}
+		node->as.struct_expr.field_names = next_names;
+		node->as.struct_expr.field_names[node->as.struct_expr.field_count] = dup_cstr(prev(p)->lexeme);
+		if (!node->as.struct_expr.field_names[node->as.struct_expr.field_count]) {
+			ast_free(node);
+			return NULL;
+		}
+		if (!expect(p, TOKEN_COLON, ":")) {
+			ast_free(node);
+			return NULL;
+		}
+		value = parse_expression(p);
+		if (!value) {
+			ast_free(node);
+			return NULL;
+		}
+		if (!ast_vec_push(&node->as.struct_expr.field_values, value)) {
+			ast_free(value);
+			ast_free(node);
+			return NULL;
+		}
+		node->as.struct_expr.field_count++;
+		if (!match(p, TOKEN_COMMA)) {
+			break;
+		}
+		if (check(p, TOKEN_RBRACE)) {
+			break;
+		}
+	}
+
+	if (!expect(p, TOKEN_RBRACE, "}")) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
+}
+
+static int looks_like_struct_literal(parser *p) {
+	size_t saved = p->current;
+	int brace_depth = 0;
+	int paren_depth = 0;
+	int bracket_depth = 0;
+	int expect_field_name = 1;
+	int saw_field = 0;
+
+	if (!match(p, TOKEN_LBRACE)) {
+		return 0;
+	}
+	brace_depth = 1;
+	while (brace_depth > 0 && !is_at_end(p)) {
+		if (match(p, TOKEN_LBRACE)) {
+			brace_depth++;
+			continue;
+		}
+		if (match(p, TOKEN_RBRACE)) {
+			brace_depth--;
+			continue;
+		}
+		if (match(p, TOKEN_LPAREN)) {
+			paren_depth++;
+			continue;
+		}
+		if (paren_depth > 0 && match(p, TOKEN_RPAREN)) {
+			paren_depth--;
+			continue;
+		}
+		if (match(p, TOKEN_LBRACKET)) {
+			bracket_depth++;
+			continue;
+		}
+		if (bracket_depth > 0 && match(p, TOKEN_RBRACKET)) {
+			bracket_depth--;
+			continue;
+		}
+		if (brace_depth == 1 && paren_depth == 0 && bracket_depth == 0) {
+			if (expect_field_name) {
+				if (!match(p, TOKEN_IDENTIFIER)) {
+					p->current = saved;
+					return 0;
+				}
+				if (!match(p, TOKEN_COLON)) {
+					p->current = saved;
+					return 0;
+				}
+				expect_field_name = 0;
+				saw_field = 1;
+				continue;
+			}
+			if (match(p, TOKEN_COMMA)) {
+				expect_field_name = 1;
+				continue;
+			}
+		}
+		advance_tok(p);
+	}
+	p->current = saved;
+	return brace_depth == 0 && paren_depth == 0 && bracket_depth == 0 && saw_field;
 }
 
 static int skip_brace_initializer(parser *p) {
