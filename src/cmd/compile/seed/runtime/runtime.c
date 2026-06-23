@@ -17,12 +17,14 @@ static char **g_host_argv = NULL;
 
 typedef enum runtime_value_kind {
 	RUNTIME_INT = 0,
+	RUNTIME_FLOAT,
 	RUNTIME_STRING,
 } runtime_value_kind;
 
 typedef struct runtime_data_value {
 	runtime_value_kind kind;
 	long int_value;
+	double float_value;
 	char *str_value;
 } runtime_data_value;
 
@@ -30,6 +32,16 @@ static runtime_data_value value_make_int(long v) {
 	runtime_data_value out;
 	out.kind = RUNTIME_INT;
 	out.int_value = v;
+	out.float_value = (double)v;
+	out.str_value = NULL;
+	return out;
+}
+
+static runtime_data_value value_make_float(double v) {
+	runtime_data_value out;
+	out.kind = RUNTIME_FLOAT;
+	out.int_value = (long)v;
+	out.float_value = v;
 	out.str_value = NULL;
 	return out;
 }
@@ -38,6 +50,7 @@ static runtime_data_value value_make_string_owned(char *s) {
 	runtime_data_value out;
 	out.kind = RUNTIME_STRING;
 	out.int_value = 0;
+	out.float_value = 0.0;
 	out.str_value = s;
 	return out;
 }
@@ -64,12 +77,17 @@ static void value_clear(runtime_data_value *v) {
 	}
 	v->kind = RUNTIME_INT;
 	v->int_value = 0;
+	v->float_value = 0.0;
 	v->str_value = NULL;
 }
 
 static int value_copy(runtime_data_value *dst, const runtime_data_value *src) {
 	if (src->kind == RUNTIME_INT) {
 		*dst = value_make_int(src->int_value);
+		return 1;
+	}
+	if (src->kind == RUNTIME_FLOAT) {
+		*dst = value_make_float(src->float_value);
 		return 1;
 	}
 	*dst = value_make_string_copy(src->str_value ? src->str_value : "");
@@ -122,12 +140,22 @@ static int value_truthy(const runtime_data_value *v) {
 	if (v->kind == RUNTIME_INT) {
 		return v->int_value != 0;
 	}
+	if (v->kind == RUNTIME_FLOAT) {
+		return v->float_value != 0.0;
+	}
 	return v->str_value && v->str_value[0] != '\0';
 }
 
 static int value_as_cstr(const runtime_data_value *v, char *tmp, size_t tmp_size, const char **out) {
 	if (v->kind == RUNTIME_STRING) {
 		*out = v->str_value ? v->str_value : "";
+		return 1;
+	}
+	if (v->kind == RUNTIME_FLOAT) {
+		if (snprintf(tmp, tmp_size, "%.17g", v->float_value) < 0) {
+			return 0;
+		}
+		*out = tmp;
 		return 1;
 	}
 	if (snprintf(tmp, tmp_size, "%ld", v->int_value) < 0) {
@@ -785,6 +813,19 @@ static int is_int_literal(const char *s) {
 	return 1;
 }
 
+static int is_float_literal(const char *s) {
+	char *end = NULL;
+	if (!s || !*s) {
+		return 0;
+	}
+	if (strchr(s, '.') == NULL && strchr(s, 'e') == NULL && strchr(s, 'E') == NULL) {
+		return 0;
+	}
+	errno = 0;
+	strtod(s, &end);
+	return errno == 0 && end != NULL && *end == '\0';
+}
+
 static void values_free(runtime_values *vals) {
 	size_t i;
 	for (i = 0; i < vals->len; i++) {
@@ -831,6 +872,51 @@ static int values_get(const runtime_values *vals, const char *name, runtime_data
 	for (i = 0; i < vals->len; i++) {
 		if (strcmp(vals->data[i].name, name) == 0) {
 			return value_copy(out, &vals->data[i].value);
+		}
+	}
+	return 0;
+}
+
+static int name_has_dotted_prefix(const char *name, const char *prefix) {
+	size_t prefix_len;
+	if (!name || !prefix) {
+		return 0;
+	}
+	prefix_len = strlen(prefix);
+	return prefix_len > 0 && strncmp(name, prefix, prefix_len) == 0 && name[prefix_len] == '.';
+}
+
+static int values_copy_prefixed(const runtime_values *src, const char *old_prefix, runtime_values *dst, const char *new_prefix) {
+	size_t i;
+	size_t old_len;
+	char mapped_name[256];
+
+	if (!src || !old_prefix || !new_prefix) {
+		return 0;
+	}
+	old_len = strlen(old_prefix);
+	for (i = 0; i < src->len; i++) {
+		if (!name_has_dotted_prefix(src->data[i].name, old_prefix)) {
+			continue;
+		}
+		if (snprintf(mapped_name, sizeof(mapped_name), "%s%s", new_prefix, src->data[i].name + old_len) >= (int)sizeof(mapped_name)) {
+			return 0;
+		}
+		if (!values_set(dst, mapped_name, &src->data[i].value)) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+static int values_have_prefixed(const runtime_values *vals, const char *prefix) {
+	size_t i;
+	if (!vals || !prefix || !*prefix) {
+		return 0;
+	}
+	for (i = 0; i < vals->len; i++) {
+		if (name_has_dotted_prefix(vals->data[i].name, prefix)) {
+			return 1;
 		}
 	}
 	return 0;
@@ -985,16 +1071,74 @@ static int parse_record_line(const char *line, runtime_ins *out) {
 	return 1;
 }
 
+static int resolve_dotted_value(const runtime_values *vals, const char *name, runtime_data_value *out, int depth) {
+	runtime_data_value base;
+	char chained_name[256];
+	const char *dot;
+
+	if (depth > 8 || !name) {
+		return 0;
+	}
+	if (values_get(vals, name, out)) {
+		return 1;
+	}
+	for (dot = strrchr(name, '.'); dot != NULL; ) {
+		size_t prefix_len = (size_t)(dot - name);
+		char prefix[128];
+		memset(&base, 0, sizeof(base));
+		if (prefix_len > 0 && prefix_len < sizeof(prefix)) {
+			memcpy(prefix, name, prefix_len);
+			prefix[prefix_len] = '\0';
+			if (resolve_dotted_value(vals, prefix, &base, depth + 1)) {
+				if (base.kind == RUNTIME_STRING && base.str_value && base.str_value[0] != '\0') {
+					if (snprintf(chained_name, sizeof(chained_name), "%s.%s", base.str_value, dot + 1) < (int)sizeof(chained_name)) {
+						value_clear(&base);
+						return resolve_dotted_value(vals, chained_name, out, depth + 1);
+					}
+				}
+				value_clear(&base);
+			}
+		}
+		{
+			const char *scan = dot;
+			dot = NULL;
+			while (scan > name) {
+				scan--;
+				if (*scan == '.') {
+					dot = scan;
+					break;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 static int resolve_value(const runtime_values *vals, const char *name, runtime_data_value *out) {
 	if (is_int_literal(name)) {
 		*out = value_make_int(strtol(name, NULL, 10));
+		return 1;
+	}
+	if (is_float_literal(name)) {
+		*out = value_make_float(strtod(name, NULL));
 		return 1;
 	}
 	if (is_string_literal(name)) {
 		*out = parse_string_literal(name);
 		return out->str_value != NULL;
 	}
-	return values_get(vals, name, out);
+	return resolve_dotted_value(vals, name, out, 0);
+}
+
+static int value_is_numeric(const runtime_data_value *v) {
+	return v->kind == RUNTIME_INT || v->kind == RUNTIME_FLOAT;
+}
+
+static double value_as_double(const runtime_data_value *v) {
+	if (v->kind == RUNTIME_FLOAT) {
+		return v->float_value;
+	}
+	return (double)v->int_value;
 }
 
 static int parse_size_t(const char *text, size_t *out) {
@@ -1130,7 +1274,9 @@ static int execute_function(
 	const runtime_function *fn,
 	const runtime_data_value *args,
 	size_t argc,
+	const runtime_values *caller_vals,
 	runtime_data_value *out_return,
+	runtime_values *out_return_fields,
 	compile_error *err,
 	int depth
 ) {
@@ -1150,6 +1296,20 @@ static int execute_function(
 	}
 
 	for (i = 0; i < argc; i++) {
+		if (caller_vals && args[i].kind == RUNTIME_STRING && args[i].str_value && args[i].str_value[0] != '\0' &&
+		    values_have_prefixed(caller_vals, args[i].str_value)) {
+			runtime_data_value remapped_arg = value_make_string_copy(fn->params[i]);
+			if (remapped_arg.str_value == NULL ||
+			    !values_set(&vals, fn->params[i], &remapped_arg) ||
+			    !values_copy_prefixed(caller_vals, args[i].str_value, &vals, fn->params[i])) {
+				value_clear(&remapped_arg);
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				values_free(&vals);
+				return 0;
+			}
+			value_clear(&remapped_arg);
+			continue;
+		}
 		if (!values_set(&vals, fn->params[i], &args[i])) {
 			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 			values_free(&vals);
@@ -1241,59 +1401,91 @@ static int execute_function(
 			if (strcmp(ins->op, "ADD") == 0) {
 				if (a.kind == RUNTIME_INT && b.kind == RUNTIME_INT) {
 					r = value_make_int(a.int_value + b.int_value);
+				} else if (value_is_numeric(&a) && value_is_numeric(&b)) {
+					r = value_make_float(value_as_double(&a) + value_as_double(&b));
 				} else if (!value_concat(&r, &a, &b)) {
 					ok = 0;
 				}
 			} else if (strcmp(ins->op, "SUB") == 0) {
-				if (a.kind != RUNTIME_INT || b.kind != RUNTIME_INT) {
-					error_set(err, ERR_SEMANTIC, 0, 0, "SUB expects int operands");
+				if (!value_is_numeric(&a) || !value_is_numeric(&b)) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "SUB expects numeric operands");
 					ok = 0;
-				} else {
+				} else if (a.kind == RUNTIME_INT && b.kind == RUNTIME_INT) {
 					r = value_make_int(a.int_value - b.int_value);
+				} else {
+					r = value_make_float(value_as_double(&a) - value_as_double(&b));
 				}
 			} else if (strcmp(ins->op, "MUL") == 0) {
-				if (a.kind != RUNTIME_INT || b.kind != RUNTIME_INT) {
-					error_set(err, ERR_SEMANTIC, 0, 0, "MUL expects int operands");
+				if (!value_is_numeric(&a) || !value_is_numeric(&b)) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "MUL expects numeric operands");
 					ok = 0;
-				} else {
+				} else if (a.kind == RUNTIME_INT && b.kind == RUNTIME_INT) {
 					r = value_make_int(a.int_value * b.int_value);
+				} else {
+					r = value_make_float(value_as_double(&a) * value_as_double(&b));
 				}
 			} else if (strcmp(ins->op, "DIV") == 0) {
-				if (a.kind != RUNTIME_INT || b.kind != RUNTIME_INT) {
-					error_set(err, ERR_SEMANTIC, 0, 0, "DIV expects int operands");
+				if (!value_is_numeric(&a) || !value_is_numeric(&b)) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "DIV expects numeric operands");
 					ok = 0;
-				} else if (b.int_value == 0) {
+				} else if (value_as_double(&b) == 0.0) {
 					error_set(err, ERR_SEMANTIC, 0, 0, "division by zero");
 					ok = 0;
-				} else {
+				} else if (a.kind == RUNTIME_INT && b.kind == RUNTIME_INT) {
 					r = value_make_int(a.int_value / b.int_value);
+				} else {
+					r = value_make_float(value_as_double(&a) / value_as_double(&b));
 				}
 			} else if (strcmp(ins->op, "CMP_EQ") == 0) {
 				if (a.kind != b.kind) {
-					error_set(err, ERR_SEMANTIC, 0, 0, "CMP_EQ expects operand types to match");
-					ok = 0;
+					if (value_is_numeric(&a) && value_is_numeric(&b)) {
+						r = value_make_int(value_as_double(&a) == value_as_double(&b));
+					} else {
+						error_set(err, ERR_SEMANTIC, 0, 0, "CMP_EQ expects operand types to match");
+						ok = 0;
+					}
 				} else if (a.kind == RUNTIME_INT) {
 					r = value_make_int(a.int_value == b.int_value);
+				} else if (a.kind == RUNTIME_FLOAT) {
+					r = value_make_int(a.float_value == b.float_value);
 				} else {
 					r = value_make_int(strcmp(a.str_value ? a.str_value : "", b.str_value ? b.str_value : "") == 0);
 				}
 			} else if (strcmp(ins->op, "CMP_NE") == 0) {
 				if (a.kind != b.kind) {
-					error_set(err, ERR_SEMANTIC, 0, 0, "CMP_NE expects operand types to match");
-					ok = 0;
+					if (value_is_numeric(&a) && value_is_numeric(&b)) {
+						r = value_make_int(value_as_double(&a) != value_as_double(&b));
+					} else {
+						error_set(err, ERR_SEMANTIC, 0, 0, "CMP_NE expects operand types to match");
+						ok = 0;
+					}
 				} else if (a.kind == RUNTIME_INT) {
 					r = value_make_int(a.int_value != b.int_value);
+				} else if (a.kind == RUNTIME_FLOAT) {
+					r = value_make_int(a.float_value != b.float_value);
 				} else {
 					r = value_make_int(strcmp(a.str_value ? a.str_value : "", b.str_value ? b.str_value : "") != 0);
 				}
 			} else {
 				int cmp;
 				if (a.kind != b.kind) {
-					error_set(err, ERR_SEMANTIC, 0, 0, "%s expects operand types to match", ins->op);
-					ok = 0;
+					if (!value_is_numeric(&a) || !value_is_numeric(&b)) {
+						error_set(err, ERR_SEMANTIC, 0, 0, "%s expects operand types to match", ins->op);
+						ok = 0;
+					} else {
+						double ad = value_as_double(&a);
+						double bd = value_as_double(&b);
+						cmp = (ad > bd) - (ad < bd);
+						if (strcmp(ins->op, "CMP_LT") == 0) r = value_make_int(cmp < 0);
+						else if (strcmp(ins->op, "CMP_LE") == 0) r = value_make_int(cmp <= 0);
+						else if (strcmp(ins->op, "CMP_GT") == 0) r = value_make_int(cmp > 0);
+						else if (strcmp(ins->op, "CMP_GE") == 0) r = value_make_int(cmp >= 0);
+					}
 				} else {
 					if (a.kind == RUNTIME_INT) {
 						cmp = (a.int_value > b.int_value) - (a.int_value < b.int_value);
+					} else if (a.kind == RUNTIME_FLOAT) {
+						cmp = (a.float_value > b.float_value) - (a.float_value < b.float_value);
 					} else {
 						cmp = strcmp(a.str_value ? a.str_value : "", b.str_value ? b.str_value : "");
 					}
@@ -1369,14 +1561,53 @@ static int execute_function(
 					return 0;
 				}
 			} else {
-				if (!execute_function(prog, labels, funcs, callee, &pending_args[call_base], call_argc, &callee_ret, err, depth + 1)) {
+				runtime_values callee_return_fields = {0};
+				if (!execute_function(prog, labels, funcs, callee, &pending_args[call_base], call_argc, &vals, &callee_ret, &callee_return_fields, err, depth + 1)) {
 					for (j = call_base; j < pending_len; j++) {
 						value_clear(&pending_args[j]);
 					}
 					pending_len = call_base;
+					values_free(&callee_return_fields);
 					values_free(&vals);
 					return 0;
 				}
+				if (callee_return_fields.len > 0 && callee_ret.kind == RUNTIME_STRING && callee_ret.str_value && callee_ret.str_value[0] != '\0') {
+					runtime_data_value remapped_alias = value_make_string_copy(ins->result);
+					if (remapped_alias.str_value == NULL) {
+						for (j = call_base; j < pending_len; j++) {
+							value_clear(&pending_args[j]);
+						}
+						pending_len = call_base;
+						values_free(&callee_return_fields);
+						value_clear(&callee_ret);
+						values_free(&vals);
+						error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+						return 0;
+					}
+					if (!values_set(&vals, ins->result, &remapped_alias) ||
+					    !values_copy_prefixed(&callee_return_fields, callee_ret.str_value, &vals, ins->result)) {
+						for (j = call_base; j < pending_len; j++) {
+							value_clear(&pending_args[j]);
+						}
+						pending_len = call_base;
+						values_free(&callee_return_fields);
+						value_clear(&remapped_alias);
+						value_clear(&callee_ret);
+						values_free(&vals);
+						error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+						return 0;
+					}
+					value_clear(&remapped_alias);
+					values_free(&callee_return_fields);
+					for (j = call_base; j < pending_len; j++) {
+						value_clear(&pending_args[j]);
+					}
+					pending_len = call_base;
+					value_clear(&callee_ret);
+					pc++;
+					continue;
+				}
+				values_free(&callee_return_fields);
 			}
 			for (j = call_base; j < pending_len; j++) {
 				value_clear(&pending_args[j]);
@@ -1393,10 +1624,19 @@ static int execute_function(
 			continue;
 		}
 		if (strcmp(ins->op, "RET") == 0) {
-			if (!resolve_value(&vals, ins->result, out_return)) {
+			if (ins->result[0] == '\0') {
+				*out_return = value_make_int(0);
+			} else if (!resolve_value(&vals, ins->result, out_return)) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "unknown return value: %s", ins->result);
 				values_free(&vals);
 				return 0;
+			}
+			if (out_return_fields && out_return->kind == RUNTIME_STRING && out_return->str_value && out_return->str_value[0] != '\0') {
+				if (!values_copy_prefixed(&vals, out_return->str_value, out_return_fields, out_return->str_value)) {
+					error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+					values_free(&vals);
+					return 0;
+				}
 			}
 			values_free(&vals);
 			return 1;
@@ -1469,7 +1709,7 @@ bool runtime_execute_text_with_argv(
 		return false;
 	}
 
-	ok = execute_function(&prog, &labels, &funcs, entry, no_args, 0, &ret, err, 0);
+	ok = execute_function(&prog, &labels, &funcs, entry, no_args, 0, NULL, &ret, NULL, err, 0);
 	if (ok) {
 		if (ret.kind == RUNTIME_INT) {
 			*out_return = ret.int_value;
