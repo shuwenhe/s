@@ -30,6 +30,7 @@ typedef enum ast_kind {
 	AST_BOOL_EXPR,
 	AST_STRING_EXPR,
 	AST_ARRAY_EXPR,
+	AST_STRUCT_EXPR,
 	AST_MEMBER_EXPR,
 	AST_INDEX_EXPR,
 	AST_CALL_EXPR,
@@ -147,6 +148,13 @@ struct ast_node {
 		struct {
 			ast_vec items;
 		} array_expr;
+
+		struct {
+			char *type_name;
+			char **field_names;
+			ast_vec field_values;
+			size_t field_count;
+		} struct_expr;
 
 		struct {
 			ast_node *object;
