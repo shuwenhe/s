@@ -598,7 +598,7 @@ static ast_node *parse_unary(parser *p) {
 
 static ast_node *parse_factor(parser *p) {
 	ast_node *expr = parse_unary(p);
-	while (expr && (check(p, TOKEN_STAR) || check(p, TOKEN_SLASH))) {
+	while (expr && (check(p, TOKEN_STAR) || check(p, TOKEN_SLASH) || check(p, TOKEN_PERCENT))) {
 		size_t saved = p->current;
 		advance_tok(p);
 		if (match(p, TOKEN_ASSIGN)) {
@@ -761,7 +761,7 @@ static ast_node *parse_assignment(parser *p) {
 	if (!expr) {
 		return NULL;
 	}
-	if (check(p, TOKEN_PLUS) || check(p, TOKEN_MINUS) || check(p, TOKEN_STAR) || check(p, TOKEN_SLASH)) {
+	if (check(p, TOKEN_PLUS) || check(p, TOKEN_MINUS) || check(p, TOKEN_STAR) || check(p, TOKEN_SLASH) || check(p, TOKEN_PERCENT)) {
 		size_t saved = p->current;
 		advance_tok(p);
 		if (match(p, TOKEN_ASSIGN)) {
