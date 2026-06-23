@@ -690,6 +690,14 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			}
 			*out_type = TYPE_ARRAY;
 			return 1;
+		case AST_STRUCT_EXPR:
+			for (i = 0; i < node->as.struct_expr.field_values.len; i++) {
+				if (!analyze_expr(ctx, node->as.struct_expr.field_values.data[i], &rhs_type)) {
+					return 0;
+				}
+			}
+			*out_type = node->as.struct_expr.type_name ? node->as.struct_expr.type_name : TYPE_ANY;
+			return 1;
 		case AST_IDENT_EXPR:
 			sym = scope_lookup(ctx->current_scope, node->as.ident_expr.name);
 			if (!sym) {
@@ -1267,6 +1275,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_BOOL_EXPR:
 		case AST_STRING_EXPR:
 		case AST_ARRAY_EXPR:
+		case AST_STRUCT_EXPR:
 			return analyze_expr(ctx, node, &expr_type);
 	}
 
