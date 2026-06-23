@@ -362,8 +362,13 @@ collect_bundle_files() {
 
   abs="$(readlink -f "$file")"
   [[ -n "$abs" && -f "$abs" ]] || return 1
-  [[ -n "${S_BUNDLE_SEEN[$abs]:-}" ]] && return 0
-  S_BUNDLE_SEEN["$abs"]=1
+  
+  # Check if already seen (use string match for compatibility)
+  if [[ " $S_BUNDLE_FILES " == *" $abs "* ]]; then
+    return 0
+  fi
+
+  S_BUNDLE_FILES="$S_BUNDLE_FILES $abs"
 
   while IFS= read -r module; do
     [[ -n "$module" ]] || continue
@@ -387,12 +392,14 @@ prepare_source_bundle() {
   local out_file="$4"
   local file
 
-  declare -gA S_BUNDLE_SEEN=()
-  declare -ga S_BUNDLE_FILES=()
+  # Initialize global arrays (bash/zsh compatible)
+  S_BUNDLE_FILES=""
   collect_bundle_files "$entry" "$project_root" "$work_file" || return 1
 
   printf 'package s.bundle\n\n' >"$out_file"
-  for file in "${S_BUNDLE_FILES[@]}"; do
+  # Iterate over space-separated file list (zsh compatible)
+  for file in $S_BUNDLE_FILES; do
+    [[ -n "$file" ]] || continue
     awk '
       skip_use_block {
         if ($0 ~ /}/) {
