@@ -9,8 +9,8 @@ typedef struct ir_builder {
 	compile_error *err;
 	int temp_counter;
 	int label_counter;
-	char break_labels[64][64];
-	char continue_labels[64][64];
+	char break_labels[64][IR_OPERAND_CAP];
+	char continue_labels[64][IR_OPERAND_CAP];
 	int loop_depth;
 } ir_builder;
 
@@ -101,8 +101,8 @@ static int push_loop(ir_builder *b, const char *break_label, const char *continu
 	if (b->loop_depth >= 64) {
 		return 0;
 	}
-	snprintf(b->break_labels[b->loop_depth], 64, "%s", break_label);
-	snprintf(b->continue_labels[b->loop_depth], 64, "%s", continue_label);
+	copy_str(b->break_labels[b->loop_depth], break_label);
+	copy_str(b->continue_labels[b->loop_depth], continue_label);
 	b->loop_depth++;
 	return 1;
 }
@@ -128,6 +128,36 @@ static const char *current_continue_label(ir_builder *b) {
 }
 
 static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]);
+
+static bool lower_struct_literal(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
+	size_t i;
+	char alias_literal[IR_OPERAND_CAP];
+
+	next_temp(b, out);
+	if (snprintf(alias_literal, sizeof(alias_literal), "\"%s\"", out) >= (int)sizeof(alias_literal)) {
+		error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "struct alias too long for IR operand");
+		return false;
+	}
+	if (!emit_ins(b, IR_MOV, out, alias_literal, "", expr->pos)) {
+		return false;
+	}
+
+	for (i = 0; i < expr->as.struct_expr.field_count; i++) {
+		char field_value[IR_OPERAND_CAP];
+		char field_name[IR_OPERAND_CAP];
+		if (!lower_expr(b, expr->as.struct_expr.field_values.data[i], field_value)) {
+			return false;
+		}
+		if (snprintf(field_name, sizeof(field_name), "%s.%s", out, expr->as.struct_expr.field_names[i]) >= (int)sizeof(field_name)) {
+			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "struct field name too long for IR operand");
+			return false;
+		}
+		if (!emit_ins(b, IR_MOV, field_name, field_value, "", expr->pos)) {
+			return false;
+		}
+	}
+	return true;
+}
 static bool lower_stmt(ir_builder *b, ast_node *stmt);
 
 static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
@@ -325,6 +355,8 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			return true;
 		case AST_ARRAY_EXPR:
 			return lower_array_literal(b, expr, out);
+		case AST_STRUCT_EXPR:
+			return lower_struct_literal(b, expr, out);
 		case AST_IDENT_EXPR:
 			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.ident_expr.name);
 			return true;
