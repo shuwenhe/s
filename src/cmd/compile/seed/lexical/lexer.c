@@ -72,6 +72,7 @@ const char *token_type_name(token_type type) {
 		case TOKEN_MINUS: return "-";
 		case TOKEN_STAR: return "*";
 		case TOKEN_SLASH: return "/";
+		case TOKEN_PERCENT: return "%";
 		case TOKEN_BANG: return "!";
 		case TOKEN_ASSIGN: return "=";
 		case TOKEN_EQ: return "==";
@@ -227,12 +228,34 @@ bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error 
 				i++;
 				col++;
 			}
+			/* decimal fraction */
 			if (source[i] == '.' && isdigit((unsigned char)source[i + 1])) {
 				i++;
 				col++;
 				while (isdigit((unsigned char)source[i])) {
 					i++;
 					col++;
+				}
+			}
+			/* scientific notation: e/E followed by optional sign and digits */
+			if (source[i] == 'e' || source[i] == 'E') {
+				size_t saved_i = i;
+				size_t saved_col = col;
+				i++;
+				col++;
+				if (source[i] == '+' || source[i] == '-') {
+					i++;
+					col++;
+				}
+				if (isdigit((unsigned char)source[i])) {
+					while (isdigit((unsigned char)source[i])) {
+						i++;
+						col++;
+					}
+				} else {
+					/* not a valid exponent, backtrack */
+					i = saved_i;
+					col = saved_col;
 				}
 			}
 			{
@@ -355,6 +378,7 @@ bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error 
 			case '-': if (!push_simple(out_tokens, TOKEN_MINUS, "-", tok_line, tok_col)) goto oom; break;
 			case '*': if (!push_simple(out_tokens, TOKEN_STAR, "*", tok_line, tok_col)) goto oom; break;
 			case '/': if (!push_simple(out_tokens, TOKEN_SLASH, "/", tok_line, tok_col)) goto oom; break;
+			case '%': if (!push_simple(out_tokens, TOKEN_PERCENT, "%", tok_line, tok_col)) goto oom; break;
 			case '!': if (!push_simple(out_tokens, TOKEN_BANG, "!", tok_line, tok_col)) goto oom; break;
 			case '=': if (!push_simple(out_tokens, TOKEN_ASSIGN, "=", tok_line, tok_col)) goto oom; break;
 			case '<': if (!push_simple(out_tokens, TOKEN_LT, "<", tok_line, tok_col)) goto oom; break;

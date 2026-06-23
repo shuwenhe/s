@@ -1386,7 +1386,7 @@ static int execute_function(
 			pc++;
 			continue;
 		}
-		if (strcmp(ins->op, "ADD") == 0 || strcmp(ins->op, "SUB") == 0 || strcmp(ins->op, "MUL") == 0 || strcmp(ins->op, "DIV") == 0 ||
+		if (strcmp(ins->op, "ADD") == 0 || strcmp(ins->op, "SUB") == 0 || strcmp(ins->op, "MUL") == 0 || strcmp(ins->op, "DIV") == 0 || strcmp(ins->op, "MOD") == 0 ||
 			strcmp(ins->op, "CMP_EQ") == 0 || strcmp(ins->op, "CMP_NE") == 0 || strcmp(ins->op, "CMP_LT") == 0 || strcmp(ins->op, "CMP_LE") == 0 ||
 			strcmp(ins->op, "CMP_GT") == 0 || strcmp(ins->op, "CMP_GE") == 0) {
 			runtime_data_value r = value_make_int(0);
@@ -1435,6 +1435,16 @@ static int execute_function(
 					r = value_make_int(a.int_value / b.int_value);
 				} else {
 					r = value_make_float(value_as_double(&a) / value_as_double(&b));
+				}
+			} else if (strcmp(ins->op, "MOD") == 0) {
+				if (a.kind != RUNTIME_INT || b.kind != RUNTIME_INT) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "MOD requires integer operands");
+					ok = 0;
+				} else if (b.int_value == 0) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "modulo by zero");
+					ok = 0;
+				} else {
+					r = value_make_int(a.int_value % b.int_value);
 				}
 			} else if (strcmp(ins->op, "CMP_EQ") == 0) {
 				if (a.kind != b.kind) {
