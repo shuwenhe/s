@@ -241,7 +241,7 @@ read_workspace_dirs() {
 # absolute .s file path.  Returns empty string (non-zero exit) when not found.
 module_to_file() {
   local module="$1"
-  local rel sub candidate root dir
+  local rel sub candidate root dir root_name rel_trimmed
 
   rel="${module//.//}"   # dots -> slashes
 
@@ -293,6 +293,17 @@ module_to_file() {
       candidate="$root/${dir}/${rel##*/}.s"
       [[ -f "$candidate" ]] && echo "$candidate" && return 0
     fi
+    root_name="$(basename "$root")"
+    if [[ "$rel" == "$root_name/"* ]]; then
+      rel_trimmed="${rel#"$root_name"/}"
+      candidate="$root/${rel_trimmed}.s"
+      [[ -f "$candidate" ]] && echo "$candidate" && return 0
+      dir="${rel_trimmed%/*}"
+      if [[ "$dir" != "$rel_trimmed" ]]; then
+        candidate="$root/${dir}/${rel_trimmed##*/}.s"
+        [[ -f "$candidate" ]] && echo "$candidate" && return 0
+      fi
+    fi
   done
 
   # Try workspace dirs from s.work
@@ -327,6 +338,115 @@ resolve_source_arg() {
   return 0
 }
 
+extract_used_modules() {
+  local file="$1"
+  awk '
+    /^[[:space:]]*use[[:space:]]+/ {
+      line = $0
+      sub(/^[[:space:]]*use[[:space:]]+/, "", line)
+      sub(/[[:space:]]+as[[:space:]].*$/, "", line)
+      sub(/\.\{.*$/, "", line)
+      gsub(/[[:space:]]+$/, "", line)
+      if (line != "") {
+        print line
+      }
+    }
+  ' "$file"
+}
+
+collect_bundle_files() {
+  local file="$1"
+  local project_root="$2"
+  local work_file="$3"
+  local abs module child old_project_root old_work_file
+
+  abs="$(readlink -f "$file")"
+  [[ -n "$abs" && -f "$abs" ]] || return 1
+  [[ -n "${S_BUNDLE_SEEN[$abs]:-}" ]] && return 0
+  S_BUNDLE_SEEN["$abs"]=1
+
+  while IFS= read -r module; do
+    [[ -n "$module" ]] || continue
+    old_project_root="${S_PROJECT_ROOT:-}"
+    old_work_file="${S_WORK_FILE:-}"
+    S_PROJECT_ROOT="$project_root"
+    S_WORK_FILE="$work_file"
+    child="$(module_to_file "$module" || true)"
+    S_PROJECT_ROOT="$old_project_root"
+    S_WORK_FILE="$old_work_file"
+    [[ -n "$child" ]] && collect_bundle_files "$child" "$project_root" "$work_file"
+  done < <(extract_used_modules "$abs")
+
+  S_BUNDLE_FILES+=("$abs")
+}
+
+prepare_source_bundle() {
+  local entry="$1"
+  local project_root="$2"
+  local work_file="$3"
+  local out_file="$4"
+  local file
+
+  declare -gA S_BUNDLE_SEEN=()
+  declare -ga S_BUNDLE_FILES=()
+  collect_bundle_files "$entry" "$project_root" "$work_file" || return 1
+
+  printf 'package s.bundle\n\n' >"$out_file"
+  for file in "${S_BUNDLE_FILES[@]}"; do
+    awk '
+      skip_use_block {
+        if ($0 ~ /}/) {
+          skip_use_block = 0
+        }
+        next
+      }
+      skip_struct_block {
+        if ($0 ~ /}/) {
+          skip_struct_block = 0
+        }
+        next
+      }
+      /^[[:space:]]*package[[:space:]]+/ { next }
+      /^[[:space:]]*use[[:space:]]+/ {
+        if ($0 ~ /\{/ && $0 !~ /}/) {
+          skip_use_block = 1
+        }
+        next
+      }
+      /^[[:space:]]*struct[[:space:]]+[A-Za-z0-9_]+[[:space:]]*\{/ {
+        if ($0 !~ /}/) {
+          skip_struct_block = 1
+        }
+        next
+      }
+      { print }
+    ' "$file" >>"$out_file"
+    printf '\n' >>"$out_file"
+  done
+}
+
+maybe_bundle_source() {
+  local src="$1"
+  local project_root work_file bundle_file
+
+  [[ -f "$src" ]] || {
+    printf '%s\n' "$src"
+    return 0
+  }
+
+  if ! grep -Eq '^[[:space:]]*use[[:space:]]+' "$src"; then
+    printf '%s\n' "$src"
+    return 0
+  fi
+
+  project_root="$(project_root_for "$src")"
+  work_file="$project_root/s.work"
+  bundle_file="$(mktemp /tmp/s_bundle.XXXXXX.s)"
+  register_tmp_file "$bundle_file"
+  prepare_source_bundle "$src" "$project_root" "$work_file" "$bundle_file"
+  printf '%s\n' "$bundle_file"
+}
+
 smoke_fixture_list() {
   local root="$1"
   cat <<EOF
@@ -343,9 +463,9 @@ EOF
 ensure_ir_runner() {
   local arch runner src seed_obj
   arch="$(uname -m)"
-  runner="/tmp/s_ir_runner_${arch}_modrun_v8"
-  src="/tmp/s_ir_runner_main_${arch}_modrun_v8.c"
-  seed_obj="/tmp/s_seed_${arch}_modrun_v8.o"
+  runner="/tmp/s_ir_runner_${arch}_modrun_v14"
+  src="/tmp/s_ir_runner_main_${arch}_modrun_v14.c"
+  seed_obj="/tmp/s_seed_${arch}_modrun_v14.o"
 
   if [[ -x "$runner" ]]; then
     echo "$runner"
@@ -458,6 +578,7 @@ case "$cmd" in
       fail "$EXIT_USAGE" "usage: s ir <input.s|module> -o <output.ir>"
     fi
     src="$(resolve_source_arg "$1")"
+    src="$(maybe_bundle_source "$src")"
     if ! run_compiler "$src" "$src" "$3"; then
       fail "$EXIT_COMPILE" "ir generation failed: $1"
     fi
@@ -475,6 +596,7 @@ case "$cmd" in
       fail "$EXIT_USAGE" "usage: s build <input.s|module> -o <output.bin>"
     fi
     in_src="$(resolve_source_arg "$1")"
+    in_src="$(maybe_bundle_source "$in_src")"
     out_bin="$3"
     build_launcher "$in_src" "$out_bin"
     echo "built $1 -> $out_bin"
@@ -519,6 +641,7 @@ case "$cmd" in
       fail "$EXIT_USAGE" "usage: s run <input.s|module>"
     fi
     run_src="$(resolve_source_arg "$1")"
+    run_src="$(maybe_bundle_source "$run_src")"
     tmp_ir="$(mktemp /tmp/s_run.XXXXXX.ir)"
     register_tmp_file "$tmp_ir"
 
