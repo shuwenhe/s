@@ -1109,10 +1109,14 @@ static ast_node *parse_for_statement(parser *p) {
 		return NULL;
 	}
 
-	/* Minimal compatibility: accept `for i in 0..n { ... }` by parsing its body. */
+	/* Support `for cond { ... }` as a while-style loop. */
 	if (!check(p, TOKEN_LPAREN)) {
-		while (!check(p, TOKEN_LBRACE) && !is_at_end(p)) {
-			advance_tok(p);
+		if (!check(p, TOKEN_LBRACE)) {
+			node->as.for_stmt.condition = parse_expression(p);
+			if (!node->as.for_stmt.condition) {
+				ast_free(node);
+				return NULL;
+			}
 		}
 		if (!expect(p, TOKEN_LBRACE, "{")) {
 			ast_free(node);
