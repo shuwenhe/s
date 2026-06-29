@@ -23,10 +23,15 @@ static bool expect_tokens(const token_vec *vec, const token_type *expected, size
 	return true;
 }
 
-static bool test_let_statement(void) {
-	const char *src = "var x = 42;";
+static bool test_binding_keywords(void) {
+	const char *src = "let x = 42; var y = 7;";
 	token_type expected[] = {
 		TOKEN_LET,
+		TOKEN_IDENTIFIER,
+		TOKEN_ASSIGN,
+		TOKEN_NUMBER,
+		TOKEN_SEMICOLON,
+		TOKEN_VAR,
 		TOKEN_IDENTIFIER,
 		TOKEN_ASSIGN,
 		TOKEN_NUMBER,
@@ -107,8 +112,28 @@ static bool test_line_comment_lexing(void) {
 		return false;
 	}
 	ok = tokens.len >= 11;
-	ok = ok && tokens.data[0].type == TOKEN_LET;
+	ok = ok && tokens.data[0].type == TOKEN_VAR;
 	ok = ok && tokens.data[5].type == TOKEN_LET;
+	token_vec_free(&tokens);
+	return ok;
+}
+
+static bool test_immutable_let_rejection(void) {
+	const char *src = "fn main() int { let x = 1; x = 2; 0; }";
+	token_vec tokens;
+	parse_result result;
+	compile_error err;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (!ok) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	if (!result.root) {
+		token_vec_free(&tokens);
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
 	token_vec_free(&tokens);
 	return ok;
 }
@@ -116,7 +141,7 @@ static bool test_line_comment_lexing(void) {
 static bool test_array_literal_lexing(void) {
 	const char *src = "var xs = [1.0, 2.0, 3.0];";
 	token_type expected[] = {
-		TOKEN_LET,
+		TOKEN_VAR,
 		TOKEN_IDENTIFIER,
 		TOKEN_ASSIGN,
 		TOKEN_LBRACKET,
@@ -150,8 +175,8 @@ static bool test_block_comment_lexing_and_error(void) {
 		return false;
 	}
 	ok = tokens.len >= 11;
-	ok = ok && tokens.data[0].type == TOKEN_LET;
-	ok = ok && tokens.data[5].type == TOKEN_LET;
+	ok = ok && tokens.data[0].type == TOKEN_VAR;
+	ok = ok && tokens.data[5].type == TOKEN_VAR;
 	token_vec_free(&tokens);
 	if (!ok) {
 		return false;
@@ -166,7 +191,7 @@ static bool test_block_comment_lexing_and_error(void) {
 }
 
 static bool test_parser_let_and_precedence(void) {
-	const char *src = "var x = 1 + 2 * 3;";
+	const char *src = "let x = 1 + 2 * 3;";
 	token_vec tokens;
 	compile_error err;
 	parse_result result;
@@ -190,7 +215,7 @@ static bool test_parser_let_and_precedence(void) {
 	}
 
 	stmt = result.root->as.program.statements.data[0];
-	ok = stmt->kind == AST_LET_STMT;
+	ok = stmt->kind == AST_LET_STMT && !stmt->as.let_stmt.mutable;
 	if (!ok) {
 		parser_parse_result_free(&result);
 		return false;
@@ -1405,11 +1430,12 @@ static bool test_runtime_minimal_loop(void) {
 int main(void) {
 	bool ok = true;
 
-	ok = ok && test_let_statement();
+	ok = ok && test_binding_keywords();
 	ok = ok && test_function_header();
 	ok = ok && test_illegal_char_error();
 	ok = ok && test_unterminated_string_error();
 	ok = ok && test_line_comment_lexing();
+	ok = ok && test_immutable_let_rejection();
 	ok = ok && test_array_literal_lexing();
 	ok = ok && test_block_comment_lexing_and_error();
 	ok = ok && test_parser_let_and_precedence();
