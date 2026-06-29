@@ -28,6 +28,9 @@ func run_typesys_suite() int {
     if !assignable_type("[]int", "nil") {
         return 1
     }
+    if assignable_type("[4]int", "nil") {
+        return 1
+    }
     if !assignable_type("&int", "nil") {
         return 1
     }
@@ -42,6 +45,9 @@ func run_typesys_suite() int {
         return 1
     }
     if comparable_type("[]int") {
+        return 1
+    }
+    if comparable_type("[4]int") {
         return 1
     }
     if comparable_type("map") {
