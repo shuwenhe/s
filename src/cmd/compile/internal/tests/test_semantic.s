@@ -50,6 +50,11 @@ func run_semantic_suite(string fixtures_root) int {
         return 1
     }
 
+    let array_ok = "package demo.array\nfunc first([4]int data) int {\n  data[0]\n}"
+    if check_text(array_ok) != 0 {
+        return 1
+    }
+
     let overload_ok = "package demo.call\nfunc f[t](t v) t {\n  v\n}\nfunc f(int v) int {\n  v + 1\n}\nfunc main() int {\n  f(1)\n}"
     if check_text(overload_ok) != 0 {
         return 1

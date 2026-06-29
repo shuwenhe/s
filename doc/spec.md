@@ -256,17 +256,27 @@ var c = a as i64 + b
 
 draft 0.1 建议采用如下形式：
 
-- 固定长度数组：`[t; n]`
+- 固定长度数组：`[n]t`
 - 切片：`[]t`
+- framework code 中应尽量避免 `T[]`、`[][]T` 与 `[]T` 混用，统一以 `[]t` 作为切片规范写法
 
 示例：
 
 ```s
-[int32; 4] a = [1, 2, 3, 4]
+[4]int32 a = [1, 2, 3, 4]
 []int32 s = a[1..3]
 ```
 
-### 9.2 struct types
+### 9.2 maps
+
+draft 0.1 建议 map 统一写作 `map[K]V`，空 map 统一写作 `map[K]V{}`。
+
+```s
+map[string]int counts = {}
+map[int]bool seen = {}
+```
+
+### 9.3 struct types
 
 结构体定义具名字段聚合类型：
 
@@ -280,7 +290,7 @@ struct user {
 
 字段默认遵循声明顺序布局，但 abi 稳定布局是否默认保证属于后续版本议题。
 
-### 9.3 enum types
+### 9.4 enum types
 
 枚举用于定义代数数据类型：
 
@@ -317,6 +327,7 @@ func add(int32 a, int32 b) int32 {
 - 参数类型必须显式声明
 - 返回类型可以省略，省略时表示返回 `()`
 - 函数体最后一个表达式可以作为隐式返回值
+- 多返回值应统一写成 tuple return，例如 `func f(...) (t1, t2)`
 
 ### 10.2 parameter passing
 
