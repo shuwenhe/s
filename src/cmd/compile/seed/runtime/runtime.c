@@ -332,6 +332,65 @@ static char *run_command_capture_output(const char *command, compile_error *err)
 	return captured;
 }
 
+static int host_file_exists(const char *path) {
+	FILE *fp;
+	if (!path || !*path) {
+		return 0;
+	}
+	fp = fopen(path, "rb");
+	if (!fp) {
+		return 0;
+	}
+	fclose(fp);
+	return 1;
+}
+
+static char *host_read_text_file(const char *path, compile_error *err) {
+	FILE *fp;
+	long len;
+	size_t read_len;
+	char *buf;
+
+	if (!path || !*path) {
+		return value_make_string_copy("").str_value;
+	}
+	fp = fopen(path, "rb");
+	if (!fp) {
+		return value_make_string_copy("").str_value;
+	}
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		fclose(fp);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to seek file: %s", path);
+		return NULL;
+	}
+	len = ftell(fp);
+	if (len < 0) {
+		fclose(fp);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to stat file: %s", path);
+		return NULL;
+	}
+	if (fseek(fp, 0, SEEK_SET) != 0) {
+		fclose(fp);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to rewind file: %s", path);
+		return NULL;
+	}
+	buf = (char *)malloc((size_t)len + 1);
+	if (!buf) {
+		fclose(fp);
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+		return NULL;
+	}
+	read_len = fread(buf, 1, (size_t)len, fp);
+	fclose(fp);
+	if (read_len != (size_t)len) {
+		free(buf);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to read file: %s", path);
+		return NULL;
+	}
+	buf[len] = '\0';
+	return buf;
+}
+
 bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char *output_dir, compile_error *err);
 
 static int compile_s_file_to_ir(const char *input_path, const char *output_path, compile_error *err) {
@@ -531,6 +590,39 @@ static int host_dispatch_call(
 			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 			return 0;
 		}
+		return 1;
+	}
+	if (strcmp(name, "runtime_file_exists") == 0) {
+		const char *path = NULL;
+		char path_buf[256];
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "runtime_file_exists expects 1 arg");
+			return 0;
+		}
+		if (!value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render runtime_file_exists path");
+			return 0;
+		}
+		*out = value_make_int(host_file_exists(path) ? 1 : 0);
+		return 1;
+	}
+	if (strcmp(name, "runtime_read_text_file") == 0) {
+		const char *path = NULL;
+		char path_buf[256];
+		char *content;
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "runtime_read_text_file expects 1 arg");
+			return 0;
+		}
+		if (!value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render runtime_read_text_file path");
+			return 0;
+		}
+		content = host_read_text_file(path, err);
+		if (!content) {
+			return 0;
+		}
+		*out = value_make_string_owned(content);
 		return 1;
 	}
 	if (strcmp(name, "runtime_run_command_output") == 0) {
