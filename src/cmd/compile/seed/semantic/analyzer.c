@@ -16,6 +16,7 @@ typedef enum symbol_kind {
 typedef struct symbol {
 	char *name;
 	symbol_kind kind;
+	int mutable;
 	int min_arity;
 	int max_arity;
 	char *type_name;
@@ -279,6 +280,7 @@ static symbol *scope_lookup(scope *s, const char *name) {
 static int scope_define(scope *s,
 	const char *name,
 	symbol_kind kind,
+	int is_mutable,
 	int min_arity,
 	int max_arity,
 	const char *type_name,
@@ -308,6 +310,7 @@ static int scope_define(scope *s,
 		return -1;
 	}
 	sym->kind = kind;
+	sym->mutable = is_mutable ? 1 : 0;
 	sym->min_arity = min_arity;
 	sym->max_arity = max_arity;
 	if (param_count > 0) {
@@ -345,6 +348,7 @@ static int define_builtins(scope *global_scope, compile_error *err) {
 		int status = scope_define(global_scope,
 			spec->name,
 			SYMBOL_FN,
+			0,
 			spec->min_arity,
 			spec->max_arity,
 			spec->return_type,
@@ -550,6 +554,7 @@ static int apply_narrow_facts(semantic_ctx *ctx, const narrow_fact *facts, size_
 		status = scope_define(ctx->current_scope,
 			existing->name,
 			existing->kind,
+			existing->mutable,
 			existing->min_arity,
 			existing->max_arity,
 			is_type_any(existing->type_name) ? facts[i].type_name : existing->type_name,
@@ -701,7 +706,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 		case AST_IDENT_EXPR:
 			sym = scope_lookup(ctx->current_scope, node->as.ident_expr.name);
 			if (!sym) {
-				status = scope_define(ctx->current_scope, node->as.ident_expr.name, SYMBOL_VAR, -1, -1, TYPE_ANY, NULL, 0);
+				status = scope_define(ctx->current_scope, node->as.ident_expr.name, SYMBOL_VAR, 1, -1, -1, TYPE_ANY, NULL, 0);
 				if (status < 0) {
 					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
 					return 0;
@@ -861,7 +866,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				if (!analyze_expr(ctx, node->as.assign_expr.value, &rhs_type)) {
 					return 0;
 				}
-				status = scope_define(ctx->current_scope, node->as.assign_expr.name, SYMBOL_VAR, -1, -1, rhs_type, NULL, 0);
+				status = scope_define(ctx->current_scope, node->as.assign_expr.name, SYMBOL_VAR, 1, -1, -1, rhs_type, NULL, 0);
 				if (status < 0) {
 					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
 					return 0;
@@ -878,6 +883,11 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			if (sym->kind == SYMBOL_FN || sym->kind == SYMBOL_IMPORT) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"symbol '%s' is not assignable", sym->name);
+				return 0;
+			}
+			if (!sym->mutable) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"symbol '%s' is immutable", sym->name);
 				return 0;
 			}
 			if (!analyze_expr(ctx, node->as.assign_expr.value, &rhs_type)) {
@@ -994,6 +1004,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						ctx->current_scope,
 						decl->as.fn_stmt.name,
 						SYMBOL_FN,
+						0,
 						(int)decl->as.fn_stmt.param_count,
 						(int)decl->as.fn_stmt.param_count,
 						decl->as.fn_stmt.return_type ? decl->as.fn_stmt.return_type : TYPE_ANY,
@@ -1018,6 +1029,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					status = scope_define(ctx->current_scope,
 						decl->as.use_decl.alias,
 						SYMBOL_IMPORT,
+						0,
 						min_arity,
 						max_arity,
 						ret_type,
@@ -1051,6 +1063,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						status = scope_define(ctx->current_scope,
 							decl->as.use_decl.selectors[j],
 							SYMBOL_IMPORT,
+							0,
 							min_arity,
 							max_arity,
 							ret_type,
@@ -1083,7 +1096,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			if (!analyze_expr(ctx, node->as.let_stmt.value, &expr_type)) {
 				return 0;
 			}
-			status = scope_define(ctx->current_scope, node->as.let_stmt.name, SYMBOL_VAR, -1, -1, expr_type, NULL, 0);
+			status = scope_define(ctx->current_scope, node->as.let_stmt.name, SYMBOL_VAR, node->as.let_stmt.mutable, -1, -1, expr_type, NULL, 0);
 			if (status == 0) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"redefinition of symbol '%s'", node->as.let_stmt.name);
@@ -1104,6 +1117,11 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			if (target->kind == SYMBOL_FN || target->kind == SYMBOL_IMPORT) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"symbol '%s' is not assignable", target->name);
+				return 0;
+			}
+			if (!target->mutable) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"symbol '%s' is immutable", node->as.assign_stmt.name);
 				return 0;
 			}
 			if (!analyze_expr(ctx, node->as.assign_stmt.value, &expr_type)) {
@@ -1232,6 +1250,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					ctx->current_scope,
 					node->as.fn_stmt.params[i],
 					SYMBOL_PARAM,
+					0,
 					-1,
 					-1,
 					node->as.fn_stmt.param_types ? node->as.fn_stmt.param_types[i] : TYPE_ANY,

@@ -12,6 +12,7 @@ typedef enum token_type {
 
 	TOKEN_FN,
 	TOKEN_LET,
+	TOKEN_VAR,
 	TOKEN_PACKAGE,
 	TOKEN_USE,
 	TOKEN_AS,

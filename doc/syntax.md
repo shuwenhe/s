@@ -207,6 +207,8 @@ param       = pattern ":" type
 returntype  = " " type
 ```
 
+`returntype` 允许直接引用任意 `type`，因此单返回、单位返回和 tuple 返回都走同一条语法分支。draft 0.1 建议多返回统一写成 tuple type，不要再引入隐式的“逗号返回”变体。
+
 ### 6.2 struct declaration
 
 ```text
@@ -358,6 +360,7 @@ type =
     reftype
   | slicetype
   | arraytype
+  | maptype
   | tupletype
   | functiontype
   | typepath
@@ -378,10 +381,21 @@ slicetype =
     "[" "]" type
 
 arraytype =
-    "[" type ";" constexpr "]"
+    "[" constexpr "]" type
 ```
 
-### 8.4 tuple types
+draft 0.1 建议把 `[]t` 作为切片 canonical form，把 `[n]t` 作为固定长度数组 canonical form。NeurX 一类数值代码应避免同时采用 `T[]` 和 `[]T` 两种主写法。
+
+### 8.4 map types
+
+```text
+maptype =
+    "map" "[" type "]" type
+```
+
+`map[K]V` 是 map 的唯一建议规范写法。空 map 推荐写作 `map[K]V{}`，不要再混入 `map<int]bool` 这类兼容写法。
+
+### 8.5 tuple types
 
 ```text
 tupletype =
@@ -391,14 +405,14 @@ typelist =
     type ("," type)* ","?
 ```
 
-### 8.5 function types
+### 8.6 function types
 
 ```text
 functiontype =
     "func" "(" typelist? ")" " " type
 ```
 
-### 8.6 paths
+### 8.7 paths
 
 ```text
 typepath =
@@ -587,6 +601,7 @@ primaryexpr =
   | pathexpr
   | tupleexpr
   | arrayexpr
+  | mapexpr
   | structexpr
   | blockexpr
   | ifexpr
@@ -612,6 +627,15 @@ tupleexpr =
 arrayexpr =
     "[" exprlist? "]"
 
+mapexpr =
+    "map" "[" type "]" type "{" mapentrylist? "}"
+
+mapentrylist =
+    mapentry ("," mapentry)* ","?
+
+mapentry =
+    expr ":" expr
+
 exprlist =
     expr ("," expr)* ","?
 ```
@@ -629,6 +653,27 @@ fieldinit =
     ident ":" expr
   | ident
 ```
+
+typed composite literals are allowed in draft 0.1 for framework code and should be normalized by formatter:
+
+- slice literal: `[]T{...}`
+- array literal: `[N]T{...}`
+- map literal: `map[K]V{...}`
+- struct literal: `Type{...}`
+
+This is the recommended surface for NeurX-style code that needs stable container initialization.
+
+For typed composite literals, the intended shape is:
+
+```text
+typedcompositeliteral =
+    slicetype "{" exprlist? "}"
+  | arraytype "{" exprlist? "}"
+  | maptype "{" mapentrylist? "}"
+  | typepath "{" fieldinitlist? "}"
+```
+
+`typedcompositeliteral` is not a separate parser node requirement; it is a normalization rule for the formatter and parser front-end.
 
 ### 11.14 if expression
 
@@ -835,7 +880,78 @@ s 的基本规则如下：
 5. `unsafe` 是否仅支持块，还是也支持函数/trait 级别修饰
 6. 是否为模式匹配引入更丰富的 `..` 模式和守卫语法
 
-## 19. summary
+## 19. neurx compatibility checklist
+
+NeurX 这类深度学习框架代码建议优先遵循以下统一写法：
+
+1. 切片统一写作 `[]t`，固定长度数组统一写作 `[n]t`。
+2. map 统一写作 `map[K]V`，空 map 统一写作 `map[K]V{}`。
+3. 多返回值统一写作 tuple return，例如 `func f(...) (t1, t2)`。
+4. 复合字面量统一写作 `[]T{...}`、`[N]T{...}`、`map[K]V{...}`、`Type{...}`。
+5. 容器初始化不要混用 `[]`, `{}`, `[]T{cap:n}` 和别的兼容写法。
+6. 深度学习主干代码优先使用一种 `for in` 或范围循环风格，不要在同一模块里分裂成多种循环习惯。
+7. 条件表达式、`select`、`switch`、`blockexpr` 的边界要固定，不要依赖实现细节推断。
+
+典型优先整改文件：
+
+- [transformer.s](/Users/feifei/shuwen/neurx/model/transformer/transformer.s)
+- [loss.s](/Users/feifei/shuwen/neurx/train/loss.s)
+- [text_generator.s](/Users/feifei/shuwen/neurx/infer/text_generator.s)
+- [sampling_penalties.s](/Users/feifei/shuwen/neurx/infer/sampling_penalties.s)
+- [sampling_beam.s](/Users/feifei/shuwen/neurx/infer/sampling_beam.s)
+
+## 20. neurx migration notes
+
+以下是按文件拆分的优先迁移建议，便于把规范直接落到代码：
+
+### 20.1 transformer and training core
+
+- [transformer.s](/Users/feifei/shuwen/neurx/model/transformer/transformer.s) 应优先统一多维容器写法，避免 `[][][]float hidden_states`、`[][]int attention_mask` 之外又混入旧式后缀声明。
+- [loss.s](/Users/feifei/shuwen/neurx/train/loss.s) 应统一损失输入张量的数组语法，并把返回值风格固定下来，避免同类损失函数各自使用不同容器声明。
+- [checkpoint_manager.s](/Users/feifei/shuwen/neurx/train/checkpoint_manager.s) 应优先清理空容器、空 map、状态初始化的写法，让 checkpoint 状态能稳定序列化和反序列化。
+
+### 20.2 inference and sampling
+
+- [text_generator.s](/Users/feifei/shuwen/neurx/infer/text_generator.s) 应先收敛条件表达式、生成结果构造和多序列输出的写法。
+- [sampling_penalties.s](/Users/feifei/shuwen/neurx/infer/sampling_penalties.s) 应统一 `map`、`for in`、范围循环和空集合初始化语法。
+- [sampling_beam.s](/Users/feifei/shuwen/neurx/infer/sampling_beam.s) 应统一 beam 容器的初始化、排序与返回方式，尽量避免在同一文件里同时出现空列表、容量列表和结构体字面量的不同风格。
+
+### 20.3 migration strategy
+
+建议按下面顺序推进：
+
+1. 先改 `map` 和空容器初始化。
+2. 再改多维数组和复合字面量。
+3. 再统一函数返回值和 tuple return。
+4. 最后收敛控制流和表达式糖。
+
+### 20.4 PR checklist
+
+在每个 NeurX 相关 PR 里，至少确认下面几项：
+
+- 代码里不再新增 `T[]` 作为主容器写法。
+- 不再新增 `map<int]bool`、`[string:int {` 这类非 canonical 语法。
+- 新函数若需要多返回，优先使用 tuple return。
+- 容器初始化要明确区分空值、预分配和字面量。
+- 同一模块内只保留一种主循环风格。
+
+### 20.5 pr short form
+
+NeurX PR 可直接用这 5 条快速自检：
+
+1. 容器只用 `[]t` / `[n]t` / `map[K]V` 的 canonical 形式。
+2. 不新增非标准 map 或多维数组写法。
+3. 多返回统一 tuple return。
+4. 空容器、预分配、字面量初始化要区分清楚。
+5. 同模块内只保留一种主循环风格。
+
+一行版：`[]t` / `[n]t` / `map[K]V` 统一，tuple return 统一，初始化分清空值与预分配，循环风格只保留一种。
+
+标题版：NeurX 语法统一只抓四件事，容器、map、返回值、循环。
+
+commit 版：unify NeurX syntax around containers, maps, returns, and loops.
+
+## 21. summary
 
 这份语法规范的目的不是一次性把 s 的每个字符都锁死，而是先把最关键的表面结构冻结到足以实现 parser 和 formatter 的程度。
 
