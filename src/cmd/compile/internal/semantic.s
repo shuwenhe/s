@@ -1217,6 +1217,15 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
                     errors: errors,
                 }
             }
+            if starts_with(target.type_name, "[") {
+                if !types_compatible("int", index.type_name) {
+                    errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
+                }
+                return check_result {
+                    type_name: strip_array_prefix(target.type_name),
+                    errors: errors,
+                }
+            }
             if starts_with(target.type_name, "string") {
                 if !types_compatible("int", index.type_name) {
                     errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
@@ -2061,6 +2070,12 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, vec[string] 
     if param_type.is_slice != arg_type.is_slice {
         return false
     }
+    if param_type.is_array != arg_type.is_array {
+        return false
+    }
+    if param_type.is_array && param_type.array_len != arg_type.array_len {
+        return false
+    }
 
     if param_type.base != arg_type.base {
         return false
@@ -2102,6 +2117,9 @@ func match_specificity(type_ref expected, type_ref actual, vec[string] generic_n
     if expected.is_slice == actual.is_slice {
         score = score + 1
     }
+    if expected.is_array == actual.is_array {
+        score = score + 1
+    }
     score
 }
 
@@ -2122,6 +2140,9 @@ func instantiate_type(string ty, vec[string] generic_names, vec[type_binding] ge
     }
     if starts_with(clean, "[]") {
         return "[]" + instantiate_type(slice(clean, 2, len(clean)), generic_names, generic_bindings)
+    }
+    if starts_with(clean, "[") {
+        return array_prefix_text(clean) + instantiate_type(strip_array_prefix(clean), generic_names, generic_bindings)
     }
 
     let args = extract_type_args(clean)
@@ -2157,6 +2178,9 @@ func type_contains_generic(string ty, vec[string] generic_names) bool {
     if starts_with(clean, "[]") {
         return type_contains_generic(slice(clean, 2, len(clean)), generic_names)
     }
+    if starts_with(clean, "[") {
+        return type_contains_generic(strip_array_prefix(clean), generic_names)
+    }
 
     let args = extract_type_args(clean)
     let i = 0
@@ -2178,6 +2202,38 @@ func is_generic_name(vec[string] generic_names, string name) bool {
         i = i + 1
     }
     false
+}
+
+func strip_array_prefix(string ty) string {
+    let clean = parse_type(ty)
+    if !starts_with(clean, "[") || starts_with(clean, "[]") {
+        return clean
+    }
+
+    let depth = 0
+    let i = 0
+    while i < len(clean) {
+        let ch = char_at(clean, i)
+        if ch == "[" {
+            depth = depth + 1
+        } else if ch == "]" {
+            depth = depth - 1
+            if depth == 0 {
+                return parse_type(slice(clean, i + 1, len(clean)))
+            }
+        }
+        i = i + 1
+    }
+    clean
+}
+
+func array_prefix_text(string ty) string {
+    let clean = parse_type(ty)
+    let tail = strip_array_prefix(clean)
+    if tail == clean {
+        return ""
+    }
+    slice(clean, 0, len(clean) - len(tail))
 }
 
 func generic_name(string raw) string {

@@ -11,6 +11,8 @@ struct type_ref {
     bool is_ref
     bool is_mut_ref
     bool is_slice
+    bool is_array
+    string array_len
     vec[string] args
 }
 
@@ -31,6 +33,12 @@ func parse_type(string text) string {
     if starts_with(clean, "[]") {
         return "[]" + parse_type(slice(clean, 2, clean.len()))
     }
+    if starts_with(clean, "[") {
+        let close = find_char(clean, "]")
+        if close > 0 {
+            return slice(clean, 0, close + 1) + parse_type(slice(clean, close + 1, clean.len()))
+        }
+    }
     return clean
 }
 
@@ -40,6 +48,8 @@ func parse_type_ref(string text) type_ref {
     let is_ref = false
     let is_mut_ref = false
     let is_slice = false
+    let is_array = false
+    string array_len = ""
 
     if starts_with(rest, "&mut ") {
         is_ref = true
@@ -53,6 +63,13 @@ func parse_type_ref(string text) type_ref {
     if starts_with(rest, "[]") {
         is_slice = true
         rest = parse_type(slice(rest, 2, rest.len()))
+    } else if starts_with(rest, "[") {
+        let close = find_char(rest, "]")
+        if close > 0 {
+            is_array = true
+            array_len = trim_text(slice(rest, 1, close))
+            rest = parse_type(slice(rest, close + 1, rest.len()))
+        }
     }
 
     type_ref {
@@ -61,7 +78,9 @@ func parse_type_ref(string text) type_ref {
         is_ref: is_ref,
         is_mut_ref: is_mut_ref,
         is_slice: is_slice,
-        args: extract_type_args(canonical),
+        is_array: is_array,
+        array_len: array_len,
+        args: extract_type_args(rest),
     }
 }
 
@@ -108,6 +127,12 @@ func rules_consistent() bool {
     if !same_type("[]int", "[]int") {
         return false
     }
+    if !same_type("[4]int", "[4]int") {
+        return false
+    }
+    if same_type("[4]int", "[8]int") {
+        return false
+    }
 
     let result_ref = parse_type_ref("result[int, string]")
     if result_ref.base != "result" {
@@ -125,6 +150,10 @@ func rules_consistent() bool {
 
     let ref_ref = parse_type_ref("&mut []int")
     if !ref_ref.is_ref || !ref_ref.is_mut_ref {
+        return false
+    }
+    let array_ref = parse_type_ref("[4]int")
+    if !array_ref.is_array || array_ref.array_len != "4" {
         return false
     }
     true
@@ -145,6 +174,12 @@ func base_type_name(string ty) string {
     if starts_with(clean, "[]") {
         return base_type_name(slice(clean, 2, clean.len()))
     }
+    if starts_with(clean, "[") {
+        let close = find_char(clean, "]")
+        if close > 0 {
+            return base_type_name(slice(clean, close + 1, clean.len()))
+        }
+    }
     let bracket = find_char(clean, "[")
     if bracket >= 0 {
         return trim_text(slice(clean, 0, bracket))
@@ -163,6 +198,12 @@ func base_type_name(string ty) string {
 func extract_type_args(string type_name) vec[string] {
     let out = vec[string]()
     let clean = parse_type(type_name)
+    if starts_with(clean, "[") && !starts_with(clean, "[]") {
+        let close = find_char(clean, "]")
+        if close > 0 {
+            return extract_type_args(slice(clean, close + 1, clean.len()))
+        }
+    }
     let open = find_char(clean, "[")
     let close = find_last_char(clean, "]")
     if open < 0 || close <= open + 1 {
@@ -217,6 +258,12 @@ func compatible_type(string left, string right) bool {
     if lt.is_ref != rt.is_ref || lt.is_mut_ref != rt.is_mut_ref || lt.is_slice != rt.is_slice {
         return false
     }
+    if lt.is_array != rt.is_array {
+        return false
+    }
+    if lt.is_array && lt.array_len != rt.array_len {
+        return false
+    }
     if lt.base != rt.base {
         return false
     }
@@ -247,6 +294,9 @@ func comparable_type(string ty) bool {
         return true
     }
     if starts_with(clean, "[]") {
+        return false
+    }
+    if starts_with(clean, "[") {
         return false
     }
 
