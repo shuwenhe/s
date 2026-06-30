@@ -861,6 +861,27 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					return 0;
 			}
 		case AST_ASSIGN_EXPR:
+			if (node->as.assign_expr.target_object && node->as.assign_expr.target_index) {
+				const char *object_type;
+				const char *index_type;
+				if (!analyze_expr(ctx, node->as.assign_expr.target_object, &object_type)) {
+					return 0;
+				}
+				if (!analyze_expr(ctx, node->as.assign_expr.target_index, &index_type)) {
+					return 0;
+				}
+				if (!analyze_expr(ctx, node->as.assign_expr.value, &rhs_type)) {
+					return 0;
+				}
+				if (!is_truthy_type(index_type) && strcmp(index_type, TYPE_INT) != 0) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"index assignment expects integer index, got '%s'", index_type ? index_type : TYPE_ANY);
+					return 0;
+				}
+				(void)object_type;
+				*out_type = rhs_type;
+				return 1;
+			}
 			sym = scope_lookup(ctx->current_scope, node->as.assign_expr.name);
 			if (!sym) {
 				if (!analyze_expr(ctx, node->as.assign_expr.value, &rhs_type)) {

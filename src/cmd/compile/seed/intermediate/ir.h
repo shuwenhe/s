@@ -28,6 +28,7 @@ typedef enum ir_op {
 	IR_CMP_LE,
 	IR_CMP_GT,
 	IR_CMP_GE,
+	IR_INDEX_SET,
 	IR_RET,
 } ir_op;
 
