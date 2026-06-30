@@ -1,4 +1,4 @@
-/Users/feifei/shuwen/s#include <stdbool.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -1120,6 +1120,95 @@ static bool test_runtime_short_circuit_and_side_effect_order(void) {
 	return ok;
 }
 
+static bool execute_source_main(const char *src, long *ret, compile_error *err) {
+	token_vec tokens;
+	parse_result result;
+	IR ir;
+	FILE *tmp;
+	char buf[8192];
+	size_t n;
+	bool ok;
+
+	if (!lexer_scan(src, &tokens, err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+
+	tmp = tmpfile();
+	if (!tmp) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	generate_code(&ir, tmp);
+	fflush(tmp);
+	fseek(tmp, 0, SEEK_SET);
+	n = fread(buf, 1, sizeof(buf) - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
+
+	ok = runtime_execute_text(buf, "main", ret, err);
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_runtime_array_len_and_index(void) {
+	const char *src =
+		"fn main() int { "
+		"  var xs = [4, 7, 9]; "
+		"  return len(xs) + xs[1]; "
+		"}";
+	compile_error err;
+	long ret = 0;
+	bool ok = execute_source_main(src, &ret, &err);
+	return ok && ret == 10;
+}
+
+static bool test_runtime_nested_member_alias_compare(void) {
+	const char *src =
+		"fn main() int { "
+		"  var cfg = Config { activation_type: \"gelu\" }; "
+		"  var layer = Layer { config: cfg }; "
+		"  if layer.config.activation_type == \"gelu\" { return 1; } "
+		"  return 0; "
+		"}";
+	compile_error err;
+	long ret = 0;
+	bool ok = execute_source_main(src, &ret, &err);
+	return ok && ret == 1;
+}
+
+static bool test_runtime_nested_member_return_alias(void) {
+	const char *src =
+		"fn build_network() Network { "
+		"  Network { width: 7 } "
+		"} "
+		"fn main() int { "
+		"  var layer = Layer { network: build_network() }; "
+		"  return layer.network.width; "
+		"}";
+	compile_error err;
+	long ret = 0;
+	bool ok = execute_source_main(src, &ret, &err);
+	return ok && ret == 7;
+}
+
 static bool test_runtime_function_call_and_tail_expr_return(void) {
 	const char *src =
 		"fn id(x) int { x } "
@@ -1429,55 +1518,66 @@ static bool test_runtime_minimal_loop(void) {
 
 int main(void) {
 	bool ok = true;
+#define RUN_TEST(fn) do { \
+	bool test_ok = fn(); \
+	if (!test_ok) { \
+		fprintf(stderr, "FAIL: %s\n", #fn); \
+		ok = false; \
+	} \
+} while (0)
 
-	ok = ok && test_binding_keywords();
-	ok = ok && test_function_header();
-	ok = ok && test_illegal_char_error();
-	ok = ok && test_unterminated_string_error();
-	ok = ok && test_line_comment_lexing();
-	ok = ok && test_immutable_let_rejection();
-	ok = ok && test_array_literal_lexing();
-	ok = ok && test_block_comment_lexing_and_error();
-	ok = ok && test_parser_let_and_precedence();
-	ok = ok && test_parser_return_and_block();
-	ok = ok && test_parser_array_literal();
-	ok = ok && test_parser_dotted_package_decl();
-	ok = ok && test_parser_dotted_use_decl();
-	ok = ok && test_parser_use_selector_list();
-	ok = ok && test_parser_member_access_expr();
-	ok = ok && test_parser_control_flow_and_function();
-	ok = ok && test_semantic_ok();
-	ok = ok && test_semantic_undeclared_symbol();
-	ok = ok && test_semantic_return_outside_function();
-	ok = ok && test_semantic_call_arity_mismatch();
-	ok = ok && test_semantic_return_type_mismatch();
-	ok = ok && test_semantic_call_arg_type_mismatch();
-	ok = ok && test_semantic_missing_return_path();
-	ok = ok && test_semantic_assignment_and_loop_control();
-	ok = ok && test_semantic_bool_flow();
-	ok = ok && test_semantic_unreachable_after_break();
-	ok = ok && test_semantic_unreachable_after_continue();
-	ok = ok && test_semantic_unreachable_after_return();
-	ok = ok && test_semantic_nested_if_dead_code();
-	ok = ok && test_semantic_call_callee_boundary();
-	ok = ok && test_semantic_chained_assignment_in_call_args();
-	ok = ok && test_semantic_short_circuit_assignment_propagation();
-	ok = ok && test_semantic_builtin_signature_check();
-	ok = ok && test_semantic_import_signature_check();
-	ok = ok && test_semantic_path_sensitive_narrowing_if_and();
-	ok = ok && test_semantic_path_sensitive_narrowing_if_or_else();
-	ok = ok && test_semantic_metadata_import_signature_success();
-	ok = ok && test_parser_assignment_expression();
-	ok = ok && test_ir_generation_entry();
-	ok = ok && test_codegen_end_to_end();
-	ok = ok && test_runtime_minimal_loop();
-	ok = ok && test_runtime_short_circuit_or();
-	ok = ok && test_runtime_short_circuit_and_side_effect_order();
-	ok = ok && test_runtime_function_call_and_tail_expr_return();
-	ok = ok && test_runtime_string_value_semantics();
-	ok = ok && test_runtime_string_mixed_compare_error();
-	ok = ok && test_runtime_string_escape_sequences();
-	ok = ok && test_runtime_string_long_boundary();
+	RUN_TEST(test_binding_keywords);
+	RUN_TEST(test_function_header);
+	RUN_TEST(test_illegal_char_error);
+	RUN_TEST(test_unterminated_string_error);
+	RUN_TEST(test_line_comment_lexing);
+	RUN_TEST(test_immutable_let_rejection);
+	RUN_TEST(test_array_literal_lexing);
+	RUN_TEST(test_block_comment_lexing_and_error);
+	RUN_TEST(test_parser_let_and_precedence);
+	RUN_TEST(test_parser_return_and_block);
+	RUN_TEST(test_parser_array_literal);
+	RUN_TEST(test_parser_dotted_package_decl);
+	RUN_TEST(test_parser_dotted_use_decl);
+	RUN_TEST(test_parser_use_selector_list);
+	RUN_TEST(test_parser_member_access_expr);
+	RUN_TEST(test_parser_control_flow_and_function);
+	RUN_TEST(test_semantic_ok);
+	RUN_TEST(test_semantic_undeclared_symbol);
+	RUN_TEST(test_semantic_return_outside_function);
+	RUN_TEST(test_semantic_call_arity_mismatch);
+	RUN_TEST(test_semantic_return_type_mismatch);
+	RUN_TEST(test_semantic_call_arg_type_mismatch);
+	RUN_TEST(test_semantic_missing_return_path);
+	RUN_TEST(test_semantic_assignment_and_loop_control);
+	RUN_TEST(test_semantic_bool_flow);
+	RUN_TEST(test_semantic_unreachable_after_break);
+	RUN_TEST(test_semantic_unreachable_after_continue);
+	RUN_TEST(test_semantic_unreachable_after_return);
+	RUN_TEST(test_semantic_nested_if_dead_code);
+	RUN_TEST(test_semantic_call_callee_boundary);
+	RUN_TEST(test_semantic_chained_assignment_in_call_args);
+	RUN_TEST(test_semantic_short_circuit_assignment_propagation);
+	RUN_TEST(test_semantic_builtin_signature_check);
+	RUN_TEST(test_semantic_import_signature_check);
+	RUN_TEST(test_semantic_path_sensitive_narrowing_if_and);
+	RUN_TEST(test_semantic_path_sensitive_narrowing_if_or_else);
+	RUN_TEST(test_semantic_metadata_import_signature_success);
+	RUN_TEST(test_parser_assignment_expression);
+	RUN_TEST(test_ir_generation_entry);
+	RUN_TEST(test_codegen_end_to_end);
+	RUN_TEST(test_runtime_minimal_loop);
+	RUN_TEST(test_runtime_short_circuit_or);
+	RUN_TEST(test_runtime_short_circuit_and_side_effect_order);
+	RUN_TEST(test_runtime_array_len_and_index);
+	RUN_TEST(test_runtime_nested_member_alias_compare);
+	RUN_TEST(test_runtime_nested_member_return_alias);
+	RUN_TEST(test_runtime_function_call_and_tail_expr_return);
+	RUN_TEST(test_runtime_string_value_semantics);
+	RUN_TEST(test_runtime_string_mixed_compare_error);
+	RUN_TEST(test_runtime_string_escape_sequences);
+	RUN_TEST(test_runtime_string_long_boundary);
+#undef RUN_TEST
 
 	if (!ok) {
 		fprintf(stderr, "seed parser/semantic/ir tests failed\n");
