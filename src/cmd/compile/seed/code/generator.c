@@ -122,6 +122,9 @@ void generate_code(IR *ir, FILE *output) {
             case IR_CMP_GE:
                 emit_record(output, "CMP_GE", instr->result, instr->operand1, instr->operand2);
                 break;
+            case IR_INDEX_SET:
+                emit_record(output, "INDEX_SET", instr->result, instr->operand1, instr->operand2);
+                break;
             case IR_RET:
                 emit_record(output, "RET", instr->result, "", "");
                 break;

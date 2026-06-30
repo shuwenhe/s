@@ -188,6 +188,8 @@ void ast_free(ast_node *node) {
 			break;
 		case AST_ASSIGN_EXPR:
 			free(node->as.assign_expr.name);
+			ast_free(node->as.assign_expr.target_object);
+			ast_free(node->as.assign_expr.target_index);
 			ast_free(node->as.assign_expr.value);
 			break;
 		case AST_UNARY_EXPR:
@@ -890,27 +892,32 @@ static ast_node *parse_assignment(parser *p) {
 	if (!match(p, TOKEN_ASSIGN)) {
 		return expr;
 	}
-	if (expr->kind != AST_IDENT_EXPR) {
-		/* Compatibility mode: allow non-identifier assignment targets by parsing RHS and dropping target. */
-		{
-			ast_node *rhs = parse_assignment(p);
-			ast_free(expr);
-			return rhs;
-		}
-	}
-	name = dup_cstr(expr->as.ident_expr.name);
-	if (!name) {
-		ast_free(expr);
-		error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
-		return NULL;
-	}
 	node = ast_new(AST_ASSIGN_EXPR, expr->pos);
 	if (!node) {
-		free(name);
 		ast_free(expr);
 		return NULL;
 	}
-	node->as.assign_expr.name = name;
+	if (expr->kind == AST_IDENT_EXPR) {
+		name = dup_cstr(expr->as.ident_expr.name);
+		if (!name) {
+			ast_free(node);
+			ast_free(expr);
+			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
+			return NULL;
+		}
+		node->as.assign_expr.name = name;
+	} else if (expr->kind == AST_INDEX_EXPR) {
+		node->as.assign_expr.target_object = expr->as.index_expr.object;
+		node->as.assign_expr.target_index = expr->as.index_expr.index;
+		expr->as.index_expr.object = NULL;
+		expr->as.index_expr.index = NULL;
+	} else {
+		/* Compatibility mode: allow non-identifier assignment targets by parsing RHS and dropping target. */
+		ast_node *rhs = parse_assignment(p);
+		ast_free(node);
+		ast_free(expr);
+		return rhs;
+	}
 	node->as.assign_expr.value = parse_assignment(p);
 	ast_free(expr);
 	if (!node->as.assign_expr.value) {
