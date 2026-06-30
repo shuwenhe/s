@@ -77,6 +77,7 @@ const char *ir_op_name(ir_op op) {
 		case IR_CMP_LE: return "CMP_LE";
 		case IR_CMP_GT: return "CMP_GT";
 		case IR_CMP_GE: return "CMP_GE";
+		case IR_INDEX_SET: return "INDEX_SET";
 		case IR_RET: return "RET";
 	}
 	return "UNKNOWN";
@@ -170,11 +171,10 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERA
 		return false;
 	}
 
-	if (used + 2 >= IR_OPERAND_CAP) {
+	if (used + 1 >= IR_OPERAND_CAP) {
 		error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "array literal too long for IR operand");
 		return false;
 	}
-	out[used++] = '"';
 	out[used++] = '[';
 
 	for (i = 0; i < expr->as.array_expr.items.len; i++) {
@@ -211,12 +211,11 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERA
 		used += (size_t)written;
 	}
 
-	if (used + 2 >= IR_OPERAND_CAP) {
+	if (used + 1 >= IR_OPERAND_CAP) {
 		error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "array literal too long for IR operand");
 		return false;
 	}
 	out[used++] = ']';
-	out[used++] = '"';
 	out[used] = '\0';
 	return true;
 }
@@ -409,6 +408,20 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 		case AST_BINARY_EXPR:
 			return lower_binary(b, expr, out);
 		case AST_ASSIGN_EXPR:
+			if (expr->as.assign_expr.target_object && expr->as.assign_expr.target_index) {
+				char object_name[IR_OPERAND_CAP];
+				char index_name[IR_OPERAND_CAP];
+				if (!lower_expr(b, expr->as.assign_expr.value, out)) {
+					return false;
+				}
+				if (!lower_expr(b, expr->as.assign_expr.target_object, object_name)) {
+					return false;
+				}
+				if (!lower_expr(b, expr->as.assign_expr.target_index, index_name)) {
+					return false;
+				}
+				return emit_ins(b, IR_INDEX_SET, object_name, index_name, out, expr->pos);
+			}
 			if (!lower_expr(b, expr->as.assign_expr.value, out)) {
 				return false;
 			}

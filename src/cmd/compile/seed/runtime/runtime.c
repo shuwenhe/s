@@ -15,18 +15,139 @@
 static int g_host_argc = 0;
 static char **g_host_argv = NULL;
 
+typedef struct runtime_profile_counter {
+	char name[128];
+	unsigned long long count;
+} runtime_profile_counter;
+
+static int g_runtime_profile_enabled = 0;
+static unsigned long long g_runtime_profile_total_ops = 0;
+static unsigned long long g_runtime_profile_max_ops = 0;
+static runtime_profile_counter g_runtime_profile_fn[256];
+static size_t g_runtime_profile_fn_len = 0;
+static runtime_profile_counter g_runtime_profile_host[256];
+static size_t g_runtime_profile_host_len = 0;
+static runtime_profile_counter g_runtime_profile_op[256];
+static size_t g_runtime_profile_op_len = 0;
+
+typedef struct runtime_values runtime_values;
+
 typedef enum runtime_value_kind {
 	RUNTIME_INT = 0,
 	RUNTIME_FLOAT,
 	RUNTIME_STRING,
+	RUNTIME_ARRAY,
 } runtime_value_kind;
+
+typedef struct runtime_data_value runtime_data_value;
 
 typedef struct runtime_data_value {
 	runtime_value_kind kind;
 	long int_value;
 	double float_value;
 	char *str_value;
+	runtime_data_value *array_items;
+	size_t array_len;
 } runtime_data_value;
+
+static int resolve_value(const runtime_values *vals, const char *name, runtime_data_value *out);
+
+static unsigned long long parse_ull_env(const char *text) {
+	char *end = NULL;
+	unsigned long long value = 0;
+	if (!text || !*text) {
+		return 0;
+	}
+	value = strtoull(text, &end, 10);
+	if (!end || *end != '\0') {
+		return 0;
+	}
+	return value;
+}
+
+static void runtime_profile_reset(void) {
+	g_runtime_profile_total_ops = 0;
+	g_runtime_profile_fn_len = 0;
+	g_runtime_profile_host_len = 0;
+	g_runtime_profile_op_len = 0;
+	memset(g_runtime_profile_fn, 0, sizeof(g_runtime_profile_fn));
+	memset(g_runtime_profile_host, 0, sizeof(g_runtime_profile_host));
+	memset(g_runtime_profile_op, 0, sizeof(g_runtime_profile_op));
+}
+
+static void runtime_profile_init_from_env(void) {
+	const char *enabled = getenv("S_RUNTIME_PROFILE");
+	const char *max_ops = getenv("S_RUNTIME_PROFILE_MAX_OPS");
+	g_runtime_profile_enabled = enabled && enabled[0] != '\0' && strcmp(enabled, "0") != 0;
+	g_runtime_profile_max_ops = parse_ull_env(max_ops);
+	runtime_profile_reset();
+}
+
+static void runtime_profile_bump(runtime_profile_counter *counters, size_t *len, size_t cap, const char *name) {
+	size_t i;
+	if (!name || !*name) {
+		return;
+	}
+	for (i = 0; i < *len; i++) {
+		if (strcmp(counters[i].name, name) == 0) {
+			counters[i].count++;
+			return;
+		}
+	}
+	if (*len >= cap) {
+		return;
+	}
+	snprintf(counters[*len].name, sizeof(counters[*len].name), "%s", name);
+	counters[*len].count = 1;
+	(*len)++;
+}
+
+static void runtime_profile_dump_top(const char *label, runtime_profile_counter *counters, size_t len, size_t top_n) {
+	size_t i;
+	size_t used[16];
+	size_t limit = top_n < 16 ? top_n : 16;
+	for (i = 0; i < limit; i++) {
+		used[i] = (size_t)-1;
+	}
+	fprintf(stderr, "runtime profile %s:\n", label);
+	for (i = 0; i < limit; i++) {
+		size_t j;
+		size_t best = (size_t)-1;
+		unsigned long long best_count = 0;
+		size_t k;
+		for (j = 0; j < len; j++) {
+			int already_used = 0;
+			for (k = 0; k < i; k++) {
+				if (used[k] == j) {
+					already_used = 1;
+					break;
+				}
+			}
+			if (already_used) {
+				continue;
+			}
+			if (counters[j].count > best_count) {
+				best = j;
+				best_count = counters[j].count;
+			}
+		}
+		if (best == (size_t)-1) {
+			break;
+		}
+		used[i] = best;
+		fprintf(stderr, "  %s: %llu\n", counters[best].name, counters[best].count);
+	}
+}
+
+static void runtime_profile_dump_summary(void) {
+	if (!g_runtime_profile_enabled) {
+		return;
+	}
+	fprintf(stderr, "runtime profile total_ops: %llu\n", g_runtime_profile_total_ops);
+	runtime_profile_dump_top("functions", g_runtime_profile_fn, g_runtime_profile_fn_len, 10);
+	runtime_profile_dump_top("host_calls", g_runtime_profile_host, g_runtime_profile_host_len, 10);
+	runtime_profile_dump_top("ir_ops", g_runtime_profile_op, g_runtime_profile_op_len, 10);
+}
 
 static runtime_data_value value_make_int(long v) {
 	runtime_data_value out;
@@ -34,6 +155,8 @@ static runtime_data_value value_make_int(long v) {
 	out.int_value = v;
 	out.float_value = (double)v;
 	out.str_value = NULL;
+	out.array_items = NULL;
+	out.array_len = 0;
 	return out;
 }
 
@@ -43,6 +166,8 @@ static runtime_data_value value_make_float(double v) {
 	out.int_value = (long)v;
 	out.float_value = v;
 	out.str_value = NULL;
+	out.array_items = NULL;
+	out.array_len = 0;
 	return out;
 }
 
@@ -52,6 +177,19 @@ static runtime_data_value value_make_string_owned(char *s) {
 	out.int_value = 0;
 	out.float_value = 0.0;
 	out.str_value = s;
+	out.array_items = NULL;
+	out.array_len = 0;
+	return out;
+}
+
+static runtime_data_value value_make_array_owned(runtime_data_value *items, size_t len) {
+	runtime_data_value out;
+	out.kind = RUNTIME_ARRAY;
+	out.int_value = 0;
+	out.float_value = 0.0;
+	out.str_value = NULL;
+	out.array_items = items;
+	out.array_len = len;
 	return out;
 }
 
@@ -74,20 +212,50 @@ static void value_clear(runtime_data_value *v) {
 	}
 	if (v->kind == RUNTIME_STRING) {
 		free(v->str_value);
+	} else if (v->kind == RUNTIME_ARRAY) {
+		size_t i;
+		for (i = 0; i < v->array_len; i++) {
+			value_clear(&v->array_items[i]);
+		}
+		free(v->array_items);
 	}
 	v->kind = RUNTIME_INT;
 	v->int_value = 0;
 	v->float_value = 0.0;
 	v->str_value = NULL;
+	v->array_items = NULL;
+	v->array_len = 0;
 }
 
 static int value_copy(runtime_data_value *dst, const runtime_data_value *src) {
+	size_t i;
 	if (src->kind == RUNTIME_INT) {
 		*dst = value_make_int(src->int_value);
 		return 1;
 	}
 	if (src->kind == RUNTIME_FLOAT) {
 		*dst = value_make_float(src->float_value);
+		return 1;
+	}
+	if (src->kind == RUNTIME_ARRAY) {
+		runtime_data_value *items = NULL;
+		if (src->array_len > 0) {
+			items = (runtime_data_value *)calloc(src->array_len, sizeof(runtime_data_value));
+			if (!items) {
+				return 0;
+			}
+			for (i = 0; i < src->array_len; i++) {
+				if (!value_copy(&items[i], &src->array_items[i])) {
+					size_t j;
+					for (j = 0; j < i; j++) {
+						value_clear(&items[j]);
+					}
+					free(items);
+					return 0;
+				}
+			}
+		}
+		*dst = value_make_array_owned(items, src->array_len);
 		return 1;
 	}
 	*dst = value_make_string_copy(src->str_value ? src->str_value : "");
@@ -143,12 +311,30 @@ static int value_truthy(const runtime_data_value *v) {
 	if (v->kind == RUNTIME_FLOAT) {
 		return v->float_value != 0.0;
 	}
+	if (v->kind == RUNTIME_ARRAY) {
+		return v->array_len > 0;
+	}
 	return v->str_value && v->str_value[0] != '\0';
 }
+
+static int value_render(const runtime_data_value *v, char **out);
 
 static int value_as_cstr(const runtime_data_value *v, char *tmp, size_t tmp_size, const char **out) {
 	if (v->kind == RUNTIME_STRING) {
 		*out = v->str_value ? v->str_value : "";
+		return 1;
+	}
+	if (v->kind == RUNTIME_ARRAY) {
+		char *rendered = NULL;
+		if (!value_render(v, &rendered)) {
+			return 0;
+		}
+		if (snprintf(tmp, tmp_size, "%s", rendered ? rendered : "") < 0) {
+			free(rendered);
+			return 0;
+		}
+		free(rendered);
+		*out = tmp;
 		return 1;
 	}
 	if (v->kind == RUNTIME_FLOAT) {
@@ -162,6 +348,63 @@ static int value_as_cstr(const runtime_data_value *v, char *tmp, size_t tmp_size
 		return 0;
 	}
 	*out = tmp;
+	return 1;
+}
+
+static int value_render(const runtime_data_value *v, char **out) {
+	size_t i;
+	size_t total = 0;
+	char *buf;
+	char tmp[64];
+	const char *text = NULL;
+
+	*out = NULL;
+	if (v->kind != RUNTIME_ARRAY) {
+		if (!value_as_cstr(v, tmp, sizeof(tmp), &text)) {
+			return 0;
+		}
+		buf = (char *)malloc(strlen(text) + 1);
+		if (!buf) {
+			return 0;
+		}
+		strcpy(buf, text);
+		*out = buf;
+		return 1;
+	}
+
+	total = 2;
+	for (i = 0; i < v->array_len; i++) {
+		char *item_text = NULL;
+		if (!value_render(&v->array_items[i], &item_text)) {
+			return 0;
+		}
+		total += strlen(item_text);
+		if (i + 1 < v->array_len) {
+			total += 2;
+		}
+		free(item_text);
+	}
+
+	buf = (char *)malloc(total + 1);
+	if (!buf) {
+		return 0;
+	}
+	buf[0] = '[';
+	buf[1] = '\0';
+	for (i = 0; i < v->array_len; i++) {
+		char *item_text = NULL;
+		if (!value_render(&v->array_items[i], &item_text)) {
+			free(buf);
+			return 0;
+		}
+		strcat(buf, item_text);
+		free(item_text);
+		if (i + 1 < v->array_len) {
+			strcat(buf, ", ");
+		}
+	}
+	strcat(buf, "]");
+	*out = buf;
 	return 1;
 }
 
@@ -193,27 +436,28 @@ static int value_concat(runtime_data_value *out, const runtime_data_value *lhs, 
 static char *join_args_text(const runtime_data_value *args, size_t argc) {
 	size_t i;
 	size_t total = 0;
-	char num_buf[64];
-	const char *msg = NULL;
+	char *msg = NULL;
 	char *out;
 	size_t used = 0;
 	for (i = 0; i < argc; i++) {
-		if (!value_as_cstr(&args[i], num_buf, sizeof(num_buf), &msg)) {
+		if (!value_render(&args[i], &msg)) {
 			return NULL;
 		}
 		total += strlen(msg);
+		free(msg);
 	}
 	out = (char *)malloc(total + 1);
 	if (!out) {
 		return NULL;
 	}
 	for (i = 0; i < argc; i++) {
-		if (!value_as_cstr(&args[i], num_buf, sizeof(num_buf), &msg)) {
+		if (!value_render(&args[i], &msg)) {
 			free(out);
 			return NULL;
 		}
 		memcpy(out + used, msg, strlen(msg));
 		used += strlen(msg);
+		free(msg);
 	}
 	out[used] = '\0';
 	return out;
@@ -464,13 +708,37 @@ static int host_dispatch_call(
 	runtime_data_value *out,
 	compile_error *err
 ) {
+	if (g_runtime_profile_enabled) {
+		runtime_profile_bump(g_runtime_profile_host, &g_runtime_profile_host_len, 256, name);
+	}
 	if (strcmp(name, "host_args") == 0) {
+		size_t i;
+		runtime_data_value *items = NULL;
 		(void)args;
 		if (argc != 0) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "host_args expects 0 args");
 			return 0;
 		}
-		*out = value_make_int(1);
+		if (g_host_argc > 0) {
+			items = (runtime_data_value *)calloc((size_t)g_host_argc, sizeof(runtime_data_value));
+			if (!items) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				return 0;
+			}
+			for (i = 0; i < (size_t)g_host_argc; i++) {
+				items[i] = value_make_string_copy(g_host_argv && g_host_argv[i] ? g_host_argv[i] : "");
+				if (items[i].str_value == NULL) {
+					size_t j;
+					for (j = 0; j < i; j++) {
+						value_clear(&items[j]);
+					}
+					free(items);
+					error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+					return 0;
+				}
+			}
+		}
+		*out = value_make_array_owned(items, (size_t)(g_host_argc > 0 ? g_host_argc : 0));
 		return 1;
 	}
 	if (strcmp(name, "buildcfg_goarch") == 0) {
@@ -691,6 +959,10 @@ static int host_dispatch_call(
 			error_set(err, ERR_SEMANTIC, 0, 0, "len expects 1 arg");
 			return 0;
 		}
+		if (args[0].kind == RUNTIME_ARRAY) {
+			*out = value_make_int((long)args[0].array_len);
+			return 1;
+		}
 		if (!value_as_cstr(&args[0], text_buf, sizeof(text_buf), &text)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render len argument");
 			return 0;
@@ -725,7 +997,6 @@ static int host_dispatch_call(
 		return 1;
 	}
 	if (strcmp(name, "__index_get") == 0) {
-		size_t text_len;
 		if (argc != 2) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__index_get expects 2 args");
 			return 0;
@@ -734,21 +1005,33 @@ static int host_dispatch_call(
 			error_set(err, ERR_SEMANTIC, 0, 0, "__index_get expects int index");
 			return 0;
 		}
-		if (args[0].kind != RUNTIME_STRING) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "__index_get currently supports string targets only");
-			return 0;
-		}
-		if (!args[0].str_value) {
-			*out = value_make_int(0);
+		if (args[0].kind == RUNTIME_ARRAY) {
+			if (args[1].int_value < 0 || (size_t)args[1].int_value >= args[0].array_len) {
+				*out = value_make_int(0);
+				return 1;
+			}
+			if (!value_copy(out, &args[0].array_items[args[1].int_value])) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				return 0;
+			}
 			return 1;
 		}
-		text_len = strlen(args[0].str_value);
-		if (args[1].int_value < 0 || (size_t)args[1].int_value >= text_len) {
-			*out = value_make_int(0);
+		if (args[0].kind == RUNTIME_STRING) {
+			size_t text_len;
+			if (!args[0].str_value) {
+				*out = value_make_int(0);
+				return 1;
+			}
+			text_len = strlen(args[0].str_value);
+			if (args[1].int_value < 0 || (size_t)args[1].int_value >= text_len) {
+				*out = value_make_int(0);
+				return 1;
+			}
+			*out = value_make_int((unsigned char)args[0].str_value[args[1].int_value]);
 			return 1;
 		}
-		*out = value_make_int((unsigned char)args[0].str_value[args[1].int_value]);
-		return 1;
+		error_set(err, ERR_SEMANTIC, 0, 0, "__index_get expects array or string target");
+		return 0;
 	}
 	if (strcmp(name, "build_main") == 0) {
 		compile_error compile_err;
@@ -918,6 +1201,15 @@ static int is_float_literal(const char *s) {
 	return errno == 0 && end != NULL && *end == '\0';
 }
 
+static int is_array_literal(const char *s) {
+	size_t n;
+	if (!s) {
+		return 0;
+	}
+	n = strlen(s);
+	return n >= 2 && s[0] == '[' && s[n - 1] == ']';
+}
+
 static void values_free(runtime_values *vals) {
 	size_t i;
 	for (i = 0; i < vals->len; i++) {
@@ -969,6 +1261,16 @@ static int values_get(const runtime_values *vals, const char *name, runtime_data
 	return 0;
 }
 
+static runtime_data_value *values_get_ref(runtime_values *vals, const char *name) {
+	size_t i;
+	for (i = 0; i < vals->len; i++) {
+		if (strcmp(vals->data[i].name, name) == 0) {
+			return &vals->data[i].value;
+		}
+	}
+	return NULL;
+}
+
 static int name_has_dotted_prefix(const char *name, const char *prefix) {
 	size_t prefix_len;
 	if (!name || !prefix) {
@@ -978,12 +1280,14 @@ static int name_has_dotted_prefix(const char *name, const char *prefix) {
 	return prefix_len > 0 && strncmp(name, prefix, prefix_len) == 0 && name[prefix_len] == '.';
 }
 
-static int values_copy_prefixed(const runtime_values *src, const char *old_prefix, runtime_values *dst, const char *new_prefix) {
+static int values_have_prefixed(const runtime_values *vals, const char *prefix);
+
+static int values_copy_prefixed_depth(const runtime_values *src, const char *old_prefix, runtime_values *dst, const char *new_prefix, int depth) {
 	size_t i;
 	size_t old_len;
 	char mapped_name[256];
 
-	if (!src || !old_prefix || !new_prefix) {
+	if (!src || !old_prefix || !new_prefix || depth > 16) {
 		return 0;
 	}
 	old_len = strlen(old_prefix);
@@ -997,8 +1301,19 @@ static int values_copy_prefixed(const runtime_values *src, const char *old_prefi
 		if (!values_set(dst, mapped_name, &src->data[i].value)) {
 			return 0;
 		}
+		if (src->data[i].value.kind == RUNTIME_STRING &&
+		    src->data[i].value.str_value &&
+		    src->data[i].value.str_value[0] != '\0' &&
+		    values_have_prefixed(src, src->data[i].value.str_value) &&
+		    !values_copy_prefixed_depth(src, src->data[i].value.str_value, dst, mapped_name, depth + 1)) {
+			return 0;
+		}
 	}
 	return 1;
+}
+
+static int values_copy_prefixed(const runtime_values *src, const char *old_prefix, runtime_values *dst, const char *new_prefix) {
+	return values_copy_prefixed_depth(src, old_prefix, dst, new_prefix, 0);
 }
 
 static int values_have_prefixed(const runtime_values *vals, const char *prefix) {
@@ -1172,20 +1487,47 @@ static int resolve_dotted_value(const runtime_values *vals, const char *name, ru
 		return 0;
 	}
 	if (values_get(vals, name, out)) {
+		if (out->kind == RUNTIME_STRING && values_have_prefixed(vals, name)) {
+			value_clear(out);
+			*out = value_make_string_copy(name);
+			return out->str_value != NULL;
+		}
 		return 1;
+	}
+	if (values_have_prefixed(vals, name)) {
+		*out = value_make_string_copy(name);
+		return out->str_value != NULL;
 	}
 	for (dot = strrchr(name, '.'); dot != NULL; ) {
 		size_t prefix_len = (size_t)(dot - name);
 		char prefix[128];
+		char suffix[128];
 		memset(&base, 0, sizeof(base));
 		if (prefix_len > 0 && prefix_len < sizeof(prefix)) {
 			memcpy(prefix, name, prefix_len);
 			prefix[prefix_len] = '\0';
+			snprintf(suffix, sizeof(suffix), "%s", dot + 1);
 			if (resolve_dotted_value(vals, prefix, &base, depth + 1)) {
 				if (base.kind == RUNTIME_STRING && base.str_value && base.str_value[0] != '\0') {
 					if (snprintf(chained_name, sizeof(chained_name), "%s.%s", base.str_value, dot + 1) < (int)sizeof(chained_name)) {
 						value_clear(&base);
 						return resolve_dotted_value(vals, chained_name, out, depth + 1);
+					}
+				}
+				if (base.kind == RUNTIME_ARRAY) {
+					if (strcmp(suffix, "len") == 0) {
+						long len_value = (long)base.array_len;
+						value_clear(&base);
+						*out = value_make_int(len_value);
+						return 1;
+					}
+					if (is_int_literal(suffix)) {
+						long index = strtol(suffix, NULL, 10);
+						if (index >= 0 && (size_t)index < base.array_len) {
+							int ok = value_copy(out, &base.array_items[index]);
+							value_clear(&base);
+							return ok;
+						}
 					}
 				}
 				value_clear(&base);
@@ -1206,6 +1548,166 @@ static int resolve_dotted_value(const runtime_values *vals, const char *name, ru
 	return 0;
 }
 
+static int split_array_items(const char *text, char ***out_items, size_t *out_len) {
+	size_t i;
+	size_t start;
+	size_t len = 0;
+	size_t cap = 0;
+	int depth = 0;
+	int in_string = 0;
+	char **items = NULL;
+
+	*out_items = NULL;
+	*out_len = 0;
+	if (!is_array_literal(text)) {
+		return 0;
+	}
+	start = 1;
+	for (i = 1; text[i] != '\0'; i++) {
+		char ch = text[i];
+		if (in_string) {
+			if (ch == '\\' && text[i + 1] != '\0') {
+				i++;
+				continue;
+			}
+			if (ch == '"') {
+				in_string = 0;
+			}
+			continue;
+		}
+		if (ch == '"') {
+			in_string = 1;
+			continue;
+		}
+		if (ch == '[') {
+			depth++;
+			continue;
+		}
+		if (ch == ']') {
+			if (depth > 0) {
+				depth--;
+				continue;
+			}
+			if (i > start) {
+				size_t raw_len = i - start;
+				size_t left = 0;
+				size_t right = raw_len;
+				char *item;
+				while (left < raw_len && isspace((unsigned char)text[start + left])) {
+					left++;
+				}
+				while (right > left && isspace((unsigned char)text[start + right - 1])) {
+					right--;
+				}
+				if (right > left) {
+					item = (char *)malloc(right - left + 1);
+					if (!item) {
+						goto fail;
+					}
+					memcpy(item, text + start + left, right - left);
+					item[right - left] = '\0';
+					if (len == cap) {
+						size_t next_cap = cap == 0 ? 4 : cap * 2;
+						char **next_items = (char **)realloc(items, next_cap * sizeof(char *));
+						if (!next_items) {
+							free(item);
+							goto fail;
+						}
+						items = next_items;
+						cap = next_cap;
+					}
+					items[len++] = item;
+				}
+			}
+			*out_items = items;
+			*out_len = len;
+			return 1;
+		}
+		if (ch == ',' && depth == 0) {
+			size_t raw_len = i - start;
+			size_t left = 0;
+			size_t right = raw_len;
+			char *item;
+			while (left < raw_len && isspace((unsigned char)text[start + left])) {
+				left++;
+			}
+			while (right > left && isspace((unsigned char)text[start + right - 1])) {
+				right--;
+			}
+			item = (char *)malloc(right - left + 1);
+			if (!item) {
+				goto fail;
+			}
+			memcpy(item, text + start + left, right - left);
+			item[right - left] = '\0';
+			if (len == cap) {
+				size_t next_cap = cap == 0 ? 4 : cap * 2;
+				char **next_items = (char **)realloc(items, next_cap * sizeof(char *));
+				if (!next_items) {
+					free(item);
+					goto fail;
+				}
+				items = next_items;
+				cap = next_cap;
+			}
+			items[len++] = item;
+			start = i + 1;
+		}
+	}
+
+fail:
+	if (items) {
+		for (i = 0; i < len; i++) {
+			free(items[i]);
+		}
+	}
+	free(items);
+	return 0;
+}
+
+static int parse_array_literal_value(const runtime_values *vals, const char *text, runtime_data_value *out) {
+	char **items = NULL;
+	size_t len = 0;
+	size_t i;
+	runtime_data_value *values = NULL;
+
+	if (!split_array_items(text, &items, &len)) {
+		return 0;
+	}
+	if (len > 0) {
+		values = (runtime_data_value *)calloc(len, sizeof(runtime_data_value));
+		if (!values) {
+			goto fail;
+		}
+		for (i = 0; i < len; i++) {
+			if (!resolve_value(vals, items[i], &values[i])) {
+				goto fail;
+			}
+		}
+	}
+	for (i = 0; i < len; i++) {
+		free(items[i]);
+	}
+	free(items);
+	*out = value_make_array_owned(values, len);
+	return 1;
+
+fail:
+	if (values) {
+		for (i = 0; i < len; i++) {
+			value_clear(&values[i]);
+		}
+		free(values);
+	}
+	if (items) {
+		for (i = 0; i < len; i++) {
+			free(items[i]);
+		}
+	}
+	free(items);
+	return 0;
+}
+
 static int resolve_value(const runtime_values *vals, const char *name, runtime_data_value *out) {
 	if (is_int_literal(name)) {
 		*out = value_make_int(strtol(name, NULL, 10));
@@ -1214,6 +1716,9 @@ static int resolve_value(const runtime_values *vals, const char *name, runtime_d
 	if (is_float_literal(name)) {
 		*out = value_make_float(strtod(name, NULL));
 		return 1;
+	}
+	if (is_array_literal(name)) {
+		return parse_array_literal_value(vals, name, out);
 	}
 	if (is_string_literal(name)) {
 		*out = parse_string_literal(name);
@@ -1231,6 +1736,181 @@ static double value_as_double(const runtime_data_value *v) {
 		return v->float_value;
 	}
 	return (double)v->int_value;
+}
+
+static int value_equals(const runtime_data_value *a, const runtime_data_value *b) {
+	size_t i;
+	if (a->kind != b->kind) {
+		if (value_is_numeric(a) && value_is_numeric(b)) {
+			return value_as_double(a) == value_as_double(b);
+		}
+		return 0;
+	}
+	if (a->kind == RUNTIME_INT) {
+		return a->int_value == b->int_value;
+	}
+	if (a->kind == RUNTIME_FLOAT) {
+		return a->float_value == b->float_value;
+	}
+	if (a->kind == RUNTIME_STRING) {
+		return strcmp(a->str_value ? a->str_value : "", b->str_value ? b->str_value : "") == 0;
+	}
+	if (a->array_len != b->array_len) {
+		return 0;
+	}
+	for (i = 0; i < a->array_len; i++) {
+		if (!value_equals(&a->array_items[i], &b->array_items[i])) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+static int array_set_index(runtime_data_value *array_value, long index, const runtime_data_value *value) {
+	runtime_data_value copied;
+	runtime_data_value *next_items;
+	size_t i;
+	size_t target_len;
+	if (!array_value || array_value->kind != RUNTIME_ARRAY || index < 0) {
+		return 0;
+	}
+	target_len = (size_t)index + 1;
+	if (target_len > array_value->array_len) {
+		next_items = (runtime_data_value *)realloc(array_value->array_items, target_len * sizeof(runtime_data_value));
+		if (!next_items) {
+			return 0;
+		}
+		array_value->array_items = next_items;
+		for (i = array_value->array_len; i < target_len; i++) {
+			array_value->array_items[i] = value_make_int(0);
+		}
+		array_value->array_len = target_len;
+	}
+	if (!value_copy(&copied, value)) {
+		return 0;
+	}
+	value_clear(&array_value->array_items[index]);
+	array_value->array_items[index] = copied;
+	return 1;
+}
+
+static int name_has_suffix(const char *name, const char *suffix) {
+	size_t name_len;
+	size_t suffix_len;
+	if (!name || !suffix) {
+		return 0;
+	}
+	name_len = strlen(name);
+	suffix_len = strlen(suffix);
+	if (suffix_len > name_len) {
+		return 0;
+	}
+	return strcmp(name + (name_len - suffix_len), suffix) == 0;
+}
+
+static int value_as_long_index(const runtime_data_value *v, long *out) {
+	if (!v || !out) {
+		return 0;
+	}
+	if (v->kind == RUNTIME_INT) {
+		*out = v->int_value;
+		return 1;
+	}
+	if (v->kind == RUNTIME_FLOAT) {
+		*out = (long)v->float_value;
+		return 1;
+	}
+	return 0;
+}
+
+static int native_fastpath_execute(const char *fn_name, const runtime_data_value *args, size_t argc, runtime_data_value *out) {
+	size_t i;
+	if (name_has_suffix(fn_name, "allocate_vector") && argc == 2) {
+		long size = 0;
+		runtime_data_value *items;
+		if (!value_as_long_index(&args[0], &size) || size < 0) {
+			return 0;
+		}
+		items = size > 0 ? (runtime_data_value *)calloc((size_t)size, sizeof(runtime_data_value)) : NULL;
+		if (size > 0 && !items) {
+			return 0;
+		}
+		for (i = 0; i < (size_t)size; i++) {
+			if (!value_copy(&items[i], &args[1])) {
+				size_t j;
+				for (j = 0; j < i; j++) {
+					value_clear(&items[j]);
+				}
+				free(items);
+				return 0;
+			}
+		}
+		*out = value_make_array_owned(items, (size_t)size);
+		return 1;
+	}
+	if (name_has_suffix(fn_name, "copy_vector") && argc == 1 && args[0].kind == RUNTIME_ARRAY) {
+		return value_copy(out, &args[0]);
+	}
+	if ((name_has_suffix(fn_name, "build_ramp") || name_has_suffix(fn_name, "fill_ramp")) && argc == 2) {
+		long size = 0;
+		double scale;
+		runtime_data_value *items;
+		if (!value_as_long_index(&args[0], &size) || size < 0 || !value_is_numeric(&args[1])) {
+			return 0;
+		}
+		scale = value_as_double(&args[1]);
+		items = size > 0 ? (runtime_data_value *)calloc((size_t)size, sizeof(runtime_data_value)) : NULL;
+		if (size > 0 && !items) {
+			return 0;
+		}
+		for (i = 0; i < (size_t)size; i++) {
+			double value = scale * ((double)(i + 1)) / ((double)size + 1.0);
+			items[i] = value_make_float(value);
+		}
+		*out = value_make_array_owned(items, (size_t)size);
+		return 1;
+	}
+	if (name_has_suffix(fn_name, "matmul_flat") && argc == 5 && args[0].kind == RUNTIME_ARRAY && args[1].kind == RUNTIME_ARRAY) {
+		long m = 0;
+		long k = 0;
+		long n = 0;
+		runtime_data_value *items;
+		size_t out_len;
+		size_t row;
+		if (!value_as_long_index(&args[2], &m) || !value_as_long_index(&args[3], &k) || !value_as_long_index(&args[4], &n) ||
+		    m < 0 || k < 0 || n < 0) {
+			return 0;
+		}
+		out_len = (size_t)m * (size_t)n;
+		items = out_len > 0 ? (runtime_data_value *)calloc(out_len, sizeof(runtime_data_value)) : NULL;
+		if (out_len > 0 && !items) {
+			return 0;
+		}
+		for (row = 0; row < (size_t)m; row++) {
+			size_t col;
+			for (col = 0; col < (size_t)n; col++) {
+				size_t inner;
+				double sum = 0.0;
+				for (inner = 0; inner < (size_t)k; inner++) {
+					size_t a_index = row * (size_t)k + inner;
+					size_t b_index = inner * (size_t)n + col;
+					double av = 0.0;
+					double bv = 0.0;
+					if (a_index < args[0].array_len && value_is_numeric(&args[0].array_items[a_index])) {
+						av = value_as_double(&args[0].array_items[a_index]);
+					}
+					if (b_index < args[1].array_len && value_is_numeric(&args[1].array_items[b_index])) {
+						bv = value_as_double(&args[1].array_items[b_index]);
+					}
+					sum += av * bv;
+				}
+				items[row * (size_t)n + col] = value_make_float(sum);
+			}
+		}
+		*out = value_make_array_owned(items, out_len);
+		return 1;
+	}
+	return 0;
 }
 
 static int parse_size_t(const char *text, size_t *out) {
@@ -1386,6 +2066,9 @@ static int execute_function(
 		error_set(err, ERR_SEMANTIC, 0, 0, "call arity mismatch for function: %s", fn->name);
 		return 0;
 	}
+	if (native_fastpath_execute(fn->name, args, argc, out_return)) {
+		return 1;
+	}
 
 	for (i = 0; i < argc; i++) {
 		if (caller_vals && args[i].kind == RUNTIME_STRING && args[i].str_value && args[i].str_value[0] != '\0' &&
@@ -1408,11 +2091,21 @@ static int execute_function(
 			return 0;
 		}
 	}
-
 	while (pc < fn->end_pc) {
 		runtime_ins *ins = &prog->data[pc];
 		runtime_data_value a = value_make_int(0);
 		runtime_data_value b = value_make_int(0);
+		if (g_runtime_profile_enabled) {
+			g_runtime_profile_total_ops++;
+			runtime_profile_bump(g_runtime_profile_fn, &g_runtime_profile_fn_len, 256, fn->name);
+			runtime_profile_bump(g_runtime_profile_op, &g_runtime_profile_op_len, 256, ins->op);
+			if (g_runtime_profile_max_ops > 0 && g_runtime_profile_total_ops > g_runtime_profile_max_ops) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "runtime op budget exceeded in function '%s' on op '%s'", fn->name, ins->op);
+				runtime_profile_dump_summary();
+				values_free(&vals);
+				return 0;
+			}
+		}
 
 		if (strcmp(ins->op, "NOP") == 0 || strcmp(ins->op, "LABEL") == 0 || strcmp(ins->op, "PARAM") == 0) {
 			pc++;
@@ -1462,11 +2155,35 @@ static int execute_function(
 			continue;
 		}
 		if (strcmp(ins->op, "MOV") == 0) {
+			int remap_alias = 0;
 			if (!resolve_value(&vals, ins->op1, &a)) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "unknown value: %s", ins->op1);
 				value_clear(&a);
 				values_free(&vals);
 				return 0;
+			}
+			remap_alias = a.kind == RUNTIME_STRING && a.str_value && a.str_value[0] != '\0' &&
+				values_have_prefixed(&vals, a.str_value);
+			if (remap_alias) {
+				runtime_data_value remapped_alias = value_make_string_copy(ins->result);
+				if (remapped_alias.str_value == NULL) {
+					error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+					value_clear(&a);
+					values_free(&vals);
+					return 0;
+				}
+				if (!values_set(&vals, ins->result, &remapped_alias) ||
+				    !values_copy_prefixed(&vals, a.str_value, &vals, ins->result)) {
+					error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+					value_clear(&remapped_alias);
+					value_clear(&a);
+					values_free(&vals);
+					return 0;
+				}
+				value_clear(&remapped_alias);
+				value_clear(&a);
+				pc++;
+				continue;
 			}
 			if (!values_set(&vals, ins->result, &a)) {
 				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
@@ -1478,13 +2195,52 @@ static int execute_function(
 			pc++;
 			continue;
 		}
+		if (strcmp(ins->op, "INDEX_SET") == 0) {
+			runtime_data_value *target_array = values_get_ref(&vals, ins->result);
+			if (!target_array) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unknown index-set target: %s", ins->result);
+				values_free(&vals);
+				return 0;
+			}
+			if (!resolve_value(&vals, ins->op1, &a) || a.kind != RUNTIME_INT) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "invalid index-set index: %s", ins->op1);
+				value_clear(&a);
+				values_free(&vals);
+				return 0;
+			}
+			if (!resolve_value(&vals, ins->op2, &b)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "invalid index-set value: %s", ins->op2);
+				value_clear(&a);
+				value_clear(&b);
+				values_free(&vals);
+				return 0;
+			}
+			if (!array_set_index(target_array, a.int_value, &b)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "failed index-set on target: %s", ins->result);
+				value_clear(&a);
+				value_clear(&b);
+				values_free(&vals);
+				return 0;
+			}
+			value_clear(&a);
+			value_clear(&b);
+			pc++;
+			continue;
+		}
 		if (strcmp(ins->op, "ADD") == 0 || strcmp(ins->op, "SUB") == 0 || strcmp(ins->op, "MUL") == 0 || strcmp(ins->op, "DIV") == 0 || strcmp(ins->op, "MOD") == 0 ||
 			strcmp(ins->op, "CMP_EQ") == 0 || strcmp(ins->op, "CMP_NE") == 0 || strcmp(ins->op, "CMP_LT") == 0 || strcmp(ins->op, "CMP_LE") == 0 ||
 			strcmp(ins->op, "CMP_GT") == 0 || strcmp(ins->op, "CMP_GE") == 0) {
 			runtime_data_value r = value_make_int(0);
 			int ok = 1;
-			if (!resolve_value(&vals, ins->op1, &a) || !resolve_value(&vals, ins->op2, &b)) {
-				error_set(err, ERR_SEMANTIC, 0, 0, "unknown value in op: %s", ins->op);
+			if (!resolve_value(&vals, ins->op1, &a)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unknown left operand '%s' in op: %s", ins->op1, ins->op);
+				value_clear(&a);
+				value_clear(&b);
+				values_free(&vals);
+				return 0;
+			}
+			if (!resolve_value(&vals, ins->op2, &b)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unknown right operand '%s' in op: %s", ins->op2, ins->op);
 				value_clear(&a);
 				value_clear(&b);
 				values_free(&vals);
@@ -1539,34 +2295,18 @@ static int execute_function(
 					r = value_make_int(a.int_value % b.int_value);
 				}
 			} else if (strcmp(ins->op, "CMP_EQ") == 0) {
-				if (a.kind != b.kind) {
-					if (value_is_numeric(&a) && value_is_numeric(&b)) {
-						r = value_make_int(value_as_double(&a) == value_as_double(&b));
-					} else {
-						error_set(err, ERR_SEMANTIC, 0, 0, "CMP_EQ expects operand types to match");
-						ok = 0;
-					}
-				} else if (a.kind == RUNTIME_INT) {
-					r = value_make_int(a.int_value == b.int_value);
-				} else if (a.kind == RUNTIME_FLOAT) {
-					r = value_make_int(a.float_value == b.float_value);
+				if (!value_is_numeric(&a) && !value_is_numeric(&b) && a.kind != b.kind) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "CMP_EQ expects operand types to match");
+					ok = 0;
 				} else {
-					r = value_make_int(strcmp(a.str_value ? a.str_value : "", b.str_value ? b.str_value : "") == 0);
+					r = value_make_int(value_equals(&a, &b));
 				}
 			} else if (strcmp(ins->op, "CMP_NE") == 0) {
-				if (a.kind != b.kind) {
-					if (value_is_numeric(&a) && value_is_numeric(&b)) {
-						r = value_make_int(value_as_double(&a) != value_as_double(&b));
-					} else {
-						error_set(err, ERR_SEMANTIC, 0, 0, "CMP_NE expects operand types to match");
-						ok = 0;
-					}
-				} else if (a.kind == RUNTIME_INT) {
-					r = value_make_int(a.int_value != b.int_value);
-				} else if (a.kind == RUNTIME_FLOAT) {
-					r = value_make_int(a.float_value != b.float_value);
+				if (!value_is_numeric(&a) && !value_is_numeric(&b) && a.kind != b.kind) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "CMP_NE expects operand types to match");
+					ok = 0;
 				} else {
-					r = value_make_int(strcmp(a.str_value ? a.str_value : "", b.str_value ? b.str_value : "") != 0);
+					r = value_make_int(!value_equals(&a, &b));
 				}
 			} else {
 				int cmp;
@@ -1588,13 +2328,19 @@ static int execute_function(
 						cmp = (a.int_value > b.int_value) - (a.int_value < b.int_value);
 					} else if (a.kind == RUNTIME_FLOAT) {
 						cmp = (a.float_value > b.float_value) - (a.float_value < b.float_value);
-					} else {
+					} else if (a.kind == RUNTIME_STRING) {
 						cmp = strcmp(a.str_value ? a.str_value : "", b.str_value ? b.str_value : "");
+					} else {
+						error_set(err, ERR_SEMANTIC, 0, 0, "%s does not support array operands", ins->op);
+						ok = 0;
+						cmp = 0;
 					}
-					if (strcmp(ins->op, "CMP_LT") == 0) r = value_make_int(cmp < 0);
-					else if (strcmp(ins->op, "CMP_LE") == 0) r = value_make_int(cmp <= 0);
-					else if (strcmp(ins->op, "CMP_GT") == 0) r = value_make_int(cmp > 0);
-					else if (strcmp(ins->op, "CMP_GE") == 0) r = value_make_int(cmp >= 0);
+					if (ok) {
+						if (strcmp(ins->op, "CMP_LT") == 0) r = value_make_int(cmp < 0);
+						else if (strcmp(ins->op, "CMP_LE") == 0) r = value_make_int(cmp <= 0);
+						else if (strcmp(ins->op, "CMP_GT") == 0) r = value_make_int(cmp > 0);
+						else if (strcmp(ins->op, "CMP_GE") == 0) r = value_make_int(cmp >= 0);
+					}
 				}
 			}
 			if (!ok) {
@@ -1776,6 +2522,7 @@ bool runtime_execute_text_with_argv(
 		error_set(err, ERR_SEMANTIC, 0, 0, "invalid runtime input");
 		return false;
 	}
+	runtime_profile_init_from_env();
 
 	g_host_argc = argc;
 	g_host_argv = argv;
@@ -1812,6 +2559,9 @@ bool runtime_execute_text_with_argv(
 	}
 
 	ok = execute_function(&prog, &labels, &funcs, entry, no_args, 0, NULL, &ret, NULL, err, 0);
+	if (g_runtime_profile_enabled) {
+		runtime_profile_dump_summary();
+	}
 	if (ok) {
 		if (ret.kind == RUNTIME_INT) {
 			*out_return = ret.int_value;
