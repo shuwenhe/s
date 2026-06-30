@@ -44,12 +44,48 @@ build-arm64:
 	@echo "Building S compiler for ARM64..."
 	@bash ./bin/build_s_arm64.sh
 
-.PHONY: help selfhost-bin
+seed-tests:
+	@echo "Building seed runtime/parser tests..."
+	@gcc -std=c11 -Wall -Wextra -Werror -DSEED_COMPILE_ONLY \
+	  -o ./bin/seed_tests \
+	  src/cmd/compile/seed/testing/tests.c \
+	  src/cmd/compile/seed/s_seed.c \
+	  src/cmd/compile/seed/bootstrap/bootstrap.c \
+	  src/cmd/compile/seed/lexical/lexer.c \
+	  src/cmd/compile/seed/error/error.c \
+	  src/cmd/compile/seed/syntax/parser.c \
+	  src/cmd/compile/seed/semantic/analyzer.c \
+	  src/cmd/compile/seed/intermediate/ir.c \
+	  src/cmd/compile/seed/code/generator.c \
+	  src/cmd/compile/seed/code/native_backend.c \
+	  src/cmd/compile/seed/runtime/runtime.c
+	@./bin/seed_tests
+
+seed-runtime-regression:
+	@echo "Building seed runtime regression tests..."
+	@gcc -std=c11 -Wall -Wextra -Werror -DSEED_COMPILE_ONLY \
+	  -o ./bin/seed_runtime_regression \
+	  src/cmd/compile/seed/testing/runtime_regression.c \
+	  src/cmd/compile/seed/s_seed.c \
+	  src/cmd/compile/seed/bootstrap/bootstrap.c \
+	  src/cmd/compile/seed/lexical/lexer.c \
+	  src/cmd/compile/seed/error/error.c \
+	  src/cmd/compile/seed/syntax/parser.c \
+	  src/cmd/compile/seed/semantic/analyzer.c \
+	  src/cmd/compile/seed/intermediate/ir.c \
+	  src/cmd/compile/seed/code/generator.c \
+	  src/cmd/compile/seed/code/native_backend.c \
+	  src/cmd/compile/seed/runtime/runtime.c
+	@./bin/seed_runtime_regression
+
+.PHONY: help selfhost-bin seed-tests seed-runtime-regression
 
 help:
 	@echo "  make run"
 	@echo "  make build-x86_64"
 	@echo "  make build-arm64"
+	@echo "  make seed-tests"
+	@echo "  make seed-runtime-regression"
 	@echo "  override install dir: make INSTALL_BIN_DIR=/usr/local/bin SUDO=sudo"
 
 selfhost-bin:
