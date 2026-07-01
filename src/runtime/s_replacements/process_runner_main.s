@@ -1,12 +1,12 @@
 // S 实现：process_runner_main.c
 // 提供进程运行入口
 
-fn usage(): int {
+func usage(): int {
     eprint("usage: process_runner run-argv <program> [arg ...] | run-shell <command>")
     return 1
 }
 
-fn main(args: [string]): int {
+func main(args: [string]): int {
     if args.len() < 2 {
         return usage()
     }
