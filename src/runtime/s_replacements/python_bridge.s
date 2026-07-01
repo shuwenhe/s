@@ -1,2 +1,2 @@
-fn python_bridge() {
+func python_bridge() {
 }

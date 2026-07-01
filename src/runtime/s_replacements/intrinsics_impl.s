@@ -1,2 +1,2 @@
-fn intrinsics_impl() {
+func intrinsics_impl() {
 }

@@ -1,2 +1,2 @@
-fn compat() {
+func compat() {
 }
