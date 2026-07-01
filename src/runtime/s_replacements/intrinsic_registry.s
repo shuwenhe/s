@@ -1,2 +1,2 @@
-fn intrinsic_registry() {
+func intrinsic_registry() {
 }

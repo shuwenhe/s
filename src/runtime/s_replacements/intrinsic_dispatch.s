@@ -1,2 +1,2 @@
-fn intrinsic_dispatch() {
+func intrinsic_dispatch() {
 }

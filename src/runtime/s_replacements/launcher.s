@@ -1,2 +1,2 @@
-fn launcher() {
+func launcher() {
 }

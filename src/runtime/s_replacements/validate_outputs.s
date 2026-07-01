@@ -1,2 +1,2 @@
-fn validate_outputs() {
+func validate_outputs() {
 }

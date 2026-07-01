@@ -607,16 +607,17 @@ func print_module_summary(Module m, string indent) void {
 }
 
 // Count trainable parameters
-def count_trainable_params(Module m) int {
+func count_trainable_params(Module m) int {
     int total = 0
     int i = 0
     while i < len(m.parameters):
         if m.parameters[i].requires_grad:
             total = total + m.parameters[i].data.shape.size
         i = i + 1
-    return total
+    total
+}
 
 // Move module to device (placeholder for future GPU support)
-def to_device(Module mut m, string device) void:
-    # Currently only CPU supported
-    pass
+func to_device(Module mut m, string device) void {
+    // Currently only CPU supported
+}
