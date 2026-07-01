@@ -1,2 +1,2 @@
-fn hosted_frontend() {
+func hosted_frontend() {
 }

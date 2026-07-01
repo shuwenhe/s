@@ -1,2 +1,2 @@
-fn hosted_command() {
+func hosted_command() {
 }

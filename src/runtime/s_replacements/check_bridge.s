@@ -1,2 +1,2 @@
-fn check_bridge() {
+func check_bridge() {
 }
