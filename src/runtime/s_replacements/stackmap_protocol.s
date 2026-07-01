@@ -1,2 +1,2 @@
-fn stackmap_protocol() {
+func stackmap_protocol() {
 }
