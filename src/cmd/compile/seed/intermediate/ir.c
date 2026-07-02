@@ -430,26 +430,30 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			}
 			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.assign_expr.name);
 			return true;
-			case AST_CALL_EXPR: {
-				size_t i;
-				char callee[IR_OPERAND_CAP] = "call";
-				char argc_text[IR_OPERAND_CAP];
-				for (i = 0; i < expr->as.call_expr.args.len; i++) {
-					char arg_tmp[IR_OPERAND_CAP];
-					if (!lower_expr(b, expr->as.call_expr.args.data[i], arg_tmp)) {
-						return false;
-					}
-					if (!emit_ins(b, IR_ARG, arg_tmp, "", "", expr->pos)) {
-						return false;
-					}
+		case AST_CALL_EXPR: {
+			size_t i;
+			char callee[IR_OPERAND_CAP] = "call";
+			char argc_text[IR_OPERAND_CAP];
+			for (i = 0; i < expr->as.call_expr.args.len; i++) {
+				char arg_tmp[IR_OPERAND_CAP];
+				if (!lower_expr(b, expr->as.call_expr.args.data[i], arg_tmp)) {
+					return false;
 				}
-				if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_IDENT_EXPR) {
-					snprintf(callee, sizeof(callee), "%s", expr->as.call_expr.callee->as.ident_expr.name);
+				if (!emit_ins(b, IR_ARG, arg_tmp, "", "", expr->pos)) {
+					return false;
 				}
-				snprintf(argc_text, sizeof(argc_text), "%zu", expr->as.call_expr.args.len);
-				next_temp(b, out);
-				return emit_ins(b, IR_CALL, out, callee, argc_text, expr->pos);
 			}
+			if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_IDENT_EXPR) {
+				snprintf(callee, sizeof(callee), "%s", expr->as.call_expr.callee->as.ident_expr.name);
+			} else if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_MEMBER_EXPR) {
+				if (!lower_expr(b, expr->as.call_expr.callee, callee)) {
+					return false;
+				}
+			}
+			snprintf(argc_text, sizeof(argc_text), "%zu", expr->as.call_expr.args.len);
+			next_temp(b, out);
+			return emit_ins(b, IR_CALL, out, callee, argc_text, expr->pos);
+		}
 		default:
 			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "unsupported expression in IR lowering");
 			return false;
