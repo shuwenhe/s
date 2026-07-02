@@ -156,8 +156,10 @@ impl lexer {
     }
 
     func read_number(mut self) result[string, lex_error] {
-        string out = ""        while !self.is_eof() {
-            string ch = self.peek()?            if !is_number_continue(ch) {
+        string out = ""
+        while !self.is_eof() {
+            string ch = self.peek()?
+            if !is_number_continue(ch) {
                 break
             }
             out = out + self.advance()?
