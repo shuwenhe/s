@@ -970,6 +970,32 @@ static int host_dispatch_call(
 		*out = value_make_int((long)strlen(text));
 		return 1;
 	}
+	if (strcmp(name, "float") == 0) {
+		const char *text = NULL;
+		char text_buf[64];
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "float expects 1 arg");
+			return 0;
+		}
+		if (args[0].kind == RUNTIME_FLOAT) {
+			*out = value_make_float(args[0].float_value);
+			return 1;
+		}
+		if (args[0].kind == RUNTIME_INT) {
+			*out = value_make_float((double)args[0].int_value);
+			return 1;
+		}
+		if (args[0].kind == RUNTIME_STRING) {
+			if (!value_as_cstr(&args[0], text_buf, sizeof(text_buf), &text)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "failed to render float argument");
+				return 0;
+			}
+			*out = value_make_float(strtod(text, NULL));
+			return 1;
+		}
+		error_set(err, ERR_SEMANTIC, 0, 0, "float expects numeric or string arg");
+		return 0;
+	}
 	if (strcmp(name, "string") == 0) {
 		if (argc != 1) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "string expects 1 arg");
