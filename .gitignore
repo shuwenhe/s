@@ -1,3 +1,11 @@
+# Ignore built S compiler binaries and local installs
+.local/
+bin/
+*.exe
+*.arm64_*
+
+# Build outputs
+/build/
 # build outputs
 build/
 out/
