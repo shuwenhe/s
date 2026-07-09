@@ -1,0 +1,36 @@
+#!/bin/bash
+# Real-time file watcher for auto-commit and push
+# Usage: .githooks/watch-and-commit
+
+REPO_DIR=$(pwd)
+LAST_COMMIT_TIME=0
+COMMIT_DELAY=2  # Wait 2 seconds after last change to avoid multiple commits
+
+auto_commit() {
+    if git diff --quiet && git diff --cached --quiet; then
+        return
+    fi
+    
+    git add -A
+    TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+    git commit -m "chore: auto-commit changes at $TIMESTAMP" 2>/dev/null && \
+    git push origin main 2>/dev/null
+}
+
+# Check if inotifywait is available
+if command -v inotifywait &> /dev/null; then
+    echo "Starting file watcher for $REPO_DIR..."
+    inotifywait -m -r -e modify,create,delete \
+        --exclude '(\.git/|\.vscode/|node_modules/|__pycache__|\.pyc|\.o)' \
+        "$REPO_DIR" 2>/dev/null | while read path action file; do
+        echo "[$(date '+%H:%M:%S')] $action $path$file"
+        sleep $COMMIT_DELAY
+        auto_commit
+    done
+else
+    echo "inotifywait not found. Using fallback polling mode (every 1 second)..."
+    while true; do
+        auto_commit
+        sleep 1
+    done
+fi
