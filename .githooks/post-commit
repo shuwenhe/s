@@ -1,0 +1,3 @@
+#!/bin/bash
+# Auto-push after commit to main branch
+git push origin main 2>/dev/null
