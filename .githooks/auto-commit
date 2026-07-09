@@ -1,11 +1,70 @@
 #!/bin/bash
-# Auto-commit and push on file changes
+# Auto-commit and push on file changes with intelligent commit messages
 # This script should be run periodically or via a file watcher
 
 STATUS=$(git status --porcelain)
 if [ -n "$STATUS" ]; then
     git add -A
-    TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-    git commit -m "chore: auto-commit changes at $TIMESTAMP" 2>/dev/null && \
+    
+    # Get statistics about changes
+    FILES_CHANGED=$(git diff --cached --name-only | tr '\n' ' ')
+    STATS=$(git diff --cached --numstat | awk '{added+=$1; removed+=$2} END {print added " " removed}')
+    LINES_ADDED=$(echo "$STATS" | awk '{print $1}')
+    LINES_REMOVED=$(echo "$STATS" | awk '{print $2}')
+    
+    # Analyze changed files to determine commit type and component
+    COMPONENT=""
+    HAS_TRAINER=0
+    HAS_EXAMPLES=0
+    HAS_README=0
+    HAS_STDLIB=0
+    HAS_COMPILER=0
+    HAS_TESTS=0
+    
+    # Extract component name if trainer file exists
+    TRAINER_FILE=$(echo "$FILES_CHANGED" | grep -o "[^ ]*_trainer\.s" | head -1)
+    if [ -n "$TRAINER_FILE" ]; then
+        COMPONENT=$(basename "$TRAINER_FILE" _trainer.s | sed 's/_/-/g')
+        HAS_TRAINER=1
+    fi
+    
+    # Check file types for S language project
+    echo "$FILES_CHANGED" | grep -q "_examples\.s\|example" && HAS_EXAMPLES=1
+    echo "$FILES_CHANGED" | grep -q "README\|\.md" && HAS_README=1
+    echo "$FILES_CHANGED" | grep -q "lib/\|stdlib" && HAS_STDLIB=1
+    echo "$FILES_CHANGED" | grep -q "src/\|compiler\|bin/" && HAS_COMPILER=1
+    echo "$FILES_CHANGED" | grep -q "test/" && HAS_TESTS=1
+    
+    # Generate meaningful commit message
+    if [ "$HAS_COMPILER" -eq 1 ] && [ "$LINES_ADDED" -gt 100 ]; then
+        MSG="feat: improve S compiler implementation ($LINES_ADDED lines)"
+    elif [ "$HAS_STDLIB" -eq 1 ] && [ "$LINES_ADDED" -gt 50 ]; then
+        MSG="feat: add S standard library functions ($LINES_ADDED lines)"
+    elif [ "$HAS_TESTS" -eq 1 ]; then
+        MSG="test: add S language tests ($LINES_ADDED lines)"
+    elif [ "$HAS_README" -eq 1 ]; then
+        # Documentation update
+        MSG="docs: update S language documentation ($LINES_ADDED lines)"
+    elif [ "$HAS_TRAINER" -eq 1 ] && [ "$HAS_EXAMPLES" -eq 1 ]; then
+        # Complete feature implementation
+        MSG="feat: implement $COMPONENT trainer with examples ($LINES_ADDED lines)"
+    elif [ "$HAS_TRAINER" -eq 1 ]; then
+        # Trainer implementation/update
+        MSG="feat: implement $COMPONENT trainer ($LINES_ADDED lines)"
+    elif [ "$HAS_EXAMPLES" -eq 1 ]; then
+        # Examples
+        MSG="feat: add usage examples ($LINES_ADDED lines)"
+    else
+        # Fallback: generic message with line count
+        if [ "$LINES_ADDED" -gt 500 ]; then
+            MSG="feat: major implementation update ($LINES_ADDED lines added)"
+        elif [ "$LINES_ADDED" -gt 100 ]; then
+            MSG="feat: add functionality ($LINES_ADDED lines)"
+        else
+            MSG="feat: update S language code ($LINES_ADDED added, $LINES_REMOVED removed)"
+        fi
+    fi
+    
+    git commit -m "$MSG" 2>/dev/null && \
     git push origin main 2>/dev/null
 fi
