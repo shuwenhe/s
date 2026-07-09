@@ -1,0 +1,11 @@
+#!/bin/bash
+# Auto-commit and push on file changes
+# This script should be run periodically or via a file watcher
+
+STATUS=$(git status --porcelain)
+if [ -n "$STATUS" ]; then
+    git add -A
+    TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+    git commit -m "chore: auto-commit changes at $TIMESTAMP" 2>/dev/null && \
+    git push origin main 2>/dev/null
+fi
