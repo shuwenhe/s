@@ -16,12 +16,10 @@ esac
 
 current_branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
 if [ "$current_branch" != "$BRANCH" ]; then
-    echo "post-commit: current branch is '$current_branch', expected '$BRANCH'; skip auto-push" >&2
     exit 0
 fi
 
 if ! git remote get-url origin >/dev/null 2>&1; then
-    echo "post-commit: origin remote not configured; skip auto-push" >&2
     exit 0
 fi
 

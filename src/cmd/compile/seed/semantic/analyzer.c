@@ -1020,21 +1020,25 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_PROGRAM:
 			for (i = 0; i < node->as.program.statements.len; i++) {
 				ast_node *decl = node->as.program.statements.data[i];
-				if (decl->kind == AST_FN_STMT) {
+				if (decl->kind == AST_FN_STMT || decl->kind == AST_EXTERN_DECL) {
+					const char *name = decl->kind == AST_FN_STMT ? decl->as.fn_stmt.name : decl->as.extern_decl.name;
+					char **param_types = decl->kind == AST_FN_STMT ? decl->as.fn_stmt.param_types : decl->as.extern_decl.param_types;
+					size_t param_count = decl->kind == AST_FN_STMT ? decl->as.fn_stmt.param_count : decl->as.extern_decl.param_count;
+					const char *return_type = decl->kind == AST_FN_STMT ? decl->as.fn_stmt.return_type : decl->as.extern_decl.return_type;
 					status = scope_define(
 						ctx->current_scope,
-						decl->as.fn_stmt.name,
+						name,
 						SYMBOL_FN,
 						0,
-						(int)decl->as.fn_stmt.param_count,
-						(int)decl->as.fn_stmt.param_count,
-						decl->as.fn_stmt.return_type ? decl->as.fn_stmt.return_type : TYPE_ANY,
-						decl->as.fn_stmt.param_types,
-						decl->as.fn_stmt.param_count
+						(int)param_count,
+						(int)param_count,
+						return_type ? return_type : TYPE_ANY,
+						param_types,
+						param_count
 					);
 					if (status == 0) {
 						error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
-							"redefinition of function '%s'", decl->as.fn_stmt.name);
+							"redefinition of function '%s'", name);
 						return 0;
 					}
 					if (status < 0) {
@@ -1110,6 +1114,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			return 1;
 		case AST_PACKAGE_DECL:
 		case AST_USE_DECL:
+		case AST_EXTERN_DECL:
 			return 1;
 		case AST_BLOCK:
 			return analyze_block_with_new_scope(ctx, node);

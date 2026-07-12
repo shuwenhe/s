@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import argparse
 import fcntl
 import os
@@ -10,43 +12,25 @@ import time
 from pathlib import Path
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Watch a git repository and auto commit/push stable changes."
-    )
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Watch a git repository and auto commit/push stable changes.")
     parser.add_argument("--repo", default=".", help="Path to the git repository.")
-    parser.add_argument(
-        "--interval",
-        type=float,
-        default=2.0,
-        help="Polling interval in seconds.",
-    )
-    parser.add_argument(
-        "--debounce",
-        type=float,
-        default=5.0,
-        help="Wait time after the last change before committing.",
-    )
-    parser.add_argument(
-        "--message-prefix",
-        default="chore: auto update",
-        help="Prefix used for generated commit messages.",
-    )
+    parser.add_argument("--interval", type=float, default=2.0, help="Polling interval in seconds.")
+    parser.add_argument("--debounce", type=float, default=3.0, help="Wait after the last change before committing.")
+    parser.add_argument("--branch", default=os.environ.get("NEURX_AUTO_PUSH_BRANCH", "main"), help="Branch to keep current and push.")
+    parser.add_argument("--remote", default=os.environ.get("NEURX_AUTO_PUSH_REMOTE", "origin"), help="Git remote to push to.")
+    parser.add_argument("--message-prefix", default=os.environ.get("NEURX_AUTO_PUSH_MESSAGE_PREFIX", "chore: auto save"), help="Commit message prefix.")
     return parser.parse_args()
 
 
-def git(repo, *args, check=True):
-    result = subprocess.run(
-        ["git", "-C", str(repo), *args],
-        text=True,
-        capture_output=True,
-    )
+def git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(["git", "-C", str(repo), *args], text=True, capture_output=True)
     if check and result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or "git command failed")
     return result
 
 
-def acquire_lock(lock_path):
+def acquire_lock(lock_path: Path):
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     lock_file = open(lock_path, "w", encoding="utf-8")
     try:
@@ -58,100 +42,88 @@ def acquire_lock(lock_path):
     return lock_file
 
 
-def get_status(repo):
-    return git(repo, "status", "--porcelain", check=True).stdout.strip()
-
-
-def current_branch(repo):
+def current_branch(repo: Path) -> str:
     return git(repo, "branch", "--show-current", check=True).stdout.strip()
 
 
-def has_upstream(repo):
-    result = git(
-        repo,
-        "rev-parse",
-        "--abbrev-ref",
-        "--symbolic-full-name",
-        "@{u}",
-        check=False,
-    )
+def has_remote(repo: Path, remote: str) -> bool:
+    result = git(repo, "remote", "get-url", remote, check=False)
     return result.returncode == 0
 
 
-def summarize_paths(paths):
-    labels = []
-    mapping = [
-        ("src/cmd/compile/internal/", "compiler"),
-        ("src/s/", "language packages"),
-        ("src/runtime/", "runtime"),
-        ("src/prelude/", "standard library"),
-        ("src/result/", "standard library"),
-        ("src/option/", "standard library"),
-        ("src/vec/", "standard library"),
-        ("src/io/", "standard library"),
-        ("src/fs/", "standard library"),
-        ("src/env/", "standard library"),
-        ("src/process/", "standard library"),
-        ("src/cmd/", "commands"),
-        ("doc/", "docs"),
-        ("misc/editor/vscode/", "VS Code support"),
-        (".vscode/", "workspace settings"),
-        ("misc/scripts/", "tooling"),
-        ("misc/examples/", "examples"),
-    ]
-    for prefix, label in mapping:
-        if any(path.startswith(prefix) for path in paths):
-            labels.append(label)
-    if not labels:
-        labels.append("project files")
-    return labels
+def list_changed_paths(repo: Path) -> list[str]:
+    result = git(repo, "diff", "--cached", "--name-only", check=True)
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
-def build_commit_message(paths):
-    labels = summarize_paths(paths)
-    if len(labels) == 1:
-        return f"Update {labels[0]}."
-    if len(labels) == 2:
-        return f"Update {labels[0]} and {labels[1]}."
-    return f"Update {', '.join(labels[:-1])}, and {labels[-1]}."
+def summarize_paths(paths: list[str]) -> str:
+    if not paths:
+        return "update"
+    if any(path.startswith("src/") for path in paths):
+        return "update source"
+    if any(path.startswith("misc/") for path in paths):
+        return "update tooling"
+    if any(path.startswith("doc/") or path.endswith(".md") for path in paths):
+        return "update docs"
+    return "update files"
 
 
-def commit_and_push(repo, message_prefix):
+def commit_and_push(repo: Path, remote: str, branch: str, message_prefix: str) -> bool:
     git(repo, "add", "-A", check=True)
-    cached = git(repo, "diff", "--cached", "--name-only", check=True).stdout.strip()
-    if not cached:
+    if git(repo, "diff", "--cached", "--quiet", check=False).returncode == 0:
         return False
-    changed_paths = [line.strip() for line in cached.splitlines() if line.strip()]
 
-    message = f"{message_prefix}: {build_commit_message(changed_paths)}"
-    git(repo, "commit", "-m", message, check=True)
+    changed_paths = list_changed_paths(repo)
+    message = f"{message_prefix}: {summarize_paths(changed_paths)}"
+    env = os.environ.copy()
+    env["NEURX_SKIP_AUTO_PUSH"] = "1"
 
-    branch = current_branch(repo)
-    if not branch:
-        raise RuntimeError("cannot determine current branch")
+    commit = subprocess.run(
+        ["git", "-C", str(repo), "commit", "-m", message],
+        text=True,
+        capture_output=True,
+        env=env,
+    )
+    if commit.returncode != 0:
+        raise RuntimeError(commit.stderr.strip() or "git commit failed")
 
-    if has_upstream(repo):
-        git(repo, "push", check=True)
-    else:
-        git(repo, "push", "-u", "origin", branch, check=True)
+    if not has_remote(repo, remote):
+        raise RuntimeError(f"remote '{remote}' is not configured")
+
+    push = subprocess.run(["git", "-C", str(repo), "push", remote, branch], text=True, capture_output=True)
+    if push.returncode != 0:
+        raise RuntimeError(push.stderr.strip() or "git push failed")
+
     return True
 
 
-def main():
+def scan_mtimes(root: Path) -> dict[str, float]:
+    mtimes: dict[str, float] = {}
+    for path in root.rglob("*"):
+        if ".git" in path.parts:
+            continue
+        try:
+            if path.is_file():
+                mtimes[str(path)] = path.stat().st_mtime
+        except OSError:
+            continue
+    return mtimes
+
+
+def main() -> int:
     args = parse_args()
     repo = Path(args.repo).resolve()
-    git_dir = repo / ".git"
-    lock_path = git_dir / "auto_commit_push.lock"
-
-    if not git_dir.exists():
+    if not (repo / ".git").exists():
         print(f"{repo} is not a git repository", file=sys.stderr)
         return 1
 
-    try:
-        lock_file = acquire_lock(lock_path)
-    except RuntimeError as exc:
-        print(str(exc), file=sys.stderr)
+    branch = args.branch
+    if current_branch(repo) != branch:
+        print(f"watcher: current branch must be '{branch}'", file=sys.stderr)
         return 1
+
+    lock_path = repo / ".git" / "auto_commit_push.lock"
+    acquire_lock(lock_path)
 
     running = True
 
@@ -164,64 +136,50 @@ def main():
     signal.signal(signal.SIGTERM, stop_handler)
 
     print(f"watching {repo}")
-    print(f"interval={args.interval}s debounce={args.debounce}s")
+    print(f"branch={branch} remote={args.remote} interval={args.interval}s debounce={args.debounce}s")
     sys.stdout.flush()
 
-    last_seen_status = None
+    last_scan = scan_mtimes(repo)
     dirty_since = None
-    last_processed_status = None
+    last_signature = None
 
     try:
         while running:
-            try:
-                status = get_status(repo)
-            except Exception as exc:
-                print(f"[error] status failed: {exc}", file=sys.stderr)
-                sys.stderr.flush()
-                time.sleep(max(args.interval, 3.0))
-                continue
+            current = scan_mtimes(repo)
+            changed = [path for path, mtime in current.items() if last_scan.get(path) != mtime]
+            removed = [path for path in last_scan if path not in current]
 
-            if not status:
-                last_seen_status = None
-                dirty_since = None
-                time.sleep(args.interval)
-                continue
-
-            if status != last_seen_status:
-                last_seen_status = status
+            if changed or removed:
                 dirty_since = time.time()
-                print("[change detected]")
-                print(status)
-                sys.stdout.flush()
+                signature = tuple(sorted(changed + removed))
+                if signature != last_signature:
+                    print(f"[change] {len(changed) + len(removed)} file(s)")
+                    sys.stdout.flush()
+                    last_signature = signature
                 time.sleep(args.interval)
+                last_scan = current
                 continue
 
-            if dirty_since is None or (time.time() - dirty_since) < args.debounce:
-                time.sleep(args.interval)
-                continue
+            if dirty_since is not None and (time.time() - dirty_since) >= args.debounce:
+                try:
+                    committed = commit_and_push(repo, args.remote, branch, args.message_prefix)
+                except Exception as exc:
+                    print(f"[error] commit/push failed: {exc}", file=sys.stderr)
+                    sys.stderr.flush()
+                    dirty_since = None
+                    last_signature = None
+                    time.sleep(max(args.interval, 3.0))
+                    continue
 
-            if status == last_processed_status:
-                time.sleep(args.interval)
-                continue
-
-            try:
-                committed = commit_and_push(repo, args.message_prefix)
-            except Exception as exc:
-                print(f"[error] commit/push failed: {exc}", file=sys.stderr)
-                sys.stderr.flush()
-                last_processed_status = None
-                time.sleep(max(args.interval, 5.0))
-                continue
-
-            if committed:
-                print("[pushed] changes committed and pushed")
-                sys.stdout.flush()
-                last_processed_status = status
-                last_seen_status = None
+                if committed:
+                    print("[pushed] changes committed and pushed")
+                    sys.stdout.flush()
                 dirty_since = None
+                last_signature = None
+                last_scan = scan_mtimes(repo)
+
             time.sleep(args.interval)
     finally:
-        lock_file.close()
         try:
             lock_path.unlink(missing_ok=True)
         except OSError:

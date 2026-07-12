@@ -85,6 +85,45 @@ static bool test_runtime_nested_member_return_alias(void) {
 	return execute_source_main(src, &ret, &err) && ret == 7;
 }
 
+static bool test_runtime_host_file_operations(void) {
+	const char *path = "/tmp/s_seed_runtime_file_test.txt";
+	const char *src =
+		"fn main() int { "
+		"  if __host_write_text_file(\"/tmp/s_seed_runtime_file_test.txt\", \"hello from s\") < 0 { return 0; } "
+		"  if __host_read_to_string(\"/tmp/s_seed_runtime_file_test.txt\") == \"hello from s\" { return 1; } "
+		"  return 0; "
+		"}";
+	compile_error err;
+	long ret = 0;
+	bool ok = execute_source_main(src, &ret, &err) && ret == 1;
+	remove(path);
+	return ok;
+}
+
+static bool test_runtime_host_socket_operations(void) {
+	const char *src =
+		"extern \"libc:socket\" func native_socket(int domain, int kind, int protocol) int; "
+		"extern \"libc:close\" func native_close(int fd) int; "
+		"fn main() int { "
+		"  var fd = native_socket(2, 1, 6); "
+		"  if fd < 0 { return 0; } "
+		"  if native_close(fd) < 0 { return 0; } "
+		"  return 1; "
+		"}";
+	compile_error err;
+	long ret = 0;
+	return execute_source_main(src, &ret, &err) && ret == 1;
+}
+
+static bool test_runtime_libc_ffi(void) {
+	const char *src =
+		"extern \"libc\" func strlen(string text) int; "
+		"fn main() int { return strlen(\"native ffi\"); }";
+	compile_error err;
+	long ret = 0;
+	return execute_source_main(src, &ret, &err) && ret == 10;
+}
+
 int main(void) {
 	bool ok = true;
 
@@ -102,6 +141,18 @@ int main(void) {
 	}
 	if (!test_runtime_nested_member_return_alias()) {
 		fprintf(stderr, "FAIL: %s\n", "test_runtime_nested_member_return_alias");
+		ok = false;
+	}
+	if (!test_runtime_host_file_operations()) {
+		fprintf(stderr, "FAIL: %s\n", "test_runtime_host_file_operations");
+		ok = false;
+	}
+	if (!test_runtime_host_socket_operations()) {
+		fprintf(stderr, "FAIL: %s\n", "test_runtime_host_socket_operations");
+		ok = false;
+	}
+	if (!test_runtime_libc_ffi()) {
+		fprintf(stderr, "FAIL: %s\n", "test_runtime_libc_ffi");
 		ok = false;
 	}
 

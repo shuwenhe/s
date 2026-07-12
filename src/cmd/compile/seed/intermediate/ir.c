@@ -12,7 +12,38 @@ typedef struct ir_builder {
 	char break_labels[64][IR_OPERAND_CAP];
 	char continue_labels[64][IR_OPERAND_CAP];
 	int loop_depth;
+	ast_node *externs[128];
+	size_t extern_count;
 } ir_builder;
+
+static ast_node *find_extern(ir_builder *b, const char *name) {
+	size_t i;
+	for (i = 0; i < b->extern_count; i++) {
+		if (strcmp(b->externs[i]->as.extern_decl.name, name) == 0) return b->externs[i];
+	}
+	return NULL;
+}
+
+static int ffi_callee_name(ast_node *decl, char out[IR_OPERAND_CAP]) {
+	size_t i;
+	const char *abi = decl->as.extern_decl.abi;
+	const char *symbol = decl->as.extern_decl.name;
+	int n;
+	if (strncmp(abi, "libc:", 5) == 0) {
+		symbol = abi + 5;
+		abi = "libc";
+	}
+	n = snprintf(out, IR_OPERAND_CAP, "__ffi_%s$%s$%s$", abi, symbol, decl->as.extern_decl.return_type);
+	size_t used;
+	if (n < 0 || n >= IR_OPERAND_CAP) return 0;
+	used = (size_t)n;
+	for (i = 0; i < decl->as.extern_decl.param_count; i++) {
+		n = snprintf(out + used, IR_OPERAND_CAP - used, "%s%s", i ? "," : "", decl->as.extern_decl.param_types[i]);
+		if (n < 0 || (size_t)n >= IR_OPERAND_CAP - used) return 0;
+		used += (size_t)n;
+	}
+	return 1;
+}
 
 static void copy_str(char dst[IR_OPERAND_CAP], const char *src) {
 	if (!src) {
@@ -445,6 +476,13 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			}
 			if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_IDENT_EXPR) {
 				snprintf(callee, sizeof(callee), "%s", expr->as.call_expr.callee->as.ident_expr.name);
+				{
+					ast_node *decl = find_extern(b, callee);
+					if (decl && strncmp(decl->as.extern_decl.abi, "libc", 4) == 0 && !ffi_callee_name(decl, callee)) {
+						error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "extern signature too long");
+						return false;
+					}
+				}
 			} else if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_MEMBER_EXPR) {
 				if (!lower_expr(b, expr->as.call_expr.callee, callee)) {
 					return false;
@@ -629,9 +667,10 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		return true;
 	}
 	switch (stmt->kind) {
-			case AST_PACKAGE_DECL:
-			case AST_USE_DECL:
-				return true;
+		case AST_PACKAGE_DECL:
+		case AST_USE_DECL:
+		case AST_EXTERN_DECL:
+			return true;
 		case AST_BLOCK:
 			return lower_block(b, stmt);
 		case AST_LET_STMT:
@@ -701,5 +740,13 @@ bool ir_generate_from_ast(ast_node *root, IR *ir, compile_error *err) {
 	b.temp_counter = 0;
 	b.label_counter = 0;
 	b.loop_depth = 0;
+	b.extern_count = 0;
+	if (root->kind == AST_PROGRAM) {
+		size_t i;
+		for (i = 0; i < root->as.program.statements.len; i++) {
+			ast_node *decl = root->as.program.statements.data[i];
+			if (decl->kind == AST_EXTERN_DECL && b.extern_count < 128) b.externs[b.extern_count++] = decl;
+		}
+	}
 	return lower_stmt(&b, root);
 }
