@@ -5,13 +5,16 @@ set -euo pipefail
 # This script ensures the S compiler runtime environment is properly set up
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-S_ROOT="/Users/feifei/shuwen/train/s"
-INSTALL_DIR="$S_ROOT/.local/bin"
 
 echo "════════════════════════════════════════════════════════════════"
 echo "🔧 S Compiler Runtime Setup"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
+
+# Resolve the repository root from the script location so the installer
+# works regardless of the checkout path.
+S_ROOT="$(cd "${SCRIPT_DIR}" && pwd)"
+INSTALL_DIR="$S_ROOT/.local/bin"
 
 # Step 1: Verify S compiler source files exist
 echo "▶ Checking S compiler source files..."
