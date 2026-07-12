@@ -17,6 +17,7 @@ typedef enum ast_kind {
 	AST_EXPR_STMT,
 	AST_PACKAGE_DECL,
 	AST_USE_DECL,
+	AST_EXTERN_DECL,
 	AST_IF_STMT,
 	AST_WHILE_STMT,
 	AST_FOR_STMT,
@@ -86,6 +87,15 @@ struct ast_node {
 			char **selectors;
 			size_t selector_count;
 		} use_decl;
+
+		struct {
+			char *abi;
+			char *name;
+			char **params;
+			char **param_types;
+			size_t param_count;
+			char *return_type;
+		} extern_decl;
 
 		struct {
 			ast_node *condition;

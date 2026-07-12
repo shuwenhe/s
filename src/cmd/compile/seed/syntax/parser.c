@@ -70,6 +70,7 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_EXPR_STMT: return "EXPR_STMT";
 		case AST_PACKAGE_DECL: return "PACKAGE_DECL";
 		case AST_USE_DECL: return "USE_DECL";
+		case AST_EXTERN_DECL: return "EXTERN_DECL";
 		case AST_IF_STMT: return "IF_STMT";
 		case AST_WHILE_STMT: return "WHILE_STMT";
 		case AST_FOR_STMT: return "FOR_STMT";
@@ -155,6 +156,17 @@ void ast_free(ast_node *node) {
 				free(node->as.use_decl.selectors[i]);
 			}
 			free(node->as.use_decl.selectors);
+			break;
+		case AST_EXTERN_DECL:
+			free(node->as.extern_decl.abi);
+			free(node->as.extern_decl.name);
+			for (i = 0; i < node->as.extern_decl.param_count; i++) {
+				free(node->as.extern_decl.params[i]);
+				free(node->as.extern_decl.param_types[i]);
+			}
+			free(node->as.extern_decl.params);
+			free(node->as.extern_decl.param_types);
+			free(node->as.extern_decl.return_type);
 			break;
 		case AST_IF_STMT:
 			ast_free(node->as.if_stmt.condition);
@@ -1911,76 +1923,77 @@ static ast_node *parse_top_level(parser *p) {
 static ast_node *parse_extern_decl(parser *p) {
 	const token *kw = peek(p);
 	ast_node *node;
-	int depth;
+	size_t cap = 0;
 
 	if (!match(p, TOKEN_IDENTIFIER) || strcmp(prev(p)->lexeme, "extern") != 0) {
 		parse_error(p, peek(p), "expected 'extern'");
 		return NULL;
 	}
 
+	node = ast_new(AST_EXTERN_DECL, kw->pos);
+	if (!node) return NULL;
 	if (check(p, TOKEN_STRING)) {
 		advance_tok(p);
+		node->as.extern_decl.abi = dup_cstr(prev(p)->lexeme);
+	} else {
+		node->as.extern_decl.abi = dup_cstr("intrinsic");
 	}
+	if (!node->as.extern_decl.abi) { ast_free(node); return NULL; }
 
 	if (!match(p, TOKEN_FN)) {
 		parse_error(p, peek(p), "expected 'func' after extern");
+		ast_free(node);
 		return NULL;
 	}
 
 	if (!expect(p, TOKEN_IDENTIFIER, "extern function name")) {
-		return NULL;
-	}
-	if (!expect(p, TOKEN_LPAREN, "'(' after extern function name")) {
-		return NULL;
-	}
-
-	depth = 1;
-	while (depth > 0 && !is_at_end(p)) {
-		if (match(p, TOKEN_LPAREN)) {
-			depth++;
-			continue;
-		}
-		if (match(p, TOKEN_RPAREN)) {
-			depth--;
-			continue;
-		}
-		advance_tok(p);
-	}
-	if (depth != 0) {
-		parse_error(p, kw, "unterminated extern parameter list");
-		return NULL;
-	}
-
-	if (check(p, TOKEN_LPAREN)) {
-		advance_tok(p);
-		depth = 1;
-		while (depth > 0 && !is_at_end(p)) {
-			if (match(p, TOKEN_LPAREN)) {
-				depth++;
-				continue;
-			}
-			if (match(p, TOKEN_RPAREN)) {
-				depth--;
-				continue;
-			}
-			advance_tok(p);
-		}
-		if (depth != 0) {
-			parse_error(p, kw, "unterminated extern return type");
-			return NULL;
-		}
-	}
-
-	consume_optional_semicolon(p);
-	node = ast_new(AST_PACKAGE_DECL, kw->pos);
-	if (!node) {
-		return NULL;
-	}
-	node->as.package_decl.name = dup_cstr("");
-	if (!node->as.package_decl.name) {
 		ast_free(node);
 		return NULL;
 	}
+	node->as.extern_decl.name = dup_cstr(prev(p)->lexeme);
+	if (!node->as.extern_decl.name) { ast_free(node); return NULL; }
+	if (!expect(p, TOKEN_LPAREN, "'(' after extern function name")) {
+		ast_free(node);
+		return NULL;
+	}
+	while (!check(p, TOKEN_RPAREN)) {
+		char *param_type = NULL;
+		char *param_name = NULL;
+		if (!try_parse_typed_name(p, TOKEN_COMMA, &param_type, &param_name)) {
+			parse_error(p, peek(p), "expected typed extern parameter");
+			ast_free(node);
+			return NULL;
+		}
+		if (node->as.extern_decl.param_count == cap) {
+			size_t next_cap = cap == 0 ? 4 : cap * 2;
+			char **next_params = (char **)realloc(node->as.extern_decl.params, next_cap * sizeof(char *));
+			char **next_types = (char **)realloc(node->as.extern_decl.param_types, next_cap * sizeof(char *));
+			if (!next_params || !next_types) {
+				free(next_params); free(next_types); free(param_type); free(param_name); ast_free(node); return NULL;
+			}
+			node->as.extern_decl.params = next_params;
+			node->as.extern_decl.param_types = next_types;
+			cap = next_cap;
+		}
+		node->as.extern_decl.params[node->as.extern_decl.param_count] = param_name;
+		node->as.extern_decl.param_types[node->as.extern_decl.param_count++] = param_type;
+		if (!match(p, TOKEN_COMMA)) break;
+	}
+	if (!expect(p, TOKEN_RPAREN, "')' after extern parameters")) { ast_free(node); return NULL; }
+	if (check(p, TOKEN_LPAREN)) {
+		advance_tok(p);
+		if (!expect(p, TOKEN_RPAREN, "')' in unit return type")) { ast_free(node); return NULL; }
+		node->as.extern_decl.return_type = dup_cstr("()");
+	} else {
+		size_t type_start = p->current;
+		size_t type_line = peek(p)->pos.line;
+		while (!is_at_end(p) && !check(p, TOKEN_SEMICOLON) && peek(p)->pos.line == type_line) advance_tok(p);
+		if (p->current > type_start) node->as.extern_decl.return_type = join_lexemes_range(p->tokens, type_start, p->current);
+		else node->as.extern_decl.return_type = dup_cstr("()");
+	}
+	if (!node->as.extern_decl.return_type) { ast_free(node); return NULL; }
+
+	consume_optional_semicolon(p);
 	return node;
 }
 

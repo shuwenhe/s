@@ -1,8 +1,18 @@
 #include <ctype.h>
+#include <arpa/inet.h>
+#include <dlfcn.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <poll.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "../code/target.h"
@@ -14,6 +24,7 @@
 
 static int g_host_argc = 0;
 static char **g_host_argv = NULL;
+static int g_host_errno = 0;
 
 typedef struct runtime_profile_counter {
 	char name[128];
@@ -554,25 +565,62 @@ static int read_source_text_file(const char *path, char **out_text, compile_erro
 }
 
 static char *run_command_capture_output(const char *command, compile_error *err) {
-	char temp_path[256];
-	char system_command[4096];
+	FILE *pipe = NULL;
 	char *captured = NULL;
-	snprintf(temp_path, sizeof(temp_path), "/tmp/s_runtime_cmd_%ld.txt", (long)getpid());
-	if (snprintf(system_command, sizeof(system_command), "%s > %s", command, temp_path) >= (int)sizeof(system_command)) {
-		remove(temp_path);
+	size_t used = 0;
+	size_t cap = 0;
+	char stream_command[4096];
+	char chunk[4096];
+	size_t nread = 0;
+	if (snprintf(stream_command, sizeof(stream_command), "%s 2>&1", command) >= (int)sizeof(stream_command)) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "command too long");
 		return NULL;
 	}
-	if (system(system_command) != 0) {
-		remove(temp_path);
+	pipe = popen(stream_command, "r");
+	if (!pipe) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to run command");
+		return NULL;
+	}
+	while ((nread = fread(chunk, 1, sizeof(chunk), pipe)) > 0) {
+		if (fwrite(chunk, 1, nread, stdout) != nread) {
+			pclose(pipe);
+			free(captured);
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to stream command output");
+			return NULL;
+		}
+		fflush(stdout);
+		if (used + nread + 1 > cap) {
+			size_t new_cap = cap == 0 ? 8192 : cap * 2;
+			while (new_cap < used + nread + 1) {
+				new_cap *= 2;
+			}
+			char *grown = (char *)realloc(captured, new_cap);
+			if (!grown) {
+				pclose(pipe);
+				free(captured);
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				return NULL;
+			}
+			captured = grown;
+			cap = new_cap;
+		}
+		memcpy(captured + used, chunk, nread);
+		used += nread;
+	}
+	if (pclose(pipe) != 0) {
+		free(captured);
 		error_set(err, ERR_SEMANTIC, 0, 0, "command failed");
 		return NULL;
 	}
-	if (!read_source_text_file(temp_path, &captured, err)) {
-		remove(temp_path);
-		return NULL;
+	if (!captured) {
+		captured = (char *)calloc(1, 1);
+		if (!captured) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return NULL;
+		}
+	} else {
+		captured[used] = '\0';
 	}
-	remove(temp_path);
 	return captured;
 }
 
@@ -633,6 +681,146 @@ static char *host_read_text_file(const char *path, compile_error *err) {
 	}
 	buf[len] = '\0';
 	return buf;
+}
+
+static int host_write_text_file(const char *path, const char *contents) {
+	FILE *fp;
+	size_t len;
+	if (!path || !*path || !contents) {
+		g_host_errno = EINVAL;
+		return -1;
+	}
+	fp = fopen(path, "wb");
+	if (!fp) {
+		g_host_errno = errno;
+		return -1;
+	}
+	len = strlen(contents);
+	if (fwrite(contents, 1, len, fp) != len || fclose(fp) != 0) {
+		g_host_errno = errno ? errno : EIO;
+		return -1;
+	}
+	g_host_errno = 0;
+	return 0;
+}
+
+static char *host_make_temp_dir(const char *prefix) {
+	const char *base = (prefix && *prefix) ? prefix : "s";
+	char *path;
+	size_t len = strlen(base) + 20;
+	path = (char *)malloc(len);
+	if (!path) {
+		g_host_errno = ENOMEM;
+		return NULL;
+	}
+	snprintf(path, len, "/tmp/%s-XXXXXX", base);
+	if (!mkdtemp(path)) {
+		g_host_errno = errno;
+		free(path);
+		return NULL;
+	}
+	g_host_errno = 0;
+	return path;
+}
+
+static int host_sockaddr(const char *ip, int port, int family, struct sockaddr_storage *storage, socklen_t *len) {
+	memset(storage, 0, sizeof(*storage));
+	if (family == AF_INET) {
+		struct sockaddr_in *addr = (struct sockaddr_in *)storage;
+		addr->sin_family = AF_INET;
+		addr->sin_port = htons((unsigned short)port);
+		if (!ip || !*ip || strcmp(ip, "0.0.0.0") == 0) {
+			addr->sin_addr.s_addr = htonl(INADDR_ANY);
+		} else if (inet_pton(AF_INET, ip, &addr->sin_addr) != 1) {
+			g_host_errno = EINVAL;
+			return 0;
+		}
+		*len = sizeof(*addr);
+		return 1;
+	}
+	if (family == AF_INET6) {
+		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)storage;
+		addr->sin6_family = AF_INET6;
+		addr->sin6_port = htons((unsigned short)port);
+		if (!ip || !*ip || strcmp(ip, "::") == 0) {
+			addr->sin6_addr = in6addr_any;
+		} else if (inet_pton(AF_INET6, ip, &addr->sin6_addr) != 1) {
+			g_host_errno = EINVAL;
+			return 0;
+		}
+		*len = sizeof(*addr);
+		return 1;
+	}
+	g_host_errno = EAFNOSUPPORT;
+	return 0;
+}
+
+static int host_int_arg(const runtime_data_value *arg, long *out) {
+	if (arg->kind != RUNTIME_INT) {
+		return 0;
+	}
+	*out = arg->int_value;
+	return 1;
+}
+
+static int host_dispatch_libc_ffi(const char *name, const runtime_data_value *args, size_t argc,
+	runtime_data_value *out, compile_error *err) {
+	char spec[IR_OPERAND_CAP];
+	char *abi;
+	char *symbol;
+	char *return_type;
+	char *param_types;
+	char *save = NULL;
+	void *address;
+	uintptr_t av[6] = {0, 0, 0, 0, 0, 0};
+	uintptr_t result;
+	size_t i;
+	if (strncmp(name, "__ffi_", 6) != 0) return 0;
+	if (argc > 6 || strlen(name + 6) >= sizeof(spec)) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "libc FFI supports at most 6 arguments");
+		return -1;
+	}
+	snprintf(spec, sizeof(spec), "%s", name + 6);
+	abi = strtok_r(spec, "$", &save);
+	symbol = strtok_r(NULL, "$", &save);
+	return_type = strtok_r(NULL, "$", &save);
+	param_types = strtok_r(NULL, "$", &save);
+	(void)param_types;
+	if (!abi || strcmp(abi, "libc") != 0 || !symbol || !return_type) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "invalid libc FFI call descriptor");
+		return -1;
+	}
+	address = dlsym(RTLD_DEFAULT, symbol);
+	if (!address) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "libc symbol not found: %s", symbol);
+		return -1;
+	}
+	for (i = 0; i < argc; i++) {
+		if (args[i].kind == RUNTIME_STRING) av[i] = (uintptr_t)(args[i].str_value ? args[i].str_value : "");
+		else if (args[i].kind == RUNTIME_INT) av[i] = (uintptr_t)args[i].int_value;
+		else {
+			error_set(err, ERR_SEMANTIC, 0, 0, "libc FFI argument %zu must be int, bool, or string", i + 1);
+			return -1;
+		}
+	}
+	switch (argc) {
+		case 0: result = ((uintptr_t (*)(void))address)(); break;
+		case 1: result = ((uintptr_t (*)(uintptr_t))address)(av[0]); break;
+		case 2: result = ((uintptr_t (*)(uintptr_t, uintptr_t))address)(av[0], av[1]); break;
+		case 3: result = ((uintptr_t (*)(uintptr_t, uintptr_t, uintptr_t))address)(av[0], av[1], av[2]); break;
+		case 4: result = ((uintptr_t (*)(uintptr_t, uintptr_t, uintptr_t, uintptr_t))address)(av[0], av[1], av[2], av[3]); break;
+		case 5: result = ((uintptr_t (*)(uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t))address)(av[0], av[1], av[2], av[3], av[4]); break;
+		default: result = ((uintptr_t (*)(uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t, uintptr_t))address)(av[0], av[1], av[2], av[3], av[4], av[5]); break;
+	}
+	if (strcmp(return_type, "string") == 0) {
+		*out = value_make_string_copy(result ? (const char *)result : "");
+		if (!out->str_value) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return -1; }
+	} else {
+		long signed_result = (long)(int32_t)(uint32_t)result;
+		*out = value_make_int(signed_result);
+		g_host_errno = signed_result < 0 ? errno : 0;
+	}
+	return 1;
 }
 
 bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char *output_dir, compile_error *err);
@@ -708,9 +896,12 @@ static int host_dispatch_call(
 	runtime_data_value *out,
 	compile_error *err
 ) {
+	int ffi_status;
 	if (g_runtime_profile_enabled) {
 		runtime_profile_bump(g_runtime_profile_host, &g_runtime_profile_host_len, 256, name);
 	}
+	ffi_status = host_dispatch_libc_ffi(name, args, argc, out, err);
+	if (ffi_status != 0) return ffi_status > 0;
 	if (strcmp(name, "host_args") == 0) {
 		size_t i;
 		runtime_data_value *items = NULL;
@@ -833,6 +1024,163 @@ static int host_dispatch_call(
 		free(joined);
 		*out = value_make_int(0);
 		return 1;
+	}
+	if (strcmp(name, "__host_read_to_string") == 0) {
+		const char *path = NULL;
+		char path_buf[256];
+		char *content;
+		if (argc != 1 || !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_read_to_string expects a path");
+			return 0;
+		}
+		content = host_read_text_file(path, err);
+		if (!content) return 0;
+		g_host_errno = content[0] == '\0' && !host_file_exists(path) ? ENOENT : 0;
+		*out = value_make_string_owned(content);
+		return 1;
+	}
+	if (strcmp(name, "__host_write_text_file") == 0) {
+		const char *path = NULL;
+		const char *contents = NULL;
+		char path_buf[256], contents_buf[64];
+		if (argc != 2 || !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path) ||
+		    !value_as_cstr(&args[1], contents_buf, sizeof(contents_buf), &contents)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_write_text_file expects path and contents");
+			return 0;
+		}
+		*out = value_make_int(host_write_text_file(path, contents));
+		return 1;
+	}
+	if (strcmp(name, "__host_make_temp_dir") == 0) {
+		const char *prefix = NULL;
+		char prefix_buf[64];
+		char *path;
+		if (argc != 1 || !value_as_cstr(&args[0], prefix_buf, sizeof(prefix_buf), &prefix)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_make_temp_dir expects a prefix");
+			return 0;
+		}
+		path = host_make_temp_dir(prefix);
+		*out = path ? value_make_string_owned(path) : value_make_string_copy("");
+		return 1;
+	}
+	if (strcmp(name, "__sys_errno") == 0) {
+		if (argc != 0) { error_set(err, ERR_SEMANTIC, 0, 0, "__sys_errno expects 0 args"); return 0; }
+		*out = value_make_int(g_host_errno);
+		return 1;
+	}
+	if (strcmp(name, "__sys_strerror") == 0) {
+		long code;
+		if (argc != 1 || !host_int_arg(&args[0], &code)) { error_set(err, ERR_SEMANTIC, 0, 0, "__sys_strerror expects errno"); return 0; }
+		*out = value_make_string_copy(strerror((int)code));
+		return out->str_value != NULL;
+	}
+	if (strcmp(name, "__sys_socket") == 0) {
+		long domain, type, protocol;
+		int fd;
+		if (argc != 3 || !host_int_arg(&args[0], &domain) || !host_int_arg(&args[1], &type) || !host_int_arg(&args[2], &protocol)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_socket expects 3 integer args"); return 0;
+		}
+		fd = socket((int)domain, (int)type, (int)protocol);
+		g_host_errno = fd < 0 ? errno : 0;
+		*out = value_make_int(fd);
+		return 1;
+	}
+	if (strcmp(name, "__sys_bind") == 0 || strcmp(name, "__sys_connect") == 0) {
+		long fd, port, family;
+		const char *ip = NULL;
+		char ip_buf[64];
+		struct sockaddr_storage addr;
+		socklen_t addr_len;
+		int rc;
+		if (argc != 4 || !host_int_arg(&args[0], &fd) || !value_as_cstr(&args[1], ip_buf, sizeof(ip_buf), &ip) ||
+		    !host_int_arg(&args[2], &port) || !host_int_arg(&args[3], &family)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s expects fd, ip, port, family", name); return 0;
+		}
+		if (!host_sockaddr(ip, (int)port, (int)family, &addr, &addr_len)) rc = -1;
+		else if (strcmp(name, "__sys_bind") == 0) rc = bind((int)fd, (struct sockaddr *)&addr, addr_len);
+		else rc = connect((int)fd, (struct sockaddr *)&addr, addr_len);
+		g_host_errno = rc < 0 && g_host_errno == 0 ? errno : (rc < 0 ? g_host_errno : 0);
+		*out = value_make_int(rc);
+		return 1;
+	}
+	if (strcmp(name, "__sys_listen") == 0 || strcmp(name, "__sys_accept") == 0 || strcmp(name, "__sys_close") == 0) {
+		long fd, arg = 0;
+		int rc;
+		size_t expected = strcmp(name, "__sys_listen") == 0 ? 2u : 1u;
+		if (argc != expected || !host_int_arg(&args[0], &fd) || (expected == 2 && !host_int_arg(&args[1], &arg))) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s has invalid arguments", name); return 0;
+		}
+		if (strcmp(name, "__sys_listen") == 0) rc = listen((int)fd, (int)arg);
+		else if (strcmp(name, "__sys_accept") == 0) rc = accept((int)fd, NULL, NULL);
+		else rc = close((int)fd);
+		g_host_errno = rc < 0 ? errno : 0;
+		*out = value_make_int(rc);
+		return 1;
+	}
+	if (strcmp(name, "__sys_read_string") == 0) {
+		long fd, max_bytes;
+		char *buf;
+		ssize_t n;
+		if (argc != 2 || !host_int_arg(&args[0], &fd) || !host_int_arg(&args[1], &max_bytes) || max_bytes < 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_read_string expects fd and non-negative size"); return 0;
+		}
+		buf = (char *)malloc((size_t)max_bytes + 1);
+		if (!buf) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+		n = read((int)fd, buf, (size_t)max_bytes);
+		g_host_errno = n < 0 ? errno : 0;
+		if (n < 0) n = 0;
+		buf[n] = '\0';
+		*out = value_make_string_owned(buf);
+		return 1;
+	}
+	if (strcmp(name, "__sys_write_string") == 0) {
+		long fd;
+		const char *data = NULL;
+		char data_buf[64];
+		ssize_t n;
+		if (argc != 2 || !host_int_arg(&args[0], &fd) || !value_as_cstr(&args[1], data_buf, sizeof(data_buf), &data)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_write_string expects fd and data"); return 0;
+		}
+		n = write((int)fd, data, strlen(data));
+		g_host_errno = n < 0 ? errno : 0;
+		*out = value_make_int((long)n);
+		return 1;
+	}
+	if (strcmp(name, "__sys_poll_ready") == 0) {
+		long fd, events, timeout;
+		struct pollfd pfd;
+		int rc;
+		if (argc != 3 || !host_int_arg(&args[0], &fd) || !host_int_arg(&args[1], &events) || !host_int_arg(&args[2], &timeout)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_poll_ready expects fd, events, timeout"); return 0;
+		}
+		pfd.fd = (int)fd; pfd.events = (short)events; pfd.revents = 0;
+		rc = poll(&pfd, 1, (int)timeout);
+		g_host_errno = rc < 0 ? errno : 0;
+		*out = value_make_int(rc);
+		return 1;
+	}
+	if (strcmp(name, "__sys_fcntl") == 0) {
+		long fd, cmd, arg;
+		int rc;
+		if (argc != 3 || !host_int_arg(&args[0], &fd) || !host_int_arg(&args[1], &cmd) || !host_int_arg(&args[2], &arg)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_fcntl expects fd, cmd, arg"); return 0;
+		}
+		rc = fcntl((int)fd, (int)cmd, (int)arg); g_host_errno = rc < 0 ? errno : 0; *out = value_make_int(rc); return 1;
+	}
+	if (strcmp(name, "__sys_setsockopt") == 0 || strcmp(name, "__sys_getsockopt") == 0) {
+		long fd, level, option, value = 0;
+		int option_value = 0;
+		socklen_t value_len = sizeof(option_value);
+		int rc;
+		size_t expected = strcmp(name, "__sys_setsockopt") == 0 ? 4u : 3u;
+		if (argc != expected || !host_int_arg(&args[0], &fd) || !host_int_arg(&args[1], &level) || !host_int_arg(&args[2], &option) ||
+		    (expected == 4 && !host_int_arg(&args[3], &value))) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s has invalid arguments", name); return 0;
+		}
+		option_value = (int)value;
+		if (expected == 4) rc = setsockopt((int)fd, (int)level, (int)option, &option_value, sizeof(option_value));
+		else rc = getsockopt((int)fd, (int)level, (int)option, &option_value, &value_len);
+		g_host_errno = rc < 0 ? errno : 0; *out = value_make_int(rc < 0 ? -1 : (expected == 4 ? 0 : option_value)); return 1;
 	}
 	if (strcmp(name, "runtime_env_get") == 0) {
 		const char *key = NULL;

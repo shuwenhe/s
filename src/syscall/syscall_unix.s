@@ -49,24 +49,30 @@ const POLLHUP  = 16
 const POLLNVAL = 32
 
 // ─── 原始 OS 桥接（由宿主运行时/libc 实现）─────────────────────
-extern "intrinsic" func __sys_socket(int domain, int typ, int proto) int
+extern "libc:socket" func __libc_socket(int domain, int typ, int proto) int
 extern "intrinsic" func __sys_bind(int sockfd, string ip, int port, int family) int
-extern "intrinsic" func __sys_listen(int sockfd, int backlog) int
-extern "intrinsic" func __sys_accept(int sockfd) int
+extern "libc:listen" func __libc_listen(int sockfd, int backlog) int
+extern "libc:accept" func __libc_accept(int sockfd, int address, int address_len) int
 extern "intrinsic" func __sys_accept_addr(int sockfd, string mut out_ip, int mut out_port) int
 extern "intrinsic" func __sys_connect(int sockfd, string ip, int port, int family) int
 extern "intrinsic" func __sys_read(int fd, vec[int] mut buf, int n) int
 extern "intrinsic" func __sys_write(int fd, vec[int] buf, int n) int
 extern "intrinsic" func __sys_read_string(int fd, int n) string
 extern "intrinsic" func __sys_write_string(int fd, string data) int
-extern "intrinsic" func __sys_close(int fd) int
+extern "libc:close" func __libc_close(int fd) int
 extern "intrinsic" func __sys_poll(vec[int] fds, int nfds, int events, int timeout_ms) int
 extern "intrinsic" func __sys_poll_ready(int fd, int events, int timeout_ms) int
-extern "intrinsic" func __sys_fcntl(int fd, int cmd, int arg) int
+extern "libc:fcntl" func __libc_fcntl(int fd, int cmd, int arg) int
 extern "intrinsic" func __sys_setsockopt(int sockfd, int level, int optname, int val) int
 extern "intrinsic" func __sys_getsockopt(int sockfd, int level, int optname) int
 extern "intrinsic" func __sys_errno() int
 extern "intrinsic" func __sys_strerror(int errno_code) string
+
+func __sys_socket(int domain, int typ, int proto) int { __libc_socket(domain, typ, proto) }
+func __sys_listen(int sockfd, int backlog) int { __libc_listen(sockfd, backlog) }
+func __sys_accept(int sockfd) int { __libc_accept(sockfd, 0, 0) }
+func __sys_close(int fd) int { __libc_close(fd) }
+func __sys_fcntl(int fd, int cmd, int arg) int { __libc_fcntl(fd, cmd, arg) }
 
 // kqueue / epoll I/O 事件通知（平台自适应）
 extern "intrinsic" func __sys_poller_create() int
