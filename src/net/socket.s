@@ -71,7 +71,7 @@ func listen_tcp(string host, int port) result[TCPListener, net_error] {
         },
     }
 
-    result::ok(TCPListener { fd: fd, host: host, port: port })
+    result::ok(TCPListener { fd: fd, host: sc.local_ip(fd), port: sc.local_port(fd) })
 }
 
 impl TCPListener {
@@ -83,6 +83,8 @@ impl TCPListener {
                 fd:        ar.fd,
                 remote_ip: ar.ip,
                 remote_port: ar.port,
+                read_timeout_ms: 0,
+                write_timeout_ms: 0,
             }),
             result::err(e) : result::err(wrap_sc_err(e)),
         }
@@ -110,6 +112,8 @@ struct TCPConn {
     int    fd
     string remote_ip
     int    remote_port
+    int    read_timeout_ms
+    int    write_timeout_ms
 }
 
 // 主动发起 TCP 连接
@@ -131,7 +135,66 @@ func dial_tcp(string host, int port) result[TCPConn, net_error] {
         },
     }
 
-    result::ok(TCPConn { fd: fd, remote_ip: host, remote_port: port })
+    result::ok(TCPConn {
+        fd: fd,
+        remote_ip: host,
+        remote_port: port,
+        read_timeout_ms: 0,
+        write_timeout_ms: 0,
+    })
+}
+
+// Non-blocking connect with a relative timeout. Host may be an IPv4 literal
+// or DNS name; name resolution is performed by the syscall layer.
+func dial_tcp_timeout(string host, int port, int timeout_ms) result[TCPConn, net_error] {
+    let fd_res = sc.socket(sc.AF_INET, sc.SOCK_STREAM, sc.IPPROTO_TCP)
+    let fd = switch fd_res {
+        result::ok(v) : v,
+        result::err(e) : return result::err(wrap_sc_err(e)),
+    }
+    switch sc.connect_deadline(fd, host, port, sc.AF_INET, timeout_ms) {
+        result::ok(_) : (),
+        result::err(e) : {
+            sc.close(fd)
+            return result::err(wrap_sc_err(e))
+        },
+    }
+    result::ok(TCPConn {
+        fd: fd,
+        remote_ip: sc.peer_ip(fd),
+        remote_port: sc.peer_port(fd),
+        read_timeout_ms: 0,
+        write_timeout_ms: 0,
+    })
+}
+
+func dial_tcp6_timeout(string host, int port, int timeout_ms) result[TCPConn, net_error] {
+    let fd_res = sc.socket(sc.AF_INET6, sc.SOCK_STREAM, sc.IPPROTO_TCP)
+    let fd = switch fd_res {
+        result::ok(v) : v,
+        result::err(e) : return result::err(wrap_sc_err(e)),
+    }
+    switch sc.connect_deadline(fd, host, port, sc.AF_INET6, timeout_ms) {
+        result::ok(_) : (),
+        result::err(e) : {
+            sc.close(fd)
+            return result::err(wrap_sc_err(e))
+        },
+    }
+    result::ok(TCPConn {
+        fd: fd,
+        remote_ip: sc.peer_ip(fd),
+        remote_port: sc.peer_port(fd),
+        read_timeout_ms: 0,
+        write_timeout_ms: 0,
+    })
+}
+
+func resolve_host(string host) result[vec[string], net_error] {
+    switch sc.resolve_ip(host, sc.AF_UNSPEC) {
+        result::ok(addresses) : result::ok(addresses),
+        result::err(e) : result::err(wrap_sc_err(e)),
+    }
 }
 
 impl TCPConn {
@@ -171,6 +234,52 @@ impl TCPConn {
     func wait_writable(self, int timeout_ms) result[bool, net_error] {
         switch sc.poll_ready(self.fd, sc.POLLOUT, timeout_ms) {
             result::ok(n)  : result::ok(n > 0),
+            result::err(e) : result::err(wrap_sc_err(e)),
+        }
+    }
+
+    // Relative deadline API. Zero clears a timeout.
+    func set_deadline_ms(mut self, int timeout_ms) result[(), net_error] {
+        switch sc.set_deadline_ms(self.fd, timeout_ms, timeout_ms) {
+            result::ok(v) : {
+                self.read_timeout_ms = timeout_ms
+                self.write_timeout_ms = timeout_ms
+                result::ok(v)
+            },
+            result::err(e) : result::err(wrap_sc_err(e)),
+        }
+    }
+
+    func set_read_deadline_ms(mut self, int timeout_ms) result[(), net_error] {
+        switch sc.set_deadline_ms(self.fd, timeout_ms, self.write_timeout_ms) {
+            result::ok(v) : {
+                self.read_timeout_ms = timeout_ms
+                result::ok(v)
+            },
+            result::err(e) : result::err(wrap_sc_err(e)),
+        }
+    }
+
+    func set_write_deadline_ms(mut self, int timeout_ms) result[(), net_error] {
+        switch sc.set_deadline_ms(self.fd, self.read_timeout_ms, timeout_ms) {
+            result::ok(v) : {
+                self.write_timeout_ms = timeout_ms
+                result::ok(v)
+            },
+            result::err(e) : result::err(wrap_sc_err(e)),
+        }
+    }
+
+    func shutdown_read(self) result[(), net_error] {
+        switch sc.shutdown(self.fd, sc.SHUT_RD) {
+            result::ok(v) : result::ok(v),
+            result::err(e) : result::err(wrap_sc_err(e)),
+        }
+    }
+
+    func shutdown_write(self) result[(), net_error] {
+        switch sc.shutdown(self.fd, sc.SHUT_WR) {
+            result::ok(v) : result::ok(v),
             result::err(e) : result::err(wrap_sc_err(e)),
         }
     }
@@ -232,6 +341,8 @@ struct UDPConn {
     int    fd
     string local_ip
     int    local_port
+    int    read_timeout_ms
+    int    write_timeout_ms
 }
 
 func listen_udp(string host, int port) result[UDPConn, net_error] {
@@ -247,7 +358,13 @@ func listen_udp(string host, int port) result[UDPConn, net_error] {
             return result::err(wrap_sc_err(e))
         },
     }
-    result::ok(UDPConn { fd: fd, local_ip: host, local_port: port })
+    result::ok(UDPConn {
+        fd: fd,
+        local_ip: sc.local_ip(fd),
+        local_port: sc.local_port(fd),
+        read_timeout_ms: 0,
+        write_timeout_ms: 0,
+    })
 }
 
 impl UDPConn {
@@ -261,6 +378,51 @@ impl UDPConn {
     func write(self, string data) result[int, net_error] {
         switch sc.write_string(self.fd, data) {
             result::ok(n)  : result::ok(n),
+            result::err(e) : result::err(wrap_sc_err(e)),
+        }
+    }
+
+    func recv_from(self, int max_bytes) result[sc.recvfrom_result, net_error] {
+        switch sc.recvfrom_string(self.fd, max_bytes) {
+            result::ok(datagram) : result::ok(datagram),
+            result::err(e) : result::err(wrap_sc_err(e)),
+        }
+    }
+
+    func send_to(self, string data, string host, int port) result[int, net_error] {
+        switch sc.sendto_string(self.fd, data, host, port, sc.AF_INET) {
+            result::ok(n) : result::ok(n),
+            result::err(e) : result::err(wrap_sc_err(e)),
+        }
+    }
+
+    func set_deadline_ms(mut self, int timeout_ms) result[(), net_error] {
+        switch sc.set_deadline_ms(self.fd, timeout_ms, timeout_ms) {
+            result::ok(v) : {
+                self.read_timeout_ms = timeout_ms
+                self.write_timeout_ms = timeout_ms
+                result::ok(v)
+            },
+            result::err(e) : result::err(wrap_sc_err(e)),
+        }
+    }
+
+    func set_read_deadline_ms(mut self, int timeout_ms) result[(), net_error] {
+        switch sc.set_deadline_ms(self.fd, timeout_ms, self.write_timeout_ms) {
+            result::ok(v) : {
+                self.read_timeout_ms = timeout_ms
+                result::ok(v)
+            },
+            result::err(e) : result::err(wrap_sc_err(e)),
+        }
+    }
+
+    func set_write_deadline_ms(mut self, int timeout_ms) result[(), net_error] {
+        switch sc.set_deadline_ms(self.fd, self.read_timeout_ms, timeout_ms) {
+            result::ok(v) : {
+                self.write_timeout_ms = timeout_ms
+                result::ok(v)
+            },
             result::err(e) : result::err(wrap_sc_err(e)),
         }
     }
