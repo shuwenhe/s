@@ -15,6 +15,7 @@ struct net_error {
 }
 
 // ─── 常量：地址族 ────────────────────────────────────────────
+const AF_UNSPEC = 0
 const AF_INET  = 2
 const AF_INET6 = 10
 const AF_UNIX  = 1
@@ -48,37 +49,50 @@ const POLLERR  = 8
 const POLLHUP  = 16
 const POLLNVAL = 32
 
+const SHUT_RD   = 0
+const SHUT_WR   = 1
+const SHUT_RDWR = 2
+
 // ─── 原始 OS 桥接（由宿主运行时/libc 实现）─────────────────────
-extern "libc:socket" func __libc_socket(int domain, int typ, int proto) int
+extern "intrinsic" func __sys_socket(int domain, int typ, int proto) int
 extern "intrinsic" func __sys_bind(int sockfd, string ip, int port, int family) int
-extern "libc:listen" func __libc_listen(int sockfd, int backlog) int
-extern "libc:accept" func __libc_accept(int sockfd, int address, int address_len) int
-extern "intrinsic" func __sys_accept_addr(int sockfd, string mut out_ip, int mut out_port) int
+extern "intrinsic" func __sys_listen(int sockfd, int backlog) int
+extern "intrinsic" func __sys_accept(int sockfd) int
 extern "intrinsic" func __sys_connect(int sockfd, string ip, int port, int family) int
+extern "intrinsic" func __sys_connect_deadline(int sockfd, string host, int port, int family, int timeout_ms) int
+extern "intrinsic" func __sys_resolve_ip(string host, int family) vec[string]
 extern "intrinsic" func __sys_read(int fd, vec[int] mut buf, int n) int
 extern "intrinsic" func __sys_write(int fd, vec[int] buf, int n) int
 extern "intrinsic" func __sys_read_string(int fd, int n) string
 extern "intrinsic" func __sys_write_string(int fd, string data) int
-extern "libc:close" func __libc_close(int fd) int
+extern "intrinsic" func __sys_sendto_string(int fd, string data, string ip, int port, int family) int
+extern "intrinsic" func __sys_recvfrom_string(int fd, int n) string
+extern "intrinsic" func __sys_last_recvfrom_ip() string
+extern "intrinsic" func __sys_last_recvfrom_port() int
+extern "intrinsic" func __sys_close(int fd) int
 extern "intrinsic" func __sys_poll(vec[int] fds, int nfds, int events, int timeout_ms) int
 extern "intrinsic" func __sys_poll_ready(int fd, int events, int timeout_ms) int
-extern "libc:fcntl" func __libc_fcntl(int fd, int cmd, int arg) int
+extern "intrinsic" func __sys_fcntl(int fd, int cmd, int arg) int
 extern "intrinsic" func __sys_setsockopt(int sockfd, int level, int optname, int val) int
 extern "intrinsic" func __sys_getsockopt(int sockfd, int level, int optname) int
+extern "intrinsic" func __sys_set_deadline_ms(int fd, int read_timeout_ms, int write_timeout_ms) int
+extern "intrinsic" func __sys_shutdown(int fd, int how) int
+extern "intrinsic" func __sys_local_ip(int fd) string
+extern "intrinsic" func __sys_local_port(int fd) int
+extern "intrinsic" func __sys_peer_ip(int fd) string
+extern "intrinsic" func __sys_peer_port(int fd) int
 extern "intrinsic" func __sys_errno() int
 extern "intrinsic" func __sys_strerror(int errno_code) string
-
-func __sys_socket(int domain, int typ, int proto) int { __libc_socket(domain, typ, proto) }
-func __sys_listen(int sockfd, int backlog) int { __libc_listen(sockfd, backlog) }
-func __sys_accept(int sockfd) int { __libc_accept(sockfd, 0, 0) }
-func __sys_close(int fd) int { __libc_close(fd) }
-func __sys_fcntl(int fd, int cmd, int arg) int { __libc_fcntl(fd, cmd, arg) }
+extern "intrinsic" func __sys_sendfile(int out_fd, int in_fd, int offset, int count) int
+extern "intrinsic" func __sys_splice(int in_fd, int out_fd, int count) int
+extern "intrinsic" func __sys_interface_addresses() vec[string]
+extern "intrinsic" func __sys_open_read(string path) int
 
 // kqueue / epoll I/O 事件通知（平台自适应）
 extern "intrinsic" func __sys_poller_create() int
 extern "intrinsic" func __sys_poller_add(int poller_fd, int fd, int events) int
 extern "intrinsic" func __sys_poller_del(int poller_fd, int fd) int
-extern "intrinsic" func __sys_poller_wait(int poller_fd, vec[int] mut ready_fds, int max, int timeout_ms) int
+extern "intrinsic" func __sys_poller_wait(int poller_fd, int max, int timeout_ms) vec[int]
 
 // ─── 辅助：构建 net_error ─────────────────────────────────────
 func make_net_error(string msg) net_error {
@@ -131,13 +145,15 @@ func accept(int sockfd) result[int, net_error] {
 
 // ─── 公开 API：accept + 获取对端地址 ─────────────────────────
 func accept_addr(int sockfd) result[accept_result, net_error] {
-    let out_ip   = ""
-    let out_port = 0
-    let newfd    = __sys_accept_addr(sockfd, out_ip, out_port)
+    let newfd = __sys_accept(sockfd)
     if newfd < 0 {
         result::err(make_net_error("accept"))
     } else {
-        result::ok(accept_result { fd: newfd, ip: out_ip, port: out_port })
+        result::ok(accept_result {
+            fd: newfd,
+            ip: __sys_peer_ip(newfd),
+            port: __sys_peer_port(newfd),
+        })
     }
 }
 
@@ -147,6 +163,11 @@ struct accept_result {
     int    port
 }
 
+func local_ip(int fd) string { __sys_local_ip(fd) }
+func local_port(int fd) int { __sys_local_port(fd) }
+func peer_ip(int fd) string { __sys_peer_ip(fd) }
+func peer_port(int fd) int { __sys_peer_port(fd) }
+
 // ─── 公开 API：connect ────────────────────────────────────────
 func connect(int sockfd, string ip, int port, int family) result[(), net_error] {
     let r = __sys_connect(sockfd, ip, port, family)
@@ -154,6 +175,24 @@ func connect(int sockfd, string ip, int port, int family) result[(), net_error] 
         result::err(make_net_error("connect"))
     } else {
         result::ok(())
+    }
+}
+
+func connect_deadline(int sockfd, string host, int port, int family, int timeout_ms) result[(), net_error] {
+    let r = __sys_connect_deadline(sockfd, host, port, family, timeout_ms)
+    if r < 0 {
+        result::err(make_net_error("connect"))
+    } else {
+        result::ok(())
+    }
+}
+
+func resolve_ip(string host, int family) result[vec[string], net_error] {
+    let addresses = __sys_resolve_ip(host, family)
+    if len(addresses) == 0 && __sys_errno() != 0 {
+        result::err(make_net_error("resolve"))
+    } else {
+        result::ok(addresses)
     }
 }
 
@@ -180,6 +219,55 @@ func write_string(int fd, string data) result[int, net_error] {
         result::err(make_net_error("write"))
     } else {
         result::ok(n)
+    }
+}
+
+// UDP datagram I/O keeps the destination/source boundary explicit.
+func sendto_string(int fd, string data, string ip, int port, int family) result[int, net_error] {
+    let n = __sys_sendto_string(fd, data, ip, port, family)
+    if n < 0 {
+        result::err(make_net_error("sendto"))
+    } else {
+        result::ok(n)
+    }
+}
+
+struct recvfrom_result {
+    string data
+    string ip
+    int port
+}
+
+func recvfrom_string(int fd, int max_bytes) result[recvfrom_result, net_error] {
+    let data = __sys_recvfrom_string(fd, max_bytes)
+    let code = __sys_errno()
+    if data == "" && code != 0 {
+        result::err(net_error { message: "recvfrom: " + __sys_strerror(code), errno_code: code })
+    } else {
+        result::ok(recvfrom_result {
+            data: data,
+            ip: __sys_last_recvfrom_ip(),
+            port: __sys_last_recvfrom_port(),
+        })
+    }
+}
+
+func sendfile(int out_fd, int in_fd, int offset, int count) result[int, net_error] {
+    let n = __sys_sendfile(out_fd, in_fd, offset, count)
+    if n < 0 { result::err(make_net_error("sendfile")) } else { result::ok(n) }
+}
+
+func splice(int in_fd, int out_fd, int count) result[int, net_error] {
+    let n = __sys_splice(in_fd, out_fd, count)
+    if n < 0 { result::err(make_net_error("splice")) } else { result::ok(n) }
+}
+
+func interface_addresses() result[vec[string], net_error] {
+    let addresses = __sys_interface_addresses()
+    if len(addresses) == 0 && __sys_errno() != 0 {
+        result::err(make_net_error("getifaddrs"))
+    } else {
+        result::ok(addresses)
     }
 }
 
@@ -227,6 +315,25 @@ func set_tcp_nodelay(int fd) result[(), net_error] {
     }
 }
 
+// Relative timeouts in milliseconds. Zero clears the timeout.
+func set_deadline_ms(int fd, int read_timeout_ms, int write_timeout_ms) result[(), net_error] {
+    let r = __sys_set_deadline_ms(fd, read_timeout_ms, write_timeout_ms)
+    if r < 0 {
+        result::err(make_net_error("set deadline"))
+    } else {
+        result::ok(())
+    }
+}
+
+func shutdown(int fd, int how) result[(), net_error] {
+    let r = __sys_shutdown(fd, how)
+    if r < 0 {
+        result::err(make_net_error("shutdown"))
+    } else {
+        result::ok(())
+    }
+}
+
 // ─── 公开 API：poll（单 fd 版本）─────────────────────────────
 func poll_ready(int fd, int events, int timeout_ms) result[int, net_error] {
     let r = __sys_poll_ready(fd, events, timeout_ms)
@@ -266,9 +373,8 @@ func poller_del(int poller_fd, int fd) result[(), net_error] {
 }
 
 func poller_wait(int poller_fd, int max, int timeout_ms) result[vec[int], net_error] {
-    let ready = vec[int]()
-    let n = __sys_poller_wait(poller_fd, ready, max, timeout_ms)
-    if n < 0 {
+    let ready = __sys_poller_wait(poller_fd, max, timeout_ms)
+    if __sys_errno() != 0 {
         result::err(make_net_error("poller_wait"))
     } else {
         result::ok(ready)
