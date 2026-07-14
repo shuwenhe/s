@@ -1,8 +1,15 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <ctype.h>
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <poll.h>
@@ -12,8 +19,17 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#if defined(__linux__)
+#include <sys/epoll.h>
+#include <sys/sendfile.h>
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <sys/event.h>
+#include <sys/uio.h>
+#endif
 
 #include "../code/target.h"
 #include "../intermediate/ir.h"
@@ -25,6 +41,8 @@
 static int g_host_argc = 0;
 static char **g_host_argv = NULL;
 static int g_host_errno = 0;
+static _Thread_local char g_last_recvfrom_ip[INET6_ADDRSTRLEN];
+static _Thread_local int g_last_recvfrom_port = 0;
 
 typedef struct runtime_profile_counter {
 	char name[128];
@@ -723,9 +741,62 @@ static char *host_make_temp_dir(const char *prefix) {
 	return path;
 }
 
+/* S exposes Linux-compatible stable values; translate them at the host edge. */
+static int host_native_family(int family) {
+	if (family == 0) return AF_UNSPEC;
+	if (family == 2) return AF_INET;
+	if (family == 10) return AF_INET6;
+	return family;
+}
+
+static int host_native_sockopt_level(int level) {
+	if (level == 1) return SOL_SOCKET;
+	if (level == 6) return IPPROTO_TCP;
+	if (level == 17) return IPPROTO_UDP;
+	return level;
+}
+
+static int host_native_sockopt_name(int level, int option) {
+	if (level != 1) return option;
+	switch (option) {
+		case 2: return SO_REUSEADDR;
+		case 7: return SO_SNDBUF;
+		case 8: return SO_RCVBUF;
+		case 9: return SO_KEEPALIVE;
+#ifdef SO_REUSEPORT
+		case 15: return SO_REUSEPORT;
+#endif
+		default: return option;
+	}
+}
+
 static int host_sockaddr(const char *ip, int port, int family, struct sockaddr_storage *storage, socklen_t *len) {
+	struct addrinfo hints;
+	struct addrinfo *resolved = NULL;
+	char service[16];
+	int gai_rc;
 	memset(storage, 0, sizeof(*storage));
-	if (family == AF_INET) {
+	int native_family = host_native_family(family);
+	if (native_family != AF_INET && native_family != AF_INET6) {
+		g_host_errno = EAFNOSUPPORT;
+		return 0;
+	}
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = native_family;
+	hints.ai_socktype = 0;
+	hints.ai_flags = AI_NUMERICSERV | ((!ip || !*ip) ? AI_PASSIVE : 0);
+	snprintf(service, sizeof(service), "%d", port);
+	gai_rc = getaddrinfo((ip && *ip) ? ip : NULL, service, &hints, &resolved);
+	if (gai_rc == 0 && resolved && resolved->ai_addrlen <= sizeof(*storage)) {
+		memcpy(storage, resolved->ai_addr, resolved->ai_addrlen);
+		*len = (socklen_t)resolved->ai_addrlen;
+		freeaddrinfo(resolved);
+		g_host_errno = 0;
+		return 1;
+	}
+	if (resolved) freeaddrinfo(resolved);
+	/* Preserve wildcard behavior for an omitted host. */
+	if (native_family == AF_INET) {
 		struct sockaddr_in *addr = (struct sockaddr_in *)storage;
 		addr->sin_family = AF_INET;
 		addr->sin_port = htons((unsigned short)port);
@@ -738,7 +809,7 @@ static int host_sockaddr(const char *ip, int port, int family, struct sockaddr_s
 		*len = sizeof(*addr);
 		return 1;
 	}
-	if (family == AF_INET6) {
+	if (native_family == AF_INET6) {
 		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)storage;
 		addr->sin6_family = AF_INET6;
 		addr->sin6_port = htons((unsigned short)port);
@@ -755,11 +826,205 @@ static int host_sockaddr(const char *ip, int port, int family, struct sockaddr_s
 	return 0;
 }
 
+static int host_connect_deadline(int fd, const char *host, int port, int family, int timeout_ms) {
+	struct sockaddr_storage addr;
+	socklen_t addr_len;
+	struct pollfd pfd;
+	int old_flags;
+	int rc;
+	int socket_error = 0;
+	socklen_t error_len = sizeof(socket_error);
+	if (timeout_ms < 0 || !host_sockaddr(host, port, family, &addr, &addr_len)) {
+		if (timeout_ms < 0) g_host_errno = EINVAL;
+		return -1;
+	}
+	old_flags = fcntl(fd, F_GETFL, 0);
+	if (old_flags < 0 || fcntl(fd, F_SETFL, old_flags | O_NONBLOCK) < 0) {
+		g_host_errno = errno;
+		return -1;
+	}
+	rc = connect(fd, (struct sockaddr *)&addr, addr_len);
+	if (rc < 0 && errno == EINPROGRESS) {
+		pfd.fd = fd;
+		pfd.events = POLLOUT;
+		pfd.revents = 0;
+		do {
+			rc = poll(&pfd, 1, timeout_ms);
+		} while (rc < 0 && errno == EINTR);
+		if (rc == 0) {
+			socket_error = ETIMEDOUT;
+			rc = -1;
+		} else if (rc > 0) {
+			if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &socket_error, &error_len) < 0) socket_error = errno;
+			rc = socket_error == 0 ? 0 : -1;
+		}
+	} else if (rc < 0) {
+		socket_error = errno;
+	}
+	(void)fcntl(fd, F_SETFL, old_flags);
+	g_host_errno = rc < 0 ? (socket_error ? socket_error : errno) : 0;
+	return rc;
+}
+
+static int host_sockaddr_text(const struct sockaddr *addr, char *ip, size_t ip_cap, int *port) {
+	if (!addr || !ip || ip_cap == 0) return 0;
+	if (addr->sa_family == AF_INET) {
+		const struct sockaddr_in *v4 = (const struct sockaddr_in *)addr;
+		if (!inet_ntop(AF_INET, &v4->sin_addr, ip, (socklen_t)ip_cap)) return 0;
+		if (port) *port = (int)ntohs(v4->sin_port);
+		return 1;
+	}
+	if (addr->sa_family == AF_INET6) {
+		const struct sockaddr_in6 *v6 = (const struct sockaddr_in6 *)addr;
+		if (!inet_ntop(AF_INET6, &v6->sin6_addr, ip, (socklen_t)ip_cap)) return 0;
+		if (port) *port = (int)ntohs(v6->sin6_port);
+		return 1;
+	}
+	return 0;
+}
+
 static int host_int_arg(const runtime_data_value *arg, long *out) {
 	if (arg->kind != RUNTIME_INT) {
 		return 0;
 	}
 	*out = arg->int_value;
+	return 1;
+}
+
+static int host_socket_name(int fd, int peer, char *ip, size_t ip_cap, int *port) {
+	struct sockaddr_storage storage;
+	socklen_t len = sizeof(storage);
+	int rc;
+	memset(&storage, 0, sizeof(storage));
+	rc = peer ? getpeername(fd, (struct sockaddr *)&storage, &len)
+	          : getsockname(fd, (struct sockaddr *)&storage, &len);
+	if (rc < 0) {
+		g_host_errno = errno;
+		return 0;
+	}
+	if (storage.ss_family == AF_INET) {
+		const struct sockaddr_in *addr = (const struct sockaddr_in *)&storage;
+		if (ip && ip_cap > 0 && !inet_ntop(AF_INET, &addr->sin_addr, ip, (socklen_t)ip_cap)) {
+			g_host_errno = errno;
+			return 0;
+		}
+		if (port) *port = (int)ntohs(addr->sin_port);
+	} else if (storage.ss_family == AF_INET6) {
+		const struct sockaddr_in6 *addr = (const struct sockaddr_in6 *)&storage;
+		if (ip && ip_cap > 0 && !inet_ntop(AF_INET6, &addr->sin6_addr, ip, (socklen_t)ip_cap)) {
+			g_host_errno = errno;
+			return 0;
+		}
+		if (port) *port = (int)ntohs(addr->sin6_port);
+	} else {
+		g_host_errno = EAFNOSUPPORT;
+		return 0;
+	}
+	g_host_errno = 0;
+	return 1;
+}
+
+static int host_set_socket_deadline(int fd, int read_timeout_ms, int write_timeout_ms) {
+	struct timeval read_timeout;
+	struct timeval write_timeout;
+	int rc;
+	if (read_timeout_ms < 0 || write_timeout_ms < 0) {
+		g_host_errno = EINVAL;
+		return -1;
+	}
+	read_timeout.tv_sec = read_timeout_ms / 1000;
+	read_timeout.tv_usec = (read_timeout_ms % 1000) * 1000;
+	write_timeout.tv_sec = write_timeout_ms / 1000;
+	write_timeout.tv_usec = (write_timeout_ms % 1000) * 1000;
+	rc = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof(read_timeout));
+	if (rc == 0) rc = setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &write_timeout, sizeof(write_timeout));
+	g_host_errno = rc < 0 ? errno : 0;
+	return rc;
+}
+
+static int host_poller_create(void) {
+#if defined(__linux__)
+	int fd = epoll_create1(EPOLL_CLOEXEC);
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+	int fd = kqueue();
+	if (fd >= 0) (void)fcntl(fd, F_SETFD, FD_CLOEXEC);
+#else
+	int fd = -1;
+	errno = ENOSYS;
+#endif
+	g_host_errno = fd < 0 ? errno : 0;
+	return fd;
+}
+
+static int host_poller_change(int poller_fd, int fd, int events, int add) {
+	int rc = -1;
+#if defined(__linux__)
+	struct epoll_event event;
+	memset(&event, 0, sizeof(event));
+	if (events & POLLIN) event.events |= EPOLLIN;
+	if (events & POLLOUT) event.events |= EPOLLOUT;
+	event.events |= EPOLLERR | EPOLLHUP;
+	event.data.fd = fd;
+	rc = epoll_ctl(poller_fd, add ? EPOLL_CTL_ADD : EPOLL_CTL_DEL, fd, add ? &event : NULL);
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+	struct kevent changes[2];
+	int count = 0;
+	if ((events & POLLIN) || !add) EV_SET(&changes[count++], fd, EVFILT_READ, add ? EV_ADD : EV_DELETE, 0, 0, NULL);
+	if ((events & POLLOUT) || !add) EV_SET(&changes[count++], fd, EVFILT_WRITE, add ? EV_ADD : EV_DELETE, 0, 0, NULL);
+	rc = kevent(poller_fd, changes, count, NULL, 0, NULL);
+	if (!add && rc < 0 && errno == ENOENT) rc = 0;
+#else
+	(void)poller_fd; (void)fd; (void)events; (void)add;
+	errno = ENOSYS;
+#endif
+	g_host_errno = rc < 0 ? errno : 0;
+	return rc;
+}
+
+static int host_poller_wait(int poller_fd, int max_events, int timeout_ms, runtime_data_value *out) {
+	runtime_data_value *items = NULL;
+	int n = -1;
+	int i;
+	if (max_events <= 0 || timeout_ms < -1) {
+		g_host_errno = EINVAL;
+		return 0;
+	}
+	items = (runtime_data_value *)calloc((size_t)max_events, sizeof(*items));
+	if (!items) return 0;
+#if defined(__linux__)
+	{
+		struct epoll_event *events = (struct epoll_event *)calloc((size_t)max_events, sizeof(*events));
+		if (!events) { free(items); return 0; }
+		n = epoll_wait(poller_fd, events, max_events, timeout_ms);
+		if (n >= 0) for (i = 0; i < n; i++) items[i] = value_make_int(events[i].data.fd);
+		free(events);
+	}
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+	{
+		struct kevent *events = (struct kevent *)calloc((size_t)max_events, sizeof(*events));
+		struct timespec timeout;
+		struct timespec *timeout_ptr = NULL;
+		if (!events) { free(items); return 0; }
+		if (timeout_ms >= 0) {
+			timeout.tv_sec = timeout_ms / 1000;
+			timeout.tv_nsec = (timeout_ms % 1000) * 1000000L;
+			timeout_ptr = &timeout;
+		}
+		n = kevent(poller_fd, NULL, 0, events, max_events, timeout_ptr);
+		if (n >= 0) for (i = 0; i < n; i++) items[i] = value_make_int((long)events[i].ident);
+		free(events);
+	}
+#else
+	(void)poller_fd; (void)timeout_ms; (void)i;
+	errno = ENOSYS;
+#endif
+	if (n < 0) {
+		g_host_errno = errno;
+		free(items);
+		return 0;
+	}
+	g_host_errno = 0;
+	*out = value_make_array_owned(items, (size_t)n);
 	return 1;
 }
 
@@ -1080,7 +1345,7 @@ static int host_dispatch_call(
 		if (argc != 3 || !host_int_arg(&args[0], &domain) || !host_int_arg(&args[1], &type) || !host_int_arg(&args[2], &protocol)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_socket expects 3 integer args"); return 0;
 		}
-		fd = socket((int)domain, (int)type, (int)protocol);
+		fd = socket(host_native_family((int)domain), (int)type, (int)protocol);
 		g_host_errno = fd < 0 ? errno : 0;
 		*out = value_make_int(fd);
 		return 1;
@@ -1102,6 +1367,83 @@ static int host_dispatch_call(
 		g_host_errno = rc < 0 && g_host_errno == 0 ? errno : (rc < 0 ? g_host_errno : 0);
 		*out = value_make_int(rc);
 		return 1;
+	}
+	if (strcmp(name, "__sys_connect_deadline") == 0) {
+		long fd, port, family, timeout_ms;
+		const char *host = NULL;
+		char host_buf[256];
+		int rc;
+		if (argc != 5 || !host_int_arg(&args[0], &fd) ||
+		    !value_as_cstr(&args[1], host_buf, sizeof(host_buf), &host) ||
+		    !host_int_arg(&args[2], &port) || !host_int_arg(&args[3], &family) ||
+		    !host_int_arg(&args[4], &timeout_ms)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_connect_deadline expects fd, host, port, family, timeout_ms"); return 0;
+		}
+		rc = host_connect_deadline((int)fd, host, (int)port, (int)family, (int)timeout_ms);
+		*out = value_make_int(rc);
+		return 1;
+	}
+	if (strcmp(name, "__sys_resolve_ip") == 0) {
+		const char *host = NULL;
+		char host_buf[256];
+		long family;
+		struct addrinfo hints;
+		struct addrinfo *list = NULL, *it;
+		runtime_data_value *items = NULL;
+		size_t count = 0, cap = 0;
+		int rc;
+		if (argc != 2 || !value_as_cstr(&args[0], host_buf, sizeof(host_buf), &host) || !host_int_arg(&args[1], &family)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_resolve_ip expects host and family"); return 0;
+		}
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_family = host_native_family((int)family);
+		hints.ai_socktype = SOCK_STREAM;
+		rc = getaddrinfo(host, NULL, &hints, &list);
+		if (rc != 0) {
+			g_host_errno = EINVAL;
+			*out = value_make_array_owned(NULL, 0);
+			return 1;
+		}
+		for (it = list; it; it = it->ai_next) {
+			char ip[INET6_ADDRSTRLEN];
+			size_t i;
+			int duplicate = 0;
+			if (!host_sockaddr_text(it->ai_addr, ip, sizeof(ip), NULL)) continue;
+			for (i = 0; i < count; i++) {
+				if (items[i].str_value && strcmp(items[i].str_value, ip) == 0) { duplicate = 1; break; }
+			}
+			if (duplicate) continue;
+			if (count == cap) {
+				size_t next_cap = cap ? cap * 2 : 4;
+				runtime_data_value *next = (runtime_data_value *)realloc(items, next_cap * sizeof(*items));
+				if (!next) { freeaddrinfo(list); free(items); error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+				items = next; cap = next_cap;
+			}
+			items[count] = value_make_string_copy(ip);
+			if (!items[count].str_value) { freeaddrinfo(list); free(items); error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+			count++;
+		}
+		freeaddrinfo(list);
+		g_host_errno = 0;
+		*out = value_make_array_owned(items, count);
+		return 1;
+	}
+	if (strcmp(name, "__sys_local_port") == 0 || strcmp(name, "__sys_peer_port") == 0 ||
+	    strcmp(name, "__sys_local_ip") == 0 || strcmp(name, "__sys_peer_ip") == 0) {
+		long fd;
+		char ip[INET6_ADDRSTRLEN];
+		int port = 0;
+		int peer = strstr(name, "peer") != NULL;
+		int want_ip = strstr(name, "_ip") != NULL;
+		if (argc != 1 || !host_int_arg(&args[0], &fd)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s expects an fd", name); return 0;
+		}
+		if (!host_socket_name((int)fd, peer, ip, sizeof(ip), &port)) {
+			*out = want_ip ? value_make_string_copy("") : value_make_int(-1);
+		} else {
+			*out = want_ip ? value_make_string_copy(ip) : value_make_int(port);
+		}
+		return want_ip ? out->str_value != NULL : 1;
 	}
 	if (strcmp(name, "__sys_listen") == 0 || strcmp(name, "__sys_accept") == 0 || strcmp(name, "__sys_close") == 0) {
 		long fd, arg = 0;
@@ -1146,6 +1488,73 @@ static int host_dispatch_call(
 		*out = value_make_int((long)n);
 		return 1;
 	}
+	if (strcmp(name, "__sys_sendto_string") == 0) {
+		long fd, port, family;
+		const char *data = NULL, *ip = NULL;
+		char data_buf[64], ip_buf[64];
+		struct sockaddr_storage addr;
+		socklen_t addr_len;
+		ssize_t n;
+		if (argc != 5 || !host_int_arg(&args[0], &fd) ||
+		    !value_as_cstr(&args[1], data_buf, sizeof(data_buf), &data) ||
+		    !value_as_cstr(&args[2], ip_buf, sizeof(ip_buf), &ip) ||
+		    !host_int_arg(&args[3], &port) || !host_int_arg(&args[4], &family)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_sendto_string expects fd, data, ip, port, family"); return 0;
+		}
+		if (!host_sockaddr(ip, (int)port, (int)family, &addr, &addr_len)) n = -1;
+		else n = sendto((int)fd, data, strlen(data), 0, (struct sockaddr *)&addr, addr_len);
+		g_host_errno = n < 0 && g_host_errno == 0 ? errno : (n < 0 ? g_host_errno : 0);
+		*out = value_make_int((long)n);
+		return 1;
+	}
+	if (strcmp(name, "__sys_recvfrom_string") == 0) {
+		long fd, max_bytes;
+		char *buf;
+		struct sockaddr_storage peer;
+		socklen_t peer_len = sizeof(peer);
+		ssize_t n;
+		if (argc != 2 || !host_int_arg(&args[0], &fd) || !host_int_arg(&args[1], &max_bytes) || max_bytes < 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_recvfrom_string expects fd and non-negative size"); return 0;
+		}
+		buf = (char *)malloc((size_t)max_bytes + 1);
+		if (!buf) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+		memset(&peer, 0, sizeof(peer));
+		n = recvfrom((int)fd, buf, (size_t)max_bytes, 0, (struct sockaddr *)&peer, &peer_len);
+		g_host_errno = n < 0 ? errno : 0;
+		g_last_recvfrom_ip[0] = '\0';
+		g_last_recvfrom_port = 0;
+		if (n >= 0) (void)host_sockaddr_text((struct sockaddr *)&peer, g_last_recvfrom_ip, sizeof(g_last_recvfrom_ip), &g_last_recvfrom_port);
+		if (n < 0) n = 0;
+		buf[n] = '\0';
+		*out = value_make_string_owned(buf);
+		return 1;
+	}
+	if (strcmp(name, "__sys_last_recvfrom_ip") == 0) {
+		if (argc != 0) { error_set(err, ERR_SEMANTIC, 0, 0, "__sys_last_recvfrom_ip expects no args"); return 0; }
+		*out = value_make_string_copy(g_last_recvfrom_ip); return out->str_value != NULL;
+	}
+	if (strcmp(name, "__sys_last_recvfrom_port") == 0) {
+		if (argc != 0) { error_set(err, ERR_SEMANTIC, 0, 0, "__sys_last_recvfrom_port expects no args"); return 0; }
+		*out = value_make_int(g_last_recvfrom_port); return 1;
+	}
+	if (strcmp(name, "__sys_set_deadline_ms") == 0) {
+		long fd, read_ms, write_ms;
+		int rc;
+		if (argc != 3 || !host_int_arg(&args[0], &fd) || !host_int_arg(&args[1], &read_ms) || !host_int_arg(&args[2], &write_ms)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_set_deadline_ms expects fd, read_ms, write_ms"); return 0;
+		}
+		rc = host_set_socket_deadline((int)fd, (int)read_ms, (int)write_ms);
+		*out = value_make_int(rc);
+		return 1;
+	}
+	if (strcmp(name, "__sys_shutdown") == 0) {
+		long fd, how;
+		int rc;
+		if (argc != 2 || !host_int_arg(&args[0], &fd) || !host_int_arg(&args[1], &how)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_shutdown expects fd and how"); return 0;
+		}
+		rc = shutdown((int)fd, (int)how); g_host_errno = rc < 0 ? errno : 0; *out = value_make_int(rc); return 1;
+	}
 	if (strcmp(name, "__sys_poll_ready") == 0) {
 		long fd, events, timeout;
 		struct pollfd pfd;
@@ -1178,9 +1587,121 @@ static int host_dispatch_call(
 			error_set(err, ERR_SEMANTIC, 0, 0, "%s has invalid arguments", name); return 0;
 		}
 		option_value = (int)value;
-		if (expected == 4) rc = setsockopt((int)fd, (int)level, (int)option, &option_value, sizeof(option_value));
-		else rc = getsockopt((int)fd, (int)level, (int)option, &option_value, &value_len);
+		{
+			int native_level = host_native_sockopt_level((int)level);
+			int native_option = host_native_sockopt_name((int)level, (int)option);
+			if (expected == 4) rc = setsockopt((int)fd, native_level, native_option, &option_value, sizeof(option_value));
+			else rc = getsockopt((int)fd, native_level, native_option, &option_value, &value_len);
+		}
 		g_host_errno = rc < 0 ? errno : 0; *out = value_make_int(rc < 0 ? -1 : (expected == 4 ? 0 : option_value)); return 1;
+	}
+	if (strcmp(name, "__sys_poller_create") == 0) {
+		if (argc != 0) { error_set(err, ERR_SEMANTIC, 0, 0, "__sys_poller_create expects no args"); return 0; }
+		*out = value_make_int(host_poller_create()); return 1;
+	}
+	if (strcmp(name, "__sys_poller_add") == 0 || strcmp(name, "__sys_poller_del") == 0) {
+		long poller_fd, fd, events = 0;
+		int add = strcmp(name, "__sys_poller_add") == 0;
+		size_t expected = add ? 3u : 2u;
+		if (argc != expected || !host_int_arg(&args[0], &poller_fd) || !host_int_arg(&args[1], &fd) ||
+		    (add && !host_int_arg(&args[2], &events))) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s has invalid arguments", name); return 0;
+		}
+		*out = value_make_int(host_poller_change((int)poller_fd, (int)fd, (int)events, add)); return 1;
+	}
+	if (strcmp(name, "__sys_poller_wait") == 0) {
+		long poller_fd, max_events, timeout_ms;
+		if (argc != 3 || !host_int_arg(&args[0], &poller_fd) || !host_int_arg(&args[1], &max_events) ||
+		    !host_int_arg(&args[2], &timeout_ms)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_poller_wait expects poller_fd, max_events, timeout_ms"); return 0;
+		}
+		if (!host_poller_wait((int)poller_fd, (int)max_events, (int)timeout_ms, out)) {
+			if (g_host_errno == 0) error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "poller wait allocation failed");
+			else *out = value_make_array_owned(NULL, 0);
+		}
+		return 1;
+	}
+	if (strcmp(name, "__sys_sendfile") == 0) {
+		long out_fd, in_fd, offset, count;
+		ssize_t sent = -1;
+		if (argc != 4 || !host_int_arg(&args[0], &out_fd) || !host_int_arg(&args[1], &in_fd) ||
+		    !host_int_arg(&args[2], &offset) || !host_int_arg(&args[3], &count) || offset < 0 || count < 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_sendfile expects out_fd, in_fd, offset, count"); return 0;
+		}
+#if defined(__linux__)
+		{
+			off_t off = (off_t)offset;
+			sent = sendfile((int)out_fd, (int)in_fd, &off, (size_t)count);
+		}
+#elif defined(__APPLE__)
+		{
+			off_t len = (off_t)count;
+			int rc = sendfile((int)in_fd, (int)out_fd, (off_t)offset, &len, NULL, 0);
+			sent = (rc == 0 || len > 0) ? (ssize_t)len : -1;
+		}
+#else
+		errno = ENOSYS;
+#endif
+		g_host_errno = sent < 0 ? errno : 0;
+		*out = value_make_int((long)sent);
+		return 1;
+	}
+	if (strcmp(name, "__sys_open_read") == 0) {
+		const char *path = NULL;
+		char path_buf[512];
+		int fd;
+		if (argc != 1 || !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_open_read expects a path"); return 0;
+		}
+		fd = open(path, O_RDONLY);
+		g_host_errno = fd < 0 ? errno : 0;
+		*out = value_make_int(fd);
+		return 1;
+	}
+	if (strcmp(name, "__sys_splice") == 0) {
+		long in_fd, out_fd, count;
+		ssize_t moved = -1;
+		if (argc != 3 || !host_int_arg(&args[0], &in_fd) || !host_int_arg(&args[1], &out_fd) ||
+		    !host_int_arg(&args[2], &count) || count < 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__sys_splice expects in_fd, out_fd, count"); return 0;
+		}
+#if defined(__linux__)
+		moved = splice((int)in_fd, NULL, (int)out_fd, NULL, (size_t)count, SPLICE_F_MOVE | SPLICE_F_MORE);
+#else
+		errno = ENOSYS;
+#endif
+		g_host_errno = moved < 0 ? errno : 0;
+		*out = value_make_int((long)moved);
+		return 1;
+	}
+	if (strcmp(name, "__sys_interface_addresses") == 0) {
+		struct ifaddrs *interfaces = NULL, *it;
+		runtime_data_value *items = NULL;
+		size_t count = 0, cap = 0;
+		if (argc != 0) { error_set(err, ERR_SEMANTIC, 0, 0, "__sys_interface_addresses expects no args"); return 0; }
+		if (getifaddrs(&interfaces) < 0) {
+			g_host_errno = errno; *out = value_make_array_owned(NULL, 0); return 1;
+		}
+		for (it = interfaces; it; it = it->ifa_next) {
+			char ip[INET6_ADDRSTRLEN];
+			char entry[IFNAMSIZ + INET6_ADDRSTRLEN + 2];
+			if (!it->ifa_addr || (it->ifa_addr->sa_family != AF_INET && it->ifa_addr->sa_family != AF_INET6)) continue;
+			if (!host_sockaddr_text(it->ifa_addr, ip, sizeof(ip), NULL)) continue;
+			snprintf(entry, sizeof(entry), "%s|%s", it->ifa_name ? it->ifa_name : "", ip);
+			if (count == cap) {
+				size_t next_cap = cap ? cap * 2 : 8;
+				runtime_data_value *next = (runtime_data_value *)realloc(items, next_cap * sizeof(*items));
+				if (!next) { freeifaddrs(interfaces); free(items); error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+				items = next; cap = next_cap;
+			}
+			items[count] = value_make_string_copy(entry);
+			if (!items[count].str_value) { freeifaddrs(interfaces); free(items); error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+			count++;
+		}
+		freeifaddrs(interfaces);
+		g_host_errno = 0;
+		*out = value_make_array_owned(items, count);
+		return 1;
 	}
 	if (strcmp(name, "runtime_env_get") == 0) {
 		const char *key = NULL;
