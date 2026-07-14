@@ -58,12 +58,13 @@ seed-tests:
 	  src/cmd/compile/seed/intermediate/ir.c \
 	  src/cmd/compile/seed/code/generator.c \
 	  src/cmd/compile/seed/code/native_backend.c \
+	  src/cmd/compile/seed/runtime/network_windows.c \
 	  src/cmd/compile/seed/runtime/runtime.c
 	@./bin/seed_tests
 
-seed-runtime-regression:
+seed-runtime-regression-bin:
 	@echo "Building seed runtime regression tests..."
-	@gcc -std=c11 -Wall -Wextra -Werror -DSEED_COMPILE_ONLY \
+	@gcc -std=c11 -Wall -Wextra -Werror -pthread -DSEED_COMPILE_ONLY \
 	  -o ./bin/seed_runtime_regression \
 	  src/cmd/compile/seed/testing/runtime_regression.c \
 	  src/cmd/compile/seed/s_seed.c \
@@ -75,10 +76,16 @@ seed-runtime-regression:
 	  src/cmd/compile/seed/intermediate/ir.c \
 	  src/cmd/compile/seed/code/generator.c \
 	  src/cmd/compile/seed/code/native_backend.c \
+	  src/cmd/compile/seed/runtime/network_windows.c \
 	  src/cmd/compile/seed/runtime/runtime.c
+
+seed-runtime-regression: seed-runtime-regression-bin
 	@./bin/seed_runtime_regression
 
-.PHONY: help selfhost-bin seed-tests seed-runtime-regression
+seed-network-tests: seed-runtime-regression-bin
+	@./bin/seed_runtime_regression --network-only
+
+.PHONY: help selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests
 
 help:
 	@echo "  make run"
@@ -86,6 +93,7 @@ help:
 	@echo "  make build-arm64"
 	@echo "  make seed-tests"
 	@echo "  make seed-runtime-regression"
+	@echo "  make seed-network-tests"
 	@echo "  override install dir: make INSTALL_BIN_DIR=/usr/local/bin SUDO=sudo"
 
 selfhost-bin:
