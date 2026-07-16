@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#ifndef _WIN32
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 
 #ifdef _WIN32
 #include <direct.h>
@@ -13,6 +17,7 @@
 #endif
 
 #include "../error/error.h"
+#include "../code/target.h"
 
 bool seed_compile_source_text(const char *source_text, FILE *output, compile_error *err);
 
@@ -152,12 +157,41 @@ static bool write_text_file(const char *path, const char *text, compile_error *e
 	return true;
 }
 
+static bool run_compiler(const char *compiler, const char *arg1, const char *arg2, const char *arg3, compile_error *err) {
+#ifdef _WIN32
+	(void)compiler; (void)arg1; (void)arg2; (void)arg3;
+	error_set(err, ERR_SEMANTIC, 0, 0, "self-host bootstrap process execution is not implemented on Windows");
+	return false;
+#else
+	pid_t pid = fork();
+	int status;
+	if (pid < 0) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to fork self-host compiler");
+		return false;
+	}
+	if (pid == 0) {
+		if (arg3) execl(compiler, compiler, arg1, arg2, arg3, (char *)NULL);
+		else execl(compiler, compiler, arg1, arg2, (char *)NULL);
+		_exit(127);
+	}
+	if (waitpid(pid, &status, 0) < 0 || !WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "self-host compiler stage failed: %s", compiler);
+		return false;
+	}
+	return true;
+#endif
+}
+
 bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char *output_dir, compile_error *err) {
 	char *compiler_src = NULL;
 	char *stage1 = NULL;
 	char *stage2 = NULL;
+	char *stage3 = NULL;
 	char stage1_path[512];
 	char stage2_path[512];
+	char stage3_path[512];
+	char stage1_bin[512];
+	char stage2_bin[512];
 	bool ok = false;
 
 	error_clear(err);
@@ -178,18 +212,31 @@ bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char
 		goto done;
 	}
 
-	if (!compile_to_buffer(compiler_src, &stage2, err)) {
-		goto done;
-	}
-
 	snprintf(stage1_path, sizeof(stage1_path), "%s/stage1.ir", output_dir);
 	snprintf(stage2_path, sizeof(stage2_path), "%s/stage2.ir", output_dir);
-	if (!write_text_file(stage1_path, stage1, err) || !write_text_file(stage2_path, stage2, err)) {
+	snprintf(stage3_path, sizeof(stage3_path), "%s/stage3.ir", output_dir);
+	snprintf(stage1_bin, sizeof(stage1_bin), "%s/stage1", output_dir);
+	snprintf(stage2_bin, sizeof(stage2_bin), "%s/stage2", output_dir);
+	if (!write_text_file(stage1_path, stage1, err)) {
 		goto done;
 	}
-
-	if (strcmp(stage1, stage2) != 0) {
-		error_set(err, ERR_SEMANTIC, 0, 0, "bootstrap mismatch: stage1 and stage2 outputs differ");
+	if (!emit_native_from_ir_file(stage1_path, stage1_bin, err)) {
+		goto done;
+	}
+	if (!run_compiler(stage1_bin, compiler_source_path, stage2_path, NULL, err)) {
+		goto done;
+	}
+	if (!run_compiler(stage1_bin, "--emit-bin", stage2_path, stage2_bin, err)) {
+		goto done;
+	}
+	if (!run_compiler(stage2_bin, compiler_source_path, stage3_path, NULL, err)) {
+		goto done;
+	}
+	if (!read_file_text(stage2_path, &stage2, err) || !read_file_text(stage3_path, &stage3, err)) {
+		goto done;
+	}
+	if (strcmp(stage2, stage3) != 0) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "bootstrap mismatch: stage2 and stage3 IR differ");
 		goto done;
 	}
 
@@ -199,5 +246,6 @@ done:
 	free(compiler_src);
 	free(stage1);
 	free(stage2);
+	free(stage3);
 	return ok;
 }
