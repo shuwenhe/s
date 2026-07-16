@@ -266,7 +266,7 @@ bool emit_native_from_ir_file(const char *input_ir_path, const char *output_bina
 		"gcc -std=c11 -O2 -Wall -Wextra -Werror -DSEED_COMPILE_ONLY -I %s/src/cmd/compile/seed -o %s %s "
 		"%s/src/cmd/compile/seed/runtime/runtime.c %s/src/cmd/compile/seed/error/error.c "
 		"%s/src/cmd/compile/seed/code/native_backend.c "
-		"%s/src/cmd/compile/seed/lexical/lexer.c %s/src/cmd/compile/seed/syntax/parser.c "
+		"%s/src/cmd/compile/seed/lexical/lexer.c %s/src/cmd/compile/seed/lexical/selfhost_bridge.c %s/src/cmd/compile/seed/syntax/parser.c "
 		"%s/src/cmd/compile/seed/semantic/analyzer.c %s/src/cmd/compile/seed/intermediate/ir.c "
 		"%s/src/cmd/compile/seed/code/generator.c %s/src/cmd/compile/seed/bootstrap/bootstrap.c "
 		"%s/src/cmd/compile/seed/s_seed.c",
@@ -276,7 +276,7 @@ bool emit_native_from_ir_file(const char *input_ir_path, const char *output_bina
 		s_source_root, s_source_root,
 		s_source_root,
 		s_source_root, s_source_root,
-		s_source_root, s_source_root,
+		s_source_root, s_source_root, s_source_root,
 		s_source_root, s_source_root, s_source_root);
 
 	rc = system(command);
@@ -457,12 +457,12 @@ bool emit_c_abi_shared_from_ir_file(const char *input_ir_path, const char *outpu
 		"gcc -std=c11 -O2 -fPIC -fvisibility=hidden %s -Wall -Wextra -Werror -DSEED_COMPILE_ONLY -I %s/src/cmd/compile/seed -o %s %s "
 		"%s/src/cmd/compile/seed/runtime/runtime.c %s/src/cmd/compile/seed/error/error.c "
 		"%s/src/cmd/compile/seed/code/native_backend.c %s/src/cmd/compile/seed/lexical/lexer.c "
-		"%s/src/cmd/compile/seed/syntax/parser.c %s/src/cmd/compile/seed/semantic/analyzer.c "
+		"%s/src/cmd/compile/seed/lexical/selfhost_bridge.c %s/src/cmd/compile/seed/syntax/parser.c %s/src/cmd/compile/seed/semantic/analyzer.c "
 		"%s/src/cmd/compile/seed/intermediate/ir.c %s/src/cmd/compile/seed/code/generator.c "
 		"%s/src/cmd/compile/seed/bootstrap/bootstrap.c %s/src/cmd/compile/seed/s_seed.c",
 		shared_flag, s_source_root, output_library_path, temp_path,
 		s_source_root, s_source_root, s_source_root, s_source_root,
-		s_source_root, s_source_root, s_source_root, s_source_root,
+		s_source_root, s_source_root, s_source_root, s_source_root, s_source_root,
 		s_source_root, s_source_root);
 	rc = system(command);
 	remove(temp_path);

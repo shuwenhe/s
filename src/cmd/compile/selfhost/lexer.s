@@ -249,7 +249,7 @@ func dump_tokens(string source) string {
         }
         output = append_token(output, symbol_kind(symbol), symbol, token_line, token_column)
 		if symbol_kind(symbol) == "UNKNOWN" {
-			return lexer_error("ILLEGAL_CHAR", token_line, token_column, "unexpected character")
+			return lexer_error("ILLEGAL_CHAR", token_line, token_column, "illegal character: " + symbol)
 		}
         i = i + len(symbol)
         column = column + len(symbol)
