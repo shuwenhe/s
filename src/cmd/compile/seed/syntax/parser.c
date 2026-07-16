@@ -1,5 +1,6 @@
 #include "ast.h"
 
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +15,7 @@ typedef struct parser {
 } parser;
 
 static ast_node *parse_extern_decl(parser *p);
+static ast_node *parse_export_decl(parser *p);
 static ast_node *parse_binding_statement(parser *p, int is_mutable);
 static int looks_like_typed_binding(parser *p);
 static int try_parse_typed_name(parser *p, token_type terminator, char **out_type, char **out_name);
@@ -29,6 +31,19 @@ static char *dup_cstr(const char *s) {
 	}
 	memcpy(out, s, n + 1);
 	return out;
+}
+
+static int is_c_identifier(const char *s) {
+	const unsigned char *p = (const unsigned char *)s;
+	if (!p || !(isalpha(*p) || *p == '_')) {
+		return 0;
+	}
+	for (p++; *p; p++) {
+		if (!(isalnum(*p) || *p == '_')) {
+			return 0;
+		}
+	}
+	return 1;
 }
 
 void ast_vec_init(ast_vec *vec) {
@@ -185,6 +200,8 @@ void ast_free(ast_node *node) {
 			break;
 		case AST_FN_STMT:
 			free(node->as.fn_stmt.name);
+			free(node->as.fn_stmt.export_abi);
+			free(node->as.fn_stmt.export_symbol);
 			for (i = 0; i < node->as.fn_stmt.param_count; i++) {
 				free(node->as.fn_stmt.params[i]);
 				free(node->as.fn_stmt.param_types[i]);
@@ -1906,6 +1923,9 @@ static ast_node *parse_top_level(parser *p) {
 		if (strcmp(tok->lexeme, "extern") == 0) {
 			return parse_extern_decl(p);
 		}
+		if (strcmp(tok->lexeme, "export") == 0) {
+			return parse_export_decl(p);
+		}
 		if (strcmp(tok->lexeme, "struct") == 0) {
 			return parse_struct_decl(p);
 		}
@@ -1918,6 +1938,67 @@ static ast_node *parse_top_level(parser *p) {
 		}
 	}
 	return parse_statement(p);
+}
+
+static ast_node *parse_export_decl(parser *p) {
+	const token *kw = peek(p);
+	const char *spec;
+	const char *colon;
+	ast_node *node;
+
+	if (!match(p, TOKEN_IDENTIFIER) || strcmp(prev(p)->lexeme, "export") != 0) {
+		parse_error(p, peek(p), "expected 'export'");
+		return NULL;
+	}
+	if (!expect(p, TOKEN_STRING, "C ABI export specification, for example \"c:add\"")) {
+		return NULL;
+	}
+	spec = prev(p)->lexeme;
+	colon = strchr(spec, ':');
+	if (!colon || colon == spec || colon[1] == '\0') {
+		parse_error(p, prev(p), "export specification must be 'c:<symbol>'");
+		return NULL;
+	}
+	if ((size_t)(colon - spec) != 1 || spec[0] != 'c') {
+		parse_error(p, prev(p), "unsupported export ABI '%.*s'; seed compiler supports only 'c'", (int)(colon - spec), spec);
+		return NULL;
+	}
+	if (!is_c_identifier(colon + 1)) {
+		parse_error(p, prev(p), "C ABI export symbol must be a valid C identifier");
+		return NULL;
+	}
+	if (!match(p, TOKEN_FN)) {
+		parse_error(p, peek(p), "expected 'func' after export specification");
+		return NULL;
+	}
+	node = parse_fn_statement(p);
+	if (!node) {
+		return NULL;
+	}
+	if (!node->as.fn_stmt.return_type || strcmp(node->as.fn_stmt.return_type, "int") != 0) {
+		parse_error(p, kw, "C ABI export currently requires return type 'int'");
+		ast_free(node);
+		return NULL;
+	}
+	{
+		size_t i;
+		for (i = 0; i < node->as.fn_stmt.param_count; i++) {
+			if (!node->as.fn_stmt.param_types[i] || strcmp(node->as.fn_stmt.param_types[i], "int") != 0) {
+				parse_error(p, kw, "C ABI export currently supports only 'int' parameters");
+				ast_free(node);
+				return NULL;
+			}
+		}
+	}
+	node->pos = kw->pos;
+	node->as.fn_stmt.export_abi = dup_cstr("c");
+	node->as.fn_stmt.export_symbol = dup_cstr(colon + 1);
+	if (!node->as.fn_stmt.export_abi || !node->as.fn_stmt.export_symbol) {
+		error_set(p->err, ERR_OUT_OF_MEMORY, kw->pos.line, kw->pos.column, "out of memory");
+		ast_free(node);
+		return NULL;
+	}
+	return node;
 }
 
 static ast_node *parse_extern_decl(parser *p) {

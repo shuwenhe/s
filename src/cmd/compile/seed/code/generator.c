@@ -62,6 +62,9 @@ void generate_code(IR *ir, FILE *output) {
             case IR_NOP:
                 emit_record(output, "NOP", "", "", "");
                 break;
+            case IR_EXPORT:
+                emit_record(output, "EXPORT", instr->result, instr->operand1, instr->operand2);
+                break;
             case IR_FUNC_BEGIN:
                 emit_record(output, "FUNC_BEGIN", instr->result, "", "");
                 break;

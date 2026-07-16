@@ -146,12 +146,35 @@ static void print_usage(const char *argv0) {
 	fprintf(stderr, "usage:\n");
 	fprintf(stderr, "  %s <input.s> <output.ir>\n", argv0);
 	fprintf(stderr, "  %s --emit-bin <input.ir> <output.bin>\n", argv0);
+	fprintf(stderr, "  %s --emit-shared <input.ir> <output.dylib|output.so>\n", argv0);
+	fprintf(stderr, "  %s --probe-backend <native|c-abi|cuda|cann>\n", argv0);
 	fprintf(stderr, "  %s --bootstrap <compiler_source.s> [output_dir]\n", argv0);
 }
 
 int main(int argc, char **argv) {
 	compile_error err;
 	error_clear(&err);
+
+	if (argc >= 2 && strcmp(argv[1], "--probe-backend") == 0) {
+		s_target_backend backend;
+		char detail[512];
+		bool available;
+		if (argc != 3) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (strcmp(argv[2], "native") == 0) backend = S_TARGET_NATIVE;
+		else if (strcmp(argv[2], "c-abi") == 0) backend = S_TARGET_C_ABI;
+		else if (strcmp(argv[2], "cuda") == 0) backend = S_TARGET_CUDA;
+		else if (strcmp(argv[2], "cann") == 0) backend = S_TARGET_CANN;
+		else {
+			fprintf(stderr, "unknown backend: %s\n", argv[2]);
+			return 2;
+		}
+		available = s_target_backend_probe(backend, detail, sizeof(detail));
+		printf("%s: %s\n", s_target_backend_name(backend), detail);
+		return available ? 0 : 3;
+	}
 
 	if (argc >= 2 && strcmp(argv[1], "--emit-bin") == 0) {
 		if (argc != 4) {
@@ -163,6 +186,19 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 		printf("compiled %s -> %s\n", argv[2], argv[3]);
+		return 0;
+	}
+
+	if (argc >= 2 && strcmp(argv[1], "--emit-shared") == 0) {
+		if (argc != 4) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (!emit_c_abi_shared_from_ir_file(argv[2], argv[3], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("compiled C ABI library %s -> %s\n", argv[2], argv[3]);
 		return 0;
 	}
 

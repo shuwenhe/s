@@ -46,6 +46,7 @@ build-arm64:
 
 seed-tests:
 	@echo "Building seed runtime/parser tests..."
+	@mkdir -p ./bin
 	@gcc -std=c11 -Wall -Wextra -Werror -DSEED_COMPILE_ONLY \
 	  -o ./bin/seed_tests \
 	  src/cmd/compile/seed/testing/tests.c \
@@ -57,6 +58,7 @@ seed-tests:
 	  src/cmd/compile/seed/semantic/analyzer.c \
 	  src/cmd/compile/seed/intermediate/ir.c \
 	  src/cmd/compile/seed/code/generator.c \
+	  src/cmd/compile/seed/code/backend_registry.c \
 	  src/cmd/compile/seed/code/native_backend.c \
 	  src/cmd/compile/seed/runtime/network_windows.c \
 	  src/cmd/compile/seed/runtime/runtime.c
@@ -64,6 +66,7 @@ seed-tests:
 
 seed-runtime-regression-bin:
 	@echo "Building seed runtime regression tests..."
+	@mkdir -p ./bin
 	@gcc -std=c11 -Wall -Wextra -Werror -pthread -DSEED_COMPILE_ONLY \
 	  -o ./bin/seed_runtime_regression \
 	  src/cmd/compile/seed/testing/runtime_regression.c \
@@ -75,6 +78,7 @@ seed-runtime-regression-bin:
 	  src/cmd/compile/seed/semantic/analyzer.c \
 	  src/cmd/compile/seed/intermediate/ir.c \
 	  src/cmd/compile/seed/code/generator.c \
+	  src/cmd/compile/seed/code/backend_registry.c \
 	  src/cmd/compile/seed/code/native_backend.c \
 	  src/cmd/compile/seed/runtime/network_windows.c \
 	  src/cmd/compile/seed/runtime/runtime.c
@@ -85,7 +89,31 @@ seed-runtime-regression: seed-runtime-regression-bin
 seed-network-tests: seed-runtime-regression-bin
 	@./bin/seed_runtime_regression --network-only
 
-.PHONY: help selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests
+seed-compiler-bin:
+	@mkdir -p ./bin
+	@gcc -std=c11 -Wall -Wextra -Werror \
+	  -o ./bin/s_seed \
+	  src/cmd/compile/seed/s_seed.c \
+	  src/cmd/compile/seed/bootstrap/bootstrap.c \
+	  src/cmd/compile/seed/lexical/lexer.c \
+	  src/cmd/compile/seed/error/error.c \
+	  src/cmd/compile/seed/syntax/parser.c \
+	  src/cmd/compile/seed/semantic/analyzer.c \
+	  src/cmd/compile/seed/intermediate/ir.c \
+	  src/cmd/compile/seed/code/generator.c \
+	  src/cmd/compile/seed/code/backend_registry.c \
+	  src/cmd/compile/seed/code/native_backend.c \
+	  src/cmd/compile/seed/runtime/network_windows.c \
+	  src/cmd/compile/seed/runtime/runtime.c
+
+seed-c-abi-test: seed-compiler-bin
+	@mkdir -p /tmp/s_seed_c_abi_test
+	@./bin/s_seed tests/c_abi/add.s /tmp/s_seed_c_abi_test/add.ir
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-shared /tmp/s_seed_c_abi_test/add.ir /tmp/s_seed_c_abi_test/libs_add.$$(if [ "$$(uname -s)" = Darwin ]; then echo dylib; else echo so; fi)
+	@gcc -std=c11 -Wall -Wextra -Werror -o /tmp/s_seed_c_abi_test/caller tests/c_abi/caller.c $$(if [ "$$(uname -s)" = Darwin ]; then echo; else echo -ldl; fi)
+	@/tmp/s_seed_c_abi_test/caller /tmp/s_seed_c_abi_test/libs_add.$$(if [ "$$(uname -s)" = Darwin ]; then echo dylib; else echo so; fi)
+
+.PHONY: help selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test
 
 help:
 	@echo "  make run"
@@ -94,6 +122,7 @@ help:
 	@echo "  make seed-tests"
 	@echo "  make seed-runtime-regression"
 	@echo "  make seed-network-tests"
+	@echo "  make seed-c-abi-test"
 	@echo "  override install dir: make INSTALL_BIN_DIR=/usr/local/bin SUDO=sudo"
 
 selfhost-bin:

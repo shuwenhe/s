@@ -117,6 +117,8 @@ struct ast_node {
 
 		struct {
 			char *name;
+			char *export_abi;
+			char *export_symbol;
 			char **params;
 			char **param_types;
 			size_t param_count;
