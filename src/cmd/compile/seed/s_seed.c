@@ -142,26 +142,41 @@ bool seed_compile_file(const char *input_path, const char *output_path, compile_
 }
 
 #ifndef SEED_COMPILE_ONLY
+static void write_hex(FILE *out, const char *text) {
+	static const char digits[] = "0123456789abcdef";
+	const unsigned char *p = (const unsigned char *)(text ? text : "");
+	while (*p) {
+		fputc(digits[*p >> 4], out);
+		fputc(digits[*p & 15], out);
+		p++;
+	}
+}
+
 static bool seed_dump_tokens_file(const char *input_path, const char *output_path, compile_error *err) {
 	char *source_text = NULL;
 	token_vec tokens;
 	FILE *out;
 	size_t i;
 	if (!read_file_text(input_path, &source_text, err)) return false;
-	if (!lexer_scan(source_text, &tokens, err)) {
-		free(source_text);
-		return false;
-	}
 	out = fopen(output_path, "wb");
 	if (!out) {
-		token_vec_free(&tokens);
 		free(source_text);
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open token output: %s", output_path);
 		return false;
 	}
+	if (!lexer_scan(source_text, &tokens, err)) {
+		const char *code = err->code == ERR_ILLEGAL_CHAR ? "ILLEGAL_CHAR" :
+			err->code == ERR_UNTERMINATED_STRING ? "UNTERMINATED_STRING" : "SYNTAX";
+		fprintf(out, "ERROR|%s|%zu|%zu|%s\n", code, err->line, err->column, err->message);
+		fclose(out);
+		free(source_text);
+		error_clear(err);
+		return true;
+	}
 	for (i = 0; i < tokens.len; i++) {
-		fprintf(out, "%s|%s|%zu|%zu\n", token_type_name(tokens.data[i].type),
-			tokens.data[i].lexeme ? tokens.data[i].lexeme : "", tokens.data[i].pos.line, tokens.data[i].pos.column);
+		fprintf(out, "%s|", token_type_name(tokens.data[i].type));
+		write_hex(out, tokens.data[i].lexeme);
+		fprintf(out, "|%zu|%zu\n", tokens.data[i].pos.line, tokens.data[i].pos.column);
 	}
 	if (fclose(out) != 0) {
 		token_vec_free(&tokens);
