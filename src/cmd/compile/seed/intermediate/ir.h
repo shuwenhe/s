@@ -8,6 +8,7 @@
 
 typedef enum ir_op {
 	IR_NOP = 0,
+	IR_EXPORT,
 	IR_FUNC_BEGIN,
 	IR_FUNC_END,
 	IR_LABEL,
