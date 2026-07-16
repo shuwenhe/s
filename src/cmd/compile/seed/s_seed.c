@@ -142,6 +142,40 @@ bool seed_compile_file(const char *input_path, const char *output_path, compile_
 }
 
 #ifndef SEED_COMPILE_ONLY
+static bool seed_dump_tokens_file(const char *input_path, const char *output_path, compile_error *err) {
+	char *source_text = NULL;
+	token_vec tokens;
+	FILE *out;
+	size_t i;
+	if (!read_file_text(input_path, &source_text, err)) return false;
+	if (!lexer_scan(source_text, &tokens, err)) {
+		free(source_text);
+		return false;
+	}
+	out = fopen(output_path, "wb");
+	if (!out) {
+		token_vec_free(&tokens);
+		free(source_text);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open token output: %s", output_path);
+		return false;
+	}
+	for (i = 0; i < tokens.len; i++) {
+		fprintf(out, "%s|%s|%zu|%zu\n", token_type_name(tokens.data[i].type),
+			tokens.data[i].lexeme ? tokens.data[i].lexeme : "", tokens.data[i].pos.line, tokens.data[i].pos.column);
+	}
+	if (fclose(out) != 0) {
+		token_vec_free(&tokens);
+		free(source_text);
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to close token output: %s", output_path);
+		return false;
+	}
+	token_vec_free(&tokens);
+	free(source_text);
+	return true;
+}
+#endif
+
+#ifndef SEED_COMPILE_ONLY
 static void print_usage(const char *argv0) {
 	fprintf(stderr, "usage:\n");
 	fprintf(stderr, "  %s <input.s> <output.ir>\n", argv0);
@@ -149,11 +183,24 @@ static void print_usage(const char *argv0) {
 	fprintf(stderr, "  %s --emit-shared <input.ir> <output.dylib|output.so>\n", argv0);
 	fprintf(stderr, "  %s --probe-backend <native|c-abi|cuda|cann>\n", argv0);
 	fprintf(stderr, "  %s --bootstrap <compiler_source.s> [output_dir]\n", argv0);
+	fprintf(stderr, "  %s --dump-tokens <input.s> <output.tokens>\n", argv0);
 }
 
 int main(int argc, char **argv) {
 	compile_error err;
 	error_clear(&err);
+
+	if (argc >= 2 && strcmp(argv[1], "--dump-tokens") == 0) {
+		if (argc != 4) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (!seed_dump_tokens_file(argv[2], argv[3], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		return 0;
+	}
 
 	if (argc >= 2 && strcmp(argv[1], "--probe-backend") == 0) {
 		s_target_backend backend;
