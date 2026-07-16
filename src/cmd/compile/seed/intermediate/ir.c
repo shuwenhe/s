@@ -87,7 +87,8 @@ bool ir_emit(IR *ir, ir_op type, const char *result, const char *operand1, const
 
 const char *ir_op_name(ir_op op) {
 	switch (op) {
-		case IR_NOP: return "NOP";
+	case IR_NOP: return "NOP";
+		case IR_EXPORT: return "EXPORT";
 		case IR_FUNC_BEGIN: return "FUNC_BEGIN";
 		case IR_FUNC_END: return "FUNC_END";
 		case IR_LABEL: return "LABEL";
@@ -619,8 +620,30 @@ static bool lower_for(ir_builder *b, ast_node *stmt) {
 
 static bool lower_fn(ir_builder *b, ast_node *stmt) {
 	size_t i;
+	char signature[IR_OPERAND_CAP];
+	size_t used = 0;
 	int has_tail_expr_return = 0;
 	int non_unit = is_non_unit_return_type(stmt->as.fn_stmt.return_type);
+	if (stmt->as.fn_stmt.export_symbol) {
+		const char *ret = stmt->as.fn_stmt.return_type ? stmt->as.fn_stmt.return_type : "()";
+		int n = snprintf(signature, sizeof(signature), "%s", ret);
+		if (n < 0 || (size_t)n >= sizeof(signature)) {
+			error_set(b->err, ERR_SEMANTIC, stmt->pos.line, stmt->pos.column, "C ABI export signature is too long");
+			return false;
+		}
+		used = (size_t)n;
+		for (i = 0; i < stmt->as.fn_stmt.param_count; i++) {
+			n = snprintf(signature + used, sizeof(signature) - used, ",%s", stmt->as.fn_stmt.param_types[i]);
+			if (n < 0 || (size_t)n >= sizeof(signature) - used) {
+				error_set(b->err, ERR_SEMANTIC, stmt->pos.line, stmt->pos.column, "C ABI export signature is too long");
+				return false;
+			}
+			used += (size_t)n;
+		}
+		if (!emit_ins(b, IR_EXPORT, stmt->as.fn_stmt.name, stmt->as.fn_stmt.export_symbol, signature, stmt->pos)) {
+			return false;
+		}
+	}
 	if (!emit_ins(b, IR_FUNC_BEGIN, stmt->as.fn_stmt.name, "", "", stmt->pos)) {
 		return false;
 	}
