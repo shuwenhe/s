@@ -1,4 +1,5 @@
 #include "token.h"
+#include "selfhost_bridge.h"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -134,7 +135,7 @@ static bool push_simple(token_vec *out, token_type t, const char *lexeme, size_t
 	return true;
 }
 
-bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error *err) {
+static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct compile_error *err) {
 	size_t i = 0;
 	size_t line = 1;
 	size_t col = 1;
@@ -415,4 +416,12 @@ oom:
 		return false;
 	}
 	return true;
+}
+
+bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error *err) {
+	const char *mode = getenv("S_LEXER_MODE");
+	if (mode && strcmp(mode, "selfhost") == 0) {
+		return selfhost_lexer_scan(source, out_tokens, err);
+	}
+	return lexer_scan_seed(source, out_tokens, err);
 }

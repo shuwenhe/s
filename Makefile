@@ -54,6 +54,7 @@ seed-tests:
 	  src/cmd/compile/seed/s_seed.c \
 	  src/cmd/compile/seed/bootstrap/bootstrap.c \
 	  src/cmd/compile/seed/lexical/lexer.c \
+	  src/cmd/compile/seed/lexical/selfhost_bridge.c \
 	  src/cmd/compile/seed/error/error.c \
 	  src/cmd/compile/seed/syntax/parser.c \
 	  src/cmd/compile/seed/semantic/analyzer.c \
@@ -74,6 +75,7 @@ seed-runtime-regression-bin:
 	  src/cmd/compile/seed/s_seed.c \
 	  src/cmd/compile/seed/bootstrap/bootstrap.c \
 	  src/cmd/compile/seed/lexical/lexer.c \
+	  src/cmd/compile/seed/lexical/selfhost_bridge.c \
 	  src/cmd/compile/seed/error/error.c \
 	  src/cmd/compile/seed/syntax/parser.c \
 	  src/cmd/compile/seed/semantic/analyzer.c \
@@ -97,6 +99,7 @@ seed-compiler-bin:
 	  src/cmd/compile/seed/s_seed.c \
 	  src/cmd/compile/seed/bootstrap/bootstrap.c \
 	  src/cmd/compile/seed/lexical/lexer.c \
+	  src/cmd/compile/seed/lexical/selfhost_bridge.c \
 	  src/cmd/compile/seed/error/error.c \
 	  src/cmd/compile/seed/syntax/parser.c \
 	  src/cmd/compile/seed/semantic/analyzer.c \
@@ -127,13 +130,24 @@ selfhost-lexer-check: seed-compiler-bin
 	@./bin/s_seed --dump-tokens tests/selfhost/lexer_fixture.s $(SELFHOST_DIR)/tokens.seed
 	@$(SELFHOST_DIR)/s_lexer tests/selfhost/lexer_fixture.s $(SELFHOST_DIR)/tokens.s
 	@cmp $(SELFHOST_DIR)/tokens.seed $(SELFHOST_DIR)/tokens.s
+	@./bin/s_seed --dump-tokens tests/selfhost/lexer_unterminated_string.s $(SELFHOST_DIR)/unterminated-string.seed
+	@$(SELFHOST_DIR)/s_lexer tests/selfhost/lexer_unterminated_string.s $(SELFHOST_DIR)/unterminated-string.s
+	@cmp $(SELFHOST_DIR)/unterminated-string.seed $(SELFHOST_DIR)/unterminated-string.s
+	@./bin/s_seed --dump-tokens tests/selfhost/lexer_unterminated_comment.s $(SELFHOST_DIR)/unterminated-comment.seed
+	@$(SELFHOST_DIR)/s_lexer tests/selfhost/lexer_unterminated_comment.s $(SELFHOST_DIR)/unterminated-comment.s
+	@cmp $(SELFHOST_DIR)/unterminated-comment.seed $(SELFHOST_DIR)/unterminated-comment.s
+	@./bin/s_seed --dump-tokens tests/selfhost/lexer_illegal_char.s $(SELFHOST_DIR)/illegal-char.seed
+	@$(SELFHOST_DIR)/s_lexer tests/selfhost/lexer_illegal_char.s $(SELFHOST_DIR)/illegal-char.s
+	@cmp $(SELFHOST_DIR)/illegal-char.seed $(SELFHOST_DIR)/illegal-char.s
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/s_lexer ./bin/s_lexer
 	@echo "S lexer check passed: S token stream == seed token stream"
 
 selfhost-check: selfhost selfhost-lexer-check
 	@./bin/s tests/c_abi/add.s $(SELFHOST_DIR)/final-check.ir
+	@S_LEXER_MODE=selfhost S_SELFHOST_LEXER=$(SELFHOST_DIR)/s_lexer ./bin/s tests/c_abi/add.s $(SELFHOST_DIR)/s-lexer-parser.ir
+	@cmp $(SELFHOST_DIR)/final-check.ir $(SELFHOST_DIR)/s-lexer-parser.ir
 	@cmp $(SELFHOST_DIR)/stage2.ir $(SELFHOST_DIR)/stage3.ir
-	@echo "Self-host check passed: stage2 == stage3 and ./bin/s compiled a fixture"
+	@echo "Self-host check passed: stage2 == stage3 and S Lexer -> Parser IR matches seed"
 
 .PHONY: help selfhost selfhost-check selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test
 

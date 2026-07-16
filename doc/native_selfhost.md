@@ -31,4 +31,12 @@ make selfhost-check SELFHOST_DIR=/tmp/s-selfhost
 
 第一个真实迁移组件是 `src/cmd/compile/selfhost/lexer.s`。标识符、关键字、数字、字符串、注释、运算符、行列跟踪和 token 序列生成均在 S 中执行；C runtime 只提供文件读写、单字符读取和字符串切片 intrinsic。`make selfhost-lexer-check` 会生成 C/S 两份 token 文件并要求字节完全一致。
 
+S Lexer 与 Parser 之间使用窄桥接协议：token 的 lexeme 使用十六进制编码，桥接层恢复 `token_vec` 后直接调用现有 Parser。设置下列环境变量即可让完整编译走 S Lexer：
+
+```sh
+S_LEXER_MODE=selfhost S_SELFHOST_LEXER=./bin/s_lexer ./bin/s input.s output.ir
+```
+
+`make selfhost-check` 会分别使用 seed lexer 和 S lexer 编译同一源码，并要求最终 IR 字节一致。覆盖用例包括小数、科学计数法、非法字符、未闭合字符串和未闭合块注释。
+
 下一阶段应逐个让 `compile/internal/syntax`、`typecheck`、`ir` 和 backend 模块成为实际执行路径，并用相同输入的 IR golden test 验证与 seed 行为一致。C 最终只保留启动、系统调用和 CUDA/CANN C ABI shim。
