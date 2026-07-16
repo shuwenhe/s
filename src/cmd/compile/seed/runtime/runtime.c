@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <errno.h>
+#include <limits.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
 #include <net/if.h>
@@ -3480,9 +3481,9 @@ bool runtime_execute_text(const char *target_text, const char *entry_function, l
 bool runtime_execute_text_i64(
 	const char *target_text,
 	const char *entry_function,
-	const long *args,
+	const int64_t *args,
 	size_t argc,
-	long *out_return,
+	int64_t *out_return,
 	compile_error *err
 ) {
 	runtime_program prog = {0};
@@ -3506,6 +3507,11 @@ bool runtime_execute_text_i64(
 			return false;
 		}
 		for (i = 0; i < argc; i++) {
+			if (args[i] < (int64_t)LONG_MIN || args[i] > (int64_t)LONG_MAX) {
+				free(runtime_args);
+				error_set(err, ERR_SEMANTIC, 0, 0, "C ABI integer argument is outside the S runtime range");
+				return false;
+			}
 			runtime_args[i] = value_make_int(args[i]);
 		}
 	}
@@ -3532,7 +3538,7 @@ bool runtime_execute_text_i64(
 		ok = 0;
 	}
 	if (ok) {
-		*out_return = ret.int_value;
+		*out_return = (int64_t)ret.int_value;
 	}
 	value_clear(&ret);
 	free(runtime_args);
