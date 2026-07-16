@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "target.h"
 
@@ -11,6 +12,13 @@ typedef struct c_abi_export {
 	char symbol[256];
 	size_t argc;
 } c_abi_export;
+
+static int native_is_c_identifier(const char *s) {
+	const unsigned char *p = (const unsigned char *)s;
+	if (!p || !(isalpha(*p) || *p == '_')) return 0;
+	for (p++; *p; p++) if (!(isalnum(*p) || *p == '_')) return 0;
+	return 1;
+}
 
 static bool read_text_file(const char *path, char **out_text, compile_error *err) {
 	FILE *fp;
@@ -356,6 +364,10 @@ static bool collect_c_abi_exports(const char *ir_text, c_abi_export *exports, si
 			if (!signature) goto invalid_record;
 			*signature++ = '\0';
 			if (strcmp(signature, "int") != 0 && strncmp(signature, "int,", 4) != 0) goto invalid_signature;
+			if (!native_is_c_identifier(function) || !native_is_c_identifier(symbol) || strcmp(symbol, "s_abi_last_error") == 0) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "invalid or reserved C ABI export name");
+				return false;
+			}
 			cursor = signature + 3;
 			while (*cursor) {
 				if (*cursor != ',' || strncmp(cursor + 1, "int", 3) != 0) goto invalid_signature;
@@ -365,6 +377,15 @@ static bool collect_c_abi_exports(const char *ir_text, c_abi_export *exports, si
 			if (strlen(function) >= sizeof(exports[len].function) || strlen(symbol) >= sizeof(exports[len].symbol)) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "C ABI export name is too long");
 				return false;
+			}
+			{
+				size_t previous;
+				for (previous = 0; previous < len; previous++) {
+					if (strcmp(exports[previous].symbol, symbol) == 0) {
+						error_set(err, ERR_SEMANTIC, 0, 0, "duplicate C ABI export symbol: %s", symbol);
+						return false;
+					}
+				}
 			}
 			strcpy(exports[len].function, function);
 			strcpy(exports[len].symbol, symbol);
@@ -408,11 +429,11 @@ static bool write_c_abi_library_file(FILE *out, const char *ir_text, const c_abi
 		for (arg = 0; arg < exports[i].argc; arg++) {
 			if (fprintf(out, "%sint64_t a%zu", arg ? ", " : "", arg) < 0) return false;
 		}
-		if (fprintf(out, ") {\n    compile_error err;\n    long ret = 0;\n") < 0) return false;
+		if (fprintf(out, ") {\n    compile_error err;\n    int64_t ret = 0;\n") < 0) return false;
 		if (exports[i].argc > 0) {
-			if (fprintf(out, "    long args[%zu] = {", exports[i].argc) < 0) return false;
+			if (fprintf(out, "    int64_t args[%zu] = {", exports[i].argc) < 0) return false;
 			for (arg = 0; arg < exports[i].argc; arg++) {
-				if (fprintf(out, "%s(long)a%zu", arg ? ", " : "", arg) < 0) return false;
+				if (fprintf(out, "%sa%zu", arg ? ", " : "", arg) < 0) return false;
 			}
 			if (fprintf(out, "};\n") < 0) return false;
 		}
