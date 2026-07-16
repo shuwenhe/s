@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
 			print_compile_error(&err);
 			return 1;
 		}
-		printf("bootstrap two-stage check passed\n");
+		printf("bootstrap self-host check passed (stage2 IR == stage3 IR)\n");
 		return 0;
 	}
 

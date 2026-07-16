@@ -2,6 +2,7 @@ PREFIX ?= $(CURDIR)/.local
 INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_PROGRAM ?= install
 SUDO ?=
+SELFHOST_DIR ?= $(CURDIR)/.bootstrap/selfhost
 
 run:
 	@echo "Building and installing S compiler for $(shell uname -m)..."
@@ -113,7 +114,18 @@ seed-c-abi-test: seed-compiler-bin
 	@gcc -std=c11 -Wall -Wextra -Werror -o /tmp/s_seed_c_abi_test/caller tests/c_abi/caller.c $$(if [ "$$(uname -s)" = Darwin ]; then echo; else echo -ldl; fi)
 	@/tmp/s_seed_c_abi_test/caller /tmp/s_seed_c_abi_test/libs_add.$$(if [ "$$(uname -s)" = Darwin ]; then echo dylib; else echo so; fi)
 
-.PHONY: help selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test
+selfhost: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR) ./bin
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --bootstrap src/cmd/compile/main.s $(SELFHOST_DIR)
+	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/stage2 ./bin/s
+	@echo "Installed self-hosted S compiler: ./bin/s"
+
+selfhost-check: selfhost
+	@./bin/s tests/c_abi/add.s $(SELFHOST_DIR)/final-check.ir
+	@cmp $(SELFHOST_DIR)/stage2.ir $(SELFHOST_DIR)/stage3.ir
+	@echo "Self-host check passed: stage2 == stage3 and ./bin/s compiled a fixture"
+
+.PHONY: help selfhost selfhost-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test
 
 help:
 	@echo "  make run"
@@ -123,6 +135,8 @@ help:
 	@echo "  make seed-runtime-regression"
 	@echo "  make seed-network-tests"
 	@echo "  make seed-c-abi-test"
+	@echo "  make selfhost"
+	@echo "  make selfhost-check"
 	@echo "  override install dir: make INSTALL_BIN_DIR=/usr/local/bin SUDO=sudo"
 
 selfhost-bin:
