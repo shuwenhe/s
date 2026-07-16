@@ -1336,6 +1336,22 @@ static int host_dispatch_call(
 		*out = value_make_string_copy(ch);
 		return out->str_value != NULL;
 	}
+	if (strcmp(name, "__host_byte_at") == 0) {
+		const char *text = NULL;
+		char text_buf[64];
+		long index;
+		if (argc != 2 || !value_as_cstr(&args[0], text_buf, sizeof(text_buf), &text) ||
+		    !host_int_arg(&args[1], &index)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_byte_at expects string and int");
+			return 0;
+		}
+		if (index < 0 || (size_t)index >= strlen(text)) {
+			*out = value_make_int(-1);
+			return 1;
+		}
+		*out = value_make_int((unsigned char)text[index]);
+		return 1;
+	}
 	if (strcmp(name, "__host_slice") == 0) {
 		const char *text = NULL;
 		char text_buf[64];

@@ -4,6 +4,7 @@ extern "intrinsic" func host_args() []string;
 extern "intrinsic" func __host_read_to_string(string path) string;
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
 extern "intrinsic" func __host_char_at(string text, int index) string;
+extern "intrinsic" func __host_byte_at(string text, int index) int;
 extern "intrinsic" func __host_slice(string text, int start, int end) string;
 
 func is_digit(string ch) bool {
@@ -84,8 +85,33 @@ func int_text(int value) string {
     return int_text(value / 10) + digit_text(value % 10)
 }
 
+func hex_digit(int value) string {
+    if value < 10 { return digit_text(value) }
+    if value == 10 { return "a" }
+    if value == 11 { return "b" }
+    if value == 12 { return "c" }
+    if value == 13 { return "d" }
+    if value == 14 { return "e" }
+    return "f"
+}
+
+func hex_text(string text) string {
+    var output = ""
+    var index = 0
+    while index < len(text) {
+        let value = __host_byte_at(text, index)
+        output = output + hex_digit(value / 16) + hex_digit(value % 16)
+        index = index + 1
+    }
+    return output
+}
+
+func lexer_error(string code, int line, int column, string message) string {
+    return "ERROR|" + code + "|" + int_text(line) + "|" + int_text(column) + "|" + message + "\n"
+}
+
 func append_token(string output, string kind, string lexeme, int line, int column) string {
-    return output + kind + "|" + lexeme + "|" + int_text(line) + "|" + int_text(column) + "\n"
+    return output + kind + "|" + hex_text(lexeme) + "|" + int_text(line) + "|" + int_text(column) + "\n"
 }
 
 func dump_tokens(string source) string {
@@ -118,6 +144,8 @@ func dump_tokens(string source) string {
             continue
         }
         if ch == "/" && i + 1 < source_len && __host_char_at(source, i + 1) == "*" {
+			let comment_line = line
+			let comment_column = column
             i = i + 2
             column = column + 2
             while i + 1 < source_len && !(__host_char_at(source, i) == "*" && __host_char_at(source, i + 1) == "/") {
@@ -132,6 +160,8 @@ func dump_tokens(string source) string {
             if i + 1 < source_len {
                 i = i + 2
                 column = column + 2
+			} else {
+				return lexer_error("SYNTAX", comment_line, comment_column, "unterminated block comment")
             }
             continue
         }
@@ -154,6 +184,33 @@ func dump_tokens(string source) string {
                 i = i + 1
                 column = column + 1
             }
+			if i + 1 < source_len && __host_char_at(source, i) == "." && is_digit(__host_char_at(source, i + 1)) {
+				i = i + 1
+				column = column + 1
+				while i < source_len && is_digit(__host_char_at(source, i)) {
+					i = i + 1
+					column = column + 1
+				}
+			}
+			if i < source_len && (__host_char_at(source, i) == "e" || __host_char_at(source, i) == "E") {
+				let exponent_i = i
+				let exponent_column = column
+				i = i + 1
+				column = column + 1
+				if i < source_len && (__host_char_at(source, i) == "+" || __host_char_at(source, i) == "-") {
+					i = i + 1
+					column = column + 1
+				}
+				if i < source_len && is_digit(__host_char_at(source, i)) {
+					while i < source_len && is_digit(__host_char_at(source, i)) {
+						i = i + 1
+						column = column + 1
+					}
+				} else {
+					i = exponent_i
+					column = exponent_column
+				}
+			}
             let lexeme = __host_slice(source, start, i)
             output = append_token(output, "NUMBER", lexeme, token_line, token_column)
             continue
@@ -171,6 +228,9 @@ func dump_tokens(string source) string {
                     column = column + 1
                 }
             }
+			if i >= source_len || __host_char_at(source, i) != "\"" {
+				return lexer_error("UNTERMINATED_STRING", token_line, token_column, "unterminated string literal")
+			}
             let lexeme = __host_slice(source, start, i)
             output = append_token(output, "STRING", lexeme, token_line, token_column)
             if i < source_len && __host_char_at(source, i) == "\"" {
@@ -188,6 +248,9 @@ func dump_tokens(string source) string {
             }
         }
         output = append_token(output, symbol_kind(symbol), symbol, token_line, token_column)
+		if symbol_kind(symbol) == "UNKNOWN" {
+			return lexer_error("ILLEGAL_CHAR", token_line, token_column, "unexpected character")
+		}
         i = i + len(symbol)
         column = column + len(symbol)
     }
@@ -202,6 +265,10 @@ func main() int {
     }
     let source = __host_read_to_string(args[1])
     let output = dump_tokens(source)
+	if len(output) >= 6 && __host_slice(output, 0, 6) == "ERROR|" {
+		__host_write_text_file(args[2], output)
+		return 0
+	}
     if __host_write_text_file(args[2], output) != 0 {
         return 1
     }

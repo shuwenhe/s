@@ -120,12 +120,22 @@ selfhost: seed-compiler-bin
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/stage2 ./bin/s
 	@echo "Installed self-hosted S compiler: ./bin/s"
 
-selfhost-check: selfhost
+selfhost-lexer-check: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR) ./bin
+	@./bin/s_seed src/cmd/compile/selfhost/lexer.s $(SELFHOST_DIR)/lexer.ir
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-bin $(SELFHOST_DIR)/lexer.ir $(SELFHOST_DIR)/s_lexer
+	@./bin/s_seed --dump-tokens tests/selfhost/lexer_fixture.s $(SELFHOST_DIR)/tokens.seed
+	@$(SELFHOST_DIR)/s_lexer tests/selfhost/lexer_fixture.s $(SELFHOST_DIR)/tokens.s
+	@cmp $(SELFHOST_DIR)/tokens.seed $(SELFHOST_DIR)/tokens.s
+	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/s_lexer ./bin/s_lexer
+	@echo "S lexer check passed: S token stream == seed token stream"
+
+selfhost-check: selfhost selfhost-lexer-check
 	@./bin/s tests/c_abi/add.s $(SELFHOST_DIR)/final-check.ir
 	@cmp $(SELFHOST_DIR)/stage2.ir $(SELFHOST_DIR)/stage3.ir
 	@echo "Self-host check passed: stage2 == stage3 and ./bin/s compiled a fixture"
 
-.PHONY: help selfhost selfhost-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test
+.PHONY: help selfhost selfhost-check selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test
 
 help:
 	@echo "  make run"
@@ -137,6 +147,7 @@ help:
 	@echo "  make seed-c-abi-test"
 	@echo "  make selfhost"
 	@echo "  make selfhost-check"
+	@echo "  make selfhost-lexer-check"
 	@echo "  override install dir: make INSTALL_BIN_DIR=/usr/local/bin SUDO=sudo"
 
 selfhost-bin:
