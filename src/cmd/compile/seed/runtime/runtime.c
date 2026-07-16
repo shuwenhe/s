@@ -3477,6 +3477,71 @@ bool runtime_execute_text(const char *target_text, const char *entry_function, l
 	return runtime_execute_text_with_argv(target_text, entry_function, out_return, err, 0, NULL);
 }
 
+bool runtime_execute_text_i64(
+	const char *target_text,
+	const char *entry_function,
+	const long *args,
+	size_t argc,
+	long *out_return,
+	compile_error *err
+) {
+	runtime_program prog = {0};
+	runtime_labels labels = {0};
+	runtime_functions funcs = {0};
+	const runtime_function *entry;
+	runtime_data_value *runtime_args = NULL;
+	runtime_data_value ret = value_make_int(0);
+	size_t i;
+	int ok;
+
+	error_clear(err);
+	if (!target_text || !entry_function || !out_return || (argc > 0 && !args)) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "invalid typed runtime input");
+		return false;
+	}
+	if (argc > 0) {
+		runtime_args = (runtime_data_value *)calloc(argc, sizeof(*runtime_args));
+		if (!runtime_args) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return false;
+		}
+		for (i = 0; i < argc; i++) {
+			runtime_args[i] = value_make_int(args[i]);
+		}
+	}
+	if (!parse_program_text(target_text, &prog, &labels, err) ||
+	    !build_function_table(&prog, &funcs, err)) {
+		free(runtime_args);
+		program_free(&prog);
+		labels_free(&labels);
+		functions_free(&funcs);
+		return false;
+	}
+	entry = functions_find(&funcs, entry_function);
+	if (!entry) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "entry function not found: %s", entry_function);
+		free(runtime_args);
+		program_free(&prog);
+		labels_free(&labels);
+		functions_free(&funcs);
+		return false;
+	}
+	ok = execute_function(&prog, &labels, &funcs, entry, runtime_args, argc, NULL, &ret, NULL, err, 0);
+	if (ok && ret.kind != RUNTIME_INT) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "C ABI i64 entry returned a non-integer value: %s", entry_function);
+		ok = 0;
+	}
+	if (ok) {
+		*out_return = ret.int_value;
+	}
+	value_clear(&ret);
+	free(runtime_args);
+	program_free(&prog);
+	labels_free(&labels);
+	functions_free(&funcs);
+	return ok ? true : false;
+}
+
 bool runtime_execute_file(const char *target_path, const char *entry_function, long *out_return, compile_error *err) {
 	FILE *fp;
 	long n;
