@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "../error/error.h"
 
@@ -18,9 +19,9 @@ bool runtime_execute_text_with_argv(
 bool runtime_execute_text_i64(
 	const char *target_text,
 	const char *entry_function,
-	const long *args,
+	const int64_t *args,
 	size_t argc,
-	long *out_return,
+	int64_t *out_return,
 	compile_error *err
 );
 bool runtime_execute_file(const char *target_path, const char *entry_function, long *out_return, compile_error *err);
