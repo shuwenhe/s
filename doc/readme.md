@@ -12,7 +12,7 @@ This repository contains the language implementation, standard library, runtime 
 - `test/` language and compiler tests
 - `doc/` design notes, implementation reports, and plans
 - `bin/` helper scripts and utilities
-- `run_train.sh` training or demo entrypoint used by the repo
+- `misc/scripts/run_train.sh` training or demo entrypoint used by the repo
 
 ## Quick Start
 
@@ -25,7 +25,7 @@ make
 Run the training or validation script:
 
 ```bash
-./run_train.sh
+./misc/scripts/run_train.sh
 ```
 
 If you want to work on the compiler or syntax pipeline directly, inspect the code under:
@@ -257,7 +257,7 @@ cd /Users/feifei/shuwen/train/s
 make build
 
 # Test your changes
-./run_train.sh
+./misc/scripts/run_train.sh
 
 # Run compiler tests
 make test
