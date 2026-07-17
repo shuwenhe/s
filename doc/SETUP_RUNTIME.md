@@ -6,7 +6,7 @@ Run the setup script to compile and install S compiler with full runtime:
 
 ```bash
 cd /Users/feifei/shuwen/train/s
-bash setup_runtime.sh
+bash misc/scripts/setup_runtime.sh
 ```
 
 ## What This Does
