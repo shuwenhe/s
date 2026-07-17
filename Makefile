@@ -112,9 +112,9 @@ seed-compiler-bin:
 
 seed-c-abi-test: seed-compiler-bin
 	@mkdir -p /tmp/s_seed_c_abi_test
-	@./bin/s_seed tests/c_abi/add.s /tmp/s_seed_c_abi_test/add.ir
+	@./bin/s_seed test/c_abi/add.s /tmp/s_seed_c_abi_test/add.ir
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-shared /tmp/s_seed_c_abi_test/add.ir /tmp/s_seed_c_abi_test/libs_add.$$(if [ "$$(uname -s)" = Darwin ]; then echo dylib; else echo so; fi)
-	@gcc -std=c11 -Wall -Wextra -Werror -o /tmp/s_seed_c_abi_test/caller tests/c_abi/caller.c $$(if [ "$$(uname -s)" = Darwin ]; then echo; else echo -ldl; fi)
+	@gcc -std=c11 -Wall -Wextra -Werror -o /tmp/s_seed_c_abi_test/caller test/c_abi/caller.c $$(if [ "$$(uname -s)" = Darwin ]; then echo; else echo -ldl; fi)
 	@/tmp/s_seed_c_abi_test/caller /tmp/s_seed_c_abi_test/libs_add.$$(if [ "$$(uname -s)" = Darwin ]; then echo dylib; else echo so; fi)
 
 selfhost: seed-compiler-bin
@@ -127,24 +127,24 @@ selfhost-lexer-check: seed-compiler-bin
 	@mkdir -p $(SELFHOST_DIR) ./bin
 	@./bin/s_seed src/cmd/compile/selfhost/lexer.s $(SELFHOST_DIR)/lexer.ir
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-bin $(SELFHOST_DIR)/lexer.ir $(SELFHOST_DIR)/s_lexer
-	@./bin/s_seed --dump-tokens tests/selfhost/lexer_fixture.s $(SELFHOST_DIR)/tokens.seed
-	@$(SELFHOST_DIR)/s_lexer tests/selfhost/lexer_fixture.s $(SELFHOST_DIR)/tokens.s
+	@./bin/s_seed --dump-tokens test/selfhost/lexer_fixture.s $(SELFHOST_DIR)/tokens.seed
+	@$(SELFHOST_DIR)/s_lexer test/selfhost/lexer_fixture.s $(SELFHOST_DIR)/tokens.s
 	@cmp $(SELFHOST_DIR)/tokens.seed $(SELFHOST_DIR)/tokens.s
-	@./bin/s_seed --dump-tokens tests/selfhost/lexer_unterminated_string.s $(SELFHOST_DIR)/unterminated-string.seed
-	@$(SELFHOST_DIR)/s_lexer tests/selfhost/lexer_unterminated_string.s $(SELFHOST_DIR)/unterminated-string.s
+	@./bin/s_seed --dump-tokens test/selfhost/lexer_unterminated_string.s $(SELFHOST_DIR)/unterminated-string.seed
+	@$(SELFHOST_DIR)/s_lexer test/selfhost/lexer_unterminated_string.s $(SELFHOST_DIR)/unterminated-string.s
 	@cmp $(SELFHOST_DIR)/unterminated-string.seed $(SELFHOST_DIR)/unterminated-string.s
-	@./bin/s_seed --dump-tokens tests/selfhost/lexer_unterminated_comment.s $(SELFHOST_DIR)/unterminated-comment.seed
-	@$(SELFHOST_DIR)/s_lexer tests/selfhost/lexer_unterminated_comment.s $(SELFHOST_DIR)/unterminated-comment.s
+	@./bin/s_seed --dump-tokens test/selfhost/lexer_unterminated_comment.s $(SELFHOST_DIR)/unterminated-comment.seed
+	@$(SELFHOST_DIR)/s_lexer test/selfhost/lexer_unterminated_comment.s $(SELFHOST_DIR)/unterminated-comment.s
 	@cmp $(SELFHOST_DIR)/unterminated-comment.seed $(SELFHOST_DIR)/unterminated-comment.s
-	@./bin/s_seed --dump-tokens tests/selfhost/lexer_illegal_char.s $(SELFHOST_DIR)/illegal-char.seed
-	@$(SELFHOST_DIR)/s_lexer tests/selfhost/lexer_illegal_char.s $(SELFHOST_DIR)/illegal-char.s
+	@./bin/s_seed --dump-tokens test/selfhost/lexer_illegal_char.s $(SELFHOST_DIR)/illegal-char.seed
+	@$(SELFHOST_DIR)/s_lexer test/selfhost/lexer_illegal_char.s $(SELFHOST_DIR)/illegal-char.s
 	@cmp $(SELFHOST_DIR)/illegal-char.seed $(SELFHOST_DIR)/illegal-char.s
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/s_lexer ./bin/s_lexer
 	@echo "S lexer check passed: S token stream == seed token stream"
 
 selfhost-check: selfhost selfhost-lexer-check
-	@./bin/s tests/c_abi/add.s $(SELFHOST_DIR)/final-check.ir
-	@S_LEXER_MODE=selfhost S_SELFHOST_LEXER=$(SELFHOST_DIR)/s_lexer ./bin/s tests/c_abi/add.s $(SELFHOST_DIR)/s-lexer-parser.ir
+	@./bin/s test/c_abi/add.s $(SELFHOST_DIR)/final-check.ir
+	@S_LEXER_MODE=selfhost S_SELFHOST_LEXER=$(SELFHOST_DIR)/s_lexer ./bin/s test/c_abi/add.s $(SELFHOST_DIR)/s-lexer-parser.ir
 	@cmp $(SELFHOST_DIR)/final-check.ir $(SELFHOST_DIR)/s-lexer-parser.ir
 	@cmp $(SELFHOST_DIR)/stage2.ir $(SELFHOST_DIR)/stage3.ir
 	@echo "Self-host check passed: stage2 == stage3 and S Lexer -> Parser IR matches seed"
