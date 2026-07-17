@@ -73,8 +73,7 @@ s/
 ├── bin/                        # Helper scripts
 ├── doc/                        # Documentation
 ├── test/                       # Test suite
-├── Makefile                    # Build configuration
-└── main.ir                     # Intermediate representation
+└── Makefile                    # Build configuration
 ```
 
 ## Language Features
