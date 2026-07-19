@@ -588,21 +588,32 @@ static char *run_command_capture_output(const char *command, compile_error *err)
 	char *captured = NULL;
 	size_t used = 0;
 	size_t cap = 0;
-	char stream_command[4096];
 	char chunk[4096];
 	size_t nread = 0;
-	if (snprintf(stream_command, sizeof(stream_command), "%s 2>&1", command) >= (int)sizeof(stream_command)) {
-		error_set(err, ERR_SEMANTIC, 0, 0, "command too long");
+	/* allocate stream_command dynamically to avoid fixed-size limits */
+	size_t sc_len = strlen(command) + 5; /* space + "2>&1" + NUL */
+	char *stream_command = (char *)malloc(sc_len);
+	if (!stream_command) {
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 		return NULL;
+	}
+	snprintf(stream_command, sc_len, "%s 2>&1", command);
+	/* write the command to a temp file for debugging */
+	FILE *dbg = fopen("/tmp/last_run_command.txt", "w");
+	if (dbg) {
+		fwrite(stream_command, 1, strlen(stream_command), dbg);
+		fclose(dbg);
 	}
 	pipe = popen(stream_command, "r");
 	if (!pipe) {
+		free(stream_command);
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to run command");
 		return NULL;
 	}
 	while ((nread = fread(chunk, 1, sizeof(chunk), pipe)) > 0) {
 		if (fwrite(chunk, 1, nread, stdout) != nread) {
 			pclose(pipe);
+			free(stream_command);
 			free(captured);
 			error_set(err, ERR_SEMANTIC, 0, 0, "failed to stream command output");
 			return NULL;
@@ -616,6 +627,7 @@ static char *run_command_capture_output(const char *command, compile_error *err)
 			char *grown = (char *)realloc(captured, new_cap);
 			if (!grown) {
 				pclose(pipe);
+				free(stream_command);
 				free(captured);
 				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 				return NULL;
@@ -627,10 +639,12 @@ static char *run_command_capture_output(const char *command, compile_error *err)
 		used += nread;
 	}
 	if (pclose(pipe) != 0) {
+		free(stream_command);
 		free(captured);
 		error_set(err, ERR_SEMANTIC, 0, 0, "command failed");
 		return NULL;
 	}
+	free(stream_command);
 	if (!captured) {
 		captured = (char *)calloc(1, 1);
 		if (!captured) {
