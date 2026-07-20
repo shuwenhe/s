@@ -17,7 +17,7 @@ use std.ai.autograd.{AutoGradTensor, parameter, create_autograd_tensor}
 
 struct Module {
     string name
-    string type_name  // "Linear", "Embedding", "TransformerBlock", etc.
+    string type_name  // "Linear", "embedding", "TransformerBlock", etc.
     AutoGradTensor[] parameters  // Learnable parameters
     Map<string, Tensor> buffers  // Non-learnable state (running stats, etc.)
     
@@ -106,19 +106,19 @@ func forward(Linear self, AutoGradTensor x) AutoGradTensor {
 }
 
 // ============================================
-// Embedding Layer (词嵌入层)
+// embedding Layer (词嵌入层)
 // ============================================
 
-struct Embedding : Module {
+struct embedding : Module {
     AutoGradTensor weight  // (num_embeddings, embedding_dim)
     int num_embeddings
     int embedding_dim
     int padding_idx
 }
 
-func new_embedding(int num_embed, int embed_dim, int pad_idx) Embedding {
-    Embedding layer
-    layer.type_name = "Embedding"
+func new_embedding(int num_embed, int embed_dim, int pad_idx) embedding {
+    embedding layer
+    layer.type_name = "embedding"
     layer.num_embeddings = num_embed
     layer.embedding_dim = embed_dim
     layer.padding_idx = pad_idx
@@ -135,7 +135,7 @@ func new_embedding(int num_embed, int embed_dim, int pad_idx) Embedding {
 // Forward: lookup embeddings by token indices
 // Input: token_ids of shape (batch_size, seq_len)
 // Output: (batch_size, seq_len, embedding_dim)
-func forward(Embedding self, int[] token_ids, int batch_size, int seq_len) AutoGradTensor {
+func forward(embedding self, int[] token_ids, int batch_size, int seq_len) AutoGradTensor {
     int num_tokens = batch_size * seq_len
     
     // Gather embeddings for each token

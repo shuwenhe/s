@@ -451,7 +451,7 @@ func autograd_transpose(AutoGradTensor x, int dim0, int dim1) AutoGradTensor {
 // Optimizer Implementations (优化器实现)
 // ============================================
 
-struct OptimizerState {
+struct optimizer_state {
     string name             // "sgd" | "adam" | "adamw" | ...
     float learning_rate     // α (alpha)
     float momentum          // β1 for SGD momentum, β1 for Adam
@@ -465,8 +465,8 @@ struct OptimizerState {
     Map<string, Tensor> second_moment // For second moment (Adam)
 }
 
-func new_sgd_optimizer(float lr, float momentum, float weight_decay) OptimizerState {
-    OptimizerState {
+func new_sgd_optimizer(float lr, float momentum, float weight_decay) optimizer_state {
+    optimizer_state {
         name: "sgd",
         learning_rate: lr,
         momentum: momentum,
@@ -475,8 +475,8 @@ func new_sgd_optimizer(float lr, float momentum, float weight_decay) OptimizerSt
     }
 }
 
-func new_adam_optimizer(float lr, float beta1, float beta2, float weight_decay, float eps) OptimizerState {
-    OptimizerState {
+func new_adam_optimizer(float lr, float beta1, float beta2, float weight_decay, float eps) optimizer_state {
+    optimizer_state {
         name: "adam",
         learning_rate: lr,
         momentum: beta1,
@@ -495,7 +495,7 @@ func zero_grad(Map<string, AutoGradTensor> params) void {
 }
 
 // SGD optimizer step
-func sgd_step(OptimizerState mut opt, Map<string, AutoGradTensor> params) void {
+func sgd_step(optimizer_state mut opt, Map<string, AutoGradTensor> params) void {
     opt.step_count = opt.step_count + 1
     
     for name, param in params {
@@ -521,7 +521,7 @@ func sgd_step(OptimizerState mut opt, Map<string, AutoGradTensor> params) void {
 }
 
 // Adam optimizer step
-func adam_step(OptimizerState mut opt, Map<string, AutoGradTensor> params) void {
+func adam_step(optimizer_state mut opt, Map<string, AutoGradTensor> params) void {
     int t = opt.step_count + 1
     opt.step_count = t
     float bias_corr1 = 1.0 - pow(opt.momentum, t as float)
@@ -558,7 +558,7 @@ func adam_step(OptimizerState mut opt, Map<string, AutoGradTensor> params) void 
 }
 
 // Learning rate scheduling
-func lr_step(OptimizerState mut opt, string scheduler, int epoch) void {
+func lr_step(optimizer_state mut opt, string scheduler, int epoch) void {
     if scheduler == "step" && epoch % 30 == 0 {
         opt.learning_rate = opt.learning_rate * 0.1  // Decay by 10x every 30 epochs
     }
