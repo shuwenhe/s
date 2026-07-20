@@ -13,7 +13,7 @@ use std.ai.autograd as AG
 
 type Module = AI.Module
 type Linear = AI.Linear
-type Embedding = AI.Embedding
+type embedding = AI.embedding
 type LayerNorm = AI.LayerNorm
 type MultiHeadAttention = AI.MultiHeadAttention
 type FeedForward = AI.FeedForward
@@ -37,8 +37,8 @@ struct GPTConfig {
 
 struct GPTModel {
     GPTConfig config
-    Embedding tok_embed
-    Embedding pos_embed
+    embedding tok_embed
+    embedding pos_embed
     TransformerBlock[] blocks
     LayerNorm final_ln
     Linear output_head
@@ -57,7 +57,7 @@ func make_linear(int in_f, int out_f, bool use_bias) Linear {
     AI.new_linear(in_f, out_f, use_bias)
 }
 
-func make_embedding(int num_emb, int emb_dim, int pad_idx) Embedding {
+func make_embedding(int num_emb, int emb_dim, int pad_idx) embedding {
     AI.new_embedding(num_emb, emb_dim, pad_idx)
 }
 
