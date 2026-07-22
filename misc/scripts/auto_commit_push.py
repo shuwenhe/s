@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args():
     parser = argparse.ArgumentParser(description="Watch a git repository and auto commit/push stable changes.")
     parser.add_argument("--repo", default=".", help="Path to the git repository.")
     parser.add_argument("--interval", type=float, default=2.0, help="Polling interval in seconds.")
@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+def git(repo: Path, *args: str, check: bool = True):
     result = subprocess.run(["git", "-C", str(repo), *args], text=True, capture_output=True)
     if check and result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or "git command failed")
@@ -42,21 +42,21 @@ def acquire_lock(lock_path: Path):
     return lock_file
 
 
-def current_branch(repo: Path) -> str:
+def current_branch(repo: Path):
     return git(repo, "branch", "--show-current", check=True).stdout.strip()
 
 
-def has_remote(repo: Path, remote: str) -> bool:
+def has_remote(repo: Path, remote: str):
     result = git(repo, "remote", "get-url", remote, check=False)
     return result.returncode == 0
 
 
-def list_changed_paths(repo: Path) -> list[str]:
+def list_changed_paths(repo: Path):
     result = git(repo, "diff", "--cached", "--name-only", check=True)
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
-def summarize_paths(paths: list[str]) -> str:
+def summarize_paths(paths: list[str]):
     if not paths:
         return "update"
     if any(path.startswith("src/") for path in paths):
@@ -68,7 +68,7 @@ def summarize_paths(paths: list[str]) -> str:
     return "update files"
 
 
-def commit_and_push(repo: Path, remote: str, branch: str, message_prefix: str) -> bool:
+def commit_and_push(repo: Path, remote: str, branch: str, message_prefix: str):
     git(repo, "add", "-A", check=True)
     if git(repo, "diff", "--cached", "--quiet", check=False).returncode == 0:
         return False
@@ -97,7 +97,7 @@ def commit_and_push(repo: Path, remote: str, branch: str, message_prefix: str) -
     return True
 
 
-def scan_mtimes(root: Path) -> dict[str, float]:
+def scan_mtimes(root: Path):
     mtimes: dict[str, float] = {}
     for path in root.rglob("*"):
         if ".git" in path.parts:
@@ -110,7 +110,7 @@ def scan_mtimes(root: Path) -> dict[str, float]:
     return mtimes
 
 
-def main() -> int:
+def main():
     args = parse_args()
     repo = Path(args.repo).resolve()
     if not (repo / ".git").exists():
