@@ -25,7 +25,7 @@ MAPPING = {
 
 ROOT = Path('src/compiler')
 
-def fix_file(path: Path) -> bool:
+def fix_file(path: Path):
     try:
         data = path.read_bytes()
     except Exception as e:
