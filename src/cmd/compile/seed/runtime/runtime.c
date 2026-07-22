@@ -590,7 +590,7 @@ static char *run_command_capture_output(const char *command, compile_error *err)
 	size_t cap = 0;
 	char chunk[4096];
 	size_t nread = 0;
-	size_t sc_len = strlen(command) + 5;
+	size_t sc_len = strlen(command) + 6;
 	char *stream_command = (char *)malloc(sc_len);
 	if (!stream_command) {
 		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
@@ -1313,6 +1313,58 @@ static int host_dispatch_call(
 		if (!content) return 0;
 		g_host_errno = content[0] == '\0' && !host_file_exists(path) ? ENOENT : 0;
 		*out = value_make_string_owned(content);
+		return 1;
+	}
+	if (strcmp(name, "__host_read_binary_file") == 0 || strcmp(name, "__host_read_binary_file_range") == 0) {
+		const char *path = NULL;
+		char path_buf[256];
+		long start = 0;
+		long count = -1;
+		long file_size;
+		size_t read_count;
+		unsigned char *bytes = NULL;
+		runtime_data_value *items = NULL;
+		FILE *fp = NULL;
+		size_t i;
+		size_t expected = strcmp(name, "__host_read_binary_file_range") == 0 ? 3u : 1u;
+		if (argc != expected || !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path) ||
+		    (expected == 3u && (!host_int_arg(&args[1], &start) || !host_int_arg(&args[2], &count))) ||
+		    start < 0 || count < -1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s received invalid arguments", name);
+			return 0;
+		}
+		fp = fopen(path, "rb");
+		if (!fp || fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) < 0) {
+			if (fp) fclose(fp);
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to open binary file: %s", path);
+			return 0;
+		}
+		if (start > file_size) start = file_size;
+		if (count < 0 || count > file_size - start) count = file_size - start;
+		if (fseek(fp, start, SEEK_SET) != 0) {
+			fclose(fp);
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to seek binary file: %s", path);
+			return 0;
+		}
+		if (count > 0) {
+			bytes = (unsigned char *)malloc((size_t)count);
+			items = (runtime_data_value *)calloc((size_t)count, sizeof(runtime_data_value));
+			if (!bytes || !items) {
+				free(bytes); free(items); fclose(fp);
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				return 0;
+			}
+			read_count = fread(bytes, 1, (size_t)count, fp);
+			if (read_count != (size_t)count) {
+				free(bytes); free(items); fclose(fp);
+				error_set(err, ERR_SEMANTIC, 0, 0, "failed to read binary file: %s", path);
+				return 0;
+			}
+			for (i = 0; i < (size_t)count; i++) items[i] = value_make_int(bytes[i]);
+			free(bytes);
+		}
+		fclose(fp);
+		*out = value_make_array_owned(items, (size_t)count);
 		return 1;
 	}
 	if (strcmp(name, "__host_write_text_file") == 0) {
