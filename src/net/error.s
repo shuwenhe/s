@@ -1,6 +1,5 @@
 package src.net
 
-// ParseError 错误类型
 struct ParseError {
     string typ
     string text
@@ -9,7 +8,6 @@ func (e *ParseError) Error() string {
     "invalid " + e.typ + ": " + e.text
 }
 
-// AddrError 错误类型
 struct AddrError {
     string err
     string addr
@@ -25,7 +23,6 @@ func (e *AddrError) Error() string {
     s
 }
 
-// UnknownNetworkError 错误类型
 struct UnknownNetworkError {
     string net
 }
@@ -33,11 +30,9 @@ func (e *UnknownNetworkError) Error() string {
     "unknown network " + e.net
 }
 
-// timeoutError 错误类型
 struct timeoutError {}
 func (e *timeoutError) Error() string { "i/o timeout" }
 
-// OpError 错误类型
 struct OpError {
     string op
     string net

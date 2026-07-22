@@ -230,7 +230,6 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 				i++;
 				col++;
 			}
-			/* decimal fraction */
 			if (source[i] == '.' && isdigit((unsigned char)source[i + 1])) {
 				i++;
 				col++;
@@ -239,7 +238,6 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 					col++;
 				}
 			}
-			/* scientific notation: e/E followed by optional sign and digits */
 			if (source[i] == 'e' || source[i] == 'E') {
 				size_t saved_i = i;
 				size_t saved_col = col;
@@ -255,7 +253,6 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 						col++;
 					}
 				} else {
-					/* not a valid exponent, backtrack */
 					i = saved_i;
 					col = saved_col;
 				}

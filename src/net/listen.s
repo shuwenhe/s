@@ -1,9 +1,6 @@
 package src.net
 
-// Listen 伪实现
-// Listen 支持 "tcp"/"udp"，返回对应 Listener
 func Listen(network string, address string) Listener {
-    // 解析 address
     parts = split(address, ":")
     ip = parts[0]
     port = atoi(parts[1])

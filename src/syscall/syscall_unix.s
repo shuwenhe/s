@@ -1,48 +1,36 @@
-// ============================================================
-// syscall_unix.s — POSIX 系统调用绑定层
-// 为 S 运行时提供套接字、文件描述符、轮询等 OS 接口。
-// 通过 extern "intrinsic" 桥接到宿主 C 运行时/libc。
-// ============================================================
 package src.syscall
 
 use std.result.result
 use std.vec.vec
 
-// ─── 错误类型 ────────────────────────────────────────────────
 struct net_error {
     string message
     int    errno_code
 }
 
-// ─── 常量：地址族 ────────────────────────────────────────────
 const AF_UNSPEC = 0
 const AF_INET  = 2
 const AF_INET6 = 10
 const AF_UNIX  = 1
 
-// ─── 常量：套接字类型 ─────────────────────────────────────────
 const SOCK_STREAM    = 1
 const SOCK_DGRAM     = 2
 const SOCK_NONBLOCK  = 2048
 const SOCK_CLOEXEC   = 524288
 
-// ─── 常量：协议 ───────────────────────────────────────────────
 const IPPROTO_TCP = 6
 const IPPROTO_UDP = 17
 
-// ─── 常量：setsockopt 层/选项 ─────────────────────────────────
 const SOL_SOCKET   = 1
 const SO_REUSEADDR = 2
 const SO_REUSEPORT = 15
 const SO_KEEPALIVE = 9
 const TCP_NODELAY  = 1
 
-// ─── 常量：fcntl ──────────────────────────────────────────────
 const F_GETFL    = 3
 const F_SETFL    = 4
 const O_NONBLOCK = 2048
 
-// ─── 常量：poll events ────────────────────────────────────────
 const POLLIN   = 1
 const POLLOUT  = 4
 const POLLERR  = 8
@@ -53,7 +41,6 @@ const SHUT_RD   = 0
 const SHUT_WR   = 1
 const SHUT_RDWR = 2
 
-// ─── 原始 OS 桥接（由宿主运行时/libc 实现）─────────────────────
 extern "intrinsic" func __sys_socket(int domain, int typ, int proto) int
 extern "intrinsic" func __sys_bind(int sockfd, string ip, int port, int family) int
 extern "intrinsic" func __sys_listen(int sockfd, int backlog) int
@@ -88,13 +75,11 @@ extern "intrinsic" func __sys_splice(int in_fd, int out_fd, int count) int
 extern "intrinsic" func __sys_interface_addresses() vec[string]
 extern "intrinsic" func __sys_open_read(string path) int
 
-// kqueue / epoll I/O 事件通知（平台自适应）
 extern "intrinsic" func __sys_poller_create() int
 extern "intrinsic" func __sys_poller_add(int poller_fd, int fd, int events) int
 extern "intrinsic" func __sys_poller_del(int poller_fd, int fd) int
 extern "intrinsic" func __sys_poller_wait(int poller_fd, int max, int timeout_ms) vec[int]
 
-// ─── 辅助：构建 net_error ─────────────────────────────────────
 func make_net_error(string msg) net_error {
     let code = __sys_errno()
     net_error {
@@ -103,7 +88,6 @@ func make_net_error(string msg) net_error {
     }
 }
 
-// ─── 公开 API：socket ─────────────────────────────────────────
 func socket(int domain, int typ, int proto) result[int, net_error] {
     let fd = __sys_socket(domain, typ, proto)
     if fd < 0 {
@@ -113,7 +97,6 @@ func socket(int domain, int typ, int proto) result[int, net_error] {
     }
 }
 
-// ─── 公开 API：bind ───────────────────────────────────────────
 func bind(int sockfd, string ip, int port, int family) result[(), net_error] {
     let r = __sys_bind(sockfd, ip, port, family)
     if r < 0 {
@@ -123,7 +106,6 @@ func bind(int sockfd, string ip, int port, int family) result[(), net_error] {
     }
 }
 
-// ─── 公开 API：listen ─────────────────────────────────────────
 func listen(int sockfd, int backlog) result[(), net_error] {
     let r = __sys_listen(sockfd, backlog)
     if r < 0 {
@@ -133,7 +115,6 @@ func listen(int sockfd, int backlog) result[(), net_error] {
     }
 }
 
-// ─── 公开 API：accept（返回新 fd）────────────────────────────
 func accept(int sockfd) result[int, net_error] {
     let newfd = __sys_accept(sockfd)
     if newfd < 0 {
@@ -143,7 +124,6 @@ func accept(int sockfd) result[int, net_error] {
     }
 }
 
-// ─── 公开 API：accept + 获取对端地址 ─────────────────────────
 func accept_addr(int sockfd) result[accept_result, net_error] {
     let newfd = __sys_accept(sockfd)
     if newfd < 0 {
@@ -168,7 +148,6 @@ func local_port(int fd) int { __sys_local_port(fd) }
 func peer_ip(int fd) string { __sys_peer_ip(fd) }
 func peer_port(int fd) int { __sys_peer_port(fd) }
 
-// ─── 公开 API：connect ────────────────────────────────────────
 func connect(int sockfd, string ip, int port, int family) result[(), net_error] {
     let r = __sys_connect(sockfd, ip, port, family)
     if r < 0 {
@@ -196,14 +175,12 @@ func resolve_ip(string host, int family) result[vec[string], net_error] {
     }
 }
 
-// ─── 公开 API：read（返回读到的字节串）──────────────────────
 func read_string(int fd, int max_bytes) result[string, net_error] {
     let data = __sys_read_string(fd, max_bytes)
     if data == "" {
-        // 检查是 EOF 还是错误
         let code = __sys_errno()
         if code == 0 {
-            result::ok("")   // EOF
+            result::ok("")
         } else {
             result::err(net_error { message: "read: " + __sys_strerror(code), errno_code: code })
         }
@@ -212,7 +189,6 @@ func read_string(int fd, int max_bytes) result[string, net_error] {
     }
 }
 
-// ─── 公开 API：write（发送字节串）────────────────────────────
 func write_string(int fd, string data) result[int, net_error] {
     let n = __sys_write_string(fd, data)
     if n < 0 {
@@ -222,7 +198,6 @@ func write_string(int fd, string data) result[int, net_error] {
     }
 }
 
-// UDP datagram I/O keeps the destination/source boundary explicit.
 func sendto_string(int fd, string data, string ip, int port, int family) result[int, net_error] {
     let n = __sys_sendto_string(fd, data, ip, port, family)
     if n < 0 {
@@ -271,7 +246,6 @@ func interface_addresses() result[vec[string], net_error] {
     }
 }
 
-// ─── 公开 API：close ──────────────────────────────────────────
 func close(int fd) result[(), net_error] {
     let r = __sys_close(fd)
     if r < 0 {
@@ -281,7 +255,6 @@ func close(int fd) result[(), net_error] {
     }
 }
 
-// ─── 公开 API：设置非阻塞模式 ─────────────────────────────────
 func set_nonblocking(int fd) result[(), net_error] {
     let flags = __sys_fcntl(fd, F_GETFL, 0)
     if flags < 0 {
@@ -295,7 +268,6 @@ func set_nonblocking(int fd) result[(), net_error] {
     }
 }
 
-// ─── 公开 API：SO_REUSEADDR ───────────────────────────────────
 func set_reuseaddr(int fd) result[(), net_error] {
     let r = __sys_setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 1)
     if r < 0 {
@@ -305,7 +277,6 @@ func set_reuseaddr(int fd) result[(), net_error] {
     }
 }
 
-// ─── 公开 API：TCP_NODELAY ────────────────────────────────────
 func set_tcp_nodelay(int fd) result[(), net_error] {
     let r = __sys_setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, 1)
     if r < 0 {
@@ -315,7 +286,6 @@ func set_tcp_nodelay(int fd) result[(), net_error] {
     }
 }
 
-// Relative timeouts in milliseconds. Zero clears the timeout.
 func set_deadline_ms(int fd, int read_timeout_ms, int write_timeout_ms) result[(), net_error] {
     let r = __sys_set_deadline_ms(fd, read_timeout_ms, write_timeout_ms)
     if r < 0 {
@@ -334,7 +304,6 @@ func shutdown(int fd, int how) result[(), net_error] {
     }
 }
 
-// ─── 公开 API：poll（单 fd 版本）─────────────────────────────
 func poll_ready(int fd, int events, int timeout_ms) result[int, net_error] {
     let r = __sys_poll_ready(fd, events, timeout_ms)
     if r < 0 {
@@ -344,7 +313,6 @@ func poll_ready(int fd, int events, int timeout_ms) result[int, net_error] {
     }
 }
 
-// ─── 公开 API：I/O 事件通知器（kqueue/epoll 封装）────────────
 func poller_create() result[int, net_error] {
     let pfd = __sys_poller_create()
     if pfd < 0 {
@@ -381,6 +349,5 @@ func poller_wait(int poller_fd, int max, int timeout_ms) result[vec[int], net_er
     }
 }
 
-// 兼容旧接口
 func syscall_unix_unit_name() string { "src/syscall/syscall_unix" }
 func syscall_unix_unit_ready() int   { 1 }
