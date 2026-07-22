@@ -15,7 +15,6 @@ func dispatch_init(string arch) string {
     run_arch_init(init_name)
 }
 
-// Backward-compatible wrapper for existing callers.
 func init(string arch) string {
     return dispatch_init(arch)
 }

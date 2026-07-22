@@ -1,13 +1,11 @@
 package main
 
 func test_array_types() void {
-    // Test prefix array syntax
     []int arr1 = []int{1, 2, 3}
     [5]int arr2 = [5]int{1, 2, 3, 4, 5}
     []string arr3 = []string{"a", "b"}
     [10]string arr4 = [10]string{"x"}
-    
-    // Test in function parameters
+
     print_array(arr1)
     print_fixed(arr2)
 }

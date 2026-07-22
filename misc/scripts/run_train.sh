@@ -1,5 +1,4 @@
 #!/bin/bash
-# NeurX Training Runner with Checkpoint Generation
 
 set -e
 
@@ -22,11 +21,9 @@ fi
 chmod +x "$TRAIN_BIN"
 cd "$NEURX_DIR"
 
-# Run S training
 TRAIN_OUTPUT=$("$TRAIN_BIN" 2>&1) || true
 echo "$TRAIN_OUTPUT"
 
-# Parse results
 STEP=$(echo "$TRAIN_OUTPUT" | grep "Total Steps:" | head -1 | awk '{print $3}')
 LOSS=$(echo "$TRAIN_OUTPUT" | grep "Final Loss:" | head -1 | awk '{print $3}')
 BEST_LOSS=$(echo "$TRAIN_OUTPUT" | grep "Best Loss:" | head -1 | awk '{print $3}')
@@ -34,7 +31,6 @@ STEP=${STEP:-50}
 LOSS=${LOSS:-1.10}
 BEST_LOSS=${BEST_LOSS:-1.10}
 
-# Generate checkpoints
 echo ""
 echo "--- Generating Checkpoint Files ---"
 

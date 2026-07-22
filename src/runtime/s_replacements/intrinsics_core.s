@@ -1,5 +1,3 @@
-// S 实现：intrinsics_core.py
-// 提供字符串基础操作
 
 func string_len(text: string): int {
     return text.len()

@@ -1,12 +1,10 @@
 package src.net
 
-// Addr 接口
 interface Addr {
     Network() string
     String() string
 }
 
-// TCPAddr 示例实现
 struct TCPAddr {
     string ip
     int port

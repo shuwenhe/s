@@ -1,15 +1,11 @@
 #!/bin/bash
 
-# Test runner for let/var feature in S language compiler
-# Location: s/test/syntax/run_let_var_tests.sh
-
 set -e
 
 COMPILER="${COMPILER:-/Users/feifei/shuwen/s/bin/s}"
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="/tmp/s_let_var_tests_$$"
 
-# Create output directory
 mkdir -p "$OUTPUT_DIR"
 
 echo "╔════════════════════════════════════════════════════════════════╗"
@@ -24,7 +20,6 @@ echo ""
 TESTS_PASSED=0
 TESTS_FAILED=0
 
-# Test 1: let_var_basic.s
 echo "📋 Test 1: Basic let/var functionality"
 if $COMPILER "$TEST_DIR/let_var_basic.s" "$OUTPUT_DIR/let_var_basic.ir" >/dev/null 2>&1; then
     echo "  ✓ PASS: let_var_basic.s compiled successfully"
@@ -35,7 +30,6 @@ else
 fi
 echo ""
 
-# Test 2: let_immutable.s (should fail)
 echo "📋 Test 2: Immutability enforcement"
 OUTPUT=$($COMPILER "$TEST_DIR/let_immutable.s" "$OUTPUT_DIR/let_immutable.ir" 2>&1)
 if echo "$OUTPUT" | grep -q "symbol 'x' is immutable"; then
@@ -49,7 +43,6 @@ else
 fi
 echo ""
 
-# Test 3: var_mutable.s
 echo "📋 Test 3: Mutable variable functionality"
 if $COMPILER "$TEST_DIR/var_mutable.s" "$OUTPUT_DIR/var_mutable.ir" >/dev/null 2>&1; then
     echo "  ✓ PASS: var_mutable.s compiled successfully"
@@ -60,7 +53,6 @@ else
 fi
 echo ""
 
-# Test 4: let_var_comprehensive.s
 echo "📋 Test 4: Comprehensive let/var integration"
 if $COMPILER "$TEST_DIR/let_var_comprehensive.s" "$OUTPUT_DIR/let_var_comprehensive.ir" >/dev/null 2>&1; then
     echo "  ✓ PASS: let_var_comprehensive.s compiled successfully"
@@ -72,7 +64,6 @@ else
 fi
 echo ""
 
-# Summary
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║  TEST SUMMARY                                                  ║"
 echo "╠════════════════════════════════════════════════════════════════╣"
@@ -84,15 +75,14 @@ if [ $TESTS_FAILED -eq 0 ]; then
     echo "║                                                                ║"
     echo "║  🎉 ALL TESTS PASSED 🎉                                        ║"
     echo "╚════════════════════════════════════════════════════════════════╝"
-    
-    # Cleanup on success
+
     rm -rf "$OUTPUT_DIR"
     exit 0
 else
     echo "║                                                                ║"
     echo "║  ⚠️  SOME TESTS FAILED                                         ║"
     echo "╚════════════════════════════════════════════════════════════════╝"
-    
+
     echo ""
     echo "Output files retained in: $OUTPUT_DIR"
     exit 1
