@@ -3,7 +3,6 @@ package src.net
 use src.syscall as sc
 use std.result.result
 
-// Linux zero-copy transfer. Other Unix hosts return ENOSYS explicitly.
 func splice_file(int input_fd, int output_fd, int count) result[int, net_error] {
     switch sc.splice(input_fd, output_fd, count) {
         result::ok(n) : result::ok(n),

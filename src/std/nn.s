@@ -1,10 +1,3 @@
-// ============================================
-// S Language Neural Network Compatibility Layer
-// ============================================
-//
-// `std.nn` keeps the historical GPT-facing API alive while delegating the
-// actual layer implementations to `std.ai.nn`.
-// ============================================
 
 package std.nn
 
