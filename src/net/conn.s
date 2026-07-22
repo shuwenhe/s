@@ -1,6 +1,5 @@
 package src.net
 
-// Conn 接口
 interface Conn {
     Read([]byte) (int, error)
     Write([]byte) (int, error)

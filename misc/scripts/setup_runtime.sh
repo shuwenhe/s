@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# S Compiler Runtime Fix Script
-# This script ensures the S compiler runtime environment is properly set up
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "════════════════════════════════════════════════════════════════"
@@ -11,12 +8,9 @@ echo "🔧 S Compiler Runtime Setup"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 
-# Resolve the repository root from the script location so the installer
-# works regardless of the checkout path.
 S_ROOT="$(cd "${SCRIPT_DIR}" && pwd)"
 INSTALL_DIR="$S_ROOT/.local/bin"
 
-# Step 1: Verify S compiler source files exist
 echo "▶ Checking S compiler source files..."
 REQUIRED_FILES=(
     "src/cmd/compile/seed/s_seed.c"
@@ -45,7 +39,6 @@ done
 echo "✓ All source files found"
 echo ""
 
-# Step 2: Compile S compiler
 echo "▶ Compiling S compiler..."
 ARCH=$(uname -m)
 TIMESTAMP=$(date +%Y%m%d%H%M%S)
@@ -85,7 +78,6 @@ chmod +x "$OUT_BIN"
 echo "✓ Compilation successful"
 echo ""
 
-# Step 3: Install to .local/bin
 echo "▶ Installing to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
 cp "$OUT_BIN" "$INSTALL_DIR/s"
@@ -94,7 +86,6 @@ chmod +x "$INSTALL_DIR/s"
 echo "✓ Installation successful"
 echo ""
 
-# Step 4: Verify installation
 echo "▶ Verifying installation..."
 if [ -x "$INSTALL_DIR/s" ]; then
     echo "✓ Compiler executable verified"
@@ -103,7 +94,6 @@ else
     exit 1
 fi
 
-# Try a simple compile test
 echo ""
 echo "▶ Testing compiler..."
 TEST_FILE="/tmp/test_s_compile_$$.s"

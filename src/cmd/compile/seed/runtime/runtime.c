@@ -590,15 +590,13 @@ static char *run_command_capture_output(const char *command, compile_error *err)
 	size_t cap = 0;
 	char chunk[4096];
 	size_t nread = 0;
-	/* allocate stream_command dynamically to avoid fixed-size limits */
-	size_t sc_len = strlen(command) + 5; /* space + "2>&1" + NUL */
+	size_t sc_len = strlen(command) + 5;
 	char *stream_command = (char *)malloc(sc_len);
 	if (!stream_command) {
 		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 		return NULL;
 	}
 	snprintf(stream_command, sc_len, "%s 2>&1", command);
-	/* write the command to a temp file for debugging */
 	FILE *dbg = fopen("/tmp/last_run_command.txt", "w");
 	if (dbg) {
 		fwrite(stream_command, 1, strlen(stream_command), dbg);
@@ -756,7 +754,6 @@ static char *host_make_temp_dir(const char *prefix) {
 	return path;
 }
 
-/* S exposes Linux-compatible stable values; translate them at the host edge. */
 static int host_native_family(int family) {
 	if (family == 0) return AF_UNSPEC;
 	if (family == 2) return AF_INET;
@@ -810,7 +807,6 @@ static int host_sockaddr(const char *ip, int port, int family, struct sockaddr_s
 		return 1;
 	}
 	if (resolved) freeaddrinfo(resolved);
-	/* Preserve wildcard behavior for an omitted host. */
 	if (native_family == AF_INET) {
 		struct sockaddr_in *addr = (struct sockaddr_in *)storage;
 		addr->sin_family = AF_INET;
@@ -2018,11 +2014,6 @@ static int host_dispatch_call(
 		s_argv = g_host_argv;
 
 		if (s_argc >= 2 && strcmp(s_argv[1], "mod") == 0) {
-			// For now, let's just trigger a print to confirm we are hitting the S logic path
-			// if we were actually calling the S 'main'.
-			// But wait, build_main is called FROM S main.
-			// The S main in src/cmd/compile/main.s calls build_main(args).
-			// We need to implement the 'mod index' logic here or make sure it's reachable.
 		}
 
 		if (s_argc >= 2 && strcmp(s_argv[1], "--emit-bin") == 0) {

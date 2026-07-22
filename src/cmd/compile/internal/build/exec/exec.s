@@ -42,9 +42,6 @@ func run(vec[string] options) int {
         return run_mod_command(options)
     }
 
-    // Resolve module notation (e.g. "neurx.agent.runtime") to a file path
-    // before any file I/O.  A module name has no "/", contains ".", and does
-    // not end with ".s".
     if is_module_name(options[1]) {
         let resolved = resolve_module_source_path(options[1])
         if resolved.is_none() {
@@ -207,7 +204,6 @@ func run_mod_index(string dir) int {
     let cmd = vec[string]()
     cmd.push("sh")
     cmd.push("-c")
-    // Scan for package declarations and match with file paths
     let script = "find " + dir + " -name '*.s' -not -path '*/.*' | while read f; do " +
                  "pkg=$(grep -h '^package ' \"$f\" | head -n1 | sed 's/package //;s/[[:space:]]*$//'); " +
                  "if [ -n \"$pkg\" ]; then printf \"%s\\t%s\\n\" \"$pkg\" \"$f\"; fi; " +
@@ -285,9 +281,6 @@ func is_valid_module_name(string name) bool {
     true
 }
 
-// is_module_name returns true when the argument looks like a dotted module path
-// (e.g. "neurx.agent.runtime") rather than a file-system path.
-// Heuristic: contains ".", has no "/", and does not end with ".s".
 func is_module_name(string path) bool {
     if path == "" {
         return false
@@ -307,7 +300,6 @@ func is_module_name(string path) bool {
     if !has_dot {
         return false
     }
-    // ends with ".s" → it is a plain file name like "foo.s", not a module
     if len(path) >= 2 {
         if char_at(path, len(path) - 2) == "." && char_at(path, len(path) - 1) == "s" {
             return false

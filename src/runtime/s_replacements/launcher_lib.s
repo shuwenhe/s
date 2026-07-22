@@ -1,5 +1,3 @@
-// S 实现：launcher_lib.c
-// 提供 launcher 进程调用
 
 func launcher_run_argv(args: [string]): int {
     return process_runner_run_argv(args)

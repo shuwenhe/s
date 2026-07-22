@@ -1,14 +1,11 @@
 #!/bin/bash
 
-# Test script to validate array syntax conversions in neurx codebase
-
 COMPILER=/Users/feifei/shuwen/s/bin/s
 NEURX=/Users/feifei/shuwen/neurx
 RESULTS_DIR=/tmp/neurx_compile_tests
 
 mkdir -p "$RESULTS_DIR"
 
-# Key files to test - these should have been converted
 TEST_FILES=(
     "train_model.s"
     "train_demo.s"
@@ -33,14 +30,14 @@ FAILED=0
 
 for file in "${TEST_FILES[@]}"; do
     filepath="$NEURX/$file"
-    
+
     if [ ! -f "$filepath" ]; then
         echo "⚠ SKIP: $file (not found)"
         continue
     fi
-    
+
     output_ir="$RESULTS_DIR/$(basename "$file" .s).ir"
-    
+
     if $COMPILER "$filepath" "$output_ir" 2>&1 | grep -q "compiled"; then
         echo "✓ PASS: $file"
         ((PASSED++))

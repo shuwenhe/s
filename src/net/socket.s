@@ -1,7 +1,3 @@
-// ============================================================
-// socket.s — S 语言网络套接字高级封装
-// 基于 src.syscall 提供面向使用者的 TCP/UDP 接口。
-// ============================================================
 package src.net
 
 use src.syscall as sc
@@ -9,7 +5,6 @@ use std.result.result
 use std.vec.vec
 use std.option.option
 
-// 重新导出常用常量
 const AF_INET    = sc.AF_INET
 const AF_INET6   = sc.AF_INET6
 const SOCK_STREAM = sc.SOCK_STREAM
@@ -18,7 +13,6 @@ const POLLIN      = sc.POLLIN
 const POLLOUT     = sc.POLLOUT
 const POLLERR     = sc.POLLERR
 
-// ─── 错误类型（与 syscall 层共用）────────────────────────────
 struct net_error {
     string message
     int    errno_code
@@ -28,23 +22,19 @@ func wrap_sc_err(sc.net_error e) net_error {
     net_error { message: e.message, errno_code: e.errno_code }
 }
 
-// ─── TCPListener ──────────────────────────────────────────────
 struct TCPListener {
     int    fd
     string host
     int    port
 }
 
-// 创建 TCP 监听器，绑定并开始监听
 func listen_tcp(string host, int port) result[TCPListener, net_error] {
-    // 1. 创建套接字
     let fd_res = sc.socket(sc.AF_INET, sc.SOCK_STREAM, sc.IPPROTO_TCP)
     let fd = switch fd_res {
         result::ok(v)  : v,
         result::err(e) : return result::err(wrap_sc_err(e)),
     }
 
-    // 2. SO_REUSEADDR
     switch sc.set_reuseaddr(fd) {
         result::ok(_)  : (),
         result::err(e) : {
@@ -53,7 +43,6 @@ func listen_tcp(string host, int port) result[TCPListener, net_error] {
         },
     }
 
-    // 3. bind
     switch sc.bind(fd, host, port, sc.AF_INET) {
         result::ok(_)  : (),
         result::err(e) : {
@@ -62,7 +51,6 @@ func listen_tcp(string host, int port) result[TCPListener, net_error] {
         },
     }
 
-    // 4. listen（backlog = 128）
     switch sc.listen(fd, 128) {
         result::ok(_)  : (),
         result::err(e) : {
@@ -75,7 +63,6 @@ func listen_tcp(string host, int port) result[TCPListener, net_error] {
 }
 
 impl TCPListener {
-    // 阻塞等待下一个连接
     func accept(self) result[TCPConn, net_error] {
         let res = sc.accept_addr(self.fd)
         switch res {
@@ -90,7 +77,6 @@ impl TCPListener {
         }
     }
 
-    // 设为非阻塞模式（配合事件循环使用）
     func set_nonblocking(self) result[(), net_error] {
         switch sc.set_nonblocking(self.fd) {
             result::ok(v)  : result::ok(v),
@@ -98,7 +84,6 @@ impl TCPListener {
         }
     }
 
-    // 关闭监听器
     func close(self) result[(), net_error] {
         switch sc.close(self.fd) {
             result::ok(v)  : result::ok(v),
@@ -107,7 +92,6 @@ impl TCPListener {
     }
 }
 
-// ─── TCPConn ──────────────────────────────────────────────────
 struct TCPConn {
     int    fd
     string remote_ip
@@ -116,7 +100,6 @@ struct TCPConn {
     int    write_timeout_ms
 }
 
-// 主动发起 TCP 连接
 func dial_tcp(string host, int port) result[TCPConn, net_error] {
     let fd_res = sc.socket(sc.AF_INET, sc.SOCK_STREAM, sc.IPPROTO_TCP)
     let fd = switch fd_res {
@@ -124,7 +107,6 @@ func dial_tcp(string host, int port) result[TCPConn, net_error] {
         result::err(e) : return result::err(wrap_sc_err(e)),
     }
 
-    // TCP_NODELAY（减少延迟）
     sc.set_tcp_nodelay(fd)
 
     switch sc.connect(fd, host, port, sc.AF_INET) {
@@ -144,8 +126,6 @@ func dial_tcp(string host, int port) result[TCPConn, net_error] {
     })
 }
 
-// Non-blocking connect with a relative timeout. Host may be an IPv4 literal
-// or DNS name; name resolution is performed by the syscall layer.
 func dial_tcp_timeout(string host, int port, int timeout_ms) result[TCPConn, net_error] {
     let fd_res = sc.socket(sc.AF_INET, sc.SOCK_STREAM, sc.IPPROTO_TCP)
     let fd = switch fd_res {
@@ -198,7 +178,6 @@ func resolve_host(string host) result[vec[string], net_error] {
 }
 
 impl TCPConn {
-    // 读取最多 max_bytes 字节，返回字符串（按字节读）
     func read(self, int max_bytes) result[string, net_error] {
         switch sc.read_string(self.fd, max_bytes) {
             result::ok(data) : result::ok(data),
@@ -206,7 +185,6 @@ impl TCPConn {
         }
     }
 
-    // 写入字符串（按字节写），返回实际写入字节数
     func write(self, string data) result[int, net_error] {
         switch sc.write_string(self.fd, data) {
             result::ok(n)  : result::ok(n),
@@ -214,7 +192,6 @@ impl TCPConn {
         }
     }
 
-    // 设为非阻塞
     func set_nonblocking(self) result[(), net_error] {
         switch sc.set_nonblocking(self.fd) {
             result::ok(v)  : result::ok(v),
@@ -222,7 +199,6 @@ impl TCPConn {
         }
     }
 
-    // 等待可读（timeout_ms < 0 = 永久等待）
     func wait_readable(self, int timeout_ms) result[bool, net_error] {
         switch sc.poll_ready(self.fd, sc.POLLIN, timeout_ms) {
             result::ok(n)  : result::ok(n > 0),
@@ -230,7 +206,6 @@ impl TCPConn {
         }
     }
 
-    // 等待可写
     func wait_writable(self, int timeout_ms) result[bool, net_error] {
         switch sc.poll_ready(self.fd, sc.POLLOUT, timeout_ms) {
             result::ok(n)  : result::ok(n > 0),
@@ -238,7 +213,6 @@ impl TCPConn {
         }
     }
 
-    // Relative deadline API. Zero clears a timeout.
     func set_deadline_ms(mut self, int timeout_ms) result[(), net_error] {
         switch sc.set_deadline_ms(self.fd, timeout_ms, timeout_ms) {
             result::ok(v) : {
@@ -284,7 +258,6 @@ impl TCPConn {
         }
     }
 
-    // 关闭连接
     func close(self) result[(), net_error] {
         switch sc.close(self.fd) {
             result::ok(v)  : result::ok(v),
@@ -293,7 +266,6 @@ impl TCPConn {
     }
 }
 
-// ─── I/O 事件循环（kqueue/epoll 封装）────────────────────────
 struct Poller {
     int fd
 }
@@ -320,7 +292,6 @@ impl Poller {
         }
     }
 
-    // 返回就绪 fd 列表，timeout_ms < 0 = 永久阻塞
     func wait(self, int max, int timeout_ms) result[vec[int], net_error] {
         switch sc.poller_wait(self.fd, max, timeout_ms) {
             result::ok(fds) : result::ok(fds),
@@ -336,7 +307,6 @@ impl Poller {
     }
 }
 
-// ─── UDP Socket ──────────────────────────────────────────────
 struct UDPConn {
     int    fd
     string local_ip

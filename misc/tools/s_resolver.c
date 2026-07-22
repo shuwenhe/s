@@ -1,8 +1,3 @@
-/* Simple S dependency resolver prototype
- * Usage: s_resolver <repo_root> <entry.s>
- * Scans `use` statements and attempts to locate source files under repo_root/src
- * This is a best-effort tool to build a dependency graph for bootstrapping.
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +6,6 @@
 
 #define MAX_PATH 4096
 
-// Simple linked list for visited files
 typedef struct Node {
     char *path;
     struct Node *next;
@@ -38,9 +32,7 @@ static char *join_path(const char *a, const char *b) {
     return out;
 }
 
-// try heuristics to map module name to a file path
 static int resolve_module(const char *repo_root, const char *module, char *out_path, size_t out_sz) {
-    // try repo_root/src/<module with dots replaced>.s
     char buf[MAX_PATH];
     snprintf(buf, sizeof(buf), "%s/src/%s.s", repo_root, module);
     for (char *p = buf; *p; ++p) if (*p == '.') *p = '/';
@@ -50,7 +42,6 @@ static int resolve_module(const char *repo_root, const char *module, char *out_p
         return 0;
     }
 
-    // try repo_root/src/<module prefix>.s (drop last segment)
     char tmp[MAX_PATH];
     strncpy(tmp, module, sizeof(tmp));
     char *last = strrchr(tmp, '.');
@@ -64,9 +55,7 @@ static int resolve_module(const char *repo_root, const char *module, char *out_p
         }
     }
 
-    // fallback: search all .s files under repo_root/src for occurrence of last token
     const char *last_tok = last ? last + 1 : module;
-    // naive directory walk at depth 2+ using opendir
     char dirpath[MAX_PATH];
     snprintf(dirpath, sizeof(dirpath), "%s/src", repo_root);
     DIR *d = opendir(dirpath);
@@ -74,7 +63,6 @@ static int resolve_module(const char *repo_root, const char *module, char *out_p
     struct dirent *ent;
     while ((ent = readdir(d)) != NULL) {
         if (ent->d_name[0] == '.') continue;
-        // recurse into directories
         char subdir[MAX_PATH];
         snprintf(subdir, sizeof(subdir), "%s/%s", dirpath, ent->d_name);
         struct stat st2;
@@ -106,7 +94,6 @@ static int resolve_module(const char *repo_root, const char *module, char *out_p
             }
             closedir(d2);
         } else {
-            // also check .s files in src root
             size_t len = strlen(ent->d_name);
             if (len > 2 && strcmp(ent->d_name + len - 2, ".s") == 0) {
                 char fpath[MAX_PATH];
@@ -139,12 +126,10 @@ static void resolve_rec(const char *repo_root, const char *path, Node **out_head
     if (!f) return;
     char line[1024];
     while (fgets(line, sizeof(line), f)) {
-        // trim leading whitespace
         char *p = line;
         while (*p == ' ' || *p == '\t') p++;
         if (strncmp(p, "use ", 4) == 0) {
             p += 4;
-            // read token until space or newline
             char token[512] = {0};
             int i = 0;
             while (*p && *p != '\n' && *p != ' ' && *p != '\t') {
@@ -175,7 +160,6 @@ int main(int argc, char **argv) {
     Node *head = NULL;
     resolve_rec(repo_root, entry_path, &head);
 
-    // print dependency list in reverse order (visited stack)
     for (Node *n = head; n; n = n->next) {
         printf("%s\n", n->path);
     }

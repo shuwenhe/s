@@ -129,7 +129,6 @@ static int load_import_signatures(compile_error *err) {
 
 	fp = fopen(IMPORT_SIGNATURE_META_PATH, "rb");
 	if (!fp) {
-		/* Metadata is optional; unknown imports will remain permissive. */
 		return 1;
 	}
 
@@ -1305,7 +1304,6 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				return 0;
 			}
 			ctx->function_depth--;
-			/* Compatibility mode: allow tail-expression style functions without explicit return on all paths. */
 			ctx->current_return_type = old_return_type;
 			leave_child_scope(ctx, old_scope);
 			return 1;

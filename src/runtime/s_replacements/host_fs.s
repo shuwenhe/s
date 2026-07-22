@@ -1,15 +1,12 @@
-// S 实现：host_fs.c
-// 提供文件读写、目录创建、临时目录等功能
 
 func dup_cstr(text: string): string {
     if text == nil {
         return nil
     }
-    return text // S 语言字符串为不可变对象，直接返回即可
+    return text
 }
 
 func host_fs_free(ptr: string) {
-    // S 语言自动垃圾回收，无需手动释放
 }
 
 func mkdirs_for_path(path: string) {

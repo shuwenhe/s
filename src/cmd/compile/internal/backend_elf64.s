@@ -2791,20 +2791,15 @@ func add_module_candidates_in_root(vec[string] candidates, string root, string m
     candidates.push(root + "/" + dot_to_slash(module) + "/" + last_segment(module) + ".s")
 }
 
-// NeurX packages are declared as neurx.* but live under the repo root without a neurx/ prefix.
-// We also support common NeurX layouts like task/planner.s for neurx.planner.
 func add_neurx_module_candidates(vec[string] candidates, string root, string tail) () {
-    // 1. Try standard layouts (e.g., neurx.agent.runtime -> agent/runtime.s)
     add_std_layout_candidates(candidates, root, tail)
 
-    // 2. Try flattened layout for sub-packages (e.g., neurx.agent.memory -> memory/memory.s)
     if has_dot_local(tail) {
         let last = last_segment(tail)
         candidates.push(root + "/" + last + "/" + last + ".s")
         candidates.push(root + "/" + last + ".s")
     }
 
-    // 3. Try platform/app specific layouts
     candidates.push(root + "/app/" + dot_to_slash(tail) + ".s")
     candidates.push(root + "/platform/" + dot_to_slash(tail) + ".s")
 }
@@ -2822,7 +2817,6 @@ func has_dot_local(string text) bool {
 
 func add_compile_module_candidates(vec[string] candidates, string root, string tail) () {
     candidates.push(root + "/src/cmd/compile/" + dot_to_slash(tail) + ".s")
-    // also try dir/name.s layout (e.g. internal/build/exec/exec.s)
     candidates.push(root + "/src/cmd/compile/" + dot_to_slash(tail) + "/" + last_segment(tail) + ".s")
     let pkg = drop_last_segment(tail)
     if pkg != "" {

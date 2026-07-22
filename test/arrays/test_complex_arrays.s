@@ -1,15 +1,12 @@
 package main
 
 func test_complex_arrays() void {
-    // Nested structures with arrays
     var ints = []int{1, 2, 3, 4, 5}
     var floats = []float{1.0, 2.5, 3.14}
     var strings = []string{"a", "b", "c"}
-    
-    // Trailing comma
+
     var trailing = []int{1, 2, 3,}
-    
-    // In function calls
+
     print_array([]int{10, 20, 30})
 }
 
