@@ -53,7 +53,6 @@ def fix_file(path: Path) -> bool:
         new = tokenize.untokenize(tokens)
         if isinstance(new, (bytes, bytearray)):
             new = new.decode('utf-8')
-        # backup
         bak = path.with_suffix(path.suffix + '.fixbak')
         bak.write_bytes(data)
         path.write_text(new, encoding='utf-8')

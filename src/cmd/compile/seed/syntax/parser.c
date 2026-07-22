@@ -435,52 +435,43 @@ static ast_node *parse_primary(parser *p) {
 		if (!node) {
 			return NULL;
 		}
-		
-		// After consuming [, check if this is []TYPE{ or [N]TYPE{ pattern
+
 		size_t peek_pos = p->current;
 		int is_typed = 0;
-		
-		// Look ahead for []TYPE{ pattern
+
 		if (check(p, TOKEN_RBRACKET)) {
-			// Might be []TYPE{...}
-			advance_tok(p);  // move past ]
+			advance_tok(p);
 			if (check(p, TOKEN_IDENTIFIER)) {
-				advance_tok(p);  // move past type name
+				advance_tok(p);
 				if (check(p, TOKEN_LBRACE)) {
 					is_typed = 1;
 				}
 			}
 		} else {
-			// Might be [N]TYPE{...}
-			// Find the closing ]
 			int depth = 1;
 			while (depth > 0 && !is_at_end(p)) {
 				if (check(p, TOKEN_LBRACKET)) depth++;
 				else if (check(p, TOKEN_RBRACKET)) depth--;
 				if (depth > 0) advance_tok(p);
 			}
-			
-			// Check if we found it and if it's followed by TYPE{
+
 			if (check(p, TOKEN_RBRACKET)) {
-				advance_tok(p);  // consume ]
+				advance_tok(p);
 				if (check(p, TOKEN_IDENTIFIER)) {
-					advance_tok(p);  // consume type
+					advance_tok(p);
 					if (check(p, TOKEN_LBRACE)) {
 						is_typed = 1;
 					}
 				}
 			}
 		}
-		
+
 		if (is_typed) {
-			// We're now at the { token
-			// Consume it
 			if (!match(p, TOKEN_LBRACE)) {
 				ast_free(node);
 				return NULL;
 			}
 
-			/* Compatibility: accept capacity-only initializers like []float{cap: n}. */
 			if (check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "cap") == 0) {
 				advance_tok(p);
 				if (!expect(p, TOKEN_COLON, ":")) {
@@ -492,11 +483,9 @@ static ast_node *parse_primary(parser *p) {
 					return NULL;
 				}
 				if (match(p, TOKEN_COMMA)) {
-					/* allow trailing comma after cap initializer */
 				}
 			}
 
-			// Parse array elements using parse_assignment to avoid comma operator issues
 			if (!check(p, TOKEN_RBRACE)) {
 				for (;;) {
 					ast_node *item = parse_assignment(p);
@@ -512,23 +501,21 @@ static ast_node *parse_primary(parser *p) {
 					if (!match(p, TOKEN_COMMA)) {
 						break;
 					}
-					// Allow trailing comma
 					if (check(p, TOKEN_RBRACE)) {
 						break;
 					}
 				}
 			}
-			
+
 			if (!expect(p, TOKEN_RBRACE, "}")) {
 				ast_free(node);
 				return NULL;
 			}
 			return node;
 		}
-		
-		// Not a typed array, restore position and parse as [ ... ] literal
+
 		p->current = peek_pos;
-		
+
 		if (!check(p, TOKEN_RBRACKET)) {
 			for (;;) {
 				ast_node *item = parse_assignment(p);
@@ -553,7 +540,6 @@ static ast_node *parse_primary(parser *p) {
 			ast_free(node);
 			return NULL;
 		}
-		/* Compatibility: accept typed literal prefix like []float{cap: n}. */
 		if (match(p, TOKEN_IDENTIFIER)) {
 			if (!skip_brace_initializer(p)) {
 				ast_free(node);
@@ -910,7 +896,6 @@ static ast_node *parse_assignment(parser *p) {
 		size_t saved = p->current;
 		advance_tok(p);
 		if (match(p, TOKEN_ASSIGN)) {
-			/* Compatibility mode: consume compound assignment and keep RHS expression. */
 			ast_node *rhs = parse_assignment(p);
 			ast_free(expr);
 			return rhs;
@@ -941,7 +926,6 @@ static ast_node *parse_assignment(parser *p) {
 		expr->as.index_expr.object = NULL;
 		expr->as.index_expr.index = NULL;
 	} else {
-		/* Compatibility mode: allow non-identifier assignment targets by parsing RHS and dropping target. */
 		ast_node *rhs = parse_assignment(p);
 		ast_free(node);
 		ast_free(expr);
@@ -1249,7 +1233,6 @@ static ast_node *parse_for_statement(parser *p) {
 		return NULL;
 	}
 
-	/* Support `for cond { ... }` as a while-style loop. */
 	if (!check(p, TOKEN_LPAREN)) {
 		if (!check(p, TOKEN_LBRACE)) {
 			node->as.for_stmt.condition = parse_expression(p);
@@ -1619,11 +1602,8 @@ static ast_node *parse_fn_statement(parser *p) {
 		param_name = NULL;
 		param_type = NULL;
 
-		/* Preferred form: <type> <name>, e.g. []float data / int n */
 		if (!error_is_set(p->err) && try_parse_typed_name(p, TOKEN_COMMA, &param_type, &param_name)) {
-			/* parsed successfully */
 		} else {
-			/* Fallback: <name> [type] for older scripts. */
 			p->current = saved;
 			if (param_type) {
 				free(param_type);
@@ -2118,7 +2098,6 @@ static ast_node *parse_struct_decl(parser *p) {
 
 	consume_optional_semicolon(p);
 
-	/* Minimal support: register struct name as a placeholder symbol for later references. */
 	node = ast_new(AST_LET_STMT, kw->pos);
 	if (!node) {
 		return NULL;

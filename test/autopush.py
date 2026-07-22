@@ -18,13 +18,11 @@ import sys
 import time
 from pathlib import Path
 
-
 def current_branch()  str:
     p = subprocess.run(["git", "rev-parse", "--abbrev-ref", "head"], capture_output=true, text=true)
     if p.returncode != 0:
         return "main"
     return p.stdout.strip()
-
 
 def scan_mtimes(root: path)  dict:
     mt = {}
@@ -36,11 +34,9 @@ def scan_mtimes(root: path)  dict:
             continue
     return mt
 
-
 def git_has_staged_changes()  bool:
     p = subprocess.run(["git", "diff", "--cached", "--quiet", "--exit-code"])
     return p.returncode != 0
-
 
 def run_git_commit_and_push(remote: str, branch: str, commit_msg: str, author_name: str | none, author_email: str | none)  none:
     env = os.environ.copy()
@@ -49,7 +45,6 @@ def run_git_commit_and_push(remote: str, branch: str, commit_msg: str, author_na
     if author_email:
         env["git_author_email"] = author_email
 
-    # git add all
     subprocess.run(["git", "add", "-a"])
 
     if not git_has_staged_changes():
@@ -68,7 +63,6 @@ def run_git_commit_and_push(remote: str, branch: str, commit_msg: str, author_na
     p2 = subprocess.run(push_cmd)
     if p2.returncode != 0:
         print("git push failed", file=sys.stderr)
-
 
 def main()  none:
     parser = argparse.argumentparser()
@@ -102,12 +96,10 @@ def main()  none:
             now = time.time()
             mt = scan_mtimes(root)
             changed = []
-            # detect new or modified files
             for p, t in mt.items():
                 if p not in last_scan or last_scan[p] != t:
                     changed.append(p)
 
-            # detect removed files
             for p in list(last_scan.keys()):
                 if p not in mt:
                     changed.append(p)
@@ -118,19 +110,16 @@ def main()  none:
                 print(f"detected {len(changed)} change(s). debouncing for {args.debounce}s.")
 
             if pending and (now - last_event_time) >= args.debounce:
-                # perform commit+push
                 files_short = ", ".join(path(p).name for p in changed[:8])
                 if len(changed) > 8:
                     files_short += ", ..."
                 msg = f"auto-update: {files_short}"
                 run_git_commit_and_push(remote, branch, msg, author_name, author_email)
                 pending = false
-                # refresh base scan
                 last_scan = scan_mtimes(root)
 
     except keyboardinterrupt:
         print("stopped by user")
-
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,3 @@
-// S 实现：host_intrinsics.c
-// 提供命令行参数、环境变量、打印等功能
 
 let g_args: [string] = []
 
