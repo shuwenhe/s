@@ -1,6 +1,6 @@
 # S Programming Language
 
-S is a systems programming language and self-hosting compiler project. The repository contains the seed compiler, the S frontend and backend, the runtime, standard-library packages, architecture support, and compiler tests.
+S is a systems programming language and compiler project working toward full self-hosting. The repository contains the seed compiler, the S frontend and backend, the runtime, standard-library packages, architecture support, and compiler tests.
 
 ## Methods and interfaces
 
@@ -44,19 +44,27 @@ Compile an S source file to IR:
 ./bin/s_seed input.s output.ir
 ```
 
-## Build the self-hosted compiler
+## Build the seed-hosted compiler launcher
 
 ```sh
 make selfhost
 ```
 
-The resulting compiler is installed as `bin/s`.
+The resulting compiler is installed as `bin/s`. At present this executable still links the C seed compiler; the stage comparison checks deterministic bootstrapping, not independent self-hosting.
 
 To verify compiler bootstrapping and lexer compatibility:
 
 ```sh
 make selfhost-check
 ```
+
+To require that `bin/s` no longer links the C seed compiler, run:
+
+```sh
+make true-selfhost-check
+```
+
+This stricter check intentionally fails until the S frontend and backend fully replace the seed path.
 
 ## Tests
 

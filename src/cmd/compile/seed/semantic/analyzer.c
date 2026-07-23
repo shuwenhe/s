@@ -32,6 +32,7 @@ typedef struct scope {
 
 typedef struct semantic_ctx {
 	scope *current_scope;
+	ast_node *root;
 	compile_error *err;
 	int function_depth;
 	int loop_depth;
@@ -388,6 +389,52 @@ static int is_type_assignable(const char *expected, const char *actual) {
 	return strcmp(expected, actual) == 0;
 }
 
+static ast_node *find_trait_decl(semantic_ctx *ctx, const char *name) {
+	size_t i;
+	if (!ctx || !ctx->root || ctx->root->kind != AST_PROGRAM || !name) return NULL;
+	for (i = 0; i < ctx->root->as.program.statements.len; i++) {
+		ast_node *decl = ctx->root->as.program.statements.data[i];
+		if (decl->kind == AST_TRAIT_DECL && decl->as.trait_decl.name &&
+			strcmp(decl->as.trait_decl.name, name) == 0) return decl;
+	}
+	return NULL;
+}
+
+static ast_node *find_trait_method(ast_node *trait_decl, const char *name) {
+	size_t i;
+	if (!trait_decl || trait_decl->kind != AST_TRAIT_DECL) return NULL;
+	for (i = 0; i < trait_decl->as.trait_decl.methods.len; i++) {
+		ast_node *method = trait_decl->as.trait_decl.methods.data[i];
+		if (method->as.fn_stmt.name && strcmp(method->as.fn_stmt.name, name) == 0) return method;
+	}
+	return NULL;
+}
+
+static int type_implements_trait(semantic_ctx *ctx, const char *actual, ast_node *trait_decl) {
+	size_t i, j;
+	char method_name[256];
+	for (i = 0; i < trait_decl->as.trait_decl.methods.len; i++) {
+		ast_node *required = trait_decl->as.trait_decl.methods.data[i];
+		symbol *method;
+		if (snprintf(method_name, sizeof(method_name), "%s.%s", actual, required->as.fn_stmt.name) >= (int)sizeof(method_name)) return 0;
+		method = scope_lookup(ctx->current_scope, method_name);
+		if (!method || method->kind != SYMBOL_FN || method->param_count != required->as.fn_stmt.param_count + 1 ||
+			!is_type_assignable(required->as.fn_stmt.return_type, method->type_name)) return 0;
+		for (j = 0; j < required->as.fn_stmt.param_count; j++) {
+			if (!is_type_assignable(required->as.fn_stmt.param_types[j], method->param_types[j + 1]) ||
+				!is_type_assignable(method->param_types[j + 1], required->as.fn_stmt.param_types[j])) return 0;
+		}
+	}
+	return 1;
+}
+
+static int is_type_assignable_ctx(semantic_ctx *ctx, const char *expected, const char *actual) {
+	ast_node *trait_decl;
+	if (is_type_assignable(expected, actual)) return 1;
+	trait_decl = find_trait_decl(ctx, expected);
+	return trait_decl ? type_implements_trait(ctx, actual, trait_decl) : 0;
+}
+
 static int is_truthy_type(const char *type_name) {
 	return is_type_any(type_name) || strcmp(type_name, TYPE_BOOL) == 0 || strcmp(type_name, TYPE_INT) == 0 || strcmp(type_name, TYPE_FLOAT) == 0;
 }
@@ -627,9 +674,8 @@ static int analyze_block_with_new_scope(semantic_ctx *ctx, ast_node *block) {
 	return 1;
 }
 
-static __attribute__((unused)) int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char *return_type) {
+static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char *return_type) {
 	size_t i;
-	const char *expr_type;
 	if (!node) {
 		return 0;
 	}
@@ -645,12 +691,7 @@ static __attribute__((unused)) int stmt_guarantees_return(semantic_ctx *ctx, ast
 			if (node->as.block.statements.len > 0) {
 				ast_node *tail = node->as.block.statements.data[node->as.block.statements.len - 1];
 				if (tail->kind == AST_EXPR_STMT) {
-					if (!analyze_expr(ctx, tail->as.expr_stmt.expr, &expr_type)) {
-						return 0;
-					}
-					if (is_type_assignable(return_type, expr_type)) {
-						return 1;
-					}
+					return is_type_assignable_ctx(ctx, return_type, tail->as.expr_stmt.inferred_type);
 				}
 			}
 			return 0;
@@ -705,17 +746,9 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 		case AST_IDENT_EXPR:
 			sym = scope_lookup(ctx->current_scope, node->as.ident_expr.name);
 			if (!sym) {
-				status = scope_define(ctx->current_scope, node->as.ident_expr.name, SYMBOL_VAR, 1, -1, -1, TYPE_ANY, NULL, 0);
-				if (status < 0) {
-					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
-					return 0;
-				}
-				sym = scope_lookup(ctx->current_scope, node->as.ident_expr.name);
-				if (!sym) {
-					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
-						"use of undeclared symbol '%s'", node->as.ident_expr.name);
-					return 0;
-				}
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"use of undeclared symbol '%s'", node->as.ident_expr.name);
+				return 0;
 			}
 			*out_type = sym->type_name;
 			return 1;
@@ -938,12 +971,59 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				return 0;
 			}
 			if (node->as.call_expr.callee->kind == AST_MEMBER_EXPR) {
+				ast_node *member = node->as.call_expr.callee;
+				ast_node *trait_decl;
+				ast_node *required = NULL;
+				char method_name[256];
+				if (!analyze_expr(ctx, member->as.member_expr.object, &lhs_type)) {
+					return 0;
+				}
+				trait_decl = find_trait_decl(ctx, lhs_type);
+				if (trait_decl) required = find_trait_method(trait_decl, member->as.member_expr.member);
+				if (trait_decl && !required) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"trait '%s' has no method '%s'", lhs_type, member->as.member_expr.member);
+					return 0;
+				}
+				if (required) {
+					sym = NULL;
+					snprintf(method_name, sizeof(method_name), "@method.%s", member->as.member_expr.member);
+				} else if (snprintf(method_name, sizeof(method_name), "%s.%s",
+					lhs_type ? lhs_type : TYPE_ANY, member->as.member_expr.member) >= (int)sizeof(method_name)) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "method name is too long");
+					return 0;
+				}
+				if (!required) sym = scope_lookup(ctx->current_scope, method_name);
+				if (!required && (!sym || sym->kind != SYMBOL_FN || sym->param_count == 0)) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"type '%s' has no method '%s'", lhs_type ? lhs_type : TYPE_ANY, member->as.member_expr.member);
+					return 0;
+				}
+				if (node->as.call_expr.args.len != (required ? required->as.fn_stmt.param_count : sym->param_count - 1)) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"call to '%s' expects %zu arguments, got %zu", method_name,
+						required ? required->as.fn_stmt.param_count : sym->param_count - 1, node->as.call_expr.args.len);
+					return 0;
+				}
 				for (i = 0; i < node->as.call_expr.args.len; i++) {
 					if (!analyze_expr(ctx, node->as.call_expr.args.data[i], &rhs_type)) {
 						return 0;
 					}
+					if (!is_type_assignable(required ? required->as.fn_stmt.param_types[i] : sym->param_types[i + 1], rhs_type)) {
+						error_set(ctx->err, ERR_SEMANTIC, node->as.call_expr.args.data[i]->pos.line,
+							node->as.call_expr.args.data[i]->pos.column,
+							"argument %zu type mismatch for '%s': expected '%s', got '%s'",
+							i + 1, method_name, required ? required->as.fn_stmt.param_types[i] : sym->param_types[i + 1], rhs_type ? rhs_type : TYPE_ANY);
+						return 0;
+					}
 				}
-				*out_type = TYPE_ANY;
+				free(member->as.member_expr.resolved_method);
+				member->as.member_expr.resolved_method = dup_cstr(method_name);
+				if (!member->as.member_expr.resolved_method) {
+					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+					return 0;
+				}
+				*out_type = required ? required->as.fn_stmt.return_type : sym->type_name;
 				return 1;
 			}
 			if (node->as.call_expr.callee->kind != AST_IDENT_EXPR) {
@@ -987,7 +1067,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					return 0;
 				}
 				if (sym->kind == SYMBOL_FN && i < sym->param_count &&
-					!is_type_assignable(sym->param_types[i], rhs_type)) {
+					!is_type_assignable_ctx(ctx, sym->param_types[i], rhs_type)) {
 					error_set(ctx->err, ERR_SEMANTIC, node->as.call_expr.args.data[i]->pos.line,
 						node->as.call_expr.args.data[i]->pos.column,
 						"argument %zu type mismatch for '%s': expected '%s', got '%s'",
@@ -1199,7 +1279,14 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			}
 			return 1;
 		case AST_EXPR_STMT:
-			return analyze_expr(ctx, node->as.expr_stmt.expr, &expr_type);
+			if (!analyze_expr(ctx, node->as.expr_stmt.expr, &expr_type)) return 0;
+			free(node->as.expr_stmt.inferred_type);
+			node->as.expr_stmt.inferred_type = dup_cstr(expr_type ? expr_type : TYPE_ANY);
+			if (!node->as.expr_stmt.inferred_type) {
+				error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+				return 0;
+			}
+			return 1;
 		case AST_IF_STMT:
 			if (!analyze_expr(ctx, node->as.if_stmt.condition, &expr_type)) {
 				return 0;
@@ -1303,11 +1390,23 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				leave_child_scope(ctx, old_scope);
 				return 0;
 			}
+			if (node->as.fn_stmt.return_type &&
+				strcmp(node->as.fn_stmt.return_type, TYPE_UNIT) != 0 &&
+				!stmt_guarantees_return(ctx, node->as.fn_stmt.body, node->as.fn_stmt.return_type)) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"function '%s' does not return on all paths", node->as.fn_stmt.name);
+				ctx->function_depth--;
+				ctx->current_return_type = old_return_type;
+				leave_child_scope(ctx, old_scope);
+				return 0;
+			}
 			ctx->function_depth--;
 			ctx->current_return_type = old_return_type;
 			leave_child_scope(ctx, old_scope);
 			return 1;
 		}
+		case AST_TRAIT_DECL:
+			return 1;
 		case AST_BINARY_EXPR:
 		case AST_ASSIGN_EXPR:
 		case AST_UNARY_EXPR:
@@ -1342,6 +1441,7 @@ bool semantic_analyze(ast_node *root, compile_error *err) {
 	}
 
 	ctx.current_scope = global_scope;
+	ctx.root = root;
 	ctx.err = err;
 	ctx.function_depth = 0;
 	ctx.loop_depth = 0;

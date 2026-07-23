@@ -22,6 +22,7 @@ typedef enum ast_kind {
 	AST_WHILE_STMT,
 	AST_FOR_STMT,
 	AST_FN_STMT,
+	AST_TRAIT_DECL,
 
 	AST_BINARY_EXPR,
 	AST_ASSIGN_EXPR,
@@ -75,6 +76,7 @@ struct ast_node {
 
 		struct {
 			ast_node *expr;
+			char *inferred_type;
 		} expr_stmt;
 
 		struct {
@@ -117,6 +119,7 @@ struct ast_node {
 
 		struct {
 			char *name;
+			char *receiver_type;
 			char *export_abi;
 			char *export_symbol;
 			char **params;
@@ -125,6 +128,11 @@ struct ast_node {
 			char *return_type;
 			ast_node *body;
 		} fn_stmt;
+
+		struct {
+			char *name;
+			ast_vec methods;
+		} trait_decl;
 
 		struct {
 			token_type op;
@@ -174,6 +182,7 @@ struct ast_node {
 		struct {
 			ast_node *object;
 			char *member;
+			char *resolved_method;
 		} member_expr;
 
 		struct {

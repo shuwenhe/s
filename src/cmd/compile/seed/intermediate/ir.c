@@ -175,6 +175,16 @@ static bool lower_struct_literal(ir_builder *b, ast_node *expr, char out[IR_OPER
 	if (!emit_ins(b, IR_MOV, out, alias_literal, "", expr->pos)) {
 		return false;
 	}
+	{
+		char type_field[IR_OPERAND_CAP];
+		char type_literal[IR_OPERAND_CAP];
+		if (snprintf(type_field, sizeof(type_field), "%s.__type", out) >= (int)sizeof(type_field) ||
+			snprintf(type_literal, sizeof(type_literal), "\"%s\"", expr->as.struct_expr.type_name) >= (int)sizeof(type_literal) ||
+			!emit_ins(b, IR_MOV, type_field, type_literal, "", expr->pos)) {
+			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "struct type tag too long for IR operand");
+			return false;
+		}
+	}
 
 	for (i = 0; i < expr->as.struct_expr.field_count; i++) {
 		char field_value[IR_OPERAND_CAP];
@@ -464,8 +474,19 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			return true;
 		case AST_CALL_EXPR: {
 			size_t i;
+			size_t argc = expr->as.call_expr.args.len;
 			char callee[IR_OPERAND_CAP] = "call";
 			char argc_text[IR_OPERAND_CAP];
+			if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_MEMBER_EXPR &&
+				expr->as.call_expr.callee->as.member_expr.resolved_method) {
+				char receiver[IR_OPERAND_CAP];
+				if (!lower_expr(b, expr->as.call_expr.callee->as.member_expr.object, receiver) ||
+					!emit_ins(b, IR_ARG, receiver, "", "", expr->pos)) {
+					return false;
+				}
+				snprintf(callee, sizeof(callee), "%s", expr->as.call_expr.callee->as.member_expr.resolved_method);
+				argc++;
+			}
 			for (i = 0; i < expr->as.call_expr.args.len; i++) {
 				char arg_tmp[IR_OPERAND_CAP];
 				if (!lower_expr(b, expr->as.call_expr.args.data[i], arg_tmp)) {
@@ -484,12 +505,13 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 						return false;
 					}
 				}
-			} else if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_MEMBER_EXPR) {
+			} else if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_MEMBER_EXPR &&
+				!expr->as.call_expr.callee->as.member_expr.resolved_method) {
 				if (!lower_expr(b, expr->as.call_expr.callee, callee)) {
 					return false;
 				}
 			}
-			snprintf(argc_text, sizeof(argc_text), "%zu", expr->as.call_expr.args.len);
+			snprintf(argc_text, sizeof(argc_text), "%zu", argc);
 			next_temp(b, out);
 			return emit_ins(b, IR_CALL, out, callee, argc_text, expr->pos);
 		}
@@ -693,6 +715,7 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		case AST_PACKAGE_DECL:
 		case AST_USE_DECL:
 		case AST_EXTERN_DECL:
+		case AST_TRAIT_DECL:
 			return true;
 		case AST_BLOCK:
 			return lower_block(b, stmt);

@@ -3309,14 +3309,14 @@ static int execute_function(
 					r = value_make_int(a.int_value % b.int_value);
 				}
 			} else if (strcmp(ins->op, "CMP_EQ") == 0) {
-				if (!value_is_numeric(&a) && !value_is_numeric(&b) && a.kind != b.kind) {
+				if (a.kind != b.kind && (!value_is_numeric(&a) || !value_is_numeric(&b))) {
 					error_set(err, ERR_SEMANTIC, 0, 0, "CMP_EQ expects operand types to match");
 					ok = 0;
 				} else {
 					r = value_make_int(value_equals(&a, &b));
 				}
 			} else if (strcmp(ins->op, "CMP_NE") == 0) {
-				if (!value_is_numeric(&a) && !value_is_numeric(&b) && a.kind != b.kind) {
+				if (a.kind != b.kind && (!value_is_numeric(&a) || !value_is_numeric(&b))) {
 					error_set(err, ERR_SEMANTIC, 0, 0, "CMP_NE expects operand types to match");
 					ok = 0;
 				} else {
@@ -3399,6 +3399,7 @@ static int execute_function(
 			size_t call_argc = 0;
 			runtime_data_value callee_ret = value_make_int(0);
 			const runtime_function *callee;
+			char dynamic_callee[256];
 			size_t call_base;
 			size_t j;
 			if (!parse_size_t(ins->op2, &call_argc)) {
@@ -3412,7 +3413,25 @@ static int execute_function(
 				return 0;
 			}
 			call_base = pending_len - call_argc;
-			callee = functions_find(funcs, ins->op1);
+			if (strncmp(ins->op1, "@method.", 8) == 0) {
+				runtime_data_value type_tag = value_make_int(0);
+				char type_field[1024];
+				if (call_argc == 0 || pending_args[call_base].kind != RUNTIME_STRING ||
+					!pending_args[call_base].str_value ||
+					snprintf(type_field, sizeof(type_field), "%s.__type", pending_args[call_base].str_value) >= (int)sizeof(type_field) ||
+					!resolve_value(&vals, type_field, &type_tag) || type_tag.kind != RUNTIME_STRING ||
+					!type_tag.str_value ||
+					snprintf(dynamic_callee, sizeof(dynamic_callee), "%s.%s", type_tag.str_value, ins->op1 + 8) >= (int)sizeof(dynamic_callee)) {
+					value_clear(&type_tag);
+					error_set(err, ERR_SEMANTIC, 0, 0, "cannot resolve dynamic method: %s", ins->op1 + 8);
+					values_free(&vals);
+					return 0;
+				}
+				value_clear(&type_tag);
+				callee = functions_find(funcs, dynamic_callee);
+			} else {
+				callee = functions_find(funcs, ins->op1);
+			}
 			if (!callee) {
 				if (!host_dispatch_call(ins->op1, &pending_args[call_base], call_argc, &callee_ret, err)) {
 					for (j = call_base; j < pending_len; j++) {
