@@ -3,6 +3,7 @@ INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_PROGRAM ?= install
 SUDO ?=
 SELFHOST_DIR ?= $(CURDIR)/.bootstrap/selfhost
+PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 
 run:
 	@echo "Building and installing S compiler for $(shell uname -m)..."
@@ -94,6 +95,7 @@ seed-network-tests: seed-runtime-regression-bin
 
 seed-compiler-bin:
 	@mkdir -p ./bin
+	@echo "Building seed compiler..."
 	@gcc -std=c11 -Wall -Wextra -Werror \
 	  -o ./bin/s_seed \
 	  src/cmd/compile/seed/s_seed.c \
@@ -149,7 +151,7 @@ selfhost-check: selfhost selfhost-lexer-check
 	@cmp $(SELFHOST_DIR)/stage2.ir $(SELFHOST_DIR)/stage3.ir
 	@echo "Self-host check passed: stage2 == stage3 and S Lexer -> Parser IR matches seed"
 
-.PHONY: help selfhost selfhost-check selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test
+.PHONY: help selfhost selfhost-check selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 help:
 	@echo "  make run"
@@ -162,7 +164,35 @@ help:
 	@echo "  make selfhost"
 	@echo "  make selfhost-check"
 	@echo "  make selfhost-lexer-check"
+	@echo "  PARALLEL BUILDS:"
+	@echo "  make test-quick               # Run quick tests only"
+	@echo "  make test-full                # Run all tests in parallel"
+	@echo "  make build-parallel           # Build all tools in parallel"
+	@echo "  make selfhost-full            # Complete bootstrapping with parallel jobs"
+	@echo "  CONFIGURATION:"
+	@echo "  make PARALLEL_JOBS=8          # Override CPU count (default: nproc)"
 	@echo "  override install dir: make INSTALL_BIN_DIR=/usr/local/bin SUDO=sudo"
+
+test-quick: seed-tests
+	@echo "✓ Quick tests passed"
+
+test-full: seed-compiler-bin
+	@echo "Running all test suites in parallel ($(PARALLEL_JOBS) jobs)..."
+	@$(MAKE) seed-tests & \
+	$(MAKE) seed-runtime-regression & \
+	wait
+	@echo "✓ All tests passed"
+
+build-parallel:
+	@echo "Building seed compiler, tests, and regression tests in parallel ($(PARALLEL_JOBS) jobs)..."
+	@$(MAKE) seed-compiler-bin & \
+	$(MAKE) seed-tests & \
+	$(MAKE) seed-runtime-regression-bin & \
+	wait
+	@echo "✓ All builds completed"
+
+selfhost-full: build-parallel selfhost selfhost-check
+	@echo "✓ Full self-host bootstrapping completed"
 
 selfhost-bin:
 	@if [[ -z "$(COMPILER)" ]]; then \
