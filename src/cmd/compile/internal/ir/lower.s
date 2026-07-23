@@ -57,14 +57,12 @@ func from_syntax(source_file src) ir_ast.package_ir {
             item.trait(trait_decl) : {
                 pkg.decls.push(ir_ast.decl_ir::r#type(ir_ast.type_decl { name: trait_decl.name, type_expr: "trait" }))
             }
-            item.impl(impl_decl) : {
-                let methods = vec[ir_ast.func_decl]()
-                let mi = 0
-                while mi < impl_decl.methods.len() {
-                    methods.push(convert_function(impl_decl.methods[mi], const_entries))
-                    mi = mi + 1
-                }
-                pkg.decls.push(ir_ast.decl_ir::impl(ir_ast.impl_decl { type_name: impl_decl.target, methods: methods }))
+            item.method(method_decl) : {
+                pkg.decls.push(ir_ast.decl_ir::method(ir_ast.method_decl {
+                    receiver_name: method_decl.receiver_name,
+                    receiver_type: method_decl.receiver_type,
+                    method: convert_function(method_decl.method, const_entries),
+                }))
             }
         }
         i = i + 1

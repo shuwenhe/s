@@ -28,8 +28,7 @@ func new_lexer(string source) lexer {
     }
 }
 
-impl lexer {
-    func tokenize(mut self) result[vec[token], lex_error] {
+func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
         vec[token] tokens = vec[token]()        while !self.is_eof() {
             self.skip_ignored()?
             if self.is_eof() {
@@ -100,7 +99,7 @@ impl lexer {
         result::ok(tokens)
     }
 
-    func skip_ignored(mut self) result[(), lex_error] {
+func (self: &mut lexer) skip_ignored() result[(), lex_error] {
         while !self.is_eof() {
             string ch = self.peek()?
             if is_whitespace(ch) {
@@ -145,7 +144,7 @@ impl lexer {
         result::ok(())
     }
 
-    func read_identifier(mut self) result[string, lex_error] {
+func (self: &mut lexer) read_identifier() result[string, lex_error] {
         string out = ""        while !self.is_eof() {
             string ch = self.peek()?            if !is_ident_continue(ch) {
                 break
@@ -155,7 +154,7 @@ impl lexer {
         result::ok(out)
     }
 
-    func read_number(mut self) result[string, lex_error] {
+func (self: &mut lexer) read_number() result[string, lex_error] {
         string out = ""
         while !self.is_eof() {
             string ch = self.peek()?
@@ -167,7 +166,7 @@ impl lexer {
         result::ok(out)
     }
 
-    func read_string(mut self) result[string, lex_error] {
+func (self: &mut lexer) read_string() result[string, lex_error] {
         string out = self.advance()?        while !self.is_eof() {
             let ch = self.advance()?
             out = out + ch
@@ -185,7 +184,7 @@ impl lexer {
         result::err(self.error("unterminated string literal"))
     }
 
-    func read_symbol(mut self) result[string, lex_error] {
+func (self: &mut lexer) read_symbol() result[string, lex_error] {
         vec[string] multi = vec[string] {            "->",
             ":",
             "==",
@@ -219,21 +218,21 @@ impl lexer {
         result::err(self.error("unexpected character"))
     }
 
-    func match_text(self, string text) bool {
+func (self: lexer) match_text(string text) bool {
         if self.index + len(text) > len(self.source) {
             return false
         }
         slice(self.source, self.index, self.index + len(text)) == text
     }
 
-    func peek(self) result[string, lex_error] {
+func (self: lexer) peek() result[string, lex_error] {
         if self.is_eof() {
             return result::err(self.error("unexpected eof"))
         }
         result::ok(char_at(self.source, self.index))
     }
 
-    func advance(mut self) result[string, lex_error] {
+func (self: &mut lexer) advance() result[string, lex_error] {
         if self.is_eof() {
             return result::err(self.error("unexpected eof"))
         }
@@ -250,18 +249,17 @@ impl lexer {
         result::ok(ch)
     }
 
-    func is_eof(self) bool {
+func (self: lexer) is_eof() bool {
         self.index >= len(self.source)
     }
 
-    func error(self, string message) lex_error {
+func (self: lexer) error(string message) lex_error {
         lex_error {
             message: message,
             line: self.line,
             column: self.column,
         }
     }
-}
 
 func is_whitespace(string ch) bool {
     switch ch {
