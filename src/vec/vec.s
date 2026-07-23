@@ -34,14 +34,13 @@ func with_capacity[t](int capacity) vec[t] {
     }
 }
 
-impl vec[t] {
-    func push(mut self, t value) () {
+func (self: &mut vec[t]) push(t value) () {
         ensure_capacity(self, self.length + 1)
         array_set(self.raw.storage.value, self.length, value)
         self.length = self.length + 1
     }
 
-    func pop(mut self) option[t] {
+func (self: &mut vec[t]) pop() option[t] {
         if self.length == 0 {
             return option::none
         }
@@ -49,26 +48,26 @@ impl vec[t] {
         option::some(array_get(self.raw.storage.value, self.length))
     }
 
-    func len(self) int {
+func (self: vec[t]) len() int {
         self.length
     }
 
-    func capacity(self) int {
+func (self: vec[t]) capacity() int {
         self.raw.capacity
     }
 
-    func is_empty(self) bool {
+func (self: vec[t]) is_empty() bool {
         self.length == 0
     }
 
-    func get(self, int index) option[t] {
+func (self: vec[t]) get(int index) option[t] {
         if index < 0 || index >= self.length {
             return option::none
         }
         option::some(array_get(self.raw.storage.value, index))
     }
 
-    func set(mut self, int index, t value) bool {
+func (self: &mut vec[t]) set(int index, t value) bool {
         if index < 0 || index >= self.length {
             return false
         }
@@ -76,10 +75,9 @@ impl vec[t] {
         true
     }
 
-    func clear(mut self) () {
+func (self: &mut vec[t]) clear() () {
         self.length = 0
     }
-}
 
 func ensure_capacity[t](vec[t] mut vec, int wanted) () {
     if wanted <= vec.raw.capacity {
