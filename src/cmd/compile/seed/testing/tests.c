@@ -1168,6 +1168,47 @@ static bool execute_source_main(const char *src, long *ret, compile_error *err) 
 	return ok;
 }
 
+static bool test_runtime_receiver_method(void) {
+	const char *src =
+		"struct Point { int x } "
+		"func (self: Point) value() int { return self.x; } "
+		"func main() int { let p = Point { x: 7 }; return p.value(); }";
+	compile_error err;
+	long ret = 0;
+	return execute_source_main(src, &ret, &err) && ret == 7;
+}
+
+static bool test_runtime_implicit_trait_dispatch(void) {
+	const char *src =
+		"struct Calc { int marker } "
+		"trait Adder { func add(int a, int b) int; } "
+		"func (self: Calc) add(int a, int b) int { return a + b; } "
+		"func use_adder(Adder value) int { return value.add(3, 4); } "
+		"func main() int { return use_adder(Calc { marker: 0 }); }";
+	compile_error err;
+	long ret = 0;
+	return execute_source_main(src, &ret, &err) && ret == 7;
+}
+
+static bool test_semantic_implicit_trait_missing_method(void) {
+	const char *src =
+		"struct Calc { int marker } "
+		"trait Adder { func add(int a, int b) int; } "
+		"func main() int { let value = Calc { marker: 0 }; return consume(value); } "
+		"func consume(Adder value) int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) return false;
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) return false;
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
 static bool test_runtime_array_len_and_index(void) {
 	const char *src =
 		"fn main() int { "
@@ -1573,6 +1614,9 @@ int main(void) {
 	RUN_TEST(test_runtime_nested_member_alias_compare);
 	RUN_TEST(test_runtime_nested_member_return_alias);
 	RUN_TEST(test_runtime_function_call_and_tail_expr_return);
+	RUN_TEST(test_runtime_receiver_method);
+	RUN_TEST(test_runtime_implicit_trait_dispatch);
+	RUN_TEST(test_semantic_implicit_trait_missing_method);
 	RUN_TEST(test_runtime_string_value_semantics);
 	RUN_TEST(test_runtime_string_mixed_compare_error);
 	RUN_TEST(test_runtime_string_escape_sequences);
