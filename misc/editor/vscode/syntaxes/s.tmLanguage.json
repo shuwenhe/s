@@ -173,7 +173,7 @@
         },
         {
           "name": "storage.type.declaration.s",
-          "match": "\\b(?:func|fn|var|var|struct|enum|trait|impl|for)\\b"
+          "match": "\\b(?:func|fn|var|var|struct|enum|trait|for)\\b"
         }
       ]
     },
@@ -190,10 +190,6 @@
         {
           "name": "entity.name.type.enum.s",
           "match": "(?<=\\benum\\s)([A-Z][A-Za-z0-9_]*)"
-        },
-        {
-          "name": "entity.name.type.impl-target.s",
-          "match": "(?<=\\bfor\\s)([A-Z][A-Za-z0-9_]*(?:\\[[^\\]]+\\])?)"
         }
       ]
     },
@@ -276,12 +272,8 @@
     "traits": {
       "patterns": [
         {
-          "name": "entity.other.inherited-class.s",
-          "match": "\\b[A-Z][A-Za-z0-9_]*\\b(?=\\s+for\\s+[A-Z][A-Za-z0-9_]*\\b)"
-        },
-        {
-          "name": "entity.name.type.trait.impl.s",
-          "match": "(?<=\\bimpl\\s)([A-Z][A-Za-z0-9_]*)(?=\\s+for\\s)"
+          "name": "entity.name.function.method.s",
+          "match": "(?<=\\)\\s)([a-zA-Z_][A-Za-z0-9_]*)(?=\\s*\\()"
         }
       ]
     },

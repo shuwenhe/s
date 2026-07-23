@@ -18,7 +18,7 @@ enum decl_ir {
     r#type(type_decl),
     let(var_decl),
     const(const_decl),
-    impl(impl_decl),
+    method(method_decl),
 }
 
 struct func_decl {
@@ -41,7 +41,7 @@ struct var_decl { string name, string type_name, option[string] init }
 
 struct const_decl { string name, string value }
 
-struct impl_decl { string type_name, vec[func_decl] methods }
+struct method_decl { string receiver_name, string receiver_type, func_decl method }
 
 struct block_ir { vec[stmt_ir] statements, option[expr_ir] final_expr }
 

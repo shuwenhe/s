@@ -3,9 +3,8 @@ struct point
   int32 x
   int32 y
 trait measure
-  func size(point self) int32
-impl measure for point
-  func size(point self) int32
-    final (self.x + self.y)
+  func size() int32
+method (point p) size() -> int32
+  final (p.x + p.y)
 func total(point p, vec[int32] items, int32 index) int32
   final (call p.size() + items[index])

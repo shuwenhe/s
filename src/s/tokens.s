@@ -62,7 +62,6 @@ func is_keyword(string text) bool {
         "struct" : true,
         "enum" : true,
         "trait" : true,
-        "impl" : true,
         "for" : true,
         "if" : true,
         "else" : true,

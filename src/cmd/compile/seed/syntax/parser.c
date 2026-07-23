@@ -1911,7 +1911,6 @@ static ast_node *parse_top_level(parser *p) {
 		}
 		if (strcmp(tok->lexeme, "enum") == 0 ||
 			strcmp(tok->lexeme, "trait") == 0 ||
-			strcmp(tok->lexeme, "impl") == 0 ||
 			strcmp(tok->lexeme, "const") == 0) {
 			parse_error(p, tok, "unsupported top-level declaration '%s' in seed compiler", tok->lexeme);
 			return NULL;

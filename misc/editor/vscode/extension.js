@@ -53,10 +53,9 @@ function activate(context) {
             container: true,
           },
           {
-            regex: /^\s*impl(?:\s+([A-Z][A-Za-z0-9_]*)(?:\[[^\]]+\])?)?\s+for\s+([A-Z][A-Za-z0-9_]*(?:\[[^\]]+\])?)/,
-            kind: vscode.SymbolKind.Object,
-            name: (m) => (m[1] ? `impl ${m[1]} for ${m[2]}` : `impl for ${m[2]}`),
-            container: true,
+            regex: /^\s*(?:pub\s+)?(?:func|fn)\s+\(([^)]+)\)\s*([a-zA-Z_][A-Za-z0-9_]*)/,
+            kind: vscode.SymbolKind.Method,
+            name: (m) => `${m[1].trim()}.${m[2]}`,
           },
           {
             regex: /^\s*(?:pub\s+)?(?:func|fn)\s+([a-zA-Z_][A-Za-z0-9_]*)/,

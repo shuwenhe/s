@@ -5,31 +5,29 @@ enum option[t] {
     none,
 }
 
-impl option[t] {
-    func is_some(self) bool {
+func (self: option[t]) is_some() bool {
         switch self {
             option::some(_) : true,
             option::none : false,
         }
     }
 
-    func is_none(self) bool {
+func (self: option[t]) is_none() bool {
         !self.is_some()
     }
 
-    func unwrap(self) t {
+func (self: option[t]) unwrap() t {
         switch self {
             option::some(value) : value,
             option::none : __option_panic_unwrap(),
         }
     }
 
-    func unwrap_or(self, t default) t {
+func (self: option[t]) unwrap_or(t default) t {
         switch self {
             option::some(value) : value,
             option::none : default,
         }
     }
-}
 
 extern "intrinsic" func __option_panic_unwrap[t]() t

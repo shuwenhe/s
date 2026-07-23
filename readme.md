@@ -2,6 +2,18 @@
 
 S is a systems programming language and self-hosting compiler project. The repository contains the seed compiler, the S frontend and backend, the runtime, standard-library packages, architecture support, and compiler tests.
 
+## Methods and interfaces
+
+S uses receiver methods as its single core method model:
+
+```s
+func (writer: &mut File) write(string data) result[(), io_error] {
+    // ...
+}
+```
+
+Traits are satisfied implicitly by method-set compatibility. A type implements a trait when its receiver methods contain every method required by that trait with compatible parameter and return types. S does not use `impl` declarations.
+
 ## Repository layout
 
 - `src/cmd/compile/seed`: C-based seed compiler and runtime.

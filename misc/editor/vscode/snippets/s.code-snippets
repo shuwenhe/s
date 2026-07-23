@@ -36,16 +36,14 @@
     ],
     "description": "Insert an S trait"
   },
-  "Impl": {
-    "prefix": "impl",
+  "Receiver Method": {
+    "prefix": "method",
     "body": [
-      "impl ${1:TraitName} for ${2:TypeName} {",
-      "\tfn ${3:method}(self: ${2:TypeName}) ${4:()} {",
-      "\t\t${5}",
-      "\t}",
+      "func (${1:self}: ${2:TypeName}) ${3:method}(${4}) ${5:()} {",
+      "\t${6}",
       "}"
     ],
-    "description": "Insert an S impl block"
+    "description": "Insert an S receiver method"
   },
   "Match": {
     "prefix": "switch",

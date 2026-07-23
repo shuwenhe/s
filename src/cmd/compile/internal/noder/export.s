@@ -29,6 +29,14 @@ func collect_exports(source_file ast) vec[export_record] {
                     out.push(export_record { name: tr.name, kind: "trait" })
                 }
             }
+            item.method(method) : {
+                if method.method.is_public {
+                    out.push(export_record {
+                        name: method.receiver_type + "." + method.method.sig.name,
+                        kind: "method",
+                    })
+                }
+            }
             item.const(cn) : out.push(export_record { name: cn.name, kind: "const" }),
             _ : (),
         }
