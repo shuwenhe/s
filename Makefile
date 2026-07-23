@@ -149,9 +149,16 @@ selfhost-check: selfhost selfhost-lexer-check
 	@S_LEXER_MODE=selfhost S_SELFHOST_LEXER=$(SELFHOST_DIR)/s_lexer ./bin/s test/c_abi/add.s $(SELFHOST_DIR)/s-lexer-parser.ir
 	@cmp $(SELFHOST_DIR)/final-check.ir $(SELFHOST_DIR)/s-lexer-parser.ir
 	@cmp $(SELFHOST_DIR)/stage2.ir $(SELFHOST_DIR)/stage3.ir
-	@echo "Self-host check passed: stage2 == stage3 and S Lexer -> Parser IR matches seed"
+	@echo "Seed-hosted bootstrap check passed: stage2 == stage3 and S Lexer -> Parser IR matches seed"
 
-.PHONY: help selfhost selfhost-check selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+true-selfhost-check: selfhost-check
+	@if nm ./bin/s 2>/dev/null | grep -q 'seed_compile_source_text'; then \
+		echo "True self-host check failed: ./bin/s still links the C seed compiler"; \
+		exit 1; \
+	fi
+	@echo "True self-host check passed: ./bin/s does not link the C seed compiler"
+
+.PHONY: help selfhost selfhost-check true-selfhost-check selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 help:
 	@echo "  make run"
@@ -163,6 +170,7 @@ help:
 	@echo "  make seed-c-abi-test"
 	@echo "  make selfhost"
 	@echo "  make selfhost-check"
+	@echo "  make true-selfhost-check      # Reject a compiler that still links the C seed"
 	@echo "  make selfhost-lexer-check"
 	@echo "  PARALLEL BUILDS:"
 	@echo "  make test-quick               # Run quick tests only"
@@ -177,18 +185,22 @@ test-quick: seed-tests
 	@echo "✓ Quick tests passed"
 
 test-full: seed-compiler-bin
-	@echo "Running all test suites in parallel ($(PARALLEL_JOBS) jobs)..."
-	@$(MAKE) seed-tests & \
-	$(MAKE) seed-runtime-regression & \
-	wait
+	@echo "Running test suites with isolated runtime resources..."
+	@$(MAKE) seed-tests
+	@$(MAKE) seed-runtime-regression
 	@echo "✓ All tests passed"
 
 build-parallel:
 	@echo "Building seed compiler, tests, and regression tests in parallel ($(PARALLEL_JOBS) jobs)..."
-	@$(MAKE) seed-compiler-bin & \
-	$(MAKE) seed-tests & \
-	$(MAKE) seed-runtime-regression-bin & \
-	wait
+	@set -e; \
+	$(MAKE) seed-compiler-bin & seed_pid=$$!; \
+	$(MAKE) seed-tests & tests_pid=$$!; \
+	$(MAKE) seed-runtime-regression-bin & regression_pid=$$!; \
+	status=0; \
+	wait $$seed_pid || status=$$?; \
+	wait $$tests_pid || status=$$?; \
+	wait $$regression_pid || status=$$?; \
+	exit $$status
 	@echo "✓ All builds completed"
 
 selfhost-full: build-parallel selfhost selfhost-check
