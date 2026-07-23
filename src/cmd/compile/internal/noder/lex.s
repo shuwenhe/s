@@ -4,7 +4,7 @@ use std.result.result
 use std.vec.vec
 
 func classify_token(string token) string {
-    if token == "package" || token == "use" || token == "func" || token == "struct" || token == "enum" || token == "trait" || token == "impl" || token == "const" {
+    if token == "package" || token == "use" || token == "func" || token == "struct" || token == "enum" || token == "trait" || token == "const" {
         return "keyword"
     }
     if token == "{" || token == "}" || token == "(" || token == ")" || token == ":" || token == ";" || token == "," {

@@ -14,7 +14,7 @@ enum option[t] {
 }
 
 trait reader_like[t] {
-    func read(&mut self self, []u8 buf) result[usize, io_error];
+    func read([]u8 buf) result[usize, io_error];
 }
 
 func load[t: reader](t reader, string path) result[string, io_error] {
@@ -22,8 +22,6 @@ func load[t: reader](t reader, string path) result[string, io_error] {
     value
 }
 
-impl reader_like[file] for file {
-    func read(&mut self self, []u8 buf) result[usize, io_error] {
-        buf
-    }
+func (self: &mut file) read([]u8 buf) result[usize, io_error] {
+    buf
 }

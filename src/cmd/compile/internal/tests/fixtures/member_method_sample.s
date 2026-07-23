@@ -6,13 +6,11 @@ struct point {
 }
 
 trait measure {
-    func size(point self) int;
+    func size() int;
 }
 
-impl measure for point {
-    func size(point self) int {
-        self.x + self.y
-    }
+func (p: point) size() int {
+    p.x + p.y
 }
 
 func total(point p, vec[int] items, int index) int {
