@@ -90,6 +90,7 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_WHILE_STMT: return "WHILE_STMT";
 		case AST_FOR_STMT: return "FOR_STMT";
 		case AST_FN_STMT: return "FN_STMT";
+		case AST_TRAIT_DECL: return "TRAIT_DECL";
 		case AST_BINARY_EXPR: return "BINARY_EXPR";
 		case AST_ASSIGN_EXPR: return "ASSIGN_EXPR";
 		case AST_UNARY_EXPR: return "UNARY_EXPR";
@@ -121,6 +122,8 @@ ast_node *ast_new(ast_kind kind, source_pos pos) {
 		ast_vec_init(&node->as.array_expr.items);
 	} else if (kind == AST_CALL_EXPR) {
 		ast_vec_init(&node->as.call_expr.args);
+	} else if (kind == AST_TRAIT_DECL) {
+		ast_vec_init(&node->as.trait_decl.methods);
 	}
 	return node;
 }
@@ -160,6 +163,7 @@ void ast_free(ast_node *node) {
 				break;
 		case AST_EXPR_STMT:
 			ast_free(node->as.expr_stmt.expr);
+			free(node->as.expr_stmt.inferred_type);
 			break;
 		case AST_PACKAGE_DECL:
 			free(node->as.package_decl.name);
@@ -200,6 +204,7 @@ void ast_free(ast_node *node) {
 			break;
 		case AST_FN_STMT:
 			free(node->as.fn_stmt.name);
+			free(node->as.fn_stmt.receiver_type);
 			free(node->as.fn_stmt.export_abi);
 			free(node->as.fn_stmt.export_symbol);
 			for (i = 0; i < node->as.fn_stmt.param_count; i++) {
@@ -210,6 +215,13 @@ void ast_free(ast_node *node) {
 			free(node->as.fn_stmt.param_types);
 			free(node->as.fn_stmt.return_type);
 			ast_free(node->as.fn_stmt.body);
+			break;
+		case AST_TRAIT_DECL:
+			free(node->as.trait_decl.name);
+			for (i = 0; i < node->as.trait_decl.methods.len; i++) {
+				ast_free(node->as.trait_decl.methods.data[i]);
+			}
+			ast_vec_free(&node->as.trait_decl.methods);
 			break;
 		case AST_BINARY_EXPR:
 			ast_free(node->as.binary_expr.left);
@@ -257,6 +269,7 @@ void ast_free(ast_node *node) {
 		case AST_MEMBER_EXPR:
 			ast_free(node->as.member_expr.object);
 			free(node->as.member_expr.member);
+			free(node->as.member_expr.resolved_method);
 			break;
 		case AST_INDEX_EXPR:
 			ast_free(node->as.index_expr.object);
@@ -337,6 +350,7 @@ static ast_node *parse_expression(parser *p);
 static ast_node *parse_assignment(parser *p);
 static ast_node *parse_statement(parser *p);
 static ast_node *parse_struct_decl(parser *p);
+static ast_node *parse_trait_decl(parser *p);
 static int skip_brace_initializer(parser *p);
 static ast_node *parse_struct_literal_expr(parser *p, const token *type_tok);
 static int looks_like_struct_literal(parser *p);
@@ -1263,7 +1277,10 @@ static ast_node *parse_for_statement(parser *p) {
 		ast_free(node);
 		return NULL;
 	}
-	if (!expect(p, TOKEN_SEMICOLON, ";")) {
+	/* Binding parsers consume their terminating semicolon. Expression and
+	 * empty initializers leave it for the for-clause parser. */
+	if ((!node->as.for_stmt.init || node->as.for_stmt.init->kind != AST_LET_STMT) &&
+		!expect(p, TOKEN_SEMICOLON, ";")) {
 		ast_free(node);
 		return NULL;
 	}
@@ -1579,17 +1596,83 @@ static ast_node *parse_fn_statement(parser *p) {
 	ast_node *node = ast_new(AST_FN_STMT, prev(p)->pos);
 	size_t cap = 0;
 	char *ret_type;
+	char *receiver_name = NULL;
+	char *receiver_type = NULL;
 	if (!node) {
 		return NULL;
 	}
-	if (!expect(p, TOKEN_IDENTIFIER, "function name")) {
+	if (match(p, TOKEN_LPAREN)) {
+		size_t type_start;
+		const char *base_type;
+		char method_name[256];
+		if (!expect(p, TOKEN_IDENTIFIER, "receiver name")) {
+			ast_free(node);
+			return NULL;
+		}
+		receiver_name = dup_cstr(prev(p)->lexeme);
+		if (!receiver_name) {
+			free(receiver_name);
+			ast_free(node);
+			return NULL;
+		}
+		/* Accept both `(name: Type)` and the Go-like `(name Type)` form. */
+		match(p, TOKEN_COLON);
+		type_start = p->current;
+		while (!is_at_end(p) && !check(p, TOKEN_RPAREN)) {
+			advance_tok(p);
+		}
+		if (p->current == type_start) {
+			parse_error(p, peek(p), "expected receiver type");
+			free(receiver_name);
+			ast_free(node);
+			return NULL;
+		}
+		receiver_type = join_lexemes_range(p->tokens, type_start, p->current);
+		if (!receiver_type || !expect(p, TOKEN_RPAREN, ")") ||
+			!expect(p, TOKEN_IDENTIFIER, "method name")) {
+			free(receiver_name);
+			free(receiver_type);
+			ast_free(node);
+			return NULL;
+		}
+		base_type = receiver_type;
+		if (strncmp(base_type, "&mut", 4) == 0) base_type += 4;
+		else if (base_type[0] == '&') base_type++;
+		if (snprintf(method_name, sizeof(method_name), "%s.%s", base_type, prev(p)->lexeme) >= (int)sizeof(method_name)) {
+			parse_error(p, prev(p), "method name is too long");
+			free(receiver_name);
+			free(receiver_type);
+			ast_free(node);
+			return NULL;
+		}
+		node->as.fn_stmt.name = dup_cstr(method_name);
+		node->as.fn_stmt.receiver_type = dup_cstr(base_type);
+	} else {
+		if (!expect(p, TOKEN_IDENTIFIER, "function name")) {
+			ast_free(node);
+			return NULL;
+		}
+		node->as.fn_stmt.name = dup_cstr(prev(p)->lexeme);
+	}
+	if (!node->as.fn_stmt.name) {
+		free(receiver_name);
+		free(receiver_type);
 		ast_free(node);
 		return NULL;
 	}
-	node->as.fn_stmt.name = dup_cstr(prev(p)->lexeme);
-	if (!node->as.fn_stmt.name) {
-		ast_free(node);
-		return NULL;
+	if (receiver_name) {
+		node->as.fn_stmt.params = (char **)malloc(4 * sizeof(char *));
+		node->as.fn_stmt.param_types = (char **)malloc(4 * sizeof(char *));
+		if (!node->as.fn_stmt.params || !node->as.fn_stmt.param_types) {
+			free(receiver_name);
+			free(receiver_type);
+			ast_free(node);
+			return NULL;
+		}
+		node->as.fn_stmt.params[0] = receiver_name;
+		node->as.fn_stmt.param_types[0] = receiver_type;
+		node->as.fn_stmt.param_count = 1;
+		cap = 4;
 	}
 	if (!expect(p, TOKEN_LPAREN, "(")) {
 		ast_free(node);
@@ -1909,8 +1992,10 @@ static ast_node *parse_top_level(parser *p) {
 		if (strcmp(tok->lexeme, "struct") == 0) {
 			return parse_struct_decl(p);
 		}
+		if (strcmp(tok->lexeme, "trait") == 0) {
+			return parse_trait_decl(p);
+		}
 		if (strcmp(tok->lexeme, "enum") == 0 ||
-			strcmp(tok->lexeme, "trait") == 0 ||
 			strcmp(tok->lexeme, "const") == 0) {
 			parse_error(p, tok, "unsupported top-level declaration '%s' in seed compiler", tok->lexeme);
 			return NULL;
@@ -2116,6 +2201,98 @@ static ast_node *parse_struct_decl(parser *p) {
 		ast_free(node);
 		return NULL;
 	}
+	return node;
+}
+
+static ast_node *parse_trait_method_signature(parser *p) {
+	ast_node *method = ast_new(AST_FN_STMT, prev(p)->pos);
+	size_t cap = 0;
+	if (!method) return NULL;
+	if (!expect(p, TOKEN_IDENTIFIER, "trait method name")) {
+		ast_free(method);
+		return NULL;
+	}
+	method->as.fn_stmt.name = dup_cstr(prev(p)->lexeme);
+	if (!method->as.fn_stmt.name || !expect(p, TOKEN_LPAREN, "(")) {
+		ast_free(method);
+		return NULL;
+	}
+	while (!check(p, TOKEN_RPAREN)) {
+		char *param_type = NULL;
+		char *param_name = NULL;
+		if (!try_parse_typed_name(p, TOKEN_COMMA, &param_type, &param_name)) {
+			parse_error(p, peek(p), "expected typed trait method parameter");
+			ast_free(method);
+			return NULL;
+		}
+		if (method->as.fn_stmt.param_count == cap) {
+			size_t next_cap = cap == 0 ? 4 : cap * 2;
+			char **next_params = (char **)realloc(method->as.fn_stmt.params, next_cap * sizeof(char *));
+			char **next_types = (char **)realloc(method->as.fn_stmt.param_types, next_cap * sizeof(char *));
+			if (!next_params || !next_types) {
+				free(next_params); free(next_types); free(param_type); free(param_name); ast_free(method); return NULL;
+			}
+			method->as.fn_stmt.params = next_params;
+			method->as.fn_stmt.param_types = next_types;
+			cap = next_cap;
+		}
+		method->as.fn_stmt.params[method->as.fn_stmt.param_count] = param_name;
+		method->as.fn_stmt.param_types[method->as.fn_stmt.param_count++] = param_type;
+		if (!match(p, TOKEN_COMMA)) break;
+	}
+	if (!expect(p, TOKEN_RPAREN, ")")) {
+		ast_free(method);
+		return NULL;
+	}
+	if (check(p, TOKEN_SEMICOLON)) {
+		method->as.fn_stmt.return_type = dup_cstr("()");
+	} else {
+		size_t type_start = p->current;
+		while (!is_at_end(p) && !check(p, TOKEN_SEMICOLON) && !check(p, TOKEN_RBRACE)) advance_tok(p);
+		method->as.fn_stmt.return_type = p->current > type_start
+			? join_lexemes_range(p->tokens, type_start, p->current) : dup_cstr("()");
+	}
+	if (!method->as.fn_stmt.return_type || !expect(p, TOKEN_SEMICOLON, ";")) {
+		ast_free(method);
+		return NULL;
+	}
+	return method;
+}
+
+static ast_node *parse_trait_decl(parser *p) {
+	const token *kw = peek(p);
+	ast_node *node;
+	if (!match(p, TOKEN_IDENTIFIER) || strcmp(prev(p)->lexeme, "trait") != 0) {
+		parse_error(p, peek(p), "expected 'trait'");
+		return NULL;
+	}
+	node = ast_new(AST_TRAIT_DECL, kw->pos);
+	if (!node) return NULL;
+	if (!expect(p, TOKEN_IDENTIFIER, "trait name")) {
+		ast_free(node);
+		return NULL;
+	}
+	node->as.trait_decl.name = dup_cstr(prev(p)->lexeme);
+	if (!node->as.trait_decl.name || !expect(p, TOKEN_LBRACE, "'{' after trait name")) {
+		ast_free(node);
+		return NULL;
+	}
+	while (!check(p, TOKEN_RBRACE)) {
+		ast_node *method;
+		if (!match(p, TOKEN_FN)) {
+			parse_error(p, peek(p), "expected trait method signature");
+			ast_free(node);
+			return NULL;
+		}
+		method = parse_trait_method_signature(p);
+		if (!method || !ast_vec_push(&node->as.trait_decl.methods, method)) {
+			ast_free(method);
+			ast_free(node);
+			return NULL;
+		}
+	}
+	advance_tok(p);
+	consume_optional_semicolon(p);
 	return node;
 }
 
@@ -2443,6 +2620,11 @@ static int parse_dotted_path(parser *p,
         }
         snprintf(alias_buf, alias_size, "%s", prev(p)->lexeme);
     }
+
+	if (alias_buf[0] == '\0') {
+		const char *last = strrchr(path, '.');
+		snprintf(alias_buf, alias_size, "%s", last ? last + 1 : path);
+	}
 
     return 1;
 }
