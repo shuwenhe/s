@@ -218,12 +218,8 @@ func run_semantic_suite(string fixtures_root) int {
         return 1
     }
 
-    let impl_src = "package demo.impl\nimpl Box[T] {\n}"
-    let impl_diags = check_detailed(impl_src)
-    if !has_code(impl_diags, "e3028") {
-        return 1
-    }
-    if !has_code(impl_diags, "e3030") {
+    let legacy_impl_src = "package demo.legacy\nimpl Box[T] {\n}"
+    if check_text(legacy_impl_src) == 0 {
         return 1
     }
 
@@ -245,65 +241,53 @@ func run_semantic_suite(string fixtures_root) int {
         return 1
     }
 
-    let trait_impl_ok = "package demo.iface\ntrait Adder {\n  func add(int a, int b) int;\n}\nimpl Adder for Calc where Calc {\n  func add(int a, int b) int {\n    a + b\n  }\n}\nfunc main() int {\n  0\n}"
-    if check_text(trait_impl_ok) != 0 {
+    let implicit_trait_ok = "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) add(int a, int b) int {\n  a + b\n}\nfunc use_adder(Adder a) int {\n  a.add(1, 2)\n}\nfunc main() int {\n  use_adder(Calc {})\n}"
+    if check_text(implicit_trait_ok) != 0 {
         return 1
     }
 
-    let trait_impl_missing = "package demo.iface\ntrait Adder {\n  func add(int a, int b) int;\n}\nimpl Adder for Calc where Calc {\n  func sub(int a, int b) int {\n    a - b\n  }\n}\nfunc main() int {\n  0\n}"
-    let trait_impl_missing_diags = check_detailed(trait_impl_missing)
-    if !has_code(trait_impl_missing_diags, "e3041") {
+    let implicit_trait_missing = "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) sub(int a, int b) int {\n  a - b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() int {\n  use_adder(Calc {})\n}"
+    let implicit_trait_missing_diags = check_detailed(implicit_trait_missing)
+    if !has_code(implicit_trait_missing_diags, "e1002") {
         return 1
     }
 
-    let trait_impl_sig_mismatch = "package demo.iface\ntrait Adder {\n  func add(int a, int b) int;\n}\nimpl Adder for Calc where Calc {\n  func add(bool a, int b) int {\n    b\n  }\n}\nfunc main() int {\n  0\n}"
-    let trait_impl_sig_diags = check_detailed(trait_impl_sig_mismatch)
-    if !has_code(trait_impl_sig_diags, "e3043") {
+    let implicit_trait_sig_mismatch = "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) add(bool a, int b) int {\n  b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() int {\n  use_adder(Calc {})\n}"
+    let implicit_trait_sig_diags = check_detailed(implicit_trait_sig_mismatch)
+    if !has_code(implicit_trait_sig_diags, "e1002") {
         return 1
     }
 
-    let trait_impl_receiver_mismatch = "package demo.iface\ntrait Reader {\n  func read(File self, int count) int;\n}\nimpl Reader for File where File {\n  func read(&File self, int count) int {\n    count\n  }\n}\nfunc main() int {\n  0\n}"
-    let trait_impl_receiver_diags = check_detailed(trait_impl_receiver_mismatch)
-    if !has_code(trait_impl_receiver_diags, "e3043") {
-        return 1
-    }
-
-    let method_call_ok = "package demo.method\nstruct Point {\n  int x\n}\ntrait Measure {\n  func size(Point self) int;\n}\nimpl Measure for Point where Point {\n  func size(Point self) int {\n    self.x\n  }\n}\nfunc main() int {\n  let p = Point { x: 4 }\n  p.size()\n}"
+    let method_call_ok = "package demo.method\nstruct Point {\n  int x\n}\ntrait Measure {\n  func size() int;\n}\nfunc (p: Point) size() int {\n  p.x\n}\nfunc main() int {\n  let p = Point { x: 4 }\n  p.size()\n}"
     if check_text(method_call_ok) != 0 {
         return 1
     }
 
-    let method_ref_ok = "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek(&Reader self) int;\n}\nimpl Peek for Reader where Reader {\n  func peek(&Reader self) int {\n    self.count\n  }\n}\nfunc main() int {\n  let reader = Reader { count: 2 }\n  reader.peek()\n}"
+    let method_ref_ok = "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (reader: &Reader) peek() int {\n  reader.count\n}\nfunc main() int {\n  let reader = Reader { count: 2 }\n  reader.peek()\n}"
     if check_text(method_ref_ok) != 0 {
         return 1
     }
 
-    let method_temp_ref_fail = "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek(&Reader self) int;\n}\nimpl Peek for Reader where Reader {\n  func peek(&Reader self) int {\n    self.count\n  }\n}\nfunc make_reader() Reader {\n  Reader { count: 2 }\n}\nfunc main() int {\n  make_reader().peek()\n}"
+    let method_temp_ref_fail = "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (reader: &Reader) peek() int {\n  reader.count\n}\nfunc make_reader() Reader {\n  Reader { count: 2 }\n}\nfunc main() int {\n  make_reader().peek()\n}"
     let method_temp_ref_diags = check_detailed(method_temp_ref_fail)
     if !has_code(method_temp_ref_diags, "e3051") {
         return 1
     }
 
-    let method_mut_ref_ok = "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump(&mut Counter self) int;\n}\nimpl Bump for Counter where Counter {\n  func bump(&mut Counter self) int {\n    self.count\n  }\n}\nfunc main() int {\n  let counter = Counter { count: 2 }\n  counter.bump()\n}"
+    let method_mut_ref_ok = "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &mut Counter) bump() int {\n  counter.count\n}\nfunc main() int {\n  let counter = Counter { count: 2 }\n  counter.bump()\n}"
     if check_text(method_mut_ref_ok) != 0 {
         return 1
     }
 
-    let method_temp_mut_ref_fail = "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump(&mut Counter self) int;\n}\nimpl Bump for Counter where Counter {\n  func bump(&mut Counter self) int {\n    self.count\n  }\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() int {\n  make_counter().bump()\n}"
+    let method_temp_mut_ref_fail = "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &mut Counter) bump() int {\n  counter.count\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() int {\n  make_counter().bump()\n}"
     let method_temp_mut_ref_diags = check_detailed(method_temp_mut_ref_fail)
     if !has_code(method_temp_mut_ref_diags, "e3051") {
         return 1
     }
 
-    let trait_impl_unknown = "package demo.iface\nimpl MissingTrait for Calc where Calc {\n  func add(int a, int b) int {\n    a + b\n  }\n}\nfunc main() int {\n  0\n}"
-    let trait_impl_unknown_diags = check_detailed(trait_impl_unknown)
-    if !has_code(trait_impl_unknown_diags, "e3040") {
-        return 1
-    }
-
-    let trait_impl_duplicate_method = "package demo.iface\ntrait Adder {\n  func add(int a, int b) int;\n}\nimpl Adder for Calc where Calc {\n  func add(int a, int b) int {\n    a + b\n  }\n  func add(int a, int b) int {\n    a\n  }\n}\nfunc main() int {\n  0\n}"
-    let trait_impl_dup_diags = check_detailed(trait_impl_duplicate_method)
-    if !has_code(trait_impl_dup_diags, "e3042") {
+    let duplicate_receiver_method = "package demo.iface\nstruct Calc {}\nfunc (c: Calc) add(int a) int {\n  a\n}\nfunc (c: Calc) add(int a) int {\n  a\n}\nfunc main() int {\n  0\n}"
+    let duplicate_receiver_diags = check_detailed(duplicate_receiver_method)
+    if !has_code(duplicate_receiver_diags, "e3042") {
         return 1
     }
 

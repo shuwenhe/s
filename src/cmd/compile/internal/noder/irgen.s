@@ -25,9 +25,9 @@ func lower_to_ir(source_file ast) vec[ir_node] {
                 op: "trait",
                 payload: tr.name,
             }),
-            item.impl(im) : out.push(ir_node {
-                op: "impl",
-                payload: im.target,
+            item.method(method) : out.push(ir_node {
+                op: "method",
+                payload: method.receiver_type + "." + method.method.sig.name,
             }),
             item.const(cn) : out.push(ir_node {
                 op: "const",

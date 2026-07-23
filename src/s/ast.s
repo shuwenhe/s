@@ -254,11 +254,10 @@ struct trait_decl {
     bool is_public
 }
 
-struct impl_decl {
-    string target
-    option[string] trait_name
-    vec[string] generics
-    vec[function_decl] methods
+struct receiver_method_decl {
+    string receiver_name
+    string receiver_type
+    function_decl method
 }
 
 struct const_decl {
@@ -273,7 +272,7 @@ enum item {
     struct(struct_decl),
     enum(enum_decl),
     trait(trait_decl),
-    impl(impl_decl),
+    method(receiver_method_decl),
 }
 
 struct source_file {
@@ -312,7 +311,7 @@ func append_item_dump(vec[string] lines, item item) () {
         item.struct(value) : append_lines(lines, dump_struct(value)),
         item.enum(value) : append_lines(lines, dump_enum(value)),
         item.trait(value) : append_lines(lines, dump_trait(value)),
-        item.impl(value) : append_lines(lines, dump_impl(value)),
+        item.method(value) : append_lines(lines, dump_receiver_method(value)),
     }
 }
 
@@ -424,20 +423,37 @@ func dump_trait(trait_decl item) vec[string] {
     lines
 }
 
-func dump_impl(impl_decl item) vec[string] {
+func dump_receiver_method(receiver_method_decl item) vec[string] {
     let lines = vec[string]()
-    let head =
-        switch item.trait_name {
-            option.some(name) : name + " for " + item.target,
-            option.none : item.target,
-        }
-    let title = replace_once("impl " + fmt_generics(item.generics) + " " + head, "impl  ", "impl ")
-    lines.push(title)
+    let method = item.method
+    let params = vec[string]()
     let _mi2 = 0
-    while _mi2 < item.methods.len() {
-        let method = item.methods[_mi2]
-        append_lines(lines, dump_function(method, "  "))
+    while _mi2 < method.sig.params.len() {
+        let param = method.sig.params[_mi2]
+        params.push(param.type_name + " " + param.name)
         _mi2 = _mi2 + 1
+    }
+    let ret =
+        switch method.sig.return_type {
+            option.some(value) : " -> " + value,
+            option.none : "",
+        }
+    lines.push(
+        "method ("
+            + item.receiver_type
+            + " "
+            + item.receiver_name
+            + ") "
+            + method.sig.name
+            + fmt_generics(method.sig.generics)
+            + "("
+            + join_with(params, ", ")
+            + ")"
+            + ret
+    )
+    switch method.body {
+        option.some(body) : append_lines(lines, dump_block(body, "  ")),
+        option.none : (),
     }
     lines
 }

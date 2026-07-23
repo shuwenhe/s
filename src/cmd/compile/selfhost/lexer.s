@@ -49,6 +49,7 @@ func symbol_kind(string text) string {
     if text == "==" { return "==" }
     if text == "!=" { return "!=" }
     if text == "&&" { return "&&" }
+    if text == "&" { return "&" }
     if text == "||" { return "||" }
     if text == "<" { return "<" }
     if text == "<=" { return "<=" }
