@@ -87,3 +87,4 @@ editor/vscode/*.vsix
 
 # build outputs
 # /s/out/
+.bootstrap/
