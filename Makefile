@@ -1,4 +1,4 @@
-PREFIX ?= $(CURDIR)/.local
+PREFIX ?= $(HOME)/.local
 INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_PROGRAM ?= install
 SUDO ?=
