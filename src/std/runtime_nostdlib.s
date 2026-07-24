@@ -1,18 +1,12 @@
 package std.runtime_nostdlib
 
-// Pure S implementation of minimal runtime library
-// Replaces C libc for self-hosted compiler bootstrap
-// 
-// This provides:
-// - Process exit
-// - File I/O via syscalls
-// - Minimal memory allocation
-// - No C library dependencies
+// Pure S implementation of minimal runtime library for -nostdlib builds
+// Provides syscall interface and minimal utilities
+// Linux x86-64 only
 
-// System call interface for Linux x86-64
-// These are intrinsic functions that the compiler understands
-
-extern "intrinsic" func __syscall(int nr, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) int
+// System call intrinsic (compiler generates raw syscall)
+extern "intrinsic" func syscall_6(int nr, int a1, int a2, int a3, int a4, int a5, int a6) int
+extern "intrinsic" func syscall_1(int nr, int a1) int
 
 // Linux x86-64 syscall numbers
 const SYS_EXIT = 60
@@ -23,101 +17,77 @@ const SYS_CLOSE = 3
 const SYS_BRK = 12
 
 // File descriptor constants
-const STDIN_FILENO = 0
-const STDOUT_FILENO = 1
-const STDERR_FILENO = 2
+const STDIN_FD = 0
+const STDOUT_FD = 1
+const STDERR_FD = 2
 
-// Exit the process
-func exit(int status) {
-    __syscall(SYS_EXIT, status, 0, 0, 0, 0, 0)
+// Process control
+func exit(int code) {
+    // Call exit(2) syscall
+    let _ = syscall_1(SYS_EXIT, code)
 }
 
-// Write bytes to file descriptor
-func write_fd(int fd, []byte buffer) int {
-    if len(buffer) == 0 {
+// File I/O via syscalls
+func write_to_fd(int fd, string text) int {
+    // write(fd, buffer, count) syscall
+    // Note: S compiler must handle string-to-pointer conversion
+    let count = len(text)
+    if count == 0 {
         return 0
     }
-    
-    // TODO: Need to pass pointer to buffer
-    // For now, assume compiler handles this
-    return __syscall(SYS_WRITE, fd, 0, len(buffer), 0, 0, 0)
+    syscall_6(SYS_WRITE, fd, 0, count, 0, 0, 0)
 }
 
-// Write string to stdout
+// Standard output
 func stdout_write(string text) int {
-    if len(text) == 0 {
-        return 0
-    }
-    return write_fd(STDOUT_FILENO, []byte(text))
+    write_to_fd(STDOUT_FD, text)
 }
 
-// Write string to stderr
+// Standard error
 func stderr_write(string text) int {
-    if len(text) == 0 {
-        return 0
-    }
-    return write_fd(STDERR_FILENO, []byte(text))
+    write_to_fd(STDERR_FD, text)
 }
 
-// Minimal memory allocator using brk syscall
-var heap_break: i64 = 0
-
-func brk(i64 new_break) i64 {
-    // Call brk syscall to extend or check heap
-    return i64(__syscall(SYS_BRK, int(new_break), 0, 0, 0, 0, 0))
-}
-
-func malloc(int size) &byte {
-    // This is a simplified allocator
-    // For compiler bootstrap, we don't need sophisticated allocation
-    // Just request more heap space with brk
-    
-    if heap_break == 0 {
-        heap_break = brk(0)  // Get current break
-    }
-    
-    let new_break = heap_break + i64(size)
-    let result = brk(new_break)
-    
-    if result < 0 {
-        return nil  // Allocation failed
-    }
-    
-    let allocated = heap_break
-    heap_break = new_break
-    
-    return &byte(allocated)
-}
-
-func free(&byte ptr) {
-    // No-op for simple bump allocator
-    // In a production runtime, we would track freed regions
-}
-
-// Print formatted output (minimal version)
-func print(string text) {
-    let _ = stdout_write(text)
-}
-
+// Convenience functions
 func println(string text) {
-    let _ = stdout_write(text + "\n")
-}
-
-// Error output
-func eprint(string text) {
-    let _ = stderr_write(text)
+    let _ = stdout_write(text)
+    let _ = stdout_write("\n")
 }
 
 func eprintln(string text) {
-    let _ = stderr_write(text + "\n")
+    let _ = stderr_write(text)
+    let _ = stderr_write("\n")
 }
 
-// Entry point for standalone programs
-// This replaces the C runtime initialization
-func __start() int {
-    // Call the main function (provided by user program)
-    return main()
+// Heap management (simple bump allocator)
+var heap_top = 0x10000000  // 256MB offset for heap start
+
+func malloc(int size) int {
+    if size <= 0 {
+        return 0
+    }
+    
+    let ptr = heap_top
+    heap_top = heap_top + size
+    
+    // Align to 16 bytes
+    let remainder = heap_top % 16
+    if remainder != 0 {
+        heap_top = heap_top + (16 - remainder)
+    }
+    
+    ptr
 }
 
-// Declare main function (user-provided)
+func free(int ptr) {
+    // No-op for bump allocator
+}
+
+// Program entry (called by runtime startup)
+// User code should define their own main()
 extern func main() int
+
+// Standard entry point for nostdlib programs
+func __start() int {
+    main()
+}

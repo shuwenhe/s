@@ -243,7 +243,7 @@ struct abi_behavior_entry {
     string abi_summary
 }
 
-func build(string path, string output, string ssa_margin_override) int {
+func build(string path, string output, string ssa_margin_override, bool nostdlib) int {
     let source_result = read_to_string(path)
     if source_result.is_err() {
         return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message)
@@ -349,10 +349,16 @@ func build(string path, string output, string ssa_margin_override) int {
         }
 
         let ld_argv = vec[string]()
-        ld_argv.push("ld");
-        ld_argv.push("-o");
-        ld_argv.push(output);
-        ld_argv.push(obj_path);
+        ld_argv.push("ld")
+        if nostdlib {
+            ld_argv.push("-nostdlib")
+            ld_argv.push("-static")
+            ld_argv.push("-T")
+            ld_argv.push("src/runtime/linker/nostdlib.ld")
+        }
+        ld_argv.push("-o")
+        ld_argv.push(output)
+        ld_argv.push(obj_path)
         let ld_result = run_process(ld_argv)
         if ld_result.is_err() {
             return report_failure("toolchain failed: " + ld_result.unwrap_err().message)
