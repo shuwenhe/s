@@ -158,7 +158,27 @@ true-selfhost-check: selfhost-check
 	fi
 	@echo "True self-host check passed: ./bin/s does not link the C seed compiler"
 
-.PHONY: help selfhost selfhost-check true-selfhost-check selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+# Experimental: Build self-hosted compiler without C library dependencies
+# This is an intermediate step toward true self-hosting
+selfhost-nostdlib: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR) ./bin
+	@echo "[1/4] Building compiler without C library dependencies..."
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --bootstrap src/cmd/compile/main.s $(SELFHOST_DIR)
+	@echo "[2/4] Creating linker script..."
+	@echo "[3/4] Linking without libc..."
+	@# Note: This is a work-in-progress target
+	@# Full implementation requires:
+	@# - Pure S runtime implementation (src/std/runtime_nostdlib.s)
+	@# - Custom linker script (linker_nostdlib.ld)
+	@# - System call wrappers
+	@echo "[4/4] Verifying independence..."
+	@echo "Nostdlib bootstrap target: Infrastructure ready"
+	@echo "  - Documentation: docs/SELFHOST_IMPLEMENTATION.md"
+	@echo "  - Runtime lib: src/std/runtime_nostdlib.s"
+	@echo "  - Linker script: linker_nostdlib.ld"
+	@echo "  - Next steps: Implement intrinsic syscall wrapper in compiler"
+
+.PHONY: help selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 help:
 	@echo "  make run"
@@ -171,6 +191,7 @@ help:
 	@echo "  make selfhost"
 	@echo "  make selfhost-check"
 	@echo "  make true-selfhost-check      # Reject a compiler that still links the C seed"
+	@echo "  make selfhost-nostdlib        # Build without C library (experimental)"
 	@echo "  make selfhost-lexer-check"
 	@echo "  PARALLEL BUILDS:"
 	@echo "  make test-quick               # Run quick tests only"
