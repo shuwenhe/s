@@ -1,6 +1,8 @@
 # Ignore built S compiler binaries and local installs
 .local/
-bin/
+bin/*
+!bin/s          # Bootstrap compiler - required for self-hosting
+!bin/.gitkeep
 *.exe
 *.arm64_*
 
