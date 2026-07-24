@@ -15,6 +15,7 @@ typedef enum s_target_backend {
 
 void generate_code(IR *ir, FILE *output);
 bool emit_native_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err);
+bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err);
 bool emit_c_abi_shared_from_ir_file(const char *input_ir_path, const char *output_library_path, compile_error *err);
 const char *s_target_backend_name(s_target_backend backend);
 bool s_target_backend_probe(s_target_backend backend, char *detail, size_t detail_size);

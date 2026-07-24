@@ -63,6 +63,7 @@ seed-tests:
 	  src/cmd/compile/seed/code/generator.c \
 	  src/cmd/compile/seed/code/backend_registry.c \
 	  src/cmd/compile/seed/code/native_backend.c \
+	  src/cmd/compile/seed/code/standalone_amd64_backend.c \
 	  src/cmd/compile/seed/runtime/network_windows.c \
 	  src/cmd/compile/seed/runtime/runtime.c
 	@./bin/seed_tests
@@ -84,6 +85,7 @@ seed-runtime-regression-bin:
 	  src/cmd/compile/seed/code/generator.c \
 	  src/cmd/compile/seed/code/backend_registry.c \
 	  src/cmd/compile/seed/code/native_backend.c \
+	  src/cmd/compile/seed/code/standalone_amd64_backend.c \
 	  src/cmd/compile/seed/runtime/network_windows.c \
 	  src/cmd/compile/seed/runtime/runtime.c
 
@@ -109,6 +111,7 @@ seed-compiler-bin:
 	  src/cmd/compile/seed/code/generator.c \
 	  src/cmd/compile/seed/code/backend_registry.c \
 	  src/cmd/compile/seed/code/native_backend.c \
+	  src/cmd/compile/seed/code/standalone_amd64_backend.c \
 	  src/cmd/compile/seed/runtime/network_windows.c \
 	  src/cmd/compile/seed/runtime/runtime.c
 
@@ -152,33 +155,36 @@ selfhost-check: selfhost selfhost-lexer-check
 	@echo "Seed-hosted bootstrap check passed: stage2 == stage3 and S Lexer -> Parser IR matches seed"
 
 true-selfhost-check: selfhost-check
-	@if nm ./bin/s 2>/dev/null | grep -q 'seed_compile_source_text'; then \
-		echo "True self-host check failed: ./bin/s still links the C seed compiler"; \
-		exit 1; \
-	fi
+	@./misc/scripts/verify_true_selfhost.sh ./bin/s
 	@echo "True self-host check passed: ./bin/s does not link the C seed compiler"
 
-# Experimental: Build self-hosted compiler without C library dependencies
-# This is an intermediate step toward true self-hosting
-selfhost-nostdlib: seed-compiler-bin
-	@mkdir -p $(SELFHOST_DIR) ./bin
-	@echo "[1/4] Building compiler without C library dependencies..."
-	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --bootstrap src/cmd/compile/main.s $(SELFHOST_DIR)
-	@echo "[2/4] Creating linker script..."
-	@echo "[3/4] Linking without libc..."
-	@# Note: This is a work-in-progress target
-	@# Full implementation requires:
-	@# - Pure S runtime implementation (src/std/runtime_nostdlib.s)
-	@# - Custom linker script (linker_nostdlib.ld)
-	@# - System call wrappers
-	@echo "[4/4] Verifying independence..."
-	@echo "Nostdlib bootstrap target: Infrastructure ready"
-	@echo "  - Documentation: docs/SELFHOST_IMPLEMENTATION.md"
-	@echo "  - Runtime lib: src/std/runtime_nostdlib.s"
-	@echo "  - Linker script: linker_nostdlib.ld"
-	@echo "  - Next steps: Implement intrinsic syscall wrapper in compiler"
+# A producer for bin/s_nostdlib must be added before this target can pass.  Keep
+# this target fail-closed: an absent artifact must never be reported as a
+# successful no-libc bootstrap.
+selfhost-nostdlib:
+	@if [ ! -x ./bin/s_nostdlib ]; then \
+		echo "selfhost-nostdlib: missing ./bin/s_nostdlib" >&2; \
+		echo "the pure-S native compiler/linker path is not implemented yet" >&2; \
+		exit 1; \
+	fi
+	@./misc/scripts/verify_true_selfhost.sh ./bin/s_nostdlib
+	@echo "Verified no-libc self-hosted compiler: ./bin/s_nostdlib"
 
-.PHONY: help selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+selfhost-runtime-check:
+	@mkdir -p $(SELFHOST_DIR)/nostdlib
+	@as --64 -o $(SELFHOST_DIR)/nostdlib/runtime.o src/runtime/selfhost_linux_amd64.S
+	@as --64 -o $(SELFHOST_DIR)/nostdlib/runtime_probe.o test/selfhost/nostdlib_runtime_probe_amd64.S
+	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/nostdlib/runtime_probe \
+	  $(SELFHOST_DIR)/nostdlib/runtime.o \
+	  $(SELFHOST_DIR)/nostdlib/runtime_probe.o
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/nostdlib/runtime_probe
+	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
+	@echo "No-libc Linux/amd64 runtime check passed"
+
+.PHONY: help selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+
+verify-true-selfhost:
+	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
 
 help:
 	@echo "  make run"
@@ -192,6 +198,7 @@ help:
 	@echo "  make selfhost-check"
 	@echo "  make true-selfhost-check      # Reject a compiler that still links the C seed"
 	@echo "  make selfhost-nostdlib        # Build without C library (experimental)"
+	@echo "  make selfhost-runtime-check   # Verify the no-libc Linux/amd64 runtime"
 	@echo "  make selfhost-lexer-check"
 	@echo "  PARALLEL BUILDS:"
 	@echo "  make test-quick               # Run quick tests only"
