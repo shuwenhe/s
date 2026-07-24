@@ -1,0 +1,13 @@
+SSEED-TARGET-V1
+EXPORT|add|neurx_add|int,int,int
+FUNC_BEGIN|add|_|_
+PARAM|a|_|_
+PARAM|b|_|_
+ADD|t0|a|b
+RET|t0|_|_
+RET|0|_|_
+FUNC_END|add|_|_
+FUNC_BEGIN|main|_|_
+RET|0|_|_
+RET|0|_|_
+FUNC_END|main|_|_
