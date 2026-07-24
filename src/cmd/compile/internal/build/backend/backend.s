@@ -6,11 +6,11 @@ use std.io.eprintln
 use std.process.run_process
 use std.vec.vec
 
-func build(string path, string output, string ssa_margin) int {
-    build_binary(path, output, ssa_margin)
+func build(string path, string output, string ssa_margin, bool nostdlib) int {
+    build_binary(path, output, ssa_margin, nostdlib)
 }
 
-func run(string path, string ssa_margin) int {
+func run(string path, string ssa_margin, bool nostdlib) int {
     let temp_dir_result = make_temp_dir("s-build-")
     if temp_dir_result.is_err() {
         eprintln("run failed: could not create temporary output directory");
@@ -18,7 +18,7 @@ func run(string path, string ssa_margin) int {
     }
 
     let output_path = temp_dir_result.unwrap() + "/a.out"
-    if build(path, output_path, ssa_margin) != 0 {
+    if build(path, output_path, ssa_margin, nostdlib) != 0 {
         eprintln("run failed: build step failed");
         return 1
     }
