@@ -1,0 +1,16 @@
+# Binary files
+bin/s binary
+
+# Source files
+*.s text eol=lf
+*.c text eol=lf
+*.h text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+
+# Configuration
+*.json text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
