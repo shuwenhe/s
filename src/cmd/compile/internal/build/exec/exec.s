@@ -104,7 +104,8 @@ func run(vec[string] options) int {
             emit_built(options[2]);
             return 0
         }
-        if build_binary(options[1], options[2], options[3]) == 0 {
+        let nostdlib = options.len() > 4 && options[4] == "nostdlib"
+        if build_binary(options[1], options[2], options[3], nostdlib) == 0 {
             let ignored_cache = update_cache_target(options[1], source, "build", build_target)
             emit_built(options[2]);
             return 0
@@ -113,7 +114,8 @@ func run(vec[string] options) int {
     }
 
     if options[0] == "run" {
-        return run_binary(options[1], options[3])
+        let nostdlib = options.len() > 4 && options[4] == "nostdlib"
+        return run_binary(options[1], options[3], nostdlib)
     }
 
     return 1
