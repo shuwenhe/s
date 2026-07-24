@@ -5,46 +5,22 @@ SUDO ?=
 SELFHOST_DIR ?= $(CURDIR)/.bootstrap/selfhost
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 
-run:
-	@echo "Building and installing S compiler for $(shell uname -m)..."
-	@set -e; \
-	OUT_BIN=""; \
-	case "$(shell uname -m)" in \
-		x86_64) \
-			if [ ! -f ./bin/build_s_x86_64.sh ]; then \
-				echo "Missing builder: ./bin/build_s_x86_64.sh"; \
-				exit 1; \
-			fi; \
-			OUT_BIN="$$(bash ./bin/build_s_x86_64.sh)"; \
-			;; \
-		aarch64|arm64) \
-			if [ ! -f ./bin/build_s_arm64.sh ]; then \
-				echo "Missing builder: ./bin/build_s_arm64.sh"; \
-				exit 1; \
-			fi; \
-			OUT_BIN="$$(bash ./bin/build_s_arm64.sh)"; \
-			;; \
-		*) \
-			echo "Unsupported architecture: $(shell uname -m)"; \
-			exit 1; \
-			;; \
-	esac; \
-	if [ ! -f "$$OUT_BIN" ]; then \
-		echo "Build succeeded but output not found: $$OUT_BIN"; \
-		exit 1; \
-	fi; \
-	mkdir -p "$(INSTALL_BIN_DIR)"; \
-	echo "Installing $$OUT_BIN to $(INSTALL_BIN_DIR)/s..."; \
-	$(SUDO) $(INSTALL_PROGRAM) -m 0755 "$$OUT_BIN" "$(INSTALL_BIN_DIR)/s"; \
-	echo "S compiler installed successfully."
+run: bin/s
+	@echo "Installing S compiler bootstrap binary (bin/s) for $$(uname -m)..."
+	@mkdir -p "$(INSTALL_BIN_DIR)"
+	@echo "Installing bin/s to $(INSTALL_BIN_DIR)/s..."
+	@$(SUDO) $(INSTALL_PROGRAM) -m 0755 ./bin/s "$(INSTALL_BIN_DIR)/s"
+	@echo "S compiler installed successfully."
 
-build-x86_64:
-	@echo "Building S compiler for x86_64..."
-	@bash ./bin/build_s_x86_64.sh
+build-x86_64: bin/s
+	@echo "✓ S compiler ready for x86_64 (bootstrap: bin/s)"
 
-build-arm64:
-	@echo "Building S compiler for ARM64..."
-	@bash ./bin/build_s_arm64.sh
+build-arm64: bin/s
+	@echo "✓ S compiler ready for ARM64 (bootstrap: bin/s)"
+
+bin/s:
+	@echo "error: bin/s not found. Please run: git clone --depth 1 https://github.com/shuwenhe/s.git"
+	@exit 1
 
 seed-tests:
 	@echo "Building seed runtime/parser tests..."
