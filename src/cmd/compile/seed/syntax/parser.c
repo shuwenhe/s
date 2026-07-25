@@ -2228,7 +2228,6 @@ static ast_node *parse_struct_decl(parser *p) {
 	const token *kw = peek(p);
 	const token *name_tok;
 	ast_node *node;
-	int depth;
 
 	if (!match(p, TOKEN_IDENTIFIER) || strcmp(prev(p)->lexeme, "struct") != 0) {
 		parse_error(p, peek(p), "expected 'struct'");
@@ -2244,45 +2243,59 @@ static ast_node *parse_struct_decl(parser *p) {
 		return NULL;
 	}
 
-	depth = 1;
-	while (depth > 0 && !is_at_end(p)) {
-		if (match(p, TOKEN_LBRACE)) {
-			depth++;
-			continue;
+	/* parse struct body to capture field type/name pairs line by line */
+	/* '{' already consumed above */
+
+	ast_node *stype = ast_new(AST_STRUCT_EXPR, kw->pos);
+	if (!stype) return NULL;
+	stype->as.struct_expr.type_name = dup_cstr(name_tok->lexeme);
+	if (!stype->as.struct_expr.type_name) { ast_free(stype); return NULL; }
+
+	while (!check(p, TOKEN_RBRACE)) {
+		/* skip empty lines */
+		const token *t = peek(p);
+		if (t->type == TOKEN_SEMICOLON) { advance_tok(p); continue; }
+		if (t->type == TOKEN_RBRACE) break;
+		/* collect tokens on this line */
+		size_t line = t->pos.line;
+		size_t start = p->current;
+		size_t k = start;
+		while (!is_at_end(p) && peek(p)->pos.line == line && peek(p)->type != TOKEN_RBRACE) {
+			advance_tok(p);
+			k++;
 		}
-		if (match(p, TOKEN_RBRACE)) {
-			depth--;
-			continue;
-		}
-		advance_tok(p);
+		if (k == start) break;
+		/* last token on the line should be the field name */
+		const token *field_tok = &p->tokens->data[k-1];
+		/* type tokens are from start .. k-1 (exclusive)
+		 * join them to get the type lexeme */
+		char *type_lex = join_lexemes_range(p->tokens, start, k-1);
+		if (!type_lex) { ast_free(stype); return NULL; }
+		/* push field name */
+		char **next_names = (char **)realloc(stype->as.struct_expr.field_names, (stype->as.struct_expr.field_count + 1) * sizeof(char *));
+		if (!next_names) { free(type_lex); ast_free(stype); return NULL; }
+		stype->as.struct_expr.field_names = next_names;
+		stype->as.struct_expr.field_names[stype->as.struct_expr.field_count] = dup_cstr(field_tok->lexeme);
+		if (!stype->as.struct_expr.field_names[stype->as.struct_expr.field_count]) { free(type_lex); ast_free(stype); return NULL; }
+		/* push a string expr node that holds the type lexeme so analyzer can register it */
+		ast_node *type_node = ast_new(AST_STRING_EXPR, field_tok->pos);
+		if (!type_node) { free(type_lex); ast_free(stype); return NULL; }
+		type_node->as.string_expr.literal = type_lex; /* transfer ownership */
+		if (!ast_vec_push(&stype->as.struct_expr.field_values, type_node)) { ast_free(type_node); ast_free(stype); return NULL; }
+		stype->as.struct_expr.field_count++;
+		/* advance over any semicolon on this line */
+		if (check(p, TOKEN_SEMICOLON)) advance_tok(p);
 	}
 
-	if (depth != 0) {
-		parse_error(p, kw, "unterminated struct declaration");
-		return NULL;
-	}
-
+	if (!expect(p, TOKEN_RBRACE, "}") ) { ast_free(stype); return NULL; }
 	consume_optional_semicolon(p);
 
 	node = ast_new(AST_LET_STMT, kw->pos);
-	if (!node) {
-		return NULL;
-	}
+	if (!node) { ast_free(stype); return NULL; }
 	node->as.let_stmt.name = dup_cstr(name_tok->lexeme);
-	if (!node->as.let_stmt.name) {
-		ast_free(node);
-		return NULL;
-	}
-	node->as.let_stmt.value = ast_new(AST_NUMBER_EXPR, kw->pos);
-	if (!node->as.let_stmt.value) {
-		ast_free(node);
-		return NULL;
-	}
-	node->as.let_stmt.value->as.number_expr.literal = dup_cstr("0");
-	if (!node->as.let_stmt.value->as.number_expr.literal) {
-		ast_free(node);
-		return NULL;
-	}
+	if (!node->as.let_stmt.name) { ast_free(node); ast_free(stype); return NULL; }
+	node->as.let_stmt.type_name = dup_cstr("struct");
+	node->as.let_stmt.value = stype;
 	return node;
 }
 
