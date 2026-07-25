@@ -61,6 +61,7 @@ struct ast_node {
 
 		struct {
 			char *name;
+			char *type_name;
 			ast_node *value;
 			bool mutable;
 		} let_stmt;
