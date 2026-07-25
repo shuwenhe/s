@@ -118,6 +118,85 @@ static int parse_int_field(const char *s, int *out) {
 	return 1;
 }
 
+typedef struct type_field_info {
+	char *type_name;
+	char **field_names;
+	char **field_types;
+	size_t field_count;
+	struct type_field_info *next;
+} type_field_info;
+
+static type_field_info *type_registry = NULL;
+
+static void free_type_registry(void) {
+	type_field_info *t = type_registry;
+	while (t) {
+		type_field_info *n = t->next;
+		if (t->type_name) free(t->type_name);
+		if (t->field_names) {
+			for (size_t i = 0; i < t->field_count; i++) free(t->field_names[i]);
+			free(t->field_names);
+		}
+		if (t->field_types) {
+			for (size_t i = 0; i < t->field_count; i++) if (t->field_types[i]) free((char *)t->field_types[i]);
+			free(t->field_types);
+		}
+		free(t);
+		t = n;
+	}
+	type_registry = NULL;
+}
+
+static type_field_info *find_type_info(const char *type_name) {
+	type_field_info *t = type_registry;
+	while (t) {
+		if (t->type_name && strcmp(t->type_name, type_name) == 0) return t;
+		t = t->next;
+	}
+	return NULL;
+
+}
+
+static int register_type_fields(const char *type_name, char **field_names, char **field_types, size_t field_count) {
+	if (!type_name) return 0;
+	if (find_type_info(type_name)) return 1; /* already registered */
+	type_field_info *t = (type_field_info *)malloc(sizeof(type_field_info));
+	if (!t) return 0;
+	t->type_name = dup_cstr(type_name);
+	t->field_count = field_count;
+	t->field_names = NULL;
+	t->field_types = NULL;
+	t->next = type_registry;
+	if (field_count > 0) {
+		t->field_names = (char **)malloc(field_count * sizeof(char *));
+		t->field_types = (char **)malloc(field_count * sizeof(char *));
+		if (!t->field_names || !t->field_types) {
+			free_type_registry();
+			return 0;
+		}
+		for (size_t i = 0; i < field_count; i++) {
+			t->field_names[i] = dup_cstr(field_names[i] ? field_names[i] : "");
+			t->field_types[i] = field_types[i] ? dup_cstr(field_types[i]) : dup_cstr(TYPE_ANY);
+			if (!t->field_names[i] || !t->field_types[i]) {
+				free_type_registry();
+				return 0;
+			}
+		}
+	}
+	type_registry = t;
+	return 1;
+}
+
+static const char *lookup_field_type(const char *type_name, const char *field_name) {
+	if (!type_name || !field_name) return NULL;
+	type_field_info *t = find_type_info(type_name);
+	if (!t) return NULL;
+	for (size_t i = 0; i < t->field_count; i++) {
+		if (t->field_names[i] && strcmp(t->field_names[i], field_name) == 0) return t->field_types[i];
+	}
+	return NULL;
+}
+
 static int load_import_signatures(compile_error *err) {
 	FILE *fp;
 	char line[512];
@@ -396,6 +475,19 @@ static ast_node *find_trait_decl(semantic_ctx *ctx, const char *name) {
 		ast_node *decl = ctx->root->as.program.statements.data[i];
 		if (decl->kind == AST_TRAIT_DECL && decl->as.trait_decl.name &&
 			strcmp(decl->as.trait_decl.name, name) == 0) return decl;
+	}
+	return NULL;
+}
+
+static ast_node *find_struct_literal(semantic_ctx *ctx, const char *type_name) {
+	size_t i;
+	if (!ctx || !ctx->root || ctx->root->kind != AST_PROGRAM || !type_name) return NULL;
+	for (i = 0; i < ctx->root->as.program.statements.len; i++) {
+		ast_node *decl = ctx->root->as.program.statements.data[i];
+		if (decl->kind == AST_LET_STMT && decl->as.let_stmt.value && decl->as.let_stmt.value->kind == AST_STRUCT_EXPR) {
+			ast_node *se = decl->as.let_stmt.value;
+			if (se->as.struct_expr.type_name && strcmp(se->as.struct_expr.type_name, type_name) == 0) return se;
+		}
 	}
 	return NULL;
 }
@@ -736,9 +828,33 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			*out_type = TYPE_ARRAY;
 			return 1;
 		case AST_STRUCT_EXPR:
-			for (i = 0; i < node->as.struct_expr.field_values.len; i++) {
-				if (!analyze_expr(ctx, node->as.struct_expr.field_values.data[i], &rhs_type)) {
-					return 0;
+			/* analyze field values and register field types for this struct type */
+			if (node->as.struct_expr.type_name) {
+				char **f_types = NULL;
+				size_t fc = node->as.struct_expr.field_count;
+				if (fc > 0) {
+					f_types = (char **)malloc(fc * sizeof(char *));
+					if (!f_types) return 0;
+				}
+				for (i = 0; i < node->as.struct_expr.field_values.len; i++) {
+					if (!analyze_expr(ctx, node->as.struct_expr.field_values.data[i], &rhs_type)) {
+						for (size_t j = 0; j < i && f_types; j++) free(f_types[j]);
+						free(f_types);
+						return 0;
+					}
+					if (f_types) f_types[i] = dup_cstr(rhs_type ? rhs_type : TYPE_ANY);
+				}
+				/* register fields if we have names */
+				if (node->as.struct_expr.field_names && node->as.struct_expr.field_count > 0) {
+					if (!register_type_fields(node->as.struct_expr.type_name, node->as.struct_expr.field_names, f_types, node->as.struct_expr.field_count)) {
+						for (size_t j = 0; j < node->as.struct_expr.field_count; j++) if (f_types && f_types[j]) free(f_types[j]);
+						free(f_types);
+						return 0;
+					}
+				}
+				if (f_types) {
+					for (size_t j = 0; j < node->as.struct_expr.field_count; j++) if (f_types[j]) free(f_types[j]);
+					free(f_types);
 				}
 			}
 			*out_type = node->as.struct_expr.type_name ? node->as.struct_expr.type_name : TYPE_ANY;
@@ -763,6 +879,47 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					lhs_type ? lhs_type : TYPE_ANY,
 					(int)node->pos.line, (int)node->pos.column);
 			}
+			/* Try to resolve member type from registered struct info */
+			if (lhs_type) {
+				/* If lhs is an array '[]T' and member access is like 'len' or similar, skip; here we look up field on T only for struct lhs */
+				const char *resolved = NULL;
+				if (strncmp(lhs_type, "[]", 2) == 0) {
+					/* array of structs: try on element type */
+					char *elem = (char *)lhs_type + 2;
+					resolved = lookup_field_type(elem, node->as.member_expr.member);
+				}
+				if (!resolved) resolved = lookup_field_type(lhs_type, node->as.member_expr.member);
+				if (resolved) {
+					*out_type = resolved;
+					return 1;
+				}
+				/* attempt to find a struct literal in the program that defines this type and register its fields */
+				ast_node *se = find_struct_literal(ctx, lhs_type);
+				if (se) {
+					/* build field type list by analyzing field value expressions */
+					size_t fc = se->as.struct_expr.field_count;
+					char **f_names = NULL;
+					char **f_types = NULL;
+					if (fc > 0) {
+						f_names = (char **)malloc(fc * sizeof(char *));
+						f_types = (char **)malloc(fc * sizeof(char *));
+						if (!f_names || !f_types) { free(f_names); free(f_types); return 0; }
+					}
+					for (size_t ii = 0; ii < fc; ii++) {
+						f_names[ii] = dup_cstr(se->as.struct_expr.field_names[ii]);
+						const char *ft = NULL;
+						if (!analyze_expr(ctx, se->as.struct_expr.field_values.data[ii], &ft)) ft = TYPE_ANY;
+						f_types[ii] = dup_cstr(ft ? ft : TYPE_ANY);
+					}
+					register_type_fields(lhs_type, f_names, f_types, fc);
+					for (size_t ii = 0; ii < fc; ii++) { free(f_names[ii]); free(f_types[ii]); }
+					free(f_names); free(f_types);
+					/* try lookup again */
+					resolved = lookup_field_type(lhs_type, node->as.member_expr.member);
+					if (resolved) { *out_type = resolved; return 1; }
+				}
+			}
+			/* fallback: unknown member, return any */
 			*out_type = TYPE_ANY;
 			return 1;
 		case AST_INDEX_EXPR:
@@ -1220,6 +1377,56 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_BLOCK:
 			return analyze_block_with_new_scope(ctx, node);
 		case AST_LET_STMT:
+			/* special-case: struct declaration encoded as a let with type_name='struct' and value AST_STRUCT_EXPR */
+			if (node->as.let_stmt.type_name && strcmp(node->as.let_stmt.type_name, "struct") == 0 &&
+				node->as.let_stmt.value && node->as.let_stmt.value->kind == AST_STRUCT_EXPR) {
+				ast_node *stype = node->as.let_stmt.value;
+				/* collect field names and types from the struct_expr where field_values are string literals (type lexemes) */
+				size_t fc = stype->as.struct_expr.field_count;
+				char **f_names = NULL;
+				char **f_types = NULL;
+				if (fc > 0) {
+					f_names = (char **)malloc(fc * sizeof(char *));
+					f_types = (char **)malloc(fc * sizeof(char *));
+					if (!f_names || !f_types) {
+						free(f_names); free(f_types);
+						error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+						return 0;
+					}
+				}
+				for (i = 0; i < fc; i++) {
+					f_names[i] = dup_cstr(stype->as.struct_expr.field_names[i]);
+					/* field_values[i] is a string expr node containing the type lexeme */
+					ast_node *tv = stype->as.struct_expr.field_values.data[i];
+					if (tv && tv->kind == AST_STRING_EXPR && tv->as.string_expr.literal) {
+						f_types[i] = dup_cstr(tv->as.string_expr.literal);
+					} else {
+						f_types[i] = dup_cstr(TYPE_ANY);
+					}
+					if (!f_names[i] || !f_types[i]) {
+						for (size_t j = 0; j <= i; j++) { if (f_names[j]) free(f_names[j]); if (f_types[j]) free(f_types[j]); }
+						free(f_names); free(f_types);
+						error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+						return 0;
+					}
+				}
+				/* register the struct type */
+				if (!register_type_fields(node->as.let_stmt.name, f_names, f_types, fc)) {
+					for (size_t j = 0; j < fc; j++) { free(f_names[j]); free(f_types[j]); }
+					free(f_names); free(f_types);
+					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+					return 0;
+				}
+				/* Debug: list registered fields */
+				for (size_t jj = 0; jj < fc; jj++) {
+					fprintf(stderr, "DEBUG_REGISTER type='%s' field='%s' field_type='%s' at %d:%d\n",
+						node->as.let_stmt.name, f_names[jj], f_types[jj], (int)node->pos.line, (int)node->pos.column);
+				}
+				for (size_t j = 0; j < fc; j++) { free(f_names[j]); free(f_types[j]); }
+				free(f_names); free(f_types);
+				return 1;
+			}
+
 			if (!analyze_expr(ctx, node->as.let_stmt.value, &expr_type)) {
 				return 0;
 			}
