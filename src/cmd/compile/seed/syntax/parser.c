@@ -978,7 +978,7 @@ static ast_node *parse_block(parser *p) {
 
 		/* allow shorthand typed binding inside blocks: 'Type name = expr' */
 		ast_node *stmt = NULL;
-		if (check(p, TOKEN_IDENTIFIER) && looks_like_typed_binding(p)) {
+		if ((check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_LBRACKET)) && looks_like_typed_binding(p)) {
 			stmt = parse_typed_binding_statement(p, 1);
 			if (!stmt) {
 				ast_free(block);
@@ -1080,6 +1080,7 @@ static ast_node *parse_typed_binding_statement(parser *p, int is_mutable) {
 	node->as.let_stmt.name = dup_cstr(binding_name);
 	/* preserve declared type annotation */
 	node->as.let_stmt.type_name = dup_cstr(binding_type);
+
 	if (!node->as.let_stmt.name) {
 		free(binding_type);
 		free(binding_name);
@@ -1111,8 +1112,30 @@ static int looks_like_typed_binding(parser *p) {
 	char *parsed_name = NULL;
 	int ok = 0;
 
-	if (try_parse_typed_name(p, TOKEN_ASSIGN, &parsed_type, &parsed_name) && check(p, TOKEN_ASSIGN)) {
-		ok = 1;
+	/* Decide based on the starting token.
+	 * - If it starts with an identifier, ensure it's not a function call (identifier followed by '(').
+	 * - If it starts with '[', allow array-style typed bindings. */
+	if (is_at_end(p)) {
+		p->current = saved;
+		return 0;
+	}
+	token_type cur_t = peek(p)->type;
+	if (cur_t == TOKEN_IDENTIFIER) {
+		/* If next token is '(' (call) or '[' (index), this is not a typed binding. */
+		if (p->current + 1 < p->tokens->len) {
+			token_type nt = p->tokens->data[p->current + 1].type;
+			if (nt == TOKEN_LPAREN || nt == TOKEN_LBRACKET) {
+				p->current = saved;
+				return 0;
+			}
+		}
+		if (try_parse_typed_name(p, TOKEN_ASSIGN, &parsed_type, &parsed_name) && check(p, TOKEN_ASSIGN)) {
+			ok = 1;
+		}
+	} else if (cur_t == TOKEN_LBRACKET) {
+		if (try_parse_typed_name(p, TOKEN_ASSIGN, &parsed_type, &parsed_name) && check(p, TOKEN_ASSIGN)) {
+			ok = 1;
+		}
 	}
 	free(parsed_type);
 	free(parsed_name);
@@ -1593,6 +1616,26 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 		*out_name = NULL;
 		p->current = saved;
 		return 0;
+	}
+	/* If the parsed type string ends with a dot, this was likely an object member
+	 * assignment like `obj.member = ...` mis-parsed as a typed binding. Reject
+	 * that to let the normal assignment parsing handle it. */
+	{
+		size_t lt = strlen(*out_type);
+		if (lt > 0) {
+			char last = (*out_type)[lt - 1];
+			/* If the last character is not alphanumeric or underscore, it's likely
+			 * trailing punctuation from an expression (e.g. '.' or '['), not a
+			 * proper type name segment. Reject to avoid misclassification. */
+			if (!(isalnum((unsigned char)last) || last == '_')) {
+				free(*out_type);
+				free(*out_name);
+				*out_type = NULL;
+				*out_name = NULL;
+				p->current = saved;
+				return 0;
+			}
+		}
 	}
 
 	return 1;
