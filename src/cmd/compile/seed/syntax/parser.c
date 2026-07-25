@@ -5,18 +5,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "../error/error.h"
-
 typedef struct parser {
 	const token_vec *tokens;
 	size_t current;
 	struct compile_error *err;
 } parser;
 
+static size_t next_block_id = 1;
+
 static ast_node *parse_extern_decl(parser *p);
 static ast_node *parse_export_decl(parser *p);
 static ast_node *parse_binding_statement(parser *p, int is_mutable);
+static ast_node *parse_typed_binding_statement(parser *p, int is_mutable);
 static int looks_like_typed_binding(parser *p);
 static int try_parse_typed_name(parser *p, token_type terminator, char **out_type, char **out_name);
 static int try_parse_type_annotation(parser *p, char **out_type);
@@ -149,6 +152,7 @@ void ast_free(ast_node *node) {
 			break;
 		case AST_LET_STMT:
 			free(node->as.let_stmt.name);
+			free(node->as.let_stmt.type_name);
 			ast_free(node->as.let_stmt.value);
 			break;
 			case AST_ASSIGN_STMT:
@@ -302,7 +306,9 @@ static const token *advance_tok(parser *p) {
 	if (!is_at_end(p)) {
 		p->current++;
 	}
-	return prev(p);
+	const token *pr = prev(p);
+	(void)pr;
+	return pr;
 }
 
 static int check(parser *p, token_type t) {
@@ -363,6 +369,7 @@ static int parse_dotted_path(parser *p,
 	int allow_selector_suffix);
 
 static ast_node *parse_primary(parser *p) {
+	(void)p;
 	const token *tok = peek(p);
 	ast_node *node;
 
@@ -607,6 +614,7 @@ static ast_node *parse_primary(parser *p) {
 }
 
 static ast_node *parse_call(parser *p) {
+	(void)p;
 	ast_node *expr = parse_primary(p);
 	if (!expr) {
 		return NULL;
@@ -963,9 +971,22 @@ static ast_node *parse_block(parser *p) {
 	if (!block) {
 		return NULL;
 	}
+	next_block_id++;
+
 
 	while (!check(p, TOKEN_RBRACE) && !is_at_end(p)) {
-		ast_node *stmt = parse_statement(p);
+
+		/* allow shorthand typed binding inside blocks: 'Type name = expr' */
+		ast_node *stmt = NULL;
+		if (check(p, TOKEN_IDENTIFIER) && looks_like_typed_binding(p)) {
+			stmt = parse_typed_binding_statement(p, 1);
+			if (!stmt) {
+				ast_free(block);
+				return NULL;
+			}
+		} else {
+			stmt = parse_statement(p);
+		}
 		if (!stmt) {
 			ast_free(block);
 			return NULL;
@@ -975,6 +996,7 @@ static ast_node *parse_block(parser *p) {
 			ast_free(block);
 			return NULL;
 		}
+
 	}
 
 	if (!expect(p, TOKEN_RBRACE, "}")) {
@@ -1056,6 +1078,8 @@ static ast_node *parse_typed_binding_statement(parser *p, int is_mutable) {
 	}
 	node->as.let_stmt.mutable = is_mutable ? 1 : 0;
 	node->as.let_stmt.name = dup_cstr(binding_name);
+	/* preserve declared type annotation */
+	node->as.let_stmt.type_name = dup_cstr(binding_type);
 	if (!node->as.let_stmt.name) {
 		free(binding_type);
 		free(binding_name);
@@ -1097,13 +1121,16 @@ static int looks_like_typed_binding(parser *p) {
 }
 
 static ast_node *parse_return_statement(parser *p) {
+	(void)p;
 	ast_node *node = ast_new(AST_RETURN_STMT, prev(p)->pos);
 	if (!node) {
 		return NULL;
 	}
 
 	if (!check(p, TOKEN_SEMICOLON) && !check(p, TOKEN_RBRACE)) {
+		/* return expression parsing */
 		node->as.return_stmt.value = parse_expression(p);
+		/* return expression parsed */
 		if (!node->as.return_stmt.value) {
 			ast_free(node);
 			return NULL;
@@ -1185,6 +1212,7 @@ static ast_node *parse_for_init(parser *p) {
 }
 
 static ast_node *parse_if_statement(parser *p) {
+	(void)p;
 	ast_node *node = ast_new(AST_IF_STMT, prev(p)->pos);
 	int has_paren;
 	if (!node) {
@@ -1218,6 +1246,7 @@ static ast_node *parse_if_statement(parser *p) {
 }
 
 static ast_node *parse_while_statement(parser *p) {
+	(void)p;
 	ast_node *node = ast_new(AST_WHILE_STMT, prev(p)->pos);
 	int has_paren;
 	if (!node) {
@@ -1242,6 +1271,7 @@ static ast_node *parse_while_statement(parser *p) {
 }
 
 static ast_node *parse_for_statement(parser *p) {
+	(void)p;
 	ast_node *node = ast_new(AST_FOR_STMT, prev(p)->pos);
 	if (!node) {
 		return NULL;
@@ -1502,6 +1532,11 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 
 	while (!is_at_end(p)) {
 		token_type t = peek(p)->type;
+		/* If we hit an un-nested '}' that's not part of the typed-name, stop
+		 * scanning so the outer parser can handle the block close. */
+		if (t == TOKEN_RBRACE && bracket_depth == 0 && paren_depth == 0 && brace_depth == 0) {
+			break;
+		}
 		if (t == terminator && bracket_depth == 0 && paren_depth == 0 && brace_depth == 0) {
 			break;
 		}
@@ -1593,6 +1628,7 @@ static char *join_lexemes_range(const token_vec *tokens, size_t start, size_t en
 }
 
 static ast_node *parse_fn_statement(parser *p) {
+	(void)p;
 	ast_node *node = ast_new(AST_FN_STMT, prev(p)->pos);
 	size_t cap = 0;
 	char *ret_type;
@@ -1935,6 +1971,7 @@ static ast_node *parse_use_decl(parser *p) {
 }
 
 static ast_node *parse_statement(parser *p) {
+	(void)p;
 	if (match(p, TOKEN_LET)) {
 		if (looks_like_typed_binding(p)) {
 			return parse_typed_binding_statement(p, 0);
@@ -1947,6 +1984,7 @@ static ast_node *parse_statement(parser *p) {
 		}
 		return parse_binding_statement(p, 1);
 	}
+    
 	if (match(p, TOKEN_RETURN)) {
 		return parse_return_statement(p);
 	}
@@ -2143,6 +2181,7 @@ static ast_node *parse_extern_decl(parser *p) {
 }
 
 static ast_node *parse_struct_decl(parser *p) {
+	(void)p;
 	const token *kw = peek(p);
 	const token *name_tok;
 	ast_node *node;
@@ -2260,6 +2299,7 @@ static ast_node *parse_trait_method_signature(parser *p) {
 }
 
 static ast_node *parse_trait_decl(parser *p) {
+	(void)p;
 	const token *kw = peek(p);
 	ast_node *node;
 	if (!match(p, TOKEN_IDENTIFIER) || strcmp(prev(p)->lexeme, "trait") != 0) {
@@ -2303,6 +2343,7 @@ parse_result parser_parse_tokens(const token_vec *tokens, compile_error *err) {
 	p.tokens = tokens;
 	p.current = 0;
 	p.err = err;
+	(void)p;
 	error_clear(err);
 
 	out.root = ast_new(AST_PROGRAM, tokens->len > 0 ? tokens->data[0].pos : (source_pos){1, 1});
@@ -2312,17 +2353,21 @@ parse_result parser_parse_tokens(const token_vec *tokens, compile_error *err) {
 	}
 
 	while (!is_at_end(&p)) {
+		const token *tpeek = peek(&p);
+		(void)tpeek;
 		ast_node *stmt = parse_top_level(&p);
 		if (!stmt) {
+			const token *tok = peek(&p);
+			fprintf(stderr, "PARSE_FAIL at %d:%d near '%s' (tok=%s)\n", (int)tok->pos.line, (int)tok->pos.column, tok->lexeme ? tok->lexeme : "<eof>", token_type_name(tok->type));
 			if (!error_is_set(err)) {
-				const token *tok = peek(&p);
 				error_set(err, ERR_SYNTAX, tok->pos.line, tok->pos.column,
-				          "failed to parse top-level near '%s'", tok->lexeme ? tok->lexeme : "<eof>");
+						  "failed to parse top-level near '%s'", tok->lexeme ? tok->lexeme : "<eof>");
 			}
 			ast_free(out.root);
 			out.root = NULL;
 			return out;
 		}
+		/* parsed top-level declaration */
 		if (!ast_vec_push(&out.root->as.program.statements, stmt)) {
 			ast_free(stmt);
 			ast_free(out.root);
@@ -2344,6 +2389,7 @@ void parser_parse_result_free(parse_result *res) {
 }
 
 static ast_node *parse_struct_literal_expr(parser *p, const token *type_tok) {
+	(void)p;
 	ast_node *node;
 	char **next_names;
 
@@ -2413,6 +2459,7 @@ static ast_node *parse_struct_literal_expr(parser *p, const token *type_tok) {
 }
 
 static ast_node *parse_map_literal_expr(parser *p, const token *type_tok, const char *type_name) {
+	(void)p;
 	ast_node *node;
 	char **next_names;
 

@@ -1201,7 +1201,19 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			if (!analyze_expr(ctx, node->as.let_stmt.value, &expr_type)) {
 				return 0;
 			}
-			status = scope_define(ctx->current_scope, node->as.let_stmt.name, SYMBOL_VAR, node->as.let_stmt.mutable, -1, -1, expr_type, NULL, 0);
+			/* If the let has an explicit declared type, use it and validate assignment */
+			if (node->as.let_stmt.type_name && node->as.let_stmt.type_name[0] != '\0') {
+				const char *decl_type = node->as.let_stmt.type_name;
+				if (!is_type_assignable(decl_type, expr_type)) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"initializer type mismatch for '%s': declared '%s', got '%s'",
+						node->as.let_stmt.name, decl_type, expr_type ? expr_type : TYPE_ANY);
+					return 0;
+				}
+				status = scope_define(ctx->current_scope, node->as.let_stmt.name, SYMBOL_VAR, node->as.let_stmt.mutable, -1, -1, decl_type, NULL, 0);
+			} else {
+				status = scope_define(ctx->current_scope, node->as.let_stmt.name, SYMBOL_VAR, node->as.let_stmt.mutable, -1, -1, expr_type, NULL, 0);
+			}
 			if (status == 0) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"redefinition of symbol '%s'", node->as.let_stmt.name);
