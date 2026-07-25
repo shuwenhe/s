@@ -1318,14 +1318,19 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						ret_type,
 						NULL,
 						0);
-					if (status == 0) {
-						error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
-							"redefinition of import alias '%s'", decl->as.use_decl.alias);
-						return 0;
-					}
 					if (status < 0) {
 						error_set(ctx->err, ERR_OUT_OF_MEMORY, decl->pos.line, decl->pos.column, "out of memory");
 						return 0;
+					}
+					if (status == 0) {
+						/* already defined in this scope: allow idempotent re-use only if it's an import */
+						symbol *existing = scope_lookup_current(ctx->current_scope, decl->as.use_decl.alias);
+						if (!existing || existing->kind != SYMBOL_IMPORT) {
+							error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
+								"redefinition of import alias '%s'", decl->as.use_decl.alias);
+							return 0;
+						}
+						/* already present and is an import; skip silently */
 					}
 				}
 				if (decl->kind == AST_USE_DECL && decl->as.use_decl.selector_count > 0) {
@@ -1352,15 +1357,20 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 							ret_type,
 							NULL,
 							0);
-						if (status == 0) {
-							error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
-								"redefinition of import alias '%s'", decl->as.use_decl.selectors[j]);
-							return 0;
-						}
 						if (status < 0) {
 							error_set(ctx->err, ERR_OUT_OF_MEMORY, decl->pos.line, decl->pos.column, "out of memory");
 							return 0;
 						}
+						if (status == 0) {
+							symbol *existing = scope_lookup_current(ctx->current_scope, decl->as.use_decl.selectors[j]);
+							if (!existing || existing->kind != SYMBOL_IMPORT) {
+								error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
+									"redefinition of import alias '%s'", decl->as.use_decl.selectors[j]);
+								return 0;
+							}
+							/* already present - nothing more to do */
+						}
+						/* newly defined or already present; nothing else required here */
 					}
 				}
 			}
