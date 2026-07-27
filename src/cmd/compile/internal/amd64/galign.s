@@ -1,7 +1,5 @@
 package compile.internal.amd64
-
 let leaptr = "LEAQ"
-
 func init_amd64(arch_info mut arch) arch_info {
     arch.link_arch = "amd64"
     arch.reg_sp = 7
@@ -15,15 +13,12 @@ func init_amd64(arch_info mut arch) arch_info {
     arch.spill_arg_reg_hook = "spill_arg_reg"
     arch
 }
-
 func link_arch_name() string {
     "amd64"
 }
-
 func stack_pointer_register() int {
     7
 }
-
 func max_width_limit() int {
     1 << 50
 }

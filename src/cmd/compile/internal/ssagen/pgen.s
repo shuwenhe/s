@@ -1,13 +1,10 @@
 package compile.internal.ssagen
-
 use std.vec.vec
-
 struct pgen_plan {
     vec[string] lines
     int stack_size
     bool has_split_check
 }
-
 func build_pgen_plan(string fn_name, int stack_size, bool need_split_check, bool emit_arginfo, bool emit_wrapinfo) pgen_plan {
     let lines = vec[string]()
     lines.push("TEXT " + fn_name)

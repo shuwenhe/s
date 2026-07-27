@@ -1,19 +1,15 @@
 package compile.internal.inline
-
 use compile.internal.mir.mir_graph
 use compile.internal.mir.mir_statement
 use std.prelude.len
 use std.prelude.slice
-
 func estimate_inline_sites(string mir_text) int {
     let calls = count_token(mir_text, " call=")
     if calls <= 0 {
         return 0
     }
-
     calls / 2
 }
-
 func estimate_inline_sites_graph(mir_graph graph) int {
     let call_sites = 0
     let i = 0
@@ -37,18 +33,15 @@ func estimate_inline_sites_graph(mir_graph graph) int {
         }
         i = i + 1
     }
-
     if call_sites <= 0 {
         return 0
     }
     call_sites / 2
 }
-
 func count_token(string text, string token) int {
     if token == "" {
         return 0
     }
-
     let total = 0
     let i = 0
     while i <= len(text) - len(token) {

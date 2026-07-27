@@ -1,7 +1,5 @@
 package compile.internal.arm
-
 use std.vec.vec
-
 struct ssa_value {
     string op
     vec[string] args
@@ -11,22 +9,18 @@ struct ssa_value {
     string type_name
     bool signed
 }
-
 struct ssa_block {
     string kind
     vec[int] succs
     int likely
 }
-
 struct bfc_result {
     bool ok
     int lsb
     int width
 }
-
 func ssa_mark_moves() () {
 }
-
 func load_by_type(string type_name, bool signed) string {
     if type_name == "float32" {
         return "MOVF"
@@ -48,7 +42,6 @@ func load_by_type(string type_name, bool signed) string {
     }
     "MOVW"
 }
-
 func store_by_type(string type_name) string {
     if type_name == "float32" {
         return "MOVF"
@@ -64,7 +57,6 @@ func store_by_type(string type_name) string {
     }
     "MOVW"
 }
-
 func makeshift(int reg, int typ, int amount) int {
     if amount < 0 {
         return 0
@@ -74,16 +66,13 @@ func makeshift(int reg, int typ, int amount) int {
     }
     return (reg & 0xf) + typ + ((amount & 31) << 7)
 }
-
 func makeregshift(int r1, int typ, int r2) int {
     return (r1 & 0xf) + typ + ((r2 & 0xf) << 8) + (1 << 4)
 }
-
 func get_bfc(int v) bfc_result {
     if v == 0 {
         return bfc_result { ok: false, lsb: -1, width: 0 }
     }
-
     let lsb = 0
     let t = v
     while lsb < 32 {
@@ -93,28 +82,23 @@ func get_bfc(int v) bfc_result {
         t = t / 2
         lsb = lsb + 1
     }
-
     let width = 0
     let u = t
     while width < 32 && (u % 2) == 1 {
         u = u / 2
         width = width + 1
     }
-
     if u != 0 {
         return bfc_result { ok: false, lsb: -1, width: 0 }
     }
-
     if lsb < 0 || lsb > 31 {
         return bfc_result { ok: false, lsb: -1, width: 0 }
     }
     if width <= 0 || width > (32 - lsb) {
         return bfc_result { ok: false, lsb: -1, width: 0 }
     }
-
     bfc_result { ok: true, lsb: lsb, width: width }
 }
-
 func ssa_gen_value(ssa_value value) string {
     if value.op == "OpCopy" || value.op == "OpARMMOVWreg" {
         return "MOVW"
@@ -148,22 +132,18 @@ func ssa_gen_value(ssa_value value) string {
     }
     "GENERIC"
 }
-
 func ssa_gen_block(string kind, int next_succ, int likely) vec[string] {
     let out = vec[string]()
-
     if kind == "BlockPlain" || kind == "BlockDefer" {
         if next_succ != 0 {
             out.push("JMP")
         }
         return out
     }
-
     if kind == "BlockRet" {
         out.push("RET")
         return out
     }
-
     if kind == "BlockARMEQ" {
         if next_succ == 0 {
             out.push("BNE")
@@ -172,7 +152,6 @@ func ssa_gen_block(string kind, int next_succ, int likely) vec[string] {
         }
         return out
     }
-
     if kind == "BlockARMNE" {
         if next_succ == 0 {
             out.push("BEQ")
@@ -181,7 +160,6 @@ func ssa_gen_block(string kind, int next_succ, int likely) vec[string] {
         }
         return out
     }
-
     if starts_with(kind, "BlockARM") {
         if likely >= 0 {
             out.push("B.cond")
@@ -192,11 +170,9 @@ func ssa_gen_block(string kind, int next_succ, int likely) vec[string] {
         }
         return out
     }
-
     out.push("UNIMPL")
     out
 }
-
 func starts_with(string text, string prefix) bool {
     if text.len() < prefix.len() {
         return false

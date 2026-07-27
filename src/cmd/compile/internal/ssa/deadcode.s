@@ -1,7 +1,5 @@
 package compile.internal.ssa
-
 use std.vec.vec
-
 func run_deadcode(mut ssa_func f) int {
     recompute_uses(f)
     let changed = 0
@@ -17,7 +15,6 @@ func run_deadcode(mut ssa_func f) int {
         }
         i = i + 1
     }
-
     let bi = 0
     while bi < f.blocks.len() {
         let compact = vec[int]()

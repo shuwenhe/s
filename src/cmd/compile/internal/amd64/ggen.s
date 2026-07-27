@@ -1,5 +1,4 @@
 package compile.internal.amd64
-
 func zerorange(vec[prog] insns, int off, int cnt) vec[prog] {
     if cnt <= 0 {
         return insns
@@ -7,7 +6,6 @@ func zerorange(vec[prog] insns, int off, int cnt) vec[prog] {
     if (cnt % 8) != 0 {
         return insns
     }
-
     let out = insns
     let at = off
     let left = cnt
@@ -31,7 +29,6 @@ func zerorange(vec[prog] insns, int off, int cnt) vec[prog] {
     }
     out
 }
-
 func ginsnop(vec[prog] insns) vec[prog] {
     let out = insns
     out.push(prog {

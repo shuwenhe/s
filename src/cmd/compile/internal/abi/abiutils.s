@@ -1,25 +1,20 @@
 package compile.internal.abi
-
 use std.vec.vec
-
 struct reg_amounts {
     int int_regs
     int float_regs
 }
-
 struct abi_config {
     int offset_for_locals
     reg_amounts reg_amounts
     int which
 }
-
 struct abi_param_assignment {
     string type_name
     string name
     vec[int] registers
     int offset
 }
-
 struct abi_param_result_info {
     vec[abi_param_assignment] inparams
     vec[abi_param_assignment] outparams
@@ -29,24 +24,20 @@ struct abi_param_result_info {
     int out_registers_used
     abi_config config
 }
-
 struct register_layout {
     vec[string] types
     vec[int] offsets
 }
-
 struct assign_state {
     reg_amounts r_total
     reg_amounts r_used
     int stack_offset
     int spill_offset
 }
-
 struct reg_alloc_result {
     bool ok
     vec[int] regs
 }
-
 func new_abi_config(int i_regs_count, int f_regs_count, int offset_for_locals, int which) abi_config {
     abi_config {
         offset_for_locals: offset_for_locals,
@@ -57,62 +48,48 @@ func new_abi_config(int i_regs_count, int f_regs_count, int offset_for_locals, i
         which: which,
     }
 }
-
 func config_which(abi_config config) int {
     config.which
 }
-
 func locals_offset(abi_config config) int {
     config.offset_for_locals
 }
-
 func float_index_for(abi_config config, int r) int {
     r - config.reg_amounts.int_regs
 }
-
 func in_params(abi_param_result_info info) vec[abi_param_assignment] {
     info.inparams
 }
-
 func out_params(abi_param_result_info info) vec[abi_param_assignment] {
     info.outparams
 }
-
 func in_param(abi_param_result_info info, int index) abi_param_assignment {
     info.inparams[index]
 }
-
 func out_param(abi_param_result_info info, int index) abi_param_assignment {
     info.outparams[index]
 }
-
 func spill_area_offset(abi_param_result_info info) int {
     info.offset_to_spill_area
 }
-
 func spill_area_size(abi_param_result_info info) int {
     info.spill_area_size
 }
-
 func in_registers_used(abi_param_result_info info) int {
     info.in_registers_used
 }
-
 func out_registers_used(abi_param_result_info info) int {
     info.out_registers_used
 }
-
 func arg_width(abi_param_result_info info) int {
     info.spill_area_size + info.offset_to_spill_area - locals_offset(info.config)
 }
-
 func abi_param_offset(abi_param_assignment assignment) int {
     if assignment.registers.len() > 0 {
         return -1
     }
     assignment.offset
 }
-
 func frame_offset(abi_param_assignment assignment, abi_param_result_info info) int {
     if assignment.offset < 0 {
         return -1
@@ -122,7 +99,6 @@ func frame_offset(abi_param_assignment assignment, abi_param_result_info info) i
     }
     assignment.offset + spill_area_offset(info) - locals_offset(info.config)
 }
-
 func reg_string(reg_amounts amounts, int r) string {
     if r < amounts.int_regs {
         return "I" + to_string(r)
@@ -132,7 +108,6 @@ func reg_string(reg_amounts amounts, int r) string {
     }
     "<?>" + to_string(r)
 }
-
 func assignment_string(abi_param_assignment assignment, abi_config config, bool extra) string {
     let regs = "R{"
     let offname = "spilloffset"
@@ -153,7 +128,6 @@ func assignment_string(abi_param_assignment assignment, abi_config config, bool 
     }
     regs + " } " + offname + ": " + to_string(assignment.offset) + " typ: " + assignment.type_name
 }
-
 func info_string(abi_param_result_info info) string {
     let out = ""
     let i = 0
@@ -168,7 +142,6 @@ func info_string(abi_param_result_info info) string {
     }
     out + "offsetToSpillArea: " + to_string(info.offset_to_spill_area) + " spillAreaSize: " + to_string(info.spill_area_size)
 }
-
 func num_param_regs(abi_config config, string type_name) int {
     let need = reg_amounts_for_type(type_name)
     if need.int_regs > config.reg_amounts.int_regs || need.float_regs > config.reg_amounts.float_regs {
@@ -176,7 +149,6 @@ func num_param_regs(abi_config config, string type_name) int {
     }
     need.int_regs + need.float_regs
 }
-
 func abi_analyze_types(abi_config config, vec[string] params, vec[string] results) abi_param_result_info {
     let state = assign_state {
         r_total: config.reg_amounts,
@@ -184,7 +156,6 @@ func abi_analyze_types(abi_config config, vec[string] params, vec[string] result
         stack_offset: config.offset_for_locals,
         spill_offset: 0,
     }
-
     let inparams = vec[abi_param_assignment]()
     let i = 0
     while i < params.len() {
@@ -193,7 +164,6 @@ func abi_analyze_types(abi_config config, vec[string] params, vec[string] result
     }
     state.stack_offset = align_to(state.stack_offset, reg_size())
     let in_regs_used = state.r_used.int_regs + state.r_used.float_regs
-
     state.r_used = reg_amounts { int_regs: 0, float_regs: 0 }
     let outparams = vec[abi_param_assignment]()
     i = 0
@@ -201,7 +171,6 @@ func abi_analyze_types(abi_config config, vec[string] params, vec[string] result
         outparams.push(assign_param(state, results[i], "", true))
         i = i + 1
     }
-
     abi_param_result_info {
         inparams: inparams,
         outparams: outparams,
@@ -212,7 +181,6 @@ func abi_analyze_types(abi_config config, vec[string] params, vec[string] result
         config: config,
     }
 }
-
 func register_types(vec[abi_param_assignment] assignments) vec[string] {
     let rts = vec[string]()
     let i = 0
@@ -224,7 +192,6 @@ func register_types(vec[abi_param_assignment] assignments) vec[string] {
     }
     rts
 }
-
 func register_types_and_offsets(abi_param_assignment assignment) register_layout {
     if assignment.registers.len() == 0 {
         return register_layout {
@@ -232,7 +199,6 @@ func register_types_and_offsets(abi_param_assignment assignment) register_layout
             offsets: vec[int](),
         }
     }
-
     let types = append_param_types(vec[string](), assignment.type_name)
     let pair = append_param_offsets(vec[int](), 0, assignment.type_name)
     register_layout {
@@ -240,7 +206,6 @@ func register_types_and_offsets(abi_param_assignment assignment) register_layout
         offsets: pair.offsets,
     }
 }
-
 func compute_padding(abi_param_assignment assignment, int slots) vec[int] {
     let padding = vec[int]()
     let i = 0
@@ -251,7 +216,6 @@ func compute_padding(abi_param_assignment assignment, int slots) vec[int] {
     if assignment.registers.len() == 0 {
         return padding
     }
-
     let layout = register_types_and_offsets(assignment)
     i = 0
     while i + 1 < layout.types.len() && i < padding.len() {
@@ -264,29 +228,24 @@ func compute_padding(abi_param_assignment assignment, int slots) vec[int] {
     }
     padding
 }
-
 struct offset_result {
     vec[int] offsets
     int next
 }
-
 func append_param_offsets(vec[int] offsets, int at, string type_name) offset_result {
     let size = type_size(type_name)
     if size == 0 {
         return offset_result { offsets: offsets, next: at }
     }
-
     if is_complex_type(type_name) || size > reg_size() {
         let half = size / 2
         offsets.push(at)
         offsets.push(at + half)
         return offset_result { offsets: offsets, next: at + size }
     }
-
     offsets.push(at)
     offset_result { offsets: offsets, next: at + size }
 }
-
 func append_param_types(vec[string] rts, string type_name) vec[string] {
     if type_size(type_name) == 0 {
         return rts
@@ -324,7 +283,6 @@ func append_param_types(vec[string] rts, string type_name) vec[string] {
     rts.push(type_name)
     rts
 }
-
 func assign_param(assign_state mut state, string type_name, string name, bool is_result) abi_param_assignment {
     let alloc = try_alloc_regs(state, type_name)
     let offset = -1
@@ -335,7 +293,6 @@ func assign_param(assign_state mut state, string type_name, string name, bool is
         offset = next_slot(state.spill_offset, type_name)
         state.spill_offset = align_to(offset + type_size(type_name), alignment_for_type(type_name))
     }
-
     abi_param_assignment {
         type_name: type_name,
         name: name,
@@ -343,12 +300,10 @@ func assign_param(assign_state mut state, string type_name, string name, bool is
         offset: offset,
     }
 }
-
 func try_alloc_regs(assign_state mut state, string type_name) reg_alloc_result {
     if type_size(type_name) == 0 {
         return reg_alloc_result { ok: false, regs: vec[int]() }
     }
-
     let need = reg_amounts_for_type(type_name)
     if need.int_regs > state.r_total.int_regs - state.r_used.int_regs {
         return reg_alloc_result { ok: false, regs: vec[int]() }
@@ -356,7 +311,6 @@ func try_alloc_regs(assign_state mut state, string type_name) reg_alloc_result {
     if need.float_regs > state.r_total.float_regs - state.r_used.float_regs {
         return reg_alloc_result { ok: false, regs: vec[int]() }
     }
-
     let regs = vec[int]()
     let i = 0
     while i < need.int_regs {
@@ -368,16 +322,13 @@ func try_alloc_regs(assign_state mut state, string type_name) reg_alloc_result {
         regs.push(state.r_total.int_regs + state.r_used.float_regs + i)
         i = i + 1
     }
-
     state.r_used.int_regs = state.r_used.int_regs + need.int_regs
     state.r_used.float_regs = state.r_used.float_regs + need.float_regs
     reg_alloc_result { ok: true, regs: regs }
 }
-
 func next_slot(int offset, string type_name) int {
     align_to(offset, alignment_for_type(type_name))
 }
-
 func reg_amounts_for_type(string type_name) reg_amounts {
     if is_zero_size_type(type_name) {
         return reg_amounts { int_regs: 0, float_regs: 0 }
@@ -397,18 +348,15 @@ func reg_amounts_for_type(string type_name) reg_amounts {
     if is_interface_type(type_name) {
         return reg_amounts { int_regs: 2, float_regs: 0 }
     }
-
     let words = (type_size(type_name) + reg_size() - 1) / reg_size()
     if words < 1 {
         words = 1
     }
     reg_amounts { int_regs: words, float_regs: 0 }
 }
-
 func reg_size() int {
     8
 }
-
 func type_size(string type_name) int {
     if is_zero_size_type(type_name) {
         return 0
@@ -451,7 +399,6 @@ func type_size(string type_name) int {
     }
     8
 }
-
 func alignment_for_type(string type_name) int {
     let size = type_size(type_name)
     if size <= 1 {
@@ -465,7 +412,6 @@ func alignment_for_type(string type_name) int {
     }
     8
 }
-
 func align_to(int value, int to) int {
     if to <= 0 {
         return value
@@ -476,35 +422,27 @@ func align_to(int value, int to) int {
     }
     value + to - m
 }
-
 func is_zero_size_type(string type_name) bool {
     type_name == "" || type_name == "()" || type_name == "unit" || type_name == "struct{}"
 }
-
 func is_float_type(string type_name) bool {
     type_name == "float32" || type_name == "float64" || type_name == "float"
 }
-
 func is_complex_type(string type_name) bool {
     type_name == "complex64" || type_name == "complex128"
 }
-
 func is_simd_type(string type_name) bool {
     starts_with(type_name, "simd")
 }
-
 func is_string_type(string type_name) bool {
     type_name == "string"
 }
-
 func is_slice_type(string type_name) bool {
     starts_with(type_name, "[]")
 }
-
 func is_interface_type(string type_name) bool {
     type_name == "iface" || type_name == "interface" || type_name == "any"
 }
-
 func starts_with(string text, string prefix) bool {
     if text.len() < prefix.len() {
         return false

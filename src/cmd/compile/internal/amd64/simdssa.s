@@ -1,5 +1,4 @@
 package compile.internal.amd64
-
 func ssa_gen_simd_value(ssa_value v) bool {
     if starts_with(v.op, "simd.") {
         return true
@@ -9,7 +8,6 @@ func ssa_gen_simd_value(ssa_value v) bool {
     }
     false
 }
-
 func simd_opcode_class(string op) string {
     if starts_with(op, "OpAMD64VAES") {
         return "aes"
@@ -31,7 +29,6 @@ func simd_opcode_class(string op) string {
     }
     "non-simd"
 }
-
 func starts_with(string text, string prefix) bool {
     if text.len() < prefix.len() {
         return false
