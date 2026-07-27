@@ -1,15 +1,15 @@
-/* Linker script for S compiler bootstrap without C library
- * 
- * This script links S code without any C library dependencies
- * Used for true self-hosting: compiler → IR → binary (no libc)
- */
+ 
+
+
+
+
 
 ENTRY(_start)
 
 PHDRS
 {
-    text PT_LOAD FILEHDR PHDRS FLAGS(5); /* R+X */
-    data PT_LOAD FLAGS(6);                /* R+W */
+    text PT_LOAD FILEHDR PHDRS FLAGS(5);  
+    data PT_LOAD FLAGS(6);                 
 }
 
 SECTIONS
