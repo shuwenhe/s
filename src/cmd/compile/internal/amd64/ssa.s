@@ -1,4 +1,5 @@
 package compile.internal.amd64
+
 func ssa_mark_moves(ssa_block mut block) ssa_block {
     let flive = block.flags_live_at_end
     let ci = 0
@@ -30,18 +31,23 @@ func ssa_mark_moves(ssa_block mut block) ssa_block {
     }
     block
 }
+
 func is_gp_reg(int r) bool {
     r >= 1 && r <= 16
 }
+
 func is_fp_reg(int r) bool {
     r >= 100 && r <= 131
 }
+
 func is_k_reg(int r) bool {
     r >= 200 && r <= 207
 }
+
 func is_low_fp_reg(int r) bool {
     r >= 100 && r <= 115
 }
+
 func load_by_reg_width(int reg, int width) string {
     if !is_fp_reg(reg) && !is_k_reg(reg) {
         if width == 1 {
@@ -53,6 +59,7 @@ func load_by_reg_width(int reg, int width) string {
     }
     return store_by_reg_width(reg, width)
 }
+
 func store_by_reg_width(int reg, int width) string {
     if is_fp_reg(reg) {
         if width == 4 {
@@ -91,6 +98,7 @@ func store_by_reg_width(int reg, int width) string {
     }
     "MOVQ"
 }
+
 func move_by_regs_width(int dest, int src, int width) string {
     if is_fp_reg(dest) && is_fp_reg(src) {
         if is_low_fp_reg(dest) && is_low_fp_reg(src) && width <= 16 {
@@ -124,6 +132,7 @@ func move_by_regs_width(int dest, int src, int width) string {
     }
     "MOVQ"
 }
+
 func ssa_gen_value(ssa_value v) string {
     if ssa_gen_simd_value(v) {
         return "simd:" + simd_opcode_class(v.op)
@@ -142,6 +151,7 @@ func ssa_gen_value(ssa_value v) string {
     }
     "GENERIC"
 }
+
 func ssa_gen_block(string kind) string {
     if kind == "plain" {
         return "JMP"
@@ -154,6 +164,7 @@ func ssa_gen_block(string kind) string {
     }
     "BLOCK"
 }
+
 func load_reg_result(string type_name) string {
     if type_name == "float" || type_name == "float64" || type_name == "float32" {
         return "X0"
@@ -163,9 +174,11 @@ func load_reg_result(string type_name) string {
     }
     "AX"
 }
+
 func spill_arg_reg(int index) string {
     return "spill+" + to_string(index * 8)
 }
+
 func starts_with(string text, string prefix) bool {
     if text.len() < prefix.len() {
         return false

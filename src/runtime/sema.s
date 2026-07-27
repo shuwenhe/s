@@ -6,10 +6,12 @@ extern "intrinsic" func __atomic_cas(int mut target, int expected, int desired) 
 extern "intrinsic" func __atomic_add(int mut target, int delta) int
 extern "intrinsic" func __atomic_load(int target) int
 extern "intrinsic" func __sema_new_id() int
+
 struct Semaphore {
     int id
     int count
 }
+
 func new_semaphore(int initial) Semaphore {
     Semaphore {
         id:    __sema_new_id(),
@@ -40,10 +42,12 @@ func (self: &mut Semaphore) try_wait() bool {
             false
         }
     }
+
 struct Mutex {
     int state
     Semaphore sem
 }
+
 func new_mutex() Mutex {
     Mutex {
         state: 0,
@@ -70,12 +74,14 @@ func (self: &mut Mutex) unlock() () {
 func (self: &mut Mutex) try_lock() bool {
         __atomic_cas(self.state, 0, 1)
     }
+
 struct RWMutex {
     int readers
     int writer
     Mutex write_mu
     Semaphore read_sem
 }
+
 func new_rwmutex() RWMutex {
     RWMutex {
         readers:   0,
@@ -108,10 +114,12 @@ func (self: &mut RWMutex) wunlock() () {
         self.write_mu.unlock()
         self.read_sem.signal()
     }
+
 struct Once {
     int done
     Mutex mu
 }
+
 func new_once() Once {
     Once { done: 0, mu: new_mutex() }
 }
@@ -126,5 +134,7 @@ func (self: &mut Once) do(func f) () {
         }
         self.mu.unlock()
     }
+
 func sema_unit_name() string { "src/runtime/sema" }
+
 func sema_unit_ready() int   { 1 }

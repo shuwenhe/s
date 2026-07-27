@@ -1,10 +1,12 @@
 package compile.internal.ssa
 use std.vec.vec
+
 struct prove_fact {
     int value_id
     bool known_zero
     bool known_non_zero
 }
+
 func fact_for(int id, bool z, bool nz) prove_fact {
     prove_fact {
         value_id: id,
@@ -12,6 +14,7 @@ func fact_for(int id, bool z, bool nz) prove_fact {
         known_non_zero: nz,
     }
 }
+
 func find_fact(vec[prove_fact] facts, int id) int {
     let i = 0
     while i < facts.len() {
@@ -22,14 +25,17 @@ func find_fact(vec[prove_fact] facts, int id) int {
     }
     -1
 }
+
 func fact_zero(vec[prove_fact] facts, int id) bool {
     let i = find_fact(facts, id)
     i >= 0 && facts[i].known_zero
 }
+
 func fact_non_zero(vec[prove_fact] facts, int id) bool {
     let i = find_fact(facts, id)
     i >= 0 && facts[i].known_non_zero
 }
+
 func run_prove(ssa_func f) vec[prove_fact] {
     let facts = vec[prove_fact]()
     let i = 0

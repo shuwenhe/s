@@ -1,5 +1,6 @@
 package src.net.internal
 import "src.std.time"
+
 func NewRawSocket(family: int, socktype: int, protocol: int) (*RawSocket, error) {
     let fd, errno = sys_socket(family, socktype, protocol)
     if errno != 0 {
@@ -232,6 +233,7 @@ func (s *RawSocket) SetWriteDeadline(deadline_ns: i64) error {
     s.write_deadline_ns = deadline_ns
     nil
 }
+
 func calculate_timeout_ms(deadline_ns: i64) int {
     if deadline_ns == 0 {
         return -1
@@ -315,9 +317,11 @@ func (s *RawSocket) GetRemoteAddr() (string, int, error) {
     }
     "", ntohs(addr.sin_port), nil
 }
+
 func ntohs(net: int) int {
     ((net & 0xFF00) >> 8) | ((net & 0x00FF) << 8)
 }
+
 func ntohl(net: int) int {
     let b1 = (net >> 24) & 0xFF
     let b2 = (net >> 16) & 0xFF

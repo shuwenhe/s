@@ -3,6 +3,7 @@ use compile.internal.mir.mir_graph
 use compile.internal.mir.mir_statement
 use std.prelude.len
 use std.prelude.slice
+
 func estimate_devirtualized_sites(string mir_text) int {
     let candidates = count_token(mir_text, "dyn") + count_token(mir_text, "iface")
     if candidates <= 0 {
@@ -10,6 +11,7 @@ func estimate_devirtualized_sites(string mir_text) int {
     }
     candidates / 2
 }
+
 func estimate_devirtualized_sites_graph(mir_graph graph) int {
     let candidates = 0
     let i = 0
@@ -39,6 +41,7 @@ func estimate_devirtualized_sites_graph(mir_graph graph) int {
     }
     candidates / 2
 }
+
 func count_token(string text, string token) int {
     if token == "" {
         return 0

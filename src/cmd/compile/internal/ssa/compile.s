@@ -1,9 +1,11 @@
 package compile.internal.ssa
 use std.vec.vec
+
 struct pass_stat {
     string name
     int changed
 }
+
 struct compile_report {
     ssa_func f
     vec[pass_stat] stats
@@ -13,6 +15,7 @@ struct compile_report {
     int check_code
     string dump
 }
+
 func optimize(mut ssa_func f, ssa_config cfg) vec[pass_stat] {
     let stats = vec[pass_stat]()
     if cfg.enable_rewrite {
@@ -32,6 +35,7 @@ func optimize(mut ssa_func f, ssa_config cfg) vec[pass_stat] {
     }
     stats
 }
+
 func compile_func(mut ssa_func f, ssa_config cfg) compile_report {
     let stats = optimize(f, cfg)
     let facts = vec[prove_fact]()

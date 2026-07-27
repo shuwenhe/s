@@ -10,6 +10,7 @@ use std.env.args as host_args
 use std.env.get
 use std.io.eprintln
 use std.io.println
+
 func default_fixtures_root() string {
     let env_root = get("s_test_fixtures_root")
     if env_root.is_some() {
@@ -17,6 +18,7 @@ func default_fixtures_root() string {
     }
     "cmd/compile/internal/tests/fixtures"
 }
+
 func main() int {
     let args = host_args()
     if args.len() >= 2 {

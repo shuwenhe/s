@@ -1,28 +1,35 @@
 package src.bufio
+
 struct buffer_reader {
     string data
     int offset
 }
+
 struct buffer_writer {
     string data
 }
+
 func bufio_unit_name() string {
     "src/bufio/bufio"
 }
+
 func bufio_unit_ready() int {
     1
 }
+
 func new_buffer_reader(string data) buffer_reader {
     buffer_reader {
         data: data,
         offset: 0,
     }
 }
+
 func new_buffer_writer() buffer_writer {
     buffer_writer {
         data: "",
     }
 }
+
 func clamp_buffer_end(string data, int start, int requested_end) int {
     int end = requested_end
     int begin = start
@@ -37,6 +44,7 @@ func clamp_buffer_end(string data, int start, int requested_end) int {
     }
     end
 }
+
 func trim_trailing_cr(string line) string {
     if len(line) > 0 && slice(line, len(line) - 1, len(line)) == "\r" {
         slice(line, 0, len(line) - 1)
@@ -95,10 +103,12 @@ func (w *buffer_writer) len() int {
 func (w *buffer_writer) reset() {
     w.data = ""
 }
+
 func buffer_read_first_line(string text) string {
     buffer_reader reader = new_buffer_reader(text)
     reader.read_line()
 }
+
 func buffer_round_trip(string input) string {
     buffer_reader reader = new_buffer_reader(input)
     buffer_writer writer = new_buffer_writer()

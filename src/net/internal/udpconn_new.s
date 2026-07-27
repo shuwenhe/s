@@ -1,4 +1,5 @@
 package src.net.internal
+
 struct UDPAddr {
     ip: string
     port: int
@@ -9,6 +10,7 @@ func (a *UDPAddr) Network() string {
 func (a *UDPAddr) String() string {
     a.ip + ":" + string(a.port)
 }
+
 struct UDPConn {
     RawSocket: *RawSocket
     laddr: *UDPAddr
@@ -55,6 +57,7 @@ func (c *UDPConn) ReadFromUDP(buf: []byte) (int, *UDPAddr, error) {
 func (c *UDPConn) WriteToUDP(buf: []byte, addr: *UDPAddr) (int, error) {
     c.RawSocket.SendTo(buf, addr.ip, addr.port)
 }
+
 func DialUDP(address: string, port: int, timeout_ms: int) (*UDPConn, error) {
     let sock, err = NewRawSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
     if err != nil {
@@ -79,6 +82,7 @@ func DialUDP(address: string, port: int, timeout_ms: int) (*UDPConn, error) {
         raddr: &UDPAddr{ip: address, port: port},
     }, nil
 }
+
 func ListenUDP(address: string, port: int) (*UDPListener, error) {
     let sock, err = NewRawSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
     if err != nil {
@@ -99,6 +103,7 @@ func ListenUDP(address: string, port: int) (*UDPListener, error) {
         addr: &UDPAddr{ip: local_ip, port: local_port},
     }, nil
 }
+
 struct UDPListener {
     RawSocket: *RawSocket
     addr: *UDPAddr
