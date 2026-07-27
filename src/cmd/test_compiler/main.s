@@ -1,5 +1,4 @@
 package cmd
-
 use compile.internal.tests.test_golden.run_golden_suite
 use compile.internal.tests.test_backend_abi.run_backend_abi_suite
 use compile.internal.tests.test_mir.run_mir_suite
@@ -11,7 +10,6 @@ use std.env.args as host_args
 use std.env.get
 use std.io.eprintln
 use std.io.println
-
 func default_fixtures_root() string {
     let env_root = get("s_test_fixtures_root")
     if env_root.is_some() {
@@ -19,7 +17,6 @@ func default_fixtures_root() string {
     }
     "cmd/compile/internal/tests/fixtures"
 }
-
 func main() int {
     let args = host_args()
     if args.len() >= 2 {
@@ -29,54 +26,45 @@ func main() int {
             return 0
         }
     }
-
     let fixtures_root = default_fixtures_root()
     if args.len() >= 2 {
         fixtures_root = args[1]
     }
-
     let semantic_result = run_semantic_suite(fixtures_root)
     if semantic_result != 0 {
         eprintln("semantic suite failed");
         return semantic_result
     }
-
     let golden_result = run_golden_suite(fixtures_root)
     if golden_result != 0 {
         eprintln("golden suite failed");
         return golden_result
     }
-
     let backend_abi_result = run_backend_abi_suite()
     if backend_abi_result != 0 {
         eprintln("backend abi suite failed");
         return backend_abi_result
     }
-
     let mir_result = run_mir_suite()
     if mir_result != 0 {
         eprintln("mir suite failed");
         return mir_result
     }
-
     let ssa_result = run_ssa_suite()
     if ssa_result != 0 {
         eprintln("ssa suite failed");
         return ssa_result
     }
-
     let pipeline_result = run_pipeline_regression_suite()
     if pipeline_result != 0 {
         eprintln("pipeline regression suite failed");
         return pipeline_result
     }
-
     let typesys_result = run_typesys_suite()
     if typesys_result != 0 {
         eprintln("typesys suite failed");
         return typesys_result
     }
-
     println("test_compiler: ok");
     0
 }

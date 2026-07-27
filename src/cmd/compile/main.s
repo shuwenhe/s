@@ -1,37 +1,30 @@
 package cmd
-
 use compile.internal.arch.dispatch_init as arch_dispatch_init
 use compile.internal.build.main as build_main
 use internal.buildcfg.check as buildcfg_check
 use internal.buildcfg.goarch as buildcfg_goarch
 use std.env.args as host_args
 use std.io.eprintln
-
 func main() int {
     let args = host_args()
     let goarch = buildcfg_goarch()
-
     let buildcfg_err = buildcfg_check()
     if buildcfg_err != "" {
         report_compile_error(buildcfg_err)
         return 2
     }
-
     let arch_init_name = resolve_arch_init_name(goarch)
     if arch_init_name == "" {
         report_compile_error("unknown architecture \"" + goarch + "\"")
         return 2
     }
-
     let arch_err = arch_dispatch_init(goarch)
     if arch_err != "" {
         report_compile_error(arch_err)
         return 2
     }
-
     build_main(args)
 }
-
 func resolve_arch_init_name(string goarch) string {
     if goarch == "386" {
         return "x86_init"
@@ -68,7 +61,6 @@ func resolve_arch_init_name(string goarch) string {
     }
     ""
 }
-
 func report_compile_error(string message) () {
     eprintln("compile: " + message)
 }

@@ -1,24 +1,19 @@
 package compile.internal.ssagen
-
 use std.vec.vec
-
 struct abi_location {
     bool in_reg
     string place
     int stack_offset
 }
-
 struct abi_layout {
     vec[abi_location] params
     vec[abi_location] results
     int spill_size
 }
-
 func assign_abi_layout(string arch, int params, int results) abi_layout {
     let int_regs = arch_int_arg_regs(arch)
     let out_params = vec[abi_location]()
     let out_results = vec[abi_location]()
-
     let stack_off = 0
     let i = 0
     while i < params {
@@ -30,7 +25,6 @@ func assign_abi_layout(string arch, int params, int results) abi_layout {
         }
         i = i + 1
     }
-
     let j = 0
     while j < results {
         if j < int_regs {
@@ -41,14 +35,12 @@ func assign_abi_layout(string arch, int params, int results) abi_layout {
         }
         j = j + 1
     }
-
     abi_layout {
         params: out_params,
         results: out_results,
         spill_size: align_stack(stack_off, arch_stack_align(arch)),
     }
 }
-
 func align_stack(int size, int align) int {
     if align <= 1 {
         return size

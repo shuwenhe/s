@@ -1,7 +1,5 @@
 package compile.internal.gc
-
 use std.vec.vec
-
 func profile_name(string target, string suffix) string {
     if target == "" {
         return ""
@@ -11,14 +9,12 @@ func profile_name(string target, string suffix) string {
     }
     target + suffix
 }
-
 func pick_pkgpath(vec[string] args) string {
     if args.len() > 2 {
         return args[2]
     }
     "main"
 }
-
 func clamp_backend_workers(int requested) int {
     if requested <= 0 {
         return 1
@@ -28,7 +24,6 @@ func clamp_backend_workers(int requested) int {
     }
     requested
 }
-
 func ends_with_slash(string text) bool {
     if text == "" {
         return false

@@ -1,5 +1,4 @@
 package compile.internal.tests.test_mir
-
 use compile.internal.mir.trace_branch
 use compile.internal.mir.dump_graph
 use compile.internal.mir.block_count
@@ -12,7 +11,6 @@ use compile.internal.mir.mir_local_slot
 use compile.internal.mir.mir_terminator
 use compile.internal.mir.mir_statement
 use std.vec.vec
-
 func run_mir_suite() int {
     if trace_branch("flag", "then", "else") != "branch flag |   then then |   else else" {
         return 1
@@ -26,7 +24,6 @@ func run_mir_suite() int {
     if trace_switch("value", "") != "switch value" {
         return 1
     }
-
     let blocks = vec[mir_basic_block]()
     blocks.push(mir_basic_block {
         id: 0,
@@ -45,14 +42,11 @@ func run_mir_suite() int {
         entry: 0,
         exit: 0,
     }
-
     if block_count(graph) != 1 {
         return 1
     }
-
     if dump_graph(graph) != "mir main blocks=1 entry=0 exit=0 | bb0(entry) stmts=0 term=return" {
         return 1
     }
-
     0
 }

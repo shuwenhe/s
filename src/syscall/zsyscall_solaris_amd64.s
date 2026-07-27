@@ -1,9 +1,7 @@
 package src.syscall
-
 func zsyscall_solaris_amd64_unit_name() string {
     "src/syscall/zsyscall_solaris_amd64"
 }
-
 func zsyscall_solaris_amd64_unit_ready() int {
     1
 }

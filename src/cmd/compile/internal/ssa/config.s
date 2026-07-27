@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 struct ssa_config {
     bool debug
     string target_arch
@@ -13,7 +12,6 @@ struct ssa_config {
     bool enable_regalloc
     int regalloc_register_count
 }
-
 func default_config() ssa_config {
     ssa_config {
         debug: false,
@@ -29,7 +27,6 @@ func default_config() ssa_config {
         regalloc_register_count: 8,
     }
 }
-
 func with_debug(ssa_config cfg, bool on) ssa_config {
     ssa_config {
         debug: on,
@@ -45,7 +42,6 @@ func with_debug(ssa_config cfg, bool on) ssa_config {
         regalloc_register_count: cfg.regalloc_register_count,
     }
 }
-
 func with_target_arch(ssa_config cfg, string arch) ssa_config {
     ssa_config {
         debug: cfg.debug,
