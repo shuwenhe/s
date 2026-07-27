@@ -23,7 +23,7 @@ func lex_source(source_unit unit) result[vec[token_item], noder_error] {
     while li < lines.len() {
         let line = lines[li]
         let trimmed = trim_spaces(line)
-        if starts_with(trimmed, "//") {
+        if starts_with(trimmed, "
             li = li + 1
             continue
         }

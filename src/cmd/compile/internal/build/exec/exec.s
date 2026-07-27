@@ -207,7 +207,7 @@ func run_mod_index(string dir) int {
     cmd.push("sh")
     cmd.push("-c")
     let script = "find " + dir + " -name '*.s' -not -path '*/.*' | while read f; do " +
-                 "pkg=$(grep -h '^package ' \"$f\" | head -n1 | sed 's/package //;s/[[:space:]]*$//'); " +
+                 "pkg=$(grep -h '^package ' \"$f\" | head -n1 | sed 's/package 
                  "if [ -n \"$pkg\" ]; then printf \"%s\\t%s\\n\" \"$pkg\" \"$f\"; fi; " +
                  "done"
     cmd.push(script)

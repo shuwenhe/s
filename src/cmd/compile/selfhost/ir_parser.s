@@ -5,8 +5,8 @@ use std.strings.trim as trim_string
 use std.strings.contains as contains_string
 use std.fmt.sprintf
 
-// Minimal IR parser for x86-64 bootstrap
-// This can parse the seed compiler's IR output and validate structure
+
+
 
 struct IRInstruction {
     opcode: string
@@ -26,7 +26,7 @@ struct IRModule {
     functions: []IRFunction
 }
 
-// Parse IR in SSEED format
+
 func parse_ir(string content) (IRModule, error) {
     let lines = split_string(content, "\n")
     let mut module = IRModule{
@@ -39,13 +39,13 @@ func parse_ir(string content) (IRModule, error) {
         return module, error("empty IR")
     }
     
-    // Check header
+    
     let header = trim_string(lines[0])
     if header != "SSEED-TARGET-V1" {
         return module, error("invalid IR header: " + header)
     }
     
-    // Parse functions
+    
     let mut i = 1
     let mut current_func: *IRFunction = nil
     
@@ -57,7 +57,7 @@ func parse_ir(string content) (IRModule, error) {
             continue
         }
         
-        // Parse line by pipe delimiter
+        
         let parts = split_string(line, "|")
         if len(parts) == 0 {
             i += 1
@@ -101,7 +101,7 @@ func parse_ir(string content) (IRModule, error) {
     return module, nil
 }
 
-// Get summary statistics about IR
+
 func get_ir_stats(IRModule module) map[string]int {
     let mut stats = map[string]int{}
     
@@ -127,7 +127,7 @@ func get_ir_stats(IRModule module) map[string]int {
     return stats
 }
 
-// Verify IR integrity
+
 func verify_ir(IRModule module) error {
     if len(module.functions) == 0 {
         return error("no functions in IR")
@@ -138,14 +138,14 @@ func verify_ir(IRModule module) error {
             return error("function with empty name")
         }
         
-        // Check for balanced FUNC_BEGIN/FUNC_END
-        // (The parser should ensure this)
+        
+        
     }
     
     return nil
 }
 
-// Convert IR instruction to debug string
+
 func instruction_to_string(IRInstruction instr) string {
     let mut s = instr.opcode
     s += "|" + instr.dest
