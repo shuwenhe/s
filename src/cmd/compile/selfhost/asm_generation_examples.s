@@ -1,71 +1,71 @@
-// Minimal x86-64 ASM Generator for demonstration
-// Shows how to convert IR instructions to working x86-64 assembly
+
+
 
 package demo
 
-// Minimal instruction set to prove concept
-// This handles just enough IR to run a simple main() function
+
+
 
 func generate_minimal_x86_64_asm() string {
-    // This generates working x86-64 code for:
-    // main() that returns 0
+    
+    
     
     return `
 .text
 .globl main
 
-// Example of minimal viable main function in x86-64
+
 main:
-    // Function prologue
+    
     push %rbp
     mov %rsp, %rbp
     
-    // Function body - return 0
-    xor %eax, %eax      // return value = 0
     
-    // Function epilogue
+    xor %eax, %eax      
+    
+    
     pop %rbp
     ret
 
-// Explanation of what this does:
-// push %rbp        - Save caller's base pointer
-// mov %rsp, %rbp   - Set up new stack frame  
-// xor %eax, %eax   - Set return value to 0 (XOR is fast way to zero)
-// pop %rbp         - Restore caller's base pointer
-// ret              - Return to caller
-//
-// Result: Returns 0 when called from C runtime
-// Binary size: ~20 bytes
-// Can be compiled with: gcc -no-pie minimal.s -o minimal
-//                      ./minimal; echo $?
-//                      Output: 0
+
+
+
+
+
+
+
+
+
+
+
+
 `
 }
 
-// More complex example - handling IR instruction patterns
+
 func example_ir_to_asm_patterns() []string {
     let patterns = []string{
-        // Pattern 1: MOV temp into register
-        "// IR: MOV|result|temp|_",
+        
+        "
         "MOV-PATTERN: mov [temp_location], %rax",
         "               mov %rax, [result_location]",
         "",
         
-        // Pattern 2: Compare and jump
-        "// IR: CMP_NE|t3|buildcfg_err|\"\"",
+        
+        "
         "CMP-PATTERN: mov [buildcfg_err], %rax",
         "             cmp $0, %rax           # Compare with empty string",
         "             jne L0                 # Jump if not equal",
         "",
         
-        // Pattern 3: Function call
-        "// IR: CALL|t0|host_args|0",
+        
+        "
         "CALL-PATTERN: call host_args       # Call external function",
         "              mov %rax, [t0]       # Save result to temp",
         "",
         
-        // Pattern 4: Return value
-        "// IR: RET|2|_|_",
+        
+        "
         "RET-PATTERN: mov $2, %rax         # Load return value",
         "             pop %rbp",
         "             ret",
@@ -74,7 +74,7 @@ func example_ir_to_asm_patterns() []string {
     return patterns
 }
 
-// Register allocation strategy
+
 func explain_register_allocation() string {
     return `
 Simple Register Allocation Strategy for MVP:
@@ -105,7 +105,7 @@ Usage:
 `
 }
 
-// Full example: IR to complete assembly
+
 func full_example_compilation() string {
     return `
 ========== EXAMPLE: Compiling Simple IR to x86-64 ==========
@@ -168,7 +168,7 @@ echo $?
 `
 }
 
-// Key insight
+
 func key_insight() string {
     return `
 WHY THIS WORKS FOR TRUE SELF-HOSTING:
