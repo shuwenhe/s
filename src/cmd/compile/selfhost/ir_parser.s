@@ -5,9 +5,6 @@ use std.strings.trim as trim_string
 use std.strings.contains as contains_string
 use std.fmt.sprintf
 
-
-
-
 struct IRInstruction {
     opcode: string
     dest: string
@@ -26,7 +23,6 @@ struct IRModule {
     functions: []IRFunction
 }
 
-
 func parse_ir(string content) (IRModule, error) {
     let lines = split_string(content, "\n")
     let mut module = IRModule{
@@ -34,38 +30,35 @@ func parse_ir(string content) (IRModule, error) {
         version: "1",
         functions: []IRFunction{},
     }
-    
+
     if len(lines) == 0 {
         return module, error("empty IR")
     }
-    
-    
+
     let header = trim_string(lines[0])
     if header != "SSEED-TARGET-V1" {
         return module, error("invalid IR header: " + header)
     }
-    
-    
+
     let mut i = 1
     let mut current_func: *IRFunction = nil
-    
+
     for i < len(lines) {
         let line = trim_string(lines[i])
-        
+
         if line == "" {
             i += 1
             continue
         }
-        
-        
+
         let parts = split_string(line, "|")
         if len(parts) == 0 {
             i += 1
             continue
         }
-        
+
         let opcode = parts[0]
-        
+
         match opcode {
             case "FUNC_BEGIN":
                 if len(parts) >= 2 {
@@ -76,10 +69,10 @@ func parse_ir(string content) (IRModule, error) {
                     current_func = &func
                     module.functions = append(module.functions, func)
                 }
-                
+
             case "FUNC_END":
                 current_func = nil
-                
+
             default:
                 if current_func != nil {
                     let instr = IRInstruction{
@@ -94,25 +87,24 @@ func parse_ir(string content) (IRModule, error) {
                     )
                 }
         }
-        
+
         i += 1
     }
-    
+
     return module, nil
 }
 
-
 func get_ir_stats(IRModule module) map[string]int {
     let mut stats = map[string]int{}
-    
+
     stats["total_functions"] = len(module.functions)
-    
+
     let mut total_instrs = 0
     let mut opcode_counts = map[string]int{}
-    
+
     for _, func in module.functions {
         total_instrs += len(func.instructions)
-        
+
         for _, instr in func.instructions {
             if count, exists := opcode_counts[instr.opcode]; exists {
                 opcode_counts[instr.opcode] = count + 1
@@ -121,30 +113,26 @@ func get_ir_stats(IRModule module) map[string]int {
             }
         }
     }
-    
+
     stats["total_instructions"] = total_instrs
-    
+
     return stats
 }
-
 
 func verify_ir(IRModule module) error {
     if len(module.functions) == 0 {
         return error("no functions in IR")
     }
-    
+
     for _, func in module.functions {
         if func.name == "" {
             return error("function with empty name")
         }
-        
-        
-        
+
     }
-    
+
     return nil
 }
-
 
 func instruction_to_string(IRInstruction instr) string {
     let mut s = instr.opcode
