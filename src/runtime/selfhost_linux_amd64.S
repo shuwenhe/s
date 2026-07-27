@@ -1,8 +1,8 @@
-/* Linux/amd64 bootstrap runtime for native S programs.
- *
- * This file intentionally uses only the kernel syscall ABI.  It must remain
- * linkable with `ld -static`; no C runtime or ELF interpreter is permitted.
- */
+ 
+
+
+
+
 
 .section .bss
 .align 8
@@ -40,7 +40,7 @@ _start:
 
 .section .text
 
-/* long s_syscall6(long nr, long a1, ..., long a6) */
+ 
 .global s_syscall6
 .type s_syscall6, @function
 s_syscall6:
@@ -63,7 +63,7 @@ s_exit:
     ud2
 .size s_exit, .-s_exit
 
-/* long s_read(long fd, void *buffer, unsigned long count) */
+ 
 .global s_read
 .type s_read, @function
 s_read:
@@ -72,7 +72,7 @@ s_read:
     ret
 .size s_read, .-s_read
 
-/* long s_write(long fd, const void *buffer, unsigned long count) */
+ 
 .global s_write
 .type s_write, @function
 s_write:
@@ -81,7 +81,7 @@ s_write:
     ret
 .size s_write, .-s_write
 
-/* long s_openat(long dirfd, const char *path, long flags, long mode) */
+ 
 .global s_openat
 .type s_openat, @function
 s_openat:
@@ -99,7 +99,7 @@ s_close:
     ret
 .size s_close, .-s_close
 
-/* void *s_mmap(void *addr, size_t length, prot, flags, fd, offset) */
+ 
 .global s_mmap
 .type s_mmap, @function
 s_mmap:
@@ -117,7 +117,7 @@ s_munmap:
     ret
 .size s_munmap, .-s_munmap
 
-/* Monotonic allocator.  Allocation failure returns zero. */
+ 
 .global s_alloc
 .type s_alloc, @function
 s_alloc:
@@ -207,12 +207,12 @@ s_strlen:
     ret
 .size s_strlen, .-s_strlen
 
-/* Bootstrap value ABI:
- *   integers and booleans: (value << 1) | 1
- *   heap/static objects:   aligned pointer
- *   string object:         { kind=2, byte_len, bytes... }
- *   array object:          { kind=4, item_count, tagged_values... }
- */
+ 
+
+
+
+
+
 
 .global s_value_len
 .type s_value_len, @function
@@ -273,7 +273,7 @@ s_value_add:
     ret
 .size s_value_add, .-s_value_add
 
-/* Raw -1/0/1 comparison result. */
+ 
 .global s_value_cmp
 .type s_value_cmp, @function
 s_value_cmp:
@@ -440,7 +440,7 @@ s_index_set:
     ret
 .size s_index_set, .-s_index_set
 
-/* Convert a kernel C string into a bootstrap string object. */
+ 
 .type s_from_c_string, @function
 s_from_c_string:
     push %rbx
