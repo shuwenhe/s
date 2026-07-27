@@ -116,17 +116,6 @@ func (self: &mut lexer) skip_ignored() result[(), lex_error] {
 
             if self.match_text(" 
 
-
-
-
-
-
-
-
-
-
-
-
 ") {
                         depth = depth - 1
                         self.advance()?
