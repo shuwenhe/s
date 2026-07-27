@@ -4,15 +4,18 @@ use std.prelude.char_at
 use std.prelude.len
 use std.result.result
 use std.vec.vec
+
 struct parse_error {
     string message
     int line
     int column
 }
+
 struct parser {
     vec[token] tokens
     int index
 }
+
 func parse_source(string source) result[source_file, parse_error] {
     switch new_lexer(source).tokenize() {
         result::ok(tokens) : parse_tokens(tokens),
@@ -23,6 +26,7 @@ func parse_source(string source) result[source_file, parse_error] {
         }),
     }
 }
+
 func parse_tokens(vec[token] tokens) result[source_file, parse_error] {
     parser parser = parser {        tokens: tokens,
         index: 0,
@@ -1110,6 +1114,7 @@ func (self: parser) find_top_level_symbol_offset(string value) int {
         }
         -1
     }
+
 func build_call_expr(string callee_name, vec[expr] args) expr {
     expr::call(call_expr {
         callee: box(expr::name(name_expr {
@@ -1120,15 +1125,18 @@ func build_call_expr(string callee_name, vec[expr] args) expr {
         inferred_type: option::none,
     })
 }
+
 struct parsed_function {
     function_sig sig
     option[block_expr] body
     option[named_type] receiver
 }
+
 struct named_type {
     string name
     string type_name
 }
+
 func decode_receiver_type(vec[token] tokens) result[named_type, parse_error] {
     let colon = find_token_value(tokens, ":")
     if colon >= 0 {
@@ -1146,6 +1154,7 @@ func decode_receiver_type(vec[token] tokens) result[named_type, parse_error] {
         column: 0,
     })
 }
+
 func decode_named_type(vec[token] tokens) result[named_type, parse_error] {
     int colon = find_token_value(tokens, ":")    if colon >= 0 {
         let name_tokens = slice_tokens(tokens, 0, colon)
@@ -1167,6 +1176,7 @@ func decode_named_type(vec[token] tokens) result[named_type, parse_error] {
         type_name: normalize_type_text(join_token_values(slice_tokens(tokens, 0, split))),
     })
 }
+
 func slice_tokens(vec[token] tokens, int start, int end) vec[token] {
     vec[token] out = vec[token]()    int i = start    while i < end {
         out.push(tokens[i])
@@ -1174,12 +1184,14 @@ func slice_tokens(vec[token] tokens, int start, int end) vec[token] {
     }
     out
 }
+
 func join_token_values(vec[token] tokens) string {
     vec[string] parts = vec[string]()    for token in tokens {
         parts.push(token.value)
     }
     join_strings(parts, " ")
 }
+
 func find_token_value(vec[token] tokens, string value) int {
     int bracket = 0    int paren = 0    int i = 0    while i < len(tokens) {
         let token = tokens[i]
@@ -1198,6 +1210,7 @@ func find_token_value(vec[token] tokens, string value) int {
     }
     -1
 }
+
 func find_decl_name_index(vec[token] tokens) int {
     int bracket = 0    int paren = 0    int index = -1    int i = 0    while i < len(tokens) {
         let token = tokens[i]
@@ -1216,6 +1229,7 @@ func find_decl_name_index(vec[token] tokens) int {
     }
     index
 }
+
 func normalize_type_text(string text) string {
     text
         .replace(" . ", ".")
@@ -1228,6 +1242,7 @@ func normalize_type_text(string text) string {
         .replace("[] ", "[]")
         .replace(" [", "[")
 }
+
 func contains_string(vec[string] values, string target) bool {
     for value in values {
         if value == target {
@@ -1236,6 +1251,7 @@ func contains_string(vec[string] values, string target) bool {
     }
     false
 }
+
 func join_strings(vec[string] values, string sep) string {
     string out = ""    bool first = true    for value in values {
         if !first {
@@ -1246,6 +1262,7 @@ func join_strings(vec[string] values, string sep) string {
     }
     out
 }
+
 func path_contains_dot(string path) bool {
     int i = 0    while i < len(path) {
         if char_at(path, i) == "." {
@@ -1255,6 +1272,7 @@ func path_contains_dot(string path) bool {
     }
     false
 }
+
 func starts_with_upper(string text) bool {
     if text == "" {
         return false

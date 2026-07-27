@@ -1,4 +1,5 @@
 package compile.internal.noder
+
 func run_lex_tests() int {
     let unit = source_unit {
         path: "demo.s",

@@ -5,6 +5,7 @@ use internal.buildcfg.check as buildcfg_check
 use internal.buildcfg.goarch as buildcfg_goarch
 use std.env.args as host_args
 use std.io.eprintln
+
 func main() int {
     let args = host_args()
     let goarch = buildcfg_goarch()
@@ -25,6 +26,7 @@ func main() int {
     }
     build_main(args)
 }
+
 func resolve_arch_init_name(string goarch) string {
     if goarch == "386" {
         return "x86_init"
@@ -61,6 +63,7 @@ func resolve_arch_init_name(string goarch) string {
     }
     ""
 }
+
 func report_compile_error(string message) () {
     eprintln("compile: " + message)
 }

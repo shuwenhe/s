@@ -3,6 +3,7 @@ func try_exec_if_present(path: string, args: [string]) {
         os.execv(path, args)
     }
 }
+
 func main(args: [string]): int {
     try_exec_if_present(os.getenv("S_SELFHOSTED"), args)
     try_exec_if_present(os.getenv("s_selfhosted_runner"), args)

@@ -1,15 +1,18 @@
 package compile.internal.ssagen
 use std.vec.vec
+
 struct phi_input {
     int pred
     int value
 }
+
 struct lowered_phi {
     int target
     vec[int] incoming
     bool trivial
     int chosen
 }
+
 func lower_phi(int target, vec[phi_input] inputs) lowered_phi {
     let incoming = vec[int]()
     let i = 0
@@ -39,6 +42,7 @@ func lower_phi(int target, vec[phi_input] inputs) lowered_phi {
         chosen: chosen,
     }
 }
+
 func phi_is_trivial(lowered_phi p) bool {
     p.trivial
 }

@@ -8,6 +8,7 @@ func wait_for_child(pid: int): int {
     }
     return 1
 }
+
 func process_runner_run_argv(argv: [string]): int {
     if argv.len() == 0 || argv[0] == nil {
         return 127
@@ -22,6 +23,7 @@ func process_runner_run_argv(argv: [string]): int {
     }
     return wait_for_child(pid)
 }
+
 func process_runner_run_shell(command: string): int {
     if command == nil || command == "" {
         return 127

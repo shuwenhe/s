@@ -2,17 +2,21 @@ package std.vec
 use std.option.option
 use std.prelude.box
 use std.prelude.box
+
 struct raw_vec[t] {
     box[array[t]] storage
     int capacity
 }
+
 struct vec[t] {
     raw_vec[t] raw
     int length
 }
+
 func new_vec[t]() vec[t] {
     with_capacity[t](4)
 }
+
 func with_capacity[t](int capacity) vec[t] {
     let initial =
         if capacity > 0 {
@@ -65,6 +69,7 @@ func (self: &mut vec[t]) set(int index, t value) bool {
 func (self: &mut vec[t]) clear() () {
         self.length = 0
     }
+
 func ensure_capacity[t](vec[t] mut vec, int wanted) () {
     if wanted <= vec.raw.capacity {
         return
@@ -79,6 +84,7 @@ func ensure_capacity[t](vec[t] mut vec, int wanted) () {
     vec.raw.storage = box(next_storage)
     vec.raw.capacity = next
 }
+
 func grow_capacity(int current, int wanted) int {
     let next = current
     if next <= 0 {
@@ -89,13 +95,17 @@ func grow_capacity(int current, int wanted) int {
     }
     next
 }
+
 struct array[t] {}
+
 func new_array[t](int size) array[t] {
     __vec_new_array[t](size)
 }
+
 func array_get[t](array[t] array, int index) t {
     __vec_array_get[t](array, index)
 }
+
 func array_set[t](array[t] array, int index, t value) () {
     __vec_array_set[t](array, index, value)
 }

@@ -3,6 +3,7 @@ use src.runtime as rt
 use std.io as io
 use std.vec.vec
 use std.result.result
+
 func run_echo_server(int port) result[(), net_error] {
     let listener_res = listen_tcp("0.0.0.0", port)
     let listener = switch listener_res {
@@ -25,6 +26,7 @@ func run_echo_server(int port) result[(), net_error] {
     }
     result::ok(())
 }
+
 func handle_echo_conn(TCPConn conn) () {
     let buf_size = 4096
     while true {
@@ -50,6 +52,7 @@ func handle_echo_conn(TCPConn conn) () {
     }
     conn.close()
 }
+
 func run_worker_pool(int num_workers, int num_tasks) () {
     let task_ch = rt.new_raw_chan(num_workers)
     let done_ch = rt.new_raw_chan(num_tasks)
@@ -74,6 +77,7 @@ func run_worker_pool(int num_workers, int num_tasks) () {
     }
     io.println("all tasks done")
 }
+
 func worker_loop(rt.RawChan mut task_ch, rt.RawChan mut done_ch, int id) () {
     while true {
         let task = rt.chan_recv(task_ch)
@@ -85,6 +89,7 @@ func worker_loop(rt.RawChan mut task_ch, rt.RawChan mut done_ch, int id) () {
         rt.chan_send(done_ch, task.value)
     }
 }
+
 func run_select_demo() () {
     let ch1 = rt.new_raw_chan(1)
     let ch2 = rt.new_raw_chan(1)

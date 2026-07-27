@@ -1,4 +1,5 @@
 package src.net.http
+
 struct Request {
     string method
     string path

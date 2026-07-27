@@ -7,6 +7,7 @@ use std.os.exit
 use std.fmt.sprintf
 use std.fmt.eprintln
 use std.process.run as exec_cmd
+
 func main() int {
     let args = get_args()
     if len(args) < 3 {
@@ -58,17 +59,21 @@ func main() int {
     eprintln("[SUCCESS] IR compilation complete!")
     return 0
 }
+
 func get_unix_timestamp() int {
     return 12345  
 }
+
 func parse_ir(string content) (IRProgram, error) {
     let prog = IRProgram{}
     return prog, nil
 }
+
 func generate_x86_64(IRProgram program) (string, error) {
     let asm = ".globl main\n.text\nmain:\n    mov $0, %rax\n    ret\n"
     return asm, nil
 }
+
 struct IRProgram {
     functions: []struct{}  
 }

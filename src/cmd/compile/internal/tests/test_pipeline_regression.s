@@ -20,6 +20,7 @@ use compile.internal.mir.mir_control_edge
 use compile.internal.mir.dump_graph
 use std.prelude.slice
 use std.vec.vec
+
 func run_pipeline_regression_suite() int {
     let cli_build_eq = vec[string]()
     cli_build_eq.push("compile")
@@ -214,6 +215,7 @@ func run_pipeline_regression_suite() int {
     }
     0
 }
+
 func count_const_decls(ir_ast.package_ir pkg) int {
     let count = 0
     let i = 0
@@ -226,6 +228,7 @@ func count_const_decls(ir_ast.package_ir pkg) int {
     }
     count
 }
+
 func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
     let i = 0
     while i < pkg.decls.len() {
@@ -241,6 +244,7 @@ func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
     }
     false
 }
+
 func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
     let i = 0
     while i < pkg.decls.len() {
@@ -265,6 +269,7 @@ func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
     }
     false
 }
+
 func collect_ir_package_features(ir_ast.package_ir pkg) int {
     let features = 0
     let i = 0
@@ -305,6 +310,7 @@ func collect_ir_package_features(ir_ast.package_ir pkg) int {
     }
     features
 }
+
 func collect_ir_block_features(ir_ast.block_ir block) int {
     let features = 2
     let i = 0
@@ -333,6 +339,7 @@ func collect_ir_block_features(ir_ast.block_ir block) int {
     }
     features
 }
+
 func collect_ir_expr_features(ir_ast.expr_ir expression) int {
     let features = 0
     switch expression {
@@ -388,6 +395,7 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
     }
     features
 }
+
 func starts_with(string text, string prefix) bool {
     if prefix == "" {
         return true
@@ -397,6 +405,7 @@ func starts_with(string text, string prefix) bool {
     }
     slice(text, 0, prefix.len()) == prefix
 }
+
 func contains(string text, string needle) bool {
     if needle == "" {
         return true

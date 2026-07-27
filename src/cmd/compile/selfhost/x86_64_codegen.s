@@ -4,12 +4,14 @@ use std.strings.contains as contains_string
 use std.strings.trim as trim_string
 use std.fmt.sprintf
 use std.io.eprintln
+
 struct X86_64Gen {
     asm_lines: []string
     register_stack: []string  
     temp_allocations: map[string]string  
     label_count: int
 }
+
 func new_x86_64_gen() X86_64Gen {
     return X86_64Gen{
         asm_lines: []string{},
@@ -142,6 +144,7 @@ func (gen: &mut X86_64Gen) translate_instruction(Instruction instr) error {
             return error("unknown IR opcode: " + instr.opcode)
     }
 }
+
 func generate_assembly_from_ir([]Instruction instructions) (string, error) {
     let mut gen = new_x86_64_gen()
     gen.asm_lines = append(gen.asm_lines, ".globl main")
@@ -159,6 +162,7 @@ func generate_assembly_from_ir([]Instruction instructions) (string, error) {
     }
     return result, nil
 }
+
 func format_immediate(string value) string {
     if contains_string(value, "\"") {
         return "$0x0"  

@@ -1,10 +1,12 @@
 package compile.internal.gc
 use compile.internal.build.main as build_main
 use std.vec.vec
+
 struct compile_result {
     int status
     string report
 }
+
 func compile_package(vec[string] args) compile_result {
     let status = build_main(args)
     if status != 0 {
@@ -23,6 +25,7 @@ func compile_package(vec[string] args) compile_result {
         report: obj_payload,
     }
 }
+
 func enqueue_func(vec[string] queue, string fn_name) vec[string] {
     if fn_name == "" || fn_name == "_" {
         return queue
@@ -36,12 +39,14 @@ func enqueue_func(vec[string] queue, string fn_name) vec[string] {
     out.push(fn_name)
     out
 }
+
 func prepare_func(string fn_name) string {
     if fn_name == "" {
         return "skip"
     }
     "prepared:" + fn_name
 }
+
 func compile_functions(vec[string] queue, int workers) string {
     let bounded_workers = clamp_backend_workers(workers)
     let out = "workers=" + to_string(bounded_workers) + "\n"

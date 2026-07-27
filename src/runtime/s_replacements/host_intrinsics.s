@@ -1,22 +1,28 @@
 let g_args: [string] = []
+
 func host_intrinsics_init(args: [string]) {
     g_args = args[1:]
 }
+
 func host_intrinsics_argc(): int {
     return g_args.len()
 }
+
 func host_intrinsics_argv(index: int): string {
     if index < 0 || index >= g_args.len() {
         return nil
     }
     return g_args[index]
 }
+
 func host_intrinsics_get_env(key: string): string {
     return os.getenv(key)
 }
+
 func host_intrinsics_println(text: string) {
     print(text)
 }
+
 func host_intrinsics_eprintln(text: string) {
     eprint(text)
 }

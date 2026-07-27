@@ -1,4 +1,5 @@
 package demo.conflict
+
 struct point {
     int x
 }
@@ -14,6 +15,7 @@ func (p: point) size() int {
 func (p: point) size() int {
     p.x
 }
+
 func bad(point p) int {
     p.size()
 }

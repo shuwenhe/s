@@ -14,6 +14,7 @@ type GELU_Mod = AI.GELU
 type Sigmoid_Mod = AI.Sigmoid
 type Softmax_Mod = AI.Softmax
 type Sequential = AI.Sequential
+
 struct GPTConfig {
     int vocab_size
     int embed_dim
@@ -23,6 +24,7 @@ struct GPTConfig {
     int max_seq_len
     float dropout_prob
 }
+
 struct GPTModel {
     GPTConfig config
     embedding tok_embed
@@ -32,60 +34,79 @@ struct GPTModel {
     Linear output_head
     AG.AutoGradTensor[] all_params
 }
+
 func nn_unit_name() string {
     "std/nn"
 }
+
 func nn_unit_ready() int {
     1
 }
+
 func make_linear(int in_f, int out_f, bool use_bias) Linear {
     AI.new_linear(in_f, out_f, use_bias)
 }
+
 func make_embedding(int num_emb, int emb_dim, int pad_idx) embedding {
     AI.new_embedding(num_emb, emb_dim, pad_idx)
 }
+
 func make_layer_norm(int[] norm_shape, float eps_val) LayerNorm {
     AI.new_layer_norm(norm_shape, eps_val)
 }
+
 func make_mha(int d_model, int n_heads, float drop_p, bool causal) MultiHeadAttention {
     AI.new_mha(d_model, n_heads, drop_p, causal)
 }
+
 func make_feed_forward(int d_model, int d_ff, float drop_p, string act_fn) FeedForward {
     AI.new_feed_forward(d_model, d_ff, drop_p, act_fn)
 }
+
 func make_transformer_block(int d_model, int n_heads, int d_ff, float drop_p, bool pre_norm) TransformerBlock {
     AI.new_transformer_block(d_model, n_heads, d_ff, drop_p, pre_norm)
 }
+
 func make_dropout(float prob) Dropout {
     AI.new_dropout(prob)
 }
+
 func make_relu_mod() ReLU_Mod {
     AI.new_relu()
 }
+
 func make_gelu_mod() GELU_Mod {
     AI.new_gelu()
 }
+
 func make_sigmoid_mod() Sigmoid_Mod {
     AI.new_sigmoid()
 }
+
 func make_softmax_mod(int d) Softmax_Mod {
     AI.new_softmax(d)
 }
+
 func make_sequential() Sequential {
     AI.new_sequential(new AI.Module[0])
 }
+
 func set_train(Module mut m, bool mode) void {
     AI.train_mode(m, mode)
 }
+
 func get_params(Module m) AG.AutoGradTensor[] {
     AI.get_parameters(m)
 }
+
 func count_params(Module m) int {
     AI.count_parameters(m)
 }
+
 func module_summary(Module m, string indent) void {
     AI.print_module_summary(m, indent)
 }
+
 func default_gpt_config() GPTConfig {
     GPTConfig {
         vocab_size: 256,
@@ -97,6 +118,7 @@ func default_gpt_config() GPTConfig {
         dropout_prob: 0.1,
     }
 }
+
 func make_gpt(GPTConfig cfg) GPTModel {
     GPTModel model
     model.config = cfg
@@ -119,6 +141,7 @@ func make_gpt(GPTConfig cfg) GPTModel {
     collect_gpt_params(model)
     model
 }
+
 func copy_params_into(AG.AutoGradTensor[] dst, int start_pos, AG.AutoGradTensor[] src) int {
     int i = 0
     while i < len(src) {
@@ -127,6 +150,7 @@ func copy_params_into(AG.AutoGradTensor[] dst, int start_pos, AG.AutoGradTensor[
     }
     start_pos + i
 }
+
 func collect_gpt_params(GPTModel mut model) void {
     int total = count_params(model.tok_embed) + count_params(model.pos_embed)
     int i = 0
@@ -147,6 +171,7 @@ func collect_gpt_params(GPTModel mut model) void {
     pos = copy_params_into(model.all_params, pos, get_params(model.final_ln))
     pos = copy_params_into(model.all_params, pos, get_params(model.output_head))
 }
+
 func gpt_total_params(GPTModel self) int {
     int total = 0
     int i = 0
@@ -156,6 +181,7 @@ func gpt_total_params(GPTModel self) int {
     }
     total
 }
+
 func forward(GPTModel self, int[] token_ids, int batch_size, int seq_len) AG.AutoGradTensor {
     AG.AutoGradTensor tok_emb = AI.forward(self.tok_embed, token_ids, batch_size, seq_len)
     int total_tokens = batch_size * seq_len
@@ -175,6 +201,7 @@ func forward(GPTModel self, int[] token_ids, int batch_size, int seq_len) AG.Aut
     AG.AutoGradTensor normed = AI.forward(self.final_ln, x)
     AI.forward(self.output_head, normed)
 }
+
 func print_gpt_summary(GPTModel self) void {
     println("")
     println("╔══════════════════════════════════════════╗")

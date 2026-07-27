@@ -10,6 +10,7 @@ var gc_enabled      = true
 extern "intrinsic" func __gc_stw_start() ()
 extern "intrinsic" func __gc_stw_stop() ()
 extern "intrinsic" func __runtime_nanotime() int
+
 func gc_trigger() () {
     if !gc_enabled {
         return
@@ -19,6 +20,7 @@ func gc_trigger() () {
     }
     run_gc()
 }
+
 func run_gc() () {
     if gc_phase != GC_PHASE_OFF {
         return
@@ -40,9 +42,11 @@ func run_gc() () {
     }
     __gc_stw_stop()
 }
+
 func force_gc() () {
     run_gc()
 }
+
 struct GcStats {
     int phase
     int heap_alloc
@@ -51,6 +55,7 @@ struct GcStats {
     int total_freed
     int live_objects
 }
+
 func gc_stats() GcStats {
     GcStats {
         phase:        gc_phase,
@@ -61,7 +66,11 @@ func gc_stats() GcStats {
         live_objects: heap_live_objs,
     }
 }
+
 func gc_disable() () { gc_enabled = false }
+
 func gc_enable()  () { gc_enabled = true  }
+
 func mgc_unit_name() string { "src/runtime/mgc" }
+
 func mgc_unit_ready() int   { 1 }

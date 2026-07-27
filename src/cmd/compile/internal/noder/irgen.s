@@ -2,6 +2,7 @@ package compile.internal.noder
 use s.item
 use s.source_file
 use std.vec.vec
+
 func lower_to_ir(source_file ast) vec[ir_node] {
     let out = vec[ir_node]()
     let i = 0
