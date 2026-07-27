@@ -20,7 +20,7 @@ func is_ident_continue(string ch) bool {
 }
 
 func keyword_kind(string text) string {
-    if text == "fn" || text == "func" { return "FN" }
+    if text == "func" { return "FN" }
     if text == "let" { return "LET" }
     if text == "var" { return "VAR" }
     if text == "package" { return "PACKAGE" }

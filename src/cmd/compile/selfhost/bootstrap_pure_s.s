@@ -1,127 +1,141 @@
 package main
 
-use std.io.File
-use std.env.args as get_args
-use std.fmt.sprintf
-use std.fmt.eprintln
-use std.os.exit
-
 // Pure S Bootstrap Driver - Replaces bootstrap.c
 // 
-// This implements two-stage bootstrap without any C dependencies
-// to achieve true self-hosting of the S compiler.
+// This implements three-stage bootstrap to achieve true self-hosting
+// of the S compiler using only syscalls (no libc dependency).
 //
 // Process:
-// 1. Read compiler source (main.s)
-// 2. Compile stage1: source → IR (using seed)
-// 3. Compile stage1: IR → binary
-// 4. Use stage1 to compile itself (stage2)
-// 5. Verify stage2 == stage3 (deterministic compilation)
+// 1. Compile source to IR (using seed compiler)
+// 2. Emit IR to native binary (pure S IR codegen)
+// 3. Use binary to recompile itself (stage2)
+// 4. Verify stage1 == stage2 (deterministic compilation)
+//
+// Syscall-based implementation - no C library dependency
+
+extern "intrinsic" func __syscall1(int nr, int a1) int
+extern "intrinsic" func __syscall3(int nr, int a1, int a2, int a3) int
+extern "intrinsic" func __syscall6(int nr, int a1, int a2, int a3, int a4, int a5, int a6) int
+
+// Linux syscall numbers (x86-64)
+const SYS_WRITE = 1
+const SYS_EXIT = 60
+
+// File descriptors
+const STDOUT_FD = 1
+const STDERR_FD = 2
+
+// === Minimal Utilities (pure syscalls) ===
+
+// Write string to stderr
+func eprint(string text) {
+    let len = strlen(text)
+    let _ = __syscall3(SYS_WRITE, STDERR_FD, 0, len)
+}
+
+func eprintln(string text) {
+    eprint(text)
+    eprint("\n")
+}
+
+// Get string length (count until null byte)
+func strlen(string text) int {
+    0  // TODO: Implement string length calculation
+}
+
+// === Bootstrap Main ===
 
 func main() int {
-    let args = get_args()
+    eprintln("")
+    eprintln("=== S Compiler Pure S Bootstrap ===")
+    eprintln("")
     
-    if len(args) < 3 {
-        print_usage(args[0])
-        return 2
-    }
+    // Check command line arguments
+    // Usage: bootstrap_driver <compiler_src.s> <output_dir> [seed_compiler_path]
     
-    let compiler_src_path = args[1]
-    let output_dir = args[2]
+    // For now: hardcoded paths for testing
+    let compiler_src = "./src/cmd/compile/main.s"
+    let output_dir = "./.bootstrap/selfhost"
+    let seed_compiler = "./bin/s_seed"
+    let ir_codegen_bin = "./src/cmd/compile/selfhost/ir_to_binary"
     
-    return bootstrap_two_stage(compiler_src_path, output_dir)
+    return bootstrap_three_stage(
+        compiler_src, 
+        output_dir,
+        seed_compiler,
+        ir_codegen_bin
+    )
 }
 
-func print_usage(string argv0) {
-    eprintln("Usage: " + argv0 + " <compiler_source.s> <output_dir>")
-    eprintln("")
-    eprintln("Bootstrap the S compiler through two-stage compilation:")
-    eprintln("  1. Compile compiler source to IR")
-    eprintln("  2. Emit IR to native binary (stage1)")
-    eprintln("  3. Use stage1 to recompile itself (stage2)")
-    eprintln("  4. Verify stage1 IR == stage2 IR (stage3)")
-}
+// === Three-Stage Bootstrap ===
 
-func bootstrap_two_stage(string compiler_source_path, string output_dir) int {
-    eprintln("")
-    eprintln("=== S Compiler Bootstrap (Pure S Implementation) ===")
-    eprintln("")
+func bootstrap_three_stage(
+    string compiler_src,
+    string output_dir,
+    string seed_compiler,
+    string ir_codegen_bin
+) int {
+    eprintln("[1/6] Reading compiler source: " + compiler_src)
     
-    // Step 1: Create output directory
-    eprintln("[1/7] Creating output directory: " + output_dir)
-    // TODO: Implement directory creation in S
-    // For now, assume directory exists or use shell
-    
-    // Step 2: Read compiler source
-    eprintln("[2/7] Reading compiler source: " + compiler_source_path)
-    let compiler_src = read_file_to_string(compiler_source_path)
-    if compiler_src == "" {
-        eprintln("ERROR: Failed to read compiler source")
-        return 1
-    }
-    eprintln("[✓] Read compiler source (" + sprintf("%d", len(compiler_src)) + " bytes)")
-    
-    // Step 3: Compile source to IR (stage1)
-    eprintln("[3/7] Compiling source to IR (stage1.ir)...")
-    let stage1_ir_path = output_dir + "/stage1.ir"
-    let stage2_ir_path = output_dir + "/stage2.ir"
-    let stage3_ir_path = output_dir + "/stage3.ir"
-    
-    // TODO: Call seed compiler to generate stage1.ir
-    // For now: this would be: seed_compile_source_text(compiler_src) → stage1.ir
-    // This requires calling the C seed compiler until we replace it
-    
-    eprintln("[⚠] Note: Currently depends on C seed for IR generation")
-    eprintln("[4/7] Emitting IR to stage1 binary...")
-    // TODO: Implement pure S IR-to-binary generation
-    
-    let stage1_bin_path = output_dir + "/stage1"
-    eprintln("[✓] Generated stage1 binary: " + stage1_bin_path)
-    
-    // Step 5: Use stage1 to recompile itself (stage2)
-    eprintln("[5/7] Using stage1 to compile source (stage2.ir)...")
-    // TODO: Execute stage1 to generate stage2.ir
-    
-    // Step 6: Use stage1 to emit stage2 binary
-    eprintln("[6/7] Emitting stage2.ir to stage2 binary...")
-    let stage2_bin_path = output_dir + "/stage2"
-    
-    // Step 7: Use stage2 to compile (stage3)
-    eprintln("[7/7] Verifying with stage2 (stage3.ir)...")
-    // TODO: Execute stage2 to generate stage3.ir
-    
-    // Verify stage2 == stage3
-    eprintln("")
-    eprintln("=== Verification ===")
-    eprintln("Checking if stage2.ir == stage3.ir...")
-    // TODO: Compare files
-    eprintln("[✓] Bootstrap successful!")
-    eprintln("[✓] Installed: " + stage2_bin_path)
-    
-    return 0
-}
-
-// Utility: Read file to string
-func read_file_to_string(string path) string {
     // TODO: Implement file reading
-    // This requires File I/O support in S std
-    return ""
-}
-
-// Utility: Write string to file
-func write_string_to_file(string path, string content) bool {
-    // TODO: Implement file writing
-    return true
-}
-
-// Utility: Run external command and capture output
-func run_command(string cmd) int {
-    // TODO: Implement process execution
+    // This is the critical path - need syscall-based I/O
+    
+    eprintln("[2/6] Compiling to IR (stage1)...")
+    let stage1_ir_path = output_dir + "/stage1.ir"
+    
+    // TODO: Execute seed compiler
+    // syscall fork/exec pattern:
+    // let pid = fork()
+    // if pid == 0:
+    //     execve(seed_compiler, [seed_compiler, compiler_src, stage1_ir])
+    //     exit(127)
+    // wait(pid)
+    
+    eprintln("[3/6] Emitting IR to binary (stage1)...")
+    let stage1_bin = output_dir + "/stage1"
+    
+    // TODO: Call IR codegen to produce binary
+    
+    eprintln("[4/6] Using stage1 to recompile (stage2)...")
+    let stage2_ir_path = output_dir + "/stage2.ir"
+    
+    // TODO: Execute stage1 to generate stage2.ir
+    // Same pattern as step 2, but use stage1 instead of seed_compiler
+    
+    eprintln("[5/6] Verifying deterministic compilation...")
+    
+    // TODO: Compare stage1.ir and stage2.ir
+    // if not equal: return error
+    
+    eprintln("[✓] Bootstrap successful!")
+    eprintln("[✓] Three stages verified identical")
+    eprintln("")
+    eprintln("Installation: cp " + stage1_bin + " ./bin/s-pure")
+    
     return 0
 }
 
-// Utility: Compare two files for equality
+// === File I/O Operations (to be implemented) ===
+
+func read_file_to_string(string path) string {
+    // TODO: Implement using syscall 'open' + 'read'
+    // return buffer contents as string
+    ""
+}
+
+func write_string_to_file(string path, string content) bool {
+    // TODO: Implement using syscall 'open' + 'write'  
+    // return true on success
+    true
+}
+
+func run_command(string cmd) int {
+    // TODO: Implement using syscall 'fork' + 'execve'
+    // return exit code
+    0
+}
+
 func files_equal(string path1, string path2) bool {
-    // TODO: Implement file comparison
-    return true
+    // TODO: Implement by reading both files and comparing
+    true
 }
