@@ -1605,7 +1605,7 @@ func normalize_go_symbol(string text) string {
 
 func strip_go_asm_comment(string line) string {
     let out = line
-    let slash = index_of(out, "//")
+    let slash = index_of(out, "
     if slash >= 0 {
         out = slice(out, 0, slash)
     }

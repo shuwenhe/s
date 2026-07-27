@@ -134,9 +134,6 @@ true-selfhost-check: selfhost-check
 	@./misc/scripts/verify_true_selfhost.sh ./bin/s
 	@echo "True self-host check passed: ./bin/s does not link the C seed compiler"
 
-# A producer for bin/s_nostdlib must be added before this target can pass.  Keep
-# this target fail-closed: an absent artifact must never be reported as a
-# successful no-libc bootstrap.
 selfhost-nostdlib:
 	@if [ ! -x ./bin/s_nostdlib ]; then \
 		echo "selfhost-nostdlib: missing ./bin/s_nostdlib" >&2; \
