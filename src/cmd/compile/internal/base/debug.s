@@ -1,4 +1,5 @@
 package compile.internal.base
+
 struct debug_flags {
     int align_hot
     int append
@@ -24,6 +25,7 @@ struct debug_flags {
     bool concurrent_ok
 }
 let debug = default_debug_flags()
+
 func default_debug_flags() debug_flags {
     debug_flags {
         align_hot: 1,
@@ -50,6 +52,7 @@ func default_debug_flags() debug_flags {
         concurrent_ok: true,
     }
 }
+
 func debug_ssa(string phase, string flag, int value, string value_string) string {
     if phase == "" || flag == "" {
         return "invalid ssa debug option"

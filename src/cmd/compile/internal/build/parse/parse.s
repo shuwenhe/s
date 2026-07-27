@@ -2,6 +2,7 @@ package compile.internal.build.parse
 use std.prelude.char_at
 use std.prelude.slice
 use std.vec.vec
+
 func parse_options(vec[string] args)  vec[string] {
     if args.len() < 2 {
         return make_options("help", "", "", "", false)
@@ -74,6 +75,7 @@ func parse_options(vec[string] args)  vec[string] {
     }
     make_options("help", "", "", "", false)
 }
+
 func usage()  string {
     "usage:\n"
     + "  s check <path|module>\n"
@@ -91,6 +93,7 @@ func usage()  string {
     + "  Set S_PROJECT_ROOT=<dir> for neurx.* modules (strip neurx. prefix for paths).\n"
     + "  Run 's mod index' in the project to generate build/s-package-index.tsv for mismatched packages.\n"
 }
+
 func make_options(string command, string path, string output, string ssa_margin, bool nostdlib)  vec[string] {
     let options = vec[string]()
     options.push(command)
@@ -102,6 +105,7 @@ func make_options(string command, string path, string output, string ssa_margin,
     }
     options
 }
+
 func has_flag(vec[string] args, int start_index, string flag) bool {
     let i = start_index
     while i < args.len() {
@@ -112,6 +116,7 @@ func has_flag(vec[string] args, int start_index, string flag) bool {
     }
     false
 }
+
 func parse_optional_margin(vec[string] args, int start_index) string {
     if args.len() <= start_index {
         return ""
@@ -141,15 +146,18 @@ func parse_optional_margin(vec[string] args, int start_index) string {
     }
     "__invalid_margin__"
 }
+
 func starts_with(string text, string prefix) bool {
     if text.len() < prefix.len() {
         return false
     }
     slice(text, 0, prefix.len()) == prefix
 }
+
 func slice_after(string text, string prefix) string {
     slice(text, prefix.len(), text.len())
 }
+
 func is_non_negative_integer(string text) bool {
     if text == "" {
         return false
@@ -164,6 +172,7 @@ func is_non_negative_integer(string text) bool {
     }
     true
 }
+
 func is_digit_char(string ch) bool {
     if ch == "0" || ch == "1" || ch == "2" || ch == "3" || ch == "4" {
         return true

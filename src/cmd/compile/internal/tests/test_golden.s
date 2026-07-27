@@ -4,6 +4,7 @@ use std.io.println
 use compile.internal.syntax.read_source
 use compile.internal.syntax.tokenize
 use compile.internal.syntax.dump_tokens_text
+
 func run_golden_suite(string fixtures_root) int {
     let source_path = fixtures_root + "/sample.s"
     let tokens_path = fixtures_root + "/sample.tokens"

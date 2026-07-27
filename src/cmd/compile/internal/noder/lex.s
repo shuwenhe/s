@@ -1,6 +1,7 @@
 package compile.internal.noder
 use std.result.result
 use std.vec.vec
+
 func classify_token(string token) string {
     if token == "package" || token == "use" || token == "func" || token == "struct" || token == "enum" || token == "trait" || token == "const" {
         return "keyword"
@@ -13,6 +14,7 @@ func classify_token(string token) string {
     }
     "ident"
 }
+
 func lex_source(source_unit unit) result[vec[token_item], noder_error] {
     let out = vec[token_item]()
     let lines = split_lines(unit.text)

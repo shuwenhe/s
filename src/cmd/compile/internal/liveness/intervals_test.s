@@ -1,8 +1,10 @@
 package compile.internal.liveness
 use std.vec.vec
+
 func intervals_test_case_name() string {
     "liveness/intervals_test.s"
 }
+
 func intervals_test_case_pass() int {
     let events = vec[live_event]()
     events.push(live_event { point: 0, value_id: 1, on: true })

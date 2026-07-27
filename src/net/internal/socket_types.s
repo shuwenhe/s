@@ -108,12 +108,14 @@ const ENOPROTOOPT = 92
 const EPROTONOSUPPORT = 93
 const ESOCKTNOSUPPORT = 94
 const EOPNOTSUPP = 95
+
 struct SockaddrInet {
     u16 sin_family
     u16 sin_port
     u32 sin_addr
     []byte sin_zero
 }
+
 struct SockaddrInet6 {
     u16 sin6_family
     u16 sin6_port
@@ -121,15 +123,18 @@ struct SockaddrInet6 {
     []byte sin6_addr
     u32 sin6_scope_id
 }
+
 struct Sockaddr {
     u16 sa_family
     []byte sa_data
 }
+
 struct Pollfd {
     int fd
     i16 events
     i16 revents
 }
+
 struct RawSocket {
     int fd
     int family
@@ -139,20 +144,24 @@ struct RawSocket {
     i64 read_deadline_ns
     i64 write_deadline_ns
 }
+
 struct TCPConnState {
     RawSocket sock
     []byte local_addr
     []byte remote_addr
 }
+
 struct UDPConnState {
     RawSocket sock
     []byte local_addr
     []byte remote_addr
 }
+
 struct TCPListenerState {
     RawSocket sock
     []byte addr
 }
+
 struct SocketError {
     int errno
     string message
@@ -161,6 +170,7 @@ struct SocketError {
 func (e *SocketError) Error() string {
     e.syscall_name + ": " + e.message
 }
+
 func NewSocketError(errno: int, syscall_name: string) *SocketError {
     var msg string
     case errno {
@@ -190,9 +200,11 @@ func NewSocketError(errno: int, syscall_name: string) *SocketError {
         syscall_name: syscall_name,
     }
 }
+
 func IsTemporaryError(errno: int) bool {
     errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR
 }
+
 func IsTimeoutError(errno: int) bool {
     errno == ETIMEDOUT
 }

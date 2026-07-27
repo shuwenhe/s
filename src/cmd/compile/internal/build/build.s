@@ -8,6 +8,7 @@ use internal.buildcfg.goarch as buildcfg_goarch
 use internal.buildcfg.goos as buildcfg_goos
 use std.io.println
 use std.vec.vec
+
 func main(vec[string] args)  int {
     let options = parse_options(args)
     if options[0] == "help" {
@@ -25,9 +26,11 @@ func main(vec[string] args)  int {
     }
     0
 }
+
 func report_error_local(string message)  () {
     report_error(message)
 }
+
 func emit_target_log(string command) () {
     if command == "check" || command == "build" {
         println("buildcfg: target=" + buildcfg_goos() + "/" + buildcfg_goarch())

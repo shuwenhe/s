@@ -4,6 +4,7 @@ use compile.internal.build.main as build_main
 use internal.buildcfg.check as buildcfg_check
 use internal.buildcfg.goarch as buildcfg_goarch
 use std.vec.vec
+
 func main(vec[string] args) int {
     let buildcfg_err = buildcfg_check()
     if buildcfg_err != "" {
@@ -15,6 +16,7 @@ func main(vec[string] args) int {
     }
     return build_main(args)
 }
+
 func run_cli(vec[string] args) int {
     main(args)
 }

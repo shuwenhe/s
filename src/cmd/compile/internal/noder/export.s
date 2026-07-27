@@ -2,6 +2,7 @@ package compile.internal.noder
 use s.item
 use s.source_file
 use std.vec.vec
+
 func collect_exports(source_file ast) vec[export_record] {
     let out = vec[export_record]()
     let i = 0
@@ -42,6 +43,7 @@ func collect_exports(source_file ast) vec[export_record] {
     }
     out
 }
+
 func emit_export_payload(vec[export_record] exports) string {
     let out = "export-data version=1\n"
     let i = 0

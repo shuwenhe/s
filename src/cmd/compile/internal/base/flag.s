@@ -1,11 +1,13 @@
 package compile.internal.base
 use std.vec.vec
+
 struct cmd_cfg {
     vec[string] import_dirs
     vec[string] import_map
     bool spectre_index
     bool instrumenting
 }
+
 struct cmd_flags {
     int b
     int c
@@ -36,6 +38,7 @@ struct cmd_flags {
     cmd_cfg cfg
 }
 let flag = default_cmd_flags()
+
 func default_cmd_flags() cmd_flags {
     cmd_flags {
         b: 0,
@@ -72,12 +75,14 @@ func default_cmd_flags() cmd_flags {
         },
     }
 }
+
 func add_import_dir(string path) () {
     if path == "" {
         return
     }
     flag.cfg.import_dirs.push(path)
 }
+
 func parse_flags() cmd_flags {
     flag
 }

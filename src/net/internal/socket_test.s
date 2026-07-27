@@ -1,5 +1,6 @@
 package src.net.internal
 import "src.std.testing"
+
 func TestSocketCreate(t *testing.T) {
     sock, err := NewRawSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
     if err != nil {
@@ -25,6 +26,7 @@ func TestSocketCreate(t *testing.T) {
         t.Errorf("Failed to close socket: %v", err)
     }
 }
+
 func TestSocketCreateUDP(t *testing.T) {
     sock, err := NewRawSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
     if err != nil {
@@ -40,6 +42,7 @@ func TestSocketCreateUDP(t *testing.T) {
     }
     sock.Close()
 }
+
 func TestSocketClose(t *testing.T) {
     sock, _ := NewRawSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
     err := sock.Close()
@@ -51,6 +54,7 @@ func TestSocketClose(t *testing.T) {
         t.Error("Expected error on second close")
     }
 }
+
 func TestSetReuseAddr(t *testing.T) {
     sock, _ := NewRawSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
     defer sock.Close()
@@ -63,6 +67,7 @@ func TestSetReuseAddr(t *testing.T) {
         t.Errorf("Failed to unset SO_REUSEADDR: %v", err)
     }
 }
+
 func TestSetTCPNoDelay(t *testing.T) {
     sock, _ := NewRawSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
     defer sock.Close()
@@ -71,6 +76,7 @@ func TestSetTCPNoDelay(t *testing.T) {
         t.Errorf("Failed to set TCP_NODELAY: %v", err)
     }
 }
+
 func TestSetBufferSize(t *testing.T) {
     sock, _ := NewRawSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
     defer sock.Close()
@@ -83,14 +89,17 @@ func TestSetBufferSize(t *testing.T) {
         t.Errorf("Failed to set recv buffer size: %v", err)
     }
 }
+
 func TestSetReadDeadline(t *testing.T) {
     sock, _ := NewRawSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
     defer sock.Close()
 }
+
 func TestSetWriteDeadline(t *testing.T) {
     sock, _ := NewRawSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
     defer sock.Close()
 }
+
 func TestHtons(t *testing.T) {
     let result = htons(0x1234)
     let expected = 0x3412
@@ -98,6 +107,7 @@ func TestHtons(t *testing.T) {
         t.Errorf("htons(0x1234) = 0x%04x, expected 0x%04x", result, expected)
     }
 }
+
 func TestNtohs(t *testing.T) {
     let result = ntohs(0x3412)
     let expected = 0x1234
@@ -105,6 +115,7 @@ func TestNtohs(t *testing.T) {
         t.Errorf("ntohs(0x3412) = 0x%04x, expected 0x%04x", result, expected)
     }
 }
+
 func TestSocketError(t *testing.T) {
     let err = NewSocketError(ECONNREFUSED, "connect")
     if err == nil {
@@ -118,6 +129,7 @@ func TestSocketError(t *testing.T) {
         t.Errorf("Expected syscall name 'connect', got '%s'", err.syscall_name)
     }
 }
+
 func TestIsTemporaryError(t *testing.T) {
     if !IsTemporaryError(EAGAIN) {
         t.Error("EAGAIN should be temporary error")
@@ -129,6 +141,7 @@ func TestIsTemporaryError(t *testing.T) {
         t.Error("ECONNREFUSED should not be temporary error")
     }
 }
+
 func TestIsTimeoutError(t *testing.T) {
     if !IsTimeoutError(ETIMEDOUT) {
         t.Error("ETIMEDOUT should be timeout error")
@@ -137,6 +150,7 @@ func TestIsTimeoutError(t *testing.T) {
         t.Error("EAGAIN should not be timeout error")
     }
 }
+
 struct TestServer {
     listener *TCPListener
     port int
@@ -156,6 +170,7 @@ func (ts *TestServer) Stop() error {
     }
     nil
 }
+
 func TestTCPServerClientIntegration(t *testing.T) {
     server_sock, err := NewRawSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
     if err != nil {
@@ -218,6 +233,7 @@ func TestTCPServerClientIntegration(t *testing.T) {
         }
     }
 }
+
 func TestUDPCommunication(t *testing.T) {
     server_sock, err := NewRawSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
     if err != nil {
@@ -268,6 +284,7 @@ func TestUDPCommunication(t *testing.T) {
         }
     }
 }
+
 func TestTimeoutHandling(t *testing.T) {
     sock, err := NewRawSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
     if err != nil {
@@ -288,6 +305,7 @@ func TestTimeoutHandling(t *testing.T) {
         t.Error("Timeout handling failed")
     }
 }
+
 func TestConcurrentConnections(t *testing.T) {
     server_sock, err := NewRawSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
     if err != nil {

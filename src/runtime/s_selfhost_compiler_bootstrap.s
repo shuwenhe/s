@@ -14,6 +14,7 @@ const CMD_LEX     = 4
 const CMD_AST     = 5
 const CMD_VERSION = 6
 const CMD_HELP    = 7
+
 func main() int {
     runtime_init()
     gc_disable()
@@ -42,6 +43,7 @@ func main() int {
     }
     0
 }
+
 func parse_command(string s) int {
     if s == "check"   { return CMD_CHECK   }
     if s == "build"   { return CMD_BUILD   }
@@ -55,6 +57,7 @@ func parse_command(string s) int {
     if s == "-h"      { return CMD_HELP    }
     CMD_UNKNOWN
 }
+
 func print_usage() () {
     io.println("s compiler " + BOOTSTRAP_VERSION)
     io.println("")

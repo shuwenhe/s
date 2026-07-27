@@ -1,5 +1,6 @@
 package compile.internal.base
 use std.fs.read_to_string
+
 func map_file_read(string path, int offset, int length) result[string, string] {
     let full = read_to_string(path)
     if full.is_err() {
@@ -18,6 +19,7 @@ func map_file_read(string path, int offset, int length) result[string, string] {
     }
     result::ok(slice(text, offset, end))
 }
+
 func map_file(string path, int offset, int length) result[string, string] {
     map_file_read(path, offset, length)
 }

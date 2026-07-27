@@ -3,6 +3,7 @@ use compile.internal.arch.dispatch_init as arch_dispatch_init
 use internal.buildcfg.check as buildcfg_check
 use internal.buildcfg.goarch as buildcfg_goarch
 use std.vec.vec
+
 func compile_main(vec[string] args) int {
     let init_err = init_compile_environment()
     if init_err != "" {
@@ -11,6 +12,7 @@ func compile_main(vec[string] args) int {
     let result = compile_package(args)
     return result.status
 }
+
 func init_compile_environment() string {
     let cfg_err = buildcfg_check()
     if cfg_err != "" {

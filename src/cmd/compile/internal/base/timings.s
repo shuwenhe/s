@@ -1,14 +1,17 @@
 package compile.internal.base
 use std.vec.vec
+
 struct timestamp {
     int tick
     string label
     bool start
 }
+
 struct timing_event {
     int size
     string unit
 }
+
 struct timings {
     vec[timestamp] list
     vec[timing_event] events
@@ -17,9 +20,11 @@ let timer = timings {
     list: vec[timestamp](),
     events: vec[timing_event](),
 }
+
 func timing_tick() int {
     timer.list.len() + timer.events.len()
 }
+
 func timings_start(vec[string] labels) () {
     timer.list.push(timestamp {
         tick: timing_tick(),
@@ -27,6 +32,7 @@ func timings_start(vec[string] labels) () {
         start: true,
     })
 }
+
 func timings_stop(vec[string] labels) () {
     timer.list.push(timestamp {
         tick: timing_tick(),
@@ -34,12 +40,14 @@ func timings_stop(vec[string] labels) () {
         start: false,
     })
 }
+
 func timings_add_event(int size, string unit) () {
     timer.events.push(timing_event {
         size: size,
         unit: unit,
     })
 }
+
 func timings_write(string prefix) string {
     let out = ""
     let i = 0
@@ -55,6 +63,7 @@ func timings_write(string prefix) string {
     }
     out
 }
+
 func join_with_colon(vec[string] labels) string {
     if labels.len() == 0 {
         return ""
