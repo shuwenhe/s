@@ -1,10 +1,12 @@
 package compile.internal.base
 use std.vec.vec
+
 struct hash_mask {
     string name
     string suffix
     bool exclude
 }
+
 struct hash_debug {
     string name
     string raw
@@ -20,9 +22,11 @@ let pgo_hash = new_hash_debug("pgohash", "")
 let literal_alloc_hash = new_hash_debug("literalallochash", "")
 let merge_locals_hash = new_hash_debug("mergelocalshash", "")
 let variable_make_hash = new_hash_debug("variablemakehash", "")
+
 func has_debug_hash() bool {
     hash_debug_default.raw != ""
 }
+
 func new_hash_debug(string name, string raw) hash_debug {
     let out = hash_debug {
         name: name,
@@ -65,13 +69,16 @@ func new_hash_debug(string name, string raw) hash_debug {
     }
     out
 }
+
 func set_inline_suffix_only(hash_debug mut hd, bool on) hash_debug {
     hd.inline_suffix_only = on
     hd
 }
+
 func debug_hash_match_pkg_func(string pkg, string fn_name) bool {
     match_pkg_func(hash_debug_default, pkg, fn_name)
 }
+
 func match_pkg_func(hash_debug hd, string pkg, string fn_name) bool {
     if hd.raw == "" {
         return true
@@ -98,6 +105,7 @@ func match_pkg_func(hash_debug hd, string pkg, string fn_name) bool {
     }
     included
 }
+
 func split(string text, string sep) vec[string] {
     let out = vec[string]()
     if sep == "" {
@@ -118,12 +126,14 @@ func split(string text, string sep) vec[string] {
     out.push(slice(text, start, len(text)))
     out
 }
+
 func starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
     }
     return slice(text, 0, len(prefix)) == prefix
 }
+
 func ends_with(string text, string suffix) bool {
     if len(text) < len(suffix) {
         return false

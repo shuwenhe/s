@@ -4,6 +4,7 @@ use compile.internal.ssa_core.build_pipeline_with_margin
 use compile.internal.ssa_core.dump_pipeline
 use compile.internal.ssa_core.dump_debug_map
 use std.prelude.slice
+
 func run_ssa_suite() int {
     let mir_text = "mir main blocks=2 entry=0 exit=1 | bb0(entry) stmts=1 term=jump | bb1(exit) stmts=0 term=return"
     let arm64_dump = dump_pipeline(build_pipeline(mir_text, "arm64"))
@@ -593,6 +594,7 @@ func run_ssa_suite() int {
     }
     0
 }
+
 func contains(string text, string needle) bool {
     if needle == "" {
         return true

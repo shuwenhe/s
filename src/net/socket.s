@@ -10,18 +10,22 @@ const SOCK_DGRAM  = sc.SOCK_DGRAM
 const POLLIN      = sc.POLLIN
 const POLLOUT     = sc.POLLOUT
 const POLLERR     = sc.POLLERR
+
 struct net_error {
     string message
     int    errno_code
 }
+
 func wrap_sc_err(sc.net_error e) net_error {
     net_error { message: e.message, errno_code: e.errno_code }
 }
+
 struct TCPListener {
     int    fd
     string host
     int    port
 }
+
 func listen_tcp(string host, int port) result[TCPListener, net_error] {
     let fd_res = sc.socket(sc.AF_INET, sc.SOCK_STREAM, sc.IPPROTO_TCP)
     let fd = switch fd_res {
@@ -76,6 +80,7 @@ func (self: TCPListener) close() result[(), net_error] {
             result::err(e) : result::err(wrap_sc_err(e)),
         }
     }
+
 struct TCPConn {
     int    fd
     string remote_ip
@@ -83,6 +88,7 @@ struct TCPConn {
     int    read_timeout_ms
     int    write_timeout_ms
 }
+
 func dial_tcp(string host, int port) result[TCPConn, net_error] {
     let fd_res = sc.socket(sc.AF_INET, sc.SOCK_STREAM, sc.IPPROTO_TCP)
     let fd = switch fd_res {
@@ -105,6 +111,7 @@ func dial_tcp(string host, int port) result[TCPConn, net_error] {
         write_timeout_ms: 0,
     })
 }
+
 func dial_tcp_timeout(string host, int port, int timeout_ms) result[TCPConn, net_error] {
     let fd_res = sc.socket(sc.AF_INET, sc.SOCK_STREAM, sc.IPPROTO_TCP)
     let fd = switch fd_res {
@@ -126,6 +133,7 @@ func dial_tcp_timeout(string host, int port, int timeout_ms) result[TCPConn, net
         write_timeout_ms: 0,
     })
 }
+
 func dial_tcp6_timeout(string host, int port, int timeout_ms) result[TCPConn, net_error] {
     let fd_res = sc.socket(sc.AF_INET6, sc.SOCK_STREAM, sc.IPPROTO_TCP)
     let fd = switch fd_res {
@@ -147,6 +155,7 @@ func dial_tcp6_timeout(string host, int port, int timeout_ms) result[TCPConn, ne
         write_timeout_ms: 0,
     })
 }
+
 func resolve_host(string host) result[vec[string], net_error] {
     switch sc.resolve_ip(host, sc.AF_UNSPEC) {
         result::ok(addresses) : result::ok(addresses),
@@ -229,9 +238,11 @@ func (self: TCPConn) close() result[(), net_error] {
             result::err(e) : result::err(wrap_sc_err(e)),
         }
     }
+
 struct Poller {
     int fd
 }
+
 func new_poller() result[Poller, net_error] {
     switch sc.poller_create() {
         result::ok(fd) : result::ok(Poller { fd: fd }),
@@ -262,6 +273,7 @@ func (self: Poller) close() result[(), net_error] {
             result::err(e) : result::err(wrap_sc_err(e)),
         }
     }
+
 struct UDPConn {
     int    fd
     string local_ip
@@ -269,6 +281,7 @@ struct UDPConn {
     int    read_timeout_ms
     int    write_timeout_ms
 }
+
 func listen_udp(string host, int port) result[UDPConn, net_error] {
     let fd_res = sc.socket(sc.AF_INET, sc.SOCK_DGRAM, sc.IPPROTO_UDP)
     let fd = switch fd_res {

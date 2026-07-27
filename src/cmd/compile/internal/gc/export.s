@@ -1,5 +1,6 @@
 package compile.internal.gc
 use std.vec.vec
+
 func dump_asm_header(string pkg_name, vec[string] symbols) string {
     let out = "
     let i = 0
@@ -9,6 +10,7 @@ func dump_asm_header(string pkg_name, vec[string] symbols) string {
     }
     out
 }
+
 func dump_export_data(string pkg_name, vec[string] exported_symbols) string {
     let out = "package " + pkg_name + "\nexports:\n"
     let i = 0

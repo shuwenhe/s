@@ -8,38 +8,48 @@ const LOG2E = 1.44269504088896340736
 const EPSILON = 1e-7
 const INF = 1e308
 const NEG_INF = -1e308
+
 func abs(float x) float {
     if x < 0 { return -x }
     x
 }
+
 func max_f(float a, float b) float {
     if a > b { a } else { b }
 }
+
 func min_f(float a, float b) float {
     if a < b { a } else { b }
 }
+
 func clamp_f(float x, float lo, float hi) float {
     if x < lo { return lo }
     if x > hi { return hi }
     x
 }
+
 func sign_f(float x) float {
     if x > 0 { return 1.0 }
     if x < 0 { return -1.0 }
     0.0
 }
+
 func mod(int a, int b) int {
     if b == 0 { return 0 }
     int r = a - (a / b) * b
     if (r > 0 && b < 0) || (r < 0 && b > 0) { r = r + b }
     r
 }
+
 func fmod(float a, float b) float {
     float r = a - (a as int as float / b as int as float) * b
     r
 }
+
 func square(float x) float { x * x }
+
 func cube(float x) float { x * x * x }
+
 func pow(float base, float exp_val) float {
     if exp_val == 0.0 { return 1.0 }
     if base == 0.0 { return 0.0 }
@@ -54,6 +64,7 @@ func pow(float base, float exp_val) float {
     if negative { return 1.0 / result }
     result
 }
+
 func sqrt(float x) float {
     if x < 0.0 { return 0.0 }
     if x == 0.0 || x == 1.0 { return x }
@@ -65,14 +76,17 @@ func sqrt(float x) float {
     }
     g
 }
+
 func cbrt(float x) float {
     if x >= 0.0 { pow(x, 1.0 / 3.0) }
     else { -pow(-x, 1.0 / 3.0) }
 }
+
 func rsqrt(float x) float {
     if x <= 0.0 { return INF }
     1.0 / sqrt(x)
 }
+
 func hypot(float a, float b) float {
     float abs_a = abs(a)
     float abs_b = abs(b)
@@ -85,6 +99,7 @@ func hypot(float a, float b) float {
         return abs_b * sqrt(1.0 + ratio * ratio)
     }
 }
+
 func exp(float x) float {
     if x > 709.78 { return INF }
     if x < -745.13 { return 0.0 }
@@ -106,12 +121,14 @@ func exp(float x) float {
     if neg { return 1.0 / sum }
     sum
 }
+
 func expm1(float x) float {
     if abs(x) < 0.01 {
         return x + x*x/2.0 + x*x*x/6.0
     }
     exp(x) - 1.0
 }
+
 func log(float x) float {
     if x <= 0.0 { return NEG_INF }
     if x == 1.0 { return 0.0 }
@@ -127,14 +144,18 @@ func log(float x) float {
     }
     y + guess
 }
+
 func log1p(float x) float {
     if abs(x) < 0.01 {
         return x - x*x/2.0 + x*x*x/3.0
     }
     log(1.0 + x)
 }
+
 func log10(float x) float { log(x) / LN10 }
+
 func log2(float x) float { log(x) / LN2 }
+
 func sin(float x) float {
     float TWO_PI = 2.0 * PI
     x = x - ((x / TWO_PI) as int as float) * TWO_PI
@@ -155,9 +176,11 @@ func sin(float x) float {
     }
     sum
 }
+
 func cos(float x) float {
     sin(x + PI / 2.0)
 }
+
 func tan(float x) float {
     float c = cos(x)
     if abs(c) < EPSILON {
@@ -165,6 +188,7 @@ func tan(float x) float {
     }
     sin(x) / c
 }
+
 func asin(float x) float {
     if x > 1.0 { x = 1.0 }
     if x < -1.0 { x = -1.0 }
@@ -180,9 +204,11 @@ func asin(float x) float {
     }
     guess
 }
+
 func acos(float x) float {
     PI / 2.0 - asin(x)
 }
+
 func atan(float x) float {
     if x > 1e10 { return PI / 2.0 }
     if x < -1e10 { return -PI / 2.0 }
@@ -205,6 +231,7 @@ func atan(float x) float {
     }
     sum
 }
+
 func atan2(float y, float x) float {
     if x > 0.0 { return atan(y / x) }
     if x < 0.0 && y >= 0.0 { return atan(y / x) + PI }
@@ -213,92 +240,117 @@ func atan2(float y, float x) float {
     if y < 0.0 { return -PI / 2.0 }
     0.0
 }
+
 func deg2rad(float degrees) float { degrees * PI / 180.0 }
+
 func rad2deg(float radians) float { radians * 180.0 / PI }
+
 func sinh(float x) float {
     (exp(x) - exp(-x)) / 2.0
 }
+
 func cosh(float x) float {
     (exp(x) + exp(-x)) / 2.0
 }
+
 func tanh_h(float x) float {
     float ep = exp(x)
     float em = exp(-x)
     (ep - em) / (ep + em)
 }
+
 func asinh(float x) float {
     log(x + sqrt(x*x + 1.0))
 }
+
 func acosh(float x) float {
     log(x + sqrt(x*x - 1.0))
 }
+
 func atanh(float x) float {
     log((1.0 + x) / (1.0 - x)) / 2.0
 }
+
 func ceil(float x) float {
     int ix = x as int
     if x > (ix as float) && x >= 0.0 { return (ix + 1) as float }
     if x != (ix as float) && x < 0.0 { return (ix as float) }
     x
 }
+
 func floor(float x) float {
     int ix = x as int
     if x < (ix as float) && x < 0.0 { return (ix - 1) as float }
     if x != (ix as float) && x >= 0.0 { return (ix as float) }
     x
 }
+
 func round_f(float x) float {
     if x >= 0.0 { floor(x + 0.5) }
     else { ceil(x - 0.5) }
 }
+
 func trunc(float x) float {
     (x as int) as float
 }
+
 func sigmoid(float x) float {
     if x > 500.0 { return 1.0 }
     if x < -500.0 { return 0.0 }
     float ep = exp(-x)
     1.0 / (1.0 + ep)
 }
+
 func relu(float x) float {
     if x < 0.0 { return 0.0 }
     x
 }
+
 func leaky_relu(float x, float alpha) float {
     if x < 0.0 { return x * alpha }
     x
 }
+
 func gelu(float x) float {
     float SQRT_2_OVER_PI = 0.7978845608028654
     float inner = SQRT_2_OVER_PI * (x + 0.044715 * x * x * x)
     0.5 * x * (1.0 + tanh_h(inner))
 }
+
 func silu(float x) float { x * sigmoid(x) }
+
 func softplus(float x) float {
     if x > 20.0 { return x }
     if x < -20.0 { return 0.0 }
     log1p(exp(x))
 }
+
 func elu(float x, float alpha) float {
     if x > 0.0 { return x }
     alpha * (exp(x) - 1.0)
 }
+
 func mish(float x) float {
     x * tanh_h(softplus(x))
 }
+
 func hardswish(float x) float {
     if x < -3.0 { return 0.0 }
     if x > 3.0 { return x }
     x * (x + 3.0) / 6.0
 }
+
 func hardshrink(float x, float lambda) float {
     if x > lambda || x < -lambda { return x }
     0.0
 }
+
 func softsign(float x) float {
     x / (1.0 + abs(x))
 }
+
 func tanh_act(float x) float { tanh_h(x) }
+
 func erf(float x) float {
     float sign = 1.0
     if x < 0.0 { sign = -1.0; x = -x }
@@ -308,9 +360,13 @@ func erf(float x) float {
                  + 0.254829592) * t * exp(-(x * x))
     sign * y
 }
+
 func erfc(float x) float { 1.0 - erf(x) }
+
 func normal_cdf(float x) float { 0.5 * (1.0 + erf(x / SQRT2)) }
+
 func normal_pdf(float x) float { exp(-0.5 * x * x) / (SQRT2 * sqrt(PI)) }
+
 func log_sum_exp(float[] values, int count) float {
     if count <= 0 { return 0.0 }
     float m = values[0]
@@ -327,44 +383,58 @@ func log_sum_exp(float[] values, int count) float {
     }
     m + log(s)
 }
+
 func sigmoid_xent(float x) float {
     if x > 0.0 { return -log(1.0 + exp(-x)) }
     return x - log(1.0 + exp(x))
 }
+
 func lerp(float a, float b, float t) float { a + t * (b - a) }
+
 func inv_lerp(float a, float b, float c) float {
     if abs(b - a) < EPSILON { return 0.0 }
     (c - a) / (b - a)
 }
+
 func smoothstep(float edge0, float edge1, float x) float {
     float t = clamp_f((x - edge0) / (edge1 - edge0), 0.0, 1.0)
     t * t * (3.0 - 2.0 * t)
 }
+
 func smootherstep(float edge0, float edge1, float x) float {
     float t = clamp_f((x - edge0) / (edge1 - edge0), 0.0, 1.0)
     t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
 }
+
 func step(float edge, float x) float {
     if x < edge { return 0.0 }
     1.0
 }
+
 func l1_dist(float a, float b) float { abs(a - b) }
+
 func l2_sq_dist(float a, float b) float { 
     float d = a - b; d * d 
 }
+
 func l2_dist(float a, float b) float { sqrt(l2_sq_dist(a, b)) }
+
 func cosine_sim(float a, float b) float {
     float na = abs(a)
     float nb = abs(b)
     if na < EPSILON || nb < EPSILON { return 0.0 }
     (a * b) / (na * nb)
 }
+
 func is_finite(float x) bool { x > NEG_INF && x < INF }
+
 func is_nan(float x) bool { !(x == x) }
+
 func safe_div(float a, float b, float fallback) float {
     if abs(b) < EPSILON { return fallback }
     a / b
 }
+
 func fmt_float(float val, int decimals) string {
     int ival = val as int
     float frac = val - ival as float

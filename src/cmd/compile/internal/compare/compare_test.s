@@ -1,5 +1,6 @@
 package compile.internal.compare
 use std.vec.vec
+
 func make_field(string name, int offset, int size, bool regular_memory, string type_kind) compare_field {
     compare_field {
         name: name,
@@ -15,6 +16,7 @@ func make_field(string name, int offset, int size, bool regular_memory, string t
         elem_can_panic: false,
     }
 }
+
 func run_compare_tests() int {
     let fields = vec[compare_field]()
     fields.push(make_field("a", 0, 4, true, "int32"))

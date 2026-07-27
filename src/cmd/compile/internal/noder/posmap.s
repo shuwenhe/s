@@ -1,5 +1,6 @@
 package compile.internal.noder
 use std.vec.vec
+
 func build_pos_map(string source) vec[pos_entry] {
     let out = vec[pos_entry]()
     let lines = split_lines(source)
@@ -16,6 +17,7 @@ func build_pos_map(string source) vec[pos_entry] {
     }
     out
 }
+
 func offset_to_pos(vec[pos_entry] table, int offset) pos_entry {
     if table.len() == 0 {
         return pos_entry { offset: offset, line: 1, column: 1 }

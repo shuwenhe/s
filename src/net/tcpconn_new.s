@@ -1,5 +1,6 @@
 package src.net
 import "src.net.internal"
+
 struct TCPAddr {
     string ip
     int port
@@ -10,6 +11,7 @@ func (a *TCPAddr) Network() string {
 func (a *TCPAddr) String() string {
     a.ip + ":" + itoa(a.port)
 }
+
 struct TCPConn {
     *internal.RawSocket
     laddr *TCPAddr
@@ -86,6 +88,7 @@ func (c *TCPConn) SetReusePort(on bool) error {
     }
     c.RawSocket.SetReusePort(on)
 }
+
 func DialTCP(address string, port int, timeout_ms int) (*TCPConn, error) {
     sock, err := internal.NewRawSocket(
         internal.AF_INET,
@@ -108,10 +111,12 @@ func DialTCP(address string, port int, timeout_ms int) (*TCPConn, error) {
         raddr: &TCPAddr{ip: remote_ip, port: remote_port},
     }, nil
 }
+
 struct TCPListener {
     *internal.RawSocket
     addr *TCPAddr
 }
+
 func ListenTCP(address string, port int) (*TCPListener, error) {
     sock, err := internal.NewRawSocket(
         internal.AF_INET,

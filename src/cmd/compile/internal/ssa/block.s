@@ -1,5 +1,6 @@
 package compile.internal.ssa
 use std.vec.vec
+
 struct ssa_block {
     int id
     string kind
@@ -8,6 +9,7 @@ struct ssa_block {
     vec[int] succs
     int control
 }
+
 func make_block(int id, string kind) ssa_block {
     ssa_block {
         id: id,
@@ -18,6 +20,7 @@ func make_block(int id, string kind) ssa_block {
         control: -1,
     }
 }
+
 func block_set_control(mut ssa_block b, int value_id) ssa_block {
     b.control = value_id
     b

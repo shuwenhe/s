@@ -1,4 +1,5 @@
 package src.net.http
+
 struct response {
     string body
     int status

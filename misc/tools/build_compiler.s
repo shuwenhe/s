@@ -4,6 +4,7 @@ use std.env.args as env_args
 use std.fs.file_exists
 use std.prelude.len
 use std.io.println
+
 func main() int {
     let args = env_args()
     if args.len() < 2 {

@@ -1,4 +1,5 @@
 package compile.internal.ssa
+
 func is_const_with(ssa_func f, int id, string lit) bool {
     if id < 0 || id >= f.values.len() {
         return false
@@ -6,6 +7,7 @@ func is_const_with(ssa_func f, int id, string lit) bool {
     let v = f.values[id]
     v.op == op_const() && v.literal == lit
 }
+
 func rewrite_value_generic(mut ssa_func f, int id) bool {
     if id < 0 || id >= f.values.len() {
         return false
@@ -66,6 +68,7 @@ func rewrite_value_generic(mut ssa_func f, int id) bool {
     }
     false
 }
+
 func run_rewrite_generic(mut ssa_func f) int {
     let changed = 0
     let i = 0

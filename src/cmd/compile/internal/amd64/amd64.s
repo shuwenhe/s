@@ -1,4 +1,5 @@
 package compile.internal.amd64
+
 struct arch_info {
 	string link_arch
 	int reg_sp
@@ -11,12 +12,14 @@ struct arch_info {
 	string load_reg_result_hook
 	string spill_arg_reg_hook
 }
+
 struct prog {
 	string op
 	string from
 	string to
 	int offset
 }
+
 struct ssa_value {
 	string op
 	vec[string] args
@@ -25,13 +28,16 @@ struct ssa_value {
 	string aux
 	int reg
 }
+
 struct ssa_block {
 	vec[ssa_value] values
 	vec[ssa_value] controls
 	bool flags_live_at_end
 }
+
 func init() () {
 }
+
 func init_arch_info() arch_info {
 	let info = arch_info {
 		link_arch: "",

@@ -1,5 +1,6 @@
 package compile.internal.ssa
 use std.vec.vec
+
 func run_deadcode(mut ssa_func f) int {
     recompute_uses(f)
     let changed = 0

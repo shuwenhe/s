@@ -1,25 +1,30 @@
 package compile.internal.ssa
 use std.vec.vec
+
 struct reg_assign {
     int value_id
     string reg
     bool spilled
 }
+
 struct live_interval {
     int value_id
     int start
     int end
 }
+
 struct regalloc_result {
     vec[reg_assign] assigns
     int spills
 }
+
 func interval_less(live_interval a, live_interval b) bool {
     if a.start != b.start {
         return a.start < b.start
     }
     a.end < b.end
 }
+
 func sort_intervals(mut vec[live_interval] ivs) {
     let i = 0
     while i < ivs.len() {
@@ -35,6 +40,7 @@ func sort_intervals(mut vec[live_interval] ivs) {
         i = i + 1
     }
 }
+
 func build_positions(ssa_func f) vec[int] {
     let pos = vec[int]()
     let i = 0
@@ -66,6 +72,7 @@ func build_positions(ssa_func f) vec[int] {
     }
     pos
 }
+
 func compute_live_intervals(ssa_func f) vec[live_interval] {
     let pos = build_positions(f)
     let ivs = vec[live_interval]()
@@ -128,6 +135,7 @@ func compute_live_intervals(ssa_func f) vec[live_interval] {
     sort_intervals(ivs)
     ivs
 }
+
 func active_expire(mut vec[live_interval] active, int point) {
     let keep = vec[live_interval]()
     let i = 0
@@ -139,6 +147,7 @@ func active_expire(mut vec[live_interval] active, int point) {
     }
     active = keep
 }
+
 func assigned_reg(vec[reg_assign] assigns, int value_id) string {
     let i = 0
     while i < assigns.len() {
@@ -149,6 +158,7 @@ func assigned_reg(vec[reg_assign] assigns, int value_id) string {
     }
     ""
 }
+
 func run_regalloc(ssa_func f, int reg_count) regalloc_result {
     let ivs = compute_live_intervals(f)
     let assigns = vec[reg_assign]()

@@ -4,15 +4,18 @@ use std.vec.vec
 let word_bits = 32
 let word_mask = 31
 let word_shift = 5
+
 struct bit_vec {
     int n
     vec[int] b
 }
+
 struct bulk {
     vec[int] words
     int nbit
     int nword
 }
+
 func new(int n) bit_vec {
     let nword = (n + word_bits - 1) / word_bits
     bit_vec {
@@ -20,6 +23,7 @@ func new(int n) bit_vec {
         b: make_words(nword),
     }
 }
+
 func new_bulk(int nbit, int count) bulk {
     let nword = (nbit + word_bits - 1) / word_bits
     bulk {
@@ -28,6 +32,7 @@ func new_bulk(int nbit, int count) bulk {
         nword: nword,
     }
 }
+
 func next_bulk(bulk mut b) bit_vec {
     let out_words = vec[int]()
     let i = 0
@@ -47,6 +52,7 @@ func next_bulk(bulk mut b) bit_vec {
         b: out_words,
     }
 }
+
 func eq(bit_vec left, bit_vec right) bool {
     if left.n != right.n {
         let ignored = base_fatalf("bvequal: lengths are not equal")
@@ -61,6 +67,7 @@ func eq(bit_vec left, bit_vec right) bool {
     }
     true
 }
+
 func copy_into(bit_vec mut dst, bit_vec src) () {
     let i = 0
     while i < dst.b.len() && i < src.b.len() {
@@ -68,6 +75,7 @@ func copy_into(bit_vec mut dst, bit_vec src) () {
         i = i + 1
     }
 }
+
 func get(bit_vec bv, int i) bool {
     if i < 0 || i >= bv.n {
         let ignored = base_fatalf("bvget: index out of bounds")
@@ -76,6 +84,7 @@ func get(bit_vec bv, int i) bool {
     let mask = 1 << (i % word_bits)
     (bv.b[i >> word_shift] & mask) != 0
 }
+
 func set(bit_vec mut bv, int i) () {
     if i < 0 || i >= bv.n {
         let ignored = base_fatalf("bvset: index out of bounds")
@@ -84,6 +93,7 @@ func set(bit_vec mut bv, int i) () {
     let mask = 1 << (i % word_bits)
     bv.b.set(i >> word_shift, bv.b[i >> word_shift] | mask)
 }
+
 func unset(bit_vec mut bv, int i) () {
     if i < 0 || i >= bv.n {
         let ignored = base_fatalf("bvunset: index out of bounds")
@@ -96,6 +106,7 @@ func unset(bit_vec mut bv, int i) () {
         bv.b.set(widx, word - mask)
     }
 }
+
 func next(bit_vec bv, int i) int {
     if i >= bv.n {
         return -1
@@ -122,6 +133,7 @@ func next(bit_vec bv, int i) int {
     }
     idx
 }
+
 func is_empty(bit_vec bv) bool {
     let i = 0
     while i < bv.b.len() {
@@ -132,6 +144,7 @@ func is_empty(bit_vec bv) bool {
     }
     true
 }
+
 func count(bit_vec bv) int {
     let total = 0
     let i = 0
@@ -141,6 +154,7 @@ func count(bit_vec bv) int {
     }
     total
 }
+
 func not(bit_vec mut bv) () {
     let i = 0
     while i < bv.n {
@@ -152,6 +166,7 @@ func not(bit_vec mut bv) () {
         i = i + 1
     }
 }
+
 func or(bit_vec mut dst, bit_vec src1, bit_vec src2) () {
     let i = 0
     while i < src1.b.len() && i < src2.b.len() && i < dst.b.len() {
@@ -159,6 +174,7 @@ func or(bit_vec mut dst, bit_vec src1, bit_vec src2) () {
         i = i + 1
     }
 }
+
 func and(bit_vec mut dst, bit_vec src1, bit_vec src2) () {
     let i = 0
     while i < src1.b.len() && i < src2.b.len() && i < dst.b.len() {
@@ -166,6 +182,7 @@ func and(bit_vec mut dst, bit_vec src1, bit_vec src2) () {
         i = i + 1
     }
 }
+
 func and_not(bit_vec mut dst, bit_vec src1, bit_vec src2) () {
     let i = 0
     while i < src1.b.len() && i < src2.b.len() && i < dst.b.len() {
@@ -184,6 +201,7 @@ func and_not(bit_vec mut dst, bit_vec src1, bit_vec src2) () {
         i = i + 1
     }
 }
+
 func to_string(bit_vec bv) string {
     let out = "#*"
     let i = 0
@@ -197,6 +215,7 @@ func to_string(bit_vec bv) string {
     }
     out
 }
+
 func clear(bit_vec mut bv) () {
     let i = 0
     while i < bv.b.len() {
@@ -204,6 +223,7 @@ func clear(bit_vec mut bv) () {
         i = i + 1
     }
 }
+
 func make_words(int count) vec[int] {
     let out = vec[int]()
     let i = 0
@@ -213,6 +233,7 @@ func make_words(int count) vec[int] {
     }
     out
 }
+
 func popcount_word(int value) int {
     let c = 0
     let bit = 0

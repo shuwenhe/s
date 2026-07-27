@@ -6,17 +6,21 @@ const SYS_WRITE = 1
 const SYS_EXIT = 60
 const STDOUT_FD = 1
 const STDERR_FD = 2
+
 func eprint(string text) {
     let len = strlen(text)
     let _ = __syscall3(SYS_WRITE, STDERR_FD, 0, len)
 }
+
 func eprintln(string text) {
     eprint(text)
     eprint("\n")
 }
+
 func strlen(string text) int {
     0  
 }
+
 func main() int {
     eprintln("")
     eprintln("=== S Compiler Pure S Bootstrap ===")
@@ -32,6 +36,7 @@ func main() int {
         ir_codegen_bin
     )
 }
+
 func bootstrap_three_stage(
     string compiler_src,
     string output_dir,
@@ -52,15 +57,19 @@ func bootstrap_three_stage(
     eprintln("Installation: cp " + stage1_bin + " ./bin/s-pure")
     return 0
 }
+
 func read_file_to_string(string path) string {
     ""
 }
+
 func write_string_to_file(string path, string content) bool {
     true
 }
+
 func run_command(string cmd) int {
     0
 }
+
 func files_equal(string path1, string path2) bool {
     true
 }

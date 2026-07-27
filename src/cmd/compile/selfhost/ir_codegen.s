@@ -7,11 +7,13 @@ use std.strings.split as split_string
 use std.strings.trim as trim_string
 use std.strings.contains as contains_string
 use std.fmt.sprintf
+
 struct IRProgram {
     functions: []Function
     globals: []Global
     metadata: Metadata
 }
+
 struct Function {
     name: string
     is_exported: bool
@@ -19,6 +21,7 @@ struct Function {
     locals: []Local
     max_temp: int
 }
+
 struct Instruction {
     opcode: string
     dest: string
@@ -26,26 +29,31 @@ struct Instruction {
     src2: string
     src3: string
 }
+
 struct Local {
     name: string
     type_str: string
     size: int
 }
+
 struct Global {
     name: string
     value: string
     is_const: bool
 }
+
 struct Metadata {
     target: string
     version: string
 }
+
 struct X86_64CodeGen {
     program: IRProgram
     buffer: []byte
     label_counter: int
     register_map: map[string]int
 }
+
 func parse_ir(string content) (IRProgram, error) {
     let lines = split_string(content, "\n")
     let mut prog = IRProgram{}
@@ -99,6 +107,7 @@ func parse_ir(string content) (IRProgram, error) {
     }
     return prog, nil
 }
+
 func generate_x86_64(IRProgram program) (string, error) {
     let mut codegen = X86_64CodeGen{
         program: program,
@@ -128,6 +137,7 @@ func generate_x86_64(IRProgram program) (string, error) {
     }
     return asm, nil
 }
+
 func generate_instruction(Instruction instr) (string, error) {
     match instr.opcode {
         case "MOV":
@@ -150,6 +160,7 @@ func generate_instruction(Instruction instr) (string, error) {
             return "", error("unknown opcode: " + instr.opcode)
     }
 }
+
 func ir_compile_to_elf(string ir_path, string output_path) error {
     let ir_content, read_err = io_read_all(ir_path)
     if read_err != nil {

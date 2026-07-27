@@ -1,4 +1,5 @@
 package compile.internal.base
+
 struct start_heap_state {
     int requested_heap_goal
     int derate_break
@@ -19,12 +20,14 @@ let start_heap = start_heap_state {
     original_gogc: 100,
     active: false,
 }
+
 func gogc_derate(int gogc) int {
     if gogc < start_heap.derate_break {
         return (gogc * start_heap.derate_lo_pct) / 100
     }
     return (gogc * start_heap.derate_hi_pct) / 100
 }
+
 func adjust_starting_heap(int requested_heap_goal, int derate_break, int derate_lo_pct, int derate_hi_pct, bool log_heap_tweaks) start_heap_state {
     if requested_heap_goal <= 0 {
         return start_heap
@@ -52,6 +55,7 @@ func adjust_starting_heap(int requested_heap_goal, int derate_break, int derate_
     start_heap.active = true
     start_heap
 }
+
 func start_heap_done() bool {
     !start_heap.active
 }
