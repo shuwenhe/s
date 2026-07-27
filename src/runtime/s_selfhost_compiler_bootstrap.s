@@ -1,14 +1,11 @@
 package runtime
-
 use compile.internal.compiler.main as compiler_main
 use std.env as env
 use std.io  as io
 use std.vec.vec
 use std.result.result
-
 const BOOTSTRAP_VERSION = "0.2.0"
 const BOOTSTRAP_STAGE   = "stage1"
-
 const CMD_UNKNOWN = 0
 const CMD_CHECK   = 1
 const CMD_BUILD   = 2
@@ -17,21 +14,16 @@ const CMD_LEX     = 4
 const CMD_AST     = 5
 const CMD_VERSION = 6
 const CMD_HELP    = 7
-
 func main() int {
     runtime_init()
     gc_disable()
-
     let args = env.args()
-
     if args.len() < 2 {
         print_usage()
         return 1
     }
-
     let cmd_str = args.get(1).unwrap_or("")
     let cmd     = parse_command(cmd_str)
-
     switch cmd {
         CMD_VERSION : {
             io.println("s compiler " + BOOTSTRAP_VERSION + " (" + BOOTSTRAP_STAGE + ")")
@@ -48,10 +40,8 @@ func main() int {
             compiler_main(args)
         },
     }
-
     0
 }
-
 func parse_command(string s) int {
     if s == "check"   { return CMD_CHECK   }
     if s == "build"   { return CMD_BUILD   }
@@ -65,7 +55,6 @@ func parse_command(string s) int {
     if s == "-h"      { return CMD_HELP    }
     CMD_UNKNOWN
 }
-
 func print_usage() () {
     io.println("s compiler " + BOOTSTRAP_VERSION)
     io.println("")

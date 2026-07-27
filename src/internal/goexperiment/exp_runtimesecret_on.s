@@ -1,9 +1,7 @@
 package src.internal.goexperiment
-
 func exp_runtimesecret_on_unit_name() string {
     "src/internal/goexperiment/exp_runtimesecret_on"
 }
-
 func exp_runtimesecret_on_unit_ready() int {
     1
 }

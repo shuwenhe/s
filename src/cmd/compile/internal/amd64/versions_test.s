@@ -1,5 +1,4 @@
 package compile.internal.amd64
-
 func run_versions_test_suite() int {
     let info = init_arch_info()
     if info.link_arch != "amd64" {
@@ -11,7 +10,6 @@ func run_versions_test_suite() int {
     if info.max_width <= 0 {
         return 1
     }
-
     let v = ssa_value {
         op: "OpAMD64MOVQconst",
         args: vec[string](),
@@ -29,7 +27,6 @@ func run_versions_test_suite() int {
     if !marked.values[0].marked {
         return 1
     }
-
     let simd = ssa_value {
         op: "OpAMD64VADDPS128",
         args: vec[string](),
@@ -41,6 +38,5 @@ func run_versions_test_suite() int {
     if !ssa_gen_simd_value(simd) {
         return 1
     }
-
     0
 }

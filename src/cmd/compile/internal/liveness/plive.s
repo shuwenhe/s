@@ -1,7 +1,5 @@
 package compile.internal.liveness
-
 use std.vec.vec
-
 struct live_stack_slot {
     string name
     int frame_offset
@@ -9,7 +7,6 @@ struct live_stack_slot {
     bool is_arg
     bool addr_taken
 }
-
 struct liveness_emit_blob {
     string args_symbol
     string locals_symbol
@@ -20,11 +17,9 @@ struct liveness_emit_blob {
     vec[string] locals_maps
     vec[string] stack_objects
 }
-
 func plive_emit(string fn_name, vec[live_stack_slot] slots, vec[vec[int]] stack_maps) liveness_emit_blob {
     let args_bits = max_bitmap_words(slots, true)
     let locals_bits = max_bitmap_words(slots, false)
-
     let args_maps = vec[string]()
     let locals_maps = vec[string]()
     let i = 0
@@ -33,7 +28,6 @@ func plive_emit(string fn_name, vec[live_stack_slot] slots, vec[vec[int]] stack_
         locals_maps.push(build_bitmap(locals_bits, slots, stack_maps[i], false))
         i = i + 1
     }
-
     liveness_emit_blob {
         args_symbol: fn_name + ".gcargs",
         locals_symbol: fn_name + ".gclocals",
@@ -45,7 +39,6 @@ func plive_emit(string fn_name, vec[live_stack_slot] slots, vec[vec[int]] stack_
         stack_objects: emit_stack_objects(slots),
     }
 }
-
 func max_bitmap_words(vec[live_stack_slot] slots, bool want_args) int {
     let out = 0
     let i = 0
@@ -62,14 +55,12 @@ func max_bitmap_words(vec[live_stack_slot] slots, bool want_args) int {
     }
     out
 }
-
 func slot_word_index(live_stack_slot slot) int {
     if slot.frame_offset >= 0 {
         return slot.frame_offset / 8
     }
     (-slot.frame_offset) / 8
 }
-
 func build_bitmap(int width, vec[live_stack_slot] slots, vec[int] live, bool want_args) string {
     if width <= 0 {
         return ""
@@ -80,7 +71,6 @@ func build_bitmap(int width, vec[live_stack_slot] slots, vec[int] live, bool wan
         bits.push(0)
         i = i + 1
     }
-
     let k = 0
     while k < slots.len() && k < live.len() {
         let s = slots[k]
@@ -97,10 +87,8 @@ func build_bitmap(int width, vec[live_stack_slot] slots, vec[int] live, bool wan
         }
         k = k + 1
     }
-
     encode_bitmap(bits)
 }
-
 func emit_stack_objects(vec[live_stack_slot] slots) vec[string] {
     let out = vec[string]()
     let i = 0
@@ -113,7 +101,6 @@ func emit_stack_objects(vec[live_stack_slot] slots) vec[string] {
     }
     out
 }
-
 func encode_bitmap(vec[int] bits) string {
     let out = ""
     let i = 0

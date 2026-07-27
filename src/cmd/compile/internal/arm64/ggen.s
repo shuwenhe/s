@@ -1,7 +1,5 @@
 package compile.internal.arm64
-
 use std.vec.vec
-
 struct prog {
     string op
     string from
@@ -9,23 +7,19 @@ struct prog {
     int offset
     string cond
 }
-
 func padframe(int frame) int {
     if (frame % 16) != 0 {
         frame = frame + (16 - (frame % 16))
     }
     frame
 }
-
 func zerorange(vec[prog] insns, int off, int cnt, bool ignored) vec[prog] {
     if (cnt % 8) != 0 {
         return insns
     }
-
     let out = insns
     let at = off + 8
     let left = cnt
-
     while left >= 16 && at < 512 {
         out.push(prog {
             op: "STP",
@@ -37,7 +31,6 @@ func zerorange(vec[prog] insns, int off, int cnt, bool ignored) vec[prog] {
         at = at + 16
         left = left - 16
     }
-
     while left > 0 {
         out.push(prog {
             op: "MOVD",
@@ -49,10 +42,8 @@ func zerorange(vec[prog] insns, int off, int cnt, bool ignored) vec[prog] {
         at = at + 8
         left = left - 8
     }
-
     out
 }
-
 func ginsnop(vec[prog] insns) vec[prog] {
     let out = insns
     out.push(prog {

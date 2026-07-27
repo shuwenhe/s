@@ -1,5 +1,4 @@
 package cmd
-
 use std.io.File as file_type
 use std.io.open as io_open
 use std.io.write as io_write
@@ -8,13 +7,11 @@ use std.strings.split as split_string
 use std.strings.trim as trim_string
 use std.strings.contains as contains_string
 use std.fmt.sprintf
-
 struct IRProgram {
     functions: []Function
     globals: []Global
     metadata: Metadata
 }
-
 struct Function {
     name: string
     is_exported: bool
@@ -22,7 +19,6 @@ struct Function {
     locals: []Local
     max_temp: int
 }
-
 struct Instruction {
     opcode: string
     dest: string
@@ -30,56 +26,46 @@ struct Instruction {
     src2: string
     src3: string
 }
-
 struct Local {
     name: string
     type_str: string
     size: int
 }
-
 struct Global {
     name: string
     value: string
     is_const: bool
 }
-
 struct Metadata {
     target: string
     version: string
 }
-
 struct X86_64CodeGen {
     program: IRProgram
     buffer: []byte
     label_counter: int
     register_map: map[string]int
 }
-
 func parse_ir(string content) (IRProgram, error) {
     let lines = split_string(content, "\n")
     let mut prog = IRProgram{}
     let mut current_func: *Function = nil
     let mut line_idx = 0
-
     if line_idx >= len(lines) {
         return prog, error("empty IR file")
     }
-
     let header = trim_string(lines[line_idx])
     if header != "SSEED-TARGET-V1" {
         return prog, error("invalid IR header: " + header)
     }
     line_idx += 1
-
     for line_idx < len(lines) {
         let line = trim_string(lines[line_idx])
         if line == "" {
             line_idx += 1
             continue
         }
-
         if contains_string(line, "FUNC_BEGIN") {
-
             let parts = split_string(line, "|")
             if len(parts) >= 2 {
                 let func = Function{
@@ -93,7 +79,6 @@ func parse_ir(string content) (IRProgram, error) {
         } else if contains_string(line, "FUNC_END") {
             current_func = nil
         } else if current_func != nil && contains_string(line, "|") {
-
             let parts = split_string(line, "|")
             if len(parts) >= 2 {
                 let instr = Instruction{
@@ -106,35 +91,28 @@ func parse_ir(string content) (IRProgram, error) {
                 current_func.instructions = append(current_func.instructions, instr)
             }
         }
-
         line_idx += 1
     }
-
     prog.metadata = Metadata{
         target: "x86_64",
         version: "1",
     }
-
     return prog, nil
 }
-
 func generate_x86_64(IRProgram program) (string, error) {
     let mut codegen = X86_64CodeGen{
         program: program,
         buffer: []byte{},
         label_counter: 0,
     }
-
     let mut asm = ""
     asm += ".globl main\n"
     asm += ".text\n\n"
-
     for _, func in program.functions {
         asm += "
         asm += func.name + ":\n"
         asm += "    push %rbp\n"
         asm += "    mov %rsp, %rbp\n"
-
         for _, instr in func.instructions {
             let instr_asm, err = generate_instruction(instr)
             if err != nil {
@@ -142,17 +120,14 @@ func generate_x86_64(IRProgram program) (string, error) {
             }
             asm += instr_asm
         }
-
         if func.name == "main" {
             asm += "    xor %eax, %eax\n"
         }
         asm += "    pop %rbp\n"
         asm += "    ret\n\n"
     }
-
     return asm, nil
 }
-
 func generate_instruction(Instruction instr) (string, error) {
     match instr.opcode {
         case "MOV":
@@ -175,24 +150,19 @@ func generate_instruction(Instruction instr) (string, error) {
             return "", error("unknown opcode: " + instr.opcode)
     }
 }
-
 func ir_compile_to_elf(string ir_path, string output_path) error {
-
     let ir_content, read_err = io_read_all(ir_path)
     if read_err != nil {
         return read_err
     }
-
     let program, parse_err = parse_ir(string(ir_content))
     if parse_err != nil {
         return parse_err
     }
-
     let asm_code, gen_err = generate_x86_64(program)
     if gen_err != nil {
         return gen_err
     }
-
     let temp_asm = "/tmp/s_compiler_generated.s"
     let asm_file = io_open(temp_asm, "w")
     if asm_file == nil {
@@ -200,6 +170,5 @@ func ir_compile_to_elf(string ir_path, string output_path) error {
     }
     io_write(asm_file, []byte(asm_code))
     asm_file.close()
-
     return nil
 }

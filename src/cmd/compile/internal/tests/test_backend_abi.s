@@ -1,5 +1,4 @@
 package compile.internal.tests.test_backend_abi
-
 use compile.internal.backend_elf64.build_abi_emit_plan
 use compile.internal.backend_elf64.build_dwarf_like_artifact
 use compile.internal.backend_elf64.build_gc_metadata_artifact
@@ -29,14 +28,12 @@ use std.fs.make_temp_dir
 use std.fs.read_to_string
 use std.fs.write_text_file
 use std.prelude.slice
-
 func run_backend_abi_suite() int {
     let src = "package demo.abi\nfunc pair(int a, int b) (int, int) {\n  a\n}\nfunc big(result[int, string] a, result[int, string] b, result[int, string] c) result[int, string] {\n  a\n}\nfunc triple(int a, int b, int c) (int, int, int) {\n  a\n}"
     let parsed = parse_source(src)
     if parsed.is_err() {
         return 1
     }
-
     let plan = build_abi_emit_plan("amd64", parsed.unwrap())
     if !contains(plan, "abi-emit version=1 arch=amd64") {
         return 1
@@ -74,7 +71,6 @@ func run_backend_abi_suite() int {
     if !contains(plan, "abi_spill=") {
         return 1
     }
-
     if !contains(plan, "fn big") {
         return 1
     }
@@ -84,14 +80,12 @@ func run_backend_abi_suite() int {
     if !contains(plan, "ret->sret:%rdi") {
         return 1
     }
-
     if !contains(plan, "fn triple") {
         return 1
     }
     if !contains(plan, "tuple_parts=3") {
         return 1
     }
-
     let dwarf = build_dwarf_like_artifact(parsed.unwrap(), "ssa pair blocks=2 values=4 loops=1 dbg_lines=3", "ssa.debug pair | value#0 reg=r10 | let v0 -> r10")
     if !contains(dwarf, "section .debug_loc") {
         return 1
@@ -114,7 +108,6 @@ func run_backend_abi_suite() int {
     if !contains(dwarf, "metric location_continuity=") {
         return 1
     }
-
     let gcmap = build_gc_metadata_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 loops=1 spills=2 rollback=0 proof_fail=0")
     if !contains(gcmap, "gcmap version=1") {
         return 1
@@ -140,7 +133,6 @@ func run_backend_abi_suite() int {
     if !contains(gcmap, "contract e2e_safepoint=") {
         return 1
     }
-
     let matrix = build_abi_machine_matrix_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 spills=2")
     if !contains(matrix, "abi-matrix version=1") {
         return 1
@@ -154,7 +146,6 @@ func run_backend_abi_suite() int {
     if !contains(matrix, "cross_arch_consistency=") {
         return 1
     }
-
     let toolchain = build_toolchain_compat_artifact(parsed.unwrap(), "amd64")
     if !contains(toolchain, "toolchain-compat version=1") {
         return 1
@@ -186,7 +177,6 @@ func run_backend_abi_suite() int {
     if !contains(toolchain, "go_equiv ") {
         return 1
     }
-
     let go_asm_src = "TEXT main(SB),$0-0\nMOVQ $7, AX\nADDQ $3, AX\nRET\n"
     let gas = translate_go_plan9_to_gas("amd64", go_asm_src)
     if gas.is_err() {
@@ -204,17 +194,14 @@ func run_backend_abi_suite() int {
     if !contains(gas.unwrap(), "ret") {
         return 1
     }
-
     let asm_artifact = build_go_asm_bridge_artifact("amd64", go_asm_src)
     if validate_go_asm_bridge_artifact(asm_artifact).is_err() {
         return 1
     }
-
     let bad_go_asm = "MOVQ $1, AX\nRET\n"
     if translate_go_plan9_to_gas("amd64", bad_go_asm).is_ok() {
         return 1
     }
-
     let go_asm_ctrl = "TEXT helper(SB),$0-0\nMOVQ ret+8(FP), AX\nRET\nTEXT main(SB),$0-0\nCALL helper(SB)\nCMPQ AX, AX\nJE done\nJMP done\ndone:\nRET\n"
     let gas_ctrl = translate_go_plan9_to_gas("amd64", go_asm_ctrl)
     if gas_ctrl.is_err() {
@@ -235,12 +222,10 @@ func run_backend_abi_suite() int {
     if !contains(gas_ctrl.unwrap(), "done:") {
         return 1
     }
-
     let bad_go_asm_base = "TEXT main(SB),$0-0\nMOVQ 0(X0), AX\nRET\n"
     if translate_go_plan9_to_gas("amd64", bad_go_asm_base).is_ok() {
         return 1
     }
-
     let perf = build_backend_perf_baseline_artifact(
         "amd64",
         "ssa pair blocks=2 values=4 spills=2 splits=1 remat=1 sched_tp=8 sched_lat=5",
@@ -274,7 +259,6 @@ func run_backend_abi_suite() int {
     if !contains(perf, "runtime_gc cycles=") {
         return 1
     }
-
     let opt = build_midend_opt_artifact(
         "midend inline_sites=2 escape_sites=1 devirtualized=1 cross_pkg_inline=0 const_prop=1 sroutine_sites=1 select_weighted_sites=1 select_timeout_sites=1 select_send_sites=1 const_fold_hits=2 ipo_synergy=3 pass_rm_unreachable=1 pass_fold_branch=1 pass_simplify_j2r=0 pass_trim_unit=0 pass_dedup=1"
     )
@@ -293,7 +277,6 @@ func run_backend_abi_suite() int {
     if validate_midend_opt_artifact(opt).is_err() {
         return 1
     }
-
     let e2e_temp = make_temp_dir("s-opt-e2e-")
     if e2e_temp.is_err() {
         return 1
@@ -314,7 +297,6 @@ func run_backend_abi_suite() int {
     if build(e2e_src_path, e2e_out_path + ".badmargin", "oops") == 0 {
         return 1
     }
-
     let e2e_nomaint_src_path = e2e_dir + "/missing_main_demo.s"
     let e2e_nomaint_out_path = e2e_dir + "/missing_main_demo"
     let e2e_missing_main_src = "package demo.nomian\nfunc helper() int {\n  0\n}"
@@ -324,7 +306,6 @@ func run_backend_abi_suite() int {
     if build(e2e_nomaint_src_path, e2e_nomaint_out_path, "") == 0 {
         return 1
     }
-
     let e2e_semantic_src_path = e2e_dir + "/semantic_fail_demo.s"
     let e2e_semantic_out_path = e2e_dir + "/semantic_fail_demo"
     let e2e_semantic_fail_src = "package demo.semanticfail\nfunc main() int {\n  missing()\n  0\n}"
@@ -334,7 +315,6 @@ func run_backend_abi_suite() int {
     if build(e2e_semantic_src_path, e2e_semantic_out_path, "") == 0 {
         return 1
     }
-
     let cfi = build_cfi_artifact("amd64", "ssa pair blocks=2 spills=1 reloads=1", "ssa.debug pair")
     if !contains(cfi, ".cfi_startproc") {
         return 1
@@ -345,7 +325,6 @@ func run_backend_abi_suite() int {
     if validate_cfi_artifact(cfi).is_err() {
         return 1
     }
-
     if validate_ssa_abi_contracts("amd64", "spills=3 reloads=1 call_pressure=2").is_ok() {
         return 1
     }
@@ -358,7 +337,6 @@ func run_backend_abi_suite() int {
     if validate_ssa_abi_contracts("amd64", "spills=1 reloads=2 call_pressure=2 caller_restore_missing=1").is_ok() {
         return 1
     }
-
     let wasm_probe = build_wasm_binary_probe_plan("/tmp/out.wasm")
     if !contains(wasm_probe, "wasm-objdump -x /tmp/out.wasm") {
         return 1
@@ -369,12 +347,10 @@ func run_backend_abi_suite() int {
     if !contains(wasm_probe, "grep -q _start") {
         return 1
     }
-
     let wasm_source = "__attribute__((__import_module__(\"wasi_snapshot_preview1\"), __import_name__(\"fd_write\")))\nextern int fd_write();\n__attribute__((__import_module__(\"wasi_snapshot_preview1\"), __import_name__(\"proc_exit\")))\nextern void proc_exit(int);\nint s_main(void){return 0;}\nvoid _start(void){proc_exit(s_main());}"
     if validate_wasi_contract_source(wasm_source).is_err() {
         return 1
     }
-
     let fn_map_src = "package demo.fnmap\nfunc arm64_init() int {\n  println(\"arm64\")\n  0\n}\nfunc amd64_init() int {\n  println(\"amd64\")\n  0\n}\nfunc main() int {\n  let archInits = map[string]func() int{\"amd64\": amd64_init, \"arm64\": arm64_init}\n  let goarch = \"arm64\"\n  let init = archInits[goarch]\n  init()\n  0\n}"
     let fn_map_parsed = parse_source(fn_map_src)
     if fn_map_parsed.is_err() {
@@ -401,7 +377,6 @@ func run_backend_abi_suite() int {
     if fn_map_exit.unwrap() != 0 {
         return 1
     }
-
     let defer_src = "package demo.defer\nfunc main() int {\n  defer println(\"cleanup\")\n  println(\"work\")\n  0\n}"
     let defer_parsed = parse_source(defer_src)
     if defer_parsed.is_err() {
@@ -431,7 +406,6 @@ func run_backend_abi_suite() int {
     if defer_exit.unwrap() != 0 {
         return 1
     }
-
     let recover_src = "package demo.recover\nfunc handle() int {\n  recover()\n  println(\"recovered\")\n  0\n}\nfunc main() int {\n  defer handle()\n  panic(\"boom\")\n  0\n}"
     let recover_parsed = parse_source(recover_src)
     if recover_parsed.is_err() {
@@ -458,7 +432,6 @@ func run_backend_abi_suite() int {
     if recover_exit.unwrap() != 0 {
         return 1
     }
-
     let sroutine_src = "package demo.sroutine\nfunc worker() int {\n  println(\"worker\")\n  0\n}\nfunc main() int {\n  sroutine worker()\n  println(\"main\")\n  0\n}"
     let sroutine_parsed = parse_source(sroutine_src)
     if sroutine_parsed.is_err() {
@@ -488,7 +461,6 @@ func run_backend_abi_suite() int {
     if sroutine_exit.unwrap() != 0 {
         return 1
     }
-
     let sroutine_chan_src = "package demo.sroutinechan\nfunc producer1() int {\n  chan_send(ch1, 1)\n  chan_send(ch1, 4)\n  0\n}\nfunc producer2() int {\n  chan_send(ch2, 2)\n  0\n}\nfunc main() int {\n  let ch1 = chan_make(3)\n  let ch2 = chan_make(3)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv_default(ch1, ch2))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
     let sroutine_chan_parsed = parse_source(sroutine_chan_src)
     if sroutine_chan_parsed.is_err() {
@@ -533,7 +505,6 @@ func run_backend_abi_suite() int {
     if sroutine_chan_metrics.unwrap().channel_recvs != 3 {
         return 1
     }
-
     let gc_collect_src = "package demo.gc\nfunc allocate_temp() int {\n  let temp = chan_make(1)\n  0\n}\nfunc main() int {\n  let survivor = chan_make(1)\n  allocate_temp()\n  gc_collect()\n  println(survivor)\n  0\n}"
     let gc_collect_parsed = parse_source(gc_collect_src)
     if gc_collect_parsed.is_err() {
@@ -566,7 +537,6 @@ func run_backend_abi_suite() int {
     if gc_collect_metrics.unwrap().gc_live_channels != 1 {
         return 1
     }
-
     let gc_barrier_src = "package demo.gcbarrier\nfunc main() int {\n  let outer = chan_make(1)\n  let inner = chan_make(1)\n  select_send(outer, inner)\n  gc_collect()\n  println(chan_recv(outer))\n  0\n}"
     let gc_barrier_parsed = parse_source(gc_barrier_src)
     if gc_barrier_parsed.is_err() {
@@ -596,7 +566,6 @@ func run_backend_abi_suite() int {
     if gc_barrier_metrics.unwrap().gc_live_channels != 2 {
         return 1
     }
-
     let gc_auto_src = "package demo.gcauto\nfunc alloc_many() int {\n  let a = chan_make(1)\n  let b = chan_make(1)\n  let c = chan_make(1)\n  0\n}\nfunc main() int {\n  let survivor = chan_make(1)\n  alloc_many()\n  println(survivor)\n  0\n}"
     let gc_auto_parsed = parse_source(gc_auto_src)
     if gc_auto_parsed.is_err() {
@@ -626,7 +595,6 @@ func run_backend_abi_suite() int {
     if gc_auto_metrics.unwrap().gc_live_channels != 1 {
         return 1
     }
-
     let weighted_timeout_src = "package demo.weighted\nfunc producer1() int {\n  chan_send(ch1, 7)\n  0\n}\nfunc producer2() int {\n  chan_send(ch2, 9)\n  0\n}\nfunc main() int {\n  let ch1 = chan_make(2)\n  let ch2 = chan_make(2)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv_weighted(ch1, 2, ch2, 1))\n  println(select_recv_timeout(ch1, ch2, 3))\n  println(select_recv_timeout(ch1, ch2, 3))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
     let weighted_timeout_parsed = parse_source(weighted_timeout_src)
     if weighted_timeout_parsed.is_err() {
@@ -665,7 +633,6 @@ func run_backend_abi_suite() int {
     if weighted_timeout_metrics.unwrap().select_default_fallbacks != 0 {
         return 1
     }
-
     let select_send_src = "package demo.selectsend\nfunc main() int {\n  let ch1 = chan_make(1)\n  let ch2 = chan_make(1)\n  select_send(ch1, 5, ch2, 6)\n  println(chan_recv(ch1))\n  select_send_default(ch1, 7, ch2, 8)\n  println(chan_recv(ch2))\n  select_send_timeout(ch1, 9, ch2, 10, 2)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
     let select_send_parsed = parse_source(select_send_src)
     if select_send_parsed.is_err() {
@@ -707,7 +674,6 @@ func run_backend_abi_suite() int {
     if select_send_metrics.unwrap().channel_sends != 3 {
         return 1
     }
-
     let select_syntax_src = "package demo.selectsyntax\nfunc main() int {\n  let ch1 = chan_make(1)\n  let ch2 = chan_make(1)\n  chan_send(ch1, 5)\n  chan_send(ch2, 7)\n  println(select {\n    case recv(ch1, ch2):\n  })\n  select {\n    case recv(ch1, ch2):\n    case timeout(3):\n  }\n  select {\n    case send(ch1, 8, ch2, 9):\n    case default:\n  }\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
     let select_syntax_parsed = parse_source(select_syntax_src)
     if select_syntax_parsed.is_err() {
@@ -743,7 +709,6 @@ func run_backend_abi_suite() int {
     if select_syntax_metrics.unwrap().select_default_fallbacks != 0 {
         return 1
     }
-
     let sroutine_recover_src = "package demo.srrecover\nfunc recover_worker() int {\n  recover()\n  println(\"recover-ok\")\n  0\n}\nfunc worker() int {\n  defer recover_worker()\n  println(msg)\n  panic(\"boom\")\n  0\n}\nfunc main() int {\n  let msg = \"captured\"\n  sroutine worker()\n  println(\"main\")\n  0\n}"
     let sroutine_recover_parsed = parse_source(sroutine_recover_src)
     if sroutine_recover_parsed.is_err() {
@@ -769,7 +734,6 @@ func run_backend_abi_suite() int {
     if sroutine_recover_writes.unwrap()[2].text != "main\n" {
         return 1
     }
-
     let const_iota_src = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() int {\n  println(C)\n  0\n}"
     let const_iota_parsed = parse_source(const_iota_src)
     if const_iota_parsed.is_err() {
@@ -789,7 +753,6 @@ func run_backend_abi_suite() int {
     if const_iota_writes.unwrap()[0].text != "10\n" {
         return 1
     }
-
     let const_iota_fail_src = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() int {\n  0\n}"
     let const_iota_fail_parsed = parse_source(const_iota_fail_src)
     if const_iota_fail_parsed.is_err() {
@@ -806,10 +769,8 @@ func run_backend_abi_suite() int {
     if !contains(const_iota_fail_writes.unwrap_err().message, "const evaluation failed") {
         return 1
     }
-
     0
 }
-
 func contains(string text, string needle) bool {
     if needle == "" {
         return true
@@ -817,7 +778,6 @@ func contains(string text, string needle) bool {
     if text.len() < needle.len() {
         return false
     }
-
     let i = 0
     while i <= text.len() - needle.len() {
         if slice(text, i, i + needle.len()) == needle {
@@ -827,7 +787,6 @@ func contains(string text, string needle) bool {
     }
     false
 }
-
 func contains_all(string text, vec[string] needles) bool {
     let i = 0
     while i < needles.len() {
@@ -838,7 +797,6 @@ func contains_all(string text, vec[string] needles) bool {
     }
     true
 }
-
 func read_artifact_or_empty(string path) string {
     let content = read_to_string(path)
     if content.is_err() {
@@ -846,7 +804,6 @@ func read_artifact_or_empty(string path) string {
     }
     content.unwrap()
 }
-
 func require_artifact_markers(string path, vec[string] markers) string {
     let content = read_artifact_or_empty(path)
     if content == "" {
@@ -857,37 +814,30 @@ func require_artifact_markers(string path, vec[string] markers) string {
     }
     content
 }
-
 func validate_emitted_artifacts(string out_path) bool {
     let opt = require_artifact_markers(out_path + ".opt", vec[string]("midend-opt version=1", "scheduler_opt sroutine_sites=1", "select_timeout_sites=1", "select_send_sites=1"))
     if opt == "" || validate_midend_opt_artifact(opt).is_err() {
         return false
     }
-
     let perf = require_artifact_markers(out_path + ".perf", vec[string]("perf-baseline version=1", "scheduler queue_policy=priority-rr select_policy=multi-chan-priority-rr", "select_timeout_sites=1", "select_send_sites=1", "scheduler_counters", "runtime_sched sroutine_scheduled=1", "runtime_gc cycles=", "heap_goal="))
     if perf == "" || validate_backend_perf_baseline(perf).is_err() {
         return false
     }
-
     let toolchain = require_artifact_markers(out_path + ".toolchain", vec[string]("toolchain-compat version=1", "asm=go-plan9-min", "go_asm syntax=plan9 translator=enabled status=ok"))
     if toolchain == "" || validate_toolchain_compat_artifact(toolchain).is_err() {
         return false
     }
-
     if require_artifact_markers(out_path + ".gcmap", vec[string]("gcmap version=1", "collector plan=go-like-mark-sweep", "safepoints=alloc-trigger", "ptr_bitmap=", "contract e2e_safepoint=")) == "" {
         return false
     }
-
     let cfi = require_artifact_markers(out_path + ".cfi", vec[string]("cfi version=1", ".cfi_startproc", ".cfi_def_cfa", ".cfi_endproc"))
     if cfi == "" || validate_cfi_artifact(cfi).is_err() {
         return false
     }
-
     let dwarf = require_artifact_markers(out_path + ".dwarf", vec[string]("section .debug_info", "section .debug_line", "section .debug_loc", "section .debug_ranges", "policy debug_budget_mode=", "metric location_continuity="))
     if dwarf == "" || validate_dwarf_consumability(dwarf, "ssa dbg_budget=30").is_err() {
         return false
     }
-
     if require_artifact_markers(out_path + ".stackmap", vec[string]("stackmap version=1", "fn main slots=", "bitmap=", "callee_saved=")) == "" {
         return false
     }
@@ -906,6 +856,5 @@ func validate_emitted_artifacts(string out_path) bool {
     if require_artifact_markers(out_path + ".dbg", vec[string]("ssa\n", "\n\ndebug\n", "value#", "dbg_lines=")) == "" {
         return false
     }
-
     true
 }

@@ -1,7 +1,5 @@
 package compile.internal.ssa
-
 use std.vec.vec
-
 func run_schedule(mut ssa_func f) int {
     let changed = 0
     let bi = 0

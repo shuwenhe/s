@@ -1,28 +1,23 @@
 package src.net.internal
-
 const AF_UNSPEC = 0
 const AF_INET = 2
 const AF_INET6 = 10
 const AF_UNIX = 1
 const AF_NETLINK = 16
 const AF_PACKET = 17
-
 const SOCK_STREAM = 1
 const SOCK_DGRAM = 2
 const SOCK_RAW = 3
 const SOCK_SEQPACKET = 5
 const SOCK_NONBLOCK = 2048
 const SOCK_CLOEXEC = 524288
-
 const IPPROTO_IP = 0
 const IPPROTO_TCP = 6
 const IPPROTO_UDP = 17
 const IPPROTO_ICMP = 1
-
 const SOL_SOCKET = 1
 const SOL_TCP = 6
 const SOL_UDP = 17
-
 const SO_REUSEADDR = 2
 const SO_TYPE = 3
 const SO_ERROR = 4
@@ -35,18 +30,15 @@ const SO_OOBINLINE = 10
 const SO_RCVTIMEO = 20
 const SO_SNDTIMEO = 21
 const SO_REUSEPORT = 15
-
 const TCP_NODELAY = 1
 const TCP_MAXSEG = 2
 const TCP_CORK = 3
 const TCP_KEEPIDLE = 4
 const TCP_KEEPINTVL = 5
 const TCP_KEEPCNT = 6
-
 const SHUT_RD = 0
 const SHUT_WR = 1
 const SHUT_RDWR = 2
-
 const POLLIN = 1
 const POLLPRI = 2
 const POLLOUT = 4
@@ -57,7 +49,6 @@ const POLLRDNORM = 64
 const POLLRDBAND = 128
 const POLLWRNORM = 256
 const POLLWRBAND = 512
-
 const EPERM = 1
 const ENOENT = 2
 const ESRCH = 3
@@ -117,14 +108,12 @@ const ENOPROTOOPT = 92
 const EPROTONOSUPPORT = 93
 const ESOCKTNOSUPPORT = 94
 const EOPNOTSUPP = 95
-
 struct SockaddrInet {
     u16 sin_family
     u16 sin_port
     u32 sin_addr
     []byte sin_zero
 }
-
 struct SockaddrInet6 {
     u16 sin6_family
     u16 sin6_port
@@ -132,18 +121,15 @@ struct SockaddrInet6 {
     []byte sin6_addr
     u32 sin6_scope_id
 }
-
 struct Sockaddr {
     u16 sa_family
     []byte sa_data
 }
-
 struct Pollfd {
     int fd
     i16 events
     i16 revents
 }
-
 struct RawSocket {
     int fd
     int family
@@ -153,34 +139,28 @@ struct RawSocket {
     i64 read_deadline_ns
     i64 write_deadline_ns
 }
-
 struct TCPConnState {
     RawSocket sock
     []byte local_addr
     []byte remote_addr
 }
-
 struct UDPConnState {
     RawSocket sock
     []byte local_addr
     []byte remote_addr
 }
-
 struct TCPListenerState {
     RawSocket sock
     []byte addr
 }
-
 struct SocketError {
     int errno
     string message
     string syscall_name
 }
-
 func (e *SocketError) Error() string {
     e.syscall_name + ": " + e.message
 }
-
 func NewSocketError(errno: int, syscall_name: string) *SocketError {
     var msg string
     case errno {
@@ -204,18 +184,15 @@ func NewSocketError(errno: int, syscall_name: string) *SocketError {
     EPERM → msg = "operation not permitted"
     default → msg = "errno: " + itoa(errno)
     }
-
     &SocketError{
         errno: errno,
         message: msg,
         syscall_name: syscall_name,
     }
 }
-
 func IsTemporaryError(errno: int) bool {
     errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR
 }
-
 func IsTimeoutError(errno: int) bool {
     errno == ETIMEDOUT
 }

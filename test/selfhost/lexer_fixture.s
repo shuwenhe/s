@@ -1,5 +1,4 @@
 package demo.lex
-
 func add(int left, int right) int {
     let message = "sum"
 	let ratio = 12.50e-2

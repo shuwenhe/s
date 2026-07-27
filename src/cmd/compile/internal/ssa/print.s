@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func dump_func(ssa_func f) string {
     let out = "ssa-func " + f.name + "\n"
     let bi = 0

@@ -1,13 +1,10 @@
 package compile.internal.ssa
-
 use std.vec.vec
-
 struct dom_tree {
     vec[int] block_ids
     vec[int] idom
     vec[int] depth
 }
-
 func dom_index(dom_tree t, int block_id) int {
     let i = 0
     while i < t.block_ids.len() {
@@ -18,12 +15,10 @@ func dom_index(dom_tree t, int block_id) int {
     }
     -1
 }
-
 func run_dom(ssa_func f) dom_tree {
     let ids = vec[int]()
     let idom = vec[int]()
     let depth = vec[int]()
-
     let bi = 0
     while bi < f.blocks.len() {
         ids.push(f.blocks[bi].id)
@@ -42,7 +37,6 @@ func run_dom(ssa_func f) dom_tree {
         }
         bi = bi + 1
     }
-
     bi = 0
     while bi < ids.len() {
         let d = 0
@@ -60,14 +54,12 @@ func run_dom(ssa_func f) dom_tree {
         depth[bi] = d
         bi = bi + 1
     }
-
     dom_tree {
         block_ids: ids,
         idom: idom,
         depth: depth,
     }
 }
-
 func dominates(dom_tree t, int a, int b) bool {
     if a == b {
         return true

@@ -1,24 +1,19 @@
 package compile.internal.ssa
-
 use std.vec.vec
-
 struct line_range {
     int first
     int last
 }
-
 struct xpos_map_entry {
     int file_index
     line_range lines
     sparse_map data
 }
-
 struct xpos_map {
     vec[xpos_map_entry] maps
     int last_index
     int last_slot
 }
-
 func new_xpos_map(vec[int_pair] file_ranges) xpos_map {
     let maps = vec[xpos_map_entry]()
     let i = 0
@@ -42,7 +37,6 @@ func new_xpos_map(vec[int_pair] file_ranges) xpos_map {
         last_slot: -1,
     }
 }
-
 func xpos_map_slot(mut xpos_map m, int file_index) int_pair {
     if file_index == m.last_index && m.last_slot >= 0 {
         return make_int_pair(m.last_slot, 1)
@@ -58,7 +52,6 @@ func xpos_map_slot(mut xpos_map m, int file_index) int_pair {
     }
     make_int_pair(0, 0)
 }
-
 func xpos_map_clear(mut xpos_map m) xpos_map {
     let i = 0
     while i < m.maps.len() {
@@ -69,7 +62,6 @@ func xpos_map_clear(mut xpos_map m) xpos_map {
     m.last_slot = -1
     m
 }
-
 func xpos_map_set(mut xpos_map m, int file_index, int line, int value) xpos_map {
     let slot = xpos_map_slot(m, file_index)
     if slot.right == 0 {
@@ -79,7 +71,6 @@ func xpos_map_set(mut xpos_map m, int file_index, int line, int value) xpos_map 
     m.maps[slot.left].data = sparse_map_set(m.maps[slot.left].data, line - start, value)
     m
 }
-
 func xpos_map_get(mut xpos_map m, int file_index, int line) int_pair {
     let slot = xpos_map_slot(m, file_index)
     if slot.right == 0 {
@@ -88,7 +79,6 @@ func xpos_map_get(mut xpos_map m, int file_index, int line) int_pair {
     let start = m.maps[slot.left].lines.first
     sparse_map_get(m.maps[slot.left].data, line - start)
 }
-
 func xpos_map_contains(mut xpos_map m, int file_index, int line) bool {
     let slot = xpos_map_slot(m, file_index)
     if slot.right == 0 {
