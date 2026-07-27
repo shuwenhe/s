@@ -4,22 +4,22 @@ use std.io.File as file_type
 use std.encoding.binary.write as binary_write
 use std.encoding.binary.little_endian
 
-// ELF x86-64 binary generator in pure S
-// This creates standalone ELF executables without C dependencies
 
-const ELF_MAGIC = 0x464c457f        // "\x7fELF"
-const ELF_CLASS_64 = 2              // 64-bit
-const ELF_DATA_LE = 1               // Little-endian
+
+
+const ELF_MAGIC = 0x464c457f        
+const ELF_CLASS_64 = 2              
+const ELF_DATA_LE = 1               
 const ELF_VERSION = 1
-const ELF_OSABI = 0                 // System V ABI
+const ELF_OSABI = 0                 
 const ELF_ABIVERSION = 0
-const ELF_TYPE_EXEC = 2             // Executable file
+const ELF_TYPE_EXEC = 2             
 const ELF_MACHINE_X86_64 = 0x3E
 
 struct ELFHeader {
     magic: u32
-    class_: u8                       // 1=32-bit, 2=64-bit
-    data: u8                         // 1=LE, 2=BE
+    class_: u8                       
+    data: u8                         
     version: u8
     osabi: u8
     abiversion: u8
@@ -98,7 +98,7 @@ func new_elf_builder() ELFBuilder {
             abiversion: ELF_ABIVERSION,
             type_: ELF_TYPE_EXEC,
             machine: ELF_MACHINE_X86_64,
-            entry: 0x400000,  // Standard entry point for executable
+            entry: 0x400000,  
             header_size: 64,
             program_header_size: 56,
             section_header_size: 64,
@@ -112,38 +112,38 @@ func new_elf_builder() ELFBuilder {
     }
 }
 
-// Add code to the text section
+
 func (builder: &mut ELFBuilder) add_code([]byte code) {
     builder.code_section = append_slice(builder.code_section, code)
 }
 
-// Generate minimal ELF structure for x86-64 executable
+
 func (builder: &mut ELFBuilder) generate() []byte {
     let mut buffer: []byte = []byte{}
 
-    // Write ELF header
-    // This is a simplified version - minimal headers for a working executable
+    
+    
 
-    // For now, return placeholder
-    // Full implementation would write all sections and headers in binary format
+    
+    
     
     return buffer
 }
 
-// More efficient approach: Generate via inline assembly
-// Rather than implement full ELF generator now, we can use GCC for linking
-// but only for the linker step - the code generation is already in S
+
+
+
 
 func generate_elf_from_x86_64_asm(string asm_source, string output_binary) error {
-    // This is a bridge function that:
-    // 1. Receives x86-64 assembly from IR code gen
-    // 2. Uses system gcc to assemble and link
-    // 3. Result is a working executable
-    //
-    // This allows us to be "self-hosting" for the compiler logic
-    // while using proven tools for the final binary generation
-    //
-    // The next phase would implement full ELF generation in S
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     return nil
 }
