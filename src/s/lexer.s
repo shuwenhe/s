@@ -4,17 +4,20 @@ use std.prelude.len
 use std.prelude.slice
 use std.vec.vec
 use std.result.result
+
 struct lex_error {
     string message
     int line
     int column
 }
+
 struct lexer {
     string source
     int index
     int line
     int column
 }
+
 func new_lexer(string source) lexer {
     lexer {
         source: source,
@@ -216,6 +219,7 @@ func (self: lexer) error(string message) lex_error {
             column: self.column,
         }
     }
+
 func is_whitespace(string ch) bool {
     switch ch {
         " " : true,
@@ -225,6 +229,7 @@ func is_whitespace(string ch) bool {
         _ : false,
     }
 }
+
 func is_digit(string ch) bool {
     switch ch {
         "0" : true,
@@ -240,18 +245,22 @@ func is_digit(string ch) bool {
         _ : false,
     }
 }
+
 func is_number_continue(string ch) bool {
     is_digit(ch) || ch == "_"
 }
+
 func is_ident_start(string ch) bool {
     if ch == "_" {
         return true
     }
     is_ascii_alpha(ch)
 }
+
 func is_ident_continue(string ch) bool {
     is_ident_start(ch) || is_digit(ch)
 }
+
 func is_ascii_alpha(string ch) bool {
     switch ch {
         "a" : true,
@@ -309,6 +318,7 @@ func is_ascii_alpha(string ch) bool {
         _ : false,
     }
 }
+
 func is_single_symbol(string ch) bool {
     switch ch {
         "(" : true,
@@ -337,6 +347,7 @@ func is_single_symbol(string ch) bool {
         _ : false,
     }
 }
+
 func is_keyword(string value) bool {
     return value == "func"
 }

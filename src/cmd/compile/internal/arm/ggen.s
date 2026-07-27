@@ -1,5 +1,6 @@
 package compile.internal.arm
 use std.vec.vec
+
 struct prog {
     string op
     string from
@@ -7,6 +8,7 @@ struct prog {
     int offset
     string cond
 }
+
 func zerorange(vec[prog] insns, int off, int cnt, bool r0_ready) vec[prog] {
     if cnt <= 0 {
         return insns
@@ -61,6 +63,7 @@ func zerorange(vec[prog] insns, int off, int cnt, bool r0_ready) vec[prog] {
     }
     out
 }
+
 func ginsnop(vec[prog] insns) vec[prog] {
     let out = insns
     out.push(prog {

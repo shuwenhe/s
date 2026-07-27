@@ -28,6 +28,7 @@ use std.fs.make_temp_dir
 use std.fs.read_to_string
 use std.fs.write_text_file
 use std.prelude.slice
+
 func run_backend_abi_suite() int {
     let src = "package demo.abi\nfunc pair(int a, int b) (int, int) {\n  a\n}\nfunc big(result[int, string] a, result[int, string] b, result[int, string] c) result[int, string] {\n  a\n}\nfunc triple(int a, int b, int c) (int, int, int) {\n  a\n}"
     let parsed = parse_source(src)
@@ -771,6 +772,7 @@ func run_backend_abi_suite() int {
     }
     0
 }
+
 func contains(string text, string needle) bool {
     if needle == "" {
         return true
@@ -787,6 +789,7 @@ func contains(string text, string needle) bool {
     }
     false
 }
+
 func contains_all(string text, vec[string] needles) bool {
     let i = 0
     while i < needles.len() {
@@ -797,6 +800,7 @@ func contains_all(string text, vec[string] needles) bool {
     }
     true
 }
+
 func read_artifact_or_empty(string path) string {
     let content = read_to_string(path)
     if content.is_err() {
@@ -804,6 +808,7 @@ func read_artifact_or_empty(string path) string {
     }
     content.unwrap()
 }
+
 func require_artifact_markers(string path, vec[string] markers) string {
     let content = read_artifact_or_empty(path)
     if content == "" {
@@ -814,6 +819,7 @@ func require_artifact_markers(string path, vec[string] markers) string {
     }
     content
 }
+
 func validate_emitted_artifacts(string out_path) bool {
     let opt = require_artifact_markers(out_path + ".opt", vec[string]("midend-opt version=1", "scheduler_opt sroutine_sites=1", "select_timeout_sites=1", "select_send_sites=1"))
     if opt == "" || validate_midend_opt_artifact(opt).is_err() {

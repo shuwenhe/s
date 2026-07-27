@@ -1,5 +1,6 @@
 package compile.internal.liveness
 use std.vec.vec
+
 struct local_slot {
     string name
     int size
@@ -7,10 +8,12 @@ struct local_slot {
     int align
     int offset
 }
+
 struct merged_locals {
     vec[local_slot] slots
     int frame_size
 }
+
 func merge_locals(vec[local_slot] a, vec[local_slot] b) merged_locals {
     let slots = vec[local_slot]()
     append_unique_slots(slots, a)
@@ -32,6 +35,7 @@ func merge_locals(vec[local_slot] a, vec[local_slot] b) merged_locals {
         frame_size: align_up(cursor, 8),
     }
 }
+
 func append_unique_slots(vec[local_slot] dst, vec[local_slot] src) () {
     let i = 0
     while i < src.len() {
@@ -52,6 +56,7 @@ func append_unique_slots(vec[local_slot] dst, vec[local_slot] src) () {
         i = i + 1
     }
 }
+
 func find_slot_index(vec[local_slot] slots, string name) int {
     let i = 0
     while i < slots.len() {
@@ -62,6 +67,7 @@ func find_slot_index(vec[local_slot] slots, string name) int {
     }
     -1
 }
+
 func align_up(int value, int align) int {
     if align <= 1 {
         return value

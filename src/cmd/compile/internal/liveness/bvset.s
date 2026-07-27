@@ -1,11 +1,14 @@
 package compile.internal.liveness
 use std.vec.vec
+
 struct bv_set {
     vec[vec[int]] rows
 }
+
 func new_bv_set() bv_set {
     bv_set { rows: vec[vec[int]]() }
 }
+
 func bvset_add(vec[vec[int]] rows, vec[int] bits) vec[vec[int]] {
     let normalized = normalize_bits(bits)
     let i = 0
@@ -18,9 +21,11 @@ func bvset_add(vec[vec[int]] rows, vec[int] bits) vec[vec[int]] {
     rows.push(normalized)
     rows
 }
+
 func bvset_extract_unique(bv_set set) vec[vec[int]] {
     set.rows
 }
+
 func normalize_bits(vec[int] bits) vec[int] {
     let out = vec[int]()
     let i = 0
@@ -34,6 +39,7 @@ func normalize_bits(vec[int] bits) vec[int] {
     }
     out
 }
+
 func bitmap_equal(vec[int] left, vec[int] right) bool {
     if left.len() != right.len() {
         return false

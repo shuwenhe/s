@@ -4,9 +4,11 @@ use std.fs.make_temp_dir
 use std.io.eprintln
 use std.process.run_process
 use std.vec.vec
+
 func build(string path, string output, string ssa_margin, bool nostdlib) int {
     build_binary(path, output, ssa_margin, nostdlib)
 }
+
 func run(string path, string ssa_margin, bool nostdlib) int {
     let temp_dir_result = make_temp_dir("s-build-")
     if temp_dir_result.is_err() {

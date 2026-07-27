@@ -1,10 +1,12 @@
 package compile.internal.noder
 use std.vec.vec
+
 struct link_symbol {
     string pkg
     string name
     string kind
 }
+
 func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_symbol] {
     let out = vec[link_symbol]()
     let i = 0
@@ -18,6 +20,7 @@ func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_sy
     }
     out
 }
+
 func emit_link_manifest(vec[link_symbol] syms) string {
     let out = "link-manifest version=1\n"
     let i = 0
@@ -27,11 +30,13 @@ func emit_link_manifest(vec[link_symbol] syms) string {
     }
     out
 }
+
 struct link_symbol {
     string pkg
     string name
     string kind
 }
+
 func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_symbol] {
     let out = vec[link_symbol]()
     let i = 0
@@ -45,6 +50,7 @@ func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_sy
     }
     out
 }
+
 func emit_link_manifest(vec[link_symbol] syms) string {
     let out = "link-manifest version=1\n"
     let i = 0

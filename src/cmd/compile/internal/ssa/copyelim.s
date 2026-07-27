@@ -1,4 +1,5 @@
 package compile.internal.ssa
+
 func run_copyelim(mut ssa_func f) int {
     let changed = 0
     let i = 0

@@ -5,6 +5,7 @@ use std.io.println
 use compile.internal.syntax.read_source
 use compile.internal.syntax.dump_tokens_text
 use compile.internal.syntax.tokenize
+
 func main() int {
     let args = host_args()
     if args.len() < 2 {

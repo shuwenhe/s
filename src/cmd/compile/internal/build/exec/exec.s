@@ -27,6 +27,7 @@ use std.io.eprintln
 use std.io.println
 use std.prelude.char_at
 use std.prelude.len
+
 func run(vec[string] options) int {
     if options[0] == "help" {
         return 0
@@ -109,6 +110,7 @@ func run(vec[string] options) int {
     }
     return 1
 }
+
 func run_test_command(vec[string] options) int {
     let fixtures_root = resolve_fixtures_root(options[1])
     let semantic_result = run_semantic_suite(fixtures_root)
@@ -149,6 +151,7 @@ func run_test_command(vec[string] options) int {
     println("test: ok")
     return 0
 }
+
 func resolve_fixtures_root(string override) string {
     if override != "" {
         return override
@@ -159,6 +162,7 @@ func resolve_fixtures_root(string override) string {
     }
     "cmd/compile/internal/tests/fixtures"
 }
+
 func run_mod_command(vec[string] options) int {
     if options[1] == "init" {
         return run_mod_init(options[2])
@@ -172,6 +176,7 @@ func run_mod_command(vec[string] options) int {
     eprintln("mod command is not supported")
     return 1
 }
+
 func run_mod_index(string dir) int {
     if dir == "" {
         eprintln("mod index failed: directory path required")
@@ -200,6 +205,7 @@ func run_mod_index(string dir) int {
     println("mod index: generated s-package-index.tsv")
     0
 }
+
 func run_mod_init(string module_name) int {
     if !is_valid_module_name(module_name) {
         eprintln("mod init failed: invalid module name")
@@ -223,6 +229,7 @@ func run_mod_init(string module_name) int {
     println("mod init: created s.mod")
     return 0
 }
+
 func run_mod_tidy() int {
     let read_result = read_to_string("s.mod")
     if read_result.is_err() {
@@ -232,6 +239,7 @@ func run_mod_tidy() int {
     println("mod tidy: ok")
     return 0
 }
+
 func is_valid_module_name(string name) bool {
     if name == "" {
         return false
@@ -246,6 +254,7 @@ func is_valid_module_name(string name) bool {
     }
     true
 }
+
 func is_module_name(string path) bool {
     if path == "" {
         return false

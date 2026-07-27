@@ -1,4 +1,5 @@
 package compile.internal.ssa
+
 func check_func(ssa_func f) int {
     let i = 0
     while i < f.values.len() {

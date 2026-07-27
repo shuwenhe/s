@@ -7,11 +7,13 @@ use s.dump_stmt
 use std.option.option
 use std.prelude.to_string
 use std.vec.vec
+
 struct mir_operand {
     string kind
     string value
     string type_name
 }
+
 struct mir_local_slot {
     int id
     string name
@@ -20,26 +22,32 @@ struct mir_local_slot {
     string type_name
     bool copyable
 }
+
 struct mir_assign_stmt {
     int target
     string op
     vec[string] args
 }
+
 struct mir_eval_stmt {
     string op
     vec[string] args
 }
+
 struct mir_move_stmt {
     int target
     mir_operand source
 }
+
 struct mir_copy_stmt {
     int target
     mir_operand source
 }
+
 struct mir_drop_stmt {
     int slot
 }
+
 enum mir_statement {
     assign(mir_assign_stmt),
     eval(mir_eval_stmt),
@@ -47,21 +55,25 @@ enum mir_statement {
     copy(mir_copy_stmt),
     drop(mir_drop_stmt),
 }
+
 struct mir_control_edge {
     string label
     int target
     vec[mir_operand] args
 }
+
 struct mir_terminator {
     string kind
     vec[mir_control_edge] edges
 }
+
 struct mir_basic_block {
     int id
     string label
     vec[mir_statement] statements
     mir_terminator terminator
 }
+
 struct mir_graph {
     string function_name
     vec[mir_basic_block] blocks
@@ -70,6 +82,7 @@ struct mir_graph {
     int entry
     int exit
 }
+
 func lower_function_graph(function_decl function) mir_graph {
     if function.body.is_some() {
         return lower_block_graph(function.sig.name, function.body.unwrap())
@@ -97,6 +110,7 @@ func lower_function_graph(function_decl function) mir_graph {
         exit: 0,
     }
 }
+
 func lower_block_graph(string function_name, block_expr block) mir_graph {
     let statements = vec[mir_statement]()
     let index = 0
@@ -143,6 +157,7 @@ func lower_block_graph(string function_name, block_expr block) mir_graph {
         exit: 0,
     }
 }
+
 func dump_graph(mir_graph graph) string {
     let out = "mir " + graph.function_name
         + " blocks=" + to_string(graph.blocks.len())
@@ -159,13 +174,16 @@ func dump_graph(mir_graph graph) string {
     }
     out
 }
+
 func block_count(mir_graph graph) int {
     graph.blocks.len()
 }
+
 func lower_function(function_decl function) string {
     let graph = lower_function_graph(function)
     return analyze_borrow_function(function.sig.name, vec[string](), dump_graph(graph))
 }
+
 func lower_block(block_expr block) string {
     let text = "block"
     let index = 0
@@ -181,21 +199,25 @@ func lower_block(block_expr block) string {
         return text + " | " + indent(1) + "yield unit"
     }
 }
+
 func trace_branch(string condition_text, string then_text, string else_text) string {
     if else_text == "" {
         return "branch " + condition_text + " | " + indent(1) + "then " + then_text + " | " + indent(1) + "else <missing>"
     }
     return "branch " + condition_text + " | " + indent(1) + "then " + then_text + " | " + indent(1) + "else " + else_text
 }
+
 func trace_loop(string loop_kind, string condition_text, string body_text) string {
     return loop_kind + " " + condition_text + " | " + indent(1) + "body " + body_text
 }
+
 func trace_switch(string subject_text, string arms_text) string {
     if arms_text == "" {
         return "switch " + subject_text
     }
     return "switch " + subject_text + " | " + arms_text
 }
+
 func indent(int depth) string {
     let out = ""
     let i = 0
@@ -205,6 +227,7 @@ func indent(int depth) string {
     }
     return out
 }
+
 func join_text(vec[string] values, string sep) string {
     let out = ""
     let i = 0

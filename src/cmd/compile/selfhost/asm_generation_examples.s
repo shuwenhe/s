@@ -1,4 +1,5 @@
 package demo
+
 func generate_minimal_x86_64_asm() string {
     return `
 .text
@@ -11,6 +12,7 @@ main:
     ret
 `
 }
+
 func example_ir_to_asm_patterns() []string {
     let patterns = []string{
         "
@@ -33,6 +35,7 @@ func example_ir_to_asm_patterns() []string {
     }
     return patterns
 }
+
 func explain_register_allocation() string {
     return `
 Simple Register Allocation Strategy for MVP:
@@ -56,6 +59,7 @@ Usage:
    → call func; mov %rax, -0(%rbp)    # or -8(%rbp) for next
 `
 }
+
 func full_example_compilation() string {
     return `
 ========== EXAMPLE: Compiling Simple IR to x86-64 ==========
@@ -108,6 +112,7 @@ echo $?
   → 0  (Success!)
 `
 }
+
 func key_insight() string {
     return `
 WHY THIS WORKS FOR TRUE SELF-HOSTING:

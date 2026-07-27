@@ -4,10 +4,12 @@ use std.result.result
 use std.option.option
 const CHAN_OPEN   = 0
 const CHAN_CLOSED = 1
+
 struct Waiter {
     int g_id
     int val_idx
 }
+
 struct RawChan {
     int      cap
     vec[int] buf
@@ -19,6 +21,7 @@ struct RawChan {
     vec[Waiter] receivers
     Mutex    mu
 }
+
 func new_raw_chan(int cap) RawChan {
     let buf = vec[int]()
     let i = 0
@@ -38,6 +41,7 @@ func new_raw_chan(int cap) RawChan {
         mu:        new_mutex(),
     }
 }
+
 func chan_send(RawChan mut ch, int val) result[(), string] {
     ch.mu.lock()
     if ch.state == CHAN_CLOSED {
@@ -89,6 +93,7 @@ func chan_send(RawChan mut ch, int val) result[(), string] {
     ch.mu.unlock()
     result::ok(())
 }
+
 func chan_recv(RawChan mut ch) recv_result {
     ch.mu.lock()
     if ch.cap == 0 {
@@ -147,10 +152,12 @@ func chan_recv(RawChan mut ch) recv_result {
     ch.mu.unlock()
     recv_result { value: val, ok: true }
 }
+
 struct recv_result {
     int  value
     bool ok
 }
+
 func chan_try_send(RawChan mut ch, int val) bool {
     ch.mu.lock()
     if ch.state == CHAN_CLOSED {
@@ -183,6 +190,7 @@ func chan_try_send(RawChan mut ch, int val) bool {
     ch.mu.unlock()
     true
 }
+
 func chan_try_recv(RawChan mut ch) option[recv_result] {
     ch.mu.lock()
     if ch.cap == 0 {
@@ -218,6 +226,7 @@ func chan_try_recv(RawChan mut ch) option[recv_result] {
     ch.mu.unlock()
     option::some(recv_result { value: val, ok: true })
 }
+
 func chan_close(RawChan mut ch) result[(), string] {
     ch.mu.lock()
     if ch.state == CHAN_CLOSED {
@@ -235,6 +244,7 @@ func chan_close(RawChan mut ch) result[(), string] {
     ch.mu.unlock()
     result::ok(())
 }
+
 func dequeue_waiter(vec[Waiter] mut q) option[Waiter] {
     if q.is_empty() {
         return option::none
@@ -251,13 +261,19 @@ func dequeue_waiter(vec[Waiter] mut q) option[Waiter] {
 }
 extern "intrinsic" func __chan_deliver(int g_id, int val) ()
 extern "intrinsic" func __chan_take_delivered(int g_id) int
+
 func chan_deliver(int g_id, int val) () {
     __chan_deliver(g_id, val)
 }
+
 func chan_take_delivered(int g_id) int {
     __chan_take_delivered(g_id)
 }
+
 func chan_len(RawChan ch) int  { ch.count }
+
 func chan_cap(RawChan ch) int  { ch.cap   }
+
 func chan_unit_name() string { "src/runtime/chan" }
+
 func chan_unit_ready() int   { 1 }

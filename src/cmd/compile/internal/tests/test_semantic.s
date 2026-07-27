@@ -3,6 +3,7 @@ use compile.internal.semantic.check_text
 use compile.internal.semantic.check_detailed
 use compile.internal.semantic.semantic_error
 use std.fs.read_to_string
+
 func run_semantic_suite(string fixtures_root) int {
     let ok_path = fixtures_root + "/check_ok.s"
     let fail_path = fixtures_root + "/check_fail.s"
@@ -288,6 +289,7 @@ func run_semantic_suite(string fixtures_root) int {
     }
     0
 }
+
 func has_code(vec[semantic_error] diagnostics, string code) bool {
     let i = 0
     while i < diagnostics.len() {

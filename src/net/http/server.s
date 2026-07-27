@@ -1,4 +1,5 @@
 package src.net.http
+
 struct HTTPServer {
     string addr
     map[string, func(Request, Response)] routes
