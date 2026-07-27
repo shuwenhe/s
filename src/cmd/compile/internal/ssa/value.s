@@ -1,7 +1,5 @@
 package compile.internal.ssa
-
 use std.vec.vec
-
 struct ssa_value {
     int id
     string name
@@ -12,7 +10,6 @@ struct ssa_value {
     bool removed
     string literal
 }
-
 func make_value(int id, string name, string op, string ty, vec[int] args, string literal) ssa_value {
     ssa_value {
         id: id,
@@ -25,11 +22,9 @@ func make_value(int id, string name, string op, string ty, vec[int] args, string
         literal: literal,
     }
 }
-
 func value_is_const_zero(ssa_value v) bool {
     v.op == op_const() && v.literal == "0"
 }
-
 func value_key(ssa_value v) string {
     let key = v.op + "|" + v.ty + "|" + v.literal
     let i = 0

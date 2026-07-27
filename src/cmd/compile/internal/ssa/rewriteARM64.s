@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func run_rewrite_arm64(mut ssa_func f) int {
     let changed = 0
     let i = 0
@@ -9,7 +8,6 @@ func run_rewrite_arm64(mut ssa_func f) int {
             i = i + 1
             continue
         }
-
         if v.op == op_add() && v.args.len() == 2 {
             if is_const_with(f, v.args[1], "0") {
                 f.values[i].op = op_copy()

@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func check_func(ssa_func f) int {
     let i = 0
     while i < f.values.len() {
@@ -16,7 +15,6 @@ func check_func(ssa_func f) int {
         }
         i = i + 1
     }
-
     let bi = 0
     while bi < f.blocks.len() {
         let b = f.blocks[bi]

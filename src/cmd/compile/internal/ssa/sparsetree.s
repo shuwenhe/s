@@ -1,7 +1,5 @@
 package compile.internal.ssa
-
 use std.vec.vec
-
 struct sparse_tree_node {
     int parent
     int child
@@ -9,11 +7,9 @@ struct sparse_tree_node {
     int entry
     int exit
 }
-
 struct sparse_tree {
     vec[sparse_tree_node] nodes
 }
-
 func new_sparse_tree(int n) sparse_tree {
     let nodes = vec[sparse_tree_node]()
     let i = 0
@@ -29,7 +25,6 @@ func new_sparse_tree(int n) sparse_tree {
     }
     sparse_tree { nodes: nodes }
 }
-
 func sparse_tree_add_edge(mut sparse_tree t, int parent, int child) sparse_tree {
     if parent < 0 || child < 0 || parent >= t.nodes.len() || child >= t.nodes.len() {
         return t
@@ -39,7 +34,6 @@ func sparse_tree_add_edge(mut sparse_tree t, int parent, int child) sparse_tree 
     t.nodes[parent].child = child
     t
 }
-
 func number_subtree(mut sparse_tree t, int root, int n) int_pair {
     if root < 0 || root >= t.nodes.len() {
         return make_int_pair(n, 0)
@@ -57,7 +51,6 @@ func number_subtree(mut sparse_tree t, int root, int n) int_pair {
     t.nodes[root].exit = next
     make_int_pair(next + 2, 1)
 }
-
 func sparse_tree_is_ancestor_eq(sparse_tree t, int x, int y) bool {
     if x < 0 || y < 0 || x >= t.nodes.len() || y >= t.nodes.len() {
         return false

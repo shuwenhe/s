@@ -1,5 +1,4 @@
 package src.net
-
 func parse_ip_port(addr string) (string, int) {
     parts = split(addr, ":")
     if len(parts) != 2 {
@@ -9,7 +8,6 @@ func parse_ip_port(addr string) (string, int) {
     port = atoi(parts[1])
     ip, port
 }
-
 func split_host_port(addr string) (string, string) {
     parts = split(addr, ":")
     if len(parts) != 2 {

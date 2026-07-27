@@ -1,25 +1,21 @@
 package compile.internal.noder
-
 use std.prelude.char_at
 use std.prelude.len
 use std.prelude.slice
 use std.prelude.to_string
 use std.vec.vec
-
 func starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
     }
     slice(text, 0, len(prefix)) == prefix
 }
-
 func ends_with(string text, string suffix) bool {
     if len(text) < len(suffix) {
         return false
     }
     slice(text, len(text) - len(suffix), len(text)) == suffix
 }
-
 func trim_spaces(string text) string {
     let start = 0
     let end = len(text)
@@ -41,7 +37,6 @@ func trim_spaces(string text) string {
     }
     slice(text, start, end)
 }
-
 func split_lines(string text) vec[string] {
     let out = vec[string]()
     let start = 0
@@ -56,7 +51,6 @@ func split_lines(string text) vec[string] {
     out.push(slice(text, start, len(text)))
     out
 }
-
 func split_words(string line) vec[string] {
     let out = vec[string]()
     let current = ""
@@ -78,7 +72,6 @@ func split_words(string line) vec[string] {
     }
     out
 }
-
 func normalize_import_path(string raw) string {
     let text = trim_spaces(raw)
     if starts_with(text, "\"") && ends_with(text, "\"") && len(text) >= 2 {
@@ -86,7 +79,6 @@ func normalize_import_path(string raw) string {
     }
     text
 }
-
 func join_path(vec[string] parts) string {
     if parts.len() == 0 {
         return ""
@@ -99,7 +91,6 @@ func join_path(vec[string] parts) string {
     }
     out
 }
-
 func ident_or_default(string name, string fallback) string {
     let t = trim_spaces(name)
     if t == "" {
@@ -107,7 +98,6 @@ func ident_or_default(string name, string fallback) string {
     }
     t
 }
-
 func fmt_pos(string path, int line, int column) string {
     path + ":" + to_string(line) + ":" + to_string(column)
 }

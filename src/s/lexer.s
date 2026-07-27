@@ -1,24 +1,20 @@
 package s
-
 use std.prelude.char_at
 use std.prelude.len
 use std.prelude.slice
 use std.vec.vec
 use std.result.result
-
 struct lex_error {
     string message
     int line
     int column
 }
-
 struct lexer {
     string source
     int index
     int line
     int column
 }
-
 func new_lexer(string source) lexer {
     lexer {
         source: source,
@@ -27,14 +23,12 @@ func new_lexer(string source) lexer {
         column: 1,
     }
 }
-
 func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
         vec[token] tokens = vec[token]()        while !self.is_eof() {
             self.skip_ignored()?
             if self.is_eof() {
                 break
             }
-
             int start_line = self.line            int start_column = self.column            string ch = self.peek()?
             if is_ident_start(ch) {
                 string value = self.read_identifier()?                token_kind kind =                    if is_keyword(value) {
@@ -50,7 +44,6 @@ func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
                 })
                 continue
             }
-
             if is_digit(ch) {
                 tokens.push(token {
                     kind: token_kind::int,
@@ -60,7 +53,6 @@ func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
                 })
                 continue
             }
-
             if ch == "\"" {
                 tokens.push(token {
                     kind: token_kind::string,
@@ -70,7 +62,6 @@ func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
                 })
                 continue
             }
-
             if ch == '(' || ch == ')' {
                 tokens.push(token {
                     kind: token_kind::symbol,
@@ -80,7 +71,6 @@ func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
                 })
                 continue
             }
-
             tokens.push(token {
                 kind: token_kind::symbol,
                 value: self.read_symbol()?,
@@ -88,17 +78,14 @@ func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
                 column: start_column,
             })
         }
-
         tokens.push(token {
             kind: token_kind::eof,
             value: "<eof>",
             line: self.line,
             column: self.column,
         })
-
         result::ok(tokens)
     }
-
 func (self: &mut lexer) skip_ignored() result[(), lex_error] {
         while !self.is_eof() {
             string ch = self.peek()?
@@ -106,16 +93,13 @@ func (self: &mut lexer) skip_ignored() result[(), lex_error] {
                 self.advance()?
                 continue
             }
-
             if self.match_text("
                 while !self.is_eof() && self.peek()? != "\n" {
                     self.advance()?
                 }
                 continue
             }
-
             if self.match_text(" 
-
 ") {
                         depth = depth - 1
                         self.advance()?
@@ -126,13 +110,10 @@ func (self: &mut lexer) skip_ignored() result[(), lex_error] {
                 }
                 continue
             }
-
             break
         }
-
         result::ok(())
     }
-
 func (self: &mut lexer) read_identifier() result[string, lex_error] {
         string out = ""        while !self.is_eof() {
             string ch = self.peek()?            if !is_ident_continue(ch) {
@@ -142,7 +123,6 @@ func (self: &mut lexer) read_identifier() result[string, lex_error] {
         }
         result::ok(out)
     }
-
 func (self: &mut lexer) read_number() result[string, lex_error] {
         string out = ""
         while !self.is_eof() {
@@ -154,7 +134,6 @@ func (self: &mut lexer) read_number() result[string, lex_error] {
         }
         result::ok(out)
     }
-
 func (self: &mut lexer) read_string() result[string, lex_error] {
         string out = self.advance()?        while !self.is_eof() {
             let ch = self.advance()?
@@ -172,7 +151,6 @@ func (self: &mut lexer) read_string() result[string, lex_error] {
         }
         result::err(self.error("unterminated string literal"))
     }
-
 func (self: &mut lexer) read_symbol() result[string, lex_error] {
         vec[string] multi = vec[string] {            "->",
             ":",
@@ -189,7 +167,6 @@ func (self: &mut lexer) read_symbol() result[string, lex_error] {
             ">>",
             "::",
         }
-
         for symbol in multi {
             if self.match_text(symbol) {
                 string out = ""                int count = len(symbol)                int i = 0                while i < count {
@@ -199,49 +176,39 @@ func (self: &mut lexer) read_symbol() result[string, lex_error] {
                 return result::ok(out)
             }
         }
-
         string ch = self.peek()?        if is_single_symbol(ch) {
             return result::ok(self.advance()?)
         }
-
         result::err(self.error("unexpected character"))
     }
-
 func (self: lexer) match_text(string text) bool {
         if self.index + len(text) > len(self.source) {
             return false
         }
         slice(self.source, self.index, self.index + len(text)) == text
     }
-
 func (self: lexer) peek() result[string, lex_error] {
         if self.is_eof() {
             return result::err(self.error("unexpected eof"))
         }
         result::ok(char_at(self.source, self.index))
     }
-
 func (self: &mut lexer) advance() result[string, lex_error] {
         if self.is_eof() {
             return result::err(self.error("unexpected eof"))
         }
-
         string ch = char_at(self.source, self.index)        self.index = self.index + 1
-
         if ch == "\n" {
             self.line = self.line + 1
             self.column = 1
         } else {
             self.column = self.column + 1
         }
-
         result::ok(ch)
     }
-
 func (self: lexer) is_eof() bool {
         self.index >= len(self.source)
     }
-
 func (self: lexer) error(string message) lex_error {
         lex_error {
             message: message,
@@ -249,7 +216,6 @@ func (self: lexer) error(string message) lex_error {
             column: self.column,
         }
     }
-
 func is_whitespace(string ch) bool {
     switch ch {
         " " : true,
@@ -259,7 +225,6 @@ func is_whitespace(string ch) bool {
         _ : false,
     }
 }
-
 func is_digit(string ch) bool {
     switch ch {
         "0" : true,
@@ -275,22 +240,18 @@ func is_digit(string ch) bool {
         _ : false,
     }
 }
-
 func is_number_continue(string ch) bool {
     is_digit(ch) || ch == "_"
 }
-
 func is_ident_start(string ch) bool {
     if ch == "_" {
         return true
     }
     is_ascii_alpha(ch)
 }
-
 func is_ident_continue(string ch) bool {
     is_ident_start(ch) || is_digit(ch)
 }
-
 func is_ascii_alpha(string ch) bool {
     switch ch {
         "a" : true,
@@ -348,7 +309,6 @@ func is_ascii_alpha(string ch) bool {
         _ : false,
     }
 }
-
 func is_single_symbol(string ch) bool {
     switch ch {
         "(" : true,
@@ -377,7 +337,6 @@ func is_single_symbol(string ch) bool {
         _ : false,
     }
 }
-
 func is_keyword(string value) bool {
     return value == "func"
 }

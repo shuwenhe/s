@@ -1,7 +1,5 @@
 package compile.internal.ssa
-
 use std.vec.vec
-
 func recompute_uses(mut ssa_func f) {
     let i = 0
     while i < f.values.len() {
@@ -31,7 +29,6 @@ func recompute_uses(mut ssa_func f) {
         bi = bi + 1
     }
 }
-
 func rewrite_value_references(mut ssa_func f, int from_id, int to_id) int {
     let changed = 0
     let i = 0
