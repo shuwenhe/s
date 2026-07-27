@@ -4,9 +4,6 @@ use std.io.File as file_type
 use std.encoding.binary.write as binary_write
 use std.encoding.binary.little_endian
 
-
-
-
 const ELF_MAGIC = 0x464c457f        
 const ELF_CLASS_64 = 2              
 const ELF_DATA_LE = 1               
@@ -112,38 +109,17 @@ func new_elf_builder() ELFBuilder {
     }
 }
 
-
 func (builder: &mut ELFBuilder) add_code([]byte code) {
     builder.code_section = append_slice(builder.code_section, code)
 }
 
-
 func (builder: &mut ELFBuilder) generate() []byte {
     let mut buffer: []byte = []byte{}
 
-    
-    
-
-    
-    
-    
     return buffer
 }
 
-
-
-
-
 func generate_elf_from_x86_64_asm(string asm_source, string output_binary) error {
-    
-    
-    
-    
-    
-    
-    
-    
-    
 
     return nil
 }

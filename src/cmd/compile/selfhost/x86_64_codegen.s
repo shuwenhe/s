@@ -6,9 +6,6 @@ use std.strings.trim as trim_string
 use std.fmt.sprintf
 use std.io.eprintln
 
-
-
-
 struct X86_64Gen {
     asm_lines: []string
     register_stack: []string  
@@ -51,25 +48,22 @@ func (gen: &mut X86_64Gen) free_register(string reg) {
 }
 
 func (gen: &mut X86_64Gen) get_location(string var) string {
-    
+
     if loc, exists := gen.temp_allocations[var]; exists {
         return loc
     }
-    
-    
+
     let reg = gen.allocate_register()
     if reg != "" {
         gen.temp_allocations[var] = reg
         return reg
     }
-    
-    
+
     let stack_offset = (len(gen.temp_allocations) + 1) * 8
     let stack_loc = sprintf("-%d(%%rbp)", stack_offset)
     gen.temp_allocations[var] = stack_loc
     return stack_loc
 }
-
 
 func (gen: &mut X86_64Gen) translate_instruction(Instruction instr) error {
     match instr.opcode {
@@ -78,96 +72,93 @@ func (gen: &mut X86_64Gen) translate_instruction(Instruction instr) error {
             gen.emit("mov %rsp, %rbp")
             gen.emit("sub $256, %rsp")  
             return nil
-            
+
         case "FUNC_END":
             gen.emit("add $256, %rsp")
             gen.emit("pop %rbp")
             gen.emit("ret")
             return nil
-            
+
         case "MOV":
-            
+
             let src_loc = gen.get_location(instr.src1)
             let dst_loc = gen.get_location(instr.dest)
-            
+
             if instr.src1 == "0" || instr.src1 == "1" {
                 gen.emit("mov $" + instr.src1 + ", " + dst_loc)
             } else if contains_string(instr.src1, "\"") {
-                
+
                 gen.emit("mov $" + instr.src1 + ", " + dst_loc)
             } else {
                 gen.emit("mov " + src_loc + ", %rax")
                 gen.emit("mov %rax, " + dst_loc)
             }
             return nil
-            
+
         case "ADD":
-            
+
             let src1_loc = gen.get_location(instr.src1)
             let src2_loc = gen.get_location(instr.src2)
             let dst_loc = gen.get_location(instr.dest)
-            
+
             gen.emit("mov " + src1_loc + ", %rax")
             gen.emit("add " + src2_loc + ", %rax")
             gen.emit("mov %rax, " + dst_loc)
             return nil
-            
+
         case "CMP_EQ":
-            
+
             let src1_loc = gen.get_location(instr.src1)
             let src2_loc = gen.get_location(instr.src2)
             let dst_loc = gen.get_location(instr.dest)
-            
+
             gen.emit("mov " + src1_loc + ", %rax")
             gen.emit("cmp " + src2_loc + ", %rax")
             gen.emit("sete %al")  
             gen.emit("movzx %al, " + dst_loc)
             return nil
-            
+
         case "CMP_NE":
-            
+
             let src1_loc = gen.get_location(instr.src1)
             let src2_loc = gen.get_location(instr.src2)
             let dst_loc = gen.get_location(instr.dest)
-            
+
             gen.emit("mov " + src1_loc + ", %rax")
             gen.emit("cmp " + src2_loc + ", %rax")
             gen.emit("setne %al")  
             gen.emit("movzx %al, " + dst_loc)
             return nil
-            
+
         case "JUMP_IF_FALSE":
-            
+
             let cond_loc = gen.get_location(instr.src2)
             gen.emit("mov " + cond_loc + ", %rax")
             gen.emit("test %rax, %rax")
             gen.emit("jz " + instr.src1)
             return nil
-            
+
         case "JUMP":
             gen.emit("jmp " + instr.src1)
             return nil
-            
+
         case "LABEL":
             gen.emit_label(instr.src1)
             return nil
-            
+
         case "CALL":
-            
-            
-            
+
             gen.emit("call " + instr.src1)
             let dst_loc = gen.get_location(instr.dest)
             if dst_loc != "" {
                 gen.emit("mov %rax, " + dst_loc)
             }
             return nil
-            
+
         case "ARG":
-            
-            
+
             return nil
-            
+
         case "RET":
             let ret_loc = instr.src1
             if ret_loc != "" && ret_loc != "0" {
@@ -180,45 +171,41 @@ func (gen: &mut X86_64Gen) translate_instruction(Instruction instr) error {
             gen.emit("pop %rbp")
             gen.emit("ret")
             return nil
-            
+
         case "PARAM":
-            
-            
+
             return nil
-            
+
         default:
             return error("unknown IR opcode: " + instr.opcode)
     }
 }
 
-
 func generate_assembly_from_ir([]Instruction instructions) (string, error) {
     let mut gen = new_x86_64_gen()
-    
+
     gen.asm_lines = append(gen.asm_lines, ".globl main")
     gen.asm_lines = append(gen.asm_lines, ".text")
     gen.asm_lines = append(gen.asm_lines, "")
-    
+
     for _, instr in instructions {
         let err = gen.translate_instruction(instr)
         if err != nil {
             return "", err
         }
     }
-    
-    
+
     let mut result = ""
     for _, line in gen.asm_lines {
         result += line + "\n"
     }
-    
+
     return result, nil
 }
 
-
 func format_immediate(string value) string {
     if contains_string(value, "\"") {
-        
+
         return "$0x0"  
     }
     if value == "" || value == "_" {

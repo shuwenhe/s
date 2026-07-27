@@ -9,9 +9,6 @@ use std.strings.trim as trim_string
 use std.strings.contains as contains_string
 use std.fmt.sprintf
 
-
-
-
 struct IRProgram {
     functions: []Function
     globals: []Global
@@ -58,14 +55,12 @@ struct X86_64CodeGen {
     register_map: map[string]int
 }
 
-
 func parse_ir(string content) (IRProgram, error) {
     let lines = split_string(content, "\n")
     let mut prog = IRProgram{}
     let mut current_func: *Function = nil
     let mut line_idx = 0
 
-    
     if line_idx >= len(lines) {
         return prog, error("empty IR file")
     }
@@ -76,7 +71,6 @@ func parse_ir(string content) (IRProgram, error) {
     }
     line_idx += 1
 
-    
     for line_idx < len(lines) {
         let line = trim_string(lines[line_idx])
         if line == "" {
@@ -85,7 +79,7 @@ func parse_ir(string content) (IRProgram, error) {
         }
 
         if contains_string(line, "FUNC_BEGIN") {
-            
+
             let parts = split_string(line, "|")
             if len(parts) >= 2 {
                 let func = Function{
@@ -99,7 +93,7 @@ func parse_ir(string content) (IRProgram, error) {
         } else if contains_string(line, "FUNC_END") {
             current_func = nil
         } else if current_func != nil && contains_string(line, "|") {
-            
+
             let parts = split_string(line, "|")
             if len(parts) >= 2 {
                 let instr = Instruction{
@@ -124,7 +118,6 @@ func parse_ir(string content) (IRProgram, error) {
     return prog, nil
 }
 
-
 func generate_x86_64(IRProgram program) (string, error) {
     let mut codegen = X86_64CodeGen{
         program: program,
@@ -136,14 +129,12 @@ func generate_x86_64(IRProgram program) (string, error) {
     asm += ".globl main\n"
     asm += ".text\n\n"
 
-    
     for _, func in program.functions {
         asm += "
         asm += func.name + ":\n"
         asm += "    push %rbp\n"
         asm += "    mov %rsp, %rbp\n"
 
-        
         for _, instr in func.instructions {
             let instr_asm, err = generate_instruction(instr)
             if err != nil {
@@ -152,7 +143,6 @@ func generate_x86_64(IRProgram program) (string, error) {
             asm += instr_asm
         }
 
-        
         if func.name == "main" {
             asm += "    xor %eax, %eax\n"
         }
@@ -186,27 +176,23 @@ func generate_instruction(Instruction instr) (string, error) {
     }
 }
 
-
 func ir_compile_to_elf(string ir_path, string output_path) error {
-    
+
     let ir_content, read_err = io_read_all(ir_path)
     if read_err != nil {
         return read_err
     }
 
-    
     let program, parse_err = parse_ir(string(ir_content))
     if parse_err != nil {
         return parse_err
     }
 
-    
     let asm_code, gen_err = generate_x86_64(program)
     if gen_err != nil {
         return gen_err
     }
 
-    
     let temp_asm = "/tmp/s_compiler_generated.s"
     let asm_file = io_open(temp_asm, "w")
     if asm_file == nil {
@@ -214,10 +200,6 @@ func ir_compile_to_elf(string ir_path, string output_path) error {
     }
     io_write(asm_file, []byte(asm_code))
     asm_file.close()
-
-    
-    
-    
 
     return nil
 }
