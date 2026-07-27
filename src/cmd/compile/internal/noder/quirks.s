@@ -1,8 +1,6 @@
 package compile.internal.noder
-
 use std.result.result
 use std.vec.vec
-
 func apply_quirk(string name, source_unit mut unit) result[(), noder_error] {
     if name == "trim-trailing-space" {
         unit.text = trim_spaces(unit.text)
@@ -32,10 +30,8 @@ func apply_quirk(string name, source_unit mut unit) result[(), noder_error] {
         unit.text = out
         return result::ok(())
     }
-
     result::err(make_error(code_unknown_quirk(), "unknown quirk: " + name, unit.path, 0, 0))
 }
-
 func apply_quirks(vec[string] quirks, source_unit mut unit) result[(), noder_error] {
     let i = 0
     while i < quirks.len() {

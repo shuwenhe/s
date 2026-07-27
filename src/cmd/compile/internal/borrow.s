@@ -1,13 +1,10 @@
 package compile.internal.borrow
-
 use std.prelude.len
 use std.prelude.slice
 use std.vec.vec
-
 func analyze_block() int {
     return 0
 }
-
 func analyze_trace(string scope, vec[string] type_env, string block_text) string {
     let plan = make_plan_trace(type_env)
     let text = "borrow " + scope
@@ -19,18 +16,15 @@ func analyze_trace(string scope, vec[string] type_env, string block_text) string
     }
     return text + " | plan " + join_text(plan, ", ")
 }
-
 func analyze_function(string name, vec[string] type_env, string body_text) string {
     return analyze_trace(name, type_env, body_text)
 }
-
 func analyze_expr(string scope, string expr_text) string {
     if expr_text == "" {
         return "expr " + scope + " | <empty>"
     }
     return "expr " + scope + " | " + expr_text
 }
-
 func join_text(vec[string] values, string sep) string {
     let out = ""
     let i = 0
@@ -43,7 +37,6 @@ func join_text(vec[string] values, string sep) string {
     }
     return out
 }
-
 func make_plan_trace(vec[string] type_env) vec[string] {
     let plan = vec[string]()
     let i = 0
@@ -60,7 +53,6 @@ func make_plan_trace(vec[string] type_env) vec[string] {
     }
     return plan
 }
-
 func starts_with(string text, string prefix) bool {
     let prefix_len = len(prefix)
     if prefix_len > len(text) {

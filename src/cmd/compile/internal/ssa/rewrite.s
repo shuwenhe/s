@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func run_arch_rewrite(mut ssa_func f, string arch) int {
     if arch == "amd64" {
         return run_rewrite_amd64(f)
@@ -12,7 +11,6 @@ func run_arch_rewrite(mut ssa_func f, string arch) int {
     }
     0
 }
-
 func run_rewrite(mut ssa_func f, string arch) int {
     let total = 0
     let rounds = 0

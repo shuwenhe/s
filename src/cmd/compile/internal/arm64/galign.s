@@ -1,5 +1,4 @@
 package compile.internal.arm64
-
 struct arch_info {
     string link_arch
     int reg_sp
@@ -13,7 +12,6 @@ struct arch_info {
     string load_reg_result_hook
     string spill_arg_reg_hook
 }
-
 func init_arm64(arch_info mut arch) arch_info {
     arch.link_arch = "arm64"
     arch.reg_sp = 31
@@ -28,7 +26,6 @@ func init_arm64(arch_info mut arch) arch_info {
     arch.spill_arg_reg_hook = "spill_arg_reg"
     arch
 }
-
 func init_arch_info() arch_info {
     let info = arch_info {
         link_arch: "",
@@ -45,15 +42,12 @@ func init_arch_info() arch_info {
     }
     init_arm64(info)
 }
-
 func link_arch_name() string {
     "arm64"
 }
-
 func stack_pointer_register() int {
     31
 }
-
 func max_width_limit() int {
     1 << 50
 }

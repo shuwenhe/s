@@ -1,130 +1,106 @@
 package s
-
 use std.option.option
 use std.prelude.box
 use std.prelude.to_string
 use std.vec.vec
-
 struct use_decl {
     string path
     option[string] alias
 }
-
 struct field {
     string name
     string type_name
     bool is_public
 }
-
 struct param {
     string name
     string type_name
 }
-
 struct function_sig {
     string name
     vec[string] generics
     vec[param] params
     option[string] return_type
 }
-
 struct name_pattern {
     string name
 }
-
 struct wildcard_pattern {}
-
 struct variant_pattern {
     string path
     vec[pattern] args
 }
-
 struct literal_pattern {
     expr value
 }
-
 enum pattern {
     name(name_pattern),
     wildcard(wildcard_pattern),
     variant(variant_pattern),
     literal(literal_pattern),
 }
-
 struct int_expr {
     string value
     option[string] inferred_type
 }
-
 struct string_expr {
     string value
     option[string] inferred_type
 }
-
 struct bool_expr {
     bool value
     option[string] inferred_type
 }
-
 struct name_expr {
     string name
     option[string] inferred_type
 }
-
 struct borrow_expr {
     box[expr] target
     bool mutable
     option[string] inferred_type
 }
-
 struct binary_expr {
     box[expr] left
     string op
     box[expr] right
     option[string] inferred_type
 }
-
 struct member_expr {
     box[expr] target
     string member
     option[string] inferred_type
 }
-
 struct index_expr {
     box[expr] target
     box[expr] index
     option[string] inferred_type
 }
-
 struct call_expr {
     box[expr] callee
     vec[expr] args
     option[string] inferred_type
 }
-
 struct switch_arm {
     pattern pattern
     expr expr
 }
-
 struct switch_expr {
     box[expr] subject
     vec[switch_arm] arms
     option[string] inferred_type
 }
-
 struct if_expr {
     box[expr] condition
     block_expr then_branch
     option[box[expr]] else_branch
     option[string] inferred_type
 }
-
 struct while_expr {
     box[expr] condition
     block_expr body
     option[string] inferred_type
 }
-
 struct for_expr {
     vec[string] names
     bool declare
@@ -132,28 +108,23 @@ struct for_expr {
     block_expr body
     option[string] inferred_type
 }
-
 struct block_expr {
     vec[stmt] statements
     option[expr] final_expr
     option[string] inferred_type
 }
-
 struct array_literal {
     option[string] type_text
     vec[expr] items
 }
-
 struct map_entry {
     expr key
     expr value
 }
-
 struct map_literal {
     option[string] type_text
     vec[map_entry] entries
 }
-
 enum expr {
     int(int_expr),
     string(string_expr),
@@ -172,45 +143,36 @@ enum expr {
     array(array_literal),
     map(map_literal),
 }
-
 struct var_stmt {
     string name
     option[string] type_name
     expr value
 }
-
 struct assign_stmt {
     string name
     expr value
 }
-
 struct increment_stmt {
     string name
 }
-
 struct c_for_stmt {
     box[stmt] init
     expr condition
     box[stmt] step
     block_expr body
 }
-
 struct return_stmt {
     option[expr] value
 }
-
 struct expr_stmt {
     expr expr
 }
-
 struct defer_stmt {
     expr expr
 }
-
 struct sroutine_stmt {
     expr expr
 }
-
 enum stmt {
     let(var_stmt),
     assign(assign_stmt),
@@ -221,51 +183,43 @@ enum stmt {
     defer(defer_stmt),
     sroutine(sroutine_stmt),
 }
-
 struct function_decl {
     function_sig sig
     option[block_expr] body
     bool is_public
 }
-
 struct struct_decl {
     string name
     vec[string] generics
     vec[field] fields
     bool is_public
 }
-
 struct enum_variant {
     string name
     option[string] payload
 }
-
 struct enum_decl {
     string name
     vec[string] generics
     vec[enum_variant] variants
     bool is_public
 }
-
 struct trait_decl {
     string name
     vec[string] generics
     vec[function_sig] methods
     bool is_public
 }
-
 struct receiver_method_decl {
     string receiver_name
     string receiver_type
     function_decl method
 }
-
 struct const_decl {
     string name
     option[expr] value
     int iota_index
 }
-
 enum item {
     function(function_decl),
     const(const_decl),
@@ -274,13 +228,11 @@ enum item {
     trait(trait_decl),
     method(receiver_method_decl),
 }
-
 struct source_file {
     string pkg
     vec[use_decl] uses
     vec[item] items
 }
-
 func dump_source_file(source_file source) string {
     let lines = vec[string]()
     lines.push("package " + source.pkg);
@@ -303,7 +255,6 @@ func dump_source_file(source_file source) string {
     }
     join_lines(lines)
 }
-
 func append_item_dump(vec[string] lines, item item) () {
     switch item {
         item.function(value) : append_lines(lines, dump_function(value, "")),
@@ -314,21 +265,18 @@ func append_item_dump(vec[string] lines, item item) () {
         item.method(value) : append_lines(lines, dump_receiver_method(value)),
     }
 }
-
 func dump_const(const_decl item) vec[string] {
     switch item.value {
         option.some(value) : vec[string] { "const " + item.name + " = " + dump_expr(value) },
         option.none : vec[string] { "const " + item.name },
     }
 }
-
 func fmt_generics(vec[string] generics) string {
     if len(generics) == 0 {
         return ""
     }
     "[" + join_with(generics, ", ") + "]"
 }
-
 func dump_function(function_decl item, string indent) vec[string] {
     let lines = vec[string]()
     let params = vec[string]()
@@ -361,7 +309,6 @@ func dump_function(function_decl item, string indent) vec[string] {
     }
     lines
 }
-
 func dump_struct(struct_decl item) vec[string] {
     let lines = vec[string]()
     let prefix = if item.is_public { "pub " } else { "" }
@@ -375,7 +322,6 @@ func dump_struct(struct_decl item) vec[string] {
     }
     lines
 }
-
 func dump_enum(enum_decl item) vec[string] {
     let lines = vec[string]()
     lines.push("enum " + item.name + fmt_generics(item.generics))
@@ -390,7 +336,6 @@ func dump_enum(enum_decl item) vec[string] {
     }
     lines
 }
-
 func dump_trait(trait_decl item) vec[string] {
     let lines = vec[string]()
     let prefix = if item.is_public { "pub " } else { "" }
@@ -422,7 +367,6 @@ func dump_trait(trait_decl item) vec[string] {
     }
     lines
 }
-
 func dump_receiver_method(receiver_method_decl item) vec[string] {
     let lines = vec[string]()
     let method = item.method
@@ -457,7 +401,6 @@ func dump_receiver_method(receiver_method_decl item) vec[string] {
     }
     lines
 }
-
 func dump_block(block_expr block, string indent) vec[string] {
     let lines = vec[string]()
     let _si = 0
@@ -472,7 +415,6 @@ func dump_block(block_expr block, string indent) vec[string] {
     }
     lines
 }
-
 func dump_stmt(stmt stmt, string indent) vec[string] {
     switch stmt {
         stmt.let(value) : {
@@ -517,7 +459,6 @@ func dump_stmt(stmt stmt, string indent) vec[string] {
         stmt.sroutine(value) : single_line(indent + "sroutine " + dump_expr(value.expr)),
     }
 }
-
 func dump_for_clause(stmt stmt) string {
     switch stmt {
         stmt.let(value) : {
@@ -535,7 +476,6 @@ func dump_for_clause(stmt stmt) string {
         stmt.sroutine(_) : "sroutine",
     }
 }
-
 func dump_expr(expr expr) string {
     switch expr {
         expr.int(value) : value.value,
@@ -581,7 +521,6 @@ func dump_expr(expr expr) string {
         }
     }
 }
-
 func dump_if_expr(if_expr value) string {
     let text = "if " + dump_expr(value.condition.value) + " {...}"
     switch value.else_branch {
@@ -589,7 +528,6 @@ func dump_if_expr(if_expr value) string {
         option.none : text,
     }
 }
-
 func dump_pattern(pattern pattern) string {
     switch pattern {
         pattern.name(value) : value.name,
@@ -603,7 +541,6 @@ func dump_pattern(pattern pattern) string {
         }
     }
 }
-
 func join_exprs(vec[expr] values) string {
     let parts = vec[string]()
     let _iv = 0
@@ -614,14 +551,12 @@ func join_exprs(vec[expr] values) string {
     }
     join_with(parts, ", ")
 }
-
 func join_patterns(vec[pattern] values) string {
     let parts = vec[string]()
     let _pv = 0
     while _pv < values.len() { parts.push(dump_pattern(values[_pv])); _pv = _pv + 1 }
     join_with(parts, ", ")
 }
-
 func join_switch_arms(vec[switch_arm] values) string {
     let parts = vec[string]()
     let _mv = 0
@@ -632,7 +567,6 @@ func join_switch_arms(vec[switch_arm] values) string {
     }
     join_with(parts, "; ")
 }
-
 func append_lines(vec[string] dest, vec[string] source) () {
     let _li = 0
     while _li < source.len() {
@@ -640,13 +574,11 @@ func append_lines(vec[string] dest, vec[string] source) () {
         _li = _li + 1
     }
 }
-
 func single_line(string text) vec[string] {
     let lines = vec[string]()
     lines.push(text)
     lines
 }
-
 func join_lines(vec[string] lines) string {
     join_with(lines, "\n")
 }
@@ -665,7 +597,6 @@ func join_with(vec[string] values, string sep) string {
     }
     out
 }
-
 func replace_once(string text, string from, string to) string {
     text
 }

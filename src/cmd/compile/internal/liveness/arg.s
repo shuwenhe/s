@@ -1,24 +1,19 @@
 package compile.internal.liveness
-
 use std.vec.vec
-
 struct arg_liveness_slot {
     string name
     int frame_offset
     int ptr_words
 }
-
 struct arg_liveness_payload {
     string symbol_name
     int min_slot_offset
     vec[int] map_offsets
     vec[string] maps
 }
-
 func arg_emit_symbol_name(string fn_name) string {
     fn_name + ".argliveinfo"
 }
-
 func arg_emit(string fn_name, vec[arg_liveness_slot] args, vec[vec[int]] raw_maps) arg_liveness_payload {
     let maps = dedupe_bitmaps(raw_maps)
     let min_slot_offset = 0
@@ -38,7 +33,6 @@ func arg_emit(string fn_name, vec[arg_liveness_slot] args, vec[vec[int]] raw_map
     if min_slot_offset > 255 {
         min_slot_offset = 255
     }
-
     let map_offsets = vec[int]()
     let encoded_maps = vec[string]()
     let off = min_slot_offset
@@ -50,7 +44,6 @@ func arg_emit(string fn_name, vec[arg_liveness_slot] args, vec[vec[int]] raw_map
         off = off + bits.len()
         m = m + 1
     }
-
     arg_liveness_payload {
         symbol_name: arg_emit_symbol_name(fn_name),
         min_slot_offset: min_slot_offset,
@@ -58,7 +51,6 @@ func arg_emit(string fn_name, vec[arg_liveness_slot] args, vec[vec[int]] raw_map
         maps: encoded_maps,
     }
 }
-
 func dedupe_bitmaps(vec[vec[int]] maps) vec[vec[int]] {
     let out = vec[vec[int]]()
     let i = 0
@@ -79,7 +71,6 @@ func dedupe_bitmaps(vec[vec[int]] maps) vec[vec[int]] {
     }
     out
 }
-
 func bitmap_equal(vec[int] left, vec[int] right) bool {
     if left.len() != right.len() {
         return false
@@ -93,7 +84,6 @@ func bitmap_equal(vec[int] left, vec[int] right) bool {
     }
     true
 }
-
 func encode_bitmap(vec[int] bits) string {
     let out = ""
     let i = 0

@@ -1,10 +1,8 @@
 package compile.internal.typesys
-
 use std.prelude.char_at
 use std.prelude.len
 use std.prelude.slice
 use std.vec.vec
-
 struct type_ref {
     string canonical
     string base
@@ -15,7 +13,6 @@ struct type_ref {
     string array_len
     vec[string] args
 }
-
 func parse_type(string text) string {
     let clean = normalize_type_text(trim_text(text))
     if clean == "" {
@@ -41,7 +38,6 @@ func parse_type(string text) string {
     }
     return clean
 }
-
 func parse_type_ref(string text) type_ref {
     let canonical = parse_type(text)
     let rest = canonical
@@ -50,7 +46,6 @@ func parse_type_ref(string text) type_ref {
     let is_slice = false
     let is_array = false
     string array_len = ""
-
     if starts_with(rest, "&mut ") {
         is_ref = true
         is_mut_ref = true
@@ -59,7 +54,6 @@ func parse_type_ref(string text) type_ref {
         is_ref = true
         rest = parse_type(slice(rest, 1, rest.len()))
     }
-
     if starts_with(rest, "[]") {
         is_slice = true
         rest = parse_type(slice(rest, 2, rest.len()))
@@ -71,7 +65,6 @@ func parse_type_ref(string text) type_ref {
             rest = parse_type(slice(rest, close + 1, rest.len()))
         }
     }
-
     type_ref {
         canonical: canonical,
         base: base_type_name(rest),
@@ -83,27 +76,22 @@ func parse_type_ref(string text) type_ref {
         args: extract_type_args(rest),
     }
 }
-
 func dump_type_ref(type_ref ty) string {
     ty.canonical
 }
-
 func same_type_ref(type_ref left, type_ref right) bool {
     left.canonical == right.canonical
 }
-
 func type_arg(type_ref ty, int index) string {
     if index < 0 || index >= ty.args.len() {
         return "unknown"
     }
     parse_type(ty.args[index])
 }
-
 func generic_arity(string ty) int {
     let args = extract_type_args(ty)
     args.len()
 }
-
 func has_unknown_component(string ty) bool {
     let clean = parse_type(ty)
     if clean == "unknown" {
@@ -119,7 +107,6 @@ func has_unknown_component(string ty) bool {
     }
     false
 }
-
 func rules_consistent() bool {
     if parse_type("  int  ") != "int" {
         return false
@@ -133,7 +120,6 @@ func rules_consistent() bool {
     if same_type("[4]int", "[8]int") {
         return false
     }
-
     let result_ref = parse_type_ref("result[int, string]")
     if result_ref.base != "result" {
         return false
@@ -147,7 +133,6 @@ func rules_consistent() bool {
     if generic_arity("result[int, string]") != 2 {
         return false
     }
-
     let ref_ref = parse_type_ref("&mut []int")
     if !ref_ref.is_ref || !ref_ref.is_mut_ref {
         return false
@@ -158,11 +143,9 @@ func rules_consistent() bool {
     }
     true
 }
-
 func dump_type(string ty) string {
     return parse_type(ty)
 }
-
 func base_type_name(string ty) string {
     let clean = parse_type(ty)
     if starts_with(clean, "&mut ") {
@@ -194,7 +177,6 @@ func base_type_name(string ty) string {
     }
     return clean
 }
-
 func extract_type_args(string type_name) vec[string] {
     let out = vec[string]()
     let clean = parse_type(type_name)
@@ -209,7 +191,6 @@ func extract_type_args(string type_name) vec[string] {
     if open < 0 || close <= open + 1 {
         return out
     }
-
     let inner = slice(clean, open + 1, close)
     let depth = 0
     let start = 0
@@ -226,35 +207,28 @@ func extract_type_args(string type_name) vec[string] {
         }
         i = i + 1
     }
-
     if start < inner.len() {
         out.push(trim_text(slice(inner, start, inner.len())))
     }
     out
 }
-
 func same_type(string left, string right) bool {
     return parse_type(left) == parse_type(right)
 }
-
 func compatible_type(string left, string right) bool {
     let l = parse_type(left)
     let r = parse_type(right)
-
     if l == r {
         return true
     }
     if l == "unknown" || r == "unknown" {
         return false
     }
-
     if is_tuple_type(l) || is_tuple_type(r) {
         return compatible_tuple_type(l, r)
     }
-
     let lt = parse_type_ref(l)
     let rt = parse_type_ref(r)
-
     if lt.is_ref != rt.is_ref || lt.is_mut_ref != rt.is_mut_ref || lt.is_slice != rt.is_slice {
         return false
     }
@@ -270,7 +244,6 @@ func compatible_type(string left, string right) bool {
     if lt.args.len() != rt.args.len() {
         return false
     }
-
     let i = 0
     while i < lt.args.len() {
         if !compatible_type(lt.args[i], rt.args[i]) {
@@ -280,13 +253,11 @@ func compatible_type(string left, string right) bool {
     }
     true
 }
-
 func comparable_type(string ty) bool {
     let clean = parse_type(ty)
     if clean == "unknown" || clean == "map" || clean == "fn" {
         return false
     }
-
     if is_builtin_primitive(clean) {
         return true
     }
@@ -299,7 +270,6 @@ func comparable_type(string ty) bool {
     if starts_with(clean, "[") {
         return false
     }
-
     if is_tuple_type(clean) {
         let items = extract_tuple_args(clean)
         let i = 0
@@ -311,7 +281,6 @@ func comparable_type(string ty) bool {
         }
         return true
     }
-
     let base = base_type_name(clean)
     if base == "option" || base == "result" {
         let args = extract_type_args(clean)
@@ -324,10 +293,8 @@ func comparable_type(string ty) bool {
         }
         return true
     }
-
     false
 }
-
 func assignable_type(string target, string source) bool {
     let t = parse_type(target)
     let s = parse_type(source)
@@ -343,22 +310,17 @@ func assignable_type(string target, string source) bool {
     if t == "unknown" || s == "unknown" {
         return false
     }
-
     if compatible_type(t, s) {
         return true
     }
-
     if is_numeric_primitive(t) && is_numeric_primitive(s) {
         return numeric_rank(t) >= numeric_rank(s)
     }
-
     if is_tuple_type(t) || is_tuple_type(s) {
         return assignable_tuple_type(t, s)
     }
-
     false
 }
-
 func is_nilable_type(string ty) bool {
     let clean = parse_type(ty)
     if clean == "map" || clean == "fn" {
@@ -370,20 +332,17 @@ func is_nilable_type(string ty) bool {
     let base = base_type_name(clean)
     return base == "interface" || base == "trait"
 }
-
 func compatible_tuple_type(string left, string right) bool {
     let l = parse_type(left)
     let r = parse_type(right)
     if !is_tuple_type(l) || !is_tuple_type(r) {
         return false
     }
-
     let la = extract_tuple_args(l)
     let ra = extract_tuple_args(r)
     if la.len() != ra.len() {
         return false
     }
-
     let i = 0
     while i < la.len() {
         if !compatible_type(la[i], ra[i]) {
@@ -393,20 +352,17 @@ func compatible_tuple_type(string left, string right) bool {
     }
     true
 }
-
 func assignable_tuple_type(string target, string source) bool {
     let t = parse_type(target)
     let s = parse_type(source)
     if !is_tuple_type(t) || !is_tuple_type(s) {
         return false
     }
-
     let ta = extract_tuple_args(t)
     let sa = extract_tuple_args(s)
     if ta.len() != sa.len() {
         return false
     }
-
     let i = 0
     while i < ta.len() {
         if !assignable_type(ta[i], sa[i]) {
@@ -416,7 +372,6 @@ func assignable_tuple_type(string target, string source) bool {
     }
     true
 }
-
 func is_tuple_type(string ty) bool {
     let clean = parse_type(ty)
     if clean.len() < 2 {
@@ -424,14 +379,12 @@ func is_tuple_type(string ty) bool {
     }
     return starts_with(clean, "(") && ends_with(clean, ")")
 }
-
 func extract_tuple_args(string type_name) vec[string] {
     let out = vec[string]()
     let clean = parse_type(type_name)
     if !is_tuple_type(clean) {
         return out
     }
-
     let inner = slice(clean, 1, clean.len() - 1)
     let depth = 0
     let start = 0
@@ -453,7 +406,6 @@ func extract_tuple_args(string type_name) vec[string] {
     }
     out
 }
-
 func is_numeric_primitive(string ty) bool {
     let clean = parse_type(ty)
     return clean == "i8"
@@ -469,7 +421,6 @@ func is_numeric_primitive(string ty) bool {
         || clean == "f32"
         || clean == "f64"
 }
-
 func numeric_rank(string ty) int {
     let clean = parse_type(ty)
     if clean == "i8" || clean == "u8" {
@@ -486,7 +437,6 @@ func numeric_rank(string ty) int {
     }
     0
 }
-
 func is_builtin_primitive(string ty) bool {
     let clean = parse_type(ty)
     return clean == "()"
@@ -508,7 +458,6 @@ func is_builtin_primitive(string ty) bool {
         || clean == "f32"
         || clean == "f64"
 }
-
 func is_copy_type(string ty) bool {
     let clean = parse_type(ty)
     if clean == "()"
@@ -534,24 +483,19 @@ func is_copy_type(string ty) bool {
     }
     return false
 }
-
 func is_reference_type(string ty) bool {
     return starts_with(trim_text(ty), "&")
 }
-
 func is_slice_type(string ty) bool {
     return starts_with(trim_text(ty), "[]")
 }
-
 func is_generic_type(string ty) bool {
     let clean = trim_text(ty)
     return find_char(clean, "[") >= 0 || find_char(clean, "<") >= 0
 }
-
 func normalize_type_text(string text) string {
     return trim_text(text)
 }
-
 func trim_text(string text) string {
     let start = 0
     let end = text.len()
@@ -563,7 +507,6 @@ func trim_text(string text) string {
     }
     return slice(text, start, end)
 }
-
 func starts_with(string text, string prefix) bool {
     let prefix_len = prefix.len()
     if prefix_len > text.len() {
@@ -571,7 +514,6 @@ func starts_with(string text, string prefix) bool {
     }
     return slice(text, 0, prefix_len) == prefix
 }
-
 func ends_with(string text, string suffix) bool {
     let suffix_len = suffix.len()
     let text_len = text.len()
@@ -580,11 +522,9 @@ func ends_with(string text, string suffix) bool {
     }
     return slice(text, text_len - suffix_len, text_len) == suffix
 }
-
 func is_space(string ch) bool {
     return ch == " " || ch == "\n" || ch == "\t" || ch == "\r"
 }
-
 func find_char(string text, string needle) int {
     let i = 0
     while i < text.len() {
@@ -595,7 +535,6 @@ func find_char(string text, string needle) int {
     }
     return 0 - 1
 }
-
 func find_last_char(string text, string needle) int {
     let i = text.len()
     while i > 0 {
@@ -606,7 +545,6 @@ func find_last_char(string text, string needle) int {
     }
     return 0 - 1
 }
-
 func extract_section(string text, string open, string close) string {
     let start = find_char(text, open)
     if start < 0 {

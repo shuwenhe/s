@@ -1,22 +1,18 @@
 package s
-
 use std.option.option
 use std.prelude.char_at
 use std.prelude.len
 use std.result.result
 use std.vec.vec
-
 struct parse_error {
     string message
     int line
     int column
 }
-
 struct parser {
     vec[token] tokens
     int index
 }
-
 func parse_source(string source) result[source_file, parse_error] {
     switch new_lexer(source).tokenize() {
         result::ok(tokens) : parse_tokens(tokens),
@@ -27,18 +23,15 @@ func parse_source(string source) result[source_file, parse_error] {
         }),
     }
 }
-
 func parse_tokens(vec[token] tokens) result[source_file, parse_error] {
     parser parser = parser {        tokens: tokens,
         index: 0,
     }
     parser.parse_source_file()
 }
-
     int global_parse_depth = 0    func log_depth(string msg) {
         print(msg)
     }
-
 func (self: &mut parser) parse_source_file() result[source_file, parse_error] {
         global_parse_depth = global_parse_depth + 1
         log_depth("parse_source_file depth: " + to_string(global_parse_depth))
@@ -47,7 +40,6 @@ func (self: &mut parser) parse_source_file() result[source_file, parse_error] {
         while self.at_keyword("use") {
             uses.push(self.parse_use_decl()?)
         }
-
         while !self.at(token_kind::eof) {
             if self.at_keyword("const") && self.at_symbol_after_keyword("(") {
                 vec[const_decl] consts = self.parse_const_group_items()?                int ci = 0                while ci < consts.len() {
@@ -58,7 +50,6 @@ func (self: &mut parser) parse_source_file() result[source_file, parse_error] {
             }
             items.push(self.parse_item()?)
         }
-
         global_parse_depth = global_parse_depth - 1
         log_depth("parse_source_file exit depth: " + to_string(global_parse_depth))
         result::ok(source_file {
@@ -67,7 +58,6 @@ func (self: &mut parser) parse_source_file() result[source_file, parse_error] {
             items: items,
         })
     }
-
 func (self: &mut parser) parse_use_decl() result[use_decl, parse_error] {
         self.expect_keyword("use")?
         string path = self.parse_use_path()?        option[string] alias =            if self.at_keyword("as") {
@@ -81,7 +71,6 @@ func (self: &mut parser) parse_use_decl() result[use_decl, parse_error] {
             alias: alias,
         })
     }
-
 func (self: &mut parser) parse_item() result[item, parse_error] {
         if self.at_keyword("func") {
             parsed_function parsed = self.parse_function(true)?
@@ -116,13 +105,11 @@ func (self: &mut parser) parse_item() result[item, parse_error] {
         }
         result::err(self.error_here("unexpected token"))
     }
-
 func (self: &mut parser) parse_const_decl() result[const_decl, parse_error] {
         self.expect_keyword("const")?
         const_decl entry = self.parse_const_entry(false, 0)?        self.eat_symbol(";")
         result::ok(entry)
     }
-
 func (self: &mut parser) parse_const_group_items() result[vec[const_decl], parse_error] {
         self.expect_keyword("const")?
         self.expect_symbol("(")?
@@ -137,7 +124,6 @@ func (self: &mut parser) parse_const_group_items() result[vec[const_decl], parse
         }
         result::ok(out)
     }
-
 func (self: &mut parser) parse_const_entry(bool allow_omitted_value, int iota_index) result[const_decl, parse_error] {
         string name = self.expect_ident()?        option[expr] value = option::none        if self.eat_symbol("=") {
             value = option::some(self.parse_expr()?)
@@ -150,7 +136,6 @@ func (self: &mut parser) parse_const_entry(bool allow_omitted_value, int iota_in
             iota_index: iota_index,
         })
     }
-
 func (self: &mut parser) parse_function_decl() result[function_decl, parse_error] {
         parsed_function pair = self.parse_function(true)?        if pair.receiver.is_some() {
             return result::err(self.error_here("method receiver not allowed in this context"))
@@ -161,7 +146,6 @@ func (self: &mut parser) parse_function_decl() result[function_decl, parse_error
             is_public: starts_with_upper(pair.sig.name),
         })
     }
-
 func (self: &mut parser) parse_struct_decl() result[struct_decl, parse_error] {
         self.expect_keyword("struct")?
         string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("{")?
@@ -174,7 +158,6 @@ func (self: &mut parser) parse_struct_decl() result[struct_decl, parse_error] {
             })
             self.eat_symbol(",")
         }
-
         result::ok(struct_decl {
             name: name,
             generics: generics,
@@ -182,7 +165,6 @@ func (self: &mut parser) parse_struct_decl() result[struct_decl, parse_error] {
             is_public: starts_with_upper(name),
         })
     }
-
 func (self: &mut parser) parse_enum_decl() result[enum_decl, parse_error] {
         self.expect_keyword("enum")?
         string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("{")?
@@ -200,7 +182,6 @@ func (self: &mut parser) parse_enum_decl() result[enum_decl, parse_error] {
             })
             self.eat_symbol(",")
         }
-
         result::ok(enum_decl {
             name: name,
             generics: generics,
@@ -208,7 +189,6 @@ func (self: &mut parser) parse_enum_decl() result[enum_decl, parse_error] {
             is_public: starts_with_upper(name),
         })
     }
-
 func (self: &mut parser) parse_trait_decl() result[trait_decl, parse_error] {
         self.expect_keyword("trait")?
         string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("{")?
@@ -218,7 +198,6 @@ func (self: &mut parser) parse_trait_decl() result[trait_decl, parse_error] {
             methods.push(pair.sig)
             self.expect_symbol(";")?
         }
-
         result::ok(trait_decl {
             name: name,
             generics: generics,
@@ -226,10 +205,8 @@ func (self: &mut parser) parse_trait_decl() result[trait_decl, parse_error] {
             is_public: starts_with_upper(name),
         })
     }
-
 func (self: &mut parser) parse_function(bool require_body) result[parsed_function, parse_error] {
         self.expect_keyword("func")?
-
         option[named_type] receiver = option::none        if self.at_symbol("(") {
             self.expect_symbol("(")?
             let receiver_tokens = self.parse_token_segment(vec[string] { ")" })?
@@ -239,22 +216,17 @@ func (self: &mut parser) parse_function(bool require_body) result[parsed_functio
         }
         string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("(")?
         vec[param] params = self.parse_params()?        self.expect_symbol(")")?
-
         option[string] return_type = option::none        token next = self.peek()?        if !(next.kind == token_kind::symbol && (next.value == "{" || next.value == ";")) && !(
             next.kind == token_kind::keyword && next.value == "where"
         ) {
-
             return_type = option::some(self.parse_type_text(vec[string] { "where", "{", ";" })?)
         }
-
         self.parse_where_clause()?
-
         option[block_expr] body =            if require_body {
                 option::some(self.parse_block_expr()?)
             } else {
                 option::none
             }
-
         result::ok(parsed_function {
             sig: function_sig {
                 name: name,
@@ -266,12 +238,10 @@ func (self: &mut parser) parse_function(bool require_body) result[parsed_functio
             receiver: receiver,
         })
     }
-
 func (self: &mut parser) parse_params() result[vec[param], parse_error] {
         vec[param] params = vec[param]()        if self.at_symbol(")") {
             return result::ok(params)
         }
-
         while true {
             named_type part = self.parse_named_type(vec[string] { ",", ")" })?            params.push(param {
                 name: part.name,
@@ -281,15 +251,12 @@ func (self: &mut parser) parse_params() result[vec[param], parse_error] {
                 break
             }
         }
-
         result::ok(params)
     }
-
 func (self: &mut parser) parse_generic_params() result[vec[string], parse_error] {
         vec[string] generics = vec[string]()        if !self.eat_symbol("[") {
             return result::ok(generics)
         }
-
         while !self.eat_symbol("]") {
             string name = self.expect_ident()?            string item =                if self.eat_symbol(":") {
                     vec[string] bounds = vec[string]()                    bounds.push(self.parse_path()?)
@@ -303,10 +270,8 @@ func (self: &mut parser) parse_generic_params() result[vec[string], parse_error]
             generics.push(item)
             self.eat_symbol(",")
         }
-
         result::ok(generics)
     }
-
 func (self: &mut parser) parse_where_clause() result[(), parse_error] {
         if !self.eat_keyword("where") {
             return result::ok(())
@@ -319,11 +284,9 @@ func (self: &mut parser) parse_where_clause() result[(), parse_error] {
         }
         result::ok(())
     }
-
 func (self: &mut parser) parse_named_type(vec[string] stop_values) result[named_type, parse_error] {
         vec[token] segment = self.parse_token_segment(stop_values)?        decode_named_type(segment)
     }
-
 func (self: &mut parser) parse_token_segment(vec[string] stop_values) result[vec[token], parse_error] {
         vec[token] segment = vec[token]()        int bracket = 0        int paren = 0
         while true {
@@ -347,10 +310,8 @@ func (self: &mut parser) parse_token_segment(vec[string] stop_values) result[vec
             }
             segment.push(self.advance()?)
         }
-
         result::ok(segment)
     }
-
 func (self: &mut parser) parse_block_expr() result[block_expr, parse_error] {
         self.expect_symbol("{")?
         vec[stmt] statements = vec[stmt]()        option[expr] final_expr = option::none
@@ -370,7 +331,6 @@ func (self: &mut parser) parse_block_expr() result[block_expr, parse_error] {
             final_expr = option::some(expr)
             break
         }
-
         self.expect_symbol("}")?
         result::ok(block_expr {
             statements: statements,
@@ -378,7 +338,6 @@ func (self: &mut parser) parse_block_expr() result[block_expr, parse_error] {
             inferred_type: option::none,
         })
     }
-
 func (self: parser) starts_stmt() bool {
         self.at_keyword("return")
             || self.at_keyword("defer")
@@ -388,7 +347,6 @@ func (self: parser) starts_stmt() bool {
             || self.looks_like_increment_stmt()
             || self.looks_like_assignment_stmt()
     }
-
 func (self: &mut parser) parse_stmt() result[stmt, parse_error] {
         if self.at_keyword("defer") {
             return result::ok(stmt::defer(self.parse_defer_stmt()?))
@@ -413,27 +371,22 @@ func (self: &mut parser) parse_stmt() result[stmt, parse_error] {
         }
         result::err(self.error_here("unexpected statement"))
     }
-
 func (self: &mut parser) parse_var_stmt(bool consume_semicolon) result[var_stmt, parse_error] {
         result::err(self.error_here("let/var declarations are not supported; use explicit typed declaration"))
     }
-
 func (self: &mut parser) parse_short_var_stmt(bool consume_semicolon) result[var_stmt, parse_error] {
         result::err(self.error_here("short declaration := is not supported; use explicit typed declaration"))
     }
-
 func (self: &mut parser) parse_defer_stmt() result[defer_stmt, parse_error] {
         self.expect_keyword("defer")?
         expr expr = self.parse_expr()?        self.eat_symbol(";")
         result::ok(defer_stmt { expr: expr })
     }
-
 func (self: &mut parser) parse_sroutine_stmt() result[sroutine_stmt, parse_error] {
         self.expect_keyword("sroutine")?
         expr expr = self.parse_expr()?        self.eat_symbol(";")
         result::ok(sroutine_stmt { expr: expr })
     }
-
 func (self: &mut parser) parse_typed_var_stmt(bool consume_semicolon) result[var_stmt, parse_error] {
         let segment = self.parse_token_segment(vec[string] { "=" })?
         let named = decode_named_type(segment)?
@@ -448,7 +401,6 @@ func (self: &mut parser) parse_typed_var_stmt(bool consume_semicolon) result[var
             value: value,
         })
     }
-
 func (self: &mut parser) parse_assign_stmt(bool consume_semicolon) result[assign_stmt, parse_error] {
         string name = self.expect_ident()?        self.expect_symbol("=")?
         let value = self.parse_expr()?
@@ -460,7 +412,6 @@ func (self: &mut parser) parse_assign_stmt(bool consume_semicolon) result[assign
             value: value,
         })
     }
-
 func (self: &mut parser) parse_increment_stmt(bool consume_semicolon) result[increment_stmt, parse_error] {
         string name = self.expect_ident()?        self.expect_symbol("++")?
         if consume_semicolon {
@@ -470,7 +421,6 @@ func (self: &mut parser) parse_increment_stmt(bool consume_semicolon) result[inc
             name: name,
         })
     }
-
 func (self: &mut parser) parse_cfor_stmt() result[c_for_stmt, parse_error] {
         self.expect_keyword("for")?
         self.expect_symbol("(")?
@@ -487,7 +437,6 @@ func (self: &mut parser) parse_cfor_stmt() result[c_for_stmt, parse_error] {
             body: body,
         })
     }
-
 func (self: &mut parser) parse_for_clause_stmt() result[stmt, parse_error] {
         if self.looks_like_typed_var_stmt() {
             return result::ok(stmt::let(self.parse_typed_var_stmt(false)?))
@@ -500,7 +449,6 @@ func (self: &mut parser) parse_for_clause_stmt() result[stmt, parse_error] {
         }
         result::err(self.error_here("unexpected for clause"))
     }
-
 func (self: &mut parser) parse_return_stmt() result[return_stmt, parse_error] {
         self.expect_keyword("return")?
         if self.eat_symbol(";") {
@@ -514,7 +462,6 @@ func (self: &mut parser) parse_return_stmt() result[return_stmt, parse_error] {
             value: option::some(value),
         })
     }
-
 func (self: &mut parser) parse_expr() result[expr, parse_error] {
         if self.at_keyword("select") {
             return self.parse_select_expr()
@@ -533,11 +480,9 @@ func (self: &mut parser) parse_expr() result[expr, parse_error] {
         }
         self.parse_binary_expr(0)
     }
-
 func (self: &mut parser) parse_select_expr() result[expr, parse_error] {
         self.expect_keyword("select")?
         self.expect_symbol("{")?
-
         string mode = ""        vec[expr] recv_args = vec[expr]()        vec[expr] send_args = vec[expr]()        option[expr] timeout_arg = option[expr].none        bool has_default = false
         while !self.eat_symbol("}") {
             self.expect_keyword("case")?
@@ -550,11 +495,9 @@ func (self: &mut parser) parse_select_expr() result[expr, parse_error] {
                 self.eat_symbol(";")
                 continue
             }
-
             let case_expr = self.parse_expr()?
             self.expect_symbol(":")?
             self.eat_symbol(";")
-
             switch case_expr {
                 expr.call(call_value) : {
                     switch call_value.callee.value {
@@ -601,14 +544,12 @@ func (self: &mut parser) parse_select_expr() result[expr, parse_error] {
                 _ : return result::err(self.error_here("select case must be call expression")),
             }
         }
-
         if timeout_arg.is_some() && has_default {
             return result::err(self.error_here("select cannot combine timeout and default"))
         }
         if mode == "" {
             return result::err(self.error_here("select requires recv(...) or send(...) case"))
         }
-
         string callee_name = ""        vec[expr] args = vec[expr]()        if mode == "recv" {
             if recv_args.len() == 0 {
                 return result::err(self.error_here("select recv requires at least one channel"))
@@ -640,10 +581,8 @@ func (self: &mut parser) parse_select_expr() result[expr, parse_error] {
                 callee_name = "select_send_default"
             }
         }
-
         result::ok(build_call_expr(callee_name, args))
     }
-
 func (self: &mut parser) parse_switch_expr() result[expr, parse_error] {
         self.expect_keyword("switch")?
         expr subject = self.parse_expr()?        self.expect_symbol("{")?
@@ -657,14 +596,12 @@ func (self: &mut parser) parse_switch_expr() result[expr, parse_error] {
             })
             self.eat_symbol(",")
         }
-
         result::ok(expr::switch(switch_expr {
             subject: box(subject),
             arms: arms,
             inferred_type: option::none,
         }))
     }
-
 func (self: &mut parser) parse_if_expr() result[expr, parse_error] {
         self.expect_keyword("if")?
         expr condition = self.parse_expr()?        block_expr then_branch = self.parse_block_expr()?        option[box[expr]] else_branch =            if self.eat_keyword("else") {
@@ -676,7 +613,6 @@ func (self: &mut parser) parse_if_expr() result[expr, parse_error] {
             } else {
                 option::none
             }
-
         result::ok(expr::if(if_expr {
             condition: box(condition),
             then_branch: then_branch,
@@ -684,7 +620,6 @@ func (self: &mut parser) parse_if_expr() result[expr, parse_error] {
             inferred_type: option::none,
         }))
     }
-
 func (self: &mut parser) parse_while_expr() result[expr, parse_error] {
         self.expect_keyword("while")?
         expr condition = self.parse_expr()?        let body = self.parse_block_expr()?
@@ -694,7 +629,6 @@ func (self: &mut parser) parse_while_expr() result[expr, parse_error] {
             inferred_type: option::none,
         }))
     }
-
 func (self: &mut parser) parse_for_expr() result[expr, parse_error] {
         self.expect_keyword("for")?
         string name = self.expect_ident()?        self.expect_keyword("in")?
@@ -706,12 +640,10 @@ func (self: &mut parser) parse_for_expr() result[expr, parse_error] {
             inferred_type: option::none,
         }))
     }
-
 func (self: &mut parser) parse_pattern() result[pattern, parse_error] {
         if self.eat_ident_value("_") {
             return result::ok(pattern::wildcard(wildcard_pattern {}))
         }
-
         token token = self.peek()?        if token.kind == token_kind::int {
             self.advance()?
             return result::ok(pattern::literal(literal_pattern {
@@ -748,7 +680,6 @@ func (self: &mut parser) parse_pattern() result[pattern, parse_error] {
                 }),
             }))
         }
-
         string path = self.parse_path()?        if self.eat_symbol("(") {
             vec[pattern] args = vec[pattern]()            if !self.at_symbol(")") {
                 while true {
@@ -764,17 +695,14 @@ func (self: &mut parser) parse_pattern() result[pattern, parse_error] {
                 args: args,
             }))
         }
-
         if path_contains_dot(path) || starts_with_upper(path) {
             return result::ok(pattern::variant(variant_pattern {
                 path: path,
                 args: vec[pattern](),
             }))
         }
-
         result::ok(pattern::name(name_pattern { name: path }))
     }
-
 func (self: &mut parser) parse_binary_expr(int min_precedence) result[expr, parse_error] {
         let expr = self.parse_unary_expr()?
         while true {
@@ -791,7 +719,6 @@ func (self: &mut parser) parse_binary_expr(int min_precedence) result[expr, pars
         }
         result::ok(expr)
     }
-
 func (self: &mut parser) parse_unary_expr() result[expr, parse_error] {
         if self.eat_symbol("&") {
             bool mutable = self.eat_keyword("mut")            let target = self.parse_unary_expr()?
@@ -803,7 +730,6 @@ func (self: &mut parser) parse_unary_expr() result[expr, parse_error] {
         }
         self.parse_call_expr()
     }
-
 func (self: &mut parser) parse_call_expr() result[expr, parse_error] {
         let expr = self.parse_primary_expr()?
         while true {
@@ -855,7 +781,6 @@ func (self: &mut parser) parse_call_expr() result[expr, parse_error] {
         }
         result::ok(expr)
     }
-
 func (self: &mut parser) parse_primary_expr() result[expr, parse_error] {
         token token = self.peek()?        if token.kind == token_kind::int {
             self.advance()?
@@ -899,12 +824,9 @@ func (self: &mut parser) parse_primary_expr() result[expr, parse_error] {
             expr expr = self.parse_expr()?            self.expect_symbol(")")?
             return result::ok(expr)
         }
-
         if self.at_symbol("[") {
-
             let bracket = self.parse_bracket_group()?
             let type_text = bracket
-
             token token = self.peek().unwrap()            if token.kind != token_kind::symbol || token.value != "{" {
                 let seg = self.parse_token_segment(vec[string] { "{" })?
                 type_text = type_text + " " + join_token_values(seg)
@@ -921,13 +843,10 @@ func (self: &mut parser) parse_primary_expr() result[expr, parse_error] {
             self.expect_symbol("}")?
             return result::ok(expr::array(array_literal { type_text: option::some(type_text.trim()), items: items }))
         }
-
         if token.kind == token_kind::ident && token.value == "map" {
-
             self.advance()?
             let bracket = self.parse_bracket_group()?
             let type_text = "map" + bracket
-
             let token2 = self.peek().unwrap()
             if token2.kind == token_kind::ident || token2.kind == token_kind::symbol {
                 let seg = self.parse_token_segment(vec[string] { "{" })?
@@ -953,7 +872,6 @@ func (self: &mut parser) parse_primary_expr() result[expr, parse_error] {
             inferred_type: option::none,
         }))
     }
-
 func (self: parser) binary_precedence(string op) int {
         switch op {
             "||" : 1,
@@ -972,7 +890,6 @@ func (self: parser) binary_precedence(string op) int {
             _ : -1,
         }
     }
-
 func (self: &mut parser) parse_use_path() result[string, parse_error] {
         vec[string] parts = vec[string]()        parts.push(self.expect_ident()?)
         while self.eat_symbol(".") {
@@ -993,7 +910,6 @@ func (self: &mut parser) parse_use_path() result[string, parse_error] {
         }
         result::ok(join_strings(parts, "."))
     }
-
 func (self: &mut parser) parse_path() result[string, parse_error] {
         vec[string] parts = vec[string]()        parts.push(self.expect_ident()?)
         while self.eat_symbol(".") {
@@ -1010,7 +926,6 @@ func (self: &mut parser) parse_path() result[string, parse_error] {
         }
         result::ok(join_strings(parts, "."))
     }
-
 func (self: &mut parser) parse_type_text(vec[string] stop_values) result[string, parse_error] {
         vec[string] parts = vec[string]()        int bracket = 0        int paren = 0
         while true {
@@ -1034,10 +949,8 @@ func (self: &mut parser) parse_type_text(vec[string] stop_values) result[string,
             }
             parts.push(self.advance()?.value)
         }
-
         result::ok(normalize_type_text(join_strings(parts, " ")))
     }
-
 func (self: &mut parser) parse_bracket_group() result[string, parse_error] {
         vec[string] parts = vec[string]()        parts.push(self.advance()?.value)
         int depth = 1        while depth > 0 {
@@ -1055,49 +968,39 @@ func (self: &mut parser) parse_bracket_group() result[string, parse_error] {
                 .replace(" ,", ",")
         )
     }
-
 func (self: parser) at(token_kind kind) bool {
         self.peek().unwrap().kind == kind
     }
-
 func (self: parser) at_keyword(string value) bool {
         token token = self.peek().unwrap()        token.kind == token_kind::keyword && token.value == value
     }
-
 func (self: parser) at_symbol(string value) bool {
         token token = self.peek().unwrap()        token.kind == token_kind::symbol && token.value == value
     }
-
 func (self: parser) at_symbol_after_keyword(string value) bool {
         token first = self.peek().unwrap()        if first.kind != token_kind::keyword {
             return false
         }
         token second = self.peek_at(1).unwrap()        second.kind == token_kind::symbol && second.value == value
     }
-
 func (self: parser) at_cfor_start() bool {
         self.at_keyword("for") && self.peek_at(1).unwrap().kind == token_kind::symbol && self.peek_at(1).unwrap().value == "("
     }
-
 func (self: parser) looks_like_assignment_stmt() bool {
         token first = self.peek().unwrap()        token second = self.peek_at(1).unwrap()        first.kind == token_kind::ident && second.kind == token_kind::symbol && second.value == "="
     }
-
 func (self: parser) looks_like_short_var_stmt() bool {
         false
     }
-
 func (self: parser) looks_like_increment_stmt() bool {
         token first = self.peek().unwrap()        token second = self.peek_at(1).unwrap()        first.kind == token_kind::ident && second.kind == token_kind::symbol && second.value == "++"
     }
-
 func (self: parser) looks_like_typed_var_stmt() bool {
         int offset = self.find_top_level_symbol_offset("=")        if offset <= 0 {
             return false
         }
         decode_named_type(slice_tokens(self.tokens, self.index, self.index + offset)).is_ok()
     }
-
 func (self: &mut parser) eat_keyword(string value) bool {
         if self.at_keyword(value) {
             self.advance().unwrap()
@@ -1105,7 +1008,6 @@ func (self: &mut parser) eat_keyword(string value) bool {
         }
         false
     }
-
 func (self: &mut parser) eat_ident_value(string value) bool {
         token token = self.peek().unwrap()        if token.kind == token_kind::ident && token.value == value {
             self.advance().unwrap()
@@ -1113,7 +1015,6 @@ func (self: &mut parser) eat_ident_value(string value) bool {
         }
         false
     }
-
 func (self: &mut parser) eat_symbol(string value) bool {
         if self.at_symbol(value) {
             self.advance().unwrap()
@@ -1121,7 +1022,6 @@ func (self: &mut parser) eat_symbol(string value) bool {
         }
         false
     }
-
 func (self: &mut parser) expect_keyword(string value) result[token, parse_error] {
         token token = self.peek()?        if token.kind == token_kind::keyword && token.value == value {
             return self.advance()
@@ -1132,7 +1032,6 @@ func (self: &mut parser) expect_keyword(string value) result[token, parse_error]
             column: token.column,
         })
     }
-
 func (self: &mut parser) expect_symbol(string value) result[token, parse_error] {
         token token = self.peek()?        if token.kind == token_kind::symbol && token.value == value {
             return self.advance()
@@ -1143,7 +1042,6 @@ func (self: &mut parser) expect_symbol(string value) result[token, parse_error] 
             column: token.column,
         })
     }
-
 func (self: &mut parser) expect_ident() result[string, parse_error] {
         token token = self.peek()?        if token.kind == token_kind::ident {
             self.advance()?
@@ -1159,11 +1057,9 @@ func (self: &mut parser) expect_ident() result[string, parse_error] {
             column: token.column,
         })
     }
-
 func (self: parser) peek() result[token, parse_error] {
         self.peek_at(0)
     }
-
 func (self: parser) peek_at(int offset) result[token, parse_error] {
         if self.index >= len(self.tokens) {
             return result::err(parse_error {
@@ -1177,12 +1073,10 @@ func (self: parser) peek_at(int offset) result[token, parse_error] {
         }
         result::ok(self.tokens[target])
     }
-
 func (self: &mut parser) advance() result[token, parse_error] {
         token token = self.peek()?        self.index = self.index + 1
         result::ok(token)
     }
-
 func (self: parser) error_here(string message) parse_error {
         token token = self.peek().unwrap()        parse_error {
             message: message,
@@ -1190,7 +1084,6 @@ func (self: parser) error_here(string message) parse_error {
             column: token.column,
         }
     }
-
 func (self: parser) find_top_level_symbol_offset(string value) int {
         int bracket = 0        int paren = 0        int offset = 0        while self.index + offset < len(self.tokens) {
             let token = self.tokens[self.index + offset]
@@ -1217,7 +1110,6 @@ func (self: parser) find_top_level_symbol_offset(string value) int {
         }
         -1
     }
-
 func build_call_expr(string callee_name, vec[expr] args) expr {
     expr::call(call_expr {
         callee: box(expr::name(name_expr {
@@ -1228,18 +1120,15 @@ func build_call_expr(string callee_name, vec[expr] args) expr {
         inferred_type: option::none,
     })
 }
-
 struct parsed_function {
     function_sig sig
     option[block_expr] body
     option[named_type] receiver
 }
-
 struct named_type {
     string name
     string type_name
 }
-
 func decode_receiver_type(vec[token] tokens) result[named_type, parse_error] {
     let colon = find_token_value(tokens, ":")
     if colon >= 0 {
@@ -1257,7 +1146,6 @@ func decode_receiver_type(vec[token] tokens) result[named_type, parse_error] {
         column: 0,
     })
 }
-
 func decode_named_type(vec[token] tokens) result[named_type, parse_error] {
     int colon = find_token_value(tokens, ":")    if colon >= 0 {
         let name_tokens = slice_tokens(tokens, 0, colon)
@@ -1267,7 +1155,6 @@ func decode_named_type(vec[token] tokens) result[named_type, parse_error] {
             type_name: normalize_type_text(join_token_values(type_tokens)),
         })
     }
-
     int split = find_decl_name_index(tokens)    if split <= 0 {
         return result::err(parse_error {
             message: "expected typed name",
@@ -1280,7 +1167,6 @@ func decode_named_type(vec[token] tokens) result[named_type, parse_error] {
         type_name: normalize_type_text(join_token_values(slice_tokens(tokens, 0, split))),
     })
 }
-
 func slice_tokens(vec[token] tokens, int start, int end) vec[token] {
     vec[token] out = vec[token]()    int i = start    while i < end {
         out.push(tokens[i])
@@ -1288,14 +1174,12 @@ func slice_tokens(vec[token] tokens, int start, int end) vec[token] {
     }
     out
 }
-
 func join_token_values(vec[token] tokens) string {
     vec[string] parts = vec[string]()    for token in tokens {
         parts.push(token.value)
     }
     join_strings(parts, " ")
 }
-
 func find_token_value(vec[token] tokens, string value) int {
     int bracket = 0    int paren = 0    int i = 0    while i < len(tokens) {
         let token = tokens[i]
@@ -1314,7 +1198,6 @@ func find_token_value(vec[token] tokens, string value) int {
     }
     -1
 }
-
 func find_decl_name_index(vec[token] tokens) int {
     int bracket = 0    int paren = 0    int index = -1    int i = 0    while i < len(tokens) {
         let token = tokens[i]
@@ -1333,7 +1216,6 @@ func find_decl_name_index(vec[token] tokens) int {
     }
     index
 }
-
 func normalize_type_text(string text) string {
     text
         .replace(" . ", ".")
@@ -1346,7 +1228,6 @@ func normalize_type_text(string text) string {
         .replace("[] ", "[]")
         .replace(" [", "[")
 }
-
 func contains_string(vec[string] values, string target) bool {
     for value in values {
         if value == target {
@@ -1355,7 +1236,6 @@ func contains_string(vec[string] values, string target) bool {
     }
     false
 }
-
 func join_strings(vec[string] values, string sep) string {
     string out = ""    bool first = true    for value in values {
         if !first {
@@ -1366,7 +1246,6 @@ func join_strings(vec[string] values, string sep) string {
     }
     out
 }
-
 func path_contains_dot(string path) bool {
     int i = 0    while i < len(path) {
         if char_at(path, i) == "." {
@@ -1376,7 +1255,6 @@ func path_contains_dot(string path) bool {
     }
     false
 }
-
 func starts_with_upper(string text) bool {
     if text == "" {
         return false

@@ -1,5 +1,4 @@
 package src.net
-
 interface PacketConn {
     ReadFrom([]byte) (int, Addr, error)
     WriteTo([]byte, Addr) (int, error)
