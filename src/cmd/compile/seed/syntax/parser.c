@@ -976,7 +976,7 @@ static ast_node *parse_block(parser *p) {
 
 	while (!check(p, TOKEN_RBRACE) && !is_at_end(p)) {
 
-		/* allow shorthand typed binding inside blocks: 'Type name = expr' */
+		 
 		ast_node *stmt = NULL;
 		if ((check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_LBRACKET)) && looks_like_typed_binding(p)) {
 			stmt = parse_typed_binding_statement(p, 1);
@@ -1078,7 +1078,7 @@ static ast_node *parse_typed_binding_statement(parser *p, int is_mutable) {
 	}
 	node->as.let_stmt.mutable = is_mutable ? 1 : 0;
 	node->as.let_stmt.name = dup_cstr(binding_name);
-	/* preserve declared type annotation */
+	 
 	node->as.let_stmt.type_name = dup_cstr(binding_type);
 
 	if (!node->as.let_stmt.name) {
@@ -1112,16 +1112,16 @@ static int looks_like_typed_binding(parser *p) {
 	char *parsed_name = NULL;
 	int ok = 0;
 
-	/* Decide based on the starting token.
-	 * - If it starts with an identifier, ensure it's not a function call (identifier followed by '(').
-	 * - If it starts with '[', allow array-style typed bindings. */
+	 
+
+
 	if (is_at_end(p)) {
 		p->current = saved;
 		return 0;
 	}
 	token_type cur_t = peek(p)->type;
 	if (cur_t == TOKEN_IDENTIFIER) {
-		/* If next token is '(' (call) or '[' (index), this is not a typed binding. */
+		 
 		if (p->current + 1 < p->tokens->len) {
 			token_type nt = p->tokens->data[p->current + 1].type;
 			if (nt == TOKEN_LPAREN || nt == TOKEN_LBRACKET) {
@@ -1151,9 +1151,9 @@ static ast_node *parse_return_statement(parser *p) {
 	}
 
 	if (!check(p, TOKEN_SEMICOLON) && !check(p, TOKEN_RBRACE)) {
-		/* return expression parsing */
+		 
 		node->as.return_stmt.value = parse_expression(p);
-		/* return expression parsed */
+		 
 		if (!node->as.return_stmt.value) {
 			ast_free(node);
 			return NULL;
@@ -1330,8 +1330,8 @@ static ast_node *parse_for_statement(parser *p) {
 		ast_free(node);
 		return NULL;
 	}
-	/* Binding parsers consume their terminating semicolon. Expression and
-	 * empty initializers leave it for the for-clause parser. */
+	 
+
 	if ((!node->as.for_stmt.init || node->as.for_stmt.init->kind != AST_LET_STMT) &&
 		!expect(p, TOKEN_SEMICOLON, ";")) {
 		ast_free(node);
@@ -1555,8 +1555,8 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 
 	while (!is_at_end(p)) {
 		token_type t = peek(p)->type;
-		/* If we hit an un-nested '}' that's not part of the typed-name, stop
-		 * scanning so the outer parser can handle the block close. */
+		 
+
 		if (t == TOKEN_RBRACE && bracket_depth == 0 && paren_depth == 0 && brace_depth == 0) {
 			break;
 		}
@@ -1617,16 +1617,16 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 		p->current = saved;
 		return 0;
 	}
-	/* If the parsed type string ends with a dot, this was likely an object member
-	 * assignment like `obj.member = ...` mis-parsed as a typed binding. Reject
-	 * that to let the normal assignment parsing handle it. */
+	 
+
+
 	{
 		size_t lt = strlen(*out_type);
 		if (lt > 0) {
 			char last = (*out_type)[lt - 1];
-			/* If the last character is not alphanumeric or underscore, it's likely
-			 * trailing punctuation from an expression (e.g. '.' or '['), not a
-			 * proper type name segment. Reject to avoid misclassification. */
+			 
+
+
 			if (!(isalnum((unsigned char)last) || last == '_')) {
 				free(*out_type);
 				free(*out_name);
@@ -1694,7 +1694,7 @@ static ast_node *parse_fn_statement(parser *p) {
 			ast_free(node);
 			return NULL;
 		}
-		/* Accept both `(name: Type)` and the Go-like `(name Type)` form. */
+		 
 		match(p, TOKEN_COLON);
 		type_start = p->current;
 		while (!is_at_end(p) && !check(p, TOKEN_RPAREN)) {
@@ -2243,8 +2243,8 @@ static ast_node *parse_struct_decl(parser *p) {
 		return NULL;
 	}
 
-	/* parse struct body to capture field type/name pairs line by line */
-	/* '{' already consumed above */
+	 
+	 
 
 	ast_node *stype = ast_new(AST_STRUCT_EXPR, kw->pos);
 	if (!stype) return NULL;
@@ -2252,11 +2252,11 @@ static ast_node *parse_struct_decl(parser *p) {
 	if (!stype->as.struct_expr.type_name) { ast_free(stype); return NULL; }
 
 	while (!check(p, TOKEN_RBRACE)) {
-		/* skip empty lines */
+		 
 		const token *t = peek(p);
 		if (t->type == TOKEN_SEMICOLON) { advance_tok(p); continue; }
 		if (t->type == TOKEN_RBRACE) break;
-		/* collect tokens on this line */
+		 
 		size_t line = t->pos.line;
 		size_t start = p->current;
 		size_t k = start;
@@ -2265,25 +2265,25 @@ static ast_node *parse_struct_decl(parser *p) {
 			k++;
 		}
 		if (k == start) break;
-		/* last token on the line should be the field name */
+		 
 		const token *field_tok = &p->tokens->data[k-1];
-		/* type tokens are from start .. k-1 (exclusive)
-		 * join them to get the type lexeme */
+		 
+
 		char *type_lex = join_lexemes_range(p->tokens, start, k-1);
 		if (!type_lex) { ast_free(stype); return NULL; }
-		/* push field name */
+		 
 		char **next_names = (char **)realloc(stype->as.struct_expr.field_names, (stype->as.struct_expr.field_count + 1) * sizeof(char *));
 		if (!next_names) { free(type_lex); ast_free(stype); return NULL; }
 		stype->as.struct_expr.field_names = next_names;
 		stype->as.struct_expr.field_names[stype->as.struct_expr.field_count] = dup_cstr(field_tok->lexeme);
 		if (!stype->as.struct_expr.field_names[stype->as.struct_expr.field_count]) { free(type_lex); ast_free(stype); return NULL; }
-		/* push a string expr node that holds the type lexeme so analyzer can register it */
+		 
 		ast_node *type_node = ast_new(AST_STRING_EXPR, field_tok->pos);
 		if (!type_node) { free(type_lex); ast_free(stype); return NULL; }
-		type_node->as.string_expr.literal = type_lex; /* transfer ownership */
+		type_node->as.string_expr.literal = type_lex;  
 		if (!ast_vec_push(&stype->as.struct_expr.field_values, type_node)) { ast_free(type_node); ast_free(stype); return NULL; }
 		stype->as.struct_expr.field_count++;
-		/* advance over any semicolon on this line */
+		 
 		if (check(p, TOKEN_SEMICOLON)) advance_tok(p);
 	}
 
@@ -2423,7 +2423,7 @@ parse_result parser_parse_tokens(const token_vec *tokens, compile_error *err) {
 			out.root = NULL;
 			return out;
 		}
-		/* parsed top-level declaration */
+		 
 		if (!ast_vec_push(&out.root->as.program.statements, stmt)) {
 			ast_free(stmt);
 			ast_free(out.root);

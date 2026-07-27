@@ -159,7 +159,7 @@ static type_field_info *find_type_info(const char *type_name) {
 
 static int register_type_fields(const char *type_name, char **field_names, char **field_types, size_t field_count) {
 	if (!type_name) return 0;
-	if (find_type_info(type_name)) return 1; /* already registered */
+	if (find_type_info(type_name)) return 1;  
 	type_field_info *t = (type_field_info *)malloc(sizeof(type_field_info));
 	if (!t) return 0;
 	t->type_name = dup_cstr(type_name);
@@ -828,7 +828,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			*out_type = TYPE_ARRAY;
 			return 1;
 		case AST_STRUCT_EXPR:
-			/* analyze field values and register field types for this struct type */
+			 
 			if (node->as.struct_expr.type_name) {
 				char **f_types = NULL;
 				size_t fc = node->as.struct_expr.field_count;
@@ -844,7 +844,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					}
 					if (f_types) f_types[i] = dup_cstr(rhs_type ? rhs_type : TYPE_ANY);
 				}
-				/* register fields if we have names */
+				 
 				if (node->as.struct_expr.field_names && node->as.struct_expr.field_count > 0) {
 					if (!register_type_fields(node->as.struct_expr.type_name, node->as.struct_expr.field_names, f_types, node->as.struct_expr.field_count)) {
 						for (size_t j = 0; j < node->as.struct_expr.field_count; j++) if (f_types && f_types[j]) free(f_types[j]);
@@ -872,19 +872,19 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			if (!analyze_expr(ctx, node->as.member_expr.object, &lhs_type)) {
 				return 0;
 			}
-			/* Targeted diagnostic: if this member is the optimizer array, print its base type */
+			 
 			if (node->as.member_expr.member && strcmp(node->as.member_expr.member, "backbone_optimizers") == 0) {
 				fprintf(stderr, "DEBUG_MEMBER member='%s' base_type='%s' at %d:%d\n",
 					node->as.member_expr.member,
 					lhs_type ? lhs_type : TYPE_ANY,
 					(int)node->pos.line, (int)node->pos.column);
 			}
-			/* Try to resolve member type from registered struct info */
+			 
 			if (lhs_type) {
-				/* If lhs is an array '[]T' and member access is like 'len' or similar, skip; here we look up field on T only for struct lhs */
+				 
 				const char *resolved = NULL;
 				if (strncmp(lhs_type, "[]", 2) == 0) {
-					/* array of structs: try on element type */
+					 
 					char *elem = (char *)lhs_type + 2;
 					resolved = lookup_field_type(elem, node->as.member_expr.member);
 				}
@@ -893,10 +893,10 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					*out_type = resolved;
 					return 1;
 				}
-				/* attempt to find a struct literal in the program that defines this type and register its fields */
+				 
 				ast_node *se = find_struct_literal(ctx, lhs_type);
 				if (se) {
-					/* build field type list by analyzing field value expressions */
+					 
 					size_t fc = se->as.struct_expr.field_count;
 					char **f_names = NULL;
 					char **f_types = NULL;
@@ -914,12 +914,12 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					register_type_fields(lhs_type, f_names, f_types, fc);
 					for (size_t ii = 0; ii < fc; ii++) { free(f_names[ii]); free(f_types[ii]); }
 					free(f_names); free(f_types);
-					/* try lookup again */
+					 
 					resolved = lookup_field_type(lhs_type, node->as.member_expr.member);
 					if (resolved) { *out_type = resolved; return 1; }
 				}
 			}
-			/* fallback: unknown member, return any */
+			 
 			*out_type = TYPE_ANY;
 			return 1;
 		case AST_INDEX_EXPR:
@@ -934,15 +934,15 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					"index expression expects int index, got '%s'", rhs_type ? rhs_type : TYPE_ANY);
 				return 0;
 			}
-			/* If indexing a string, result is int (char). If indexing an array '[]T',
-			 * result is element type 'T'. Otherwise unknown. */
+			 
+
 			if (lhs_type && strcmp(lhs_type, TYPE_STRING) == 0) {
 				*out_type = TYPE_INT;
 				return 1;
 			}
 			if (lhs_type && strncmp(lhs_type, "[]", 2) == 0) {
 				*out_type = dup_cstr(lhs_type + 2);
-				/* If the indexed object is a member access to backbone_optimizers, log base/result types */
+				 
 				if (node->as.index_expr.object && node->as.index_expr.object->kind == AST_MEMBER_EXPR &&
 					node->as.index_expr.object->as.member_expr.member &&
 					strcmp(node->as.index_expr.object->as.member_expr.member, "backbone_optimizers") == 0) {
@@ -1323,14 +1323,14 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						return 0;
 					}
 					if (status == 0) {
-						/* already defined in this scope: allow idempotent re-use only if it's an import */
+						 
 						symbol *existing = scope_lookup_current(ctx->current_scope, decl->as.use_decl.alias);
 						if (!existing || existing->kind != SYMBOL_IMPORT) {
 							error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
 								"redefinition of import alias '%s'", decl->as.use_decl.alias);
 							return 0;
 						}
-						/* already present and is an import; skip silently */
+						 
 					}
 				}
 				if (decl->kind == AST_USE_DECL && decl->as.use_decl.selector_count > 0) {
@@ -1368,9 +1368,9 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 									"redefinition of import alias '%s'", decl->as.use_decl.selectors[j]);
 								return 0;
 							}
-							/* already present - nothing more to do */
+							 
 						}
-						/* newly defined or already present; nothing else required here */
+						 
 					}
 				}
 			}
@@ -1387,11 +1387,11 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_BLOCK:
 			return analyze_block_with_new_scope(ctx, node);
 		case AST_LET_STMT:
-			/* special-case: struct declaration encoded as a let with type_name='struct' and value AST_STRUCT_EXPR */
+			 
 			if (node->as.let_stmt.type_name && strcmp(node->as.let_stmt.type_name, "struct") == 0 &&
 				node->as.let_stmt.value && node->as.let_stmt.value->kind == AST_STRUCT_EXPR) {
 				ast_node *stype = node->as.let_stmt.value;
-				/* collect field names and types from the struct_expr where field_values are string literals (type lexemes) */
+				 
 				size_t fc = stype->as.struct_expr.field_count;
 				char **f_names = NULL;
 				char **f_types = NULL;
@@ -1406,7 +1406,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				}
 				for (i = 0; i < fc; i++) {
 					f_names[i] = dup_cstr(stype->as.struct_expr.field_names[i]);
-					/* field_values[i] is a string expr node containing the type lexeme */
+					 
 					ast_node *tv = stype->as.struct_expr.field_values.data[i];
 					if (tv && tv->kind == AST_STRING_EXPR && tv->as.string_expr.literal) {
 						f_types[i] = dup_cstr(tv->as.string_expr.literal);
@@ -1420,14 +1420,14 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						return 0;
 					}
 				}
-				/* register the struct type */
+				 
 				if (!register_type_fields(node->as.let_stmt.name, f_names, f_types, fc)) {
 					for (size_t j = 0; j < fc; j++) { free(f_names[j]); free(f_types[j]); }
 					free(f_names); free(f_types);
 					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
 					return 0;
 				}
-				/* Debug: list registered fields */
+				 
 				for (size_t jj = 0; jj < fc; jj++) {
 					fprintf(stderr, "DEBUG_REGISTER type='%s' field='%s' field_type='%s' at %d:%d\n",
 						node->as.let_stmt.name, f_names[jj], f_types[jj], (int)node->pos.line, (int)node->pos.column);
@@ -1440,7 +1440,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			if (!analyze_expr(ctx, node->as.let_stmt.value, &expr_type)) {
 				return 0;
 			}
-			/* Targeted diagnostic for 'layer_opt' to inspect RHS expression shape/types */
+			 
 			if (node->as.let_stmt.name && strcmp(node->as.let_stmt.name, "layer_opt") == 0) {
 				int rhs_kind = -1;
 				if (node->as.let_stmt.value) rhs_kind = (int)node->as.let_stmt.value->kind;
@@ -1464,17 +1464,17 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						idx_type ? idx_type : TYPE_ANY);
 				}
 			}
-			/* If the let has an explicit declared type, use it and validate assignment */
+			 
 			if (node->as.let_stmt.type_name && node->as.let_stmt.type_name[0] != '\0') {
 				const char *decl_type = node->as.let_stmt.type_name;
-				/* Debug: print declared vs initializer-inferred type for this let */
+				 
 				fprintf(stderr, "DEBUG_LET '%s' declared='%s' init_type='%s' at %d:%d\n",
 					node->as.let_stmt.name ? node->as.let_stmt.name : "<anon>",
 					decl_type ? decl_type : TYPE_ANY,
 					expr_type ? expr_type : TYPE_ANY,
 					(int)node->pos.line, (int)node->pos.column);
 				if (!is_type_assignable(decl_type, expr_type)) {
-					/* Always print a concise diagnostic at the mismatch site to help tracing */
+					 
 					fprintf(stderr, "DEBUG_LET_ERROR name='%s' decl_type='%s' init_type='%s' rhs_kind=%d at %d:%d\n",
 						node->as.let_stmt.name ? node->as.let_stmt.name : "<anon>",
 						decl_type ? decl_type : TYPE_ANY,
@@ -1560,7 +1560,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				return 0;
 			}
 			if (!is_type_assignable(ctx->current_return_type, expr_type)) {
-				/* Temporary debug output to inspect unexpected actual type */
+				 
 				fprintf(stderr, "DEBUG_RETURN at %d:%d expected='%s' actual='%s'\n",
 					(int)node->pos.line, (int)node->pos.column,
 					ctx->current_return_type ? ctx->current_return_type : TYPE_ANY,

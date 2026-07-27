@@ -107,27 +107,27 @@ func (self: &mut lexer) skip_ignored() result[(), lex_error] {
                 continue
             }
 
-            if self.match_text("//") {
+            if self.match_text("
                 while !self.is_eof() && self.peek()? != "\n" {
                     self.advance()?
                 }
                 continue
             }
 
-            if self.match_text("/*") {
-                self.advance()?
-                self.advance()?
-                int depth = 1                while depth > 0 {
-                    if self.is_eof() {
-                        return err(self.error("unterminated block comment"))
-                    }
-                    if self.match_text("/*") {
-                        depth = depth + 1
-                        self.advance()?
-                        self.advance()?
-                        continue
-                    }
-                    if self.match_text("*/") {
+            if self.match_text(" 
+
+
+
+
+
+
+
+
+
+
+
+
+") {
                         depth = depth - 1
                         self.advance()?
                         self.advance()?

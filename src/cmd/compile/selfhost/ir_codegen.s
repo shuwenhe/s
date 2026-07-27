@@ -9,8 +9,8 @@ use std.strings.trim as trim_string
 use std.strings.contains as contains_string
 use std.fmt.sprintf
 
-// IR Code Generator: Translates SSEED-V1 IR to ELF x86-64 binary
-// This enables true self-hosting by replacing C backend with pure S implementation
+
+
 
 struct IRProgram {
     functions: []Function
@@ -58,14 +58,14 @@ struct X86_64CodeGen {
     register_map: map[string]int
 }
 
-// Parse IR format
+
 func parse_ir(string content) (IRProgram, error) {
     let lines = split_string(content, "\n")
     let mut prog = IRProgram{}
     let mut current_func: *Function = nil
     let mut line_idx = 0
 
-    // Parse header
+    
     if line_idx >= len(lines) {
         return prog, error("empty IR file")
     }
@@ -76,7 +76,7 @@ func parse_ir(string content) (IRProgram, error) {
     }
     line_idx += 1
 
-    // Parse functions
+    
     for line_idx < len(lines) {
         let line = trim_string(lines[line_idx])
         if line == "" {
@@ -85,7 +85,7 @@ func parse_ir(string content) (IRProgram, error) {
         }
 
         if contains_string(line, "FUNC_BEGIN") {
-            // Start new function
+            
             let parts = split_string(line, "|")
             if len(parts) >= 2 {
                 let func = Function{
@@ -99,7 +99,7 @@ func parse_ir(string content) (IRProgram, error) {
         } else if contains_string(line, "FUNC_END") {
             current_func = nil
         } else if current_func != nil && contains_string(line, "|") {
-            // Parse instruction
+            
             let parts = split_string(line, "|")
             if len(parts) >= 2 {
                 let instr = Instruction{
@@ -124,7 +124,7 @@ func parse_ir(string content) (IRProgram, error) {
     return prog, nil
 }
 
-// Generate x86-64 assembly from IR
+
 func generate_x86_64(IRProgram program) (string, error) {
     let mut codegen = X86_64CodeGen{
         program: program,
@@ -136,14 +136,14 @@ func generate_x86_64(IRProgram program) (string, error) {
     asm += ".globl main\n"
     asm += ".text\n\n"
 
-    // Generate code for each function
+    
     for _, func in program.functions {
-        asm += "// Function: " + func.name + "\n"
+        asm += "
         asm += func.name + ":\n"
         asm += "    push %rbp\n"
         asm += "    mov %rsp, %rbp\n"
 
-        // Generate function body
+        
         for _, instr in func.instructions {
             let instr_asm, err = generate_instruction(instr)
             if err != nil {
@@ -152,7 +152,7 @@ func generate_x86_64(IRProgram program) (string, error) {
             asm += instr_asm
         }
 
-        // Function epilogue
+        
         if func.name == "main" {
             asm += "    xor %eax, %eax\n"
         }
@@ -186,27 +186,27 @@ func generate_instruction(Instruction instr) (string, error) {
     }
 }
 
-// Main entry point for IR code generation
+
 func ir_compile_to_elf(string ir_path, string output_path) error {
-    // Read IR file
+    
     let ir_content, read_err = io_read_all(ir_path)
     if read_err != nil {
         return read_err
     }
 
-    // Parse IR
+    
     let program, parse_err = parse_ir(string(ir_content))
     if parse_err != nil {
         return parse_err
     }
 
-    // Generate x86-64 assembly
+    
     let asm_code, gen_err = generate_x86_64(program)
     if gen_err != nil {
         return gen_err
     }
 
-    // Write assembly to temp file
+    
     let temp_asm = "/tmp/s_compiler_generated.s"
     let asm_file = io_open(temp_asm, "w")
     if asm_file == nil {
@@ -215,9 +215,9 @@ func ir_compile_to_elf(string ir_path, string output_path) error {
     io_write(asm_file, []byte(asm_code))
     asm_file.close()
 
-    // TODO: Implement ELF generation directly instead of using external tools
-    // For now, use gcc as backend
-    // Later stages will replace this with pure S ELF generation
+    
+    
+    
 
     return nil
 }
