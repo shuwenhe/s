@@ -2512,6 +2512,10 @@ static int resolve_dotted_value(const runtime_values *vals, const char *name, ru
 		*out = value_make_string_copy(name);
 		return out->str_value != NULL;
 	}
+	if (strlen(name) >= 3 && strcmp(name + strlen(name) - 3, ".[]") == 0) {
+		*out = value_make_string_copy(name);
+		return out->str_value != NULL;
+	}
 	for (dot = strrchr(name, '.'); dot != NULL; ) {
 		size_t prefix_len = (size_t)(dot - name);
 		char prefix[128];
