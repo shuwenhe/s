@@ -907,6 +907,28 @@ static ast_node *parse_logic_or(parser *p) {
 	return expr;
 }
 
+/* Helper function to convert member_expr to dotted name string */
+static char *member_expr_to_name(ast_node *expr) {
+	char buffer[1024];
+	buffer[0] = '\0';
+	
+	/* Recursively build dotted path */
+	if (expr->kind == AST_IDENT_EXPR) {
+		snprintf(buffer, sizeof(buffer), "%s", expr->as.ident_expr.name);
+	} else if (expr->kind == AST_MEMBER_EXPR) {
+		char *object_name = member_expr_to_name(expr->as.member_expr.object);
+		if (!object_name) {
+			return NULL;
+		}
+		snprintf(buffer, sizeof(buffer), "%s.%s", object_name, expr->as.member_expr.member);
+		free(object_name);
+	} else {
+		return NULL;
+	}
+	
+	return dup_cstr(buffer);
+}
+
 static ast_node *parse_assignment(parser *p) {
 	ast_node *expr = parse_logic_or(p);
 	ast_node *node;
@@ -947,6 +969,16 @@ static ast_node *parse_assignment(parser *p) {
 		node->as.assign_expr.target_index = expr->as.index_expr.index;
 		expr->as.index_expr.object = NULL;
 		expr->as.index_expr.index = NULL;
+	} else if (expr->kind == AST_MEMBER_EXPR) {
+		/* Handle struct field assignment: obj.field = value */
+		name = member_expr_to_name(expr);
+		if (!name) {
+			ast_free(node);
+			ast_free(expr);
+			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory or invalid member expression");
+			return NULL;
+		}
+		node->as.assign_expr.name = name;
 	} else {
 		ast_node *rhs = parse_assignment(p);
 		ast_free(node);
