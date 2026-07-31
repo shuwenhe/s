@@ -2120,21 +2120,16 @@ static int host_dispatch_call(
 		return 1;
 	}
 
-	/* ================================================================
-	 * S Runtime: String Primitives (Phase 2B - Day 1 Commit 1)
-	 * ================================================================ */
-	
-	if (strcmp(name, "str_len") == 0) {
+	if (strcmp(name, "__host_str_len") == 0) {
 		const char *str = NULL;
 		char str_buf[4096];
 		long len = 0;
 		
 		if (argc != 1 || !value_as_cstr(&args[0], str_buf, sizeof(str_buf), &str)) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "str_len expects 1 string argument");
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_str_len expects 1 string argument");
 			return 0;
 		}
 		
-		/* Manual strlen implementation (not依赖 libc) */
 		while (str[len] != '\0') {
 			len++;
 		}
@@ -2143,7 +2138,7 @@ static int host_dispatch_call(
 		return 1;
 	}
 	
-	if (strcmp(name, "str_char_at") == 0) {
+	if (strcmp(name, "__host_str_char_at") == 0) {
 		const char *str = NULL;
 		char str_buf[4096];
 		long index = 0;
@@ -2151,16 +2146,14 @@ static int host_dispatch_call(
 		char result[2];
 		
 		if (argc != 2 || !value_as_cstr(&args[0], str_buf, sizeof(str_buf), &str) || !host_int_arg(&args[1], &index)) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "str_char_at expects (string, int) arguments");
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_str_char_at expects (string, int) arguments");
 			return 0;
 		}
 		
-		/* Get string length */
 		while (str[len] != '\0') {
 			len++;
 		}
 		
-		/* Boundary check - return empty string instead of crashing */
 		if (index < 0 || index >= len) {
 			*out = value_make_string_copy("");
 			if (!out->str_value) {
@@ -2170,7 +2163,6 @@ static int host_dispatch_call(
 			return 1;
 		}
 		
-		/* Return single character as string */
 		result[0] = str[index];
 		result[1] = '\0';
 		*out = value_make_string_copy(result);
@@ -2181,7 +2173,7 @@ static int host_dispatch_call(
 		return 1;
 	}
 	
-	if (strcmp(name, "str_find") == 0) {
+	if (strcmp(name, "__host_str_find") == 0) {
 		const char *haystack = NULL;
 		const char *needle = NULL;
 		char haystack_buf[4096];
@@ -2195,11 +2187,10 @@ static int host_dispatch_call(
 		if (argc != 2 || 
 		    !value_as_cstr(&args[0], haystack_buf, sizeof(haystack_buf), &haystack) ||
 		    !value_as_cstr(&args[1], needle_buf, sizeof(needle_buf), &needle)) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "str_find expects (string, string) arguments");
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_str_find expects (string, string) arguments");
 			return 0;
 		}
 		
-		/* Get lengths */
 		while (haystack[haystack_len] != '\0') {
 			haystack_len++;
 		}
@@ -2207,13 +2198,11 @@ static int host_dispatch_call(
 			needle_len++;
 		}
 		
-		/* Empty needle edge case */
 		if (needle_len == 0) {
 			*out = value_make_int(0);
 			return 1;
 		}
 		
-		/* Manual strstr implementation (not依赖 libc) */
 		for (i = 0; i <= haystack_len - needle_len; i++) {
 			found = 1;
 			for (j = 0; j < needle_len; j++) {

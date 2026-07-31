@@ -1,4 +1,3 @@
-# module_path|min_arity|max_arity|return_type
 std.env.args|0|0|any
 std.io.eprintln|1|*|()
 compile.internal.arch.dispatch_init|1|1|string
