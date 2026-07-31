@@ -2372,6 +2372,86 @@ static int host_dispatch_call(
 		return 1;
 	}
 
+	if (strcmp(name, "__host_atomic_replace") == 0) {
+		const char *tmp_path = NULL;
+		const char *final_path = NULL;
+		char tmp_buf[4096];
+		char final_buf[4096];
+		char dir_path[4096];
+		int tmp_fd = -1;
+		int dir_fd = -1;
+		size_t i = 0;
+		size_t last_slash = 0;
+		
+		if (argc != 2 || 
+		    !value_as_cstr(&args[0], tmp_buf, sizeof(tmp_buf), &tmp_path) ||
+		    !value_as_cstr(&args[1], final_buf, sizeof(final_buf), &final_path)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_atomic_replace expects (string, string) arguments");
+			return 0;
+		}
+		
+		/* Step 1: Verify tmp file exists */
+		tmp_fd = open(tmp_path, O_RDONLY);
+		if (tmp_fd < 0) {
+			/* Tmp file doesn't exist - return false */
+			*out = value_make_int(0);
+			return 1;
+		}
+		
+		/* Step 2: fsync tmp file to ensure data persisted */
+		if (fsync(tmp_fd) != 0) {
+			close(tmp_fd);
+			*out = value_make_int(0);
+			return 1;
+		}
+		
+		close(tmp_fd);
+		
+		/* Step 3: Atomic rename */
+		if (rename(tmp_path, final_path) != 0) {
+			*out = value_make_int(0);
+			return 1;
+		}
+		
+		/* Step 4: Extract directory path from final_path */
+		/* Find last slash */
+		for (i = 0; final_path[i] != '\0'; i++) {
+			if (final_path[i] == '/') {
+				last_slash = i;
+			}
+		}
+		
+		/* Copy directory path */
+		if (last_slash == 0) {
+			/* No directory separator - use current directory */
+			dir_path[0] = '.';
+			dir_path[1] = '\0';
+		} else {
+			/* Copy up to last slash */
+			for (i = 0; i < last_slash && i < sizeof(dir_path) - 1; i++) {
+				dir_path[i] = final_path[i];
+			}
+			dir_path[i] = '\0';
+		}
+		
+		/* Step 5: fsync directory to persist metadata (CRITICAL) */
+#if defined(__linux__)
+		dir_fd = open(dir_path, O_RDONLY | O_DIRECTORY);
+#else
+		/* macOS/BSD don't have O_DIRECTORY, but open on directory works */
+		dir_fd = open(dir_path, O_RDONLY);
+#endif
+		if (dir_fd >= 0) {
+			/* fsync directory - this ensures the rename is persisted */
+			fsync(dir_fd);
+			close(dir_fd);
+		}
+		/* Note: We don't fail if directory fsync fails - the rename succeeded */
+		
+		*out = value_make_int(1); /* true */
+		return 1;
+	}
+
 	error_set(err, ERR_SEMANTIC, 0, 0, "unknown function: %s", name);
 	return 0;
 }
