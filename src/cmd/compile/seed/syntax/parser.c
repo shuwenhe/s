@@ -907,12 +907,10 @@ static ast_node *parse_logic_or(parser *p) {
 	return expr;
 }
 
-/* Helper function to convert member_expr to dotted name string */
 static char *member_expr_to_name(ast_node *expr) {
 	char buffer[1024];
 	buffer[0] = '\0';
 	
-	/* Recursively build dotted path */
 	if (expr->kind == AST_IDENT_EXPR) {
 		snprintf(buffer, sizeof(buffer), "%s", expr->as.ident_expr.name);
 	} else if (expr->kind == AST_MEMBER_EXPR) {
@@ -970,7 +968,6 @@ static ast_node *parse_assignment(parser *p) {
 		expr->as.index_expr.object = NULL;
 		expr->as.index_expr.index = NULL;
 	} else if (expr->kind == AST_MEMBER_EXPR) {
-		/* Handle struct field assignment: obj.field = value */
 		name = member_expr_to_name(expr);
 		if (!name) {
 			ast_free(node);
