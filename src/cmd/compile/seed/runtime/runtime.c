@@ -2124,36 +2124,36 @@ static int host_dispatch_call(
 		const char *str = NULL;
 		char str_buf[4096];
 		long len = 0;
-		
+
 		if (argc != 1 || !value_as_cstr(&args[0], str_buf, sizeof(str_buf), &str)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_str_len expects 1 string argument");
 			return 0;
 		}
-		
+
 		while (str[len] != '\0') {
 			len++;
 		}
-		
+
 		*out = value_make_int(len);
 		return 1;
 	}
-	
+
 	if (strcmp(name, "__host_str_char_at") == 0) {
 		const char *str = NULL;
 		char str_buf[4096];
 		long index = 0;
 		long len = 0;
 		char result[2];
-		
+
 		if (argc != 2 || !value_as_cstr(&args[0], str_buf, sizeof(str_buf), &str) || !host_int_arg(&args[1], &index)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_str_char_at expects (string, int) arguments");
 			return 0;
 		}
-		
+
 		while (str[len] != '\0') {
 			len++;
 		}
-		
+
 		if (index < 0 || index >= len) {
 			*out = value_make_string_copy("");
 			if (!out->str_value) {
@@ -2162,7 +2162,7 @@ static int host_dispatch_call(
 			}
 			return 1;
 		}
-		
+
 		result[0] = str[index];
 		result[1] = '\0';
 		*out = value_make_string_copy(result);
@@ -2172,7 +2172,7 @@ static int host_dispatch_call(
 		}
 		return 1;
 	}
-	
+
 	if (strcmp(name, "__host_str_find") == 0) {
 		const char *haystack = NULL;
 		const char *needle = NULL;
@@ -2183,26 +2183,26 @@ static int host_dispatch_call(
 		long i, j;
 		int found = 0;
 		long found_pos = -1;
-		
-		if (argc != 2 || 
+
+		if (argc != 2 ||
 		    !value_as_cstr(&args[0], haystack_buf, sizeof(haystack_buf), &haystack) ||
 		    !value_as_cstr(&args[1], needle_buf, sizeof(needle_buf), &needle)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_str_find expects (string, string) arguments");
 			return 0;
 		}
-		
+
 		while (haystack[haystack_len] != '\0') {
 			haystack_len++;
 		}
 		while (needle[needle_len] != '\0') {
 			needle_len++;
 		}
-		
+
 		if (needle_len == 0) {
 			*out = value_make_int(0);
 			return 1;
 		}
-		
+
 		for (i = 0; i <= haystack_len - needle_len; i++) {
 			found = 1;
 			for (j = 0; j < needle_len; j++) {
@@ -2216,8 +2216,159 @@ static int host_dispatch_call(
 				break;
 			}
 		}
-		
+
 		*out = value_make_int(found_pos);
+		return 1;
+	}
+
+	if (strcmp(name, "__host_file_size") == 0) {
+		const char *path = NULL;
+		char path_buf[4096];
+		struct stat st;
+
+		if (argc != 1 || !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_file_size expects 1 string argument");
+			return 0;
+		}
+
+		if (stat(path, &st) != 0) {
+			*out = value_make_int(-1);
+			return 1;
+		}
+
+		*out = value_make_int((long)st.st_size);
+		return 1;
+	}
+
+	if (strcmp(name, "__host_file_exists") == 0) {
+		const char *path = NULL;
+		char path_buf[4096];
+		struct stat st;
+
+		if (argc != 1 || !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_file_exists expects 1 string argument");
+			return 0;
+		}
+
+		if (stat(path, &st) == 0) {
+			*out = value_make_int(1);
+		} else {
+			*out = value_make_int(0);
+		}
+		return 1;
+	}
+
+	if (strcmp(name, "__host_write_file") == 0) {
+		const char *path = NULL;
+		const char *content = NULL;
+		char path_buf[4096];
+		char content_buf[65536];
+		FILE *fp = NULL;
+		size_t content_len = 0;
+		size_t written = 0;
+
+		if (argc != 2 ||
+		    !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path) ||
+		    !value_as_cstr(&args[1], content_buf, sizeof(content_buf), &content)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_write_file expects (string, string) arguments");
+			return 0;
+		}
+
+		while (content[content_len] != '\0') {
+			content_len++;
+		}
+
+		fp = fopen(path, "wb");
+		if (!fp) {
+			*out = value_make_int(0);
+			return 1;
+		}
+
+		if (content_len > 0) {
+			written = fwrite(content, 1, content_len, fp);
+			if (written != content_len) {
+				fclose(fp);
+				*out = value_make_int(0);
+				return 1;
+			}
+		}
+
+		if (fflush(fp) != 0) {
+			fclose(fp);
+			*out = value_make_int(0);
+			return 1;
+		}
+
+		if (fclose(fp) != 0) {
+			*out = value_make_int(0);
+			return 1;
+		}
+
+		*out = value_make_int(1);
+		return 1;
+	}
+
+	if (strcmp(name, "__host_read_file") == 0) {
+		const char *path = NULL;
+		char path_buf[4096];
+		struct stat st;
+		FILE *fp = NULL;
+		char *buffer = NULL;
+		size_t file_size = 0;
+		size_t bytes_read = 0;
+
+		if (argc != 1 || !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_read_file expects 1 string argument");
+			return 0;
+		}
+
+		if (stat(path, &st) != 0) {
+			*out = value_make_string_copy("");
+			if (!out->str_value) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				return 0;
+			}
+			return 1;
+		}
+
+		file_size = (size_t)st.st_size;
+
+		fp = fopen(path, "rb");
+		if (!fp) {
+			*out = value_make_string_copy("");
+			if (!out->str_value) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				return 0;
+			}
+			return 1;
+		}
+
+		buffer = (char *)malloc(file_size + 1);
+		if (!buffer) {
+			fclose(fp);
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return 0;
+		}
+
+		if (file_size > 0) {
+			bytes_read = fread(buffer, 1, file_size, fp);
+			if (bytes_read != file_size) {
+				free(buffer);
+				fclose(fp);
+				*out = value_make_string_copy("");
+				if (!out->str_value) {
+					error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+					return 0;
+				}
+				return 1;
+			}
+		}
+
+		buffer[file_size] = '\0';
+
+		fclose(fp);
+
+		*out = value_make_string_owned(buffer);
 		return 1;
 	}
 
