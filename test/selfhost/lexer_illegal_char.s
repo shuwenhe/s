@@ -1,3 +1,3 @@
-func main() int {
+func main() {
     return 1 @ 2
 }

@@ -3,7 +3,7 @@ package compile.internal.noder
 func run_lex_tests() int {
     let unit = source_unit {
         path: "demo.s",
-        text: "package demo\nuse \"std.io\"\nfunc main() int { 0 }\n",
+        text: "package demo\nuse \"std.io\"\nfunc main() { 0 }\n",
     }
     let tokens_result = lex_source(unit)
     if tokens_result.is_err() {

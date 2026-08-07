@@ -6,7 +6,7 @@ use compile.internal.syntax.dump_source_text
 use compile.internal.syntax.parse_source
 use compile.internal.syntax.read_source
 
-func main() int {
+func main() {
     let args = host_args()
     if args.len() < 2 {
         println("usage: ast_dump <path>");

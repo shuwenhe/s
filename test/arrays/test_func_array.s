@@ -4,7 +4,7 @@ func test([]int arr) void {
     println("array")
 }
 
-func main() int {
+func main() {
     test([]int{1})
     test([]int{1, 2})
     0

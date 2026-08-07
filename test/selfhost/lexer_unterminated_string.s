@@ -1,3 +1,3 @@
-func main() int {
+func main() {
     let value = "unterminated
 }

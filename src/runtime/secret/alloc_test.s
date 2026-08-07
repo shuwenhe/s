@@ -8,7 +8,7 @@ func alloc_test_unit_ready() int {
     1
 }
 
-func main() int {
+func main() {
     if alloc_test_unit_ready() == 1 {
         return 0
     }

@@ -8,7 +8,7 @@ use std.fmt.sprintf
 use std.fmt.eprintln
 use std.process.run as exec_cmd
 
-func main() int {
+func main() {
     let args = get_args()
     if len(args) < 3 {
         eprintln("Usage: ir_to_binary <input.ir> <output_binary>")

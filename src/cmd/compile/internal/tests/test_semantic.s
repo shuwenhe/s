@@ -29,15 +29,15 @@ func run_semantic_suite(string fixtures_root) int {
     if check_text(inline_fail) == 0 {
         return 1
     }
-    let call_ok = "package demo.call\nfunc add(int a, int b) int {\n  a + b\n}\nfunc main() int {\n  add(1, 2)\n}"
+    let call_ok = "package demo.call\nfunc add(int a, int b) int {\n  a + b\n}\nfunc main() {\n  add(1, 2)\n}"
     if check_text(call_ok) != 0 {
         return 1
     }
-    let call_fail = "package demo.call\nfunc add(int a, int b) int {\n  a + b\n}\nfunc main() int {\n  add(1, true)\n}"
+    let call_fail = "package demo.call\nfunc add(int a, int b) int {\n  a + b\n}\nfunc main() {\n  add(1, true)\n}"
     if check_text(call_fail) == 0 {
         return 1
     }
-    let call_undefined_fail = "package demo.call\nfunc main() int {\n  missing(1)\n}"
+    let call_undefined_fail = "package demo.call\nfunc main() {\n  missing(1)\n}"
     if check_text(call_undefined_fail) == 0 {
         return 1
     }
@@ -45,19 +45,19 @@ func run_semantic_suite(string fixtures_root) int {
     if check_text(array_ok) != 0 {
         return 1
     }
-    let overload_ok = "package demo.call\nfunc f[t](t v) t {\n  v\n}\nfunc f(int v) int {\n  v + 1\n}\nfunc main() int {\n  f(1)\n}"
+    let overload_ok = "package demo.call\nfunc f[t](t v) t {\n  v\n}\nfunc f(int v) int {\n  v + 1\n}\nfunc main() {\n  f(1)\n}"
     if check_text(overload_ok) != 0 {
         return 1
     }
-    let overload_generic_ok = "package demo.call\nfunc pick[t](t a, t b) t {\n  a\n}\nfunc main() int {\n  pick(1, 2)\n}"
+    let overload_generic_ok = "package demo.call\nfunc pick[t](t a, t b) t {\n  a\n}\nfunc main() {\n  pick(1, 2)\n}"
     if check_text(overload_generic_ok) != 0 {
         return 1
     }
-    let overload_generic_fail = "package demo.call\nfunc pick[t](t a, t b) t {\n  a\n}\nfunc main() int {\n  pick(1, true)\n}"
+    let overload_generic_fail = "package demo.call\nfunc pick[t](t a, t b) t {\n  a\n}\nfunc main() {\n  pick(1, true)\n}"
     if check_text(overload_generic_fail) == 0 {
         return 1
     }
-    let overload_ambiguous_fail = "package demo.call\nfunc g[t](t v) t {\n  v\n}\nfunc g[u](u v) u {\n  v\n}\nfunc main() int {\n  g(1)\n}"
+    let overload_ambiguous_fail = "package demo.call\nfunc g[t](t v) t {\n  v\n}\nfunc g[u](u v) u {\n  v\n}\nfunc main() {\n  g(1)\n}"
     if check_text(overload_ambiguous_fail) == 0 {
         return 1
     }
@@ -101,7 +101,7 @@ func run_semantic_suite(string fixtures_root) int {
     if check_text(nested_ok) != 0 {
         return 1
     }
-    let diag_src = "package main\nfunc main() int {\n  missing(1)\n  missing(1)\n  0\n}"
+    let diag_src = "package main\nfunc main() {\n  missing(1)\n  missing(1)\n  0\n}"
     let diagnostics = check_detailed(diag_src)
     if diagnostics.len() == 0 {
         return 1
@@ -138,12 +138,12 @@ func run_semantic_suite(string fixtures_root) int {
     if !saw_summary {
         return 1
     }
-    let control_src = "package demo.ctrl\nfunc main() int {\n  goto L1\n  0\n}"
+    let control_src = "package demo.ctrl\nfunc main() {\n  goto L1\n  0\n}"
     let control_diags = check_detailed(control_src)
     if !has_code(control_diags, "e3022") {
         return 1
     }
-    let recover_src = "package demo.recover\nfunc main() int {\n  recover()\n  0\n}"
+    let recover_src = "package demo.recover\nfunc main() {\n  recover()\n  0\n}"
     let recover_diags = check_detailed(recover_src)
     if !has_code(recover_diags, "e3025") {
         return 1
@@ -151,32 +151,32 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(recover_diags, "e3033") {
         return 1
     }
-    let go_uncoordinated_src = "package demo.conc\nfunc worker() int {\n  0\n}\nfunc main() int {\n  go(\"worker\")\n  0\n}"
+    let go_uncoordinated_src = "package demo.conc\nfunc worker() int {\n  0\n}\nfunc main() {\n  go(\"worker\")\n  0\n}"
     let go_uncoordinated_diags = check_detailed(go_uncoordinated_src)
     if !has_code(go_uncoordinated_diags, "e3047") {
         return 1
     }
-    let sroutine_uncoordinated_src = "package demo.conc\nfunc worker() int {\n  0\n}\nfunc main() int {\n  sroutine worker()\n  0\n}"
+    let sroutine_uncoordinated_src = "package demo.conc\nfunc worker() int {\n  0\n}\nfunc main() {\n  sroutine worker()\n  0\n}"
     let sroutine_uncoordinated_diags = check_detailed(sroutine_uncoordinated_src)
     if !has_code(sroutine_uncoordinated_diags, "e3047") {
         return 1
     }
-    let send_without_recv_src = "package demo.conc\nfunc main() int {\n  let ch = chan_make(1)\n  chan_send(ch, 1)\n  0\n}"
+    let send_without_recv_src = "package demo.conc\nfunc main() {\n  let ch = chan_make(1)\n  chan_send(ch, 1)\n  0\n}"
     let send_without_recv_diags = check_detailed(send_without_recv_src)
     if !has_code(send_without_recv_diags, "e3050") {
         return 1
     }
-    let select_without_recv_src = "package demo.conc\nfunc main() int {\n  let chs = vec[chan]()\n  select_recv(chs)\n  0\n}"
+    let select_without_recv_src = "package demo.conc\nfunc main() {\n  let chs = vec[chan]()\n  select_recv(chs)\n  0\n}"
     let select_without_recv_diags = check_detailed(select_without_recv_src)
     if !has_code(select_without_recv_diags, "e3048") {
         return 1
     }
-    let close_overflow_src = "package demo.conc\nfunc main() int {\n  let ch = chan_make(1)\n  chan_close(ch)\n  chan_close(ch)\n  0\n}"
+    let close_overflow_src = "package demo.conc\nfunc main() {\n  let ch = chan_make(1)\n  chan_close(ch)\n  chan_close(ch)\n  0\n}"
     let close_overflow_diags = check_detailed(close_overflow_src)
     if !has_code(close_overflow_diags, "e3049") {
         return 1
     }
-    let panic_src = "package demo.recover\nfunc main() int {\n  panic(\"x\")\n}"
+    let panic_src = "package demo.recover\nfunc main() {\n  panic(\"x\")\n}"
     let panic_diags = check_detailed(panic_src)
     if !has_code(panic_diags, "e3026") {
         return 1
@@ -193,97 +193,97 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(embed_diags, "e3035") {
         return 1
     }
-    let complex_goto_src = "package demo.ctrl\nfunc main() int {\n  label L1\n  if true {\n    switch 1 {\n      1 : goto L1,\n      _ : 0,\n    }\n  }\n  0\n}"
+    let complex_goto_src = "package demo.ctrl\nfunc main() {\n  label L1\n  if true {\n    switch 1 {\n      1 : goto L1,\n      _ : 0,\n    }\n  }\n  0\n}"
     let complex_diags = check_detailed(complex_goto_src)
     if !has_code(complex_diags, "e3037") {
         return 1
     }
-    let non_comparable_eq_src = "package demo.eq\nfunc main() int {\n  let a = map[string]func() int{}\n  let b = map[string]func() int{}\n  if a == b {\n    1\n  } else {\n    0\n  }\n}"
+    let non_comparable_eq_src = "package demo.eq\nfunc main() {\n  let a = map[string]func() int{}\n  let b = map[string]func() int{}\n  if a == b {\n    1\n  } else {\n    0\n  }\n}"
     let non_comparable_eq_diags = check_detailed(non_comparable_eq_src)
     if !has_code(non_comparable_eq_diags, "e3039") {
         return 1
     }
-    let implicit_trait_ok = "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) add(int a, int b) int {\n  a + b\n}\nfunc use_adder(Adder a) int {\n  a.add(1, 2)\n}\nfunc main() int {\n  use_adder(Calc {})\n}"
+    let implicit_trait_ok = "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) add(int a, int b) int {\n  a + b\n}\nfunc use_adder(Adder a) int {\n  a.add(1, 2)\n}\nfunc main() {\n  use_adder(Calc {})\n}"
     if check_text(implicit_trait_ok) != 0 {
         return 1
     }
-    let implicit_trait_missing = "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) sub(int a, int b) int {\n  a - b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() int {\n  use_adder(Calc {})\n}"
+    let implicit_trait_missing = "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) sub(int a, int b) int {\n  a - b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() {\n  use_adder(Calc {})\n}"
     let implicit_trait_missing_diags = check_detailed(implicit_trait_missing)
     if !has_code(implicit_trait_missing_diags, "e1002") {
         return 1
     }
-    let implicit_trait_sig_mismatch = "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) add(bool a, int b) int {\n  b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() int {\n  use_adder(Calc {})\n}"
+    let implicit_trait_sig_mismatch = "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) add(bool a, int b) int {\n  b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() {\n  use_adder(Calc {})\n}"
     let implicit_trait_sig_diags = check_detailed(implicit_trait_sig_mismatch)
     if !has_code(implicit_trait_sig_diags, "e1002") {
         return 1
     }
-    let method_call_ok = "package demo.method\nstruct Point {\n  int x\n}\ntrait Measure {\n  func size() int;\n}\nfunc (p: Point) size() int {\n  p.x\n}\nfunc main() int {\n  let p = Point { x: 4 }\n  p.size()\n}"
+    let method_call_ok = "package demo.method\nstruct Point {\n  int x\n}\ntrait Measure {\n  func size() int;\n}\nfunc (p: Point) size() int {\n  p.x\n}\nfunc main() {\n  let p = Point { x: 4 }\n  p.size()\n}"
     if check_text(method_call_ok) != 0 {
         return 1
     }
-    let method_ref_ok = "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (reader: &Reader) peek() int {\n  reader.count\n}\nfunc main() int {\n  let reader = Reader { count: 2 }\n  reader.peek()\n}"
+    let method_ref_ok = "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (reader: &Reader) peek() int {\n  reader.count\n}\nfunc main() {\n  let reader = Reader { count: 2 }\n  reader.peek()\n}"
     if check_text(method_ref_ok) != 0 {
         return 1
     }
-    let method_temp_ref_fail = "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (reader: &Reader) peek() int {\n  reader.count\n}\nfunc make_reader() Reader {\n  Reader { count: 2 }\n}\nfunc main() int {\n  make_reader().peek()\n}"
+    let method_temp_ref_fail = "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (reader: &Reader) peek() int {\n  reader.count\n}\nfunc make_reader() Reader {\n  Reader { count: 2 }\n}\nfunc main() {\n  make_reader().peek()\n}"
     let method_temp_ref_diags = check_detailed(method_temp_ref_fail)
     if !has_code(method_temp_ref_diags, "e3051") {
         return 1
     }
-    let method_mut_ref_ok = "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &mut Counter) bump() int {\n  counter.count\n}\nfunc main() int {\n  let counter = Counter { count: 2 }\n  counter.bump()\n}"
+    let method_mut_ref_ok = "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &mut Counter) bump() int {\n  counter.count\n}\nfunc main() {\n  let counter = Counter { count: 2 }\n  counter.bump()\n}"
     if check_text(method_mut_ref_ok) != 0 {
         return 1
     }
-    let method_temp_mut_ref_fail = "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &mut Counter) bump() int {\n  counter.count\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() int {\n  make_counter().bump()\n}"
+    let method_temp_mut_ref_fail = "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &mut Counter) bump() int {\n  counter.count\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() {\n  make_counter().bump()\n}"
     let method_temp_mut_ref_diags = check_detailed(method_temp_mut_ref_fail)
     if !has_code(method_temp_mut_ref_diags, "e3051") {
         return 1
     }
-    let duplicate_receiver_method = "package demo.iface\nstruct Calc {}\nfunc (c: Calc) add(int a) int {\n  a\n}\nfunc (c: Calc) add(int a) int {\n  a\n}\nfunc main() int {\n  0\n}"
+    let duplicate_receiver_method = "package demo.iface\nstruct Calc {}\nfunc (c: Calc) add(int a) int {\n  a\n}\nfunc (c: Calc) add(int a) int {\n  a\n}\nfunc main() {\n  0\n}"
     let duplicate_receiver_diags = check_detailed(duplicate_receiver_method)
     if !has_code(duplicate_receiver_diags, "e3042") {
         return 1
     }
-    let const_iota_ok = "package demo.consts\nconst A = iota\nconst B = iota\nfunc main() int {\n  A + B\n}"
+    let const_iota_ok = "package demo.consts\nconst A = iota\nconst B = iota\nfunc main() {\n  A + B\n}"
     if check_text(const_iota_ok) != 0 {
         return 1
     }
-    let const_ref_ok = "package demo.consts\nconst Base = 3\nconst Sum = Base + 2\nfunc main() int {\n  Sum\n}"
+    let const_ref_ok = "package demo.consts\nconst Base = 3\nconst Sum = Base + 2\nfunc main() {\n  Sum\n}"
     if check_text(const_ref_ok) != 0 {
         return 1
     }
-    let iota_outside_const_fail = "package demo.consts\nfunc main() int {\n  iota\n}"
+    let iota_outside_const_fail = "package demo.consts\nfunc main() {\n  iota\n}"
     if check_text(iota_outside_const_fail) == 0 {
         return 1
     }
-    let duplicate_const_fail = "package demo.consts\nconst A = 1\nconst A = 2\nfunc main() int {\n  A\n}"
+    let duplicate_const_fail = "package demo.consts\nconst A = 1\nconst A = 2\nfunc main() {\n  A\n}"
     let duplicate_const_diags = check_detailed(duplicate_const_fail)
     if !has_code(duplicate_const_diags, "e3044") {
         return 1
     }
-    let const_group_ok = "package demo.consts\nconst (\n  A = iota\n  B\n  C = A + 1\n)\nfunc main() int {\n  C\n}"
+    let const_group_ok = "package demo.consts\nconst (\n  A = iota\n  B\n  C = A + 1\n)\nfunc main() {\n  C\n}"
     if check_text(const_group_ok) != 0 {
         return 1
     }
-    let const_group_missing_init_fail = "package demo.consts\nconst (\n  A\n)\nfunc main() int {\n  0\n}"
+    let const_group_missing_init_fail = "package demo.consts\nconst (\n  A\n)\nfunc main() {\n  0\n}"
     let const_group_missing_diags = check_detailed(const_group_missing_init_fail)
     if !has_code(const_group_missing_diags, "e3045") {
         return 1
     }
-    let const_iota_increment_value_ok = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() int {\n  C\n}"
+    let const_iota_increment_value_ok = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() {\n  C\n}"
     if check_text(const_iota_increment_value_ok) != 0 {
         return 1
     }
-    let const_iota_div_zero_fail = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() int {\n  0\n}"
+    let const_iota_div_zero_fail = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() {\n  0\n}"
     let const_iota_div_zero_diags = check_detailed(const_iota_div_zero_fail)
     if !has_code(const_iota_div_zero_diags, "e3046") {
         return 1
     }
-    let nil_assign_ok = "package demo.nil\nfunc main() int {\n  let f: fn = nil\n  if f == nil {\n    0\n  } else {\n    1\n  }\n}"
+    let nil_assign_ok = "package demo.nil\nfunc main() {\n  let f: fn = nil\n  if f == nil {\n    0\n  } else {\n    1\n  }\n}"
     if check_text(nil_assign_ok) != 0 {
         return 1
     }
-    let nil_assign_fail = "package demo.nil\nfunc main() int {\n  let x: int = nil\n  x\n}"
+    let nil_assign_fail = "package demo.nil\nfunc main() {\n  let x: int = nil\n  x\n}"
     if check_text(nil_assign_fail) == 0 {
         return 1
     }

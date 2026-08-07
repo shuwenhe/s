@@ -254,7 +254,7 @@ func dump_tokens(string source) string {
     return append_token(output, "EOF", "", line, column)
 }
 
-func main() int {
+func main() {
     let args = host_args()
     if len(args) != 3 {
         eprintln("usage: s_selfhost_lexer <input.s> <output.tokens>")
