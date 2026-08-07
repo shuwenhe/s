@@ -12,7 +12,7 @@ func print_array([]int arr) void {
     println("Array length:", len(arr))
 }
 
-func main() int {
+func main() {
     test_complex_arrays()
     0
 }

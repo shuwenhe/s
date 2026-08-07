@@ -5,6 +5,6 @@ func main(vec[string] args) int {
     return compiler_main(args)
 }
 
-func main() int {
+func main() {
     0
 }

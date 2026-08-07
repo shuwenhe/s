@@ -1,6 +1,6 @@
 package main
 
-func main() int {
+func main() {
     []int x = []int{1, 2}
     0
 }

@@ -285,7 +285,7 @@ func run_backend_abi_suite() int {
     let e2e_dir = e2e_temp.unwrap()
     let e2e_src_path = e2e_dir + "/select_opt_demo.s"
     let e2e_out_path = e2e_dir + "/select_opt_demo"
-    let e2e_src = "package demo.opte2e\nfunc worker() int {\n  chan_send(ch1, 7)\n  0\n}\nfunc main() int {\n  let ch1 = chan_make(1)\n  sroutine worker()\n  println(select_recv_timeout(ch1, 2))\n  select_send(ch1, 9)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  0\n}"
+    let e2e_src = "package demo.opte2e\nfunc worker() int {\n  chan_send(ch1, 7)\n  0\n}\nfunc main() {\n  let ch1 = chan_make(1)\n  sroutine worker()\n  println(select_recv_timeout(ch1, 2))\n  select_send(ch1, 9)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  0\n}"
     if write_text_file(e2e_src_path, e2e_src).is_err() {
         return 1
     }
@@ -309,7 +309,7 @@ func run_backend_abi_suite() int {
     }
     let e2e_semantic_src_path = e2e_dir + "/semantic_fail_demo.s"
     let e2e_semantic_out_path = e2e_dir + "/semantic_fail_demo"
-    let e2e_semantic_fail_src = "package demo.semanticfail\nfunc main() int {\n  missing()\n  0\n}"
+    let e2e_semantic_fail_src = "package demo.semanticfail\nfunc main() {\n  missing()\n  0\n}"
     if write_text_file(e2e_semantic_src_path, e2e_semantic_fail_src).is_err() {
         return 1
     }
@@ -352,7 +352,7 @@ func run_backend_abi_suite() int {
     if validate_wasi_contract_source(wasm_source).is_err() {
         return 1
     }
-    let fn_map_src = "package demo.fnmap\nfunc arm64_init() int {\n  println(\"arm64\")\n  0\n}\nfunc amd64_init() int {\n  println(\"amd64\")\n  0\n}\nfunc main() int {\n  let archInits = map[string]func() int{\"amd64\": amd64_init, \"arm64\": arm64_init}\n  let goarch = \"arm64\"\n  let init = archInits[goarch]\n  init()\n  0\n}"
+    let fn_map_src = "package demo.fnmap\nfunc arm64_init() int {\n  println(\"arm64\")\n  0\n}\nfunc amd64_init() int {\n  println(\"amd64\")\n  0\n}\nfunc main() {\n  let archInits = map[string]func() int{\"amd64\": amd64_init, \"arm64\": arm64_init}\n  let goarch = \"arm64\"\n  let init = archInits[goarch]\n  init()\n  0\n}"
     let fn_map_parsed = parse_source(fn_map_src)
     if fn_map_parsed.is_err() {
         return 1
@@ -378,7 +378,7 @@ func run_backend_abi_suite() int {
     if fn_map_exit.unwrap() != 0 {
         return 1
     }
-    let defer_src = "package demo.defer\nfunc main() int {\n  defer println(\"cleanup\")\n  println(\"work\")\n  0\n}"
+    let defer_src = "package demo.defer\nfunc main() {\n  defer println(\"cleanup\")\n  println(\"work\")\n  0\n}"
     let defer_parsed = parse_source(defer_src)
     if defer_parsed.is_err() {
         return 1
@@ -407,7 +407,7 @@ func run_backend_abi_suite() int {
     if defer_exit.unwrap() != 0 {
         return 1
     }
-    let recover_src = "package demo.recover\nfunc handle() int {\n  recover()\n  println(\"recovered\")\n  0\n}\nfunc main() int {\n  defer handle()\n  panic(\"boom\")\n  0\n}"
+    let recover_src = "package demo.recover\nfunc handle() int {\n  recover()\n  println(\"recovered\")\n  0\n}\nfunc main() {\n  defer handle()\n  panic(\"boom\")\n  0\n}"
     let recover_parsed = parse_source(recover_src)
     if recover_parsed.is_err() {
         return 1
@@ -433,7 +433,7 @@ func run_backend_abi_suite() int {
     if recover_exit.unwrap() != 0 {
         return 1
     }
-    let sroutine_src = "package demo.sroutine\nfunc worker() int {\n  println(\"worker\")\n  0\n}\nfunc main() int {\n  sroutine worker()\n  println(\"main\")\n  0\n}"
+    let sroutine_src = "package demo.sroutine\nfunc worker() int {\n  println(\"worker\")\n  0\n}\nfunc main() {\n  sroutine worker()\n  println(\"main\")\n  0\n}"
     let sroutine_parsed = parse_source(sroutine_src)
     if sroutine_parsed.is_err() {
         return 1
@@ -462,7 +462,7 @@ func run_backend_abi_suite() int {
     if sroutine_exit.unwrap() != 0 {
         return 1
     }
-    let sroutine_chan_src = "package demo.sroutinechan\nfunc producer1() int {\n  chan_send(ch1, 1)\n  chan_send(ch1, 4)\n  0\n}\nfunc producer2() int {\n  chan_send(ch2, 2)\n  0\n}\nfunc main() int {\n  let ch1 = chan_make(3)\n  let ch2 = chan_make(3)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv_default(ch1, ch2))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
+    let sroutine_chan_src = "package demo.sroutinechan\nfunc producer1() int {\n  chan_send(ch1, 1)\n  chan_send(ch1, 4)\n  0\n}\nfunc producer2() int {\n  chan_send(ch2, 2)\n  0\n}\nfunc main() {\n  let ch1 = chan_make(3)\n  let ch2 = chan_make(3)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv_default(ch1, ch2))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
     let sroutine_chan_parsed = parse_source(sroutine_chan_src)
     if sroutine_chan_parsed.is_err() {
         return 1
@@ -506,7 +506,7 @@ func run_backend_abi_suite() int {
     if sroutine_chan_metrics.unwrap().channel_recvs != 3 {
         return 1
     }
-    let gc_collect_src = "package demo.gc\nfunc allocate_temp() int {\n  let temp = chan_make(1)\n  0\n}\nfunc main() int {\n  let survivor = chan_make(1)\n  allocate_temp()\n  gc_collect()\n  println(survivor)\n  0\n}"
+    let gc_collect_src = "package demo.gc\nfunc allocate_temp() int {\n  let temp = chan_make(1)\n  0\n}\nfunc main() {\n  let survivor = chan_make(1)\n  allocate_temp()\n  gc_collect()\n  println(survivor)\n  0\n}"
     let gc_collect_parsed = parse_source(gc_collect_src)
     if gc_collect_parsed.is_err() {
         return 1
@@ -538,7 +538,7 @@ func run_backend_abi_suite() int {
     if gc_collect_metrics.unwrap().gc_live_channels != 1 {
         return 1
     }
-    let gc_barrier_src = "package demo.gcbarrier\nfunc main() int {\n  let outer = chan_make(1)\n  let inner = chan_make(1)\n  select_send(outer, inner)\n  gc_collect()\n  println(chan_recv(outer))\n  0\n}"
+    let gc_barrier_src = "package demo.gcbarrier\nfunc main() {\n  let outer = chan_make(1)\n  let inner = chan_make(1)\n  select_send(outer, inner)\n  gc_collect()\n  println(chan_recv(outer))\n  0\n}"
     let gc_barrier_parsed = parse_source(gc_barrier_src)
     if gc_barrier_parsed.is_err() {
         return 1
@@ -567,7 +567,7 @@ func run_backend_abi_suite() int {
     if gc_barrier_metrics.unwrap().gc_live_channels != 2 {
         return 1
     }
-    let gc_auto_src = "package demo.gcauto\nfunc alloc_many() int {\n  let a = chan_make(1)\n  let b = chan_make(1)\n  let c = chan_make(1)\n  0\n}\nfunc main() int {\n  let survivor = chan_make(1)\n  alloc_many()\n  println(survivor)\n  0\n}"
+    let gc_auto_src = "package demo.gcauto\nfunc alloc_many() int {\n  let a = chan_make(1)\n  let b = chan_make(1)\n  let c = chan_make(1)\n  0\n}\nfunc main() {\n  let survivor = chan_make(1)\n  alloc_many()\n  println(survivor)\n  0\n}"
     let gc_auto_parsed = parse_source(gc_auto_src)
     if gc_auto_parsed.is_err() {
         return 1
@@ -596,7 +596,7 @@ func run_backend_abi_suite() int {
     if gc_auto_metrics.unwrap().gc_live_channels != 1 {
         return 1
     }
-    let weighted_timeout_src = "package demo.weighted\nfunc producer1() int {\n  chan_send(ch1, 7)\n  0\n}\nfunc producer2() int {\n  chan_send(ch2, 9)\n  0\n}\nfunc main() int {\n  let ch1 = chan_make(2)\n  let ch2 = chan_make(2)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv_weighted(ch1, 2, ch2, 1))\n  println(select_recv_timeout(ch1, ch2, 3))\n  println(select_recv_timeout(ch1, ch2, 3))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
+    let weighted_timeout_src = "package demo.weighted\nfunc producer1() int {\n  chan_send(ch1, 7)\n  0\n}\nfunc producer2() int {\n  chan_send(ch2, 9)\n  0\n}\nfunc main() {\n  let ch1 = chan_make(2)\n  let ch2 = chan_make(2)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv_weighted(ch1, 2, ch2, 1))\n  println(select_recv_timeout(ch1, ch2, 3))\n  println(select_recv_timeout(ch1, ch2, 3))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
     let weighted_timeout_parsed = parse_source(weighted_timeout_src)
     if weighted_timeout_parsed.is_err() {
         return 1
@@ -634,7 +634,7 @@ func run_backend_abi_suite() int {
     if weighted_timeout_metrics.unwrap().select_default_fallbacks != 0 {
         return 1
     }
-    let select_send_src = "package demo.selectsend\nfunc main() int {\n  let ch1 = chan_make(1)\n  let ch2 = chan_make(1)\n  select_send(ch1, 5, ch2, 6)\n  println(chan_recv(ch1))\n  select_send_default(ch1, 7, ch2, 8)\n  println(chan_recv(ch2))\n  select_send_timeout(ch1, 9, ch2, 10, 2)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
+    let select_send_src = "package demo.selectsend\nfunc main() {\n  let ch1 = chan_make(1)\n  let ch2 = chan_make(1)\n  select_send(ch1, 5, ch2, 6)\n  println(chan_recv(ch1))\n  select_send_default(ch1, 7, ch2, 8)\n  println(chan_recv(ch2))\n  select_send_timeout(ch1, 9, ch2, 10, 2)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
     let select_send_parsed = parse_source(select_send_src)
     if select_send_parsed.is_err() {
         return 1
@@ -675,7 +675,7 @@ func run_backend_abi_suite() int {
     if select_send_metrics.unwrap().channel_sends != 3 {
         return 1
     }
-    let select_syntax_src = "package demo.selectsyntax\nfunc main() int {\n  let ch1 = chan_make(1)\n  let ch2 = chan_make(1)\n  chan_send(ch1, 5)\n  chan_send(ch2, 7)\n  println(select {\n    case recv(ch1, ch2):\n  })\n  select {\n    case recv(ch1, ch2):\n    case timeout(3):\n  }\n  select {\n    case send(ch1, 8, ch2, 9):\n    case default:\n  }\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
+    let select_syntax_src = "package demo.selectsyntax\nfunc main() {\n  let ch1 = chan_make(1)\n  let ch2 = chan_make(1)\n  chan_send(ch1, 5)\n  chan_send(ch2, 7)\n  println(select {\n    case recv(ch1, ch2):\n  })\n  select {\n    case recv(ch1, ch2):\n    case timeout(3):\n  }\n  select {\n    case send(ch1, 8, ch2, 9):\n    case default:\n  }\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
     let select_syntax_parsed = parse_source(select_syntax_src)
     if select_syntax_parsed.is_err() {
         return 1
@@ -710,7 +710,7 @@ func run_backend_abi_suite() int {
     if select_syntax_metrics.unwrap().select_default_fallbacks != 0 {
         return 1
     }
-    let sroutine_recover_src = "package demo.srrecover\nfunc recover_worker() int {\n  recover()\n  println(\"recover-ok\")\n  0\n}\nfunc worker() int {\n  defer recover_worker()\n  println(msg)\n  panic(\"boom\")\n  0\n}\nfunc main() int {\n  let msg = \"captured\"\n  sroutine worker()\n  println(\"main\")\n  0\n}"
+    let sroutine_recover_src = "package demo.srrecover\nfunc recover_worker() int {\n  recover()\n  println(\"recover-ok\")\n  0\n}\nfunc worker() int {\n  defer recover_worker()\n  println(msg)\n  panic(\"boom\")\n  0\n}\nfunc main() {\n  let msg = \"captured\"\n  sroutine worker()\n  println(\"main\")\n  0\n}"
     let sroutine_recover_parsed = parse_source(sroutine_recover_src)
     if sroutine_recover_parsed.is_err() {
         return 1
@@ -735,7 +735,7 @@ func run_backend_abi_suite() int {
     if sroutine_recover_writes.unwrap()[2].text != "main\n" {
         return 1
     }
-    let const_iota_src = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() int {\n  println(C)\n  0\n}"
+    let const_iota_src = "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() {\n  println(C)\n  0\n}"
     let const_iota_parsed = parse_source(const_iota_src)
     if const_iota_parsed.is_err() {
         return 1
@@ -754,7 +754,7 @@ func run_backend_abi_suite() int {
     if const_iota_writes.unwrap()[0].text != "10\n" {
         return 1
     }
-    let const_iota_fail_src = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() int {\n  0\n}"
+    let const_iota_fail_src = "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() {\n  0\n}"
     let const_iota_fail_parsed = parse_source(const_iota_fail_src)
     if const_iota_fail_parsed.is_err() {
         return 1

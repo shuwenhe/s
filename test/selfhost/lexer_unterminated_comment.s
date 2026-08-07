@@ -1,1 +1,1 @@
-func main() int {
+func main() {
