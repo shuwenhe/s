@@ -17,7 +17,7 @@ func print_fixed([5]int arr) void {
     println("Fixed array")
 }
 
-func main() int {
+func main() {
     test_array_types()
     0
 }

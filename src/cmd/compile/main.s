@@ -6,7 +6,7 @@ use internal.buildcfg.goarch as buildcfg_goarch
 use std.env.args as host_args
 use std.io.eprintln
 
-func main() int {
+func main() {
     let args = host_args()
     let goarch = buildcfg_goarch()
     let buildcfg_err = buildcfg_check()

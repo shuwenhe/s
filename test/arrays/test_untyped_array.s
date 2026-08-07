@@ -6,7 +6,7 @@ func test_untyped_array() void {
     println("Arrays created")
 }
 
-func main() int {
+func main() {
     test_untyped_array()
     0
 }

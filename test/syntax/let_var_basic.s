@@ -24,7 +24,7 @@ func test_var_array() void {
     println("var arr reassigned to []int{4, 5}")
 }
 
-func main() int {
+func main() {
     test_let_immutable()
     test_var_mutable()
     test_let_array()

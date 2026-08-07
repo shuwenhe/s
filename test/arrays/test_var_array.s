@@ -6,7 +6,7 @@ func test_var_array() void {
     println("Arrays created")
 }
 
-func main() int {
+func main() {
     test_var_array()
     0
 }

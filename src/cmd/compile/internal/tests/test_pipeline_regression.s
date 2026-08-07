@@ -54,7 +54,7 @@ func run_pipeline_regression_suite() int {
     if parsed_bad_margin[0] != "help" {
         return 1
     }
-    let source = "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int {\n  1\n}\nfunc worker() int {\n  helper()\n  0\n}\nfunc main() int {\n  let arr = [int]{1, 2}\n  let mp = [string]int{\"k\": 1}\n  let idx = arr[0]\n  let bx = { idx + 1 }\n  idx = idx + bx\n  sroutine worker()\n  for (let i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
+    let source = "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int {\n  1\n}\nfunc worker() int {\n  helper()\n  0\n}\nfunc main() {\n  let arr = [int]{1, 2}\n  let mp = [string]int{\"k\": 1}\n  let idx = arr[0]\n  let bx = { idx + 1 }\n  idx = idx + bx\n  sroutine worker()\n  for (let i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
     let parsed = parse_source(source)
     if parsed.is_err() {
         return 1
@@ -73,7 +73,7 @@ func run_pipeline_regression_suite() int {
     if !has_const_decl(lowered, "B", "1") {
         return 1
     }
-    let const_only_source = "package demo.constonly\nconst (\n  A = 1\n  B\n)\nfunc main() int {\n  B\n}"
+    let const_only_source = "package demo.constonly\nconst (\n  A = 1\n  B\n)\nfunc main() {\n  B\n}"
     let const_only_parsed = parse_source(const_only_source)
     if const_only_parsed.is_err() {
         return 1

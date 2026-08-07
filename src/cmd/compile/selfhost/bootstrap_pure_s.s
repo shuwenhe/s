@@ -21,7 +21,7 @@ func strlen(string text) int {
     0  
 }
 
-func main() int {
+func main() {
     eprintln("")
     eprintln("=== S Compiler Pure S Bootstrap ===")
     eprintln("")

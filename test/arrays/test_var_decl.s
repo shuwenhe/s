@@ -4,7 +4,7 @@ func test() void {
     var x = []int{1}
 }
 
-func main() int {
+func main() {
     test()
     0
 }
