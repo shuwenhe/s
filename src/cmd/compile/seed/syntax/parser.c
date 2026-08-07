@@ -713,6 +713,78 @@ static ast_node *parse_call(parser *p) {
 	return expr;
 }
 
+// Generic binary operator parser - unified implementation
+typedef ast_node *(*parser_func)(parser *p);
+
+static ast_node *parse_binary_expr(
+	parser *p,
+	parser_func lower_prec,
+	int (*is_operator)(token_type),
+	int handle_compound_assign
+) {
+	ast_node *expr = lower_prec(p);
+	
+	while (expr && is_operator(peek(p)->type)) {
+		if (handle_compound_assign) {
+			size_t saved = p->current;
+			advance_tok(p);
+			if (match(p, TOKEN_ASSIGN)) {
+				p->current = saved;
+				break;
+			}
+			p->current = saved;
+		}
+		
+		const token *op = advance_tok(p);
+		ast_node *rhs = lower_prec(p);
+		ast_node *parent;
+		
+		if (!rhs) {
+			ast_free(expr);
+			return NULL;
+		}
+		
+		parent = ast_new(AST_BINARY_EXPR, op->pos);
+		if (!parent) {
+			ast_free(expr);
+			ast_free(rhs);
+			return NULL;
+		}
+		
+		parent->as.binary_expr.op = op->type;
+		parent->as.binary_expr.left = expr;
+		parent->as.binary_expr.right = rhs;
+		expr = parent;
+	}
+	
+	return expr;
+}
+
+// Operator type checking functions
+static int is_mult_div_mod(token_type t) {
+	return t == TOKEN_STAR || t == TOKEN_SLASH || t == TOKEN_PERCENT;
+}
+
+static int is_add_sub(token_type t) {
+	return t == TOKEN_PLUS || t == TOKEN_MINUS;
+}
+
+static int is_comparison(token_type t) {
+	return t == TOKEN_LT || t == TOKEN_LE || t == TOKEN_GT || t == TOKEN_GE;
+}
+
+static int is_equality(token_type t) {
+	return t == TOKEN_EQ || t == TOKEN_NE;
+}
+
+static int is_logic_and(token_type t) {
+	return t == TOKEN_AND_AND;
+}
+
+static int is_logic_or(token_type t) {
+	return t == TOKEN_OR_OR;
+}
+
 static ast_node *parse_unary(parser *p) {
 	const token *tok = peek(p);
 	ast_node *node;
@@ -750,161 +822,27 @@ static ast_node *parse_unary(parser *p) {
 }
 
 static ast_node *parse_factor(parser *p) {
-	ast_node *expr = parse_unary(p);
-	while (expr && (check(p, TOKEN_STAR) || check(p, TOKEN_SLASH) || check(p, TOKEN_PERCENT))) {
-		size_t saved = p->current;
-		advance_tok(p);
-		if (match(p, TOKEN_ASSIGN)) {
-			p->current = saved;
-			break;
-		}
-		p->current = saved;
-		const token *op = advance_tok(p);
-		ast_node *rhs = parse_unary(p);
-		ast_node *parent;
-		if (!rhs) {
-			ast_free(expr);
-			return NULL;
-		}
-		parent = ast_new(AST_BINARY_EXPR, op->pos);
-		if (!parent) {
-			ast_free(expr);
-			ast_free(rhs);
-			return NULL;
-		}
-		parent->as.binary_expr.op = op->type;
-		parent->as.binary_expr.left = expr;
-		parent->as.binary_expr.right = rhs;
-		expr = parent;
-	}
-	return expr;
+	return parse_binary_expr(p, parse_unary, is_mult_div_mod, 1);
 }
 
 static ast_node *parse_term(parser *p) {
-	ast_node *expr = parse_factor(p);
-	while (expr && (check(p, TOKEN_PLUS) || check(p, TOKEN_MINUS))) {
-		size_t saved = p->current;
-		advance_tok(p);
-		if (match(p, TOKEN_ASSIGN)) {
-			p->current = saved;
-			break;
-		}
-		p->current = saved;
-		const token *op = advance_tok(p);
-		ast_node *rhs = parse_factor(p);
-		ast_node *parent;
-		if (!rhs) {
-			ast_free(expr);
-			return NULL;
-		}
-		parent = ast_new(AST_BINARY_EXPR, op->pos);
-		if (!parent) {
-			ast_free(expr);
-			ast_free(rhs);
-			return NULL;
-		}
-		parent->as.binary_expr.op = op->type;
-		parent->as.binary_expr.left = expr;
-		parent->as.binary_expr.right = rhs;
-		expr = parent;
-	}
-	return expr;
+	return parse_binary_expr(p, parse_factor, is_add_sub, 1);
 }
 
 static ast_node *parse_comparison(parser *p) {
-	ast_node *expr = parse_term(p);
-	while (expr && (check(p, TOKEN_LT) || check(p, TOKEN_LE) || check(p, TOKEN_GT) || check(p, TOKEN_GE))) {
-		const token *op = advance_tok(p);
-		ast_node *rhs = parse_term(p);
-		ast_node *parent;
-		if (!rhs) {
-			ast_free(expr);
-			return NULL;
-		}
-		parent = ast_new(AST_BINARY_EXPR, op->pos);
-		if (!parent) {
-			ast_free(expr);
-			ast_free(rhs);
-			return NULL;
-		}
-		parent->as.binary_expr.op = op->type;
-		parent->as.binary_expr.left = expr;
-		parent->as.binary_expr.right = rhs;
-		expr = parent;
-	}
-	return expr;
+	return parse_binary_expr(p, parse_term, is_comparison, 0);
 }
 
 static ast_node *parse_equality(parser *p) {
-	ast_node *expr = parse_comparison(p);
-	while (expr && (check(p, TOKEN_EQ) || check(p, TOKEN_NE))) {
-		const token *op = advance_tok(p);
-		ast_node *rhs = parse_comparison(p);
-		ast_node *parent;
-		if (!rhs) {
-			ast_free(expr);
-			return NULL;
-		}
-		parent = ast_new(AST_BINARY_EXPR, op->pos);
-		if (!parent) {
-			ast_free(expr);
-			ast_free(rhs);
-			return NULL;
-		}
-		parent->as.binary_expr.op = op->type;
-		parent->as.binary_expr.left = expr;
-		parent->as.binary_expr.right = rhs;
-		expr = parent;
-	}
-	return expr;
+	return parse_binary_expr(p, parse_comparison, is_equality, 0);
 }
 
 static ast_node *parse_logic_and(parser *p) {
-	ast_node *expr = parse_equality(p);
-	while (expr && check(p, TOKEN_AND_AND)) {
-		const token *op = advance_tok(p);
-		ast_node *rhs = parse_equality(p);
-		ast_node *parent;
-		if (!rhs) {
-			ast_free(expr);
-			return NULL;
-		}
-		parent = ast_new(AST_BINARY_EXPR, op->pos);
-		if (!parent) {
-			ast_free(expr);
-			ast_free(rhs);
-			return NULL;
-		}
-		parent->as.binary_expr.op = op->type;
-		parent->as.binary_expr.left = expr;
-		parent->as.binary_expr.right = rhs;
-		expr = parent;
-	}
-	return expr;
+	return parse_binary_expr(p, parse_equality, is_logic_and, 0);
 }
 
 static ast_node *parse_logic_or(parser *p) {
-	ast_node *expr = parse_logic_and(p);
-	while (expr && check(p, TOKEN_OR_OR)) {
-		const token *op = advance_tok(p);
-		ast_node *rhs = parse_logic_and(p);
-		ast_node *parent;
-		if (!rhs) {
-			ast_free(expr);
-			return NULL;
-		}
-		parent = ast_new(AST_BINARY_EXPR, op->pos);
-		if (!parent) {
-			ast_free(expr);
-			ast_free(rhs);
-			return NULL;
-		}
-		parent->as.binary_expr.op = op->type;
-		parent->as.binary_expr.left = expr;
-		parent->as.binary_expr.right = rhs;
-		expr = parent;
-	}
-	return expr;
+	return parse_binary_expr(p, parse_logic_and, is_logic_or, 0);
 }
 
 static char *member_expr_to_name(ast_node *expr) {
