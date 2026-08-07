@@ -1,6 +1,6 @@
 package main
 
-func main() int {
+func main() {
     var x = {1, 2}
     0
 }

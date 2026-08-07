@@ -15,7 +15,7 @@ const CMD_AST     = 5
 const CMD_VERSION = 6
 const CMD_HELP    = 7
 
-func main() int {
+func main() {
     runtime_init()
     gc_disable()
     let args = env.args()
