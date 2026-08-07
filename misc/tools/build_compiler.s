@@ -5,7 +5,7 @@ use std.fs.file_exists
 use std.prelude.len
 use std.io.println
 
-func main() int {
+func main() {
     let args = env_args()
     if args.len() < 2 {
         println("usage: build_compiler.s <arch>")

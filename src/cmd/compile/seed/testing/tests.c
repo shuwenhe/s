@@ -1172,7 +1172,7 @@ static bool test_runtime_receiver_method(void) {
 	const char *src =
 		"struct Point { int x } "
 		"func (self: Point) value() int { return self.x; } "
-		"func main() int { let p = Point { x: 7 }; return p.value(); }";
+		"func main() { let p = Point { x: 7 }; return p.value(); }";
 	compile_error err;
 	long ret = 0;
 	return execute_source_main(src, &ret, &err) && ret == 7;
@@ -1184,7 +1184,7 @@ static bool test_runtime_implicit_trait_dispatch(void) {
 		"trait Adder { func add(int a, int b) int; } "
 		"func (self: Calc) add(int a, int b) int { return a + b; } "
 		"func use_adder(Adder value) int { return value.add(3, 4); } "
-		"func main() int { return use_adder(Calc { marker: 0 }); }";
+		"func main() { return use_adder(Calc { marker: 0 }); }";
 	compile_error err;
 	long ret = 0;
 	return execute_source_main(src, &ret, &err) && ret == 7;
@@ -1194,7 +1194,7 @@ static bool test_semantic_implicit_trait_missing_method(void) {
 	const char *src =
 		"struct Calc { int marker } "
 		"trait Adder { func add(int a, int b) int; } "
-		"func main() int { let value = Calc { marker: 0 }; return consume(value); } "
+		"func main() { let value = Calc { marker: 0 }; return consume(value); } "
 		"func consume(Adder value) int { return 0; }";
 	token_vec tokens;
 	compile_error err;

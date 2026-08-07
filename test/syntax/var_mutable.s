@@ -7,7 +7,7 @@ func test_var_reassign() void {
     println("var x reassigned to 20")
 }
 
-func main() int {
+func main() {
     test_var_reassign()
     0
 }

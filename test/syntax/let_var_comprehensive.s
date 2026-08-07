@@ -51,7 +51,7 @@ func test_var_loop() void {
     println("Var in while loop works")
 }
 
-func main() int {
+func main() {
     test_let_basics()
     test_var_basics()
     test_typed_let()
