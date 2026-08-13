@@ -735,6 +735,52 @@ static int host_write_text_file(const char *path, const char *contents) {
 	return 0;
 }
 
+static int host_make_dirs(const char *path) {
+	char buffer[PATH_MAX];
+	size_t len;
+	char *cursor;
+	struct stat st;
+
+	if (!path || !*path) {
+		g_host_errno = EINVAL;
+		return -1;
+	}
+	len = strlen(path);
+	if (len >= sizeof(buffer)) {
+		g_host_errno = ENAMETOOLONG;
+		return -1;
+	}
+	memcpy(buffer, path, len + 1);
+	while (len > 1 && buffer[len - 1] == '/') {
+		buffer[--len] = '\0';
+	}
+	for (cursor = buffer + 1; *cursor; cursor++) {
+		if (*cursor != '/') {
+			continue;
+		}
+		*cursor = '\0';
+		if (mkdir(buffer, 0777) != 0 && errno != EEXIST) {
+			g_host_errno = errno;
+			return -1;
+		}
+		if (stat(buffer, &st) != 0 || !S_ISDIR(st.st_mode)) {
+			g_host_errno = errno ? errno : ENOTDIR;
+			return -1;
+		}
+		*cursor = '/';
+	}
+	if (mkdir(buffer, 0777) != 0 && errno != EEXIST) {
+		g_host_errno = errno;
+		return -1;
+	}
+	if (stat(buffer, &st) != 0 || !S_ISDIR(st.st_mode)) {
+		g_host_errno = errno ? errno : ENOTDIR;
+		return -1;
+	}
+	g_host_errno = 0;
+	return 0;
+}
+
 static char *host_make_temp_dir(const char *prefix) {
 	const char *base = (prefix && *prefix) ? prefix : "s";
 	char *path;
@@ -1867,6 +1913,20 @@ static int host_dispatch_call(
 		*out = value_make_int(host_file_exists(path) ? 1 : 0);
 		return 1;
 	}
+	if (strcmp(name, "runtime_make_dirs") == 0) {
+		const char *path = NULL;
+		char path_buf[PATH_MAX];
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "runtime_make_dirs expects 1 arg");
+			return 0;
+		}
+		if (!value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render runtime_make_dirs path");
+			return 0;
+		}
+		*out = value_make_int(host_make_dirs(path) == 0 ? 1 : 0);
+		return 1;
+	}
 	if (strcmp(name, "runtime_read_text_file") == 0) {
 		const char *path = NULL;
 		char path_buf[256];
@@ -2581,6 +2641,51 @@ static int values_set(runtime_values *vals, const char *name, const runtime_data
 		return 0;
 	}
 	vals->len++;
+	return 1;
+}
+
+static int values_set_runtime_command_result(
+	runtime_values *vals,
+	const char *name,
+	int ok,
+	int exit_code,
+	const char *error_text
+) {
+	char field_name[2048];
+	runtime_data_value value = value_make_string_copy(name);
+	if (!value.str_value || !values_set(vals, name, &value)) {
+		value_clear(&value);
+		return 0;
+	}
+	value_clear(&value);
+
+	snprintf(field_name, sizeof(field_name), "%s.__type", name);
+	value = value_make_string_copy("runtime_command_result");
+	if (!value.str_value || !values_set(vals, field_name, &value)) {
+		value_clear(&value);
+		return 0;
+	}
+	value_clear(&value);
+
+	snprintf(field_name, sizeof(field_name), "%s.ok", name);
+	value = value_make_int(ok ? 1 : 0);
+	if (!values_set(vals, field_name, &value)) {
+		return 0;
+	}
+
+	snprintf(field_name, sizeof(field_name), "%s.exit_code", name);
+	value = value_make_int(exit_code);
+	if (!values_set(vals, field_name, &value)) {
+		return 0;
+	}
+
+	snprintf(field_name, sizeof(field_name), "%s.error", name);
+	value = value_make_string_copy(error_text ? error_text : "");
+	if (!value.str_value || !values_set(vals, field_name, &value)) {
+		value_clear(&value);
+		return 0;
+	}
+	value_clear(&value);
 	return 1;
 }
 
@@ -3763,6 +3868,27 @@ static int execute_function(
 					pending_len = call_base;
 					values_free(&vals);
 					return 0;
+				}
+				if (strcmp(ins->op1, "runtime_make_dirs") == 0) {
+					int command_ok = callee_ret.kind == RUNTIME_INT && callee_ret.int_value != 0;
+					const char *command_error = command_ok ? "" : strerror(g_host_errno ? g_host_errno : EIO);
+					if (!values_set_runtime_command_result(&vals, ins->result, command_ok, command_ok ? 0 : 1, command_error)) {
+						for (j = call_base; j < pending_len; j++) {
+							value_clear(&pending_args[j]);
+						}
+						pending_len = call_base;
+						value_clear(&callee_ret);
+						values_free(&vals);
+						error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+						return 0;
+					}
+					for (j = call_base; j < pending_len; j++) {
+						value_clear(&pending_args[j]);
+					}
+					pending_len = call_base;
+					value_clear(&callee_ret);
+					pc++;
+					continue;
 				}
 			} else {
 				runtime_values callee_return_fields = {0};
