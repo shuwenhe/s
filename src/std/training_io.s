@@ -38,7 +38,7 @@ struct checkpoint {
     CheckpointMeta meta
     TrainState state
     ModelConfigSnapshot config
-    Map<string, T.Tensor> weight_map
+    Map<string, T.tensor> weight_map
     string file_path
     long file_size_bytes
     string checksum_md5
@@ -180,7 +180,7 @@ func save_checkpoint(checkpoint ckpt, string output_dir, string name_prefix) str
 }
 
 func quick_save(string output_dir, int step, float loss, float best_loss, int best_step,
-                 ModelConfigSnapshot config, Map<string, T.Tensor> weights,
+                 ModelConfigSnapshot config, Map<string, T.tensor> weights,
                  float[] recent_losses) string {
     checkpoint ckpt
     ckpt.meta = default_meta()
@@ -245,8 +245,8 @@ func get_latest_checkpoint(string manifest_path) string {
     cpts[len(cpts) - 1]
 }
 
-func export_weights(AG.AGTensor[] params) Map<string, T.Tensor> {
-    Map<string, T.Tensor> wmap = new_map()
+func export_weights(AG.ag_tensor[] params) Map<string, T.tensor> {
+    Map<string, T.tensor> wmap = new_map()
     int i = 0
     while i < len(params) {
         map_put(wmap, params[i].name, params[i].data)
@@ -255,7 +255,7 @@ func export_weights(AG.AGTensor[] params) Map<string, T.Tensor> {
     wmap
 }
 
-func import_weights(Map<string, T.Tensor> wmap, AG.AGTensor[] mut params) void {
+func import_weights(Map<string, T.tensor> wmap, AG.ag_tensor[] mut params) void {
     int i = 0
     while i < len(params) {
         if params[i].name in wmap {
@@ -265,8 +265,8 @@ func import_weights(Map<string, T.Tensor> wmap, AG.AGTensor[] mut params) void {
     }
 }
 
-func export_weights_binary(AG.AGTensor[] params, string output_path) string {
-    Map<string, T.Tensor> wmap = export_weights(params)
+func export_weights_binary(AG.ag_tensor[] params, string output_path) string {
+    Map<string, T.tensor> wmap = export_weights(params)
     checkpoint dummy
     dummy.meta = default_meta()
     dummy.state = initial_train_state()

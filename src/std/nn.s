@@ -32,7 +32,7 @@ struct GPTModel {
     TransformerBlock[] blocks
     LayerNorm final_ln
     Linear output_head
-    AG.AutoGradTensor[] all_params
+    AG.auto_grad_tensor[] all_params
 }
 
 func nn_unit_name() string {
@@ -95,7 +95,7 @@ func set_train(Module mut m, bool mode) void {
     AI.train_mode(m, mode)
 }
 
-func get_params(Module m) AG.AutoGradTensor[] {
+func get_params(Module m) AG.auto_grad_tensor[] {
     AI.get_parameters(m)
 }
 
@@ -142,7 +142,7 @@ func make_gpt(GPTConfig cfg) GPTModel {
     model
 }
 
-func copy_params_into(AG.AutoGradTensor[] dst, int start_pos, AG.AutoGradTensor[] src) int {
+func copy_params_into(AG.auto_grad_tensor[] dst, int start_pos, AG.auto_grad_tensor[] src) int {
     int i = 0
     while i < len(src) {
         dst[start_pos + i] = src[i]
@@ -159,7 +159,7 @@ func collect_gpt_params(GPTModel mut model) void {
         i = i + 1
     }
     total = total + count_params(model.final_ln) + count_params(model.output_head)
-    model.all_params = new AG.AutoGradTensor[total]
+    model.all_params = new AG.auto_grad_tensor[total]
     int pos = 0
     pos = copy_params_into(model.all_params, pos, get_params(model.tok_embed))
     pos = copy_params_into(model.all_params, pos, get_params(model.pos_embed))
@@ -182,8 +182,8 @@ func gpt_total_params(GPTModel self) int {
     total
 }
 
-func forward(GPTModel self, int[] token_ids, int batch_size, int seq_len) AG.AutoGradTensor {
-    AG.AutoGradTensor tok_emb = AI.forward(self.tok_embed, token_ids, batch_size, seq_len)
+func forward(GPTModel self, int[] token_ids, int batch_size, int seq_len) AG.auto_grad_tensor {
+    AG.auto_grad_tensor tok_emb = AI.forward(self.tok_embed, token_ids, batch_size, seq_len)
     int total_tokens = batch_size * seq_len
     int[] pos_ids = new int[total_tokens]
     int idx = 0
@@ -191,14 +191,14 @@ func forward(GPTModel self, int[] token_ids, int batch_size, int seq_len) AG.Aut
         pos_ids[idx] = idx % seq_len
         idx = idx + 1
     }
-    AG.AutoGradTensor pos_emb = AI.forward(self.pos_embed, pos_ids, batch_size, seq_len)
-    AG.AutoGradTensor x = AG.autograd_add(tok_emb, pos_emb)
+    AG.auto_grad_tensor pos_emb = AI.forward(self.pos_embed, pos_ids, batch_size, seq_len)
+    AG.auto_grad_tensor x = AG.autograd_add(tok_emb, pos_emb)
     int i = 0
     while i < self.config.num_layers {
         x = AI.forward(self.blocks[i], x)
         i = i + 1
     }
-    AG.AutoGradTensor normed = AI.forward(self.final_ln, x)
+    AG.auto_grad_tensor normed = AI.forward(self.final_ln, x)
     AI.forward(self.output_head, normed)
 }
 
