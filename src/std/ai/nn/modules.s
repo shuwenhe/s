@@ -1,34 +1,34 @@
 package std.ai.nn
-use std.tensor.{Tensor, zeros, ones, randn, xavier_uniform, kaiming_normal, 
+use std.tensor.{tensor, zeros, ones, randn, xavier_uniform, kaiming_normal, 
                   add, sub, mul, div, matmul_2d, reshape, transpose,
                   relu_tensor, softmax_tensor, layer_norm, sigmoid_tensor, 
                   tanh_tensor, gelu_tensor, dropout as tensor_dropout}
 use std.math.{sqrt, exp, tanh}
-use std.ai.autograd.{AutoGradTensor, parameter, create_autograd_tensor}
+use std.ai.autograd.{auto_grad_tensor, parameter, create_autograd_tensor}
 
 struct Module {
     string name
     string type_name
-    AutoGradTensor[] parameters
-    Map<string, Tensor> buffers
-    func forward(AutoGradTensor input) AutoGradTensor
+    auto_grad_tensor[] parameters
+    Map<string, tensor> buffers
+    func forward(auto_grad_tensor input) auto_grad_tensor
 }
 
 func module_init(string name, string type_name) Module {
     Module {
         name: name,
         type_name: type_name,
-        parameters: new AutoGradTensor[0],
+        parameters: new auto_grad_tensor[0],
         buffers: new_map(),
     }
 }
 
-func add_param(Module mut m, Tensor data, string param_name) void {
-    AutoGradTensor p = parameter(data, m.name + "." + param_name)
+func add_param(Module mut m, tensor data, string param_name) void {
+    auto_grad_tensor p = parameter(data, m.name + "." + param_name)
     append(m.parameters, p)
 }
 
-func get_parameters(Module m) AutoGradTensor[] { m.parameters }
+func get_parameters(Module m) auto_grad_tensor[] { m.parameters }
 
 func count_parameters(Module m) int {
     int total = 0
@@ -45,8 +45,8 @@ func train_mode(Module mut m, bool mode) void {
 }
 
 struct Linear : Module {
-    AutoGradTensor weight
-    AutoGradTensor bias
+    auto_grad_tensor weight
+    auto_grad_tensor bias
     int in_features
     int out_features
     bool bias_enabled
@@ -60,10 +60,10 @@ func new_linear(int in_feat, int out_feat, bool use_bias) Linear {
     layer.bias_enabled = use_bias
     int[] fan_in = [in_feat]
     int[] fan_out = [out_feat]
-    Tensor w_data = xavier_uniform(fan_in, fan_out)
+    tensor w_data = xavier_uniform(fan_in, fan_out)
     layer.weight = parameter(w_data, "weight")
     if use_bias {
-        Tensor b_data = zeros([out_feat])
+        tensor b_data = zeros([out_feat])
         layer.bias = parameter(b_data, "bias")
         append(layer.parameters, layer.bias)
     }
@@ -71,8 +71,8 @@ func new_linear(int in_feat, int out_feat, bool use_bias) Linear {
     layer
 }
 
-func forward(Linear self, AutoGradTensor x) AutoGradTensor {
-    AutoGradTensor out = autograd_matmul(x, self.weight)
+func forward(Linear self, auto_grad_tensor x) auto_grad_tensor {
+    auto_grad_tensor out = autograd_matmul(x, self.weight)
     if self.bias_enabled {
         out = autograd_add(out, self.bias)
     }
@@ -80,7 +80,7 @@ func forward(Linear self, AutoGradTensor x) AutoGradTensor {
 }
 
 struct embedding : Module {
-    AutoGradTensor weight
+    auto_grad_tensor weight
     int num_embeddings
     int embedding_dim
     int padding_idx
@@ -93,13 +93,13 @@ func new_embedding(int num_embed, int embed_dim, int pad_idx) embedding {
     layer.embedding_dim = embed_dim
     layer.padding_idx = pad_idx
     int[] shape = [num_embed, embed_dim]
-    Tensor w_data = randn(shape, 0.0, 1.0)
+    tensor w_data = randn(shape, 0.0, 1.0)
     layer.weight = parameter(w_data, "weight")
     append(layer.parameters, layer.weight)
     layer
 }
 
-func forward(embedding self, int[] token_ids, int batch_size, int seq_len) AutoGradTensor {
+func forward(embedding self, int[] token_ids, int batch_size, int seq_len) auto_grad_tensor {
     int num_tokens = batch_size * seq_len
     float[] emb_values = new float[num_tokens * self.embedding_dim]
     int i = 0
@@ -122,13 +122,13 @@ func forward(embedding self, int[] token_ids, int batch_size, int seq_len) AutoG
         i = i + 1
     }
     int[] out_shape = [batch_size, seq_len, self.embedding_dim]
-    Tensor out_data = tensor(emb_values, out_shape)
+    tensor out_data = tensor(emb_values, out_shape)
     create_autograd_tensor(out_data, true)
 }
 
 struct LayerNorm : Module {
-    AutoGradTensor gamma
-    AutoGradTensor beta
+    auto_grad_tensor gamma
+    auto_grad_tensor beta
     int[] normalized_shape
     float eps
 }
@@ -151,13 +151,13 @@ func new_layer_norm(int[] norm_shape, float eps) LayerNorm {
     layer
 }
 
-func forward(LayerNorm self, AutoGradTensor x) AutoGradTensor {
-    Tensor mean_val = mean(x.data, -1, true)
-    Tensor centered = sub(x.data, mean_val)
-    Tensor var_val = mean(square(centered.data), -1, true)
-    Tensor std = sqrt(add_scalar(var_val, self.eps))
-    Tensor normalized = div(centered.data, std)
-    Tensor out_data = mul(normalized, self.gamma.data)
+func forward(LayerNorm self, auto_grad_tensor x) auto_grad_tensor {
+    tensor mean_val = mean(x.data, -1, true)
+    tensor centered = sub(x.data, mean_val)
+    tensor var_val = mean(square(centered.data), -1, true)
+    tensor std = sqrt(add_scalar(var_val, self.eps))
+    tensor normalized = div(centered.data, std)
+    tensor out_data = mul(normalized, self.gamma.data)
     out_data = add(out_data, self.beta.data)
     create_autograd_tensor(out_data, x.requires_grad)
 }
@@ -199,15 +199,15 @@ func new_mha(int embed_dim, int num_heads, float dropout_p, bool is_causal) Mult
     attn
 }
 
-func forward(MultiHeadAttention self, AutoGradTensor x, Tensor mask) AutoGradTensor {
+func forward(MultiHeadAttention self, auto_grad_tensor x, tensor mask) auto_grad_tensor {
     int batch_size = x.data.shape.dims[0]
     int seq_len = x.data.shape.dims[1]
     int d_model = self.embed_dim
     int n_heads = self.num_heads
     int d_k = self.head_dim
-    AutoGradTensor Q = forward(self.q_proj, x)
-    AutoGradTensor K = forward(self.k_proj, x)
-    AutoGradTensor V = forward(self.v_proj, x)
+    auto_grad_tensor Q = forward(self.q_proj, x)
+    auto_grad_tensor K = forward(self.k_proj, x)
+    auto_grad_tensor V = forward(self.v_proj, x)
     Q = autograd_view(Q, [batch_size, seq_len, n_heads, d_k])
     Q = autograd_transpose(Q, 1, 2)
     K = autograd_view(K, [batch_size, seq_len, n_heads, d_k])
@@ -215,29 +215,29 @@ func forward(MultiHeadAttention self, AutoGradTensor x, Tensor mask) AutoGradTen
     V = autograd_view(V, [batch_size, seq_len, n_heads, d_k])
     V = autograd_transpose(V, 1, 2)
     K_T = autograd_transpose(K, 2, 3)
-    AutoGradTensor scores = autograd_matmul(Q, K_T)
+    auto_grad_tensor scores = autograd_matmul(Q, K_T)
     float scale = sqrt(d_k as float)
-    AutoGradTensor scaled_scores = div(scores, scalar(scale))
+    auto_grad_tensor scaled_scores = div(scores, scalar(scale))
     if self.causal {
-        Tensor causal_mask = make_causal_mask(seq_len)
+        tensor causal_mask = make_causal_mask(seq_len)
         scaled_scores = add(scaled_scores, causal_mask)
     }
     if mask != nil {
         scaled_scores = add(scaled_scores, mask)
     }
-    AutoGradTensor attn_weights = softmax(scaled_scores, -1)
+    auto_grad_tensor attn_weights = softmax(scaled_scores, -1)
     if self.dropout_prob > 0 && self.training {
         attn_weights = tensor_dropout(attn_weights.data, self.dropout_prob, true)
         attn_weights = create_autograd_tensor(attn_weights, true)
     }
-    AutoGradTensor context = autograd_matmul(attn_weights, V)
+    auto_grad_tensor context = autograd_matmul(attn_weights, V)
     context = autograd_transpose(context, 1, 2)
     context = autograd_view(context, [batch_size, seq_len, d_model])
-    AutoGradTensor output = forward(self.out_proj, context)
+    auto_grad_tensor output = forward(self.out_proj, context)
     output
 }
 
-func make_causal_mask(int seq_len) Tensor {
+func make_causal_mask(int seq_len) tensor {
     float[] vals = new float[seq_len * seq_len]
     int i = 0
     while i < seq_len {
@@ -249,7 +249,7 @@ func make_causal_mask(int seq_len) Tensor {
         }
         i = i + 1
     }
-    Tensor { shape: [seq_len, seq_len], data: vals, device: "cpu", requires_grad: false }
+    tensor { shape: [seq_len, seq_len], data: vals, device: "cpu", requires_grad: false }
 }
 
 struct FeedForward : Module {
@@ -287,8 +287,8 @@ func new_feed_forward(int d_model, int d_ff, float dropout_p, string act_fn) Fee
     ff
 }
 
-func forward(FeedForward self, AutoGradTensor x) AutoGradTensor {
-    AutoGradTensor h = forward(self.fc1, x)
+func forward(FeedForward self, auto_grad_tensor x) auto_grad_tensor {
+    auto_grad_tensor h = forward(self.fc1, x)
     if self.activation == "relu" {
         h = autograd_relu(h)
     }
@@ -302,7 +302,7 @@ func forward(FeedForward self, AutoGradTensor x) AutoGradTensor {
         h = tensor_dropout(h.data, self.dropout_prob, true)
         h = create_autograd_tensor(h, true)
     }
-    AutoGradTensor output = forward(self.fc2, h)
+    auto_grad_tensor output = forward(self.fc2, h)
     output
 }
 
@@ -327,29 +327,29 @@ func new_transformer_block(int d_model, int n_heads, int d_ff, float dropout_p, 
     block
 }
 
-func forward(TransformerBlock self, AutoGradTensor x) AutoGradTensor {
+func forward(TransformerBlock self, auto_grad_tensor x) auto_grad_tensor {
     if self.pre_norm {
-        AutoGradTensor normed = forward(self.norm1, x)
-        AutoGradTensor attn_out = forward(self.attn, normed, nil)
-        AutoGradTensor h = add(x, attn_out)
+        auto_grad_tensor normed = forward(self.norm1, x)
+        auto_grad_tensor attn_out = forward(self.attn, normed, nil)
+        auto_grad_tensor h = add(x, attn_out)
         if self.dropout_prob > 0 {
             h = tensor_dropout(h.data, self.dropout_prob, true)
             h = create_autograd_tensor(h, true)
         }
         normed = forward(self.norm2, h)
-        AutoGradTensor ff_out = forward(self.ff_net, normed)
-        AutoGradTensor output = add(h, ff_out)
+        auto_grad_tensor ff_out = forward(self.ff_net, normed)
+        auto_grad_tensor output = add(h, ff_out)
         if self.dropout_prob > 0 {
             output = tensor_dropout(output.data, self.dropout_prob, true)
             output = create_autograd_tensor(output, true)
         }
         output
     } else {
-        AutoGradTensor attn_out = forward(self.attn, x, nil)
-        AutoGradTensor h = add(x, attn_out)
+        auto_grad_tensor attn_out = forward(self.attn, x, nil)
+        auto_grad_tensor h = add(x, attn_out)
         h = forward(self.norm1, h)
-        AutoGradTensor ff_out = forward(self.ff_net, h)
-        AutoGradTensor output = add(h, ff_out)
+        auto_grad_tensor ff_out = forward(self.ff_net, h)
+        auto_grad_tensor output = add(h, ff_out)
         output = forward(self.norm2, output)
         output
     }
@@ -363,9 +363,9 @@ func new_dropout(float prob) Dropout {
     Dropout { probability: prob }
 }
 
-func forward(Dropout self, AutoGradTensor x) AutoGradTensor {
+func forward(Dropout self, auto_grad_tensor x) auto_grad_tensor {
     if !self.training || self.probability == 0.0 { return x }
-    AutoGradTensor result = create_autograd_tensor(
+    auto_grad_tensor result = create_autograd_tensor(
         tensor_dropout(x.data, self.probability, true),
         x.requires_grad
     )
@@ -376,31 +376,31 @@ struct ReLU : Module {}
 
 func new_relu() ReLU { ReLU {} }
 
-func forward(ReLU self, AutoGradTensor x) AutoGradTensor { autograd_relu(x) }
+func forward(ReLU self, auto_grad_tensor x) auto_grad_tensor { autograd_relu(x) }
 
 struct GELU : Module {}
 
 func new_gelu() GELU { GELU {} }
 
-func forward(GELU self, AutoGradTensor x) AutoGradTensor { autograd_gelu(x) }
+func forward(GELU self, auto_grad_tensor x) auto_grad_tensor { autograd_gelu(x) }
 
 struct SiLU : Module {}
 
 func new_silu() SiLU { SiLU {} }
 
-func forward(SiLU self, AutoGradTensor x) AutoGradTensor { autograd_silu(x) }
+func forward(SiLU self, auto_grad_tensor x) auto_grad_tensor { autograd_silu(x) }
 
 struct Sigmoid : Module {}
 
 func new_sigmoid() Sigmoid { Sigmoid {} }
 
-func forward(Sigmoid self, AutoGradTensor x) AutoGradTensor { autograd_sigmoid(x) }
+func forward(Sigmoid self, auto_grad_tensor x) auto_grad_tensor { autograd_sigmoid(x) }
 
 struct TanhModule : Module {}
 
 func new_tanh_mod() TanhModule { TanhModule {} }
 
-func forward(TanhModule self, AutoGradTensor x) AutoGradTensor { autograd_tanh(x) }
+func forward(TanhModule self, auto_grad_tensor x) auto_grad_tensor { autograd_tanh(x) }
 
 struct Softmax : Module {
     int dim
@@ -408,7 +408,7 @@ struct Softmax : Module {
 
 func new_softmax(int d) Softmax { Softmax { dim: d } }
 
-func forward(Softmax self, AutoGradTensor x) AutoGradTensor { autograd_softmax(x, self.dim) }
+func forward(Softmax self, auto_grad_tensor x) auto_grad_tensor { autograd_softmax(x, self.dim) }
 
 struct Sequential : Module {
     Module[] layers
@@ -418,8 +418,8 @@ func new_sequential(Module[] layers) Sequential {
     Sequential { layers: layers }
 }
 
-func forward(Sequential self, AutoGradTensor x) AutoGradTensor {
-    AutoGradTensor output = x
+func forward(Sequential self, auto_grad_tensor x) auto_grad_tensor {
+    auto_grad_tensor output = x
     int i = 0
     while i < len(self.layers) {
         output = forward(self.layers[i], output)
