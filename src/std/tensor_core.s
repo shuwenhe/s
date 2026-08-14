@@ -3,20 +3,20 @@ const FLOAT_EPSILON = 1e-7
 const FLOAT_INF = 1e308
 const FLOAT_NEG_INF = -1e308
 
-struct TensorShape {
+struct tensor_shape {
     int[] dims
     int ndim
     int size
 }
 
-struct Tensor {
-    TensorShape shape
+struct tensor {
+    tensor_shape shape
     float[] data
     string device
     bool requires_grad
 }
 
-func make_shape(int[] dims) TensorShape {
+func make_shape(int[] dims) tensor_shape {
     int ndim = len(dims)
     int total_size = 1
     int i = 0
@@ -24,20 +24,20 @@ func make_shape(int[] dims) TensorShape {
         total_size = total_size * dims[i]
         i = i + 1
     }
-    TensorShape { dims: dims, ndim: ndim, size: total_size }
+    tensor_shape { dims: dims, ndim: ndim, size: total_size }
 }
 
-func numel(Tensor t) int { t.shape.size }
+func numel(tensor t) int { t.shape.size }
 
-func ndim(Tensor t) int { t.shape.ndim }
+func ndim(tensor t) int { t.shape.ndim }
 
-func dim_size(Tensor t, int axis) int {
+func dim_size(tensor t, int axis) int {
     if axis < 0 { axis = t.shape.ndim + axis }
     if axis >= 0 && axis < t.shape.ndim { return t.shape.dims[axis] }
     return 1
 }
 
-func shape_str(TensorShape s) string {
+func shape_str(tensor_shape s) string {
     string result = "("
     int i = 0
     while i < s.ndim {
@@ -49,7 +49,7 @@ func shape_str(TensorShape s) string {
     result
 }
 
-func same_shape(Tensor a, Tensor b) bool {
+func same_shape(tensor a, tensor b) bool {
     if a.shape.ndim != b.shape.ndim { return false }
     int i = 0
     while i < a.shape.ndim {
@@ -59,7 +59,7 @@ func same_shape(Tensor a, Tensor b) bool {
     return true
 }
 
-func flat_index(TensorShape shape, int[] indices) int {
+func flat_index(tensor_shape shape, int[] indices) int {
     int idx = 0
     int stride = 1
     int d = shape.ndim - 1
@@ -71,7 +71,7 @@ func flat_index(TensorShape shape, int[] indices) int {
     idx
 }
 
-func unflatten_index(TensorShape shape, int flat_idx) int[] {
+func unflatten_index(tensor_shape shape, int flat_idx) int[] {
     int[] result = new int[shape.ndim]
     int remaining = flat_idx
     int d = shape.ndim - 1
@@ -83,8 +83,8 @@ func unflatten_index(TensorShape shape, int flat_idx) int[] {
     result
 }
 
-func make_tensor(float[] values, int[] shape_dims) Tensor {
-    TensorShape sh = make_shape(shape_dims)
+func make_tensor(float[] values, int[] shape_dims) tensor {
+    tensor_shape sh = make_shape(shape_dims)
     int val_count = len(values)
     if val_count < sh.size {
         float[] padded = new float[sh.size]
@@ -93,42 +93,42 @@ func make_tensor(float[] values, int[] shape_dims) Tensor {
         while i < sh.size { padded[i] = 0.0; i = i + 1 }
         values = padded
     }
-    Tensor { shape: sh, data: values, device: "cpu", requires_grad: false }
+    tensor { shape: sh, data: values, device: "cpu", requires_grad: false }
 }
 
-func zeros(int[] shape_dims) Tensor {
-    TensorShape sh = make_shape(shape_dims)
+func zeros(int[] shape_dims) tensor {
+    tensor_shape sh = make_shape(shape_dims)
     float[] vals = new float[sh.size]
     int i = 0
     while i < sh.size { vals[i] = 0.0; i = i + 1 }
-    Tensor { shape: sh, data: vals, device: "cpu", requires_grad: false }
+    tensor { shape: sh, data: vals, device: "cpu", requires_grad: false }
 }
 
-func ones(int[] shape_dims) Tensor {
-    TensorShape sh = make_shape(shape_dims)
+func ones(int[] shape_dims) tensor {
+    tensor_shape sh = make_shape(shape_dims)
     float[] vals = new float[sh.size]
     int i = 0
     while i < sh.size { vals[i] = 1.0; i = i + 1 }
-    Tensor { shape: sh, data: vals, device: "cpu", requires_grad: false }
+    tensor { shape: sh, data: vals, device: "cpu", requires_grad: false }
 }
 
-func full(int[] shape_dims, float fill_value) Tensor {
-    TensorShape sh = make_shape(shape_dims)
+func full(int[] shape_dims, float fill_value) tensor {
+    tensor_shape sh = make_shape(shape_dims)
     float[] vals = new float[sh.size]
     int i = 0
     while i < sh.size { vals[i] = fill_value; i = i + 1 }
-    Tensor { shape: sh, data: vals, device: "cpu", requires_grad: false }
+    tensor { shape: sh, data: vals, device: "cpu", requires_grad: false }
 }
 
-func scalar(float value) Tensor {
+func scalar(float value) tensor {
     float[] v = new float[1]
     v[0] = value
     int[] s = new int[1]
     s[0] = 1
-    Tensor { shape: make_shape(s), data: v, device: "cpu", requires_grad: false }
+    tensor { shape: make_shape(s), data: v, device: "cpu", requires_grad: false }
 }
 
-func arange(int start, int stop, int step) Tensor {
+func arange(int start, int stop, int step) tensor {
     int count = (stop - start) / step
     if count <= 0 { count = 1 }
     float[] v = new float[count]
@@ -141,10 +141,10 @@ func arange(int start, int stop, int step) Tensor {
     }
     int[] s = new int[1]
     s[0] = count
-    Tensor { shape: make_shape(s), data: v, device: "cpu", requires_grad: false }
+    tensor { shape: make_shape(s), data: v, device: "cpu", requires_grad: false }
 }
 
-func linspace(float start, float stop, int n) Tensor {
+func linspace(float start, float stop, int n) tensor {
     float[] v = new float[n]
     float delta = 0.0
     if n > 1 { delta = (stop - start) / ((n-1) as float) }
@@ -155,14 +155,14 @@ func linspace(float start, float stop, int n) Tensor {
     }
     int[] s = new int[1]
     s[0] = n
-    Tensor { shape: make_shape(s), data: v, device: "cpu", requires_grad: false }
+    tensor { shape: make_shape(s), data: v, device: "cpu", requires_grad: false }
 }
 
-func eye(int n) Tensor {
+func eye(int n) tensor {
     int[] shape = new int[2]
     shape[0] = n
     shape[1] = n
-    TensorShape sh = make_shape(shape)
+    tensor_shape sh = make_shape(shape)
     float[] v = new float[sh.size]
     int r = 0
     while r < n {
@@ -174,12 +174,12 @@ func eye(int n) Tensor {
         }
         r = r + 1
     }
-    Tensor { shape: sh, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: sh, data: v, device: "cpu", requires_grad: false }
 }
 
-func zeros_like(Tensor t) Tensor { zeros(t.shape.dims) }
+func zeros_like(tensor t) tensor { zeros(t.shape.dims) }
 
-func ones_like(Tensor t) Tensor { ones(t.shape.dims) }
+func ones_like(tensor t) tensor { ones(t.shape.dims) }
 var _rand_seed = 42
 
 func set_seed(int seed) void { _rand_seed = seed }
@@ -190,16 +190,16 @@ func _rand_float() float {
     r
 }
 
-func rand(int[] shape_dims) Tensor {
-    TensorShape sh = make_shape(shape_dims)
+func rand(int[] shape_dims) tensor {
+    tensor_shape sh = make_shape(shape_dims)
     float[] v = new float[sh.size]
     int i = 0
     while i < sh.size { v[i] = _rand_float(); i = i + 1 }
-    Tensor { shape: sh, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: sh, data: v, device: "cpu", requires_grad: false }
 }
 
-func randn(int[] shape_dims, float mean, float std) Tensor {
-    TensorShape sh = make_shape(shape_dims)
+func randn(int[] shape_dims, float mean, float std) tensor {
+    tensor_shape sh = make_shape(shape_dims)
     float[] v = new float[sh.size]
     int i = 0
     while i < sh.size {
@@ -210,15 +210,15 @@ func randn(int[] shape_dims, float mean, float std) Tensor {
         v[i] = mean + z * std
         i = i + 1
     }
-    Tensor { shape: sh, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: sh, data: v, device: "cpu", requires_grad: false }
 }
 
-func xavier_uniform(int fan_in, int fan_out) Tensor {
+func xavier_uniform(int fan_in, int fan_out) tensor {
     int[] shape = new int[2]
     shape[0] = fan_in
     shape[1] = fan_out
     float limit = sqrt(6.0 / ((fan_in as float) + (fan_out as float)))
-    Tensor t = rand(shape)
+    tensor t = rand(shape)
     int i = 0
     while i < t.shape.size {
         t.data[i] = (t.data[i] * 2.0 - 1.0) * limit
@@ -227,7 +227,7 @@ func xavier_uniform(int fan_in, int fan_out) Tensor {
     t
 }
 
-func kaiming_normal(int fan_in, int fan_out) Tensor {
+func kaiming_normal(int fan_in, int fan_out) tensor {
     int[] shape = new int[2]
     shape[0] = fan_in
     shape[1] = fan_out
@@ -235,28 +235,28 @@ func kaiming_normal(int fan_in, int fan_out) Tensor {
     randn(shape, 0.0, std_val)
 }
 
-func item(Tensor t) float {
+func item(tensor t) float {
     t.data[0]
 }
 
-func get(Tensor t, int[] indices) float {
+func get(tensor t, int[] indices) float {
     int idx = flat_index(t.shape, indices)
     t.data[idx]
 }
 
-func get_flat(Tensor t, int idx) float {
+func get_flat(tensor t, int idx) float {
     t.data[idx]
 }
 
-func set_flat(Tensor mut t, int idx, float value) void {
+func set_flat(tensor mut t, int idx, float value) void {
     t.data[idx] = value
 }
 
-func print_tensor_info(Tensor t) void {
-    print("Tensor" + shape_str(t.shape) + " device=" + t.device)
+func print_tensor_info(tensor t) void {
+    print("tensor" + shape_str(t.shape) + " device=" + t.device)
 }
 
-func print_values(Tensor t, int n) void {
+func print_values(tensor t, int n) void {
     print_tensor_info(t)
     int limit = n
     if limit > t.shape.size { limit = t.shape.size }
@@ -272,21 +272,21 @@ func print_values(Tensor t, int n) void {
     println(s)
 }
 
-func reshape(Tensor t, int[] new_dims) Tensor {
-    TensorShape new_sh = make_shape(new_dims)
+func reshape(tensor t, int[] new_dims) tensor {
+    tensor_shape new_sh = make_shape(new_dims)
     if new_sh.size != t.shape.size {
         return t
     }
-    Tensor { shape: new_sh, data: t.data, device: t.device, requires_grad: t.requires_grad }
+    tensor { shape: new_sh, data: t.data, device: t.device, requires_grad: t.requires_grad }
 }
 
-func flatten(Tensor t) Tensor {
+func flatten(tensor t) tensor {
     int[] flat_s = new int[1]
     flat_s[0] = t.shape.size
     reshape(t, flat_s)
 }
 
-func squeeze(Tensor t) Tensor {
+func squeeze(tensor t) tensor {
     int new_ndim = 0
     int i = 0
     while i < t.shape.ndim {
@@ -306,7 +306,7 @@ func squeeze(Tensor t) Tensor {
     reshape(t, new_dims)
 }
 
-func unsqueeze(Tensor t, int dim_pos) Tensor {
+func unsqueeze(tensor t, int dim_pos) tensor {
     int new_ndim = t.shape.ndim + 1
     int[] new_dims = new int[new_ndim]
     int i = 0
@@ -322,7 +322,7 @@ func unsqueeze(Tensor t, int dim_pos) Tensor {
     reshape(t, new_dims)
 }
 
-func transpose_2d(Tensor t) Tensor {
+func transpose_2d(tensor t) tensor {
     if t.shape.ndim != 2 { return t }
     int rows = t.shape.dims[0]
     int cols = t.shape.dims[1]
@@ -339,10 +339,10 @@ func transpose_2d(Tensor t) Tensor {
     int[] new_s = new int[2]
     new_s[0] = cols
     new_s[1] = rows
-    Tensor { shape: make_shape(new_s), data: v, device: t.device, requires_grad: t.requires_grad }
+    tensor { shape: make_shape(new_s), data: v, device: t.device, requires_grad: t.requires_grad }
 }
 
-func transpose(Tensor t, int dim0, int dim1) Tensor {
+func transpose(tensor t, int dim0, int dim1) tensor {
     if t.shape.ndim == 2 { return transpose_2d(t) }
     int[] new_dims = new int[t.shape.ndim]
     int i = 0
@@ -352,16 +352,16 @@ func transpose(Tensor t, int dim0, int dim1) Tensor {
         else { new_dims[i] = t.shape.dims[i] }
         i = i + 1
     }
-    Tensor { shape: make_shape(new_dims), data: t.data, device: t.device, requires_grad: t.requires_grad }
+    tensor { shape: make_shape(new_dims), data: t.data, device: t.device, requires_grad: t.requires_grad }
 }
 
-func view(Tensor t, int[] new_dims) Tensor {
+func view(tensor t, int[] new_dims) tensor {
     reshape(t, new_dims)
 }
 
-func contiguous(Tensor t) Tensor { t }
+func contiguous(tensor t) tensor { t }
 
-func add(Tensor a, Tensor b) Tensor {
+func add(tensor a, tensor b) tensor {
     if same_shape(a, b) {
         return elemwise_op2(a, b, func(float x, float y) float { x + y })
     }
@@ -370,35 +370,35 @@ func add(Tensor a, Tensor b) Tensor {
     a
 }
 
-func add_scalar(Tensor t, float s) Tensor {
+func add_scalar(tensor t, float s) tensor {
     float[] v = new float[t.shape.size]
     int i = 0
     while i < t.shape.size { v[i] = t.data[i] + s; i = i + 1 }
-    Tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func sub(Tensor a, Tensor b) Tensor {
+func sub(tensor a, tensor b) tensor {
     if is_scalar(b) { return add_scalar(a, -item(b)) }
     if same_shape(a, b) { return elemwise_op2(a, b, func(float x, float y) float { x - y }) }
     if is_scalar(a) { return neg(add_scalar(b, -item(a))) }
     a
 }
 
-func mul(Tensor a, Tensor b) Tensor {
+func mul(tensor a, tensor b) tensor {
     if is_scalar(b) { return mul_scalar(a, item(b)) }
     if is_scalar(a) { return mul_scalar(b, item(a)) }
     if same_shape(a, b) { return elemwise_op2(a, b, func(float x, float y) float { x * y }) }
     a
 }
 
-func mul_scalar(Tensor t, float s) Tensor {
+func mul_scalar(tensor t, float s) tensor {
     float[] v = new float[t.shape.size]
     int i = 0
     while i < t.shape.size { v[i] = t.data[i] * s; i = i + 1 }
-    Tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func div(Tensor a, Tensor b) Tensor {
+func div(tensor a, tensor b) tensor {
     if is_scalar(b) { return div_scalar(a, item(b)) }
     if same_shape(a, b) {
         return elemwise_op2(a, b, func(float x, float y) float { 
@@ -409,23 +409,23 @@ func div(Tensor a, Tensor b) Tensor {
     a
 }
 
-func div_scalar(Tensor t, float s) Tensor {
+func div_scalar(tensor t, float s) tensor {
     if abs(s) < FLOAT_EPSILON { return t }
     mul_scalar(t, 1.0 / s)
 }
 
-func neg(Tensor t) Tensor { mul_scalar(t, -1.0) }
+func neg(tensor t) tensor { mul_scalar(t, -1.0) }
 
-func pow_t(Tensor t, float exp) Tensor {
+func pow_t(tensor t, float exp) tensor {
     float[] v = new float[t.shape.size]
     int i = 0
     while i < t.shape.size { v[i] = pow_f(t.data[i], exp); i = i + 1 }
-    Tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func square(Tensor t) Tensor { pow_t(t, 2.0) }
+func square(tensor t) tensor { pow_t(t, 2.0) }
 
-func sqrt_t(Tensor t) Tensor {
+func sqrt_t(tensor t) tensor {
     float[] v = new float[t.shape.size]
     int i = 0
     while i < t.shape.size { 
@@ -433,17 +433,17 @@ func sqrt_t(Tensor t) Tensor {
         else { v[i] = 0.0 }
         i = i + 1
     }
-    Tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func exp_t(Tensor t) Tensor {
+func exp_t(tensor t) tensor {
     float[] v = new float[t.shape.size]
     int i = 0
     while i < t.shape.size { v[i] = exp_f(t.data[i]); i = i + 1 }
-    Tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func log_t(Tensor t) Tensor {
+func log_t(tensor t) tensor {
     float[] v = new float[t.shape.size]
     int i = 0
     while i < t.shape.size { 
@@ -451,17 +451,17 @@ func log_t(Tensor t) Tensor {
         else { v[i] = FLOAT_NEG_INF }
         i = i + 1
     }
-    Tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func abs_t(Tensor t) Tensor {
+func abs_t(tensor t) tensor {
     float[] v = new float[t.shape.size]
     int i = 0
     while i < t.shape.size { v[i] = abs_f(t.data[i]); i = i + 1 }
-    Tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func clamp_t(Tensor t, float lo, float hi) Tensor {
+func clamp_t(tensor t, float lo, float hi) tensor {
     float[] v = new float[t.shape.size]
     int i = 0
     while i < t.shape.size {
@@ -471,35 +471,35 @@ func clamp_t(Tensor t, float lo, float hi) Tensor {
         v[i] = x
         i = i + 1
     }
-    Tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func is_scalar(Tensor t) bool { t.shape.size == 1 }
+func is_scalar(tensor t) bool { t.shape.size == 1 }
 
-func elemwise_op2(Tensor a, Tensor b, func(float, float) float op) Tensor {
+func elemwise_op2(tensor a, tensor b, func(float, float) float op) tensor {
     int n = a.shape.size
     float[] v = new float[n]
     int i = 0
     while i < n { v[i] = op(a.data[i], b.data[i]); i = i + 1 }
-    Tensor { shape: a.shape, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: a.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func elemwise_op1(Tensor t, func(float) float op) Tensor {
+func elemwise_op1(tensor t, func(float) float op) tensor {
     int n = t.shape.size
     float[] v = new float[n]
     int i = 0
     while i < n { v[i] = op(t.data[i]); i = i + 1 }
-    Tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func sum_all(Tensor t) Tensor {
+func sum_all(tensor t) tensor {
     float s = 0.0
     int i = 0
     while i < t.shape.size { s = s + t.data[i]; i = i + 1 }
     scalar(s)
 }
 
-func sum_dim(Tensor t, int target_dim, bool keepdim) Tensor {
+func sum_dim(tensor t, int target_dim, bool keepdim) tensor {
     if t.shape.ndim == 0 { return sum_all(t) }
     int d = target_dim
     if d < 0 { d = t.shape.ndim + d }
@@ -518,24 +518,24 @@ func sum_dim(Tensor t, int target_dim, bool keepdim) Tensor {
     int new_ndim = t.shape.ndim
     if !keepdim { new_ndim = new_ndim - 1 }
     int[] out_d = build_reduced_shape(t.shape, d, keepdim)
-    Tensor { shape: make_shape(out_d), data: sums, device: "cpu", requires_grad: false }
+    tensor { shape: make_shape(out_d), data: sums, device: "cpu", requires_grad: false }
 }
 
-func mean_all(Tensor t) Tensor {
+func mean_all(tensor t) tensor {
     float s = item(sum_all(t))
     scalar(s / t.shape.size as float)
 }
 
-func mean_dim(Tensor t, int dim, bool keepdim) Tensor {
+func mean_dim(tensor t, int dim, bool keepdim) tensor {
     if t.shape.ndim == 0 { return mean_all(t) }
     int d = dim
     if d < 0 { d = t.shape.ndim + d }
     int d_size = t.shape.dims[d]
-    Tensor s = sum_dim(t, d, keepdim)
+    tensor s = sum_dim(t, d, keepdim)
     div_scalar(s, d_size as float)
 }
 
-func max_all(Tensor t) Tensor {
+func max_all(tensor t) tensor {
     if t.shape.size == 0 { return scalar(FLOAT_NEG_INF) }
     float m = t.data[0]
     int i = 1
@@ -546,7 +546,7 @@ func max_all(Tensor t) Tensor {
     scalar(m)
 }
 
-func min_all(Tensor t) Tensor {
+func min_all(tensor t) tensor {
     if t.shape.size == 0 { return scalar(FLOAT_INF) }
     float m = t.data[0]
     int i = 1
@@ -557,14 +557,14 @@ func min_all(Tensor t) Tensor {
     scalar(m)
 }
 
-func norm(Tensor t) Tensor {
+func norm(tensor t) tensor {
     float s = 0.0
     int i = 0
     while i < t.shape.size { s = s + t.data[i] * t.data[i]; i = i + 1 }
     scalar(sqrt_f(s))
 }
 
-func matmul(Tensor a, Tensor b) Tensor {
+func matmul(tensor a, tensor b) tensor {
     if a.shape.ndim != 2 || b.shape.ndim != 2 { return a }
     int M = a.shape.dims[0]
     int K = a.shape.dims[1]
@@ -590,10 +590,10 @@ func matmul(Tensor a, Tensor b) Tensor {
     int[] out_s = new int[2]
     out_s[0] = M
     out_s[1] = N
-    Tensor { shape: make_shape(out_s), data: v, device: "cpu", requires_grad: false }
+    tensor { shape: make_shape(out_s), data: v, device: "cpu", requires_grad: false }
 }
 
-func dot(Tensor a, Tensor b) Tensor {
+func dot(tensor a, tensor b) tensor {
     if a.shape.ndim != 1 || b.shape.ndim != 1 { return scalar(0.0) }
     int n = a.shape.dims[0]
     if n != b.shape.dims[0] { return scalar(0.0) }
@@ -603,7 +603,7 @@ func dot(Tensor a, Tensor b) Tensor {
     scalar(s)
 }
 
-func outer(Tensor a, Tensor b) Tensor {
+func outer(tensor a, tensor b) tensor {
     int m = a.shape.dims[0]
     int n = b.shape.dims[0]
     float[] v = new float[m * n]
@@ -619,10 +619,10 @@ func outer(Tensor a, Tensor b) Tensor {
     int[] s = new int[2]
     s[0] = m
     s[1] = n
-    Tensor { shape: make_shape(s), data: v, device: "cpu", requires_grad: false }
+    tensor { shape: make_shape(s), data: v, device: "cpu", requires_grad: false }
 }
 
-func cat(Tensor[] tensors, int axis) Tensor {
+func cat(tensor[] tensors, int axis) tensor {
     if len(tensors) == 0 { return zeros({0}) }
     if len(tensors) == 1 { return tensors[0] }
     int d = axis
@@ -651,14 +651,14 @@ func cat(Tensor[] tensors, int axis) Tensor {
         offset = offset + sz
         ti = ti + 1
     }
-    Tensor { shape: make_shape(out_d), data: v, device: "cpu", requires_grad: false }
+    tensor { shape: make_shape(out_d), data: v, device: "cpu", requires_grad: false }
 }
 
-func relu(Tensor t) Tensor {
+func relu(tensor t) tensor {
     elemwise_op1(t, func(float x) float { if x < 0 { return 0.0 }; x })
 }
 
-func gelu(Tensor t) Tensor {
+func gelu(tensor t) tensor {
     float sqrt_2_pi = 0.7978845608028654
     elemwise_op1(t, func(float x) float {
         float inner = sqrt_2_pi * (x + 0.044715 * x * x * x)
@@ -668,17 +668,17 @@ func gelu(Tensor t) Tensor {
     })
 }
 
-func softmax(Tensor t, int dim) Tensor {
+func softmax(tensor t, int dim) tensor {
     int d = dim
     if d < 0 { d = t.shape.ndim + d }
-    Tensor m = max_all(t)
-    Tensor shifted = sub(t, m)
-    Tensor e = exp_t(shifted)
-    Tensor s = sum_dim(e, d, true)
+    tensor m = max_all(t)
+    tensor shifted = sub(t, m)
+    tensor e = exp_t(shifted)
+    tensor s = sum_dim(e, d, true)
     div(e, s)
 }
 
-func sigmoid(Tensor t) Tensor {
+func sigmoid(tensor t) tensor {
     elemwise_op1(t, func(float x) float {
         if x > 500 { return 1.0 }
         if x < -500 { return 0.0 }
@@ -687,7 +687,7 @@ func sigmoid(Tensor t) Tensor {
     })
 }
 
-func tanh_t(Tensor t) Tensor {
+func tanh_t(tensor t) tensor {
     elemwise_op1(t, func(float x) float {
         float ep = exp_f(x)
         float em = exp_f(-x)
@@ -695,19 +695,19 @@ func tanh_t(Tensor t) Tensor {
     })
 }
 
-func layer_norm(Tensor t, float eps) Tensor {
+func layer_norm(tensor t, float eps) tensor {
     if t.shape.ndim == 0 { return t }
     int last = t.shape.ndim - 1
-    Tensor mu = mean_dim(t, last, true)
-    Tensor centered = sub(t, mu)
-    Tensor sq = mul(centered, centered)
-    Tensor var = mean_dim(sq, last, true)
-    Tensor var_eps = add(var, scalar(eps))
-    Tensor std = sqrt_t(var_eps)
+    tensor mu = mean_dim(t, last, true)
+    tensor centered = sub(t, mu)
+    tensor sq = mul(centered, centered)
+    tensor var = mean_dim(sq, last, true)
+    tensor var_eps = add(var, scalar(eps))
+    tensor std = sqrt_t(var_eps)
     div(centered, std)
 }
 
-func dropout(Tensor t, float p, bool training) Tensor {
+func dropout(tensor t, float p, bool training) tensor {
     if !training || p <= 0.0 { return t }
     float scale = 1.0 / (1.0 - p)
     float[] v = new float[t.shape.size]
@@ -717,10 +717,10 @@ func dropout(Tensor t, float p, bool training) Tensor {
         else { v[i] = t.data[i] * scale }
         i = i + 1
     }
-    Tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
+    tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func one_hot(int[] indices, int num_classes) Tensor {
+func one_hot(int[] indices, int num_classes) tensor {
     int n = len(indices)
     float[] v = new float[n * num_classes]
     int i = 0
@@ -734,36 +734,36 @@ func one_hot(int[] indices, int num_classes) Tensor {
     int[] s = new int[2]
     s[0] = n
     s[1] = num_classes
-    Tensor { shape: make_shape(s), data: v, device: "cpu", requires_grad: false }
+    tensor { shape: make_shape(s), data: v, device: "cpu", requires_grad: false }
 }
 
-func mse_loss(Tensor pred, Tensor target) Tensor {
-    Tensor diff = sub(pred, target)
-    Tensor sq = square(diff)
+func mse_loss(tensor pred, tensor target) tensor {
+    tensor diff = sub(pred, target)
+    tensor sq = square(diff)
     mean_all(sq)
 }
 
-func cross_entropy_loss(Tensor logits, Tensor targets) Tensor {
-    Tensor probs = softmax(logits, logits.shape.ndim - 1)
-    Tensor log_probs = log_t(probs)
-    Tensor loss_term = mul(log_probs, targets)
-    Tensor summed = sum_all(loss_term)
+func cross_entropy_loss(tensor logits, tensor targets) tensor {
+    tensor probs = softmax(logits, logits.shape.ndim - 1)
+    tensor log_probs = log_t(probs)
+    tensor loss_term = mul(log_probs, targets)
+    tensor summed = sum_all(loss_term)
     div_scalar(summed, logits.shape.dims[0] as float)
 }
 
-func l1_loss(Tensor pred, Tensor target) Tensor {
-    Tensor diff = sub(pred, target)
-    Tensor adiff = abs_t(diff)
+func l1_loss(tensor pred, tensor target) tensor {
+    tensor diff = sub(pred, target)
+    tensor adiff = abs_t(diff)
     mean_all(adiff)
 }
 
-func bce_logits_loss(Tensor logits, Tensor targets) Tensor {
-    Tensor sig = sigmoid(logits)
-    Tensor loss_p = mul(targets, log_t(add(sig, scalar(1e-7))))
-    Tensor ones_minus_t = sub(scalar(1.0), targets)
-    Tensor ones_minus_sig = sub(scalar(1.0), sig)
-    Tensor loss_n = mul(ones_minus_t, log_t(add(ones_minus_sig, scalar(1e-7))))
-    Tensor total = add(loss_p, loss_n)
+func bce_logits_loss(tensor logits, tensor targets) tensor {
+    tensor sig = sigmoid(logits)
+    tensor loss_p = mul(targets, log_t(add(sig, scalar(1e-7))))
+    tensor ones_minus_t = sub(scalar(1.0), targets)
+    tensor ones_minus_sig = sub(scalar(1.0), sig)
+    tensor loss_n = mul(ones_minus_t, log_t(add(ones_minus_sig, scalar(1e-7))))
+    tensor total = add(loss_p, loss_n)
     neg(mean_all(total))
 }
 
@@ -908,7 +908,7 @@ func tanh_f_func(float x) float {
     (ep - em) / (ep + em)
 }
 
-func reduce_idx_sum(int flat_idx, TensorShape sh, int d) int {
+func reduce_idx_sum(int flat_idx, tensor_shape sh, int d) int {
     int result = 0
     int stride_before = 1
     int stride_after = 1
@@ -920,7 +920,7 @@ func reduce_idx_sum(int flat_idx, TensorShape sh, int d) int {
     result
 }
 
-func build_reduced_shape(TensorShape sh, int d, bool keepdim) int[] {
+func build_reduced_shape(tensor_shape sh, int d, bool keepdim) int[] {
     int new_ndim = sh.ndim
     if !keepdim { new_ndim = new_ndim - 1 }
     int[] out = new int[new_ndim]
@@ -934,4 +934,4 @@ func build_reduced_shape(TensorShape sh, int d, bool keepdim) int[] {
     out
 }
 
-func neg(Tensor t) Tensor { mul_scalar(t, -1.0) }
+func neg(tensor t) tensor { mul_scalar(t, -1.0) }
