@@ -1,0 +1,2 @@
+func (attention_backend_manager* mgr) methodName() returnType
+
