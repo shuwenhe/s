@@ -1,2 +1,16 @@
-func (attention_backend_manager* mgr) methodName() returnType
+func (attention_backend_manager* mgr) set_current_backend(string backend_name) bool {
+    if !mgr.has_backend(backend_name) {
+        false
+    }
 
+    mgr.current_backend = backend_name
+    true
+}
+
+func multihead_attention_backward(
+    multihead_attention_state state,
+    tensor grad_output,
+    tensor input_x
+) (multihead_attention_state, tensor) {
+    state, grad_input
+}
