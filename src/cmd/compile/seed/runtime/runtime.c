@@ -1216,7 +1216,8 @@ static int host_dispatch_call(
 	const runtime_data_value *args,
 	size_t argc,
 	runtime_data_value *out,
-	compile_error *err
+	compile_error *err,
+	const runtime_functions *funcs
 ) {
 	int ffi_status;
 	if (g_runtime_profile_enabled) {
@@ -2497,6 +2498,18 @@ static int host_dispatch_call(
 		
 		*out = value_make_int(1);
 		return 1;
+	}
+
+	/* Last resort: check if this is a user-defined function */
+	/* If not found in built-in functions, return 0 to let caller handle it */
+	if (funcs != NULL) {
+		const runtime_function *user_fn = functions_find(funcs, name);
+		if (user_fn != NULL) {
+			/* User-defined function found, but we can't execute it here */
+			/* Return -1 to signal this to the caller */
+			error_set(err, ERR_SEMANTIC, 0, 0, "user-defined function: %s (should not reach here)", name);
+			return -1;
+		}
 	}
 
 	error_set(err, ERR_SEMANTIC, 0, 0, "unknown function: %s", name);
@@ -3861,7 +3874,7 @@ static int execute_function(
 				callee = functions_find(funcs, ins->op1);
 			}
 			if (!callee) {
-				if (!host_dispatch_call(ins->op1, &pending_args[call_base], call_argc, &callee_ret, err)) {
+				if (!host_dispatch_call(ins->op1, &pending_args[call_base], call_argc, &callee_ret, err, funcs)) {
 					for (j = call_base; j < pending_len; j++) {
 						value_clear(&pending_args[j]);
 					}
