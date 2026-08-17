@@ -1211,6 +1211,11 @@ static void print_compile_error_local(const compile_error *err) {
 	fprintf(stderr, "error[%d] at %zu:%zu: %s\n", (int)err->code, err->line, err->column, err->message);
 }
 
+/* Forward declaration for user-defined function support in host_dispatch_call */
+typedef struct runtime_function runtime_function;
+typedef struct runtime_functions runtime_functions;
+static const runtime_function *functions_find(const runtime_functions *funcs, const char *name);
+
 static int host_dispatch_call(
 	const char *name,
 	const runtime_data_value *args,
