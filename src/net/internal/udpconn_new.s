@@ -4,47 +4,47 @@ struct UDPAddr {
     ip: string
     port: int
 }
-func (a *UDPAddr) Network() string {
+func (UDPAddr* a) Network() string {
     "udp"
 }
-func (a *UDPAddr) String() string {
+func (UDPAddr* a) String() string {
     a.ip + ":" + string(a.port)
 }
 
 struct UDPConn {
-    RawSocket: *RawSocket
+    raw_socket: *raw_socket
     laddr: *UDPAddr
     raddr: *UDPAddr
 }
-func (c *UDPConn) Read(buf: []byte) (int, error) {
-    c.RawSocket.Read(buf)
+func (UDPConn* c) Read(buf: []byte) (int, error) {
+    c.raw_socket.read(buf)
 }
-func (c *UDPConn) Write(buf: []byte) (int, error) {
-    c.RawSocket.Write(buf)
+func (UDPConn* c) Write(buf: []byte) (int, error) {
+    c.raw_socket.write(buf)
 }
-func (c *UDPConn) Close() error {
-    c.RawSocket.Close()
+func (UDPConn* c) Close() error {
+    c.raw_socket.close()
 }
-func (c *UDPConn) LocalAddr() Addr {
+func (UDPConn* c) LocalAddr() Addr {
     c.laddr
 }
-func (c *UDPConn) RemoteAddr() Addr {
+func (UDPConn* c) RemoteAddr() Addr {
     c.raddr
 }
-func (c *UDPConn) SetDeadline(t: time.Time) error {
+func (UDPConn* c) SetDeadline(t: time.Time) error {
     let deadline_ns = t.UnixNano()
-    c.RawSocket.SetReadDeadline(deadline_ns)
-    c.RawSocket.SetWriteDeadline(deadline_ns)
+    c.raw_socket.set_read_deadline(deadline_ns)
+    c.raw_socket.set_write_deadline(deadline_ns)
     nil
 }
-func (c *UDPConn) SetReadDeadline(t: time.Time) error {
-    c.RawSocket.SetReadDeadline(t.UnixNano())
+func (UDPConn* c) SetReadDeadline(t: time.Time) error {
+    c.raw_socket.set_read_deadline(t.UnixNano())
 }
-func (c *UDPConn) SetWriteDeadline(t: time.Time) error {
-    c.RawSocket.SetWriteDeadline(t.UnixNano())
+func (UDPConn* c) SetWriteDeadline(t: time.Time) error {
+    c.raw_socket.set_write_deadline(t.UnixNano())
 }
-func (c *UDPConn) ReadFromUDP(buf: []byte) (int, *UDPAddr, error) {
-    let n, src_ip, src_port, err = c.RawSocket.RecvFrom(buf)
+func (UDPConn* c) ReadFromUDP(buf: []byte) (int, *UDPAddr, error) {
+    let n, src_ip, src_port, err = c.raw_socket.recv_from(buf)
     if err != nil {
         return n, nil, err
     }
@@ -54,73 +54,73 @@ func (c *UDPConn) ReadFromUDP(buf: []byte) (int, *UDPAddr, error) {
     }, nil
     n, &UDPAddr{ip: src_ip, port: src_port}, nil
 }
-func (c *UDPConn) WriteToUDP(buf: []byte, addr: *UDPAddr) (int, error) {
-    c.RawSocket.SendTo(buf, addr.ip, addr.port)
+func (UDPConn* c) WriteToUDP(buf: []byte, addr: *UDPAddr) (int, error) {
+    c.raw_socket.send_to(buf, addr.ip, addr.port)
 }
 
 func DialUDP(address: string, port: int, timeout_ms: int) (*UDPConn, error) {
-    let sock, err = NewRawSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+    let sock, err = new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
         return nil, err
     }
-    var local_addr SockaddrInet
-    local_addr.sin_family = AF_INET
+    var local_addr sockaddr_inet
+    local_addr.sin_family = af_inet
     local_addr.sin_port = 0
-    let errno = sys_bind(sock.fd, (*Sockaddr)(&local_addr), 16)
+    let errno = sys_bind(sock.fd, (*sockaddr)(&local_addr), 16)
     if errno != 0 {
-        sock.Close()
-        return nil, NewSocketError(errno, "bind")
+        sock.close()
+        return nil, new_socket_error(errno, "bind")
     }
-    let local_ip, local_port, err = sock.GetLocalAddr()
+    let local_ip, local_port, err = sock.get_local_addr()
     if err != nil {
-        sock.Close()
+        sock.close()
         return nil, err
     }
     &UDPConn{
-        RawSocket: sock,
+        raw_socket: sock,
         laddr: &UDPAddr{ip: local_ip, port: local_port},
         raddr: &UDPAddr{ip: address, port: port},
     }, nil
 }
 
 func ListenUDP(address: string, port: int) (*UDPListener, error) {
-    let sock, err = NewRawSocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+    let sock, err = new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
         return nil, err
     }
-    err = sock.UDPBind(address, port)
+    err = sock.udp_bind(address, port)
     if err != nil {
-        sock.Close()
+        sock.close()
         return nil, err
     }
-    let local_ip, local_port, err = sock.GetLocalAddr()
+    let local_ip, local_port, err = sock.get_local_addr()
     if err != nil {
-        sock.Close()
+        sock.close()
         return nil, err
     }
     &UDPListener{
-        RawSocket: sock,
+        raw_socket: sock,
         addr: &UDPAddr{ip: local_ip, port: local_port},
     }, nil
 }
 
 struct UDPListener {
-    RawSocket: *RawSocket
+    raw_socket: *raw_socket
     addr: *UDPAddr
 }
-func (l *UDPListener) Close() error {
-    l.RawSocket.Close()
+func (UDPListener* l) Close() error {
+    l.raw_socket.close()
 }
-func (l *UDPListener) Addr() Addr {
+func (UDPListener* l) Addr() Addr {
     l.addr
 }
-func (l *UDPListener) ReadFromUDP(buf: []byte) (int, *UDPAddr, error) {
-    let n, src_ip, src_port, err = l.RawSocket.RecvFrom(buf)
+func (UDPListener* l) ReadFromUDP(buf: []byte) (int, *UDPAddr, error) {
+    let n, src_ip, src_port, err = l.raw_socket.recv_from(buf)
     if err != nil {
         return n, nil, err
     }
     n, &UDPAddr{ip: src_ip, port: src_port}, nil
 }
-func (l *UDPListener) WriteToUDP(buf: []byte, addr: *UDPAddr) (int, error) {
-    l.RawSocket.SendTo(buf, addr.ip, addr.port)
+func (UDPListener* l) WriteToUDP(buf: []byte, addr: *UDPAddr) (int, error) {
+    l.raw_socket.send_to(buf, addr.ip, addr.port)
 }

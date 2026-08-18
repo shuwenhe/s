@@ -1,122 +1,123 @@
 package src.net.internal
-const AF_UNSPEC = 0
-const AF_INET = 2
-const AF_INET6 = 10
-const AF_UNIX = 1
-const AF_NETLINK = 16
-const AF_PACKET = 17
-const SOCK_STREAM = 1
-const SOCK_DGRAM = 2
-const SOCK_RAW = 3
-const SOCK_SEQPACKET = 5
-const SOCK_NONBLOCK = 2048
-const SOCK_CLOEXEC = 524288
-const IPPROTO_IP = 0
-const IPPROTO_TCP = 6
-const IPPROTO_UDP = 17
-const IPPROTO_ICMP = 1
-const SOL_SOCKET = 1
-const SOL_TCP = 6
-const SOL_UDP = 17
-const SO_REUSEADDR = 2
-const SO_TYPE = 3
-const SO_ERROR = 4
-const SO_DONTROUTE = 5
-const SO_BROADCAST = 6
-const SO_SNDBUF = 7
-const SO_RCVBUF = 8
-const SO_KEEPALIVE = 9
-const SO_OOBINLINE = 10
-const SO_RCVTIMEO = 20
-const SO_SNDTIMEO = 21
-const SO_REUSEPORT = 15
-const TCP_NODELAY = 1
-const TCP_MAXSEG = 2
-const TCP_CORK = 3
-const TCP_KEEPIDLE = 4
-const TCP_KEEPINTVL = 5
-const TCP_KEEPCNT = 6
-const SHUT_RD = 0
-const SHUT_WR = 1
-const SHUT_RDWR = 2
-const POLLIN = 1
-const POLLPRI = 2
-const POLLOUT = 4
-const POLLERR = 8
-const POLLHUP = 16
-const POLLNVAL = 32
-const POLLRDNORM = 64
-const POLLRDBAND = 128
-const POLLWRNORM = 256
-const POLLWRBAND = 512
-const EPERM = 1
-const ENOENT = 2
-const ESRCH = 3
-const EINTR = 4
-const EIO = 5
-const ENXIO = 6
-const E2BIG = 7
-const ENOEXEC = 8
-const EBADF = 9
-const ECHILD = 10
-const EAGAIN = 11
-const EWOULDBLOCK = 11
-const ENOMEM = 12
-const EACCES = 13
-const EFAULT = 14
-const ENOTBLK = 15
-const EBUSY = 16
-const EEXIST = 17
-const EXDEV = 18
-const ENODEV = 19
-const ENOTDIR = 20
-const EISDIR = 21
-const EINVAL = 22
-const ENFILE = 23
-const EMFILE = 24
-const ENOTTY = 25
-const ETXTBSY = 26
-const EFBIG = 27
-const ENOSPC = 28
-const ESPIPE = 29
-const EROFS = 30
-const EMLINK = 31
-const EPIPE = 32
-const EDOM = 33
-const ERANGE = 34
-const EDEADLK = 35
-const ENAMETOOLONG = 36
-const ENOLCK = 37
-const ENOSYS = 38
-const ENOTEMPTY = 39
-const ELOOP = 40
-const ECONNREFUSED = 111
-const ECONNRESET = 104
-const ECONNABORTED = 103
-const ENETDOWN = 100
-const ENETUNREACH = 101
-const ENETRESET = 102
-const ENOBUFS = 105
-const ETIMEDOUT = 110
-const EISCONN = 106
-const ENOTCONN = 107
-const EADDRNOTAVAIL = 99
-const EADDRINUSE = 98
-const EAFNOSUPPORT = 97
-const EPROTOTYPE = 41
-const ENOPROTOOPT = 92
-const EPROTONOSUPPORT = 93
-const ESOCKTNOSUPPORT = 94
-const EOPNOTSUPP = 95
+const af_unspec = 0
+const af_inet = 2
+const af_inet6 = 10
+const af_unix = 1
+const af_netlink = 16
+const af_packet = 17
+const sock_stream = 1
+const sock_dgram = 2
+const sock_raw = 3
+const sock_seqpacket = 5
+const sock_nonblock = 2048
+const sock_cloexec = 524288
+const ipproto_ip = 0
+const ipproto_tcp = 6
+const ipproto_udp = 17
+const ipproto_icmp = 1
+const sol_socket = 1
+const sol_tcp = 6
+const sol_udp = 17
+const so_reuseaddr = 2
+const so_type = 3
+const so_error = 4
+const so_dontroute = 5
+const so_broadcast = 6
+const so_sndbuf = 7
+const so_rcvbuf = 8
+const so_keepalive = 9
+const so_oobinline = 10
+const so_rcvtimeo = 20
+const so_sndtimeo = 21
+const so_reuseport = 15
+const tcp_nodelay = 1
+const tcp_maxseg = 2
+const tcp_cork = 3
+const tcp_keepidle = 4
+const tcp_keepintvl = 5
+const tcp_keepcnt = 6
+const shut_rd = 0
+const shut_wr = 1
+const shut_rdwr = 2
+const poll_in = 1
+const poll_pri = 2
+const poll_out = 4
+const poll_err = 8
+const poll_hup = 16
+const poll_nval = 32
+const poll_rdnorm = 64
+const poll_rdband = 128
+const poll_wrnorm = 256
+const poll_wrband = 512
+const eperm = 1
+const enoent = 2
+const esrch = 3
+const eintr = 4
+const eio = 5
+const enxio = 6
+const e2big = 7
+const enoexec = 8
+const ebadf = 9
+const echild = 10
+const eagain = 11
+const ewouldblock = 11
+const enomem = 12
+const eacces = 13
+const efault = 14
+const enotblk = 15
+const ebusy = 16
+const eexist = 17
+const exdev = 18
+const enodev = 19
+const enotdir = 20
+const eisdir = 21
+const einval = 22
+const enfile = 23
+const emfile = 24
+const enotty = 25
+const etxtbsy = 26
+const efbig = 27
+const enospc = 28
+const espipe = 29
+const erofs = 30
+const emlink = 31
+const epipe = 32
+const edom = 33
+const erange = 34
+const edeadlk = 35
+const enametoolong = 36
+const enolck = 37
+const enosys = 38
+const enotempty = 39
+const eloop = 40
+const econnrefused = 111
+const econnreset = 104
+const econnaborted = 103
+const enetdown = 100
+const enetunreach = 101
+const enetreset = 102
+const enobufs = 105
+const etimedout = 110
+const eisconn = 106
+const enotconn = 107
+const eaddrnotavail = 99
+const eaddrinuse = 98
+const eafnosupport = 97
+const einprogress = 115
+const eprototype = 41
+const enoprotoopt = 92
+const eprotonosupport = 93
+const esocktnosupport = 94
+const eopnotsupp = 95
 
-struct SockaddrInet {
+struct sockaddr_inet {
     u16 sin_family
     u16 sin_port
     u32 sin_addr
     []byte sin_zero
 }
 
-struct SockaddrInet6 {
+struct sockaddr_inet6 {
     u16 sin6_family
     u16 sin6_port
     u32 sin6_flowinfo
@@ -124,18 +125,18 @@ struct SockaddrInet6 {
     u32 sin6_scope_id
 }
 
-struct Sockaddr {
+struct sockaddr {
     u16 sa_family
     []byte sa_data
 }
 
-struct Pollfd {
+struct pollfd {
     int fd
     i16 events
     i16 revents
 }
 
-struct RawSocket {
+struct raw_socket {
     int fd
     int family
     int socktype
@@ -146,65 +147,65 @@ struct RawSocket {
 }
 
 struct TCPConnState {
-    RawSocket sock
+    raw_socket sock
     []byte local_addr
     []byte remote_addr
 }
 
 struct UDPConnState {
-    RawSocket sock
+    raw_socket sock
     []byte local_addr
     []byte remote_addr
 }
 
 struct TCPListenerState {
-    RawSocket sock
+    raw_socket sock
     []byte addr
 }
 
-struct SocketError {
+struct socket_error {
     int errno
     string message
     string syscall_name
 }
-func (e *SocketError) Error() string {
+func (socket_error* e) Error() string {
     e.syscall_name + ": " + e.message
 }
 
-func NewSocketError(errno: int, syscall_name: string) *SocketError {
+func new_socket_error(errno: int, syscall_name: string) *socket_error {
     var msg string
     case errno {
-    ECONNREFUSED → msg = "connection refused"
-    ECONNRESET → msg = "connection reset by peer"
-    ETIMEDOUT → msg = "operation timed out"
-    EWOULDBLOCK → msg = "resource temporarily unavailable"
-    ECONNABORTED → msg = "software caused connection abort"
-    ENOTCONN → msg = "transport endpoint is not connected"
-    EISCONN → msg = "transport endpoint is already connected"
-    EADDRINUSE → msg = "address already in use"
-    EADDRNOTAVAIL → msg = "cannot assign requested address"
-    ENETDOWN → msg = "network is down"
-    ENETUNREACH → msg = "network is unreachable"
-    ENOBUFS → msg = "no buffer space available"
-    EBADF → msg = "bad file descriptor"
-    EINVAL → msg = "invalid argument"
-    EMFILE → msg = "too many open files"
-    ENFILE → msg = "file table overflow"
-    EACCES → msg = "permission denied"
-    EPERM → msg = "operation not permitted"
+    econnrefused → msg = "connection refused"
+    econnreset → msg = "connection reset by peer"
+    etimedout → msg = "operation timed out"
+    ewouldblock → msg = "resource temporarily unavailable"
+    econnaborted → msg = "software caused connection abort"
+    enotconn → msg = "transport endpoint is not connected"
+    eisconn → msg = "transport endpoint is already connected"
+    eaddrinuse → msg = "address already in use"
+    eaddrnotavail → msg = "cannot assign requested address"
+    enetdown → msg = "network is down"
+    enetunreach → msg = "network is unreachable"
+    enobufs → msg = "no buffer space available"
+    ebadf → msg = "bad file descriptor"
+    einval → msg = "invalid argument"
+    emfile → msg = "too many open files"
+    enfile → msg = "file table overflow"
+    eacces → msg = "permission denied"
+    eperm → msg = "operation not permitted"
     default → msg = "errno: " + itoa(errno)
     }
-    &SocketError{
+    &socket_error{
         errno: errno,
         message: msg,
         syscall_name: syscall_name,
     }
 }
 
-func IsTemporaryError(errno: int) bool {
-    errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR
+func is_temporary_error(errno: int) bool {
+    errno == eagain || errno == ewouldblock || errno == eintr
 }
 
-func IsTimeoutError(errno: int) bool {
-    errno == ETIMEDOUT
+func is_timeout_error(errno: int) bool {
+    errno == etimedout
 }
