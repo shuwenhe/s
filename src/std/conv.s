@@ -89,6 +89,34 @@ func string_to_int(string text) int {
     return result
 }
 
+func extract_int_default(string text, int fallback) int {
+    if len(text) == 0 {
+        return fallback
+    }
+    int index = 0
+    int sign = 1
+    if string(text[0]) == "-" {
+        sign = -1
+        index = 1
+    } else if string(text[0]) == "+" {
+        index = 1
+    }
+    int value = 0
+    bool seen = false
+    while index < len(text) {
+        int digit = int(text[index]) - 48
+        if digit >= 0 && digit <= 9 {
+            value = value * 10 + digit
+            seen = true
+        }
+        index = index + 1
+    }
+    if !seen {
+        return fallback
+    }
+    return sign * value
+}
+
 func float_to_string_precision(float value, int precision) string {
     if precision < 0 {
         precision = 0
