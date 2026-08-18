@@ -6,32 +6,32 @@ struct net_error {
     string message
     int    errno_code
 }
-const AF_UNSPEC = 0
-const AF_INET  = 2
-const AF_INET6 = 10
-const AF_UNIX  = 1
-const SOCK_STREAM    = 1
-const SOCK_DGRAM     = 2
-const SOCK_NONBLOCK  = 2048
-const SOCK_CLOEXEC   = 524288
-const IPPROTO_TCP = 6
-const IPPROTO_UDP = 17
-const SOL_SOCKET   = 1
-const SO_REUSEADDR = 2
-const SO_REUSEPORT = 15
-const SO_KEEPALIVE = 9
-const TCP_NODELAY  = 1
-const F_GETFL    = 3
-const F_SETFL    = 4
-const O_NONBLOCK = 2048
-const POLLIN   = 1
-const POLLOUT  = 4
-const POLLERR  = 8
-const POLLHUP  = 16
-const POLLNVAL = 32
-const SHUT_RD   = 0
-const SHUT_WR   = 1
-const SHUT_RDWR = 2
+const af_unspec = 0
+const af_inet = 2
+const af_inet6 = 10
+const af_unix = 1
+const sock_stream = 1
+const sock_dgram = 2
+const sock_nonblock = 2048
+const sock_cloexec = 524288
+const ipproto_tcp = 6
+const ipproto_udp = 17
+const sol_socket = 1
+const so_reuseaddr = 2
+const so_reuseport = 15
+const so_keepalive = 9
+const tcp_nodelay = 1
+const f_getfl = 3
+const f_setfl = 4
+const o_nonblock = 2048
+const poll_in = 1
+const poll_out = 4
+const poll_err = 8
+const poll_hup = 16
+const poll_nval = 32
+const shut_rd = 0
+const shut_wr = 1
+const shut_rdwr = 2
 extern "intrinsic" func __sys_socket(int domain, int typ, int proto) int
 extern "intrinsic" func __sys_bind(int sockfd, string ip, int port, int family) int
 extern "intrinsic" func __sys_listen(int sockfd, int backlog) int
@@ -249,11 +249,11 @@ func close(int fd) result[(), net_error] {
 }
 
 func set_nonblocking(int fd) result[(), net_error] {
-    let flags = __sys_fcntl(fd, F_GETFL, 0)
+    let flags = __sys_fcntl(fd, f_getfl, 0)
     if flags < 0 {
         return result::err(make_net_error("fcntl F_GETFL"))
     }
-    let r = __sys_fcntl(fd, F_SETFL, flags | O_NONBLOCK)
+    let r = __sys_fcntl(fd, f_setfl, flags | o_nonblock)
     if r < 0 {
         result::err(make_net_error("fcntl F_SETFL"))
     } else {
@@ -262,7 +262,7 @@ func set_nonblocking(int fd) result[(), net_error] {
 }
 
 func set_reuseaddr(int fd) result[(), net_error] {
-    let r = __sys_setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 1)
+    let r = __sys_setsockopt(fd, sol_socket, so_reuseaddr, 1)
     if r < 0 {
         result::err(make_net_error("setsockopt SO_REUSEADDR"))
     } else {
@@ -271,7 +271,7 @@ func set_reuseaddr(int fd) result[(), net_error] {
 }
 
 func set_tcp_nodelay(int fd) result[(), net_error] {
-    let r = __sys_setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, 1)
+    let r = __sys_setsockopt(fd, ipproto_tcp, tcp_nodelay, 1)
     if r < 0 {
         result::err(make_net_error("setsockopt TCP_NODELAY"))
     } else {
