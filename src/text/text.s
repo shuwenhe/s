@@ -65,3 +65,39 @@ func str_to_bytes(string text) []int {
 func bytes_to_string_range([]int bytes, int start, int length) string {
     encoding_bytes_to_string_range(bytes, start, length)
 }
+
+func substring(string s, int start, int end) string {
+    if start < 0 || end > len(s) || start > end {
+        return ""
+    }
+    string result = ""
+    int i = start
+    while i < end {
+        result = result + string(s[i])
+        i = i + 1
+    }
+    return result
+}
+
+func find_substring(string text, string substr) int {
+    if len(substr) == 0 || len(substr) > len(text) {
+        return -1
+    }
+    int i = 0
+    while i <= len(text) - len(substr) {
+        bool matches = true
+        int j = 0
+        while j < len(substr) {
+            if text[i + j] != substr[j] {
+                matches = false
+                break
+            }
+            j = j + 1
+        }
+        if matches {
+            return i
+        }
+        i = i + 1
+    }
+    return -1
+}
