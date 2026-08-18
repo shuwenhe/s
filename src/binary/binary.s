@@ -46,3 +46,20 @@ func i32_le_string(string data, int offset) int {
     }
     return value
 }
+
+func parse_int_at_bytes([]int bytes, int pos) int {
+    if pos < 0 || pos >= len(bytes) {
+        return 0
+    }
+    int value = 0
+    int cursor = pos
+    while cursor < len(bytes) {
+        int c = bytes[cursor]
+        if c < 48 || c > 57 {
+            break
+        }
+        value = value * 10 + (c - 48)
+        cursor = cursor + 1
+    }
+    return value
+}
