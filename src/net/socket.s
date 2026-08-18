@@ -201,7 +201,7 @@ func (tcp_conn self) wait_writable(int timeout_ms) result[bool, net_error] {
         }
     }
 
-func (self: &mut tcp_conn) set_deadline_ms(int timeout_ms) result[(), net_error] {
+func (tcp_conn* self) set_deadline_ms(int timeout_ms) result[(), net_error] {
         switch sc.set_deadline_ms(self.fd, timeout_ms, timeout_ms) {
             result::ok(v) : {
                 self.read_timeout_ms = timeout_ms
@@ -212,7 +212,7 @@ func (self: &mut tcp_conn) set_deadline_ms(int timeout_ms) result[(), net_error]
         }
     }
 
-func (self: &mut tcp_conn) set_read_deadline_ms(int timeout_ms) result[(), net_error] {
+func (tcp_conn* self) set_read_deadline_ms(int timeout_ms) result[(), net_error] {
         switch sc.set_deadline_ms(self.fd, timeout_ms, self.write_timeout_ms) {
             result::ok(v) : {
                 self.read_timeout_ms = timeout_ms
@@ -222,7 +222,7 @@ func (self: &mut tcp_conn) set_read_deadline_ms(int timeout_ms) result[(), net_e
         }
     }
 
-func (self: &mut tcp_conn) set_write_deadline_ms(int timeout_ms) result[(), net_error] {
+func (tcp_conn* self) set_write_deadline_ms(int timeout_ms) result[(), net_error] {
         switch sc.set_deadline_ms(self.fd, self.read_timeout_ms, timeout_ms) {
             result::ok(v) : {
                 self.write_timeout_ms = timeout_ms
@@ -350,7 +350,7 @@ func (udp_conn self) send_to(string data, string host, int port) result[int, net
         }
     }
 
-func (self: &mut udp_conn) set_deadline_ms(int timeout_ms) result[(), net_error] {
+func (udp_conn* self) set_deadline_ms(int timeout_ms) result[(), net_error] {
         switch sc.set_deadline_ms(self.fd, timeout_ms, timeout_ms) {
             result::ok(v) : {
                 self.read_timeout_ms = timeout_ms
@@ -361,7 +361,7 @@ func (self: &mut udp_conn) set_deadline_ms(int timeout_ms) result[(), net_error]
         }
     }
 
-func (self: &mut udp_conn) set_read_deadline_ms(int timeout_ms) result[(), net_error] {
+func (udp_conn* self) set_read_deadline_ms(int timeout_ms) result[(), net_error] {
         switch sc.set_deadline_ms(self.fd, timeout_ms, self.write_timeout_ms) {
             result::ok(v) : {
                 self.read_timeout_ms = timeout_ms
@@ -371,7 +371,7 @@ func (self: &mut udp_conn) set_read_deadline_ms(int timeout_ms) result[(), net_e
         }
     }
 
-func (self: &mut udp_conn) set_write_deadline_ms(int timeout_ms) result[(), net_error] {
+func (udp_conn* self) set_write_deadline_ms(int timeout_ms) result[(), net_error] {
         switch sc.set_deadline_ms(self.fd, self.read_timeout_ms, timeout_ms) {
             result::ok(v) : {
                 self.write_timeout_ms = timeout_ms
