@@ -5,9 +5,11 @@ struct TCPAddr {
     string ip
     int port
 }
+
 func (TCPAddr* a) Network() string {
     "tcp"
 }
+
 func (TCPAddr* a) String() string {
     a.ip + ":" + itoa(a.port)
 }
@@ -17,36 +19,44 @@ struct TCPConn {
     laddr *TCPAddr
     raddr *TCPAddr
 }
+
 func (TCPConn* c) Read(buf []byte) (int, error) {
     if c.raw_socket == nil {
         return 0, "connection closed"
     }
     c.raw_socket.read(buf)
 }
+
 func (TCPConn* c) Write(buf []byte) (int, error) {
     if c.raw_socket == nil {
         return 0, "connection closed"
     }
     c.raw_socket.write(buf)
 }
+
 func (TCPConn* c) Close() error {
     if c.raw_socket == nil {
         return "already closed"
     }
     c.raw_socket.close()
 }
+
 func (TCPConn* c) LocalAddr() Addr {
     c.laddr
 }
+
 func (TCPConn* c) RemoteAddr() Addr {
     c.raddr
 }
+
 func (TCPConn* c) ReadFrom(buf []byte) (int, Addr, error) {
     0, nil, "tcp does not support ReadFrom"
 }
+
 func (TCPConn* c) WriteTo(buf []byte, addr Addr) (int, error) {
     0, "tcp does not support WriteTo"
 }
+
 func (TCPConn* c) SetDeadline(deadline_ns i64) error {
     if c.raw_socket == nil {
         return "connection closed"
@@ -58,30 +68,35 @@ func (TCPConn* c) SetDeadline(deadline_ns i64) error {
     }
     err2
 }
+
 func (TCPConn* c) SetReadDeadline(deadline_ns i64) error {
     if c.raw_socket == nil {
         return "connection closed"
     }
     c.raw_socket.set_read_deadline(deadline_ns)
 }
+
 func (TCPConn* c) SetWriteDeadline(deadline_ns i64) error {
     if c.raw_socket == nil {
         return "connection closed"
     }
     c.raw_socket.set_write_deadline(deadline_ns)
 }
+
 func (TCPConn* c) SetNoDelay(on bool) error {
     if c.raw_socket == nil {
         return "connection closed"
     }
     c.raw_socket.set_tcp_no_delay(on)
 }
+
 func (TCPConn* c) SetReuseAddr(on bool) error {
     if c.raw_socket == nil {
         return "connection closed"
     }
     c.raw_socket.set_reuse_addr(on)
 }
+
 func (TCPConn* c) SetReusePort(on bool) error {
     if c.raw_socket == nil {
         return "connection closed"
@@ -142,6 +157,7 @@ func ListenTCP(address string, port int) (*TCPListener, error) {
         addr: &TCPAddr{ip: address, port: port},
     }, nil
 }
+
 func (TCPListener* l) Accept() (*TCPConn, error) {
     if l.raw_socket == nil {
         return nil, "listener closed"
@@ -158,12 +174,14 @@ func (TCPListener* l) Accept() (*TCPConn, error) {
         raddr: &TCPAddr{ip: remote_ip, port: remote_port},
     }, nil
 }
+
 func (TCPListener* l) Close() error {
     if l.raw_socket == nil {
         return "already closed"
     }
     l.raw_socket.close()
 }
+
 func (TCPListener* l) Addr() Addr {
     l.addr
 }

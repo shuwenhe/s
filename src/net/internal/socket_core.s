@@ -264,6 +264,7 @@ func calculate_timeout_ms(deadline_ns: i64) int {
         remaining_ms
     }
 }
+
 func (raw_socket* s) set_reuse_addr(on: bool) error {
     let val: int = if on { 1 } else { 0 }
     let errno = sys_setsockopt(s.fd, sol_socket, so_reuseaddr, (*byte)(&val), 4)
