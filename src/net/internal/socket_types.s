@@ -146,19 +146,19 @@ struct raw_socket {
     i64 write_deadline_ns
 }
 
-struct TCPConnState {
+struct tcp_conn_state {
     raw_socket sock
     []byte local_addr
     []byte remote_addr
 }
 
-struct UDPConnState {
+struct udp_conn_state {
     raw_socket sock
     []byte local_addr
     []byte remote_addr
 }
 
-struct TCPListenerState {
+struct tcp_listener_state {
     raw_socket sock
     []byte addr
 }
@@ -168,6 +168,7 @@ struct socket_error {
     string message
     string syscall_name
 }
+
 func (socket_error* e) Error() string {
     e.syscall_name + ": " + e.message
 }
