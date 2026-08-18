@@ -1,6 +1,6 @@
 package std.binary
 
-use std.text.normalize_byte
+use std.encoding.normalize_byte
 
 func u64_le_bytes([]int bytes, int offset) int {
     if offset < 0 || offset + 8 > len(bytes) {
