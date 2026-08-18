@@ -61,3 +61,51 @@ func parse_int_default(string text, int fallback) int {
     }
     sign * value
 }
+
+func float_to_string_precision(float value, int precision) string {
+    if precision < 0 {
+        precision = 0
+    }
+    bool negative = false
+    float current = value
+    if current < 0.0 {
+        negative = true
+        current = 0.0 - current
+    }
+
+    int int_part = int(current)
+    float frac = current - float(int_part)
+    string result = int_to_string(int_part)
+
+    if precision == 0 {
+        if negative {
+            return "-" + result
+        }
+        return result
+    }
+
+    result = result + "."
+    int i = 0
+    while i < precision {
+        frac = frac * 10.0
+        int digit = int(frac)
+        if digit < 0 {
+            digit = 0
+        }
+        if digit > 9 {
+            digit = 9
+        }
+        result = result + string(48 + digit)
+        frac = frac - float(digit)
+        i = i + 1
+    }
+
+    if negative {
+        return "-" + result
+    }
+    return result
+}
+
+func float_to_string(float value) string {
+    return float_to_string_precision(value, 3)
+}
