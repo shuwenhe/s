@@ -155,6 +155,7 @@ struct TestServer {
     listener *TCPListener
     port int
 }
+
 func (TestServer* ts) Start(port int) error {
     listener, err := ListenTCP("127.0.0.1", port)
     if err != nil {
@@ -164,6 +165,7 @@ func (TestServer* ts) Start(port int) error {
     ts.port = port
     nil
 }
+
 func (TestServer* ts) Stop() error {
     if ts.listener != nil {
         ts.listener.Close()
