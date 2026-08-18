@@ -5,50 +5,50 @@ struct TCPAddr {
     string ip
     int port
 }
-func (a *TCPAddr) Network() string {
+func (TCPAddr* a) Network() string {
     "tcp"
 }
-func (a *TCPAddr) String() string {
+func (TCPAddr* a) String() string {
     a.ip + ":" + itoa(a.port)
 }
 
 struct TCPConn {
-    *internal.RawSocket
+    *internal.raw_socket
     laddr *TCPAddr
     raddr *TCPAddr
 }
-func (c *TCPConn) Read(buf []byte) (int, error) {
-    if c.RawSocket == nil {
+func (TCPConn* c) Read(buf []byte) (int, error) {
+    if c.raw_socket == nil {
         return 0, "connection closed"
     }
-    c.RawSocket.Read(buf)
+    c.raw_socket.read(buf)
 }
-func (c *TCPConn) Write(buf []byte) (int, error) {
-    if c.RawSocket == nil {
+func (TCPConn* c) Write(buf []byte) (int, error) {
+    if c.raw_socket == nil {
         return 0, "connection closed"
     }
-    c.RawSocket.Write(buf)
+    c.raw_socket.write(buf)
 }
-func (c *TCPConn) Close() error {
-    if c.RawSocket == nil {
+func (TCPConn* c) Close() error {
+    if c.raw_socket == nil {
         return "already closed"
     }
-    c.RawSocket.Close()
+    c.raw_socket.close()
 }
-func (c *TCPConn) LocalAddr() Addr {
+func (TCPConn* c) LocalAddr() Addr {
     c.laddr
 }
-func (c *TCPConn) RemoteAddr() Addr {
+func (TCPConn* c) RemoteAddr() Addr {
     c.raddr
 }
-func (c *TCPConn) ReadFrom(buf []byte) (int, Addr, error) {
+func (TCPConn* c) ReadFrom(buf []byte) (int, Addr, error) {
     0, nil, "tcp does not support ReadFrom"
 }
-func (c *TCPConn) WriteTo(buf []byte, addr Addr) (int, error) {
+func (TCPConn* c) WriteTo(buf []byte, addr Addr) (int, error) {
     0, "tcp does not support WriteTo"
 }
-func (c *TCPConn) SetDeadline(deadline_ns i64) error {
-    if c.RawSocket == nil {
+func (TCPConn* c) SetDeadline(deadline_ns i64) error {
+    if c.raw_socket == nil {
         return "connection closed"
     }
     err1 := c.SetReadDeadline(deadline_ns)
@@ -58,112 +58,112 @@ func (c *TCPConn) SetDeadline(deadline_ns i64) error {
     }
     err2
 }
-func (c *TCPConn) SetReadDeadline(deadline_ns i64) error {
-    if c.RawSocket == nil {
+func (TCPConn* c) SetReadDeadline(deadline_ns i64) error {
+    if c.raw_socket == nil {
         return "connection closed"
     }
-    c.RawSocket.SetReadDeadline(deadline_ns)
+    c.raw_socket.set_read_deadline(deadline_ns)
 }
-func (c *TCPConn) SetWriteDeadline(deadline_ns i64) error {
-    if c.RawSocket == nil {
+func (TCPConn* c) SetWriteDeadline(deadline_ns i64) error {
+    if c.raw_socket == nil {
         return "connection closed"
     }
-    c.RawSocket.SetWriteDeadline(deadline_ns)
+    c.raw_socket.set_write_deadline(deadline_ns)
 }
-func (c *TCPConn) SetNoDelay(on bool) error {
-    if c.RawSocket == nil {
+func (TCPConn* c) SetNoDelay(on bool) error {
+    if c.raw_socket == nil {
         return "connection closed"
     }
-    c.RawSocket.SetTCPNoDelay(on)
+    c.raw_socket.set_tcp_no_delay(on)
 }
-func (c *TCPConn) SetReuseAddr(on bool) error {
-    if c.RawSocket == nil {
+func (TCPConn* c) SetReuseAddr(on bool) error {
+    if c.raw_socket == nil {
         return "connection closed"
     }
-    c.RawSocket.SetReuseAddr(on)
+    c.raw_socket.set_reuse_addr(on)
 }
-func (c *TCPConn) SetReusePort(on bool) error {
-    if c.RawSocket == nil {
+func (TCPConn* c) SetReusePort(on bool) error {
+    if c.raw_socket == nil {
         return "connection closed"
     }
-    c.RawSocket.SetReusePort(on)
+    c.raw_socket.set_reuse_port(on)
 }
 
 func DialTCP(address string, port int, timeout_ms int) (*TCPConn, error) {
-    sock, err := internal.NewRawSocket(
-        internal.AF_INET,
-        internal.SOCK_STREAM,
-        internal.IPPROTO_TCP,
+    sock, err := internal.new_raw_socket(
+        internal.af_inet,
+        internal.sock_stream,
+        internal.ipproto_tcp,
     )
     if err != nil {
         return nil, err
     }
-    err = sock.Connect(address, port, timeout_ms)
+    err = sock.connect(address, port, timeout_ms)
     if err != nil {
-        sock.Close()
+        sock.close()
         return nil, err
     }
-    local_ip, local_port, _ := sock.GetLocalAddr()
-    remote_ip, remote_port, _ := sock.GetRemoteAddr()
+    local_ip, local_port, _ := sock.get_local_addr()
+    remote_ip, remote_port, _ := sock.get_remote_addr()
     &TCPConn{
-        RawSocket: sock,
+        raw_socket: sock,
         laddr: &TCPAddr{ip: local_ip, port: local_port},
         raddr: &TCPAddr{ip: remote_ip, port: remote_port},
     }, nil
 }
 
 struct TCPListener {
-    *internal.RawSocket
+    *internal.raw_socket
     addr *TCPAddr
 }
 
 func ListenTCP(address string, port int) (*TCPListener, error) {
-    sock, err := internal.NewRawSocket(
-        internal.AF_INET,
-        internal.SOCK_STREAM,
-        internal.IPPROTO_TCP,
+    sock, err := internal.new_raw_socket(
+        internal.af_inet,
+        internal.sock_stream,
+        internal.ipproto_tcp,
     )
     if err != nil {
         return nil, err
     }
-    sock.SetReuseAddr(true)
-    err = sock.Bind(address, port)
+    sock.set_reuse_addr(true)
+    err = sock.bind(address, port)
     if err != nil {
-        sock.Close()
+        sock.close()
         return nil, err
     }
-    err = sock.Listen(128)
+    err = sock.listen(128)
     if err != nil {
-        sock.Close()
+        sock.close()
         return nil, err
     }
     &TCPListener{
-        RawSocket: sock,
+        raw_socket: sock,
         addr: &TCPAddr{ip: address, port: port},
     }, nil
 }
-func (l *TCPListener) Accept() (*TCPConn, error) {
-    if l.RawSocket == nil {
+func (TCPListener* l) Accept() (*TCPConn, error) {
+    if l.raw_socket == nil {
         return nil, "listener closed"
     }
-    client_sock, err := l.RawSocket.Accept()
+    client_sock, err := l.raw_socket.accept()
     if err != nil {
         return nil, err
     }
-    remote_ip, remote_port, _ := client_sock.GetRemoteAddr()
-    local_ip, local_port, _ := client_sock.GetLocalAddr()
+    remote_ip, remote_port, _ := client_sock.get_remote_addr()
+    local_ip, local_port, _ := client_sock.get_local_addr()
     &TCPConn{
-        RawSocket: client_sock,
+        raw_socket: client_sock,
         laddr: &TCPAddr{ip: local_ip, port: local_port},
         raddr: &TCPAddr{ip: remote_ip, port: remote_port},
     }, nil
 }
-func (l *TCPListener) Close() error {
-    if l.RawSocket == nil {
+func (TCPListener* l) Close() error {
+    if l.raw_socket == nil {
         return "already closed"
     }
-    l.RawSocket.Close()
+    l.raw_socket.close()
 }
-func (l *TCPListener) Addr() Addr {
+func (TCPListener* l) Addr() Addr {
     l.addr
 }
