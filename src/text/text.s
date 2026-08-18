@@ -20,6 +20,26 @@ func int_to_string(int value) string {
     return result
 }
 
+func int64_to_string(int64 value) string {
+    if value == 0 {
+        return "0"
+    }
+    string result = ""
+    int64 current = value
+    if current < 0 {
+        current = 0 - current
+    }
+    while current > 0 {
+        int64 digit = current % 10
+        result = string(48 + int(digit)) + result
+        current = current / 10
+    }
+    if value < 0 {
+        return "-" + result
+    }
+    return result
+}
+
 func parse_int_default(string text, int fallback) int {
     if len(text) == 0 {
         return fallback
