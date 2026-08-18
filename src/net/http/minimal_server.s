@@ -1,18 +1,6 @@
 package src.net.http
 
-struct request {
-    string method
-    string path
-    map[string, string] headers
-    string body
-}
-
-struct response {
-    int status
-    map[string, string] headers
-    string body
-}
-type handler_func = func(request) response
+type handler_func = func(http_request) http_response
 
 struct route_entry {
     string method
