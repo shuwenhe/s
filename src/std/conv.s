@@ -62,6 +62,10 @@ func parse_int_default(string text, int fallback) int {
     sign * value
 }
 
+func parse_int(string text) int {
+    parse_int_default(text, 0)
+}
+
 func float_to_string_precision(float value, int precision) string {
     if precision < 0 {
         precision = 0
