@@ -66,6 +66,29 @@ func parse_int(string text) int {
     parse_int_default(text, 0)
 }
 
+func string_to_int(string text) int {
+    int result = 0
+    int index = 0
+    int start = 0
+    bool negative = false
+    if len(text) > 0 && string(text[0]) == "-" {
+        negative = true
+        start = 1
+    }
+    index = start
+    while index < len(text) {
+        int digit = int(text[index]) - 48
+        if digit >= 0 && digit <= 9 {
+            result = result * 10 + digit
+        }
+        index = index + 1
+    }
+    if negative {
+        result = -result
+    }
+    return result
+}
+
 func float_to_string_precision(float value, int precision) string {
     if precision < 0 {
         precision = 0
