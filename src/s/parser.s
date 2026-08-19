@@ -98,6 +98,9 @@ func (self: &mut parser) parse_item() result[item, parse_error] {
         if self.at_keyword("const") {
             return result::ok(item::const(self.parse_const_decl()?))
         }
+        if self.at_keyword("var") {
+            return result::ok(item::var(self.parse_var_decl()?))
+        }
         if self.at_keyword("struct") {
             return result::ok(item::struct(self.parse_struct_decl()?))
         }
@@ -140,6 +143,30 @@ func (self: &mut parser) parse_const_entry(bool allow_omitted_value, int iota_in
             iota_index: iota_index,
         })
     }
+
+func (self: &mut parser) parse_var_decl() result[var_decl, parse_error] {
+        self.expect_keyword("var")?
+        string name = self.expect_ident()?
+        option[string] type_name = option::none
+        option[expr] value = option::none
+        
+        if !self.at_symbol("=") && !self.at_symbol(";") {
+            type_name = option::some(self.parse_type_expr()?)
+        }
+        
+        if self.eat_symbol("=") {
+            value = option::some(self.parse_expr()?)
+        }
+        
+        self.eat_symbol(";")
+        
+        result::ok(var_decl {
+            name: name,
+            type_name: type_name,
+            value: value,
+        })
+    }
+
 func (self: &mut parser) parse_function_decl() result[function_decl, parse_error] {
         parsed_function pair = self.parse_function(true)?        if pair.receiver.is_some() {
             return result::err(self.error_here("method receiver not allowed in this context"))

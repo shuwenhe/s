@@ -261,9 +261,17 @@ struct const_decl {
     option[expr] value
     int iota_index
 }
+
+struct var_decl {
+    string name
+    option[string] type_name
+    option[expr] value
+}
+
 enum item {
     function(function_decl),
     const(const_decl),
+    var(var_decl),
     struct(struct_decl),
     enum(enum_decl),
     trait(trait_decl),
@@ -303,6 +311,7 @@ func append_item_dump(vec[string] lines, item item) () {
     switch item {
         item.function(value) : append_lines(lines, dump_function(value, "")),
         item.const(value) : append_lines(lines, dump_const(value)),
+        item.var(value) : append_lines(lines, dump_var(value)),
         item.struct(value) : append_lines(lines, dump_struct(value)),
         item.enum(value) : append_lines(lines, dump_enum(value)),
         item.trait(value) : append_lines(lines, dump_trait(value)),
@@ -314,6 +323,18 @@ func dump_const(const_decl item) vec[string] {
     switch item.value {
         option.some(value) : vec[string] { "const " + item.name + " = " + dump_expr(value) },
         option.none : vec[string] { "const " + item.name },
+    }
+}
+
+func dump_var(var_decl item) vec[string] {
+    let decl = "var " + item.name
+    switch item.type_name {
+        option.some(t) : decl = decl + " " + t,
+        option.none : {},
+    }
+    switch item.value {
+        option.some(v) : vec[string] { decl + " = " + dump_expr(v) },
+        option.none : vec[string] { decl },
     }
 }
 
