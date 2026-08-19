@@ -1304,6 +1304,30 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						return 0;
 					}
 				}
+				else if (decl->kind == AST_VAR_DECL) {
+					const char *var_name = decl->as.var_decl.name;
+					const char *var_type = decl->as.var_decl.type_name ? decl->as.var_decl.type_name : TYPE_ANY;
+					status = scope_define(
+						ctx->current_scope,
+						var_name,
+						SYMBOL_VAR,
+						1,
+						0,
+						0,
+						var_type,
+						NULL,
+						0
+					);
+					if (status == 0) {
+						error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
+							"redefinition of global variable '%s'", var_name);
+						return 0;
+					}
+					if (status < 0) {
+						error_set(ctx->err, ERR_OUT_OF_MEMORY, decl->pos.line, decl->pos.column, "out of memory");
+						return 0;
+					}
+				}
 				if (decl->kind == AST_USE_DECL && decl->as.use_decl.alias && decl->as.use_decl.alias[0] != '\0') {
 					int min_arity;
 					int max_arity;
@@ -1383,6 +1407,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_PACKAGE_DECL:
 		case AST_USE_DECL:
 		case AST_EXTERN_DECL:
+		case AST_VAR_DECL:
 			return 1;
 		case AST_BLOCK:
 			return analyze_block_with_new_scope(ctx, node);

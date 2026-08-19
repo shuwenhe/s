@@ -18,6 +18,7 @@ typedef enum ast_kind {
 	AST_PACKAGE_DECL,
 	AST_USE_DECL,
 	AST_EXTERN_DECL,
+	AST_VAR_DECL,
 	AST_IF_STMT,
 	AST_WHILE_STMT,
 	AST_FOR_STMT,
@@ -99,6 +100,12 @@ struct ast_node {
 			size_t param_count;
 			char *return_type;
 		} extern_decl;
+
+		struct {
+			char *name;
+			char *type_name;
+			ast_node *value;
+		} var_decl;
 
 		struct {
 			ast_node *condition;

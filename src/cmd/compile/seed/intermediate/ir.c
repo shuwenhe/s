@@ -715,6 +715,7 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		case AST_PACKAGE_DECL:
 		case AST_USE_DECL:
 		case AST_EXTERN_DECL:
+		case AST_VAR_DECL:
 		case AST_TRAIT_DECL:
 			return true;
 		case AST_BLOCK:

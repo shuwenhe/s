@@ -17,6 +17,7 @@ typedef struct parser {
 static size_t next_block_id = 1;
 
 static ast_node *parse_extern_decl(parser *p);
+static ast_node *parse_var_decl(parser *p);
 static ast_node *parse_export_decl(parser *p);
 static ast_node *parse_binding_statement(parser *p, int is_mutable);
 static ast_node *parse_typed_binding_statement(parser *p, int is_mutable);
@@ -89,6 +90,7 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_PACKAGE_DECL: return "PACKAGE_DECL";
 		case AST_USE_DECL: return "USE_DECL";
 		case AST_EXTERN_DECL: return "EXTERN_DECL";
+		case AST_VAR_DECL: return "VAR_DECL";
 		case AST_IF_STMT: return "IF_STMT";
 		case AST_WHILE_STMT: return "WHILE_STMT";
 		case AST_FOR_STMT: return "FOR_STMT";
@@ -190,6 +192,11 @@ void ast_free(ast_node *node) {
 			free(node->as.extern_decl.params);
 			free(node->as.extern_decl.param_types);
 			free(node->as.extern_decl.return_type);
+			break;
+		case AST_VAR_DECL:
+			free(node->as.var_decl.name);
+			free(node->as.var_decl.type_name);
+			ast_free(node->as.var_decl.value);
 			break;
 		case AST_IF_STMT:
 			ast_free(node->as.if_stmt.condition);
@@ -2016,6 +2023,9 @@ static ast_node *parse_top_level(parser *p) {
 	if (match(p, TOKEN_USE)) {
 		return parse_use_decl(p);
 	}
+	if (match(p, TOKEN_VAR)) {
+		return parse_var_decl(p);
+	}
 	if (check(p, TOKEN_IDENTIFIER)) {
 		const token *tok = peek(p);
 		if (strcmp(tok->lexeme, "extern") == 0) {
@@ -2172,6 +2182,47 @@ static ast_node *parse_extern_decl(parser *p) {
 		else node->as.extern_decl.return_type = dup_cstr("()");
 	}
 	if (!node->as.extern_decl.return_type) { ast_free(node); return NULL; }
+
+	consume_optional_semicolon(p);
+	return node;
+}
+
+static ast_node *parse_var_decl(parser *p) {
+	const token *kw = prev(p);
+	ast_node *node;
+	char *type_name = NULL;
+
+	node = ast_new(AST_VAR_DECL, kw->pos);
+	if (!node) return NULL;
+
+	if (!expect(p, TOKEN_IDENTIFIER, "variable name")) {
+		ast_free(node);
+		return NULL;
+	}
+	node->as.var_decl.name = dup_cstr(prev(p)->lexeme);
+	if (!node->as.var_decl.name) {
+		ast_free(node);
+		return NULL;
+	}
+
+	if (!check(p, TOKEN_ASSIGN) && !check(p, TOKEN_SEMICOLON)) {
+		if (try_parse_type_annotation(p, &type_name)) {
+			node->as.var_decl.type_name = type_name;
+		} else {
+			parse_error(p, peek(p), "expected type or '='");
+			ast_free(node);
+			return NULL;
+		}
+	}
+
+	node->as.var_decl.value = NULL;
+	if (match(p, TOKEN_ASSIGN)) {
+		node->as.var_decl.value = parse_expression(p);
+		if (!node->as.var_decl.value) {
+			ast_free(node);
+			return NULL;
+		}
+	}
 
 	consume_optional_semicolon(p);
 	return node;
