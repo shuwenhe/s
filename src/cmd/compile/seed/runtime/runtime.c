@@ -1147,6 +1147,7 @@ static int host_dispatch_libc_ffi(const char *name, const runtime_data_value *ar
 }
 
 bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char *output_dir, compile_error *err);
+bool seed_compile_files(int input_count, char **input_paths, const char *output_path, compile_error *err);
 
 static int compile_s_file_to_ir(const char *input_path, const char *output_path, compile_error *err) {
 	char *source_text = NULL;
@@ -2177,6 +2178,22 @@ static int host_dispatch_call(
 			return 1;
 		}
 
+		if (s_argc >= 2 && strcmp(s_argv[1], "--compile-unit") == 0) {
+			if (s_argc < 4) {
+				fprintf(stderr, "usage: --compile-unit <output.ir> <input.s>...\n");
+				*out = value_make_int(2);
+				return 1;
+			}
+			error_clear(&compile_err);
+			if (!seed_compile_files(s_argc - 3, &s_argv[3], s_argv[2], &compile_err)) {
+				print_compile_error_local(&compile_err);
+				*out = value_make_int(1);
+				return 1;
+			}
+			*out = value_make_int(0);
+			return 1;
+		}
+
 		if (s_argc >= 2 && strcmp(s_argv[1], "--bootstrap") == 0) {
 			const char *out_dir = ".";
 			if (s_argc < 3 || s_argc > 4) {
@@ -2208,7 +2225,7 @@ static int host_dispatch_call(
 			return 1;
 		}
 
-		fprintf(stderr, "usage:\n  s <input.s> <output.ir>\n  s --emit-bin <input.ir> <output.bin>\n  s --bootstrap <compiler_source.s> [output_dir]\n  s mod index <dir>\n");
+		fprintf(stderr, "usage:\n  s <input.s> <output.ir>\n  s --compile-unit <output.ir> <input.s>...\n  s --emit-bin <input.ir> <output.bin>\n  s --bootstrap <compiler_source.s> [output_dir]\n  s mod index <dir>\n");
 		*out = value_make_int(2);
 		return 1;
 	}
@@ -4128,6 +4145,64 @@ static int execute_function(
 				else if (strcmp(ins->op1, "__sroutine_current_id") == 0) result_value = g_runtime_scheduler.current_sroutine_id;
 				else result_value = scheduler_live_count();
 				callee_ret = value_make_int(result_value);
+				if (!values_set(&vals, ins->result, &callee_ret)) {
+					value_clear(&callee_ret);
+					values_free(&vals);
+					return 0;
+				}
+				value_clear(&callee_ret);
+				pc++;
+				continue;
+			}
+			if (strcmp(ins->op1, "__vec_make") == 0 || strncmp(ins->op1, "__vec_", 6) == 0) {
+				int vector_ok = 1;
+				runtime_data_value *vector = NULL;
+				if (strcmp(ins->op1, "__vec_make") == 0) {
+					if (call_argc != 0) vector_ok = 0;
+					else callee_ret = value_make_array_owned(NULL, 0);
+				} else if (call_argc < 1 || pending_args[call_base].kind != RUNTIME_STRING ||
+					!pending_args[call_base].str_value ||
+					!(vector = values_get_ref(&vals, pending_args[call_base].str_value)) ||
+					vector->kind != RUNTIME_ARRAY) {
+					vector_ok = 0;
+				} else if (strcmp(ins->op1, "__vec_push") == 0 && call_argc == 2) {
+					runtime_data_value *next = (runtime_data_value *)realloc(vector->array_items,
+						(vector->array_len + 1) * sizeof(*next));
+					if (!next) {
+						error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+						vector_ok = 0;
+					} else {
+						vector->array_items = next;
+						memset(&vector->array_items[vector->array_len], 0, sizeof(*next));
+						if (!value_copy(&vector->array_items[vector->array_len], &pending_args[call_base + 1])) vector_ok = 0;
+						else vector->array_len++;
+						callee_ret = value_make_int(0);
+					}
+				} else if (strcmp(ins->op1, "__vec_len") == 0 && call_argc == 1) {
+					callee_ret = value_make_int((long)vector->array_len);
+				} else if (strcmp(ins->op1, "__vec_is_empty") == 0 && call_argc == 1) {
+					callee_ret = value_make_int(vector->array_len == 0);
+				} else if (strcmp(ins->op1, "__vec_get") == 0 && call_argc == 2 &&
+					pending_args[call_base + 1].kind == RUNTIME_INT) {
+					long index = pending_args[call_base + 1].int_value;
+					if (index < 0 || (size_t)index >= vector->array_len) callee_ret = value_make_int(0);
+					else if (!value_copy(&callee_ret, &vector->array_items[index])) vector_ok = 0;
+				} else if (strcmp(ins->op1, "__vec_set") == 0 && call_argc == 3 &&
+					pending_args[call_base + 1].kind == RUNTIME_INT) {
+					vector_ok = array_set_index(vector, pending_args[call_base + 1].int_value,
+						&pending_args[call_base + 2]);
+					callee_ret = value_make_int(0);
+				} else {
+					vector_ok = 0;
+				}
+				for (j = call_base; j < pending_len; j++) value_clear(&pending_args[j]);
+				pending_len = call_base;
+				if (!vector_ok) {
+					if (!error_is_set(err)) error_set(err, ERR_SEMANTIC, 0, 0, "invalid vector operation: %s", ins->op1);
+					value_clear(&callee_ret);
+					values_free(&vals);
+					return 0;
+				}
 				if (!values_set(&vals, ins->result, &callee_ret)) {
 					value_clear(&callee_ret);
 					values_free(&vals);

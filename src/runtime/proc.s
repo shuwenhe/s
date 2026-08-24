@@ -37,7 +37,7 @@ struct Scheduler {
     int      num_p
     Mutex    mu
 }
-var _sched = init_scheduler()
+var _sched Scheduler = init_scheduler()
 
 func init_scheduler() Scheduler {
     Scheduler {
@@ -120,9 +120,9 @@ func schedule() () {
 func find_runnable() int {
     _sched.mu.lock()
     if !_sched.global_q.is_empty() {
-        let sroutine_id = _sched.global_q.get(0).unwrap_or(-1)
+        let sroutine_id = _sched.global_q[0]
         if sroutine_id >= 0 {
-            _sched.global_q.set(0, -1)
+            _sched.global_q[0] = -1
             _sched.mu.unlock()
             return sroutine_id
         }
@@ -163,10 +163,7 @@ func try_wakeup_idle_m() () {
 func sroutine_transition(int sroutine_id, int status, int park_reason) bool {
     let i = 0
     while i < _sched.task.len() {
-        let g = _sched.task.get(i).unwrap_or(Sroutine {
-            id: -1, status: SROUTINE_DEAD, name: "", parent_id: -1,
-            m_id: -1, wait_for: SROUTINE_PARK_NONE, stack_size: 0, system: false,
-        })
+        let g = _sched.task[i]
         if g.id == sroutine_id {
             if !sroutine_state_can_transition(g.status, status) {
                 return false
@@ -181,7 +178,7 @@ func sroutine_transition(int sroutine_id, int status, int park_reason) bool {
                 stack_size: g.stack_size,
                 system:     g.system,
             }
-            _sched.task.set(i, updated)
+            _sched.task[i] = updated
             return true
         }
         i = i + 1
@@ -203,10 +200,7 @@ func sroutine_list() vec[SroutineInfo] {
     let result = vec[SroutineInfo]()
     let i = 0
     while i < _sched.task.len() {
-        let g = _sched.task.get(i).unwrap_or(Sroutine {
-            id: -1, status: SROUTINE_DEAD, name: "", parent_id: -1,
-            m_id: -1, wait_for: SROUTINE_PARK_NONE, stack_size: 0, system: false,
-        })
+        let g = _sched.task[i]
         if g.id >= 0 {
             result.push(SroutineInfo {
                 id:     g.id,
