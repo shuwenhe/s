@@ -24,6 +24,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#if !defined(_WIN32)
+#include <sys/wait.h>
+#endif
+
 #if defined(__linux__)
 #include <sys/epoll.h>
 #include <sys/sendfile.h>
@@ -1905,6 +1909,35 @@ static int host_dispatch_call(
 		}
 		return 1;
 	}
+	if (strcmp(name, "runtime_run_command_exit_code") == 0) {
+		const char *command = NULL;
+		char command_buf[4096];
+		int status;
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "runtime_run_command_exit_code expects 1 arg");
+			return 0;
+		}
+		if (!value_as_cstr(&args[0], command_buf, sizeof(command_buf), &command)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to render runtime command");
+			return 0;
+		}
+		status = system(command);
+		if (status == -1) {
+			*out = value_make_int(127);
+#if defined(_WIN32)
+		} else {
+			*out = value_make_int(status);
+#else
+		} else if (WIFEXITED(status)) {
+			*out = value_make_int(WEXITSTATUS(status));
+		} else if (WIFSIGNALED(status)) {
+			*out = value_make_int(128 + WTERMSIG(status));
+		} else {
+			*out = value_make_int(1);
+#endif
+		}
+		return 1;
+	}
 	if (strcmp(name, "runtime_file_exists") == 0) {
 		const char *path = NULL;
 		char path_buf[256];
@@ -2053,6 +2086,34 @@ static int host_dispatch_call(
 			return 1;
 		}
 		error_set(err, ERR_SEMANTIC, 0, 0, "float expects numeric or string arg");
+		return 0;
+	}
+	if (strcmp(name, "int") == 0) {
+		const char *text = NULL;
+		char text_buf[64];
+		char *end = NULL;
+		long value;
+		if (argc != 1) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "int expects 1 arg");
+			return 0;
+		}
+		if (args[0].kind == RUNTIME_INT) {
+			*out = value_make_int(args[0].int_value);
+			return 1;
+		}
+		if (args[0].kind == RUNTIME_FLOAT) {
+			*out = value_make_int((long)args[0].float_value);
+			return 1;
+		}
+		if (args[0].kind == RUNTIME_STRING && value_as_cstr(&args[0], text_buf, sizeof(text_buf), &text)) {
+			errno = 0;
+			value = strtol(text, &end, 10);
+			if (errno == 0 && end && *end == '\0') {
+				*out = value_make_int(value);
+				return 1;
+			}
+		}
+		error_set(err, ERR_SEMANTIC, 0, 0, "int expects numeric or integer string arg");
 		return 0;
 	}
 	if (strcmp(name, "string") == 0) {
