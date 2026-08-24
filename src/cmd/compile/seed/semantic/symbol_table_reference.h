@@ -83,9 +83,9 @@ static inline float symbol_table_load_factor(symbol_table *table) {
  *   symbol *scope_lookup(scope *s, const char *name) {
  *       scope *it = s;
  *       while (it) {
- *           symbol *sym = scope_lookup_current(it, name);  // O(n) per scope
+ *           symbol *sym = scope_lookup_current(it, name);
  *           if (sym) return sym;
- *           it = it->parent;                               // Traverse chain
+ *           it = it->parent;
  *       }
  *       return NULL;
  *   }
@@ -102,7 +102,7 @@ static inline float symbol_table_load_factor(symbol_table *table) {
  *   symbol *scope_lookup(scope *s, const char *name) {
  *       scope *it = s;
  *       while (it) {
- *           symbol *sym = symbol_table_lookup(it->symbols, name);  // O(1)
+ *           symbol *sym = symbol_table_lookup(it->symbols, name);
  *           if (sym) return sym;
  *           it = it->parent;
  *       }
@@ -154,17 +154,17 @@ static inline float symbol_table_load_factor(symbol_table *table) {
  *
  *   symbol_table *table = symbol_table_new(256);
  *
- *   // Insert
+ *
  *   symbol *sym = create_symbol("foo", TYPE_INT);
  *   symbol_table_insert(table, "foo", sym);
  *
- *   // Lookup (O(1) average)
+ *
  *   symbol *found = symbol_table_lookup(table, "foo");
  *   if (found) {
  *       printf("Found: %s\n", found->name);
  *   }
  *
- *   // Cleanup
+ *
  *   symbol_table_free(table);
  *
  * ============================================================================

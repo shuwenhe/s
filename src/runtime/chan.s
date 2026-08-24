@@ -6,7 +6,7 @@ const CHAN_OPEN   = 0
 const CHAN_CLOSED = 1
 
 struct Waiter {
-    int g_id
+    int sroutine_id
     int val_idx
 }
 
@@ -54,24 +54,24 @@ func chan_send(RawChan mut ch, int val) result[(), string] {
             ch.mu.unlock()
             switch recv_opt {
                 option::some(w) : {
-                    chan_deliver(w.g_id, val)
-                    goready(w.g_id)
+                    chan_deliver(w.sroutine_id, val)
+                    sroutine_ready(w.sroutine_id)
                 },
                 option::none : (),
             }
             return result::ok(())
         }
-        let cur = __goroutine_current_id()
-        ch.senders.push(Waiter { g_id: cur, val_idx: val })
+        let cur = __sroutine_current_id()
+        ch.senders.push(Waiter { sroutine_id: cur, val_idx: val })
         ch.mu.unlock()
-        gopark(1)
+        sroutine_park(SROUTINE_PARK_CHANNEL)
         return result::ok(())
     }
     while ch.count >= ch.cap {
-        let cur = __goroutine_current_id()
-        ch.senders.push(Waiter { g_id: cur, val_idx: val })
+        let cur = __sroutine_current_id()
+        ch.senders.push(Waiter { sroutine_id: cur, val_idx: val })
         ch.mu.unlock()
-        gopark(1)
+        sroutine_park(SROUTINE_PARK_CHANNEL)
         ch.mu.lock()
         if ch.state == CHAN_CLOSED {
             ch.mu.unlock()
@@ -85,7 +85,7 @@ func chan_send(RawChan mut ch, int val) result[(), string] {
         let recv_opt = dequeue_waiter(ch.receivers)
         ch.mu.unlock()
         switch recv_opt {
-            option::some(w) : goready(w.g_id),
+            option::some(w) : sroutine_ready(w.sroutine_id),
             option::none    : (),
         }
         return result::ok(())
@@ -102,7 +102,7 @@ func chan_recv(RawChan mut ch) recv_result {
             ch.mu.unlock()
             switch send_opt {
                 option::some(w) : {
-                    goready(w.g_id)
+                    sroutine_ready(w.sroutine_id)
                     return recv_result { value: w.val_idx, ok: true }
                 },
                 option::none : (),
@@ -112,10 +112,10 @@ func chan_recv(RawChan mut ch) recv_result {
             ch.mu.unlock()
             return recv_result { value: 0, ok: false }
         }
-        let cur = __goroutine_current_id()
-        ch.receivers.push(Waiter { g_id: cur, val_idx: -1 })
+        let cur = __sroutine_current_id()
+        ch.receivers.push(Waiter { sroutine_id: cur, val_idx: -1 })
         ch.mu.unlock()
-        gopark(1)
+        sroutine_park(SROUTINE_PARK_CHANNEL)
         let v = chan_take_delivered(cur)
         return recv_result { value: v, ok: true }
     }
@@ -124,10 +124,10 @@ func chan_recv(RawChan mut ch) recv_result {
             ch.mu.unlock()
             return recv_result { value: 0, ok: false }
         }
-        let cur = __goroutine_current_id()
-        ch.receivers.push(Waiter { g_id: cur, val_idx: -1 })
+        let cur = __sroutine_current_id()
+        ch.receivers.push(Waiter { sroutine_id: cur, val_idx: -1 })
         ch.mu.unlock()
-        gopark(1)
+        sroutine_park(SROUTINE_PARK_CHANNEL)
         ch.mu.lock()
     }
     let val = ch.buf.get(ch.head).unwrap_or(0)
@@ -143,7 +143,7 @@ func chan_recv(RawChan mut ch) recv_result {
                 ch.tail  = (ch.tail + 1) % ch.cap
                 ch.count = ch.count + 1
                 ch.mu.unlock()
-                goready(w.g_id)
+                sroutine_ready(w.sroutine_id)
             },
             option::none : (),
         }
@@ -170,8 +170,8 @@ func chan_try_send(RawChan mut ch, int val) bool {
             ch.mu.unlock()
             switch recv_opt {
                 option::some(w) : {
-                    chan_deliver(w.g_id, val)
-                    goready(w.g_id)
+                    chan_deliver(w.sroutine_id, val)
+                    sroutine_ready(w.sroutine_id)
                 },
                 option::none : (),
             }
@@ -199,7 +199,7 @@ func chan_try_recv(RawChan mut ch) option[recv_result] {
             ch.mu.unlock()
             switch send_opt {
                 option::some(w) : {
-                    goready(w.g_id)
+                    sroutine_ready(w.sroutine_id)
                     return option::some(recv_result { value: w.val_idx, ok: true })
                 },
                 option::none : (),
@@ -237,7 +237,7 @@ func chan_close(RawChan mut ch) result[(), string] {
     while !ch.receivers.is_empty() {
         let w_opt = dequeue_waiter(ch.receivers)
         switch w_opt {
-            option::some(w) : goready(w.g_id),
+            option::some(w) : sroutine_ready(w.sroutine_id),
             option::none    : (),
         }
     }
@@ -249,25 +249,25 @@ func dequeue_waiter(vec[Waiter] mut q) option[Waiter] {
     if q.is_empty() {
         return option::none
     }
-    let w = q.get(0).unwrap_or(Waiter { g_id: -1, val_idx: -1 })
+    let w = q.get(0).unwrap_or(Waiter { sroutine_id: -1, val_idx: -1 })
     let new_q = vec[Waiter]()
     let i = 1
     while i < q.len() {
-        new_q.push(q.get(i).unwrap_or(Waiter { g_id: -1, val_idx: -1 }))
+        new_q.push(q.get(i).unwrap_or(Waiter { sroutine_id: -1, val_idx: -1 }))
         i = i + 1
     }
     q = new_q
     option::some(w)
 }
-extern "intrinsic" func __chan_deliver(int g_id, int val) ()
-extern "intrinsic" func __chan_take_delivered(int g_id) int
+extern "intrinsic" func __chan_deliver(int sroutine_id, int val) ()
+extern "intrinsic" func __chan_take_delivered(int sroutine_id) int
 
-func chan_deliver(int g_id, int val) () {
-    __chan_deliver(g_id, val)
+func chan_deliver(int sroutine_id, int val) () {
+    __chan_deliver(sroutine_id, val)
 }
 
-func chan_take_delivered(int g_id) int {
-    __chan_take_delivered(g_id)
+func chan_take_delivered(int sroutine_id) int {
+    __chan_take_delivered(sroutine_id)
 }
 
 func chan_len(RawChan ch) int  { ch.count }

@@ -26,6 +26,7 @@ func new_lexer(string source) lexer {
         column: 1,
     }
 }
+
 func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
         vec[token] tokens = vec[token]()        while !self.is_eof() {
             self.skip_ignored()?
@@ -89,6 +90,7 @@ func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
         })
         result::ok(tokens)
     }
+
 func (self: &mut lexer) skip_ignored() result[(), lex_error] {
         while !self.is_eof() {
             string ch = self.peek()?
@@ -117,6 +119,7 @@ func (self: &mut lexer) skip_ignored() result[(), lex_error] {
         }
         result::ok(())
     }
+
 func (self: &mut lexer) read_identifier() result[string, lex_error] {
         string out = ""        while !self.is_eof() {
             string ch = self.peek()?            if !is_ident_continue(ch) {
@@ -126,6 +129,7 @@ func (self: &mut lexer) read_identifier() result[string, lex_error] {
         }
         result::ok(out)
     }
+
 func (self: &mut lexer) read_number() result[string, lex_error] {
         string out = ""
         while !self.is_eof() {
@@ -137,6 +141,7 @@ func (self: &mut lexer) read_number() result[string, lex_error] {
         }
         result::ok(out)
     }
+
 func (self: &mut lexer) read_string() result[string, lex_error] {
         string out = self.advance()?        while !self.is_eof() {
             let ch = self.advance()?
@@ -154,6 +159,7 @@ func (self: &mut lexer) read_string() result[string, lex_error] {
         }
         result::err(self.error("unterminated string literal"))
     }
+
 func (self: &mut lexer) read_symbol() result[string, lex_error] {
         vec[string] multi = vec[string] {            "->",
             ":",
@@ -184,18 +190,21 @@ func (self: &mut lexer) read_symbol() result[string, lex_error] {
         }
         result::err(self.error("unexpected character"))
     }
+
 func (self: lexer) match_text(string text) bool {
         if self.index + len(text) > len(self.source) {
             return false
         }
         slice(self.source, self.index, self.index + len(text)) == text
     }
+
 func (self: lexer) peek() result[string, lex_error] {
         if self.is_eof() {
             return result::err(self.error("unexpected eof"))
         }
         result::ok(char_at(self.source, self.index))
     }
+
 func (self: &mut lexer) advance() result[string, lex_error] {
         if self.is_eof() {
             return result::err(self.error("unexpected eof"))
@@ -209,9 +218,11 @@ func (self: &mut lexer) advance() result[string, lex_error] {
         }
         result::ok(ch)
     }
+
 func (self: lexer) is_eof() bool {
         self.index >= len(self.source)
     }
+
 func (self: lexer) error(string message) lex_error {
         lex_error {
             message: message,

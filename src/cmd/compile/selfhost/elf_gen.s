@@ -103,9 +103,11 @@ func new_elf_builder() ELFBuilder {
         symbol_table: []byte{},
     }
 }
+
 func (builder: &mut ELFBuilder) add_code([]byte code) {
     builder.code_section = append_slice(builder.code_section, code)
 }
+
 func (builder: &mut ELFBuilder) generate() []byte {
     let mut buffer: []byte = []byte{}
     return buffer
