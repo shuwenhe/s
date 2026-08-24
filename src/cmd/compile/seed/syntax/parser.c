@@ -1652,6 +1652,14 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 
 	{
 		size_t lt = strlen(*out_type);
+		/* `mut` qualifies the binding, not the declared value type.  The
+		 * lexer/parser currently joins type tokens without whitespace, so a
+		 * parameter such as `RawChan mut ch` arrives here as `RawChanmut`.
+		 * Keep the semantic type canonical for field and method lookup. */
+		if (lt > 3 && strcmp(*out_type + lt - 3, "mut") == 0) {
+			(*out_type)[lt - 3] = '\0';
+			lt -= 3;
+		}
 		if (lt > 0) {
 			char last = (*out_type)[lt - 1];
 
