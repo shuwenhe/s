@@ -13,6 +13,7 @@ struct server {
     int port
     []route_entry routes
 }
+
 func (s *server) add_route(string method, string path, handler_func handler) {
     s.routes.push(route_entry {
         method: method,
@@ -20,5 +21,6 @@ func (s *server) add_route(string method, string path, handler_func handler) {
         handler: handler,
     })
 }
+
 func (s *server) serve() {
 }
