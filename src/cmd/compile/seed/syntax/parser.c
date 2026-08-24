@@ -612,6 +612,16 @@ static ast_node *parse_primary(parser *p) {
 		return node;
 	}
 	if (match(p, TOKEN_LPAREN)) {
+		if (match(p, TOKEN_RPAREN)) {
+			node = ast_new(AST_NUMBER_EXPR, tok->pos);
+			if (!node) return NULL;
+			node->as.number_expr.literal = dup_cstr("0");
+			if (!node->as.number_expr.literal) {
+				ast_free(node);
+				return NULL;
+			}
+			return node;
+		}
 		node = parse_expression(p);
 		if (!node) {
 			return NULL;
@@ -697,6 +707,33 @@ static ast_node *parse_call(parser *p) {
 			indexed->as.index_expr.object = expr;
 			indexed->as.index_expr.index = index_expr;
 			expr = indexed;
+			continue;
+		}
+
+		if (check(p, TOKEN_COLON) && p->current + 1 < p->tokens->len &&
+			p->tokens->data[p->current + 1].type == TOKEN_COLON) {
+			char *qualified;
+			size_t qualified_len;
+			if (expr->kind != AST_IDENT_EXPR) {
+				parse_error(p, peek(p), "qualified name requires an identifier namespace");
+				ast_free(expr);
+				return NULL;
+			}
+			advance_tok(p);
+			advance_tok(p);
+			if (!expect(p, TOKEN_IDENTIFIER, "qualified name member")) {
+				ast_free(expr);
+				return NULL;
+			}
+			qualified_len = strlen(expr->as.ident_expr.name) + strlen(prev(p)->lexeme) + 3;
+			qualified = (char *)malloc(qualified_len);
+			if (!qualified) {
+				ast_free(expr);
+				return NULL;
+			}
+			snprintf(qualified, qualified_len, "%s::%s", expr->as.ident_expr.name, prev(p)->lexeme);
+			free(expr->as.ident_expr.name);
+			expr->as.ident_expr.name = qualified;
 			continue;
 		}
 
