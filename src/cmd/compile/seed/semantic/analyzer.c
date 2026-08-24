@@ -552,6 +552,8 @@ static flow_exit_kind stmt_exit_kind(ast_node *node) {
 			return FLOW_EXIT_BREAK;
 		case AST_CONTINUE_STMT:
 			return FLOW_EXIT_CONTINUE;
+		case AST_SROUTINE_STMT:
+			return FLOW_EXIT_NONE;
 		case AST_IF_STMT:
 			if (!node->as.if_stmt.else_branch) {
 				return FLOW_EXIT_NONE;
@@ -1304,14 +1306,14 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						return 0;
 					}
 				}
-				else if (decl->kind == AST_VAR_DECL) {
+				else if (decl->kind == AST_VAR_DECL || decl->kind == AST_CONST_DECL) {
 					const char *var_name = decl->as.var_decl.name;
 					const char *var_type = decl->as.var_decl.type_name ? decl->as.var_decl.type_name : TYPE_ANY;
 					status = scope_define(
 						ctx->current_scope,
 						var_name,
 						SYMBOL_VAR,
-						1,
+						decl->kind == AST_VAR_DECL,
 						0,
 						0,
 						var_type,
@@ -1408,6 +1410,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_USE_DECL:
 		case AST_EXTERN_DECL:
 		case AST_VAR_DECL:
+		case AST_CONST_DECL:
 			return 1;
 		case AST_BLOCK:
 			return analyze_block_with_new_scope(ctx, node);
@@ -1637,6 +1640,9 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
 				return 0;
 			}
+			return 1;
+		case AST_SROUTINE_STMT:
+			if (!analyze_expr(ctx, node->as.sroutine_stmt.call, &expr_type)) return 0;
 			return 1;
 		case AST_IF_STMT:
 			if (!analyze_expr(ctx, node->as.if_stmt.condition, &expr_type)) {

@@ -38,6 +38,7 @@
 #include "../semantic/scope.h"
 #include "../syntax/ast.h"
 #include "memory.h"
+#include "sroutine_abi.h"
 
 static int g_host_argc = 0;
 static char **g_host_argv = NULL;
@@ -2596,6 +2597,37 @@ typedef struct runtime_functions {
 	size_t cap;
 } runtime_functions;
 
+typedef struct runtime_sroutine_task {
+	long id;
+	sroutine_state state;
+	sroutine_park_reason park_reason;
+	const runtime_function *fn;
+	runtime_data_value *args;
+	size_t argc;
+} runtime_sroutine_task;
+
+typedef struct runtime_channel {
+	long id;
+	runtime_data_value *items;
+	size_t len;
+	size_t cap;
+} runtime_channel;
+
+typedef struct runtime_scheduler {
+	runtime_sroutine_task *task;
+	size_t task_len;
+	size_t task_cap;
+	size_t task_head;
+	runtime_channel *channel;
+	size_t channel_len;
+	size_t channel_cap;
+	long next_channel_id;
+	long next_sroutine_id;
+	long current_sroutine_id;
+} runtime_scheduler;
+
+static runtime_scheduler g_runtime_scheduler;
+
 static int is_blank(const char *s) {
 	while (*s) {
 		if (!isspace((unsigned char)*s)) {
@@ -3537,6 +3569,179 @@ static int execute_function(
 	runtime_values *out_return_fields,
 	compile_error *err,
 	int depth
+);
+
+static void scheduler_reset(void) {
+	size_t i;
+	for (i = g_runtime_scheduler.task_head; i < g_runtime_scheduler.task_len; i++) {
+		size_t j;
+		for (j = 0; j < g_runtime_scheduler.task[i].argc; j++) value_clear(&g_runtime_scheduler.task[i].args[j]);
+		free(g_runtime_scheduler.task[i].args);
+	}
+	for (i = 0; i < g_runtime_scheduler.channel_len; i++) {
+		size_t j;
+		for (j = 0; j < g_runtime_scheduler.channel[i].len; j++) value_clear(&g_runtime_scheduler.channel[i].items[j]);
+		free(g_runtime_scheduler.channel[i].items);
+	}
+	free(g_runtime_scheduler.task);
+	free(g_runtime_scheduler.channel);
+	memset(&g_runtime_scheduler, 0, sizeof(g_runtime_scheduler));
+	g_runtime_scheduler.next_channel_id = 1;
+	g_runtime_scheduler.next_sroutine_id = 1;
+	g_runtime_scheduler.current_sroutine_id = 0;
+}
+
+static runtime_channel *scheduler_find_channel(long id) {
+	size_t i;
+	for (i = 0; i < g_runtime_scheduler.channel_len; i++) {
+		if (g_runtime_scheduler.channel[i].id == id) return &g_runtime_scheduler.channel[i];
+	}
+	return NULL;
+}
+
+static int scheduler_make_channel(long capacity, runtime_data_value *out, compile_error *err) {
+	runtime_channel *channel;
+	if (capacity < 0) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "chan_make capacity must be non-negative");
+		return 0;
+	}
+	if (g_runtime_scheduler.channel_len == g_runtime_scheduler.channel_cap) {
+		size_t cap = g_runtime_scheduler.channel_cap ? g_runtime_scheduler.channel_cap * 2 : 8;
+		runtime_channel *next = (runtime_channel *)realloc(g_runtime_scheduler.channel, cap * sizeof(*next));
+		if (!next) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+		g_runtime_scheduler.channel = next;
+		g_runtime_scheduler.channel_cap = cap;
+	}
+	channel = &g_runtime_scheduler.channel[g_runtime_scheduler.channel_len++];
+	memset(channel, 0, sizeof(*channel));
+	channel->id = g_runtime_scheduler.next_channel_id++;
+	channel->cap = capacity > 0 ? (size_t)capacity : 1;
+	channel->items = (runtime_data_value *)calloc(channel->cap, sizeof(*channel->items));
+	if (!channel->items) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+	*out = value_make_int(channel->id);
+	return 1;
+}
+
+static int scheduler_send(long id, const runtime_data_value *value, compile_error *err) {
+	runtime_channel *channel = scheduler_find_channel(id);
+	if (!channel) { error_set(err, ERR_SEMANTIC, 0, 0, "unknown channel: %ld", id); return 0; }
+	if (channel->len == channel->cap) {
+		size_t cap = channel->cap * 2;
+		runtime_data_value *next = (runtime_data_value *)realloc(channel->items, cap * sizeof(*next));
+		if (!next) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+		channel->items = next;
+		channel->cap = cap;
+	}
+	memset(&channel->items[channel->len], 0, sizeof(channel->items[channel->len]));
+	if (!value_copy(&channel->items[channel->len], value)) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+	channel->len++;
+	return 1;
+}
+
+static int scheduler_spawn(const runtime_function *fn, const runtime_data_value *args, size_t argc, compile_error *err) {
+	runtime_sroutine_task *task;
+	size_t i;
+	if (g_runtime_scheduler.task_len == g_runtime_scheduler.task_cap) {
+		size_t cap = g_runtime_scheduler.task_cap ? g_runtime_scheduler.task_cap * 2 : 8;
+		runtime_sroutine_task *next = (runtime_sroutine_task *)realloc(g_runtime_scheduler.task, cap * sizeof(*next));
+		if (!next) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+		g_runtime_scheduler.task = next;
+		g_runtime_scheduler.task_cap = cap;
+	}
+	task = &g_runtime_scheduler.task[g_runtime_scheduler.task_len++];
+	memset(task, 0, sizeof(*task));
+	task->id = g_runtime_scheduler.next_sroutine_id++;
+	task->state = SROUTINE_RUNNABLE;
+	task->park_reason = SROUTINE_PARK_NONE;
+	task->fn = fn;
+	task->argc = argc;
+	task->args = argc ? (runtime_data_value *)calloc(argc, sizeof(*task->args)) : NULL;
+	if (argc && !task->args) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+	for (i = 0; i < argc; i++) {
+		if (!value_copy(&task->args[i], &args[i])) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+	}
+	return 1;
+}
+
+static int scheduler_transition(size_t task_index, sroutine_state state, sroutine_park_reason park_reason,
+	compile_error *err) {
+	runtime_sroutine_task *task;
+	if (task_index >= g_runtime_scheduler.task_len) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "unknown sroutine task index: %zu", task_index);
+		return 0;
+	}
+	task = &g_runtime_scheduler.task[task_index];
+	if (!sroutine_state_can_transition(task->state, state)) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "invalid sroutine state transition %d -> %d: %ld",
+			(int)task->state, (int)state, task->id);
+		return 0;
+	}
+	task->state = state;
+	task->park_reason = park_reason;
+	return 1;
+}
+
+static long scheduler_live_count(void) {
+	size_t i;
+	long count = 0;
+	for (i = 0; i < g_runtime_scheduler.task_len; i++) {
+		if (g_runtime_scheduler.task[i].state != SROUTINE_DEAD) count++;
+	}
+	return count;
+}
+
+static int scheduler_run_one(const runtime_program *prog, const runtime_labels *labels,
+	const runtime_functions *funcs, compile_error *err, int depth) {
+	runtime_sroutine_task task;
+	runtime_data_value ignored = value_make_int(0);
+	size_t i;
+	int ok;
+	long previous_sroutine_id;
+	size_t task_index;
+	if (g_runtime_scheduler.task_head >= g_runtime_scheduler.task_len) return 0;
+	task_index = g_runtime_scheduler.task_head++;
+	if (!scheduler_transition(task_index, SROUTINE_RUNNING, SROUTINE_PARK_NONE, err)) return -1;
+	task = g_runtime_scheduler.task[task_index];
+	previous_sroutine_id = g_runtime_scheduler.current_sroutine_id;
+	g_runtime_scheduler.current_sroutine_id = task.id;
+	ok = execute_function(prog, labels, funcs, task.fn, task.args, task.argc, NULL, &ignored, NULL, err, depth + 1);
+	g_runtime_scheduler.current_sroutine_id = previous_sroutine_id;
+	if (ok && !scheduler_transition(task_index, SROUTINE_DEAD, SROUTINE_PARK_NONE, err)) ok = 0;
+	value_clear(&ignored);
+	for (i = 0; i < task.argc; i++) value_clear(&task.args[i]);
+	free(task.args);
+	return ok ? 1 : -1;
+}
+
+static int scheduler_recv(const runtime_program *prog, const runtime_labels *labels,
+	const runtime_functions *funcs, long id, runtime_data_value *out, compile_error *err, int depth) {
+	runtime_channel *channel = scheduler_find_channel(id);
+	if (!channel) { error_set(err, ERR_SEMANTIC, 0, 0, "unknown channel: %ld", id); return 0; }
+	while (channel->len == 0) {
+		int ran = scheduler_run_one(prog, labels, funcs, err, depth);
+		if (ran < 0) return 0;
+		if (ran == 0) { error_set(err, ERR_SEMANTIC, 0, 0, "channel deadlock on: %ld", id); return 0; }
+		channel = scheduler_find_channel(id);
+	}
+	*out = channel->items[0];
+	if (channel->len > 1) memmove(channel->items, channel->items + 1, (channel->len - 1) * sizeof(*channel->items));
+	channel->len--;
+	memset(&channel->items[channel->len], 0, sizeof(channel->items[channel->len]));
+	return 1;
+}
+
+static int execute_function(
+	const runtime_program *prog,
+	const runtime_labels *labels,
+	const runtime_functions *funcs,
+	const runtime_function *fn,
+	const runtime_data_value *args,
+	size_t argc,
+	const runtime_values *caller_vals,
+	runtime_data_value *out_return,
+	runtime_values *out_return_fields,
+	compile_error *err,
+	int depth
 ) {
 	runtime_values vals = {0};
 	runtime_data_value pending_args[128];
@@ -3867,6 +4072,31 @@ static int execute_function(
 			pc++;
 			continue;
 		}
+		if (strcmp(ins->op, "SROUTINE") == 0) {
+			size_t spawn_argc = 0;
+			size_t spawn_base;
+			size_t j;
+			const runtime_function *spawn_fn = functions_find(funcs, ins->result);
+			if (!parse_size_t(ins->op1, &spawn_argc) || spawn_argc > pending_len) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "invalid sroutine arguments for: %s", ins->result);
+				values_free(&vals);
+				return 0;
+			}
+			if (!spawn_fn) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unknown sroutine function: %s", ins->result);
+				values_free(&vals);
+				return 0;
+			}
+			spawn_base = pending_len - spawn_argc;
+			if (!scheduler_spawn(spawn_fn, &pending_args[spawn_base], spawn_argc, err)) {
+				values_free(&vals);
+				return 0;
+			}
+			for (j = spawn_base; j < pending_len; j++) value_clear(&pending_args[j]);
+			pending_len = spawn_base;
+			pc++;
+			continue;
+		}
 		if (strcmp(ins->op, "CALL") == 0) {
 			size_t call_argc = 0;
 			runtime_data_value callee_ret = value_make_int(0);
@@ -3885,6 +4115,51 @@ static int execute_function(
 				return 0;
 			}
 			call_base = pending_len - call_argc;
+			if (strcmp(ins->op1, "__sroutine_abi_version") == 0 ||
+				strcmp(ins->op1, "__sroutine_current_id") == 0 ||
+				strcmp(ins->op1, "sroutine_count") == 0) {
+				long result_value = 0;
+				if (call_argc != 0) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "%s expects 0 args", ins->op1);
+					values_free(&vals);
+					return 0;
+				}
+				if (strcmp(ins->op1, "__sroutine_abi_version") == 0) result_value = SROUTINE_ABI_VERSION;
+				else if (strcmp(ins->op1, "__sroutine_current_id") == 0) result_value = g_runtime_scheduler.current_sroutine_id;
+				else result_value = scheduler_live_count();
+				callee_ret = value_make_int(result_value);
+				if (!values_set(&vals, ins->result, &callee_ret)) {
+					value_clear(&callee_ret);
+					values_free(&vals);
+					return 0;
+				}
+				value_clear(&callee_ret);
+				pc++;
+				continue;
+			}
+			if (strcmp(ins->op1, "chan_make") == 0 || strcmp(ins->op1, "chan_send") == 0 || strcmp(ins->op1, "chan_recv") == 0) {
+				int channel_ok = 0;
+				if (strcmp(ins->op1, "chan_make") == 0 && call_argc == 1 && pending_args[call_base].kind == RUNTIME_INT) {
+					channel_ok = scheduler_make_channel(pending_args[call_base].int_value, &callee_ret, err);
+				} else if (strcmp(ins->op1, "chan_send") == 0 && call_argc == 2 && pending_args[call_base].kind == RUNTIME_INT) {
+					channel_ok = scheduler_send(pending_args[call_base].int_value, &pending_args[call_base + 1], err);
+					if (channel_ok) callee_ret = value_make_int(0);
+				} else if (strcmp(ins->op1, "chan_recv") == 0 && call_argc == 1 && pending_args[call_base].kind == RUNTIME_INT) {
+					channel_ok = scheduler_recv(prog, labels, funcs, pending_args[call_base].int_value, &callee_ret, err, depth);
+				} else {
+					error_set(err, ERR_SEMANTIC, 0, 0, "invalid channel call: %s", ins->op1);
+				}
+				for (j = call_base; j < pending_len; j++) value_clear(&pending_args[j]);
+				pending_len = call_base;
+				if (!channel_ok || !values_set(&vals, ins->result, &callee_ret)) {
+					value_clear(&callee_ret);
+					values_free(&vals);
+					return 0;
+				}
+				value_clear(&callee_ret);
+				pc++;
+				continue;
+			}
 			if (strncmp(ins->op1, "@method.", 8) == 0) {
 				runtime_data_value type_tag = value_make_int(0);
 				char type_field[1024];
@@ -4049,6 +4324,7 @@ bool runtime_execute_text_with_argv(
 		return false;
 	}
 	runtime_profile_init_from_env();
+	scheduler_reset();
 
 	g_host_argc = argc;
 	g_host_argv = argv;
@@ -4101,6 +4377,7 @@ bool runtime_execute_text_with_argv(
 	functions_free(&funcs);
 	g_host_argc = 0;
 	g_host_argv = NULL;
+	scheduler_reset();
 	return ok ? true : false;
 }
 
@@ -4126,6 +4403,7 @@ bool runtime_execute_text_i64(
 	int ok;
 
 	error_clear(err);
+	scheduler_reset();
 	if (!target_text || !entry_function || !out_return || (argc > 0 && !args)) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "invalid typed runtime input");
 		return false;
@@ -4175,6 +4453,7 @@ bool runtime_execute_text_i64(
 	program_free(&prog);
 	labels_free(&labels);
 	functions_free(&funcs);
+	scheduler_reset();
 	return ok ? true : false;
 }
 

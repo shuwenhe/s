@@ -23,6 +23,7 @@ struct MirEvalStmt {
     string op
     vec[string] args
 }
+
 enum MirStatement {
     assign(MirAssignStmt),
     eval(MirEvalStmt),
