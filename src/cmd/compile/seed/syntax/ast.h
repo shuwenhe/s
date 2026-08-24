@@ -14,11 +14,13 @@ typedef enum ast_kind {
 	AST_RETURN_STMT,
 	AST_BREAK_STMT,
 	AST_CONTINUE_STMT,
+	AST_SROUTINE_STMT,
 	AST_EXPR_STMT,
 	AST_PACKAGE_DECL,
 	AST_USE_DECL,
 	AST_EXTERN_DECL,
 	AST_VAR_DECL,
+	AST_CONST_DECL,
 	AST_IF_STMT,
 	AST_WHILE_STMT,
 	AST_FOR_STMT,
@@ -75,6 +77,10 @@ struct ast_node {
 		struct {
 			ast_node *value;
 		} return_stmt;
+
+		struct {
+			ast_node *call;
+		} sroutine_stmt;
 
 		struct {
 			ast_node *expr;

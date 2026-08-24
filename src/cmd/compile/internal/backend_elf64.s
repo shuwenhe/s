@@ -189,6 +189,7 @@ struct runtime_metrics {
     int gc_heap_goal
     int gc_alloc_since_cycle
 }
+
 enum value {
     int(int),
     string(string),
@@ -3868,6 +3869,7 @@ func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[wr
         _ : result::err(backend_error { message: "backend error: unsupported call target" }),
     }
 }
+
     func eval_panic_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
     if args.len() != 1 {
         return result::err(backend_error { message: "backend error: panic expects exactly one argument" })

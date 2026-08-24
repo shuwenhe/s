@@ -43,12 +43,10 @@ func read_mem_stats() MemStats {
     }
 }
 
-func num_goroutine() int {
-    _sched.gs.len()
+func num_sroutine() int {
+    _sched.task.len()
 }
 
-func gosched() () {
-}
 extern "intrinsic" func __runtime_panic(string msg) ()
 extern "intrinsic" func __runtime_recover() option[string]
 
