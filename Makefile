@@ -71,6 +71,27 @@ seed-runtime-regression: seed-runtime-regression-bin
 seed-network-tests: seed-runtime-regression-bin
 	@./bin/seed_runtime_regression --network-only
 
+sroutine-check: selfhost
+	@mkdir -p /tmp/s_sroutine_check
+	@./bin/s src/runtime/sroutine_abi.s /tmp/s_sroutine_check/sroutine_abi.ir
+	@test -s /tmp/s_sroutine_check/sroutine_abi.ir
+	@./bin/s src/net/sroutine_demo.s /tmp/s_sroutine_check/sroutine_demo.ir
+	@test -s /tmp/s_sroutine_check/sroutine_demo.ir
+	@./bin/s --emit-bin /tmp/s_sroutine_check/sroutine_demo.ir /tmp/s_sroutine_check/sroutine_demo
+	@/tmp/s_sroutine_check/sroutine_demo
+	@./bin/s test/runtime/sroutine_abi_test.s /tmp/s_sroutine_check/sroutine_abi_test.ir
+	@test -s /tmp/s_sroutine_check/sroutine_abi_test.ir
+	@./bin/s --emit-bin /tmp/s_sroutine_check/sroutine_abi_test.ir /tmp/s_sroutine_check/sroutine_abi_test
+	@/tmp/s_sroutine_check/sroutine_abi_test
+	@./bin/s test/runtime/sroutine_deadlock_test.s /tmp/s_sroutine_check/sroutine_deadlock_test.ir
+	@test -s /tmp/s_sroutine_check/sroutine_deadlock_test.ir
+	@./bin/s --emit-bin /tmp/s_sroutine_check/sroutine_deadlock_test.ir /tmp/s_sroutine_check/sroutine_deadlock_test
+	@if /tmp/s_sroutine_check/sroutine_deadlock_test >/tmp/s_sroutine_check/deadlock.out 2>&1; then \
+		echo "expected sroutine deadlock detection"; exit 1; \
+	else \
+		rg -q "channel deadlock" /tmp/s_sroutine_check/deadlock.out; \
+	fi
+
 seed-compiler-bin:
 	@mkdir -p ./bin
 	@echo "Building seed compiler..."
@@ -165,7 +186,7 @@ selfhost-runtime-check:
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
 
-.PHONY: help selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+.PHONY: help selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 verify-true-selfhost:
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"

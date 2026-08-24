@@ -4,6 +4,7 @@ struct ParseError {
     string typ
     string text
 }
+
 func (e *ParseError) Error() string {
     "invalid " + e.typ + ": " + e.text
 }
@@ -12,6 +13,7 @@ struct AddrError {
     string err
     string addr
 }
+
 func (e *AddrError) Error() string {
     if e == nil {
         return "<nil>"
@@ -26,11 +28,13 @@ func (e *AddrError) Error() string {
 struct UnknownNetworkError {
     string net
 }
+
 func (e *UnknownNetworkError) Error() string {
     "unknown network " + e.net
 }
 
 struct timeoutError {}
+
 func (e *timeoutError) Error() string { "i/o timeout" }
 
 struct OpError {
@@ -40,6 +44,7 @@ struct OpError {
     Addr addr
     string err
 }
+
 func (e *OpError) Error() string {
     if e == nil {
         return "<nil>"
