@@ -291,16 +291,53 @@ static bool test_parser_array_literal(void) {
 	}
 
 	stmt = result.root->as.program.statements.data[0];
-	ok = stmt->kind == AST_LET_STMT;
+	ok = stmt->kind == AST_VAR_DECL;
 	if (!ok) {
 		parser_parse_result_free(&result);
 		return false;
 	}
 
-	expr = stmt->as.let_stmt.value;
+	expr = stmt->as.var_decl.value;
 	ok = expr->kind == AST_ARRAY_EXPR;
 	ok = ok && expr->as.array_expr.items.len == 3;
 
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_const_decl(void) {
+	const char *src = "const ABI_VERSION = 1; fn main() int { return ABI_VERSION; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	bool ok;
+	int i;
+
+	if (!lexer_scan(src, &tokens, &err)) return false;
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root || result.root->as.program.statements.len != 2 ||
+		result.root->as.program.statements.data[0]->kind != AST_CONST_DECL) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	ir_init(&ir);
+	ok = ir_generate_from_ast(result.root, &ir, &err);
+	if (ok) {
+		ok = false;
+		for (i = 0; i < ir.instruction_count; i++) {
+			if (ir.instructions[i].type == IR_RET && strcmp(ir.instructions[i].result, "1") == 0) {
+				ok = true;
+				break;
+			}
+		}
+	}
+	ir_free(&ir);
 	parser_parse_result_free(&result);
 	return ok;
 }
@@ -1578,6 +1615,7 @@ int main(void) {
 	RUN_TEST(test_parser_let_and_precedence);
 	RUN_TEST(test_parser_return_and_block);
 	RUN_TEST(test_parser_array_literal);
+	RUN_TEST(test_parser_const_decl);
 	RUN_TEST(test_parser_dotted_package_decl);
 	RUN_TEST(test_parser_dotted_use_decl);
 	RUN_TEST(test_parser_use_selector_list);
