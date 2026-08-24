@@ -128,7 +128,7 @@ func find_runnable() int {
         }
     }
     _sched.mu.unlock()
-    -1
+    return -1
 }
 
 func run_sroutine(int sroutine_id) () {
@@ -138,7 +138,7 @@ func run_sroutine(int sroutine_id) () {
 }
 
 func m_idle() () {
-    let i = 0
+    var i = 0
     while i < 100 {
         let next = find_runnable()
         if next >= 0 {
@@ -161,7 +161,7 @@ func try_wakeup_idle_m() () {
 }
 
 func sroutine_transition(int sroutine_id, int status, int park_reason) bool {
-    let i = 0
+    var i = 0
     while i < _sched.task.len() {
         let g = _sched.task[i]
         if g.id == sroutine_id {
@@ -198,7 +198,7 @@ struct SroutineInfo {
 
 func sroutine_list() vec[SroutineInfo] {
     let result = vec[SroutineInfo]()
-    let i = 0
+    var i = 0
     while i < _sched.task.len() {
         let g = _sched.task[i]
         if g.id >= 0 {
@@ -215,7 +215,7 @@ func sroutine_list() vec[SroutineInfo] {
 
 func runtime_init() () {
     let num = __runtime_num_cpu()
-    let i = 0
+    var i = 0
     while i < num {
         let p = P {
             id:         i,
