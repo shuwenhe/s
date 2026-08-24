@@ -1151,6 +1151,30 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					"call callee is missing");
 				return 0;
 			}
+			if (node->as.call_expr.callee->kind == AST_INDEX_EXPR &&
+				node->as.call_expr.callee->as.index_expr.object &&
+				node->as.call_expr.callee->as.index_expr.object->kind == AST_IDENT_EXPR &&
+				strcmp(node->as.call_expr.callee->as.index_expr.object->as.ident_expr.name, "vec") == 0) {
+				ast_node *type_expr = node->as.call_expr.callee->as.index_expr.index;
+				const char *element_type = TYPE_ANY;
+				char *vector_type;
+				size_t vector_type_len;
+				if (node->as.call_expr.args.len != 0) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"vec[T]() expects 0 arguments");
+					return 0;
+				}
+				if (type_expr && type_expr->kind == AST_IDENT_EXPR) element_type = type_expr->as.ident_expr.name;
+				vector_type_len = strlen(element_type) + 6;
+				vector_type = (char *)malloc(vector_type_len);
+				if (!vector_type) {
+					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+					return 0;
+				}
+				snprintf(vector_type, vector_type_len, "vec[%s]", element_type);
+				*out_type = vector_type;
+				return 1;
+			}
 			if (node->as.call_expr.callee->kind == AST_MEMBER_EXPR) {
 				ast_node *member = node->as.call_expr.callee;
 				ast_node *trait_decl;
@@ -1158,6 +1182,40 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				char method_name[256];
 				if (!analyze_expr(ctx, member->as.member_expr.object, &lhs_type)) {
 					return 0;
+				}
+				if ((lhs_type && strncmp(lhs_type, "vec[", 4) == 0) ||
+					(lhs_type && strcmp(lhs_type, TYPE_ARRAY) == 0)) {
+					const char *method = member->as.member_expr.member;
+					const char *builtin = NULL;
+					size_t expected = 0;
+					const char *return_type = TYPE_UNIT;
+					if (strcmp(method, "push") == 0) { builtin = "__vec_push"; expected = 1; }
+					else if (strcmp(method, "len") == 0) { builtin = "__vec_len"; return_type = TYPE_INT; }
+					else if (strcmp(method, "is_empty") == 0) { builtin = "__vec_is_empty"; return_type = TYPE_BOOL; }
+					else if (strcmp(method, "get") == 0) { builtin = "__vec_get"; expected = 1; return_type = TYPE_ANY; }
+					else if (strcmp(method, "set") == 0) { builtin = "__vec_set"; expected = 2; }
+					if (!builtin) {
+						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+							"vector has no method '%s'", method);
+						return 0;
+					}
+					if (node->as.call_expr.args.len != expected) {
+						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+							"call to vector.%s expects %zu arguments, got %zu", method, expected,
+							node->as.call_expr.args.len);
+						return 0;
+					}
+					for (i = 0; i < node->as.call_expr.args.len; i++) {
+						if (!analyze_expr(ctx, node->as.call_expr.args.data[i], &rhs_type)) return 0;
+					}
+					free(member->as.member_expr.resolved_method);
+					member->as.member_expr.resolved_method = dup_cstr(builtin);
+					if (!member->as.member_expr.resolved_method) {
+						error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+						return 0;
+					}
+					*out_type = return_type;
+					return 1;
 				}
 				trait_decl = find_trait_decl(ctx, lhs_type);
 				if (trait_decl) required = find_trait_method(trait_decl, member->as.member_expr.member);

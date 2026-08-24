@@ -1100,7 +1100,7 @@ static int looks_like_typed_binding(parser *p) {
 
 		if (p->current + 1 < p->tokens->len) {
 			token_type nt = p->tokens->data[p->current + 1].type;
-			if (nt == TOKEN_LPAREN || nt == TOKEN_LBRACKET) {
+			if (nt == TOKEN_LPAREN || nt == TOKEN_LBRACKET || nt == TOKEN_DOT) {
 				p->current = saved;
 				return 0;
 			}
