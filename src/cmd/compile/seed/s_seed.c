@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -141,6 +142,64 @@ bool seed_compile_file(const char *input_path, const char *output_path, compile_
 	return ok;
 }
 
+bool seed_compile_files(int input_count, char **input_paths, const char *output_path, compile_error *err) {
+	char *unit_source = NULL;
+	size_t unit_len = 0;
+	FILE *out = NULL;
+	int i;
+	bool ok = false;
+	if (input_count < 1 || !input_paths || !output_path) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "compile-unit requires at least one source input");
+		return false;
+	}
+	unit_source = (char *)calloc(1, 1);
+	if (!unit_source) {
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+		return false;
+	}
+	for (i = 0; i < input_count; i++) {
+		char *source = NULL;
+		size_t source_len;
+		char *next;
+		if (!read_file_text(input_paths[i], &source, err)) goto done;
+		source_len = strlen(source);
+		if (source_len > SIZE_MAX - unit_len - 2) {
+			free(source);
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "compile-unit source is too large");
+			goto done;
+		}
+		next = (char *)realloc(unit_source, unit_len + source_len + 2);
+		if (!next) {
+			free(source);
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			goto done;
+		}
+		unit_source = next;
+		memcpy(unit_source + unit_len, source, source_len);
+		unit_len += source_len;
+		unit_source[unit_len++] = '\n';
+		unit_source[unit_len] = '\0';
+		free(source);
+	}
+	out = fopen(output_path, "wb");
+	if (!out) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open output: %s", output_path);
+		goto done;
+	}
+	ok = seed_compile_source_text(unit_source, out, err);
+	if (fclose(out) != 0) {
+		out = NULL;
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to close output: %s", output_path);
+		ok = false;
+	} else {
+		out = NULL;
+	}
+done:
+	if (out) fclose(out);
+	free(unit_source);
+	return ok;
+}
+
 #ifndef SEED_COMPILE_ONLY
 static void write_hex(FILE *out, const char *text) {
 	static const char digits[] = "0123456789abcdef";
@@ -269,6 +328,7 @@ static void print_usage(const char *argv0) {
 	fprintf(stderr, "  %s --bootstrap <compiler_source.s> [output_dir]\n", argv0);
 	fprintf(stderr, "  %s --dump-tokens <input.s> <output.tokens>\n", argv0);
 	fprintf(stderr, "  %s --link-ir <output.ir> <input.ir>...\n", argv0);
+	fprintf(stderr, "  %s --compile-unit <output.ir> <input.s>...\n", argv0);
 }
 
 int main(int argc, char **argv) {
@@ -294,6 +354,19 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 		printf("linked %d IR modules -> %s\n", argc - 3, argv[2]);
+		return 0;
+	}
+
+	if (argc >= 2 && strcmp(argv[1], "--compile-unit") == 0) {
+		if (argc < 4) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (!seed_compile_files(argc - 3, &argv[3], argv[2], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("compiled %d S modules -> %s\n", argc - 3, argv[2]);
 		return 0;
 	}
 
