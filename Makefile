@@ -98,6 +98,17 @@ seed-c-abi-test: seed-compiler-bin
 	@gcc -std=c11 -Wall -Wextra -Werror -o /tmp/s_seed_c_abi_test/caller test/c_abi/caller.c $$(if [ "$$(uname -s)" = Darwin ]; then echo; else echo -ldl; fi)
 	@/tmp/s_seed_c_abi_test/caller /tmp/s_seed_c_abi_test/libs_add.$$(if [ "$$(uname -s)" = Darwin ]; then echo dylib; else echo so; fi)
 
+.PHONY: seed-module-link-test
+seed-module-link-test: seed-compiler-bin
+	@mkdir -p /tmp/s_seed_module_link_test
+	@./bin/s_seed test/modules/provider.s /tmp/s_seed_module_link_test/provider.ir
+	@./bin/s_seed test/modules/main.s /tmp/s_seed_module_link_test/main.ir
+	@./bin/s_seed --link-ir /tmp/s_seed_module_link_test/program.ir /tmp/s_seed_module_link_test/provider.ir /tmp/s_seed_module_link_test/main.ir
+	@! ./bin/s_seed --link-ir /tmp/s_seed_module_link_test/duplicate.ir /tmp/s_seed_module_link_test/provider.ir /tmp/s_seed_module_link_test/provider.ir >/dev/null 2>&1
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-bin /tmp/s_seed_module_link_test/program.ir /tmp/s_seed_module_link_test/program
+	@/tmp/s_seed_module_link_test/program
+	@echo "Seed multi-module IR link test passed."
+
 selfhost: seed-compiler-bin
 	@mkdir -p $(SELFHOST_DIR) ./bin
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --bootstrap src/cmd/compile/main.s $(SELFHOST_DIR)

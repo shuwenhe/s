@@ -188,6 +188,163 @@ static bool seed_dump_tokens_file(const char *input_path, const char *output_pat
 	free(source_text);
 	return true;
 }
+
+typedef struct linked_function_names {
+	char **data;
+	size_t len;
+	size_t cap;
+} linked_function_names;
+
+static void linked_function_names_free(linked_function_names *names) {
+	size_t i;
+	for (i = 0; i < names->len; i++) free(names->data[i]);
+	free(names->data);
+	memset(names, 0, sizeof(*names));
+}
+
+static bool linked_function_add(linked_function_names *names, const char *name, compile_error *err) {
+	size_t i;
+	char *copy;
+	for (i = 0; i < names->len; i++) {
+		if (strcmp(names->data[i], name) == 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "duplicate linked function: %s", name);
+			return false;
+		}
+	}
+	if (names->len == names->cap) {
+		size_t next_cap = names->cap ? names->cap * 2 : 32;
+		char **next = (char **)realloc(names->data, next_cap * sizeof(*next));
+		if (!next) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return false;
+		}
+		names->data = next;
+		names->cap = next_cap;
+	}
+	copy = (char *)malloc(strlen(name) + 1);
+	if (!copy) {
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+		return false;
+	}
+	strcpy(copy, name);
+	names->data[names->len++] = copy;
+	return true;
+}
+
+static bool linked_ir_write_line(FILE *out, const char *line, size_t module_index, compile_error *err) {
+	const char *first_sep;
+	const char *second_sep;
+	size_t op_len;
+	bool is_label_record;
+
+	first_sep = strchr(line, '|');
+	if (!first_sep) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "invalid IR record without fields");
+		return false;
+	}
+	op_len = (size_t)(first_sep - line);
+	is_label_record = (op_len == 5 && strncmp(line, "LABEL", 5) == 0) ||
+		(op_len == 4 && strncmp(line, "JUMP", 4) == 0) ||
+		(op_len == 13 && strncmp(line, "JUMP_IF_FALSE", 13) == 0);
+	if (!is_label_record) {
+		if (fprintf(out, "%s\n", line) < 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed writing linked IR");
+			return false;
+		}
+		return true;
+	}
+	second_sep = strchr(first_sep + 1, '|');
+	if (!second_sep) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "invalid control-flow IR record");
+		return false;
+	}
+	if (fprintf(out, "%.*s|m%zu_%.*s%s\n", (int)op_len, line, module_index,
+		(int)(second_sep - first_sep - 1), first_sep + 1, second_sep) < 0) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed writing linked IR");
+		return false;
+	}
+	return true;
+}
+
+static bool seed_link_ir_files(const char *output_path, int input_count, char **input_paths, compile_error *err) {
+	FILE *out = NULL;
+	linked_function_names names = {0};
+	bool ok = false;
+	int input_index;
+
+	if (input_count < 1) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "at least one IR input is required");
+		return false;
+	}
+	out = fopen(output_path, "wb");
+	if (!out) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open linked output: %s", output_path);
+		return false;
+	}
+	fputs("SSEED-TARGET-V1\n", out);
+	for (input_index = 0; input_index < input_count; input_index++) {
+		char *text = NULL;
+		char *cursor;
+		bool first_line = true;
+		if (!read_file_text(input_paths[input_index], &text, err)) goto done;
+		cursor = text;
+		while (*cursor) {
+			char *line = cursor;
+			char *newline = strchr(cursor, '\n');
+			if (newline) {
+				*newline = '\0';
+				cursor = newline + 1;
+			} else {
+				cursor += strlen(cursor);
+			}
+			if (first_line) {
+				first_line = false;
+				if (strcmp(line, "SSEED-TARGET-V1") != 0) {
+					error_set(err, ERR_SEMANTIC, 1, 1, "invalid target header in %s", input_paths[input_index]);
+					free(text);
+					goto done;
+				}
+				continue;
+			}
+			if (strncmp(line, "FUNC_BEGIN|", 11) == 0) {
+				const char *name = line + 11;
+				const char *sep = strchr(name, '|');
+				char function_name[256];
+				size_t name_len;
+				if (!sep || (name_len = (size_t)(sep - name)) == 0 || name_len >= sizeof(function_name)) {
+					error_set(err, ERR_SEMANTIC, 0, 0, "invalid linked function record in %s", input_paths[input_index]);
+					free(text);
+					goto done;
+				}
+				memcpy(function_name, name, name_len);
+				function_name[name_len] = '\0';
+				if (!linked_function_add(&names, function_name, err)) {
+					free(text);
+					goto done;
+				}
+			}
+			if (*line && !linked_ir_write_line(out, line, (size_t)input_index, err)) {
+				free(text);
+				goto done;
+			}
+		}
+		free(text);
+	}
+	if (ferror(out)) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed writing linked output: %s", output_path);
+		goto done;
+	}
+	ok = true;
+
+done:
+	if (out && fclose(out) != 0 && ok) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to close linked output: %s", output_path);
+		ok = false;
+	}
+	linked_function_names_free(&names);
+	if (!ok) remove(output_path);
+	return ok;
+}
 #endif
 
 #ifndef SEED_COMPILE_ONLY
@@ -200,6 +357,7 @@ static void print_usage(const char *argv0) {
 	fprintf(stderr, "  %s --probe-backend <native|c-abi|cuda|cann>\n", argv0);
 	fprintf(stderr, "  %s --bootstrap <compiler_source.s> [output_dir]\n", argv0);
 	fprintf(stderr, "  %s --dump-tokens <input.s> <output.tokens>\n", argv0);
+	fprintf(stderr, "  %s --link-ir <output.ir> <input.ir>...\n", argv0);
 }
 
 int main(int argc, char **argv) {
@@ -215,6 +373,19 @@ int main(int argc, char **argv) {
 			print_compile_error(&err);
 			return 1;
 		}
+		return 0;
+	}
+
+	if (argc >= 2 && strcmp(argv[1], "--link-ir") == 0) {
+		if (argc < 4) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (!seed_link_ir_files(argv[2], argc - 3, &argv[3], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("linked %d modules -> %s\n", argc - 3, argv[2]);
 		return 0;
 	}
 
