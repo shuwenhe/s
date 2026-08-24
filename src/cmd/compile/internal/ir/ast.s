@@ -11,6 +11,7 @@ struct package_ir {
     string name
     vec[decl_ir] decls
 }
+
 enum decl_ir {
     func(func_decl),
     r#type(type_decl),
@@ -42,6 +43,7 @@ struct const_decl { string name, string value }
 struct method_decl { string receiver_name, string receiver_type, func_decl method }
 
 struct block_ir { vec[stmt_ir] statements, option[expr_ir] final_expr }
+
 enum stmt_ir {
     let(var_stmt),
     assign(assign_stmt),
@@ -62,6 +64,7 @@ struct c_for_stmt { stmt_ir init, expr_ir condition, stmt_ir step, block_ir body
 struct expr_stmt { expr_ir expr }
 
 struct return_stmt { option[expr_ir] value }
+
 enum expr_ir {
     int(int),
     string(string),

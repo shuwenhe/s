@@ -18,6 +18,7 @@ static size_t next_block_id = 1;
 
 static ast_node *parse_extern_decl(parser *p);
 static ast_node *parse_var_decl(parser *p);
+static ast_node *parse_const_decl(parser *p);
 static ast_node *parse_export_decl(parser *p);
 static ast_node *parse_binding_statement(parser *p, int is_mutable);
 static ast_node *parse_typed_binding_statement(parser *p, int is_mutable);
@@ -86,11 +87,13 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_RETURN_STMT: return "RETURN_STMT";
 			case AST_BREAK_STMT: return "BREAK_STMT";
 			case AST_CONTINUE_STMT: return "CONTINUE_STMT";
+		case AST_SROUTINE_STMT: return "SROUTINE_STMT";
 		case AST_EXPR_STMT: return "EXPR_STMT";
 		case AST_PACKAGE_DECL: return "PACKAGE_DECL";
 		case AST_USE_DECL: return "USE_DECL";
 		case AST_EXTERN_DECL: return "EXTERN_DECL";
 		case AST_VAR_DECL: return "VAR_DECL";
+		case AST_CONST_DECL: return "CONST_DECL";
 		case AST_IF_STMT: return "IF_STMT";
 		case AST_WHILE_STMT: return "WHILE_STMT";
 		case AST_FOR_STMT: return "FOR_STMT";
@@ -167,6 +170,9 @@ void ast_free(ast_node *node) {
 			case AST_BREAK_STMT:
 			case AST_CONTINUE_STMT:
 				break;
+		case AST_SROUTINE_STMT:
+			ast_free(node->as.sroutine_stmt.call);
+			break;
 		case AST_EXPR_STMT:
 			ast_free(node->as.expr_stmt.expr);
 			free(node->as.expr_stmt.inferred_type);
@@ -194,6 +200,7 @@ void ast_free(ast_node *node) {
 			free(node->as.extern_decl.return_type);
 			break;
 		case AST_VAR_DECL:
+		case AST_CONST_DECL:
 			free(node->as.var_decl.name);
 			free(node->as.var_decl.type_name);
 			ast_free(node->as.var_decl.value);
@@ -605,6 +612,16 @@ static ast_node *parse_primary(parser *p) {
 		return node;
 	}
 	if (match(p, TOKEN_LPAREN)) {
+		if (match(p, TOKEN_RPAREN)) {
+			node = ast_new(AST_NUMBER_EXPR, tok->pos);
+			if (!node) return NULL;
+			node->as.number_expr.literal = dup_cstr("0");
+			if (!node->as.number_expr.literal) {
+				ast_free(node);
+				return NULL;
+			}
+			return node;
+		}
 		node = parse_expression(p);
 		if (!node) {
 			return NULL;
@@ -690,6 +707,33 @@ static ast_node *parse_call(parser *p) {
 			indexed->as.index_expr.object = expr;
 			indexed->as.index_expr.index = index_expr;
 			expr = indexed;
+			continue;
+		}
+
+		if (check(p, TOKEN_COLON) && p->current + 1 < p->tokens->len &&
+			p->tokens->data[p->current + 1].type == TOKEN_COLON) {
+			char *qualified;
+			size_t qualified_len;
+			if (expr->kind != AST_IDENT_EXPR) {
+				parse_error(p, peek(p), "qualified name requires an identifier namespace");
+				ast_free(expr);
+				return NULL;
+			}
+			advance_tok(p);
+			advance_tok(p);
+			if (!expect(p, TOKEN_IDENTIFIER, "qualified name member")) {
+				ast_free(expr);
+				return NULL;
+			}
+			qualified_len = strlen(expr->as.ident_expr.name) + strlen(prev(p)->lexeme) + 3;
+			qualified = (char *)malloc(qualified_len);
+			if (!qualified) {
+				ast_free(expr);
+				return NULL;
+			}
+			snprintf(qualified, qualified_len, "%s::%s", expr->as.ident_expr.name, prev(p)->lexeme);
+			free(expr->as.ident_expr.name);
+			expr->as.ident_expr.name = qualified;
 			continue;
 		}
 
@@ -948,7 +992,9 @@ static ast_node *parse_block(parser *p) {
 	while (!check(p, TOKEN_RBRACE) && !is_at_end(p)) {
 
 		ast_node *stmt = NULL;
-		if ((check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_LBRACKET)) && looks_like_typed_binding(p)) {
+		if ((check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_LBRACKET)) &&
+			!(check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "sroutine") == 0) &&
+			looks_like_typed_binding(p)) {
 			stmt = parse_typed_binding_statement(p, 1);
 			if (!stmt) {
 				ast_free(block);
@@ -1091,7 +1137,7 @@ static int looks_like_typed_binding(parser *p) {
 
 		if (p->current + 1 < p->tokens->len) {
 			token_type nt = p->tokens->data[p->current + 1].type;
-			if (nt == TOKEN_LPAREN || nt == TOKEN_LBRACKET) {
+			if (nt == TOKEN_LPAREN || nt == TOKEN_LBRACKET || nt == TOKEN_DOT) {
 				p->current = saved;
 				return 0;
 			}
@@ -1170,6 +1216,27 @@ static ast_node *parse_expr_statement(parser *p) {
 		return NULL;
 	}
 
+	if (!consume_optional_semicolon(p)) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
+}
+
+static ast_node *parse_sroutine_statement(parser *p) {
+	const token *keyword = advance_tok(p);
+	ast_node *node = ast_new(AST_SROUTINE_STMT, keyword->pos);
+	if (!node) {
+		return NULL;
+	}
+	node->as.sroutine_stmt.call = parse_expression(p);
+	if (!node->as.sroutine_stmt.call || node->as.sroutine_stmt.call->kind != AST_CALL_EXPR ||
+		!node->as.sroutine_stmt.call->as.call_expr.callee ||
+		node->as.sroutine_stmt.call->as.call_expr.callee->kind != AST_IDENT_EXPR) {
+		parse_error(p, keyword, "sroutine expects a named function call");
+		ast_free(node);
+		return NULL;
+	}
 	if (!consume_optional_semicolon(p)) {
 		ast_free(node);
 		return NULL;
@@ -1585,6 +1652,14 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 
 	{
 		size_t lt = strlen(*out_type);
+		/* `mut` qualifies the binding, not the declared value type.  The
+		 * lexer/parser currently joins type tokens without whitespace, so a
+		 * parameter such as `RawChan mut ch` arrives here as `RawChanmut`.
+		 * Keep the semantic type canonical for field and method lookup. */
+		if (lt > 3 && strcmp(*out_type + lt - 3, "mut") == 0) {
+			(*out_type)[lt - 3] = '\0';
+			lt -= 3;
+		}
 		if (lt > 0) {
 			char last = (*out_type)[lt - 1];
 
@@ -1976,6 +2051,9 @@ static ast_node *parse_use_decl(parser *p) {
 
 static ast_node *parse_statement(parser *p) {
 	(void)p;
+	if (check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "sroutine") == 0) {
+		return parse_sroutine_statement(p);
+	}
 	if (match(p, TOKEN_LET)) {
 		if (looks_like_typed_binding(p)) {
 			return parse_typed_binding_statement(p, 0);
@@ -2040,8 +2118,10 @@ static ast_node *parse_top_level(parser *p) {
 		if (strcmp(tok->lexeme, "trait") == 0) {
 			return parse_trait_decl(p);
 		}
-		if (strcmp(tok->lexeme, "enum") == 0 ||
-			strcmp(tok->lexeme, "const") == 0) {
+		if (strcmp(tok->lexeme, "const") == 0) {
+			return parse_const_decl(p);
+		}
+		if (strcmp(tok->lexeme, "enum") == 0) {
 			parse_error(p, tok, "unsupported top-level declaration '%s' in seed compiler", tok->lexeme);
 			return NULL;
 		}
@@ -2225,6 +2305,40 @@ static ast_node *parse_var_decl(parser *p) {
 	}
 
 	consume_optional_semicolon(p);
+	return node;
+}
+
+static ast_node *parse_const_decl(parser *p) {
+	const token *kw = advance_tok(p);
+	ast_node *node = ast_new(AST_CONST_DECL, kw->pos);
+	if (!node) return NULL;
+	if (!expect(p, TOKEN_IDENTIFIER, "constant name")) {
+		ast_free(node);
+		return NULL;
+	}
+	node->as.var_decl.name = dup_cstr(prev(p)->lexeme);
+	if (!node->as.var_decl.name) {
+		ast_free(node);
+		return NULL;
+	}
+	if (!check(p, TOKEN_ASSIGN)) {
+		char *type_name = NULL;
+		if (!try_parse_type_annotation(p, &type_name)) {
+			parse_error(p, peek(p), "expected constant type or '='");
+			ast_free(node);
+			return NULL;
+		}
+		node->as.var_decl.type_name = type_name;
+	}
+	if (!expect(p, TOKEN_ASSIGN, "'=' after constant name")) {
+		ast_free(node);
+		return NULL;
+	}
+	node->as.var_decl.value = parse_expression(p);
+	if (!node->as.var_decl.value || !consume_optional_semicolon(p)) {
+		ast_free(node);
+		return NULL;
+	}
 	return node;
 }
 

@@ -453,10 +453,32 @@ static int is_numeric_type(const char *type_name) {
 	return is_type_any(type_name) || strcmp(type_name, TYPE_INT) == 0 || strcmp(type_name, TYPE_FLOAT) == 0;
 }
 
+static void normalized_type_span(const char *type_name, const char **start, size_t *len) {
+	const char *value = type_name ? type_name : "";
+	size_t n;
+	if (strncmp(value, "&mut", 4) == 0) value += 4;
+	else if (*value == '&') value++;
+	n = strlen(value);
+	if (n >= 3 && strcmp(value + n - 3, "mut") == 0) n -= 3;
+	*start = value;
+	*len = n;
+}
+
+static int normalized_type_equal(const char *left, const char *right) {
+	const char *left_start;
+	const char *right_start;
+	size_t left_len;
+	size_t right_len;
+	normalized_type_span(left, &left_start, &left_len);
+	normalized_type_span(right, &right_start, &right_len);
+	return left_len == right_len && strncmp(left_start, right_start, left_len) == 0;
+}
+
 static int is_type_assignable(const char *expected, const char *actual) {
 	if (is_type_any(expected) || is_type_any(actual)) {
 		return 1;
 	}
+	if (normalized_type_equal(expected, actual)) return 1;
 	if ((strncmp(expected, "[]", 2) == 0 && strcmp(actual, TYPE_ARRAY) == 0) ||
 		(strncmp(actual, "[]", 2) == 0 && strcmp(expected, TYPE_ARRAY) == 0)) {
 		return 1;
@@ -552,6 +574,8 @@ static flow_exit_kind stmt_exit_kind(ast_node *node) {
 			return FLOW_EXIT_BREAK;
 		case AST_CONTINUE_STMT:
 			return FLOW_EXIT_CONTINUE;
+		case AST_SROUTINE_STMT:
+			return FLOW_EXIT_NONE;
 		case AST_IF_STMT:
 			if (!node->as.if_stmt.else_branch) {
 				return FLOW_EXIT_NONE;
@@ -803,6 +827,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 	int status;
 	const char *lhs_type;
 	const char *rhs_type;
+	const char *lookup_type;
 	symbol *sym;
 	if (!node) {
 		*out_type = TYPE_UNIT;
@@ -872,6 +897,9 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			if (!analyze_expr(ctx, node->as.member_expr.object, &lhs_type)) {
 				return 0;
 			}
+			lookup_type = lhs_type;
+			if (lookup_type && strncmp(lookup_type, "&mut", 4) == 0) lookup_type += 4;
+			else if (lookup_type && lookup_type[0] == '&') lookup_type++;
 			 
 			if (node->as.member_expr.member && strcmp(node->as.member_expr.member, "backbone_optimizers") == 0) {
 				fprintf(stderr, "DEBUG_MEMBER member='%s' base_type='%s' at %d:%d\n",
@@ -888,13 +916,13 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					char *elem = (char *)lhs_type + 2;
 					resolved = lookup_field_type(elem, node->as.member_expr.member);
 				}
-				if (!resolved) resolved = lookup_field_type(lhs_type, node->as.member_expr.member);
+				if (!resolved) resolved = lookup_field_type(lookup_type, node->as.member_expr.member);
 				if (resolved) {
 					*out_type = resolved;
 					return 1;
 				}
 				 
-				ast_node *se = find_struct_literal(ctx, lhs_type);
+				ast_node *se = find_struct_literal(ctx, lookup_type);
 				if (se) {
 					 
 					size_t fc = se->as.struct_expr.field_count;
@@ -1149,6 +1177,30 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					"call callee is missing");
 				return 0;
 			}
+			if (node->as.call_expr.callee->kind == AST_INDEX_EXPR &&
+				node->as.call_expr.callee->as.index_expr.object &&
+				node->as.call_expr.callee->as.index_expr.object->kind == AST_IDENT_EXPR &&
+				strcmp(node->as.call_expr.callee->as.index_expr.object->as.ident_expr.name, "vec") == 0) {
+				ast_node *type_expr = node->as.call_expr.callee->as.index_expr.index;
+				const char *element_type = TYPE_ANY;
+				char *vector_type;
+				size_t vector_type_len;
+				if (node->as.call_expr.args.len != 0) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"vec[T]() expects 0 arguments");
+					return 0;
+				}
+				if (type_expr && type_expr->kind == AST_IDENT_EXPR) element_type = type_expr->as.ident_expr.name;
+				vector_type_len = strlen(element_type) + 6;
+				vector_type = (char *)malloc(vector_type_len);
+				if (!vector_type) {
+					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+					return 0;
+				}
+				snprintf(vector_type, vector_type_len, "vec[%s]", element_type);
+				*out_type = vector_type;
+				return 1;
+			}
 			if (node->as.call_expr.callee->kind == AST_MEMBER_EXPR) {
 				ast_node *member = node->as.call_expr.callee;
 				ast_node *trait_decl;
@@ -1156,6 +1208,42 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				char method_name[256];
 				if (!analyze_expr(ctx, member->as.member_expr.object, &lhs_type)) {
 					return 0;
+				}
+				if (lhs_type && strncmp(lhs_type, "&mut", 4) == 0) lhs_type += 4;
+				else if (lhs_type && lhs_type[0] == '&') lhs_type++;
+				if ((lhs_type && strncmp(lhs_type, "vec[", 4) == 0) ||
+					(lhs_type && strcmp(lhs_type, TYPE_ARRAY) == 0)) {
+					const char *method = member->as.member_expr.member;
+					const char *builtin = NULL;
+					size_t expected = 0;
+					const char *return_type = TYPE_UNIT;
+					if (strcmp(method, "push") == 0) { builtin = "__vec_push"; expected = 1; }
+					else if (strcmp(method, "len") == 0) { builtin = "__vec_len"; return_type = TYPE_INT; }
+					else if (strcmp(method, "is_empty") == 0) { builtin = "__vec_is_empty"; return_type = TYPE_BOOL; }
+					else if (strcmp(method, "get") == 0) { builtin = "__vec_get"; expected = 1; return_type = TYPE_ANY; }
+					else if (strcmp(method, "set") == 0) { builtin = "__vec_set"; expected = 2; }
+					if (!builtin) {
+						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+							"vector has no method '%s'", method);
+						return 0;
+					}
+					if (node->as.call_expr.args.len != expected) {
+						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+							"call to vector.%s expects %zu arguments, got %zu", method, expected,
+							node->as.call_expr.args.len);
+						return 0;
+					}
+					for (i = 0; i < node->as.call_expr.args.len; i++) {
+						if (!analyze_expr(ctx, node->as.call_expr.args.data[i], &rhs_type)) return 0;
+					}
+					free(member->as.member_expr.resolved_method);
+					member->as.member_expr.resolved_method = dup_cstr(builtin);
+					if (!member->as.member_expr.resolved_method) {
+						error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+						return 0;
+					}
+					*out_type = return_type;
+					return 1;
 				}
 				trait_decl = find_trait_decl(ctx, lhs_type);
 				if (trait_decl) required = find_trait_method(trait_decl, member->as.member_expr.member);
@@ -1220,7 +1308,8 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				*out_type = TYPE_ANY;
 				return 1;
 			}
-			if (sym->kind == SYMBOL_VAR || sym->kind == SYMBOL_PARAM) {
+			if ((sym->kind == SYMBOL_VAR || sym->kind == SYMBOL_PARAM) &&
+				!normalized_type_equal(sym->type_name, "func")) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"symbol '%s' is not callable", sym->name);
 				return 0;
@@ -1304,14 +1393,14 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						return 0;
 					}
 				}
-				else if (decl->kind == AST_VAR_DECL) {
+				else if (decl->kind == AST_VAR_DECL || decl->kind == AST_CONST_DECL) {
 					const char *var_name = decl->as.var_decl.name;
 					const char *var_type = decl->as.var_decl.type_name ? decl->as.var_decl.type_name : TYPE_ANY;
 					status = scope_define(
 						ctx->current_scope,
 						var_name,
 						SYMBOL_VAR,
-						1,
+						decl->kind == AST_VAR_DECL,
 						0,
 						0,
 						var_type,
@@ -1408,6 +1497,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_USE_DECL:
 		case AST_EXTERN_DECL:
 		case AST_VAR_DECL:
+		case AST_CONST_DECL:
 			return 1;
 		case AST_BLOCK:
 			return analyze_block_with_new_scope(ctx, node);
@@ -1637,6 +1727,9 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
 				return 0;
 			}
+			return 1;
+		case AST_SROUTINE_STMT:
+			if (!analyze_expr(ctx, node->as.sroutine_stmt.call, &expr_type)) return 0;
 			return 1;
 		case AST_IF_STMT:
 			if (!analyze_expr(ctx, node->as.if_stmt.condition, &expr_type)) {

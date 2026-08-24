@@ -52,24 +52,29 @@ func trim_trailing_cr(string line) string {
         line
     }
 }
+
 func (r *buffer_reader) remaining() int {
     if r.offset >= len(r.data) {
         return 0
     }
     len(r.data) - r.offset
 }
+
 func (r *buffer_reader) peek(int n) string {
     int end = clamp_buffer_end(r.data, r.offset, r.offset + n)
     slice(r.data, r.offset, end)
 }
+
 func (r *buffer_reader) read(int n) string {
     string chunk = r.peek(n)
     r.offset = r.offset + len(chunk)
     chunk
 }
+
 func (r *buffer_reader) read_byte() string {
     r.read(1)
 }
+
 func (r *buffer_reader) read_line() string {
     if r.offset >= len(r.data) {
         return ""
@@ -85,21 +90,27 @@ func (r *buffer_reader) read_line() string {
     }
     trim_trailing_cr(slice(r.data, start, len(r.data)))
 }
+
 func (r *buffer_reader) reset() {
     r.offset = 0
 }
+
 func (w *buffer_writer) write(string chunk) {
     w.data = w.data + chunk
 }
+
 func (w *buffer_writer) write_line(string line) {
     w.data = w.data + line + "\n"
 }
+
 func (w *buffer_writer) contents() string {
     w.data
 }
+
 func (w *buffer_writer) len() int {
     len(w.data)
 }
+
 func (w *buffer_writer) reset() {
     w.data = ""
 }

@@ -24,12 +24,15 @@ func new_x86_64_gen() X86_64Gen {
         label_count: 0,
     }
 }
+
 func (gen: &mut X86_64Gen) emit(string line) {
     gen.asm_lines = append(gen.asm_lines, "    " + line)
 }
+
 func (gen: &mut X86_64Gen) emit_label(string label) {
     gen.asm_lines = append(gen.asm_lines, label + ":")
 }
+
 func (gen: &mut X86_64Gen) allocate_register() string {
     if len(gen.register_stack) > 0 {
         let reg = gen.register_stack[0]
@@ -38,9 +41,11 @@ func (gen: &mut X86_64Gen) allocate_register() string {
     }
     return ""  
 }
+
 func (gen: &mut X86_64Gen) free_register(string reg) {
     gen.register_stack = append(gen.register_stack, reg)
 }
+
 func (gen: &mut X86_64Gen) get_location(string var) string {
     if loc, exists := gen.temp_allocations[var]; exists {
         return loc
@@ -55,6 +60,7 @@ func (gen: &mut X86_64Gen) get_location(string var) string {
     gen.temp_allocations[var] = stack_loc
     return stack_loc
 }
+
 func (gen: &mut X86_64Gen) translate_instruction(Instruction instr) error {
     match instr.opcode {
         case "FUNC_BEGIN":

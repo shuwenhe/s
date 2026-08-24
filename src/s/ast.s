@@ -41,6 +41,7 @@ struct variant_pattern {
 struct literal_pattern {
     expr value
 }
+
 enum pattern {
     name(name_pattern),
     wildcard(wildcard_pattern),
@@ -151,6 +152,7 @@ struct map_literal {
     option[string] type_text
     vec[map_entry] entries
 }
+
 enum expr {
     int(int_expr),
     string(string_expr),
@@ -207,6 +209,7 @@ struct defer_stmt {
 struct sroutine_stmt {
     expr expr
 }
+
 enum stmt {
     let(var_stmt),
     assign(assign_stmt),

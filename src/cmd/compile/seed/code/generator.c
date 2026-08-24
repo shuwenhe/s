@@ -89,6 +89,9 @@ void generate_code(IR *ir, FILE *output) {
             case IR_CALL:
                 emit_record(output, "CALL", instr->result, instr->operand1, instr->operand2);
                 break;
+            case IR_SROUTINE:
+                emit_record(output, "SROUTINE", instr->result, instr->operand1, "");
+                break;
             case IR_MOV:
                 emit_record(output, "MOV", instr->result, instr->operand1, "");
                 break;

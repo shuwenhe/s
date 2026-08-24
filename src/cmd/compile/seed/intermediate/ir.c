@@ -14,7 +14,17 @@ typedef struct ir_builder {
 	int loop_depth;
 	ast_node *externs[128];
 	size_t extern_count;
+	ast_node *constants[128];
+	size_t constant_count;
 } ir_builder;
+
+static ast_node *find_constant(ir_builder *b, const char *name) {
+	size_t i;
+	for (i = 0; i < b->constant_count; i++) {
+		if (strcmp(b->constants[i]->as.var_decl.name, name) == 0) return b->constants[i]->as.var_decl.value;
+	}
+	return NULL;
+}
 
 static ast_node *find_extern(ir_builder *b, const char *name) {
 	size_t i;
@@ -97,6 +107,7 @@ const char *ir_op_name(ir_op op) {
 		case IR_PARAM: return "PARAM";
 		case IR_ARG: return "ARG";
 		case IR_CALL: return "CALL";
+		case IR_SROUTINE: return "SROUTINE";
 		case IR_MOV: return "MOV";
 		case IR_ADD: return "ADD";
 		case IR_SUB: return "SUB";
@@ -401,6 +412,10 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 		case AST_STRUCT_EXPR:
 			return lower_struct_literal(b, expr, out);
 		case AST_IDENT_EXPR:
+			{
+				ast_node *constant_value = find_constant(b, expr->as.ident_expr.name);
+				if (constant_value) return lower_expr(b, constant_value, out);
+			}
 			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.ident_expr.name);
 			return true;
 		case AST_MEMBER_EXPR: {
@@ -477,13 +492,29 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			size_t argc = expr->as.call_expr.args.len;
 			char callee[IR_OPERAND_CAP] = "call";
 			char argc_text[IR_OPERAND_CAP];
+			if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_INDEX_EXPR &&
+				expr->as.call_expr.callee->as.index_expr.object &&
+				expr->as.call_expr.callee->as.index_expr.object->kind == AST_IDENT_EXPR &&
+				strcmp(expr->as.call_expr.callee->as.index_expr.object->as.ident_expr.name, "vec") == 0) {
+				next_temp(b, out);
+				return emit_ins(b, IR_CALL, out, "__vec_make", "0", expr->pos);
+			}
 			if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_MEMBER_EXPR &&
 				expr->as.call_expr.callee->as.member_expr.resolved_method) {
 				char receiver[IR_OPERAND_CAP];
-				if (!lower_expr(b, expr->as.call_expr.callee->as.member_expr.object, receiver) ||
-					!emit_ins(b, IR_ARG, receiver, "", "", expr->pos)) {
+				char receiver_arg[IR_OPERAND_CAP];
+				if (!lower_expr(b, expr->as.call_expr.callee->as.member_expr.object, receiver)) {
 					return false;
 				}
+				if (strncmp(expr->as.call_expr.callee->as.member_expr.resolved_method, "__vec_", 6) == 0) {
+					if (snprintf(receiver_arg, sizeof(receiver_arg), "\"%s\"", receiver) >= (int)sizeof(receiver_arg)) {
+						error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "vector receiver is too long");
+						return false;
+					}
+				} else {
+					snprintf(receiver_arg, sizeof(receiver_arg), "%s", receiver);
+				}
+				if (!emit_ins(b, IR_ARG, receiver_arg, "", "", expr->pos)) return false;
 				snprintf(callee, sizeof(callee), "%s", expr->as.call_expr.callee->as.member_expr.resolved_method);
 				argc++;
 			}
@@ -716,6 +747,7 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		case AST_USE_DECL:
 		case AST_EXTERN_DECL:
 		case AST_VAR_DECL:
+		case AST_CONST_DECL:
 		case AST_TRAIT_DECL:
 			return true;
 		case AST_BLOCK:
@@ -753,6 +785,19 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		}
 		case AST_EXPR_STMT:
 			return lower_expr(b, stmt->as.expr_stmt.expr, value);
+		case AST_SROUTINE_STMT: {
+			ast_node *call = stmt->as.sroutine_stmt.call;
+			size_t i;
+			char argc_text[IR_OPERAND_CAP];
+			const char *callee = call->as.call_expr.callee->as.ident_expr.name;
+			for (i = 0; i < call->as.call_expr.args.len; i++) {
+				char arg_tmp[IR_OPERAND_CAP];
+				if (!lower_expr(b, call->as.call_expr.args.data[i], arg_tmp) ||
+					!emit_ins(b, IR_ARG, arg_tmp, "", "", stmt->pos)) return false;
+			}
+			snprintf(argc_text, sizeof(argc_text), "%zu", call->as.call_expr.args.len);
+			return emit_ins(b, IR_SROUTINE, callee, argc_text, "", stmt->pos);
+		}
 		case AST_IF_STMT:
 			return lower_if(b, stmt);
 		case AST_WHILE_STMT:
@@ -788,11 +833,13 @@ bool ir_generate_from_ast(ast_node *root, IR *ir, compile_error *err) {
 	b.label_counter = 0;
 	b.loop_depth = 0;
 	b.extern_count = 0;
+	b.constant_count = 0;
 	if (root->kind == AST_PROGRAM) {
 		size_t i;
 		for (i = 0; i < root->as.program.statements.len; i++) {
 			ast_node *decl = root->as.program.statements.data[i];
 			if (decl->kind == AST_EXTERN_DECL && b.extern_count < 128) b.externs[b.extern_count++] = decl;
+			if (decl->kind == AST_CONST_DECL && b.constant_count < 128) b.constants[b.constant_count++] = decl;
 		}
 	}
 	return lower_stmt(&b, root);
