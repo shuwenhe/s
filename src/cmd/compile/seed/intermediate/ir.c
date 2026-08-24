@@ -492,13 +492,29 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			size_t argc = expr->as.call_expr.args.len;
 			char callee[IR_OPERAND_CAP] = "call";
 			char argc_text[IR_OPERAND_CAP];
+			if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_INDEX_EXPR &&
+				expr->as.call_expr.callee->as.index_expr.object &&
+				expr->as.call_expr.callee->as.index_expr.object->kind == AST_IDENT_EXPR &&
+				strcmp(expr->as.call_expr.callee->as.index_expr.object->as.ident_expr.name, "vec") == 0) {
+				next_temp(b, out);
+				return emit_ins(b, IR_CALL, out, "__vec_make", "0", expr->pos);
+			}
 			if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_MEMBER_EXPR &&
 				expr->as.call_expr.callee->as.member_expr.resolved_method) {
 				char receiver[IR_OPERAND_CAP];
-				if (!lower_expr(b, expr->as.call_expr.callee->as.member_expr.object, receiver) ||
-					!emit_ins(b, IR_ARG, receiver, "", "", expr->pos)) {
+				char receiver_arg[IR_OPERAND_CAP];
+				if (!lower_expr(b, expr->as.call_expr.callee->as.member_expr.object, receiver)) {
 					return false;
 				}
+				if (strncmp(expr->as.call_expr.callee->as.member_expr.resolved_method, "__vec_", 6) == 0) {
+					if (snprintf(receiver_arg, sizeof(receiver_arg), "\"%s\"", receiver) >= (int)sizeof(receiver_arg)) {
+						error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "vector receiver is too long");
+						return false;
+					}
+				} else {
+					snprintf(receiver_arg, sizeof(receiver_arg), "%s", receiver);
+				}
+				if (!emit_ins(b, IR_ARG, receiver_arg, "", "", expr->pos)) return false;
 				snprintf(callee, sizeof(callee), "%s", expr->as.call_expr.callee->as.member_expr.resolved_method);
 				argc++;
 			}
