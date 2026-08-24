@@ -4,6 +4,7 @@ func (l *UDPListener) Close() error {
     }
     nil
 }
+
 func (l *UDPListener) Addr() Addr {
     &l.laddr
 }

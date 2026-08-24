@@ -18,6 +18,7 @@ func new_semaphore(int initial) Semaphore {
         count: initial,
     }
 }
+
 func (self: &mut Semaphore) wait() () {
         while true {
             let old = __atomic_load(self.count)
@@ -30,10 +31,12 @@ func (self: &mut Semaphore) wait() () {
             }
         }
     }
+
 func (self: &mut Semaphore) signal() () {
         __atomic_add(self.count, 1)
         __sema_wakeup(self.id)
     }
+
 func (self: &mut Semaphore) try_wait() bool {
         let old = __atomic_load(self.count)
         if old > 0 {
@@ -54,6 +57,7 @@ func new_mutex() Mutex {
         sem:   new_semaphore(0),
     }
 }
+
 func (self: &mut Mutex) lock() () {
         if __atomic_cas(self.state, 0, 1) {
             return
@@ -65,12 +69,14 @@ func (self: &mut Mutex) lock() () {
             self.sem.wait()
         }
     }
+
 func (self: &mut Mutex) unlock() () {
         if !__atomic_cas(self.state, 1, 0) {
             return
         }
         self.sem.signal()
     }
+
 func (self: &mut Mutex) try_lock() bool {
         __atomic_cas(self.state, 0, 1)
     }
@@ -90,18 +96,21 @@ func new_rwmutex() RWMutex {
         read_sem:  new_semaphore(0),
     }
 }
+
 func (self: &mut RWMutex) rlock() () {
         while __atomic_load(self.writer) == 1 {
             self.read_sem.wait()
         }
         __atomic_add(self.readers, 1)
     }
+
 func (self: &mut RWMutex) runlock() () {
         let prev = __atomic_add(self.readers, -1)
         if prev == 1 && __atomic_load(self.writer) == 1 {
             self.write_mu.sem.signal()
         }
     }
+
 func (self: &mut RWMutex) wlock() () {
         self.write_mu.lock()
         __atomic_cas(self.writer, 0, 1)
@@ -109,6 +118,7 @@ func (self: &mut RWMutex) wlock() () {
             self.write_mu.sem.wait()
         }
     }
+
 func (self: &mut RWMutex) wunlock() () {
         __atomic_cas(self.writer, 1, 0)
         self.write_mu.unlock()
@@ -123,6 +133,7 @@ struct Once {
 func new_once() Once {
     Once { done: 0, mu: new_mutex() }
 }
+
 func (self: &mut Once) do(func f) () {
         if __atomic_load(self.done) == 1 {
             return

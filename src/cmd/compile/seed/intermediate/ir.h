@@ -17,6 +17,7 @@ typedef enum ir_op {
 	IR_PARAM,
 	IR_ARG,
 	IR_CALL,
+	IR_SROUTINE,
 	IR_MOV,
 	IR_ADD,
 	IR_SUB,
