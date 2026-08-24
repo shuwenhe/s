@@ -188,23 +188,114 @@ static bool seed_dump_tokens_file(const char *input_path, const char *output_pat
 	free(source_text);
 	return true;
 }
+
+static bool seed_link_ir_files(const char *output_path, int input_count, char **input_paths, compile_error *err) {
+	static const char header[] = "SSEED-TARGET-V1";
+	FILE *out;
+	int i;
+	if (!output_path || input_count < 1) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "link-ir requires at least one input");
+		return false;
+	}
+	out = fopen(output_path, "wb");
+	if (!out) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open link output: %s", output_path);
+		return false;
+	}
+	fputs(header, out);
+	fputc('\n', out);
+	for (i = 0; i < input_count; i++) {
+		char *text = NULL;
+		const char *body;
+		if (!read_file_text(input_paths[i], &text, err)) {
+			fclose(out);
+			return false;
+		}
+		if (strncmp(text, header, sizeof(header) - 1) != 0 ||
+			(text[sizeof(header) - 1] != '\n' && text[sizeof(header) - 1] != '\r')) {
+			free(text);
+			fclose(out);
+			error_set(err, ERR_SEMANTIC, 0, 0, "invalid IR module header: %s", input_paths[i]);
+			return false;
+		}
+		body = text + sizeof(header) - 1;
+		while (*body == '\r' || *body == '\n') body++;
+		if (*body) {
+			const char *cursor = body;
+			while (*cursor) {
+				const char *line_end = strchr(cursor, '\n');
+				size_t line_len = line_end ? (size_t)(line_end - cursor) : strlen(cursor);
+				const char *label = NULL;
+				size_t p;
+				for (p = 0; p + 3 <= line_len; p++) {
+					if (cursor[p] == '|' && cursor[p + 1] == 'L' &&
+						cursor[p + 2] >= '0' && cursor[p + 2] <= '9') {
+						label = cursor + p;
+						break;
+					}
+				}
+				if (label) {
+					size_t prefix_len = (size_t)(label - cursor) + 1;
+					fwrite(cursor, 1, prefix_len, out);
+					fprintf(out, "M%d_", i);
+					fwrite(cursor + prefix_len, 1, line_len - prefix_len, out);
+				} else {
+					fwrite(cursor, 1, line_len, out);
+				}
+				fputc('\n', out);
+				if (!line_end) break;
+				cursor = line_end + 1;
+			}
+		}
+		free(text);
+	}
+	if (fclose(out) != 0) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to close link output: %s", output_path);
+		return false;
+	}
+	return true;
+}
 #endif
 
 #ifndef SEED_COMPILE_ONLY
 static void print_usage(const char *argv0) {
 	fprintf(stderr, "usage:\n");
 	fprintf(stderr, "  %s <input.s> <output.ir>\n", argv0);
+	fprintf(stderr, "  %s ir <input.s> -o <output.ir>\n", argv0);
 	fprintf(stderr, "  %s --emit-bin <input.ir> <output.bin>\n", argv0);
 	fprintf(stderr, "  %s --emit-standalone-amd64 <input.ir> <output.bin>\n", argv0);
 	fprintf(stderr, "  %s --emit-shared <input.ir> <output.dylib|output.so>\n", argv0);
 	fprintf(stderr, "  %s --probe-backend <native|c-abi|cuda|cann>\n", argv0);
 	fprintf(stderr, "  %s --bootstrap <compiler_source.s> [output_dir]\n", argv0);
 	fprintf(stderr, "  %s --dump-tokens <input.s> <output.tokens>\n", argv0);
+	fprintf(stderr, "  %s --link-ir <output.ir> <input.ir>...\n", argv0);
 }
 
 int main(int argc, char **argv) {
 	compile_error err;
 	error_clear(&err);
+
+	if (argc == 5 && strcmp(argv[1], "ir") == 0 && strcmp(argv[3], "-o") == 0) {
+		if (!seed_compile_file(argv[2], argv[4], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("compiled %s -> %s\n", argv[2], argv[4]);
+		return 0;
+	}
+
+	if (argc >= 2 && strcmp(argv[1], "--link-ir") == 0) {
+		if (argc < 4) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (!seed_link_ir_files(argv[2], argc - 3, &argv[3], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("linked %d IR modules -> %s\n", argc - 3, argv[2]);
+		return 0;
+	}
 
 	if (argc >= 2 && strcmp(argv[1], "--dump-tokens") == 0) {
 		if (argc != 4) {
