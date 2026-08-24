@@ -453,10 +453,32 @@ static int is_numeric_type(const char *type_name) {
 	return is_type_any(type_name) || strcmp(type_name, TYPE_INT) == 0 || strcmp(type_name, TYPE_FLOAT) == 0;
 }
 
+static void normalized_type_span(const char *type_name, const char **start, size_t *len) {
+	const char *value = type_name ? type_name : "";
+	size_t n;
+	if (strncmp(value, "&mut", 4) == 0) value += 4;
+	else if (*value == '&') value++;
+	n = strlen(value);
+	if (n >= 3 && strcmp(value + n - 3, "mut") == 0) n -= 3;
+	*start = value;
+	*len = n;
+}
+
+static int normalized_type_equal(const char *left, const char *right) {
+	const char *left_start;
+	const char *right_start;
+	size_t left_len;
+	size_t right_len;
+	normalized_type_span(left, &left_start, &left_len);
+	normalized_type_span(right, &right_start, &right_len);
+	return left_len == right_len && strncmp(left_start, right_start, left_len) == 0;
+}
+
 static int is_type_assignable(const char *expected, const char *actual) {
 	if (is_type_any(expected) || is_type_any(actual)) {
 		return 1;
 	}
+	if (normalized_type_equal(expected, actual)) return 1;
 	if ((strncmp(expected, "[]", 2) == 0 && strcmp(actual, TYPE_ARRAY) == 0) ||
 		(strncmp(actual, "[]", 2) == 0 && strcmp(expected, TYPE_ARRAY) == 0)) {
 		return 1;
@@ -805,6 +827,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 	int status;
 	const char *lhs_type;
 	const char *rhs_type;
+	const char *lookup_type;
 	symbol *sym;
 	if (!node) {
 		*out_type = TYPE_UNIT;
@@ -874,6 +897,9 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			if (!analyze_expr(ctx, node->as.member_expr.object, &lhs_type)) {
 				return 0;
 			}
+			lookup_type = lhs_type;
+			if (lookup_type && strncmp(lookup_type, "&mut", 4) == 0) lookup_type += 4;
+			else if (lookup_type && lookup_type[0] == '&') lookup_type++;
 			 
 			if (node->as.member_expr.member && strcmp(node->as.member_expr.member, "backbone_optimizers") == 0) {
 				fprintf(stderr, "DEBUG_MEMBER member='%s' base_type='%s' at %d:%d\n",
@@ -890,13 +916,13 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					char *elem = (char *)lhs_type + 2;
 					resolved = lookup_field_type(elem, node->as.member_expr.member);
 				}
-				if (!resolved) resolved = lookup_field_type(lhs_type, node->as.member_expr.member);
+				if (!resolved) resolved = lookup_field_type(lookup_type, node->as.member_expr.member);
 				if (resolved) {
 					*out_type = resolved;
 					return 1;
 				}
 				 
-				ast_node *se = find_struct_literal(ctx, lhs_type);
+				ast_node *se = find_struct_literal(ctx, lookup_type);
 				if (se) {
 					 
 					size_t fc = se->as.struct_expr.field_count;
@@ -1183,6 +1209,8 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				if (!analyze_expr(ctx, member->as.member_expr.object, &lhs_type)) {
 					return 0;
 				}
+				if (lhs_type && strncmp(lhs_type, "&mut", 4) == 0) lhs_type += 4;
+				else if (lhs_type && lhs_type[0] == '&') lhs_type++;
 				if ((lhs_type && strncmp(lhs_type, "vec[", 4) == 0) ||
 					(lhs_type && strcmp(lhs_type, TYPE_ARRAY) == 0)) {
 					const char *method = member->as.member_expr.member;
@@ -1280,7 +1308,8 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				*out_type = TYPE_ANY;
 				return 1;
 			}
-			if (sym->kind == SYMBOL_VAR || sym->kind == SYMBOL_PARAM) {
+			if ((sym->kind == SYMBOL_VAR || sym->kind == SYMBOL_PARAM) &&
+				!normalized_type_equal(sym->type_name, "func")) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"symbol '%s' is not callable", sym->name);
 				return 0;

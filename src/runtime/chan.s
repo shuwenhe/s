@@ -24,7 +24,7 @@ struct RawChan {
 
 func new_raw_chan(int cap) RawChan {
     let buf = vec[int]()
-    let i = 0
+    var i = 0
     while i < cap {
         buf.push(0)
         i = i + 1
@@ -50,14 +50,11 @@ func chan_send(RawChan mut ch, int val) result[(), string] {
     }
     if ch.cap == 0 {
         if !ch.receivers.is_empty() {
-            let recv_opt = dequeue_waiter(ch.receivers)
+            let w = dequeue_waiter(ch.receivers)
             ch.mu.unlock()
-            switch recv_opt {
-                option::some(w) : {
-                    chan_deliver(w.sroutine_id, val)
-                    sroutine_ready(w.sroutine_id)
-                },
-                option::none : (),
+            if w.sroutine_id >= 0 {
+                chan_deliver(w.sroutine_id, val)
+                sroutine_ready(w.sroutine_id)
             }
             return result::ok(())
         }
@@ -82,11 +79,10 @@ func chan_send(RawChan mut ch, int val) result[(), string] {
     ch.tail = (ch.tail + 1) % ch.cap
     ch.count = ch.count + 1
     if !ch.receivers.is_empty() {
-        let recv_opt = dequeue_waiter(ch.receivers)
+        let w = dequeue_waiter(ch.receivers)
         ch.mu.unlock()
-        switch recv_opt {
-            option::some(w) : sroutine_ready(w.sroutine_id),
-            option::none    : (),
+        if w.sroutine_id >= 0 {
+            sroutine_ready(w.sroutine_id)
         }
         return result::ok(())
     }
@@ -98,14 +94,11 @@ func chan_recv(RawChan mut ch) recv_result {
     ch.mu.lock()
     if ch.cap == 0 {
         if !ch.senders.is_empty() {
-            let send_opt = dequeue_waiter(ch.senders)
+            let w = dequeue_waiter(ch.senders)
             ch.mu.unlock()
-            switch send_opt {
-                option::some(w) : {
-                    sroutine_ready(w.sroutine_id)
-                    return recv_result { value: w.val_idx, ok: true }
-                },
-                option::none : (),
+            if w.sroutine_id >= 0 {
+                sroutine_ready(w.sroutine_id)
+                return recv_result { value: w.val_idx, ok: true }
             }
         }
         if ch.state == CHAN_CLOSED {
@@ -130,22 +123,19 @@ func chan_recv(RawChan mut ch) recv_result {
         sroutine_park(SROUTINE_PARK_CHANNEL)
         ch.mu.lock()
     }
-    let val = ch.buf.get(ch.head).unwrap_or(0)
+    let val = ch.buf[ch.head]
     ch.head  = (ch.head + 1) % ch.cap
     ch.count = ch.count - 1
     if !ch.senders.is_empty() {
-        let send_opt = dequeue_waiter(ch.senders)
+        let w = dequeue_waiter(ch.senders)
         ch.mu.unlock()
-        switch send_opt {
-            option::some(w) : {
-                ch.mu.lock()
-                ch.buf.set(ch.tail, w.val_idx)
-                ch.tail  = (ch.tail + 1) % ch.cap
-                ch.count = ch.count + 1
-                ch.mu.unlock()
-                sroutine_ready(w.sroutine_id)
-            },
-            option::none : (),
+        if w.sroutine_id >= 0 {
+            ch.mu.lock()
+            ch.buf[ch.tail] = w.val_idx
+            ch.tail  = (ch.tail + 1) % ch.cap
+            ch.count = ch.count + 1
+            ch.mu.unlock()
+            sroutine_ready(w.sroutine_id)
         }
         return recv_result { value: val, ok: true }
     }
@@ -166,14 +156,11 @@ func chan_try_send(RawChan mut ch, int val) bool {
     }
     if ch.cap == 0 {
         if !ch.receivers.is_empty() {
-            let recv_opt = dequeue_waiter(ch.receivers)
+            let w = dequeue_waiter(ch.receivers)
             ch.mu.unlock()
-            switch recv_opt {
-                option::some(w) : {
-                    chan_deliver(w.sroutine_id, val)
-                    sroutine_ready(w.sroutine_id)
-                },
-                option::none : (),
+            if w.sroutine_id >= 0 {
+                chan_deliver(w.sroutine_id, val)
+                sroutine_ready(w.sroutine_id)
             }
             return true
         }
@@ -195,14 +182,11 @@ func chan_try_recv(RawChan mut ch) option[recv_result] {
     ch.mu.lock()
     if ch.cap == 0 {
         if !ch.senders.is_empty() {
-            let send_opt = dequeue_waiter(ch.senders)
+            let w = dequeue_waiter(ch.senders)
             ch.mu.unlock()
-            switch send_opt {
-                option::some(w) : {
-                    sroutine_ready(w.sroutine_id)
-                    return option::some(recv_result { value: w.val_idx, ok: true })
-                },
-                option::none : (),
+            if w.sroutine_id >= 0 {
+                sroutine_ready(w.sroutine_id)
+                return option::some(recv_result { value: w.val_idx, ok: true })
             }
         }
         if ch.state == CHAN_CLOSED {
@@ -220,7 +204,7 @@ func chan_try_recv(RawChan mut ch) option[recv_result] {
         ch.mu.unlock()
         return option::none
     }
-    let val = ch.buf.get(ch.head).unwrap_or(0)
+    let val = ch.buf[ch.head]
     ch.head  = (ch.head + 1) % ch.cap
     ch.count = ch.count - 1
     ch.mu.unlock()
@@ -235,29 +219,28 @@ func chan_close(RawChan mut ch) result[(), string] {
     }
     ch.state = CHAN_CLOSED
     while !ch.receivers.is_empty() {
-        let w_opt = dequeue_waiter(ch.receivers)
-        switch w_opt {
-            option::some(w) : sroutine_ready(w.sroutine_id),
-            option::none    : (),
+        let w = dequeue_waiter(ch.receivers)
+        if w.sroutine_id >= 0 {
+            sroutine_ready(w.sroutine_id)
         }
     }
     ch.mu.unlock()
     result::ok(())
 }
 
-func dequeue_waiter(vec[Waiter] mut q) option[Waiter] {
+func dequeue_waiter(vec[Waiter] mut q) Waiter {
     if q.is_empty() {
-        return option::none
+        return Waiter { sroutine_id: -1, val_idx: -1 }
     }
-    let w = q.get(0).unwrap_or(Waiter { sroutine_id: -1, val_idx: -1 })
+    let w = q[0]
     let new_q = vec[Waiter]()
-    let i = 1
+    var i = 1
     while i < q.len() {
-        new_q.push(q.get(i).unwrap_or(Waiter { sroutine_id: -1, val_idx: -1 }))
+        new_q.push(q[i])
         i = i + 1
     }
     q = new_q
-    option::some(w)
+    w
 }
 extern "intrinsic" func __chan_deliver(int sroutine_id, int val) ()
 extern "intrinsic" func __chan_take_delivered(int sroutine_id) int
