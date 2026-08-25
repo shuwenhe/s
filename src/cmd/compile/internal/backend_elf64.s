@@ -69,11 +69,11 @@ func fail_function(string message) (function_decl, backend_error) {
     });
 }
 
-func ok_write_ops(vec[write_op] value) (vec[write_op), backend_error] {
+func ok_write_ops(vec[write_op] value) (vec[write_op], backend_error) {
     result.ok(value);
 }
 
-func fail_write_ops(string message) (vec[write_op), backend_error] {
+func fail_write_ops(string message) (vec[write_op], backend_error) {
     result.err(backend_error {
         message: message,
     });
@@ -3121,7 +3121,7 @@ func restore_captured_bindings(vec[captured_binding] captured) vec[binding] {
     out
 }
 
-func compile_writes(source_file source, mir_graph graph) (vec[write_op), backend_error] {
+func compile_writes(source_file source, mir_graph graph) (vec[write_op], backend_error) {
     if graph.blocks.len() == 0 {
         return fail_write_ops("backend error: mir graph has no blocks")
     }
@@ -4514,7 +4514,7 @@ func control_panic_payload_text(vec[binding] env) string {
     }
 }
 
-func collect_const_bindings(source_file source) (vec[binding), backend_error] {
+func collect_const_bindings(source_file source) (vec[binding], backend_error) {
     out := vec[binding]()
     visited := vec[string]()
     collect_result := collect_const_bindings_in_source(source, out, visited)

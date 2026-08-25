@@ -26,7 +26,7 @@ func read_source(string path) (string, syntax_error) {
     }
 }
 
-func tokenize(string source) (vec[token), syntax_error] {
+func tokenize(string source) (vec[token], syntax_error) {
     switch new_lexer(source).tokenize() {
         result::ok(tokens) : result::ok(tokens),
         result::err(err) : result::err(syntax_error {

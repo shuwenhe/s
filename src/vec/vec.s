@@ -47,19 +47,19 @@ func (vec[t]* self) pop() option[t] {
         option::some(array_get(self.raw.storage.value, self.length))
     }
 
-func (self: vec[t]) len() int {
+func (vec[t]* self) len() int {
         self.length
     }
 
-func (self: vec[t]) capacity() int {
+func (vec[t]* self) capacity() int {
         self.raw.capacity
     }
 
-func (self: vec[t]) is_empty() bool {
+func (vec[t]* self) is_empty() bool {
         self.length == 0
     }
 
-func (self: vec[t]) get(int index) option[t] {
+func (vec[t]* self) get(int index) option[t] {
         if index < 0 || index >= self.length {
             return option::none
         }

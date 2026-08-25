@@ -15,7 +15,7 @@ func classify_token(string token) string {
     "ident"
 }
 
-func lex_source(source_unit unit) (vec[token_item), noder_error] {
+func lex_source(source_unit unit) (vec[token_item], noder_error) {
     out := vec[token_item]()
     lines := split_lines(unit.text)
     li := 0

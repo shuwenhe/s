@@ -9,7 +9,7 @@ func read_unit(string path) (source_unit, noder_error) {
     }
 }
 
-func read_units(vec[string] paths) (vec[source_unit), noder_error] {
+func read_units(vec[string] paths) (vec[source_unit], noder_error) {
     out := vec[source_unit]()
     i := 0
     for i < paths.len() {

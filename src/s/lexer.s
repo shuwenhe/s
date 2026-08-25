@@ -27,7 +27,7 @@ func new_lexer(string source) lexer {
     }
 }
 
-func (lexer* self) tokenize() (vec[token), lex_error] {
+func (lexer* self) tokenize() (vec[token], lex_error) {
         vec[token] tokens = vec[token]()        for !self.is_eof() {
             self.skip_ignored()?
             if self.is_eof() {
@@ -191,14 +191,14 @@ func (lexer* self) read_symbol() (string, lex_error) {
         result::err(self.error("unexpected character"))
     }
 
-func (self: lexer) match_text(string text) bool {
+func (lexer* self) match_text(string text) bool {
         if self.index + len(text) > len(self.source) {
             return false
         }
         slice(self.source, self.index, self.index + len(text)) == text
     }
 
-func (self: lexer) peek() (string, lex_error) {
+func (lexer* self) peek() (string, lex_error) {
         if self.is_eof() {
             return result::err(self.error("unexpected eof"))
         }
@@ -219,11 +219,11 @@ func (lexer* self) advance() (string, lex_error) {
         result::ok(ch)
     }
 
-func (self: lexer) is_eof() bool {
+func (lexer* self) is_eof() bool {
         self.index >= len(self.source)
     }
 
-func (self: lexer) error(string message) lex_error {
+func (lexer* self) error(string message) lex_error {
         lex_error {
             message: message,
             line: self.line,
