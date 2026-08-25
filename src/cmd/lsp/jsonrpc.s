@@ -39,12 +39,12 @@ func parse_jsonrpc_message(raw string) (jsonrpc_request, string) {
                 option::none() : {}
             }
 
-            result::ok(jsonrpc_request {
+            jsonrpc_request {
                 jsonrpc: "2.0",
                 method: method,
                 params: option::none(),
                 id: id_opt,
-            })
+            }
         },
         option::none() : {
             "No method field in request"

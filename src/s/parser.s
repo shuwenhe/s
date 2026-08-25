@@ -177,11 +177,11 @@ func (parser* self) parse_function_decl() (function_decl, parse_error) {
         parsed_function pair = self.parse_function(true)?        if pair.receiver.is_some() {
             return self.error_here("method receiver not allowed in this context")
         }
-        result::ok(function_decl {
+        function_decl {
             sig: pair.sig,
             body: pair.body,
             is_public: starts_with_upper(pair.sig.name),
-        })
+        }
     }
 
 func (parser* self) parse_struct_decl() (struct_decl, parse_error) {
@@ -196,12 +196,12 @@ func (parser* self) parse_struct_decl() (struct_decl, parse_error) {
             })
             self.eat_symbol(",")
         }
-        result::ok(struct_decl {
+        struct_decl {
             name: name,
             generics: generics,
             fields: fields,
             is_public: starts_with_upper(name),
-        })
+        }
     }
 
 func (parser* self) parse_enum_decl() (enum_decl, parse_error) {
@@ -221,12 +221,12 @@ func (parser* self) parse_enum_decl() (enum_decl, parse_error) {
             })
             self.eat_symbol(",")
         }
-        result::ok(enum_decl {
+        enum_decl {
             name: name,
             generics: generics,
             variants: variants,
             is_public: starts_with_upper(name),
-        })
+        }
     }
 
 func (parser* self) parse_trait_decl() (trait_decl, parse_error) {
@@ -238,12 +238,12 @@ func (parser* self) parse_trait_decl() (trait_decl, parse_error) {
             methods.push(pair.sig)
             self.expect_symbol(";")?
         }
-        result::ok(trait_decl {
+        trait_decl {
             name: name,
             generics: generics,
             methods: methods,
             is_public: starts_with_upper(name),
-        })
+        }
     }
 
 func (parser* self) parse_function(bool require_body) (parsed_function, parse_error) {
@@ -449,11 +449,11 @@ func (parser* self) parse_typed_var_stmt(bool consume_semicolon) (var_stmt, pars
         if consume_semicolon {
             self.eat_symbol(";")
         }
-        result::ok(var_stmt {
+        var_stmt {
             name: named.name,
             type_name: option::some(named.type_name),
             value: value,
-        })
+        }
     }
 
 func (parser* self) parse_assign_stmt(bool consume_semicolon) (assign_stmt, parse_error) {
@@ -487,12 +487,12 @@ func (parser* self) parse_cfor_stmt() (c_for_stmt, parse_error) {
         step := self.parse_for_clause_stmt()?
         self.expect_symbol(")")?
         body := self.parse_block_expr()?
-        result::ok(c_for_stmt {
+        c_for_stmt {
             init: box(init),
             condition: condition,
             step: box(step),
             body: body,
-        })
+        }
     }
 
 func (parser* self) parse_for_clause_stmt() (stmt, parse_error) {
@@ -517,9 +517,9 @@ func (parser* self) parse_return_stmt() (return_stmt, parse_error) {
         }
         value := self.parse_expr()?
         self.eat_symbol(";")
-        result::ok(return_stmt {
+        return_stmt {
             value: option::some(value),
-        })
+        }
     }
 
 func (parser* self) parse_expr() (expr, parse_error) {
@@ -655,11 +655,11 @@ func (parser* self) parse_switch_expr() (expr, parse_error) {
             })
             self.eat_symbol(",")
         }
-        result::ok(expr::switch(switch_expr {
+        expr::switch(switch_expr {
             subject: box(subject),
             arms: arms,
             inferred_type: option::none,
-        }))
+        })
     }
 
 func (parser* self) parse_if_expr() (expr, parse_error) {
@@ -673,12 +673,12 @@ func (parser* self) parse_if_expr() (expr, parse_error) {
             } else {
                 option::none
             }
-        result::ok(expr::if(if_expr {
+        expr::if(if_expr {
             condition: box(condition),
             then_branch: then_branch,
             else_branch: else_branch,
             inferred_type: option::none,
-        }))
+        })
     }
 
 func (parser* self) parse_for_expr() (expr, parse_error) {
@@ -731,7 +731,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
         }
         
         expr condition = self.parse_expr()?        body := self.parse_block_expr()?
-        result::ok(expr::for(for_expr {
+        expr::for(for_expr {
             init: option::none,
             condition: option::some(box(condition)),
             post: option::none,
@@ -739,7 +739,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
             iterable: option::none,
             body: body,
             inferred_type: option::none,
-        }))
+        })
     }
 
 func (parser* self) parse_pattern() (pattern, parse_error) {
@@ -974,10 +974,10 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
             self.expect_symbol("}")?
             return expr::map(map_literal { type_text: option::some(type_text.trim()), entries: entries }))
         }
-        result::ok(expr::name(name_expr {
+        expr::name(name_expr {
             name: self.expect_ident()?,
             inferred_type: option::none,
-        }))
+        })
     }
 
 func (parser* self) binary_precedence(string op) int {
@@ -1073,12 +1073,11 @@ func (parser* self) parse_bracket_group() (string, parse_error) {
                 depth = depth - 1
             }
         }
-        result::ok(
-            join_strings(parts, " ")
+                    join_strings(parts, " ")
                 .replace("[ ", "[")
                 .replace(" ]", "]")
                 .replace(" ,", ",")
-        )
+        
     }
 
 func (parser* self) at(token_kind kind) bool {
@@ -1299,10 +1298,10 @@ func decode_named_type(vec[token] tokens) (named_type, parse_error) {
             column: 0,
         }
     }
-    result::ok(named_type {
+    named_type {
         name: tokens[split].value,
         type_name: normalize_type_text(join_token_values(slice_tokens(tokens, 0, split))),
-    })
+    }
 }
 
 func slice_tokens(vec[token] tokens, int start, int end) vec[token] {

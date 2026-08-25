@@ -3190,11 +3190,11 @@ func execute_source_main(source_file source) (mir_execution_result, backend_erro
     if code_result.is_err() {
         return code_result.unwrap_err()
     }
-    result::ok(mir_execution_result {
+    mir_execution_result {
         writes: writes,
         exit_code: code_result.unwrap(),
         runtime: collect_runtime_metrics(runtime),
-    })
+    }
 }
 
 func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
@@ -3285,7 +3285,7 @@ func execute_mir_statement(mir_statement statement, vec[write_op] writes) ((), b
             }
             ()
         }
-        _ : result::ok(()),
+        _ : (,
     }
 }
 
@@ -3675,7 +3675,7 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] env, vec[write_op]
             }
             ()
         }
-        stmt.defer(_) : result::ok(()),
+        stmt.defer(_) : (,
         stmt.sroutine(value) : execute_sroutine_stmt(value, source, env, writes, runtime),
     }
 }
@@ -3751,9 +3751,9 @@ func execute_c_for(c_for_stmt value, source_file source, vec[binding] env, vec[w
 
 func eval_expr(expr expr, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     switch expr {
-        expr.int(value) : result::ok(value.int(parse_int_literal(value.value))),
-        expr.string(value) : result::ok(value.string(decode_string_literal(value.value))),
-        expr.bool(value) : result::ok(value.bool(value.value)),
+        expr.int(value) : value.int(parse_int_literal(value.value)),
+        expr.string(value) : value.string(decode_string_literal(value.value)),
+        expr.bool(value) : value.bool(value.value),
         expr.name(value) : lookup_name_or_function(env, source, value.name),
         expr.binary(value) : eval_binary(value, source, env, writes, runtime),
         expr.call(value) : eval_call(value, source, env, writes, runtime),
@@ -4519,7 +4519,7 @@ func collect_const_bindings(source_file source) (vec[binding], backend_error) {
     visited := vec[string]()
     collect_result := collect_const_bindings_in_source(source, out, visited)
     if collect_result.is_err() {
-        return result::err(collect_result.unwrap_err())
+        return collect_result.unwrap_err())
     }
     out
 }
@@ -4595,9 +4595,9 @@ func load_source_graph_for_use(string module_path) (source_file, backend_error) 
 
 func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) (value, backend_error) {
     switch value {
-        expr.int(int_expr) : result::ok(value.int(parse_int_literal(int_expr.value))),
-        expr.string(string_expr) : result::ok(value.string(decode_string_literal(string_expr.value))),
-        expr.bool(bool_expr) : result::ok(value.bool(bool_expr.value)),
+        expr.int(int_expr) : value.int(parse_int_literal(int_expr.value)),
+        expr.string(string_expr) : value.string(decode_string_literal(string_expr.value)),
+        expr.bool(bool_expr) : value.bool(bool_expr.value),
         expr.name(name_expr) : {
             if name_expr.name == "iota" {
                 return value.int(iota_value)
@@ -4737,7 +4737,7 @@ func eval_if_expr(if_expr value, source_file source, vec[binding] env, vec[write
             } else {
                 switch value.else_branch {
                     option.some(expr) : eval_expr(expr.value, source, env, writes, runtime),
-                    option.none : result::ok(value.unit(unit_value {})),
+                    option.none : value.unit(unit_value {}),
                 }
             }
         }
@@ -4779,13 +4779,13 @@ func add_values(value left, value right) (value, backend_error) {
     switch left {
         value.int(left_int) : {
             switch right {
-                value.int(right_int) : result::ok(value.int(left_int + right_int)),
+                value.int(right_int) : value.int(left_int + right_int),
                 _ : backend_error { message: "backend error: + expects matching types" },
             }
         }
         value.string(left_text) : {
             switch right {
-                value.string(right_text) : result::ok(value.string(left_text + right_text)),
+                value.string(right_text) : value.string(left_text + right_text),
                 _ : backend_error { message: "backend error: + expects matching string types" },
             }
         }
@@ -5079,10 +5079,10 @@ func validate_abi_coverage(string arch) ((), backend_error) {
         i = i + 1
     }
     if abi_int_ret_reg(arch) == "" {
-        return result::err(backend_error { message: "backend error: missing integer return ABI mapping on " + arch }
+        return backend_error { message: "backend error: missing integer return ABI mapping on " + arch }
     }
     if abi_float_ret_reg(arch) == "" {
-        return result::err(backend_error { message: "backend error: missing float return ABI mapping on " + arch }
+        return backend_error { message: "backend error: missing float return ABI mapping on " + arch }
     }
     if abi_callee_saved_count(arch) == 0 {
         return backend_error { message: "backend error: missing callee-saved ABI set on " + arch }
@@ -5094,7 +5094,7 @@ func validate_abi_coverage(string arch) ((), backend_error) {
         return backend_error { message: "backend error: missing stack alignment ABI rule on " + arch }
     }
     if abi_sret_reg(arch) == "" {
-        return result::err(backend_error { message: "backend error: missing aggregate return (sret) ABI register on " + arch }
+        return backend_error { message: "backend error: missing aggregate return (sret) ABI register on " + arch }
     }
     if abi_variadic_gp_limit(arch) <= 0 {
         return backend_error { message: "backend error: missing variadic GP ABI budget on " + arch }
@@ -5109,7 +5109,7 @@ func validate_abi_coverage(string arch) ((), backend_error) {
         return backend_error { message: "backend error: missing aggregate pass mode for large aggregates on " + arch }
     }
     if abi_return_mode(arch, "aggregate", 64) == "" {
-        return result::err(backend_error { message: "backend error: missing aggregate return mode on " + arch }
+        return backend_error { message: "backend error: missing aggregate return mode on " + arch }
     }
     ()
 }
