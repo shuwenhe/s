@@ -85,7 +85,7 @@ func ensure_capacity[t](vec[t] mut vec, int wanted) () {
     let next = grow_capacity(vec.raw.capacity, wanted)
     let next_storage = new_array[t](next)
     let i = 0
-    while i < vec.length {
+    for i < vec.length {
         array_set(next_storage, i, array_get(vec.raw.storage.value, i))
         i = i + 1
     }
@@ -98,7 +98,7 @@ func grow_capacity(int current, int wanted) int {
     if next <= 0 {
         next = 4
     }
-    while next < wanted {
+    for next < wanted {
         next = next * 2
     }
     next
