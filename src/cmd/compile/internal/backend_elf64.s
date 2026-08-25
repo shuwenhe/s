@@ -244,19 +244,19 @@ struct abi_behavior_entry {
 func build(string path, string output, string ssa_margin_override, bool nostdlib) int {
     source_result := read_to_string(path)
     if source_result.is_err() {
-        return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message)
+        return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message
     }
     source := source_result.unwrap()
     if is_compiler_runtime_entry(path, source) {
-        return build_compiler_runtime_launcher(output)
+        return build_compiler_runtime_launcher(output
     }
     parsed_result := load_source_graph(path, source)
     if parsed_result.is_err() {
-        return report_failure(parsed_result.unwrap_err().message)
+        return report_failure(parsed_result.unwrap_err().message
     }
     parsed := parsed_result.unwrap()
     if !should_skip_semantic_check(path) && check_text(source) != 0 {
-        return report_failure("semantic check failed")
+        return report_failure("semantic check failed"
     }
     mir_result := lower_main_to_mir(parsed)
     if mir_result.is_err() {
@@ -266,52 +266,52 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     arch := buildcfg_goarch()
     margin_result := parse_ssa_margin_override(ssa_margin_override)
     if margin_result.is_err() {
-        return report_failure(margin_result.unwrap_err().message)
+        return report_failure(margin_result.unwrap_err().message
     }
     dominant_margin := margin_result.unwrap()
     midend := run_midend_pipeline(graph)
     ssa_program := build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
     ssa_text := dump_ssa_pipeline(ssa_program)
     if ssa_text == "" {
-        return report_failure("ssa lowering failed: empty pipeline")
+        return report_failure("ssa lowering failed: empty pipeline"
     }
     debug_map := dump_ssa_debug_map(ssa_program)
     if debug_map == "" {
-        return report_failure("ssa debug map failed: empty map")
+        return report_failure("ssa debug map failed: empty map"
     }
     abi_runtime_check := validate_ssa_abi_contracts(arch, ssa_text)
     if abi_runtime_check.is_err() {
-        return report_failure(abi_runtime_check.unwrap_err().message)
+        return report_failure(abi_runtime_check.unwrap_err().message
     }
     abi_check := validate_abi_coverage(arch)
     if abi_check.is_err() {
-        return report_failure(abi_check.unwrap_err().message)
+        return report_failure(abi_check.unwrap_err().message
     }
     writes_result := compile_writes(parsed, graph)
     if writes_result.is_err() {
-        return report_failure(writes_result.unwrap_err().message)
+        return report_failure(writes_result.unwrap_err().message
     }
     exit_code_result := compile_exit_code(parsed, graph)
     if exit_code_result.is_err() {
-        return report_failure(exit_code_result.unwrap_err().message)
+        return report_failure(exit_code_result.unwrap_err().message
     }
     runtime_metrics_result := compile_runtime_metrics(parsed, graph)
     if runtime_metrics_result.is_err() {
-        return report_failure(runtime_metrics_result.unwrap_err().message)
+        return report_failure(runtime_metrics_result.unwrap_err().message
     }
     temp_dir_result := make_temp_dir("s-build-")
     if temp_dir_result.is_err() {
-        return report_failure("could not create temporary output directory: " + temp_dir_result.unwrap_err().message)
+        return report_failure("could not create temporary output directory: " + temp_dir_result.unwrap_err().message
     }
     temp_dir := temp_dir_result.unwrap()
     if arch == "wasm" {
         wasm_result := build_wasm_object_chain(temp_dir, output, writes_result.unwrap(), exit_code_result.unwrap())
         if wasm_result.is_err() {
-            return report_failure(wasm_result.unwrap_err().message)
+            return report_failure(wasm_result.unwrap_err().message
         }
         wasm_binary_check := validate_wasi_binary_artifact(output)
         if wasm_binary_check.is_err() {
-            return report_failure(wasm_binary_check.unwrap_err().message)
+            return report_failure(wasm_binary_check.unwrap_err().message
         }
     } else {
         asm_text := emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
@@ -319,7 +319,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         obj_path := temp_dir + "/out.o"
         write_result := write_text_file(asm_path, asm_text)
         if write_result.is_err() {
-            return report_failure("failed to write assembly: " + write_result.unwrap_err().message)
+            return report_failure("failed to write assembly: " + write_result.unwrap_err().message
         }
         as_argv := vec[string]()
         as_argv.push("as");
@@ -328,7 +328,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         as_argv.push(asm_path);
         as_result := run_process(as_argv)
         if as_result.is_err() {
-            return report_failure("toolchain failed: " + as_result.unwrap_err().message)
+            return report_failure("toolchain failed: " + as_result.unwrap_err().message
         }
         ld_argv := vec[string]()
         ld_argv.push("ld")
@@ -343,108 +343,108 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         ld_argv.push(obj_path)
         ld_result := run_process(ld_argv)
         if ld_result.is_err() {
-            return report_failure("toolchain failed: " + ld_result.unwrap_err().message)
+            return report_failure("toolchain failed: " + ld_result.unwrap_err().message
         }
     }
     dbg_path := output + ".dbg"
     dbg_payload := "ssa\n" + ssa_text + "\n\ndebug\n" + debug_map
     dbg_write := write_text_file(dbg_path, dbg_payload)
     if dbg_write.is_err() {
-        return report_failure("failed to write debug artifact: " + dbg_write.unwrap_err().message)
+        return report_failure("failed to write debug artifact: " + dbg_write.unwrap_err().message
     }
     stackmap_path := output + ".stackmap"
     stackmap_payload := build_stackmap_artifact(arch, parsed, ssa_text, debug_map)
     stackmap_write := write_text_file(stackmap_path, stackmap_payload)
     if stackmap_write.is_err() {
-        return report_failure("failed to write stack map artifact: " + stackmap_write.unwrap_err().message)
+        return report_failure("failed to write stack map artifact: " + stackmap_write.unwrap_err().message
     }
     abi_path := output + ".abi"
     abi_payload := build_abi_behavior_artifact(arch, parsed)
     abi_write := write_text_file(abi_path, abi_payload)
     if abi_write.is_err() {
-        return report_failure("failed to write ABI behavior artifact: " + abi_write.unwrap_err().message)
+        return report_failure("failed to write ABI behavior artifact: " + abi_write.unwrap_err().message
     }
     abi_emit_path := output + ".abi.emit"
     abi_emit_payload := build_abi_emit_plan(arch, parsed)
     abi_emit_write := write_text_file(abi_emit_path, abi_emit_payload)
     if abi_emit_write.is_err() {
-        return report_failure("failed to write ABI emission artifact: " + abi_emit_write.unwrap_err().message)
+        return report_failure("failed to write ABI emission artifact: " + abi_emit_write.unwrap_err().message
     }
     abi_matrix_payload := build_abi_machine_matrix_artifact(arch, parsed, ssa_text)
     abi_matrix_check := validate_abi_machine_matrix(abi_matrix_payload)
     if abi_matrix_check.is_err() {
-        return report_failure(abi_matrix_check.unwrap_err().message)
+        return report_failure(abi_matrix_check.unwrap_err().message
     }
     abi_matrix_path := output + ".abi.matrix"
     abi_matrix_write := write_text_file(abi_matrix_path, abi_matrix_payload)
     if abi_matrix_write.is_err() {
-        return report_failure("failed to write ABI matrix artifact: " + abi_matrix_write.unwrap_err().message)
+        return report_failure("failed to write ABI matrix artifact: " + abi_matrix_write.unwrap_err().message
     }
     dwarf_path := output + ".dwarf"
     dwarf_payload := build_dwarf_like_artifact(parsed, ssa_text, debug_map)
     dwarf_check := validate_dwarf_consumability(dwarf_payload, ssa_text)
     if dwarf_check.is_err() {
-        return report_failure(dwarf_check.unwrap_err().message)
+        return report_failure(dwarf_check.unwrap_err().message
     }
     dwarf_write := write_text_file(dwarf_path, dwarf_payload)
     if dwarf_write.is_err() {
-        return report_failure("failed to write DWARF-like artifact: " + dwarf_write.unwrap_err().message)
+        return report_failure("failed to write DWARF-like artifact: " + dwarf_write.unwrap_err().message
     }
     cfi_path := output + ".cfi"
     cfi_payload := build_cfi_artifact(arch, ssa_text, debug_map)
     cfi_check := validate_cfi_artifact(cfi_payload)
     if cfi_check.is_err() {
-        return report_failure(cfi_check.unwrap_err().message)
+        return report_failure(cfi_check.unwrap_err().message
     }
     cfi_write := write_text_file(cfi_path, cfi_payload)
     if cfi_write.is_err() {
-        return report_failure("failed to write CFI artifact: " + cfi_write.unwrap_err().message)
+        return report_failure("failed to write CFI artifact: " + cfi_write.unwrap_err().message
     }
     gc_path := output + ".gcmap"
     gc_payload := build_gc_metadata_artifact(arch, parsed, ssa_text)
     gc_check := validate_gc_contract_chain(gc_payload, parsed, ssa_text)
     if gc_check.is_err() {
-        return report_failure(gc_check.unwrap_err().message)
+        return report_failure(gc_check.unwrap_err().message
     }
     gc_write := write_text_file(gc_path, gc_payload)
     if gc_write.is_err() {
-        return report_failure("failed to write GC metadata artifact: " + gc_write.unwrap_err().message)
+        return report_failure("failed to write GC metadata artifact: " + gc_write.unwrap_err().message
     }
     export_path := output + ".export"
     export_payload := build_export_data_artifact(parsed, arch)
     export_write := write_text_file(export_path, export_payload)
     if export_write.is_err() {
-        return report_failure("failed to write export data artifact: " + export_write.unwrap_err().message)
+        return report_failure("failed to write export data artifact: " + export_write.unwrap_err().message
     }
     toolchain_path := output + ".toolchain"
     toolchain_payload := build_toolchain_compat_artifact(parsed, arch)
     toolchain_check := validate_toolchain_compat_artifact(toolchain_payload)
     if toolchain_check.is_err() {
-        return report_failure(toolchain_check.unwrap_err().message)
+        return report_failure(toolchain_check.unwrap_err().message
     }
     toolchain_write := write_text_file(toolchain_path, toolchain_payload)
     if toolchain_write.is_err() {
-        return report_failure("failed to write toolchain compatibility artifact: " + toolchain_write.unwrap_err().message)
+        return report_failure("failed to write toolchain compatibility artifact: " + toolchain_write.unwrap_err().message
     }
     perf_path := output + ".perf"
     perf_payload := build_backend_perf_baseline_artifact(arch, ssa_text, midend.report, runtime_metrics_text(runtime_metrics_result.unwrap()))
     perf_check := validate_backend_perf_baseline(perf_payload)
     if perf_check.is_err() {
-        return report_failure(perf_check.unwrap_err().message)
+        return report_failure(perf_check.unwrap_err().message
     }
     perf_write := write_text_file(perf_path, perf_payload)
     if perf_write.is_err() {
-        return report_failure("failed to write backend perf baseline artifact: " + perf_write.unwrap_err().message)
+        return report_failure("failed to write backend perf baseline artifact: " + perf_write.unwrap_err().message
     }
     opt_path := output + ".opt"
     opt_payload := build_midend_opt_artifact(midend.report)
     opt_check := validate_midend_opt_artifact(opt_payload)
     if opt_check.is_err() {
-        return report_failure(opt_check.unwrap_err().message)
+        return report_failure(opt_check.unwrap_err().message
     }
     opt_write := write_text_file(opt_path, opt_payload)
     if opt_write.is_err() {
-        return report_failure("failed to write optimization report: " + opt_write.unwrap_err().message)
+        return report_failure("failed to write optimization report: " + opt_write.unwrap_err().message
     }
     0
 }
@@ -1055,7 +1055,7 @@ func emit_wasm_c_source(vec[write_op] writes, int exit_code) string {
         lines.push("  fd_write(" + to_string(writes[i].fd) + ", &iov_" + to_string(i) + ", 1, &nw_" + to_string(i) + ");")
         i = i + 1
     }
-    lines.push("  return " + to_string(exit_code) + ";")
+    lines.push("  return " + to_string(exit_code) + ";"
     lines.push("}")
     lines.push("")
     lines.push("void _start(void) {")
@@ -1117,7 +1117,7 @@ func validate_abi_machine_matrix(string payload) ((), backend_error) {
         return result::err(backend_error { message: "backend error: ABI matrix call sequence axis missing" })
     }
     if !has_substring(payload, "matrix ret=") {
-        return result::err(backend_error { message: "backend error: ABI matrix return axis missing" })
+        return result::err(backend_error { message: "backend error: ABI matrix return axis missing" }
     }
     if !has_substring(payload, "cross_arch_consistency=") {
         return result::err(backend_error { message: "backend error: ABI matrix cross-arch consistency missing" })
@@ -1177,7 +1177,7 @@ func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
     if translated.is_err() {
         lines.push("status=error")
         lines.push("reason=" + translated.unwrap_err().message)
-        return join_lines(lines)
+        return join_lines(lines
     }
     lines.push("status=ok")
     lines.push("translator=plan9-to-gas")
@@ -1286,7 +1286,7 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
         return result::err(backend_error { message: "go asm translation error: unsupported opcode " + op })
     }
     if args_text == "" {
-        return result::ok("    " + gas_op)
+        return "    " + gas_op
     }
     comma := index_of(args_text, ",")
     if comma < 0 {
@@ -1294,7 +1294,7 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
         if one.is_err() {
             return result::err(one.unwrap_err())
         }
-        return result::ok("    " + gas_op + " " + one.unwrap())
+        return "    " + gas_op + " " + one.unwrap())
     }
     left_raw := trim_spaces(slice(args_text, 0, comma))
     right_raw := trim_spaces(slice(args_text, comma + 1, len(args_text)))
@@ -1390,36 +1390,36 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
     if starts_with_local(operand, "$") {
         imm := slice(operand, 1, len(operand))
         if ends_with_local(imm, "(SB)") {
-            return result::ok("$" + normalize_go_symbol(slice(imm, 0, len(imm) - len("(SB)"))))
+            return "$" + normalize_go_symbol(slice(imm, 0, len(imm) - len("(SB)"))))
         }
-        return result::ok("$" + normalize_go_symbol(imm))
+        return "$" + normalize_go_symbol(imm))
     }
     if ends_with_local(operand, "(SB)") {
         sym := normalize_go_symbol(slice(operand, 0, len(operand) - len("(SB)")))
         if sym == "" {
             return result::err(backend_error { message: "go asm translation error: empty symbol operand" })
         }
-        return result::ok(sym)
+        return sym
     }
     paren := index_of(operand, "(")
     if paren >= 0 && ends_with_local(operand, ")") {
         base := slice(operand, paren + 1, len(operand) - 1)
         if base == "SB" {
-            return result::ok(normalize_go_symbol(slice(operand, 0, paren)))
+            return normalize_go_symbol(slice(operand, 0, paren)))
         }
         mapped_base := map_go_register(base, arch)
         if mapped_base == "" {
             return result::err(backend_error { message: "go asm translation error: unsupported base register " + base })
         }
         disp := parse_go_disp(slice(operand, 0, paren))
-        return result::ok(disp + "(" + mapped_base + ")")
+        return disp + "(" + mapped_base + ")"
     }
     mapped_reg := map_go_register(operand, arch)
     if mapped_reg != "" {
-        return result::ok(mapped_reg)
+        return mapped_reg
     }
     if starts_with_local(operand, ".") {
-        return result::ok(normalize_go_symbol(operand))
+        return normalize_go_symbol(operand))
     }
     result::ok(normalize_go_symbol(operand))
 }
@@ -1718,7 +1718,7 @@ func build_abi_emit_plan(string arch, source_file source) string {
 func abi_param_location(string arch, int index) string {
     reg := abi_int_arg_reg(arch, index)
     if reg == "" {
-        return "stack+" + to_string((index - abi_variadic_gp_limit(arch)) * 8)
+        return "stack+" + to_string((index - abi_variadic_gp_limit(arch)) * 8
     }
     reg
 }
@@ -1726,14 +1726,14 @@ func abi_param_location(string arch, int index) string {
 func abi_float_param_location(string arch, int index) string {
     reg := abi_float_arg_reg(arch, index)
     if reg == "" {
-        return "stackf+" + to_string(index * 8)
+        return "stackf+" + to_string(index * 8
     }
     reg
 }
 
 func abi_emit_ret_location(string arch, int aggregate_size) string {
     if aggregate_size > 16 {
-        return "sret:" + abi_sret_reg(arch)
+        return "sret:" + abi_sret_reg(arch
     }
     abi_int_ret_reg(arch)
 }
@@ -1777,13 +1777,13 @@ func abi_emit_ret_plan(string arch, string ret_type, int ret_parts, int aggregat
         return "ret->void"
     }
     if ret_parts <= 1 {
-        return "ret->" + abi_emit_ret_location(arch, aggregate_size)
+        return "ret->" + abi_emit_ret_location(arch, aggregate_size
     }
     if ret_parts == 2 && aggregate_size <= 16 {
-        return "ret0->" + abi_int_ret_reg(arch) + " | ret1->" + abi_second_int_ret_reg(arch)
+        return "ret0->" + abi_int_ret_reg(arch) + " | ret1->" + abi_second_int_ret_reg(arch
     }
     if aggregate_size > 16 || ret_parts > 2 {
-        return "ret->sret:" + abi_sret_reg(arch) + " | tuple_parts=" + to_string(ret_parts)
+        return "ret->sret:" + abi_sret_reg(arch) + " | tuple_parts=" + to_string(ret_parts
     }
     "ret->" + abi_int_ret_reg(arch)
 }
@@ -1929,13 +1929,13 @@ func collect_fn_result_types(function_decl fn_decl) vec[string] {
 func split_signature_types(string type_text) vec[string] {
     t := trim_spaces(type_text)
     if t == "" {
-        return vec[string]()
+        return vec[string](
     }
     if abi_text_starts_with(t, "(") && abi_text_ends_with(t, ")") {
         t = trim_spaces(slice(t, 1, len(t) - 1))
     }
     if t == "" {
-        return vec[string]()
+        return vec[string](
     }
     out := vec[string]()
     start := 0
@@ -2541,7 +2541,7 @@ func resolve_module_source_path(string module) option[string] {
     for i < candidates.len() {
         probe := read_to_string(candidates[i])
         if probe.is_ok() {
-            return option::some(candidates[i])
+            return option::some(candidates[i]
         }
         i = i + 1
     }
@@ -2559,7 +2559,7 @@ func lookup_package_index(string module) option[string] {
                 path := found.unwrap()
                 probe := read_to_string(path)
                 if probe.is_ok() {
-                    return option::some(path)
+                    return option::some(path
                 }
             }
         }
@@ -2886,22 +2886,22 @@ func is_compiler_runtime_entry(string path, string source) bool {
 func build_compiler_runtime_launcher(string output) int {
     base_compiler := resolve_bootstrap_base_compiler()
     if output == base_compiler {
-        return report_failure("refusing to generate a launcher that execs itself; set s_bootstrap_base_compiler to a different binary")
+        return report_failure("refusing to generate a launcher that execs itself; set s_bootstrap_base_compiler to a different binary"
     }
     temp_dir_result := make_temp_dir("s-launcher-")
     if temp_dir_result.is_err() {
-        return report_failure("could not create temporary launcher directory: " + temp_dir_result.unwrap_err().message)
+        return report_failure("could not create temporary launcher directory: " + temp_dir_result.unwrap_err().message
     }
     temp_dir := temp_dir_result.unwrap()
     asm_path := temp_dir + "/launcher.s"
     obj_path := temp_dir + "/launcher.o"
     asm_text_result := emit_runtime_launcher_asm(base_compiler)
     if asm_text_result.is_err() {
-        return report_failure(asm_text_result.unwrap_err().message)
+        return report_failure(asm_text_result.unwrap_err().message
     }
     write_result := write_text_file(asm_path, asm_text_result.unwrap())
     if write_result.is_err() {
-        return report_failure("failed to write launcher assembly: " + write_result.unwrap_err().message)
+        return report_failure("failed to write launcher assembly: " + write_result.unwrap_err().message
     }
     as_argv := vec[string]()
     as_argv.push("as")
@@ -2910,7 +2910,7 @@ func build_compiler_runtime_launcher(string output) int {
     as_argv.push(asm_path)
     as_result := run_process(as_argv)
     if as_result.is_err() {
-        return report_failure("launcher assembler failed: " + as_result.unwrap_err().message)
+        return report_failure("launcher assembler failed: " + as_result.unwrap_err().message
     }
     ld_argv := vec[string]()
     ld_argv.push("ld")
@@ -2919,7 +2919,7 @@ func build_compiler_runtime_launcher(string output) int {
     ld_argv.push(obj_path)
     ld_result := run_process(ld_argv)
     if ld_result.is_err() {
-        return report_failure("launcher linker failed: " + ld_result.unwrap_err().message)
+        return report_failure("launcher linker failed: " + ld_result.unwrap_err().message
     }
     0
 }
@@ -2947,10 +2947,10 @@ func resolve_bootstrap_base_compiler() string {
 func emit_runtime_launcher_asm(string base_compiler) (string, backend_error) {
     arch := buildcfg_goarch()
     if arch == "arm64" {
-        return result::ok(emit_runtime_launcher_asm_arm64(base_compiler))
+        return emit_runtime_launcher_asm_arm64(base_compiler))
     }
     if arch == "amd64" || arch == "amd64p32" {
-        return result::ok(emit_runtime_launcher_asm_amd64(base_compiler))
+        return emit_runtime_launcher_asm_amd64(base_compiler))
     }
     result::err(backend_error { message: "unsupported architecture for compiler launcher: " + arch })
 }
@@ -3123,30 +3123,30 @@ func restore_captured_bindings(vec[captured_binding] captured) vec[binding] {
 
 func compile_writes(source_file source, mir_graph graph) (vec[write_op], backend_error) {
     if graph.blocks.len() == 0 {
-        return fail_write_ops("backend error: mir graph has no blocks")
+        return fail_write_ops("backend error: mir graph has no blocks"
     }
     source_exec := execute_source_main(source)
     if source_exec.is_ok() {
-        return result::ok(source_exec.unwrap().writes)
+        return source_exec.unwrap().writes
     }
     exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
-        return fail_write_ops(source_exec.unwrap_err().message)
+        return fail_write_ops(source_exec.unwrap_err().message
     }
     result::ok(exec_result.unwrap().writes)
 }
 
 func compile_exit_code(source_file source, mir_graph graph) (int, backend_error) {
     if graph.blocks.len() == 0 {
-        return fail_int("backend error: mir graph has no blocks")
+        return fail_int("backend error: mir graph has no blocks"
     }
     source_exec := execute_source_main(source)
     if source_exec.is_ok() {
-        return result::ok(source_exec.unwrap().exit_code)
+        return source_exec.unwrap().exit_code
     }
     exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
-        return fail_int(source_exec.unwrap_err().message)
+        return fail_int(source_exec.unwrap_err().message
     }
     result::ok(exec_result.unwrap().exit_code)
 }
@@ -3157,7 +3157,7 @@ func compile_runtime_metrics(source_file source, mir_graph graph) (runtime_metri
     }
     source_exec := execute_source_main(source)
     if source_exec.is_ok() {
-        return result::ok(source_exec.unwrap().runtime)
+        return source_exec.unwrap().runtime
     }
     exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
@@ -3217,7 +3217,7 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
             si = si + 1
         }
         if block.terminator.kind == "return" {
-            return result::ok(mir_execution_result {
+            return mir_execution_result {
                 writes: writes,
                 exit_code: 0,
                 runtime: runtime_metrics {
@@ -3270,7 +3270,7 @@ func find_mir_block(mir_graph graph, int id) (mir_basic_block, backend_error) {
     i := 0
     for i < graph.blocks.len() {
         if graph.blocks[i].id == id {
-            return result::ok(graph.blocks[i])
+            return graph.blocks[i]
         }
         i = i + 1
     }
@@ -3315,7 +3315,7 @@ func emit_call_line_to_write(string line, string callee, int fd, vec[write_op] w
 func render_literal_text(string raw_arg) string {
     arg := trim_spaces(raw_arg)
     if is_quoted_literal(arg) {
-        return decode_string_literal(arg)
+        return decode_string_literal(arg
     }
     if arg == "true" || arg == "false" {
         return arg
@@ -3454,11 +3454,11 @@ func call_function_with_capture(
 ) (value, backend_error) {
     fn_result := find_function(source, name)
     if fn_result.is_err() {
-        return fail_value(fn_result.unwrap_err().message)
+        return fail_value(fn_result.unwrap_err().message
     }
     function := fn_result.unwrap()
     if function.body.is_none() {
-        return fail_value("backend error: function " + name + " has no body")
+        return fail_value("backend error: function " + name + " has no body"
     }
     if function.sig.params.len() != args.len() {
         return fail_value(
@@ -3473,7 +3473,7 @@ func call_function_with_capture(
     env := vec[binding]()
     const_bindings := collect_const_bindings(source)
     if const_bindings.is_err() {
-        return fail_value(const_bindings.unwrap_err().message)
+        return fail_value(const_bindings.unwrap_err().message
     }
     env = copy_bindings(const_bindings.unwrap())
     captured := restore_captured_bindings(captured_env)
@@ -3490,7 +3490,7 @@ func call_function_with_capture(
     }
     body_result := execute_block_in_place(function.body.unwrap(), source, env, writes, runtime)
     if body_result.is_err() {
-        return fail_value(body_result.unwrap_err().message)
+        return fail_value(body_result.unwrap_err().message
     }
     copy_control_bindings(env, caller_env)
     ok_value(body_result.unwrap())
@@ -3498,7 +3498,7 @@ func call_function_with_capture(
 
 func find_function(source_file source, string name) (function_decl, backend_error) {
     visited := vec[string]()
-    return find_function_in_source_graph(source, name, visited)
+    return find_function_in_source_graph(source, name, visited
 }
 
 func find_function_in_source_graph(source_file source, string name, vec[string] visited) (function_decl, backend_error) {
@@ -3511,7 +3511,7 @@ func find_function_in_source_graph(source_file source, string name, vec[string] 
         switch source.items[i] {
             item.function(value) : {
                 if value.sig.name == name {
-                    return result::ok(value)
+                    return value
                 }
             }
             _ : (),
@@ -3565,9 +3565,9 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] e
                 if control_panic_is_active(env) {
                     return result::err(panic_error(control_panic_payload_text(env)))
                 }
-                return result::ok(value.unit(unit_value {}))
+                return value.unit(unit_value {}))
             }
-            return result::err(err)
+            return result::err(err
         }
         schedule_step := run_sroutine_scheduler_step(source, env, writes, runtime)
         if schedule_step.is_err() {
@@ -3580,9 +3580,9 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] e
                 if control_panic_is_active(env) {
                     return result::err(panic_error(control_panic_payload_text(env)))
                 }
-                return result::ok(value.unit(unit_value {}))
+                return value.unit(unit_value {}))
             }
-            return result::err(err)
+            return result::err(err
         }
         run_gc_safepoint(env, runtime)
         si = si + 1
@@ -3601,9 +3601,9 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] e
                     if control_panic_is_active(env) {
                         return result::err(panic_error(control_panic_payload_text(env)))
                     }
-                    return result::ok(value.unit(unit_value {}))
+                    return value.unit(unit_value {}))
                 }
-                return result::err(err)
+                return result::err(err
             }
             final_value = final_result.unwrap()
         }
@@ -3710,7 +3710,7 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, vec[binding]
             })
             runtime.sroutine_scheduled = runtime.sroutine_scheduled + 1
             runtime.sroutine_yields = runtime.sroutine_yields + 1
-            return result::ok(())
+            return ())
         }
         _ : result::err(backend_error { message: "backend error: sroutine expects a call expression" }),
     }
@@ -3803,49 +3803,49 @@ func eval_call(call_expr value, source_file source, vec[binding] env, vec[write_
     switch value.callee.value {
         expr.name(callee_name) : {
             if callee_name.name == "println" || callee_name.name == "eprintln" {
-                return eval_print_call(callee_name.name, value.args, source, env, writes, runtime)
+                return eval_print_call(callee_name.name, value.args, source, env, writes, runtime
             }
             if callee_name.name == "panic" {
-                return eval_panic_call(value.args, source, env, writes, runtime)
+                return eval_panic_call(value.args, source, env, writes, runtime
             }
             if callee_name.name == "recover" {
-                return eval_recover_call(env, runtime)
+                return eval_recover_call(env, runtime
             }
             if callee_name.name == "gc_collect" {
-                return eval_gc_collect_call(value.args, source, env, writes, runtime)
+                return eval_gc_collect_call(value.args, source, env, writes, runtime
             }
             if callee_name.name == "chan_make" {
-                return eval_chan_make_call(value.args, source, env, writes, runtime)
+                return eval_chan_make_call(value.args, source, env, writes, runtime
             }
             if callee_name.name == "chan_send" {
-                return eval_chan_send_call(value.args, source, env, writes, runtime)
+                return eval_chan_send_call(value.args, source, env, writes, runtime
             }
             if callee_name.name == "chan_recv" {
-                return eval_chan_recv_call(value.args, source, env, writes, runtime, false)
+                return eval_chan_recv_call(value.args, source, env, writes, runtime, false
             }
             if callee_name.name == "select_recv" {
-                return eval_chan_recv_call(value.args, source, env, writes, runtime, true)
+                return eval_chan_recv_call(value.args, source, env, writes, runtime, true
             }
             if callee_name.name == "select_recv_weighted" {
-                return eval_select_recv_weighted_call(value.args, source, env, writes, runtime)
+                return eval_select_recv_weighted_call(value.args, source, env, writes, runtime
             }
             if callee_name.name == "select_recv_default" {
-                return eval_select_recv_default_call(value.args, source, env, writes, runtime)
+                return eval_select_recv_default_call(value.args, source, env, writes, runtime
             }
             if callee_name.name == "select_recv_timeout" {
-                return eval_select_recv_timeout_call(value.args, source, env, writes, runtime)
+                return eval_select_recv_timeout_call(value.args, source, env, writes, runtime
             }
             if callee_name.name == "select_send" {
-                return eval_select_send_call(value.args, source, env, writes, runtime)
+                return eval_select_send_call(value.args, source, env, writes, runtime
             }
             if callee_name.name == "select_send_default" {
-                return eval_select_send_default_call(value.args, source, env, writes, runtime)
+                return eval_select_send_default_call(value.args, source, env, writes, runtime
             }
             if callee_name.name == "select_send_timeout" {
-                return eval_select_send_timeout_call(value.args, source, env, writes, runtime)
+                return eval_select_send_timeout_call(value.args, source, env, writes, runtime
             }
             if callee_name.name == "chan_close" {
-                return eval_chan_close_call(value.args, source, env, writes, runtime)
+                return eval_chan_close_call(value.args, source, env, writes, runtime
             }
         }
         _ : (),
@@ -3883,10 +3883,10 @@ func eval_call(call_expr value, source_file source, vec[binding] env, vec[write_
 
 func eval_recover_call(vec[binding] env, runtime_state runtime) (value, backend_error) {
     if !control_in_defer_mode(env) {
-        return result::ok(value.unit(unit_value {}))
+        return value.unit(unit_value {}))
     }
     if !control_panic_is_active(env) {
-        return result::ok(value.unit(unit_value {}))
+        return value.unit(unit_value {}))
     }
     payload := control_panic_payload_text(env)
     set_control(env, control_panic_active, value.bool(false))
@@ -3996,7 +3996,7 @@ func eval_chan_recv_call(vec[expr] args, source_file source, vec[binding] env, v
         if is_select && channels.len() > 0 {
             runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % channels.len()
         }
-        return result::ok(value.unit(unit_value {}))
+        return value.unit(unit_value {}))
     }
     if is_select {
         return result::err(backend_error { message: "backend error: select_recv has no ready channel" })
@@ -4045,7 +4045,7 @@ func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[bind
         if weighted.len() > 0 {
             runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % weighted.len()
         }
-        return result::ok(value.unit(unit_value {}))
+        return value.unit(unit_value {}))
     }
     return result::err(backend_error { message: "backend error: select_recv_weighted has no ready channel" })
 }
@@ -4158,11 +4158,11 @@ func choose_ready_channel(runtime_state runtime, vec[value] channels) option[int
         pick := (start + offset) % channels.len()
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
-            return option.some(-1)
+            return option.some(-1
         }
         if runtime.channels[idx].buffer.len() > 0 {
             runtime.select_rr_cursor = (pick + 1) % channels.len()
-            return option.some(idx)
+            return option.some(idx
         }
         offset = offset + 1
     }
@@ -4179,10 +4179,10 @@ func choose_closed_channel(runtime_state runtime, vec[value] channels) option[in
         pick := (start + offset) % channels.len()
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
-            return option.some(-1)
+            return option.some(-1
         }
         if runtime.channels[idx].closed {
-            return option.some(pick)
+            return option.some(pick
         }
         offset = offset + 1
     }
@@ -4199,12 +4199,12 @@ func choose_sendable_channel(runtime_state runtime, vec[value] channels) option[
         pick := (start + offset) % channels.len()
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
-            return option.some(-1)
+            return option.some(-1
         }
         ch_state := runtime.channels[idx]
         if !ch_state.closed && ch_state.buffer.len() < ch_state.capacity {
             runtime.select_rr_cursor = (pick + 1) % channels.len()
-            return option.some(pick)
+            return option.some(pick
         }
         offset = offset + 1
     }
@@ -4217,7 +4217,7 @@ func drain_selected_channel(runtime_state runtime, int idx) (value, backend_erro
     }
     ch_state := runtime.channels[idx]
     if ch_state.buffer.len() == 0 {
-        return result::ok(value.unit(unit_value {}))
+        return value.unit(unit_value {}))
     }
     first := ch_state.buffer[0]
     rest := vec[value]()
@@ -4395,7 +4395,7 @@ func execute_deferred(vec[expr] deferred, source_file source, vec[binding] env, 
                 continue
             }
             set_control(env, control_in_defer, value.bool(false))
-            return result::err(err)
+            return result::err(err
         }
     }
     set_control(env, control_in_defer, value.bool(false))
@@ -4404,7 +4404,7 @@ func execute_deferred(vec[expr] deferred, source_file source, vec[binding] env, 
 
 func run_sroutine_scheduler_step(source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) ((), backend_error) {
     if runtime.runq.len() == 0 {
-        return result::ok(())
+        return ())
     }
     task := runtime.runq[0]
     rest := vec[sroutine_task]()
@@ -4422,9 +4422,9 @@ func run_sroutine_scheduler_step(source_file source, vec[binding] env, vec[write
         err := task_result.unwrap_err()
         if is_panic_error(err) {
             runtime.sroutine_panics = runtime.sroutine_panics + 1
-            return result::err(err)
+            return result::err(err
         }
-        return result::err(err)
+        return result::err(err
     }
     runtime.sroutine_completed = runtime.sroutine_completed + 1
     run_gc_safepoint(env, runtime)
@@ -4526,7 +4526,7 @@ func collect_const_bindings(source_file source) (vec[binding], backend_error) {
 
 func collect_const_bindings_in_source(source_file source, vec[binding] out, vec[string] visited) ((), backend_error) {
     if string_vec_contains(visited, source.pkg) {
-        return result::ok(())
+        return ())
     }
     visited.push(source.pkg)
     last_expr := option::none
@@ -4600,7 +4600,7 @@ func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) (
         expr.bool(bool_expr) : result::ok(value.bool(bool_expr.value)),
         expr.name(name_expr) : {
             if name_expr.name == "iota" {
-                return result::ok(value.int(iota_value))
+                return value.int(iota_value))
             }
             const_value := lookup_value(const_env, name_expr.name)
             if const_value.is_err() {
@@ -4640,7 +4640,7 @@ func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) (
 
 func lookup_name_or_function(vec[binding] env, source_file source, string name) (value, backend_error) {
     if name == "nil" {
-        return result::ok(value.unit(unit_value {}))
+        return value.unit(unit_value {}))
     }
     local := lookup_value(env, name)
     if local.is_ok() {
@@ -4648,7 +4648,7 @@ func lookup_name_or_function(vec[binding] env, source_file source, string name) 
     }
     fn_result := find_function(source, name)
     if fn_result.is_ok() {
-        return result::ok(value.fn_ref(name))
+        return value.fn_ref(name))
     }
     result::err(backend_error { message: "backend error: unknown name " + name })
 }
@@ -4694,7 +4694,7 @@ func eval_index_expr(index_expr value, source_file source, vec[binding] env, vec
             i := 0
             for i < entries.len() {
                 if entries[i].key == key {
-                    return result::ok(value.fn_ref(entries[i].func_name))
+                    return value.fn_ref(entries[i].func_name))
                 }
                 i = i + 1
             }
@@ -4966,13 +4966,13 @@ func parse_int_literal(string literal) int {
 
 func parse_ssa_margin_override(string text) (int, backend_error) {
     if text == "" {
-        return ok_int(-1)
+        return ok_int(-1
     }
     i := 0
     for i < len(text) {
         ch := char_at(text, i)
         if digit_value(ch) < 0 {
-            return fail_int("invalid --ssa-dominant-margin value: " + text)
+            return fail_int("invalid --ssa-dominant-margin value: " + text
         }
         i = i + 1
     }
@@ -5053,18 +5053,18 @@ func decode_string_literal(string literal) string {
 func emit_asm(vec[write_op] writes, int exit_code) string {
     arch := buildcfg_goarch()
     if arch == "arm64" {
-        return emit_asm_arm64(writes, exit_code)
+        return emit_asm_arm64(writes, exit_code
     }
     if arch == "riscv64" {
-        return emit_asm_riscv64(writes, exit_code)
+        return emit_asm_riscv64(writes, exit_code
     }
     if arch == "s390x" {
-        return emit_asm_s390x(writes, exit_code)
+        return emit_asm_s390x(writes, exit_code
     }
     if arch == "amd64p32" {
-        return emit_asm_amd64(writes, exit_code)
+        return emit_asm_amd64(writes, exit_code
     }
-    return emit_asm_amd64(writes, exit_code)
+    return emit_asm_amd64(writes, exit_code
 }
 
 func validate_abi_coverage(string arch) ((), backend_error) {
@@ -5079,10 +5079,10 @@ func validate_abi_coverage(string arch) ((), backend_error) {
         i = i + 1
     }
     if abi_int_ret_reg(arch) == "" {
-        return result::err(backend_error { message: "backend error: missing integer return ABI mapping on " + arch })
+        return result::err(backend_error { message: "backend error: missing integer return ABI mapping on " + arch }
     }
     if abi_float_ret_reg(arch) == "" {
-        return result::err(backend_error { message: "backend error: missing float return ABI mapping on " + arch })
+        return result::err(backend_error { message: "backend error: missing float return ABI mapping on " + arch }
     }
     if abi_callee_saved_count(arch) == 0 {
         return result::err(backend_error { message: "backend error: missing callee-saved ABI set on " + arch })
@@ -5094,7 +5094,7 @@ func validate_abi_coverage(string arch) ((), backend_error) {
         return result::err(backend_error { message: "backend error: missing stack alignment ABI rule on " + arch })
     }
     if abi_sret_reg(arch) == "" {
-        return result::err(backend_error { message: "backend error: missing aggregate return (sret) ABI register on " + arch })
+        return result::err(backend_error { message: "backend error: missing aggregate return (sret) ABI register on " + arch }
     }
     if abi_variadic_gp_limit(arch) <= 0 {
         return result::err(backend_error { message: "backend error: missing variadic GP ABI budget on " + arch })
@@ -5109,7 +5109,7 @@ func validate_abi_coverage(string arch) ((), backend_error) {
         return result::err(backend_error { message: "backend error: missing aggregate pass mode for large aggregates on " + arch })
     }
     if abi_return_mode(arch, "aggregate", 64) == "" {
-        return result::err(backend_error { message: "backend error: missing aggregate return mode on " + arch })
+        return result::err(backend_error { message: "backend error: missing aggregate return mode on " + arch }
     }
     result::ok(())
 }
@@ -5180,16 +5180,16 @@ func abi_aggregate_pass_mode(string arch, int size_bytes) string {
 
 func abi_return_mode(string arch, string type_class, int size_bytes) string {
     if type_class == "int" {
-        return "reg:" + abi_int_ret_reg(arch)
+        return "reg:" + abi_int_ret_reg(arch
     }
     if type_class == "float" {
-        return "reg:" + abi_float_ret_reg(arch)
+        return "reg:" + abi_float_ret_reg(arch
     }
     if type_class == "aggregate" {
         if size_bytes <= 16 {
             return "aggregate-reg"
         }
-        return "sret:" + abi_sret_reg(arch)
+        return "sret:" + abi_sret_reg(arch
     }
     ""
 }

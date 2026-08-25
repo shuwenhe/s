@@ -308,13 +308,13 @@ func target_parallel_lane(string target_key) int {
 
 func digit_fallback(string ch) int {
     if ch >= "0" && ch <= "9" {
-        return digit_value(ch)
+        return digit_value(ch
     }
     if ch >= "a" && ch <= "z" {
-        return 10 + index_of("abcdefghijklmnopqrstuvwxyz", ch)
+        return 10 + index_of("abcdefghijklmnopqrstuvwxyz", ch
     }
     if ch >= "A" && ch <= "Z" {
-        return 10 + index_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ", ch)
+        return 10 + index_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ", ch
     }
     1
 }

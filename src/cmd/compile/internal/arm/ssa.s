@@ -71,11 +71,11 @@ func makeshift(int reg, int typ, int amount) int {
     if amount >= 32 {
         return 0
     }
-    return (reg & 0xf) + typ + ((amount & 31) << 7)
+    return (reg & 0xf) + typ + ((amount & 31) << 7
 }
 
 func makeregshift(int r1, int typ, int r2) int {
-    return (r1 & 0xf) + typ + ((r2 & 0xf) << 8) + (1 << 4)
+    return (r1 & 0xf) + typ + ((r2 & 0xf) << 8) + (1 << 4
 }
 
 func get_bfc(int v) bfc_result {
@@ -114,10 +114,10 @@ func ssa_gen_value(ssa_value value) string {
         return "MOVW"
     }
     if value.op == "OpLoadReg" {
-        return load_by_type(value.type_name, value.signed)
+        return load_by_type(value.type_name, value.signed
     }
     if value.op == "OpStoreReg" {
-        return store_by_type(value.type_name)
+        return store_by_type(value.type_name
     }
     if value.op == "OpARMADD" || value.op == "OpARMADDconst" {
         return "ADD"

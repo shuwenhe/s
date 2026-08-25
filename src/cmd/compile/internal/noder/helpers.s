@@ -81,7 +81,7 @@ func split_words(string line) vec[string] {
 func normalize_import_path(string raw) string {
     text := trim_spaces(raw)
     if starts_with(text, "\"") && ends_with(text, "\"") && len(text) >= 2 {
-        return slice(text, 1, len(text) - 1)
+        return slice(text, 1, len(text) - 1
     }
     text
 }

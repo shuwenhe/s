@@ -14,7 +14,7 @@ use std.io.println
 func default_fixtures_root() string {
     env_root := get("s_test_fixtures_root")
     if env_root.is_some() {
-        return env_root.unwrap()
+        return env_root.unwrap(
     }
     "cmd/compile/internal/tests/fixtures"
 }

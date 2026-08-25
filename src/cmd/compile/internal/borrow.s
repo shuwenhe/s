@@ -16,11 +16,11 @@ func analyze_trace(string scope, vec[string] type_env, string block_text) string
     if plan.len() == 0 {
         return text + " | plan <empty>"
     }
-    return text + " | plan " + join_text(plan, ", ")
+    return text + " | plan " + join_text(plan, ", "
 }
 
 func analyze_function(string name, vec[string] type_env, string body_text) string {
-    return analyze_trace(name, type_env, body_text)
+    return analyze_trace(name, type_env, body_text
 }
 
 func analyze_expr(string scope, string expr_text) string {

@@ -170,7 +170,7 @@ func find_symbol_in_list(symbols vec[document_symbol], name string) option[docum
     i := 0
     for i < symbols.len() {
         if symbols[i].name == name {
-            return option::some(symbols[i])
+            return option::some(symbols[i]
         }
         i = i + 1
     }

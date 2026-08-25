@@ -92,11 +92,11 @@ func hypot(float a, float b) float {
     float abs_b = abs(b)
     if abs_a > abs_b {
         float ratio = abs_b / abs_a
-        return abs_a * sqrt(1.0 + ratio * ratio)
+        return abs_a * sqrt(1.0 + ratio * ratio
     } else {
         if abs_b == 0.0 { return 0.0 }
         float ratio = abs_a / abs_b
-        return abs_b * sqrt(1.0 + ratio * ratio)
+        return abs_b * sqrt(1.0 + ratio * ratio
     }
 }
 

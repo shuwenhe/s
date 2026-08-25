@@ -149,7 +149,7 @@ func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
     switch expression {
         ir_ast.expr_ir::name(name) : {
             if contains_text(name, "_unlowered") {
-                return result::err("lowering contract violation: placeholder expression remains")
+                return result::err("lowering contract violation: placeholder expression remains"
             }
         }
         ir_ast.expr_ir::call(call_expr) : {
@@ -167,20 +167,20 @@ func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
             if l.is_err() {
                 return l
             }
-            return validate_expr_contract(binary_expr.right)
+            return validate_expr_contract(binary_expr.right
         }
         ir_ast.expr_ir::borrow(borrow_expr) : {
-            return validate_expr_contract(borrow_expr.target)
+            return validate_expr_contract(borrow_expr.target
         }
         ir_ast.expr_ir::member(member_expr) : {
-            return validate_expr_contract(member_expr.target)
+            return validate_expr_contract(member_expr.target
         }
         ir_ast.expr_ir::index(index_expr) : {
             t := validate_expr_contract(index_expr.target)
             if t.is_err() {
                 return t
             }
-            return validate_expr_contract(index_expr.index)
+            return validate_expr_contract(index_expr.index
         }
         ir_ast.expr_ir::array(array_expr) : {
             i := 0
@@ -207,7 +207,7 @@ func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
             }
         }
         ir_ast.expr_ir::block(block_expr) : {
-            return validate_block_contract(block_expr)
+            return validate_block_contract(block_expr
         }
         _ : (),
     }
@@ -347,7 +347,7 @@ func convert_expr(expr e, vec[const_rewrite_entry] const_entries) ir_ast.expr_ir
 }
 
 func lower_main_to_mir(source_file src) (mir_graph, string) {
-    return lower_package_to_mir(src)
+    return lower_package_to_mir(src
 }
 
 func lower_package_to_mir(source_file src) (mir_graph, string) {
@@ -366,7 +366,7 @@ func lower_package_to_mir(source_file src) (mir_graph, string) {
         i = i + 1
     }
     if fn_count == 0 {
-        return result::err("entry function not found: package has no function body")
+        return result::err("entry function not found: package has no function body"
     }
     picked := option[function_decl].none
     fallback := option[function_decl].none
@@ -391,7 +391,7 @@ func lower_package_to_mir(source_file src) (mir_graph, string) {
         picked = fallback
     }
     if picked.is_none() {
-        return result::err("entry function not found")
+        return result::err("entry function not found"
     }
     graph := lower_function_to_mir(picked.unwrap(), const_entries)
     const_fold_hits := 0
@@ -435,7 +435,7 @@ func count_const_hits_stmt(stmt s, vec[const_rewrite_entry] const_entries) int {
         stmt.increment(_) : 0,
         stmt.return(return_stmt) : {
             if return_stmt.value.is_some() {
-                return count_const_hits_expr(return_stmt.value.unwrap(), const_entries)
+                return count_const_hits_expr(return_stmt.value.unwrap(), const_entries
             }
             0
         }
@@ -614,7 +614,7 @@ func lower_function_to_mir(function_decl fd, vec[const_rewrite_entry] const_entr
             exit: 0,
         }
     }
-    return lower_block_to_mir(fd.sig.name, fd.body.unwrap(), const_entries)
+    return lower_block_to_mir(fd.sig.name, fd.body.unwrap(), const_entries
 }
 
 func lower_block_to_mir(string function_name, block_expr block, vec[const_rewrite_entry] const_entries) mir_graph {
@@ -646,7 +646,7 @@ func lower_block_to_mir(string function_name, block_expr block, vec[const_rewrit
                 merge_lines.push("yield " + dump_expr(tail))
                 blocks.push(make_block(3, "if.merge", merge_lines, "return", vec[mir_control_edge]()))
                 trace.push("control if -> blocks(entry, if.then, if.else, if.merge)")
-                return make_graph(function_name, blocks, trace, 0, 3)
+                return make_graph(function_name, blocks, trace, 0, 3
             }
             expr.while(while_expr) : {
                 blocks.push(make_block(0, "entry", stmt_texts, "jump", vec1_edge("cond", 1)))
@@ -663,7 +663,7 @@ func lower_block_to_mir(string function_name, block_expr block, vec[const_rewrit
                 exit_lines.push("yield unit")
                 blocks.push(make_block(3, "while.exit", exit_lines, "return", vec[mir_control_edge]()))
                 trace.push("control while -> blocks(entry, while.cond, while.body, while.exit)")
-                return make_graph(function_name, blocks, trace, 0, 3)
+                return make_graph(function_name, blocks, trace, 0, 3
             }
             expr.switch(switch_expr) : {
                 dispatch_edges := vec[mir_control_edge]()
@@ -676,7 +676,7 @@ func lower_block_to_mir(string function_name, block_expr block, vec[const_rewrit
                 blocks.push(make_block(3, "switch.default", vec1("switch.default"), "jump", vec1_edge("merge", 4)))
                 blocks.push(make_block(4, "switch.merge", vec1("yield " + substitute_const_text(dump_expr(tail), const_entries)), "return", vec[mir_control_edge]()))
                 trace.push("control switch -> blocks(entry, switch.case0, switch.case1, switch.default, switch.merge)")
-                return make_graph(function_name, blocks, trace, 0, 4)
+                return make_graph(function_name, blocks, trace, 0, 4
             }
             expr.for(for_expr) : {
                 blocks.push(make_block(0, "entry", stmt_texts, "jump", vec1_edge("for.cond", 1)))
@@ -687,7 +687,7 @@ func lower_block_to_mir(string function_name, block_expr block, vec[const_rewrit
                 blocks.push(make_block(2, "for.body", vec1("for.body"), "jump", vec1_edge("for.cond", 1)))
                 blocks.push(make_block(3, "for.exit", vec1("yield unit"), "return", vec[mir_control_edge]()))
                 trace.push("control for -> blocks(entry, for.cond, for.body, for.exit)")
-                return make_graph(function_name, blocks, trace, 0, 3)
+                return make_graph(function_name, blocks, trace, 0, 3
             }
             _ : (),
         }
@@ -840,7 +840,7 @@ func eval_const_fold_value(expr value, vec[const_rewrite_entry] out, int iota_in
         expr.binary(binary_expr) : {
             left := eval_const_fold_value(binary_expr.left.value, out, iota_index)
             right := eval_const_fold_value(binary_expr.right.value, out, iota_index)
-            return eval_const_fold_binary(binary_expr.op, left, right)
+            return eval_const_fold_binary(binary_expr.op, left, right
         }
         _ : const_fold_value {
             value_kind: "unknown",
@@ -910,7 +910,7 @@ func eval_const_fold_binary(string op, const_fold_value left, const_fold_value r
 
 func const_fold_value_text(const_fold_value value) string {
     if value.value_kind == "int" {
-        return to_string(value.int_value)
+        return to_string(value.int_value
     }
     if value.value_kind == "bool" {
         if value.bool_value {
@@ -929,7 +929,7 @@ func lookup_const_entry(vec[const_rewrite_entry] entries, string name) option[co
     for i > 0 {
         i = i - 1
         if entries[i].name == name {
-            return option::some(entries[i])
+            return option::some(entries[i]
         }
     }
     option.none
@@ -946,17 +946,17 @@ func lookup_const_expr_text(vec[const_rewrite_entry] entries, string name) strin
 func resolve_const_name_expr(string name, vec[const_rewrite_entry] const_entries) ir_ast.expr_ir {
     entry := lookup_const_entry(const_entries, name)
     if entry.is_none() {
-        return ir_ast.expr_ir::name(name)
+        return ir_ast.expr_ir::name(name
     }
     value := entry.unwrap()
     if value.value_kind == "int" {
-        return ir_ast.expr_ir::int(value.int_value)
+        return ir_ast.expr_ir::int(value.int_value
     }
     if value.value_kind == "bool" {
-        return ir_ast.expr_ir::bool(value.bool_value)
+        return ir_ast.expr_ir::bool(value.bool_value
     }
     if value.value_kind == "string" {
-        return ir_ast.expr_ir::string(value.string_value)
+        return ir_ast.expr_ir::string(value.string_value
     }
     ir_ast.expr_ir::name(name)
 }

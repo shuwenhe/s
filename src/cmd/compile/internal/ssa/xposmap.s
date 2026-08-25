@@ -44,14 +44,14 @@ func new_xpos_map(vec[int_pair] file_ranges) xpos_map {
 
 func xpos_map_slot(xpos_map m, int file_index) int_pair {
     if file_index == m.last_index && m.last_slot >= 0 {
-        return make_int_pair(m.last_slot, 1)
+        return make_int_pair(m.last_slot, 1
     }
     i := 0
     for i < m.maps.len() {
         if m.maps[i].file_index == file_index {
             m.last_index = file_index
             m.last_slot = i
-            return make_int_pair(i, 1)
+            return make_int_pair(i, 1
         }
         i = i + 1
     }
@@ -82,7 +82,7 @@ func xpos_map_set(xpos_map m, int file_index, int line, int value) xpos_map {
 func xpos_map_get(xpos_map m, int file_index, int line) int_pair {
     slot := xpos_map_slot(m, file_index)
     if slot.right == 0 {
-        return make_int_pair(0, 0)
+        return make_int_pair(0, 0
     }
     start := m.maps[slot.left].lines.first
     sparse_map_get(m.maps[slot.left].data, line - start)
