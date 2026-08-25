@@ -118,16 +118,12 @@ struct if_expr {
     option[string] inferred_type
 }
 
-struct while_expr {
-    box[expr] condition
-    block_expr body
-    option[string] inferred_type
-}
-
 struct for_expr {
+    option[box[stmt]] init
+    option[box[expr]] condition
+    option[box[stmt]] post
     vec[string] names
-    bool declare
-    box[expr] iterable
+    option[box[expr]] iterable
     block_expr body
     option[string] inferred_type
 }
@@ -165,7 +161,6 @@ enum expr {
     call(call_expr),
     switch(switch_expr),
     if(if_expr),
-    while(while_expr),
     for(for_expr),
     block(block_expr),
     array(array_literal),
@@ -291,7 +286,7 @@ func dump_source_file(source_file source) string {
     let lines = vec[string]()
     lines.push("package " + source.pkg);
     let ui = 0
-    while ui < source.uses.len() {
+    for ui < source.uses.len() {
         let use_decl = source.uses[ui]
         let text =
             switch use_decl.alias {
@@ -302,7 +297,7 @@ func dump_source_file(source_file source) string {
         ui = ui + 1
     }
     let ii = 0
-    while ii < source.items.len() {
+    for ii < source.items.len() {
         let item = source.items[ii]
         append_item_dump(lines, item);
         ii = ii + 1
@@ -352,7 +347,7 @@ func dump_function(function_decl item, string indent) vec[string] {
     let lines = vec[string]()
     let params = vec[string]()
     let _pi = 0
-    while _pi < item.sig.params.len() {
+    for _pi < item.sig.params.len() {
         let param = item.sig.params[_pi]
         params.push(param.type_name + " " + param.name)
         _pi = _pi + 1
@@ -386,7 +381,7 @@ func dump_struct(struct_decl item) vec[string] {
     let prefix = if item.is_public { "pub " } else { "" }
     lines.push(prefix + "struct " + item.name + fmt_generics(item.generics))
     let _fi = 0
-    while _fi < item.fields.len() {
+    for _fi < item.fields.len() {
         let field = item.fields[_fi]
         let fp = if field.is_public { "pub " } else { "" }
         lines.push("  " + fp + field.type_name + " " + field.name)
@@ -399,7 +394,7 @@ func dump_enum(enum_decl item) vec[string] {
     let lines = vec[string]()
     lines.push("enum " + item.name + fmt_generics(item.generics))
     let _vi = 0
-    while _vi < item.variants.len() {
+    for _vi < item.variants.len() {
         let variant = item.variants[_vi]
         switch variant.payload {
             option.some(payload) : lines.push("  " + variant.name + "(" + payload + ")"),
@@ -415,11 +410,11 @@ func dump_trait(trait_decl item) vec[string] {
     let prefix = if item.is_public { "pub " } else { "" }
     lines.push(prefix + "trait " + item.name + fmt_generics(item.generics))
     let _mi = 0
-    while _mi < item.methods.len() {
+    for _mi < item.methods.len() {
         let method = item.methods[_mi]
         let params = vec[string]()
         let _mpi = 0
-        while _mpi < method.params.len() {
+        for _mpi < method.params.len() {
             let param = method.params[_mpi]
             params.push(param.type_name + " " + param.name)
             _mpi = _mpi + 1
@@ -447,7 +442,7 @@ func dump_receiver_method(receiver_method_decl item) vec[string] {
     let method = item.method
     let params = vec[string]()
     let _mi2 = 0
-    while _mi2 < method.sig.params.len() {
+    for _mi2 < method.sig.params.len() {
         let param = method.sig.params[_mi2]
         params.push(param.type_name + " " + param.name)
         _mi2 = _mi2 + 1
@@ -480,7 +475,7 @@ func dump_receiver_method(receiver_method_decl item) vec[string] {
 func dump_block(block_expr block, string indent) vec[string] {
     let lines = vec[string]()
     let _si = 0
-    while _si < block.statements.len() {
+    for _si < block.statements.len() {
         let stmt = block.statements[_si]
         append_lines(lines, dump_stmt(stmt, indent))
         _si = _si + 1
@@ -571,11 +566,10 @@ func dump_expr(expr expr) string {
         expr.call(value) : "call " + dump_expr(value.callee.value) + "(" + join_exprs(value.args) + ")",
         expr.switch(value) : "switch " + dump_expr(value.subject.value) + " { " + join_switch_arms(value.arms) + " }",
         expr.if(value) : dump_if_expr(value),
-        expr.while(value) : "while " + dump_expr(value.condition.value) + " {...}",
         expr.for(value) : {
             let names = ""
             let i = 0
-            while i < value.names.len() {
+            for i < value.names.len() {
                 if i > 0 {
                     names = names + ", "
                 }
@@ -589,13 +583,13 @@ func dump_expr(expr expr) string {
         expr.array(value) : {
             let elems = vec[string]()
             let _ei = 0
-            while _ei < value.items.len() { elems.push(dump_expr(value.items[_ei])); _ei = _ei + 1 }
+            for _ei < value.items.len() { elems.push(dump_expr(value.items[_ei])); _ei = _ei + 1 }
             "[" + join_with(elems, ", ") + "]"
         }
         expr.map(value) : {
             let parts = vec[string]()
             let _en = 0
-            while _en < value.entries.len() { let entry = value.entries[_en]; parts.push(dump_expr(entry.key) + ": " + dump_expr(entry.value)); _en = _en + 1 }
+            for _en < value.entries.len() { let entry = value.entries[_en]; parts.push(dump_expr(entry.key) + ": " + dump_expr(entry.value)); _en = _en + 1 }
             "{" + join_with(parts, ", ") + "}"
         }
     }
@@ -626,7 +620,7 @@ func dump_pattern(pattern pattern) string {
 func join_exprs(vec[expr] values) string {
     let parts = vec[string]()
     let _iv = 0
-    while _iv < values.len() {
+    for _iv < values.len() {
         let value = values[_iv]
         parts.push(dump_expr(value))
         _iv = _iv + 1
@@ -637,14 +631,14 @@ func join_exprs(vec[expr] values) string {
 func join_patterns(vec[pattern] values) string {
     let parts = vec[string]()
     let _pv = 0
-    while _pv < values.len() { parts.push(dump_pattern(values[_pv])); _pv = _pv + 1 }
+    for _pv < values.len() { parts.push(dump_pattern(values[_pv])); _pv = _pv + 1 }
     join_with(parts, ", ")
 }
 
 func join_switch_arms(vec[switch_arm] values) string {
     let parts = vec[string]()
     let _mv = 0
-    while _mv < values.len() {
+    for _mv < values.len() {
         let value = values[_mv]
         parts.push(dump_pattern(value.pattern) + " : " + dump_expr(value.expr))
         _mv = _mv + 1
@@ -654,7 +648,7 @@ func join_switch_arms(vec[switch_arm] values) string {
 
 func append_lines(vec[string] dest, vec[string] source) () {
     let _li = 0
-    while _li < source.len() {
+    for _li < source.len() {
         dest.push(source[_li])
         _li = _li + 1
     }
@@ -674,7 +668,7 @@ func join_with(vec[string] values, string sep) string {
     let out = ""
     let first = true
     let _j = 0
-    while _j < values.len() {
+    for _j < values.len() {
         let value = values[_j]
         if !first {
             out = out + sep
