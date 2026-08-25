@@ -7,19 +7,19 @@ use std.env.args as host_args
 use std.io.eprintln
 
 func main() {
-    let args = host_args()
-    let goarch = buildcfg_goarch()
-    let buildcfg_err = buildcfg_check()
+    args := host_args()
+    goarch := buildcfg_goarch()
+    buildcfg_err := buildcfg_check()
     if buildcfg_err != "" {
         report_compile_error(buildcfg_err)
         return 2
     }
-    let arch_init_name = resolve_arch_init_name(goarch)
+    arch_init_name := resolve_arch_init_name(goarch)
     if arch_init_name == "" {
         report_compile_error("unknown architecture \"" + goarch + "\"")
         return 2
     }
-    let arch_err = arch_dispatch_init(goarch)
+    arch_err := arch_dispatch_init(goarch)
     if arch_err != "" {
         report_compile_error(arch_err)
         return 2

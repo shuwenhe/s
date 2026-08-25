@@ -18,7 +18,7 @@ func new_vec[t]() vec[t] {
 }
 
 func with_capacity[t](int capacity) vec[t] {
-    let initial =
+    initial :=
         if capacity > 0 {
             capacity
         } else {
@@ -82,9 +82,9 @@ func ensure_capacity[t](vec[t] mut vec, int wanted) () {
     if wanted <= vec.raw.capacity {
         return
     }
-    let next = grow_capacity(vec.raw.capacity, wanted)
-    let next_storage = new_array[t](next)
-    let i = 0
+    next := grow_capacity(vec.raw.capacity, wanted)
+    next_storage := new_array[t](next)
+    i := 0
     for i < vec.length {
         array_set(next_storage, i, array_get(vec.raw.storage.value, i))
         i = i + 1
@@ -94,7 +94,7 @@ func ensure_capacity[t](vec[t] mut vec, int wanted) () {
 }
 
 func grow_capacity(int current, int wanted) int {
-    let next = current
+    next := current
     if next <= 0 {
         next = 4
     }

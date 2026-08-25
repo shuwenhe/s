@@ -36,7 +36,7 @@ func starts_with(string text, string prefix) bool {
     if text.len() < prefix.len() {
         return false
     }
-    let i = 0
+    i := 0
     while i < prefix.len() {
         if text[i] != prefix[i] {
             return false

@@ -8,8 +8,8 @@ const STDOUT_FD = 1
 const STDERR_FD = 2
 
 func eprint(string text) {
-    let len = strlen(text)
-    let _ = __syscall3(SYS_WRITE, STDERR_FD, 0, len)
+    len := strlen(text)
+    _ := __syscall3(SYS_WRITE, STDERR_FD, 0, len)
 }
 
 func eprintln(string text) {
@@ -25,10 +25,10 @@ func main() {
     eprintln("")
     eprintln("=== S Compiler Pure S Bootstrap ===")
     eprintln("")
-    let compiler_src = "./src/cmd/compile/main.s"
-    let output_dir = "./.bootstrap/selfhost"
-    let seed_compiler = "./bin/s_seed"
-    let ir_codegen_bin = "./src/cmd/compile/selfhost/ir_to_binary"
+    compiler_src := "./src/cmd/compile/main.s"
+    output_dir := "./.bootstrap/selfhost"
+    seed_compiler := "./bin/s_seed"
+    ir_codegen_bin := "./src/cmd/compile/selfhost/ir_to_binary"
     return bootstrap_three_stage(
         compiler_src, 
         output_dir,
@@ -45,11 +45,11 @@ func bootstrap_three_stage(
 ) int {
     eprintln("[1/6] Reading compiler source: " + compiler_src)
     eprintln("[2/6] Compiling to IR (stage1)...")
-    let stage1_ir_path = output_dir + "/stage1.ir"
+    stage1_ir_path := output_dir + "/stage1.ir"
     eprintln("[3/6] Emitting IR to binary (stage1)...")
-    let stage1_bin = output_dir + "/stage1"
+    stage1_bin := output_dir + "/stage1"
     eprintln("[4/6] Using stage1 to recompile (stage2)...")
-    let stage2_ir_path = output_dir + "/stage2.ir"
+    stage2_ir_path := output_dir + "/stage2.ir"
     eprintln("[5/6] Verifying deterministic compilation...")
     eprintln("[✓] Bootstrap successful!")
     eprintln("[✓] Three stages verified identical")

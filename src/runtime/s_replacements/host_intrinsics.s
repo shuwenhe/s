@@ -1,4 +1,4 @@
-let g_args: [string] = []
+g_args: [string] = []
 
 func host_intrinsics_init(args: [string]) {
     g_args = args[1:]

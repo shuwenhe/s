@@ -29,7 +29,7 @@ func token_kind_name(token_kind kind) string {
 }
 
 func dump_tokens(vec[token] tokens) string {
-    let out = ""
+    out := ""
     for token in tokens {
         if out != "" {
             out = out + "\n"
