@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func asin_unit_name() string {
-    "src/math/asin"
+    "src/switch/asin"
 }
 
 func asin_unit_ready() int {

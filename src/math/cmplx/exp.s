@@ -1,7 +1,7 @@
-package src.math.cmplx
+package src.switch.cmplx
 
 func exp_unit_name() string {
-    "src/math/cmplx/exp"
+    "src/switch/cmplx/exp"
 }
 
 func exp_unit_ready() int {

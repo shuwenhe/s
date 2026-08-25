@@ -1,7 +1,7 @@
-package src.math.cmplx
+package src.switch.cmplx
 
 func isinf_unit_name() string {
-    "src/math/cmplx/isinf"
+    "src/switch/cmplx/isinf"
 }
 
 func isinf_unit_ready() int {

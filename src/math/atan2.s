@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func atan2_unit_name() string {
-    "src/math/atan2"
+    "src/switch/atan2"
 }
 
 func atan2_unit_ready() int {

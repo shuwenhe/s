@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func link_test_unit_name() string {
-    "src/math/big/link_test"
+    "src/switch/big/link_test"
 }
 
 func link_test_unit_ready() int {

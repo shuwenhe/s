@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func floatconv_test_unit_name() string {
-    "src/math/big/floatconv_test"
+    "src/switch/big/floatconv_test"
 }
 
 func floatconv_test_unit_ready() int {

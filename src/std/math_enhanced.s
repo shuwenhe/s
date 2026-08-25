@@ -1,4 +1,4 @@
-package std.math
+package std.switch
 const PI = 3.14159265358979323846
 const E = 2.71828182845904523536
 const LN2 = 0.69314718055994530942

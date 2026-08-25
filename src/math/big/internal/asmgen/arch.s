@@ -1,7 +1,7 @@
-package src.math.big.internal.asmgen
+package src.switch.big.internal.asmgen
 
 func arch_unit_name() string {
-    "src/math/big/internal/asmgen/arch"
+    "src/switch/big/internal/asmgen/arch"
 }
 
 func arch_unit_ready() int {

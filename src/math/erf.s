@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func erf_unit_name() string {
-    "src/math/erf"
+    "src/switch/erf"
 }
 
 func erf_unit_ready() int {

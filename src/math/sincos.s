@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func sincos_unit_name() string {
-    "src/math/sincos"
+    "src/switch/sincos"
 }
 
 func sincos_unit_ready() int {

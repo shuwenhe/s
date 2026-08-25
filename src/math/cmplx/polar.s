@@ -1,7 +1,7 @@
-package src.math.cmplx
+package src.switch.cmplx
 
 func polar_unit_name() string {
-    "src/math/cmplx/polar"
+    "src/switch/cmplx/polar"
 }
 
 func polar_unit_ready() int {

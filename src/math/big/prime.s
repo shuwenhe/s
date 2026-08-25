@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func prime_unit_name() string {
-    "src/math/big/prime"
+    "src/switch/big/prime"
 }
 
 func prime_unit_ready() int {

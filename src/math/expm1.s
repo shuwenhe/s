@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func expm1_unit_name() string {
-    "src/math/expm1"
+    "src/switch/expm1"
 }
 
 func expm1_unit_ready() int {

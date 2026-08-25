@@ -20,7 +20,7 @@ func (h lsp_handler) on_did_change(params did_change_text_document_params) {
     uri := params.text_document.uri
     version := params.text_document.version
 
-    match h.doc_manager.get_document(uri) {
+    switch h.doc_manager.get_document(uri) {
         option::some(doc) : {
             new_text := apply_content_changes(doc.text, params.content_changes)
             h.doc_manager.update_document(uri, new_text, version)
@@ -39,7 +39,7 @@ func (h lsp_handler) on_did_close(params did_close_text_document_params) {
 func (h lsp_handler) publish_diagnostics(uri string) vec[diagnostic] {
     diags := vec[diagnostic]()
 
-    match h.doc_manager.get_errors(uri) {
+    switch h.doc_manager.get_errors(uri) {
         option::some(errors) : {
             i := 0
             for i < errors.len() {
@@ -65,7 +65,7 @@ func (h lsp_handler) publish_diagnostics(uri string) vec[diagnostic] {
 }
 
 func (h lsp_handler) get_document_symbols(uri string) vec[document_symbol] {
-    match h.doc_manager.get_document_symbols(uri) {
+    switch h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : symbols,
         option::none() : vec[document_symbol]()
     }
@@ -76,7 +76,7 @@ func (h lsp_handler) get_completions(uri string, pos position) completion_list {
 
     completions.append(get_keyword_completions())
 
-    match h.doc_manager.get_document_symbols(uri) {
+    switch h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : {
             i := 0
             for i < symbols.len() {
@@ -132,9 +132,9 @@ func get_keyword_completions() vec[completion_item] {
 }
 
 func (h lsp_handler) get_hover(uri string, pos position) option[hover] {
-    match h.doc_manager.get_token_at_position(uri, pos) {
+    switch h.doc_manager.get_token_at_position(uri, pos) {
         option::some(token) : {
-            match h.find_symbol_definition(uri, token) {
+            switch h.find_symbol_definition(uri, token) {
                 option::some(symbol) : {
                     option::some(hover {
                         contents: format_hover_contents(symbol),
@@ -160,7 +160,7 @@ func (h lsp_handler) get_hover(uri string, pos position) option[hover] {
 }
 
 func (h lsp_handler) find_symbol_definition(uri string, name string) option[document_symbol] {
-    match h.doc_manager.get_document_symbols(uri) {
+    switch h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : find_symbol_in_list(symbols, name),
         option::none() : option::none()
     }
@@ -183,7 +183,7 @@ func apply_content_changes(text string, changes vec[text_document_content_change
 
     for i < changes.len() {
         change := changes[i]
-        match change.range_val {
+        switch change.range_val {
             option::some(r) : {
                 lines := std::split(result, "\n")
                 start_offset := position_to_offset(lines, r.start)
@@ -220,7 +220,7 @@ func position_to_offset(lines vec[string], pos position) int {
 }
 
 func symbol_kind_to_completion_kind(kind symbol_kind) completion_item_kind {
-    match kind {
+    switch kind {
         symbol_kind::function_k : completion_item_kind::function,
         symbol_kind::struct_k : completion_item_kind::struct_k,
         symbol_kind::enum_k : completion_item_kind::enum_value,
@@ -234,7 +234,7 @@ func symbol_kind_to_completion_kind(kind symbol_kind) completion_item_kind {
 }
 
 func format_symbol_kind(kind symbol_kind) string {
-    match kind {
+    switch kind {
         symbol_kind::function_k : "function",
         symbol_kind::struct_k : "struct",
         symbol_kind::enum_k : "enum",

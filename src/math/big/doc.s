@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func doc_unit_name() string {
-    "src/math/big/doc"
+    "src/switch/big/doc"
 }
 
 func doc_unit_ready() int {

@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func asinh_unit_name() string {
-    "src/math/asinh"
+    "src/switch/asinh"
 }
 
 func asinh_unit_ready() int {

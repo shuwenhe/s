@@ -677,7 +677,7 @@ func instruction_verify_pick_reason(string primary, string pass_delta_summary, s
         if tie_count > 1 {
             return "tie-break"
         }
-        return "top-match"
+        return "top-switch"
     }
     "fallback"
 }

@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func lgamma_unit_name() string {
-    "src/math/lgamma"
+    "src/switch/lgamma"
 }
 
 func lgamma_unit_ready() int {

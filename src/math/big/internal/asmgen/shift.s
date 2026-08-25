@@ -1,7 +1,7 @@
-package src.math.big.internal.asmgen
+package src.switch.big.internal.asmgen
 
 func shift_unit_name() string {
-    "src/math/big/internal/asmgen/shift"
+    "src/switch/big/internal/asmgen/shift"
 }
 
 func shift_unit_ready() int {

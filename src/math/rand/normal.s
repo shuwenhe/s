@@ -1,7 +1,7 @@
-package src.math.rand
+package src.switch.rand
 
 func normal_unit_name() string {
-    "src/math/rand/normal"
+    "src/switch/rand/normal"
 }
 
 func normal_unit_ready() int {

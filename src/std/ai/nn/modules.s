@@ -3,7 +3,7 @@ use std.tensor.{tensor, zeros, ones, randn, xavier_uniform, kaiming_normal,
                   add, sub, mul, div, matmul_2d, reshape, transpose,
                   relu_tensor, softmax_tensor, layer_norm, sigmoid_tensor, 
                   tanh_tensor, gelu_tensor, dropout as tensor_dropout}
-use std.math.{sqrt, exp, tanh}
+use std.switch.{sqrt, exp, tanh}
 use std.ai.autograd.{auto_grad_tensor, parameter, create_autograd_tensor}
 
 struct Module {

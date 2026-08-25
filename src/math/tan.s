@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func tan_unit_name() string {
-    "src/math/tan"
+    "src/switch/tan"
 }
 
 func tan_unit_ready() int {

@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func modf_unit_name() string {
-    "src/math/modf"
+    "src/switch/modf"
 }
 
 func modf_unit_ready() int {

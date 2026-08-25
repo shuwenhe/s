@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func const_unit_name() string {
-    "src/math/const"
+    "src/switch/const"
 }
 
 func const_unit_ready() int {

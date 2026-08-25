@@ -20,7 +20,7 @@ func main() {
 func (server lsp_server) run() {
     buf := ""
     loop {
-        match std::read_line_from_stdin() {
+        switch std::read_line_from_stdin() {
             result::ok(line) : {
                 if line == "" {
                     break
@@ -29,9 +29,9 @@ func (server lsp_server) run() {
                 prefix := "Content-Length: "
                 if std::starts_with(line, prefix) {
                     len_str := line.substring(prefix.len(), line.len())
-                    match std::parse_int(len_str) {
+                    switch std::parse_int(len_str) {
                         result::ok(content_len) : {
-                            match std::read_bytes_from_stdin(content_len) {
+                            switch std::read_bytes_from_stdin(content_len) {
                                 result::ok(content) : {
                                     server.handle_message(content)
                                 },
@@ -51,9 +51,9 @@ func (server lsp_server) run() {
 }
 
 func (server lsp_server) handle_message(message string) {
-    match lsp::parse_jsonrpc_message(message) {
+    switch lsp::parse_jsonrpc_message(message) {
         result::ok(req) : {
-            match req.method {
+            switch req.method {
                 "initialize" : server.handle_initialize(req),
                 "initialized" : {},
                 "shutdown" : server.handle_shutdown(req),
@@ -73,7 +73,7 @@ func (server lsp_server) handle_message(message string) {
                 "workspace/symbol" : server.handle_workspace_symbol(req, message),
 
                 _ : {
-                    match req.id {
+                    switch req.id {
                         option::some(id) : {
                             server.send_error(id, -32601, "Method not found")
                         },
@@ -91,7 +91,7 @@ func (server lsp_server) handle_message(message string) {
 func (server lsp_server) handle_initialize(req lsp::jsonrpc_request) {
     server.initialized = true
 
-    match req.id {
+    switch req.id {
         option::some(id) : {
             capabilities := lsp::server_capabilities {
                 text_document_sync: true,
@@ -122,14 +122,14 @@ func (server lsp_server) handle_initialize(req lsp::jsonrpc_request) {
 }
 
 func (server lsp_server) handle_shutdown(req lsp::jsonrpc_request) {
-    match req.id {
+    switch req.id {
         option::some(id) : server.send_response(id, "null"),
         option::none() : {}
     }
 }
 
 func (server lsp_server) handle_did_open(req lsp::jsonrpc_request, message string) {
-    match extract_text_document_item(message) {
+    switch extract_text_document_item(message) {
         option::some(item) : {
             params := lsp::did_open_text_document_params {
                 text_document: item,
@@ -143,7 +143,7 @@ func (server lsp_server) handle_did_open(req lsp::jsonrpc_request, message strin
 }
 
 func (server lsp_server) handle_did_change(req lsp::jsonrpc_request, message string) {
-    match extract_did_change_params(message) {
+    switch extract_did_change_params(message) {
         option::some((uri, text, version)) : {
             changes := vec[lsp::text_document_content_change_event]{
                 lsp::text_document_content_change_event {
@@ -169,7 +169,7 @@ func (server lsp_server) handle_did_change(req lsp::jsonrpc_request, message str
 }
 
 func (server lsp_server) handle_did_save(req lsp::jsonrpc_request, message string) {
-    match extract_text_document_identifier(message) {
+    switch extract_text_document_identifier(message) {
         option::some(uri) : {
             params := lsp::did_save_text_document_params {
                 text_document: lsp::text_document_identifier { uri: uri },
@@ -182,7 +182,7 @@ func (server lsp_server) handle_did_save(req lsp::jsonrpc_request, message strin
 }
 
 func (server lsp_server) handle_did_close(req lsp::jsonrpc_request, message string) {
-    match extract_text_document_identifier(message) {
+    switch extract_text_document_identifier(message) {
         option::some(uri) : {
             params := lsp::did_close_text_document_params {
                 text_document: lsp::text_document_identifier { uri: uri },
@@ -194,9 +194,9 @@ func (server lsp_server) handle_did_close(req lsp::jsonrpc_request, message stri
 }
 
 func (server lsp_server) handle_completion(req lsp::jsonrpc_request, message string) {
-    match req.id {
+    switch req.id {
         option::some(id) : {
-            match extract_position_params(message) {
+            switch extract_position_params(message) {
                 option::some((uri, line, character)) : {
                     pos := lsp::position { line: line, character: character }
                     completions := server.handler.get_completions(uri, pos)
@@ -211,12 +211,12 @@ func (server lsp_server) handle_completion(req lsp::jsonrpc_request, message str
 }
 
 func (server lsp_server) handle_hover(req lsp::jsonrpc_request, message string) {
-    match req.id {
+    switch req.id {
         option::some(id) : {
-            match extract_position_params(message) {
+            switch extract_position_params(message) {
                 option::some((uri, line, character)) : {
                     pos := lsp::position { line: line, character: character }
-                    match server.handler.get_hover(uri, pos) {
+                    switch server.handler.get_hover(uri, pos) {
                         option::some(hover) : {
                             result := lsp::serialize_hover(hover)
                             server.send_response(id, result)
@@ -232,12 +232,12 @@ func (server lsp_server) handle_hover(req lsp::jsonrpc_request, message string) 
 }
 
 func (server lsp_server) handle_definition(req lsp::jsonrpc_request, message string) {
-    match req.id {
+    switch req.id {
         option::some(id) : {
-            match extract_position_params(message) {
+            switch extract_position_params(message) {
                 option::some((uri, line, character)) : {
                     pos := lsp::position { line: line, character: character }
-                    match server.handler.find_symbol_definition(uri, "") {
+                    switch server.handler.find_symbol_definition(uri, "") {
                         option::some(symbol) : {
                             location := "{\"uri\":\"" + uri + "\",\"range\":" + 
                                 lsp::serialize_range(symbol.range_val) + "}"
@@ -254,7 +254,7 @@ func (server lsp_server) handle_definition(req lsp::jsonrpc_request, message str
 }
 
 func (server lsp_server) handle_references(req lsp::jsonrpc_request, message string) {
-    match req.id {
+    switch req.id {
         option::some(id) : {
             server.send_response(id, "[]")
         },
@@ -263,9 +263,9 @@ func (server lsp_server) handle_references(req lsp::jsonrpc_request, message str
 }
 
 func (server lsp_server) handle_document_symbol(req lsp::jsonrpc_request, message string) {
-    match req.id {
+    switch req.id {
         option::some(id) : {
-            match extract_text_document_identifier(message) {
+            switch extract_text_document_identifier(message) {
                 option::some(uri) : {
                     symbols := server.handler.get_document_symbols(uri)
                     result := lsp::serialize_document_symbols(symbols)
@@ -279,7 +279,7 @@ func (server lsp_server) handle_document_symbol(req lsp::jsonrpc_request, messag
 }
 
 func (server lsp_server) handle_rename(req lsp::jsonrpc_request, message string) {
-    match req.id {
+    switch req.id {
         option::some(id) : {
             server.send_response(id, "{\"changes\":{}}")
         },
@@ -288,7 +288,7 @@ func (server lsp_server) handle_rename(req lsp::jsonrpc_request, message string)
 }
 
 func (server lsp_server) handle_workspace_symbol(req lsp::jsonrpc_request, message string) {
-    match req.id {
+    switch req.id {
         option::some(id) : {
             server.send_response(id, "[]")
         },
@@ -327,7 +327,7 @@ func (server lsp_server) send_message(message string) {
 }
 
 func extract_text_document_item(message string) option[lsp::text_document_item] {
-    match extract_text_document_identifier(message) {
+    switch extract_text_document_identifier(message) {
         option::some(uri) : {
             option::none()
         },
@@ -340,15 +340,15 @@ func extract_text_document_identifier(message string) option[string] {
 }
 
 func extract_position_params(message string) option[(string, int, int)] {
-    match lsp::extract_json_string(message, "uri") {
+    switch lsp::extract_json_string(message, "uri") {
         option::some(uri) : {
-            match lsp::extract_json_string(message, "line") {
+            switch lsp::extract_json_string(message, "line") {
                 option::some(line_str) : {
-                    match std::parse_int(line_str) {
+                    switch std::parse_int(line_str) {
                         result::ok(line) : {
-                            match lsp::extract_json_string(message, "character") {
+                            switch lsp::extract_json_string(message, "character") {
                                 option::some(char_str) : {
-                                    match std::parse_int(char_str) {
+                                    switch std::parse_int(char_str) {
                                         result::ok(character) : {
                                             option::some((uri, line, character))
                                         },
@@ -369,13 +369,13 @@ func extract_position_params(message string) option[(string, int, int)] {
 }
 
 func extract_did_change_params(message string) option[(string, string, int)] {
-    match lsp::extract_json_string(message, "uri") {
+    switch lsp::extract_json_string(message, "uri") {
         option::some(uri) : {
-            match lsp::extract_json_string(message, "text") {
+            switch lsp::extract_json_string(message, "text") {
                 option::some(text) : {
-                    match lsp::extract_json_string(message, "version") {
+                    switch lsp::extract_json_string(message, "version") {
                         option::some(version_str) : {
-                            match std::parse_int(version_str) {
+                            switch std::parse_int(version_str) {
                                 result::ok(version) : {
                                     option::some((uri, text, version))
                                 },

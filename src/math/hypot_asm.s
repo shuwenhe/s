@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func hypot_asm_unit_name() string {
-    "src/math/hypot_asm"
+    "src/switch/hypot_asm"
 }
 
 func hypot_asm_unit_ready() int {

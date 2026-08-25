@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func acosh_unit_name() string {
-    "src/math/acosh"
+    "src/switch/acosh"
 }
 
 func acosh_unit_ready() int {

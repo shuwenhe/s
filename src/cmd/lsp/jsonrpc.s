@@ -23,15 +23,15 @@ struct jsonrpc_notification {
 }
 
 func parse_jsonrpc_message(raw string) (jsonrpc_request, string) {
-    match extract_json_string(raw, "method") {
+    switch extract_json_string(raw, "method") {
         option::some(method) : {
             id_str := extract_json_string(raw, "id")
             params := extract_json_string(raw, "params")
 
             id_opt := option::none()
-            match id_str {
+            switch id_str {
                 option::some(id_val) : {
-                    match std::parse_int(id_val) {
+                    switch std::parse_int(id_val) {
                         result::ok(id_num) : id_opt = option::some(id_num),
                         result::err(_) : {}
                     }
@@ -124,22 +124,22 @@ func serialize_completion_list(list completion_list) string {
 func serialize_completion_item(item completion_item) string {
     var result = "{\"label\":\"" + escape_json_string(item.label) + "\""
 
-    match item.kind {
+    switch item.kind {
         option::some(k) : result = result + ",\"kind\":" + std::to_string(completion_kind_to_int(k)),
         option::none() : {}
     }
 
-    match item.detail {
+    switch item.detail {
         option::some(d) : result = result + ",\"detail\":\"" + escape_json_string(d) + "\"",
         option::none() : {}
     }
 
-    match item.documentation {
+    switch item.documentation {
         option::some(doc) : result = result + ",\"documentation\":\"" + escape_json_string(doc) + "\"",
         option::none() : {}
     }
 
-    match item.sort_text {
+    switch item.sort_text {
         option::some(st) : result = result + ",\"sortText\":\"" + escape_json_string(st) + "\"",
         option::none() : {}
     }
@@ -161,7 +161,7 @@ func serialize_position(p position) string {
 }
 
 func serialize_severity(severity option[int]) string {
-    match severity {
+    switch severity {
         option::some(s) : std::to_string(s),
         option::none() : "4"
     }
@@ -169,7 +169,7 @@ func serialize_severity(severity option[int]) string {
 
 func extract_json_string(json string, key string) option[string] {
     search_key := "\"" + key + "\":"
-    match std::find_substring(json, search_key) {
+    switch std::find_substring(json, search_key) {
         option::some(pos) : {
             start := pos + search_key.len()
 
@@ -231,7 +231,7 @@ func escape_json_string(s string) string {
 }
 
 func symbol_kind_to_int(kind symbol_kind) int {
-    match kind {
+    switch kind {
         symbol_kind::file_k : 1,
         symbol_kind::module_k : 2,
         symbol_kind::namespace_k : 3,
@@ -262,7 +262,7 @@ func symbol_kind_to_int(kind symbol_kind) int {
 }
 
 func completion_kind_to_int(kind completion_item_kind) int {
-    match kind {
+    switch kind {
         completion_item_kind::text : 1,
         completion_item_kind::method : 2,
         completion_item_kind::function : 3,

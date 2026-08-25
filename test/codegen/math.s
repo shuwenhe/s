@@ -1,7 +1,7 @@
 package test.codegen
 
 func math_unit_name() string {
-    "test/codegen/math"
+    "test/codegen/switch"
 }
 
 func math_unit_ready() int {

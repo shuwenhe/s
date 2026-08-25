@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func hilbert_test_unit_name() string {
-    "src/math/big/hilbert_test"
+    "src/switch/big/hilbert_test"
 }
 
 func hilbert_test_unit_ready() int {

@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func unsafe_unit_name() string {
-    "src/math/unsafe"
+    "src/switch/unsafe"
 }
 
 func unsafe_unit_ready() int {

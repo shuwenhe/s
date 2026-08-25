@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func sqrt_unit_name() string {
-    "src/math/sqrt"
+    "src/switch/sqrt"
 }
 
 func sqrt_unit_ready() int {

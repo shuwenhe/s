@@ -1,7 +1,7 @@
-package src.math.cmplx
+package src.switch.cmplx
 
 func asin_unit_name() string {
-    "src/math/cmplx/asin"
+    "src/switch/cmplx/asin"
 }
 
 func asin_unit_ready() int {

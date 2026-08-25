@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func erfinv_unit_name() string {
-    "src/math/erfinv"
+    "src/switch/erfinv"
 }
 
 func erfinv_unit_ready() int {

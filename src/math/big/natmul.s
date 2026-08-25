@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func natmul_unit_name() string {
-    "src/math/big/natmul"
+    "src/switch/big/natmul"
 }
 
 func natmul_unit_ready() int {

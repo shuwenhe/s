@@ -1,7 +1,7 @@
-package src.math.big.internal.asmgen
+package src.switch.big.internal.asmgen
 
 func mul_unit_name() string {
-    "src/math/big/internal/asmgen/mul"
+    "src/switch/big/internal/asmgen/mul"
 }
 
 func mul_unit_ready() int {

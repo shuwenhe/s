@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func intconv_test_unit_name() string {
-    "src/math/big/intconv_test"
+    "src/switch/big/intconv_test"
 }
 
 func intconv_test_unit_ready() int {

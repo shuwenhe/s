@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func dim_noasm_unit_name() string {
-    "src/math/dim_noasm"
+    "src/switch/dim_noasm"
 }
 
 func dim_noasm_unit_ready() int {

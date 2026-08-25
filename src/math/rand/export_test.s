@@ -1,7 +1,7 @@
-package src.math.rand
+package src.switch.rand
 
 func export_test_unit_name() string {
-    "src/math/rand/export_test"
+    "src/switch/rand/export_test"
 }
 
 func export_test_unit_ready() int {

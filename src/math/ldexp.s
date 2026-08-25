@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func ldexp_unit_name() string {
-    "src/math/ldexp"
+    "src/switch/ldexp"
 }
 
 func ldexp_unit_ready() int {

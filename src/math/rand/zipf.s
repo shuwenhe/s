@@ -1,7 +1,7 @@
-package src.math.rand
+package src.switch.rand
 
 func zipf_unit_name() string {
-    "src/math/rand/zipf"
+    "src/switch/rand/zipf"
 }
 
 func zipf_unit_ready() int {

@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func cbrt_unit_name() string {
-    "src/math/cbrt"
+    "src/switch/cbrt"
 }
 
 func cbrt_unit_ready() int {

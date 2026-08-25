@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func huge_test_unit_name() string {
-    "src/math/huge_test"
+    "src/switch/huge_test"
 }
 
 func huge_test_unit_ready() int {

@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func floatexample_test_unit_name() string {
-    "src/math/big/floatexample_test"
+    "src/switch/big/floatexample_test"
 }
 
 func floatexample_test_unit_ready() int {

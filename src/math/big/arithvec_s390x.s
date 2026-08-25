@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func arithvec_s390x_unit_name() string {
-    "src/math/big/arithvec_s390x"
+    "src/switch/big/arithvec_s390x"
 }
 
 func arithvec_s390x_unit_ready() int {

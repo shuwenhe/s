@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func floatmarsh_unit_name() string {
-    "src/math/big/floatmarsh"
+    "src/switch/big/floatmarsh"
 }
 
 func floatmarsh_unit_ready() int {

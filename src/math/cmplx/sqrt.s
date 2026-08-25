@@ -1,7 +1,7 @@
-package src.math.cmplx
+package src.switch.cmplx
 
 func sqrt_unit_name() string {
-    "src/math/cmplx/sqrt"
+    "src/switch/cmplx/sqrt"
 }
 
 func sqrt_unit_ready() int {

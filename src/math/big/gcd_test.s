@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func gcd_test_unit_name() string {
-    "src/math/big/gcd_test"
+    "src/switch/big/gcd_test"
 }
 
 func gcd_test_unit_ready() int {

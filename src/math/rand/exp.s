@@ -1,7 +1,7 @@
-package src.math.rand
+package src.switch.rand
 
 func exp_unit_name() string {
-    "src/math/rand/exp"
+    "src/switch/rand/exp"
 }
 
 func exp_unit_ready() int {

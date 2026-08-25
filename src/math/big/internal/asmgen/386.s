@@ -1,6 +1,6 @@
-package src.math.big.internal.asmgen
+package src.switch.big.internal.asmgen
 func 386_unit_name() string {
-    "src/math/big/internal/asmgen/386"
+    "src/switch/big/internal/asmgen/386"
 }
 
 func 386_unit_ready() int {

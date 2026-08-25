@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func nextafter_unit_name() string {
-    "src/math/nextafter"
+    "src/switch/nextafter"
 }
 
 func nextafter_unit_ready() int {

@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func float_unit_name() string {
-    "src/math/big/float"
+    "src/switch/big/float"
 }
 
 func float_unit_ready() int {

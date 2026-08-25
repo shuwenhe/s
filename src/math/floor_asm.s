@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func floor_asm_unit_name() string {
-    "src/math/floor_asm"
+    "src/switch/floor_asm"
 }
 
 func floor_asm_unit_ready() int {
