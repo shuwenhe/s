@@ -9,7 +9,7 @@ struct sparse_set {
 func new_sparse_set(int n) sparse_set {
     sparse := vec[int]()
     i := 0
-    while i < n {
+    for i < n {
         sparse.push(0)
         i = i + 1
     }
@@ -35,7 +35,7 @@ func sparse_set_contains(sparse_set s, int x) bool {
     i < s.dense.len() && s.dense[i] == x
 }
 
-func sparse_set_add(mut sparse_set s, int x) sparse_set {
+func sparse_set_add(sparse_set s, int x) sparse_set {
     if x < 0 || x >= s.sparse.len() {
         return s
     }
@@ -48,7 +48,7 @@ func sparse_set_add(mut sparse_set s, int x) sparse_set {
     s
 }
 
-func sparse_set_remove(mut sparse_set s, int x) sparse_set {
+func sparse_set_remove(sparse_set s, int x) sparse_set {
     if x < 0 || x >= s.sparse.len() {
         return s
     }
@@ -62,7 +62,7 @@ func sparse_set_remove(mut sparse_set s, int x) sparse_set {
     s
 }
 
-func sparse_set_pop(mut sparse_set s) int_pair {
+func sparse_set_pop(sparse_set s) int_pair {
     if s.dense.len() == 0 {
         return make_int_pair(0, 0)
     }
@@ -71,7 +71,7 @@ func sparse_set_pop(mut sparse_set s) int_pair {
     make_int_pair(x, 1)
 }
 
-func sparse_set_clear(mut sparse_set s) sparse_set {
+func sparse_set_clear(sparse_set s) sparse_set {
     s.dense = vec[int]()
     s
 }

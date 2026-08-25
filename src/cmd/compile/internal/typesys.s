@@ -23,8 +23,8 @@ func parse_type(string text) string {
     if is_builtin_primitive(clean) {
         return clean
     }
-    if starts_with(clean, "&mut ") {
-        return "&mut " + parse_type(slice(clean, 5, clean.len()))
+    if starts_with(clean, "&") {
+        return "&" + parse_type(slice(clean, 5, clean.len()))
     }
     if starts_with(clean, "&") {
         return "&" + parse_type(slice(clean, 1, clean.len()))
@@ -49,7 +49,7 @@ func parse_type_ref(string text) type_ref {
     is_slice := false
     is_array := false
     string array_len = ""
-    if starts_with(rest, "&mut ") {
+    if starts_with(rest, "&") {
         is_ref = true
         is_mut_ref = true
         rest = parse_type(slice(rest, 5, rest.len()))
@@ -107,7 +107,7 @@ func has_unknown_component(string ty) bool {
     }
     args := extract_type_args(clean)
     i := 0
-    while i < args.len() {
+    for i < args.len() {
         if parse_type(args[i]) == "unknown" {
             return true
         }
@@ -129,7 +129,7 @@ func rules_consistent() bool {
     if same_type("[4]int", "[8]int") {
         return false
     }
-    result_ref := parse_type_ref("result[int, string]")
+    result_ref := parse_type_ref("(int, string)")
     if result_ref.base != "result" {
         return false
     }
@@ -139,10 +139,10 @@ func rules_consistent() bool {
     if type_arg(result_ref, 1) != "string" {
         return false
     }
-    if generic_arity("result[int, string]") != 2 {
+    if generic_arity("(int, string)") != 2 {
         return false
     }
-    ref_ref := parse_type_ref("&mut []int")
+    ref_ref := parse_type_ref("&[]int")
     if !ref_ref.is_ref || !ref_ref.is_mut_ref {
         return false
     }
@@ -159,7 +159,7 @@ func dump_type(string ty) string {
 
 func base_type_name(string ty) string {
     clean := parse_type(ty)
-    if starts_with(clean, "&mut ") {
+    if starts_with(clean, "&") {
         return base_type_name(slice(clean, 5, clean.len()))
     }
     if starts_with(clean, "&") {
@@ -207,7 +207,7 @@ func extract_type_args(string type_name) vec[string] {
     depth := 0
     start := 0
     i := 0
-    while i < inner.len() {
+    for i < inner.len() {
         ch := char_at(inner, i)
         if ch == "[" {
             depth = depth + 1
@@ -259,7 +259,7 @@ func compatible_type(string left, string right) bool {
         return false
     }
     i := 0
-    while i < lt.args.len() {
+    for i < lt.args.len() {
         if !compatible_type(lt.args[i], rt.args[i]) {
             return false
         }
@@ -288,7 +288,7 @@ func comparable_type(string ty) bool {
     if is_tuple_type(clean) {
         items := extract_tuple_args(clean)
         i := 0
-        while i < items.len() {
+        for i < items.len() {
             if !comparable_type(items[i]) {
                 return false
             }
@@ -300,7 +300,7 @@ func comparable_type(string ty) bool {
     if base == "option" || base == "result" {
         args := extract_type_args(clean)
         i := 0
-        while i < args.len() {
+        for i < args.len() {
             if !comparable_type(args[i]) {
                 return false
             }
@@ -362,7 +362,7 @@ func compatible_tuple_type(string left, string right) bool {
         return false
     }
     i := 0
-    while i < la.len() {
+    for i < la.len() {
         if !compatible_type(la[i], ra[i]) {
             return false
         }
@@ -383,7 +383,7 @@ func assignable_tuple_type(string target, string source) bool {
         return false
     }
     i := 0
-    while i < ta.len() {
+    for i < ta.len() {
         if !assignable_type(ta[i], sa[i]) {
             return false
         }
@@ -410,7 +410,7 @@ func extract_tuple_args(string type_name) vec[string] {
     depth := 0
     start := 0
     i := 0
-    while i < inner.len() {
+    for i < inner.len() {
         ch := char_at(inner, i)
         if ch == "(" || ch == "[" {
             depth = depth + 1
@@ -529,10 +529,10 @@ func normalize_type_text(string text) string {
 func trim_text(string text) string {
     start := 0
     end := text.len()
-    while start < end && is_space(char_at(text, start)) {
+    for start < end && is_space(char_at(text, start)) {
         start = start + 1
     }
-    while end > start && is_space(char_at(text, end - 1)) {
+    for end > start && is_space(char_at(text, end - 1)) {
         end = end - 1
     }
     return slice(text, start, end)
@@ -561,7 +561,7 @@ func is_space(string ch) bool {
 
 func find_char(string text, string needle) int {
     i := 0
-    while i < text.len() {
+    for i < text.len() {
         if slice(text, i, i + 1) == needle {
             return i
         }
@@ -572,7 +572,7 @@ func find_char(string text, string needle) int {
 
 func find_last_char(string text, string needle) int {
     i := text.len()
-    while i > 0 {
+    for i > 0 {
         i = i - 1
         if slice(text, i, i + 1) == needle {
             return i
@@ -588,7 +588,7 @@ func extract_section(string text, string open, string close) string {
     }
     depth := 0
     i := start
-    while i < text.len() {
+    for i < text.len() {
         ch := slice(text, i, i + 1)
         if ch == open {
             depth = depth + 1

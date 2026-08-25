@@ -1,7 +1,7 @@
 package compile.internal.amd64
 leaptr := "LEAQ"
 
-func init_amd64(arch_info mut arch) arch_info {
+func init_amd64(arch_info arch) arch_info {
     arch.link_arch = "amd64"
     arch.reg_sp = 7
     arch.max_width = 1 << 50

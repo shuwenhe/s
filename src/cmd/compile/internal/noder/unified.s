@@ -3,7 +3,7 @@ use s.parse_source
 use std.result.result
 use std.vec.vec
 
-func run_unified(string path, vec[string] quirks) result[noder_output, noder_error] {
+func run_unified(string path, vec[string] quirks) (noder_output, noder_error) {
     unit := read_unit(path)?
     apply_quirks(quirks, unit)?
     tokens := lex_source(unit)?

@@ -33,7 +33,7 @@ func analyze_expr(string scope, string expr_text) string {
 func join_text(vec[string] values, string sep) string {
     out := ""
     i := 0
-    while i < values.len() {
+    for i < values.len() {
         if i > 0 {
             out = out + sep
         }
@@ -46,7 +46,7 @@ func join_text(vec[string] values, string sep) string {
 func make_plan_trace(vec[string] type_env) vec[string] {
     plan := vec[string]()
     i := 0
-    while i < type_env.len() {
+    for i < type_env.len() {
         ty := type_env[i]
         if ty == "" {
             plan.push("borrow:<empty>")

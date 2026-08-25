@@ -98,7 +98,7 @@ func hex_digit(int value) string {
 func hex_text(string text) string {
     var output = ""
     var index = 0
-    while index < len(text) {
+    for index < len(text) {
         value := __host_byte_at(text, index)
         output = output + hex_digit(value / 16) + hex_digit(value % 16)
         index = index + 1
@@ -120,7 +120,7 @@ func dump_tokens(string source) string {
     var line = 1
     var column = 1
     source_len := len(source)
-    while i < source_len {
+    for i < source_len {
         ch := __host_char_at(source, i)
         if ch == " " || ch == "\t" || ch == "\r" {
             i = i + 1
@@ -136,7 +136,7 @@ func dump_tokens(string source) string {
         if ch == "/" && i + 1 < source_len && __host_char_at(source, i + 1) == "/" {
             i = i + 2
             column = column + 2
-            while i < source_len && __host_char_at(source, i) != "\n" {
+            for i < source_len && __host_char_at(source, i) != "\n" {
                 i = i + 1
                 column = column + 1
             }
@@ -147,7 +147,7 @@ func dump_tokens(string source) string {
 			comment_column := column
             i = i + 2
             column = column + 2
-            while i + 1 < source_len && !(__host_char_at(source, i) == "*" && __host_char_at(source, i + 1) == "/") {
+            for i + 1 < source_len && !(__host_char_at(source, i) == "*" && __host_char_at(source, i + 1) == "/") {
                 if __host_char_at(source, i) == "\n" {
                     line = line + 1
                     column = 1
@@ -168,7 +168,7 @@ func dump_tokens(string source) string {
         token_column := column
         if is_alpha(ch) {
             start := i
-            while i < source_len && is_ident_continue(__host_char_at(source, i)) {
+            for i < source_len && is_ident_continue(__host_char_at(source, i)) {
                 i = i + 1
                 column = column + 1
             }
@@ -178,14 +178,14 @@ func dump_tokens(string source) string {
         }
         if is_digit(ch) {
             start := i
-            while i < source_len && is_digit(__host_char_at(source, i)) {
+            for i < source_len && is_digit(__host_char_at(source, i)) {
                 i = i + 1
                 column = column + 1
             }
 			if i + 1 < source_len && __host_char_at(source, i) == "." && is_digit(__host_char_at(source, i + 1)) {
 				i = i + 1
 				column = column + 1
-				while i < source_len && is_digit(__host_char_at(source, i)) {
+				for i < source_len && is_digit(__host_char_at(source, i)) {
 					i = i + 1
 					column = column + 1
 				}
@@ -200,7 +200,7 @@ func dump_tokens(string source) string {
 					column = column + 1
 				}
 				if i < source_len && is_digit(__host_char_at(source, i)) {
-					while i < source_len && is_digit(__host_char_at(source, i)) {
+					for i < source_len && is_digit(__host_char_at(source, i)) {
 						i = i + 1
 						column = column + 1
 					}
@@ -217,7 +217,7 @@ func dump_tokens(string source) string {
             i = i + 1
             column = column + 1
             start := i
-            while i < source_len && __host_char_at(source, i) != "\"" && __host_char_at(source, i) != "\n" {
+            for i < source_len && __host_char_at(source, i) != "\"" && __host_char_at(source, i) != "\n" {
                 if __host_char_at(source, i) == "\\" && i + 1 < source_len {
                     i = i + 2
                     column = column + 2

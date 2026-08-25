@@ -357,7 +357,7 @@ func zero_grad(Map<string, auto_grad_tensor> params) void {
     }
 }
 
-func sgd_step(optimizer_state mut opt, Map<string, auto_grad_tensor> params) void {
+func sgd_step(optimizer_state opt, Map<string, auto_grad_tensor> params) void {
     opt.step_count = opt.step_count + 1
     for name, param in params {
         if !param.requires_grad { continue }
@@ -377,7 +377,7 @@ func sgd_step(optimizer_state mut opt, Map<string, auto_grad_tensor> params) voi
     }
 }
 
-func adam_step(optimizer_state mut opt, Map<string, auto_grad_tensor> params) void {
+func adam_step(optimizer_state opt, Map<string, auto_grad_tensor> params) void {
     int t = opt.step_count + 1
     opt.step_count = t
     float bias_corr1 = 1.0 - pow(opt.momentum, t as float)
@@ -400,7 +400,7 @@ func adam_step(optimizer_state mut opt, Map<string, auto_grad_tensor> params) vo
     }
 }
 
-func lr_step(optimizer_state mut opt, string scheduler, int epoch) void {
+func lr_step(optimizer_state opt, string scheduler, int epoch) void {
     if scheduler == "step" && epoch % 30 == 0 {
         opt.learning_rate = opt.learning_rate * 0.1
     }

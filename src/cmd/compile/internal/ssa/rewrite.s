@@ -1,6 +1,6 @@
 package compile.internal.ssa
 
-func run_arch_rewrite(mut ssa_func f, string arch) int {
+func run_arch_rewrite(ssa_func f, string arch) int {
     if arch == "amd64" {
         return run_rewrite_amd64(f)
     }
@@ -13,10 +13,10 @@ func run_arch_rewrite(mut ssa_func f, string arch) int {
     0
 }
 
-func run_rewrite(mut ssa_func f, string arch) int {
+func run_rewrite(ssa_func f, string arch) int {
     total := 0
     rounds := 0
-    while rounds < 6 {
+    for rounds < 6 {
         g := run_rewrite_generic(f)
         a := run_arch_rewrite(f, arch)
         changed := g + a

@@ -4,7 +4,7 @@ func loopreschedchecks_module_name() string {
     "ssa/loopreschedchecks.s"
 }
 
-func loopreschedchecks_module_apply(mut ssa_func f) int {
+func loopreschedchecks_module_apply(ssa_func f) int {
     recompute_uses(f)
     0
 }
