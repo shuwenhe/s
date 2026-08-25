@@ -27,8 +27,8 @@ struct tcp_listener {
 }
 
 func listen_tcp(string host, int port) result[tcp_listener, net_error] {
-    let fd_res = sc.socket(af_inet, sock_stream, sc.ipproto_tcp)
-    let fd = switch fd_res {
+    fd_res := sc.socket(af_inet, sock_stream, sc.ipproto_tcp)
+    fd := switch fd_res {
         result::ok(v)  : v,
         result::err(e) : return result::err(wrap_sc_err(e)),
     }
@@ -57,7 +57,7 @@ func listen_tcp(string host, int port) result[tcp_listener, net_error] {
 }
 
 func (tcp_listener self) accept() result[tcp_conn, net_error] {
-    let res = sc.accept_addr(self.fd)
+    res := sc.accept_addr(self.fd)
         switch res {
             result::ok(ar)  : result::ok(tcp_conn {
                 fd:        ar.fd,
@@ -93,8 +93,8 @@ struct tcp_conn {
 }
 
 func dial_tcp(string host, int port) result[tcp_conn, net_error] {
-    let fd_res = sc.socket(af_inet, sock_stream, sc.ipproto_tcp)
-    let fd = switch fd_res {
+    fd_res := sc.socket(af_inet, sock_stream, sc.ipproto_tcp)
+    fd := switch fd_res {
         result::ok(v)  : v,
         result::err(e) : return result::err(wrap_sc_err(e)),
     }
@@ -116,8 +116,8 @@ func dial_tcp(string host, int port) result[tcp_conn, net_error] {
 }
 
 func dial_tcp_timeout(string host, int port, int timeout_ms) result[tcp_conn, net_error] {
-    let fd_res = sc.socket(af_inet, sock_stream, sc.ipproto_tcp)
-    let fd = switch fd_res {
+    fd_res := sc.socket(af_inet, sock_stream, sc.ipproto_tcp)
+    fd := switch fd_res {
         result::ok(v) : v,
         result::err(e) : return result::err(wrap_sc_err(e)),
     }
@@ -138,8 +138,8 @@ func dial_tcp_timeout(string host, int port, int timeout_ms) result[tcp_conn, ne
 }
 
 func dial_tcp6_timeout(string host, int port, int timeout_ms) result[tcp_conn, net_error] {
-    let fd_res = sc.socket(af_inet6, sock_stream, sc.ipproto_tcp)
-    let fd = switch fd_res {
+    fd_res := sc.socket(af_inet6, sock_stream, sc.ipproto_tcp)
+    fd := switch fd_res {
         result::ok(v) : v,
         result::err(e) : return result::err(wrap_sc_err(e)),
     }
@@ -301,8 +301,8 @@ struct udp_conn {
 }
 
 func listen_udp(string host, int port) result[udp_conn, net_error] {
-    let fd_res = sc.socket(af_inet, sock_dgram, sc.ipproto_udp)
-    let fd = switch fd_res {
+    fd_res := sc.socket(af_inet, sock_dgram, sc.ipproto_udp)
+    fd := switch fd_res {
         result::ok(v)  : v,
         result::err(e) : return result::err(wrap_sc_err(e)),
     }

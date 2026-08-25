@@ -6,7 +6,7 @@ func load_prelude() int {
 }
 
 func lookup_builtin_type(string name) bool {
-    let base = base_type_name(name)
+    base := base_type_name(name)
     base == "string"
         || base == "vec"
         || base == "result"
@@ -25,7 +25,7 @@ func lookup_builtin_type(string name) bool {
 }
 
 func lookup_builtin_field_type(string type_name, string field_name) string {
-    let base = base_type_name(type_name)
+    base := base_type_name(type_name)
     if base == "file_info" {
         if field_name == "size" || field_name == "hidden" {
             return "int"
@@ -40,7 +40,7 @@ func lookup_builtin_field_type(string type_name, string field_name) string {
 }
 
 func lookup_builtin_index_type(string type_name) string {
-    let base = base_type_name(type_name)
+    base := base_type_name(type_name)
     if base == "vec" || base == "array" {
         return "first_type_arg"
     }
@@ -51,7 +51,7 @@ func lookup_builtin_index_type(string type_name) string {
 }
 
 func lookup_builtin_method_type(string type_name, string member) string {
-    let base = base_type_name(type_name)
+    base := base_type_name(type_name)
     if base == "string" && member == "len" {
         return "int"
     }
@@ -101,7 +101,7 @@ func lookup_builtin_method_type(string type_name, string member) string {
 }
 
 func lookup_builtin_method_arity(string type_name, string member) int {
-    let base = base_type_name(type_name)
+    base := base_type_name(type_name)
     if base == "vec" && member == "push" {
         return 1
     }

@@ -37,7 +37,7 @@ struct cmd_flags {
     string spectre
     cmd_cfg cfg
 }
-let flag = default_cmd_flags()
+flag := default_cmd_flags()
 
 func default_cmd_flags() cmd_flags {
     cmd_flags {

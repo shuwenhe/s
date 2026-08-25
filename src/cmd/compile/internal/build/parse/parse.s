@@ -7,7 +7,7 @@ func parse_options(vec[string] args)  vec[string] {
     if args.len() < 2 {
         return make_options("help", "", "", "", false)
     }
-    let command = args[1]
+    command := args[1]
     if command == "help" || command == "--help" || command == "-h" {
         return make_options("help", "", "", "", false)
     }
@@ -24,8 +24,8 @@ func parse_options(vec[string] args)  vec[string] {
         if args[3] != "-o" {
             return make_options("help", "", "", "", false)
         }
-        let nostdlib = has_flag(args, 5, "-nostdlib")
-        let margin = parse_optional_margin(args, 5)
+        nostdlib := has_flag(args, 5, "-nostdlib")
+        margin := parse_optional_margin(args, 5)
         if margin == "__invalid_margin__" {
             return make_options("help", "", "", "", false)
         }
@@ -35,8 +35,8 @@ func parse_options(vec[string] args)  vec[string] {
         if args.len() < 3 {
             return make_options("help", "", "", "", false)
         }
-        let nostdlib = has_flag(args, 3, "-nostdlib")
-        let margin = parse_optional_margin(args, 3)
+        nostdlib := has_flag(args, 3, "-nostdlib")
+        margin := parse_optional_margin(args, 3)
         if margin == "__invalid_margin__" {
             return make_options("help", "", "", "", false)
         }
@@ -52,7 +52,7 @@ func parse_options(vec[string] args)  vec[string] {
         if args.len() < 3 {
             return make_options("help", "", "", "", false)
         }
-        let mod_command = args[2]
+        mod_command := args[2]
         if mod_command == "init" {
             if args.len() != 4 {
                 return make_options("help", "", "", "", false)
@@ -95,7 +95,7 @@ func usage()  string {
 }
 
 func make_options(string command, string path, string output, string ssa_margin, bool nostdlib)  vec[string] {
-    let options = vec[string]()
+    options := vec[string]()
     options.push(command)
     options.push(path)
     options.push(output)
@@ -107,7 +107,7 @@ func make_options(string command, string path, string output, string ssa_margin,
 }
 
 func has_flag(vec[string] args, int start_index, string flag) bool {
-    let i = start_index
+    i := start_index
     while i < args.len() {
         if args[i] == flag {
             return true
@@ -125,7 +125,7 @@ func parse_optional_margin(vec[string] args, int start_index) string {
         if args.len() <= start_index + 1 {
             return "__invalid_margin__"
         }
-        let value = args[start_index + 1]
+        value := args[start_index + 1]
         if !is_non_negative_integer(value) {
             return "__invalid_margin__"
         }
@@ -135,7 +135,7 @@ func parse_optional_margin(vec[string] args, int start_index) string {
         return value
     }
     if starts_with(args[start_index], "--ssa-dominant-margin=") {
-        let value = slice_after(args[start_index], "--ssa-dominant-margin=")
+        value := slice_after(args[start_index], "--ssa-dominant-margin=")
         if !is_non_negative_integer(value) {
             return "__invalid_margin__"
         }
@@ -162,9 +162,9 @@ func is_non_negative_integer(string text) bool {
     if text == "" {
         return false
     }
-    let i = 0
+    i := 0
     while i < text.len() {
-        let ch = char_at(text, i)
+        ch := char_at(text, i)
         if !is_digit_char(ch) {
             return false
         }

@@ -14,21 +14,21 @@ struct hash_debug {
     bool inline_suffix_only
     vec[hash_mask] matches
 }
-let hash_debug_default = new_hash_debug("gossahash", "")
-let convert_hash = new_hash_debug("converthash", "")
-let fma_hash = new_hash_debug("fmahash", "")
-let loop_var_hash = new_hash_debug("loopvarhash", "")
-let pgo_hash = new_hash_debug("pgohash", "")
-let literal_alloc_hash = new_hash_debug("literalallochash", "")
-let merge_locals_hash = new_hash_debug("mergelocalshash", "")
-let variable_make_hash = new_hash_debug("variablemakehash", "")
+hash_debug_default := new_hash_debug("gossahash", "")
+convert_hash := new_hash_debug("converthash", "")
+fma_hash := new_hash_debug("fmahash", "")
+loop_var_hash := new_hash_debug("loopvarhash", "")
+pgo_hash := new_hash_debug("pgohash", "")
+literal_alloc_hash := new_hash_debug("literalallochash", "")
+merge_locals_hash := new_hash_debug("mergelocalshash", "")
+variable_make_hash := new_hash_debug("variablemakehash", "")
 
 func has_debug_hash() bool {
     hash_debug_default.raw != ""
 }
 
 func new_hash_debug(string name, string raw) hash_debug {
-    let out = hash_debug {
+    out := hash_debug {
         name: name,
         raw: raw,
         file_suffix_only: false,
@@ -46,10 +46,10 @@ func new_hash_debug(string name, string raw) hash_debug {
         out.matches.push(hash_mask { name: name, suffix: "*deny*", exclude: true })
         return out
     }
-    let parts = split(raw, "/")
-    let i = 0
+    parts := split(raw, "/")
+    i := 0
     while i < parts.len() {
-        let p = trim_spaces(parts[i])
+        p := trim_spaces(parts[i])
         if p != "" {
             if starts_with(p, "-") {
                 out.matches.push(hash_mask {
@@ -89,11 +89,11 @@ func match_pkg_func(hash_debug hd, string pkg, string fn_name) bool {
     if hd.raw == "n" || hd.raw == "N" {
         return false
     }
-    let target = pkg + "." + fn_name
-    let included = false
-    let i = 0
+    target := pkg + "." + fn_name
+    included := false
+    i := 0
     while i < hd.matches.len() {
-        let m = hd.matches[i]
+        m := hd.matches[i]
         if m.exclude {
             if m.suffix != "" && ends_with(target, m.suffix) {
                 return false
@@ -107,13 +107,13 @@ func match_pkg_func(hash_debug hd, string pkg, string fn_name) bool {
 }
 
 func split(string text, string sep) vec[string] {
-    let out = vec[string]()
+    out := vec[string]()
     if sep == "" {
         out.push(text)
         return out
     }
-    let start = 0
-    let i = 0
+    start := 0
+    i := 0
     while i <= len(text) - len(sep) {
         if slice(text, i, i + len(sep)) == sep {
             out.push(slice(text, start, i))

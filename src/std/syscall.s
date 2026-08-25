@@ -32,7 +32,7 @@ const STDOUT_FD = 1
 const STDERR_FD = 2
 
 func exit(int code) {
-    let _ = __syscall1(SYS_EXIT, code)
+    _ := __syscall1(SYS_EXIT, code)
 }
 
 func open_file(string path, int flags, int mode) int {
@@ -84,11 +84,11 @@ func stderr_write(string text) int {
 }
 
 func println(string text) {
-    let _ = stdout_write(text)
-    let _ = stdout_write("\n")
+    _ := stdout_write(text)
+    _ := stdout_write("\n")
 }
 
 func eprintln(string text) {
-    let _ = stderr_write(text)
-    let _ = stderr_write("\n")
+    _ := stderr_write(text)
+    _ := stderr_write("\n")
 }

@@ -17,8 +17,8 @@ func write_link_file(string path, string manifest) result[(), noder_error] {
 }
 
 func write_ir_file(string path, vec[ir_node] ir) result[(), noder_error] {
-    let out = "ir version=1\n"
-    let i = 0
+    out := "ir version=1\n"
+    i := 0
     while i < ir.len() {
         out = out + ir[i].op + " " + ir[i].payload + "\n"
         i = i + 1

@@ -234,7 +234,7 @@ func (self: &mut parser) parse_trait_decl() result[trait_decl, parse_error] {
         string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("{")?
         vec[function_sig] methods = vec[function_sig]()
         for !self.eat_symbol("}") {
-            let pair = self.parse_function(false)?
+            pair := self.parse_function(false)?
             methods.push(pair.sig)
             self.expect_symbol(";")?
         }
@@ -250,7 +250,7 @@ func (self: &mut parser) parse_function(bool require_body) result[parsed_functio
         self.expect_keyword("func")?
         option[named_type] receiver = option::none        if self.at_symbol("(") {
             self.expect_symbol("(")?
-            let receiver_tokens = self.parse_token_segment(vec[string] { ")" })?
+            receiver_tokens := self.parse_token_segment(vec[string] { ")" })?
             named_type named = decode_receiver_type(receiver_tokens)?
             self.expect_symbol(")")?
             receiver = option::some(named)
@@ -442,10 +442,10 @@ func (self: &mut parser) parse_sroutine_stmt() result[sroutine_stmt, parse_error
     }
 
 func (self: &mut parser) parse_typed_var_stmt(bool consume_semicolon) result[var_stmt, parse_error] {
-        let segment = self.parse_token_segment(vec[string] { "=" })?
-        let named = decode_named_type(segment)?
+        segment := self.parse_token_segment(vec[string] { "=" })?
+        named := decode_named_type(segment)?
         self.expect_symbol("=")?
-        let value = self.parse_expr()?
+        value := self.parse_expr()?
         if consume_semicolon {
             self.eat_symbol(";")
         }
@@ -458,7 +458,7 @@ func (self: &mut parser) parse_typed_var_stmt(bool consume_semicolon) result[var
 
 func (self: &mut parser) parse_assign_stmt(bool consume_semicolon) result[assign_stmt, parse_error] {
         string name = self.expect_ident()?        self.expect_symbol("=")?
-        let value = self.parse_expr()?
+        value := self.parse_expr()?
         if consume_semicolon {
             self.eat_symbol(";")
         }
@@ -481,12 +481,12 @@ func (self: &mut parser) parse_increment_stmt(bool consume_semicolon) result[inc
 func (self: &mut parser) parse_cfor_stmt() result[c_for_stmt, parse_error] {
         self.expect_keyword("for")?
         self.expect_symbol("(")?
-        let init = self.parse_for_clause_stmt()?
+        init := self.parse_for_clause_stmt()?
         self.expect_symbol(";")?
         expr condition = self.parse_expr()?        self.expect_symbol(";")?
-        let step = self.parse_for_clause_stmt()?
+        step := self.parse_for_clause_stmt()?
         self.expect_symbol(")")?
-        let body = self.parse_block_expr()?
+        body := self.parse_block_expr()?
         result::ok(c_for_stmt {
             init: box(init),
             condition: condition,
@@ -515,7 +515,7 @@ func (self: &mut parser) parse_return_stmt() result[return_stmt, parse_error] {
                 value: option::none,
             })
         }
-        let value = self.parse_expr()?
+        value := self.parse_expr()?
         self.eat_symbol(";")
         result::ok(return_stmt {
             value: option::some(value),
@@ -553,7 +553,7 @@ func (self: &mut parser) parse_select_expr() result[expr, parse_error] {
                 self.eat_symbol(";")
                 continue
             }
-            let case_expr = self.parse_expr()?
+            case_expr := self.parse_expr()?
             self.expect_symbol(":")?
             self.eat_symbol(";")
             switch case_expr {
@@ -647,7 +647,7 @@ func (self: &mut parser) parse_switch_expr() result[expr, parse_error] {
         expr subject = self.parse_expr()?        self.expect_symbol("{")?
         vec[switch_arm] arms = vec[switch_arm]()
         for !self.eat_symbol("}") {
-            let pattern = self.parse_pattern()?
+            pattern := self.parse_pattern()?
             self.expect_symbol(":")?
             expr expr = self.parse_expr()?            arms.push(switch_arm {
                 pattern: pattern,
@@ -685,7 +685,7 @@ func (self: &mut parser) parse_for_expr() result[expr, parse_error] {
         self.expect_keyword("for")?
         
         if self.at_symbol("{") {
-            let body = self.parse_block_expr()?
+            body := self.parse_block_expr()?
             return result::ok(expr::for(for_expr {
                 init: option::none,
                 condition: option::none,
@@ -699,12 +699,12 @@ func (self: &mut parser) parse_for_expr() result[expr, parse_error] {
         
         if self.at_symbol("(") {
             self.expect_symbol("(")?
-            let init = self.parse_for_clause_stmt()?
+            init := self.parse_for_clause_stmt()?
             self.expect_symbol(";")?
             expr condition = self.parse_expr()?            self.expect_symbol(";")?
-            let post = self.parse_for_clause_stmt()?
+            post := self.parse_for_clause_stmt()?
             self.expect_symbol(")")?
-            let body = self.parse_block_expr()?
+            body := self.parse_block_expr()?
             return result::ok(expr::for(for_expr {
                 init: option::some(box(init)),
                 condition: option::some(box(condition)),
@@ -718,7 +718,7 @@ func (self: &mut parser) parse_for_expr() result[expr, parse_error] {
         
         token token = self.peek()?        if token.kind == token_kind::ident && self.at_symbol_after_keyword("in") {
             string name = self.expect_ident()?            self.expect_keyword("in")?
-            expr iterable = self.parse_expr()?            let body = self.parse_block_expr()?
+            expr iterable = self.parse_expr()?            body := self.parse_block_expr()?
             return result::ok(expr::for(for_expr {
                 init: option::none,
                 condition: option::none,
@@ -730,7 +730,7 @@ func (self: &mut parser) parse_for_expr() result[expr, parse_error] {
             }))
         }
         
-        expr condition = self.parse_expr()?        let body = self.parse_block_expr()?
+        expr condition = self.parse_expr()?        body := self.parse_block_expr()?
         result::ok(expr::for(for_expr {
             init: option::none,
             condition: option::some(box(condition)),
@@ -807,12 +807,12 @@ func (self: &mut parser) parse_pattern() result[pattern, parse_error] {
     }
 
 func (self: &mut parser) parse_binary_expr(int min_precedence) result[expr, parse_error] {
-        let expr = self.parse_unary_expr()?
+        expr := self.parse_unary_expr()?
         for true {
             token token = self.peek()?            int precedence = self.binary_precedence(token.value)            if precedence < min_precedence {
                 break
             }
-            string op = self.advance()?.value            let rhs = self.parse_binary_expr(precedence + 1)?
+            string op = self.advance()?.value            rhs := self.parse_binary_expr(precedence + 1)?
             expr = expr::binary(binary_expr {
                 left: box(expr),
                 op: op,
@@ -825,7 +825,7 @@ func (self: &mut parser) parse_binary_expr(int min_precedence) result[expr, pars
 
 func (self: &mut parser) parse_unary_expr() result[expr, parse_error] {
         if self.eat_symbol("&") {
-            bool mutable = self.eat_keyword("mut")            let target = self.parse_unary_expr()?
+            bool mutable = self.eat_keyword("mut")            target := self.parse_unary_expr()?
             return result::ok(expr::borrow(borrow_expr {
                 target: box(target),
                 mutable: mutable,
@@ -836,7 +836,7 @@ func (self: &mut parser) parse_unary_expr() result[expr, parse_error] {
     }
 
 func (self: &mut parser) parse_call_expr() result[expr, parse_error] {
-        let expr = self.parse_primary_expr()?
+        expr := self.parse_primary_expr()?
         for true {
             if self.eat_symbol("(") {
                 vec[expr] args = vec[expr]()                if !self.at_symbol(")") {
@@ -873,7 +873,7 @@ func (self: &mut parser) parse_call_expr() result[expr, parse_error] {
                 continue
             }
             if self.eat_symbol("[") {
-                let index = self.parse_expr()?
+                index := self.parse_expr()?
                 self.expect_symbol("]")?
                 expr = expr::index(index_expr {
                     target: box(expr),
@@ -931,10 +931,10 @@ func (self: &mut parser) parse_primary_expr() result[expr, parse_error] {
             return result::ok(expr)
         }
         if self.at_symbol("[") {
-            let bracket = self.parse_bracket_group()?
-            let type_text = bracket
+            bracket := self.parse_bracket_group()?
+            type_text := bracket
             token token = self.peek().unwrap()            if token.kind != token_kind::symbol || token.value != "{" {
-                let seg = self.parse_token_segment(vec[string] { "{" })?
+                seg := self.parse_token_segment(vec[string] { "{" })?
                 type_text = type_text + " " + join_token_values(seg)
             }
             self.expect_symbol("{")?
@@ -951,19 +951,19 @@ func (self: &mut parser) parse_primary_expr() result[expr, parse_error] {
         }
         if token.kind == token_kind::ident && token.value == "map" {
             self.advance()?
-            let bracket = self.parse_bracket_group()?
-            let type_text = "map" + bracket
-            let token2 = self.peek().unwrap()
+            bracket := self.parse_bracket_group()?
+            type_text := "map" + bracket
+            token2 := self.peek().unwrap()
             if token2.kind == token_kind::ident || token2.kind == token_kind::symbol {
-                let seg = self.parse_token_segment(vec[string] { "{" })?
+                seg := self.parse_token_segment(vec[string] { "{" })?
                 type_text = type_text + " " + join_token_values(seg)
             }
             self.expect_symbol("{")?
             vec[map_entry] entries = vec[map_entry]()            if !self.at_symbol("}") {
                 for true {
-                    let key = self.parse_expr()?
+                    key := self.parse_expr()?
                     self.expect_symbol(":")?
-                    let value = self.parse_expr()?
+                    value := self.parse_expr()?
                     entries.push(map_entry { key: key, value: value })
                     if !self.eat_symbol(",") || self.at_symbol("}") {
                         break
@@ -1003,7 +1003,7 @@ func (self: &mut parser) parse_use_path() result[string, parse_error] {
         for self.eat_symbol(".") {
             if self.eat_symbol("{") {
                 vec[string] members = vec[string]()                for !self.eat_symbol("}") {
-                    let member = self.expect_ident()?
+                    member := self.expect_ident()?
                     string text =                        if self.eat_keyword("as") {
                             member + " as " + self.expect_ident()?
                         } else {
@@ -1030,7 +1030,7 @@ func (self: &mut parser) parse_path() result[string, parse_error] {
             parts.push(self.expect_ident()?)
         }
         if self.at_symbol("[") {
-            let last = parts.pop().unwrap()
+            last := parts.pop().unwrap()
             parts.push(last + self.parse_bracket_group()?)
         }
         result::ok(join_strings(parts, "."))
@@ -1217,7 +1217,7 @@ func (self: parser) error_here(string message) parse_error {
 
 func (self: parser) find_top_level_symbol_offset(string value) int {
         int bracket = 0        int paren = 0        int offset = 0        for self.index + offset < len(self.tokens) {
-            let token = self.tokens[self.index + offset]
+            token := self.tokens[self.index + offset]
             if token.kind == token_kind::eof {
                 break
             }
@@ -1265,7 +1265,7 @@ struct named_type {
 }
 
 func decode_receiver_type(vec[token] tokens) result[named_type, parse_error] {
-    let colon = find_token_value(tokens, ":")
+    colon := find_token_value(tokens, ":")
     if colon >= 0 {
         return decode_named_type(tokens)
     }
@@ -1284,8 +1284,8 @@ func decode_receiver_type(vec[token] tokens) result[named_type, parse_error] {
 
 func decode_named_type(vec[token] tokens) result[named_type, parse_error] {
     int colon = find_token_value(tokens, ":")    if colon >= 0 {
-        let name_tokens = slice_tokens(tokens, 0, colon)
-        let type_tokens = slice_tokens(tokens, colon + 1, len(tokens))
+        name_tokens := slice_tokens(tokens, 0, colon)
+        type_tokens := slice_tokens(tokens, colon + 1, len(tokens))
         return result::ok(named_type {
             name: normalize_type_text(join_token_values(name_tokens)),
             type_name: normalize_type_text(join_token_values(type_tokens)),
@@ -1321,7 +1321,7 @@ func join_token_values(vec[token] tokens) string {
 
 func find_token_value(vec[token] tokens, string value) int {
     int bracket = 0    int paren = 0    int i = 0    for i < len(tokens) {
-        let token = tokens[i]
+        token := tokens[i]
         if token.value == "[" {
             bracket = bracket + 1
         } else if token.value == "]" {
@@ -1340,7 +1340,7 @@ func find_token_value(vec[token] tokens, string value) int {
 
 func find_decl_name_index(vec[token] tokens) int {
     int bracket = 0    int paren = 0    int index = -1    int i = 0    for i < len(tokens) {
-        let token = tokens[i]
+        token := tokens[i]
         if token.value == "[" {
             bracket = bracket + 1
         } else if token.value == "]" {

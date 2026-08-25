@@ -18,13 +18,13 @@ const CMD_HELP    = 7
 func main() {
     runtime_init()
     gc_disable()
-    let args = env.args()
+    args := env.args()
     if args.len() < 2 {
         print_usage()
         return 1
     }
-    let cmd_str = args.get(1).unwrap_or("")
-    let cmd     = parse_command(cmd_str)
+    cmd_str := args.get(1).unwrap_or("")
+    cmd     := parse_command(cmd_str)
     switch cmd {
         CMD_VERSION : {
             io.println("s compiler " + BOOTSTRAP_VERSION + " (" + BOOTSTRAP_STAGE + ")")

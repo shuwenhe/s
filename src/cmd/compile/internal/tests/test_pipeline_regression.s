@@ -22,48 +22,48 @@ use std.prelude.slice
 use std.vec.vec
 
 func run_pipeline_regression_suite() int {
-    let cli_build_eq = vec[string]()
+    cli_build_eq := vec[string]()
     cli_build_eq.push("compile")
     cli_build_eq.push("build")
     cli_build_eq.push("demo.s")
     cli_build_eq.push("-o")
     cli_build_eq.push("a.out")
     cli_build_eq.push("--ssa-dominant-margin=5")
-    let parsed_build_eq = parse_options(cli_build_eq)
+    parsed_build_eq := parse_options(cli_build_eq)
     if parsed_build_eq.len() < 4 || parsed_build_eq[3] != "5" {
         return 1
     }
-    let cli_run_split = vec[string]()
+    cli_run_split := vec[string]()
     cli_run_split.push("compile")
     cli_run_split.push("run")
     cli_run_split.push("demo.s")
     cli_run_split.push("--ssa-dominant-margin")
     cli_run_split.push("7")
-    let parsed_run_split = parse_options(cli_run_split)
+    parsed_run_split := parse_options(cli_run_split)
     if parsed_run_split.len() < 4 || parsed_run_split[3] != "7" {
         return 1
     }
-    let cli_bad_margin = vec[string]()
+    cli_bad_margin := vec[string]()
     cli_bad_margin.push("compile")
     cli_bad_margin.push("build")
     cli_bad_margin.push("demo.s")
     cli_bad_margin.push("-o")
     cli_bad_margin.push("a.out")
     cli_bad_margin.push("--ssa-dominant-margin=oops")
-    let parsed_bad_margin = parse_options(cli_bad_margin)
+    parsed_bad_margin := parse_options(cli_bad_margin)
     if parsed_bad_margin[0] != "help" {
         return 1
     }
-    let source = "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int {\n  1\n}\nfunc worker() int {\n  helper()\n  0\n}\nfunc main() {\n  let arr = [int]{1, 2}\n  let mp = [string]int{\"k\": 1}\n  let idx = arr[0]\n  let bx = { idx + 1 }\n  idx = idx + bx\n  sroutine worker()\n  for (let i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
-    let parsed = parse_source(source)
+    source := "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int {\n  1\n}\nfunc worker() int {\n  helper()\n  0\n}\nfunc main() {\n  arr := [int]{1, 2}\n  mp := [string]int{\"k\": 1}\n  idx := arr[0]\n  bx := { idx + 1 }\n  idx = idx + bx\n  sroutine worker()\n  for (let i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
+    parsed := parse_source(source)
     if parsed.is_err() {
         return 1
     }
-    let lowered_checked = from_syntax_checked(parsed.unwrap())
+    lowered_checked := from_syntax_checked(parsed.unwrap())
     if lowered_checked.is_err() {
         return 1
     }
-    let lowered = lowered_checked.unwrap()
+    lowered := lowered_checked.unwrap()
     if count_const_decls(lowered) != 2 {
         return 1
     }
@@ -73,19 +73,19 @@ func run_pipeline_regression_suite() int {
     if !has_const_decl(lowered, "B", "1") {
         return 1
     }
-    let const_only_source = "package demo.constonly\nconst (\n  A = 1\n  B\n)\nfunc main() {\n  B\n}"
-    let const_only_parsed = parse_source(const_only_source)
+    const_only_source := "package demo.constonly\nconst (\n  A = 1\n  B\n)\nfunc main() {\n  B\n}"
+    const_only_parsed := parse_source(const_only_source)
     if const_only_parsed.is_err() {
         return 1
     }
-    let const_only_lowered = from_syntax_checked(const_only_parsed.unwrap())
+    const_only_lowered := from_syntax_checked(const_only_parsed.unwrap())
     if const_only_lowered.is_err() {
         return 1
     }
     if !main_final_is_int_literal(const_only_lowered.unwrap(), 1) {
         return 1
     }
-    let features = collect_ir_package_features(lowered)
+    features := collect_ir_package_features(lowered)
     if (features & 1) == 0 {
         return 1
     }
@@ -101,20 +101,20 @@ func run_pipeline_regression_suite() int {
     if (features & 16) == 0 {
         return 1
     }
-    let graph_result = lower_main_to_mir(parsed.unwrap())
+    graph_result := lower_main_to_mir(parsed.unwrap())
     if graph_result.is_err() {
         return 1
     }
-    let graph = graph_result.unwrap()
-    let graph_text = dump_graph(graph)
+    graph := graph_result.unwrap()
+    graph_text := dump_graph(graph)
     if !contains(graph_text, "yield 1") {
         return 1
     }
     if contains(graph_text, "yield B") {
         return 1
     }
-    let saw_pkg_functions = false
-    let ti = 0
+    saw_pkg_functions := false
+    ti := 0
     while ti < graph.trace.len() {
         if starts_with(graph.trace[ti], "package.functions=") {
             saw_pkg_functions = true
@@ -124,7 +124,7 @@ func run_pipeline_regression_suite() int {
     if !saw_pkg_functions {
         return 1
     }
-    let midend = run_midend_pipeline(graph)
+    midend := run_midend_pipeline(graph)
     if !contains(midend.report, "inline_sites=") {
         return 1
     }
@@ -158,7 +158,7 @@ func run_pipeline_regression_suite() int {
     if !contains(midend.report, "const_fold_hits=1") {
         return 1
     }
-    let metric_graph = mir_graph {
+    metric_graph := mir_graph {
         blocks: vec[mir_block](),
         trace: vec[string](
             "stmt sroutine worker()",
@@ -167,7 +167,7 @@ func run_pipeline_regression_suite() int {
             "expr call select_send(ch1, 7, ch2, 8)",
         ),
     }
-    let metric_midend = run_midend_pipeline(metric_graph)
+    metric_midend := run_midend_pipeline(metric_graph)
     if !contains(metric_midend.report, "sroutine_sites=1") {
         return 1
     }
@@ -180,33 +180,33 @@ func run_pipeline_regression_suite() int {
     if !contains(metric_midend.report, "select_send_sites=1") {
         return 1
     }
-    let hinted = build_pipeline_with_graph_hints(graph, midend.optimized_mir_text, "amd64")
-    let hinted_dump = dump_pipeline(hinted)
+    hinted := build_pipeline_with_graph_hints(graph, midend.optimized_mir_text, "amd64")
+    hinted_dump := dump_pipeline(hinted)
     if !contains(hinted_dump, "blocks=") {
         return 1
     }
     if !contains(hinted_dump, "dbg_lines=") {
         return 1
     }
-    let hot_mir = "mir hot blocks=4 entry=0 exit=3 | bb0(entry) stmts=2 term=branch | bb1(path) stmts=0 term=jump | bb2(path2) stmts=0 term=jump | bb3(exit) stmts=0 term=return"
-    let hot_low = build_pipeline_with_graph_hints_and_margin(graph, hot_mir, "amd64", 0)
-    let hot_low_dump = dump_pipeline(hot_low)
+    hot_mir := "mir hot blocks=4 entry=0 exit=3 | bb0(entry) stmts=2 term=branch | bb1(path) stmts=0 term=jump | bb2(path2) stmts=0 term=jump | bb3(exit) stmts=0 term=return"
+    hot_low := build_pipeline_with_graph_hints_and_margin(graph, hot_mir, "amd64", 0)
+    hot_low_dump := dump_pipeline(hot_low)
     if !contains(hot_low_dump, "delta_hot=") {
         return 1
     }
     if !contains(hot_low_dump, ",margin=0,dominant=struct") {
         return 1
     }
-    let hot_high = build_pipeline_with_graph_hints_and_margin(graph, hot_mir, "amd64", 1000000)
-    let hot_high_dump = dump_pipeline(hot_high)
+    hot_high := build_pipeline_with_graph_hints_and_margin(graph, hot_mir, "amd64", 1000000)
+    hot_high_dump := dump_pipeline(hot_high)
     if !contains(hot_high_dump, ",margin=1000000,dominant=balanced") {
         return 1
     }
-    let abi_plan = build_abi_emit_plan("riscv64", parsed.unwrap())
+    abi_plan := build_abi_emit_plan("riscv64", parsed.unwrap())
     if !contains(abi_plan, "abi-emit version=1 arch=riscv64") {
         return 1
     }
-    let wasm_plan = build_wasm_toolchain_plan("/tmp/in.c", "/tmp/out.o", "/tmp/out.wasm")
+    wasm_plan := build_wasm_toolchain_plan("/tmp/in.c", "/tmp/out.o", "/tmp/out.wasm")
     if !contains(wasm_plan, "clang --target=wasm32-wasi -c") {
         return 1
     }
@@ -217,8 +217,8 @@ func run_pipeline_regression_suite() int {
 }
 
 func count_const_decls(ir_ast.package_ir pkg) int {
-    let count = 0
-    let i = 0
+    count := 0
+    i := 0
     while i < pkg.decls.len() {
         switch pkg.decls[i] {
             ir_ast.decl_ir::const(_) : count = count + 1,
@@ -230,7 +230,7 @@ func count_const_decls(ir_ast.package_ir pkg) int {
 }
 
 func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
-    let i = 0
+    i := 0
     while i < pkg.decls.len() {
         switch pkg.decls[i] {
             ir_ast.decl_ir::const(cd) : {
@@ -246,12 +246,12 @@ func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
 }
 
 func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
-    let i = 0
+    i := 0
     while i < pkg.decls.len() {
         switch pkg.decls[i] {
             ir_ast.decl_ir::func(fd) : {
                 if fd.name == "main" && fd.body.is_some() {
-                    let body = fd.body.unwrap()
+                    body := fd.body.unwrap()
                     if body.final_expr.is_some() {
                         switch body.final_expr.unwrap() {
                             ir_ast.expr_ir::int(value) : {
@@ -271,14 +271,14 @@ func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
 }
 
 func collect_ir_package_features(ir_ast.package_ir pkg) int {
-    let features = 0
-    let i = 0
+    features := 0
+    i := 0
     while i < pkg.decls.len() {
         switch pkg.decls[i] {
             ir_ast.decl_ir::func(fd) : {
                 if fd.name == "main" && fd.body.is_some() {
-                    let body = fd.body.unwrap()
-                    let j = 0
+                    body := fd.body.unwrap()
+                    j := 0
                     while j < body.statements.len() {
                         switch body.statements[j] {
                             ir_ast.stmt_ir::expr(expr_stmt) : {
@@ -312,8 +312,8 @@ func collect_ir_package_features(ir_ast.package_ir pkg) int {
 }
 
 func collect_ir_block_features(ir_ast.block_ir block) int {
-    let features = 2
-    let i = 0
+    features := 2
+    i := 0
     while i < block.statements.len() {
         switch block.statements[i] {
             ir_ast.stmt_ir::expr(expr_stmt) : {
@@ -341,7 +341,7 @@ func collect_ir_block_features(ir_ast.block_ir block) int {
 }
 
 func collect_ir_expr_features(ir_ast.expr_ir expression) int {
-    let features = 0
+    features := 0
     switch expression {
         ir_ast.expr_ir::name(name) : {
             if contains(name, "_unlowered") {
@@ -359,7 +359,7 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
         }
         ir_ast.expr_ir::array(array_expr) : {
             features = features | 8
-            let ai = 0
+            ai := 0
             while ai < array_expr.items.len() {
                 features = features | collect_ir_expr_features(array_expr.items[ai])
                 ai = ai + 1
@@ -367,7 +367,7 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
         }
         ir_ast.expr_ir::map(map_expr) : {
             features = features | 16
-            let mi = 0
+            mi := 0
             while mi < map_expr.entries.len() {
                 features = features | collect_ir_expr_features(map_expr.entries[mi].key)
                 features = features | collect_ir_expr_features(map_expr.entries[mi].value)
@@ -378,7 +378,7 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
             features = features | collect_ir_block_features(block_expr)
         }
         ir_ast.expr_ir::call(call_expr) : {
-            let i = 0
+            i := 0
             while i < call_expr.args.len() {
                 features = features | collect_ir_expr_features(call_expr.args[i])
                 i = i + 1
@@ -413,7 +413,7 @@ func contains(string text, string needle) bool {
     if text.len() < needle.len() {
         return false
     }
-    let i = 0
+    i := 0
     while i <= text.len() - needle.len() {
         if slice(text, i, i + needle.len()) == needle {
             return true

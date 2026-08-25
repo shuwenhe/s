@@ -1,10 +1,10 @@
 package compile.internal.ssa
 
 func run_rewrite_arm64(mut ssa_func f) int {
-    let changed = 0
-    let i = 0
+    changed := 0
+    i := 0
     while i < f.values.len() {
-        let v = f.values[i]
+        v := f.values[i]
         if v.removed {
             i = i + 1
             continue

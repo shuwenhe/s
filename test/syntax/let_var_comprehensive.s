@@ -1,9 +1,9 @@
 package main
 
 func test_let_basics() void {
-    let x = 42
-    let message = "Hello, immutable world!"
-    let arr = []int{1, 2, 3}
+    x := 42
+    message := "Hello, immutable world!"
+    arr := []int{1, 2, 3}
     println("Let variables created successfully")
 }
 
@@ -18,9 +18,9 @@ func test_var_basics() void {
 }
 
 func test_typed_let() void {
-    let count int = 5
-    let flag bool = true
-    let name string = "Alice"
+    count int := 5
+    flag bool := true
+    name string := "Alice"
     println("Typed let declarations work")
 }
 
@@ -35,7 +35,7 @@ func test_typed_var() void {
 }
 
 func test_mixed() void {
-    let constant = 100
+    constant := 100
     var mutable = 200
     mutable = 300
     println("Mixed let and var work together")

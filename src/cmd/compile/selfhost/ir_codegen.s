@@ -55,28 +55,28 @@ struct X86_64CodeGen {
 }
 
 func parse_ir(string content) (IRProgram, error) {
-    let lines = split_string(content, "\n")
-    let mut prog = IRProgram{}
-    let mut current_func: *Function = nil
-    let mut line_idx = 0
+    lines := split_string(content, "\n")
+    mut prog := IRProgram{}
+    mut current_func: *Function = nil
+    mut line_idx := 0
     if line_idx >= len(lines) {
         return prog, error("empty IR file")
     }
-    let header = trim_string(lines[line_idx])
+    header := trim_string(lines[line_idx])
     if header != "SSEED-TARGET-V1" {
         return prog, error("invalid IR header: " + header)
     }
     line_idx += 1
     for line_idx < len(lines) {
-        let line = trim_string(lines[line_idx])
+        line := trim_string(lines[line_idx])
         if line == "" {
             line_idx += 1
             continue
         }
         if contains_string(line, "FUNC_BEGIN") {
-            let parts = split_string(line, "|")
+            parts := split_string(line, "|")
             if len(parts) >= 2 {
-                let func = Function{
+                func := Function{
                     name: parts[1],
                     instructions: []Instruction{},
                     locals: []Local{},
@@ -87,9 +87,9 @@ func parse_ir(string content) (IRProgram, error) {
         } else if contains_string(line, "FUNC_END") {
             current_func = nil
         } else if current_func != nil && contains_string(line, "|") {
-            let parts = split_string(line, "|")
+            parts := split_string(line, "|")
             if len(parts) >= 2 {
-                let instr = Instruction{
+                instr := Instruction{
                     opcode: parts[0],
                     dest: if len(parts) > 1 then parts[1] else "",
                     src1: if len(parts) > 2 then parts[2] else "",
@@ -109,12 +109,12 @@ func parse_ir(string content) (IRProgram, error) {
 }
 
 func generate_x86_64(IRProgram program) (string, error) {
-    let mut codegen = X86_64CodeGen{
+    mut codegen := X86_64CodeGen{
         program: program,
         buffer: []byte{},
         label_counter: 0,
     }
-    let mut asm = ""
+    mut asm := ""
     asm += ".globl main\n"
     asm += ".text\n\n"
     for _, func in program.functions {
@@ -123,7 +123,7 @@ func generate_x86_64(IRProgram program) (string, error) {
         asm += "    push %rbp\n"
         asm += "    mov %rsp, %rbp\n"
         for _, instr in func.instructions {
-            let instr_asm, err = generate_instruction(instr)
+            instr_asm, err := generate_instruction(instr)
             if err != nil {
                 return "", err
             }
@@ -162,20 +162,20 @@ func generate_instruction(Instruction instr) (string, error) {
 }
 
 func ir_compile_to_elf(string ir_path, string output_path) error {
-    let ir_content, read_err = io_read_all(ir_path)
+    ir_content, read_err := io_read_all(ir_path)
     if read_err != nil {
         return read_err
     }
-    let program, parse_err = parse_ir(string(ir_content))
+    program, parse_err := parse_ir(string(ir_content))
     if parse_err != nil {
         return parse_err
     }
-    let asm_code, gen_err = generate_x86_64(program)
+    asm_code, gen_err := generate_x86_64(program)
     if gen_err != nil {
         return gen_err
     }
-    let temp_asm = "/tmp/s_compiler_generated.s"
-    let asm_file = io_open(temp_asm, "w")
+    temp_asm := "/tmp/s_compiler_generated.s"
+    asm_file := io_open(temp_asm, "w")
     if asm_file == nil {
         return error("failed to open temp assembly file")
     }
