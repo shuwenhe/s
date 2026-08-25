@@ -9,11 +9,11 @@ func estimate_escape_sites(string mir_text) int {
 }
 
 func estimate_escape_sites_graph(mir_graph graph) int {
-    let total = 0
-    let i = 0
+    total := 0
+    i := 0
     while i < graph.blocks.len() {
-        let block = graph.blocks[i]
-        let j = 0
+        block := graph.blocks[i]
+        j := 0
         while j < block.statements.len() {
             switch block.statements[j] {
                 mir_statement::eval(eval_stmt) : {
@@ -39,8 +39,8 @@ func count_token(string text, string token) int {
     if token == "" {
         return 0
     }
-    let total = 0
-    let i = 0
+    total := 0
+    i := 0
     while i <= len(text) - len(token) {
         if slice(text, i, i + len(token)) == token {
             total = total + 1

@@ -1,3 +1,3 @@
 func main() {
-    let value = "unterminated
+    value := "unterminated
 }

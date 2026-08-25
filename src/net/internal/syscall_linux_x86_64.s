@@ -36,7 +36,7 @@ func set_errno(err: int) {
 
 func sys_socket(family: int, socktype: int, protocol: int) (int, int) {
     clear_errno()
-    let fd = socket(family, socktype | sock_nonblock | sock_cloexec, protocol)
+    fd := socket(family, socktype | sock_nonblock | sock_cloexec, protocol)
     if fd < 0 {
         return fd, get_errno()
     }
@@ -73,7 +73,7 @@ func sys_listen(fd: int, backlog: int) int {
 
 func sys_accept(fd: int, addr: *sockaddr, addrlen: *int) (int, int) {
     clear_errno()
-    let client_fd = accept(fd, addr, addrlen)
+    client_fd := accept(fd, addr, addrlen)
     if client_fd < 0 {
         return client_fd, get_errno()
     }
@@ -91,7 +91,7 @@ func sys_connect(fd: int, addr: *sockaddr, addrlen: int) int {
 
 func sys_read(fd: int, buf: *byte, len: int) (int, int) {
     clear_errno()
-    let n = read(fd, buf, len)
+    n := read(fd, buf, len)
     if n < 0 {
         return n, get_errno()
     }
@@ -100,7 +100,7 @@ func sys_read(fd: int, buf: *byte, len: int) (int, int) {
 
 func sys_write(fd: int, buf: *byte, len: int) (int, int) {
     clear_errno()
-    let n = write(fd, buf, len)
+    n := write(fd, buf, len)
     if n < 0 {
         return n, get_errno()
     }
@@ -109,7 +109,7 @@ func sys_write(fd: int, buf: *byte, len: int) (int, int) {
 
 func sys_sendto(fd: int, buf: *byte, len: int, dest_addr: *sockaddr, addrlen: int) (int, int) {
     clear_errno()
-    let n = sendto(fd, buf, len, 0, dest_addr, addrlen)
+    n := sendto(fd, buf, len, 0, dest_addr, addrlen)
     if n < 0 {
         return n, get_errno()
     }
@@ -118,7 +118,7 @@ func sys_sendto(fd: int, buf: *byte, len: int, dest_addr: *sockaddr, addrlen: in
 
 func sys_recvfrom(fd: int, buf: *byte, len: int, src_addr: *sockaddr, addrlen: *int) (int, int) {
     clear_errno()
-    let n = recvfrom(fd, buf, len, 0, src_addr, addrlen)
+    n := recvfrom(fd, buf, len, 0, src_addr, addrlen)
     if n < 0 {
         return n, get_errno()
     }
@@ -145,7 +145,7 @@ func sys_getsockopt(fd: int, level: int, optname: int, optval: *byte, optlen: *i
 
 func sys_set_nonblocking(fd: int) int {
     clear_errno()
-    let flags = fcntl(fd, f_getfl, 0)
+    flags := fcntl(fd, f_getfl, 0)
     if flags < 0 {
         return get_errno()
     }
@@ -176,7 +176,7 @@ func sys_getpeername(fd: int, addr: *sockaddr, addrlen: *int) int {
 
 func sys_poll(fds: *pollfd, nfds: int, timeout_ms: int) (int, int) {
     clear_errno()
-    let n = poll(fds, nfds, timeout_ms)
+    n := poll(fds, nfds, timeout_ms)
     if n < 0 {
         return n, get_errno()
     }
@@ -204,9 +204,9 @@ func htons(host: int) int {
 }
 
 func htonl(host: int) int {
-    let b1 = (host >> 24) & 0xFF
-    let b2 = (host >> 16) & 0xFF
-    let b3 = (host >> 8) & 0xFF
-    let b4 = host & 0xFF
+    b1 := (host >> 24) & 0xFF
+    b2 := (host >> 16) & 0xFF
+    b3 := (host >> 8) & 0xFF
+    b4 := host & 0xFF
     (b4 << 24) | (b3 << 16) | (b2 << 8) | b1
 }

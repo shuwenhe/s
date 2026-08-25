@@ -7,12 +7,12 @@ use compile.internal.syntax.parse_source
 use compile.internal.syntax.read_source
 
 func main() {
-    let args = host_args()
+    args := host_args()
     if args.len() < 2 {
         println("usage: ast_dump <path>");
         return 1
     }
-    let path = args[1]
+    path := args[1]
     switch read_source(path) {
         result.err(err) : {
             println("error: " + err.message);

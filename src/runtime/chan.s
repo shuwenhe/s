@@ -23,7 +23,7 @@ struct RawChan {
 }
 
 func new_raw_chan(int cap) RawChan {
-    let buf = vec[int]()
+    buf := vec[int]()
     var i = 0
     while i < cap {
         buf.push(0)
@@ -50,7 +50,7 @@ func chan_send(RawChan mut ch, int val) result[(), string] {
     }
     if ch.cap == 0 {
         if !ch.receivers.is_empty() {
-            let w = dequeue_waiter(ch.receivers)
+            w := dequeue_waiter(ch.receivers)
             ch.mu.unlock()
             if w.sroutine_id >= 0 {
                 chan_deliver(w.sroutine_id, val)
@@ -58,14 +58,14 @@ func chan_send(RawChan mut ch, int val) result[(), string] {
             }
             return result::ok(())
         }
-        let cur = __sroutine_current_id()
+        cur := __sroutine_current_id()
         ch.senders.push(Waiter { sroutine_id: cur, val_idx: val })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
         return result::ok(())
     }
     while ch.count >= ch.cap {
-        let cur = __sroutine_current_id()
+        cur := __sroutine_current_id()
         ch.senders.push(Waiter { sroutine_id: cur, val_idx: val })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
@@ -79,7 +79,7 @@ func chan_send(RawChan mut ch, int val) result[(), string] {
     ch.tail = (ch.tail + 1) % ch.cap
     ch.count = ch.count + 1
     if !ch.receivers.is_empty() {
-        let w = dequeue_waiter(ch.receivers)
+        w := dequeue_waiter(ch.receivers)
         ch.mu.unlock()
         if w.sroutine_id >= 0 {
             sroutine_ready(w.sroutine_id)
@@ -94,7 +94,7 @@ func chan_recv(RawChan mut ch) recv_result {
     ch.mu.lock()
     if ch.cap == 0 {
         if !ch.senders.is_empty() {
-            let w = dequeue_waiter(ch.senders)
+            w := dequeue_waiter(ch.senders)
             ch.mu.unlock()
             if w.sroutine_id >= 0 {
                 sroutine_ready(w.sroutine_id)
@@ -105,11 +105,11 @@ func chan_recv(RawChan mut ch) recv_result {
             ch.mu.unlock()
             return recv_result { value: 0, ok: false }
         }
-        let cur = __sroutine_current_id()
+        cur := __sroutine_current_id()
         ch.receivers.push(Waiter { sroutine_id: cur, val_idx: -1 })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
-        let v = chan_take_delivered(cur)
+        v := chan_take_delivered(cur)
         return recv_result { value: v, ok: true }
     }
     while ch.count == 0 {
@@ -117,17 +117,17 @@ func chan_recv(RawChan mut ch) recv_result {
             ch.mu.unlock()
             return recv_result { value: 0, ok: false }
         }
-        let cur = __sroutine_current_id()
+        cur := __sroutine_current_id()
         ch.receivers.push(Waiter { sroutine_id: cur, val_idx: -1 })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
         ch.mu.lock()
     }
-    let val = ch.buf[ch.head]
+    val := ch.buf[ch.head]
     ch.head  = (ch.head + 1) % ch.cap
     ch.count = ch.count - 1
     if !ch.senders.is_empty() {
-        let w = dequeue_waiter(ch.senders)
+        w := dequeue_waiter(ch.senders)
         ch.mu.unlock()
         if w.sroutine_id >= 0 {
             ch.mu.lock()
@@ -156,7 +156,7 @@ func chan_try_send(RawChan mut ch, int val) bool {
     }
     if ch.cap == 0 {
         if !ch.receivers.is_empty() {
-            let w = dequeue_waiter(ch.receivers)
+            w := dequeue_waiter(ch.receivers)
             ch.mu.unlock()
             if w.sroutine_id >= 0 {
                 chan_deliver(w.sroutine_id, val)
@@ -182,7 +182,7 @@ func chan_try_recv(RawChan mut ch) option[recv_result] {
     ch.mu.lock()
     if ch.cap == 0 {
         if !ch.senders.is_empty() {
-            let w = dequeue_waiter(ch.senders)
+            w := dequeue_waiter(ch.senders)
             ch.mu.unlock()
             if w.sroutine_id >= 0 {
                 sroutine_ready(w.sroutine_id)
@@ -204,7 +204,7 @@ func chan_try_recv(RawChan mut ch) option[recv_result] {
         ch.mu.unlock()
         return option::none
     }
-    let val = ch.buf[ch.head]
+    val := ch.buf[ch.head]
     ch.head  = (ch.head + 1) % ch.cap
     ch.count = ch.count - 1
     ch.mu.unlock()
@@ -219,7 +219,7 @@ func chan_close(RawChan mut ch) result[(), string] {
     }
     ch.state = CHAN_CLOSED
     while !ch.receivers.is_empty() {
-        let w = dequeue_waiter(ch.receivers)
+        w := dequeue_waiter(ch.receivers)
         if w.sroutine_id >= 0 {
             sroutine_ready(w.sroutine_id)
         }
@@ -232,8 +232,8 @@ func dequeue_waiter(vec[Waiter] mut q) Waiter {
     if q.is_empty() {
         return Waiter { sroutine_id: -1, val_idx: -1 }
     }
-    let w = q[0]
-    let new_q = vec[Waiter]()
+    w := q[0]
+    new_q := vec[Waiter]()
     var i = 1
     while i < q.len() {
         new_q.push(q[i])

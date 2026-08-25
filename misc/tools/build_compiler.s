@@ -6,13 +6,13 @@ use std.prelude.len
 use std.io.println
 
 func main() {
-    let args = env_args()
+    args := env_args()
     if args.len() < 2 {
         println("usage: build_compiler.s <arch>")
         return 1
     }
-    let arch = args[1]
-    let compiler_path = ""
+    arch := args[1]
+    compiler_path := ""
     if arch == "x86_64" || arch == "amd64" {
         compiler_path = "./bin/s"
     } else if arch == "arm64" || arch == "aarch64" {

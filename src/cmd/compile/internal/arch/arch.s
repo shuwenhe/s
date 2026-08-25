@@ -7,7 +7,7 @@ struct arch_dispatch_entry {
 }
 
 func dispatch_init(string arch) string {
-    let init_name = lookup_init_name(arch)
+    init_name := lookup_init_name(arch)
     if init_name == "" {
         return "unknown architecture \"" + arch + "\""
     }
@@ -19,8 +19,8 @@ func init(string arch) string {
 }
 
 func lookup_init_name(string arch) string {
-    let table = arch_inits()
-    let i = 0
+    table := arch_inits()
+    i := 0
     while i < table.len() {
         if table[i].goarch == arch {
             return table[i].init_name
@@ -31,7 +31,7 @@ func lookup_init_name(string arch) string {
 }
 
 func arch_inits() vec[arch_dispatch_entry] {
-    let entries = vec[arch_dispatch_entry]()
+    entries := vec[arch_dispatch_entry]()
     entries.push(arch_dispatch_entry { goarch: "386", init_name: "x86_init" })
     entries.push(arch_dispatch_entry { goarch: "amd64", init_name: "amd64_init" })
     entries.push(arch_dispatch_entry { goarch: "arm", init_name: "arm_init" })

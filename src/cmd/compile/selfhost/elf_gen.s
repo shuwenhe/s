@@ -109,7 +109,7 @@ func (builder: &mut ELFBuilder) add_code([]byte code) {
 }
 
 func (builder: &mut ELFBuilder) generate() []byte {
-    let mut buffer: []byte = []byte{}
+    mut buffer: []byte = []byte{}
     return buffer
 }
 

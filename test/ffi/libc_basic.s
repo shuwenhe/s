@@ -6,7 +6,7 @@ func main() {
     if c_strlen("native ffi") != 10 {
         return 1
     }
-    let fd = c_socket(2, 1, 6)
+    fd := c_socket(2, 1, 6)
     if fd < 0 {
         return 2
     }

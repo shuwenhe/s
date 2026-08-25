@@ -101,23 +101,23 @@ func TestSetWriteDeadline(t *testing.T) {
 }
 
 func TestHtons(t *testing.T) {
-    let result = htons(0x1234)
-    let expected = 0x3412
+    result := htons(0x1234)
+    expected := 0x3412
     if result != expected {
         t.Errorf("htons(0x1234) = 0x%04x, expected 0x%04x", result, expected)
     }
 }
 
 func TestNtohs(t *testing.T) {
-    let result = ntohs(0x3412)
-    let expected = 0x1234
+    result := ntohs(0x3412)
+    expected := 0x1234
     if result != expected {
         t.Errorf("ntohs(0x3412) = 0x%04x, expected 0x%04x", result, expected)
     }
 }
 
 func TestSocketError(t *testing.T) {
-    let err = new_socket_error(econnrefused, "connect")
+    err := new_socket_error(econnrefused, "connect")
     if err == nil {
         t.Error("Failed to create socket error")
         return
@@ -294,8 +294,8 @@ func TestTimeoutHandling(t *testing.T) {
         return
     }
     defer sock.close()
-    let now_ns = time.now_ns()
-    let past_deadline = now_ns - 1000000
+    now_ns := time.now_ns()
+    past_deadline := now_ns - 1000000
     sock.set_read_deadline(past_deadline)
     var buf = [1]byte{}
     _, err = sock.read(buf[:])

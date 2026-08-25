@@ -1,7 +1,7 @@
 package test.runtime.generic_vec
 
 func main() int {
-    let values = vec[int]();
+    values := vec[int]();
     values.push(11);
     values.push(22);
     if values.len() != 2 {

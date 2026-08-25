@@ -14,17 +14,17 @@ struct lowered_phi {
 }
 
 func lower_phi(int target, vec[phi_input] inputs) lowered_phi {
-    let incoming = vec[int]()
-    let i = 0
+    incoming := vec[int]()
+    i := 0
     while i < inputs.len() {
         incoming.push(inputs[i].value)
         i = i + 1
     }
-    let trivial = true
-    let chosen = -1
+    trivial := true
+    chosen := -1
     if incoming.len() > 0 {
         chosen = incoming[0]
-        let k = 1
+        k := 1
         while k < incoming.len() {
             if incoming[k] != chosen {
                 trivial = false

@@ -1,8 +1,8 @@
 package main
 
 func test_let_immutable() void {
-    let x = 10
-    println("let x = 10 is immutable")
+    x := 10
+    println("x := 10 is immutable")
 }
 
 func test_var_mutable() void {
@@ -13,8 +13,8 @@ func test_var_mutable() void {
 }
 
 func test_let_array() void {
-    let arr = []int{1, 2, 3}
-    println("let arr = []int{1, 2, 3}")
+    arr := []int{1, 2, 3}
+    println("arr := []int{1, 2, 3}")
 }
 
 func test_var_array() void {

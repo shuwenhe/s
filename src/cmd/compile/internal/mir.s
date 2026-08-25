@@ -87,9 +87,9 @@ func lower_function_graph(function_decl function) mir_graph {
     if function.body.is_some() {
         return lower_block_graph(function.sig.name, function.body.unwrap())
     }
-    let empty_statements = vec[mir_statement]()
-    let empty_edges = vec[mir_control_edge]()
-    let blocks = vec[mir_basic_block]()
+    empty_statements := vec[mir_statement]()
+    empty_edges := vec[mir_control_edge]()
+    blocks := vec[mir_basic_block]()
     blocks.push(mir_basic_block {
         id: 0,
         label: "entry",
@@ -99,7 +99,7 @@ func lower_function_graph(function_decl function) mir_graph {
             edges: empty_edges,
         },
     })
-    let trace = vec[string]()
+    trace := vec[string]()
     trace.push("block |   yield unit")
     mir_graph {
         function_name: function.sig.name,
@@ -112,11 +112,11 @@ func lower_function_graph(function_decl function) mir_graph {
 }
 
 func lower_block_graph(string function_name, block_expr block) mir_graph {
-    let statements = vec[mir_statement]()
-    let index = 0
+    statements := vec[mir_statement]()
+    index := 0
     while index < block.statements.len() {
-        let stmt_text = join_text(dump_stmt(block.statements[index], indent(1)), " | ")
-        let args = vec[string]()
+        stmt_text := join_text(dump_stmt(block.statements[index], indent(1)), " | ")
+        args := vec[string]()
         args.push(stmt_text)
         statements.push(mir_statement::eval(mir_eval_stmt {
             op: "stmt",
@@ -124,11 +124,11 @@ func lower_block_graph(string function_name, block_expr block) mir_graph {
         }))
         index = index + 1
     }
-    let trace = vec[string]()
-    let trace_text = "block"
+    trace := vec[string]()
+    trace_text := "block"
     index = 0
     while index < block.statements.len() {
-        let stmt_trace = join_text(dump_stmt(block.statements[index], indent(1)), " | ")
+        stmt_trace := join_text(dump_stmt(block.statements[index], indent(1)), " | ")
         trace_text = trace_text + " | " + indent(1) + stmt_trace
         index = index + 1
     }
@@ -138,7 +138,7 @@ func lower_block_graph(string function_name, block_expr block) mir_graph {
         trace_text = trace_text + " | " + indent(1) + "yield unit"
     }
     trace.push(trace_text)
-    let blocks = vec[mir_basic_block]()
+    blocks := vec[mir_basic_block]()
     blocks.push(mir_basic_block {
         id: 0,
         label: "entry",
@@ -159,13 +159,13 @@ func lower_block_graph(string function_name, block_expr block) mir_graph {
 }
 
 func dump_graph(mir_graph graph) string {
-    let out = "mir " + graph.function_name
+    out := "mir " + graph.function_name
         + " blocks=" + to_string(graph.blocks.len())
         + " entry=" + to_string(graph.entry)
         + " exit=" + to_string(graph.exit)
-    let i = 0
+    i := 0
     while i < graph.blocks.len() {
-        let block = graph.blocks[i]
+        block := graph.blocks[i]
         out = out + " | bb" + to_string(block.id)
             + "(" + block.label + ")"
             + " stmts=" + to_string(block.statements.len())
@@ -180,20 +180,20 @@ func block_count(mir_graph graph) int {
 }
 
 func lower_function(function_decl function) string {
-    let graph = lower_function_graph(function)
+    graph := lower_function_graph(function)
     return analyze_borrow_function(function.sig.name, vec[string](), dump_graph(graph))
 }
 
 func lower_block(block_expr block) string {
-    let text = "block"
-    let index = 0
+    text := "block"
+    index := 0
     while index < block.statements.len() {
-        let stmt_text = join_text(dump_stmt(block.statements[index], indent(1)), " | ")
+        stmt_text := join_text(dump_stmt(block.statements[index], indent(1)), " | ")
         text = text + " | " + indent(1) + stmt_text
         index = index + 1
     }
     if block.final_expr.is_some() {
-        let tail = block.final_expr.unwrap()
+        tail := block.final_expr.unwrap()
         return text + " | " + indent(1) + "yield " + dump_expr(tail)
     } else {
         return text + " | " + indent(1) + "yield unit"
@@ -219,8 +219,8 @@ func trace_switch(string subject_text, string arms_text) string {
 }
 
 func indent(int depth) string {
-    let out = ""
-    let i = 0
+    out := ""
+    i := 0
     while i < depth {
         out = out + "  "
         i = i + 1
@@ -229,8 +229,8 @@ func indent(int depth) string {
 }
 
 func join_text(vec[string] values, string sep) string {
-    let out = ""
-    let i = 0
+    out := ""
+    i := 0
     while i < values.len() {
         if i > 0 {
             out = out + sep

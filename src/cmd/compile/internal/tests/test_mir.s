@@ -25,7 +25,7 @@ func run_mir_suite() int {
     if trace_switch("value", "") != "switch value" {
         return 1
     }
-    let blocks = vec[mir_basic_block]()
+    blocks := vec[mir_basic_block]()
     blocks.push(mir_basic_block {
         id: 0,
         label: "entry",
@@ -35,7 +35,7 @@ func run_mir_suite() int {
             edges: vec[mir_control_edge](),
         },
     })
-    let graph = mir_graph {
+    graph := mir_graph {
         function_name: "main",
         blocks: blocks,
         locals: vec[mir_local_slot](),

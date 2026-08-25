@@ -40,7 +40,7 @@ func append_unique(vec[string] mut names, string value) () {
     if value == "" || value == "_" {
         return
     }
-    let i = 0
+    i := 0
     while i < names.len() {
         if names[i] == value {
             return
@@ -51,8 +51,8 @@ func append_unique(vec[string] mut names, string value) () {
 }
 
 func collect_call_arg_names(call_expr call_value) vec[string] {
-    let out = vec[string]()
-    let i = 0
+    out := vec[string]()
+    i := 0
     while i < call_value.args.len() {
         switch get_name_from_expr(call_value.args[i]) {
             option::some(name_value) : append_unique(out, name_value),
@@ -64,7 +64,7 @@ func collect_call_arg_names(call_expr call_value) vec[string] {
 }
 
 func collect_keep_alive_names(stmt value) vec[string] {
-    let out = vec[string]()
+    out := vec[string]()
     switch value {
         stmt.assign(assign_value) : append_unique(out, assign_value.name),
         stmt.increment(increment_value) : append_unique(out, increment_value.name),
@@ -72,8 +72,8 @@ func collect_keep_alive_names(stmt value) vec[string] {
         stmt.expr(expr_value) : {
             switch expr_value.expr {
                 expr.call(call_value) : {
-                    let names = collect_call_arg_names(call_value)
-                    let i = 0
+                    names := collect_call_arg_names(call_value)
+                    i := 0
                     while i < names.len() {
                         append_unique(out, names[i])
                         i = i + 1
@@ -88,12 +88,12 @@ func collect_keep_alive_names(stmt value) vec[string] {
 }
 
 func keep_alive_stmt(string name_value) stmt {
-    let args = vec[expr]()
+    args := vec[expr]()
     args.push(expr::name(name_expr {
         name: name_value,
         inferred_type: option::none,
     }))
-    let callee = expr::name(name_expr {
+    callee := expr::name(name_expr {
         name: "keep_alive",
         inferred_type: option::none,
     })
@@ -107,9 +107,9 @@ func keep_alive_stmt(string name_value) stmt {
 }
 
 func preserve_stmt(stmt value) vec[stmt] {
-    let out = vec[stmt]()
-    let names = collect_keep_alive_names(value)
-    let i = 0
+    out := vec[stmt]()
+    names := collect_keep_alive_names(value)
+    i := 0
     while i < names.len() {
         out.push(keep_alive_stmt(names[i]))
         i = i + 1
@@ -155,8 +155,8 @@ func edit_expr(expr value, bool in_bloop) expr {
             inferred_type: index_value.inferred_type,
         }),
         expr.call(call_value) : {
-            let out_args = vec[expr]()
-            let i = 0
+            out_args := vec[expr]()
+            i := 0
             while i < call_value.args.len() {
                 out_args.push(edit_expr(call_value.args[i], in_bloop))
                 i = i + 1
@@ -168,8 +168,8 @@ func edit_expr(expr value, bool in_bloop) expr {
             })
         }
         expr.if(if_value) : {
-            let then_block = edit_block(if_value.then_branch, in_bloop)
-            let else_expr = option::none
+            then_block := edit_block(if_value.then_branch, in_bloop)
+            else_expr := option::none
             switch if_value.else_branch {
                 option::some(else_value) : {
                     else_expr = option::some(box(edit_expr(else_value.value, in_bloop)))
@@ -184,7 +184,7 @@ func edit_expr(expr value, bool in_bloop) expr {
             })
         }
         expr.while(while_value) : {
-            let loop_flag = in_bloop || is_testing_bloop_expr(while_value.condition.value)
+            loop_flag := in_bloop || is_testing_bloop_expr(while_value.condition.value)
             expr::while(while_expr {
                 condition: box(edit_expr(while_value.condition.value, in_bloop)),
                 body: edit_block(while_value.body, loop_flag),
@@ -200,8 +200,8 @@ func edit_expr(expr value, bool in_bloop) expr {
         }),
         expr.block(block_value) : expr::block(edit_block(block_value, in_bloop)),
         expr.switch(switch_value) : {
-            let arms = vec[switch_arm]()
-            let i = 0
+            arms := vec[switch_arm]()
+            i := 0
             while i < switch_value.arms.len() {
                 arms.push(switch_arm {
                     pattern: switch_value.arms[i].pattern,
@@ -222,7 +222,7 @@ func edit_expr(expr value, bool in_bloop) expr {
 func edit_stmt(stmt value, bool in_bloop) stmt {
     switch value {
         stmt.c_for(loop_value) : {
-            let loop_flag = in_bloop || is_testing_bloop_expr(loop_value.condition)
+            loop_flag := in_bloop || is_testing_bloop_expr(loop_value.condition)
             stmt::c_for(c_for_stmt {
                 init: box(edit_stmt(loop_value.init.value, in_bloop)),
                 condition: edit_expr(loop_value.condition, in_bloop),
@@ -243,14 +243,14 @@ func edit_stmt(stmt value, bool in_bloop) stmt {
 }
 
 func edit_block(block_expr block_value, bool in_bloop) block_expr {
-    let out_stmts = vec[stmt]()
-    let i = 0
+    out_stmts := vec[stmt]()
+    i := 0
     while i < block_value.statements.len() {
-        let current = edit_stmt(block_value.statements[i], in_bloop)
+        current := edit_stmt(block_value.statements[i], in_bloop)
         out_stmts.push(current)
         if in_bloop {
-            let extra = preserve_stmt(current)
-            let j = 0
+            extra := preserve_stmt(current)
+            j := 0
             while j < extra.len() {
                 out_stmts.push(extra[j])
                 j = j + 1
@@ -258,7 +258,7 @@ func edit_block(block_expr block_value, bool in_bloop) block_expr {
         }
         i = i + 1
     }
-    let final_expr = option::none
+    final_expr := option::none
     switch block_value.final_expr {
         option::some(final_value) : final_expr = option::some(edit_expr(final_value, in_bloop)),
         option::none : (),
@@ -271,7 +271,7 @@ func edit_block(block_expr block_value, bool in_bloop) block_expr {
 }
 
 func has_testing_import(source_file pkg) bool {
-    let i = 0
+    i := 0
     while i < pkg.uses.len() {
         if pkg.uses[i].path == "testing" || starts_with(pkg.uses[i].path, "testing.") {
             return true
@@ -285,12 +285,12 @@ func walk(source_file pkg) source_file {
     if !has_testing_import(pkg) {
         return pkg
     }
-    let out_items = vec[item]()
-    let i = 0
+    out_items := vec[item]()
+    i := 0
     while i < pkg.items.len() {
         switch pkg.items[i] {
             item.function(fn_value) : {
-                let out_fn = fn_value
+                out_fn := fn_value
                 switch out_fn.body {
                     option::some(body_value) : {
                         out_fn.body = option::some(edit_block(body_value, false))

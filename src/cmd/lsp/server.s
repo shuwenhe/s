@@ -9,7 +9,7 @@ struct lsp_server {
 }
 
 func main() {
-    let mut server = lsp_server {
+    mut server := lsp_server {
         handler: lsp::new_lsp_handler(),
         initialized: false,
     }
@@ -18,7 +18,7 @@ func main() {
 }
 
 func (server mut lsp_server) run() {
-    let buf = ""
+    buf := ""
     loop {
         match std::read_line_from_stdin() {
             result::ok(line) : {
@@ -26,9 +26,9 @@ func (server mut lsp_server) run() {
                     break
                 }
 
-                let prefix = "Content-Length: "
+                prefix := "Content-Length: "
                 if std::starts_with(line, prefix) {
-                    let len_str = line.substring(prefix.len(), line.len())
+                    len_str := line.substring(prefix.len(), line.len())
                     match std::parse_int(len_str) {
                         result::ok(content_len) : {
                             match std::read_bytes_from_stdin(content_len) {
@@ -93,7 +93,7 @@ func (server mut lsp_server) handle_initialize(req lsp::jsonrpc_request) {
 
     match req.id {
         option::some(id) : {
-            let capabilities = lsp::server_capabilities {
+            capabilities := lsp::server_capabilities {
                 text_document_sync: true,
                 completion_provider: true,
                 hover_provider: true,
@@ -104,7 +104,7 @@ func (server mut lsp_server) handle_initialize(req lsp::jsonrpc_request) {
                 workspace_symbol_provider: false,
             }
 
-            let result = "{\"capabilities\":{" +
+            result := "{\"capabilities\":{" +
                 "\"textDocumentSync\":true," +
                 "\"completionProvider\":true," +
                 "\"hoverProvider\":true," +
@@ -131,7 +131,7 @@ func (server mut lsp_server) handle_shutdown(req lsp::jsonrpc_request) {
 func (server mut lsp_server) handle_did_open(req lsp::jsonrpc_request, message string) {
     match extract_text_document_item(message) {
         option::some(item) : {
-            let params = lsp::did_open_text_document_params {
+            params := lsp::did_open_text_document_params {
                 text_document: item,
             }
             server.handler.on_did_open(params)
@@ -145,14 +145,14 @@ func (server mut lsp_server) handle_did_open(req lsp::jsonrpc_request, message s
 func (server mut lsp_server) handle_did_change(req lsp::jsonrpc_request, message string) {
     match extract_did_change_params(message) {
         option::some((uri, text, version)) : {
-            let changes = vec[lsp::text_document_content_change_event]{
+            changes := vec[lsp::text_document_content_change_event]{
                 lsp::text_document_content_change_event {
                     range_val: option::none(),
                     text: text,
                 }
             }
 
-            let params = lsp::did_change_text_document_params {
+            params := lsp::did_change_text_document_params {
                 text_document: lsp::versioned_text_document_identifier {
                     uri: uri,
                     version: version,
@@ -171,7 +171,7 @@ func (server mut lsp_server) handle_did_change(req lsp::jsonrpc_request, message
 func (server mut lsp_server) handle_did_save(req lsp::jsonrpc_request, message string) {
     match extract_text_document_identifier(message) {
         option::some(uri) : {
-            let params = lsp::did_save_text_document_params {
+            params := lsp::did_save_text_document_params {
                 text_document: lsp::text_document_identifier { uri: uri },
                 text: option::none(),
             }
@@ -184,7 +184,7 @@ func (server mut lsp_server) handle_did_save(req lsp::jsonrpc_request, message s
 func (server mut lsp_server) handle_did_close(req lsp::jsonrpc_request, message string) {
     match extract_text_document_identifier(message) {
         option::some(uri) : {
-            let params = lsp::did_close_text_document_params {
+            params := lsp::did_close_text_document_params {
                 text_document: lsp::text_document_identifier { uri: uri },
             }
             server.handler.on_did_close(params)
@@ -198,9 +198,9 @@ func (server mut lsp_server) handle_completion(req lsp::jsonrpc_request, message
         option::some(id) : {
             match extract_position_params(message) {
                 option::some((uri, line, character)) : {
-                    let pos = lsp::position { line: line, character: character }
-                    let completions = server.handler.get_completions(uri, pos)
-                    let result = lsp::serialize_completion_list(completions)
+                    pos := lsp::position { line: line, character: character }
+                    completions := server.handler.get_completions(uri, pos)
+                    result := lsp::serialize_completion_list(completions)
                     server.send_response(id, result)
                 },
                 option::none() : server.send_error(id, -32700, "Invalid parameters")
@@ -215,10 +215,10 @@ func (server mut lsp_server) handle_hover(req lsp::jsonrpc_request, message stri
         option::some(id) : {
             match extract_position_params(message) {
                 option::some((uri, line, character)) : {
-                    let pos = lsp::position { line: line, character: character }
+                    pos := lsp::position { line: line, character: character }
                     match server.handler.get_hover(uri, pos) {
                         option::some(hover) : {
-                            let result = lsp::serialize_hover(hover)
+                            result := lsp::serialize_hover(hover)
                             server.send_response(id, result)
                         },
                         option::none() : server.send_response(id, "null")
@@ -236,10 +236,10 @@ func (server mut lsp_server) handle_definition(req lsp::jsonrpc_request, message
         option::some(id) : {
             match extract_position_params(message) {
                 option::some((uri, line, character)) : {
-                    let pos = lsp::position { line: line, character: character }
+                    pos := lsp::position { line: line, character: character }
                     match server.handler.find_symbol_definition(uri, "") {
                         option::some(symbol) : {
-                            let location = "{\"uri\":\"" + uri + "\",\"range\":" + 
+                            location := "{\"uri\":\"" + uri + "\",\"range\":" + 
                                 lsp::serialize_range(symbol.range_val) + "}"
                             server.send_response(id, location)
                         },
@@ -267,8 +267,8 @@ func (server mut lsp_server) handle_document_symbol(req lsp::jsonrpc_request, me
         option::some(id) : {
             match extract_text_document_identifier(message) {
                 option::some(uri) : {
-                    let symbols = server.handler.get_document_symbols(uri)
-                    let result = lsp::serialize_document_symbols(symbols)
+                    symbols := server.handler.get_document_symbols(uri)
+                    result := lsp::serialize_document_symbols(symbols)
                     server.send_response(id, result)
                 },
                 option::none() : server.send_error(id, -32700, "Invalid parameters")
@@ -297,9 +297,9 @@ func (server mut lsp_server) handle_workspace_symbol(req lsp::jsonrpc_request, m
 }
 
 func (server mut lsp_server) send_diagnostics(uri string) {
-    let diags = server.handler.publish_diagnostics(uri)
-    let diag_json = lsp::serialize_diagnostics(diags)
-    let message = lsp::create_notification(
+    diags := server.handler.publish_diagnostics(uri)
+    diag_json := lsp::serialize_diagnostics(diags)
+    message := lsp::create_notification(
         "textDocument/publishDiagnostics",
         "{\"uri\":\"" + uri + "\",\"diagnostics\":" + diag_json + "}"
     )
@@ -307,12 +307,12 @@ func (server mut lsp_server) send_diagnostics(uri string) {
 }
 
 func (server lsp_server) send_response(id int, result string) {
-    let response = lsp::create_response(id, result)
+    response := lsp::create_response(id, result)
     server.send_message(response)
 }
 
 func (server lsp_server) send_error(id int, code int, message string) {
-    let response = lsp::create_error_response(id, code, message)
+    response := lsp::create_error_response(id, code, message)
     server.send_message(response)
 }
 
@@ -321,7 +321,7 @@ func (server lsp_server) send_notification(message string) {
 }
 
 func (server lsp_server) send_message(message string) {
-    let header = "Content-Length: " + std::to_string(message.len()) + "\r\n\r\n"
+    header := "Content-Length: " + std::to_string(message.len()) + "\r\n\r\n"
     std::print(header)
     std::print(message)
 }

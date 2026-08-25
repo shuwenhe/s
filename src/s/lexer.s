@@ -144,7 +144,7 @@ func (self: &mut lexer) read_number() result[string, lex_error] {
 
 func (self: &mut lexer) read_string() result[string, lex_error] {
         string out = self.advance()?        for !self.is_eof() {
-            let ch = self.advance()?
+            ch := self.advance()?
             out = out + ch
             if ch == "\\" {
                 if self.is_eof() {

@@ -2,7 +2,7 @@ package src.net.internal
 import "src.std.time"
 
 func new_raw_socket(family: int, socktype: int, protocol: int) (*raw_socket, error) {
-    let fd, errno = sys_socket(family, socktype, protocol)
+    fd, errno := sys_socket(family, socktype, protocol)
     if errno != 0 {
         return nil, new_socket_error(errno, "socket")
     }
@@ -21,7 +21,7 @@ func (raw_socket* s) close() error {
     if s.fd < 0 {
         return new_socket_error(ebadf, "close")
     }
-    let errno = sys_close(s.fd)
+    errno := sys_close(s.fd)
     if errno != 0 {
         return new_socket_error(errno, "close")
     }
@@ -36,7 +36,7 @@ func (raw_socket* s) bind(addr_str: string, port: int) error {
     var sa_inet sockaddr_inet
     sa_inet.sin_family = af_inet
     sa_inet.sin_port = htons(port)
-    let errno = sys_bind(s.fd, (*sockaddr)(&sa_inet), 16)
+    errno := sys_bind(s.fd, (*sockaddr)(&sa_inet), 16)
     if errno != 0 {
         return new_socket_error(errno, "bind")
     }
@@ -47,7 +47,7 @@ func (raw_socket* s) listen(backlog: int) error {
     if s.fd < 0 {
         return new_socket_error(ebadf, "listen")
     }
-    let errno = sys_listen(s.fd, backlog)
+    errno := sys_listen(s.fd, backlog)
     if errno != 0 {
         return new_socket_error(errno, "listen")
     }
@@ -60,7 +60,7 @@ func (raw_socket* s) accept() (*raw_socket, error) {
     }
     var addr sockaddr
     var addrlen int = 16
-    let client_fd, errno = sys_accept(s.fd, &addr, &addrlen)
+    client_fd, errno := sys_accept(s.fd, &addr, &addrlen)
     if errno != 0 {
         return nil, new_socket_error(errno, "accept")
     }
@@ -82,10 +82,10 @@ func (raw_socket* s) connect(addr_str: string, port: int, timeout_ms: int) error
     var sa_inet sockaddr_inet
     sa_inet.sin_family = af_inet
     sa_inet.sin_port = htons(port)
-    let errno = sys_connect(s.fd, (*sockaddr)(&sa_inet), 16)
+    errno := sys_connect(s.fd, (*sockaddr)(&sa_inet), 16)
     if errno == einprogress {
         if timeout_ms > 0 {
-            let n, poll_errno = sys_poll(&pollfd{
+            n, poll_errno := sys_poll(&pollfd{
                 fd: s.fd,
                 events: poll_out | poll_err,
                 revents: 0,
@@ -96,9 +96,9 @@ func (raw_socket* s) connect(addr_str: string, port: int, timeout_ms: int) error
             if n == 0 {
                 return new_socket_error(etimedout, "connect")
             }
-            let optval: int
+            optval: int
             var optlen: int = 4
-            let opt_errno = sys_getsockopt(s.fd, sol_socket, so_error, (*byte)(&optval), &optlen)
+            opt_errno := sys_getsockopt(s.fd, sol_socket, so_error, (*byte)(&optval), &optlen)
             if opt_errno != 0 || optval != 0 {
                 return new_socket_error(optval, "connect")
             }
@@ -116,7 +116,7 @@ func (raw_socket* s) udp_bind(addr_str: string, port: int) error {
     var sa_inet sockaddr_inet
     sa_inet.sin_family = af_inet
     sa_inet.sin_port = htons(port)
-    let errno = sys_bind(s.fd, (*sockaddr)(&sa_inet), 16)
+    errno := sys_bind(s.fd, (*sockaddr)(&sa_inet), 16)
     if errno != 0 {
         return new_socket_error(errno, "bind")
     }
@@ -130,8 +130,8 @@ func (raw_socket* s) send_to(buf: []byte, addr_str: string, port: int) (int, err
     var dest_addr sockaddr_inet
     dest_addr.sin_family = af_inet
     dest_addr.sin_port = htons(port)
-    let timeout_ms = calculate_timeout_ms(s.write_deadline_ns)
-    let n, poll_errno = sys_poll(&pollfd{
+    timeout_ms := calculate_timeout_ms(s.write_deadline_ns)
+    n, poll_errno := sys_poll(&pollfd{
         fd: s.fd,
         events: poll_out | poll_err,
         revents: 0,
@@ -142,7 +142,7 @@ func (raw_socket* s) send_to(buf: []byte, addr_str: string, port: int) (int, err
     if n == 0 {
         return 0, new_socket_error(etimedout, "sendto")
     }
-    let nsent, errno = sys_sendto(s.fd, &buf[0], len(buf), (*sockaddr)(&dest_addr), 16)
+    nsent, errno := sys_sendto(s.fd, &buf[0], len(buf), (*sockaddr)(&dest_addr), 16)
     if errno != 0 {
         if is_temporary_error(errno) {
             return 0, nil
@@ -156,8 +156,8 @@ func (raw_socket* s) recv_from(buf: []byte) (int, string, int, error) {
     if s.fd < 0 {
         return 0, "", 0, new_socket_error(ebadf, "recvfrom")
     }
-    let timeout_ms = calculate_timeout_ms(s.read_deadline_ns)
-    let n, poll_errno = sys_poll(&pollfd{
+    timeout_ms := calculate_timeout_ms(s.read_deadline_ns)
+    n, poll_errno := sys_poll(&pollfd{
         fd: s.fd,
         events: poll_in | poll_err,
         revents: 0,
@@ -170,14 +170,14 @@ func (raw_socket* s) recv_from(buf: []byte) (int, string, int, error) {
     }
     var src_addr sockaddr_inet
     var addrlen: int = 16
-    let nread, errno = sys_recvfrom(s.fd, &buf[0], len(buf), (*sockaddr)(&src_addr), &addrlen)
+    nread, errno := sys_recvfrom(s.fd, &buf[0], len(buf), (*sockaddr)(&src_addr), &addrlen)
     if errno != 0 {
         if is_temporary_error(errno) {
             return 0, "", 0, nil
         }
         return 0, "", 0, new_socket_error(errno, "recvfrom")
     }
-    let src_port = ntohs(src_addr.sin_port)
+    src_port := ntohs(src_addr.sin_port)
     nread, "", src_port, nil
 }
 
@@ -185,8 +185,8 @@ func (raw_socket* s) read(buf: []byte) (int, error) {
     if s.fd < 0 {
         return 0, new_socket_error(ebadf, "read")
     }
-    let timeout_ms = calculate_timeout_ms(s.read_deadline_ns)
-    let n, poll_errno = sys_poll(&pollfd{
+    timeout_ms := calculate_timeout_ms(s.read_deadline_ns)
+    n, poll_errno := sys_poll(&pollfd{
         fd: s.fd,
         events: poll_in | poll_err,
         revents: 0,
@@ -197,7 +197,7 @@ func (raw_socket* s) read(buf: []byte) (int, error) {
     if n == 0 {
         return 0, new_socket_error(etimedout, "read")
     }
-    let nread, errno = sys_read(s.fd, &buf[0], len(buf))
+    nread, errno := sys_read(s.fd, &buf[0], len(buf))
     if errno != 0 {
         if is_temporary_error(errno) {
             return 0, nil
@@ -214,8 +214,8 @@ func (raw_socket* s) write(buf: []byte) (int, error) {
     if s.fd < 0 {
         return 0, new_socket_error(ebadf, "write")
     }
-    let timeout_ms = calculate_timeout_ms(s.write_deadline_ns)
-    let n, poll_errno = sys_poll(&pollfd{
+    timeout_ms := calculate_timeout_ms(s.write_deadline_ns)
+    n, poll_errno := sys_poll(&pollfd{
         fd: s.fd,
         events: poll_out | poll_err,
         revents: 0,
@@ -226,7 +226,7 @@ func (raw_socket* s) write(buf: []byte) (int, error) {
     if n == 0 {
         return 0, new_socket_error(etimedout, "write")
     }
-    let nwritten, errno = sys_write(s.fd, &buf[0], len(buf))
+    nwritten, errno := sys_write(s.fd, &buf[0], len(buf))
     if errno != 0 {
         if is_temporary_error(errno) {
             return 0, nil
@@ -250,12 +250,12 @@ func calculate_timeout_ms(deadline_ns: i64) int {
     if deadline_ns == 0 {
         return -1
     }
-    let now_ns = time.now_ns()
+    now_ns := time.now_ns()
     if now_ns >= deadline_ns {
         return 0
     }
-    let remaining_ns = deadline_ns - now_ns
-    let remaining_ms = remaining_ns / 1_000_000
+    remaining_ns := deadline_ns - now_ns
+    remaining_ms := remaining_ns / 1_000_000
     if remaining_ms > 2147483647 {
         2147483647
     } else if remaining_ms < 1 {
@@ -266,8 +266,8 @@ func calculate_timeout_ms(deadline_ns: i64) int {
 }
 
 func (raw_socket* s) set_reuse_addr(on: bool) error {
-    let val: int = if on { 1 } else { 0 }
-    let errno = sys_setsockopt(s.fd, sol_socket, so_reuseaddr, (*byte)(&val), 4)
+    val: int = if on { 1 } else { 0 }
+    errno := sys_setsockopt(s.fd, sol_socket, so_reuseaddr, (*byte)(&val), 4)
     if errno != 0 {
         return new_socket_error(errno, "setsockopt")
     }
@@ -275,8 +275,8 @@ func (raw_socket* s) set_reuse_addr(on: bool) error {
 }
 
 func (raw_socket* s) set_reuse_port(on: bool) error {
-    let val: int = if on { 1 } else { 0 }
-    let errno = sys_setsockopt(s.fd, sol_socket, so_reuseport, (*byte)(&val), 4)
+    val: int = if on { 1 } else { 0 }
+    errno := sys_setsockopt(s.fd, sol_socket, so_reuseport, (*byte)(&val), 4)
     if errno != 0 {
         return new_socket_error(errno, "setsockopt")
     }
@@ -287,8 +287,8 @@ func (raw_socket* s) set_tcp_no_delay(on: bool) error {
     if s.protocol != ipproto_tcp {
         return new_socket_error(einval, "setsockopt")
     }
-    let val: int = if on { 1 } else { 0 }
-    let errno = sys_setsockopt(s.fd, sol_tcp, tcp_nodelay, (*byte)(&val), 4)
+    val: int = if on { 1 } else { 0 }
+    errno := sys_setsockopt(s.fd, sol_tcp, tcp_nodelay, (*byte)(&val), 4)
     if errno != 0 {
         return new_socket_error(errno, "setsockopt")
     }
@@ -296,7 +296,7 @@ func (raw_socket* s) set_tcp_no_delay(on: bool) error {
 }
 
 func (raw_socket* s) set_send_buffer_size(size: int) error {
-    let errno = sys_setsockopt(s.fd, sol_socket, so_sndbuf, (*byte)(&size), 4)
+    errno := sys_setsockopt(s.fd, sol_socket, so_sndbuf, (*byte)(&size), 4)
     if errno != 0 {
         return new_socket_error(errno, "setsockopt")
     }
@@ -304,7 +304,7 @@ func (raw_socket* s) set_send_buffer_size(size: int) error {
 }
 
 func (raw_socket* s) set_recv_buffer_size(size: int) error {
-    let errno = sys_setsockopt(s.fd, sol_socket, so_rcvbuf, (*byte)(&size), 4)
+    errno := sys_setsockopt(s.fd, sol_socket, so_rcvbuf, (*byte)(&size), 4)
     if errno != 0 {
         return new_socket_error(errno, "setsockopt")
     }
@@ -317,7 +317,7 @@ func (raw_socket* s) get_local_addr() (string, int, error) {
     }
     var addr sockaddr_inet
     var addrlen: int = 16
-    let errno = sys_getsockname(s.fd, (*sockaddr)(&addr), &addrlen)
+    errno := sys_getsockname(s.fd, (*sockaddr)(&addr), &addrlen)
     if errno != 0 {
         return "", 0, new_socket_error(errno, "getsockname")
     }
@@ -330,7 +330,7 @@ func (raw_socket* s) get_remote_addr() (string, int, error) {
     }
     var addr sockaddr_inet
     var addrlen: int = 16
-    let errno = sys_getpeername(s.fd, (*sockaddr)(&addr), &addrlen)
+    errno := sys_getpeername(s.fd, (*sockaddr)(&addr), &addrlen)
     if errno != 0 {
         return "", 0, new_socket_error(errno, "getpeername")
     }
@@ -342,9 +342,9 @@ func ntohs(net: int) int {
 }
 
 func ntohl(net: int) int {
-    let b1 = (net >> 24) & 0xFF
-    let b2 = (net >> 16) & 0xFF
-    let b3 = (net >> 8) & 0xFF
-    let b4 = net & 0xFF
+    b1 := (net >> 24) & 0xFF
+    b2 := (net >> 16) & 0xFF
+    b3 := (net >> 8) & 0xFF
+    b4 := net & 0xFF
     (b4 << 24) | (b3 << 16) | (b2 << 8) | b1
 }

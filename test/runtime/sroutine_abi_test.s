@@ -14,11 +14,11 @@ func main() int {
         println("FAIL: main sroutine id");
         return 2;
     }
-    let done_channel = chan_make(2);
+    done_channel := chan_make(2);
     sroutine abi_worker(done_channel);
     sroutine abi_worker(done_channel);
-    let first = chan_recv(done_channel);
-    let second = chan_recv(done_channel);
+    first := chan_recv(done_channel);
+    second := chan_recv(done_channel);
     if first <= 0 || second <= 0 || first == second {
         println("FAIL: worker sroutine id");
         return 3;

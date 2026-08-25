@@ -10,11 +10,11 @@ struct link_symbol {
 struct link_context {
     vec[link_symbol] symbols
 }
-let reserved_imports = vec[string]{"go", "type"}
-let ctxt = link_context { symbols: vec[link_symbol]() }
+reserved_imports := vec[string]{"go", "type"}
+ctxt := link_context { symbols: vec[link_symbol]() }
 
 func is_reserved_import(string prefix) bool {
-    let i = 0
+    i := 0
     while i < reserved_imports.len() {
         if reserved_imports[i] == prefix {
             return true
@@ -25,7 +25,7 @@ func is_reserved_import(string prefix) bool {
 }
 
 func pkg_linksym(string prefix, string name, int abi) link_symbol {
-    let sep = "."
+    sep := "."
     if is_reserved_import(prefix) {
         sep = ":"
     }
@@ -40,7 +40,7 @@ func linkname(string name, int abi) link_symbol {
 }
 
 func linksym(string pkg, string name, int abi) link_symbol {
-    let sym = link_symbol {
+    sym := link_symbol {
         pkg: pkg,
         name: name,
         abi: abi,

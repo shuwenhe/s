@@ -6,7 +6,7 @@ struct int_tuple {
 }
 
 func make_tuple2(int first, int second) int_tuple {
-    let items = vec[int]()
+    items := vec[int]()
     items.push(first)
     items.push(second)
     int_tuple { items: items }
@@ -27,7 +27,7 @@ func tuple_equal(int_tuple a, int_tuple b) bool {
     if a.items.len() != b.items.len() {
         return false
     }
-    let i = 0
+    i := 0
     while i < a.items.len() {
         if a.items[i] != b.items[i] {
             return false

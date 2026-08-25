@@ -12,12 +12,12 @@ func sweep_pass() int {
     sweep_freed_bytes = 0
     sweep_freed_count = 0
     sweep_live_count  = 0
-    let all_objs = __mem_heap_list_all()
-    let i = 0
+    all_objs := __mem_heap_list_all()
+    i := 0
     while i < all_objs.len() {
-        let obj_id = all_objs.get(i).unwrap_or(-1)
+        obj_id := all_objs.get(i).unwrap_or(-1)
         if obj_id >= 0 {
-            let hdr = __mem_obj_read_header(obj_id)
+            hdr := __mem_obj_read_header(obj_id)
             if hdr.mark == GC_WHITE {
                 sweep_freed_bytes = sweep_freed_bytes + hdr.size
                 sweep_freed_count = sweep_freed_count + 1

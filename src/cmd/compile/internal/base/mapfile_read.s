@@ -2,18 +2,18 @@ package compile.internal.base
 use std.fs.read_to_string
 
 func map_file_read(string path, int offset, int length) result[string, string] {
-    let full = read_to_string(path)
+    full := read_to_string(path)
     if full.is_err() {
         return result::err("read file failed")
     }
-    let text = full.unwrap()
+    text := full.unwrap()
     if offset < 0 || length < 0 {
         return result::err("invalid map range")
     }
     if offset > len(text) {
         return result::err("offset out of range")
     }
-    let end = offset + length
+    end := offset + length
     if end > len(text) {
         end = len(text)
     }

@@ -12,8 +12,8 @@ func mkdirs_for_path(path: string) {
     if path == nil || path == "" {
         return
     }
-    let parts = path.split("/")
-    let current = ""
+    parts := path.split("/")
+    current := ""
     for part in parts {
         if part == "" {
             continue
@@ -40,8 +40,8 @@ func host_fs_write_text_file(path: string, contents: string): int {
 }
 
 func host_fs_make_temp_dir(prefix: string, base_dir: string): string {
-    let prefix_text = if prefix == nil { "tmp-" } else { prefix }
-    let root = if base_dir == nil { "/tmp" } else { base_dir }
+    prefix_text := if prefix == nil { "tmp-" } else { prefix }
+    root := if base_dir == nil { "/tmp" } else { base_dir }
     mkdirs_for_path(root)
     return os.make_temp_dir(prefix_text, root)
 }

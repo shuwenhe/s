@@ -25,14 +25,14 @@ func run_gc() () {
     if gc_phase != GC_PHASE_OFF {
         return
     }
-    let t0 = __runtime_nanotime()
+    t0 := __runtime_nanotime()
     __gc_stw_start()
     gc_phase = GC_PHASE_MARK
     mark_init()
     mark_roots()
     drain_mark_queue()
     gc_phase = GC_PHASE_SWEEP
-    let freed = sweep_pass()
+    freed := sweep_pass()
     gc_total_freed = gc_total_freed + freed
     gc_run_count = gc_run_count + 1
     gc_phase     = GC_PHASE_OFF

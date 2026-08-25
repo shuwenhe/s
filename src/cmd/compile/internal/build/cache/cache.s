@@ -27,8 +27,8 @@ func cache_hit(string source_path, string source_text, string phase) bool {
 }
 
 func cache_hit_target(string source_path, string source_text, string phase, string target_key) bool {
-    let stamp_path = cache_stamp_path(source_path, phase, target_key)
-    let cached = read_to_string(stamp_path)
+    stamp_path := cache_stamp_path(source_path, phase, target_key)
+    cached := read_to_string(stamp_path)
     if cached.is_err() {
         return false
     }
@@ -36,12 +36,12 @@ func cache_hit_target(string source_path, string source_text, string phase, stri
 }
 
 func cache_hit_explain_target(string source_path, string source_text, string phase, string target_key) string {
-    let stamp_path = cache_stamp_path(source_path, phase, target_key)
-    let cached = read_to_string(stamp_path)
+    stamp_path := cache_stamp_path(source_path, phase, target_key)
+    cached := read_to_string(stamp_path)
     if cached.is_err() {
         return "miss:no-stamp"
     }
-    let now = dependency_fingerprint(source_path, source_text, phase, target_key)
+    now := dependency_fingerprint(source_path, source_text, phase, target_key)
     if cached.unwrap() == now {
         return "hit:exact-fingerprint"
     }
@@ -53,38 +53,38 @@ func update_cache(string source_path, string source_text, string phase) bool {
 }
 
 func update_cache_target(string source_path, string source_text, string phase, string target_key) bool {
-    let stamp_path = cache_stamp_path(source_path, phase, target_key)
-    let domain = invalidation_domain(source_path, source_text, phase, target_key)
-    let previous = read_to_string(stamp_path)
-    let next_fingerprint = dependency_fingerprint(source_path, source_text, phase, target_key)
-    let write = write_text_file(stamp_path, next_fingerprint)
+    stamp_path := cache_stamp_path(source_path, phase, target_key)
+    domain := invalidation_domain(source_path, source_text, phase, target_key)
+    previous := read_to_string(stamp_path)
+    next_fingerprint := dependency_fingerprint(source_path, source_text, phase, target_key)
+    write := write_text_file(stamp_path, next_fingerprint)
     if write.is_err() {
         return false
     }
     if previous.is_err() || previous.unwrap() != next_fingerprint {
-        let ignored_epoch = bump_phase_epoch(phase, domain)
+        ignored_epoch := bump_phase_epoch(phase, domain)
     }
-    let pkg = package_name(source_text)
-    let prev_export = read_to_string(export_stamp_path(pkg))
-    let next_export = export_signature(source_text)
-    let prev_state = read_dep_version_state(pkg)
-    let next_version = prev_state.version
+    pkg := package_name(source_text)
+    prev_export := read_to_string(export_stamp_path(pkg))
+    next_export := export_signature(source_text)
+    prev_state := read_dep_version_state(pkg)
+    next_version := prev_state.version
     if prev_export.is_err() || prev_export.unwrap() != next_export {
         next_version = next_version + 1
     }
-    let graph_state = dependency_graph_state(source_text, phase, target_key)
-    let next_depth = graph_state.max_depth + 1
+    graph_state := dependency_graph_state(source_text, phase, target_key)
+    next_depth := graph_state.max_depth + 1
     if next_depth < 1 {
         next_depth = 1
     }
-    let next_layer_epoch = next_version * 97 + next_depth * 13 + graph_state.epoch_acc + graph_state.dep_count
-    let export_stamp = export_stamp_path(pkg)
-    let export_write = write_text_file(export_stamp, next_export)
+    next_layer_epoch := next_version * 97 + next_depth * 13 + graph_state.epoch_acc + graph_state.dep_count
+    export_stamp := export_stamp_path(pkg)
+    export_write := write_text_file(export_stamp, next_export)
     if export_write.is_err() {
         return false
     }
-    let version_stamp = version_stamp_path(pkg)
-    let version_payload = "version=" + to_string(next_version)
+    version_stamp := version_stamp_path(pkg)
+    version_payload := "version=" + to_string(next_version)
         + ";depth=" + to_string(next_depth)
         + ";layer=" + to_string(next_layer_epoch)
         + ";phase_epoch=" + to_string(read_phase_epoch(phase, domain))
@@ -95,18 +95,18 @@ func update_cache_target(string source_path, string source_text, string phase, s
         + ";waves=" + to_string(graph_state.parallel_wave_count)
         + ";pruned_deps=" + graph_state.pruned_signature
         + ";explain=" + cache_hit_explain_target(source_path, source_text, phase, target_key)
-    let version_write = write_text_file(version_stamp, version_payload)
+    version_write := write_text_file(version_stamp, version_payload)
     !version_write.is_err()
 }
 
 func dependency_fingerprint(string source_path, string source_text, string phase, string target_key) string {
-    let own = fingerprint(source_text)
-    let pkg = package_name(source_text)
-    let imports = import_signature(source_text)
-    let exports = export_signature(source_text)
-    let propagated = dependency_layer_version_signature(source_text, phase, target_key)
-    let domain = invalidation_domain(source_path, source_text, phase, target_key)
-    let epoch = read_phase_epoch(phase, domain)
+    own := fingerprint(source_text)
+    pkg := package_name(source_text)
+    imports := import_signature(source_text)
+    exports := export_signature(source_text)
+    propagated := dependency_layer_version_signature(source_text, phase, target_key)
+    domain := invalidation_domain(source_path, source_text, phase, target_key)
+    epoch := read_phase_epoch(phase, domain)
     phase + ":" + source_path + ":" + pkg + ":" + own + ":" + imports + ":" + exports + ":" + propagated + ":domain=" + domain + ":epoch=" + to_string(epoch) + ":target=" + sanitize_key(target_key)
 }
 
@@ -115,8 +115,8 @@ func cache_stamp_path(string source_path, string phase, string target_key) strin
 }
 
 func invalidation_domain(string source_path, string source_text, string phase, string target_key) string {
-    let pkg = package_name(source_text)
-    let lane = target_parallel_lane(target_key)
+    pkg := package_name(source_text)
+    lane := target_parallel_lane(target_key)
     phase + ":" + pkg + ":" + sanitize_key(source_path) + ":" + sanitize_key(target_key) + ":lane" + to_string(lane)
 }
 
@@ -125,11 +125,11 @@ func phase_stamp_path(string phase, string domain) string {
 }
 
 func read_phase_epoch(string phase, string domain) int {
-    let stamp = read_to_string(phase_stamp_path(phase, domain))
+    stamp := read_to_string(phase_stamp_path(phase, domain))
     if stamp.is_err() {
         return 0
     }
-    let value = parse_field_int(stamp.unwrap(), "epoch=")
+    value := parse_field_int(stamp.unwrap(), "epoch=")
     if value < 0 {
         return 0
     }
@@ -137,33 +137,33 @@ func read_phase_epoch(string phase, string domain) int {
 }
 
 func bump_phase_epoch(string phase, string domain) bool {
-    let current = read_phase_epoch(phase, domain)
-    let next = current + 1
-    let payload = "epoch=" + to_string(next)
-    let write = write_text_file(phase_stamp_path(phase, domain), payload)
+    current := read_phase_epoch(phase, domain)
+    next := current + 1
+    payload := "epoch=" + to_string(next)
+    write := write_text_file(phase_stamp_path(phase, domain), payload)
     !write.is_err()
 }
 
 func fingerprint(string source_text) string {
-    let funcs = count_token(source_text, "func ")
-    let structs = count_token(source_text, "struct ")
-    let calls = count_token(source_text, " call")
-    let uses = count_token(source_text, "\nuse ")
-    let pkg = package_name(source_text)
+    funcs := count_token(source_text, "func ")
+    structs := count_token(source_text, "struct ")
+    calls := count_token(source_text, " call")
+    uses := count_token(source_text, "\nuse ")
+    pkg := package_name(source_text)
     pkg + ":" + to_string(len(source_text)) + ":" + to_string(funcs) + ":" + to_string(structs) + ":" + to_string(calls) + ":" + to_string(uses)
 }
 
 func import_signature(string source_text) string {
-    let sig = "imports"
-    let cursor = 0
+    sig := "imports"
+    cursor := 0
     while cursor < len(source_text) {
-        let line_end = index_of_from(source_text, "\n", cursor)
+        line_end := index_of_from(source_text, "\n", cursor)
         if line_end < 0 {
             line_end = len(source_text)
         }
-        let line = trim_spaces(slice(source_text, cursor, line_end))
+        line := trim_spaces(slice(source_text, cursor, line_end))
         if starts_with(line, "use ") {
-            let path = use_path_from_line(line)
+            path := use_path_from_line(line)
             sig = sig + "|" + path
         }
         cursor = line_end + 1
@@ -172,17 +172,17 @@ func import_signature(string source_text) string {
 }
 
 func export_signature(string source_text) string {
-    let pub_funcs = count_token(source_text, "\npub func ") + count_token(source_text, "\npub\nfunc ")
-    let pub_structs = count_token(source_text, "\npub struct ")
-    let pub_enums = count_token(source_text, "\npub enum ")
-    let pub_traits = count_token(source_text, "\npub trait ")
-    let pub_impls = count_token(source_text, "\npub impl ")
+    pub_funcs := count_token(source_text, "\npub func ") + count_token(source_text, "\npub\nfunc ")
+    pub_structs := count_token(source_text, "\npub struct ")
+    pub_enums := count_token(source_text, "\npub enum ")
+    pub_traits := count_token(source_text, "\npub trait ")
+    pub_impls := count_token(source_text, "\npub impl ")
     "exports:" + to_string(pub_funcs) + ":" + to_string(pub_structs) + ":" + to_string(pub_enums) + ":" + to_string(pub_traits) + ":" + to_string(pub_impls)
 }
 
 func dependency_layer_version_signature(string source_text, string phase, string target_key) string {
-    let graph = dependency_graph_state(source_text, phase, target_key)
-    let sig = "dep-layer"
+    graph := dependency_graph_state(source_text, phase, target_key)
+    sig := "dep-layer"
         + ":max_depth=" + to_string(graph.max_depth)
         + ":epoch=" + to_string(graph.epoch_acc)
         + ":count=" + to_string(graph.dep_count)
@@ -195,26 +195,26 @@ func dependency_layer_version_signature(string source_text, string phase, string
 }
 
 func dependency_graph_state(string source_text, string phase, string target_key) dep_graph_state {
-    let max_depth = 0
-    let epoch_acc = 0
-    let dep_count = 0
-    let pruned_count = 0
-    let minimal_invalidation = 100
-    let waves = 1
-    let direct_signature = ""
-    let pruned_signature = ""
-    let source_pkg = package_name(source_text)
-    let phase_budget = phase_depth_budget(phase)
-    let cursor = 0
+    max_depth := 0
+    epoch_acc := 0
+    dep_count := 0
+    pruned_count := 0
+    minimal_invalidation := 100
+    waves := 1
+    direct_signature := ""
+    pruned_signature := ""
+    source_pkg := package_name(source_text)
+    phase_budget := phase_depth_budget(phase)
+    cursor := 0
     while cursor < len(source_text) {
-        let line_end = index_of_from(source_text, "\n", cursor)
+        line_end := index_of_from(source_text, "\n", cursor)
         if line_end < 0 {
             line_end = len(source_text)
         }
-        let line = trim_spaces(slice(source_text, cursor, line_end))
+        line := trim_spaces(slice(source_text, cursor, line_end))
         if starts_with(line, "use ") {
-            let path = use_path_from_line(line)
-            let dep_state = read_dep_version_state(path)
+            path := use_path_from_line(line)
+            dep_state := read_dep_version_state(path)
             if should_prune_dependency(path, source_pkg, dep_state, phase_budget, target_key) {
                 pruned_count = pruned_count + 1
                 pruned_signature = pruned_signature + "|" + path
@@ -225,10 +225,10 @@ func dependency_graph_state(string source_text, string phase, string target_key)
             if dep_state.depth > max_depth {
                 max_depth = dep_state.depth
             }
-            let weighted = dep_state.layer_epoch + dep_state.version * (dep_state.depth + 1)
+            weighted := dep_state.layer_epoch + dep_state.version * (dep_state.depth + 1)
             epoch_acc = epoch_acc + weighted
             dep_count = dep_count + 1
-            let lane = target_parallel_lane(target_key)
+            lane := target_parallel_lane(target_key)
             if lane + 1 > waves {
                 waves = lane + 1
             }
@@ -283,13 +283,13 @@ func should_prune_dependency(string dep_path, string source_pkg, dep_version_sta
 }
 
 func same_root_package(string left, string right) bool {
-    let l = root_package(left)
-    let r = root_package(right)
+    l := root_package(left)
+    r := root_package(right)
     l != "" && l == r
 }
 
 func root_package(string pkg) string {
-    let dot = index_of(pkg, ".")
+    dot := index_of(pkg, ".")
     if dot < 0 {
         return pkg
     }
@@ -297,8 +297,8 @@ func root_package(string pkg) string {
 }
 
 func target_parallel_lane(string target_key) int {
-    let hash = 0
-    let i = 0
+    hash := 0
+    i := 0
     while i < len(target_key) {
         hash = (hash * 33 + digit_fallback(slice(target_key, i, i + 1))) % 4
         i = i + 1
@@ -328,7 +328,7 @@ func version_stamp_path(string pkg_or_use_path) string {
 }
 
 func read_dep_version_state(string pkg_or_use_path) dep_version_state {
-    let stamp = read_to_string(version_stamp_path(pkg_or_use_path))
+    stamp := read_to_string(version_stamp_path(pkg_or_use_path))
     if stamp.is_err() {
         return dep_version_state {
             version: 0,
@@ -336,10 +336,10 @@ func read_dep_version_state(string pkg_or_use_path) dep_version_state {
             layer_epoch: 0,
         }
     }
-    let text = stamp.unwrap()
-    let version = parse_field_int(text, "version=")
-    let depth = parse_field_int(text, "depth=")
-    let layer = parse_field_int(text, "layer=")
+    text := stamp.unwrap()
+    version := parse_field_int(text, "version=")
+    depth := parse_field_int(text, "depth=")
+    layer := parse_field_int(text, "layer=")
     if version < 0 {
         version = 0
     }
@@ -357,15 +357,15 @@ func read_dep_version_state(string pkg_or_use_path) dep_version_state {
 }
 
 func parse_field_int(string text, string marker) int {
-    let start = index_of(text, marker)
+    start := index_of(text, marker)
     if start < 0 {
         return -1
     }
     start = start + len(marker)
-    let value = 0
-    let seen = false
+    value := 0
+    seen := false
     while start < len(text) {
-        let ch = slice(text, start, start + 1)
+        ch := slice(text, start, start + 1)
         if ch < "0" || ch > "9" {
             break
         }
@@ -394,10 +394,10 @@ func digit_value(string ch) int {
 }
 
 func sanitize_key(string text) string {
-    let out = ""
-    let i = 0
+    out := ""
+    i := 0
     while i < len(text) {
-        let ch = slice(text, i, i + 1)
+        ch := slice(text, i, i + 1)
         if ch == "." || ch == "/" || ch == " " || ch == "\t" || ch == "\n" || ch == "\r" {
             out = out + "_"
         } else {
@@ -409,8 +409,8 @@ func sanitize_key(string text) string {
 }
 
 func use_path_from_line(string line) string {
-    let payload = trim_spaces(slice(line, 4, len(line)))
-    let as_pos = index_of(payload, " as ")
+    payload := trim_spaces(slice(line, 4, len(line)))
+    as_pos := index_of(payload, " as ")
     if as_pos < 0 {
         return payload
     }
@@ -418,17 +418,17 @@ func use_path_from_line(string line) string {
 }
 
 func trim_spaces(string text) string {
-    let start = 0
-    let end = len(text)
+    start := 0
+    end := len(text)
     while start < end {
-        let ch0 = slice(text, start, start + 1)
+        ch0 := slice(text, start, start + 1)
         if ch0 != " " && ch0 != "\t" && ch0 != "\n" && ch0 != "\r" {
             break
         }
         start = start + 1
     }
     while end > start {
-        let ch1 = slice(text, end - 1, end)
+        ch1 := slice(text, end - 1, end)
         if ch1 != " " && ch1 != "\t" && ch1 != "\n" && ch1 != "\r" {
             break
         }
@@ -445,15 +445,15 @@ func starts_with(string text, string prefix) bool {
 }
 
 func package_name(string source_text) string {
-    let marker = "package "
-    let start = index_of(source_text, marker)
+    marker := "package "
+    start := index_of(source_text, marker)
     if start < 0 {
         return "unknown"
     }
     start = start + len(marker)
-    let end = start
+    end := start
     while end < len(source_text) {
-        let ch = slice(source_text, end, end + 1)
+        ch := slice(source_text, end, end + 1)
         if ch == " " || ch == "\n" || ch == "\r" || ch == "\t" {
             break
         }
@@ -466,7 +466,7 @@ func index_of(string text, string token) int {
     if token == "" {
         return 0
     }
-    let i = 0
+    i := 0
     while i <= len(text) - len(token) {
         if slice(text, i, i + len(token)) == token {
             return i
@@ -480,7 +480,7 @@ func index_of_from(string text, string token, int start) int {
     if token == "" {
         return start
     }
-    let i = start
+    i := start
     while i <= len(text) - len(token) {
         if slice(text, i, i + len(token)) == token {
             return i
@@ -494,8 +494,8 @@ func count_token(string text, string token) int {
     if token == "" {
         return 0
     }
-    let total = 0
-    let i = 0
+    total := 0
+    i := 0
     while i <= len(text) - len(token) {
         if slice(text, i, i + len(token)) == token {
             total = total + 1

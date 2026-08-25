@@ -13,8 +13,8 @@ func zerorange(vec[prog] insns, int off, int cnt, bool r0_ready) vec[prog] {
     if cnt <= 0 {
         return insns
     }
-    let out = insns
-    let has_r0 = r0_ready
+    out := insns
+    has_r0 := r0_ready
     if !has_r0 {
         out.push(prog {
             op: "MOVW",
@@ -25,9 +25,9 @@ func zerorange(vec[prog] insns, int off, int cnt, bool r0_ready) vec[prog] {
         })
         has_r0 = true
     }
-    let ptr_size = 4
+    ptr_size := 4
     if cnt < (4 * ptr_size) {
-        let i = 0
+        i := 0
         while i < cnt {
             out.push(prog {
                 op: "MOVW",
@@ -50,7 +50,7 @@ func zerorange(vec[prog] insns, int off, int cnt, bool r0_ready) vec[prog] {
         })
         return out
     }
-    let at = 0
+    at := 0
     while at < cnt {
         out.push(prog {
             op: "MOVW",
@@ -65,7 +65,7 @@ func zerorange(vec[prog] insns, int off, int cnt, bool r0_ready) vec[prog] {
 }
 
 func ginsnop(vec[prog] insns) vec[prog] {
-    let out = insns
+    out := insns
     out.push(prog {
         op: "AND",
         from: "R0",

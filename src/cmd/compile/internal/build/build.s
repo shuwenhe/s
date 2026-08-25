@@ -10,13 +10,13 @@ use std.io.println
 use std.vec.vec
 
 func main(vec[string] args)  int {
-    let options = parse_options(args)
+    options := parse_options(args)
     if options[0] == "help" {
         report_usage(parse_usage())
         return 0
     }
     emit_target_log(options[0])
-    let exec_result = exec_run(options)
+    exec_result := exec_run(options)
     if options[0] == "run" {
         return exec_result
     }

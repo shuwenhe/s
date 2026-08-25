@@ -40,7 +40,7 @@ func (udp_conn* c) RemoteAddr() Addr {
 }
 
 func (udp_conn* c) SetDeadline(t: time.Time) error {
-    let deadline_ns = t.UnixNano()
+    deadline_ns := t.UnixNano()
     c.raw_socket.set_read_deadline(deadline_ns)
     c.raw_socket.set_write_deadline(deadline_ns)
     nil
@@ -55,7 +55,7 @@ func (udp_conn* c) SetWriteDeadline(t: time.Time) error {
 }
 
 func (udp_conn* c) ReadFromUDP(buf: []byte) (int, *udp_addr, error) {
-    let n, src_ip, src_port, err = c.raw_socket.recv_from(buf)
+    n, src_ip, src_port, err := c.raw_socket.recv_from(buf)
     if err != nil {
         return n, nil, err
     }
@@ -71,19 +71,19 @@ func (udp_conn* c) WriteToUDP(buf: []byte, addr: *udp_addr) (int, error) {
 }
 
 func dial_udp(address: string, port: int, timeout_ms: int) (*udp_conn, error) {
-    let sock, err = new_raw_socket(af_inet, sock_dgram, ipproto_udp)
+    sock, err := new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
         return nil, err
     }
     var local_addr sockaddr_inet
     local_addr.sin_family = af_inet
     local_addr.sin_port = 0
-    let errno = sys_bind(sock.fd, (*sockaddr)(&local_addr), 16)
+    errno := sys_bind(sock.fd, (*sockaddr)(&local_addr), 16)
     if errno != 0 {
         sock.close()
         return nil, new_socket_error(errno, "bind")
     }
-    let local_ip, local_port, err = sock.get_local_addr()
+    local_ip, local_port, err := sock.get_local_addr()
     if err != nil {
         sock.close()
         return nil, err
@@ -96,7 +96,7 @@ func dial_udp(address: string, port: int, timeout_ms: int) (*udp_conn, error) {
 }
 
 func listen_udp(address: string, port: int) (*udp_listener, error) {
-    let sock, err = new_raw_socket(af_inet, sock_dgram, ipproto_udp)
+    sock, err := new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
         return nil, err
     }
@@ -105,7 +105,7 @@ func listen_udp(address: string, port: int) (*udp_listener, error) {
         sock.close()
         return nil, err
     }
-    let local_ip, local_port, err = sock.get_local_addr()
+    local_ip, local_port, err := sock.get_local_addr()
     if err != nil {
         sock.close()
         return nil, err
@@ -130,7 +130,7 @@ func (udp_listener* l) Addr() Addr {
 }
 
 func (udp_listener* l) ReadFromUDP(buf: []byte) (int, *udp_addr, error) {
-    let n, src_ip, src_port, err = l.raw_socket.recv_from(buf)
+    n, src_ip, src_port, err := l.raw_socket.recv_from(buf)
     if err != nil {
         return n, nil, err
     }

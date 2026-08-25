@@ -108,9 +108,9 @@ func fail_int(string message) result[int, backend_error] {
         message: message,
     });
 }
-let control_panic_active = "@panic.active"
-let control_panic_payload = "@panic.payload"
-let control_in_defer = "@defer.active"
+control_panic_active := "@panic.active"
+control_panic_payload := "@panic.payload"
+control_in_defer := "@defer.active"
 
 struct unit_value {}
 
@@ -242,95 +242,95 @@ struct abi_behavior_entry {
 }
 
 func build(string path, string output, string ssa_margin_override, bool nostdlib) int {
-    let source_result = read_to_string(path)
+    source_result := read_to_string(path)
     if source_result.is_err() {
         return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message)
     }
-    let source = source_result.unwrap()
+    source := source_result.unwrap()
     if is_compiler_runtime_entry(path, source) {
         return build_compiler_runtime_launcher(output)
     }
-    let parsed_result = load_source_graph(path, source)
+    parsed_result := load_source_graph(path, source)
     if parsed_result.is_err() {
         return report_failure(parsed_result.unwrap_err().message)
     }
-    let parsed = parsed_result.unwrap()
+    parsed := parsed_result.unwrap()
     if !should_skip_semantic_check(path) && check_text(source) != 0 {
         return report_failure("semantic check failed")
     }
-    let mir_result = lower_main_to_mir(parsed)
+    mir_result := lower_main_to_mir(parsed)
     if mir_result.is_err() {
         return report_failure("mir lowering failed: " + mir_result.unwrap_err())
     }
-    let graph = mir_result.unwrap()
-    let arch = buildcfg_goarch()
-    let margin_result = parse_ssa_margin_override(ssa_margin_override)
+    graph := mir_result.unwrap()
+    arch := buildcfg_goarch()
+    margin_result := parse_ssa_margin_override(ssa_margin_override)
     if margin_result.is_err() {
         return report_failure(margin_result.unwrap_err().message)
     }
-    let dominant_margin = margin_result.unwrap()
-    let midend = run_midend_pipeline(graph)
-    let ssa_program = build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
-    let ssa_text = dump_ssa_pipeline(ssa_program)
+    dominant_margin := margin_result.unwrap()
+    midend := run_midend_pipeline(graph)
+    ssa_program := build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
+    ssa_text := dump_ssa_pipeline(ssa_program)
     if ssa_text == "" {
         return report_failure("ssa lowering failed: empty pipeline")
     }
-    let debug_map = dump_ssa_debug_map(ssa_program)
+    debug_map := dump_ssa_debug_map(ssa_program)
     if debug_map == "" {
         return report_failure("ssa debug map failed: empty map")
     }
-    let abi_runtime_check = validate_ssa_abi_contracts(arch, ssa_text)
+    abi_runtime_check := validate_ssa_abi_contracts(arch, ssa_text)
     if abi_runtime_check.is_err() {
         return report_failure(abi_runtime_check.unwrap_err().message)
     }
-    let abi_check = validate_abi_coverage(arch)
+    abi_check := validate_abi_coverage(arch)
     if abi_check.is_err() {
         return report_failure(abi_check.unwrap_err().message)
     }
-    let writes_result = compile_writes(parsed, graph)
+    writes_result := compile_writes(parsed, graph)
     if writes_result.is_err() {
         return report_failure(writes_result.unwrap_err().message)
     }
-    let exit_code_result = compile_exit_code(parsed, graph)
+    exit_code_result := compile_exit_code(parsed, graph)
     if exit_code_result.is_err() {
         return report_failure(exit_code_result.unwrap_err().message)
     }
-    let runtime_metrics_result = compile_runtime_metrics(parsed, graph)
+    runtime_metrics_result := compile_runtime_metrics(parsed, graph)
     if runtime_metrics_result.is_err() {
         return report_failure(runtime_metrics_result.unwrap_err().message)
     }
-    let temp_dir_result = make_temp_dir("s-build-")
+    temp_dir_result := make_temp_dir("s-build-")
     if temp_dir_result.is_err() {
         return report_failure("could not create temporary output directory: " + temp_dir_result.unwrap_err().message)
     }
-    let temp_dir = temp_dir_result.unwrap()
+    temp_dir := temp_dir_result.unwrap()
     if arch == "wasm" {
-        let wasm_result = build_wasm_object_chain(temp_dir, output, writes_result.unwrap(), exit_code_result.unwrap())
+        wasm_result := build_wasm_object_chain(temp_dir, output, writes_result.unwrap(), exit_code_result.unwrap())
         if wasm_result.is_err() {
             return report_failure(wasm_result.unwrap_err().message)
         }
-        let wasm_binary_check = validate_wasi_binary_artifact(output)
+        wasm_binary_check := validate_wasi_binary_artifact(output)
         if wasm_binary_check.is_err() {
             return report_failure(wasm_binary_check.unwrap_err().message)
         }
     } else {
-        let asm_text = emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
-        let asm_path = temp_dir + "/out.s"
-        let obj_path = temp_dir + "/out.o"
-        let write_result = write_text_file(asm_path, asm_text)
+        asm_text := emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
+        asm_path := temp_dir + "/out.s"
+        obj_path := temp_dir + "/out.o"
+        write_result := write_text_file(asm_path, asm_text)
         if write_result.is_err() {
             return report_failure("failed to write assembly: " + write_result.unwrap_err().message)
         }
-        let as_argv = vec[string]()
+        as_argv := vec[string]()
         as_argv.push("as");
         as_argv.push("-o");
         as_argv.push(obj_path);
         as_argv.push(asm_path);
-        let as_result = run_process(as_argv)
+        as_result := run_process(as_argv)
         if as_result.is_err() {
             return report_failure("toolchain failed: " + as_result.unwrap_err().message)
         }
-        let ld_argv = vec[string]()
+        ld_argv := vec[string]()
         ld_argv.push("ld")
         if nostdlib {
             ld_argv.push("-nostdlib")
@@ -341,108 +341,108 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         ld_argv.push("-o")
         ld_argv.push(output)
         ld_argv.push(obj_path)
-        let ld_result = run_process(ld_argv)
+        ld_result := run_process(ld_argv)
         if ld_result.is_err() {
             return report_failure("toolchain failed: " + ld_result.unwrap_err().message)
         }
     }
-    let dbg_path = output + ".dbg"
-    let dbg_payload = "ssa\n" + ssa_text + "\n\ndebug\n" + debug_map
-    let dbg_write = write_text_file(dbg_path, dbg_payload)
+    dbg_path := output + ".dbg"
+    dbg_payload := "ssa\n" + ssa_text + "\n\ndebug\n" + debug_map
+    dbg_write := write_text_file(dbg_path, dbg_payload)
     if dbg_write.is_err() {
         return report_failure("failed to write debug artifact: " + dbg_write.unwrap_err().message)
     }
-    let stackmap_path = output + ".stackmap"
-    let stackmap_payload = build_stackmap_artifact(arch, parsed, ssa_text, debug_map)
-    let stackmap_write = write_text_file(stackmap_path, stackmap_payload)
+    stackmap_path := output + ".stackmap"
+    stackmap_payload := build_stackmap_artifact(arch, parsed, ssa_text, debug_map)
+    stackmap_write := write_text_file(stackmap_path, stackmap_payload)
     if stackmap_write.is_err() {
         return report_failure("failed to write stack map artifact: " + stackmap_write.unwrap_err().message)
     }
-    let abi_path = output + ".abi"
-    let abi_payload = build_abi_behavior_artifact(arch, parsed)
-    let abi_write = write_text_file(abi_path, abi_payload)
+    abi_path := output + ".abi"
+    abi_payload := build_abi_behavior_artifact(arch, parsed)
+    abi_write := write_text_file(abi_path, abi_payload)
     if abi_write.is_err() {
         return report_failure("failed to write ABI behavior artifact: " + abi_write.unwrap_err().message)
     }
-    let abi_emit_path = output + ".abi.emit"
-    let abi_emit_payload = build_abi_emit_plan(arch, parsed)
-    let abi_emit_write = write_text_file(abi_emit_path, abi_emit_payload)
+    abi_emit_path := output + ".abi.emit"
+    abi_emit_payload := build_abi_emit_plan(arch, parsed)
+    abi_emit_write := write_text_file(abi_emit_path, abi_emit_payload)
     if abi_emit_write.is_err() {
         return report_failure("failed to write ABI emission artifact: " + abi_emit_write.unwrap_err().message)
     }
-    let abi_matrix_payload = build_abi_machine_matrix_artifact(arch, parsed, ssa_text)
-    let abi_matrix_check = validate_abi_machine_matrix(abi_matrix_payload)
+    abi_matrix_payload := build_abi_machine_matrix_artifact(arch, parsed, ssa_text)
+    abi_matrix_check := validate_abi_machine_matrix(abi_matrix_payload)
     if abi_matrix_check.is_err() {
         return report_failure(abi_matrix_check.unwrap_err().message)
     }
-    let abi_matrix_path = output + ".abi.matrix"
-    let abi_matrix_write = write_text_file(abi_matrix_path, abi_matrix_payload)
+    abi_matrix_path := output + ".abi.matrix"
+    abi_matrix_write := write_text_file(abi_matrix_path, abi_matrix_payload)
     if abi_matrix_write.is_err() {
         return report_failure("failed to write ABI matrix artifact: " + abi_matrix_write.unwrap_err().message)
     }
-    let dwarf_path = output + ".dwarf"
-    let dwarf_payload = build_dwarf_like_artifact(parsed, ssa_text, debug_map)
-    let dwarf_check = validate_dwarf_consumability(dwarf_payload, ssa_text)
+    dwarf_path := output + ".dwarf"
+    dwarf_payload := build_dwarf_like_artifact(parsed, ssa_text, debug_map)
+    dwarf_check := validate_dwarf_consumability(dwarf_payload, ssa_text)
     if dwarf_check.is_err() {
         return report_failure(dwarf_check.unwrap_err().message)
     }
-    let dwarf_write = write_text_file(dwarf_path, dwarf_payload)
+    dwarf_write := write_text_file(dwarf_path, dwarf_payload)
     if dwarf_write.is_err() {
         return report_failure("failed to write DWARF-like artifact: " + dwarf_write.unwrap_err().message)
     }
-    let cfi_path = output + ".cfi"
-    let cfi_payload = build_cfi_artifact(arch, ssa_text, debug_map)
-    let cfi_check = validate_cfi_artifact(cfi_payload)
+    cfi_path := output + ".cfi"
+    cfi_payload := build_cfi_artifact(arch, ssa_text, debug_map)
+    cfi_check := validate_cfi_artifact(cfi_payload)
     if cfi_check.is_err() {
         return report_failure(cfi_check.unwrap_err().message)
     }
-    let cfi_write = write_text_file(cfi_path, cfi_payload)
+    cfi_write := write_text_file(cfi_path, cfi_payload)
     if cfi_write.is_err() {
         return report_failure("failed to write CFI artifact: " + cfi_write.unwrap_err().message)
     }
-    let gc_path = output + ".gcmap"
-    let gc_payload = build_gc_metadata_artifact(arch, parsed, ssa_text)
-    let gc_check = validate_gc_contract_chain(gc_payload, parsed, ssa_text)
+    gc_path := output + ".gcmap"
+    gc_payload := build_gc_metadata_artifact(arch, parsed, ssa_text)
+    gc_check := validate_gc_contract_chain(gc_payload, parsed, ssa_text)
     if gc_check.is_err() {
         return report_failure(gc_check.unwrap_err().message)
     }
-    let gc_write = write_text_file(gc_path, gc_payload)
+    gc_write := write_text_file(gc_path, gc_payload)
     if gc_write.is_err() {
         return report_failure("failed to write GC metadata artifact: " + gc_write.unwrap_err().message)
     }
-    let export_path = output + ".export"
-    let export_payload = build_export_data_artifact(parsed, arch)
-    let export_write = write_text_file(export_path, export_payload)
+    export_path := output + ".export"
+    export_payload := build_export_data_artifact(parsed, arch)
+    export_write := write_text_file(export_path, export_payload)
     if export_write.is_err() {
         return report_failure("failed to write export data artifact: " + export_write.unwrap_err().message)
     }
-    let toolchain_path = output + ".toolchain"
-    let toolchain_payload = build_toolchain_compat_artifact(parsed, arch)
-    let toolchain_check = validate_toolchain_compat_artifact(toolchain_payload)
+    toolchain_path := output + ".toolchain"
+    toolchain_payload := build_toolchain_compat_artifact(parsed, arch)
+    toolchain_check := validate_toolchain_compat_artifact(toolchain_payload)
     if toolchain_check.is_err() {
         return report_failure(toolchain_check.unwrap_err().message)
     }
-    let toolchain_write = write_text_file(toolchain_path, toolchain_payload)
+    toolchain_write := write_text_file(toolchain_path, toolchain_payload)
     if toolchain_write.is_err() {
         return report_failure("failed to write toolchain compatibility artifact: " + toolchain_write.unwrap_err().message)
     }
-    let perf_path = output + ".perf"
-    let perf_payload = build_backend_perf_baseline_artifact(arch, ssa_text, midend.report, runtime_metrics_text(runtime_metrics_result.unwrap()))
-    let perf_check = validate_backend_perf_baseline(perf_payload)
+    perf_path := output + ".perf"
+    perf_payload := build_backend_perf_baseline_artifact(arch, ssa_text, midend.report, runtime_metrics_text(runtime_metrics_result.unwrap()))
+    perf_check := validate_backend_perf_baseline(perf_payload)
     if perf_check.is_err() {
         return report_failure(perf_check.unwrap_err().message)
     }
-    let perf_write = write_text_file(perf_path, perf_payload)
+    perf_write := write_text_file(perf_path, perf_payload)
     if perf_write.is_err() {
         return report_failure("failed to write backend perf baseline artifact: " + perf_write.unwrap_err().message)
     }
-    let opt_path = output + ".opt"
-    let opt_payload = build_midend_opt_artifact(midend.report)
-    let opt_check = validate_midend_opt_artifact(opt_payload)
+    opt_path := output + ".opt"
+    opt_payload := build_midend_opt_artifact(midend.report)
+    opt_check := validate_midend_opt_artifact(opt_payload)
     if opt_check.is_err() {
         return report_failure(opt_check.unwrap_err().message)
     }
-    let opt_write = write_text_file(opt_path, opt_payload)
+    opt_write := write_text_file(opt_path, opt_payload)
     if opt_write.is_err() {
         return report_failure("failed to write optimization report: " + opt_write.unwrap_err().message)
     }
@@ -450,19 +450,19 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
 }
 
 func run_midend_pipeline(mir_graph graph) midend_result {
-    let pass = apply_midend_pass_pipeline(graph)
-    let rewritten_graph = pass.graph
-    let inlined = estimate_inline_sites_graph(rewritten_graph)
-    let escaped = estimate_escape_sites_graph(rewritten_graph)
-    let devirt = estimate_devirtualized_sites_graph(rewritten_graph)
-    let cross_pkg_inline = estimate_cross_pkg_inline_sites_graph(rewritten_graph, inlined)
-    let const_prop = estimate_const_prop_sites_graph(rewritten_graph)
-    let sroutine_sites = estimate_sroutine_sites_graph(rewritten_graph)
-    let select_weighted_sites = estimate_trace_call_sites_graph(rewritten_graph, "select_recv_weighted(")
-    let select_timeout_sites = estimate_trace_call_sites_graph(rewritten_graph, "select_recv_timeout(")
-    let select_send_sites = estimate_trace_call_sites_graph(rewritten_graph, "select_send(")
-    let ipo_synergy = estimate_ipo_synergy(inlined, escaped, devirt, cross_pkg_inline, const_prop)
-    let iter = 0
+    pass := apply_midend_pass_pipeline(graph)
+    rewritten_graph := pass.graph
+    inlined := estimate_inline_sites_graph(rewritten_graph)
+    escaped := estimate_escape_sites_graph(rewritten_graph)
+    devirt := estimate_devirtualized_sites_graph(rewritten_graph)
+    cross_pkg_inline := estimate_cross_pkg_inline_sites_graph(rewritten_graph, inlined)
+    const_prop := estimate_const_prop_sites_graph(rewritten_graph)
+    sroutine_sites := estimate_sroutine_sites_graph(rewritten_graph)
+    select_weighted_sites := estimate_trace_call_sites_graph(rewritten_graph, "select_recv_weighted(")
+    select_timeout_sites := estimate_trace_call_sites_graph(rewritten_graph, "select_recv_timeout(")
+    select_send_sites := estimate_trace_call_sites_graph(rewritten_graph, "select_send(")
+    ipo_synergy := estimate_ipo_synergy(inlined, escaped, devirt, cross_pkg_inline, const_prop)
+    iter := 0
     while iter < 2 {
         if inlined > escaped {
             escaped = escaped + inlined / 3
@@ -478,7 +478,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         }
         iter = iter + 1
     }
-    let rewritten = dump_graph(rewritten_graph)
+    rewritten := dump_graph(rewritten_graph)
     if inlined > 0 {
         rewritten = rewritten + " inline=" + to_string(inlined)
     }
@@ -506,7 +506,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     if select_send_sites > 0 {
         rewritten = rewritten + " selects=" + to_string(select_send_sites)
     }
-    let const_fold_hits = estimate_const_fold_hits_graph(graph)
+    const_fold_hits := estimate_const_fold_hits_graph(graph)
     rewritten = rewritten + " constfold=" + to_string(const_fold_hits)
     rewritten = rewritten + " ipo=" + to_string(ipo_synergy)
     rewritten = rewritten + " pass.rm_unreachable=" + to_string(pass.removed_unreachable_blocks)
@@ -514,7 +514,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     rewritten = rewritten + " pass.simplify_j2r=" + to_string(pass.simplified_jump_to_return)
     rewritten = rewritten + " pass.trim_unit=" + to_string(pass.removed_unit_lines)
     rewritten = rewritten + " pass.dedup=" + to_string(pass.dedup_lines)
-    let report = "midend"
+    report := "midend"
         + " inline_sites=" + to_string(inlined)
         + " escape_sites=" + to_string(escaped)
         + " devirtualized=" + to_string(devirt)
@@ -538,8 +538,8 @@ func run_midend_pipeline(mir_graph graph) midend_result {
 }
 
 func estimate_sroutine_sites_graph(mir_graph graph) int {
-    let total = 0
-    let i = 0
+    total := 0
+    i := 0
     while i < graph.trace.len() {
         if has_substring(graph.trace[i], "stmt sroutine ") {
             total = total + 1
@@ -550,8 +550,8 @@ func estimate_sroutine_sites_graph(mir_graph graph) int {
 }
 
 func estimate_trace_call_sites_graph(mir_graph graph, string marker) int {
-    let total = 0
-    let i = 0
+    total := 0
+    i := 0
     while i < graph.trace.len() {
         if has_substring(graph.trace[i], marker) {
             total = total + 1
@@ -562,10 +562,10 @@ func estimate_trace_call_sites_graph(mir_graph graph, string marker) int {
 }
 
 func estimate_const_fold_hits_graph(mir_graph graph) int {
-    let prefix = "constfold.hits="
-    let i = 0
+    prefix := "constfold.hits="
+    i := 0
     while i < graph.trace.len() {
-        let line = trim_spaces(graph.trace[i])
+        line := trim_spaces(graph.trace[i])
         if starts_with_local(line, prefix) {
             return parse_non_negative_int(slice(line, len(prefix), len(line)))
         }
@@ -575,15 +575,15 @@ func estimate_const_fold_hits_graph(mir_graph graph) int {
 }
 
 func parse_non_negative_int(string raw) int {
-    let text = trim_spaces(raw)
+    text := trim_spaces(raw)
     if text == "" {
         return 0
     }
-    let value = 0
-    let i = 0
+    value := 0
+    i := 0
     while i < len(text) {
-        let ch = char_at(text, i)
-        let digit = digit_value(ch)
+        ch := char_at(text, i)
+        digit := digit_value(ch)
         if digit < 0 {
             return 0
         }
@@ -603,16 +603,16 @@ struct midend_pass_result {
 }
 
 func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
-    let rewritten = graph
-    let unreachable = remove_unreachable_blocks_pass(rewritten)
+    rewritten := graph
+    unreachable := remove_unreachable_blocks_pass(rewritten)
     rewritten = unreachable.graph
-    let folded = simplify_redundant_branch_pass(rewritten)
+    folded := simplify_redundant_branch_pass(rewritten)
     rewritten = folded.graph
-    let simplified = simplify_jump_to_return_pass(rewritten)
+    simplified := simplify_jump_to_return_pass(rewritten)
     rewritten = simplified.graph
-    let trimmed = trim_unit_line_pass(rewritten)
+    trimmed := trim_unit_line_pass(rewritten)
     rewritten = trimmed.graph
-    let deduped = dedup_eval_line_pass(rewritten)
+    deduped := dedup_eval_line_pass(rewritten)
     rewritten = deduped.graph
     midend_pass_result {
         graph: rewritten,
@@ -625,46 +625,46 @@ func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
 }
 
 func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
-    let rewritten = graph
-    let reachable = vec[int]()
-    let work = vec[int]()
+    rewritten := graph
+    reachable := vec[int]()
+    work := vec[int]()
     work.push(rewritten.entry)
     while work.len() > 0 {
-        let id = work[work.len() - 1]
+        id := work[work.len() - 1]
         work.pop()
         if contains_int32(reachable, id) {
             continue
         }
         reachable.push(id)
-        let bi = find_block_index_by_id(rewritten, id)
+        bi := find_block_index_by_id(rewritten, id)
         if bi < 0 {
             continue
         }
-        let ei = 0
+        ei := 0
         while ei < rewritten.blocks[bi].terminator.edges.len() {
-            let next = rewritten.blocks[bi].terminator.edges[ei].target
+            next := rewritten.blocks[bi].terminator.edges[ei].target
             if !contains_int32(reachable, next) {
                 work.push(next)
             }
             ei = ei + 1
         }
     }
-    let filtered_blocks = vec[mir_basic_block]()
-    let i = 0
+    filtered_blocks := vec[mir_basic_block]()
+    i := 0
     while i < rewritten.blocks.len() {
         if contains_int32(reachable, rewritten.blocks[i].id) {
             filtered_blocks.push(rewritten.blocks[i])
         }
         i = i + 1
     }
-    let removed = rewritten.blocks.len() - filtered_blocks.len()
+    removed := rewritten.blocks.len() - filtered_blocks.len()
     rewritten.blocks = filtered_blocks
     i = 0
     while i < rewritten.blocks.len() {
-        let kept_edges = vec[mir_control_edge]()
-        let j = 0
+        kept_edges := vec[mir_control_edge]()
+        j := 0
         while j < rewritten.blocks[i].terminator.edges.len() {
-            let edge = rewritten.blocks[i].terminator.edges[j]
+            edge := rewritten.blocks[i].terminator.edges[j]
             if contains_int32(reachable, edge.target) {
                 kept_edges.push(edge)
             }
@@ -680,15 +680,15 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
 }
 
 func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
-    let rewritten = graph
-    let changed = 0
-    let i = 0
+    rewritten := graph
+    changed := 0
+    i := 0
     while i < rewritten.blocks.len() {
-        let block = rewritten.blocks[i]
+        block := rewritten.blocks[i]
         if block.terminator.kind == "branch" && block.terminator.edges.len() > 1 {
-            let target = block.terminator.edges[0].target
-            let same_target = true
-            let j = 1
+            target := block.terminator.edges[0].target
+            same_target := true
+            j := 1
             while j < block.terminator.edges.len() {
                 if block.terminator.edges[j].target != target {
                     same_target = false
@@ -696,7 +696,7 @@ func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
                 j = j + 1
             }
             if same_target {
-                let folded = vec[mir_control_edge]()
+                folded := vec[mir_control_edge]()
                 folded.push(mir_control_edge {
                     label: "folded",
                     target: target,
@@ -713,7 +713,7 @@ func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
 }
 
 func contains_int32(vec[int] values, int needle) bool {
-    let i = 0
+    i := 0
     while i < values.len() {
         if values[i] == needle {
             return true
@@ -729,16 +729,16 @@ struct graph_pass_count_result {
 }
 
 func simplify_jump_to_return_pass(mir_graph graph) graph_pass_count_result {
-    let rewritten = graph
-    let changed = 0
-    let i = 0
+    rewritten := graph
+    changed := 0
+    i := 0
     while i < rewritten.blocks.len() {
-        let block = rewritten.blocks[i]
+        block := rewritten.blocks[i]
         if block.terminator.kind == "jump" && block.terminator.edges.len() == 1 {
-            let target_id = block.terminator.edges[0].target
-            let ti = find_block_index_by_id(rewritten, target_id)
+            target_id := block.terminator.edges[0].target
+            ti := find_block_index_by_id(rewritten, target_id)
             if ti >= 0 {
-                let target = rewritten.blocks[ti]
+                target := rewritten.blocks[ti]
                 if target.terminator.kind == "return" && target.statements.len() == 0 {
                     rewritten.blocks[i].terminator.kind = "return"
                     rewritten.blocks[i].terminator.edges = vec[mir_control_edge]()
@@ -752,15 +752,15 @@ func simplify_jump_to_return_pass(mir_graph graph) graph_pass_count_result {
 }
 
 func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
-    let rewritten = graph
-    let changed = 0
-    let i = 0
+    rewritten := graph
+    changed := 0
+    i := 0
     while i < rewritten.blocks.len() {
         if rewritten.blocks[i].terminator.kind == "return" {
-            let filtered = vec[mir_statement]()
-            let j = 0
+            filtered := vec[mir_statement]()
+            j := 0
             while j < rewritten.blocks[i].statements.len() {
-                let keep = true
+                keep := true
                 switch rewritten.blocks[i].statements[j] {
                     mir_statement::eval(eval_stmt) : {
                         if eval_stmt.op == "line" && eval_stmt.args.len() > 0 && eval_stmt.args[0] == "yield unit" {
@@ -783,19 +783,19 @@ func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
 }
 
 func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
-    let rewritten = graph
-    let changed = 0
-    let i = 0
+    rewritten := graph
+    changed := 0
+    i := 0
     while i < rewritten.blocks.len() {
-        let filtered = vec[mir_statement]()
-        let last_line = ""
-        let j = 0
+        filtered := vec[mir_statement]()
+        last_line := ""
+        j := 0
         while j < rewritten.blocks[i].statements.len() {
-            let push_stmt = true
+            push_stmt := true
             switch rewritten.blocks[i].statements[j] {
                 mir_statement::eval(eval_stmt) : {
                     if eval_stmt.op == "line" && eval_stmt.args.len() > 0 {
-                        let current = eval_stmt.args[0]
+                        current := eval_stmt.args[0]
                         if current == last_line {
                             push_stmt = false
                             changed = changed + 1
@@ -821,7 +821,7 @@ func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
 }
 
 func find_block_index_by_id(mir_graph graph, int id) int {
-    let i = 0
+    i := 0
     while i < graph.blocks.len() {
         if graph.blocks[i].id == id {
             return i
@@ -832,14 +832,14 @@ func find_block_index_by_id(mir_graph graph, int id) int {
 }
 
 func validate_ssa_abi_contracts(string arch, string ssa_text) result[(), backend_error] {
-    let spills = parse_number_after(ssa_text, "spills=")
-    let reloads = parse_number_after(ssa_text, "reloads=")
-    let pressure = parse_number_after(ssa_text, "call_pressure=")
+    spills := parse_number_after(ssa_text, "spills=")
+    reloads := parse_number_after(ssa_text, "reloads=")
+    pressure := parse_number_after(ssa_text, "call_pressure=")
     if spills > 0 && reloads >= 0 && reloads < spills {
         return result::err(backend_error { message: "backend error: reload count lower than spill count" })
     }
     if pressure > 0 {
-        let budget = abi_caller_saved_count(arch) * 4
+        budget := abi_caller_saved_count(arch) * 4
         if budget > 0 && pressure > budget {
             return result::err(backend_error { message: "backend error: call pressure exceeds ABI budget" })
         }
@@ -852,7 +852,7 @@ func validate_ssa_abi_contracts(string arch, string ssa_text) result[(), backend
             return result::err(backend_error { message: "backend error: tailcall with spill slots is not legal" })
         }
     }
-    let preserve = validate_callsite_preservation(ssa_text)
+    preserve := validate_callsite_preservation(ssa_text)
     if preserve.is_err() {
         return preserve
     }
@@ -860,11 +860,11 @@ func validate_ssa_abi_contracts(string arch, string ssa_text) result[(), backend
 }
 
 func validate_callsite_preservation(string ssa_text) result[(), backend_error] {
-    let clobber = parse_number_after(ssa_text, "callee_saved_clobber=")
+    clobber := parse_number_after(ssa_text, "callee_saved_clobber=")
     if clobber > 0 {
         return result::err(backend_error { message: "backend error: callee-saved registers clobbered at callsite" })
     }
-    let restore_missing = parse_number_after(ssa_text, "caller_restore_missing=")
+    restore_missing := parse_number_after(ssa_text, "caller_restore_missing=")
     if restore_missing > 0 {
         return result::err(backend_error { message: "backend error: caller restore is missing at callsite" })
     }
@@ -875,7 +875,7 @@ func validate_callsite_preservation(string ssa_text) result[(), backend_error] {
 }
 
 func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
-    let lines = vec[string]()
+    lines := vec[string]()
     lines.push("cfi version=1 arch=" + arch)
     lines.push(".cfi_startproc")
     lines.push(".cfi_def_cfa sp, " + to_string(abi_stack_alignment(arch)))
@@ -900,15 +900,15 @@ func validate_cfi_artifact(string payload) result[(), backend_error] {
 }
 
 func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int inlined) int {
-    let imports = 0
-    let i = 0
+    imports := 0
+    i := 0
     while i < graph.trace.len() {
         if has_substring(graph.trace[i], "package.fn ") {
             imports = imports + 1
         }
         i = i + 1
     }
-    let score = inlined / 2 + imports
+    score := inlined / 2 + imports
     if score < 0 {
         return 0
     }
@@ -916,11 +916,11 @@ func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int inlined) int {
 }
 
 func estimate_const_prop_sites_graph(mir_graph graph) int {
-    let constants = 0
-    let i = 0
+    constants := 0
+    i := 0
     while i < graph.blocks.len() {
-        let block = graph.blocks[i]
-        let j = 0
+        block := graph.blocks[i]
+        j := 0
         while j < block.statements.len() {
             switch block.statements[j] {
                 mir_statement::assign(assign_stmt) : {
@@ -961,11 +961,11 @@ func build_wasm_binary_probe_plan(string output) string {
 }
 
 func validate_wasi_binary_artifact(string output) result[(), backend_error] {
-    let probe = vec[string]()
+    probe := vec[string]()
     probe.push("sh")
     probe.push("-c")
     probe.push(build_wasm_binary_probe_plan(output))
-    let run = run_process(probe)
+    run := run_process(probe)
     if run.is_err() {
         return result::err(backend_error {
             message: "backend error: wasi binary probe failed (requires wasm-objdump and expected imports/exports): " + run.unwrap_err().message,
@@ -975,31 +975,31 @@ func validate_wasi_binary_artifact(string output) result[(), backend_error] {
 }
 
 func build_wasm_object_chain(string temp_dir, string output, vec[write_op] writes, int exit_code) result[(), backend_error] {
-    let c_path = temp_dir + "/out_wasm.c"
-    let obj_path = temp_dir + "/out_wasm.o"
-    let c_source = emit_wasm_c_source(writes, exit_code)
-    let wasi_check = validate_wasi_contract_source(c_source)
+    c_path := temp_dir + "/out_wasm.c"
+    obj_path := temp_dir + "/out_wasm.o"
+    c_source := emit_wasm_c_source(writes, exit_code)
+    wasi_check := validate_wasi_contract_source(c_source)
     if wasi_check.is_err() {
         return wasi_check
     }
-    let write_result = write_text_file(c_path, c_source)
+    write_result := write_text_file(c_path, c_source)
     if write_result.is_err() {
         return result::err(backend_error { message: "failed to write wasm c source: " + write_result.unwrap_err().message })
     }
-    let cc_argv = vec[string]()
+    cc_argv := vec[string]()
     cc_argv.push("clang")
     cc_argv.push("--target=wasm32-wasi")
     cc_argv.push("-c")
     cc_argv.push(c_path)
     cc_argv.push("-o")
     cc_argv.push(obj_path)
-    let cc_result = run_process(cc_argv)
+    cc_result := run_process(cc_argv)
     if cc_result.is_err() {
         return result::err(backend_error {
             message: "wasm object compile failed: " + cc_result.unwrap_err().message + " | plan: " + build_wasm_toolchain_plan(c_path, obj_path, output),
         })
     }
-    let ld_argv = vec[string]()
+    ld_argv := vec[string]()
     ld_argv.push("wasm-ld")
     ld_argv.push("--no-entry")
     ld_argv.push("--export=_start")
@@ -1007,7 +1007,7 @@ func build_wasm_object_chain(string temp_dir, string output, vec[write_op] write
     ld_argv.push(obj_path)
     ld_argv.push("-o")
     ld_argv.push(output)
-    let ld_result = run_process(ld_argv)
+    ld_result := run_process(ld_argv)
     if ld_result.is_err() {
         return result::err(backend_error {
             message: "wasm link failed: " + ld_result.unwrap_err().message + " | plan: " + build_wasm_toolchain_plan(c_path, obj_path, output),
@@ -1036,7 +1036,7 @@ func validate_wasi_contract_source(string source) result[(), backend_error] {
 }
 
 func emit_wasm_c_source(vec[write_op] writes, int exit_code) string {
-    let lines = vec[string]()
+    lines := vec[string]()
     lines.push("typedef unsigned int u32;")
     lines.push("typedef unsigned int usize;")
     lines.push("struct ciovec { const char* buf; usize len; };")
@@ -1046,9 +1046,9 @@ func emit_wasm_c_source(vec[write_op] writes, int exit_code) string {
     lines.push("extern void proc_exit(int code);")
     lines.push("")
     lines.push("int s_main(void) {")
-    let i = 0
+    i := 0
     while i < writes.len() {
-        let label = "message_" + to_string(i)
+        label := "message_" + to_string(i)
         lines.push("  static const char " + label + "[] = \"" + escape_asm_string(writes[i].text) + "\";")
         lines.push("  struct ciovec iov_" + to_string(i) + " = { " + label + ", " + to_string(len(writes[i].text)) + "u };")
         lines.push("  u32 nw_" + to_string(i) + " = 0;")
@@ -1065,7 +1065,7 @@ func emit_wasm_c_source(vec[write_op] writes, int exit_code) string {
 }
 
 func estimate_ipo_synergy(int inlined, int escaped, int devirt, int cross_pkg_inline, int const_prop) int {
-    let score = inlined + devirt + cross_pkg_inline + const_prop
+    score := inlined + devirt + cross_pkg_inline + const_prop
     if escaped > 0 {
         score = score - escaped / 2
     }
@@ -1076,12 +1076,12 @@ func estimate_ipo_synergy(int inlined, int escaped, int devirt, int cross_pkg_in
 }
 
 func build_abi_machine_matrix_artifact(string arch, source_file source, string ssa_text) string {
-    let lines = vec[string]()
+    lines := vec[string]()
     lines.push("abi-matrix version=1 arch=" + arch)
     lines.push("axis caller_saved=" + to_string(abi_caller_saved_count(arch)) + " callee_saved=" + to_string(abi_callee_saved_count(arch)))
     lines.push("axis stack_align=" + to_string(abi_stack_alignment(arch)) + " variadic_gp=" + to_string(abi_variadic_gp_limit(arch)))
-    let functions = function_item_count(source)
-    let spills = parse_number_after(ssa_text, "spills=")
+    functions := function_item_count(source)
+    spills := parse_number_after(ssa_text, "spills=")
     if spills < 0 {
         spills = 0
     }
@@ -1093,7 +1093,7 @@ func build_abi_machine_matrix_artifact(string arch, source_file source, string s
 }
 
 func abi_cross_arch_consistency_status(string arch, int spills, int functions) string {
-    let score = functions * 4 - spills
+    score := functions * 4 - spills
     if arch == "arm64" {
         score = score + 2
     }
@@ -1126,7 +1126,7 @@ func validate_abi_machine_matrix(string payload) result[(), backend_error] {
 }
 
 func build_toolchain_compat_artifact(source_file source, string arch) string {
-    let lines = vec[string]()
+    lines := vec[string]()
     lines.push("toolchain-compat version=1 arch=" + arch)
     lines.push("module=partial build_tags=partial test=integrated cover=partial profile=partial go_cmd_equiv=partial")
     lines.push("cgo=unsupported asm=go-plan9-min linker=elf64 archive=partial relocation=partial")
@@ -1171,9 +1171,9 @@ func validate_toolchain_compat_artifact(string payload) result[(), backend_error
 }
 
 func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
-    let lines = vec[string]()
+    lines := vec[string]()
     lines.push("go-asm version=1 arch=" + arch + " syntax=plan9")
-    let translated = translate_go_plan9_to_gas(arch, plan9_source)
+    translated := translate_go_plan9_to_gas(arch, plan9_source)
     if translated.is_err() {
         lines.push("status=error")
         lines.push("reason=" + translated.unwrap_err().message)
@@ -1202,22 +1202,22 @@ func validate_go_asm_bridge_artifact(string payload) result[(), backend_error] {
 }
 
 func translate_go_plan9_to_gas(string arch, string plan9_source) result[string, backend_error] {
-    let input_lines = split_lines_local(plan9_source)
-    let output_lines = vec[string]()
-    let saw_text_directive = false
-    let i = 0
+    input_lines := split_lines_local(plan9_source)
+    output_lines := vec[string]()
+    saw_text_directive := false
+    i := 0
     while i < input_lines.len() {
-        let cleaned = trim_spaces(strip_go_asm_comment(input_lines[i]))
+        cleaned := trim_spaces(strip_go_asm_comment(input_lines[i]))
         if cleaned == "" {
             i = i + 1
             continue
         }
         if starts_with_local(cleaned, "TEXT ") {
-            let symbol_result = parse_go_text_symbol(cleaned)
+            symbol_result := parse_go_text_symbol(cleaned)
             if symbol_result.is_err() {
                 return result::err(symbol_result.unwrap_err())
             }
-            let symbol = symbol_result.unwrap()
+            symbol := symbol_result.unwrap()
             saw_text_directive = true
             output_lines.push("    .text")
             output_lines.push("    .globl " + symbol)
@@ -1227,7 +1227,7 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) result[string, 
             continue
         }
         if ends_with_local(cleaned, ":") {
-            let label = trim_spaces(slice(cleaned, 0, len(cleaned) - 1))
+            label := trim_spaces(slice(cleaned, 0, len(cleaned) - 1))
             if label == "" {
                 return result::err(backend_error { message: "go asm translation error: empty label" })
             }
@@ -1243,7 +1243,7 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) result[string, 
             i = i + 1
             continue
         }
-        let instr_result = translate_go_instruction_line(cleaned, arch)
+        instr_result := translate_go_instruction_line(cleaned, arch)
         if instr_result.is_err() {
             return result::err(instr_result.unwrap_err())
         }
@@ -1257,16 +1257,16 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) result[string, 
 }
 
 func parse_go_text_symbol(string line) result[string, backend_error] {
-    let after = trim_spaces(slice(line, len("TEXT "), len(line)))
-    let comma = index_of(after, ",")
+    after := trim_spaces(slice(line, len("TEXT "), len(line)))
+    comma := index_of(after, ",")
     if comma < 0 {
         return result::err(backend_error { message: "go asm translation error: malformed TEXT directive" })
     }
-    let symbol_ref = trim_spaces(slice(after, 0, comma))
+    symbol_ref := trim_spaces(slice(after, 0, comma))
     if !ends_with_local(symbol_ref, "(SB)") {
         return result::err(backend_error { message: "go asm translation error: TEXT symbol must use (SB)" })
     }
-    let symbol = normalize_go_symbol(slice(symbol_ref, 0, len(symbol_ref) - len("(SB)")))
+    symbol := normalize_go_symbol(slice(symbol_ref, 0, len(symbol_ref) - len("(SB)")))
     if symbol == "" {
         return result::err(backend_error { message: "go asm translation error: empty TEXT symbol" })
     }
@@ -1274,35 +1274,35 @@ func parse_go_text_symbol(string line) result[string, backend_error] {
 }
 
 func translate_go_instruction_line(string line, string arch) result[string, backend_error] {
-    let first_space = index_of(line, " ")
-    let op = line
-    let args_text = ""
+    first_space := index_of(line, " ")
+    op := line
+    args_text := ""
     if first_space >= 0 {
         op = trim_spaces(slice(line, 0, first_space))
         args_text = trim_spaces(slice(line, first_space + 1, len(line)))
     }
-    let gas_op = map_go_opcode(op)
+    gas_op := map_go_opcode(op)
     if gas_op == "" {
         return result::err(backend_error { message: "go asm translation error: unsupported opcode " + op })
     }
     if args_text == "" {
         return result::ok("    " + gas_op)
     }
-    let comma = index_of(args_text, ",")
+    comma := index_of(args_text, ",")
     if comma < 0 {
-        let one = convert_go_operand_to_gas(args_text, arch)
+        one := convert_go_operand_to_gas(args_text, arch)
         if one.is_err() {
             return result::err(one.unwrap_err())
         }
         return result::ok("    " + gas_op + " " + one.unwrap())
     }
-    let left_raw = trim_spaces(slice(args_text, 0, comma))
-    let right_raw = trim_spaces(slice(args_text, comma + 1, len(args_text)))
-    let left = convert_go_operand_to_gas(left_raw, arch)
+    left_raw := trim_spaces(slice(args_text, 0, comma))
+    right_raw := trim_spaces(slice(args_text, comma + 1, len(args_text)))
+    left := convert_go_operand_to_gas(left_raw, arch)
     if left.is_err() {
         return result::err(left.unwrap_err())
     }
-    let right = convert_go_operand_to_gas(right_raw, arch)
+    right := convert_go_operand_to_gas(right_raw, arch)
     if right.is_err() {
         return result::err(right.unwrap_err())
     }
@@ -1383,38 +1383,38 @@ func map_go_opcode(string op) string {
 }
 
 func convert_go_operand_to_gas(string raw, string arch) result[string, backend_error] {
-    let operand = trim_spaces(raw)
+    operand := trim_spaces(raw)
     if operand == "" {
         return result::err(backend_error { message: "go asm translation error: empty operand" })
     }
     if starts_with_local(operand, "$") {
-        let imm = slice(operand, 1, len(operand))
+        imm := slice(operand, 1, len(operand))
         if ends_with_local(imm, "(SB)") {
             return result::ok("$" + normalize_go_symbol(slice(imm, 0, len(imm) - len("(SB)"))))
         }
         return result::ok("$" + normalize_go_symbol(imm))
     }
     if ends_with_local(operand, "(SB)") {
-        let sym = normalize_go_symbol(slice(operand, 0, len(operand) - len("(SB)")))
+        sym := normalize_go_symbol(slice(operand, 0, len(operand) - len("(SB)")))
         if sym == "" {
             return result::err(backend_error { message: "go asm translation error: empty symbol operand" })
         }
         return result::ok(sym)
     }
-    let paren = index_of(operand, "(")
+    paren := index_of(operand, "(")
     if paren >= 0 && ends_with_local(operand, ")") {
-        let base = slice(operand, paren + 1, len(operand) - 1)
+        base := slice(operand, paren + 1, len(operand) - 1)
         if base == "SB" {
             return result::ok(normalize_go_symbol(slice(operand, 0, paren)))
         }
-        let mapped_base = map_go_register(base, arch)
+        mapped_base := map_go_register(base, arch)
         if mapped_base == "" {
             return result::err(backend_error { message: "go asm translation error: unsupported base register " + base })
         }
-        let disp = parse_go_disp(slice(operand, 0, paren))
+        disp := parse_go_disp(slice(operand, 0, paren))
         return result::ok(disp + "(" + mapped_base + ")")
     }
-    let mapped_reg = map_go_register(operand, arch)
+    mapped_reg := map_go_register(operand, arch)
     if mapped_reg != "" {
         return result::ok(mapped_reg)
     }
@@ -1483,13 +1483,13 @@ func map_go_register(string reg, string arch) string {
 }
 
 func parse_go_disp(string text) string {
-    let disp = trim_spaces(text)
+    disp := trim_spaces(text)
     if disp == "" {
         return "0"
     }
-    let plus = index_of(disp, "+")
+    plus := index_of(disp, "+")
     if plus >= 0 {
-        let tail = trim_spaces(slice(disp, plus + 1, len(disp)))
+        tail := trim_spaces(slice(disp, plus + 1, len(disp)))
         if tail == "" {
             return "0"
         }
@@ -1499,7 +1499,7 @@ func parse_go_disp(string text) string {
 }
 
 func normalize_go_symbol(string text) string {
-    let out = trim_spaces(text)
+    out := trim_spaces(text)
     if starts_with_local(out, "*") {
         out = trim_spaces(slice(out, 1, len(out)))
     }
@@ -1507,12 +1507,12 @@ func normalize_go_symbol(string text) string {
 }
 
 func strip_go_asm_comment(string line) string {
-    let out = line
-    let slash = index_of(out, "
+    out := line
+    slash := index_of(out, "
     if slash >= 0 {
         out = slice(out, 0, slash)
     }
-    let hash = index_of(out, "#")
+    hash := index_of(out, "#")
     if hash >= 0 {
         out = slice(out, 0, hash)
     }
@@ -1520,9 +1520,9 @@ func strip_go_asm_comment(string line) string {
 }
 
 func split_lines_local(string text) vec[string] {
-    let lines = vec[string]()
-    let start = 0
-    let i = 0
+    lines := vec[string]()
+    start := 0
+    i := 0
     while i < len(text) {
         if char_at(text, i) == "\n" {
             lines.push(slice(text, start, i))
@@ -1537,11 +1537,11 @@ func split_lines_local(string text) vec[string] {
 }
 
 func flatten_multiline(string text) string {
-    let lines = split_lines_local(text)
-    let out = vec[string]()
-    let i = 0
+    lines := split_lines_local(text)
+    out := vec[string]()
+    i := 0
     while i < lines.len() {
-        let line = trim_spaces(lines[i])
+        line := trim_spaces(lines[i])
         if line != "" {
             out.push(line)
         }
@@ -1551,13 +1551,13 @@ func flatten_multiline(string text) string {
 }
 
 func build_stackmap_artifact(string arch, source_file source, string ssa_text, string debug_map) string {
-    let entries = collect_function_stackmaps(arch, source, ssa_text)
-    let header = "stackmap version=2 arch=" + arch + " functions=" + to_string(entries.len())
-    let lines = vec[string]()
+    entries := collect_function_stackmaps(arch, source, ssa_text)
+    header := "stackmap version=2 arch=" + arch + " functions=" + to_string(entries.len())
+    lines := vec[string]()
     lines.push(header)
-    let i = 0
+    i := 0
     while i < entries.len() {
-        let entry = entries[i]
+        entry := entries[i]
         lines.push(
             "fn " + entry.name
                 + " slots=" + to_string(entry.slots)
@@ -1571,7 +1571,7 @@ func build_stackmap_artifact(string arch, source_file source, string ssa_text, s
 }
 
 func estimate_stack_slots(string ssa_text) int {
-    let spills = parse_number_after(ssa_text, "spills=")
+    spills := parse_number_after(ssa_text, "spills=")
     if spills < 0 {
         return 0
     }
@@ -1579,13 +1579,13 @@ func estimate_stack_slots(string ssa_text) int {
 }
 
 func collect_function_stackmaps(string arch, source_file source, string ssa_text) vec[stackmap_function_entry] {
-    let out = vec[stackmap_function_entry]()
-    let i = 0
+    out := vec[stackmap_function_entry]()
+    i := 0
     while i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
                 if fn_decl.body.is_some() {
-                    let slots = estimate_function_stack_slots(fn_decl, ssa_text)
+                    slots := estimate_function_stack_slots(fn_decl, ssa_text)
                     out.push(stackmap_function_entry {
                         name: fn_decl.sig.name,
                         slots: slots,
@@ -1611,7 +1611,7 @@ func collect_function_stackmaps(string arch, source_file source, string ssa_text
 
 func estimate_function_stack_slots(function_decl fn_decl, string ssa_text) int {
     if fn_decl.sig.name == "main" {
-        let main_slots = estimate_stack_slots(ssa_text)
+        main_slots := estimate_stack_slots(ssa_text)
         if main_slots > 0 {
             return main_slots
         }
@@ -1619,8 +1619,8 @@ func estimate_function_stack_slots(function_decl fn_decl, string ssa_text) int {
     if fn_decl.body.is_none() {
         return 0
     }
-    let stmt_count = fn_decl.body.unwrap().statements.len()
-    let slots = (stmt_count + 1) / 2
+    stmt_count := fn_decl.body.unwrap().statements.len()
+    slots := (stmt_count + 1) / 2
     if slots < 1 {
         return 1
     }
@@ -1631,8 +1631,8 @@ func build_slot_bitmap(string function_name, int slots) string {
     if slots <= 0 {
         return "0"
     }
-    let out = ""
-    let i = 0
+    out := ""
+    i := 0
     while i < slots {
         if ((i + len(function_name)) % 2) == 0 {
             out = out + "1"
@@ -1645,12 +1645,12 @@ func build_slot_bitmap(string function_name, int slots) string {
 }
 
 func build_abi_behavior_artifact(string arch, source_file source) string {
-    let entries = collect_abi_behavior(arch, source)
-    let lines = vec[string]()
+    entries := collect_abi_behavior(arch, source)
+    lines := vec[string]()
     lines.push("abi version=1 arch=" + arch + " functions=" + to_string(entries.len()))
-    let i = 0
+    i := 0
     while i < entries.len() {
-        let entry = entries[i]
+        entry := entries[i]
         lines.push(
             "fn " + entry.name
                 + " params=" + to_string(entry.param_count)
@@ -1669,33 +1669,33 @@ func build_abi_behavior_artifact(string arch, source_file source) string {
 }
 
 func build_abi_emit_plan(string arch, source_file source) string {
-    let lines = vec[string]()
+    lines := vec[string]()
     lines.push("abi-emit version=1 arch=" + arch)
-    let i = 0
+    i := 0
     while i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
-                let line = "fn " + fn_decl.sig.name
-                let abi_info = abi_analyze_types(
+                line := "fn " + fn_decl.sig.name
+                abi_info := abi_analyze_types(
                     new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
                     collect_fn_param_types(fn_decl),
                     collect_fn_result_types(fn_decl)
                 )
-                let p = 0
+                p := 0
                 while p < fn_decl.sig.params.len() {
                     line = line + " | a" + to_string(p) + "->" + abi_param_location(arch, p)
                     line = line + " | f" + to_string(p) + "->" + abi_float_param_location(arch, p)
                     p = p + 1
                 }
-                let variadic = fn_decl.sig.params.len() > abi_variadic_gp_limit(arch)
+                variadic := fn_decl.sig.params.len() > abi_variadic_gp_limit(arch)
                 line = line + " | variadic=" + bool_string(variadic)
-                let ret_type =
+                ret_type :=
                     switch fn_decl.sig.return_type {
                         option.some(value) : trim_spaces(value),
                         option.none : "",
                     }
-                let ret_parts = count_top_level_type_parts(ret_type)
-                let aggregate_size = abi_emit_aggregate_size_hint(fn_decl.sig.params.len(), ret_type)
+                ret_parts := count_top_level_type_parts(ret_type)
+                aggregate_size := abi_emit_aggregate_size_hint(fn_decl.sig.params.len(), ret_type)
                 line = line + " | ret_arity=" + to_string(ret_parts)
                 line = line + " | agg_mode=" + abi_emit_aggregate_mode(ret_type, ret_parts, aggregate_size)
                 line = line + " | stack_align=" + to_string(abi_stack_alignment(arch))
@@ -1716,7 +1716,7 @@ func build_abi_emit_plan(string arch, source_file source) string {
 }
 
 func abi_param_location(string arch, int index) string {
-    let reg = abi_int_arg_reg(arch, index)
+    reg := abi_int_arg_reg(arch, index)
     if reg == "" {
         return "stack+" + to_string((index - abi_variadic_gp_limit(arch)) * 8)
     }
@@ -1724,7 +1724,7 @@ func abi_param_location(string arch, int index) string {
 }
 
 func abi_float_param_location(string arch, int index) string {
-    let reg = abi_float_arg_reg(arch, index)
+    reg := abi_float_arg_reg(arch, index)
     if reg == "" {
         return "stackf+" + to_string(index * 8)
     }
@@ -1739,8 +1739,8 @@ func abi_emit_ret_location(string arch, int aggregate_size) string {
 }
 
 func abi_emit_aggregate_size_hint(int param_count, string ret_type) int {
-    let size = param_count * 8
-    let parts = count_top_level_type_parts(ret_type)
+    size := param_count * 8
+    parts := count_top_level_type_parts(ret_type)
     if parts > 1 {
         size = parts * 8
     }
@@ -1828,7 +1828,7 @@ func abi_caller_saved_count(string arch) int {
 }
 
 func abi_call_sequence_mode(string arch, bool variadic, int ret_parts, int aggregate_size) string {
-    let mode = "normal"
+    mode := "normal"
     if variadic {
         mode = "variadic-home"
     }
@@ -1845,16 +1845,16 @@ func abi_call_sequence_mode(string arch, bool variadic, int ret_parts, int aggre
 }
 
 func count_top_level_type_parts(string type_text) int {
-    let t = trim_spaces(type_text)
+    t := trim_spaces(type_text)
     if t == "" {
         return 0
     }
-    let paren = 0
-    let bracket = 0
-    let count = 1
-    let i = 0
+    paren := 0
+    bracket := 0
+    count := 1
+    i := 0
     while i < len(t) {
-        let ch = char_at(t, i)
+        ch := char_at(t, i)
         if ch == "(" {
             paren = paren + 1
         } else if ch == ")" {
@@ -1876,19 +1876,19 @@ func count_top_level_type_parts(string type_text) int {
 }
 
 func collect_abi_behavior(string arch, source_file source) vec[abi_behavior_entry] {
-    let out = vec[abi_behavior_entry]()
-    let i = 0
+    out := vec[abi_behavior_entry]()
+    i := 0
     while i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
-                let abi_info = abi_analyze_types(
+                abi_info := abi_analyze_types(
                     new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
                     collect_fn_param_types(fn_decl),
                     collect_fn_result_types(fn_decl)
                 )
-                let param_count = fn_decl.sig.params.len()
-                let variadic = param_count > abi_variadic_gp_limit(arch)
-                let aggregate_size = param_count * 8
+                param_count := fn_decl.sig.params.len()
+                variadic := param_count > abi_variadic_gp_limit(arch)
+                aggregate_size := param_count * 8
                 out.push(abi_behavior_entry {
                     name: fn_decl.sig.name,
                     param_count: param_count,
@@ -1910,8 +1910,8 @@ func collect_abi_behavior(string arch, source_file source) vec[abi_behavior_entr
 }
 
 func collect_fn_param_types(function_decl fn_decl) vec[string] {
-    let out = vec[string]()
-    let i = 0
+    out := vec[string]()
+    i := 0
     while i < fn_decl.sig.params.len() {
         out.push(trim_spaces(fn_decl.sig.params[i].type_name))
         i = i + 1
@@ -1927,7 +1927,7 @@ func collect_fn_result_types(function_decl fn_decl) vec[string] {
 }
 
 func split_signature_types(string type_text) vec[string] {
-    let t = trim_spaces(type_text)
+    t := trim_spaces(type_text)
     if t == "" {
         return vec[string]()
     }
@@ -1937,13 +1937,13 @@ func split_signature_types(string type_text) vec[string] {
     if t == "" {
         return vec[string]()
     }
-    let out = vec[string]()
-    let start = 0
-    let paren = 0
-    let bracket = 0
-    let i = 0
+    out := vec[string]()
+    start := 0
+    paren := 0
+    bracket := 0
+    i := 0
     while i < len(t) {
-        let ch = char_at(t, i)
+        ch := char_at(t, i)
         if ch == "(" {
             paren = paren + 1
         } else if ch == ")" {
@@ -1997,7 +1997,7 @@ func abi_float_param_reg_limit(string arch) int {
 }
 
 func build_dwarf_like_artifact(source_file source, string ssa_text, string debug_map) string {
-    let lines = vec[string]()
+    lines := vec[string]()
     lines.push("dwarf-lite version=1")
     lines.push("section .debug_info")
     lines.push("  compile_unit name=" + parse_name_after(ssa_text, "ssa "))
@@ -2014,7 +2014,7 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
     lines.push("section .debug_ranges")
     append_debug_ranges_section(lines, source, ssa_text)
     lines.push("section .debug_inlining")
-    let i = 0
+    i := 0
     while i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : lines.push("  fn=" + fn_decl.sig.name + " inline_depth=" + to_string(dwarf_inline_depth_hint(fn_decl.sig.name, ssa_text))),
@@ -2029,15 +2029,15 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
 }
 
 func build_dwarf_continuity_metric(string ssa_text, string debug_map) string {
-    let lines = parse_number_after(ssa_text, "dbg_lines=")
+    lines := parse_number_after(ssa_text, "dbg_lines=")
     if lines < 1 {
         lines = 1
     }
-    let vars = count_occurrences(debug_map, "let v")
+    vars := count_occurrences(debug_map, "let v")
     if vars < 1 {
         vars = 1
     }
-    let continuity = (vars * 100) / lines
+    continuity := (vars * 100) / lines
     if continuity > 100 {
         continuity = 100
     }
@@ -2045,11 +2045,11 @@ func build_dwarf_continuity_metric(string ssa_text, string debug_map) string {
 }
 
 func build_dwarf_budget_policy(string ssa_text) string {
-    let budget = parse_number_after(ssa_text, "dbg_budget=")
+    budget := parse_number_after(ssa_text, "dbg_budget=")
     if budget < 0 {
         budget = 0
     }
-    let mode = "balanced"
+    mode := "balanced"
     if budget < 20 {
         mode = "strict"
     }
@@ -2060,15 +2060,15 @@ func build_dwarf_budget_policy(string ssa_text) string {
 }
 
 func build_dwarf_regression_gate(string ssa_text, string debug_map) string {
-    let budget = parse_number_after(ssa_text, "dbg_budget=")
+    budget := parse_number_after(ssa_text, "dbg_budget=")
     if budget < 0 {
         budget = 0
     }
-    let locs = count_occurrences(debug_map, "let v")
+    locs := count_occurrences(debug_map, "let v")
     if locs < 1 {
         locs = 1
     }
-    let status = "pass"
+    status := "pass"
     if budget < 15 {
         status = "fail"
     }
@@ -2078,21 +2078,21 @@ func build_dwarf_regression_gate(string ssa_text, string debug_map) string {
 }
 
 func append_debug_loc_section(vec[string] lines, string debug_map) () {
-    let marker = "let v"
-    let cursor = 0
-    let loc_id = 0
+    marker := "let v"
+    cursor := 0
+    loc_id := 0
     while true {
-        let at = index_of_from(debug_map, marker, cursor)
+        at := index_of_from(debug_map, marker, cursor)
         if at < 0 {
             break
         }
-        let end = index_of_from(debug_map, " | ", at)
+        end := index_of_from(debug_map, " | ", at)
         if end < 0 {
             end = len(debug_map)
         }
-        let entry = trim_spaces(slice(debug_map, at, end))
-        let lo = 100 + loc_id * 8
-        let hi = lo + 8
+        entry := trim_spaces(slice(debug_map, at, end))
+        lo := 100 + loc_id * 8
+        hi := lo + 8
         lines.push("  loc#" + to_string(loc_id) + " pc=[" + to_string(lo) + "," + to_string(hi) + ") " + entry)
         loc_id = loc_id + 1
         cursor = end + 3
@@ -2103,29 +2103,29 @@ func append_debug_loc_section(vec[string] lines, string debug_map) () {
 }
 
 func append_debug_ranges_section(vec[string] lines, source_file source, string ssa_text) () {
-    let dbg_lines = parse_number_after(ssa_text, "dbg_lines=")
+    dbg_lines := parse_number_after(ssa_text, "dbg_lines=")
     if dbg_lines < 1 {
         dbg_lines = 1
     }
-    let range_span = dbg_lines * 8
+    range_span := dbg_lines * 8
     if range_span < 16 {
         range_span = 16
     }
-    let loops = parse_number_after(ssa_text, "loops=")
+    loops := parse_number_after(ssa_text, "loops=")
     if loops < 0 {
         loops = 0
     }
-    let fn_idx = 0
-    let i = 0
+    fn_idx := 0
+    i := 0
     while i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
-                let lo = 0x1000 + fn_idx * range_span
-                let hi = lo + range_span
+                lo := 0x1000 + fn_idx * range_span
+                hi := lo + range_span
                 lines.push("  fn=" + fn_decl.sig.name + " range=[" + to_string(lo) + "," + to_string(hi) + ")")
                 if loops > 0 {
-                    let inline_lo = lo + 4
-                    let inline_hi = inline_lo + loops * 4
+                    inline_lo := lo + 4
+                    inline_hi := inline_lo + loops * 4
                     if inline_hi > hi {
                         inline_hi = hi
                     }
@@ -2143,7 +2143,7 @@ func append_debug_ranges_section(vec[string] lines, source_file source, string s
 }
 
 func dwarf_inline_depth_hint(string fn_name, string ssa_text) int {
-    let loops = parse_number_after(ssa_text, "loops=")
+    loops := parse_number_after(ssa_text, "loops=")
     if loops < 0 {
         loops = 0
     }
@@ -2157,16 +2157,16 @@ func dwarf_inline_depth_hint(string fn_name, string ssa_text) int {
 }
 
 func build_gc_metadata_artifact(string arch, source_file source, string ssa_text) string {
-    let lines = vec[string]()
-    let spills = estimate_stack_slots(ssa_text)
+    lines := vec[string]()
+    spills := estimate_stack_slots(ssa_text)
     lines.push("gcmap version=1 arch=" + arch + " spills=" + to_string(spills))
     lines.push("collector plan=go-like-mark-sweep roots=env+runq+chan-buffer barriers=hybrid safepoints=alloc-trigger")
-    let i = 0
+    i := 0
     while i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
-                let slots = estimate_function_stack_slots(fn_decl, ssa_text)
-                let ptr_bitmap = build_gc_pointer_bitmap(fn_decl.sig.name, slots)
+                slots := estimate_function_stack_slots(fn_decl, ssa_text)
+                ptr_bitmap := build_gc_pointer_bitmap(fn_decl.sig.name, slots)
                 lines.push(
                     "fn " + fn_decl.sig.name
                         + " slots=" + to_string(slots)
@@ -2208,7 +2208,7 @@ func validate_dwarf_consumability(string dwarf_payload, string ssa_text) result[
     if !has_substring(dwarf_payload, "metric location_continuity=") {
         return result::err(backend_error { message: "backend error: dwarf continuity metric missing" })
     }
-    let budget = parse_number_after(ssa_text, "dbg_budget=")
+    budget := parse_number_after(ssa_text, "dbg_budget=")
     if budget >= 0 && budget < 15 {
         return result::err(backend_error { message: "backend error: dwarf consumability budget too low" })
     }
@@ -2240,15 +2240,15 @@ func validate_gc_contract_chain(string gc_payload, source_file source, string ss
     if !has_substring(gc_payload, "contract e2e_safepoint=") {
         return result::err(backend_error { message: "backend error: gc contract end-to-end marker missing" })
     }
-    let expected = function_item_count(source)
-    let got = count_occurrences(gc_payload, "\nfn ")
+    expected := function_item_count(source)
+    got := count_occurrences(gc_payload, "\nfn ")
     if has_substring(gc_payload, "fn ") && got == 0 {
         got = 1
     }
     if expected > 0 && got < expected {
         return result::err(backend_error { message: "backend error: gc contract function coverage mismatch" })
     }
-    let proof_fail = parse_number_after(ssa_text, "proof_fail=")
+    proof_fail := parse_number_after(ssa_text, "proof_fail=")
     if proof_fail > 0 {
         return result::err(backend_error { message: "backend error: gc contract blocked by failed SSA proofs" })
     }
@@ -2256,7 +2256,7 @@ func validate_gc_contract_chain(string gc_payload, source_file source, string ss
 }
 
 func build_backend_perf_baseline_artifact(string arch, string ssa_text, string midend_report, string runtime_report) string {
-    let lines = vec[string]()
+    lines := vec[string]()
     lines.push("perf-baseline version=1 arch=" + arch)
     lines.push("ssa spills=" + to_string(parse_number_after(ssa_text, "spills="))
         + " splits=" + to_string(parse_number_after(ssa_text, "splits="))
@@ -2322,7 +2322,7 @@ func validate_backend_perf_baseline(string payload) result[(), backend_error] {
 }
 
 func build_midend_opt_artifact(string midend_report) string {
-    let lines = vec[string]()
+    lines := vec[string]()
     lines.push("midend-opt version=1")
     lines.push("report " + midend_report)
     lines.push("summary"
@@ -2376,8 +2376,8 @@ func validate_midend_opt_artifact(string payload) result[(), backend_error] {
 }
 
 func function_item_count(source_file source) int {
-    let out = 0
-    let i = 0
+    out := 0
+    i := 0
     while i < source.items.len() {
         switch source.items[i] {
             item.function(_) : out = out + 1,
@@ -2392,8 +2392,8 @@ func build_gc_pointer_bitmap(string fn_name, int slots) string {
     if slots <= 0 {
         return "0"
     }
-    let out = ""
-    let i = 0
+    out := ""
+    i := 0
     while i < slots {
         if ((i + len(fn_name)) % 3) == 0 {
             out = out + "1"
@@ -2413,12 +2413,12 @@ func gc_write_barrier_mode(string fn_name) string {
 }
 
 func gc_safepoint_count(function_decl fn_decl, string ssa_text) int {
-    let base = fn_decl.sig.params.len()
-    let loops = parse_number_after(ssa_text, "loops=")
+    base := fn_decl.sig.params.len()
+    loops := parse_number_after(ssa_text, "loops=")
     if loops < 0 {
         loops = 0
     }
-    let total = 1 + base + loops
+    total := 1 + base + loops
     if total < 1 {
         return 1
     }
@@ -2426,9 +2426,9 @@ func gc_safepoint_count(function_decl fn_decl, string ssa_text) int {
 }
 
 func build_export_data_artifact(source_file source, string arch) string {
-    let lines = vec[string]()
+    lines := vec[string]()
     lines.push("export-data version=1 arch=" + arch)
-    let i = 0
+    i := 0
     while i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
@@ -2460,14 +2460,14 @@ func ends_with_local(string text, string suffix) bool {
 }
 
 func load_source_graph(string path, string source) result[source_file, backend_error] {
-    let parsed_result = parse_source(source)
+    parsed_result := parse_source(source)
     if parsed_result.is_err() {
         return result::err(backend_error { message: "parse failed: " + parsed_result.unwrap_err().message })
     }
-    let combined = parsed_result.unwrap()
-    let visited = vec[string]()
+    combined := parsed_result.unwrap()
+    visited := vec[string]()
     visited.push(path)
-    let deps_result = append_dependency_items(combined, combined.uses, visited)
+    deps_result := append_dependency_items(combined, combined.uses, visited)
     if deps_result.is_err() {
         return result::err(deps_result.unwrap_err())
     }
@@ -2475,25 +2475,25 @@ func load_source_graph(string path, string source) result[source_file, backend_e
 }
 
 func append_dependency_items(source_file mut combined, vec[use_decl] uses, vec[string] mut visited) result[(), backend_error] {
-    let i = 0
+    i := 0
     while i < uses.len() {
-        let module_result = resolve_module_source_path(uses[i].path)
+        module_result := resolve_module_source_path(uses[i].path)
         if module_result.is_none() {
             return result::err(backend_error { message: "module resolver failed: " + uses[i].path })
         }
-        let dep_path = module_result.unwrap()
+        dep_path := module_result.unwrap()
         if !string_vec_contains(visited, dep_path) {
             visited.push(dep_path)
-            let dep_source_result = read_to_string(dep_path)
+            dep_source_result := read_to_string(dep_path)
             if dep_source_result.is_err() {
                 return result::err(backend_error { message: "failed to read module " + uses[i].path + " at " + dep_path + ": " + dep_source_result.unwrap_err().message })
             }
-            let dep_parsed_result = parse_source(dep_source_result.unwrap())
+            dep_parsed_result := parse_source(dep_source_result.unwrap())
             if dep_parsed_result.is_err() {
                 return result::err(backend_error { message: "parse failed in module " + uses[i].path + ": " + dep_parsed_result.unwrap_err().message })
             }
-            let dep = dep_parsed_result.unwrap()
-            let nested_result = append_dependency_items(combined, dep.uses, visited)
+            dep := dep_parsed_result.unwrap()
+            nested_result := append_dependency_items(combined, dep.uses, visited)
             if nested_result.is_err() {
                 return nested_result
             }
@@ -2505,7 +2505,7 @@ func append_dependency_items(source_file mut combined, vec[use_decl] uses, vec[s
 }
 
 func append_source_items(source_file mut combined, source_file dep) () {
-    let i = 0
+    i := 0
     while i < dep.items.len() {
         combined.items.push(dep.items[i])
         i = i + 1
@@ -2513,7 +2513,7 @@ func append_source_items(source_file mut combined, source_file dep) () {
 }
 
 func string_vec_contains(vec[string] values, string value) bool {
-    let i = 0
+    i := 0
     while i < values.len() {
         if values[i] == value {
             return true
@@ -2531,15 +2531,15 @@ func should_skip_semantic_check(string path) bool {
 }
 
 func resolve_module_source_path(string module) option[string] {
-    let indexed = lookup_package_index(module)
+    indexed := lookup_package_index(module)
     if indexed.is_some() {
         return indexed
     }
-    let candidates = vec[string]()
+    candidates := vec[string]()
     add_module_candidates(candidates, module)
-    let i = 0
+    i := 0
     while i < candidates.len() {
-        let probe = read_to_string(candidates[i])
+        probe := read_to_string(candidates[i])
         if probe.is_ok() {
             return option::some(candidates[i])
         }
@@ -2549,15 +2549,15 @@ func resolve_module_source_path(string module) option[string] {
 }
 
 func lookup_package_index(string module) option[string] {
-    let paths = package_index_candidate_paths()
-    let pi = 0
+    paths := package_index_candidate_paths()
+    pi := 0
     while pi < paths.len() {
-        let read_result = read_to_string(paths[pi])
+        read_result := read_to_string(paths[pi])
         if read_result.is_ok() {
-            let found = lookup_module_in_package_index_text(read_result.unwrap(), module)
+            found := lookup_module_in_package_index_text(read_result.unwrap(), module)
             if found.is_some() {
-                let path = found.unwrap()
-                let probe = read_to_string(path)
+                path := found.unwrap()
+                probe := read_to_string(path)
                 if probe.is_ok() {
                     return option::some(path)
                 }
@@ -2569,7 +2569,7 @@ func lookup_package_index(string module) option[string] {
 }
 
 func package_index_candidate_paths() vec[string] {
-    let paths = vec[string]()
+    paths := vec[string]()
     switch env_get("S_PACKAGE_INDEX") {
         option.some(value) : {
             if value != "" {
@@ -2578,7 +2578,7 @@ func package_index_candidate_paths() vec[string] {
         }
         option.none : (),
     }
-    let project = resolve_project_root()
+    project := resolve_project_root()
     if project != "" {
         paths.push(project + "/build/s-package-index.tsv")
         paths.push(project + "/s-package-index.tsv")
@@ -2587,19 +2587,19 @@ func package_index_candidate_paths() vec[string] {
 }
 
 func lookup_module_in_package_index_text(string text, string module) option[string] {
-    let lines = split_lines_local(text)
-    let project = resolve_project_root()
-    let i = 0
+    lines := split_lines_local(text)
+    project := resolve_project_root()
+    i := 0
     while i < lines.len() {
-        let line = trim_spaces(lines[i])
+        line := trim_spaces(lines[i])
         if line == "" || starts_with_local(line, "#") {
             i = i + 1
             continue
         }
-        let tab = find_tab_index(line)
+        tab := find_tab_index(line)
         if tab > 0 {
-            let name = trim_spaces(slice(line, 0, tab))
-            let path = trim_spaces(slice(line, tab + 1, len(line)))
+            name := trim_spaces(slice(line, 0, tab))
+            path := trim_spaces(slice(line, tab + 1, len(line)))
             if name == module && path != "" {
                 return option::some(normalize_package_index_path(project, path))
             }
@@ -2623,7 +2623,7 @@ func normalize_package_index_path(string project, string path) string {
 }
 
 func find_tab_index(string text) int {
-    let i = 0
+    i := 0
     while i < len(text) {
         if char_at(text, i) == "\t" {
             return i
@@ -2634,8 +2634,8 @@ func find_tab_index(string text) int {
 }
 
 func add_module_candidates(vec[string] candidates, string module) () {
-    let roots = module_search_roots()
-    let i = 0
+    roots := module_search_roots()
+    i := 0
     while i < roots.len() {
         add_module_candidates_in_root(candidates, roots[i], module)
         i = i + 1
@@ -2673,7 +2673,7 @@ func add_module_candidates_in_root(vec[string] candidates, string root, string m
 func add_neurx_module_candidates(vec[string] candidates, string root, string tail) () {
     add_std_layout_candidates(candidates, root, tail)
     if has_dot_local(tail) {
-        let last = last_segment(tail)
+        last := last_segment(tail)
         candidates.push(root + "/" + last + "/" + last + ".s")
         candidates.push(root + "/" + last + ".s")
     }
@@ -2682,7 +2682,7 @@ func add_neurx_module_candidates(vec[string] candidates, string root, string tai
 }
 
 func has_dot_local(string text) bool {
-    let i = 0
+    i := 0
     while i < len(text) {
         if char_at(text, i) == "." {
             return true
@@ -2695,7 +2695,7 @@ func has_dot_local(string text) bool {
 func add_compile_module_candidates(vec[string] candidates, string root, string tail) () {
     candidates.push(root + "/src/cmd/compile/" + dot_to_slash(tail) + ".s")
     candidates.push(root + "/src/cmd/compile/" + dot_to_slash(tail) + "/" + last_segment(tail) + ".s")
-    let pkg = drop_last_segment(tail)
+    pkg := drop_last_segment(tail)
     if pkg != "" {
         candidates.push(root + "/src/cmd/compile/" + dot_to_slash(pkg) + ".s")
         candidates.push(root + "/src/cmd/compile/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
@@ -2710,7 +2710,7 @@ func add_std_module_candidates(vec[string] candidates, string root, string tail)
         candidates.push(root + "/src/prelude/prelude.s")
         return
     }
-    let pkg = drop_last_segment(tail)
+    pkg := drop_last_segment(tail)
     if pkg == "" {
         pkg = tail
     }
@@ -2719,12 +2719,12 @@ func add_std_module_candidates(vec[string] candidates, string root, string tail)
 }
 
 func add_std_layout_candidates(vec[string] candidates, string root, string tail) () {
-    let slash_path = dot_to_slash(tail)
+    slash_path := dot_to_slash(tail)
     candidates.push(root + "/" + slash_path + ".s")
     candidates.push(root + "/" + slash_path + "/" + last_segment(tail) + ".s")
-    let pkg = drop_last_segment(tail)
+    pkg := drop_last_segment(tail)
     if pkg != "" {
-        let pkg_slash = dot_to_slash(pkg)
+        pkg_slash := dot_to_slash(pkg)
         candidates.push(root + "/" + pkg_slash + ".s")
         candidates.push(root + "/" + pkg_slash + "/" + last_segment(pkg) + ".s")
     }
@@ -2747,7 +2747,7 @@ func add_s_module_candidates(vec[string] candidates, string root, string symbol)
 }
 
 func module_search_roots() vec[string] {
-    let roots = vec[string]()
+    roots := vec[string]()
     push_module_search_root(roots, resolve_s_root())
     push_module_search_root(roots, resolve_project_root())
     push_workspace_roots(roots)
@@ -2759,7 +2759,7 @@ func push_workspace_roots(vec[string] roots) () {
     switch env_get("S_WORK_FILE") {
         option.some(path) : {
             if path != "" {
-                let work = read_to_string(path)
+                work := read_to_string(path)
                 if work.is_ok() {
                     append_workspace_roots(roots, work.unwrap())
                 }
@@ -2770,13 +2770,13 @@ func push_workspace_roots(vec[string] roots) () {
 }
 
 func append_workspace_roots(vec[string] roots, string text) () {
-    let lines = split_lines_local(text)
-    let i = 0
+    lines := split_lines_local(text)
+    i := 0
     while i < lines.len() {
-        let line = trim_spaces(lines[i])
+        line := trim_spaces(lines[i])
         if starts_with_local(line, "use = \"") {
-            let start = len("use = \"")
-            let end = find_quote_from(line, start)
+            start := len("use = \"")
+            end := find_quote_from(line, start)
             if end > start {
                 push_module_search_root(roots, slice(line, start, end))
             }
@@ -2820,7 +2820,7 @@ func push_module_search_root(vec[string] roots, string root) () {
 }
 
 func find_quote_from(string text, int start) int {
-    let i = start
+    i := start
     while i < len(text) {
         if char_at(text, i) == "\"" {
             return i
@@ -2831,10 +2831,10 @@ func find_quote_from(string text, int start) int {
 }
 
 func dot_to_slash(string text) string {
-    let out = ""
-    let i = 0
+    out := ""
+    i := 0
     while i < len(text) {
-        let ch = char_at(text, i)
+        ch := char_at(text, i)
         if ch == "." {
             out = out + "/"
         } else {
@@ -2846,7 +2846,7 @@ func dot_to_slash(string text) string {
 }
 
 func drop_last_segment(string text) string {
-    let last = last_dot_index(text)
+    last := last_dot_index(text)
     if last < 0 {
         return ""
     }
@@ -2854,7 +2854,7 @@ func drop_last_segment(string text) string {
 }
 
 func last_segment(string text) string {
-    let last = last_dot_index(text)
+    last := last_dot_index(text)
     if last < 0 {
         return text
     }
@@ -2862,7 +2862,7 @@ func last_segment(string text) string {
 }
 
 func last_dot_index(string text) int {
-    let i = len(text)
+    i := len(text)
     while i > 0 {
         i = i - 1
         if char_at(text, i) == "." {
@@ -2884,40 +2884,40 @@ func is_compiler_runtime_entry(string path, string source) bool {
 }
 
 func build_compiler_runtime_launcher(string output) int {
-    let base_compiler = resolve_bootstrap_base_compiler()
+    base_compiler := resolve_bootstrap_base_compiler()
     if output == base_compiler {
         return report_failure("refusing to generate a launcher that execs itself; set s_bootstrap_base_compiler to a different binary")
     }
-    let temp_dir_result = make_temp_dir("s-launcher-")
+    temp_dir_result := make_temp_dir("s-launcher-")
     if temp_dir_result.is_err() {
         return report_failure("could not create temporary launcher directory: " + temp_dir_result.unwrap_err().message)
     }
-    let temp_dir = temp_dir_result.unwrap()
-    let asm_path = temp_dir + "/launcher.s"
-    let obj_path = temp_dir + "/launcher.o"
-    let asm_text_result = emit_runtime_launcher_asm(base_compiler)
+    temp_dir := temp_dir_result.unwrap()
+    asm_path := temp_dir + "/launcher.s"
+    obj_path := temp_dir + "/launcher.o"
+    asm_text_result := emit_runtime_launcher_asm(base_compiler)
     if asm_text_result.is_err() {
         return report_failure(asm_text_result.unwrap_err().message)
     }
-    let write_result = write_text_file(asm_path, asm_text_result.unwrap())
+    write_result := write_text_file(asm_path, asm_text_result.unwrap())
     if write_result.is_err() {
         return report_failure("failed to write launcher assembly: " + write_result.unwrap_err().message)
     }
-    let as_argv = vec[string]()
+    as_argv := vec[string]()
     as_argv.push("as")
     as_argv.push("-o")
     as_argv.push(obj_path)
     as_argv.push(asm_path)
-    let as_result = run_process(as_argv)
+    as_result := run_process(as_argv)
     if as_result.is_err() {
         return report_failure("launcher assembler failed: " + as_result.unwrap_err().message)
     }
-    let ld_argv = vec[string]()
+    ld_argv := vec[string]()
     ld_argv.push("ld")
     ld_argv.push("-o")
     ld_argv.push(output)
     ld_argv.push(obj_path)
-    let ld_result = run_process(ld_argv)
+    ld_result := run_process(ld_argv)
     if ld_result.is_err() {
         return report_failure("launcher linker failed: " + ld_result.unwrap_err().message)
     }
@@ -2945,7 +2945,7 @@ func resolve_bootstrap_base_compiler() string {
 }
 
 func emit_runtime_launcher_asm(string base_compiler) result[string, backend_error] {
-    let arch = buildcfg_goarch()
+    arch := buildcfg_goarch()
     if arch == "arm64" {
         return result::ok(emit_runtime_launcher_asm_arm64(base_compiler))
     }
@@ -2997,12 +2997,12 @@ func emit_runtime_launcher_asm_amd64(string base_compiler) string {
 }
 
 func parse_name_after(string text, string marker) string {
-    let at = index_of(text, marker)
+    at := index_of(text, marker)
     if at < 0 {
         return "main"
     }
-    let start = at + len(marker)
-    let end = index_of_from(text, " ", start)
+    start := at + len(marker)
+    end := index_of_from(text, " ", start)
     if end < 0 {
         return slice(text, start, len(text))
     }
@@ -3041,10 +3041,10 @@ func make_runtime_state() runtime_state {
 }
 
 func collect_runtime_metrics(runtime_state runtime) runtime_metrics {
-    let sends = 0
-    let recvs = 0
-    let closed = 0
-    let i = 0
+    sends := 0
+    recvs := 0
+    closed := 0
+    i := 0
     while i < runtime.channels.len() {
         sends = sends + runtime.channels[i].sends
         recvs = recvs + runtime.channels[i].recvs
@@ -3102,8 +3102,8 @@ func runtime_metrics_text(runtime_metrics metrics) string {
 }
 
 func snapshot_captured_bindings(vec[binding] env) vec[captured_binding] {
-    let out = vec[captured_binding]()
-    let i = 0
+    out := vec[captured_binding]()
+    i := 0
     while i < env.len() {
         out.push(captured_binding { name: env[i].name, value: env[i].value })
         i = i + 1
@@ -3112,8 +3112,8 @@ func snapshot_captured_bindings(vec[binding] env) vec[captured_binding] {
 }
 
 func restore_captured_bindings(vec[captured_binding] captured) vec[binding] {
-    let out = vec[binding]()
-    let i = 0
+    out := vec[binding]()
+    i := 0
     while i < captured.len() {
         out.push(binding { name: captured[i].name, value: captured[i].value })
         i = i + 1
@@ -3125,11 +3125,11 @@ func compile_writes(source_file source, mir_graph graph) result[vec[write_op], b
     if graph.blocks.len() == 0 {
         return fail_write_ops("backend error: mir graph has no blocks")
     }
-    let source_exec = execute_source_main(source)
+    source_exec := execute_source_main(source)
     if source_exec.is_ok() {
         return result::ok(source_exec.unwrap().writes)
     }
-    let exec_result = execute_mir_graph(graph)
+    exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
         return fail_write_ops(source_exec.unwrap_err().message)
     }
@@ -3140,11 +3140,11 @@ func compile_exit_code(source_file source, mir_graph graph) result[int, backend_
     if graph.blocks.len() == 0 {
         return fail_int("backend error: mir graph has no blocks")
     }
-    let source_exec = execute_source_main(source)
+    source_exec := execute_source_main(source)
     if source_exec.is_ok() {
         return result::ok(source_exec.unwrap().exit_code)
     }
-    let exec_result = execute_mir_graph(graph)
+    exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
         return fail_int(source_exec.unwrap_err().message)
     }
@@ -3155,11 +3155,11 @@ func compile_runtime_metrics(source_file source, mir_graph graph) result[runtime
     if graph.blocks.len() == 0 {
         return result::err(backend_error { message: "backend error: mir graph has no blocks" })
     }
-    let source_exec = execute_source_main(source)
+    source_exec := execute_source_main(source)
     if source_exec.is_ok() {
         return result::ok(source_exec.unwrap().runtime)
     }
-    let exec_result = execute_mir_graph(graph)
+    exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
         return result::err(source_exec.unwrap_err())
     }
@@ -3167,26 +3167,26 @@ func compile_runtime_metrics(source_file source, mir_graph graph) result[runtime
 }
 
 func execute_source_main(source_file source) result[mir_execution_result, backend_error] {
-    let main_result = find_main(source)
+    main_result := find_main(source)
     if main_result.is_err() {
         return result::err(main_result.unwrap_err())
     }
-    let main_fn = main_result.unwrap()
+    main_fn := main_result.unwrap()
     if main_fn.body.is_none() {
         return result::err(backend_error { message: "backend error: entry function main has no body" })
     }
-    let writes = vec[write_op]()
-    let runtime = make_runtime_state()
-    let const_bindings = collect_const_bindings(source)
+    writes := vec[write_op]()
+    runtime := make_runtime_state()
+    const_bindings := collect_const_bindings(source)
     if const_bindings.is_err() {
         return result::err(const_bindings.unwrap_err())
     }
-    let env = copy_bindings(const_bindings.unwrap())
-    let eval_result = execute_block_in_place(main_fn.body.unwrap(), source, env, writes, runtime)
+    env := copy_bindings(const_bindings.unwrap())
+    eval_result := execute_block_in_place(main_fn.body.unwrap(), source, env, writes, runtime)
     if eval_result.is_err() {
         return result::err(eval_result.unwrap_err())
     }
-    let code_result = value_to_exit_code(eval_result.unwrap())
+    code_result := value_to_exit_code(eval_result.unwrap())
     if code_result.is_err() {
         return result::err(code_result.unwrap_err())
     }
@@ -3198,19 +3198,19 @@ func execute_source_main(source_file source) result[mir_execution_result, backen
 }
 
 func execute_mir_graph(mir_graph graph) result[mir_execution_result, backend_error] {
-    let writes = vec[write_op]()
-    let current = graph.entry
-    let steps = 0
-    let max_steps = 100000
+    writes := vec[write_op]()
+    current := graph.entry
+    steps := 0
+    max_steps := 100000
     while steps < max_steps {
-        let block_result = find_mir_block(graph, current)
+        block_result := find_mir_block(graph, current)
         if block_result.is_err() {
             return result::err(block_result.unwrap_err())
         }
-        let block = block_result.unwrap()
-        let si = 0
+        block := block_result.unwrap()
+        si := 0
         while si < block.statements.len() {
-            let stmt_result = execute_mir_statement(block.statements[si], writes)
+            stmt_result := execute_mir_statement(block.statements[si], writes)
             if stmt_result.is_err() {
                 return result::err(stmt_result.unwrap_err())
             }
@@ -3253,7 +3253,7 @@ func execute_mir_graph(mir_graph graph) result[mir_execution_result, backend_err
             continue
         }
         if block.terminator.kind == "branch" {
-            let target = select_branch_target(block.terminator.edges)
+            target := select_branch_target(block.terminator.edges)
             if target < 0 {
                 return result::err(backend_error { message: "backend error: branch terminator has no target" })
             }
@@ -3267,7 +3267,7 @@ func execute_mir_graph(mir_graph graph) result[mir_execution_result, backend_err
 }
 
 func find_mir_block(mir_graph graph, int id) result[mir_basic_block, backend_error] {
-    let i = 0
+    i := 0
     while i < graph.blocks.len() {
         if graph.blocks[i].id == id {
             return result::ok(graph.blocks[i])
@@ -3301,11 +3301,11 @@ func emit_print_from_line(string line, vec[write_op] mut writes) () {
 }
 
 func emit_call_line_to_write(string line, string callee, int fd, vec[write_op] mut writes) () {
-    let arg_opt = extract_call_arg(line, callee)
+    arg_opt := extract_call_arg(line, callee)
     if arg_opt.is_none() {
         return
     }
-    let rendered = render_literal_text(arg_opt.unwrap())
+    rendered := render_literal_text(arg_opt.unwrap())
     writes.push(write_op {
         fd: fd,
         text: rendered + "\n",
@@ -3313,7 +3313,7 @@ func emit_call_line_to_write(string line, string callee, int fd, vec[write_op] m
 }
 
 func render_literal_text(string raw_arg) string {
-    let arg = trim_spaces(raw_arg)
+    arg := trim_spaces(raw_arg)
     if is_quoted_literal(arg) {
         return decode_string_literal(arg)
     }
@@ -3324,12 +3324,12 @@ func render_literal_text(string raw_arg) string {
 }
 
 func extract_call_arg(string line, string callee) option[string] {
-    let call_index = index_of(line, callee)
+    call_index := index_of(line, callee)
     if call_index < 0 {
         return option.none
     }
-    let start = call_index + len(callee)
-    let end = index_of_from(line, ")", start)
+    start := call_index + len(callee)
+    end := index_of_from(line, ")", start)
     if end < 0 || end < start {
         return option.none
     }
@@ -3344,8 +3344,8 @@ func is_quoted_literal(string text) bool {
 }
 
 func trim_spaces(string text) string {
-    let start = 0
-    let end = len(text)
+    start := 0
+    end := len(text)
     while start < end && is_space(char_at(text, start)) {
         start = start + 1
     }
@@ -3374,8 +3374,8 @@ func index_of_from(string text, string needle, int start) int {
     if len(text) < len(needle) || start >= len(text) {
         return -1
     }
-    let i = start
-    let limit = len(text) - len(needle)
+    i := start
+    limit := len(text) - len(needle)
     while i <= limit {
         if slice(text, i, i + len(needle)) == needle {
             return i
@@ -3386,15 +3386,15 @@ func index_of_from(string text, string needle, int start) int {
 }
 
 func parse_number_after(string text, string marker) int {
-    let start = index_of(text, marker)
+    start := index_of(text, marker)
     if start < 0 {
         return -1
     }
     start = start + len(marker)
-    let value = 0
-    let found = false
+    value := 0
+    found := false
     while start < len(text) {
-        let ch = char_at(text, start)
+        ch := char_at(text, start)
         if ch < "0" || ch > "9" {
             break
         }
@@ -3412,7 +3412,7 @@ func select_branch_target(vec[mir_control_edge] edges) int {
     if edges.len() == 0 {
         return -1
     }
-    let i = 0
+    i := 0
     while i < edges.len() {
         if edges[i].label == "false" || edges[i].label == "exit" || edges[i].label == "default" {
             return edges[i].target
@@ -3423,7 +3423,7 @@ func select_branch_target(vec[mir_control_edge] edges) int {
 }
 
 func find_main(source_file source) result[function_decl, backend_error] {
-    let i = 0
+    i := 0
     while i < source.items.len() {
         switch source.items[i] {
             item.function(value) : {
@@ -3439,7 +3439,7 @@ func find_main(source_file source) result[function_decl, backend_error] {
 }
 
 func call_function(source_file source, string name, vec[value] args, vec[binding] mut caller_env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
-    let captured = vec[captured_binding]()
+    captured := vec[captured_binding]()
     call_function_with_capture(source, name, args, caller_env, writes, runtime, captured)
 }
 
@@ -3452,11 +3452,11 @@ func call_function_with_capture(
     runtime_state mut runtime,
     vec[captured_binding] captured_env
 ) result[value, backend_error] {
-    let fn_result = find_function(source, name)
+    fn_result := find_function(source, name)
     if fn_result.is_err() {
         return fail_value(fn_result.unwrap_err().message)
     }
-    let function = fn_result.unwrap()
+    function := fn_result.unwrap()
     if function.body.is_none() {
         return fail_value("backend error: function " + name + " has no body")
     }
@@ -3470,17 +3470,17 @@ func call_function_with_capture(
                 + to_string(args.len())
         )
     }
-    let env = vec[binding]()
-    let const_bindings = collect_const_bindings(source)
+    env := vec[binding]()
+    const_bindings := collect_const_bindings(source)
     if const_bindings.is_err() {
         return fail_value(const_bindings.unwrap_err().message)
     }
     env = copy_bindings(const_bindings.unwrap())
-    let captured = restore_captured_bindings(captured_env)
+    captured := restore_captured_bindings(captured_env)
     propagate_bindings(env, captured)
     propagate_bindings(captured, env)
     copy_control_bindings(caller_env, env)
-    let pi = 0
+    pi := 0
     while pi < function.sig.params.len() {
         env.push(binding {
             name: function.sig.params[pi].name,
@@ -3488,7 +3488,7 @@ func call_function_with_capture(
         })
         pi = pi + 1
     }
-    let body_result = execute_block_in_place(function.body.unwrap(), source, env, writes, runtime)
+    body_result := execute_block_in_place(function.body.unwrap(), source, env, writes, runtime)
     if body_result.is_err() {
         return fail_value(body_result.unwrap_err().message)
     }
@@ -3497,7 +3497,7 @@ func call_function_with_capture(
 }
 
 func find_function(source_file source, string name) result[function_decl, backend_error] {
-    let visited = vec[string]()
+    visited := vec[string]()
     return find_function_in_source_graph(source, name, visited)
 }
 
@@ -3506,7 +3506,7 @@ func find_function_in_source_graph(source_file source, string name, vec[string] 
         return result::err(backend_error { message: "backend error: unknown function " + name })
     }
     visited.push(source.pkg)
-    let i = 0
+    i := 0
     while i < source.items.len() {
         switch source.items[i] {
             item.function(value) : {
@@ -3518,13 +3518,13 @@ func find_function_in_source_graph(source_file source, string name, vec[string] 
         }
         i = i + 1
     }
-    let ui = 0
+    ui := 0
     while ui < source.uses.len() {
-        let dep_result = load_source_graph_for_use(source.uses[ui].path)
+        dep_result := load_source_graph_for_use(source.uses[ui].path)
         if dep_result.is_err() {
             return result::err(dep_result.unwrap_err())
         }
-        let found = find_function_in_source_graph(dep_result.unwrap(), name, visited)
+        found := find_function_in_source_graph(dep_result.unwrap(), name, visited)
         if found.is_ok() {
             return found
         }
@@ -3534,8 +3534,8 @@ func find_function_in_source_graph(source_file source, string name, vec[string] 
 }
 
 func execute_block(block_expr block, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
-    let local_env = copy_bindings(env)
-    let result = execute_block_in_place(block, source, local_env, writes, runtime)
+    local_env := copy_bindings(env)
+    result := execute_block_in_place(block, source, local_env, writes, runtime)
     if result.is_err() {
         result::err(result.unwrap_err())
     }
@@ -3543,8 +3543,8 @@ func execute_block(block_expr block, source_file source, vec[binding] mut env, v
 }
 
 func execute_block_in_place(block_expr block, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
-    let deferred = vec[expr]()
-    let si = 0
+    deferred := vec[expr]()
+    si := 0
     while si < block.statements.len() {
         switch block.statements[si] {
             stmt.defer(value) : {
@@ -3554,11 +3554,11 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
             }
             _ : (),
         }
-        let stmt_result = execute_stmt(block.statements[si], source, env, writes, runtime)
+        stmt_result := execute_stmt(block.statements[si], source, env, writes, runtime)
         if stmt_result.is_err() {
-            let err = stmt_result.unwrap_err()
+            err := stmt_result.unwrap_err()
             if is_panic_error(err) {
-                let run_deferred = execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
+                run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                 if run_deferred.is_err() {
                     return result::err(run_deferred.unwrap_err())
                 }
@@ -3569,11 +3569,11 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
             }
             return result::err(err)
         }
-        let schedule_step = run_sroutine_scheduler_step(source, env, writes, runtime)
+        schedule_step := run_sroutine_scheduler_step(source, env, writes, runtime)
         if schedule_step.is_err() {
-            let err = schedule_step.unwrap_err()
+            err := schedule_step.unwrap_err()
             if is_panic_error(err) {
-                let run_deferred = execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
+                run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                 if run_deferred.is_err() {
                     return result::err(run_deferred.unwrap_err())
                 }
@@ -3587,14 +3587,14 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
         run_gc_safepoint(env, runtime)
         si = si + 1
     }
-    let final_value = value.unit(unit_value {})
+    final_value := value.unit(unit_value {})
     switch block.final_expr {
         option.some(expr) : {
-            let final_result = eval_expr(expr, source, env, writes, runtime)
+            final_result := eval_expr(expr, source, env, writes, runtime)
             if final_result.is_err() {
-                let err = final_result.unwrap_err()
+                err := final_result.unwrap_err()
                 if is_panic_error(err) {
-                    let run_deferred = execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
+                    run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                     if run_deferred.is_err() {
                         return result::err(run_deferred.unwrap_err())
                     }
@@ -3609,11 +3609,11 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
         }
         option.none : (),
     }
-    let run_deferred = execute_deferred(deferred, source, env, writes, runtime, "")
+    run_deferred := execute_deferred(deferred, source, env, writes, runtime, "")
     if run_deferred.is_err() {
         return result::err(run_deferred.unwrap_err())
     }
-    let schedule_flush = run_sroutine_scheduler_flush(source, env, writes, runtime)
+    schedule_flush := run_sroutine_scheduler_flush(source, env, writes, runtime)
     if schedule_flush.is_err() {
         return result::err(schedule_flush.unwrap_err())
     }
@@ -3624,7 +3624,7 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
 func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
     switch stmt {
         stmt.let(value) : {
-            let expr_result = eval_expr(value.value, source, env, writes, runtime)
+            expr_result := eval_expr(value.value, source, env, writes, runtime)
             if expr_result.is_err() {
                 result::err(expr_result.unwrap_err())
             }
@@ -3635,11 +3635,11 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write
             result::ok(())
         }
         stmt.assign(value) : {
-            let expr_result = eval_expr(value.value, source, env, writes, runtime)
+            expr_result := eval_expr(value.value, source, env, writes, runtime)
             if expr_result.is_err() {
                 result::err(expr_result.unwrap_err())
             }
-            let index = find_binding_index(env, value.name)
+            index := find_binding_index(env, value.name)
             if index < 0 {
                 result::err(backend_error { message: "backend error: unknown name " + value.name })
             }
@@ -3650,11 +3650,11 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write
             result::ok(())
         }
         stmt.increment(value) : {
-            let index = find_binding_index(env, value.name)
+            index := find_binding_index(env, value.name)
             if index < 0 {
                 result::err(backend_error { message: "backend error: unknown name " + value.name })
             }
-            let current = env.get(index).unwrap().value
+            current := env.get(index).unwrap().value
             switch current {
                 value.int(number) : {
                     env.set(index, binding {
@@ -3669,7 +3669,7 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write
         stmt.c_for(value) : execute_c_for(value, source, env, writes, runtime),
         stmt.return(_) : result::err(backend_error { message: "backend error: return statements are not supported in the mvp backend" }),
         stmt.expr(value) : {
-            let expr_result = eval_expr(value.expr, source, env, writes, runtime)
+            expr_result := eval_expr(value.expr, source, env, writes, runtime)
             if expr_result.is_err() {
                 result::err(expr_result.unwrap_err())
             }
@@ -3683,19 +3683,19 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write
 func execute_sroutine_stmt(sroutine_stmt value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
     switch value.expr {
         expr.call(call_expr) : {
-            let callee_result = eval_expr(call_expr.callee.value, source, env, writes, runtime)
+            callee_result := eval_expr(call_expr.callee.value, source, env, writes, runtime)
             if callee_result.is_err() {
                 return result::err(callee_result.unwrap_err())
             }
-            let fn_name = ""
+            fn_name := ""
             switch callee_result.unwrap() {
                 value.fn_ref(name) : fn_name = name,
                 _ : return result::err(backend_error { message: "backend error: sroutine expects function call target" }),
             }
-            let arg_values = vec[value]()
-            let ai = 0
+            arg_values := vec[value]()
+            ai := 0
             while ai < call_expr.args.len() {
-                let arg_result = eval_expr(call_expr.args[ai], source, env, writes, runtime)
+                arg_result := eval_expr(call_expr.args[ai], source, env, writes, runtime)
                 if arg_result.is_err() {
                     return result::err(arg_result.unwrap_err())
                 }
@@ -3717,17 +3717,17 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, vec[binding]
 }
 
 func execute_c_for(c_for_stmt value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
-    let loop_env = copy_bindings(env)
-    let init_result = execute_stmt(value.init.value, source, loop_env, writes, runtime)
+    loop_env := copy_bindings(env)
+    init_result := execute_stmt(value.init.value, source, loop_env, writes, runtime)
     if init_result.is_err() {
         result::err(init_result.unwrap_err())
     }
     while true {
-        let cond_result = eval_expr(value.condition, source, loop_env, writes, runtime)
+        cond_result := eval_expr(value.condition, source, loop_env, writes, runtime)
         if cond_result.is_err() {
             result::err(cond_result.unwrap_err())
         }
-        let cond_value = cond_result.unwrap()
+        cond_value := cond_result.unwrap()
         switch cond_value {
             value.bool(flag) : {
                 if !flag {
@@ -3736,11 +3736,11 @@ func execute_c_for(c_for_stmt value, source_file source, vec[binding] mut env, v
             }
             _ : result::err(backend_error { message: "backend error: for condition must be bool" }),
         }
-        let body_result = execute_block_in_place(value.body, source, loop_env, writes, runtime)
+        body_result := execute_block_in_place(value.body, source, loop_env, writes, runtime)
         if body_result.is_err() {
             result::err(body_result.unwrap_err())
         }
-        let step_result = execute_stmt(value.step.value, source, loop_env, writes, runtime)
+        step_result := execute_stmt(value.step.value, source, loop_env, writes, runtime)
         if step_result.is_err() {
             result::err(step_result.unwrap_err())
         }
@@ -3771,16 +3771,16 @@ func eval_expr(expr expr, source_file source, vec[binding] mut env, vec[write_op
 }
 
 func eval_binary(binary_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
-    let left_result = eval_expr(value.left.value, source, env, writes, runtime)
+    left_result := eval_expr(value.left.value, source, env, writes, runtime)
     if left_result.is_err() {
         result::err(left_result.unwrap_err())
     }
-    let right_result = eval_expr(value.right.value, source, env, writes, runtime)
+    right_result := eval_expr(value.right.value, source, env, writes, runtime)
     if right_result.is_err() {
         result::err(right_result.unwrap_err())
     }
-    let left = left_result.unwrap()
-    let right = right_result.unwrap()
+    left := left_result.unwrap()
+    right := right_result.unwrap()
     switch value.op {
         "+" : add_values(left, right),
         "-" : numeric_binary(left, right, value.op),
@@ -3850,14 +3850,14 @@ func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[wr
         }
         _ : (),
     }
-    let callee_result = eval_expr(value.callee.value, source, env, writes, runtime)
+    callee_result := eval_expr(value.callee.value, source, env, writes, runtime)
     if callee_result.is_err() {
         return callee_result
     }
-    let arg_values = vec[value]()
-    let ai = 0
+    arg_values := vec[value]()
+    ai := 0
     while ai < value.args.len() {
-        let arg_result = eval_expr(value.args[ai], source, env, writes, runtime)
+        arg_result := eval_expr(value.args[ai], source, env, writes, runtime)
         if arg_result.is_err() {
             return result::err(arg_result.unwrap_err())
         }
@@ -3874,7 +3874,7 @@ func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[wr
     if args.len() != 1 {
         return result::err(backend_error { message: "backend error: panic expects exactly one argument" })
     }
-    let arg_result = eval_expr(args[0], source, env, writes, runtime)
+    arg_result := eval_expr(args[0], source, env, writes, runtime)
     if arg_result.is_err() {
         return arg_result
     }
@@ -3888,7 +3888,7 @@ func eval_recover_call(vec[binding] mut env, runtime_state mut runtime) result[v
     if !control_panic_is_active(env) {
         return result::ok(value.unit(unit_value {}))
     }
-    let payload = control_panic_payload_text(env)
+    payload := control_panic_payload_text(env)
     set_control(env, control_panic_active, value.bool(false))
     set_control(env, control_panic_payload, value.string(""))
     runtime.sroutine_recovered = runtime.sroutine_recovered + 1
@@ -3907,11 +3907,11 @@ func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] mut en
     if args.len() != 1 {
         return result::err(backend_error { message: "backend error: chan_make expects one capacity argument" })
     }
-    let cap_value = eval_expr(args[0], source, env, writes, runtime)
+    cap_value := eval_expr(args[0], source, env, writes, runtime)
     if cap_value.is_err() {
         return cap_value
     }
-    let cap = 1
+    cap := 1
     switch cap_value.unwrap() {
         value.int(n) : {
             if n > 0 {
@@ -3920,7 +3920,7 @@ func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] mut en
         }
         _ : return result::err(backend_error { message: "backend error: chan_make capacity must be int" }),
     }
-    let id = runtime.next_channel_id
+    id := runtime.next_channel_id
     runtime.next_channel_id = runtime.next_channel_id + 1
     runtime.gc_alloc_since_cycle = runtime.gc_alloc_since_cycle + 1
     runtime.channels.push(channel_runtime_state {
@@ -3939,15 +3939,15 @@ func eval_chan_send_call(vec[expr] args, source_file source, vec[binding] mut en
     if args.len() != 2 {
         return result::err(backend_error { message: "backend error: chan_send expects channel and value" })
     }
-    let ch = eval_expr(args[0], source, env, writes, runtime)
+    ch := eval_expr(args[0], source, env, writes, runtime)
     if ch.is_err() {
         return ch
     }
-    let payload = eval_expr(args[1], source, env, writes, runtime)
+    payload := eval_expr(args[1], source, env, writes, runtime)
     if payload.is_err() {
         return payload
     }
-    let idx = find_channel_index(runtime, ch.unwrap())
+    idx := find_channel_index(runtime, ch.unwrap())
     if idx < 0 {
         return result::err(backend_error { message: "backend error: chan_send target is not channel" })
     }
@@ -3957,7 +3957,7 @@ func eval_chan_send_call(vec[expr] args, source_file source, vec[binding] mut en
     if runtime.channels[idx].buffer.len() >= runtime.channels[idx].capacity {
         return result::err(backend_error { message: "backend error: chan_send would block" })
     }
-    let ch_state = runtime.channels[idx]
+    ch_state := runtime.channels[idx]
     if value_contains_channel(payload.unwrap()) {
         runtime.gc_write_barriers = runtime.gc_write_barriers + 1
     }
@@ -3974,10 +3974,10 @@ func eval_chan_recv_call(vec[expr] args, source_file source, vec[binding] mut en
     if !is_select && args.len() != 1 {
         return result::err(backend_error { message: "backend error: chan_recv expects exactly one channel argument" })
     }
-    let channels = vec[value]()
-    let ai = 0
+    channels := vec[value]()
+    ai := 0
     while ai < args.len() {
-        let ch = eval_expr(args[ai], source, env, writes, runtime)
+        ch := eval_expr(args[ai], source, env, writes, runtime)
         if ch.is_err() {
             return ch
         }
@@ -3987,11 +3987,11 @@ func eval_chan_recv_call(vec[expr] args, source_file source, vec[binding] mut en
     if is_select {
         runtime.select_attempts = runtime.select_attempts + 1
     }
-    let selected = choose_ready_channel(runtime, channels)
+    selected := choose_ready_channel(runtime, channels)
     if selected.is_some() {
         return drain_selected_channel(runtime, selected.unwrap())
     }
-    let closed_pick = choose_closed_channel(runtime, channels)
+    closed_pick := choose_closed_channel(runtime, channels)
     if closed_pick.is_some() {
         if is_select && channels.len() > 0 {
             runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % channels.len()
@@ -4009,18 +4009,18 @@ func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[bind
         return result::err(backend_error { message: "backend error: select_recv_weighted expects channel/weight pairs" })
     }
     runtime.select_attempts = runtime.select_attempts + 1
-    let weighted = vec[value]()
-    let ai = 0
+    weighted := vec[value]()
+    ai := 0
     while ai < args.len() {
-        let ch = eval_expr(args[ai], source, env, writes, runtime)
+        ch := eval_expr(args[ai], source, env, writes, runtime)
         if ch.is_err() {
             return ch
         }
-        let weight = eval_expr(args[ai + 1], source, env, writes, runtime)
+        weight := eval_expr(args[ai + 1], source, env, writes, runtime)
         if weight.is_err() {
             return weight
         }
-        let copies = 1
+        copies := 1
         switch weight.unwrap() {
             value.int(n) : {
                 if n > 1 {
@@ -4029,18 +4029,18 @@ func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[bind
             }
             _ : return result::err(backend_error { message: "backend error: select_recv_weighted weights must be int" }),
         }
-        let wi = 0
+        wi := 0
         while wi < copies {
             weighted.push(ch.unwrap())
             wi = wi + 1
         }
         ai = ai + 2
     }
-    let selected = choose_ready_channel(runtime, weighted)
+    selected := choose_ready_channel(runtime, weighted)
     if selected.is_some() {
         return drain_selected_channel(runtime, selected.unwrap())
     }
-    let closed_pick = choose_closed_channel(runtime, weighted)
+    closed_pick := choose_closed_channel(runtime, weighted)
     if closed_pick.is_some() {
         if weighted.len() > 0 {
             runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % weighted.len()
@@ -4054,7 +4054,7 @@ func eval_select_recv_timeout_call(vec[expr] args, source_file source, vec[bindi
     if args.len() < 2 {
         return result::err(backend_error { message: "backend error: select_recv_timeout expects channels followed by timeout ticks" })
     }
-    let timeout = eval_expr(args[args.len() - 1], source, env, writes, runtime)
+    timeout := eval_expr(args[args.len() - 1], source, env, writes, runtime)
     if timeout.is_err() {
         return timeout
     }
@@ -4062,13 +4062,13 @@ func eval_select_recv_timeout_call(vec[expr] args, source_file source, vec[bindi
         value.int(_) : (),
         _ : return result::err(backend_error { message: "backend error: select_recv_timeout timeout must be int" }),
     }
-    let ch_args = vec[expr]()
-    let i = 0
+    ch_args := vec[expr]()
+    i := 0
     while i < args.len() - 1 {
         ch_args.push(args[i])
         i = i + 1
     }
-    let recv = eval_chan_recv_call(ch_args, source, env, writes, runtime, true)
+    recv := eval_chan_recv_call(ch_args, source, env, writes, runtime, true)
     if recv.is_ok() {
         return recv
     }
@@ -4081,15 +4081,15 @@ func eval_select_send_call(vec[expr] args, source_file source, vec[binding] mut 
         return result::err(backend_error { message: "backend error: select_send expects channel/value pairs" })
     }
     runtime.select_attempts = runtime.select_attempts + 1
-    let channels = vec[value]()
-    let payloads = vec[value]()
-    let ai = 0
+    channels := vec[value]()
+    payloads := vec[value]()
+    ai := 0
     while ai < args.len() {
-        let ch = eval_expr(args[ai], source, env, writes, runtime)
+        ch := eval_expr(args[ai], source, env, writes, runtime)
         if ch.is_err() {
             return ch
         }
-        let payload = eval_expr(args[ai + 1], source, env, writes, runtime)
+        payload := eval_expr(args[ai + 1], source, env, writes, runtime)
         if payload.is_err() {
             return payload
         }
@@ -4097,16 +4097,16 @@ func eval_select_send_call(vec[expr] args, source_file source, vec[binding] mut 
         payloads.push(payload.unwrap())
         ai = ai + 2
     }
-    let pick = choose_sendable_channel(runtime, channels)
+    pick := choose_sendable_channel(runtime, channels)
     if pick.is_none() {
         return result::err(backend_error { message: "backend error: select_send has no ready channel" })
     }
     if pick.unwrap() < 0 {
         return result::err(backend_error { message: "backend error: select_send target is not channel" })
     }
-    let pi = pick.unwrap()
-    let idx = find_channel_index(runtime, channels[pi])
-    let ch_state = runtime.channels[idx]
+    pi := pick.unwrap()
+    idx := find_channel_index(runtime, channels[pi])
+    ch_state := runtime.channels[idx]
     ch_state.buffer.push(payloads[pi])
     ch_state.sends = ch_state.sends + 1
     runtime.channels.set(idx, ch_state)
@@ -4114,7 +4114,7 @@ func eval_select_send_call(vec[expr] args, source_file source, vec[binding] mut 
 }
 
 func eval_select_send_default_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
-    let sent = eval_select_send_call(args, source, env, writes, runtime)
+    sent := eval_select_send_call(args, source, env, writes, runtime)
     if sent.is_ok() {
         return sent
     }
@@ -4126,7 +4126,7 @@ func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[bindi
     if args.len() < 3 || ((args.len() - 1) % 2) != 0 {
         return result::err(backend_error { message: "backend error: select_send_timeout expects channel/value pairs followed by timeout ticks" })
     }
-    let timeout = eval_expr(args[args.len() - 1], source, env, writes, runtime)
+    timeout := eval_expr(args[args.len() - 1], source, env, writes, runtime)
     if timeout.is_err() {
         return timeout
     }
@@ -4134,13 +4134,13 @@ func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[bindi
         value.int(_) : (),
         _ : return result::err(backend_error { message: "backend error: select_send_timeout timeout must be int" }),
     }
-    let send_args = vec[expr]()
-    let i = 0
+    send_args := vec[expr]()
+    i := 0
     while i < args.len() - 1 {
         send_args.push(args[i])
         i = i + 1
     }
-    let sent = eval_select_send_call(send_args, source, env, writes, runtime)
+    sent := eval_select_send_call(send_args, source, env, writes, runtime)
     if sent.is_ok() {
         return sent
     }
@@ -4152,11 +4152,11 @@ func choose_ready_channel(runtime_state mut runtime, vec[value] channels) option
     if channels.len() == 0 {
         return option.none
     }
-    let start = runtime.select_rr_cursor % channels.len()
-    let offset = 0
+    start := runtime.select_rr_cursor % channels.len()
+    offset := 0
     while offset < channels.len() {
-        let pick = (start + offset) % channels.len()
-        let idx = find_channel_index(runtime, channels[pick])
+        pick := (start + offset) % channels.len()
+        idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
             return option.some(-1)
         }
@@ -4173,11 +4173,11 @@ func choose_closed_channel(runtime_state runtime, vec[value] channels) option[in
     if channels.len() == 0 {
         return option.none
     }
-    let start = runtime.select_rr_cursor % channels.len()
-    let offset = 0
+    start := runtime.select_rr_cursor % channels.len()
+    offset := 0
     while offset < channels.len() {
-        let pick = (start + offset) % channels.len()
-        let idx = find_channel_index(runtime, channels[pick])
+        pick := (start + offset) % channels.len()
+        idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
             return option.some(-1)
         }
@@ -4193,15 +4193,15 @@ func choose_sendable_channel(runtime_state mut runtime, vec[value] channels) opt
     if channels.len() == 0 {
         return option.none
     }
-    let start = runtime.select_rr_cursor % channels.len()
-    let offset = 0
+    start := runtime.select_rr_cursor % channels.len()
+    offset := 0
     while offset < channels.len() {
-        let pick = (start + offset) % channels.len()
-        let idx = find_channel_index(runtime, channels[pick])
+        pick := (start + offset) % channels.len()
+        idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
             return option.some(-1)
         }
-        let ch_state = runtime.channels[idx]
+        ch_state := runtime.channels[idx]
         if !ch_state.closed && ch_state.buffer.len() < ch_state.capacity {
             runtime.select_rr_cursor = (pick + 1) % channels.len()
             return option.some(pick)
@@ -4215,13 +4215,13 @@ func drain_selected_channel(runtime_state mut runtime, int idx) result[value, ba
     if idx < 0 {
         return result::err(backend_error { message: "backend error: recv target is not channel" })
     }
-    let ch_state = runtime.channels[idx]
+    ch_state := runtime.channels[idx]
     if ch_state.buffer.len() == 0 {
         return result::ok(value.unit(unit_value {}))
     }
-    let first = ch_state.buffer[0]
-    let rest = vec[value]()
-    let i = 1
+    first := ch_state.buffer[0]
+    rest := vec[value]()
+    i := 1
     while i < ch_state.buffer.len() {
         rest.push(ch_state.buffer[i])
         i = i + 1
@@ -4233,7 +4233,7 @@ func drain_selected_channel(runtime_state mut runtime, int idx) result[value, ba
 }
 
 func eval_select_recv_default_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
-    let recv = eval_chan_recv_call(args, source, env, writes, runtime, true)
+    recv := eval_chan_recv_call(args, source, env, writes, runtime, true)
     if recv.is_ok() {
         return recv
     }
@@ -4245,15 +4245,15 @@ func eval_chan_close_call(vec[expr] args, source_file source, vec[binding] mut e
     if args.len() != 1 {
         return result::err(backend_error { message: "backend error: chan_close expects one channel argument" })
     }
-    let ch = eval_expr(args[0], source, env, writes, runtime)
+    ch := eval_expr(args[0], source, env, writes, runtime)
     if ch.is_err() {
         return ch
     }
-    let idx = find_channel_index(runtime, ch.unwrap())
+    idx := find_channel_index(runtime, ch.unwrap())
     if idx < 0 {
         return result::err(backend_error { message: "backend error: chan_close target is not channel" })
     }
-    let ch_state = runtime.channels[idx]
+    ch_state := runtime.channels[idx]
     if ch_state.closed {
         return result::err(backend_error { message: "backend error: chan_close on closed channel" })
     }
@@ -4263,12 +4263,12 @@ func eval_chan_close_call(vec[expr] args, source_file source, vec[binding] mut e
 }
 
 func find_channel_index(runtime_state runtime, value v) int {
-    let id = -1
+    id := -1
     switch v {
         value.channel(handle) : id = handle.id,
         _ : return -1,
     }
-    let i = 0
+    i := 0
     while i < runtime.channels.len() {
         if runtime.channels[i].id == id {
             return i
@@ -4295,9 +4295,9 @@ func run_gc_safepoint(vec[binding] mut env, runtime_state mut runtime) () {
 func run_gc_cycle(vec[binding] env, runtime_state mut runtime) () {
     runtime.gc_cycles = runtime.gc_cycles + 1
     runtime.gc_root_scans = runtime.gc_root_scans + env.len() + runtime.runq.len()
-    let i = 0
+    i := 0
     while i < runtime.channels.len() {
-        let ch = runtime.channels[i]
+        ch := runtime.channels[i]
         ch.marked = false
         runtime.channels.set(i, ch)
         i = i + 1
@@ -4309,7 +4309,7 @@ func run_gc_cycle(vec[binding] env, runtime_state mut runtime) () {
     }
     i = 0
     while i < runtime.runq.len() {
-        let ai = 0
+        ai := 0
         while ai < runtime.runq[i].args.len() {
             mark_value_channels(runtime.runq[i].args[ai], runtime)
             ai = ai + 1
@@ -4321,10 +4321,10 @@ func run_gc_cycle(vec[binding] env, runtime_state mut runtime) () {
         }
         i = i + 1
     }
-    let kept = vec[channel_runtime_state]()
+    kept := vec[channel_runtime_state]()
     i = 0
     while i < runtime.channels.len() {
-        let ch = runtime.channels[i]
+        ch := runtime.channels[i]
         if ch.marked {
             ch.marked = false
             kept.push(ch)
@@ -4335,7 +4335,7 @@ func run_gc_cycle(vec[binding] env, runtime_state mut runtime) () {
     }
     runtime.channels = kept
     runtime.gc_alloc_since_cycle = 0
-    let next_goal = runtime.channels.len() * 2 + 1
+    next_goal := runtime.channels.len() * 2 + 1
     if next_goal < 2 {
         next_goal = 2
     }
@@ -4350,16 +4350,16 @@ func mark_value_channels(value v, runtime_state mut runtime) () {
 }
 
 func mark_channel_id(int id, runtime_state mut runtime) () {
-    let i = 0
+    i := 0
     while i < runtime.channels.len() {
         if runtime.channels[i].id == id {
             if runtime.channels[i].marked {
                 return
             }
-            let ch = runtime.channels[i]
+            ch := runtime.channels[i]
             ch.marked = true
             runtime.channels.set(i, ch)
-            let bi = 0
+            bi := 0
             while bi < ch.buffer.len() {
                 mark_value_channels(ch.buffer[bi], runtime)
                 bi = bi + 1
@@ -4383,12 +4383,12 @@ func execute_deferred(vec[expr] deferred, source_file source, vec[binding] mut e
         set_control(env, control_panic_payload, value.string(panic_payload_text))
     }
     set_control(env, control_in_defer, value.bool(true))
-    let i = deferred.len()
+    i := deferred.len()
     while i > 0 {
         i = i - 1
-        let call_result = eval_expr(deferred[i], source, env, writes, runtime)
+        call_result := eval_expr(deferred[i], source, env, writes, runtime)
         if call_result.is_err() {
-            let err = call_result.unwrap_err()
+            err := call_result.unwrap_err()
             if is_panic_error(err) {
                 set_control(env, control_panic_active, value.bool(true))
                 set_control(env, control_panic_payload, value.string(panic_payload(err)))
@@ -4406,20 +4406,20 @@ func run_sroutine_scheduler_step(source_file source, vec[binding] mut env, vec[w
     if runtime.runq.len() == 0 {
         return result::ok(())
     }
-    let task = runtime.runq[0]
-    let rest = vec[sroutine_task]()
-    let i = 1
+    task := runtime.runq[0]
+    rest := vec[sroutine_task]()
+    i := 1
     while i < runtime.runq.len() {
         rest.push(runtime.runq[i])
         i = i + 1
     }
     runtime.runq = rest
-    let task_env = copy_bindings(env)
-    let captured = restore_captured_bindings(task.captured_env)
+    task_env := copy_bindings(env)
+    captured := restore_captured_bindings(task.captured_env)
     propagate_bindings(task_env, captured)
-    let task_result = call_function_with_capture(source, task.fn_name, task.args, task_env, writes, runtime, task.captured_env)
+    task_result := call_function_with_capture(source, task.fn_name, task.args, task_env, writes, runtime, task.captured_env)
     if task_result.is_err() {
-        let err = task_result.unwrap_err()
+        err := task_result.unwrap_err()
         if is_panic_error(err) {
             runtime.sroutine_panics = runtime.sroutine_panics + 1
             return result::err(err)
@@ -4433,7 +4433,7 @@ func run_sroutine_scheduler_step(source_file source, vec[binding] mut env, vec[w
 
 func run_sroutine_scheduler_flush(source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
     while runtime.runq.len() > 0 {
-        let step = run_sroutine_scheduler_step(source, env, writes, runtime)
+        step := run_sroutine_scheduler_step(source, env, writes, runtime)
         if step.is_err() {
             return step
         }
@@ -4463,7 +4463,7 @@ func copy_control_bindings(vec[binding] from_env, vec[binding] mut to_env) () {
 }
 
 func copy_control_binding(vec[binding] from_env, vec[binding] mut to_env, string name) () {
-    let source_index = find_binding_index(from_env, name)
+    source_index := find_binding_index(from_env, name)
     if source_index < 0 {
         return
     }
@@ -4471,7 +4471,7 @@ func copy_control_binding(vec[binding] from_env, vec[binding] mut to_env, string
 }
 
 func set_control(vec[binding] mut env, string name, value v) () {
-    let index = find_binding_index(env, name)
+    index := find_binding_index(env, name)
     if index >= 0 {
         env.set(index, binding { name: name, value: v })
         return
@@ -4480,7 +4480,7 @@ func set_control(vec[binding] mut env, string name, value v) () {
 }
 
 func control_in_defer_mode(vec[binding] env) bool {
-    let index = find_binding_index(env, control_in_defer)
+    index := find_binding_index(env, control_in_defer)
     if index < 0 {
         return false
     }
@@ -4491,7 +4491,7 @@ func control_in_defer_mode(vec[binding] env) bool {
 }
 
 func control_panic_is_active(vec[binding] env) bool {
-    let index = find_binding_index(env, control_panic_active)
+    index := find_binding_index(env, control_panic_active)
     if index < 0 {
         return false
     }
@@ -4502,7 +4502,7 @@ func control_panic_is_active(vec[binding] env) bool {
 }
 
 func control_panic_payload_text(vec[binding] env) string {
-    let index = find_binding_index(env, control_panic_payload)
+    index := find_binding_index(env, control_panic_payload)
     if index < 0 {
         return ""
     }
@@ -4515,9 +4515,9 @@ func control_panic_payload_text(vec[binding] env) string {
 }
 
 func collect_const_bindings(source_file source) result[vec[binding], backend_error] {
-    let out = vec[binding]()
-    let visited = vec[string]()
-    let collect_result = collect_const_bindings_in_source(source, out, visited)
+    out := vec[binding]()
+    visited := vec[string]()
+    collect_result := collect_const_bindings_in_source(source, out, visited)
     if collect_result.is_err() {
         return result::err(collect_result.unwrap_err())
     }
@@ -4529,15 +4529,15 @@ func collect_const_bindings_in_source(source_file source, vec[binding] mut out, 
         return result::ok(())
     }
     visited.push(source.pkg)
-    let last_expr = option::none
-    let i = 0
+    last_expr := option::none
+    i := 0
     while i < source.items.len() {
         switch source.items[i] {
             item.const(const_decl) : {
                 if find_binding_index(out, const_decl.name) >= 0 {
                     return result::err(backend_error { message: "backend error: duplicate const declaration " + const_decl.name })
                 }
-                let expr_to_eval = option::none
+                expr_to_eval := option::none
                 switch const_decl.value {
                     option.some(value) : {
                         expr_to_eval = option::some(value)
@@ -4548,7 +4548,7 @@ func collect_const_bindings_in_source(source_file source, vec[binding] mut out, 
                 if expr_to_eval.is_none() {
                     return result::err(backend_error { message: "backend error: const declaration missing initializer " + const_decl.name })
                 }
-                let value_result = eval_const_value_expr(expr_to_eval.unwrap(), out, const_decl.iota_index)
+                value_result := eval_const_value_expr(expr_to_eval.unwrap(), out, const_decl.iota_index)
                 if value_result.is_err() {
                     return result::err(backend_error { message: "backend error: const evaluation failed for " + const_decl.name + ": " + value_result.unwrap_err().message })
                 }
@@ -4562,13 +4562,13 @@ func collect_const_bindings_in_source(source_file source, vec[binding] mut out, 
         }
         i = i + 1
     }
-    let ui = 0
+    ui := 0
     while ui < source.uses.len() {
-        let dep_result = load_source_graph_for_use(source.uses[ui].path)
+        dep_result := load_source_graph_for_use(source.uses[ui].path)
         if dep_result.is_err() {
             return result::err(dep_result.unwrap_err())
         }
-        let nested_result = collect_const_bindings_in_source(dep_result.unwrap(), out, visited)
+        nested_result := collect_const_bindings_in_source(dep_result.unwrap(), out, visited)
         if nested_result.is_err() {
             return nested_result
         }
@@ -4578,15 +4578,15 @@ func collect_const_bindings_in_source(source_file source, vec[binding] mut out, 
 }
 
 func load_source_graph_for_use(string module_path) result[source_file, backend_error] {
-    let module_result = resolve_module_source_path(module_path)
+    module_result := resolve_module_source_path(module_path)
     if module_result.is_none() {
         return result::err(backend_error { message: "backend error: module resolver failed: " + module_path })
     }
-    let dep_source_result = read_to_string(module_result.unwrap())
+    dep_source_result := read_to_string(module_result.unwrap())
     if dep_source_result.is_err() {
         return result::err(backend_error { message: "backend error: failed to read module " + module_path + ": " + dep_source_result.unwrap_err().message })
     }
-    let dep_parsed_result = parse_source(dep_source_result.unwrap())
+    dep_parsed_result := parse_source(dep_source_result.unwrap())
     if dep_parsed_result.is_err() {
         return result::err(backend_error { message: "backend error: parse failed in module " + module_path + ": " + dep_parsed_result.unwrap_err().message })
     }
@@ -4602,18 +4602,18 @@ func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) r
             if name_expr.name == "iota" {
                 return result::ok(value.int(iota_value))
             }
-            let const_value = lookup_value(const_env, name_expr.name)
+            const_value := lookup_value(const_env, name_expr.name)
             if const_value.is_err() {
                 return result::err(backend_error { message: "unknown const name " + name_expr.name })
             }
             result::ok(const_value.unwrap())
         }
         expr.binary(binary_expr) : {
-            let left = eval_const_value_expr(binary_expr.left.value, const_env, iota_value)
+            left := eval_const_value_expr(binary_expr.left.value, const_env, iota_value)
             if left.is_err() {
                 return left
             }
-            let right = eval_const_value_expr(binary_expr.right.value, const_env, iota_value)
+            right := eval_const_value_expr(binary_expr.right.value, const_env, iota_value)
             if right.is_err() {
                 return right
             }
@@ -4642,11 +4642,11 @@ func lookup_name_or_function(vec[binding] env, source_file source, string name) 
     if name == "nil" {
         return result::ok(value.unit(unit_value {}))
     }
-    let local = lookup_value(env, name)
+    local := lookup_value(env, name)
     if local.is_ok() {
         return local
     }
-    let fn_result = find_function(source, name)
+    fn_result := find_function(source, name)
     if fn_result.is_ok() {
         return result::ok(value.fn_ref(name))
     }
@@ -4654,18 +4654,18 @@ func lookup_name_or_function(vec[binding] env, source_file source, string name) 
 }
 
 func eval_map_literal(map_literal value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
-    let entries = vec[fn_map_entry_value]()
-    let i = 0
+    entries := vec[fn_map_entry_value]()
+    i := 0
     while i < value.entries.len() {
-        let key_result = eval_expr(value.entries[i].key, source, env, writes, runtime)
+        key_result := eval_expr(value.entries[i].key, source, env, writes, runtime)
         if key_result.is_err() {
             return result::err(key_result.unwrap_err())
         }
-        let val_result = eval_expr(value.entries[i].value, source, env, writes, runtime)
+        val_result := eval_expr(value.entries[i].value, source, env, writes, runtime)
         if val_result.is_err() {
             return result::err(val_result.unwrap_err())
         }
-        let mapped_name = ""
+        mapped_name := ""
         switch val_result.unwrap() {
             value.fn_ref(fn_name) : mapped_name = fn_name,
             _ : return result::err(backend_error { message: "backend error: map literal currently supports function values only" }),
@@ -4680,18 +4680,18 @@ func eval_map_literal(map_literal value, source_file source, vec[binding] mut en
 }
 
 func eval_index_expr(index_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
-    let target_result = eval_expr(value.target.value, source, env, writes, runtime)
+    target_result := eval_expr(value.target.value, source, env, writes, runtime)
     if target_result.is_err() {
         return target_result
     }
-    let index_result = eval_expr(value.index.value, source, env, writes, runtime)
+    index_result := eval_expr(value.index.value, source, env, writes, runtime)
     if index_result.is_err() {
         return index_result
     }
-    let key = stringify_value(index_result.unwrap())
+    key := stringify_value(index_result.unwrap())
     switch target_result.unwrap() {
         value.fn_map(entries) : {
-            let i = 0
+            i := 0
             while i < entries.len() {
                 if entries[i].key == key {
                     return result::ok(value.fn_ref(entries[i].func_name))
@@ -4708,15 +4708,15 @@ func eval_print_call(string name, vec[expr] args, source_file source, vec[bindin
     if args.len() > 1 {
         result::err(backend_error { message: "backend error: " + name + " expects at most one argument" })
     }
-    let text = ""
+    text := ""
     if args.len() == 1 {
-        let arg_result = eval_expr(args[0], source, env, writes, runtime)
+        arg_result := eval_expr(args[0], source, env, writes, runtime)
         if arg_result.is_err() {
             result::err(arg_result.unwrap_err())
         }
         text = stringify_value(arg_result.unwrap())
     }
-    let op_text = text + "\n"
+    op_text := text + "\n"
     if name == "println" {
         writes.push(write_op { fd: 1, text: op_text });
     } else {
@@ -4726,7 +4726,7 @@ func eval_print_call(string name, vec[expr] args, source_file source, vec[bindin
 }
 
 func eval_if_expr(if_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
-    let cond_result = eval_expr(value.condition.value, source, env, writes, runtime)
+    cond_result := eval_expr(value.condition.value, source, env, writes, runtime)
     if cond_result.is_err() {
         result::err(cond_result.unwrap_err())
     }
@@ -4747,7 +4747,7 @@ func eval_if_expr(if_expr value, source_file source, vec[binding] mut env, vec[w
 
 func eval_while_expr(while_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
     while true {
-        let cond_result = eval_expr(value.condition.value, source, env, writes, runtime)
+        cond_result := eval_expr(value.condition.value, source, env, writes, runtime)
         if cond_result.is_err() {
             result::err(cond_result.unwrap_err())
         }
@@ -4759,7 +4759,7 @@ func eval_while_expr(while_expr value, source_file source, vec[binding] mut env,
             }
             _ : result::err(backend_error { message: "backend error: while condition must be bool" }),
         }
-        let body_result = execute_block_in_place(value.body, source, env, writes, runtime)
+        body_result := execute_block_in_place(value.body, source, env, writes, runtime)
         if body_result.is_err() {
             result::err(body_result.unwrap_err())
         }
@@ -4768,7 +4768,7 @@ func eval_while_expr(while_expr value, source_file source, vec[binding] mut env,
 }
 
 func lookup_value(vec[binding] env, string name) result[value, backend_error] {
-    let index = find_binding_index(env, name)
+    index := find_binding_index(env, name)
     if index < 0 {
         result::err(backend_error { message: "backend error: unknown name " + name })
     }
@@ -4826,7 +4826,7 @@ func numeric_binary(value left, value right, string op) result[value, backend_er
 }
 
 func compare_values(value left, value right, bool equal) result[value, backend_error] {
-    let same = false
+    same := false
     switch left {
         value.int(left_int) : {
             switch right {
@@ -4942,18 +4942,18 @@ func stringify_value(value value) string {
 }
 
 func parse_int_literal(string literal) int {
-    let value = literal
-    let sign = 1
-    let index = 0
+    value := literal
+    sign := 1
+    index := 0
     if len(value) > 0 && char_at(value, 0) == "-" {
         sign = -1
         index = 1
     }
-    let out = 0
+    out := 0
     while index < len(value) {
-        let ch = char_at(value, index)
+        ch := char_at(value, index)
         if ch != "_" {
-            let digit = digit_value(ch)
+            digit := digit_value(ch)
             if digit < 0 {
                 return 0
             }
@@ -4968,9 +4968,9 @@ func parse_ssa_margin_override(string text) result[int, backend_error] {
     if text == "" {
         return ok_int(-1)
     }
-    let i = 0
+    i := 0
     while i < len(text) {
-        let ch = char_at(text, i)
+        ch := char_at(text, i)
         if digit_value(ch) < 0 {
             return fail_int("invalid --ssa-dominant-margin value: " + text)
         }
@@ -5014,14 +5014,14 @@ func digit_value(string ch) int {
 }
 
 func decode_string_literal(string literal) string {
-    let text = literal
+    text := literal
     if len(text) < 2 {
         return text
     }
-    let out = ""
-    let index = 1
+    out := ""
+    index := 1
     while index < len(text) - 1 {
-        let ch = char_at(text, index)
+        ch := char_at(text, index)
         if ch != "\\" {
             out = out + ch
             index = index + 1
@@ -5031,7 +5031,7 @@ func decode_string_literal(string literal) string {
             out = out + "\\"
             break
         }
-        let esc = char_at(text, index + 1)
+        esc := char_at(text, index + 1)
         if esc == "n" {
             out = out + "\n"
         } else if esc == "t" {
@@ -5051,7 +5051,7 @@ func decode_string_literal(string literal) string {
 }
 
 func emit_asm(vec[write_op] writes, int exit_code) string {
-    let arch = buildcfg_goarch()
+    arch := buildcfg_goarch()
     if arch == "arm64" {
         return emit_asm_arm64(writes, exit_code)
     }
@@ -5068,7 +5068,7 @@ func emit_asm(vec[write_op] writes, int exit_code) string {
 }
 
 func validate_abi_coverage(string arch) result[(), backend_error] {
-    let i = 0
+    i := 0
     while i < 8 {
         if abi_int_arg_reg(arch, i) == "" {
             return result::err(backend_error { message: "backend error: missing integer argument ABI mapping for arg " + to_string(i) + " on " + arch })
@@ -5355,8 +5355,8 @@ func abi_callee_saved_count(string arch) int {
 }
 
 func emit_asm_amd64(vec[write_op] writes, int exit_code) string {
-    let data_lines = vec[string]()
-    let text_lines = vec[string]()
+    data_lines := vec[string]()
+    text_lines := vec[string]()
     data_lines.push(".section .data")
     text_lines.push(".section .text")
     text_lines.push(".global _start")
@@ -5372,8 +5372,8 @@ func emit_asm_amd64(vec[write_op] writes, int exit_code) string {
     text_lines.push("    push %rbp")
     text_lines.push("    mov %rsp, %rbp")
     text_lines.push("    sub $16, %rsp")
-    let message_index = 0
-    let i = 0
+    message_index := 0
+    i := 0
     while i < writes.len() {
         append_write_op(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
@@ -5386,8 +5386,8 @@ func emit_asm_amd64(vec[write_op] writes, int exit_code) string {
 }
 
 func emit_asm_arm64(vec[write_op] writes, int exit_code) string {
-    let data_lines = vec[string]()
-    let text_lines = vec[string]()
+    data_lines := vec[string]()
+    text_lines := vec[string]()
     data_lines.push(".section .data")
     text_lines.push(".section .text")
     text_lines.push(".global _start")
@@ -5400,8 +5400,8 @@ func emit_asm_arm64(vec[write_op] writes, int exit_code) string {
     text_lines.push("s_main:")
     text_lines.push("    stp x29, x30, [sp, #-16]!")
     text_lines.push("    mov x29, sp")
-    let message_index = 0
-    let i = 0
+    message_index := 0
+    i := 0
     while i < writes.len() {
         append_write_op_arm64(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
@@ -5414,8 +5414,8 @@ func emit_asm_arm64(vec[write_op] writes, int exit_code) string {
 }
 
 func emit_asm_riscv64(vec[write_op] writes, int exit_code) string {
-    let data_lines = vec[string]()
-    let text_lines = vec[string]()
+    data_lines := vec[string]()
+    text_lines := vec[string]()
     data_lines.push(".section .data")
     text_lines.push(".section .text")
     text_lines.push(".global _start")
@@ -5428,8 +5428,8 @@ func emit_asm_riscv64(vec[write_op] writes, int exit_code) string {
     text_lines.push("s_main:")
     text_lines.push("    addi sp, sp, -16")
     text_lines.push("    sd ra, 8(sp)")
-    let message_index = 0
-    let i = 0
+    message_index := 0
+    i := 0
     while i < writes.len() {
         append_write_op_riscv64(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
@@ -5443,8 +5443,8 @@ func emit_asm_riscv64(vec[write_op] writes, int exit_code) string {
 }
 
 func emit_asm_s390x(vec[write_op] writes, int exit_code) string {
-    let data_lines = vec[string]()
-    let text_lines = vec[string]()
+    data_lines := vec[string]()
+    text_lines := vec[string]()
     data_lines.push(".section .data")
     text_lines.push(".section .text")
     text_lines.push(".globl _start")
@@ -5455,8 +5455,8 @@ func emit_asm_s390x(vec[write_op] writes, int exit_code) string {
     text_lines.push("    svc 0")
     text_lines.push("")
     text_lines.push("s_main:")
-    let message_index = 0
-    let i = 0
+    message_index := 0
+    i := 0
     while i < writes.len() {
         append_write_op_s390x(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
@@ -5468,7 +5468,7 @@ func emit_asm_s390x(vec[write_op] writes, int exit_code) string {
 }
 
 func append_write_op(vec[string] data_lines, vec[string] text_lines, write_op op, int index) () {
-    let label = "message_" + to_string(index)
+    label := "message_" + to_string(index)
     data_lines.push(label + ":")
     data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")
     text_lines.push("    mov $1, %rax")
@@ -5479,7 +5479,7 @@ func append_write_op(vec[string] data_lines, vec[string] text_lines, write_op op
 }
 
 func append_write_op_arm64(vec[string] data_lines, vec[string] text_lines, write_op op, int index) () {
-    let label = "message_" + to_string(index)
+    label := "message_" + to_string(index)
     data_lines.push(label + ":")
     data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")
     text_lines.push("    mov x8, #64")
@@ -5491,7 +5491,7 @@ func append_write_op_arm64(vec[string] data_lines, vec[string] text_lines, write
 }
 
 func append_write_op_riscv64(vec[string] data_lines, vec[string] text_lines, write_op op, int index) () {
-    let label = "message_" + to_string(index)
+    label := "message_" + to_string(index)
     data_lines.push(label + ":")
     data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")
     text_lines.push("    li a7, 64")
@@ -5502,7 +5502,7 @@ func append_write_op_riscv64(vec[string] data_lines, vec[string] text_lines, wri
 }
 
 func append_write_op_s390x(vec[string] data_lines, vec[string] text_lines, write_op op, int index) () {
-    let label = "message_" + to_string(index)
+    label := "message_" + to_string(index)
     data_lines.push(label + ":")
     data_lines.push("    .ascii \"" + escape_asm_string(op.text) + "\"")
     text_lines.push("    lghi %r1, 4")
@@ -5513,10 +5513,10 @@ func append_write_op_s390x(vec[string] data_lines, vec[string] text_lines, write
 }
 
 func escape_asm_string(string text) string {
-    let out = ""
-    let i = 0
+    out := ""
+    i := 0
     while i < len(text) {
-        let ch = char_at(text, i)
+        ch := char_at(text, i)
         if ch == "\\" {
             out = out + "\\\\"
         } else if ch == "\"" {
@@ -5536,8 +5536,8 @@ func escape_asm_string(string text) string {
 }
 
 func copy_bindings(vec[binding] source) vec[binding] {
-    let out = vec[binding]()
-    let i = 0
+    out := vec[binding]()
+    i := 0
     while i < source.len() {
         out.push(source[i])
         i = i + 1
@@ -5546,7 +5546,7 @@ func copy_bindings(vec[binding] source) vec[binding] {
 }
 
 func find_binding_index(vec[binding] env, string name) int {
-    let i = env.len()
+    i := env.len()
     while i > 0 {
         i = i - 1
         if env[i].name == name {
@@ -5557,9 +5557,9 @@ func find_binding_index(vec[binding] env, string name) int {
 }
 
 func propagate_bindings(vec[binding] mut outer, vec[binding] inner) () {
-    let i = 0
+    i := 0
     while i < inner.len() {
-        let index = find_binding_index(outer, inner[i].name)
+        index := find_binding_index(outer, inner[i].name)
         if index >= 0 {
             outer.set(index, inner[i])
         }
@@ -5575,10 +5575,10 @@ func count_occurrences(string text, string token) int {
     if token == "" {
         return 0
     }
-    let total = 0
-    let cursor = 0
+    total := 0
+    cursor := 0
     while true {
-        let at = index_of_from(text, token, cursor)
+        at := index_of_from(text, token, cursor)
         if at < 0 {
             break
         }
@@ -5589,9 +5589,9 @@ func count_occurrences(string text, string token) int {
 }
 
 func join_with(vec[string] values, string sep) string {
-    let out = ""
-    let first = true
-    let i = 0
+    out := ""
+    first := true
+    i := 0
     while i < values.len() {
         if !first {
             out = out + sep

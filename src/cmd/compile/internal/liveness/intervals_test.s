@@ -6,12 +6,12 @@ func intervals_test_case_name() string {
 }
 
 func intervals_test_case_pass() int {
-    let events = vec[live_event]()
+    events := vec[live_event]()
     events.push(live_event { point: 0, value_id: 1, on: true })
     events.push(live_event { point: 3, value_id: 1, on: false })
     events.push(live_event { point: 2, value_id: 2, on: true })
     events.push(live_event { point: 6, value_id: 2, on: false })
-    let ivs = build_live_intervals(events)
+    ivs := build_live_intervals(events)
     if ivs.len() != 2 {
         return 0
     }

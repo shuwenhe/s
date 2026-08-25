@@ -23,8 +23,8 @@ struct IRModule {
 }
 
 func parse_ir(string content) (IRModule, error) {
-    let lines = split_string(content, "\n")
-    let mut module = IRModule{
+    lines := split_string(content, "\n")
+    mut module := IRModule{
         target: "x86_64",
         version: "1",
         functions: []IRFunction{},
@@ -32,28 +32,28 @@ func parse_ir(string content) (IRModule, error) {
     if len(lines) == 0 {
         return module, error("empty IR")
     }
-    let header = trim_string(lines[0])
+    header := trim_string(lines[0])
     if header != "SSEED-TARGET-V1" {
         return module, error("invalid IR header: " + header)
     }
-    let mut i = 1
-    let mut current_func: *IRFunction = nil
+    mut i := 1
+    mut current_func: *IRFunction = nil
     for i < len(lines) {
-        let line = trim_string(lines[i])
+        line := trim_string(lines[i])
         if line == "" {
             i += 1
             continue
         }
-        let parts = split_string(line, "|")
+        parts := split_string(line, "|")
         if len(parts) == 0 {
             i += 1
             continue
         }
-        let opcode = parts[0]
+        opcode := parts[0]
         match opcode {
             case "FUNC_BEGIN":
                 if len(parts) >= 2 {
-                    let func = IRFunction{
+                    func := IRFunction{
                         name: parts[1],
                         instructions: []IRInstruction{},
                     }
@@ -64,7 +64,7 @@ func parse_ir(string content) (IRModule, error) {
                 current_func = nil
             default:
                 if current_func != nil {
-                    let instr = IRInstruction{
+                    instr := IRInstruction{
                         opcode: opcode,
                         dest: if len(parts) > 1 then parts[1] else "",
                         src1: if len(parts) > 2 then parts[2] else "",
@@ -82,10 +82,10 @@ func parse_ir(string content) (IRModule, error) {
 }
 
 func get_ir_stats(IRModule module) map[string]int {
-    let mut stats = map[string]int{}
+    mut stats := map[string]int{}
     stats["total_functions"] = len(module.functions)
-    let mut total_instrs = 0
-    let mut opcode_counts = map[string]int{}
+    mut total_instrs := 0
+    mut opcode_counts := map[string]int{}
     for _, func in module.functions {
         total_instrs += len(func.instructions)
         for _, instr in func.instructions {
@@ -113,7 +113,7 @@ func verify_ir(IRModule module) error {
 }
 
 func instruction_to_string(IRInstruction instr) string {
-    let mut s = instr.opcode
+    mut s := instr.opcode
     s += "|" + instr.dest
     s += "|" + instr.src1
     s += "|" + instr.src2

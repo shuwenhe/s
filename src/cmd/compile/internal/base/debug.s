@@ -24,7 +24,7 @@ struct debug_flags {
     int zero_copy
     bool concurrent_ok
 }
-let debug = default_debug_flags()
+debug := default_debug_flags()
 
 func default_debug_flags() debug_flags {
     debug_flags {

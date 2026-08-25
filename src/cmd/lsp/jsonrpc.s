@@ -25,10 +25,10 @@ struct jsonrpc_notification {
 func parse_jsonrpc_message(raw string) result[jsonrpc_request, string] {
     match extract_json_string(raw, "method") {
         option::some(method) : {
-            let id_str = extract_json_string(raw, "id")
-            let params = extract_json_string(raw, "params")
+            id_str := extract_json_string(raw, "id")
+            params := extract_json_string(raw, "params")
 
-            let id_opt = option::none()
+            id_opt := option::none()
             match id_str {
                 option::some(id_val) : {
                     match std::parse_int(id_val) {
@@ -168,10 +168,10 @@ func serialize_severity(severity option[int]) string {
 }
 
 func extract_json_string(json string, key string) option[string] {
-    let search_key = "\"" + key + "\":"
+    search_key := "\"" + key + "\":"
     match std::find_substring(json, search_key) {
         option::some(pos) : {
-            let start = pos + search_key.len()
+            start := pos + search_key.len()
 
             while start < json.len() && (json[start] == " " || json[start] == "\t") {
                 start = start + 1
@@ -179,7 +179,7 @@ func extract_json_string(json string, key string) option[string] {
 
             if start < json.len() {
                 if json[start] == "\"" {
-                    let end = start + 1
+                    end := start + 1
                     while end < json.len() && json[end] != "\"" {
                         if json[end] == "\\" {
                             end = end + 2
@@ -193,7 +193,7 @@ func extract_json_string(json string, key string) option[string] {
                         option::none()
                     }
                 } else {
-                    let end = start
+                    end := start
                     while end < json.len() && json[end] != "," && json[end] != "}" && json[end] != "]" {
                         end = end + 1
                     }
@@ -211,7 +211,7 @@ func escape_json_string(s string) string {
     var result = ""
     var i = 0
     while i < s.len() {
-        let c = s[i]
+        c := s[i]
         if c == "\"" {
             result = result + "\\\""
         } else if c == "\\" {

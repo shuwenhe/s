@@ -1,5 +1,5 @@
 package compile.internal.amd64
-let leaptr = "LEAQ"
+leaptr := "LEAQ"
 
 func init_amd64(arch_info mut arch) arch_info {
     arch.link_arch = "amd64"
