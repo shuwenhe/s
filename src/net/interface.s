@@ -5,8 +5,8 @@ use std.vec.vec
 
 func interface_addresses() (vec[string], net_error) {
     switch sc.interface_addresses() {
-        result::ok(addresses) : result::ok(addresses),
-        result::err(e) : result::err(wrap_sc_err(e)),
+        addresses : addresses,
+        e : wrap_sc_err(e),
     }
 }
 

@@ -46,7 +46,7 @@ func chan_send(RawChan ch, int val) ((), string) {
     ch.mu.lock()
     if ch.state == CHAN_CLOSED {
         ch.mu.unlock()
-        return result::err("send on closed channel"
+        return "send on closed channel"
     }
     if ch.cap == 0 {
         if !ch.receivers.is_empty() {
@@ -56,7 +56,7 @@ func chan_send(RawChan ch, int val) ((), string) {
                 chan_deliver(w.sroutine_id, val)
                 sroutine_ready(w.sroutine_id)
             }
-            return ())
+            return ()
         }
         cur := __sroutine_current_id()
         ch.senders.push(Waiter { sroutine_id: cur, val_idx: val })
@@ -72,7 +72,7 @@ func chan_send(RawChan ch, int val) ((), string) {
         ch.mu.lock()
         if ch.state == CHAN_CLOSED {
             ch.mu.unlock()
-            return result::err("send on closed channel"
+            return "send on closed channel"
         }
     }
     ch.buf.set(ch.tail, val)
@@ -84,10 +84,10 @@ func chan_send(RawChan ch, int val) ((), string) {
         if w.sroutine_id >= 0 {
             sroutine_ready(w.sroutine_id)
         }
-        return ())
+        return ()
     }
     ch.mu.unlock()
-    result::ok(())
+    ()
 }
 
 func chan_recv(RawChan ch) recv_result {
@@ -225,7 +225,7 @@ func chan_close(RawChan ch) ((), string) {
         }
     }
     ch.mu.unlock()
-    result::ok(())
+    ()
 }
 
 func dequeue_waiter(vec[Waiter] q) Waiter {

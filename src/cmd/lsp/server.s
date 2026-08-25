@@ -21,7 +21,7 @@ func (server lsp_server) run() {
     buf := ""
     loop {
         switch std::read_line_from_stdin() {
-            result::ok(line) : {
+            line : {
                 if line == "" {
                     break
                 }
@@ -30,20 +30,20 @@ func (server lsp_server) run() {
                 if std::starts_with(line, prefix) {
                     len_str := line.substring(prefix.len(), line.len())
                     switch std::parse_int(len_str) {
-                        result::ok(content_len) : {
+                        content_len : {
                             switch std::read_bytes_from_stdin(content_len) {
-                                result::ok(content) : {
+                                content : {
                                     server.handle_message(content)
                                 },
-                                result::err(_) : {
+                                _ : {
                                 }
                             }
                         },
-                        result::err(_) : {}
+                        _ : {}
                     }
                 }
             },
-            result::err(_) : {
+            _ : {
                 break
             }
         }
@@ -52,7 +52,7 @@ func (server lsp_server) run() {
 
 func (server lsp_server) handle_message(message string) {
     switch lsp::parse_jsonrpc_message(message) {
-        result::ok(req) : {
+        req : {
             switch req.method {
                 "initialize" : server.handle_initialize(req),
                 "initialized" : {},
@@ -82,7 +82,7 @@ func (server lsp_server) handle_message(message string) {
                 }
             }
         },
-        result::err(err) : {
+        err : {
             std::println("LSP Parse Error: " + err)
         }
     }
@@ -345,20 +345,20 @@ func extract_position_params(message string) option[(string, int, int)] {
             switch lsp::extract_json_string(message, "line") {
                 option::some(line_str) : {
                     switch std::parse_int(line_str) {
-                        result::ok(line) : {
+                        line : {
                             switch lsp::extract_json_string(message, "character") {
                                 option::some(char_str) : {
                                     switch std::parse_int(char_str) {
-                                        result::ok(character) : {
+                                        character : {
                                             option::some((uri, line, character))
                                         },
-                                        result::err(_) : option::none()
+                                        _ : option::none()
                                     }
                                 },
                                 option::none() : option::none()
                             }
                         },
-                        result::err(_) : option::none()
+                        _ : option::none()
                     }
                 },
                 option::none() : option::none()
@@ -376,10 +376,10 @@ func extract_did_change_params(message string) option[(string, string, int)] {
                     switch lsp::extract_json_string(message, "version") {
                         option::some(version_str) : {
                             switch std::parse_int(version_str) {
-                                result::ok(version) : {
+                                version : {
                                     option::some((uri, text, version))
                                 },
-                                result::err(_) : option::none()
+                                _ : option::none()
                             }
                         },
                         option::none() : option::none()

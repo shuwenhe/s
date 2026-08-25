@@ -17,7 +17,7 @@ func map_file_read(string path, int offset, int length) (string, string) {
     if end > len(text) {
         end = len(text)
     }
-    result::ok(slice(text, offset, end))
+    slice(text, offset, end)
 }
 
 func map_file(string path, int offset, int length) (string, string) {

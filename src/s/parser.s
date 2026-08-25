@@ -18,12 +18,12 @@ struct parser {
 
 func parse_source(string source) (source_file, parse_error) {
     switch new_lexer(source).tokenize() {
-        result::ok(tokens) : parse_tokens(tokens),
-        result::err(err) : result::err(parse_error {
+        tokens : parse_tokens(tokens),
+        err : parse_error {
             message: err.message,
             line: err.line,
             column: err.column,
-        }),
+        },
     }
 }
 
@@ -57,11 +57,11 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
         }
         global_parse_depth = global_parse_depth - 1
         log_depth("parse_source_file exit depth: " + to_string(global_parse_depth))
-        result::ok(source_file {
+        source_file {
             pkg: pkg,
             uses: uses,
             items: items,
-        })
+        }
     }
 
 func (parser* self) parse_use_decl() (use_decl, parse_error) {
@@ -72,10 +72,10 @@ func (parser* self) parse_use_decl() (use_decl, parse_error) {
             } else {
                 option::none
             }
-        result::ok(use_decl {
+        use_decl {
             path: path,
             alias: alias,
-        })
+        }
     }
 
 func (parser* self) parse_item() (item, parse_error) {
@@ -113,13 +113,13 @@ func (parser* self) parse_item() (item, parse_error) {
         if self.at_keyword("trait") {
             return item::trait(self.parse_trait_decl()?))
         }
-        result::err(self.error_here("unexpected token"))
+        self.error_here("unexpected token")
     }
 
 func (parser* self) parse_const_decl() (const_decl, parse_error) {
         self.expect_keyword("const")?
         const_decl entry = self.parse_const_entry(false, 0)?        self.eat_symbol(";")
-        result::ok(entry)
+        entry
     }
 
 func (parser* self) parse_const_group_items() (vec[const_decl], parse_error) {
@@ -134,20 +134,20 @@ func (parser* self) parse_const_group_items() (vec[const_decl], parse_error) {
             self.eat_symbol(";")
             self.eat_symbol(",")
         }
-        result::ok(out)
+        out
     }
 
 func (parser* self) parse_const_entry(bool allow_omitted_value, int iota_index) (const_decl, parse_error) {
         string name = self.expect_ident()?        option[expr] value = option::none        if self.eat_symbol("=") {
             value = option::some(self.parse_expr()?)
         } else if !allow_omitted_value {
-            return result::err(self.error_here("expected symbol ="))
+            return self.error_here("expected symbol =")
         }
-        result::ok(const_decl {
+        const_decl {
             name: name,
             value: value,
             iota_index: iota_index,
-        })
+        }
     }
 
 func (parser* self) parse_var_decl() (var_decl, parse_error) {
@@ -166,16 +166,16 @@ func (parser* self) parse_var_decl() (var_decl, parse_error) {
 
         self.eat_symbol(";")
 
-        result::ok(var_decl {
+        var_decl {
             name: name,
             type_name: type_name,
             value: value,
-        })
+        }
     }
 
 func (parser* self) parse_function_decl() (function_decl, parse_error) {
         parsed_function pair = self.parse_function(true)?        if pair.receiver.is_some() {
-            return result::err(self.error_here("method receiver not allowed in this context"))
+            return self.error_here("method receiver not allowed in this context")
         }
         result::ok(function_decl {
             sig: pair.sig,
@@ -268,7 +268,7 @@ func (parser* self) parse_function(bool require_body) (parsed_function, parse_er
             } else {
                 option::none
             }
-        result::ok(parsed_function {
+        parsed_function {
             sig: function_sig {
                 name: name,
                 generics: generics,
@@ -277,7 +277,7 @@ func (parser* self) parse_function(bool require_body) (parsed_function, parse_er
             },
             body: body,
             receiver: receiver,
-        })
+        }
     }
 
 func (parser* self) parse_params() (vec[param], parse_error) {
@@ -293,7 +293,7 @@ func (parser* self) parse_params() (vec[param], parse_error) {
                 break
             }
         }
-        result::ok(params)
+        params
     }
 
 func (parser* self) parse_generic_params() (vec[string], parse_error) {
@@ -313,7 +313,7 @@ func (parser* self) parse_generic_params() (vec[string], parse_error) {
             generics.push(item)
             self.eat_symbol(",")
         }
-        result::ok(generics)
+        generics
     }
 
 func (parser* self) parse_where_clause() ((), parse_error) {
@@ -326,7 +326,7 @@ func (parser* self) parse_where_clause() ((), parse_error) {
                 break
             }
         }
-        result::ok(())
+        ()
     }
 
 func (parser* self) parse_named_type(vec[string] stop_values) (named_type, parse_error) {
@@ -356,7 +356,7 @@ func (parser* self) parse_token_segment(vec[string] stop_values) (vec[token], pa
             }
             segment.push(self.advance()?)
         }
-        result::ok(segment)
+        segment
     }
 
 func (parser* self) parse_block_expr() (block_expr, parse_error) {
@@ -379,11 +379,11 @@ func (parser* self) parse_block_expr() (block_expr, parse_error) {
             break
         }
         self.expect_symbol("}")?
-        result::ok(block_expr {
+        block_expr {
             statements: statements,
             final_expr: final_expr,
             inferred_type: option::none,
-        })
+        }
     }
 
 func (parser* self) starts_stmt() bool {
@@ -418,27 +418,27 @@ func (parser* self) parse_stmt() (stmt, parse_error) {
         if self.looks_like_assignment_stmt() {
             return stmt::assign(self.parse_assign_stmt(true)?))
         }
-        result::err(self.error_here("unexpected statement"))
+        self.error_here("unexpected statement")
     }
 
 func (parser* self) parse_var_stmt(bool consume_semicolon) (var_stmt, parse_error) {
-        result::err(self.error_here("let/var declarations are not supported; use explicit typed declaration"))
+        self.error_here("let/var declarations are not supported; use explicit typed declaration")
     }
 
 func (parser* self) parse_short_var_stmt(bool consume_semicolon) (var_stmt, parse_error) {
-        result::err(self.error_here("short declaration := is not supported; use explicit typed declaration"))
+        self.error_here("short declaration := is not supported; use explicit typed declaration")
     }
 
 func (parser* self) parse_defer_stmt() (defer_stmt, parse_error) {
         self.expect_keyword("defer")?
         expr expr = self.parse_expr()?        self.eat_symbol(";")
-        result::ok(defer_stmt { expr: expr })
+        defer_stmt { expr: expr }
     }
 
 func (parser* self) parse_sroutine_stmt() (sroutine_stmt, parse_error) {
         self.expect_keyword("sroutine")?
         expr expr = self.parse_expr()?        self.eat_symbol(";")
-        result::ok(sroutine_stmt { expr: expr })
+        sroutine_stmt { expr: expr }
     }
 
 func (parser* self) parse_typed_var_stmt(bool consume_semicolon) (var_stmt, parse_error) {
@@ -462,10 +462,10 @@ func (parser* self) parse_assign_stmt(bool consume_semicolon) (assign_stmt, pars
         if consume_semicolon {
             self.eat_symbol(";")
         }
-        result::ok(assign_stmt {
+        assign_stmt {
             name: name,
             value: value,
-        })
+        }
     }
 
 func (parser* self) parse_increment_stmt(bool consume_semicolon) (increment_stmt, parse_error) {
@@ -473,9 +473,9 @@ func (parser* self) parse_increment_stmt(bool consume_semicolon) (increment_stmt
         if consume_semicolon {
             self.eat_symbol(";")
         }
-        result::ok(increment_stmt {
+        increment_stmt {
             name: name,
-        })
+        }
     }
 
 func (parser* self) parse_cfor_stmt() (c_for_stmt, parse_error) {
@@ -505,7 +505,7 @@ func (parser* self) parse_for_clause_stmt() (stmt, parse_error) {
         if self.looks_like_assignment_stmt() {
             return stmt::assign(self.parse_assign_stmt(false)?))
         }
-        result::err(self.error_here("unexpected for clause"))
+        self.error_here("unexpected for clause")
     }
 
 func (parser* self) parse_return_stmt() (return_stmt, parse_error) {
@@ -546,7 +546,7 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
             self.expect_keyword("case")?
             if self.eat_keyword("default") {
                 if has_default {
-                    return result::err(self.error_here("duplicate default case in select"))
+                    return self.error_here("duplicate default case in select")
                 }
                 has_default = true
                 self.expect_symbol(":")?
@@ -562,11 +562,11 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
                         expr.name(name_value) : {
                             if name_value.name == "recv" {
                                 if mode != "" && mode != "recv" {
-                                    return result::err(self.error_here("select cannot mix recv and send cases"))
+                                    return self.error_here("select cannot mix recv and send cases")
                                 }
                                 mode = "recv"
                                 if call_value.args.len() == 0 {
-                                    return result::err(self.error_here("select recv case requires at least one channel"))
+                                    return self.error_here("select recv case requires at least one channel")
                                 }
                                 int ri = 0                                for ri < call_value.args.len() {
                                     recv_args.push(call_value.args[ri])
@@ -574,11 +574,11 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
                                 }
                             } else if name_value.name == "send" {
                                 if mode != "" && mode != "send" {
-                                    return result::err(self.error_here("select cannot mix recv and send cases"))
+                                    return self.error_here("select cannot mix recv and send cases")
                                 }
                                 mode = "send"
                                 if call_value.args.len() < 2 || (call_value.args.len() % 2) != 0 {
-                                    return result::err(self.error_here("select send case expects channel/value pairs"))
+                                    return self.error_here("select send case expects channel/value pairs")
                                 }
                                 int si = 0                                for si < call_value.args.len() {
                                     send_args.push(call_value.args[si])
@@ -586,31 +586,31 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
                                 }
                             } else if name_value.name == "timeout" || name_value.name == "after" {
                                 if timeout_arg.is_some() {
-                                    return result::err(self.error_here("duplicate timeout case in select"))
+                                    return self.error_here("duplicate timeout case in select")
                                 }
                                 if call_value.args.len() != 1 {
-                                    return result::err(self.error_here("select timeout case expects one tick argument"))
+                                    return self.error_here("select timeout case expects one tick argument")
                                 }
                                 timeout_arg = option[expr].some(call_value.args[0])
                             } else {
-                                return result::err(self.error_here("unsupported select case expression"))
+                                return self.error_here("unsupported select case expression")
                             }
                         }
-                        _ : return result::err(self.error_here("select case must be recv/send/timeout call")),
+                        _ : return self.error_here("select case must be recv/send/timeout call"),
                     }
                 }
-                _ : return result::err(self.error_here("select case must be call expression")),
+                _ : return self.error_here("select case must be call expression"),
             }
         }
         if timeout_arg.is_some() && has_default {
-            return result::err(self.error_here("select cannot combine timeout and default"))
+            return self.error_here("select cannot combine timeout and default")
         }
         if mode == "" {
-            return result::err(self.error_here("select requires recv(...) or send(...) case"))
+            return self.error_here("select requires recv(...) or send(...) case")
         }
         string callee_name = ""        vec[expr] args = vec[expr]()        if mode == "recv" {
             if recv_args.len() == 0 {
-                return result::err(self.error_here("select recv requires at least one channel"))
+                return self.error_here("select recv requires at least one channel")
             }
             callee_name = "select_recv"
             int ri = 0            for ri < recv_args.len() {
@@ -625,7 +625,7 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
             }
         } else {
             if send_args.len() < 2 || (send_args.len() % 2) != 0 {
-                return result::err(self.error_here("select send requires channel/value pairs"))
+                return self.error_here("select send requires channel/value pairs")
             }
             callee_name = "select_send"
             int si = 0            for si < send_args.len() {
@@ -639,7 +639,7 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
                 callee_name = "select_send_default"
             }
         }
-        result::ok(build_call_expr(callee_name, args))
+        build_call_expr(callee_name, args)
     }
 
 func (parser* self) parse_switch_expr() (expr, parse_error) {
@@ -803,7 +803,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
                 args: vec[pattern](),
             }))
         }
-        result::ok(pattern::name(name_pattern { name: path }))
+        pattern::name(name_pattern { name: path })
     }
 
 func (parser* self) parse_binary_expr(int min_precedence) (expr, parse_error) {
@@ -820,7 +820,7 @@ func (parser* self) parse_binary_expr(int min_precedence) (expr, parse_error) {
                 inferred_type: option::none,
             })
         }
-        result::ok(expr)
+        expr
     }
 
 func (parser* self) parse_unary_expr() (expr, parse_error) {
@@ -885,7 +885,7 @@ func (parser* self) parse_call_expr() (expr, parse_error) {
             }
             break
         }
-        result::ok(expr)
+        expr
     }
 
 func (parser* self) parse_primary_expr() (expr, parse_error) {
@@ -1017,7 +1017,7 @@ func (parser* self) parse_use_path() (string, parse_error) {
             }
             parts.push(self.expect_ident()?)
         }
-        result::ok(join_strings(parts, "."))
+        join_strings(parts, ".")
     }
 
 func (parser* self) parse_path() (string, parse_error) {
@@ -1034,7 +1034,7 @@ func (parser* self) parse_path() (string, parse_error) {
             last := parts.pop().unwrap()
             parts.push(last + self.parse_bracket_group()?)
         }
-        result::ok(join_strings(parts, "."))
+        join_strings(parts, ".")
     }
 
 func (parser* self) parse_type_text(vec[string] stop_values) (string, parse_error) {
@@ -1060,7 +1060,7 @@ func (parser* self) parse_type_text(vec[string] stop_values) (string, parse_erro
             }
             parts.push(self.advance()?.value)
         }
-        result::ok(normalize_type_text(join_strings(parts, " ")))
+        normalize_type_text(join_strings(parts, " "))
     }
 
 func (parser* self) parse_bracket_group() (string, parse_error) {
@@ -1151,22 +1151,22 @@ func (parser* self) expect_keyword(string value) (token, parse_error) {
         token token = self.peek()?        if token.kind == token_kind::keyword && token.value == value {
             return self.advance(
         }
-        result::err(parse_error {
+        parse_error {
             message: "expected keyword " + value,
             line: token.line,
             column: token.column,
-        })
+        }
     }
 
 func (parser* self) expect_symbol(string value) (token, parse_error) {
         token token = self.peek()?        if token.kind == token_kind::symbol && token.value == value {
             return self.advance(
         }
-        result::err(parse_error {
+        parse_error {
             message: "expected symbol " + value,
             line: token.line,
             column: token.column,
-        })
+        }
     }
 
 func (parser* self) expect_ident() (string, parse_error) {
@@ -1178,11 +1178,11 @@ func (parser* self) expect_ident() (string, parse_error) {
             self.advance()?
             return token.value
         }
-        result::err(parse_error {
+        parse_error {
             message: "expected identifier",
             line: token.line,
             column: token.column,
-        })
+        }
     }
 
 func (parser* self) peek() (token, parse_error) {
@@ -1191,21 +1191,21 @@ func (parser* self) peek() (token, parse_error) {
 
 func (parser* self) peek_at(int offset) (token, parse_error) {
         if self.index >= len(self.tokens) {
-            return result::err(parse_error {
+            return parse_error {
                 message: "unexpected eof",
                 line: 0,
                 column: 0,
-            })
+            }
         }
         int target = self.index + offset        if target >= len(self.tokens) {
             target = len(self.tokens) - 1
         }
-        result::ok(self.tokens[target])
+        self.tokens[target]
     }
 
 func (parser* self) advance() (token, parse_error) {
         token token = self.peek()?        self.index = self.index + 1
-        result::ok(token)
+        token
     }
 
 func (parser* self) error_here(string message) parse_error {
@@ -1276,11 +1276,11 @@ func decode_receiver_type(vec[token] tokens) (named_type, parse_error) {
             type_name: normalize_type_text(join_token_values(slice_tokens(tokens, 1, len(tokens)))),
         })
     }
-    result::err(parse_error {
+    parse_error {
         message: "expected receiver in '(name Type)' or '(name: Type)' form",
         line: 0,
         column: 0,
-    })
+    }
 }
 
 func decode_named_type(vec[token] tokens) (named_type, parse_error) {
@@ -1293,11 +1293,11 @@ func decode_named_type(vec[token] tokens) (named_type, parse_error) {
         })
     }
     int split = find_decl_name_index(tokens)    if split <= 0 {
-        return result::err(parse_error {
+        return parse_error {
             message: "expected typed name",
             line: 0,
             column: 0,
-        })
+        }
     }
     result::ok(named_type {
         name: tokens[split].value,

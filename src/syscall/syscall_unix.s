@@ -81,43 +81,43 @@ func make_net_error(string msg) net_error {
 func socket(int domain, int typ, int proto) (int, net_error) {
     fd := __sys_socket(domain, typ, proto)
     if fd < 0 {
-        result::err(make_net_error("socket"))
+        make_net_error("socket")
     } else {
-        result::ok(fd)
+        fd
     }
 }
 
 func bind(int sockfd, string ip, int port, int family) ((), net_error) {
     r := __sys_bind(sockfd, ip, port, family)
     if r < 0 {
-        result::err(make_net_error("bind"))
+        make_net_error("bind")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func listen(int sockfd, int backlog) ((), net_error) {
     r := __sys_listen(sockfd, backlog)
     if r < 0 {
-        result::err(make_net_error("listen"))
+        make_net_error("listen")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func accept(int sockfd) (int, net_error) {
     newfd := __sys_accept(sockfd)
     if newfd < 0 {
-        result::err(make_net_error("accept"))
+        make_net_error("accept")
     } else {
-        result::ok(newfd)
+        newfd
     }
 }
 
 func accept_addr(int sockfd) (accept_result, net_error) {
     newfd := __sys_accept(sockfd)
     if newfd < 0 {
-        result::err(make_net_error("accept"))
+        make_net_error("accept")
     } else {
         result::ok(accept_result {
             fd: newfd,
@@ -144,27 +144,27 @@ func peer_port(int fd) int { __sys_peer_port(fd) }
 func connect(int sockfd, string ip, int port, int family) ((), net_error) {
     r := __sys_connect(sockfd, ip, port, family)
     if r < 0 {
-        result::err(make_net_error("connect"))
+        make_net_error("connect")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func connect_deadline(int sockfd, string host, int port, int family, int timeout_ms) ((), net_error) {
     r := __sys_connect_deadline(sockfd, host, port, family, timeout_ms)
     if r < 0 {
-        result::err(make_net_error("connect"))
+        make_net_error("connect")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func resolve_ip(string host, int family) (vec[string], net_error) {
     addresses := __sys_resolve_ip(host, family)
     if len(addresses) == 0 && __sys_errno() != 0 {
-        result::err(make_net_error("resolve"))
+        make_net_error("resolve")
     } else {
-        result::ok(addresses)
+        addresses
     }
 }
 
@@ -173,30 +173,30 @@ func read_string(int fd, int max_bytes) (string, net_error) {
     if data == "" {
         code := __sys_errno()
         if code == 0 {
-            result::ok("")
+            ""
         } else {
-            result::err(net_error { message: "read: " + __sys_strerror(code), errno_code: code })
+            net_error { message: "read: " + __sys_strerror(code), errno_code: code }
         }
     } else {
-        result::ok(data)
+        data
     }
 }
 
 func write_string(int fd, string data) (int, net_error) {
     n := __sys_write_string(fd, data)
     if n < 0 {
-        result::err(make_net_error("write"))
+        make_net_error("write")
     } else {
-        result::ok(n)
+        n
     }
 }
 
 func sendto_string(int fd, string data, string ip, int port, int family) (int, net_error) {
     n := __sys_sendto_string(fd, data, ip, port, family)
     if n < 0 {
-        result::err(make_net_error("sendto"))
+        make_net_error("sendto")
     } else {
-        result::ok(n)
+        n
     }
 }
 
@@ -210,7 +210,7 @@ func recvfrom_string(int fd, int max_bytes) (recvfrom_result, net_error) {
     data := __sys_recvfrom_string(fd, max_bytes)
     code := __sys_errno()
     if data == "" && code != 0 {
-        result::err(net_error { message: "recvfrom: " + __sys_strerror(code), errno_code: code })
+        net_error { message: "recvfrom: " + __sys_strerror(code), errno_code: code }
     } else {
         result::ok(recvfrom_result {
             data: data,
@@ -222,123 +222,123 @@ func recvfrom_string(int fd, int max_bytes) (recvfrom_result, net_error) {
 
 func sendfile(int out_fd, int in_fd, int offset, int count) (int, net_error) {
     n := __sys_sendfile(out_fd, in_fd, offset, count)
-    if n < 0 { result::err(make_net_error("sendfile")) } else { result::ok(n) }
+    if n < 0 { make_net_error("sendfile") } else { n }
 }
 
 func splice(int in_fd, int out_fd, int count) (int, net_error) {
     n := __sys_splice(in_fd, out_fd, count)
-    if n < 0 { result::err(make_net_error("splice")) } else { result::ok(n) }
+    if n < 0 { make_net_error("splice") } else { n }
 }
 
 func interface_addresses() (vec[string], net_error) {
     addresses := __sys_interface_addresses()
     if len(addresses) == 0 && __sys_errno() != 0 {
-        result::err(make_net_error("getifaddrs"))
+        make_net_error("getifaddrs")
     } else {
-        result::ok(addresses)
+        addresses
     }
 }
 
 func close(int fd) ((), net_error) {
     r := __sys_close(fd)
     if r < 0 {
-        result::err(make_net_error("close"))
+        make_net_error("close")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func set_nonblocking(int fd) ((), net_error) {
     flags := __sys_fcntl(fd, f_getfl, 0)
     if flags < 0 {
-        return result::err(make_net_error("fcntl F_GETFL"))
+        return make_net_error("fcntl F_GETFL")
     }
     r := __sys_fcntl(fd, f_setfl, flags | o_nonblock)
     if r < 0 {
-        result::err(make_net_error("fcntl F_SETFL"))
+        make_net_error("fcntl F_SETFL")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func set_reuseaddr(int fd) ((), net_error) {
     r := __sys_setsockopt(fd, sol_socket, so_reuseaddr, 1)
     if r < 0 {
-        result::err(make_net_error("setsockopt SO_REUSEADDR"))
+        make_net_error("setsockopt SO_REUSEADDR")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func set_tcp_nodelay(int fd) ((), net_error) {
     r := __sys_setsockopt(fd, ipproto_tcp, tcp_nodelay, 1)
     if r < 0 {
-        result::err(make_net_error("setsockopt TCP_NODELAY"))
+        make_net_error("setsockopt TCP_NODELAY")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func set_deadline_ms(int fd, int read_timeout_ms, int write_timeout_ms) ((), net_error) {
     r := __sys_set_deadline_ms(fd, read_timeout_ms, write_timeout_ms)
     if r < 0 {
-        result::err(make_net_error("set deadline"))
+        make_net_error("set deadline")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func shutdown(int fd, int how) ((), net_error) {
     r := __sys_shutdown(fd, how)
     if r < 0 {
-        result::err(make_net_error("shutdown"))
+        make_net_error("shutdown")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func poll_ready(int fd, int events, int timeout_ms) (int, net_error) {
     r := __sys_poll_ready(fd, events, timeout_ms)
     if r < 0 {
-        result::err(make_net_error("poll"))
+        make_net_error("poll")
     } else {
-        result::ok(r)
+        r
     }
 }
 
 func poller_create() (int, net_error) {
     pfd := __sys_poller_create()
     if pfd < 0 {
-        result::err(make_net_error("poller_create"))
+        make_net_error("poller_create")
     } else {
-        result::ok(pfd)
+        pfd
     }
 }
 
 func poller_add(int poller_fd, int fd, int events) ((), net_error) {
     r := __sys_poller_add(poller_fd, fd, events)
     if r < 0 {
-        result::err(make_net_error("poller_add"))
+        make_net_error("poller_add")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func poller_del(int poller_fd, int fd) ((), net_error) {
     r := __sys_poller_del(poller_fd, fd)
     if r < 0 {
-        result::err(make_net_error("poller_del"))
+        make_net_error("poller_del")
     } else {
-        result::ok(())
+        ()
     }
 }
 
 func poller_wait(int poller_fd, int max, int timeout_ms) (vec[int], net_error) {
     ready := __sys_poller_wait(poller_fd, max, timeout_ms)
     if __sys_errno() != 0 {
-        result::err(make_net_error("poller_wait"))
+        make_net_error("poller_wait")
     } else {
-        result::ok(ready)
+        ready
     }
 }
 
