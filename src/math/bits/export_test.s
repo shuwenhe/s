@@ -1,7 +1,7 @@
-package src.math.bits
+package src.switch.bits
 
 func export_test_unit_name() string {
-    "src/math/bits/export_test"
+    "src/switch/bits/export_test"
 }
 
 func export_test_unit_ready() int {

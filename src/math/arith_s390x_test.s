@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func arith_s390x_test_unit_name() string {
-    "src/math/arith_s390x_test"
+    "src/switch/arith_s390x_test"
 }
 
 func arith_s390x_test_unit_ready() int {

@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func accuracy_string_unit_name() string {
-    "src/math/big/accuracy_string"
+    "src/switch/big/accuracy_string"
 }
 
 func accuracy_string_unit_ready() int {

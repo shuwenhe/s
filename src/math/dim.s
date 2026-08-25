@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func dim_unit_name() string {
-    "src/math/dim"
+    "src/switch/dim"
 }
 
 func dim_unit_ready() int {

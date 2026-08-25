@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func decimal_test_unit_name() string {
-    "src/math/big/decimal_test"
+    "src/switch/big/decimal_test"
 }
 
 func decimal_test_unit_ready() int {

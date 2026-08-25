@@ -1,7 +1,7 @@
-package src.math.bits
+package src.switch.bits
 
 func bits_errors_unit_name() string {
-    "src/math/bits/bits_errors"
+    "src/switch/bits/bits_errors"
 }
 
 func bits_errors_unit_ready() int {

@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func arith_amd64_unit_name() string {
-    "src/math/big/arith_amd64"
+    "src/switch/big/arith_amd64"
 }
 
 func arith_amd64_unit_ready() int {

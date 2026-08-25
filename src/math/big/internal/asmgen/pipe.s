@@ -1,7 +1,7 @@
-package src.math.big.internal.asmgen
+package src.switch.big.internal.asmgen
 
 func pipe_unit_name() string {
-    "src/math/big/internal/asmgen/pipe"
+    "src/switch/big/internal/asmgen/pipe"
 }
 
 func pipe_unit_ready() int {

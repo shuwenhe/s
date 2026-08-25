@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func exp2_noasm_unit_name() string {
-    "src/math/exp2_noasm"
+    "src/switch/exp2_noasm"
 }
 
 func exp2_noasm_unit_ready() int {

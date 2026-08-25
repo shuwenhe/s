@@ -1,7 +1,7 @@
-package src.math.bits
+package src.switch.bits
 
 func make_examples_unit_name() string {
-    "src/math/bits/make_examples"
+    "src/switch/bits/make_examples"
 }
 
 func make_examples_unit_ready() int {

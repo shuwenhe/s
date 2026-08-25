@@ -62,7 +62,7 @@ func (gen: &X86_64Gen) get_location(string var) string {
 }
 
 func (gen: &X86_64Gen) translate_instruction(Instruction instr) error {
-    match instr.opcode {
+    switch instr.opcode {
         case "FUNC_BEGIN":
             gen.emit("push %rbp")
             gen.emit("mov %rsp, %rbp")

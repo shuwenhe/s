@@ -139,7 +139,7 @@ func generate_x86_64(IRProgram program) (string, error) {
 }
 
 func generate_instruction(Instruction instr) (string, error) {
-    match instr.opcode {
+    switch instr.opcode {
         case "MOV":
             return "    mov " + instr.src1 + ", " + instr.dest + "\n", nil
         case "ADD":

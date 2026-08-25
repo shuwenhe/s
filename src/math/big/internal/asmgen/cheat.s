@@ -1,7 +1,7 @@
-package src.math.big.internal.asmgen
+package src.switch.big.internal.asmgen
 
 func cheat_unit_name() string {
-    "src/math/big/internal/asmgen/cheat"
+    "src/switch/big/internal/asmgen/cheat"
 }
 
 func cheat_unit_ready() int {

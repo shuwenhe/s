@@ -1,7 +1,7 @@
-package src.math.bits
+package src.switch.bits
 
 func bits_tables_unit_name() string {
-    "src/math/bits/bits_tables"
+    "src/switch/bits/bits_tables"
 }
 
 func bits_tables_unit_ready() int {

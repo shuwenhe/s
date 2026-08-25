@@ -1,7 +1,7 @@
-package src.math.cmplx
+package src.switch.cmplx
 
 func phase_unit_name() string {
-    "src/math/cmplx/phase"
+    "src/switch/cmplx/phase"
 }
 
 func phase_unit_ready() int {
