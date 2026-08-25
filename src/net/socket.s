@@ -128,13 +128,13 @@ func dial_tcp_timeout(string host, int port, int timeout_ms) (tcp_conn, net_erro
             return wrap_sc_err(e)
         },
     }
-    result::ok(tcp_conn {
+    tcp_conn {
         fd: fd,
         remote_ip: sc.peer_ip(fd),
         remote_port: sc.peer_port(fd),
         read_timeout_ms: 0,
         write_timeout_ms: 0,
-    })
+    }
 }
 
 func dial_tcp6_timeout(string host, int port, int timeout_ms) (tcp_conn, net_error) {
@@ -150,13 +150,13 @@ func dial_tcp6_timeout(string host, int port, int timeout_ms) (tcp_conn, net_err
             return wrap_sc_err(e)
         },
     }
-    result::ok(tcp_conn {
+    tcp_conn {
         fd: fd,
         remote_ip: sc.peer_ip(fd),
         remote_port: sc.peer_port(fd),
         read_timeout_ms: 0,
         write_timeout_ms: 0,
-    })
+    }
 }
 
 func resolve_host(string host) (vec[string], net_error) {
@@ -313,13 +313,13 @@ func listen_udp(string host, int port) (udp_conn, net_error) {
             return wrap_sc_err(e)
         },
     }
-    result::ok(udp_conn {
+    udp_conn {
         fd: fd,
         local_ip: sc.local_ip(fd),
         local_port: sc.local_port(fd),
         read_timeout_ms: 0,
         write_timeout_ms: 0,
-    })
+    }
 }
 
 func (udp_conn self) read(int max_bytes) (string, net_error) {

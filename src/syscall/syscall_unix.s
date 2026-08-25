@@ -119,11 +119,11 @@ func accept_addr(int sockfd) (accept_result, net_error) {
     if newfd < 0 {
         make_net_error("accept")
     } else {
-        result::ok(accept_result {
+        accept_result {
             fd: newfd,
             ip: __sys_peer_ip(newfd),
             port: __sys_peer_port(newfd),
-        })
+        }
     }
 }
 
@@ -212,11 +212,11 @@ func recvfrom_string(int fd, int max_bytes) (recvfrom_result, net_error) {
     if data == "" && code != 0 {
         net_error { message: "recvfrom: " + __sys_strerror(code), errno_code: code }
     } else {
-        result::ok(recvfrom_result {
+        recvfrom_result {
             data: data,
             ip: __sys_last_recvfrom_ip(),
             port: __sys_last_recvfrom_port(),
-        })
+        }
     }
 }
 

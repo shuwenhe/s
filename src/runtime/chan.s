@@ -215,7 +215,7 @@ func chan_close(RawChan ch) ((), string) {
     ch.mu.lock()
     if ch.state == CHAN_CLOSED {
         ch.mu.unlock()
-        return result::err("close of closed channel"
+        return "close of closed channel"
     }
     ch.state = CHAN_CLOSED
     for !ch.receivers.is_empty() {

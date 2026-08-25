@@ -4,14 +4,14 @@ use std.fs.read_to_string
 func map_file_read(string path, int offset, int length) (string, string) {
     full := read_to_string(path)
     if full.is_err() {
-        return result::err("read file failed"
+        return "read file failed"
     }
     text := full.unwrap()
     if offset < 0 || length < 0 {
-        return result::err("invalid map range"
+        return "invalid map range"
     }
     if offset > len(text) {
-        return result::err("offset out of range"
+        return "offset out of range"
     }
     end := offset + length
     if end > len(text) {
