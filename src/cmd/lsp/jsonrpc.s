@@ -32,8 +32,8 @@ func parse_jsonrpc_message(raw string) (jsonrpc_request, string) {
             switch id_str {
                 option::some(id_val) : {
                     switch std::parse_int(id_val) {
-                        result::ok(id_num) : id_opt = option::some(id_num),
-                        result::err(_) : {}
+                        id_num : id_opt = option::some(id_num),
+                        _ : {}
                     }
                 },
                 option::none() : {}
@@ -47,7 +47,7 @@ func parse_jsonrpc_message(raw string) (jsonrpc_request, string) {
             })
         },
         option::none() : {
-            result::err("No method field in request")
+            "No method field in request"
         }
     }
 }

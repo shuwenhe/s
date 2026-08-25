@@ -836,42 +836,42 @@ func validate_ssa_abi_contracts(string arch, string ssa_text) ((), backend_error
     reloads := parse_number_after(ssa_text, "reloads=")
     pressure := parse_number_after(ssa_text, "call_pressure=")
     if spills > 0 && reloads >= 0 && reloads < spills {
-        return result::err(backend_error { message: "backend error: reload count lower than spill count" })
+        return backend_error { message: "backend error: reload count lower than spill count" }
     }
     if pressure > 0 {
         budget := abi_caller_saved_count(arch) * 4
         if budget > 0 && pressure > budget {
-            return result::err(backend_error { message: "backend error: call pressure exceeds ABI budget" })
+            return backend_error { message: "backend error: call pressure exceeds ABI budget" }
         }
     }
     if has_substring(ssa_text, "tailcall") {
         if arch == "wasm" {
-            return result::err(backend_error { message: "backend error: tailcall is not legal on wasm path" })
+            return backend_error { message: "backend error: tailcall is not legal on wasm path" }
         }
         if spills > 0 {
-            return result::err(backend_error { message: "backend error: tailcall with spill slots is not legal" })
+            return backend_error { message: "backend error: tailcall with spill slots is not legal" }
         }
     }
     preserve := validate_callsite_preservation(ssa_text)
     if preserve.is_err() {
         return preserve
     }
-    result::ok(())
+    ()
 }
 
 func validate_callsite_preservation(string ssa_text) ((), backend_error) {
     clobber := parse_number_after(ssa_text, "callee_saved_clobber=")
     if clobber > 0 {
-        return result::err(backend_error { message: "backend error: callee-saved registers clobbered at callsite" })
+        return backend_error { message: "backend error: callee-saved registers clobbered at callsite" }
     }
     restore_missing := parse_number_after(ssa_text, "caller_restore_missing=")
     if restore_missing > 0 {
-        return result::err(backend_error { message: "backend error: caller restore is missing at callsite" })
+        return backend_error { message: "backend error: caller restore is missing at callsite" }
     }
     if has_substring(ssa_text, "call_preserve=fail") {
-        return result::err(backend_error { message: "backend error: callsite preserve contract failed" })
+        return backend_error { message: "backend error: callsite preserve contract failed" }
     }
-    result::ok(())
+    ()
 }
 
 func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
@@ -888,15 +888,15 @@ func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
 
 func validate_cfi_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "cfi version=1") {
-        return result::err(backend_error { message: "backend error: cfi header missing" })
+        return backend_error { message: "backend error: cfi header missing" }
     }
     if !has_substring(payload, ".cfi_startproc") || !has_substring(payload, ".cfi_endproc") {
-        return result::err(backend_error { message: "backend error: cfi proc markers missing" })
+        return backend_error { message: "backend error: cfi proc markers missing" }
     }
     if !has_substring(payload, ".cfi_def_cfa") {
-        return result::err(backend_error { message: "backend error: cfi cfa rule missing" })
+        return backend_error { message: "backend error: cfi cfa rule missing" }
     }
-    result::ok(())
+    ()
 }
 
 func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int inlined) int {
@@ -967,11 +967,11 @@ func validate_wasi_binary_artifact(string output) ((), backend_error) {
     probe.push(build_wasm_binary_probe_plan(output))
     run := run_process(probe)
     if run.is_err() {
-        return result::err(backend_error {
+        return backend_error {
             message: "backend error: wasi binary probe failed (requires wasm-objdump and expected imports/exports): " + run.unwrap_err().message,
-        })
+        }
     }
-    result::ok(())
+    ()
 }
 
 func build_wasm_object_chain(string temp_dir, string output, vec[write_op] writes, int exit_code) ((), backend_error) {
@@ -984,7 +984,7 @@ func build_wasm_object_chain(string temp_dir, string output, vec[write_op] write
     }
     write_result := write_text_file(c_path, c_source)
     if write_result.is_err() {
-        return result::err(backend_error { message: "failed to write wasm c source: " + write_result.unwrap_err().message })
+        return backend_error { message: "failed to write wasm c source: " + write_result.unwrap_err().message }
     }
     cc_argv := vec[string]()
     cc_argv.push("clang")
@@ -995,9 +995,9 @@ func build_wasm_object_chain(string temp_dir, string output, vec[write_op] write
     cc_argv.push(obj_path)
     cc_result := run_process(cc_argv)
     if cc_result.is_err() {
-        return result::err(backend_error {
+        return backend_error {
             message: "wasm object compile failed: " + cc_result.unwrap_err().message + " | plan: " + build_wasm_toolchain_plan(c_path, obj_path, output),
-        })
+        }
     }
     ld_argv := vec[string]()
     ld_argv.push("wasm-ld")
@@ -1009,30 +1009,30 @@ func build_wasm_object_chain(string temp_dir, string output, vec[write_op] write
     ld_argv.push(output)
     ld_result := run_process(ld_argv)
     if ld_result.is_err() {
-        return result::err(backend_error {
+        return backend_error {
             message: "wasm link failed: " + ld_result.unwrap_err().message + " | plan: " + build_wasm_toolchain_plan(c_path, obj_path, output),
-        })
+        }
     }
-    result::ok(())
+    ()
 }
 
 func validate_wasi_contract_source(string source) ((), backend_error) {
     if !has_substring(source, "__import_module__(\"wasi_snapshot_preview1\")") {
-        return result::err(backend_error { message: "backend error: wasi import module annotation missing" })
+        return backend_error { message: "backend error: wasi import module annotation missing" }
     }
     if !has_substring(source, "fd_write") {
-        return result::err(backend_error { message: "backend error: wasi fd_write import missing" })
+        return backend_error { message: "backend error: wasi fd_write import missing" }
     }
     if !has_substring(source, "proc_exit") {
-        return result::err(backend_error { message: "backend error: wasi proc_exit import missing" })
+        return backend_error { message: "backend error: wasi proc_exit import missing" }
     }
     if !has_substring(source, "void _start(void)") {
-        return result::err(backend_error { message: "backend error: wasi _start entry missing" })
+        return backend_error { message: "backend error: wasi _start entry missing" }
     }
     if !has_substring(source, "proc_exit(s_main())") {
-        return result::err(backend_error { message: "backend error: wasi startup contract missing proc_exit(s_main())" })
+        return backend_error { message: "backend error: wasi startup contract missing proc_exit(s_main())" }
     }
-    result::ok(())
+    ()
 }
 
 func emit_wasm_c_source(vec[write_op] writes, int exit_code) string {
@@ -1108,21 +1108,21 @@ func abi_cross_arch_consistency_status(string arch, int spills, int functions) s
 
 func validate_abi_machine_matrix(string payload) ((), backend_error) {
     if !has_substring(payload, "abi-matrix version=1") {
-        return result::err(backend_error { message: "backend error: ABI matrix header missing" })
+        return backend_error { message: "backend error: ABI matrix header missing" }
     }
     if !has_substring(payload, "axis caller_saved=") {
-        return result::err(backend_error { message: "backend error: ABI matrix caller/callee axis missing" })
+        return backend_error { message: "backend error: ABI matrix caller/callee axis missing" }
     }
     if !has_substring(payload, "matrix callseq=") {
-        return result::err(backend_error { message: "backend error: ABI matrix call sequence axis missing" })
+        return backend_error { message: "backend error: ABI matrix call sequence axis missing" }
     }
     if !has_substring(payload, "matrix ret=") {
-        return result::err(backend_error { message: "backend error: ABI matrix return axis missing" }
+        return backend_error { message: "backend error: ABI matrix return axis missing" }
     }
     if !has_substring(payload, "cross_arch_consistency=") {
-        return result::err(backend_error { message: "backend error: ABI matrix cross-arch consistency missing" })
+        return backend_error { message: "backend error: ABI matrix cross-arch consistency missing" }
     }
-    result::ok(())
+    ()
 }
 
 func build_toolchain_compat_artifact(source_file source, string arch) string {
@@ -1141,33 +1141,33 @@ func build_toolchain_compat_artifact(source_file source, string arch) string {
 
 func validate_toolchain_compat_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "toolchain-compat version=1") {
-        return result::err(backend_error { message: "backend error: toolchain compatibility header missing" })
+        return backend_error { message: "backend error: toolchain compatibility header missing" }
     }
     if !has_substring(payload, "module=") {
-        return result::err(backend_error { message: "backend error: toolchain compatibility module field missing" })
+        return backend_error { message: "backend error: toolchain compatibility module field missing" }
     }
     if !has_substring(payload, "linker=") {
-        return result::err(backend_error { message: "backend error: toolchain compatibility linker field missing" })
+        return backend_error { message: "backend error: toolchain compatibility linker field missing" }
     }
     if !has_substring(payload, "go_cmd_equiv=") {
-        return result::err(backend_error { message: "backend error: toolchain compatibility go command equivalence field missing" })
+        return backend_error { message: "backend error: toolchain compatibility go command equivalence field missing" }
     }
     if !has_substring(payload, "matrix ") {
-        return result::err(backend_error { message: "backend error: toolchain compatibility matrix missing" })
+        return backend_error { message: "backend error: toolchain compatibility matrix missing" }
     }
     if !has_substring(payload, "gate coverage=") {
-        return result::err(backend_error { message: "backend error: toolchain compatibility gate missing" })
+        return backend_error { message: "backend error: toolchain compatibility gate missing" }
     }
     if !has_substring(payload, "interop cgo=") {
-        return result::err(backend_error { message: "backend error: toolchain compatibility interop roadmap missing" })
+        return backend_error { message: "backend error: toolchain compatibility interop roadmap missing" }
     }
     if !has_substring(payload, "go_asm syntax=plan9") {
-        return result::err(backend_error { message: "backend error: toolchain compatibility go asm marker missing" })
+        return backend_error { message: "backend error: toolchain compatibility go asm marker missing" }
     }
     if !has_substring(payload, "go_equiv ") {
-        return result::err(backend_error { message: "backend error: toolchain compatibility go equivalence marker missing" })
+        return backend_error { message: "backend error: toolchain compatibility go equivalence marker missing" }
     }
-    result::ok(())
+    ()
 }
 
 func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
@@ -1187,18 +1187,18 @@ func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
 
 func validate_go_asm_bridge_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "go-asm version=1") {
-        return result::err(backend_error { message: "backend error: go asm artifact header missing" })
+        return backend_error { message: "backend error: go asm artifact header missing" }
     }
     if !has_substring(payload, "syntax=plan9") {
-        return result::err(backend_error { message: "backend error: go asm artifact syntax marker missing" })
+        return backend_error { message: "backend error: go asm artifact syntax marker missing" }
     }
     if !has_substring(payload, "status=ok") {
-        return result::err(backend_error { message: "backend error: go asm artifact status is not ok" })
+        return backend_error { message: "backend error: go asm artifact status is not ok" }
     }
     if !has_substring(payload, "gas_preview=") {
-        return result::err(backend_error { message: "backend error: go asm artifact preview missing" })
+        return backend_error { message: "backend error: go asm artifact preview missing" }
     }
-    result::ok(())
+    ()
 }
 
 func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backend_error) {
@@ -1215,7 +1215,7 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
         if starts_with_local(cleaned, "TEXT ") {
             symbol_result := parse_go_text_symbol(cleaned)
             if symbol_result.is_err() {
-                return result::err(symbol_result.unwrap_err())
+                return symbol_result.unwrap_err()
             }
             symbol := symbol_result.unwrap()
             saw_text_directive = true
@@ -1229,14 +1229,14 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
         if ends_with_local(cleaned, ":") {
             label := trim_spaces(slice(cleaned, 0, len(cleaned) - 1))
             if label == "" {
-                return result::err(backend_error { message: "go asm translation error: empty label" })
+                return backend_error { message: "go asm translation error: empty label" }
             }
             output_lines.push(normalize_go_symbol(label) + ":")
             i = i + 1
             continue
         }
         if !saw_text_directive {
-            return result::err(backend_error { message: "go asm translation error: missing TEXT directive" })
+            return backend_error { message: "go asm translation error: missing TEXT directive" }
         }
         if starts_with_local(cleaned, "RET") {
             output_lines.push("    ret")
@@ -1245,32 +1245,32 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
         }
         instr_result := translate_go_instruction_line(cleaned, arch)
         if instr_result.is_err() {
-            return result::err(instr_result.unwrap_err())
+            return instr_result.unwrap_err()
         }
         output_lines.push(instr_result.unwrap())
         i = i + 1
     }
     if !saw_text_directive {
-        return result::err(backend_error { message: "go asm translation error: no TEXT directive found" })
+        return backend_error { message: "go asm translation error: no TEXT directive found" }
     }
-    result::ok(join_lines(output_lines))
+    join_lines(output_lines)
 }
 
 func parse_go_text_symbol(string line) (string, backend_error) {
     after := trim_spaces(slice(line, len("TEXT "), len(line)))
     comma := index_of(after, ",")
     if comma < 0 {
-        return result::err(backend_error { message: "go asm translation error: malformed TEXT directive" })
+        return backend_error { message: "go asm translation error: malformed TEXT directive" }
     }
     symbol_ref := trim_spaces(slice(after, 0, comma))
     if !ends_with_local(symbol_ref, "(SB)") {
-        return result::err(backend_error { message: "go asm translation error: TEXT symbol must use (SB)" })
+        return backend_error { message: "go asm translation error: TEXT symbol must use (SB)" }
     }
     symbol := normalize_go_symbol(slice(symbol_ref, 0, len(symbol_ref) - len("(SB)")))
     if symbol == "" {
-        return result::err(backend_error { message: "go asm translation error: empty TEXT symbol" })
+        return backend_error { message: "go asm translation error: empty TEXT symbol" }
     }
-    result::ok(symbol)
+    symbol
 }
 
 func translate_go_instruction_line(string line, string arch) (string, backend_error) {
@@ -1283,7 +1283,7 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
     }
     gas_op := map_go_opcode(op)
     if gas_op == "" {
-        return result::err(backend_error { message: "go asm translation error: unsupported opcode " + op })
+        return backend_error { message: "go asm translation error: unsupported opcode " + op }
     }
     if args_text == "" {
         return "    " + gas_op
@@ -1292,7 +1292,7 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
     if comma < 0 {
         one := convert_go_operand_to_gas(args_text, arch)
         if one.is_err() {
-            return result::err(one.unwrap_err())
+            return one.unwrap_err()
         }
         return "    " + gas_op + " " + one.unwrap())
     }
@@ -1300,13 +1300,13 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
     right_raw := trim_spaces(slice(args_text, comma + 1, len(args_text)))
     left := convert_go_operand_to_gas(left_raw, arch)
     if left.is_err() {
-        return result::err(left.unwrap_err())
+        return left.unwrap_err()
     }
     right := convert_go_operand_to_gas(right_raw, arch)
     if right.is_err() {
-        return result::err(right.unwrap_err())
+        return right.unwrap_err()
     }
-    result::ok("    " + gas_op + " " + left.unwrap() + ", " + right.unwrap())
+    "    " + gas_op + " " + left.unwrap() + ", " + right.unwrap()
 }
 
 func map_go_opcode(string op) string {
@@ -1385,19 +1385,19 @@ func map_go_opcode(string op) string {
 func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) {
     operand := trim_spaces(raw)
     if operand == "" {
-        return result::err(backend_error { message: "go asm translation error: empty operand" })
+        return backend_error { message: "go asm translation error: empty operand" }
     }
     if starts_with_local(operand, "$") {
         imm := slice(operand, 1, len(operand))
         if ends_with_local(imm, "(SB)") {
-            return "$" + normalize_go_symbol(slice(imm, 0, len(imm) - len("(SB)"))))
+            return "$" + normalize_go_symbol(slice(imm, 0, len(imm) - len("(SB)")))
         }
         return "$" + normalize_go_symbol(imm))
     }
     if ends_with_local(operand, "(SB)") {
         sym := normalize_go_symbol(slice(operand, 0, len(operand) - len("(SB)")))
         if sym == "" {
-            return result::err(backend_error { message: "go asm translation error: empty symbol operand" })
+            return backend_error { message: "go asm translation error: empty symbol operand" }
         }
         return sym
     }
@@ -1409,7 +1409,7 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
         }
         mapped_base := map_go_register(base, arch)
         if mapped_base == "" {
-            return result::err(backend_error { message: "go asm translation error: unsupported base register " + base })
+            return backend_error { message: "go asm translation error: unsupported base register " + base }
         }
         disp := parse_go_disp(slice(operand, 0, paren))
         return disp + "(" + mapped_base + ")"
@@ -1421,7 +1421,7 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
     if starts_with_local(operand, ".") {
         return normalize_go_symbol(operand))
     }
-    result::ok(normalize_go_symbol(operand))
+    normalize_go_symbol(operand)
 }
 
 func map_go_register(string reg, string arch) string {
@@ -2188,57 +2188,57 @@ func build_gc_metadata_artifact(string arch, source_file source, string ssa_text
 
 func validate_dwarf_consumability(string dwarf_payload, string ssa_text) ((), backend_error) {
     if !has_substring(dwarf_payload, "section .debug_info") {
-        return result::err(backend_error { message: "backend error: dwarf consumability gate missing .debug_info" })
+        return backend_error { message: "backend error: dwarf consumability gate missing .debug_info" }
     }
     if !has_substring(dwarf_payload, "section .debug_line") {
-        return result::err(backend_error { message: "backend error: dwarf consumability gate missing .debug_line" })
+        return backend_error { message: "backend error: dwarf consumability gate missing .debug_line" }
     }
     if !has_substring(dwarf_payload, "section .debug_loc") {
-        return result::err(backend_error { message: "backend error: dwarf consumability gate missing .debug_loc" })
+        return backend_error { message: "backend error: dwarf consumability gate missing .debug_loc" }
     }
     if !has_substring(dwarf_payload, "section .debug_ranges") {
-        return result::err(backend_error { message: "backend error: dwarf consumability gate missing .debug_ranges" })
+        return backend_error { message: "backend error: dwarf consumability gate missing .debug_ranges" }
     }
     if !has_substring(dwarf_payload, "gate dwarf_consumable=") {
-        return result::err(backend_error { message: "backend error: dwarf consumability gate marker missing" })
+        return backend_error { message: "backend error: dwarf consumability gate marker missing" }
     }
     if !has_substring(dwarf_payload, "policy debug_budget_mode=") {
-        return result::err(backend_error { message: "backend error: dwarf budget policy missing" })
+        return backend_error { message: "backend error: dwarf budget policy missing" }
     }
     if !has_substring(dwarf_payload, "metric location_continuity=") {
-        return result::err(backend_error { message: "backend error: dwarf continuity metric missing" })
+        return backend_error { message: "backend error: dwarf continuity metric missing" }
     }
     budget := parse_number_after(ssa_text, "dbg_budget=")
     if budget >= 0 && budget < 15 {
-        return result::err(backend_error { message: "backend error: dwarf consumability budget too low" })
+        return backend_error { message: "backend error: dwarf consumability budget too low" }
     }
     if count_occurrences(dwarf_payload, "loc#") <= 0 {
-        return result::err(backend_error { message: "backend error: dwarf consumability has no variable locations" })
+        return backend_error { message: "backend error: dwarf consumability has no variable locations" }
     }
-    result::ok(())
+    ()
 }
 
 func validate_gc_contract_chain(string gc_payload, source_file source, string ssa_text) ((), backend_error) {
     if !has_substring(gc_payload, "gcmap version=1") {
-        return result::err(backend_error { message: "backend error: gc contract missing gcmap header" })
+        return backend_error { message: "backend error: gc contract missing gcmap header" }
     }
     if count_occurrences(gc_payload, " safepoints=") <= 0 {
-        return result::err(backend_error { message: "backend error: gc contract missing safepoints" })
+        return backend_error { message: "backend error: gc contract missing safepoints" }
     }
     if count_occurrences(gc_payload, " ptr_bitmap=") <= 0 {
-        return result::err(backend_error { message: "backend error: gc contract missing pointer bitmap" })
+        return backend_error { message: "backend error: gc contract missing pointer bitmap" }
     }
     if !has_substring(gc_payload, "fault_inject ") {
-        return result::err(backend_error { message: "backend error: gc contract missing fault injection profile" })
+        return backend_error { message: "backend error: gc contract missing fault injection profile" }
     }
     if !has_substring(gc_payload, "collector plan=go-like-mark-sweep") {
-        return result::err(backend_error { message: "backend error: gc contract collector plan missing" })
+        return backend_error { message: "backend error: gc contract collector plan missing" }
     }
     if !has_substring(gc_payload, "stress baseline=enabled") {
-        return result::err(backend_error { message: "backend error: gc contract missing stress baseline marker" })
+        return backend_error { message: "backend error: gc contract missing stress baseline marker" }
     }
     if !has_substring(gc_payload, "contract e2e_safepoint=") {
-        return result::err(backend_error { message: "backend error: gc contract end-to-end marker missing" })
+        return backend_error { message: "backend error: gc contract end-to-end marker missing" }
     }
     expected := function_item_count(source)
     got := count_occurrences(gc_payload, "\nfn ")
@@ -2246,13 +2246,13 @@ func validate_gc_contract_chain(string gc_payload, source_file source, string ss
         got = 1
     }
     if expected > 0 && got < expected {
-        return result::err(backend_error { message: "backend error: gc contract function coverage mismatch" })
+        return backend_error { message: "backend error: gc contract function coverage mismatch" }
     }
     proof_fail := parse_number_after(ssa_text, "proof_fail=")
     if proof_fail > 0 {
-        return result::err(backend_error { message: "backend error: gc contract blocked by failed SSA proofs" })
+        return backend_error { message: "backend error: gc contract blocked by failed SSA proofs" }
     }
-    result::ok(())
+    ()
 }
 
 func build_backend_perf_baseline_artifact(string arch, string ssa_text, string midend_report, string runtime_report) string {
@@ -2292,33 +2292,33 @@ func build_backend_perf_baseline_artifact(string arch, string ssa_text, string m
 
 func validate_backend_perf_baseline(string payload) ((), backend_error) {
     if !has_substring(payload, "perf-baseline version=1") {
-        return result::err(backend_error { message: "backend error: perf baseline header missing" })
+        return backend_error { message: "backend error: perf baseline header missing" }
     }
     if !has_substring(payload, "regression_gate ") {
-        return result::err(backend_error { message: "backend error: perf baseline regression gate missing" })
+        return backend_error { message: "backend error: perf baseline regression gate missing" }
     }
     if !has_substring(payload, "ssa spills=") {
-        return result::err(backend_error { message: "backend error: perf baseline SSA metrics missing" })
+        return backend_error { message: "backend error: perf baseline SSA metrics missing" }
     }
     if !has_substring(payload, "scheduler queue_policy=") {
-        return result::err(backend_error { message: "backend error: perf baseline scheduler metrics missing" })
+        return backend_error { message: "backend error: perf baseline scheduler metrics missing" }
     }
     if !has_substring(payload, "runtime_sched sroutine_scheduled=") {
-        return result::err(backend_error { message: "backend error: perf baseline runtime scheduler metrics missing" })
+        return backend_error { message: "backend error: perf baseline runtime scheduler metrics missing" }
     }
     if !has_substring(payload, "scheduler_counters select_default_fallbacks=") {
-        return result::err(backend_error { message: "backend error: perf baseline scheduler counter metrics missing" })
+        return backend_error { message: "backend error: perf baseline scheduler counter metrics missing" }
     }
     if !has_substring(payload, "runtime_gc cycles=") {
-        return result::err(backend_error { message: "backend error: perf baseline runtime gc metrics missing" })
+        return backend_error { message: "backend error: perf baseline runtime gc metrics missing" }
     }
     if !has_substring(payload, "regression_gate_long ") {
-        return result::err(backend_error { message: "backend error: perf baseline long regression gate missing" })
+        return backend_error { message: "backend error: perf baseline long regression gate missing" }
     }
     if !has_substring(payload, "regression_gate_arch ") {
-        return result::err(backend_error { message: "backend error: perf baseline arch gate missing" })
+        return backend_error { message: "backend error: perf baseline arch gate missing" }
     }
-    result::ok(())
+    ()
 }
 
 func build_midend_opt_artifact(string midend_report) string {
@@ -2349,30 +2349,30 @@ func build_midend_opt_artifact(string midend_report) string {
 
 func validate_midend_opt_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "midend-opt version=1") {
-        return result::err(backend_error { message: "backend error: midend opt artifact header missing" })
+        return backend_error { message: "backend error: midend opt artifact header missing" }
     }
     if !has_substring(payload, "report midend ") {
-        return result::err(backend_error { message: "backend error: midend opt artifact raw report missing" })
+        return backend_error { message: "backend error: midend opt artifact raw report missing" }
     }
     if !has_substring(payload, "summary inline_sites=") {
-        return result::err(backend_error { message: "backend error: midend opt artifact summary missing" })
+        return backend_error { message: "backend error: midend opt artifact summary missing" }
     }
     if !has_substring(payload, "scheduler_opt sroutine_sites=") {
-        return result::err(backend_error { message: "backend error: midend opt artifact scheduler section missing" })
+        return backend_error { message: "backend error: midend opt artifact scheduler section missing" }
     }
     if !has_substring(payload, "select_weighted_sites=") {
-        return result::err(backend_error { message: "backend error: midend opt artifact weighted select metric missing" })
+        return backend_error { message: "backend error: midend opt artifact weighted select metric missing" }
     }
     if !has_substring(payload, "select_timeout_sites=") {
-        return result::err(backend_error { message: "backend error: midend opt artifact timeout select metric missing" })
+        return backend_error { message: "backend error: midend opt artifact timeout select metric missing" }
     }
     if !has_substring(payload, "select_send_sites=") {
-        return result::err(backend_error { message: "backend error: midend opt artifact send select metric missing" })
+        return backend_error { message: "backend error: midend opt artifact send select metric missing" }
     }
     if !has_substring(payload, "passes rm_unreachable=") {
-        return result::err(backend_error { message: "backend error: midend opt artifact pass section missing" })
+        return backend_error { message: "backend error: midend opt artifact pass section missing" }
     }
-    result::ok(())
+    ()
 }
 
 func function_item_count(source_file source) int {
@@ -2462,16 +2462,16 @@ func ends_with_local(string text, string suffix) bool {
 func load_source_graph(string path, string source) (source_file, backend_error) {
     parsed_result := parse_source(source)
     if parsed_result.is_err() {
-        return result::err(backend_error { message: "parse failed: " + parsed_result.unwrap_err().message })
+        return backend_error { message: "parse failed: " + parsed_result.unwrap_err().message }
     }
     combined := parsed_result.unwrap()
     visited := vec[string]()
     visited.push(path)
     deps_result := append_dependency_items(combined, combined.uses, visited)
     if deps_result.is_err() {
-        return result::err(deps_result.unwrap_err())
+        return deps_result.unwrap_err()
     }
-    result::ok(combined)
+    combined
 }
 
 func append_dependency_items(source_file combined, vec[use_decl] uses, vec[string] visited) ((), backend_error) {
@@ -2479,18 +2479,18 @@ func append_dependency_items(source_file combined, vec[use_decl] uses, vec[strin
     for i < uses.len() {
         module_result := resolve_module_source_path(uses[i].path)
         if module_result.is_none() {
-            return result::err(backend_error { message: "module resolver failed: " + uses[i].path })
+            return backend_error { message: "module resolver failed: " + uses[i].path }
         }
         dep_path := module_result.unwrap()
         if !string_vec_contains(visited, dep_path) {
             visited.push(dep_path)
             dep_source_result := read_to_string(dep_path)
             if dep_source_result.is_err() {
-                return result::err(backend_error { message: "failed to read module " + uses[i].path + " at " + dep_path + ": " + dep_source_result.unwrap_err().message })
+                return backend_error { message: "failed to read module " + uses[i].path + " at " + dep_path + ": " + dep_source_result.unwrap_err().message }
             }
             dep_parsed_result := parse_source(dep_source_result.unwrap())
             if dep_parsed_result.is_err() {
-                return result::err(backend_error { message: "parse failed in module " + uses[i].path + ": " + dep_parsed_result.unwrap_err().message })
+                return backend_error { message: "parse failed in module " + uses[i].path + ": " + dep_parsed_result.unwrap_err().message }
             }
             dep := dep_parsed_result.unwrap()
             nested_result := append_dependency_items(combined, dep.uses, visited)
@@ -2501,7 +2501,7 @@ func append_dependency_items(source_file combined, vec[use_decl] uses, vec[strin
         }
         i = i + 1
     }
-    result::ok(())
+    ()
 }
 
 func append_source_items(source_file combined, source_file dep) () {
@@ -2952,7 +2952,7 @@ func emit_runtime_launcher_asm(string base_compiler) (string, backend_error) {
     if arch == "amd64" || arch == "amd64p32" {
         return emit_runtime_launcher_asm_amd64(base_compiler))
     }
-    result::err(backend_error { message: "unsupported architecture for compiler launcher: " + arch })
+    backend_error { message: "unsupported architecture for compiler launcher: " + arch }
 }
 
 func emit_runtime_launcher_asm_arm64(string base_compiler) string {
@@ -3133,7 +3133,7 @@ func compile_writes(source_file source, mir_graph graph) (vec[write_op], backend
     if exec_result.is_err() {
         return fail_write_ops(source_exec.unwrap_err().message
     }
-    result::ok(exec_result.unwrap().writes)
+    exec_result.unwrap().writes
 }
 
 func compile_exit_code(source_file source, mir_graph graph) (int, backend_error) {
@@ -3148,12 +3148,12 @@ func compile_exit_code(source_file source, mir_graph graph) (int, backend_error)
     if exec_result.is_err() {
         return fail_int(source_exec.unwrap_err().message
     }
-    result::ok(exec_result.unwrap().exit_code)
+    exec_result.unwrap().exit_code
 }
 
 func compile_runtime_metrics(source_file source, mir_graph graph) (runtime_metrics, backend_error) {
     if graph.blocks.len() == 0 {
-        return result::err(backend_error { message: "backend error: mir graph has no blocks" })
+        return backend_error { message: "backend error: mir graph has no blocks" }
     }
     source_exec := execute_source_main(source)
     if source_exec.is_ok() {
@@ -3161,34 +3161,34 @@ func compile_runtime_metrics(source_file source, mir_graph graph) (runtime_metri
     }
     exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
-        return result::err(source_exec.unwrap_err())
+        return source_exec.unwrap_err()
     }
-    result::ok(exec_result.unwrap().runtime)
+    exec_result.unwrap().runtime
 }
 
 func execute_source_main(source_file source) (mir_execution_result, backend_error) {
     main_result := find_main(source)
     if main_result.is_err() {
-        return result::err(main_result.unwrap_err())
+        return main_result.unwrap_err()
     }
     main_fn := main_result.unwrap()
     if main_fn.body.is_none() {
-        return result::err(backend_error { message: "backend error: entry function main has no body" })
+        return backend_error { message: "backend error: entry function main has no body" }
     }
     writes := vec[write_op]()
     runtime := make_runtime_state()
     const_bindings := collect_const_bindings(source)
     if const_bindings.is_err() {
-        return result::err(const_bindings.unwrap_err())
+        return const_bindings.unwrap_err()
     }
     env := copy_bindings(const_bindings.unwrap())
     eval_result := execute_block_in_place(main_fn.body.unwrap(), source, env, writes, runtime)
     if eval_result.is_err() {
-        return result::err(eval_result.unwrap_err())
+        return eval_result.unwrap_err()
     }
     code_result := value_to_exit_code(eval_result.unwrap())
     if code_result.is_err() {
-        return result::err(code_result.unwrap_err())
+        return code_result.unwrap_err()
     }
     result::ok(mir_execution_result {
         writes: writes,
@@ -3205,14 +3205,14 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
     for steps < max_steps {
         block_result := find_mir_block(graph, current)
         if block_result.is_err() {
-            return result::err(block_result.unwrap_err())
+            return block_result.unwrap_err()
         }
         block := block_result.unwrap()
         si := 0
         for si < block.statements.len() {
             stmt_result := execute_mir_statement(block.statements[si], writes)
             if stmt_result.is_err() {
-                return result::err(stmt_result.unwrap_err())
+                return stmt_result.unwrap_err()
             }
             si = si + 1
         }
@@ -3246,7 +3246,7 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
         }
         if block.terminator.kind == "jump" {
             if block.terminator.edges.len() == 0 {
-                return result::err(backend_error { message: "backend error: jump terminator has no target" })
+                return backend_error { message: "backend error: jump terminator has no target" }
             }
             current = block.terminator.edges[0].target
             steps = steps + 1
@@ -3255,15 +3255,15 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
         if block.terminator.kind == "branch" {
             target := select_branch_target(block.terminator.edges)
             if target < 0 {
-                return result::err(backend_error { message: "backend error: branch terminator has no target" })
+                return backend_error { message: "backend error: branch terminator has no target" }
             }
             current = target
             steps = steps + 1
             continue
         }
-        return result::err(backend_error { message: "backend error: unsupported mir terminator kind " + block.terminator.kind })
+        return backend_error { message: "backend error: unsupported mir terminator kind " + block.terminator.kind }
     }
-    result::err(backend_error { message: "backend error: mir execution exceeded step limit" })
+    backend_error { message: "backend error: mir execution exceeded step limit" }
 }
 
 func find_mir_block(mir_graph graph, int id) (mir_basic_block, backend_error) {
@@ -3274,7 +3274,7 @@ func find_mir_block(mir_graph graph, int id) (mir_basic_block, backend_error) {
         }
         i = i + 1
     }
-    result::err(backend_error { message: "backend error: missing mir block id " + to_string(id) })
+    backend_error { message: "backend error: missing mir block id " + to_string(id) }
 }
 
 func execute_mir_statement(mir_statement statement, vec[write_op] writes) ((), backend_error) {
@@ -3283,7 +3283,7 @@ func execute_mir_statement(mir_statement statement, vec[write_op] writes) ((), b
             if eval_stmt.args.len() > 0 {
                 emit_print_from_line(eval_stmt.args[0], writes)
             }
-            result::ok(())
+            ()
         }
         _ : result::ok(()),
     }
@@ -3503,7 +3503,7 @@ func find_function(source_file source, string name) (function_decl, backend_erro
 
 func find_function_in_source_graph(source_file source, string name, vec[string] visited) (function_decl, backend_error) {
     if string_vec_contains(visited, source.pkg) {
-        return result::err(backend_error { message: "backend error: unknown function " + name })
+        return backend_error { message: "backend error: unknown function " + name }
     }
     visited.push(source.pkg)
     i := 0
@@ -3522,7 +3522,7 @@ func find_function_in_source_graph(source_file source, string name, vec[string] 
     for ui < source.uses.len() {
         dep_result := load_source_graph_for_use(source.uses[ui].path)
         if dep_result.is_err() {
-            return result::err(dep_result.unwrap_err())
+            return dep_result.unwrap_err()
         }
         found := find_function_in_source_graph(dep_result.unwrap(), name, visited)
         if found.is_ok() {
@@ -3530,16 +3530,16 @@ func find_function_in_source_graph(source_file source, string name, vec[string] 
         }
         ui = ui + 1
     }
-    result::err(backend_error { message: "backend error: unknown function " + name })
+    backend_error { message: "backend error: unknown function " + name }
 }
 
 func execute_block(block_expr block, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     local_env := copy_bindings(env)
     result := execute_block_in_place(block, source, local_env, writes, runtime)
     if result.is_err() {
-        result::err(result.unwrap_err())
+        result.unwrap_err()
     }
-    result::ok(result.unwrap())
+    result.unwrap()
 }
 
 func execute_block_in_place(block_expr block, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
@@ -3560,14 +3560,14 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] e
             if is_panic_error(err) {
                 run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                 if run_deferred.is_err() {
-                    return result::err(run_deferred.unwrap_err())
+                    return run_deferred.unwrap_err()
                 }
                 if control_panic_is_active(env) {
-                    return result::err(panic_error(control_panic_payload_text(env)))
+                    return panic_error(control_panic_payload_text(env))
                 }
                 return value.unit(unit_value {}))
             }
-            return result::err(err
+            return err
         }
         schedule_step := run_sroutine_scheduler_step(source, env, writes, runtime)
         if schedule_step.is_err() {
@@ -3575,14 +3575,14 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] e
             if is_panic_error(err) {
                 run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                 if run_deferred.is_err() {
-                    return result::err(run_deferred.unwrap_err())
+                    return run_deferred.unwrap_err()
                 }
                 if control_panic_is_active(env) {
-                    return result::err(panic_error(control_panic_payload_text(env)))
+                    return panic_error(control_panic_payload_text(env))
                 }
-                return value.unit(unit_value {}))
+                return value.unit(unit_value {})
             }
-            return result::err(err
+            return err
         }
         run_gc_safepoint(env, runtime)
         si = si + 1
@@ -3596,14 +3596,14 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] e
                 if is_panic_error(err) {
                     run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                     if run_deferred.is_err() {
-                        return result::err(run_deferred.unwrap_err())
+                        return run_deferred.unwrap_err()
                     }
                     if control_panic_is_active(env) {
-                        return result::err(panic_error(control_panic_payload_text(env)))
+                        return panic_error(control_panic_payload_text(env))
                     }
-                    return value.unit(unit_value {}))
+                    return value.unit(unit_value {})
                 }
-                return result::err(err
+                return err
             }
             final_value = final_result.unwrap()
         }
@@ -3611,14 +3611,14 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] e
     }
     run_deferred := execute_deferred(deferred, source, env, writes, runtime, "")
     if run_deferred.is_err() {
-        return result::err(run_deferred.unwrap_err())
+        return run_deferred.unwrap_err()
     }
     schedule_flush := run_sroutine_scheduler_flush(source, env, writes, runtime)
     if schedule_flush.is_err() {
-        return result::err(schedule_flush.unwrap_err())
+        return schedule_flush.unwrap_err()
     }
     run_gc_safepoint(env, runtime)
-    result::ok(final_value)
+    final_value
 }
 
 func execute_stmt(stmt stmt, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) ((), backend_error) {
@@ -3626,33 +3626,33 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] env, vec[write_op]
         stmt.let(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
             if expr_result.is_err() {
-                result::err(expr_result.unwrap_err())
+                expr_result.unwrap_err()
             }
             env.push(binding {
                 name: value.name,
                 value: expr_result.unwrap(),
             })
-            result::ok(())
+            ()
         }
         stmt.assign(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
             if expr_result.is_err() {
-                result::err(expr_result.unwrap_err())
+                expr_result.unwrap_err()
             }
             index := find_binding_index(env, value.name)
             if index < 0 {
-                result::err(backend_error { message: "backend error: unknown name " + value.name })
+                backend_error { message: "backend error: unknown name " + value.name }
             }
             env.set(index, binding {
                 name: value.name,
                 value: expr_result.unwrap(),
             })
-            result::ok(())
+            ()
         }
         stmt.increment(value) : {
             index := find_binding_index(env, value.name)
             if index < 0 {
-                result::err(backend_error { message: "backend error: unknown name " + value.name })
+                backend_error { message: "backend error: unknown name " + value.name }
             }
             current := env.get(index).unwrap().value
             switch current {
@@ -3661,19 +3661,19 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] env, vec[write_op]
                         name: value.name,
                         value: value.int(number + 1),
                     })
-                    result::ok(())
+                    ()
                 }
-                _ : result::err(backend_error { message: "backend error: increment expects int for " + value.name }),
+                _ : backend_error { message: "backend error: increment expects int for " + value.name },
             }
         }
         stmt.c_for(value) : execute_c_for(value, source, env, writes, runtime),
-        stmt.return(_) : result::err(backend_error { message: "backend error: return statements are not supported in the mvp backend" }),
+        stmt.return(_) : backend_error { message: "backend error: return statements are not supported in the mvp backend" },
         stmt.expr(value) : {
             expr_result := eval_expr(value.expr, source, env, writes, runtime)
             if expr_result.is_err() {
-                result::err(expr_result.unwrap_err())
+                expr_result.unwrap_err()
             }
-            result::ok(())
+            ()
         }
         stmt.defer(_) : result::ok(()),
         stmt.sroutine(value) : execute_sroutine_stmt(value, source, env, writes, runtime),
@@ -3685,19 +3685,19 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, vec[binding]
         expr.call(call_expr) : {
             callee_result := eval_expr(call_expr.callee.value, source, env, writes, runtime)
             if callee_result.is_err() {
-                return result::err(callee_result.unwrap_err())
+                return callee_result.unwrap_err()
             }
             fn_name := ""
             switch callee_result.unwrap() {
                 value.fn_ref(name) : fn_name = name,
-                _ : return result::err(backend_error { message: "backend error: sroutine expects function call target" }),
+                _ : return backend_error { message: "backend error: sroutine expects function call target" },
             }
             arg_values := vec[value]()
             ai := 0
             for ai < call_expr.args.len() {
                 arg_result := eval_expr(call_expr.args[ai], source, env, writes, runtime)
                 if arg_result.is_err() {
-                    return result::err(arg_result.unwrap_err())
+                    return arg_result.unwrap_err()
                 }
                 arg_values.push(arg_result.unwrap())
                 ai = ai + 1
@@ -3710,9 +3710,9 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, vec[binding]
             })
             runtime.sroutine_scheduled = runtime.sroutine_scheduled + 1
             runtime.sroutine_yields = runtime.sroutine_yields + 1
-            return ())
+            return ()
         }
-        _ : result::err(backend_error { message: "backend error: sroutine expects a call expression" }),
+        _ : backend_error { message: "backend error: sroutine expects a call expression" },
     }
 }
 
@@ -3720,12 +3720,12 @@ func execute_c_for(c_for_stmt value, source_file source, vec[binding] env, vec[w
     loop_env := copy_bindings(env)
     init_result := execute_stmt(value.init.value, source, loop_env, writes, runtime)
     if init_result.is_err() {
-        result::err(init_result.unwrap_err())
+        init_result.unwrap_err()
     }
     for true {
         cond_result := eval_expr(value.condition, source, loop_env, writes, runtime)
         if cond_result.is_err() {
-            result::err(cond_result.unwrap_err())
+            cond_result.unwrap_err()
         }
         cond_value := cond_result.unwrap()
         switch cond_value {
@@ -3734,19 +3734,19 @@ func execute_c_for(c_for_stmt value, source_file source, vec[binding] env, vec[w
                     break
                 }
             }
-            _ : result::err(backend_error { message: "backend error: for condition must be bool" }),
+            _ : backend_error { message: "backend error: for condition must be bool" },
         }
         body_result := execute_block_in_place(value.body, source, loop_env, writes, runtime)
         if body_result.is_err() {
-            result::err(body_result.unwrap_err())
+            body_result.unwrap_err()
         }
         step_result := execute_stmt(value.step.value, source, loop_env, writes, runtime)
         if step_result.is_err() {
-            result::err(step_result.unwrap_err())
+            step_result.unwrap_err()
         }
     }
     propagate_bindings(env, loop_env)
-    result::ok(())
+    ()
 }
 
 func eval_expr(expr expr, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
@@ -3760,12 +3760,12 @@ func eval_expr(expr expr, source_file source, vec[binding] env, vec[write_op] wr
         expr.if(value) : eval_if_expr(value, source, env, writes, runtime),
         expr.while(value) : eval_while_expr(value, source, env, writes, runtime),
         expr.block(value) : execute_block(value, source, env, writes, runtime),
-        expr.for(_) : result::err(backend_error { message: "backend error: for expressions are not supported in the mvp backend" }),
-        expr.switch(_) : result::err(backend_error { message: "backend error: switch expressions are not supported in the mvp backend" }),
-        expr.borrow(_) : result::err(backend_error { message: "backend error: borrow expressions are not supported in the mvp backend" }),
-        expr.member(_) : result::err(backend_error { message: "backend error: member expressions are not supported in the mvp backend" }),
+        expr.for(_) : backend_error { message: "backend error: for expressions are not supported in the mvp backend" },
+        expr.switch(_) : backend_error { message: "backend error: switch expressions are not supported in the mvp backend" },
+        expr.borrow(_) : backend_error { message: "backend error: borrow expressions are not supported in the mvp backend" },
+        expr.member(_) : backend_error { message: "backend error: member expressions are not supported in the mvp backend" },
         expr.index(value) : eval_index_expr(value, source, env, writes, runtime),
-        expr.array(_) : result::err(backend_error { message: "backend error: array literals are not supported in the mvp backend" }),
+        expr.array(_) : backend_error { message: "backend error: array literals are not supported in the mvp backend" },
         expr.map(value) : eval_map_literal(value, source, env, writes, runtime),
     }
 }
@@ -3773,11 +3773,11 @@ func eval_expr(expr expr, source_file source, vec[binding] env, vec[write_op] wr
 func eval_binary(binary_expr value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     left_result := eval_expr(value.left.value, source, env, writes, runtime)
     if left_result.is_err() {
-        result::err(left_result.unwrap_err())
+        left_result.unwrap_err()
     }
     right_result := eval_expr(value.right.value, source, env, writes, runtime)
     if right_result.is_err() {
-        result::err(right_result.unwrap_err())
+        right_result.unwrap_err()
     }
     left := left_result.unwrap()
     right := right_result.unwrap()
@@ -3795,7 +3795,7 @@ func eval_binary(binary_expr value, source_file source, vec[binding] env, vec[wr
         ">=" : ordered_compare(left, right, value.op),
         "&&" : logical_binary(left, right, true),
         "||" : logical_binary(left, right, false),
-        _ : result::err(backend_error { message: "backend error: unsupported binary operator " + value.op }),
+        _ : backend_error { message: "backend error: unsupported binary operator " + value.op },
     }
 }
 
@@ -3859,26 +3859,26 @@ func eval_call(call_expr value, source_file source, vec[binding] env, vec[write_
     for ai < value.args.len() {
         arg_result := eval_expr(value.args[ai], source, env, writes, runtime)
         if arg_result.is_err() {
-            return result::err(arg_result.unwrap_err())
+            return arg_result.unwrap_err()
         }
         arg_values.push(arg_result.unwrap())
         ai = ai + 1
     }
     switch callee_result.unwrap() {
         value.fn_ref(name) : call_function(source, name, arg_values, env, writes, runtime),
-        _ : result::err(backend_error { message: "backend error: unsupported call target" }),
+        _ : backend_error { message: "backend error: unsupported call target" },
     }
 }
 
     func eval_panic_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() != 1 {
-        return result::err(backend_error { message: "backend error: panic expects exactly one argument" })
+        return backend_error { message: "backend error: panic expects exactly one argument" }
     }
     arg_result := eval_expr(args[0], source, env, writes, runtime)
     if arg_result.is_err() {
         return arg_result
     }
-    return result::err(panic_error(stringify_value(arg_result.unwrap())))
+    return panic_error(stringify_value(arg_result.unwrap()))
 }
 
 func eval_recover_call(vec[binding] env, runtime_state runtime) (value, backend_error) {
@@ -3892,20 +3892,20 @@ func eval_recover_call(vec[binding] env, runtime_state runtime) (value, backend_
     set_control(env, control_panic_active, value.bool(false))
     set_control(env, control_panic_payload, value.string(""))
     runtime.sroutine_recovered = runtime.sroutine_recovered + 1
-    result::ok(value.string(payload))
+    value.string(payload)
 }
 
 func eval_gc_collect_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() != 0 {
-        return result::err(backend_error { message: "backend error: gc_collect expects no arguments" })
+        return backend_error { message: "backend error: gc_collect expects no arguments" }
     }
     run_gc_cycle(env, runtime)
-    result::ok(value.unit(unit_value {}))
+    value.unit(unit_value {})
 }
 
 func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() != 1 {
-        return result::err(backend_error { message: "backend error: chan_make expects one capacity argument" })
+        return backend_error { message: "backend error: chan_make expects one capacity argument" }
     }
     cap_value := eval_expr(args[0], source, env, writes, runtime)
     if cap_value.is_err() {
@@ -3918,7 +3918,7 @@ func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] env, v
                 cap = n
             }
         }
-        _ : return result::err(backend_error { message: "backend error: chan_make capacity must be int" }),
+        _ : return backend_error { message: "backend error: chan_make capacity must be int" },
     }
     id := runtime.next_channel_id
     runtime.next_channel_id = runtime.next_channel_id + 1
@@ -3932,12 +3932,12 @@ func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] env, v
         recvs: 0,
         marked: false,
     })
-    result::ok(value.channel(channel_handle_value { id: id }))
+    value.channel(channel_handle_value { id: id })
 }
 
 func eval_chan_send_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() != 2 {
-        return result::err(backend_error { message: "backend error: chan_send expects channel and value" })
+        return backend_error { message: "backend error: chan_send expects channel and value" }
     }
     ch := eval_expr(args[0], source, env, writes, runtime)
     if ch.is_err() {
@@ -3949,13 +3949,13 @@ func eval_chan_send_call(vec[expr] args, source_file source, vec[binding] env, v
     }
     idx := find_channel_index(runtime, ch.unwrap())
     if idx < 0 {
-        return result::err(backend_error { message: "backend error: chan_send target is not channel" })
+        return backend_error { message: "backend error: chan_send target is not channel" }
     }
     if runtime.channels[idx].closed {
-        return result::err(backend_error { message: "backend error: chan_send on closed channel" })
+        return backend_error { message: "backend error: chan_send on closed channel" }
     }
     if runtime.channels[idx].buffer.len() >= runtime.channels[idx].capacity {
-        return result::err(backend_error { message: "backend error: chan_send would block" })
+        return backend_error { message: "backend error: chan_send would block" }
     }
     ch_state := runtime.channels[idx]
     if value_contains_channel(payload.unwrap()) {
@@ -3964,15 +3964,15 @@ func eval_chan_send_call(vec[expr] args, source_file source, vec[binding] env, v
     ch_state.buffer.push(payload.unwrap())
     ch_state.sends = ch_state.sends + 1
     runtime.channels.set(idx, ch_state)
-    result::ok(value.unit(unit_value {}))
+    value.unit(unit_value {})
 }
 
 func eval_chan_recv_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime, bool is_select) (value, backend_error) {
     if args.len() == 0 {
-        return result::err(backend_error { message: "backend error: chan_recv/select_recv expects at least one channel argument" })
+        return backend_error { message: "backend error: chan_recv/select_recv expects at least one channel argument" }
     }
     if !is_select && args.len() != 1 {
-        return result::err(backend_error { message: "backend error: chan_recv expects exactly one channel argument" })
+        return backend_error { message: "backend error: chan_recv expects exactly one channel argument" }
     }
     channels := vec[value]()
     ai := 0
@@ -3999,14 +3999,14 @@ func eval_chan_recv_call(vec[expr] args, source_file source, vec[binding] env, v
         return value.unit(unit_value {}))
     }
     if is_select {
-        return result::err(backend_error { message: "backend error: select_recv has no ready channel" })
+        return backend_error { message: "backend error: select_recv has no ready channel" }
     }
-    result::ok(value.unit(unit_value {}))
+    value.unit(unit_value {})
 }
 
 func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() < 2 || (args.len() % 2) != 0 {
-        return result::err(backend_error { message: "backend error: select_recv_weighted expects channel/weight pairs" })
+        return backend_error { message: "backend error: select_recv_weighted expects channel/weight pairs" }
     }
     runtime.select_attempts = runtime.select_attempts + 1
     weighted := vec[value]()
@@ -4027,7 +4027,7 @@ func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[bind
                     copies = n
                 }
             }
-            _ : return result::err(backend_error { message: "backend error: select_recv_weighted weights must be int" }),
+            _ : return backend_error { message: "backend error: select_recv_weighted weights must be int" },
         }
         wi := 0
         for wi < copies {
@@ -4047,12 +4047,12 @@ func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[bind
         }
         return value.unit(unit_value {}))
     }
-    return result::err(backend_error { message: "backend error: select_recv_weighted has no ready channel" })
+    return backend_error { message: "backend error: select_recv_weighted has no ready channel" }
 }
 
 func eval_select_recv_timeout_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() < 2 {
-        return result::err(backend_error { message: "backend error: select_recv_timeout expects channels followed by timeout ticks" })
+        return backend_error { message: "backend error: select_recv_timeout expects channels followed by timeout ticks" }
     }
     timeout := eval_expr(args[args.len() - 1], source, env, writes, runtime)
     if timeout.is_err() {
@@ -4060,7 +4060,7 @@ func eval_select_recv_timeout_call(vec[expr] args, source_file source, vec[bindi
     }
     switch timeout.unwrap() {
         value.int(_) : (),
-        _ : return result::err(backend_error { message: "backend error: select_recv_timeout timeout must be int" }),
+        _ : return backend_error { message: "backend error: select_recv_timeout timeout must be int" },
     }
     ch_args := vec[expr]()
     i := 0
@@ -4073,12 +4073,12 @@ func eval_select_recv_timeout_call(vec[expr] args, source_file source, vec[bindi
         return recv
     }
     runtime.select_timeouts = runtime.select_timeouts + 1
-    result::ok(value.unit(unit_value {}))
+    value.unit(unit_value {})
 }
 
 func eval_select_send_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() < 2 || (args.len() % 2) != 0 {
-        return result::err(backend_error { message: "backend error: select_send expects channel/value pairs" })
+        return backend_error { message: "backend error: select_send expects channel/value pairs" }
     }
     runtime.select_attempts = runtime.select_attempts + 1
     channels := vec[value]()
@@ -4099,10 +4099,10 @@ func eval_select_send_call(vec[expr] args, source_file source, vec[binding] env,
     }
     pick := choose_sendable_channel(runtime, channels)
     if pick.is_none() {
-        return result::err(backend_error { message: "backend error: select_send has no ready channel" })
+        return backend_error { message: "backend error: select_send has no ready channel" }
     }
     if pick.unwrap() < 0 {
-        return result::err(backend_error { message: "backend error: select_send target is not channel" })
+        return backend_error { message: "backend error: select_send target is not channel" }
     }
     pi := pick.unwrap()
     idx := find_channel_index(runtime, channels[pi])
@@ -4110,7 +4110,7 @@ func eval_select_send_call(vec[expr] args, source_file source, vec[binding] env,
     ch_state.buffer.push(payloads[pi])
     ch_state.sends = ch_state.sends + 1
     runtime.channels.set(idx, ch_state)
-    result::ok(value.unit(unit_value {}))
+    value.unit(unit_value {})
 }
 
 func eval_select_send_default_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
@@ -4119,12 +4119,12 @@ func eval_select_send_default_call(vec[expr] args, source_file source, vec[bindi
         return sent
     }
     runtime.select_default_fallbacks = runtime.select_default_fallbacks + 1
-    result::ok(value.unit(unit_value {}))
+    value.unit(unit_value {})
 }
 
 func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() < 3 || ((args.len() - 1) % 2) != 0 {
-        return result::err(backend_error { message: "backend error: select_send_timeout expects channel/value pairs followed by timeout ticks" })
+        return backend_error { message: "backend error: select_send_timeout expects channel/value pairs followed by timeout ticks" }
     }
     timeout := eval_expr(args[args.len() - 1], source, env, writes, runtime)
     if timeout.is_err() {
@@ -4132,7 +4132,7 @@ func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[bindi
     }
     switch timeout.unwrap() {
         value.int(_) : (),
-        _ : return result::err(backend_error { message: "backend error: select_send_timeout timeout must be int" }),
+        _ : return backend_error { message: "backend error: select_send_timeout timeout must be int" },
     }
     send_args := vec[expr]()
     i := 0
@@ -4145,7 +4145,7 @@ func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[bindi
         return sent
     }
     runtime.select_timeouts = runtime.select_timeouts + 1
-    result::ok(value.unit(unit_value {}))
+    value.unit(unit_value {})
 }
 
 func choose_ready_channel(runtime_state runtime, vec[value] channels) option[int] {
@@ -4213,7 +4213,7 @@ func choose_sendable_channel(runtime_state runtime, vec[value] channels) option[
 
 func drain_selected_channel(runtime_state runtime, int idx) (value, backend_error) {
     if idx < 0 {
-        return result::err(backend_error { message: "backend error: recv target is not channel" })
+        return backend_error { message: "backend error: recv target is not channel" }
     }
     ch_state := runtime.channels[idx]
     if ch_state.buffer.len() == 0 {
@@ -4229,7 +4229,7 @@ func drain_selected_channel(runtime_state runtime, int idx) (value, backend_erro
     ch_state.buffer = rest
     ch_state.recvs = ch_state.recvs + 1
     runtime.channels.set(idx, ch_state)
-    result::ok(first)
+    first
 }
 
 func eval_select_recv_default_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
@@ -4238,12 +4238,12 @@ func eval_select_recv_default_call(vec[expr] args, source_file source, vec[bindi
         return recv
     }
     runtime.select_default_fallbacks = runtime.select_default_fallbacks + 1
-    result::ok(value.unit(unit_value {}))
+    value.unit(unit_value {})
 }
 
 func eval_chan_close_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() != 1 {
-        return result::err(backend_error { message: "backend error: chan_close expects one channel argument" })
+        return backend_error { message: "backend error: chan_close expects one channel argument" }
     }
     ch := eval_expr(args[0], source, env, writes, runtime)
     if ch.is_err() {
@@ -4251,15 +4251,15 @@ func eval_chan_close_call(vec[expr] args, source_file source, vec[binding] env, 
     }
     idx := find_channel_index(runtime, ch.unwrap())
     if idx < 0 {
-        return result::err(backend_error { message: "backend error: chan_close target is not channel" })
+        return backend_error { message: "backend error: chan_close target is not channel" }
     }
     ch_state := runtime.channels[idx]
     if ch_state.closed {
-        return result::err(backend_error { message: "backend error: chan_close on closed channel" })
+        return backend_error { message: "backend error: chan_close on closed channel" }
     }
     ch_state.closed = true
     runtime.channels.set(idx, ch_state)
-    result::ok(value.unit(unit_value {}))
+    value.unit(unit_value {})
 }
 
 func find_channel_index(runtime_state runtime, value v) int {
@@ -4395,16 +4395,16 @@ func execute_deferred(vec[expr] deferred, source_file source, vec[binding] env, 
                 continue
             }
             set_control(env, control_in_defer, value.bool(false))
-            return result::err(err
+            return err
         }
     }
     set_control(env, control_in_defer, value.bool(false))
-    result::ok(())
+    ()
 }
 
 func run_sroutine_scheduler_step(source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) ((), backend_error) {
     if runtime.runq.len() == 0 {
-        return ())
+        return ()
     }
     task := runtime.runq[0]
     rest := vec[sroutine_task]()
@@ -4422,13 +4422,13 @@ func run_sroutine_scheduler_step(source_file source, vec[binding] env, vec[write
         err := task_result.unwrap_err()
         if is_panic_error(err) {
             runtime.sroutine_panics = runtime.sroutine_panics + 1
-            return result::err(err
+            return err
         }
-        return result::err(err
+        return err
     }
     runtime.sroutine_completed = runtime.sroutine_completed + 1
     run_gc_safepoint(env, runtime)
-    result::ok(())
+    ()
 }
 
 func run_sroutine_scheduler_flush(source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) ((), backend_error) {
@@ -4438,7 +4438,7 @@ func run_sroutine_scheduler_flush(source_file source, vec[binding] env, vec[writ
             return step
         }
     }
-    result::ok(())
+    ()
 }
 
 func panic_error(string payload) backend_error {
@@ -4521,12 +4521,12 @@ func collect_const_bindings(source_file source) (vec[binding], backend_error) {
     if collect_result.is_err() {
         return result::err(collect_result.unwrap_err())
     }
-    result::ok(out)
+    out
 }
 
 func collect_const_bindings_in_source(source_file source, vec[binding] out, vec[string] visited) ((), backend_error) {
     if string_vec_contains(visited, source.pkg) {
-        return ())
+        return ()
     }
     visited.push(source.pkg)
     last_expr := option::none
@@ -4535,7 +4535,7 @@ func collect_const_bindings_in_source(source_file source, vec[binding] out, vec[
         switch source.items[i] {
             item.const(const_decl) : {
                 if find_binding_index(out, const_decl.name) >= 0 {
-                    return result::err(backend_error { message: "backend error: duplicate const declaration " + const_decl.name })
+                    return backend_error { message: "backend error: duplicate const declaration " + const_decl.name }
                 }
                 expr_to_eval := option::none
                 switch const_decl.value {
@@ -4546,11 +4546,11 @@ func collect_const_bindings_in_source(source_file source, vec[binding] out, vec[
                     option.none : expr_to_eval = last_expr,
                 }
                 if expr_to_eval.is_none() {
-                    return result::err(backend_error { message: "backend error: const declaration missing initializer " + const_decl.name })
+                    return backend_error { message: "backend error: const declaration missing initializer " + const_decl.name }
                 }
                 value_result := eval_const_value_expr(expr_to_eval.unwrap(), out, const_decl.iota_index)
                 if value_result.is_err() {
-                    return result::err(backend_error { message: "backend error: const evaluation failed for " + const_decl.name + ": " + value_result.unwrap_err().message })
+                    return backend_error { message: "backend error: const evaluation failed for " + const_decl.name + ": " + value_result.unwrap_err().message }
                 }
                 out.push(binding {
                     name: const_decl.name,
@@ -4566,7 +4566,7 @@ func collect_const_bindings_in_source(source_file source, vec[binding] out, vec[
     for ui < source.uses.len() {
         dep_result := load_source_graph_for_use(source.uses[ui].path)
         if dep_result.is_err() {
-            return result::err(dep_result.unwrap_err())
+            return dep_result.unwrap_err()
         }
         nested_result := collect_const_bindings_in_source(dep_result.unwrap(), out, visited)
         if nested_result.is_err() {
@@ -4574,23 +4574,23 @@ func collect_const_bindings_in_source(source_file source, vec[binding] out, vec[
         }
         ui = ui + 1
     }
-    result::ok(())
+    ()
 }
 
 func load_source_graph_for_use(string module_path) (source_file, backend_error) {
     module_result := resolve_module_source_path(module_path)
     if module_result.is_none() {
-        return result::err(backend_error { message: "backend error: module resolver failed: " + module_path })
+        return backend_error { message: "backend error: module resolver failed: " + module_path }
     }
     dep_source_result := read_to_string(module_result.unwrap())
     if dep_source_result.is_err() {
-        return result::err(backend_error { message: "backend error: failed to read module " + module_path + ": " + dep_source_result.unwrap_err().message })
+        return backend_error { message: "backend error: failed to read module " + module_path + ": " + dep_source_result.unwrap_err().message }
     }
     dep_parsed_result := parse_source(dep_source_result.unwrap())
     if dep_parsed_result.is_err() {
-        return result::err(backend_error { message: "backend error: parse failed in module " + module_path + ": " + dep_parsed_result.unwrap_err().message })
+        return backend_error { message: "backend error: parse failed in module " + module_path + ": " + dep_parsed_result.unwrap_err().message }
     }
-    result::ok(dep_parsed_result.unwrap())
+    dep_parsed_result.unwrap()
 }
 
 func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) (value, backend_error) {
@@ -4600,13 +4600,13 @@ func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) (
         expr.bool(bool_expr) : result::ok(value.bool(bool_expr.value)),
         expr.name(name_expr) : {
             if name_expr.name == "iota" {
-                return value.int(iota_value))
+                return value.int(iota_value)
             }
             const_value := lookup_value(const_env, name_expr.name)
             if const_value.is_err() {
-                return result::err(backend_error { message: "unknown const name " + name_expr.name })
+                return backend_error { message: "unknown const name " + name_expr.name }
             }
-            result::ok(const_value.unwrap())
+            const_value.unwrap()
         }
         expr.binary(binary_expr) : {
             left := eval_const_value_expr(binary_expr.left.value, const_env, iota_value)
@@ -4631,10 +4631,10 @@ func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) (
                 ">=" : ordered_compare(left.unwrap(), right.unwrap(), binary_expr.op),
                 "&&" : logical_binary(left.unwrap(), right.unwrap(), true),
                 "||" : logical_binary(left.unwrap(), right.unwrap(), false),
-                _ : result::err(backend_error { message: "unsupported const operator " + binary_expr.op }),
+                _ : backend_error { message: "unsupported const operator " + binary_expr.op },
             }
         }
-        _ : result::err(backend_error { message: "unsupported const expression kind" }),
+        _ : backend_error { message: "unsupported const expression kind" },
     }
 }
 
@@ -4650,7 +4650,7 @@ func lookup_name_or_function(vec[binding] env, source_file source, string name) 
     if fn_result.is_ok() {
         return value.fn_ref(name))
     }
-    result::err(backend_error { message: "backend error: unknown name " + name })
+    backend_error { message: "backend error: unknown name " + name }
 }
 
 func eval_map_literal(map_literal value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
@@ -4659,16 +4659,16 @@ func eval_map_literal(map_literal value, source_file source, vec[binding] env, v
     for i < value.entries.len() {
         key_result := eval_expr(value.entries[i].key, source, env, writes, runtime)
         if key_result.is_err() {
-            return result::err(key_result.unwrap_err())
+            return key_result.unwrap_err()
         }
         val_result := eval_expr(value.entries[i].value, source, env, writes, runtime)
         if val_result.is_err() {
-            return result::err(val_result.unwrap_err())
+            return val_result.unwrap_err()
         }
         mapped_name := ""
         switch val_result.unwrap() {
             value.fn_ref(fn_name) : mapped_name = fn_name,
-            _ : return result::err(backend_error { message: "backend error: map literal currently supports function values only" }),
+            _ : return backend_error { message: "backend error: map literal currently supports function values only" },
         }
         entries.push(fn_map_entry_value {
             key: stringify_value(key_result.unwrap()),
@@ -4676,7 +4676,7 @@ func eval_map_literal(map_literal value, source_file source, vec[binding] env, v
         })
         i = i + 1
     }
-    result::ok(value.fn_map(entries))
+    value.fn_map(entries)
 }
 
 func eval_index_expr(index_expr value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
@@ -4698,21 +4698,21 @@ func eval_index_expr(index_expr value, source_file source, vec[binding] env, vec
                 }
                 i = i + 1
             }
-            result::err(backend_error { message: "backend error: map key not found " + key })
+            backend_error { message: "backend error: map key not found " + key }
         }
-        _ : result::err(backend_error { message: "backend error: index target is not a function map" }),
+        _ : backend_error { message: "backend error: index target is not a function map" },
     }
 }
 
 func eval_print_call(string name, vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() > 1 {
-        result::err(backend_error { message: "backend error: " + name + " expects at most one argument" })
+        backend_error { message: "backend error: " + name + " expects at most one argument" }
     }
     text := ""
     if args.len() == 1 {
         arg_result := eval_expr(args[0], source, env, writes, runtime)
         if arg_result.is_err() {
-            result::err(arg_result.unwrap_err())
+            arg_result.unwrap_err()
         }
         text = stringify_value(arg_result.unwrap())
     }
@@ -4722,13 +4722,13 @@ func eval_print_call(string name, vec[expr] args, source_file source, vec[bindin
     } else {
         writes.push(write_op { fd: 2, text: op_text });
     }
-    result::ok(value.unit(unit_value {}))
+    value.unit(unit_value {})
 }
 
 func eval_if_expr(if_expr value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     cond_result := eval_expr(value.condition.value, source, env, writes, runtime)
     if cond_result.is_err() {
-        result::err(cond_result.unwrap_err())
+        cond_result.unwrap_err()
     }
     switch cond_result.unwrap() {
         value.bool(flag) : {
@@ -4741,7 +4741,7 @@ func eval_if_expr(if_expr value, source_file source, vec[binding] env, vec[write
                 }
             }
         }
-        _ : result::err(backend_error { message: "backend error: if condition must be bool" }),
+        _ : backend_error { message: "backend error: if condition must be bool" },
     }
 }
 
@@ -4749,7 +4749,7 @@ func eval_while_expr(while_expr value, source_file source, vec[binding] env, vec
     for true {
         cond_result := eval_expr(value.condition.value, source, env, writes, runtime)
         if cond_result.is_err() {
-            result::err(cond_result.unwrap_err())
+            cond_result.unwrap_err()
         }
         switch cond_result.unwrap() {
             value.bool(flag) : {
@@ -4757,22 +4757,22 @@ func eval_while_expr(while_expr value, source_file source, vec[binding] env, vec
                     break
                 }
             }
-            _ : result::err(backend_error { message: "backend error: while condition must be bool" }),
+            _ : backend_error { message: "backend error: while condition must be bool" },
         }
         body_result := execute_block_in_place(value.body, source, env, writes, runtime)
         if body_result.is_err() {
-            result::err(body_result.unwrap_err())
+            body_result.unwrap_err()
         }
     }
-    result::ok(value.unit(unit_value {}))
+    value.unit(unit_value {})
 }
 
 func lookup_value(vec[binding] env, string name) (value, backend_error) {
     index := find_binding_index(env, name)
     if index < 0 {
-        result::err(backend_error { message: "backend error: unknown name " + name })
+        backend_error { message: "backend error: unknown name " + name }
     }
-    result::ok(env[index].value)
+    env[index].value
 }
 
 func add_values(value left, value right) (value, backend_error) {
@@ -4780,16 +4780,16 @@ func add_values(value left, value right) (value, backend_error) {
         value.int(left_int) : {
             switch right {
                 value.int(right_int) : result::ok(value.int(left_int + right_int)),
-                _ : result::err(backend_error { message: "backend error: + expects matching types" }),
+                _ : backend_error { message: "backend error: + expects matching types" },
             }
         }
         value.string(left_text) : {
             switch right {
                 value.string(right_text) : result::ok(value.string(left_text + right_text)),
-                _ : result::err(backend_error { message: "backend error: + expects matching string types" }),
+                _ : backend_error { message: "backend error: + expects matching string types" },
             }
         }
-        _ : result::err(backend_error { message: "backend error: unsupported + operands" }),
+        _ : backend_error { message: "backend error: unsupported + operands" },
     }
 }
 
@@ -4799,29 +4799,29 @@ func numeric_binary(value left, value right, string op) (value, backend_error) {
             switch right {
                 value.int(right_int) : {
                     if op == "-" {
-                        result::ok(value.int(left_int - right_int))
+                        value.int(left_int - right_int)
                     } else if op == "*" {
-                        result::ok(value.int(left_int * right_int))
+                        value.int(left_int * right_int)
                     } else if op == "/" {
                         if right_int == 0 {
-                            result::err(backend_error { message: "backend error: division by zero" })
+                            backend_error { message: "backend error: division by zero" }
                         } else {
-                            result::ok(value.int(left_int / right_int))
+                            value.int(left_int / right_int)
                         }
                     } else if op == "%" {
                         if right_int == 0 {
-                            result::err(backend_error { message: "backend error: modulo by zero" })
+                            backend_error { message: "backend error: modulo by zero" }
                         } else {
-                            result::ok(value.int(left_int % right_int))
+                            value.int(left_int % right_int)
                         }
                     } else {
-                        result::err(backend_error { message: "backend error: unsupported numeric operator " + op })
+                        backend_error { message: "backend error: unsupported numeric operator " + op }
                     }
                 }
-                _ : result::err(backend_error { message: "backend error: numeric operator expects int operands" }),
+                _ : backend_error { message: "backend error: numeric operator expects int operands" },
             }
         }
-        _ : result::err(backend_error { message: "backend error: numeric operator expects int operands" }),
+        _ : backend_error { message: "backend error: numeric operator expects int operands" },
     }
 }
 
@@ -4831,47 +4831,47 @@ func compare_values(value left, value right, bool equal) (value, backend_error) 
         value.int(left_int) : {
             switch right {
                 value.int(right_int) : same = left_int == right_int,
-                _ : result::err(backend_error { message: "backend error: comparison expects matching types" }),
+                _ : backend_error { message: "backend error: comparison expects matching types" },
             }
         }
         value.string(left_text) : {
             switch right {
                 value.string(right_text) : same = left_text == right_text,
-                _ : result::err(backend_error { message: "backend error: comparison expects matching types" }),
+                _ : backend_error { message: "backend error: comparison expects matching types" },
             }
         }
         value.bool(left_bool) : {
             switch right {
                 value.bool(right_bool) : same = left_bool == right_bool,
-                _ : result::err(backend_error { message: "backend error: comparison expects matching types" }),
+                _ : backend_error { message: "backend error: comparison expects matching types" },
             }
         }
         value.unit(_) : {
             switch right {
                 value.unit(_) : same = true,
-                _ : result::err(backend_error { message: "backend error: comparison expects matching types" }),
+                _ : backend_error { message: "backend error: comparison expects matching types" },
             }
         }
         value.fn_ref(left_name) : {
             switch right {
                 value.fn_ref(right_name) : same = left_name == right_name,
-                _ : result::err(backend_error { message: "backend error: comparison expects matching types" }),
+                _ : backend_error { message: "backend error: comparison expects matching types" },
             }
         }
         value.channel(left_handle) : {
             switch right {
                 value.channel(right_handle) : same = left_handle.id == right_handle.id,
-                _ : result::err(backend_error { message: "backend error: comparison expects matching types" }),
+                _ : backend_error { message: "backend error: comparison expects matching types" },
             }
         }
         value.fn_map(_) : {
-            return result::err(backend_error { message: "backend error: function maps are not comparable" })
+            return backend_error { message: "backend error: function maps are not comparable" }
         }
     }
     if equal {
-        result::ok(value.bool(same))
+        value.bool(same)
     } else {
-        result::ok(value.bool(!same))
+        value.bool(!same)
     }
 }
 
@@ -4881,21 +4881,21 @@ func ordered_compare(value left, value right, string op) (value, backend_error) 
             switch right {
                 value.int(right_int) : {
                     if op == "<" {
-                        result::ok(value.bool(left_int < right_int))
+                        value.bool(left_int < right_int)
                     } else if op == "<=" {
-                        result::ok(value.bool(left_int <= right_int))
+                        value.bool(left_int <= right_int)
                     } else if op == ">" {
-                        result::ok(value.bool(left_int > right_int))
+                        value.bool(left_int > right_int)
                     } else if op == ">=" {
-                        result::ok(value.bool(left_int >= right_int))
+                        value.bool(left_int >= right_int)
                     } else {
-                        result::err(backend_error { message: "backend error: unsupported ordered comparison " + op })
+                        backend_error { message: "backend error: unsupported ordered comparison " + op }
                     }
                 }
-                _ : result::err(backend_error { message: "backend error: ordered comparison expects int operands" }),
+                _ : backend_error { message: "backend error: ordered comparison expects int operands" },
             }
         }
-        _ : result::err(backend_error { message: "backend error: ordered comparison expects int operands" }),
+        _ : backend_error { message: "backend error: ordered comparison expects int operands" },
     }
 }
 
@@ -4905,27 +4905,27 @@ func logical_binary(value left, value right, bool and_op) (value, backend_error)
             switch right {
                 value.bool(right_bool) : {
                     if and_op {
-                        result::ok(value.bool(left_bool && right_bool))
+                        value.bool(left_bool && right_bool)
                     } else {
-                        result::ok(value.bool(left_bool || right_bool))
+                        value.bool(left_bool || right_bool)
                     }
                 }
-                _ : result::err(backend_error { message: "backend error: logical operator expects bool operands" }),
+                _ : backend_error { message: "backend error: logical operator expects bool operands" },
             }
         }
-        _ : result::err(backend_error { message: "backend error: logical operator expects bool operands" }),
+        _ : backend_error { message: "backend error: logical operator expects bool operands" },
     }
 }
 
 func value_to_exit_code(value value) (int, backend_error) {
     switch value {
-        value.int(number) : result::ok(number),
-        value.bool(flag) : result::ok(if flag { 1 } else { 0 }),
-        value.unit(_) : result::ok(0),
-        value.string(_) : result::err(backend_error { message: "backend error: main cannot return string" }),
-        value.channel(_) : result::err(backend_error { message: "backend error: main cannot return channel" }),
-        value.fn_ref(_) : result::err(backend_error { message: "backend error: main cannot return function reference" }),
-        value.fn_map(_) : result::err(backend_error { message: "backend error: main cannot return function map" }),
+        value.int(number) : number,
+        value.bool(flag) : if flag { 1 } else { 0 },
+        value.unit(_) : 0,
+        value.string(_) : backend_error { message: "backend error: main cannot return string" },
+        value.channel(_) : backend_error { message: "backend error: main cannot return channel" },
+        value.fn_ref(_) : backend_error { message: "backend error: main cannot return function reference" },
+        value.fn_map(_) : backend_error { message: "backend error: main cannot return function map" },
     }
 }
 
@@ -5071,10 +5071,10 @@ func validate_abi_coverage(string arch) ((), backend_error) {
     i := 0
     for i < 8 {
         if abi_int_arg_reg(arch, i) == "" {
-            return result::err(backend_error { message: "backend error: missing integer argument ABI mapping for arg " + to_string(i) + " on " + arch })
+            return backend_error { message: "backend error: missing integer argument ABI mapping for arg " + to_string(i) + " on " + arch }
         }
         if abi_float_arg_reg(arch, i) == "" {
-            return result::err(backend_error { message: "backend error: missing float argument ABI mapping for arg " + to_string(i) + " on " + arch })
+            return backend_error { message: "backend error: missing float argument ABI mapping for arg " + to_string(i) + " on " + arch }
         }
         i = i + 1
     }
@@ -5085,33 +5085,33 @@ func validate_abi_coverage(string arch) ((), backend_error) {
         return result::err(backend_error { message: "backend error: missing float return ABI mapping on " + arch }
     }
     if abi_callee_saved_count(arch) == 0 {
-        return result::err(backend_error { message: "backend error: missing callee-saved ABI set on " + arch })
+        return backend_error { message: "backend error: missing callee-saved ABI set on " + arch }
     }
     if abi_caller_saved_count(arch) == 0 {
-        return result::err(backend_error { message: "backend error: missing caller-saved ABI set on " + arch })
+        return backend_error { message: "backend error: missing caller-saved ABI set on " + arch }
     }
     if abi_stack_alignment(arch) <= 0 {
-        return result::err(backend_error { message: "backend error: missing stack alignment ABI rule on " + arch })
+        return backend_error { message: "backend error: missing stack alignment ABI rule on " + arch }
     }
     if abi_sret_reg(arch) == "" {
         return result::err(backend_error { message: "backend error: missing aggregate return (sret) ABI register on " + arch }
     }
     if abi_variadic_gp_limit(arch) <= 0 {
-        return result::err(backend_error { message: "backend error: missing variadic GP ABI budget on " + arch })
+        return backend_error { message: "backend error: missing variadic GP ABI budget on " + arch }
     }
     if abi_variadic_fp_limit(arch) <= 0 {
-        return result::err(backend_error { message: "backend error: missing variadic FP ABI budget on " + arch })
+        return backend_error { message: "backend error: missing variadic FP ABI budget on " + arch }
     }
     if abi_aggregate_pass_mode(arch, 8) == "" {
-        return result::err(backend_error { message: "backend error: missing aggregate pass mode for small aggregates on " + arch })
+        return backend_error { message: "backend error: missing aggregate pass mode for small aggregates on " + arch }
     }
     if abi_aggregate_pass_mode(arch, 64) == "" {
-        return result::err(backend_error { message: "backend error: missing aggregate pass mode for large aggregates on " + arch })
+        return backend_error { message: "backend error: missing aggregate pass mode for large aggregates on " + arch }
     }
     if abi_return_mode(arch, "aggregate", 64) == "" {
         return result::err(backend_error { message: "backend error: missing aggregate return mode on " + arch }
     }
-    result::ok(())
+    ()
 }
 
 func abi_sret_reg(string arch) string {

@@ -75,13 +75,13 @@ func (dm document_manager) parse_document(uri string) {
         option::some(doc) : {
             lexer := s::new_lexer(doc.text)
             switch lexer.tokenize() {
-                result::ok(tokens) : {
+                tokens : {
                     switch s::parse_tokens(tokens) {
-                        result::ok(ast) : {
+                        ast : {
                             dm.ast_cache.insert(uri, ast)
                             dm.error_cache.remove(uri)
                         },
-                        result::err(err) : {
+                        err : {
                             dm.error_cache.insert(uri, vec[parse_error]{
                                 parse_error {
                                     message: err.message,
@@ -91,7 +91,7 @@ func (dm document_manager) parse_document(uri string) {
                         }
                     }
                 },
-                result::err(err) : {
+                err : {
                     dm.error_cache.insert(uri, vec[parse_error]{
                         parse_error {
                             message: err.message,

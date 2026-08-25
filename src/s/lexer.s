@@ -88,7 +88,7 @@ func (lexer* self) tokenize() (vec[token], lex_error) {
             line: self.line,
             column: self.column,
         })
-        result::ok(tokens)
+        tokens
     }
 
 func (lexer* self) skip_ignored() ((), lex_error) {
@@ -117,7 +117,7 @@ func (lexer* self) skip_ignored() ((), lex_error) {
             }
             break
         }
-        result::ok(())
+        ()
     }
 
 func (lexer* self) read_identifier() (string, lex_error) {
@@ -127,7 +127,7 @@ func (lexer* self) read_identifier() (string, lex_error) {
             }
             out = out + self.advance()?
         }
-        result::ok(out)
+        out
     }
 
 func (lexer* self) read_number() (string, lex_error) {
@@ -139,7 +139,7 @@ func (lexer* self) read_number() (string, lex_error) {
             }
             out = out + self.advance()?
         }
-        result::ok(out)
+        out
     }
 
 func (lexer* self) read_string() (string, lex_error) {
@@ -148,7 +148,7 @@ func (lexer* self) read_string() (string, lex_error) {
             out = out + ch
             if ch == "\\" {
                 if self.is_eof() {
-                    return result::err(self.error("unterminated escape sequence"))
+                    return self.error("unterminated escape sequence")
                 }
                 string ch = self.advance()?
                 continue
@@ -157,7 +157,7 @@ func (lexer* self) read_string() (string, lex_error) {
                 return out
             }
         }
-        result::err(self.error("unterminated string literal"))
+        self.error("unterminated string literal")
     }
 
 func (lexer* self) read_symbol() (string, lex_error) {
@@ -188,7 +188,7 @@ func (lexer* self) read_symbol() (string, lex_error) {
         string ch = self.peek()?        if is_single_symbol(ch) {
             return self.advance()?
         }
-        result::err(self.error("unexpected character"))
+        self.error("unexpected character")
     }
 
 func (lexer* self) match_text(string text) bool {
@@ -200,14 +200,14 @@ func (lexer* self) match_text(string text) bool {
 
 func (lexer* self) peek() (string, lex_error) {
         if self.is_eof() {
-            return result::err(self.error("unexpected eof"))
+            return self.error("unexpected eof")
         }
-        result::ok(char_at(self.source, self.index))
+        char_at(self.source, self.index)
     }
 
 func (lexer* self) advance() (string, lex_error) {
         if self.is_eof() {
-            return result::err(self.error("unexpected eof"))
+            return self.error("unexpected eof")
         }
         string ch = char_at(self.source, self.index)        self.index = self.index + 1
         if ch == "\n" {
@@ -216,7 +216,7 @@ func (lexer* self) advance() (string, lex_error) {
         } else {
             self.column = self.column + 1
         }
-        result::ok(ch)
+        ch
     }
 
 func (lexer* self) is_eof() bool {
