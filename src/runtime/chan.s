@@ -46,7 +46,7 @@ func chan_send(RawChan ch, int val) ((), string) {
     ch.mu.lock()
     if ch.state == CHAN_CLOSED {
         ch.mu.unlock()
-        return result::err("send on closed channel")
+        return result::err("send on closed channel"
     }
     if ch.cap == 0 {
         if !ch.receivers.is_empty() {
@@ -56,13 +56,13 @@ func chan_send(RawChan ch, int val) ((), string) {
                 chan_deliver(w.sroutine_id, val)
                 sroutine_ready(w.sroutine_id)
             }
-            return result::ok(())
+            return ())
         }
         cur := __sroutine_current_id()
         ch.senders.push(Waiter { sroutine_id: cur, val_idx: val })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
-        return result::ok(())
+        return ())
     }
     for ch.count >= ch.cap {
         cur := __sroutine_current_id()
@@ -72,7 +72,7 @@ func chan_send(RawChan ch, int val) ((), string) {
         ch.mu.lock()
         if ch.state == CHAN_CLOSED {
             ch.mu.unlock()
-            return result::err("send on closed channel")
+            return result::err("send on closed channel"
         }
     }
     ch.buf.set(ch.tail, val)
@@ -84,7 +84,7 @@ func chan_send(RawChan ch, int val) ((), string) {
         if w.sroutine_id >= 0 {
             sroutine_ready(w.sroutine_id)
         }
-        return result::ok(())
+        return ())
     }
     ch.mu.unlock()
     result::ok(())
@@ -215,7 +215,7 @@ func chan_close(RawChan ch) ((), string) {
     ch.mu.lock()
     if ch.state == CHAN_CLOSED {
         ch.mu.unlock()
-        return result::err("close of closed channel")
+        return result::err("close of closed channel"
     }
     ch.state = CHAN_CLOSED
     for !ch.receivers.is_empty() {

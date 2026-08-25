@@ -84,7 +84,7 @@ func (r *buffer_reader) read_line() string {
         if slice(r.data, r.offset, r.offset + 1) == "\n" {
             string line = slice(r.data, start, r.offset)
             r.offset = r.offset + 1
-            return trim_trailing_cr(line)
+            return trim_trailing_cr(line
         }
         r.offset = r.offset + 1
     }

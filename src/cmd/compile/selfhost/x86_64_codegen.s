@@ -147,7 +147,7 @@ func (gen: &X86_64Gen) translate_instruction(Instruction instr) error {
         case "PARAM":
             return nil
         default:
-            return error("unknown IR opcode: " + instr.opcode)
+            return error("unknown IR opcode: " + instr.opcode
     }
 }
 

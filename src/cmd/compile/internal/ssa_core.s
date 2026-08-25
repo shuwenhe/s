@@ -252,7 +252,7 @@ func build_pipeline(string mir_text, string goarch) ssa_program {
 func build_pipeline_with_margin(string mir_text, string goarch, int dominant_margin_override) ssa_program {
     options := default_options()
     options.dominant_margin_override = dominant_margin_override
-    return build_pipeline_with_options(mir_text, goarch, options)
+    return build_pipeline_with_options(mir_text, goarch, options
 }
 
 func build_pipeline_with_graph_hints(mir_graph graph, string mir_text, string goarch) ssa_program {
@@ -1147,7 +1147,7 @@ func int32_min(int left, int right) int {
 func canonicalize_mir(string mir_text) ssa_rewrite_result {
     rewritten := mir_text
     rewrites := 0
-    r0 := replace_first_token(rewritten, " term=jump |", " term=return |")
+    r0 := replace_first_token(rewritten, " term=jump |", " term=return |"
     if r0.changed {
         rewritten = r0.text
         rewrites = rewrites + 1
@@ -1876,7 +1876,7 @@ func normalize_stmt_counts(string mir_text, int target_total) string {
     if current_total <= 0 || target_total >= current_total {
         return mir_text
     }
-    return reduce_numeric_marker_budget(mir_text, " stmts=", current_total - target_total)
+    return reduce_numeric_marker_budget(mir_text, " stmts=", current_total - target_total
 }
 
 func reduce_numeric_marker_budget(string text, string marker, int budget) string {
@@ -2292,7 +2292,7 @@ func hash_text(string text) int {
 
 func parse_digit_safe(string ch) int {
     if ch >= "0" && ch <= "9" {
-        return parse_digit(ch)
+        return parse_digit(ch
     }
     if ch >= "a" && ch <= "z" {
         return 10

@@ -5,7 +5,7 @@ func host_intrinsics_init(args: [string]) {
 }
 
 func host_intrinsics_argc(): int {
-    return g_args.len()
+    return g_args.len(
 }
 
 func host_intrinsics_argv(index: int): string {
@@ -16,7 +16,7 @@ func host_intrinsics_argv(index: int): string {
 }
 
 func host_intrinsics_get_env(key: string): string {
-    return os.getenv(key)
+    return os.getenv(key
 }
 
 func host_intrinsics_println(text: string) {

@@ -14,11 +14,11 @@ use compile.internal.build.backend.run as backend_run_impl
 use compile.internal.build.frontend.load as frontend_load_impl
 
 func parse_options(vec[string] args)  vec[string] {
-    return parse_options_impl(args)
+    return parse_options_impl(args
 }
 
 func usage() string {
-    return usage_impl()
+    return usage_impl(
 }
 
 func emit_check_ok(string path) () {
@@ -46,13 +46,13 @@ func report_usage(string text) () {
 }
 
 func build(string path, string output, string ssa_margin, bool nostdlib) int {
-    return backend_build_impl(path, output, ssa_margin, nostdlib)
+    return backend_build_impl(path, output, ssa_margin, nostdlib
 }
 
 func run(string path, string ssa_margin, bool nostdlib) int {
-    return backend_run_impl(path, ssa_margin, nostdlib)
+    return backend_run_impl(path, ssa_margin, nostdlib
 }
 
 func load_frontend(string path) string {
-    return frontend_load_impl(path)
+    return frontend_load_impl(path
 }

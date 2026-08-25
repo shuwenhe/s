@@ -27,7 +27,7 @@ func host_fs_read_to_string(path: string): string {
     if path == nil {
         return nil
     }
-    return os.read_file(path)
+    return os.read_file(path
 }
 
 func host_fs_write_text_file(path: string, contents: string): int {
@@ -43,5 +43,5 @@ func host_fs_make_temp_dir(prefix: string, base_dir: string): string {
     prefix_text := if prefix == nil { "tmp-" } else { prefix }
     root := if base_dir == nil { "/tmp" } else { base_dir }
     mkdirs_for_path(root)
-    return os.make_temp_dir(prefix_text, root)
+    return os.make_temp_dir(prefix_text, root
 }
