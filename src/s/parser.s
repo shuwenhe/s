@@ -122,7 +122,7 @@ func (parser* self) parse_const_decl() (const_decl, parse_error) {
         result::ok(entry)
     }
 
-func (parser* self) parse_const_group_items() (vec[const_decl), parse_error] {
+func (parser* self) parse_const_group_items() (vec[const_decl], parse_error) {
         self.expect_keyword("const")?
         self.expect_symbol("(")?
         vec[const_decl] out = vec[const_decl]()        int iota_index = 0        for !self.eat_symbol(")") {
@@ -280,7 +280,7 @@ func (parser* self) parse_function(bool require_body) (parsed_function, parse_er
         })
     }
 
-func (parser* self) parse_params() (vec[param), parse_error] {
+func (parser* self) parse_params() (vec[param], parse_error) {
         vec[param] params = vec[param]()        if self.at_symbol(")") {
             return result::ok(params)
         }
@@ -296,7 +296,7 @@ func (parser* self) parse_params() (vec[param), parse_error] {
         result::ok(params)
     }
 
-func (parser* self) parse_generic_params() (vec[string), parse_error] {
+func (parser* self) parse_generic_params() (vec[string], parse_error) {
         vec[string] generics = vec[string]()        if !self.eat_symbol("[") {
             return result::ok(generics)
         }
@@ -333,7 +333,7 @@ func (parser* self) parse_named_type(vec[string] stop_values) (named_type, parse
         vec[token] segment = self.parse_token_segment(stop_values)?        decode_named_type(segment)
     }
 
-func (parser* self) parse_token_segment(vec[string] stop_values) (vec[token), parse_error] {
+func (parser* self) parse_token_segment(vec[string] stop_values) (vec[token], parse_error) {
         vec[token] segment = vec[token]()        int bracket = 0        int paren = 0
         for true {
             token token = self.peek()?            if token.kind == token_kind::eof {
@@ -386,7 +386,7 @@ func (parser* self) parse_block_expr() (block_expr, parse_error) {
         })
     }
 
-func (self: parser) starts_stmt() bool {
+func (parser* self) starts_stmt() bool {
         self.at_keyword("return")
             || self.at_keyword("defer")
             || self.at_keyword("sroutine")
@@ -980,7 +980,7 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
         }))
     }
 
-func (self: parser) binary_precedence(string op) int {
+func (parser* self) binary_precedence(string op) int {
         switch op {
             "||" : 1,
             "&&" : 2,
@@ -1081,42 +1081,42 @@ func (parser* self) parse_bracket_group() (string, parse_error) {
         )
     }
 
-func (self: parser) at(token_kind kind) bool {
+func (parser* self) at(token_kind kind) bool {
         self.peek().unwrap().kind == kind
     }
 
-func (self: parser) at_keyword(string value) bool {
+func (parser* self) at_keyword(string value) bool {
         token token = self.peek().unwrap()        token.kind == token_kind::keyword && token.value == value
     }
 
-func (self: parser) at_symbol(string value) bool {
+func (parser* self) at_symbol(string value) bool {
         token token = self.peek().unwrap()        token.kind == token_kind::symbol && token.value == value
     }
 
-func (self: parser) at_symbol_after_keyword(string value) bool {
+func (parser* self) at_symbol_after_keyword(string value) bool {
         token first = self.peek().unwrap()        if first.kind != token_kind::keyword {
             return false
         }
         token second = self.peek_at(1).unwrap()        second.kind == token_kind::symbol && second.value == value
     }
 
-func (self: parser) at_cfor_start() bool {
+func (parser* self) at_cfor_start() bool {
         self.at_keyword("for") && self.peek_at(1).unwrap().kind == token_kind::symbol && self.peek_at(1).unwrap().value == "("
     }
 
-func (self: parser) looks_like_assignment_stmt() bool {
+func (parser* self) looks_like_assignment_stmt() bool {
         token first = self.peek().unwrap()        token second = self.peek_at(1).unwrap()        first.kind == token_kind::ident && second.kind == token_kind::symbol && second.value == "="
     }
 
-func (self: parser) looks_like_short_var_stmt() bool {
+func (parser* self) looks_like_short_var_stmt() bool {
         false
     }
 
-func (self: parser) looks_like_increment_stmt() bool {
+func (parser* self) looks_like_increment_stmt() bool {
         token first = self.peek().unwrap()        token second = self.peek_at(1).unwrap()        first.kind == token_kind::ident && second.kind == token_kind::symbol && second.value == "++"
     }
 
-func (self: parser) looks_like_typed_var_stmt() bool {
+func (parser* self) looks_like_typed_var_stmt() bool {
         int offset = self.find_top_level_symbol_offset("=")        if offset <= 0 {
             return false
         }
@@ -1185,11 +1185,11 @@ func (parser* self) expect_ident() (string, parse_error) {
         })
     }
 
-func (self: parser) peek() (token, parse_error) {
+func (parser* self) peek() (token, parse_error) {
         self.peek_at(0)
     }
 
-func (self: parser) peek_at(int offset) (token, parse_error) {
+func (parser* self) peek_at(int offset) (token, parse_error) {
         if self.index >= len(self.tokens) {
             return result::err(parse_error {
                 message: "unexpected eof",
@@ -1208,7 +1208,7 @@ func (parser* self) advance() (token, parse_error) {
         result::ok(token)
     }
 
-func (self: parser) error_here(string message) parse_error {
+func (parser* self) error_here(string message) parse_error {
         token token = self.peek().unwrap()        parse_error {
             message: message,
             line: token.line,
@@ -1216,7 +1216,7 @@ func (self: parser) error_here(string message) parse_error {
         }
     }
 
-func (self: parser) find_top_level_symbol_offset(string value) int {
+func (parser* self) find_top_level_symbol_offset(string value) int {
         int bracket = 0        int paren = 0        int offset = 0        for self.index + offset < len(self.tokens) {
             token := self.tokens[self.index + offset]
             if token.kind == token_kind::eof {

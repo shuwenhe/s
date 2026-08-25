@@ -159,7 +159,7 @@ func connect_deadline(int sockfd, string host, int port, int family, int timeout
     }
 }
 
-func resolve_ip(string host, int family) (vec[string), net_error] {
+func resolve_ip(string host, int family) (vec[string], net_error) {
     addresses := __sys_resolve_ip(host, family)
     if len(addresses) == 0 && __sys_errno() != 0 {
         result::err(make_net_error("resolve"))
@@ -230,7 +230,7 @@ func splice(int in_fd, int out_fd, int count) (int, net_error) {
     if n < 0 { result::err(make_net_error("splice")) } else { result::ok(n) }
 }
 
-func interface_addresses() (vec[string), net_error] {
+func interface_addresses() (vec[string], net_error) {
     addresses := __sys_interface_addresses()
     if len(addresses) == 0 && __sys_errno() != 0 {
         result::err(make_net_error("getifaddrs"))
@@ -333,7 +333,7 @@ func poller_del(int poller_fd, int fd) ((), net_error) {
     }
 }
 
-func poller_wait(int poller_fd, int max, int timeout_ms) (vec[int), net_error] {
+func poller_wait(int poller_fd, int max, int timeout_ms) (vec[int], net_error) {
     ready := __sys_poller_wait(poller_fd, max, timeout_ms)
     if __sys_errno() != 0 {
         result::err(make_net_error("poller_wait"))
