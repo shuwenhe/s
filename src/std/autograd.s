@@ -267,7 +267,7 @@ func ag_view(ag_tensor x, int[] shape) ag_tensor {
 
 func ag_transpose(ag_tensor x, int d0, int d1) ag_tensor {
     T.tensor out_data = T.transpose(x.data, d0, d1)
-    int nid = register_op("transpose", [x.graph_node_id], out_data, x.requires_grad, new float[0], [d0, d1])
+    int nid = register_op("transpose", [x.graph_node_id], out_data, x.requires_grad, new float[0], [d0, d1))
     ag_tensor { data: out_data, grad: T.zeros_like(out_data), graph_node_id: nid, requires_grad: x.requires_grad, is_leaf: false, name: "transpose" }
 }
 

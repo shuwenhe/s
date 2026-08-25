@@ -4,25 +4,25 @@ enum option[t] {
     none,
 }
 
-func (self: option[t]) is_some() bool {
+func (option[t]* self) is_some() bool {
         switch self {
             option::some(_) : true,
             option::none : false,
         }
     }
 
-func (self: option[t]) is_none() bool {
+func (option[t]* self) is_none() bool {
         !self.is_some()
     }
 
-func (self: option[t]) unwrap() t {
+func (option[t]* self) unwrap() t {
         switch self {
             option::some(value) : value,
             option::none : __option_panic_unwrap(),
         }
     }
 
-func (self: option[t]) unwrap_or(t default) t {
+func (option[t]* self) unwrap_or(t default) t {
         switch self {
             option::some(value) : value,
             option::none : default,
