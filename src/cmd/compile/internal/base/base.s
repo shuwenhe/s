@@ -17,7 +17,7 @@ func at_exit(string name) () {
 func run_at_exit() vec[string] {
     out := vec[string]()
     i := at_exit_funcs.len()
-    while i > 0 {
+    for i > 0 {
         i = i - 1
         out.push(at_exit_funcs[i].name)
     }

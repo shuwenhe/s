@@ -4,7 +4,7 @@ func generate_module_name() string {
     "ssa/generate.s"
 }
 
-func generate_module_apply(mut ssa_func f) int {
+func generate_module_apply(ssa_func f) int {
     recompute_uses(f)
     0
 }

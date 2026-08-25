@@ -14,7 +14,7 @@ struct sparse_map {
 func new_sparse_map(int n) sparse_map {
     sparse := vec[int]()
     i := 0
-    while i < n {
+    for i < n {
         sparse.push(0)
         i = i + 1
     }
@@ -43,7 +43,7 @@ func sparse_map_get(sparse_map s, int key) int_pair {
     make_int_pair(0, 0)
 }
 
-func sparse_map_set(mut sparse_map s, int key, int value) sparse_map {
+func sparse_map_set(sparse_map s, int key, int value) sparse_map {
     if key < 0 || key >= s.sparse.len() {
         return s
     }
@@ -57,7 +57,7 @@ func sparse_map_set(mut sparse_map s, int key, int value) sparse_map {
     s
 }
 
-func sparse_map_remove(mut sparse_map s, int key) sparse_map {
+func sparse_map_remove(sparse_map s, int key) sparse_map {
     if key < 0 || key >= s.sparse.len() {
         return s
     }
@@ -71,7 +71,7 @@ func sparse_map_remove(mut sparse_map s, int key) sparse_map {
     s
 }
 
-func sparse_map_clear(mut sparse_map s) sparse_map {
+func sparse_map_clear(sparse_map s) sparse_map {
     s.dense = vec[sparse_entry]()
     s
 }

@@ -32,7 +32,7 @@ func value_is_const_zero(ssa_value v) bool {
 func value_key(ssa_value v) string {
     key := v.op + "|" + v.ty + "|" + v.literal
     i := 0
-    while i < v.args.len() {
+    for i < v.args.len() {
         key = key + "#" + to_string(v.args[i])
         i = i + 1
     }

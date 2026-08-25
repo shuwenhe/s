@@ -15,7 +15,7 @@ struct syntax_error {
     int column
 }
 
-func read_source(string path) result[string, syntax_error] {
+func read_source(string path) (string, syntax_error) {
     switch read_to_string(path) {
         result::ok(source) : result::ok(source),
         result::err(err) : result::err(syntax_error {
@@ -26,7 +26,7 @@ func read_source(string path) result[string, syntax_error] {
     }
 }
 
-func tokenize(string source) result[vec[token], syntax_error] {
+func tokenize(string source) (vec[token), syntax_error] {
     switch new_lexer(source).tokenize() {
         result::ok(tokens) : result::ok(tokens),
         result::err(err) : result::err(syntax_error {
@@ -37,12 +37,12 @@ func tokenize(string source) result[vec[token], syntax_error] {
     }
 }
 
-func parse_source(string source) result[source_file, syntax_error] {
+func parse_source(string source) (source_file, syntax_error) {
     tokens := tokenize(source)?
     parse_tokens(tokens)
 }
 
-func parse_tokens(vec[token] tokens) result[source_file, syntax_error] {
+func parse_tokens(vec[token] tokens) (source_file, syntax_error) {
     switch parse_tokens(tokens) {
         result::ok(ast) : result::ok(ast),
         result::err(err) : result::err(syntax_error {

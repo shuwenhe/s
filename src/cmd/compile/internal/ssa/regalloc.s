@@ -25,11 +25,11 @@ func interval_less(live_interval a, live_interval b) bool {
     a.end < b.end
 }
 
-func sort_intervals(mut vec[live_interval] ivs) {
+func sort_intervals(vec[live_interval] ivs) {
     i := 0
-    while i < ivs.len() {
+    for i < ivs.len() {
         j := i + 1
-        while j < ivs.len() {
+        for j < ivs.len() {
             if interval_less(ivs[j], ivs[i]) {
                 t := ivs[i]
                 ivs[i] = ivs[j]
@@ -44,15 +44,15 @@ func sort_intervals(mut vec[live_interval] ivs) {
 func build_positions(ssa_func f) vec[int] {
     pos := vec[int]()
     i := 0
-    while i < f.values.len() {
+    for i < f.values.len() {
         pos.push(-1)
         i = i + 1
     }
     p := 0
     bi := 0
-    while bi < f.blocks.len() {
+    for bi < f.blocks.len() {
         j := 0
-        while j < f.blocks[bi].values.len() {
+        for j < f.blocks[bi].values.len() {
             id := f.blocks[bi].values[j]
             if id >= 0 && id < pos.len() && pos[id] < 0 {
                 pos[id] = p
@@ -63,7 +63,7 @@ func build_positions(ssa_func f) vec[int] {
         bi = bi + 1
     }
     i = 0
-    while i < pos.len() {
+    for i < pos.len() {
         if pos[i] < 0 {
             pos[i] = p
             p = p + 1
@@ -77,7 +77,7 @@ func compute_live_intervals(ssa_func f) vec[live_interval] {
     pos := build_positions(f)
     ivs := vec[live_interval]()
     i := 0
-    while i < f.values.len() {
+    for i < f.values.len() {
         if !f.values[i].removed {
             need := f.values[i].uses > 0 || op_has_side_effect(f.values[i].op)
             if need {
@@ -91,17 +91,17 @@ func compute_live_intervals(ssa_func f) vec[live_interval] {
         i = i + 1
     }
     i = 0
-    while i < f.values.len() {
+    for i < f.values.len() {
         if f.values[i].removed {
             i = i + 1
             continue
         }
         use_pos := pos[i]
         j := 0
-        while j < f.values[i].args.len() {
+        for j < f.values[i].args.len() {
             arg := f.values[i].args[j]
             k := 0
-            while k < ivs.len() {
+            for k < ivs.len() {
                 if ivs[k].value_id == arg && use_pos > ivs[k].end {
                     ivs[k].end = use_pos
                     break
@@ -113,7 +113,7 @@ func compute_live_intervals(ssa_func f) vec[live_interval] {
         i = i + 1
     }
     bi := 0
-    while bi < f.blocks.len() {
+    for bi < f.blocks.len() {
         ctrl := f.blocks[bi].control
         if ctrl >= 0 {
             use_pos := 0
@@ -122,7 +122,7 @@ func compute_live_intervals(ssa_func f) vec[live_interval] {
                 use_pos = pos[tail]
             }
             k := 0
-            while k < ivs.len() {
+            for k < ivs.len() {
                 if ivs[k].value_id == ctrl && use_pos > ivs[k].end {
                     ivs[k].end = use_pos
                     break
@@ -136,10 +136,10 @@ func compute_live_intervals(ssa_func f) vec[live_interval] {
     ivs
 }
 
-func active_expire(mut vec[live_interval] active, int point) {
+func active_expire(vec[live_interval] active, int point) {
     keep := vec[live_interval]()
     i := 0
-    while i < active.len() {
+    for i < active.len() {
         if active[i].end >= point {
             keep.push(active[i])
         }
@@ -150,7 +150,7 @@ func active_expire(mut vec[live_interval] active, int point) {
 
 func assigned_reg(vec[reg_assign] assigns, int value_id) string {
     i := 0
-    while i < assigns.len() {
+    for i < assigns.len() {
         if assigns[i].value_id == value_id {
             return assigns[i].reg
         }
@@ -165,7 +165,7 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
     active := vec[live_interval]()
     spills := 0
     i := 0
-    while i < ivs.len() {
+    for i < ivs.len() {
         cur := ivs[i]
         active_expire(active, cur.start)
         if reg_count <= 0 {
@@ -177,7 +177,7 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
         if active.len() < reg_count {
             used := vec[string]()
             ai := 0
-            while ai < active.len() {
+            for ai < active.len() {
                 r := assigned_reg(assigns, active[ai].value_id)
                 if r != "" {
                     used.push(r)
@@ -186,11 +186,11 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
             }
             picked := ""
             rix := 0
-            while rix < reg_count {
+            for rix < reg_count {
                 cand := "r" + to_string(rix)
                 seen := false
                 ui := 0
-                while ui < used.len() {
+                for ui < used.len() {
                     if used[ui] == cand {
                         seen = true
                         break
@@ -211,7 +211,7 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
         } else {
             far_i := 0
             k := 1
-            while k < active.len() {
+            for k < active.len() {
                 if active[k].end > active[far_i].end {
                     far_i = k
                 }

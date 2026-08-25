@@ -557,7 +557,7 @@ func dump_expr(expr expr) string {
         expr.bool(value) : if value.value { "true" } else { "false" },
         expr.name(value) : value.name,
         expr.borrow(value) : {
-            prefix := if value.mutable { "&mut " } else { "&" }
+            prefix := if value.mutable { "&" } else { "&" }
             prefix + dump_expr(value.target.value)
         }
         expr.binary(value) : "(" + dump_expr(value.left.value) + " " + value.op + " " + dump_expr(value.right.value) + ")",

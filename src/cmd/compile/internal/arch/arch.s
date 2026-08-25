@@ -21,7 +21,7 @@ func init(string arch) string {
 func lookup_init_name(string arch) string {
     table := arch_inits()
     i := 0
-    while i < table.len() {
+    for i < table.len() {
         if table[i].goarch == arch {
             return table[i].init_name
         }

@@ -24,7 +24,7 @@ func arg_emit(string fn_name, vec[arg_liveness_slot] args, vec[vec[int]] raw_map
     if args.len() > 0 {
         min_slot_offset = args[0].frame_offset
         i := 1
-        while i < args.len() {
+        for i < args.len() {
             if args[i].frame_offset < min_slot_offset {
                 min_slot_offset = args[i].frame_offset
             }
@@ -41,7 +41,7 @@ func arg_emit(string fn_name, vec[arg_liveness_slot] args, vec[vec[int]] raw_map
     encoded_maps := vec[string]()
     off := min_slot_offset
     m := 0
-    while m < maps.len() {
+    for m < maps.len() {
         bits := maps[m]
         map_offsets.push(off)
         encoded_maps.push(encode_bitmap(bits))
@@ -59,10 +59,10 @@ func arg_emit(string fn_name, vec[arg_liveness_slot] args, vec[vec[int]] raw_map
 func dedupe_bitmaps(vec[vec[int]] maps) vec[vec[int]] {
     out := vec[vec[int]]()
     i := 0
-    while i < maps.len() {
+    for i < maps.len() {
         seen := false
         j := 0
-        while j < out.len() {
+        for j < out.len() {
             if bitmap_equal(out[j], maps[i]) {
                 seen = true
                 break
@@ -82,7 +82,7 @@ func bitmap_equal(vec[int] left, vec[int] right) bool {
         return false
     }
     i := 0
-    while i < left.len() {
+    for i < left.len() {
         if left[i] != right[i] {
             return false
         }
@@ -94,7 +94,7 @@ func bitmap_equal(vec[int] left, vec[int] right) bool {
 func encode_bitmap(vec[int] bits) string {
     out := ""
     i := 0
-    while i < bits.len() {
+    for i < bits.len() {
         if bits[i] != 0 {
             out = out + "1"
         } else {

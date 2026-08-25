@@ -51,13 +51,13 @@ func timings_add_event(int size, string unit) () {
 func timings_write(string prefix) string {
     out := ""
     i := 0
-    while i < timer.list.len() {
+    for i < timer.list.len() {
         phase := timer.list[i]
         out = out + prefix + phase.label + "\t" + (if phase.start { "start" } else { "stop" }) + "\n"
         i = i + 1
     }
     i = 0
-    while i < timer.events.len() {
+    for i < timer.events.len() {
         out = out + prefix + "event\t" + to_string(timer.events[i].size) + " " + timer.events[i].unit + "\n"
         i = i + 1
     }
@@ -70,7 +70,7 @@ func join_with_colon(vec[string] labels) string {
     }
     out := labels[0]
     i := 1
-    while i < labels.len() {
+    for i < labels.len() {
         out = out + ":" + labels[i]
         i = i + 1
     }

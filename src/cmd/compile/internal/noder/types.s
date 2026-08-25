@@ -75,13 +75,13 @@ func make_error(string code, string message, string path, int line, int column) 
     }
 }
 
-func ok_unit(string path, string text) result[source_unit, noder_error] {
+func ok_unit(string path, string text) (source_unit, noder_error) {
     result::ok(source_unit {
         path: path,
         text: text,
     })
 }
 
-func err_unit(string code, string message, string path, int line, int column) result[source_unit, noder_error] {
+func err_unit(string code, string message, string path, int line, int column) (source_unit, noder_error) {
     result::err(make_error(code, message, path, line, column))
 }

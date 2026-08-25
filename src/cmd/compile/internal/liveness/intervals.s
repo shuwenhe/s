@@ -16,7 +16,7 @@ struct live_event {
 func build_live_intervals(vec[live_event] events) vec[live_interval] {
     out := vec[live_interval]()
     i := 0
-    while i < events.len() {
+    for i < events.len() {
         ev := events[i]
         idx := find_interval_index(out, ev.value_id)
         if ev.on {
@@ -66,7 +66,7 @@ func merge_intervals(live_interval a, live_interval b) live_interval {
 
 func find_interval_index(vec[live_interval] ivs, int value_id) int {
     i := 0
-    while i < ivs.len() {
+    for i < ivs.len() {
         if ivs[i].value_id == value_id {
             return i
         }

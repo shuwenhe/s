@@ -25,7 +25,7 @@ struct RawChan {
 func new_raw_chan(int cap) RawChan {
     buf := vec[int]()
     var i = 0
-    while i < cap {
+    for i < cap {
         buf.push(0)
         i = i + 1
     }
@@ -42,7 +42,7 @@ func new_raw_chan(int cap) RawChan {
     }
 }
 
-func chan_send(RawChan mut ch, int val) result[(), string] {
+func chan_send(RawChan ch, int val) ((), string) {
     ch.mu.lock()
     if ch.state == CHAN_CLOSED {
         ch.mu.unlock()
@@ -64,7 +64,7 @@ func chan_send(RawChan mut ch, int val) result[(), string] {
         sroutine_park(SROUTINE_PARK_CHANNEL)
         return result::ok(())
     }
-    while ch.count >= ch.cap {
+    for ch.count >= ch.cap {
         cur := __sroutine_current_id()
         ch.senders.push(Waiter { sroutine_id: cur, val_idx: val })
         ch.mu.unlock()
@@ -90,7 +90,7 @@ func chan_send(RawChan mut ch, int val) result[(), string] {
     result::ok(())
 }
 
-func chan_recv(RawChan mut ch) recv_result {
+func chan_recv(RawChan ch) recv_result {
     ch.mu.lock()
     if ch.cap == 0 {
         if !ch.senders.is_empty() {
@@ -112,7 +112,7 @@ func chan_recv(RawChan mut ch) recv_result {
         v := chan_take_delivered(cur)
         return recv_result { value: v, ok: true }
     }
-    while ch.count == 0 {
+    for ch.count == 0 {
         if ch.state == CHAN_CLOSED {
             ch.mu.unlock()
             return recv_result { value: 0, ok: false }
@@ -148,7 +148,7 @@ struct recv_result {
     bool ok
 }
 
-func chan_try_send(RawChan mut ch, int val) bool {
+func chan_try_send(RawChan ch, int val) bool {
     ch.mu.lock()
     if ch.state == CHAN_CLOSED {
         ch.mu.unlock()
@@ -178,7 +178,7 @@ func chan_try_send(RawChan mut ch, int val) bool {
     true
 }
 
-func chan_try_recv(RawChan mut ch) option[recv_result] {
+func chan_try_recv(RawChan ch) option[recv_result] {
     ch.mu.lock()
     if ch.cap == 0 {
         if !ch.senders.is_empty() {
@@ -211,14 +211,14 @@ func chan_try_recv(RawChan mut ch) option[recv_result] {
     option::some(recv_result { value: val, ok: true })
 }
 
-func chan_close(RawChan mut ch) result[(), string] {
+func chan_close(RawChan ch) ((), string) {
     ch.mu.lock()
     if ch.state == CHAN_CLOSED {
         ch.mu.unlock()
         return result::err("close of closed channel")
     }
     ch.state = CHAN_CLOSED
-    while !ch.receivers.is_empty() {
+    for !ch.receivers.is_empty() {
         w := dequeue_waiter(ch.receivers)
         if w.sroutine_id >= 0 {
             sroutine_ready(w.sroutine_id)
@@ -228,14 +228,14 @@ func chan_close(RawChan mut ch) result[(), string] {
     result::ok(())
 }
 
-func dequeue_waiter(vec[Waiter] mut q) Waiter {
+func dequeue_waiter(vec[Waiter] q) Waiter {
     if q.is_empty() {
         return Waiter { sroutine_id: -1, val_idx: -1 }
     }
     w := q[0]
     new_q := vec[Waiter]()
     var i = 1
-    while i < q.len() {
+    for i < q.len() {
         new_q.push(q[i])
         i = i + 1
     }

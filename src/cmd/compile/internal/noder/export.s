@@ -6,7 +6,7 @@ use std.vec.vec
 func collect_exports(source_file ast) vec[export_record] {
     out := vec[export_record]()
     i := 0
-    while i < ast.items.len() {
+    for i < ast.items.len() {
         switch ast.items[i] {
             item.function(fn) : {
                 if fn.is_public {
@@ -47,7 +47,7 @@ func collect_exports(source_file ast) vec[export_record] {
 func emit_export_payload(vec[export_record] exports) string {
     out := "export-data version=1\n"
     i := 0
-    while i < exports.len() {
+    for i < exports.len() {
         out = out + exports[i].kind + " " + exports[i].name + "\n"
         i = i + 1
     }

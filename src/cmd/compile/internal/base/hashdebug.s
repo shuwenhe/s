@@ -48,7 +48,7 @@ func new_hash_debug(string name, string raw) hash_debug {
     }
     parts := split(raw, "/")
     i := 0
-    while i < parts.len() {
+    for i < parts.len() {
         p := trim_spaces(parts[i])
         if p != "" {
             if starts_with(p, "-") {
@@ -70,7 +70,7 @@ func new_hash_debug(string name, string raw) hash_debug {
     out
 }
 
-func set_inline_suffix_only(hash_debug mut hd, bool on) hash_debug {
+func set_inline_suffix_only(hash_debug hd, bool on) hash_debug {
     hd.inline_suffix_only = on
     hd
 }
@@ -92,7 +92,7 @@ func match_pkg_func(hash_debug hd, string pkg, string fn_name) bool {
     target := pkg + "." + fn_name
     included := false
     i := 0
-    while i < hd.matches.len() {
+    for i < hd.matches.len() {
         m := hd.matches[i]
         if m.exclude {
             if m.suffix != "" && ends_with(target, m.suffix) {
@@ -114,7 +114,7 @@ func split(string text, string sep) vec[string] {
     }
     start := 0
     i := 0
-    while i <= len(text) - len(sep) {
+    for i <= len(text) - len(sep) {
         if slice(text, i, i + len(sep)) == sep {
             out.push(slice(text, start, i))
             i = i + len(sep)

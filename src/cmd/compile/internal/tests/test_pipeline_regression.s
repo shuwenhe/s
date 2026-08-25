@@ -115,7 +115,7 @@ func run_pipeline_regression_suite() int {
     }
     saw_pkg_functions := false
     ti := 0
-    while ti < graph.trace.len() {
+    for ti < graph.trace.len() {
         if starts_with(graph.trace[ti], "package.functions=") {
             saw_pkg_functions = true
         }
@@ -219,7 +219,7 @@ func run_pipeline_regression_suite() int {
 func count_const_decls(ir_ast.package_ir pkg) int {
     count := 0
     i := 0
-    while i < pkg.decls.len() {
+    for i < pkg.decls.len() {
         switch pkg.decls[i] {
             ir_ast.decl_ir::const(_) : count = count + 1,
             _ : (),
@@ -231,7 +231,7 @@ func count_const_decls(ir_ast.package_ir pkg) int {
 
 func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
     i := 0
-    while i < pkg.decls.len() {
+    for i < pkg.decls.len() {
         switch pkg.decls[i] {
             ir_ast.decl_ir::const(cd) : {
                 if cd.name == name && cd.value == value {
@@ -247,7 +247,7 @@ func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
 
 func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
     i := 0
-    while i < pkg.decls.len() {
+    for i < pkg.decls.len() {
         switch pkg.decls[i] {
             ir_ast.decl_ir::func(fd) : {
                 if fd.name == "main" && fd.body.is_some() {
@@ -273,13 +273,13 @@ func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
 func collect_ir_package_features(ir_ast.package_ir pkg) int {
     features := 0
     i := 0
-    while i < pkg.decls.len() {
+    for i < pkg.decls.len() {
         switch pkg.decls[i] {
             ir_ast.decl_ir::func(fd) : {
                 if fd.name == "main" && fd.body.is_some() {
                     body := fd.body.unwrap()
                     j := 0
-                    while j < body.statements.len() {
+                    for j < body.statements.len() {
                         switch body.statements[j] {
                             ir_ast.stmt_ir::expr(expr_stmt) : {
                                 features = features | collect_ir_expr_features(expr_stmt.expr)
@@ -314,7 +314,7 @@ func collect_ir_package_features(ir_ast.package_ir pkg) int {
 func collect_ir_block_features(ir_ast.block_ir block) int {
     features := 2
     i := 0
-    while i < block.statements.len() {
+    for i < block.statements.len() {
         switch block.statements[i] {
             ir_ast.stmt_ir::expr(expr_stmt) : {
                 features = features | collect_ir_expr_features(expr_stmt.expr)
@@ -360,7 +360,7 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
         ir_ast.expr_ir::array(array_expr) : {
             features = features | 8
             ai := 0
-            while ai < array_expr.items.len() {
+            for ai < array_expr.items.len() {
                 features = features | collect_ir_expr_features(array_expr.items[ai])
                 ai = ai + 1
             }
@@ -368,7 +368,7 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
         ir_ast.expr_ir::map(map_expr) : {
             features = features | 16
             mi := 0
-            while mi < map_expr.entries.len() {
+            for mi < map_expr.entries.len() {
                 features = features | collect_ir_expr_features(map_expr.entries[mi].key)
                 features = features | collect_ir_expr_features(map_expr.entries[mi].value)
                 mi = mi + 1
@@ -379,7 +379,7 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
         }
         ir_ast.expr_ir::call(call_expr) : {
             i := 0
-            while i < call_expr.args.len() {
+            for i < call_expr.args.len() {
                 features = features | collect_ir_expr_features(call_expr.args[i])
                 i = i + 1
             }
@@ -414,7 +414,7 @@ func contains(string text, string needle) bool {
         return false
     }
     i := 0
-    while i <= text.len() - needle.len() {
+    for i <= text.len() - needle.len() {
         if slice(text, i, i + needle.len()) == needle {
             return true
         }

@@ -28,7 +28,7 @@ func zerorange(vec[prog] insns, int off, int cnt, bool r0_ready) vec[prog] {
     ptr_size := 4
     if cnt < (4 * ptr_size) {
         i := 0
-        while i < cnt {
+        for i < cnt {
             out.push(prog {
                 op: "MOVW",
                 from: "R0",
@@ -51,7 +51,7 @@ func zerorange(vec[prog] insns, int off, int cnt, bool r0_ready) vec[prog] {
         return out
     }
     at := 0
-    while at < cnt {
+    for at < cnt {
         out.push(prog {
             op: "MOVW",
             from: "R0",

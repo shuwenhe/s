@@ -80,7 +80,7 @@ func (r *buffer_reader) read_line() string {
         return ""
     }
     int start = r.offset
-    while r.offset < len(r.data) {
+    for r.offset < len(r.data) {
         if slice(r.data, r.offset, r.offset + 1) == "\n" {
             string line = slice(r.data, start, r.offset)
             r.offset = r.offset + 1

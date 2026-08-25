@@ -2,7 +2,7 @@ package compile.internal.noder
 use std.result.result
 use std.vec.vec
 
-func apply_quirk(string name, source_unit mut unit) result[(), noder_error] {
+func apply_quirk(string name, source_unit unit) ((), noder_error) {
     if name == "trim-trailing-space" {
         unit.text = trim_spaces(unit.text)
         return result::ok(())
@@ -11,7 +11,7 @@ func apply_quirk(string name, source_unit mut unit) result[(), noder_error] {
         lines := split_lines(unit.text)
         out := ""
         i := 0
-        while i < lines.len() {
+        for i < lines.len() {
             line := trim_spaces(lines[i])
             if starts_with(line, "use ") {
                 words := split_words(line)
@@ -34,9 +34,9 @@ func apply_quirk(string name, source_unit mut unit) result[(), noder_error] {
     result::err(make_error(code_unknown_quirk(), "unknown quirk: " + name, unit.path, 0, 0))
 }
 
-func apply_quirks(vec[string] quirks, source_unit mut unit) result[(), noder_error] {
+func apply_quirks(vec[string] quirks, source_unit unit) ((), noder_error) {
     i := 0
-    while i < quirks.len() {
+    for i < quirks.len() {
         r := apply_quirk(quirks[i], unit)
         if r.is_err() {
             return r
