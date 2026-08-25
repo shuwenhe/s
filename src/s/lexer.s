@@ -28,7 +28,7 @@ func new_lexer(string source) lexer {
 }
 
 func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
-        vec[token] tokens = vec[token]()        while !self.is_eof() {
+        vec[token] tokens = vec[token]()        for !self.is_eof() {
             self.skip_ignored()?
             if self.is_eof() {
                 break
@@ -92,14 +92,14 @@ func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
     }
 
 func (self: &mut lexer) skip_ignored() result[(), lex_error] {
-        while !self.is_eof() {
+        for !self.is_eof() {
             string ch = self.peek()?
             if is_whitespace(ch) {
                 self.advance()?
                 continue
             }
             if self.match_text("
-                while !self.is_eof() && self.peek()? != "\n" {
+                for !self.is_eof() && self.peek()? != "\n" {
                     self.advance()?
                 }
                 continue
@@ -121,7 +121,7 @@ func (self: &mut lexer) skip_ignored() result[(), lex_error] {
     }
 
 func (self: &mut lexer) read_identifier() result[string, lex_error] {
-        string out = ""        while !self.is_eof() {
+        string out = ""        for !self.is_eof() {
             string ch = self.peek()?            if !is_ident_continue(ch) {
                 break
             }
@@ -132,7 +132,7 @@ func (self: &mut lexer) read_identifier() result[string, lex_error] {
 
 func (self: &mut lexer) read_number() result[string, lex_error] {
         string out = ""
-        while !self.is_eof() {
+        for !self.is_eof() {
             string ch = self.peek()?
             if !is_number_continue(ch) {
                 break
@@ -143,7 +143,7 @@ func (self: &mut lexer) read_number() result[string, lex_error] {
     }
 
 func (self: &mut lexer) read_string() result[string, lex_error] {
-        string out = self.advance()?        while !self.is_eof() {
+        string out = self.advance()?        for !self.is_eof() {
             let ch = self.advance()?
             out = out + ch
             if ch == "\\" {
@@ -178,7 +178,7 @@ func (self: &mut lexer) read_symbol() result[string, lex_error] {
         }
         for symbol in multi {
             if self.match_text(symbol) {
-                string out = ""                int count = len(symbol)                int i = 0                while i < count {
+                string out = ""                int count = len(symbol)                int i = 0                for i < count {
                     out = out + self.advance()?
                     i = i + 1
                 }

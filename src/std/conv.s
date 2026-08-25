@@ -9,7 +9,7 @@ func int_to_string(int value) string {
     if current < 0 {
         current = 0 - current
     }
-    while current > 0 {
+    for current > 0 {
         int digit = current - (current / 10) * 10
         result = string(48 + digit) + result
         current = current / 10
@@ -29,7 +29,7 @@ func int64_to_string(int64 value) string {
     if current < 0 {
         current = 0 - current
     }
-    while current > 0 {
+    for current > 0 {
         int64 digit = current % 10
         result = string(48 + int(digit)) + result
         current = current / 10
@@ -51,7 +51,7 @@ func parse_int_default(string text, int fallback) int {
         index = 1
     }
     int value = 0
-    while index < len(text) {
+    for index < len(text) {
         int digit = int(text[index]) - 48
         if digit < 0 || digit > 9 {
             return fallback
@@ -76,7 +76,7 @@ func string_to_int(string text) int {
         start = 1
     }
     index = start
-    while index < len(text) {
+    for index < len(text) {
         int digit = int(text[index]) - 48
         if digit >= 0 && digit <= 9 {
             result = result * 10 + digit
@@ -103,7 +103,7 @@ func extract_int_default(string text, int fallback) int {
     }
     int value = 0
     bool seen = false
-    while index < len(text) {
+    for index < len(text) {
         int digit = int(text[index]) - 48
         if digit >= 0 && digit <= 9 {
             value = value * 10 + digit
@@ -141,7 +141,7 @@ func float_to_string_precision(float value, int precision) string {
 
     result = result + "."
     int i = 0
-    while i < precision {
+    for i < precision {
         frac = frac * 10.0
         int digit = int(frac)
         if digit < 0 {

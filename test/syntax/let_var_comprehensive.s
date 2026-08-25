@@ -44,7 +44,7 @@ func test_mixed() void {
 func test_var_loop() void {
     var i = 0
     var total = 0
-    while i < 5 {
+    for i < 5 {
         total = total + i
         i = i + 1
     }

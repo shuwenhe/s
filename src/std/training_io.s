@@ -108,7 +108,7 @@ func serialize_checkpoint(checkpoint ckpt) string {
     content = content + "throughput=" + fmt_float(ckpt.state.tokens_per_second, 1) + "\n"
     content = content + "loss_history=["
     int i = 0
-    while i < len(ckpt.state.loss_history) {
+    for i < len(ckpt.state.loss_history) {
         if i > 0 { content = content + ", " }
         content = content + fmt_float(ckpt.state.loss_history[i], 4)
         i = i + 1
@@ -127,7 +127,7 @@ func serialize_checkpoint(checkpoint ckpt) string {
     for name, tensor in ckpt.weight_map {
         content = content + name + ".shape=["
         int d = 0
-        while d < tensor.shape.ndim {
+        for d < tensor.shape.ndim {
             if d > 0 { content = content + "," }
             content = content + int_to_str(tensor.shape.dims[d])
             d = d + 1
@@ -137,21 +137,21 @@ func serialize_checkpoint(checkpoint ckpt) string {
         int n = tensor.shape.size
         if n > 100 {
             int p = 0
-            while p < 10 {
+            for p < 10 {
                 content = content + fmt_float(tensor.data[p], 6)
                 if p < n - 1 { content = content + "," }
                 p = p + 1
             }
             content = content + "...(" + int_to_str(n - 20) + " more)..."
             p = n - 10
-            while p < n {
+            for p < n {
                 content = content + fmt_float(tensor.data[p], 6)
                 if p < n - 1 { content = content + "," }
                 p = p + 1
             }
         } else {
             int p = 0
-            while p < n {
+            for p < n {
                 content = content + fmt_float(tensor.data[p], 6)
                 if p < n - 1 { content = content + "," }
                 p = p + 1
@@ -248,7 +248,7 @@ func get_latest_checkpoint(string manifest_path) string {
 func export_weights(AG.ag_tensor[] params) Map<string, T.tensor> {
     Map<string, T.tensor> wmap = new_map()
     int i = 0
-    while i < len(params) {
+    for i < len(params) {
         map_put(wmap, params[i].name, params[i].data)
         i = i + 1
     }
@@ -257,7 +257,7 @@ func export_weights(AG.ag_tensor[] params) Map<string, T.tensor> {
 
 func import_weights(Map<string, T.tensor> wmap, AG.ag_tensor[] mut params) void {
     int i = 0
-    while i < len(params) {
+    for i < len(params) {
         if params[i].name in wmap {
             params[i].data = wmap[params[i].name]
         }
@@ -303,7 +303,7 @@ func save_log(string log_path) void {
     string header = "Step\tLoss\tBestLoss\tGradNorm\tLR\tTime(ms)\tMessage\n"
     string lines = header
     int i = 0
-    while i < _log_count {
+    for i < _log_count {
         TrainingLogEntry e = _log_entries[i]
         lines = lines + int_to_str(e.step) + "\t" +
                  fmt_float(e.loss, 6) + "\t" +
@@ -322,7 +322,7 @@ func print_log_summary() void {
     println("Step |   Loss   |  Best   |  Grad  |    LR    | Time | Note")
     println("-----|----------|---------|--------|----------|------|-----")
     int i = 0
-    while i < _log_count {
+    for i < _log_count {
         TrainingLogEntry e = _log_entries[i]
         string line = pad_int(e.step, 4) + " | " +
                        pad_float(e.loss, 8, 6) + " | " +
@@ -345,7 +345,7 @@ func int_to_str(int n) string {
     bool neg = n < 0
     if neg { n = -n }
     string s = ""
-    while n > 0 {
+    for n > 0 {
         s = string((n % 10) + 48) + s
         n = n / 10
     }
@@ -361,7 +361,7 @@ func fmt_float(float val, int decimals) string {
     if decimals > 0 {
         result = result + "."
         int d = 0
-        while d < decimals {
+        for d < decimals {
             frac = frac * 10.0
             int digit = frac as int
             result = result + int_to_str(digit)
@@ -381,7 +381,7 @@ func ends_with(string s, string suffix) bool {
     int suflen = len(suffix)
     if suflen > slen { return false }
     int i = 0
-    while i < suflen {
+    for i < suflen {
         if s[slen - suflen + i] != suffix[i] { return false }
         i = i + 1
     }
@@ -391,7 +391,7 @@ func ends_with(string s, string suffix) bool {
 func split_lines(string text) string[] {
     int count = 1
     int i = 0
-    while i < len(text) {
+    for i < len(text) {
         if text[i] == char(10) { count = count + 1 }
         i = i + 1
     }
@@ -399,7 +399,7 @@ func split_lines(string text) string[] {
     string current = ""
     int idx = 0
     i = 0
-    while i < len(text) {
+    for i < len(text) {
         if text[i] == char(10) {
             result[idx] = current
             current = ""
@@ -419,7 +419,7 @@ func parse_int_field(string text, string field_name, int default_val) int {
     if pos < 0 { return default_val }
     pos = pos + len(target)
     string val_str = ""
-    while pos < len(text) {
+    for pos < len(text) {
         char c = text[pos]
         if c == char(10) || c == char(13) || c == char(0) { break }
         val_str = val_str + string(c)
@@ -428,7 +428,7 @@ func parse_int_field(string text, string field_name, int default_val) int {
     int result = 0
     int sign = 1
     int vi = 0
-    while vi < len(val_str) {
+    for vi < len(val_str) {
         char vc = val_str[vi]
         if vc == char(45) { sign = -1 }
         else if vc >= char(48) && vc <= char(57) {
@@ -445,7 +445,7 @@ func parse_float_field(string text, string field_name, float default_val) float 
     if pos < 0 { return default_val }
     pos = pos + len(target)
     string val_str = ""
-    while pos < len(text) {
+    for pos < len(text) {
         char c = text[pos]
         if c == char(10) || c == char(13) || c == char(0) { break }
         val_str = val_str + string(c)
@@ -456,7 +456,7 @@ func parse_float_field(string text, string field_name, float default_val) float 
     float divisor = 10.0
     bool after_dot = false
     int vi = 0
-    while vi < len(val_str) {
+    for vi < len(val_str) {
         char vc = val_str[vi]
         if vc == char(45) { sign = -1.0 }
         else if vc == char(46) { after_dot = true }
@@ -476,10 +476,10 @@ func find_substr(string haystack, string needle) int {
     if nlen == 0 { return 0 }
     if nlen > hlen { return -1 }
     int i = 0
-    while i <= hlen - nlen {
+    for i <= hlen - nlen {
         bool found = true
         int j = 0
-        while j < nlen {
+        for j < nlen {
             if haystack[i+j] != needle[j] { found = false; break }
             j = j + 1
         }
@@ -491,13 +491,13 @@ func find_substr(string haystack, string needle) int {
 
 func pad_int(int n, int width) string {
     string s = int_to_str(n)
-    while len(s) < width { s = " " + s }
+    for len(s) < width { s = " " + s }
     s
 }
 
 func pad_float(float val, int width, int decimals) string {
     string s = fmt_float(val, decimals)
-    while len(s) < width { s = " " + s }
+    for len(s) < width { s = " " + s }
     s
 }
 extern "intrinsic" func __host_write_text_file(string path, string contents) int

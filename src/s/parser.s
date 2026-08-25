@@ -42,12 +42,12 @@ func (self: &mut parser) parse_source_file() result[source_file, parse_error] {
         log_depth("parse_source_file depth: " + to_string(global_parse_depth))
         self.expect_keyword("package")?
         string pkg = self.parse_path()?        vec[use_decl] uses = vec[use_decl]()        vec[item] items = vec[item]()
-        while self.at_keyword("use") {
+        for self.at_keyword("use") {
             uses.push(self.parse_use_decl()?)
         }
-        while !self.at(token_kind::eof) {
+        for !self.at(token_kind::eof) {
             if self.at_keyword("const") && self.at_symbol_after_keyword("(") {
-                vec[const_decl] consts = self.parse_const_group_items()?                int ci = 0                while ci < consts.len() {
+                vec[const_decl] consts = self.parse_const_group_items()?                int ci = 0                for ci < consts.len() {
                     items.push(item::const(consts[ci]));
                     ci = ci + 1
                 }
@@ -125,7 +125,7 @@ func (self: &mut parser) parse_const_decl() result[const_decl, parse_error] {
 func (self: &mut parser) parse_const_group_items() result[vec[const_decl], parse_error] {
         self.expect_keyword("const")?
         self.expect_symbol("(")?
-        vec[const_decl] out = vec[const_decl]()        int iota_index = 0        while !self.eat_symbol(")") {
+        vec[const_decl] out = vec[const_decl]()        int iota_index = 0        for !self.eat_symbol(")") {
             if self.eat_symbol(";") || self.eat_symbol(",") {
                 continue
             }
@@ -188,7 +188,7 @@ func (self: &mut parser) parse_struct_decl() result[struct_decl, parse_error] {
         self.expect_keyword("struct")?
         string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("{")?
         vec[field] fields = vec[field]()
-        while !self.eat_symbol("}") {
+        for !self.eat_symbol("}") {
             named_type field = self.parse_named_type(vec[string] { ",", "}" })?            fields.push(field {
                 name: field.name,
                 type_name: field.type_name,
@@ -208,7 +208,7 @@ func (self: &mut parser) parse_enum_decl() result[enum_decl, parse_error] {
         self.expect_keyword("enum")?
         string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("{")?
         vec[enum_variant] variants = vec[enum_variant]()
-        while !self.eat_symbol("}") {
+        for !self.eat_symbol("}") {
             string variant_name = self.expect_ident()?            option[string] payload =                if self.eat_symbol("(") {
                     string ty = self.parse_type_text(vec[string] { ")" })?                    self.expect_symbol(")")?
                     option::some(ty)
@@ -233,7 +233,7 @@ func (self: &mut parser) parse_trait_decl() result[trait_decl, parse_error] {
         self.expect_keyword("trait")?
         string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("{")?
         vec[function_sig] methods = vec[function_sig]()
-        while !self.eat_symbol("}") {
+        for !self.eat_symbol("}") {
             let pair = self.parse_function(false)?
             methods.push(pair.sig)
             self.expect_symbol(";")?
@@ -284,7 +284,7 @@ func (self: &mut parser) parse_params() result[vec[param], parse_error] {
         vec[param] params = vec[param]()        if self.at_symbol(")") {
             return result::ok(params)
         }
-        while true {
+        for true {
             named_type part = self.parse_named_type(vec[string] { ",", ")" })?            params.push(param {
                 name: part.name,
                 type_name: part.type_name,
@@ -300,10 +300,10 @@ func (self: &mut parser) parse_generic_params() result[vec[string], parse_error]
         vec[string] generics = vec[string]()        if !self.eat_symbol("[") {
             return result::ok(generics)
         }
-        while !self.eat_symbol("]") {
+        for !self.eat_symbol("]") {
             string name = self.expect_ident()?            string item =                if self.eat_symbol(":") {
                     vec[string] bounds = vec[string]()                    bounds.push(self.parse_path()?)
-                    while self.eat_symbol("+") {
+                    for self.eat_symbol("+") {
                         bounds.push(self.parse_path()?)
                     }
                     name + ": " + join_strings(bounds, " + ")
@@ -320,7 +320,7 @@ func (self: &mut parser) parse_where_clause() result[(), parse_error] {
         if !self.eat_keyword("where") {
             return result::ok(())
         }
-        while true {
+        for true {
             self.parse_type_text(vec[string] { ",", "{", ";" })?
             if !self.eat_symbol(",") || self.at_symbol("{") || self.at_symbol(";") {
                 break
@@ -335,7 +335,7 @@ func (self: &mut parser) parse_named_type(vec[string] stop_values) result[named_
 
 func (self: &mut parser) parse_token_segment(vec[string] stop_values) result[vec[token], parse_error] {
         vec[token] segment = vec[token]()        int bracket = 0        int paren = 0
-        while true {
+        for true {
             token token = self.peek()?            if token.kind == token_kind::eof {
                 break
             }
@@ -362,7 +362,7 @@ func (self: &mut parser) parse_token_segment(vec[string] stop_values) result[vec
 func (self: &mut parser) parse_block_expr() result[block_expr, parse_error] {
         self.expect_symbol("{")?
         vec[stmt] statements = vec[stmt]()        option[expr] final_expr = option::none
-        while !self.at_symbol("}") {
+        for !self.at_symbol("}") {
             if self.starts_stmt() {
                 statements.push(self.parse_stmt()?)
                 continue
@@ -532,9 +532,6 @@ func (self: &mut parser) parse_expr() result[expr, parse_error] {
         if self.at_keyword("if") {
             return self.parse_if_expr()
         }
-        if self.at_keyword("while") {
-            return self.parse_while_expr()
-        }
         if self.at_keyword("for") {
             return self.parse_for_expr()
         }
@@ -545,7 +542,7 @@ func (self: &mut parser) parse_select_expr() result[expr, parse_error] {
         self.expect_keyword("select")?
         self.expect_symbol("{")?
         string mode = ""        vec[expr] recv_args = vec[expr]()        vec[expr] send_args = vec[expr]()        option[expr] timeout_arg = option[expr].none        bool has_default = false
-        while !self.eat_symbol("}") {
+        for !self.eat_symbol("}") {
             self.expect_keyword("case")?
             if self.eat_keyword("default") {
                 if has_default {
@@ -571,7 +568,7 @@ func (self: &mut parser) parse_select_expr() result[expr, parse_error] {
                                 if call_value.args.len() == 0 {
                                     return result::err(self.error_here("select recv case requires at least one channel"))
                                 }
-                                int ri = 0                                while ri < call_value.args.len() {
+                                int ri = 0                                for ri < call_value.args.len() {
                                     recv_args.push(call_value.args[ri])
                                     ri = ri + 1
                                 }
@@ -583,7 +580,7 @@ func (self: &mut parser) parse_select_expr() result[expr, parse_error] {
                                 if call_value.args.len() < 2 || (call_value.args.len() % 2) != 0 {
                                     return result::err(self.error_here("select send case expects channel/value pairs"))
                                 }
-                                int si = 0                                while si < call_value.args.len() {
+                                int si = 0                                for si < call_value.args.len() {
                                     send_args.push(call_value.args[si])
                                     si = si + 1
                                 }
@@ -616,7 +613,7 @@ func (self: &mut parser) parse_select_expr() result[expr, parse_error] {
                 return result::err(self.error_here("select recv requires at least one channel"))
             }
             callee_name = "select_recv"
-            int ri = 0            while ri < recv_args.len() {
+            int ri = 0            for ri < recv_args.len() {
                 args.push(recv_args[ri])
                 ri = ri + 1
             }
@@ -631,7 +628,7 @@ func (self: &mut parser) parse_select_expr() result[expr, parse_error] {
                 return result::err(self.error_here("select send requires channel/value pairs"))
             }
             callee_name = "select_send"
-            int si = 0            while si < send_args.len() {
+            int si = 0            for si < send_args.len() {
                 args.push(send_args[si])
                 si = si + 1
             }
@@ -649,7 +646,7 @@ func (self: &mut parser) parse_switch_expr() result[expr, parse_error] {
         self.expect_keyword("switch")?
         expr subject = self.parse_expr()?        self.expect_symbol("{")?
         vec[switch_arm] arms = vec[switch_arm]()
-        while !self.eat_symbol("}") {
+        for !self.eat_symbol("}") {
             let pattern = self.parse_pattern()?
             self.expect_symbol(":")?
             expr expr = self.parse_expr()?            arms.push(switch_arm {
@@ -684,23 +681,62 @@ func (self: &mut parser) parse_if_expr() result[expr, parse_error] {
         }))
     }
 
-func (self: &mut parser) parse_while_expr() result[expr, parse_error] {
-        self.expect_keyword("while")?
-        expr condition = self.parse_expr()?        let body = self.parse_block_expr()?
-        result::ok(expr::while(while_expr {
-            condition: box(condition),
-            body: body,
-            inferred_type: option::none,
-        }))
-    }
-
 func (self: &mut parser) parse_for_expr() result[expr, parse_error] {
         self.expect_keyword("for")?
-        string name = self.expect_ident()?        self.expect_keyword("in")?
-        expr iterable = self.parse_expr()?        let body = self.parse_block_expr()?
+        
+        if self.at_symbol("{") {
+            let body = self.parse_block_expr()?
+            return result::ok(expr::for(for_expr {
+                init: option::none,
+                condition: option::none,
+                post: option::none,
+                names: vec[string](),
+                iterable: option::none,
+                body: body,
+                inferred_type: option::none,
+            }))
+        }
+        
+        if self.at_symbol("(") {
+            self.expect_symbol("(")?
+            let init = self.parse_for_clause_stmt()?
+            self.expect_symbol(";")?
+            expr condition = self.parse_expr()?            self.expect_symbol(";")?
+            let post = self.parse_for_clause_stmt()?
+            self.expect_symbol(")")?
+            let body = self.parse_block_expr()?
+            return result::ok(expr::for(for_expr {
+                init: option::some(box(init)),
+                condition: option::some(box(condition)),
+                post: option::some(box(post)),
+                names: vec[string](),
+                iterable: option::none,
+                body: body,
+                inferred_type: option::none,
+            }))
+        }
+        
+        token token = self.peek()?        if token.kind == token_kind::ident && self.at_symbol_after_keyword("in") {
+            string name = self.expect_ident()?            self.expect_keyword("in")?
+            expr iterable = self.parse_expr()?            let body = self.parse_block_expr()?
+            return result::ok(expr::for(for_expr {
+                init: option::none,
+                condition: option::none,
+                post: option::none,
+                names: vec[string] { name },
+                iterable: option::some(box(iterable)),
+                body: body,
+                inferred_type: option::none,
+            }))
+        }
+        
+        expr condition = self.parse_expr()?        let body = self.parse_block_expr()?
         result::ok(expr::for(for_expr {
-            name: name,
-            iterable: box(iterable),
+            init: option::none,
+            condition: option::some(box(condition)),
+            post: option::none,
+            names: vec[string](),
+            iterable: option::none,
             body: body,
             inferred_type: option::none,
         }))
@@ -748,7 +784,7 @@ func (self: &mut parser) parse_pattern() result[pattern, parse_error] {
         }
         string path = self.parse_path()?        if self.eat_symbol("(") {
             vec[pattern] args = vec[pattern]()            if !self.at_symbol(")") {
-                while true {
+                for true {
                     args.push(self.parse_pattern()?)
                     if !self.eat_symbol(",") || self.at_symbol(")") {
                         break
@@ -772,7 +808,7 @@ func (self: &mut parser) parse_pattern() result[pattern, parse_error] {
 
 func (self: &mut parser) parse_binary_expr(int min_precedence) result[expr, parse_error] {
         let expr = self.parse_unary_expr()?
-        while true {
+        for true {
             token token = self.peek()?            int precedence = self.binary_precedence(token.value)            if precedence < min_precedence {
                 break
             }
@@ -801,10 +837,10 @@ func (self: &mut parser) parse_unary_expr() result[expr, parse_error] {
 
 func (self: &mut parser) parse_call_expr() result[expr, parse_error] {
         let expr = self.parse_primary_expr()?
-        while true {
+        for true {
             if self.eat_symbol("(") {
                 vec[expr] args = vec[expr]()                if !self.at_symbol(")") {
-                    while true {
+                    for true {
                         args.push(self.parse_expr()?)
                         if !self.eat_symbol(",") || self.at_symbol(")") {
                             break
@@ -903,7 +939,7 @@ func (self: &mut parser) parse_primary_expr() result[expr, parse_error] {
             }
             self.expect_symbol("{")?
             vec[expr] items = vec[expr]()            if !self.at_symbol("}") {
-                while true {
+                for true {
                     items.push(self.parse_expr()?)
                     if !self.eat_symbol(",") || self.at_symbol("}") {
                         break
@@ -924,7 +960,7 @@ func (self: &mut parser) parse_primary_expr() result[expr, parse_error] {
             }
             self.expect_symbol("{")?
             vec[map_entry] entries = vec[map_entry]()            if !self.at_symbol("}") {
-                while true {
+                for true {
                     let key = self.parse_expr()?
                     self.expect_symbol(":")?
                     let value = self.parse_expr()?
@@ -964,9 +1000,9 @@ func (self: parser) binary_precedence(string op) int {
 
 func (self: &mut parser) parse_use_path() result[string, parse_error] {
         vec[string] parts = vec[string]()        parts.push(self.expect_ident()?)
-        while self.eat_symbol(".") {
+        for self.eat_symbol(".") {
             if self.eat_symbol("{") {
-                vec[string] members = vec[string]()                while !self.eat_symbol("}") {
+                vec[string] members = vec[string]()                for !self.eat_symbol("}") {
                     let member = self.expect_ident()?
                     string text =                        if self.eat_keyword("as") {
                             member + " as " + self.expect_ident()?
@@ -985,10 +1021,10 @@ func (self: &mut parser) parse_use_path() result[string, parse_error] {
 
 func (self: &mut parser) parse_path() result[string, parse_error] {
         vec[string] parts = vec[string]()        parts.push(self.expect_ident()?)
-        while self.eat_symbol(".") {
+        for self.eat_symbol(".") {
             parts.push(self.expect_ident()?)
         }
-        while self.at_symbol(":") && self.peek_at(1).unwrap().kind == token_kind::symbol && self.peek_at(1).unwrap().value == ":" {
+        for self.at_symbol(":") && self.peek_at(1).unwrap().kind == token_kind::symbol && self.peek_at(1).unwrap().value == ":" {
             self.expect_symbol(":")?
             self.expect_symbol(":")?
             parts.push(self.expect_ident()?)
@@ -1002,7 +1038,7 @@ func (self: &mut parser) parse_path() result[string, parse_error] {
 
 func (self: &mut parser) parse_type_text(vec[string] stop_values) result[string, parse_error] {
         vec[string] parts = vec[string]()        int bracket = 0        int paren = 0
-        while true {
+        for true {
             token token = self.peek()?            if token.kind == token_kind::eof {
                 break
             }
@@ -1028,7 +1064,7 @@ func (self: &mut parser) parse_type_text(vec[string] stop_values) result[string,
 
 func (self: &mut parser) parse_bracket_group() result[string, parse_error] {
         vec[string] parts = vec[string]()        parts.push(self.advance()?.value)
-        int depth = 1        while depth > 0 {
+        int depth = 1        for depth > 0 {
             token token = self.advance()?            parts.push(token.value)
             if token.value == "[" {
                 depth = depth + 1
@@ -1180,7 +1216,7 @@ func (self: parser) error_here(string message) parse_error {
     }
 
 func (self: parser) find_top_level_symbol_offset(string value) int {
-        int bracket = 0        int paren = 0        int offset = 0        while self.index + offset < len(self.tokens) {
+        int bracket = 0        int paren = 0        int offset = 0        for self.index + offset < len(self.tokens) {
             let token = self.tokens[self.index + offset]
             if token.kind == token_kind::eof {
                 break
@@ -1269,7 +1305,7 @@ func decode_named_type(vec[token] tokens) result[named_type, parse_error] {
 }
 
 func slice_tokens(vec[token] tokens, int start, int end) vec[token] {
-    vec[token] out = vec[token]()    int i = start    while i < end {
+    vec[token] out = vec[token]()    int i = start    for i < end {
         out.push(tokens[i])
         i = i + 1
     }
@@ -1284,7 +1320,7 @@ func join_token_values(vec[token] tokens) string {
 }
 
 func find_token_value(vec[token] tokens, string value) int {
-    int bracket = 0    int paren = 0    int i = 0    while i < len(tokens) {
+    int bracket = 0    int paren = 0    int i = 0    for i < len(tokens) {
         let token = tokens[i]
         if token.value == "[" {
             bracket = bracket + 1
@@ -1303,7 +1339,7 @@ func find_token_value(vec[token] tokens, string value) int {
 }
 
 func find_decl_name_index(vec[token] tokens) int {
-    int bracket = 0    int paren = 0    int index = -1    int i = 0    while i < len(tokens) {
+    int bracket = 0    int paren = 0    int index = -1    int i = 0    for i < len(tokens) {
         let token = tokens[i]
         if token.value == "[" {
             bracket = bracket + 1
@@ -1355,7 +1391,7 @@ func join_strings(vec[string] values, string sep) string {
 }
 
 func path_contains_dot(string path) bool {
-    int i = 0    while i < len(path) {
+    int i = 0    for i < len(path) {
         if char_at(path, i) == "." {
             return true
         }

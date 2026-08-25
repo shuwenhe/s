@@ -126,7 +126,7 @@ func make_gpt(GPTConfig cfg) GPTModel {
     model.pos_embed = make_embedding(cfg.max_seq_len, cfg.embed_dim, -1)
     model.blocks = new TransformerBlock[cfg.num_layers]
     int i = 0
-    while i < cfg.num_layers {
+    for i < cfg.num_layers {
         model.blocks[i] = make_transformer_block(
             cfg.embed_dim,
             cfg.num_heads,
@@ -144,7 +144,7 @@ func make_gpt(GPTConfig cfg) GPTModel {
 
 func copy_params_into(AG.auto_grad_tensor[] dst, int start_pos, AG.auto_grad_tensor[] src) int {
     int i = 0
-    while i < len(src) {
+    for i < len(src) {
         dst[start_pos + i] = src[i]
         i = i + 1
     }
@@ -154,7 +154,7 @@ func copy_params_into(AG.auto_grad_tensor[] dst, int start_pos, AG.auto_grad_ten
 func collect_gpt_params(GPTModel mut model) void {
     int total = count_params(model.tok_embed) + count_params(model.pos_embed)
     int i = 0
-    while i < model.config.num_layers {
+    for i < model.config.num_layers {
         total = total + count_params(model.blocks[i])
         i = i + 1
     }
@@ -164,7 +164,7 @@ func collect_gpt_params(GPTModel mut model) void {
     pos = copy_params_into(model.all_params, pos, get_params(model.tok_embed))
     pos = copy_params_into(model.all_params, pos, get_params(model.pos_embed))
     i = 0
-    while i < model.config.num_layers {
+    for i < model.config.num_layers {
         pos = copy_params_into(model.all_params, pos, get_params(model.blocks[i]))
         i = i + 1
     }
@@ -175,7 +175,7 @@ func collect_gpt_params(GPTModel mut model) void {
 func gpt_total_params(GPTModel self) int {
     int total = 0
     int i = 0
-    while i < len(self.all_params) {
+    for i < len(self.all_params) {
         total = total + AG.num_parameters(self.all_params[i])
         i = i + 1
     }
@@ -187,14 +187,14 @@ func forward(GPTModel self, int[] token_ids, int batch_size, int seq_len) AG.aut
     int total_tokens = batch_size * seq_len
     int[] pos_ids = new int[total_tokens]
     int idx = 0
-    while idx < total_tokens {
+    for idx < total_tokens {
         pos_ids[idx] = idx % seq_len
         idx = idx + 1
     }
     AG.auto_grad_tensor pos_emb = AI.forward(self.pos_embed, pos_ids, batch_size, seq_len)
     AG.auto_grad_tensor x = AG.autograd_add(tok_emb, pos_emb)
     int i = 0
-    while i < self.config.num_layers {
+    for i < self.config.num_layers {
         x = AI.forward(self.blocks[i], x)
         i = i + 1
     }

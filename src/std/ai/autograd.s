@@ -51,7 +51,7 @@ func dfs_visit(int idx, bool[] visited, int[] order, int order_len_ref) void {
     visited[idx] = true
     graph_node node = current_graph[idx]
     int i = 0
-    while i < len(node.inputs) {
+    for i < len(node.inputs) {
         dfs_visit(node.inputs[i], visited, order, order_len_ref)
         i = i + 1
     }
@@ -63,13 +63,13 @@ func backward(auto_grad_tensor loss_tensor) Map<string, tensor> {
     loss_tensor.grad = ones_like(loss_tensor.data)
     int[] topo_order = topological_sort(loss_tensor.grad_ctx.graph_idx)
     int i = len(topo_order) - 1
-    while i >= 0 {
+    for i >= 0 {
         int node_idx = topo_order[i]
         graph_node node = current_graph[node_idx]
         if node.backward_fn != nil && node.grad_output != nil {
             tensor[] input_grads = call_backward(node, node.grad_output)
             int j = 0
-            while j < len(input_grads) {
+            for j < len(input_grads) {
                 int inp_idx = node.inputs[j]
                 if inp_idx < graph_size && current_graph[inp_idx].grad != nil {
                     current_graph[inp_idx].grad = add(current_graph[inp_idx].grad, input_grads[j])
@@ -85,7 +85,7 @@ func backward(auto_grad_tensor loss_tensor) Map<string, tensor> {
 func collect_leaf_gradients() Map<string, tensor> {
     Map<string, tensor> result = new_map()
     int i = 0
-    while i < graph_size {
+    for i < graph_size {
         graph_node node = current_graph[i]
         if node.is_leaf && node.requires_grad && node.grad != nil {
             map_put(result, node.name, node.grad)
@@ -168,7 +168,7 @@ func autograd_relu(auto_grad_tensor x) auto_grad_tensor {
 func relu_backward_mask(tensor x) tensor {
     float[] mask = new float[x.shape.size]
     int i = 0
-    while i < x.shape.size {
+    for i < x.shape.size {
         if x.data.values[i] > 0 { mask[i] = 1.0 }
         else { mask[i] = 0.0 }
         i = i + 1
@@ -181,7 +181,7 @@ func cross_entropy_loss(auto_grad_tensor logits, int[] target_classes) auto_grad
     int batch_size = logits.shape.dims[0]
     float loss_val = 0.0
     int i = 0
-    while i < batch_size {
+    for i < batch_size {
         int cls = target_classes[i]
         if cls >= 0 && cls < probs.shape.dims[1] {
             float p = probs.data.values[i * probs.shape.dims[1] + cls]
@@ -211,11 +211,11 @@ func cross_entropy_loss(auto_grad_tensor logits, int[] target_classes) auto_grad
 func compute_ce_grad(tensor probs, int[] targets, int batch_size) tensor {
     tensor grad = zeros_like(probs)
     int i = 0
-    while i < batch_size {
+    for i < batch_size {
         int cls = targets[i]
         int offset = i * probs.shape.dims[1]
         int j = 0
-        while j < probs.shape.dims[1] {
+        for j < probs.shape.dims[1] {
             float val = probs.data.values[offset + j]
             if j == cls { grad.data.values[offset + j] = (val - 1.0) / batch_size as float }
             else { grad.data.values[offset + j] = val / batch_size as float }

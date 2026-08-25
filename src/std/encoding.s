@@ -29,7 +29,7 @@ func is_ascii_printable(int value) bool {
 func normalize_ascii_text(string text) string {
     string result = ""
     int i = 0
-    while i < len(text) {
+    for i < len(text) {
         int val = ascii_to_lower(int(byte(text[i])))
         if is_ascii_printable(val) {
             result = result + string(byte(val))
@@ -42,7 +42,7 @@ func normalize_ascii_text(string text) string {
 func bytes_to_string([]int bytes) string {
     string result = ""
     int i = 0
-    while i < len(bytes) {
+    for i < len(bytes) {
         result = result + string(normalize_byte(bytes[i]))
         i = i + 1
     }
@@ -52,7 +52,7 @@ func bytes_to_string([]int bytes) string {
 func str_to_bytes(string text) []int {
     []int result
     int i = 0
-    while i < len(text) {
+    for i < len(text) {
         result = append(result, normalize_byte(int(byte(text[i]))))
         i = i + 1
     }
@@ -62,7 +62,7 @@ func str_to_bytes(string text) []int {
 func bytes_to_string_range([]int bytes, int start, int length) string {
     string result = ""
     int i = 0
-    while i < length && start + i < len(bytes) {
+    for i < length && start + i < len(bytes) {
         result = result + string(normalize_byte(bytes[start + i]))
         i = i + 1
     }
