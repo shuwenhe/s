@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func escape_test_unit_name() string {
-    "src/math/big/escape_test"
+    "src/switch/big/escape_test"
 }
 
 func escape_test_unit_ready() int {

@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func trig_reduce_unit_name() string {
-    "src/math/trig_reduce"
+    "src/switch/trig_reduce"
 }
 
 func trig_reduce_unit_ready() int {

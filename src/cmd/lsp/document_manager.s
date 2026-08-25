@@ -36,7 +36,7 @@ func (dm document_manager) open_document(item text_document_item) {
 }
 
 func (dm document_manager) update_document(uri string, text string, version int) {
-    match dm.documents.get(uri) {
+    switch dm.documents.get(uri) {
         option::some(doc) : {
             updated := text_document {
                 uri: uri,
@@ -71,12 +71,12 @@ func (dm document_manager) get_errors(uri string) option[vec[parse_error]] {
 }
 
 func (dm document_manager) parse_document(uri string) {
-    match dm.documents.get(uri) {
+    switch dm.documents.get(uri) {
         option::some(doc) : {
             lexer := s::new_lexer(doc.text)
-            match lexer.tokenize() {
+            switch lexer.tokenize() {
                 result::ok(tokens) : {
-                    match s::parse_tokens(tokens) {
+                    switch s::parse_tokens(tokens) {
                         result::ok(ast) : {
                             dm.ast_cache.insert(uri, ast)
                             dm.error_cache.remove(uri)
@@ -107,7 +107,7 @@ func (dm document_manager) parse_document(uri string) {
 }
 
 func (dm document_manager) get_token_at_position(uri string, pos position) option[string] {
-    match dm.documents.get(uri) {
+    switch dm.documents.get(uri) {
         option::some(doc) : {
             lines := std::split(doc.text, "\n")
             if pos.line < lines.len() {
@@ -146,7 +146,7 @@ func is_identifier_char(c str) bool {
 }
 
 func (dm document_manager) get_document_symbols(uri string) option[vec[document_symbol]] {
-    match dm.get_ast(uri) {
+    switch dm.get_ast(uri) {
         option::some(ast) : option::some(extract_symbols_from_ast(ast)),
         option::none() : option::none()
     }
@@ -158,7 +158,7 @@ func extract_symbols_from_ast(ast s::source_file) vec[document_symbol] {
     i := 0
     for i < ast.items.len() {
         item := ast.items[i]
-        match item {
+        switch item {
             s::item::function(func) : {
                 symbols.push(document_symbol {
                     name: func.sig.name,

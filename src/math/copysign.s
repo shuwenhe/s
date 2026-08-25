@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func copysign_unit_name() string {
-    "src/math/copysign"
+    "src/switch/copysign"
 }
 
 func copysign_unit_ready() int {

@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func export_s390x_test_unit_name() string {
-    "src/math/export_s390x_test"
+    "src/switch/export_s390x_test"
 }
 
 func export_s390x_test_unit_ready() int {

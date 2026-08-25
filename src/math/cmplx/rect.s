@@ -1,7 +1,7 @@
-package src.math.cmplx
+package src.switch.cmplx
 
 func rect_unit_name() string {
-    "src/math/cmplx/rect"
+    "src/switch/cmplx/rect"
 }
 
 func rect_unit_ready() int {

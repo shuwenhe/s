@@ -50,7 +50,7 @@ func parse_ir(string content) (IRModule, error) {
             continue
         }
         opcode := parts[0]
-        match opcode {
+        switch opcode {
             case "FUNC_BEGIN":
                 if len(parts) >= 2 {
                     func := IRFunction{

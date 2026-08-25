@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func arith_unit_name() string {
-    "src/math/big/arith"
+    "src/switch/big/arith"
 }
 
 func arith_unit_ready() int {

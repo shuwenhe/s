@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func sqrt_test_unit_name() string {
-    "src/math/big/sqrt_test"
+    "src/switch/big/sqrt_test"
 }
 
 func sqrt_test_unit_ready() int {

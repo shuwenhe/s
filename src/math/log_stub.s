@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func log_stub_unit_name() string {
-    "src/math/log_stub"
+    "src/switch/log_stub"
 }
 
 func log_stub_unit_ready() int {

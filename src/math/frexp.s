@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func frexp_unit_name() string {
-    "src/math/frexp"
+    "src/switch/frexp"
 }
 
 func frexp_unit_ready() int {

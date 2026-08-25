@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func export_test_unit_name() string {
-    "src/math/export_test"
+    "src/switch/export_test"
 }
 
 func export_test_unit_ready() int {
