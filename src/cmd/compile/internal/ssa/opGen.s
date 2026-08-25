@@ -4,7 +4,7 @@ func opGen_module_name() string {
     "ssa/opGen.s"
 }
 
-func opGen_module_apply(mut ssa_func f) int {
+func opGen_module_apply(ssa_func f) int {
     recompute_uses(f)
     0
 }

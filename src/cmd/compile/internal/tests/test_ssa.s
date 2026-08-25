@@ -603,7 +603,7 @@ func contains(string text, string needle) bool {
         return false
     }
     i := 0
-    while i <= text.len() - needle.len() {
+    for i <= text.len() - needle.len() {
         if slice(text, i, i + needle.len()) == needle {
             return true
         }

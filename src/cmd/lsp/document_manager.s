@@ -24,7 +24,7 @@ func new_document_manager() document_manager {
     }
 }
 
-func (dm mut document_manager) open_document(item text_document_item) {
+func (dm document_manager) open_document(item text_document_item) {
     doc := text_document {
         uri: item.uri,
         language_id: item.language_id,
@@ -35,7 +35,7 @@ func (dm mut document_manager) open_document(item text_document_item) {
     dm.parse_document(item.uri)
 }
 
-func (dm mut document_manager) update_document(uri string, text string, version int) {
+func (dm document_manager) update_document(uri string, text string, version int) {
     match dm.documents.get(uri) {
         option::some(doc) : {
             updated := text_document {
@@ -52,7 +52,7 @@ func (dm mut document_manager) update_document(uri string, text string, version 
     }
 }
 
-func (dm mut document_manager) close_document(uri string) {
+func (dm document_manager) close_document(uri string) {
     dm.documents.remove(uri)
     dm.ast_cache.remove(uri)
     dm.error_cache.remove(uri)
@@ -70,7 +70,7 @@ func (dm document_manager) get_errors(uri string) option[vec[parse_error]] {
     dm.error_cache.get(uri)
 }
 
-func (dm mut document_manager) parse_document(uri string) {
+func (dm document_manager) parse_document(uri string) {
     match dm.documents.get(uri) {
         option::some(doc) : {
             lexer := s::new_lexer(doc.text)
@@ -116,11 +116,11 @@ func (dm document_manager) get_token_at_position(uri string, pos position) optio
                     start := pos.character
                     end := pos.character
 
-                    while start > 0 && is_identifier_char(line[start - 1]) {
+                    for start > 0 && is_identifier_char(line[start - 1]) {
                         start = start - 1
                     }
 
-                    while end < line.len() && is_identifier_char(line[end]) {
+                    for end < line.len() && is_identifier_char(line[end]) {
                         end = end + 1
                     }
 
@@ -156,7 +156,7 @@ func extract_symbols_from_ast(ast s::source_file) vec[document_symbol] {
     symbols := vec[document_symbol]()
 
     i := 0
-    while i < ast.items.len() {
+    for i < ast.items.len() {
         item := ast.items[i]
         match item {
             s::item::function(func) : {

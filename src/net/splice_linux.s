@@ -2,7 +2,7 @@ package src.net
 use src.syscall as sc
 use std.result.result
 
-func splice_file(int input_fd, int output_fd, int count) result[int, net_error] {
+func splice_file(int input_fd, int output_fd, int count) (int, net_error) {
     switch sc.splice(input_fd, output_fd, count) {
         result::ok(n) : result::ok(n),
         result::err(e) : result::err(wrap_sc_err(e)),

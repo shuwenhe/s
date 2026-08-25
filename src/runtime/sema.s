@@ -2,8 +2,8 @@ package src.runtime
 use std.vec.vec
 extern "intrinsic" func __sema_sleep(int sema_id) ()
 extern "intrinsic" func __sema_wakeup(int sema_id) ()
-extern "intrinsic" func __atomic_cas(int mut target, int expected, int desired) bool
-extern "intrinsic" func __atomic_add(int mut target, int delta) int
+extern "intrinsic" func __atomic_cas(int target, int expected, int desired) bool
+extern "intrinsic" func __atomic_add(int target, int delta) int
 extern "intrinsic" func __atomic_load(int target) int
 extern "intrinsic" func __sema_new_id() int
 
@@ -19,8 +19,8 @@ func new_semaphore(int initial) Semaphore {
     }
 }
 
-func (self: &mut Semaphore) wait() () {
-        while true {
+func (Semaphore* self) wait() () {
+        for true {
             old := __atomic_load(self.count)
             if old > 0 {
                 if __atomic_cas(self.count, old, old - 1) {
@@ -32,12 +32,12 @@ func (self: &mut Semaphore) wait() () {
         }
     }
 
-func (self: &mut Semaphore) signal() () {
+func (Semaphore* self) signal() () {
         __atomic_add(self.count, 1)
         __sema_wakeup(self.id)
     }
 
-func (self: &mut Semaphore) try_wait() bool {
+func (Semaphore* self) try_wait() bool {
         old := __atomic_load(self.count)
         if old > 0 {
             __atomic_cas(self.count, old, old - 1)
@@ -58,11 +58,11 @@ func new_mutex() Mutex {
     }
 }
 
-func (self: &mut Mutex) lock() () {
+func (Mutex* self) lock() () {
         if __atomic_cas(self.state, 0, 1) {
             return
         }
-        while true {
+        for true {
             if __atomic_cas(self.state, 0, 1) {
                 return
             }
@@ -70,14 +70,14 @@ func (self: &mut Mutex) lock() () {
         }
     }
 
-func (self: &mut Mutex) unlock() () {
+func (Mutex* self) unlock() () {
         if !__atomic_cas(self.state, 1, 0) {
             return
         }
         self.sem.signal()
     }
 
-func (self: &mut Mutex) try_lock() bool {
+func (Mutex* self) try_lock() bool {
         __atomic_cas(self.state, 0, 1)
     }
 
@@ -97,29 +97,29 @@ func new_rwmutex() RWMutex {
     }
 }
 
-func (self: &mut RWMutex) rlock() () {
-        while __atomic_load(self.writer) == 1 {
+func (RWMutex* self) rlock() () {
+        for __atomic_load(self.writer) == 1 {
             self.read_sem.wait()
         }
         __atomic_add(self.readers, 1)
     }
 
-func (self: &mut RWMutex) runlock() () {
+func (RWMutex* self) runlock() () {
         prev := __atomic_add(self.readers, -1)
         if prev == 1 && __atomic_load(self.writer) == 1 {
             self.write_mu.sem.signal()
         }
     }
 
-func (self: &mut RWMutex) wlock() () {
+func (RWMutex* self) wlock() () {
         self.write_mu.lock()
         __atomic_cas(self.writer, 0, 1)
-        while __atomic_load(self.readers) > 0 {
+        for __atomic_load(self.readers) > 0 {
             self.write_mu.sem.wait()
         }
     }
 
-func (self: &mut RWMutex) wunlock() () {
+func (RWMutex* self) wunlock() () {
         __atomic_cas(self.writer, 1, 0)
         self.write_mu.unlock()
         self.read_sem.signal()
@@ -134,7 +134,7 @@ func new_once() Once {
     Once { done: 0, mu: new_mutex() }
 }
 
-func (self: &mut Once) do(func f) () {
+func (Once* self) do(func f) () {
         if __atomic_load(self.done) == 1 {
             return
         }

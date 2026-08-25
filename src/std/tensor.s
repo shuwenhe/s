@@ -70,7 +70,7 @@ func unflatten_index(tensor_shape shape, int flat_idx) int[] {
     int remaining = flat_idx
     int d = shape.ndim - 1
     for d >= 0 {
-        result[d] = remaining % shape.dims[d]
+        (d) = remaining % shape.dims[d]
         remaining = remaining / shape.dims[d]
         d = d - 1
     }
@@ -183,7 +183,7 @@ func set_seed(int s) void {
     global_rand_state.seed = s
 }
 
-func rand_float(rand_state mut state) float {
+func rand_float(rand_state state) float {
     state.seed = state.seed * 1103515245 + 12345
     float result = (state.seed & 0x7fffffff) as float / 2147483647.0 as float
     result
@@ -242,7 +242,7 @@ func get(tensor t, int[] indices) float {
     t.data.values[idx]
 }
 
-func set(tensor mut t, int[] indices, float value) void {
+func set(tensor t, int[] indices, float value) void {
     int idx = flat_index(t.shape, indices)
     t.data.values[idx] = value
 }
@@ -251,7 +251,7 @@ func get_flat(tensor t, int idx) float {
     t.data.values[idx]
 }
 
-func set_flat(tensor mut t, int idx, float value) void {
+func set_flat(tensor t, int idx, float value) void {
     t.data.values[idx] = value
 }
 
@@ -670,7 +670,7 @@ func matmul_2d(tensor a, tensor b) tensor {
                 s = s + a.data.values[m * K + k] * b.data.values[k * N + n]
                 k = k + 1
             }
-            result[m * N + n] = s
+            (m * N + n) = s
             n = n + 1
         }
         m = m + 1
@@ -702,7 +702,7 @@ func outer(tensor a, tensor b) tensor {
     for i < m {
         int j = 0
         for j < n {
-            result[i * n + j] = a.data.values[i] * b.data.values[j]
+            (i * n + j) = a.data.values[i] * b.data.values[j]
             j = j + 1
         }
         i = i + 1

@@ -39,7 +39,7 @@ extern "intrinsic" func __sys_accept(int sockfd) int
 extern "intrinsic" func __sys_connect(int sockfd, string ip, int port, int family) int
 extern "intrinsic" func __sys_connect_deadline(int sockfd, string host, int port, int family, int timeout_ms) int
 extern "intrinsic" func __sys_resolve_ip(string host, int family) vec[string]
-extern "intrinsic" func __sys_read(int fd, vec[int] mut buf, int n) int
+extern "intrinsic" func __sys_read(int fd, vec[int] buf, int n) int
 extern "intrinsic" func __sys_write(int fd, vec[int] buf, int n) int
 extern "intrinsic" func __sys_read_string(int fd, int n) string
 extern "intrinsic" func __sys_write_string(int fd, string data) int
@@ -78,7 +78,7 @@ func make_net_error(string msg) net_error {
     }
 }
 
-func socket(int domain, int typ, int proto) result[int, net_error] {
+func socket(int domain, int typ, int proto) (int, net_error) {
     fd := __sys_socket(domain, typ, proto)
     if fd < 0 {
         result::err(make_net_error("socket"))
@@ -87,7 +87,7 @@ func socket(int domain, int typ, int proto) result[int, net_error] {
     }
 }
 
-func bind(int sockfd, string ip, int port, int family) result[(), net_error] {
+func bind(int sockfd, string ip, int port, int family) ((), net_error) {
     r := __sys_bind(sockfd, ip, port, family)
     if r < 0 {
         result::err(make_net_error("bind"))
@@ -96,7 +96,7 @@ func bind(int sockfd, string ip, int port, int family) result[(), net_error] {
     }
 }
 
-func listen(int sockfd, int backlog) result[(), net_error] {
+func listen(int sockfd, int backlog) ((), net_error) {
     r := __sys_listen(sockfd, backlog)
     if r < 0 {
         result::err(make_net_error("listen"))
@@ -105,7 +105,7 @@ func listen(int sockfd, int backlog) result[(), net_error] {
     }
 }
 
-func accept(int sockfd) result[int, net_error] {
+func accept(int sockfd) (int, net_error) {
     newfd := __sys_accept(sockfd)
     if newfd < 0 {
         result::err(make_net_error("accept"))
@@ -114,7 +114,7 @@ func accept(int sockfd) result[int, net_error] {
     }
 }
 
-func accept_addr(int sockfd) result[accept_result, net_error] {
+func accept_addr(int sockfd) (accept_result, net_error) {
     newfd := __sys_accept(sockfd)
     if newfd < 0 {
         result::err(make_net_error("accept"))
@@ -141,7 +141,7 @@ func peer_ip(int fd) string { __sys_peer_ip(fd) }
 
 func peer_port(int fd) int { __sys_peer_port(fd) }
 
-func connect(int sockfd, string ip, int port, int family) result[(), net_error] {
+func connect(int sockfd, string ip, int port, int family) ((), net_error) {
     r := __sys_connect(sockfd, ip, port, family)
     if r < 0 {
         result::err(make_net_error("connect"))
@@ -150,7 +150,7 @@ func connect(int sockfd, string ip, int port, int family) result[(), net_error] 
     }
 }
 
-func connect_deadline(int sockfd, string host, int port, int family, int timeout_ms) result[(), net_error] {
+func connect_deadline(int sockfd, string host, int port, int family, int timeout_ms) ((), net_error) {
     r := __sys_connect_deadline(sockfd, host, port, family, timeout_ms)
     if r < 0 {
         result::err(make_net_error("connect"))
@@ -159,7 +159,7 @@ func connect_deadline(int sockfd, string host, int port, int family, int timeout
     }
 }
 
-func resolve_ip(string host, int family) result[vec[string], net_error] {
+func resolve_ip(string host, int family) (vec[string), net_error] {
     addresses := __sys_resolve_ip(host, family)
     if len(addresses) == 0 && __sys_errno() != 0 {
         result::err(make_net_error("resolve"))
@@ -168,7 +168,7 @@ func resolve_ip(string host, int family) result[vec[string], net_error] {
     }
 }
 
-func read_string(int fd, int max_bytes) result[string, net_error] {
+func read_string(int fd, int max_bytes) (string, net_error) {
     data := __sys_read_string(fd, max_bytes)
     if data == "" {
         code := __sys_errno()
@@ -182,7 +182,7 @@ func read_string(int fd, int max_bytes) result[string, net_error] {
     }
 }
 
-func write_string(int fd, string data) result[int, net_error] {
+func write_string(int fd, string data) (int, net_error) {
     n := __sys_write_string(fd, data)
     if n < 0 {
         result::err(make_net_error("write"))
@@ -191,7 +191,7 @@ func write_string(int fd, string data) result[int, net_error] {
     }
 }
 
-func sendto_string(int fd, string data, string ip, int port, int family) result[int, net_error] {
+func sendto_string(int fd, string data, string ip, int port, int family) (int, net_error) {
     n := __sys_sendto_string(fd, data, ip, port, family)
     if n < 0 {
         result::err(make_net_error("sendto"))
@@ -206,7 +206,7 @@ struct recvfrom_result {
     int port
 }
 
-func recvfrom_string(int fd, int max_bytes) result[recvfrom_result, net_error] {
+func recvfrom_string(int fd, int max_bytes) (recvfrom_result, net_error) {
     data := __sys_recvfrom_string(fd, max_bytes)
     code := __sys_errno()
     if data == "" && code != 0 {
@@ -220,17 +220,17 @@ func recvfrom_string(int fd, int max_bytes) result[recvfrom_result, net_error] {
     }
 }
 
-func sendfile(int out_fd, int in_fd, int offset, int count) result[int, net_error] {
+func sendfile(int out_fd, int in_fd, int offset, int count) (int, net_error) {
     n := __sys_sendfile(out_fd, in_fd, offset, count)
     if n < 0 { result::err(make_net_error("sendfile")) } else { result::ok(n) }
 }
 
-func splice(int in_fd, int out_fd, int count) result[int, net_error] {
+func splice(int in_fd, int out_fd, int count) (int, net_error) {
     n := __sys_splice(in_fd, out_fd, count)
     if n < 0 { result::err(make_net_error("splice")) } else { result::ok(n) }
 }
 
-func interface_addresses() result[vec[string], net_error] {
+func interface_addresses() (vec[string), net_error] {
     addresses := __sys_interface_addresses()
     if len(addresses) == 0 && __sys_errno() != 0 {
         result::err(make_net_error("getifaddrs"))
@@ -239,7 +239,7 @@ func interface_addresses() result[vec[string], net_error] {
     }
 }
 
-func close(int fd) result[(), net_error] {
+func close(int fd) ((), net_error) {
     r := __sys_close(fd)
     if r < 0 {
         result::err(make_net_error("close"))
@@ -248,7 +248,7 @@ func close(int fd) result[(), net_error] {
     }
 }
 
-func set_nonblocking(int fd) result[(), net_error] {
+func set_nonblocking(int fd) ((), net_error) {
     flags := __sys_fcntl(fd, f_getfl, 0)
     if flags < 0 {
         return result::err(make_net_error("fcntl F_GETFL"))
@@ -261,7 +261,7 @@ func set_nonblocking(int fd) result[(), net_error] {
     }
 }
 
-func set_reuseaddr(int fd) result[(), net_error] {
+func set_reuseaddr(int fd) ((), net_error) {
     r := __sys_setsockopt(fd, sol_socket, so_reuseaddr, 1)
     if r < 0 {
         result::err(make_net_error("setsockopt SO_REUSEADDR"))
@@ -270,7 +270,7 @@ func set_reuseaddr(int fd) result[(), net_error] {
     }
 }
 
-func set_tcp_nodelay(int fd) result[(), net_error] {
+func set_tcp_nodelay(int fd) ((), net_error) {
     r := __sys_setsockopt(fd, ipproto_tcp, tcp_nodelay, 1)
     if r < 0 {
         result::err(make_net_error("setsockopt TCP_NODELAY"))
@@ -279,7 +279,7 @@ func set_tcp_nodelay(int fd) result[(), net_error] {
     }
 }
 
-func set_deadline_ms(int fd, int read_timeout_ms, int write_timeout_ms) result[(), net_error] {
+func set_deadline_ms(int fd, int read_timeout_ms, int write_timeout_ms) ((), net_error) {
     r := __sys_set_deadline_ms(fd, read_timeout_ms, write_timeout_ms)
     if r < 0 {
         result::err(make_net_error("set deadline"))
@@ -288,7 +288,7 @@ func set_deadline_ms(int fd, int read_timeout_ms, int write_timeout_ms) result[(
     }
 }
 
-func shutdown(int fd, int how) result[(), net_error] {
+func shutdown(int fd, int how) ((), net_error) {
     r := __sys_shutdown(fd, how)
     if r < 0 {
         result::err(make_net_error("shutdown"))
@@ -297,7 +297,7 @@ func shutdown(int fd, int how) result[(), net_error] {
     }
 }
 
-func poll_ready(int fd, int events, int timeout_ms) result[int, net_error] {
+func poll_ready(int fd, int events, int timeout_ms) (int, net_error) {
     r := __sys_poll_ready(fd, events, timeout_ms)
     if r < 0 {
         result::err(make_net_error("poll"))
@@ -306,7 +306,7 @@ func poll_ready(int fd, int events, int timeout_ms) result[int, net_error] {
     }
 }
 
-func poller_create() result[int, net_error] {
+func poller_create() (int, net_error) {
     pfd := __sys_poller_create()
     if pfd < 0 {
         result::err(make_net_error("poller_create"))
@@ -315,7 +315,7 @@ func poller_create() result[int, net_error] {
     }
 }
 
-func poller_add(int poller_fd, int fd, int events) result[(), net_error] {
+func poller_add(int poller_fd, int fd, int events) ((), net_error) {
     r := __sys_poller_add(poller_fd, fd, events)
     if r < 0 {
         result::err(make_net_error("poller_add"))
@@ -324,7 +324,7 @@ func poller_add(int poller_fd, int fd, int events) result[(), net_error] {
     }
 }
 
-func poller_del(int poller_fd, int fd) result[(), net_error] {
+func poller_del(int poller_fd, int fd) ((), net_error) {
     r := __sys_poller_del(poller_fd, fd)
     if r < 0 {
         result::err(make_net_error("poller_del"))
@@ -333,7 +333,7 @@ func poller_del(int poller_fd, int fd) result[(), net_error] {
     }
 }
 
-func poller_wait(int poller_fd, int max, int timeout_ms) result[vec[int], net_error] {
+func poller_wait(int poller_fd, int max, int timeout_ms) (vec[int), net_error] {
     ready := __sys_poller_wait(poller_fd, max, timeout_ms)
     if __sys_errno() != 0 {
         result::err(make_net_error("poller_wait"))

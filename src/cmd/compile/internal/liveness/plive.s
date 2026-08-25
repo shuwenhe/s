@@ -26,7 +26,7 @@ func plive_emit(string fn_name, vec[live_stack_slot] slots, vec[vec[int]] stack_
     args_maps := vec[string]()
     locals_maps := vec[string]()
     i := 0
-    while i < stack_maps.len() {
+    for i < stack_maps.len() {
         args_maps.push(build_bitmap(args_bits, slots, stack_maps[i], true))
         locals_maps.push(build_bitmap(locals_bits, slots, stack_maps[i], false))
         i = i + 1
@@ -46,7 +46,7 @@ func plive_emit(string fn_name, vec[live_stack_slot] slots, vec[vec[int]] stack_
 func max_bitmap_words(vec[live_stack_slot] slots, bool want_args) int {
     out := 0
     i := 0
-    while i < slots.len() {
+    for i < slots.len() {
         s := slots[i]
         if (want_args && s.is_arg) || (!want_args && !s.is_arg) {
             start := slot_word_index(s)
@@ -73,17 +73,17 @@ func build_bitmap(int width, vec[live_stack_slot] slots, vec[int] live, bool wan
     }
     bits := vec[int]()
     i := 0
-    while i < width {
+    for i < width {
         bits.push(0)
         i = i + 1
     }
     k := 0
-    while k < slots.len() && k < live.len() {
+    for k < slots.len() && k < live.len() {
         s := slots[k]
         if live[k] != 0 && ((want_args && s.is_arg) || (!want_args && !s.is_arg)) {
             start := slot_word_index(s)
             w := 0
-            while w < s.ptr_words {
+            for w < s.ptr_words {
                 idx := start + w
                 if idx >= 0 && idx < bits.len() {
                     bits[idx] = 1
@@ -99,7 +99,7 @@ func build_bitmap(int width, vec[live_stack_slot] slots, vec[int] live, bool wan
 func emit_stack_objects(vec[live_stack_slot] slots) vec[string] {
     out := vec[string]()
     i := 0
-    while i < slots.len() {
+    for i < slots.len() {
         s := slots[i]
         if !s.is_arg && s.addr_taken && s.ptr_words > 0 {
             out.push(s.name + "@" + to_string(s.frame_offset) + ":" + to_string(s.ptr_words))
@@ -112,7 +112,7 @@ func emit_stack_objects(vec[live_stack_slot] slots) vec[string] {
 func encode_bitmap(vec[int] bits) string {
     out := ""
     i := 0
-    while i < bits.len() {
+    for i < bits.len() {
         if bits[i] != 0 {
             out = out + "1"
         } else {

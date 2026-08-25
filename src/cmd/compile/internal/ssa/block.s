@@ -21,7 +21,7 @@ func make_block(int id, string kind) ssa_block {
     }
 }
 
-func block_set_control(mut ssa_block b, int value_id) ssa_block {
+func block_set_control(ssa_block b, int value_id) ssa_block {
     b.control = value_id
     b
 }

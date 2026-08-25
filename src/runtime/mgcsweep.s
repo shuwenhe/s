@@ -14,7 +14,7 @@ func sweep_pass() int {
     sweep_live_count  = 0
     all_objs := __mem_heap_list_all()
     i := 0
-    while i < all_objs.len() {
+    for i < all_objs.len() {
         obj_id := all_objs.get(i).unwrap_or(-1)
         if obj_id >= 0 {
             hdr := __mem_obj_read_header(obj_id)

@@ -15,10 +15,10 @@ func estimate_inline_sites(string mir_text) int {
 func estimate_inline_sites_graph(mir_graph graph) int {
     call_sites := 0
     i := 0
-    while i < graph.blocks.len() {
+    for i < graph.blocks.len() {
         block := graph.blocks[i]
         j := 0
-        while j < block.statements.len() {
+        for j < block.statements.len() {
             switch block.statements[j] {
                 mir_statement::eval(eval_stmt) : {
                     if eval_stmt.op == "call" {
@@ -47,7 +47,7 @@ func count_token(string text, string token) int {
     }
     total := 0
     i := 0
-    while i <= len(text) - len(token) {
+    for i <= len(text) - len(token) {
         if slice(text, i, i + len(token)) == token {
             total = total + 1
             i = i + len(token)

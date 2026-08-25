@@ -16,7 +16,7 @@ struct compile_report {
     string dump
 }
 
-func optimize(mut ssa_func f, ssa_config cfg) vec[pass_stat] {
+func optimize(ssa_func f, ssa_config cfg) vec[pass_stat] {
     stats := vec[pass_stat]()
     if cfg.enable_rewrite {
         stats.push(pass_stat { name: "rewrite", changed: run_rewrite(f, cfg.target_arch) })
@@ -36,7 +36,7 @@ func optimize(mut ssa_func f, ssa_config cfg) vec[pass_stat] {
     stats
 }
 
-func compile_func(mut ssa_func f, ssa_config cfg) compile_report {
+func compile_func(ssa_func f, ssa_config cfg) compile_report {
     stats := optimize(f, cfg)
     facts := vec[prove_fact]()
     if cfg.enable_prove {

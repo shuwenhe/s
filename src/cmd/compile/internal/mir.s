@@ -114,7 +114,7 @@ func lower_function_graph(function_decl function) mir_graph {
 func lower_block_graph(string function_name, block_expr block) mir_graph {
     statements := vec[mir_statement]()
     index := 0
-    while index < block.statements.len() {
+    for index < block.statements.len() {
         stmt_text := join_text(dump_stmt(block.statements[index], indent(1)), " | ")
         args := vec[string]()
         args.push(stmt_text)
@@ -127,7 +127,7 @@ func lower_block_graph(string function_name, block_expr block) mir_graph {
     trace := vec[string]()
     trace_text := "block"
     index = 0
-    while index < block.statements.len() {
+    for index < block.statements.len() {
         stmt_trace := join_text(dump_stmt(block.statements[index], indent(1)), " | ")
         trace_text = trace_text + " | " + indent(1) + stmt_trace
         index = index + 1
@@ -164,7 +164,7 @@ func dump_graph(mir_graph graph) string {
         + " entry=" + to_string(graph.entry)
         + " exit=" + to_string(graph.exit)
     i := 0
-    while i < graph.blocks.len() {
+    for i < graph.blocks.len() {
         block := graph.blocks[i]
         out = out + " | bb" + to_string(block.id)
             + "(" + block.label + ")"
@@ -187,7 +187,7 @@ func lower_function(function_decl function) string {
 func lower_block(block_expr block) string {
     text := "block"
     index := 0
-    while index < block.statements.len() {
+    for index < block.statements.len() {
         stmt_text := join_text(dump_stmt(block.statements[index], indent(1)), " | ")
         text = text + " | " + indent(1) + stmt_text
         index = index + 1
@@ -221,7 +221,7 @@ func trace_switch(string subject_text, string arms_text) string {
 func indent(int depth) string {
     out := ""
     i := 0
-    while i < depth {
+    for i < depth {
         out = out + "  "
         i = i + 1
     }
@@ -231,7 +231,7 @@ func indent(int depth) string {
 func join_text(vec[string] values, string sep) string {
     out := ""
     i := 0
-    while i < values.len() {
+    for i < values.len() {
         if i > 0 {
             out = out + sep
         }

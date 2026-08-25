@@ -108,7 +108,7 @@ func make_options(string command, string path, string output, string ssa_margin,
 
 func has_flag(vec[string] args, int start_index, string flag) bool {
     i := start_index
-    while i < args.len() {
+    for i < args.len() {
         if args[i] == flag {
             return true
         }
@@ -163,7 +163,7 @@ func is_non_negative_integer(string text) bool {
         return false
     }
     i := 0
-    while i < text.len() {
+    for i < text.len() {
         ch := char_at(text, i)
         if !is_digit_char(ch) {
             return false

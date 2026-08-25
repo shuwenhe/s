@@ -37,7 +37,7 @@ func new_graph() computation_graph {
     computation_graph { nodes: new graph_node[2000], node_count: 0 }
 }
 
-func add_node(computation_graph mut g, graph_node n) int {
+func add_node(computation_graph g, graph_node n) int {
     if g.node_count < 2000 {
         n.id = _next_node_id
         g.nodes[g.node_count] = n
@@ -57,7 +57,7 @@ func get_node(computation_graph g, int id) graph_node {
     graph_node {}
 }
 
-func _dfs_topo(int node_idx, bool[] visited, int[] order, int mut order_pos) void {
+func _dfs_topo(int node_idx, bool[] visited, int[] order, int order_pos) void {
     if visited[node_idx] { return }
     visited[node_idx] = true
     graph_node n = get_node(_global_graph, node_idx)
@@ -594,7 +594,7 @@ func register_op(string op_name, int[] input_ids, T.tensor output, bool req_grad
 func cache_to_ints(int[] arr, int start, int count) int[] {
     int[] result = new int[count]
     int i = 0
-    for i < count { result[i] = arr[start + i]; i = i + 1 }
+    for i < count { (i) = arr[start + i]; i = i + 1 }
     result
 }
 
@@ -639,7 +639,7 @@ func zero_grad(Map<string, ag_tensor> params) void {
     }
 }
 
-func sgd_step(optimizer mut opt, Map<string, ag_tensor> params) void {
+func sgd_step(optimizer opt, Map<string, ag_tensor> params) void {
     opt.step = opt.step + 1
     for name, param in params {
         if !param.requires_grad { continue }
@@ -661,7 +661,7 @@ func sgd_step(optimizer mut opt, Map<string, ag_tensor> params) void {
     }
 }
 
-func adam_step(optimizer mut opt, Map<string, ag_tensor> params) void {
+func adam_step(optimizer opt, Map<string, ag_tensor> params) void {
     int t = opt.step + 1
     opt.step = t
     float bias1 = 1.0 - M.pow(opt.momentum, t as float)
@@ -712,7 +712,7 @@ func clip_grad_value_(Map<string, ag_tensor> params, float clip_val) void {
     }
 }
 
-func lr_step(optimizer mut opt, int epoch) void {
+func lr_step(optimizer opt, int epoch) void {
     if epoch > 0 && mod(epoch, 30) == 0 {
         opt.lr = opt.lr * 0.1
     }

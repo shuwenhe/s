@@ -262,7 +262,7 @@ func build_pipeline_with_graph_hints(mir_graph graph, string mir_text, string go
     graph_branches := 0
     graph_edges := 0
     i := 0
-    while i < graph.blocks.len() {
+    for i < graph.blocks.len() {
         block := graph.blocks[i]
         graph_values = graph_values + block.statements.len()
         graph_edges = graph_edges + block.terminator.edges.len()
@@ -270,7 +270,7 @@ func build_pipeline_with_graph_hints(mir_graph graph, string mir_text, string go
             graph_branches = graph_branches + 1
         }
         j := 0
-        while j < block.statements.len() {
+        for j < block.statements.len() {
             switch block.statements[j] {
                 mir_statement::assign(assign_stmt) : {
                     if assign_stmt.op == "phi" {
@@ -310,7 +310,7 @@ func build_pipeline_with_graph_hints_and_margin(mir_graph graph, string mir_text
     graph_branches := 0
     graph_edges := 0
     i := 0
-    while i < graph.blocks.len() {
+    for i < graph.blocks.len() {
         block := graph.blocks[i]
         graph_values = graph_values + block.statements.len()
         graph_edges = graph_edges + block.terminator.edges.len()
@@ -318,7 +318,7 @@ func build_pipeline_with_graph_hints_and_margin(mir_graph graph, string mir_text
             graph_branches = graph_branches + 1
         }
         j := 0
-        while j < block.statements.len() {
+        for j < block.statements.len() {
             switch block.statements[j] {
                 mir_statement::assign(assign_stmt) : {
                     if assign_stmt.op == "phi" {
@@ -581,7 +581,7 @@ func choose_instruction_verify_stage(string primary, string pass_delta_summary) 
     best := candidates[0]
     best_count := stage_delta_count(pass_delta_summary, best)
     i := 1
-    while i < candidates.len() {
+    for i < candidates.len() {
         stage := candidates[i]
         count := stage_delta_count(pass_delta_summary, stage)
         if count > best_count {
@@ -606,7 +606,7 @@ func build_instruction_verify_stage_evidence(string primary, string pass_delta_s
     second_stage := "none"
     second_count := 0
     i := 1
-    while i < candidates.len() {
+    for i < candidates.len() {
         stage := candidates[i]
         count := stage_delta_count(pass_delta_summary, stage)
         if count > top_count {
@@ -637,7 +637,7 @@ func instruction_verify_pick_matches_top(string primary, string pass_delta_summa
     top_stage := candidates[0]
     top_count := stage_delta_count(pass_delta_summary, top_stage)
     i := 1
-    while i < candidates.len() {
+    for i < candidates.len() {
         stage := candidates[i]
         count := stage_delta_count(pass_delta_summary, stage)
         if count > top_count {
@@ -661,7 +661,7 @@ func instruction_verify_pick_reason(string primary, string pass_delta_summary, s
     top_count := stage_delta_count(pass_delta_summary, top_stage)
     tie_count := 1
     i := 1
-    while i < candidates.len() {
+    for i < candidates.len() {
         stage := candidates[i]
         count := stage_delta_count(pass_delta_summary, stage)
         if count > top_count {
@@ -731,7 +731,7 @@ func stage_delta_count(string summary, string stage) int {
         return 0
     }
     cursor := 0
-    while cursor < summary.len() {
+    for cursor < summary.len() {
         sep := find_token_from(summary, ",", cursor)
         if sep > summary.len() {
             sep = summary.len()
@@ -1227,7 +1227,7 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
     }
     active_until := vec[int]()
     ri := 0
-    while ri < regs.len() {
+    for ri < regs.len() {
         active_until.push(0)
         ri = ri + 1
     }
@@ -1243,10 +1243,10 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
         live_width = 2
     }
     i := 0
-    while i < value_count {
+    for i < value_count {
         chosen := -1
         ri = 0
-        while ri < regs.len() {
+        for ri < regs.len() {
             if i >= active_until[ri] {
                 chosen = ri
                 break
@@ -1312,7 +1312,7 @@ func pick_split_victim(vec[int] active_until) int {
     victim := 0
     max_until := active_until[0]
     i := 1
-    while i < active_until.len() {
+    for i < active_until.len() {
         if active_until[i] > max_until {
             max_until = active_until[i]
             victim = i
@@ -1348,7 +1348,7 @@ func should_split_live_range(int index, int victim_live_until, int value_count, 
 func count_live_regs(vec[int] active_until, int cursor) int {
     count := 0
     i := 0
-    while i < active_until.len() {
+    for i < active_until.len() {
         if active_until[i] > cursor {
             count = count + 1
         }
@@ -1471,7 +1471,7 @@ func build_pass_delta_summary(string delta_trace) string {
     }
     out := ""
     cursor := 0
-    while cursor < delta_trace.len() {
+    for cursor < delta_trace.len() {
         sep := find_token_from(delta_trace, ";", cursor)
         if sep > delta_trace.len() {
             sep = delta_trace.len()
@@ -1501,7 +1501,7 @@ func build_pass_delta_category_summary(string delta_trace, bool structural) stri
     }
     out := ""
     cursor := 0
-    while cursor < delta_trace.len() {
+    for cursor < delta_trace.len() {
         sep := find_token_from(delta_trace, ";", cursor)
         if sep > delta_trace.len() {
             sep = delta_trace.len()
@@ -1598,7 +1598,7 @@ func count_delta_summary_entries(string summary) int {
     }
     count := 0
     cursor := 0
-    while cursor < summary.len() {
+    for cursor < summary.len() {
         sep := find_token_from(summary, ",", cursor)
         if sep > summary.len() {
             sep = summary.len()
@@ -1618,7 +1618,7 @@ func count_delta_summary_active_entries(string summary) int {
     }
     count := 0
     cursor := 0
-    while cursor < summary.len() {
+    for cursor < summary.len() {
         sep := find_token_from(summary, ",", cursor)
         if sep > summary.len() {
             sep = summary.len()
@@ -1645,7 +1645,7 @@ func sum_delta_summary_counts(string summary) int {
     }
     total := 0
     cursor := 0
-    while cursor < summary.len() {
+    for cursor < summary.len() {
         sep := find_token_from(summary, ",", cursor)
         if sep > summary.len() {
             sep = summary.len()
@@ -1667,7 +1667,7 @@ func sum_delta_summary_counts(string summary) int {
 func parse_delta_count(string text, int start, int end) int {
     value := 0
     i := start
-    while i < end && i < text.len() {
+    for i < end && i < text.len() {
         ch := char_at(text, i)
         if is_digit(ch) {
             value = value * 10 + parse_digit(ch)
@@ -1842,7 +1842,7 @@ func remove_empty_jump_blocks(string mir_text, int budget) string {
     out := ""
     cursor := 0
     removed := 0
-    while cursor < mir_text.len() {
+    for cursor < mir_text.len() {
         block_pos := find_token_from(mir_text, " | bb", cursor)
         if block_pos > mir_text.len() - 5 {
             out = out + slice(mir_text, cursor, mir_text.len())
@@ -1886,7 +1886,7 @@ func reduce_numeric_marker_budget(string text, string marker, int budget) string
     out := ""
     cursor := 0
     remaining := budget
-    while cursor < text.len() {
+    for cursor < text.len() {
         pos := find_token_from(text, marker, cursor)
         if pos > text.len() - marker.len() {
             return out + slice(text, cursor, text.len())
@@ -1895,7 +1895,7 @@ func reduce_numeric_marker_budget(string text, string marker, int budget) string
         digits_start := pos + marker.len()
         digits_end := digits_start
         value := 0
-        while digits_end < text.len() && is_digit(char_at(text, digits_end)) {
+        for digits_end < text.len() && is_digit(char_at(text, digits_end)) {
             value = value * 10 + parse_digit(char_at(text, digits_end))
             digits_end = digits_end + 1
         }
@@ -1919,7 +1919,7 @@ func replace_first_n_tokens(string text, string needle, string replacement, int 
     }
     out := text
     i := 0
-    while i < count {
+    for i < count {
         next := replace_first_token(out, needle, replacement)
         if !next.changed {
             return out
@@ -1932,7 +1932,7 @@ func replace_first_n_tokens(string text, string needle, string replacement, int 
 
 func find_token_from(string text, string needle, int start) int {
     i := start
-    while i <= text.len() - needle.len() {
+    for i <= text.len() - needle.len() {
         if slice(text, i, i + needle.len()) == needle {
             return i
         }
@@ -2021,7 +2021,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
     replay_log := ""
     rollback_node := "none"
     prev := -1
-    while fixed_iters < max_iters && stable_iters < 2 {
+    for fixed_iters < max_iters && stable_iters < 2 {
         prev = current
         rollback_value = current
         rollback_points = rollback_points + 1
@@ -2283,7 +2283,7 @@ func has_scheduler_conflict(int pre_i, int cse_i, ssa_dataflow_model model) bool
 func hash_text(string text) int {
     h := 17
     i := 0
-    while i < text.len() {
+    for i < text.len() {
         h = (h * 31 + parse_digit_safe(char_at(text, i))) % 1000003
         i = i + 1
     }
@@ -2611,14 +2611,14 @@ func estimate_phi_nodes(string mir_text) int {
 func count_numeric_marker_total(string text, string marker) int {
     total := 0
     cursor := 0
-    while cursor < text.len() {
+    for cursor < text.len() {
         pos := find_token_from(text, marker, cursor)
         if pos > text.len() - marker.len() {
             return total
         }
         digits := pos + marker.len()
         value := 0
-        while digits < text.len() && is_digit(char_at(text, digits)) {
+        for digits < text.len() && is_digit(char_at(text, digits)) {
             value = value * 10 + parse_digit(char_at(text, digits))
             digits = digits + 1
         }
@@ -2734,7 +2734,7 @@ func parse_int_after(string text, string marker) int {
     start = start + marker.len()
     value := 0
     i := start
-    while i < text.len() && is_digit(char_at(text, i)) {
+    for i < text.len() && is_digit(char_at(text, i)) {
         ch := char_at(text, i)
         value = value * 10 + parse_digit(ch)
         i = i + 1
@@ -2745,7 +2745,7 @@ func parse_int_after(string text, string marker) int {
 func count_token(string text, string token) int {
     total := 0
     i := 0
-    while i <= text.len() - token.len() {
+    for i <= text.len() - token.len() {
         if slice(text, i, i + token.len()) == token {
             total = total + 1
             i = i + token.len()
@@ -2760,11 +2760,11 @@ func parse_total_stmt_count(string mir_text) int {
     total := 0
     marker := " stmts="
     i := 0
-    while i <= mir_text.len() - marker.len() {
+    for i <= mir_text.len() - marker.len() {
         if slice(mir_text, i, i + marker.len()) == marker {
             cursor := i + marker.len()
             value := 0
-            while cursor < mir_text.len() && is_digit(char_at(mir_text, cursor)) {
+            for cursor < mir_text.len() && is_digit(char_at(mir_text, cursor)) {
                 value = value * 10 + parse_digit(char_at(mir_text, cursor))
                 cursor = cursor + 1
             }
@@ -2791,9 +2791,9 @@ func build_debug_lines(string mir_text, vec[string] allocated_regs) vec[string] 
         blocks = 1
     }
     i := 0
-    while i < allocated_regs.len() {
+    for i < allocated_regs.len() {
         block := i
-        while block >= blocks {
+        for block >= blocks {
             block = block - blocks
         }
         out.push("line " + to_string(100 + i) + " -> bb" + to_string(block) + " -> " + allocated_regs[i])
@@ -2805,7 +2805,7 @@ func build_debug_lines(string mir_text, vec[string] allocated_regs) vec[string] 
 func build_var_locations(vec[string] allocated_regs) vec[string] {
     out := vec[string]()
     i := 0
-    while i < allocated_regs.len() {
+    for i < allocated_regs.len() {
         out.push("let v" + to_string(i) + " -> " + allocated_regs[i])
         i = i + 1
     }
@@ -2913,7 +2913,7 @@ func dump_pipeline(ssa_program program) string {
         + " max_live=" + to_string(program.regalloc_max_live)
         + " dbg_lines=" + to_string(program.debug_line_count)
     i := 0
-    while i < program.allocated_regs.len() {
+    for i < program.allocated_regs.len() {
         out = out + " | v" + to_string(i) + "->" + program.allocated_regs[i]
         i = i + 1
     }
@@ -2925,17 +2925,17 @@ func dump_debug_map(ssa_program program) string {
         + " values=" + to_string(program.optimized_value_count)
         + " spills=" + to_string(program.spill_count)
     i := 0
-    while i < program.allocated_regs.len() {
+    for i < program.allocated_regs.len() {
         out = out + " | value#" + to_string(i) + " reg=" + program.allocated_regs[i]
         i = i + 1
     }
     i = 0
-    while i < program.debug_lines.len() {
+    for i < program.debug_lines.len() {
         out = out + " | " + program.debug_lines[i]
         i = i + 1
     }
     i = 0
-    while i < program.debug_var_locations.len() {
+    for i < program.debug_var_locations.len() {
         out = out + " | " + program.debug_var_locations[i]
         i = i + 1
     }
@@ -2968,7 +2968,7 @@ func find_token(string text, string token) int {
         return text.len() + 1
     }
     i := 0
-    while i <= text.len() - token.len() {
+    for i <= text.len() - token.len() {
         if slice(text, i, i + token.len()) == token {
             return i
         }

@@ -4,7 +4,7 @@ func softfloat_module_name() string {
     "ssa/softfloat.s"
 }
 
-func softfloat_module_apply(mut ssa_func f) int {
+func softfloat_module_apply(ssa_func f) int {
     recompute_uses(f)
     0
 }

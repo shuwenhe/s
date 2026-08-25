@@ -76,7 +76,7 @@ func unflatten_index(tensor_shape shape, int flat_idx) int[] {
     int remaining = flat_idx
     int d = shape.ndim - 1
     for d >= 0 {
-        result[d] = remaining % shape.dims[d]
+        (d) = remaining % shape.dims[d]
         remaining = remaining / shape.dims[d]
         d = d - 1
     }
@@ -248,7 +248,7 @@ func get_flat(tensor t, int idx) float {
     t.data[idx]
 }
 
-func set_flat(tensor mut t, int idx, float value) void {
+func set_flat(tensor t, int idx, float value) void {
     t.data[idx] = value
 }
 

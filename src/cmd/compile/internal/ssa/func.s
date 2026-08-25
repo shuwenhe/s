@@ -26,14 +26,14 @@ func make_func(string name) ssa_func {
     f
 }
 
-func func_add_block(mut ssa_func f, string kind) int {
+func func_add_block(ssa_func f, string kind) int {
     id := f.next_block_id
     f.next_block_id = f.next_block_id + 1
     f.blocks.push(make_block(id, kind))
     id
 }
 
-func func_add_value(mut ssa_func f, string name, string op, string ty, vec[int] args, string literal) int {
+func func_add_value(ssa_func f, string name, string op, string ty, vec[int] args, string literal) int {
     id := f.next_value_id
     f.next_value_id = f.next_value_id + 1
     f.values.push(make_value(id, name, op, ty, args, literal))
@@ -42,7 +42,7 @@ func func_add_value(mut ssa_func f, string name, string op, string ty, vec[int] 
 
 func func_find_block_index(ssa_func f, int block_id) int {
     i := 0
-    while i < f.blocks.len() {
+    for i < f.blocks.len() {
         if f.blocks[i].id == block_id {
             return i
         }
@@ -51,7 +51,7 @@ func func_find_block_index(ssa_func f, int block_id) int {
     -1
 }
 
-func block_append_value(mut ssa_func f, int block_id, int value_id) {
+func block_append_value(ssa_func f, int block_id, int value_id) {
     bi := func_find_block_index(f, block_id)
     if bi >= 0 {
         f.blocks[bi].values.push(value_id)

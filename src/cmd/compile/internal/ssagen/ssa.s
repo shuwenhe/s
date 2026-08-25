@@ -20,7 +20,7 @@ struct wrap_info_blob {
 func emit_arg_info(string fn_name, vec[abi_param_desc] in_params) arg_info_blob {
     bytes := vec[int]()
     i := 0
-    while i < in_params.len() {
+    for i < in_params.len() {
         append_param_encoding(bytes, in_params[i])
         i = i + 1
     }

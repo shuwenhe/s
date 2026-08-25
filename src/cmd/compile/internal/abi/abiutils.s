@@ -139,7 +139,7 @@ func assignment_string(abi_param_assignment assignment, abi_config config, bool 
         offname = "offset"
     }
     i := 0
-    while i < assignment.registers.len() {
+    for i < assignment.registers.len() {
         r := assignment.registers[i]
         regs = regs + " " + reg_string(config.reg_amounts, r)
         if extra {
@@ -156,12 +156,12 @@ func assignment_string(abi_param_assignment assignment, abi_config config, bool 
 func info_string(abi_param_result_info info) string {
     out := ""
     i := 0
-    while i < info.inparams.len() {
+    for i < info.inparams.len() {
         out = out + "IN " + to_string(i) + ": " + assignment_string(info.inparams[i], info.config, false) + "\n"
         i = i + 1
     }
     i = 0
-    while i < info.outparams.len() {
+    for i < info.outparams.len() {
         out = out + "OUT " + to_string(i) + ": " + assignment_string(info.outparams[i], info.config, false) + "\n"
         i = i + 1
     }
@@ -185,7 +185,7 @@ func abi_analyze_types(abi_config config, vec[string] params, vec[string] result
     }
     inparams := vec[abi_param_assignment]()
     i := 0
-    while i < params.len() {
+    for i < params.len() {
         inparams.push(assign_param(state, params[i], "", false))
         i = i + 1
     }
@@ -194,7 +194,7 @@ func abi_analyze_types(abi_config config, vec[string] params, vec[string] result
     state.r_used = reg_amounts { int_regs: 0, float_regs: 0 }
     outparams := vec[abi_param_assignment]()
     i = 0
-    while i < results.len() {
+    for i < results.len() {
         outparams.push(assign_param(state, results[i], "", true))
         i = i + 1
     }
@@ -212,7 +212,7 @@ func abi_analyze_types(abi_config config, vec[string] params, vec[string] result
 func register_types(vec[abi_param_assignment] assignments) vec[string] {
     rts := vec[string]()
     i := 0
-    while i < assignments.len() {
+    for i < assignments.len() {
         if assignments[i].registers.len() > 0 {
             rts = append_param_types(rts, assignments[i].type_name)
         }
@@ -239,7 +239,7 @@ func register_types_and_offsets(abi_param_assignment assignment) register_layout
 func compute_padding(abi_param_assignment assignment, int slots) vec[int] {
     padding := vec[int]()
     i := 0
-    while i < slots {
+    for i < slots {
         padding.push(0)
         i = i + 1
     }
@@ -248,7 +248,7 @@ func compute_padding(abi_param_assignment assignment, int slots) vec[int] {
     }
     layout := register_types_and_offsets(assignment)
     i = 0
-    while i + 1 < layout.types.len() && i < padding.len() {
+    for i + 1 < layout.types.len() && i < padding.len() {
         at := layout.offsets[i] + type_size(layout.types[i])
         next := layout.offsets[i + 1]
         if next > at {
@@ -317,7 +317,7 @@ func append_param_types(vec[string] rts, string type_name) vec[string] {
     rts
 }
 
-func assign_param(assign_state mut state, string type_name, string name, bool is_result) abi_param_assignment {
+func assign_param(assign_state state, string type_name, string name, bool is_result) abi_param_assignment {
     alloc := try_alloc_regs(state, type_name)
     offset := -1
     if !alloc.ok {
@@ -335,7 +335,7 @@ func assign_param(assign_state mut state, string type_name, string name, bool is
     }
 }
 
-func try_alloc_regs(assign_state mut state, string type_name) reg_alloc_result {
+func try_alloc_regs(assign_state state, string type_name) reg_alloc_result {
     if type_size(type_name) == 0 {
         return reg_alloc_result { ok: false, regs: vec[int]() }
     }
@@ -348,12 +348,12 @@ func try_alloc_regs(assign_state mut state, string type_name) reg_alloc_result {
     }
     regs := vec[int]()
     i := 0
-    while i < need.int_regs {
+    for i < need.int_regs {
         regs.push(state.r_used.int_regs + i)
         i = i + 1
     }
     i = 0
-    while i < need.float_regs {
+    for i < need.float_regs {
         regs.push(state.r_total.int_regs + state.r_used.float_regs + i)
         i = i + 1
     }
@@ -497,7 +497,7 @@ func starts_with(string text, string prefix) bool {
         return false
     }
     i := 0
-    while i < prefix.len() {
+    for i < prefix.len() {
         if text[i] != prefix[i] {
             return false
         }

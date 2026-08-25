@@ -245,7 +245,7 @@ func is_valid_module_name(string name) bool {
         return false
     }
     i := 0
-    while i < len(name) {
+    for i < len(name) {
         ch := char_at(name, i)
         if ch == " " || ch == "\t" || ch == "\r" || ch == "\n" {
             return false
@@ -261,7 +261,7 @@ func is_module_name(string path) bool {
     }
     has_dot := false
     i := 0
-    while i < len(path) {
+    for i < len(path) {
         ch := char_at(path, i)
         if ch == "/" {
             return false

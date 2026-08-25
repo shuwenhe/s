@@ -12,7 +12,7 @@ func make_decision(string ty) string {
 func make_plan(vec[string] type_env) vec[string] {
     plan := vec[string]()
     i := 0
-    while i < type_env.len() {
+    for i < type_env.len() {
         ty := type_env[i]
         next_i := i + 1
         i = next_i

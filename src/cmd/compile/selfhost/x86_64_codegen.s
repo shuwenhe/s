@@ -25,15 +25,15 @@ func new_x86_64_gen() X86_64Gen {
     }
 }
 
-func (gen: &mut X86_64Gen) emit(string line) {
+func (gen: &X86_64Gen) emit(string line) {
     gen.asm_lines = append(gen.asm_lines, "    " + line)
 }
 
-func (gen: &mut X86_64Gen) emit_label(string label) {
+func (gen: &X86_64Gen) emit_label(string label) {
     gen.asm_lines = append(gen.asm_lines, label + ":")
 }
 
-func (gen: &mut X86_64Gen) allocate_register() string {
+func (gen: &X86_64Gen) allocate_register() string {
     if len(gen.register_stack) > 0 {
         reg := gen.register_stack[0]
         gen.register_stack = gen.register_stack[1:]
@@ -42,11 +42,11 @@ func (gen: &mut X86_64Gen) allocate_register() string {
     return ""  
 }
 
-func (gen: &mut X86_64Gen) free_register(string reg) {
+func (gen: &X86_64Gen) free_register(string reg) {
     gen.register_stack = append(gen.register_stack, reg)
 }
 
-func (gen: &mut X86_64Gen) get_location(string var) string {
+func (gen: &X86_64Gen) get_location(string var) string {
     if loc, exists := gen.temp_allocations[var]; exists {
         return loc
     }
@@ -61,7 +61,7 @@ func (gen: &mut X86_64Gen) get_location(string var) string {
     return stack_loc
 }
 
-func (gen: &mut X86_64Gen) translate_instruction(Instruction instr) error {
+func (gen: &X86_64Gen) translate_instruction(Instruction instr) error {
     match instr.opcode {
         case "FUNC_BEGIN":
             gen.emit("push %rbp")
@@ -152,7 +152,7 @@ func (gen: &mut X86_64Gen) translate_instruction(Instruction instr) error {
 }
 
 func generate_assembly_from_ir([]Instruction instructions) (string, error) {
-    mut gen := new_x86_64_gen()
+    gen := new_x86_64_gen()
     gen.asm_lines = append(gen.asm_lines, ".globl main")
     gen.asm_lines = append(gen.asm_lines, ".text")
     gen.asm_lines = append(gen.asm_lines, "")
@@ -162,7 +162,7 @@ func generate_assembly_from_ir([]Instruction instructions) (string, error) {
             return "", err
         }
     }
-    mut result := ""
+    result := ""
     for _, line in gen.asm_lines {
         result += line + "\n"
     }

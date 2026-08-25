@@ -12,14 +12,14 @@ enum option[t] {
     none,
 }
 trait reader_like[t] {
-    func read([]u8 buf) result[usize, io_error];
+    func read([]u8 buf) (usize, io_error);
 }
 
-func load[t: reader](t reader, string path) result[string, io_error] {
+func load[t: reader](t reader, string path) (string, io_error) {
     value := 1
     value
 }
 
-func (self: &mut file) read([]u8 buf) result[usize, io_error] {
+func (file* self) read([]u8 buf) (usize, io_error) {
     buf
 }

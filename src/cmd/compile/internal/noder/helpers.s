@@ -22,7 +22,7 @@ func ends_with(string text, string suffix) bool {
 func trim_spaces(string text) string {
     start := 0
     end := len(text)
-    while start < end {
+    for start < end {
         ch := char_at(text, start)
         if ch == " " || ch == "\t" || ch == "\n" || ch == "\r" {
             start = start + 1
@@ -30,7 +30,7 @@ func trim_spaces(string text) string {
             break
         }
     }
-    while end > start {
+    for end > start {
         ch := char_at(text, end - 1)
         if ch == " " || ch == "\t" || ch == "\n" || ch == "\r" {
             end = end - 1
@@ -45,7 +45,7 @@ func split_lines(string text) vec[string] {
     out := vec[string]()
     start := 0
     i := 0
-    while i < len(text) {
+    for i < len(text) {
         if char_at(text, i) == "\n" {
             out.push(slice(text, start, i))
             start = i + 1
@@ -60,7 +60,7 @@ func split_words(string line) vec[string] {
     out := vec[string]()
     current := ""
     i := 0
-    while i < len(line) {
+    for i < len(line) {
         ch := char_at(line, i)
         if ch == " " || ch == "\t" {
             if current != "" {
@@ -92,7 +92,7 @@ func join_path(vec[string] parts) string {
     }
     out := parts[0]
     i := 1
-    while i < parts.len() {
+    for i < parts.len() {
         out = out + "/" + parts[i]
         i = i + 1
     }

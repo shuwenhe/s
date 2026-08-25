@@ -104,12 +104,12 @@ func new_elf_builder() ELFBuilder {
     }
 }
 
-func (builder: &mut ELFBuilder) add_code([]byte code) {
+func (builder: &ELFBuilder) add_code([]byte code) {
     builder.code_section = append_slice(builder.code_section, code)
 }
 
-func (builder: &mut ELFBuilder) generate() []byte {
-    mut buffer: []byte = []byte{}
+func (builder: &ELFBuilder) generate() []byte {
+    buffer: []byte = []byte{}
     return buffer
 }
 

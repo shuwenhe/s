@@ -9,7 +9,7 @@ func u64_le_bytes([]int bytes, int offset) int {
     int value = 0
     int multiplier = 1
     int i = 0
-    while i < 8 {
+    for i < 8 {
         value = value + normalize_byte(bytes[offset + i]) * multiplier
         multiplier = multiplier * 256
         i = i + 1
@@ -24,7 +24,7 @@ func u64_le_string(string data, int offset) int {
     int value = 0
     int multiplier = 1
     int i = 0
-    while i < 8 {
+    for i < 8 {
         value = value + normalize_byte(int(byte(data[offset + i]))) * multiplier
         multiplier = multiplier * 256
         i = i + 1
@@ -39,7 +39,7 @@ func i32_le_string(string data, int offset) int {
     int value = 0
     int multiplier = 1
     int i = 0
-    while i < 4 {
+    for i < 4 {
         value = value + normalize_byte(int(byte(data[offset + i]))) * multiplier
         multiplier = multiplier * 256
         i = i + 1
@@ -53,7 +53,7 @@ func parse_int_at_bytes([]int bytes, int pos) int {
     }
     int value = 0
     int cursor = pos
-    while cursor < len(bytes) {
+    for cursor < len(bytes) {
         int c = bytes[cursor]
         if c < 48 || c > 57 {
             break

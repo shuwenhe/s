@@ -84,7 +84,7 @@ func get_bfc(int v) bfc_result {
     }
     lsb := 0
     t := v
-    while lsb < 32 {
+    for lsb < 32 {
         if (t % 2) == 1 {
             break
         }
@@ -93,7 +93,7 @@ func get_bfc(int v) bfc_result {
     }
     width := 0
     u := t
-    while width < 32 && (u % 2) == 1 {
+    for width < 32 && (u % 2) == 1 {
         u = u / 2
         width = width + 1
     }
@@ -190,7 +190,7 @@ func starts_with(string text, string prefix) bool {
         return false
     }
     i := 0
-    while i < prefix.len() {
+    for i < prefix.len() {
         if text[i] != prefix[i] {
             return false
         }

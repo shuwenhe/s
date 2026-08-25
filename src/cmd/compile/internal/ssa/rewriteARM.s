@@ -1,9 +1,9 @@
 package compile.internal.ssa
 
-func run_rewrite_arm(mut ssa_func f) int {
+func run_rewrite_arm(ssa_func f) int {
     changed := 0
     i := 0
-    while i < f.values.len() {
+    for i < f.values.len() {
         v := f.values[i]
         if v.removed {
             i = i + 1

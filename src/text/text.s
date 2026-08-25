@@ -72,7 +72,7 @@ func substring(string s, int start, int end) string {
     }
     string result = ""
     int i = start
-    while i < end {
+    for i < end {
         result = result + string(s[i])
         i = i + 1
     }
@@ -84,10 +84,10 @@ func find_substring(string text, string substr) int {
         return -1
     }
     int i = 0
-    while i <= len(text) - len(substr) {
+    for i <= len(text) - len(substr) {
         bool matches = true
         int j = 0
-        while j < len(substr) {
+        for j < len(substr) {
             if text[i + j] != substr[j] {
                 matches = false
                 break

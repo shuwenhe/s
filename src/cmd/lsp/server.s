@@ -4,12 +4,12 @@ use "std"
 use "../lsp"
 
 struct lsp_server {
-    mut handler: lsp::lsp_handler
+    handler: lsp::lsp_handler
     initialized: bool
 }
 
 func main() {
-    mut server := lsp_server {
+    server := lsp_server {
         handler: lsp::new_lsp_handler(),
         initialized: false,
     }
@@ -17,7 +17,7 @@ func main() {
     server.run()
 }
 
-func (server mut lsp_server) run() {
+func (server lsp_server) run() {
     buf := ""
     loop {
         match std::read_line_from_stdin() {
@@ -50,7 +50,7 @@ func (server mut lsp_server) run() {
     }
 }
 
-func (server mut lsp_server) handle_message(message string) {
+func (server lsp_server) handle_message(message string) {
     match lsp::parse_jsonrpc_message(message) {
         result::ok(req) : {
             match req.method {
@@ -88,7 +88,7 @@ func (server mut lsp_server) handle_message(message string) {
     }
 }
 
-func (server mut lsp_server) handle_initialize(req lsp::jsonrpc_request) {
+func (server lsp_server) handle_initialize(req lsp::jsonrpc_request) {
     server.initialized = true
 
     match req.id {
@@ -121,14 +121,14 @@ func (server mut lsp_server) handle_initialize(req lsp::jsonrpc_request) {
     }
 }
 
-func (server mut lsp_server) handle_shutdown(req lsp::jsonrpc_request) {
+func (server lsp_server) handle_shutdown(req lsp::jsonrpc_request) {
     match req.id {
         option::some(id) : server.send_response(id, "null"),
         option::none() : {}
     }
 }
 
-func (server mut lsp_server) handle_did_open(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_did_open(req lsp::jsonrpc_request, message string) {
     match extract_text_document_item(message) {
         option::some(item) : {
             params := lsp::did_open_text_document_params {
@@ -142,7 +142,7 @@ func (server mut lsp_server) handle_did_open(req lsp::jsonrpc_request, message s
     }
 }
 
-func (server mut lsp_server) handle_did_change(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_did_change(req lsp::jsonrpc_request, message string) {
     match extract_did_change_params(message) {
         option::some((uri, text, version)) : {
             changes := vec[lsp::text_document_content_change_event]{
@@ -168,7 +168,7 @@ func (server mut lsp_server) handle_did_change(req lsp::jsonrpc_request, message
     }
 }
 
-func (server mut lsp_server) handle_did_save(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_did_save(req lsp::jsonrpc_request, message string) {
     match extract_text_document_identifier(message) {
         option::some(uri) : {
             params := lsp::did_save_text_document_params {
@@ -181,7 +181,7 @@ func (server mut lsp_server) handle_did_save(req lsp::jsonrpc_request, message s
     }
 }
 
-func (server mut lsp_server) handle_did_close(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_did_close(req lsp::jsonrpc_request, message string) {
     match extract_text_document_identifier(message) {
         option::some(uri) : {
             params := lsp::did_close_text_document_params {
@@ -193,7 +193,7 @@ func (server mut lsp_server) handle_did_close(req lsp::jsonrpc_request, message 
     }
 }
 
-func (server mut lsp_server) handle_completion(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_completion(req lsp::jsonrpc_request, message string) {
     match req.id {
         option::some(id) : {
             match extract_position_params(message) {
@@ -210,7 +210,7 @@ func (server mut lsp_server) handle_completion(req lsp::jsonrpc_request, message
     }
 }
 
-func (server mut lsp_server) handle_hover(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_hover(req lsp::jsonrpc_request, message string) {
     match req.id {
         option::some(id) : {
             match extract_position_params(message) {
@@ -231,7 +231,7 @@ func (server mut lsp_server) handle_hover(req lsp::jsonrpc_request, message stri
     }
 }
 
-func (server mut lsp_server) handle_definition(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_definition(req lsp::jsonrpc_request, message string) {
     match req.id {
         option::some(id) : {
             match extract_position_params(message) {
@@ -253,7 +253,7 @@ func (server mut lsp_server) handle_definition(req lsp::jsonrpc_request, message
     }
 }
 
-func (server mut lsp_server) handle_references(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_references(req lsp::jsonrpc_request, message string) {
     match req.id {
         option::some(id) : {
             server.send_response(id, "[]")
@@ -262,7 +262,7 @@ func (server mut lsp_server) handle_references(req lsp::jsonrpc_request, message
     }
 }
 
-func (server mut lsp_server) handle_document_symbol(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_document_symbol(req lsp::jsonrpc_request, message string) {
     match req.id {
         option::some(id) : {
             match extract_text_document_identifier(message) {
@@ -278,7 +278,7 @@ func (server mut lsp_server) handle_document_symbol(req lsp::jsonrpc_request, me
     }
 }
 
-func (server mut lsp_server) handle_rename(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_rename(req lsp::jsonrpc_request, message string) {
     match req.id {
         option::some(id) : {
             server.send_response(id, "{\"changes\":{}}")
@@ -287,7 +287,7 @@ func (server mut lsp_server) handle_rename(req lsp::jsonrpc_request, message str
     }
 }
 
-func (server mut lsp_server) handle_workspace_symbol(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_workspace_symbol(req lsp::jsonrpc_request, message string) {
     match req.id {
         option::some(id) : {
             server.send_response(id, "[]")
@@ -296,7 +296,7 @@ func (server mut lsp_server) handle_workspace_symbol(req lsp::jsonrpc_request, m
     }
 }
 
-func (server mut lsp_server) send_diagnostics(uri string) {
+func (server lsp_server) send_diagnostics(uri string) {
     diags := server.handler.publish_diagnostics(uri)
     diag_json := lsp::serialize_diagnostics(diags)
     message := lsp::create_notification(

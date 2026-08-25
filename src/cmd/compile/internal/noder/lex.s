@@ -15,11 +15,11 @@ func classify_token(string token) string {
     "ident"
 }
 
-func lex_source(source_unit unit) result[vec[token_item], noder_error] {
+func lex_source(source_unit unit) (vec[token_item), noder_error] {
     out := vec[token_item]()
     lines := split_lines(unit.text)
     li := 0
-    while li < lines.len() {
+    for li < lines.len() {
         line := lines[li]
         trimmed := trim_spaces(line)
         if starts_with(trimmed, "
@@ -28,7 +28,7 @@ func lex_source(source_unit unit) result[vec[token_item], noder_error] {
         }
         words := split_words(line)
         wi := 0
-        while wi < words.len() {
+        for wi < words.len() {
             out.push(token_item {
                 kind: classify_token(words[wi]),
                 text: words[wi],

@@ -91,7 +91,7 @@ func make_sequential() Sequential {
     AI.new_sequential(new AI.Module[0])
 }
 
-func set_train(Module mut m, bool mode) void {
+func set_train(Module m, bool mode) void {
     AI.train_mode(m, mode)
 }
 
@@ -151,7 +151,7 @@ func copy_params_into(AG.auto_grad_tensor[] dst, int start_pos, AG.auto_grad_ten
     start_pos + i
 }
 
-func collect_gpt_params(GPTModel mut model) void {
+func collect_gpt_params(GPTModel model) void {
     int total = count_params(model.tok_embed) + count_params(model.pos_embed)
     int i = 0
     for i < model.config.num_layers {

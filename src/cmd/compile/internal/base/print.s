@@ -36,7 +36,7 @@ func add_error_msg(string at, int code, string message, bool warning) () {
 func flush_errors() string {
     out := ""
     i := 0
-    while i < error_msgs.len() {
+    for i < error_msgs.len() {
         out = out + error_msgs[i].msg + "\n"
         i = i + 1
     }

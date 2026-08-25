@@ -56,9 +56,9 @@ struct X86_64CodeGen {
 
 func parse_ir(string content) (IRProgram, error) {
     lines := split_string(content, "\n")
-    mut prog := IRProgram{}
-    mut current_func: *Function = nil
-    mut line_idx := 0
+    prog := IRProgram{}
+    current_func: *Function = nil
+    line_idx := 0
     if line_idx >= len(lines) {
         return prog, error("empty IR file")
     }
@@ -109,12 +109,12 @@ func parse_ir(string content) (IRProgram, error) {
 }
 
 func generate_x86_64(IRProgram program) (string, error) {
-    mut codegen := X86_64CodeGen{
+    codegen := X86_64CodeGen{
         program: program,
         buffer: []byte{},
         label_counter: 0,
     }
-    mut asm := ""
+    asm := ""
     asm += ".globl main\n"
     asm += ".text\n\n"
     for _, func in program.functions {

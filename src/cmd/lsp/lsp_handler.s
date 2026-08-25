@@ -3,7 +3,7 @@ package lsp
 use "std"
 
 struct lsp_handler {
-    mut doc_manager: document_manager
+    doc_manager: document_manager
 }
 
 func new_lsp_handler() lsp_handler {
@@ -12,11 +12,11 @@ func new_lsp_handler() lsp_handler {
     }
 }
 
-func (h mut lsp_handler) on_did_open(params did_open_text_document_params) {
+func (h lsp_handler) on_did_open(params did_open_text_document_params) {
     h.doc_manager.open_document(params.text_document)
 }
 
-func (h mut lsp_handler) on_did_change(params did_change_text_document_params) {
+func (h lsp_handler) on_did_change(params did_change_text_document_params) {
     uri := params.text_document.uri
     version := params.text_document.version
 
@@ -29,10 +29,10 @@ func (h mut lsp_handler) on_did_change(params did_change_text_document_params) {
     }
 }
 
-func (h mut lsp_handler) on_did_save(params did_save_text_document_params) {
+func (h lsp_handler) on_did_save(params did_save_text_document_params) {
 }
 
-func (h mut lsp_handler) on_did_close(params did_close_text_document_params) {
+func (h lsp_handler) on_did_close(params did_close_text_document_params) {
     h.doc_manager.close_document(params.text_document.uri)
 }
 
@@ -42,7 +42,7 @@ func (h lsp_handler) publish_diagnostics(uri string) vec[diagnostic] {
     match h.doc_manager.get_errors(uri) {
         option::some(errors) : {
             i := 0
-            while i < errors.len() {
+            for i < errors.len() {
                 err := errors[i]
                 diags.push(diagnostic {
                     r: range {
@@ -79,7 +79,7 @@ func (h lsp_handler) get_completions(uri string, pos position) completion_list {
     match h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : {
             i := 0
-            while i < symbols.len() {
+            for i < symbols.len() {
                 sym := symbols[i]
                 completions.push(completion_item {
                     label: sym.name,
@@ -109,12 +109,12 @@ func get_keyword_completions() vec[completion_item] {
         "package", "use", "pub", "func", "struct", "enum", "trait",
         "const", "static", "if", "else", "for", "while", "switch",
         "case", "default", "return", "break", "continue", "true", "false",
-        "nil", "mut", "let", "var", "in", "as",
+        "nil", "let", "var", "in", "as",
     }
 
     completions := vec[completion_item]()
     i := 0
-    while i < keywords.len() {
+    for i < keywords.len() {
         completions.push(completion_item {
             label: keywords[i],
             kind: option::some(completion_item_kind::keyword),
@@ -168,7 +168,7 @@ func (h lsp_handler) find_symbol_definition(uri string, name string) option[docu
 
 func find_symbol_in_list(symbols vec[document_symbol], name string) option[document_symbol] {
     i := 0
-    while i < symbols.len() {
+    for i < symbols.len() {
         if symbols[i].name == name {
             return option::some(symbols[i])
         }
@@ -181,7 +181,7 @@ func apply_content_changes(text string, changes vec[text_document_content_change
     result := text
     i := 0
 
-    while i < changes.len() {
+    for i < changes.len() {
         change := changes[i]
         match change.range_val {
             option::some(r) : {
@@ -207,7 +207,7 @@ func position_to_offset(lines vec[string], pos position) int {
     offset := 0
     i := 0
 
-    while i < pos.line && i < lines.len() {
+    for i < pos.line && i < lines.len() {
         offset = offset + lines[i].len() + 1
         i = i + 1
     }

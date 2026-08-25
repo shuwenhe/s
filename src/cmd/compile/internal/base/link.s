@@ -15,7 +15,7 @@ ctxt := link_context { symbols: vec[link_symbol]() }
 
 func is_reserved_import(string prefix) bool {
     i := 0
-    while i < reserved_imports.len() {
+    for i < reserved_imports.len() {
         if reserved_imports[i] == prefix {
             return true
         }

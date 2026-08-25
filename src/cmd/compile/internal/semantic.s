@@ -134,14 +134,14 @@ func check_detailed(string source) vec[semantic_error] {
     consts := collect_consts(file.items, functions, traits, source, diagnostics)
     validate_function_set(functions, source, diagnostics)
     i := 0
-    while i < file.items.len() {
+    for i < file.items.len() {
         ignored := check_item(file.items[i], functions, traits, consts, source, diagnostics)
         i = i + 1
     }
     finalize_diagnostics(diagnostics)
 }
 
-func run_preparse_semantic_completeness_checks(string source, vec[semantic_error] mut diagnostics) () {
+func run_preparse_semantic_completeness_checks(string source, vec[semantic_error] diagnostics) () {
     ignored0 := validate_control_flow_semantics(source, diagnostics)
     ignored1 := validate_recovery_semantics(source, diagnostics)
     ignored2 := validate_method_interface_semantics(source, diagnostics)
@@ -149,7 +149,7 @@ func run_preparse_semantic_completeness_checks(string source, vec[semantic_error
     ignored4 := validate_semantic_proof_chain(source, diagnostics)
 }
 
-func validate_concurrency_semantics(string source, vec[semantic_error] mut diagnostics) int {
+func validate_concurrency_semantics(string source, vec[semantic_error] diagnostics) int {
     errors := 0
     go_count := count_token_text(source, "\ngo(") + count_token_text(source, "\ngo ")
     sroutine_count := count_token_text(source, "\nsroutine ")
@@ -181,7 +181,7 @@ func validate_concurrency_semantics(string source, vec[semantic_error] mut diagn
     errors
 }
 
-func validate_control_flow_semantics(string source, vec[semantic_error] mut diagnostics) int {
+func validate_control_flow_semantics(string source, vec[semantic_error] diagnostics) int {
     errors := 0
     label_defs := count_token_text(source, "label ")
     goto_uses := count_token_text(source, "goto ")
@@ -200,7 +200,7 @@ func validate_control_flow_semantics(string source, vec[semantic_error] mut diag
     errors
 }
 
-func validate_recovery_semantics(string source, vec[semantic_error] mut diagnostics) int {
+func validate_recovery_semantics(string source, vec[semantic_error] diagnostics) int {
     errors := 0
     defer_count := count_token_text(source, "defer ")
     panic_count := count_token_text(source, "panic(")
@@ -223,9 +223,9 @@ func validate_recovery_semantics(string source, vec[semantic_error] mut diagnost
     errors
 }
 
-func validate_method_interface_semantics(string source, vec[semantic_error] mut diagnostics) int {
+func validate_method_interface_semantics(string source, vec[semantic_error] diagnostics) int {
     errors := 0
-    receiver_mut := count_token_text(source, "&mut ")
+    receiver_mut := count_token_text(source, "&")
     receiver_ref := count_token_text(source, "&")
     if receiver_mut > 0 && receiver_ref > receiver_mut {
         errors = errors + add_error(source, diagnostics, "e3029", "mixed receiver variants require method-set consistency proof", "func")
@@ -239,7 +239,7 @@ func validate_method_interface_semantics(string source, vec[semantic_error] mut 
     errors
 }
 
-func validate_semantic_proof_chain(string source, vec[semantic_error] mut diagnostics) int {
+func validate_semantic_proof_chain(string source, vec[semantic_error] diagnostics) int {
     errors := 0
     defer_count := count_token_text(source, "defer ")
     panic_count := count_token_text(source, "panic(")
@@ -263,7 +263,7 @@ func count_token_text(string text, string token) int {
     }
     count := 0
     i := 0
-    while i <= len(text) - len(token) {
+    for i <= len(text) - len(token) {
         if slice(text, i, i + len(token)) == token {
             count = count + 1
             i = i + len(token)
@@ -284,13 +284,13 @@ func finalize_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
 func append_anchor_summaries(vec[semantic_error] diagnostics) vec[semantic_error] {
     out := vec[semantic_error]()
     i := 0
-    while i < diagnostics.len() {
+    for i < diagnostics.len() {
         out.push(diagnostics[i])
         i = i + 1
     }
     summaries := vec[semantic_error]()
     i = 0
-    while i < diagnostics.len() {
+    for i < diagnostics.len() {
         d := diagnostics[i]
         if d.anchor != "" {
             at := find_anchor_summary_index(summaries, d.anchor)
@@ -316,7 +316,7 @@ func append_anchor_summaries(vec[semantic_error] diagnostics) vec[semantic_error
         i = i + 1
     }
     i = 0
-    while i < summaries.len() {
+    for i < summaries.len() {
         if summaries[i].repeat_count > 1 {
             out.push(summaries[i])
         }
@@ -327,7 +327,7 @@ func append_anchor_summaries(vec[semantic_error] diagnostics) vec[semantic_error
 
 func find_anchor_summary_index(vec[semantic_error] diagnostics, string anchor) int {
     i := 0
-    while i < diagnostics.len() {
+    for i < diagnostics.len() {
         if diagnostics[i].anchor == anchor {
             return i
         }
@@ -339,7 +339,7 @@ func find_anchor_summary_index(vec[semantic_error] diagnostics, string anchor) i
 func dedupe_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
     out := vec[semantic_error]()
     i := 0
-    while i < diagnostics.len() {
+    for i < diagnostics.len() {
         d := diagnostics[i]
         idx := find_diagnostic_index(out, d)
         if idx < 0 {
@@ -357,7 +357,7 @@ func dedupe_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
 
 func find_diagnostic_index(vec[semantic_error] diagnostics, semantic_error candidate) int {
     i := 0
-    while i < diagnostics.len() {
+    for i < diagnostics.len() {
         if diagnostics[i].code == candidate.code
             && diagnostics[i].message == candidate.message
             && diagnostics[i].line == candidate.line
@@ -372,11 +372,11 @@ func find_diagnostic_index(vec[semantic_error] diagnostics, semantic_error candi
 func sort_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
     out := vec[semantic_error]()
     i := 0
-    while i < diagnostics.len() {
+    for i < diagnostics.len() {
         item := diagnostics[i]
         insert := out.len()
         j := 0
-        while j < out.len() {
+        for j < out.len() {
             if diagnostic_before(item, out[j]) {
                 insert = j
                 j = out.len()
@@ -390,10 +390,10 @@ func sort_diagnostics(vec[semantic_error] diagnostics) vec[semantic_error] {
     out
 }
 
-func insert_diagnostic(vec[semantic_error] mut diagnostics, int at, semantic_error item) () {
+func insert_diagnostic(vec[semantic_error] diagnostics, int at, semantic_error item) () {
     diagnostics.push(item)
     i := diagnostics.len() - 1
-    while i > at {
+    for i > at {
         diagnostics[i] = diagnostics[i - 1]
         i = i - 1
     }
@@ -440,7 +440,7 @@ func apply_diagnostic_budget(vec[semantic_error] diagnostics) vec[semantic_error
     out := vec[semantic_error]()
     warnings := 0
     i := 0
-    while i < diagnostics.len() && out.len() < max_total {
+    for i < diagnostics.len() && out.len() < max_total {
         d := diagnostics[i]
         if d.severity == "warning" {
             if warnings >= max_warnings {
@@ -455,16 +455,16 @@ func apply_diagnostic_budget(vec[semantic_error] diagnostics) vec[semantic_error
     out
 }
 
-func validate_function_set(vec[function_binding] functions, string source, vec[semantic_error] mut diagnostics) int {
+func validate_function_set(vec[function_binding] functions, string source, vec[semantic_error] diagnostics) int {
     errors := 0
     i := 0
     has_main := false
-    while i < functions.len() {
+    for i < functions.len() {
         if !functions[i].has_receiver && functions[i].name == "main" {
             has_main = true
         }
         j := i + 1
-        while j < functions.len() {
+        for j < functions.len() {
             if !functions[i].has_receiver && !functions[j].has_receiver && functions[i].name == functions[j].name {
                 errors = errors + add_error(source, diagnostics, "e3010", "duplicate function declaration", functions[i].name)
             }
@@ -490,7 +490,7 @@ func same_param_types(vec[string] left, vec[string] right) bool {
         return false
     }
     i := 0
-    while i < left.len() {
+    for i < left.len() {
         if !same_type(left[i], right[i]) {
             return false
         }
@@ -506,7 +506,7 @@ func is_main_package(string source) bool {
 func collect_functions(vec[item] items) vec[function_binding] {
     out := vec[function_binding]()
     i := 0
-    while i < items.len() {
+    for i < items.len() {
         switch items[i] {
             item.function(function_decl) : out.push(make_function_binding(function_decl)),
             item.method(method_decl) : out.push(make_receiver_method_binding(method_decl)),
@@ -520,13 +520,13 @@ func collect_functions(vec[item] items) vec[function_binding] {
 func make_function_binding(function_decl function_decl) function_binding {
     generic_names := vec[string]()
     i := 0
-    while i < function_decl.sig.generics.len() {
+    for i < function_decl.sig.generics.len() {
         generic_names.push(generic_name(function_decl.sig.generics[i]));
         i = i + 1
     }
     params := vec[string]()
     i = 0
-    while i < function_decl.sig.params.len() {
+    for i < function_decl.sig.params.len() {
         params.push(parse_type(function_decl.sig.params[i].type_name));
         i = i + 1
     }
@@ -551,7 +551,7 @@ func make_receiver_method_binding(receiver_method_decl method_decl) function_bin
     params := vec[string]()
     params.push(parse_type(method_decl.receiver_type))
     i := 0
-    while i < binding.param_types.len() {
+    for i < binding.param_types.len() {
         params.push(binding.param_types[i])
         i = i + 1
     }
@@ -562,7 +562,7 @@ func make_receiver_method_binding(receiver_method_decl method_decl) function_bin
     binding
 }
 
-func check_item(item item, vec[function_binding] functions, vec[trait_binding] traits, vec[const_binding] consts, string source, vec[semantic_error] mut diagnostics) int {
+func check_item(item item, vec[function_binding] functions, vec[trait_binding] traits, vec[const_binding] consts, string source, vec[semantic_error] diagnostics) int {
     switch item {
         item.function(function_decl) : check_function(function_decl, functions, traits, consts, source, diagnostics),
         item.method(method_decl) : check_receiver_method(method_decl, functions, traits, consts, source, diagnostics),
@@ -570,12 +570,12 @@ func check_item(item item, vec[function_binding] functions, vec[trait_binding] t
     }
 }
 
-func collect_consts(vec[item] items, vec[function_binding] functions, vec[trait_binding] traits, string source, vec[semantic_error] mut diagnostics) vec[const_binding] {
+func collect_consts(vec[item] items, vec[function_binding] functions, vec[trait_binding] traits, string source, vec[semantic_error] diagnostics) vec[const_binding] {
     out := vec[const_binding]()
     type_env := vec[type_binding]()
     last_const_expr := option::none
     i := 0
-    while i < items.len() {
+    for i < items.len() {
         switch items[i] {
             item.const(const_decl) : {
                 if lookup_name_type(type_env, const_decl.name) != "unknown" {
@@ -651,7 +651,7 @@ func eval_const_int_expr(expr value, vec[const_binding] known_consts, int iota_v
                 }
             }
             i := known_consts.len()
-            while i > 0 {
+            for i > 0 {
                 i = i - 1
                 if known_consts[i].name == name_expr.name {
                     if known_consts[i].has_int_value {
@@ -727,7 +727,7 @@ func parse_const_int_literal(string literal) int {
         i = 1
     }
     out := 0
-    while i < len(text) {
+    for i < len(text) {
         ch := char_at(text, i)
         if ch != "_" {
             out = out * 10 + const_digit_value(ch)
@@ -774,15 +774,15 @@ func const_digit_value(string ch) int {
 func collect_traits(vec[item] items) vec[trait_binding] {
     out := vec[trait_binding]()
     i := 0
-    while i < items.len() {
+    for i < items.len() {
         switch items[i] {
             item.trait(trait_decl) : {
                 methods := vec[method_binding]()
                 mi := 0
-                while mi < trait_decl.methods.len() {
+                for mi < trait_decl.methods.len() {
                     params := vec[string]()
                     pi := 0
-                    while pi < trait_decl.methods[mi].params.len() {
+                    for pi < trait_decl.methods[mi].params.len() {
                         params.push(parse_type(trait_decl.methods[mi].params[pi].type_name));
                         pi = pi + 1
                     }
@@ -815,7 +815,7 @@ func collect_traits(vec[item] items) vec[trait_binding] {
 
 func find_trait_binding(vec[trait_binding] traits, string name) option[trait_binding] {
     i := 0
-    while i < traits.len() {
+    for i < traits.len() {
         if traits[i].name == name || traits[i].name == base_type_name(name) {
             return option.some(traits[i])
         }
@@ -826,7 +826,7 @@ func find_trait_binding(vec[trait_binding] traits, string name) option[trait_bin
 
 func find_trait_method(trait_binding trait_info, string name) option[method_binding] {
     i := 0
-    while i < trait_info.methods.len() {
+    for i < trait_info.methods.len() {
         if trait_info.methods[i].name == name {
             return option.some(trait_info.methods[i])
         }
@@ -837,10 +837,10 @@ func find_trait_method(trait_binding trait_info, string name) option[method_bind
 
 func receiver_type_implements_trait(string receiver_type, trait_binding trait_info, vec[function_binding] functions) bool {
     mi := 0
-    while mi < trait_info.methods.len() {
+    for mi < trait_info.methods.len() {
         matched := false
         fi := 0
-        while fi < functions.len() {
+        for fi < functions.len() {
             if functions[fi].has_receiver
                 && functions[fi].owner_type == method_owner_type(parse_type(receiver_type))
                 && method_binding_matches_trait(functions[fi], trait_info.methods[mi]) {
@@ -864,7 +864,7 @@ func method_binding_matches_trait(function_binding method, method_binding requir
         return false
     }
     i := 0
-    while i < requirement.param_types.len() {
+    for i < requirement.param_types.len() {
         if !same_type(method.param_types[i + 1], requirement.param_types[i]) {
             return false
         }
@@ -874,8 +874,8 @@ func method_binding_matches_trait(function_binding method, method_binding requir
 }
 
 func receiver_mode_from_type(string receiver_type) string {
-    if starts_with(receiver_type, "&mut ") || starts_with(receiver_type, "mut ") {
-        return "mut_ref"
+    if starts_with(receiver_type, "&") || starts_with(receiver_type, "*") {
+        return "ref"
     }
     if starts_with(receiver_type, "&") || starts_with(receiver_type, "*") {
         return "ref"
@@ -898,7 +898,7 @@ func receiver_mode_from_params(vec[param_decl] params) string {
     if params[0].name != "self" {
         return "value"
     }
-    if starts_with(params[0].type_name, "&mut ") {
+    if starts_with(params[0].type_name, "&") {
         return "mut_ref"
     }
     if starts_with(params[0].type_name, "&") {
@@ -907,7 +907,7 @@ func receiver_mode_from_params(vec[param_decl] params) string {
     "value"
 }
 
-func check_receiver_method(receiver_method_decl method_decl, vec[function_binding] functions, vec[trait_binding] traits, vec[const_binding] consts, string source, vec[semantic_error] mut diagnostics) int {
+func check_receiver_method(receiver_method_decl method_decl, vec[function_binding] functions, vec[trait_binding] traits, vec[const_binding] consts, string source, vec[semantic_error] diagnostics) int {
     method := method_decl.method
     if method.body.is_none() {
         return 0
@@ -920,7 +920,7 @@ func check_receiver_method(receiver_method_decl method_decl, vec[function_bindin
         }
     env := vec[type_binding]()
     i := 0
-    while i < consts.len() {
+    for i < consts.len() {
         env.push(type_binding {
             name: consts[i].name,
             type_name: consts[i].type_name,
@@ -932,7 +932,7 @@ func check_receiver_method(receiver_method_decl method_decl, vec[function_bindin
         type_name: parse_type(method_decl.receiver_type),
     })
     i = 0
-    while i < method.sig.params.len() {
+    for i < method.sig.params.len() {
         param := method.sig.params[i]
         env.push(type_binding {
             name: param.name,
@@ -949,7 +949,7 @@ func check_receiver_method(receiver_method_decl method_decl, vec[function_bindin
     pre_errors + result.errors
 }
 
-func check_function(function_decl function_decl, vec[function_binding] functions, vec[trait_binding] traits, vec[const_binding] consts, string source, vec[semantic_error] mut diagnostics) int {
+func check_function(function_decl function_decl, vec[function_binding] functions, vec[trait_binding] traits, vec[const_binding] consts, string source, vec[semantic_error] diagnostics) int {
     if function_decl.body.is_none() {
         return 0
     }
@@ -961,7 +961,7 @@ func check_function(function_decl function_decl, vec[function_binding] functions
         }
     env := vec[type_binding]()
     i := 0
-    while i < consts.len() {
+    for i < consts.len() {
         env.push(type_binding {
             name: consts[i].name,
             type_name: consts[i].type_name,
@@ -970,7 +970,7 @@ func check_function(function_decl function_decl, vec[function_binding] functions
         i = i + 1
     }
     i = 0
-    while i < function_decl.sig.params.len() {
+    for i < function_decl.sig.params.len() {
         param := function_decl.sig.params[i]
         env.push(type_binding {
             name: param.name,
@@ -988,13 +988,13 @@ func check_function(function_decl function_decl, vec[function_binding] functions
     pre_errors + result.errors
 }
 
-func validate_function_signature(function_decl function_decl, string source, vec[semantic_error] mut diagnostics) int {
+func validate_function_signature(function_decl function_decl, string source, vec[semantic_error] diagnostics) int {
     errors := 0
     i := 0
-    while i < function_decl.sig.generics.len() {
+    for i < function_decl.sig.generics.len() {
         gi := generic_name(function_decl.sig.generics[i])
         j := i + 1
-        while j < function_decl.sig.generics.len() {
+        for j < function_decl.sig.generics.len() {
             if gi == generic_name(function_decl.sig.generics[j]) {
                 errors = errors + add_error(source, diagnostics, "e3012", "duplicate generic parameter", gi)
             }
@@ -1003,10 +1003,10 @@ func validate_function_signature(function_decl function_decl, string source, vec
         i = i + 1
     }
     i = 0
-    while i < function_decl.sig.params.len() {
+    for i < function_decl.sig.params.len() {
         pi := function_decl.sig.params[i].name
         pj := i + 1
-        while pj < function_decl.sig.params.len() {
+        for pj < function_decl.sig.params.len() {
             if pi == function_decl.sig.params[pj].name {
                 errors = errors + add_error(source, diagnostics, "e3013", "duplicate parameter name", pi)
             }
@@ -1025,11 +1025,11 @@ func validate_function_signature(function_decl function_decl, string source, vec
     errors
 }
 
-func infer_block_expr(block_expr block, vec[type_binding] outer_env, string expected_return, vec[function_binding] functions, vec[trait_binding] traits, string source, vec[semantic_error] mut diagnostics) check_result {
+func infer_block_expr(block_expr block, vec[type_binding] outer_env, string expected_return, vec[function_binding] functions, vec[trait_binding] traits, string source, vec[semantic_error] diagnostics) check_result {
     local_env := clone_env(outer_env)
     errors := 0
     i := 0
-    while i < block.statements.len() {
+    for i < block.statements.len() {
         errors = errors + check_stmt(block.statements[i], local_env, expected_return, functions, traits, source, diagnostics)
         i = i + 1
     }
@@ -1048,7 +1048,7 @@ func infer_block_expr(block_expr block, vec[type_binding] outer_env, string expe
     }
 }
 
-func check_stmt(stmt stmt, vec[type_binding] mut env, string expected_return, vec[function_binding] functions, vec[trait_binding] traits, string source, vec[semantic_error] mut diagnostics) int {
+func check_stmt(stmt stmt, vec[type_binding] env, string expected_return, vec[function_binding] functions, vec[trait_binding] traits, string source, vec[semantic_error] diagnostics) int {
     switch stmt {
         stmt.let(value) : {
             rhs := infer_expr(value.value, env, expected_return, functions, traits, source, diagnostics)
@@ -1132,7 +1132,7 @@ func check_stmt(stmt stmt, vec[type_binding] mut env, string expected_return, ve
     }
 }
 
-func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[function_binding] functions, vec[trait_binding] traits, string source, vec[semantic_error] mut diagnostics) check_result {
+func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[function_binding] functions, vec[trait_binding] traits, string source, vec[semantic_error] diagnostics) check_result {
     switch expr {
         expr::int(_) : ok_type("int"),
         expr::string(_) : ok_type("string"),
@@ -1159,7 +1159,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
             if is_unknown(base.type_name) {
                 return base
             }
-            prefix := if value.mutable { "&mut " } else { "&" }
+            prefix := if value.mutable { "&" } else { "&" }
             check_result {
                 type_name: prefix + base.type_name,
                 errors: base.errors,
@@ -1230,7 +1230,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
             errors := 0
             arg_types := vec[string]()
             i := 0
-            while i < value.args.len() {
+            for i < value.args.len() {
                 arg_result := infer_expr(value.args[i], env, expected_return, functions, traits, source, diagnostics)
                 errors = errors + arg_result.errors
                 arg_types.push(arg_result.type_name);
@@ -1245,11 +1245,11 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
                     if methods.len() > 0 {
                         matches := vec[signature_match]()
                         j := 0
-                        while j < methods.len() {
+                        for j < methods.len() {
                             method_arg_types := vec[string]()
                             method_arg_types.push(method_receiver_arg_type(target.type_name, methods[j].receiver_mode));
                             ai := 0
-                            while ai < arg_types.len() {
+                            for ai < arg_types.len() {
                                 method_arg_types.push(arg_types[ai]);
                                 ai = ai + 1
                             }
@@ -1268,7 +1268,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
                         best := matches[0]
                         ambiguous := false
                         j = 1
-                        while j < matches.len() {
+                        for j < matches.len() {
                             if better_match(matches[j], best) {
                                 best = matches[j]
                                 ambiguous = false
@@ -1306,7 +1306,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
                                 }
                             }
                             ai := 0
-                            while ai < arg_types.len() {
+                            for ai < arg_types.len() {
                                 if !types_compatible(requirement.param_types[ai], arg_types[ai]) {
                                     return check_result {
                                         type_name: "unknown",
@@ -1347,7 +1347,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
                     }
                     matches := vec[signature_match]()
                     j := 0
-                    while j < candidates.len() {
+                    for j < candidates.len() {
                         m := try_match_signature(candidates[j], arg_types, functions, traits)
                         if m.ok {
                             matches.push(m);
@@ -1363,7 +1363,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
                     best := matches[0]
                     ambiguous := false
                     j = 1
-                    while j < matches.len() {
+                    for j < matches.len() {
                         if better_match(matches[j], best) {
                             best = matches[j]
                             ambiguous = false
@@ -1398,7 +1398,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
             arm_type := "unknown"
             seen_patterns := vec[pattern]()
             i := 0
-            while i < value.arms.len() {
+            for i < value.arms.len() {
                 arm := value.arms[i]
                 if pattern_unreachable(seen_patterns, arm.pattern, subject.type_name) {
                     errors = errors + add_error(source, diagnostics, "e2003", "unreachable switch arm", pattern_anchor(arm.pattern))
@@ -1484,7 +1484,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
             first := infer_expr(value.items[0], env, expected_return, functions, traits, source, diagnostics)
             errors := first.errors
             i := 1
-            while i < value.items.len() {
+            for i < value.items.len() {
                 item := infer_expr(value.items[i], env, expected_return, functions, traits, source, diagnostics)
                 errors = errors + item.errors
                 if !types_compatible(first.type_name, item.type_name) {
@@ -1500,7 +1500,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
         expr::map(value) : {
             errors := 0
             i := 0
-            while i < value.entries.len() {
+            for i < value.entries.len() {
                 errors = errors + infer_expr(value.entries[i].key, env, expected_return, functions, traits, source, diagnostics).errors
                 errors = errors + infer_expr(value.entries[i].value, env, expected_return, functions, traits, source, diagnostics).errors
                 i = i + 1
@@ -1513,7 +1513,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
     }
 }
 
-func check_pattern(pattern pattern, string expected_type, string source, vec[semantic_error] mut diagnostics) pattern_check_result {
+func check_pattern(pattern pattern, string expected_type, string source, vec[semantic_error] diagnostics) pattern_check_result {
     bindings := vec[type_binding]()
     errors := bind_pattern(pattern, expected_type, bindings, source, diagnostics)
     pattern_check_result {
@@ -1522,7 +1522,7 @@ func check_pattern(pattern pattern, string expected_type, string source, vec[sem
     }
 }
 
-func bind_pattern(pattern pattern, string expected_type, vec[type_binding] mut bindings, string source, vec[semantic_error] mut diagnostics) int {
+func bind_pattern(pattern pattern, string expected_type, vec[type_binding] bindings, string source, vec[semantic_error] diagnostics) int {
     if is_unknown(expected_type) {
         return add_error(source, diagnostics, "e2007", "pattern expected type is unknown", pattern_anchor(pattern))
     }
@@ -1576,12 +1576,12 @@ func bind_pattern(pattern pattern, string expected_type, vec[type_binding] mut b
     }
 }
 
-func add_binding(vec[type_binding] mut bindings, string name, string type_name, string source, vec[semantic_error] mut diagnostics) int {
+func add_binding(vec[type_binding] bindings, string name, string type_name, string source, vec[semantic_error] diagnostics) int {
     if name == "_" {
         return 0
     }
     i := 0
-    while i < bindings.len() {
+    for i < bindings.len() {
         if bindings[i].name == name {
             if !types_compatible(bindings[i].type_name, type_name) {
                 return add_error(source, diagnostics, "e2008", "conflicting binding type in pattern", name)
@@ -1598,9 +1598,9 @@ func add_binding(vec[type_binding] mut bindings, string name, string type_name, 
     0
 }
 
-func append_bindings(vec[type_binding] mut target, vec[type_binding] source) () {
+func append_bindings(vec[type_binding] target, vec[type_binding] source) () {
     i := 0
-    while i < source.len() {
+    for i < source.len() {
         target.push(source[i]);
         i = i + 1
     }
@@ -1608,7 +1608,7 @@ func append_bindings(vec[type_binding] mut target, vec[type_binding] source) () 
 
 func pattern_duplicate(vec[pattern] seen, pattern current, string expected_type) bool {
     i := 0
-    while i < seen.len() {
+    for i < seen.len() {
         if pattern_equivalent(seen[i], current, expected_type) {
             return true
         }
@@ -1619,7 +1619,7 @@ func pattern_duplicate(vec[pattern] seen, pattern current, string expected_type)
 
 func pattern_unreachable(vec[pattern] seen, pattern current, string expected_type) bool {
     i := 0
-    while i < seen.len() {
+    for i < seen.len() {
         if pattern_subsumes(seen[i], current, expected_type) {
             return true
         }
@@ -1675,7 +1675,7 @@ func pattern_subsumes(pattern left, pattern right, string expected_type) bool {
 
 func patterns_cover_type(vec[pattern] patterns, string expected_type) bool {
     i := 0
-    while i < patterns.len() {
+    for i < patterns.len() {
         if pattern_is_wild(patterns[i]) {
             return true
         }
@@ -1695,7 +1695,7 @@ func option_patterns_cover(vec[pattern] patterns, string expected_type) bool {
     seen_none := false
     some_patterns := vec[pattern]()
     i := 0
-    while i < patterns.len() {
+    for i < patterns.len() {
         switch patterns[i] {
             pattern::variant(value) : {
                 ctor := last_path_segment(value.path)
@@ -1719,7 +1719,7 @@ func result_patterns_cover(vec[pattern] patterns, string expected_type) bool {
     ok_patterns := vec[pattern]()
     err_patterns := vec[pattern]()
     i := 0
-    while i < patterns.len() {
+    for i < patterns.len() {
         switch patterns[i] {
             pattern::variant(value) : {
                 ctor := last_path_segment(value.path)
@@ -1799,7 +1799,7 @@ func variant_payload_type(string expected_type, string ctor) string {
     "unknown"
 }
 
-func infer_binary(string op, check_result left, check_result right, string source, vec[semantic_error] mut diagnostics) check_result {
+func infer_binary(string op, check_result left, check_result right, string source, vec[semantic_error] diagnostics) check_result {
     errors := left.errors + right.errors
     if op == "+" || op == "-" || op == "*" || op == "/" || op == "%" {
         if !types_compatible("int", left.type_name) || !types_compatible("int", right.type_name) {
@@ -1851,7 +1851,7 @@ func infer_binary(string op, check_result left, check_result right, string sourc
 func lookup_functions(vec[function_binding] functions, string name) vec[function_binding] {
     out := vec[function_binding]()
     i := 0
-    while i < functions.len() {
+    for i < functions.len() {
         if !functions[i].has_receiver && functions[i].name == name {
             out.push(functions[i]);
         }
@@ -1864,7 +1864,7 @@ func lookup_named_methods(vec[function_binding] functions, string receiver_type,
     out := vec[function_binding]()
     normalized_receiver := method_owner_type(receiver_type)
     i := 0
-    while i < functions.len() {
+    for i < functions.len() {
         if functions[i].has_receiver && functions[i].owner_type == normalized_receiver && functions[i].name == name {
             out.push(functions[i]);
         }
@@ -1877,7 +1877,7 @@ func lookup_methods(vec[function_binding] functions, string receiver_type, strin
     out := vec[function_binding]()
     normalized_receiver := method_owner_type(receiver_type)
     i := 0
-    while i < functions.len() {
+    for i < functions.len() {
         if functions[i].has_receiver && functions[i].owner_type == normalized_receiver && functions[i].name == name {
             if receiver_allows_method(receiver_type, receiver_expr, functions[i].receiver_mode) {
                 out.push(functions[i]);
@@ -1889,7 +1889,7 @@ func lookup_methods(vec[function_binding] functions, string receiver_type, strin
 }
 
 func method_owner_type(string receiver_type) string {
-    if starts_with(receiver_type, "&mut ") {
+    if starts_with(receiver_type, "&") {
         return slice(receiver_type, 5, len(receiver_type))
     }
     if starts_with(receiver_type, "&") {
@@ -1903,7 +1903,7 @@ func receiver_allows_method(string receiver_type, expr receiver_expr, string rec
         return true
     }
     if receiver_mode == "mut_ref" {
-        if starts_with(receiver_type, "&mut ") {
+        if starts_with(receiver_type, "&") {
             return true
         }
         return is_addressable_expr(receiver_expr)
@@ -1929,7 +1929,7 @@ func is_addressable_expr(expr value) bool {
 func method_receiver_arg_type(string receiver_type, string receiver_mode) string {
     owner_type := method_owner_type(receiver_type)
     if receiver_mode == "mut_ref" {
-        return "&mut " + owner_type
+        return "&" + owner_type
     }
     if receiver_mode == "ref" {
         return "&" + owner_type
@@ -1961,7 +1961,7 @@ func try_match_signature(function_binding binding, vec[string] arg_types, vec[fu
     score := 0
     unknown_arg_count := 0
     i := 0
-    while i < arg_types.len() {
+    for i < arg_types.len() {
         expected_ref := parse_type_ref(binding.param_types[i])
         actual_ref := parse_type_ref(arg_types[i])
         if is_unknown(actual_ref.canonical) {
@@ -2014,7 +2014,7 @@ func same_match_rank(signature_match left, signature_match right) bool {
         && left.generic_bind_count == right.generic_bind_count
 }
 
-func match_type_pattern_ref(type_ref param_type, type_ref arg_type, vec[string] generic_names, vec[type_binding] mut generic_bindings) bool {
+func match_type_pattern_ref(type_ref param_type, type_ref arg_type, vec[string] generic_names, vec[type_binding] generic_bindings) bool {
     p := param_type.canonical
     a := arg_type.canonical
     if is_generic_name(generic_names, p) {
@@ -2053,7 +2053,7 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, vec[string] 
         return same_type_ref(param_type, arg_type)
     }
     i := 0
-    while i < p_args.len() {
+    for i < p_args.len() {
         p_next := parse_type_ref(p_args[i])
         a_next := parse_type_ref(a_args[i])
         if !match_type_pattern_ref(p_next, a_next, generic_names, generic_bindings) {
@@ -2095,8 +2095,8 @@ func instantiate_type(string ty, vec[string] generic_names, vec[type_binding] ge
             return bound
         }
     }
-    if starts_with(clean, "&mut ") {
-        return "&mut " + instantiate_type(slice(clean, 5, len(clean)), generic_names, generic_bindings)
+    if starts_with(clean, "&") {
+        return "&" + instantiate_type(slice(clean, 5, len(clean)), generic_names, generic_bindings)
     }
     if starts_with(clean, "&") {
         return "&" + instantiate_type(slice(clean, 1, len(clean)), generic_names, generic_bindings)
@@ -2114,7 +2114,7 @@ func instantiate_type(string ty, vec[string] generic_names, vec[type_binding] ge
     base := base_type_name(clean)
     built := base + "["
     i := 0
-    while i < args.len() {
+    for i < args.len() {
         if i > 0 {
             built = built + ", "
         }
@@ -2129,7 +2129,7 @@ func type_contains_generic(string ty, vec[string] generic_names) bool {
     if is_generic_name(generic_names, clean) {
         return true
     }
-    if starts_with(clean, "&mut ") {
+    if starts_with(clean, "&") {
         return type_contains_generic(slice(clean, 5, len(clean)), generic_names)
     }
     if starts_with(clean, "&") {
@@ -2143,7 +2143,7 @@ func type_contains_generic(string ty, vec[string] generic_names) bool {
     }
     args := extract_type_args(clean)
     i := 0
-    while i < args.len() {
+    for i < args.len() {
         if type_contains_generic(args[i], generic_names) {
             return true
         }
@@ -2154,7 +2154,7 @@ func type_contains_generic(string ty, vec[string] generic_names) bool {
 
 func is_generic_name(vec[string] generic_names, string name) bool {
     i := 0
-    while i < generic_names.len() {
+    for i < generic_names.len() {
         if generic_names[i] == name {
             return true
         }
@@ -2170,7 +2170,7 @@ func strip_array_prefix(string ty) string {
     }
     depth := 0
     i := 0
-    while i < len(clean) {
+    for i < len(clean) {
         ch := char_at(clean, i)
         if ch == "[" {
             depth = depth + 1
@@ -2196,7 +2196,7 @@ func array_prefix_text(string ty) string {
 
 func generic_name(string raw) string {
     i := 0
-    while i < len(raw) {
+    for i < len(raw) {
         if char_at(raw, i) == ":" {
             return trim_text(slice(raw, 0, i))
         }
@@ -2208,7 +2208,7 @@ func generic_name(string raw) string {
 func clone_env(vec[type_binding] env) vec[type_binding] {
     out := vec[type_binding]()
     i := 0
-    while i < env.len() {
+    for i < env.len() {
         out.push(env[i]);
         i = i + 1
     }
@@ -2217,7 +2217,7 @@ func clone_env(vec[type_binding] env) vec[type_binding] {
 
 func lookup_name_type(vec[type_binding] env, string name) string {
     i := env.len()
-    while i > 0 {
+    for i > 0 {
         i = i - 1
         if env[i].name == name {
             return env[i].type_name
@@ -2306,7 +2306,7 @@ func second_type_arg(string type_name) string {
     type_arg(parse_type_ref(type_name), 1)
 }
 
-func add_error(string source, vec[semantic_error] mut diagnostics, string code, string message, string anchor) int {
+func add_error(string source, vec[semantic_error] diagnostics, string code, string message, string anchor) int {
     recovery_anchor := resolve_recovery_anchor(source, anchor)
     chain_id := build_chain_id("semantic", code, recovery_anchor)
     pos := locate_anchor(source, recovery_anchor)
@@ -2342,7 +2342,7 @@ func chain_id_from_anchor(string anchor) string {
 func sanitize_chain_anchor(string anchor) string {
     out := ""
     i := 0
-    while i < len(anchor) {
+    for i < len(anchor) {
         ch := slice(anchor, i, i + 1)
         if ch == " " || ch == "\t" || ch == "\n" || ch == "\r" {
             out = out + "_"
@@ -2441,7 +2441,7 @@ func find_substring(string haystack, string needle) int {
         return 0 - 1
     }
     i := 0
-    while i + len(needle) <= len(haystack) {
+    for i + len(needle) <= len(haystack) {
         if slice(haystack, i, i + len(needle)) == needle {
             return i
         }
@@ -2454,7 +2454,7 @@ func index_to_pos(string source, int index) source_pos {
     line := 1
     column := 1
     i := 0
-    while i < index {
+    for i < index {
         if char_at(source, i) == "\n" {
             line = line + 1
             column = 1
@@ -2485,7 +2485,7 @@ func contains_token(string text, string token) bool {
 
 func find_char(string text, string needle) int {
     i := 0
-    while i < len(text) {
+    for i < len(text) {
         if char_at(text, i) == needle {
             return i
         }
@@ -2496,7 +2496,7 @@ func find_char(string text, string needle) int {
 
 func find_last_char(string text, string needle) int {
     i := len(text)
-    while i > 0 {
+    for i > 0 {
         i = i - 1
         if char_at(text, i) == needle {
             return i
@@ -2507,7 +2507,7 @@ func find_last_char(string text, string needle) int {
 
 func last_path_segment(string path) string {
     i := len(path)
-    while i > 0 {
+    for i > 0 {
         i = i - 1
         if char_at(path, i) == "." {
             return slice(path, i + 1, len(path))
@@ -2519,10 +2519,10 @@ func last_path_segment(string path) string {
 func trim_text(string text) string {
     start := 0
     end := len(text)
-    while start < end && is_space(char_at(text, start)) {
+    for start < end && is_space(char_at(text, start)) {
         start = start + 1
     }
-    while end > start && is_space(char_at(text, end - 1)) {
+    for end > start && is_space(char_at(text, end - 1)) {
         end = end - 1
     }
     slice(text, start, end)

@@ -31,7 +31,7 @@ func from_syntax(source_file src) ir_ast.package_ir {
     pkg := ir_ast.package_ir { name: src.pkg, decls: vec[ir_ast.decl_ir]() }
     const_entries := collect_const_rewrite_entries(src)
     i := 0
-    while i < src.items.len() {
+    for i < src.items.len() {
         it := src.items[i]
         switch it {
             item.function(function_decl) : {
@@ -67,7 +67,7 @@ func from_syntax(source_file src) ir_ast.package_ir {
     pkg
 }
 
-func from_syntax_checked(source_file src) result[ir_ast.package_ir, string] {
+func from_syntax_checked(source_file src) (ir_ast.package_ir, string) {
     pkg := from_syntax(src)
     check := validate_lowering_contract(pkg)
     if check.is_err() {
@@ -76,9 +76,9 @@ func from_syntax_checked(source_file src) result[ir_ast.package_ir, string] {
     result::ok(pkg)
 }
 
-func validate_lowering_contract(ir_ast.package_ir pkg) result[(), string] {
+func validate_lowering_contract(ir_ast.package_ir pkg) ((), string) {
     i := 0
-    while i < pkg.decls.len() {
+    for i < pkg.decls.len() {
         switch pkg.decls[i] {
             ir_ast.decl_ir::func(fd) : {
                 if fd.body.is_some() {
@@ -95,9 +95,9 @@ func validate_lowering_contract(ir_ast.package_ir pkg) result[(), string] {
     result::ok(())
 }
 
-func validate_block_contract(ir_ast.block_ir block) result[(), string] {
+func validate_block_contract(ir_ast.block_ir block) ((), string) {
     i := 0
-    while i < block.statements.len() {
+    for i < block.statements.len() {
         switch block.statements[i] {
             ir_ast.stmt_ir::let(var_stmt) : {
                 checked := validate_expr_contract(var_stmt.value)
@@ -145,7 +145,7 @@ func validate_block_contract(ir_ast.block_ir block) result[(), string] {
     result::ok(())
 }
 
-func validate_expr_contract(ir_ast.expr_ir expression) result[(), string] {
+func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
     switch expression {
         ir_ast.expr_ir::name(name) : {
             if contains_text(name, "_unlowered") {
@@ -154,7 +154,7 @@ func validate_expr_contract(ir_ast.expr_ir expression) result[(), string] {
         }
         ir_ast.expr_ir::call(call_expr) : {
             i := 0
-            while i < call_expr.args.len() {
+            for i < call_expr.args.len() {
                 checked := validate_expr_contract(call_expr.args[i])
                 if checked.is_err() {
                     return checked
@@ -184,7 +184,7 @@ func validate_expr_contract(ir_ast.expr_ir expression) result[(), string] {
         }
         ir_ast.expr_ir::array(array_expr) : {
             i := 0
-            while i < array_expr.items.len() {
+            for i < array_expr.items.len() {
                 checked := validate_expr_contract(array_expr.items[i])
                 if checked.is_err() {
                     return checked
@@ -194,7 +194,7 @@ func validate_expr_contract(ir_ast.expr_ir expression) result[(), string] {
         }
         ir_ast.expr_ir::map(map_expr) : {
             i := 0
-            while i < map_expr.entries.len() {
+            for i < map_expr.entries.len() {
                 key_checked := validate_expr_contract(map_expr.entries[i].key)
                 if key_checked.is_err() {
                     return key_checked
@@ -222,7 +222,7 @@ func contains_text(string text, string needle) bool {
         return false
     }
     i := 0
-    while i <= text.len() - needle.len() {
+    for i <= text.len() - needle.len() {
         if slice(text, i, i + needle.len()) == needle {
             return true
         }
@@ -234,7 +234,7 @@ func contains_text(string text, string needle) bool {
 func convert_function(function_decl fd, vec[const_rewrite_entry] const_entries) ir_ast.func_decl {
     sig := ir_ast.func_sig { params: vec[ir_ast.param](), return_type_name: option[string].none, generics: fd.sig.generics }
     pi := 0
-    while pi < fd.sig.params.len() {
+    for pi < fd.sig.params.len() {
         p := fd.sig.params[pi]
         sig.params.push(ir_ast.param { name: p.name, type_name: p.type_name })
         pi = pi + 1
@@ -254,7 +254,7 @@ func convert_function(function_decl fd, vec[const_rewrite_entry] const_entries) 
 func convert_block(block_expr b, vec[const_rewrite_entry] const_entries) ir_ast.block_ir {
     stmts := vec[ir_ast.stmt_ir]()
     si := 0
-    while si < b.statements.len() {
+    for si < b.statements.len() {
         stmts.push(convert_stmt(b.statements[si], const_entries))
         si = si + 1
     }
@@ -322,7 +322,7 @@ func convert_expr(expr e, vec[const_rewrite_entry] const_entries) ir_ast.expr_ir
             }
             args := vec[ir_ast.expr_ir]()
             ai := 0
-            while ai < call_expr.args.len() {
+            for ai < call_expr.args.len() {
                 args.push(convert_expr(call_expr.args[ai], const_entries))
                 ai = ai + 1
             }
@@ -346,15 +346,15 @@ func convert_expr(expr e, vec[const_rewrite_entry] const_entries) ir_ast.expr_ir
     }
 }
 
-func lower_main_to_mir(source_file src) result[mir_graph, string] {
+func lower_main_to_mir(source_file src) (mir_graph, string) {
     return lower_package_to_mir(src)
 }
 
-func lower_package_to_mir(source_file src) result[mir_graph, string] {
+func lower_package_to_mir(source_file src) (mir_graph, string) {
     const_entries := collect_const_rewrite_entries(src)
     fn_count := 0
     i := 0
-    while i < src.items.len() {
+    for i < src.items.len() {
         switch src.items[i] {
             item.function(function_decl) : {
                 if function_decl.body.is_some() {
@@ -371,7 +371,7 @@ func lower_package_to_mir(source_file src) result[mir_graph, string] {
     picked := option[function_decl].none
     fallback := option[function_decl].none
     i := 0
-    while i < src.items.len() {
+    for i < src.items.len() {
         switch src.items[i] {
             item.function(function_decl) : {
                 if function_decl.body.is_some() {
@@ -401,7 +401,7 @@ func lower_package_to_mir(source_file src) result[mir_graph, string] {
     graph.trace.push("constfold.hits=" + to_string(const_fold_hits))
     graph.trace.push("package.functions=" + to_string(fn_count))
     t := 0
-    while t < src.items.len() {
+    for t < src.items.len() {
         switch src.items[t] {
             item.function(function_decl) : {
                 if function_decl.body.is_some() {
@@ -418,7 +418,7 @@ func lower_package_to_mir(source_file src) result[mir_graph, string] {
 func count_const_hits_block(block_expr block, vec[const_rewrite_entry] const_entries) int {
     total := 0
     i := 0
-    while i < block.statements.len() {
+    for i < block.statements.len() {
         total = total + count_const_hits_stmt(block.statements[i], const_entries)
         i = i + 1
     }
@@ -469,7 +469,7 @@ func count_const_hits_expr(expr e, vec[const_rewrite_entry] const_entries) int {
         expr.call(call_expr) : {
             total := count_const_hits_expr(call_expr.callee.value, const_entries)
             i := 0
-            while i < call_expr.args.len() {
+            for i < call_expr.args.len() {
                 total = total + count_const_hits_expr(call_expr.args[i], const_entries)
                 i = i + 1
             }
@@ -478,7 +478,7 @@ func count_const_hits_expr(expr e, vec[const_rewrite_entry] const_entries) int {
         expr.switch(switch_expr) : {
             total := count_const_hits_expr(switch_expr.subject.value, const_entries)
             i := 0
-            while i < switch_expr.arms.len() {
+            for i < switch_expr.arms.len() {
                 total = total + count_const_hits_expr(switch_expr.arms[i].expr, const_entries)
                 i = i + 1
             }
@@ -498,7 +498,7 @@ func count_const_hits_expr(expr e, vec[const_rewrite_entry] const_entries) int {
         expr.array(array_literal) : {
             total := 0
             i := 0
-            while i < array_literal.items.len() {
+            for i < array_literal.items.len() {
                 total = total + count_const_hits_expr(array_literal.items[i], const_entries)
                 i = i + 1
             }
@@ -507,7 +507,7 @@ func count_const_hits_expr(expr e, vec[const_rewrite_entry] const_entries) int {
         expr.map(map_literal) : {
             total := 0
             i := 0
-            while i < map_literal.entries.len() {
+            for i < map_literal.entries.len() {
                 total = total + count_const_hits_expr(map_literal.entries[i].key, const_entries)
                 total = total + count_const_hits_expr(map_literal.entries[i].value, const_entries)
                 i = i + 1
@@ -574,7 +574,7 @@ func block_to_expr(block_expr block, vec[const_rewrite_entry] const_entries) ir_
 func array_to_expr(array_literal lit, vec[const_rewrite_entry] const_entries) ir_ast.expr_ir {
     items := vec[ir_ast.expr_ir]()
     i := 0
-    while i < lit.items.len() {
+    for i < lit.items.len() {
         items.push(convert_expr(lit.items[i], const_entries))
         i = i + 1
     }
@@ -587,7 +587,7 @@ func array_to_expr(array_literal lit, vec[const_rewrite_entry] const_entries) ir
 func map_to_expr(map_literal lit, vec[const_rewrite_entry] const_entries) ir_ast.expr_ir {
     entries := vec[ir_ast.map_entry_expr]()
     i := 0
-    while i < lit.entries.len() {
+    for i < lit.entries.len() {
         entry := lit.entries[i]
         entries.push(ir_ast.map_entry_expr {
             key: convert_expr(entry.key, const_entries),
@@ -621,7 +621,7 @@ func lower_block_to_mir(string function_name, block_expr block, vec[const_rewrit
     trace := vec[string]()
     stmt_texts := vec[string]()
     i := 0
-    while i < block.statements.len() {
+    for i < block.statements.len() {
         text := dump_expr_stmt(block.statements[i], const_entries)
         stmt_texts.push(text)
         trace.push("stmt " + text)
@@ -726,7 +726,7 @@ func collect_const_rewrite_entries(source_file src) vec[const_rewrite_entry] {
         bool_value: false,
     }
     i := 0
-    while i < src.items.len() {
+    for i < src.items.len() {
         switch src.items[i] {
             item.const(const_decl) : {
                 folded := const_rewrite_entry {
@@ -926,7 +926,7 @@ func const_fold_value_text(const_fold_value value) string {
 
 func lookup_const_entry(vec[const_rewrite_entry] entries, string name) option[const_rewrite_entry] {
     i := entries.len()
-    while i > 0 {
+    for i > 0 {
         i = i - 1
         if entries[i].name == name {
             return option::some(entries[i])
@@ -965,7 +965,7 @@ func resolve_const_name_expr(string name, vec[const_rewrite_entry] const_entries
 func substitute_const_text(string text, vec[const_rewrite_entry] entries) string {
     out := text
     i := 0
-    while i < entries.len() {
+    for i < entries.len() {
         if entries[i].name != "" && entries[i].expr_text != "" {
             out = replace_ident_token(out, entries[i].name, entries[i].expr_text)
         }
@@ -983,7 +983,7 @@ func replace_ident_token(string text, string ident, string replacement) string {
     }
     out := ""
     i := 0
-    while i < text.len() {
+    for i < text.len() {
         if i + ident.len() <= text.len() && slice(text, i, i + ident.len()) == ident {
             left_ok := i == 0 || !is_ident_char(slice(text, i - 1, i))
             right_ok := i + ident.len() == text.len() || !is_ident_char(slice(text, i + ident.len(), i + ident.len() + 1))
@@ -1015,7 +1015,7 @@ func vec1(string text) vec[string] {
 func clone_lines(vec[string] lines) vec[string] {
     out := vec[string]()
     i := 0
-    while i < lines.len() {
+    for i < lines.len() {
         out.push(lines[i])
         i = i + 1
     }
@@ -1039,7 +1039,7 @@ func vec1_edge(string label, int target) vec[mir_control_edge] {
 func make_block(int id, string label, vec[string] lines, string term_kind, vec[mir_control_edge] edges) mir_basic_block {
     statements := vec[mir_statement]()
     i := 0
-    while i < lines.len() {
+    for i < lines.len() {
         args := vec[string]()
         args.push(lines[i])
         statements.push(mir_statement::eval(mir_eval_stmt {

@@ -23,7 +23,7 @@ func module_init(string name, string type_name) Module {
     }
 }
 
-func add_param(Module mut m, tensor data, string param_name) void {
+func add_param(Module m, tensor data, string param_name) void {
     auto_grad_tensor p = parameter(data, m.name + "." + param_name)
     append(m.parameters, p)
 }
@@ -40,7 +40,7 @@ func count_parameters(Module m) int {
     total
 }
 
-func train_mode(Module mut m, bool mode) void {
+func train_mode(Module m, bool mode) void {
     m.training = mode
 }
 
@@ -428,11 +428,11 @@ func forward(Sequential self, auto_grad_tensor x) auto_grad_tensor {
     output
 }
 
-func add_layer(Sequential mut self, Module layer) void {
+func add_layer(Sequential self, Module layer) void {
     append(self.layers, layer)
 }
 
-func init_weights(Module mut m, string scheme) void {
+func init_weights(Module m, string scheme) void {
     int i = 0
     for i < len(m.parameters) {
         if scheme == "xavier_uniform" {
@@ -473,5 +473,5 @@ func count_trainable_params(Module m) int {
     total
 }
 
-func to_device(Module mut m, string device) void {
+func to_device(Module m, string device) void {
 }

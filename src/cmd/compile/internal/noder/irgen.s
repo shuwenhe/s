@@ -6,7 +6,7 @@ use std.vec.vec
 func lower_to_ir(source_file ast) vec[ir_node] {
     out := vec[ir_node]()
     i := 0
-    while i < ast.items.len() {
+    for i < ast.items.len() {
         switch ast.items[i] {
             item.function(fn) : out.push(ir_node {
                 op: "fn",

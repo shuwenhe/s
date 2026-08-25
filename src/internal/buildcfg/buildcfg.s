@@ -67,7 +67,7 @@ func first_non_empty_goos_env() string {
     names.push("s_goos")
     names.push("GOOS")
     i := 0
-    while i < names.len() {
+    for i < names.len() {
         value := get(names[i])
         switch value {
             some(raw) : {
@@ -90,7 +90,7 @@ func infer_goos_from_host_env() string {
     names.push("VSCODE_CLI_OS")
     names.push("MSYSTEM")
     i := 0
-    while i < names.len() {
+    for i < names.len() {
         value := get(names[i])
         switch value {
             some(raw) : {
@@ -148,7 +148,7 @@ func first_non_empty_env() string {
     names.push("s_goarch")
     names.push("GOARCH")
     i := 0
-    while i < names.len() {
+    for i < names.len() {
         value := get(names[i])
         switch value {
             some(raw) : {
@@ -171,7 +171,7 @@ func infer_goarch_from_host_env() string {
     names.push("PROCESSOR_ARCHITECTURE")
     names.push("VSCODE_CLI_ARCH")
     i := 0
-    while i < names.len() {
+    for i < names.len() {
         value := get(names[i])
         switch value {
             some(raw) : {
@@ -236,7 +236,7 @@ func contains_token(string text, string token) bool {
     }
     i := 0
     limit := len(text) - len(token)
-    while i <= limit {
+    for i <= limit {
         if slice(text, i, i + len(token)) == token {
             return true
         }
@@ -248,10 +248,10 @@ func contains_token(string text, string token) bool {
 func trim_spaces(string text) string {
     start := 0
     end := len(text)
-    while start < end && is_space(slice(text, start, start + 1)) {
+    for start < end && is_space(slice(text, start, start + 1)) {
         start = start + 1
     }
-    while end > start && is_space(slice(text, end - 1, end)) {
+    for end > start && is_space(slice(text, end - 1, end)) {
         end = end - 1
     }
     slice(text, start, end)

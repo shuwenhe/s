@@ -213,7 +213,7 @@ func starts_with(string text, string prefix) bool {
         return false
     }
     i := 0
-    while i < prefix.len() {
+    for i < prefix.len() {
         if text[i] != prefix[i] {
             return false
         }
