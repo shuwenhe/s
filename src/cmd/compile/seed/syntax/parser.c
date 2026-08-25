@@ -312,6 +312,13 @@ static const token *prev(parser *p) {
 	return &p->tokens->data[p->current - 1];
 }
 
+static const token *peek_ahead(parser *p, size_t offset) {
+	if (p->current + offset >= p->tokens->len) {
+		return NULL;
+	}
+	return &p->tokens->data[p->current + offset];
+}
+
 static int is_at_end(parser *p) {
 	return peek(p)->type == TOKEN_EOF;
 }
@@ -1022,6 +1029,44 @@ static ast_node *parse_block(parser *p) {
 	return block;
 }
 
+static ast_node *parse_assign_declare_statement(parser *p) {
+	ast_node *node = ast_new(AST_LET_STMT, peek(p)->pos);
+	const token *name_tok;
+	if (!node) {
+		return NULL;
+	}
+	if (!expect(p, TOKEN_IDENTIFIER, "identifier")) {
+		ast_free(node);
+		return NULL;
+	}
+	name_tok = prev(p);
+	node->as.let_stmt.name = dup_cstr(name_tok->lexeme);
+	if (!node->as.let_stmt.name) {
+		ast_free(node);
+		return NULL;
+	}
+	node->as.let_stmt.mutable = 0;
+	node->as.let_stmt.type_name = NULL;
+	
+	if (!expect(p, TOKEN_ASSIGN_DECLARE, ":=")) {
+		ast_free(node);
+		return NULL;
+	}
+	
+	node->as.let_stmt.value = parse_expression(p);
+	if (!node->as.let_stmt.value) {
+		ast_free(node);
+		return NULL;
+	}
+	
+	if (!consume_optional_semicolon(p)) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
+}
+
+static ast_node *parse_binding_statement(parser *p, int is_mutable) __attribute__((unused));
 static ast_node *parse_binding_statement(parser *p, int is_mutable) {
 	ast_node *node = ast_new(AST_LET_STMT, prev(p)->pos);
 	const token *name_tok;
@@ -1072,6 +1117,7 @@ static ast_node *parse_binding_statement(parser *p, int is_mutable) {
 	return node;
 }
 
+static ast_node *parse_typed_binding_statement(parser *p, int is_mutable) __attribute__((unused));
 static ast_node *parse_typed_binding_statement(parser *p, int is_mutable) {
 	ast_node *node;
 	char *binding_type = NULL;
@@ -1122,6 +1168,7 @@ static ast_node *parse_typed_binding_statement(parser *p, int is_mutable) {
 	return node;
 }
 
+static int looks_like_typed_binding(parser *p) __attribute__((unused));
 static int looks_like_typed_binding(parser *p) {
 	size_t saved = p->current;
 	char *parsed_type = NULL;
@@ -1249,11 +1296,9 @@ static ast_node *parse_for_init(parser *p) {
 	if (check(p, TOKEN_SEMICOLON)) {
 		return NULL;
 	}
-	if (match(p, TOKEN_LET)) {
-		return parse_binding_statement(p, 0);
-	}
-	if (match(p, TOKEN_VAR)) {
-		return parse_binding_statement(p, 1);
+	// Handle := declarations in for loops
+	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
+		return parse_assign_declare_statement(p);
 	}
 
 	node = ast_new(AST_EXPR_STMT, peek(p)->pos);
@@ -2054,19 +2099,12 @@ static ast_node *parse_statement(parser *p) {
 	if (check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "sroutine") == 0) {
 		return parse_sroutine_statement(p);
 	}
-	if (match(p, TOKEN_LET)) {
-		if (looks_like_typed_binding(p)) {
-			return parse_typed_binding_statement(p, 0);
-		}
-		return parse_binding_statement(p, 0);
+	
+	// Handle := declarations (identifier := expression)
+	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
+		return parse_assign_declare_statement(p);
 	}
-	if (match(p, TOKEN_VAR)) {
-		if (looks_like_typed_binding(p)) {
-			return parse_typed_binding_statement(p, 1);
-		}
-		return parse_binding_statement(p, 1);
-	}
-
+	
 	if (match(p, TOKEN_RETURN)) {
 		return parse_return_statement(p);
 	}
@@ -2101,8 +2139,9 @@ static ast_node *parse_top_level(parser *p) {
 	if (match(p, TOKEN_USE)) {
 		return parse_use_decl(p);
 	}
-	if (match(p, TOKEN_VAR)) {
-		return parse_var_decl(p);
+	// Handle := global declarations
+	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
+		return parse_assign_declare_statement(p);
 	}
 	if (check(p, TOKEN_IDENTIFIER)) {
 		const token *tok = peek(p);
@@ -2267,6 +2306,7 @@ static ast_node *parse_extern_decl(parser *p) {
 	return node;
 }
 
+static ast_node *parse_var_decl(parser *p) __attribute__((unused));
 static ast_node *parse_var_decl(parser *p) {
 	const token *kw = prev(p);
 	ast_node *node;
