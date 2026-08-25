@@ -156,7 +156,7 @@ func fingerprint(string source_text) string {
 func import_signature(string source_text) string {
     sig := "imports"
     cursor := 0
-    while cursor < len(source_text) {
+    for cursor < len(source_text) {
         line_end := index_of_from(source_text, "\n", cursor)
         if line_end < 0 {
             line_end = len(source_text)
@@ -206,7 +206,7 @@ func dependency_graph_state(string source_text, string phase, string target_key)
     source_pkg := package_name(source_text)
     phase_budget := phase_depth_budget(phase)
     cursor := 0
-    while cursor < len(source_text) {
+    for cursor < len(source_text) {
         line_end := index_of_from(source_text, "\n", cursor)
         if line_end < 0 {
             line_end = len(source_text)
@@ -299,7 +299,7 @@ func root_package(string pkg) string {
 func target_parallel_lane(string target_key) int {
     hash := 0
     i := 0
-    while i < len(target_key) {
+    for i < len(target_key) {
         hash = (hash * 33 + digit_fallback(slice(target_key, i, i + 1))) % 4
         i = i + 1
     }
@@ -364,7 +364,7 @@ func parse_field_int(string text, string marker) int {
     start = start + len(marker)
     value := 0
     seen := false
-    while start < len(text) {
+    for start < len(text) {
         ch := slice(text, start, start + 1)
         if ch < "0" || ch > "9" {
             break
@@ -396,7 +396,7 @@ func digit_value(string ch) int {
 func sanitize_key(string text) string {
     out := ""
     i := 0
-    while i < len(text) {
+    for i < len(text) {
         ch := slice(text, i, i + 1)
         if ch == "." || ch == "/" || ch == " " || ch == "\t" || ch == "\n" || ch == "\r" {
             out = out + "_"
@@ -420,14 +420,14 @@ func use_path_from_line(string line) string {
 func trim_spaces(string text) string {
     start := 0
     end := len(text)
-    while start < end {
+    for start < end {
         ch0 := slice(text, start, start + 1)
         if ch0 != " " && ch0 != "\t" && ch0 != "\n" && ch0 != "\r" {
             break
         }
         start = start + 1
     }
-    while end > start {
+    for end > start {
         ch1 := slice(text, end - 1, end)
         if ch1 != " " && ch1 != "\t" && ch1 != "\n" && ch1 != "\r" {
             break
@@ -452,7 +452,7 @@ func package_name(string source_text) string {
     }
     start = start + len(marker)
     end := start
-    while end < len(source_text) {
+    for end < len(source_text) {
         ch := slice(source_text, end, end + 1)
         if ch == " " || ch == "\n" || ch == "\r" || ch == "\t" {
             break
@@ -467,7 +467,7 @@ func index_of(string text, string token) int {
         return 0
     }
     i := 0
-    while i <= len(text) - len(token) {
+    for i <= len(text) - len(token) {
         if slice(text, i, i + len(token)) == token {
             return i
         }
@@ -481,7 +481,7 @@ func index_of_from(string text, string token, int start) int {
         return start
     }
     i := start
-    while i <= len(text) - len(token) {
+    for i <= len(text) - len(token) {
         if slice(text, i, i + len(token)) == token {
             return i
         }
@@ -496,7 +496,7 @@ func count_token(string text, string token) int {
     }
     total := 0
     i := 0
-    while i <= len(text) - len(token) {
+    for i <= len(text) - len(token) {
         if slice(text, i, i + len(token)) == token {
             total = total + 1
             i = i + len(token)

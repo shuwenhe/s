@@ -10,7 +10,7 @@ struct link_symbol {
 func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_symbol] {
     out := vec[link_symbol]()
     i := 0
-    while i < exports.len() {
+    for i < exports.len() {
         out.push(link_symbol {
             pkg: pkg_name,
             name: pkg_name + "." + exports[i].name,
@@ -24,7 +24,7 @@ func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_sy
 func emit_link_manifest(vec[link_symbol] syms) string {
     out := "link-manifest version=1\n"
     i := 0
-    while i < syms.len() {
+    for i < syms.len() {
         out = out + syms[i].kind + " " + syms[i].name + "\n"
         i = i + 1
     }
@@ -40,7 +40,7 @@ struct link_symbol {
 func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_symbol] {
     out := vec[link_symbol]()
     i := 0
-    while i < exports.len() {
+    for i < exports.len() {
         out.push(link_symbol {
             pkg: pkg_name,
             name: pkg_name + "." + exports[i].name,
@@ -54,7 +54,7 @@ func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_sy
 func emit_link_manifest(vec[link_symbol] syms) string {
     out := "link-manifest version=1\n"
     i := 0
-    while i < syms.len() {
+    for i < syms.len() {
         out = out + syms[i].kind + " " + syms[i].name + "\n"
         i = i + 1
     }

@@ -14,7 +14,7 @@ struct arch_info {
     string spill_arg_reg_hook
 }
 
-func init_arm64(arch_info mut arch) arch_info {
+func init_arm64(arch_info arch) arch_info {
     arch.link_arch = "arm64"
     arch.reg_sp = 31
     arch.max_width = 1 << 50

@@ -15,7 +15,7 @@ struct arch_info {
 func init() () {
 }
 
-func init_arm(arch_info mut arch) arch_info {
+func init_arm(arch_info arch) arch_info {
     arch.link_arch = "arm"
     arch.reg_sp = 13
     arch.max_width = (1 << 32) - 1

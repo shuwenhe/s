@@ -32,7 +32,7 @@ func enqueue_func(vec[string] queue, string fn_name) vec[string] {
     }
     out := vec[string]()
     i := 0
-    while i < queue.len() {
+    for i < queue.len() {
         out.push(queue[i])
         i = i + 1
     }
@@ -51,7 +51,7 @@ func compile_functions(vec[string] queue, int workers) string {
     bounded_workers := clamp_backend_workers(workers)
     out := "workers=" + to_string(bounded_workers) + "\n"
     i := 0
-    while i < queue.len() {
+    for i < queue.len() {
         out = out + prepare_func(queue[i]) + "\n"
         i = i + 1
     }

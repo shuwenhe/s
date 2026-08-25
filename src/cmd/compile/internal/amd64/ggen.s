@@ -10,7 +10,7 @@ func zerorange(vec[prog] insns, int off, int cnt) vec[prog] {
     out := insns
     at := off
     left := cnt
-    while left >= 16 {
+    for left >= 16 {
         out.push(prog {
             op: "MOVUPS",
             from: "X15",

@@ -6,7 +6,7 @@ func parse_imports(source_unit unit) vec[import_record] {
     out := vec[import_record]()
     lines := split_lines(unit.text)
     i := 0
-    while i < lines.len() {
+    for i < lines.len() {
         line := trim_spaces(lines[i])
         if !starts_with(line, "use ") {
             i = i + 1
@@ -32,7 +32,7 @@ func parse_imports(source_unit unit) vec[import_record] {
 func import_map(vec[import_record] imports) vec[string] {
     out := vec[string]()
     i := 0
-    while i < imports.len() {
+    for i < imports.len() {
         switch imports[i].alias {
             option::some(alias) : out.push(alias + "=" + imports[i].path),
             option::none : out.push(imports[i].path),

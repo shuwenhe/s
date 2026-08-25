@@ -24,7 +24,7 @@ struct IRModule {
 
 func parse_ir(string content) (IRModule, error) {
     lines := split_string(content, "\n")
-    mut module := IRModule{
+    module := IRModule{
         target: "x86_64",
         version: "1",
         functions: []IRFunction{},
@@ -36,8 +36,8 @@ func parse_ir(string content) (IRModule, error) {
     if header != "SSEED-TARGET-V1" {
         return module, error("invalid IR header: " + header)
     }
-    mut i := 1
-    mut current_func: *IRFunction = nil
+    i := 1
+    current_func: *IRFunction = nil
     for i < len(lines) {
         line := trim_string(lines[i])
         if line == "" {
@@ -82,10 +82,10 @@ func parse_ir(string content) (IRModule, error) {
 }
 
 func get_ir_stats(IRModule module) map[string]int {
-    mut stats := map[string]int{}
+    stats := map[string]int{}
     stats["total_functions"] = len(module.functions)
-    mut total_instrs := 0
-    mut opcode_counts := map[string]int{}
+    total_instrs := 0
+    opcode_counts := map[string]int{}
     for _, func in module.functions {
         total_instrs += len(func.instructions)
         for _, instr in func.instructions {
@@ -113,7 +113,7 @@ func verify_ir(IRModule module) error {
 }
 
 func instruction_to_string(IRInstruction instr) string {
-    mut s := instr.opcode
+    s := instr.opcode
     s += "|" + instr.dest
     s += "|" + instr.src1
     s += "|" + instr.src2

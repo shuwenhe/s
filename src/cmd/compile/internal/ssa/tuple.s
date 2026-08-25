@@ -28,7 +28,7 @@ func tuple_equal(int_tuple a, int_tuple b) bool {
         return false
     }
     i := 0
-    while i < a.items.len() {
+    for i < a.items.len() {
         if a.items[i] != b.items[i] {
             return false
         }

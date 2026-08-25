@@ -139,7 +139,7 @@ func run_sroutine(int sroutine_id) () {
 
 func m_idle() () {
     var i = 0
-    while i < 100 {
+    for i < 100 {
         next := find_runnable()
         if next >= 0 {
             run_sroutine(next)
@@ -162,7 +162,7 @@ func try_wakeup_idle_m() () {
 
 func sroutine_transition(int sroutine_id, int status, int park_reason) bool {
     var i = 0
-    while i < _sched.task.len() {
+    for i < _sched.task.len() {
         g := _sched.task[i]
         if g.id == sroutine_id {
             if !sroutine_state_can_transition(g.status, status) {
@@ -199,7 +199,7 @@ struct SroutineInfo {
 func sroutine_list() vec[SroutineInfo] {
     result := vec[SroutineInfo]()
     var i = 0
-    while i < _sched.task.len() {
+    for i < _sched.task.len() {
         g := _sched.task[i]
         if g.id >= 0 {
             result.push(SroutineInfo {
@@ -216,7 +216,7 @@ func sroutine_list() vec[SroutineInfo] {
 func runtime_init() () {
     num := __runtime_num_cpu()
     var i = 0
-    while i < num {
+    for i < num {
         p := P {
             id:         i,
             current_sroutine:      -1,

@@ -59,51 +59,51 @@ struct backend_error {
     string message
 }
 
-func ok_function(function_decl value) result[function_decl, backend_error] {
+func ok_function(function_decl value) (function_decl, backend_error) {
     result.ok(value);
 }
 
-func fail_function(string message) result[function_decl, backend_error] {
+func fail_function(string message) (function_decl, backend_error) {
     result.err(backend_error {
         message: message,
     });
 }
 
-func ok_write_ops(vec[write_op] value) result[vec[write_op], backend_error] {
+func ok_write_ops(vec[write_op] value) (vec[write_op), backend_error] {
     result.ok(value);
 }
 
-func fail_write_ops(string message) result[vec[write_op], backend_error] {
+func fail_write_ops(string message) (vec[write_op), backend_error] {
     result.err(backend_error {
         message: message,
     });
 }
 
-func ok_value(value value) result[value, backend_error] {
+func ok_value(value value) (value, backend_error) {
     result.ok(value);
 }
 
-func fail_value(string message) result[value, backend_error] {
+func fail_value(string message) (value, backend_error) {
     result.err(backend_error {
         message: message,
     });
 }
 
-func ok_unit() result[(), backend_error] {
+func ok_unit() ((), backend_error) {
     result.ok(());
 }
 
-func fail_unit(string message) result[(), backend_error] {
+func fail_unit(string message) ((), backend_error) {
     result.err(backend_error {
         message: message,
     });
 }
 
-func ok_int(int value) result[int, backend_error] {
+func ok_int(int value) (int, backend_error) {
     result.ok(value);
 }
 
-func fail_int(string message) result[int, backend_error] {
+func fail_int(string message) (int, backend_error) {
     result.err(backend_error {
         message: message,
     });
@@ -463,7 +463,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     select_send_sites := estimate_trace_call_sites_graph(rewritten_graph, "select_send(")
     ipo_synergy := estimate_ipo_synergy(inlined, escaped, devirt, cross_pkg_inline, const_prop)
     iter := 0
-    while iter < 2 {
+    for iter < 2 {
         if inlined > escaped {
             escaped = escaped + inlined / 3
         }
@@ -540,7 +540,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
 func estimate_sroutine_sites_graph(mir_graph graph) int {
     total := 0
     i := 0
-    while i < graph.trace.len() {
+    for i < graph.trace.len() {
         if has_substring(graph.trace[i], "stmt sroutine ") {
             total = total + 1
         }
@@ -552,7 +552,7 @@ func estimate_sroutine_sites_graph(mir_graph graph) int {
 func estimate_trace_call_sites_graph(mir_graph graph, string marker) int {
     total := 0
     i := 0
-    while i < graph.trace.len() {
+    for i < graph.trace.len() {
         if has_substring(graph.trace[i], marker) {
             total = total + 1
         }
@@ -564,7 +564,7 @@ func estimate_trace_call_sites_graph(mir_graph graph, string marker) int {
 func estimate_const_fold_hits_graph(mir_graph graph) int {
     prefix := "constfold.hits="
     i := 0
-    while i < graph.trace.len() {
+    for i < graph.trace.len() {
         line := trim_spaces(graph.trace[i])
         if starts_with_local(line, prefix) {
             return parse_non_negative_int(slice(line, len(prefix), len(line)))
@@ -581,7 +581,7 @@ func parse_non_negative_int(string raw) int {
     }
     value := 0
     i := 0
-    while i < len(text) {
+    for i < len(text) {
         ch := char_at(text, i)
         digit := digit_value(ch)
         if digit < 0 {
@@ -629,7 +629,7 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     reachable := vec[int]()
     work := vec[int]()
     work.push(rewritten.entry)
-    while work.len() > 0 {
+    for work.len() > 0 {
         id := work[work.len() - 1]
         work.pop()
         if contains_int32(reachable, id) {
@@ -641,7 +641,7 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
             continue
         }
         ei := 0
-        while ei < rewritten.blocks[bi].terminator.edges.len() {
+        for ei < rewritten.blocks[bi].terminator.edges.len() {
             next := rewritten.blocks[bi].terminator.edges[ei].target
             if !contains_int32(reachable, next) {
                 work.push(next)
@@ -651,7 +651,7 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     }
     filtered_blocks := vec[mir_basic_block]()
     i := 0
-    while i < rewritten.blocks.len() {
+    for i < rewritten.blocks.len() {
         if contains_int32(reachable, rewritten.blocks[i].id) {
             filtered_blocks.push(rewritten.blocks[i])
         }
@@ -660,10 +660,10 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     removed := rewritten.blocks.len() - filtered_blocks.len()
     rewritten.blocks = filtered_blocks
     i = 0
-    while i < rewritten.blocks.len() {
+    for i < rewritten.blocks.len() {
         kept_edges := vec[mir_control_edge]()
         j := 0
-        while j < rewritten.blocks[i].terminator.edges.len() {
+        for j < rewritten.blocks[i].terminator.edges.len() {
             edge := rewritten.blocks[i].terminator.edges[j]
             if contains_int32(reachable, edge.target) {
                 kept_edges.push(edge)
@@ -683,13 +683,13 @@ func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
     i := 0
-    while i < rewritten.blocks.len() {
+    for i < rewritten.blocks.len() {
         block := rewritten.blocks[i]
         if block.terminator.kind == "branch" && block.terminator.edges.len() > 1 {
             target := block.terminator.edges[0].target
             same_target := true
             j := 1
-            while j < block.terminator.edges.len() {
+            for j < block.terminator.edges.len() {
                 if block.terminator.edges[j].target != target {
                     same_target = false
                 }
@@ -714,7 +714,7 @@ func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
 
 func contains_int32(vec[int] values, int needle) bool {
     i := 0
-    while i < values.len() {
+    for i < values.len() {
         if values[i] == needle {
             return true
         }
@@ -732,7 +732,7 @@ func simplify_jump_to_return_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
     i := 0
-    while i < rewritten.blocks.len() {
+    for i < rewritten.blocks.len() {
         block := rewritten.blocks[i]
         if block.terminator.kind == "jump" && block.terminator.edges.len() == 1 {
             target_id := block.terminator.edges[0].target
@@ -755,11 +755,11 @@ func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
     i := 0
-    while i < rewritten.blocks.len() {
+    for i < rewritten.blocks.len() {
         if rewritten.blocks[i].terminator.kind == "return" {
             filtered := vec[mir_statement]()
             j := 0
-            while j < rewritten.blocks[i].statements.len() {
+            for j < rewritten.blocks[i].statements.len() {
                 keep := true
                 switch rewritten.blocks[i].statements[j] {
                     mir_statement::eval(eval_stmt) : {
@@ -786,11 +786,11 @@ func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
     i := 0
-    while i < rewritten.blocks.len() {
+    for i < rewritten.blocks.len() {
         filtered := vec[mir_statement]()
         last_line := ""
         j := 0
-        while j < rewritten.blocks[i].statements.len() {
+        for j < rewritten.blocks[i].statements.len() {
             push_stmt := true
             switch rewritten.blocks[i].statements[j] {
                 mir_statement::eval(eval_stmt) : {
@@ -822,7 +822,7 @@ func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
 
 func find_block_index_by_id(mir_graph graph, int id) int {
     i := 0
-    while i < graph.blocks.len() {
+    for i < graph.blocks.len() {
         if graph.blocks[i].id == id {
             return i
         }
@@ -831,7 +831,7 @@ func find_block_index_by_id(mir_graph graph, int id) int {
     0 - 1
 }
 
-func validate_ssa_abi_contracts(string arch, string ssa_text) result[(), backend_error] {
+func validate_ssa_abi_contracts(string arch, string ssa_text) ((), backend_error) {
     spills := parse_number_after(ssa_text, "spills=")
     reloads := parse_number_after(ssa_text, "reloads=")
     pressure := parse_number_after(ssa_text, "call_pressure=")
@@ -859,7 +859,7 @@ func validate_ssa_abi_contracts(string arch, string ssa_text) result[(), backend
     result::ok(())
 }
 
-func validate_callsite_preservation(string ssa_text) result[(), backend_error] {
+func validate_callsite_preservation(string ssa_text) ((), backend_error) {
     clobber := parse_number_after(ssa_text, "callee_saved_clobber=")
     if clobber > 0 {
         return result::err(backend_error { message: "backend error: callee-saved registers clobbered at callsite" })
@@ -886,7 +886,7 @@ func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
     join_lines(lines)
 }
 
-func validate_cfi_artifact(string payload) result[(), backend_error] {
+func validate_cfi_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "cfi version=1") {
         return result::err(backend_error { message: "backend error: cfi header missing" })
     }
@@ -902,7 +902,7 @@ func validate_cfi_artifact(string payload) result[(), backend_error] {
 func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int inlined) int {
     imports := 0
     i := 0
-    while i < graph.trace.len() {
+    for i < graph.trace.len() {
         if has_substring(graph.trace[i], "package.fn ") {
             imports = imports + 1
         }
@@ -918,10 +918,10 @@ func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int inlined) int {
 func estimate_const_prop_sites_graph(mir_graph graph) int {
     constants := 0
     i := 0
-    while i < graph.blocks.len() {
+    for i < graph.blocks.len() {
         block := graph.blocks[i]
         j := 0
-        while j < block.statements.len() {
+        for j < block.statements.len() {
             switch block.statements[j] {
                 mir_statement::assign(assign_stmt) : {
                     if assign_stmt.op == "const" || assign_stmt.op == "literal" {
@@ -960,7 +960,7 @@ func build_wasm_binary_probe_plan(string output) string {
         + " && wasm-objdump -x " + output + " | grep -q _start"
 }
 
-func validate_wasi_binary_artifact(string output) result[(), backend_error] {
+func validate_wasi_binary_artifact(string output) ((), backend_error) {
     probe := vec[string]()
     probe.push("sh")
     probe.push("-c")
@@ -974,7 +974,7 @@ func validate_wasi_binary_artifact(string output) result[(), backend_error] {
     result::ok(())
 }
 
-func build_wasm_object_chain(string temp_dir, string output, vec[write_op] writes, int exit_code) result[(), backend_error] {
+func build_wasm_object_chain(string temp_dir, string output, vec[write_op] writes, int exit_code) ((), backend_error) {
     c_path := temp_dir + "/out_wasm.c"
     obj_path := temp_dir + "/out_wasm.o"
     c_source := emit_wasm_c_source(writes, exit_code)
@@ -1016,7 +1016,7 @@ func build_wasm_object_chain(string temp_dir, string output, vec[write_op] write
     result::ok(())
 }
 
-func validate_wasi_contract_source(string source) result[(), backend_error] {
+func validate_wasi_contract_source(string source) ((), backend_error) {
     if !has_substring(source, "__import_module__(\"wasi_snapshot_preview1\")") {
         return result::err(backend_error { message: "backend error: wasi import module annotation missing" })
     }
@@ -1047,7 +1047,7 @@ func emit_wasm_c_source(vec[write_op] writes, int exit_code) string {
     lines.push("")
     lines.push("int s_main(void) {")
     i := 0
-    while i < writes.len() {
+    for i < writes.len() {
         label := "message_" + to_string(i)
         lines.push("  static const char " + label + "[] = \"" + escape_asm_string(writes[i].text) + "\";")
         lines.push("  struct ciovec iov_" + to_string(i) + " = { " + label + ", " + to_string(len(writes[i].text)) + "u };")
@@ -1106,7 +1106,7 @@ func abi_cross_arch_consistency_status(string arch, int spills, int functions) s
     "fragile"
 }
 
-func validate_abi_machine_matrix(string payload) result[(), backend_error] {
+func validate_abi_machine_matrix(string payload) ((), backend_error) {
     if !has_substring(payload, "abi-matrix version=1") {
         return result::err(backend_error { message: "backend error: ABI matrix header missing" })
     }
@@ -1139,7 +1139,7 @@ func build_toolchain_compat_artifact(source_file source, string arch) string {
     join_lines(lines)
 }
 
-func validate_toolchain_compat_artifact(string payload) result[(), backend_error] {
+func validate_toolchain_compat_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "toolchain-compat version=1") {
         return result::err(backend_error { message: "backend error: toolchain compatibility header missing" })
     }
@@ -1185,7 +1185,7 @@ func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
     join_lines(lines)
 }
 
-func validate_go_asm_bridge_artifact(string payload) result[(), backend_error] {
+func validate_go_asm_bridge_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "go-asm version=1") {
         return result::err(backend_error { message: "backend error: go asm artifact header missing" })
     }
@@ -1201,12 +1201,12 @@ func validate_go_asm_bridge_artifact(string payload) result[(), backend_error] {
     result::ok(())
 }
 
-func translate_go_plan9_to_gas(string arch, string plan9_source) result[string, backend_error] {
+func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backend_error) {
     input_lines := split_lines_local(plan9_source)
     output_lines := vec[string]()
     saw_text_directive := false
     i := 0
-    while i < input_lines.len() {
+    for i < input_lines.len() {
         cleaned := trim_spaces(strip_go_asm_comment(input_lines[i]))
         if cleaned == "" {
             i = i + 1
@@ -1256,7 +1256,7 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) result[string, 
     result::ok(join_lines(output_lines))
 }
 
-func parse_go_text_symbol(string line) result[string, backend_error] {
+func parse_go_text_symbol(string line) (string, backend_error) {
     after := trim_spaces(slice(line, len("TEXT "), len(line)))
     comma := index_of(after, ",")
     if comma < 0 {
@@ -1273,7 +1273,7 @@ func parse_go_text_symbol(string line) result[string, backend_error] {
     result::ok(symbol)
 }
 
-func translate_go_instruction_line(string line, string arch) result[string, backend_error] {
+func translate_go_instruction_line(string line, string arch) (string, backend_error) {
     first_space := index_of(line, " ")
     op := line
     args_text := ""
@@ -1382,7 +1382,7 @@ func map_go_opcode(string op) string {
     ""
 }
 
-func convert_go_operand_to_gas(string raw, string arch) result[string, backend_error] {
+func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) {
     operand := trim_spaces(raw)
     if operand == "" {
         return result::err(backend_error { message: "go asm translation error: empty operand" })
@@ -1523,7 +1523,7 @@ func split_lines_local(string text) vec[string] {
     lines := vec[string]()
     start := 0
     i := 0
-    while i < len(text) {
+    for i < len(text) {
         if char_at(text, i) == "\n" {
             lines.push(slice(text, start, i))
             start = i + 1
@@ -1540,7 +1540,7 @@ func flatten_multiline(string text) string {
     lines := split_lines_local(text)
     out := vec[string]()
     i := 0
-    while i < lines.len() {
+    for i < lines.len() {
         line := trim_spaces(lines[i])
         if line != "" {
             out.push(line)
@@ -1556,7 +1556,7 @@ func build_stackmap_artifact(string arch, source_file source, string ssa_text, s
     lines := vec[string]()
     lines.push(header)
     i := 0
-    while i < entries.len() {
+    for i < entries.len() {
         entry := entries[i]
         lines.push(
             "fn " + entry.name
@@ -1581,7 +1581,7 @@ func estimate_stack_slots(string ssa_text) int {
 func collect_function_stackmaps(string arch, source_file source, string ssa_text) vec[stackmap_function_entry] {
     out := vec[stackmap_function_entry]()
     i := 0
-    while i < source.items.len() {
+    for i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
                 if fn_decl.body.is_some() {
@@ -1633,7 +1633,7 @@ func build_slot_bitmap(string function_name, int slots) string {
     }
     out := ""
     i := 0
-    while i < slots {
+    for i < slots {
         if ((i + len(function_name)) % 2) == 0 {
             out = out + "1"
         } else {
@@ -1649,7 +1649,7 @@ func build_abi_behavior_artifact(string arch, source_file source) string {
     lines := vec[string]()
     lines.push("abi version=1 arch=" + arch + " functions=" + to_string(entries.len()))
     i := 0
-    while i < entries.len() {
+    for i < entries.len() {
         entry := entries[i]
         lines.push(
             "fn " + entry.name
@@ -1672,7 +1672,7 @@ func build_abi_emit_plan(string arch, source_file source) string {
     lines := vec[string]()
     lines.push("abi-emit version=1 arch=" + arch)
     i := 0
-    while i < source.items.len() {
+    for i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
                 line := "fn " + fn_decl.sig.name
@@ -1682,7 +1682,7 @@ func build_abi_emit_plan(string arch, source_file source) string {
                     collect_fn_result_types(fn_decl)
                 )
                 p := 0
-                while p < fn_decl.sig.params.len() {
+                for p < fn_decl.sig.params.len() {
                     line = line + " | a" + to_string(p) + "->" + abi_param_location(arch, p)
                     line = line + " | f" + to_string(p) + "->" + abi_float_param_location(arch, p)
                     p = p + 1
@@ -1853,7 +1853,7 @@ func count_top_level_type_parts(string type_text) int {
     bracket := 0
     count := 1
     i := 0
-    while i < len(t) {
+    for i < len(t) {
         ch := char_at(t, i)
         if ch == "(" {
             paren = paren + 1
@@ -1878,7 +1878,7 @@ func count_top_level_type_parts(string type_text) int {
 func collect_abi_behavior(string arch, source_file source) vec[abi_behavior_entry] {
     out := vec[abi_behavior_entry]()
     i := 0
-    while i < source.items.len() {
+    for i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
                 abi_info := abi_analyze_types(
@@ -1912,7 +1912,7 @@ func collect_abi_behavior(string arch, source_file source) vec[abi_behavior_entr
 func collect_fn_param_types(function_decl fn_decl) vec[string] {
     out := vec[string]()
     i := 0
-    while i < fn_decl.sig.params.len() {
+    for i < fn_decl.sig.params.len() {
         out.push(trim_spaces(fn_decl.sig.params[i].type_name))
         i = i + 1
     }
@@ -1942,7 +1942,7 @@ func split_signature_types(string type_text) vec[string] {
     paren := 0
     bracket := 0
     i := 0
-    while i < len(t) {
+    for i < len(t) {
         ch := char_at(t, i)
         if ch == "(" {
             paren = paren + 1
@@ -2015,7 +2015,7 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
     append_debug_ranges_section(lines, source, ssa_text)
     lines.push("section .debug_inlining")
     i := 0
-    while i < source.items.len() {
+    for i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : lines.push("  fn=" + fn_decl.sig.name + " inline_depth=" + to_string(dwarf_inline_depth_hint(fn_decl.sig.name, ssa_text))),
             _ : (),
@@ -2081,7 +2081,7 @@ func append_debug_loc_section(vec[string] lines, string debug_map) () {
     marker := "let v"
     cursor := 0
     loc_id := 0
-    while true {
+    for true {
         at := index_of_from(debug_map, marker, cursor)
         if at < 0 {
             break
@@ -2117,7 +2117,7 @@ func append_debug_ranges_section(vec[string] lines, source_file source, string s
     }
     fn_idx := 0
     i := 0
-    while i < source.items.len() {
+    for i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
                 lo := 0x1000 + fn_idx * range_span
@@ -2162,7 +2162,7 @@ func build_gc_metadata_artifact(string arch, source_file source, string ssa_text
     lines.push("gcmap version=1 arch=" + arch + " spills=" + to_string(spills))
     lines.push("collector plan=go-like-mark-sweep roots=env+runq+chan-buffer barriers=hybrid safepoints=alloc-trigger")
     i := 0
-    while i < source.items.len() {
+    for i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
                 slots := estimate_function_stack_slots(fn_decl, ssa_text)
@@ -2186,7 +2186,7 @@ func build_gc_metadata_artifact(string arch, source_file source, string ssa_text
     join_lines(lines)
 }
 
-func validate_dwarf_consumability(string dwarf_payload, string ssa_text) result[(), backend_error] {
+func validate_dwarf_consumability(string dwarf_payload, string ssa_text) ((), backend_error) {
     if !has_substring(dwarf_payload, "section .debug_info") {
         return result::err(backend_error { message: "backend error: dwarf consumability gate missing .debug_info" })
     }
@@ -2218,7 +2218,7 @@ func validate_dwarf_consumability(string dwarf_payload, string ssa_text) result[
     result::ok(())
 }
 
-func validate_gc_contract_chain(string gc_payload, source_file source, string ssa_text) result[(), backend_error] {
+func validate_gc_contract_chain(string gc_payload, source_file source, string ssa_text) ((), backend_error) {
     if !has_substring(gc_payload, "gcmap version=1") {
         return result::err(backend_error { message: "backend error: gc contract missing gcmap header" })
     }
@@ -2290,7 +2290,7 @@ func build_backend_perf_baseline_artifact(string arch, string ssa_text, string m
     join_lines(lines)
 }
 
-func validate_backend_perf_baseline(string payload) result[(), backend_error] {
+func validate_backend_perf_baseline(string payload) ((), backend_error) {
     if !has_substring(payload, "perf-baseline version=1") {
         return result::err(backend_error { message: "backend error: perf baseline header missing" })
     }
@@ -2347,7 +2347,7 @@ func build_midend_opt_artifact(string midend_report) string {
     join_lines(lines)
 }
 
-func validate_midend_opt_artifact(string payload) result[(), backend_error] {
+func validate_midend_opt_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "midend-opt version=1") {
         return result::err(backend_error { message: "backend error: midend opt artifact header missing" })
     }
@@ -2378,7 +2378,7 @@ func validate_midend_opt_artifact(string payload) result[(), backend_error] {
 func function_item_count(source_file source) int {
     out := 0
     i := 0
-    while i < source.items.len() {
+    for i < source.items.len() {
         switch source.items[i] {
             item.function(_) : out = out + 1,
             _ : (),
@@ -2394,7 +2394,7 @@ func build_gc_pointer_bitmap(string fn_name, int slots) string {
     }
     out := ""
     i := 0
-    while i < slots {
+    for i < slots {
         if ((i + len(fn_name)) % 3) == 0 {
             out = out + "1"
         } else {
@@ -2429,7 +2429,7 @@ func build_export_data_artifact(source_file source, string arch) string {
     lines := vec[string]()
     lines.push("export-data version=1 arch=" + arch)
     i := 0
-    while i < source.items.len() {
+    for i < source.items.len() {
         switch source.items[i] {
             item.function(fn_decl) : {
                 lines.push(
@@ -2459,7 +2459,7 @@ func ends_with_local(string text, string suffix) bool {
     slice(text, len(text) - len(suffix), len(text)) == suffix
 }
 
-func load_source_graph(string path, string source) result[source_file, backend_error] {
+func load_source_graph(string path, string source) (source_file, backend_error) {
     parsed_result := parse_source(source)
     if parsed_result.is_err() {
         return result::err(backend_error { message: "parse failed: " + parsed_result.unwrap_err().message })
@@ -2474,9 +2474,9 @@ func load_source_graph(string path, string source) result[source_file, backend_e
     result::ok(combined)
 }
 
-func append_dependency_items(source_file mut combined, vec[use_decl] uses, vec[string] mut visited) result[(), backend_error] {
+func append_dependency_items(source_file combined, vec[use_decl] uses, vec[string] visited) ((), backend_error) {
     i := 0
-    while i < uses.len() {
+    for i < uses.len() {
         module_result := resolve_module_source_path(uses[i].path)
         if module_result.is_none() {
             return result::err(backend_error { message: "module resolver failed: " + uses[i].path })
@@ -2504,9 +2504,9 @@ func append_dependency_items(source_file mut combined, vec[use_decl] uses, vec[s
     result::ok(())
 }
 
-func append_source_items(source_file mut combined, source_file dep) () {
+func append_source_items(source_file combined, source_file dep) () {
     i := 0
-    while i < dep.items.len() {
+    for i < dep.items.len() {
         combined.items.push(dep.items[i])
         i = i + 1
     }
@@ -2514,7 +2514,7 @@ func append_source_items(source_file mut combined, source_file dep) () {
 
 func string_vec_contains(vec[string] values, string value) bool {
     i := 0
-    while i < values.len() {
+    for i < values.len() {
         if values[i] == value {
             return true
         }
@@ -2538,7 +2538,7 @@ func resolve_module_source_path(string module) option[string] {
     candidates := vec[string]()
     add_module_candidates(candidates, module)
     i := 0
-    while i < candidates.len() {
+    for i < candidates.len() {
         probe := read_to_string(candidates[i])
         if probe.is_ok() {
             return option::some(candidates[i])
@@ -2551,7 +2551,7 @@ func resolve_module_source_path(string module) option[string] {
 func lookup_package_index(string module) option[string] {
     paths := package_index_candidate_paths()
     pi := 0
-    while pi < paths.len() {
+    for pi < paths.len() {
         read_result := read_to_string(paths[pi])
         if read_result.is_ok() {
             found := lookup_module_in_package_index_text(read_result.unwrap(), module)
@@ -2590,7 +2590,7 @@ func lookup_module_in_package_index_text(string text, string module) option[stri
     lines := split_lines_local(text)
     project := resolve_project_root()
     i := 0
-    while i < lines.len() {
+    for i < lines.len() {
         line := trim_spaces(lines[i])
         if line == "" || starts_with_local(line, "#") {
             i = i + 1
@@ -2624,7 +2624,7 @@ func normalize_package_index_path(string project, string path) string {
 
 func find_tab_index(string text) int {
     i := 0
-    while i < len(text) {
+    for i < len(text) {
         if char_at(text, i) == "\t" {
             return i
         }
@@ -2636,7 +2636,7 @@ func find_tab_index(string text) int {
 func add_module_candidates(vec[string] candidates, string module) () {
     roots := module_search_roots()
     i := 0
-    while i < roots.len() {
+    for i < roots.len() {
         add_module_candidates_in_root(candidates, roots[i], module)
         i = i + 1
     }
@@ -2683,7 +2683,7 @@ func add_neurx_module_candidates(vec[string] candidates, string root, string tai
 
 func has_dot_local(string text) bool {
     i := 0
-    while i < len(text) {
+    for i < len(text) {
         if char_at(text, i) == "." {
             return true
         }
@@ -2772,7 +2772,7 @@ func push_workspace_roots(vec[string] roots) () {
 func append_workspace_roots(vec[string] roots, string text) () {
     lines := split_lines_local(text)
     i := 0
-    while i < lines.len() {
+    for i < lines.len() {
         line := trim_spaces(lines[i])
         if starts_with_local(line, "use = \"") {
             start := len("use = \"")
@@ -2821,7 +2821,7 @@ func push_module_search_root(vec[string] roots, string root) () {
 
 func find_quote_from(string text, int start) int {
     i := start
-    while i < len(text) {
+    for i < len(text) {
         if char_at(text, i) == "\"" {
             return i
         }
@@ -2833,7 +2833,7 @@ func find_quote_from(string text, int start) int {
 func dot_to_slash(string text) string {
     out := ""
     i := 0
-    while i < len(text) {
+    for i < len(text) {
         ch := char_at(text, i)
         if ch == "." {
             out = out + "/"
@@ -2863,7 +2863,7 @@ func last_segment(string text) string {
 
 func last_dot_index(string text) int {
     i := len(text)
-    while i > 0 {
+    for i > 0 {
         i = i - 1
         if char_at(text, i) == "." {
             return i
@@ -2944,7 +2944,7 @@ func resolve_bootstrap_base_compiler() string {
     "/app/s/bin/s_arm64"
 }
 
-func emit_runtime_launcher_asm(string base_compiler) result[string, backend_error] {
+func emit_runtime_launcher_asm(string base_compiler) (string, backend_error) {
     arch := buildcfg_goarch()
     if arch == "arm64" {
         return result::ok(emit_runtime_launcher_asm_arm64(base_compiler))
@@ -3045,7 +3045,7 @@ func collect_runtime_metrics(runtime_state runtime) runtime_metrics {
     recvs := 0
     closed := 0
     i := 0
-    while i < runtime.channels.len() {
+    for i < runtime.channels.len() {
         sends = sends + runtime.channels[i].sends
         recvs = recvs + runtime.channels[i].recvs
         if runtime.channels[i].closed {
@@ -3104,7 +3104,7 @@ func runtime_metrics_text(runtime_metrics metrics) string {
 func snapshot_captured_bindings(vec[binding] env) vec[captured_binding] {
     out := vec[captured_binding]()
     i := 0
-    while i < env.len() {
+    for i < env.len() {
         out.push(captured_binding { name: env[i].name, value: env[i].value })
         i = i + 1
     }
@@ -3114,14 +3114,14 @@ func snapshot_captured_bindings(vec[binding] env) vec[captured_binding] {
 func restore_captured_bindings(vec[captured_binding] captured) vec[binding] {
     out := vec[binding]()
     i := 0
-    while i < captured.len() {
+    for i < captured.len() {
         out.push(binding { name: captured[i].name, value: captured[i].value })
         i = i + 1
     }
     out
 }
 
-func compile_writes(source_file source, mir_graph graph) result[vec[write_op], backend_error] {
+func compile_writes(source_file source, mir_graph graph) (vec[write_op), backend_error] {
     if graph.blocks.len() == 0 {
         return fail_write_ops("backend error: mir graph has no blocks")
     }
@@ -3136,7 +3136,7 @@ func compile_writes(source_file source, mir_graph graph) result[vec[write_op], b
     result::ok(exec_result.unwrap().writes)
 }
 
-func compile_exit_code(source_file source, mir_graph graph) result[int, backend_error] {
+func compile_exit_code(source_file source, mir_graph graph) (int, backend_error) {
     if graph.blocks.len() == 0 {
         return fail_int("backend error: mir graph has no blocks")
     }
@@ -3151,7 +3151,7 @@ func compile_exit_code(source_file source, mir_graph graph) result[int, backend_
     result::ok(exec_result.unwrap().exit_code)
 }
 
-func compile_runtime_metrics(source_file source, mir_graph graph) result[runtime_metrics, backend_error] {
+func compile_runtime_metrics(source_file source, mir_graph graph) (runtime_metrics, backend_error) {
     if graph.blocks.len() == 0 {
         return result::err(backend_error { message: "backend error: mir graph has no blocks" })
     }
@@ -3166,7 +3166,7 @@ func compile_runtime_metrics(source_file source, mir_graph graph) result[runtime
     result::ok(exec_result.unwrap().runtime)
 }
 
-func execute_source_main(source_file source) result[mir_execution_result, backend_error] {
+func execute_source_main(source_file source) (mir_execution_result, backend_error) {
     main_result := find_main(source)
     if main_result.is_err() {
         return result::err(main_result.unwrap_err())
@@ -3197,19 +3197,19 @@ func execute_source_main(source_file source) result[mir_execution_result, backen
     })
 }
 
-func execute_mir_graph(mir_graph graph) result[mir_execution_result, backend_error] {
+func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
     writes := vec[write_op]()
     current := graph.entry
     steps := 0
     max_steps := 100000
-    while steps < max_steps {
+    for steps < max_steps {
         block_result := find_mir_block(graph, current)
         if block_result.is_err() {
             return result::err(block_result.unwrap_err())
         }
         block := block_result.unwrap()
         si := 0
-        while si < block.statements.len() {
+        for si < block.statements.len() {
             stmt_result := execute_mir_statement(block.statements[si], writes)
             if stmt_result.is_err() {
                 return result::err(stmt_result.unwrap_err())
@@ -3266,9 +3266,9 @@ func execute_mir_graph(mir_graph graph) result[mir_execution_result, backend_err
     result::err(backend_error { message: "backend error: mir execution exceeded step limit" })
 }
 
-func find_mir_block(mir_graph graph, int id) result[mir_basic_block, backend_error] {
+func find_mir_block(mir_graph graph, int id) (mir_basic_block, backend_error) {
     i := 0
-    while i < graph.blocks.len() {
+    for i < graph.blocks.len() {
         if graph.blocks[i].id == id {
             return result::ok(graph.blocks[i])
         }
@@ -3277,7 +3277,7 @@ func find_mir_block(mir_graph graph, int id) result[mir_basic_block, backend_err
     result::err(backend_error { message: "backend error: missing mir block id " + to_string(id) })
 }
 
-func execute_mir_statement(mir_statement statement, vec[write_op] mut writes) result[(), backend_error] {
+func execute_mir_statement(mir_statement statement, vec[write_op] writes) ((), backend_error) {
     switch statement {
         mir_statement.eval(eval_stmt) : {
             if eval_stmt.args.len() > 0 {
@@ -3289,7 +3289,7 @@ func execute_mir_statement(mir_statement statement, vec[write_op] mut writes) re
     }
 }
 
-func emit_print_from_line(string line, vec[write_op] mut writes) () {
+func emit_print_from_line(string line, vec[write_op] writes) () {
     if has_substring(line, "eprintln(") {
         emit_call_line_to_write(line, "eprintln(", 2, writes)
         return
@@ -3300,7 +3300,7 @@ func emit_print_from_line(string line, vec[write_op] mut writes) () {
     }
 }
 
-func emit_call_line_to_write(string line, string callee, int fd, vec[write_op] mut writes) () {
+func emit_call_line_to_write(string line, string callee, int fd, vec[write_op] writes) () {
     arg_opt := extract_call_arg(line, callee)
     if arg_opt.is_none() {
         return
@@ -3346,10 +3346,10 @@ func is_quoted_literal(string text) bool {
 func trim_spaces(string text) string {
     start := 0
     end := len(text)
-    while start < end && is_space(char_at(text, start)) {
+    for start < end && is_space(char_at(text, start)) {
         start = start + 1
     }
-    while end > start && is_space(char_at(text, end - 1)) {
+    for end > start && is_space(char_at(text, end - 1)) {
         end = end - 1
     }
     slice(text, start, end)
@@ -3376,7 +3376,7 @@ func index_of_from(string text, string needle, int start) int {
     }
     i := start
     limit := len(text) - len(needle)
-    while i <= limit {
+    for i <= limit {
         if slice(text, i, i + len(needle)) == needle {
             return i
         }
@@ -3393,7 +3393,7 @@ func parse_number_after(string text, string marker) int {
     start = start + len(marker)
     value := 0
     found := false
-    while start < len(text) {
+    for start < len(text) {
         ch := char_at(text, start)
         if ch < "0" || ch > "9" {
             break
@@ -3413,7 +3413,7 @@ func select_branch_target(vec[mir_control_edge] edges) int {
         return -1
     }
     i := 0
-    while i < edges.len() {
+    for i < edges.len() {
         if edges[i].label == "false" || edges[i].label == "exit" || edges[i].label == "default" {
             return edges[i].target
         }
@@ -3422,9 +3422,9 @@ func select_branch_target(vec[mir_control_edge] edges) int {
     edges[0].target
 }
 
-func find_main(source_file source) result[function_decl, backend_error] {
+func find_main(source_file source) (function_decl, backend_error) {
     i := 0
-    while i < source.items.len() {
+    for i < source.items.len() {
         switch source.items[i] {
             item.function(value) : {
                 if value.body.is_some() && (value.sig.name == "main" || value.sig.name == "main") {
@@ -3438,7 +3438,7 @@ func find_main(source_file source) result[function_decl, backend_error] {
     fail_function("backend error: entry function main not found")
 }
 
-func call_function(source_file source, string name, vec[value] args, vec[binding] mut caller_env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func call_function(source_file source, string name, vec[value] args, vec[binding] caller_env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     captured := vec[captured_binding]()
     call_function_with_capture(source, name, args, caller_env, writes, runtime, captured)
 }
@@ -3447,11 +3447,11 @@ func call_function_with_capture(
     source_file source,
     string name,
     vec[value] args,
-    vec[binding] mut caller_env,
-    vec[write_op] mut writes,
-    runtime_state mut runtime,
+    vec[binding] caller_env,
+    vec[write_op] writes,
+    runtime_state runtime,
     vec[captured_binding] captured_env
-) result[value, backend_error] {
+) (value, backend_error) {
     fn_result := find_function(source, name)
     if fn_result.is_err() {
         return fail_value(fn_result.unwrap_err().message)
@@ -3481,7 +3481,7 @@ func call_function_with_capture(
     propagate_bindings(captured, env)
     copy_control_bindings(caller_env, env)
     pi := 0
-    while pi < function.sig.params.len() {
+    for pi < function.sig.params.len() {
         env.push(binding {
             name: function.sig.params[pi].name,
             value: args[pi],
@@ -3496,18 +3496,18 @@ func call_function_with_capture(
     ok_value(body_result.unwrap())
 }
 
-func find_function(source_file source, string name) result[function_decl, backend_error] {
+func find_function(source_file source, string name) (function_decl, backend_error) {
     visited := vec[string]()
     return find_function_in_source_graph(source, name, visited)
 }
 
-func find_function_in_source_graph(source_file source, string name, vec[string] mut visited) result[function_decl, backend_error] {
+func find_function_in_source_graph(source_file source, string name, vec[string] visited) (function_decl, backend_error) {
     if string_vec_contains(visited, source.pkg) {
         return result::err(backend_error { message: "backend error: unknown function " + name })
     }
     visited.push(source.pkg)
     i := 0
-    while i < source.items.len() {
+    for i < source.items.len() {
         switch source.items[i] {
             item.function(value) : {
                 if value.sig.name == name {
@@ -3519,7 +3519,7 @@ func find_function_in_source_graph(source_file source, string name, vec[string] 
         i = i + 1
     }
     ui := 0
-    while ui < source.uses.len() {
+    for ui < source.uses.len() {
         dep_result := load_source_graph_for_use(source.uses[ui].path)
         if dep_result.is_err() {
             return result::err(dep_result.unwrap_err())
@@ -3533,7 +3533,7 @@ func find_function_in_source_graph(source_file source, string name, vec[string] 
     result::err(backend_error { message: "backend error: unknown function " + name })
 }
 
-func execute_block(block_expr block, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func execute_block(block_expr block, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     local_env := copy_bindings(env)
     result := execute_block_in_place(block, source, local_env, writes, runtime)
     if result.is_err() {
@@ -3542,10 +3542,10 @@ func execute_block(block_expr block, source_file source, vec[binding] mut env, v
     result::ok(result.unwrap())
 }
 
-func execute_block_in_place(block_expr block, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func execute_block_in_place(block_expr block, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     deferred := vec[expr]()
     si := 0
-    while si < block.statements.len() {
+    for si < block.statements.len() {
         switch block.statements[si] {
             stmt.defer(value) : {
                 deferred.push(value.expr);
@@ -3621,7 +3621,7 @@ func execute_block_in_place(block_expr block, source_file source, vec[binding] m
     result::ok(final_value)
 }
 
-func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
+func execute_stmt(stmt stmt, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) ((), backend_error) {
     switch stmt {
         stmt.let(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
@@ -3680,7 +3680,7 @@ func execute_stmt(stmt stmt, source_file source, vec[binding] mut env, vec[write
     }
 }
 
-func execute_sroutine_stmt(sroutine_stmt value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
+func execute_sroutine_stmt(sroutine_stmt value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) ((), backend_error) {
     switch value.expr {
         expr.call(call_expr) : {
             callee_result := eval_expr(call_expr.callee.value, source, env, writes, runtime)
@@ -3694,7 +3694,7 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, vec[binding]
             }
             arg_values := vec[value]()
             ai := 0
-            while ai < call_expr.args.len() {
+            for ai < call_expr.args.len() {
                 arg_result := eval_expr(call_expr.args[ai], source, env, writes, runtime)
                 if arg_result.is_err() {
                     return result::err(arg_result.unwrap_err())
@@ -3716,13 +3716,13 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, vec[binding]
     }
 }
 
-func execute_c_for(c_for_stmt value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
+func execute_c_for(c_for_stmt value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) ((), backend_error) {
     loop_env := copy_bindings(env)
     init_result := execute_stmt(value.init.value, source, loop_env, writes, runtime)
     if init_result.is_err() {
         result::err(init_result.unwrap_err())
     }
-    while true {
+    for true {
         cond_result := eval_expr(value.condition, source, loop_env, writes, runtime)
         if cond_result.is_err() {
             result::err(cond_result.unwrap_err())
@@ -3749,7 +3749,7 @@ func execute_c_for(c_for_stmt value, source_file source, vec[binding] mut env, v
     result::ok(())
 }
 
-func eval_expr(expr expr, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_expr(expr expr, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     switch expr {
         expr.int(value) : result::ok(value.int(parse_int_literal(value.value))),
         expr.string(value) : result::ok(value.string(decode_string_literal(value.value))),
@@ -3770,7 +3770,7 @@ func eval_expr(expr expr, source_file source, vec[binding] mut env, vec[write_op
     }
 }
 
-func eval_binary(binary_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_binary(binary_expr value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     left_result := eval_expr(value.left.value, source, env, writes, runtime)
     if left_result.is_err() {
         result::err(left_result.unwrap_err())
@@ -3799,7 +3799,7 @@ func eval_binary(binary_expr value, source_file source, vec[binding] mut env, ve
     }
 }
 
-func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_call(call_expr value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     switch value.callee.value {
         expr.name(callee_name) : {
             if callee_name.name == "println" || callee_name.name == "eprintln" {
@@ -3856,7 +3856,7 @@ func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[wr
     }
     arg_values := vec[value]()
     ai := 0
-    while ai < value.args.len() {
+    for ai < value.args.len() {
         arg_result := eval_expr(value.args[ai], source, env, writes, runtime)
         if arg_result.is_err() {
             return result::err(arg_result.unwrap_err())
@@ -3870,7 +3870,7 @@ func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[wr
     }
 }
 
-    func eval_panic_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+    func eval_panic_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() != 1 {
         return result::err(backend_error { message: "backend error: panic expects exactly one argument" })
     }
@@ -3881,7 +3881,7 @@ func eval_call(call_expr value, source_file source, vec[binding] mut env, vec[wr
     return result::err(panic_error(stringify_value(arg_result.unwrap())))
 }
 
-func eval_recover_call(vec[binding] mut env, runtime_state mut runtime) result[value, backend_error] {
+func eval_recover_call(vec[binding] env, runtime_state runtime) (value, backend_error) {
     if !control_in_defer_mode(env) {
         return result::ok(value.unit(unit_value {}))
     }
@@ -3895,7 +3895,7 @@ func eval_recover_call(vec[binding] mut env, runtime_state mut runtime) result[v
     result::ok(value.string(payload))
 }
 
-func eval_gc_collect_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_gc_collect_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() != 0 {
         return result::err(backend_error { message: "backend error: gc_collect expects no arguments" })
     }
@@ -3903,7 +3903,7 @@ func eval_gc_collect_call(vec[expr] args, source_file source, vec[binding] mut e
     result::ok(value.unit(unit_value {}))
 }
 
-func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() != 1 {
         return result::err(backend_error { message: "backend error: chan_make expects one capacity argument" })
     }
@@ -3935,7 +3935,7 @@ func eval_chan_make_call(vec[expr] args, source_file source, vec[binding] mut en
     result::ok(value.channel(channel_handle_value { id: id }))
 }
 
-func eval_chan_send_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_chan_send_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() != 2 {
         return result::err(backend_error { message: "backend error: chan_send expects channel and value" })
     }
@@ -3967,7 +3967,7 @@ func eval_chan_send_call(vec[expr] args, source_file source, vec[binding] mut en
     result::ok(value.unit(unit_value {}))
 }
 
-func eval_chan_recv_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime, bool is_select) result[value, backend_error] {
+func eval_chan_recv_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime, bool is_select) (value, backend_error) {
     if args.len() == 0 {
         return result::err(backend_error { message: "backend error: chan_recv/select_recv expects at least one channel argument" })
     }
@@ -3976,7 +3976,7 @@ func eval_chan_recv_call(vec[expr] args, source_file source, vec[binding] mut en
     }
     channels := vec[value]()
     ai := 0
-    while ai < args.len() {
+    for ai < args.len() {
         ch := eval_expr(args[ai], source, env, writes, runtime)
         if ch.is_err() {
             return ch
@@ -4004,14 +4004,14 @@ func eval_chan_recv_call(vec[expr] args, source_file source, vec[binding] mut en
     result::ok(value.unit(unit_value {}))
 }
 
-func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() < 2 || (args.len() % 2) != 0 {
         return result::err(backend_error { message: "backend error: select_recv_weighted expects channel/weight pairs" })
     }
     runtime.select_attempts = runtime.select_attempts + 1
     weighted := vec[value]()
     ai := 0
-    while ai < args.len() {
+    for ai < args.len() {
         ch := eval_expr(args[ai], source, env, writes, runtime)
         if ch.is_err() {
             return ch
@@ -4030,7 +4030,7 @@ func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[bind
             _ : return result::err(backend_error { message: "backend error: select_recv_weighted weights must be int" }),
         }
         wi := 0
-        while wi < copies {
+        for wi < copies {
             weighted.push(ch.unwrap())
             wi = wi + 1
         }
@@ -4050,7 +4050,7 @@ func eval_select_recv_weighted_call(vec[expr] args, source_file source, vec[bind
     return result::err(backend_error { message: "backend error: select_recv_weighted has no ready channel" })
 }
 
-func eval_select_recv_timeout_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_select_recv_timeout_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() < 2 {
         return result::err(backend_error { message: "backend error: select_recv_timeout expects channels followed by timeout ticks" })
     }
@@ -4064,7 +4064,7 @@ func eval_select_recv_timeout_call(vec[expr] args, source_file source, vec[bindi
     }
     ch_args := vec[expr]()
     i := 0
-    while i < args.len() - 1 {
+    for i < args.len() - 1 {
         ch_args.push(args[i])
         i = i + 1
     }
@@ -4076,7 +4076,7 @@ func eval_select_recv_timeout_call(vec[expr] args, source_file source, vec[bindi
     result::ok(value.unit(unit_value {}))
 }
 
-func eval_select_send_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_select_send_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() < 2 || (args.len() % 2) != 0 {
         return result::err(backend_error { message: "backend error: select_send expects channel/value pairs" })
     }
@@ -4084,7 +4084,7 @@ func eval_select_send_call(vec[expr] args, source_file source, vec[binding] mut 
     channels := vec[value]()
     payloads := vec[value]()
     ai := 0
-    while ai < args.len() {
+    for ai < args.len() {
         ch := eval_expr(args[ai], source, env, writes, runtime)
         if ch.is_err() {
             return ch
@@ -4113,7 +4113,7 @@ func eval_select_send_call(vec[expr] args, source_file source, vec[binding] mut 
     result::ok(value.unit(unit_value {}))
 }
 
-func eval_select_send_default_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_select_send_default_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     sent := eval_select_send_call(args, source, env, writes, runtime)
     if sent.is_ok() {
         return sent
@@ -4122,7 +4122,7 @@ func eval_select_send_default_call(vec[expr] args, source_file source, vec[bindi
     result::ok(value.unit(unit_value {}))
 }
 
-func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() < 3 || ((args.len() - 1) % 2) != 0 {
         return result::err(backend_error { message: "backend error: select_send_timeout expects channel/value pairs followed by timeout ticks" })
     }
@@ -4136,7 +4136,7 @@ func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[bindi
     }
     send_args := vec[expr]()
     i := 0
-    while i < args.len() - 1 {
+    for i < args.len() - 1 {
         send_args.push(args[i])
         i = i + 1
     }
@@ -4148,13 +4148,13 @@ func eval_select_send_timeout_call(vec[expr] args, source_file source, vec[bindi
     result::ok(value.unit(unit_value {}))
 }
 
-func choose_ready_channel(runtime_state mut runtime, vec[value] channels) option[int] {
+func choose_ready_channel(runtime_state runtime, vec[value] channels) option[int] {
     if channels.len() == 0 {
         return option.none
     }
     start := runtime.select_rr_cursor % channels.len()
     offset := 0
-    while offset < channels.len() {
+    for offset < channels.len() {
         pick := (start + offset) % channels.len()
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
@@ -4175,7 +4175,7 @@ func choose_closed_channel(runtime_state runtime, vec[value] channels) option[in
     }
     start := runtime.select_rr_cursor % channels.len()
     offset := 0
-    while offset < channels.len() {
+    for offset < channels.len() {
         pick := (start + offset) % channels.len()
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
@@ -4189,13 +4189,13 @@ func choose_closed_channel(runtime_state runtime, vec[value] channels) option[in
     option.none
 }
 
-func choose_sendable_channel(runtime_state mut runtime, vec[value] channels) option[int] {
+func choose_sendable_channel(runtime_state runtime, vec[value] channels) option[int] {
     if channels.len() == 0 {
         return option.none
     }
     start := runtime.select_rr_cursor % channels.len()
     offset := 0
-    while offset < channels.len() {
+    for offset < channels.len() {
         pick := (start + offset) % channels.len()
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
@@ -4211,7 +4211,7 @@ func choose_sendable_channel(runtime_state mut runtime, vec[value] channels) opt
     option.none
 }
 
-func drain_selected_channel(runtime_state mut runtime, int idx) result[value, backend_error] {
+func drain_selected_channel(runtime_state runtime, int idx) (value, backend_error) {
     if idx < 0 {
         return result::err(backend_error { message: "backend error: recv target is not channel" })
     }
@@ -4222,7 +4222,7 @@ func drain_selected_channel(runtime_state mut runtime, int idx) result[value, ba
     first := ch_state.buffer[0]
     rest := vec[value]()
     i := 1
-    while i < ch_state.buffer.len() {
+    for i < ch_state.buffer.len() {
         rest.push(ch_state.buffer[i])
         i = i + 1
     }
@@ -4232,7 +4232,7 @@ func drain_selected_channel(runtime_state mut runtime, int idx) result[value, ba
     result::ok(first)
 }
 
-func eval_select_recv_default_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_select_recv_default_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     recv := eval_chan_recv_call(args, source, env, writes, runtime, true)
     if recv.is_ok() {
         return recv
@@ -4241,7 +4241,7 @@ func eval_select_recv_default_call(vec[expr] args, source_file source, vec[bindi
     result::ok(value.unit(unit_value {}))
 }
 
-func eval_chan_close_call(vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_chan_close_call(vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() != 1 {
         return result::err(backend_error { message: "backend error: chan_close expects one channel argument" })
     }
@@ -4269,7 +4269,7 @@ func find_channel_index(runtime_state runtime, value v) int {
         _ : return -1,
     }
     i := 0
-    while i < runtime.channels.len() {
+    for i < runtime.channels.len() {
         if runtime.channels[i].id == id {
             return i
         }
@@ -4278,7 +4278,7 @@ func find_channel_index(runtime_state runtime, value v) int {
     -1
 }
 
-func run_gc_safepoint(vec[binding] mut env, runtime_state mut runtime) () {
+func run_gc_safepoint(vec[binding] env, runtime_state runtime) () {
     if runtime.channels.len() == 0 {
         return
     }
@@ -4292,30 +4292,30 @@ func run_gc_safepoint(vec[binding] mut env, runtime_state mut runtime) () {
     run_gc_cycle(env, runtime)
 }
 
-func run_gc_cycle(vec[binding] env, runtime_state mut runtime) () {
+func run_gc_cycle(vec[binding] env, runtime_state runtime) () {
     runtime.gc_cycles = runtime.gc_cycles + 1
     runtime.gc_root_scans = runtime.gc_root_scans + env.len() + runtime.runq.len()
     i := 0
-    while i < runtime.channels.len() {
+    for i < runtime.channels.len() {
         ch := runtime.channels[i]
         ch.marked = false
         runtime.channels.set(i, ch)
         i = i + 1
     }
     i = 0
-    while i < env.len() {
+    for i < env.len() {
         mark_value_channels(env[i].value, runtime)
         i = i + 1
     }
     i = 0
-    while i < runtime.runq.len() {
+    for i < runtime.runq.len() {
         ai := 0
-        while ai < runtime.runq[i].args.len() {
+        for ai < runtime.runq[i].args.len() {
             mark_value_channels(runtime.runq[i].args[ai], runtime)
             ai = ai + 1
         }
         ai = 0
-        while ai < runtime.runq[i].captured_env.len() {
+        for ai < runtime.runq[i].captured_env.len() {
             mark_value_channels(runtime.runq[i].captured_env[ai].value, runtime)
             ai = ai + 1
         }
@@ -4323,7 +4323,7 @@ func run_gc_cycle(vec[binding] env, runtime_state mut runtime) () {
     }
     kept := vec[channel_runtime_state]()
     i = 0
-    while i < runtime.channels.len() {
+    for i < runtime.channels.len() {
         ch := runtime.channels[i]
         if ch.marked {
             ch.marked = false
@@ -4342,16 +4342,16 @@ func run_gc_cycle(vec[binding] env, runtime_state mut runtime) () {
     runtime.gc_heap_goal = next_goal
 }
 
-func mark_value_channels(value v, runtime_state mut runtime) () {
+func mark_value_channels(value v, runtime_state runtime) () {
     switch v {
         value.channel(handle) : mark_channel_id(handle.id, runtime),
         _ : (),
     }
 }
 
-func mark_channel_id(int id, runtime_state mut runtime) () {
+func mark_channel_id(int id, runtime_state runtime) () {
     i := 0
-    while i < runtime.channels.len() {
+    for i < runtime.channels.len() {
         if runtime.channels[i].id == id {
             if runtime.channels[i].marked {
                 return
@@ -4360,7 +4360,7 @@ func mark_channel_id(int id, runtime_state mut runtime) () {
             ch.marked = true
             runtime.channels.set(i, ch)
             bi := 0
-            while bi < ch.buffer.len() {
+            for bi < ch.buffer.len() {
                 mark_value_channels(ch.buffer[bi], runtime)
                 bi = bi + 1
             }
@@ -4377,14 +4377,14 @@ func value_contains_channel(value v) bool {
     }
 }
 
-func execute_deferred(vec[expr] deferred, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime, string panic_payload_text) result[(), backend_error] {
+func execute_deferred(vec[expr] deferred, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime, string panic_payload_text) ((), backend_error) {
     if panic_payload_text != "" {
         set_control(env, control_panic_active, value.bool(true))
         set_control(env, control_panic_payload, value.string(panic_payload_text))
     }
     set_control(env, control_in_defer, value.bool(true))
     i := deferred.len()
-    while i > 0 {
+    for i > 0 {
         i = i - 1
         call_result := eval_expr(deferred[i], source, env, writes, runtime)
         if call_result.is_err() {
@@ -4402,14 +4402,14 @@ func execute_deferred(vec[expr] deferred, source_file source, vec[binding] mut e
     result::ok(())
 }
 
-func run_sroutine_scheduler_step(source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
+func run_sroutine_scheduler_step(source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) ((), backend_error) {
     if runtime.runq.len() == 0 {
         return result::ok(())
     }
     task := runtime.runq[0]
     rest := vec[sroutine_task]()
     i := 1
-    while i < runtime.runq.len() {
+    for i < runtime.runq.len() {
         rest.push(runtime.runq[i])
         i = i + 1
     }
@@ -4431,8 +4431,8 @@ func run_sroutine_scheduler_step(source_file source, vec[binding] mut env, vec[w
     result::ok(())
 }
 
-func run_sroutine_scheduler_flush(source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[(), backend_error] {
-    while runtime.runq.len() > 0 {
+func run_sroutine_scheduler_flush(source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) ((), backend_error) {
+    for runtime.runq.len() > 0 {
         step := run_sroutine_scheduler_step(source, env, writes, runtime)
         if step.is_err() {
             return step
@@ -4456,13 +4456,13 @@ func panic_payload(backend_error err) string {
     slice(err.message, 6, len(err.message))
 }
 
-func copy_control_bindings(vec[binding] from_env, vec[binding] mut to_env) () {
+func copy_control_bindings(vec[binding] from_env, vec[binding] to_env) () {
     copy_control_binding(from_env, to_env, control_panic_active)
     copy_control_binding(from_env, to_env, control_panic_payload)
     copy_control_binding(from_env, to_env, control_in_defer)
 }
 
-func copy_control_binding(vec[binding] from_env, vec[binding] mut to_env, string name) () {
+func copy_control_binding(vec[binding] from_env, vec[binding] to_env, string name) () {
     source_index := find_binding_index(from_env, name)
     if source_index < 0 {
         return
@@ -4470,7 +4470,7 @@ func copy_control_binding(vec[binding] from_env, vec[binding] mut to_env, string
     set_control(to_env, name, from_env[source_index].value)
 }
 
-func set_control(vec[binding] mut env, string name, value v) () {
+func set_control(vec[binding] env, string name, value v) () {
     index := find_binding_index(env, name)
     if index >= 0 {
         env.set(index, binding { name: name, value: v })
@@ -4514,7 +4514,7 @@ func control_panic_payload_text(vec[binding] env) string {
     }
 }
 
-func collect_const_bindings(source_file source) result[vec[binding], backend_error] {
+func collect_const_bindings(source_file source) (vec[binding), backend_error] {
     out := vec[binding]()
     visited := vec[string]()
     collect_result := collect_const_bindings_in_source(source, out, visited)
@@ -4524,14 +4524,14 @@ func collect_const_bindings(source_file source) result[vec[binding], backend_err
     result::ok(out)
 }
 
-func collect_const_bindings_in_source(source_file source, vec[binding] mut out, vec[string] mut visited) result[(), backend_error] {
+func collect_const_bindings_in_source(source_file source, vec[binding] out, vec[string] visited) ((), backend_error) {
     if string_vec_contains(visited, source.pkg) {
         return result::ok(())
     }
     visited.push(source.pkg)
     last_expr := option::none
     i := 0
-    while i < source.items.len() {
+    for i < source.items.len() {
         switch source.items[i] {
             item.const(const_decl) : {
                 if find_binding_index(out, const_decl.name) >= 0 {
@@ -4563,7 +4563,7 @@ func collect_const_bindings_in_source(source_file source, vec[binding] mut out, 
         i = i + 1
     }
     ui := 0
-    while ui < source.uses.len() {
+    for ui < source.uses.len() {
         dep_result := load_source_graph_for_use(source.uses[ui].path)
         if dep_result.is_err() {
             return result::err(dep_result.unwrap_err())
@@ -4577,7 +4577,7 @@ func collect_const_bindings_in_source(source_file source, vec[binding] mut out, 
     result::ok(())
 }
 
-func load_source_graph_for_use(string module_path) result[source_file, backend_error] {
+func load_source_graph_for_use(string module_path) (source_file, backend_error) {
     module_result := resolve_module_source_path(module_path)
     if module_result.is_none() {
         return result::err(backend_error { message: "backend error: module resolver failed: " + module_path })
@@ -4593,7 +4593,7 @@ func load_source_graph_for_use(string module_path) result[source_file, backend_e
     result::ok(dep_parsed_result.unwrap())
 }
 
-func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) result[value, backend_error] {
+func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) (value, backend_error) {
     switch value {
         expr.int(int_expr) : result::ok(value.int(parse_int_literal(int_expr.value))),
         expr.string(string_expr) : result::ok(value.string(decode_string_literal(string_expr.value))),
@@ -4638,7 +4638,7 @@ func eval_const_value_expr(expr value, vec[binding] const_env, int iota_value) r
     }
 }
 
-func lookup_name_or_function(vec[binding] env, source_file source, string name) result[value, backend_error] {
+func lookup_name_or_function(vec[binding] env, source_file source, string name) (value, backend_error) {
     if name == "nil" {
         return result::ok(value.unit(unit_value {}))
     }
@@ -4653,10 +4653,10 @@ func lookup_name_or_function(vec[binding] env, source_file source, string name) 
     result::err(backend_error { message: "backend error: unknown name " + name })
 }
 
-func eval_map_literal(map_literal value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_map_literal(map_literal value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     entries := vec[fn_map_entry_value]()
     i := 0
-    while i < value.entries.len() {
+    for i < value.entries.len() {
         key_result := eval_expr(value.entries[i].key, source, env, writes, runtime)
         if key_result.is_err() {
             return result::err(key_result.unwrap_err())
@@ -4679,7 +4679,7 @@ func eval_map_literal(map_literal value, source_file source, vec[binding] mut en
     result::ok(value.fn_map(entries))
 }
 
-func eval_index_expr(index_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_index_expr(index_expr value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     target_result := eval_expr(value.target.value, source, env, writes, runtime)
     if target_result.is_err() {
         return target_result
@@ -4692,7 +4692,7 @@ func eval_index_expr(index_expr value, source_file source, vec[binding] mut env,
     switch target_result.unwrap() {
         value.fn_map(entries) : {
             i := 0
-            while i < entries.len() {
+            for i < entries.len() {
                 if entries[i].key == key {
                     return result::ok(value.fn_ref(entries[i].func_name))
                 }
@@ -4704,7 +4704,7 @@ func eval_index_expr(index_expr value, source_file source, vec[binding] mut env,
     }
 }
 
-func eval_print_call(string name, vec[expr] args, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_print_call(string name, vec[expr] args, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     if args.len() > 1 {
         result::err(backend_error { message: "backend error: " + name + " expects at most one argument" })
     }
@@ -4725,7 +4725,7 @@ func eval_print_call(string name, vec[expr] args, source_file source, vec[bindin
     result::ok(value.unit(unit_value {}))
 }
 
-func eval_if_expr(if_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
+func eval_if_expr(if_expr value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
     cond_result := eval_expr(value.condition.value, source, env, writes, runtime)
     if cond_result.is_err() {
         result::err(cond_result.unwrap_err())
@@ -4745,8 +4745,8 @@ func eval_if_expr(if_expr value, source_file source, vec[binding] mut env, vec[w
     }
 }
 
-func eval_while_expr(while_expr value, source_file source, vec[binding] mut env, vec[write_op] mut writes, runtime_state mut runtime) result[value, backend_error] {
-    while true {
+func eval_while_expr(while_expr value, source_file source, vec[binding] env, vec[write_op] writes, runtime_state runtime) (value, backend_error) {
+    for true {
         cond_result := eval_expr(value.condition.value, source, env, writes, runtime)
         if cond_result.is_err() {
             result::err(cond_result.unwrap_err())
@@ -4767,7 +4767,7 @@ func eval_while_expr(while_expr value, source_file source, vec[binding] mut env,
     result::ok(value.unit(unit_value {}))
 }
 
-func lookup_value(vec[binding] env, string name) result[value, backend_error] {
+func lookup_value(vec[binding] env, string name) (value, backend_error) {
     index := find_binding_index(env, name)
     if index < 0 {
         result::err(backend_error { message: "backend error: unknown name " + name })
@@ -4775,7 +4775,7 @@ func lookup_value(vec[binding] env, string name) result[value, backend_error] {
     result::ok(env[index].value)
 }
 
-func add_values(value left, value right) result[value, backend_error] {
+func add_values(value left, value right) (value, backend_error) {
     switch left {
         value.int(left_int) : {
             switch right {
@@ -4793,7 +4793,7 @@ func add_values(value left, value right) result[value, backend_error] {
     }
 }
 
-func numeric_binary(value left, value right, string op) result[value, backend_error] {
+func numeric_binary(value left, value right, string op) (value, backend_error) {
     switch left {
         value.int(left_int) : {
             switch right {
@@ -4825,7 +4825,7 @@ func numeric_binary(value left, value right, string op) result[value, backend_er
     }
 }
 
-func compare_values(value left, value right, bool equal) result[value, backend_error] {
+func compare_values(value left, value right, bool equal) (value, backend_error) {
     same := false
     switch left {
         value.int(left_int) : {
@@ -4875,7 +4875,7 @@ func compare_values(value left, value right, bool equal) result[value, backend_e
     }
 }
 
-func ordered_compare(value left, value right, string op) result[value, backend_error] {
+func ordered_compare(value left, value right, string op) (value, backend_error) {
     switch left {
         value.int(left_int) : {
             switch right {
@@ -4899,7 +4899,7 @@ func ordered_compare(value left, value right, string op) result[value, backend_e
     }
 }
 
-func logical_binary(value left, value right, bool and_op) result[value, backend_error] {
+func logical_binary(value left, value right, bool and_op) (value, backend_error) {
     switch left {
         value.bool(left_bool) : {
             switch right {
@@ -4917,7 +4917,7 @@ func logical_binary(value left, value right, bool and_op) result[value, backend_
     }
 }
 
-func value_to_exit_code(value value) result[int, backend_error] {
+func value_to_exit_code(value value) (int, backend_error) {
     switch value {
         value.int(number) : result::ok(number),
         value.bool(flag) : result::ok(if flag { 1 } else { 0 }),
@@ -4950,7 +4950,7 @@ func parse_int_literal(string literal) int {
         index = 1
     }
     out := 0
-    while index < len(value) {
+    for index < len(value) {
         ch := char_at(value, index)
         if ch != "_" {
             digit := digit_value(ch)
@@ -4964,12 +4964,12 @@ func parse_int_literal(string literal) int {
     sign * out
 }
 
-func parse_ssa_margin_override(string text) result[int, backend_error] {
+func parse_ssa_margin_override(string text) (int, backend_error) {
     if text == "" {
         return ok_int(-1)
     }
     i := 0
-    while i < len(text) {
+    for i < len(text) {
         ch := char_at(text, i)
         if digit_value(ch) < 0 {
             return fail_int("invalid --ssa-dominant-margin value: " + text)
@@ -5020,7 +5020,7 @@ func decode_string_literal(string literal) string {
     }
     out := ""
     index := 1
-    while index < len(text) - 1 {
+    for index < len(text) - 1 {
         ch := char_at(text, index)
         if ch != "\\" {
             out = out + ch
@@ -5067,9 +5067,9 @@ func emit_asm(vec[write_op] writes, int exit_code) string {
     return emit_asm_amd64(writes, exit_code)
 }
 
-func validate_abi_coverage(string arch) result[(), backend_error] {
+func validate_abi_coverage(string arch) ((), backend_error) {
     i := 0
-    while i < 8 {
+    for i < 8 {
         if abi_int_arg_reg(arch, i) == "" {
             return result::err(backend_error { message: "backend error: missing integer argument ABI mapping for arg " + to_string(i) + " on " + arch })
         }
@@ -5374,7 +5374,7 @@ func emit_asm_amd64(vec[write_op] writes, int exit_code) string {
     text_lines.push("    sub $16, %rsp")
     message_index := 0
     i := 0
-    while i < writes.len() {
+    for i < writes.len() {
         append_write_op(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
         i = i + 1
@@ -5402,7 +5402,7 @@ func emit_asm_arm64(vec[write_op] writes, int exit_code) string {
     text_lines.push("    mov x29, sp")
     message_index := 0
     i := 0
-    while i < writes.len() {
+    for i < writes.len() {
         append_write_op_arm64(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
         i = i + 1
@@ -5430,7 +5430,7 @@ func emit_asm_riscv64(vec[write_op] writes, int exit_code) string {
     text_lines.push("    sd ra, 8(sp)")
     message_index := 0
     i := 0
-    while i < writes.len() {
+    for i < writes.len() {
         append_write_op_riscv64(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
         i = i + 1
@@ -5457,7 +5457,7 @@ func emit_asm_s390x(vec[write_op] writes, int exit_code) string {
     text_lines.push("s_main:")
     message_index := 0
     i := 0
-    while i < writes.len() {
+    for i < writes.len() {
         append_write_op_s390x(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
         i = i + 1
@@ -5515,7 +5515,7 @@ func append_write_op_s390x(vec[string] data_lines, vec[string] text_lines, write
 func escape_asm_string(string text) string {
     out := ""
     i := 0
-    while i < len(text) {
+    for i < len(text) {
         ch := char_at(text, i)
         if ch == "\\" {
             out = out + "\\\\"
@@ -5538,7 +5538,7 @@ func escape_asm_string(string text) string {
 func copy_bindings(vec[binding] source) vec[binding] {
     out := vec[binding]()
     i := 0
-    while i < source.len() {
+    for i < source.len() {
         out.push(source[i])
         i = i + 1
     }
@@ -5547,7 +5547,7 @@ func copy_bindings(vec[binding] source) vec[binding] {
 
 func find_binding_index(vec[binding] env, string name) int {
     i := env.len()
-    while i > 0 {
+    for i > 0 {
         i = i - 1
         if env[i].name == name {
             return i
@@ -5556,9 +5556,9 @@ func find_binding_index(vec[binding] env, string name) int {
     -1
 }
 
-func propagate_bindings(vec[binding] mut outer, vec[binding] inner) () {
+func propagate_bindings(vec[binding] outer, vec[binding] inner) () {
     i := 0
-    while i < inner.len() {
+    for i < inner.len() {
         index := find_binding_index(outer, inner[i].name)
         if index >= 0 {
             outer.set(index, inner[i])
@@ -5577,7 +5577,7 @@ func count_occurrences(string text, string token) int {
     }
     total := 0
     cursor := 0
-    while true {
+    for true {
         at := index_of_from(text, token, cursor)
         if at < 0 {
             break
@@ -5592,7 +5592,7 @@ func join_with(vec[string] values, string sep) string {
     out := ""
     first := true
     i := 0
-    while i < values.len() {
+    for i < values.len() {
         if !first {
             out = out + sep
         }

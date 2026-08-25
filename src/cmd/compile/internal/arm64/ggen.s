@@ -23,7 +23,7 @@ func zerorange(vec[prog] insns, int off, int cnt, bool ignored) vec[prog] {
     out := insns
     at := off + 8
     left := cnt
-    while left >= 16 && at < 512 {
+    for left >= 16 && at < 512 {
         out.push(prog {
             op: "STP",
             from: "ZR,ZR",
@@ -34,7 +34,7 @@ func zerorange(vec[prog] insns, int off, int cnt, bool ignored) vec[prog] {
         at = at + 16
         left = left - 16
     }
-    while left > 0 {
+    for left > 0 {
         out.push(prog {
             op: "MOVD",
             from: "ZR",

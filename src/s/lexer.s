@@ -27,7 +27,7 @@ func new_lexer(string source) lexer {
     }
 }
 
-func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
+func (lexer* self) tokenize() (vec[token), lex_error] {
         vec[token] tokens = vec[token]()        for !self.is_eof() {
             self.skip_ignored()?
             if self.is_eof() {
@@ -91,7 +91,7 @@ func (self: &mut lexer) tokenize() result[vec[token], lex_error] {
         result::ok(tokens)
     }
 
-func (self: &mut lexer) skip_ignored() result[(), lex_error] {
+func (lexer* self) skip_ignored() ((), lex_error) {
         for !self.is_eof() {
             string ch = self.peek()?
             if is_whitespace(ch) {
@@ -120,7 +120,7 @@ func (self: &mut lexer) skip_ignored() result[(), lex_error] {
         result::ok(())
     }
 
-func (self: &mut lexer) read_identifier() result[string, lex_error] {
+func (lexer* self) read_identifier() (string, lex_error) {
         string out = ""        for !self.is_eof() {
             string ch = self.peek()?            if !is_ident_continue(ch) {
                 break
@@ -130,7 +130,7 @@ func (self: &mut lexer) read_identifier() result[string, lex_error] {
         result::ok(out)
     }
 
-func (self: &mut lexer) read_number() result[string, lex_error] {
+func (lexer* self) read_number() (string, lex_error) {
         string out = ""
         for !self.is_eof() {
             string ch = self.peek()?
@@ -142,7 +142,7 @@ func (self: &mut lexer) read_number() result[string, lex_error] {
         result::ok(out)
     }
 
-func (self: &mut lexer) read_string() result[string, lex_error] {
+func (lexer* self) read_string() (string, lex_error) {
         string out = self.advance()?        for !self.is_eof() {
             ch := self.advance()?
             out = out + ch
@@ -160,7 +160,7 @@ func (self: &mut lexer) read_string() result[string, lex_error] {
         result::err(self.error("unterminated string literal"))
     }
 
-func (self: &mut lexer) read_symbol() result[string, lex_error] {
+func (lexer* self) read_symbol() (string, lex_error) {
         vec[string] multi = vec[string] {            "->",
             ":",
             "==",
@@ -198,14 +198,14 @@ func (self: lexer) match_text(string text) bool {
         slice(self.source, self.index, self.index + len(text)) == text
     }
 
-func (self: lexer) peek() result[string, lex_error] {
+func (self: lexer) peek() (string, lex_error) {
         if self.is_eof() {
             return result::err(self.error("unexpected eof"))
         }
         result::ok(char_at(self.source, self.index))
     }
 
-func (self: &mut lexer) advance() result[string, lex_error] {
+func (lexer* self) advance() (string, lex_error) {
         if self.is_eof() {
             return result::err(self.error("unexpected eof"))
         }

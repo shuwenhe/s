@@ -255,7 +255,7 @@ func export_weights(AG.ag_tensor[] params) Map<string, T.tensor> {
     wmap
 }
 
-func import_weights(Map<string, T.tensor> wmap, AG.ag_tensor[] mut params) void {
+func import_weights(Map<string, T.tensor> wmap, AG.ag_tensor[] params) void {
     int i = 0
     for i < len(params) {
         if params[i].name in wmap {
@@ -401,7 +401,7 @@ func split_lines(string text) string[] {
     i = 0
     for i < len(text) {
         if text[i] == char(10) {
-            result[idx] = current
+            (idx) = current
             current = ""
             idx = idx + 1
         } else {
@@ -409,7 +409,7 @@ func split_lines(string text) string[] {
         }
         i = i + 1
     }
-    if len(current) > 0 { result[idx] = current }
+    if len(current) > 0 { (idx) = current }
     result
 }
 

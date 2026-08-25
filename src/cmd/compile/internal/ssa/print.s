@@ -3,11 +3,11 @@ package compile.internal.ssa
 func dump_func(ssa_func f) string {
     out := "ssa-func " + f.name + "\n"
     bi := 0
-    while bi < f.blocks.len() {
+    for bi < f.blocks.len() {
         b := f.blocks[bi]
         out = out + "block b" + to_string(b.id) + " kind=" + b.kind + "\n"
         i := 0
-        while i < b.values.len() {
+        for i < b.values.len() {
             id := b.values[i]
             v := f.values[id]
             out = out + "  v" + to_string(v.id) + " " + v.op + " " + v.ty
@@ -17,7 +17,7 @@ func dump_func(ssa_func f) string {
             if v.args.len() > 0 {
                 out = out + " args="
                 j := 0
-                while j < v.args.len() {
+                for j < v.args.len() {
                     if j > 0 {
                         out = out + ","
                     }

@@ -6,7 +6,7 @@ func build_pos_map(string source) vec[pos_entry] {
     lines := split_lines(source)
     offset := 0
     i := 0
-    while i < lines.len() {
+    for i < lines.len() {
         out.push(pos_entry {
             offset: offset,
             line: i + 1,
@@ -24,7 +24,7 @@ func offset_to_pos(vec[pos_entry] table, int offset) pos_entry {
     }
     i := 0
     last := table[0]
-    while i < table.len() {
+    for i < table.len() {
         if table[i].offset > offset {
             break
         }

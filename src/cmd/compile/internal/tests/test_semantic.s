@@ -81,15 +81,15 @@ func run_semantic_suite(string fixtures_root) int {
     if check_text(option_match_bind_type_fail) == 0 {
         return 1
     }
-    result_match_ok := "package demo.switch\nfunc f(result[int, string] value) int {\n  switch value {\n    ok(v) : v,\n    err(e) : 0,\n  }\n}"
+    result_match_ok := "package demo.switch\nfunc f((int, string) value) int {\n  switch value {\n    ok(v) : v,\n    err(e) : 0,\n  }\n}"
     if check_text(result_match_ok) != 0 {
         return 1
     }
-    result_match_exhaust_fail := "package demo.switch\nfunc f(result[int, string] value) int {\n  switch value {\n    ok(v) : v,\n  }\n}"
+    result_match_exhaust_fail := "package demo.switch\nfunc f((int, string) value) int {\n  switch value {\n    ok(v) : v,\n  }\n}"
     if check_text(result_match_exhaust_fail) == 0 {
         return 1
     }
-    result_match_duplicate_fail := "package demo.switch\nfunc f(result[int, string] value) int {\n  switch value {\n    ok(v) : v,\n    err(e) : 0,\n    err(e2) : 1,\n  }\n}"
+    result_match_duplicate_fail := "package demo.switch\nfunc f((int, string) value) int {\n  switch value {\n    ok(v) : v,\n    err(e) : 0,\n    err(e2) : 1,\n  }\n}"
     if check_text(result_match_duplicate_fail) == 0 {
         return 1
     }
@@ -97,7 +97,7 @@ func run_semantic_suite(string fixtures_root) int {
     if check_text(option_nested_payload_fail) == 0 {
         return 1
     }
-    nested_ok := "package demo.switch\nfunc f(option[result[int, string]] value) int {\n  switch value {\n    some(ok(v)) : v,\n    some(err(e)) : 0,\n    none : 0,\n  }\n}"
+    nested_ok := "package demo.switch\nfunc f(option[(int, string)] value) int {\n  switch value {\n    some(ok(v)) : v,\n    some(err(e)) : 0,\n    none : 0,\n  }\n}"
     if check_text(nested_ok) != 0 {
         return 1
     }
@@ -126,7 +126,7 @@ func run_semantic_suite(string fixtures_root) int {
     }
     saw_summary := false
     i := 0
-    while i < diagnostics.len() {
+    for i < diagnostics.len() {
         if diagnostics[i].code == "s0001" {
             saw_summary = true
             if diagnostics[i].upstream_code == "" {
@@ -230,11 +230,11 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(method_temp_ref_diags, "e3051") {
         return 1
     }
-    method_mut_ref_ok := "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &mut Counter) bump() int {\n  counter.count\n}\nfunc main() {\n  counter := Counter { count: 2 }\n  counter.bump()\n}"
+    method_mut_ref_ok := "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &Counter) bump() int {\n  counter.count\n}\nfunc main() {\n  counter := Counter { count: 2 }\n  counter.bump()\n}"
     if check_text(method_mut_ref_ok) != 0 {
         return 1
     }
-    method_temp_mut_ref_fail := "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &mut Counter) bump() int {\n  counter.count\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() {\n  make_counter().bump()\n}"
+    method_temp_mut_ref_fail := "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &Counter) bump() int {\n  counter.count\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() {\n  make_counter().bump()\n}"
     method_temp_mut_ref_diags := check_detailed(method_temp_mut_ref_fail)
     if !has_code(method_temp_mut_ref_diags, "e3051") {
         return 1
@@ -292,7 +292,7 @@ func run_semantic_suite(string fixtures_root) int {
 
 func has_code(vec[semantic_error] diagnostics, string code) bool {
     i := 0
-    while i < diagnostics.len() {
+    for i < diagnostics.len() {
         if diagnostics[i].code == code {
             return true
         }

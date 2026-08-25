@@ -20,7 +20,7 @@ func merge_locals(vec[local_slot] a, vec[local_slot] b) merged_locals {
     append_unique_slots(slots, b)
     cursor := 0
     i := 0
-    while i < slots.len() {
+    for i < slots.len() {
         align := slots[i].align
         if align <= 0 {
             align = 8
@@ -38,7 +38,7 @@ func merge_locals(vec[local_slot] a, vec[local_slot] b) merged_locals {
 
 func append_unique_slots(vec[local_slot] dst, vec[local_slot] src) () {
     i := 0
-    while i < src.len() {
+    for i < src.len() {
         idx := find_slot_index(dst, src[i].name)
         if idx < 0 {
             dst.push(src[i])
@@ -59,7 +59,7 @@ func append_unique_slots(vec[local_slot] dst, vec[local_slot] src) () {
 
 func find_slot_index(vec[local_slot] slots, string name) int {
     i := 0
-    while i < slots.len() {
+    for i < slots.len() {
         if slots[i].name == name {
             return i
         }

@@ -4,7 +4,7 @@ func cpufeatures_module_name() string {
     "ssa/cpufeatures.s"
 }
 
-func cpufeatures_module_apply(mut ssa_func f) int {
+func cpufeatures_module_apply(ssa_func f) int {
     recompute_uses(f)
     0
 }
