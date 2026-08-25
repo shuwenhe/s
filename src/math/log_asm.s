@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func log_asm_unit_name() string {
-    "src/math/log_asm"
+    "src/switch/log_asm"
 }
 
 func log_asm_unit_ready() int {

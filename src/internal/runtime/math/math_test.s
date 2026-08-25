@@ -1,7 +1,7 @@
-package src.internal.runtime.math
+package src.internal.runtime.switch
 
 func math_test_unit_name() string {
-    "src/internal/runtime/math/math_test"
+    "src/internal/runtime/switch/math_test"
 }
 
 func math_test_unit_ready() int {

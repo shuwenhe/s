@@ -1,7 +1,7 @@
-package src.math.big.internal.asmgen
+package src.switch.big.internal.asmgen
 
 func riscv64_unit_name() string {
-    "src/math/big/internal/asmgen/riscv64"
+    "src/switch/big/internal/asmgen/riscv64"
 }
 
 func riscv64_unit_ready() int {

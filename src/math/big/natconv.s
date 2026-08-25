@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func natconv_unit_name() string {
-    "src/math/big/natconv"
+    "src/switch/big/natconv"
 }
 
 func natconv_unit_ready() int {

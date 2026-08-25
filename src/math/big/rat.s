@@ -1,7 +1,7 @@
-package src.math.big
+package src.switch.big
 
 func rat_unit_name() string {
-    "src/math/big/rat"
+    "src/switch/big/rat"
 }
 
 func rat_unit_ready() int {

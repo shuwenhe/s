@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func pow10_unit_name() string {
-    "src/math/pow10"
+    "src/switch/pow10"
 }
 
 func pow10_unit_ready() int {

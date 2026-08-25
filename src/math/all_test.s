@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func all_test_unit_name() string {
-    "src/math/all_test"
+    "src/switch/all_test"
 }
 
 func all_test_unit_ready() int {

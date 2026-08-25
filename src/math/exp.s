@@ -1,7 +1,7 @@
-package src.math
+package src.switch
 
 func exp_unit_name() string {
-    "src/math/exp"
+    "src/switch/exp"
 }
 
 func exp_unit_ready() int {

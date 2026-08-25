@@ -1,7 +1,7 @@
-package src.math.cmplx
+package src.switch.cmplx
 
 func sin_unit_name() string {
-    "src/math/cmplx/sin"
+    "src/switch/cmplx/sin"
 }
 
 func sin_unit_ready() int {
