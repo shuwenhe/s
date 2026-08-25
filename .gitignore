@@ -94,3 +94,15 @@ editor/vscode/*.vsix
 # Compiled S seed binaries (architecture-specific)
 src/cmd/compile/seed/s_seed_x86_64
 src/cmd/compile/seed/s_seed_*
+
+# Backup files
+*.bak
+*.orig
+
+# Compiled intermediate representation
+*.ir
+
+# Generated seed compiler binaries
+bin/s_seed*
+bin/seed_tests
+bin/s_lexer
