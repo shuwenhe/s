@@ -13,7 +13,7 @@ func main() {
         handler: lsp::new_lsp_handler(),
         initialized: false,
     }
-    
+
     server.run()
 }
 
@@ -25,7 +25,7 @@ func (server mut lsp_server) run() {
                 if line == "" {
                     break
                 }
-                
+
                 let prefix = "Content-Length: "
                 if std::starts_with(line, prefix) {
                     let len_str = line.substring(prefix.len(), line.len())
@@ -58,12 +58,12 @@ func (server mut lsp_server) handle_message(message string) {
                 "initialized" : {},
                 "shutdown" : server.handle_shutdown(req),
                 "exit" : std::exit(0),
-                
+
                 "textDocument/didOpen" : server.handle_did_open(req, message),
                 "textDocument/didChange" : server.handle_did_change(req, message),
                 "textDocument/didSave" : server.handle_did_save(req, message),
                 "textDocument/didClose" : server.handle_did_close(req, message),
-                
+
                 "textDocument/completion" : server.handle_completion(req, message),
                 "textDocument/hover" : server.handle_hover(req, message),
                 "textDocument/definition" : server.handle_definition(req, message),
@@ -71,7 +71,7 @@ func (server mut lsp_server) handle_message(message string) {
                 "textDocument/documentSymbol" : server.handle_document_symbol(req, message),
                 "textDocument/rename" : server.handle_rename(req, message),
                 "workspace/symbol" : server.handle_workspace_symbol(req, message),
-                
+
                 _ : {
                     match req.id {
                         option::some(id) : {
@@ -90,7 +90,7 @@ func (server mut lsp_server) handle_message(message string) {
 
 func (server mut lsp_server) handle_initialize(req lsp::jsonrpc_request) {
     server.initialized = true
-    
+
     match req.id {
         option::some(id) : {
             let capabilities = lsp::server_capabilities {
@@ -103,7 +103,7 @@ func (server mut lsp_server) handle_initialize(req lsp::jsonrpc_request) {
                 rename_provider: true,
                 workspace_symbol_provider: false,
             }
-            
+
             let result = "{\"capabilities\":{" +
                 "\"textDocumentSync\":true," +
                 "\"completionProvider\":true," +
@@ -114,7 +114,7 @@ func (server mut lsp_server) handle_initialize(req lsp::jsonrpc_request) {
                 "\"renameProvider\":true," +
                 "\"serverInfo\":{\"name\":\"s-lsp\",\"version\":\"1.0.0\"}" +
                 "}}"
-            
+
             server.send_response(id, result)
         },
         option::none() : {}
@@ -135,7 +135,7 @@ func (server mut lsp_server) handle_did_open(req lsp::jsonrpc_request, message s
                 text_document: item,
             }
             server.handler.on_did_open(params)
-            
+
             server.send_diagnostics(item.uri)
         },
         option::none() : {}
@@ -151,7 +151,7 @@ func (server mut lsp_server) handle_did_change(req lsp::jsonrpc_request, message
                     text: text,
                 }
             }
-            
+
             let params = lsp::did_change_text_document_params {
                 text_document: lsp::versioned_text_document_identifier {
                     uri: uri,
@@ -159,9 +159,9 @@ func (server mut lsp_server) handle_did_change(req lsp::jsonrpc_request, message
                 },
                 content_changes: changes,
             }
-            
+
             server.handler.on_did_change(params)
-            
+
             server.send_diagnostics(uri)
         },
         option::none() : {}

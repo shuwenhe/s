@@ -27,7 +27,7 @@ func parse_jsonrpc_message(raw string) result[jsonrpc_request, string] {
         option::some(method) : {
             let id_str = extract_json_string(raw, "id")
             let params = extract_json_string(raw, "params")
-            
+
             let id_opt = option::none()
             match id_str {
                 option::some(id_val) : {
@@ -38,7 +38,7 @@ func parse_jsonrpc_message(raw string) result[jsonrpc_request, string] {
                 },
                 option::none() : {}
             }
-            
+
             result::ok(jsonrpc_request {
                 jsonrpc: "2.0",
                 method: method,
@@ -123,27 +123,27 @@ func serialize_completion_list(list completion_list) string {
 
 func serialize_completion_item(item completion_item) string {
     var result = "{\"label\":\"" + escape_json_string(item.label) + "\""
-    
+
     match item.kind {
         option::some(k) : result = result + ",\"kind\":" + std::to_string(completion_kind_to_int(k)),
         option::none() : {}
     }
-    
+
     match item.detail {
         option::some(d) : result = result + ",\"detail\":\"" + escape_json_string(d) + "\"",
         option::none() : {}
     }
-    
+
     match item.documentation {
         option::some(doc) : result = result + ",\"documentation\":\"" + escape_json_string(doc) + "\"",
         option::none() : {}
     }
-    
+
     match item.sort_text {
         option::some(st) : result = result + ",\"sortText\":\"" + escape_json_string(st) + "\"",
         option::none() : {}
     }
-    
+
     result = result + "}"
     result
 }
@@ -172,11 +172,11 @@ func extract_json_string(json string, key string) option[string] {
     match std::find_substring(json, search_key) {
         option::some(pos) : {
             let start = pos + search_key.len()
-            
+
             while start < json.len() && (json[start] == " " || json[start] == "\t") {
                 start = start + 1
             }
-            
+
             if start < json.len() {
                 if json[start] == "\"" {
                     let end = start + 1

@@ -5,9 +5,9 @@ use "../s"
 
 struct document_manager {
     map[string, text_document] documents
-    
+
     map[string, s::source_file] ast_cache
-    
+
     map[string, vec[parse_error]] error_cache
 }
 
@@ -115,15 +115,15 @@ func (dm document_manager) get_token_at_position(uri string, pos position) optio
                 if pos.character < line.len() {
                     let start = pos.character
                     let end = pos.character
-                    
+
                     while start > 0 && is_identifier_char(line[start - 1]) {
                         start = start - 1
                     }
-                    
+
                     while end < line.len() && is_identifier_char(line[end]) {
                         end = end + 1
                     }
-                    
+
                     if start < end {
                         option::some(line.substring(start, end))
                     } else {
@@ -154,7 +154,7 @@ func (dm document_manager) get_document_symbols(uri string) option[vec[document_
 
 func extract_symbols_from_ast(ast s::source_file) vec[document_symbol] {
     let symbols = vec[document_symbol]()
-    
+
     let i = 0
     while i < ast.items.len() {
         let item = ast.items[i]
@@ -227,6 +227,6 @@ func extract_symbols_from_ast(ast s::source_file) vec[document_symbol] {
         }
         i = i + 1
     }
-    
+
     symbols
 }

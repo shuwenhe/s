@@ -41,6 +41,7 @@ typedef enum token_type {
 	TOKEN_LE,
 	TOKEN_GT,
 	TOKEN_GE,
+	TOKEN_QUESTION,
 
 	TOKEN_LPAREN,
 	TOKEN_RPAREN,

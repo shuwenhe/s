@@ -19,7 +19,7 @@ func (h mut lsp_handler) on_did_open(params did_open_text_document_params) {
 func (h mut lsp_handler) on_did_change(params did_change_text_document_params) {
     let uri = params.text_document.uri
     let version = params.text_document.version
-    
+
     match h.doc_manager.get_document(uri) {
         option::some(doc) : {
             let new_text = apply_content_changes(doc.text, params.content_changes)
@@ -38,7 +38,7 @@ func (h mut lsp_handler) on_did_close(params did_close_text_document_params) {
 
 func (h lsp_handler) publish_diagnostics(uri string) vec[diagnostic] {
     let diags = vec[diagnostic]()
-    
+
     match h.doc_manager.get_errors(uri) {
         option::some(errors) : {
             let i = 0
@@ -60,7 +60,7 @@ func (h lsp_handler) publish_diagnostics(uri string) vec[diagnostic] {
         },
         option::none() : {}
     }
-    
+
     diags
 }
 
@@ -73,9 +73,9 @@ func (h lsp_handler) get_document_symbols(uri string) vec[document_symbol] {
 
 func (h lsp_handler) get_completions(uri string, pos position) completion_list {
     let completions = vec[completion_item]()
-    
+
     completions.append(get_keyword_completions())
-    
+
     match h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : {
             let i = 0
@@ -97,7 +97,7 @@ func (h lsp_handler) get_completions(uri string, pos position) completion_list {
         },
         option::none() : {}
     }
-    
+
     completion_list {
         is_incomplete: false,
         items: completions,
@@ -111,7 +111,7 @@ func get_keyword_completions() vec[completion_item] {
         "case", "default", "return", "break", "continue", "true", "false",
         "nil", "mut", "let", "var", "in", "as",
     }
-    
+
     let completions = vec[completion_item]()
     let i = 0
     while i < keywords.len() {
@@ -180,7 +180,7 @@ func find_symbol_in_list(symbols vec[document_symbol], name string) option[docum
 func apply_content_changes(text string, changes vec[text_document_content_change_event]) string {
     let result = text
     let i = 0
-    
+
     while i < changes.len() {
         let change = changes[i]
         match change.range_val {
@@ -188,7 +188,7 @@ func apply_content_changes(text string, changes vec[text_document_content_change
                 let lines = std::split(result, "\n")
                 let start_offset = position_to_offset(lines, r.start)
                 let end_offset = position_to_offset(lines, r.end)
-                
+
                 let before = result.substring(0, start_offset)
                 let after = result.substring(end_offset, result.len())
                 result = before + change.text + after
@@ -199,23 +199,23 @@ func apply_content_changes(text string, changes vec[text_document_content_change
         }
         i = i + 1
     }
-    
+
     result
 }
 
 func position_to_offset(lines vec[string], pos position) int {
     let offset = 0
     let i = 0
-    
+
     while i < pos.line && i < lines.len() {
         offset = offset + lines[i].len() + 1
         i = i + 1
     }
-    
+
     if pos.line < lines.len() {
         offset = offset + pos.character
     }
-    
+
     offset
 }
 
