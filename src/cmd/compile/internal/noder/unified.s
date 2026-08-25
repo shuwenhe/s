@@ -11,7 +11,7 @@ func run_unified(string path, vec[string] quirks) (noder_output, noder_error) {
     ast_result := parse_source(unit.text)
     if ast_result.is_err() {
         err := ast_result.unwrap_err()
-        return result::err(make_error(code_parse_failed(), err.message, unit.path, err.line, err.column))
+        return make_error(code_parse_failed(), err.message, unit.path, err.line, err.column)
     }
     ast := ast_result.unwrap()
     ir := lower_to_ir(ast)
@@ -20,7 +20,7 @@ func run_unified(string path, vec[string] quirks) (noder_output, noder_error) {
     notes.push("imports=" + to_string(imports.len()))
     notes.push("tokens=" + to_string(tokens.len()))
     notes.push("exports=" + to_string(exports.len()))
-    result::ok(noder_output {
+    noder_output {
         unit: unit,
         tokens: tokens,
         imports: imports,
@@ -28,5 +28,5 @@ func run_unified(string path, vec[string] quirks) (noder_output, noder_error) {
         ir: ir,
         exports: exports,
         notes: notes,
-    })
+    }
 }

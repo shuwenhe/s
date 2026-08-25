@@ -10,7 +10,7 @@ func compile_unit(string source_path, string export_out, string ir_out, string l
     write_ir_file(ir_out, out.ir)?
     links := build_link_symbols(out.ast.pkg, out.exports)
     write_link_file(link_out, emit_link_manifest(links))?
-    result::ok(out)
+    out
 }
 
 func compile_unit_default_paths(string source_path) (noder_output, noder_error) {

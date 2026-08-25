@@ -39,5 +39,5 @@ func lex_source(source_unit unit) (vec[token_item], noder_error) {
         }
         li = li + 1
     }
-    result::ok(out)
+    out
 }
