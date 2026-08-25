@@ -64,7 +64,7 @@ func pow(float base, float exp) float {
     bool negative = exp < 0
     if negative { exp = -exp }
     float result = 1.0
-    while exp >= 1 {
+    for exp >= 1 {
         if mod(exp as int, 2) == 1 {
             result = result * base
         }
@@ -80,7 +80,7 @@ func sqrt(float x) float {
     if x == 0 || x == 1 { return x }
     float guess = x / 2.0
     int i = 0
-    while i < 20 {
+    for i < 20 {
         guess = (guess + x / guess) / 2.0
         i = i + 1
     }
@@ -106,7 +106,7 @@ func exp(float x) float {
     float sum = 1.0
     float rn = 1.0
     int n = 1
-    while n <= 20 {
+    for n <= 20 {
         rn = rn * r
         term = term * n
         n = n + 1
@@ -115,13 +115,13 @@ func exp(float x) float {
     float ri = r
     float fi = 1.0
     int j = 2
-    while j <= 15 {
+    for j <= 15 {
         ri = ri * r
         fi = fi * j
         sum = sum + ri / fi
         j = j + 1
     }
-    while k > 0 {
+    for k > 0 {
         sum = sum * 2.0
         k = k - 1
     }
@@ -133,17 +133,17 @@ func log(float x) float {
     if x <= 0 { return NEG_INF }
     if x == 1 { return 0.0 }
     float y = 0.0
-    while x >= 2.0 {
+    for x >= 2.0 {
         x = x / 2.0
         y = y + LN2
     }
-    while x < 1.0 {
+    for x < 1.0 {
         x = x * 2.0
         y = y - LN2
     }
     float guess = x - 1.0
     int i = 0
-    while i < 15 {
+    for i < 15 {
         float eg = exp(guess)
         guess = guess + 2.0 * (x - eg) / (x + eg)
         i = i + 1
@@ -174,11 +174,11 @@ func sin(float x) float {
     float sum = x
     float xx = x * x
     int i = 1
-    while i <= 10 {
+    for i <= 10 {
         float denom = 1.0
         int j = 1
         int fact_end = 2 * i + 1
-        while j <= fact_end {
+        for j <= fact_end {
             denom = denom * j
             j = j + 1
         }
@@ -206,7 +206,7 @@ func asin(float x) float {
     if x < -1.0 { x = -1.0 }
     float guess = x
     int i = 0
-    while i < 20 {
+    for i < 20 {
         float sg = sin(guess)
         if abs(sg - x) < EPSILON { break }
         float cg = cos(guess)
@@ -234,7 +234,7 @@ func atan(float x) float {
     float term = x
     float sum = x
     int i = 1
-    while i <= 15 {
+    for i <= 15 {
         float coeff = 1.0 / (2.0 * i + 1.0)
         term = term * (-xx)
         sum = sum + term * coeff
@@ -355,13 +355,13 @@ func log_sum_exp(float[] values, int count) float {
     if count <= 0 { return 0.0 }
     float m = values[0]
     int i = 1
-    while i < count {
+    for i < count {
         m = max(m, values[i])
         i = i + 1
     }
     float s = 0.0
     i = 0
-    while i < count {
+    for i < count {
         s = s + exp(values[i] - m)
         i = i + 1
     }

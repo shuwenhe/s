@@ -50,7 +50,7 @@ func add_node(computation_graph mut g, graph_node n) int {
 
 func get_node(computation_graph g, int id) graph_node {
     int i = 0
-    while i < g.node_count {
+    for i < g.node_count {
         if g.nodes[i].id == id { return g.nodes[i] }
         i = i + 1
     }
@@ -62,7 +62,7 @@ func _dfs_topo(int node_idx, bool[] visited, int[] order, int mut order_pos) voi
     visited[node_idx] = true
     graph_node n = get_node(_global_graph, node_idx)
     int i = 0
-    while i < len(n.input_node_ids) {
+    for i < len(n.input_node_ids) {
         _dfs_topo(n.input_node_ids[i], visited, order, order_pos)
         i = i + 1
     }
@@ -75,7 +75,7 @@ func topological_sort() int[] {
     int[] order = new int[_global_graph.node_count]
     int pos = 0
     int i = 0
-    while i < _global_graph.node_count {
+    for i < _global_graph.node_count {
         if !visited[i] {
             _dfs_topo(_global_graph.nodes[i].id, visited, order, pos)
         }
@@ -216,7 +216,7 @@ func ag_softmax(ag_tensor x, int dim) ag_tensor {
     int sz = T.numel(out_data)
     float[] cache = new float[sz]
     int i = 0
-    while i < sz { cache[i] = out_data.data[i]; i = i + 1 }
+    for i < sz { cache[i] = out_data.data[i]; i = i + 1 }
     int nid = register_op("softmax", [x.graph_node_id], out_data, x.requires_grad, cache, [dim])
     ag_tensor { data: out_data, grad: T.zeros_like(out_data), graph_node_id: nid, requires_grad: x.requires_grad, is_leaf: false, name: "softmax" }
 }
@@ -232,7 +232,7 @@ func ag_sigmoid(ag_tensor x) ag_tensor {
     int sz = T.numel(out_data)
     float[] cache = new float[sz]
     int i = 0
-    while i < sz { cache[i] = out_data.data[i]; i = i + 1 }
+    for i < sz { cache[i] = out_data.data[i]; i = i + 1 }
     int nid = register_op("sigmoid", [x.graph_node_id], out_data, x.requires_grad, cache, new int[0])
     ag_tensor { data: out_data, grad: T.zeros_like(out_data), graph_node_id: nid, requires_grad: x.requires_grad, is_leaf: false, name: "sigmoid" }
 }
@@ -242,7 +242,7 @@ func ag_tanh(ag_tensor x) ag_tensor {
     int sz = T.numel(out_data)
     float[] cache = new float[sz]
     int i = 0
-    while i < sz { cache[i] = out_data.data[i]; i = i + 1 }
+    for i < sz { cache[i] = out_data.data[i]; i = i + 1 }
     int nid = register_op("tanh", [x.graph_node_id], out_data, x.requires_grad, cache, new int[0])
     ag_tensor { data: out_data, grad: T.zeros_like(out_data), graph_node_id: nid, requires_grad: x.requires_grad, is_leaf: false, name: "tanh" }
 }
@@ -297,7 +297,7 @@ func ag_cross_entropy(ag_tensor logits, int[] target_classes) ag_tensor {
     int num_classes = logits.data.shape.dims[logits.data.shape.ndim - 1]
     float loss_val = 0.0
     int i = 0
-    while i < batch_size {
+    for i < batch_size {
         int cls = target_classes[i]
         if cls >= 0 && cls < num_classes {
             float p = probs.data[i * num_classes + cls]
@@ -311,9 +311,9 @@ func ag_cross_entropy(ag_tensor logits, int[] target_classes) ag_tensor {
     int psz = T.numel(probs)
     float[] cache = new float[psz + batch_size]
     int j = 0
-    while j < psz { cache[j] = probs.data[j]; j = j + 1 }
+    for j < psz { cache[j] = probs.data[j]; j = j + 1 }
     j = 0
-    while j < batch_size { cache[psz + j] = target_classes[j] as float; j = j + 1 }
+    for j < batch_size { cache[psz + j] = target_classes[j] as float; j = j + 1 }
     int nid = register_op("cross_entropy", [logits.graph_node_id], loss_data, true, cache, target_classes)
     ag_tensor { data: loss_data, grad: T.scalar(0.0), graph_node_id: nid, requires_grad: true, is_leaf: false, name: "ce_loss" }
 }
@@ -339,7 +339,7 @@ func backward(ag_tensor loss_tensor) Map<string, T.tensor> {
     }
     int[] topo = topological_sort()
     int idx = len(topo) - 1
-    while idx >= 0 {
+    for idx >= 0 {
         int nid = topo[idx]
         if nid >= 0 && nid < _global_graph.node_count {
             graph_node node = _global_graph.nodes[nid]
@@ -397,7 +397,7 @@ func compute_backward(graph_node node) void {
         int n = T.numel(inp)
         float[] mask_v = new float[n]
         int i = 0
-        while i < n {
+        for i < n {
             if inp.data[i] > 0 { mask_v[i] = 1.0 }
             else { mask_v[i] = 0.0 }
             i = i + 1
@@ -411,7 +411,7 @@ func compute_backward(graph_node node) void {
         float[] gv = new float[n]
         float SQRT_2_PI = 0.7978845608028654
         int i = 0
-        while i < n {
+        for i < n {
             float x = inp.data[i]
             float inner = SQRT_2_PI * (x + 0.044715 * x * x * x)
             float ei = M.exp(2.0 * inner)
@@ -433,11 +433,11 @@ func compute_backward(graph_node node) void {
         int psz = batch_size * num_classes
         T.tensor grad_input = T.zeros(get_output(node.input_node_ids[0]).shape.dims)
         int i = 0
-        while i < batch_size {
+        for i < batch_size {
             int cls = node.cache_int[i]
             int offset = i * num_classes
             int j = 0
-            while j < num_classes {
+            for j < num_classes {
                 float p = node.cache_float[offset + j]
                 if j == cls { grad_input.data[offset + j] = (p - 1.0) / batch_size as float }
                 else { grad_input.data[offset + j] = p / batch_size as float }
@@ -526,7 +526,7 @@ func accumulate_grad(int target_nid, T.tensor grad_delta) void {
         T.tensor current = _global_graph.nodes[target_nid].grad
         int n = T.numel(current)
         int i = 0
-        while i < n {
+        for i < n {
             current.data[i] = current.data[i] + grad_delta.data[i]
             i = i + 1
         }
@@ -537,7 +537,7 @@ func accumulate_grad(int target_nid, T.tensor grad_delta) void {
 func collect_leaf_gradients() Map[string, T.tensor> {
     Map<string, T.tensor> result = new_map()
     int i = 0
-    while i < _global_graph.node_count {
+    for i < _global_graph.node_count {
         graph_node node = _global_graph.nodes[i]
         if node.is_leaf && node.requires_grad {
             map_put(result, node.name, node.grad)
@@ -568,7 +568,7 @@ func elemwise_sign(T.tensor t) T.tensor {
     int n = T.numel(t)
     float[] v = new float[n]
     int i = 0
-    while i < n {
+    for i < n {
         if t.data[i] > 0 { v[i] = 1.0 }
         else if t.data[i] < 0 { v[i] = -1.0 }
         else { v[i] = 0.0 }
@@ -594,7 +594,7 @@ func register_op(string op_name, int[] input_ids, T.tensor output, bool req_grad
 func cache_to_ints(int[] arr, int start, int count) int[] {
     int[] result = new int[count]
     int i = 0
-    while i < count { result[i] = arr[start + i]; i = i + 1 }
+    for i < count { result[i] = arr[start + i]; i = i + 1 }
     result
 }
 

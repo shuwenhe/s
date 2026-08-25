@@ -33,7 +33,7 @@ func get_parameters(Module m) auto_grad_tensor[] { m.parameters }
 func count_parameters(Module m) int {
     int total = 0
     int i = 0
-    while i < len(m.parameters) {
+    for i < len(m.parameters) {
         total = total + num_parameters(m.parameters[i])
         i = i + 1
     }
@@ -103,18 +103,18 @@ func forward(embedding self, int[] token_ids, int batch_size, int seq_len) auto_
     int num_tokens = batch_size * seq_len
     float[] emb_values = new float[num_tokens * self.embedding_dim]
     int i = 0
-    while i < num_tokens {
+    for i < num_tokens {
         int token_id = token_ids[i]
         if token_id == self.padding_idx {
             int j = 0
-            while j < self.embedding_dim {
+            for j < self.embedding_dim {
                 emb_values[i * self.embedding_dim + j] = 0.0
                 j = j + 1
             }
         } else if token_id >= 0 && token_id < self.num_embeddings {
             int offset = token_id * self.embedding_dim
             int j = 0
-            while j < self.embedding_dim {
+            for j < self.embedding_dim {
                 emb_values[i * self.embedding_dim + j] = self.weight.data.values[offset + j]
                 j = j + 1
             }
@@ -140,7 +140,7 @@ func new_layer_norm(int[] norm_shape, float eps) LayerNorm {
     layer.eps = eps
     int size = 1
     int i = 0
-    while i < len(norm_shape) {
+    for i < len(norm_shape) {
         size = size * norm_shape[i]
         i = i + 1
     }
@@ -187,10 +187,10 @@ func new_mha(int embed_dim, int num_heads, float dropout_p, bool is_causal) Mult
     attn.v_proj = new_linear(embed_dim, embed_dim, false)
     attn.out_proj = new_linear(embed_dim, embed_dim, false)
     int i = 0
-    while i < 4 {
+    for i < 4 {
         Linear proj = [attn.q_proj, attn.k_proj, attn.v_proj, attn.out_proj][i]
         int j = 0
-        while j < len(proj.parameters) {
+        for j < len(proj.parameters) {
             append(attn.parameters, proj.parameters[j])
             j = j + 1
         }
@@ -240,9 +240,9 @@ func forward(MultiHeadAttention self, auto_grad_tensor x, tensor mask) auto_grad
 func make_causal_mask(int seq_len) tensor {
     float[] vals = new float[seq_len * seq_len]
     int i = 0
-    while i < seq_len {
+    for i < seq_len {
         int j = 0
-        while j < seq_len {
+        for j < seq_len {
             if j > i { vals[i * seq_len + j] = NEG_INF }
             else { vals[i * seq_len + j] = 0.0 }
             j = j + 1
@@ -270,17 +270,17 @@ func new_feed_forward(int d_model, int d_ff, float dropout_p, string act_fn) Fee
     ff.norm = new_layer_norm([d_model], 1e-5)
     int[][] linears = [[ff.fc1], [ff.fc2]]
     int li = 0
-    while li < 2 {
+    for li < 2 {
         Linear l = [ff.fc1, ff.fc2][li]
         int pi = 0
-        while pi < len(l.parameters) {
+        for pi < len(l.parameters) {
             append(ff.parameters, l.parameters[pi])
             pi = pi + 1
         }
         li = li + 1
     }
     int ni = 0
-    while ni < 2 {
+    for ni < 2 {
         append(ff.parameters, ff.norm.parameters[ni])
         ni = ni + 1
     }
@@ -421,7 +421,7 @@ func new_sequential(Module[] layers) Sequential {
 func forward(Sequential self, auto_grad_tensor x) auto_grad_tensor {
     auto_grad_tensor output = x
     int i = 0
-    while i < len(self.layers) {
+    for i < len(self.layers) {
         output = forward(self.layers[i], output)
         i = i + 1
     }
@@ -434,7 +434,7 @@ func add_layer(Sequential mut self, Module layer) void {
 
 func init_weights(Module mut m, string scheme) void {
     int i = 0
-    while i < len(m.parameters) {
+    for i < len(m.parameters) {
         if scheme == "xavier_uniform" {
             m.parameters[i].data = xavier_uniform(m.parameters[i].data.shape.dims[:2], m.parameters[i].data.shape.dims[2:])
         }
@@ -454,7 +454,7 @@ func print_module_summary(Module m, string indent) void {
     if m.type_name == "Sequential" {
         Sequential seq = m as Sequential
         int i = 0
-        while i < len(seq.layers) {
+        for i < len(seq.layers) {
             print_module_summary(seq.layers[i], indent + "  ")
             i = i + 1
         }
@@ -464,10 +464,12 @@ func print_module_summary(Module m, string indent) void {
 func count_trainable_params(Module m) int {
     int total = 0
     int i = 0
-    while i < len(m.parameters):
-        if m.parameters[i].requires_grad:
+    for i < len(m.parameters) {
+        if m.parameters[i].requires_grad {
             total = total + m.parameters[i].data.shape.size
+        }
         i = i + 1
+    }
     total
 }
 
