@@ -6,6 +6,10 @@ struct struct_name {
 
 func (receiver_type receiver_name) method_name(parameter_type parameter_name) return_type{}
 
-func (type name) 
+func (type name) {}
 
-
+func function_name(parameter_type* parameter_name) (return_type1, return_type2) {
+    parameter_name.field_name = value
+    parameter_name.field_name = parameter_name.field_name
+    return_value1, return_value2
+}
