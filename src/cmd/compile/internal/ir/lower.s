@@ -149,7 +149,7 @@ func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
     switch expression {
         ir_ast.expr_ir::name(name) : {
             if contains_text(name, "_unlowered") {
-                return result::err("lowering contract violation: placeholder expression remains"
+                return "lowering contract violation: placeholder expression remains"
             }
         }
         ir_ast.expr_ir::call(call_expr) : {
@@ -366,7 +366,7 @@ func lower_package_to_mir(source_file src) (mir_graph, string) {
         i = i + 1
     }
     if fn_count == 0 {
-        return result::err("entry function not found: package has no function body"
+        return "entry function not found: package has no function body"
     }
     picked := option[function_decl].none
     fallback := option[function_decl].none
@@ -391,7 +391,7 @@ func lower_package_to_mir(source_file src) (mir_graph, string) {
         picked = fallback
     }
     if picked.is_none() {
-        return result::err("entry function not found"
+        return "entry function not found"
     }
     graph := lower_function_to_mir(picked.unwrap(), const_entries)
     const_fold_hits := 0
