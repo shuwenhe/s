@@ -26,11 +26,11 @@ struct build_cfg {
 }
 
 func goos() string {
-    let explicit_value = normalize_goos(first_non_empty_goos_env())
+    explicit_value := normalize_goos(first_non_empty_goos_env())
     if explicit_value != "" {
         return explicit_value
     }
-    let inferred_value = infer_goos_from_host_env()
+    inferred_value := infer_goos_from_host_env()
     if inferred_value != "" {
         return inferred_value
     }
@@ -38,11 +38,11 @@ func goos() string {
 }
 
 func goarch() string {
-    let explicit_value = normalize_goarch(first_non_empty_env())
+    explicit_value := normalize_goarch(first_non_empty_env())
     if explicit_value != "" {
         return explicit_value
     }
-    let inferred_value = infer_goarch_from_host_env()
+    inferred_value := infer_goarch_from_host_env()
     if inferred_value != "" {
         return inferred_value
     }
@@ -50,11 +50,11 @@ func goarch() string {
 }
 
 func check() string {
-    let os = goos()
+    os := goos()
     if !is_supported_goos(os) {
         return "unsupported goos: " + os
     }
-    let arch = goarch()
+    arch := goarch()
     if !is_supported_goarch(arch) {
         return "unsupported goarch: " + arch
     }
@@ -62,16 +62,16 @@ func check() string {
 }
 
 func first_non_empty_goos_env() string {
-    let names = vec[string]()
+    names := vec[string]()
     names.push("S_GOOS")
     names.push("s_goos")
     names.push("GOOS")
-    let i = 0
+    i := 0
     while i < names.len() {
-        let value = get(names[i])
+        value := get(names[i])
         switch value {
             some(raw) : {
-                let text = trim_spaces(raw)
+                text := trim_spaces(raw)
                 if text != "" {
                     return text
                 }
@@ -84,17 +84,17 @@ func first_non_empty_goos_env() string {
 }
 
 func infer_goos_from_host_env() string {
-    let names = vec[string]()
+    names := vec[string]()
     names.push("OSTYPE")
     names.push("OS")
     names.push("VSCODE_CLI_OS")
     names.push("MSYSTEM")
-    let i = 0
+    i := 0
     while i < names.len() {
-        let value = get(names[i])
+        value := get(names[i])
         switch value {
             some(raw) : {
-                let mapped = map_host_os(raw)
+                mapped := map_host_os(raw)
                 if mapped != "" {
                     return mapped
                 }
@@ -107,7 +107,7 @@ func infer_goos_from_host_env() string {
 }
 
 func normalize_goos(string os) string {
-    let mapped = map_host_os(os)
+    mapped := map_host_os(os)
     if mapped != "" {
         return mapped
     }
@@ -115,7 +115,7 @@ func normalize_goos(string os) string {
 }
 
 func map_host_os(string raw) string {
-    let text = trim_spaces(raw)
+    text := trim_spaces(raw)
     if contains_token(text, "linux") {
         return "linux"
     }
@@ -143,16 +143,16 @@ func is_supported_goos(string os) bool {
 }
 
 func first_non_empty_env() string {
-    let names = vec[string]()
+    names := vec[string]()
     names.push("S_GOARCH")
     names.push("s_goarch")
     names.push("GOARCH")
-    let i = 0
+    i := 0
     while i < names.len() {
-        let value = get(names[i])
+        value := get(names[i])
         switch value {
             some(raw) : {
-                let text = trim_spaces(raw)
+                text := trim_spaces(raw)
                 if text != "" {
                     return text
                 }
@@ -165,17 +165,17 @@ func first_non_empty_env() string {
 }
 
 func infer_goarch_from_host_env() string {
-    let names = vec[string]()
+    names := vec[string]()
     names.push("HOSTTYPE")
     names.push("MACHTYPE")
     names.push("PROCESSOR_ARCHITECTURE")
     names.push("VSCODE_CLI_ARCH")
-    let i = 0
+    i := 0
     while i < names.len() {
-        let value = get(names[i])
+        value := get(names[i])
         switch value {
             some(raw) : {
-                let mapped = map_host_arch(raw)
+                mapped := map_host_arch(raw)
                 if mapped != "" {
                     return mapped
                 }
@@ -188,7 +188,7 @@ func infer_goarch_from_host_env() string {
 }
 
 func normalize_goarch(string arch) string {
-    let mapped = map_host_arch(arch)
+    mapped := map_host_arch(arch)
     if mapped != "" {
         return mapped
     }
@@ -196,7 +196,7 @@ func normalize_goarch(string arch) string {
 }
 
 func map_host_arch(string raw) string {
-    let text = trim_spaces(raw)
+    text := trim_spaces(raw)
     if contains_token(text, "aarch64") || contains_token(text, "arm64") {
         return "arm64"
     }
@@ -234,8 +234,8 @@ func contains_token(string text, string token) bool {
     if len(text) < len(token) {
         return false
     }
-    let i = 0
-    let limit = len(text) - len(token)
+    i := 0
+    limit := len(text) - len(token)
     while i <= limit {
         if slice(text, i, i + len(token)) == token {
             return true
@@ -246,8 +246,8 @@ func contains_token(string text, string token) bool {
 }
 
 func trim_spaces(string text) string {
-    let start = 0
-    let end = len(text)
+    start := 0
+    end := len(text)
     while start < end && is_space(slice(text, start, start + 1)) {
         start = start + 1
     }

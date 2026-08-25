@@ -14,11 +14,11 @@ struct abi_layout {
 }
 
 func assign_abi_layout(string arch, int params, int results) abi_layout {
-    let int_regs = arch_int_arg_regs(arch)
-    let out_params = vec[abi_location]()
-    let out_results = vec[abi_location]()
-    let stack_off = 0
-    let i = 0
+    int_regs := arch_int_arg_regs(arch)
+    out_params := vec[abi_location]()
+    out_results := vec[abi_location]()
+    stack_off := 0
+    i := 0
     while i < params {
         if i < int_regs {
             out_params.push(abi_location { in_reg: true, place: "r" + to_string(i), stack_offset: -1 })
@@ -28,7 +28,7 @@ func assign_abi_layout(string arch, int params, int results) abi_layout {
         }
         i = i + 1
     }
-    let j = 0
+    j := 0
     while j < results {
         if j < int_regs {
             out_results.push(abi_location { in_reg: true, place: "ret" + to_string(j), stack_offset: -1 })

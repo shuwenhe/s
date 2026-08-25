@@ -32,6 +32,6 @@ func ends_with_slash(string text) bool {
     if text == "" {
         return false
     }
-    let last = text[text.len() - 1]
+    last := text[text.len() - 1]
     last == "/" || last == "\\"
 }

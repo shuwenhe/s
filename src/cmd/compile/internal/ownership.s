@@ -10,11 +10,11 @@ func make_decision(string ty) string {
 }
 
 func make_plan(vec[string] type_env) vec[string] {
-    let plan = vec[string]()
-    let i = 0
+    plan := vec[string]()
+    i := 0
     while i < type_env.len() {
-        let ty = type_env[i]
-        let next_i = i + 1
+        ty := type_env[i]
+        next_i := i + 1
         i = next_i
         plan.push(make_decision(ty))
     }

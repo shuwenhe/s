@@ -6,11 +6,11 @@ use internal.buildcfg.goarch as buildcfg_goarch
 use std.vec.vec
 
 func main(vec[string] args) int {
-    let buildcfg_err = buildcfg_check()
+    buildcfg_err := buildcfg_check()
     if buildcfg_err != "" {
         return 2
     }
-    let arch_err = arch_dispatch_init(buildcfg_goarch())
+    arch_err := arch_dispatch_init(buildcfg_goarch())
     if arch_err != "" {
         return 2
     }

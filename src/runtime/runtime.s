@@ -14,7 +14,7 @@ func runtime_init() () {
 }
 
 func set_max_procs(int n) int {
-    let old = _sched.num_p
+    old := _sched.num_p
     if n > 0 {
         _sched.num_p = n
     }

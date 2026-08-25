@@ -29,12 +29,12 @@ func malloc(int size, int type_id) int {
     if size <= 0 {
         return -1
     }
-    let actual_size = if size <= MAX_SMALL_SIZE {
+    actual_size := if size <= MAX_SMALL_SIZE {
         __mem_size_class(size)
     } else {
         size
     }
-    let obj_id = __mem_os_alloc(actual_size)
+    obj_id := __mem_os_alloc(actual_size)
     if obj_id < 0 {
         return -1
     }
@@ -50,7 +50,7 @@ func malloc(int size, int type_id) int {
 }
 
 func free_obj(int obj_id) () {
-    let hdr = __mem_obj_read_header(obj_id)
+    hdr := __mem_obj_read_header(obj_id)
     heap_alloc_bytes = heap_alloc_bytes - hdr.size
     if heap_alloc_bytes < 0 {
         heap_alloc_bytes = 0

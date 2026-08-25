@@ -21,7 +21,7 @@ func new_semaphore(int initial) Semaphore {
 
 func (self: &mut Semaphore) wait() () {
         while true {
-            let old = __atomic_load(self.count)
+            old := __atomic_load(self.count)
             if old > 0 {
                 if __atomic_cas(self.count, old, old - 1) {
                     return
@@ -38,7 +38,7 @@ func (self: &mut Semaphore) signal() () {
     }
 
 func (self: &mut Semaphore) try_wait() bool {
-        let old = __atomic_load(self.count)
+        old := __atomic_load(self.count)
         if old > 0 {
             __atomic_cas(self.count, old, old - 1)
         } else {
@@ -105,7 +105,7 @@ func (self: &mut RWMutex) rlock() () {
     }
 
 func (self: &mut RWMutex) runlock() () {
-        let prev = __atomic_add(self.readers, -1)
+        prev := __atomic_add(self.readers, -1)
         if prev == 1 && __atomic_load(self.writer) == 1 {
             self.write_mu.sem.signal()
         }

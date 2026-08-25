@@ -24,11 +24,11 @@ func mark_object(int obj_id) bool {
 }
 
 func mark_roots() () {
-    let roots = vec[int]()
+    roots := vec[int]()
     __gc_scan_roots(roots)
-    let i = 0
+    i := 0
     while i < roots.len() {
-        let root_id = roots.get(i).unwrap_or(-1)
+        root_id := roots.get(i).unwrap_or(-1)
         if root_id >= 0 {
             if mark_object(root_id) {
                 mark_gray_queue.push(root_id)
@@ -41,15 +41,15 @@ func mark_roots() () {
 
 func drain_mark_queue() () {
     while !mark_gray_queue.is_empty() {
-        let obj_opt = mark_gray_queue.pop()
-        let obj_id = switch obj_opt {
+        obj_opt := mark_gray_queue.pop()
+        obj_id := switch obj_opt {
             option::some(id) : id,
             option::none     : break,
         }
-        let children = __gc_get_children(obj_id)
-        let j = 0
+        children := __gc_get_children(obj_id)
+        j := 0
         while j < children.len() {
-            let child_id = children.get(j).unwrap_or(-1)
+            child_id := children.get(j).unwrap_or(-1)
             if child_id >= 0 {
                 if mark_object(child_id) {
                     mark_gray_queue.push(child_id)

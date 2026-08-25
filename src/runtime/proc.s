@@ -57,9 +57,9 @@ func sroutine_spawn(int entry_id, string name) int {
 		return -1
 	}
     _sched.mu.lock()
-    let sroutine_id = _sched.next_sroutine_id
+    sroutine_id := _sched.next_sroutine_id
     _sched.next_sroutine_id = _sched.next_sroutine_id + 1
-    let g = Sroutine {
+    g := Sroutine {
         id:         sroutine_id,
         status:     SROUTINE_RUNNABLE,
         name:       name,
@@ -82,7 +82,7 @@ func sroutine_spawn(int entry_id, string name) int {
 }
 
 func sroutine_yield() () {
-    let cur = __sroutine_current_id()
+    cur := __sroutine_current_id()
     if cur < 0 { return }
     _sched.mu.lock()
     sroutine_transition(cur, SROUTINE_RUNNABLE, SROUTINE_PARK_NONE)
@@ -92,7 +92,7 @@ func sroutine_yield() () {
 }
 
 func sroutine_park(int reason) () {
-    let cur = __sroutine_current_id()
+    cur := __sroutine_current_id()
     if cur < 0 { return }
     _sched.mu.lock()
     sroutine_transition(cur, SROUTINE_WAITING, reason)
@@ -109,7 +109,7 @@ func sroutine_ready(int sroutine_id) () {
 }
 
 func schedule() () {
-    let next_sroutine_id = find_runnable()
+    next_sroutine_id := find_runnable()
     if next_sroutine_id < 0 {
         m_idle()
         return
@@ -120,7 +120,7 @@ func schedule() () {
 func find_runnable() int {
     _sched.mu.lock()
     if !_sched.global_q.is_empty() {
-        let sroutine_id = _sched.global_q[0]
+        sroutine_id := _sched.global_q[0]
         if sroutine_id >= 0 {
             _sched.global_q[0] = -1
             _sched.mu.unlock()
@@ -132,7 +132,7 @@ func find_runnable() int {
 }
 
 func run_sroutine(int sroutine_id) () {
-    let cur = __sroutine_current_id()
+    cur := __sroutine_current_id()
     sroutine_transition(sroutine_id, SROUTINE_RUNNING, SROUTINE_PARK_NONE)
     __sroutine_context_switch(cur, sroutine_id)
 }
@@ -140,7 +140,7 @@ func run_sroutine(int sroutine_id) () {
 func m_idle() () {
     var i = 0
     while i < 100 {
-        let next = find_runnable()
+        next := find_runnable()
         if next >= 0 {
             run_sroutine(next)
             return
@@ -152,9 +152,9 @@ func m_idle() () {
 
 func try_wakeup_idle_m() () {
     if _sched.global_q.len() > 0 {
-        let mid = _sched.next_mid
+        mid := _sched.next_mid
         _sched.next_mid = _sched.next_mid + 1
-        let m = M { id: mid, p_id: -1, current_sroutine: -1, spinning: false }
+        m := M { id: mid, p_id: -1, current_sroutine: -1, spinning: false }
         _sched.ms.push(m)
         __runtime_thread_wake(mid)
     }
@@ -163,12 +163,12 @@ func try_wakeup_idle_m() () {
 func sroutine_transition(int sroutine_id, int status, int park_reason) bool {
     var i = 0
     while i < _sched.task.len() {
-        let g = _sched.task[i]
+        g := _sched.task[i]
         if g.id == sroutine_id {
             if !sroutine_state_can_transition(g.status, status) {
                 return false
             }
-            let updated = Sroutine {
+            updated := Sroutine {
                 id:         g.id,
                 status:     status,
                 name:       g.name,
@@ -197,10 +197,10 @@ struct SroutineInfo {
 }
 
 func sroutine_list() vec[SroutineInfo] {
-    let result = vec[SroutineInfo]()
+    result := vec[SroutineInfo]()
     var i = 0
     while i < _sched.task.len() {
-        let g = _sched.task[i]
+        g := _sched.task[i]
         if g.id >= 0 {
             result.push(SroutineInfo {
                 id:     g.id,
@@ -214,10 +214,10 @@ func sroutine_list() vec[SroutineInfo] {
 }
 
 func runtime_init() () {
-    let num = __runtime_num_cpu()
+    num := __runtime_num_cpu()
     var i = 0
     while i < num {
-        let p = P {
+        p := P {
             id:         i,
             current_sroutine:      -1,
             local_q:    vec[int](),
@@ -227,7 +227,7 @@ func runtime_init() () {
         _sched.ps.push(p)
         i = i + 1
     }
-    let m0 = M { id: 0, p_id: 0, current_sroutine: -1, spinning: false }
+    m0 := M { id: 0, p_id: 0, current_sroutine: -1, spinning: false }
     _sched.ms.push(m0)
 }
 

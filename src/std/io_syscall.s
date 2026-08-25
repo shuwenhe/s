@@ -14,7 +14,7 @@ func allocate_read_buffer() []byte {
 }
 
 func file_open_read(string path) (FileHandle, int) {
-    let fd = syscall.open_file(path, syscall.O_RDONLY, 0)
+    fd := syscall.open_file(path, syscall.O_RDONLY, 0)
     if fd < 0 {
         return FileHandle{fd: -1, path: path, mode: "r"}, fd
     }
@@ -22,7 +22,7 @@ func file_open_read(string path) (FileHandle, int) {
 }
 
 func file_open_write(string path) (FileHandle, int) {
-    let fd = syscall.open_file(path, 
+    fd := syscall.open_file(path, 
         syscall.O_WRONLY | syscall.O_CREAT | syscall.O_TRUNC, 
         0o644)
     if fd < 0 {
@@ -39,16 +39,16 @@ func file_close(FileHandle f) int {
 }
 
 func file_read_string(string path) (string, int) {
-    let f, err = file_open_read(path)
+    f, err := file_open_read(path)
     if err != 0 {
         return "", err
     }
-    let _ = file_close(f)
+    _ := file_close(f)
     "", 0
 }
 
 func file_write_string(string path, string content) int {
-    let f, err = file_open_write(path)
+    f, err := file_open_write(path)
     if err != 0 {
         return err
     }
@@ -56,7 +56,7 @@ func file_write_string(string path, string content) int {
 }
 
 func file_read_lines(string path, func(string) int callback) int {
-    let f, err = file_open_read(path)
+    f, err := file_open_read(path)
     if err != 0 {
         return err
     }
@@ -64,7 +64,7 @@ func file_read_lines(string path, func(string) int callback) int {
 }
 
 func file_append(string path, string content) int {
-    let fd = syscall.open_file(path, 
+    fd := syscall.open_file(path, 
         syscall.O_WRONLY | syscall.O_APPEND | syscall.O_CREAT,
         0o644)
     if fd < 0 {
@@ -74,11 +74,11 @@ func file_append(string path, string content) int {
 }
 
 func file_exists(string path) bool {
-    let f, err = file_open_read(path)
+    f, err := file_open_read(path)
     if err != 0 {
         return false
     }
-    let _ = file_close(f)
+    _ := file_close(f)
     return true
 }
 
@@ -99,16 +99,16 @@ func mkdir(string path) int {
 }
 
 func files_equal(string path1, string path2) bool {
-    let f1, err1 = file_open_read(path1)
+    f1, err1 := file_open_read(path1)
     if err1 != 0 {
         return false
     }
-    defer { let _ = file_close(f1) }
-    let f2, err2 = file_open_read(path2)
+    defer { _ := file_close(f1) }
+    f2, err2 := file_open_read(path2)
     if err2 != 0 {
         return false
     }
-    defer { let _ = file_close(f2) }
+    defer { _ := file_close(f2) }
     true
 }
 

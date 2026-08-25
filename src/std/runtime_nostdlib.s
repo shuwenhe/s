@@ -12,11 +12,11 @@ const STDOUT_FD = 1
 const STDERR_FD = 2
 
 func exit(int code) {
-    let _ = syscall_1(SYS_EXIT, code)
+    _ := syscall_1(SYS_EXIT, code)
 }
 
 func write_to_fd(int fd, string text) int {
-    let count = len(text)
+    count := len(text)
     if count == 0 {
         return 0
     }
@@ -32,13 +32,13 @@ func stderr_write(string text) int {
 }
 
 func println(string text) {
-    let _ = stdout_write(text)
-    let _ = stdout_write("\n")
+    _ := stdout_write(text)
+    _ := stdout_write("\n")
 }
 
 func eprintln(string text) {
-    let _ = stderr_write(text)
-    let _ = stderr_write("\n")
+    _ := stderr_write(text)
+    _ := stderr_write("\n")
 }
 var heap_top = 0x10000000  
 
@@ -46,9 +46,9 @@ func malloc(int size) int {
     if size <= 0 {
         return 0
     }
-    let ptr = heap_top
+    ptr := heap_top
     heap_top = heap_top + size
-    let remainder = heap_top % 16
+    remainder := heap_top % 16
     if remainder != 0 {
         heap_top = heap_top + (16 - remainder)
     }

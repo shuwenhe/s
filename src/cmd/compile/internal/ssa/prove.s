@@ -16,7 +16,7 @@ func fact_for(int id, bool z, bool nz) prove_fact {
 }
 
 func find_fact(vec[prove_fact] facts, int id) int {
-    let i = 0
+    i := 0
     while i < facts.len() {
         if facts[i].value_id == id {
             return i
@@ -27,22 +27,22 @@ func find_fact(vec[prove_fact] facts, int id) int {
 }
 
 func fact_zero(vec[prove_fact] facts, int id) bool {
-    let i = find_fact(facts, id)
+    i := find_fact(facts, id)
     i >= 0 && facts[i].known_zero
 }
 
 func fact_non_zero(vec[prove_fact] facts, int id) bool {
-    let i = find_fact(facts, id)
+    i := find_fact(facts, id)
     i >= 0 && facts[i].known_non_zero
 }
 
 func run_prove(ssa_func f) vec[prove_fact] {
-    let facts = vec[prove_fact]()
-    let i = 0
+    facts := vec[prove_fact]()
+    i := 0
     while i < f.values.len() {
-        let v = f.values[i]
-        let z = false
-        let nz = false
+        v := f.values[i]
+        z := false
+        nz := false
         if v.op == op_const() {
             z = v.literal == "0"
             nz = v.literal != "" && v.literal != "0"

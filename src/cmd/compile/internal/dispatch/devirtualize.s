@@ -5,7 +5,7 @@ use std.prelude.len
 use std.prelude.slice
 
 func estimate_devirtualized_sites(string mir_text) int {
-    let candidates = count_token(mir_text, "dyn") + count_token(mir_text, "iface")
+    candidates := count_token(mir_text, "dyn") + count_token(mir_text, "iface")
     if candidates <= 0 {
         return 0
     }
@@ -13,11 +13,11 @@ func estimate_devirtualized_sites(string mir_text) int {
 }
 
 func estimate_devirtualized_sites_graph(mir_graph graph) int {
-    let candidates = 0
-    let i = 0
+    candidates := 0
+    i := 0
     while i < graph.blocks.len() {
-        let block = graph.blocks[i]
-        let j = 0
+        block := graph.blocks[i]
+        j := 0
         while j < block.statements.len() {
             switch block.statements[j] {
                 mir_statement::eval(eval_stmt) : {
@@ -46,8 +46,8 @@ func count_token(string text, string token) int {
     if token == "" {
         return 0
     }
-    let total = 0
-    let i = 0
+    total := 0
+    i := 0
     while i <= len(text) - len(token) {
         if slice(text, i, i + len(token)) == token {
             total = total + 1
