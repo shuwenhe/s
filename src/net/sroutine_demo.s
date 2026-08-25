@@ -1,6 +1,5 @@
 package src.net.sroutine_demo
 
-
 func worker(int task_channel, int done_channel, int worker_id) int {
     let task = chan_recv(task_channel);
     println("worker processed task");

@@ -1047,18 +1047,18 @@ static ast_node *parse_assign_declare_statement(parser *p) {
 	}
 	node->as.let_stmt.mutable = 0;
 	node->as.let_stmt.type_name = NULL;
-	
+
 	if (!expect(p, TOKEN_ASSIGN_DECLARE, ":=")) {
 		ast_free(node);
 		return NULL;
 	}
-	
+
 	node->as.let_stmt.value = parse_expression(p);
 	if (!node->as.let_stmt.value) {
 		ast_free(node);
 		return NULL;
 	}
-	
+
 	if (!consume_optional_semicolon(p)) {
 		ast_free(node);
 		return NULL;
@@ -1296,7 +1296,7 @@ static ast_node *parse_for_init(parser *p) {
 	if (check(p, TOKEN_SEMICOLON)) {
 		return NULL;
 	}
-	// Handle := declarations in for loops
+
 	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
 		return parse_assign_declare_statement(p);
 	}
@@ -1697,10 +1697,7 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 
 	{
 		size_t lt = strlen(*out_type);
-		/* `mut` qualifies the binding, not the declared value type.  The
-		 * lexer/parser currently joins type tokens without whitespace, so a
-		 * parameter such as `RawChan mut ch` arrives here as `RawChanmut`.
-		 * Keep the semantic type canonical for field and method lookup. */
+
 		if (lt > 3 && strcmp(*out_type + lt - 3, "mut") == 0) {
 			(*out_type)[lt - 3] = '\0';
 			lt -= 3;
@@ -1765,29 +1762,81 @@ static ast_node *parse_fn_statement(parser *p) {
 		size_t type_start;
 		const char *base_type;
 		char method_name[256];
-		if (!expect(p, TOKEN_IDENTIFIER, "receiver name")) {
-			ast_free(node);
-			return NULL;
-		}
-		receiver_name = dup_cstr(prev(p)->lexeme);
-		if (!receiver_name) {
-			free(receiver_name);
-			ast_free(node);
-			return NULL;
-		}
 
-		match(p, TOKEN_COLON);
+		size_t saved_pos = p->current;
+		int try_new_format = 1;
+
 		type_start = p->current;
-		while (!is_at_end(p) && !check(p, TOKEN_RPAREN)) {
+
+		if (check(p, TOKEN_STAR) || check(p, TOKEN_AMP)) {
 			advance_tok(p);
 		}
-		if (p->current == type_start) {
-			parse_error(p, peek(p), "expected receiver type");
-			free(receiver_name);
-			ast_free(node);
-			return NULL;
+
+		if (!check(p, TOKEN_IDENTIFIER)) {
+
+			try_new_format = 0;
+			p->current = saved_pos;
+		} else {
+
+			size_t type_end = p->current + 1;
+			advance_tok(p);
+
+			if (check(p, TOKEN_IDENTIFIER)) {
+
+				receiver_type = join_lexemes_range(p->tokens, type_start, type_end);
+				receiver_name = dup_cstr(peek(p)->lexeme);
+				advance_tok(p);
+
+				if (!check(p, TOKEN_RPAREN)) {
+
+					try_new_format = 0;
+					free(receiver_name);
+					free(receiver_type);
+					p->current = saved_pos;
+					receiver_name = NULL;
+					receiver_type = NULL;
+				} else {
+
+					try_new_format = 1;
+				}
+			} else if (check(p, TOKEN_COLON)) {
+
+				try_new_format = 0;
+				p->current = saved_pos;
+			} else {
+
+				try_new_format = 0;
+				p->current = saved_pos;
+			}
 		}
-		receiver_type = join_lexemes_range(p->tokens, type_start, p->current);
+
+		if (!try_new_format) {
+
+			if (!expect(p, TOKEN_IDENTIFIER, "receiver name")) {
+				ast_free(node);
+				return NULL;
+			}
+			receiver_name = dup_cstr(prev(p)->lexeme);
+			if (!receiver_name) {
+				free(receiver_name);
+				ast_free(node);
+				return NULL;
+			}
+
+			match(p, TOKEN_COLON);
+			type_start = p->current;
+			while (!is_at_end(p) && !check(p, TOKEN_RPAREN)) {
+				advance_tok(p);
+			}
+			if (p->current == type_start) {
+				parse_error(p, peek(p), "expected receiver type");
+				free(receiver_name);
+				ast_free(node);
+				return NULL;
+			}
+			receiver_type = join_lexemes_range(p->tokens, type_start, p->current);
+		}
+
 		if (!receiver_type || !expect(p, TOKEN_RPAREN, ")") ||
 			!expect(p, TOKEN_IDENTIFIER, "method name")) {
 			free(receiver_name);
@@ -1904,17 +1953,52 @@ static ast_node *parse_fn_statement(parser *p) {
 	}
 
 	if (check(p, TOKEN_LPAREN)) {
+		size_t ret_type_start;
+		int paren_depth;
+
 		advance_tok(p);
-		if (!expect(p, TOKEN_RPAREN, ")")) {
+		ret_type_start = p->current;
+		paren_depth = 1;
+
+		while (paren_depth > 0 && !is_at_end(p)) {
+			if (check(p, TOKEN_LPAREN)) {
+				paren_depth++;
+				advance_tok(p);
+			} else if (check(p, TOKEN_RPAREN)) {
+				paren_depth--;
+				if (paren_depth == 0) {
+					break;
+				}
+				advance_tok(p);
+			} else {
+				advance_tok(p);
+			}
+		}
+
+		if (paren_depth != 0) {
+			error_set(p->err, 4, peek(p)->pos.line, peek(p)->pos.column, "unmatched parenthesis");
 			ast_free(node);
 			return NULL;
 		}
-		ret_type = dup_cstr("()");
+
+		if (ret_type_start < p->current) {
+			ret_type = join_lexemes_range(p->tokens, ret_type_start, p->current);
+		} else {
+			ret_type = dup_cstr("()");
+		}
+
 		if (!ret_type) {
 			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
 			ast_free(node);
 			return NULL;
 		}
+
+		if (!expect(p, TOKEN_RPAREN, ")")) {
+			free(ret_type);
+			ast_free(node);
+			return NULL;
+		}
+
 		free(node->as.fn_stmt.return_type);
 		node->as.fn_stmt.return_type = ret_type;
 	} else {
@@ -2099,12 +2183,11 @@ static ast_node *parse_statement(parser *p) {
 	if (check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "sroutine") == 0) {
 		return parse_sroutine_statement(p);
 	}
-	
-	// Handle := declarations (identifier := expression)
+
 	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
 		return parse_assign_declare_statement(p);
 	}
-	
+
 	if (match(p, TOKEN_RETURN)) {
 		return parse_return_statement(p);
 	}
@@ -2139,7 +2222,7 @@ static ast_node *parse_top_level(parser *p) {
 	if (match(p, TOKEN_USE)) {
 		return parse_use_decl(p);
 	}
-	// Handle := global declarations
+
 	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
 		return parse_assign_declare_statement(p);
 	}

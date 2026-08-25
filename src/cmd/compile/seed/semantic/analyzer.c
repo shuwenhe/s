@@ -853,7 +853,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			*out_type = TYPE_ARRAY;
 			return 1;
 		case AST_STRUCT_EXPR:
-			 
+
 			if (node->as.struct_expr.type_name) {
 				char **f_types = NULL;
 				size_t fc = node->as.struct_expr.field_count;
@@ -869,7 +869,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					}
 					if (f_types) f_types[i] = dup_cstr(rhs_type ? rhs_type : TYPE_ANY);
 				}
-				 
+
 				if (node->as.struct_expr.field_names && node->as.struct_expr.field_count > 0) {
 					if (!register_type_fields(node->as.struct_expr.type_name, node->as.struct_expr.field_names, f_types, node->as.struct_expr.field_count)) {
 						for (size_t j = 0; j < node->as.struct_expr.field_count; j++) if (f_types && f_types[j]) free(f_types[j]);
@@ -900,19 +900,19 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			lookup_type = lhs_type;
 			if (lookup_type && strncmp(lookup_type, "&mut", 4) == 0) lookup_type += 4;
 			else if (lookup_type && lookup_type[0] == '&') lookup_type++;
-			 
+
 			if (node->as.member_expr.member && strcmp(node->as.member_expr.member, "backbone_optimizers") == 0) {
 				fprintf(stderr, "DEBUG_MEMBER member='%s' base_type='%s' at %d:%d\n",
 					node->as.member_expr.member,
 					lhs_type ? lhs_type : TYPE_ANY,
 					(int)node->pos.line, (int)node->pos.column);
 			}
-			 
+
 			if (lhs_type) {
-				 
+
 				const char *resolved = NULL;
 				if (strncmp(lhs_type, "[]", 2) == 0) {
-					 
+
 					char *elem = (char *)lhs_type + 2;
 					resolved = lookup_field_type(elem, node->as.member_expr.member);
 				}
@@ -921,10 +921,10 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					*out_type = resolved;
 					return 1;
 				}
-				 
+
 				ast_node *se = find_struct_literal(ctx, lookup_type);
 				if (se) {
-					 
+
 					size_t fc = se->as.struct_expr.field_count;
 					char **f_names = NULL;
 					char **f_types = NULL;
@@ -942,12 +942,12 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					register_type_fields(lhs_type, f_names, f_types, fc);
 					for (size_t ii = 0; ii < fc; ii++) { free(f_names[ii]); free(f_types[ii]); }
 					free(f_names); free(f_types);
-					 
+
 					resolved = lookup_field_type(lhs_type, node->as.member_expr.member);
 					if (resolved) { *out_type = resolved; return 1; }
 				}
 			}
-			 
+
 			*out_type = TYPE_ANY;
 			return 1;
 		case AST_INDEX_EXPR:
@@ -962,7 +962,6 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					"index expression expects int index, got '%s'", rhs_type ? rhs_type : TYPE_ANY);
 				return 0;
 			}
-			 
 
 			if (lhs_type && strcmp(lhs_type, TYPE_STRING) == 0) {
 				*out_type = TYPE_INT;
@@ -970,7 +969,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			}
 			if (lhs_type && strncmp(lhs_type, "[]", 2) == 0) {
 				*out_type = dup_cstr(lhs_type + 2);
-				 
+
 				if (node->as.index_expr.object && node->as.index_expr.object->kind == AST_MEMBER_EXPR &&
 					node->as.index_expr.object->as.member_expr.member &&
 					strcmp(node->as.index_expr.object->as.member_expr.member, "backbone_optimizers") == 0) {
@@ -1436,14 +1435,14 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						return 0;
 					}
 					if (status == 0) {
-						 
+
 						symbol *existing = scope_lookup_current(ctx->current_scope, decl->as.use_decl.alias);
 						if (!existing || existing->kind != SYMBOL_IMPORT) {
 							error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
 								"redefinition of import alias '%s'", decl->as.use_decl.alias);
 							return 0;
 						}
-						 
+
 					}
 				}
 				if (decl->kind == AST_USE_DECL && decl->as.use_decl.selector_count > 0) {
@@ -1481,9 +1480,9 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 									"redefinition of import alias '%s'", decl->as.use_decl.selectors[j]);
 								return 0;
 							}
-							 
+
 						}
-						 
+
 					}
 				}
 			}
@@ -1502,11 +1501,11 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_BLOCK:
 			return analyze_block_with_new_scope(ctx, node);
 		case AST_LET_STMT:
-			 
+
 			if (node->as.let_stmt.type_name && strcmp(node->as.let_stmt.type_name, "struct") == 0 &&
 				node->as.let_stmt.value && node->as.let_stmt.value->kind == AST_STRUCT_EXPR) {
 				ast_node *stype = node->as.let_stmt.value;
-				 
+
 				size_t fc = stype->as.struct_expr.field_count;
 				char **f_names = NULL;
 				char **f_types = NULL;
@@ -1521,7 +1520,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				}
 				for (i = 0; i < fc; i++) {
 					f_names[i] = dup_cstr(stype->as.struct_expr.field_names[i]);
-					 
+
 					ast_node *tv = stype->as.struct_expr.field_values.data[i];
 					if (tv && tv->kind == AST_STRING_EXPR && tv->as.string_expr.literal) {
 						f_types[i] = dup_cstr(tv->as.string_expr.literal);
@@ -1535,14 +1534,14 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						return 0;
 					}
 				}
-				 
+
 				if (!register_type_fields(node->as.let_stmt.name, f_names, f_types, fc)) {
 					for (size_t j = 0; j < fc; j++) { free(f_names[j]); free(f_types[j]); }
 					free(f_names); free(f_types);
 					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
 					return 0;
 				}
-				 
+
 				for (size_t jj = 0; jj < fc; jj++) {
 					fprintf(stderr, "DEBUG_REGISTER type='%s' field='%s' field_type='%s' at %d:%d\n",
 						node->as.let_stmt.name, f_names[jj], f_types[jj], (int)node->pos.line, (int)node->pos.column);
@@ -1555,7 +1554,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			if (!analyze_expr(ctx, node->as.let_stmt.value, &expr_type)) {
 				return 0;
 			}
-			 
+
 			if (node->as.let_stmt.name && strcmp(node->as.let_stmt.name, "layer_opt") == 0) {
 				int rhs_kind = -1;
 				if (node->as.let_stmt.value) rhs_kind = (int)node->as.let_stmt.value->kind;
@@ -1579,17 +1578,17 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						idx_type ? idx_type : TYPE_ANY);
 				}
 			}
-			 
+
 			if (node->as.let_stmt.type_name && node->as.let_stmt.type_name[0] != '\0') {
 				const char *decl_type = node->as.let_stmt.type_name;
-				 
+
 				fprintf(stderr, "DEBUG_LET '%s' declared='%s' init_type='%s' at %d:%d\n",
 					node->as.let_stmt.name ? node->as.let_stmt.name : "<anon>",
 					decl_type ? decl_type : TYPE_ANY,
 					expr_type ? expr_type : TYPE_ANY,
 					(int)node->pos.line, (int)node->pos.column);
 				if (!is_type_assignable(decl_type, expr_type)) {
-					 
+
 					fprintf(stderr, "DEBUG_LET_ERROR name='%s' decl_type='%s' init_type='%s' rhs_kind=%d at %d:%d\n",
 						node->as.let_stmt.name ? node->as.let_stmt.name : "<anon>",
 						decl_type ? decl_type : TYPE_ANY,
@@ -1675,7 +1674,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				return 0;
 			}
 			if (!is_type_assignable(ctx->current_return_type, expr_type)) {
-				 
+
 				fprintf(stderr, "DEBUG_RETURN at %d:%d expected='%s' actual='%s'\n",
 					(int)node->pos.line, (int)node->pos.column,
 					ctx->current_return_type ? ctx->current_return_type : TYPE_ANY,
