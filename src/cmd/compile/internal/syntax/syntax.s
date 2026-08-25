@@ -17,23 +17,23 @@ struct syntax_error {
 
 func read_source(string path) (string, syntax_error) {
     switch read_to_string(path) {
-        result::ok(source) : result::ok(source),
-        result::err(err) : result::err(syntax_error {
+        source : source,
+        err : syntax_error {
             message: "failed to read source file: " + path + ": " + err.message,
             line: 0,
             column: 0,
-        }),
+        },
     }
 }
 
 func tokenize(string source) (vec[token], syntax_error) {
     switch new_lexer(source).tokenize() {
-        result::ok(tokens) : result::ok(tokens),
-        result::err(err) : result::err(syntax_error {
+        tokens : tokens,
+        err : syntax_error {
             message: err.message,
             line: err.line,
             column: err.column,
-        }),
+        },
     }
 }
 
@@ -44,12 +44,12 @@ func parse_source(string source) (source_file, syntax_error) {
 
 func parse_tokens(vec[token] tokens) (source_file, syntax_error) {
     switch parse_tokens(tokens) {
-        result::ok(ast) : result::ok(ast),
-        result::err(err) : result::err(syntax_error {
+        ast : ast,
+        err : syntax_error {
             message: err.message,
             line: err.line,
             column: err.column,
-        }),
+        },
     }
 }
 

@@ -71,9 +71,9 @@ func from_syntax_checked(source_file src) (ir_ast.package_ir, string) {
     pkg := from_syntax(src)
     check := validate_lowering_contract(pkg)
     if check.is_err() {
-        return result::err(check.unwrap_err())
+        return check.unwrap_err()
     }
-    result::ok(pkg)
+    pkg
 }
 
 func validate_lowering_contract(ir_ast.package_ir pkg) ((), string) {
@@ -92,7 +92,7 @@ func validate_lowering_contract(ir_ast.package_ir pkg) ((), string) {
         }
         i = i + 1
     }
-    result::ok(())
+    ()
 }
 
 func validate_block_contract(ir_ast.block_ir block) ((), string) {
@@ -142,7 +142,7 @@ func validate_block_contract(ir_ast.block_ir block) ((), string) {
     if block.final_expr.is_some() {
         return validate_expr_contract(block.final_expr.unwrap())
     }
-    result::ok(())
+    ()
 }
 
 func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
@@ -211,7 +211,7 @@ func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
         }
         _ : (),
     }
-    result::ok(())
+    ()
 }
 
 func contains_text(string text, string needle) bool {
@@ -412,7 +412,7 @@ func lower_package_to_mir(source_file src) (mir_graph, string) {
         }
         t = t + 1
     }
-    result::ok(graph)
+    graph
 }
 
 func count_const_hits_block(block_expr block, vec[const_rewrite_entry] const_entries) int {

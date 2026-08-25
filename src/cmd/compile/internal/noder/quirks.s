@@ -31,7 +31,7 @@ func apply_quirk(string name, source_unit unit) ((), noder_error) {
         unit.text = out
         return ())
     }
-    result::err(make_error(code_unknown_quirk(), "unknown quirk: " + name, unit.path, 0, 0))
+    make_error(code_unknown_quirk(), "unknown quirk: " + name, unit.path, 0, 0)
 }
 
 func apply_quirks(vec[string] quirks, source_unit unit) ((), noder_error) {
@@ -43,5 +43,5 @@ func apply_quirks(vec[string] quirks, source_unit unit) ((), noder_error) {
         }
         i = i + 1
     }
-    result::ok(())
+    ()
 }
