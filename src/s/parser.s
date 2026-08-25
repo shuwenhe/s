@@ -155,17 +155,17 @@ func (self: &mut parser) parse_var_decl() result[var_decl, parse_error] {
         string name = self.expect_ident()?
         option[string] type_name = option::none
         option[expr] value = option::none
-        
+
         if !self.at_symbol("=") && !self.at_symbol(";") {
             type_name = option::some(self.parse_type_expr()?)
         }
-        
+
         if self.eat_symbol("=") {
             value = option::some(self.parse_expr()?)
         }
-        
+
         self.eat_symbol(";")
-        
+
         result::ok(var_decl {
             name: name,
             type_name: type_name,

@@ -1,8 +1,5 @@
 package src.runtime
 
-
-
-
 const SROUTINE_ABI_VERSION = 1
 
 const SROUTINE_IDLE     = 0
