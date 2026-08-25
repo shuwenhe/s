@@ -38,7 +38,7 @@ func sys_socket(family: int, socktype: int, protocol: int) (int, int) {
     clear_errno()
     fd := socket(family, socktype | sock_nonblock | sock_cloexec, protocol)
     if fd < 0 {
-        return fd, get_errno()
+        return fd, get_errno(
     }
     fd, 0
 }
@@ -75,7 +75,7 @@ func sys_accept(fd: int, addr: *sockaddr, addrlen: *int) (int, int) {
     clear_errno()
     client_fd := accept(fd, addr, addrlen)
     if client_fd < 0 {
-        return client_fd, get_errno()
+        return client_fd, get_errno(
     }
     client_fd, 0
 }
@@ -93,7 +93,7 @@ func sys_read(fd: int, buf: *byte, len: int) (int, int) {
     clear_errno()
     n := read(fd, buf, len)
     if n < 0 {
-        return n, get_errno()
+        return n, get_errno(
     }
     n, 0
 }
@@ -102,7 +102,7 @@ func sys_write(fd: int, buf: *byte, len: int) (int, int) {
     clear_errno()
     n := write(fd, buf, len)
     if n < 0 {
-        return n, get_errno()
+        return n, get_errno(
     }
     n, 0
 }
@@ -111,7 +111,7 @@ func sys_sendto(fd: int, buf: *byte, len: int, dest_addr: *sockaddr, addrlen: in
     clear_errno()
     n := sendto(fd, buf, len, 0, dest_addr, addrlen)
     if n < 0 {
-        return n, get_errno()
+        return n, get_errno(
     }
     n, 0
 }
@@ -120,7 +120,7 @@ func sys_recvfrom(fd: int, buf: *byte, len: int, src_addr: *sockaddr, addrlen: *
     clear_errno()
     n := recvfrom(fd, buf, len, 0, src_addr, addrlen)
     if n < 0 {
-        return n, get_errno()
+        return n, get_errno(
     }
     n, 0
 }
@@ -147,7 +147,7 @@ func sys_set_nonblocking(fd: int) int {
     clear_errno()
     flags := fcntl(fd, f_getfl, 0)
     if flags < 0 {
-        return get_errno()
+        return get_errno(
     }
     if fcntl(fd, f_setfl, flags | o_nonblock) < 0 {
         get_errno()
@@ -178,7 +178,7 @@ func sys_poll(fds: *pollfd, nfds: int, timeout_ms: int) (int, int) {
     clear_errno()
     n := poll(fds, nfds, timeout_ms)
     if n < 0 {
-        return n, get_errno()
+        return n, get_errno(
     }
     n, 0
 }

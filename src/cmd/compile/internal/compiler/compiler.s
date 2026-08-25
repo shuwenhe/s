@@ -14,7 +14,7 @@ func main(vec[string] args) int {
     if arch_err != "" {
         return 2
     }
-    return build_main(args)
+    return build_main(args
 }
 
 func run_cli(vec[string] args) int {

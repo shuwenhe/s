@@ -5,19 +5,19 @@ func usage(): int {
 
 func main(args: [string]): int {
     if args.len() < 2 {
-        return usage()
+        return usage(
     }
     if args[1] == "run-argv" {
         if args.len() < 3 {
-            return usage()
+            return usage(
         }
-        return process_runner_run_argv(args[2:])
+        return process_runner_run_argv(args[2:]
     }
     if args[1] == "run-shell" {
         if args.len() != 3 {
-            return usage()
+            return usage(
         }
-        return process_runner_run_shell(args[2])
+        return process_runner_run_shell(args[2]
     }
-    return usage()
+    return usage(
 }

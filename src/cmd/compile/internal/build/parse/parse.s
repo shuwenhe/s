@@ -5,73 +5,73 @@ use std.vec.vec
 
 func parse_options(vec[string] args)  vec[string] {
     if args.len() < 2 {
-        return make_options("help", "", "", "", false)
+        return make_options("help", "", "", "", false
     }
     command := args[1]
     if command == "help" || command == "--help" || command == "-h" {
-        return make_options("help", "", "", "", false)
+        return make_options("help", "", "", "", false
     }
     if command == "check" || command == "tokens" || command == "ast" {
         if args.len() < 3 {
-            return make_options("help", "", "", "", false)
+            return make_options("help", "", "", "", false
         }
-        return make_options(command, args[2], "", "", false)
+        return make_options(command, args[2], "", "", false
     }
     if command == "build" {
         if args.len() < 5 {
-            return make_options("help", "", "", "", false)
+            return make_options("help", "", "", "", false
         }
         if args[3] != "-o" {
-            return make_options("help", "", "", "", false)
+            return make_options("help", "", "", "", false
         }
         nostdlib := has_flag(args, 5, "-nostdlib")
         margin := parse_optional_margin(args, 5)
         if margin == "__invalid_margin__" {
-            return make_options("help", "", "", "", false)
+            return make_options("help", "", "", "", false
         }
-        return make_options(command, args[2], args[4], margin, nostdlib)
+        return make_options(command, args[2], args[4], margin, nostdlib
     }
     if command == "run" {
         if args.len() < 3 {
-            return make_options("help", "", "", "", false)
+            return make_options("help", "", "", "", false
         }
         nostdlib := has_flag(args, 3, "-nostdlib")
         margin := parse_optional_margin(args, 3)
         if margin == "__invalid_margin__" {
-            return make_options("help", "", "", "", false)
+            return make_options("help", "", "", "", false
         }
-        return make_options(command, args[2], "", margin, nostdlib)
+        return make_options(command, args[2], "", margin, nostdlib
     }
     if command == "test" {
         if args.len() >= 3 {
-            return make_options(command, args[2], "", "", false)
+            return make_options(command, args[2], "", "", false
         }
-        return make_options(command, "", "", "", false)
+        return make_options(command, "", "", "", false
     }
     if command == "mod" {
         if args.len() < 3 {
-            return make_options("help", "", "", "", false)
+            return make_options("help", "", "", "", false
         }
         mod_command := args[2]
         if mod_command == "init" {
             if args.len() != 4 {
-                return make_options("help", "", "", "", false)
+                return make_options("help", "", "", "", false
             }
-            return make_options(command, "init", args[3], "", false)
+            return make_options(command, "init", args[3], "", false
         }
         if mod_command == "tidy" {
             if args.len() != 3 {
-                return make_options("help", "", "", "", false)
+                return make_options("help", "", "", "", false
             }
-            return make_options(command, "tidy", "", "", false)
+            return make_options(command, "tidy", "", "", false
         }
         if mod_command == "index" {
             if args.len() != 4 {
-                return make_options("help", "", "", "", false)
+                return make_options("help", "", "", "", false
             }
-            return make_options(command, "index", args[3], "", false)
+            return make_options(command, "index", args[3], "", false
         }
-        return make_options("help", "", "", "", false)
+        return make_options("help", "", "", "", false
     }
     make_options("help", "", "", "", false)
 }
