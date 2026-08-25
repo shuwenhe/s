@@ -56,8 +56,6 @@ const char *token_type_name(token_type type) {
 		case TOKEN_NUMBER: return "NUMBER";
 		case TOKEN_STRING: return "STRING";
 		case TOKEN_FN: return "FN";
-		case TOKEN_LET: return "LET";
-		case TOKEN_VAR: return "VAR";
 		case TOKEN_PACKAGE: return "PACKAGE";
 		case TOKEN_USE: return "USE";
 		case TOKEN_AS: return "AS";
@@ -77,6 +75,7 @@ const char *token_type_name(token_type type) {
 		case TOKEN_PERCENT: return "%";
 		case TOKEN_BANG: return "!";
 		case TOKEN_ASSIGN: return "=";
+		case TOKEN_ASSIGN_DECLARE: return ":=";
 		case TOKEN_EQ: return "==";
 		case TOKEN_NE: return "!=";
 		case TOKEN_AMP: return "&";
@@ -103,8 +102,6 @@ const char *token_type_name(token_type type) {
 static token_type keyword_or_identifier(const char *lexeme) {
 	if (strcmp(lexeme, "fn") == 0) return TOKEN_FN;
 	if (strcmp(lexeme, "func") == 0) return TOKEN_FN;
-	if (strcmp(lexeme, "let") == 0) return TOKEN_LET;
-	if (strcmp(lexeme, "var") == 0) return TOKEN_VAR;
 	if (strcmp(lexeme, "package") == 0) return TOKEN_PACKAGE;
 	if (strcmp(lexeme, "use") == 0) return TOKEN_USE;
 	if (strcmp(lexeme, "as") == 0) return TOKEN_AS;
@@ -364,6 +361,16 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 		}
 		if (c == '|' && source[i + 1] == '|') {
 			if (!push_simple(out_tokens, TOKEN_OR_OR, "||", tok_line, tok_col)) {
+				error_set(err, ERR_OUT_OF_MEMORY, tok_line, tok_col, "out of memory");
+				token_vec_free(out_tokens);
+				return false;
+			}
+			i += 2;
+			col += 2;
+			continue;
+		}
+		if (c == ':' && source[i + 1] == '=') {
+			if (!push_simple(out_tokens, TOKEN_ASSIGN_DECLARE, ":=", tok_line, tok_col)) {
 				error_set(err, ERR_OUT_OF_MEMORY, tok_line, tok_col, "out of memory");
 				token_vec_free(out_tokens);
 				return false;

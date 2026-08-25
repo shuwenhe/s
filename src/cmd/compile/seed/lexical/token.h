@@ -11,8 +11,6 @@ typedef enum token_type {
 	TOKEN_STRING,
 
 	TOKEN_FN,
-	TOKEN_LET,
-	TOKEN_VAR,
 	TOKEN_PACKAGE,
 	TOKEN_USE,
 	TOKEN_AS,
@@ -33,6 +31,7 @@ typedef enum token_type {
 	TOKEN_PERCENT,
 	TOKEN_BANG,
 	TOKEN_ASSIGN,
+	TOKEN_ASSIGN_DECLARE,
 	TOKEN_EQ,
 	TOKEN_NE,
 	TOKEN_AMP,
