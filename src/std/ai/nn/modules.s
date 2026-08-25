@@ -208,11 +208,11 @@ func forward(MultiHeadAttention self, auto_grad_tensor x, tensor mask) auto_grad
     auto_grad_tensor Q = forward(self.q_proj, x)
     auto_grad_tensor K = forward(self.k_proj, x)
     auto_grad_tensor V = forward(self.v_proj, x)
-    Q = autograd_view(Q, [batch_size, seq_len, n_heads, d_k])
+    Q = autograd_view(Q, [batch_size, seq_len, n_heads, d_k))
     Q = autograd_transpose(Q, 1, 2)
-    K = autograd_view(K, [batch_size, seq_len, n_heads, d_k])
+    K = autograd_view(K, [batch_size, seq_len, n_heads, d_k))
     K = autograd_transpose(K, 1, 2)
-    V = autograd_view(V, [batch_size, seq_len, n_heads, d_k])
+    V = autograd_view(V, [batch_size, seq_len, n_heads, d_k))
     V = autograd_transpose(V, 1, 2)
     K_T = autograd_transpose(K, 2, 3)
     auto_grad_tensor scores = autograd_matmul(Q, K_T)
@@ -232,7 +232,7 @@ func forward(MultiHeadAttention self, auto_grad_tensor x, tensor mask) auto_grad
     }
     auto_grad_tensor context = autograd_matmul(attn_weights, V)
     context = autograd_transpose(context, 1, 2)
-    context = autograd_view(context, [batch_size, seq_len, d_model])
+    context = autograd_view(context, [batch_size, seq_len, d_model))
     auto_grad_tensor output = forward(self.out_proj, context)
     output
 }
