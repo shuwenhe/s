@@ -1213,7 +1213,6 @@ static void print_compile_error_local(const compile_error *err) {
 	fprintf(stderr, "error[%d] at %zu:%zu: %s\n", (int)err->code, err->line, err->column, err->message);
 }
 
-/* Forward declaration for user-defined function support in host_dispatch_call */
 typedef struct runtime_function runtime_function;
 typedef struct runtime_functions runtime_functions;
 static const runtime_function *functions_find(const runtime_functions *funcs, const char *name);
@@ -2492,39 +2491,39 @@ static int host_dispatch_call(
 		int dir_fd = -1;
 		size_t i = 0;
 		size_t last_slash = 0;
-		
+
 		if (argc != 2 || 
 		    !value_as_cstr(&args[0], tmp_buf, sizeof(tmp_buf), &tmp_path) ||
 		    !value_as_cstr(&args[1], final_buf, sizeof(final_buf), &final_path)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_atomic_replace expects (string, string) arguments");
 			return 0;
 		}
-		
+
 		tmp_fd = open(tmp_path, O_RDONLY);
 		if (tmp_fd < 0) {
 			*out = value_make_int(0);
 			return 1;
 		}
-		
+
 		if (fsync(tmp_fd) != 0) {
 			close(tmp_fd);
 			*out = value_make_int(0);
 			return 1;
 		}
-		
+
 		close(tmp_fd);
-		
+
 		if (rename(tmp_path, final_path) != 0) {
 			*out = value_make_int(0);
 			return 1;
 		}
-		
+
 		for (i = 0; final_path[i] != '\0'; i++) {
 			if (final_path[i] == '/') {
 				last_slash = i;
 			}
 		}
-		
+
 		if (last_slash == 0) {
 			dir_path[0] = '.';
 			dir_path[1] = '\0';
@@ -2534,7 +2533,7 @@ static int host_dispatch_call(
 			}
 			dir_path[i] = '\0';
 		}
-		
+
 #if defined(__linux__)
 		dir_fd = open(dir_path, O_RDONLY | O_DIRECTORY);
 #else
@@ -2544,18 +2543,15 @@ static int host_dispatch_call(
 			fsync(dir_fd);
 			close(dir_fd);
 		}
-		
+
 		*out = value_make_int(1);
 		return 1;
 	}
 
-	/* Last resort: check if this is a user-defined function */
-	/* If not found in built-in functions, return 0 to let caller handle it */
 	if (funcs != NULL) {
 		const runtime_function *user_fn = functions_find(funcs, name);
 		if (user_fn != NULL) {
-			/* User-defined function found, but we can't execute it here */
-			/* Return -1 to signal this to the caller */
+
 			error_set(err, ERR_SEMANTIC, 0, 0, "user-defined function: %s (should not reach here)", name);
 			return -1;
 		}

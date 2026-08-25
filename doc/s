@@ -1,0 +1,11 @@
+struct struct_name {
+    field_type field_name
+    field_type field_name
+    field_type field_name
+}
+
+func (receiver_type receiver_name) method_name(parameter_type parameter_name) return_type{}
+
+func (type name) 
+
+
