@@ -154,7 +154,7 @@ func rules_consistent() bool {
 }
 
 func dump_type(string ty) string {
-    return parse_type(ty)
+    return parse_type(ty
 }
 
 func base_type_name(string ty) string {
@@ -226,7 +226,7 @@ func extract_type_args(string type_name) vec[string] {
 }
 
 func same_type(string left, string right) bool {
-    return parse_type(left) == parse_type(right)
+    return parse_type(left) == parse_type(right
 }
 
 func compatible_type(string left, string right) bool {
@@ -239,7 +239,7 @@ func compatible_type(string left, string right) bool {
         return false
     }
     if is_tuple_type(l) || is_tuple_type(r) {
-        return compatible_tuple_type(l, r)
+        return compatible_tuple_type(l, r
     }
     lt := parse_type_ref(l)
     rt := parse_type_ref(r)
@@ -318,7 +318,7 @@ func assignable_type(string target, string source) bool {
         return true
     }
     if s == "nil" {
-        return is_nilable_type(t)
+        return is_nilable_type(t
     }
     if t == "nil" {
         return s == "nil"
@@ -330,10 +330,10 @@ func assignable_type(string target, string source) bool {
         return true
     }
     if is_numeric_primitive(t) && is_numeric_primitive(s) {
-        return numeric_rank(t) >= numeric_rank(s)
+        return numeric_rank(t) >= numeric_rank(s
     }
     if is_tuple_type(t) || is_tuple_type(s) {
-        return assignable_tuple_type(t, s)
+        return assignable_tuple_type(t, s
     }
     false
 }
@@ -397,7 +397,7 @@ func is_tuple_type(string ty) bool {
     if clean.len() < 2 {
         return false
     }
-    return starts_with(clean, "(") && ends_with(clean, ")")
+    return starts_with(clean, "(") && ends_with(clean, ")"
 }
 
 func extract_tuple_args(string type_name) vec[string] {
@@ -510,11 +510,11 @@ func is_copy_type(string ty) bool {
 }
 
 func is_reference_type(string ty) bool {
-    return starts_with(trim_text(ty), "&")
+    return starts_with(trim_text(ty), "&"
 }
 
 func is_slice_type(string ty) bool {
-    return starts_with(trim_text(ty), "[]")
+    return starts_with(trim_text(ty), "[]"
 }
 
 func is_generic_type(string ty) bool {
@@ -523,7 +523,7 @@ func is_generic_type(string ty) bool {
 }
 
 func normalize_type_text(string text) string {
-    return trim_text(text)
+    return trim_text(text
 }
 
 func trim_text(string text) string {
@@ -535,7 +535,7 @@ func trim_text(string text) string {
     for end > start && is_space(char_at(text, end - 1)) {
         end = end - 1
     }
-    return slice(text, start, end)
+    return slice(text, start, end
 }
 
 func starts_with(string text, string prefix) bool {
@@ -595,7 +595,7 @@ func extract_section(string text, string open, string close) string {
         } else if ch == close {
             depth = depth - 1
             if depth == 0 {
-                return slice(text, start + 1, i)
+                return slice(text, start + 1, i
             }
         }
         i = i + 1

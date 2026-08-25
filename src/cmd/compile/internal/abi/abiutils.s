@@ -117,17 +117,17 @@ func frame_offset(abi_param_assignment assignment, abi_param_result_info info) i
         return -1
     }
     if assignment.registers.len() == 0 {
-        return assignment.offset - locals_offset(info.config)
+        return assignment.offset - locals_offset(info.config
     }
     assignment.offset + spill_area_offset(info) - locals_offset(info.config)
 }
 
 func reg_string(reg_amounts amounts, int r) string {
     if r < amounts.int_regs {
-        return "I" + to_string(r)
+        return "I" + to_string(r
     }
     if r < amounts.int_regs + amounts.float_regs {
-        return "F" + to_string(r - amounts.int_regs)
+        return "F" + to_string(r - amounts.int_regs
     }
     "<?>" + to_string(r)
 }

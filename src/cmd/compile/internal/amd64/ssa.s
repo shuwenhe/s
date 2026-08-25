@@ -57,7 +57,7 @@ func load_by_reg_width(int reg, int width) string {
             return "MOVWLZX"
         }
     }
-    return store_by_reg_width(reg, width)
+    return store_by_reg_width(reg, width
 }
 
 func store_by_reg_width(int reg, int width) string {
@@ -135,7 +135,7 @@ func move_by_regs_width(int dest, int src, int width) string {
 
 func ssa_gen_value(ssa_value v) string {
     if ssa_gen_simd_value(v) {
-        return "simd:" + simd_opcode_class(v.op)
+        return "simd:" + simd_opcode_class(v.op
     }
     if v.op == "OpAMD64ADDQ" {
         return "ADDQ"
@@ -176,7 +176,7 @@ func load_reg_result(string type_name) string {
 }
 
 func spill_arg_reg(int index) string {
-    return "spill+" + to_string(index * 8)
+    return "spill+" + to_string(index * 8
 }
 
 func starts_with(string text, string prefix) bool {

@@ -81,7 +81,7 @@ func dial_udp(address: string, port: int, timeout_ms: int) (*udp_conn, error) {
     errno := sys_bind(sock.fd, (*sockaddr)(&local_addr), 16)
     if errno != 0 {
         sock.close()
-        return nil, new_socket_error(errno, "bind")
+        return nil, new_socket_error(errno, "bind"
     }
     local_ip, local_port, err := sock.get_local_addr()
     if err != nil {

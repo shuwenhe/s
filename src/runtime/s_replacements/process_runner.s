@@ -21,7 +21,7 @@ func process_runner_run_argv(argv: [string]): int {
         os.execvp(argv[0], argv)
         os.exit(127)
     }
-    return wait_for_child(pid)
+    return wait_for_child(pid
 }
 
 func process_runner_run_shell(command: string): int {
@@ -36,5 +36,5 @@ func process_runner_run_shell(command: string): int {
         os.execl("/bin/sh", ["sh", "-c", command))
         os.exit(127)
     }
-    return wait_for_child(pid)
+    return wait_for_child(pid
 }

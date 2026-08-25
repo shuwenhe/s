@@ -79,7 +79,7 @@ func backward(auto_grad_tensor loss_tensor) Map<string, tensor> {
         }
         i = i - 1
     }
-    return collect_leaf_gradients()
+    return collect_leaf_gradients(
 }
 
 func collect_leaf_gradients() Map<string, tensor> {

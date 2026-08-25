@@ -33,10 +33,10 @@ func run(vec[string] options) int {
         return 0
     }
     if options[0] == "test" {
-        return run_test_command(options)
+        return run_test_command(options
     }
     if options[0] == "mod" {
-        return run_mod_command(options)
+        return run_mod_command(options
     }
     if is_module_name(options[1]) {
         resolved := resolve_module_source_path(options[1])
@@ -106,7 +106,7 @@ func run(vec[string] options) int {
     }
     if options[0] == "run" {
         nostdlib := options.len() > 4 && options[4] == "nostdlib"
-        return run_binary(options[1], options[3], nostdlib)
+        return run_binary(options[1], options[3], nostdlib
     }
     return 1
 }
@@ -158,20 +158,20 @@ func resolve_fixtures_root(string override) string {
     }
     env_root := get("s_test_fixtures_root")
     if env_root.is_some() {
-        return env_root.unwrap()
+        return env_root.unwrap(
     }
     "cmd/compile/internal/tests/fixtures"
 }
 
 func run_mod_command(vec[string] options) int {
     if options[1] == "init" {
-        return run_mod_init(options[2])
+        return run_mod_init(options[2]
     }
     if options[1] == "tidy" {
-        return run_mod_tidy()
+        return run_mod_tidy(
     }
     if options[1] == "index" {
-        return run_mod_index(options[2])
+        return run_mod_index(options[2]
     }
     eprintln("mod command is not supported")
     return 1

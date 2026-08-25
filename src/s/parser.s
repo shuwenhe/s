@@ -87,31 +87,31 @@ func (parser* self) parse_item() (item, parse_error) {
                         body: parsed.body,
                         is_public: starts_with_upper(parsed.sig.name),
                     }
-                    return result::ok(item::method(receiver_method_decl {
+                    return item::method(receiver_method_decl {
                         receiver_name: r.name,
                         receiver_type: r.type_name,
                         method: method,
                     }))
                 },
                 option::none : {
-                    return result::ok(item::function(parsed))
+                    return item::function(parsed))
                 }
             }
         }
         if self.at_keyword("const") {
-            return result::ok(item::const(self.parse_const_decl()?))
+            return item::const(self.parse_const_decl()?))
         }
         if self.at_keyword("var") {
-            return result::ok(item::var(self.parse_var_decl()?))
+            return item::var(self.parse_var_decl()?))
         }
         if self.at_keyword("struct") {
-            return result::ok(item::struct(self.parse_struct_decl()?))
+            return item::struct(self.parse_struct_decl()?))
         }
         if self.at_keyword("enum") {
-            return result::ok(item::enum(self.parse_enum_decl()?))
+            return item::enum(self.parse_enum_decl()?))
         }
         if self.at_keyword("trait") {
-            return result::ok(item::trait(self.parse_trait_decl()?))
+            return item::trait(self.parse_trait_decl()?))
         }
         result::err(self.error_here("unexpected token"))
     }
@@ -282,7 +282,7 @@ func (parser* self) parse_function(bool require_body) (parsed_function, parse_er
 
 func (parser* self) parse_params() (vec[param], parse_error) {
         vec[param] params = vec[param]()        if self.at_symbol(")") {
-            return result::ok(params)
+            return params
         }
         for true {
             named_type part = self.parse_named_type(vec[string] { ",", ")" })?            params.push(param {
@@ -298,7 +298,7 @@ func (parser* self) parse_params() (vec[param], parse_error) {
 
 func (parser* self) parse_generic_params() (vec[string], parse_error) {
         vec[string] generics = vec[string]()        if !self.eat_symbol("[") {
-            return result::ok(generics)
+            return generics
         }
         for !self.eat_symbol("]") {
             string name = self.expect_ident()?            string item =                if self.eat_symbol(":") {
@@ -318,7 +318,7 @@ func (parser* self) parse_generic_params() (vec[string], parse_error) {
 
 func (parser* self) parse_where_clause() ((), parse_error) {
         if !self.eat_keyword("where") {
-            return result::ok(())
+            return ())
         }
         for true {
             self.parse_type_text(vec[string] { ",", "{", ";" })?
@@ -398,25 +398,25 @@ func (parser* self) starts_stmt() bool {
 
 func (parser* self) parse_stmt() (stmt, parse_error) {
         if self.at_keyword("defer") {
-            return result::ok(stmt::defer(self.parse_defer_stmt()?))
+            return stmt::defer(self.parse_defer_stmt()?))
         }
         if self.at_keyword("sroutine") {
-            return result::ok(stmt::sroutine(self.parse_sroutine_stmt()?))
+            return stmt::sroutine(self.parse_sroutine_stmt()?))
         }
         if self.at_keyword("return") {
-            return result::ok(stmt::return(self.parse_return_stmt()?))
+            return stmt::return(self.parse_return_stmt()?))
         }
         if self.at_cfor_start() {
-            return result::ok(stmt::c_for(self.parse_cfor_stmt()?))
+            return stmt::c_for(self.parse_cfor_stmt()?))
         }
         if self.looks_like_typed_var_stmt() {
-            return result::ok(stmt::let(self.parse_typed_var_stmt(true)?))
+            return stmt::let(self.parse_typed_var_stmt(true)?))
         }
         if self.looks_like_increment_stmt() {
-            return result::ok(stmt::increment(self.parse_increment_stmt(true)?))
+            return stmt::increment(self.parse_increment_stmt(true)?))
         }
         if self.looks_like_assignment_stmt() {
-            return result::ok(stmt::assign(self.parse_assign_stmt(true)?))
+            return stmt::assign(self.parse_assign_stmt(true)?))
         }
         result::err(self.error_here("unexpected statement"))
     }
@@ -497,13 +497,13 @@ func (parser* self) parse_cfor_stmt() (c_for_stmt, parse_error) {
 
 func (parser* self) parse_for_clause_stmt() (stmt, parse_error) {
         if self.looks_like_typed_var_stmt() {
-            return result::ok(stmt::let(self.parse_typed_var_stmt(false)?))
+            return stmt::let(self.parse_typed_var_stmt(false)?))
         }
         if self.looks_like_increment_stmt() {
-            return result::ok(stmt::increment(self.parse_increment_stmt(false)?))
+            return stmt::increment(self.parse_increment_stmt(false)?))
         }
         if self.looks_like_assignment_stmt() {
-            return result::ok(stmt::assign(self.parse_assign_stmt(false)?))
+            return stmt::assign(self.parse_assign_stmt(false)?))
         }
         result::err(self.error_here("unexpected for clause"))
     }
@@ -511,7 +511,7 @@ func (parser* self) parse_for_clause_stmt() (stmt, parse_error) {
 func (parser* self) parse_return_stmt() (return_stmt, parse_error) {
         self.expect_keyword("return")?
         if self.eat_symbol(";") {
-            return result::ok(return_stmt {
+            return return_stmt {
                 value: option::none,
             })
         }
@@ -524,16 +524,16 @@ func (parser* self) parse_return_stmt() (return_stmt, parse_error) {
 
 func (parser* self) parse_expr() (expr, parse_error) {
         if self.at_keyword("select") {
-            return self.parse_select_expr()
+            return self.parse_select_expr(
         }
         if self.at_keyword("switch") {
-            return self.parse_switch_expr()
+            return self.parse_switch_expr(
         }
         if self.at_keyword("if") {
-            return self.parse_if_expr()
+            return self.parse_if_expr(
         }
         if self.at_keyword("for") {
-            return self.parse_for_expr()
+            return self.parse_for_expr(
         }
         self.parse_binary_expr(0)
     }
@@ -686,7 +686,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
         
         if self.at_symbol("{") {
             body := self.parse_block_expr()?
-            return result::ok(expr::for(for_expr {
+            return expr::for(for_expr {
                 init: option::none,
                 condition: option::none,
                 post: option::none,
@@ -705,7 +705,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
             post := self.parse_for_clause_stmt()?
             self.expect_symbol(")")?
             body := self.parse_block_expr()?
-            return result::ok(expr::for(for_expr {
+            return expr::for(for_expr {
                 init: option::some(box(init)),
                 condition: option::some(box(condition)),
                 post: option::some(box(post)),
@@ -719,7 +719,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
         token token = self.peek()?        if token.kind == token_kind::ident && self.at_symbol_after_keyword("in") {
             string name = self.expect_ident()?            self.expect_keyword("in")?
             expr iterable = self.parse_expr()?            body := self.parse_block_expr()?
-            return result::ok(expr::for(for_expr {
+            return expr::for(for_expr {
                 init: option::none,
                 condition: option::none,
                 post: option::none,
@@ -744,11 +744,11 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
 
 func (parser* self) parse_pattern() (pattern, parse_error) {
         if self.eat_ident_value("_") {
-            return result::ok(pattern::wildcard(wildcard_pattern {}))
+            return pattern::wildcard(wildcard_pattern {}))
         }
         token token = self.peek()?        if token.kind == token_kind::int {
             self.advance()?
-            return result::ok(pattern::literal(literal_pattern {
+            return pattern::literal(literal_pattern {
                 value: expr::int(int_expr {
                     value: token.value,
                     inferred_type: option::none,
@@ -757,7 +757,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
         }
         if token.kind == token_kind::string {
             self.advance()?
-            return result::ok(pattern::literal(literal_pattern {
+            return pattern::literal(literal_pattern {
                 value: expr::string(string_expr {
                     value: token.value,
                     inferred_type: option::none,
@@ -766,7 +766,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
         }
         if self.at_keyword("true") {
             self.advance()?
-            return result::ok(pattern::literal(literal_pattern {
+            return pattern::literal(literal_pattern {
                 value: expr::bool(bool_expr {
                     value: true,
                     inferred_type: option::none,
@@ -775,7 +775,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
         }
         if self.at_keyword("false") {
             self.advance()?
-            return result::ok(pattern::literal(literal_pattern {
+            return pattern::literal(literal_pattern {
                 value: expr::bool(bool_expr {
                     value: false,
                     inferred_type: option::none,
@@ -792,13 +792,13 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
                 }
             }
             self.expect_symbol(")")?
-            return result::ok(pattern::variant(variant_pattern {
+            return pattern::variant(variant_pattern {
                 path: path,
                 args: args,
             }))
         }
         if path_contains_dot(path) || starts_with_upper(path) {
-            return result::ok(pattern::variant(variant_pattern {
+            return pattern::variant(variant_pattern {
                 path: path,
                 args: vec[pattern](),
             }))
@@ -827,7 +827,7 @@ func (parser* self) parse_unary_expr() (expr, parse_error) {
         if self.eat_symbol("&") {
             bool mutable = false
             target := self.parse_unary_expr()?
-            return result::ok(expr::borrow(borrow_expr {
+            return expr::borrow(borrow_expr {
                 target: box(target),
                 mutable: mutable,
                 inferred_type: option::none,
@@ -891,45 +891,45 @@ func (parser* self) parse_call_expr() (expr, parse_error) {
 func (parser* self) parse_primary_expr() (expr, parse_error) {
         token token = self.peek()?        if token.kind == token_kind::int {
             self.advance()?
-            return result::ok(expr::int(int_expr {
+            return expr::int(int_expr {
                 value: token.value,
                 inferred_type: option::none,
             }))
         }
         if token.kind == token_kind::string {
             self.advance()?
-            return result::ok(expr::string(string_expr {
+            return expr::string(string_expr {
                 value: token.value,
                 inferred_type: option::none,
             }))
         }
         if self.at_keyword("true") {
             self.advance()?
-            return result::ok(expr::bool(bool_expr {
+            return expr::bool(bool_expr {
                 value: true,
                 inferred_type: option::none,
             }))
         }
         if self.at_keyword("false") {
             self.advance()?
-            return result::ok(expr::bool(bool_expr {
+            return expr::bool(bool_expr {
                 value: false,
                 inferred_type: option::none,
             }))
         }
         if self.at_keyword("nil") {
             self.advance()?
-            return result::ok(expr::name(name_expr {
+            return expr::name(name_expr {
                 name: "nil",
                 inferred_type: option::none,
             }))
         }
         if self.at_symbol("{") {
-            return result::ok(expr::block(self.parse_block_expr()?))
+            return expr::block(self.parse_block_expr()?))
         }
         if self.eat_symbol("(") {
             expr expr = self.parse_expr()?            self.expect_symbol(")")?
-            return result::ok(expr)
+            return expr
         }
         if self.at_symbol("[") {
             bracket := self.parse_bracket_group()?
@@ -948,7 +948,7 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
                 }
             }
             self.expect_symbol("}")?
-            return result::ok(expr::array(array_literal { type_text: option::some(type_text.trim()), items: items }))
+            return expr::array(array_literal { type_text: option::some(type_text.trim()), items: items }))
         }
         if token.kind == token_kind::ident && token.value == "map" {
             self.advance()?
@@ -972,7 +972,7 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
                 }
             }
             self.expect_symbol("}")?
-            return result::ok(expr::map(map_literal { type_text: option::some(type_text.trim()), entries: entries }))
+            return expr::map(map_literal { type_text: option::some(type_text.trim()), entries: entries }))
         }
         result::ok(expr::name(name_expr {
             name: self.expect_ident()?,
@@ -1013,7 +1013,7 @@ func (parser* self) parse_use_path() (string, parse_error) {
                     members.push(text)
                     self.eat_symbol(",")
                 }
-                return result::ok(join_strings(parts, ".") + ".{" + join_strings(members, ", ") + "}")
+                return join_strings(parts, ".") + ".{" + join_strings(members, ", ") + "}")
             }
             parts.push(self.expect_ident()?)
         }
@@ -1149,7 +1149,7 @@ func (parser* self) eat_symbol(string value) bool {
 
 func (parser* self) expect_keyword(string value) (token, parse_error) {
         token token = self.peek()?        if token.kind == token_kind::keyword && token.value == value {
-            return self.advance()
+            return self.advance(
         }
         result::err(parse_error {
             message: "expected keyword " + value,
@@ -1160,7 +1160,7 @@ func (parser* self) expect_keyword(string value) (token, parse_error) {
 
 func (parser* self) expect_symbol(string value) (token, parse_error) {
         token token = self.peek()?        if token.kind == token_kind::symbol && token.value == value {
-            return self.advance()
+            return self.advance(
         }
         result::err(parse_error {
             message: "expected symbol " + value,
@@ -1172,11 +1172,11 @@ func (parser* self) expect_symbol(string value) (token, parse_error) {
 func (parser* self) expect_ident() (string, parse_error) {
         token token = self.peek()?        if token.kind == token_kind::ident {
             self.advance()?
-            return result::ok(token.value)
+            return token.value
         }
         if token.kind == token_kind::keyword && token.value == "self" {
             self.advance()?
-            return result::ok(token.value)
+            return token.value
         }
         result::err(parse_error {
             message: "expected identifier",
@@ -1268,10 +1268,10 @@ struct named_type {
 func decode_receiver_type(vec[token] tokens) (named_type, parse_error) {
     colon := find_token_value(tokens, ":")
     if colon >= 0 {
-        return decode_named_type(tokens)
+        return decode_named_type(tokens
     }
     if tokens.len() >= 2 && tokens[0].kind == token_kind::ident {
-        return result::ok(named_type {
+        return named_type {
             name: tokens[0].value,
             type_name: normalize_type_text(join_token_values(slice_tokens(tokens, 1, len(tokens)))),
         })
@@ -1287,7 +1287,7 @@ func decode_named_type(vec[token] tokens) (named_type, parse_error) {
     int colon = find_token_value(tokens, ":")    if colon >= 0 {
         name_tokens := slice_tokens(tokens, 0, colon)
         type_tokens := slice_tokens(tokens, colon + 1, len(tokens))
-        return result::ok(named_type {
+        return named_type {
             name: normalize_type_text(join_token_values(name_tokens)),
             type_name: normalize_type_text(join_token_values(type_tokens)),
         })

@@ -5,7 +5,7 @@ use std.vec.vec
 func apply_quirk(string name, source_unit unit) ((), noder_error) {
     if name == "trim-trailing-space" {
         unit.text = trim_spaces(unit.text)
-        return result::ok(())
+        return ())
     }
     if name == "normalize-import-quotes" {
         lines := split_lines(unit.text)
@@ -29,7 +29,7 @@ func apply_quirk(string name, source_unit unit) ((), noder_error) {
             i = i + 1
         }
         unit.text = out
-        return result::ok(())
+        return ())
     }
     result::err(make_error(code_unknown_quirk(), "unknown quirk: " + name, unit.path, 0, 0))
 }

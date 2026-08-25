@@ -30,11 +30,11 @@ func parse_ir(string content) (IRModule, error) {
         functions: []IRFunction{},
     }
     if len(lines) == 0 {
-        return module, error("empty IR")
+        return module, error("empty IR"
     }
     header := trim_string(lines[0])
     if header != "SSEED-TARGET-V1" {
-        return module, error("invalid IR header: " + header)
+        return module, error("invalid IR header: " + header
     }
     i := 1
     current_func: *IRFunction = nil
@@ -102,11 +102,11 @@ func get_ir_stats(IRModule module) map[string]int {
 
 func verify_ir(IRModule module) error {
     if len(module.functions) == 0 {
-        return error("no functions in IR")
+        return error("no functions in IR"
     }
     for _, func in module.functions {
         if func.name == "" {
-            return error("function with empty name")
+            return error("function with empty name"
         }
     }
     return nil

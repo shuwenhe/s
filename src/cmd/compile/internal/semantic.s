@@ -120,13 +120,13 @@ func check_detailed(string source) vec[semantic_error] {
     diagnostics := vec[semantic_error]()
     if !rules_consistent() {
         add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
-        return finalize_diagnostics(diagnostics)
+        return finalize_diagnostics(diagnostics
     }
     run_preparse_semantic_completeness_checks(source, diagnostics)
     parsed := parse_source(source)
     if parsed.is_err() {
         add_error(source, diagnostics, "e0001", "parse failed", "package");
-        return finalize_diagnostics(diagnostics)
+        return finalize_diagnostics(diagnostics
     }
     file := parsed.unwrap()
     functions := collect_functions(file.items)
@@ -215,7 +215,7 @@ func validate_recovery_semantics(string source, vec[semantic_error] diagnostics)
         errors = errors + add_error(source, diagnostics, "e3027", "recover coverage exceeds deferred handlers", "recover")
     }
     if panic_count > 0 && count_token_text(source, "return") == 0 {
-        errors = errors + add_error(source, diagnostics, "e3032", "panic path requires explicit return or recovery bridge", "panic")
+        errors = errors + add_error(source, diagnostics, "e3032", "panic path requires explicit return or recovery bridge", "panic"
     }
     if recover_count > 0 && panic_count == 0 {
         errors = errors + add_error(source, diagnostics, "e3033", "recover without panic path may break semantic equivalence", "recover")
@@ -817,7 +817,7 @@ func find_trait_binding(vec[trait_binding] traits, string name) option[trait_bin
     i := 0
     for i < traits.len() {
         if traits[i].name == name || traits[i].name == base_type_name(name) {
-            return option.some(traits[i])
+            return option.some(traits[i]
         }
         i = i + 1
     }
@@ -828,7 +828,7 @@ func find_trait_method(trait_binding trait_info, string name) option[method_bind
     i := 0
     for i < trait_info.methods.len() {
         if trait_info.methods[i].name == name {
-            return option.some(trait_info.methods[i])
+            return option.some(trait_info.methods[i]
         }
         i = i + 1
     }
@@ -943,7 +943,7 @@ func check_receiver_method(receiver_method_decl method_decl, vec[function_bindin
     result := infer_block_expr(method.body.unwrap(), env, expected_return, functions, traits, source, diagnostics)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
         if !same_type(expected_return, result.type_name) {
-            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "method return type mismatch", method.sig.name)
+            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "method return type mismatch", method.sig.name
         }
     }
     pre_errors + result.errors
@@ -982,7 +982,7 @@ func check_function(function_decl function_decl, vec[function_binding] functions
     result := infer_block_expr(function_decl.body.unwrap(), env, expected_return, functions, traits, source, diagnostics)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
         if !same_type(expected_return, result.type_name) {
-            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "function return type mismatch", function_decl.sig.name)
+            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "function return type mismatch", function_decl.sig.name
         }
     }
     pre_errors + result.errors
@@ -1017,7 +1017,7 @@ func validate_function_signature(function_decl function_decl, string source, vec
     switch function_decl.sig.return_type {
         option.some(rt) : {
             if has_unknown_component(rt) {
-                errors = errors + add_error(source, diagnostics, "e3014", "return type has unknown component", function_decl.sig.name)
+                errors = errors + add_error(source, diagnostics, "e3014", "return type has unknown component", function_decl.sig.name
             }
         }
         option.none : (),
@@ -1073,17 +1073,17 @@ func check_stmt(stmt stmt, vec[type_binding] env, string expected_return, vec[fu
             rhs := infer_expr(value.value, env, expected_return, functions, traits, source, diagnostics)
             errors := rhs.errors
             if is_unknown(target_type) {
-                return errors + add_error(source, diagnostics, "e3002", "assignment to undefined name", value.name)
+                return errors + add_error(source, diagnostics, "e3002", "assignment to undefined name", value.name
             }
             if !types_compatible(target_type, rhs.type_name) {
-                return errors + add_error(source, diagnostics, "e3003", "assignment type mismatch", value.name)
+                return errors + add_error(source, diagnostics, "e3003", "assignment type mismatch", value.name
             }
             errors
         }
         stmt.increment(value) : {
             ty := lookup_name_type(env, value.name)
             if !types_compatible("int", ty) {
-                return add_error(source, diagnostics, "e3005", "increment requires int", value.name)
+                return add_error(source, diagnostics, "e3005", "increment requires int", value.name
             }
             0
         }
@@ -1105,10 +1105,10 @@ func check_stmt(stmt stmt, vec[type_binding] env, string expected_return, vec[fu
                 option.some(expr) : {
                     expr_result := infer_expr(expr, env, expected_return, functions, traits, source, diagnostics)
                     if expected_return == "()" {
-                        return expr_result.errors + add_error(source, diagnostics, "e3007", "unexpected return value", "return")
+                        return expr_result.errors + add_error(source, diagnostics, "e3007", "unexpected return value", "return"
                     }
                     if !types_compatible(expected_return, expr_result.type_name) {
-                        return expr_result.errors + add_error(source, diagnostics, "e3008", "return type mismatch", "return")
+                        return expr_result.errors + add_error(source, diagnostics, "e3008", "return type mismatch", "return"
                     }
                     expr_result.errors
                 }
@@ -1116,7 +1116,7 @@ func check_stmt(stmt stmt, vec[type_binding] env, string expected_return, vec[fu
                     if expected_return == "()" {
                         return 0
                     }
-                    add_error(source, diagnostics, "e3009", "missing return value", "return")
+                    add_error(source, diagnostics, "e3009", "missing return value", "return"
                 }
             }
         }
@@ -1139,13 +1139,13 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
         expr::bool(_) : ok_type("bool"),
         expr::name(value) : {
             if value.name == "nil" {
-                return ok_type("nil")
+                return ok_type("nil"
             }
             ty := lookup_name_type(env, value.name)
             if is_unknown(ty) {
                 fn_candidates := lookup_functions(functions, value.name)
                 if fn_candidates.len() > 0 {
-                    return ok_type("fn")
+                    return ok_type("fn"
                 }
                 return check_result {
                     type_name: "unknown",
@@ -1479,7 +1479,7 @@ func infer_expr(expr expr, vec[type_binding] env, string expected_return, vec[fu
         }
         expr::array(value) : {
             if value.items.len() == 0 {
-                return ok_type("[]unknown")
+                return ok_type("[]unknown"
             }
             first := infer_expr(value.items[0], env, expected_return, functions, traits, source, diagnostics)
             errors := first.errors
@@ -1544,32 +1544,32 @@ func bind_pattern(pattern pattern, string expected_type, vec[type_binding] bindi
             if base == "option" {
                 if variant == "some" {
                     if value.args.len() != 1 {
-                        return add_error(source, diagnostics, "e2004", "some payload arity mismatch", value.path)
+                        return add_error(source, diagnostics, "e2004", "some payload arity mismatch", value.path
                     }
-                    return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics)
+                    return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics
                 }
                 if variant == "none" {
                     if value.args.len() == 0 {
                         return 0
                     }
-                    return add_error(source, diagnostics, "e2004", "none must not have payload", value.path)
+                    return add_error(source, diagnostics, "e2004", "none must not have payload", value.path
                 }
-                return add_error(source, diagnostics, "e2006", "invalid option constructor", value.path)
+                return add_error(source, diagnostics, "e2006", "invalid option constructor", value.path
             }
             if base == "result" {
                 if variant == "ok" {
                     if value.args.len() != 1 {
-                        return add_error(source, diagnostics, "e2004", "ok payload arity mismatch", value.path)
+                        return add_error(source, diagnostics, "e2004", "ok payload arity mismatch", value.path
                     }
-                    return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics)
+                    return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics
                 }
                 if variant == "err" {
                     if value.args.len() != 1 {
-                        return add_error(source, diagnostics, "e2004", "err payload arity mismatch", value.path)
+                        return add_error(source, diagnostics, "e2004", "err payload arity mismatch", value.path
                     }
-                    return bind_pattern(value.args[0], second_type_arg(expected_type), bindings, source, diagnostics)
+                    return bind_pattern(value.args[0], second_type_arg(expected_type), bindings, source, diagnostics
                 }
-                return add_error(source, diagnostics, "e2006", "invalid result constructor", value.path)
+                return add_error(source, diagnostics, "e2006", "invalid result constructor", value.path
             }
             add_error(source, diagnostics, "e2006", "variant pattern not allowed for this type", value.path)
         }
@@ -1584,7 +1584,7 @@ func add_binding(vec[type_binding] bindings, string name, string type_name, stri
     for i < bindings.len() {
         if bindings[i].name == name {
             if !types_compatible(bindings[i].type_name, type_name) {
-                return add_error(source, diagnostics, "e2008", "conflicting binding type in pattern", name)
+                return add_error(source, diagnostics, "e2008", "conflicting binding type in pattern", name
             }
             return 0
         }
@@ -1664,7 +1664,7 @@ func pattern_subsumes(pattern left, pattern right, string expected_type) bool {
                     if is_unknown(payload_type) {
                         return false
                     }
-                    return pattern_subsumes(lv.args[0], rv.args[0], payload_type)
+                    return pattern_subsumes(lv.args[0], rv.args[0], payload_type
                 }
                 _ : false,
             }
@@ -1683,10 +1683,10 @@ func patterns_cover_type(vec[pattern] patterns, string expected_type) bool {
     }
     base := base_type_name(expected_type)
     if base == "option" {
-        return option_patterns_cover(patterns, expected_type)
+        return option_patterns_cover(patterns, expected_type
     }
     if base == "result" {
-        return result_patterns_cover(patterns, expected_type)
+        return result_patterns_cover(patterns, expected_type
     }
     false
 }
@@ -1782,7 +1782,7 @@ func variant_payload_type(string expected_type, string ctor) string {
     base := base_type_name(expected_type)
     if base == "option" {
         if ctor == "some" {
-            return first_type_arg(expected_type)
+            return first_type_arg(expected_type
         }
         if ctor == "none" {
             return "()"
@@ -1790,10 +1790,10 @@ func variant_payload_type(string expected_type, string ctor) string {
     }
     if base == "result" {
         if ctor == "ok" {
-            return first_type_arg(expected_type)
+            return first_type_arg(expected_type
         }
         if ctor == "err" {
-            return second_type_arg(expected_type)
+            return second_type_arg(expected_type
         }
     }
     "unknown"
@@ -1906,13 +1906,13 @@ func receiver_allows_method(string receiver_type, expr receiver_expr, string rec
         if starts_with(receiver_type, "&") {
             return true
         }
-        return is_addressable_expr(receiver_expr)
+        return is_addressable_expr(receiver_expr
     }
     if receiver_mode == "ref" {
         if starts_with(receiver_type, "&") {
             return true
         }
-        return is_addressable_expr(receiver_expr)
+        return is_addressable_expr(receiver_expr
     }
     false
 }
@@ -2027,7 +2027,7 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, vec[string] 
             ;
             return true
         }
-        return same_type(bound, a)
+        return same_type(bound, a
     }
     if param_type.is_ref != arg_type.is_ref {
         return false
@@ -2050,7 +2050,7 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, vec[string] 
     p_args := param_type.args
     a_args := arg_type.args
     if p_args.len() != a_args.len() {
-        return same_type_ref(param_type, arg_type)
+        return same_type_ref(param_type, arg_type
     }
     i := 0
     for i < p_args.len() {
@@ -2096,16 +2096,16 @@ func instantiate_type(string ty, vec[string] generic_names, vec[type_binding] ge
         }
     }
     if starts_with(clean, "&") {
-        return "&" + instantiate_type(slice(clean, 5, len(clean)), generic_names, generic_bindings)
+        return "&" + instantiate_type(slice(clean, 5, len(clean)), generic_names, generic_bindings
     }
     if starts_with(clean, "&") {
-        return "&" + instantiate_type(slice(clean, 1, len(clean)), generic_names, generic_bindings)
+        return "&" + instantiate_type(slice(clean, 1, len(clean)), generic_names, generic_bindings
     }
     if starts_with(clean, "[]") {
-        return "[]" + instantiate_type(slice(clean, 2, len(clean)), generic_names, generic_bindings)
+        return "[]" + instantiate_type(slice(clean, 2, len(clean)), generic_names, generic_bindings
     }
     if starts_with(clean, "[") {
-        return array_prefix_text(clean) + instantiate_type(strip_array_prefix(clean), generic_names, generic_bindings)
+        return array_prefix_text(clean) + instantiate_type(strip_array_prefix(clean), generic_names, generic_bindings
     }
     args := extract_type_args(clean)
     if args.len() == 0 {
@@ -2130,16 +2130,16 @@ func type_contains_generic(string ty, vec[string] generic_names) bool {
         return true
     }
     if starts_with(clean, "&") {
-        return type_contains_generic(slice(clean, 5, len(clean)), generic_names)
+        return type_contains_generic(slice(clean, 5, len(clean)), generic_names
     }
     if starts_with(clean, "&") {
-        return type_contains_generic(slice(clean, 1, len(clean)), generic_names)
+        return type_contains_generic(slice(clean, 1, len(clean)), generic_names
     }
     if starts_with(clean, "[]") {
-        return type_contains_generic(slice(clean, 2, len(clean)), generic_names)
+        return type_contains_generic(slice(clean, 2, len(clean)), generic_names
     }
     if starts_with(clean, "[") {
-        return type_contains_generic(strip_array_prefix(clean), generic_names)
+        return type_contains_generic(strip_array_prefix(clean), generic_names
     }
     args := extract_type_args(clean)
     i := 0
@@ -2235,26 +2235,26 @@ func ok_type(string type_name) check_result {
 
 func types_compatible(string left, string right) bool {
     if is_unknown(left) || is_unknown(right) {
-        return is_unknown(left) && is_unknown(right)
+        return is_unknown(left) && is_unknown(right
     }
     if is_nil(left) && is_nil(right) {
         return true
     }
     if is_nil(left) {
-        return is_nilable_type(right)
+        return is_nilable_type(right
     }
     if is_nil(right) {
-        return is_nilable_type(left)
+        return is_nilable_type(left
     }
     assignable_type(left, right) || compatible_type(left, right)
 }
 
 func nil_comparable_pair(string left, string right) bool {
     if is_nil(left) {
-        return is_nil(right) || is_nilable_type(right)
+        return is_nil(right) || is_nilable_type(right
     }
     if is_nil(right) {
-        return is_nilable_type(left)
+        return is_nilable_type(left
     }
     false
 }
@@ -2283,10 +2283,10 @@ func is_unknown(string type_name) bool {
 func resolve_method_return(string target_type, string method_type) string {
     target_ref := parse_type_ref(target_type)
     if method_type == "t" {
-        return type_arg(target_ref, 0)
+        return type_arg(target_ref, 0
     }
     if method_type == "e" {
-        return type_arg(target_ref, 1)
+        return type_arg(target_ref, 1
     }
     if method_type == "option[t]" {
         arg := type_arg(target_ref, 0)

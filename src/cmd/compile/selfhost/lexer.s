@@ -15,7 +15,7 @@ func is_alpha(string ch) bool {
 }
 
 func is_ident_continue(string ch) bool {
-    return is_alpha(ch) || is_digit(ch)
+    return is_alpha(ch) || is_digit(ch
 }
 
 func keyword_kind(string text) string {
@@ -82,7 +82,7 @@ func digit_text(int value) string {
 
 func int_text(int value) string {
     if value < 10 { return digit_text(value) }
-    return int_text(value / 10) + digit_text(value % 10)
+    return int_text(value / 10) + digit_text(value % 10
 }
 
 func hex_digit(int value) string {
@@ -160,7 +160,7 @@ func dump_tokens(string source) string {
                 i = i + 2
                 column = column + 2
 			} else {
-				return lexer_error("SYNTAX", comment_line, comment_column, "unterminated block comment")
+				return lexer_error("SYNTAX", comment_line, comment_column, "unterminated block comment"
             }
             continue
         }
@@ -227,7 +227,7 @@ func dump_tokens(string source) string {
                 }
             }
 			if i >= source_len || __host_char_at(source, i) != "\"" {
-				return lexer_error("UNTERMINATED_STRING", token_line, token_column, "unterminated string literal")
+				return lexer_error("UNTERMINATED_STRING", token_line, token_column, "unterminated string literal"
 			}
             lexeme := __host_slice(source, start, i)
             output = append_token(output, "STRING", lexeme, token_line, token_column)
@@ -246,12 +246,12 @@ func dump_tokens(string source) string {
         }
         output = append_token(output, symbol_kind(symbol), symbol, token_line, token_column)
 		if symbol_kind(symbol) == "UNKNOWN" {
-			return lexer_error("ILLEGAL_CHAR", token_line, token_column, "illegal character: " + symbol)
+			return lexer_error("ILLEGAL_CHAR", token_line, token_column, "illegal character: " + symbol
 		}
         i = i + len(symbol)
         column = column + len(symbol)
     }
-    return append_token(output, "EOF", "", line, column)
+    return append_token(output, "EOF", "", line, column
 }
 
 func main() {

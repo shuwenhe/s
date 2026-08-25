@@ -60,11 +60,11 @@ func parse_ir(string content) (IRProgram, error) {
     current_func: *Function = nil
     line_idx := 0
     if line_idx >= len(lines) {
-        return prog, error("empty IR file")
+        return prog, error("empty IR file"
     }
     header := trim_string(lines[line_idx])
     if header != "SSEED-TARGET-V1" {
-        return prog, error("invalid IR header: " + header)
+        return prog, error("invalid IR header: " + header
     }
     line_idx += 1
     for line_idx < len(lines) {
@@ -157,7 +157,7 @@ func generate_instruction(Instruction instr) (string, error) {
         case "LABEL":
             return instr.src1 + ":\n", nil
         default:
-            return "", error("unknown opcode: " + instr.opcode)
+            return "", error("unknown opcode: " + instr.opcode
     }
 }
 
@@ -177,7 +177,7 @@ func ir_compile_to_elf(string ir_path, string output_path) error {
     temp_asm := "/tmp/s_compiler_generated.s"
     asm_file := io_open(temp_asm, "w")
     if asm_file == nil {
-        return error("failed to open temp assembly file")
+        return error("failed to open temp assembly file"
     }
     io_write(asm_file, []byte(asm_code))
     asm_file.close()

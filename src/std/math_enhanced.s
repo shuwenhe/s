@@ -89,7 +89,7 @@ func sqrt(float x) float {
 
 func cbrt(float x) float {
     if x >= 0 { return pow(x, 1.0 / 3.0) }
-    return -pow(-x, 1.0 / 3.0)
+    return -pow(-x, 1.0 / 3.0
 }
 
 func exp(float x) float {
@@ -298,7 +298,7 @@ func floor(float x) float {
 
 func round(float x) float {
     if x >= 0 { return floor(x + 0.5) }
-    return ceil(x - 0.5)
+    return ceil(x - 0.5
 }
 
 func trunc(float x) float {

@@ -162,5 +162,5 @@ func float_to_string_precision(float value, int precision) string {
 }
 
 func float_to_string(float value) string {
-    return float_to_string_precision(value, 3)
+    return float_to_string_precision(value, 3
 }

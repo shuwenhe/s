@@ -325,7 +325,7 @@ func transpose(tensor t, int dim0, int dim1) tensor {
         i = i + 1
     }
     if t.shape.ndim == 2 && dim0 == 0 && dim1 == 1 {
-        return transpose_2d(t)
+        return transpose_2d(t
     }
     tensor { shape: shape_from_dims(new_dims), data: t.data, device: t.device, requires_grad: t.requires_grad }
 }
@@ -683,7 +683,7 @@ func matmul_2d(tensor a, tensor b) tensor {
 
 func dot(tensor a, tensor b) tensor {
     if a.shape.ndim != 1 || b.shape.ndim != 1 || a.shape.dims[0] != b.shape.dims[0] {
-        return scalar(0.0)
+        return scalar(0.0
     }
     float s = 0.0
     int i = 0

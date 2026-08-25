@@ -34,11 +34,11 @@ func sparse_map_contains(sparse_map s, int key) bool {
 
 func sparse_map_get(sparse_map s, int key) int_pair {
     if key < 0 || key >= s.sparse.len() {
-        return make_int_pair(0, 0)
+        return make_int_pair(0, 0
     }
     i := s.sparse[key]
     if i < s.dense.len() && s.dense[i].key == key {
-        return make_int_pair(s.dense[i].value, 1)
+        return make_int_pair(s.dense[i].value, 1
     }
     make_int_pair(0, 0)
 }

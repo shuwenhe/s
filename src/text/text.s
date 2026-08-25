@@ -27,11 +27,11 @@ func parse_int_default(string text, int fallback) int {
 }
 
 func float_to_string(float value) string {
-    return conv_float_to_string(value)
+    return conv_float_to_string(value
 }
 
 func float_to_string_precision(float value, int precision) string {
-    return conv_float_to_string_precision(value, precision)
+    return conv_float_to_string_precision(value, precision
 }
 
 func normalize_byte(int value) int {

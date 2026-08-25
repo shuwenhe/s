@@ -51,5 +51,5 @@ func init_arch_info() arch_info {
 		load_reg_result_hook: "",
 		spill_arg_reg_hook: "",
 	}
-	return init_amd64(info)
+	return init_amd64(info
 }

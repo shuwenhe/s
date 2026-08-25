@@ -154,7 +154,7 @@ func (lexer* self) read_string() (string, lex_error) {
                 continue
             }
             if ch == "\"" {
-                return result::ok(out)
+                return out
             }
         }
         result::err(self.error("unterminated string literal"))
@@ -182,11 +182,11 @@ func (lexer* self) read_symbol() (string, lex_error) {
                     out = out + self.advance()?
                     i = i + 1
                 }
-                return result::ok(out)
+                return out
             }
         }
         string ch = self.peek()?        if is_single_symbol(ch) {
-            return result::ok(self.advance()?)
+            return self.advance()?
         }
         result::err(self.error("unexpected character"))
     }

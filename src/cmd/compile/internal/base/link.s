@@ -30,7 +30,7 @@ func pkg_linksym(string prefix, string name, int abi) link_symbol {
         sep = ":"
     }
     if name == "_" {
-        return linksym(prefix, "_", abi)
+        return linksym(prefix, "_", abi
     }
     linksym(prefix, prefix + sep + name, abi)
 }

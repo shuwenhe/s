@@ -655,7 +655,7 @@ func cat(tensor[] tensors, int axis) tensor {
 }
 
 func relu(tensor t) tensor {
-    elemwise_op1(t, func(float x) float { if x < 0 { return 0.0 }; x })
+    elemwise_op1(t, func(float x) float { if x < 0 { return 0.0 }; x }
 }
 
 func gelu(tensor t) tensor {

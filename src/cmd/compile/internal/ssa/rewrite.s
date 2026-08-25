@@ -2,13 +2,13 @@ package compile.internal.ssa
 
 func run_arch_rewrite(ssa_func f, string arch) int {
     if arch == "amd64" {
-        return run_rewrite_amd64(f)
+        return run_rewrite_amd64(f
     }
     if arch == "arm64" {
-        return run_rewrite_arm64(f)
+        return run_rewrite_arm64(f
     }
     if arch == "arm" {
-        return run_rewrite_arm(f)
+        return run_rewrite_arm(f
     }
     0
 }

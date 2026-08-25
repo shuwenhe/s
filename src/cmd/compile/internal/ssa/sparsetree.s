@@ -41,7 +41,7 @@ func sparse_tree_add_edge(sparse_tree t, int parent, int child) sparse_tree {
 
 func number_subtree(sparse_tree t, int root, int n) int_pair {
     if root < 0 || root >= t.nodes.len() {
-        return make_int_pair(n, 0)
+        return make_int_pair(n, 0
     }
     next := n + 1
     t.nodes[root].entry = next
