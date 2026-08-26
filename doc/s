@@ -240,7 +240,7 @@ switch color {
 10. Variable Declaration
 Variable definition
 x := 10              // Mutable
-const y := 5         // Immutable
+const y = 5         // Immutable
 int z  = 15          // Explicit type
 int w = 20           // Explicit type, mutable
 

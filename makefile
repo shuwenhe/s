@@ -3,6 +3,7 @@ INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_PROGRAM ?= install
 SUDO ?=
 SELFHOST_DIR ?= $(CURDIR)/.bootstrap/selfhost
+BOOTSTRAP_MANIFEST ?= $(SELFHOST_DIR)/manifest.txt
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 
 run: bin/s
@@ -130,11 +131,19 @@ seed-module-link-test: seed-compiler-bin
 	@/tmp/s_seed_module_link_test/program
 	@echo "Seed multi-module IR link test passed."
 
-selfhost: seed-compiler-bin
+bootstrap-stage0: seed-compiler-bin
+	@echo "Bootstrap stage0 ready: ./bin/s_seed (trusted C seed)"
+
+bootstrap-convergence: bootstrap-stage0
 	@mkdir -p $(SELFHOST_DIR) ./bin
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --bootstrap src/cmd/compile/main.s $(SELFHOST_DIR)
+	@./src/cmd/dist/checks/write-manifest.sh "$(SELFHOST_DIR)" "$(BOOTSTRAP_MANIFEST)"
+	@echo "Bootstrap convergence passed: stage2.ir == stage3.ir"
+
+selfhost: bootstrap-convergence
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/stage2 ./bin/s
-	@echo "Installed self-hosted S compiler: ./bin/s"
+	@echo "Installed seed-hosted S compiler: ./bin/s"
+	@echo "Note: this artifact is not yet a true native self-hosted compiler"
 
 selfhost-lexer-check: seed-compiler-bin
 	@mkdir -p $(SELFHOST_DIR) ./bin
@@ -166,6 +175,21 @@ true-selfhost-check: selfhost-check
 	@./misc/scripts/verify_true_selfhost.sh ./bin/s
 	@echo "True self-host check passed: ./bin/s does not link the C seed compiler"
 
+bootstrap-audit: selfhost
+	@./src/cmd/dist/checks/audit.sh "$(SELFHOST_DIR)" ./bin/s
+
+bootstrap-subset-check: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR)/subset
+	@./bin/s_seed test/selfhost/subset_valid.s $(SELFHOST_DIR)/subset/valid.ir
+	@! ./bin/s_seed test/selfhost/subset_invalid_let.s $(SELFHOST_DIR)/subset/invalid-let.ir >/dev/null 2>&1
+	@! ./bin/s_seed test/selfhost/subset_invalid_var.s $(SELFHOST_DIR)/subset/invalid-var.ir >/dev/null 2>&1
+	@echo "Bootstrap declaration subset check passed"
+
+bootstrap-source-closure:
+	@mkdir -p $(SELFHOST_DIR)
+	@./src/cmd/dist/source_closure.sh src/cmd/compile/main.s $(SELFHOST_DIR)/sources.txt
+	@echo "Bootstrap source closure: $(SELFHOST_DIR)/sources.txt"
+
 selfhost-nostdlib:
 	@if [ ! -x ./bin/s_nostdlib ]; then \
 		echo "selfhost-nostdlib: missing ./bin/s_nostdlib" >&2; \
@@ -186,7 +210,7 @@ selfhost-runtime-check:
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
 
-.PHONY: help selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-audit bootstrap-subset-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 verify-true-selfhost:
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
@@ -199,6 +223,11 @@ help:
 	@echo "  make seed-runtime-regression"
 	@echo "  make seed-network-tests"
 	@echo "  make seed-c-abi-test"
+	@echo "  make bootstrap-stage0       # Build the trusted C stage0 compiler"
+	@echo "  make bootstrap-convergence  # Produce stage1..3 and prove IR convergence"
+	@echo "  make bootstrap-audit        # Report provenance and forbidden dependencies"
+	@echo "  make bootstrap-subset-check # Enforce the frozen bootstrap declaration syntax"
+	@echo "  make bootstrap-source-closure # Resolve the pure-S compiler source closure"
 	@echo "  make selfhost"
 	@echo "  make selfhost-check"
 	@echo "  make true-selfhost-check      # Reject a compiler that still links the C seed"

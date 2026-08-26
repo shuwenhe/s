@@ -54,7 +54,7 @@ func run_pipeline_regression_suite() int {
     if parsed_bad_margin[0] != "help" {
         return 1
     }
-    source := "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int {\n  1\n}\nfunc worker() int {\n  helper()\n  0\n}\nfunc main() {\n  arr := [int]{1, 2}\n  mp := [string]int{\"k\": 1}\n  idx := arr[0]\n  bx := { idx + 1 }\n  idx = idx + bx\n  sroutine worker()\n  for (let i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
+    source := "package demo.reg\nconst (\n  A = 1\n  B\n)\nfunc helper() int {\n  1\n}\nfunc worker() int {\n  helper()\n  0\n}\nfunc main() {\n  arr := [int]{1, 2}\n  mp := [string]int{\"k\": 1}\n  idx := arr[0]\n  bx := { idx + 1 }\n  idx = idx + bx\n  sroutine worker()\n  for (i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B + mp[\"k\"]\n}"
     parsed := parse_source(source)
     if parsed.is_err() {
         return 1
