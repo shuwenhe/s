@@ -46,18 +46,18 @@ func (gen: &X86_64Gen) free_register(string reg) {
     gen.register_stack = append(gen.register_stack, reg)
 }
 
-func (gen: &X86_64Gen) get_location(string var) string {
-    if loc, exists := gen.temp_allocations[var]; exists {
+func (gen: &X86_64Gen) get_location(string variable) string {
+    if loc, exists := gen.temp_allocations[variable]; exists {
         return loc
     }
     reg := gen.allocate_register()
     if reg != "" {
-        gen.temp_allocations[var] = reg
+        gen.temp_allocations[variable] = reg
         return reg
     }
     stack_offset := (len(gen.temp_allocations) + 1) * 8
     stack_loc := sprintf("-%d(%%rbp)", stack_offset)
-    gen.temp_allocations[var] = stack_loc
+    gen.temp_allocations[variable] = stack_loc
     return stack_loc
 }
 

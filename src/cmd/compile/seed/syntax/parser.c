@@ -1045,7 +1045,7 @@ static ast_node *parse_assign_declare_statement(parser *p) {
 		ast_free(node);
 		return NULL;
 	}
-	node->as.let_stmt.mutable = 0;
+	node->as.let_stmt.mutable = 1;
 	node->as.let_stmt.type_name = NULL;
 
 	if (!expect(p, TOKEN_ASSIGN_DECLARE, ":=")) {
@@ -2444,16 +2444,16 @@ static ast_node *parse_const_decl(parser *p) {
 		ast_free(node);
 		return NULL;
 	}
-	if (!check(p, TOKEN_ASSIGN)) {
+	if (!check(p, TOKEN_ASSIGN_DECLARE)) {
 		char *type_name = NULL;
 		if (!try_parse_type_annotation(p, &type_name)) {
-			parse_error(p, peek(p), "expected constant type or '='");
+			parse_error(p, peek(p), "expected constant type or ':='");
 			ast_free(node);
 			return NULL;
 		}
 		node->as.var_decl.type_name = type_name;
 	}
-	if (!expect(p, TOKEN_ASSIGN, "'=' after constant name")) {
+	if (!expect(p, TOKEN_ASSIGN_DECLARE, "':=' after constant name")) {
 		ast_free(node);
 		return NULL;
 	}
