@@ -1051,22 +1051,26 @@ func (parser* self) parse_expr() (expr, parse_error) {
 }
 
 func (parser* self) parse_select_expr() (expr, parse_error) {
-        self.expect_keyword("select")?
-        self.expect_symbol("{")?
+        self.expect_keyword("select")
+        self.expect_symbol("{")
         string mode = ""        vec[expr] recv_args = vec[expr]()        vec[expr] send_args = vec[expr]()        option[expr] timeout_arg = option[expr].none        bool has_default = false
         for !self.eat_symbol("}") {
-            self.expect_keyword("case")?
+            self.expect_keyword("case")
             if self.eat_keyword("default") {
                 if has_default {
                     return self.error_here("duplicate default case in select")
                 }
                 has_default = true
-                self.expect_symbol(":")?
+                self.expect_symbol(":")
                 self.eat_symbol(";")
                 continue
             }
-            case_expr := self.parse_expr()?
-            self.expect_symbol(":")?
+            case_expr, err := self.parse_expr()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
+            self.expect_symbol(":")
             self.eat_symbol(";")
             switch case_expr {
                 expr.call(call_value) : {
@@ -1155,13 +1159,25 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
     }
 
 func (parser* self) parse_switch_expr() (expr, parse_error) {
-        self.expect_keyword("switch")?
-        expr subject = self.parse_expr()?        self.expect_symbol("{")?
+        self.expect_keyword("switch")
+        subject, err := self.parse_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
         vec[switch_arm] arms = vec[switch_arm]()
         for !self.eat_symbol("}") {
-            pattern := self.parse_pattern()?
-            self.expect_symbol(":")?
-            expr expr = self.parse_expr()?            arms.push(switch_arm {
+            pattern, err := self.parse_pattern()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
+            self.expect_symbol(":")
+            expr, err := self.parse_expr()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
                 pattern: pattern,
                 expr: expr,
             })
@@ -1175,12 +1191,16 @@ func (parser* self) parse_switch_expr() (expr, parse_error) {
     }
 
 func (parser* self) parse_if_expr() (expr, parse_error) {
-        self.expect_keyword("if")?
-        expr condition = self.parse_expr()?        block_expr then_branch = self.parse_block_expr()?        option[box[expr]] else_branch =            if self.eat_keyword("else") {
+        self.expect_keyword("if")
+        condition, err := self.parse_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
                 if self.at_keyword("if") {
-                    option::some(box(self.parse_if_expr()?))
+                    option::some(box(self.parse_if_expr()))
                 } else {
-                    option::some(box(expr::block(self.parse_block_expr()?)))
+                    option::some(box(expr::block(self.parse_block_expr())))
                 }
             } else {
                 option::none
@@ -1194,10 +1214,14 @@ func (parser* self) parse_if_expr() (expr, parse_error) {
     }
 
 func (parser* self) parse_for_expr() (expr, parse_error) {
-        self.expect_keyword("for")?
+        self.expect_keyword("for")
         
         if self.at_symbol("{") {
-            body := self.parse_block_expr()?
+            body, err := self.parse_block_expr()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
             return expr::for(for_expr {
                 init: option::none,
                 condition: option::none,
@@ -1210,13 +1234,30 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
         }
         
         if self.at_symbol("(") {
-            self.expect_symbol("(")?
-            init := self.parse_for_clause_stmt()?
-            self.expect_symbol(";")?
-            expr condition = self.parse_expr()?            self.expect_symbol(";")?
-            post := self.parse_for_clause_stmt()?
-            self.expect_symbol(")")?
-            body := self.parse_block_expr()?
+            self.expect_symbol("(")
+            init, err := self.parse_for_clause_stmt()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
+            self.expect_symbol(";")
+            condition, err := self.parse_expr()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
+            post, err := self.parse_for_clause_stmt()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
+            _, err := self.expect_symbol(")")
+            if err.message != "" { expr empty; return empty, err }
+            body, err := self.parse_block_expr()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
             return expr::for(for_expr {
                 init: option::some(box(init)),
                 condition: option::some(box(condition)),
@@ -1228,9 +1269,21 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
             }))
         }
         
-        token token = self.peek()?        if token.kind == token_kind::ident && self.at_symbol_after_keyword("in") {
-            string name = self.expect_ident()?            self.expect_keyword("in")?
-            expr iterable = self.parse_expr()?            body := self.parse_block_expr()?
+        token, err := self.peek()
+        if err.message != "" {
+            token empty
+            return empty, err
+        }
+            name, err := self.expect_ident()
+            if err.message != "" {
+                string empty
+                return empty, err
+            }
+            iterable, err := self.parse_expr()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
             return expr::for(for_expr {
                 init: option::none,
                 condition: option::none,
@@ -1242,7 +1295,11 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
             }))
         }
         
-        expr condition = self.parse_expr()?        body := self.parse_block_expr()?
+        condition, err := self.parse_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
         expr::for(for_expr {
             init: option::none,
             condition: option::some(box(condition)),
@@ -1258,8 +1315,12 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
         if self.eat_ident_value("_") {
             return pattern::wildcard(wildcard_pattern {}))
         }
-        token token = self.peek()?        if token.kind == token_kind::int {
-            self.advance()?
+        token, err := self.peek()
+        if err.message != "" {
+            token empty
+            return empty, err
+        }
+            self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::int(int_expr {
                     value: token.value,
@@ -1268,7 +1329,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             }))
         }
         if token.kind == token_kind::string {
-            self.advance()?
+            self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::string(string_expr {
                     value: token.value,
@@ -1277,7 +1338,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             }))
         }
         if self.at_keyword("true") {
-            self.advance()?
+            self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::bool(bool_expr {
                     value: true,
@@ -1286,7 +1347,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             }))
         }
         if self.at_keyword("false") {
-            self.advance()?
+            self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::bool(bool_expr {
                     value: false,
@@ -1294,16 +1355,21 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
                 }),
             }))
         }
-        string path = self.parse_path()?        if self.eat_symbol("(") {
+        path, err := self.parse_path()
+        if err.message != "" {
+            string empty
+            return empty, err
+        }
             vec[pattern] args = vec[pattern]()            if !self.at_symbol(")") {
                 for true {
-                    args.push(self.parse_pattern()?)
+                    args.push(self.parse_pattern())
                     if !self.eat_symbol(",") || self.at_symbol(")") {
                         break
                     }
                 }
             }
-            self.expect_symbol(")")?
+            _, err := self.expect_symbol(")")
+            if err.message != "" { expr empty; return empty, err }
             return pattern::variant(variant_pattern {
                 path: path,
                 args: args,
@@ -1319,12 +1385,24 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
     }
 
 func (parser* self) parse_binary_expr(int min_precedence) (expr, parse_error) {
-        expr := self.parse_unary_expr()?
+        expr, err := self.parse_unary_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
         for true {
-            token token = self.peek()?            int precedence = self.binary_precedence(token.value)            if precedence < min_precedence {
+            token, err := self.peek()
+            if err.message != "" {
+                token empty
+                return empty, err
+            }
                 break
             }
-            string op = self.advance()?.value            rhs := self.parse_binary_expr(precedence + 1)?
+            op, err := self.advance()
+            if err.message != "" {
+                string empty
+                return empty, err
+            }
             expr = expr::binary(binary_expr {
                 left: box(expr),
                 op: op,
@@ -1353,18 +1431,23 @@ func (parser* self) parse_unary_expr() (expr, parse_error) {
 }
 
 func (parser* self) parse_call_expr() (expr, parse_error) {
-        expr := self.parse_primary_expr()?
+        expr, err := self.parse_primary_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
         for true {
             if self.eat_symbol("(") {
                 vec[expr] args = vec[expr]()                if !self.at_symbol(")") {
                     for true {
-                        args.push(self.parse_expr()?)
+                        args.push(self.parse_expr())
                         if !self.eat_symbol(",") || self.at_symbol(")") {
                             break
                         }
                     }
                 }
-                self.expect_symbol(")")?
+                _, err := self.expect_symbol(")")
+            if err.message != "" { expr empty; return empty, err }
                 expr = expr::call(call_expr {
                     callee: box(expr),
                     args: args,
@@ -1375,23 +1458,27 @@ func (parser* self) parse_call_expr() (expr, parse_error) {
             if self.eat_symbol(".") {
                 expr = expr::member(member_expr {
                     target: box(expr),
-                    member: self.expect_ident()?,
+                    member: self.expect_ident(),
                     inferred_type: option::none,
                 })
                 continue
             }
             if self.eat_symbol(":") {
-                self.expect_symbol(":")?
+                self.expect_symbol(":")
                 expr = expr::member(member_expr {
                     target: box(expr),
-                    member: self.expect_ident()?,
+                    member: self.expect_ident(),
                     inferred_type: option::none,
                 })
                 continue
             }
             if self.eat_symbol("[") {
-                index := self.parse_expr()?
-                self.expect_symbol("]")?
+                index, err := self.parse_expr()
+                if err.message != "" {
+                    expr empty
+                    return empty, err
+                }
+                self.expect_symbol("]")
                 expr = expr::index(index_expr {
                     target: box(expr),
                     index: box(index),
@@ -1405,93 +1492,125 @@ func (parser* self) parse_call_expr() (expr, parse_error) {
     }
 
 func (parser* self) parse_primary_expr() (expr, parse_error) {
-        token token = self.peek()?        if token.kind == token_kind::int {
-            self.advance()?
+        token, err := self.peek()
+        if err.message != "" {
+            token empty
+            return empty, err
+        }
+            self.advance()
             return expr::int(int_expr {
                 value: token.value,
                 inferred_type: option::none,
             }))
         }
         if token.kind == token_kind::string {
-            self.advance()?
+            self.advance()
             return expr::string(string_expr {
                 value: token.value,
                 inferred_type: option::none,
             }))
         }
         if self.at_keyword("true") {
-            self.advance()?
+            self.advance()
             return expr::bool(bool_expr {
                 value: true,
                 inferred_type: option::none,
             }))
         }
         if self.at_keyword("false") {
-            self.advance()?
+            self.advance()
             return expr::bool(bool_expr {
                 value: false,
                 inferred_type: option::none,
             }))
         }
         if self.at_keyword("nil") {
-            self.advance()?
+            self.advance()
             return expr::name(name_expr {
                 name: "nil",
                 inferred_type: option::none,
             }))
         }
         if self.at_symbol("{") {
-            return expr::block(self.parse_block_expr()?))
+            return expr::block(self.parse_block_expr()))
         }
         if self.eat_symbol("(") {
-            expr expr = self.parse_expr()?            self.expect_symbol(")")?
+            expr, err := self.parse_expr()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
             return expr
         }
         if self.at_symbol("[") {
-            bracket := self.parse_bracket_group()?
+            bracket, err := self.parse_bracket_group()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
             type_text := bracket
             token token = self.peek().unwrap()            if token.kind != token_kind::symbol || token.value != "{" {
-                seg := self.parse_token_segment(vec[string] { "{" })?
+                seg, err := self.parse_token_segment(vec[string] { "{" })
+                if err.message != "" {
+                    expr empty
+                    return empty, err
+                }
                 type_text = type_text + " " + join_token_values(seg)
             }
-            self.expect_symbol("{")?
+            self.expect_symbol("{")
             vec[expr] items = vec[expr]()            if !self.at_symbol("}") {
                 for true {
-                    items.push(self.parse_expr()?)
+                    items.push(self.parse_expr())
                     if !self.eat_symbol(",") || self.at_symbol("}") {
                         break
                     }
                 }
             }
-            self.expect_symbol("}")?
+            self.expect_symbol("}")
             return expr::array(array_literal { type_text: option::some(type_text.trim()), items: items }))
         }
         if token.kind == token_kind::ident && token.value == "map" {
-            self.advance()?
-            bracket := self.parse_bracket_group()?
+            self.advance()
+            bracket, err := self.parse_bracket_group()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
             type_text := "map" + bracket
             token2 := self.peek().unwrap()
             if token2.kind == token_kind::ident || token2.kind == token_kind::symbol {
-                seg := self.parse_token_segment(vec[string] { "{" })?
+                seg, err := self.parse_token_segment(vec[string] { "{" })
+                if err.message != "" {
+                    expr empty
+                    return empty, err
+                }
                 type_text = type_text + " " + join_token_values(seg)
             }
-            self.expect_symbol("{")?
+            self.expect_symbol("{")
             vec[map_entry] entries = vec[map_entry]()            if !self.at_symbol("}") {
                 for true {
-                    key := self.parse_expr()?
-                    self.expect_symbol(":")?
-                    value := self.parse_expr()?
+                    key, err := self.parse_expr()
+                    if err.message != "" {
+                        expr empty
+                        return empty, err
+                    }
+                    self.expect_symbol(":")
+                    value, err := self.parse_expr()
+                    if err.message != "" {
+                        expr empty
+                        return empty, err
+                    }
                     entries.push(map_entry { key: key, value: value })
                     if !self.eat_symbol(",") || self.at_symbol("}") {
                         break
                     }
                 }
             }
-            self.expect_symbol("}")?
+            self.expect_symbol("}")
             return expr::map(map_literal { type_text: option::some(type_text.trim()), entries: entries }))
         }
         expr::name(name_expr {
-            name: self.expect_ident()?,
+            name: self.expect_ident(),
             inferred_type: option::none,
         })
     }
@@ -1516,13 +1635,17 @@ func (parser* self) binary_precedence(string op) int {
     }
 
 func (parser* self) parse_use_path() (string, parse_error) {
-        vec[string] parts = vec[string]()        parts.push(self.expect_ident()?)
+        vec[string] parts = vec[string]()        parts.push(self.expect_ident())
         for self.eat_symbol(".") {
             if self.eat_symbol("{") {
                 vec[string] members = vec[string]()                for !self.eat_symbol("}") {
-                    member := self.expect_ident()?
+                    member, err := self.expect_ident()
+                    if err.message != "" {
+                        expr empty
+                        return empty, err
+                    }
                     string text =                        if self.eat_keyword("as") {
-                            member + " as " + self.expect_ident()?
+                            member + " as " + self.expect_ident()
                         } else {
                             member
                         }
@@ -1531,7 +1654,7 @@ func (parser* self) parse_use_path() (string, parse_error) {
                 }
                 return join_strings(parts, ".") + ".{" + join_strings(members, ", ") + "}")
             }
-            parts.push(self.expect_ident()?)
+            parts.push(self.expect_ident())
         }
         join_strings(parts, ".")
     }
