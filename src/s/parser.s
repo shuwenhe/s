@@ -28,69 +28,78 @@ func parse_source(string source) (source_file, parse_error) {
 }
 
 func parse_tokens(vec[token] tokens) (source_file, parse_error) {
-    parser parser = parser {        tokens: tokens,
+    parser p := parser {
+        tokens: tokens,
         index: 0,
     }
-    parser.parse_source_file()
+    p.parse_source_file()
 }
-    int global_parse_depth = 0    func log_depth(string msg) {
-        print(msg)
-    }
+
+int global_parse_depth := 0
+
+func log_depth(string msg) {
+    print(msg)
+}
 
 func (parser* self) parse_source_file() (source_file, parse_error) {
-        global_parse_depth = global_parse_depth + 1
-        log_depth("parse_source_file depth: " + to_string(global_parse_depth))
-        self.expect_keyword("package")?
-        string pkg = self.parse_path()?        vec[use_decl] uses = vec[use_decl]()        vec[item] items = vec[item]()
-        for self.at_keyword("use") {
-            uses.push(self.parse_use_decl()?)
-        }
-        for !self.at(token_kind::eof) {
-            if self.at_keyword("const") && self.at_symbol_after_keyword("(") {
-                vec[const_decl] consts = self.parse_const_group_items()?                int ci = 0                for ci < consts.len() {
-                    items.push(item::const(consts[ci]));
-                    ci = ci + 1
-                }
-                continue
+    global_parse_depth = global_parse_depth + 1
+    log_depth("parse_source_file depth: " + to_string(global_parse_depth))
+    self.expect_keyword("package")?
+    string pkg := self.parse_path()?
+    vec[use_decl] uses := vec[use_decl]()
+    vec[item] items := vec[item]()
+    for self.at_keyword("use") {
+        uses.push(self.parse_use_decl()?)
+    }
+    for !self.at(token_kind::eof) {
+        if self.at_keyword("const") && self.at_symbol_after_keyword("(") {
+            vec[const_decl] consts := self.parse_const_group_items()?
+            int ci := 0
+            for ci < consts.len() {
+                items.push(item::const(consts[ci]))
+                ci = ci + 1
             }
-            items.push(self.parse_item()?)
+            continue
         }
-        global_parse_depth = global_parse_depth - 1
-        log_depth("parse_source_file exit depth: " + to_string(global_parse_depth))
-        source_file {
-            pkg: pkg,
-            uses: uses,
-            items: items,
-        }
+        items.push(self.parse_item()?)
+    }
+    global_parse_depth = global_parse_depth - 1
+    log_depth("parse_source_file exit depth: " + to_string(global_parse_depth))
+    source_file {
+        pkg: pkg,
+        uses: uses,
+        items: items,
     }
 
 func (parser* self) parse_use_decl() (use_decl, parse_error) {
-        self.expect_keyword("use")?
-        string path = self.parse_use_path()?        option[string] alias =            if self.at_keyword("as") {
-                self.advance()?
-                option::some(self.expect_ident()?)
-            } else {
-                option::none
-            }
-        use_decl {
-            path: path,
-            alias: alias,
-        }
+    self.expect_keyword("use")?
+    string path := self.parse_use_path()?
+    option[string] alias := if self.at_keyword("as") {
+        self.advance()?
+        option::some(self.expect_ident()?)
+    } else {
+        option::none
     }
+    use_decl {
+        path: path,
+        alias: alias,
+    }
+}
 
 func (parser* self) parse_item() (item, parse_error) {
-        if self.at_keyword("func") {
-            parsed_function parsed = self.parse_function(true)?
-            switch parsed.receiver {
-                option::some(r) : {
-                    function_decl method = function_decl {                        sig: parsed.sig,
-                        body: parsed.body,
-                        is_public: starts_with_upper(parsed.sig.name),
-                    }
-                    return item::method(receiver_method_decl {
-                        receiver_name: r.name,
-                        receiver_type: r.type_name,
-                        method: method,
+    if self.at_keyword("func") {
+        parsed_function parsed := self.parse_function(true)?
+        switch parsed.receiver {
+            option::some(r) : {
+                function_decl method := function_decl {
+                    sig: parsed.sig,
+                    body: parsed.body,
+                    is_public: starts_with_upper(parsed.sig.name),
+                }
+                return item::method(receiver_method_decl {
+                    receiver_name: r.name,
+                    receiver_type: r.type_name,
+                    method: method,
                     }))
                 },
                 option::none : {
