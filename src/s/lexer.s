@@ -28,59 +28,63 @@ func new_lexer(string source) lexer {
 }
 
 func (lexer* self) tokenize() (vec[token], lex_error) {
-        vec[token] tokens = vec[token]()        for !self.is_eof() {
-            self.skip_ignored()
-            if self.is_eof() {
-                break
+    vec[token] tokens = vec[token]()
+    for !self.is_eof() {
+        self.skip_ignored()
+        if self.is_eof() {
+            break
+        }
+        int start_line = self.line
+        int start_column = self.column
+        string ch = self.peek()
+        if is_ident_start(ch) {
+            string value = self.read_identifier()
+            token_kind kind = if is_keyword(value) {
+                token_kind::keyword
+            } else {
+                token_kind::ident
             }
-            int start_line = self.line            int start_column = self.column            string ch = self.peek()
-            if is_ident_start(ch) {
-                string value = self.read_identifier()                token_kind kind =                    if is_keyword(value) {
-                        token_kind::keyword
-                    } else {
-                        token_kind::ident
-                    }
-                tokens.push(token {
-                    kind: kind,
-                    value: value,
-                    line: start_line,
-                    column: start_column,
-                })
-                continue
-            }
-            if is_digit(ch) {
-                tokens.push(token {
-                    kind: token_kind::int,
-                    value: self.read_number(),
-                    line: start_line,
-                    column: start_column,
-                })
-                continue
-            }
-            if ch == "\"" {
-                tokens.push(token {
-                    kind: token_kind::string,
-                    value: self.read_string(),
-                    line: start_line,
-                    column: start_column,
-                })
-                continue
-            }
-            if ch == '(' || ch == ')' {
-                tokens.push(token {
-                    kind: token_kind::symbol,
-                    value: self.read_symbol(),
-                    line: start_line,
-                    column: start_column,
-                })
-                continue
-            }
+            tokens.push(token {
+                kind: kind,
+                value: value,
+                line: start_line,
+                column: start_column,
+            })
+            continue
+        }
+        if is_digit(ch) {
+            tokens.push(token {
+                kind: token_kind::int,
+                value: self.read_number(),
+                line: start_line,
+                column: start_column,
+            })
+            continue
+        }
+        if ch == "\"" {
+            tokens.push(token {
+                kind: token_kind::string,
+                value: self.read_string(),
+                line: start_line,
+                column: start_column,
+            })
+            continue
+        }
+        if ch == '(' || ch == ')' {
             tokens.push(token {
                 kind: token_kind::symbol,
                 value: self.read_symbol(),
                 line: start_line,
                 column: start_column,
             })
+            continue
+        }
+        tokens.push(token {
+            kind: token_kind::symbol,
+            value: self.read_symbol(),
+            line: start_line,
+            column: start_column,
+        })
         }
         tokens.push(token {
             kind: token_kind::eof,
@@ -92,13 +96,13 @@ func (lexer* self) tokenize() (vec[token], lex_error) {
     }
 
 func (lexer* self) skip_ignored() ((), lex_error) {
-        for !self.is_eof() {
-            string ch = self.peek()
-            if is_whitespace(ch) {
-                self.advance()
-                continue
-            }
-            if self.match_text("
+    for !self.is_eof() {
+        string ch = self.peek()
+        if is_whitespace(ch) {
+            self.advance()
+            continue
+        }
+        if self.match_text("
                 for !self.is_eof() && self.peek() != "\n" {
                     self.advance()
                 }
@@ -121,115 +125,124 @@ func (lexer* self) skip_ignored() ((), lex_error) {
     }
 
 func (lexer* self) read_identifier() (string, lex_error) {
-        string out = ""        for !self.is_eof() {
-            string ch = self.peek()            if !is_ident_continue(ch) {
-                break
-            }
-            out = out + self.advance()
+    string out = ""
+    for !self.is_eof() {
+        string ch = self.peek()
+        if !is_ident_continue(ch) {
+            break
         }
-        out
+        out = out + self.advance()
     }
+    out
+}
 
 func (lexer* self) read_number() (string, lex_error) {
-        string out = ""
-        for !self.is_eof() {
-            string ch = self.peek()
-            if !is_number_continue(ch) {
-                break
-            }
-            out = out + self.advance()
+    string out = ""
+    for !self.is_eof() {
+        string ch = self.peek()
+        if !is_number_continue(ch) {
+            break
         }
-        out
+        out = out + self.advance()
     }
+    out
+}
 
 func (lexer* self) read_string() (string, lex_error) {
-        string out = self.advance()        for !self.is_eof() {
-            ch := self.advance()
-            out = out + ch
-            if ch == "\\" {
-                if self.is_eof() {
-                    return self.error("unterminated escape sequence")
-                }
-                string ch = self.advance()
-                continue
+    string out = self.advance()
+    for !self.is_eof() {
+        ch := self.advance()
+        out = out + ch
+        if ch == "\\" {
+            if self.is_eof() {
+                return self.error("unterminated escape sequence")
             }
-            if ch == "\"" {
-                return out
-            }
+            string ch = self.advance()
+            continue
         }
-        self.error("unterminated string literal")
+        if ch == "\"" {
+            return out
+        }
     }
+    self.error("unterminated string literal")
+}
 
 func (lexer* self) read_symbol() (string, lex_error) {
-        vec[string] multi = vec[string] {            "->",
-            ":",
-            "==",
-            "!=",
-            "<=",
-            ">=",
-            "&&",
-            "||",
-            "++",
-            "..=",
-            "..",
-            "<<",
-            ">>",
-            "::",
-        }
-        for symbol in multi {
-            if self.match_text(symbol) {
-                string out = ""                int count = len(symbol)                int i = 0                for i < count {
-                    out = out + self.advance()
-                    i = i + 1
-                }
-                return out
-            }
-        }
-        string ch = self.peek()        if is_single_symbol(ch) {
-            return self.advance()
-        }
-        self.error("unexpected character")
+    vec[string] multi = vec[string] {
+        "->",
+        ":",
+        "==",
+        "!=",
+        "<=",
+        ">=",
+        "&&",
+        "||",
+        "++",
+        "..=",
+        "..",
+        "<<",
+        ">>",
+        "::",
     }
+    for symbol in multi {
+        if self.match_text(symbol) {
+            string out = ""
+            int count = len(symbol)
+            int i = 0
+            for i < count {
+                out = out + self.advance()
+                i = i + 1
+            }
+            return out
+        }
+    }
+    string ch = self.peek()
+    if is_single_symbol(ch) {
+        return self.advance()
+    }
+    self.error("unexpected character")
+}
 
 func (lexer* self) match_text(string text) bool {
-        if self.index + len(text) > len(self.source) {
-            return false
-        }
-        slice(self.source, self.index, self.index + len(text)) == text
+    if self.index + len(text) > len(self.source) {
+        return false
     }
+    slice(self.source, self.index, self.index + len(text)) == text
+}
 
 func (lexer* self) peek() (string, lex_error) {
-        if self.is_eof() {
-            return self.error("unexpected eof")
-        }
-        char_at(self.source, self.index)
+    if self.is_eof() {
+        return self.error("unexpected eof")
     }
+    char_at(self.source, self.index)
+}
 
 func (lexer* self) advance() (string, lex_error) {
-        if self.is_eof() {
-            return self.error("unexpected eof")
-        }
-        string ch = char_at(self.source, self.index)        self.index = self.index + 1
-        if ch == "\n" {
-            self.line = self.line + 1
-            self.column = 1
-        } else {
-            self.column = self.column + 1
-        }
-        ch
+    if self.is_eof() {
+        return self.error("unexpected eof")
     }
+    string ch = char_at(self.source, self.index)
+    self.index = self.index + 1
+    if ch == "\n" {
+        self.line = self.line + 1
+        self.column = 1
+    } else {
+        self.column = self.column + 1
+    }
+    ch
+}
 
 func (lexer* self) is_eof() bool {
-        self.index >= len(self.source)
-    }
+    self.index >= len(self.source)
+}
 
 func (lexer* self) error(string message) lex_error {
-        lex_error {
-            message: message,
-            line: self.line,
-            column: self.column,
-        }
+    lex_error {
+        message: message,
+        line: self.line,
+        column: self.column,
     }
+}
 
 func is_whitespace(string ch) bool {
     switch ch {
