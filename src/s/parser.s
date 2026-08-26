@@ -991,12 +991,6 @@ func (parser* self) parse_for_clause_stmt() (stmt, parse_error) {
     }
     stmt empty
 }
-        }
-        if self.looks_like_assignment_stmt() {
-            return stmt::assign(self.parse_assign_stmt(false)?))
-        }
-        self.error_here("unexpected for clause")
-    }
 
 func (parser* self) parse_return_stmt() (return_stmt, parse_error) {
     _, err := self.expect_keyword("return")
@@ -1539,61 +1533,113 @@ func (parser* self) parse_use_path() (string, parse_error) {
     }
 
 func (parser* self) parse_path() (string, parse_error) {
-        vec[string] parts = vec[string]()        parts.push(self.expect_ident()?)
-        for self.eat_symbol(".") {
-            parts.push(self.expect_ident()?)
-        }
-        for self.at_symbol(":") && self.peek_at(1).unwrap().kind == token_kind::symbol && self.peek_at(1).unwrap().value == ":" {
-            self.expect_symbol(":")?
-            self.expect_symbol(":")?
-            parts.push(self.expect_ident()?)
-        }
-        if self.at_symbol("[") {
-            last := parts.pop().unwrap()
-            parts.push(last + self.parse_bracket_group()?)
-        }
-        join_strings(parts, ".")
+    vec[string] parts := vec[string]()
+    ident, err := self.expect_ident()
+    if err.message != "" {
+        string empty
+        return empty, err
     }
+    parts.push(ident)
+    for self.eat_symbol(".") {
+        p, err := self.expect_ident()
+        if err.message != "" {
+            string empty
+            return empty, err
+        }
+        parts.push(p)
+    }
+    for self.at_symbol(":") && self.peek_at(1).unwrap().kind == token_kind::symbol && self.peek_at(1).unwrap().value == ":" {
+        _, err := self.expect_symbol(":")
+        if err.message != "" {
+            string empty
+            return empty, err
+        }
+        _, err = self.expect_symbol(":")
+        if err.message != "" {
+            string empty
+            return empty, err
+        }
+        p, err := self.expect_ident()
+        if err.message != "" {
+            string empty
+            return empty, err
+        }
+        parts.push(p)
+    }
+    if self.at_symbol("[") {
+        last := parts.pop().unwrap()
+        bg, err := self.parse_bracket_group()
+        if err.message != "" {
+            string empty
+            return empty, err
+        }
+        parts.push(last + bg)
+    }
+    join_strings(parts, "."), parse_error { message: "" }
+}
 
 func (parser* self) parse_type_text(vec[string] stop_values) (string, parse_error) {
-        vec[string] parts = vec[string]()        int bracket = 0        int paren = 0
-        for true {
-            token token = self.peek()?            if token.kind == token_kind::eof {
-                break
-            }
-            if bracket == 0 && paren == 0 && contains_string(stop_values, token.value) {
-                break
-            }
-            if token.value == "[" {
-                bracket = bracket + 1
-            } else if token.value == "]" {
-                bracket = bracket - 1
-            } else if token.value == "(" {
-                paren = paren + 1
-            } else if token.value == ")" {
-                if paren == 0 {
-                    break
-                }
-                paren = paren - 1
-            }
-            parts.push(self.advance()?.value)
+    vec[string] parts := vec[string]()
+    int bracket := 0
+    int paren := 0
+    for true {
+        t, err := self.peek()
+        if err.message != "" {
+            string empty
+            return empty, err
         }
-        normalize_type_text(join_strings(parts, " "))
+        if t.kind == token_kind::eof {
+            break
+        }
+        if bracket == 0 && paren == 0 && contains_string(stop_values, t.value) {
+            break
+        }
+        if t.value == "[" {
+            bracket = bracket + 1
+        } else if t.value == "]" {
+            bracket = bracket - 1
+        } else if t.value == "(" {
+            paren = paren + 1
+        } else if t.value == ")" {
+            if paren == 0 {
+                break
+            }
+            paren = paren - 1
+        }
+        tok, err := self.advance()
+        if err.message != "" {
+            string empty
+            return empty, err
+        }
+        parts.push(tok.value)
     }
+    normalize_type_text(join_strings(parts, " ")), parse_error { message: "" }
+}
 
 func (parser* self) parse_bracket_group() (string, parse_error) {
-        vec[string] parts = vec[string]()        parts.push(self.advance()?.value)
-        int depth = 1        for depth > 0 {
-            token token = self.advance()?            parts.push(token.value)
-            if token.value == "[" {
-                depth = depth + 1
-            } else if token.value == "]" {
-                depth = depth - 1
-            }
+    vec[string] parts := vec[string]()
+    tok, err := self.advance()
+    if err.message != "" {
+        string empty
+        return empty, err
+    }
+    parts.push(tok.value)
+    int depth := 1
+    for depth > 0 {
+        t, err := self.advance()
+        if err.message != "" {
+            string empty
+            return empty, err
         }
-                    join_strings(parts, " ")
-                .replace("[ ", "[")
-                .replace(" ]", "]")
+        parts.push(t.value)
+        if t.value == "[" {
+            depth = depth + 1
+        } else if t.value == "]" {
+            depth = depth - 1
+        }
+    }
+    join_strings(parts, " ").replace("[ ", "[").replace(" ]", "]"), parse_error { message: "" }
+})
                 .replace(" ,", ",")
         
     }
