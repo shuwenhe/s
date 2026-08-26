@@ -308,7 +308,6 @@ func (parser* self) parse_var_decl() (var_decl, parse_error) {
         value: value,
     }
 }
-    }
 
 func (parser* self) parse_function_decl() (function_decl, parse_error) {
     pair, err := self.parse_function(true)
@@ -798,11 +797,11 @@ func (parser* self) parse_stmt() (stmt, parse_error) {
 
 func (parser* self) parse_var_stmt(bool consume_semicolon) (var_stmt, parse_error) {
         self.error_here("let/var declarations are not supported; use explicit typed declaration")
-    }
+}
 
 func (parser* self) parse_short_var_stmt(bool consume_semicolon) (var_stmt, parse_error) {
         self.error_here("short declaration := is not supported; use explicit typed declaration")
-    }
+}
 
 func (parser* self) parse_defer_stmt() (defer_stmt, parse_error) {
     _, err := self.expect_keyword("defer")
