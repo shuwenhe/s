@@ -35,7 +35,7 @@ func parse_tokens(vec[token] tokens) (source_file, parse_error) {
     p.parse_source_file()
 }
 
-int global_parse_depth := 0
+int global_parse_depth = 0
 
 func log_depth(string msg) {
     print(msg)
@@ -57,8 +57,8 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
         return empty, err
     }
     
-    vec[use_decl] uses := vec[use_decl]()
-    vec[item] items := vec[item]()
+    vec[use_decl] uses = vec[use_decl]()
+    vec[item] items = vec[item]()
     
     for self.at_keyword("use") {
         decl, err := self.parse_use_decl()
@@ -76,7 +76,7 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
                 source_file empty
                 return empty, err
             }
-            int ci := 0
+            int ci = 0
             for ci < consts.len() {
                 items.push(item::const(consts[ci]))
                 ci = ci + 1
@@ -113,7 +113,7 @@ func (parser* self) parse_use_decl() (use_decl, parse_error) {
         return empty, err
     }
     
-    option[string] alias := option::none
+    option[string] alias = option::none
     if self.at_keyword("as") {
         _, err := self.advance()
         if err.message != "" {
@@ -229,8 +229,8 @@ func (parser* self) parse_const_group_items() (vec[const_decl], parse_error) {
         vec[const_decl] empty
         return empty, err
     }
-    vec[const_decl] out := vec[const_decl]()
-    int iota_index := 0
+    vec[const_decl] out = vec[const_decl]()
+    int iota_index = 0
     for !self.eat_symbol(")") {
         if self.eat_symbol(";") || self.eat_symbol(",") {
             continue
@@ -254,7 +254,7 @@ func (parser* self) parse_const_entry(bool allow_omitted_value, int iota_index) 
         const_decl empty
         return empty, err
     }
-    option[expr] value := option::none
+    option[expr] value = option::none
     if self.eat_symbol("=") {
         val, err := self.parse_expr()
         if err.message != "" {
@@ -283,8 +283,8 @@ func (parser* self) parse_var_decl() (var_decl, parse_error) {
         var_decl empty
         return empty, err
     }
-    option[string] type_name := option::none
-    option[expr] value := option::none
+    option[string] type_name = option::none
+    option[expr] value = option::none
     if !self.at_symbol("=") && !self.at_symbol(";") {
         type_expr, err := self.parse_type_expr()
         if err.message != "" {
@@ -346,7 +346,7 @@ func (parser* self) parse_struct_decl() (struct_decl, parse_error) {
         struct_decl empty
         return empty, err
     }
-    vec[field] fields := vec[field]()
+    vec[field] fields = vec[field]()
     for !self.eat_symbol("}") {
         f, err := self.parse_named_type(vec[string] { ",", "}" })
         if err.message != "" {
@@ -389,14 +389,14 @@ func (parser* self) parse_enum_decl() (enum_decl, parse_error) {
         enum_decl empty
         return empty, err
     }
-    vec[enum_variant] variants := vec[enum_variant]()
+    vec[enum_variant] variants = vec[enum_variant]()
     for !self.eat_symbol("}") {
         variant_name, err := self.expect_ident()
         if err.message != "" {
             enum_decl empty
             return empty, err
         }
-        option[string] payload := option::none
+        option[string] payload = option::none
         if self.eat_symbol("(") {
             ty, err := self.parse_type_text(vec[string] { ")" })
             if err.message != "" {
@@ -445,7 +445,7 @@ func (parser* self) parse_trait_decl() (trait_decl, parse_error) {
         trait_decl empty
         return empty, err
     }
-    vec[function_sig] methods := vec[function_sig]()
+    vec[function_sig] methods = vec[function_sig]()
     for !self.eat_symbol("}") {
         pair, err := self.parse_function(false)
         if err.message != "" {
@@ -473,7 +473,7 @@ func (parser* self) parse_function(bool require_body) (parsed_function, parse_er
         parsed_function empty
         return empty, err
     }
-    option[named_type] receiver := option::none
+    option[named_type] receiver = option::none
     if self.at_symbol("(") {
         _, err := self.expect_symbol("(")
         if err.message != "" {
@@ -522,8 +522,8 @@ func (parser* self) parse_function(bool require_body) (parsed_function, parse_er
         parsed_function empty
         return empty, err
     }
-    option[string] return_type := option::none
-    token next := self.peek()
+    option[string] return_type = option::none
+    token next = self.peek()
     if !(next.kind == token_kind::symbol && (next.value == "{" || next.value == ";")) && !(next.kind == token_kind::keyword && next.value == "where") {
         ty, err := self.parse_type_text(vec[string] { "where", "{", ";" })
         if err.message != "" {
@@ -537,7 +537,7 @@ func (parser* self) parse_function(bool require_body) (parsed_function, parse_er
         parsed_function empty
         return empty, err
     }
-    option[block_expr] body := option::none
+    option[block_expr] body = option::none
     if require_body {
         b, err := self.parse_block_expr()
         if err.message != "" {
@@ -559,7 +559,7 @@ func (parser* self) parse_function(bool require_body) (parsed_function, parse_er
 }
 
 func (parser* self) parse_params() (vec[param], parse_error) {
-    vec[param] params := vec[param]()
+    vec[param] params = vec[param]()
     if self.at_symbol(")") {
         return params, parse_error { message: "" }
     }
@@ -581,7 +581,7 @@ func (parser* self) parse_params() (vec[param], parse_error) {
 }
 
 func (parser* self) parse_generic_params() (vec[string], parse_error) {
-    vec[string] generics := vec[string]()
+    vec[string] generics = vec[string]()
     if !self.eat_symbol("[") {
         return generics, parse_error { message: "" }
     }
@@ -591,9 +591,9 @@ func (parser* self) parse_generic_params() (vec[string], parse_error) {
             vec[string] empty
             return empty, err
         }
-        string item := name
+        string item = name
         if self.eat_symbol(":") {
-            vec[string] bounds := vec[string]()
+            vec[string] bounds = vec[string]()
             p, err := self.parse_path()
             if err.message != "" {
                 vec[string] empty
@@ -642,9 +642,9 @@ func (parser* self) parse_named_type(vec[string] stop_values) (named_type, parse
 }
 
 func (parser* self) parse_token_segment(vec[string] stop_values) (vec[token], parse_error) {
-    vec[token] segment := vec[token]()
-    int bracket := 0
-    int paren := 0
+    vec[token] segment = vec[token]()
+    int bracket = 0
+    int paren = 0
     for true {
         t, err := self.peek()
         if err.message != "" {
@@ -685,8 +685,8 @@ func (parser* self) parse_block_expr() (block_expr, parse_error) {
         block_expr empty
         return empty, err
     }
-    vec[stmt] statements := vec[stmt]()
-    option[expr] final_expr := option::none
+    vec[stmt] statements = vec[stmt]()
+    option[expr] final_expr = option::none
     for !self.at_symbol("}") {
         if self.starts_stmt() {
             s, err := self.parse_stmt()
@@ -1051,15 +1051,15 @@ func (parser* self) parse_expr() (expr, parse_error) {
 func (parser* self) parse_select_expr() (expr, parse_error) {
         self.expect_keyword("select")
         self.expect_symbol("{")
-        string mode := ""
-        vec[expr] recv_args := vec[expr]()
-        vec[expr] send_args := vec[expr]()
-        option[expr] timeout_arg := option[expr].none
-        bool has_default := false
-        string callee_name := ""
-        vec[expr] args := vec[expr]()
-        int ri := 0
-        int si := 0
+        string mode = ""
+        vec[expr] recv_args = vec[expr]()
+        vec[expr] send_args = vec[expr]()
+        option[expr] timeout_arg = option[expr].none
+        bool has_default = false
+        string callee_name = ""
+        vec[expr] args = vec[expr]()
+        int ri = 0
+        int si = 0
         for !self.eat_symbol("}") {
             self.expect_keyword("case")
             if self.eat_keyword("default") {
@@ -1177,7 +1177,7 @@ func (parser* self) parse_switch_expr() (expr, parse_error) {
             expr empty
             return empty, err
         }
-        vec[switch_arm] arms := vec[switch_arm]()
+        vec[switch_arm] arms = vec[switch_arm]()
         for !self.eat_symbol("}") {
             pattern, err := self.parse_pattern()
             if err.message != "" {
@@ -1372,7 +1372,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             string empty
             return empty, err
         }
-            vec[pattern] args := vec[pattern]()
+            vec[pattern] args = vec[pattern]()
             if !self.at_symbol(")") {
                 for true {
                     args.push(self.parse_pattern())
@@ -1428,7 +1428,7 @@ func (parser* self) parse_binary_expr(int min_precedence) (expr, parse_error) {
 
 func (parser* self) parse_unary_expr() (expr, parse_error) {
     if self.eat_symbol("&") {
-        bool mutable := false
+        bool mutable = false
         target, err := self.parse_unary_expr()
         if err.message != "" {
             expr empty
@@ -1572,7 +1572,7 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
                 type_text = type_text + " " + join_token_values(seg)
             }
             self.expect_symbol("{")
-            vec[expr] items := vec[expr]()
+            vec[expr] items = vec[expr]()
             if !self.at_symbol("}") {
                 for true {
                     items.push(self.parse_expr())
@@ -1602,7 +1602,7 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
                 type_text = type_text + " " + join_token_values(seg)
             }
             self.expect_symbol("{")
-            vec[map_entry] entries := vec[map_entry]()
+            vec[map_entry] entries = vec[map_entry]()
             if !self.at_symbol("}") {
                 for true {
                     key, err := self.parse_expr()
@@ -1651,18 +1651,18 @@ func (parser* self) binary_precedence(string op) int {
     }
 
 func (parser* self) parse_use_path() (string, parse_error) {
-        vec[string] parts := vec[string]()
+        vec[string] parts = vec[string]()
         parts.push(self.expect_ident())
         for self.eat_symbol(".") {
             if self.eat_symbol("{") {
-                vec[string] members := vec[string]()
+                vec[string] members = vec[string]()
                 for !self.eat_symbol("}") {
                     member, err := self.expect_ident()
                     if err.message != "" {
                         expr empty
                         return empty, err
                     }
-                    string text := if self.eat_keyword("as") {
+                    string text = if self.eat_keyword("as") {
                             member + " as " + self.expect_ident()
                         } else {
                             member
@@ -1678,7 +1678,7 @@ func (parser* self) parse_use_path() (string, parse_error) {
     }
 
 func (parser* self) parse_path() (string, parse_error) {
-    vec[string] parts := vec[string]()
+    vec[string] parts = vec[string]()
     ident, err := self.expect_ident()
     if err.message != "" {
         string empty
@@ -1724,9 +1724,9 @@ func (parser* self) parse_path() (string, parse_error) {
 }
 
 func (parser* self) parse_type_text(vec[string] stop_values) (string, parse_error) {
-    vec[string] parts := vec[string]()
-    int bracket := 0
-    int paren := 0
+    vec[string] parts = vec[string]()
+    int bracket = 0
+    int paren = 0
     for true {
         t, err := self.peek()
         if err.message != "" {
@@ -1762,14 +1762,14 @@ func (parser* self) parse_type_text(vec[string] stop_values) (string, parse_erro
 }
 
 func (parser* self) parse_bracket_group() (string, parse_error) {
-    vec[string] parts := vec[string]()
+    vec[string] parts = vec[string]()
     tok, err := self.advance()
     if err.message != "" {
         string empty
         return empty, err
     }
     parts.push(tok.value)
-    int depth := 1
+    int depth = 1
     for depth > 0 {
         t, err := self.advance()
         if err.message != "" {
@@ -1945,7 +1945,7 @@ func (parser* self) advance() (token, parse_error) {
 }
 
 func (parser* self) error_here(string message) parse_error {
-        token token := self.peek().unwrap()
+        token token = self.peek().unwrap()
         parse_error {
             message: message,
             line: token.line,
@@ -1954,9 +1954,9 @@ func (parser* self) error_here(string message) parse_error {
     }
 
 func (parser* self) find_top_level_symbol_offset(string value) int {
-        int bracket := 0
-        int paren := 0
-        int offset := 0
+        int bracket = 0
+        int paren = 0
+        int offset = 0
         for self.index + offset < len(self.tokens) {
             token := self.tokens[self.index + offset]
             if token.kind == token_kind::eof {
@@ -2024,7 +2024,7 @@ func decode_receiver_type(vec[token] tokens) (named_type, parse_error) {
 }
 
 func decode_named_type(vec[token] tokens) (named_type, parse_error) {
-    int colon := find_token_value(tokens, ":")
+    int colon = find_token_value(tokens, ":")
     if colon >= 0 {
         name_tokens := slice_tokens(tokens, 0, colon)
         type_tokens := slice_tokens(tokens, colon + 1, len(tokens))
@@ -2047,8 +2047,8 @@ func decode_named_type(vec[token] tokens) (named_type, parse_error) {
 }
 
 func slice_tokens(vec[token] tokens, int start, int end) vec[token] {
-    vec[token] out := vec[token]()
-    int i := start
+    vec[token] out = vec[token]()
+    int i = start
     for i < end {
         out.push(tokens[i])
         i = i + 1
@@ -2057,7 +2057,7 @@ func slice_tokens(vec[token] tokens, int start, int end) vec[token] {
 }
 
 func join_token_values(vec[token] tokens) string {
-    vec[string] parts := vec[string]()
+    vec[string] parts = vec[string]()
     for token in tokens {
         parts.push(token.value)
     }
@@ -2065,9 +2065,9 @@ func join_token_values(vec[token] tokens) string {
 }
 
 func find_token_value(vec[token] tokens, string value) int {
-    int bracket := 0
-    int paren := 0
-    int i := 0
+    int bracket = 0
+    int paren = 0
+    int i = 0
     for i < len(tokens) {
         token := tokens[i]
         if token.value == "[" {
@@ -2087,10 +2087,10 @@ func find_token_value(vec[token] tokens, string value) int {
 }
 
 func find_decl_name_index(vec[token] tokens) int {
-    int bracket := 0
-    int paren := 0
-    int index := -1
-    int i := 0
+    int bracket = 0
+    int paren = 0
+    int index = -1
+    int i = 0
     for i < len(tokens) {
         token := tokens[i]
         if token.value == "[" {
@@ -2131,8 +2131,8 @@ func contains_string(vec[string] values, string target) bool {
 }
 
 func join_strings(vec[string] values, string sep) string {
-    string out := ""
-    bool first := true
+    string out = ""
+    bool first = true
     for value in values {
         if !first {
             out = out + sep
@@ -2144,7 +2144,7 @@ func join_strings(vec[string] values, string sep) string {
 }
 
 func path_contains_dot(string path) bool {
-    int i := 0
+    int i = 0
     for i < len(path) {
         if char_at(path, i) == "." {
             return true
@@ -2158,7 +2158,7 @@ func starts_with_upper(string text) bool {
     if text == "" {
         return false
     }
-    string ch := char_at(text, 0)
+    string ch = char_at(text, 0)
     switch ch {
         "a" : true,
         "b" : true,
