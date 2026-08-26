@@ -1,15 +1,262 @@
+                                 S Language Complete Syntax Guide
+
+1. Basic Types
+int                 // Integer
+float               // Float
+bool                // Boolean
+char                // Character
+void                // No return value
+string              // String
+Type*               // Pointer type
+Type[]              // Array type
+
+
+2. Struct Definition
+Basic struct
 struct struct_name {
     field_type field_name
     field_type field_name
     field_type field_name
 }
 
-func (receiver_type receiver_name) method_name(parameter_type parameter_name) return_type{}
-
-func (type name) {}
-
-func function_name(parameter_type* parameter_name) (return_type1, return_type2) {
-    parameter_name.field_name = value
-    parameter_name.field_name = parameter_name.field_name
-    return_value1, return_value2
+Example
+struct person {
+    int age
+    string name
+    float height
 }
+
+struct config {
+    int port
+    string hostname
+    bool debug
+}
+
+3. Function Definition
+Basic function
+func function_name(param_type param_name) return_type {
+    // Function body
+}
+
+Example
+func add(int a, int b) int {
+    a + b
+}
+
+func greet(string name) string {
+    "Hello, " + name
+}
+
+Key points
+- Implicit return: last expression serves as return value (no need for `return` keyword)
+- Parameter passing: default is pass-by-value
+
+4. Multiple Return Values
+func function_name(param_type param_name) (return_type1, return_type2) {
+    return value1, value2
+}
+
+Example
+func divide(int a, int b) (int, int) {
+    return a / b, a % b
+}
+
+// Call
+quotient, remainder := divide(10, 3)
+
+5. Method Definition (Receiver Pattern)
+Basic method
+func (receiver_type receiver_name) method_name(parameter_type parameter_name) return_type {
+    // receiver_name acts as this/self
+}
+
+Example
+struct circle {
+    int radius
+}
+
+func (circle c) area() int {
+    c.radius * c.radius * 314 / 100
+}
+
+func (circle c) diameter() int {
+    c.radius * 2
+}
+
+// Call
+c := circle { radius: 5 }
+a := c.area()
+d := c.diameter()
+
+Key points
+- Receiver can be value or pointer
+- Receiver name is used within the method
+
+6. Pointers and Mutability
+Value receiver (read-only)
+func (circle c) area() int {
+    // c is read-only, cannot be modified
+}
+
+Pointer receiver (mutable)
+func (circle* c) scale(int factor) {
+    c.radius = c.radius * factor // c is a mutable pointer, can be modified
+}
+
+Example
+struct counter {
+    int value
+}
+
+func (counter c) get_value() int {
+    c.value
+}
+
+func (counter* c) increment() {
+    c.value = c.value + 1
+}
+
+func (counter* c) add(int n) {
+    c.value = c.value + n
+}
+
+// Call
+count := counter { value: 0 }
+count.increment()
+count.add(5)
+v := count.get_value()  // v = 6
+
+7. Parameter Passing Pattern
+Value parameter (copy)
+func process(int value) int {
+    value  // Modifying value does not affect original
+}
+
+Pointer parameter (reference, mutable)
+func update(int* value) {
+    value = value * 2  // Modification affects original
+}
+
+func modify(person* p) {
+    p.age = p.age + 1  // Modify struct field
+}
+
+Example
+func increment(int* num) {
+    num = num + 1
+}
+
+func increment_person_age(person* p) {
+    p.age = p.age + 1
+}
+
+// Call
+x := 5
+increment(&x)  // x is now 6
+
+john := person { age: 30, name: "John" }
+increment_person_age(&john)  // john.age is now 31
+
+8. Array
+Array definition
+int[]               // Integer array
+string[]            // String array
+
+Array operations
+arr := [1, 2, 3, 4, 5]
+arr := new int[10]           // Create array of size 10
+len(arr)                        // Get array length
+arr[0]                          // Access element
+arr[0] = 42                     // Modify element
+
+Example
+func sum_array(int[] arr) int {
+    sum := 0
+    i := 0
+    for i < len(arr) {
+        sum = sum + arr[i]
+        i = i + 1
+    }
+    sum
+}
+
+func reverse_array(int* arr, int len) {
+    i := 0
+    for i < len / 2 {
+        temp := arr[i]
+        arr[i] = arr[len - 1 - i]
+        arr[len - 1 - i] = temp
+        i = i + 1
+    }
+}
+
+Vector (dynamic array)
+use std.vec.vec
+
+v := vec[int]()
+v.push(10)
+v.push(20)
+len := v.len()
+value := v[0]
+
+9. Control Flow
+if/else
+if condition {
+    // Code block
+} else {
+    // Code block
+}
+
+if x > 0 {
+    y = x + 1
+} else if x == 0 {
+    y = 0
+} else {
+    y = x - 1
+}
+
+
+for loop
+for i in 0..10 {
+    // i from 0 to 9
+}
+
+for item in array {
+    // Iterate over array
+}
+
+switch expression
+switch value {
+    case1 : { block1 },
+    case2 : { block2 },
+    _ : { default_block }
+}
+
+switch color {
+    "red" : { print_red() },
+    "blue" : { print_blue() },
+    _ : { print_unknown() }
+}
+
+10. Variable Declaration
+Variable definition
+x := 10              // Mutable
+const y := 5         // Immutable
+int z  = 15          // Explicit type
+int w = 20           // Explicit type, mutable
+
+Assignment
+x = x + 1                   // Expression assignment
+arr[0] = 42                 // Array assignment
+struct_val.field = 100      // Struct field assignment
+
+11. Packages and Imports
+Package declaration
+package module.submodule.name
+
+Imports
+use std.array.array
+use std.io.print
+use neurx.inference.engine
+
+12. Error Handling

@@ -547,3 +547,44 @@ done:
 	free(module);
 	return ok;
 }
+
+bool emit_standalone_amd64_object_from_ir_file(const char *input_ir_path, const char *output_object_path, compile_error *err) {
+	standalone_module *module = NULL;
+	char asm_path[256];
+	FILE *out = NULL;
+	bool ok = false;
+	char *as_program[] = {"as", "--64", "-o", (char *)output_object_path, asm_path, NULL};
+
+	error_clear(err);
+	if (!input_ir_path || !output_object_path) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "invalid standalone object backend input");
+		return false;
+	}
+	snprintf(asm_path, sizeof(asm_path), "/tmp/s_standalone_obj_%ld.s", (long)getpid());
+	module = (standalone_module *)calloc(1, sizeof(*module));
+	if (!module) {
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+		goto done;
+	}
+	if (!load_ir(input_ir_path, &module->ir, err) || !analyze_module(module, err)) goto done;
+	out = fopen(asm_path, "wb");
+	if (!out) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to create standalone object assembly");
+		goto done;
+	}
+	if (!emit_assembly(out, module, err)) goto done;
+	if (fclose(out) != 0) {
+		out = NULL;
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to close standalone object assembly");
+		goto done;
+	}
+	out = NULL;
+	if (!run_tool(as_program, err)) goto done;
+	ok = true;
+
+done:
+	if (out) fclose(out);
+	unlink(asm_path);
+	free(module);
+	return ok;
+}
