@@ -469,144 +469,262 @@ func (parser* self) parse_trait_decl() (trait_decl, parse_error) {
 }
 
 func (parser* self) parse_function(bool require_body) (parsed_function, parse_error) {
-        self.expect_keyword("func")?
-        option[named_type] receiver = option::none        if self.at_symbol("(") {
-            self.expect_symbol("(")?
-            receiver_tokens := self.parse_token_segment(vec[string] { ")" })?
-            named_type named = decode_receiver_type(receiver_tokens)?
-            self.expect_symbol(")")?
-            receiver = option::some(named)
-        }
-        string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("(")?
-        vec[param] params = self.parse_params()?        self.expect_symbol(")")?
-        option[string] return_type = option::none        token next = self.peek()?        if !(next.kind == token_kind::symbol && (next.value == "{" || next.value == ";")) && !(
-            next.kind == token_kind::keyword && next.value == "where"
-        ) {
-            return_type = option::some(self.parse_type_text(vec[string] { "where", "{", ";" })?)
-        }
-        self.parse_where_clause()?
-        option[block_expr] body =            if require_body {
-                option::some(self.parse_block_expr()?)
-            } else {
-                option::none
-            }
-        parsed_function {
-            sig: function_sig {
-                name: name,
-                generics: generics,
-                params: params,
-                return_type: return_type,
-            },
-            body: body,
-            receiver: receiver,
-        }
+    _, err := self.expect_keyword("func")
+    if err.message != "" {
+        parsed_function empty
+        return empty, err
     }
+    option[named_type] receiver := option::none
+    if self.at_symbol("(") {
+        _, err := self.expect_symbol("(")
+        if err.message != "" {
+            parsed_function empty
+            return empty, err
+        }
+        receiver_tokens, err := self.parse_token_segment(vec[string] { ")" })
+        if err.message != "" {
+            parsed_function empty
+            return empty, err
+        }
+        named, err := decode_receiver_type(receiver_tokens)
+        if err.message != "" {
+            parsed_function empty
+            return empty, err
+        }
+        _, err = self.expect_symbol(")")
+        if err.message != "" {
+            parsed_function empty
+            return empty, err
+        }
+        receiver = option::some(named)
+    }
+    name, err := self.expect_ident()
+    if err.message != "" {
+        parsed_function empty
+        return empty, err
+    }
+    generics, err := self.parse_generic_params()
+    if err.message != "" {
+        parsed_function empty
+        return empty, err
+    }
+    _, err = self.expect_symbol("(")
+    if err.message != "" {
+        parsed_function empty
+        return empty, err
+    }
+    params, err := self.parse_params()
+    if err.message != "" {
+        parsed_function empty
+        return empty, err
+    }
+    _, err = self.expect_symbol(")")
+    if err.message != "" {
+        parsed_function empty
+        return empty, err
+    }
+    option[string] return_type := option::none
+    token next := self.peek()
+    if !(next.kind == token_kind::symbol && (next.value == "{" || next.value == ";")) && !(next.kind == token_kind::keyword && next.value == "where") {
+        ty, err := self.parse_type_text(vec[string] { "where", "{", ";" })
+        if err.message != "" {
+            parsed_function empty
+            return empty, err
+        }
+        return_type = option::some(ty)
+    }
+    _, err = self.parse_where_clause()
+    if err.message != "" {
+        parsed_function empty
+        return empty, err
+    }
+    option[block_expr] body := option::none
+    if require_body {
+        b, err := self.parse_block_expr()
+        if err.message != "" {
+            parsed_function empty
+            return empty, err
+        }
+        body = option::some(b)
+    }
+    parsed_function {
+        sig: function_sig {
+            name: name,
+            generics: generics,
+            params: params,
+            return_type: return_type,
+        },
+        body: body,
+        receiver: receiver,
+    }
+}
 
 func (parser* self) parse_params() (vec[param], parse_error) {
-        vec[param] params = vec[param]()        if self.at_symbol(")") {
-            return params
-        }
-        for true {
-            named_type part = self.parse_named_type(vec[string] { ",", ")" })?            params.push(param {
-                name: part.name,
-                type_name: part.type_name,
-            })
-            if !self.eat_symbol(",") || self.at_symbol(")") {
-                break
-            }
-        }
-        params
+    vec[param] params := vec[param]()
+    if self.at_symbol(")") {
+        return params, parse_error { message: "" }
     }
-
-func (parser* self) parse_generic_params() (vec[string], parse_error) {
-        vec[string] generics = vec[string]()        if !self.eat_symbol("[") {
-            return generics
+    for true {
+        part, err := self.parse_named_type(vec[string] { ",", ")" })
+        if err.message != "" {
+            vec[param] empty
+            return empty, err
         }
-        for !self.eat_symbol("]") {
-            string name = self.expect_ident()?            string item =                if self.eat_symbol(":") {
-                    vec[string] bounds = vec[string]()                    bounds.push(self.parse_path()?)
-                    for self.eat_symbol("+") {
-                        bounds.push(self.parse_path()?)
-                    }
-                    name + ": " + join_strings(bounds, " + ")
-                } else {
-                    name
-                }
-            generics.push(item)
-            self.eat_symbol(",")
-        }
-        generics
-    }
-
-func (parser* self) parse_where_clause() ((), parse_error) {
-        if !self.eat_keyword("where") {
-            return ())
-        }
-        for true {
-            self.parse_type_text(vec[string] { ",", "{", ";" })?
-            if !self.eat_symbol(",") || self.at_symbol("{") || self.at_symbol(";") {
-                break
-            }
-        }
-        ()
-    }
-
-func (parser* self) parse_named_type(vec[string] stop_values) (named_type, parse_error) {
-        vec[token] segment = self.parse_token_segment(stop_values)?        decode_named_type(segment)
-    }
-
-func (parser* self) parse_token_segment(vec[string] stop_values) (vec[token], parse_error) {
-        vec[token] segment = vec[token]()        int bracket = 0        int paren = 0
-        for true {
-            token token = self.peek()?            if token.kind == token_kind::eof {
-                break
-            }
-            if bracket == 0 && paren == 0 && contains_string(stop_values, token.value) {
-                break
-            }
-            if token.value == "[" {
-                bracket = bracket + 1
-            } else if token.value == "]" {
-                bracket = bracket - 1
-            } else if token.value == "(" {
-                paren = paren + 1
-            } else if token.value == ")" {
-                if paren == 0 {
-                    break
-                }
-                paren = paren - 1
-            }
-            segment.push(self.advance()?)
-        }
-        segment
-    }
-
-func (parser* self) parse_block_expr() (block_expr, parse_error) {
-        self.expect_symbol("{")?
-        vec[stmt] statements = vec[stmt]()        option[expr] final_expr = option::none
-        for !self.at_symbol("}") {
-            if self.starts_stmt() {
-                statements.push(self.parse_stmt()?)
-                continue
-            }
-            expr expr = self.parse_expr()?            if self.eat_symbol(";") {
-                statements.push(stmt::expr(expr_stmt { expr: expr }))
-                continue
-            }
-            if !self.at_symbol("}") {
-                statements.push(stmt::expr(expr_stmt { expr: expr }))
-                continue
-            }
-            final_expr = option::some(expr)
+        params.push(param {
+            name: part.name,
+            type_name: part.type_name,
+        })
+        if !self.eat_symbol(",") || self.at_symbol(")") {
             break
         }
-        self.expect_symbol("}")?
-        block_expr {
-            statements: statements,
-            final_expr: final_expr,
-            inferred_type: option::none,
+    }
+    params, parse_error { message: "" }
+}
+
+func (parser* self) parse_generic_params() (vec[string], parse_error) {
+    vec[string] generics := vec[string]()
+    if !self.eat_symbol("[") {
+        return generics, parse_error { message: "" }
+    }
+    for !self.eat_symbol("]") {
+        name, err := self.expect_ident()
+        if err.message != "" {
+            vec[string] empty
+            return empty, err
+        }
+        string item := name
+        if self.eat_symbol(":") {
+            vec[string] bounds := vec[string]()
+            p, err := self.parse_path()
+            if err.message != "" {
+                vec[string] empty
+                return empty, err
+            }
+            bounds.push(p)
+            for self.eat_symbol("+") {
+                p, err := self.parse_path()
+                if err.message != "" {
+                    vec[string] empty
+                    return empty, err
+                }
+                bounds.push(p)
+            }
+            item = name + ": " + join_strings(bounds, " + ")
+        }
+        generics.push(item)
+        self.eat_symbol(",")
+    }
+    generics, parse_error { message: "" }
+}
+
+func (parser* self) parse_where_clause() ((), parse_error) {
+    if !self.eat_keyword("where") {
+        return (), parse_error { message: "" }
+    }
+    for true {
+        _, err := self.parse_type_text(vec[string] { ",", "{", ";" })
+        if err.message != "" {
+            return (), err
+        }
+        if !self.eat_symbol(",") || self.at_symbol("{") || self.at_symbol(";") {
+            break
         }
     }
+    (), parse_error { message: "" }
+}
+
+func (parser* self) parse_named_type(vec[string] stop_values) (named_type, parse_error) {
+    segment, err := self.parse_token_segment(stop_values)
+    if err.message != "" {
+        named_type empty
+        return empty, err
+    }
+    decode_named_type(segment)
+}
+
+func (parser* self) parse_token_segment(vec[string] stop_values) (vec[token], parse_error) {
+    vec[token] segment := vec[token]()
+    int bracket := 0
+    int paren := 0
+    for true {
+        t, err := self.peek()
+        if err.message != "" {
+            vec[token] empty
+            return empty, err
+        }
+        if t.kind == token_kind::eof {
+            break
+        }
+        if bracket == 0 && paren == 0 && contains_string(stop_values, t.value) {
+            break
+        }
+        if t.value == "[" {
+            bracket = bracket + 1
+        } else if t.value == "]" {
+            bracket = bracket - 1
+        } else if t.value == "(" {
+            paren = paren + 1
+        } else if t.value == ")" {
+            if paren == 0 {
+                break
+            }
+            paren = paren - 1
+        }
+        tok, err := self.advance()
+        if err.message != "" {
+            vec[token] empty
+            return empty, err
+        }
+        segment.push(tok)
+    }
+    segment, parse_error { message: "" }
+}
+
+func (parser* self) parse_block_expr() (block_expr, parse_error) {
+    _, err := self.expect_symbol("{")
+    if err.message != "" {
+        block_expr empty
+        return empty, err
+    }
+    vec[stmt] statements := vec[stmt]()
+    option[expr] final_expr := option::none
+    for !self.at_symbol("}") {
+        if self.starts_stmt() {
+            s, err := self.parse_stmt()
+            if err.message != "" {
+                block_expr empty
+                return empty, err
+            }
+            statements.push(s)
+            continue
+        }
+        e, err := self.parse_expr()
+        if err.message != "" {
+            block_expr empty
+            return empty, err
+        }
+        if self.eat_symbol(";") {
+            statements.push(stmt::expr(expr_stmt { expr: e }))
+            continue
+        }
+        if !self.at_symbol("}") {
+            statements.push(stmt::expr(expr_stmt { expr: e }))
+            continue
+        }
+        final_expr = option::some(e)
+        break
+    }
+    _, err = self.expect_symbol("}")
+    if err.message != "" {
+        block_expr empty
+        return empty, err
+    }
+    block_expr {
+        statements: statements,
+        final_expr: final_expr,
+        inferred_type: option::none,
+    }
+}
 
 func (parser* self) starts_stmt() bool {
         self.at_keyword("return")
