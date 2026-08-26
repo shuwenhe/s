@@ -818,7 +818,6 @@ func (parser* self) parse_defer_stmt() (defer_stmt, parse_error) {
     self.eat_symbol(";")
     defer_stmt { expr: e }
 }
-    }
 
 func (parser* self) parse_sroutine_stmt() (sroutine_stmt, parse_error) {
     _, err := self.expect_keyword("sroutine")
