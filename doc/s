@@ -260,3 +260,7 @@ use std.io.print
 use neurx.inference.engine
 
 12. Error Handling
+path, err := self.parse_use_path()
+if err != nil {
+    return err
+}
