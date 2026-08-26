@@ -44,16 +44,38 @@ func log_depth(string msg) {
 func (parser* self) parse_source_file() (source_file, parse_error) {
     global_parse_depth = global_parse_depth + 1
     log_depth("parse_source_file depth: " + to_string(global_parse_depth))
-    self.expect_keyword("package")?
-    string pkg := self.parse_path()?
+    
+    _, err := self.expect_keyword("package")
+    if err.message != "" {
+        source_file empty
+        return empty, err
+    }
+    
+    pkg, err := self.parse_path()
+    if err.message != "" {
+        source_file empty
+        return empty, err
+    }
+    
     vec[use_decl] uses := vec[use_decl]()
     vec[item] items := vec[item]()
+    
     for self.at_keyword("use") {
-        uses.push(self.parse_use_decl()?)
+        decl, err := self.parse_use_decl()
+        if err.message != "" {
+            source_file empty
+            return empty, err
+        }
+        uses.push(decl)
     }
+    
     for !self.at(token_kind::eof) {
         if self.at_keyword("const") && self.at_symbol_after_keyword("(") {
-            vec[const_decl] consts := self.parse_const_group_items()?
+            consts, err := self.parse_const_group_items()
+            if err.message != "" {
+                source_file empty
+                return empty, err
+            }
             int ci := 0
             for ci < consts.len() {
                 items.push(item::const(consts[ci]))
@@ -61,8 +83,14 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
             }
             continue
         }
-        items.push(self.parse_item()?)
+        item_val, err := self.parse_item()
+        if err.message != "" {
+            source_file empty
+            return empty, err
+        }
+        items.push(item_val)
     }
+    
     global_parse_depth = global_parse_depth - 1
     log_depth("parse_source_file exit depth: " + to_string(global_parse_depth))
     source_file {
@@ -70,16 +98,36 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
         uses: uses,
         items: items,
     }
+}
 
 func (parser* self) parse_use_decl() (use_decl, parse_error) {
-    self.expect_keyword("use")?
-    string path := self.parse_use_path()?
-    option[string] alias := if self.at_keyword("as") {
-        self.advance()?
-        option::some(self.expect_ident()?)
-    } else {
-        option::none
+    _, err := self.expect_keyword("use")
+    if err.message != "" {
+        use_decl empty
+        return empty, err
     }
+    
+    path, err := self.parse_use_path()
+    if err.message != "" {
+        use_decl empty
+        return empty, err
+    }
+    
+    option[string] alias := option::none
+    if self.at_keyword("as") {
+        _, err := self.advance()
+        if err.message != "" {
+            use_decl empty
+            return empty, err
+        }
+        alias_val, err := self.expect_ident()
+        if err.message != "" {
+            use_decl empty
+            return empty, err
+        }
+        alias = option::some(alias_val)
+    }
+    
     use_decl {
         path: path,
         alias: alias,
@@ -88,10 +136,14 @@ func (parser* self) parse_use_decl() (use_decl, parse_error) {
 
 func (parser* self) parse_item() (item, parse_error) {
     if self.at_keyword("func") {
-        parsed_function parsed := self.parse_function(true)?
+        parsed, err := self.parse_function(true)
+        if err.message != "" {
+            item empty
+            return empty, err
+        }
         switch parsed.receiver {
             option::some(r) : {
-                function_decl method := function_decl {
+                method := function_decl {
                     sig: parsed.sig,
                     body: parsed.body,
                     is_public: starts_with_upper(parsed.sig.name),
@@ -100,30 +152,56 @@ func (parser* self) parse_item() (item, parse_error) {
                     receiver_name: r.name,
                     receiver_type: r.type_name,
                     method: method,
-                    }))
-                },
-                option::none : {
-                    return item::function(parsed))
-                }
+                }), parse_error{ message: "", line: 0, column: 0 }
+            },
+            option::none : {
+                return item::function(parsed), parse_error{ message: "", line: 0, column: 0 }
             }
         }
-        if self.at_keyword("const") {
-            return item::const(self.parse_const_decl()?))
-        }
-        if self.at_keyword("var") {
-            return item::var(self.parse_var_decl()?))
-        }
-        if self.at_keyword("struct") {
-            return item::struct(self.parse_struct_decl()?))
-        }
-        if self.at_keyword("enum") {
-            return item::enum(self.parse_enum_decl()?))
-        }
-        if self.at_keyword("trait") {
-            return item::trait(self.parse_trait_decl()?))
-        }
-        self.error_here("unexpected token")
     }
+    if self.at_keyword("const") {
+        decl, err := self.parse_const_decl()
+        if err.message != "" {
+            item empty
+            return empty, err
+        }
+        return item::const(decl), parse_error{ message: "", line: 0, column: 0 }
+    }
+    if self.at_keyword("var") {
+        decl, err := self.parse_var_decl()
+        if err.message != "" {
+            item empty
+            return empty, err
+        }
+        return item::var(decl), parse_error{ message: "", line: 0, column: 0 }
+    }
+    if self.at_keyword("struct") {
+        decl, err := self.parse_struct_decl()
+        if err.message != "" {
+            item empty
+            return empty, err
+        }
+        return item::struct(decl), parse_error{ message: "", line: 0, column: 0 }
+    }
+    if self.at_keyword("enum") {
+        decl, err := self.parse_enum_decl()
+        if err.message != "" {
+            item empty
+            return empty, err
+        }
+        return item::enum(decl), parse_error{ message: "", line: 0, column: 0 }
+    }
+    if self.at_keyword("trait") {
+        decl, err := self.parse_trait_decl()
+        if err.message != "" {
+            item empty
+            return empty, err
+        }
+        return item::trait(decl), parse_error{ message: "", line: 0, column: 0 }
+    }
+    item empty
+    return empty, self.error_here("unexpected token")
+}
 
 func (parser* self) parse_const_decl() (const_decl, parse_error) {
         self.expect_keyword("const")?
