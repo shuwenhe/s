@@ -737,29 +737,64 @@ func (parser* self) starts_stmt() bool {
     }
 
 func (parser* self) parse_stmt() (stmt, parse_error) {
-        if self.at_keyword("defer") {
-            return stmt::defer(self.parse_defer_stmt()?))
+    if self.at_keyword("defer") {
+        s, err := self.parse_defer_stmt()
+        if err.message != "" {
+            stmt empty
+            return empty, err
         }
-        if self.at_keyword("sroutine") {
-            return stmt::sroutine(self.parse_sroutine_stmt()?))
-        }
-        if self.at_keyword("return") {
-            return stmt::return(self.parse_return_stmt()?))
-        }
-        if self.at_cfor_start() {
-            return stmt::c_for(self.parse_cfor_stmt()?))
-        }
-        if self.looks_like_typed_var_stmt() {
-            return stmt::let(self.parse_typed_var_stmt(true)?))
-        }
-        if self.looks_like_increment_stmt() {
-            return stmt::increment(self.parse_increment_stmt(true)?))
-        }
-        if self.looks_like_assignment_stmt() {
-            return stmt::assign(self.parse_assign_stmt(true)?))
-        }
-        self.error_here("unexpected statement")
+        return stmt::defer(s), parse_error { message: "" }
     }
+    if self.at_keyword("sroutine") {
+        s, err := self.parse_sroutine_stmt()
+        if err.message != "" {
+            stmt empty
+            return empty, err
+        }
+        return stmt::sroutine(s), parse_error { message: "" }
+    }
+    if self.at_keyword("return") {
+        s, err := self.parse_return_stmt()
+        if err.message != "" {
+            stmt empty
+            return empty, err
+        }
+        return stmt::return(s), parse_error { message: "" }
+    }
+    if self.at_cfor_start() {
+        s, err := self.parse_cfor_stmt()
+        if err.message != "" {
+            stmt empty
+            return empty, err
+        }
+        return stmt::c_for(s), parse_error { message: "" }
+    }
+    if self.looks_like_typed_var_stmt() {
+        s, err := self.parse_typed_var_stmt(true)
+        if err.message != "" {
+            stmt empty
+            return empty, err
+        }
+        return stmt::let(s), parse_error { message: "" }
+    }
+    if self.looks_like_increment_stmt() {
+        s, err := self.parse_increment_stmt(true)
+        if err.message != "" {
+            stmt empty
+            return empty, err
+        }
+        return stmt::increment(s), parse_error { message: "" }
+    }
+    if self.looks_like_assignment_stmt() {
+        s, err := self.parse_assign_stmt(true)
+        if err.message != "" {
+            stmt empty
+            return empty, err
+        }
+        return stmt::assign(s), parse_error { message: "" }
+    }
+    self.error_here("unexpected statement")
+}
 
 func (parser* self) parse_var_stmt(bool consume_semicolon) (var_stmt, parse_error) {
         self.error_here("let/var declarations are not supported; use explicit typed declaration")
@@ -770,31 +805,66 @@ func (parser* self) parse_short_var_stmt(bool consume_semicolon) (var_stmt, pars
     }
 
 func (parser* self) parse_defer_stmt() (defer_stmt, parse_error) {
-        self.expect_keyword("defer")?
-        expr expr = self.parse_expr()?        self.eat_symbol(";")
-        defer_stmt { expr: expr }
+    _, err := self.expect_keyword("defer")
+    if err.message != "" {
+        defer_stmt empty
+        return empty, err
+    }
+    e, err := self.parse_expr()
+    if err.message != "" {
+        defer_stmt empty
+        return empty, err
+    }
+    self.eat_symbol(";")
+    defer_stmt { expr: e }
+}
     }
 
 func (parser* self) parse_sroutine_stmt() (sroutine_stmt, parse_error) {
-        self.expect_keyword("sroutine")?
-        expr expr = self.parse_expr()?        self.eat_symbol(";")
-        sroutine_stmt { expr: expr }
+    _, err := self.expect_keyword("sroutine")
+    if err.message != "" {
+        sroutine_stmt empty
+        return empty, err
     }
+    e, err := self.parse_expr()
+    if err.message != "" {
+        sroutine_stmt empty
+        return empty, err
+    }
+    self.eat_symbol(";")
+    sroutine_stmt { expr: e }
+}
 
 func (parser* self) parse_typed_var_stmt(bool consume_semicolon) (var_stmt, parse_error) {
-        segment := self.parse_token_segment(vec[string] { "=" })?
-        named := decode_named_type(segment)?
-        self.expect_symbol("=")?
-        value := self.parse_expr()?
-        if consume_semicolon {
-            self.eat_symbol(";")
-        }
-        var_stmt {
-            name: named.name,
-            type_name: option::some(named.type_name),
-            value: value,
-        }
+    segment, err := self.parse_token_segment(vec[string] { "=" })
+    if err.message != "" {
+        var_stmt empty
+        return empty, err
     }
+    named, err := decode_named_type(segment)
+    if err.message != "" {
+        var_stmt empty
+        return empty, err
+    }
+    _, err = self.expect_symbol("=")
+    if err.message != "" {
+        var_stmt empty
+        return empty, err
+    }
+    value, err := self.parse_expr()
+    if err.message != "" {
+        var_stmt empty
+        return empty, err
+    }
+    if consume_semicolon {
+        self.eat_symbol(";")
+    }
+    var_stmt {
+        name: named.name,
+        type_name: option::some(named.type_name),
+        value: value,
+    }
+}
 
 func (parser* self) parse_assign_stmt(bool consume_semicolon) (assign_stmt, parse_error) {
         string name = self.expect_ident()?        self.expect_symbol("=")?
