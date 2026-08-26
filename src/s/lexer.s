@@ -108,8 +108,7 @@ func (lexer* self) skip_ignored() ((), lex_error) {
                 }
                 continue
             }
-            if self.match_text(" 
-") {
+            if self.match_text(" ") {
                         depth = depth - 1
                         self.advance()
                         self.advance()
