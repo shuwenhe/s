@@ -867,50 +867,130 @@ func (parser* self) parse_typed_var_stmt(bool consume_semicolon) (var_stmt, pars
 }
 
 func (parser* self) parse_assign_stmt(bool consume_semicolon) (assign_stmt, parse_error) {
-        string name = self.expect_ident()?        self.expect_symbol("=")?
-        value := self.parse_expr()?
-        if consume_semicolon {
-            self.eat_symbol(";")
-        }
-        assign_stmt {
-            name: name,
-            value: value,
-        }
+    name, err := self.expect_ident()
+    if err.message != "" {
+        assign_stmt empty
+        return empty, err
     }
+    _, err = self.expect_symbol("=")
+    if err.message != "" {
+        assign_stmt empty
+        return empty, err
+    }
+    value, err := self.parse_expr()
+    if err.message != "" {
+        assign_stmt empty
+        return empty, err
+    }
+    if consume_semicolon {
+        self.eat_symbol(";")
+    }
+    assign_stmt {
+        name: name,
+        value: value,
+    }
+}
 
 func (parser* self) parse_increment_stmt(bool consume_semicolon) (increment_stmt, parse_error) {
-        string name = self.expect_ident()?        self.expect_symbol("++")?
-        if consume_semicolon {
-            self.eat_symbol(";")
-        }
-        increment_stmt {
-            name: name,
-        }
+    name, err := self.expect_ident()
+    if err.message != "" {
+        increment_stmt empty
+        return empty, err
     }
+    _, err = self.expect_symbol("++")
+    if err.message != "" {
+        increment_stmt empty
+        return empty, err
+    }
+    if consume_semicolon {
+        self.eat_symbol(";")
+    }
+    increment_stmt {
+        name: name,
+    }
+}
 
 func (parser* self) parse_cfor_stmt() (c_for_stmt, parse_error) {
-        self.expect_keyword("for")?
-        self.expect_symbol("(")?
-        init := self.parse_for_clause_stmt()?
-        self.expect_symbol(";")?
-        expr condition = self.parse_expr()?        self.expect_symbol(";")?
-        step := self.parse_for_clause_stmt()?
-        self.expect_symbol(")")?
-        body := self.parse_block_expr()?
-        c_for_stmt {
-            init: box(init),
-            condition: condition,
-            step: box(step),
-            body: body,
-        }
+    _, err := self.expect_keyword("for")
+    if err.message != "" {
+        c_for_stmt empty
+        return empty, err
     }
+    _, err = self.expect_symbol("(")
+    if err.message != "" {
+        c_for_stmt empty
+        return empty, err
+    }
+    init, err := self.parse_for_clause_stmt()
+    if err.message != "" {
+        c_for_stmt empty
+        return empty, err
+    }
+    _, err = self.expect_symbol(";")
+    if err.message != "" {
+        c_for_stmt empty
+        return empty, err
+    }
+    condition, err := self.parse_expr()
+    if err.message != "" {
+        c_for_stmt empty
+        return empty, err
+    }
+    _, err = self.expect_symbol(";")
+    if err.message != "" {
+        c_for_stmt empty
+        return empty, err
+    }
+    step, err := self.parse_for_clause_stmt()
+    if err.message != "" {
+        c_for_stmt empty
+        return empty, err
+    }
+    _, err = self.expect_symbol(")")
+    if err.message != "" {
+        c_for_stmt empty
+        return empty, err
+    }
+    body, err := self.parse_block_expr()
+    if err.message != "" {
+        c_for_stmt empty
+        return empty, err
+    }
+    c_for_stmt {
+        init: box(init),
+        condition: condition,
+        step: box(step),
+        body: body,
+    }
+}
 
 func (parser* self) parse_for_clause_stmt() (stmt, parse_error) {
-        if self.looks_like_typed_var_stmt() {
-            return stmt::let(self.parse_typed_var_stmt(false)?))
+    if self.looks_like_typed_var_stmt() {
+        s, err := self.parse_typed_var_stmt(false)
+        if err.message != "" {
+            stmt empty
+            return empty, err
         }
-        if self.looks_like_increment_stmt() {
-            return stmt::increment(self.parse_increment_stmt(false)?))
+        return stmt::let(s), parse_error { message: "" }
+    }
+    if self.looks_like_increment_stmt() {
+        s, err := self.parse_increment_stmt(false)
+        if err.message != "" {
+            stmt empty
+            return empty, err
+        }
+        return stmt::increment(s), parse_error { message: "" }
+    }
+    if self.looks_like_assignment_stmt() {
+        s, err := self.parse_assign_stmt(false)
+        if err.message != "" {
+            stmt empty
+            return empty, err
+        }
+        return stmt::assign(s), parse_error { message: "" }
+    }
+    stmt empty
+}
         }
         if self.looks_like_assignment_stmt() {
             return stmt::assign(self.parse_assign_stmt(false)?))
@@ -919,34 +999,62 @@ func (parser* self) parse_for_clause_stmt() (stmt, parse_error) {
     }
 
 func (parser* self) parse_return_stmt() (return_stmt, parse_error) {
-        self.expect_keyword("return")?
-        if self.eat_symbol(";") {
-            return return_stmt {
-                value: option::none,
-            })
-        }
-        value := self.parse_expr()?
-        self.eat_symbol(";")
-        return_stmt {
-            value: option::some(value),
-        }
+    _, err := self.expect_keyword("return")
+    if err.message != "" {
+        return_stmt empty
+        return empty, err
     }
+    if self.eat_symbol(";") {
+        return_stmt r
+        r = return_stmt { value: option::none }
+        return r, parse_error { message: "" }
+    }
+    value, err := self.parse_expr()
+    if err.message != "" {
+        return_stmt empty
+        return empty, err
+    }
+    self.eat_symbol(";")
+    return_stmt {
+        value: option::some(value),
+    }
+}
 
 func (parser* self) parse_expr() (expr, parse_error) {
-        if self.at_keyword("select") {
-            return self.parse_select_expr(
+    if self.at_keyword("select") {
+        e, err := self.parse_select_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
         }
-        if self.at_keyword("switch") {
-            return self.parse_switch_expr(
-        }
-        if self.at_keyword("if") {
-            return self.parse_if_expr(
-        }
-        if self.at_keyword("for") {
-            return self.parse_for_expr(
-        }
-        self.parse_binary_expr(0)
+        return e, parse_error { message: "" }
     }
+    if self.at_keyword("switch") {
+        e, err := self.parse_switch_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
+        return e, parse_error { message: "" }
+    }
+    if self.at_keyword("if") {
+        e, err := self.parse_if_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
+        return e, parse_error { message: "" }
+    }
+    if self.at_keyword("for") {
+        e, err := self.parse_for_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
+        return e, parse_error { message: "" }
+    }
+    self.parse_binary_expr(0)
+}
 
 func (parser* self) parse_select_expr() (expr, parse_error) {
         self.expect_keyword("select")?
