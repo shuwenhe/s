@@ -2031,9 +2031,10 @@ func decode_named_type(vec[token] tokens) (named_type, parse_error) {
         return named_type {
             name: normalize_type_text(join_token_values(name_tokens)),
             type_name: normalize_type_text(join_token_values(type_tokens)),
-        })
+        }
     }
-    int split = find_decl_name_index(tokens)    if split <= 0 {
+    int split = find_decl_name_index(tokens)
+    if split <= 0 {
         return parse_error {
             message: "expected typed name",
             line: 0,
