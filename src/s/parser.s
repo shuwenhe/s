@@ -1051,11 +1051,15 @@ func (parser* self) parse_expr() (expr, parse_error) {
 }
 
 func (parser* self) parse_select_expr() (expr, parse_error) {
-        self.expect_keyword("select")
-        self.expect_symbol("{")
-        string mode = ""        vec[expr] recv_args = vec[expr]()        vec[expr] send_args = vec[expr]()        option[expr] timeout_arg = option[expr].none        bool has_default = false
-        for !self.eat_symbol("}") {
-            self.expect_keyword("case")
+    self.expect_keyword("select")
+    self.expect_symbol("{")
+    string mode = ""
+    vec[expr] recv_args = vec[expr]()
+    vec[expr] send_args = vec[expr]()
+    option[expr] timeout_arg = option[expr].none
+    bool has_default = false
+    for !self.eat_symbol("}") {
+        self.expect_keyword("case")
             if self.eat_keyword("default") {
                 if has_default {
                     return self.error_here("duplicate default case in select")
