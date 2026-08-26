@@ -204,134 +204,269 @@ func (parser* self) parse_item() (item, parse_error) {
 }
 
 func (parser* self) parse_const_decl() (const_decl, parse_error) {
-        self.expect_keyword("const")?
-        const_decl entry = self.parse_const_entry(false, 0)?        self.eat_symbol(";")
-        entry
+    _, err := self.expect_keyword("const")
+    if err.message != "" {
+        const_decl empty
+        return empty, err
     }
+    entry, err := self.parse_const_entry(false, 0)
+    if err.message != "" {
+        const_decl empty
+        return empty, err
+    }
+    self.eat_symbol(";")
+    entry
+}
 
 func (parser* self) parse_const_group_items() (vec[const_decl], parse_error) {
-        self.expect_keyword("const")?
-        self.expect_symbol("(")?
-        vec[const_decl] out = vec[const_decl]()        int iota_index = 0        for !self.eat_symbol(")") {
-            if self.eat_symbol(";") || self.eat_symbol(",") {
-                continue
-            }
-            out.push(self.parse_const_entry(true, iota_index)?);
-            iota_index = iota_index + 1
-            self.eat_symbol(";")
-            self.eat_symbol(",")
-        }
-        out
+    _, err := self.expect_keyword("const")
+    if err.message != "" {
+        vec[const_decl] empty
+        return empty, err
     }
+    _, err = self.expect_symbol("(")
+    if err.message != "" {
+        vec[const_decl] empty
+        return empty, err
+    }
+    vec[const_decl] out := vec[const_decl]()
+    int iota_index := 0
+    for !self.eat_symbol(")") {
+        if self.eat_symbol(";") || self.eat_symbol(",") {
+            continue
+        }
+        entry, err := self.parse_const_entry(true, iota_index)
+        if err.message != "" {
+            vec[const_decl] empty
+            return empty, err
+        }
+        out.push(entry)
+        iota_index = iota_index + 1
+        self.eat_symbol(";")
+        self.eat_symbol(",")
+    }
+    out
+}
 
 func (parser* self) parse_const_entry(bool allow_omitted_value, int iota_index) (const_decl, parse_error) {
-        string name = self.expect_ident()?        option[expr] value = option::none        if self.eat_symbol("=") {
-            value = option::some(self.parse_expr()?)
-        } else if !allow_omitted_value {
-            return self.error_here("expected symbol =")
-        }
-        const_decl {
-            name: name,
-            value: value,
-            iota_index: iota_index,
-        }
+    name, err := self.expect_ident()
+    if err.message != "" {
+        const_decl empty
+        return empty, err
     }
+    option[expr] value := option::none
+    if self.eat_symbol("=") {
+        val, err := self.parse_expr()
+        if err.message != "" {
+            const_decl empty
+            return empty, err
+        }
+        value = option::some(val)
+    } else if !allow_omitted_value {
+        return self.error_here("expected symbol =")
+    }
+    const_decl {
+        name: name,
+        value: value,
+        iota_index: iota_index,
+    }
+}
 
 func (parser* self) parse_var_decl() (var_decl, parse_error) {
-        self.expect_keyword("var")?
-        string name = self.expect_ident()?
-        option[string] type_name = option::none
-        option[expr] value = option::none
-
-        if !self.at_symbol("=") && !self.at_symbol(";") {
-            type_name = option::some(self.parse_type_expr()?)
+    _, err := self.expect_keyword("var")
+    if err.message != "" {
+        var_decl empty
+        return empty, err
+    }
+    name, err := self.expect_ident()
+    if err.message != "" {
+        var_decl empty
+        return empty, err
+    }
+    option[string] type_name := option::none
+    option[expr] value := option::none
+    if !self.at_symbol("=") && !self.at_symbol(";") {
+        type_expr, err := self.parse_type_expr()
+        if err.message != "" {
+            var_decl empty
+            return empty, err
         }
-
-        if self.eat_symbol("=") {
-            value = option::some(self.parse_expr()?)
+        type_name = option::some(type_expr)
+    }
+    if self.eat_symbol("=") {
+        val, err := self.parse_expr()
+        if err.message != "" {
+            var_decl empty
+            return empty, err
         }
-
-        self.eat_symbol(";")
-
-        var_decl {
-            name: name,
-            type_name: type_name,
-            value: value,
-        }
+        value = option::some(val)
+    }
+    self.eat_symbol(";")
+    var_decl {
+        name: name,
+        type_name: type_name,
+        value: value,
+    }
+}
     }
 
 func (parser* self) parse_function_decl() (function_decl, parse_error) {
-        parsed_function pair = self.parse_function(true)?        if pair.receiver.is_some() {
-            return self.error_here("method receiver not allowed in this context")
-        }
-        function_decl {
-            sig: pair.sig,
-            body: pair.body,
-            is_public: starts_with_upper(pair.sig.name),
-        }
+    pair, err := self.parse_function(true)
+    if err.message != "" {
+        function_decl empty
+        return empty, err
     }
+    if pair.receiver.is_some() {
+        return self.error_here("method receiver not allowed in this context")
+    }
+    function_decl {
+        sig: pair.sig,
+        body: pair.body,
+        is_public: starts_with_upper(pair.sig.name),
+    }
+}
 
 func (parser* self) parse_struct_decl() (struct_decl, parse_error) {
-        self.expect_keyword("struct")?
-        string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("{")?
-        vec[field] fields = vec[field]()
-        for !self.eat_symbol("}") {
-            named_type field = self.parse_named_type(vec[string] { ",", "}" })?            fields.push(field {
-                name: field.name,
-                type_name: field.type_name,
-                is_public: starts_with_upper(field.name),
-            })
-            self.eat_symbol(",")
-        }
-        struct_decl {
-            name: name,
-            generics: generics,
-            fields: fields,
-            is_public: starts_with_upper(name),
-        }
+    _, err := self.expect_keyword("struct")
+    if err.message != "" {
+        struct_decl empty
+        return empty, err
     }
+    name, err := self.expect_ident()
+    if err.message != "" {
+        struct_decl empty
+        return empty, err
+    }
+    generics, err := self.parse_generic_params()
+    if err.message != "" {
+        struct_decl empty
+        return empty, err
+    }
+    _, err = self.expect_symbol("{")
+    if err.message != "" {
+        struct_decl empty
+        return empty, err
+    }
+    vec[field] fields := vec[field]()
+    for !self.eat_symbol("}") {
+        f, err := self.parse_named_type(vec[string] { ",", "}" })
+        if err.message != "" {
+            struct_decl empty
+            return empty, err
+        }
+        fields.push(field {
+            name: f.name,
+            type_name: f.type_name,
+            is_public: starts_with_upper(f.name),
+        })
+        self.eat_symbol(",")
+    }
+    struct_decl {
+        name: name,
+        generics: generics,
+        fields: fields,
+        is_public: starts_with_upper(name),
+    }
+}
 
 func (parser* self) parse_enum_decl() (enum_decl, parse_error) {
-        self.expect_keyword("enum")?
-        string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("{")?
-        vec[enum_variant] variants = vec[enum_variant]()
-        for !self.eat_symbol("}") {
-            string variant_name = self.expect_ident()?            option[string] payload =                if self.eat_symbol("(") {
-                    string ty = self.parse_type_text(vec[string] { ")" })?                    self.expect_symbol(")")?
-                    option::some(ty)
-                } else {
-                    option::none
-                }
-            variants.push(enum_variant {
-                name: variant_name,
-                payload: payload,
-            })
-            self.eat_symbol(",")
-        }
-        enum_decl {
-            name: name,
-            generics: generics,
-            variants: variants,
-            is_public: starts_with_upper(name),
-        }
+    _, err := self.expect_keyword("enum")
+    if err.message != "" {
+        enum_decl empty
+        return empty, err
     }
+    name, err := self.expect_ident()
+    if err.message != "" {
+        enum_decl empty
+        return empty, err
+    }
+    generics, err := self.parse_generic_params()
+    if err.message != "" {
+        enum_decl empty
+        return empty, err
+    }
+    _, err = self.expect_symbol("{")
+    if err.message != "" {
+        enum_decl empty
+        return empty, err
+    }
+    vec[enum_variant] variants := vec[enum_variant]()
+    for !self.eat_symbol("}") {
+        variant_name, err := self.expect_ident()
+        if err.message != "" {
+            enum_decl empty
+            return empty, err
+        }
+        option[string] payload := option::none
+        if self.eat_symbol("(") {
+            ty, err := self.parse_type_text(vec[string] { ")" })
+            if err.message != "" {
+                enum_decl empty
+                return empty, err
+            }
+            _, err = self.expect_symbol(")")
+            if err.message != "" {
+                enum_decl empty
+                return empty, err
+            }
+            payload = option::some(ty)
+        }
+        variants.push(enum_variant {
+            name: variant_name,
+            payload: payload,
+        })
+        self.eat_symbol(",")
+    }
+    enum_decl {
+        name: name,
+        generics: generics,
+        variants: variants,
+        is_public: starts_with_upper(name),
+    }
+}
 
 func (parser* self) parse_trait_decl() (trait_decl, parse_error) {
-        self.expect_keyword("trait")?
-        string name = self.expect_ident()?        vec[string] generics = self.parse_generic_params()?        self.expect_symbol("{")?
-        vec[function_sig] methods = vec[function_sig]()
-        for !self.eat_symbol("}") {
-            pair := self.parse_function(false)?
-            methods.push(pair.sig)
-            self.expect_symbol(";")?
+    _, err := self.expect_keyword("trait")
+    if err.message != "" {
+        trait_decl empty
+        return empty, err
+    }
+    name, err := self.expect_ident()
+    if err.message != "" {
+        trait_decl empty
+        return empty, err
+    }
+    generics, err := self.parse_generic_params()
+    if err.message != "" {
+        trait_decl empty
+        return empty, err
+    }
+    _, err = self.expect_symbol("{")
+    if err.message != "" {
+        trait_decl empty
+        return empty, err
+    }
+    vec[function_sig] methods := vec[function_sig]()
+    for !self.eat_symbol("}") {
+        pair, err := self.parse_function(false)
+        if err.message != "" {
+            trait_decl empty
+            return empty, err
         }
-        trait_decl {
-            name: name,
-            generics: generics,
-            methods: methods,
-            is_public: starts_with_upper(name),
+        methods.push(pair.sig)
+        _, err = self.expect_symbol(";")
+        if err.message != "" {
+            trait_decl empty
+            return empty, err
         }
     }
+    trait_decl {
+        name: name,
+        generics: generics,
+        methods: methods,
+        is_public: starts_with_upper(name),
+    }
+}
 
 func (parser* self) parse_function(bool require_body) (parsed_function, parse_error) {
         self.expect_keyword("func")?
