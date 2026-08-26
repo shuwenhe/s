@@ -29,13 +29,13 @@ func new_lexer(string source) lexer {
 
 func (lexer* self) tokenize() (vec[token], lex_error) {
         vec[token] tokens = vec[token]()        for !self.is_eof() {
-            self.skip_ignored()?
+            self.skip_ignored()
             if self.is_eof() {
                 break
             }
-            int start_line = self.line            int start_column = self.column            string ch = self.peek()?
+            int start_line = self.line            int start_column = self.column            string ch = self.peek()
             if is_ident_start(ch) {
-                string value = self.read_identifier()?                token_kind kind =                    if is_keyword(value) {
+                string value = self.read_identifier()                token_kind kind =                    if is_keyword(value) {
                         token_kind::keyword
                     } else {
                         token_kind::ident
@@ -51,7 +51,7 @@ func (lexer* self) tokenize() (vec[token], lex_error) {
             if is_digit(ch) {
                 tokens.push(token {
                     kind: token_kind::int,
-                    value: self.read_number()?,
+                    value: self.read_number(),
                     line: start_line,
                     column: start_column,
                 })
@@ -60,7 +60,7 @@ func (lexer* self) tokenize() (vec[token], lex_error) {
             if ch == "\"" {
                 tokens.push(token {
                     kind: token_kind::string,
-                    value: self.read_string()?,
+                    value: self.read_string(),
                     line: start_line,
                     column: start_column,
                 })
@@ -69,7 +69,7 @@ func (lexer* self) tokenize() (vec[token], lex_error) {
             if ch == '(' || ch == ')' {
                 tokens.push(token {
                     kind: token_kind::symbol,
-                    value: self.read_symbol()?,
+                    value: self.read_symbol(),
                     line: start_line,
                     column: start_column,
                 })
@@ -77,7 +77,7 @@ func (lexer* self) tokenize() (vec[token], lex_error) {
             }
             tokens.push(token {
                 kind: token_kind::symbol,
-                value: self.read_symbol()?,
+                value: self.read_symbol(),
                 line: start_line,
                 column: start_column,
             })
@@ -93,25 +93,25 @@ func (lexer* self) tokenize() (vec[token], lex_error) {
 
 func (lexer* self) skip_ignored() ((), lex_error) {
         for !self.is_eof() {
-            string ch = self.peek()?
+            string ch = self.peek()
             if is_whitespace(ch) {
-                self.advance()?
+                self.advance()
                 continue
             }
             if self.match_text("
-                for !self.is_eof() && self.peek()? != "\n" {
-                    self.advance()?
+                for !self.is_eof() && self.peek() != "\n" {
+                    self.advance()
                 }
                 continue
             }
             if self.match_text(" 
 ") {
                         depth = depth - 1
-                        self.advance()?
-                        self.advance()?
+                        self.advance()
+                        self.advance()
                         continue
                     }
-                    self.advance()?
+                    self.advance()
                 }
                 continue
             }
@@ -122,10 +122,10 @@ func (lexer* self) skip_ignored() ((), lex_error) {
 
 func (lexer* self) read_identifier() (string, lex_error) {
         string out = ""        for !self.is_eof() {
-            string ch = self.peek()?            if !is_ident_continue(ch) {
+            string ch = self.peek()            if !is_ident_continue(ch) {
                 break
             }
-            out = out + self.advance()?
+            out = out + self.advance()
         }
         out
     }
@@ -133,24 +133,24 @@ func (lexer* self) read_identifier() (string, lex_error) {
 func (lexer* self) read_number() (string, lex_error) {
         string out = ""
         for !self.is_eof() {
-            string ch = self.peek()?
+            string ch = self.peek()
             if !is_number_continue(ch) {
                 break
             }
-            out = out + self.advance()?
+            out = out + self.advance()
         }
         out
     }
 
 func (lexer* self) read_string() (string, lex_error) {
-        string out = self.advance()?        for !self.is_eof() {
-            ch := self.advance()?
+        string out = self.advance()        for !self.is_eof() {
+            ch := self.advance()
             out = out + ch
             if ch == "\\" {
                 if self.is_eof() {
                     return self.error("unterminated escape sequence")
                 }
-                string ch = self.advance()?
+                string ch = self.advance()
                 continue
             }
             if ch == "\"" {
@@ -179,14 +179,14 @@ func (lexer* self) read_symbol() (string, lex_error) {
         for symbol in multi {
             if self.match_text(symbol) {
                 string out = ""                int count = len(symbol)                int i = 0                for i < count {
-                    out = out + self.advance()?
+                    out = out + self.advance()
                     i = i + 1
                 }
                 return out
             }
         }
-        string ch = self.peek()?        if is_single_symbol(ch) {
-            return self.advance()?
+        string ch = self.peek()        if is_single_symbol(ch) {
+            return self.advance()
         }
         self.error("unexpected character")
     }
@@ -351,7 +351,7 @@ func is_single_symbol(string ch) bool {
         "=" : true,
         "<" : true,
         ">" : true,
-        "?" : true,
+        "" : true,
         "&" : true,
         "|" : true,
         "^" : true,
