@@ -1336,17 +1336,21 @@ func (parser* self) parse_binary_expr(int min_precedence) (expr, parse_error) {
     }
 
 func (parser* self) parse_unary_expr() (expr, parse_error) {
-        if self.eat_symbol("&") {
-            bool mutable = false
-            target := self.parse_unary_expr()?
-            return expr::borrow(borrow_expr {
-                target: box(target),
-                mutable: mutable,
-                inferred_type: option::none,
-            }))
+    if self.eat_symbol("&") {
+        bool mutable := false
+        target, err := self.parse_unary_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
         }
-        self.parse_call_expr()
+        return expr::borrow(borrow_expr {
+            target: box(target),
+            mutable: mutable,
+            inferred_type: option::none,
+        }), parse_error { message: "" }
     }
+    self.parse_call_expr()
+}
 
 func (parser* self) parse_call_expr() (expr, parse_error) {
         expr := self.parse_primary_expr()?
@@ -1711,42 +1715,65 @@ func (parser* self) eat_symbol(string value) bool {
     }
 
 func (parser* self) expect_keyword(string value) (token, parse_error) {
-        token token = self.peek()?        if token.kind == token_kind::keyword && token.value == value {
-            return self.advance(
-        }
-        parse_error {
-            message: "expected keyword " + value,
-            line: token.line,
-            column: token.column,
-        }
+    t, err := self.peek()
+    if err.message != "" {
+        token empty
+        return empty, err
     }
+    if t.kind == token_kind::keyword && t.value == value {
+        return self.advance()
+    }
+    parse_error {
+        message: "expected keyword " + value,
+        line: t.line,
+        column: t.column,
+    }
+}
 
 func (parser* self) expect_symbol(string value) (token, parse_error) {
-        token token = self.peek()?        if token.kind == token_kind::symbol && token.value == value {
-            return self.advance(
-        }
-        parse_error {
-            message: "expected symbol " + value,
-            line: token.line,
-            column: token.column,
-        }
+    t, err := self.peek()
+    if err.message != "" {
+        token empty
+        return empty, err
     }
+    if t.kind == token_kind::symbol && t.value == value {
+        return self.advance()
+    }
+    parse_error {
+        message: "expected symbol " + value,
+        line: t.line,
+        column: t.column,
+    }
+}
 
 func (parser* self) expect_ident() (string, parse_error) {
-        token token = self.peek()?        if token.kind == token_kind::ident {
-            self.advance()?
-            return token.value
-        }
-        if token.kind == token_kind::keyword && token.value == "self" {
-            self.advance()?
-            return token.value
-        }
-        parse_error {
-            message: "expected identifier",
-            line: token.line,
-            column: token.column,
-        }
+    t, err := self.peek()
+    if err.message != "" {
+        string empty
+        return empty, err
     }
+    if t.kind == token_kind::ident {
+        _, err := self.advance()
+        if err.message != "" {
+            string empty
+            return empty, err
+        }
+        return t.value, parse_error { message: "" }
+    }
+    if t.kind == token_kind::keyword && t.value == "self" {
+        _, err := self.advance()
+        if err.message != "" {
+            string empty
+            return empty, err
+        }
+        return t.value, parse_error { message: "" }
+    }
+    parse_error {
+        message: "expected identifier",
+        line: t.line,
+        column: t.column,
+    }
+}
 
 func (parser* self) peek() (token, parse_error) {
         self.peek_at(0)
@@ -1767,9 +1794,14 @@ func (parser* self) peek_at(int offset) (token, parse_error) {
     }
 
 func (parser* self) advance() (token, parse_error) {
-        token token = self.peek()?        self.index = self.index + 1
-        token
+    t, err := self.peek()
+    if err.message != "" {
+        token empty
+        return empty, err
     }
+    self.index = self.index + 1
+    t, parse_error { message: "" }
+}
 
 func (parser* self) error_here(string message) parse_error {
         token token = self.peek().unwrap()        parse_error {
