@@ -21,6 +21,7 @@ static ast_node *parse_var_decl(parser *p);
 static ast_node *parse_const_decl(parser *p);
 static ast_node *parse_export_decl(parser *p);
 static ast_node *parse_binding_statement(parser *p, int is_mutable);
+static ast_node *parse_assign_declare_statement(parser *p);
 static ast_node *parse_typed_binding_statement(parser *p, int is_mutable);
 static int looks_like_typed_binding(parser *p);
 static int try_parse_typed_name(parser *p, token_type terminator, char **out_type, char **out_name);
@@ -999,7 +1000,14 @@ static ast_node *parse_block(parser *p) {
 	while (!check(p, TOKEN_RBRACE) && !is_at_end(p)) {
 
 		ast_node *stmt = NULL;
-		if ((check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_LBRACKET)) &&
+		
+		if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
+			stmt = parse_assign_declare_statement(p);
+			if (!stmt) {
+				ast_free(block);
+				return NULL;
+			}
+		} else if ((check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_LBRACKET)) &&
 			!(check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "sroutine") == 0) &&
 			looks_like_typed_binding(p)) {
 			stmt = parse_typed_binding_statement(p, 1);
