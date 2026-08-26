@@ -102,26 +102,42 @@ func (lexer* self) skip_ignored() ((), lex_error) {
             self.advance()
             continue
         }
-        if self.match_text("
-                for !self.is_eof() && self.peek() != "\n" {
-                    self.advance()
-                }
-                continue
+        if self.match_text("//") {
+            for !self.is_eof() && self.peek() != "\n" {
+                self.advance()
             }
-            if self.match_text(" ") {
-                        depth = depth - 1
-                        self.advance()
-                        self.advance()
-                        continue
-                    }
-                    self.advance()
-                }
-                continue
-            }
-            break
+            continue
         }
-        ()
+        if self.match_text("/*") {
+            self.advance()
+            self.advance()
+            int depth = 1
+            for depth > 0 {
+                if self.is_eof() {
+                    (), lex_error empty
+                    return empty, lex_error { message: "unterminated block comment", line: self.line, column: self.column }
+                }
+                if self.match_text("/*") {
+                    depth = depth + 1
+                    self.advance()
+                    self.advance()
+                    continue
+                }
+                if self.match_text("*/") {
+                    depth = depth - 1
+                    self.advance()
+                    self.advance()
+                    continue
+                }
+                self.advance()
+            }
+            continue
+        }
+        break
     }
+    (), lex_error empty
+    return empty
+}
 
 func (lexer* self) read_identifier() (string, lex_error) {
     string out = ""
