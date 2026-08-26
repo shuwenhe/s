@@ -1160,7 +1160,7 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
             }
         }
         build_call_expr(callee_name, args)
-    }
+}
 
 func (parser* self) parse_switch_expr() (expr, parse_error) {
         self.expect_keyword("switch")
