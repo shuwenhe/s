@@ -12,11 +12,12 @@
 
 #include "target.h"
 
-#define STANDALONE_MAX_INS 8192
+#define STANDALONE_MAX_INS 16384
 #define STANDALONE_MAX_FUNCS 256
 #define STANDALONE_MAX_SLOTS 2048
 #define STANDALONE_MAX_LITERALS 2048
 #define STANDALONE_MAX_ARGS 6
+#define STANDALONE_MAX_PENDING_ARGS 64
 #define STANDALONE_TEXT_CAP 1024
 
 typedef struct standalone_ins {
@@ -66,22 +67,32 @@ static void copy_text(char *dst, size_t cap, const char *src) {
 
 static bool split_ir_record(char *line, char *fields[4]) {
 	size_t count = 0;
-	char *start = line;
-	char *p;
-	for (p = line; ; p++) {
-		if (*p == '|' && (p == line || p[-1] != '\\')) {
-			*p = '\0';
-			if (count >= 4) return false;
-			fields[count++] = start;
-			start = p + 1;
+	char *read = line;
+	char *write = line;
+	fields[count++] = write;
+	for (;;) {
+		char ch = *read++;
+		if (ch == '\\') {
+			char escaped = *read++;
+			if (escaped == '\0') return false;
+			if (escaped == 'n') ch = '\n';
+			else if (escaped == 'r') ch = '\r';
+			else if (escaped == 't') ch = '\t';
+			else ch = escaped;
+			*write++ = ch;
 			continue;
 		}
-		if (*p == '\0' || *p == '\n' || *p == '\r') {
-			*p = '\0';
+		if (ch == '|') {
 			if (count >= 4) return false;
-			fields[count++] = start;
+			*write++ = '\0';
+			fields[count++] = write;
+			continue;
+		}
+		if (ch == '\0' || ch == '\n' || ch == '\r') {
+			*write = '\0';
 			break;
 		}
+		*write++ = ch;
 	}
 	return count == 4;
 }
@@ -347,15 +358,17 @@ static const char *runtime_callee(const char *name) {
 	if (strcmp(name, "__host_char_at") == 0) return "s_string_char_at";
 	if (strcmp(name, "__host_byte_at") == 0) return "s_string_byte_at";
 	if (strcmp(name, "__host_slice") == 0) return "s_string_slice";
+	if (strcmp(name, "__host_byte_string") == 0) return "s_byte_string_value";
 	if (strcmp(name, "__index_get") == 0) return "s_index_get";
 	if (strcmp(name, "__host_read_to_string") == 0) return "s_read_file_value";
 	if (strcmp(name, "__host_write_text_file") == 0) return "s_write_file_value";
+	if (strcmp(name, "__host_make_executable") == 0) return "s_make_executable_value";
 	return NULL;
 }
 
 static bool emit_function(FILE *out, standalone_module *module, standalone_function *fn, compile_error *err) {
 	static const char *arg_regs[STANDALONE_MAX_ARGS] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
-	const char *pending[STANDALONE_MAX_ARGS];
+	const char *pending[STANDALONE_MAX_PENDING_ARGS];
 	size_t pending_count = 0;
 	size_t param_count = 0;
 	size_t i;
@@ -373,17 +386,33 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			}
 			if (!emit_store(out, fn, ins->result, arg_regs[param_count++], err)) return false;
 		} else if (strcmp(ins->op, "ARG") == 0) {
-			if (pending_count >= STANDALONE_MAX_ARGS) {
-				error_set(err, ERR_SEMANTIC, 0, 0, "more than six call arguments are not supported in %s", fn->name);
+			if (pending_count >= STANDALONE_MAX_PENDING_ARGS) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "too many pending call arguments in %s", fn->name);
 				return false;
 			}
 			pending[pending_count++] = ins->result;
 		} else if (strcmp(ins->op, "CALL") == 0) {
 			const char *callee = runtime_callee(ins->operand1);
 			char local_callee[STANDALONE_TEXT_CAP];
+			char *count_end = NULL;
+			long call_arg_count = strtol(ins->operand2, &count_end, 10);
+			size_t first_arg;
 			size_t arg;
-			for (arg = 0; arg < pending_count; arg++) {
-				if (!emit_load(out, module, fn, pending[arg], arg_regs[arg], err)) return false;
+			if (!count_end || *count_end != '\0' || call_arg_count < 0 ||
+				call_arg_count > STANDALONE_MAX_ARGS || (size_t)call_arg_count > pending_count) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "invalid argument count for call to %s in %s", ins->operand1, fn->name);
+				return false;
+			}
+			/*
+			 * IR argument records form a stack.  An argument expression may itself
+			 * contain a call, so the inner CALL consumes only its trailing ARGs and
+			 * must leave the outer call's arguments pending.  Consuming the entire
+			 * queue here made nested calls receive the wrong values and was the
+			 * first standalone-bootstrap crash.
+			 */
+			first_arg = pending_count - (size_t)call_arg_count;
+			for (arg = 0; arg < (size_t)call_arg_count; arg++) {
+				if (!emit_load(out, module, fn, pending[first_arg + arg], arg_regs[arg], err)) return false;
 			}
 			if (!callee) {
 				symbol_text(ins->operand1, local_callee, sizeof(local_callee));
@@ -392,7 +421,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				fprintf(out, "    call %s\n", callee);
 			}
 			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
-			pending_count = 0;
+			pending_count = first_arg;
 		} else if (strcmp(ins->op, "MOV") == 0) {
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
 				!emit_store(out, fn, ins->result, "%rax", err)) return false;

@@ -1,4 +1,4 @@
-                                 S Language Complete Syntax Guide
+S Language Complete Syntax Guide
 
 1. Basic Types
 int                 // Integer
@@ -9,7 +9,6 @@ void                // No return value
 string              // String
 Type*               // Pointer type
 Type[]              // Array type
-
 
 2. Struct Definition
 Basic struct

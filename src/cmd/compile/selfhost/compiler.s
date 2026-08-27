@@ -1,0 +1,1906 @@
+package compile.selfhost.compiler
+
+// This is the executable bootstrap compiler core.  Keep this file inside the
+// frozen seed subset: strings, integers, functions, conditionals and loops.
+// The first slice deliberately accepts only a main function returning an
+// integer expression.  Later bootstrap slices extend this parser rather than
+// falling back to the C compiler.
+extern "intrinsic" func host_args() []string;
+extern "intrinsic" func __host_read_to_string(string path) string;
+extern "intrinsic" func __host_write_text_file(string path, string contents) int;
+extern "intrinsic" func __host_char_at(string text, int index) string;
+extern "intrinsic" func __host_byte_string(int value) string;
+extern "intrinsic" func __host_make_executable(string path) int;
+extern "intrinsic" func __host_slice(string text, int start, int end) string;
+
+func digit_text(int value) string {
+    if value == 0 { return "0" }
+    if value == 1 { return "1" }
+    if value == 2 { return "2" }
+    if value == 3 { return "3" }
+    if value == 4 { return "4" }
+    if value == 5 { return "5" }
+    if value == 6 { return "6" }
+    if value == 7 { return "7" }
+    if value == 8 { return "8" }
+    return "9"
+}
+
+func int_text(int value) string {
+    if value < 10 { return digit_text(value) }
+    return int_text(value / 10) + digit_text(value % 10)
+}
+
+func is_space(string ch) bool {
+    return ch == " " || ch == "\t" || ch == "\r" || ch == "\n"
+}
+
+func is_digit(string ch) bool {
+    return ch >= "0" && ch <= "9"
+}
+
+func is_alpha(string ch) bool {
+    return (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || ch == "_"
+}
+
+func is_ident_continue(string ch) bool {
+    return is_alpha(ch) || is_digit(ch)
+}
+
+func skip_space(string source, int start) int {
+    int index = start
+    for index < len(source) && is_space(__host_char_at(source, index)) {
+        index = index + 1
+    }
+    return index
+}
+
+func matches_at(string source, int index, string needle) bool {
+    if index + len(needle) > len(source) { return false }
+    int i = 0
+    for i < len(needle) {
+        if __host_char_at(source, index + i) != __host_char_at(needle, i) {
+            return false
+        }
+        i = i + 1
+    }
+    return true
+}
+
+func find_word(string source, string word) int {
+    int i = 0
+    for i + len(word) <= len(source) {
+        bool left_boundary = i == 0 || !is_ident_continue(__host_char_at(source, i - 1))
+        bool right_boundary = i + len(word) == len(source) || !is_ident_continue(__host_char_at(source, i + len(word)))
+        if left_boundary && right_boundary && matches_at(source, i, word) { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+func find_word_from(string source, string word, int start) int {
+    int index = start
+    for index + len(word) <= len(source) {
+        bool left_boundary = index == 0 || !is_ident_continue(__host_char_at(source, index - 1))
+        bool right_boundary = index + len(word) == len(source) || !is_ident_continue(__host_char_at(source, index + len(word)))
+        if left_boundary && right_boundary && matches_at(source, index, word) { return index }
+        index = index + 1
+    }
+    return -1
+}
+
+func function_declaration(string source, string name) int {
+    int index = 0
+    for index < len(source) {
+        int function_at = find_word_from(source, "func", index)
+        if function_at < 0 { return -1 }
+        int name_at = skip_space(source, function_at + 4)
+        int name_end = skip_identifier(source, name_at)
+        if name_end > name_at && __host_slice(source, name_at, name_end) == name {
+            return function_at
+        }
+        index = function_at + 4
+    }
+    return -1
+}
+
+func function_body(string source, string name) int {
+    int declaration = function_declaration(source, name)
+    if declaration < 0 { return -1 }
+    int scan = declaration + 4
+    for scan < len(source) && __host_char_at(source, scan) != "{" {
+        scan = scan + 1
+    }
+    if scan < len(source) { return scan + 1 }
+    return -1
+}
+
+func function_parameter_at(string source, string name, int wanted) string {
+    int declaration = function_declaration(source, name)
+    if declaration < 0 { return "" }
+    int name_at = skip_space(source, declaration + 4)
+    int name_end = skip_identifier(source, name_at)
+    int open = skip_space(source, name_end)
+    if open >= len(source) || __host_char_at(source, open) != "(" { return "" }
+    int close = matching_paren(source, open, len(source))
+    if close < 0 { return "" }
+    int cursor = skip_space(source, open + 1)
+    int ordinal = 0
+    for cursor < close {
+        int type_end = skip_identifier(source, cursor)
+        if type_end == cursor { return "" }
+        int parameter_at = skip_space(source, type_end)
+        int parameter_end = skip_identifier(source, parameter_at)
+        if parameter_end == parameter_at { return "" }
+        if ordinal == wanted { return __host_slice(source, parameter_at, parameter_end) }
+        cursor = skip_space(source, parameter_end)
+        if cursor >= close || __host_char_at(source, cursor) != "," { return "" }
+        cursor = skip_space(source, cursor + 1)
+        ordinal = ordinal + 1
+    }
+    return ""
+}
+
+func function_parameter(string source, string name) string {
+    return function_parameter_at(source, name, 0)
+}
+
+func function_body_end(string source, int body) int {
+    int index = body
+    int depth = 1
+    for index < len(source) {
+        string ch = __host_char_at(source, index)
+        if ch == "{" { depth = depth + 1 }
+        if ch == "}" {
+            depth = depth - 1
+            if depth == 0 { return index }
+        }
+        index = index + 1
+    }
+    return -1
+}
+
+func parse_uint(string source, int start) int {
+    int value = 0
+    int index = start
+    for index < len(source) && is_digit(__host_char_at(source, index)) {
+        string ch = __host_char_at(source, index)
+        if ch == "0" { value = value * 10 }
+        if ch == "1" { value = value * 10 + 1 }
+        if ch == "2" { value = value * 10 + 2 }
+        if ch == "3" { value = value * 10 + 3 }
+        if ch == "4" { value = value * 10 + 4 }
+        if ch == "5" { value = value * 10 + 5 }
+        if ch == "6" { value = value * 10 + 6 }
+        if ch == "7" { value = value * 10 + 7 }
+        if ch == "8" { value = value * 10 + 8 }
+        if ch == "9" { value = value * 10 + 9 }
+        index = index + 1
+    }
+    return value
+}
+
+func skip_uint(string source, int start) int {
+    int index = start
+    for index < len(source) && is_digit(__host_char_at(source, index)) {
+        index = index + 1
+    }
+    return index
+}
+
+func skip_identifier(string source, int start) int {
+    int index = start
+    for index < len(source) && is_ident_continue(__host_char_at(source, index)) {
+        index = index + 1
+    }
+    return index
+}
+
+func expression_end(string source, int start) int {
+    int index = start
+    int depth = 0
+    for index < len(source) {
+        string ch = __host_char_at(source, index)
+        if ch == "(" { depth = depth + 1 }
+        if ch == ")" {
+            if depth == 0 { return index }
+            depth = depth - 1
+        }
+        if depth == 0 && (ch == ";" || ch == "}" || ch == "\n") { return index }
+        index = index + 1
+    }
+    return -1
+}
+
+func matching_paren(string source, int start, int end) int {
+    int index = start
+    int depth = 0
+    for index < end {
+        string ch = __host_char_at(source, index)
+        if ch == "(" { depth = depth + 1 }
+        if ch == ")" {
+            depth = depth - 1
+            if depth == 0 { return index }
+        }
+        index = index + 1
+    }
+    return -1
+}
+
+func factor_end(string source, int start, int end) int {
+    int index = skip_space(source, start)
+    if index >= end { return -1 }
+    string ch = __host_char_at(source, index)
+    if is_digit(ch) { return skip_uint(source, index) }
+    if is_alpha(ch) {
+        int name_end = skip_identifier(source, index)
+        int after_name = skip_space(source, name_end)
+        if after_name < end && __host_char_at(source, after_name) == "(" {
+            int close = matching_paren(source, after_name, end)
+            if close < 0 { return -1 }
+            return close + 1
+        }
+        return name_end
+    }
+    if ch == "(" {
+        int close = matching_paren(source, index, end)
+        if close < 0 { return -1 }
+        return close + 1
+    }
+    return -1
+}
+
+func resolve_identifier(string source, string name, int scope_start, int before, string parameter_name, int parameter_value) int {
+    int index = scope_start
+    int value = -1
+    for index < before {
+        if matches_at(source, index, name) {
+            bool left_boundary = index == 0 || !is_ident_continue(__host_char_at(source, index - 1))
+            int after_name = index + len(name)
+            bool right_boundary = after_name == len(source) || !is_ident_continue(__host_char_at(source, after_name))
+            int assign = skip_space(source, after_name)
+            if left_boundary && right_boundary && assign + 1 < before &&
+                __host_char_at(source, assign) == ":" && __host_char_at(source, assign + 1) == "=" {
+                int initializer = skip_space(source, assign + 2)
+                int initializer_end = expression_end(source, initializer)
+                if initializer_end < 0 || initializer_end >= before { return -1 }
+                value = evaluate_expression(source, initializer, initializer_end, scope_start, parameter_name, parameter_value)
+                if value < 0 { return -1 }
+                index = initializer_end + 1
+                continue
+            }
+        }
+        index = index + 1
+    }
+    if value < 0 && parameter_name != "" && name == parameter_name { return parameter_value }
+    return value
+}
+
+func resolve_function(string source, string name, bool has_argument, int argument) int {
+    int body = function_body(source, name)
+    if body < 0 { return -1 }
+    string parameter = function_parameter(source, name)
+    if parameter == "" && has_argument { return -1 }
+    if parameter != "" && !has_argument { return -1 }
+    int body_end = function_body_end(source, body)
+    if body_end < 0 { return -1 }
+    return evaluate_block(source, body, body_end, body, parameter, argument)
+}
+
+func factor_value(string source, int start, int next, int scope_start, string parameter_name, int parameter_value) int {
+    string ch = __host_char_at(source, start)
+    if ch == "(" { return evaluate_expression(source, start + 1, next - 1, scope_start, parameter_name, parameter_value) }
+    if is_digit(ch) { return parse_uint(source, start) }
+    if is_alpha(ch) {
+        int name_end = skip_identifier(source, start)
+        string name = __host_slice(source, start, name_end)
+        int after_name = skip_space(source, name_end)
+        if after_name < next && __host_char_at(source, after_name) == "(" {
+            int close = next - 1
+            int argument_start = skip_space(source, after_name + 1)
+            if argument_start == close { return resolve_function(source, name, false, 0) }
+            int argument = evaluate_expression(source, argument_start, close, scope_start, parameter_name, parameter_value)
+            if argument < 0 { return -1 }
+            return resolve_function(source, name, true, argument)
+        }
+        return resolve_identifier(source, name, scope_start, start, parameter_name, parameter_value)
+    }
+    return -1
+}
+
+func evaluate_arithmetic_expression(string source, int start, int end, int scope_start, string parameter_name, int parameter_value) int {
+    int index = skip_space(source, start)
+    int next = factor_end(source, index, end)
+    if next < 0 { return -1 }
+    int term = factor_value(source, index, next, scope_start, parameter_name, parameter_value)
+    if term < 0 { return -1 }
+    int total = 0
+    string additive = "+"
+    index = next
+    for true {
+        if index == end {
+            if additive == "+" { return total + term }
+            return total - term
+        }
+        index = skip_space(source, index)
+        if index == end {
+            if additive == "+" { return total + term }
+            return total - term
+        }
+        if index > end { return -1 }
+        string operator = __host_char_at(source, index)
+        if operator != "+" && operator != "-" && operator != "*" && operator != "/" && operator != "%" { return -1 }
+        int factor_start = skip_space(source, index + 1)
+        next = factor_end(source, factor_start, end)
+        if next < 0 { return -1 }
+        int factor = factor_value(source, factor_start, next, scope_start, parameter_name, parameter_value)
+        if factor < 0 { return -1 }
+        if operator == "*" { term = term * factor }
+        if operator == "/" {
+            if factor == 0 { return -1 }
+            term = term / factor
+        }
+        if operator == "%" {
+            if factor == 0 { return -1 }
+            term = term % factor
+        }
+        if operator == "+" || operator == "-" {
+            if additive == "+" { total = total + term }
+            if additive == "-" { total = total - term }
+            additive = operator
+            term = factor
+        }
+        index = next
+    }
+    return -1
+}
+
+func comparison_at(string source, int start, int end) int {
+    int index = start
+    int depth = 0
+    for index < end {
+        string ch = __host_char_at(source, index)
+        if ch == "(" { depth = depth + 1 }
+        if ch == ")" { depth = depth - 1 }
+        if depth == 0 && (ch == "=" || ch == "!" || ch == "<" || ch == ">") {
+            return index
+        }
+        index = index + 1
+    }
+    return -1
+}
+
+func logical_at(string source, int start, int end, string operator) int {
+    int index = start
+    int depth = 0
+    for index + 1 < end {
+        string ch = __host_char_at(source, index)
+        if ch == "(" { depth = depth + 1 }
+        if ch == ")" { depth = depth - 1 }
+        if depth == 0 && matches_at(source, index, operator) { return index }
+        index = index + 1
+    }
+    return -1
+}
+
+func evaluate_expression(string source, int start, int end, int scope_start, string parameter_name, int parameter_value) int {
+    int logical = logical_at(source, start, end, "||")
+    if logical >= 0 {
+        int left_logical = evaluate_expression(source, start, logical, scope_start, parameter_name, parameter_value)
+        if left_logical < 0 { return -1 }
+        if left_logical != 0 { return 1 }
+        int right_logical = evaluate_expression(source, logical + 2, end, scope_start, parameter_name, parameter_value)
+        if right_logical < 0 { return -1 }
+        if right_logical != 0 { return 1 }
+        return 0
+    }
+    logical = logical_at(source, start, end, "&&")
+    if logical >= 0 {
+        int left_logical = evaluate_expression(source, start, logical, scope_start, parameter_name, parameter_value)
+        if left_logical < 0 { return -1 }
+        if left_logical == 0 { return 0 }
+        int right_logical = evaluate_expression(source, logical + 2, end, scope_start, parameter_name, parameter_value)
+        if right_logical < 0 { return -1 }
+        if right_logical != 0 { return 1 }
+        return 0
+    }
+    int trimmed_start = skip_space(source, start)
+    if trimmed_start < end && __host_char_at(source, trimmed_start) == "!" &&
+        (trimmed_start + 1 >= end || __host_char_at(source, trimmed_start + 1) != "=") {
+        int negated = evaluate_expression(source, trimmed_start + 1, end, scope_start, parameter_name, parameter_value)
+        if negated < 0 { return -1 }
+        if negated == 0 { return 1 }
+        return 0
+    }
+    int compare = comparison_at(source, start, end)
+    if compare < 0 {
+        return evaluate_arithmetic_expression(source, start, end, scope_start, parameter_name, parameter_value)
+    }
+    int operator_end = compare + 1
+    if operator_end < end && __host_char_at(source, operator_end) == "=" {
+        operator_end = operator_end + 1
+    }
+    string operator = __host_slice(source, compare, operator_end)
+    if operator == "=" || operator == "!" { return -1 }
+    int left = evaluate_arithmetic_expression(source, start, compare, scope_start, parameter_name, parameter_value)
+    int right = evaluate_arithmetic_expression(source, operator_end, end, scope_start, parameter_name, parameter_value)
+    if left < 0 || right < 0 { return -1 }
+    if operator == "==" {
+        if left == right { return 1 }
+        return 0
+    }
+    if operator == "!=" {
+        if left != right { return 1 }
+        return 0
+    }
+    if operator == "<" {
+        if left < right { return 1 }
+        return 0
+    }
+    if operator == "<=" {
+        if left <= right { return 1 }
+        return 0
+    }
+    if operator == ">" {
+        if left > right { return 1 }
+        return 0
+    }
+    if operator == ">=" {
+        if left >= right { return 1 }
+        return 0
+    }
+    return -1
+}
+
+func evaluate_block(string source, int block_start, int block_end, int scope_start, string parameter_name, int parameter_value) int {
+    int index = block_start
+    for index < block_end {
+        index = skip_space(source, index)
+        if index >= block_end { return -1 }
+        if matches_at(source, index, "return") {
+            int start = skip_space(source, index + 6)
+            int end = expression_end(source, start)
+            if end < 0 || end > block_end { return -1 }
+            return evaluate_expression(source, start, end, scope_start, parameter_name, parameter_value)
+        }
+        if matches_at(source, index, "if") {
+            int condition_start = skip_space(source, index + 2)
+            int open = condition_start
+            int paren_depth = 0
+            for open < block_end {
+                string ch = __host_char_at(source, open)
+                if ch == "(" { paren_depth = paren_depth + 1 }
+                if ch == ")" { paren_depth = paren_depth - 1 }
+                if ch == "{" && paren_depth == 0 { break }
+                open = open + 1
+            }
+            if open >= block_end { return -1 }
+            int close = function_body_end(source, open + 1)
+            if close < 0 || close > block_end { return -1 }
+            int condition = evaluate_expression(source, condition_start, open, scope_start, parameter_name, parameter_value)
+            if condition < 0 { return -1 }
+            if condition != 0 {
+                int selected = evaluate_block(source, open + 1, close, scope_start, parameter_name, parameter_value)
+                if selected >= 0 { return selected }
+            }
+            int after = skip_space(source, close + 1)
+            if after + 4 <= block_end && matches_at(source, after, "else") {
+                int else_open = skip_space(source, after + 4)
+                if else_open >= block_end || __host_char_at(source, else_open) != "{" { return -1 }
+                int else_close = function_body_end(source, else_open + 1)
+                if else_close < 0 || else_close > block_end { return -1 }
+                if condition == 0 {
+                    int selected = evaluate_block(source, else_open + 1, else_close, scope_start, parameter_name, parameter_value)
+                    if selected >= 0 { return selected }
+                }
+                index = else_close + 1
+                continue
+            }
+            index = close + 1
+            continue
+        }
+        index = index + 1
+    }
+    return -1
+}
+
+func evaluate_main_expression(string source) int {
+    int body = function_body(source, "main")
+    if body < 0 { return -1 }
+    int body_end = function_body_end(source, body)
+    if body_end < 0 { return -1 }
+    return evaluate_block(source, body, body_end, body, "", 0)
+}
+
+func compile_main_expression(string source) string {
+    int value = evaluate_main_expression(source)
+    if value < 0 { return "" }
+    return "SSEED-TARGET-V1\nFUNC_BEGIN|main|_|_\nRET|" + int_text(value) + "|_|_\nFUNC_END|main|_|_\n"
+}
+
+func little16(int input) string {
+    int value = input
+    return __host_byte_string(value % 256) + __host_byte_string((value / 256) % 256)
+}
+
+func little32(int input) string {
+    int value = input
+    return little16(value % 65536) + little16((value / 65536) % 65536)
+}
+
+func little32_signed(int input) string {
+    int value = input
+    if value < 0 { value = value + 4294967296 }
+    return little32(value)
+}
+
+func little64(int input) string {
+    int value = input
+    return little32(value) + little32(0)
+}
+
+func zeroes(int count) string {
+    string output = ""
+    int i = 0
+    for i < count {
+        output = output + __host_byte_string(0)
+        i = i + 1
+    }
+    return output
+}
+
+func emit_elf_image(string code) string {
+    int image_base = 4194304
+    int code_offset = 120
+    int file_size = code_offset + len(code)
+    string elf = __host_byte_string(127) + "ELF"
+    elf = elf + __host_byte_string(2) + __host_byte_string(1) + __host_byte_string(1) + zeroes(9)
+    elf = elf + little16(2) + little16(62) + little32(1)
+    elf = elf + little64(image_base + code_offset) + little64(64) + little64(0)
+    elf = elf + little32(0) + little16(64) + little16(56) + little16(1)
+    elf = elf + little16(0) + little16(0) + little16(0)
+    elf = elf + little32(1) + little32(5) + little64(0)
+    elf = elf + little64(image_base) + little64(image_base)
+    elf = elf + little64(file_size) + little64(file_size) + little64(4096)
+    return elf + code
+}
+
+func exit_sequence() string {
+    // mov $60,%rax; mov $exit_code,%rdi; syscall
+    return __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(192) + little32(60)
+        + __host_byte_string(15) + __host_byte_string(5)
+}
+
+func emit_exit_elf(int exit_code) string {
+    string code = __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(199) + little32(exit_code)
+    return emit_elf_image(code + exit_sequence())
+}
+
+func trim_space_end(string source, int start, int end) int {
+    int result = end
+    for result > start && is_space(__host_char_at(source, result - 1)) {
+        result = result - 1
+    }
+    return result
+}
+
+func arithmetic_operator_at(string source, int start, int end, bool product) int {
+    int index = end - 1
+    int depth = 0
+    for index >= start {
+        string ch = __host_char_at(source, index)
+        if ch == ")" { depth = depth + 1 }
+        if ch == "(" { depth = depth - 1 }
+        if depth == 0 {
+            if !product && (ch == "+" || ch == "-") && index > start { return index }
+            if product && (ch == "*" || ch == "/" || ch == "%") { return index }
+        }
+        index = index - 1
+    }
+    return -1
+}
+
+func arithmetic_machine_op(string operator) string {
+    if operator == "+" {
+        return __host_byte_string(72) + __host_byte_string(1) + __host_byte_string(200)
+    }
+    if operator == "-" {
+        return __host_byte_string(72) + __host_byte_string(41) + __host_byte_string(200)
+    }
+    if operator == "*" {
+        return __host_byte_string(72) + __host_byte_string(15) + __host_byte_string(175) + __host_byte_string(193)
+    }
+    string divide = __host_byte_string(72) + __host_byte_string(49) + __host_byte_string(210)
+        + __host_byte_string(72) + __host_byte_string(247) + __host_byte_string(241)
+    if operator == "%" {
+        return divide + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(208)
+    }
+    return divide
+}
+
+func emit_arithmetic_machine(string source, int raw_start, int raw_end) string {
+    int start = skip_space(source, raw_start)
+    int end = trim_space_end(source, start, raw_end)
+    if start >= end { return "" }
+    if __host_char_at(source, start) == "(" {
+        int close = matching_paren(source, start, end)
+        if close == end - 1 {
+            return emit_arithmetic_machine(source, start + 1, end - 1)
+        }
+    }
+    int operator_at = arithmetic_operator_at(source, start, end, false)
+    if operator_at < 0 { operator_at = arithmetic_operator_at(source, start, end, true) }
+    if operator_at >= 0 {
+        string left = emit_arithmetic_machine(source, start, operator_at)
+        string right = emit_arithmetic_machine(source, operator_at + 1, end)
+        if left == "" || right == "" { return "" }
+        string save_left = __host_byte_string(80)
+        string move_right = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
+        string restore_left = __host_byte_string(88)
+        return left + save_left + right + move_right + restore_left
+            + arithmetic_machine_op(__host_char_at(source, operator_at))
+    }
+    int number_end = skip_uint(source, start)
+    if number_end != end { return "" }
+    // mov $imm32,%eax; the bootstrap slice accepts non-negative int32 values.
+    return __host_byte_string(184) + little32(parse_uint(source, start))
+}
+
+func comparison_machine_op(string operator) string {
+    if operator == "==" { return __host_byte_string(15) + __host_byte_string(148) + __host_byte_string(192) }
+    if operator == "!=" { return __host_byte_string(15) + __host_byte_string(149) + __host_byte_string(192) }
+    if operator == "<" { return __host_byte_string(15) + __host_byte_string(156) + __host_byte_string(192) }
+    if operator == "<=" { return __host_byte_string(15) + __host_byte_string(158) + __host_byte_string(192) }
+    if operator == ">" { return __host_byte_string(15) + __host_byte_string(159) + __host_byte_string(192) }
+    return __host_byte_string(15) + __host_byte_string(157) + __host_byte_string(192)
+}
+
+func emit_condition_machine(string source, int start, int end) string {
+    int compare = comparison_at(source, start, end)
+    if compare < 0 { return emit_arithmetic_machine(source, start, end) }
+    int operator_end = compare + 1
+    if operator_end < end && __host_char_at(source, operator_end) == "=" { operator_end = operator_end + 1 }
+    string operator = __host_slice(source, compare, operator_end)
+    string left = emit_arithmetic_machine(source, start, compare)
+    string right = emit_arithmetic_machine(source, operator_end, end)
+    if left == "" || right == "" { return "" }
+    string save_left = __host_byte_string(80)
+    string move_right = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
+    string restore_left = __host_byte_string(88)
+    string compare_values = __host_byte_string(72) + __host_byte_string(57) + __host_byte_string(200)
+    string widen_bool = __host_byte_string(72) + __host_byte_string(15) + __host_byte_string(182) + __host_byte_string(192)
+    return left + save_left + right + move_right + restore_left + compare_values
+        + comparison_machine_op(operator) + widen_bool
+}
+
+func emit_native_return_machine(string source, int return_at, int block_end) string {
+    int start = skip_space(source, return_at + 6)
+    int end = expression_end(source, start)
+    if end < 0 || end > block_end { return "" }
+    string expression = emit_arithmetic_machine(source, start, end)
+    if expression == "" { return "" }
+    string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
+    return expression + move_result + exit_sequence()
+}
+
+func emit_native_block_machine(string source, int block_start, int block_end) string {
+    int index = skip_space(source, block_start)
+    if index >= block_end { return "" }
+    if matches_at(source, index, "return") {
+        return emit_native_return_machine(source, index, block_end)
+    }
+    if !matches_at(source, index, "if") { return "" }
+    int condition_start = skip_space(source, index + 2)
+    int open = condition_start
+    int paren_depth = 0
+    for open < block_end {
+        string ch = __host_char_at(source, open)
+        if ch == "(" { paren_depth = paren_depth + 1 }
+        if ch == ")" { paren_depth = paren_depth - 1 }
+        if ch == "{" && paren_depth == 0 { break }
+        open = open + 1
+    }
+    if open >= block_end { return "" }
+    int close = function_body_end(source, open + 1)
+    if close < 0 || close > block_end { return "" }
+    int after = skip_space(source, close + 1)
+    if after + 4 > block_end || !matches_at(source, after, "else") { return "" }
+    int else_open = skip_space(source, after + 4)
+    if else_open >= block_end || __host_char_at(source, else_open) != "{" { return "" }
+    int else_close = function_body_end(source, else_open + 1)
+    if else_close < 0 || else_close > block_end { return "" }
+    string condition = emit_condition_machine(source, condition_start, open)
+    string then_code = emit_native_block_machine(source, open + 1, close)
+    string else_code = emit_native_block_machine(source, else_open + 1, else_close)
+    if condition == "" || then_code == "" || else_code == "" { return "" }
+    string test_result = __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
+    string jump_false = __host_byte_string(15) + __host_byte_string(132) + little32(len(then_code))
+    return condition + test_result + jump_false + then_code + else_code
+}
+
+func emit_native_expression_elf(string source) string {
+    int body = function_body(source, "main")
+    if body < 0 { return "" }
+    int body_end = function_body_end(source, body)
+    if body_end < 0 { return "" }
+    int return_at = skip_space(source, body)
+    if return_at >= body_end || !matches_at(source, return_at, "return") { return "" }
+    int start = skip_space(source, return_at + 6)
+    int end = expression_end(source, start)
+    if end < 0 || end > body_end { return "" }
+    int after = end
+    if after < body_end && __host_char_at(source, after) == ";" { after = after + 1 }
+    after = skip_space(source, after)
+    if after != body_end { return "" }
+    string expression_code = emit_arithmetic_machine(source, start, end)
+    if expression_code == "" { return "" }
+    // Linux exit status: move expression result from rax to rdi.
+    string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
+    return emit_elf_image(expression_code + move_result + exit_sequence())
+}
+
+func emit_native_control_elf(string source) string {
+    int body = function_body(source, "main")
+    if body < 0 { return "" }
+    int body_end = function_body_end(source, body)
+    if body_end < 0 { return "" }
+    string code = emit_native_block_machine(source, body, body_end)
+    if code == "" { return "" }
+    return emit_elf_image(code)
+}
+
+func local_slot(string source, int scope_start, int before, string wanted) int {
+    int index = scope_start
+    int slot = 0
+    for index <= before && index < len(source) {
+        index = skip_space(source, index)
+        if index > before || index >= len(source) { return -1 }
+        if is_alpha(__host_char_at(source, index)) {
+            int name_end = skip_identifier(source, index)
+            string name = __host_slice(source, index, name_end)
+            int assign = skip_space(source, name_end)
+            if assign + 1 < len(source) && __host_char_at(source, assign) == ":" &&
+                __host_char_at(source, assign + 1) == "=" {
+                if name == wanted { return slot }
+                slot = slot + 1
+                int initializer = skip_space(source, assign + 2)
+                int initializer_end = expression_end(source, initializer)
+                if initializer_end < 0 { return -1 }
+                index = initializer_end + 1
+                continue
+            }
+            index = name_end
+            continue
+        }
+        index = index + 1
+    }
+    return -1
+}
+
+func stack_load(int slot) string {
+    int displacement = 256 - ((slot + 1) * 8)
+    return __host_byte_string(72) + __host_byte_string(139) + __host_byte_string(69)
+        + __host_byte_string(displacement)
+}
+
+func stack_store(int slot) string {
+    int displacement = 256 - ((slot + 1) * 8)
+    return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(69)
+        + __host_byte_string(displacement)
+}
+
+func emit_scoped_arithmetic_machine(string source, int raw_start, int raw_end, int scope_start) string {
+    int start = skip_space(source, raw_start)
+    int end = trim_space_end(source, start, raw_end)
+    if start >= end { return "" }
+    if __host_char_at(source, start) == "(" {
+        int close = matching_paren(source, start, end)
+        if close == end - 1 {
+            return emit_scoped_arithmetic_machine(source, start + 1, end - 1, scope_start)
+        }
+    }
+    int operator_at = arithmetic_operator_at(source, start, end, false)
+    if operator_at < 0 { operator_at = arithmetic_operator_at(source, start, end, true) }
+    if operator_at >= 0 {
+        string left = emit_scoped_arithmetic_machine(source, start, operator_at, scope_start)
+        string right = emit_scoped_arithmetic_machine(source, operator_at + 1, end, scope_start)
+        if left == "" || right == "" { return "" }
+        return left + __host_byte_string(80) + right
+            + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
+            + __host_byte_string(88) + arithmetic_machine_op(__host_char_at(source, operator_at))
+    }
+    int number_end = skip_uint(source, start)
+    if number_end == end { return __host_byte_string(184) + little32(parse_uint(source, start)) }
+    int name_end = skip_identifier(source, start)
+    if name_end == end {
+        int slot = local_slot(source, scope_start, start, __host_slice(source, start, name_end))
+        if slot < 0 || slot >= 15 { return "" }
+        return stack_load(slot)
+    }
+    return ""
+}
+
+func emit_scoped_condition_machine(string source, int start, int end, int scope_start) string {
+    int compare = comparison_at(source, start, end)
+    if compare < 0 { return emit_scoped_arithmetic_machine(source, start, end, scope_start) }
+    int operator_end = compare + 1
+    if operator_end < end && __host_char_at(source, operator_end) == "=" { operator_end = operator_end + 1 }
+    string operator = __host_slice(source, compare, operator_end)
+    string left = emit_scoped_arithmetic_machine(source, start, compare, scope_start)
+    string right = emit_scoped_arithmetic_machine(source, operator_end, end, scope_start)
+    if left == "" || right == "" { return "" }
+    return left + __host_byte_string(80) + right
+        + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
+        + __host_byte_string(88)
+        + __host_byte_string(72) + __host_byte_string(57) + __host_byte_string(200)
+        + comparison_machine_op(operator)
+        + __host_byte_string(72) + __host_byte_string(15) + __host_byte_string(182) + __host_byte_string(192)
+}
+
+func emit_assignment_block_machine(string source, int block_start, int block_end, int scope_start) string {
+    int index = block_start
+    string code = ""
+    for index < block_end {
+        index = skip_space(source, index)
+        if index >= block_end { return code }
+        if !is_alpha(__host_char_at(source, index)) { return "" }
+        int name_end = skip_identifier(source, index)
+        string name = __host_slice(source, index, name_end)
+        int assign = skip_space(source, name_end)
+        if assign >= block_end || __host_char_at(source, assign) != "=" ||
+            (assign + 1 < block_end && __host_char_at(source, assign + 1) == "=") { return "" }
+        int expression_start = skip_space(source, assign + 1)
+        int expression_finish = expression_end(source, expression_start)
+        if expression_finish < 0 || expression_finish > block_end { return "" }
+        int slot = local_slot(source, scope_start, index, name)
+        string value = emit_scoped_arithmetic_machine(source, expression_start, expression_finish, scope_start)
+        if slot < 0 || value == "" { return "" }
+        code = code + value + stack_store(slot)
+        index = expression_finish + 1
+    }
+    return code
+}
+
+func emit_native_loop_elf(string source) string {
+    int body = function_body(source, "main")
+    if body < 0 { return "" }
+    int body_end = function_body_end(source, body)
+    if body_end < 0 { return "" }
+    string prefix = __host_byte_string(85) + __host_byte_string(72) + __host_byte_string(137)
+        + __host_byte_string(229) + __host_byte_string(72) + __host_byte_string(129)
+        + __host_byte_string(236) + little32(128)
+    int index = body
+    for true {
+        index = skip_space(source, index)
+        if index >= body_end { return "" }
+        if matches_at(source, index, "while") { break }
+        if !is_alpha(__host_char_at(source, index)) { return "" }
+        int name_end = skip_identifier(source, index)
+        int assign = skip_space(source, name_end)
+        if assign + 1 >= body_end || __host_char_at(source, assign) != ":" ||
+            __host_char_at(source, assign + 1) != "=" { return "" }
+        int initializer = skip_space(source, assign + 2)
+        int initializer_end = expression_end(source, initializer)
+        if initializer_end < 0 || initializer_end > body_end { return "" }
+        int slot = local_slot(source, body, index, __host_slice(source, index, name_end))
+        string value = emit_scoped_arithmetic_machine(source, initializer, initializer_end, body)
+        if slot < 0 || value == "" { return "" }
+        prefix = prefix + value + stack_store(slot)
+        index = initializer_end + 1
+    }
+    int condition_start = skip_space(source, index + 5)
+    int open = condition_start
+    for open < body_end && __host_char_at(source, open) != "{" { open = open + 1 }
+    if open >= body_end { return "" }
+    int close = function_body_end(source, open + 1)
+    if close < 0 || close > body_end { return "" }
+    string condition = emit_scoped_condition_machine(source, condition_start, open, body)
+    string loop_body = emit_assignment_block_machine(source, open + 1, close, body)
+    if condition == "" || loop_body == "" { return "" }
+    string test_result = __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
+    string jump_exit = __host_byte_string(15) + __host_byte_string(132) + little32(len(loop_body) + 5)
+    int loop_size = len(condition) + len(test_result) + len(jump_exit) + len(loop_body) + 5
+    string jump_back = __host_byte_string(233) + little32_signed(0 - loop_size)
+    int return_at = find_word_from(source, "return", close + 1)
+    if return_at < 0 || return_at >= body_end { return "" }
+    int return_start = skip_space(source, return_at + 6)
+    int return_end = expression_end(source, return_start)
+    if return_end < 0 || return_end > body_end { return "" }
+    string result = emit_scoped_arithmetic_machine(source, return_start, return_end, body)
+    if result == "" { return "" }
+    string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
+    return emit_elf_image(prefix + condition + test_result + jump_exit + loop_body + jump_back
+        + result + move_result + exit_sequence())
+}
+
+func decode_bootstrap_string(string source, int start, int end) string {
+    string output = ""
+    int index = start
+    for index < end {
+        string ch = __host_char_at(source, index)
+        if ch == "\\" && index + 1 < end {
+            string escaped = __host_char_at(source, index + 1)
+            if escaped == "n" { output = output + "\n" }
+            if escaped == "r" { output = output + "\r" }
+            if escaped == "t" { output = output + "\t" }
+            if escaped == "\\" { output = output + "\\" }
+            if escaped == "\"" { output = output + "\"" }
+            index = index + 2
+            continue
+        }
+        output = output + ch
+        index = index + 1
+    }
+    return output
+}
+
+func emit_write_sequence(int address, int count) string {
+    // write(1, address, count) using Linux/amd64 syscall registers.
+    return __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(192) + little32(1)
+        + __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(199) + little32(1)
+        + __host_byte_string(72) + __host_byte_string(190) + little64(address)
+        + __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(194) + little32(count)
+        + __host_byte_string(15) + __host_byte_string(5)
+}
+
+func emit_native_string_elf(string source) string {
+    int body = function_body(source, "main")
+    if body < 0 { return "" }
+    int body_end = function_body_end(source, body)
+    if body_end < 0 { return "" }
+    int print_at = find_word_from(source, "println", body)
+    if print_at < 0 || print_at >= body_end || print_at != skip_space(source, body) { return "" }
+    int open = skip_space(source, print_at + 7)
+    if open >= body_end || __host_char_at(source, open) != "(" { return "" }
+    int quote = skip_space(source, open + 1)
+    if quote >= body_end || __host_char_at(source, quote) != "\"" { return "" }
+    int string_end = quote + 1
+    for string_end < body_end {
+        if __host_char_at(source, string_end) == "\\" { string_end = string_end + 2; continue }
+        if __host_char_at(source, string_end) == "\"" { break }
+        string_end = string_end + 1
+    }
+    if string_end >= body_end { return "" }
+    string literal = decode_bootstrap_string(source, quote + 1, string_end)
+    int return_at = find_word_from(source, "return", string_end + 1)
+    if return_at < 0 || return_at >= body_end { return "" }
+    int return_start = skip_space(source, return_at + 6)
+    int return_end = expression_end(source, return_start)
+    if return_end < 0 || return_end > body_end { return "" }
+    int after_return = return_end
+    if after_return < body_end && __host_char_at(source, after_return) == ";" { after_return = after_return + 1 }
+    after_return = skip_space(source, after_return)
+    if after_return != body_end { return "" }
+    string result = emit_arithmetic_machine(source, return_start, return_end)
+    if result == "" { return "" }
+    string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
+    string tail = result + move_result + exit_sequence()
+    string placeholder_write = emit_write_sequence(0, len(literal))
+    int string_address = 4194304 + 120 + len(placeholder_write) + len(tail)
+    string code = emit_write_sequence(string_address, len(literal)) + tail
+    return emit_elf_image(code + literal)
+}
+
+func emit_array_expression_machine(string source, int raw_start, int raw_end, string array_name, int array_length) string {
+    int start = skip_space(source, raw_start)
+    int end = trim_space_end(source, start, raw_end)
+    if start >= end { return "" }
+    if __host_char_at(source, start) == "(" {
+        int close = matching_paren(source, start, end)
+        if close == end - 1 {
+            return emit_array_expression_machine(source, start + 1, end - 1, array_name, array_length)
+        }
+    }
+    int operator_at = arithmetic_operator_at(source, start, end, false)
+    if operator_at < 0 { operator_at = arithmetic_operator_at(source, start, end, true) }
+    if operator_at >= 0 {
+        string left = emit_array_expression_machine(source, start, operator_at, array_name, array_length)
+        string right = emit_array_expression_machine(source, operator_at + 1, end, array_name, array_length)
+        if left == "" || right == "" { return "" }
+        return left + __host_byte_string(80) + right
+            + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
+            + __host_byte_string(88) + arithmetic_machine_op(__host_char_at(source, operator_at))
+    }
+    int number_end = skip_uint(source, start)
+    if number_end == end { return __host_byte_string(184) + little32(parse_uint(source, start)) }
+    int name_end = skip_identifier(source, start)
+    if name_end <= start || __host_slice(source, start, name_end) != array_name { return "" }
+    int open = skip_space(source, name_end)
+    if open >= end || __host_char_at(source, open) != "[" { return "" }
+    int index_start = skip_space(source, open + 1)
+    int index_end = skip_uint(source, index_start)
+    int close = skip_space(source, index_end)
+    if close >= end || close != end - 1 || __host_char_at(source, close) != "]" { return "" }
+    int element = parse_uint(source, index_start)
+    if element < 0 || element >= array_length { return "" }
+    return stack_load(element)
+}
+
+func emit_native_array_elf(string source) string {
+    int body = function_body(source, "main")
+    if body < 0 { return "" }
+    int body_end = function_body_end(source, body)
+    if body_end < 0 { return "" }
+    int declaration = skip_space(source, body)
+    if declaration >= body_end || !is_alpha(__host_char_at(source, declaration)) { return "" }
+    int name_end = skip_identifier(source, declaration)
+    string name = __host_slice(source, declaration, name_end)
+    int assign = skip_space(source, name_end)
+    if assign + 1 >= body_end || __host_char_at(source, assign) != ":" ||
+        __host_char_at(source, assign + 1) != "=" { return "" }
+    int open = skip_space(source, assign + 2)
+    if open >= body_end || __host_char_at(source, open) != "[" { return "" }
+    string code = __host_byte_string(85) + __host_byte_string(72) + __host_byte_string(137)
+        + __host_byte_string(229) + __host_byte_string(72) + __host_byte_string(129)
+        + __host_byte_string(236) + little32(128)
+    int cursor = skip_space(source, open + 1)
+    int count = 0
+    for cursor < body_end && __host_char_at(source, cursor) != "]" {
+        int value_end = skip_uint(source, cursor)
+        if value_end == cursor || count >= 15 { return "" }
+        code = code + __host_byte_string(184) + little32(parse_uint(source, cursor)) + stack_store(count)
+        count = count + 1
+        cursor = skip_space(source, value_end)
+        if cursor < body_end && __host_char_at(source, cursor) == "," {
+            cursor = skip_space(source, cursor + 1)
+        } else if cursor < body_end && __host_char_at(source, cursor) != "]" {
+            return ""
+        }
+    }
+    if cursor >= body_end || __host_char_at(source, cursor) != "]" || count == 0 { return "" }
+    int return_at = find_word_from(source, "return", cursor + 1)
+    if return_at < 0 || return_at >= body_end { return "" }
+    int return_start = skip_space(source, return_at + 6)
+    int return_end = expression_end(source, return_start)
+    if return_end < 0 || return_end > body_end { return "" }
+    string result = emit_array_expression_machine(source, return_start, return_end, name, count)
+    if result == "" { return "" }
+    string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
+    return emit_elf_image(code + result + move_result + exit_sequence())
+}
+
+func native_function_slot(string source, string wanted) int {
+    if wanted == "main" { return 0 }
+    int index = 0
+    int slot = 1
+    for index < len(source) {
+        int declaration = find_word_from(source, "func", index)
+        if declaration < 0 { return -1 }
+        int name_at = skip_space(source, declaration + 4)
+        int name_end = skip_identifier(source, name_at)
+        if name_end == name_at { return -1 }
+        string name = __host_slice(source, name_at, name_end)
+        if name != "main" {
+            if name == wanted { return slot }
+            slot = slot + 1
+        }
+        index = name_end
+    }
+    return -1
+}
+
+func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, string current_function) string {
+    int start = skip_space(source, raw_start)
+    int end = trim_space_end(source, start, raw_end)
+    if start >= end { return "" }
+    if __host_char_at(source, start) == "(" {
+        int close = matching_paren(source, start, end)
+        if close == end - 1 { return emit_multi_call_arithmetic(source, start + 1, end - 1, current_function) }
+    }
+    int operator_at = arithmetic_operator_at(source, start, end, false)
+    if operator_at < 0 { operator_at = arithmetic_operator_at(source, start, end, true) }
+    if operator_at >= 0 {
+        string left = emit_multi_call_arithmetic(source, start, operator_at, current_function)
+        string right = emit_multi_call_arithmetic(source, operator_at + 1, end, current_function)
+        if left == "" || right == "" { return "" }
+        return left + __host_byte_string(80) + right
+            + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
+            + __host_byte_string(88) + arithmetic_machine_op(__host_char_at(source, operator_at))
+    }
+    int number_end = skip_uint(source, start)
+    if number_end == end { return __host_byte_string(184) + little32(parse_uint(source, start)) }
+    int name_end = skip_identifier(source, start)
+    string name = __host_slice(source, start, name_end)
+    int open = skip_space(source, name_end)
+    if name_end == end {
+        int parameter_index = 0
+        for parameter_index < 6 {
+            if name == function_parameter_at(source, current_function, parameter_index) {
+                return stack_load(parameter_index)
+            }
+            parameter_index = parameter_index + 1
+        }
+        int current_body = function_body(source, current_function)
+        int slot = local_slot(source, current_body, start, name)
+        if slot >= 0 && slot < 25 { return stack_load(slot + 6) }
+        return ""
+    }
+    if name_end <= start || open >= end || __host_char_at(source, open) != "(" { return "" }
+    int close = matching_paren(source, open, end)
+    if close != end - 1 { return "" }
+    int slot = native_function_slot(source, name)
+    if slot <= 0 { return "" }
+    string argument_code = ""
+    int argument_start = skip_space(source, open + 1)
+    if argument_start < close {
+        argument_code = emit_multi_sysv_call_arguments(source, argument_start, close, current_function, name, 0)
+        if argument_code == "" { return "" }
+    } else if function_parameter(source, name) != "" {
+        return ""
+    }
+    int address = 4194304 + 120 + slot * 512
+    return argument_code + __host_byte_string(72) + __host_byte_string(184) + little64(address)
+        + __host_byte_string(255) + __host_byte_string(208)
+}
+
+func emit_multi_sysv_call_arguments(string source, int raw_start, int end, string current_function, string callee, int index) string {
+    int start = skip_space(source, raw_start)
+    if start >= end || index >= 6 || function_parameter_at(source, callee, index) == "" { return "" }
+    int comma = argument_comma(source, start, end)
+    int argument_end = end
+    if comma >= 0 { argument_end = comma }
+    string value = emit_multi_call_arithmetic(source, start, argument_end, current_function)
+    string pop_argument = sysv_argument_pop(index)
+    if value == "" || pop_argument == "" { return "" }
+    if comma < 0 {
+        if function_parameter_at(source, callee, index + 1) != "" { return "" }
+        return value + __host_byte_string(80) + pop_argument
+    }
+    string remaining = emit_multi_sysv_call_arguments(source, comma + 1, end, current_function, callee, index + 1)
+    if remaining == "" { return "" }
+    return value + __host_byte_string(80) + remaining + pop_argument
+}
+
+func emit_multi_condition_machine(string source, int start, int end, string current_function) string {
+    int compare = comparison_at(source, start, end)
+    if compare < 0 { return emit_multi_call_arithmetic(source, start, end, current_function) }
+    int operator_end = compare + 1
+    if operator_end < end && __host_char_at(source, operator_end) == "=" { operator_end = operator_end + 1 }
+    string operator = __host_slice(source, compare, operator_end)
+    string left = emit_multi_call_arithmetic(source, start, compare, current_function)
+    string right = emit_multi_call_arithmetic(source, operator_end, end, current_function)
+    if left == "" || right == "" { return "" }
+    return left + __host_byte_string(80) + right
+        + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
+        + __host_byte_string(88)
+        + __host_byte_string(72) + __host_byte_string(57) + __host_byte_string(200)
+        + comparison_machine_op(operator)
+        + __host_byte_string(72) + __host_byte_string(15) + __host_byte_string(182) + __host_byte_string(192)
+}
+
+func emit_multi_assignment_block(string source, int block_start, int block_end, string function_name) string {
+    int function_start = function_body(source, function_name)
+    int index = block_start
+    string code = ""
+    for index < block_end {
+        index = skip_space(source, index)
+        if index >= block_end { return code }
+        int name_end = skip_identifier(source, index)
+        if name_end == index { return "" }
+        string name = __host_slice(source, index, name_end)
+        int assign = skip_space(source, name_end)
+        if assign >= block_end || __host_char_at(source, assign) != "=" ||
+            (assign + 1 < block_end && __host_char_at(source, assign + 1) == "=") { return "" }
+        int expression_start = skip_space(source, assign + 1)
+        int expression_finish = expression_end(source, expression_start)
+        int slot = local_slot(source, function_start, index, name)
+        string value = emit_multi_call_arithmetic(source, expression_start, expression_finish, function_name)
+        if expression_finish < 0 || expression_finish > block_end || slot < 0 || slot >= 25 || value == "" { return "" }
+        code = code + value + stack_store(slot + 6)
+        index = expression_finish + 1
+    }
+    return code
+}
+
+func emit_multi_block_sequence(string source, int raw_start, int block_end, string function_name, bool entry_function) string {
+    int index = skip_space(source, raw_start)
+    if index >= block_end { return "" }
+    if matches_at(source, index, "return") {
+        int result_start = skip_space(source, index + 6)
+        int result_end = expression_end(source, result_start)
+        if result_end < 0 || result_end > block_end { return "" }
+        string result = emit_multi_call_arithmetic(source, result_start, result_end, function_name)
+        if result == "" { return "" }
+        if entry_function {
+            return result + __host_byte_string(72) + __host_byte_string(137)
+                + __host_byte_string(199) + exit_sequence()
+        }
+        return result + __host_byte_string(201) + __host_byte_string(195)
+    }
+    if matches_at(source, index, "if") {
+        int condition_start = skip_space(source, index + 2)
+        int open = condition_start
+        int depth = 0
+        for open < block_end {
+            string ch = __host_char_at(source, open)
+            if ch == "(" { depth = depth + 1 }
+            if ch == ")" { depth = depth - 1 }
+            if ch == "{" && depth == 0 { break }
+            open = open + 1
+        }
+        if open >= block_end { return "" }
+        int close = function_body_end(source, open + 1)
+        if close < 0 || close > block_end { return "" }
+        string condition = emit_multi_condition_machine(source, condition_start, open, function_name)
+        string then_code = emit_multi_block_sequence(source, open + 1, close, function_name, entry_function)
+        if condition == "" { return "" }
+        string test_result = __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
+        int after = skip_space(source, close + 1)
+        if after < block_end && matches_at(source, after, "else") {
+            int else_open = skip_space(source, after + 4)
+            if else_open >= block_end || __host_char_at(source, else_open) != "{" { return "" }
+            int else_close = function_body_end(source, else_open + 1)
+            if else_close < 0 || else_close > block_end { return "" }
+            string else_code = emit_multi_block_sequence(source, else_open + 1, else_close, function_name, entry_function)
+            string rest = emit_multi_block_sequence(source, else_close + 1, block_end, function_name, entry_function)
+            return condition + test_result
+                + __host_byte_string(15) + __host_byte_string(132) + little32(len(then_code) + 5)
+                + then_code + __host_byte_string(233) + little32(len(else_code))
+                + else_code + rest
+        }
+        string rest = emit_multi_block_sequence(source, close + 1, block_end, function_name, entry_function)
+        return condition + test_result
+            + __host_byte_string(15) + __host_byte_string(132) + little32(len(then_code))
+            + then_code + rest
+    }
+    if matches_at(source, index, "while") || matches_at(source, index, "for") {
+        int keyword_size = 5
+        if matches_at(source, index, "for") { keyword_size = 3 }
+        int condition_start = skip_space(source, index + keyword_size)
+        int open = condition_start
+        for open < block_end && __host_char_at(source, open) != "{" { open = open + 1 }
+        if open >= block_end { return "" }
+        int close = function_body_end(source, open + 1)
+        if close < 0 || close > block_end { return "" }
+        string condition = emit_multi_condition_machine(source, condition_start, open, function_name)
+        string loop_body = emit_multi_block_sequence(source, open + 1, close, function_name, entry_function)
+        if condition == "" || loop_body == "" { return "" }
+        string test_result = __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
+        string jump_exit = __host_byte_string(15) + __host_byte_string(132) + little32(len(loop_body) + 5)
+        int loop_size = len(condition) + len(test_result) + len(jump_exit) + len(loop_body) + 5
+        string rest = emit_multi_block_sequence(source, close + 1, block_end, function_name, entry_function)
+        return condition + test_result + jump_exit + loop_body
+            + __host_byte_string(233) + little32_signed(0 - loop_size) + rest
+    }
+    int name_end = skip_identifier(source, index)
+    if name_end == index { return "" }
+    string name = __host_slice(source, index, name_end)
+    int assign = skip_space(source, name_end)
+    bool declaration = assign + 1 < block_end && __host_char_at(source, assign) == ":" &&
+        __host_char_at(source, assign + 1) == "="
+    bool assignment = assign < block_end && __host_char_at(source, assign) == "=" &&
+        !(assign + 1 < block_end && __host_char_at(source, assign + 1) == "=")
+    if declaration || assignment {
+        int initializer = skip_space(source, assign + 1)
+        if declaration { initializer = skip_space(source, assign + 2) }
+        int initializer_end = expression_end(source, initializer)
+        int function_start = function_body(source, function_name)
+        int slot = local_slot(source, function_start, index, name)
+        string value = emit_multi_call_arithmetic(source, initializer, initializer_end, function_name)
+        if initializer_end < 0 || initializer_end > block_end || slot < 0 || slot >= 25 || value == "" { return "" }
+        return value + stack_store(slot + 6)
+            + emit_multi_block_sequence(source, initializer_end + 1, block_end, function_name, entry_function)
+    }
+    int expression_finish = expression_end(source, index)
+    if expression_finish < 0 || expression_finish > block_end { return "" }
+    string expression_code = emit_multi_call_arithmetic(source, index, expression_finish, function_name)
+    if expression_code == "" { return "" }
+    return expression_code
+        + emit_multi_block_sequence(source, expression_finish + 1, block_end, function_name, entry_function)
+}
+
+func emit_multi_function_machine(string source, string function_name, bool entry_function) string {
+    int body = function_body(source, function_name)
+    if body < 0 { return "" }
+    int body_end = function_body_end(source, body)
+    if body_end < 0 { return "" }
+    string statements = emit_multi_block_sequence(source, body, body_end, function_name, entry_function)
+    if statements == "" { return "" }
+    return spill_sysv_parameters() + statements
+}
+
+func emit_native_multi_call_elf(string source) string {
+    string main_code = emit_multi_function_machine(source, "main", true)
+    if main_code == "" { return "" }
+    if len(main_code) > 512 { return "" }
+    string image = main_code + zeroes(512 - len(main_code))
+    int index = 0
+    int emitted = 0
+    for index < len(source) {
+        int declaration = find_word_from(source, "func", index)
+        if declaration < 0 { break }
+        int name_at = skip_space(source, declaration + 4)
+        int name_end = skip_identifier(source, name_at)
+        if name_end == name_at { return "" }
+        string name = __host_slice(source, name_at, name_end)
+        if name != "main" {
+            if function_parameter_at(source, name, 6) != "" { return "" }
+            string code = emit_multi_function_machine(source, name, false)
+            if code == "" { return "" }
+            if len(code) > 512 { return "" }
+            image = image + code + zeroes(512 - len(code))
+            emitted = emitted + 1
+        }
+        index = name_end
+    }
+    if emitted < 2 { return "" }
+    return emit_elf_image(image)
+}
+
+func emit_native_copy_elf(string source) string {
+    int body = function_body(source, "main")
+    if body < 0 { return "" }
+    int body_end = function_body_end(source, body)
+    if body_end < 0 { return "" }
+    int call_at = skip_space(source, body)
+    if call_at >= body_end || !matches_at(source, call_at, "copy_args_file") { return "" }
+    // Preserve argv[1] in rbx and argv[2] in r13 before reserving the buffer.
+    string setup = __host_byte_string(72) + __host_byte_string(139) + __host_byte_string(92)
+        + __host_byte_string(36) + __host_byte_string(16)
+        + __host_byte_string(76) + __host_byte_string(139) + __host_byte_string(108)
+        + __host_byte_string(36) + __host_byte_string(24)
+        + __host_byte_string(72) + __host_byte_string(129) + __host_byte_string(236) + little32(4096)
+    string test_rax = __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
+    string success_exit = __host_byte_string(191) + little32(0)
+        + __host_byte_string(184) + little32(60)
+        + __host_byte_string(15) + __host_byte_string(5)
+    string io_exit = __host_byte_string(191) + little32(1)
+        + __host_byte_string(184) + little32(60)
+        + __host_byte_string(15) + __host_byte_string(5)
+    // input = openat(AT_FDCWD, argv[1], O_RDONLY, 0)
+    string open_input_call = __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(199) + little32_signed(-100)
+        + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(222)
+        + __host_byte_string(49) + __host_byte_string(210)
+        + __host_byte_string(69) + __host_byte_string(49) + __host_byte_string(210)
+        + __host_byte_string(184) + little32(257)
+        + __host_byte_string(15) + __host_byte_string(5)
+    string save_input = __host_byte_string(73) + __host_byte_string(137) + __host_byte_string(196)
+    // output = openat(AT_FDCWD, argv[2], O_WRONLY|O_CREAT|O_TRUNC, 0644)
+    string open_output_call = __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(199) + little32_signed(-100)
+        + __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(238)
+        + __host_byte_string(186) + little32(577)
+        + __host_byte_string(65) + __host_byte_string(186) + little32(420)
+        + __host_byte_string(184) + little32(257)
+        + __host_byte_string(15) + __host_byte_string(5)
+    string save_output = __host_byte_string(73) + __host_byte_string(137) + __host_byte_string(199)
+    // count = read(input, rsp, 4096). The backward jump repeats until EOF.
+    string read_call = __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(231)
+        + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(230)
+        + __host_byte_string(186) + little32(4096)
+        + __host_byte_string(49) + __host_byte_string(192)
+        + __host_byte_string(15) + __host_byte_string(5)
+    string begin_write = __host_byte_string(73) + __host_byte_string(137) + __host_byte_string(198)
+        + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(227)
+    // write(output, cursor, remaining), retrying short writes.
+    string write_call = __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(255)
+        + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(222)
+        + __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(242)
+        + __host_byte_string(184) + little32(1)
+        + __host_byte_string(15) + __host_byte_string(5)
+    string advance_write = __host_byte_string(72) + __host_byte_string(1) + __host_byte_string(195)
+        + __host_byte_string(73) + __host_byte_string(41) + __host_byte_string(198)
+    int write_back = 0 - (len(write_call) + len(test_rax) + 6 + len(advance_write) + 6)
+    string write_loop_without_read_jump = write_call + test_rax
+        + __host_byte_string(15) + __host_byte_string(142)
+        + little32(len(advance_write) + 6 + 5 + len(success_exit))
+        + advance_write
+        + __host_byte_string(15) + __host_byte_string(133) + little32_signed(write_back)
+    int read_head_size = len(read_call) + len(test_rax) + 6 + 6 + len(begin_write)
+    int read_back = 0 - (read_head_size + len(write_loop_without_read_jump) + 5)
+    string write_loop = write_loop_without_read_jump
+        + __host_byte_string(233) + little32_signed(read_back)
+    string read_loop = read_call + test_rax
+        + __host_byte_string(15) + __host_byte_string(136)
+        + little32(6 + len(begin_write) + len(write_loop) + len(success_exit))
+        + __host_byte_string(15) + __host_byte_string(132)
+        + little32(len(begin_write) + len(write_loop))
+        + begin_write + write_loop
+    string open_output = open_output_call + test_rax
+        + __host_byte_string(15) + __host_byte_string(136)
+        + little32(len(save_output) + len(read_loop) + len(success_exit))
+        + save_output
+    string open_input = open_input_call + test_rax
+        + __host_byte_string(15) + __host_byte_string(136)
+        + little32(len(save_input) + len(open_output) + len(read_loop) + len(success_exit))
+        + save_input
+    string code = setup + open_input + open_output + read_loop + success_exit + io_exit
+    // Linux process entry has argc at [rsp]. Reject missing input/output paths
+    // before loading argv. The relative branch skips the complete success path.
+    string argc_check = __host_byte_string(72) + __host_byte_string(131)
+        + __host_byte_string(60) + __host_byte_string(36) + __host_byte_string(3)
+        + __host_byte_string(15) + __host_byte_string(133) + little32(len(code))
+    string usage_exit = __host_byte_string(191) + little32(2)
+        + __host_byte_string(184) + little32(60)
+        + __host_byte_string(15) + __host_byte_string(5)
+    return emit_elf_image(argc_check + code + usage_exit)
+}
+
+func emit_native_locals_elf(string source) string {
+    int body = function_body(source, "main")
+    if body < 0 { return "" }
+    int body_end = function_body_end(source, body)
+    if body_end < 0 { return "" }
+    // push rbp; mov rsp,rbp; reserve 128 bytes for the frozen local-slot slice.
+    string code = __host_byte_string(85) + __host_byte_string(72) + __host_byte_string(137)
+        + __host_byte_string(229) + __host_byte_string(72) + __host_byte_string(129)
+        + __host_byte_string(236) + little32(128)
+    int index = body
+    for index < body_end {
+        index = skip_space(source, index)
+        if index >= body_end { return "" }
+        if matches_at(source, index, "return") {
+            int return_start = skip_space(source, index + 6)
+            int return_end = expression_end(source, return_start)
+            if return_end < 0 || return_end > body_end { return "" }
+            string result = emit_scoped_arithmetic_machine(source, return_start, return_end, body)
+            if result == "" { return "" }
+            string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
+            return emit_elf_image(code + result + move_result + exit_sequence())
+        }
+        if !is_alpha(__host_char_at(source, index)) { return "" }
+        int name_end = skip_identifier(source, index)
+        int assign = skip_space(source, name_end)
+        if assign + 1 >= body_end || __host_char_at(source, assign) != ":" ||
+            __host_char_at(source, assign + 1) != "=" { return "" }
+        int initializer = skip_space(source, assign + 2)
+        int initializer_end = expression_end(source, initializer)
+        if initializer_end < 0 || initializer_end > body_end { return "" }
+        string value = emit_scoped_arithmetic_machine(source, initializer, initializer_end, body)
+        int slot = local_slot(source, body, index, __host_slice(source, index, name_end))
+        if value == "" || slot < 0 || slot >= 15 { return "" }
+        code = code + value + stack_store(slot)
+        index = initializer_end + 1
+    }
+    return ""
+}
+
+func called_function_name(string source, int start, int end) string {
+    int index = start
+    for index < end {
+        if is_alpha(__host_char_at(source, index)) {
+            int name_end = skip_identifier(source, index)
+            int open = skip_space(source, name_end)
+            if open < end && __host_char_at(source, open) == "(" {
+                int close = matching_paren(source, open, end)
+                if close >= 0 { return __host_slice(source, index, name_end) }
+            }
+            index = name_end
+            continue
+        }
+        index = index + 1
+    }
+    return ""
+}
+
+func emit_call_arithmetic_machine(string source, int raw_start, int raw_end, string callee, int callee_address) string {
+    int start = skip_space(source, raw_start)
+    int end = trim_space_end(source, start, raw_end)
+    if start >= end { return "" }
+    if __host_char_at(source, start) == "(" {
+        int close = matching_paren(source, start, end)
+        if close == end - 1 {
+            return emit_call_arithmetic_machine(source, start + 1, end - 1, callee, callee_address)
+        }
+    }
+    int operator_at = arithmetic_operator_at(source, start, end, false)
+    if operator_at < 0 { operator_at = arithmetic_operator_at(source, start, end, true) }
+    if operator_at >= 0 {
+        string left = emit_call_arithmetic_machine(source, start, operator_at, callee, callee_address)
+        string right = emit_call_arithmetic_machine(source, operator_at + 1, end, callee, callee_address)
+        if left == "" || right == "" { return "" }
+        return left + __host_byte_string(80) + right
+            + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
+            + __host_byte_string(88) + arithmetic_machine_op(__host_char_at(source, operator_at))
+    }
+    int number_end = skip_uint(source, start)
+    if number_end == end { return __host_byte_string(184) + little32(parse_uint(source, start)) }
+    int name_end = skip_identifier(source, start)
+    int open = skip_space(source, name_end)
+    if name_end > start && __host_slice(source, start, name_end) == callee && open < end &&
+        __host_char_at(source, open) == "(" {
+        int close = matching_paren(source, open, end)
+        if close == end - 1 {
+            string argument_code = ""
+            int argument_start = skip_space(source, open + 1)
+            if argument_start < close {
+                argument_code = emit_sysv_call_arguments(source, argument_start, close, callee, callee_address, 0)
+                if argument_code == "" { return "" }
+            } else if function_parameter(source, callee) != "" {
+                return ""
+            }
+            // movabs $callee,%rax; call *%rax
+            return argument_code + __host_byte_string(72) + __host_byte_string(184) + little64(callee_address)
+                + __host_byte_string(255) + __host_byte_string(208)
+        }
+    }
+    return ""
+}
+
+func argument_comma(string source, int start, int end) int {
+    int index = start
+    int depth = 0
+    for index < end {
+        string ch = __host_char_at(source, index)
+        if ch == "(" { depth = depth + 1 }
+        if ch == ")" { depth = depth - 1 }
+        if depth == 0 && ch == "," { return index }
+        index = index + 1
+    }
+    return -1
+}
+
+func sysv_argument_pop(int index) string {
+    if index == 0 { return __host_byte_string(95) }
+    if index == 1 { return __host_byte_string(94) }
+    if index == 2 { return __host_byte_string(90) }
+    if index == 3 { return __host_byte_string(89) }
+    if index == 4 { return __host_byte_string(65) + __host_byte_string(88) }
+    if index == 5 { return __host_byte_string(65) + __host_byte_string(89) }
+    return ""
+}
+
+func emit_sysv_call_arguments(string source, int raw_start, int end, string callee, int callee_address, int index) string {
+    int start = skip_space(source, raw_start)
+    if start >= end || index >= 6 || function_parameter_at(source, callee, index) == "" { return "" }
+    int comma = argument_comma(source, start, end)
+    int argument_end = end
+    if comma >= 0 { argument_end = comma }
+    string value = emit_call_arithmetic_machine(source, start, argument_end, callee, callee_address)
+    string pop_argument = sysv_argument_pop(index)
+    if value == "" || pop_argument == "" { return "" }
+    if comma < 0 {
+        if function_parameter_at(source, callee, index + 1) != "" { return "" }
+        return value + __host_byte_string(80) + pop_argument
+    }
+    string remaining = emit_sysv_call_arguments(source, comma + 1, end, callee, callee_address, index + 1)
+    if remaining == "" { return "" }
+    return value + __host_byte_string(80) + remaining + pop_argument
+}
+
+func sysv_parameter_load(int index) string {
+    if index == 0 { return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(248) }
+    if index == 1 { return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(240) }
+    if index == 2 { return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(208) }
+    if index == 3 { return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(200) }
+    if index == 4 { return __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(192) }
+    if index == 5 { return __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(200) }
+    return ""
+}
+
+func spill_sysv_parameters() string {
+    // Establish stable slots before expression lowering reuses caller-saved
+    // registers such as rcx and rdx as arithmetic temporaries.
+    string code = __host_byte_string(85)
+        + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(229)
+        + __host_byte_string(72) + __host_byte_string(129) + __host_byte_string(236) + little32(256)
+    int index = 0
+    for index < 6 {
+        code = code + sysv_parameter_load(index) + stack_store(index)
+        index = index + 1
+    }
+    return code
+}
+
+func emit_parameters_arithmetic_machine(string source, int raw_start, int raw_end, string function_name) string {
+    int start = skip_space(source, raw_start)
+    int end = trim_space_end(source, start, raw_end)
+    if start >= end { return "" }
+    if __host_char_at(source, start) == "(" {
+        int close = matching_paren(source, start, end)
+        if close == end - 1 {
+            return emit_parameters_arithmetic_machine(source, start + 1, end - 1, function_name)
+        }
+    }
+    int operator_at = arithmetic_operator_at(source, start, end, false)
+    if operator_at < 0 { operator_at = arithmetic_operator_at(source, start, end, true) }
+    if operator_at >= 0 {
+        string left = emit_parameters_arithmetic_machine(source, start, operator_at, function_name)
+        string right = emit_parameters_arithmetic_machine(source, operator_at + 1, end, function_name)
+        if left == "" || right == "" { return "" }
+        return left + __host_byte_string(80) + right
+            + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
+            + __host_byte_string(88) + arithmetic_machine_op(__host_char_at(source, operator_at))
+    }
+    int number_end = skip_uint(source, start)
+    if number_end == end { return __host_byte_string(184) + little32(parse_uint(source, start)) }
+    int name_end = skip_identifier(source, start)
+    string identifier = __host_slice(source, start, name_end)
+    int parameter_index = 0
+    for parameter_index < 6 {
+        if name_end == end && identifier == function_parameter_at(source, function_name, parameter_index) {
+            return stack_load(parameter_index)
+        }
+        parameter_index = parameter_index + 1
+    }
+    return ""
+}
+
+func emit_native_call_elf(string source) string {
+    int main_body = function_body(source, "main")
+    if main_body < 0 { return "" }
+    int main_end = function_body_end(source, main_body)
+    if main_end < 0 { return "" }
+    int main_return = skip_space(source, main_body)
+    if main_return >= main_end || !matches_at(source, main_return, "return") { return "" }
+    int main_expression = skip_space(source, main_return + 6)
+    int main_expression_end = expression_end(source, main_expression)
+    if main_expression_end < 0 || main_expression_end > main_end { return "" }
+    int after_main = main_expression_end
+    if after_main < main_end && __host_char_at(source, after_main) == ";" { after_main = after_main + 1 }
+    after_main = skip_space(source, after_main)
+    if after_main != main_end { return "" }
+    string callee = called_function_name(source, main_expression, main_expression_end)
+    if callee == "" || callee == "main" { return "" }
+    int callee_body = function_body(source, callee)
+    if callee_body < 0 { return "" }
+    int callee_end = function_body_end(source, callee_body)
+    if callee_end < 0 { return "" }
+    int callee_return = find_word_from(source, "return", callee_body)
+    if callee_return < 0 || callee_return >= callee_end { return "" }
+    int callee_expression = skip_space(source, callee_return + 6)
+    int callee_expression_end = expression_end(source, callee_expression)
+    if callee_expression_end < 0 || callee_expression_end > callee_end { return "" }
+    int image_base = 4194304
+    int code_offset = 120
+    int function_slot = 512
+    int callee_address = image_base + code_offset + function_slot
+    string main_code = emit_call_arithmetic_machine(source, main_expression, main_expression_end, callee, callee_address)
+    string callee_code = ""
+    if function_parameter(source, callee) == "" {
+        callee_code = emit_arithmetic_machine(source, callee_expression, callee_expression_end)
+    } else {
+        if function_parameter_at(source, callee, 6) != "" { return "" }
+        string parameter_expression = emit_parameters_arithmetic_machine(source, callee_expression, callee_expression_end, callee)
+        if parameter_expression == "" { return "" }
+        callee_code = spill_sysv_parameters() + parameter_expression
+    }
+    if main_code == "" || callee_code == "" || len(main_code) + 12 > function_slot { return "" }
+    string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
+    main_code = main_code + move_result + exit_sequence()
+    if function_parameter(source, callee) == "" {
+        callee_code = callee_code + __host_byte_string(195)
+    } else {
+        callee_code = callee_code + __host_byte_string(201) + __host_byte_string(195)
+    }
+    return emit_elf_image(main_code + zeroes(function_slot - len(main_code)) + callee_code)
+}
+
+func compile_binary(string source, string output_path) int {
+    int exit_code = evaluate_main_expression(source)
+    if exit_code < 0 {
+        eprintln("compile: source is outside bootstrap slice 1")
+        return 1
+    }
+    if __host_write_text_file(output_path, emit_exit_elf(exit_code)) != 0 {
+        eprintln("compile: cannot write executable")
+        return 1
+    }
+    if __host_make_executable(output_path) != 0 {
+        eprintln("compile: cannot mark output executable")
+        return 1
+    }
+    return 0
+}
+
+func compile_native_expression_binary(string source, string output_path) int {
+    string elf = emit_native_expression_elf(source)
+    if elf == "" {
+        eprintln("compile: source is outside native expression slice")
+        return 1
+    }
+    if __host_write_text_file(output_path, elf) != 0 || __host_make_executable(output_path) != 0 {
+        eprintln("compile: cannot write native expression executable")
+        return 1
+    }
+    return 0
+}
+
+func compile_native_control_binary(string source, string output_path) int {
+    string elf = emit_native_control_elf(source)
+    if elf == "" {
+        eprintln("compile: source is outside native control slice")
+        return 1
+    }
+    if __host_write_text_file(output_path, elf) != 0 || __host_make_executable(output_path) != 0 {
+        eprintln("compile: cannot write native control executable")
+        return 1
+    }
+    return 0
+}
+
+func compile_native_locals_binary(string source, string output_path) int {
+    string elf = emit_native_locals_elf(source)
+    if elf == "" {
+        eprintln("compile: source is outside native locals slice")
+        return 1
+    }
+    if __host_write_text_file(output_path, elf) != 0 || __host_make_executable(output_path) != 0 {
+        eprintln("compile: cannot write native locals executable")
+        return 1
+    }
+    return 0
+}
+
+func compile_native_call_binary(string source, string output_path) int {
+    string elf = emit_native_call_elf(source)
+    if elf == "" {
+        eprintln("compile: source is outside native call slice")
+        return 1
+    }
+    if __host_write_text_file(output_path, elf) != 0 || __host_make_executable(output_path) != 0 {
+        eprintln("compile: cannot write native call executable")
+        return 1
+    }
+    return 0
+}
+
+func compile_native_loop_binary(string source, string output_path) int {
+    string elf = emit_native_loop_elf(source)
+    if elf == "" {
+        eprintln("compile: source is outside native loop slice")
+        return 1
+    }
+    if __host_write_text_file(output_path, elf) != 0 || __host_make_executable(output_path) != 0 {
+        eprintln("compile: cannot write native loop executable")
+        return 1
+    }
+    return 0
+}
+
+func compile_native_string_binary(string source, string output_path) int {
+    string elf = emit_native_string_elf(source)
+    if elf == "" {
+        eprintln("compile: source is outside native string slice")
+        return 1
+    }
+    if __host_write_text_file(output_path, elf) != 0 || __host_make_executable(output_path) != 0 {
+        eprintln("compile: cannot write native string executable")
+        return 1
+    }
+    return 0
+}
+
+func compile_native_array_binary(string source, string output_path) int {
+    string elf = emit_native_array_elf(source)
+    if elf == "" {
+        eprintln("compile: source is outside native array slice")
+        return 1
+    }
+    if __host_write_text_file(output_path, elf) != 0 || __host_make_executable(output_path) != 0 {
+        eprintln("compile: cannot write native array executable")
+        return 1
+    }
+    return 0
+}
+
+func compile_native_multi_call_binary(string source, string output_path) int {
+    string elf = emit_native_multi_call_elf(source)
+    if elf == "" {
+        eprintln("compile: source is outside native multi-call slice")
+        return 1
+    }
+    if __host_write_text_file(output_path, elf) != 0 || __host_make_executable(output_path) != 0 {
+        eprintln("compile: cannot write native multi-call executable")
+        return 1
+    }
+    return 0
+}
+
+func compile_native_copy_binary(string source, string output_path) int {
+    string elf = emit_native_copy_elf(source)
+    if elf == "" {
+        eprintln("compile: source is outside native copy slice")
+        return 1
+    }
+    if __host_write_text_file(output_path, elf) != 0 || __host_make_executable(output_path) != 0 {
+        eprintln("compile: cannot write native copy executable")
+        return 1
+    }
+    return 0
+}
+
+func emit_native_auto_elf(string source) string {
+    string elf = emit_native_copy_elf(source)
+    if elf != "" { return elf }
+    elf = emit_native_loop_elf(source)
+    if elf != "" { return elf }
+    elf = emit_native_string_elf(source)
+    if elf != "" { return elf }
+    elf = emit_native_array_elf(source)
+    if elf != "" { return elf }
+    elf = emit_native_call_elf(source)
+    if elf != "" { return elf }
+    elf = emit_native_multi_call_elf(source)
+    if elf != "" { return elf }
+    elf = emit_native_control_elf(source)
+    if elf != "" { return elf }
+    elf = emit_native_locals_elf(source)
+    if elf != "" { return elf }
+    return emit_native_expression_elf(source)
+}
+
+func compile_native_binary(string source, string output_path) int {
+    string elf = emit_native_auto_elf(source)
+    if elf == "" {
+        eprintln("compile: source is outside implemented native slices")
+        return 1
+    }
+    if __host_write_text_file(output_path, elf) != 0 || __host_make_executable(output_path) != 0 {
+        eprintln("compile: cannot write native executable")
+        return 1
+    }
+    return 0
+}
+
+func main() {
+    []string args = host_args()
+    if len(args) != 3 && len(args) != 4 {
+        eprintln("usage: s_bootstrap_compiler [--emit-bin] <input.s> <output>")
+        return 2
+    }
+    bool binary = len(args) == 4 && args[1] == "--emit-bin"
+    bool native_expression = len(args) == 4 && args[1] == "--emit-native-expr"
+    bool native_control = len(args) == 4 && args[1] == "--emit-native-control"
+    bool native_locals = len(args) == 4 && args[1] == "--emit-native-locals"
+    bool native_call = len(args) == 4 && args[1] == "--emit-native-call"
+    bool native_loop = len(args) == 4 && args[1] == "--emit-native-loop"
+    bool native_string = len(args) == 4 && args[1] == "--emit-native-string"
+    bool native = len(args) == 4 && args[1] == "--emit-native"
+    bool native_array = len(args) == 4 && args[1] == "--emit-native-array"
+    bool native_multi_call = len(args) == 4 && args[1] == "--emit-native-multicall"
+    bool native_copy = len(args) == 4 && args[1] == "--emit-native-copy"
+    int input_index = 1
+    int output_index = 2
+    if binary || native_expression || native_control || native_locals || native_call || native_loop || native_string || native || native_array || native_multi_call || native_copy {
+        input_index = 2
+        output_index = 3
+    }
+    string source = __host_read_to_string(args[input_index])
+    if len(source) == 0 {
+        eprintln("compile: cannot read input or input is empty")
+        return 1
+    }
+    if binary {
+        return compile_binary(source, args[output_index])
+    }
+    if native_expression {
+        return compile_native_expression_binary(source, args[output_index])
+    }
+    if native_control {
+        return compile_native_control_binary(source, args[output_index])
+    }
+    if native_locals {
+        return compile_native_locals_binary(source, args[output_index])
+    }
+    if native_call {
+        return compile_native_call_binary(source, args[output_index])
+    }
+    if native_loop {
+        return compile_native_loop_binary(source, args[output_index])
+    }
+    if native_string {
+        return compile_native_string_binary(source, args[output_index])
+    }
+    if native {
+        return compile_native_binary(source, args[output_index])
+    }
+    if native_array {
+        return compile_native_array_binary(source, args[output_index])
+    }
+    if native_multi_call {
+        return compile_native_multi_call_binary(source, args[output_index])
+    }
+    if native_copy {
+        return compile_native_copy_binary(source, args[output_index])
+    }
+    string ir = compile_main_expression(source)
+    if len(ir) == 0 {
+        eprintln("compile: source is outside bootstrap slice 1")
+        return 1
+    }
+    if __host_write_text_file(args[output_index], ir) != 0 {
+        eprintln("compile: cannot write output")
+        return 1
+    }
+    return 0
+}

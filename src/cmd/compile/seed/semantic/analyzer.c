@@ -901,13 +901,6 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			if (lookup_type && strncmp(lookup_type, "&mut", 4) == 0) lookup_type += 4;
 			else if (lookup_type && lookup_type[0] == '&') lookup_type++;
 
-			if (node->as.member_expr.member && strcmp(node->as.member_expr.member, "backbone_optimizers") == 0) {
-				fprintf(stderr, "DEBUG_MEMBER member='%s' base_type='%s' at %d:%d\n",
-					node->as.member_expr.member,
-					lhs_type ? lhs_type : TYPE_ANY,
-					(int)node->pos.line, (int)node->pos.column);
-			}
-
 			if (lhs_type) {
 
 				const char *resolved = NULL;
@@ -970,14 +963,6 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			if (lhs_type && strncmp(lhs_type, "[]", 2) == 0) {
 				*out_type = dup_cstr(lhs_type + 2);
 
-				if (node->as.index_expr.object && node->as.index_expr.object->kind == AST_MEMBER_EXPR &&
-					node->as.index_expr.object->as.member_expr.member &&
-					strcmp(node->as.index_expr.object->as.member_expr.member, "backbone_optimizers") == 0) {
-					fprintf(stderr, "DEBUG_INDEX member='backbone_optimizers' base_type='%s' result_type='%s' at %d:%d\n",
-						lhs_type ? lhs_type : TYPE_ANY,
-						*out_type ? *out_type : TYPE_ANY,
-						(int)node->pos.line, (int)node->pos.column);
-				}
 				return 1;
 			}
 			*out_type = TYPE_ANY;
@@ -1542,10 +1527,6 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					return 0;
 				}
 
-				for (size_t jj = 0; jj < fc; jj++) {
-					fprintf(stderr, "DEBUG_REGISTER type='%s' field='%s' field_type='%s' at %d:%d\n",
-						node->as.let_stmt.name, f_names[jj], f_types[jj], (int)node->pos.line, (int)node->pos.column);
-				}
 				for (size_t j = 0; j < fc; j++) { free(f_names[j]); free(f_types[j]); }
 				free(f_names); free(f_types);
 				return 1;
@@ -1555,59 +1536,9 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				return 0;
 			}
 
-			if (node->as.let_stmt.name && strcmp(node->as.let_stmt.name, "layer_opt") == 0) {
-				int rhs_kind = -1;
-				if (node->as.let_stmt.value) rhs_kind = (int)node->as.let_stmt.value->kind;
-				fprintf(stderr, "DEBUG_LET_DIAG name='layer_opt' rhs_kind=%d rhs_type='%s' at %d:%d\n",
-					rhs_kind,
-					expr_type ? expr_type : TYPE_ANY,
-					(int)node->pos.line, (int)node->pos.column);
-				if (node->as.let_stmt.value && node->as.let_stmt.value->kind == AST_INDEX_EXPR) {
-					ast_node *obj = node->as.let_stmt.value->as.index_expr.object;
-					ast_node *idx = node->as.let_stmt.value->as.index_expr.index;
-					const char *obj_type = NULL;
-					const char *idx_type = NULL;
-					int obj_kind = -1;
-					int idx_kind = -1;
-					if (obj) { obj_kind = (int)obj->kind; analyze_expr(ctx, obj, &obj_type); }
-					if (idx) { idx_kind = (int)idx->kind; analyze_expr(ctx, idx, &idx_type); }
-					fprintf(stderr, "DEBUG_LET_DIAG index object_kind=%d object_type='%s' index_kind=%d index_type='%s'\n",
-						obj_kind,
-						obj_type ? obj_type : TYPE_ANY,
-						idx_kind,
-						idx_type ? idx_type : TYPE_ANY);
-				}
-			}
-
 			if (node->as.let_stmt.type_name && node->as.let_stmt.type_name[0] != '\0') {
 				const char *decl_type = node->as.let_stmt.type_name;
-
-				fprintf(stderr, "DEBUG_LET '%s' declared='%s' init_type='%s' at %d:%d\n",
-					node->as.let_stmt.name ? node->as.let_stmt.name : "<anon>",
-					decl_type ? decl_type : TYPE_ANY,
-					expr_type ? expr_type : TYPE_ANY,
-					(int)node->pos.line, (int)node->pos.column);
 				if (!is_type_assignable(decl_type, expr_type)) {
-
-					fprintf(stderr, "DEBUG_LET_ERROR name='%s' decl_type='%s' init_type='%s' rhs_kind=%d at %d:%d\n",
-						node->as.let_stmt.name ? node->as.let_stmt.name : "<anon>",
-						decl_type ? decl_type : TYPE_ANY,
-						expr_type ? expr_type : TYPE_ANY,
-						node->as.let_stmt.value ? (int)node->as.let_stmt.value->kind : -1,
-						(int)node->pos.line, (int)node->pos.column);
-					if (node->as.let_stmt.value && node->as.let_stmt.value->kind == AST_INDEX_EXPR) {
-						ast_node *obj = node->as.let_stmt.value->as.index_expr.object;
-						ast_node *idx = node->as.let_stmt.value->as.index_expr.index;
-						const char *obj_type = NULL;
-						const char *idx_type = NULL;
-						if (obj) analyze_expr(ctx, obj, &obj_type);
-						if (idx) analyze_expr(ctx, idx, &idx_type);
-						fprintf(stderr, "DEBUG_LET_ERROR index object_kind=%d object_type='%s' index_kind=%d index_type='%s'\n",
-							obj ? (int)obj->kind : -1,
-							obj_type ? obj_type : TYPE_ANY,
-							idx ? (int)idx->kind : -1,
-							idx_type ? idx_type : TYPE_ANY);
-					}
 					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 						"initializer type mismatch for '%s': declared '%s', got '%s'",
 						node->as.let_stmt.name, decl_type, expr_type ? expr_type : TYPE_ANY);
@@ -1674,31 +1605,6 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				return 0;
 			}
 			if (!is_type_assignable(ctx->current_return_type, expr_type)) {
-
-				fprintf(stderr, "DEBUG_RETURN at %d:%d expected='%s' actual='%s'\n",
-					(int)node->pos.line, (int)node->pos.column,
-					ctx->current_return_type ? ctx->current_return_type : TYPE_ANY,
-					expr_type ? expr_type : TYPE_ANY);
-				if (node->as.return_stmt.value) {
-					fprintf(stderr, "DEBUG_RETURN expr kind=%d\n", node->as.return_stmt.value->kind);
-					switch (node->as.return_stmt.value->kind) {
-						case AST_CALL_EXPR:
-							if (node->as.return_stmt.value->as.call_expr.callee &&
-								node->as.return_stmt.value->as.call_expr.callee->kind == AST_IDENT_EXPR) {
-								fprintf(stderr, "DEBUG_RETURN call callee=%s\n",
-									node->as.return_stmt.value->as.call_expr.callee->as.ident_expr.name);
-							}
-							break;
-						case AST_IDENT_EXPR:
-							fprintf(stderr, "DEBUG_RETURN ident=%s\n", node->as.return_stmt.value->as.ident_expr.name);
-							break;
-						case AST_STRING_EXPR:
-							fprintf(stderr, "DEBUG_RETURN string_literal='%s'\n", node->as.return_stmt.value->as.string_expr.literal);
-							break;
-						default:
-							break;
-					}
-				}
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"return type mismatch: expected '%s', got '%s'",
 					ctx->current_return_type ? ctx->current_return_type : TYPE_ANY,
