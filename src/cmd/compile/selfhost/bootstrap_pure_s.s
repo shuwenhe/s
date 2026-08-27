@@ -1,40 +1,36 @@
 package main
-extern "intrinsic" func __syscall1(int nr, int a1) int
-extern "intrinsic" func __syscall3(int nr, int a1, int a2, int a3) int
-extern "intrinsic" func __syscall6(int nr, int a1, int a2, int a3, int a4, int a5, int a6) int
-const SYS_WRITE = 1
-const SYS_EXIT = 60
-const STDOUT_FD = 1
-const STDERR_FD = 2
 
-func eprint(string text) {
-    len := strlen(text)
-    _ := __syscall3(SYS_WRITE, STDERR_FD, 0, len)
-}
+use std.fs.write_text_file
+use std.io.eprintln
+use std.process.run_process
 
-func eprintln(string text) {
-    eprint(text)
-    eprint("\n")
-}
-
-func strlen(string text) int {
-    0  
-}
-
-func main() {
-    eprintln("")
-    eprintln("=== S Compiler Pure S Bootstrap ===")
-    eprintln("")
-    compiler_src := "./src/cmd/compile/main.s"
+func main() int {
+    compiler_src := "./src/cmd/compile/selfhost/compiler.s"
     output_dir := "./.bootstrap/selfhost"
     seed_compiler := "./bin/s_seed"
     ir_codegen_bin := "./src/cmd/compile/selfhost/ir_to_binary"
-    return bootstrap_three_stage(
-        compiler_src, 
-        output_dir,
-        seed_compiler,
-        ir_codegen_bin
-    )
+
+    eprintln("")
+    eprintln("=== S Compiler Pure S Bootstrap ===")
+    eprintln("")
+    eprintln("source: " + compiler_src)
+    eprintln("workdir: " + output_dir)
+    eprintln("seed: " + seed_compiler)
+    eprintln("ir-codegen: " + ir_codegen_bin)
+
+    if !ensure_dir(output_dir) {
+        return 1
+    }
+
+    return bootstrap_three_stage(compiler_src, output_dir, seed_compiler, ir_codegen_bin)
+}
+
+func ensure_dir(string path) bool {
+    marker := path + "/.bootstrap-ready"
+    if write_text_file(marker, "ready\n").is_err() {
+        return false
+    }
+    true
 }
 
 func bootstrap_three_stage(
@@ -43,33 +39,83 @@ func bootstrap_three_stage(
     string seed_compiler,
     string ir_codegen_bin
 ) int {
-    eprintln("[1/6] Reading compiler source: " + compiler_src)
-    eprintln("[2/6] Compiling to IR (stage1)...")
-    stage1_ir_path := output_dir + "/stage1.ir"
-    eprintln("[3/6] Emitting IR to binary (stage1)...")
+    stage1_ir := output_dir + "/stage1.ir"
     stage1_bin := output_dir + "/stage1"
-    eprintln("[4/6] Using stage1 to recompile (stage2)...")
-    stage2_ir_path := output_dir + "/stage2.ir"
-    eprintln("[5/6] Verifying deterministic compilation...")
-    eprintln("[✓] Bootstrap successful!")
-    eprintln("[✓] Three stages verified identical")
-    eprintln("")
-    eprintln("Installation: cp " + stage1_bin + " ./bin/s-pure")
-    return 0
-}
+    stage2_ir := output_dir + "/stage2.ir"
+    stage2_bin := output_dir + "/stage2"
+    stage3_ir := output_dir + "/stage3.ir"
+    stage3_bin := output_dir + "/stage3"
 
-func read_file_to_string(string path) string {
-    ""
-}
+    eprintln("[1/5] building stage1 IR with the trusted seed")
+    if run_checked([]string{seed_compiler, compiler_src, stage1_ir}) != 0 {
+        return 1
+    }
 
-func write_string_to_file(string path, string content) bool {
-    true
-}
+    eprintln("[2/5] lowering stage1 IR to a runnable compiler")
+    if run_checked([]string{seed_compiler, "--emit-standalone-amd64", stage1_ir, stage1_bin}) != 0 {
+        return 1
+    }
 
-func run_command(string cmd) int {
+    eprintln("[3/5] recompiling compiler.s with stage1")
+    if run_checked([]string{stage1_bin, compiler_src, stage2_ir}) != 0 {
+        return 1
+    }
+    if run_checked([]string{stage1_bin, "--emit-standalone-amd64", stage2_ir, stage2_bin}) != 0 {
+        return 1
+    }
+
+    eprintln("[4/5] recompiling compiler.s with stage2")
+    if run_checked([]string{stage2_bin, compiler_src, stage3_ir}) != 0 {
+        return 1
+    }
+    if run_checked([]string{stage2_bin, "--emit-standalone-amd64", stage3_ir, stage3_bin}) != 0 {
+        return 1
+    }
+
+    eprintln("[5/5] verifying convergence")
+    if run_checked([]string{"cmp", stage2_ir, stage3_ir}) != 0 {
+        eprintln("bootstrap failed: stage2.ir and stage3.ir differ")
+        return 1
+    }
+    if run_checked([]string{"cmp", stage2_bin, stage3_bin}) != 0 {
+        eprintln("bootstrap failed: stage2 and stage3 binaries differ")
+        return 1
+    }
+
+    manifest := make_manifest(stage1_ir, stage1_bin, stage2_ir, stage2_bin, stage3_ir, stage3_bin)
+    if write_text_file(output_dir + "/manifest.txt", manifest).is_err() {
+        eprintln("bootstrap failed: unable to write manifest")
+        return 1
+    }
+
+    eprintln("bootstrap complete: stage2 and stage3 converge")
+    eprintln("installed candidate: " + stage2_bin)
     0
 }
 
-func files_equal(string path1, string path2) bool {
-    true
+func run_checked([]string argv) int {
+    result := run_process(argv)
+    if result.is_err() {
+        eprintln("bootstrap command failed: " + result.unwrap_err().message)
+        return 1
+    }
+    0
+}
+
+func make_manifest(
+    string stage1_ir,
+    string stage1_bin,
+    string stage2_ir,
+    string stage2_bin,
+    string stage3_ir,
+    string stage3_bin
+) string {
+    out := "s-bootstrap-manifest-v1\n"
+    out = out + "stage1.ir=" + stage1_ir + "\n"
+    out = out + "stage1=" + stage1_bin + "\n"
+    out = out + "stage2.ir=" + stage2_ir + "\n"
+    out = out + "stage2=" + stage2_bin + "\n"
+    out = out + "stage3.ir=" + stage3_ir + "\n"
+    out = out + "stage3=" + stage3_bin + "\n"
+    out
 }
