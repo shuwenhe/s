@@ -69,6 +69,8 @@ This stricter check intentionally fails until the S frontend and backend fully r
 The executable bootstrap work and its acceptance criteria are documented in
 [`doc/bootstrap.md`](doc/bootstrap.md). The first static pure-S frontend slice
 can be exercised with `make bootstrap-slice1-check`.
+For the native bootstrap frontier, use `make native-bootstrap` and
+`make native-selfhost`.
 
 ## Tests
 

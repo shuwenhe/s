@@ -1,6 +1,6 @@
 package main
 
 func main() {
-    []int x = []int{}
+    int[] x = int[]{}
     0
 }
