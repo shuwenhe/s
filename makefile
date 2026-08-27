@@ -179,6 +179,18 @@ true-selfhost-check: selfhost-check
 bootstrap-audit: selfhost
 	@./src/cmd/dist/checks/audit.sh "$(SELFHOST_DIR)" ./bin/s
 
+# Build a genuinely independent compiler chain.  Unlike bootstrap-convergence,
+# this target compares compiler executables, not seed-generated IR.  It is
+# expected to stay red until every construct used by compiler.s is supported by
+# the pure-S native backend.
+native-bootstrap: seed-compiler-bin
+	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/native-bootstrap.sh \
+	  $(SELFHOST_DIR)/native
+
+native-bootstrap-install: native-bootstrap
+	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/native/stage2 ./bin/s
+	@echo "Installed native self-hosted S compiler: ./bin/s"
+
 bootstrap-subset-check: seed-compiler-bin
 	@mkdir -p $(SELFHOST_DIR)/subset
 	@./bin/s_seed test/selfhost/subset_valid.s $(SELFHOST_DIR)/subset/valid.ir
@@ -192,6 +204,14 @@ bootstrap-slice1-check: seed-compiler-bin
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
 	  $(SELFHOST_DIR)/slice1/compiler.ir $(SELFHOST_DIR)/slice1/compiler
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/compiler
+	@$(SELFHOST_DIR)/slice1/compiler --emit-asm test/selfhost/bootstrap_asm_string.s \
+	  $(SELFHOST_DIR)/slice1/asm-string.S
+	@as --64 -o $(SELFHOST_DIR)/slice1/asm-string.o $(SELFHOST_DIR)/slice1/asm-string.S
+	@as --64 -o $(SELFHOST_DIR)/slice1/asm-runtime.o src/runtime/selfhost_linux_amd64.S
+	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/slice1/asm-string \
+	  $(SELFHOST_DIR)/slice1/asm-runtime.o $(SELFHOST_DIR)/slice1/asm-string.o
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/asm-string
+	@set +e; $(SELFHOST_DIR)/slice1/asm-string; status=$$?; set -e; test $$status -eq 42
 	@$(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1.s \
 	  $(SELFHOST_DIR)/slice1/program.ir
 	@grep -q '^RET|42|_|_$$' $(SELFHOST_DIR)/slice1/program.ir
@@ -277,6 +297,18 @@ bootstrap-slice1-check: seed-compiler-bin
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-function-control
 	@set +e; $(SELFHOST_DIR)/slice1/native-function-control; status=$$?; set -e; test $$status -eq 42
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-function-control | grep -q 'je'
+	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_logical.s \
+	  $(SELFHOST_DIR)/slice1/native-logical
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-logical
+	@set +e; $(SELFHOST_DIR)/slice1/native-logical; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_typed_locals.s \
+	  $(SELFHOST_DIR)/slice1/native-typed-locals
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-typed-locals
+	@set +e; $(SELFHOST_DIR)/slice1/native-typed-locals; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_large_function.s \
+	  $(SELFHOST_DIR)/slice1/native-large-function
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-large-function
+	@set +e; $(SELFHOST_DIR)/slice1/native-large-function; status=$$?; set -e; test $$status -eq 42
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_copy.s \
 	  $(SELFHOST_DIR)/slice1/native-copy
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-copy
@@ -321,7 +353,7 @@ selfhost-runtime-check:
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
 
-.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-audit bootstrap-subset-check bootstrap-slice1-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-audit native-bootstrap native-bootstrap-install bootstrap-subset-check bootstrap-slice1-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 verify-true-selfhost:
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
@@ -337,6 +369,8 @@ help:
 	@echo "  make bootstrap-stage0       # Build the trusted C stage0 compiler"
 	@echo "  make bootstrap-convergence  # Produce stage1..3 and prove IR convergence"
 	@echo "  make bootstrap-audit        # Report provenance and forbidden dependencies"
+	@echo "  make native-bootstrap       # Build and compare pure-S stage1 -> stage2 -> stage3 binaries"
+	@echo "  make native-bootstrap-install # Install converged native stage2 as bin/s"
 	@echo "  make bootstrap-subset-check # Enforce the frozen bootstrap declaration syntax"
 	@echo "  make bootstrap-slice1-check # Build and exercise the first static pure-S compiler slice"
 	@echo "  make pure-s-bootstrap-check # Run every implemented no-seed bootstrap frontier"
