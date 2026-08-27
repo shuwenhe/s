@@ -15,7 +15,7 @@ func string_replace(text: string, old: string, new: string): string {
 }
 
 func string_char_at(text: string, index: int): string {
-    if index < 0 || index >= text.len() {
+    if index < 0 || index >= len(text) {
         return ""
     }
     return text.slice(index, index+1

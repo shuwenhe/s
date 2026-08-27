@@ -1,24 +1,24 @@
 package compile.internal.ssagen
-use std.vec.vec
+use std.slices
 
 struct pgen_plan {
-    vec[string] lines
+    string[] lines
     int stack_size
     bool has_split_check
 }
 
 func build_pgen_plan(string fn_name, int stack_size, bool need_split_check, bool emit_arginfo, bool emit_wrapinfo) pgen_plan {
-    lines := vec[string]()
-    lines.push("TEXT " + fn_name)
+    lines := string[]()
+    lines = append(lines, "TEXT " + fn_name)
     if need_split_check {
-        lines.push("split-check")
+        lines = append(lines, "split-check")
     }
-    lines.push("stack=" + to_string(stack_size))
+    lines = append(lines, "stack=" + to_string(stack_size))
     if emit_arginfo {
-        lines.push("funcdata:arginfo")
+        lines = append(lines, "funcdata:arginfo")
     }
     if emit_wrapinfo {
-        lines.push("funcdata:wrapinfo")
+        lines = append(lines, "funcdata:wrapinfo")
     }
     pgen_plan {
         lines: lines,

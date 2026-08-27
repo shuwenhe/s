@@ -3,9 +3,9 @@ use compile.internal.arch.dispatch_init as arch_dispatch_init
 use compile.internal.build.main as build_main
 use internal.buildcfg.check as buildcfg_check
 use internal.buildcfg.goarch as buildcfg_goarch
-use std.vec.vec
+use std.slices
 
-func main(vec[string] args) int {
+func main(string[] args) int {
     buildcfg_err := buildcfg_check()
     if buildcfg_err != "" {
         return 2
@@ -17,6 +17,6 @@ func main(vec[string] args) int {
     return build_main(args
 }
 
-func run_cli(vec[string] args) int {
+func run_cli(string[] args) int {
     main(args)
 }

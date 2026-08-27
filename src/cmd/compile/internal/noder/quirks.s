@@ -1,6 +1,6 @@
 package compile.internal.noder
 use std.result.result
-use std.vec.vec
+use std.slices
 
 func apply_quirk(string name, source_unit unit) ((), noder_error) {
     if name == "trim-trailing-space" {
@@ -11,13 +11,13 @@ func apply_quirk(string name, source_unit unit) ((), noder_error) {
         lines := split_lines(unit.text)
         out := ""
         i := 0
-        for i < lines.len() {
+        for i < len(lines) {
             line := trim_spaces(lines[i])
             if starts_with(line, "use ") {
                 words := split_words(line)
-                if words.len() >= 2 {
+                if len(words) >= 2 {
                     line = "use \"" + normalize_import_path(words[1]) + "\""
-                    if words.len() >= 4 && words[2] == "as" {
+                    if len(words) >= 4 && words[2] == "as" {
                         line = line + " as " + words[3]
                     }
                 }
@@ -34,9 +34,9 @@ func apply_quirk(string name, source_unit unit) ((), noder_error) {
     make_error(code_unknown_quirk(), "unknown quirk: " + name, unit.path, 0, 0)
 }
 
-func apply_quirks(vec[string] quirks, source_unit unit) ((), noder_error) {
+func apply_quirks(string[] quirks, source_unit unit) ((), noder_error) {
     i := 0
-    for i < quirks.len() {
+    for i < len(quirks) {
         r := apply_quirk(quirks[i], unit)
         if r.is_err() {
             return r

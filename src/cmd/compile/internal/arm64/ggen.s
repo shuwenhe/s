@@ -1,5 +1,5 @@
 package compile.internal.arm64
-use std.vec.vec
+use std.slices
 
 struct prog {
     string op
@@ -16,7 +16,7 @@ func padframe(int frame) int {
     frame
 }
 
-func zerorange(vec[prog] insns, int off, int cnt, bool ignored) vec[prog] {
+func zerorange(prog[] insns, int off, int cnt, bool ignored) prog[] {
     if (cnt % 8) != 0 {
         return insns
     }
@@ -48,7 +48,7 @@ func zerorange(vec[prog] insns, int off, int cnt, bool ignored) vec[prog] {
     out
 }
 
-func ginsnop(vec[prog] insns) vec[prog] {
+func ginsnop(prog[] insns) prog[] {
     out := insns
     out.push(prog {
         op: "HINT",

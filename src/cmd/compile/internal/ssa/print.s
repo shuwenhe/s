@@ -3,21 +3,21 @@ package compile.internal.ssa
 func dump_func(ssa_func f) string {
     out := "ssa-func " + f.name + "\n"
     bi := 0
-    for bi < f.blocks.len() {
+    for bi < len(f.blocks) {
         b := f.blocks[bi]
         out = out + "block b" + to_string(b.id) + " kind=" + b.kind + "\n"
         i := 0
-        for i < b.values.len() {
+        for i < len(b.values) {
             id := b.values[i]
             v := f.values[id]
             out = out + "  v" + to_string(v.id) + " " + v.op + " " + v.ty
             if v.literal != "" {
                 out = out + " lit=" + v.literal
             }
-            if v.args.len() > 0 {
+            if len(v.args) > 0 {
                 out = out + " args="
                 j := 0
-                for j < v.args.len() {
+                for j < len(v.args) {
                     if j > 0 {
                         out = out + ","
                     }

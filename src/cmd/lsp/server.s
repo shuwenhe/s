@@ -28,7 +28,7 @@ func (server lsp_server) run() {
 
                 prefix := "Content-Length: "
                 if std::starts_with(line, prefix) {
-                    len_str := line.substring(prefix.len(), line.len())
+                    len_str := line.substring(len(prefix), len(line))
                     switch std::parse_int(len_str) {
                         content_len : {
                             switch std::read_bytes_from_stdin(content_len) {
@@ -145,7 +145,7 @@ func (server lsp_server) handle_did_open(req lsp::jsonrpc_request, message strin
 func (server lsp_server) handle_did_change(req lsp::jsonrpc_request, message string) {
     switch extract_did_change_params(message) {
         option::some((uri, text, version)) : {
-            changes := vec[lsp::text_document_content_change_event]{
+            changes := lsp::text_document_content_change_event[]{
                 lsp::text_document_content_change_event {
                     range_val: option::none(),
                     text: text,
@@ -321,7 +321,7 @@ func (server lsp_server) send_notification(message string) {
 }
 
 func (server lsp_server) send_message(message string) {
-    header := "Content-Length: " + std::to_string(message.len()) + "\r\n\r\n"
+    header := "Content-Length: " + std::to_string(len(message)) + "\r\n\r\n"
     std::print(header)
     std::print(message)
 }

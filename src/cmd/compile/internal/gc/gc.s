@@ -1,6 +1,6 @@
 package compile.internal.gc
-use std.vec.vec
+use std.slices
 
-func main(vec[string] args) int {
+func main(string[] args) int {
     return compile_main(args
 }

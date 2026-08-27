@@ -53,7 +53,7 @@ func sys_close(fd: int) int {
     }
 }
 
-func sys_bind(fd: int, addr: *sockaddr, addrlen: int) int {
+func sys_bind(fd: int, so* addrckaddr, addrlen: int) int {
     clear_errno()
     if bind(fd, addr, addrlen) < 0 {
         get_errno()
@@ -71,7 +71,7 @@ func sys_listen(fd: int, backlog: int) int {
     }
 }
 
-func sys_accept(fd: int, addr: *sockaddr, addrlen: *int) (int, int) {
+func sys_accept(fd: int, so* addrckaddr, in* addrlent) (int, int) {
     clear_errno()
     client_fd := accept(fd, addr, addrlen)
     if client_fd < 0 {
@@ -80,7 +80,7 @@ func sys_accept(fd: int, addr: *sockaddr, addrlen: *int) (int, int) {
     client_fd, 0
 }
 
-func sys_connect(fd: int, addr: *sockaddr, addrlen: int) int {
+func sys_connect(fd: int, so* addrckaddr, addrlen: int) int {
     clear_errno()
     if connect(fd, addr, addrlen) < 0 {
         get_errno()
@@ -89,7 +89,7 @@ func sys_connect(fd: int, addr: *sockaddr, addrlen: int) int {
     }
 }
 
-func sys_read(fd: int, buf: *byte, len: int) (int, int) {
+func sys_read(fd: int, by* bufte, len: int) (int, int) {
     clear_errno()
     n := read(fd, buf, len)
     if n < 0 {
@@ -98,7 +98,7 @@ func sys_read(fd: int, buf: *byte, len: int) (int, int) {
     n, 0
 }
 
-func sys_write(fd: int, buf: *byte, len: int) (int, int) {
+func sys_write(fd: int, by* bufte, len: int) (int, int) {
     clear_errno()
     n := write(fd, buf, len)
     if n < 0 {
@@ -107,7 +107,7 @@ func sys_write(fd: int, buf: *byte, len: int) (int, int) {
     n, 0
 }
 
-func sys_sendto(fd: int, buf: *byte, len: int, dest_addr: *sockaddr, addrlen: int) (int, int) {
+func sys_sendto(fd: int, by* bufte, len: int, so* dest_addrckaddr, addrlen: int) (int, int) {
     clear_errno()
     n := sendto(fd, buf, len, 0, dest_addr, addrlen)
     if n < 0 {
@@ -116,7 +116,7 @@ func sys_sendto(fd: int, buf: *byte, len: int, dest_addr: *sockaddr, addrlen: in
     n, 0
 }
 
-func sys_recvfrom(fd: int, buf: *byte, len: int, src_addr: *sockaddr, addrlen: *int) (int, int) {
+func sys_recvfrom(fd: int, by* bufte, len: int, so* src_addrckaddr, in* addrlent) (int, int) {
     clear_errno()
     n := recvfrom(fd, buf, len, 0, src_addr, addrlen)
     if n < 0 {
@@ -125,7 +125,7 @@ func sys_recvfrom(fd: int, buf: *byte, len: int, src_addr: *sockaddr, addrlen: *
     n, 0
 }
 
-func sys_setsockopt(fd: int, level: int, optname: int, optval: *byte, optlen: int) int {
+func sys_setsockopt(fd: int, level: int, optname: int, by* optvalte, optlen: int) int {
     clear_errno()
     if setsockopt(fd, level, optname, optval, optlen) < 0 {
         get_errno()
@@ -134,7 +134,7 @@ func sys_setsockopt(fd: int, level: int, optname: int, optval: *byte, optlen: in
     }
 }
 
-func sys_getsockopt(fd: int, level: int, optname: int, optval: *byte, optlen: *int) int {
+func sys_getsockopt(fd: int, level: int, optname: int, by* optvalte, in* optlent) int {
     clear_errno()
     if getsockopt(fd, level, optname, optval, optlen) < 0 {
         get_errno()
@@ -156,7 +156,7 @@ func sys_set_nonblocking(fd: int) int {
     }
 }
 
-func sys_getsockname(fd: int, addr: *sockaddr, addrlen: *int) int {
+func sys_getsockname(fd: int, so* addrckaddr, in* addrlent) int {
     clear_errno()
     if getsockname(fd, addr, addrlen) < 0 {
         get_errno()
@@ -165,7 +165,7 @@ func sys_getsockname(fd: int, addr: *sockaddr, addrlen: *int) int {
     }
 }
 
-func sys_getpeername(fd: int, addr: *sockaddr, addrlen: *int) int {
+func sys_getpeername(fd: int, so* addrckaddr, in* addrlent) int {
     clear_errno()
     if getpeername(fd, addr, addrlen) < 0 {
         get_errno()
@@ -174,7 +174,7 @@ func sys_getpeername(fd: int, addr: *sockaddr, addrlen: *int) int {
     }
 }
 
-func sys_poll(fds: *pollfd, nfds: int, timeout_ms: int) (int, int) {
+func sys_poll(pollfd* fds, nfds: int, timeout_ms: int) (int, int) {
     clear_errno()
     n := poll(fds, nfds, timeout_ms)
     if n < 0 {
@@ -192,7 +192,7 @@ func sys_shutdown(fd: int, how: int) int {
     }
 }
 
-func ipv4_to_sockaddr(ip_str: *byte, port: int) (sockaddr_inet, bool) {
+func ipv4_to_sockaddr(byte* ip_str, port: int) (sockaddr_inet, bool) {
     var addr sockaddr_inet
     addr.sin_family = af_inet
     addr.sin_port = htons(port)

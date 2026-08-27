@@ -1,5 +1,5 @@
 package src.runtime
-use std.vec.vec
+use std.slices
 use std.result.result
 use std.option.option
 const CHAN_OPEN   = 0
@@ -12,21 +12,21 @@ struct Waiter {
 
 struct RawChan {
     int      cap
-    vec[int] buf
+    int[] buf
     int      head
     int      tail
     int      count
     int      state
-    vec[Waiter] senders
-    vec[Waiter] receivers
+    Waiter[] senders
+    Waiter[] receivers
     Mutex    mu
 }
 
 func new_raw_chan(int cap) RawChan {
-    buf := vec[int]()
+    buf := int[]()
     var i = 0
     for i < cap {
-        buf.push(0)
+        buf = append(buf, 0)
         i = i + 1
     }
     RawChan {
@@ -36,8 +36,8 @@ func new_raw_chan(int cap) RawChan {
         tail:      0,
         count:     0,
         state:     CHAN_OPEN,
-        senders:   vec[Waiter](),
-        receivers: vec[Waiter](),
+        senders:   Waiter[](),
+        receivers: Waiter[](),
         mu:        new_mutex(),
     }
 }
@@ -56,17 +56,17 @@ func chan_send(RawChan ch, int val) ((), string) {
                 chan_deliver(w.sroutine_id, val)
                 sroutine_ready(w.sroutine_id)
             }
-            return ()
+            return 
         }
         cur := __sroutine_current_id()
-        ch.senders.push(Waiter { sroutine_id: cur, val_idx: val })
+        ch.senders = append(ch.senders, Waiter { sroutine_id: cur, val_idx: val })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
         return ())
     }
     for ch.count >= ch.cap {
         cur := __sroutine_current_id()
-        ch.senders.push(Waiter { sroutine_id: cur, val_idx: val })
+        ch.senders = append(ch.senders, Waiter { sroutine_id: cur, val_idx: val })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
         ch.mu.lock()
@@ -84,7 +84,7 @@ func chan_send(RawChan ch, int val) ((), string) {
         if w.sroutine_id >= 0 {
             sroutine_ready(w.sroutine_id)
         }
-        return ()
+        return 
     }
     ch.mu.unlock()
     ()
@@ -106,7 +106,7 @@ func chan_recv(RawChan ch) recv_result {
             return recv_result { value: 0, ok: false }
         }
         cur := __sroutine_current_id()
-        ch.receivers.push(Waiter { sroutine_id: cur, val_idx: -1 })
+        ch.receivers = append(ch.receivers, Waiter { sroutine_id: cur, val_idx: -1 })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
         v := chan_take_delivered(cur)
@@ -118,7 +118,7 @@ func chan_recv(RawChan ch) recv_result {
             return recv_result { value: 0, ok: false }
         }
         cur := __sroutine_current_id()
-        ch.receivers.push(Waiter { sroutine_id: cur, val_idx: -1 })
+        ch.receivers = append(ch.receivers, Waiter { sroutine_id: cur, val_idx: -1 })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
         ch.mu.lock()
@@ -228,15 +228,15 @@ func chan_close(RawChan ch) ((), string) {
     ()
 }
 
-func dequeue_waiter(vec[Waiter] q) Waiter {
+func dequeue_waiter(Waiter[] q) Waiter {
     if q.is_empty() {
         return Waiter { sroutine_id: -1, val_idx: -1 }
     }
     w := q[0]
-    new_q := vec[Waiter]()
+    new_q := Waiter[]()
     var i = 1
-    for i < q.len() {
-        new_q.push(q[i])
+    for i < len(q) {
+        new_q = append(new_q, q[i])
         i = i + 1
     }
     q = new_q

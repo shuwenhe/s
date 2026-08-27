@@ -1,5 +1,5 @@
 package compile.internal.base
-use std.vec.vec
+use std.slices
 
 struct link_symbol {
     string pkg
@@ -8,14 +8,14 @@ struct link_symbol {
 }
 
 struct link_context {
-    vec[link_symbol] symbols
+    link_symbol[] symbols
 }
-reserved_imports := vec[string]{"go", "type"}
-ctxt := link_context { symbols: vec[link_symbol]() }
+reserved_imports := string[]{"go", "type"}
+ctxt := link_context { symbols: link_symbol[]() }
 
 func is_reserved_import(string prefix) bool {
     i := 0
-    for i < reserved_imports.len() {
+    for i < len(reserved_imports) {
         if reserved_imports[i] == prefix {
             return true
         }
@@ -45,6 +45,6 @@ func linksym(string pkg, string name, int abi) link_symbol {
         name: name,
         abi: abi,
     }
-    ctxt.symbols.push(sym)
+    ctxt.symbols = append(ctxt.symbols, sym)
     sym
 }

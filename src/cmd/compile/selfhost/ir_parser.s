@@ -57,7 +57,7 @@ func parse_ir(string content) (IRModule, error) {
                         name: parts[1],
                         instructions: []IRInstruction{},
                     }
-                    current_func = &func
+                    current_func = *func
                     module.functions = append(module.functions, func)
                 }
             case "FUNC_END":

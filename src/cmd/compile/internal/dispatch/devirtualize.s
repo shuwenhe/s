@@ -15,16 +15,16 @@ func estimate_devirtualized_sites(string mir_text) int {
 func estimate_devirtualized_sites_graph(mir_graph graph) int {
     candidates := 0
     i := 0
-    for i < graph.blocks.len() {
+    for i < len(graph.blocks) {
         block := graph.blocks[i]
         j := 0
-        for j < block.statements.len() {
+        for j < len(block.statements) {
             switch block.statements[j] {
                 mir_statement::eval(eval_stmt) : {
                     if eval_stmt.op == "dynamic_call" || eval_stmt.op == "iface_call" || eval_stmt.op == "member_call" {
                         candidates = candidates + 1
                     }
-                    if eval_stmt.args.len() > 0 {
+                    if len(eval_stmt.args) > 0 {
                         candidates = candidates + count_token(eval_stmt.args[0], "dyn")
                         candidates = candidates + count_token(eval_stmt.args[0], "iface")
                         candidates = candidates + count_token(eval_stmt.args[0], "member")

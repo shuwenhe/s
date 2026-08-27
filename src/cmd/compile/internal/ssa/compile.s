@@ -1,5 +1,5 @@
 package compile.internal.ssa
-use std.vec.vec
+use std.slices
 
 struct pass_stat {
     string name
@@ -8,52 +8,52 @@ struct pass_stat {
 
 struct compile_report {
     ssa_func f
-    vec[pass_stat] stats
-    vec[prove_fact] prove_facts
+    pass_stat[] stats
+    prove_fact[] prove_facts
     dom_tree dom
     regalloc_result regalloc
     int check_code
     string dump
 }
 
-func optimize(ssa_func f, ssa_config cfg) vec[pass_stat] {
-    stats := vec[pass_stat]()
+func optimize(ssa_func f, ssa_config cfg) pass_stat[] {
+    stats := pass_stat[]()
     if cfg.enable_rewrite {
-        stats.push(pass_stat { name: "rewrite", changed: run_rewrite(f, cfg.target_arch) })
+        stats = append(stats, pass_stat { name: "rewrite", changed: run_rewrite(f, cfg.target_arch) })
     }
     if cfg.enable_cse {
-        stats.push(pass_stat { name: "cse", changed: run_cse(f) })
+        stats = append(stats, pass_stat { name: "cse", changed: run_cse(f) })
     }
     if cfg.enable_copyelim {
-        stats.push(pass_stat { name: "copyelim", changed: run_copyelim(f) })
+        stats = append(stats, pass_stat { name: "copyelim", changed: run_copyelim(f) })
     }
     if cfg.enable_deadcode {
-        stats.push(pass_stat { name: "deadcode", changed: run_deadcode(f) })
+        stats = append(stats, pass_stat { name: "deadcode", changed: run_deadcode(f) })
     }
     if cfg.enable_schedule {
-        stats.push(pass_stat { name: "schedule", changed: run_schedule(f) })
+        stats = append(stats, pass_stat { name: "schedule", changed: run_schedule(f) })
     }
     stats
 }
 
 func compile_func(ssa_func f, ssa_config cfg) compile_report {
     stats := optimize(f, cfg)
-    facts := vec[prove_fact]()
+    facts := prove_fact[]()
     if cfg.enable_prove {
         facts = run_prove(f)
-        stats.push(pass_stat { name: "prove", changed: facts.len() })
+        stats = append(stats, pass_stat { name: "prove", changed: len(facts) })
     }
     dominfo := run_dom(f)
     if cfg.enable_dom {
-        stats.push(pass_stat { name: "dom", changed: dominfo.block_ids.len() })
+        stats = append(stats, pass_stat { name: "dom", changed: len(dominfo.block_ids) })
     }
     regs := regalloc_result {
-        assigns: vec[reg_assign](),
+        assigns: reg_assign[](),
         spills: 0,
     }
     if cfg.enable_regalloc {
         regs = run_regalloc(f, cfg.regalloc_register_count)
-        stats.push(pass_stat { name: "regalloc", changed: regs.assigns.len() })
+        stats = append(stats, pass_stat { name: "regalloc", changed: len(regs.assigns) })
     }
     code := check_func(f)
     compile_report {

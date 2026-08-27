@@ -8,7 +8,7 @@ struct document_manager {
 
     map[string, s::source_file] ast_cache
 
-    map[string, vec[parse_error]] error_cache
+    map[string, parse_error[]] error_cache
 }
 
 struct parse_error {
@@ -20,7 +20,7 @@ func new_document_manager() document_manager {
     document_manager {
         documents: map[string, text_document](),
         ast_cache: map[string, s::source_file](),
-        error_cache: map[string, vec[parse_error]](),
+        error_cache: map[string, parse_error[]](),
     }
 }
 
@@ -66,7 +66,7 @@ func (dm document_manager) get_ast(uri string) option[s::source_file] {
     dm.ast_cache.get(uri)
 }
 
-func (dm document_manager) get_errors(uri string) option[vec[parse_error]] {
+func (dm document_manager) get_errors(uri string) option[parse_error[]] {
     dm.error_cache.get(uri)
 }
 
@@ -82,7 +82,7 @@ func (dm document_manager) parse_document(uri string) {
                             dm.error_cache.remove(uri)
                         },
                         err : {
-                            dm.error_cache.insert(uri, vec[parse_error]{
+                            dm.error_cache.insert(uri, parse_error[]{
                                 parse_error {
                                     message: err.message,
                                     pos: position { line: err.line, character: err.column }
@@ -92,7 +92,7 @@ func (dm document_manager) parse_document(uri string) {
                     }
                 },
                 err : {
-                    dm.error_cache.insert(uri, vec[parse_error]{
+                    dm.error_cache.insert(uri, parse_error[]{
                         parse_error {
                             message: err.message,
                             pos: position { line: err.line, character: err.column }
@@ -110,9 +110,9 @@ func (dm document_manager) get_token_at_position(uri string, pos position) optio
     switch dm.documents.get(uri) {
         option::some(doc) : {
             lines := std::split(doc.text, "\n")
-            if pos.line < lines.len() {
+            if pos.line < len(lines) {
                 line := lines[pos.line]
-                if pos.character < line.len() {
+                if pos.character < len(line) {
                     start := pos.character
                     end := pos.character
 
@@ -120,7 +120,7 @@ func (dm document_manager) get_token_at_position(uri string, pos position) optio
                         start = start - 1
                     }
 
-                    for end < line.len() && is_identifier_char(line[end]) {
+                    for end < len(line) && is_identifier_char(line[end]) {
                         end = end + 1
                     }
 
@@ -145,18 +145,18 @@ func is_identifier_char(c str) bool {
     (c >= "0" && c <= "9") || c == "_"
 }
 
-func (dm document_manager) get_document_symbols(uri string) option[vec[document_symbol]] {
+func (dm document_manager) get_document_symbols(uri string) option[document_symbol[]] {
     switch dm.get_ast(uri) {
         option::some(ast) : option::some(extract_symbols_from_ast(ast)),
         option::none() : option::none()
     }
 }
 
-func extract_symbols_from_ast(ast s::source_file) vec[document_symbol] {
-    symbols := vec[document_symbol]()
+func extract_symbols_from_ast(ast s::source_file) document_symbol[] {
+    symbols := document_symbol[]()
 
     i := 0
-    for i < ast.items.len() {
+    for i < len(ast.items) {
         item := ast.items[i]
         switch item {
             s::item::function(func) : {
@@ -165,11 +165,11 @@ func extract_symbols_from_ast(ast s::source_file) vec[document_symbol] {
                     kind: symbol_kind::function_k,
                     range_val: range {
                         start: position { line: func.line, character: 0 },
-                        end: position { line: func.line, character: func.sig.name.len() }
+                        end: position { line: func.line, character: len(func.sig.name) }
                     },
                     selection_range: range {
                         start: position { line: func.line, character: 0 },
-                        end: position { line: func.line, character: func.sig.name.len() }
+                        end: position { line: func.line, character: len(func.sig.name) }
                     },
                     children: option::none(),
                     deprecated: option::none()
@@ -181,11 +181,11 @@ func extract_symbols_from_ast(ast s::source_file) vec[document_symbol] {
                     kind: symbol_kind::struct_k,
                     range_val: range {
                         start: position { line: s_decl.line, character: 0 },
-                        end: position { line: s_decl.line, character: s_decl.name.len() }
+                        end: position { line: s_decl.line, character: len(s_decl.name) }
                     },
                     selection_range: range {
                         start: position { line: s_decl.line, character: 0 },
-                        end: position { line: s_decl.line, character: s_decl.name.len() }
+                        end: position { line: s_decl.line, character: len(s_decl.name) }
                     },
                     children: option::none(),
                     deprecated: option::none()
@@ -197,11 +197,11 @@ func extract_symbols_from_ast(ast s::source_file) vec[document_symbol] {
                     kind: symbol_kind::enum_k,
                     range_val: range {
                         start: position { line: e_decl.line, character: 0 },
-                        end: position { line: e_decl.line, character: e_decl.name.len() }
+                        end: position { line: e_decl.line, character: len(e_decl.name) }
                     },
                     selection_range: range {
                         start: position { line: e_decl.line, character: 0 },
-                        end: position { line: e_decl.line, character: e_decl.name.len() }
+                        end: position { line: e_decl.line, character: len(e_decl.name) }
                     },
                     children: option::none(),
                     deprecated: option::none()
@@ -213,11 +213,11 @@ func extract_symbols_from_ast(ast s::source_file) vec[document_symbol] {
                     kind: symbol_kind::interface_k,
                     range_val: range {
                         start: position { line: t_decl.line, character: 0 },
-                        end: position { line: t_decl.line, character: t_decl.name.len() }
+                        end: position { line: t_decl.line, character: len(t_decl.name) }
                     },
                     selection_range: range {
                         start: position { line: t_decl.line, character: 0 },
-                        end: position { line: t_decl.line, character: t_decl.name.len() }
+                        end: position { line: t_decl.line, character: len(t_decl.name) }
                     },
                     children: option::none(),
                     deprecated: option::none()
