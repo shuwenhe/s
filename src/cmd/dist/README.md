@@ -13,9 +13,10 @@ The stages are build provenance, not compiler architecture:
 4. normalized second- and third-stage artifacts must converge;
 5. the installed compiler must contain no C seed or IR-interpreter dependency.
 
-Current convergence is IR-only and seed-hosted. `make true-selfhost-check`
-remains the release gate for a native self-hosted compiler, while
-`make native-bootstrap` exercises the native frontier directly.
+Current convergence is now native-first. `make selfhost` installs the native
+bootstrap result, `make seed-hosted-selfhost` preserves the older compatibility
+path, and `make true-selfhost-check` remains the release gate for a compiler
+that no longer links the C seed.
 
 Compiler sources must use these declaration forms:
 

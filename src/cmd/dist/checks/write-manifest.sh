@@ -1,8 +1,9 @@
 #!/bin/sh
 set -eu
 
-dir=${1:?usage: write-manifest.sh DIR OUTPUT}
-output=${2:?usage: write-manifest.sh DIR OUTPUT}
+dir=${1:?usage: write-manifest.sh DIR OUTPUT [RUNTIME]}
+output=${2:?usage: write-manifest.sh DIR OUTPUT [RUNTIME]}
+runtime=${3:-}
 
 tmp="${output}.tmp.$$"
 trap 'rm -f "$tmp"' EXIT HUP INT TERM
@@ -16,6 +17,10 @@ trap 'rm -f "$tmp"' EXIT HUP INT TERM
             printf '%s  %s\n' "$digest" "$name"
         fi
     done
+    if [ -n "$runtime" ] && [ -f "$runtime" ]; then
+        digest=$(sha256sum "$runtime" | awk '{print $1}')
+        printf '%s  %s\n' "$digest" "runtime"
+    fi
 } >"$tmp"
 mv "$tmp" "$output"
 trap - EXIT HUP INT TERM
