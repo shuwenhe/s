@@ -141,15 +141,8 @@ bootstrap-convergence: bootstrap-stage0
 	@echo "Bootstrap convergence passed: stage2.ir == stage3.ir"
 
 bootstrap-pure-s: bootstrap-stage0
-	@mkdir -p $(SELFHOST_DIR) ./bin
-	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed src/cmd/compile/selfhost/bootstrap_pure_s.s \
-	  $(SELFHOST_DIR)/bootstrap_pure_s.ir
-	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
-	  $(SELFHOST_DIR)/bootstrap_pure_s.ir $(SELFHOST_DIR)/bootstrap_pure_s
-	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/bootstrap_pure_s
-	@S_SOURCE_ROOT=$(CURDIR) $(SELFHOST_DIR)/bootstrap_pure_s
-	@./src/cmd/dist/checks/audit.sh "$(SELFHOST_DIR)" ./bin/s
-	@echo "Bootstrap pure-S passed: stage2.ir == stage3.ir and seed dependency audit passed"
+	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/native-bootstrap.sh \
+	  $(SELFHOST_DIR)
 
 selfhost: bootstrap-convergence
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/stage2 ./bin/s
