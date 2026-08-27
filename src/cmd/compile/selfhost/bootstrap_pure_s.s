@@ -4,6 +4,7 @@ use std.fs.write_text_file
 use std.io.eprintln
 use std.io_syscall.mkdir
 use std.process.run_process
+use std.slices
 
 func main() int {
     compiler_src := "./src/cmd/compile/selfhost/compiler.s"
@@ -47,8 +48,7 @@ func bootstrap_three_stage(
     stage3_bin := output_dir + "/stage3"
 
     eprintln("[1/5] building stage1 IR with the trusted seed")
-    string[] stage1_argv
-    stage1_argv = append(stage1_argv, seed_compiler)
+    stage1_argv := []string{seed_compiler}
     stage1_argv = append(stage1_argv, compiler_src)
     stage1_argv = append(stage1_argv, stage1_ir)
     if run_checked(stage1_argv) != 0 {
@@ -56,8 +56,7 @@ func bootstrap_three_stage(
     }
 
     eprintln("[2/5] lowering stage1 IR to a runnable compiler")
-    string[] stage1_bin_argv
-    stage1_bin_argv = append(stage1_bin_argv, seed_compiler)
+    stage1_bin_argv := string[] { seed_compiler }
     stage1_bin_argv = append(stage1_bin_argv, "--emit-standalone-amd64")
     stage1_bin_argv = append(stage1_bin_argv, stage1_ir)
     stage1_bin_argv = append(stage1_bin_argv, stage1_bin)
@@ -66,15 +65,13 @@ func bootstrap_three_stage(
     }
 
     eprintln("[3/5] recompiling compiler.s with stage1")
-    string[] stage2_argv
-    stage2_argv = append(stage2_argv, stage1_bin)
+    stage2_argv := string[] { stage1_bin }
     stage2_argv = append(stage2_argv, compiler_src)
     stage2_argv = append(stage2_argv, stage2_ir)
     if run_checked(stage2_argv) != 0 {
         return 1
     }
-    string[] stage2_bin_argv
-    stage2_bin_argv = append(stage2_bin_argv, stage1_bin)
+    stage2_bin_argv := string[] { stage1_bin }
     stage2_bin_argv = append(stage2_bin_argv, "--emit-standalone-amd64")
     stage2_bin_argv = append(stage2_bin_argv, stage2_ir)
     stage2_bin_argv = append(stage2_bin_argv, stage2_bin)
@@ -83,15 +80,13 @@ func bootstrap_three_stage(
     }
 
     eprintln("[4/5] recompiling compiler.s with stage2")
-    string[] stage3_argv
-    stage3_argv = append(stage3_argv, stage2_bin)
+    stage3_argv := string[] { stage2_bin }
     stage3_argv = append(stage3_argv, compiler_src)
     stage3_argv = append(stage3_argv, stage3_ir)
     if run_checked(stage3_argv) != 0 {
         return 1
     }
-    string[] stage3_bin_argv
-    stage3_bin_argv = append(stage3_bin_argv, stage2_bin)
+    stage3_bin_argv := string[] { stage2_bin }
     stage3_bin_argv = append(stage3_bin_argv, "--emit-standalone-amd64")
     stage3_bin_argv = append(stage3_bin_argv, stage3_ir)
     stage3_bin_argv = append(stage3_bin_argv, stage3_bin)
@@ -100,16 +95,14 @@ func bootstrap_three_stage(
     }
 
     eprintln("[5/5] verifying convergence")
-    string[] cmp_ir_argv
-    cmp_ir_argv = append(cmp_ir_argv, "cmp")
+    cmp_ir_argv := string[] { "cmp" }
     cmp_ir_argv = append(cmp_ir_argv, stage2_ir)
     cmp_ir_argv = append(cmp_ir_argv, stage3_ir)
     if run_checked(cmp_ir_argv) != 0 {
         eprintln("bootstrap failed: stage2.ir and stage3.ir differ")
         return 1
     }
-    string[] cmp_bin_argv
-    cmp_bin_argv = append(cmp_bin_argv, "cmp")
+    cmp_bin_argv := string[] { "cmp" }
     cmp_bin_argv = append(cmp_bin_argv, stage2_bin)
     cmp_bin_argv = append(cmp_bin_argv, stage3_bin)
     if run_checked(cmp_bin_argv) != 0 {
