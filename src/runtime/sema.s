@@ -1,5 +1,5 @@
 package src.runtime
-use std.vec.vec
+use std.slices
 extern "intrinsic" func __sema_sleep(int sema_id) ()
 extern "intrinsic" func __sema_wakeup(int sema_id) ()
 extern "intrinsic" func __atomic_cas(int target, int expected, int desired) bool

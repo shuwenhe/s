@@ -1,9 +1,9 @@
 package compile.internal.arm64
-use std.vec.vec
+use std.slices
 
 struct ssa_value {
     string op
-    vec[string] args
+    string[] args
     int reg
     int reg0
     int aux_int
@@ -168,29 +168,29 @@ func ssa_gen_value(ssa_value value) string {
     "GENERIC"
 }
 
-func ssa_gen_block(string kind, int next_succ, int likely) vec[string] {
-    out := vec[string]()
+func ssa_gen_block(string kind, int next_succ, int likely) string[] {
+    out := string[]()
     if kind == "BlockPlain" || kind == "BlockDefer" {
         if next_succ != 0 {
-            out.push("B")
+            out = append(out, "B")
         }
         return out
     }
     if kind == "BlockRet" {
-        out.push("RET")
+        out = append(out, "RET")
         return out
     }
     if starts_with(kind, "BlockARM64") {
         if likely >= 0 {
-            out.push("B.cond")
-            out.push("B")
+            out = append(out, "B.cond")
+            out = append(out, "B")
         } else {
-            out.push("B.inv")
-            out.push("B")
+            out = append(out, "B.inv")
+            out = append(out, "B")
         }
         return out
     }
-    out.push("UNIMPL")
+    out = append(out, "UNIMPL")
     out
 }
 
@@ -209,11 +209,11 @@ func spill_arg_reg(int index) string {
 }
 
 func starts_with(string text, string prefix) bool {
-    if text.len() < prefix.len() {
+    if len(text) < len(prefix) {
         return false
     }
     i := 0
-    for i < prefix.len() {
+    for i < len(prefix) {
         if text[i] != prefix[i] {
             return false
         }

@@ -8,7 +8,7 @@ use compile.internal.syntax.tokenize
 
 func main() {
     args := host_args()
-    if args.len() < 2 {
+    if len(args) < 2 {
         println("usage: lex_dump <path>");
         return 1
     }

@@ -36,13 +36,13 @@ func (h lsp_handler) on_did_close(params did_close_text_document_params) {
     h.doc_manager.close_document(params.text_document.uri)
 }
 
-func (h lsp_handler) publish_diagnostics(uri string) vec[diagnostic] {
-    diags := vec[diagnostic]()
+func (h lsp_handler) publish_diagnostics(uri string) diagnostic[] {
+    diags := diagnostic[]()
 
     switch h.doc_manager.get_errors(uri) {
         option::some(errors) : {
             i := 0
-            for i < errors.len() {
+            for i < len(errors) {
                 err := errors[i]
                 diags.push(diagnostic {
                     r: range {
@@ -64,22 +64,22 @@ func (h lsp_handler) publish_diagnostics(uri string) vec[diagnostic] {
     diags
 }
 
-func (h lsp_handler) get_document_symbols(uri string) vec[document_symbol] {
+func (h lsp_handler) get_document_symbols(uri string) document_symbol[] {
     switch h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : symbols,
-        option::none() : vec[document_symbol]()
+        option::none() : document_symbol[]()
     }
 }
 
 func (h lsp_handler) get_completions(uri string, pos position) completion_list {
-    completions := vec[completion_item]()
+    completions := completion_item[]()
 
     completions.append(get_keyword_completions())
 
     switch h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : {
             i := 0
-            for i < symbols.len() {
+            for i < len(symbols) {
                 sym := symbols[i]
                 completions.push(completion_item {
                     label: sym.name,
@@ -104,17 +104,17 @@ func (h lsp_handler) get_completions(uri string, pos position) completion_list {
     }
 }
 
-func get_keyword_completions() vec[completion_item] {
-    keywords := vec[string]{
+func get_keyword_completions() completion_item[] {
+    keywords := string[]{
         "package", "use", "pub", "func", "struct", "enum", "trait",
         "const", "static", "if", "else", "for", "while", "switch",
         "case", "default", "return", "break", "continue", "true", "false",
         "nil", "let", "var", "in", "as",
     }
 
-    completions := vec[completion_item]()
+    completions := completion_item[]()
     i := 0
-    for i < keywords.len() {
+    for i < len(keywords) {
         completions.push(completion_item {
             label: keywords[i],
             kind: option::some(completion_item_kind::keyword),
@@ -140,7 +140,7 @@ func (h lsp_handler) get_hover(uri string, pos position) option[hover] {
                         contents: format_hover_contents(symbol),
                         r: option::some(range {
                             start: pos,
-                            end: position { line: pos.line, character: pos.character + token.len() }
+                            end: position { line: pos.line, character: pos.character + len(token) }
                         })
                     })
                 },
@@ -149,7 +149,7 @@ func (h lsp_handler) get_hover(uri string, pos position) option[hover] {
                         contents: "**" + token + "**",
                         r: option::some(range {
                             start: pos,
-                            end: position { line: pos.line, character: pos.character + token.len() }
+                            end: position { line: pos.line, character: pos.character + len(token) }
                         })
                     })
                 }
@@ -166,9 +166,9 @@ func (h lsp_handler) find_symbol_definition(uri string, name string) option[docu
     }
 }
 
-func find_symbol_in_list(symbols vec[document_symbol], name string) option[document_symbol] {
+func find_symbol_in_list(symbols document_symbol[], name string) option[document_symbol] {
     i := 0
-    for i < symbols.len() {
+    for i < len(symbols) {
         if symbols[i].name == name {
             return option::some(symbols[i]
         }
@@ -177,11 +177,11 @@ func find_symbol_in_list(symbols vec[document_symbol], name string) option[docum
     option::none()
 }
 
-func apply_content_changes(text string, changes vec[text_document_content_change_event]) string {
+func apply_content_changes(text string, changes text_document_content_change_event[]) string {
     result := text
     i := 0
 
-    for i < changes.len() {
+    for i < len(changes) {
         change := changes[i]
         switch change.range_val {
             option::some(r) : {
@@ -190,7 +190,7 @@ func apply_content_changes(text string, changes vec[text_document_content_change
                 end_offset := position_to_offset(lines, r.end)
 
                 before := result.substring(0, start_offset)
-                after := result.substring(end_offset, result.len())
+                after := result.substring(end_offset, len(result))
                 result = before + change.text + after
             },
             option::none() : {
@@ -203,16 +203,16 @@ func apply_content_changes(text string, changes vec[text_document_content_change
     result
 }
 
-func position_to_offset(lines vec[string], pos position) int {
+func position_to_offset(lines string[], pos position) int {
     offset := 0
     i := 0
 
-    for i < pos.line && i < lines.len() {
+    for i < pos.line && i < len(lines) {
         offset = offset + lines[i].len() + 1
         i = i + 1
     }
 
-    if pos.line < lines.len() {
+    if pos.line < len(lines) {
         offset = offset + pos.character
     }
 

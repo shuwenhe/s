@@ -7,9 +7,9 @@ use compile.internal.build.utils.report_usage
 use internal.buildcfg.goarch as buildcfg_goarch
 use internal.buildcfg.goos as buildcfg_goos
 use std.io.println
-use std.vec.vec
+use std.slices
 
-func main(vec[string] args)  int {
+func main(string[] args)  int {
     options := parse_options(args)
     if options[0] == "help" {
         report_usage(parse_usage())

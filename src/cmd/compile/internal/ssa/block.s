@@ -1,12 +1,12 @@
 package compile.internal.ssa
-use std.vec.vec
+use std.slices
 
 struct ssa_block {
     int id
     string kind
-    vec[int] values
-    vec[int] preds
-    vec[int] succs
+    int[] values
+    int[] preds
+    int[] succs
     int control
 }
 
@@ -14,9 +14,9 @@ func make_block(int id, string kind) ssa_block {
     ssa_block {
         id: id,
         kind: kind,
-        values: vec[int](),
-        preds: vec[int](),
-        succs: vec[int](),
+        values: int[](),
+        preds: int[](),
+        succs: int[](),
         control: -1,
     }
 }

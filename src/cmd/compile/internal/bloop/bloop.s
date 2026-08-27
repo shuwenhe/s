@@ -24,7 +24,7 @@ use std.option.option
 use std.prelude.box
 use std.prelude.len
 use std.prelude.slice
-use std.vec.vec
+use std.slices
 
 func get_name_from_expr(expr value) option[string] {
     switch value {
@@ -36,24 +36,24 @@ func get_name_from_expr(expr value) option[string] {
     }
 }
 
-func append_unique(vec[string] names, string value) () {
+func append_unique(string[] names, string value) () {
     if value == "" || value == "_" {
         return
     }
     i := 0
-    for i < names.len() {
+    for i < len(names) {
         if names[i] == value {
             return
         }
         i = i + 1
     }
-    names.push(value)
+    names = append(names, value)
 }
 
-func collect_call_arg_names(call_expr call_value) vec[string] {
-    out := vec[string]()
+func collect_call_arg_names(call_expr call_value) string[] {
+    out := string[]()
     i := 0
-    for i < call_value.args.len() {
+    for i < len(call_value.args) {
         switch get_name_from_expr(call_value.args[i]) {
             option::some(name_value) : append_unique(out, name_value),
             option::none : (),
@@ -63,8 +63,8 @@ func collect_call_arg_names(call_expr call_value) vec[string] {
     out
 }
 
-func collect_keep_alive_names(stmt value) vec[string] {
-    out := vec[string]()
+func collect_keep_alive_names(stmt value) string[] {
+    out := string[]()
     switch value {
         stmt.assign(assign_value) : append_unique(out, assign_value.name),
         stmt.increment(increment_value) : append_unique(out, increment_value.name),
@@ -74,7 +74,7 @@ func collect_keep_alive_names(stmt value) vec[string] {
                 expr.call(call_value) : {
                     names := collect_call_arg_names(call_value)
                     i := 0
-                    for i < names.len() {
+                    for i < len(names) {
                         append_unique(out, names[i])
                         i = i + 1
                     }
@@ -88,7 +88,7 @@ func collect_keep_alive_names(stmt value) vec[string] {
 }
 
 func keep_alive_stmt(string name_value) stmt {
-    args := vec[expr]()
+    args := expr[]()
     args.push(expr::name(name_expr {
         name: name_value,
         inferred_type: option::none,
@@ -106,12 +106,12 @@ func keep_alive_stmt(string name_value) stmt {
     })
 }
 
-func preserve_stmt(stmt value) vec[stmt] {
-    out := vec[stmt]()
+func preserve_stmt(stmt value) stmt[] {
+    out := stmt[]()
     names := collect_keep_alive_names(value)
     i := 0
-    for i < names.len() {
-        out.push(keep_alive_stmt(names[i]))
+    for i < len(names) {
+        out = append(out, keep_alive_stmt(names[i]))
         i = i + 1
     }
     out
@@ -155,10 +155,10 @@ func edit_expr(expr value, bool in_bloop) expr {
             inferred_type: index_value.inferred_type,
         }),
         expr.call(call_value) : {
-            out_args := vec[expr]()
+            out_args := expr[]()
             i := 0
-            for i < call_value.args.len() {
-                out_args.push(edit_expr(call_value.args[i], in_bloop))
+            for i < len(call_value.args) {
+                out_args = append(out_args, edit_expr(call_value.args[i], in_bloop))
                 i = i + 1
             }
             expr::call(call_expr {
@@ -200,9 +200,9 @@ func edit_expr(expr value, bool in_bloop) expr {
         }),
         expr.block(block_value) : expr::block(edit_block(block_value, in_bloop)),
         expr.switch(switch_value) : {
-            arms := vec[switch_arm]()
+            arms := switch_arm[]()
             i := 0
-            for i < switch_value.arms.len() {
+            for i < len(switch_value.arms) {
                 arms.push(switch_arm {
                     pattern: switch_value.arms[i].pattern,
                     expr: edit_expr(switch_value.arms[i].expr, in_bloop),
@@ -243,16 +243,16 @@ func edit_stmt(stmt value, bool in_bloop) stmt {
 }
 
 func edit_block(block_expr block_value, bool in_bloop) block_expr {
-    out_stmts := vec[stmt]()
+    out_stmts := stmt[]()
     i := 0
-    for i < block_value.statements.len() {
+    for i < len(block_value.statements) {
         current := edit_stmt(block_value.statements[i], in_bloop)
-        out_stmts.push(current)
+        out_stmts = append(out_stmts, current)
         if in_bloop {
             extra := preserve_stmt(current)
             j := 0
-            for j < extra.len() {
-                out_stmts.push(extra[j])
+            for j < len(extra) {
+                out_stmts = append(out_stmts, extra[j])
                 j = j + 1
             }
         }
@@ -272,7 +272,7 @@ func edit_block(block_expr block_value, bool in_bloop) block_expr {
 
 func has_testing_import(source_file pkg) bool {
     i := 0
-    for i < pkg.uses.len() {
+    for i < len(pkg.uses) {
         if pkg.uses[i].path == "testing" || starts_with(pkg.uses[i].path, "testing.") {
             return true
         }
@@ -285,9 +285,9 @@ func walk(source_file pkg) source_file {
     if !has_testing_import(pkg) {
         return pkg
     }
-    out_items := vec[item]()
+    out_items := item[]()
     i := 0
-    for i < pkg.items.len() {
+    for i < len(pkg.items) {
         switch pkg.items[i] {
             item.function(fn_value) : {
                 out_fn := fn_value
@@ -297,9 +297,9 @@ func walk(source_file pkg) source_file {
                     }
                     option::none : (),
                 }
-                out_items.push(item::function(out_fn))
+                out_items = append(out_items, item::function(out_fn))
             }
-            _ : out_items.push(pkg.items[i]),
+            _ : out_items = append(out_items, pkg.items[i]),
         }
         i = i + 1
     }

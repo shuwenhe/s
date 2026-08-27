@@ -10,7 +10,7 @@ func wait_for_child(pid: int): int {
 }
 
 func process_runner_run_argv(argv: [string]): int {
-    if argv.len() == 0 || argv[0] == nil {
+    if len(argv) == 0 || argv[0] == nil {
         return 127
     }
     pid := os.fork()

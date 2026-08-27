@@ -1,25 +1,25 @@
 package compile.internal.borrow
 use std.prelude.len
 use std.prelude.slice
-use std.vec.vec
+use std.slices
 
 func analyze_block() int {
     return 0
 }
 
-func analyze_trace(string scope, vec[string] type_env, string block_text) string {
+func analyze_trace(string scope, string[] type_env, string block_text) string {
     plan := make_plan_trace(type_env)
     text := "borrow " + scope
     if block_text != "" {
         text = text + " | " + block_text
     }
-    if plan.len() == 0 {
+    if len(plan) == 0 {
         return text + " | plan <empty>"
     }
     return text + " | plan " + join_text(plan, ", "
 }
 
-func analyze_function(string name, vec[string] type_env, string body_text) string {
+func analyze_function(string name, string[] type_env, string body_text) string {
     return analyze_trace(name, type_env, body_text
 }
 
@@ -30,10 +30,10 @@ func analyze_expr(string scope, string expr_text) string {
     return "expr " + scope + " | " + expr_text
 }
 
-func join_text(vec[string] values, string sep) string {
+func join_text(string[] values, string sep) string {
     out := ""
     i := 0
-    for i < values.len() {
+    for i < len(values) {
         if i > 0 {
             out = out + sep
         }
@@ -43,17 +43,17 @@ func join_text(vec[string] values, string sep) string {
     return out
 }
 
-func make_plan_trace(vec[string] type_env) vec[string] {
-    plan := vec[string]()
+func make_plan_trace(string[] type_env) string[] {
+    plan := string[]()
     i := 0
-    for i < type_env.len() {
+    for i < len(type_env) {
         ty := type_env[i]
         if ty == "" {
-            plan.push("borrow:<empty>")
+            plan = append(plan, "borrow:<empty>")
         } else if starts_with(ty, "&") {
-            plan.push("copy:" + ty)
+            plan = append(plan, "copy:" + ty)
         } else {
-            plan.push("drop:" + ty)
+            plan = append(plan, "drop:" + ty)
         }
         i = i + 1
     }

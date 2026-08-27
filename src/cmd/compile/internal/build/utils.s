@@ -13,7 +13,7 @@ use compile.internal.build.backend.build as backend_build_impl
 use compile.internal.build.backend.run as backend_run_impl
 use compile.internal.build.frontend.load as frontend_load_impl
 
-func parse_options(vec[string] args)  vec[string] {
+func parse_options(string[] args)  string[] {
     return parse_options_impl(args
 }
 
@@ -25,7 +25,7 @@ func emit_check_ok(string path) () {
     emit_check_ok_impl(path)
 }
 
-func emit_tokens(vec[token] tokens) () {
+func emit_tokens(token[] tokens) () {
     emit_tokens_impl(tokens)
 }
 

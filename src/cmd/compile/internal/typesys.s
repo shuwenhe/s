@@ -2,7 +2,7 @@ package compile.internal.typesys
 use std.prelude.char_at
 use std.prelude.len
 use std.prelude.slice
-use std.vec.vec
+use std.slices
 
 struct type_ref {
     string canonical
@@ -12,7 +12,7 @@ struct type_ref {
     bool is_slice
     bool is_array
     string array_len
-    vec[string] args
+    string[] args
 }
 
 func parse_type(string text) string {
@@ -24,18 +24,18 @@ func parse_type(string text) string {
         return clean
     }
     if starts_with(clean, "&") {
-        return "&" + parse_type(slice(clean, 5, clean.len()))
+        return "&" + parse_type(slice(clean, 5, len(clean)))
     }
     if starts_with(clean, "&") {
-        return "&" + parse_type(slice(clean, 1, clean.len()))
+        return "&" + parse_type(slice(clean, 1, len(clean)))
     }
     if starts_with(clean, "[]") {
-        return "[]" + parse_type(slice(clean, 2, clean.len()))
+        return "[]" + parse_type(slice(clean, 2, len(clean)))
     }
     if starts_with(clean, "[") {
         close := find_char(clean, "]")
         if close > 0 {
-            return slice(clean, 0, close + 1) + parse_type(slice(clean, close + 1, clean.len()))
+            return slice(clean, 0, close + 1) + parse_type(slice(clean, close + 1, len(clean)))
         }
     }
     return clean
@@ -52,20 +52,20 @@ func parse_type_ref(string text) type_ref {
     if starts_with(rest, "&") {
         is_ref = true
         is_mut_ref = true
-        rest = parse_type(slice(rest, 5, rest.len()))
+        rest = parse_type(slice(rest, 5, len(rest)))
     } else if starts_with(rest, "&") {
         is_ref = true
-        rest = parse_type(slice(rest, 1, rest.len()))
+        rest = parse_type(slice(rest, 1, len(rest)))
     }
     if starts_with(rest, "[]") {
         is_slice = true
-        rest = parse_type(slice(rest, 2, rest.len()))
+        rest = parse_type(slice(rest, 2, len(rest)))
     } else if starts_with(rest, "[") {
         close := find_char(rest, "]")
         if close > 0 {
             is_array = true
             array_len = trim_text(slice(rest, 1, close))
-            rest = parse_type(slice(rest, close + 1, rest.len()))
+            rest = parse_type(slice(rest, close + 1, len(rest)))
         }
     }
     type_ref {
@@ -89,7 +89,7 @@ func same_type_ref(type_ref left, type_ref right) bool {
 }
 
 func type_arg(type_ref ty, int index) string {
-    if index < 0 || index >= ty.args.len() {
+    if index < 0 || index >= len(ty.args) {
         return "unknown"
     }
     parse_type(ty.args[index])
@@ -97,7 +97,7 @@ func type_arg(type_ref ty, int index) string {
 
 func generic_arity(string ty) int {
     args := extract_type_args(ty)
-    args.len()
+    len(args)
 }
 
 func has_unknown_component(string ty) bool {
@@ -107,7 +107,7 @@ func has_unknown_component(string ty) bool {
     }
     args := extract_type_args(clean)
     i := 0
-    for i < args.len() {
+    for i < len(args) {
         if parse_type(args[i]) == "unknown" {
             return true
         }
@@ -160,18 +160,18 @@ func dump_type(string ty) string {
 func base_type_name(string ty) string {
     clean := parse_type(ty)
     if starts_with(clean, "&") {
-        return base_type_name(slice(clean, 5, clean.len()))
+        return base_type_name(slice(clean, 5, len(clean)))
     }
     if starts_with(clean, "&") {
-        return base_type_name(slice(clean, 1, clean.len()))
+        return base_type_name(slice(clean, 1, len(clean)))
     }
     if starts_with(clean, "[]") {
-        return base_type_name(slice(clean, 2, clean.len()))
+        return base_type_name(slice(clean, 2, len(clean)))
     }
     if starts_with(clean, "[") {
         close := find_char(clean, "]")
         if close > 0 {
-            return base_type_name(slice(clean, close + 1, clean.len()))
+            return base_type_name(slice(clean, close + 1, len(clean)))
         }
     }
     bracket := find_char(clean, "[")
@@ -189,13 +189,13 @@ func base_type_name(string ty) string {
     return clean
 }
 
-func extract_type_args(string type_name) vec[string] {
-    out := vec[string]()
+func extract_type_args(string type_name) string[] {
+    out := string[]()
     clean := parse_type(type_name)
     if starts_with(clean, "[") && !starts_with(clean, "[]") {
         close := find_char(clean, "]")
         if close > 0 {
-            return extract_type_args(slice(clean, close + 1, clean.len()))
+            return extract_type_args(slice(clean, close + 1, len(clean)))
         }
     }
     open := find_char(clean, "[")
@@ -207,20 +207,20 @@ func extract_type_args(string type_name) vec[string] {
     depth := 0
     start := 0
     i := 0
-    for i < inner.len() {
+    for i < len(inner) {
         ch := char_at(inner, i)
         if ch == "[" {
             depth = depth + 1
         } else if ch == "]" {
             depth = depth - 1
         } else if ch == "," && depth == 0 {
-            out.push(trim_text(slice(inner, start, i)))
+            out = append(out, trim_text(slice(inner, start, i)))
             start = i + 1
         }
         i = i + 1
     }
-    if start < inner.len() {
-        out.push(trim_text(slice(inner, start, inner.len())))
+    if start < len(inner) {
+        out = append(out, trim_text(slice(inner, start, len(inner))))
     }
     out
 }
@@ -255,11 +255,11 @@ func compatible_type(string left, string right) bool {
     if lt.base != rt.base {
         return false
     }
-    if lt.args.len() != rt.args.len() {
+    if len(lt.args) != len(rt.args) {
         return false
     }
     i := 0
-    for i < lt.args.len() {
+    for i < len(lt.args) {
         if !compatible_type(lt.args[i], rt.args[i]) {
             return false
         }
@@ -288,7 +288,7 @@ func comparable_type(string ty) bool {
     if is_tuple_type(clean) {
         items := extract_tuple_args(clean)
         i := 0
-        for i < items.len() {
+        for i < len(items) {
             if !comparable_type(items[i]) {
                 return false
             }
@@ -300,7 +300,7 @@ func comparable_type(string ty) bool {
     if base == "option" || base == "result" {
         args := extract_type_args(clean)
         i := 0
-        for i < args.len() {
+        for i < len(args) {
             if !comparable_type(args[i]) {
                 return false
             }
@@ -358,11 +358,11 @@ func compatible_tuple_type(string left, string right) bool {
     }
     la := extract_tuple_args(l)
     ra := extract_tuple_args(r)
-    if la.len() != ra.len() {
+    if len(la) != len(ra) {
         return false
     }
     i := 0
-    for i < la.len() {
+    for i < len(la) {
         if !compatible_type(la[i], ra[i]) {
             return false
         }
@@ -379,11 +379,11 @@ func assignable_tuple_type(string target, string source) bool {
     }
     ta := extract_tuple_args(t)
     sa := extract_tuple_args(s)
-    if ta.len() != sa.len() {
+    if len(ta) != len(sa) {
         return false
     }
     i := 0
-    for i < ta.len() {
+    for i < len(ta) {
         if !assignable_type(ta[i], sa[i]) {
             return false
         }
@@ -394,36 +394,36 @@ func assignable_tuple_type(string target, string source) bool {
 
 func is_tuple_type(string ty) bool {
     clean := parse_type(ty)
-    if clean.len() < 2 {
+    if len(clean) < 2 {
         return false
     }
     return starts_with(clean, "(") && ends_with(clean, ")"
 }
 
-func extract_tuple_args(string type_name) vec[string] {
-    out := vec[string]()
+func extract_tuple_args(string type_name) string[] {
+    out := string[]()
     clean := parse_type(type_name)
     if !is_tuple_type(clean) {
         return out
     }
-    inner := slice(clean, 1, clean.len() - 1)
+    inner := slice(clean, 1, len(clean) - 1)
     depth := 0
     start := 0
     i := 0
-    for i < inner.len() {
+    for i < len(inner) {
         ch := char_at(inner, i)
         if ch == "(" || ch == "[" {
             depth = depth + 1
         } else if ch == ")" || ch == "]" {
             depth = depth - 1
         } else if ch == "," && depth == 0 {
-            out.push(trim_text(slice(inner, start, i)))
+            out = append(out, trim_text(slice(inner, start, i)))
             start = i + 1
         }
         i = i + 1
     }
-    if start < inner.len() {
-        out.push(trim_text(slice(inner, start, inner.len())))
+    if start < len(inner) {
+        out = append(out, trim_text(slice(inner, start, len(inner))))
     }
     out
 }
@@ -528,7 +528,7 @@ func normalize_type_text(string text) string {
 
 func trim_text(string text) string {
     start := 0
-    end := text.len()
+    end := len(text)
     for start < end && is_space(char_at(text, start)) {
         start = start + 1
     }
@@ -539,16 +539,16 @@ func trim_text(string text) string {
 }
 
 func starts_with(string text, string prefix) bool {
-    prefix_len := prefix.len()
-    if prefix_len > text.len() {
+    prefix_len := len(prefix)
+    if prefix_len > len(text) {
         return false
     }
     return slice(text, 0, prefix_len) == prefix
 }
 
 func ends_with(string text, string suffix) bool {
-    suffix_len := suffix.len()
-    text_len := text.len()
+    suffix_len := len(suffix)
+    text_len := len(text)
     if suffix_len > text_len {
         return false
     }
@@ -561,7 +561,7 @@ func is_space(string ch) bool {
 
 func find_char(string text, string needle) int {
     i := 0
-    for i < text.len() {
+    for i < len(text) {
         if slice(text, i, i + 1) == needle {
             return i
         }
@@ -571,7 +571,7 @@ func find_char(string text, string needle) int {
 }
 
 func find_last_char(string text, string needle) int {
-    i := text.len()
+    i := len(text)
     for i > 0 {
         i = i - 1
         if slice(text, i, i + 1) == needle {
@@ -588,7 +588,7 @@ func extract_section(string text, string open, string close) string {
     }
     depth := 0
     i := start
-    for i < text.len() {
+    for i < len(text) {
         ch := slice(text, i, i + 1)
         if ch == open {
             depth = depth + 1

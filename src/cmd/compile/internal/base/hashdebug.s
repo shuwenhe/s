@@ -1,5 +1,5 @@
 package compile.internal.base
-use std.vec.vec
+use std.slices
 
 struct hash_mask {
     string name
@@ -12,7 +12,7 @@ struct hash_debug {
     string raw
     bool file_suffix_only
     bool inline_suffix_only
-    vec[hash_mask] matches
+    hash_mask[] matches
 }
 hash_debug_default := new_hash_debug("gossahash", "")
 convert_hash := new_hash_debug("converthash", "")
@@ -33,22 +33,22 @@ func new_hash_debug(string name, string raw) hash_debug {
         raw: raw,
         file_suffix_only: false,
         inline_suffix_only: false,
-        matches: vec[hash_mask](),
+        matches: hash_mask[](),
     }
     if raw == "" {
         return out
     }
     if raw == "y" || raw == "Y" {
-        out.matches.push(hash_mask { name: name, suffix: "", exclude: false })
+        out.matches = append(out.matches, hash_mask { name: name, suffix: "", exclude: false })
         return out
     }
     if raw == "n" || raw == "N" {
-        out.matches.push(hash_mask { name: name, suffix: "*deny*", exclude: true })
+        out.matches = append(out.matches, hash_mask { name: name, suffix: "*deny*", exclude: true })
         return out
     }
     parts := split(raw, "/")
     i := 0
-    for i < parts.len() {
+    for i < len(parts) {
         p := trim_spaces(parts[i])
         if p != "" {
             if starts_with(p, "-") {
@@ -92,7 +92,7 @@ func match_pkg_func(hash_debug hd, string pkg, string fn_name) bool {
     target := pkg + "." + fn_name
     included := false
     i := 0
-    for i < hd.matches.len() {
+    for i < len(hd.matches) {
         m := hd.matches[i]
         if m.exclude {
             if m.suffix != "" && ends_with(target, m.suffix) {
@@ -106,24 +106,24 @@ func match_pkg_func(hash_debug hd, string pkg, string fn_name) bool {
     included
 }
 
-func split(string text, string sep) vec[string] {
-    out := vec[string]()
+func split(string text, string sep) string[] {
+    out := string[]()
     if sep == "" {
-        out.push(text)
+        out = append(out, text)
         return out
     }
     start := 0
     i := 0
     for i <= len(text) - len(sep) {
         if slice(text, i, i + len(sep)) == sep {
-            out.push(slice(text, start, i))
+            out = append(out, slice(text, start, i))
             i = i + len(sep)
             start = i
             continue
         }
         i = i + 1
     }
-    out.push(slice(text, start, len(text)))
+    out = append(out, slice(text, start, len(text)))
     out
 }
 

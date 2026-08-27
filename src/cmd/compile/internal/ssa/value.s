@@ -1,18 +1,18 @@
 package compile.internal.ssa
-use std.vec.vec
+use std.slices
 
 struct ssa_value {
     int id
     string name
     string op
     string ty
-    vec[int] args
+    int[] args
     int uses
     bool removed
     string literal
 }
 
-func make_value(int id, string name, string op, string ty, vec[int] args, string literal) ssa_value {
+func make_value(int id, string name, string op, string ty, int[] args, string literal) ssa_value {
     ssa_value {
         id: id,
         name: name,
@@ -32,7 +32,7 @@ func value_is_const_zero(ssa_value v) bool {
 func value_key(ssa_value v) string {
     key := v.op + "|" + v.ty + "|" + v.literal
     i := 0
-    for i < v.args.len() {
+    for i < len(v.args) {
         key = key + "#" + to_string(v.args[i])
         i = i + 1
     }

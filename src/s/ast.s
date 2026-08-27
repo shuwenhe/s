@@ -2,7 +2,7 @@ package s
 use std.option.option
 use std.prelude.box
 use std.prelude.to_string
-use std.vec.vec
+use std.slices
 
 struct use_decl {
     string path
@@ -22,8 +22,8 @@ struct param {
 
 struct function_sig {
     string name
-    vec[string] generics
-    vec[param] params
+    string[] generics
+    param[] params
     option[string] return_type
 }
 
@@ -35,7 +35,7 @@ struct wildcard_pattern {}
 
 struct variant_pattern {
     string path
-    vec[pattern] args
+    pattern[] args
 }
 
 struct literal_pattern {
@@ -96,7 +96,7 @@ struct index_expr {
 
 struct call_expr {
     box[expr] callee
-    vec[expr] args
+    expr[] args
     option[string] inferred_type
 }
 
@@ -107,7 +107,7 @@ struct switch_arm {
 
 struct switch_expr {
     box[expr] subject
-    vec[switch_arm] arms
+    switch_arm[] arms
     option[string] inferred_type
 }
 
@@ -122,21 +122,21 @@ struct for_expr {
     option[box[stmt]] init
     option[box[expr]] condition
     option[box[stmt]] post
-    vec[string] names
+    string[] names
     option[box[expr]] iterable
     block_expr body
     option[string] inferred_type
 }
 
 struct block_expr {
-    vec[stmt] statements
+    stmt[] statements
     option[expr] final_expr
     option[string] inferred_type
 }
 
 struct array_literal {
     option[string] type_text
-    vec[expr] items
+    expr[] items
 }
 
 struct map_entry {
@@ -146,7 +146,7 @@ struct map_entry {
 
 struct map_literal {
     option[string] type_text
-    vec[map_entry] entries
+    map_entry[] entries
 }
 
 enum expr {
@@ -224,8 +224,8 @@ struct function_decl {
 
 struct struct_decl {
     string name
-    vec[string] generics
-    vec[field] fields
+    string[] generics
+    field[] fields
     bool is_public
 }
 
@@ -236,15 +236,15 @@ struct enum_variant {
 
 struct enum_decl {
     string name
-    vec[string] generics
-    vec[enum_variant] variants
+    string[] generics
+    enum_variant[] variants
     bool is_public
 }
 
 struct trait_decl {
     string name
-    vec[string] generics
-    vec[function_sig] methods
+    string[] generics
+    function_sig[] methods
     bool is_public
 }
 
@@ -278,26 +278,26 @@ enum item {
 
 struct source_file {
     string pkg
-    vec[use_decl] uses
-    vec[item] items
+    use_decl[] uses
+    item[] items
 }
 
 func dump_source_file(source_file source) string {
-    lines := vec[string]()
-    lines.push("package " + source.pkg);
+    lines := string[]()
+    lines = append(lines, "package " + source.pkg);
     ui := 0
-    for ui < source.uses.len() {
+    for ui < len(source.uses) {
         use_decl := source.uses[ui]
         text :=
             switch use_decl.alias {
                 option.some(alias) : "use " + use_decl.path + " as " + alias,
                 option.none : "use " + use_decl.path,
             }
-        lines.push(text);
+        lines = append(lines, text);
         ui = ui + 1
     }
     ii := 0
-    for ii < source.items.len() {
+    for ii < len(source.items) {
         item := source.items[ii]
         append_item_dump(lines, item);
         ii = ii + 1
@@ -305,7 +305,7 @@ func dump_source_file(source_file source) string {
     join_lines(lines)
 }
 
-func append_item_dump(vec[string] lines, item item) () {
+func append_item_dump(string[] lines, item item) () {
     switch item {
         item.function(value) : append_lines(lines, dump_function(value, "")),
         item.const(value) : append_lines(lines, dump_const(value)),
@@ -317,39 +317,39 @@ func append_item_dump(vec[string] lines, item item) () {
     }
 }
 
-func dump_const(const_decl item) vec[string] {
+func dump_const(const_decl item) string[] {
     switch item.value {
-        option.some(value) : vec[string] { "const " + item.name + " = " + dump_expr(value) },
-        option.none : vec[string] { "const " + item.name },
+        option.some(value) : string[] { "const " + item.name + " = " + dump_expr(value) },
+        option.none : string[] { "const " + item.name },
     }
 }
 
-func dump_var(var_decl item) vec[string] {
+func dump_var(var_decl item) string[] {
     decl := "var " + item.name
     switch item.type_name {
         option.some(t) : decl = decl + " " + t,
         option.none : {},
     }
     switch item.value {
-        option.some(v) : vec[string] { decl + " = " + dump_expr(v) },
-        option.none : vec[string] { decl },
+        option.some(v) : string[] { decl + " = " + dump_expr(v) },
+        option.none : string[] { decl },
     }
 }
 
-func fmt_generics(vec[string] generics) string {
+func fmt_generics(string[] generics) string {
     if len(generics) == 0 {
         return ""
     }
     "[" + join_with(generics, ", ") + "]"
 }
 
-func dump_function(function_decl item, string indent) vec[string] {
-    lines := vec[string]()
-    params := vec[string]()
+func dump_function(function_decl item, string indent) string[] {
+    lines := string[]()
+    params := string[]()
     _pi := 0
-    for _pi < item.sig.params.len() {
+    for _pi < len(item.sig.params) {
         param := item.sig.params[_pi]
-        params.push(param.type_name + " " + param.name)
+        params = append(params, param.type_name + " " + param.name)
         _pi = _pi + 1
     }
     ret :=
@@ -376,47 +376,47 @@ func dump_function(function_decl item, string indent) vec[string] {
     lines
 }
 
-func dump_struct(struct_decl item) vec[string] {
-    lines := vec[string]()
+func dump_struct(struct_decl item) string[] {
+    lines := string[]()
     prefix := if item.is_public { "pub " } else { "" }
-    lines.push(prefix + "struct " + item.name + fmt_generics(item.generics))
+    lines = append(lines, prefix + "struct " + item.name + fmt_generics(item.generics))
     _fi := 0
-    for _fi < item.fields.len() {
+    for _fi < len(item.fields) {
         field := item.fields[_fi]
         fp := if field.is_public { "pub " } else { "" }
-        lines.push("  " + fp + field.type_name + " " + field.name)
+        lines = append(lines, "  " + fp + field.type_name + " " + field.name)
         _fi = _fi + 1
     }
     lines
 }
 
-func dump_enum(enum_decl item) vec[string] {
-    lines := vec[string]()
-    lines.push("enum " + item.name + fmt_generics(item.generics))
+func dump_enum(enum_decl item) string[] {
+    lines := string[]()
+    lines = append(lines, "enum " + item.name + fmt_generics(item.generics))
     _vi := 0
-    for _vi < item.variants.len() {
+    for _vi < len(item.variants) {
         variant := item.variants[_vi]
         switch variant.payload {
-            option.some(payload) : lines.push("  " + variant.name + "(" + payload + ")"),
-            option.none : lines.push("  " + variant.name),
+            option.some(payload) : lines = append(lines, "  " + variant.name + "(" + payload + ")"),
+            option.none : lines = append(lines, "  " + variant.name),
         }
         _vi = _vi + 1
     }
     lines
 }
 
-func dump_trait(trait_decl item) vec[string] {
-    lines := vec[string]()
+func dump_trait(trait_decl item) string[] {
+    lines := string[]()
     prefix := if item.is_public { "pub " } else { "" }
-    lines.push(prefix + "trait " + item.name + fmt_generics(item.generics))
+    lines = append(lines, prefix + "trait " + item.name + fmt_generics(item.generics))
     _mi := 0
-    for _mi < item.methods.len() {
+    for _mi < len(item.methods) {
         method := item.methods[_mi]
-        params := vec[string]()
+        params := string[]()
         _mpi := 0
-        for _mpi < method.params.len() {
+        for _mpi < len(method.params) {
             param := method.params[_mpi]
-            params.push(param.type_name + " " + param.name)
+            params = append(params, param.type_name + " " + param.name)
             _mpi = _mpi + 1
         }
         ret :=
@@ -437,14 +437,14 @@ func dump_trait(trait_decl item) vec[string] {
     lines
 }
 
-func dump_receiver_method(receiver_method_decl item) vec[string] {
-    lines := vec[string]()
+func dump_receiver_method(receiver_method_decl item) string[] {
+    lines := string[]()
     method := item.method
-    params := vec[string]()
+    params := string[]()
     _mi2 := 0
-    for _mi2 < method.sig.params.len() {
+    for _mi2 < len(method.sig.params) {
         param := method.sig.params[_mi2]
-        params.push(param.type_name + " " + param.name)
+        params = append(params, param.type_name + " " + param.name)
         _mi2 = _mi2 + 1
     }
     ret :=
@@ -472,22 +472,22 @@ func dump_receiver_method(receiver_method_decl item) vec[string] {
     lines
 }
 
-func dump_block(block_expr block, string indent) vec[string] {
-    lines := vec[string]()
+func dump_block(block_expr block, string indent) string[] {
+    lines := string[]()
     _si := 0
-    for _si < block.statements.len() {
+    for _si < len(block.statements) {
         stmt := block.statements[_si]
         append_lines(lines, dump_stmt(stmt, indent))
         _si = _si + 1
     }
     switch block.final_expr {
-        option.some(expr) : lines.push(indent + "final " + dump_expr(expr)),
+        option.some(expr) : lines = append(lines, indent + "final " + dump_expr(expr)),
         option.none : (),
     }
     lines
 }
 
-func dump_stmt(stmt stmt, string indent) vec[string] {
+func dump_stmt(stmt stmt, string indent) string[] {
     switch stmt {
         stmt.let(value) : {
             text :=
@@ -504,7 +504,7 @@ func dump_stmt(stmt stmt, string indent) vec[string] {
             single_line(indent + value.name + "++")
         }
         stmt.c_for(value) : {
-            lines := vec[string]()
+            lines := string[]()
             lines.push(
                 indent
                     + "for ("
@@ -569,7 +569,7 @@ func dump_expr(expr expr) string {
         expr.for(value) : {
             names := ""
             i := 0
-            for i < value.names.len() {
+            for i < len(value.names) {
                 if i > 0 {
                     names = names + ", "
                 }
@@ -581,15 +581,15 @@ func dump_expr(expr expr) string {
         }
         expr.block(_) : "{...}",
         expr.array(value) : {
-            elems := vec[string]()
+            elems := string[]()
             _ei := 0
-            for _ei < value.items.len() { elems.push(dump_expr(value.items[_ei])); _ei = _ei + 1 }
+            for _ei < len(value.items) { elems = append(elems, dump_expr(value.items[_ei])); _ei = _ei + 1 }
             "[" + join_with(elems, ", ") + "]"
         }
         expr.map(value) : {
-            parts := vec[string]()
+            parts := string[]()
             _en := 0
-            for _en < value.entries.len() { entry := value.entries[_en]; parts.push(dump_expr(entry.key) + ": " + dump_expr(entry.value)); _en = _en + 1 }
+            for _en < len(value.entries) { entry := value.entries[_en]; parts = append(parts, dump_expr(entry.key) + ": " + dump_expr(entry.value)); _en = _en + 1 }
             "{" + join_with(parts, ", ") + "}"
         }
     }
@@ -617,58 +617,58 @@ func dump_pattern(pattern pattern) string {
     }
 }
 
-func join_exprs(vec[expr] values) string {
-    parts := vec[string]()
+func join_exprs(expr[] values) string {
+    parts := string[]()
     _iv := 0
-    for _iv < values.len() {
+    for _iv < len(values) {
         value := values[_iv]
-        parts.push(dump_expr(value))
+        parts = append(parts, dump_expr(value))
         _iv = _iv + 1
     }
     join_with(parts, ", ")
 }
 
-func join_patterns(vec[pattern] values) string {
-    parts := vec[string]()
+func join_patterns(pattern[] values) string {
+    parts := string[]()
     _pv := 0
-    for _pv < values.len() { parts.push(dump_pattern(values[_pv])); _pv = _pv + 1 }
+    for _pv < len(values) { parts = append(parts, dump_pattern(values[_pv])); _pv = _pv + 1 }
     join_with(parts, ", ")
 }
 
-func join_switch_arms(vec[switch_arm] values) string {
-    parts := vec[string]()
+func join_switch_arms(switch_arm[] values) string {
+    parts := string[]()
     _mv := 0
-    for _mv < values.len() {
+    for _mv < len(values) {
         value := values[_mv]
-        parts.push(dump_pattern(value.pattern) + " : " + dump_expr(value.expr))
+        parts = append(parts, dump_pattern(value.pattern) + " : " + dump_expr(value.expr))
         _mv = _mv + 1
     }
     join_with(parts, "; ")
 }
 
-func append_lines(vec[string] dest, vec[string] source) () {
+func append_lines(string[] dest, string[] source) () {
     _li := 0
-    for _li < source.len() {
-        dest.push(source[_li])
+    for _li < len(source) {
+        dest = append(dest, source[_li])
         _li = _li + 1
     }
 }
 
-func single_line(string text) vec[string] {
-    lines := vec[string]()
-    lines.push(text)
+func single_line(string text) string[] {
+    lines := string[]()
+    lines = append(lines, text)
     lines
 }
 
-func join_lines(vec[string] lines) string {
+func join_lines(string[] lines) string {
     join_with(lines, "\n")
 }
 
-func join_with(vec[string] values, string sep) string {
+func join_with(string[] values, string sep) string {
     out := ""
     first := true
     _j := 0
-    for _j < values.len() {
+    for _j < len(values) {
         value := values[_j]
         if !first {
             out = out + sep

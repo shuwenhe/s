@@ -1,6 +1,6 @@
 package src.runtime
-use std.vec.vec
-extern "intrinsic" func __mem_heap_list_all() vec[int]
+use std.slices
+extern "intrinsic" func __mem_heap_list_all() int[]
 extern "intrinsic" func __mem_obj_read_header(int obj_id) ObjHeader
 extern "intrinsic" func __mem_obj_set_mark(int obj_id, int mark) ()
 extern "intrinsic" func __mem_os_free(int obj_id) ()
@@ -14,7 +14,7 @@ func sweep_pass() int {
     sweep_live_count  = 0
     all_objs := __mem_heap_list_all()
     i := 0
-    for i < all_objs.len() {
+    for i < len(all_objs) {
         obj_id := all_objs.get(i).unwrap_or(-1)
         if obj_id >= 0 {
             hdr := __mem_obj_read_header(obj_id)

@@ -1,5 +1,5 @@
 package compile.internal.ssa
-use std.vec.vec
+use std.slices
 
 struct line_range {
     int first
@@ -13,15 +13,15 @@ struct xpos_map_entry {
 }
 
 struct xpos_map {
-    vec[xpos_map_entry] maps
+    xpos_map_entry[] maps
     int last_index
     int last_slot
 }
 
-func new_xpos_map(vec[int_pair] file_ranges) xpos_map {
-    maps := vec[xpos_map_entry]()
+func new_xpos_map(int_pair[] file_ranges) xpos_map {
+    maps := xpos_map_entry[]()
     i := 0
-    for i < file_ranges.len() {
+    for i < len(file_ranges) {
         left := file_ranges[i].left
         right := file_ranges[i].right
         width := right - left + 1
@@ -47,7 +47,7 @@ func xpos_map_slot(xpos_map m, int file_index) int_pair {
         return make_int_pair(m.last_slot, 1
     }
     i := 0
-    for i < m.maps.len() {
+    for i < len(m.maps) {
         if m.maps[i].file_index == file_index {
             m.last_index = file_index
             m.last_slot = i
@@ -60,7 +60,7 @@ func xpos_map_slot(xpos_map m, int file_index) int_pair {
 
 func xpos_map_clear(xpos_map m) xpos_map {
     i := 0
-    for i < m.maps.len() {
+    for i < len(m.maps) {
         m.maps[i].data = sparse_map_clear(m.maps[i].data)
         i = i + 1
     }

@@ -11,7 +11,7 @@ func (l *TCPListener) Accept() Conn {
         return nil
     }
     TCPConn c = TCPConn { fd: newfd, laddr: l.laddr, raddr: TCPAddr{} }
-    &c
+    *c
 }
 
 func (l *TCPListener) Close() error {
@@ -22,5 +22,5 @@ func (l *TCPListener) Close() error {
 }
 
 func (l *TCPListener) Addr() Addr {
-    &l.laddr
+    *l.laddr
 }

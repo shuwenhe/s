@@ -1,60 +1,60 @@
 package compile.internal.ssa
-use std.vec.vec
+use std.slices
 
 struct sparse_set {
-    vec[int] dense
-    vec[int] sparse
+    int[] dense
+    int[] sparse
 }
 
 func new_sparse_set(int n) sparse_set {
-    sparse := vec[int]()
+    sparse := int[]()
     i := 0
     for i < n {
-        sparse.push(0)
+        sparse = append(sparse, 0)
         i = i + 1
     }
     sparse_set {
-        dense: vec[int](),
+        dense: int[](),
         sparse: sparse,
     }
 }
 
 func sparse_set_cap(sparse_set s) int {
-    s.sparse.len()
+    len(s.sparse)
 }
 
 func sparse_set_size(sparse_set s) int {
-    s.dense.len()
+    len(s.dense)
 }
 
 func sparse_set_contains(sparse_set s, int x) bool {
-    if x < 0 || x >= s.sparse.len() {
+    if x < 0 || x >= len(s.sparse) {
         return false
     }
     i := s.sparse[x]
-    i < s.dense.len() && s.dense[i] == x
+    i < len(s.dense) && s.dense[i] == x
 }
 
 func sparse_set_add(sparse_set s, int x) sparse_set {
-    if x < 0 || x >= s.sparse.len() {
+    if x < 0 || x >= len(s.sparse) {
         return s
     }
     i := s.sparse[x]
-    if i < s.dense.len() && s.dense[i] == x {
+    if i < len(s.dense) && s.dense[i] == x {
         return s
     }
-    s.dense.push(x)
-    s.sparse[x] = s.dense.len() - 1
+    s.dense = append(s.dense, x)
+    s.sparse[x] = len(s.dense) - 1
     s
 }
 
 func sparse_set_remove(sparse_set s, int x) sparse_set {
-    if x < 0 || x >= s.sparse.len() {
+    if x < 0 || x >= len(s.sparse) {
         return s
     }
     i := s.sparse[x]
-    if i < s.dense.len() && s.dense[i] == x {
-        last := s.dense[s.dense.len() - 1]
+    if i < len(s.dense) && s.dense[i] == x {
+        last := s.dense[len(s.dense) - 1]
         s.dense[i] = last
         s.sparse[last] = i
         s.dense.pop()
@@ -63,15 +63,15 @@ func sparse_set_remove(sparse_set s, int x) sparse_set {
 }
 
 func sparse_set_pop(sparse_set s) int_pair {
-    if s.dense.len() == 0 {
+    if len(s.dense) == 0 {
         return make_int_pair(0, 0
     }
-    x := s.dense[s.dense.len() - 1]
+    x := s.dense[len(s.dense) - 1]
     s.dense.pop()
     make_int_pair(x, 1)
 }
 
 func sparse_set_clear(sparse_set s) sparse_set {
-    s.dense = vec[int]()
+    s.dense = int[]()
     s
 }

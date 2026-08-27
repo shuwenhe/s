@@ -25,15 +25,15 @@ func new_x86_64_gen() X86_64Gen {
     }
 }
 
-func (gen: &X86_64Gen) emit(string line) {
+func (X86_64Gen* gen) emit(string line) {
     gen.asm_lines = append(gen.asm_lines, "    " + line)
 }
 
-func (gen: &X86_64Gen) emit_label(string label) {
+func (X86_64Gen* gen) emit_label(string label) {
     gen.asm_lines = append(gen.asm_lines, label + ":")
 }
 
-func (gen: &X86_64Gen) allocate_register() string {
+func (X86_64Gen* gen) allocate_register() string {
     if len(gen.register_stack) > 0 {
         reg := gen.register_stack[0]
         gen.register_stack = gen.register_stack[1:]
@@ -42,11 +42,11 @@ func (gen: &X86_64Gen) allocate_register() string {
     return ""  
 }
 
-func (gen: &X86_64Gen) free_register(string reg) {
+func (X86_64Gen* gen) free_register(string reg) {
     gen.register_stack = append(gen.register_stack, reg)
 }
 
-func (gen: &X86_64Gen) get_location(string variable) string {
+func (X86_64Gen* gen) get_location(string variable) string {
     if loc, exists := gen.temp_allocations[variable]; exists {
         return loc
     }
@@ -61,7 +61,7 @@ func (gen: &X86_64Gen) get_location(string variable) string {
     return stack_loc
 }
 
-func (gen: &X86_64Gen) translate_instruction(Instruction instr) error {
+func (X86_64Gen* gen) translate_instruction(Instruction instr) error {
     switch instr.opcode {
         case "FUNC_BEGIN":
             gen.emit("push %rbp")

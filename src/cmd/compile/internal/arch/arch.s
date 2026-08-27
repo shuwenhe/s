@@ -1,5 +1,5 @@
 package compile.internal.arch
-use std.vec.vec
+use std.slices
 
 struct arch_dispatch_entry {
     string goarch
@@ -21,7 +21,7 @@ func init(string arch) string {
 func lookup_init_name(string arch) string {
     table := arch_inits()
     i := 0
-    for i < table.len() {
+    for i < len(table) {
         if table[i].goarch == arch {
             return table[i].init_name
         }
@@ -30,23 +30,23 @@ func lookup_init_name(string arch) string {
     ""
 }
 
-func arch_inits() vec[arch_dispatch_entry] {
-    entries := vec[arch_dispatch_entry]()
-    entries.push(arch_dispatch_entry { goarch: "386", init_name: "x86_init" })
-    entries.push(arch_dispatch_entry { goarch: "amd64", init_name: "amd64_init" })
-    entries.push(arch_dispatch_entry { goarch: "arm", init_name: "arm_init" })
-    entries.push(arch_dispatch_entry { goarch: "arm64", init_name: "arm64_init" })
-    entries.push(arch_dispatch_entry { goarch: "loong64", init_name: "loong64_init" })
-    entries.push(arch_dispatch_entry { goarch: "mips", init_name: "mips_init" })
-    entries.push(arch_dispatch_entry { goarch: "mipsle", init_name: "mips_init" })
-    entries.push(arch_dispatch_entry { goarch: "mips64", init_name: "mips64_init" })
-    entries.push(arch_dispatch_entry { goarch: "mips64le", init_name: "mips64_init" })
-    entries.push(arch_dispatch_entry { goarch: "ppc64", init_name: "ppc64_init" })
-    entries.push(arch_dispatch_entry { goarch: "ppc64le", init_name: "ppc64_init" })
-    entries.push(arch_dispatch_entry { goarch: "riscv64", init_name: "riscv64_init" })
-    entries.push(arch_dispatch_entry { goarch: "amd64p32", init_name: "amd64p32_init" })
-    entries.push(arch_dispatch_entry { goarch: "s390x", init_name: "s390x_init" })
-    entries.push(arch_dispatch_entry { goarch: "wasm", init_name: "wasm_init" })
+func arch_inits() arch_dispatch_entry[] {
+    entries := arch_dispatch_entry[]()
+    entries = append(entries, arch_dispatch_entry { goarch: "386", init_name: "x86_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "amd64", init_name: "amd64_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "arm", init_name: "arm_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "arm64", init_name: "arm64_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "loong64", init_name: "loong64_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "mips", init_name: "mips_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "mipsle", init_name: "mips_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "mips64", init_name: "mips64_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "mips64le", init_name: "mips64_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "ppc64", init_name: "ppc64_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "ppc64le", init_name: "ppc64_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "riscv64", init_name: "riscv64_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "amd64p32", init_name: "amd64p32_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "s390x", init_name: "s390x_init" })
+    entries = append(entries, arch_dispatch_entry { goarch: "wasm", init_name: "wasm_init" })
     entries
 }
 

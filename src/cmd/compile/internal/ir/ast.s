@@ -1,15 +1,15 @@
 package compile.internal.ir.ast
-use std.vec.vec
+use std.slices
 use compile.internal.ir.types
 
 struct program_ir {
     string package_name
-    vec[package_ir] packages
+    package_ir[] packages
 }
 
 struct package_ir {
     string name
-    vec[decl_ir] decls
+    decl_ir[] decls
 }
 
 enum decl_ir {
@@ -27,9 +27,9 @@ struct func_decl {
 }
 
 struct func_sig {
-    vec[param] params
+    param[] params
     option[string] return_type_name
-    vec[string] generics
+    string[] generics
 }
 
 struct param { string name, string type_name }
@@ -42,7 +42,7 @@ struct const_decl { string name, string value }
 
 struct method_decl { string receiver_name, string receiver_type, func_decl method }
 
-struct block_ir { vec[stmt_ir] statements, option[expr_ir] final_expr }
+struct block_ir { stmt_ir[] statements, option[expr_ir] final_expr }
 
 enum stmt_ir {
     let(var_stmt),
@@ -82,7 +82,7 @@ enum expr_ir {
 
 struct binary_expr { string op, expr_ir left, expr_ir right }
 
-struct call_expr { string callee, vec[expr_ir] args }
+struct call_expr { string callee, expr_ir[] args }
 
 struct borrow_expr { expr_ir target, bool mutable }
 
@@ -90,12 +90,12 @@ struct member_expr { expr_ir target, string member }
 
 struct index_expr { expr_ir target, expr_ir index }
 
-struct array_expr { option[string] type_name, vec[expr_ir] items }
+struct array_expr { option[string] type_name, expr_ir[] items }
 
 struct map_entry_expr { expr_ir key, expr_ir value }
 
-struct map_expr { option[string] type_name, vec[map_entry_expr] entries }
+struct map_expr { option[string] type_name, map_entry_expr[] entries }
 
 func make_empty_package(string name) package_ir {
-    package_ir { name: name, decls: vec[decl_ir]() }
+    package_ir { name: name, decls: decl_ir[]() }
 }

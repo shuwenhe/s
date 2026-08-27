@@ -156,19 +156,34 @@ increment(&x)  // x is now 6
 john := person { age: 30, name: "John" }
 increment_person_age(&john)  // john.age is now 31
 
-8. Array
+8. Array and Slice
 Array definition
-int[]               // Integer array
-string[]            // String array
+int[]               // Slice type (dynamic array)
+int[3]              // Array type (fixed size)
+string[]            // String slice
+Type*[]             // Slice of pointers
+
+Fixed array
+a := int[3]{10, 20, 30}      // Fixed array, len=3, cap=3, immutable size
+
+Dynamic slice (like Go)
+v := int[]{10, 20, 30}       // Slice literal, len=3, cap≥3
+empty := int[]               // Empty slice
+s := make(int[], 10)         // Make slice with length 10
+s := make(int[], 3, 10)      // Make slice, length 3, capacity 10
 
 Array operations
-arr := [1, 2, 3, 4, 5]
-arr := new int[10]           // Create array of size 10
-len(arr)                        // Get array length
-arr[0]                          // Access element
-arr[0] = 42                     // Modify element
+len(arr)                        // Get array/slice length
+cap(arr)                        // Get slice capacity
+arr[0]                          // Access element (read)
+arr[0] = 42                     // Modify element (write)
+s[1:3]                          // Slice operation: elements from index 1 to 3
+s[1:]                           // Slice from index 1 to end
+s[:3]                           // Slice from start to index 3
+append(s, 4)                    // Append element (returns new slice)
+append(s, 5, 6, 7)              // Append multiple elements
 
-Example
+Example: Sum array elements
 func sum_array(int[] arr) int {
     sum := 0
     i := 0
@@ -179,24 +194,27 @@ func sum_array(int[] arr) int {
     sum
 }
 
-func reverse_array(int* arr, int len) {
-    i := 0
-    for i < len / 2 {
-        temp := arr[i]
-        arr[i] = arr[len - 1 - i]
-        arr[len - 1 - i] = temp
-        i = i + 1
+Example: Using slice with append
+func append_numbers(int[] s) int[] {
+    s = append(s, 10)
+    s = append(s, 20)
+    s = append(s, 30)
+    s
+}
+
+Example: Slice iteration
+func print_slice(int[] s) {
+    for i in 0..len(s) {
+        println(s[i])
     }
 }
 
-Vector (dynamic array)
-use std.vec.vec
-
-v := vec[int]()
-v.push(10)
-v.push(20)
-len := v.len()
-value := v[0]
+Key points on slices
+- Slices are dynamic arrays (like Go slices)
+- Slice header: array pointer + length + capacity
+- append() may reallocate memory if needed
+- Slices share underlying array (memory sharing)
+- No vector library needed - slices are built-in
 
 9. Control Flow
 if/else

@@ -1,5 +1,5 @@
 package compile.internal.noder
-use std.vec.vec
+use std.slices
 
 struct link_symbol {
     string pkg
@@ -7,10 +7,10 @@ struct link_symbol {
     string kind
 }
 
-func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_symbol] {
-    out := vec[link_symbol]()
+func build_link_symbols(string pkg_name, export_record[] exports) link_symbol[] {
+    out := link_symbol[]()
     i := 0
-    for i < exports.len() {
+    for i < len(exports) {
         out.push(link_symbol {
             pkg: pkg_name,
             name: pkg_name + "." + exports[i].name,
@@ -21,10 +21,10 @@ func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_sy
     out
 }
 
-func emit_link_manifest(vec[link_symbol] syms) string {
+func emit_link_manifest(link_symbol[] syms) string {
     out := "link-manifest version=1\n"
     i := 0
-    for i < syms.len() {
+    for i < len(syms) {
         out = out + syms[i].kind + " " + syms[i].name + "\n"
         i = i + 1
     }
@@ -37,10 +37,10 @@ struct link_symbol {
     string kind
 }
 
-func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_symbol] {
-    out := vec[link_symbol]()
+func build_link_symbols(string pkg_name, export_record[] exports) link_symbol[] {
+    out := link_symbol[]()
     i := 0
-    for i < exports.len() {
+    for i < len(exports) {
         out.push(link_symbol {
             pkg: pkg_name,
             name: pkg_name + "." + exports[i].name,
@@ -51,10 +51,10 @@ func build_link_symbols(string pkg_name, vec[export_record] exports) vec[link_sy
     out
 }
 
-func emit_link_manifest(vec[link_symbol] syms) string {
+func emit_link_manifest(link_symbol[] syms) string {
     out := "link-manifest version=1\n"
     i := 0
-    for i < syms.len() {
+    for i < len(syms) {
         out = out + syms[i].kind + " " + syms[i].name + "\n"
         i = i + 1
     }

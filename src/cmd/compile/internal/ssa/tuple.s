@@ -1,34 +1,34 @@
 package compile.internal.ssa
-use std.vec.vec
+use std.slices
 
 struct int_tuple {
-    vec[int] items
+    int[] items
 }
 
 func make_tuple2(int first, int second) int_tuple {
-    items := vec[int]()
-    items.push(first)
-    items.push(second)
+    items := int[]()
+    items = append(items, first)
+    items = append(items, second)
     int_tuple { items: items }
 }
 
 func tuple_len(int_tuple t) int {
-    t.items.len()
+    len(t.items)
 }
 
 func tuple_at(int_tuple t, int idx) int {
-    if idx < 0 || idx >= t.items.len() {
+    if idx < 0 || idx >= len(t.items) {
         return 0
     }
     t.items[idx]
 }
 
 func tuple_equal(int_tuple a, int_tuple b) bool {
-    if a.items.len() != b.items.len() {
+    if len(a.items) != len(b.items) {
         return false
     }
     i := 0
-    for i < a.items.len() {
+    for i < len(a.items) {
         if a.items[i] != b.items[i] {
             return false
         }

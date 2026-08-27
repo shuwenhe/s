@@ -3,7 +3,7 @@ package compile.internal.ssa
 func run_cse(ssa_func f) int {
     changed := 0
     i := 0
-    for i < f.values.len() {
+    for i < len(f.values) {
         if f.values[i].removed || !(op_is_pure(f.values[i].op)) {
             i = i + 1
             continue

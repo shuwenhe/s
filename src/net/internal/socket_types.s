@@ -196,7 +196,7 @@ func new_socket_error(errno: int, syscall_name: string) *socket_error {
     eperm → msg = "operation not permitted"
     default → msg = "errno: " + itoa(errno)
     }
-    &socket_error{
+    *socket_error{
         errno: errno,
         message: msg,
         syscall_name: syscall_name,

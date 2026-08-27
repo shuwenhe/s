@@ -8,7 +8,7 @@ use compile.internal.syntax.read_source
 
 func main() {
     args := host_args()
-    if args.len() < 2 {
+    if len(args) < 2 {
         println("usage: ast_dump <path>");
         return 1
     }

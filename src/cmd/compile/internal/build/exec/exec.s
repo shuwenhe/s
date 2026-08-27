@@ -28,7 +28,7 @@ use std.io.println
 use std.prelude.char_at
 use std.prelude.len
 
-func run(vec[string] options) int {
+func run(string[] options) int {
     if options[0] == "help" {
         return 0
     }
@@ -96,7 +96,7 @@ func run(vec[string] options) int {
             emit_built(options[2]);
             return 0
         }
-        nostdlib := options.len() > 4 && options[4] == "nostdlib"
+        nostdlib := len(options) > 4 && options[4] == "nostdlib"
         if build_binary(options[1], options[2], options[3], nostdlib) == 0 {
             ignored_cache := update_cache_target(options[1], source, "build", build_target)
             emit_built(options[2]);
@@ -105,13 +105,13 @@ func run(vec[string] options) int {
         return 1
     }
     if options[0] == "run" {
-        nostdlib := options.len() > 4 && options[4] == "nostdlib"
+        nostdlib := len(options) > 4 && options[4] == "nostdlib"
         return run_binary(options[1], options[3], nostdlib
     }
     return 1
 }
 
-func run_test_command(vec[string] options) int {
+func run_test_command(string[] options) int {
     fixtures_root := resolve_fixtures_root(options[1])
     semantic_result := run_semantic_suite(fixtures_root)
     if semantic_result != 0 {
@@ -163,7 +163,7 @@ func resolve_fixtures_root(string override) string {
     "cmd/compile/internal/tests/fixtures"
 }
 
-func run_mod_command(vec[string] options) int {
+func run_mod_command(string[] options) int {
     if options[1] == "init" {
         return run_mod_init(options[2]
     }
@@ -183,14 +183,14 @@ func run_mod_index(string dir) int {
         return 1
     }
     println("mod index: scanning " + dir + "...")
-    cmd := vec[string]()
-    cmd.push("sh")
-    cmd.push("-c")
+    cmd := string[]()
+    cmd = append(cmd, "sh")
+    cmd = append(cmd, "-c")
     script := "find " + dir + " -name '*.s' -not -path '*/.*' | while read f; do " +
                  "pkg=$(grep -h '^package ' \"$f\" | head -n1 | sed 's/package 
                  "if [ -n \"$pkg\" ]; then printf \"%s\\t%s\\n\" \"$pkg\" \"$f\"; fi; " +
                  "done"
-    cmd.push(script)
+    cmd = append(cmd, script)
     result := run_process_output(cmd)
     if result.is_err() {
         eprintln("mod index failed: " + result.unwrap_err().message)

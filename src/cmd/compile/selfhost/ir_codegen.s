@@ -81,7 +81,7 @@ func parse_ir(string content) (IRProgram, error) {
                     instructions: []Instruction{},
                     locals: []Local{},
                 }
-                current_func = &func
+                current_func = *func
                 prog.functions = append(prog.functions, func)
             }
         } else if contains_string(line, "FUNC_END") {

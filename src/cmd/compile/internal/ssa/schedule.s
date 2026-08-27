@@ -1,15 +1,15 @@
 package compile.internal.ssa
-use std.vec.vec
+use std.slices
 
 func run_schedule(ssa_func f) int {
     changed := 0
     bi := 0
-    for bi < f.blocks.len() {
+    for bi < len(f.blocks) {
         vals := f.blocks[bi].values
         i := 0
-        for i < vals.len() {
+        for i < len(vals) {
             j := i + 1
-            for j < vals.len() {
+            for j < len(vals) {
                 if vals[j] < vals[i] {
                     t := vals[i]
                     vals[i] = vals[j]

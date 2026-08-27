@@ -44,7 +44,7 @@ func read_mem_stats() MemStats {
 }
 
 func num_sroutine() int {
-    _sched.task.len()
+    len(_sched.task)
 }
 
 extern "intrinsic" func __runtime_panic(string msg) ()

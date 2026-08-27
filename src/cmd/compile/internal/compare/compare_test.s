@@ -1,5 +1,5 @@
 package compile.internal.compare
-use std.vec.vec
+use std.slices
 
 func make_field(string name, int offset, int size, bool regular_memory, string type_kind) compare_field {
     compare_field {
@@ -18,10 +18,10 @@ func make_field(string name, int offset, int size, bool regular_memory, string t
 }
 
 func run_compare_tests() int {
-    fields := vec[compare_field]()
-    fields.push(make_field("a", 0, 4, true, "int32"))
-    fields.push(make_field("b", 4, 4, true, "int32"))
-    fields.push(make_field("s", 8, 16, false, "string"))
+    fields := compare_field[]()
+    fields = append(fields, make_field("a", 0, 4, true, "int32"))
+    fields = append(fields, make_field("b", 4, 4, true, "int32"))
+    fields = append(fields, make_field("s", 8, 16, false, "string"))
     t := compare_struct {
         fields: fields,
         alignment: 8,
@@ -41,7 +41,7 @@ func run_compare_tests() int {
         return 1
     }
     cmp := eq_struct(t, "p", "q")
-    if cmp.conds.len() == 0 {
+    if len(cmp.conds) == 0 {
         return 1
     }
     m16 := eq_mem_func(16, 8, 8, true)

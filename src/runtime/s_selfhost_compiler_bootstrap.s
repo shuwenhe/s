@@ -2,7 +2,7 @@ package runtime
 use compile.internal.compiler.main as compiler_main
 use std.env as env
 use std.io  as io
-use std.vec.vec
+use std.slices
 use std.result.result
 const BOOTSTRAP_VERSION = "0.2.0"
 const BOOTSTRAP_STAGE   = "stage1"
@@ -19,7 +19,7 @@ func main() {
     runtime_init()
     gc_disable()
     args := env.args()
-    if args.len() < 2 {
+    if len(args) < 2 {
         print_usage()
         return 1
     }

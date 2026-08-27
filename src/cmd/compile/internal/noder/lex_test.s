@@ -10,7 +10,7 @@ func run_lex_tests() int {
         return 1
     }
     tokens := tokens_result.unwrap()
-    if tokens.len() == 0 {
+    if len(tokens) == 0 {
         return 1
     }
     if tokens[0].text != "package" {

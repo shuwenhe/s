@@ -2,7 +2,7 @@ package internal.buildcfg
 use std.env.get
 use std.prelude.len
 use std.prelude.slice
-use std.vec.vec
+use std.slices
 
 struct build_cfg_error {
     string message
@@ -62,12 +62,12 @@ func check() string {
 }
 
 func first_non_empty_goos_env() string {
-    names := vec[string]()
-    names.push("S_GOOS")
-    names.push("s_goos")
-    names.push("GOOS")
+    names := string[]()
+    names = append(names, "S_GOOS")
+    names = append(names, "s_goos")
+    names = append(names, "GOOS")
     i := 0
-    for i < names.len() {
+    for i < len(names) {
         value := get(names[i])
         switch value {
             some(raw) : {
@@ -84,13 +84,13 @@ func first_non_empty_goos_env() string {
 }
 
 func infer_goos_from_host_env() string {
-    names := vec[string]()
-    names.push("OSTYPE")
-    names.push("OS")
-    names.push("VSCODE_CLI_OS")
-    names.push("MSYSTEM")
+    names := string[]()
+    names = append(names, "OSTYPE")
+    names = append(names, "OS")
+    names = append(names, "VSCODE_CLI_OS")
+    names = append(names, "MSYSTEM")
     i := 0
-    for i < names.len() {
+    for i < len(names) {
         value := get(names[i])
         switch value {
             some(raw) : {
@@ -143,12 +143,12 @@ func is_supported_goos(string os) bool {
 }
 
 func first_non_empty_env() string {
-    names := vec[string]()
-    names.push("S_GOARCH")
-    names.push("s_goarch")
-    names.push("GOARCH")
+    names := string[]()
+    names = append(names, "S_GOARCH")
+    names = append(names, "s_goarch")
+    names = append(names, "GOARCH")
     i := 0
-    for i < names.len() {
+    for i < len(names) {
         value := get(names[i])
         switch value {
             some(raw) : {
@@ -165,13 +165,13 @@ func first_non_empty_env() string {
 }
 
 func infer_goarch_from_host_env() string {
-    names := vec[string]()
-    names.push("HOSTTYPE")
-    names.push("MACHTYPE")
-    names.push("PROCESSOR_ARCHITECTURE")
-    names.push("VSCODE_CLI_ARCH")
+    names := string[]()
+    names = append(names, "HOSTTYPE")
+    names = append(names, "MACHTYPE")
+    names = append(names, "PROCESSOR_ARCHITECTURE")
+    names = append(names, "VSCODE_CLI_ARCH")
     i := 0
-    for i < names.len() {
+    for i < len(names) {
         value := get(names[i])
         switch value {
             some(raw) : {

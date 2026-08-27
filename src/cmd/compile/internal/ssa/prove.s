@@ -1,5 +1,5 @@
 package compile.internal.ssa
-use std.vec.vec
+use std.slices
 
 struct prove_fact {
     int value_id
@@ -15,9 +15,9 @@ func fact_for(int id, bool z, bool nz) prove_fact {
     }
 }
 
-func find_fact(vec[prove_fact] facts, int id) int {
+func find_fact(prove_fact[] facts, int id) int {
     i := 0
-    for i < facts.len() {
+    for i < len(facts) {
         if facts[i].value_id == id {
             return i
         }
@@ -26,35 +26,35 @@ func find_fact(vec[prove_fact] facts, int id) int {
     -1
 }
 
-func fact_zero(vec[prove_fact] facts, int id) bool {
+func fact_zero(prove_fact[] facts, int id) bool {
     i := find_fact(facts, id)
     i >= 0 && facts[i].known_zero
 }
 
-func fact_non_zero(vec[prove_fact] facts, int id) bool {
+func fact_non_zero(prove_fact[] facts, int id) bool {
     i := find_fact(facts, id)
     i >= 0 && facts[i].known_non_zero
 }
 
-func run_prove(ssa_func f) vec[prove_fact] {
-    facts := vec[prove_fact]()
+func run_prove(ssa_func f) prove_fact[] {
+    facts := prove_fact[]()
     i := 0
-    for i < f.values.len() {
+    for i < len(f.values) {
         v := f.values[i]
         z := false
         nz := false
         if v.op == op_const() {
             z = v.literal == "0"
             nz = v.literal != "" && v.literal != "0"
-        } else if v.op == op_mul() && v.args.len() == 2 {
+        } else if v.op == op_mul() && len(v.args) == 2 {
             z = fact_zero(facts, v.args[0]) || fact_zero(facts, v.args[1])
-        } else if v.op == op_add() && v.args.len() == 2 {
+        } else if v.op == op_add() && len(v.args) == 2 {
             z = fact_zero(facts, v.args[0]) && fact_zero(facts, v.args[1])
             nz = fact_non_zero(facts, v.args[0]) && fact_non_zero(facts, v.args[1])
-        } else if v.op == op_sub() && v.args.len() == 2 {
+        } else if v.op == op_sub() && len(v.args) == 2 {
             z = v.args[0] == v.args[1]
         }
-        facts.push(fact_for(v.id, z, nz))
+        facts = append(facts, fact_for(v.id, z, nz))
         i = i + 1
     }
     facts

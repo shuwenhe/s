@@ -35,7 +35,7 @@ func bufio_smoke_writer_test() int {
     if writer.contents() != "helloworld\n" {
         return 0
     }
-    if writer.len() != 11 {
+    if len(writer) != 11 {
         return 0
     }
     1

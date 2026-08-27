@@ -1,5 +1,5 @@
 package compile.internal.abi
-use std.vec.vec
+use std.slices
 
 struct reg_amounts {
     int int_regs
@@ -15,13 +15,13 @@ struct abi_config {
 struct abi_param_assignment {
     string type_name
     string name
-    vec[int] registers
+    int[] registers
     int offset
 }
 
 struct abi_param_result_info {
-    vec[abi_param_assignment] inparams
-    vec[abi_param_assignment] outparams
+    abi_param_assignment[] inparams
+    abi_param_assignment[] outparams
     int offset_to_spill_area
     int spill_area_size
     int in_registers_used
@@ -30,8 +30,8 @@ struct abi_param_result_info {
 }
 
 struct register_layout {
-    vec[string] types
-    vec[int] offsets
+    string[] types
+    int[] offsets
 }
 
 struct assign_state {
@@ -43,7 +43,7 @@ struct assign_state {
 
 struct reg_alloc_result {
     bool ok
-    vec[int] regs
+    int[] regs
 }
 
 func new_abi_config(int i_regs_count, int f_regs_count, int offset_for_locals, int which) abi_config {
@@ -69,11 +69,11 @@ func float_index_for(abi_config config, int r) int {
     r - config.reg_amounts.int_regs
 }
 
-func in_params(abi_param_result_info info) vec[abi_param_assignment] {
+func in_params(abi_param_result_info info) abi_param_assignment[] {
     info.inparams
 }
 
-func out_params(abi_param_result_info info) vec[abi_param_assignment] {
+func out_params(abi_param_result_info info) abi_param_assignment[] {
     info.outparams
 }
 
@@ -106,7 +106,7 @@ func arg_width(abi_param_result_info info) int {
 }
 
 func abi_param_offset(abi_param_assignment assignment) int {
-    if assignment.registers.len() > 0 {
+    if len(assignment.registers) > 0 {
         return -1
     }
     assignment.offset
@@ -116,7 +116,7 @@ func frame_offset(abi_param_assignment assignment, abi_param_result_info info) i
     if assignment.offset < 0 {
         return -1
     }
-    if assignment.registers.len() == 0 {
+    if len(assignment.registers) == 0 {
         return assignment.offset - locals_offset(info.config
     }
     assignment.offset + spill_area_offset(info) - locals_offset(info.config)
@@ -135,11 +135,11 @@ func reg_string(reg_amounts amounts, int r) string {
 func assignment_string(abi_param_assignment assignment, abi_config config, bool extra) string {
     regs := "R{"
     offname := "spilloffset"
-    if assignment.registers.len() == 0 {
+    if len(assignment.registers) == 0 {
         offname = "offset"
     }
     i := 0
-    for i < assignment.registers.len() {
+    for i < len(assignment.registers) {
         r := assignment.registers[i]
         regs = regs + " " + reg_string(config.reg_amounts, r)
         if extra {
@@ -156,12 +156,12 @@ func assignment_string(abi_param_assignment assignment, abi_config config, bool 
 func info_string(abi_param_result_info info) string {
     out := ""
     i := 0
-    for i < info.inparams.len() {
+    for i < len(info.inparams) {
         out = out + "IN " + to_string(i) + ": " + assignment_string(info.inparams[i], info.config, false) + "\n"
         i = i + 1
     }
     i = 0
-    for i < info.outparams.len() {
+    for i < len(info.outparams) {
         out = out + "OUT " + to_string(i) + ": " + assignment_string(info.outparams[i], info.config, false) + "\n"
         i = i + 1
     }
@@ -176,26 +176,26 @@ func num_param_regs(abi_config config, string type_name) int {
     need.int_regs + need.float_regs
 }
 
-func abi_analyze_types(abi_config config, vec[string] params, vec[string] results) abi_param_result_info {
+func abi_analyze_types(abi_config config, string[] params, string[] results) abi_param_result_info {
     state := assign_state {
         r_total: config.reg_amounts,
         r_used: reg_amounts { int_regs: 0, float_regs: 0 },
         stack_offset: config.offset_for_locals,
         spill_offset: 0,
     }
-    inparams := vec[abi_param_assignment]()
+    inparams := abi_param_assignment[]()
     i := 0
-    for i < params.len() {
-        inparams.push(assign_param(state, params[i], "", false))
+    for i < len(params) {
+        inparams = append(inparams, assign_param(state, params[i], "", false))
         i = i + 1
     }
     state.stack_offset = align_to(state.stack_offset, reg_size())
     in_regs_used := state.r_used.int_regs + state.r_used.float_regs
     state.r_used = reg_amounts { int_regs: 0, float_regs: 0 }
-    outparams := vec[abi_param_assignment]()
+    outparams := abi_param_assignment[]()
     i = 0
-    for i < results.len() {
-        outparams.push(assign_param(state, results[i], "", true))
+    for i < len(results) {
+        outparams = append(outparams, assign_param(state, results[i], "", true))
         i = i + 1
     }
     abi_param_result_info {
@@ -209,11 +209,11 @@ func abi_analyze_types(abi_config config, vec[string] params, vec[string] result
     }
 }
 
-func register_types(vec[abi_param_assignment] assignments) vec[string] {
-    rts := vec[string]()
+func register_types(abi_param_assignment[] assignments) string[] {
+    rts := string[]()
     i := 0
-    for i < assignments.len() {
-        if assignments[i].registers.len() > 0 {
+    for i < len(assignments) {
+        if assignments[i]len(.registers) > 0 {
             rts = append_param_types(rts, assignments[i].type_name)
         }
         i = i + 1
@@ -222,33 +222,33 @@ func register_types(vec[abi_param_assignment] assignments) vec[string] {
 }
 
 func register_types_and_offsets(abi_param_assignment assignment) register_layout {
-    if assignment.registers.len() == 0 {
+    if len(assignment.registers) == 0 {
         return register_layout {
-            types: vec[string](),
-            offsets: vec[int](),
+            types: string[](),
+            offsets: int[](),
         }
     }
-    types := append_param_types(vec[string](), assignment.type_name)
-    pair := append_param_offsets(vec[int](), 0, assignment.type_name)
+    types := append_param_types(string[](), assignment.type_name)
+    pair := append_param_offsets(int[](), 0, assignment.type_name)
     register_layout {
         types: types,
         offsets: pair.offsets,
     }
 }
 
-func compute_padding(abi_param_assignment assignment, int slots) vec[int] {
-    padding := vec[int]()
+func compute_padding(abi_param_assignment assignment, int slots) int[] {
+    padding := int[]()
     i := 0
     for i < slots {
-        padding.push(0)
+        padding = append(padding, 0)
         i = i + 1
     }
-    if assignment.registers.len() == 0 {
+    if len(assignment.registers) == 0 {
         return padding
     }
     layout := register_types_and_offsets(assignment)
     i = 0
-    for i + 1 < layout.types.len() && i < padding.len() {
+    for i + 1 < len(layout.types) && i < len(padding) {
         at := layout.offsets[i] + type_size(layout.types[i])
         next := layout.offsets[i + 1]
         if next > at {
@@ -260,60 +260,60 @@ func compute_padding(abi_param_assignment assignment, int slots) vec[int] {
 }
 
 struct offset_result {
-    vec[int] offsets
+    int[] offsets
     int next
 }
 
-func append_param_offsets(vec[int] offsets, int at, string type_name) offset_result {
+func append_param_offsets(int[] offsets, int at, string type_name) offset_result {
     size := type_size(type_name)
     if size == 0 {
         return offset_result { offsets: offsets, next: at }
     }
     if is_complex_type(type_name) || size > reg_size() {
         half := size / 2
-        offsets.push(at)
-        offsets.push(at + half)
+        offsets = append(offsets, at)
+        offsets = append(offsets, at + half)
         return offset_result { offsets: offsets, next: at + size }
     }
-    offsets.push(at)
+    offsets = append(offsets, at)
     offset_result { offsets: offsets, next: at + size }
 }
 
-func append_param_types(vec[string] rts, string type_name) vec[string] {
+func append_param_types(string[] rts, string type_name) string[] {
     if type_size(type_name) == 0 {
         return rts
     }
     if is_complex_type(type_name) {
-        rts.push("float")
-        rts.push("float")
+        rts = append(rts, "float")
+        rts = append(rts, "float")
         return rts
     }
     if is_float_type(type_name) {
-        rts.push("float")
+        rts = append(rts, "float")
         return rts
     }
     if is_string_type(type_name) {
-        rts.push("ptr")
-        rts.push("int")
+        rts = append(rts, "ptr")
+        rts = append(rts, "int")
         return rts
     }
     if is_slice_type(type_name) {
-        rts.push("ptr")
-        rts.push("int")
-        rts.push("int")
+        rts = append(rts, "ptr")
+        rts = append(rts, "int")
+        rts = append(rts, "int")
         return rts
     }
     if is_interface_type(type_name) {
-        rts.push("ptr")
-        rts.push("ptr")
+        rts = append(rts, "ptr")
+        rts = append(rts, "ptr")
         return rts
     }
     if type_size(type_name) > reg_size() {
-        rts.push("uint32")
-        rts.push("uint32")
+        rts = append(rts, "uint32")
+        rts = append(rts, "uint32")
         return rts
     }
-    rts.push(type_name)
+    rts = append(rts, type_name)
     rts
 }
 
@@ -337,24 +337,24 @@ func assign_param(assign_state state, string type_name, string name, bool is_res
 
 func try_alloc_regs(assign_state state, string type_name) reg_alloc_result {
     if type_size(type_name) == 0 {
-        return reg_alloc_result { ok: false, regs: vec[int]() }
+        return reg_alloc_result { ok: false, regs: int[]() }
     }
     need := reg_amounts_for_type(type_name)
     if need.int_regs > state.r_total.int_regs - state.r_used.int_regs {
-        return reg_alloc_result { ok: false, regs: vec[int]() }
+        return reg_alloc_result { ok: false, regs: int[]() }
     }
     if need.float_regs > state.r_total.float_regs - state.r_used.float_regs {
-        return reg_alloc_result { ok: false, regs: vec[int]() }
+        return reg_alloc_result { ok: false, regs: int[]() }
     }
-    regs := vec[int]()
+    regs := int[]()
     i := 0
     for i < need.int_regs {
-        regs.push(state.r_used.int_regs + i)
+        regs = append(regs, state.r_used.int_regs + i)
         i = i + 1
     }
     i = 0
     for i < need.float_regs {
-        regs.push(state.r_total.int_regs + state.r_used.float_regs + i)
+        regs = append(regs, state.r_total.int_regs + state.r_used.float_regs + i)
         i = i + 1
     }
     state.r_used.int_regs = state.r_used.int_regs + need.int_regs
@@ -493,11 +493,11 @@ func is_interface_type(string type_name) bool {
 }
 
 func starts_with(string text, string prefix) bool {
-    if text.len() < prefix.len() {
+    if len(text) < len(prefix) {
         return false
     }
     i := 0
-    for i < prefix.len() {
+    for i < len(prefix) {
         if text[i] != prefix[i] {
             return false
         }

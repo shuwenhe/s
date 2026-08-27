@@ -33,11 +33,11 @@ func simd_opcode_class(string op) string {
 }
 
 func starts_with(string text, string prefix) bool {
-    if text.len() < prefix.len() {
+    if len(text) < len(prefix) {
         return false
     }
     i := 0
-    for i < prefix.len() {
+    for i < len(prefix) {
         if text[i] != prefix[i] {
             return false
         }

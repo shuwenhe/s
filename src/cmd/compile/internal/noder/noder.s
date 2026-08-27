@@ -1,10 +1,10 @@
 package compile.internal.noder
 use std.result.result
-use std.vec.vec
+use std.slices
 
 func compile_unit(string source_path, string export_out, string ir_out, string link_out) (noder_output, noder_error) {
-    quirks := vec[string]()
-    quirks.push("normalize-import-quotes")
+    quirks := string[]()
+    quirks = append(quirks, "normalize-import-quotes")
     out := run_unified(source_path, quirks)?
     write_export_file(export_out, out.exports)?
     write_ir_file(ir_out, out.ir)?

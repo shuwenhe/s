@@ -1,5 +1,5 @@
 package compile.internal.base
-use std.vec.vec
+use std.slices
 
 struct error_msg {
     string pos
@@ -8,7 +8,7 @@ struct error_msg {
     bool warning
 }
 pos := ""
-error_msgs := vec[error_msg]()
+error_msgs := error_msg[]()
 num_errors := 0
 num_syntax_errors := 0
 
@@ -36,11 +36,11 @@ func add_error_msg(string at, int code, string message, bool warning) () {
 func flush_errors() string {
     out := ""
     i := 0
-    for i < error_msgs.len() {
+    for i < len(error_msgs) {
         out = out + error_msgs[i].msg + "\n"
         i = i + 1
     }
-    error_msgs = vec[error_msg]()
+    error_msgs = error_msg[]()
     out
 }
 

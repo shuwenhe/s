@@ -4,13 +4,13 @@ use s.token
 use s.dump_source_file
 use s.dump_tokens
 use std.io.println
-use std.vec.vec
+use std.slices
 
 func check_ok(string path) () {
     println("ok: " + path)
 }
 
-func tokens(vec[token] tokens) () {
+func tokens(token[] tokens) () {
     println(dump_tokens(tokens))
 }
 

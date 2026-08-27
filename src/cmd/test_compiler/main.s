@@ -21,7 +21,7 @@ func default_fixtures_root() string {
 
 func main() {
     args := host_args()
-    if args.len() >= 2 {
+    if len(args) >= 2 {
         command := args[1]
         if command == "-h" || command == "--help" {
             println("usage: test_compiler [fixtures_root]");
@@ -29,7 +29,7 @@ func main() {
         }
     }
     fixtures_root := default_fixtures_root()
-    if args.len() >= 2 {
+    if len(args) >= 2 {
         fixtures_root = args[1]
     }
     semantic_result := run_semantic_suite(fixtures_root)

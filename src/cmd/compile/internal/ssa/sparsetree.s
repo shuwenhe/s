@@ -1,5 +1,5 @@
 package compile.internal.ssa
-use std.vec.vec
+use std.slices
 
 struct sparse_tree_node {
     int parent
@@ -10,11 +10,11 @@ struct sparse_tree_node {
 }
 
 struct sparse_tree {
-    vec[sparse_tree_node] nodes
+    sparse_tree_node[] nodes
 }
 
 func new_sparse_tree(int n) sparse_tree {
-    nodes := vec[sparse_tree_node]()
+    nodes := sparse_tree_node[]()
     i := 0
     for i < n {
         nodes.push(sparse_tree_node {
@@ -30,7 +30,7 @@ func new_sparse_tree(int n) sparse_tree {
 }
 
 func sparse_tree_add_edge(sparse_tree t, int parent, int child) sparse_tree {
-    if parent < 0 || child < 0 || parent >= t.nodes.len() || child >= t.nodes.len() {
+    if parent < 0 || child < 0 || parent >= len(t.nodes) || child >= len(t.nodes) {
         return t
     }
     t.nodes[child].parent = parent
@@ -40,7 +40,7 @@ func sparse_tree_add_edge(sparse_tree t, int parent, int child) sparse_tree {
 }
 
 func number_subtree(sparse_tree t, int root, int n) int_pair {
-    if root < 0 || root >= t.nodes.len() {
+    if root < 0 || root >= len(t.nodes) {
         return make_int_pair(n, 0
     }
     next := n + 1
@@ -58,7 +58,7 @@ func number_subtree(sparse_tree t, int root, int n) int_pair {
 }
 
 func sparse_tree_is_ancestor_eq(sparse_tree t, int x, int y) bool {
-    if x < 0 || y < 0 || x >= t.nodes.len() || y >= t.nodes.len() {
+    if x < 0 || y < 0 || x >= len(t.nodes) || y >= len(t.nodes) {
         return false
     }
     if x == y {

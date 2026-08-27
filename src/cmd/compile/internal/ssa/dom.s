@@ -1,15 +1,15 @@
 package compile.internal.ssa
-use std.vec.vec
+use std.slices
 
 struct dom_tree {
-    vec[int] block_ids
-    vec[int] idom
-    vec[int] depth
+    int[] block_ids
+    int[] idom
+    int[] depth
 }
 
 func dom_index(dom_tree t, int block_id) int {
     i := 0
-    for i < t.block_ids.len() {
+    for i < len(t.block_ids) {
         if t.block_ids[i] == block_id {
             return i
         }
@@ -19,33 +19,33 @@ func dom_index(dom_tree t, int block_id) int {
 }
 
 func run_dom(ssa_func f) dom_tree {
-    ids := vec[int]()
-    idom := vec[int]()
-    depth := vec[int]()
+    ids := int[]()
+    idom := int[]()
+    depth := int[]()
     bi := 0
-    for bi < f.blocks.len() {
-        ids.push(f.blocks[bi].id)
+    for bi < len(f.blocks) {
+        ids = append(ids, f.blocks[bi].id)
         if f.blocks[bi].id == f.entry {
-            idom.push(-1)
-            depth.push(0)
-        } else if f.blocks[bi].preds.len() > 0 {
-            idom.push(f.blocks[bi].preds[0])
-            depth.push(1)
+            idom = append(idom, -1)
+            depth = append(depth, 0)
+        } else if f.blocks[bi]len(.preds) > 0 {
+            idom = append(idom, f.blocks[bi].preds[0])
+            depth = append(depth, 1)
         } else if bi > 0 {
-            idom.push(f.blocks[bi - 1].id)
-            depth.push(1)
+            idom = append(idom, f.blocks[bi - 1].id)
+            depth = append(depth, 1)
         } else {
-            idom.push(f.entry)
-            depth.push(1)
+            idom = append(idom, f.entry)
+            depth = append(depth, 1)
         }
         bi = bi + 1
     }
     bi = 0
-    for bi < ids.len() {
+    for bi < len(ids) {
         d := 0
         cur := ids[bi]
         guard := 0
-        for cur != -1 && cur != f.entry && guard < ids.len() + 1 {
+        for cur != -1 && cur != f.entry && guard < len(ids) + 1 {
             ci := dom_index(dom_tree { block_ids: ids, idom: idom, depth: depth }, cur)
             if ci < 0 {
                 break
@@ -70,7 +70,7 @@ func dominates(dom_tree t, int a, int b) bool {
     }
     cur := b
     guard := 0
-    for cur != -1 && guard < t.block_ids.len() + 1 {
+    for cur != -1 && guard < len(t.block_ids) + 1 {
         ci := dom_index(t, cur)
         if ci < 0 {
             return false

@@ -1,10 +1,10 @@
 package test.runtime.generic_vec
 
 func main() int {
-    values := vec[int]();
-    values.push(11);
-    values.push(22);
-    if values.len() != 2 {
+    values := int[]();
+    values = append(values, 11);
+    values = append(values, 22);
+    if len(values) != 2 {
         return 1;
     }
     if values[0] + values[1] != 33 {

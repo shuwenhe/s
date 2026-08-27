@@ -1,5 +1,5 @@
 package src.runtime
-use std.vec.vec
+use std.slices
 const GC_PHASE_OFF   = 0
 const GC_PHASE_MARK  = 1
 const GC_PHASE_SWEEP = 2

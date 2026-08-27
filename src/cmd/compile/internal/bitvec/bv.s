@@ -1,17 +1,17 @@
 package compile.internal.bitvec
 use compile.internal.base.fatalf as base_fatalf
-use std.vec.vec
+use std.slices
 word_bits := 32
 word_mask := 31
 word_shift := 5
 
 struct bit_vec {
     int n
-    vec[int] b
+    int[] b
 }
 
 struct bulk {
-    vec[int] words
+    int[] words
     int nbit
     int nword
 }
@@ -34,16 +34,16 @@ func new_bulk(int nbit, int count) bulk {
 }
 
 func next_bulk(bulk b) bit_vec {
-    out_words := vec[int]()
+    out_words := int[]()
     i := 0
-    for i < b.nword && i < b.words.len() {
-        out_words.push(b.words[i])
+    for i < b.nword && i < len(b.words) {
+        out_words = append(out_words, b.words[i])
         i = i + 1
     }
-    rest_words := vec[int]()
+    rest_words := int[]()
     i = b.nword
-    for i < b.words.len() {
-        rest_words.push(b.words[i])
+    for i < len(b.words) {
+        rest_words = append(rest_words, b.words[i])
         i = i + 1
     }
     b.words = rest_words
@@ -59,7 +59,7 @@ func eq(bit_vec left, bit_vec right) bool {
         return false
     }
     i := 0
-    for i < left.b.len() {
+    for i < len(left.b) {
         if left.b[i] != right.b[i] {
             return false
         }
@@ -70,7 +70,7 @@ func eq(bit_vec left, bit_vec right) bool {
 
 func copy_into(bit_vec dst, bit_vec src) () {
     i := 0
-    for i < dst.b.len() && i < src.b.len() {
+    for i < len(dst.b) && i < len(src.b) {
         dst.b.set(i, src.b[i])
         i = i + 1
     }
@@ -136,7 +136,7 @@ func next(bit_vec bv, int i) int {
 
 func is_empty(bit_vec bv) bool {
     i := 0
-    for i < bv.b.len() {
+    for i < len(bv.b) {
         if bv.b[i] != 0 {
             return false
         }
@@ -148,7 +148,7 @@ func is_empty(bit_vec bv) bool {
 func count(bit_vec bv) int {
     total := 0
     i := 0
-    for i < bv.b.len() {
+    for i < len(bv.b) {
         total = total + popcount_word(bv.b[i])
         i = i + 1
     }
@@ -169,7 +169,7 @@ func not(bit_vec bv) () {
 
 func or(bit_vec dst, bit_vec src1, bit_vec src2) () {
     i := 0
-    for i < src1.b.len() && i < src2.b.len() && i < dst.b.len() {
+    for i < len(src1.b) && i < len(src2.b) && i < len(dst.b) {
         dst.b.set(i, src1.b[i] | src2.b[i])
         i = i + 1
     }
@@ -177,7 +177,7 @@ func or(bit_vec dst, bit_vec src1, bit_vec src2) () {
 
 func and(bit_vec dst, bit_vec src1, bit_vec src2) () {
     i := 0
-    for i < src1.b.len() && i < src2.b.len() && i < dst.b.len() {
+    for i < len(src1.b) && i < len(src2.b) && i < len(dst.b) {
         dst.b.set(i, src1.b[i] & src2.b[i])
         i = i + 1
     }
@@ -185,7 +185,7 @@ func and(bit_vec dst, bit_vec src1, bit_vec src2) () {
 
 func and_not(bit_vec dst, bit_vec src1, bit_vec src2) () {
     i := 0
-    for i < src1.b.len() && i < src2.b.len() && i < dst.b.len() {
+    for i < len(src1.b) && i < len(src2.b) && i < len(dst.b) {
         a := src1.b[i]
         b := src2.b[i]
         bit := 0
@@ -218,17 +218,17 @@ func to_string(bit_vec bv) string {
 
 func clear(bit_vec bv) () {
     i := 0
-    for i < bv.b.len() {
+    for i < len(bv.b) {
         bv.b.set(i, 0)
         i = i + 1
     }
 }
 
-func make_words(int count) vec[int] {
-    out := vec[int]()
+func make_words(int count) int[] {
+    out := int[]()
     i := 0
     for i < count {
-        out.push(0)
+        out = append(out, 0)
         i = i + 1
     }
     out

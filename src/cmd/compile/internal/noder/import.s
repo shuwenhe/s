@@ -1,22 +1,22 @@
 package compile.internal.noder
 use std.option.option
-use std.vec.vec
+use std.slices
 
-func parse_imports(source_unit unit) vec[import_record] {
-    out := vec[import_record]()
+func parse_imports(source_unit unit) import_record[] {
+    out := import_record[]()
     lines := split_lines(unit.text)
     i := 0
-    for i < lines.len() {
+    for i < len(lines) {
         line := trim_spaces(lines[i])
         if !starts_with(line, "use ") {
             i = i + 1
             continue
         }
         parts := split_words(line)
-        if parts.len() >= 2 {
+        if len(parts) >= 2 {
             path := normalize_import_path(parts[1])
             alias := option::none
-            if parts.len() >= 4 && parts[2] == "as" {
+            if len(parts) >= 4 && parts[2] == "as" {
                 alias = option::some(parts[3])
             }
             out.push(import_record {
@@ -29,13 +29,13 @@ func parse_imports(source_unit unit) vec[import_record] {
     out
 }
 
-func import_map(vec[import_record] imports) vec[string] {
-    out := vec[string]()
+func import_map(import_record[] imports) string[] {
+    out := string[]()
     i := 0
-    for i < imports.len() {
+    for i < len(imports) {
         switch imports[i].alias {
-            option::some(alias) : out.push(alias + "=" + imports[i].path),
-            option::none : out.push(imports[i].path),
+            option::some(alias) : out = append(out, alias + "=" + imports[i].path),
+            option::none : out = append(out, imports[i].path),
         }
         i = i + 1
     }

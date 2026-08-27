@@ -3,13 +3,13 @@ package compile.internal.amd64
 func ssa_mark_moves(ssa_block block) ssa_block {
     flive := block.flags_live_at_end
     ci := 0
-    for ci < block.controls.len() {
+    for ci < len(block.controls) {
         if block.controls[ci].flags {
             flive = true
         }
         ci = ci + 1
     }
-    i := block.values.len() - 1
+    i := len(block.values) - 1
     for i >= 0 {
         v := block.values[i]
         if flive && (v.op == "OpAMD64MOVLconst" || v.op == "OpAMD64MOVQconst") {
@@ -21,7 +21,7 @@ func ssa_mark_moves(ssa_block block) ssa_block {
             flive = false
         }
         ai := 0
-        for ai < v.args.len() {
+        for ai < len(v.args) {
             if v.args[ai] == "flags" {
                 flive = true
             }
@@ -180,11 +180,11 @@ func spill_arg_reg(int index) string {
 }
 
 func starts_with(string text, string prefix) bool {
-    if text.len() < prefix.len() {
+    if len(text) < len(prefix) {
         return false
     }
     i := 0
-    for i < prefix.len() {
+    for i < len(prefix) {
         if text[i] != prefix[i] {
             return false
         }

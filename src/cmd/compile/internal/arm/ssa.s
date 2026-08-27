@@ -1,9 +1,9 @@
 package compile.internal.arm
-use std.vec.vec
+use std.slices
 
 struct ssa_value {
     string op
-    vec[string] args
+    string[] args
     int reg
     int reg0
     int aux_int
@@ -13,7 +13,7 @@ struct ssa_value {
 
 struct ssa_block {
     string kind
-    vec[int] succs
+    int[] succs
     int likely
 }
 
@@ -143,54 +143,54 @@ func ssa_gen_value(ssa_value value) string {
     "GENERIC"
 }
 
-func ssa_gen_block(string kind, int next_succ, int likely) vec[string] {
-    out := vec[string]()
+func ssa_gen_block(string kind, int next_succ, int likely) string[] {
+    out := string[]()
     if kind == "BlockPlain" || kind == "BlockDefer" {
         if next_succ != 0 {
-            out.push("JMP")
+            out = append(out, "JMP")
         }
         return out
     }
     if kind == "BlockRet" {
-        out.push("RET")
+        out = append(out, "RET")
         return out
     }
     if kind == "BlockARMEQ" {
         if next_succ == 0 {
-            out.push("BNE")
+            out = append(out, "BNE")
         } else {
-            out.push("BEQ")
+            out = append(out, "BEQ")
         }
         return out
     }
     if kind == "BlockARMNE" {
         if next_succ == 0 {
-            out.push("BEQ")
+            out = append(out, "BEQ")
         } else {
-            out.push("BNE")
+            out = append(out, "BNE")
         }
         return out
     }
     if starts_with(kind, "BlockARM") {
         if likely >= 0 {
-            out.push("B.cond")
-            out.push("JMP")
+            out = append(out, "B.cond")
+            out = append(out, "JMP")
         } else {
-            out.push("B.inv")
-            out.push("JMP")
+            out = append(out, "B.inv")
+            out = append(out, "JMP")
         }
         return out
     }
-    out.push("UNIMPL")
+    out = append(out, "UNIMPL")
     out
 }
 
 func starts_with(string text, string prefix) bool {
-    if text.len() < prefix.len() {
+    if len(text) < len(prefix) {
         return false
     }
     i := 0
-    for i < prefix.len() {
+    for i < len(prefix) {
         if text[i] != prefix[i] {
             return false
         }
