@@ -14,6 +14,6 @@ func classify(int input) int {
     }
 }
 
-func main() int {
+func main() {
     return classify(11)
 }

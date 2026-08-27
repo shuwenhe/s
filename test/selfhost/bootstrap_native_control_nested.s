@@ -1,6 +1,6 @@
 package main
 
-func main() int {
+func main() {
     if 1 == 0 {
         return 1
     } else {

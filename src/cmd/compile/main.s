@@ -6,7 +6,7 @@ use internal.buildcfg.goarch as buildcfg_goarch
 use std.env.args as host_args
 use std.io.eprintln
 
-func main() int {
+func main() {
     args := host_args()
     buildcfg_err := buildcfg_check()
     if buildcfg_err != "" {

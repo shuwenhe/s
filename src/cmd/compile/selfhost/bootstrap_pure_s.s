@@ -6,7 +6,7 @@ use std.io_syscall.mkdir
 use std.process.run_process
 use std.slices
 
-func main() int {
+func main() {
     compiler_src := "./src/cmd/compile/selfhost/compiler.s"
     output_dir := "./.bootstrap/selfhost"
     seed_compiler := "./bin/s_seed"
@@ -48,7 +48,7 @@ func bootstrap_three_stage(
     stage3_bin := output_dir + "/stage3"
 
     eprintln("[1/5] building stage1 IR with the trusted seed")
-    stage1_argv := string[]()
+    stage1_argv := string[]{}
     stage1_argv = append(stage1_argv, seed_compiler)
     stage1_argv = append(stage1_argv, compiler_src)
     stage1_argv = append(stage1_argv, stage1_ir)

@@ -1,5 +1,5 @@
 package main
 
-func main() int {
+func main() {
     return 42 / (3 - 3)
 }
