@@ -20,6 +20,8 @@ mkdir -p "$work"
 
 runtime_object="$work/selfhost_runtime.o"
 as --64 -o "$runtime_object" "$root/src/runtime/selfhost_linux_amd64.S"
+stage_manifest="$work/manifest.txt"
+write_manifest="$root/src/cmd/dist/checks/write-manifest.sh"
 
 compile_native_stage() {
     compiler=$1
@@ -85,7 +87,9 @@ set -e
 printf '%s\n' "conformance                PASS"
 
 printf '%s\n' ""
-printf '%s\n' "S TRUE SELF-HOST BOOTSTRAP"
+"$write_manifest" "$work" "$stage_manifest" "$runtime_object"
+
+printf '%s\n' "S NATIVE BOOTSTRAP"
 printf '%s\n' "================================================================"
 printf '%s\n' "seed -> stage1             PASS"
 printf '%s\n' "stage1 -> stage2           PASS"
@@ -94,5 +98,6 @@ printf '%s\n' "IR convergence             PASS"
 printf '%s\n' "binary convergence         PASS"
 printf '%s\n' "seed dependency audit      PASS"
 printf '%s\n' "conformance                PASS"
+printf '%s\n' "manifest                   $stage_manifest"
 printf '%s\n' ""
-printf '%s\n' "RESULT: TRUE SELF-HOSTING"
+printf '%s\n' "RESULT: NATIVE BOOTSTRAP COMPLETE"
