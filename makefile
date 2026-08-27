@@ -335,6 +335,144 @@ bootstrap-slice1-check: seed-compiler-bin
 	  $(SELFHOST_DIR)/slice1/not-yet-selfhosted >/dev/null 2>&1
 	@echo "Bootstrap slice 1 passed: static S compiler produced a runnable program"
 
+bootstrap-slice2-check: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR)/slice2
+	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice2/compiler.ir
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
+	  $(SELFHOST_DIR)/slice2/compiler.ir $(SELFHOST_DIR)/slice2/compiler
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/compiler
+	@$(SELFHOST_DIR)/slice2/compiler --emit-native test/selfhost/bootstrap_native_expr.s \
+	  $(SELFHOST_DIR)/slice2/native-expression
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/native-expression
+	@set +e; $(SELFHOST_DIR)/slice2/native-expression; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice2/compiler --emit-native test/selfhost/bootstrap_native_control.s \
+	  $(SELFHOST_DIR)/slice2/native-control
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/native-control
+	@set +e; $(SELFHOST_DIR)/slice2/native-control; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice2/compiler --emit-native test/selfhost/bootstrap_native_locals.s \
+	  $(SELFHOST_DIR)/slice2/native-locals
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/native-locals
+	@set +e; $(SELFHOST_DIR)/slice2/native-locals; status=$$?; set -e; test $$status -eq 42
+	@sh ./src/cmd/dist/checks/bootstrap-frontier.sh src/cmd/compile/selfhost/compiler.s
+	@echo "Bootstrap slice 2 passed: native expression/control/locals frontier"
+
+bootstrap-slice3-check: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR)/slice3
+	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice3/compiler.ir
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
+	  $(SELFHOST_DIR)/slice3/compiler.ir $(SELFHOST_DIR)/slice3/compiler
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/compiler
+	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_call.s \
+	  $(SELFHOST_DIR)/slice3/native-call
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-call
+	@set +e; $(SELFHOST_DIR)/slice3/native-call; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_loop.s \
+	  $(SELFHOST_DIR)/slice3/native-loop
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-loop
+	@set +e; $(SELFHOST_DIR)/slice3/native-loop; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_string.s \
+	  $(SELFHOST_DIR)/slice3/native-string
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-string
+	@set +e; $(SELFHOST_DIR)/slice3/native-string >$(SELFHOST_DIR)/slice3/native-string.out; status=$$?; set -e; test $$status -eq 42
+	@test "$$(cat $(SELFHOST_DIR)/slice3/native-string.out)" = "selfhost-string"
+	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_array.s \
+	  $(SELFHOST_DIR)/slice3/native-array
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-array
+	@set +e; $(SELFHOST_DIR)/slice3/native-array; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_multicall.s \
+	  $(SELFHOST_DIR)/slice3/native-multicall
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-multicall
+	@set +e; $(SELFHOST_DIR)/slice3/native-multicall; status=$$?; set -e; test $$status -eq 42
+	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice3/native-multicall | grep -c 'call.*%rax')" -ge 2
+	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_multicall_args.s \
+	  $(SELFHOST_DIR)/slice3/native-multicall-args
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-multicall-args
+	@set +e; $(SELFHOST_DIR)/slice3/native-multicall-args; status=$$?; set -e; test $$status -eq 42
+	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice3/native-multicall-args | grep -c 'call.*%rax')" -ge 2
+	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_copy.s \
+	  $(SELFHOST_DIR)/slice3/native-copy
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-copy
+	@set +e; $(SELFHOST_DIR)/slice3/native-copy; status=$$?; set -e; test $$status -eq 2
+	@set +e; $(SELFHOST_DIR)/slice3/native-copy $(SELFHOST_DIR)/slice3/missing-input \
+	  $(SELFHOST_DIR)/slice3/missing-output; status=$$?; set -e; test $$status -eq 1
+	@$(SELFHOST_DIR)/slice3/native-copy test/selfhost/bootstrap_native_copy_input.txt \
+	  $(SELFHOST_DIR)/slice3/native-copy.out
+	@cmp test/selfhost/bootstrap_native_copy_input.txt $(SELFHOST_DIR)/slice3/native-copy.out
+	@echo "Bootstrap slice 3 passed: native call/loop/string/array/multicall/copy frontier"
+
+bootstrap-slice4-check: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR)/slice4
+	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice4/compiler.ir
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
+	  $(SELFHOST_DIR)/slice4/compiler.ir $(SELFHOST_DIR)/slice4/compiler
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/compiler
+	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_function_loop.s \
+	  $(SELFHOST_DIR)/slice4/native-function-loop
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-function-loop
+	@set +e; $(SELFHOST_DIR)/slice4/native-function-loop; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_function_control.s \
+	  $(SELFHOST_DIR)/slice4/native-function-control
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-function-control
+	@set +e; $(SELFHOST_DIR)/slice4/native-function-control; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_logical.s \
+	  $(SELFHOST_DIR)/slice4/native-logical
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-logical
+	@set +e; $(SELFHOST_DIR)/slice4/native-logical; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_typed_locals.s \
+	  $(SELFHOST_DIR)/slice4/native-typed-locals
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-typed-locals
+	@set +e; $(SELFHOST_DIR)/slice4/native-typed-locals; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_large_function.s \
+	  $(SELFHOST_DIR)/slice4/native-large-function
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-large-function
+	@set +e; $(SELFHOST_DIR)/slice4/native-large-function; status=$$?; set -e; test $$status -eq 42
+	@echo "Bootstrap slice 4 passed: function control/logical/typed locals/large function frontier"
+
+bootstrap-slice5-check: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR)/slice5
+	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice5/compiler.ir
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
+	  $(SELFHOST_DIR)/slice5/compiler.ir $(SELFHOST_DIR)/slice5/compiler
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/compiler
+	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_multicall.s \
+	  $(SELFHOST_DIR)/slice5/native-multicall
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-multicall
+	@set +e; $(SELFHOST_DIR)/slice5/native-multicall; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_multicall_args.s \
+	  $(SELFHOST_DIR)/slice5/native-multicall-args
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-multicall-args
+	@set +e; $(SELFHOST_DIR)/slice5/native-multicall-args; status=$$?; set -e; test $$status -eq 42
+	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice5/native-multicall | grep -c 'call.*%rax')" -ge 2
+	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice5/native-multicall-args | grep -c 'call.*%rax')" -ge 2
+	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_call6.s \
+	  $(SELFHOST_DIR)/slice5/native-call6
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-call6
+	@set +e; $(SELFHOST_DIR)/slice5/native-call6; status=$$?; set -e; test $$status -eq 42
+	@echo "Bootstrap slice 5 passed: multi-call and argument passing frontier"
+
+bootstrap-slice6-check: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR)/slice6
+	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice6/compiler.ir
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
+	  $(SELFHOST_DIR)/slice6/compiler.ir $(SELFHOST_DIR)/slice6/compiler
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice6/compiler
+	@as --64 -o $(SELFHOST_DIR)/slice6/asm-runtime.o src/runtime/selfhost_linux_amd64.S
+	@$(SELFHOST_DIR)/slice6/compiler --emit-asm test/selfhost/bootstrap_asm_branch_strings.s \
+	  $(SELFHOST_DIR)/slice6/branch-strings.S
+	@as --64 -o $(SELFHOST_DIR)/slice6/branch-strings.o $(SELFHOST_DIR)/slice6/branch-strings.S
+	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/slice6/branch-strings \
+	  $(SELFHOST_DIR)/slice6/asm-runtime.o $(SELFHOST_DIR)/slice6/branch-strings.o
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice6/branch-strings
+	@set +e; $(SELFHOST_DIR)/slice6/branch-strings; status=$$?; set -e; test $$status -eq 42
+	@$(SELFHOST_DIR)/slice6/compiler --emit-asm test/selfhost/bootstrap_asm_string.s \
+	  $(SELFHOST_DIR)/slice6/string-compare.S
+	@as --64 -o $(SELFHOST_DIR)/slice6/string-compare.o $(SELFHOST_DIR)/slice6/string-compare.S
+	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/slice6/string-compare \
+	  $(SELFHOST_DIR)/slice6/asm-runtime.o $(SELFHOST_DIR)/slice6/string-compare.o
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice6/string-compare
+	@set +e; $(SELFHOST_DIR)/slice6/string-compare; status=$$?; set -e; test $$status -eq 42
+	@echo "Bootstrap slice 6 passed: string compare and branch-string frontier"
+
 pure-s-bootstrap-check: selfhost-runtime-check selfhost-lexer-check bootstrap-slice1-check
 	@echo "Pure-S bootstrap frontier passed: runtime, lexer, frontend, and minimal ELF writer"
 
@@ -363,7 +501,7 @@ selfhost-runtime-check:
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
 
-.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap native-bootstrap-install native-selfhost bootstrap-subset-check bootstrap-slice1-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap native-bootstrap-install native-selfhost bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 verify-true-selfhost:
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
@@ -385,6 +523,12 @@ help:
 	@echo "  make native-selfhost          # Install the native bootstrap result as bin/s"
 	@echo "  make bootstrap-subset-check # Enforce the frozen bootstrap declaration syntax"
 	@echo "  make bootstrap-slice1-check # Build and exercise the first static pure-S compiler slice"
+	@echo "  make bootstrap-slice2-check # Report the next native bootstrap frontier"
+	@echo "  make bootstrap-slice3-check # Exercise native call/loop/string/array/multicall/copy"
+	@echo "  make bootstrap-slice4-check # Exercise function control/logical/typed locals/large function"
+	@echo "  make bootstrap-slice5-check # Exercise multi-call and argument passing frontier"
+	@echo "  make bootstrap-slice6-check # Exercise string compare and branch-string frontier"
+	@echo "  see doc/bootstrap.md         # Bootstrap ladder notes and slice rationale"
 	@echo "  make pure-s-bootstrap-check # Run every implemented no-seed bootstrap frontier"
 	@echo "  make bootstrap-source-closure # Resolve the pure-S compiler source closure"
 	@echo "  make selfhost                # Install the native self-hosted compiler"

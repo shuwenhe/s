@@ -73,6 +73,8 @@ The executable bootstrap work and its acceptance criteria are documented in
 [`doc/bootstrap.md`](doc/bootstrap.md). The first static pure-S frontend slice
 can be exercised with `make bootstrap-slice1-check`.
 For the seed-hosted compatibility path, use `make seed-hosted-selfhost`.
+The full ladder currently runs through `make bootstrap-slice6-check`; each slice
+is documented in [`doc/bootstrap.md`](doc/bootstrap.md).
 
 ## Tests
 
