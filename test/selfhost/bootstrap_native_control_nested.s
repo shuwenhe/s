@@ -1,0 +1,13 @@
+package main
+
+func main() int {
+    if 1 == 0 {
+        return 1
+    } else {
+        if 2 < 3 {
+            return 42
+        } else {
+            return 0
+        }
+    }
+}
