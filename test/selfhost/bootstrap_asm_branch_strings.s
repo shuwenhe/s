@@ -7,7 +7,7 @@ func choose(string operator) string {
     return "greater"
 }
 
-func main() int {
+func main() {
     if choose("==") == "equal" {
         return 42
     }

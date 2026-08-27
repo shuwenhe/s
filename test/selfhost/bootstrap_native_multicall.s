@@ -8,6 +8,6 @@ func second() int {
     return first() * 2
 }
 
-func main() int {
+func main() {
     return second() * 2 + 2
 }

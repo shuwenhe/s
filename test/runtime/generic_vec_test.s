@@ -1,6 +1,6 @@
 package test.runtime.generic_vec
 
-func main() int {
+func main() {
     values := int[]();
     values = append(values, 11);
     values = append(values, 22);

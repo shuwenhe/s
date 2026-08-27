@@ -52,6 +52,6 @@ func grow(int input) int {
     return value
 }
 
-func main() int {
+func main() {
     return grow(seed())
 }

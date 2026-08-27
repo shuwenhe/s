@@ -5,7 +5,7 @@ func decorate(string value) string {
     return prefix + value
 }
 
-func main() int {
+func main() {
     string actual = decorate("bootstrap")
     if actual == "S:bootstrap" {
         return 42

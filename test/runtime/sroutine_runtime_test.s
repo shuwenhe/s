@@ -6,7 +6,7 @@ func sroutine_worker(int task_channel, int done_channel, int worker_id) int {
     return 0;
 }
 
-func main() int {
+func main() {
     task_channel := chan_make(2);
     done_channel := chan_make(2);
     sroutine sroutine_worker(task_channel, done_channel, 10);
