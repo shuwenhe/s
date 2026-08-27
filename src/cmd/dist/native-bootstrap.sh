@@ -35,24 +35,44 @@ compile_native_stage() {
 
 # The seed participates only in construction of stage1.  Every later compiler
 # must be emitted by the preceding S compiler directly from the same S source.
+printf '%s\n' "[1/7] seed -> stage1"
 "$seed" "$source_file" "$work/stage1.ir"
 S_SOURCE_ROOT="$root" "$seed" --emit-standalone-amd64 \
     "$work/stage1.ir" "$work/stage1"
 "$verify" "$work/stage1"
+printf '%s\n' "seed -> stage1             PASS"
 
+printf '%s\n' "[2/7] stage1 -> stage2"
+"$work/stage1" "$source_file" "$work/stage2.ir"
 compile_native_stage "$work/stage1" "$source_file" "$work/stage2"
 "$verify" "$work/stage2"
+printf '%s\n' "stage1 -> stage2           PASS"
 
+printf '%s\n' "[3/7] stage2 -> stage3"
+"$work/stage2" "$source_file" "$work/stage3.ir"
 compile_native_stage "$work/stage2" "$source_file" "$work/stage3"
 "$verify" "$work/stage3"
+printf '%s\n' "stage2 -> stage3           PASS"
 
+printf '%s\n' "[4/7] convergence"
+cmp "$work/stage2.ir" "$work/stage3.ir" ||
+    fail "stage2.ir and stage3.ir differ"
+printf '%s\n' "IR convergence             PASS"
 cmp "$work/stage2" "$work/stage3" ||
     fail "stage2 and stage3 compiler binaries differ"
+printf '%s\n' "binary convergence         PASS"
 
-# Exercise the converged compiler instead of merely auditing its ELF headers.
+printf '%s\n' "[5/7] seed dependency audit"
+"$verify" "$work/stage2"
+printf '%s\n' "seed dependency audit      PASS"
+
+printf '%s\n' "[6/7] stage2 compiler smoke test"
 "$work/stage2" --emit-asm \
     "$root/test/selfhost/bootstrap_native_multicall_args.s" \
     "$work/conformance.S"
+printf '%s\n' "stage2 compiler smoke test PASS"
+
+printf '%s\n' "[7/7] conformance"
 as --64 -o "$work/conformance.o" "$work/conformance.S"
 ld -static -T "$root/src/runtime/linker/nostdlib.ld" \
     -o "$work/conformance" "$runtime_object" "$work/conformance.o"
@@ -62,5 +82,17 @@ set +e
 status=$?
 set -e
 [ "$status" -eq 42 ] || fail "conformance program returned $status, want 42"
+printf '%s\n' "conformance                PASS"
 
-printf '%s\n' "native bootstrap passed: stage2 == stage3"
+printf '%s\n' ""
+printf '%s\n' "S TRUE SELF-HOST BOOTSTRAP"
+printf '%s\n' "================================================================"
+printf '%s\n' "seed -> stage1             PASS"
+printf '%s\n' "stage1 -> stage2           PASS"
+printf '%s\n' "stage2 -> stage3           PASS"
+printf '%s\n' "IR convergence             PASS"
+printf '%s\n' "binary convergence         PASS"
+printf '%s\n' "seed dependency audit      PASS"
+printf '%s\n' "conformance                PASS"
+printf '%s\n' ""
+printf '%s\n' "RESULT: TRUE SELF-HOSTING"
