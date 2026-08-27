@@ -9,12 +9,12 @@ func read_unit(string path) (source_unit, noder_error) {
     }
 }
 
-func read_units(vec[string] paths) (vec[source_unit], noder_error) {
-    out := vec[source_unit]()
+func read_units(string[] paths) (source_unit[], noder_error) {
+    out := source_unit[]()
     i := 0
-    for i < paths.len() {
+    for i < len(paths) {
         switch read_unit(paths[i]) {
-            unit : out.push(unit),
+            unit : out = append(out, unit),
             err : return err,
         }
         i = i + 1

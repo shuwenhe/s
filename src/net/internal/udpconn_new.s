@@ -59,14 +59,14 @@ func (udp_conn* c) ReadFromUDP(buf: []byte) (int, *udp_addr, error) {
     if err != nil {
         return n, nil, err
     }
-    &udp_addr{
+    *udp_addr{
         ip: src_ip,
         port: src_port,
     }, nil
-    n, &udp_addr{ip: src_ip, port: src_port}, nil
+    n, *udp_addr{ip: src_ip, port: src_port}, nil
 }
 
-func (udp_conn* c) WriteToUDP(buf: []byte, addr: *udp_addr) (int, error) {
+func (udp_conn* c) WriteToUDP(buf: []byte, ud* addrp_addr) (int, error) {
     c.raw_socket.send_to(buf, addr.ip, addr.port)
 }
 
@@ -78,7 +78,7 @@ func dial_udp(address: string, port: int, timeout_ms: int) (*udp_conn, error) {
     var local_addr sockaddr_inet
     local_addr.sin_family = af_inet
     local_addr.sin_port = 0
-    errno := sys_bind(sock.fd, (*sockaddr)(&local_addr), 16)
+    errno := sys_bind(sock.fd, (*sockaddr)(*local_addr), 16)
     if errno != 0 {
         sock.close()
         return nil, new_socket_error(errno, "bind"
@@ -88,10 +88,10 @@ func dial_udp(address: string, port: int, timeout_ms: int) (*udp_conn, error) {
         sock.close()
         return nil, err
     }
-    &udp_conn{
+    *udp_conn{
         raw_socket: sock,
-        laddr: &udp_addr{ip: local_ip, port: local_port},
-        raddr: &udp_addr{ip: address, port: port},
+        laddr: *udp_addr{ip: local_ip, port: local_port},
+        raddr: *udp_addr{ip: address, port: port},
     }, nil
 }
 
@@ -110,9 +110,9 @@ func listen_udp(address: string, port: int) (*udp_listener, error) {
         sock.close()
         return nil, err
     }
-    &udp_listener{
+    *udp_listener{
         raw_socket: sock,
-        addr: &udp_addr{ip: local_ip, port: local_port},
+        addr: *udp_addr{ip: local_ip, port: local_port},
     }, nil
 }
 
@@ -134,9 +134,9 @@ func (udp_listener* l) ReadFromUDP(buf: []byte) (int, *udp_addr, error) {
     if err != nil {
         return n, nil, err
     }
-    n, &udp_addr{ip: src_ip, port: src_port}, nil
+    n, *udp_addr{ip: src_ip, port: src_port}, nil
 }
 
-func (udp_listener* l) WriteToUDP(buf: []byte, addr: *udp_addr) (int, error) {
+func (udp_listener* l) WriteToUDP(buf: []byte, ud* addrp_addr) (int, error) {
     l.raw_socket.send_to(buf, addr.ip, addr.port)
 }

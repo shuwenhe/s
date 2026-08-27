@@ -274,14 +274,14 @@ func atanh(float x) float {
 func ceil(float x) float {
     int ix = x as int
     if x > (ix as float) && x >= 0.0 { return (ix + 1) as float }
-    if x != (ix as float) && x < 0.0 { return (ix as float) }
+    if x != (ix as float) && x < 0.0 { return ix as float }
     x
 }
 
 func floor(float x) float {
     int ix = x as int
     if x < (ix as float) && x < 0.0 { return (ix - 1) as float }
-    if x != (ix as float) && x >= 0.0 { return (ix as float) }
+    if x != (ix as float) && x >= 0.0 { return ix as float }
     x
 }
 

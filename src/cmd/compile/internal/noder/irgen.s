@@ -1,12 +1,12 @@
 package compile.internal.noder
 use s.item
 use s.source_file
-use std.vec.vec
+use std.slices
 
-func lower_to_ir(source_file ast) vec[ir_node] {
-    out := vec[ir_node]()
+func lower_to_ir(source_file ast) ir_node[] {
+    out := ir_node[]()
     i := 0
-    for i < ast.items.len() {
+    for i < len(ast.items) {
         switch ast.items[i] {
             item.function(fn) : out.push(ir_node {
                 op: "fn",

@@ -21,7 +21,7 @@ struct diagnostic {
     option[int] severity
     option[string] code
     option[string] source
-    option[vec[diagnostic_related_information]] related_information
+    option[diagnostic_related_information[]] related_information
 }
 
 struct diagnostic_related_information {
@@ -104,7 +104,7 @@ struct completion_item {
 
 struct completion_list {
     bool is_incomplete
-    vec[completion_item] items
+    completion_item[] items
 }
 
 struct hover {
@@ -146,7 +146,7 @@ struct document_symbol {
     symbol_kind kind
     range range_val
     range selection_range
-    option[vec[document_symbol]] children
+    option[document_symbol[]] children
     option[bool] deprecated
 }
 
@@ -168,7 +168,7 @@ struct text_edit {
 }
 
 struct workspace_edit {
-    map[string, vec[text_edit]] changes
+    map[string, text_edit[]] changes
 }
 
 struct server_capabilities {
@@ -194,7 +194,7 @@ struct text_document_content_change_event {
 
 struct did_change_text_document_params {
     versioned_text_document_identifier text_document
-    vec[text_document_content_change_event] content_changes
+    text_document_content_change_event[] content_changes
 }
 
 struct did_open_text_document_params {

@@ -3,7 +3,7 @@ use compile.internal.backend_elf64.build as build_binary
 use std.fs.make_temp_dir
 use std.io.eprintln
 use std.process.run_process
-use std.vec.vec
+use std.slices
 
 func build(string path, string output, string ssa_margin, bool nostdlib) int {
     build_binary(path, output, ssa_margin, nostdlib)
@@ -20,8 +20,8 @@ func run(string path, string ssa_margin, bool nostdlib) int {
         eprintln("run failed: build step failed");
         return 1
     }
-    run_argv := vec[string]()
-    run_argv.push(output_path);
+    run_argv := string[]()
+    run_argv = append(run_argv, output_path);
     run_result := run_process(run_argv)
     if run_result.is_err() {
         eprintln("run failed: process execution failed");

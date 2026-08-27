@@ -1,5 +1,5 @@
 package compile.internal.gc
-use std.vec.vec
+use std.slices
 
 func profile_name(string target, string suffix) string {
     if target == "" {
@@ -11,8 +11,8 @@ func profile_name(string target, string suffix) string {
     target + suffix
 }
 
-func pick_pkgpath(vec[string] args) string {
-    if args.len() > 2 {
+func pick_pkgpath(string[] args) string {
+    if len(args) > 2 {
         return args[2]
     }
     "main"
@@ -32,6 +32,6 @@ func ends_with_slash(string text) bool {
     if text == "" {
         return false
     }
-    last := text[text.len() - 1]
+    last := text[len(text) - 1]
     last == "/" || last == "\\"
 }

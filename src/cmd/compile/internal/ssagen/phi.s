@@ -1,5 +1,5 @@
 package compile.internal.ssagen
-use std.vec.vec
+use std.slices
 
 struct phi_input {
     int pred
@@ -8,24 +8,24 @@ struct phi_input {
 
 struct lowered_phi {
     int target
-    vec[int] incoming
+    int[] incoming
     bool trivial
     int chosen
 }
 
-func lower_phi(int target, vec[phi_input] inputs) lowered_phi {
-    incoming := vec[int]()
+func lower_phi(int target, phi_input[] inputs) lowered_phi {
+    incoming := int[]()
     i := 0
-    for i < inputs.len() {
-        incoming.push(inputs[i].value)
+    for i < len(inputs) {
+        incoming = append(incoming, inputs[i].value)
         i = i + 1
     }
     trivial := true
     chosen := -1
-    if incoming.len() > 0 {
+    if len(incoming) > 0 {
         chosen = incoming[0]
         k := 1
-        for k < incoming.len() {
+        for k < len(incoming) {
             if incoming[k] != chosen {
                 trivial = false
                 break

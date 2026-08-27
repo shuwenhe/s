@@ -1,9 +1,9 @@
 package compile.internal.base
-use std.vec.vec
+use std.slices
 
 struct cmd_cfg {
-    vec[string] import_dirs
-    vec[string] import_map
+    string[] import_dirs
+    string[] import_map
     bool spectre_index
     bool instrumenting
 }
@@ -68,8 +68,8 @@ func default_cmd_flags() cmd_flags {
         lang: "",
         spectre: "",
         cfg: cmd_cfg {
-            import_dirs: vec[string](),
-            import_map: vec[string](),
+            import_dirs: string[](),
+            import_map: string[](),
             spectre_index: false,
             instrumenting: false,
         },
@@ -80,7 +80,7 @@ func add_import_dir(string path) () {
     if path == "" {
         return
     }
-    flag.cfg.import_dirs.push(path)
+    flag.cfg.import_dirs = append(flag.cfg.import_dirs, path)
 }
 
 func parse_flags() cmd_flags {

@@ -7,7 +7,7 @@ use std.io.println
 
 func main() {
     args := env_args()
-    if args.len() < 2 {
+    if len(args) < 2 {
         println("usage: build_compiler.s <arch>")
         return 1
     }

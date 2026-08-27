@@ -22,7 +22,7 @@ struct prog {
 
 struct ssa_value {
 	string op
-	vec[string] args
+	string[] args
 	bool flags
 	bool marked
 	string aux
@@ -30,8 +30,8 @@ struct ssa_value {
 }
 
 struct ssa_block {
-	vec[ssa_value] values
-	vec[ssa_value] controls
+	ssa_value[] values
+	ssa_value[] controls
 	bool flags_live_at_end
 }
 

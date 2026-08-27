@@ -1,5 +1,5 @@
 package compile.internal.compare
-use std.vec.vec
+use std.slices
 
 struct compare_field {
     string name
@@ -16,7 +16,7 @@ struct compare_field {
 }
 
 struct compare_struct {
-    vec[compare_field] fields
+    compare_field[] fields
     int alignment
     int reg_size
     int arch_alignment
@@ -40,7 +40,7 @@ struct compare_node {
 }
 
 struct eq_struct_result {
-    vec[compare_node] conds
+    compare_node[] conds
     bool can_panic
 }
 
@@ -67,7 +67,7 @@ func memrun(compare_struct t, int start) memrun_result {
     next := start
     for true {
         next = next + 1
-        if next >= t.fields.len() {
+        if next >= len(t.fields) {
             break
         }
         if t.fields[next - 1].padded {
@@ -97,7 +97,7 @@ func memrun(compare_struct t, int start) memrun_result {
 
 func eq_can_panic(compare_struct t) bool {
     i := 0
-    for i < t.fields.len() {
+    for i < len(t.fields) {
         f := t.fields[i]
         if f.name != "_" && (f.can_panic || (f.type_kind == "array" && f.elem_can_panic)) {
             return true
@@ -110,7 +110,7 @@ func eq_can_panic(compare_struct t) bool {
 func eq_struct_cost(compare_struct t) int {
     cost := 0
     i := 0
-    for i < t.fields.len() {
+    for i < len(t.fields) {
         f := t.fields[i]
         if f.name == "_" {
             i = i + 1
@@ -168,10 +168,10 @@ func calculate_cost_for_field(compare_field f, int reg_size) int {
 }
 
 func eq_struct(compare_struct t, string np, string nq) eq_struct_result {
-    segments := vec[vec[compare_node]]()
-    segments.push(vec[compare_node]())
+    segments := compare_node[[]]()
+    segments = append(segments, compare_node[]())
     i := 0
-    for i < t.fields.len() {
+    for i < len(t.fields) {
         f := t.fields[i]
         if f.name == "_" {
             i = i + 1
@@ -180,7 +180,7 @@ func eq_struct(compare_struct t, string np, string nq) eq_struct_result {
         type_can_panic := f.can_panic || (f.type_kind == "array" && f.elem_can_panic)
         if !f.regular_memory {
             if type_can_panic {
-                segments.push(vec[compare_node]())
+                segments = append(segments, compare_node[]())
             }
             if f.type_kind == "string" {
                 sres := eq_string(np + "." + f.name, nq + "." + f.name)
@@ -193,7 +193,7 @@ func eq_struct(compare_struct t, string np, string nq) eq_struct_result {
                 })
             }
             if type_can_panic {
-                segments.push(vec[compare_node]())
+                segments = append(segments, compare_node[]())
             }
             i = i + 1
             continue
@@ -217,20 +217,20 @@ func eq_struct(compare_struct t, string np, string nq) eq_struct_result {
         }
         i = fc.next
     }
-    flat := vec[compare_node]()
+    flat := compare_node[]()
     s := 0
-    for s < segments.len() {
+    for s < len(segments) {
         sorted := sort_calls_last(segments[s])
         k := 0
-        for k < sorted.len() {
-            flat.push(sorted[k])
+        for k < len(sorted) {
+            flat = append(flat, sorted[k])
             k = k + 1
         }
         s = s + 1
     }
     eq_struct_result {
         conds: flat,
-        can_panic: segments.len() > 1,
+        can_panic: len(segments) > 1,
     }
 }
 
@@ -286,27 +286,27 @@ func eq_mem_func(int size, int alignment, int arch_alignment, bool can_merge_loa
     eqmem_func_result { name: "memequal", need_size: true }
 }
 
-func append_segment_node(vec[vec[compare_node]] segments, compare_node node) () {
-    if segments.len() == 0 {
-        segments.push(vec[compare_node]())
+func append_segment_node(compare_node[[]] segments, compare_node node) () {
+    if len(segments) == 0 {
+        segments = append(segments, compare_node[]())
     }
-    last := segments.len() - 1
+    last := len(segments) - 1
     segments[last].push(node)
 }
 
-func sort_calls_last(vec[compare_node] nodes) vec[compare_node] {
-    out := vec[compare_node]()
+func sort_calls_last(compare_node[] nodes) compare_node[] {
+    out := compare_node[]()
     i := 0
-    for i < nodes.len() {
+    for i < len(nodes) {
         if !nodes[i].is_call {
-            out.push(nodes[i])
+            out = append(out, nodes[i])
         }
         i = i + 1
     }
     i = 0
-    for i < nodes.len() {
+    for i < len(nodes) {
         if nodes[i].is_call {
-            out.push(nodes[i])
+            out = append(out, nodes[i])
         }
         i = i + 1
     }

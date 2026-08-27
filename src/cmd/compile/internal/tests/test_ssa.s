@@ -599,12 +599,12 @@ func contains(string text, string needle) bool {
     if needle == "" {
         return true
     }
-    if text.len() < needle.len() {
+    if len(text) < len(needle) {
         return false
     }
     i := 0
-    for i <= text.len() - needle.len() {
-        if slice(text, i, i + needle.len()) == needle {
+    for i <= len(text) - len(needle) {
+        if slice(text, i, i + len(needle)) == needle {
             return true
         }
         i = i + 1

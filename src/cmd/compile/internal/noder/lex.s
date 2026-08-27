@@ -1,6 +1,6 @@
 package compile.internal.noder
 use std.result.result
-use std.vec.vec
+use std.slices
 
 func classify_token(string token) string {
     if token == "package" || token == "use" || token == "func" || token == "struct" || token == "enum" || token == "trait" || token == "const" {
@@ -15,11 +15,11 @@ func classify_token(string token) string {
     "ident"
 }
 
-func lex_source(source_unit unit) (vec[token_item], noder_error) {
-    out := vec[token_item]()
+func lex_source(source_unit unit) (token_item[], noder_error) {
+    out := token_item[]()
     lines := split_lines(unit.text)
     li := 0
-    for li < lines.len() {
+    for li < len(lines) {
         line := lines[li]
         trimmed := trim_spaces(line)
         if starts_with(trimmed, "
@@ -28,7 +28,7 @@ func lex_source(source_unit unit) (vec[token_item], noder_error) {
         }
         words := split_words(line)
         wi := 0
-        for wi < words.len() {
+        for wi < len(words) {
             out.push(token_item {
                 kind: classify_token(words[wi]),
                 text: words[wi],

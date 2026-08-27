@@ -1,5 +1,5 @@
 package src.runtime
-use std.vec.vec
+use std.slices
 use std.result.result
 
 struct ObjHeader {
@@ -22,7 +22,7 @@ extern "intrinsic" func __mem_obj_write_header(int obj_id, ObjHeader h) ()
 extern "intrinsic" func __mem_obj_read_header(int obj_id) ObjHeader
 extern "intrinsic" func __mem_obj_set_mark(int obj_id, int mark) ()
 extern "intrinsic" func __mem_obj_get_mark(int obj_id) int
-extern "intrinsic" func __mem_heap_list_all() vec[int]
+extern "intrinsic" func __mem_heap_list_all() int[]
 extern "intrinsic" func __mem_size_class(int size) int
 
 func malloc(int size, int type_id) int {
@@ -81,7 +81,7 @@ struct malloc_stats {
     int goal_bytes
 }
 
-func heap_all_objects() vec[int] {
+func heap_all_objects() int[] {
     __mem_heap_list_all()
 }
 

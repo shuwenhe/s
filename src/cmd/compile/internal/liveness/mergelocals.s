@@ -1,5 +1,5 @@
 package compile.internal.liveness
-use std.vec.vec
+use std.slices
 
 struct local_slot {
     string name
@@ -10,17 +10,17 @@ struct local_slot {
 }
 
 struct merged_locals {
-    vec[local_slot] slots
+    local_slot[] slots
     int frame_size
 }
 
-func merge_locals(vec[local_slot] a, vec[local_slot] b) merged_locals {
-    slots := vec[local_slot]()
+func merge_locals(local_slot[] a, local_slot[] b) merged_locals {
+    slots := local_slot[]()
     append_unique_slots(slots, a)
     append_unique_slots(slots, b)
     cursor := 0
     i := 0
-    for i < slots.len() {
+    for i < len(slots) {
         align := slots[i].align
         if align <= 0 {
             align = 8
@@ -36,12 +36,12 @@ func merge_locals(vec[local_slot] a, vec[local_slot] b) merged_locals {
     }
 }
 
-func append_unique_slots(vec[local_slot] dst, vec[local_slot] src) () {
+func append_unique_slots(local_slot[] dst, local_slot[] src) () {
     i := 0
-    for i < src.len() {
+    for i < len(src) {
         idx := find_slot_index(dst, src[i].name)
         if idx < 0 {
-            dst.push(src[i])
+            dst = append(dst, src[i])
         } else {
             if src[i].size > dst[idx].size {
                 dst[idx].size = src[i].size
@@ -57,9 +57,9 @@ func append_unique_slots(vec[local_slot] dst, vec[local_slot] src) () {
     }
 }
 
-func find_slot_index(vec[local_slot] slots, string name) int {
+func find_slot_index(local_slot[] slots, string name) int {
     i := 0
-    for i < slots.len() {
+    for i < len(slots) {
         if slots[i].name == name {
             return i
         }

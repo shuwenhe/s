@@ -1,5 +1,5 @@
 package compile.internal.ir.mir
-use std.vec.vec
+use std.slices
 
 struct MirOperand {
     string kind,
@@ -16,12 +16,12 @@ struct MirLocalSlot {
 struct MirAssignStmt {
     int target
     string op
-    vec[string] args
+    string[] args
 }
 
 struct MirEvalStmt {
     string op
-    vec[string] args
+    string[] args
 }
 
 enum MirStatement {
@@ -31,24 +31,24 @@ enum MirStatement {
 
 struct MirTerminator {
     string kind,
-    vec[int] targets
+    int[] targets
 }
 
 struct MirBasicBlock {
     int id
     string label
-    vec[MirStatement] statements
+    MirStatement[] statements
     MirTerminator terminator
 }
 
 struct MirFunction {
     string name
-    vec[MirLocalSlot] locals
-    vec[MirBasicBlock] blocks
+    MirLocalSlot[] locals
+    MirBasicBlock[] blocks
     int entry
     int exit
 }
 
 func new_empty_function(string name) MirFunction {
-    MirFunction { name: name, locals: vec[MirLocalSlot](), blocks: vec[MirBasicBlock](), entry: 0, exit: 0 }
+    MirFunction { name: name, locals: MirLocalSlot[](), blocks: MirBasicBlock[](), entry: 0, exit: 0 }
 }

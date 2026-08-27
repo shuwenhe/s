@@ -2,7 +2,7 @@ package compile.internal.noder
 use s.source_file
 use std.option.option
 use std.result.result
-use std.vec.vec
+use std.slices
 
 struct noder_error {
     string code
@@ -47,12 +47,12 @@ struct ir_node {
 
 struct noder_output {
     source_unit unit
-    vec[token_item] tokens
-    vec[import_record] imports
+    token_item[] tokens
+    import_record[] imports
     source_file ast
-    vec[ir_node] ir
-    vec[export_record] exports
-    vec[string] notes
+    ir_node[] ir
+    export_record[] exports
+    string[] notes
 }
 
 func ok_error() noder_error {
