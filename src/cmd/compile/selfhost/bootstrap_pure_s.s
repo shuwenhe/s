@@ -48,7 +48,7 @@ func bootstrap_three_stage(
     stage3_bin := output_dir + "/stage3"
 
     eprintln("[1/5] building stage1 IR with the trusted seed")
-    string[] stage1_argv = string[]()
+    stage1_argv := string[]()
     stage1_argv = append(stage1_argv, seed_compiler)
     stage1_argv = append(stage1_argv, compiler_src)
     stage1_argv = append(stage1_argv, stage1_ir)
