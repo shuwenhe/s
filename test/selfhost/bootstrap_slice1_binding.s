@@ -1,6 +1,6 @@
 package main
 
-func main() int {
+func main() {
     answer := 42
     return answer
 }

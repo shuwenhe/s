@@ -5,7 +5,7 @@ func abi_worker(int done_channel) int {
     return 0;
 }
 
-func main() int {
+func main() {
     if __sroutine_abi_version() != 1 {
         println("FAIL: sroutine ABI version");
         return 1;

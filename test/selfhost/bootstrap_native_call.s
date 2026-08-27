@@ -4,6 +4,6 @@ func add(int left, int right) int {
     return left + right
 }
 
-func main() int {
+func main() {
     return add(5 * 4, 44 / 2)
 }
