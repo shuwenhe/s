@@ -6,7 +6,7 @@ func (l *UDPListener) Close() error {
 }
 
 func (l *UDPListener) Addr() Addr {
-    &l.laddr
+    *l.laddr
 }
 package src.net
 

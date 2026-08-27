@@ -1,51 +1,51 @@
 package compile.internal.liveness
-use std.vec.vec
+use std.slices
 
 struct bv_set {
-    vec[vec[int]] rows
+    int[][]] rows
 }
 
 func new_bv_set() bv_set {
-    bv_set { rows: vec[vec[int]]() }
+    bv_set { rows: int[][]]() }
 }
 
-func bvset_add(vec[vec[int]] rows, vec[int] bits) vec[vec[int]] {
+func bvset_add(int[][]] rows, int[] bits) int[][]] {
     normalized := normalize_bits(bits)
     i := 0
-    for i < rows.len() {
+    for i < len(rows) {
         if bitmap_equal(rows[i], normalized) {
             return rows
         }
         i = i + 1
     }
-    rows.push(normalized)
+    rows = append(rows, normalized)
     rows
 }
 
-func bvset_extract_unique(bv_set set) vec[vec[int]] {
+func bvset_extract_unique(bv_set set) int[][]] {
     set.rows
 }
 
-func normalize_bits(vec[int] bits) vec[int] {
-    out := vec[int]()
+func normalize_bits(int[] bits) int[] {
+    out := int[]()
     i := 0
-    for i < bits.len() {
+    for i < len(bits) {
         if bits[i] != 0 {
-            out.push(1)
+            out = append(out, 1)
         } else {
-            out.push(0)
+            out = append(out, 0)
         }
         i = i + 1
     }
     out
 }
 
-func bitmap_equal(vec[int] left, vec[int] right) bool {
-    if left.len() != right.len() {
+func bitmap_equal(int[] left, int[] right) bool {
+    if len(left) != len(right) {
         return false
     }
     i := 0
-    for i < left.len() {
+    for i < len(left) {
         if left[i] != right[i] {
             return false
         }

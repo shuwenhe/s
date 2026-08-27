@@ -28,7 +28,7 @@ func run_typesys_suite() int {
     if assignable_type("[4]int", "nil") {
         return 1
     }
-    if !assignable_type("&int", "nil") {
+    if !assignable_type("*int", "nil") {
         return 1
     }
     if !assignable_type("fn", "nil") {

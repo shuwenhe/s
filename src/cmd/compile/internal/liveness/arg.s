@@ -1,5 +1,5 @@
 package compile.internal.liveness
-use std.vec.vec
+use std.slices
 
 struct arg_liveness_slot {
     string name
@@ -10,21 +10,21 @@ struct arg_liveness_slot {
 struct arg_liveness_payload {
     string symbol_name
     int min_slot_offset
-    vec[int] map_offsets
-    vec[string] maps
+    int[] map_offsets
+    string[] maps
 }
 
 func arg_emit_symbol_name(string fn_name) string {
     fn_name + ".argliveinfo"
 }
 
-func arg_emit(string fn_name, vec[arg_liveness_slot] args, vec[vec[int]] raw_maps) arg_liveness_payload {
+func arg_emit(string fn_name, arg_liveness_slot[] args, int[][]] raw_maps) arg_liveness_payload {
     maps := dedupe_bitmaps(raw_maps)
     min_slot_offset := 0
-    if args.len() > 0 {
+    if len(args) > 0 {
         min_slot_offset = args[0].frame_offset
         i := 1
-        for i < args.len() {
+        for i < len(args) {
             if args[i].frame_offset < min_slot_offset {
                 min_slot_offset = args[i].frame_offset
             }
@@ -37,15 +37,15 @@ func arg_emit(string fn_name, vec[arg_liveness_slot] args, vec[vec[int]] raw_map
     if min_slot_offset > 255 {
         min_slot_offset = 255
     }
-    map_offsets := vec[int]()
-    encoded_maps := vec[string]()
+    map_offsets := int[]()
+    encoded_maps := string[]()
     off := min_slot_offset
     m := 0
-    for m < maps.len() {
+    for m < len(maps) {
         bits := maps[m]
-        map_offsets.push(off)
-        encoded_maps.push(encode_bitmap(bits))
-        off = off + bits.len()
+        map_offsets = append(map_offsets, off)
+        encoded_maps = append(encoded_maps, encode_bitmap(bits))
+        off = off + len(bits)
         m = m + 1
     }
     arg_liveness_payload {
@@ -56,13 +56,13 @@ func arg_emit(string fn_name, vec[arg_liveness_slot] args, vec[vec[int]] raw_map
     }
 }
 
-func dedupe_bitmaps(vec[vec[int]] maps) vec[vec[int]] {
-    out := vec[vec[int]]()
+func dedupe_bitmaps(int[][]] maps) int[][]] {
+    out := int[][]]()
     i := 0
-    for i < maps.len() {
+    for i < len(maps) {
         seen := false
         j := 0
-        for j < out.len() {
+        for j < len(out) {
             if bitmap_equal(out[j], maps[i]) {
                 seen = true
                 break
@@ -70,19 +70,19 @@ func dedupe_bitmaps(vec[vec[int]] maps) vec[vec[int]] {
             j = j + 1
         }
         if !seen {
-            out.push(maps[i])
+            out = append(out, maps[i])
         }
         i = i + 1
     }
     out
 }
 
-func bitmap_equal(vec[int] left, vec[int] right) bool {
-    if left.len() != right.len() {
+func bitmap_equal(int[] left, int[] right) bool {
+    if len(left) != len(right) {
         return false
     }
     i := 0
-    for i < left.len() {
+    for i < len(left) {
         if left[i] != right[i] {
             return false
         }
@@ -91,10 +91,10 @@ func bitmap_equal(vec[int] left, vec[int] right) bool {
     true
 }
 
-func encode_bitmap(vec[int] bits) string {
+func encode_bitmap(int[] bits) string {
     out := ""
     i := 0
-    for i < bits.len() {
+    for i < len(bits) {
         if bits[i] != 0 {
             out = out + "1"
         } else {

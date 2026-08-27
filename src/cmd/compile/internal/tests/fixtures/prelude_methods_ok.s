@@ -1,6 +1,6 @@
 package demo.prelude
 
-func ok(&string name, &vec[int] items, int index) int {
-    items.push(1);
-    name.len() + items.len() + items[index]
+func ok(*string name, *int[] items, int index) int {
+    items = append(items, 1);
+    len(name) + len(items) + items[index]
 }

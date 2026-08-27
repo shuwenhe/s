@@ -65,10 +65,10 @@ func create_notification(method string, params string) string {
     "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params + "}"
 }
 
-func serialize_diagnostics(diags vec[diagnostic]) string {
+func serialize_diagnostics(diags diagnostic[]) string {
     var result = "["
     var i = 0
-    for i < diags.len() {
+    for i < len(diags) {
         if i > 0 {
             result = result + ","
         }
@@ -85,10 +85,10 @@ func serialize_diagnostic(d diagnostic) string {
     "\",\"severity\":" + serialize_severity(d.severity) + "}"
 }
 
-func serialize_document_symbols(symbols vec[document_symbol]) string {
+func serialize_document_symbols(symbols document_symbol[]) string {
     var result = "["
     var i = 0
-    for i < symbols.len() {
+    for i < len(symbols) {
         if i > 0 {
             result = result + ","
         }
@@ -110,7 +110,7 @@ func serialize_completion_list(list completion_list) string {
     var result = "{\"isIncomplete\":" + (if list.is_incomplete { "true" } else { "false" })
     result = result + ",\"items\":["
     var i = 0
-    for i < list.items.len() {
+    for i < len(list.items) {
         if i > 0 {
             result = result + ","
         }
@@ -171,30 +171,30 @@ func extract_json_string(json string, key string) option[string] {
     search_key := "\"" + key + "\":"
     switch std::find_substring(json, search_key) {
         option::some(pos) : {
-            start := pos + search_key.len()
+            start := pos + len(search_key)
 
-            for start < json.len() && (json[start] == " " || json[start] == "\t") {
+            for start < len(json) && (json[start] == " " || json[start] == "\t") {
                 start = start + 1
             }
 
-            if start < json.len() {
+            if start < len(json) {
                 if json[start] == "\"" {
                     end := start + 1
-                    for end < json.len() && json[end] != "\"" {
+                    for end < len(json) && json[end] != "\"" {
                         if json[end] == "\\" {
                             end = end + 2
                         } else {
                             end = end + 1
                         }
                     }
-                    if end < json.len() {
+                    if end < len(json) {
                         option::some(json.substring(start + 1, end))
                     } else {
                         option::none()
                     }
                 } else {
                     end := start
-                    for end < json.len() && json[end] != "," && json[end] != "}" && json[end] != "]" {
+                    for end < len(json) && json[end] != "," && json[end] != "}" && json[end] != "]" {
                         end = end + 1
                     }
                     option::some(json.substring(start, end))
@@ -210,7 +210,7 @@ func extract_json_string(json string, key string) option[string] {
 func escape_json_string(s string) string {
     var result = ""
     var i = 0
-    for i < s.len() {
+    for i < len(s) {
         c := s[i]
         if c == "\"" {
             result = result + "\\\""

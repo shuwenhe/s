@@ -103,7 +103,7 @@ func run_semantic_suite(string fixtures_root) int {
     }
     diag_src := "package main\nfunc main() {\n  missing(1)\n  missing(1)\n  0\n}"
     diagnostics := check_detailed(diag_src)
-    if diagnostics.len() == 0 {
+    if len(diagnostics) == 0 {
         return 1
     }
     if diagnostics[0].severity == "" {
@@ -126,7 +126,7 @@ func run_semantic_suite(string fixtures_root) int {
     }
     saw_summary := false
     i := 0
-    for i < diagnostics.len() {
+    for i < len(diagnostics) {
         if diagnostics[i].code == "s0001" {
             saw_summary = true
             if diagnostics[i].upstream_code == "" {
@@ -166,7 +166,7 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(send_without_recv_diags, "e3050") {
         return 1
     }
-    select_without_recv_src := "package demo.conc\nfunc main() {\n  chs := vec[chan]()\n  select_recv(chs)\n  0\n}"
+    select_without_recv_src := "package demo.conc\nfunc main() {\n  chs := chan[]()\n  select_recv(chs)\n  0\n}"
     select_without_recv_diags := check_detailed(select_without_recv_src)
     if !has_code(select_without_recv_diags, "e3048") {
         return 1
@@ -221,20 +221,20 @@ func run_semantic_suite(string fixtures_root) int {
     if check_text(method_call_ok) != 0 {
         return 1
     }
-    method_ref_ok := "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (reader: &Reader) peek() int {\n  reader.count\n}\nfunc main() {\n  reader := Reader { count: 2 }\n  reader.peek()\n}"
+    method_ref_ok := "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (Reader* reader) peek() int {\n  reader.count\n}\nfunc main() {\n  reader := Reader { count: 2 }\n  reader.peek()\n}"
     if check_text(method_ref_ok) != 0 {
         return 1
     }
-    method_temp_ref_fail := "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (reader: &Reader) peek() int {\n  reader.count\n}\nfunc make_reader() Reader {\n  Reader { count: 2 }\n}\nfunc main() {\n  make_reader().peek()\n}"
+    method_temp_ref_fail := "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (Reader* reader) peek() int {\n  reader.count\n}\nfunc make_reader() Reader {\n  Reader { count: 2 }\n}\nfunc main() {\n  make_reader().peek()\n}"
     method_temp_ref_diags := check_detailed(method_temp_ref_fail)
     if !has_code(method_temp_ref_diags, "e3051") {
         return 1
     }
-    method_mut_ref_ok := "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &Counter) bump() int {\n  counter.count\n}\nfunc main() {\n  counter := Counter { count: 2 }\n  counter.bump()\n}"
+    method_mut_ref_ok := "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (Counter* counter) bump() int {\n  counter.count\n}\nfunc main() {\n  counter := Counter { count: 2 }\n  counter.bump()\n}"
     if check_text(method_mut_ref_ok) != 0 {
         return 1
     }
-    method_temp_mut_ref_fail := "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (counter: &Counter) bump() int {\n  counter.count\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() {\n  make_counter().bump()\n}"
+    method_temp_mut_ref_fail := "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (Counter* counter) bump() int {\n  counter.count\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() {\n  make_counter().bump()\n}"
     method_temp_mut_ref_diags := check_detailed(method_temp_mut_ref_fail)
     if !has_code(method_temp_mut_ref_diags, "e3051") {
         return 1
@@ -290,9 +290,9 @@ func run_semantic_suite(string fixtures_root) int {
     0
 }
 
-func has_code(vec[semantic_error] diagnostics, string code) bool {
+func has_code(semantic_error[] diagnostics, string code) bool {
     i := 0
-    for i < diagnostics.len() {
+    for i < len(diagnostics) {
         if diagnostics[i].code == code {
             return true
         }

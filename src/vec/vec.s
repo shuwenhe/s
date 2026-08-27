@@ -1,31 +1,49 @@
+// DEPRECATED: Use std.slices instead!
+// 
+// This package provides the old Vector implementation.
+// It is now DEPRECATED in favor of native Slice support (like Go).
+//
+// Migration guide:
+//   Old: use std.vec.vec
+//        v := int[]()
+//        v = append(v, 10)
+//        len := len(v)
+//   
+//   New: (no import needed)
+//        v := int[]{}
+//        v = append(v, 10)
+//        len := len(v)
+//
+// For migration help, see: std.slices or std.slices documentation
+
 package std.vec
 use std.option.option
 use std.prelude.box
 use std.prelude.box
 
-struct raw_vec[t] {
+struct raw_t[] {
     box[array[t]] storage
     int capacity
 }
 
-struct vec[t] {
-    raw_vec[t] raw
+struct t[] {
+    raw_t[] raw
     int length
 }
 
-func new_vec[t]() vec[t] {
+func new_t[]() t[] {
     with_capacity[t](4)
 }
 
-func with_capacity[t](int capacity) vec[t] {
+func with_capacity[t](int capacity) t[] {
     initial :=
         if capacity > 0 {
             capacity
         } else {
             4
         }
-    vec[t] {
-        raw: raw_vec[t] {
+    t[] {
+        raw: raw_t[] {
             storage: box(new_array[t](initial)),
             capacity: initial,
         },
@@ -33,13 +51,13 @@ func with_capacity[t](int capacity) vec[t] {
     }
 }
 
-func (vec[t]* self) push(t value) () {
+func (t[]* self) push(t value) () {
         ensure_capacity(self, self.length + 1)
         array_set(self.raw.storage.value, self.length, value)
         self.length = self.length + 1
     }
 
-func (vec[t]* self) pop() option[t] {
+func (t[]* self) pop() option[t] {
         if self.length == 0 {
             return option::none
         }
@@ -47,26 +65,26 @@ func (vec[t]* self) pop() option[t] {
         option::some(array_get(self.raw.storage.value, self.length))
     }
 
-func (vec[t]* self) len() int {
+func (t[]* self) len() int {
         self.length
     }
 
-func (vec[t]* self) capacity() int {
+func (t[]* self) capacity() int {
         self.raw.capacity
     }
 
-func (vec[t]* self) is_empty() bool {
+func (t[]* self) is_empty() bool {
         self.length == 0
     }
 
-func (vec[t]* self) get(int index) option[t] {
+func (t[]* self) get(int index) option[t] {
         if index < 0 || index >= self.length {
             return option::none
         }
         option::some(array_get(self.raw.storage.value, index))
     }
 
-func (vec[t]* self) set(int index, t value) bool {
+func (t[]* self) set(int index, t value) bool {
         if index < 0 || index >= self.length {
             return false
         }
@@ -74,11 +92,11 @@ func (vec[t]* self) set(int index, t value) bool {
         true
     }
 
-func (vec[t]* self) clear() () {
+func (t[]* self) clear() () {
         self.length = 0
     }
 
-func ensure_capacity[t](vec[t] vec, int wanted) () {
+func ensure_capacity[t](t[] vec, int wanted) () {
     if wanted <= vec.raw.capacity {
         return
     }

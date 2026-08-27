@@ -1,5 +1,5 @@
 package compile.internal.ssagen
-use std.vec.vec
+use std.slices
 
 struct abi_param_desc {
     int frame_offset
@@ -9,7 +9,7 @@ struct abi_param_desc {
 
 struct arg_info_blob {
     string symbol_name
-    vec[int] bytes
+    int[] bytes
 }
 
 struct wrap_info_blob {
@@ -17,32 +17,32 @@ struct wrap_info_blob {
     string wrapped_symbol
 }
 
-func emit_arg_info(string fn_name, vec[abi_param_desc] in_params) arg_info_blob {
-    bytes := vec[int]()
+func emit_arg_info(string fn_name, abi_param_desc[] in_params) arg_info_blob {
+    bytes := int[]()
     i := 0
-    for i < in_params.len() {
+    for i < len(in_params) {
         append_param_encoding(bytes, in_params[i])
         i = i + 1
     }
-    bytes.push(255)
+    bytes = append(bytes, 255)
     arg_info_blob {
         symbol_name: fn_name + ".arginfo",
         bytes: bytes,
     }
 }
 
-func append_param_encoding(vec[int] bytes, abi_param_desc p) () {
+func append_param_encoding(int[] bytes, abi_param_desc p) () {
     if p.aggregate {
-        bytes.push(254)
+        bytes = append(bytes, 254)
     }
     off := p.frame_offset
     if off < 0 {
         off = 0
     }
     if off > 253 {
-        bytes.push(253)
+        bytes = append(bytes, 253)
     } else {
-        bytes.push(off)
+        bytes = append(bytes, off)
     }
     sz := p.size
     if sz < 0 {
@@ -51,9 +51,9 @@ func append_param_encoding(vec[int] bytes, abi_param_desc p) () {
     if sz > 253 {
         sz = 253
     }
-    bytes.push(sz)
+    bytes = append(bytes, sz)
     if p.aggregate {
-        bytes.push(252)
+        bytes = append(bytes, 252)
     }
 }
 
@@ -64,13 +64,13 @@ func emit_wrapped_func_info(string fn_name, string wrapped_name) wrap_info_blob 
     }
 }
 
-func emit_ssa_funcdata(string fn_name, vec[abi_param_desc] params, string wrapped_name) vec[string] {
-    out := vec[string]()
+func emit_ssa_funcdata(string fn_name, abi_param_desc[] params, string wrapped_name) string[] {
+    out := string[]()
     arg_info := emit_arg_info(fn_name, params)
-    out.push("FUNCDATA_ArgInfo=" + arg_info.symbol_name)
+    out = append(out, "FUNCDATA_ArgInfo=" + arg_info.symbol_name)
     if wrapped_name != "" {
         wrap_info := emit_wrapped_func_info(fn_name, wrapped_name)
-        out.push("FUNCDATA_WrapInfo=" + wrap_info.symbol_name + "->" + wrap_info.wrapped_symbol)
+        out = append(out, "FUNCDATA_WrapInfo=" + wrap_info.symbol_name + "->" + wrap_info.wrapped_symbol)
     }
     out
 }

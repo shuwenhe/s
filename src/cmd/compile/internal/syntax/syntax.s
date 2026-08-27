@@ -1,7 +1,7 @@
 package compile.internal.syntax
 use std.fs.read_to_string
 use std.result.result
-use std.vec.vec
+use std.slices
 use s.source_file
 use s.token
 use s.dump_source_file
@@ -26,7 +26,7 @@ func read_source(string path) (string, syntax_error) {
     }
 }
 
-func tokenize(string source) (vec[token], syntax_error) {
+func tokenize(string source) (token[], syntax_error) {
     switch new_lexer(source).tokenize() {
         tokens : tokens,
         err : syntax_error {
@@ -42,7 +42,7 @@ func parse_source(string source) (source_file, syntax_error) {
     parse_tokens(tokens)
 }
 
-func parse_tokens(vec[token] tokens) (source_file, syntax_error) {
+func parse_tokens(token[] tokens) (source_file, syntax_error) {
     switch parse_tokens(tokens) {
         ast : ast,
         err : syntax_error {
@@ -53,7 +53,7 @@ func parse_tokens(vec[token] tokens) (source_file, syntax_error) {
     }
 }
 
-func dump_tokens_text(vec[token] tokens) string {
+func dump_tokens_text(token[] tokens) string {
     dump_tokens(tokens)
 }
 

@@ -9,7 +9,7 @@ func host_intrinsics_argc(): int {
 }
 
 func host_intrinsics_argv(index: int): string {
-    if index < 0 || index >= g_args.len() {
+    if index < 0 || index >= len(g_args) {
         return nil
     }
     return g_args[index]

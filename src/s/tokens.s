@@ -1,6 +1,6 @@
 package s
 use std.prelude.to_string
-use std.vec.vec
+use std.slices
 enum token_kind {
     ident,
     int,
@@ -28,7 +28,7 @@ func token_kind_name(token_kind kind) string {
     }
 }
 
-func dump_tokens(vec[token] tokens) string {
+func dump_tokens(token[] tokens) string {
     out := ""
     for token in tokens {
         if out != "" {

@@ -2,7 +2,7 @@ package s
 use std.prelude.char_at
 use std.prelude.len
 use std.prelude.slice
-use std.vec.vec
+use std.slices
 use std.result.result
 
 struct lex_error {
@@ -27,8 +27,8 @@ func new_lexer(string source) lexer {
     }
 }
 
-func (lexer* self) tokenize() (vec[token], lex_error) {
-    vec[token] tokens = vec[token]()
+func (lexer* self) tokenize() (token[], lex_error) {
+    token[] tokens = token[]()
     for !self.is_eof() {
         self.skip_ignored()
         if self.is_eof() {
@@ -183,7 +183,7 @@ func (lexer* self) read_string() (string, lex_error) {
 }
 
 func (lexer* self) read_symbol() (string, lex_error) {
-    vec[string] multi = vec[string] {
+    string[] multi = string[] {
         "->",
         ":",
         "==",

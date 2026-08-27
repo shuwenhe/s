@@ -13,15 +13,15 @@ func run_versions_test_suite() int {
     }
     v := ssa_value {
         op: "OpAMD64MOVQconst",
-        args: vec[string](),
+        args: string[](),
         flags: false,
         marked: false,
         aux: "",
         reg: 1,
     }
     b := ssa_block {
-        values: vec[ssa_value] { v },
-        controls: vec[ssa_value](),
+        values: ssa_value[] { v },
+        controls: ssa_value[](),
         flags_live_at_end: true,
     }
     marked := ssa_mark_moves(b)
@@ -30,7 +30,7 @@ func run_versions_test_suite() int {
     }
     simd := ssa_value {
         op: "OpAMD64VADDPS128",
-        args: vec[string](),
+        args: string[](),
         flags: false,
         marked: false,
         aux: "",

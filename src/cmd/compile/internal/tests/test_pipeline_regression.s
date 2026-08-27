@@ -19,37 +19,37 @@ use compile.internal.mir.mir_terminator
 use compile.internal.mir.mir_control_edge
 use compile.internal.mir.dump_graph
 use std.prelude.slice
-use std.vec.vec
+use std.slices
 
 func run_pipeline_regression_suite() int {
-    cli_build_eq := vec[string]()
-    cli_build_eq.push("compile")
-    cli_build_eq.push("build")
-    cli_build_eq.push("demo.s")
-    cli_build_eq.push("-o")
-    cli_build_eq.push("a.out")
-    cli_build_eq.push("--ssa-dominant-margin=5")
+    cli_build_eq := string[]()
+    cli_build_eq = append(cli_build_eq, "compile")
+    cli_build_eq = append(cli_build_eq, "build")
+    cli_build_eq = append(cli_build_eq, "demo.s")
+    cli_build_eq = append(cli_build_eq, "-o")
+    cli_build_eq = append(cli_build_eq, "a.out")
+    cli_build_eq = append(cli_build_eq, "--ssa-dominant-margin=5")
     parsed_build_eq := parse_options(cli_build_eq)
-    if parsed_build_eq.len() < 4 || parsed_build_eq[3] != "5" {
+    if len(parsed_build_eq) < 4 || parsed_build_eq[3] != "5" {
         return 1
     }
-    cli_run_split := vec[string]()
-    cli_run_split.push("compile")
-    cli_run_split.push("run")
-    cli_run_split.push("demo.s")
-    cli_run_split.push("--ssa-dominant-margin")
-    cli_run_split.push("7")
+    cli_run_split := string[]()
+    cli_run_split = append(cli_run_split, "compile")
+    cli_run_split = append(cli_run_split, "run")
+    cli_run_split = append(cli_run_split, "demo.s")
+    cli_run_split = append(cli_run_split, "--ssa-dominant-margin")
+    cli_run_split = append(cli_run_split, "7")
     parsed_run_split := parse_options(cli_run_split)
-    if parsed_run_split.len() < 4 || parsed_run_split[3] != "7" {
+    if len(parsed_run_split) < 4 || parsed_run_split[3] != "7" {
         return 1
     }
-    cli_bad_margin := vec[string]()
-    cli_bad_margin.push("compile")
-    cli_bad_margin.push("build")
-    cli_bad_margin.push("demo.s")
-    cli_bad_margin.push("-o")
-    cli_bad_margin.push("a.out")
-    cli_bad_margin.push("--ssa-dominant-margin=oops")
+    cli_bad_margin := string[]()
+    cli_bad_margin = append(cli_bad_margin, "compile")
+    cli_bad_margin = append(cli_bad_margin, "build")
+    cli_bad_margin = append(cli_bad_margin, "demo.s")
+    cli_bad_margin = append(cli_bad_margin, "-o")
+    cli_bad_margin = append(cli_bad_margin, "a.out")
+    cli_bad_margin = append(cli_bad_margin, "--ssa-dominant-margin=oops")
     parsed_bad_margin := parse_options(cli_bad_margin)
     if parsed_bad_margin[0] != "help" {
         return 1
@@ -115,7 +115,7 @@ func run_pipeline_regression_suite() int {
     }
     saw_pkg_functions := false
     ti := 0
-    for ti < graph.trace.len() {
+    for ti < len(graph.trace) {
         if starts_with(graph.trace[ti], "package.functions=") {
             saw_pkg_functions = true
         }
@@ -159,8 +159,8 @@ func run_pipeline_regression_suite() int {
         return 1
     }
     metric_graph := mir_graph {
-        blocks: vec[mir_block](),
-        trace: vec[string](
+        blocks: mir_block[](),
+        trace: string[](
             "stmt sroutine worker()",
             "expr call select_recv_weighted(ch1, 2, ch2, 1)",
             "expr call select_recv_timeout(ch1, ch2, 3)",
@@ -219,7 +219,7 @@ func run_pipeline_regression_suite() int {
 func count_const_decls(ir_ast.package_ir pkg) int {
     count := 0
     i := 0
-    for i < pkg.decls.len() {
+    for i < len(pkg.decls) {
         switch pkg.decls[i] {
             ir_ast.decl_ir::const(_) : count = count + 1,
             _ : (),
@@ -231,7 +231,7 @@ func count_const_decls(ir_ast.package_ir pkg) int {
 
 func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
     i := 0
-    for i < pkg.decls.len() {
+    for i < len(pkg.decls) {
         switch pkg.decls[i] {
             ir_ast.decl_ir::const(cd) : {
                 if cd.name == name && cd.value == value {
@@ -247,7 +247,7 @@ func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
 
 func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
     i := 0
-    for i < pkg.decls.len() {
+    for i < len(pkg.decls) {
         switch pkg.decls[i] {
             ir_ast.decl_ir::func(fd) : {
                 if fd.name == "main" && fd.body.is_some() {
@@ -273,13 +273,13 @@ func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
 func collect_ir_package_features(ir_ast.package_ir pkg) int {
     features := 0
     i := 0
-    for i < pkg.decls.len() {
+    for i < len(pkg.decls) {
         switch pkg.decls[i] {
             ir_ast.decl_ir::func(fd) : {
                 if fd.name == "main" && fd.body.is_some() {
                     body := fd.body.unwrap()
                     j := 0
-                    for j < body.statements.len() {
+                    for j < len(body.statements) {
                         switch body.statements[j] {
                             ir_ast.stmt_ir::expr(expr_stmt) : {
                                 features = features | collect_ir_expr_features(expr_stmt.expr)
@@ -314,7 +314,7 @@ func collect_ir_package_features(ir_ast.package_ir pkg) int {
 func collect_ir_block_features(ir_ast.block_ir block) int {
     features := 2
     i := 0
-    for i < block.statements.len() {
+    for i < len(block.statements) {
         switch block.statements[i] {
             ir_ast.stmt_ir::expr(expr_stmt) : {
                 features = features | collect_ir_expr_features(expr_stmt.expr)
@@ -360,7 +360,7 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
         ir_ast.expr_ir::array(array_expr) : {
             features = features | 8
             ai := 0
-            for ai < array_expr.items.len() {
+            for ai < len(array_expr.items) {
                 features = features | collect_ir_expr_features(array_expr.items[ai])
                 ai = ai + 1
             }
@@ -368,7 +368,7 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
         ir_ast.expr_ir::map(map_expr) : {
             features = features | 16
             mi := 0
-            for mi < map_expr.entries.len() {
+            for mi < len(map_expr.entries) {
                 features = features | collect_ir_expr_features(map_expr.entries[mi].key)
                 features = features | collect_ir_expr_features(map_expr.entries[mi].value)
                 mi = mi + 1
@@ -379,7 +379,7 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
         }
         ir_ast.expr_ir::call(call_expr) : {
             i := 0
-            for i < call_expr.args.len() {
+            for i < len(call_expr.args) {
                 features = features | collect_ir_expr_features(call_expr.args[i])
                 i = i + 1
             }
@@ -400,22 +400,22 @@ func starts_with(string text, string prefix) bool {
     if prefix == "" {
         return true
     }
-    if text.len() < prefix.len() {
+    if len(text) < len(prefix) {
         return false
     }
-    slice(text, 0, prefix.len()) == prefix
+    slice(text, 0, len(prefix)) == prefix
 }
 
 func contains(string text, string needle) bool {
     if needle == "" {
         return true
     }
-    if text.len() < needle.len() {
+    if len(text) < len(needle) {
         return false
     }
     i := 0
-    for i <= text.len() - needle.len() {
-        if slice(text, i, i + needle.len()) == needle {
+    for i <= len(text) - len(needle) {
+        if slice(text, i, i + len(needle)) == needle {
             return true
         }
         i = i + 1

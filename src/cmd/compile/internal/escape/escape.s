@@ -11,16 +11,16 @@ func estimate_escape_sites(string mir_text) int {
 func estimate_escape_sites_graph(mir_graph graph) int {
     total := 0
     i := 0
-    for i < graph.blocks.len() {
+    for i < len(graph.blocks) {
         block := graph.blocks[i]
         j := 0
-        for j < block.statements.len() {
+        for j < len(block.statements) {
             switch block.statements[j] {
                 mir_statement::eval(eval_stmt) : {
                     if eval_stmt.op == "alloc" || eval_stmt.op == "borrow" || eval_stmt.op == "address_of" {
                         total = total + 1
                     }
-                    if eval_stmt.args.len() > 0 {
+                    if len(eval_stmt.args) > 0 {
                         total = total + count_token(eval_stmt.args[0], "alloc")
                         total = total + count_token(eval_stmt.args[0], "borrow")
                         total = total + count_token(eval_stmt.args[0], "&")

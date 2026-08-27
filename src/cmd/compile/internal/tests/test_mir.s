@@ -10,7 +10,7 @@ use compile.internal.mir.mir_control_edge
 use compile.internal.mir.mir_local_slot
 use compile.internal.mir.mir_terminator
 use compile.internal.mir.mir_statement
-use std.vec.vec
+use std.slices
 
 func run_mir_suite() int {
     if trace_branch("flag", "then", "else") != "branch flag |   then then |   else else" {
@@ -25,21 +25,21 @@ func run_mir_suite() int {
     if trace_switch("value", "") != "switch value" {
         return 1
     }
-    blocks := vec[mir_basic_block]()
+    blocks := mir_basic_block[]()
     blocks.push(mir_basic_block {
         id: 0,
         label: "entry",
-        statements: vec[mir_statement](),
+        statements: mir_statement[](),
         terminator: mir_terminator {
             kind: "return",
-            edges: vec[mir_control_edge](),
+            edges: mir_control_edge[](),
         },
     })
     graph := mir_graph {
         function_name: "main",
         blocks: blocks,
-        locals: vec[mir_local_slot](),
-        trace: vec[string](),
+        locals: mir_local_slot[](),
+        trace: string[](),
         entry: 0,
         exit: 0,
     }
