@@ -56,7 +56,7 @@ func bootstrap_three_stage(
     }
 
     eprintln("[2/5] lowering stage1 IR to a runnable compiler")
-    stage1_bin_argv := string[] { seed_compiler }
+    stage1_bin_argv := []string{seed_compiler}
     stage1_bin_argv = append(stage1_bin_argv, "--emit-standalone-amd64")
     stage1_bin_argv = append(stage1_bin_argv, stage1_ir)
     stage1_bin_argv = append(stage1_bin_argv, stage1_bin)
@@ -65,7 +65,7 @@ func bootstrap_three_stage(
     }
 
     eprintln("[3/5] recompiling compiler.s with stage1")
-    stage2_argv := string[] { stage1_bin }
+    stage2_argv := []string{stage1_bin}
     stage2_argv = append(stage2_argv, compiler_src)
     stage2_argv = append(stage2_argv, stage2_ir)
     if run_checked(stage2_argv) != 0 {
