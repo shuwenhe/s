@@ -80,6 +80,8 @@ htmlcov/
 *.exe
 *.a
 dist/
+!src/cmd/dist/
+!src/cmd/dist/**
 build/
 !src/cmd/compile/internal/build/
 !src/cmd/compile/internal/build/**

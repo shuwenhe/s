@@ -364,6 +364,25 @@ s_string_byte_at:
     ret
 .size s_string_byte_at, .-s_string_byte_at
 
+.global s_byte_string_value
+.type s_byte_string_value, @function
+s_byte_string_value:
+    push %rbx
+    sar $1, %rdi
+    mov %rdi, %rbx
+    mov $18, %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Lbyte_string_done
+    movq $2, (%rax)
+    movq $1, 8(%rax)
+    mov %bl, 16(%rax)
+    movb $0, 17(%rax)
+.Lbyte_string_done:
+    pop %rbx
+    ret
+.size s_byte_string_value, .-s_byte_string_value
+
 .global s_string_slice
 .type s_string_slice, @function
 s_string_slice:
@@ -693,6 +712,22 @@ s_write_file_value:
     pop %rbx
     ret
 .size s_write_file_value, .-s_write_file_value
+
+.global s_make_executable_value
+.type s_make_executable_value, @function
+s_make_executable_value:
+    lea 16(%rdi), %rdi
+    mov $493, %rsi
+    mov $90, %rax
+    syscall
+    test %rax, %rax
+    js .Lmake_executable_fail
+    mov $1, %rax
+    ret
+.Lmake_executable_fail:
+    mov $3, %rax
+    ret
+.size s_make_executable_value, .-s_make_executable_value
 
 .section .rodata
 .Lnewline:
