@@ -17,6 +17,6 @@ func helper(int value) int {
     return 0
 }
 
-func main() int {
+func main() {
     return helper(7)
 }

@@ -1,6 +1,6 @@
 package main
 
-func main() int {
+func main() {
     counter := 0
     total := 0
     while counter < 6 {

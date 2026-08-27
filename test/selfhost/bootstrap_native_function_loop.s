@@ -14,6 +14,6 @@ func helper(int value) int {
     return multiply_by_loop(value, 6)
 }
 
-func main() int {
+func main() {
     return helper(7)
 }

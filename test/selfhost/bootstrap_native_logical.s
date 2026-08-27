@@ -8,7 +8,7 @@ func true_path() int {
     return 1
 }
 
-func main() int {
+func main() {
     if true_path() && !false_path() && (false_path() || true_path()) {
         return 42
     }

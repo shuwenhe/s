@@ -8,6 +8,6 @@ func combine(int value) int {
     return add3(value, value, 1)
 }
 
-func main() int {
+func main() {
     return combine(10) * 2
 }

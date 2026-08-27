@@ -10,7 +10,7 @@ func scale(int input) int {
     }
 }
 
-func main() int {
+func main() {
     base := scale(8)
     return base + 1
 }

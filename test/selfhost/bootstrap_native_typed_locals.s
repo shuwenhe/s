@@ -13,7 +13,7 @@ func choose(bool enabled, int value) int {
     return result
 }
 
-func main() int {
+func main() {
     int answer = choose(true, base())
     return answer
 }

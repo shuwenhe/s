@@ -1,6 +1,6 @@
 package main
 
-func main() int {
+func main() {
     copy_args_file()
     return 0
 }
