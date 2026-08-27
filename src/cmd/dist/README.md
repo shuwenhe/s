@@ -8,13 +8,14 @@ construction belongs here.
 The stages are build provenance, not compiler architecture:
 
 1. the trusted C seed builds the current S compiler sources;
-2. the resulting S compiler builds the second toolchain;
-3. the second toolchain builds the third toolchain;
+2. the resulting S compiler rebuilds the compiler sources;
+3. the second compiler rebuilds the sources again;
 4. normalized second- and third-stage artifacts must converge;
 5. the installed compiler must contain no C seed or IR-interpreter dependency.
 
 Current convergence is IR-only and seed-hosted. `make true-selfhost-check`
-remains the release gate for a native self-hosted compiler.
+remains the release gate for a native self-hosted compiler, while
+`make native-bootstrap` exercises the native frontier directly.
 
 Compiler sources must use these declaration forms:
 

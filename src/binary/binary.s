@@ -2,7 +2,7 @@ package std.binary
 
 use std.encoding.normalize_byte
 
-func u64_le_bytes([]int bytes, int offset) int {
+func u64_le_bytes(int[] bytes, int offset) int {
     if offset < 0 || offset + 8 > len(bytes) {
         return 0
     }
@@ -47,7 +47,7 @@ func i32_le_string(string data, int offset) int {
     return value
 }
 
-func parse_int_at_bytes([]int bytes, int pos) int {
+func parse_int_at_bytes(int[] bytes, int pos) int {
     if pos < 0 || pos >= len(bytes) {
         return 0
     }

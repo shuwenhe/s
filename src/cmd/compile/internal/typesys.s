@@ -120,13 +120,13 @@ func rules_consistent() bool {
     if parse_type("  int  ") != "int" {
         return false
     }
-    if !same_type("[]int", "[]int") {
+    if !same_type("int[]", "int[]") {
         return false
     }
-    if !same_type("[4]int", "[4]int") {
+    if !same_type("int[4]", "int[4]") {
         return false
     }
-    if same_type("[4]int", "[8]int") {
+    if same_type("int[4]", "int[8]") {
         return false
     }
     result_ref := parse_type_ref("(int, string)")
@@ -142,11 +142,11 @@ func rules_consistent() bool {
     if generic_arity("(int, string)") != 2 {
         return false
     }
-    ref_ref := parse_type_ref("&[]int")
+    ref_ref := parse_type_ref("&int[]")
     if !ref_ref.is_ref || !ref_ref.is_mut_ref {
         return false
     }
-    array_ref := parse_type_ref("[4]int")
+    array_ref := parse_type_ref("int[4]")
     if !array_ref.is_array || array_ref.array_len != "4" {
         return false
     }

@@ -13,8 +13,8 @@ main:
 `
 }
 
-func example_ir_to_asm_patterns() []string {
-    patterns := []string{
+func example_ir_to_asm_patterns() string[] {
+    patterns := string[]{
         "
         "MOV-PATTERN: mov [temp_location], %rax",
         "               mov %rax, [result_location]",

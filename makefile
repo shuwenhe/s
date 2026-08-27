@@ -149,6 +149,11 @@ selfhost: bootstrap-convergence
 	@echo "Installed seed-hosted S compiler: ./bin/s"
 	@echo "Note: this artifact is not yet a true native self-hosted compiler"
 
+native-selfhost: native-bootstrap
+	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/native/stage2 ./bin/s
+	@echo "Installed native self-hosted S compiler: ./bin/s"
+	@echo "Note: this artifact comes from the native bootstrap frontier"
+
 selfhost-lexer-check: seed-compiler-bin
 	@mkdir -p $(SELFHOST_DIR) ./bin
 	@./bin/s_seed src/cmd/compile/selfhost/lexer.s $(SELFHOST_DIR)/lexer.ir
@@ -192,8 +197,7 @@ native-bootstrap: seed-compiler-bin
 	  $(SELFHOST_DIR)/native
 
 native-bootstrap-install: native-bootstrap
-	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/native/stage2 ./bin/s
-	@echo "Installed native self-hosted S compiler: ./bin/s"
+	@$(MAKE) native-selfhost
 
 bootstrap-subset-check: seed-compiler-bin
 	@mkdir -p $(SELFHOST_DIR)/subset
@@ -357,7 +361,7 @@ selfhost-runtime-check:
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
 
-.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap native-bootstrap-install bootstrap-subset-check bootstrap-slice1-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap native-bootstrap-install native-selfhost bootstrap-subset-check bootstrap-slice1-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 verify-true-selfhost:
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
@@ -376,6 +380,7 @@ help:
 	@echo "  make bootstrap-audit        # Report provenance and forbidden dependencies"
 	@echo "  make native-bootstrap       # Build and compare pure-S stage1 -> stage2 -> stage3 binaries"
 	@echo "  make native-bootstrap-install # Install converged native stage2 as bin/s"
+	@echo "  make native-selfhost          # Install the native bootstrap result as bin/s"
 	@echo "  make bootstrap-subset-check # Enforce the frozen bootstrap declaration syntax"
 	@echo "  make bootstrap-slice1-check # Build and exercise the first static pure-S compiler slice"
 	@echo "  make pure-s-bootstrap-check # Run every implemented no-seed bootstrap frontier"
