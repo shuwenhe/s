@@ -1,76 +1,84 @@
-# S Bootstrap
+# S Bootstrap Ladder
 
-This document describes the bootstrap boundary for the S compiler and how it
-compares with the Go toolchain bootstrap model.
+This document records the current bootstrap frontier for the S compiler.
 
-## Reference model
+The ladder is intentionally incremental:
 
-Go bootstraps its toolchain in staged layers:
+1. `slice1` proves the smallest runnable compiler slice.
+2. `slice2` extends native expression, control flow, and locals.
+3. `slice3` extends calls, loops, strings, arrays, multicalls, and copy.
+4. `slice4` extends function control, logical operators, typed locals, and large functions.
+5. `slice5` extends multicall and argument passing.
+6. `slice6` extends string comparison and branch-string assembly generation.
 
-1. a trusted bootstrap toolchain builds the current sources;
-2. the resulting toolchain rebuilds itself;
-3. the next rebuild must converge with the prior stage;
-4. the installed toolchain is accepted only after the comparison passes.
+The current bootstrap driver still uses the trusted seed compiler to build each
+slice candidate, but each slice is validated against a narrower frontier of
+language or code-generation capability.
 
-S follows the same shape, but the current implementation is still split into
-two bootstrap tracks:
+## Current Targets
 
-1. `bootstrap-convergence` and `selfhost` prove seed-hosted convergence;
-2. `native-bootstrap` exercises the native S frontend/backend chain;
-3. `true-selfhost-check` is the acceptance gate for a compiler that no longer
-   links the C seed compiler.
+### Slice 1
 
-## Current stages
+Validates the minimal compiler and executable generation path.
 
-### Stage 0
-
-The trusted C seed compiler is built with:
+Recommended check:
 
 ```sh
-make seed-compiler-bin
+make bootstrap-slice1-check
 ```
 
-This produces `bin/s_seed`.
+### Slice 2
 
-### Seed-hosted convergence
+Validates native expression, control, and locals.
 
-The current self-hosted launcher is built with:
+Recommended check:
 
 ```sh
-make selfhost
+make bootstrap-slice2-check
 ```
 
-This currently checks that:
+### Slice 3
 
-1. `stage2.ir` and `stage3.ir` are identical;
-2. the generated launcher passes the seed-dependency audit;
-3. the lexer bootstrap slice still matches the seed token stream.
+Validates call, loop, string, array, multicall, and copy frontiers.
 
-### Native bootstrap frontier
-
-The experimental native chain is built with:
+Recommended check:
 
 ```sh
-make native-bootstrap
+make bootstrap-slice3-check
 ```
 
-This path is intended to mirror Go's stage progression more closely:
+### Slice 4
 
-1. build stage1 from the seed;
-2. build stage2 from stage1;
-3. build stage3 from stage2;
-4. compare the normalized outputs;
-5. reject any compiler that still depends on the seed or the IR interpreter.
+Validates function control, logical operators, typed locals, and large functions.
 
-## Acceptance criteria
+Recommended check:
 
-The compiler is considered fully self-hosted only when all of the following are
-true:
+```sh
+make bootstrap-slice4-check
+```
 
-1. `stage2` and `stage3` converge;
-2. the final compiler does not embed seed compiler symbols;
-3. the final compiler does not depend on the IR interpreter path;
-4. the native bootstrap checks pass for the implemented bootstrap slices.
+### Slice 5
 
-Until then, `selfhost` is a bootstrap-proven launcher, not the final native
-compiler.
+Validates multicall and argument passing.
+
+Recommended check:
+
+```sh
+make bootstrap-slice5-check
+```
+
+### Slice 6
+
+Validates string comparison and branch-string assembly generation.
+
+Recommended check:
+
+```sh
+make bootstrap-slice6-check
+```
+
+## Notes
+
+The ladder is a work-in-progress. The later slices are useful because they make
+the self-hosting boundary explicit, even when the full compiler is not yet able
+to rebuild itself without the seed-assisted path.
