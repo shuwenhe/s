@@ -44,13 +44,15 @@ Compile an S source file to IR:
 ./bin/s_seed input.s output.ir
 ```
 
-## Build the seed-hosted compiler launcher
+## Build the native self-hosted compiler
 
 ```sh
 make selfhost
 ```
 
-The resulting compiler is installed as `bin/s`. At present this executable still links the C seed compiler; the stage comparison checks deterministic bootstrapping, not independent self-hosting.
+The resulting compiler is installed as `bin/s`. This is now the native bootstrap
+frontier entrypoint; it still depends on the seed to construct stage1, but the
+installed binary comes from the native stage2 artifact.
 
 To verify compiler bootstrapping and lexer compatibility:
 
@@ -64,13 +66,13 @@ To require that `bin/s` no longer links the C seed compiler, run:
 make true-selfhost-check
 ```
 
-This stricter check intentionally fails until the S frontend and backend fully replace the seed path.
+This stricter check remains the release gate for catching any lingering seed
+dependency in the installed compiler.
 
 The executable bootstrap work and its acceptance criteria are documented in
 [`doc/bootstrap.md`](doc/bootstrap.md). The first static pure-S frontend slice
 can be exercised with `make bootstrap-slice1-check`.
-For the native bootstrap frontier, use `make native-bootstrap` and
-`make native-selfhost`.
+For the seed-hosted compatibility path, use `make seed-hosted-selfhost`.
 
 ## Tests
 

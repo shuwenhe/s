@@ -144,7 +144,9 @@ bootstrap-pure-s: bootstrap-stage0
 	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/native-bootstrap.sh \
 	  $(SELFHOST_DIR)
 
-selfhost: bootstrap-convergence
+selfhost: native-selfhost
+
+seed-hosted-selfhost: bootstrap-convergence
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/stage2 ./bin/s
 	@echo "Installed seed-hosted S compiler: ./bin/s"
 	@echo "Note: this artifact is not yet a true native self-hosted compiler"
@@ -179,7 +181,7 @@ selfhost-check: selfhost selfhost-lexer-check
 	@S_LEXER_MODE=selfhost S_SELFHOST_LEXER=$(SELFHOST_DIR)/s_lexer ./bin/s test/c_abi/add.s $(SELFHOST_DIR)/s-lexer-parser.ir
 	@cmp $(SELFHOST_DIR)/final-check.ir $(SELFHOST_DIR)/s-lexer-parser.ir
 	@cmp $(SELFHOST_DIR)/stage2.ir $(SELFHOST_DIR)/stage3.ir
-	@echo "Seed-hosted bootstrap check passed: stage2 == stage3 and S Lexer -> Parser IR matches seed"
+	@echo "Native bootstrap check passed: stage2 == stage3 and S Lexer -> Parser IR matches seed"
 
 true-selfhost-check: selfhost-check
 	@./misc/scripts/verify_true_selfhost.sh ./bin/s
@@ -385,7 +387,8 @@ help:
 	@echo "  make bootstrap-slice1-check # Build and exercise the first static pure-S compiler slice"
 	@echo "  make pure-s-bootstrap-check # Run every implemented no-seed bootstrap frontier"
 	@echo "  make bootstrap-source-closure # Resolve the pure-S compiler source closure"
-	@echo "  make selfhost"
+	@echo "  make selfhost                # Install the native self-hosted compiler"
+	@echo "  make seed-hosted-selfhost    # Install the seed-hosted compatibility path"
 	@echo "  make selfhost-check"
 	@echo "  make true-selfhost-check      # Reject a compiler that still links the C seed"
 	@echo "  make selfhost-nostdlib        # Build without C library (experimental)"
