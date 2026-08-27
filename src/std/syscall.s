@@ -59,7 +59,7 @@ func fork() int {
     __syscall0(SYS_FORK)
 }
 
-func execve(string path, []string argv, []string envp) int {
+func execve(string path, string[] argv, string[] envp) int {
     __syscall3(SYS_EXECVE, 0, 0, 0)
 }
 

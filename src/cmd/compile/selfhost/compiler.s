@@ -5,7 +5,7 @@ package compile.selfhost.compiler
 // The first slice deliberately accepts only a main function returning an
 // integer expression.  Later bootstrap slices extend this parser rather than
 // falling back to the C compiler.
-extern "intrinsic" func host_args() []string;
+extern "intrinsic" func host_args() string[];
 extern "intrinsic" func __host_read_to_string(string path) string;
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
 extern "intrinsic" func __host_char_at(string text, int index) string;

@@ -128,7 +128,7 @@ func bootstrap_three_stage(
     0
 }
 
-func run_checked([]string argv) int {
+func run_checked(string[] argv) int {
     exit_code := run_process(argv)
     if exit_code != 0 {
         eprintln("bootstrap command failed")

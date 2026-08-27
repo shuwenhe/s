@@ -3,17 +3,17 @@ package main
 func test_let_basics() void {
     x := 42
     message := "Hello, immutable world!"
-    arr := []int{1, 2, 3}
+    arr := int[]{1, 2, 3}
     println("Let variables created successfully")
 }
 
 func test_var_basics() void {
     var y = 99
     var text = "Mutable text"
-    var nums = []int{10, 20, 30}
+    var nums = int[]{10, 20, 30}
     y = 100
     text = "Updated text"
-    nums = []int{40, 50, 60}
+    nums = int[]{40, 50, 60}
     println("Var variables reassigned successfully")
 }
 

@@ -6,15 +6,15 @@ use std.fmt.sprintf
 use std.io.eprintln
 
 struct X86_64Gen {
-    asm_lines: []string
-    register_stack: []string  
+    asm_lines: string[]
+    register_stack: string[]  
     temp_allocations: map[string]string  
     label_count: int
 }
 
 func new_x86_64_gen() X86_64Gen {
     return X86_64Gen{
-        asm_lines: []string{},
+        asm_lines: string[]{},
         register_stack: []{
             "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%rdi",
             "%r8", "%r9", "%r10", "%r11", "%r12", "%r13",

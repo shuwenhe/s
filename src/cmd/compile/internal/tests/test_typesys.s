@@ -22,10 +22,10 @@ func run_typesys_suite() int {
     if assignable_type("(u8, u16)", "(int, u64)") {
         return 1
     }
-    if !assignable_type("[]int", "nil") {
+    if !assignable_type("int[]", "nil") {
         return 1
     }
-    if assignable_type("[4]int", "nil") {
+    if assignable_type("int[4]", "nil") {
         return 1
     }
     if !assignable_type("*int", "nil") {
@@ -40,10 +40,10 @@ func run_typesys_suite() int {
     if !comparable_type("int") {
         return 1
     }
-    if comparable_type("[]int") {
+    if comparable_type("int[]") {
         return 1
     }
-    if comparable_type("[4]int") {
+    if comparable_type("int[4]") {
         return 1
     }
     if comparable_type("map") {
@@ -55,7 +55,7 @@ func run_typesys_suite() int {
     if !comparable_type("(int, bool)") {
         return 1
     }
-    if comparable_type("(int, []int)") {
+    if comparable_type("(int, int[])") {
         return 1
     }
     0

@@ -13,15 +13,15 @@ func test_var_mutable() void {
 }
 
 func test_let_array() void {
-    arr := []int{1, 2, 3}
-    println("arr := []int{1, 2, 3}")
+    arr := int[]{1, 2, 3}
+    println("arr := int[]{1, 2, 3}")
 }
 
 func test_var_array() void {
-    var arr = []int{1, 2, 3}
-    println("var arr = []int{1, 2, 3}")
-    arr = []int{4, 5}
-    println("var arr reassigned to []int{4, 5}")
+    var arr = int[]{1, 2, 3}
+    println("var arr = int[]{1, 2, 3}")
+    arr = int[]{4, 5}
+    println("var arr reassigned to int[]{4, 5}")
 }
 
 func main() {

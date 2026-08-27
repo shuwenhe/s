@@ -41,7 +41,7 @@ func run_semantic_suite(string fixtures_root) int {
     if check_text(call_undefined_fail) == 0 {
         return 1
     }
-    array_ok := "package demo.array\nfunc first([4]int data) int {\n  data[0]\n}"
+    array_ok := "package demo.array\nfunc first(int[4] data) int {\n  data[0]\n}"
     if check_text(array_ok) != 0 {
         return 1
     }
