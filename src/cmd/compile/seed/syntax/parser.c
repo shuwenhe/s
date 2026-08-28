@@ -1713,7 +1713,8 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 		if (lt > 0) {
 			char last = (*out_type)[lt - 1];
 
-			if (!(isalnum((unsigned char)last) || last == '_')) {
+			// Allow ']' for array types like int[256]
+			if (!(isalnum((unsigned char)last) || last == '_' || last == ']')) {
 				free(*out_type);
 				free(*out_name);
 				*out_type = NULL;
@@ -2186,10 +2187,178 @@ static ast_node *parse_use_decl(parser *p) {
 	return node;
 }
 
+// Helper: Try to parse Type[size] varname pattern
+static int try_parse_array_decl(parser *p, char **out_elem_type, int *out_array_size, char **out_varname) {
+	size_t saved = p->current;
+	
+	*out_elem_type = NULL;
+	*out_array_size = 0;
+	*out_varname = NULL;
+	
+	// Must start with identifier
+	if (!check(p, TOKEN_IDENTIFIER)) {
+		p->current = saved;
+		return 0;
+	}
+	
+	const token *type_tok = peek(p);
+	advance_tok(p);
+	
+	// Must be followed by [
+	if (!check(p, TOKEN_LBRACKET)) {
+		p->current = saved;
+		return 0;
+	}
+	advance_tok(p);
+	
+	// Parse size (must be a number)
+	if (!check(p, TOKEN_NUMBER)) {
+		p->current = saved;
+		return 0;
+	}
+	
+	const token *size_tok = peek(p);
+	char *size_str = dup_cstr(size_tok->lexeme);
+	if (!size_str) {
+		p->current = saved;
+		return 0;
+	}
+	*out_array_size = (int)strtol(size_str, NULL, 10);
+	free(size_str);
+	advance_tok(p);
+	
+	// Must be followed by ]
+	if (!check(p, TOKEN_RBRACKET)) {
+		p->current = saved;
+		return 0;
+	}
+	advance_tok(p);
+	
+	// Must be followed by identifier (variable name)
+	if (!check(p, TOKEN_IDENTIFIER)) {
+		p->current = saved;
+		return 0;
+	}
+	
+	const token *name_tok = peek(p);
+	*out_elem_type = dup_cstr(type_tok->lexeme);
+	*out_varname = dup_cstr(name_tok->lexeme);
+	
+	if (!*out_elem_type || !*out_varname) {
+		free(*out_elem_type);
+		free(*out_varname);
+		*out_elem_type = NULL;
+		*out_varname = NULL;
+		p->current = saved;
+		return 0;
+	}
+	
+	advance_tok(p);
+	return 1;
+}
+
+// Parse Type[size] varname as: []Type varname = []Type{cap: size}
+static ast_node *parse_array_decl_statement(parser *p) {
+	char *elem_type = NULL;
+	int array_size = 0;
+	char *varname = NULL;
+	ast_node *node = NULL;
+	ast_node *init_expr = NULL;
+	
+	if (!try_parse_array_decl(p, &elem_type, &array_size, &varname)) {
+		return NULL;
+	}
+	
+	// Create the array type string: "[]Type"
+	char array_type[256];
+	snprintf(array_type, sizeof(array_type), "[]%s", elem_type);
+	
+	// Create a struct expression for array initialization
+	init_expr = ast_new(AST_STRUCT_EXPR, peek(p)->pos);
+	if (!init_expr) {
+		free(elem_type);
+		free(varname);
+		return NULL;
+	}
+	
+	// Set up struct fields for {cap: size}
+	init_expr->as.struct_expr.type_name = dup_cstr(array_type);
+	init_expr->as.struct_expr.field_count = 1;
+	init_expr->as.struct_expr.field_names = (char **)malloc(sizeof(char *));
+	
+	if (!init_expr->as.struct_expr.field_names || !init_expr->as.struct_expr.type_name) {
+		ast_free(init_expr);
+		free(elem_type);
+		free(varname);
+		return NULL;
+	}
+	
+	init_expr->as.struct_expr.field_names[0] = dup_cstr("cap");
+	ast_vec_init(&init_expr->as.struct_expr.field_values);
+	
+	// Create a number expression for the size
+	ast_node *size_expr = ast_new(AST_NUMBER_EXPR, peek(p)->pos);
+	if (!size_expr) {
+		ast_free(init_expr);
+		free(elem_type);
+		free(varname);
+		return NULL;
+	}
+	
+	char size_str[64];
+	snprintf(size_str, sizeof(size_str), "%d", array_size);
+	size_expr->as.number_expr.literal = dup_cstr(size_str);
+	
+	if (!size_expr->as.number_expr.literal) {
+		ast_free(size_expr);
+		ast_free(init_expr);
+		free(elem_type);
+		free(varname);
+		return NULL;
+	}
+	
+	ast_vec_push(&init_expr->as.struct_expr.field_values, size_expr);
+	
+	// Create LET_STMT node
+	node = ast_new(AST_LET_STMT, peek(p)->pos);
+	if (!node) {
+		ast_free(init_expr);
+		free(elem_type);
+		free(varname);
+		return NULL;
+	}
+	
+	node->as.let_stmt.mutable = 0;
+	node->as.let_stmt.name = varname;
+	node->as.let_stmt.type_name = dup_cstr(array_type);
+	node->as.let_stmt.value = init_expr;
+	
+	if (!node->as.let_stmt.type_name) {
+		ast_free(node);
+		ast_free(init_expr);
+		free(elem_type);
+		free(varname);
+		return NULL;
+	}
+	
+	free(elem_type);
+	
+	consume_optional_semicolon(p);
+	return node;
+}
+
 static ast_node *parse_statement(parser *p) {
 	(void)p;
 	if (check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "sroutine") == 0) {
 		return parse_sroutine_statement(p);
+	}
+
+	// Try to parse Type[size] varname pattern
+	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_LBRACKET) {
+		ast_node *arr_decl = parse_array_decl_statement(p);
+		if (arr_decl) {
+			return arr_decl;
+		}
 	}
 
 	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
@@ -2229,6 +2398,14 @@ static ast_node *parse_top_level(parser *p) {
 	}
 	if (match(p, TOKEN_USE)) {
 		return parse_use_decl(p);
+	}
+
+	// Try to parse Type[size] varname pattern
+	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_LBRACKET) {
+		ast_node *arr_decl = parse_array_decl_statement(p);
+		if (arr_decl) {
+			return arr_decl;
+		}
 	}
 
 	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
