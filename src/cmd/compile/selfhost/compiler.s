@@ -37,6 +37,197 @@ func signed_int_text(int value) string {
     return int_text(value)
 }
 
+func source_line_at(string source, int position) int {
+    int line = 1
+    int index = 0
+    for index < position && index < len(source) {
+        if __host_char_at(source, index) == "\n" { line = line + 1 }
+        index = index + 1
+    }
+    return line
+}
+
+func unsupported_item(string source, int position, string phase, string construct, string detail) string {
+    if position < 0 { return "" }
+    return phase + "|" + int_text(source_line_at(source, position)) + "|" + construct + "|" + detail + "\n"
+}
+
+func second_function_at(string source) int {
+    int first = find_function_from(source, 0)
+    if first < 0 { return -1 }
+    return find_function_from(source, first + 4)
+}
+
+func first_stack_argument_function_at(string source) int {
+    int index = 0
+    for index < len(source) {
+        int declaration = find_function_from(source, index)
+        if declaration < 0 { return -1 }
+        int name_at = skip_space(source, declaration + 4)
+        int name_end = skip_identifier(source, name_at)
+        if name_end == name_at { return -1 }
+        string name = __host_slice(source, name_at, name_end)
+        if function_parameter_abi_words(source, name) > 6 { return declaration }
+        index = name_end
+    }
+    return -1
+}
+
+func find_code_word_from(string source, string word, int start) int {
+    int index = start
+    for index + len(word) <= len(source) {
+        string ch = __host_char_at(source, index)
+        if ch == "\"" {
+            index = index + 1
+            for index < len(source) {
+                string quoted = __host_char_at(source, index)
+                if quoted == "\\" { index = index + 2; continue }
+                index = index + 1
+                if quoted == "\"" { break }
+            }
+            continue
+        }
+        if ch == "/" && index + 1 < len(source) && __host_char_at(source, index + 1) == "/" {
+            index = index + 2
+            for index < len(source) && __host_char_at(source, index) != "\n" { index = index + 1 }
+            continue
+        }
+        if ch == "/" && index + 1 < len(source) && __host_char_at(source, index + 1) == "*" {
+            index = index + 2
+            for index + 1 < len(source) &&
+                !(__host_char_at(source, index) == "*" && __host_char_at(source, index + 1) == "/") {
+                index = index + 1
+            }
+            if index + 1 < len(source) { index = index + 2 }
+            continue
+        }
+        bool left_boundary = index == 0 || !is_ident_continue(__host_char_at(source, index - 1))
+        bool right_boundary = index + len(word) == len(source) || !is_ident_continue(__host_char_at(source, index + len(word)))
+        if left_boundary && right_boundary && matches_at(source, index, word) { return index }
+        index = index + 1
+    }
+    return -1
+}
+
+func find_code_word(string source, string word) int {
+    return find_code_word_from(source, word, 0)
+}
+
+// Report the capability closure still required to compile the supplied source
+// as one program. Each construct is reported once at its first occurrence.
+func unsupported_report(string source) string {
+    string report = "S-BOOTSTRAP-UNSUPPORTED-V1\n"
+    report = report + "phase|line|construct|detail\n"
+    report = report + unsupported_item(source, find_code_word(source, "for"), "semantic", "for-loop", "loops are supported only by isolated native patterns")
+    report = report + unsupported_item(source, find_code_word(source, "continue"), "semantic", "continue", "loop control flow is not lowered in general functions")
+    report = report + unsupported_item(source, find_code_word(source, "return"), "semantic", "typed-return", "returns are supported only by bootstrap expression patterns")
+    report = report + unsupported_item(source, find_code_word(source, "__host_char_at"), "codegen", "intrinsic-call", "intrinsic calls are not lowered by the whole-program backend")
+    report = report + unsupported_item(source, first_stack_argument_function_at(source), "codegen", "stack-arguments", "calls exceeding six ABI words are not lowered")
+    report = report + unsupported_item(source, find_code_word(source, "if"), "codegen", "general-control-flow", "control flow is supported only by isolated native patterns")
+    return report
+}
+
+func parse_package_name(string source) string {
+    int start = skip_trivia(source, 0)
+    if !matches_at(source, start, "package") { return "" }
+    int cursor = start + 7
+    if cursor < len(source) && is_ident_continue(__host_char_at(source, cursor)) { return "" }
+    cursor = skip_space(source, cursor)
+    int name_start = cursor
+    int segment_end = skip_identifier(source, cursor)
+    if segment_end == cursor { return "" }
+    cursor = segment_end
+    for cursor < len(source) && __host_char_at(source, cursor) == "." {
+        cursor = cursor + 1
+        segment_end = skip_identifier(source, cursor)
+        if segment_end == cursor { return "" }
+        cursor = segment_end
+    }
+    if cursor < len(source) && !is_space(__host_char_at(source, cursor)) { return "" }
+    return __host_slice(source, name_start, cursor)
+}
+
+// Returns the number of intrinsic symbols, or -1 for a malformed declaration.
+func intrinsic_declaration_count(string source) int {
+    int count = 0
+    int cursor = 0
+    for cursor < len(source) {
+        int declaration = find_code_word_from(source, "extern", cursor)
+        if declaration < 0 { return count }
+        int index = skip_space(source, declaration + 6)
+        if !matches_at(source, index, "\"intrinsic\"") { return -1 }
+        index = skip_space(source, index + 11)
+        if !matches_at(source, index, "func") { return -1 }
+        index = skip_space(source, index + 4)
+        int name_end = skip_identifier(source, index)
+        if name_end == index { return -1 }
+        index = skip_space(source, name_end)
+        if index >= len(source) || __host_char_at(source, index) != "(" { return -1 }
+        int close = matching_paren(source, index, len(source))
+        if close < 0 { return -1 }
+        index = skip_space(source, close + 1)
+        if index >= len(source) || __host_char_at(source, index) == ";" { return -1 }
+        for index < len(source) && __host_char_at(source, index) != ";" && __host_char_at(source, index) != "{" {
+            index = index + 1
+        }
+        if index >= len(source) || __host_char_at(source, index) != ";" { return -1 }
+        count = count + 1
+        cursor = index + 1
+    }
+    return count
+}
+
+func known_intrinsic_id(string name) int {
+    if name == "__host_byte_at" { return 1 }
+    if name == "__host_slice" { return 2 }
+    if name == "string_len" { return 3 }
+    if name == "__host_byte_string" { return 4 }
+    return 0
+}
+
+func resolve_intrinsic_id(string source, string name) int {
+    int wanted = known_intrinsic_id(name)
+    if wanted == 0 { return 0 }
+    string declaration = "extern \"intrinsic\" func " + name
+    int index = 0
+    for index + len(declaration) <= len(source) {
+        if matches_at(source, index, declaration) {
+            int after = index + len(declaration)
+            if after < len(source) && __host_char_at(source, after) == "(" { return wanted }
+        }
+        index = index + 1
+    }
+    return 0
+}
+
+func emit_intrinsic_machine(int intrinsic_id) string {
+    if intrinsic_id == 1 {
+        // __host_byte_at(data,len,index): return zero when index is out of range.
+        return __host_byte_string(49) + __host_byte_string(192)
+            + __host_byte_string(72) + __host_byte_string(57) + __host_byte_string(242)
+            + __host_byte_string(115) + __host_byte_string(4)
+            + __host_byte_string(15) + __host_byte_string(182) + __host_byte_string(4) + __host_byte_string(23)
+    }
+    if intrinsic_id == 2 {
+        // __host_slice(data,len,start,end): RAX=data+start, RDX=end-start.
+        return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(248)
+            + __host_byte_string(72) + __host_byte_string(1) + __host_byte_string(208)
+            + __host_byte_string(72) + __host_byte_string(41) + __host_byte_string(209)
+            + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(202)
+    }
+    if intrinsic_id == 3 {
+        return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(240)
+    }
+    if intrinsic_id == 4 {
+        // Use the caller's reserved frame as one-byte intrinsic scratch storage.
+        return __host_byte_string(72) + __host_byte_string(141) + __host_byte_string(133)
+            + little32_signed(-248)
+            + __host_byte_string(64) + __host_byte_string(136) + __host_byte_string(56)
+            + __host_byte_string(186) + little32(1)
+    }
+    return ""
+}
+
 func is_space(string ch) bool {
     return ch == " " || ch == "\t" || ch == "\r" || ch == "\n"
 }
@@ -218,6 +409,135 @@ func function_parameter_at(string source, string name, int wanted) string {
 
 func function_parameter(string source, string name) string {
     return function_parameter_at(source, name, 0)
+}
+
+func function_parameter_type_kind_at(string source, string name, int wanted) int {
+    int declaration = function_declaration(source, name)
+    if declaration < 0 { return -1 }
+    int name_at = skip_space(source, declaration + 4)
+    int name_end = skip_identifier(source, name_at)
+    int open = skip_space(source, name_end)
+    if open >= len(source) || __host_char_at(source, open) != "(" { return -1 }
+    int close = matching_paren(source, open, len(source))
+    if close < 0 { return -1 }
+    int cursor = skip_space(source, open + 1)
+    int ordinal = 0
+    for cursor < close {
+        int type_end = skip_identifier(source, cursor)
+        if type_end == cursor { return -1 }
+        int kind = parse_type_kind(__host_slice(source, cursor, type_end))
+        int parameter_at = skip_space(source, type_end)
+        int parameter_end = skip_identifier(source, parameter_at)
+        if kind < 0 || parameter_end == parameter_at { return -1 }
+        if ordinal == wanted { return kind }
+        cursor = skip_space(source, parameter_end)
+        if cursor >= close || __host_char_at(source, cursor) != "," { return -1 }
+        cursor = skip_space(source, cursor + 1)
+        ordinal = ordinal + 1
+    }
+    return -1
+}
+
+func parse_type_kind(string name) int {
+    if name == "void" || name == "()" { return 0 }
+    if name == "int" { return 1 }
+    if name == "bool" { return 2 }
+    if name == "string" { return 3 }
+    if name == "pointer" { return 4 }
+    if name == "slice" { return 5 }
+    return -1
+}
+
+func type_abi_words(int kind) int {
+    if kind == 3 || kind == 5 { return 2 }
+    if kind >= 0 { return 1 }
+    return 0
+}
+
+func function_parameter_abi_offset(string source, string name, int wanted) int {
+    int ordinal = 0
+    int offset = 0
+    for ordinal < wanted {
+        int kind = function_parameter_type_kind_at(source, name, ordinal)
+        if kind < 0 { return -1 }
+        offset = offset + type_abi_words(kind)
+        ordinal = ordinal + 1
+    }
+    if function_parameter_type_kind_at(source, name, wanted) < 0 { return -1 }
+    return offset
+}
+
+func function_parameter_abi_words(string source, string name) int {
+    int ordinal = 0
+    int words = 0
+    for function_parameter_at(source, name, ordinal) != "" {
+        int kind = function_parameter_type_kind_at(source, name, ordinal)
+        if kind < 0 { return -1 }
+        words = words + type_abi_words(kind)
+        ordinal = ordinal + 1
+    }
+    return words
+}
+
+func function_return_type_kind(string source, string name) int {
+    int declaration = function_declaration(source, name)
+    if declaration < 0 { return -1 }
+    int name_at = skip_space(source, declaration + 4)
+    int name_end = skip_identifier(source, name_at)
+    int open = skip_space(source, name_end)
+    if open >= len(source) || __host_char_at(source, open) != "(" { return -1 }
+    int close = matching_paren(source, open, len(source))
+    if close < 0 { return -1 }
+    int result_at = skip_space(source, close + 1)
+    if result_at < len(source) && __host_char_at(source, result_at) == "{" { return 0 }
+    int result_end = skip_identifier(source, result_at)
+    if result_end == result_at { return -1 }
+    return parse_type_kind(__host_slice(source, result_at, result_end))
+}
+
+func function_symbol_count(string source, string wanted) int {
+    int count = 0
+    int index = 0
+    for index < len(source) {
+        int declaration = find_function_from(source, index)
+        if declaration < 0 { return count }
+        int name_at = skip_space(source, declaration + 4)
+        int name_end = skip_identifier(source, name_at)
+        if name_end == name_at { return -1 }
+        if __host_slice(source, name_at, name_end) == wanted { count = count + 1 }
+        index = name_end
+    }
+    return count
+}
+
+func validate_function_symbols(string source) bool {
+    int index = 0
+    if function_symbol_count(source, "main") != 1 {
+        eprintln("symbol: program must define exactly one main")
+        return false
+    }
+    for index < len(source) {
+        int declaration = find_function_from(source, index)
+        if declaration < 0 { return true }
+        int name_at = skip_space(source, declaration + 4)
+        int name_end = skip_identifier(source, name_at)
+        if name_end == name_at { eprintln("symbol: missing function name"); return false }
+        string name = __host_slice(source, name_at, name_end)
+        if function_symbol_count(source, name) != 1 {
+            eprintln("symbol: duplicate function " + name)
+            return false
+        }
+        if function_return_type_kind(source, name) < 0 {
+            eprintln("symbol: unsupported return type in " + name)
+            return false
+        }
+        if function_parameter_abi_words(source, name) < 0 {
+            eprintln("symbol: invalid parameter ABI in " + name)
+            return false
+        }
+        index = name_end
+    }
+    return true
 }
 
 func function_body_end(string source, int body) int {
@@ -891,7 +1211,7 @@ func local_slot(string source, int scope_start, int before, string wanted) int {
                     __host_char_at(source, typed_assign) == "=" &&
                     (typed_assign + 1 >= len(source) || __host_char_at(source, typed_assign + 1) != "=") {
                     if typed_name == wanted { return slot }
-                    slot = slot + 1
+                    slot = slot + type_abi_words(parse_type_kind(name))
                     int typed_initializer = skip_space(source, typed_assign + 1)
                     int typed_initializer_end = expression_end(source, typed_initializer)
                     if typed_initializer_end < 0 { return -1 }
@@ -917,6 +1237,25 @@ func local_slot(string source, int scope_start, int before, string wanted) int {
     return -1
 }
 
+func local_type_kind(string source, int scope_start, int before, string wanted) int {
+    int index = scope_start
+    for index <= before && index < len(source) {
+        index = skip_space(source, index)
+        if index > before || index >= len(source) { return -1 }
+        int type_end = skip_identifier(source, index)
+        if type_end == index { index = index + 1; continue }
+        string type_name = __host_slice(source, index, type_end)
+        int kind = parse_type_kind(type_name)
+        if kind >= 0 {
+            int name_at = skip_space(source, type_end)
+            int name_end = skip_identifier(source, name_at)
+            if name_end > name_at && __host_slice(source, name_at, name_end) == wanted { return kind }
+        }
+        index = type_end
+    }
+    return -1
+}
+
 func stack_load(int slot) string {
     int displacement = 256 - ((slot + 1) * 8)
     return __host_byte_string(72) + __host_byte_string(139) + __host_byte_string(69)
@@ -926,6 +1265,18 @@ func stack_load(int slot) string {
 func stack_store(int slot) string {
     int displacement = 256 - ((slot + 1) * 8)
     return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(69)
+        + __host_byte_string(displacement)
+}
+
+func stack_load_rdx(int slot) string {
+    int displacement = 256 - ((slot + 1) * 8)
+    return __host_byte_string(72) + __host_byte_string(139) + __host_byte_string(85)
+        + __host_byte_string(displacement)
+}
+
+func stack_store_rdx(int slot) string {
+    int displacement = 256 - ((slot + 1) * 8)
+    return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(85)
         + __host_byte_string(displacement)
 }
 
@@ -1226,10 +1577,218 @@ func native_function_stride() int {
     return 16384
 }
 
+func native_function_count(string source) int {
+    int count = 1
+    int index = 0
+    for index < len(source) {
+        int declaration = find_function_from(source, index)
+        if declaration < 0 { return count }
+        int name_at = skip_space(source, declaration + 4)
+        int name_end = skip_identifier(source, name_at)
+        if name_end == name_at { return -1 }
+        string name = __host_slice(source, name_at, name_end)
+        if name != "main" && function_body(source, name) >= 0 { count = count + 1 }
+        index = name_end
+    }
+    return count
+}
+
+func string_literal_index_at(string source, int wanted) int {
+    int index = 0
+    int ordinal = 0
+    for index < wanted {
+        if __host_char_at(source, index) == "\"" {
+            int after = skip_quoted(source, index, wanted)
+            if after > wanted { return -1 }
+            ordinal = ordinal + 1
+            index = after
+            continue
+        }
+        index = index + 1
+    }
+    return ordinal
+}
+
+func string_literal_bytes(string source, int start, int end) string {
+    string output = ""
+    int index = start + 1
+    for index < end {
+        string ch = __host_char_at(source, index)
+        if ch == "\"" { return output }
+        if ch == "\\" {
+            index = index + 1
+            if index >= end { return "" }
+            ch = __host_char_at(source, index)
+            if ch == "n" { ch = "\n" }
+            if ch == "r" { ch = "\r" }
+            if ch == "t" { ch = "\t" }
+        }
+        output = output + ch
+        index = index + 1
+    }
+    return ""
+}
+
+func string_literal_pool(string source) string {
+    string pool = ""
+    int index = 0
+    for index < len(source) {
+        if __host_char_at(source, index) == "\"" {
+            int after = skip_quoted(source, index, len(source))
+            if after <= index { return "" }
+            string literal = string_literal_bytes(source, index, after)
+            if len(literal) >= 256 { return "" }
+            pool = pool + literal + zeroes(256 - len(literal))
+            index = after
+            continue
+        }
+        index = index + 1
+    }
+    return pool
+}
+
+func string_literal_length(string source, int start, int end) int {
+    if start >= end || __host_char_at(source, start) != "\"" { return -1 }
+    int index = start + 1
+    int count = 0
+    for index < end {
+        string ch = __host_char_at(source, index)
+        if ch == "\"" { return count }
+        if ch == "\\" {
+            index = index + 1
+            if index >= end { return -1 }
+        }
+        count = count + 1
+        index = index + 1
+    }
+    return -1
+}
+
+func emit_string_value_machine(string source, int raw_start, int raw_end, string current_function) string {
+    int start = skip_space(source, raw_start)
+    int end = trim_space_end(source, start, raw_end)
+    if start >= end { return "" }
+    if __host_char_at(source, start) == "\"" {
+        int length = string_literal_length(source, start, end)
+        int close = skip_quoted(source, start, end)
+        if length < 0 || close != end { return "" }
+        int literal_index = string_literal_index_at(source, start)
+        int function_count = native_function_count(source)
+        if literal_index < 0 || function_count < 1 { return "" }
+        int address = 4194304 + 120 + function_count * native_function_stride() + literal_index * 256
+        return __host_byte_string(72) + __host_byte_string(184) + little64(address)
+            + __host_byte_string(186) + little32(length)
+    }
+    int name_end = skip_identifier(source, start)
+    string name = __host_slice(source, start, name_end)
+    if name_end == end {
+        int parameter = 0
+        for function_parameter_at(source, current_function, parameter) != "" {
+            if name == function_parameter_at(source, current_function, parameter) &&
+                function_parameter_type_kind_at(source, current_function, parameter) == 3 {
+                int offset = function_parameter_abi_offset(source, current_function, parameter)
+                return stack_load(offset) + stack_load_rdx(offset + 1)
+            }
+            parameter = parameter + 1
+        }
+        int current_body = function_body(source, current_function)
+        int local = local_slot(source, current_body, start, name)
+        if local >= 0 && local_type_kind(source, current_body, start, name) == 3 {
+            return stack_load(local + 6) + stack_load_rdx(local + 7)
+        }
+        return ""
+    }
+    int open = skip_space(source, name_end)
+    if name_end == start || open >= end || __host_char_at(source, open) != "(" { return "" }
+    int close = matching_paren(source, open, end)
+    if close != end - 1 || function_return_type_kind(source, name) != 3 { return "" }
+    int argument_start = skip_space(source, open + 1)
+    string argument = ""
+    if argument_start < close {
+        argument = emit_typed_call_arguments(source, argument_start, close, current_function, name, 0)
+        if argument == "" { return "" }
+    } else if function_parameter(source, name) != "" { return "" }
+    int slot = native_function_slot(source, name)
+    int intrinsic_id = resolve_intrinsic_id(source, name)
+    if slot <= 0 && intrinsic_id == 0 { return "" }
+    if intrinsic_id != 0 { return argument + emit_intrinsic_machine(intrinsic_id) }
+    int address = 4194304 + 120 + slot * native_function_stride()
+    // string result uses RAX=data and RDX=len.
+    return argument
+        + __host_byte_string(72) + __host_byte_string(184) + little64(address)
+        + __host_byte_string(255) + __host_byte_string(208)
+}
+
+func emit_typed_call_arguments(
+    string source,
+    int raw_start,
+    int end,
+    string current_function,
+    string callee,
+    int ordinal
+) string {
+    int start = skip_space(source, raw_start)
+    int kind = function_parameter_type_kind_at(source, callee, ordinal)
+    int words = type_abi_words(kind)
+    int word_offset = function_parameter_abi_offset(source, callee, ordinal)
+    if start >= end || kind < 0 || word_offset + words > 6 { return "" }
+    int comma = argument_comma(source, start, end)
+    int argument_end = end
+    if comma >= 0 { argument_end = comma }
+    string value = emit_multi_condition_machine(source, start, argument_end, current_function)
+    string pushes = __host_byte_string(80)
+    string pops = sysv_argument_pop(word_offset)
+    if kind == 3 {
+        value = emit_string_value_machine(source, start, argument_end, current_function)
+        pushes = __host_byte_string(80) + __host_byte_string(82)
+        pops = sysv_argument_pop(word_offset + 1) + sysv_argument_pop(word_offset)
+    }
+    if value == "" || pops == "" { return "" }
+    if comma < 0 {
+        if function_parameter_at(source, callee, ordinal + 1) != "" { return "" }
+        return value + pushes + pops
+    }
+    string remaining = emit_typed_call_arguments(
+        source,
+        comma + 1,
+        end,
+        current_function,
+        callee,
+        ordinal + 1
+    )
+    if remaining == "" { return "" }
+    return value + pushes + remaining + pops
+}
+
 func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, string current_function) string {
     int start = skip_space(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
     if start >= end { return "" }
+    if matches_at(source, start, "len") {
+        int len_open = skip_space(source, start + 3)
+        if len_open < end && __host_char_at(source, len_open) == "(" {
+            int len_close = matching_paren(source, len_open, end)
+            if len_close == end - 1 {
+                string string_value = emit_string_value_machine(source, len_open + 1, len_close, current_function)
+                if string_value != "" {
+                    return string_value + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(208)
+                }
+            }
+        }
+    }
+    int bracket = start
+    for bracket < end && __host_char_at(source, bracket) != "[" { bracket = bracket + 1 }
+    if bracket < end && __host_char_at(source, end - 1) == "]" {
+        int element_start = skip_space(source, bracket + 1)
+        int element_end = trim_space_end(source, element_start, end - 1)
+        int number_end = skip_uint(source, element_start)
+        string string_value = emit_string_value_machine(source, start, bracket, current_function)
+        if string_value != "" && number_end == element_end {
+            int element = parse_uint(source, element_start)
+            return string_value + __host_byte_string(15) + __host_byte_string(182)
+                + __host_byte_string(128) + little32(element)
+        }
+    }
     if __host_char_at(source, start) == "(" {
         int close = matching_paren(source, start, end)
         if close == end - 1 { return emit_multi_call_arithmetic(source, start + 1, end - 1, current_function) }
@@ -1255,7 +1814,8 @@ func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, strin
         int parameter_index = 0
         for parameter_index < 6 {
             if name == function_parameter_at(source, current_function, parameter_index) {
-                return stack_load(parameter_index)
+                int parameter_offset = function_parameter_abi_offset(source, current_function, parameter_index)
+                return stack_load(parameter_offset)
             }
             parameter_index = parameter_index + 1
         }
@@ -1268,15 +1828,17 @@ func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, strin
     int close = matching_paren(source, open, end)
     if close != end - 1 { return "" }
     int slot = native_function_slot(source, name)
-    if slot <= 0 { return "" }
     string argument_code = ""
     int argument_start = skip_space(source, open + 1)
     if argument_start < close {
-        argument_code = emit_multi_sysv_call_arguments(source, argument_start, close, current_function, name, 0)
+        argument_code = emit_typed_call_arguments(source, argument_start, close, current_function, name, 0)
         if argument_code == "" { return "" }
     } else if function_parameter(source, name) != "" {
         return ""
     }
+    int intrinsic_id = resolve_intrinsic_id(source, name)
+    if intrinsic_id != 0 { return argument_code + emit_intrinsic_machine(intrinsic_id) }
+    if slot <= 0 { return "" }
     int address = 4194304 + 120 + slot * native_function_stride()
     return argument_code + __host_byte_string(72) + __host_byte_string(184) + little64(address)
         + __host_byte_string(255) + __host_byte_string(208)
@@ -1386,7 +1948,14 @@ func emit_multi_block_sequence(string source, int raw_start, int block_end, stri
         int result_start = skip_space(source, index + 6)
         int result_end = expression_end(source, result_start)
         if result_end < 0 || result_end > block_end { return "" }
+        int return_kind = function_return_type_kind(source, function_name)
         string result = emit_multi_call_arithmetic(source, result_start, result_end, function_name)
+        if return_kind == 2 {
+            result = emit_multi_condition_machine(source, result_start, result_end, function_name)
+        }
+        if return_kind == 3 {
+            result = emit_string_value_machine(source, result_start, result_end, function_name)
+        }
         if result == "" { return "" }
         if entry_function {
             return result + __host_byte_string(72) + __host_byte_string(137)
@@ -1453,7 +2022,8 @@ func emit_multi_block_sequence(string source, int raw_start, int block_end, stri
     if name_end == index { return "" }
     string name = __host_slice(source, index, name_end)
     int assign = skip_space(source, name_end)
-    bool typed_declaration = name == "int" || name == "string" || name == "bool"
+    int declaration_kind = parse_type_kind(name)
+    bool typed_declaration = declaration_kind == 1 || declaration_kind == 2 || declaration_kind == 3
     if typed_declaration {
         int typed_name_at = assign
         int typed_name_end = skip_identifier(source, typed_name_at)
@@ -1474,9 +2044,14 @@ func emit_multi_block_sequence(string source, int raw_start, int block_end, stri
         int initializer_end = expression_end(source, initializer)
         int function_start = function_body(source, function_name)
         int slot = local_slot(source, function_start, index, name)
+        int value_kind = declaration_kind
+        if !typed_declaration { value_kind = local_type_kind(source, function_start, index, name) }
         string value = emit_multi_condition_machine(source, initializer, initializer_end, function_name)
+        if value_kind == 3 { value = emit_string_value_machine(source, initializer, initializer_end, function_name) }
         if initializer_end < 0 || initializer_end > block_end || slot < 0 || slot >= 25 || value == "" { return "" }
-        return value + stack_store(slot + 6)
+        string store = stack_store(slot + 6)
+        if value_kind == 3 { store = store + stack_store_rdx(slot + 7) }
+        return value + store
             + emit_multi_block_sequence(source, initializer_end + 1, block_end, function_name, entry_function)
     }
     int expression_finish = expression_end(source, index)
@@ -1513,7 +2088,7 @@ func emit_native_multi_call_elf(string source) string {
         if name_end == name_at { return "" }
         string name = __host_slice(source, name_at, name_end)
         if name != "main" && function_body(source, name) >= 0 {
-            if function_parameter_at(source, name, 6) != "" { return "" }
+            if function_parameter_abi_words(source, name) > 6 { return "" }
             string code = emit_multi_function_machine(source, name, false)
             if code == "" { return "" }
             if len(code) > stride { return "" }
@@ -1522,8 +2097,8 @@ func emit_native_multi_call_elf(string source) string {
         }
         index = name_end
     }
-    if emitted < 2 { return "" }
-    return emit_elf_image(image)
+    string literal_pool = string_literal_pool(source)
+    return emit_elf_image(image + literal_pool)
 }
 
 func emit_native_copy_elf(string source) string {
@@ -2417,9 +2992,10 @@ func compile_native_binary(string source, string output_path) int {
 func main() {
     args := host_args()
     if len(args) != 3 && len(args) != 4 {
-        eprintln("usage: s_bootstrap_compiler [--emit-bin|--emit-native|--emit-asm] <input.s> <output>")
+        eprintln("usage: s_bootstrap_compiler [--report-unsupported|--emit-bin|--emit-native|--emit-asm] <input.s> <output>")
         return 2
     }
+    bool report_unsupported = len(args) == 4 && args[1] == "--report-unsupported"
     bool binary = len(args) == 4 && args[1] == "--emit-bin"
     bool native_expression = len(args) == 4 && args[1] == "--emit-native-expr"
     bool native_control = len(args) == 4 && args[1] == "--emit-native-control"
@@ -2434,7 +3010,7 @@ func main() {
     bool native_assembly = len(args) == 4 && args[1] == "--emit-asm"
     int input_index = 1
     int output_index = 2
-    if binary || native_expression || native_control || native_locals || native_call || native_loop || native_string || native || native_array || native_multi_call || native_copy || native_assembly {
+    if report_unsupported || binary || native_expression || native_control || native_locals || native_call || native_loop || native_string || native || native_array || native_multi_call || native_copy || native_assembly {
         input_index = 2
         output_index = 3
     }
@@ -2442,6 +3018,25 @@ func main() {
     if len(source) == 0 {
         eprintln("compile: cannot read input or input is empty")
         return 1
+    }
+    if parse_package_name(source) == "" {
+        eprintln("compile: invalid or missing package declaration")
+        return 1
+    }
+    if intrinsic_declaration_count(source) < 0 {
+        eprintln("compile: invalid extern intrinsic declaration")
+        return 1
+    }
+    if !validate_function_symbols(source) {
+        eprintln("compile: invalid function symbol table")
+        return 1
+    }
+    if report_unsupported {
+        if __host_write_text_file(args[output_index], unsupported_report(source)) != 0 {
+            eprintln("compile: cannot write unsupported capability report")
+            return 1
+        }
+        return 0
     }
     if binary {
         return compile_binary(source, args[output_index])
