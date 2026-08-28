@@ -96,8 +96,9 @@ sroutine-check: selfhost
 seed-compiler-bin:
 	@mkdir -p ./bin
 	@echo "Building seed compiler..."
-	@gcc -std=c11 -Wall -Wextra -Werror \
-	  -o ./bin/s_seed \
+	@set -e; tmp="./bin/s_seed.$$$$"; trap 'rm -f "$$tmp"' EXIT HUP INT TERM; \
+	  gcc -std=c11 -Wall -Wextra -Werror \
+	  -o "$$tmp" \
 	  src/cmd/compile/seed/s_seed.c \
 	  src/cmd/compile/seed/bootstrap/bootstrap.c \
 	  src/cmd/compile/seed/lexical/lexer.c \
@@ -111,7 +112,9 @@ seed-compiler-bin:
 	  src/cmd/compile/seed/code/native_backend.c \
 	  src/cmd/compile/seed/code/standalone_amd64_backend.c \
 	  src/cmd/compile/seed/runtime/network_windows.c \
-	  src/cmd/compile/seed/runtime/runtime.c
+	  src/cmd/compile/seed/runtime/runtime.c; \
+	  mv "$$tmp" ./bin/s_seed; \
+	  trap - EXIT HUP INT TERM
 
 seed-c-abi-test: seed-compiler-bin
 	@mkdir -p /tmp/s_seed_c_abi_test
@@ -133,6 +136,66 @@ seed-module-link-test: seed-compiler-bin
 
 bootstrap-stage0: seed-compiler-bin
 	@echo "Bootstrap stage0 ready: ./bin/s_seed (trusted C seed)"
+
+bootstrap-capability-report: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR)/capability
+	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/capability/compiler.ir
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
+	  $(SELFHOST_DIR)/capability/compiler.ir $(SELFHOST_DIR)/capability/compiler
+	@$(SELFHOST_DIR)/capability/compiler --report-unsupported \
+	  src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/capability/unsupported.txt
+	@! grep -q '|package|' $(SELFHOST_DIR)/capability/unsupported.txt
+	@$(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_package_valid.s $(SELFHOST_DIR)/capability/package-valid
+	@set +e; $(SELFHOST_DIR)/capability/package-valid; status=$$?; set -e; test $$status -eq 42
+	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_package_invalid.s $(SELFHOST_DIR)/capability/package-invalid >/dev/null 2>&1
+	@! grep -q '|extern-intrinsic|' $(SELFHOST_DIR)/capability/unsupported.txt
+	@$(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_intrinsic_valid.s $(SELFHOST_DIR)/capability/intrinsic-valid
+	@set +e; $(SELFHOST_DIR)/capability/intrinsic-valid; status=$$?; set -e; test $$status -eq 42
+	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_intrinsic_invalid.s $(SELFHOST_DIR)/capability/intrinsic-invalid >/dev/null 2>&1
+	@! grep -q '|bool|' $(SELFHOST_DIR)/capability/unsupported.txt
+	@$(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_bool_cross_function.s $(SELFHOST_DIR)/capability/bool-cross-function
+	@set +e; $(SELFHOST_DIR)/capability/bool-cross-function; status=$$?; set -e; test $$status -eq 42
+	@if grep -q '|string|' $(SELFHOST_DIR)/capability/unsupported.txt; then \
+	  echo "string capability is still reported unsupported" >&2; exit 1; \
+	fi
+	@$(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_string_abi_length.s $(SELFHOST_DIR)/capability/string-abi-length
+	@$(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_string_abi_local.s $(SELFHOST_DIR)/capability/string-abi-local
+	@$(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_string_abi_branch.s $(SELFHOST_DIR)/capability/string-abi-branch
+	@set +e; $(SELFHOST_DIR)/capability/string-abi-length; status=$$?; set -e; test $$status -eq 42
+	@set +e; $(SELFHOST_DIR)/capability/string-abi-local; status=$$?; set -e; test $$status -eq 42
+	@set +e; $(SELFHOST_DIR)/capability/string-abi-branch; status=$$?; set -e; test $$status -eq 42
+	@if grep -q '|multiple-functions|' $(SELFHOST_DIR)/capability/unsupported.txt; then \
+	  echo "whole-program capability is still reported unsupported" >&2; exit 1; \
+	fi
+	@$(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_whole_program.s $(SELFHOST_DIR)/capability/whole-program
+	@set +e; $(SELFHOST_DIR)/capability/whole-program; status=$$?; set -e; test $$status -eq 42
+	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_duplicate_function.s $(SELFHOST_DIR)/capability/duplicate-function >/dev/null 2>&1
+	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_invalid_signature.s $(SELFHOST_DIR)/capability/invalid-signature >/dev/null 2>&1
+	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_unknown_function.s $(SELFHOST_DIR)/capability/unknown-function >/dev/null 2>&1
+	@$(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_intrinsic_string_arg.s $(SELFHOST_DIR)/capability/intrinsic-string-arg
+	@$(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_intrinsic_string_return.s $(SELFHOST_DIR)/capability/intrinsic-string-return
+	@$(SELFHOST_DIR)/capability/compiler --emit-native \
+	  test/selfhost/bootstrap_intrinsic_scalar_return.s $(SELFHOST_DIR)/capability/intrinsic-scalar-return
+	@set +e; $(SELFHOST_DIR)/capability/intrinsic-string-arg; status=$$?; set -e; test $$status -eq 42
+	@set +e; $(SELFHOST_DIR)/capability/intrinsic-string-return; status=$$?; set -e; test $$status -eq 42
+	@set +e; $(SELFHOST_DIR)/capability/intrinsic-scalar-return; status=$$?; set -e; test $$status -eq 42
+	@grep -q '^semantic|.*|for-loop|' $(SELFHOST_DIR)/capability/unsupported.txt
+	@grep -q '^codegen|.*|stack-arguments|' $(SELFHOST_DIR)/capability/unsupported.txt
+	@echo "Bootstrap capability report: $(SELFHOST_DIR)/capability/unsupported.txt"
 
 bootstrap-convergence: bootstrap-stage0
 	@mkdir -p $(SELFHOST_DIR) ./bin
