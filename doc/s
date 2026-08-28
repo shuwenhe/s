@@ -9,6 +9,9 @@ void                // No return value
 string              // String
 Type*               // Pointer type
 Type[]              // Array type
+Type[size] varname
+int[256] tokens    // 固定长度数组：256 个 int
+int[] tokens       // 动态长度 slice
 
 2. Struct Definition
 Basic struct
