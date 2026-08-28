@@ -12,7 +12,7 @@
 
 #include "target.h"
 
-#define STANDALONE_MAX_INS 16384
+#define STANDALONE_MAX_INS 32768
 #define STANDALONE_MAX_FUNCS 256
 #define STANDALONE_MAX_SLOTS 2048
 #define STANDALONE_MAX_LITERALS 2048
@@ -523,6 +523,7 @@ static bool run_tool(char *const argv[], compile_error *err) {
 
 bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err) {
 	standalone_module *module = NULL;
+	char temp_dir[] = "/tmp/s_standalone-XXXXXX";
 	char asm_path[256];
 	char obj_path[256];
 	char runtime_obj_path[256];
@@ -541,9 +542,13 @@ bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *o
 		return false;
 	}
 	if (!root || !*root) root = ".";
-	snprintf(asm_path, sizeof(asm_path), "/tmp/s_standalone_%ld.s", (long)getpid());
-	snprintf(obj_path, sizeof(obj_path), "/tmp/s_standalone_%ld.o", (long)getpid());
-	snprintf(runtime_obj_path, sizeof(runtime_obj_path), "/tmp/s_standalone_runtime_%ld.o", (long)getpid());
+	if (!mkdtemp(temp_dir)) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to create standalone temporary directory: %s", strerror(errno));
+		return false;
+	}
+	snprintf(asm_path, sizeof(asm_path), "%s/program.s", temp_dir);
+	snprintf(obj_path, sizeof(obj_path), "%s/program.o", temp_dir);
+	snprintf(runtime_obj_path, sizeof(runtime_obj_path), "%s/runtime.o", temp_dir);
 	snprintf(runtime_source, sizeof(runtime_source), "%s/src/runtime/selfhost_linux_amd64.S", root);
 	snprintf(linker_script, sizeof(linker_script), "%s/src/runtime/linker/nostdlib.ld", root);
 
@@ -573,12 +578,14 @@ done:
 	unlink(asm_path);
 	unlink(obj_path);
 	unlink(runtime_obj_path);
+	rmdir(temp_dir);
 	free(module);
 	return ok;
 }
 
 bool emit_standalone_amd64_object_from_ir_file(const char *input_ir_path, const char *output_object_path, compile_error *err) {
 	standalone_module *module = NULL;
+	char temp_dir[] = "/tmp/s_standalone_obj-XXXXXX";
 	char asm_path[256];
 	FILE *out = NULL;
 	bool ok = false;
@@ -589,7 +596,11 @@ bool emit_standalone_amd64_object_from_ir_file(const char *input_ir_path, const 
 		error_set(err, ERR_SEMANTIC, 0, 0, "invalid standalone object backend input");
 		return false;
 	}
-	snprintf(asm_path, sizeof(asm_path), "/tmp/s_standalone_obj_%ld.s", (long)getpid());
+	if (!mkdtemp(temp_dir)) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to create standalone object temporary directory: %s", strerror(errno));
+		return false;
+	}
+	snprintf(asm_path, sizeof(asm_path), "%s/program.s", temp_dir);
 	module = (standalone_module *)calloc(1, sizeof(*module));
 	if (!module) {
 		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
@@ -614,6 +625,7 @@ bool emit_standalone_amd64_object_from_ir_file(const char *input_ir_path, const 
 done:
 	if (out) fclose(out);
 	unlink(asm_path);
+	rmdir(temp_dir);
 	free(module);
 	return ok;
 }
