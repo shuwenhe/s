@@ -243,7 +243,7 @@ selfhost-check: selfhost selfhost-lexer-check
 	@./bin/s test/c_abi/add.s $(SELFHOST_DIR)/final-check.ir
 	@S_LEXER_MODE=selfhost S_SELFHOST_LEXER=$(SELFHOST_DIR)/s_lexer ./bin/s test/c_abi/add.s $(SELFHOST_DIR)/s-lexer-parser.ir
 	@cmp $(SELFHOST_DIR)/final-check.ir $(SELFHOST_DIR)/s-lexer-parser.ir
-	@cmp $(SELFHOST_DIR)/stage2.ir $(SELFHOST_DIR)/stage3.ir
+	@cmp $(SELFHOST_DIR)/native/stage2.S $(SELFHOST_DIR)/native/stage3.S
 	@echo "Native bootstrap check passed: stage2 == stage3 and S Lexer -> Parser IR matches seed"
 
 true-selfhost-check: selfhost-check
@@ -251,12 +251,10 @@ true-selfhost-check: selfhost-check
 	@echo "True self-host check passed: ./bin/s does not link the C seed compiler"
 
 bootstrap-audit: selfhost
-	@./src/cmd/dist/checks/audit.sh "$(SELFHOST_DIR)" ./bin/s
+	@./src/cmd/dist/checks/audit.sh "$(SELFHOST_DIR)/native" ./bin/s
 
-# Build a genuinely independent compiler chain.  Unlike bootstrap-convergence,
-# this target compares compiler executables, not seed-generated IR.  It is
-# expected to stay red until every construct used by compiler.s is supported by
-# the pure-S native backend.
+# Build a genuinely independent compiler chain. Unlike bootstrap-convergence,
+# this target compares S-generated assembly and compiler executables.
 native-bootstrap: seed-compiler-bin
 	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/native-bootstrap.sh \
 	  $(SELFHOST_DIR)/native
@@ -536,8 +534,8 @@ bootstrap-slice6-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice6/string-compare; status=$$?; set -e; test $$status -eq 42
 	@echo "Bootstrap slice 6 passed: string compare and branch-string frontier"
 
-pure-s-bootstrap-check: selfhost-runtime-check selfhost-lexer-check bootstrap-slice1-check
-	@echo "Pure-S bootstrap frontier passed: runtime, lexer, frontend, and minimal ELF writer"
+pure-s-bootstrap-check: native-bootstrap selfhost-runtime-check selfhost-lexer-check
+	@echo "Pure-S bootstrap passed: stage2/stage3 converge without a seed dependency"
 
 bootstrap-source-closure:
 	@mkdir -p $(SELFHOST_DIR)
@@ -578,7 +576,7 @@ help:
 	@echo "  make seed-network-tests"
 	@echo "  make seed-c-abi-test"
 	@echo "  make bootstrap-stage0       # Build the trusted C stage0 compiler"
-	@echo "  make bootstrap-convergence  # Produce stage1..3 and prove IR convergence"
+	@echo "  make bootstrap-convergence  # Compatibility seed-hosted IR convergence"
 	@echo "  make bootstrap-pure-s       # Run the pure-S bootstrap entrypoint"
 	@echo "  make bootstrap-audit        # Report provenance and forbidden dependencies"
 	@echo "  make native-bootstrap       # Build and compare pure-S stage1 -> stage2 -> stage3 binaries"

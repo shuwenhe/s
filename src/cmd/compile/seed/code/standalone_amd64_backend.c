@@ -1,4 +1,7 @@
+/* Darwin declares mkdtemp only at its default (full) API level. */
+#if !defined(__APPLE__) && !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200809L
+#endif
 
 #include <ctype.h>
 #include <errno.h>
@@ -519,6 +522,42 @@ static bool run_tool(char *const argv[], compile_error *err) {
 		return false;
 	}
 	return true;
+}
+
+bool emit_standalone_amd64_assembly_from_ir_file(const char *input_ir_path, const char *output_assembly_path, compile_error *err) {
+	standalone_module *module = NULL;
+	FILE *out = NULL;
+	bool ok = false;
+
+	error_clear(err);
+	if (!input_ir_path || !output_assembly_path) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "invalid standalone assembly backend input");
+		return false;
+	}
+	module = (standalone_module *)calloc(1, sizeof(*module));
+	if (!module) {
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+		return false;
+	}
+	if (!load_ir(input_ir_path, &module->ir, err) || !analyze_module(module, err)) goto done;
+	out = fopen(output_assembly_path, "wb");
+	if (!out) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to create standalone assembly output");
+		goto done;
+	}
+	if (!emit_assembly(out, module, err)) goto done;
+	if (fclose(out) != 0) {
+		out = NULL;
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to close standalone assembly output");
+		goto done;
+	}
+	out = NULL;
+	ok = true;
+
+done:
+	if (out) fclose(out);
+	free(module);
+	return ok;
 }
 
 bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err) {

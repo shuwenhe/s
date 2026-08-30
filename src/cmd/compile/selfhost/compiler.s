@@ -411,6 +411,32 @@ func function_parameter(string source, string name) string {
     return function_parameter_at(source, name, 0)
 }
 
+func function_parameter_index(string source, string name, string wanted) int {
+    int declaration = function_declaration(source, name)
+    if declaration < 0 { return -1 }
+    int name_at = skip_space(source, declaration + 4)
+    int name_end = skip_identifier(source, name_at)
+    int open = skip_space(source, name_end)
+    if open >= len(source) || __host_char_at(source, open) != "(" { return -1 }
+    int close = matching_paren(source, open, len(source))
+    if close < 0 { return -1 }
+    int cursor = skip_space(source, open + 1)
+    int ordinal = 0
+    for cursor < close {
+        int type_end = skip_identifier(source, cursor)
+        if type_end == cursor { return -1 }
+        int parameter_at = skip_space(source, type_end)
+        int parameter_end = skip_identifier(source, parameter_at)
+        if parameter_end == parameter_at { return -1 }
+        if __host_slice(source, parameter_at, parameter_end) == wanted { return ordinal }
+        cursor = skip_space(source, parameter_end)
+        if cursor >= close || __host_char_at(source, cursor) != "," { return -1 }
+        cursor = skip_space(source, cursor + 1)
+        ordinal = ordinal + 1
+    }
+    return -1
+}
+
 func function_parameter_type_kind_at(string source, string name, int wanted) int {
     int declaration = function_declaration(source, name)
     if declaration < 0 { return -1 }
@@ -1207,6 +1233,13 @@ func local_slot(string source, int scope_start, int before, string wanted) int {
                 int typed_name_end = skip_identifier(source, typed_name_at)
                 string typed_name = __host_slice(source, typed_name_at, typed_name_end)
                 int typed_assign = skip_space(source, typed_name_end)
+                if typed_name_end > typed_name_at && (typed_assign >= len(source) ||
+                    __host_char_at(source, typed_assign) != "=") {
+                    if typed_name == wanted { return slot }
+                    slot = slot + type_abi_words(parse_type_kind(name))
+                    index = typed_name_end
+                    continue
+                }
                 if typed_name_end > typed_name_at && typed_assign < len(source) &&
                     __host_char_at(source, typed_assign) == "=" &&
                     (typed_assign + 1 >= len(source) || __host_char_at(source, typed_assign + 1) != "=") {
@@ -2619,12 +2652,9 @@ func asm_runtime_callee(string name) string {
 }
 
 func asm_local_load(string source, string function_name, int before, string name) string {
-    int parameter = 0
-    for parameter < 6 {
-        if name == function_parameter_at(source, function_name, parameter) {
-            return "    mov " + signed_int_text(0 - ((parameter + 1) * 8)) + "(%rbp), %rax\n"
-        }
-        parameter = parameter + 1
+    int parameter = function_parameter_index(source, function_name, name)
+    if parameter >= 0 && parameter < 6 {
+        return "    mov " + signed_int_text(0 - ((parameter + 1) * 8)) + "(%rbp), %rax\n"
     }
     int body = function_body(source, function_name)
     int slot = local_slot(source, body, before, name)
@@ -2671,6 +2701,11 @@ func asm_expression(string source, int raw_start, int raw_end, string function_n
     if __host_char_at(source, start) == "(" {
         int close = matching_paren(source, start, end)
         if close == end - 1 { return asm_expression(source, start + 1, end - 1, function_name) }
+    }
+    if __host_char_at(source, start) == "-" {
+        string negated = asm_expression(source, start + 1, end, function_name)
+        if negated == "" { return "" }
+        return negated + "    sar $1, %rax\n    neg %rax\n    lea 1(%rax,%rax), %rax\n"
     }
     int logical = logical_at(source, start, end, "||")
     if logical >= 0 {
@@ -2766,6 +2801,32 @@ func asm_expression(string source, int raw_start, int raw_end, string function_n
     return arguments + "    call " + asm_runtime_callee(name) + "\n"
 }
 
+func asm_if_statement_end(string source, int start, int block_end) int {
+    if start >= block_end || !matches_at(source, start, "if") { return -1 }
+    int open = skip_space(source, start + 2)
+    int depth = 0
+    for open < block_end {
+        string ch = __host_char_at(source, open)
+        if ch == "(" { depth = depth + 1 }
+        if ch == ")" { depth = depth - 1 }
+        if ch == "{" && depth == 0 { break }
+        open = open + 1
+    }
+    if open >= block_end { return -1 }
+    int close = function_body_end(source, open + 1)
+    if close < 0 || close >= block_end { return -1 }
+    int after = skip_trivia(source, close + 1)
+    if after >= block_end || !matches_at(source, after, "else") { return close + 1 }
+    int alternative = skip_space(source, after + 4)
+    if alternative < block_end && matches_at(source, alternative, "if") {
+        return asm_if_statement_end(source, alternative, block_end)
+    }
+    if alternative >= block_end || __host_char_at(source, alternative) != "{" { return -1 }
+    int alternative_end = function_body_end(source, alternative + 1)
+    if alternative_end < 0 || alternative_end >= block_end { return -1 }
+    return alternative_end + 1
+}
+
 func asm_block_loop(string source, int raw_start, int block_end, string function_name, string loop_start, string loop_end) string {
     int index = skip_trivia(source, raw_start)
     if index >= block_end { return "" }
@@ -2805,6 +2866,16 @@ func asm_block_loop(string source, int raw_start, int block_end, string function
         int after = skip_trivia(source, close + 1)
         if after < block_end && matches_at(source, after, "else") {
             int else_open = skip_space(source, after + 4)
+            if else_open < block_end && matches_at(source, else_open, "if") {
+                int else_if_end = asm_if_statement_end(source, else_open, block_end)
+                if else_if_end < 0 { return "" }
+                string else_if_code = asm_block_loop(source, else_open, else_if_end, function_name, loop_start, loop_end)
+                string rest_after_else_if = asm_block_loop(source, else_if_end, block_end, function_name, loop_start, loop_end)
+                if else_if_code == "" { return "" }
+                return condition + "    cmp $1, %rax\n    je .Las_else_" + label + "\n"
+                    + then_code + "    jmp .Las_if_done_" + label + "\n.Las_else_" + label + ":\n"
+                    + else_if_code + ".Las_if_done_" + label + ":\n" + rest_after_else_if
+            }
             if else_open >= block_end || __host_char_at(source, else_open) != "{" { return "" }
             int else_close = function_body_end(source, else_open + 1)
             if else_close < 0 || else_close > block_end { return "" }
@@ -2861,6 +2932,13 @@ func asm_block_loop(string source, int raw_start, int block_end, string function
         __host_char_at(source, assign + 1) == "="
     bool assignment = assign < block_end && __host_char_at(source, assign) == "=" &&
         (assign + 1 >= block_end || __host_char_at(source, assign + 1) != "=")
+    if typed && !assignment {
+        string default_value = "    mov $1, %rax\n"
+        string default_store = asm_local_store(source, function_name, index, name)
+        if default_store == "" { return "" }
+        return default_value + default_store
+            + asm_block_loop(source, name_end, block_end, function_name, loop_start, loop_end)
+    }
     if typed || declaration || assignment {
         int value_start = skip_space(source, assign + 1)
         if declaration { value_start = skip_space(source, assign + 2) }
@@ -2915,7 +2993,7 @@ func asm_literal_byte(string source, int index) int {
 }
 
 func asm_literals(string source) string {
-    string output = ""
+    string output = ".balign 1\n.Las_literals:\n    .byte 0\n"
     int index = 0
     for index < len(source) {
         if __host_char_at(source, index) != "\"" { index = index + 1; continue }
