@@ -16,6 +16,11 @@ s_heap_current:
     .quad 0
 s_heap_limit:
     .quad 0
+.align 8
+s_byte_values_ready:
+    .quad 0
+s_byte_values:
+    .skip 6144
 
 .section .text.startup
 .global _start
@@ -207,6 +212,57 @@ s_strlen:
     ret
 .size s_strlen, .-s_strlen
 
+# Return the untagged byte at an untagged string index. Rope nodes have tag 6
+# and store their left/right children at offsets 16 and 24.
+.type s_string_byte_raw, @function
+s_string_byte_raw:
+.Lstring_byte_raw_loop:
+    cmpq $6, (%rdi)
+    jne .Lstring_byte_raw_flat
+    mov 16(%rdi), %rax
+    mov 8(%rax), %rdx
+    cmp %rdx, %rsi
+    jb .Lstring_byte_raw_left
+    sub %rdx, %rsi
+    mov 24(%rdi), %rdi
+    jmp .Lstring_byte_raw_loop
+.Lstring_byte_raw_left:
+    mov %rax, %rdi
+    jmp .Lstring_byte_raw_loop
+.Lstring_byte_raw_flat:
+    movzbl 16(%rdi,%rsi), %eax
+    ret
+.size s_string_byte_raw, .-s_string_byte_raw
+
+# Return an interned one-byte string for an untagged byte value.
+.type s_byte_value_raw, @function
+s_byte_value_raw:
+    push %rbx
+    mov %rdi, %rbx
+    cmpq $0, s_byte_values_ready(%rip)
+    jne .Lbyte_value_lookup
+    xor %eax, %eax
+    lea s_byte_values(%rip), %rdi
+.Lbyte_value_init_loop:
+    cmp $256, %rax
+    jae .Lbyte_value_init_done
+    imul $24, %rax, %rdx
+    movq $2, (%rdi,%rdx)
+    movq $1, 8(%rdi,%rdx)
+    mov %al, 16(%rdi,%rdx)
+    movb $0, 17(%rdi,%rdx)
+    inc %rax
+    jmp .Lbyte_value_init_loop
+.Lbyte_value_init_done:
+    movq $1, s_byte_values_ready(%rip)
+.Lbyte_value_lookup:
+    imul $24, %rbx, %rbx
+    lea s_byte_values(%rip), %rax
+    add %rbx, %rax
+    pop %rbx
+    ret
+.size s_byte_value_raw, .-s_byte_value_raw
+
  
 
 
@@ -244,28 +300,16 @@ s_value_add:
     push %r13
     mov %rdi, %rbx
     mov %rsi, %r12
-    mov 8(%rbx), %rax
-    mov 8(%r12), %r13
-    add %rax, %r13
-    lea 17(%r13), %rdi
+    mov 8(%rbx), %r13
+    add 8(%r12), %r13
+    mov $32, %rdi
     call s_alloc
     test %rax, %rax
     jz .Lvalue_add_done
-    movq $2, (%rax)
+    movq $6, (%rax)
     mov %r13, 8(%rax)
-    mov %rax, %r13
-    lea 16(%rax), %rdi
-    lea 16(%rbx), %rsi
-    mov 8(%rbx), %rdx
-    call s_memcpy
-    lea 16(%r13), %rdi
-    add 8(%rbx), %rdi
-    lea 16(%r12), %rsi
-    mov 8(%r12), %rdx
-    call s_memcpy
-    mov 8(%r13), %rcx
-    movb $0, 16(%r13,%rcx)
-    mov %r13, %rax
+    mov %rbx, 16(%rax)
+    mov %r12, 24(%rax)
 .Lvalue_add_done:
     pop %r13
     pop %r12
@@ -292,32 +336,49 @@ s_value_cmp:
 .Lvalue_cmp_done:
     ret
 .Lvalue_cmp_string:
-    mov 8(%rdi), %r8
-    mov 8(%rsi), %r9
-    xor %rcx, %rcx
+    push %rbx
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    mov %rdi, %rbx
+    mov %rsi, %r12
+    xor %r13, %r13
 .Lvalue_cmp_loop:
-    cmp %r8, %rcx
+    cmp 8(%rbx), %r13
     jae .Lvalue_cmp_lengths
-    cmp %r9, %rcx
+    cmp 8(%r12), %r13
     jae .Lvalue_cmp_lengths
-    movzbl 16(%rdi,%rcx), %eax
-    movzbl 16(%rsi,%rcx), %edx
-    cmp %edx, %eax
+    mov %rbx, %rdi
+    mov %r13, %rsi
+    call s_string_byte_raw
+    mov %rax, %r14
+    mov %r12, %rdi
+    mov %r13, %rsi
+    call s_string_byte_raw
+    cmp %rax, %r14
     jb .Lvalue_cmp_less
     ja .Lvalue_cmp_greater
-    inc %rcx
+    inc %r13
     jmp .Lvalue_cmp_loop
 .Lvalue_cmp_lengths:
-    cmp %r9, %r8
+    mov 8(%rbx), %rax
+    cmp 8(%r12), %rax
     jb .Lvalue_cmp_less
     ja .Lvalue_cmp_greater
     xor %eax, %eax
-    ret
+    jmp .Lvalue_cmp_string_done
 .Lvalue_cmp_less:
     mov $-1, %rax
-    ret
+    jmp .Lvalue_cmp_string_done
 .Lvalue_cmp_greater:
     mov $1, %rax
+.Lvalue_cmp_string_done:
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %rbx
     ret
 .size s_value_cmp, .-s_value_cmp
 
@@ -329,20 +390,9 @@ s_string_char_at:
     js .Lchar_at_fail
     cmp 8(%rdi), %rsi
     jae .Lchar_at_fail
-    push %rbx
-    mov %rdi, %rbx
-    mov $18, %rdi
-    call s_alloc
-    test %rax, %rax
-    jz .Lchar_at_pop
-    movq $2, (%rax)
-    movq $1, 8(%rax)
-    movzbl 16(%rbx,%rsi), %edx
-    mov %dl, 16(%rax)
-    movb $0, 17(%rax)
-.Lchar_at_pop:
-    pop %rbx
-    ret
+    call s_string_byte_raw
+    mov %rax, %rdi
+    jmp s_byte_value_raw
 .Lchar_at_fail:
     xor %eax, %eax
     ret
@@ -356,7 +406,7 @@ s_string_byte_at:
     js .Lbyte_at_fail
     cmp 8(%rdi), %rsi
     jae .Lbyte_at_fail
-    movzbl 16(%rdi,%rsi), %eax
+    call s_string_byte_raw
     lea 1(%rax,%rax), %rax
     ret
 .Lbyte_at_fail:
@@ -367,20 +417,8 @@ s_string_byte_at:
 .global s_byte_string_value
 .type s_byte_string_value, @function
 s_byte_string_value:
-    push %rbx
     sar $1, %rdi
-    mov %rdi, %rbx
-    mov $18, %rdi
-    call s_alloc
-    test %rax, %rax
-    jz .Lbyte_string_done
-    movq $2, (%rax)
-    movq $1, 8(%rax)
-    mov %bl, 16(%rax)
-    movb $0, 17(%rax)
-.Lbyte_string_done:
-    pop %rbx
-    ret
+    jmp s_byte_value_raw
 .size s_byte_string_value, .-s_byte_string_value
 
 .global s_string_slice
@@ -397,6 +435,8 @@ s_string_slice:
     push %rbx
     push %r12
     push %r13
+    push %r14
+    push %r15
     mov %rdi, %rbx
     mov %rsi, %r12
     mov %rdx, %r13
@@ -407,14 +447,23 @@ s_string_slice:
     jz .Lslice_pop
     movq $2, (%rax)
     mov %r13, 8(%rax)
-    mov %rax, %r8
-    lea 16(%rax), %rdi
-    lea 16(%rbx,%r12), %rsi
-    mov %r13, %rdx
-    call s_memcpy
-    movb $0, 16(%r8,%r13)
-    mov %r8, %rax
+    mov %rax, %r14
+    xor %r15, %r15
+.Lslice_copy_loop:
+    cmp %r13, %r15
+    jae .Lslice_copy_done
+    mov %rbx, %rdi
+    lea (%r12,%r15), %rsi
+    call s_string_byte_raw
+    mov %al, 16(%r14,%r15)
+    inc %r15
+    jmp .Lslice_copy_loop
+.Lslice_copy_done:
+    movb $0, 16(%r14,%r13)
+    mov %r14, %rax
 .Lslice_pop:
+    pop %r15
+    pop %r14
     pop %r13
     pop %r12
     pop %rbx
@@ -521,15 +570,37 @@ s_host_args_value:
     ret
 .size s_host_args_value, .-s_host_args_value
 
+.type s_write_string_fd, @function
+s_write_string_fd:
+    push %rbx
+    mov %rsi, %rbx
+    cmpq $6, (%rbx)
+    je .Lwrite_string_rope
+    lea 16(%rbx), %rsi
+    mov 8(%rbx), %rdx
+    call s_write
+    pop %rbx
+    ret
+.Lwrite_string_rope:
+    mov 16(%rbx), %rsi
+    call s_write_string_fd
+    test %rax, %rax
+    js .Lwrite_string_done
+    mov 24(%rbx), %rsi
+    call s_write_string_fd
+.Lwrite_string_done:
+    pop %rbx
+    ret
+.size s_write_string_fd, .-s_write_string_fd
+
 .global s_eprintln_value
 .type s_eprintln_value, @function
 s_eprintln_value:
     push %rbx
     mov %rdi, %rbx
     mov $2, %rdi
-    lea 16(%rbx), %rsi
-    mov 8(%rbx), %rdx
-    call s_write
+    mov %rbx, %rsi
+    call s_write_string_fd
     mov $2, %rdi
     lea .Lnewline(%rip), %rsi
     mov $1, %rdx
@@ -693,9 +764,8 @@ s_write_file_value:
     js .Lwrite_file_fail
     mov %rax, %rbx
     mov %rbx, %rdi
-    lea 16(%r12), %rsi
-    mov 8(%r12), %rdx
-    call s_write
+    mov %r12, %rsi
+    call s_write_string_fd
     push %rax
     mov %rbx, %rdi
     call s_close

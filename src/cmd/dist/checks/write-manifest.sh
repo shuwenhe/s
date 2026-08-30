@@ -9,7 +9,7 @@ trap 'rm -f "$tmp"' EXIT HUP INT TERM
 
 {
     printf 's-bootstrap-manifest-v1\n'
-    for name in stage1.ir stage2.ir stage3.ir stage1 stage2 stage3; do
+    for name in stage1.ir stage2.ir stage3.ir stage2.S stage3.S stage1 stage2 stage3; do
         path="$dir/$name"
         if [ -f "$path" ]; then
             digest=$(sha256sum "$path" | awk '{print $1}')

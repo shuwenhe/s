@@ -14,8 +14,9 @@ make true-selfhost-check
 
 The trusted C seed participates only in stage 1. Stages 2 and 3 are generated
 by S compiler binaries from `src/cmd/compile/selfhost/compiler.s`. The driver
-compares their IR and executables, audits the resulting static compiler, and
-runs a native conformance program expected to return 42.
+compares their assembly and executables, audits the resulting static compiler,
+and runs native frontend and rope-string conformance programs expected to
+return 42.
 
 `make selfhost` installs the converged stage 2 artifact as `bin/s`.
 `make seed-hosted-selfhost` retains the compatibility path and is not the
@@ -31,6 +32,12 @@ The narrower checks document and protect the language/backend frontier:
 4. `bootstrap-slice4-check`: function control, logic, typed locals, large functions.
 5. `bootstrap-slice5-check`: multicall and argument passing.
 6. `bootstrap-slice6-check`: string comparison and branch-string assembly.
+
+The complete compiler closes constructs that the earlier slices did not need:
+negative literals, declarations with default initialization, `else if`, and the
+full six-register calling frontier. Runtime concatenation uses immutable ropes,
+and one-byte strings are interned so compiling the compiler does not exhaust the
+bootstrap heap.
 
 Run `make pure-s-bootstrap-check` for the implemented no-seed frontiers and
 `make bootstrap-audit` for provenance and manifest output.
