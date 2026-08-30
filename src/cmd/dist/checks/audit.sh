@@ -5,12 +5,12 @@ dir=${1:?usage: audit.sh BOOTSTRAP_DIR COMPILER}
 compiler=${2:?usage: audit.sh BOOTSTRAP_DIR COMPILER}
 manifest="$dir/manifest.txt"
 
-test -s "$dir/stage2.ir"
-test -s "$dir/stage3.ir"
-cmp "$dir/stage2.ir" "$dir/stage3.ir"
+test -s "$dir/stage2.S"
+test -s "$dir/stage3.S"
+cmp "$dir/stage2.S" "$dir/stage3.S"
 
 printf 'bootstrap convergence\n'
-printf '  stage2.ir == stage3.ir: yes\n'
+printf '  stage2.S == stage3.S: yes\n'
 printf '  compiler artifact: %s\n' "$compiler"
 if readelf -lW "$compiler" 2>/dev/null | grep -q '[[:space:]]INTERP[[:space:]]'; then
     printf '  provenance: seed-hosted (dynamic interpreter present)\n'
