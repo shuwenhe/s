@@ -25,11 +25,16 @@ func parse_options(string[] args)  string[] {
             return make_options("help", "", "", "", false
         }
         nostdlib := has_flag(args, 5, "-nostdlib")
+        use_native := has_flag(args, 5, "--native")
         margin := parse_optional_margin(args, 5)
         if margin == "__invalid_margin__" {
             return make_options("help", "", "", "", false
         }
-        return make_options(command, args[2], args[4], margin, nostdlib
+        options := make_options(command, args[2], args[4], margin, nostdlib)
+        if use_native {
+            options = append(options, "native")
+        }
+        options
     }
     if command == "run" {
         if len(args) < 3 {
@@ -81,7 +86,7 @@ func usage()  string {
     + "  s check <path|module>\n"
     + "  s tokens <path|module>\n"
     + "  s ast <path|module>\n"
-    + "  s build <path|module> -o <output> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>] [-nostdlib]\n"
+    + "  s build <path|module> -o <output> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>] [--native] [-nostdlib]\n"
     + "  s run <path|module> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>] [-nostdlib]\n"
     + "  s test [fixtures_root]\n"
     + "  s mod init <module>\n"
@@ -89,7 +94,8 @@ func usage()  string {
     + "  s mod index <dir>\n"
     + "\n"
     + "  <module> is a dot-separated package path, e.g. neurx.agent.code_agent\n"
-    + "  -nostdlib  Generate standalone binary without C library dependencies\n"
+    + "  --native       Generate native machine code (direct compilation, experimental)\n"
+    + "  -nostdlib      Generate standalone binary without C library dependencies\n"
     + "  Set S_PROJECT_ROOT=<dir> for neurx.* modules (strip neurx. prefix for paths).\n"
     + "  Run 's mod index' in the project to generate build/s-package-index.tsv for mismatched packages.\n"
 }
