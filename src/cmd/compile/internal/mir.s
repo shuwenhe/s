@@ -194,7 +194,7 @@ func lower_block(block_expr block) string {
     }
     if block.final_expr.is_some() {
         tail := block.final_expr.unwrap()
-        return text + " | " + indent(1) + "yield " + dump_expr(tail
+        return text + " | " + indent(1) + "yield " + dump_expr(tail)
     } else {
         return text + " | " + indent(1) + "yield unit"
     }

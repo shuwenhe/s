@@ -120,13 +120,13 @@ func check_detailed(string source) semantic_error[] {
     diagnostics := semantic_error[]()
     if !rules_consistent() {
         add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
-        return finalize_diagnostics(diagnostics
+        return finalize_diagnostics(diagnostics)
     }
     run_preparse_semantic_completeness_checks(source, diagnostics)
     parsed := parse_source(source)
     if parsed.is_err() {
         add_error(source, diagnostics, "e0001", "parse failed", "package");
-        return finalize_diagnostics(diagnostics
+        return finalize_diagnostics(diagnostics)
     }
     file := parsed.unwrap()
     functions := collect_functions(file.items)

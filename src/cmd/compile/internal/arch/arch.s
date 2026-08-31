@@ -15,7 +15,7 @@ func dispatch_init(string arch) string {
 }
 
 func init(string arch) string {
-    return dispatch_init(arch
+    return dispatch_init(arch)
 }
 
 func lookup_init_name(string arch) string {
@@ -52,31 +52,31 @@ func arch_inits() arch_dispatch_entry[] {
 
 func run_arch_init(string init_name) string {
     if init_name == "x86_init" {
-        return x86_init(
+        return x86_init()
     }
     if init_name == "amd64_init" {
-        return amd64_init(
+        return amd64_init()
     }
     if init_name == "arm_init" {
-        return arm_init(
+        return arm_init()
     }
     if init_name == "arm64_init" {
-        return arm64_init(
+        return arm64_init()
     }
     if init_name == "loong64_init" {
-        return loong64_init(
+        return loong64_init()
     }
     if init_name == "mips_init" {
-        return mips_init(
+        return mips_init()
     }
     if init_name == "mips64_init" {
-        return mips64_init(
+        return mips64_init()
     }
     if init_name == "ppc64_init" {
-        return ppc64_init(
+        return ppc64_init()
     }
     if init_name == "riscv64_init" {
-        return riscv64_init(
+        return riscv64_init()
     }
     if init_name == "amd64p32_init" {
         return amd64p32_init(

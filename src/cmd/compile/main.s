@@ -6,7 +6,7 @@ use internal.buildcfg.goarch as buildcfg_goarch
 use std.env.args as host_args
 use std.io.eprintln
 
-func main() {
+func main() int {
     args := host_args()
     buildcfg_err := buildcfg_check()
     if buildcfg_err != "" {
@@ -24,6 +24,7 @@ func main() {
     return build_main(args)
 }
 
-func report_compile_error(string message) () {
+func report_compile_error(string message) int {
     eprintln("compile: " + message)
+    0
 }

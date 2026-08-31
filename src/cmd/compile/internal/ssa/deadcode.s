@@ -20,7 +20,7 @@ func run_deadcode(ssa_func f) int {
     for bi < len(f.blocks) {
         compact := int[]()
         j := 0
-        for j < f.blocks[bi]len(.values) {
+        for j < len(f.blocks[bi].values) {
             id := f.blocks[bi].values[j]
             if id >= 0 && id < len(f.values) && !f.values[id].removed {
                 compact = append(compact, id)

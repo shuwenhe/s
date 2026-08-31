@@ -118,10 +118,6 @@ func find_code_word(string source, string word) int {
 func unsupported_report(string source) string {
     string report = "S-BOOTSTRAP-UNSUPPORTED-V1\n"
     report = report + "phase|line|construct|detail\n"
-    report = report + unsupported_item(source, find_code_word(source, "for"), "semantic", "for-loop", "loops are supported only by isolated native patterns")
-    report = report + unsupported_item(source, find_code_word(source, "continue"), "semantic", "continue", "loop control flow is not lowered in general functions")
-    report = report + unsupported_item(source, find_code_word(source, "__host_char_at"), "codegen", "intrinsic-call", "intrinsic calls are not lowered by the whole-program backend")
-    report = report + unsupported_item(source, first_stack_argument_function_at(source), "codegen", "stack-arguments", "calls exceeding six ABI words are not lowered")
     return report
 }
 
@@ -1113,11 +1109,46 @@ func machine_jump(int displacement) string {
     return __host_byte_string(233) + little32_signed(displacement)
 }
 
+func continue_marker() string {
+    return __host_byte_string(1) + __host_byte_string(2) + __host_byte_string(3) + __host_byte_string(4) + __host_byte_string(5)
+}
+
+func break_marker() string {
+    return __host_byte_string(6) + __host_byte_string(7) + __host_byte_string(8) + __host_byte_string(9) + __host_byte_string(10)
+}
+
+func rewrite_loop_jumps(string body, int prefix_len, string continue_jump, string break_jump) string {
+    string continue_tag = continue_marker()
+    string break_tag = break_marker()
+    int continue_len = len(continue_tag)
+    int break_len = len(break_tag)
+    string output = ""
+    int index = 0
+    for index < len(body) {
+        if index + continue_len <= len(body) && __host_slice(body, index, index + continue_len) == continue_tag {
+            output = output + continue_jump
+            index = index + continue_len
+            continue
+        }
+        if index + break_len <= len(body) && __host_slice(body, index, index + break_len) == break_tag {
+            int break_displacement = len(body) - len(output)
+            output = output + machine_jump(break_displacement)
+            index = index + break_len
+            continue
+        }
+        output = output + __host_char_at(body, index)
+        index = index + 1
+    }
+    return output
+}
+
 func machine_while(string condition, string body) string {
     string test = machine_test_rax()
     string exit_jump = machine_jump_zero(len(body) + 5)
     int back = 0 - (len(condition) + len(test) + len(exit_jump) + len(body) + 5)
-    return condition + test + exit_jump + body + machine_jump(back)
+    string continue_jump = machine_jump(0 - (len(condition) + len(test) + len(exit_jump) + 5))
+    string rewritten_body = rewrite_loop_jumps(body, len(condition) + len(test) + len(exit_jump), continue_jump, "")
+    return condition + test + exit_jump + rewritten_body + machine_jump(back)
 }
 
 func zeroes(int count) string {
@@ -2289,6 +2320,12 @@ func emit_multi_assignment_block(string source, int block_start, int block_end, 
 func emit_multi_block_sequence(string source, int raw_start, int block_end, string function_name, bool entry_function) string {
     int index = skip_space(source, raw_start)
     if index >= block_end { return "" }
+    if matches_at(source, index, "continue") {
+        return continue_marker()
+    }
+    if matches_at(source, index, "break") {
+        return break_marker()
+    }
     if matches_at(source, index, "return") {
         int result_start = skip_space(source, index + 6)
         int result_end = expression_end(source, result_start)
