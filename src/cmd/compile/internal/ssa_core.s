@@ -252,7 +252,7 @@ func build_pipeline(string mir_text, string goarch) ssa_program {
 func build_pipeline_with_margin(string mir_text, string goarch, int dominant_margin_override) ssa_program {
     options := default_options()
     options.dominant_margin_override = dominant_margin_override
-    return build_pipeline_with_options(mir_text, goarch, options
+    return build_pipeline_with_options(mir_text, goarch, options)
 }
 
 func build_pipeline_with_graph_hints(mir_graph graph, string mir_text, string goarch) ssa_program {
