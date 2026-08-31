@@ -315,41 +315,44 @@ func find_word_from(string source, string word, int start) int {
 
 func find_function_from(string source, int start) int {
     int index = start
+    int mode = 0
     for index < len(source) {
         string ch = __host_char_at(source, index)
-        if ch == "\"" {
+        if mode == 1 {
+            if ch == "\\" && index + 1 < len(source) {
+                index = index + 2
+            } else {
+                if ch == "\"" { mode = 0 }
+                index = index + 1
+            }
+        } else if mode == 2 {
+            if ch == "\n" { mode = 0 }
             index = index + 1
-            for index < len(source) {
-                string quoted = __host_char_at(source, index)
-                if quoted == "\\" { index = index + 2; continue }
+        } else if mode == 3 {
+            if ch == "*" && index + 1 < len(source) && __host_char_at(source, index + 1) == "/" {
+                mode = 0
+                index = index + 2
+            } else {
                 index = index + 1
-                if quoted == "\"" { break }
             }
-            continue
-        }
-        if ch == "/" && index + 1 < len(source) && __host_char_at(source, index + 1) == "/" {
+        } else if ch == "\"" {
+            mode = 1
+            index = index + 1
+        } else if ch == "/" && index + 1 < len(source) && __host_char_at(source, index + 1) == "/" {
+            mode = 2
             index = index + 2
-            for index < len(source) && __host_char_at(source, index) != "\n" {
-                index = index + 1
-            }
-            continue
-        }
-        if ch == "/" && index + 1 < len(source) && __host_char_at(source, index + 1) == "*" {
+        } else if ch == "/" && index + 1 < len(source) && __host_char_at(source, index + 1) == "*" {
+            mode = 3
             index = index + 2
-            for index + 1 < len(source) &&
-                !(__host_char_at(source, index) == "*" && __host_char_at(source, index + 1) == "/") {
-                index = index + 1
+        } else {
+            if matches_at(source, index, "func") {
+                bool left_boundary = index == 0 || !is_ident_continue(__host_char_at(source, index - 1))
+                bool right_boundary = index + 4 == len(source) ||
+                    !is_ident_continue(__host_char_at(source, index + 4))
+                if left_boundary && right_boundary { return index }
             }
-            if index + 1 < len(source) { index = index + 2 }
-            continue
+            index = index + 1
         }
-        if matches_at(source, index, "func") {
-            bool left_boundary = index == 0 || !is_ident_continue(__host_char_at(source, index - 1))
-            bool right_boundary = index + 4 == len(source) ||
-                !is_ident_continue(__host_char_at(source, index + 4))
-            if left_boundary && right_boundary { return index }
-        }
-        index = index + 1
     }
     return -1
 }
@@ -521,6 +524,18 @@ func function_return_type_kind(string source, string name) int {
     return parse_type_kind(__host_slice(source, result_at, result_end))
 }
 
+func identifier_matches(string source, int start, int end, string wanted) bool {
+    if end - start != len(wanted) { return false }
+    int offset = 0
+    for start + offset < end {
+        if __host_byte_at(source, start + offset) != __host_byte_at(wanted, offset) {
+            return false
+        }
+        offset = offset + 1
+    }
+    return true
+}
+
 func function_symbol_count(string source, string wanted) int {
     int count = 0
     int index = 0
@@ -530,7 +545,7 @@ func function_symbol_count(string source, string wanted) int {
         int name_at = skip_space(source, declaration + 4)
         int name_end = skip_identifier(source, name_at)
         if name_end == name_at { return -1 }
-        if __host_slice(source, name_at, name_end) == wanted { count = count + 1 }
+        if identifier_matches(source, name_at, name_end, wanted) { count = count + 1 }
         index = name_end
     }
     return count
@@ -538,8 +553,9 @@ func function_symbol_count(string source, string wanted) int {
 
 func validate_function_symbols(string source) bool {
     int index = 0
-    if function_symbol_count(source, "main") != 1 {
-        eprintln("symbol: program must define exactly one main")
+    int main_count = function_symbol_count(source, "main")
+    if main_count != 1 {
+        eprintln("symbol: program must define exactly one main, found " + signed_int_text(main_count))
         return false
     }
     for index < len(source) {
@@ -1006,6 +1022,29 @@ func little64(int input) string {
     return little32(value) + little32(0)
 }
 
+func machine_test_rax() string {
+    return __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
+}
+
+func machine_jump_zero(int displacement) string {
+    return __host_byte_string(15) + __host_byte_string(132) + little32_signed(displacement)
+}
+
+func machine_jump_not_zero(int displacement) string {
+    return __host_byte_string(15) + __host_byte_string(133) + little32_signed(displacement)
+}
+
+func machine_jump(int displacement) string {
+    return __host_byte_string(233) + little32_signed(displacement)
+}
+
+func machine_while(string condition, string body) string {
+    string test = machine_test_rax()
+    string exit_jump = machine_jump_zero(len(body) + 5)
+    int back = 0 - (len(condition) + len(test) + len(exit_jump) + len(body) + 5)
+    return condition + test + exit_jump + body + machine_jump(back)
+}
+
 func zeroes(int count) string {
     string output = ""
     int i = 0
@@ -1087,6 +1126,15 @@ func arithmetic_machine_op(string operator) string {
     return divide
 }
 
+func machine_binary(string left, string right, string operator) string {
+    if left == "" || right == "" { return "" }
+    // Preserve the left value in the evaluation stack and place the right
+    // value in RCX, matching the amd64 two-address instruction forms below.
+    return left + __host_byte_string(80) + right
+        + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
+        + __host_byte_string(88) + arithmetic_machine_op(operator)
+}
+
 func emit_arithmetic_machine(string source, int raw_start, int raw_end) string {
     int start = skip_space(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
@@ -1102,12 +1150,7 @@ func emit_arithmetic_machine(string source, int raw_start, int raw_end) string {
     if operator_at >= 0 {
         string left = emit_arithmetic_machine(source, start, operator_at)
         string right = emit_arithmetic_machine(source, operator_at + 1, end)
-        if left == "" || right == "" { return "" }
-        string save_left = __host_byte_string(80)
-        string move_right = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
-        string restore_left = __host_byte_string(88)
-        return left + save_left + right + move_right + restore_left
-            + arithmetic_machine_op(__host_char_at(source, operator_at))
+        return machine_binary(left, right, __host_char_at(source, operator_at))
     }
     int number_end = skip_uint(source, start)
     if number_end != end { return "" }
@@ -1124,6 +1167,16 @@ func comparison_machine_op(string operator) string {
     return __host_byte_string(15) + __host_byte_string(157) + __host_byte_string(192)
 }
 
+func machine_compare(string left, string right, string operator) string {
+    if left == "" || right == "" { return "" }
+    return left + __host_byte_string(80) + right
+        + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
+        + __host_byte_string(88)
+        + __host_byte_string(72) + __host_byte_string(57) + __host_byte_string(200)
+        + comparison_machine_op(operator)
+        + __host_byte_string(72) + __host_byte_string(15) + __host_byte_string(182) + __host_byte_string(192)
+}
+
 func emit_condition_machine(string source, int start, int end) string {
     int compare = comparison_at(source, start, end)
     if compare < 0 { return emit_arithmetic_machine(source, start, end) }
@@ -1132,14 +1185,7 @@ func emit_condition_machine(string source, int start, int end) string {
     string operator = __host_slice(source, compare, operator_end)
     string left = emit_arithmetic_machine(source, start, compare)
     string right = emit_arithmetic_machine(source, operator_end, end)
-    if left == "" || right == "" { return "" }
-    string save_left = __host_byte_string(80)
-    string move_right = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
-    string restore_left = __host_byte_string(88)
-    string compare_values = __host_byte_string(72) + __host_byte_string(57) + __host_byte_string(200)
-    string widen_bool = __host_byte_string(72) + __host_byte_string(15) + __host_byte_string(182) + __host_byte_string(192)
-    return left + save_left + right + move_right + restore_left + compare_values
-        + comparison_machine_op(operator) + widen_bool
+    return machine_compare(left, right, operator)
 }
 
 func emit_native_return_machine(string source, int return_at, int block_end) string {
@@ -1182,8 +1228,8 @@ func emit_native_block_machine(string source, int block_start, int block_end) st
     string then_code = emit_native_block_machine(source, open + 1, close)
     string else_code = emit_native_block_machine(source, else_open + 1, else_close)
     if condition == "" || then_code == "" || else_code == "" { return "" }
-    string test_result = __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
-    string jump_false = __host_byte_string(15) + __host_byte_string(132) + little32(len(then_code))
+    string test_result = machine_test_rax()
+    string jump_false = machine_jump_zero(len(then_code))
     return condition + test_result + jump_false + then_code + else_code
 }
 
@@ -1328,10 +1374,7 @@ func emit_scoped_arithmetic_machine(string source, int raw_start, int raw_end, i
     if operator_at >= 0 {
         string left = emit_scoped_arithmetic_machine(source, start, operator_at, scope_start)
         string right = emit_scoped_arithmetic_machine(source, operator_at + 1, end, scope_start)
-        if left == "" || right == "" { return "" }
-        return left + __host_byte_string(80) + right
-            + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
-            + __host_byte_string(88) + arithmetic_machine_op(__host_char_at(source, operator_at))
+        return machine_binary(left, right, __host_char_at(source, operator_at))
     }
     int number_end = skip_uint(source, start)
     if number_end == end { return __host_byte_string(184) + little32(parse_uint(source, start)) }
@@ -1352,13 +1395,7 @@ func emit_scoped_condition_machine(string source, int start, int end, int scope_
     string operator = __host_slice(source, compare, operator_end)
     string left = emit_scoped_arithmetic_machine(source, start, compare, scope_start)
     string right = emit_scoped_arithmetic_machine(source, operator_end, end, scope_start)
-    if left == "" || right == "" { return "" }
-    return left + __host_byte_string(80) + right
-        + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
-        + __host_byte_string(88)
-        + __host_byte_string(72) + __host_byte_string(57) + __host_byte_string(200)
-        + comparison_machine_op(operator)
-        + __host_byte_string(72) + __host_byte_string(15) + __host_byte_string(182) + __host_byte_string(192)
+    return machine_compare(left, right, operator)
 }
 
 func emit_assignment_block_machine(string source, int block_start, int block_end, int scope_start) string {
@@ -1421,10 +1458,6 @@ func emit_native_loop_elf(string source) string {
     string condition = emit_scoped_condition_machine(source, condition_start, open, body)
     string loop_body = emit_assignment_block_machine(source, open + 1, close, body)
     if condition == "" || loop_body == "" { return "" }
-    string test_result = __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
-    string jump_exit = __host_byte_string(15) + __host_byte_string(132) + little32(len(loop_body) + 5)
-    int loop_size = len(condition) + len(test_result) + len(jump_exit) + len(loop_body) + 5
-    string jump_back = __host_byte_string(233) + little32_signed(0 - loop_size)
     int return_at = find_word_from(source, "return", close + 1)
     if return_at < 0 || return_at >= body_end { return "" }
     int return_start = skip_space(source, return_at + 6)
@@ -1433,7 +1466,7 @@ func emit_native_loop_elf(string source) string {
     string result = emit_scoped_arithmetic_machine(source, return_start, return_end, body)
     if result == "" { return "" }
     string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
-    return emit_elf_image(prefix + condition + test_result + jump_exit + loop_body + jump_back
+    return emit_elf_image(prefix + machine_while(condition, loop_body)
         + result + move_result + exit_sequence())
 }
 
@@ -1520,10 +1553,7 @@ func emit_array_expression_machine(string source, int raw_start, int raw_end, st
     if operator_at >= 0 {
         string left = emit_array_expression_machine(source, start, operator_at, array_name, array_length)
         string right = emit_array_expression_machine(source, operator_at + 1, end, array_name, array_length)
-        if left == "" || right == "" { return "" }
-        return left + __host_byte_string(80) + right
-            + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
-            + __host_byte_string(88) + arithmetic_machine_op(__host_char_at(source, operator_at))
+        return machine_binary(left, right, __host_char_at(source, operator_at))
     }
     int number_end = skip_uint(source, start)
     if number_end == end { return __host_byte_string(184) + little32(parse_uint(source, start)) }
@@ -1831,10 +1861,7 @@ func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, strin
     if operator_at >= 0 {
         string left = emit_multi_call_arithmetic(source, start, operator_at, current_function)
         string right = emit_multi_call_arithmetic(source, operator_at + 1, end, current_function)
-        if left == "" || right == "" { return "" }
-        return left + __host_byte_string(80) + right
-            + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
-            + __host_byte_string(88) + arithmetic_machine_op(__host_char_at(source, operator_at))
+        return machine_binary(left, right, __host_char_at(source, operator_at))
     }
     int number_end = skip_uint(source, start)
     if number_end == end { return __host_byte_string(184) + little32(parse_uint(source, start)) }
@@ -1911,8 +1938,8 @@ func emit_multi_condition_machine(string source, int start, int end, string curr
         string right_logical = emit_multi_condition_machine(source, logical + 2, trimmed_end, current_function)
         if left_logical == "" || right_logical == "" { return "" }
         return left_logical
-            + __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
-            + __host_byte_string(15) + __host_byte_string(133) + little32(len(right_logical))
+            + machine_test_rax()
+            + machine_jump_not_zero(len(right_logical))
             + right_logical
     }
     logical = logical_at(source, trimmed_start, trimmed_end, "&&")
@@ -1921,8 +1948,8 @@ func emit_multi_condition_machine(string source, int start, int end, string curr
         string right_logical = emit_multi_condition_machine(source, logical + 2, trimmed_end, current_function)
         if left_logical == "" || right_logical == "" { return "" }
         return left_logical
-            + __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
-            + __host_byte_string(15) + __host_byte_string(132) + little32(len(right_logical))
+            + machine_test_rax()
+            + machine_jump_zero(len(right_logical))
             + right_logical
     }
     if __host_char_at(source, trimmed_start) == "!" &&
@@ -1941,13 +1968,7 @@ func emit_multi_condition_machine(string source, int start, int end, string curr
     string operator = __host_slice(source, compare, operator_end)
     string left = emit_multi_call_arithmetic(source, trimmed_start, compare, current_function)
     string right = emit_multi_call_arithmetic(source, operator_end, trimmed_end, current_function)
-    if left == "" || right == "" { return "" }
-    return left + __host_byte_string(80) + right
-        + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
-        + __host_byte_string(88)
-        + __host_byte_string(72) + __host_byte_string(57) + __host_byte_string(200)
-        + comparison_machine_op(operator)
-        + __host_byte_string(72) + __host_byte_string(15) + __host_byte_string(182) + __host_byte_string(192)
+    return machine_compare(left, right, operator)
 }
 
 func emit_multi_assignment_block(string source, int block_start, int block_end, string function_name) string {
@@ -2013,7 +2034,7 @@ func emit_multi_block_sequence(string source, int raw_start, int block_end, stri
         string condition = emit_multi_condition_machine(source, condition_start, open, function_name)
         string then_code = emit_multi_block_sequence(source, open + 1, close, function_name, entry_function)
         if condition == "" { return "" }
-        string test_result = __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
+        string test_result = machine_test_rax()
         int after = skip_space(source, close + 1)
         if after < block_end && matches_at(source, after, "else") {
             int else_open = skip_space(source, after + 4)
@@ -2023,13 +2044,13 @@ func emit_multi_block_sequence(string source, int raw_start, int block_end, stri
             string else_code = emit_multi_block_sequence(source, else_open + 1, else_close, function_name, entry_function)
             string rest = emit_multi_block_sequence(source, else_close + 1, block_end, function_name, entry_function)
             return condition + test_result
-                + __host_byte_string(15) + __host_byte_string(132) + little32(len(then_code) + 5)
-                + then_code + __host_byte_string(233) + little32(len(else_code))
+                + machine_jump_zero(len(then_code) + 5)
+                + then_code + machine_jump(len(else_code))
                 + else_code + rest
         }
         string rest = emit_multi_block_sequence(source, close + 1, block_end, function_name, entry_function)
         return condition + test_result
-            + __host_byte_string(15) + __host_byte_string(132) + little32(len(then_code))
+            + machine_jump_zero(len(then_code))
             + then_code + rest
     }
     if matches_at(source, index, "while") || matches_at(source, index, "for") {
@@ -2044,12 +2065,8 @@ func emit_multi_block_sequence(string source, int raw_start, int block_end, stri
         string condition = emit_multi_condition_machine(source, condition_start, open, function_name)
         string loop_body = emit_multi_block_sequence(source, open + 1, close, function_name, entry_function)
         if condition == "" || loop_body == "" { return "" }
-        string test_result = __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
-        string jump_exit = __host_byte_string(15) + __host_byte_string(132) + little32(len(loop_body) + 5)
-        int loop_size = len(condition) + len(test_result) + len(jump_exit) + len(loop_body) + 5
         string rest = emit_multi_block_sequence(source, close + 1, block_end, function_name, entry_function)
-        return condition + test_result + jump_exit + loop_body
-            + __host_byte_string(233) + little32_signed(0 - loop_size) + rest
+        return machine_while(condition, loop_body) + rest
     }
     int name_end = skip_identifier(source, index)
     if name_end == index { return "" }
@@ -2294,10 +2311,7 @@ func emit_call_arithmetic_machine(string source, int raw_start, int raw_end, str
     if operator_at >= 0 {
         string left = emit_call_arithmetic_machine(source, start, operator_at, callee, callee_address)
         string right = emit_call_arithmetic_machine(source, operator_at + 1, end, callee, callee_address)
-        if left == "" || right == "" { return "" }
-        return left + __host_byte_string(80) + right
-            + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
-            + __host_byte_string(88) + arithmetic_machine_op(__host_char_at(source, operator_at))
+        return machine_binary(left, right, __host_char_at(source, operator_at))
     }
     int number_end = skip_uint(source, start)
     if number_end == end { return __host_byte_string(184) + little32(parse_uint(source, start)) }
@@ -2404,10 +2418,7 @@ func emit_parameters_arithmetic_machine(string source, int raw_start, int raw_en
     if operator_at >= 0 {
         string left = emit_parameters_arithmetic_machine(source, start, operator_at, function_name)
         string right = emit_parameters_arithmetic_machine(source, operator_at + 1, end, function_name)
-        if left == "" || right == "" { return "" }
-        return left + __host_byte_string(80) + right
-            + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
-            + __host_byte_string(88) + arithmetic_machine_op(__host_char_at(source, operator_at))
+        return machine_binary(left, right, __host_char_at(source, operator_at))
     }
     int number_end = skip_uint(source, start)
     if number_end == end { return __host_byte_string(184) + little32(parse_uint(source, start)) }
