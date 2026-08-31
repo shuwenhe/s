@@ -259,6 +259,12 @@ native-bootstrap: seed-compiler-bin
 	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/native-bootstrap.sh \
 	  $(SELFHOST_DIR)/native
 
+# Strict self-host gate: every stage writes the next ELF image directly. This
+# target intentionally forbids the assembly/link steps used by native-bootstrap.
+direct-bootstrap:
+	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/direct-bootstrap.sh \
+	  $(SELFHOST_DIR)/direct
+
 native-bootstrap-install: native-bootstrap
 	@$(MAKE) native-selfhost
 
@@ -509,7 +515,11 @@ bootstrap-slice5-check: seed-compiler-bin
 	  $(SELFHOST_DIR)/slice5/native-call6
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-call6
 	@set +e; $(SELFHOST_DIR)/slice5/native-call6; status=$$?; set -e; test $$status -eq 42
-	@echo "Bootstrap slice 5 passed: multi-call and argument passing frontier"
+	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_call8.s \
+	  $(SELFHOST_DIR)/slice5/native-call8
+	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-call8
+	@set +e; $(SELFHOST_DIR)/slice5/native-call8; status=$$?; set -e; test $$status -eq 42
+	@echo "Bootstrap slice 5 passed: multi-call and register/stack argument passing frontier"
 
 bootstrap-slice6-check: seed-compiler-bin
 	@mkdir -p $(SELFHOST_DIR)/slice6
@@ -562,7 +572,7 @@ selfhost-runtime-check:
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
 
-.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap native-bootstrap-install native-selfhost bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 verify-true-selfhost:
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
@@ -580,6 +590,7 @@ help:
 	@echo "  make bootstrap-pure-s       # Run the pure-S bootstrap entrypoint"
 	@echo "  make bootstrap-audit        # Report provenance and forbidden dependencies"
 	@echo "  make native-bootstrap       # Build and compare pure-S stage1 -> stage2 -> stage3 binaries"
+	@echo "  make direct-bootstrap       # Require S -> direct ELF stage2/stage3 convergence (no as/ld)"
 	@echo "  make native-bootstrap-install # Install converged native stage2 as bin/s"
 	@echo "  make native-selfhost          # Install the native bootstrap result as bin/s"
 	@echo "  make bootstrap-subset-check # Enforce the frozen bootstrap declaration syntax"

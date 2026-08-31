@@ -1794,19 +1794,23 @@ func emit_typed_call_arguments(
     int kind = function_parameter_type_kind_at(source, callee, ordinal)
     int words = type_abi_words(kind)
     int word_offset = function_parameter_abi_offset(source, callee, ordinal)
-    if start >= end || kind < 0 || word_offset + words > 6 { return "" }
+    if start >= end || kind < 0 || word_offset + words > 16 { return "" }
     int comma = argument_comma(source, start, end)
     int argument_end = end
     if comma >= 0 { argument_end = comma }
     string value = emit_multi_condition_machine(source, start, argument_end, current_function)
     string pushes = __host_byte_string(80)
-    string pops = sysv_argument_pop(word_offset)
+    string pops = ""
+    if word_offset < 6 { pops = sysv_argument_pop(word_offset) }
     if kind == 3 {
+        // Split string values currently require both ABI words in registers.
+        // Stack strings are enabled after aggregate stack layout is introduced.
+        if word_offset + 1 >= 6 { return "" }
         value = emit_string_value_machine(source, start, argument_end, current_function)
         pushes = __host_byte_string(80) + __host_byte_string(82)
         pops = sysv_argument_pop(word_offset + 1) + sysv_argument_pop(word_offset)
     }
-    if value == "" || pops == "" { return "" }
+    if value == "" { return "" }
     if comma < 0 {
         if function_parameter_at(source, callee, ordinal + 1) != "" { return "" }
         return value + pushes + pops
@@ -1820,7 +1824,14 @@ func emit_typed_call_arguments(
         ordinal + 1
     )
     if remaining == "" { return "" }
-    return value + pushes + remaining + pops
+    return remaining + value + pushes + pops
+}
+
+func machine_drop_stack_arguments(string source, string callee) string {
+    int words = function_parameter_abi_words(source, callee)
+    if words <= 6 { return "" }
+    return __host_byte_string(72) + __host_byte_string(129) + __host_byte_string(196)
+        + little32((words - 6) * 8)
 }
 
 func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, string current_function) string {
@@ -1872,7 +1883,7 @@ func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, strin
     int open = skip_space(source, name_end)
     if name_end == end {
         int parameter_index = 0
-        for parameter_index < 6 {
+        for parameter_index < 16 {
             if name == function_parameter_at(source, current_function, parameter_index) {
                 int parameter_offset = function_parameter_abi_offset(source, current_function, parameter_index)
                 return stack_load(parameter_offset)
@@ -1902,6 +1913,7 @@ func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, strin
     int address = 4194304 + 120 + slot * native_function_stride()
     return argument_code + __host_byte_string(72) + __host_byte_string(184) + little64(address)
         + __host_byte_string(255) + __host_byte_string(208)
+        + machine_drop_stack_arguments(source, name)
 }
 
 func emit_multi_sysv_call_arguments(string source, int raw_start, int end, string current_function, string callee, int index) string {
@@ -2119,7 +2131,7 @@ func emit_multi_function_machine(string source, string function_name, bool entry
     if body_end < 0 { return "" }
     string statements = emit_multi_block_sequence(source, body, body_end, function_name, entry_function)
     if statements == "" { return "" }
-    return spill_sysv_parameters() + statements
+    return spill_sysv_parameters(function_parameter_abi_words(source, function_name)) + statements
 }
 
 func emit_native_multi_call_elf(string source) string {
@@ -2138,7 +2150,7 @@ func emit_native_multi_call_elf(string source) string {
         if name_end == name_at { return "" }
         string name = __host_slice(source, name_at, name_end)
         if name != "main" && function_body(source, name) >= 0 {
-            if function_parameter_abi_words(source, name) > 6 { return "" }
+            if function_parameter_abi_words(source, name) > 16 { return "" }
             string code = emit_multi_function_machine(source, name, false)
             if code == "" { return "" }
             if len(code) > stride { return "" }
@@ -2386,17 +2398,21 @@ func sysv_parameter_load(int index) string {
     if index == 3 { return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(200) }
     if index == 4 { return __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(192) }
     if index == 5 { return __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(200) }
+    if index < 16 {
+        return __host_byte_string(72) + __host_byte_string(139) + __host_byte_string(69)
+            + __host_byte_string(16 + (index - 6) * 8)
+    }
     return ""
 }
 
-func spill_sysv_parameters() string {
+func spill_sysv_parameters(int words) string {
     // Establish stable slots before expression lowering reuses caller-saved
     // registers such as rcx and rdx as arithmetic temporaries.
     string code = __host_byte_string(85)
         + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(229)
         + __host_byte_string(72) + __host_byte_string(129) + __host_byte_string(236) + little32(256)
     int index = 0
-    for index < 6 {
+    for index < words && index < 16 {
         code = code + sysv_parameter_load(index) + stack_store(index)
         index = index + 1
     }
@@ -2425,7 +2441,7 @@ func emit_parameters_arithmetic_machine(string source, int raw_start, int raw_en
     int name_end = skip_identifier(source, start)
     string identifier = __host_slice(source, start, name_end)
     int parameter_index = 0
-    for parameter_index < 6 {
+    for parameter_index < 16 {
         if name_end == end && identifier == function_parameter_at(source, function_name, parameter_index) {
             return stack_load(parameter_index)
         }
@@ -2468,10 +2484,10 @@ func emit_native_call_elf(string source) string {
     if function_parameter(source, callee) == "" {
         callee_code = emit_arithmetic_machine(source, callee_expression, callee_expression_end)
     } else {
-        if function_parameter_at(source, callee, 6) != "" { return "" }
+        if function_parameter_at(source, callee, 16) != "" { return "" }
         string parameter_expression = emit_parameters_arithmetic_machine(source, callee_expression, callee_expression_end, callee)
         if parameter_expression == "" { return "" }
-        callee_code = spill_sysv_parameters() + parameter_expression
+        callee_code = spill_sysv_parameters(function_parameter_abi_words(source, callee)) + parameter_expression
     }
     if main_code == "" || callee_code == "" || len(main_code) + 12 > function_slot { return "" }
     string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
