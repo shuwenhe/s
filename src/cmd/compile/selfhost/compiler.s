@@ -3069,8 +3069,14 @@ func compile_native_binary(string source, string output_path) int {
 
 func main() {
     args := host_args()
-    if len(args) != 3 && len(args) != 4 {
-        eprintln("usage: s_bootstrap_compiler [--report-unsupported|--emit-bin|--emit-native|--emit-asm] <input.s> <output>")
+    if len(args) != 3 && len(args) != 4 && len(args) != 5 {
+        eprintln("usage: s build <input.s> -o <output>")
+        eprintln("       s [--report-unsupported|--emit-bin|--emit-native|--emit-asm] <input.s> <output>")
+        return 2
+    }
+    bool build_native = len(args) == 5 && args[1] == "build" && args[3] == "-o"
+    if len(args) == 5 && !build_native {
+        eprintln("usage: s build <input.s> -o <output>")
         return 2
     }
     bool report_unsupported = len(args) == 4 && args[1] == "--report-unsupported"
@@ -3081,14 +3087,17 @@ func main() {
     bool native_call = len(args) == 4 && args[1] == "--emit-native-call"
     bool native_loop = len(args) == 4 && args[1] == "--emit-native-loop"
     bool native_string = len(args) == 4 && args[1] == "--emit-native-string"
-    bool native = len(args) == 4 && args[1] == "--emit-native"
+    bool native = (len(args) == 4 && args[1] == "--emit-native") || build_native
     bool native_array = len(args) == 4 && args[1] == "--emit-native-array"
     bool native_multi_call = len(args) == 4 && args[1] == "--emit-native-multicall"
     bool native_copy = len(args) == 4 && args[1] == "--emit-native-copy"
     bool native_assembly = len(args) == 4 && args[1] == "--emit-asm"
     int input_index = 1
     int output_index = 2
-    if report_unsupported || binary || native_expression || native_control || native_locals || native_call || native_loop || native_string || native || native_array || native_multi_call || native_copy || native_assembly {
+    if build_native {
+        input_index = 2
+        output_index = 4
+    } else if report_unsupported || binary || native_expression || native_control || native_locals || native_call || native_loop || native_string || native || native_array || native_multi_call || native_copy || native_assembly {
         input_index = 2
         output_index = 3
     }
