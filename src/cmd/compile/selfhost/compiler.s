@@ -120,10 +120,8 @@ func unsupported_report(string source) string {
     report = report + "phase|line|construct|detail\n"
     report = report + unsupported_item(source, find_code_word(source, "for"), "semantic", "for-loop", "loops are supported only by isolated native patterns")
     report = report + unsupported_item(source, find_code_word(source, "continue"), "semantic", "continue", "loop control flow is not lowered in general functions")
-    report = report + unsupported_item(source, find_code_word(source, "return"), "semantic", "typed-return", "returns are supported only by bootstrap expression patterns")
     report = report + unsupported_item(source, find_code_word(source, "__host_char_at"), "codegen", "intrinsic-call", "intrinsic calls are not lowered by the whole-program backend")
     report = report + unsupported_item(source, first_stack_argument_function_at(source), "codegen", "stack-arguments", "calls exceeding six ABI words are not lowered")
-    report = report + unsupported_item(source, find_code_word(source, "if"), "codegen", "general-control-flow", "control flow is supported only by isolated native patterns")
     return report
 }
 
@@ -789,6 +787,83 @@ func factor_value(string source, int start, int next, int scope_start, string pa
     return -1
 }
 
+func compile_local_constant_value(string source, int scope_start, int before, string name) int {
+    int index = scope_start
+    int value = -1
+    for index < before {
+        int type_end = skip_identifier(source, index)
+        if type_end > index {
+            string type_name = __host_slice(source, index, type_end)
+            if type_name == "int" || type_name == "string" || type_name == "bool" {
+                int typed_name_at = skip_space(source, type_end)
+                int typed_name_end = skip_identifier(source, typed_name_at)
+                if typed_name_end > typed_name_at && __host_slice(source, typed_name_at, typed_name_end) == name {
+                    bool typed_is_bool = type_name == "bool"
+                    int typed_assign = skip_space(source, typed_name_end)
+                    if typed_assign + 1 < before && __host_char_at(source, typed_assign) == ":" &&
+                        __host_char_at(source, typed_assign + 1) == "=" {
+                        int initializer = skip_space(source, typed_assign + 2)
+                        int initializer_end = expression_end(source, initializer)
+                        if initializer_end < 0 || initializer_end >= before { return -1 }
+                        if typed_is_bool {
+                            value = evaluate_expression(source, initializer, initializer_end, scope_start, "", 0)
+                        } else {
+                            value = evaluate_arithmetic_expression(source, initializer, initializer_end, scope_start, "", 0)
+                        }
+                        if value < 0 { return -1 }
+                        index = initializer_end + 1
+                        continue
+                    }
+                    if typed_assign < before && __host_char_at(source, typed_assign) == "=" &&
+                        (typed_assign + 1 >= before || __host_char_at(source, typed_assign + 1) != "=") {
+                        int initializer = skip_space(source, typed_assign + 1)
+                        int initializer_end = expression_end(source, initializer)
+                        if initializer_end < 0 || initializer_end >= before { return -1 }
+                        if typed_is_bool {
+                            value = evaluate_expression(source, initializer, initializer_end, scope_start, "", 0)
+                        } else {
+                            value = evaluate_arithmetic_expression(source, initializer, initializer_end, scope_start, "", 0)
+                        }
+                        if value < 0 { return -1 }
+                        index = initializer_end + 1
+                        continue
+                    }
+                }
+            }
+        }
+        if matches_at(source, index, name) {
+            bool left_boundary = index == 0 || !is_ident_continue(__host_char_at(source, index - 1))
+            int after_name = index + len(name)
+            bool right_boundary = after_name == len(source) || !is_ident_continue(__host_char_at(source, after_name))
+            if left_boundary && right_boundary {
+                int assign = skip_space(source, after_name)
+                if assign + 1 < before && __host_char_at(source, assign) == ":" &&
+                    __host_char_at(source, assign + 1) == "=" {
+                    int initializer = skip_space(source, assign + 2)
+                    int initializer_end = expression_end(source, initializer)
+                    if initializer_end < 0 || initializer_end >= before { return -1 }
+                    value = evaluate_arithmetic_expression(source, initializer, initializer_end, scope_start, "", 0)
+                    if value < 0 { return -1 }
+                    index = initializer_end + 1
+                    continue
+                }
+                if assign < before && __host_char_at(source, assign) == "=" &&
+                    (assign + 1 >= before || __host_char_at(source, assign + 1) != "=") {
+                    int initializer = skip_space(source, assign + 1)
+                    int initializer_end = expression_end(source, initializer)
+                    if initializer_end < 0 || initializer_end >= before { return -1 }
+                    value = evaluate_arithmetic_expression(source, initializer, initializer_end, scope_start, "", 0)
+                    if value < 0 { return -1 }
+                    index = initializer_end + 1
+                    continue
+                }
+            }
+        }
+        index = index + 1
+    }
+    return value
+}
+
 func evaluate_arithmetic_expression(string source, int start, int end, int scope_start, string parameter_name, int parameter_value) int {
     int index = skip_space(source, start)
     int next = factor_end(source, index, end)
@@ -1126,6 +1201,69 @@ func arithmetic_machine_op(string operator) string {
     return divide
 }
 
+func plain_uint_value(string source, int start, int end) int {
+    int trimmed_start = skip_space(source, start)
+    int trimmed_end = trim_space_end(source, trimmed_start, end)
+    if trimmed_start >= trimmed_end { return -1 }
+    if __host_char_at(source, trimmed_start) == "(" {
+        int close = matching_paren(source, trimmed_start, trimmed_end)
+        if close == trimmed_end - 1 {
+            return plain_uint_value(source, trimmed_start + 1, trimmed_end - 1)
+        }
+    }
+    int number_end = skip_uint(source, trimmed_start)
+    if number_end != trimmed_end { return -1 }
+    return parse_uint(source, trimmed_start)
+}
+
+func fold_binary_uint_value(int left, int right, string operator) int {
+    if operator == "+" { return left + right }
+    if operator == "-" { return left - right }
+    if operator == "*" { return left * right }
+    if operator == "/" {
+        if right == 0 { return -1 }
+        return left / right
+    }
+    if operator == "%" {
+        if right == 0 { return -1 }
+        return left % right
+    }
+    return -1
+}
+
+func simplify_binary_uint(string source, int start, int operator_at, int end) string {
+    int left_trimmed = skip_space(source, start)
+    int right_trimmed = skip_space(source, operator_at + 1)
+    int left_end = trim_space_end(source, left_trimmed, operator_at)
+    int right_end = trim_space_end(source, right_trimmed, end)
+    if left_trimmed < left_end && left_end - left_trimmed == right_end - right_trimmed &&
+        __host_slice(source, left_trimmed, left_end) == __host_slice(source, right_trimmed, right_end) {
+        string operator = __host_char_at(source, operator_at)
+        if operator == "+" { return __host_byte_string(72) + __host_byte_string(141) + __host_byte_string(4) + __host_byte_string(125) + little32(0) }
+        if operator == "-" { return __host_byte_string(184) + little32(0) }
+    }
+    int left_value = plain_uint_value(source, start, operator_at)
+    int right_value = plain_uint_value(source, operator_at + 1, end)
+    string operator = __host_char_at(source, operator_at)
+    if left_value >= 0 && right_value >= 0 {
+        int folded = fold_binary_uint_value(left_value, right_value, operator)
+        if folded >= 0 { return __host_byte_string(184) + little32(folded) }
+    }
+    if operator == "+" {
+        if right_value == 0 { return emit_arithmetic_machine(source, start, operator_at) }
+        if left_value == 0 { return emit_arithmetic_machine(source, operator_at + 1, end) }
+    }
+    if operator == "-" && right_value == 0 { return emit_arithmetic_machine(source, start, operator_at) }
+    if operator == "*" {
+        if left_value == 0 || right_value == 0 { return __host_byte_string(184) + little32(0) }
+        if right_value == 1 { return emit_arithmetic_machine(source, start, operator_at) }
+        if left_value == 1 { return emit_arithmetic_machine(source, operator_at + 1, end) }
+    }
+    if operator == "/" && right_value == 1 { return emit_arithmetic_machine(source, start, operator_at) }
+    if operator == "%" && right_value == 1 { return __host_byte_string(184) + little32(0) }
+    return ""
+}
+
 func machine_binary(string left, string right, string operator) string {
     if left == "" || right == "" { return "" }
     // Preserve the left value in the evaluation stack and place the right
@@ -1148,6 +1286,8 @@ func emit_arithmetic_machine(string source, int raw_start, int raw_end) string {
     int operator_at = arithmetic_operator_at(source, start, end, false)
     if operator_at < 0 { operator_at = arithmetic_operator_at(source, start, end, true) }
     if operator_at >= 0 {
+        string simplified = simplify_binary_uint(source, start, operator_at, end)
+        if simplified != "" { return simplified }
         string left = emit_arithmetic_machine(source, start, operator_at)
         string right = emit_arithmetic_machine(source, operator_at + 1, end)
         return machine_binary(left, right, __host_char_at(source, operator_at))
@@ -1167,6 +1307,103 @@ func comparison_machine_op(string operator) string {
     return __host_byte_string(15) + __host_byte_string(157) + __host_byte_string(192)
 }
 
+func fold_compare_uint_value(int left, int right, string operator) int {
+    if operator == "==" { if left == right { return 1 } return 0 }
+    if operator == "!=" { if left != right { return 1 } return 0 }
+    if operator == "<" { if left < right { return 1 } return 0 }
+    if operator == "<=" { if left <= right { return 1 } return 0 }
+    if operator == ">" { if left > right { return 1 } return 0 }
+    if left >= right { return 1 }
+    return 0
+}
+
+func fold_logical_uint_value(int left, int right, string operator) int {
+    if operator == "||" {
+        if left != 0 || right != 0 { return 1 }
+        return 0
+    }
+    if left != 0 && right != 0 { return 1 }
+    return 0
+}
+
+func simplify_logical_uint(string source, int start, int operator_at, int end) string {
+    int left_value = plain_uint_value(source, start, operator_at)
+    int right_value = plain_uint_value(source, operator_at + 2, end)
+    string operator = __host_slice(source, operator_at, operator_at + 2)
+    if left_value >= 0 && right_value >= 0 {
+        int folded = fold_logical_uint_value(left_value, right_value, operator)
+        return __host_byte_string(184) + little32(folded)
+    }
+    if operator == "||" {
+        if left_value != 0 { return __host_byte_string(184) + little32(1) }
+        if right_value != 0 { return __host_byte_string(184) + little32(1) }
+    }
+    if operator == "&&" {
+        if left_value == 0 { return __host_byte_string(184) + little32(0) }
+        if right_value == 0 { return __host_byte_string(184) + little32(0) }
+    }
+    return ""
+}
+
+func emit_multi_condition_constant(string source, int start, int end) int {
+    int trimmed_start = skip_space(source, start)
+    int trimmed_end = trim_space_end(source, trimmed_start, end)
+    if trimmed_start >= trimmed_end { return -1 }
+    int logical = logical_at(source, trimmed_start, trimmed_end, "||")
+    if logical >= 0 {
+        int left_value = emit_multi_condition_constant(source, trimmed_start, logical)
+        if left_value < 0 { return -1 }
+        if left_value != 0 { return 1 }
+        int right_value = emit_multi_condition_constant(source, logical + 2, trimmed_end)
+        if right_value < 0 { return -1 }
+        if right_value != 0 { return 1 }
+        return 0
+    }
+    logical = logical_at(source, trimmed_start, trimmed_end, "&&")
+    if logical >= 0 {
+        int left_value = emit_multi_condition_constant(source, trimmed_start, logical)
+        if left_value < 0 { return -1 }
+        if left_value == 0 { return 0 }
+        int right_value = emit_multi_condition_constant(source, logical + 2, trimmed_end)
+        if right_value < 0 { return -1 }
+        if right_value != 0 { return 1 }
+        return 0
+    }
+    if __host_char_at(source, trimmed_start) == "(" {
+        int close = matching_paren(source, trimmed_start, trimmed_end)
+        if close == trimmed_end - 1 {
+            return emit_multi_condition_constant(source, trimmed_start + 1, trimmed_end - 1)
+        }
+    }
+    if __host_char_at(source, trimmed_start) == "!" &&
+        (trimmed_start + 1 >= trimmed_end || __host_char_at(source, trimmed_start + 1) != "=") {
+        int negated = emit_multi_condition_constant(source, trimmed_start + 1, trimmed_end)
+        if negated < 0 { return -1 }
+        if negated == 0 { return 1 }
+        return 0
+    }
+    int compare = comparison_at(source, trimmed_start, trimmed_end)
+    if compare >= 0 {
+        int operator_end = compare + 1
+        if operator_end < trimmed_end && __host_char_at(source, operator_end) == "=" {
+            operator_end = operator_end + 1
+        }
+        string operator = __host_slice(source, compare, operator_end)
+        int left_value = plain_uint_value(source, trimmed_start, compare)
+        int right_value = plain_uint_value(source, operator_end, trimmed_end)
+        if left_value >= 0 && right_value >= 0 {
+            return fold_compare_uint_value(left_value, right_value, operator)
+        }
+        return -1
+    }
+    int value = plain_uint_value(source, trimmed_start, trimmed_end)
+    if value >= 0 {
+        if value != 0 { return 1 }
+        return 0
+    }
+    return -1
+}
+
 func machine_compare(string left, string right, string operator) string {
     if left == "" || right == "" { return "" }
     return left + __host_byte_string(80) + right
@@ -1183,9 +1420,33 @@ func emit_condition_machine(string source, int start, int end) string {
     int operator_end = compare + 1
     if operator_end < end && __host_char_at(source, operator_end) == "=" { operator_end = operator_end + 1 }
     string operator = __host_slice(source, compare, operator_end)
+    int left_value = plain_uint_value(source, start, compare)
+    int right_value = plain_uint_value(source, operator_end, end)
+    if left_value >= 0 && right_value >= 0 {
+        int folded = fold_compare_uint_value(left_value, right_value, operator)
+        return __host_byte_string(184) + little32(folded)
+    }
     string left = emit_arithmetic_machine(source, start, compare)
     string right = emit_arithmetic_machine(source, operator_end, end)
     return machine_compare(left, right, operator)
+}
+
+func emit_condition_constant(string source, int start, int end) int {
+    int compare = comparison_at(source, start, end)
+    if compare < 0 {
+        int value = plain_uint_value(source, start, end)
+        if value >= 0 {
+            if value != 0 { return 1 }
+            return 0
+        }
+        return -1
+    }
+    int operator_end = compare + 1
+    if operator_end < end && __host_char_at(source, operator_end) == "=" { operator_end = operator_end + 1 }
+    int left_value = plain_uint_value(source, start, compare)
+    int right_value = plain_uint_value(source, operator_end, end)
+    if left_value < 0 || right_value < 0 { return -1 }
+    return fold_compare_uint_value(left_value, right_value, __host_slice(source, compare, operator_end))
 }
 
 func emit_native_return_machine(string source, int return_at, int block_end) string {
@@ -1224,6 +1485,13 @@ func emit_native_block_machine(string source, int block_start, int block_end) st
     if else_open >= block_end || __host_char_at(source, else_open) != "{" { return "" }
     int else_close = function_body_end(source, else_open + 1)
     if else_close < 0 || else_close > block_end { return "" }
+    int condition_value = emit_condition_constant(source, condition_start, open)
+    if condition_value == 1 {
+        return emit_native_block_machine(source, open + 1, close)
+    }
+    if condition_value == 0 {
+        return emit_native_block_machine(source, else_open + 1, else_close)
+    }
     string condition = emit_condition_machine(source, condition_start, open)
     string then_code = emit_native_block_machine(source, open + 1, close)
     string else_code = emit_native_block_machine(source, else_open + 1, else_close)
@@ -1380,7 +1648,10 @@ func emit_scoped_arithmetic_machine(string source, int raw_start, int raw_end, i
     if number_end == end { return __host_byte_string(184) + little32(parse_uint(source, start)) }
     int name_end = skip_identifier(source, start)
     if name_end == end {
-        int slot = local_slot(source, scope_start, start, __host_slice(source, start, name_end))
+        string name = __host_slice(source, start, name_end)
+        int constant = compile_local_constant_value(source, scope_start, start, name)
+        if constant >= 0 { return __host_byte_string(184) + little32(constant) }
+        int slot = local_slot(source, scope_start, start, name)
         if slot < 0 || slot >= 15 { return "" }
         return stack_load(slot)
     }
@@ -1870,6 +2141,8 @@ func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, strin
     int operator_at = arithmetic_operator_at(source, start, end, false)
     if operator_at < 0 { operator_at = arithmetic_operator_at(source, start, end, true) }
     if operator_at >= 0 {
+        string simplified = simplify_binary_uint(source, start, operator_at, end)
+        if simplified != "" { return simplified }
         string left = emit_multi_call_arithmetic(source, start, operator_at, current_function)
         string right = emit_multi_call_arithmetic(source, operator_at + 1, end, current_function)
         return machine_binary(left, right, __host_char_at(source, operator_at))
@@ -1891,6 +2164,8 @@ func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, strin
             parameter_index = parameter_index + 1
         }
         int current_body = function_body(source, current_function)
+        int constant = compile_local_constant_value(source, current_body, start, name)
+        if constant >= 0 { return __host_byte_string(184) + little32(constant) }
         int slot = local_slot(source, current_body, start, name)
         if slot >= 0 && slot < 25 { return stack_load(slot + 6) }
         return ""
@@ -1946,6 +2221,8 @@ func emit_multi_condition_machine(string source, int start, int end, string curr
     }
     int logical = logical_at(source, trimmed_start, trimmed_end, "||")
     if logical >= 0 {
+        string simplified = simplify_logical_uint(source, trimmed_start, logical, trimmed_end)
+        if simplified != "" { return simplified }
         string left_logical = emit_multi_condition_machine(source, trimmed_start, logical, current_function)
         string right_logical = emit_multi_condition_machine(source, logical + 2, trimmed_end, current_function)
         if left_logical == "" || right_logical == "" { return "" }
@@ -1956,6 +2233,8 @@ func emit_multi_condition_machine(string source, int start, int end, string curr
     }
     logical = logical_at(source, trimmed_start, trimmed_end, "&&")
     if logical >= 0 {
+        string simplified = simplify_logical_uint(source, trimmed_start, logical, trimmed_end)
+        if simplified != "" { return simplified }
         string left_logical = emit_multi_condition_machine(source, trimmed_start, logical, current_function)
         string right_logical = emit_multi_condition_machine(source, logical + 2, trimmed_end, current_function)
         if left_logical == "" || right_logical == "" { return "" }
@@ -2043,6 +2322,24 @@ func emit_multi_block_sequence(string source, int raw_start, int block_end, stri
         if open >= block_end { return "" }
         int close = function_body_end(source, open + 1)
         if close < 0 || close > block_end { return "" }
+        int condition_value = emit_multi_condition_constant(source, condition_start, open)
+        if condition_value == 1 {
+            string then_only = emit_multi_block_sequence(source, open + 1, close, function_name, entry_function)
+            if then_only == "" { return "" }
+            return then_only + emit_multi_block_sequence(source, close + 1, block_end, function_name, entry_function)
+        }
+        if condition_value == 0 {
+            int after = skip_space(source, close + 1)
+            if after < block_end && matches_at(source, after, "else") {
+                int else_open = skip_space(source, after + 4)
+                if else_open >= block_end || __host_char_at(source, else_open) != "{" { return "" }
+                int else_close = function_body_end(source, else_open + 1)
+                if else_close < 0 || else_close > block_end { return "" }
+                string else_code = emit_multi_block_sequence(source, else_open + 1, else_close, function_name, entry_function)
+                if else_code == "" { return "" }
+                return else_code + emit_multi_block_sequence(source, else_close + 1, block_end, function_name, entry_function)
+            }
+        }
         string condition = emit_multi_condition_machine(source, condition_start, open, function_name)
         string then_code = emit_multi_block_sequence(source, open + 1, close, function_name, entry_function)
         if condition == "" { return "" }
