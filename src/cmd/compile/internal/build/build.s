@@ -8,6 +8,7 @@ use internal.buildcfg.goarch as buildcfg_goarch
 use internal.buildcfg.goos as buildcfg_goos
 use std.io.println
 use std.slices
+use backend
 
 func main(string[] args)  int {
     options := parse_options(args)
@@ -77,8 +78,42 @@ func make_build_options(string path, string output, string ssa_margin) string[] 
 }
 
 func exec_run_native(string path, string output) int {
-    report_error_local("native compilation not yet implemented")
-    1
+    println("Native compilation: " + path + " -> " + output)
+    
+    driver := new_native_compilation_driver(path, output)
+    
+    result := driver.compile_simple_program()
+    if result != 0 {
+        report_error_local("assembly generation failed")
+        return 1
+    }
+    
+    result = driver.write_assembly_to_file(driver.backend_ctx.compiler.assembly_file)
+    if result != 0 {
+        report_error_local("failed to write assembly file")
+        return 1
+    }
+    
+    result = driver.invoke_gcc_assemble(
+        driver.backend_ctx.compiler.assembly_file,
+        driver.backend_ctx.compiler.object_file
+    )
+    if result != 0 {
+        report_error_local("assembly phase failed")
+        return 1
+    }
+    
+    result = driver.invoke_gcc_link(
+        driver.backend_ctx.compiler.object_file,
+        output
+    )
+    if result != 0 {
+        report_error_local("linking phase failed")
+        return 1
+    }
+    
+    println("✓ Native compilation successful: " + output)
+    0
 }
 
 
