@@ -406,6 +406,14 @@ s_string_slice:
     jb .Lslice_fail
     cmp 8(%rdi), %rdx
     ja .Lslice_fail
+    mov %rdx, %rcx
+    sub %rsi, %rcx
+    cmp $1, %rcx
+    jne .Lslice_alloc
+    call s_string_byte_raw
+    mov %rax, %rdi
+    jmp s_byte_value_raw
+.Lslice_alloc:
     push %rbx
     push %r12
     push %r13
