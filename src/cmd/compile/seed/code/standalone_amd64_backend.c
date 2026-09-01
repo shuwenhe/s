@@ -569,11 +569,13 @@ bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *o
 	char runtime_source[1024];
 	char linker_script[1024];
 	const char *root = getenv("S_SOURCE_ROOT");
+	const char *assembler = getenv("S_BOOTSTRAP_AS");
+	const char *linker = getenv("S_BOOTSTRAP_LD");
 	FILE *out = NULL;
 	bool ok = false;
-	char *as_program[] = {"as", "--64", "-o", obj_path, asm_path, NULL};
-	char *as_runtime[] = {"as", "--64", "-o", runtime_obj_path, runtime_source, NULL};
-	char *ld_program[] = {"ld", "-static", "-T", linker_script, "-o", (char *)output_binary_path, runtime_obj_path, obj_path, NULL};
+	char *as_program[] = {(char *)(assembler && *assembler ? assembler : "as"), "--64", "-o", obj_path, asm_path, NULL};
+	char *as_runtime[] = {(char *)(assembler && *assembler ? assembler : "as"), "--64", "-o", runtime_obj_path, runtime_source, NULL};
+	char *ld_program[] = {(char *)(linker && *linker ? linker : "ld"), "-static", "-T", linker_script, "-o", (char *)output_binary_path, runtime_obj_path, obj_path, NULL};
 
 	error_clear(err);
 	if (!input_ir_path || !output_binary_path) {
@@ -626,9 +628,10 @@ bool emit_standalone_amd64_object_from_ir_file(const char *input_ir_path, const 
 	standalone_module *module = NULL;
 	char temp_dir[] = "/tmp/s_standalone_obj-XXXXXX";
 	char asm_path[256];
+	const char *assembler = getenv("S_BOOTSTRAP_AS");
 	FILE *out = NULL;
 	bool ok = false;
-	char *as_program[] = {"as", "--64", "-o", (char *)output_object_path, asm_path, NULL};
+	char *as_program[] = {(char *)(assembler && *assembler ? assembler : "as"), "--64", "-o", (char *)output_object_path, asm_path, NULL};
 
 	error_clear(err);
 	if (!input_ir_path || !output_object_path) {
