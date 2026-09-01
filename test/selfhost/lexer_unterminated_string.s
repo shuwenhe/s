@@ -1,3 +1,0 @@
-func main() {
-    value := "unterminated
-}

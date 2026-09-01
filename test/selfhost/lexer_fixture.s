@@ -1,9 +1,0 @@
-package demo.lex
-func add(int left, int right) int {
-    message := "sum"
-	ratio := 12.50e-2
-    if left >= 10 && right != 0 {
-        return left + right
-    }
-    return 0
-}

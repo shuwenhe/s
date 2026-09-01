@@ -1,8 +1,0 @@
-package test.typeparam.mdempsky.12.dir
-func main_unit_name() string {
-    "test/typeparam/mdempsky/12.dir/main"
-}
-
-func main_unit_ready() int {
-    1
-}
