@@ -18,14 +18,14 @@ func stack_frame_create(param_count: int) stack_frame {
     frame
 }
 
-func (sf: &mut stack_frame) allocate_local(var_name: string, size: int) int {
+func (sf* stack_frame) allocate_local(var_name: string, size: int) int {
     offset := sf.current_offset - size
     sf.locals.push((var_name, offset, size))
     sf.current_offset = offset
     offset
 }
 
-func (sf: &mut stack_frame) get_local_offset(var_name: string) int {
+func (sf* stack_frame) get_local_offset(var_name: string) int {
     for i < sf.locals.len() {
         if sf.locals[i].0 == var_name {
             return sf.locals[i].1
@@ -34,11 +34,11 @@ func (sf: &mut stack_frame) get_local_offset(var_name: string) int {
     0
 }
 
-func (sf: &stack_frame) get_frame_size() int {
+func (sf* stack_frame) get_frame_size() int {
     -sf.current_offset
 }
 
-func (sf: &stack_frame) get_param_offset(param_index: int) int {
+func (sf* stack_frame) get_param_offset(param_index: int) int {
     (param_index + 1) * 8
 }
 
