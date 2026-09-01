@@ -3458,7 +3458,9 @@ func main() {
         return 1
     }
     if debug_find {
-        return __host_write_text_file(args[output_index], "debug")
+        int found = find_function_from(source, 0)
+        int body = function_body(source, "main")
+        return __host_write_text_file(args[output_index], int_text(found) + "|" + int_text(body) + "|" + __host_char_at(source, 25) + "|" + int_text(len(source)))
     }
     if !native_assembly && parse_package_name(source) == "" {
         eprintln("compile: invalid or missing package declaration")
