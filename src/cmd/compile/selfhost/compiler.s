@@ -359,7 +359,9 @@ func function_body(string source, string name) int {
     int declaration = function_declaration(source, name)
     if declaration < 0 { return -1 }
     int scan = declaration + 4
-    for scan < len(source) && __host_char_at(source, scan) != "{" {
+    int budget = len(source) * 2 + 32
+    for scan < len(source) && budget > 0 && __host_char_at(source, scan) != "{" {
+        budget = budget - 1
         if __host_char_at(source, scan) == ";" { return -1 }
         scan = scan + 1
     }
@@ -575,7 +577,9 @@ func function_body_end(string source, int body) int {
     if body < 1 || body >= len(source) { return -1 }
     int index = body
     int depth = 1
-    for index < len(source) {
+    int budget = len(source) * 2 + 32
+    for index < len(source) && budget > 0 {
+        budget = budget - 1
         string ch = __host_char_at(source, index)
         if ch == "\"" { index = skip_quoted(source, index, len(source)); continue }
         if ch == "/" && index + 1 < len(source) && __host_char_at(source, index + 1) == "/" {
