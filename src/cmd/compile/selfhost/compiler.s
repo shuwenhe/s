@@ -574,7 +574,7 @@ func validate_function_symbols(string source) bool {
 func function_body_end(string source, int body) int {
     if body < 1 || body >= len(source) { return -1 }
     int index = body
-    int depth = 0
+    int depth = 1
     for index < len(source) {
         string ch = __host_char_at(source, index)
         if ch == "\"" { index = skip_quoted(source, index, len(source)); continue }
@@ -769,7 +769,7 @@ func resolve_function(string source, string name, bool has_argument, int argumen
     string parameter = function_parameter(source, name)
     if parameter == "" && has_argument { return -1 }
     if parameter != "" && !has_argument { return -1 }
-    int body_end = function_body_end(source, body)
+    int body_end = function_body_end(source, body + 1)
     if body_end < 0 { return -1 }
     return evaluate_block(source, body, body_end, body, parameter, argument)
 }
@@ -3311,7 +3311,7 @@ func asm_block(string source, int raw_start, int block_end, string function_name
 func asm_function(string source, string name) string {
     int body = function_body(source, name)
     if body < 0 { return "" }
-    int body_end = function_body_end(source, body)
+    int body_end = function_body_end(source, body + 1)
     if body_end < 0 { return "" }
     string code = ".global s_fn_" + name + "\n.type s_fn_" + name + ", @function\ns_fn_" + name
         + ":\n    push %rbp\n    mov %rsp, %rbp\n    sub $4096, %rsp\n"
