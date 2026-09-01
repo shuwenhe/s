@@ -3327,7 +3327,7 @@ func asm_function(string source, string name) string {
         code = code + "    mov " + register + ", " + signed_int_text(0 - ((parameter + 1) * 8)) + "(%rbp)\n"
         parameter = parameter + 1
     }
-    string body_code = asm_block(source, body, body_end, name)
+    string body_code = asm_block(source, body + 1, body_end, name)
     if body_code == "" { return "" }
     return code + body_code + "    mov $1, %rax\n.Las_return_" + name
         + ":\n    leave\n    ret\n.size s_fn_" + name + ", .-s_fn_" + name + "\n\n"
