@@ -79,6 +79,8 @@ const char *token_type_name(token_type type) {
 		case TOKEN_EQ: return "==";
 		case TOKEN_NE: return "!=";
 		case TOKEN_AMP: return "&";
+		case TOKEN_SHL: return "<<";
+		case TOKEN_SHR: return ">>";
 		case TOKEN_AND_AND: return "&&";
 		case TOKEN_OR_OR: return "||";
 		case TOKEN_LT: return "<";
@@ -224,6 +226,16 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 
 		if (isdigit((unsigned char)c)) {
 			size_t start = i;
+			if (c == '0' && (source[i + 1] == 'x' || source[i + 1] == 'X') &&
+				isxdigit((unsigned char)source[i + 2])) {
+				i += 2;
+				col += 2;
+				while (isxdigit((unsigned char)source[i])) {
+					i++;
+					col++;
+				}
+				goto emit_number;
+			}
 			while (isdigit((unsigned char)source[i])) {
 				i++;
 				col++;
@@ -255,6 +267,7 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 					col = saved_col;
 				}
 			}
+		emit_number:
 			{
 				token tok;
 				tok.type = TOKEN_NUMBER;
@@ -317,6 +330,14 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 			i += 2;
 			col += 2;
 			continue;
+		}
+		if (c == '<' && source[i + 1] == '<') {
+			if (!push_simple(out_tokens, TOKEN_SHL, "<<", tok_line, tok_col)) goto oom;
+			i += 2; col += 2; continue;
+		}
+		if (c == '>' && source[i + 1] == '>') {
+			if (!push_simple(out_tokens, TOKEN_SHR, ">>", tok_line, tok_col)) goto oom;
+			i += 2; col += 2; continue;
 		}
 		if (c == '!' && source[i + 1] == '=') {
 			if (!push_simple(out_tokens, TOKEN_NE, "!=", tok_line, tok_col)) {

@@ -63,3 +63,7 @@ func (nc* native_compiler) compile() int {
 func (nc* native_compiler) get_assembly() string {
     nc.builder.get_assembly()
 }
+
+func (nc* native_compiler) get_machine_code() int[] {
+    nc.builder.get_machine_code()
+}

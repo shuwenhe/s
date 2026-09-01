@@ -45,6 +45,11 @@ seed-tests:
 	  src/cmd/compile/seed/runtime/runtime.c
 	@./bin/seed_tests
 
+seed-enum-check: seed-compiler-bin
+	@./bin/s_seed test/selfhost/bootstrap_enum_seed.s /tmp/s_enum_seed.ir
+	@rg -q '^RET\\|42\\|' /tmp/s_enum_seed.ir
+	@echo "seed enum lowering passed"
+
 seed-runtime-regression-bin:
 	@echo "Building seed runtime regression tests..."
 	@mkdir -p ./bin
@@ -274,6 +279,38 @@ bootstrap-subset-check: seed-compiler-bin
 	@! ./bin/s_seed test/selfhost/subset_invalid_let.s $(SELFHOST_DIR)/subset/invalid-let.ir >/dev/null 2>&1
 	@! ./bin/s_seed test/selfhost/subset_invalid_var.s $(SELFHOST_DIR)/subset/invalid-var.ir >/dev/null 2>&1
 	@echo "Bootstrap declaration subset check passed"
+
+# Gate the S-written direct backend separately from the assembly bootstrap.
+# The seed only constructs the compiler; every test program below is emitted
+# as an ELF executable directly by that S compiler without as/ld/cc.
+native-codegen-check: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR)/native-codegen
+	@./bin/s_seed src/cmd/compile/selfhost/compiler.s \
+	  $(SELFHOST_DIR)/native-codegen/compiler.ir
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
+	  $(SELFHOST_DIR)/native-codegen/compiler.ir \
+	  $(SELFHOST_DIR)/native-codegen/compiler
+	@./misc/scripts/verify_true_selfhost.sh \
+	  $(SELFHOST_DIR)/native-codegen/compiler
+	@for case_name in expr locals control call loop array logical multicall; do \
+	  source_file=test/selfhost/bootstrap_native_$$case_name.s; \
+	  output_file=$(SELFHOST_DIR)/native-codegen/$$case_name; \
+	  $(SELFHOST_DIR)/native-codegen/compiler --emit-native \
+	    $$source_file $$output_file || exit 1; \
+	  ./misc/scripts/verify_true_selfhost.sh $$output_file || exit 1; \
+	  set +e; $$output_file >/dev/null; status=$$?; set -e; \
+	  test $$status -eq 42 || exit 1; \
+	done
+	@$(SELFHOST_DIR)/native-codegen/compiler --emit-native \
+	  test/selfhost/bootstrap_native_string.s \
+	  $(SELFHOST_DIR)/native-codegen/string
+	@./misc/scripts/verify_true_selfhost.sh \
+	  $(SELFHOST_DIR)/native-codegen/string
+	@set +e; $(SELFHOST_DIR)/native-codegen/string \
+	  >$(SELFHOST_DIR)/native-codegen/string.out; status=$$?; set -e; \
+	  test $$status -eq 42
+	@test "$$(cat $(SELFHOST_DIR)/native-codegen/string.out)" = "selfhost-string"
+	@echo "Native codegen gate passed: S emitted runnable ELF files directly"
 
 bootstrap-slice1-check: seed-compiler-bin
 	@mkdir -p $(SELFHOST_DIR)/slice1
@@ -572,7 +609,7 @@ selfhost-runtime-check:
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
 
-.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 verify-true-selfhost:
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
@@ -593,6 +630,7 @@ help:
 	@echo "  make direct-bootstrap       # Require S -> direct ELF stage2/stage3 convergence (no as/ld)"
 	@echo "  make native-bootstrap-install # Install converged native stage2 as bin/s"
 	@echo "  make native-selfhost          # Install the native bootstrap result as bin/s"
+	@echo "  make native-codegen-check     # Verify S emits runnable ELF directly"
 	@echo "  make bootstrap-subset-check # Enforce the frozen bootstrap declaration syntax"
 	@echo "  make bootstrap-slice1-check # Build and exercise the first static pure-S compiler slice"
 	@echo "  make bootstrap-slice2-check # Report the next native bootstrap frontier"
