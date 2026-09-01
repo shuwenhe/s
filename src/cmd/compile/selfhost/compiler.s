@@ -664,7 +664,23 @@ func expression_end(string source, int start) int {
             if depth == 0 { return index }
             depth = depth - 1
         }
-        if depth == 0 && (ch == ";" || ch == "}" || ch == "\n") { return index }
+        if depth == 0 && ch == "\n" {
+            int previous = index - 1
+            for previous >= start && is_space(__host_char_at(source, previous)) {
+                previous = previous - 1
+            }
+            if previous >= start {
+                string last = __host_char_at(source, previous)
+                if last == "|" || last == "&" || last == "+" || last == "-" ||
+                    last == "*" || last == "/" || last == "%" || last == "=" ||
+                    last == "<" || last == ">" || last == "!" || last == "," {
+                    index = index + 1
+                    continue
+                }
+            }
+            return index
+        }
+        if depth == 0 && (ch == ";" || ch == "}") { return index }
         index = index + 1
     }
     return -1
@@ -3453,12 +3469,13 @@ func main() {
     bool native_multi_call = len(args) == 4 && args[1] == "--emit-native-multicall"
     bool native_copy = len(args) == 4 && args[1] == "--emit-native-copy"
     bool native_assembly = len(args) == 4 && args[1] == "--emit-asm"
+    bool debug_find = len(args) == 4 && args[1] == "--debug-find"
     int input_index = 1
     int output_index = 2
     if build_native {
         input_index = 2
         output_index = 4
-    } else if report_unsupported || binary || native_expression || native_control || native_locals || native_call || native_loop || native_string || native || native_array || native_multi_call || native_copy || native_assembly {
+    } else if report_unsupported || binary || native_expression || native_control || native_locals || native_call || native_loop || native_string || native || native_array || native_multi_call || native_copy || native_assembly || debug_find {
         input_index = 2
         output_index = 3
     }
@@ -3466,6 +3483,16 @@ func main() {
     if len(source) == 0 {
         eprintln("compile: cannot read input or input is empty")
         return 1
+    }
+    if debug_find {
+        int found = find_function_from(source, 0)
+        string match9 = "0"
+        string match14 = "0"
+        if matches_at(source, 9, "func") { match9 = "1" }
+        if matches_at(source, 14, "func") { match14 = "1" }
+        string diagnostic = int_text(found) + "|" + __host_char_at(source, found)
+            + "|" + match9 + "|" + match14
+        return __host_write_text_file(args[output_index], diagnostic)
     }
     if !native_assembly && parse_package_name(source) == "" {
         eprintln("compile: invalid or missing package declaration")
