@@ -363,7 +363,7 @@ func function_body(string source, string name) int {
         if __host_char_at(source, scan) == ";" { return -1 }
         scan = scan + 1
     }
-    if scan < len(source) { return scan + 1 }
+    if scan < len(source) { return scan }
     return -1
 }
 
@@ -574,7 +574,7 @@ func validate_function_symbols(string source) bool {
 func function_body_end(string source, int body) int {
     if body < 1 || body >= len(source) { return -1 }
     int index = body
-    int depth = 1
+    int depth = 0
     for index < len(source) {
         string ch = __host_char_at(source, index)
         if ch == "\"" { index = skip_quoted(source, index, len(source)); continue }
@@ -3460,7 +3460,7 @@ func main() {
     if debug_find {
         int found = find_function_from(source, 0)
         int body = function_body(source, "main")
-        return __host_write_text_file(args[output_index], int_text(found) + "|" + int_text(body) + "|" + __host_char_at(source, 25) + "|" + int_text(len(source)))
+        return __host_write_text_file(args[output_index], int_text(found) + "|" + int_text(body))
     }
     if !native_assembly && parse_package_name(source) == "" {
         eprintln("compile: invalid or missing package declaration")
