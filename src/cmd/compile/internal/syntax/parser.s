@@ -94,6 +94,7 @@ func parser_parse_program(p* parser) ast_node* {
     prog.type_ = AST_PROGRAM
     prog.line = parser_current_token(p).line
     prog.col = parser_current_token(p).col
+    tail := prog
     for {
         if parser_current_token(p).type_ == 0 {
             break
@@ -102,12 +103,16 @@ func parser_parse_program(p* parser) ast_node* {
         current := parser_current_token(p)
         if current.type_ == 10 {
             func_decl := parser_parse_func_decl(p)
+            if func_decl != nil { tail.next = func_decl; tail = func_decl }
         } else if current.type_ == 20 {
             struct_decl := parser_parse_struct_decl(p)
+            if struct_decl != nil { tail.next = struct_decl; tail = struct_decl }
         } else if current.type_ == 21 {
             var_decl := parser_parse_var_decl(p)
+            if var_decl != nil { tail.next = var_decl; tail = var_decl }
         } else if current.type_ == 22 {
             const_decl := parser_parse_const_decl(p)
+            if const_decl != nil { tail.next = const_decl; tail = const_decl }
         } else {
             parser_advance(p)
         }
@@ -129,16 +134,16 @@ func parser_parse_func_decl(p* parser) ast_node* {
     if parser_current_token(p).type_ != 85 {
         return nil
     }
-    struct_decl.value = parser_current_token(p).value
+    func_decl.value = parser_current_token(p).value
     parser_advance(p)
     if parser_current_token(p).type_ == 24 {
         parser_parse_params(p)
     }
     if parser_current_token(p).type_ != 28 {
-        parser_parse_type(p)
+        func_decl.child = parser_parse_type(p)
     }
     if parser_current_token(p).type_ == 28 {
-        parser_parse_block_stmt(p)
+        func_decl.next = parser_parse_block_stmt(p)
     }
     return func_decl
 }
@@ -152,6 +157,7 @@ func parser_parse_struct_decl(p* parser) ast_node* {
     if parser_current_token(p).type_ != 85 {
         return nil
     }
+    struct_decl.value = parser_current_token(p).value
     parser_advance(p)
     if parser_current_token(p).type_ == 28 {
         parser_advance(p)
@@ -185,7 +191,7 @@ func parser_parse_var_decl(p* parser) ast_node* {
     var_decl.child = parser_parse_type(p)
     if parser_current_token(p).type_ == 60 {
         parser_advance(p)
-        parser_parse_expression(p)
+        ret.child = parser_parse_expression(p)
     }
     return var_decl
 }
