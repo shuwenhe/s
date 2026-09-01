@@ -277,9 +277,9 @@ s_value_add:
 .type s_value_cmp, @function
 s_value_cmp:
     test $1, %rdi
-    jz .Lvalue_cmp_string
+    jz .Lvalue_cmp_left_string
     test $1, %rsi
-    jz .Lvalue_cmp_string
+    jnz .Lvalue_cmp_int_or_mixed
     sar $1, %rdi
     sar $1, %rsi
     xor %eax, %eax
@@ -289,6 +289,29 @@ s_value_cmp:
     jl .Lvalue_cmp_done
     mov $1, %rax
 .Lvalue_cmp_done:
+    ret
+.Lvalue_cmp_int_or_mixed:
+    test $1, %rdi
+    jz .Lvalue_cmp_mixed_left_string
+    test $1, %rsi
+    jz .Lvalue_cmp_mixed_right_string
+    sar $1, %rdi
+    sar $1, %rsi
+    xor %eax, %eax
+    cmp %rsi, %rdi
+    je .Lvalue_cmp_done
+    mov $-1, %rax
+    jl .Lvalue_cmp_done
+    mov $1, %rax
+    jmp .Lvalue_cmp_done
+.Lvalue_cmp_left_string:
+    test $1, %rsi
+    jz .Lvalue_cmp_string
+.Lvalue_cmp_mixed_left_string:
+    mov $-1, %rax
+    ret
+.Lvalue_cmp_mixed_right_string:
+    mov $1, %rax
     ret
 .Lvalue_cmp_string:
     push %rbx
