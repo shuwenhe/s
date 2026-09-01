@@ -3376,6 +3376,12 @@ func emit_native_assembly(string source) string {
         int name_at = skip_space(source, declaration + 4)
         int name_end = skip_identifier(source, name_at)
         string name = __host_slice(source, name_at, name_end)
+        if name == "host_args" || name == "__host_read_to_string" || name == "__host_write_text_file" ||
+            name == "__host_char_at" || name == "__host_byte_at" || name == "__host_byte_string" ||
+            name == "__host_make_executable" || name == "__host_slice" {
+            index = name_end
+            continue
+        }
         string function_code = asm_function(source, name)
         if function_code != "" {
             output = output + function_code
