@@ -1,5 +1,4 @@
 package src.runtime.metrics
-
 func histogram_unit_name() string {
     "src/runtime/metrics/histogram"
 }

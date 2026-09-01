@@ -1,13 +1,10 @@
 package compile.internal.obj
-
 use compile.internal.link
-
 enum symbol_bind {
     symbol_bind_local,
     symbol_bind_global,
     symbol_bind_weak,
 }
-
 enum symbol_type {
     symbol_type_notype,
     symbol_type_object,
@@ -15,7 +12,6 @@ enum symbol_type {
     symbol_type_section,
     symbol_type_file,
 }
-
 struct symbol_entry {
     string name
     symbol_bind bind
@@ -50,10 +46,8 @@ func (st* symbol_table) add_symbol(string name, symbol_bind bind, symbol_type ty
         section_index: section_idx,
         defined: true,
     }
-    
     st.entries = append(st.entries, entry)
     st.names = append(st.names, name)
-    
     len(st.entries) - 1
 }
 
@@ -132,7 +126,6 @@ func (st* symbol_table) dump() string {
 
 func (st* symbol_table) encode_elf_symbols() []elf_symbol {
     result := []elf_symbol()()
-    
     null_sym := elf_symbol {
         name: 0 as int32,
         info: 0 as int8,
@@ -142,7 +135,6 @@ func (st* symbol_table) encode_elf_symbols() []elf_symbol {
         size: 0 as int64,
     }
     result = append(result, null_sym)
-    
     i := 0
     for i < len(st.entries) {
         entry := st.entries[i]
@@ -157,6 +149,5 @@ func (st* symbol_table) encode_elf_symbols() []elf_symbol {
         result = append(result, sym)
         i = i + 1
     }
-    
     result
 }

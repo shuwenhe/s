@@ -13,7 +13,6 @@ use compile.internal.abt.union
 use compile.internal.abt.intersection
 use compile.internal.abt.difference
 use compile.internal.abt.equals
-
 func run_abt_suite() int {
     t1 := new_tree()
     ignored := insert(t1, 4, "4")

@@ -1,5 +1,4 @@
 package src.errors
-
 func wrap_unit_name() string {
     "src/errors/wrap"
 }

@@ -1,5 +1,4 @@
 package compile.internal.x86
-
 func ssa_unit_name() string {
     "x86/ssa.s"
 }

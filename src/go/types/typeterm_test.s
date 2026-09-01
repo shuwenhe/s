@@ -1,5 +1,4 @@
 package src.go.types
-
 func typeterm_test_unit_name() string {
     "src/go/types/typeterm_test"
 }

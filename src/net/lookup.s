@@ -1,5 +1,4 @@
 package src.net
-
 func lookup_unit_name() string {
     "src/net/lookup"
 }

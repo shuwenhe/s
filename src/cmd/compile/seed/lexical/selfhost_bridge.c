@@ -1,19 +1,15 @@
 #ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 700
 #endif
-
 #include "selfhost_bridge.h"
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #ifndef _WIN32
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
-
 static char *read_all(const char *path, compile_error *err) {
 	FILE *fp = fopen(path, "rb");
 	long size;
@@ -39,14 +35,12 @@ static char *read_all(const char *path, compile_error *err) {
 	fclose(fp);
 	return text;
 }
-
 static int hex_value(char ch) {
 	if (ch >= '0' && ch <= '9') return ch - '0';
 	if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
 	if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
 	return -1;
 }
-
 static char *decode_hex(const char *hex, compile_error *err) {
 	size_t len = strlen(hex);
 	size_t i;
@@ -73,7 +67,6 @@ static char *decode_hex(const char *hex, compile_error *err) {
 	text[len / 2] = '\0';
 	return text;
 }
-
 static int token_type_from_name(const char *name, token_type *out) {
 	int value;
 	for (value = TOKEN_EOF; value <= TOKEN_SEMICOLON; value++) {
@@ -84,7 +77,6 @@ static int token_type_from_name(const char *name, token_type *out) {
 	}
 	return 0;
 }
-
 static int parse_size(const char *text, size_t *out) {
 	char *end = NULL;
 	unsigned long value;
@@ -94,7 +86,6 @@ static int parse_size(const char *text, size_t *out) {
 	*out = (size_t)value;
 	return 1;
 }
-
 static bool parse_output(char *text, token_vec *out_tokens, compile_error *err) {
 	char *line = text;
 	token_vec_init(out_tokens);
@@ -138,14 +129,12 @@ static bool parse_output(char *text, token_vec *out_tokens, compile_error *err) 
 		line = next;
 	}
 	return true;
-
 malformed:
 	error_set(err, ERR_SEMANTIC, 0, 0, "malformed S lexer token stream");
 failed:
 	token_vec_free(out_tokens);
 	return false;
 }
-
 bool selfhost_lexer_scan(const char *source, token_vec *out_tokens, compile_error *err) {
 #ifdef _WIN32
 	(void)source; (void)out_tokens;

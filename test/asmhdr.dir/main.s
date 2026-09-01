@@ -1,5 +1,4 @@
 package test.asmhdr.dir
-
 func main_unit_name() string {
     "test/asmhdr.dir/main"
 }

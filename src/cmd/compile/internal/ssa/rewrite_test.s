@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func rewrite_test_case_name() string {
     "ssa/rewrite_test.s"
 }

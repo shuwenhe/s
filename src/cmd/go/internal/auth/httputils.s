@@ -1,5 +1,4 @@
 package src.cmd.go.internal.auth
-
 func httputils_unit_name() string {
     "src/cmd/go/internal/auth/httputils"
 }

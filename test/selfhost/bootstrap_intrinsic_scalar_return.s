@@ -1,7 +1,5 @@
 package bootstrap.closure
-
 extern "intrinsic" func __host_byte_string(int value) string;
-
 func identity(string value) string {
     return value
 }

@@ -1,5 +1,4 @@
 package src.internal.syscall.windows
-
 func zsyscall_windows_unit_name() string {
     "src/internal/syscall/windows/zsyscall_windows"
 }

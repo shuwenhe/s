@@ -9,7 +9,6 @@ extern "intrinsic" func __gc_cas_mark(int obj_id, int expected, int new_val) boo
 var mark_gray_queue  = int[]()
 var mark_total_count = 0
 var mark_root_count  = 0
-
 func mark_init() () {
     mark_gray_queue  = int[]()
     mark_total_count = 0

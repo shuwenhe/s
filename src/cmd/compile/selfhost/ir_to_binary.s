@@ -7,7 +7,6 @@ use std.os.exit
 use std.fmt.sprintf
 use std.fmt.eprintln
 use std.process.run as exec_cmd
-
 func main() {
     args := get_args()
     if len(args) < 3 {
@@ -61,7 +60,7 @@ func main() {
 }
 
 func get_unix_timestamp() int {
-    return 12345  
+    return 12345
 }
 
 func parse_ir(string content) (IRProgram, error) {
@@ -75,5 +74,5 @@ func generate_x86_64(IRProgram program) (string, error) {
 }
 
 struct IRProgram {
-    functions: []struct{}  
+    functions: []struct{}
 }

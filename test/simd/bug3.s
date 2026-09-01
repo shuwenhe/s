@@ -1,5 +1,4 @@
 package test.simd
-
 func bug3_unit_name() string {
     "test/simd/bug3"
 }

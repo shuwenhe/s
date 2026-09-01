@@ -1,5 +1,4 @@
 package main
-
 func fib(int n) int {
     if n <= 1 {
         n

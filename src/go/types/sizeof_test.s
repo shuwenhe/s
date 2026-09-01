@@ -1,5 +1,4 @@
 package src.go.types
-
 func sizeof_test_unit_name() string {
     "src/go/types/sizeof_test"
 }

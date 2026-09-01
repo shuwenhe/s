@@ -1,7 +1,6 @@
 package compile.internal.gc
 use compile.internal.build.main as build_main
 use std.slices
-
 struct compile_result {
     int status
     string report

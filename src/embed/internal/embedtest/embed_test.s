@@ -1,5 +1,4 @@
 package src.embed.internal.embedtest
-
 func embed_test_unit_name() string {
     "src/embed/internal/embedtest/embed_test"
 }

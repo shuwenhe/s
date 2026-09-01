@@ -1,5 +1,4 @@
 package test
-
 func convlit1_unit_name() string {
     "test/convlit1"
 }

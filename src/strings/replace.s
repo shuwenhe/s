@@ -1,5 +1,4 @@
 package src.strings
-
 func replace_unit_name() string {
     "src/strings/replace"
 }

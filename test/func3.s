@@ -1,5 +1,4 @@
 package test
-
 func func3_unit_name() string {
     "test/func3"
 }

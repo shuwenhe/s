@@ -1,5 +1,4 @@
 package main
-
 func first() int {
     return 5 * 2
 }

@@ -1,5 +1,4 @@
 package src.go.parser
-
 func error_test_unit_name() string {
     "src/go/parser/error_test"
 }

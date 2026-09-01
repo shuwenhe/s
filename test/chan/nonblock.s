@@ -1,5 +1,4 @@
 package test.chan
-
 func nonblock_unit_name() string {
     "test/chan/nonblock"
 }

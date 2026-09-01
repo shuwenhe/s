@@ -1,5 +1,4 @@
 package test.syntax
-
 func import_unit_name() string {
     "test/syntax/import"
 }

@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func id_module_name() string {
     "ssa/id.s"
 }

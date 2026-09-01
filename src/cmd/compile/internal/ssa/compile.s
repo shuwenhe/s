@@ -1,6 +1,5 @@
 package compile.internal.ssa
 use std.slices
-
 struct pass_stat {
     string name
     int changed

@@ -1,5 +1,4 @@
 package src.crypto.internal.fips140deps.time
-
 func time_unit_name() string {
     "src/crypto/internal/fips140deps/time/time"
 }

@@ -1,5 +1,4 @@
 package compile.internal.test.testdata.gen
-
 func constFoldGen_case_name() string {
     "test/testdata/gen/constFoldGen.s"
 }

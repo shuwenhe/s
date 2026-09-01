@@ -1,5 +1,4 @@
 package src.cmd.internal.obj
-
 func inl_unit_name() string {
     "src/cmd/internal/obj/inl"
 }

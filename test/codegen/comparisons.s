@@ -1,5 +1,4 @@
 package test.codegen
-
 func comparisons_unit_name() string {
     "test/codegen/comparisons"
 }

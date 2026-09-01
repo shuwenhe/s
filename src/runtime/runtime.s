@@ -2,7 +2,6 @@ package src.runtime
 use std.io as io
 const RUNTIME_VERSION = "0.2.0"
 extern "intrinsic" func __runtime_install_signals() ()
-
 func runtime_init() () {
     __runtime_install_signals()
     heap_alloc_bytes = 0
@@ -46,7 +45,6 @@ func read_mem_stats() MemStats {
 func num_sroutine() int {
     len(_sched.task)
 }
-
 extern "intrinsic" func __runtime_panic(string msg) ()
 extern "intrinsic" func __runtime_recover() option[string]
 

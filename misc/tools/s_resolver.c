@@ -3,21 +3,17 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
-
 #define MAX_PATH 4096
-
 typedef struct Node {
     char *path;
     struct Node *next;
 } Node;
-
 static int visited(Node *head, const char *path) {
     for (Node *n = head; n; n = n->next) {
         if (strcmp(n->path, path) == 0) return 1;
     }
     return 0;
 }
-
 static void add(Node **head, const char *path) {
     Node *n = malloc(sizeof(Node));
     n->path = malloc(strlen(path) + 1);
@@ -25,13 +21,11 @@ static void add(Node **head, const char *path) {
     n->next = *head;
     *head = n;
 }
-
 static char *join_path(const char *a, const char *b) {
     char *out = malloc(MAX_PATH);
     snprintf(out, MAX_PATH, "%s/%s", a, b);
     return out;
 }
-
 static int resolve_module(const char *repo_root, const char *module, char *out_path, size_t out_sz) {
     char buf[MAX_PATH];
     snprintf(buf, sizeof(buf), "%s/src/%s.s", repo_root, module);
@@ -41,7 +35,6 @@ static int resolve_module(const char *repo_root, const char *module, char *out_p
         strncpy(out_path, buf, out_sz);
         return 0;
     }
-
     char tmp[MAX_PATH];
     strncpy(tmp, module, sizeof(tmp));
     char *last = strrchr(tmp, '.');
@@ -54,7 +47,6 @@ static int resolve_module(const char *repo_root, const char *module, char *out_p
             return 0;
         }
     }
-
     const char *last_tok = last ? last + 1 : module;
     char dirpath[MAX_PATH];
     snprintf(dirpath, sizeof(dirpath), "%s/src", repo_root);
@@ -117,11 +109,9 @@ static int resolve_module(const char *repo_root, const char *module, char *out_p
     closedir(d);
     return -1;
 }
-
 static void resolve_rec(const char *repo_root, const char *path, Node **out_head) {
     if (visited(*out_head, path)) return;
     add(out_head, path);
-
     FILE *f = fopen(path, "rb");
     if (!f) return;
     char line[1024];
@@ -146,7 +136,6 @@ static void resolve_rec(const char *repo_root, const char *path, Node **out_head
     }
     fclose(f);
 }
-
 int main(int argc, char **argv) {
     if (argc != 3) {
         fprintf(stderr, "usage: %s <repo_root> <entry.s>\n", argv[0]);
@@ -156,10 +145,8 @@ int main(int argc, char **argv) {
     const char *entry = argv[2];
     char entry_path[MAX_PATH];
     if (entry[0] == '/') strncpy(entry_path, entry, MAX_PATH); else snprintf(entry_path, MAX_PATH, "%s/%s", repo_root, entry);
-
     Node *head = NULL;
     resolve_rec(repo_root, entry_path, &head);
-
     for (Node *n = head; n; n = n->next) {
         printf("%s\n", n->path);
     }

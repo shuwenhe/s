@@ -1,5 +1,4 @@
 package compile.internal.arm
-
 struct arch_info {
     string link_arch
     int reg_sp

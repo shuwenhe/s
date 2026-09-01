@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func rewriteRISCV64_rule_name() string {
     "ssa/rewriteRISCV64.s"
 }

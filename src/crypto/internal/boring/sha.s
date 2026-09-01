@@ -1,5 +1,4 @@
 package src.crypto.internal.boring
-
 func sha_unit_name() string {
     "src/crypto/internal/boring/sha"
 }

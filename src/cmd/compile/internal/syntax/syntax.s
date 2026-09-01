@@ -8,7 +8,6 @@ use s.dump_source_file
 use s.dump_tokens
 use s.new_lexer
 use s.parse_tokens
-
 struct syntax_error {
     string message
     int line

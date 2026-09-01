@@ -1,5 +1,4 @@
 package test
-
 func alias2_unit_name() string {
     "test/alias2"
 }

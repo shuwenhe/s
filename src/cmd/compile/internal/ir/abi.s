@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func abi_module_name() string {
     "ir/abi.s"
 }

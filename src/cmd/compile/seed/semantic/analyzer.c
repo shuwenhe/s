@@ -1,18 +1,15 @@
 #include "scope.h"
-
 #include <ctype.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 typedef enum symbol_kind {
 	SYMBOL_VAR = 0,
 	SYMBOL_FN,
 	SYMBOL_PARAM,
 	SYMBOL_IMPORT,
 } symbol_kind;
-
 typedef struct symbol {
 	char *name;
 	symbol_kind kind;
@@ -24,12 +21,10 @@ typedef struct symbol {
 	size_t param_count;
 	struct symbol *next;
 } symbol;
-
 typedef struct scope {
 	symbol *symbols;
 	struct scope *parent;
 } scope;
-
 typedef struct semantic_ctx {
 	scope *current_scope;
 	ast_node *root;
@@ -39,7 +34,6 @@ typedef struct semantic_ctx {
 	int short_circuit_rhs_depth;
 	const char *current_return_type;
 } semantic_ctx;
-
 typedef enum flow_exit_kind {
 	FLOW_EXIT_NONE = 0,
 	FLOW_EXIT_RETURN,
@@ -47,19 +41,16 @@ typedef enum flow_exit_kind {
 	FLOW_EXIT_CONTINUE,
 	FLOW_EXIT_MIXED,
 } flow_exit_kind;
-
 typedef struct signature_spec {
 	char *name;
 	int min_arity;
 	int max_arity;
 	char *return_type;
 } signature_spec;
-
 typedef struct narrow_fact {
 	char name[64];
 	const char *type_name;
 } narrow_fact;
-
 static const char *TYPE_ANY = "any";
 static const char *TYPE_INT = "int";
 static const char *TYPE_FLOAT = "float";
@@ -67,19 +58,15 @@ static const char *TYPE_STRING = "string";
 static const char *TYPE_BOOL = "bool";
 static const char *TYPE_ARRAY = "array";
 static const char *TYPE_UNIT = "()";
-
 static const char *IMPORT_SIGNATURE_META_PATH = "src/cmd/compile/seed/semantic/import_signatures.meta";
-
 static const signature_spec builtin_signatures[] = {
 	{(char *)"print", 1, -1, (char *)"()"},
 	{(char *)"println", 0, -1, (char *)"()"},
 	{(char *)"len", 1, 1, (char *)"int"},
 };
-
 static signature_spec *import_signatures = NULL;
 static size_t import_signatures_len = 0;
 static int import_signatures_loaded = 0;
-
 static char *dup_cstr(const char *s) {
 	size_t n = strlen(s);
 	char *out = (char *)malloc(n + 1);
@@ -89,7 +76,6 @@ static char *dup_cstr(const char *s) {
 	memcpy(out, s, n + 1);
 	return out;
 }
-
 static char *trim_inplace(char *s) {
 	char *end;
 	while (*s && isspace((unsigned char)*s)) {
@@ -102,7 +88,6 @@ static char *trim_inplace(char *s) {
 	*end = '\0';
 	return s;
 }
-
 static int parse_int_field(const char *s, int *out) {
 	char *end;
 	long v;
@@ -117,7 +102,6 @@ static int parse_int_field(const char *s, int *out) {
 	*out = (int)v;
 	return 1;
 }
-
 typedef struct type_field_info {
 	char *type_name;
 	char **field_names;
@@ -125,9 +109,7 @@ typedef struct type_field_info {
 	size_t field_count;
 	struct type_field_info *next;
 } type_field_info;
-
 static type_field_info *type_registry = NULL;
-
 static void free_type_registry(void) {
 	type_field_info *t = type_registry;
 	while (t) {
@@ -146,7 +128,6 @@ static void free_type_registry(void) {
 	}
 	type_registry = NULL;
 }
-
 static type_field_info *find_type_info(const char *type_name) {
 	type_field_info *t = type_registry;
 	while (t) {
@@ -154,12 +135,10 @@ static type_field_info *find_type_info(const char *type_name) {
 		t = t->next;
 	}
 	return NULL;
-
 }
-
 static int register_type_fields(const char *type_name, char **field_names, char **field_types, size_t field_count) {
 	if (!type_name) return 0;
-	if (find_type_info(type_name)) return 1;  
+	if (find_type_info(type_name)) return 1;
 	type_field_info *t = (type_field_info *)malloc(sizeof(type_field_info));
 	if (!t) return 0;
 	t->type_name = dup_cstr(type_name);
@@ -186,7 +165,6 @@ static int register_type_fields(const char *type_name, char **field_names, char 
 	type_registry = t;
 	return 1;
 }
-
 static const char *lookup_field_type(const char *type_name, const char *field_name) {
 	if (!type_name || !field_name) return NULL;
 	type_field_info *t = find_type_info(type_name);
@@ -196,22 +174,18 @@ static const char *lookup_field_type(const char *type_name, const char *field_na
 	}
 	return NULL;
 }
-
 static int load_import_signatures(compile_error *err) {
 	FILE *fp;
 	char line[512];
 	size_t line_no = 0;
-
 	if (import_signatures_loaded) {
 		return 1;
 	}
 	import_signatures_loaded = 1;
-
 	fp = fopen(IMPORT_SIGNATURE_META_PATH, "rb");
 	if (!fp) {
 		return 1;
 	}
-
 	while (fgets(line, sizeof(line), fp)) {
 		char *fields[4] = {0};
 		char *p;
@@ -274,11 +248,9 @@ static int load_import_signatures(compile_error *err) {
 		import_signatures = next;
 		import_signatures[import_signatures_len++] = spec;
 	}
-
 	fclose(fp);
 	return 1;
 }
-
 static const signature_spec *find_signature(const signature_spec *table, size_t table_len, const char *name) {
 	size_t i;
 	for (i = 0; i < table_len; i++) {
@@ -288,7 +260,6 @@ static const signature_spec *find_signature(const signature_spec *table, size_t 
 	}
 	return NULL;
 }
-
 static void resolve_import_signature(const char *module_path, int *min_arity, int *max_arity, const char **return_type) {
 	const signature_spec *spec = find_signature(import_signatures, import_signatures_len, module_path);
 	if (!spec) {
@@ -301,7 +272,6 @@ static void resolve_import_signature(const char *module_path, int *min_arity, in
 	*max_arity = spec->max_arity;
 	*return_type = spec->return_type;
 }
-
 static scope *scope_push(scope *parent) {
 	scope *s = (scope *)calloc(1, sizeof(scope));
 	if (!s) {
@@ -310,7 +280,6 @@ static scope *scope_push(scope *parent) {
 	s->parent = parent;
 	return s;
 }
-
 static void scope_free(scope *s) {
 	symbol *cur;
 	symbol *next;
@@ -332,7 +301,6 @@ static void scope_free(scope *s) {
 	}
 	free(s);
 }
-
 static symbol *scope_lookup_current(scope *s, const char *name) {
 	symbol *cur = s ? s->symbols : NULL;
 	while (cur) {
@@ -343,7 +311,6 @@ static symbol *scope_lookup_current(scope *s, const char *name) {
 	}
 	return NULL;
 }
-
 static symbol *scope_lookup(scope *s, const char *name) {
 	scope *it = s;
 	while (it) {
@@ -355,7 +322,6 @@ static symbol *scope_lookup(scope *s, const char *name) {
 	}
 	return NULL;
 }
-
 static int scope_define(scope *s,
 	const char *name,
 	symbol_kind kind,
@@ -419,7 +385,6 @@ static int scope_define(scope *s,
 	s->symbols = sym;
 	return 1;
 }
-
 static int define_builtins(scope *global_scope, compile_error *err) {
 	size_t i;
 	for (i = 0; i < sizeof(builtin_signatures) / sizeof(builtin_signatures[0]); i++) {
@@ -444,15 +409,12 @@ static int define_builtins(scope *global_scope, compile_error *err) {
 	}
 	return 1;
 }
-
 static int is_type_any(const char *type_name) {
 	return !type_name || strcmp(type_name, TYPE_ANY) == 0;
 }
-
 static int is_numeric_type(const char *type_name) {
 	return is_type_any(type_name) || strcmp(type_name, TYPE_INT) == 0 || strcmp(type_name, TYPE_FLOAT) == 0;
 }
-
 static void normalized_type_span(const char *type_name, const char **start, size_t *len) {
 	const char *value = type_name ? type_name : "";
 	size_t n;
@@ -463,7 +425,6 @@ static void normalized_type_span(const char *type_name, const char **start, size
 	*start = value;
 	*len = n;
 }
-
 static int normalized_type_equal(const char *left, const char *right) {
 	const char *left_start;
 	const char *right_start;
@@ -473,7 +434,6 @@ static int normalized_type_equal(const char *left, const char *right) {
 	normalized_type_span(right, &right_start, &right_len);
 	return left_len == right_len && strncmp(left_start, right_start, left_len) == 0;
 }
-
 static int is_type_assignable(const char *expected, const char *actual) {
 	if (is_type_any(expected) || is_type_any(actual)) {
 		return 1;
@@ -489,7 +449,6 @@ static int is_type_assignable(const char *expected, const char *actual) {
 	}
 	return strcmp(expected, actual) == 0;
 }
-
 static ast_node *find_trait_decl(semantic_ctx *ctx, const char *name) {
 	size_t i;
 	if (!ctx || !ctx->root || ctx->root->kind != AST_PROGRAM || !name) return NULL;
@@ -500,7 +459,6 @@ static ast_node *find_trait_decl(semantic_ctx *ctx, const char *name) {
 	}
 	return NULL;
 }
-
 static ast_node *find_struct_literal(semantic_ctx *ctx, const char *type_name) {
 	size_t i;
 	if (!ctx || !ctx->root || ctx->root->kind != AST_PROGRAM || !type_name) return NULL;
@@ -513,7 +471,6 @@ static ast_node *find_struct_literal(semantic_ctx *ctx, const char *type_name) {
 	}
 	return NULL;
 }
-
 static ast_node *find_trait_method(ast_node *trait_decl, const char *name) {
 	size_t i;
 	if (!trait_decl || trait_decl->kind != AST_TRAIT_DECL) return NULL;
@@ -523,7 +480,6 @@ static ast_node *find_trait_method(ast_node *trait_decl, const char *name) {
 	}
 	return NULL;
 }
-
 static int type_implements_trait(semantic_ctx *ctx, const char *actual, ast_node *trait_decl) {
 	size_t i, j;
 	char method_name[256];
@@ -541,25 +497,20 @@ static int type_implements_trait(semantic_ctx *ctx, const char *actual, ast_node
 	}
 	return 1;
 }
-
 static int is_type_assignable_ctx(semantic_ctx *ctx, const char *expected, const char *actual) {
 	ast_node *trait_decl;
 	if (is_type_assignable(expected, actual)) return 1;
 	trait_decl = find_trait_decl(ctx, expected);
 	return trait_decl ? type_implements_trait(ctx, actual, trait_decl) : 0;
 }
-
 static int is_truthy_type(const char *type_name) {
 	return is_type_any(type_name) || strcmp(type_name, TYPE_BOOL) == 0 || strcmp(type_name, TYPE_INT) == 0 || strcmp(type_name, TYPE_FLOAT) == 0;
 }
-
 static int is_ordered_type(const char *type_name) {
 	return is_type_any(type_name) || strcmp(type_name, TYPE_INT) == 0 || strcmp(type_name, TYPE_FLOAT) == 0 || strcmp(type_name, TYPE_STRING) == 0;
 }
-
 static int analyze_node(semantic_ctx *ctx, ast_node *node);
 static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type);
-
 static flow_exit_kind stmt_exit_kind(ast_node *node) {
 	flow_exit_kind then_kind;
 	flow_exit_kind else_kind;
@@ -601,7 +552,6 @@ static flow_exit_kind stmt_exit_kind(ast_node *node) {
 			return FLOW_EXIT_NONE;
 	}
 }
-
 static int enter_child_scope(semantic_ctx *ctx, scope **old_scope) {
 	scope *child;
 	*old_scope = ctx->current_scope;
@@ -613,13 +563,11 @@ static int enter_child_scope(semantic_ctx *ctx, scope **old_scope) {
 	ctx->current_scope = child;
 	return 1;
 }
-
 static void leave_child_scope(semantic_ctx *ctx, scope *old_scope) {
 	scope *child = ctx->current_scope;
 	ctx->current_scope = old_scope;
 	scope_free(child);
 }
-
 static const char *literal_node_type(ast_node *node) {
 	if (!node) {
 		return NULL;
@@ -631,7 +579,6 @@ static const char *literal_node_type(ast_node *node) {
 		default: return NULL;
 	}
 }
-
 static int add_narrow_fact(narrow_fact *facts, size_t *fact_count, const char *name, const char *type_name) {
 	size_t i;
 	if (!name || !type_name || name[0] == '\0') {
@@ -653,7 +600,6 @@ static int add_narrow_fact(narrow_fact *facts, size_t *fact_count, const char *n
 	(*fact_count)++;
 	return 1;
 }
-
 static int collect_condition_facts(ast_node *cond, int when_true, narrow_fact *facts, size_t *fact_count) {
 	const char *literal_type;
 	if (!cond) {
@@ -698,7 +644,6 @@ static int collect_condition_facts(ast_node *cond, int when_true, narrow_fact *f
 	}
 	return 1;
 }
-
 static int apply_narrow_facts(semantic_ctx *ctx, const narrow_fact *facts, size_t fact_count, source_pos pos) {
 	size_t i;
 	for (i = 0; i < fact_count; i++) {
@@ -732,7 +677,6 @@ static int apply_narrow_facts(semantic_ctx *ctx, const narrow_fact *facts, size_
 	}
 	return 1;
 }
-
 static int analyze_node_with_narrowing(semantic_ctx *ctx, ast_node *branch, ast_node *cond, int when_true) {
 	scope *old_scope;
 	narrow_fact facts[16];
@@ -755,7 +699,6 @@ static int analyze_node_with_narrowing(semantic_ctx *ctx, ast_node *branch, ast_
 	leave_child_scope(ctx, old_scope);
 	return 1;
 }
-
 static int analyze_block_with_new_scope(semantic_ctx *ctx, ast_node *block) {
 	size_t i;
 	scope *old_scope;
@@ -789,7 +732,6 @@ static int analyze_block_with_new_scope(semantic_ctx *ctx, ast_node *block) {
 	leave_child_scope(ctx, old_scope);
 	return 1;
 }
-
 static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char *return_type) {
 	size_t i;
 	if (!node) {
@@ -821,7 +763,6 @@ static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char 
 			return 0;
 	}
 }
-
 static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type) {
 	size_t i;
 	int status;
@@ -833,7 +774,6 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 		*out_type = TYPE_UNIT;
 		return 1;
 	}
-
 	switch (node->kind) {
 		case AST_NUMBER_EXPR:
 			*out_type = TYPE_INT;
@@ -853,7 +793,6 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			*out_type = TYPE_ARRAY;
 			return 1;
 		case AST_STRUCT_EXPR:
-
 			if (node->as.struct_expr.type_name) {
 				char **f_types = NULL;
 				size_t fc = node->as.struct_expr.field_count;
@@ -869,7 +808,6 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					}
 					if (f_types) f_types[i] = dup_cstr(rhs_type ? rhs_type : TYPE_ANY);
 				}
-
 				if (node->as.struct_expr.field_names && node->as.struct_expr.field_count > 0) {
 					if (!register_type_fields(node->as.struct_expr.type_name, node->as.struct_expr.field_names, f_types, node->as.struct_expr.field_count)) {
 						for (size_t j = 0; j < node->as.struct_expr.field_count; j++) if (f_types && f_types[j]) free(f_types[j]);
@@ -900,12 +838,9 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			lookup_type = lhs_type;
 			if (lookup_type && strncmp(lookup_type, "&mut", 4) == 0) lookup_type += 4;
 			else if (lookup_type && lookup_type[0] == '&') lookup_type++;
-
 			if (lhs_type) {
-
 				const char *resolved = NULL;
 				if (strncmp(lhs_type, "[]", 2) == 0) {
-
 					char *elem = (char *)lhs_type + 2;
 					resolved = lookup_field_type(elem, node->as.member_expr.member);
 				}
@@ -914,10 +849,8 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					*out_type = resolved;
 					return 1;
 				}
-
 				ast_node *se = find_struct_literal(ctx, lookup_type);
 				if (se) {
-
 					size_t fc = se->as.struct_expr.field_count;
 					char **f_names = NULL;
 					char **f_types = NULL;
@@ -935,12 +868,10 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					register_type_fields(lhs_type, f_names, f_types, fc);
 					for (size_t ii = 0; ii < fc; ii++) { free(f_names[ii]); free(f_types[ii]); }
 					free(f_names); free(f_types);
-
 					resolved = lookup_field_type(lhs_type, node->as.member_expr.member);
 					if (resolved) { *out_type = resolved; return 1; }
 				}
 			}
-
 			*out_type = TYPE_ANY;
 			return 1;
 		case AST_INDEX_EXPR:
@@ -955,14 +886,12 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					"index expression expects int index, got '%s'", rhs_type ? rhs_type : TYPE_ANY);
 				return 0;
 			}
-
 			if (lhs_type && strcmp(lhs_type, TYPE_STRING) == 0) {
 				*out_type = TYPE_INT;
 				return 1;
 			}
 			if (lhs_type && strncmp(lhs_type, "[]", 2) == 0) {
 				*out_type = dup_cstr(lhs_type + 2);
-
 				return 1;
 			}
 			*out_type = TYPE_ANY;
@@ -1340,7 +1269,6 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			return 0;
 	}
 }
-
 static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 	size_t i;
 	int status;
@@ -1349,7 +1277,6 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 	if (!node) {
 		return 1;
 	}
-
 	switch (node->kind) {
 		case AST_PROGRAM:
 			for (i = 0; i < node->as.program.statements.len; i++) {
@@ -1423,14 +1350,12 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						return 0;
 					}
 					if (status == 0) {
-
 						symbol *existing = scope_lookup_current(ctx->current_scope, decl->as.use_decl.alias);
 						if (!existing || existing->kind != SYMBOL_IMPORT) {
 							error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
 								"redefinition of import alias '%s'", decl->as.use_decl.alias);
 							return 0;
 						}
-
 					}
 				}
 				if (decl->kind == AST_USE_DECL && decl->as.use_decl.selector_count > 0) {
@@ -1468,9 +1393,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 									"redefinition of import alias '%s'", decl->as.use_decl.selectors[j]);
 								return 0;
 							}
-
 						}
-
 					}
 				}
 			}
@@ -1489,11 +1412,9 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_BLOCK:
 			return analyze_block_with_new_scope(ctx, node);
 		case AST_LET_STMT:
-
 			if (node->as.let_stmt.type_name && strcmp(node->as.let_stmt.type_name, "struct") == 0 &&
 				node->as.let_stmt.value && node->as.let_stmt.value->kind == AST_STRUCT_EXPR) {
 				ast_node *stype = node->as.let_stmt.value;
-
 				size_t fc = stype->as.struct_expr.field_count;
 				char **f_names = NULL;
 				char **f_types = NULL;
@@ -1508,7 +1429,6 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				}
 				for (i = 0; i < fc; i++) {
 					f_names[i] = dup_cstr(stype->as.struct_expr.field_names[i]);
-
 					ast_node *tv = stype->as.struct_expr.field_values.data[i];
 					if (tv && tv->kind == AST_STRING_EXPR && tv->as.string_expr.literal) {
 						f_types[i] = dup_cstr(tv->as.string_expr.literal);
@@ -1522,23 +1442,19 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						return 0;
 					}
 				}
-
 				if (!register_type_fields(node->as.let_stmt.name, f_names, f_types, fc)) {
 					for (size_t j = 0; j < fc; j++) { free(f_names[j]); free(f_types[j]); }
 					free(f_names); free(f_types);
 					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
 					return 0;
 				}
-
 				for (size_t j = 0; j < fc; j++) { free(f_names[j]); free(f_types[j]); }
 				free(f_names); free(f_types);
 				return 1;
 			}
-
 			if (!analyze_expr(ctx, node->as.let_stmt.value, &expr_type)) {
 				return 0;
 			}
-
 			if (node->as.let_stmt.type_name && node->as.let_stmt.type_name[0] != '\0') {
 				const char *decl_type = node->as.let_stmt.type_name;
 				if (!is_type_assignable(decl_type, expr_type)) {
@@ -1773,11 +1689,9 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_STRUCT_EXPR:
 			return analyze_expr(ctx, node, &expr_type);
 	}
-
 	error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "unknown AST node kind");
 	return 0;
 }
-
 bool semantic_analyze(ast_node *root, compile_error *err) {
 	semantic_ctx ctx;
 	scope *global_scope;
@@ -1791,7 +1705,6 @@ bool semantic_analyze(ast_node *root, compile_error *err) {
 		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 		return false;
 	}
-
 	ctx.current_scope = global_scope;
 	ctx.root = root;
 	ctx.err = err;
@@ -1799,12 +1712,10 @@ bool semantic_analyze(ast_node *root, compile_error *err) {
 	ctx.loop_depth = 0;
 	ctx.short_circuit_rhs_depth = 0;
 	ctx.current_return_type = TYPE_ANY;
-
 	if (!define_builtins(global_scope, err)) {
 		scope_free(global_scope);
 		return false;
 	}
-
 	ok = analyze_node(&ctx, root) ? true : false;
 	scope_free(global_scope);
 	return ok;

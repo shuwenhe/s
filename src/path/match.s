@@ -1,5 +1,4 @@
 package src.path
-
 func match_unit_name() string {
     "src/path/switch"
 }

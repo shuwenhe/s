@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func phiopt_module_name() string {
     "ssa/phiopt.s"
 }

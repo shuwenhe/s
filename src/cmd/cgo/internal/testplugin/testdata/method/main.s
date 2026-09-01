@@ -1,5 +1,4 @@
 package src.cmd.cgo.internal.testplugin.testdata.method
-
 func main_unit_name() string {
     "src/cmd/cgo/internal/testplugin/testdata/method/main"
 }

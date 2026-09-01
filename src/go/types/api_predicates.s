@@ -1,5 +1,4 @@
 package src.go.types
-
 func api_predicates_unit_name() string {
     "src/go/types/api_predicates"
 }

@@ -1,5 +1,4 @@
 package src.switch
-
 func dim_unit_name() string {
     "src/switch/dim"
 }

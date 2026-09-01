@@ -5,7 +5,6 @@ use std.result.result
 use compile.internal.syntax.dump_source_text
 use compile.internal.syntax.parse_source
 use compile.internal.syntax.read_source
-
 func main() {
     args := host_args()
     if len(args) < 2 {

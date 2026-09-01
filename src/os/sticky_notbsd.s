@@ -1,5 +1,4 @@
 package src.os
-
 func sticky_notbsd_unit_name() string {
     "src/os/sticky_notbsd"
 }

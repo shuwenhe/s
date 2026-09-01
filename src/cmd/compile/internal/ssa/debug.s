@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func debug_module_name() string {
     "ssa/debug.s"
 }

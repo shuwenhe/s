@@ -1,5 +1,4 @@
 package src.switch.big.internal.asmgen
-
 func s390x_unit_name() string {
     "src/switch/big/internal/asmgen/s390x"
 }

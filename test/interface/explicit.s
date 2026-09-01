@@ -1,5 +1,4 @@
 package test.interface
-
 func explicit_unit_name() string {
     "test/interface/explicit"
 }

@@ -1,6 +1,5 @@
 package compile.internal.arm64
 use std.slices
-
 struct ssa_value {
     string op
     string[] args

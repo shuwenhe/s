@@ -1,5 +1,4 @@
 package src.internal.goos
-
 func nonunix_unit_name() string {
     "src/internal/goos/nonunix"
 }

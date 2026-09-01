@@ -1,5 +1,4 @@
 package test.typeparam
-
 func index2_unit_name() string {
     "test/typeparam/index2"
 }

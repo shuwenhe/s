@@ -1,5 +1,4 @@
 package src.switch.rand
-
 func example_test_unit_name() string {
     "src/switch/rand/example_test"
 }

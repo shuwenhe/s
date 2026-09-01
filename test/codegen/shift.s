@@ -1,5 +1,4 @@
 package test.codegen
-
 func shift_unit_name() string {
     "test/codegen/shift"
 }

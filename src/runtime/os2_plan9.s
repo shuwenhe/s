@@ -1,5 +1,4 @@
 package src.runtime
-
 func os2_plan9_unit_name() string {
     "src/runtime/os2_plan9"
 }

@@ -1,5 +1,4 @@
 package src.internal.poll
-
 func fd_fsync_darwin_unit_name() string {
     "src/internal/poll/fd_fsync_darwin"
 }

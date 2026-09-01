@@ -1,5 +1,4 @@
 package test.syntax
-
 func composite_unit_name() string {
     "test/syntax/composite"
 }

@@ -4,7 +4,6 @@ use std.prelude.len
 use std.prelude.slice
 use std.slices
 use std.result.result
-
 struct lex_error {
     string message
     int line

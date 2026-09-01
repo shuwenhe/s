@@ -1,5 +1,4 @@
 package src.crypto.dsa
-
 func dsa_unit_name() string {
     "src/crypto/dsa/dsa"
 }

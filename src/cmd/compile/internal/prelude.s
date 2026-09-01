@@ -1,6 +1,5 @@
 package compile.internal.prelude
 use compile.internal.typesys.base_type_name
-
 func load_prelude() int {
     0
 }

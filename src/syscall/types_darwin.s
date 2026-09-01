@@ -1,5 +1,4 @@
 package src.syscall
-
 func types_darwin_unit_name() string {
     "src/syscall/types_darwin"
 }

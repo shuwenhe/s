@@ -1,5 +1,4 @@
 package src.syscall
-
 func rlimit_darwin_unit_name() string {
     "src/syscall/rlimit_darwin"
 }

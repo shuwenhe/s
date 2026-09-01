@@ -1,5 +1,4 @@
 package compile.internal.typecheck
-
 func iimport_module_name() string {
     "typecheck/iimport.s"
 }

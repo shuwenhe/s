@@ -1,5 +1,4 @@
 package compile.internal.test
-
 func truncconst_test_case_name() string {
     "test/truncconst_test.s"
 }

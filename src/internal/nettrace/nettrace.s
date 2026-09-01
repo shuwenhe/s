@@ -1,5 +1,4 @@
 package src.internal.nettrace
-
 func nettrace_unit_name() string {
     "src/internal/nettrace/nettrace"
 }

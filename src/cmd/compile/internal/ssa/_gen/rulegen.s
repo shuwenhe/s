@@ -1,5 +1,4 @@
 package compile.internal.ssa._gen
-
 func rulegen_rule_name() string {
     "ssa/_gen/rulegen.s"
 }

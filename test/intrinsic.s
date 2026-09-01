@@ -1,5 +1,4 @@
 package test
-
 func intrinsic_unit_name() string {
     "test/intrinsic"
 }

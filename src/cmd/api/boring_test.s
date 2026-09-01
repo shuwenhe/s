@@ -1,5 +1,4 @@
 package src.cmd.api
-
 func boring_test_unit_name() string {
     "src/cmd/api/boring_test"
 }

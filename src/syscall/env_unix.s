@@ -1,5 +1,4 @@
 package src.syscall
-
 func env_unix_unit_name() string {
     "src/syscall/env_unix"
 }

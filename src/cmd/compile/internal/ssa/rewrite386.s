@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func rewrite386_rule_name() string {
     "ssa/rewrite386.s"
 }

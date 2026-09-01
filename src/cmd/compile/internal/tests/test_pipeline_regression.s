@@ -20,7 +20,6 @@ use compile.internal.mir.mir_control_edge
 use compile.internal.mir.dump_graph
 use std.prelude.slice
 use std.slices
-
 func run_pipeline_regression_suite() int {
     cli_build_eq := string[]()
     cli_build_eq = append(cli_build_eq, "compile")

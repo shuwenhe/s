@@ -1,5 +1,4 @@
 package test.typeparam.absdiffimp2.dir
-
 func a_unit_name() string {
     "test/typeparam/absdiffimp2.dir/a"
 }

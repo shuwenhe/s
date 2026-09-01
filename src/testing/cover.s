@@ -1,5 +1,4 @@
 package src.testing
-
 func cover_unit_name() string {
     "src/testing/cover"
 }

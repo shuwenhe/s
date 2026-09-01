@@ -1,5 +1,4 @@
 package test
-
 func newexpr_unit_name() string {
     "test/newexpr"
 }

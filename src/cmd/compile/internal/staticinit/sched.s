@@ -1,5 +1,4 @@
 package compile.internal.staticinit
-
 func sched_unit_name() string {
     "staticinit/sched.s"
 }

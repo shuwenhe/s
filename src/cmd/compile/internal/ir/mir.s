@@ -1,6 +1,5 @@
 package compile.internal.ir.mir
 use std.slices
-
 struct MirOperand {
     string kind,
     string value
@@ -23,7 +22,6 @@ struct MirEvalStmt {
     string op
     string[] args
 }
-
 enum MirStatement {
     assign(MirAssignStmt),
     eval(MirEvalStmt),

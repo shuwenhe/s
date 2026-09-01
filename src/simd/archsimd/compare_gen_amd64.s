@@ -1,5 +1,4 @@
 package src.simd.archsimd
-
 func compare_gen_amd64_unit_name() string {
     "src/simd/archsimd/compare_gen_amd64"
 }

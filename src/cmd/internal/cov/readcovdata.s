@@ -1,5 +1,4 @@
 package src.cmd.internal.cov
-
 func readcovdata_unit_name() string {
     "src/cmd/internal/cov/readcovdata"
 }

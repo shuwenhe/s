@@ -1,5 +1,4 @@
 package src.runtime
-
 func defs_openbsd_amd64_unit_name() string {
     "src/runtime/defs_openbsd_amd64"
 }

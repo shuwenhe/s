@@ -1,5 +1,4 @@
 package test.interface
-
 func recursive_unit_name() string {
     "test/interface/recursive"
 }

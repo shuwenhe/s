@@ -1,5 +1,4 @@
 package main
-
 func main() {
     base := 6 * 7
     adjusted := base + 5

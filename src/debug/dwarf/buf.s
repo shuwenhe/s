@@ -1,5 +1,4 @@
 package src.debug.dwarf
-
 func buf_unit_name() string {
     "src/debug/dwarf/buf"
 }

@@ -1,5 +1,4 @@
 package compile.internal.typecheck
-
 func bexport_module_name() string {
     "typecheck/bexport.s"
 }

@@ -1,5 +1,4 @@
 package src.internal.fuzz
-
 func coverage_unit_name() string {
     "src/internal/fuzz/coverage"
 }

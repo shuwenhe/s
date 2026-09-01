@@ -1,5 +1,4 @@
 package src.internal.fuzz
-
 func worker_unit_name() string {
     "src/internal/fuzz/worker"
 }

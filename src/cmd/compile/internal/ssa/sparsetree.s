@@ -1,6 +1,5 @@
 package compile.internal.ssa
 use std.slices
-
 struct sparse_tree_node {
     int parent
     int child

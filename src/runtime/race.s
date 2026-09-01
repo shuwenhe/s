@@ -1,5 +1,4 @@
 package src.runtime
-
 func race_unit_name() string {
     "src/runtime/race"
 }

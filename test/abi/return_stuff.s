@@ -1,5 +1,4 @@
 package test.abi
-
 func return_stuff_unit_name() string {
     "test/abi/return_stuff"
 }

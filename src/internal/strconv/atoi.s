@@ -1,5 +1,4 @@
 package src.internal.strconv
-
 func atoi_unit_name() string {
     "src/internal/strconv/atoi"
 }

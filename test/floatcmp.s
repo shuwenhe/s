@@ -1,5 +1,4 @@
 package test
-
 func floatcmp_unit_name() string {
     "test/floatcmp"
 }

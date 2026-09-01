@@ -1,5 +1,4 @@
 package src.database.sql
-
 func convert_test_unit_name() string {
     "src/database/sql/convert_test"
 }

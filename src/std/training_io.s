@@ -1,6 +1,5 @@
 package std.training_io
 use std.tensor_core as T
-
 struct CheckpointMeta {
     string format_version
     string framework
@@ -69,7 +68,7 @@ func initial_train_state() TrainState {
     }
 }
 
-func make_config_snapshot(int vocab, int embed, int heads, int ffn, 
+func make_config_snapshot(int vocab, int embed, int heads, int ffn,
                             int layers, int seq_len, float dropout, int total_params) ModelConfigSnapshot {
     ModelConfigSnapshot {
         vocab_size: vocab,

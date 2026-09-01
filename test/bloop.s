@@ -1,5 +1,4 @@
 package test
-
 func bloop_unit_name() string {
     "test/bloop"
 }

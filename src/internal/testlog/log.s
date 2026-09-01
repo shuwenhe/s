@@ -1,5 +1,4 @@
 package src.internal.testlog
-
 func log_unit_name() string {
     "src/internal/testlog/log"
 }

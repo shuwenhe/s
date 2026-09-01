@@ -1,5 +1,4 @@
 package src.runtime
-
 func lock_futex_unit_name() string {
     "src/runtime/lock_futex"
 }

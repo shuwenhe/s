@@ -1,5 +1,4 @@
 package backend
-
 struct end_to_end_compiler {
     source_file: string
     output_file: string
@@ -48,7 +47,6 @@ func (e2e* end_to_end_compiler) stage_5_code_generation() int {
     println("Stage 5: Code Generation")
     println("  Output: " + e2e.asm_file)
     println("  Format: AT&T Assembly (gcc compatible)")
-    
     0
 }
 
@@ -57,7 +55,6 @@ func (e2e* end_to_end_compiler) stage_6_assemble() int {
     println("  Input: " + e2e.asm_file)
     println("  Output: " + e2e.obj_file)
     println("  Tool: gcc -c (System V AMD64 ABI)")
-    
     0
 }
 
@@ -66,39 +63,29 @@ func (e2e* end_to_end_compiler) stage_7_link() int {
     println("  Input: " + e2e.obj_file)
     println("  Output: " + e2e.output_file)
     println("  Tool: gcc/ld")
-    
     0
 }
 
 func (e2e* end_to_end_compiler) full_native_pipeline() int {
     println("=== Native Compilation Pipeline ===")
     println("")
-    
     result := e2e.stage_1_parse_and_typecheck()
     if result != 0 { return result }
-    
     result = e2e.stage_2_generate_ir()
     if result != 0 { return result }
-    
     result = e2e.stage_3_instruction_selection()
     if result != 0 { return result }
-    
     result = e2e.stage_4_register_allocation()
     if result != 0 { return result }
-    
     result = e2e.stage_5_code_generation()
     if result != 0 { return result }
-    
     result = e2e.stage_6_assemble()
     if result != 0 { return result }
-    
     result = e2e.stage_7_link()
     if result != 0 { return result }
-    
     println("")
     println("✓ Native compilation pipeline complete")
     println("  Executable: " + e2e.output_file)
-    
     0
 }
 

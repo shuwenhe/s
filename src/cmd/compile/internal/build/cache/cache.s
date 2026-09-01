@@ -4,7 +4,6 @@ use std.fs.write_text_file
 use std.prelude.len
 use std.prelude.slice
 use std.prelude.to_string
-
 struct dep_version_state {
     int version
     int depth

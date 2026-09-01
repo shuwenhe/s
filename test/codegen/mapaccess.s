@@ -1,5 +1,4 @@
 package test.codegen
-
 func mapaccess_unit_name() string {
     "test/codegen/mapaccess"
 }

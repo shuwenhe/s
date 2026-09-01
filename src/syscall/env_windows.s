@@ -1,5 +1,4 @@
 package src.syscall
-
 func env_windows_unit_name() string {
     "src/syscall/env_windows"
 }

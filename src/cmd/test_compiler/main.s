@@ -10,7 +10,6 @@ use std.env.args as host_args
 use std.env.get
 use std.io.eprintln
 use std.io.println
-
 func default_fixtures_root() string {
     env_root := get("s_test_fixtures_root")
     if env_root.is_some() {

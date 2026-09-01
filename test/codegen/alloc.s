@@ -1,5 +1,4 @@
 package test.codegen
-
 func alloc_unit_name() string {
     "test/codegen/alloc"
 }

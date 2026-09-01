@@ -1,5 +1,4 @@
 package src.cmd.covdata
-
 func argsmerge_unit_name() string {
     "src/cmd/covdata/argsmerge"
 }

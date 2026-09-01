@@ -1,5 +1,4 @@
 package test
-
 func slicecap_unit_name() string {
     "test/slicecap"
 }

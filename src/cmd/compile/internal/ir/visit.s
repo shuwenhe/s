@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func visit_module_name() string {
     "ir/visit.s"
 }

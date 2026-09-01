@@ -1,5 +1,4 @@
 package src.compress.flate
-
 func level3_unit_name() string {
     "src/compress/flate/level3"
 }

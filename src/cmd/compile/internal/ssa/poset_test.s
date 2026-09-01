@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func poset_test_case_name() string {
     "ssa/poset_test.s"
 }

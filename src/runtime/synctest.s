@@ -1,5 +1,4 @@
 package src.runtime
-
 func synctest_unit_name() string {
     "src/runtime/synctest"
 }

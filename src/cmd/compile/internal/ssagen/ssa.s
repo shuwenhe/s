@@ -1,6 +1,5 @@
 package compile.internal.ssagen
 use std.slices
-
 struct abi_param_desc {
     int frame_offset
     int size

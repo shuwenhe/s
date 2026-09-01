@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func reassignment_module_name() string {
     "ir/reassignment.s"
 }

@@ -1,5 +1,4 @@
 package test.chan
-
 func powser2_unit_name() string {
     "test/chan/powser2"
 }

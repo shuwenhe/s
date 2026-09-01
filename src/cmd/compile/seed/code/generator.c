@@ -1,12 +1,9 @@
 #include <stdio.h>
-
 #include "../intermediate/ir.h"
 #include "target.h"
-
 static const char *nz(const char *s) {
     return (s && s[0] != '\0') ? s : "_";
 }
-
 static void emit_field(FILE *out, const char *text) {
     const unsigned char *p = (const unsigned char *)nz(text);
     while (*p) {
@@ -33,7 +30,6 @@ static void emit_field(FILE *out, const char *text) {
         p++;
     }
 }
-
 static void emit_record(FILE *out, const char *op, const char *result, const char *op1, const char *op2) {
     emit_field(out, op);
     fputc('|', out);
@@ -44,20 +40,15 @@ static void emit_record(FILE *out, const char *op, const char *result, const cha
     emit_field(out, op2);
     fputc('\n', out);
 }
-
 void generate_code(IR *ir, FILE *output) {
     int i;
-
     if (!ir || !output) {
         fprintf(stderr, "invalid input to code generator\n");
         return;
     }
-
     fprintf(output, "SSEED-TARGET-V1\n");
-
     for (i = 0; i < ir->instruction_count; i++) {
         const IRInstruction *instr = &ir->instructions[i];
-
         switch (instr->type) {
             case IR_NOP:
                 emit_record(output, "NOP", "", "", "");

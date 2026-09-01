@@ -1,5 +1,4 @@
 package test
-
 func range2_unit_name() string {
     "test/range2"
 }

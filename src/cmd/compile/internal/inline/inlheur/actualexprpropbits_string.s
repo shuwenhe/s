@@ -1,5 +1,4 @@
 package compile.internal.inline.inlheur
-
 func actualexprpropbits_string_module_name() string {
     "inline/inlheur/actualexprpropbits_string.s"
 }

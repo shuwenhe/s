@@ -1,5 +1,4 @@
 package src.syscall
-
 func dirent_unit_name() string {
     "src/syscall/dirent"
 }

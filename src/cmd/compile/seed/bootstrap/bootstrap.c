@@ -8,19 +8,15 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
-
 #ifdef _WIN32
 #include <direct.h>
 #define mkdir_compat(p) _mkdir(p)
 #else
 #define mkdir_compat(p) mkdir((p), 0755)
 #endif
-
 #include "../error/error.h"
 #include "../code/target.h"
-
 bool seed_compile_source_text(const char *source_text, FILE *output, compile_error *err);
-
 static bool ensure_dir(const char *path, compile_error *err) {
 	if (mkdir_compat(path) == 0) {
 		return true;
@@ -31,13 +27,11 @@ static bool ensure_dir(const char *path, compile_error *err) {
 	error_set(err, ERR_SEMANTIC, 0, 0, "failed to create dir: %s", path);
 	return false;
 }
-
 static bool read_file_text(const char *path, char **out_text, compile_error *err) {
 	FILE *fp;
 	long n;
 	size_t read_n;
 	char *buf;
-
 	*out_text = NULL;
 	fp = fopen(path, "rb");
 	if (!fp) {
@@ -60,7 +54,6 @@ static bool read_file_text(const char *path, char **out_text, compile_error *err
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to rewind source: %s", path);
 		return false;
 	}
-
 	buf = (char *)malloc((size_t)n + 1);
 	if (!buf) {
 		fclose(fp);
@@ -78,20 +71,17 @@ static bool read_file_text(const char *path, char **out_text, compile_error *err
 	*out_text = buf;
 	return true;
 }
-
 static bool compile_to_buffer(const char *source_text, char **out_text, compile_error *err) {
 	FILE *tmp;
 	char *buf;
 	long n;
 	size_t read_n;
-
 	*out_text = NULL;
 	tmp = tmpfile();
 	if (!tmp) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to create temporary file");
 		return false;
 	}
-
 	if (!seed_compile_source_text(source_text, tmp, err)) {
 		fclose(tmp);
 		return false;
@@ -117,7 +107,6 @@ static bool compile_to_buffer(const char *source_text, char **out_text, compile_
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to rewind temporary output");
 		return false;
 	}
-
 	buf = (char *)malloc((size_t)n + 1);
 	if (!buf) {
 		fclose(tmp);
@@ -135,7 +124,6 @@ static bool compile_to_buffer(const char *source_text, char **out_text, compile_
 	*out_text = buf;
 	return true;
 }
-
 static bool write_text_file(const char *path, const char *text, compile_error *err) {
 	FILE *fp = fopen(path, "wb");
 	if (!fp) {
@@ -156,7 +144,6 @@ static bool write_text_file(const char *path, const char *text, compile_error *e
 	}
 	return true;
 }
-
 static bool run_compiler(const char *compiler, const char *arg1, const char *arg2, const char *arg3, compile_error *err) {
 #ifdef _WIN32
 	(void)compiler; (void)arg1; (void)arg2; (void)arg3;
@@ -181,7 +168,6 @@ static bool run_compiler(const char *compiler, const char *arg1, const char *arg
 	return true;
 #endif
 }
-
 bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char *output_dir, compile_error *err) {
 	char *compiler_src = NULL;
 	char *stage1 = NULL;
@@ -193,25 +179,20 @@ bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char
 	char stage1_bin[512];
 	char stage2_bin[512];
 	bool ok = false;
-
 	error_clear(err);
 	if (!compiler_source_path || !output_dir) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "invalid bootstrap input");
 		return false;
 	}
-
 	if (!ensure_dir(output_dir, err)) {
 		goto done;
 	}
-
 	if (!read_file_text(compiler_source_path, &compiler_src, err)) {
 		goto done;
 	}
-
 	if (!compile_to_buffer(compiler_src, &stage1, err)) {
 		goto done;
 	}
-
 	snprintf(stage1_path, sizeof(stage1_path), "%s/stage1.ir", output_dir);
 	snprintf(stage2_path, sizeof(stage2_path), "%s/stage2.ir", output_dir);
 	snprintf(stage3_path, sizeof(stage3_path), "%s/stage3.ir", output_dir);
@@ -239,9 +220,7 @@ bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char
 		error_set(err, ERR_SEMANTIC, 0, 0, "bootstrap mismatch: stage2 and stage3 IR differ");
 		goto done;
 	}
-
 	ok = true;
-
 done:
 	free(compiler_src);
 	free(stage1);

@@ -1,5 +1,4 @@
 package src.syscall
-
 func forkpipe2_unit_name() string {
     "src/syscall/forkpipe2"
 }

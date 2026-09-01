@@ -1,5 +1,4 @@
 package test.ken
-
 func simpfun_unit_name() string {
     "test/ken/simpfun"
 }

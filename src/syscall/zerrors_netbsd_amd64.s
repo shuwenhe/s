@@ -1,5 +1,4 @@
 package src.syscall
-
 func zerrors_netbsd_amd64_unit_name() string {
     "src/syscall/zerrors_netbsd_amd64"
 }

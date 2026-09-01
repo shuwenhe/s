@@ -1,5 +1,4 @@
 package compile.internal.types2
-
 func api_test_case_name() string {
     "types2/api_test.s"
 }

@@ -1,5 +1,4 @@
 package src.net
-
 struct TCPListener {
     int fd
     TCPAddr laddr

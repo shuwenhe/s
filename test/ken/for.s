@@ -1,5 +1,4 @@
 package test.ken
-
 func for_unit_name() string {
     "test/ken/for"
 }

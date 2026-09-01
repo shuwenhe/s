@@ -1,5 +1,4 @@
 package src.internal.gate
-
 func gate_unit_name() string {
     "src/internal/gate/gate"
 }

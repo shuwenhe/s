@@ -1,5 +1,4 @@
 package main
-
 func choose(int value) int {
     result := 40
     if value > 10 {

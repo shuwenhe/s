@@ -4,7 +4,6 @@ use compile.internal.build.main as build_main
 use internal.buildcfg.check as buildcfg_check
 use internal.buildcfg.goarch as buildcfg_goarch
 use std.slices
-
 func main(string[] args) int {
     buildcfg_err := buildcfg_check()
     if buildcfg_err != "" {

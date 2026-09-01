@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 struct sparse_pos_entry {
     int pos
     int value

@@ -1,5 +1,4 @@
 package src.context
-
 func context_unit_name() string {
     "src/context/context"
 }

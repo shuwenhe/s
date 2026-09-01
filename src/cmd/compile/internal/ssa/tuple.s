@@ -1,6 +1,5 @@
 package compile.internal.ssa
 use std.slices
-
 struct int_tuple {
     int[] items
 }

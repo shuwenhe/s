@@ -1,5 +1,4 @@
 package compile.internal.reflectdata
-
 func reflect_unit_name() string {
     "reflectdata/reflect.s"
 }

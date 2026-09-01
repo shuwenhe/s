@@ -1,5 +1,4 @@
 package src.internal.byteorder
-
 func byteorder_unit_name() string {
     "src/internal/byteorder/byteorder"
 }

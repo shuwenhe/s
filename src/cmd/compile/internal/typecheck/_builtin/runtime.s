@@ -1,5 +1,4 @@
 package compile.internal.typecheck._builtin
-
 func runtime_module_name() string {
     "typecheck/_builtin/runtime.s"
 }

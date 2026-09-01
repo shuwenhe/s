@@ -1,5 +1,4 @@
 package src.unicode
-
 func casetables_unit_name() string {
     "src/unicode/casetables"
 }

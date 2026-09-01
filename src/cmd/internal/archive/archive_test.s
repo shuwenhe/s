@@ -1,5 +1,4 @@
 package src.cmd.internal.archive
-
 func archive_test_unit_name() string {
     "src/cmd/internal/archive/archive_test"
 }

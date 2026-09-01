@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func location_module_name() string {
     "ssa/location.s"
 }

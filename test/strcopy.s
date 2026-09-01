@@ -1,5 +1,4 @@
 package test
-
 func strcopy_unit_name() string {
     "test/strcopy"
 }

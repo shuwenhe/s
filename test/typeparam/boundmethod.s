@@ -1,5 +1,4 @@
 package test.typeparam
-
 func boundmethod_unit_name() string {
     "test/typeparam/boundmethod"
 }

@@ -1,5 +1,4 @@
 package src.encoding.json.internal.jsonwire
-
 func encode_unit_name() string {
     "src/encoding/json/internal/jsonwire/encode"
 }

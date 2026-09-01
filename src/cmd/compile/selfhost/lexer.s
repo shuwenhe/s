@@ -5,7 +5,6 @@ extern "intrinsic" func __host_write_text_file(string path, string contents) int
 extern "intrinsic" func __host_char_at(string text, int index) string;
 extern "intrinsic" func __host_byte_at(string text, int index) int;
 extern "intrinsic" func __host_slice(string text, int start, int end) string;
-
 func is_digit(string ch) bool {
     return ch >= "0" && ch <= "9"
 }

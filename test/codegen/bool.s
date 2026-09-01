@@ -1,5 +1,4 @@
 package test.codegen
-
 func bool_unit_name() string {
     "test/codegen/bool"
 }

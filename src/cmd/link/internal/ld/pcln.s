@@ -1,5 +1,4 @@
 package src.cmd.link.internal.ld
-
 func pcln_unit_name() string {
     "src/cmd/link/internal/ld/pcln"
 }

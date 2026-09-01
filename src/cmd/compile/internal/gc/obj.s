@@ -1,5 +1,4 @@
 package compile.internal.gc
-
 func mode_compiler_obj() int {
     1
 }

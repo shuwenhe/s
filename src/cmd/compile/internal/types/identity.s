@@ -1,5 +1,4 @@
 package compile.internal.types
-
 func identity_module_name() string {
     "types/identity.s"
 }

@@ -1,5 +1,4 @@
 package src.go.types
-
 func exprstring_test_unit_name() string {
     "src/go/types/exprstring_test"
 }

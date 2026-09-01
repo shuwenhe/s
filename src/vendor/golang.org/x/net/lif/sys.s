@@ -1,5 +1,4 @@
 package src.vendor.golang.org.x.net.lif
-
 func sys_unit_name() string {
     "src/vendor/golang.org/x/net/lif/sys"
 }

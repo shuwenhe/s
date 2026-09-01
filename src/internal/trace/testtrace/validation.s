@@ -1,5 +1,4 @@
 package src.internal.trace.testtrace
-
 func validation_unit_name() string {
     "src/internal/trace/testtrace/validation"
 }

@@ -1,5 +1,4 @@
 package src.testing.cryptotest
-
 func rand_unit_name() string {
     "src/testing/cryptotest/rand"
 }

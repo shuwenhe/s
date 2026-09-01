@@ -1,5 +1,4 @@
 package src.internal.trace
-
 func resources_unit_name() string {
     "src/internal/trace/resources"
 }

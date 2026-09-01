@@ -3,7 +3,6 @@ use compile.internal.mir.mir_graph
 use compile.internal.mir.mir_statement
 use std.prelude.len
 use std.prelude.slice
-
 func estimate_inline_sites(string mir_text) int {
     calls := count_token(mir_text, " call=")
     if calls <= 0 {

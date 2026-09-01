@@ -1,5 +1,4 @@
 package src.sync.atomic
-
 func doc_unit_name() string {
     "src/sync/atomic/doc"
 }

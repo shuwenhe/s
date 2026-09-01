@@ -1,5 +1,4 @@
 package src.internal.race
-
 func norace_unit_name() string {
     "src/internal/race/norace"
 }

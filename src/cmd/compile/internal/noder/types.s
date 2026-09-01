@@ -3,7 +3,6 @@ use s.source_file
 use std.option.option
 use std.result.result
 use std.slices
-
 struct noder_error {
     string code
     string message

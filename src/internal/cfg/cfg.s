@@ -1,5 +1,4 @@
 package src.internal.cfg
-
 func cfg_unit_name() string {
     "src/internal/cfg/cfg"
 }

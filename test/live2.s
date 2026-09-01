@@ -1,5 +1,4 @@
 package test
-
 func live2_unit_name() string {
     "test/live2"
 }

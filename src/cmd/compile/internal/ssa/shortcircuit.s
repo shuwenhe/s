@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func shortcircuit_module_name() string {
     "ssa/shortcircuit.s"
 }

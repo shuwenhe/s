@@ -1,5 +1,4 @@
 package test.typeparam
-
 func recoverimp_unit_name() string {
     "test/typeparam/recoverimp"
 }

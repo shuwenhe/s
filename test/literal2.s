@@ -1,5 +1,4 @@
 package test
-
 func literal2_unit_name() string {
     "test/literal2"
 }

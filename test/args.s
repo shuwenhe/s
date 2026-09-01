@@ -1,5 +1,4 @@
 package test
-
 func args_unit_name() string {
     "test/args"
 }

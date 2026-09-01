@@ -1,5 +1,4 @@
 package src.log.slog
-
 func attr_unit_name() string {
     "src/log/slog/attr"
 }

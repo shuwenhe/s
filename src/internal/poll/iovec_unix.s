@@ -1,5 +1,4 @@
 package src.internal.poll
-
 func iovec_unix_unit_name() string {
     "src/internal/poll/iovec_unix"
 }

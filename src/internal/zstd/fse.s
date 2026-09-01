@@ -1,5 +1,4 @@
 package src.internal.zstd
-
 func fse_unit_name() string {
     "src/internal/zstd/fse"
 }

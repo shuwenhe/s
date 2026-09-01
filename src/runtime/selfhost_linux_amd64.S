@@ -1,9 +1,3 @@
- 
-
-
-
-
-
 .section .bss
 .align 8
 .global s_host_argc
@@ -21,7 +15,6 @@ s_byte_values_ready:
     .quad 0
 s_byte_values:
     .skip 6144
-
 .section .text.startup
 .global _start
 .type _start, @function
@@ -42,10 +35,7 @@ _start:
     syscall
     ud2
 .size _start, .-_start
-
 .section .text
-
- 
 .global s_syscall6
 .type s_syscall6, @function
 s_syscall6:
@@ -59,7 +49,6 @@ s_syscall6:
     syscall
     ret
 .size s_syscall6, .-s_syscall6
-
 .global s_exit
 .type s_exit, @function
 s_exit:
@@ -67,8 +56,6 @@ s_exit:
     syscall
     ud2
 .size s_exit, .-s_exit
-
- 
 .global s_read
 .type s_read, @function
 s_read:
@@ -76,8 +63,6 @@ s_read:
     syscall
     ret
 .size s_read, .-s_read
-
- 
 .global s_write
 .type s_write, @function
 s_write:
@@ -85,8 +70,6 @@ s_write:
     syscall
     ret
 .size s_write, .-s_write
-
- 
 .global s_openat
 .type s_openat, @function
 s_openat:
@@ -95,7 +78,6 @@ s_openat:
     syscall
     ret
 .size s_openat, .-s_openat
-
 .global s_close
 .type s_close, @function
 s_close:
@@ -103,8 +85,6 @@ s_close:
     syscall
     ret
 .size s_close, .-s_close
-
- 
 .global s_mmap
 .type s_mmap, @function
 s_mmap:
@@ -113,7 +93,6 @@ s_mmap:
     syscall
     ret
 .size s_mmap, .-s_mmap
-
 .global s_munmap
 .type s_munmap, @function
 s_munmap:
@@ -121,8 +100,6 @@ s_munmap:
     syscall
     ret
 .size s_munmap, .-s_munmap
-
- 
 .global s_alloc
 .type s_alloc, @function
 s_alloc:
@@ -130,11 +107,9 @@ s_alloc:
     and $-16, %rdi
     test %rdi, %rdi
     jz .Lalloc_zero
-
     mov s_heap_current(%rip), %rax
     test %rax, %rax
     jnz .Lalloc_have_heap
-
     push %rdi
     xor %rdi, %rdi
     mov $12, %rax
@@ -144,7 +119,6 @@ s_alloc:
     js .Lalloc_fail
     mov %rax, s_heap_current(%rip)
     mov %rax, s_heap_limit(%rip)
-
 .Lalloc_have_heap:
     mov s_heap_current(%rip), %rax
     mov %rax, %rdx
@@ -152,7 +126,6 @@ s_alloc:
     jc .Lalloc_fail
     cmp s_heap_limit(%rip), %rdx
     jbe .Lalloc_commit
-
     push %rax
     push %rdx
     mov %rdx, %rdi
@@ -166,11 +139,9 @@ s_alloc:
     cmp %rdx, %rcx
     jb .Lalloc_fail
     mov %rcx, s_heap_limit(%rip)
-
 .Lalloc_commit:
     mov %rdx, s_heap_current(%rip)
     ret
-
 .Lalloc_zero:
     mov s_heap_current(%rip), %rax
     ret
@@ -178,7 +149,6 @@ s_alloc:
     xor %rax, %rax
     ret
 .size s_alloc, .-s_alloc
-
 .global s_memcpy
 .type s_memcpy, @function
 s_memcpy:
@@ -187,7 +157,6 @@ s_memcpy:
     rep movsb
     ret
 .size s_memcpy, .-s_memcpy
-
 .global s_memset
 .type s_memset, @function
 s_memset:
@@ -198,7 +167,6 @@ s_memset:
     mov %r8, %rax
     ret
 .size s_memset, .-s_memset
-
 .global s_strlen
 .type s_strlen, @function
 s_strlen:
@@ -211,7 +179,6 @@ s_strlen:
 .Lstrlen_done:
     ret
 .size s_strlen, .-s_strlen
-
 # Return the untagged byte at an untagged string index. Rope nodes have tag 6
 # and store their left/right children at offsets 16 and 24.
 .type s_string_byte_raw, @function
@@ -233,7 +200,6 @@ s_string_byte_raw:
     movzbl 16(%rdi,%rsi), %eax
     ret
 .size s_string_byte_raw, .-s_string_byte_raw
-
 # Return an interned one-byte string for an untagged byte value.
 .type s_byte_value_raw, @function
 s_byte_value_raw:
@@ -262,14 +228,6 @@ s_byte_value_raw:
     pop %rbx
     ret
 .size s_byte_value_raw, .-s_byte_value_raw
-
- 
-
-
-
-
-
-
 .global s_value_len
 .type s_value_len, @function
 s_value_len:
@@ -284,7 +242,6 @@ s_value_len:
     mov $1, %rax
     ret
 .size s_value_len, .-s_value_len
-
 .global s_value_add
 .type s_value_add, @function
 s_value_add:
@@ -316,8 +273,6 @@ s_value_add:
     pop %rbx
     ret
 .size s_value_add, .-s_value_add
-
- 
 .global s_value_cmp
 .type s_value_cmp, @function
 s_value_cmp:
@@ -381,7 +336,6 @@ s_value_cmp:
     pop %rbx
     ret
 .size s_value_cmp, .-s_value_cmp
-
 .global s_string_char_at
 .type s_string_char_at, @function
 s_string_char_at:
@@ -397,7 +351,6 @@ s_string_char_at:
     xor %eax, %eax
     ret
 .size s_string_char_at, .-s_string_char_at
-
 .global s_string_byte_at
 .type s_string_byte_at, @function
 s_string_byte_at:
@@ -413,14 +366,12 @@ s_string_byte_at:
     mov $1, %rax
     ret
 .size s_string_byte_at, .-s_string_byte_at
-
 .global s_byte_string_value
 .type s_byte_string_value, @function
 s_byte_string_value:
     sar $1, %rdi
     jmp s_byte_value_raw
 .size s_byte_string_value, .-s_byte_string_value
-
 .global s_string_slice
 .type s_string_slice, @function
 s_string_slice:
@@ -472,7 +423,6 @@ s_string_slice:
     xor %eax, %eax
     ret
 .size s_string_slice, .-s_string_slice
-
 .global s_index_get
 .type s_index_get, @function
 s_index_get:
@@ -489,7 +439,6 @@ s_index_get:
     mov $1, %rax
     ret
 .size s_index_get, .-s_index_get
-
 .global s_index_set
 .type s_index_set, @function
 s_index_set:
@@ -507,8 +456,6 @@ s_index_set:
     mov $1, %rax
     ret
 .size s_index_set, .-s_index_set
-
- 
 .type s_from_c_string, @function
 s_from_c_string:
     push %rbx
@@ -534,7 +481,6 @@ s_from_c_string:
     pop %rbx
     ret
 .size s_from_c_string, .-s_from_c_string
-
 .global s_host_args_value
 .type s_host_args_value, @function
 s_host_args_value:
@@ -569,7 +515,6 @@ s_host_args_value:
     pop %rbx
     ret
 .size s_host_args_value, .-s_host_args_value
-
 .type s_write_string_fd, @function
 s_write_string_fd:
     push %rbx
@@ -592,7 +537,6 @@ s_write_string_fd:
     pop %rbx
     ret
 .size s_write_string_fd, .-s_write_string_fd
-
 .global s_eprintln_value
 .type s_eprintln_value, @function
 s_eprintln_value:
@@ -609,7 +553,6 @@ s_eprintln_value:
     pop %rbx
     ret
 .size s_eprintln_value, .-s_eprintln_value
-
 .global s_int_text
 .type s_int_text, @function
 s_int_text:
@@ -670,7 +613,6 @@ s_int_text:
     pop %rbx
     ret
 .size s_int_text, .-s_int_text
-
 .global s_read_file_value
 .type s_read_file_value, @function
 s_read_file_value:
@@ -735,7 +677,6 @@ s_read_file_value:
     pop %rbx
     ret
 .size s_read_file_value, .-s_read_file_value
-
 .global s_write_file_value
 .type s_write_file_value, @function
 s_write_file_value:
@@ -782,7 +723,6 @@ s_write_file_value:
     pop %rbx
     ret
 .size s_write_file_value, .-s_write_file_value
-
 .global s_make_executable_value
 .type s_make_executable_value, @function
 s_make_executable_value:
@@ -798,9 +738,7 @@ s_make_executable_value:
     mov $3, %rax
     ret
 .size s_make_executable_value, .-s_make_executable_value
-
 .section .rodata
 .Lnewline:
     .byte 10
-
 .section .note.GNU-stack,"",@progbits

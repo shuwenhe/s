@@ -1,5 +1,4 @@
 package src.internal.bytealg
-
 func index_amd64_unit_name() string {
     "src/internal/bytealg/index_amd64"
 }

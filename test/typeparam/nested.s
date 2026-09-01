@@ -1,5 +1,4 @@
 package test.typeparam
-
 func nested_unit_name() string {
     "test/typeparam/nested"
 }

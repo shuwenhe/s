@@ -1,7 +1,6 @@
 package compile.internal.base
 use std.slices
 enable_trace := false
-
 struct at_exit_entry {
     string name
 }

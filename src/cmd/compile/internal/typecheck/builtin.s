@@ -1,5 +1,4 @@
 package compile.internal.typecheck
-
 func builtin_module_name() string {
     "typecheck/builtin.s"
 }

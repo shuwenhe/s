@@ -1,5 +1,4 @@
 package test.ken
-
 func cplx4_unit_name() string {
     "test/ken/cplx4"
 }

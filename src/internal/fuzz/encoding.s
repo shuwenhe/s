@@ -1,5 +1,4 @@
 package src.internal.fuzz
-
 func encoding_unit_name() string {
     "src/internal/fuzz/encoding"
 }

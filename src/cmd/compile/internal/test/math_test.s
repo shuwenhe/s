@@ -1,5 +1,4 @@
 package compile.internal.test
-
 func math_test_case_name() string {
     "test/math_test.s"
 }

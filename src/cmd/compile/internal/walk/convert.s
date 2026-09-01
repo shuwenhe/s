@@ -1,5 +1,4 @@
 package compile.internal.walk
-
 func convert_module_name() string {
     "walk/convert.s"
 }

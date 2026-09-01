@@ -1,5 +1,4 @@
 package test
-
 func indirect_unit_name() string {
     "test/indirect"
 }

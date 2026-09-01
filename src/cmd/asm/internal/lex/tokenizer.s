@@ -1,5 +1,4 @@
 package src.cmd.asm.internal.lex
-
 func tokenizer_unit_name() string {
     "src/cmd/asm/internal/lex/tokenizer"
 }

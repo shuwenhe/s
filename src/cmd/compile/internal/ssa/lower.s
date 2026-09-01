@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func lower_module_name() string {
     "ssa/lower.s"
 }

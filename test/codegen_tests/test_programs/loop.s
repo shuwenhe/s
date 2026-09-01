@@ -1,5 +1,4 @@
 package main
-
 func loop_sum(int n) int {
     int sum = 0
     int i = 0

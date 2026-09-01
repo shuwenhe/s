@@ -1,5 +1,4 @@
 package src.net
-
 func dnsconfig_unix_unit_name() string {
     "src/net/dnsconfig_unix"
 }

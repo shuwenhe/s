@@ -1,5 +1,4 @@
 package src.arena
-
 func arena_unit_name() string {
     "src/arena/arena"
 }

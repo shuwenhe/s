@@ -1,5 +1,4 @@
 package src.encoding.gob
-
 func example_interface_test_unit_name() string {
     "src/encoding/gob/example_interface_test"
 }
