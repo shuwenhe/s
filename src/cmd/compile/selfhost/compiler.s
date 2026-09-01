@@ -377,6 +377,7 @@ func function_parameter_at(string source, string name, int wanted) string {
     int cursor = skip_space(source, open + 1)
     int ordinal = 0
     for cursor < close {
+        int previous_cursor = cursor
         int type_end = skip_identifier(source, cursor)
         if type_end == cursor { return "" }
         int parameter_at = skip_space(source, type_end)
@@ -386,6 +387,7 @@ func function_parameter_at(string source, string name, int wanted) string {
         cursor = skip_space(source, parameter_end)
         if cursor >= close || __host_char_at(source, cursor) != "," { return "" }
         cursor = skip_space(source, cursor + 1)
+        if cursor <= previous_cursor { return "" }
         ordinal = ordinal + 1
     }
     return ""
@@ -407,6 +409,7 @@ func function_parameter_index(string source, string name, string wanted) int {
     int cursor = skip_space(source, open + 1)
     int ordinal = 0
     for cursor < close {
+        int previous_cursor = cursor
         int type_end = skip_identifier(source, cursor)
         if type_end == cursor { return -1 }
         int parameter_at = skip_space(source, type_end)
@@ -416,6 +419,7 @@ func function_parameter_index(string source, string name, string wanted) int {
         cursor = skip_space(source, parameter_end)
         if cursor >= close || __host_char_at(source, cursor) != "," { return -1 }
         cursor = skip_space(source, cursor + 1)
+        if cursor <= previous_cursor { return -1 }
         ordinal = ordinal + 1
     }
     return -1
@@ -433,6 +437,7 @@ func function_parameter_type_kind_at(string source, string name, int wanted) int
     int cursor = skip_space(source, open + 1)
     int ordinal = 0
     for cursor < close {
+        int previous_cursor = cursor
         int type_end = skip_identifier(source, cursor)
         if type_end == cursor { return -1 }
         int kind = parse_type_kind(__host_slice(source, cursor, type_end))
@@ -443,6 +448,7 @@ func function_parameter_type_kind_at(string source, string name, int wanted) int
         cursor = skip_space(source, parameter_end)
         if cursor >= close || __host_char_at(source, cursor) != "," { return -1 }
         cursor = skip_space(source, cursor + 1)
+        if cursor <= previous_cursor { return -1 }
         ordinal = ordinal + 1
     }
     return -1
@@ -3466,7 +3472,7 @@ func main() {
         eprintln("compile: invalid extern intrinsic declaration")
         return 1
     }
-    if !native_assembly && !validate_function_symbols(source) {
+    if !native_assembly && !debug_find && !validate_function_symbols(source) {
         eprintln("compile: invalid function symbol table")
         return 1
     }
