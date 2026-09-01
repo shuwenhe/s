@@ -35,6 +35,8 @@ typedef enum token_type {
 	TOKEN_EQ,
 	TOKEN_NE,
 	TOKEN_AMP,
+	TOKEN_SHL,
+	TOKEN_SHR,
 	TOKEN_AND_AND,
 	TOKEN_OR_OR,
 	TOKEN_LT,

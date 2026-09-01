@@ -76,6 +76,7 @@ struct ast_node {
 
 		struct {
 			ast_node *value;
+			ast_vec values;
 		} return_stmt;
 
 		struct {

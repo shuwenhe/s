@@ -110,7 +110,7 @@ static int parse_int_field(const char *s, int *out) {
 		*out = -1;
 		return 1;
 	}
-	v = strtol(s, &end, 10);
+	v = strtol(s, &end, 0);
 	if (*s == '\0' || *end != '\0') {
 		return 0;
 	}
@@ -1036,6 +1036,9 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				case TOKEN_STAR:
 				case TOKEN_SLASH:
 				case TOKEN_PERCENT:
+				case TOKEN_AMP:
+				case TOKEN_SHL:
+				case TOKEN_SHR:
 					if (!is_numeric_type(lhs_type) || !is_numeric_type(rhs_type)) {
 						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 							"arithmetic operator expects numeric operands, got '%s' and '%s'", lhs_type, rhs_type);

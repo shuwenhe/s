@@ -3467,15 +3467,18 @@ func main() {
         eprintln("compile: cannot read input or input is empty")
         return 1
     }
-    if parse_package_name(source) == "" {
+    if !native_assembly && parse_package_name(source) == "" {
         eprintln("compile: invalid or missing package declaration")
         return 1
     }
-    if intrinsic_declaration_count(source) < 0 {
+    if !native_assembly && intrinsic_declaration_count(source) < 0 {
         eprintln("compile: invalid extern intrinsic declaration")
         return 1
     }
-    if !validate_function_symbols(source) {
+    // Native assembly emission already walks every function declaration while
+    // lowering it. Avoid the bootstrap-only validator here: its string scan
+    // is not yet part of the direct-native backend closure.
+    if !native_assembly && !validate_function_symbols(source) {
         eprintln("compile: invalid function symbol table")
         return 1
     }

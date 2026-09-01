@@ -33,7 +33,7 @@ func register_allocator_create() register_allocator {
     allocator
 }
 
-func (ra: &mut register_allocator) allocate(var_name: string) (string, int) {
+func (ra* register_allocator) allocate(var_name: string) (string, int) {
     for i < ra.var_to_reg.len() {
         if ra.var_to_reg[i].0 == var_name {
             return ra.registers[ra.var_to_reg[i].1].name, ra.var_to_reg[i].1
@@ -53,7 +53,7 @@ func (ra: &mut register_allocator) allocate(var_name: string) (string, int) {
     return "", ra.spill_offset
 }
 
-func (ra: &mut register_allocator) free(var_name: string) {
+func (ra* register_allocator) free(var_name: string) {
     for i < ra.var_to_reg.len() {
         if ra.var_to_reg[i].0 == var_name {
             reg_id := ra.var_to_reg[i].1
@@ -65,7 +65,7 @@ func (ra: &mut register_allocator) free(var_name: string) {
     }
 }
 
-func (ra: &register_allocator) get_register(var_name: string) string {
+func (ra* register_allocator) get_register(var_name: string) string {
     for i < ra.var_to_reg.len() {
         if ra.var_to_reg[i].0 == var_name {
             reg_id := ra.var_to_reg[i].1
@@ -78,7 +78,7 @@ func (ra: &register_allocator) get_register(var_name: string) string {
     ""
 }
 
-func (ra: &register_allocator) get_spill_offset(var_name: string) int {
+func (ra* register_allocator) get_spill_offset(var_name: string) int {
     for i < ra.var_to_reg.len() {
         if ra.var_to_reg[i].0 == var_name {
             if ra.var_to_reg[i].1 < 0 {
@@ -90,7 +90,7 @@ func (ra: &register_allocator) get_spill_offset(var_name: string) int {
     0
 }
 
-func (ra: &register_allocator) compute_stack_size() int {
+func (ra* register_allocator) compute_stack_size() int {
     min_offset := 0
     for i < ra.var_to_reg.len() {
         if ra.var_to_reg[i].1 < 0 {

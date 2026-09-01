@@ -50,25 +50,25 @@ func codegen_context_create(prog_name: string) codegen_context {
     ctx
 }
 
-func (ctx: &mut codegen_context) gen_label() string {
+func (ctx* codegen_context) gen_label() string {
     label_id := ctx.next_label_id
     ctx.next_label_id = ctx.next_label_id + 1
     ".L" + label_id as string
 }
 
-func (ctx: &mut codegen_context) emit_line(line: string) {
+func (ctx* codegen_context) emit_line(line: string) {
     ctx.assembly_lines.push(line)
 }
 
-func (ctx: &mut codegen_context) emit_comment(text: string) {
+func (ctx* codegen_context) emit_comment(text: string) {
     ctx.emit_line("# " + text)
 }
 
-func (ctx: &mut codegen_context) emit_label(label: string) {
+func (ctx* codegen_context) emit_label(label: string) {
     ctx.emit_line(label + ":")
 }
 
-func (ctx: &mut codegen_context) emit_directive(directive: string) {
+func (ctx* codegen_context) emit_directive(directive: string) {
     ctx.emit_line("." + directive)
 }
 
