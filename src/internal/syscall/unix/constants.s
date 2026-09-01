@@ -1,5 +1,4 @@
 package src.internal.syscall.unix
-
 func constants_unit_name() string {
     "src/internal/syscall/unix/constants"
 }

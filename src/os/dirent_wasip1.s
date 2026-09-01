@@ -1,5 +1,4 @@
 package src.os
-
 func dirent_wasip1_unit_name() string {
     "src/os/dirent_wasip1"
 }

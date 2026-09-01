@@ -1,5 +1,4 @@
 package src.image.internal.imageutil
-
 func impl_unit_name() string {
     "src/image/internal/imageutil/impl"
 }

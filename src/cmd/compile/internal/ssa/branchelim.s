@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func branchelim_module_name() string {
     "ssa/branchelim.s"
 }

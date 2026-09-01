@@ -10,7 +10,6 @@ const SYS_BRK = 12
 const STDIN_FD = 0
 const STDOUT_FD = 1
 const STDERR_FD = 2
-
 func exit(int code) {
     _ := syscall_1(SYS_EXIT, code)
 }
@@ -40,7 +39,7 @@ func eprintln(string text) {
     _ := stderr_write(text)
     _ := stderr_write("\n")
 }
-var heap_top = 0x10000000  
+var heap_top = 0x10000000
 
 func malloc(int size) int {
     if size <= 0 {

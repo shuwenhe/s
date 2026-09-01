@@ -1,7 +1,6 @@
 package std.autograd
 use std.tensor_core as T
 use std.math_dl as M
-
 struct graph_node {
     int id
     string op_name
@@ -135,14 +134,14 @@ func item(ag_tensor t) float { T.item(t.data) }
 func num_params(ag_tensor t) int { T.numel(t.data) }
 
 func ag_info(ag_tensor t) void {
-    println("ag_tensor(name=" + t.name + ", shape=" + T.shape_str(t.shape) + 
+    println("ag_tensor(name=" + t.name + ", shape=" + T.shape_str(t.shape) +
             ", req_grad=" + string(t.requires_grad) + ", leaf=" + string(t.is_leaf) + ")")
 }
 
 func ag_add(ag_tensor a, ag_tensor b) ag_tensor {
     T.tensor out_data = T.add(a.data, b.data)
     bool req_grad = a.requires_grad || b.requires_grad
-    int nid = register_op("add", [a.graph_node_id, b.graph_node_id], out_data, 
+    int nid = register_op("add", [a.graph_node_id, b.graph_node_id], out_data,
                            req_grad, new float[0], new int[0])
     ag_tensor {
         data: out_data,
@@ -156,7 +155,7 @@ func ag_add(ag_tensor a, ag_tensor b) ag_tensor {
 
 func ag_add_scalar(ag_tensor a, float s) ag_tensor {
     T.tensor out_data = T.add_scalar(a.data, s)
-    int nid = register_op("add_scalar", [a.graph_node_id], out_data, 
+    int nid = register_op("add_scalar", [a.graph_node_id], out_data,
                            a.requires_grad, [s], new int[0])
     ag_tensor {
         data: out_data, grad: T.zeros_like(out_data),
@@ -285,7 +284,7 @@ func ag_neg(ag_tensor x) ag_tensor {
 
 func ag_mse_loss(ag_tensor pred, ag_tensor target) ag_tensor {
     T.tensor loss_data = T.mse_loss(pred.data, target.data)
-    int nid = register_op("mse_loss", [pred.graph_node_id, target.graph_node_id], loss_data, 
+    int nid = register_op("mse_loss", [pred.graph_node_id, target.graph_node_id], loss_data,
                            pred.requires_grad || target.requires_grad, new float[0], new int[0])
     ag_tensor { data: loss_data, grad: T.zeros_like(loss_data), graph_node_id: nid, requires_grad: true, is_leaf: false, name: "mse_loss" }
 }
@@ -320,14 +319,14 @@ func ag_cross_entropy(ag_tensor logits, int[] target_classes) ag_tensor {
 
 func ag_l1_loss(ag_tensor pred, ag_tensor target) ag_tensor {
     T.tensor loss_data = T.l1_loss(pred.data, target.data)
-    int nid = register_op("l1_loss", [pred.graph_node_id, target.graph_node_id], loss_data, 
+    int nid = register_op("l1_loss", [pred.graph_node_id, target.graph_node_id], loss_data,
                            pred.requires_grad || target.requires_grad, new float[0], new int[0])
     ag_tensor { data: loss_data, grad: T.zeros_like(loss_data), graph_node_id: nid, requires_grad: true, is_leaf: false, name: "l1_loss" }
 }
 
 func ag_bce_logits(ag_tensor logits, ag_tensor targets) ag_tensor {
     T.tensor loss_data = T.bce_logits_loss(logits.data, targets.data)
-    int nid = register_op("bce_logits", [logits.graph_node_id, targets.graph_node_id], loss_data, 
+    int nid = register_op("bce_logits", [logits.graph_node_id, targets.graph_node_id], loss_data,
                            logits.requires_grad || targets.requires_grad, new float[0], new int[0])
     ag_tensor { data: loss_data, grad: T.zeros_like(loss_data), graph_node_id: nid, requires_grad: true, is_leaf: false, name: "bce_logits" }
 }
@@ -577,7 +576,7 @@ func elemwise_sign(T.tensor t) T.tensor {
     T.tensor { shape: t.shape, data: v, device: "cpu", requires_grad: false }
 }
 
-func register_op(string op_name, int[] input_ids, T.tensor output, bool req_grad, 
+func register_op(string op_name, int[] input_ids, T.tensor output, bool req_grad,
                   float[] cache_f, int[] cache_i) int {
     graph_node n
     n.op_name = op_name

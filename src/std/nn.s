@@ -14,7 +14,6 @@ type GELU_Mod = AI.GELU
 type Sigmoid_Mod = AI.Sigmoid
 type Softmax_Mod = AI.Softmax
 type Sequential = AI.Sequential
-
 struct GPTConfig {
     int vocab_size
     int embed_dim

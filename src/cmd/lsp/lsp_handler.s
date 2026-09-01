@@ -1,7 +1,5 @@
 package lsp
-
 use "std"
-
 struct lsp_handler {
     doc_manager: document_manager
 }
@@ -19,7 +17,6 @@ func (h lsp_handler) on_did_open(params did_open_text_document_params) {
 func (h lsp_handler) on_did_change(params did_change_text_document_params) {
     uri := params.text_document.uri
     version := params.text_document.version
-
     switch h.doc_manager.get_document(uri) {
         option::some(doc) : {
             new_text := apply_content_changes(doc.text, params.content_changes)
@@ -38,7 +35,6 @@ func (h lsp_handler) on_did_close(params did_close_text_document_params) {
 
 func (h lsp_handler) publish_diagnostics(uri string) diagnostic[] {
     diags := diagnostic[]()
-
     switch h.doc_manager.get_errors(uri) {
         option::some(errors) : {
             i := 0
@@ -60,7 +56,6 @@ func (h lsp_handler) publish_diagnostics(uri string) diagnostic[] {
         },
         option::none() : {}
     }
-
     diags
 }
 
@@ -73,9 +68,7 @@ func (h lsp_handler) get_document_symbols(uri string) document_symbol[] {
 
 func (h lsp_handler) get_completions(uri string, pos position) completion_list {
     completions := completion_item[]()
-
     completions.append(get_keyword_completions())
-
     switch h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : {
             i := 0
@@ -97,7 +90,6 @@ func (h lsp_handler) get_completions(uri string, pos position) completion_list {
         },
         option::none() : {}
     }
-
     completion_list {
         is_incomplete: false,
         items: completions,
@@ -111,7 +103,6 @@ func get_keyword_completions() completion_item[] {
         "case", "default", "return", "break", "continue", "true", "false",
         "nil", "let", "var", "in", "as",
     }
-
     completions := completion_item[]()
     i := 0
     for i < len(keywords) {
@@ -180,7 +171,6 @@ func find_symbol_in_list(symbols document_symbol[], name string) option[document
 func apply_content_changes(text string, changes text_document_content_change_event[]) string {
     result := text
     i := 0
-
     for i < len(changes) {
         change := changes[i]
         switch change.range_val {
@@ -188,7 +178,6 @@ func apply_content_changes(text string, changes text_document_content_change_eve
                 lines := std::split(result, "\n")
                 start_offset := position_to_offset(lines, r.start)
                 end_offset := position_to_offset(lines, r.end)
-
                 before := result.substring(0, start_offset)
                 after := result.substring(end_offset, len(result))
                 result = before + change.text + after
@@ -199,23 +188,19 @@ func apply_content_changes(text string, changes text_document_content_change_eve
         }
         i = i + 1
     }
-
     result
 }
 
 func position_to_offset(lines string[], pos position) int {
     offset := 0
     i := 0
-
     for i < pos.line && i < len(lines) {
         offset = offset + lines[i].len() + 1
         i = i + 1
     }
-
     if pos.line < len(lines) {
         offset = offset + pos.character
     }
-
     offset
 }
 

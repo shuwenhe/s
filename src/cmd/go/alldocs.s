@@ -1,5 +1,4 @@
 package src.cmd.go
-
 func alldocs_unit_name() string {
     "src/cmd/go/alldocs"
 }

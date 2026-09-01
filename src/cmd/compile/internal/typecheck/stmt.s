@@ -1,5 +1,4 @@
 package compile.internal.typecheck
-
 func stmt_module_name() string {
     "typecheck/stmt.s"
 }

@@ -1,5 +1,4 @@
 package test.typeparam.orderedmapsimp.dir
-
 func main_unit_name() string {
     "test/typeparam/orderedmapsimp.dir/main"
 }

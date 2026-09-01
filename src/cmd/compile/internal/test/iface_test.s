@@ -1,5 +1,4 @@
 package compile.internal.test
-
 func iface_test_case_name() string {
     "test/iface_test.s"
 }

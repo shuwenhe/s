@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func rewriteWasm_rule_name() string {
     "ssa/rewriteWasm.s"
 }

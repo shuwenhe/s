@@ -1,5 +1,4 @@
 package src.cmd.compile
-
 func doc_unit_name() string {
     "src/cmd/compile/doc"
 }

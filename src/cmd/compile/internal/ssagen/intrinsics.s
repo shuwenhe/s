@@ -1,5 +1,4 @@
 package compile.internal.ssagen
-
 struct intrinsic_rule {
     string name
     string op

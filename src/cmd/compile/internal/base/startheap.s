@@ -1,5 +1,4 @@
 package compile.internal.base
-
 struct start_heap_state {
     int requested_heap_goal
     int derate_break

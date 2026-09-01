@@ -1,5 +1,4 @@
 package test
-
 func parentype_unit_name() string {
     "test/parentype"
 }

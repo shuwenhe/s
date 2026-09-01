@@ -1,5 +1,4 @@
 package test.typeparam
-
 func orderedmapsimp_unit_name() string {
     "test/typeparam/orderedmapsimp"
 }

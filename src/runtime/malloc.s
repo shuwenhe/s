@@ -1,7 +1,6 @@
 package src.runtime
 use std.slices
 use std.result.result
-
 struct ObjHeader {
     int size
     int type_id

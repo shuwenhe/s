@@ -1,5 +1,4 @@
 package compile.internal.test.testdata.mysort
-
 func mysort_case_name() string {
     "test/testdata/mysort/mysort.s"
 }

@@ -1,5 +1,4 @@
 package src.flag
-
 func flag_test_unit_name() string {
     "src/flag/flag_test"
 }

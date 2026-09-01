@@ -1,5 +1,4 @@
 package src.runtime
-
 func netpoll_unit_name() string {
     "src/runtime/netpoll"
 }

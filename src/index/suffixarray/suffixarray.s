@@ -1,5 +1,4 @@
 package src.index.suffixarray
-
 func suffixarray_unit_name() string {
     "src/index/suffixarray/suffixarray"
 }

@@ -1,5 +1,4 @@
 package test.abi
-
 func leaf2_unit_name() string {
     "test/abi/leaf2"
 }

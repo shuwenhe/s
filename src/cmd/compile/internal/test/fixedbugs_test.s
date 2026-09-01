@@ -1,5 +1,4 @@
 package compile.internal.test
-
 func fixedbugs_test_case_name() string {
     "test/fixedbugs_test.s"
 }

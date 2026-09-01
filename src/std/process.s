@@ -1,10 +1,9 @@
 package std.process
 use std.syscall
 use std.io_syscall
-
 struct Process {
     pid: int
-    status: int  
+    status: int
 }
 
 struct ProcessResult {
@@ -24,7 +23,7 @@ func run_command(string cmd_line) (int, string) {
     }
     if pid == 0 {
         _ := syscall.execve(argv[0], argv, string[]{})
-        syscall.exit(127)  
+        syscall.exit(127)
     }
     exit_code := wait_for_process(pid)
     return exit_code, ""

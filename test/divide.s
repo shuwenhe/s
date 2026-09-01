@@ -1,5 +1,4 @@
 package test
-
 func divide_unit_name() string {
     "test/divide"
 }

@@ -1,5 +1,4 @@
 package src.runtime
-
 func sigaction_unit_name() string {
     "src/runtime/sigaction"
 }

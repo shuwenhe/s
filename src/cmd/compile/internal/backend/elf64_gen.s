@@ -1,5 +1,4 @@
 package backend
-
 struct elf64_header {
     string magic
     int ei_class
@@ -59,7 +58,6 @@ func (w* elf64_writer) add_section(string name, int sh_type, int[] data) {
     section.sh_offset = w.file_offset
     section.sh_size = len(data)
     section.data = data
-    
     w.sections = &section
     w.section_count = w.section_count + 1
     w.file_offset = w.file_offset + section.sh_size
@@ -90,12 +88,10 @@ func (w* elf64_writer) write_header() string {
 
 func (w* elf64_writer) generate_elf() string {
     result := w.write_header()
-    
     i := 0
     while i < w.section_count {
         result = result + ""
         i = i + 1
     }
-    
     result
 }

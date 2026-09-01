@@ -1,5 +1,4 @@
 package src.syscall
-
 func zerrors_openbsd_386_unit_name() string {
     "src/syscall/zerrors_openbsd_386"
 }

@@ -1,5 +1,4 @@
 package src.os.user
-
 func lookup_windows_unit_name() string {
     "src/os/user/lookup_windows"
 }

@@ -1,5 +1,4 @@
 package std.prelude
-
 struct box[t] {
     t value
 }

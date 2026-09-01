@@ -1,5 +1,4 @@
 package src.internal.poll
-
 func sendfile_unit_name() string {
     "src/internal/poll/sendfile"
 }

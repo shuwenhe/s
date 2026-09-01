@@ -1,5 +1,4 @@
 package src.internal.goroot
-
 func gccgo_unit_name() string {
     "src/internal/goroot/gccgo"
 }

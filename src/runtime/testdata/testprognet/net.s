@@ -1,5 +1,4 @@
 package src.runtime.testdata.testprognet
-
 func net_unit_name() string {
     "src/runtime/testdata/testprognet/net"
 }

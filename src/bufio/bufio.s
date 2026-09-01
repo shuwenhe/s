@@ -1,5 +1,4 @@
 package src.bufio
-
 struct buffer_reader {
     string data
     int offset

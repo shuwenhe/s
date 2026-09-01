@@ -1,21 +1,15 @@
 #ifdef _WIN32
-
 #define WIN32_LEAN_AND_MEAN
 #include <string.h>
-
 #include "network_windows.h"
-
 #include <windows.h>
 #include <ws2tcpip.h>
-
 #pragma comment(lib, "Ws2_32.lib")
-
 static int native_family(int family) {
 	if (family == 2) return AF_INET;
 	if (family == 10) return AF_INET6;
 	return family;
 }
-
 static int resolve_address(const char *host, int port, int family, struct sockaddr_storage *storage, int *length) {
 	struct addrinfo hints;
 	struct addrinfo *result = NULL;
@@ -38,26 +32,21 @@ static int resolve_address(const char *host, int port, int family, struct sockad
 	freeaddrinfo(result);
 	return 1;
 }
-
 int seed_win_network_startup(void) {
 	WSADATA data;
 	return WSAStartup(MAKEWORD(2, 2), &data);
 }
-
 void seed_win_network_cleanup(void) { WSACleanup(); }
-
 SOCKET seed_win_socket(int family, int type, int protocol, int *error_code) {
 	SOCKET fd = WSASocketW(native_family(family), type, protocol, NULL, 0, WSA_FLAG_OVERLAPPED);
 	if (error_code) *error_code = fd == INVALID_SOCKET ? WSAGetLastError() : 0;
 	return fd;
 }
-
 int seed_win_close(SOCKET socket_fd, int *error_code) {
 	int rc = closesocket(socket_fd);
 	if (error_code) *error_code = rc == SOCKET_ERROR ? WSAGetLastError() : 0;
 	return rc;
 }
-
 int seed_win_bind_or_connect(SOCKET socket_fd, const char *host, int port, int family, int connect_mode, int *error_code) {
 	struct sockaddr_storage storage;
 	int length = 0;
@@ -71,7 +60,6 @@ int seed_win_bind_or_connect(SOCKET socket_fd, const char *host, int port, int f
 	if (error_code) *error_code = rc == SOCKET_ERROR ? WSAGetLastError() : 0;
 	return rc;
 }
-
 int seed_win_connect_deadline(SOCKET socket_fd, const char *host, int port, int family, int timeout_ms, int *error_code) {
 	u_long nonblocking = 1;
 	u_long blocking = 0;
@@ -105,19 +93,16 @@ int seed_win_connect_deadline(SOCKET socket_fd, const char *host, int port, int 
 	if (error_code) *error_code = rc == SOCKET_ERROR ? WSAGetLastError() : 0;
 	return rc;
 }
-
 int seed_win_listen(SOCKET socket_fd, int backlog, int *error_code) {
 	int rc = listen(socket_fd, backlog);
 	if (error_code) *error_code = rc == SOCKET_ERROR ? WSAGetLastError() : 0;
 	return rc;
 }
-
 SOCKET seed_win_accept(SOCKET socket_fd, int *error_code) {
 	SOCKET accepted = accept(socket_fd, NULL, NULL);
 	if (error_code) *error_code = accepted == INVALID_SOCKET ? WSAGetLastError() : 0;
 	return accepted;
 }
-
 int seed_win_set_deadline(SOCKET socket_fd, int read_timeout_ms, int write_timeout_ms, int *error_code) {
 	DWORD read_timeout = (DWORD)read_timeout_ms;
 	DWORD write_timeout = (DWORD)write_timeout_ms;
@@ -131,7 +116,6 @@ int seed_win_set_deadline(SOCKET socket_fd, int read_timeout_ms, int write_timeo
 	if (error_code) *error_code = rc == SOCKET_ERROR ? WSAGetLastError() : 0;
 	return rc;
 }
-
 int seed_win_poll(SOCKET socket_fd, short events, int timeout_ms, int *error_code) {
 	WSAPOLLFD poll_fd;
 	int rc;
@@ -142,19 +126,16 @@ int seed_win_poll(SOCKET socket_fd, short events, int timeout_ms, int *error_cod
 	if (error_code) *error_code = rc == SOCKET_ERROR ? WSAGetLastError() : 0;
 	return rc;
 }
-
 intptr_t seed_win_iocp_create(int *error_code) {
 	HANDLE port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 	if (error_code) *error_code = port ? 0 : (int)GetLastError();
 	return (intptr_t)port;
 }
-
 int seed_win_iocp_register(intptr_t port, SOCKET socket_fd, uintptr_t key, int *error_code) {
 	HANDLE result = CreateIoCompletionPort((HANDLE)socket_fd, (HANDLE)port, (ULONG_PTR)key, 0);
 	if (error_code) *error_code = result ? 0 : (int)GetLastError();
 	return result ? 0 : SOCKET_ERROR;
 }
-
 int seed_win_iocp_wait(intptr_t port, int timeout_ms, uintptr_t *key, unsigned long *bytes, int *error_code) {
 	OVERLAPPED *overlapped = NULL;
 	ULONG_PTR completion_key = 0;
@@ -166,9 +147,6 @@ int seed_win_iocp_wait(intptr_t port, int timeout_ms, uintptr_t *key, unsigned l
 	if (error_code) *error_code = ok ? 0 : (int)GetLastError();
 	return ok ? 1 : 0;
 }
-
 #else
-
 int seed_windows_network_backend_unavailable(void) { return 1; }
-
 #endif

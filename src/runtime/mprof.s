@@ -1,5 +1,4 @@
 package src.runtime
-
 func mprof_unit_name() string {
     "src/runtime/mprof"
 }

@@ -1,26 +1,7 @@
-// DEPRECATED: Use std.slices instead!
-// 
-// This package provides the old Vector implementation.
-// It is now DEPRECATED in favor of native Slice support (like Go).
-//
-// Migration guide:
-//   Old: use std.vec.vec
-//        v := int[]()
-//        v = append(v, 10)
-//        len := len(v)
-//   
-//   New: (no import needed)
-//        v := int[]{}
-//        v = append(v, 10)
-//        len := len(v)
-//
-// For migration help, see: std.slices or std.slices documentation
-
 package std.vec
 use std.option.option
 use std.prelude.box
 use std.prelude.box
-
 struct raw_t[] {
     box[array[t]] storage
     int capacity

@@ -1,5 +1,4 @@
 package test
-
 func char_lit1_unit_name() string {
     "test/char_lit1"
 }

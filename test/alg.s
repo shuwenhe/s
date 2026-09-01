@@ -1,5 +1,4 @@
 package test
-
 func alg_unit_name() string {
     "test/alg"
 }

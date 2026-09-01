@@ -1,5 +1,4 @@
 package test
-
 func wasmmemsize_unit_name() string {
     "test/wasmmemsize"
 }

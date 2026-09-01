@@ -1,5 +1,4 @@
 package test
-
 func typeswitch2_unit_name() string {
     "test/typeswitch2"
 }

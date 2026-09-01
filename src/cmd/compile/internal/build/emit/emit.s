@@ -5,7 +5,6 @@ use s.dump_source_file
 use s.dump_tokens
 use std.io.println
 use std.slices
-
 func check_ok(string path) () {
     println("ok: " + path)
 }

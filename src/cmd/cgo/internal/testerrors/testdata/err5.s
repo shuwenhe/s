@@ -1,5 +1,4 @@
 package src.cmd.cgo.internal.testerrors.testdata
-
 func err5_unit_name() string {
     "src/cmd/cgo/internal/testerrors/testdata/err5"
 }

@@ -1,5 +1,4 @@
 package compile.internal.types
-
 func size_module_name() string {
     "types/size.s"
 }

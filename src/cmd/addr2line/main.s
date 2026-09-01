@@ -1,5 +1,4 @@
 package src.cmd.addr2line
-
 func main_unit_name() string {
     "src/cmd/addr2line/main"
 }

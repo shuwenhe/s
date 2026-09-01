@@ -1,5 +1,4 @@
 package src.go.doc.testdata.examples
-
 func inspect_signature_unit_name() string {
     "src/go/doc/testdata/examples/inspect_signature"
 }

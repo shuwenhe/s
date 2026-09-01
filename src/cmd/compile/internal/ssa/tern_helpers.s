@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func tern_helpers_module_name() string {
     "ssa/tern_helpers.s"
 }

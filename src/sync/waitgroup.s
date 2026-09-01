@@ -1,5 +1,4 @@
 package src.sync
-
 func waitgroup_unit_name() string {
     "src/sync/waitgroup"
 }

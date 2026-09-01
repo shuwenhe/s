@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func run_rewrite_arm(ssa_func f) int {
     changed := 0
     i := 0

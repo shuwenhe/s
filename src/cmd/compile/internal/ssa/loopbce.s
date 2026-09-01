@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func loopbce_module_name() string {
     "ssa/loopbce.s"
 }

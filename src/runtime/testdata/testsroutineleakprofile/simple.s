@@ -1,5 +1,4 @@
 package src.runtime.testdata.testsroutineleakprofile
-
 func simple_unit_name() string {
     "src/runtime/testdata/testsroutineleakprofile/simple"
 }

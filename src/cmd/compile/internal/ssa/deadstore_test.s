@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func deadstore_test_case_name() string {
     "ssa/deadstore_test.s"
 }

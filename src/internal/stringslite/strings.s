@@ -1,5 +1,4 @@
 package src.internal.stringslite
-
 func strings_unit_name() string {
     "src/internal/stringslite/strings"
 }

@@ -1,5 +1,4 @@
 package src.os
-
 func sys_wasip1_unit_name() string {
     "src/os/sys_wasip1"
 }

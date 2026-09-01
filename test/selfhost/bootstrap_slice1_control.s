@@ -1,5 +1,4 @@
 package main
-
 func classify(int input) int {
     if input > 10 && input < 20 {
         if input == 11 || (1 / 0) == 0 {

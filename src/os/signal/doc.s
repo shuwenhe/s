@@ -1,5 +1,4 @@
 package src.os.signal
-
 func doc_unit_name() string {
     "src/os/signal/doc"
 }

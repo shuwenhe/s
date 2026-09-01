@@ -1,5 +1,4 @@
 package test
-
 func wasmexport2_unit_name() string {
     "test/wasmexport2"
 }

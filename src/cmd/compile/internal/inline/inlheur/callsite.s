@@ -1,5 +1,4 @@
 package compile.internal.inline.inlheur
-
 func callsite_module_name() string {
     "inline/inlheur/callsite.s"
 }

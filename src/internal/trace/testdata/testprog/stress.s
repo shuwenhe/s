@@ -1,5 +1,4 @@
 package src.internal.trace.testdata.testprog
-
 func stress_unit_name() string {
     "src/internal/trace/testdata/testprog/stress"
 }

@@ -1,6 +1,5 @@
 package compile.internal.ssa
 use std.slices
-
 struct prove_fact {
     int value_id
     bool known_zero

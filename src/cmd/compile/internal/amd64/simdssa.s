@@ -1,5 +1,4 @@
 package compile.internal.amd64
-
 func ssa_gen_simd_value(ssa_value v) bool {
     if starts_with(v.op, "simd.") {
         return true

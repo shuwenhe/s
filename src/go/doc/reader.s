@@ -1,5 +1,4 @@
 package src.go.doc
-
 func reader_unit_name() string {
     "src/go/doc/reader"
 }

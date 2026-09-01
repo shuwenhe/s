@@ -1,5 +1,4 @@
 package src.crypto.internal.boring
-
 func rsa_unit_name() string {
     "src/crypto/internal/boring/rsa"
 }

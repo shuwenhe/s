@@ -1,5 +1,4 @@
 package src.syscall
-
 func syscall_dragonfly_amd64_unit_name() string {
     "src/syscall/syscall_dragonfly_amd64"
 }

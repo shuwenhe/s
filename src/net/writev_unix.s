@@ -1,5 +1,4 @@
 package src.net
-
 func writev_unix_unit_name() string {
     "src/net/writev_unix"
 }

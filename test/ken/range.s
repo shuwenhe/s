@@ -1,5 +1,4 @@
 package test.ken
-
 func range_unit_name() string {
     "test/ken/range"
 }

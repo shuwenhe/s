@@ -1,5 +1,4 @@
 package test.ken
-
 func simpconv_unit_name() string {
     "test/ken/simpconv"
 }

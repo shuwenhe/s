@@ -1,5 +1,4 @@
 package compile.internal.walk
-
 func temp_module_name() string {
     "walk/temp.s"
 }

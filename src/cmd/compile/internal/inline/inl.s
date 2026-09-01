@@ -1,5 +1,4 @@
 package compile.internal.inline
-
 func inl_module_name() string {
     "inline/inl.s"
 }

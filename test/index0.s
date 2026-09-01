@@ -1,5 +1,4 @@
 package test
-
 func index0_unit_name() string {
     "test/index0"
 }

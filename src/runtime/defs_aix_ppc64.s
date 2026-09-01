@@ -1,5 +1,4 @@
 package src.runtime
-
 func defs_aix_ppc64_unit_name() string {
     "src/runtime/defs_aix_ppc64"
 }

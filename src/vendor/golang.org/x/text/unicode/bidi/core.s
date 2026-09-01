@@ -1,5 +1,4 @@
 package src.vendor.golang.org.x.text.unicode.bidi
-
 func core_unit_name() string {
     "src/vendor/golang.org/x/text/unicode/bidi/core"
 }

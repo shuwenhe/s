@@ -1,5 +1,4 @@
 package src.internal.sysinfo
-
 func export_test_unit_name() string {
     "src/internal/sysinfo/export_test"
 }

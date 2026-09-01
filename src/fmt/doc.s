@@ -1,5 +1,4 @@
 package src.fmt
-
 func doc_unit_name() string {
     "src/fmt/doc"
 }

@@ -1,5 +1,4 @@
 package src.internal.runtime.gc.internal.gen
-
 func gp_unit_name() string {
     "src/internal/runtime/gc/internal/gen/gp"
 }

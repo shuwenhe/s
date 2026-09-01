@@ -1,5 +1,4 @@
 package src.cmd.vet.testdata.buildtag
-
 func buildtag2_unit_name() string {
     "src/cmd/vet/testdata/buildtag/buildtag2"
 }

@@ -1,5 +1,4 @@
 package src.runtime
-
 func stubs_arm_unit_name() string {
     "src/runtime/stubs_arm"
 }

@@ -1,5 +1,4 @@
 package src.cmd.internal.obj
-
 func link_unit_name() string {
     "src/cmd/internal/obj/link"
 }

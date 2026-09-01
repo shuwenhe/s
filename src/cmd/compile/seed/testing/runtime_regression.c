@@ -6,21 +6,17 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
-
 #include "../error/error.h"
 #include "../intermediate/ir.h"
 #include "../lexical/token.h"
 #include "../runtime/memory.h"
 #include "../semantic/scope.h"
 #include "../syntax/ast.h"
-
 bool seed_compile_source_text(const char *source_text, FILE *output, compile_error *err);
-
 typedef struct loopback_client_ctx {
 	int port;
 	int result;
 } loopback_client_ctx;
-
 static void *loopback_client_main(void *opaque) {
 	loopback_client_ctx *ctx = (loopback_client_ctx *)opaque;
 	struct sockaddr_in addr;
@@ -36,24 +32,20 @@ static void *loopback_client_main(void *opaque) {
 	close(fd);
 	return NULL;
 }
-
 typedef struct close_race_ctx {
 	int fd;
 	ssize_t result;
 } close_race_ctx;
-
 static void *close_race_reader(void *opaque) {
 	close_race_ctx *ctx = (close_race_ctx *)opaque;
 	char byte;
 	ctx->result = read(ctx->fd, &byte, 1);
 	return NULL;
 }
-
 static bool execute_source_main(const char *src, long *ret, compile_error *err) {
 	FILE *tmp;
 	char buf[8192];
 	size_t n;
-
 	tmp = tmpfile();
 	if (!tmp) {
 		return false;
@@ -69,7 +61,6 @@ static bool execute_source_main(const char *src, long *ret, compile_error *err) 
 	fclose(tmp);
 	return runtime_execute_text(buf, "main", ret, err);
 }
-
 static bool execute_network_source_main(const char *name, const char *src, long *ret, compile_error *err) {
 	bool ok;
 	error_clear(err);
@@ -81,7 +72,6 @@ static bool execute_network_source_main(const char *name, const char *src, long 
 	}
 	return ok;
 }
-
 static bool test_runtime_array_len_and_index(void) {
 	const char *src =
 		"fn main() int { "
@@ -92,7 +82,6 @@ static bool test_runtime_array_len_and_index(void) {
 	long ret = 0;
 	return execute_source_main(src, &ret, &err) && ret == 10;
 }
-
 static bool test_runtime_array_index_assignment(void) {
 	const char *src =
 		"fn main() int { "
@@ -108,7 +97,6 @@ static bool test_runtime_array_index_assignment(void) {
 	long ret = 0;
 	return execute_source_main(src, &ret, &err) && ret == 6;
 }
-
 static bool test_runtime_nested_member_alias_compare(void) {
 	const char *src =
 		"fn main() int { "
@@ -121,7 +109,6 @@ static bool test_runtime_nested_member_alias_compare(void) {
 	long ret = 0;
 	return execute_source_main(src, &ret, &err) && ret == 1;
 }
-
 static bool test_runtime_nested_member_return_alias(void) {
 	const char *src =
 		"fn build_network() Network { "
@@ -135,7 +122,6 @@ static bool test_runtime_nested_member_return_alias(void) {
 	long ret = 0;
 	return execute_source_main(src, &ret, &err) && ret == 7;
 }
-
 static bool test_runtime_host_file_operations(void) {
 	const char *path = "/tmp/s_seed_runtime_file_test.txt";
 	const char *src =
@@ -150,7 +136,6 @@ static bool test_runtime_host_file_operations(void) {
 	remove(path);
 	return ok;
 }
-
 static bool test_runtime_host_socket_operations(void) {
 	const char *src =
 		"extern \"libc:socket\" func native_socket(int domain, int kind, int protocol) int; "
@@ -165,7 +150,6 @@ static bool test_runtime_host_socket_operations(void) {
 	long ret = 0;
 	return execute_source_main(src, &ret, &err) && ret == 1;
 }
-
 static bool test_runtime_tcp_loopback(void) {
 	const char *src =
 		"extern \"intrinsic\" func __sys_socket(int domain, int kind, int protocol) int; "
@@ -195,7 +179,6 @@ static bool test_runtime_tcp_loopback(void) {
 	long ret = 0;
 	return execute_network_source_main("tcp_loopback", src, &ret, &err) && ret == 1;
 }
-
 static bool test_runtime_udp_loopback(void) {
 	const char *src =
 		"extern \"intrinsic\" func __sys_socket(int domain, int kind, int protocol) int; "
@@ -223,7 +206,6 @@ static bool test_runtime_udp_loopback(void) {
 	long ret = 0;
 	return execute_network_source_main("udp_loopback", src, &ret, &err) && ret == 1;
 }
-
 static bool test_runtime_socket_timeout(void) {
 	const char *src =
 		"extern \"intrinsic\" func __sys_socket(int domain, int kind, int protocol) int; "
@@ -245,7 +227,6 @@ static bool test_runtime_socket_timeout(void) {
 	long ret = 0;
 	return execute_network_source_main("socket_timeout", src, &ret, &err) && ret == 1;
 }
-
 static bool test_runtime_network_poller(void) {
 	const char *src =
 		"extern \"intrinsic\" func __sys_socket(int domain, int kind, int protocol) int; "
@@ -276,7 +257,6 @@ static bool test_runtime_network_poller(void) {
 	long ret = 0;
 	return execute_network_source_main("network_poller", src, &ret, &err) && ret == 1;
 }
-
 static bool test_runtime_dns_and_interfaces(void) {
 	const char *src =
 		"extern \"intrinsic\" func __sys_resolve_ip(string host, int family) []string; "
@@ -289,7 +269,6 @@ static bool test_runtime_dns_and_interfaces(void) {
 	long ret = 0;
 	return execute_network_source_main("dns_and_interfaces", src, &ret, &err) && ret == 1;
 }
-
 static bool test_runtime_ipv6_loopback(void) {
 	const char *src =
 		"extern \"intrinsic\" func __sys_socket(int domain, int kind, int protocol) int; "
@@ -314,7 +293,6 @@ static bool test_runtime_ipv6_loopback(void) {
 	long ret = 0;
 	return execute_network_source_main("ipv6_loopback", src, &ret, &err) && ret == 1;
 }
-
 static bool test_runtime_sendfile(void) {
 	const char *path = "/tmp/s_seed_sendfile_test.txt";
 	const char *src =
@@ -344,7 +322,6 @@ static bool test_runtime_sendfile(void) {
 	remove(path);
 	return ok;
 }
-
 static bool test_native_concurrent_loopback(void) {
 	enum { CLIENT_COUNT = 8 };
 	int server = -1;
@@ -388,7 +365,6 @@ done:
 	close(server);
 	return ok;
 }
-
 static bool test_native_close_unblocks_read(void) {
 	int pair[2];
 	pthread_t reader;
@@ -409,7 +385,6 @@ static bool test_native_close_unblocks_read(void) {
 	close(pair[1]);
 	return ctx.result <= 0;
 }
-
 static bool test_runtime_libc_ffi(void) {
 	const char *src =
 		"extern \"libc\" func strlen(string text) int; "
@@ -418,11 +393,9 @@ static bool test_runtime_libc_ffi(void) {
 	long ret = 0;
 	return execute_source_main(src, &ret, &err) && ret == 10;
 }
-
 int main(int argc, char **argv) {
 	bool ok = true;
 	bool network_only = argc == 2 && strcmp(argv[1], "--network-only") == 0;
-
 	if (!network_only && !test_runtime_array_len_and_index()) {
 		fprintf(stderr, "FAIL: %s\n", "test_runtime_array_len_and_index");
 		ok = false;
@@ -487,12 +460,10 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "FAIL: %s\n", "test_runtime_libc_ffi");
 		ok = false;
 	}
-
 	if (!ok) {
 		fprintf(stderr, "seed runtime regression tests failed\n");
 		return 1;
 	}
-
 	printf("%s passed\n", network_only ? "seed network tests" : "seed runtime regression tests");
 	return 0;
 }

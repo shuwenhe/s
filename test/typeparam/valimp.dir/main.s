@@ -1,5 +1,4 @@
 package test.typeparam.valimp.dir
-
 func main_unit_name() string {
     "test/typeparam/valimp.dir/main"
 }

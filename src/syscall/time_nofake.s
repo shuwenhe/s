@@ -1,5 +1,4 @@
 package src.syscall
-
 func time_nofake_unit_name() string {
     "src/syscall/time_nofake"
 }

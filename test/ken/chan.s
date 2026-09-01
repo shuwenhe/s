@@ -1,5 +1,4 @@
 package test.ken
-
 func chan_unit_name() string {
     "test/ken/chan"
 }

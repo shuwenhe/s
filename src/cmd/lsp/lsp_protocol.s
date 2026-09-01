@@ -1,5 +1,4 @@
 package lsp
-
 struct position {
     int line
     int character
@@ -61,7 +60,6 @@ struct versioned_text_document_identifier {
     string uri
     int version
 }
-
 enum completion_item_kind {
     text,
     method,
@@ -111,7 +109,6 @@ struct hover {
     string contents
     option[range] r
 }
-
 enum symbol_kind {
     file_k,
     module_k,

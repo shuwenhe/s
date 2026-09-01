@@ -1,5 +1,4 @@
 package src.image
-
 func geom_test_unit_name() string {
     "src/image/geom_test"
 }

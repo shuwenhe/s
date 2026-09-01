@@ -1,5 +1,4 @@
 package src.runtime
-
 func defer_test_unit_name() string {
     "src/runtime/defer_test"
 }

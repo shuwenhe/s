@@ -1,5 +1,4 @@
 package test.fixedbugs
-
 func gcc61248_unit_name() string {
     "test/fixedbugs/gcc61248"
 }

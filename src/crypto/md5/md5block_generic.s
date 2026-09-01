@@ -1,5 +1,4 @@
 package src.crypto.md5
-
 func md5block_generic_unit_name() string {
     "src/crypto/md5/md5block_generic"
 }

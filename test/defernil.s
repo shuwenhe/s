@@ -1,5 +1,4 @@
 package test
-
 func defernil_unit_name() string {
     "test/defernil"
 }

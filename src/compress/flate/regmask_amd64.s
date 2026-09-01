@@ -1,5 +1,4 @@
 package src.compress.flate
-
 func regmask_amd64_unit_name() string {
     "src/compress/flate/regmask_amd64"
 }

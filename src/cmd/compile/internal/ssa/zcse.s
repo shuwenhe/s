@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func zcse_module_name() string {
     "ssa/zcse.s"
 }

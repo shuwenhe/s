@@ -1,5 +1,4 @@
 package test.codegen
-
 func stack_unit_name() string {
     "test/codegen/stack"
 }

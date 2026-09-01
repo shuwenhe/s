@@ -1,5 +1,4 @@
 package test
-
 func sizeof_unit_name() string {
     "test/sizeof"
 }

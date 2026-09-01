@@ -1,5 +1,4 @@
 package src.os.user
-
 func user_unit_name() string {
     "src/os/user/user"
 }

@@ -1,5 +1,4 @@
 package src.switch.big
-
 func natmul_unit_name() string {
     "src/switch/big/natmul"
 }

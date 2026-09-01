@@ -27,7 +27,6 @@ use std.io.eprintln
 use std.io.println
 use std.prelude.char_at
 use std.prelude.len
-
 func run(string[] options) int {
     if options[0] == "help" {
         return 0
@@ -187,7 +186,7 @@ func run_mod_index(string dir) int {
     cmd = append(cmd, "sh")
     cmd = append(cmd, "-c")
     script := "find " + dir + " -name '*.s' -not -path '*/.*' | while read f; do " +
-                 "pkg=$(grep -h '^package ' \"$f\" | head -n1 | sed 's/package 
+                 "pkg=$(grep -h '^package ' \"$f\" | head -n1 | sed 's/package
                  "if [ -n \"$pkg\" ]; then printf \"%s\\t%s\\n\" \"$pkg\" \"$f\"; fi; " +
                  "done"
     cmd = append(cmd, script)

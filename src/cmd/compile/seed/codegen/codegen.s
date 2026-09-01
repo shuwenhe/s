@@ -1,9 +1,7 @@
 package seed.codegen
-
 use std.vec.vec
 use std.string.string
 use std.file.file
-
 struct codegen_context {
     program_name: string
     functions: code_function[]
@@ -83,7 +81,6 @@ func codegen_emit_function_prologue(ctx: &mut codegen_context, fn_name: string, 
     ctx.emit_label(fn_name)
     ctx.emit_line("    push %rbp")
     ctx.emit_line("    mov %rsp, %rbp")
-    
     if param_count > 0 {
         stack_space := (param_count + 1) * 8
         ctx.emit_line("    sub $" + stack_space as string + ", %rsp")
@@ -150,12 +147,10 @@ func codegen_write_to_file(ctx: &codegen_context, output_file: string) (int, str
     if f.is_error {
         return -1, "Failed to create file: " + output_file
     }
-    
     for i < ctx.assembly_lines.len() {
         line := ctx.assembly_lines[i]
         f.write_line(line)
     }
-    
     f.close()
     0, ""
 }

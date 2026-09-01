@@ -1,5 +1,4 @@
 package test.codegen
-
 func ifaces_unit_name() string {
     "test/codegen/ifaces"
 }

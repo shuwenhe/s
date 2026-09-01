@@ -1,5 +1,4 @@
 package compile.internal.inline.inlheur
-
 func pstate_string_module_name() string {
     "inline/inlheur/pstate_string.s"
 }

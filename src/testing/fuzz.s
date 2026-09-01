@@ -1,5 +1,4 @@
 package src.testing
-
 func fuzz_unit_name() string {
     "src/testing/fuzz"
 }

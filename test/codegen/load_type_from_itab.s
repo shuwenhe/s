@@ -1,5 +1,4 @@
 package test.codegen
-
 func load_type_from_itab_unit_name() string {
     "test/codegen/load_type_from_itab"
 }

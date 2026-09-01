@@ -1,5 +1,4 @@
 package test
-
 func escape_selfassign_unit_name() string {
     "test/escape_selfassign"
 }

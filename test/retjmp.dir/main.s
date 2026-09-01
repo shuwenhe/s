@@ -1,5 +1,4 @@
 package test.retjmp.dir
-
 func main_unit_name() string {
     "test/retjmp.dir/main"
 }

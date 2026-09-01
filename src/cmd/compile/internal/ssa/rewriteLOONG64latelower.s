@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func rewriteLOONG64latelower_rule_name() string {
     "ssa/rewriteLOONG64latelower.s"
 }

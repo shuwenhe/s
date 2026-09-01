@@ -1,5 +1,4 @@
 package src.testing
-
 func benchmark_unit_name() string {
     "src/testing/benchmark"
 }

@@ -1,5 +1,4 @@
 package src.switch
-
 func cbrt_unit_name() string {
     "src/switch/cbrt"
 }

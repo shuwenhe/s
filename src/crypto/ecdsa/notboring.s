@@ -1,5 +1,4 @@
 package src.crypto.ecdsa
-
 func notboring_unit_name() string {
     "src/crypto/ecdsa/notboring"
 }

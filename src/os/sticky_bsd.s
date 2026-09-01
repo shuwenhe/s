@@ -1,5 +1,4 @@
 package src.os
-
 func sticky_bsd_unit_name() string {
     "src/os/sticky_bsd"
 }

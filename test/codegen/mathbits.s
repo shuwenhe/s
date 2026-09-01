@@ -1,5 +1,4 @@
 package test.codegen
-
 func mathbits_unit_name() string {
     "test/codegen/mathbits"
 }

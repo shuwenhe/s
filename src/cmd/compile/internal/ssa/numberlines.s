@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func numberlines_module_name() string {
     "ssa/numberlines.s"
 }

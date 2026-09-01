@@ -1,5 +1,4 @@
 package src.cmd.internal.goobj
-
 func builtinlist_unit_name() string {
     "src/cmd/internal/goobj/builtinlist"
 }

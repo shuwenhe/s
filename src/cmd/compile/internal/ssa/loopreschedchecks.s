@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func loopreschedchecks_module_name() string {
     "ssa/loopreschedchecks.s"
 }

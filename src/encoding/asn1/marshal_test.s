@@ -1,5 +1,4 @@
 package src.encoding.asn1
-
 func marshal_test_unit_name() string {
     "src/encoding/asn1/marshal_test"
 }

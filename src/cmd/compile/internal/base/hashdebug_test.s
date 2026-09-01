@@ -1,5 +1,4 @@
 package compile.internal.base
-
 func run_hashdebug_tests() int {
     hd_y := new_hash_debug("gossahash", "y")
     if !match_pkg_func(hd_y, "anything", "anyfunc") {

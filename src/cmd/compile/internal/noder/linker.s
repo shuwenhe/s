@@ -1,6 +1,5 @@
 package compile.internal.noder
 use std.slices
-
 struct link_symbol {
     string pkg
     string name

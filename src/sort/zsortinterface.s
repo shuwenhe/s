@@ -1,5 +1,4 @@
 package src.sort
-
 func zsortinterface_unit_name() string {
     "src/sort/zsortinterface"
 }

@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func opt_module_name() string {
     "ssa/opt.s"
 }

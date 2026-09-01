@@ -6,7 +6,6 @@ enum TypeKind {
     named,
     generic,
 }
-
 struct Type {
     TypeKind kind
     string name,

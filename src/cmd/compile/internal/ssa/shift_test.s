@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func shift_test_case_name() string {
     "ssa/shift_test.s"
 }

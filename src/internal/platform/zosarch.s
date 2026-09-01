@@ -1,5 +1,4 @@
 package src.internal.platform
-
 func zosarch_unit_name() string {
     "src/internal/platform/zosarch"
 }

@@ -1,5 +1,4 @@
 package src.switch
-
 func j0_unit_name() string {
     "src/switch/j0"
 }

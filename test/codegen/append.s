@@ -1,5 +1,4 @@
 package test.codegen
-
 func append_unit_name() string {
     "test/codegen/append"
 }

@@ -1,5 +1,4 @@
 package src.cmd.go.testdata
-
 func addmod_unit_name() string {
     "src/cmd/go/testdata/addmod"
 }

@@ -1,5 +1,4 @@
 package src.runtime.cgo
-
 func netbsd_unit_name() string {
     "src/runtime/cgo/netbsd"
 }

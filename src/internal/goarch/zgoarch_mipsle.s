@@ -1,5 +1,4 @@
 package src.internal.goarch
-
 func zgoarch_mipsle_unit_name() string {
     "src/internal/goarch/zgoarch_mipsle"
 }

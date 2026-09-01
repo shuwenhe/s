@@ -1,5 +1,4 @@
 package compile.internal.ssagen
-
 struct arch_profile {
     string name
     int int_arg_regs

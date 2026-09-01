@@ -1,9 +1,7 @@
 #include "ir.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 typedef struct ir_builder {
 	IR *ir;
 	compile_error *err;
@@ -17,7 +15,6 @@ typedef struct ir_builder {
 	ast_node *constants[128];
 	size_t constant_count;
 } ir_builder;
-
 static ast_node *find_constant(ir_builder *b, const char *name) {
 	size_t i;
 	for (i = 0; i < b->constant_count; i++) {
@@ -25,7 +22,6 @@ static ast_node *find_constant(ir_builder *b, const char *name) {
 	}
 	return NULL;
 }
-
 static ast_node *find_extern(ir_builder *b, const char *name) {
 	size_t i;
 	for (i = 0; i < b->extern_count; i++) {
@@ -33,7 +29,6 @@ static ast_node *find_extern(ir_builder *b, const char *name) {
 	}
 	return NULL;
 }
-
 static int ffi_callee_name(ast_node *decl, char out[IR_OPERAND_CAP]) {
 	size_t i;
 	const char *abi = decl->as.extern_decl.abi;
@@ -54,7 +49,6 @@ static int ffi_callee_name(ast_node *decl, char out[IR_OPERAND_CAP]) {
 	}
 	return 1;
 }
-
 static void copy_str(char dst[IR_OPERAND_CAP], const char *src) {
 	if (!src) {
 		dst[0] = '\0';
@@ -62,20 +56,17 @@ static void copy_str(char dst[IR_OPERAND_CAP], const char *src) {
 	}
 	snprintf(dst, IR_OPERAND_CAP, "%s", src);
 }
-
 void ir_init(IR *ir) {
 	ir->instructions = NULL;
 	ir->instruction_count = 0;
 	ir->capacity = 0;
 }
-
 void ir_free(IR *ir) {
 	free(ir->instructions);
 	ir->instructions = NULL;
 	ir->instruction_count = 0;
 	ir->capacity = 0;
 }
-
 bool ir_emit(IR *ir, ir_op type, const char *result, const char *operand1, const char *operand2) {
 	IRInstruction *ins;
 	if (ir->instruction_count == ir->capacity) {
@@ -94,7 +85,6 @@ bool ir_emit(IR *ir, ir_op type, const char *result, const char *operand1, const
 	copy_str(ins->operand2, operand2);
 	return true;
 }
-
 const char *ir_op_name(ir_op op) {
 	switch (op) {
 	case IR_NOP: return "NOP";
@@ -128,7 +118,6 @@ const char *ir_op_name(ir_op op) {
 	}
 	return "UNKNOWN";
 }
-
 static bool emit_ins(ir_builder *b, ir_op type, const char *result, const char *op1, const char *op2, source_pos pos) {
 	if (!ir_emit(b->ir, type, result, op1, op2)) {
 		error_set(b->err, ERR_OUT_OF_MEMORY, pos.line, pos.column, "out of memory while emitting IR");
@@ -136,15 +125,12 @@ static bool emit_ins(ir_builder *b, ir_op type, const char *result, const char *
 	}
 	return true;
 }
-
 static void next_temp(ir_builder *b, char out[IR_OPERAND_CAP]) {
 	snprintf(out, IR_OPERAND_CAP, "t%d", b->temp_counter++);
 }
-
 static void next_label(ir_builder *b, char out[IR_OPERAND_CAP]) {
 	snprintf(out, IR_OPERAND_CAP, "L%d", b->label_counter++);
 }
-
 static int push_loop(ir_builder *b, const char *break_label, const char *continue_label) {
 	if (b->loop_depth >= 64) {
 		return 0;
@@ -154,33 +140,27 @@ static int push_loop(ir_builder *b, const char *break_label, const char *continu
 	b->loop_depth++;
 	return 1;
 }
-
 static void pop_loop(ir_builder *b) {
 	if (b->loop_depth > 0) {
 		b->loop_depth--;
 	}
 }
-
 static const char *current_break_label(ir_builder *b) {
 	if (b->loop_depth <= 0) {
 		return NULL;
 	}
 	return b->break_labels[b->loop_depth - 1];
 }
-
 static const char *current_continue_label(ir_builder *b) {
 	if (b->loop_depth <= 0) {
 		return NULL;
 	}
 	return b->continue_labels[b->loop_depth - 1];
 }
-
 static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]);
-
 static bool lower_struct_literal(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
 	size_t i;
 	char alias_literal[IR_OPERAND_CAP];
-
 	next_temp(b, out);
 	if (snprintf(alias_literal, sizeof(alias_literal), "\"%s\"", out) >= (int)sizeof(alias_literal)) {
 		error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "struct alias too long for IR operand");
@@ -199,7 +179,6 @@ static bool lower_struct_literal(ir_builder *b, ast_node *expr, char out[IR_OPER
 			return false;
 		}
 	}
-
 	for (i = 0; i < expr->as.struct_expr.field_count; i++) {
 		char field_value[IR_OPERAND_CAP];
 		char field_name[IR_OPERAND_CAP];
@@ -217,22 +196,18 @@ static bool lower_struct_literal(ir_builder *b, ast_node *expr, char out[IR_OPER
 	return true;
 }
 static bool lower_stmt(ir_builder *b, ast_node *stmt);
-
 static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
 	size_t i;
 	int written;
 	size_t used = 0;
-
 	if (!expr || expr->kind != AST_ARRAY_EXPR) {
 		return false;
 	}
-
 	if (used + 1 >= IR_OPERAND_CAP) {
 		error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "array literal too long for IR operand");
 		return false;
 	}
 	out[used++] = '[';
-
 	for (i = 0; i < expr->as.array_expr.items.len; i++) {
 		ast_node *item = expr->as.array_expr.items.data[i];
 		char item_text[IR_OPERAND_CAP];
@@ -258,7 +233,6 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERA
 					"array literal currently supports number/bool/string/identifier items in IR lowering");
 				return false;
 		}
-
 		written = snprintf(out + used, IR_OPERAND_CAP - used, "%s%s", (i == 0) ? "" : ", ", item_text);
 		if (written < 0 || (size_t)written >= IR_OPERAND_CAP - used) {
 			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "array literal too long for IR operand");
@@ -266,7 +240,6 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERA
 		}
 		used += (size_t)written;
 	}
-
 	if (used + 1 >= IR_OPERAND_CAP) {
 		error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "array literal too long for IR operand");
 		return false;
@@ -275,11 +248,9 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERA
 	out[used] = '\0';
 	return true;
 }
-
 static bool is_non_unit_return_type(const char *return_type) {
 	return return_type && return_type[0] != '\0' && strcmp(return_type, "()") != 0;
 }
-
 static const char *fallback_return_literal(const char *return_type) {
 	if (!return_type) {
 		return "0";
@@ -295,7 +266,6 @@ static const char *fallback_return_literal(const char *return_type) {
 	}
 	return "0";
 }
-
 static bool lower_binary(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
 	char lhs[IR_OPERAND_CAP];
 	char rhs[IR_OPERAND_CAP];
@@ -396,13 +366,11 @@ static bool lower_binary(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]
 	next_temp(b, out);
 	return emit_ins(b, op, out, lhs, rhs, expr->pos);
 }
-
 static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
 	if (!expr) {
 		out[0] = '\0';
 		return true;
 	}
-
 	switch (expr->kind) {
 		case AST_NUMBER_EXPR:
 			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.number_expr.literal);
@@ -557,7 +525,6 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			return false;
 	}
 }
-
 static bool lower_block(ir_builder *b, ast_node *block) {
 	size_t i;
 	for (i = 0; i < block->as.block.statements.len; i++) {
@@ -567,7 +534,6 @@ static bool lower_block(ir_builder *b, ast_node *block) {
 	}
 	return true;
 }
-
 static bool lower_if(ir_builder *b, ast_node *stmt) {
 	char cond[IR_OPERAND_CAP];
 	char else_label[IR_OPERAND_CAP];
@@ -594,7 +560,6 @@ static bool lower_if(ir_builder *b, ast_node *stmt) {
 	}
 	return emit_ins(b, IR_LABEL, end_label, "", "", stmt->pos);
 }
-
 static bool lower_while(ir_builder *b, ast_node *stmt) {
 	char start_label[IR_OPERAND_CAP];
 	char end_label[IR_OPERAND_CAP];
@@ -624,7 +589,6 @@ static bool lower_while(ir_builder *b, ast_node *stmt) {
 	}
 	return emit_ins(b, IR_LABEL, end_label, "", "", stmt->pos);
 }
-
 static bool lower_for(ir_builder *b, ast_node *stmt) {
 	char start_label[IR_OPERAND_CAP];
 	char post_label[IR_OPERAND_CAP];
@@ -676,7 +640,6 @@ static bool lower_for(ir_builder *b, ast_node *stmt) {
 		}
 	return emit_ins(b, IR_LABEL, end_label, "", "", stmt->pos);
 }
-
 static bool lower_fn(ir_builder *b, ast_node *stmt) {
 	size_t i;
 	char signature[IR_OPERAND_CAP];
@@ -742,7 +705,6 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
 	}
 	return emit_ins(b, IR_FUNC_END, stmt->as.fn_stmt.name, "", "", stmt->pos);
 }
-
 static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 	char value[IR_OPERAND_CAP];
 	if (!stmt) {
@@ -826,7 +788,6 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 			return false;
 	}
 }
-
 bool ir_generate_from_ast(ast_node *root, IR *ir, compile_error *err) {
 	ir_builder b;
 	if (!root || !ir || !err) {

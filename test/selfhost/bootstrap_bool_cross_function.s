@@ -1,5 +1,4 @@
 package bootstrap.closure
-
 func is_large(int value) bool {
     return value > 10
 }

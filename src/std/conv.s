@@ -1,5 +1,4 @@
 package std.conv
-
 func int_to_string(int value) string {
     if value == 0 {
         return "0"
@@ -127,18 +126,15 @@ func float_to_string_precision(float value, int precision) string {
         negative = true
         current = 0.0 - current
     }
-
     int int_part = int(current)
     float frac = current - float(int_part)
     string result = int_to_string(int_part)
-
     if precision == 0 {
         if negative {
             return "-" + result
         }
         return result
     }
-
     result = result + "."
     int i = 0
     for i < precision {
@@ -154,7 +150,6 @@ func float_to_string_precision(float value, int precision) string {
         frac = frac - float(digit)
         i = i + 1
     }
-
     if negative {
         return "-" + result
     }

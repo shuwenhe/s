@@ -1,5 +1,4 @@
 package test
-
 func genmeth2_unit_name() string {
     "test/genmeth2"
 }

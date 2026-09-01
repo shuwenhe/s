@@ -1,5 +1,4 @@
 package src.go.format
-
 func format_unit_name() string {
     "src/go/format/format"
 }

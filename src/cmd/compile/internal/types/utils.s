@@ -1,5 +1,4 @@
 package compile.internal.types
-
 func utils_module_name() string {
     "types/utils.s"
 }

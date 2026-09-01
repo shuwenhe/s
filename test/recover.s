@@ -1,5 +1,4 @@
 package test
-
 func recover_unit_name() string {
     "test/recover"
 }

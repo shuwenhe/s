@@ -29,7 +29,6 @@ use std.prelude.char_at
 use std.prelude.len
 use std.prelude.slice
 use std.slices
-
 struct type_binding {
     string name
     string type_name

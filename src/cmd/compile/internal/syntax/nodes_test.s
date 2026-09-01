@@ -1,5 +1,4 @@
 package compile.internal.syntax
-
 func nodes_test_case_name() string {
     "syntax/nodes_test.s"
 }

@@ -1,5 +1,4 @@
 package src.go.internal.gcimporter
-
 func ureader_unit_name() string {
     "src/go/internal/gcimporter/ureader"
 }

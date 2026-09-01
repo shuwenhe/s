@@ -1,5 +1,4 @@
 package src.runtime.trace
-
 func subscribe_unit_name() string {
     "src/runtime/trace/subscribe"
 }

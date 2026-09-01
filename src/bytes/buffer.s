@@ -1,5 +1,4 @@
 package src.bytes
-
 func buffer_unit_name() string {
     "src/bytes/buffer"
 }

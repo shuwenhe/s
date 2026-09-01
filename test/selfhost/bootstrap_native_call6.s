@@ -1,5 +1,4 @@
 package main
-
 func sum6(int first, int second, int third, int fourth, int fifth, int sixth) int {
     return first + second + third + fourth + fifth + sixth
 }

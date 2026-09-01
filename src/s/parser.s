@@ -4,7 +4,6 @@ use std.prelude.char_at
 use std.prelude.len
 use std.result.result
 use std.slices
-
 struct parse_error {
     string message
     int line
@@ -34,7 +33,6 @@ func parse_tokens(token[] tokens) (source_file, parse_error) {
     }
     p.parse_source_file()
 }
-
 int global_parse_depth = 0
 
 func log_depth(string msg) {
@@ -44,22 +42,18 @@ func log_depth(string msg) {
 func (parser* self) parse_source_file() (source_file, parse_error) {
     global_parse_depth = global_parse_depth + 1
     log_depth("parse_source_file depth: " + to_string(global_parse_depth))
-    
     _, err := self.expect_keyword("package")
     if err.message != "" {
         source_file empty
         return empty, err
     }
-    
     pkg, err := self.parse_path()
     if err.message != "" {
         source_file empty
         return empty, err
     }
-    
     use_decl[] uses = use_decl[]()
     item[] items = item[]()
-    
     for self.at_keyword("use") {
         decl, err := self.parse_use_decl()
         if err.message != "" {
@@ -68,7 +62,6 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
         }
         uses = append(uses, decl)
     }
-    
     for !self.at(token_kind::eof) {
         if self.at_keyword("const") && self.at_symbol_after_keyword("(") {
             consts, err := self.parse_const_group_items()
@@ -90,7 +83,6 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
         }
         items = append(items, item_val)
     }
-    
     global_parse_depth = global_parse_depth - 1
     log_depth("parse_source_file exit depth: " + to_string(global_parse_depth))
     source_file {
@@ -106,13 +98,11 @@ func (parser* self) parse_use_decl() (use_decl, parse_error) {
         use_decl empty
         return empty, err
     }
-    
     path, err := self.parse_use_path()
     if err.message != "" {
         use_decl empty
         return empty, err
     }
-    
     option[string] alias = option::none
     if self.at_keyword("as") {
         _, err := self.advance()
@@ -127,7 +117,6 @@ func (parser* self) parse_use_decl() (use_decl, parse_error) {
         }
         alias = option::some(alias_val)
     }
-    
     use_decl {
         path: path,
         alias: alias,
@@ -1227,7 +1216,6 @@ func (parser* self) parse_if_expr() (expr, parse_error) {
 
 func (parser* self) parse_for_expr() (expr, parse_error) {
         self.expect_keyword("for")
-        
         if self.at_symbol("{") {
             body, err := self.parse_block_expr()
             if err.message != "" {
@@ -1244,7 +1232,6 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
                 inferred_type: option::none,
             }))
         }
-        
         if self.at_symbol("(") {
             self.expect_symbol("(")
             init, err := self.parse_for_clause_stmt()
@@ -1280,7 +1267,6 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
                 inferred_type: option::none,
             }))
         }
-        
         token, err := self.peek()
         if err.message != "" {
             token empty
@@ -1306,7 +1292,6 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
                 inferred_type: option::none,
             }))
         }
-        
         condition, err := self.parse_expr()
         if err.message != "" {
             expr empty
@@ -1451,7 +1436,7 @@ func (parser* self) parse_call_expr() (expr, parse_error) {
         }
         for true {
             if self.eat_symbol("(") {
-                expr[] args = expr[]()                
+                expr[] args = expr[]()
                 if !self.at_symbol(")") {
                     for true {
                         args = append(args, self.parse_expr())
@@ -1786,7 +1771,6 @@ func (parser* self) parse_bracket_group() (string, parse_error) {
     join_strings(parts, " ").replace("[ ", "[").replace(" ]", "]"), parse_error { message: "" }
 })
                 .replace(" ,", ",")
-        
     }
 
 func (parser* self) at(token_kind kind) bool {

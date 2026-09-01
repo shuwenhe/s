@@ -1,5 +1,4 @@
 package src.database.sql
-
 func closemu_unit_name() string {
     "src/database/sql/closemu"
 }

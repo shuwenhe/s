@@ -1,6 +1,5 @@
 package std.fs
 use std.result.result
-
 struct fs_error {
     string message
 }

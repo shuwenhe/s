@@ -1,5 +1,4 @@
 package src.switch
-
 func dim_noasm_unit_name() string {
     "src/switch/dim_noasm"
 }

@@ -1,5 +1,4 @@
 package backend
-
 struct linker_config {
     gcc_path: string
     ld_path: string

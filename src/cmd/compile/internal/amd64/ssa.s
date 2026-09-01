@@ -1,5 +1,4 @@
 package compile.internal.amd64
-
 func ssa_mark_moves(ssa_block block) ssa_block {
     flive := block.flags_live_at_end
     ci := 0

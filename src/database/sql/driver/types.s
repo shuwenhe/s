@@ -1,5 +1,4 @@
 package src.database.sql.driver
-
 func types_unit_name() string {
     "src/database/sql/driver/types"
 }

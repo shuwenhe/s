@@ -1,5 +1,4 @@
 package compile.internal.escape
-
 func stmt_unit_name() string {
     "escape/stmt.s"
 }

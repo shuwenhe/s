@@ -1,5 +1,4 @@
 package test
-
 func directive_unit_name() string {
     "test/directive"
 }

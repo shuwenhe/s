@@ -1,12 +1,11 @@
 package std.io_syscall
 use std.syscall
-
 struct FileHandle {
     fd: int
     path: string
-    mode: string  
+    mode: string
 }
-const FILE_READ_BUFFER_SIZE = 65536  
+const FILE_READ_BUFFER_SIZE = 65536
 var __read_buffer = allocate_read_buffer()
 
 func allocate_read_buffer() []byte {
@@ -22,8 +21,8 @@ func file_open_read(string path) (FileHandle, int) {
 }
 
 func file_open_write(string path) (FileHandle, int) {
-    fd := syscall.open_file(path, 
-        syscall.O_WRONLY | syscall.O_CREAT | syscall.O_TRUNC, 
+    fd := syscall.open_file(path,
+        syscall.O_WRONLY | syscall.O_CREAT | syscall.O_TRUNC,
         0o644)
     if fd < 0 {
         return FileHandle{fd: -1, path: path, mode: "w"}, fd
@@ -64,7 +63,7 @@ func file_read_lines(string path, func(string) int callback) int {
 }
 
 func file_append(string path, string content) int {
-    fd := syscall.open_file(path, 
+    fd := syscall.open_file(path,
         syscall.O_WRONLY | syscall.O_APPEND | syscall.O_CREAT,
         0o644)
     if fd < 0 {

@@ -1,5 +1,4 @@
 package src.mime
-
 func encodedword_unit_name() string {
     "src/mime/encodedword"
 }

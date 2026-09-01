@@ -1,5 +1,4 @@
 package src.cmd.vendor.github.com.google.pprof.internal.graph
-
 func dotgraph_unit_name() string {
     "src/cmd/vendor/github.com/google/pprof/internal/graph/dotgraph"
 }

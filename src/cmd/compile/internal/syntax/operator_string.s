@@ -1,5 +1,4 @@
 package compile.internal.syntax
-
 func operator_string_module_name() string {
     "syntax/operator_string.s"
 }

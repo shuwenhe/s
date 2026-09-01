@@ -1,5 +1,4 @@
 package test
-
 func bigmap_unit_name() string {
     "test/bigmap"
 }

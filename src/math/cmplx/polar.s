@@ -1,5 +1,4 @@
 package src.switch.cmplx
-
 func polar_unit_name() string {
     "src/switch/cmplx/polar"
 }

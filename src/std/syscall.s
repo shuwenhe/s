@@ -30,7 +30,6 @@ const O_APPEND = 0o2000
 const STDIN_FD = 0
 const STDOUT_FD = 1
 const STDERR_FD = 2
-
 func exit(int code) {
     _ := __syscall1(SYS_EXIT, code)
 }

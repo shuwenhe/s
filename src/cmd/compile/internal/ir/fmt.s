@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func fmt_module_name() string {
     "ir/fmt.s"
 }

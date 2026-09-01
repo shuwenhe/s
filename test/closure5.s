@@ -1,5 +1,4 @@
 package test
-
 func closure5_unit_name() string {
     "test/closure5"
 }

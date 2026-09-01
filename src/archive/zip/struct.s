@@ -1,5 +1,4 @@
 package src.archive.zip
-
 func struct_unit_name() string {
     "src/archive/zip/struct"
 }

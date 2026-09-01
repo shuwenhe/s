@@ -1,5 +1,4 @@
 package test.typeparam
-
 func pairimp_unit_name() string {
     "test/typeparam/pairimp"
 }

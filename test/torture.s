@@ -1,5 +1,4 @@
 package test
-
 func torture_unit_name() string {
     "test/torture"
 }

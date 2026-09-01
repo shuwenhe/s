@@ -1,5 +1,4 @@
 package src.os
-
 func file_unit_name() string {
     "src/os/file"
 }

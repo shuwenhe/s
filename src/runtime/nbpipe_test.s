@@ -1,5 +1,4 @@
 package src.runtime
-
 func nbpipe_test_unit_name() string {
     "src/runtime/nbpipe_test"
 }

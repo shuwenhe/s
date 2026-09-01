@@ -1,5 +1,4 @@
 package test
-
 func bounds_unit_name() string {
     "test/bounds"
 }

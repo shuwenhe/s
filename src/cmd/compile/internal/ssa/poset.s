@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func poset_module_name() string {
     "ssa/poset.s"
 }

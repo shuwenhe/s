@@ -11,7 +11,6 @@ use compile.internal.mir.mir_local_slot
 use compile.internal.mir.mir_terminator
 use compile.internal.mir.mir_statement
 use std.slices
-
 func run_mir_suite() int {
     if trace_branch("flag", "then", "else") != "branch flag |   then then |   else else" {
         return 1

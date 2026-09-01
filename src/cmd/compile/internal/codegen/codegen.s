@@ -1,11 +1,8 @@
 package compile.internal.codegen
-
 use compile.internal.link
 use compile.internal.obj
-
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
 extern "intrinsic" func __host_make_executable(string path) int;
-
 struct codegen_config {
     string target_arch
     int64 code_section_align
@@ -46,28 +43,22 @@ func make_codegen_context(machine_code_gen* mcg, symbol_table* st, codegen_confi
 
 func (ctx* codegen_context) codegen_func_main() string {
     func_name := "main"
-    
     idx := ctx.symtab.add_symbol(func_name, symbol_bind_global, symbol_type_func, ctx.code_offset, 0 as int64, 1)
-    
     err := ctx.gen.emit_simple_func(func_name)
     if err != "" {
         return "Failed to emit main: " + err
     }
-    
     ctx.generated_functions = append(ctx.generated_functions, func_name)
     ""
 }
 
 func (ctx* codegen_context) codegen_func_add() string {
     func_name := "add"
-    
     idx := ctx.symtab.add_symbol(func_name, symbol_bind_global, symbol_type_func, ctx.code_offset, 0 as int64, 1)
-    
     err := ctx.gen.emit_add_function()
     if err != "" {
         return "Failed to emit add: " + err
     }
-    
     ctx.generated_functions = append(ctx.generated_functions, func_name)
     ""
 }
@@ -113,7 +104,6 @@ func (builder* object_file_builder) build_elf64(elf_machine machine) []int8 {
     image_base := 0x400000 as int64
     entry := image_base + code_offset
     file_size := code_offset + (len(builder.code) as int64)
-
     writer.write_elf_header(machine)
     writer.write_u64(1 as int64)
     writer.write_u64(5 as int64)
@@ -123,8 +113,6 @@ func (builder* object_file_builder) build_elf64(elf_machine machine) []int8 {
     writer.write_u64(file_size)
     writer.write_u64(file_size)
     writer.write_u64(0x1000 as int64)
-
-    // Patch e_entry in the already-emitted ELF header.
     data := writer.get_data()
     data[24] = (entry & 255) as int8
     data[25] = ((entry >> 8) & 255) as int8
@@ -169,12 +157,10 @@ func (pipeline* codegen_pipeline) generate_all() ([]int8, string) {
     if err != "" {
         return nil, "Failed to generate main: " + err
     }
-    
     err = pipeline.ctx.codegen_func_add()
     if err != "" {
         return nil, "Failed to generate add: " + err
     }
-    
     code := pipeline.ctx.gen.get_code()
     return code, ""
 }

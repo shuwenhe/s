@@ -1,5 +1,4 @@
 package main
-
 func test_complex_arrays() void {
     var ints = int[]{1, 2, 3, 4, 5}
     var floats = float[]{1.0, 2.5, 3.14}

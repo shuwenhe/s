@@ -1,5 +1,4 @@
 package src.net.internal.socktest
-
 func switch_posix_unit_name() string {
     "src/net/internal/socktest/switch_posix"
 }

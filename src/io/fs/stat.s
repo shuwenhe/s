@@ -1,5 +1,4 @@
 package src.io.fs
-
 func stat_unit_name() string {
     "src/io/fs/stat"
 }

@@ -1,5 +1,4 @@
 package src.image.png
-
 func paeth_test_unit_name() string {
     "src/image/png/paeth_test"
 }
