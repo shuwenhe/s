@@ -359,7 +359,7 @@ func function_body(string source, string name) int {
     int declaration = function_declaration(source, name)
     if declaration < 0 { return -1 }
     int scan = declaration + 4
-    int budget = len(source) * 2 + 32
+    int budget = 1000000
     for scan < len(source) && budget > 0 && __host_char_at(source, scan) != "{" {
         budget = budget - 1
         if __host_char_at(source, scan) == ";" { return -1 }
@@ -577,7 +577,7 @@ func function_body_end(string source, int body) int {
     if body < 1 || body >= len(source) { return -1 }
     int index = body
     int depth = 1
-    int budget = len(source) * 2 + 32
+    int budget = 1000000
     for index < len(source) && budget > 0 {
         budget = budget - 1
         string ch = __host_char_at(source, index)
@@ -3161,6 +3161,10 @@ func asm_if_statement_end(string source, int start, int block_end) int {
     int depth = 0
     for open < block_end {
         string ch = __host_char_at(source, open)
+        if ch == "\"" {
+            open = skip_quoted(source, open, block_end)
+            continue
+        }
         if ch == "(" { depth = depth + 1 }
         if ch == ")" { depth = depth - 1 }
         if ch == "{" && depth == 0 { break }
@@ -3205,6 +3209,10 @@ func asm_block_loop(string source, int raw_start, int block_end, string function
         int depth = 0
         for open < block_end {
             string ch = __host_char_at(source, open)
+            if ch == "\"" {
+                open = skip_quoted(source, open, block_end)
+                continue
+            }
             if ch == "(" { depth = depth + 1 }
             if ch == ")" { depth = depth - 1 }
             if ch == "{" && depth == 0 { break }
@@ -3251,6 +3259,10 @@ func asm_block_loop(string source, int raw_start, int block_end, string function
         int depth = 0
         for open < block_end {
             string ch = __host_char_at(source, open)
+            if ch == "\"" {
+                open = skip_quoted(source, open, block_end)
+                continue
+            }
             if ch == "(" { depth = depth + 1 }
             if ch == ")" { depth = depth - 1 }
             if ch == "{" && depth == 0 { break }
@@ -3314,9 +3326,15 @@ func asm_block(string source, int raw_start, int block_end, string function_name
 
 func asm_function(string source, string name) string {
     int body = function_body(source, name)
-    if body < 0 { return "" }
+    if body < 0 {
+        eprintln("compile: asm function body not found: " + name)
+        return ""
+    }
     int body_end = function_body_end(source, body + 1)
-    if body_end < 0 { return "" }
+    if body_end < 0 {
+        eprintln("compile: asm function body end not found: " + name)
+        return ""
+    }
     string code = ".global s_fn_" + name + "\n.type s_fn_" + name + ", @function\ns_fn_" + name
         + ":\n    push %rbp\n    mov %rsp, %rbp\n    sub $4096, %rsp\n"
     int parameter = 0
@@ -3332,7 +3350,10 @@ func asm_function(string source, string name) string {
         parameter = parameter + 1
     }
     string body_code = asm_block(source, body + 1, body_end, name)
-    if body_code == "" { return "" }
+    if body_code == "" {
+        eprintln("compile: asm function block unsupported: " + name)
+        return ""
+    }
     return code + body_code + "    mov $1, %rax\n.Las_return_" + name
         + ":\n    leave\n    ret\n.size s_fn_" + name + ", .-s_fn_" + name + "\n\n"
 }
