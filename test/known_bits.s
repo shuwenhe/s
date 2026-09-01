@@ -1,5 +1,4 @@
 package test
-
 func known_bits_unit_name() string {
     "test/known_bits"
 }

@@ -1,5 +1,4 @@
 package test.codegen
-
 func structs_unit_name() string {
     "test/codegen/structs"
 }

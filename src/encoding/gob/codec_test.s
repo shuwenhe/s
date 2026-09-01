@@ -1,5 +1,4 @@
 package src.encoding.gob
-
 func codec_test_unit_name() string {
     "src/encoding/gob/codec_test"
 }

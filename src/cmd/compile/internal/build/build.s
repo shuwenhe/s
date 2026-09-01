@@ -9,7 +9,6 @@ use internal.buildcfg.goos as buildcfg_goos
 use std.io.println
 use std.slices
 use backend
-
 func main(string[] args)  int {
     options := parse_options(args)
     if options[0] == "help" {
@@ -17,7 +16,6 @@ func main(string[] args)  int {
         return 0
     }
     emit_target_log(options[0])
-    
     if options[0] == "build" {
         use_native := has_native_flag(options)
         exec_result := build_with_backend(options[1], options[2], options[3], use_native)
@@ -27,7 +25,6 @@ func main(string[] args)  int {
         }
         return 0
     }
-    
     exec_result := exec_run(options)
     if options[0] == "run" {
         return exec_result
@@ -79,21 +76,17 @@ func make_build_options(string path, string output, string ssa_margin) string[] 
 
 func exec_run_native(string path, string output) int {
     println("Native compilation: " + path + " -> " + output)
-    
     driver := new_native_compilation_driver(path, output)
-    
     result := driver.compile_simple_program()
     if result != 0 {
         report_error_local("assembly generation failed")
         return 1
     }
-    
     result = driver.write_assembly_to_file(driver.backend_ctx.compiler.assembly_file)
     if result != 0 {
         report_error_local("failed to write assembly file")
         return 1
     }
-    
     result = driver.invoke_gcc_assemble(
         driver.backend_ctx.compiler.assembly_file,
         driver.backend_ctx.compiler.object_file
@@ -102,7 +95,6 @@ func exec_run_native(string path, string output) int {
         report_error_local("assembly phase failed")
         return 1
     }
-    
     result = driver.invoke_gcc_link(
         driver.backend_ctx.compiler.object_file,
         output
@@ -111,9 +103,6 @@ func exec_run_native(string path, string output) int {
         report_error_local("linking phase failed")
         return 1
     }
-    
     println("✓ Native compilation successful: " + output)
     0
 }
-
-

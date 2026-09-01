@@ -1,5 +1,4 @@
 package src.switch.big
-
 func natconv_unit_name() string {
     "src/switch/big/natconv"
 }

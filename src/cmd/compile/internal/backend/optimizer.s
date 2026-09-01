@@ -1,5 +1,4 @@
 package backend
-
 struct optimizer {
     prog_list* prog
     int pass_count
@@ -17,15 +16,12 @@ func (opt* optimizer) remove_dead_code() {
     while changed {
         changed = false
         p := opt.prog.first()
-        
         while p != nil {
             next_p := p.next
-            
             if p.op == prog_op_nop() {
                 opt.prog.remove_prog(p)
                 changed = true
             }
-            
             p = next_p
         }
     }
@@ -34,67 +30,52 @@ func (opt* optimizer) remove_dead_code() {
 
 func (opt* optimizer) combine_redundant_moves() {
     p := opt.prog.first()
-    
     while p != nil && p.next != nil {
         curr := p
         next_p := p.next
-        
         if curr.op == prog_op_mov() && next_p.op == prog_op_mov() {
             if curr.as_string == next_p.as_string {
                 opt.prog.remove_prog(next_p)
             }
         }
-        
         p = p.next
     }
-    
     opt.pass_count = opt.pass_count + 1
 }
 
 func (opt* optimizer) remove_redundant_pushes() {
     p := opt.prog.first()
-    
     while p != nil && p.next != nil {
         curr := p
         next_p := p.next
-        
         if curr.op == prog_op_push() && next_p.op == prog_op_pop() {
             opt.prog.remove_prog(curr)
             opt.prog.remove_prog(next_p)
         }
-        
         p = p.next
     }
-    
     opt.pass_count = opt.pass_count + 1
 }
 
 func (opt* optimizer) optimize_constant_folding() {
     p := opt.prog.first()
-    
     while p != nil {
         if p.op == prog_op_add() || p.op == prog_op_sub() || p.op == prog_op_mul() {
         }
-        
         p = p.next
     }
-    
     opt.pass_count = opt.pass_count + 1
 }
 
 func (opt* optimizer) optimize_register_moves() {
     p := opt.prog.first()
-    
     while p != nil && p.next != nil {
         curr := p
         next_p := p.next
-        
         if curr.op == prog_op_mov() {
         }
-        
         p = p.next
     }
-    
     opt.pass_count = opt.pass_count + 1
 }
 

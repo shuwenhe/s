@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func passbm_test_case_name() string {
     "ssa/passbm_test.s"
 }

@@ -1,5 +1,4 @@
 package src.runtime
-
 func runtime2_unit_name() string {
     "src/runtime/runtime2"
 }

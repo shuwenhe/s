@@ -1,5 +1,4 @@
 package src.runtime.secret
-
 func stubs_unit_name() string {
     "src/runtime/secret/stubs"
 }

@@ -1,5 +1,4 @@
 package src.net
-
 func interface_windows_unit_name() string {
     "src/net/interface_windows"
 }

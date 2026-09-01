@@ -1,5 +1,4 @@
 package main
-
 func test_let_basics() void {
     x := 42
     message := "Hello, immutable world!"

@@ -1,5 +1,4 @@
 package test.codegen
-
 func retpoline_unit_name() string {
     "test/codegen/retpoline"
 }

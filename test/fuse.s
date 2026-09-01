@@ -1,5 +1,4 @@
 package test
-
 func fuse_unit_name() string {
     "test/fuse"
 }

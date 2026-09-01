@@ -1,5 +1,4 @@
 package test
-
 func uintptrkeepalive_unit_name() string {
     "test/uintptrkeepalive"
 }

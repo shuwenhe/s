@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func debug_test_case_name() string {
     "ssa/debug_test.s"
 }

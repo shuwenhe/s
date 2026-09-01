@@ -1,5 +1,4 @@
 package src.regexp
-
 func onepass_test_unit_name() string {
     "src/regexp/onepass_test"
 }

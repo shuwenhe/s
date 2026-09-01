@@ -1,5 +1,4 @@
 package src.cmd.api.testdata.src.issue64958.p
-
 func p_unit_name() string {
     "src/cmd/api/testdata/src/issue64958/p/p"
 }

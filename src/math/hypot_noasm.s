@@ -1,5 +1,4 @@
 package src.switch
-
 func hypot_noasm_unit_name() string {
     "src/switch/hypot_noasm"
 }

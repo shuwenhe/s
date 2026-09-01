@@ -1,5 +1,4 @@
 package src.net
-
 func nss_unit_name() string {
     "src/net/nss"
 }

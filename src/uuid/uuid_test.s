@@ -1,5 +1,4 @@
 package src.uuid
-
 func uuid_test_unit_name() string {
     "src/uuid/uuid_test"
 }

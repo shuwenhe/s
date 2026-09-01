@@ -1,5 +1,4 @@
 package src.internal.trace.testdata.testprog
-
 func cgo_callback_unit_name() string {
     "src/internal/trace/testdata/testprog/cgo-callback"
 }

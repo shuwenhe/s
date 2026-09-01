@@ -1,5 +1,4 @@
 package std.text
-
 use std.conv.int_to_string as conv_int_to_string
 use std.conv.int64_to_string as conv_int64_to_string
 use std.conv.parse_int_default as conv_parse_int_default
@@ -13,7 +12,6 @@ use std.encoding.normalize_ascii_text as encoding_normalize_ascii_text
 use std.encoding.bytes_to_string as encoding_bytes_to_string
 use std.encoding.str_to_bytes as encoding_str_to_bytes
 use std.encoding.bytes_to_string_range as encoding_bytes_to_string_range
-
 func int_to_string(int value) string {
     conv_int_to_string(value)
 }

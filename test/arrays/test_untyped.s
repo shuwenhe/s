@@ -1,5 +1,4 @@
 package main
-
 func main() {
     var x = {1, 2}
     0

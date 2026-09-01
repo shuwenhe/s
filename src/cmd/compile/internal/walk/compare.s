@@ -1,5 +1,4 @@
 package compile.internal.walk
-
 func compare_module_name() string {
     "walk/compare.s"
 }

@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func tighten_module_name() string {
     "ssa/tighten.s"
 }

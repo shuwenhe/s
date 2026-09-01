@@ -1,5 +1,4 @@
 package src.syscall
-
 func mksyscall_windows_unit_name() string {
     "src/syscall/mksyscall_windows"
 }

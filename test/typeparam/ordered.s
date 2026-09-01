@@ -1,5 +1,4 @@
 package test.typeparam
-
 func ordered_unit_name() string {
     "test/typeparam/ordered"
 }

@@ -1,6 +1,5 @@
 package compile.internal.ssa
 use std.slices
-
 struct sparse_set {
     int[] dense
     int[] sparse

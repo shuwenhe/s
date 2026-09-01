@@ -1,5 +1,4 @@
 package src.cmd.internal.cov.covcmd
-
 func cmddefs_unit_name() string {
     "src/cmd/internal/cov/covcmd/cmddefs"
 }

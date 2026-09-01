@@ -1,30 +1,24 @@
 package compile.internal.obj
-
 use compile.internal.link
-
 enum elf_class {
     elf_class_32,
     elf_class_64,
 }
-
 enum elf_data {
     elf_data_lsb,
     elf_data_msb,
 }
-
 enum elf_type {
     elf_type_relocatable,
     elf_type_executable,
     elf_type_shared,
     elf_type_core,
 }
-
 enum elf_machine {
     elf_machine_x86_64 = 62,
     elf_machine_arm64 = 183,
     elf_machine_riscv = 243,
 }
-
 struct elf_header {
     []int8 ident
     elf_type type
@@ -175,7 +169,6 @@ func (w* elf_writer) write_elf_header(elf_machine machine) {
         w.write_u8(0 as int8)
         i = i + 1
     }
-    
     w.write_u16(2 as int16)
     w.write_u16((machine as int16))
     w.write_u32(1 as int32)

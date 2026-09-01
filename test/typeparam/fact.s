@@ -1,5 +1,4 @@
 package test.typeparam
-
 func fact_unit_name() string {
     "test/typeparam/fact"
 }

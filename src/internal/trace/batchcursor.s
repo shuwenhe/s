@@ -1,5 +1,4 @@
 package src.internal.trace
-
 func batchcursor_unit_name() string {
     "src/internal/trace/batchcursor"
 }

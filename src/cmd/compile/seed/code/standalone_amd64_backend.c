@@ -1,8 +1,6 @@
-/* Darwin declares mkdtemp only at its default (full) API level. */
 #if !defined(__APPLE__) && !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200809L
 #endif
-
 #include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -12,9 +10,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
 #include "target.h"
-
 #define STANDALONE_MAX_INS 32768
 #define STANDALONE_MAX_FUNCS 256
 #define STANDALONE_MAX_SLOTS 2048
@@ -22,24 +18,20 @@
 #define STANDALONE_MAX_ARGS 6
 #define STANDALONE_MAX_PENDING_ARGS 64
 #define STANDALONE_TEXT_CAP 1024
-
 typedef struct standalone_ins {
 	char op[32];
 	char result[STANDALONE_TEXT_CAP];
 	char operand1[STANDALONE_TEXT_CAP];
 	char operand2[STANDALONE_TEXT_CAP];
 } standalone_ins;
-
 typedef struct standalone_ir {
 	standalone_ins ins[STANDALONE_MAX_INS];
 	size_t len;
 } standalone_ir;
-
 typedef struct standalone_slot {
 	char name[STANDALONE_TEXT_CAP];
 	int offset;
 } standalone_slot;
-
 typedef struct standalone_function {
 	char name[STANDALONE_TEXT_CAP];
 	size_t begin;
@@ -48,13 +40,11 @@ typedef struct standalone_function {
 	size_t slot_count;
 	int frame_size;
 } standalone_function;
-
 typedef struct standalone_literal {
 	char encoded[STANDALONE_TEXT_CAP];
 	unsigned char bytes[STANDALONE_TEXT_CAP];
 	size_t len;
 } standalone_literal;
-
 typedef struct standalone_module {
 	standalone_ir ir;
 	standalone_function funcs[STANDALONE_MAX_FUNCS];
@@ -62,12 +52,10 @@ typedef struct standalone_module {
 	standalone_literal literals[STANDALONE_MAX_LITERALS];
 	size_t literal_count;
 } standalone_module;
-
 static void copy_text(char *dst, size_t cap, const char *src) {
 	if (!src) src = "";
 	snprintf(dst, cap, "%s", src);
 }
-
 static bool split_ir_record(char *line, char *fields[4]) {
 	size_t count = 0;
 	char *read = line;
@@ -99,7 +87,6 @@ static bool split_ir_record(char *line, char *fields[4]) {
 	}
 	return count == 4;
 }
-
 static bool load_ir(const char *path, standalone_ir *ir, compile_error *err) {
 	FILE *fp = fopen(path, "rb");
 	char *line = NULL;
@@ -145,7 +132,6 @@ static bool load_ir(const char *path, standalone_ir *ir, compile_error *err) {
 	}
 	return true;
 }
-
 static bool is_integer(const char *text) {
 	char *end = NULL;
 	if (!text || !*text) return false;
@@ -153,12 +139,10 @@ static bool is_integer(const char *text) {
 	(void)strtoll(text, &end, 10);
 	return errno == 0 && end && *end == '\0';
 }
-
 static bool is_string_literal(const char *text) {
 	size_t n = text ? strlen(text) : 0;
 	return n >= 2 && text[0] == '"' && text[n - 1] == '"';
 }
-
 static bool is_value_variable(const char *text) {
 	if (!text || !*text || strcmp(text, "_") == 0) return false;
 	if (is_integer(text) || is_string_literal(text)) return false;
@@ -166,7 +150,6 @@ static bool is_value_variable(const char *text) {
 	if (text[0] == '[') return false;
 	return true;
 }
-
 static void symbol_text(const char *name, char *out, size_t cap) {
 	size_t used = 0;
 	const unsigned char *p = (const unsigned char *)name;
@@ -176,7 +159,6 @@ static void symbol_text(const char *name, char *out, size_t cap) {
 	}
 	out[used] = '\0';
 }
-
 static int slot_index(standalone_function *fn, const char *name, bool create) {
 	size_t i;
 	for (i = 0; i < fn->slot_count; i++) {
@@ -187,7 +169,6 @@ static int slot_index(standalone_function *fn, const char *name, bool create) {
 	fn->slots[fn->slot_count].offset = -(int)((fn->slot_count + 1) * 8);
 	return (int)fn->slot_count++;
 }
-
 static bool collect_operand(standalone_function *fn, const char *operand, compile_error *err) {
 	if (is_value_variable(operand) && slot_index(fn, operand, true) < 0) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "too many standalone locals in %s", fn->name);
@@ -195,7 +176,6 @@ static bool collect_operand(standalone_function *fn, const char *operand, compil
 	}
 	return true;
 }
-
 static bool decode_literal(const char *encoded, standalone_literal *lit, compile_error *err) {
 	size_t i;
 	size_t n = strlen(encoded);
@@ -223,7 +203,6 @@ static bool decode_literal(const char *encoded, standalone_literal *lit, compile
 	}
 	return true;
 }
-
 static int literal_index(standalone_module *module, const char *encoded, compile_error *err) {
 	size_t i;
 	for (i = 0; i < module->literal_count; i++) {
@@ -236,7 +215,6 @@ static int literal_index(standalone_module *module, const char *encoded, compile
 	if (!decode_literal(encoded, &module->literals[module->literal_count], err)) return -1;
 	return (int)module->literal_count++;
 }
-
 static bool analyze_module(standalone_module *module, compile_error *err) {
 	size_t i;
 	standalone_function *current = NULL;
@@ -295,7 +273,6 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 	}
 	return module->func_count > 0;
 }
-
 static int find_literal(const standalone_module *module, const char *encoded) {
 	size_t i;
 	for (i = 0; i < module->literal_count; i++) {
@@ -303,7 +280,6 @@ static int find_literal(const standalone_module *module, const char *encoded) {
 	}
 	return -1;
 }
-
 static bool emit_load(FILE *out, standalone_module *module, standalone_function *fn,
 	const char *value, const char *reg, compile_error *err) {
 	int slot;
@@ -341,7 +317,6 @@ static bool emit_load(FILE *out, standalone_module *module, standalone_function 
 	fprintf(out, "    mov %d(%%rbp), %s\n", fn->slots[slot].offset, reg);
 	return true;
 }
-
 static bool emit_store(FILE *out, standalone_function *fn, const char *name, const char *reg, compile_error *err) {
 	int slot;
 	if (!name || !*name || strcmp(name, "_") == 0) return true;
@@ -353,7 +328,6 @@ static bool emit_store(FILE *out, standalone_function *fn, const char *name, con
 	fprintf(out, "    mov %s, %d(%%rbp)\n", reg, fn->slots[slot].offset);
 	return true;
 }
-
 static const char *runtime_callee(const char *name) {
 	if (strcmp(name, "len") == 0) return "s_value_len";
 	if (strcmp(name, "host_args") == 0) return "s_host_args_value";
@@ -368,7 +342,6 @@ static const char *runtime_callee(const char *name) {
 	if (strcmp(name, "__host_make_executable") == 0) return "s_make_executable_value";
 	return NULL;
 }
-
 static bool emit_function(FILE *out, standalone_module *module, standalone_function *fn, compile_error *err) {
 	static const char *arg_regs[STANDALONE_MAX_ARGS] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 	const char *pending[STANDALONE_MAX_PENDING_ARGS];
@@ -406,13 +379,6 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				error_set(err, ERR_SEMANTIC, 0, 0, "invalid argument count for call to %s in %s", ins->operand1, fn->name);
 				return false;
 			}
-			/*
-			 * IR argument records form a stack.  An argument expression may itself
-			 * contain a call, so the inner CALL consumes only its trailing ARGs and
-			 * must leave the outer call's arguments pending.  Consuming the entire
-			 * queue here made nested calls receive the wrong values and was the
-			 * first standalone-bootstrap crash.
-			 */
 			first_arg = pending_count - (size_t)call_arg_count;
 			for (arg = 0; arg < (size_t)call_arg_count; arg++) {
 				if (!emit_load(out, module, fn, pending[first_arg + arg], arg_regs[arg], err)) return false;
@@ -487,7 +453,6 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 	fprintf(out, "    mov $1, %%rax\n.Ls_%s_return:\n    leave\n    ret\n.size s_fn_%s, .-s_fn_%s\n\n", symbol, symbol, symbol);
 	return true;
 }
-
 static bool emit_assembly(FILE *out, standalone_module *module, compile_error *err) {
 	size_t i;
 	fprintf(out, ".section .text\n.global s_main\n.type s_main, @function\ns_main:\n    jmp s_fn_main\n.size s_main, .-s_main\n\n");
@@ -505,7 +470,6 @@ static bool emit_assembly(FILE *out, standalone_module *module, compile_error *e
 	fprintf(out, ".section .note.GNU-stack,\"\",@progbits\n");
 	return !ferror(out);
 }
-
 static bool run_tool(char *const argv[], compile_error *err) {
 	pid_t pid = fork();
 	int status;
@@ -523,12 +487,10 @@ static bool run_tool(char *const argv[], compile_error *err) {
 	}
 	return true;
 }
-
 bool emit_standalone_amd64_assembly_from_ir_file(const char *input_ir_path, const char *output_assembly_path, compile_error *err) {
 	standalone_module *module = NULL;
 	FILE *out = NULL;
 	bool ok = false;
-
 	error_clear(err);
 	if (!input_ir_path || !output_assembly_path) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "invalid standalone assembly backend input");
@@ -553,13 +515,11 @@ bool emit_standalone_amd64_assembly_from_ir_file(const char *input_ir_path, cons
 	}
 	out = NULL;
 	ok = true;
-
 done:
 	if (out) fclose(out);
 	free(module);
 	return ok;
 }
-
 bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err) {
 	standalone_module *module = NULL;
 	char temp_dir[] = "/tmp/s_standalone-XXXXXX";
@@ -576,7 +536,6 @@ bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *o
 	char *as_program[] = {(char *)(assembler && *assembler ? assembler : "as"), "--64", "-o", obj_path, asm_path, NULL};
 	char *as_runtime[] = {(char *)(assembler && *assembler ? assembler : "as"), "--64", "-o", runtime_obj_path, runtime_source, NULL};
 	char *ld_program[] = {(char *)(linker && *linker ? linker : "ld"), "-static", "-T", linker_script, "-o", (char *)output_binary_path, runtime_obj_path, obj_path, NULL};
-
 	error_clear(err);
 	if (!input_ir_path || !output_binary_path) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "invalid standalone backend input");
@@ -592,7 +551,6 @@ bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *o
 	snprintf(runtime_obj_path, sizeof(runtime_obj_path), "%s/runtime.o", temp_dir);
 	snprintf(runtime_source, sizeof(runtime_source), "%s/src/runtime/selfhost_linux_amd64.S", root);
 	snprintf(linker_script, sizeof(linker_script), "%s/src/runtime/linker/nostdlib.ld", root);
-
 	module = (standalone_module *)calloc(1, sizeof(*module));
 	if (!module) {
 		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
@@ -613,7 +571,6 @@ bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *o
 	out = NULL;
 	if (!run_tool(as_runtime, err) || !run_tool(as_program, err) || !run_tool(ld_program, err)) goto done;
 	ok = true;
-
 done:
 	if (out) fclose(out);
 	unlink(asm_path);
@@ -623,7 +580,6 @@ done:
 	free(module);
 	return ok;
 }
-
 bool emit_standalone_amd64_object_from_ir_file(const char *input_ir_path, const char *output_object_path, compile_error *err) {
 	standalone_module *module = NULL;
 	char temp_dir[] = "/tmp/s_standalone_obj-XXXXXX";
@@ -632,7 +588,6 @@ bool emit_standalone_amd64_object_from_ir_file(const char *input_ir_path, const 
 	FILE *out = NULL;
 	bool ok = false;
 	char *as_program[] = {(char *)(assembler && *assembler ? assembler : "as"), "--64", "-o", (char *)output_object_path, asm_path, NULL};
-
 	error_clear(err);
 	if (!input_ir_path || !output_object_path) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "invalid standalone object backend input");
@@ -663,7 +618,6 @@ bool emit_standalone_amd64_object_from_ir_file(const char *input_ir_path, const 
 	out = NULL;
 	if (!run_tool(as_program, err)) goto done;
 	ok = true;
-
 done:
 	if (out) fclose(out);
 	unlink(asm_path);

@@ -1,6 +1,5 @@
 package compile.internal.gc
 use std.slices
-
 func dump_asm_header(string pkg_name, string[] symbols) string {
     out := "
     i := 0

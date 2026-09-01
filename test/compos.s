@@ -1,5 +1,4 @@
 package test
-
 func compos_unit_name() string {
     "test/compos"
 }

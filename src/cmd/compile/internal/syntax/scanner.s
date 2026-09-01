@@ -1,5 +1,4 @@
 package compile.internal.syntax
-
 func scanner_module_name() string {
     "syntax/scanner.s"
 }

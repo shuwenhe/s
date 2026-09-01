@@ -1,7 +1,5 @@
 package main
-
 extern "intrinsic" func __host_char_at(string text, int index) string;
-
 func join(string left, string right) string {
     return left + right
 }

@@ -1,5 +1,4 @@
 package test.abi
-
 func result_live_unit_name() string {
     "test/abi/result_live"
 }

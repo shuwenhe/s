@@ -1,5 +1,4 @@
 package test.typeparam
-
 func list_unit_name() string {
     "test/typeparam/list"
 }

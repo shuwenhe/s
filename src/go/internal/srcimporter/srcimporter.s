@@ -1,5 +1,4 @@
 package src.go.internal.srcimporter
-
 func srcimporter_unit_name() string {
     "src/go/internal/srcimporter/srcimporter"
 }

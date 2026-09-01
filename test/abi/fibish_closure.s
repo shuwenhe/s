@@ -1,5 +1,4 @@
 package test.abi
-
 func fibish_closure_unit_name() string {
     "test/abi/fibish_closure"
 }

@@ -1,5 +1,4 @@
 package backend
-
 struct assembly_generator {
     buffer: string
     current_section: string

@@ -1,5 +1,4 @@
 package test
-
 func nosplit_unit_name() string {
     "test/nosplit"
 }

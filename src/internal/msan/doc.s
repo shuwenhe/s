@@ -1,5 +1,4 @@
 package src.internal.msan
-
 func doc_unit_name() string {
     "src/internal/msan/doc"
 }

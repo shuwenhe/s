@@ -1,5 +1,4 @@
 package test
-
 func varerr_unit_name() string {
     "test/varerr"
 }

@@ -1,5 +1,4 @@
 package src.testing.iotest
-
 func writer_unit_name() string {
     "src/testing/iotest/writer"
 }

@@ -1,5 +1,4 @@
 package src.simd.archsimd
-
 func generate_unit_name() string {
     "src/simd/archsimd/generate"
 }

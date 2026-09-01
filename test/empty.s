@@ -1,5 +1,4 @@
 package test
-
 func empty_unit_name() string {
     "test/empty"
 }

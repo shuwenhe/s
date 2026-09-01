@@ -1,5 +1,4 @@
 package src.image.gif
-
 func writer_unit_name() string {
     "src/image/gif/writer"
 }

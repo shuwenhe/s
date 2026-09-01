@@ -1,5 +1,4 @@
 package src.runtime.testdata.testprognet
-
 func signalexec_unit_name() string {
     "src/runtime/testdata/testprognet/signalexec"
 }

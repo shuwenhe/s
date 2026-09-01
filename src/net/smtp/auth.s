@@ -1,5 +1,4 @@
 package src.net.smtp
-
 func auth_unit_name() string {
     "src/net/smtp/auth"
 }

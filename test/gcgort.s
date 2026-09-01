@@ -1,5 +1,4 @@
 package test
-
 func gcgort_unit_name() string {
     "test/gcgort"
 }

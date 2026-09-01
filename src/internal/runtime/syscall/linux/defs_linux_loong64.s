@@ -1,5 +1,4 @@
 package src.internal.runtime.syscall.linux
-
 func defs_linux_loong64_unit_name() string {
     "src/internal/runtime/syscall/linux/defs_linux_loong64"
 }

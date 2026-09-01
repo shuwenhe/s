@@ -1,5 +1,4 @@
 package src.go.types
-
 func gcsizes_unit_name() string {
     "src/go/types/gcsizes"
 }

@@ -1,5 +1,4 @@
 package test.fixedbugs
-
 func notinheap_unit_name() string {
     "test/fixedbugs/notinheap"
 }

@@ -1,5 +1,4 @@
 package test
-
 func devirtualization_nil_panics_unit_name() string {
     "test/devirtualization_nil_panics"
 }

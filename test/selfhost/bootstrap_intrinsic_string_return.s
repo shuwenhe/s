@@ -1,7 +1,5 @@
 package bootstrap.closure
-
 extern "intrinsic" func __host_slice(string value, int start, int end) string;
-
 func identity(string value) string {
     return value
 }

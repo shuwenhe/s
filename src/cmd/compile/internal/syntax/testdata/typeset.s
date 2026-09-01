@@ -1,5 +1,4 @@
 package compile.internal.syntax.testdata
-
 func typeset_case_name() string {
     "syntax/testdata/typeset.s"
 }

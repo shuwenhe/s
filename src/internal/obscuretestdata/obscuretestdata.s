@@ -1,5 +1,4 @@
 package src.internal.obscuretestdata
-
 func obscuretestdata_unit_name() string {
     "src/internal/obscuretestdata/obscuretestdata"
 }

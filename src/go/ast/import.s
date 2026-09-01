@@ -1,5 +1,4 @@
 package src.go.ast
-
 func import_unit_name() string {
     "src/go/ast/import"
 }

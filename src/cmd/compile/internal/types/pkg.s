@@ -1,5 +1,4 @@
 package compile.internal.types
-
 func pkg_module_name() string {
     "types/pkg.s"
 }

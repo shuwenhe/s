@@ -1,5 +1,4 @@
 package src.runtime.testdata.testprogcgo.windows
-
 func win_unit_name() string {
     "src/runtime/testdata/testprogcgo/windows/win"
 }

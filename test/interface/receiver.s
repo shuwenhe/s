@@ -1,5 +1,4 @@
 package test.interface
-
 func receiver_unit_name() string {
     "test/interface/receiver"
 }

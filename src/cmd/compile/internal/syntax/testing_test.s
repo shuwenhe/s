@@ -1,5 +1,4 @@
 package compile.internal.syntax
-
 func testing_test_case_name() string {
     "syntax/testing_test.s"
 }

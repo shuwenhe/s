@@ -1,5 +1,4 @@
 package src.runtime
-
 func map_faststr_unit_name() string {
     "src/runtime/map_faststr"
 }

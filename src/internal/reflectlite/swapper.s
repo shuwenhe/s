@@ -1,5 +1,4 @@
 package src.internal.reflectlite
-
 func swapper_unit_name() string {
     "src/internal/reflectlite/swapper"
 }

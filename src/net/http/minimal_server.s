@@ -1,7 +1,5 @@
 package src.net.http
-
 type handler_func = func(http_request) http_response
-
 struct route_entry {
     string method
     string path

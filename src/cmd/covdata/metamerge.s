@@ -1,5 +1,4 @@
 package src.cmd.covdata
-
 func metamerge_unit_name() string {
     "src/cmd/covdata/metamerge"
 }

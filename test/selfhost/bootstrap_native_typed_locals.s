@@ -1,5 +1,4 @@
 package main
-
 func base() int {
     return 40
 }

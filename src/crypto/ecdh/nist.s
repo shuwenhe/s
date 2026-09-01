@@ -1,5 +1,4 @@
 package src.crypto.ecdh
-
 func nist_unit_name() string {
     "src/crypto/ecdh/nist"
 }

@@ -1,5 +1,4 @@
 package test.chan
-
 func perm_unit_name() string {
     "test/chan/perm"
 }

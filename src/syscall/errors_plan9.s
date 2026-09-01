@@ -1,5 +1,4 @@
 package src.syscall
-
 func errors_plan9_unit_name() string {
     "src/syscall/errors_plan9"
 }

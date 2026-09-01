@@ -1,5 +1,4 @@
 package src.mime
-
 func grammar_unit_name() string {
     "src/mime/grammar"
 }

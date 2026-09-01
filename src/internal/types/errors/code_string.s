@@ -1,5 +1,4 @@
 package src.internal.types.errors
-
 func code_string_unit_name() string {
     "src/internal/types/errors/code_string"
 }

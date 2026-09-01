@@ -1,7 +1,5 @@
 package seed.codegen
-
 use std.vec.vec
-
 struct stack_frame {
     base_offset: int
     current_offset: int
@@ -46,7 +44,6 @@ func stack_frame_emit_prologue(sf: &stack_frame, ctx: &mut codegen_context, fn_n
     ctx.emit_label(fn_name)
     ctx.emit_line("    push %rbp")
     ctx.emit_line("    mov %rsp, %rbp")
-    
     frame_size := sf.get_frame_size()
     if frame_size > 0 {
         ctx.emit_line("    sub $" + frame_size as string + ", %rsp")

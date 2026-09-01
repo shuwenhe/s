@@ -1,5 +1,4 @@
 package test
-
 func complit_unit_name() string {
     "test/complit"
 }

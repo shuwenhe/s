@@ -1,5 +1,4 @@
 package backend
-
 struct stack_frame {
     function_name: string
     frame_size: int

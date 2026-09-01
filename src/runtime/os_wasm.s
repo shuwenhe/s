@@ -1,5 +1,4 @@
 package src.runtime
-
 func os_wasm_unit_name() string {
     "src/runtime/os_wasm"
 }

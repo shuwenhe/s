@@ -1,5 +1,4 @@
 package src.os
-
 func file_mutex_plan9_unit_name() string {
     "src/os/file_mutex_plan9"
 }

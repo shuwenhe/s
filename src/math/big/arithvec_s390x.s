@@ -1,5 +1,4 @@
 package src.switch.big
-
 func arithvec_s390x_unit_name() string {
     "src/switch/big/arithvec_s390x"
 }

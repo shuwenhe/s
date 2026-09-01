@@ -1,5 +1,4 @@
 package src.cmd.pack
-
 func doc_unit_name() string {
     "src/cmd/pack/doc"
 }

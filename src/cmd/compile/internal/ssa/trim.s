@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func trim_module_name() string {
     "ssa/trim.s"
 }

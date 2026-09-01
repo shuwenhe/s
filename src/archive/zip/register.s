@@ -1,5 +1,4 @@
 package src.archive.zip
-
 func register_unit_name() string {
     "src/archive/zip/register"
 }

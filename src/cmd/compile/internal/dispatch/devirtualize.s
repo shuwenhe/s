@@ -3,7 +3,6 @@ use compile.internal.mir.mir_graph
 use compile.internal.mir.mir_statement
 use std.prelude.len
 use std.prelude.slice
-
 func estimate_devirtualized_sites(string mir_text) int {
     candidates := count_token(mir_text, "dyn") + count_token(mir_text, "iface")
     if candidates <= 0 {

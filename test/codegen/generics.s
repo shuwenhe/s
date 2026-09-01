@@ -1,5 +1,4 @@
 package test.codegen
-
 func generics_unit_name() string {
     "test/codegen/generics"
 }

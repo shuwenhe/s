@@ -1,5 +1,4 @@
 package src.runtime
-
 func defs1_linux_unit_name() string {
     "src/runtime/defs1_linux"
 }

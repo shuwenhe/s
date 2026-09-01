@@ -1,6 +1,5 @@
 package compile.internal.base
 use std.slices
-
 struct link_symbol {
     string pkg
     string name

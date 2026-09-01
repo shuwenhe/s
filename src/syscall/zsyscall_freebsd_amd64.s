@@ -1,5 +1,4 @@
 package src.syscall
-
 func zsyscall_freebsd_amd64_unit_name() string {
     "src/syscall/zsyscall_freebsd_amd64"
 }

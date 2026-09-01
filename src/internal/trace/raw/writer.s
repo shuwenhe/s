@@ -1,5 +1,4 @@
 package src.internal.trace.raw
-
 func writer_unit_name() string {
     "src/internal/trace/raw/writer"
 }

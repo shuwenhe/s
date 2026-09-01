@@ -1,5 +1,4 @@
 package src.syscall
-
 func types_netbsd_unit_name() string {
     "src/syscall/types_netbsd"
 }

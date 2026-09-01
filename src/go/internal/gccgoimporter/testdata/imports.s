@@ -1,5 +1,4 @@
 package src.go.internal.gccgoimporter.testdata
-
 func imports_unit_name() string {
     "src/go/internal/gccgoimporter/testdata/imports"
 }

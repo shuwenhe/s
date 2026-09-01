@@ -1,5 +1,4 @@
 package src.cmd.link
-
 func doc_unit_name() string {
     "src/cmd/link/doc"
 }

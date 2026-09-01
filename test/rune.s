@@ -1,5 +1,4 @@
 package test
-
 func rune_unit_name() string {
     "test/rune"
 }

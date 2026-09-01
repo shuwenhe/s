@@ -1,5 +1,4 @@
 package compile.internal.x86
-
 func galign_unit_name() string {
     "x86/galign.s"
 }

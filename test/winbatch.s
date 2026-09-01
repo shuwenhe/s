@@ -1,5 +1,4 @@
 package test
-
 func winbatch_unit_name() string {
     "test/winbatch"
 }

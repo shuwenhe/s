@@ -1,5 +1,4 @@
 package src.syscall
-
 func timestruct_unit_name() string {
     "src/syscall/timestruct"
 }

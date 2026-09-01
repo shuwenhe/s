@@ -1,5 +1,4 @@
 package src.net
-
 func timeout_test_unit_name() string {
     "src/net/timeout_test"
 }

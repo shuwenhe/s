@@ -4,7 +4,6 @@ use std.prelude.len
 use std.prelude.slice
 use std.prelude.to_string
 use std.slices
-
 func starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false

@@ -1,5 +1,4 @@
 package src.net
-
 func unixsock_posix_unit_name() string {
     "src/net/unixsock_posix"
 }

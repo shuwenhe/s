@@ -1,5 +1,4 @@
 package backend
-
 struct instr_selector {
     codegen_context* ctx
 }
@@ -34,7 +33,6 @@ func (is* instr_selector) select_add_i64(int left_reg, int right_reg, int result
         instr := "\tmovq\t%" + left_name + ", %" + result_name
         is.ctx.progs.append_prog(prog_op_mov(), instr)
     }
-    
     right_name := x86_64_reg_name(right_reg)
     result_name := x86_64_reg_name(result_reg)
     instr := "\taddq\t%" + right_name + ", %" + result_name
@@ -48,7 +46,6 @@ func (is* instr_selector) select_sub_i64(int left_reg, int right_reg, int result
         instr := "\tmovq\t%" + left_name + ", %" + result_name
         is.ctx.progs.append_prog(prog_op_mov(), instr)
     }
-    
     right_name := x86_64_reg_name(right_reg)
     result_name := x86_64_reg_name(result_reg)
     instr := "\tsubq\t%" + right_name + ", %" + result_name
@@ -62,7 +59,6 @@ func (is* instr_selector) select_mul_i64(int left_reg, int right_reg, int result
         instr := "\tmovq\t%" + left_name + ", %" + result_name
         is.ctx.progs.append_prog(prog_op_mov(), instr)
     }
-    
     right_name := x86_64_reg_name(right_reg)
     result_name := x86_64_reg_name(result_reg)
     instr := "\timulq\t%" + right_name + ", %" + result_name
@@ -75,14 +71,11 @@ func (is* instr_selector) select_div_i64(int left_reg, int right_reg, int result
         instr := "\tmovq\t%" + left_name + ", %rax"
         is.ctx.progs.append_prog(prog_op_mov(), instr)
     }
-    
     instr := "\tcqto"
     is.ctx.progs.append_prog(prog_op_nop(), instr)
-    
     right_name := x86_64_reg_name(right_reg)
     instr = "\tidivq\t%" + right_name
     is.ctx.progs.append_prog(prog_op_div(), instr)
-    
     if result_reg != 0 {
         result_name := x86_64_reg_name(result_reg)
         instr := "\tmovq\t%rax, %" + result_name
@@ -96,14 +89,11 @@ func (is* instr_selector) select_mod_i64(int left_reg, int right_reg, int result
         instr := "\tmovq\t%" + left_name + ", %rax"
         is.ctx.progs.append_prog(prog_op_mov(), instr)
     }
-    
     instr := "\tcqto"
     is.ctx.progs.append_prog(prog_op_nop(), instr)
-    
     right_name := x86_64_reg_name(right_reg)
     instr = "\tidivq\t%" + right_name
     is.ctx.progs.append_prog(prog_op_div(), instr)
-    
     if result_reg != 2 {
         result_name := x86_64_reg_name(result_reg)
         instr := "\tmovq\t%rdx, %" + result_name
@@ -134,10 +124,8 @@ func (is* instr_selector) select_return(int value_reg) {
         instr := "\tmovq\t%" + value_name + ", %rax"
         is.ctx.progs.append_prog(prog_op_mov(), instr)
     }
-    
     instr := "\tpop\t%rbp"
     is.ctx.progs.append_prog(prog_op_pop(), instr)
-    
     instr = "\tretq"
     is.ctx.progs.append_prog(prog_op_ret(), instr)
 }

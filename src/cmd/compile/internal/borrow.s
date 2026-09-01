@@ -2,7 +2,6 @@ package compile.internal.borrow
 use std.prelude.len
 use std.prelude.slice
 use std.slices
-
 func analyze_block() int {
     return 0
 }

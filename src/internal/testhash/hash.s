@@ -1,5 +1,4 @@
 package src.internal.testhash
-
 func hash_unit_name() string {
     "src/internal/testhash/hash"
 }

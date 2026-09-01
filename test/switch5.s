@@ -1,5 +1,4 @@
 package test
-
 func switch5_unit_name() string {
     "test/switch5"
 }

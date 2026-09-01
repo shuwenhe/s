@@ -1,5 +1,4 @@
 package src.cmd.link.internal.riscv64
-
 func asm_unit_name() string {
     "src/cmd/link/internal/riscv64/asm"
 }

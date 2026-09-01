@@ -1,5 +1,4 @@
 package src.internal.runtime.sys
-
 func intrinsics_unit_name() string {
     "src/internal/runtime/sys/intrinsics"
 }

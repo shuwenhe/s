@@ -1,5 +1,4 @@
 package test
-
 func unsafe_string_unit_name() string {
     "test/unsafe_string"
 }

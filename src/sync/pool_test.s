@@ -1,5 +1,4 @@
 package src.sync
-
 func pool_test_unit_name() string {
     "src/sync/pool_test"
 }

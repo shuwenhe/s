@@ -1,5 +1,4 @@
 package src.html.template
-
 func js_test_unit_name() string {
     "src/html/template/js_test"
 }

@@ -4,7 +4,6 @@ use std.result.result
 use std.option.option
 const CHAN_OPEN   = 0
 const CHAN_CLOSED = 1
-
 struct Waiter {
     int sroutine_id
     int val_idx
@@ -56,7 +55,7 @@ func chan_send(RawChan ch, int val) ((), string) {
                 chan_deliver(w.sroutine_id, val)
                 sroutine_ready(w.sroutine_id)
             }
-            return 
+            return
         }
         cur := __sroutine_current_id()
         ch.senders = append(ch.senders, Waiter { sroutine_id: cur, val_idx: val })
@@ -84,7 +83,7 @@ func chan_send(RawChan ch, int val) ((), string) {
         if w.sroutine_id >= 0 {
             sroutine_ready(w.sroutine_id)
         }
-        return 
+        return
     }
     ch.mu.unlock()
     ()

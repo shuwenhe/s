@@ -109,7 +109,6 @@ const enoprotoopt = 92
 const eprotonosupport = 93
 const esocktnosupport = 94
 const eopnotsupp = 95
-
 struct sockaddr_inet {
     u16 sin_family
     u16 sin_port

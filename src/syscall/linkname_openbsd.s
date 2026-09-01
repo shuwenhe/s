@@ -1,5 +1,4 @@
 package src.syscall
-
 func linkname_openbsd_unit_name() string {
     "src/syscall/linkname_openbsd"
 }

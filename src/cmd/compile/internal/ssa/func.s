@@ -1,6 +1,5 @@
 package compile.internal.ssa
 use std.slices
-
 struct ssa_func {
     string name
     int entry

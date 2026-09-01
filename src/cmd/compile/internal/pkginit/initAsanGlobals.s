@@ -1,5 +1,4 @@
 package compile.internal.pkginit
-
 func initAsanGlobals_unit_name() string {
     "pkginit/initAsanGlobals.s"
 }

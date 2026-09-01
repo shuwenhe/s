@@ -1,5 +1,4 @@
 package compile.internal.types
-
 func sym_test_case_name() string {
     "types/sym_test.s"
 }

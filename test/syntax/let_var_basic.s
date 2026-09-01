@@ -1,5 +1,4 @@
 package main
-
 func test_let_immutable() void {
     x := 10
     println("x := 10 is immutable")

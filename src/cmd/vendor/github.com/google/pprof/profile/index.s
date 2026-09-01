@@ -1,5 +1,4 @@
 package src.cmd.vendor.github.com.google.pprof.profile
-
 func index_unit_name() string {
     "src/cmd/vendor/github.com/google/pprof/profile/index"
 }

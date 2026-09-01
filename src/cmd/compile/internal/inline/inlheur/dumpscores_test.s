@@ -1,5 +1,4 @@
 package compile.internal.inline.inlheur
-
 func dumpscores_test_case_name() string {
     "inline/inlheur/dumpscores_test.s"
 }

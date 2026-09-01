@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func scc_module_name() string {
     "ir/scc.s"
 }

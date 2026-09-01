@@ -1,5 +1,4 @@
 package src.internal.abi
-
 func symtab_unit_name() string {
     "src/internal/abi/symtab"
 }

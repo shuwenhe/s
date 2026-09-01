@@ -1,5 +1,4 @@
 package src.mime
-
 func mediatype_test_unit_name() string {
     "src/mime/mediatype_test"
 }

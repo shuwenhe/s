@@ -1,5 +1,4 @@
 package src.cmd.go.internal.toolchain
-
 func path_unix_unit_name() string {
     "src/cmd/go/internal/toolchain/path_unix"
 }

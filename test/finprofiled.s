@@ -1,5 +1,4 @@
 package test
-
 func finprofiled_unit_name() string {
     "test/finprofiled"
 }

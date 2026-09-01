@@ -1,5 +1,4 @@
 package src.cmd.link.internal.arm
-
 func l_unit_name() string {
     "src/cmd/link/internal/arm/l"
 }

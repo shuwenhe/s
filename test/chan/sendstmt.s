@@ -1,5 +1,4 @@
 package test.chan
-
 func sendstmt_unit_name() string {
     "test/chan/sendstmt"
 }

@@ -1,5 +1,4 @@
 package src.switch
-
 func copysign_unit_name() string {
     "src/switch/copysign"
 }

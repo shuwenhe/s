@@ -1,5 +1,4 @@
 package test.interface
-
 func noeq_unit_name() string {
     "test/interface/noeq"
 }

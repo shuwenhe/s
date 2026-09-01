@@ -1,5 +1,4 @@
 package test.abi
-
 func many_intstar_input_unit_name() string {
     "test/abi/many_intstar_input"
 }

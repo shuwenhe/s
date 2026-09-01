@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func type_module_name() string {
     "ir/type.s"
 }

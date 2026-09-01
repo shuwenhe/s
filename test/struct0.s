@@ -1,5 +1,4 @@
 package test
-
 func struct0_unit_name() string {
     "test/struct0"
 }

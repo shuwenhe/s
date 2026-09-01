@@ -1,5 +1,4 @@
 package src.runtime
-
 func mem_linux_unit_name() string {
     "src/runtime/mem_linux"
 }

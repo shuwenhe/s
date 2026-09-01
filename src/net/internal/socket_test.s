@@ -1,6 +1,5 @@
 package src.net.internal
 import "src.std.testing"
-
 func TestSocketCreate(t *testing.T) {
     sock, err := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     if err != nil {

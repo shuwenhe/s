@@ -1,5 +1,4 @@
 package src.vendor.golang.org.x.text.unicode.norm
-
 func input_unit_name() string {
     "src/vendor/golang.org/x/text/unicode/norm/input"
 }

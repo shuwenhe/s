@@ -1,5 +1,4 @@
 package src.structs
-
 func doc_unit_name() string {
     "src/structs/doc"
 }

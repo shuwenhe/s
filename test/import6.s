@@ -1,5 +1,4 @@
 package test
-
 func import6_unit_name() string {
     "test/import6"
 }

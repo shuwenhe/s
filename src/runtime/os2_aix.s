@@ -1,5 +1,4 @@
 package src.runtime
-
 func os2_aix_unit_name() string {
     "src/runtime/os2_aix"
 }

@@ -1,5 +1,4 @@
 package src.go.printer
-
 func comment_unit_name() string {
     "src/go/printer/comment"
 }

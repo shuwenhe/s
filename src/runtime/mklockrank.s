@@ -1,5 +1,4 @@
 package src.runtime
-
 func mklockrank_unit_name() string {
     "src/runtime/mklockrank"
 }

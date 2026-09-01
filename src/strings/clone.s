@@ -1,5 +1,4 @@
 package src.strings
-
 func clone_unit_name() string {
     "src/strings/clone"
 }

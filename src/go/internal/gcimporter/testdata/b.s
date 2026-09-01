@@ -1,5 +1,4 @@
 package src.go.internal.gcimporter.testdata
-
 func b_unit_name() string {
     "src/go/internal/gcimporter/testdata/b"
 }

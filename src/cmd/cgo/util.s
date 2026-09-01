@@ -1,5 +1,4 @@
 package src.cmd.cgo
-
 func util_unit_name() string {
     "src/cmd/cgo/util"
 }

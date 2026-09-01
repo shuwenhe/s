@@ -1,5 +1,4 @@
 package compile.internal.base
-
 struct debug_flags {
     int align_hot
     int append

@@ -1,5 +1,4 @@
 package src.embed
-
 func embed_unit_name() string {
     "src/embed/embed"
 }

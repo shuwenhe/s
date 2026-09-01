@@ -1,5 +1,4 @@
 package test.typeparam.geninline.dir
-
 func a_unit_name() string {
     "test/typeparam/geninline.dir/a"
 }

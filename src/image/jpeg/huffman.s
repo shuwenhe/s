@@ -1,5 +1,4 @@
 package src.image.jpeg
-
 func huffman_unit_name() string {
     "src/image/jpeg/huffman"
 }

@@ -1,5 +1,4 @@
 package src.go.types
-
 func mono_unit_name() string {
     "src/go/types/mono"
 }

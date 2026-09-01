@@ -1,5 +1,4 @@
 package src.cmd.internal.src
-
 func pos_unit_name() string {
     "src/cmd/internal/src/pos"
 }

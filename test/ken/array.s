@@ -1,5 +1,4 @@
 package test.ken
-
 func array_unit_name() string {
     "test/ken/array"
 }

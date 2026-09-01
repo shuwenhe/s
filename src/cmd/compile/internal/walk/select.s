@@ -1,5 +1,4 @@
 package compile.internal.walk
-
 func select_module_name() string {
     "walk/select.s"
 }

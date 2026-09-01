@@ -1,5 +1,4 @@
 package compile.internal.syntax
-
 func nodes_module_name() string {
     "syntax/nodes.s"
 }

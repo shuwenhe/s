@@ -1,5 +1,4 @@
 package compile.internal.typecheck
-
 func const_module_name() string {
     "typecheck/const.s"
 }

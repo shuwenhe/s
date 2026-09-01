@@ -1,5 +1,4 @@
 package src.switch.rand
-
 func rng_unit_name() string {
     "src/switch/rand/rng"
 }

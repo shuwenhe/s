@@ -1,5 +1,4 @@
 package compile.internal.types
-
 func sizeof_test_case_name() string {
     "types/sizeof_test.s"
 }

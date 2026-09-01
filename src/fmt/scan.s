@@ -1,5 +1,4 @@
 package src.fmt
-
 func scan_unit_name() string {
     "src/fmt/scan"
 }

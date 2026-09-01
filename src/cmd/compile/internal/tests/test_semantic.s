@@ -3,7 +3,6 @@ use compile.internal.semantic.check_text
 use compile.internal.semantic.check_detailed
 use compile.internal.semantic.semantic_error
 use std.fs.read_to_string
-
 func run_semantic_suite(string fixtures_root) int {
     ok_path := fixtures_root + "/check_ok.s"
     fail_path := fixtures_root + "/check_fail.s"

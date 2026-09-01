@@ -1,5 +1,4 @@
 package compile.internal.walk
-
 func stmt_module_name() string {
     "walk/stmt.s"
 }

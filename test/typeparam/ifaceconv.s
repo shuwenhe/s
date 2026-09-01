@@ -1,5 +1,4 @@
 package test.typeparam
-
 func ifaceconv_unit_name() string {
     "test/typeparam/ifaceconv"
 }

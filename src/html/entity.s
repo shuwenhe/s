@@ -1,5 +1,4 @@
 package src.html
-
 func entity_unit_name() string {
     "src/html/entity"
 }

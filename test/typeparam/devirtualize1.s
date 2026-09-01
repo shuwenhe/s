@@ -1,5 +1,4 @@
 package test.typeparam
-
 func devirtualize1_unit_name() string {
     "test/typeparam/devirtualize1"
 }

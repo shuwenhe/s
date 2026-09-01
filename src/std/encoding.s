@@ -1,5 +1,4 @@
 package std.encoding
-
 func normalize_byte(int value) int {
     int current = value
     if current < 0 {

@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func critical_module_name() string {
     "ssa/critical.s"
 }

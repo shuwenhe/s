@@ -1,5 +1,4 @@
 package src.text.template
-
 func examplefiles_test_unit_name() string {
     "src/text/template/examplefiles_test"
 }

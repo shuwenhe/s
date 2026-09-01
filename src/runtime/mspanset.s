@@ -1,5 +1,4 @@
 package src.runtime
-
 func mspanset_unit_name() string {
     "src/runtime/mspanset"
 }

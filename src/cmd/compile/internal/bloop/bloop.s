@@ -25,7 +25,6 @@ use std.prelude.box
 use std.prelude.len
 use std.prelude.slice
 use std.slices
-
 func get_name_from_expr(expr value) option[string] {
     switch value {
         expr.name(name_value) : option::some(name_value.name),

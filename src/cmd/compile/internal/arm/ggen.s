@@ -1,6 +1,5 @@
 package compile.internal.arm
 use std.slices
-
 struct prog {
     string op
     string from

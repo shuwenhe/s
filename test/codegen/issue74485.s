@@ -1,5 +1,4 @@
 package test.codegen
-
 func issue74485_unit_name() string {
     "test/codegen/issue74485"
 }

@@ -1,5 +1,4 @@
 package src.cmd.cover
-
 func pkgname_test_unit_name() string {
     "src/cmd/cover/pkgname_test"
 }

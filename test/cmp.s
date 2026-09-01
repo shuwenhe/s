@@ -1,5 +1,4 @@
 package test
-
 func cmp_unit_name() string {
     "test/cmp"
 }

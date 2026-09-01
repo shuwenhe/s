@@ -1,5 +1,4 @@
 package compile.internal.wasm
-
 func ssa_unit_name() string {
     "wasm/ssa.s"
 }

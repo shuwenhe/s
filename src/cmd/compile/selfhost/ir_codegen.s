@@ -7,7 +7,6 @@ use std.strings.split as split_string
 use std.strings.trim as trim_string
 use std.strings.contains as contains_string
 use std.fmt.sprintf
-
 struct IRProgram {
     functions: []Function
     globals: []Global

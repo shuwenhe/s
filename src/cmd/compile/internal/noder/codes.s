@@ -1,5 +1,4 @@
 package compile.internal.noder
-
 func code_ok() string {
     "E0000"
 }

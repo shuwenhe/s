@@ -1,5 +1,4 @@
 package test.ken
-
 func interfun_unit_name() string {
     "test/ken/interfun"
 }

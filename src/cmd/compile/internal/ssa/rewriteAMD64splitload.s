@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func rewriteAMD64splitload_rule_name() string {
     "ssa/rewriteAMD64splitload.s"
 }

@@ -1,5 +1,4 @@
 package backend
-
 struct backend_context {
     compiler: native_compiler
     native_enabled: bool
@@ -20,22 +19,18 @@ func (bc* backend_context) compile_native() int {
     if !bc.native_enabled {
         return -1
     }
-    
     result := bc.compiler.compile_to_assembly()
     if result != 0 {
         return result
     }
-    
     result = bc.compiler.assemble_to_object()
     if result != 0 {
         return result
     }
-    
     result = bc.compiler.link_to_executable()
     if result != 0 {
         return result
     }
-    
     0
 }
 

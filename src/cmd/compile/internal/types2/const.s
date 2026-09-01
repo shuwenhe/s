@@ -1,5 +1,4 @@
 package compile.internal.types2
-
 func const_module_name() string {
     "types2/const.s"
 }

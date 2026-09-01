@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func html_test_case_name() string {
     "ir/html_test.s"
 }

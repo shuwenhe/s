@@ -1,5 +1,4 @@
 package bootstrap.closure
-
 func leaf(string value) int {
     return len(value)
 }

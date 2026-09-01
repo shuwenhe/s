@@ -1,5 +1,4 @@
 package test
-
 func used_unit_name() string {
     "test/used"
 }

@@ -1,5 +1,4 @@
 package test.ken
-
 func simpswitch_unit_name() string {
     "test/ken/simpswitch"
 }

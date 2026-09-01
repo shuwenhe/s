@@ -1,5 +1,4 @@
 package test.codegen
-
 func smallintiface_unit_name() string {
     "test/codegen/smallintiface"
 }

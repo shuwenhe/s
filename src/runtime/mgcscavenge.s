@@ -1,5 +1,4 @@
 package src.runtime
-
 func mgcscavenge_unit_name() string {
     "src/runtime/mgcscavenge"
 }

@@ -1,5 +1,4 @@
 package demo
-
 func generate_minimal_x86_64_asm() string {
     return `
 .text
@@ -7,7 +6,7 @@ func generate_minimal_x86_64_asm() string {
 main:
     push %rbp
     mov %rsp, %rbp
-    xor %eax, %eax      
+    xor %eax, %eax
     pop %rbp
     ret
 `

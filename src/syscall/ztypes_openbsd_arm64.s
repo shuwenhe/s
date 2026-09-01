@@ -1,5 +1,4 @@
 package src.syscall
-
 func ztypes_openbsd_arm64_unit_name() string {
     "src/syscall/ztypes_openbsd_arm64"
 }

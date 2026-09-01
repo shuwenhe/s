@@ -1,5 +1,4 @@
 package src.os
-
 func stat_wasip1_unit_name() string {
     "src/os/stat_wasip1"
 }

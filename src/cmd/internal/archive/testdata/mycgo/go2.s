@@ -1,5 +1,4 @@
 package src.cmd.internal.archive.testdata.mycgo
-
 func go2_unit_name() string {
     "src/cmd/internal/archive/testdata/mycgo/go2"
 }

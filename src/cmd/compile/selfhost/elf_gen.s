@@ -2,19 +2,18 @@ package cmd
 use std.io.File as file_type
 use std.encoding.binary.write as binary_write
 use std.encoding.binary.little_endian
-const ELF_MAGIC = 0x464c457f        
-const ELF_CLASS_64 = 2              
-const ELF_DATA_LE = 1               
+const ELF_MAGIC = 0x464c457f
+const ELF_CLASS_64 = 2
+const ELF_DATA_LE = 1
 const ELF_VERSION = 1
-const ELF_OSABI = 0                 
+const ELF_OSABI = 0
 const ELF_ABIVERSION = 0
-const ELF_TYPE_EXEC = 2             
+const ELF_TYPE_EXEC = 2
 const ELF_MACHINE_X86_64 = 0x3E
-
 struct ELFHeader {
     magic: u32
-    class_: u8                       
-    data: u8                         
+    class_: u8
+    data: u8
     version: u8
     osabi: u8
     abiversion: u8
@@ -90,7 +89,7 @@ func new_elf_builder() ELFBuilder {
             abiversion: ELF_ABIVERSION,
             type_: ELF_TYPE_EXEC,
             machine: ELF_MACHINE_X86_64,
-            entry: 0x400000,  
+            entry: 0x400000,
             header_size: 64,
             program_header_size: 56,
             section_header_size: 64,

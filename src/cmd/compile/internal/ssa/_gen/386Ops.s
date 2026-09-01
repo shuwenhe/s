@@ -1,5 +1,4 @@
 package compile.internal.ssa._gen
-
 func unit_386Ops_rule_name() string {
     "ssa/_gen/386Ops.s"
 }

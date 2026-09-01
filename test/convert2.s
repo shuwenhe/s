@@ -1,5 +1,4 @@
 package test
-
 func convert2_unit_name() string {
     "test/convert2"
 }

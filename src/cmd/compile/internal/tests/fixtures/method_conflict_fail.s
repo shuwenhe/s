@@ -1,5 +1,4 @@
 package demo.conflict
-
 struct point {
     int x
 }

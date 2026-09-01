@@ -1,5 +1,4 @@
 package test
-
 func convinline_unit_name() string {
     "test/convinline"
 }

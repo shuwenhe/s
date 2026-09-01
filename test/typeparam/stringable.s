@@ -1,5 +1,4 @@
 package test.typeparam
-
 func stringable_unit_name() string {
     "test/typeparam/stringable"
 }

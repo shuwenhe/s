@@ -6,7 +6,6 @@ extern "intrinsic" func __atomic_cas(int target, int expected, int desired) bool
 extern "intrinsic" func __atomic_add(int target, int delta) int
 extern "intrinsic" func __atomic_load(int target) int
 extern "intrinsic" func __sema_new_id() int
-
 struct Semaphore {
     int id
     int count

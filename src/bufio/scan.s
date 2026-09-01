@@ -1,5 +1,4 @@
 package src.bufio
-
 func scan_unit_name() string {
     "src/bufio/scan"
 }

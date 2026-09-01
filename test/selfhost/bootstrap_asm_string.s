@@ -1,5 +1,4 @@
 package main
-
 func decorate(string value) string {
     string prefix = "S:"
     return prefix + value

@@ -1,5 +1,4 @@
 package compile.internal.typecheck
-
 func mkbuiltin_module_name() string {
     "typecheck/mkbuiltin.s"
 }

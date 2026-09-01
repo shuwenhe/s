@@ -1,5 +1,4 @@
 package src.cmd.internal.objabi
-
 func pkgspecial_unit_name() string {
     "src/cmd/internal/objabi/pkgspecial"
 }

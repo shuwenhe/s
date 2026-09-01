@@ -1,5 +1,4 @@
 package src.switch.big.internal.asmgen
-
 func riscv64_unit_name() string {
     "src/switch/big/internal/asmgen/riscv64"
 }

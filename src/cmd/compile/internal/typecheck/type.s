@@ -1,5 +1,4 @@
 package compile.internal.typecheck
-
 func type_module_name() string {
     "typecheck/type.s"
 }

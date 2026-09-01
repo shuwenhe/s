@@ -1,5 +1,4 @@
 package src.net
-
 func file_posix_unit_name() string {
     "src/net/file_posix"
 }

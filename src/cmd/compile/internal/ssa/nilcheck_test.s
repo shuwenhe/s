@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func nilcheck_test_case_name() string {
     "ssa/nilcheck_test.s"
 }

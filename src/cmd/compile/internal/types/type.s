@@ -1,5 +1,4 @@
 package compile.internal.types
-
 func type_module_name() string {
     "types/type.s"
 }

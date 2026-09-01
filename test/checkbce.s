@@ -1,5 +1,4 @@
 package test
-
 func checkbce_unit_name() string {
     "test/checkbce"
 }

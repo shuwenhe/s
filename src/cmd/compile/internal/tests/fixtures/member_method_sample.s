@@ -1,5 +1,4 @@
 package demo.member
-
 struct point {
     int x
     int y

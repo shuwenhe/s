@@ -1,5 +1,4 @@
 package src.internal.asan
-
 func asan_unit_name() string {
     "src/internal/asan/asan"
 }

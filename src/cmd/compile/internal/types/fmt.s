@@ -1,5 +1,4 @@
 package compile.internal.types
-
 func fmt_module_name() string {
     "types/fmt.s"
 }

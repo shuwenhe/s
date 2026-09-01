@@ -1,6 +1,5 @@
 package compile.internal.abi
 use std.slices
-
 struct reg_amounts {
     int int_regs
     int float_regs

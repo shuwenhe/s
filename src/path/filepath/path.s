@@ -1,5 +1,4 @@
 package src.path.filepath
-
 func path_unit_name() string {
     "src/path/filepath/path"
 }

@@ -1,5 +1,4 @@
 package test.ken
-
 func complit_unit_name() string {
     "test/ken/complit"
 }

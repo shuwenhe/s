@@ -17,7 +17,6 @@ use compile.internal.mir.mir_local_slot
 use compile.internal.mir.mir_operand
 use compile.internal.backend_elf64.parse_int_literal as parse_int_literal
 use std.slices
-
 struct const_rewrite_entry {
     string name
     string expr_text

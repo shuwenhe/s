@@ -1,5 +1,4 @@
 package test
-
 func maymorestack_unit_name() string {
     "test/maymorestack"
 }

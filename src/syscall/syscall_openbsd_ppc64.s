@@ -1,5 +1,4 @@
 package src.syscall
-
 func syscall_openbsd_ppc64_unit_name() string {
     "src/syscall/syscall_openbsd_ppc64"
 }

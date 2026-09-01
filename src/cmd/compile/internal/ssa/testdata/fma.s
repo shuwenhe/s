@@ -1,5 +1,4 @@
 package compile.internal.ssa.testdata
-
 func fma_case_name() string {
     "ssa/testdata/fma.s"
 }

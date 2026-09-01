@@ -1,5 +1,4 @@
 package src.os
-
 func exec_unit_name() string {
     "src/os/exec"
 }

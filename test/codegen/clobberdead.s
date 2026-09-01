@@ -1,5 +1,4 @@
 package test.codegen
-
 func clobberdead_unit_name() string {
     "test/codegen/clobberdead"
 }

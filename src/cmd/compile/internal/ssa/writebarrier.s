@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func writebarrier_module_name() string {
     "ssa/writebarrier.s"
 }

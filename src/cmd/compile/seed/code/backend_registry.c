@@ -1,10 +1,8 @@
 #include "target.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
 const char *s_target_backend_name(s_target_backend backend) {
 	switch (backend) {
 		case S_TARGET_NATIVE: return "native";
@@ -14,7 +12,6 @@ const char *s_target_backend_name(s_target_backend backend) {
 		default: return "unknown";
 	}
 }
-
 static int find_on_path(const char *binary, char *out, size_t out_size) {
 	const char *path = getenv("PATH");
 	char *copy;
@@ -36,7 +33,6 @@ static int find_on_path(const char *binary, char *out, size_t out_size) {
 	out[0] = '\0';
 	return 0;
 }
-
 bool s_target_backend_probe(s_target_backend backend, char *detail, size_t detail_size) {
 	char tool[512] = {0};
 	const char *home;

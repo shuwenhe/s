@@ -1,5 +1,4 @@
 package src.path.filepath
-
 func symlink_plan9_unit_name() string {
     "src/path/filepath/symlink_plan9"
 }

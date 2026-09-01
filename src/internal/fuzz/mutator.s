@@ -1,5 +1,4 @@
 package src.internal.fuzz
-
 func mutator_unit_name() string {
     "src/internal/fuzz/mutator"
 }

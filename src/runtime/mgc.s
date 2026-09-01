@@ -10,7 +10,6 @@ var gc_enabled      = true
 extern "intrinsic" func __gc_stw_start() ()
 extern "intrinsic" func __gc_stw_stop() ()
 extern "intrinsic" func __runtime_nanotime() int
-
 func gc_trigger() () {
     if !gc_enabled {
         return

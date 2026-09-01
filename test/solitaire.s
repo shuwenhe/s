@@ -1,5 +1,4 @@
 package test
-
 func solitaire_unit_name() string {
     "test/solitaire"
 }

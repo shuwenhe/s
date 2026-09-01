@@ -1,5 +1,4 @@
 package src.context
-
 func afterfunc_test_unit_name() string {
     "src/context/afterfunc_test"
 }

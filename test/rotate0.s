@@ -1,5 +1,4 @@
 package test
-
 func rotate0_unit_name() string {
     "test/rotate0"
 }

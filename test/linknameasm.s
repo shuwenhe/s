@@ -1,5 +1,4 @@
 package test
-
 func linknameasm_unit_name() string {
     "test/linknameasm"
 }

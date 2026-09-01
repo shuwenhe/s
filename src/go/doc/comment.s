@@ -1,5 +1,4 @@
 package src.go.doc
-
 func comment_unit_name() string {
     "src/go/doc/comment"
 }

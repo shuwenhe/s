@@ -1,5 +1,4 @@
 package src.crypto.rand
-
 func util_unit_name() string {
     "src/crypto/rand/util"
 }

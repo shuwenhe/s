@@ -2,7 +2,6 @@ package compile.internal.noder
 use s.item
 use s.source_file
 use std.slices
-
 func collect_exports(source_file ast) export_record[] {
     out := export_record[]()
     i := 0

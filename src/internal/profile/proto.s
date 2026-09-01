@@ -1,5 +1,4 @@
 package src.internal.profile
-
 func proto_unit_name() string {
     "src/internal/profile/proto"
 }

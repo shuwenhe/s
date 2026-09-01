@@ -1,5 +1,4 @@
 package compile.internal.syntax.testdata
-
 func tparams_case_name() string {
     "syntax/testdata/tparams.s"
 }

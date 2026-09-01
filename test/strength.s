@@ -1,5 +1,4 @@
 package test
-
 func strength_unit_name() string {
     "test/strength"
 }

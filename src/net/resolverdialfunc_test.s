@@ -1,5 +1,4 @@
 package src.net
-
 func resolverdialfunc_test_unit_name() string {
     "src/net/resolverdialfunc_test"
 }

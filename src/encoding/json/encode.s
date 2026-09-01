@@ -1,5 +1,4 @@
 package src.encoding.json
-
 func encode_unit_name() string {
     "src/encoding/json/encode"
 }

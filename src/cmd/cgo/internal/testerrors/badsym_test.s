@@ -1,5 +1,4 @@
 package src.cmd.cgo.internal.testerrors
-
 func badsym_test_unit_name() string {
     "src/cmd/cgo/internal/testerrors/badsym_test"
 }

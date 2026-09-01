@@ -1,5 +1,4 @@
 package test.typeparam
-
 func chansimp_unit_name() string {
     "test/typeparam/chansimp"
 }

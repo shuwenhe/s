@@ -1,5 +1,4 @@
 package compile.internal.syntax
-
 func testing_module_name() string {
     "syntax/testing.s"
 }

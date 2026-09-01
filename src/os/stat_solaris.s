@@ -1,5 +1,4 @@
 package src.os
-
 func stat_solaris_unit_name() string {
     "src/os/stat_solaris"
 }

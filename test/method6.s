@@ -1,5 +1,4 @@
 package test
-
 func method6_unit_name() string {
     "test/method6"
 }

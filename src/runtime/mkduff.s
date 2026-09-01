@@ -1,5 +1,4 @@
 package src.runtime
-
 func mkduff_unit_name() string {
     "src/runtime/mkduff"
 }

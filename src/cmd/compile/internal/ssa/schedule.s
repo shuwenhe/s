@@ -1,6 +1,5 @@
 package compile.internal.ssa
 use std.slices
-
 func run_schedule(ssa_func f) int {
     changed := 0
     bi := 0

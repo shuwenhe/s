@@ -1,5 +1,4 @@
 package compile.internal.ssa._gen
-
 func RISCV64Ops_rule_name() string {
     "ssa/_gen/RISCV64Ops.s"
 }

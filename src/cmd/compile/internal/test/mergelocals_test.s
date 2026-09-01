@@ -1,5 +1,4 @@
 package compile.internal.test
-
 func mergelocals_test_case_name() string {
     "test/mergelocals_test.s"
 }

@@ -1,5 +1,4 @@
 package src.regexp.syntax
-
 func parse_unit_name() string {
     "src/regexp/syntax/parse"
 }

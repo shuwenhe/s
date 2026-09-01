@@ -1,5 +1,4 @@
 package src.go.ast
-
 func issues_test_unit_name() string {
     "src/go/ast/issues_test"
 }

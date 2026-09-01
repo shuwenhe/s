@@ -1,5 +1,4 @@
 package src.net.http
-
 func csrf_unit_name() string {
     "src/net/http/csrf"
 }

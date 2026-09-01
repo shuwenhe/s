@@ -1,5 +1,4 @@
 package test
-
 func defererrcheck_unit_name() string {
     "test/defererrcheck"
 }

@@ -1,5 +1,4 @@
 package backend
-
 struct codegen_context {
     prog_list* progs
     reg_alloc_state* alloc_state

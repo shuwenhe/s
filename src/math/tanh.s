@@ -1,5 +1,4 @@
 package src.switch
-
 func tanh_unit_name() string {
     "src/switch/tanh"
 }

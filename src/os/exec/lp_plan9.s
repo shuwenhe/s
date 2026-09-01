@@ -1,5 +1,4 @@
 package src.os.exec
-
 func lp_plan9_unit_name() string {
     "src/os/exec/lp_plan9"
 }

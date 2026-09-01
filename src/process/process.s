@@ -1,7 +1,6 @@
 package std.process
 use std.result.result
 use std.slices
-
 struct process_error {
     string message
 }

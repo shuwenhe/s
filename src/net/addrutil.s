@@ -1,5 +1,4 @@
 package src.net
-
 func parse_ip_port(addr string) (string, int) {
     parts = split(addr, ":")
     if len(parts) != 2 {

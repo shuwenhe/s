@@ -1,5 +1,4 @@
 package src.runtime
-
 func hash_test_unit_name() string {
     "src/runtime/hash_test"
 }

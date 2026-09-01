@@ -1,5 +1,4 @@
 package src.syscall.js
-
 func js_unit_name() string {
     "src/syscall/js/js"
 }

@@ -54,7 +54,6 @@ use std.prelude.len
 use std.prelude.slice
 use std.prelude.to_string
 use std.slices
-
 struct backend_error {
     string message
 }
@@ -189,7 +188,6 @@ struct runtime_metrics {
     int gc_heap_goal
     int gc_alloc_since_cycle
 }
-
 enum value {
     int(int),
     string(string),
@@ -3710,7 +3708,7 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] en
             })
             runtime.sroutine_scheduled = runtime.sroutine_scheduled + 1
             runtime.sroutine_yields = runtime.sroutine_yields + 1
-            return 
+            return
         }
         _ : backend_error { message: "backend error: sroutine expects a call expression" },
     }
@@ -3869,7 +3867,6 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
         _ : backend_error { message: "backend error: unsupported call target" },
     }
 }
-
     func eval_panic_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if len(args) != 1 {
         return backend_error { message: "backend error: panic expects exactly one argument" }
@@ -4404,7 +4401,7 @@ func execute_deferred(expr[] deferred, source_file source, binding[] env, write_
 
 func run_sroutine_scheduler_step(source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
     if len(runtime.runq) == 0 {
-        return 
+        return
     }
     task := runtime.runq[0]
     rest := sroutine_task[]()
@@ -4526,7 +4523,7 @@ func collect_const_bindings(source_file source) (binding[], backend_error) {
 
 func collect_const_bindings_in_source(source_file source, binding[] out, string[] visited) ((), backend_error) {
     if string_vec_contains(visited, source.pkg) {
-        return 
+        return
     }
     visited = append(visited, source.pkg)
     last_expr := option::none

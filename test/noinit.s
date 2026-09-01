@@ -1,5 +1,4 @@
 package test
-
 func noinit_unit_name() string {
     "test/noinit"
 }

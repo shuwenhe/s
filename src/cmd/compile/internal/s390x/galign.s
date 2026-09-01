@@ -1,5 +1,4 @@
 package compile.internal.s390x
-
 func galign_unit_name() string {
     "s390x/galign.s"
 }

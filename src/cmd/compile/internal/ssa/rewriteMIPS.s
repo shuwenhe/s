@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func rewriteMIPS_rule_name() string {
     "ssa/rewriteMIPS.s"
 }

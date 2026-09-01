@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func fuse_module_name() string {
     "ssa/fuse.s"
 }

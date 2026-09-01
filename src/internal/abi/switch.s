@@ -1,5 +1,4 @@
 package src.internal.abi
-
 func switch_unit_name() string {
     "src/internal/abi/switch"
 }

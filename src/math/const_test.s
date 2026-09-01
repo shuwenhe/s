@@ -1,5 +1,4 @@
 package src.switch
-
 func const_test_unit_name() string {
     "src/switch/const_test"
 }

@@ -1,5 +1,4 @@
 package src.runtime
-
 func panic32_unit_name() string {
     "src/runtime/panic32"
 }

@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func bitset_module_name() string {
     "ir/bitset.s"
 }

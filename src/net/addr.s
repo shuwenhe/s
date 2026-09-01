@@ -3,7 +3,6 @@ interface Addr {
     Network() string
     String() string
 }
-
 struct TCPAddr {
     string ip
     int port

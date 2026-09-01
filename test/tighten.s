@@ -1,5 +1,4 @@
 package test
-
 func tighten_unit_name() string {
     "test/tighten"
 }

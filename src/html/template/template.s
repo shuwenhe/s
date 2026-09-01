@@ -1,5 +1,4 @@
 package src.html.template
-
 func template_unit_name() string {
     "src/html/template/template"
 }

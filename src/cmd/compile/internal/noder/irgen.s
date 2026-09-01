@@ -2,7 +2,6 @@ package compile.internal.noder
 use s.item
 use s.source_file
 use std.slices
-
 func lower_to_ir(source_file ast) ir_node[] {
     out := ir_node[]()
     i := 0

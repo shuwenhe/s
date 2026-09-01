@@ -1,7 +1,6 @@
 package compile.internal.noder
 use std.fs.read_to_string
 use std.result.result
-
 func read_unit(string path) (source_unit, noder_error) {
     switch read_to_string(path) {
         text : ok_unit(path, text),

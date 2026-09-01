@@ -1,5 +1,4 @@
 package src.unique
-
 func canonmap_unit_name() string {
     "src/unique/canonmap"
 }

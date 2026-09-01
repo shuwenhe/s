@@ -1,5 +1,4 @@
 package src.go.doc
-
 func doc_unit_name() string {
     "src/go/doc/doc"
 }

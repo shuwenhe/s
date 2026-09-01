@@ -14,7 +14,6 @@ const CMD_LEX     = 4
 const CMD_AST     = 5
 const CMD_VERSION = 6
 const CMD_HELP    = 7
-
 func main() {
     runtime_init()
     gc_disable()

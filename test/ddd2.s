@@ -1,5 +1,4 @@
 package test
-
 func ddd2_unit_name() string {
     "test/ddd2"
 }

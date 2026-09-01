@@ -1,5 +1,4 @@
 package test.dwarf
-
 func linedirectives_unit_name() string {
     "test/dwarf/linedirectives"
 }

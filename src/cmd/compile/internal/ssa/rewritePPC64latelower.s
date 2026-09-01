@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func rewritePPC64latelower_rule_name() string {
     "ssa/rewritePPC64latelower.s"
 }

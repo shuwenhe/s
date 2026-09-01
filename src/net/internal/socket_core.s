@@ -1,6 +1,5 @@
 package src.net.internal
 import "src.std.time"
-
 func new_raw_socket(family: int, socktype: int, protocol: int) (*raw_socket, error) {
     fd, errno := sys_socket(family, socktype, protocol)
     if errno != 0 {

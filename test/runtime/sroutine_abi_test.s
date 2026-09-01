@@ -1,5 +1,4 @@
 package test.runtime.sroutine_abi
-
 func abi_worker(int done_channel) int {
     chan_send(done_channel, __sroutine_current_id());
     return 0;

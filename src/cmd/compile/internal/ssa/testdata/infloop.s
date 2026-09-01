@@ -1,5 +1,4 @@
 package compile.internal.ssa.testdata
-
 func infloop_case_name() string {
     "ssa/testdata/infloop.s"
 }

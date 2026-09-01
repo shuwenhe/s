@@ -1,5 +1,4 @@
 package test.interface
-
 func fail_unit_name() string {
     "test/interface/fail"
 }

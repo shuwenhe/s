@@ -1,6 +1,5 @@
 package compile.internal.base
 use std.fs.read_to_string
-
 func map_file_read(string path, int offset, int length) (string, string) {
     full := read_to_string(path)
     if full.is_err() {

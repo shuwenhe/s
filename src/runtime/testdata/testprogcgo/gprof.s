@@ -1,5 +1,4 @@
 package src.runtime.testdata.testprogcgo
-
 func gprof_unit_name() string {
     "src/runtime/testdata/testprogcgo/gprof"
 }

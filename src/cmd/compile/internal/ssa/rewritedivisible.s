@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func rewritedivisible_rule_name() string {
     "ssa/rewritedivisible.s"
 }

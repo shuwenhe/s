@@ -1,5 +1,4 @@
 package test.interface
-
 func private_unit_name() string {
     "test/interface/private"
 }

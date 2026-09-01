@@ -1,5 +1,4 @@
 package test.codegen
-
 func memcse_unit_name() string {
     "test/codegen/memcse"
 }

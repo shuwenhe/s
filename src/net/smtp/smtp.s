@@ -1,5 +1,4 @@
 package src.net.smtp
-
 func smtp_unit_name() string {
     "src/net/smtp/smtp"
 }

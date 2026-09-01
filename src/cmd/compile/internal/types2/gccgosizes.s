@@ -1,5 +1,4 @@
 package compile.internal.types2
-
 func gccgosizes_module_name() string {
     "types2/gccgosizes.s"
 }

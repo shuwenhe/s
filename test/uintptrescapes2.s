@@ -1,5 +1,4 @@
 package test
-
 func uintptrescapes2_unit_name() string {
     "test/uintptrescapes2"
 }

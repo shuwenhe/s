@@ -1,5 +1,4 @@
 package compile.internal.test
-
 func moveload_test_case_name() string {
     "test/moveload_test.s"
 }

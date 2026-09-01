@@ -1,5 +1,4 @@
 package src.strings
-
 func strings_unit_name() string {
     "src/strings/strings"
 }

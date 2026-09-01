@@ -1,5 +1,4 @@
 package src.net
-
 func tcpsockopt_stub_unit_name() string {
     "src/net/tcpsockopt_stub"
 }

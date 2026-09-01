@@ -1,5 +1,4 @@
 package src.crypto.internal.fips140.drbg
-
 func cast_unit_name() string {
     "src/crypto/internal/fips140/drbg/cast"
 }

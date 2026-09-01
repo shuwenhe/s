@@ -1,5 +1,4 @@
 package test.dwarf.dwarf.dir
-
 func main_unit_name() string {
     "test/dwarf/dwarf.dir/main"
 }

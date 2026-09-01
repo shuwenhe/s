@@ -1,5 +1,4 @@
 package src.net.url
-
 func gen_encoding_table_unit_name() string {
     "src/net/url/gen_encoding_table"
 }

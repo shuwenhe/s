@@ -1,5 +1,4 @@
 package src.time
-
 func format_test_unit_name() string {
     "src/time/format_test"
 }

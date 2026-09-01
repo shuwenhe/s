@@ -1,11 +1,9 @@
 #ifndef S_SEED_NETWORK_WINDOWS_H
 #define S_SEED_NETWORK_WINDOWS_H
-
 #ifdef _WIN32
 #include <stddef.h>
 #include <stdint.h>
 #include <winsock2.h>
-
 int seed_win_network_startup(void);
 void seed_win_network_cleanup(void);
 SOCKET seed_win_socket(int family, int type, int protocol, int *error_code);
@@ -20,5 +18,4 @@ intptr_t seed_win_iocp_create(int *error_code);
 int seed_win_iocp_register(intptr_t port, SOCKET socket_fd, uintptr_t key, int *error_code);
 int seed_win_iocp_wait(intptr_t port, int timeout_ms, uintptr_t *key, unsigned long *bytes, int *error_code);
 #endif
-
 #endif

@@ -1,5 +1,4 @@
 package compile.internal.staticdata
-
 func embed_unit_name() string {
     "staticdata/embed.s"
 }

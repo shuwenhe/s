@@ -1,5 +1,4 @@
 package test.dwarf.dwarf.dir
-
 func z13_unit_name() string {
     "test/dwarf/dwarf.dir/z13"
 }

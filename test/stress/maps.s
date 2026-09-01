@@ -1,5 +1,4 @@
 package test.stress
-
 func maps_unit_name() string {
     "test/stress/maps"
 }

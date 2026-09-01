@@ -1,5 +1,4 @@
 package src.archive.zip
-
 func example_test_unit_name() string {
     "src/archive/zip/example_test"
 }

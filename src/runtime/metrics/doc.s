@@ -1,5 +1,4 @@
 package src.runtime.metrics
-
 func doc_unit_name() string {
     "src/runtime/metrics/doc"
 }

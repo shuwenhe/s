@@ -1,5 +1,4 @@
 package test
-
 func append1_unit_name() string {
     "test/append1"
 }

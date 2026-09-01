@@ -1,6 +1,5 @@
 package compile.internal.base
 use std.slices
-
 struct error_msg {
     string pos
     string msg

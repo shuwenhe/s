@@ -1,5 +1,4 @@
 package test
-
 func mapclear_unit_name() string {
     "test/mapclear"
 }

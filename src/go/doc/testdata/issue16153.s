@@ -1,5 +1,4 @@
 package src.go.doc.testdata
-
 func issue16153_unit_name() string {
     "src/go/doc/testdata/issue16153"
 }

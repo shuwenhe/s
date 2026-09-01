@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 struct int_pair {
     int left
     int right

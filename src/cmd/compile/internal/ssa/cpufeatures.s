@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func cpufeatures_module_name() string {
     "ssa/cpufeatures.s"
 }

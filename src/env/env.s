@@ -1,7 +1,6 @@
 package std.env
 use std.option.option
 use std.slices
-
 func args() string[] {
     __host_args()
 }

@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func generate_module_name() string {
     "ssa/generate.s"
 }

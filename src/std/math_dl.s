@@ -8,7 +8,6 @@ const LOG2E = 1.44269504088896340736
 const EPSILON = 1e-7
 const INF = 1e308
 const NEG_INF = -1e308
-
 func abs(float x) float {
     if x < 0 { return -x }
     x
@@ -355,8 +354,8 @@ func erf(float x) float {
     float sign = 1.0
     if x < 0.0 { sign = -1.0; x = -x }
     float t = 1.0 / (1.0 + 0.3275911 * x)
-    float y = 1.0 - (((((1.061405429 * t - 1.453152027) * t) 
-                 + 1.421413741) * t - 0.284496736) * t 
+    float y = 1.0 - (((((1.061405429 * t - 1.453152027) * t)
+                 + 1.421413741) * t - 0.284496736) * t
                  + 0.254829592) * t * exp(-(x * x))
     sign * y
 }
@@ -413,8 +412,8 @@ func step(float edge, float x) float {
 
 func l1_dist(float a, float b) float { abs(a - b) }
 
-func l2_sq_dist(float a, float b) float { 
-    float d = a - b; d * d 
+func l2_sq_dist(float a, float b) float {
+    float d = a - b; d * d
 }
 
 func l2_dist(float a, float b) float { sqrt(l2_sq_dist(a, b)) }

@@ -1,5 +1,4 @@
 package src.net
-
 func fd_plan9_unit_name() string {
     "src/net/fd_plan9"
 }

@@ -1,5 +1,4 @@
 package backend
-
 struct native_compiler {
     input_file: string
     output_file: string
@@ -22,14 +21,10 @@ func new_native_compiler(input: string, output: string) native_compiler {
 
 func (nc* native_compiler) compile_to_assembly() int {
     nc.builder.emit_text_section()
-    
     nc.builder.emit_global_symbol("main")
     nc.builder.emit_function_prologue("main")
-    
     nc.builder.emit_mov_immediate_to_register(42, "rax")
-    
     nc.builder.emit_function_epilogue()
-    
     0
 }
 
@@ -46,17 +41,14 @@ func (nc* native_compiler) compile() int {
     if result != 0 {
         return result
     }
-    
     result = nc.assemble_to_object()
     if result != 0 {
         return result
     }
-    
     result = nc.link_to_executable()
     if result != 0 {
         return result
     }
-    
     0
 }
 

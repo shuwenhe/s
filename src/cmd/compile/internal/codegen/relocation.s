@@ -1,5 +1,4 @@
 package compile.internal.codegen
-
 enum reloc_type {
     reloc_type_abs,
     reloc_type_pc32,
@@ -10,7 +9,6 @@ enum reloc_type {
     reloc_type_pltoff64,
     reloc_type_pltgot,
 }
-
 struct relocation_entry {
     int64 offset
     reloc_type type
@@ -47,7 +45,6 @@ func (ctx* relocation_context) add_relocation(int64 offset, reloc_type type, str
     if found {
         return "relocation already exists at offset"
     }
-    
     rel := relocation_entry {
         offset: offset,
         type: type,
@@ -55,7 +52,6 @@ func (ctx* relocation_context) add_relocation(int64 offset, reloc_type type, str
         addend: addend,
         rel_size: size,
     }
-    
     ctx.relocations = append(ctx.relocations, rel)
     ""
 }

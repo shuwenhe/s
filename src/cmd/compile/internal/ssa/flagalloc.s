@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func flagalloc_module_name() string {
     "ssa/flagalloc.s"
 }

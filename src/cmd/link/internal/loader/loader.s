@@ -1,5 +1,4 @@
 package src.cmd.link.internal.loader
-
 func loader_unit_name() string {
     "src/cmd/link/internal/loader/loader"
 }

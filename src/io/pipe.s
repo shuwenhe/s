@@ -1,5 +1,4 @@
 package src.io
-
 func pipe_unit_name() string {
     "src/io/pipe"
 }

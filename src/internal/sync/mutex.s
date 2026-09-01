@@ -1,5 +1,4 @@
 package src.internal.sync
-
 func mutex_unit_name() string {
     "src/internal/sync/mutex"
 }

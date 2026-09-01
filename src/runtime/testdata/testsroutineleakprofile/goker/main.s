@@ -1,5 +1,4 @@
 package src.runtime.testdata.testsroutineleakprofile.goker
-
 func main_unit_name() string {
     "src/runtime/testdata/testsroutineleakprofile/goker/main"
 }

@@ -1,6 +1,5 @@
 package compile.internal.ssa
 use std.slices
-
 struct ssa_value {
     int id
     string name

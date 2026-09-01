@@ -1,5 +1,4 @@
 package src.log.syslog
-
 func syslog_test_unit_name() string {
     "src/log/syslog/syslog_test"
 }

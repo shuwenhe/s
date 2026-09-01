@@ -1,5 +1,4 @@
 package compile.internal.test
-
 func race_module_name() string {
     "test/race.s"
 }

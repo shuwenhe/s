@@ -1,5 +1,4 @@
 package src.archive.zip
-
 func writer_unit_name() string {
     "src/archive/zip/writer"
 }

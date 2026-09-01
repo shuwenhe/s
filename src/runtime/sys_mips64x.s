@@ -1,5 +1,4 @@
 package src.runtime
-
 func sys_mips64x_unit_name() string {
     "src/runtime/sys_mips64x"
 }

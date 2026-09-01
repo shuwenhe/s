@@ -1,5 +1,4 @@
 package test.typeparam
-
 func combine_unit_name() string {
     "test/typeparam/combine"
 }

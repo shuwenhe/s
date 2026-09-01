@@ -1,5 +1,4 @@
 package bootstrap.closure
-
 func identity(string value) string {
     return value
 }

@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func licm_module_name() string {
     "ssa/licm.s"
 }

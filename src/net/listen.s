@@ -1,5 +1,4 @@
 package src.net
-
 func Listen(network string, address string) Listener {
     parts = split(address, ":")
     ip = parts[0]

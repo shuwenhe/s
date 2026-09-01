@@ -1,5 +1,4 @@
 package src.crypto.tls
-
 func cipher_suites_unit_name() string {
     "src/crypto/tls/cipher_suites"
 }

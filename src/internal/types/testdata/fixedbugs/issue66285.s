@@ -1,5 +1,4 @@
 package src.internal.types.testdata.fixedbugs
-
 func issue66285_unit_name() string {
     "src/internal/types/testdata/fixedbugs/issue66285"
 }

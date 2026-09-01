@@ -1,7 +1,5 @@
 package src.net.http
-
 use std.conv.int_to_string
-
 struct http_request {
     string method
     string path

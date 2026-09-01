@@ -1,5 +1,4 @@
 package test.ddd2.dir
-
 func ddd2_unit_name() string {
     "test/ddd2.dir/ddd2"
 }

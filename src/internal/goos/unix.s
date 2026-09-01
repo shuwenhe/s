@@ -1,5 +1,4 @@
 package src.internal.goos
-
 func unix_unit_name() string {
     "src/internal/goos/unix"
 }

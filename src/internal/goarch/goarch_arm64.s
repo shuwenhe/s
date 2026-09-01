@@ -1,5 +1,4 @@
 package src.internal.goarch
-
 func goarch_arm64_unit_name() string {
     "src/internal/goarch/goarch_arm64"
 }

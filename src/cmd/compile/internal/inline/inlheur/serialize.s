@@ -1,5 +1,4 @@
 package compile.internal.inline.inlheur
-
 func serialize_module_name() string {
     "inline/inlheur/serialize.s"
 }

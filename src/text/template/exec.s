@@ -1,5 +1,4 @@
 package src.text.template
-
 func exec_unit_name() string {
     "src/text/template/exec"
 }

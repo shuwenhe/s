@@ -1,5 +1,4 @@
 package src.sync
-
 func once_unit_name() string {
     "src/sync/once"
 }

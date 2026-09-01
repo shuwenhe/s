@@ -1,7 +1,5 @@
 package compile.internal.obj
-
 use compile.internal.codegen
-
 struct elf_output {
     elf_writer writer
     []elf_section_header sections
@@ -39,18 +37,15 @@ func (out* elf_output) create_section(string name, int32 type, int64 flags, int6
         addralign: 8 as int64,
         entsize: 0 as int64,
     }
-    
     out.sections = append(out.sections, section)
 }
 
 func (out* elf_output) build_standard_sections() {
     out.create_section("", 0 as int32, 0 as int64, 0 as int64)
-    
     out.create_section(".text", 1 as int32, 6 as int64, 0 as int64)
     out.create_section(".data", 1 as int32, 3 as int64, 0 as int64)
     out.create_section(".bss", 8 as int32, 3 as int64, 0 as int64)
     out.create_section(".rodata", 1 as int32, 2 as int64, 0 as int64)
-    
     out.create_section(".symtab", 2 as int32, 0 as int64, 0 as int64)
     out.create_section(".strtab", 3 as int32, 0 as int64, 0 as int64)
     out.create_section(".shstrtab", 3 as int32, 0 as int64, 0 as int64)
@@ -65,15 +60,12 @@ func (out* elf_output) add_symbol(string name, int64 value, int64 size, int8 inf
         value: value,
         size: size,
     }
-    
     out.symbols = append(out.symbols, sym)
 }
 
 func (out* elf_output) write_elf_file() []int8 {
     result := []int8()()
-    
     out.writer.write_elf_header(elf_machine_x86_64)
-    
     result = out.writer.get_data()
     result
 }
@@ -96,11 +88,8 @@ func make_object_file_generator(machine_code_gen* cg, symbol_table* st, relocati
 
 func (gen* object_file_generator) generate() []int8 {
     gen.elf_out.build_standard_sections()
-    
     code := gen.code_gen.get_code()
-    
     gen.elf_out.add_symbol("", 0 as int64, 0 as int64, 0 as int8, 0 as int16)
-    
     i := 0
     for i < gen.symbols.count_symbols() {
         sym := gen.symbols.entries[i]
@@ -108,7 +97,6 @@ func (gen* object_file_generator) generate() []int8 {
         gen.elf_out.add_symbol(sym.name, sym.value, sym.size, info, 1 as int16)
         i = i + 1
     }
-    
     return gen.elf_out.write_elf_file()
 }
 

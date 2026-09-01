@@ -1,5 +1,4 @@
 package test
-
 func bombad_unit_name() string {
     "test/bombad"
 }

@@ -1,5 +1,4 @@
 package src.unique
-
 func doc_unit_name() string {
     "src/unique/doc"
 }

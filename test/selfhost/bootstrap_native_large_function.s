@@ -1,8 +1,4 @@
 package main
-
-// func ghost() int { return 99 }
-/* func another_ghost() int { return 98 } */
-
 func seed() int {
     return 2
 }

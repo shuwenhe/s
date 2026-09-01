@@ -1,7 +1,5 @@
 package seed.codegen
-
 use std.vec.vec
-
 struct register_info {
     name: string
     id: int
@@ -19,7 +17,6 @@ func register_allocator_create() register_allocator {
     allocator.registers = vec[]()
     allocator.var_to_reg = vec[]()
     allocator.spill_offset = -8
-    
     allocator.registers.push((register_info { name: "rax", id: 0, is_available: true }))
     allocator.registers.push((register_info { name: "rcx", id: 1, is_available: true }))
     allocator.registers.push((register_info { name: "rdx", id: 2, is_available: true }))
@@ -29,7 +26,6 @@ func register_allocator_create() register_allocator {
     allocator.registers.push((register_info { name: "r9", id: 6, is_available: true }))
     allocator.registers.push((register_info { name: "r10", id: 7, is_available: true }))
     allocator.registers.push((register_info { name: "r11", id: 8, is_available: true }))
-    
     allocator
 }
 
@@ -39,7 +35,6 @@ func (ra* register_allocator) allocate(var_name: string) (string, int) {
             return ra.registers[ra.var_to_reg[i].1].name, ra.var_to_reg[i].1
         }
     }
-    
     for i < ra.registers.len() {
         if ra.registers[i].is_available {
             ra.registers[i].is_available = false
@@ -47,7 +42,6 @@ func (ra* register_allocator) allocate(var_name: string) (string, int) {
             return ra.registers[i].name, i
         }
     }
-    
     ra.spill_offset = ra.spill_offset - 8
     ra.var_to_reg.push((var_name, -1))
     return "", ra.spill_offset

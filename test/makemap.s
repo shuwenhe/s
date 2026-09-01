@@ -1,5 +1,4 @@
 package test
-
 func makemap_unit_name() string {
     "test/makemap"
 }

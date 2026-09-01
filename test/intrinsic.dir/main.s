@@ -1,5 +1,4 @@
 package test.intrinsic.dir
-
 func main_unit_name() string {
     "test/intrinsic.dir/main"
 }

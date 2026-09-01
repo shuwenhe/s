@@ -1,5 +1,4 @@
 package src.time
-
 func time_unit_name() string {
     "src/time/time"
 }

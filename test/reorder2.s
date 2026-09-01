@@ -1,5 +1,4 @@
 package test
-
 func reorder2_unit_name() string {
     "test/reorder2"
 }

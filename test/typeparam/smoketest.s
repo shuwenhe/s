@@ -1,5 +1,4 @@
 package test.typeparam
-
 func smoketest_unit_name() string {
     "test/typeparam/smoketest"
 }

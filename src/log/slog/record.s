@@ -1,5 +1,4 @@
 package src.log.slog
-
 func record_unit_name() string {
     "src/log/slog/record"
 }

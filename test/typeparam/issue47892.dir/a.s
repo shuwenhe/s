@@ -1,5 +1,4 @@
 package test.typeparam.issue47892.dir
-
 func a_unit_name() string {
     "test/typeparam/issue47892.dir/a"
 }

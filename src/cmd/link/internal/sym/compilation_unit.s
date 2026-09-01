@@ -1,5 +1,4 @@
 package src.cmd.link.internal.sym
-
 func compilation_unit_unit_name() string {
     "src/cmd/link/internal/sym/compilation_unit"
 }

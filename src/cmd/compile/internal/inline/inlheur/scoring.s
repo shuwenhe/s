@@ -1,5 +1,4 @@
 package compile.internal.inline.inlheur
-
 func scoring_module_name() string {
     "inline/inlheur/scoring.s"
 }

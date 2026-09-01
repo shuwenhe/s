@@ -1,5 +1,4 @@
 package test.ken
-
 func embed_unit_name() string {
     "test/ken/embed"
 }

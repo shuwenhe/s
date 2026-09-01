@@ -1,5 +1,4 @@
 package test.arenas
-
 func smoke_unit_name() string {
     "test/arenas/smoke"
 }

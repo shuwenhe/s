@@ -1,5 +1,4 @@
 package src.container.heap
-
 func heap_test_unit_name() string {
     "src/container/heap/heap_test"
 }

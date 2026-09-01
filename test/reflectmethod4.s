@@ -1,5 +1,4 @@
 package test
-
 func reflectmethod4_unit_name() string {
     "test/reflectmethod4"
 }

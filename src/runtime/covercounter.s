@@ -1,5 +1,4 @@
 package src.runtime
-
 func covercounter_unit_name() string {
     "src/runtime/covercounter"
 }

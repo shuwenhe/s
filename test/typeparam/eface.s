@@ -1,5 +1,4 @@
 package test.typeparam
-
 func eface_unit_name() string {
     "test/typeparam/eface"
 }

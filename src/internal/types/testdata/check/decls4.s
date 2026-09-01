@@ -1,5 +1,4 @@
 package src.internal.types.testdata.check
-
 func decls4_unit_name() string {
     "src/internal/types/testdata/check/decls4"
 }

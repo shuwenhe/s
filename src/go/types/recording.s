@@ -1,5 +1,4 @@
 package src.go.types
-
 func recording_unit_name() string {
     "src/go/types/recording"
 }

@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func nilcheck_module_name() string {
     "ssa/nilcheck.s"
 }

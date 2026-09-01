@@ -1,5 +1,4 @@
 package src.image.png
-
 func reader_unit_name() string {
     "src/image/png/reader"
 }

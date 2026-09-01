@@ -1,5 +1,4 @@
 package test
-
 func iota_unit_name() string {
     "test/iota"
 }

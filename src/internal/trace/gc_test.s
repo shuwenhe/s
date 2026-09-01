@@ -1,5 +1,4 @@
 package src.internal.trace
-
 func gc_test_unit_name() string {
     "src/internal/trace/gc_test"
 }

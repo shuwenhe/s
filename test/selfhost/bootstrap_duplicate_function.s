@@ -1,5 +1,4 @@
 package bootstrap.closure
-
 func duplicate() int {
     return 1
 }

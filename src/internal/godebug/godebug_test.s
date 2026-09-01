@@ -1,5 +1,4 @@
 package src.internal.godebug
-
 func godebug_test_unit_name() string {
     "src/internal/godebug/godebug_test"
 }

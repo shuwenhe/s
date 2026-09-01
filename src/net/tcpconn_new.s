@@ -1,6 +1,5 @@
 package src.net
 import "src.net.internal"
-
 struct TCPAddr {
     string ip
     int port

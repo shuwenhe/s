@@ -1,5 +1,4 @@
 package src.runtime
-
 func hash32_unit_name() string {
     "src/runtime/hash32"
 }

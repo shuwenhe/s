@@ -1,10 +1,4 @@
 package compile.selfhost.compiler
-
-// This is the executable bootstrap compiler core.  Keep this file inside the
-// frozen seed subset: strings, integers, functions, conditionals and loops.
-// The first slice deliberately accepts only a main function returning an
-// integer expression.  Later bootstrap slices extend this parser rather than
-// falling back to the C compiler.
 extern "intrinsic" func host_args() string[];
 extern "intrinsic" func __host_read_to_string(string path) string;
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
@@ -13,7 +7,6 @@ extern "intrinsic" func __host_byte_at(string text, int index) int;
 extern "intrinsic" func __host_byte_string(int value) string;
 extern "intrinsic" func __host_make_executable(string path) int;
 extern "intrinsic" func __host_slice(string text, int start, int end) string;
-
 func digit_text(int value) string {
     if value == 0 { return "0" }
     if value == 1 { return "1" }
@@ -113,8 +106,6 @@ func find_code_word(string source, string word) int {
     return find_code_word_from(source, word, 0)
 }
 
-// Report the capability closure still required to compile the supplied source
-// as one program. Each construct is reported once at its first occurrence.
 func unsupported_report(string source) string {
     string report = "S-BOOTSTRAP-UNSUPPORTED-V1\n"
     report = report + "phase|line|construct|detail\n"
@@ -141,7 +132,6 @@ func parse_package_name(string source) string {
     return __host_slice(source, name_start, cursor)
 }
 
-// Returns the number of intrinsic symbols, or -1 for a malformed declaration.
 func intrinsic_declaration_count(string source) int {
     int count = 0
     int cursor = 0
@@ -196,14 +186,12 @@ func resolve_intrinsic_id(string source, string name) int {
 
 func emit_intrinsic_machine(int intrinsic_id) string {
     if intrinsic_id == 1 {
-        // __host_byte_at(data,len,index): return zero when index is out of range.
         return __host_byte_string(49) + __host_byte_string(192)
             + __host_byte_string(72) + __host_byte_string(57) + __host_byte_string(242)
             + __host_byte_string(115) + __host_byte_string(4)
             + __host_byte_string(15) + __host_byte_string(182) + __host_byte_string(4) + __host_byte_string(23)
     }
     if intrinsic_id == 2 {
-        // __host_slice(data,len,start,end): RAX=data+start, RDX=end-start.
         return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(248)
             + __host_byte_string(72) + __host_byte_string(1) + __host_byte_string(208)
             + __host_byte_string(72) + __host_byte_string(41) + __host_byte_string(209)
@@ -213,7 +201,6 @@ func emit_intrinsic_machine(int intrinsic_id) string {
         return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(240)
     }
     if intrinsic_id == 4 {
-        // Use the caller's reserved frame as one-byte intrinsic scratch storage.
         return __host_byte_string(72) + __host_byte_string(141) + __host_byte_string(133)
             + little32_signed(-248)
             + __host_byte_string(64) + __host_byte_string(136) + __host_byte_string(56)
@@ -1194,7 +1181,6 @@ func emit_elf_image(string code) string {
 }
 
 func exit_sequence() string {
-    // mov $60,%rax; mov $exit_code,%rdi; syscall
     return __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(192) + little32(60)
         + __host_byte_string(15) + __host_byte_string(5)
 }
@@ -1313,8 +1299,6 @@ func simplify_binary_uint(string source, int start, int operator_at, int end) st
 
 func machine_binary(string left, string right, string operator) string {
     if left == "" || right == "" { return "" }
-    // Preserve the left value in the evaluation stack and place the right
-    // value in RCX, matching the amd64 two-address instruction forms below.
     return left + __host_byte_string(80) + right
         + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
         + __host_byte_string(88) + arithmetic_machine_op(operator)
@@ -1341,7 +1325,6 @@ func emit_arithmetic_machine(string source, int raw_start, int raw_end) string {
     }
     int number_end = skip_uint(source, start)
     if number_end != end { return "" }
-    // mov $imm32,%eax; the bootstrap slice accepts non-negative int32 values.
     return __host_byte_string(184) + little32(parse_uint(source, start))
 }
 
@@ -1564,7 +1547,6 @@ func emit_native_expression_elf(string source) string {
     if after != body_end { return "" }
     string expression_code = emit_arithmetic_machine(source, start, end)
     if expression_code == "" { return "" }
-    // Linux exit status: move expression result from rax to rdi.
     string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
     return emit_elf_image(expression_code + move_result + exit_sequence())
 }
@@ -1810,7 +1792,6 @@ func decode_bootstrap_string(string source, int start, int end) string {
 }
 
 func emit_write_sequence(int address, int count) string {
-    // write(1, address, count) using Linux/amd64 syscall registers.
     return __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(192) + little32(1)
         + __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(199) + little32(1)
         + __host_byte_string(72) + __host_byte_string(190) + little64(address)
@@ -1952,9 +1933,6 @@ func native_function_slot(string source, string wanted) int {
 }
 
 func native_function_stride() int {
-    // Bootstrap calls use deterministic absolute slots until the relocation
-    // slice is available.  Keep enough room for the compiler's own lowering
-    // routines; several legitimately exceed the original 512-byte probe slot.
     return 16384
 }
 
@@ -2094,7 +2072,6 @@ func emit_string_value_machine(string source, int raw_start, int raw_end, string
     if slot <= 0 && intrinsic_id == 0 { return "" }
     if intrinsic_id != 0 { return argument + emit_intrinsic_machine(intrinsic_id) }
     int address = 4194304 + 120 + slot * native_function_stride()
-    // string result uses RAX=data and RDX=len.
     return argument
         + __host_byte_string(72) + __host_byte_string(184) + little64(address)
         + __host_byte_string(255) + __host_byte_string(208)
@@ -2121,8 +2098,6 @@ func emit_typed_call_arguments(
     string pops = ""
     if word_offset < 6 { pops = sysv_argument_pop(word_offset) }
     if kind == 3 {
-        // Split string values currently require both ABI words in registers.
-        // Stack strings are enabled after aggregate stack layout is introduced.
         if word_offset + 1 >= 6 { return "" }
         value = emit_string_value_machine(source, start, argument_end, current_function)
         pushes = __host_byte_string(80) + __host_byte_string(82)
@@ -2520,7 +2495,6 @@ func emit_native_copy_elf(string source) string {
     if body_end < 0 { return "" }
     int call_at = skip_space(source, body)
     if call_at >= body_end || !matches_at(source, call_at, "copy_args_file") { return "" }
-    // Preserve argv[1] in rbx and argv[2] in r13 before reserving the buffer.
     string setup = __host_byte_string(72) + __host_byte_string(139) + __host_byte_string(92)
         + __host_byte_string(36) + __host_byte_string(16)
         + __host_byte_string(76) + __host_byte_string(139) + __host_byte_string(108)
@@ -2533,7 +2507,6 @@ func emit_native_copy_elf(string source) string {
     string io_exit = __host_byte_string(191) + little32(1)
         + __host_byte_string(184) + little32(60)
         + __host_byte_string(15) + __host_byte_string(5)
-    // input = openat(AT_FDCWD, argv[1], O_RDONLY, 0)
     string open_input_call = __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(199) + little32_signed(-100)
         + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(222)
         + __host_byte_string(49) + __host_byte_string(210)
@@ -2541,7 +2514,6 @@ func emit_native_copy_elf(string source) string {
         + __host_byte_string(184) + little32(257)
         + __host_byte_string(15) + __host_byte_string(5)
     string save_input = __host_byte_string(73) + __host_byte_string(137) + __host_byte_string(196)
-    // output = openat(AT_FDCWD, argv[2], O_WRONLY|O_CREAT|O_TRUNC, 0644)
     string open_output_call = __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(199) + little32_signed(-100)
         + __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(238)
         + __host_byte_string(186) + little32(577)
@@ -2549,7 +2521,6 @@ func emit_native_copy_elf(string source) string {
         + __host_byte_string(184) + little32(257)
         + __host_byte_string(15) + __host_byte_string(5)
     string save_output = __host_byte_string(73) + __host_byte_string(137) + __host_byte_string(199)
-    // count = read(input, rsp, 4096). The backward jump repeats until EOF.
     string read_call = __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(231)
         + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(230)
         + __host_byte_string(186) + little32(4096)
@@ -2557,7 +2528,6 @@ func emit_native_copy_elf(string source) string {
         + __host_byte_string(15) + __host_byte_string(5)
     string begin_write = __host_byte_string(73) + __host_byte_string(137) + __host_byte_string(198)
         + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(227)
-    // write(output, cursor, remaining), retrying short writes.
     string write_call = __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(255)
         + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(222)
         + __host_byte_string(76) + __host_byte_string(137) + __host_byte_string(242)
@@ -2590,8 +2560,6 @@ func emit_native_copy_elf(string source) string {
         + little32(len(save_input) + len(open_output) + len(read_loop) + len(success_exit))
         + save_input
     string code = setup + open_input + open_output + read_loop + success_exit + io_exit
-    // Linux process entry has argc at [rsp]. Reject missing input/output paths
-    // before loading argv. The relative branch skips the complete success path.
     string argc_check = __host_byte_string(72) + __host_byte_string(131)
         + __host_byte_string(60) + __host_byte_string(36) + __host_byte_string(3)
         + __host_byte_string(15) + __host_byte_string(133) + little32(len(code))
@@ -2606,7 +2574,6 @@ func emit_native_locals_elf(string source) string {
     if body < 0 { return "" }
     int body_end = function_body_end(source, body)
     if body_end < 0 { return "" }
-    // push rbp; mov rsp,rbp; reserve 128 bytes for the frozen local-slot slice.
     string code = __host_byte_string(85) + __host_byte_string(72) + __host_byte_string(137)
         + __host_byte_string(229) + __host_byte_string(72) + __host_byte_string(129)
         + __host_byte_string(236) + little32(128)
@@ -2691,7 +2658,6 @@ func emit_call_arithmetic_machine(string source, int raw_start, int raw_end, str
             } else if function_parameter(source, callee) != "" {
                 return ""
             }
-            // movabs $callee,%rax; call *%rax
             return argument_code + __host_byte_string(72) + __host_byte_string(184) + little64(callee_address)
                 + __host_byte_string(255) + __host_byte_string(208)
         }
@@ -2756,8 +2722,6 @@ func sysv_parameter_load(int index) string {
 }
 
 func spill_sysv_parameters(int words) string {
-    // Establish stable slots before expression lowering reuses caller-saved
-    // registers such as rcx and rdx as arithmetic temporaries.
     string code = __host_byte_string(85)
         + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(229)
         + __host_byte_string(72) + __host_byte_string(129) + __host_byte_string(236) + little32(256)
@@ -3502,9 +3466,6 @@ func main() {
         eprintln("compile: invalid extern intrinsic declaration")
         return 1
     }
-    // Native assembly emission already walks every function declaration while
-    // lowering it. Avoid the bootstrap-only validator here: its string scan
-    // is not yet part of the direct-native backend closure.
     if !native_assembly && !validate_function_symbols(source) {
         eprintln("compile: invalid function symbol table")
         return 1

@@ -1,5 +1,4 @@
 package lib.time
-
 func mkzip_unit_name() string {
     "lib/time/mkzip"
 }

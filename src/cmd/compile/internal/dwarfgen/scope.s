@@ -1,5 +1,4 @@
 package compile.internal.dwarfgen
-
 func scope_unit_name() string {
     "dwarfgen/scope.s"
 }

@@ -1,5 +1,4 @@
 package compile.internal.inline.inlheur
-
 func parampropbits_string_module_name() string {
     "inline/inlheur/parampropbits_string.s"
 }

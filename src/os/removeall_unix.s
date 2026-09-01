@@ -1,5 +1,4 @@
 package src.os
-
 func removeall_unix_unit_name() string {
     "src/os/removeall_unix"
 }

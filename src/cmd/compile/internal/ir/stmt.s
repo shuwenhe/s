@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func stmt_module_name() string {
     "ir/stmt.s"
 }

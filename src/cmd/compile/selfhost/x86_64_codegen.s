@@ -4,11 +4,10 @@ use std.strings.contains as contains_string
 use std.strings.trim as trim_string
 use std.fmt.sprintf
 use std.io.eprintln
-
 struct X86_64Gen {
     asm_lines: string[]
-    register_stack: string[]  
-    temp_allocations: map[string]string  
+    register_stack: string[]
+    temp_allocations: map[string]string
     label_count: int
 }
 
@@ -39,7 +38,7 @@ func (X86_64Gen* gen) allocate_register() string {
         gen.register_stack = gen.register_stack[1:]
         return reg
     }
-    return ""  
+    return ""
 }
 
 func (X86_64Gen* gen) free_register(string reg) {
@@ -66,7 +65,7 @@ func (X86_64Gen* gen) translate_instruction(Instruction instr) error {
         case "FUNC_BEGIN":
             gen.emit("push %rbp")
             gen.emit("mov %rsp, %rbp")
-            gen.emit("sub $256, %rsp")  
+            gen.emit("sub $256, %rsp")
             return nil
         case "FUNC_END":
             gen.emit("add $256, %rsp")
@@ -99,7 +98,7 @@ func (X86_64Gen* gen) translate_instruction(Instruction instr) error {
             dst_loc := gen.get_location(instr.dest)
             gen.emit("mov " + src1_loc + ", %rax")
             gen.emit("cmp " + src2_loc + ", %rax")
-            gen.emit("sete %al")  
+            gen.emit("sete %al")
             gen.emit("movzx %al, " + dst_loc)
             return nil
         case "CMP_NE":
@@ -108,7 +107,7 @@ func (X86_64Gen* gen) translate_instruction(Instruction instr) error {
             dst_loc := gen.get_location(instr.dest)
             gen.emit("mov " + src1_loc + ", %rax")
             gen.emit("cmp " + src2_loc + ", %rax")
-            gen.emit("setne %al")  
+            gen.emit("setne %al")
             gen.emit("movzx %al, " + dst_loc)
             return nil
         case "JUMP_IF_FALSE":
@@ -171,7 +170,7 @@ func generate_assembly_from_ir([]Instruction instructions) (string, error) {
 
 func format_immediate(string value) string {
     if contains_string(value, "\"") {
-        return "$0x0"  
+        return "$0x0"
     }
     if value == "" || value == "_" {
         return "$0"

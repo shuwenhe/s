@@ -1,5 +1,4 @@
 package test
-
 func const_unit_name() string {
     "test/const"
 }

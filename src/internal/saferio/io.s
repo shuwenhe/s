@@ -1,5 +1,4 @@
 package src.internal.saferio
-
 func io_unit_name() string {
     "src/internal/saferio/io"
 }

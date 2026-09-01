@@ -1,5 +1,4 @@
 package src.runtime.testdata.testprogcgo
-
 func sigthrow_unit_name() string {
     "src/runtime/testdata/testprogcgo/sigthrow"
 }

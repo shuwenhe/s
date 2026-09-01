@@ -1,5 +1,4 @@
 package compile.internal.typecheck._builtin
-
 func coverage_module_name() string {
     "typecheck/_builtin/coverage.s"
 }

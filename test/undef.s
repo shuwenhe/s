@@ -1,5 +1,4 @@
 package test
-
 func undef_unit_name() string {
     "test/undef"
 }

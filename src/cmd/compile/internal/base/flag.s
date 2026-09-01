@@ -1,6 +1,5 @@
 package compile.internal.base
 use std.slices
-
 struct cmd_cfg {
     string[] import_dirs
     string[] import_map

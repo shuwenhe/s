@@ -1,5 +1,4 @@
 package src.internal.zstd
-
 func zstd_unit_name() string {
     "src/internal/zstd/zstd"
 }

@@ -7,7 +7,6 @@ use s.dump_stmt
 use std.option.option
 use std.prelude.to_string
 use std.slices
-
 struct mir_operand {
     string kind
     string value
@@ -47,7 +46,6 @@ struct mir_copy_stmt {
 struct mir_drop_stmt {
     int slot
 }
-
 enum mir_statement {
     assign(mir_assign_stmt),
     eval(mir_eval_stmt),

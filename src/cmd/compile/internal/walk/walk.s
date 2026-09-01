@@ -1,5 +1,4 @@
 package compile.internal.walk
-
 func walk_module_name() string {
     "walk/walk.s"
 }

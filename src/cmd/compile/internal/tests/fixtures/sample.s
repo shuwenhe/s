@@ -1,12 +1,10 @@
 package demo.core
 use std.io.reader
 use std.result.result as res
-
 struct config[t] {
     string addr
     int retries
 }
-
 enum option[t] {
     some(t),
     none,

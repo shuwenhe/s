@@ -1,5 +1,4 @@
 package test.typeparam
-
 func absdiff_unit_name() string {
     "test/typeparam/absdiff"
 }

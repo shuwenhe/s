@@ -1,5 +1,4 @@
 package src.net.http.internal
-
 func common_unit_name() string {
     "src/net/http/internal/common"
 }

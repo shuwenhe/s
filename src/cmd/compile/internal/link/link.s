@@ -1,5 +1,4 @@
 package compile.internal.link
-
 enum sym_type {
     sym_type_text,
     sym_type_data,
@@ -7,7 +6,6 @@ enum sym_type {
     sym_type_rodata,
     sym_type_extern,
 }
-
 struct link_sym {
     string name
     sym_type type
@@ -59,7 +57,6 @@ func (ctx* link_context) create_symbol(string name, sym_type type) (link_sym*, s
     if found {
         return existing, "symbol already exists"
     }
-    
     sym := link_sym {
         name: name,
         type: type,
@@ -69,10 +66,8 @@ func (ctx* link_context) create_symbol(string name, sym_type type) (link_sym*, s
         relocs: link_reloc[](),
         is_defined: false,
     }
-    
     ctx.symbols = append(ctx.symbols, sym)
     ctx.symbol_names = append(ctx.symbol_names, name)
-    
     return &ctx.symbols[len(ctx.symbols) - 1], ""
 }
 
@@ -93,14 +88,12 @@ func (ctx* link_context) add_relocation(string sym_name, int64 offset, int64 siz
     if !found {
         return "symbol not found"
     }
-    
     reloc := link_reloc {
         offset: offset,
         size: size,
         target_sym: target,
         add_end: add,
     }
-    
     sym.relocs = append(sym.relocs, reloc)
     ""
 }

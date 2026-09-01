@@ -1,5 +1,4 @@
 package src.encoding.hex
-
 func hex_unit_name() string {
     "src/encoding/hex/hex"
 }

@@ -1,5 +1,4 @@
 package src.cmd.cgo.internal.testgodefs.testdata
-
 func main_unit_name() string {
     "src/cmd/cgo/internal/testgodefs/testdata/main"
 }

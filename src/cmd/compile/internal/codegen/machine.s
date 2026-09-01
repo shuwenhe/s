@@ -1,8 +1,6 @@
 package compile.internal.codegen
-
 use compile.internal.link
 use compile.internal.obj
-
 enum amd64_register {
     reg_rax = 0,
     reg_rcx = 1,
@@ -21,7 +19,6 @@ enum amd64_register {
     reg_r14 = 14,
     reg_r15 = 15,
 }
-
 struct instr_stream {
     []int8 code
     int64 offset
@@ -177,21 +174,14 @@ func (gen* machine_code_gen) emit_simple_func(string func_name) string {
     if err != "" {
         return err
     }
-    
     base := gen.stream.offset
-    
     gen.emit_function_prologue()
-    
-    // The first direct executable is entered at main, so terminate through
-    // the Linux x86-64 ABI instead of returning to a nonexistent caller.
     gen.stream.emit_mov_imm_reg(60 as int64, (reg_rax as int))
     gen.stream.emit_mov_imm_reg(42 as int64, (reg_rdi as int))
     gen.stream.emit_syscall()
-    
     code_size := gen.stream.offset - base
     sym.size = code_size
     sym.is_defined = true
-    
     ""
 }
 
@@ -200,20 +190,14 @@ func (gen* machine_code_gen) emit_add_function() string {
     if err != "" {
         return err
     }
-    
     base := gen.stream.offset
-    
     gen.emit_function_prologue()
-    
     gen.stream.emit_mov_reg_reg((reg_rax as int), (reg_rdi as int))
     gen.stream.emit_add_reg_reg((reg_rax as int), (reg_rsi as int))
-    
     gen.emit_function_epilogue()
-    
     code_size := gen.stream.offset - base
     sym.size = code_size
     sym.is_defined = true
-    
     ""
 }
 
@@ -242,7 +226,6 @@ func byte_to_hex(int8 b) string {
     ub := (b as int) & 0xff
     h1 := (ub >> 4) & 0xf
     h2 := ub & 0xf
-    
     result := ""
     result = result + hex_chars[h1]
     result = result + hex_chars[h2]

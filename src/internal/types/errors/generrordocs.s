@@ -1,5 +1,4 @@
 package src.internal.types.errors
-
 func generrordocs_unit_name() string {
     "src/internal/types/errors/generrordocs"
 }

@@ -1,5 +1,4 @@
 package test.ken
-
 func strvar_unit_name() string {
     "test/ken/strvar"
 }

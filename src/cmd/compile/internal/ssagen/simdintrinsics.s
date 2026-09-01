@@ -1,5 +1,4 @@
 package compile.internal.ssagen
-
 struct simd_intrinsic_rule {
     string name
     string op

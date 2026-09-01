@@ -1,5 +1,4 @@
 package src.cmd.go.testdata
-
 func savedir_unit_name() string {
     "src/cmd/go/testdata/savedir"
 }

@@ -1,5 +1,4 @@
 package src.internal.trace.tracev2
-
 func spec_unit_name() string {
     "src/internal/trace/tracev2/spec"
 }

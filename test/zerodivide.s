@@ -1,5 +1,4 @@
 package test
-
 func zerodivide_unit_name() string {
     "test/zerodivide"
 }

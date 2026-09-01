@@ -1,5 +1,4 @@
 package src.unicode
-
 func graphic_unit_name() string {
     "src/unicode/graphic"
 }

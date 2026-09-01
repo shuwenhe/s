@@ -1,5 +1,4 @@
 package src.runtime.cgo
-
 func windows_unit_name() string {
     "src/runtime/cgo/windows"
 }

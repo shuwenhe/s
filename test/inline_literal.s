@@ -1,5 +1,4 @@
 package test
-
 func inline_literal_unit_name() string {
     "test/inline_literal"
 }

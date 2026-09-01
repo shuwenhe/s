@@ -1,5 +1,4 @@
 package src.runtime
-
 func mbitmap_unit_name() string {
     "src/runtime/mbitmap"
 }

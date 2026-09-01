@@ -1,6 +1,5 @@
 package compile.internal.ssa
 use std.slices
-
 struct ssa_block {
     int id
     string kind

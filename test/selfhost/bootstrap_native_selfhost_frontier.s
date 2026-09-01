@@ -1,5 +1,4 @@
 package main
-
 func classify(int value) int {
     int result
     if value < 0 {

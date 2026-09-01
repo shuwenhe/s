@@ -1,5 +1,4 @@
 package src.runtime
-
 func sys_openbsd_unit_name() string {
     "src/runtime/sys_openbsd"
 }

@@ -1,5 +1,4 @@
 package test.ken
-
 func simparray_unit_name() string {
     "test/ken/simparray"
 }

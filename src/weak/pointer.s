@@ -1,5 +1,4 @@
 package src.weak
-
 func pointer_unit_name() string {
     "src/weak/pointer"
 }

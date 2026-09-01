@@ -1,5 +1,4 @@
 package src.switch
-
 func signbit_unit_name() string {
     "src/switch/signbit"
 }

@@ -1,5 +1,4 @@
 package test.typeparam
-
 func mapimp_unit_name() string {
     "test/typeparam/mapimp"
 }

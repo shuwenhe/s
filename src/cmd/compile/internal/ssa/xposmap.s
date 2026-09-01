@@ -1,6 +1,5 @@
 package compile.internal.ssa
 use std.slices
-
 struct line_range {
     int first
     int last

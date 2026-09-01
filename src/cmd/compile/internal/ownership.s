@@ -1,7 +1,6 @@
 package compile.internal.ownership
 use compile.internal.typesys.is_copy_type
 use std.slices
-
 func make_decision(string ty) string {
     if is_copy_type(ty) {
         return "copy:" + ty

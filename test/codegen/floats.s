@@ -1,5 +1,4 @@
 package test.codegen
-
 func floats_unit_name() string {
     "test/codegen/floats"
 }

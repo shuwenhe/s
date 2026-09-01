@@ -1,5 +1,4 @@
 package src.maps
-
 func iter_unit_name() string {
     "src/maps/iter"
 }

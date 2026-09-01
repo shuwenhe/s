@@ -1,5 +1,4 @@
 package src.go.printer
-
 func nodes_unit_name() string {
     "src/go/printer/nodes"
 }

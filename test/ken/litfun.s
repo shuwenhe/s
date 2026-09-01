@@ -1,5 +1,4 @@
 package test.ken
-
 func litfun_unit_name() string {
     "test/ken/litfun"
 }

@@ -1,5 +1,4 @@
 package src.net
-
 func sockaddr_posix_unit_name() string {
     "src/net/sockaddr_posix"
 }

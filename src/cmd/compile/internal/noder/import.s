@@ -1,7 +1,6 @@
 package compile.internal.noder
 use std.option.option
 use std.slices
-
 func parse_imports(source_unit unit) import_record[] {
     out := import_record[]()
     lines := split_lines(unit.text)

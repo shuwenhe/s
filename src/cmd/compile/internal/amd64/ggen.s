@@ -1,5 +1,4 @@
 package compile.internal.amd64
-
 func zerorange(prog[] insns, int off, int cnt) prog[] {
     if cnt <= 0 {
         return insns

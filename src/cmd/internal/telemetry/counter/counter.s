@@ -1,5 +1,4 @@
 package src.cmd.internal.telemetry.counter
-
 func counter_unit_name() string {
     "src/cmd/internal/telemetry/counter/counter"
 }

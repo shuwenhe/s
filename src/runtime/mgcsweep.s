@@ -7,7 +7,6 @@ extern "intrinsic" func __mem_os_free(int obj_id) ()
 var sweep_freed_bytes = 0
 var sweep_freed_count = 0
 var sweep_live_count  = 0
-
 func sweep_pass() int {
     sweep_freed_bytes = 0
     sweep_freed_count = 0

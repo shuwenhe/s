@@ -1,5 +1,4 @@
 package test
-
 func weak_unit_name() string {
     "test/weak"
 }

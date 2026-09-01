@@ -1,5 +1,4 @@
 package test
-
 func maplinear_unit_name() string {
     "test/maplinear"
 }

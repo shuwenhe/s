@@ -1,13 +1,9 @@
 package lsp
-
 use "std"
 use "../s"
-
 struct document_manager {
     map[string, text_document] documents
-
     map[string, s::source_file] ast_cache
-
     map[string, parse_error[]] error_cache
 }
 
@@ -115,15 +111,12 @@ func (dm document_manager) get_token_at_position(uri string, pos position) optio
                 if pos.character < len(line) {
                     start := pos.character
                     end := pos.character
-
                     for start > 0 && is_identifier_char(line[start - 1]) {
                         start = start - 1
                     }
-
                     for end < len(line) && is_identifier_char(line[end]) {
                         end = end + 1
                     }
-
                     if start < end {
                         option::some(line.substring(start, end))
                     } else {
@@ -141,7 +134,7 @@ func (dm document_manager) get_token_at_position(uri string, pos position) optio
 }
 
 func is_identifier_char(c str) bool {
-    (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || 
+    (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") ||
     (c >= "0" && c <= "9") || c == "_"
 }
 
@@ -154,7 +147,6 @@ func (dm document_manager) get_document_symbols(uri string) option[document_symb
 
 func extract_symbols_from_ast(ast s::source_file) document_symbol[] {
     symbols := document_symbol[]()
-
     i := 0
     for i < len(ast.items) {
         item := ast.items[i]
@@ -227,6 +219,5 @@ func extract_symbols_from_ast(ast s::source_file) document_symbol[] {
         }
         i = i + 1
     }
-
     symbols
 }

@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func likelyadjust_module_name() string {
     "ssa/likelyadjust.s"
 }

@@ -1,5 +1,4 @@
 package src.testing
-
 func allocs_unit_name() string {
     "src/testing/allocs"
 }

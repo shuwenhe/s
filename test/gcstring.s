@@ -1,5 +1,4 @@
 package test
-
 func gcstring_unit_name() string {
     "test/gcstring"
 }

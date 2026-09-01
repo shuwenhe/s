@@ -1,5 +1,4 @@
 package src.testing.fstest
-
 func testfs_unit_name() string {
     "src/testing/fstest/testfs"
 }

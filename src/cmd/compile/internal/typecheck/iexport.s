@@ -1,5 +1,4 @@
 package compile.internal.typecheck
-
 func iexport_module_name() string {
     "typecheck/iexport.s"
 }

@@ -4,28 +4,23 @@
 #include <time.h>
 #include <unistd.h>
 #include <ctype.h>
-
 #include "target.h"
-
 typedef struct c_abi_export {
 	char function[256];
 	char symbol[256];
 	size_t argc;
 } c_abi_export;
-
 static int native_is_c_identifier(const char *s) {
 	const unsigned char *p = (const unsigned char *)s;
 	if (!p || !(isalpha(*p) || *p == '_')) return 0;
 	for (p++; *p; p++) if (!(isalnum(*p) || *p == '_')) return 0;
 	return 1;
 }
-
 static bool read_text_file(const char *path, char **out_text, compile_error *err) {
 	FILE *fp;
 	long n;
 	size_t read_n;
 	char *buf;
-
 	*out_text = NULL;
 	fp = fopen(path, "rb");
 	if (!fp) {
@@ -48,14 +43,12 @@ static bool read_text_file(const char *path, char **out_text, compile_error *err
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to rewind IR input: %s", path);
 		return false;
 	}
-
 	buf = (char *)malloc((size_t)n + 1);
 	if (!buf) {
 		fclose(fp);
 		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 		return false;
 	}
-
 	read_n = fread(buf, 1, (size_t)n, fp);
 	fclose(fp);
 	if (read_n != (size_t)n) {
@@ -67,15 +60,12 @@ static bool read_text_file(const char *path, char **out_text, compile_error *err
 	*out_text = buf;
 	return true;
 }
-
 static bool write_escaped_ir(FILE *out, const char *ir_text, compile_error *err) {
 	const char *p = ir_text;
-
 	if (fprintf(out, "static const char *embedded_ir =\n") < 0) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to write generated C source");
 		return false;
 	}
-
 	while (*p) {
 		if (fputc('"', out) == EOF) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "failed to write generated C source");
@@ -118,15 +108,12 @@ static bool write_escaped_ir(FILE *out, const char *ir_text, compile_error *err)
 			}
 		}
 	}
-
 	if (fprintf(out, ";\n") < 0) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to write generated C source");
 		return false;
 	}
-
 	return true;
 }
-
 static bool write_runner_c_file(FILE *out, const char *ir_text, compile_error *err) {
 	if (fprintf(out,
 		"#include <stdio.h>\n"
@@ -172,11 +159,9 @@ static bool write_runner_c_file(FILE *out, const char *ir_text, compile_error *e
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to write generated C source");
 		return false;
 	}
-
 	if (!write_escaped_ir(out, ir_text, err)) {
 		return false;
 	}
-
 	if (fprintf(out,
 		"\nint main(int argc, char **argv) {\n"
 		"    compile_error err;\n"
@@ -209,23 +194,19 @@ static bool write_runner_c_file(FILE *out, const char *ir_text, compile_error *e
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to write generated C source");
 		return false;
 	}
-
 	return true;
 }
-
 bool emit_native_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err) {
 	char *ir_text = NULL;
 	char temp_path[256];
 	char command[2048];
 	FILE *out;
 	int rc;
-
 	error_clear(err);
 	if (!input_ir_path || !output_binary_path) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "invalid native backend input");
 		return false;
 	}
-
 	if (!read_text_file(input_ir_path, &ir_text, err)) {
 		return false;
 	}
@@ -234,7 +215,6 @@ bool emit_native_from_ir_file(const char *input_ir_path, const char *output_bina
 		error_set(err, ERR_SEMANTIC, 1, 1, "invalid IR header");
 		return false;
 	}
-
 	snprintf(temp_path, sizeof(temp_path), "/tmp/s_seed_native_%ld_%ld.c", (long)getpid(), (long)time(NULL));
 	out = fopen(temp_path, "wb");
 	if (!out) {
@@ -242,7 +222,6 @@ bool emit_native_from_ir_file(const char *input_ir_path, const char *output_bina
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open temporary source file");
 		return false;
 	}
-
 	if (!write_runner_c_file(out, ir_text, err)) {
 		free(ir_text);
 		fclose(out);
@@ -250,18 +229,15 @@ bool emit_native_from_ir_file(const char *input_ir_path, const char *output_bina
 		return false;
 	}
 	free(ir_text);
-
 	if (fclose(out) != 0) {
 		remove(temp_path);
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to close temporary source file");
 		return false;
 	}
-
 	const char *s_source_root = getenv("S_SOURCE_ROOT");
 	if (!s_source_root) {
 		s_source_root = ".";
 	}
-
 	snprintf(command, sizeof(command),
 		"gcc -std=c11 -O2 -Wall -Wextra -Werror -DSEED_COMPILE_ONLY -I %s/src/cmd/compile/seed -o %s %s "
 		"%s/src/cmd/compile/seed/runtime/runtime.c %s/src/cmd/compile/seed/error/error.c "
@@ -278,17 +254,14 @@ bool emit_native_from_ir_file(const char *input_ir_path, const char *output_bina
 		s_source_root, s_source_root,
 		s_source_root, s_source_root, s_source_root,
 		s_source_root, s_source_root, s_source_root);
-
 	rc = system(command);
 	remove(temp_path);
 	if (rc != 0) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "native code generation command failed");
 		return false;
 	}
-
 	return true;
 }
-
 static bool collect_c_abi_exports(const char *ir_text, c_abi_export *exports, size_t cap, size_t *out_len, compile_error *err) {
 	const char *line = ir_text;
 	size_t len = 0;
@@ -352,7 +325,6 @@ static bool collect_c_abi_exports(const char *ir_text, c_abi_export *exports, si
 	}
 	*out_len = len;
 	return true;
-
 invalid_record:
 	error_set(err, ERR_SEMANTIC, 0, 0, "invalid C ABI EXPORT record");
 	return false;
@@ -360,7 +332,6 @@ invalid_signature:
 	error_set(err, ERR_SEMANTIC, 0, 0, "unsupported C ABI signature; only S int is currently supported");
 	return false;
 }
-
 static bool write_c_abi_library_file(FILE *out, const char *ir_text, const c_abi_export *exports, size_t export_count, compile_error *err) {
 	size_t i;
 	if (fprintf(out,
@@ -402,7 +373,6 @@ static bool write_c_abi_library_file(FILE *out, const char *ir_text, const c_abi
 	}
 	return true;
 }
-
 bool emit_c_abi_shared_from_ir_file(const char *input_ir_path, const char *output_library_path, compile_error *err) {
 	char *ir_text = NULL;
 	c_abi_export exports[64];
@@ -413,7 +383,6 @@ bool emit_c_abi_shared_from_ir_file(const char *input_ir_path, const char *outpu
 	const char *shared_flag;
 	FILE *out;
 	int rc;
-
 	error_clear(err);
 	if (!input_ir_path || !output_library_path || !read_text_file(input_ir_path, &ir_text, err)) return false;
 	if (strncmp(ir_text, "SSEED-TARGET-V1", strlen("SSEED-TARGET-V1")) != 0) {

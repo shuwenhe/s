@@ -1,5 +1,4 @@
 package compile.internal.objw
-
 func prog_unit_name() string {
     "objw/prog.s"
 }

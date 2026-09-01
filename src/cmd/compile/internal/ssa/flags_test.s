@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func flags_test_case_name() string {
     "ssa/flags_test.s"
 }

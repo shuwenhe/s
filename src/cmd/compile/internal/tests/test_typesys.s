@@ -2,7 +2,6 @@ package compile.internal.tests.test_typesys
 use compile.internal.typesys.assignable_type
 use compile.internal.typesys.comparable_type
 use compile.internal.typesys.compatible_type
-
 func run_typesys_suite() int {
     if !assignable_type("int", "u8") {
         return 1

@@ -1,5 +1,4 @@
 package main
-
 func add(int left, int right) int {
     return left + right
 }

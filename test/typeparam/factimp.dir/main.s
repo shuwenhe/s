@@ -1,5 +1,4 @@
 package test.typeparam.factimp.dir
-
 func main_unit_name() string {
     "test/typeparam/factimp.dir/main"
 }

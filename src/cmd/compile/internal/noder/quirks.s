@@ -1,7 +1,6 @@
 package compile.internal.noder
 use std.result.result
 use std.slices
-
 func apply_quirk(string name, source_unit unit) ((), noder_error) {
     if name == "trim-trailing-space" {
         unit.text = trim_spaces(unit.text)

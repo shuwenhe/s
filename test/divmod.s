@@ -1,5 +1,4 @@
 package test
-
 func divmod_unit_name() string {
     "test/divmod"
 }

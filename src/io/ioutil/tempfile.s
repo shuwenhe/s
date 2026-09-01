@@ -1,5 +1,4 @@
 package src.io.ioutil
-
 func tempfile_unit_name() string {
     "src/io/ioutil/tempfile"
 }

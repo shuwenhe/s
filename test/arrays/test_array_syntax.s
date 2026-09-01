@@ -1,5 +1,4 @@
 package main
-
 func test_array_types() void {
     int[] arr1 = int[]{1, 2, 3}
     int[5] arr2 = int[5]{1, 2, 3, 4, 5}

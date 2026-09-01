@@ -1,5 +1,4 @@
 package src.cmd.cgo.internal.test
-
 func testx_unit_name() string {
     "src/cmd/cgo/internal/test/testx"
 }

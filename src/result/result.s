@@ -1,10 +1,8 @@
 package std.result
-
 enum (t, e) {
     ok(t),
     err(e),
 }
-
 func ((t, e)* self) is_ok() bool {
     switch self {
         _  : true,
@@ -29,6 +27,5 @@ func ((t, e)* self) unwrap_err() e {
         err : err,
     }
 }
-
 extern "intrinsic" func __result_panic_unwrap[t]() t
 extern "intrinsic" func __result_panic_unwrap_err[e]() e

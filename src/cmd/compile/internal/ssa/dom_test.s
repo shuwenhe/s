@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func dom_test_case_name() string {
     "ssa/dom_test.s"
 }

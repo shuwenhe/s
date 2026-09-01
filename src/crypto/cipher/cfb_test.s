@@ -1,5 +1,4 @@
 package src.crypto.cipher
-
 func cfb_test_unit_name() string {
     "src/crypto/cipher/cfb_test"
 }

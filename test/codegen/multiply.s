@@ -1,5 +1,4 @@
 package test.codegen
-
 func multiply_unit_name() string {
     "test/codegen/multiply"
 }

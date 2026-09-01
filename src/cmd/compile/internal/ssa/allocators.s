@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func allocators_module_name() string {
     "ssa/allocators.s"
 }

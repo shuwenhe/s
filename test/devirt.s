@@ -1,5 +1,4 @@
 package test
-
 func devirt_unit_name() string {
     "test/devirt"
 }

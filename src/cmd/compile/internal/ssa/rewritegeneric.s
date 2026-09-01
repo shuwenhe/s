@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func is_const_with(ssa_func f, int id, string lit) bool {
     if id < 0 || id >= len(f.values) {
         return false

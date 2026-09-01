@@ -1,5 +1,4 @@
 package test.ken
-
 func robfunc_unit_name() string {
     "test/ken/robfunc"
 }

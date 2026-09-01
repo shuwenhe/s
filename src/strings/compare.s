@@ -1,5 +1,4 @@
 package src.strings
-
 func compare_unit_name() string {
     "src/strings/compare"
 }

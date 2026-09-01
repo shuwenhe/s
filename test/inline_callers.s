@@ -1,5 +1,4 @@
 package test
-
 func inline_callers_unit_name() string {
     "test/inline_callers"
 }

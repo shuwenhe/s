@@ -1,5 +1,4 @@
 package compile.internal.mips
-
 func ggen_unit_name() string {
     "mips/ggen.s"
 }

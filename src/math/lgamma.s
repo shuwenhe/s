@@ -1,5 +1,4 @@
 package src.switch
-
 func lgamma_unit_name() string {
     "src/switch/lgamma"
 }

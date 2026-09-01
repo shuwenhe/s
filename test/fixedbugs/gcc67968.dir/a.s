@@ -1,5 +1,4 @@
 package test.fixedbugs.gcc67968.dir
-
 func a_unit_name() string {
     "test/fixedbugs/gcc67968.dir/a"
 }

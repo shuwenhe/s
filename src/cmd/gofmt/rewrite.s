@@ -1,5 +1,4 @@
 package src.cmd.gofmt
-
 func rewrite_unit_name() string {
     "src/cmd/gofmt/rewrite"
 }

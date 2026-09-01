@@ -1,5 +1,4 @@
 package src.net.mail
-
 func message_unit_name() string {
     "src/net/mail/message"
 }

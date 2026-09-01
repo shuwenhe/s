@@ -1,5 +1,4 @@
 package src.net.internal
-
 struct udp_addr {
     ip: string
     port: int

@@ -1,7 +1,5 @@
 package selfhost.subset
-
 const immutable_value := 5;
-
 func main() {
     inferred := 10;
     inferred = 11;

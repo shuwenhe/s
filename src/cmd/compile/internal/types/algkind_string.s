@@ -1,5 +1,4 @@
 package compile.internal.types
-
 func algkind_string_module_name() string {
     "types/algkind_string.s"
 }

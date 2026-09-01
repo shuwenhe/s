@@ -1,5 +1,4 @@
 package compile.internal.devirtualize
-
 func pgo_unit_name() string {
     "devirtualize/pgo.s"
 }

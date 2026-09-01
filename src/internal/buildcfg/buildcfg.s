@@ -3,7 +3,6 @@ use std.env.get
 use std.prelude.len
 use std.prelude.slice
 use std.slices
-
 struct build_cfg_error {
     string message
 }

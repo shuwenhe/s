@@ -1,11 +1,8 @@
 package seed.codegen
-
 use std.vec.vec
 use std.string.string
-
 func instruction_select_mov(ctx: &mut codegen_context, ra: &mut register_allocator, op1: string, result: string) {
     dst_reg, _ := ra.allocate(result)
-    
     if is_numeric(op1) {
         value := parse_int(op1)
         ctx.emit_line("    mov $" + value as string + ", %" + dst_reg)
@@ -18,9 +15,7 @@ func instruction_select_mov(ctx: &mut codegen_context, ra: &mut register_allocat
 func instruction_select_add(ctx: &mut codegen_context, ra: &mut register_allocator, op1: string, op2: string, result: string) {
     dst_reg, _ := ra.allocate(result)
     src_reg, _ := ra.allocate(op1)
-    
     ctx.emit_line("    mov %" + src_reg + ", %" + dst_reg)
-    
     if is_numeric(op2) {
         value := parse_int(op2)
         ctx.emit_line("    add $" + value as string + ", %" + dst_reg)
@@ -33,9 +28,7 @@ func instruction_select_add(ctx: &mut codegen_context, ra: &mut register_allocat
 func instruction_select_sub(ctx: &mut codegen_context, ra: &mut register_allocator, op1: string, op2: string, result: string) {
     dst_reg, _ := ra.allocate(result)
     src_reg, _ := ra.allocate(op1)
-    
     ctx.emit_line("    mov %" + src_reg + ", %" + dst_reg)
-    
     if is_numeric(op2) {
         value := parse_int(op2)
         ctx.emit_line("    sub $" + value as string + ", %" + dst_reg)
@@ -47,9 +40,7 @@ func instruction_select_sub(ctx: &mut codegen_context, ra: &mut register_allocat
 
 func instruction_select_mul(ctx: &mut codegen_context, ra: &mut register_allocator, op1: string, op2: string, result: string) {
     dst_reg, _ := ra.allocate(result)
-    
     ctx.emit_line("    mov %" + dst_reg + ", %rax")
-    
     if is_numeric(op2) {
         value := parse_int(op2)
         ctx.emit_line("    mov $" + value as string + ", %rcx")
@@ -58,7 +49,6 @@ func instruction_select_mul(ctx: &mut codegen_context, ra: &mut register_allocat
         other_reg, _ := ra.allocate(op2)
         ctx.emit_line("    imul %" + other_reg + ", %rax")
     }
-    
     ctx.emit_line("    mov %rax, %" + dst_reg)
 }
 
@@ -69,7 +59,6 @@ func instruction_select_cmp(ctx: &mut codegen_context, ra: &mut register_allocat
     } else {
         src_reg, _ := ra.allocate(op1)
     }
-    
     if is_numeric(op2) {
         ctx.emit_line("    cmp $" + op2 + ", %" + src_reg)
     } else {
@@ -86,7 +75,6 @@ func instruction_select_call(ctx: &mut codegen_context, ra: &mut register_alloca
     param_regs.push("rcx")
     param_regs.push("r8")
     param_regs.push("r9")
-    
     for i < args.len() {
         if i < param_regs.len() {
             param_reg := param_regs[i]
@@ -98,7 +86,6 @@ func instruction_select_call(ctx: &mut codegen_context, ra: &mut register_alloca
             }
         }
     }
-    
     ctx.emit_line("    call " + fn_name)
 }
 
@@ -113,7 +100,6 @@ func instruction_select_ret(ctx: &mut codegen_context, ra: &mut register_allocat
             }
         }
     }
-    
     ctx.emit_line("    leave")
     ctx.emit_line("    ret")
 }
@@ -122,7 +108,6 @@ func is_numeric(s: string) bool {
     if s.len() == 0 {
         return false
     }
-    
     for i < s.len() {
         c := s[i]
         if c < '0' || c > '9' {

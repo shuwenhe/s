@@ -1,5 +1,4 @@
 package compile.internal.amd64
-
 func run_versions_test_suite() int {
     info := init_arch_info()
     if info.link_arch != "amd64" {

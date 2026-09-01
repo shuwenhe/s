@@ -7,7 +7,6 @@ const SQRT2 = 1.41421356237309504880
 const EPSILON = 1e-7
 const INF = 1e308
 const NEG_INF = -1e308
-
 func abs(float x) float {
     if x < 0 { return -x }
     x
@@ -195,7 +194,7 @@ func cos(float x) float {
 
 func tan(float x) float {
     float c = cos(x)
-    if abs(c) < EPSILON { 
+    if abs(c) < EPSILON {
         if x > 0 { return INF } else { return NEG_INF }
     }
     sin(x) / c
@@ -381,7 +380,7 @@ func erf(float x) float {
     float sign = 1.0
     if x < 0 { sign = -1.0; x = -x }
     float t = 1.0 / (1.0 + 0.3275911 * x)
-    float y = 1.0 - (((((1.061405429 * t - 1.453152027) * t) 
+    float y = 1.0 - (((((1.061405429 * t - 1.453152027) * t)
                 + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * exp(-x * x)
     sign * y
 }

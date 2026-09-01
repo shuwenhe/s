@@ -1,5 +1,4 @@
 package test
-
 func varinit_unit_name() string {
     "test/varinit"
 }

@@ -1,5 +1,4 @@
 package test.codegen
-
 func strings_unit_name() string {
     "test/codegen/strings"
 }

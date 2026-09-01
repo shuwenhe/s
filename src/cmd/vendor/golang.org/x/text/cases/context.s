@@ -1,5 +1,4 @@
 package src.cmd.vendor.golang.org.x.text.cases
-
 func context_unit_name() string {
     "src/cmd/vendor/golang.org/x/text/cases/context"
 }

@@ -1,5 +1,4 @@
 package src.cmd.go.internal.base
-
 func env_unit_name() string {
     "src/cmd/go/internal/base/env"
 }

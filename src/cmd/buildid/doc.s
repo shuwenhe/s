@@ -1,5 +1,4 @@
 package src.cmd.buildid
-
 func doc_unit_name() string {
     "src/cmd/buildid/doc"
 }

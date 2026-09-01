@@ -1,5 +1,4 @@
 package src.internal.abi.testdata
-
 func x_unit_name() string {
     "src/internal/abi/testdata/x"
 }

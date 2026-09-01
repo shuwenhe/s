@@ -1,5 +1,4 @@
 package std.io
-
 func print(string text) () {
     println(text)
 }

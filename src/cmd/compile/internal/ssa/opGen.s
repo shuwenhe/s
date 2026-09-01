@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func opGen_module_name() string {
     "ssa/opGen.s"
 }

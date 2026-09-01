@@ -1,5 +1,4 @@
 package src.runtime
-
 func mgcstack_unit_name() string {
     "src/runtime/mgcstack"
 }

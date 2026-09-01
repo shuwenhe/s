@@ -1,5 +1,4 @@
 package compile.internal.test
-
 func lang_test_case_name() string {
     "test/lang_test.s"
 }

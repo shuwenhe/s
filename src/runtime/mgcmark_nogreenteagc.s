@@ -1,5 +1,4 @@
 package src.runtime
-
 func mgcmark_nogreenteagc_unit_name() string {
     "src/runtime/mgcmark_nogreenteagc"
 }

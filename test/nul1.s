@@ -1,5 +1,4 @@
 package test
-
 func nul1_unit_name() string {
     "test/nul1"
 }

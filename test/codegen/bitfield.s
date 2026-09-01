@@ -1,5 +1,4 @@
 package test.codegen
-
 func bitfield_unit_name() string {
     "test/codegen/bitfield"
 }

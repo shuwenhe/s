@@ -1,5 +1,4 @@
 package src.cmd.covdata
-
 func covdata_unit_name() string {
     "src/cmd/covdata/covdata"
 }

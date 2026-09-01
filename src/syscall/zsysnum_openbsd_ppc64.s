@@ -1,5 +1,4 @@
 package src.syscall
-
 func zsysnum_openbsd_ppc64_unit_name() string {
     "src/syscall/zsysnum_openbsd_ppc64"
 }

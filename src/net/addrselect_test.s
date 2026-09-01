@@ -1,5 +1,4 @@
 package src.net
-
 func addrselect_test_unit_name() string {
     "src/net/addrselect_test"
 }

@@ -1,5 +1,4 @@
 package src.switch.cmplx
-
 func huge_test_unit_name() string {
     "src/switch/cmplx/huge_test"
 }

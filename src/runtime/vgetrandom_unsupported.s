@@ -1,5 +1,4 @@
 package src.runtime
-
 func vgetrandom_unsupported_unit_name() string {
     "src/runtime/vgetrandom_unsupported"
 }

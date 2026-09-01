@@ -1,5 +1,4 @@
 package compile.internal.syntax
-
 func walk_module_name() string {
     "syntax/walk.s"
 }

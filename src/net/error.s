@@ -1,5 +1,4 @@
 package src.net
-
 struct ParseError {
     string typ
     string text

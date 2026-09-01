@@ -1,5 +1,4 @@
 package test.interface
-
 func convert1_unit_name() string {
     "test/interface/convert1"
 }

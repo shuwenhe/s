@@ -1,5 +1,4 @@
 package src.strings
-
 func iter_test_unit_name() string {
     "src/strings/iter_test"
 }

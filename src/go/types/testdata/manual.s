@@ -1,5 +1,4 @@
 package src.go.types.testdata
-
 func manual_unit_name() string {
     "src/go/types/testdata/manual"
 }

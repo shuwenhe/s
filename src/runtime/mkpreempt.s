@@ -1,5 +1,4 @@
 package src.runtime
-
 func mkpreempt_unit_name() string {
     "src/runtime/mkpreempt"
 }

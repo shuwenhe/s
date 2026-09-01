@@ -1,5 +1,4 @@
 package src.runtime
-
 func lockrank_unit_name() string {
     "src/runtime/lockrank"
 }

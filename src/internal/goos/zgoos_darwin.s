@@ -1,5 +1,4 @@
 package src.internal.goos
-
 func zgoos_darwin_unit_name() string {
     "src/internal/goos/zgoos_darwin"
 }

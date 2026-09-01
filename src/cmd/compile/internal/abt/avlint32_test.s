@@ -1,5 +1,4 @@
 package compile.internal.abt
-
 func self_test() int {
     t1 := new_tree()
     ignored := insert(t1, 10, "10")

@@ -1,5 +1,4 @@
 package src.runtime
-
 func mpallocbits_unit_name() string {
     "src/runtime/mpallocbits"
 }

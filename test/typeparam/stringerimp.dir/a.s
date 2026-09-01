@@ -1,5 +1,4 @@
 package test.typeparam.stringerimp.dir
-
 func a_unit_name() string {
     "test/typeparam/stringerimp.dir/a"
 }

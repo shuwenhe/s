@@ -1,5 +1,4 @@
 package main
-
 func add(int a, int b) int {
     a + b
 }

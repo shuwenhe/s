@@ -1,5 +1,4 @@
 package main
-
 func choose(string operator) string {
     if operator == "==" { return "equal" }
     if operator == "!=" { return "different" }

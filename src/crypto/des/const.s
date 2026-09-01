@@ -1,5 +1,4 @@
 package src.crypto.des
-
 func const_unit_name() string {
     "src/crypto/des/const"
 }

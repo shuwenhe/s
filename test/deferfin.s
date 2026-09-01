@@ -1,5 +1,4 @@
 package test
-
 func deferfin_unit_name() string {
     "test/deferfin"
 }

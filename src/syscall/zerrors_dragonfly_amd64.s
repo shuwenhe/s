@@ -1,5 +1,4 @@
 package src.syscall
-
 func zerrors_dragonfly_amd64_unit_name() string {
     "src/syscall/zerrors_dragonfly_amd64"
 }

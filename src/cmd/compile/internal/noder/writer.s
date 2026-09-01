@@ -1,7 +1,6 @@
 package compile.internal.noder
 use std.fs.write_text_file
 use std.result.result
-
 func write_export_file(string path, export_record[] exports) ((), noder_error) {
     switch write_text_file(path, emit_export_payload(exports)) {
         _ : (,

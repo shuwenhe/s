@@ -1,5 +1,4 @@
 package src.net
-
 func hook_unit_name() string {
     "src/net/hook"
 }

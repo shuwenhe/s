@@ -1,5 +1,4 @@
 package compile.internal.importer.testdata
-
 func a_unit_name() string {
     "importer/testdata/a.s"
 }

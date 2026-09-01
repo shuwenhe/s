@@ -1,5 +1,4 @@
 package src.runtime
-
 func cgocallback_unit_name() string {
     "src/runtime/cgocallback"
 }

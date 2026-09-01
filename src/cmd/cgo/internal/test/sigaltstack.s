@@ -1,5 +1,4 @@
 package src.cmd.cgo.internal.test
-
 func sigaltstack_unit_name() string {
     "src/cmd/cgo/internal/test/sigaltstack"
 }

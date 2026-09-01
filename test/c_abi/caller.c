@@ -1,16 +1,13 @@
 #include <dlfcn.h>
 #include <stdint.h>
 #include <stdio.h>
-
 typedef int64_t (*add_fn)(int64_t, int64_t);
 typedef const char *(*last_error_fn)(void);
-
 int main(int argc, char **argv) {
     void *library;
     add_fn add;
     last_error_fn last_error;
     int64_t result;
-
     if (argc != 2) {
         fprintf(stderr, "usage: %s <S shared library>\n", argv[0]);
         return 2;

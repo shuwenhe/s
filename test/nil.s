@@ -1,5 +1,4 @@
 package test
-
 func nil_unit_name() string {
     "test/nil"
 }

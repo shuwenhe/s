@@ -1,19 +1,15 @@
 package src.runtime
-
 const SROUTINE_ABI_VERSION = 1
-
 const SROUTINE_IDLE     = 0
 const SROUTINE_RUNNABLE = 1
 const SROUTINE_RUNNING  = 2
 const SROUTINE_WAITING  = 3
 const SROUTINE_DEAD     = 4
-
 const SROUTINE_PARK_NONE    = 0
 const SROUTINE_PARK_CHANNEL = 1
 const SROUTINE_PARK_NETPOLL = 2
 const SROUTINE_PARK_TIMER   = 3
 const SROUTINE_PARK_JOIN    = 4
-
 extern "intrinsic" func __sroutine_abi_version() int
 extern "intrinsic" func __sroutine_current_id() int
 extern "intrinsic" func __sroutine_stack_create(int sroutine_id, int entry_id, int stack_size) int
@@ -23,7 +19,6 @@ extern "intrinsic" func __runtime_num_cpu() int
 extern "intrinsic" func __runtime_thread_wake(int thread_id) int
 extern "intrinsic" func __runtime_nanotime() int
 extern "intrinsic" func __runtime_sleep_briefly() ()
-
 func sroutine_abi_ready() bool {
     __sroutine_abi_version() == SROUTINE_ABI_VERSION
 }

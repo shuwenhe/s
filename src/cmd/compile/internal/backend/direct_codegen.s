@@ -1,5 +1,4 @@
 package backend
-
 struct direct_code_generator {
     prog_list* main_code
     prog_list* data_section
@@ -19,10 +18,8 @@ func (gen* direct_code_generator) generate_function_prologue(string func_name, i
     gen.main_code.append_prog(20, ".globl " + func_name)
     gen.main_code.append_prog(20, ".type " + func_name + ", @function")
     gen.main_code.append_prog(20, func_name + ":")
-    
     gen.main_code.append_prog(prog_op_push(), "\tpushq\t%rbp")
     gen.main_code.append_prog(prog_op_mov(), "\tmovq\t%rsp, %rbp")
-    
     if stack_size > 0 {
         instr := "\tsubq\t$" + to_string(stack_size) + ", %rsp"
         gen.main_code.append_prog(prog_op_sub(), instr)
@@ -98,7 +95,6 @@ func (gen* direct_code_generator) emit_add_i64(int lhs_reg, int rhs_reg, int res
         instr := "\tmovq\t%" + lhs_name + ", %" + result_name
         gen.main_code.append_prog(prog_op_mov(), instr)
     }
-    
     rhs_name := x86_64_reg_name(rhs_reg)
     result_name := x86_64_reg_name(result_reg)
     instr := "\taddq\t%" + rhs_name + ", %" + result_name

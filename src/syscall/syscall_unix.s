@@ -1,7 +1,6 @@
 package src.syscall
 use std.result.result
 use std.slices
-
 struct net_error {
     string message
     int    errno_code

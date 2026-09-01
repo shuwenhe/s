@@ -1,5 +1,4 @@
 package test.typeparam
-
 func adder_unit_name() string {
     "test/typeparam/adder"
 }

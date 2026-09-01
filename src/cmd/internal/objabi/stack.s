@@ -1,5 +1,4 @@
 package src.cmd.internal.objabi
-
 func stack_unit_name() string {
     "src/cmd/internal/objabi/stack"
 }

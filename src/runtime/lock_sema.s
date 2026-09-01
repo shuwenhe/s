@@ -1,5 +1,4 @@
 package src.runtime
-
 func lock_sema_unit_name() string {
     "src/runtime/lock_sema"
 }

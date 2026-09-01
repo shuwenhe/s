@@ -1,5 +1,4 @@
 package demo.generic
-
 func require_copy[t: copy](t value) t {
     value
 }

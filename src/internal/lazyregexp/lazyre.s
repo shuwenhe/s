@@ -1,5 +1,4 @@
 package src.internal.lazyregexp
-
 func lazyre_unit_name() string {
     "src/internal/lazyregexp/lazyre"
 }

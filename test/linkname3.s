@@ -1,5 +1,4 @@
 package test
-
 func linkname3_unit_name() string {
     "test/linkname3"
 }

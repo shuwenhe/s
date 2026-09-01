@@ -1,5 +1,4 @@
 package test
-
 func initialize_unit_name() string {
     "test/initialize"
 }

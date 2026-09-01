@@ -1,5 +1,4 @@
 package src.cmd.go.internal.vcweb
-
 func script_unit_name() string {
     "src/cmd/go/internal/vcweb/script"
 }

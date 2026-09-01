@@ -1,5 +1,4 @@
 package main
-
 func test(int[] arr) void {
     println("array")
 }

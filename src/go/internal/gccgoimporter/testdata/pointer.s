@@ -1,5 +1,4 @@
 package src.go.internal.gccgoimporter.testdata
-
 func pointer_unit_name() string {
     "src/go/internal/gccgoimporter/testdata/pointer"
 }

@@ -1,5 +1,4 @@
 package test.typeparam.setsimp.dir
-
 func main_unit_name() string {
     "test/typeparam/setsimp.dir/main"
 }

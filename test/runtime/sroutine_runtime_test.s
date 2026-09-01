@@ -1,5 +1,4 @@
 package test.runtime.sroutine
-
 func sroutine_worker(int task_channel, int done_channel, int worker_id) int {
     task := chan_recv(task_channel);
     chan_send(done_channel, task + worker_id);

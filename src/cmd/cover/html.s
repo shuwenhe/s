@@ -1,5 +1,4 @@
 package src.cmd.cover
-
 func html_unit_name() string {
     "src/cmd/cover/html"
 }

@@ -1,5 +1,4 @@
 package src.syscall
-
 func net_wasip1_unit_name() string {
     "src/syscall/net_wasip1"
 }

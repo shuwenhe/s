@@ -1,5 +1,4 @@
 package test.fixedbugs
-
 func issue29612_unit_name() string {
     "test/fixedbugs/issue29612"
 }

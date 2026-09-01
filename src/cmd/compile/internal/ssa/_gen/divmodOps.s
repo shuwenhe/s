@@ -1,5 +1,4 @@
 package compile.internal.ssa._gen
-
 func divmodOps_rule_name() string {
     "ssa/_gen/divmodOps.s"
 }

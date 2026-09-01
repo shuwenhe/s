@@ -1,5 +1,4 @@
 package test.typeparam
-
 func interfacearg_unit_name() string {
     "test/typeparam/interfacearg"
 }

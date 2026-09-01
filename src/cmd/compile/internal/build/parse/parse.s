@@ -2,7 +2,6 @@ package compile.internal.build.parse
 use std.prelude.char_at
 use std.prelude.slice
 use std.slices
-
 func parse_options(string[] args)  string[] {
     if len(args) < 2 {
         return make_options("help", "", "", "", false

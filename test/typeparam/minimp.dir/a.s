@@ -1,5 +1,4 @@
 package test.typeparam.minimp.dir
-
 func a_unit_name() string {
     "test/typeparam/minimp.dir/a"
 }

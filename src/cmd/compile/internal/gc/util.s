@@ -1,6 +1,5 @@
 package compile.internal.gc
 use std.slices
-
 func profile_name(string target, string suffix) string {
     if target == "" {
         return ""

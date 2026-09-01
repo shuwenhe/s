@@ -1,5 +1,4 @@
 package src.switch.rand
-
 func zipf_unit_name() string {
     "src/switch/rand/zipf"
 }

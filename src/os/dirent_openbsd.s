@@ -1,5 +1,4 @@
 package src.os
-
 func dirent_openbsd_unit_name() string {
     "src/os/dirent_openbsd"
 }

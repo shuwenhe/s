@@ -1,5 +1,4 @@
 package src.internal.zstd
-
 func literals_unit_name() string {
     "src/internal/zstd/literals"
 }

@@ -1,5 +1,4 @@
 package src.syscall
-
 func zerrors_freebsd_arm_unit_name() string {
     "src/syscall/zerrors_freebsd_arm"
 }

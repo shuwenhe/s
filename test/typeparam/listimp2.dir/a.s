@@ -1,5 +1,4 @@
 package test.typeparam.listimp2.dir
-
 func a_unit_name() string {
     "test/typeparam/listimp2.dir/a"
 }

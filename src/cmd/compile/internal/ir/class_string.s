@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func class_string_module_name() string {
     "ir/class_string.s"
 }

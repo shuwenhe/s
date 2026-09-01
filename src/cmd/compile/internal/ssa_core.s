@@ -7,7 +7,6 @@ use std.prelude.len
 use std.prelude.slice
 use std.prelude.to_string
 use std.slices
-
 struct ssa_pipeline_options {
     bool enable_dce
     bool enable_coalesce

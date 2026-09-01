@@ -1,5 +1,4 @@
 package test
-
 func nowritebarrier_unit_name() string {
     "test/nowritebarrier"
 }
