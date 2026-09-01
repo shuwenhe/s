@@ -1,5 +1,4 @@
 package test
-
 func unsafebuiltins_unit_name() string {
     "test/unsafebuiltins"
 }

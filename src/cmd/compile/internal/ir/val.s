@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func val_module_name() string {
     "ir/val.s"
 }

@@ -1,5 +1,4 @@
 package src.os.exec
-
 func exec_windows_unit_name() string {
     "src/os/exec/exec_windows"
 }

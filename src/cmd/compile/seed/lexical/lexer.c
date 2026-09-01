@@ -1,12 +1,9 @@
 #include "token.h"
 #include "selfhost_bridge.h"
-
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include "../error/error.h"
-
 static char *dup_slice(const char *s, size_t start, size_t end) {
 	size_t n = end - start;
 	char *out = (char *)malloc(n + 1);
@@ -17,13 +14,11 @@ static char *dup_slice(const char *s, size_t start, size_t end) {
 	out[n] = '\0';
 	return out;
 }
-
 void token_vec_init(token_vec *vec) {
 	vec->data = NULL;
 	vec->len = 0;
 	vec->cap = 0;
 }
-
 bool token_vec_push(token_vec *vec, token t) {
 	if (vec->len == vec->cap) {
 		size_t next_cap = (vec->cap == 0) ? 16 : vec->cap * 2;
@@ -37,7 +32,6 @@ bool token_vec_push(token_vec *vec, token t) {
 	vec->data[vec->len++] = t;
 	return true;
 }
-
 void token_vec_free(token_vec *vec) {
 	size_t i;
 	for (i = 0; i < vec->len; i++) {
@@ -48,7 +42,6 @@ void token_vec_free(token_vec *vec) {
 	vec->len = 0;
 	vec->cap = 0;
 }
-
 const char *token_type_name(token_type type) {
 	switch (type) {
 		case TOKEN_EOF: return "EOF";
@@ -100,7 +93,6 @@ const char *token_type_name(token_type type) {
 		default: return "UNKNOWN";
 	}
 }
-
 static token_type keyword_or_identifier(const char *lexeme) {
 	if (strcmp(lexeme, "fn") == 0) return TOKEN_FN;
 	if (strcmp(lexeme, "func") == 0) return TOKEN_FN;
@@ -118,7 +110,6 @@ static token_type keyword_or_identifier(const char *lexeme) {
 	if (strcmp(lexeme, "false") == 0) return TOKEN_FALSE;
 	return TOKEN_IDENTIFIER;
 }
-
 static bool push_simple(token_vec *out, token_type t, const char *lexeme, size_t line, size_t col) {
 	token tok;
 	tok.type = t;
@@ -134,20 +125,16 @@ static bool push_simple(token_vec *out, token_type t, const char *lexeme, size_t
 	}
 	return true;
 }
-
 static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct compile_error *err) {
 	size_t i = 0;
 	size_t line = 1;
 	size_t col = 1;
-
 	token_vec_init(out_tokens);
 	error_clear(err);
-
 	while (source[i] != '\0') {
 		char c = source[i];
 		size_t tok_line = line;
 		size_t tok_col = col;
-
 		if (c == ' ' || c == '\t' || c == '\r') {
 			i++;
 			col++;
@@ -159,7 +146,6 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 			col = 1;
 			continue;
 		}
-
 		if (c == '/' && source[i + 1] == '/') {
 			i += 2;
 			col += 2;
@@ -169,7 +155,6 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 			}
 			continue;
 		}
-
 		if (c == '/' && source[i + 1] == '*') {
 			i += 2;
 			col += 2;
@@ -195,7 +180,6 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 			}
 			continue;
 		}
-
 		if (isalpha((unsigned char)c) || c == '_') {
 			size_t start = i;
 			while (isalnum((unsigned char)source[i]) || source[i] == '_') {
@@ -223,7 +207,6 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 			}
 			continue;
 		}
-
 		if (isdigit((unsigned char)c)) {
 			size_t start = i;
 			if (c == '0' && (source[i + 1] == 'x' || source[i + 1] == 'X') &&
@@ -283,7 +266,6 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 			}
 			continue;
 		}
-
 		if (c == '"') {
 			size_t start;
 			i++;
@@ -320,7 +302,6 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 			col++;
 			continue;
 		}
-
 		if (c == '=' && source[i + 1] == '=') {
 			if (!push_simple(out_tokens, TOKEN_EQ, "==", tok_line, tok_col)) {
 				error_set(err, ERR_OUT_OF_MEMORY, tok_line, tok_col, "out of memory");
@@ -369,7 +350,6 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 			col += 2;
 			continue;
 		}
-
 		if (c == '&' && source[i + 1] == '&') {
 			if (!push_simple(out_tokens, TOKEN_AND_AND, "&&", tok_line, tok_col)) {
 				error_set(err, ERR_OUT_OF_MEMORY, tok_line, tok_col, "out of memory");
@@ -400,7 +380,6 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 			col += 2;
 			continue;
 		}
-
 		switch (c) {
 			case '+': if (!push_simple(out_tokens, TOKEN_PLUS, "+", tok_line, tok_col)) goto oom; break;
 			case '-': if (!push_simple(out_tokens, TOKEN_MINUS, "-", tok_line, tok_col)) goto oom; break;
@@ -430,13 +409,11 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 		i++;
 		col++;
 		continue;
-
 oom:
 		error_set(err, ERR_OUT_OF_MEMORY, tok_line, tok_col, "out of memory");
 		token_vec_free(out_tokens);
 		return false;
 	}
-
 	if (!push_simple(out_tokens, TOKEN_EOF, "", line, col)) {
 		error_set(err, ERR_OUT_OF_MEMORY, line, col, "out of memory");
 		token_vec_free(out_tokens);
@@ -444,7 +421,6 @@ oom:
 	}
 	return true;
 }
-
 bool lexer_scan(const char *source, token_vec *out_tokens, struct compile_error *err) {
 	const char *mode = getenv("S_LEXER_MODE");
 	if (mode && strcmp(mode, "selfhost") == 0) {

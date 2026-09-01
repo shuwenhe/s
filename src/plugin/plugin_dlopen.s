@@ -1,5 +1,4 @@
 package src.plugin
-
 func plugin_dlopen_unit_name() string {
     "src/plugin/plugin_dlopen"
 }

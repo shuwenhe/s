@@ -1,5 +1,4 @@
 package src.switch
-
 func sinh_unit_name() string {
     "src/switch/sinh"
 }

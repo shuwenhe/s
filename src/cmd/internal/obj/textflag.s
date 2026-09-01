@@ -1,5 +1,4 @@
 package src.cmd.internal.obj
-
 func textflag_unit_name() string {
     "src/cmd/internal/obj/textflag"
 }

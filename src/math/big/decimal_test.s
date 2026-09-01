@@ -1,5 +1,4 @@
 package src.switch.big
-
 func decimal_test_unit_name() string {
     "src/switch/big/decimal_test"
 }

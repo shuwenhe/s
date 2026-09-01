@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func decompose_module_name() string {
     "ssa/decompose.s"
 }

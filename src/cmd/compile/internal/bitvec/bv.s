@@ -4,7 +4,6 @@ use std.slices
 word_bits := 32
 word_mask := 31
 word_shift := 5
-
 struct bit_vec {
     int n
     int[] b

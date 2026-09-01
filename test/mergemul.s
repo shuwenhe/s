@@ -1,5 +1,4 @@
 package test
-
 func mergemul_unit_name() string {
     "test/mergemul"
 }

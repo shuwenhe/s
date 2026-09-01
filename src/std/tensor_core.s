@@ -2,7 +2,6 @@ package std.tensor_core
 const FLOAT_EPSILON = 1e-7
 const FLOAT_INF = 1e308
 const FLOAT_NEG_INF = -1e308
-
 struct tensor_shape {
     int[] dims
     int ndim
@@ -401,9 +400,9 @@ func mul_scalar(tensor t, float s) tensor {
 func div(tensor a, tensor b) tensor {
     if is_scalar(b) { return div_scalar(a, item(b)) }
     if same_shape(a, b) {
-        return elemwise_op2(a, b, func(float x, float y) float { 
+        return elemwise_op2(a, b, func(float x, float y) float {
             if abs(y) < FLOAT_EPSILON { return 0.0 }
-            x / y 
+            x / y
         })
     }
     a
@@ -428,7 +427,7 @@ func square(tensor t) tensor { pow_t(t, 2.0) }
 func sqrt_t(tensor t) tensor {
     float[] v = new float[t.shape.size]
     int i = 0
-    for i < t.shape.size { 
+    for i < t.shape.size {
         if t.data[i] >= 0 { v[i] = sqrt_f(t.data[i]) }
         else { v[i] = 0.0 }
         i = i + 1
@@ -446,7 +445,7 @@ func exp_t(tensor t) tensor {
 func log_t(tensor t) tensor {
     float[] v = new float[t.shape.size]
     int i = 0
-    for i < t.shape.size { 
+    for i < t.shape.size {
         if t.data[i] > 0 { v[i] = log_f(t.data[i]) }
         else { v[i] = FLOAT_NEG_INF }
         i = i + 1
@@ -629,9 +628,9 @@ func cat(tensor[] tensors, int axis) tensor {
     if d < 0 { d = tensors[0].shape.ndim + d }
     int concat_total = 0
     int ti = 0
-    for ti < len(tensors) { 
+    for ti < len(tensors) {
         concat_total = concat_total + tensors[ti].shape.dims[d]
-        ti = ti + 1 
+        ti = ti + 1
     }
     int[] out_d = new int[tensors[0].shape.ndim]
     int i = 0

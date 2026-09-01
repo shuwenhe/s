@@ -1,7 +1,6 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
-
 #include <ctype.h>
 #include <arpa/inet.h>
 #include <dlfcn.h>
@@ -23,7 +22,6 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-
 #if defined(__linux__)
 #include <sys/epoll.h>
 #include <sys/sendfile.h>
@@ -31,7 +29,6 @@
 #include <sys/event.h>
 #include <sys/uio.h>
 #endif
-
 #include "../code/target.h"
 #include "../intermediate/ir.h"
 #include "../lexical/token.h"
@@ -39,18 +36,15 @@
 #include "../syntax/ast.h"
 #include "memory.h"
 #include "sroutine_abi.h"
-
 static int g_host_argc = 0;
 static char **g_host_argv = NULL;
 static int g_host_errno = 0;
 static _Thread_local char g_last_recvfrom_ip[INET6_ADDRSTRLEN];
 static _Thread_local int g_last_recvfrom_port = 0;
-
 typedef struct runtime_profile_counter {
 	char name[128];
 	unsigned long long count;
 } runtime_profile_counter;
-
 static int g_runtime_profile_enabled = 0;
 static unsigned long long g_runtime_profile_total_ops = 0;
 static unsigned long long g_runtime_profile_max_ops = 0;
@@ -60,18 +54,14 @@ static runtime_profile_counter g_runtime_profile_host[256];
 static size_t g_runtime_profile_host_len = 0;
 static runtime_profile_counter g_runtime_profile_op[256];
 static size_t g_runtime_profile_op_len = 0;
-
 typedef struct runtime_values runtime_values;
-
 typedef enum runtime_value_kind {
 	RUNTIME_INT = 0,
 	RUNTIME_FLOAT,
 	RUNTIME_STRING,
 	RUNTIME_ARRAY,
 } runtime_value_kind;
-
 typedef struct runtime_data_value runtime_data_value;
-
 typedef struct runtime_data_value {
 	runtime_value_kind kind;
 	long int_value;
@@ -80,9 +70,7 @@ typedef struct runtime_data_value {
 	runtime_data_value *array_items;
 	size_t array_len;
 } runtime_data_value;
-
 static int resolve_value(const runtime_values *vals, const char *name, runtime_data_value *out);
-
 static unsigned long long parse_ull_env(const char *text) {
 	char *end = NULL;
 	unsigned long long value = 0;
@@ -95,7 +83,6 @@ static unsigned long long parse_ull_env(const char *text) {
 	}
 	return value;
 }
-
 static void runtime_profile_reset(void) {
 	g_runtime_profile_total_ops = 0;
 	g_runtime_profile_fn_len = 0;
@@ -105,7 +92,6 @@ static void runtime_profile_reset(void) {
 	memset(g_runtime_profile_host, 0, sizeof(g_runtime_profile_host));
 	memset(g_runtime_profile_op, 0, sizeof(g_runtime_profile_op));
 }
-
 static void runtime_profile_init_from_env(void) {
 	const char *enabled = getenv("S_RUNTIME_PROFILE");
 	const char *max_ops = getenv("S_RUNTIME_PROFILE_MAX_OPS");
@@ -113,7 +99,6 @@ static void runtime_profile_init_from_env(void) {
 	g_runtime_profile_max_ops = parse_ull_env(max_ops);
 	runtime_profile_reset();
 }
-
 static void runtime_profile_bump(runtime_profile_counter *counters, size_t *len, size_t cap, const char *name) {
 	size_t i;
 	if (!name || !*name) {
@@ -132,7 +117,6 @@ static void runtime_profile_bump(runtime_profile_counter *counters, size_t *len,
 	counters[*len].count = 1;
 	(*len)++;
 }
-
 static void runtime_profile_dump_top(const char *label, runtime_profile_counter *counters, size_t len, size_t top_n) {
 	size_t i;
 	size_t used[16];
@@ -169,7 +153,6 @@ static void runtime_profile_dump_top(const char *label, runtime_profile_counter 
 		fprintf(stderr, "  %s: %llu\n", counters[best].name, counters[best].count);
 	}
 }
-
 static void runtime_profile_dump_summary(void) {
 	if (!g_runtime_profile_enabled) {
 		return;
@@ -179,7 +162,6 @@ static void runtime_profile_dump_summary(void) {
 	runtime_profile_dump_top("host_calls", g_runtime_profile_host, g_runtime_profile_host_len, 10);
 	runtime_profile_dump_top("ir_ops", g_runtime_profile_op, g_runtime_profile_op_len, 10);
 }
-
 static runtime_data_value value_make_int(long v) {
 	runtime_data_value out;
 	out.kind = RUNTIME_INT;
@@ -190,7 +172,6 @@ static runtime_data_value value_make_int(long v) {
 	out.array_len = 0;
 	return out;
 }
-
 static runtime_data_value value_make_float(double v) {
 	runtime_data_value out;
 	out.kind = RUNTIME_FLOAT;
@@ -201,7 +182,6 @@ static runtime_data_value value_make_float(double v) {
 	out.array_len = 0;
 	return out;
 }
-
 static runtime_data_value value_make_string_owned(char *s) {
 	runtime_data_value out;
 	out.kind = RUNTIME_STRING;
@@ -212,7 +192,6 @@ static runtime_data_value value_make_string_owned(char *s) {
 	out.array_len = 0;
 	return out;
 }
-
 static runtime_data_value value_make_array_owned(runtime_data_value *items, size_t len) {
 	runtime_data_value out;
 	out.kind = RUNTIME_ARRAY;
@@ -223,7 +202,6 @@ static runtime_data_value value_make_array_owned(runtime_data_value *items, size
 	out.array_len = len;
 	return out;
 }
-
 static runtime_data_value value_make_string_copy(const char *s) {
 	char *dup;
 	if (!s) {
@@ -236,7 +214,6 @@ static runtime_data_value value_make_string_copy(const char *s) {
 	strcpy(dup, s);
 	return value_make_string_owned(dup);
 }
-
 static void value_clear(runtime_data_value *v) {
 	if (!v) {
 		return;
@@ -257,7 +234,6 @@ static void value_clear(runtime_data_value *v) {
 	v->array_items = NULL;
 	v->array_len = 0;
 }
-
 static int value_copy(runtime_data_value *dst, const runtime_data_value *src) {
 	size_t i;
 	if (src->kind == RUNTIME_INT) {
@@ -292,7 +268,6 @@ static int value_copy(runtime_data_value *dst, const runtime_data_value *src) {
 	*dst = value_make_string_copy(src->str_value ? src->str_value : "");
 	return dst->str_value != NULL;
 }
-
 static int is_string_literal(const char *s) {
 	size_t n;
 	if (!s) {
@@ -301,13 +276,11 @@ static int is_string_literal(const char *s) {
 	n = strlen(s);
 	return n >= 2 && s[0] == '"' && s[n - 1] == '"';
 }
-
 static runtime_data_value parse_string_literal(const char *s) {
 	char *buf;
 	size_t i;
 	size_t n;
 	size_t o = 0;
-
 	if (!is_string_literal(s)) {
 		return value_make_string_copy("");
 	}
@@ -334,7 +307,6 @@ static runtime_data_value parse_string_literal(const char *s) {
 	buf[o] = '\0';
 	return value_make_string_owned(buf);
 }
-
 static int value_truthy(const runtime_data_value *v) {
 	if (v->kind == RUNTIME_INT) {
 		return v->int_value != 0;
@@ -347,9 +319,7 @@ static int value_truthy(const runtime_data_value *v) {
 	}
 	return v->str_value && v->str_value[0] != '\0';
 }
-
 static int value_render(const runtime_data_value *v, char **out);
-
 static int value_as_cstr(const runtime_data_value *v, char *tmp, size_t tmp_size, const char **out) {
 	if (v->kind == RUNTIME_STRING) {
 		*out = v->str_value ? v->str_value : "";
@@ -381,14 +351,12 @@ static int value_as_cstr(const runtime_data_value *v, char *tmp, size_t tmp_size
 	*out = tmp;
 	return 1;
 }
-
 static int value_render(const runtime_data_value *v, char **out) {
 	size_t i;
 	size_t total = 0;
 	char *buf;
 	char tmp[64];
 	const char *text = NULL;
-
 	*out = NULL;
 	if (v->kind != RUNTIME_ARRAY) {
 		if (!value_as_cstr(v, tmp, sizeof(tmp), &text)) {
@@ -402,7 +370,6 @@ static int value_render(const runtime_data_value *v, char **out) {
 		*out = buf;
 		return 1;
 	}
-
 	total = 2;
 	for (i = 0; i < v->array_len; i++) {
 		char *item_text = NULL;
@@ -415,7 +382,6 @@ static int value_render(const runtime_data_value *v, char **out) {
 		}
 		free(item_text);
 	}
-
 	buf = (char *)malloc(total + 1);
 	if (!buf) {
 		return 0;
@@ -438,7 +404,6 @@ static int value_render(const runtime_data_value *v, char **out) {
 	*out = buf;
 	return 1;
 }
-
 static int value_concat(runtime_data_value *out, const runtime_data_value *lhs, const runtime_data_value *rhs) {
 	char ltmp[64];
 	char rtmp[64];
@@ -447,7 +412,6 @@ static int value_concat(runtime_data_value *out, const runtime_data_value *lhs, 
 	char *buf;
 	size_t ln;
 	size_t rn;
-
 	if (!value_as_cstr(lhs, ltmp, sizeof(ltmp), &ls) || !value_as_cstr(rhs, rtmp, sizeof(rtmp), &rs)) {
 		return 0;
 	}
@@ -463,7 +427,6 @@ static int value_concat(runtime_data_value *out, const runtime_data_value *lhs, 
 	*out = value_make_string_owned(buf);
 	return 1;
 }
-
 static char *join_args_text(const runtime_data_value *args, size_t argc) {
 	size_t i;
 	size_t total = 0;
@@ -493,7 +456,6 @@ static char *join_args_text(const runtime_data_value *args, size_t argc) {
 	out[used] = '\0';
 	return out;
 }
-
 static char *trim_copy(const char *text) {
 	size_t start = 0;
 	size_t end;
@@ -516,7 +478,6 @@ static char *trim_copy(const char *text) {
 	out[end - start] = '\0';
 	return out;
 }
-
 static char *lower_copy(const char *text) {
 	size_t i;
 	size_t n;
@@ -535,13 +496,11 @@ static char *lower_copy(const char *text) {
 	out[n] = '\0';
 	return out;
 }
-
 static int read_source_text_file(const char *path, char **out_text, compile_error *err) {
 	FILE *fp;
 	long n;
 	size_t read_n;
 	char *buf;
-
 	*out_text = NULL;
 	fp = fopen(path, "rb");
 	if (!fp) {
@@ -564,14 +523,12 @@ static int read_source_text_file(const char *path, char **out_text, compile_erro
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to rewind input: %s", path);
 		return 0;
 	}
-
 	buf = (char *)malloc((size_t)n + 1);
 	if (!buf) {
 		fclose(fp);
 		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 		return 0;
 	}
-
 	read_n = fread(buf, 1, (size_t)n, fp);
 	fclose(fp);
 	if (read_n != (size_t)n) {
@@ -583,7 +540,6 @@ static int read_source_text_file(const char *path, char **out_text, compile_erro
 	*out_text = buf;
 	return 1;
 }
-
 static char *run_command_capture_output(const char *command, compile_error *err) {
 	FILE *pipe = NULL;
 	char *captured = NULL;
@@ -655,7 +611,6 @@ static char *run_command_capture_output(const char *command, compile_error *err)
 	}
 	return captured;
 }
-
 static int host_file_exists(const char *path) {
 	FILE *fp;
 	if (!path || !*path) {
@@ -668,13 +623,11 @@ static int host_file_exists(const char *path) {
 	fclose(fp);
 	return 1;
 }
-
 static char *host_read_text_file(const char *path, compile_error *err) {
 	FILE *fp;
 	long len;
 	size_t read_len;
 	char *buf;
-
 	if (!path || !*path) {
 		return value_make_string_copy("").str_value;
 	}
@@ -714,7 +667,6 @@ static char *host_read_text_file(const char *path, compile_error *err) {
 	buf[len] = '\0';
 	return buf;
 }
-
 static int host_write_text_file(const char *path, const char *contents) {
 	FILE *fp;
 	size_t len;
@@ -735,13 +687,11 @@ static int host_write_text_file(const char *path, const char *contents) {
 	g_host_errno = 0;
 	return 0;
 }
-
 static int host_make_dirs(const char *path) {
 	char buffer[PATH_MAX];
 	size_t len;
 	char *cursor;
 	struct stat st;
-
 	if (!path || !*path) {
 		g_host_errno = EINVAL;
 		return -1;
@@ -781,7 +731,6 @@ static int host_make_dirs(const char *path) {
 	g_host_errno = 0;
 	return 0;
 }
-
 static char *host_make_temp_dir(const char *prefix) {
 	const char *base = (prefix && *prefix) ? prefix : "s";
 	char *path;
@@ -800,21 +749,18 @@ static char *host_make_temp_dir(const char *prefix) {
 	g_host_errno = 0;
 	return path;
 }
-
 static int host_native_family(int family) {
 	if (family == 0) return AF_UNSPEC;
 	if (family == 2) return AF_INET;
 	if (family == 10) return AF_INET6;
 	return family;
 }
-
 static int host_native_sockopt_level(int level) {
 	if (level == 1) return SOL_SOCKET;
 	if (level == 6) return IPPROTO_TCP;
 	if (level == 17) return IPPROTO_UDP;
 	return level;
 }
-
 static int host_native_sockopt_name(int level, int option) {
 	if (level != 1) return option;
 	switch (option) {
@@ -828,7 +774,6 @@ static int host_native_sockopt_name(int level, int option) {
 		default: return option;
 	}
 }
-
 static int host_sockaddr(const char *ip, int port, int family, struct sockaddr_storage *storage, socklen_t *len) {
 	struct addrinfo hints;
 	struct addrinfo *resolved = NULL;
@@ -883,7 +828,6 @@ static int host_sockaddr(const char *ip, int port, int family, struct sockaddr_s
 	g_host_errno = EAFNOSUPPORT;
 	return 0;
 }
-
 static int host_connect_deadline(int fd, const char *host, int port, int family, int timeout_ms) {
 	struct sockaddr_storage addr;
 	socklen_t addr_len;
@@ -923,7 +867,6 @@ static int host_connect_deadline(int fd, const char *host, int port, int family,
 	g_host_errno = rc < 0 ? (socket_error ? socket_error : errno) : 0;
 	return rc;
 }
-
 static int host_sockaddr_text(const struct sockaddr *addr, char *ip, size_t ip_cap, int *port) {
 	if (!addr || !ip || ip_cap == 0) return 0;
 	if (addr->sa_family == AF_INET) {
@@ -940,7 +883,6 @@ static int host_sockaddr_text(const struct sockaddr *addr, char *ip, size_t ip_c
 	}
 	return 0;
 }
-
 static int host_int_arg(const runtime_data_value *arg, long *out) {
 	if (arg->kind != RUNTIME_INT) {
 		return 0;
@@ -948,7 +890,6 @@ static int host_int_arg(const runtime_data_value *arg, long *out) {
 	*out = arg->int_value;
 	return 1;
 }
-
 static int host_socket_name(int fd, int peer, char *ip, size_t ip_cap, int *port) {
 	struct sockaddr_storage storage;
 	socklen_t len = sizeof(storage);
@@ -981,7 +922,6 @@ static int host_socket_name(int fd, int peer, char *ip, size_t ip_cap, int *port
 	g_host_errno = 0;
 	return 1;
 }
-
 static int host_set_socket_deadline(int fd, int read_timeout_ms, int write_timeout_ms) {
 	struct timeval read_timeout;
 	struct timeval write_timeout;
@@ -999,7 +939,6 @@ static int host_set_socket_deadline(int fd, int read_timeout_ms, int write_timeo
 	g_host_errno = rc < 0 ? errno : 0;
 	return rc;
 }
-
 static int host_poller_create(void) {
 #if defined(__linux__)
 	int fd = epoll_create1(EPOLL_CLOEXEC);
@@ -1013,7 +952,6 @@ static int host_poller_create(void) {
 	g_host_errno = fd < 0 ? errno : 0;
 	return fd;
 }
-
 static int host_poller_change(int poller_fd, int fd, int events, int add) {
 	int rc = -1;
 #if defined(__linux__)
@@ -1038,7 +976,6 @@ static int host_poller_change(int poller_fd, int fd, int events, int add) {
 	g_host_errno = rc < 0 ? errno : 0;
 	return rc;
 }
-
 static int host_poller_wait(int poller_fd, int max_events, int timeout_ms, runtime_data_value *out) {
 	runtime_data_value *items = NULL;
 	int n = -1;
@@ -1085,7 +1022,6 @@ static int host_poller_wait(int poller_fd, int max_events, int timeout_ms, runti
 	*out = value_make_array_owned(items, (size_t)n);
 	return 1;
 }
-
 static int host_dispatch_libc_ffi(const char *name, const runtime_data_value *args, size_t argc,
 	runtime_data_value *out, compile_error *err) {
 	char spec[IR_OPERAND_CAP];
@@ -1145,10 +1081,8 @@ static int host_dispatch_libc_ffi(const char *name, const runtime_data_value *ar
 	}
 	return 1;
 }
-
 bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char *output_dir, compile_error *err);
 bool seed_compile_files(int input_count, char **input_paths, const char *output_path, compile_error *err);
-
 static int compile_s_file_to_ir(const char *input_path, const char *output_path, compile_error *err) {
 	char *source_text = NULL;
 	token_vec tokens;
@@ -1156,7 +1090,6 @@ static int compile_s_file_to_ir(const char *input_path, const char *output_path,
 	IR ir;
 	FILE *out = NULL;
 	int ok = 0;
-
 	if (!read_source_text_file(input_path, &source_text, err)) {
 		return 0;
 	}
@@ -1175,7 +1108,6 @@ static int compile_s_file_to_ir(const char *input_path, const char *output_path,
 		free(source_text);
 		return 0;
 	}
-
 	ir_init(&ir);
 	if (!ir_generate_from_ast(parsed.root, &ir, err)) {
 		ir_free(&ir);
@@ -1183,7 +1115,6 @@ static int compile_s_file_to_ir(const char *input_path, const char *output_path,
 		free(source_text);
 		return 0;
 	}
-
 	out = fopen(output_path, "wb");
 	if (!out) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open output: %s", output_path);
@@ -1195,7 +1126,6 @@ static int compile_s_file_to_ir(const char *input_path, const char *output_path,
 		goto done;
 	}
 	ok = 1;
-
 done:
 	if (out) {
 		fclose(out);
@@ -1205,18 +1135,15 @@ done:
 	free(source_text);
 	return ok;
 }
-
 static void print_compile_error_local(const compile_error *err) {
 	if (!err || !error_is_set(err)) {
 		return;
 	}
 	fprintf(stderr, "error[%d] at %zu:%zu: %s\n", (int)err->code, err->line, err->column, err->message);
 }
-
 typedef struct runtime_function runtime_function;
 typedef struct runtime_functions runtime_functions;
 static const runtime_function *functions_find(const runtime_functions *funcs, const char *name);
-
 static int host_dispatch_call(
 	const char *name,
 	const runtime_data_value *args,
@@ -2149,18 +2076,14 @@ static int host_dispatch_call(
 		compile_error compile_err;
 		char **s_argv = NULL;
 		int s_argc = 0;
-
 		if (argc != 1) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "build_main expects 1 arg");
 			return 0;
 		}
-
 		s_argc = g_host_argc;
 		s_argv = g_host_argv;
-
 		if (s_argc >= 2 && strcmp(s_argv[1], "mod") == 0) {
 		}
-
 		if (s_argc >= 2 && strcmp(s_argv[1], "--emit-bin") == 0) {
 			if (s_argc != 4) {
 				fprintf(stderr, "usage: --emit-bin <input.ir> <output.bin>\n");
@@ -2176,7 +2099,6 @@ static int host_dispatch_call(
 			*out = value_make_int(0);
 			return 1;
 		}
-
 		if (s_argc >= 2 && strcmp(s_argv[1], "--compile-unit") == 0) {
 			if (s_argc < 4) {
 				fprintf(stderr, "usage: --compile-unit <output.ir> <input.s>...\n");
@@ -2192,7 +2114,6 @@ static int host_dispatch_call(
 			*out = value_make_int(0);
 			return 1;
 		}
-
 		if (s_argc >= 2 && strcmp(s_argv[1], "--bootstrap") == 0) {
 			const char *out_dir = ".";
 			if (s_argc < 3 || s_argc > 4) {
@@ -2212,7 +2133,6 @@ static int host_dispatch_call(
 			*out = value_make_int(0);
 			return 1;
 		}
-
 		if (s_argc == 3) {
 			error_clear(&compile_err);
 			if (!compile_s_file_to_ir(s_argv[1], s_argv[2], &compile_err)) {
@@ -2223,46 +2143,37 @@ static int host_dispatch_call(
 			*out = value_make_int(0);
 			return 1;
 		}
-
 		fprintf(stderr, "usage:\n  s <input.s> <output.ir>\n  s --compile-unit <output.ir> <input.s>...\n  s --emit-bin <input.ir> <output.bin>\n  s --bootstrap <compiler_source.s> [output_dir]\n  s mod index <dir>\n");
 		*out = value_make_int(2);
 		return 1;
 	}
-
 	if (strcmp(name, "__host_str_len") == 0) {
 		const char *str = NULL;
 		char str_buf[4096];
 		long len = 0;
-
 		if (argc != 1 || !value_as_cstr(&args[0], str_buf, sizeof(str_buf), &str)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_str_len expects 1 string argument");
 			return 0;
 		}
-
 		while (str[len] != '\0') {
 			len++;
 		}
-
 		*out = value_make_int(len);
 		return 1;
 	}
-
 	if (strcmp(name, "__host_str_char_at") == 0) {
 		const char *str = NULL;
 		char str_buf[4096];
 		long index = 0;
 		long len = 0;
 		char result[2];
-
 		if (argc != 2 || !value_as_cstr(&args[0], str_buf, sizeof(str_buf), &str) || !host_int_arg(&args[1], &index)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_str_char_at expects (string, int) arguments");
 			return 0;
 		}
-
 		while (str[len] != '\0') {
 			len++;
 		}
-
 		if (index < 0 || index >= len) {
 			*out = value_make_string_copy("");
 			if (!out->str_value) {
@@ -2271,7 +2182,6 @@ static int host_dispatch_call(
 			}
 			return 1;
 		}
-
 		result[0] = str[index];
 		result[1] = '\0';
 		*out = value_make_string_copy(result);
@@ -2281,7 +2191,6 @@ static int host_dispatch_call(
 		}
 		return 1;
 	}
-
 	if (strcmp(name, "__host_str_find") == 0) {
 		const char *haystack = NULL;
 		const char *needle = NULL;
@@ -2292,26 +2201,22 @@ static int host_dispatch_call(
 		long i, j;
 		int found = 0;
 		long found_pos = -1;
-
 		if (argc != 2 ||
 		    !value_as_cstr(&args[0], haystack_buf, sizeof(haystack_buf), &haystack) ||
 		    !value_as_cstr(&args[1], needle_buf, sizeof(needle_buf), &needle)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_str_find expects (string, string) arguments");
 			return 0;
 		}
-
 		while (haystack[haystack_len] != '\0') {
 			haystack_len++;
 		}
 		while (needle[needle_len] != '\0') {
 			needle_len++;
 		}
-
 		if (needle_len == 0) {
 			*out = value_make_int(0);
 			return 1;
 		}
-
 		for (i = 0; i <= haystack_len - needle_len; i++) {
 			found = 1;
 			for (j = 0; j < needle_len; j++) {
@@ -2325,40 +2230,32 @@ static int host_dispatch_call(
 				break;
 			}
 		}
-
 		*out = value_make_int(found_pos);
 		return 1;
 	}
-
 	if (strcmp(name, "__host_file_size") == 0) {
 		const char *path = NULL;
 		char path_buf[4096];
 		struct stat st;
-
 		if (argc != 1 || !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_file_size expects 1 string argument");
 			return 0;
 		}
-
 		if (stat(path, &st) != 0) {
 			*out = value_make_int(-1);
 			return 1;
 		}
-
 		*out = value_make_int((long)st.st_size);
 		return 1;
 	}
-
 	if (strcmp(name, "__host_file_exists") == 0) {
 		const char *path = NULL;
 		char path_buf[4096];
 		struct stat st;
-
 		if (argc != 1 || !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_file_exists expects 1 string argument");
 			return 0;
 		}
-
 		if (stat(path, &st) == 0) {
 			*out = value_make_int(1);
 		} else {
@@ -2366,7 +2263,6 @@ static int host_dispatch_call(
 		}
 		return 1;
 	}
-
 	if (strcmp(name, "__host_write_file") == 0) {
 		const char *path = NULL;
 		const char *content = NULL;
@@ -2375,24 +2271,20 @@ static int host_dispatch_call(
 		FILE *fp = NULL;
 		size_t content_len = 0;
 		size_t written = 0;
-
 		if (argc != 2 ||
 		    !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path) ||
 		    !value_as_cstr(&args[1], content_buf, sizeof(content_buf), &content)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_write_file expects (string, string) arguments");
 			return 0;
 		}
-
 		while (content[content_len] != '\0') {
 			content_len++;
 		}
-
 		fp = fopen(path, "wb");
 		if (!fp) {
 			*out = value_make_int(0);
 			return 1;
 		}
-
 		if (content_len > 0) {
 			written = fwrite(content, 1, content_len, fp);
 			if (written != content_len) {
@@ -2401,22 +2293,18 @@ static int host_dispatch_call(
 				return 1;
 			}
 		}
-
 		if (fflush(fp) != 0) {
 			fclose(fp);
 			*out = value_make_int(0);
 			return 1;
 		}
-
 		if (fclose(fp) != 0) {
 			*out = value_make_int(0);
 			return 1;
 		}
-
 		*out = value_make_int(1);
 		return 1;
 	}
-
 	if (strcmp(name, "__host_read_file") == 0) {
 		const char *path = NULL;
 		char path_buf[4096];
@@ -2425,12 +2313,10 @@ static int host_dispatch_call(
 		char *buffer = NULL;
 		size_t file_size = 0;
 		size_t bytes_read = 0;
-
 		if (argc != 1 || !value_as_cstr(&args[0], path_buf, sizeof(path_buf), &path)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_read_file expects 1 string argument");
 			return 0;
 		}
-
 		if (stat(path, &st) != 0) {
 			*out = value_make_string_copy("");
 			if (!out->str_value) {
@@ -2439,9 +2325,7 @@ static int host_dispatch_call(
 			}
 			return 1;
 		}
-
 		file_size = (size_t)st.st_size;
-
 		fp = fopen(path, "rb");
 		if (!fp) {
 			*out = value_make_string_copy("");
@@ -2451,14 +2335,12 @@ static int host_dispatch_call(
 			}
 			return 1;
 		}
-
 		buffer = (char *)malloc(file_size + 1);
 		if (!buffer) {
 			fclose(fp);
 			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 			return 0;
 		}
-
 		if (file_size > 0) {
 			bytes_read = fread(buffer, 1, file_size, fp);
 			if (bytes_read != file_size) {
@@ -2472,15 +2354,11 @@ static int host_dispatch_call(
 				return 1;
 			}
 		}
-
 		buffer[file_size] = '\0';
-
 		fclose(fp);
-
 		*out = value_make_string_owned(buffer);
 		return 1;
 	}
-
 	if (strcmp(name, "__host_atomic_replace") == 0) {
 		const char *tmp_path = NULL;
 		const char *final_path = NULL;
@@ -2491,39 +2369,32 @@ static int host_dispatch_call(
 		int dir_fd = -1;
 		size_t i = 0;
 		size_t last_slash = 0;
-
-		if (argc != 2 || 
+		if (argc != 2 ||
 		    !value_as_cstr(&args[0], tmp_buf, sizeof(tmp_buf), &tmp_path) ||
 		    !value_as_cstr(&args[1], final_buf, sizeof(final_buf), &final_path)) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_atomic_replace expects (string, string) arguments");
 			return 0;
 		}
-
 		tmp_fd = open(tmp_path, O_RDONLY);
 		if (tmp_fd < 0) {
 			*out = value_make_int(0);
 			return 1;
 		}
-
 		if (fsync(tmp_fd) != 0) {
 			close(tmp_fd);
 			*out = value_make_int(0);
 			return 1;
 		}
-
 		close(tmp_fd);
-
 		if (rename(tmp_path, final_path) != 0) {
 			*out = value_make_int(0);
 			return 1;
 		}
-
 		for (i = 0; final_path[i] != '\0'; i++) {
 			if (final_path[i] == '/') {
 				last_slash = i;
 			}
 		}
-
 		if (last_slash == 0) {
 			dir_path[0] = '.';
 			dir_path[1] = '\0';
@@ -2533,7 +2404,6 @@ static int host_dispatch_call(
 			}
 			dir_path[i] = '\0';
 		}
-
 #if defined(__linux__)
 		dir_fd = open(dir_path, O_RDONLY | O_DIRECTORY);
 #else
@@ -2543,59 +2413,48 @@ static int host_dispatch_call(
 			fsync(dir_fd);
 			close(dir_fd);
 		}
-
 		*out = value_make_int(1);
 		return 1;
 	}
-
 	if (funcs != NULL) {
 		const runtime_function *user_fn = functions_find(funcs, name);
 		if (user_fn != NULL) {
-
 			error_set(err, ERR_SEMANTIC, 0, 0, "user-defined function: %s (should not reach here)", name);
 			return -1;
 		}
 	}
-
 	error_set(err, ERR_SEMANTIC, 0, 0, "unknown function: %s", name);
 	return 0;
 }
-
 typedef struct runtime_value {
 	char name[64];
 	runtime_data_value value;
 } runtime_value;
-
 typedef struct runtime_values {
 	runtime_value *data;
 	size_t len;
 	size_t cap;
 } runtime_values;
-
 typedef struct runtime_label {
 	char name[64];
 	size_t pc;
 } runtime_label;
-
 typedef struct runtime_labels {
 	runtime_label *data;
 	size_t len;
 	size_t cap;
 } runtime_labels;
-
 typedef struct runtime_ins {
 	char op[32];
 	char result[1024];
 	char op1[1024];
 	char op2[1024];
 } runtime_ins;
-
 typedef struct runtime_program {
 	runtime_ins *data;
 	size_t len;
 	size_t cap;
 } runtime_program;
-
 typedef struct runtime_function {
 	char name[64];
 	size_t start_pc;
@@ -2603,13 +2462,11 @@ typedef struct runtime_function {
 	char params[32][64];
 	size_t param_count;
 } runtime_function;
-
 typedef struct runtime_functions {
 	runtime_function *data;
 	size_t len;
 	size_t cap;
 } runtime_functions;
-
 typedef struct runtime_sroutine_task {
 	long id;
 	sroutine_state state;
@@ -2618,14 +2475,12 @@ typedef struct runtime_sroutine_task {
 	runtime_data_value *args;
 	size_t argc;
 } runtime_sroutine_task;
-
 typedef struct runtime_channel {
 	long id;
 	runtime_data_value *items;
 	size_t len;
 	size_t cap;
 } runtime_channel;
-
 typedef struct runtime_scheduler {
 	runtime_sroutine_task *task;
 	size_t task_len;
@@ -2638,9 +2493,7 @@ typedef struct runtime_scheduler {
 	long next_sroutine_id;
 	long current_sroutine_id;
 } runtime_scheduler;
-
 static runtime_scheduler g_runtime_scheduler;
-
 static int is_blank(const char *s) {
 	while (*s) {
 		if (!isspace((unsigned char)*s)) {
@@ -2650,7 +2503,6 @@ static int is_blank(const char *s) {
 	}
 	return 1;
 }
-
 static int is_int_literal(const char *s) {
 	if (!s || !*s) {
 		return 0;
@@ -2669,7 +2521,6 @@ static int is_int_literal(const char *s) {
 	}
 	return 1;
 }
-
 static int is_float_literal(const char *s) {
 	char *end = NULL;
 	if (!s || !*s) {
@@ -2682,7 +2533,6 @@ static int is_float_literal(const char *s) {
 	strtod(s, &end);
 	return errno == 0 && end != NULL && *end == '\0';
 }
-
 static int is_array_literal(const char *s) {
 	size_t n;
 	if (!s) {
@@ -2691,7 +2541,6 @@ static int is_array_literal(const char *s) {
 	n = strlen(s);
 	return n >= 2 && s[0] == '[' && s[n - 1] == ']';
 }
-
 static void values_free(runtime_values *vals) {
 	size_t i;
 	for (i = 0; i < vals->len; i++) {
@@ -2702,7 +2551,6 @@ static void values_free(runtime_values *vals) {
 	vals->len = 0;
 	vals->cap = 0;
 }
-
 static int values_set(runtime_values *vals, const char *name, const runtime_data_value *value) {
 	size_t i;
 	for (i = 0; i < vals->len; i++) {
@@ -2732,7 +2580,6 @@ static int values_set(runtime_values *vals, const char *name, const runtime_data
 	vals->len++;
 	return 1;
 }
-
 static int values_set_runtime_command_result(
 	runtime_values *vals,
 	const char *name,
@@ -2747,7 +2594,6 @@ static int values_set_runtime_command_result(
 		return 0;
 	}
 	value_clear(&value);
-
 	snprintf(field_name, sizeof(field_name), "%s.__type", name);
 	value = value_make_string_copy("runtime_command_result");
 	if (!value.str_value || !values_set(vals, field_name, &value)) {
@@ -2755,19 +2601,16 @@ static int values_set_runtime_command_result(
 		return 0;
 	}
 	value_clear(&value);
-
 	snprintf(field_name, sizeof(field_name), "%s.ok", name);
 	value = value_make_int(ok ? 1 : 0);
 	if (!values_set(vals, field_name, &value)) {
 		return 0;
 	}
-
 	snprintf(field_name, sizeof(field_name), "%s.exit_code", name);
 	value = value_make_int(exit_code);
 	if (!values_set(vals, field_name, &value)) {
 		return 0;
 	}
-
 	snprintf(field_name, sizeof(field_name), "%s.error", name);
 	value = value_make_string_copy(error_text ? error_text : "");
 	if (!value.str_value || !values_set(vals, field_name, &value)) {
@@ -2777,7 +2620,6 @@ static int values_set_runtime_command_result(
 	value_clear(&value);
 	return 1;
 }
-
 static int values_get(const runtime_values *vals, const char *name, runtime_data_value *out) {
 	size_t i;
 	for (i = 0; i < vals->len; i++) {
@@ -2787,7 +2629,6 @@ static int values_get(const runtime_values *vals, const char *name, runtime_data
 	}
 	return 0;
 }
-
 static runtime_data_value *values_get_ref(runtime_values *vals, const char *name) {
 	size_t i;
 	for (i = 0; i < vals->len; i++) {
@@ -2797,7 +2638,6 @@ static runtime_data_value *values_get_ref(runtime_values *vals, const char *name
 	}
 	return NULL;
 }
-
 static int name_has_dotted_prefix(const char *name, const char *prefix) {
 	size_t prefix_len;
 	if (!name || !prefix) {
@@ -2806,14 +2646,11 @@ static int name_has_dotted_prefix(const char *name, const char *prefix) {
 	prefix_len = strlen(prefix);
 	return prefix_len > 0 && strncmp(name, prefix, prefix_len) == 0 && name[prefix_len] == '.';
 }
-
 static int values_have_prefixed(const runtime_values *vals, const char *prefix);
-
 static int values_copy_prefixed_depth(const runtime_values *src, const char *old_prefix, runtime_values *dst, const char *new_prefix, int depth) {
 	size_t i;
 	size_t old_len;
 	char mapped_name[256];
-
 	if (!src || !old_prefix || !new_prefix || depth > 16) {
 		return 0;
 	}
@@ -2838,11 +2675,9 @@ static int values_copy_prefixed_depth(const runtime_values *src, const char *old
 	}
 	return 1;
 }
-
 static int values_copy_prefixed(const runtime_values *src, const char *old_prefix, runtime_values *dst, const char *new_prefix) {
 	return values_copy_prefixed_depth(src, old_prefix, dst, new_prefix, 0);
 }
-
 static int values_have_prefixed(const runtime_values *vals, const char *prefix) {
 	size_t i;
 	if (!vals || !prefix || !*prefix) {
@@ -2855,14 +2690,12 @@ static int values_have_prefixed(const runtime_values *vals, const char *prefix) 
 	}
 	return 0;
 }
-
 static void labels_free(runtime_labels *labels) {
 	free(labels->data);
 	labels->data = NULL;
 	labels->len = 0;
 	labels->cap = 0;
 }
-
 static int labels_add(runtime_labels *labels, const char *name, size_t pc) {
 	if (labels->len == labels->cap) {
 		size_t next_cap = labels->cap == 0 ? 16 : labels->cap * 2;
@@ -2881,7 +2714,6 @@ static int labels_add(runtime_labels *labels, const char *name, size_t pc) {
 	labels->len++;
 	return 1;
 }
-
 static int labels_find(const runtime_labels *labels, const char *name, size_t *pc) {
 	size_t i;
 	for (i = 0; i < labels->len; i++) {
@@ -2892,21 +2724,18 @@ static int labels_find(const runtime_labels *labels, const char *name, size_t *p
 	}
 	return 0;
 }
-
 static void program_free(runtime_program *prog) {
 	free(prog->data);
 	prog->data = NULL;
 	prog->len = 0;
 	prog->cap = 0;
 }
-
 static void functions_free(runtime_functions *funcs) {
 	free(funcs->data);
 	funcs->data = NULL;
 	funcs->len = 0;
 	funcs->cap = 0;
 }
-
 static int functions_add(runtime_functions *funcs, const runtime_function *fn) {
 	if (funcs->len == funcs->cap) {
 		size_t next_cap = funcs->cap == 0 ? 16 : funcs->cap * 2;
@@ -2920,7 +2749,6 @@ static int functions_add(runtime_functions *funcs, const runtime_function *fn) {
 	funcs->data[funcs->len++] = *fn;
 	return 1;
 }
-
 static const runtime_function *functions_find(const runtime_functions *funcs, const char *name) {
 	size_t i;
 	for (i = 0; i < funcs->len; i++) {
@@ -2930,7 +2758,6 @@ static const runtime_function *functions_find(const runtime_functions *funcs, co
 	}
 	return NULL;
 }
-
 static int program_push(runtime_program *prog, const runtime_ins *ins) {
 	if (prog->len == prog->cap) {
 		size_t next_cap = prog->cap == 0 ? 32 : prog->cap * 2;
@@ -2944,14 +2771,12 @@ static int program_push(runtime_program *prog, const runtime_ins *ins) {
 	prog->data[prog->len++] = *ins;
 	return 1;
 }
-
 static int parse_record_line(const char *line, runtime_ins *out) {
 	char tmp[4096];
 	char parts[4][1024];
 	int part = 0;
 	size_t idx = 0;
 	size_t i = 0;
-
 	memset(parts, 0, sizeof(parts));
 	snprintf(tmp, sizeof(tmp), "%s", line);
 	while (tmp[i] != '\0') {
@@ -2991,7 +2816,6 @@ static int parse_record_line(const char *line, runtime_ins *out) {
 	if (part != 3) {
 		return 0;
 	}
-
 	if (strlen(parts[0]) >= sizeof(out->op) ||
 	    strlen(strcmp(parts[1], "_") == 0 ? "" : parts[1]) >= sizeof(out->result) ||
 	    strlen(strcmp(parts[2], "_") == 0 ? "" : parts[2]) >= sizeof(out->op1) ||
@@ -3004,12 +2828,10 @@ static int parse_record_line(const char *line, runtime_ins *out) {
 	strcpy(out->op2, strcmp(parts[3], "_") == 0 ? "" : parts[3]);
 	return 1;
 }
-
 static int resolve_dotted_value(const runtime_values *vals, const char *name, runtime_data_value *out, int depth) {
 	runtime_data_value base;
 	char chained_name[256];
 	const char *dot;
-
 	if (depth > 8 || !name) {
 		return 0;
 	}
@@ -3078,7 +2900,6 @@ static int resolve_dotted_value(const runtime_values *vals, const char *name, ru
 	}
 	return 0;
 }
-
 static int split_array_items(const char *text, char ***out_items, size_t *out_len) {
 	size_t i;
 	size_t start;
@@ -3087,7 +2908,6 @@ static int split_array_items(const char *text, char ***out_items, size_t *out_le
 	int depth = 0;
 	int in_string = 0;
 	char **items = NULL;
-
 	*out_items = NULL;
 	*out_len = 0;
 	if (!is_array_literal(text)) {
@@ -3185,7 +3005,6 @@ static int split_array_items(const char *text, char ***out_items, size_t *out_le
 			start = i + 1;
 		}
 	}
-
 fail:
 	if (items) {
 		for (i = 0; i < len; i++) {
@@ -3195,13 +3014,11 @@ fail:
 	free(items);
 	return 0;
 }
-
 static int parse_array_literal_value(const runtime_values *vals, const char *text, runtime_data_value *out) {
 	char **items = NULL;
 	size_t len = 0;
 	size_t i;
 	runtime_data_value *values = NULL;
-
 	if (!split_array_items(text, &items, &len)) {
 		return 0;
 	}
@@ -3222,7 +3039,6 @@ static int parse_array_literal_value(const runtime_values *vals, const char *tex
 	free(items);
 	*out = value_make_array_owned(values, len);
 	return 1;
-
 fail:
 	if (values) {
 		for (i = 0; i < len; i++) {
@@ -3238,7 +3054,6 @@ fail:
 	free(items);
 	return 0;
 }
-
 static int resolve_value(const runtime_values *vals, const char *name, runtime_data_value *out) {
 	if (is_int_literal(name)) {
 		*out = value_make_int(strtol(name, NULL, 10));
@@ -3257,18 +3072,15 @@ static int resolve_value(const runtime_values *vals, const char *name, runtime_d
 	}
 	return resolve_dotted_value(vals, name, out, 0);
 }
-
 static int value_is_numeric(const runtime_data_value *v) {
 	return v->kind == RUNTIME_INT || v->kind == RUNTIME_FLOAT;
 }
-
 static double value_as_double(const runtime_data_value *v) {
 	if (v->kind == RUNTIME_FLOAT) {
 		return v->float_value;
 	}
 	return (double)v->int_value;
 }
-
 static int value_equals(const runtime_data_value *a, const runtime_data_value *b) {
 	size_t i;
 	if (a->kind != b->kind) {
@@ -3296,7 +3108,6 @@ static int value_equals(const runtime_data_value *a, const runtime_data_value *b
 	}
 	return 1;
 }
-
 static int array_set_index(runtime_data_value *array_value, long index, const runtime_data_value *value) {
 	runtime_data_value copied;
 	runtime_data_value *next_items;
@@ -3324,7 +3135,6 @@ static int array_set_index(runtime_data_value *array_value, long index, const ru
 	array_value->array_items[index] = copied;
 	return 1;
 }
-
 static int name_has_suffix(const char *name, const char *suffix) {
 	size_t name_len;
 	size_t suffix_len;
@@ -3338,7 +3148,6 @@ static int name_has_suffix(const char *name, const char *suffix) {
 	}
 	return strcmp(name + (name_len - suffix_len), suffix) == 0;
 }
-
 static int value_as_long_index(const runtime_data_value *v, long *out) {
 	if (!v || !out) {
 		return 0;
@@ -3353,7 +3162,6 @@ static int value_as_long_index(const runtime_data_value *v, long *out) {
 	}
 	return 0;
 }
-
 static int native_fastpath_execute(const char *fn_name, const runtime_data_value *args, size_t argc, runtime_data_value *out) {
 	size_t i;
 	if (name_has_suffix(fn_name, "allocate_vector") && argc == 2) {
@@ -3443,7 +3251,6 @@ static int native_fastpath_execute(const char *fn_name, const runtime_data_value
 	}
 	return 0;
 }
-
 static int parse_size_t(const char *text, size_t *out) {
 	char *end = NULL;
 	long v;
@@ -3457,19 +3264,16 @@ static int parse_size_t(const char *text, size_t *out) {
 	*out = (size_t)v;
 	return 1;
 }
-
 static int parse_program_text(const char *target_text, runtime_program *prog, runtime_labels *labels, compile_error *err) {
 	char *buf;
 	char *cursor;
 	size_t line_no = 0;
-
 	buf = (char *)malloc(strlen(target_text) + 1);
 	if (!buf) {
 		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 		return 0;
 	}
 	strcpy(buf, target_text);
-
 	cursor = buf;
 	while (*cursor) {
 		runtime_ins ins;
@@ -3505,7 +3309,6 @@ static int parse_program_text(const char *target_text, runtime_program *prog, ru
 		}
 	}
 	free(buf);
-
 	for (line_no = 0; line_no < prog->len; line_no++) {
 		if (strcmp(prog->data[line_no].op, "LABEL") == 0) {
 			if (!labels_add(labels, prog->data[line_no].result, line_no)) {
@@ -3514,10 +3317,8 @@ static int parse_program_text(const char *target_text, runtime_program *prog, ru
 			}
 		}
 	}
-
 	return 1;
 }
-
 static int build_function_table(const runtime_program *prog, runtime_functions *funcs, compile_error *err) {
 	size_t i = 0;
 	while (i < prog->len) {
@@ -3569,7 +3370,6 @@ static int build_function_table(const runtime_program *prog, runtime_functions *
 	}
 	return 1;
 }
-
 static int execute_function(
 	const runtime_program *prog,
 	const runtime_labels *labels,
@@ -3583,7 +3383,6 @@ static int execute_function(
 	compile_error *err,
 	int depth
 );
-
 static void scheduler_reset(void) {
 	size_t i;
 	for (i = g_runtime_scheduler.task_head; i < g_runtime_scheduler.task_len; i++) {
@@ -3603,7 +3402,6 @@ static void scheduler_reset(void) {
 	g_runtime_scheduler.next_sroutine_id = 1;
 	g_runtime_scheduler.current_sroutine_id = 0;
 }
-
 static runtime_channel *scheduler_find_channel(long id) {
 	size_t i;
 	for (i = 0; i < g_runtime_scheduler.channel_len; i++) {
@@ -3611,7 +3409,6 @@ static runtime_channel *scheduler_find_channel(long id) {
 	}
 	return NULL;
 }
-
 static int scheduler_make_channel(long capacity, runtime_data_value *out, compile_error *err) {
 	runtime_channel *channel;
 	if (capacity < 0) {
@@ -3634,7 +3431,6 @@ static int scheduler_make_channel(long capacity, runtime_data_value *out, compil
 	*out = value_make_int(channel->id);
 	return 1;
 }
-
 static int scheduler_send(long id, const runtime_data_value *value, compile_error *err) {
 	runtime_channel *channel = scheduler_find_channel(id);
 	if (!channel) { error_set(err, ERR_SEMANTIC, 0, 0, "unknown channel: %ld", id); return 0; }
@@ -3650,7 +3446,6 @@ static int scheduler_send(long id, const runtime_data_value *value, compile_erro
 	channel->len++;
 	return 1;
 }
-
 static int scheduler_spawn(const runtime_function *fn, const runtime_data_value *args, size_t argc, compile_error *err) {
 	runtime_sroutine_task *task;
 	size_t i;
@@ -3675,7 +3470,6 @@ static int scheduler_spawn(const runtime_function *fn, const runtime_data_value 
 	}
 	return 1;
 }
-
 static int scheduler_transition(size_t task_index, sroutine_state state, sroutine_park_reason park_reason,
 	compile_error *err) {
 	runtime_sroutine_task *task;
@@ -3693,7 +3487,6 @@ static int scheduler_transition(size_t task_index, sroutine_state state, sroutin
 	task->park_reason = park_reason;
 	return 1;
 }
-
 static long scheduler_live_count(void) {
 	size_t i;
 	long count = 0;
@@ -3702,7 +3495,6 @@ static long scheduler_live_count(void) {
 	}
 	return count;
 }
-
 static int scheduler_run_one(const runtime_program *prog, const runtime_labels *labels,
 	const runtime_functions *funcs, compile_error *err, int depth) {
 	runtime_sroutine_task task;
@@ -3725,7 +3517,6 @@ static int scheduler_run_one(const runtime_program *prog, const runtime_labels *
 	free(task.args);
 	return ok ? 1 : -1;
 }
-
 static int scheduler_recv(const runtime_program *prog, const runtime_labels *labels,
 	const runtime_functions *funcs, long id, runtime_data_value *out, compile_error *err, int depth) {
 	runtime_channel *channel = scheduler_find_channel(id);
@@ -3742,7 +3533,6 @@ static int scheduler_recv(const runtime_program *prog, const runtime_labels *lab
 	memset(&channel->items[channel->len], 0, sizeof(channel->items[channel->len]));
 	return 1;
 }
-
 static int execute_function(
 	const runtime_program *prog,
 	const runtime_labels *labels,
@@ -3761,7 +3551,6 @@ static int execute_function(
 	size_t pending_len = 0;
 	size_t pc = fn->start_pc;
 	size_t i;
-
 	if (depth > 256) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "call depth exceeded");
 		return 0;
@@ -3773,7 +3562,6 @@ static int execute_function(
 	if (native_fastpath_execute(fn->name, args, argc, out_return)) {
 		return 1;
 	}
-
 	for (i = 0; i < argc; i++) {
 		if (caller_vals && args[i].kind == RUNTIME_STRING && args[i].str_value && args[i].str_value[0] != '\0' &&
 		    values_have_prefixed(caller_vals, args[i].str_value)) {
@@ -3810,7 +3598,6 @@ static int execute_function(
 				return 0;
 			}
 		}
-
 		if (strcmp(ins->op, "NOP") == 0 || strcmp(ins->op, "LABEL") == 0 || strcmp(ins->op, "PARAM") == 0) {
 			pc++;
 			continue;
@@ -4361,17 +4148,14 @@ static int execute_function(
 			values_free(&vals);
 			return 1;
 		}
-
 		error_set(err, ERR_SEMANTIC, 0, 0, "unsupported runtime op: %s", ins->op);
 		values_free(&vals);
 		return 0;
 	}
-
 	*out_return = value_make_int(0);
 	values_free(&vals);
 	return 1;
 }
-
 bool runtime_execute_text_with_argv(
 	const char *target_text,
 	const char *entry_function,
@@ -4388,7 +4172,6 @@ bool runtime_execute_text_with_argv(
 	runtime_data_value no_args[1] = { value_make_int(0) };
 	runtime_data_value ret = value_make_int(0);
 	int ok;
-
 	error_clear(err);
 	if (!target_text || !out_return) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "invalid runtime input");
@@ -4396,10 +4179,8 @@ bool runtime_execute_text_with_argv(
 	}
 	runtime_profile_init_from_env();
 	scheduler_reset();
-
 	g_host_argc = argc;
 	g_host_argv = argv;
-
 	if (!parse_program_text(target_text, &prog, &labels, err)) {
 		program_free(&prog);
 		labels_free(&labels);
@@ -4407,7 +4188,6 @@ bool runtime_execute_text_with_argv(
 		g_host_argv = NULL;
 		return false;
 	}
-
 	if (!build_function_table(&prog, &funcs, err)) {
 		program_free(&prog);
 		labels_free(&labels);
@@ -4416,7 +4196,6 @@ bool runtime_execute_text_with_argv(
 		g_host_argv = NULL;
 		return false;
 	}
-
 	if (!entry_name || entry_name[0] == '\0') {
 		entry_name = "main";
 	}
@@ -4430,7 +4209,6 @@ bool runtime_execute_text_with_argv(
 		g_host_argv = NULL;
 		return false;
 	}
-
 	ok = execute_function(&prog, &labels, &funcs, entry, no_args, 0, NULL, &ret, NULL, err, 0);
 	if (g_runtime_profile_enabled) {
 		runtime_profile_dump_summary();
@@ -4451,11 +4229,9 @@ bool runtime_execute_text_with_argv(
 	scheduler_reset();
 	return ok ? true : false;
 }
-
 bool runtime_execute_text(const char *target_text, const char *entry_function, long *out_return, compile_error *err) {
 	return runtime_execute_text_with_argv(target_text, entry_function, out_return, err, 0, NULL);
 }
-
 bool runtime_execute_text_i64(
 	const char *target_text,
 	const char *entry_function,
@@ -4472,7 +4248,6 @@ bool runtime_execute_text_i64(
 	runtime_data_value ret = value_make_int(0);
 	size_t i;
 	int ok;
-
 	error_clear(err);
 	scheduler_reset();
 	if (!target_text || !entry_function || !out_return || (argc > 0 && !args)) {
@@ -4527,20 +4302,17 @@ bool runtime_execute_text_i64(
 	scheduler_reset();
 	return ok ? true : false;
 }
-
 bool runtime_execute_file(const char *target_path, const char *entry_function, long *out_return, compile_error *err) {
 	FILE *fp;
 	long n;
 	size_t read_n;
 	char *buf;
 	bool ok;
-
 	error_clear(err);
 	if (!target_path || !out_return) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "invalid runtime input");
 		return false;
 	}
-
 	fp = fopen(target_path, "rb");
 	if (!fp) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open target: %s", target_path);
@@ -4562,7 +4334,6 @@ bool runtime_execute_file(const char *target_path, const char *entry_function, l
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to rewind target: %s", target_path);
 		return false;
 	}
-
 	buf = (char *)malloc((size_t)n + 1);
 	if (!buf) {
 		fclose(fp);
@@ -4577,7 +4348,6 @@ bool runtime_execute_file(const char *target_path, const char *entry_function, l
 		return false;
 	}
 	buf[n] = '\0';
-
 	ok = runtime_execute_text(buf, entry_function, out_return, err);
 	free(buf);
 	return ok;

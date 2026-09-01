@@ -1,5 +1,4 @@
 package test
-
 func tinyfin_unit_name() string {
     "test/tinyfin"
 }

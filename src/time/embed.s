@@ -1,5 +1,4 @@
 package src.time
-
 func embed_unit_name() string {
     "src/time/embed"
 }

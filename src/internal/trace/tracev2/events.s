@@ -1,5 +1,4 @@
 package src.internal.trace.tracev2
-
 func events_unit_name() string {
     "src/internal/trace/tracev2/events"
 }

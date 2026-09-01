@@ -1,5 +1,4 @@
 package src.archive.tar
-
 func writer_unit_name() string {
     "src/archive/tar/writer"
 }

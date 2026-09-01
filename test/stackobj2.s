@@ -1,5 +1,4 @@
 package test
-
 func stackobj2_unit_name() string {
     "test/stackobj2"
 }

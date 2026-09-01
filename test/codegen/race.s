@@ -1,5 +1,4 @@
 package test.codegen
-
 func race_unit_name() string {
     "test/codegen/race"
 }

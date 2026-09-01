@@ -1,5 +1,4 @@
 package compile.internal.escape
-
 func assign_unit_name() string {
     "escape/assign.s"
 }

@@ -1,5 +1,4 @@
 package src.cmd.asm.internal.lex
-
 func stack_unit_name() string {
     "src/cmd/asm/internal/lex/stack"
 }

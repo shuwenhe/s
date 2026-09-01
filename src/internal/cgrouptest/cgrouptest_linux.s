@@ -1,5 +1,4 @@
 package src.internal.cgrouptest
-
 func cgrouptest_linux_unit_name() string {
     "src/internal/cgrouptest/cgrouptest_linux"
 }

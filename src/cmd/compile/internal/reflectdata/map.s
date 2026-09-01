@@ -1,5 +1,4 @@
 package compile.internal.reflectdata
-
 func map_unit_name() string {
     "reflectdata/map.s"
 }

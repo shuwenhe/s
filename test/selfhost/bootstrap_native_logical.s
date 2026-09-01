@@ -1,5 +1,4 @@
 package main
-
 func false_path() int {
     return 0
 }

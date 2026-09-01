@@ -1,5 +1,4 @@
 package test
-
 func escape_bloop_unit_name() string {
     "test/escape_bloop"
 }

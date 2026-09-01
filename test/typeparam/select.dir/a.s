@@ -1,5 +1,4 @@
 package test.typeparam.select.dir
-
 func a_unit_name() string {
     "test/typeparam/select.dir/a"
 }

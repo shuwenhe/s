@@ -1,5 +1,4 @@
 package test
-
 func rename1_unit_name() string {
     "test/rename1"
 }

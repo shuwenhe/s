@@ -1,5 +1,4 @@
 package src.internal.zstd
-
 func huff_unit_name() string {
     "src/internal/zstd/huff"
 }

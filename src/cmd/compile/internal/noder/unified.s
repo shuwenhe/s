@@ -2,7 +2,6 @@ package compile.internal.noder
 use s.parse_source
 use std.result.result
 use std.slices
-
 func run_unified(string path, string[] quirks) (noder_output, noder_error) {
     unit := read_unit(path)?
     apply_quirks(quirks, unit)?

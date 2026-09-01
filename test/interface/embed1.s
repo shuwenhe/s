@@ -1,5 +1,4 @@
 package test.interface
-
 func embed1_unit_name() string {
     "test/interface/embed1"
 }

@@ -1,5 +1,4 @@
 package test
-
 func escape5_unit_name() string {
     "test/escape5"
 }

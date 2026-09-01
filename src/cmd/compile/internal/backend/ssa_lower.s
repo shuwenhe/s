@@ -1,5 +1,4 @@
 package backend
-
 struct ssa_to_machine {
     codegen_context* ctx
     ssa_function* func
@@ -48,12 +47,10 @@ func (tm* ssa_to_machine) emit_binary_op(string op, int left_reg, int right_reg,
     left_name := x86_64_reg_name(left_reg)
     right_name := x86_64_reg_name(right_reg)
     result_name := x86_64_reg_name(result_reg)
-    
     if left_reg != result_reg {
         instr := "\tmovq\t%" + left_name + ", %" + result_name
         tm.progs.append_prog(prog_op_mov(), instr)
     }
-    
     instr := ""
     switch op {
         case "add" : instr = "\taddq\t%" + right_name + ", %" + result_name,
@@ -65,17 +62,14 @@ func (tm* ssa_to_machine) emit_binary_op(string op, int left_reg, int right_reg,
         case "xor" : instr = "\txorq\t%" + right_name + ", %" + result_name,
         default : instr = "\tnop"
     }
-    
     tm.progs.append_prog(1, instr)
 }
 
 func (tm* ssa_to_machine) emit_comparison(string cond, int left_reg, int right_reg) int {
     left_name := x86_64_reg_name(left_reg)
     right_name := x86_64_reg_name(right_reg)
-    
     cmp_instr := "\tcmpq\t%" + right_name + ", %" + left_name
     tm.progs.append_prog(prog_op_cmp(), cmp_instr)
-    
     result_reg := 0
     set_instr := ""
     switch cond {
@@ -87,27 +81,21 @@ func (tm* ssa_to_machine) emit_comparison(string cond, int left_reg, int right_r
         case "ge" : set_instr = "\tsetge\t%al",
         default : set_instr = "\tnop"
     }
-    
     tm.progs.append_prog(20, set_instr)
-    
     movz_instr := "\tmovzbl\t%al, %" + x86_64_reg_name(result_reg)
     tm.progs.append_prog(prog_op_mov(), movz_instr)
-    
     result_reg
 }
 
 func (tm* ssa_to_machine) generate() prog_list {
     tm.ctx.current_func = tm.func.name
     tm.ctx.emit_prologue()
-    
     i := 0
     while i < tm.func.block_count {
         tm.lower_block(&tm.func.blocks[i])
         i = i + 1
     }
-    
     tm.ctx.emit_epilogue()
     tm.func.stack_size = tm.ctx.alloc_state.get_stack_size()
-    
     *tm.progs
 }

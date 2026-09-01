@@ -1,5 +1,4 @@
 package compile.internal.types2
-
 func alias_module_name() string {
     "types2/alias.s"
 }

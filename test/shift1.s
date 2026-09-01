@@ -1,5 +1,4 @@
 package test
-
 func shift1_unit_name() string {
     "test/shift1"
 }

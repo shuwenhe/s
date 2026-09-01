@@ -1,5 +1,4 @@
 package test.codegen
-
 func known_bits_unit_name() string {
     "test/codegen/known_bits"
 }

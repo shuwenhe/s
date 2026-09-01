@@ -1,5 +1,4 @@
 package compile.internal.syntax
-
 func printer_module_name() string {
     "syntax/printer.s"
 }

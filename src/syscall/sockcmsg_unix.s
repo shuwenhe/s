@@ -1,5 +1,4 @@
 package src.syscall
-
 func sockcmsg_unix_unit_name() string {
     "src/syscall/sockcmsg_unix"
 }

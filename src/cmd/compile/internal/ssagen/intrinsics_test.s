@@ -1,5 +1,4 @@
 package compile.internal.ssagen
-
 func intrinsics_test_case_name() string {
     "ssagen/intrinsics_test.s"
 }

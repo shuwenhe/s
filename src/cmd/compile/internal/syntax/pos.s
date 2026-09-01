@@ -1,5 +1,4 @@
 package compile.internal.syntax
-
 func pos_module_name() string {
     "syntax/pos.s"
 }

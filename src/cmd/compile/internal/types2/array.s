@@ -1,5 +1,4 @@
 package compile.internal.types2
-
 func array_module_name() string {
     "types2/array.s"
 }

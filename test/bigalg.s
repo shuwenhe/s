@@ -1,5 +1,4 @@
 package test
-
 func bigalg_unit_name() string {
     "test/bigalg"
 }

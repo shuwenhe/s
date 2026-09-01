@@ -1,5 +1,4 @@
 package main
-
 func test_var_reassign() void {
     var x = 10
     println("var x = 10")

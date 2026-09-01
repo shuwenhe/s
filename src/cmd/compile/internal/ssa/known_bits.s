@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func known_bits_module_name() string {
     "ssa/known_bits.s"
 }

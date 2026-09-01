@@ -1,5 +1,4 @@
 package compile.internal.typecheck
-
 func universe_module_name() string {
     "typecheck/universe.s"
 }

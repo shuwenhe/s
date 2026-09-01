@@ -1,5 +1,4 @@
 package main
-
 func add3(int first, int second, int third) int {
     return first + second + third
 }

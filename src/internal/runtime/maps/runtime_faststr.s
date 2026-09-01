@@ -1,5 +1,4 @@
 package src.internal.runtime.maps
-
 func runtime_faststr_unit_name() string {
     "src/internal/runtime/maps/runtime_faststr"
 }

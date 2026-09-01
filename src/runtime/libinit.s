@@ -1,5 +1,4 @@
 package src.runtime
-
 func libinit_unit_name() string {
     "src/runtime/libinit"
 }

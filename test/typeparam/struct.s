@@ -1,5 +1,4 @@
 package test.typeparam
-
 func struct_unit_name() string {
     "test/typeparam/struct"
 }

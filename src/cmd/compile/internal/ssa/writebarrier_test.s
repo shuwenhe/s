@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func writebarrier_test_case_name() string {
     "ssa/writebarrier_test.s"
 }

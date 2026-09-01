@@ -1,5 +1,4 @@
 package test
-
 func initializerr_unit_name() string {
     "test/initializerr"
 }

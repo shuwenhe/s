@@ -1,5 +1,4 @@
 package test
-
 func label_unit_name() string {
     "test/label"
 }

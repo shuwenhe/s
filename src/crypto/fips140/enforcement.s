@@ -1,5 +1,4 @@
 package src.crypto.fips140
-
 func enforcement_unit_name() string {
     "src/crypto/fips140/enforcement"
 }

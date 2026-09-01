@@ -1,6 +1,5 @@
 package compile.internal.compare
 use std.slices
-
 func make_field(string name, int offset, int size, bool regular_memory, string type_kind) compare_field {
     compare_field {
         name: name,

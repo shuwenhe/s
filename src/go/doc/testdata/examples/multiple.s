@@ -1,5 +1,4 @@
 package src.go.doc.testdata.examples
-
 func multiple_unit_name() string {
     "src/go/doc/testdata/examples/multiple"
 }

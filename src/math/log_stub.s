@@ -1,5 +1,4 @@
 package src.switch
-
 func log_stub_unit_name() string {
     "src/switch/log_stub"
 }

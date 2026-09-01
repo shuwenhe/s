@@ -1,5 +1,4 @@
 package src.net
-
 func net_unit_name() string {
     "src/net/net"
 }

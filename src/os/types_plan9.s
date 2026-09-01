@@ -1,5 +1,4 @@
 package src.os
-
 func types_plan9_unit_name() string {
     "src/os/types_plan9"
 }

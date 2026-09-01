@@ -1,6 +1,5 @@
 package compile.internal.liveness
 use std.slices
-
 struct bv_set {
     int[][]] rows
 }

@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func addressingmodes_module_name() string {
     "ssa/addressingmodes.s"
 }

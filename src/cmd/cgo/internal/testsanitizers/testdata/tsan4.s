@@ -1,5 +1,4 @@
 package src.cmd.cgo.internal.testsanitizers.testdata
-
 func tsan4_unit_name() string {
     "src/cmd/cgo/internal/testsanitizers/testdata/tsan4"
 }

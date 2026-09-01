@@ -1,5 +1,4 @@
 package src.go.doc.testdata
-
 func error2_unit_name() string {
     "src/go/doc/testdata/error2"
 }

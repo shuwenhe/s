@@ -1,5 +1,4 @@
 package test.typeparam.sliceimp.dir
-
 func a_unit_name() string {
     "test/typeparam/sliceimp.dir/a"
 }

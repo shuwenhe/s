@@ -1,5 +1,4 @@
 package test
-
 func typecheckloop_unit_name() string {
     "test/typecheckloop"
 }

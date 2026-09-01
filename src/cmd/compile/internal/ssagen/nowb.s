@@ -1,5 +1,4 @@
 package compile.internal.ssagen
-
 func is_nowritebarrier_fn(string fn_name) bool {
     if fn_name == "runtime.gcMark" {
         return true

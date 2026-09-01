@@ -1,5 +1,4 @@
 package src.cmd.link.internal.ld
-
 func elf_unit_name() string {
     "src/cmd/link/internal/ld/elf"
 }

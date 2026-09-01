@@ -1,5 +1,4 @@
 package src.html.template
-
 func element_string_unit_name() string {
     "src/html/template/element_string"
 }

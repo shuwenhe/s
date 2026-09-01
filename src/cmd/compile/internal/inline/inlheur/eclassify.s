@@ -1,5 +1,4 @@
 package compile.internal.inline.inlheur
-
 func eclassify_module_name() string {
     "inline/inlheur/eclassify.s"
 }

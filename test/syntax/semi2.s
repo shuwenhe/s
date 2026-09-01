@@ -1,5 +1,4 @@
 package test.syntax
-
 func semi2_unit_name() string {
     "test/syntax/semi2"
 }

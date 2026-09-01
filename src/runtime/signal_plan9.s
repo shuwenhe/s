@@ -1,5 +1,4 @@
 package src.runtime
-
 func signal_plan9_unit_name() string {
     "src/runtime/signal_plan9"
 }

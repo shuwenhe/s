@@ -1,6 +1,5 @@
 package compile.internal.base
 use std.slices
-
 struct timestamp {
     int tick
     string label

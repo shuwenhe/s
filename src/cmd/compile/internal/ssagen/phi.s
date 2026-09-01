@@ -1,6 +1,5 @@
 package compile.internal.ssagen
 use std.slices
-
 struct phi_input {
     int pred
     int value

@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func mknode_module_name() string {
     "ir/mknode.s"
 }

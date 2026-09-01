@@ -10,7 +10,6 @@ const sock_dgram = sc.sock_dgram
 const poll_in = sc.poll_in
 const poll_out = sc.poll_out
 const poll_err = sc.poll_err
-
 struct net_error {
     string message
     int    errno_code

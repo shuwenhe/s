@@ -1,5 +1,4 @@
 package test.typeparam
-
 func valimp_unit_name() string {
     "test/typeparam/valimp"
 }

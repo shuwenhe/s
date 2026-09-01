@@ -1,5 +1,4 @@
 package src.runtime
-
 func proc_test_unit_name() string {
     "src/runtime/proc_test"
 }

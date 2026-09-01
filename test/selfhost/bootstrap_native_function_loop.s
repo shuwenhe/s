@@ -1,5 +1,4 @@
 package main
-
 func multiply_by_loop(int value, int count) int {
     index := 0
     total := 0

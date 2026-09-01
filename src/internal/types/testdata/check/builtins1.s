@@ -1,5 +1,4 @@
 package src.internal.types.testdata.check
-
 func builtins1_unit_name() string {
     "src/internal/types/testdata/check/builtins1"
 }

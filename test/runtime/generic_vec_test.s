@@ -1,5 +1,4 @@
 package test.runtime.generic_vec
-
 func main() {
     values := int[]();
     values = append(values, 11);

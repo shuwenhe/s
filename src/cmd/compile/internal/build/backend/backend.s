@@ -4,7 +4,6 @@ use std.fs.make_temp_dir
 use std.io.eprintln
 use std.process.run_process
 use std.slices
-
 func build(string path, string output, string ssa_margin, bool nostdlib) int {
     build_binary(path, output, ssa_margin, nostdlib)
 }

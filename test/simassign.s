@@ -1,5 +1,4 @@
 package test
-
 func simassign_unit_name() string {
     "test/simassign"
 }

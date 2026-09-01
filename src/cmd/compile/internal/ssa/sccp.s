@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func sccp_module_name() string {
     "ssa/sccp.s"
 }

@@ -1,5 +1,4 @@
 package src.runtime.pprof
-
 func label_unit_name() string {
     "src/runtime/pprof/label"
 }

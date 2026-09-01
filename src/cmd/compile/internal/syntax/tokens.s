@@ -1,5 +1,4 @@
 package compile.internal.syntax
-
 func tokens_module_name() string {
     "syntax/tokens.s"
 }

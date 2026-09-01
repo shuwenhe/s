@@ -1,5 +1,4 @@
 package src.net
-
 func tcpsock_test_unit_name() string {
     "src/net/tcpsock_test"
 }

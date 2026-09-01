@@ -1,5 +1,4 @@
 package compile.internal.escape
-
 func leaks_unit_name() string {
     "escape/leaks.s"
 }

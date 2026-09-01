@@ -1,6 +1,5 @@
 package compile.internal.ssa
 use std.slices
-
 struct sparse_entry {
     int key
     int value

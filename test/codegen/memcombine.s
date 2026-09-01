@@ -1,5 +1,4 @@
 package test.codegen
-
 func memcombine_unit_name() string {
     "test/codegen/memcombine"
 }

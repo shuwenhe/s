@@ -1,5 +1,4 @@
 package src.internal.goroot
-
 func gc_unit_name() string {
     "src/internal/goroot/gc"
 }

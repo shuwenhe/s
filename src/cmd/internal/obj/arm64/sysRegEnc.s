@@ -1,5 +1,4 @@
 package src.cmd.internal.obj.arm64
-
 func sysRegEnc_unit_name() string {
     "src/cmd/internal/obj/arm64/sysRegEnc"
 }

@@ -1,5 +1,4 @@
 package src.net
-
 func netgo_netcgo_unit_name() string {
     "src/net/netgo_netcgo"
 }

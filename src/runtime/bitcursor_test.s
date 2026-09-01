@@ -1,5 +1,4 @@
 package src.runtime
-
 func bitcursor_test_unit_name() string {
     "src/runtime/bitcursor_test"
 }

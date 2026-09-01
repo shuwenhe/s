@@ -1,5 +1,4 @@
 package src.runtime
-
 func mbarrier_unit_name() string {
     "src/runtime/mbarrier"
 }

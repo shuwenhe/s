@@ -1,5 +1,4 @@
 package test
-
 func nilptr2_unit_name() string {
     "test/nilptr2"
 }

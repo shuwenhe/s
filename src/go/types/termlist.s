@@ -1,5 +1,4 @@
 package src.go.types
-
 func termlist_unit_name() string {
     "src/go/types/termlist"
 }

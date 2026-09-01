@@ -1,5 +1,4 @@
 package src.switch
-
 func mod_unit_name() string {
     "src/switch/mod"
 }

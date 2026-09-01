@@ -1,5 +1,4 @@
 package src.regexp
-
 func all_test_unit_name() string {
     "src/regexp/all_test"
 }

@@ -1,5 +1,4 @@
 package src.internal.types.testdata.examples
-
 func functions_unit_name() string {
     "src/internal/types/testdata/examples/functions"
 }

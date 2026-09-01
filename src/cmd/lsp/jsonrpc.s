@@ -1,7 +1,5 @@
 package lsp
-
 use "std"
-
 struct jsonrpc_request {
     string jsonrpc
     string method
@@ -27,7 +25,6 @@ func parse_jsonrpc_message(raw string) (jsonrpc_request, string) {
         option::some(method) : {
             id_str := extract_json_string(raw, "id")
             params := extract_json_string(raw, "params")
-
             id_opt := option::none()
             switch id_str {
                 option::some(id_val) : {
@@ -38,7 +35,6 @@ func parse_jsonrpc_message(raw string) (jsonrpc_request, string) {
                 },
                 option::none() : {}
             }
-
             jsonrpc_request {
                 jsonrpc: "2.0",
                 method: method,
@@ -57,7 +53,7 @@ func create_response(id int, result string) string {
 }
 
 func create_error_response(id int, code int, message string) string {
-    "{\"jsonrpc\":\"2.0\",\"id\":" + std::to_string(id) + 
+    "{\"jsonrpc\":\"2.0\",\"id\":" + std::to_string(id) +
     ",\"error\":{\"code\":" + std::to_string(code) + ",\"message\":\"" + escape_json_string(message) + "\"}}"
 }
 
@@ -80,8 +76,8 @@ func serialize_diagnostics(diags diagnostic[]) string {
 }
 
 func serialize_diagnostic(d diagnostic) string {
-    "{\"range\":" + serialize_range(d.r) + 
-    ",\"message\":\"" + escape_json_string(d.message) + 
+    "{\"range\":" + serialize_range(d.r) +
+    ",\"message\":\"" + escape_json_string(d.message) +
     "\",\"severity\":" + serialize_severity(d.severity) + "}"
 }
 
@@ -100,7 +96,7 @@ func serialize_document_symbols(symbols document_symbol[]) string {
 }
 
 func serialize_document_symbol(symbol document_symbol) string {
-    "{\"name\":\"" + escape_json_string(symbol.name) + 
+    "{\"name\":\"" + escape_json_string(symbol.name) +
     "\",\"kind\":" + std::to_string(symbol_kind_to_int(symbol.kind)) +
     ",\"range\":" + serialize_range(symbol.range_val) +
     ",\"selectionRange\":" + serialize_range(symbol.selection_range) + "}"
@@ -123,27 +119,22 @@ func serialize_completion_list(list completion_list) string {
 
 func serialize_completion_item(item completion_item) string {
     var result = "{\"label\":\"" + escape_json_string(item.label) + "\""
-
     switch item.kind {
         option::some(k) : result = result + ",\"kind\":" + std::to_string(completion_kind_to_int(k)),
         option::none() : {}
     }
-
     switch item.detail {
         option::some(d) : result = result + ",\"detail\":\"" + escape_json_string(d) + "\"",
         option::none() : {}
     }
-
     switch item.documentation {
         option::some(doc) : result = result + ",\"documentation\":\"" + escape_json_string(doc) + "\"",
         option::none() : {}
     }
-
     switch item.sort_text {
         option::some(st) : result = result + ",\"sortText\":\"" + escape_json_string(st) + "\"",
         option::none() : {}
     }
-
     result = result + "}"
     result
 }
@@ -172,11 +163,9 @@ func extract_json_string(json string, key string) option[string] {
     switch std::find_substring(json, search_key) {
         option::some(pos) : {
             start := pos + len(search_key)
-
             for start < len(json) && (json[start] == " " || json[start] == "\t") {
                 start = start + 1
             }
-
             if start < len(json) {
                 if json[start] == "\"" {
                     end := start + 1

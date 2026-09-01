@@ -1,5 +1,4 @@
 package src.cmd.covdata
-
 func subtractintersect_unit_name() string {
     "src/cmd/covdata/subtractintersect"
 }

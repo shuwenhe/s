@@ -1,5 +1,4 @@
 package compile.internal.test
-
 func test_module_name() string {
     "test/test.s"
 }

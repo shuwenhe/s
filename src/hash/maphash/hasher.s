@@ -1,5 +1,4 @@
 package src.hash.maphash
-
 func hasher_unit_name() string {
     "src/hash/maphash/hasher"
 }

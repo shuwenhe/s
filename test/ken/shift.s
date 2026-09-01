@@ -1,5 +1,4 @@
 package test.ken
-
 func shift_unit_name() string {
     "test/ken/shift"
 }

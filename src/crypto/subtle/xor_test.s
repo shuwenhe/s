@@ -1,5 +1,4 @@
 package src.crypto.subtle
-
 func xor_test_unit_name() string {
     "src/crypto/subtle/xor_test"
 }

@@ -1,5 +1,4 @@
 package compile.internal.ppc64
-
 func ggen_unit_name() string {
     "ppc64/ggen.s"
 }

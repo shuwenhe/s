@@ -1,5 +1,4 @@
 package src.time
-
 func genzabbrs_unit_name() string {
     "src/time/genzabbrs"
 }

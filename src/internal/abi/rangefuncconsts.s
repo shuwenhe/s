@@ -1,5 +1,4 @@
 package src.internal.abi
-
 func rangefuncconsts_unit_name() string {
     "src/internal/abi/rangefuncconsts"
 }

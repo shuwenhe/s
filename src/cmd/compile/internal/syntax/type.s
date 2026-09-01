@@ -1,5 +1,4 @@
 package compile.internal.syntax
-
 func type_module_name() string {
     "syntax/type.s"
 }

@@ -1,5 +1,4 @@
 package test
-
 func eof1_unit_name() string {
     "test/eof1"
 }

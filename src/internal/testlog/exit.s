@@ -1,5 +1,4 @@
 package src.internal.testlog
-
 func exit_unit_name() string {
     "src/internal/testlog/exit"
 }

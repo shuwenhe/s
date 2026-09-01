@@ -1,5 +1,4 @@
 package backend
-
 struct native_compilation_driver {
     input_source: string
     output_executable: string
@@ -18,22 +17,16 @@ func new_native_compilation_driver(source: string, output: string) native_compil
 
 func (ncd* native_compilation_driver) generate_assembly_for_simple_program() string {
     gen := new_assembly_generator()
-    
     gen.emit_section("text")
     gen.emit_global_symbol("main")
     gen.emit_function_start("main")
-    
     gen.emit_instruction("push %rbp")
     gen.emit_instruction("mov %rsp, %rbp")
-    
     gen.emit_instruction("mov $42, %rax")
-    
     gen.emit_instruction("pop %rbp")
     gen.emit_instruction("ret")
-    
     gen.emit_section("note.GNU-stack")
     gen.emit_instruction(".gnu_attribute 4,16")
-    
     gen.get_output()
 }
 
@@ -63,22 +56,18 @@ func (ncd* native_compilation_driver) full_compile_and_link() int {
     if result != 0 {
         return result
     }
-    
     ncd.write_assembly_to_file(ncd.backend_ctx.compiler.assembly_file)
     if result != 0 {
         return result
     }
-    
     result = ncd.invoke_gcc_assemble(ncd.backend_ctx.compiler.assembly_file, ncd.backend_ctx.compiler.object_file)
     if result != 0 {
         return result
     }
-    
     result = ncd.invoke_gcc_link(ncd.backend_ctx.compiler.object_file, ncd.backend_ctx.compiler.output_file)
     if result != 0 {
         return result
     }
-    
     0
 }
 

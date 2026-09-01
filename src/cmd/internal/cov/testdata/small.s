@@ -1,5 +1,4 @@
 package src.cmd.internal.cov.testdata
-
 func small_unit_name() string {
     "src/cmd/internal/cov/testdata/small"
 }

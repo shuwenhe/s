@@ -1,5 +1,4 @@
 package src.debug.dwarf
-
 func type_unit_name() string {
     "src/debug/dwarf/type"
 }

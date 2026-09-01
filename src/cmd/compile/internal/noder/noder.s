@@ -1,7 +1,6 @@
 package compile.internal.noder
 use std.result.result
 use std.slices
-
 func compile_unit(string source_path, string export_out, string ir_out, string link_out) (noder_output, noder_error) {
     quirks := string[]()
     quirks = append(quirks, "normalize-import-quotes")

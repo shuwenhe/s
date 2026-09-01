@@ -1,5 +1,4 @@
 package test.syntax
-
 func else_unit_name() string {
     "test/syntax/else"
 }

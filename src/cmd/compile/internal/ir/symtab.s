@@ -1,5 +1,4 @@
 package compile.internal.ir
-
 func symtab_module_name() string {
     "ir/symtab.s"
 }

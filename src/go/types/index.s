@@ -1,5 +1,4 @@
 package src.go.types
-
 func index_unit_name() string {
     "src/go/types/index"
 }

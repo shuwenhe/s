@@ -1,5 +1,4 @@
 package src.runtime
-
 func defs_netbsd_amd64_unit_name() string {
     "src/runtime/defs_netbsd_amd64"
 }

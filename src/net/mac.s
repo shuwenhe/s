@@ -1,5 +1,4 @@
 package src.net
-
 func mac_unit_name() string {
     "src/net/mac"
 }

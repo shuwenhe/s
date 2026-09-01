@@ -1,5 +1,4 @@
 package backend
-
 struct ir_instruction {
     opcode: string
     operand1: string
@@ -26,7 +25,6 @@ func (is* instruction_selector) select_add_instruction(op1: string, op2: string,
     reg1 := is.allocator.allocate_for_variable(op1)
     reg2 := is.allocator.allocate_for_variable(op2)
     result_reg := is.allocator.allocate_for_variable(result)
-    
     is.builder.emit_mov_register_to_register(reg1, result_reg)
     is.builder.emit_add_registers(reg2, result_reg)
 }
@@ -35,7 +33,6 @@ func (is* instruction_selector) select_sub_instruction(op1: string, op2: string,
     reg1 := is.allocator.allocate_for_variable(op1)
     reg2 := is.allocator.allocate_for_variable(op2)
     result_reg := is.allocator.allocate_for_variable(result)
-    
     is.builder.emit_mov_register_to_register(reg1, result_reg)
     is.builder.emit_sub_registers(reg2, result_reg)
 }
@@ -43,7 +40,6 @@ func (is* instruction_selector) select_sub_instruction(op1: string, op2: string,
 func (is* instruction_selector) select_mov_instruction(src: string, dst: string) {
     src_reg := is.allocator.allocate_for_variable(src)
     dst_reg := is.allocator.allocate_for_variable(dst)
-    
     is.builder.emit_mov_register_to_register(src_reg, dst_reg)
 }
 
@@ -55,14 +51,12 @@ func (is* instruction_selector) select_call_instruction(target: string, args: st
     param_regs = append(param_regs, "rcx")
     param_regs = append(param_regs, "r8")
     param_regs = append(param_regs, "r9")
-    
     i := 0
     for i < len(args) && i < len(param_regs) {
         arg_reg := is.allocator.allocate_for_variable(args[i])
         is.builder.emit_mov_register_to_register(arg_reg, param_regs[i])
         i = i + 1
     }
-    
     is.builder.emit_call(target)
 }
 

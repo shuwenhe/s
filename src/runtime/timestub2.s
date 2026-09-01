@@ -1,5 +1,4 @@
 package src.runtime
-
 func timestub2_unit_name() string {
     "src/runtime/timestub2"
 }

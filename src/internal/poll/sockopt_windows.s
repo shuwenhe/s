@@ -1,5 +1,4 @@
 package src.internal.poll
-
 func sockopt_windows_unit_name() string {
     "src/internal/poll/sockopt_windows"
 }

@@ -1,5 +1,4 @@
 package src.internal.trace
-
 func mud_test_unit_name() string {
     "src/internal/trace/mud_test"
 }

@@ -1,5 +1,4 @@
 package main
-
 func multiply(int x, int y) int {
     x * y
 }

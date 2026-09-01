@@ -1,5 +1,4 @@
 package src.runtime
-
 func trace_unit_name() string {
     "src/runtime/trace"
 }

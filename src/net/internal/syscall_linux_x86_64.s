@@ -21,7 +21,6 @@ extern func errno_location() *int
 const f_getfl = 3
 const f_setfl = 4
 const o_nonblock = 2048
-
 func get_errno() int {
     *errno_location()
 }

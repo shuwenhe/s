@@ -1,6 +1,5 @@
 package compile.internal.ssagen
 use std.slices
-
 struct pgen_plan {
     string[] lines
     int stack_size

@@ -1,5 +1,4 @@
 package src.runtime
-
 func stubs_riscv64_unit_name() string {
     "src/runtime/stubs_riscv64"
 }

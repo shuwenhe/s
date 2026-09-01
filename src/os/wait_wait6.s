@@ -1,5 +1,4 @@
 package src.os
-
 func wait_wait6_unit_name() string {
     "src/os/wait_wait6"
 }

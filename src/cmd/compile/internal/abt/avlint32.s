@@ -3,7 +3,6 @@ use std.slices
 leaf_height := 1
 zero_height := 0
 not_key32 := -2147483648
-
 struct kv32 {
     int key
     string data

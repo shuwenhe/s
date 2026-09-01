@@ -1,5 +1,4 @@
 package src.cmd.cgo.internal.testsanitizers.testdata
-
 func asan_global4_fail_unit_name() string {
     "src/cmd/cgo/internal/testsanitizers/testdata/asan_global4_fail"
 }

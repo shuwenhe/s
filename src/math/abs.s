@@ -1,5 +1,4 @@
 package src.switch
-
 func abs_unit_name() string {
     "src/switch/abs"
 }

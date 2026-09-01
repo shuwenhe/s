@@ -1,5 +1,4 @@
 package test
-
 func linkobj_unit_name() string {
     "test/linkobj"
 }

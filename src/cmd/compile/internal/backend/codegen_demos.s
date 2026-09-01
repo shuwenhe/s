@@ -1,8 +1,6 @@
 package backend
-
 func demo_add_two_numbers() string {
     pipeline := make_compiler_pipeline()
-    
     asm := ".intel_syntax noprefix\n"
     asm = asm + ".section\t.text\n"
     asm = asm + ".globl add_numbers\n"
@@ -14,13 +12,11 @@ func demo_add_two_numbers() string {
     asm = asm + "\tmov\trax, rdi\n"
     asm = asm + "\tpop\trbp\n"
     asm = asm + "\tret\n"
-    
     asm
 }
 
 func demo_fibonacci(int n) string {
     pipeline := make_compiler_pipeline()
-    
     asm := ".intel_syntax noprefix\n"
     asm = asm + ".section\t.text\n"
     asm = asm + ".globl fibonacci\n"
@@ -49,13 +45,11 @@ func demo_fibonacci(int n) string {
     asm = asm + "\tpop\trbx\n"
     asm = asm + "\tpop\trbp\n"
     asm = asm + "\tret\n"
-    
     asm
 }
 
 func demo_factorial() string {
     pipeline := make_compiler_pipeline()
-    
     asm := ".intel_syntax noprefix\n"
     asm = asm + ".section\t.text\n"
     asm = asm + ".globl factorial\n"
@@ -73,13 +67,11 @@ func demo_factorial() string {
     asm = asm + ".fact_end:\n"
     asm = asm + "\tpop\trbp\n"
     asm = asm + "\tret\n"
-    
     asm
 }
 
 func demo_array_sum() string {
     pipeline := make_compiler_pipeline()
-    
     asm := ".intel_syntax noprefix\n"
     asm = asm + ".section\t.text\n"
     asm = asm + ".globl array_sum\n"
@@ -98,13 +90,11 @@ func demo_array_sum() string {
     asm = asm + ".sum_end:\n"
     asm = asm + "\tpop\trbp\n"
     asm = asm + "\tret\n"
-    
     asm
 }
 
 func demo_hello_world() string {
     pipeline := make_compiler_pipeline()
-    
     asm := ".intel_syntax noprefix\n"
     asm = asm + ".section\t.data\n"
     asm = asm + "msg:\n"
@@ -120,6 +110,5 @@ func demo_hello_world() string {
     asm = asm + "\txor\trax, rax\n"
     asm = asm + "\tpop\trbp\n"
     asm = asm + "\tret\n"
-    
     asm
 }

@@ -1,5 +1,4 @@
 package compile.internal.escape
-
 func alias_unit_name() string {
     "escape/alias.s"
 }

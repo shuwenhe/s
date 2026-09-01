@@ -1,5 +1,4 @@
 package src.io.fs
-
 func readfile_unit_name() string {
     "src/io/fs/readfile"
 }

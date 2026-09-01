@@ -1,5 +1,4 @@
 package backend
-
 struct register_info {
     name: string
     index: int

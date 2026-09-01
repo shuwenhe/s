@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func bench_test_case_name() string {
     "ssa/bench_test.s"
 }

@@ -1,7 +1,6 @@
 package src.net
 use src.syscall as sc
 use std.result.result
-
 func splice_file(int input_fd, int output_fd, int count) (int, net_error) {
     switch sc.splice(input_fd, output_fd, count) {
         n : n,

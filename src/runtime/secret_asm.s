@@ -1,5 +1,4 @@
 package src.runtime
-
 func secret_asm_unit_name() string {
     "src/runtime/secret_asm"
 }

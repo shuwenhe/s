@@ -1,5 +1,4 @@
 package test.chan
-
 func doubleselect_unit_name() string {
     "test/chan/doubleselect"
 }

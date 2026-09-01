@@ -1,5 +1,4 @@
 package compile.internal.ssa
-
 func deadstore_module_name() string {
     "ssa/deadstore.s"
 }

@@ -1,5 +1,4 @@
 package test.abi
-
 func map_unit_name() string {
     "test/abi/map"
 }

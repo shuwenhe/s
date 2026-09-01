@@ -1,5 +1,4 @@
 package test
-
 func escape_struct_param2_unit_name() string {
     "test/escape_struct_param2"
 }

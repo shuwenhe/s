@@ -1,5 +1,4 @@
 package src.log.slog
-
 func text_handler_unit_name() string {
     "src/log/slog/text_handler"
 }

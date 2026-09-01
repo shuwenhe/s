@@ -1,5 +1,4 @@
 package backend
-
 struct register_allocator {
     available_regs: string[]
     allocated_regs: string[]

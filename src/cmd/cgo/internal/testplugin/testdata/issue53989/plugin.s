@@ -1,5 +1,4 @@
 package src.cmd.cgo.internal.testplugin.testdata.issue53989
-
 func plugin_unit_name() string {
     "src/cmd/cgo/internal/testplugin/testdata/issue53989/plugin"
 }

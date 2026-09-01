@@ -1,5 +1,4 @@
 package compile.internal.test
-
 func switch_test_case_name() string {
     "test/switch_test.s"
 }

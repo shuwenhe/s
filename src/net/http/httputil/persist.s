@@ -1,5 +1,4 @@
 package src.net.http.httputil
-
 func persist_unit_name() string {
     "src/net/http/httputil/persist"
 }

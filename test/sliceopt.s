@@ -1,5 +1,4 @@
 package test
-
 func sliceopt_unit_name() string {
     "test/sliceopt"
 }

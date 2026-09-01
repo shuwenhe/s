@@ -1,5 +1,4 @@
 package test.ken
-
 func label_unit_name() string {
     "test/ken/label"
 }

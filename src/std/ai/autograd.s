@@ -1,7 +1,6 @@
 package std.ai.autograd
 use std.tensor.{tensor, tensor_shape, scalar, zeros, add, sub, mul, div, matmul_2d, reshape}
 use std.switch.{exp as math_exp, log as math_log, tanh as math_tanh}
-
 struct grad_context {
     bool needs_grad
     string op_name
@@ -460,6 +459,6 @@ func needs_grad(auto_grad_tensor t) bool { t.requires_grad }
 func num_parameters(auto_grad_tensor t) int { t.data.shape.size }
 
 func print_ag_info(auto_grad_tensor t) void {
-    println("auto_grad_tensor(", t.name, ", shape=", shape_str(t.data.shape), 
+    println("auto_grad_tensor(", t.name, ", shape=", shape_str(t.data.shape),
             ", req_grad=", t.requires_grad, ", is_leaf=", t.is_leaf, ")")
 }

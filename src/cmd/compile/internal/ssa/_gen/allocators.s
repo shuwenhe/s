@@ -1,5 +1,4 @@
 package compile.internal.ssa._gen
-
 func allocators_rule_name() string {
     "ssa/_gen/allocators.s"
 }

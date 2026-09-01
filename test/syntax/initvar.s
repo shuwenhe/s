@@ -1,5 +1,4 @@
 package test.syntax
-
 func initvar_unit_name() string {
     "test/syntax/initvar"
 }

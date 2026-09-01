@@ -1,5 +1,4 @@
 package compile.internal.walk
-
 func closure_module_name() string {
     "walk/closure.s"
 }

@@ -1,5 +1,4 @@
 package src.cmd.internal.obj.riscv
-
 func doc_unit_name() string {
     "src/cmd/internal/obj/riscv/doc"
 }

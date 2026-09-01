@@ -1,5 +1,4 @@
 package test.wasmmemsize.dir
-
 func main_unit_name() string {
     "test/wasmmemsize.dir/main"
 }

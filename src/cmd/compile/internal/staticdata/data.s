@@ -1,5 +1,4 @@
 package compile.internal.staticdata
-
 func data_unit_name() string {
     "staticdata/data.s"
 }

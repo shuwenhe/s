@@ -1,6 +1,5 @@
 package compile.internal.liveness
 use std.slices
-
 struct live_interval {
     int value_id
     int start

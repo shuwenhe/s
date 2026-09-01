@@ -1,5 +1,4 @@
 package test.fixedbugs.bug506.dir
-
 func main_unit_name() string {
     "test/fixedbugs/bug506.dir/main"
 }

@@ -1,5 +1,4 @@
 package test.abi
-
 func spills4_unit_name() string {
     "test/abi/spills4"
 }

@@ -1,5 +1,4 @@
 package test
-
 func defer_unit_name() string {
     "test/defer"
 }

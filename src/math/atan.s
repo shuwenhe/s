@@ -1,5 +1,4 @@
 package src.switch
-
 func atan_unit_name() string {
     "src/switch/atan"
 }

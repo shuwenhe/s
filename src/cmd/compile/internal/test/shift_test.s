@@ -1,5 +1,4 @@
 package compile.internal.test
-
 func shift_test_case_name() string {
     "test/shift_test.s"
 }

@@ -1,5 +1,4 @@
 package test
-
 func cmplxdivide_unit_name() string {
     "test/cmplxdivide"
 }

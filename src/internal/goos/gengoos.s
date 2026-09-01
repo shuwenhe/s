@@ -1,5 +1,4 @@
 package src.internal.goos
-
 func gengoos_unit_name() string {
     "src/internal/goos/gengoos"
 }

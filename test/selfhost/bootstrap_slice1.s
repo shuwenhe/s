@@ -1,5 +1,4 @@
 package main
-
 func scale(int input) int {
     offset := 1
     if input > 10 {

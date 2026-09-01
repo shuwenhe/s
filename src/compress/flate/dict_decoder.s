@@ -1,5 +1,4 @@
 package src.compress.flate
-
 func dict_decoder_unit_name() string {
     "src/compress/flate/dict_decoder"
 }

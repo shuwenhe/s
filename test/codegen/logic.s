@@ -1,5 +1,4 @@
 package test.codegen
-
 func logic_unit_name() string {
     "test/codegen/logic"
 }

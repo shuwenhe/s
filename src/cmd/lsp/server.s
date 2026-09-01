@@ -1,8 +1,6 @@
 package main
-
 use "std"
 use "../lsp"
-
 struct lsp_server {
     handler: lsp::lsp_handler
     initialized: bool
@@ -13,7 +11,6 @@ func main() {
         handler: lsp::new_lsp_handler(),
         initialized: false,
     }
-
     server.run()
 }
 
@@ -25,7 +22,6 @@ func (server lsp_server) run() {
                 if line == "" {
                     break
                 }
-
                 prefix := "Content-Length: "
                 if std::starts_with(line, prefix) {
                     len_str := line.substring(len(prefix), len(line))
@@ -58,12 +54,10 @@ func (server lsp_server) handle_message(message string) {
                 "initialized" : {},
                 "shutdown" : server.handle_shutdown(req),
                 "exit" : std::exit(0),
-
                 "textDocument/didOpen" : server.handle_did_open(req, message),
                 "textDocument/didChange" : server.handle_did_change(req, message),
                 "textDocument/didSave" : server.handle_did_save(req, message),
                 "textDocument/didClose" : server.handle_did_close(req, message),
-
                 "textDocument/completion" : server.handle_completion(req, message),
                 "textDocument/hover" : server.handle_hover(req, message),
                 "textDocument/definition" : server.handle_definition(req, message),
@@ -71,7 +65,6 @@ func (server lsp_server) handle_message(message string) {
                 "textDocument/documentSymbol" : server.handle_document_symbol(req, message),
                 "textDocument/rename" : server.handle_rename(req, message),
                 "workspace/symbol" : server.handle_workspace_symbol(req, message),
-
                 _ : {
                     switch req.id {
                         option::some(id) : {
@@ -90,7 +83,6 @@ func (server lsp_server) handle_message(message string) {
 
 func (server lsp_server) handle_initialize(req lsp::jsonrpc_request) {
     server.initialized = true
-
     switch req.id {
         option::some(id) : {
             capabilities := lsp::server_capabilities {
@@ -103,7 +95,6 @@ func (server lsp_server) handle_initialize(req lsp::jsonrpc_request) {
                 rename_provider: true,
                 workspace_symbol_provider: false,
             }
-
             result := "{\"capabilities\":{" +
                 "\"textDocumentSync\":true," +
                 "\"completionProvider\":true," +
@@ -114,7 +105,6 @@ func (server lsp_server) handle_initialize(req lsp::jsonrpc_request) {
                 "\"renameProvider\":true," +
                 "\"serverInfo\":{\"name\":\"s-lsp\",\"version\":\"1.0.0\"}" +
                 "}}"
-
             server.send_response(id, result)
         },
         option::none() : {}
@@ -135,7 +125,6 @@ func (server lsp_server) handle_did_open(req lsp::jsonrpc_request, message strin
                 text_document: item,
             }
             server.handler.on_did_open(params)
-
             server.send_diagnostics(item.uri)
         },
         option::none() : {}
@@ -151,7 +140,6 @@ func (server lsp_server) handle_did_change(req lsp::jsonrpc_request, message str
                     text: text,
                 }
             }
-
             params := lsp::did_change_text_document_params {
                 text_document: lsp::versioned_text_document_identifier {
                     uri: uri,
@@ -159,9 +147,7 @@ func (server lsp_server) handle_did_change(req lsp::jsonrpc_request, message str
                 },
                 content_changes: changes,
             }
-
             server.handler.on_did_change(params)
-
             server.send_diagnostics(uri)
         },
         option::none() : {}
@@ -239,7 +225,7 @@ func (server lsp_server) handle_definition(req lsp::jsonrpc_request, message str
                     pos := lsp::position { line: line, character: character }
                     switch server.handler.find_symbol_definition(uri, "") {
                         option::some(symbol) : {
-                            location := "{\"uri\":\"" + uri + "\",\"range\":" + 
+                            location := "{\"uri\":\"" + uri + "\",\"range\":" +
                                 lsp::serialize_range(symbol.range_val) + "}"
                             server.send_response(id, location)
                         },

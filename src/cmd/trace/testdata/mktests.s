@@ -1,5 +1,4 @@
 package src.cmd.trace.testdata
-
 func mktests_unit_name() string {
     "src/cmd/trace/testdata/mktests"
 }

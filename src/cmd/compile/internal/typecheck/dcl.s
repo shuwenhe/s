@@ -1,5 +1,4 @@
 package compile.internal.typecheck
-
 func dcl_module_name() string {
     "typecheck/dcl.s"
 }

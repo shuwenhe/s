@@ -1,5 +1,4 @@
 package src.sync
-
 func runtime_unit_name() string {
     "src/sync/runtime"
 }

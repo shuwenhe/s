@@ -1,5 +1,4 @@
 package src.reflect
-
 func badlinkname_unit_name() string {
     "src/reflect/badlinkname"
 }

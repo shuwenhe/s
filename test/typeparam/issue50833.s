@@ -1,5 +1,4 @@
 package test.typeparam
-
 func issue50833_unit_name() string {
     "test/typeparam/issue50833"
 }

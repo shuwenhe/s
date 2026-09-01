@@ -1,7 +1,5 @@
 package compile.internal.codegen
-
 use compile.internal.link
-
 enum amd64_opcode {
     op_nop,
     op_mov,
@@ -31,7 +29,6 @@ enum amd64_opcode {
     op_imul,
     op_idiv,
 }
-
 struct amd64_operand {
     addr operand
 }
@@ -114,112 +111,91 @@ func (instr* amd64_instr) set_immediate(int64 imm, int size) {
 func encode_mov_reg_to_reg(int dest_reg, int src_reg) []int8 {
     result := []int8()()
     instr := make_amd64_instr(op_mov)
-    
     instr.set_operand_size(64)
     instr.set_rex_byte(1, (dest_reg >> 3) & 1, 0, (src_reg >> 3) & 1)
     instr.opcode_byte1 = 0x89
     instr.set_modrm(3, src_reg & 7, dest_reg & 7)
-    
     result = append_bytes(result, instr.prefixes)
     result = append(result, (instr.rex_byte as int8))
     result = append(result, (instr.opcode_byte1 as int8))
     result = append(result, (instr.modrm_byte as int8))
-    
     result
 }
 
 func encode_mov_imm_to_reg(int64 imm, int dest_reg) []int8 {
     result := []int8()()
     instr := make_amd64_instr(op_mov)
-    
     instr.set_operand_size(64)
     instr.set_rex_byte(1, 0, 0, (dest_reg >> 3) & 1)
     instr.opcode_byte1 = 0xb8 + (dest_reg & 7)
     instr.set_immediate(imm, 8)
-    
     result = append_bytes(result, instr.prefixes)
     result = append(result, (instr.rex_byte as int8))
     result = append(result, (instr.opcode_byte1 as int8))
-    
     i := 0
     for i < 8 {
         b := ((imm >> (i * 8)) & 0xff) as int8
         result = append(result, b)
         i = i + 1
     }
-    
     result
 }
 
 func encode_add_reg_to_reg(int dest_reg, int src_reg) []int8 {
     result := []int8()()
     instr := make_amd64_instr(op_add)
-    
     instr.set_operand_size(64)
     instr.set_rex_byte(1, (src_reg >> 3) & 1, 0, (dest_reg >> 3) & 1)
     instr.opcode_byte1 = 0x01
     instr.set_modrm(3, src_reg & 7, dest_reg & 7)
-    
     result = append_bytes(result, instr.prefixes)
     result = append(result, (instr.rex_byte as int8))
     result = append(result, (instr.opcode_byte1 as int8))
     result = append(result, (instr.modrm_byte as int8))
-    
     result
 }
 
 func encode_sub_reg_from_reg(int dest_reg, int src_reg) []int8 {
     result := []int8()()
     instr := make_amd64_instr(op_sub)
-    
     instr.set_operand_size(64)
     instr.set_rex_byte(1, (src_reg >> 3) & 1, 0, (dest_reg >> 3) & 1)
     instr.opcode_byte1 = 0x29
     instr.set_modrm(3, src_reg & 7, dest_reg & 7)
-    
     result = append_bytes(result, instr.prefixes)
     result = append(result, (instr.rex_byte as int8))
     result = append(result, (instr.opcode_byte1 as int8))
     result = append(result, (instr.modrm_byte as int8))
-    
     result
 }
 
 func encode_jmp(int64 offset) []int8 {
     result := []int8()()
     instr := make_amd64_instr(op_jmp)
-    
     instr.opcode_byte1 = 0xe9
     instr.set_immediate(offset - 5, 4)
-    
     result = append(result, (instr.opcode_byte1 as int8))
-    
     i := 0
     for i < 4 {
         b := (((offset - 5) >> (i * 8)) & 0xff) as int8
         result = append(result, b)
         i = i + 1
     }
-    
     result
 }
 
 func encode_call(int64 offset) []int8 {
     result := []int8()()
     instr := make_amd64_instr(op_call)
-    
     instr.opcode_byte1 = 0xe8
     instr.set_immediate(offset - 5, 4)
-    
     result = append(result, (instr.opcode_byte1 as int8))
-    
     i := 0
     for i < 4 {
         b := (((offset - 5) >> (i * 8)) & 0xff) as int8
         result = append(result, b)
         i = i + 1
     }
-    
     result
 }
 
@@ -239,30 +215,24 @@ func encode_syscall() []int8 {
 func encode_push_reg(int reg) []int8 {
     result := []int8()()
     instr := make_amd64_instr(op_push)
-    
     if (reg >> 3) & 1 != 0 {
         instr.rex_byte = 0x41
         result = append(result, (instr.rex_byte as int8))
     }
-    
     instr.opcode_byte1 = 0x50 + (reg & 7)
     result = append(result, (instr.opcode_byte1 as int8))
-    
     result
 }
 
 func encode_pop_reg(int reg) []int8 {
     result := []int8()()
     instr := make_amd64_instr(op_pop)
-    
     if (reg >> 3) & 1 != 0 {
         instr.rex_byte = 0x41
         result = append(result, (instr.rex_byte as int8))
     }
-    
     instr.opcode_byte1 = 0x58 + (reg & 7)
     result = append(result, (instr.opcode_byte1 as int8))
-    
     result
 }
 

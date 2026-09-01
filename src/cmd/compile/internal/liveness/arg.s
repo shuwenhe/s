@@ -1,6 +1,5 @@
 package compile.internal.liveness
 use std.slices
-
 struct arg_liveness_slot {
     string name
     int frame_offset

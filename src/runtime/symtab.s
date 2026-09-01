@@ -1,5 +1,4 @@
 package src.runtime
-
 func symtab_unit_name() string {
     "src/runtime/symtab"
 }

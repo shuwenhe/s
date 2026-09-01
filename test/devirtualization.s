@@ -1,5 +1,4 @@
 package test
-
 func devirtualization_unit_name() string {
     "test/devirtualization"
 }

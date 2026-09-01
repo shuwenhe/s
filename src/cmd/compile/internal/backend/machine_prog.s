@@ -1,5 +1,4 @@
 package backend
-
 struct prog_op {
     string name
     int code
@@ -21,27 +20,49 @@ struct prog_list {
 }
 
 func prog_op_mov() int { 0 }
+
 func prog_op_add() int { 1 }
+
 func prog_op_sub() int { 2 }
+
 func prog_op_mul() int { 3 }
+
 func prog_op_div() int { 4 }
+
 func prog_op_and() int { 5 }
+
 func prog_op_or() int { 6 }
+
 func prog_op_xor() int { 7 }
+
 func prog_op_cmp() int { 8 }
+
 func prog_op_jmp() int { 9 }
+
 func prog_op_jne() int { 10 }
+
 func prog_op_je() int { 11 }
+
 func prog_op_call() int { 12 }
+
 func prog_op_ret() int { 13 }
+
 func prog_op_push() int { 14 }
+
 func prog_op_pop() int { 15 }
+
 func prog_op_lea() int { 16 }
+
 func prog_op_load() int { 17 }
+
 func prog_op_store() int { 18 }
+
 func prog_op_nop() int { 19 }
+
 func prog_op_test() int { 20 }
+
 func prog_op_shl() int { 21 }
+
 func prog_op_shr() int { 22 }
 
 func make_prog_list() prog_list {

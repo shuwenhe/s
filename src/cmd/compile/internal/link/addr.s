@@ -1,5 +1,4 @@
 package compile.internal.link
-
 enum addr_type {
     addr_type_none,
     addr_type_const,
@@ -8,7 +7,6 @@ enum addr_type {
     addr_type_branch,
     addr_type_special,
 }
-
 struct addr {
     addr_type type
     int reg
