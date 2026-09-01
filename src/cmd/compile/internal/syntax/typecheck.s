@@ -1,4 +1,5 @@
 package compile.internal.syntax
+
 enum type_kind {
     TYPE_VOID = 0,
     TYPE_INT = 1,
@@ -15,6 +16,7 @@ enum type_kind {
     TYPE_CHAN = 12,
     TYPE_UNKNOWN = 99,
 }
+
 struct type_info {
     kind int
     name* string
@@ -50,6 +52,7 @@ struct typecheck_context {
     errors* string
     error_count int
     max_errors int
+    function_return* type_info
 }
 
 func typecheck_new() typecheck_context* {
@@ -244,8 +247,8 @@ func typecheck_is_compatible(type1* type_info, type2* type_info) int {
     if type1.kind == type2.kind {
         return 1
     }
-    if (type1.kind == TYPE_INT && type2.kind == TYPE_FLOAT) ||
-       (type1.kind == TYPE_FLOAT && type2.kind == TYPE_INT) {
+    if (type1.kind == TYPE_INT && type2.kind == TYPE_FLOAT) { return 1 }
+    if (type1.kind == TYPE_FLOAT && type2.kind == TYPE_INT) {
         return 1
     }
     return 0
@@ -260,18 +263,36 @@ func typecheck_var_decl(ctx* typecheck_context, var_decl* ast_node) int {
         typecheck_error(ctx, "duplicate variable declaration", var_decl.line, var_decl.col)
         return 0
     }
-    type_* := typecheck_resolve_type(ctx, var_decl.child)
-    if type_.kind == TYPE_UNKNOWN {
+    resolved_type := typecheck_resolve_type(ctx, var_decl.child)
+    if resolved_type.kind == TYPE_UNKNOWN {
         typecheck_error(ctx, "unknown variable type", var_decl.line, var_decl.col)
         return 0
     }
-    typecheck_add_symbol(ctx.current_scope, var_decl.value, type_, 2, var_decl.line, var_decl.col)
+    typecheck_add_symbol(ctx.current_scope, var_decl.value, resolved_type, 2, var_decl.line, var_decl.col)
     return 1
 }
 
 func typecheck_func_decl(ctx* typecheck_context, func_decl* ast_node) int {
+    if func_decl.value == nil || func_decl.value == "" {
+        typecheck_error(ctx, "function declaration requires a name", func_decl.line, func_decl.col)
+        return 0
+    }
+    if typecheck_lookup_symbol(ctx, func_decl.value) != nil {
+        typecheck_error(ctx, "duplicate function declaration", func_decl.line, func_decl.col)
+        return 0
+    }
+    return_type := typecheck_resolve_type(ctx, func_decl.child)
+    fn_type := alloc(type_info)
+    fn_type.kind = TYPE_FUNCTION
+    fn_type.name = func_decl.value
+    fn_type.val_type = return_type
+    typecheck_add_symbol(ctx.current_scope, func_decl.value, fn_type, 3, func_decl.line, func_decl.col)
+    previous_return := ctx.function_return
+    ctx.function_return = return_type
     typecheck_enter_scope(ctx)
+    if func_decl.next != nil { typecheck_block_stmt(ctx, func_decl.next) }
     typecheck_exit_scope(ctx)
+    ctx.function_return = previous_return
     return 1
 }
 
@@ -298,6 +319,15 @@ func typecheck_block_stmt(ctx* typecheck_context, block* ast_node) int {
 }
 
 func typecheck_return_stmt(ctx* typecheck_context, ret* ast_node) int {
+    if ctx.function_return == nil {
+        typecheck_error(ctx, "return outside function", ret.line, ret.col)
+        return 0
+    }
+    actual := typecheck_expr(ctx, ret.child)
+    if !typecheck_is_compatible(ctx.function_return, actual) {
+        typecheck_error(ctx, "return type mismatch", ret.line, ret.col)
+        return 0
+    }
     return 1
 }
 
@@ -340,6 +370,14 @@ func typecheck_statement(ctx* typecheck_context, stmt* ast_node) int {
 func typecheck_program(ctx* typecheck_context, program* ast_node) int {
     if program == nil {
         return 0
+    }
+    decl := program.next
+    for {
+        if decl == nil { break }
+        if decl.type_ == AST_STRUCT_DECL { typecheck_struct_decl(ctx, decl) }
+        else if decl.type_ == AST_VAR_DECL { typecheck_var_decl(ctx, decl) }
+        else if decl.type_ == AST_FUNC_DECL { typecheck_func_decl(ctx, decl) }
+        decl = decl.next
     }
     return 1 - ctx.error_count
 }
