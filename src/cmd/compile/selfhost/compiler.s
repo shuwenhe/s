@@ -297,7 +297,9 @@ func find_word_from(string source, string word, int start) int {
 func find_function_from(string source, int start) int {
     int index = start
     int mode = 0
-    for index < len(source) {
+    int budget = len(source) * 4 + 64
+    for index < len(source) && budget > 0 {
+        budget = budget - 1
         string ch = __host_char_at(source, index)
         if mode == 1 {
             if ch == "\\" && index + 1 < len(source) {
