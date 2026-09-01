@@ -3457,14 +3457,7 @@ func main() {
         return 1
     }
     if debug_find {
-        int found = find_function_from(source, 0)
-        string match9 = "0"
-        string match14 = "0"
-        if matches_at(source, 9, "func") { match9 = "1" }
-        if matches_at(source, 14, "func") { match14 = "1" }
-        string diagnostic = int_text(found) + "|" + __host_char_at(source, found)
-            + "|" + match9 + "|" + match14
-        return __host_write_text_file(args[output_index], diagnostic)
+        return __host_write_text_file(args[output_index], "debug")
     }
     if !native_assembly && parse_package_name(source) == "" {
         eprintln("compile: invalid or missing package declaration")
