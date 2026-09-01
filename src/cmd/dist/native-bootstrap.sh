@@ -6,6 +6,8 @@ work=${1:-"$root/.bootstrap/native"}
 seed=${S_BOOTSTRAP_SEED:-"$root/bin/s_seed"}
 source_file=${S_BOOTSTRAP_SOURCE:-"$root/src/cmd/compile/selfhost/compiler.s"}
 verify="$root/misc/scripts/verify_true_selfhost.sh"
+assembler=${S_BOOTSTRAP_AS:-as}
+linker=${S_BOOTSTRAP_LD:-ld}
 
 fail() {
     printf '%s\n' "native bootstrap failed: $*" >&2
@@ -19,7 +21,7 @@ fail() {
 mkdir -p "$work"
 
 runtime_object="$work/selfhost_runtime.o"
-as --64 -o "$runtime_object" "$root/src/runtime/selfhost_linux_amd64.S"
+"$assembler" --64 -o "$runtime_object" "$root/src/runtime/selfhost_linux_amd64.S"
 stage_manifest="$work/manifest.txt"
 write_manifest="$root/src/cmd/dist/checks/write-manifest.sh"
 
@@ -30,8 +32,8 @@ compile_native_stage() {
     assembly="${output}.S"
     object="${output}.o"
     "$compiler" --emit-asm "$input" "$assembly"
-    as --64 -o "$object" "$assembly"
-    ld -static -T "$root/src/runtime/linker/nostdlib.ld" \
+    "$assembler" --64 -o "$object" "$assembly"
+    "$linker" -static -T "$root/src/runtime/linker/nostdlib.ld" \
         -o "$output" "$runtime_object" "$object"
 }
 
@@ -43,8 +45,8 @@ run_conformance() {
     object="$work/${name}.o"
     binary="$work/${name}"
     "$compiler" --emit-asm "$source" "$assembly"
-    as --64 -o "$object" "$assembly"
-    ld -static -T "$root/src/runtime/linker/nostdlib.ld" \
+    "$assembler" --64 -o "$object" "$assembly"
+    "$linker" -static -T "$root/src/runtime/linker/nostdlib.ld" \
         -o "$binary" "$runtime_object" "$object"
     "$verify" "$binary"
     set +e
