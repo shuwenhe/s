@@ -252,6 +252,10 @@ s_value_add:
     lea -1(%rdi,%rsi), %rax
     ret
 .Lvalue_add_string:
+    cmp $1, %rdi
+    je .Lvalue_add_right
+    cmp $1, %rsi
+    je .Lvalue_add_left
     push %rbx
     push %r12
     push %r13
@@ -271,6 +275,12 @@ s_value_add:
     pop %r13
     pop %r12
     pop %rbx
+    ret
+.Lvalue_add_right:
+    mov %rsi, %rax
+    ret
+.Lvalue_add_left:
+    mov %rdi, %rax
     ret
 .size s_value_add, .-s_value_add
 .global s_value_cmp
