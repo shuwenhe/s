@@ -572,6 +572,7 @@ func validate_function_symbols(string source) bool {
 }
 
 func function_body_end(string source, int body) int {
+    if body < 1 || body >= len(source) { return -1 }
     int index = body
     int depth = 1
     for index < len(source) {
