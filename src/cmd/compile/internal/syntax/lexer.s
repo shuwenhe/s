@@ -107,7 +107,7 @@ struct lexer {
 }
 
 func lexer_new(source* string) lexer* {
-    l* := alloc(lexer)
+    l := alloc(lexer)
     l.source = source
     l.pos = 0
     l.line = 1
@@ -206,8 +206,8 @@ func lexer_read_ident(l* lexer) token {
         lexer_advance(l)
     }
     length := l.pos - start
-    value* := substring(l.source, start, length)
-    tok* := alloc(token)
+    value := substring(l.source, start, length)
+    tok := alloc(token)
     tok.line = l.line
     tok.col = start_col
     tok.value = value
@@ -336,8 +336,8 @@ func lexer_read_number(l* lexer) token {
         }
     }
     length := l.pos - start
-    value* := substring(l.source, start, length)
-    tok* := alloc(token)
+    value := substring(l.source, start, length)
+    tok := alloc(token)
     tok.line = l.line
     tok.col = start_col
     tok.type_ = 2
@@ -366,11 +366,11 @@ func lexer_read_string(l* lexer) token {
         }
     }
     length := l.pos - start
-    value* := substring(l.source, start, length)
+    value := substring(l.source, start, length)
     if lexer_current_char(l) == quote {
         lexer_advance(l)
     }
-    tok* := alloc(token)
+    tok := alloc(token)
     tok.line = l.line
     tok.col = start_col
     tok.type_ = 3
@@ -381,7 +381,7 @@ func lexer_read_string(l* lexer) token {
 func lexer_add_token(l* lexer, tok* token) {
     if l.token_count >= l.token_capacity {
         new_capacity := l.token_capacity * 2
-        new_tokens* := alloc_array(token, new_capacity)
+        new_tokens := alloc_array(token, new_capacity)
         copy_array(new_tokens, l.tokens, l.token_count)
         l.tokens = new_tokens
         l.token_capacity = new_capacity
@@ -579,7 +579,7 @@ func lexer_tokenize(l* lexer) {
             tok_type = 87
         }
         if tok_type > 0 {
-            tok* := alloc(token)
+            tok := alloc(token)
             tok.type_ = tok_type
             tok.line = l.line
             tok.col = col
@@ -587,7 +587,7 @@ func lexer_tokenize(l* lexer) {
         }
         lexer_advance(l)
     }
-    eof_tok* := alloc(token)
+    eof_tok := alloc(token)
     eof_tok.type_ = 0
     eof_tok.line = l.line
     eof_tok.col = l.col
