@@ -1,12 +1,12 @@
 package liveness_analysis
 
-struct LivenessSet {
+struct liveness_set {
     int[] live_in
     int[] live_out
     int num_vars
 }
 
-struct LivenessAnalyzer {
+struct liveness_analyzer {
     int block_count
     int instr_count
     int var_count
@@ -25,8 +25,8 @@ struct stack_frame {
     int slot_count
 }
 
-func liveness_analyzer_new(int block_count, int var_count) LivenessAnalyzer* {
-    analyzer := LivenessAnalyzer {
+func liveness_analyzer_new(int block_count, int var_count) liveness_analyzer* {
+    analyzer := liveness_analyzer {
         block_count: block_count,
         var_count: var_count,
         block_liveness: new liveness_set[block_count],
@@ -58,7 +58,7 @@ func liveness_analyzer_new(int block_count, int var_count) LivenessAnalyzer* {
     &analyzer
 }
 
-func (analyzer* LivenessAnalyzer) compute_block_gen_kill(block[] blocks, int block_id) int {
+func (analyzer* liveness_analyzer) compute_block_gen_kill(block[] blocks, int block_id) int {
     block := blocks[block_id]
     
     i := 0
@@ -86,7 +86,7 @@ func (analyzer* LivenessAnalyzer) compute_block_gen_kill(block[] blocks, int blo
     0
 }
 
-func (analyzer* LivenessAnalyzer) compute_live_ranges_iterative(block[] blocks) int {
+func (analyzer* liveness_analyzer) compute_live_ranges_iterative(block[] blocks) int {
     changed := 1
     
     for changed == 1 {
@@ -151,7 +151,7 @@ func (analyzer* LivenessAnalyzer) compute_live_ranges_iterative(block[] blocks) 
     0
 }
 
-func (analyzer* LivenessAnalyzer) analyze(block[] blocks) int {
+func (analyzer* liveness_analyzer) analyze(block[] blocks) int {
     i := 0
     for i < analyzer.block_count {
         analyzer.compute_block_gen_kill(blocks, i)
@@ -163,7 +163,7 @@ func (analyzer* LivenessAnalyzer) analyze(block[] blocks) int {
     0
 }
 
-func (analyzer* LivenessAnalyzer) is_live_at_point(int var_id, int block_id, int instr_id) int {
+func (analyzer* liveness_analyzer) is_live_at_point(int var_id, int block_id, int instr_id) int {
     if analyzer.block_liveness[block_id].live_in[var_id] == 1 {
         return 1
     }
@@ -274,9 +274,9 @@ func (frame* stack_frame) verify_alignment() int {
     return 0
 }
 
-const CALLEE_SAVED_RBX = 0x1
-const CALLEE_SAVED_R12 = 0x2
-const CALLEE_SAVED_R13 = 0x4
-const CALLEE_SAVED_R14 = 0x8
-const CALLEE_SAVED_R15 = 0x10
-const CALLEE_SAVED_RBP = 0x20
+const callee_saved_rbx = 0x1
+const callee_saved_r12 = 0x2
+const callee_saved_r13 = 0x4
+const callee_saved_r14 = 0x8
+const callee_saved_r15 = 0x10
+const callee_saved_rbp = 0x20
