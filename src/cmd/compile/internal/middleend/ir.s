@@ -1,6 +1,5 @@
 package middleend
 
-// IR Value types
 const IR_VALUE_CONST = 1
 const IR_VALUE_VAR = 2
 const IR_VALUE_PARAM = 3
@@ -13,7 +12,6 @@ const IR_VALUE_ALLOCA = 9
 const IR_VALUE_PHI = 10
 const IR_VALUE_CAST = 11
 
-// IR Operation codes for binary operations
 const IR_OP_ADD = 100
 const IR_OP_SUB = 101
 const IR_OP_MUL = 102
@@ -33,12 +31,10 @@ const IR_OP_GE = 115
 const IR_OP_LAND = 116
 const IR_OP_LOR = 117
 
-// IR Unary operations
 const IR_OP_NEG = 200
 const IR_OP_NOT = 201
 const IR_OP_LNOT = 202
 
-// IR Instruction types
 const IR_INSTR_BINOP = 300
 const IR_INSTR_UNOP = 301
 const IR_INSTR_CALL = 302
@@ -58,8 +54,8 @@ struct ir_value {
     type_info string
     line int
     column int
-    
-    // 数据存储
+
+
     const_value string
     var_name string
     param_index int
@@ -72,8 +68,8 @@ struct ir_instruction {
     opcode int
     line int
     column int
-    
-    // 控制流相关
+
+
     branch_target_true int
     branch_target_false int
     branch_targets int[]
@@ -84,7 +80,7 @@ struct ir_basicblock {
     label string
     instructions ir_instruction[]
     terminator ir_instruction
-    
+
     predecessors int[]
     successors int[]
 }
@@ -102,7 +98,6 @@ struct ir_module {
     global_vars ir_value[]
 }
 
-// IR 值构造函数
 func ir_value_const(const_val string, type_info string) ir_value {
     ir_value {
         value_type: IR_VALUE_CONST, value_id 0, type_info type_info, const_value const_val, line 0, column 0
@@ -121,7 +116,6 @@ func ir_value_param(index int, type_info string) ir_value {
     }
 }
 
-// IR 指令构造函数
 func ir_instr_binop(op int, left ir_value, right ir_value, result_type string) ir_instruction {
     ir_instruction {
         instr_type: IR_INSTR_BINOP, opcode op,
@@ -168,7 +162,6 @@ func ir_instr_phi(operands ir_value[], operand_blocks int[]) ir_instruction {
     }
 }
 
-// 基本块构造函数
 func ir_basicblock_new(block_id int, label string) ir_basicblock {
     ir_basicblock {
         block_id: block_id, label label
@@ -191,7 +184,6 @@ func ir_basicblock_add_successor(block* ir_basicblock, succ_id int) {
     block.successors = append(block.successors, succ_id)
 }
 
-// 函数构造函数
 func ir_function_new(name string, return_type string) ir_function {
     ir_function {
         name: name, return_type return_type, value_counter 0
@@ -211,7 +203,6 @@ func ir_function_gen_value_id(func* ir_function) int {
     func.value_counter
 }
 
-// 模块构造函数
 func ir_module_new() ir_module {
     ir_module {}
 }

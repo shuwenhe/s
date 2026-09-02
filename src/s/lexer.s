@@ -87,22 +87,7 @@ func (lexer* self) skip_ignored() ((), lex_error) {
             }
             continue
         }
-        if self.match_text("/*") {
-            self.advance()
-            self.advance()
-            int depth = 1
-            for depth > 0 {
-                if self.is_eof() {
-                    (), lex_error empty
-                    return empty, lex_error { message: "unterminated block comment", line self.line, column self.column }
-                }
-                if self.match_text("/*") {
-                    depth = depth + 1
-                    self.advance()
-                    self.advance()
-                    continue
-                }
-                if self.match_text("*/") {
+        if self.match_text("") {
                     depth = depth - 1
                     self.advance()
                     self.advance()

@@ -635,6 +635,22 @@ static ast_node *parse_call(parser *p) {
 		if (next_tok && last_tok && next_tok->pos.line > last_tok->pos.line) {
 			break;
 		}
+		/* S uses a postfix star when passing a mutable value by pointer. */
+		if (check(p, TOKEN_STAR) && peek_ahead(p, 1) &&
+			(peek_ahead(p, 1)->type == TOKEN_RPAREN ||
+			 peek_ahead(p, 1)->type == TOKEN_COMMA ||
+			 peek_ahead(p, 1)->type == TOKEN_SEMICOLON)) {
+			ast_node *pointer = ast_new(AST_UNARY_EXPR, peek(p)->pos);
+			if (!pointer) {
+				ast_free(expr);
+				return NULL;
+			}
+			pointer->as.unary_expr.op = TOKEN_STAR;
+			pointer->as.unary_expr.operand = expr;
+			advance_tok(p);
+			expr = pointer;
+			continue;
+		}
 		if (match(p, TOKEN_LPAREN)) {
 			ast_node *call = ast_new(AST_CALL_EXPR, prev(p)->pos);
 			if (!call) {

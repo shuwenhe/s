@@ -138,8 +138,8 @@ func is_whitespace(string c) bool {
 
 func lexer_new(string source) lexer {
     lex := lexer {
-        source: source, position 0, read_position 0,
-        current_char: ' ', line 1, column 0, start_column 0
+        source: source, position: 0, read_position: 0,
+        current_char: ' ', line: 1, column: 0, start_column: 0
     }
     lexer_read_char(lex*)
     lex
@@ -153,7 +153,7 @@ func lexer_read_char(lex* lexer) {
     }
     lex.position = lex.read_position
     lex.read_position = lex.read_position + 1
-    
+
     if lex.current_char == '\n' {
         lex.line = lex.line + 1
         lex.column = 0
@@ -197,14 +197,14 @@ func lexer_slice(string source, int start, int end) string {
 func lexer_read_number(lex* lexer) (string, int) {
     start := lex.position
     has_dot := 0
-    
+
     while is_digit(lex.current_char) || (lex.current_char == '.' && !has_dot) {
         if lex.current_char == '.' {
             has_dot = 1
         }
         lexer_read_char(lex)
     }
-    
+
     num_str := lexer_slice(lex.source, start, lex.position)
     if has_dot {
         num_str, TOKEN_FLOAT
@@ -216,14 +216,14 @@ func lexer_read_number(lex* lexer) (string, int) {
 func lexer_read_string(lex* lexer, string quote) string {
     lexer_read_char(lex)
     start := lex.position
-    
+
     while lex.current_char != quote && lex.current_char != '\0' {
         if lex.current_char == '\\' {
             lexer_read_char(lex)
         }
         lexer_read_char(lex)
     }
-    
+
     str := lexer_slice(lex.source, start, lex.position)
     if lex.current_char == quote {
         lexer_read_char(lex)
@@ -240,7 +240,7 @@ func lexer_skip_line_comment(lex* lexer) {
 func lexer_skip_block_comment(lex* lexer) {
     lexer_read_char(lex)
     lexer_read_char(lex)
-    
+
     while lex.current_char != '\0' {
         if lex.current_char == '*' && lexer_peek_char(lex) == '/' {
             lexer_read_char(lex)
@@ -253,14 +253,14 @@ func lexer_skip_block_comment(lex* lexer) {
 
 func lexer_next_token(lex* lexer) token {
     lexer_skip_whitespace(lex)
-    
+
     lex.start_column = lex.column
     line := lex.line
     column := lex.column
-    
+
     tok_type := TOKEN_EOF
     tok_value := ""
-    
+
     switch lex.current_char {
     case '\0' :
         tok_type = TOKEN_EOF
@@ -500,9 +500,9 @@ func lexer_next_token(lex* lexer) token {
             lexer_read_char(lex)
         }
     }
-    
+
     token {
-        token_type: tok_type, value tok_value, line line, column column
+        token_type: tok_type, value: tok_value, line: line, column: column
     }
 }
 
