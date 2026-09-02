@@ -202,21 +202,21 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(non_comparable_eq_diags, "e3039") {
         return 1
     }
-    implicit_trait_ok := "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) add(int a, int b) int {\n  a + b\n}\nfunc use_adder(Adder a) int {\n  a.add(1, 2)\n}\nfunc main() {\n  use_adder(Calc {})\n}"
+    implicit_trait_ok := "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc ( c Calc) add(int a, int b) int {\n  a + b\n}\nfunc use_adder(Adder a) int {\n  a.add(1, 2)\n}\nfunc main() {\n  use_adder(Calc {})\n}"
     if check_text(implicit_trait_ok) != 0 {
         return 1
     }
-    implicit_trait_missing := "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) sub(int a, int b) int {\n  a - b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() {\n  use_adder(Calc {})\n}"
+    implicit_trait_missing := "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc ( c Calc) sub(int a, int b) int {\n  a - b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() {\n  use_adder(Calc {})\n}"
     implicit_trait_missing_diags := check_detailed(implicit_trait_missing)
     if !has_code(implicit_trait_missing_diags, "e1002") {
         return 1
     }
-    implicit_trait_sig_mismatch := "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc (c: Calc) add(bool a, int b) int {\n  b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() {\n  use_adder(Calc {})\n}"
+    implicit_trait_sig_mismatch := "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc ( c Calc) add(bool a, int b) int {\n  b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() {\n  use_adder(Calc {})\n}"
     implicit_trait_sig_diags := check_detailed(implicit_trait_sig_mismatch)
     if !has_code(implicit_trait_sig_diags, "e1002") {
         return 1
     }
-    method_call_ok := "package demo.method\nstruct Point {\n  int x\n}\ntrait Measure {\n  func size() int;\n}\nfunc (p: Point) size() int {\n  p.x\n}\nfunc main() {\n  p := Point { x: 4 }\n  p.size()\n}"
+    method_call_ok := "package demo.method\nstruct Point {\n  int x\n}\ntrait Measure {\n  func size() int;\n}\nfunc ( p Point) size() int {\n  p.x\n}\nfunc main() {\n  p := Point { x: 4 }\n  p.size()\n}"
     if check_text(method_call_ok) != 0 {
         return 1
     }
@@ -238,7 +238,7 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(method_temp_mut_ref_diags, "e3051") {
         return 1
     }
-    duplicate_receiver_method := "package demo.iface\nstruct Calc {}\nfunc (c: Calc) add(int a) int {\n  a\n}\nfunc (c: Calc) add(int a) int {\n  a\n}\nfunc main() {\n  0\n}"
+    duplicate_receiver_method := "package demo.iface\nstruct Calc {}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc main() {\n  0\n}"
     duplicate_receiver_diags := check_detailed(duplicate_receiver_method)
     if !has_code(duplicate_receiver_diags, "e3042") {
         return 1

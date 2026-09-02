@@ -26,16 +26,7 @@ func (out* elf_output) add_string_to_table(string s) int32 {
 
 func (out* elf_output) create_section(string name, int32 type, int64 flags, int64 size) {
     section := elf_section_header {
-        name: out.add_string_to_table(name),
-        type: type,
-        flags: flags,
-        addr: 0 as int64,
-        offset: 0 as int64,
-        size: size,
-        link: 0 as int32,
-        info: 0 as int32,
-        addralign: 8 as int64,
-        entsize: 0 as int64,
+        name: out.add_string_to_table(name), type type, flags flags, addr 0 as int64, offset 0 as int64, size size, link 0 as int32, info 0 as int32, addralign 8 as int64, entsize 0 as int64,
     }
     out.sections = append(out.sections, section)
 }
@@ -53,12 +44,7 @@ func (out* elf_output) build_standard_sections() {
 
 func (out* elf_output) add_symbol(string name, int64 value, int64 size, int8 info, int16 shndx) {
     sym := elf_symbol {
-        name: out.add_string_to_table(name),
-        info: info,
-        other: 0 as int8,
-        shndx: shndx,
-        value: value,
-        size: size,
+        name: out.add_string_to_table(name), info info, other 0 as int8, shndx shndx, value value, size size,
     }
     out.symbols = append(out.symbols, sym)
 }
@@ -79,10 +65,7 @@ struct object_file_generator {
 
 func make_object_file_generator(machine_code_gen* cg, symbol_table* st, relocation_context* rc) object_file_generator {
     obj_file_generator {
-        code_gen: cg,
-        symbols: st,
-        relocs: rc,
-        elf_out: make_elf_output(),
+        code_gen: cg, symbols st, relocs rc, elf_out make_elf_output(),
     }
 }
 

@@ -25,10 +25,7 @@ func add_error_msg(string at, int code, string message, bool warning) () {
         full = at + ": " + message
     }
     error_msgs.push(error_msg {
-        pos: at,
-        msg: full,
-        code: code,
-        warning: warning,
+        pos: at, msg full, code code, warning warning,
     })
 }
 

@@ -13,8 +13,7 @@ func zerorange(prog[] insns, int off, int cnt) prog[] {
         out.push(prog {
             op: "MOVUPS",
             from: "X15",
-            to: "SP",
-            offset: at,
+            to: "SP", offset at,
         })
         at = at + 16
         left = left - 16
@@ -23,8 +22,7 @@ func zerorange(prog[] insns, int off, int cnt) prog[] {
         out.push(prog {
             op: "MOVQ",
             from: "X15",
-            to: "SP",
-            offset: at,
+            to: "SP", offset at,
         })
     }
     out
@@ -35,8 +33,7 @@ func ginsnop(prog[] insns) prog[] {
     out.push(prog {
         op: "XCHGL",
         from: "AX",
-        to: "AX",
-        offset: 0,
+        to: "AX", offset 0,
     })
     out
 }

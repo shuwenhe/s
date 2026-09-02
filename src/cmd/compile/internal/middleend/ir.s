@@ -105,62 +105,40 @@ struct ir_module {
 // IR 值构造函数
 func ir_value_const(const_val string, type_info string) ir_value {
     ir_value {
-        value_type: IR_VALUE_CONST,
-        value_id: 0,
-        type_info: type_info,
-        const_value: const_val,
-        line: 0,
-        column: 0
+        value_type: IR_VALUE_CONST, value_id 0, type_info type_info, const_value const_val, line 0, column 0
     }
 }
 
 func ir_value_var(name string, type_info string) ir_value {
     ir_value {
-        value_type: IR_VALUE_VAR,
-        value_id: 0,
-        type_info: type_info,
-        var_name: name,
-        line: 0,
-        column: 0
+        value_type: IR_VALUE_VAR, value_id 0, type_info type_info, var_name name, line 0, column 0
     }
 }
 
 func ir_value_param(index int, type_info string) ir_value {
     ir_value {
-        value_type: IR_VALUE_PARAM,
-        value_id: 0,
-        type_info: type_info,
-        param_index: index,
-        line: 0,
-        column: 0
+        value_type: IR_VALUE_PARAM, value_id 0, type_info type_info, param_index index, line 0, column 0
     }
 }
 
 // IR 指令构造函数
 func ir_instr_binop(op int, left ir_value, right ir_value, result_type string) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_BINOP,
-        opcode: op,
-        operands: [left, right],
-        result: ir_value { value_type: IR_VALUE_BINOP, type_info: result_type }
+        instr_type: IR_INSTR_BINOP, opcode op,
+        operands: [left, right], result ir_value { value_type: IR_VALUE_BINOP, type_info result_type }
     }
 }
 
 func ir_instr_unop(op int, operand ir_value, result_type string) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_UNOP,
-        opcode: op,
-        operands: [operand],
-        result: ir_value { value_type: IR_VALUE_UNOP, type_info: result_type }
+        instr_type: IR_INSTR_UNOP, opcode op,
+        operands: [operand], result ir_value { value_type: IR_VALUE_UNOP, type_info result_type }
     }
 }
 
 func ir_instr_call(func_name string, args ir_value[], return_type string) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_CALL,
-        var_name: func_name,
-        operands: args,
-        result: ir_value { value_type: IR_VALUE_CALL, type_info: return_type }
+        instr_type: IR_INSTR_CALL, var_name func_name, operands args, result ir_value { value_type: IR_VALUE_CALL, type_info return_type }
     }
 }
 
@@ -173,33 +151,27 @@ func ir_instr_return(value ir_value) ir_instruction {
 
 func ir_instr_br(target_block_id int) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_BR,
-        branch_target_true: target_block_id
+        instr_type: IR_INSTR_BR, branch_target_true target_block_id
     }
 }
 
 func ir_instr_condbr(cond ir_value, true_block int, false_block int) ir_instruction {
     ir_instruction {
         instr_type: IR_INSTR_CONDBR,
-        operands: [cond],
-        branch_target_true: true_block,
-        branch_target_false: false_block
+        operands: [cond], branch_target_true true_block, branch_target_false false_block
     }
 }
 
 func ir_instr_phi(operands ir_value[], operand_blocks int[]) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_PHI,
-        operands: operands,
-        branch_targets: operand_blocks
+        instr_type: IR_INSTR_PHI, operands operands, branch_targets operand_blocks
     }
 }
 
 // 基本块构造函数
 func ir_basicblock_new(block_id int, label string) ir_basicblock {
     ir_basicblock {
-        block_id: block_id,
-        label: label
+        block_id: block_id, label label
     }
 }
 
@@ -222,9 +194,7 @@ func ir_basicblock_add_successor(block* ir_basicblock, succ_id int) {
 // 函数构造函数
 func ir_function_new(name string, return_type string) ir_function {
     ir_function {
-        name: name,
-        return_type: return_type,
-        value_counter: 0
+        name: name, return_type return_type, value_counter 0
     }
 }
 

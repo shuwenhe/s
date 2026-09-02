@@ -2,17 +2,7 @@ package compile.internal.compare
 use std.slices
 func make_field(string name, int offset, int size, bool regular_memory, string type_kind) compare_field {
     compare_field {
-        name: name,
-        offset: offset,
-        size: size,
-        alignment: 1,
-        padded: false,
-        regular_memory: regular_memory,
-        can_panic: type_kind == "interface",
-        type_kind: type_kind,
-        num_elem: 0,
-        elem_cost: 1,
-        elem_can_panic: false,
+        name: name, offset offset, size size, alignment 1, padded false, regular_memory regular_memory, can_panic type_kind == "interface", type_kind type_kind, num_elem 0, elem_cost 1, elem_can_panic false,
     }
 }
 
@@ -22,11 +12,7 @@ func run_compare_tests() int {
     fields = append(fields, make_field("b", 4, 4, true, "int32"))
     fields = append(fields, make_field("s", 8, 16, false, "string"))
     t := compare_struct {
-        fields: fields,
-        alignment: 8,
-        reg_size: 8,
-        arch_alignment: 1,
-        can_merge_loads: true,
+        fields: fields, alignment 8, reg_size 8, arch_alignment 1, can_merge_loads true,
     }
     if eq_struct_cost(t) != 3 {
         return 1

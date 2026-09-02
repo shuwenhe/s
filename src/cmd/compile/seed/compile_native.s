@@ -16,7 +16,7 @@ struct compiler_native {
     toolchain: compiler_toolchain
 }
 
-func compiler_native_create(source_file: string, output_file: string) compiler_native {
+func compiler_native_create( source_file string, output_file string) compiler_native {
     compiler: compiler_native
     compiler.source_file = source_file
     compiler.output_file = output_file
@@ -91,7 +91,7 @@ func (compiler* compiler_native) compile_to_executable() (int, string) {
     0, ""
 }
 
-func compiler_compile_native(source: string, output: string) (int, string) {
+func compiler_compile_native( source string, output string) (int, string) {
     compiler := compiler_native_create(source, output)
     compiler.compile_to_executable()
 }

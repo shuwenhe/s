@@ -8,8 +8,7 @@ struct lsp_server {
 
 func main() {
     server := lsp_server {
-        handler: lsp::new_lsp_handler(),
-        initialized: false,
+        handler: lsp::new_lsp_handler(), initialized false,
     }
     server.run()
 }
@@ -86,14 +85,7 @@ func (server lsp_server) handle_initialize(req lsp::jsonrpc_request) {
     switch req.id {
         option::some(id) : {
             capabilities := lsp::server_capabilities {
-                text_document_sync: true,
-                completion_provider: true,
-                hover_provider: true,
-                definition_provider: true,
-                references_provider: true,
-                document_symbol_provider: true,
-                rename_provider: true,
-                workspace_symbol_provider: false,
+                text_document_sync: true, completion_provider true, hover_provider true, definition_provider true, references_provider true, document_symbol_provider true, rename_provider true, workspace_symbol_provider false,
             }
             result := "{\"capabilities\":{" +
                 "\"textDocumentSync\":true," +
@@ -136,16 +128,13 @@ func (server lsp_server) handle_did_change(req lsp::jsonrpc_request, message str
         option::some((uri, text, version)) : {
             changes := lsp::text_document_content_change_event[]{
                 lsp::text_document_content_change_event {
-                    range_val: option::none(),
-                    text: text,
+                    range_val: option::none(), text text,
                 }
             }
             params := lsp::did_change_text_document_params {
                 text_document: lsp::versioned_text_document_identifier {
-                    uri: uri,
-                    version: version,
-                },
-                content_changes: changes,
+                    uri: uri, version version,
+                }, content_changes changes,
             }
             server.handler.on_did_change(params)
             server.send_diagnostics(uri)
@@ -158,8 +147,7 @@ func (server lsp_server) handle_did_save(req lsp::jsonrpc_request, message strin
     switch extract_text_document_identifier(message) {
         option::some(uri) : {
             params := lsp::did_save_text_document_params {
-                text_document: lsp::text_document_identifier { uri: uri },
-                text: option::none(),
+                text_document: lsp::text_document_identifier { uri: uri }, text option::none(),
             }
             server.handler.on_did_save(params)
         },
@@ -184,7 +172,7 @@ func (server lsp_server) handle_completion(req lsp::jsonrpc_request, message str
         option::some(id) : {
             switch extract_position_params(message) {
                 option::some((uri, line, character)) : {
-                    pos := lsp::position { line: line, character: character }
+                    pos := lsp::position { line: line, character character }
                     completions := server.handler.get_completions(uri, pos)
                     result := lsp::serialize_completion_list(completions)
                     server.send_response(id, result)
@@ -201,7 +189,7 @@ func (server lsp_server) handle_hover(req lsp::jsonrpc_request, message string) 
         option::some(id) : {
             switch extract_position_params(message) {
                 option::some((uri, line, character)) : {
-                    pos := lsp::position { line: line, character: character }
+                    pos := lsp::position { line: line, character character }
                     switch server.handler.get_hover(uri, pos) {
                         option::some(hover) : {
                             result := lsp::serialize_hover(hover)
@@ -222,7 +210,7 @@ func (server lsp_server) handle_definition(req lsp::jsonrpc_request, message str
         option::some(id) : {
             switch extract_position_params(message) {
                 option::some((uri, line, character)) : {
-                    pos := lsp::position { line: line, character: character }
+                    pos := lsp::position { line: line, character character }
                     switch server.handler.find_symbol_definition(uri, "") {
                         option::some(symbol) : {
                             location := "{\"uri\":\"" + uri + "\",\"range\":" +

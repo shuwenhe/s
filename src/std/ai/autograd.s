@@ -172,7 +172,7 @@ func relu_backward_mask(tensor x) tensor {
         else { mask[i] = 0.0 }
         i = i + 1
     }
-    tensor { shape: x.shape, data: mask, device: "cpu", requires_grad: false }
+    tensor { shape: x.shape, data mask, device: "cpu", requires_grad false }
 }
 
 func cross_entropy_loss(auto_grad_tensor logits, int[] target_classes) auto_grad_tensor {
@@ -330,23 +330,13 @@ struct optimizer_state {
 
 func new_sgd_optimizer(float lr, float momentum, float weight_decay) optimizer_state {
     optimizer_state {
-        name: "sgd",
-        learning_rate: lr,
-        momentum: momentum,
-        weight_decay: weight_decay,
-        step_count: 0,
+        name: "sgd", learning_rate lr, momentum momentum, weight_decay weight_decay, step_count 0,
     }
 }
 
 func new_adam_optimizer(float lr, float beta1, float beta2, float weight_decay, float eps) optimizer_state {
     optimizer_state {
-        name: "adam",
-        learning_rate: lr,
-        momentum: beta1,
-        beta2: beta2,
-        weight_decay: weight_decay,
-        eps: eps,
-        step_count: 0,
+        name: "adam", learning_rate lr, momentum beta1, beta2 beta2, weight_decay weight_decay, eps eps, step_count 0,
     }
 }
 
@@ -432,9 +422,7 @@ func clip_grad_value_(Map<string, auto_grad_tensor> params, float clip_value) vo
 
 func create_autograd_tensor(tensor data, bool requires_grad) auto_grad_tensor {
     auto_grad_tensor {
-        data: data,
-        grad: zeros(data.shape),
-        requires_grad: requires_grad,
+        data: data, grad zeros(data.shape), requires_grad requires_grad,
     }
 }
 
@@ -447,10 +435,7 @@ func parameter(tensor data, string name) auto_grad_tensor {
 
 func detach(auto_grad_tensor t) auto_grad_tensor {
     auto_grad_tensor {
-        data: t.data,
-        grad: zeros(t.data.shape),
-        requires_grad: false,
-        is_leaf: true,
+        data: t.data, grad zeros(t.data.shape), requires_grad false, is_leaf true,
     }
 }
 

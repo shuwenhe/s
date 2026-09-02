@@ -6,7 +6,7 @@ struct stack_frame {
     param_count: int
 }
 
-func new_stack_frame(name: string, param_count: int) stack_frame {
+func new_stack_frame( name string, param_count int) stack_frame {
     frame: stack_frame
     frame.function_name = name
     frame.param_count = param_count
@@ -15,7 +15,7 @@ func new_stack_frame(name: string, param_count: int) stack_frame {
     frame
 }
 
-func (sf* stack_frame) allocate_local(var_name: string, size: int) int {
+func (sf* stack_frame) allocate_local( var_name string, size int) int {
     sf.local_variables = append(sf.local_variables, var_name)
     offset := sf.frame_size
     sf.frame_size = sf.frame_size + size

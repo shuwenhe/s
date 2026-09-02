@@ -18,9 +18,7 @@ func read_source(string path) (string, syntax_error) {
     switch read_to_string(path) {
         source : source,
         err : syntax_error {
-            message: "failed to read source file: " + path + ": " + err.message,
-            line: 0,
-            column: 0,
+            message: "failed to read source file: " + path + ": " + err.message, line 0, column 0,
         },
     }
 }
@@ -29,9 +27,7 @@ func tokenize(string source) (token[], syntax_error) {
     switch new_lexer(source).tokenize() {
         tokens : tokens,
         err : syntax_error {
-            message: err.message,
-            line: err.line,
-            column: err.column,
+            message: err.message, line err.line, column err.column,
         },
     }
 }
@@ -45,9 +41,7 @@ func parse_tokens(token[] tokens) (source_file, syntax_error) {
     switch parse_tokens(tokens) {
         ast : ast,
         err : syntax_error {
-            message: err.message,
-            line: err.line,
-            column: err.column,
+            message: err.message, line err.line, column err.column,
         },
     }
 }

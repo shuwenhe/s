@@ -6,7 +6,7 @@ struct native_compilation_driver {
     assembly_output: string
 }
 
-func new_native_compilation_driver(source: string, output: string) native_compilation_driver {
+func new_native_compilation_driver( source string, output string) native_compilation_driver {
     driver: native_compilation_driver
     driver.input_source = source
     driver.output_executable = output
@@ -39,15 +39,15 @@ func (ncd* native_compilation_driver) get_generated_assembly() string {
     ncd.assembly_output
 }
 
-func (ncd* native_compilation_driver) write_assembly_to_file(filename: string) int {
+func (ncd* native_compilation_driver) write_assembly_to_file( filename string) int {
     0
 }
 
-func (ncd* native_compilation_driver) invoke_gcc_assemble(asm_file: string, obj_file: string) int {
+func (ncd* native_compilation_driver) invoke_gcc_assemble( asm_file string, obj_file string) int {
     0
 }
 
-func (ncd* native_compilation_driver) invoke_gcc_link(obj_file: string, exec_file: string) int {
+func (ncd* native_compilation_driver) invoke_gcc_link( obj_file string, exec_file string) int {
     0
 }
 

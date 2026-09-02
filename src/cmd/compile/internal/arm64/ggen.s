@@ -26,8 +26,7 @@ func zerorange(prog[] insns, int off, int cnt, bool ignored) prog[] {
         out.push(prog {
             op: "STP",
             from: "ZR,ZR",
-            to: "[SP]",
-            offset: at,
+            to: "[SP]", offset at,
             cond: "",
         })
         at = at + 16
@@ -37,8 +36,7 @@ func zerorange(prog[] insns, int off, int cnt, bool ignored) prog[] {
         out.push(prog {
             op: "MOVD",
             from: "ZR",
-            to: "[SP]",
-            offset: at,
+            to: "[SP]", offset at,
             cond: "",
         })
         at = at + 8
@@ -52,8 +50,7 @@ func ginsnop(prog[] insns) prog[] {
     out.push(prog {
         op: "HINT",
         from: "$0",
-        to: "",
-        offset: 0,
+        to: "", offset 0,
         cond: "",
     })
     out

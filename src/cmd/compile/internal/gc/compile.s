@@ -20,8 +20,7 @@ func compile_package(string[] args) compile_result {
     export_payload := dump_export_data(pkg, exported)
     obj_payload := dump_object_bundle(pkg, export_payload, "linker-objects", mode_compiler_obj() | mode_linker_obj())
     compile_result {
-        status: 0,
-        report: obj_payload,
+        status: 0, report obj_payload,
     }
 }
 

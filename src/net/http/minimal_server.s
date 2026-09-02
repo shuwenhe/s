@@ -14,9 +14,7 @@ struct server {
 
 func (s *server) add_route(string method, string path, handler_func handler) {
     s.routes.push(route_entry {
-        method: method,
-        path: path,
-        handler: handler,
+        method: method, path path, handler handler,
     })
 }
 

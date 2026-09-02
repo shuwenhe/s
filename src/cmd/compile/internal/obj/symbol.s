@@ -30,21 +30,13 @@ struct symbol_table {
 
 func make_symbol_table() symbol_table {
     symbol_table {
-        entries: symbol_entry[](),
-        names: string[](),
-        string_table_offset: 0,
+        entries: symbol_entry[](), names string[](), string_table_offset 0,
     }
 }
 
 func (st* symbol_table) add_symbol(string name, symbol_bind bind, symbol_type type, int64 value, int64 size, int section_idx) int {
     entry := symbol_entry {
-        name: name,
-        bind: bind,
-        type: type,
-        value: value,
-        size: size,
-        section_index: section_idx,
-        defined: true,
+        name: name, bind bind, type type, value value, size size, section_index section_idx, defined true,
     }
     st.entries = append(st.entries, entry)
     st.names = append(st.names, name)
@@ -127,24 +119,15 @@ func (st* symbol_table) dump() string {
 func (st* symbol_table) encode_elf_symbols() []elf_symbol {
     result := []elf_symbol()()
     null_sym := elf_symbol {
-        name: 0 as int32,
-        info: 0 as int8,
-        other: 0 as int8,
-        shndx: 0 as int16,
-        value: 0 as int64,
-        size: 0 as int64,
+        name: 0 as int32, info 0 as int8, other 0 as int8, shndx 0 as int16, value 0 as int64, size 0 as int64,
     }
     result = append(result, null_sym)
     i := 0
     for i < len(st.entries) {
         entry := st.entries[i]
         sym := elf_symbol {
-            name: (i as int32) + 1,
-            info: entry.encode_info(),
-            other: 0 as int8,
-            shndx: (entry.section_index as int16),
-            value: entry.value,
-            size: entry.size,
+            name: (i as int32) + 1, info entry.encode_info(), other 0 as int8,
+            shndx: (entry.section_index as int16), value entry.value, size entry.size,
         }
         result = append(result, sym)
         i = i + 1

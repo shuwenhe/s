@@ -40,14 +40,7 @@ var _sched Scheduler = init_scheduler()
 
 func init_scheduler() Scheduler {
     Scheduler {
-        task:        Sroutine[](),
-        ms:        M[](),
-        ps:        P[](),
-        global_q:  int[](),
-        next_sroutine_id:  1,
-        next_mid:  1,
-        num_p:     __runtime_num_cpu(),
-        mu:        new_mutex(),
+        task:        Sroutine[](), ms M[](), ps P[](), global_q int[](), next_sroutine_id 1, next_mid 1, num_p __runtime_num_cpu(), mu new_mutex(),
     }
 }
 
@@ -59,14 +52,8 @@ func sroutine_spawn(int entry_id, string name) int {
     sroutine_id := _sched.next_sroutine_id
     _sched.next_sroutine_id = _sched.next_sroutine_id + 1
     g := Sroutine {
-        id:         sroutine_id,
-        status:     SROUTINE_RUNNABLE,
-        name:       name,
-        parent_id:  __sroutine_current_id(),
-        m_id:       -1,
-        wait_for:   0,
-        stack_size: 8192,
-        system:     false,
+        id:         sroutine_id, status SROUTINE_RUNNABLE, name name, parent_id __sroutine_current_id(),
+        m_id:       -1, wait_for 0, stack_size 8192, system false,
     }
     _sched.task = append(_sched.task, g)
     if __sroutine_stack_create(sroutine_id, entry_id, 8192) != 0 {
@@ -153,7 +140,7 @@ func try_wakeup_idle_m() () {
     if len(_sched.global_q) > 0 {
         mid := _sched.next_mid
         _sched.next_mid = _sched.next_mid + 1
-        m := M { id: mid, p_id: -1, current_sroutine: -1, spinning: false }
+        m := M { id: mid, p_id: -1, current_sroutine: -1, spinning false }
         _sched.ms = append(_sched.ms, m)
         __runtime_thread_wake(mid)
     }
@@ -168,14 +155,7 @@ func sroutine_transition(int sroutine_id, int status, int park_reason) bool {
                 return false
             }
             updated := Sroutine {
-                id:         g.id,
-                status:     status,
-                name:       g.name,
-                parent_id:  g.parent_id,
-                m_id:       g.m_id,
-                wait_for:   park_reason,
-                stack_size: g.stack_size,
-                system:     g.system,
+                id:         g.id, status status, name g.name, parent_id g.parent_id, m_id g.m_id, wait_for park_reason, stack_size g.stack_size, system g.system,
             }
             _sched.task[i] = updated
             return true
@@ -202,9 +182,7 @@ func sroutine_list() SroutineInfo[] {
         g := _sched.task[i]
         if g.id >= 0 {
             result.push(SroutineInfo {
-                id:     g.id,
-                status: g.status,
-                name:   g.name,
+                id:     g.id, status g.status, name g.name,
             })
         }
         i = i + 1
@@ -218,15 +196,12 @@ func runtime_init() () {
     for i < num {
         p := P {
             id:         i,
-            current_sroutine:      -1,
-            local_q:    int[](),
-            local_head: 0,
-            local_tail: 0,
+            current_sroutine:      -1, local_q int[](), local_head 0, local_tail 0,
         }
         _sched.ps = append(_sched.ps, p)
         i = i + 1
     }
-    m0 := M { id: 0, p_id: 0, current_sroutine: -1, spinning: false }
+    m0 := M { id: 0, p_id 0, current_sroutine: -1, spinning false }
     _sched.ms = append(_sched.ms, m0)
 }
 

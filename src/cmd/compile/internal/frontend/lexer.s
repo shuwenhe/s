@@ -138,13 +138,8 @@ func is_whitespace(string c) bool {
 
 func lexer_new(string source) lexer {
     lex := lexer {
-        source: source,
-        position: 0,
-        read_position: 0,
-        current_char: ' ',
-        line: 1,
-        column: 0,
-        start_column: 0
+        source: source, position 0, read_position 0,
+        current_char: ' ', line 1, column 0, start_column 0
     }
     lexer_read_char(lex*)
     lex
@@ -507,10 +502,7 @@ func lexer_next_token(lex* lexer) token {
     }
     
     token {
-        token_type: tok_type,
-        value: tok_value,
-        line: line,
-        column: column
+        token_type: tok_type, value tok_value, line line, column column
     }
 }
 
