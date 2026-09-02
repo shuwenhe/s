@@ -1686,12 +1686,16 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 		return 0;
 	}
 	/* S permits an inferred pointer parameter written as `value*`. */
-	if (last_ident == start && p->current > start) {
+	if (last_ident == start && p->current >= start) {
 		size_t j = last_ident + 1;
 		int pointer_suffix = 0;
 		while (j < p->current && p->tokens->data[j].type == TOKEN_STAR) {
 			pointer_suffix = 1;
 			j++;
+		}
+		if (j == p->current && check(p, TOKEN_STAR)) {
+			pointer_suffix = 1;
+			advance_tok(p);
 		}
 		if (j == p->current && pointer_suffix) {
 			*out_name = dup_cstr(p->tokens->data[start].lexeme);
