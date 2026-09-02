@@ -74,7 +74,7 @@
 // 文件: src/cmd/compile/internal/frontend/lexer.s
 // 核心接口:
 //   lexer_new(source: string) lexer
-//   lexer_next_token(lex: &mut lexer) token
+//   lexer_next_token(lex: lexer*) token
 //   token_type_name(t: token) string
 
 package frontend
@@ -107,7 +107,7 @@ func lexer_new(string source) lexer {
     // 初始化词法分析器
 }
 
-func lexer_next_token(lex: &mut lexer) token {
+func lexer_next_token(lex: lexer*) token {
     // 跳过空白和注释
     // 识别 Token
     // 返回下一个 Token
@@ -155,9 +155,9 @@ const AST_STRUCT = 5
 // ... 30+ 类型
 
 func parser_new(lex: lexer) parser { }
-func parser_parse(p: &mut parser) ast_node { }
-func parser_parse_func(p: &mut parser) ast_node { }
-func parser_parse_expr(p: &mut parser, int precedence) ast_node { }
+func parser_parse(p: parser*) ast_node { }
+func parser_parse_func(p: parser*) ast_node { }
+func parser_parse_expr(p: parser*, int precedence) ast_node { }
 ```
 
 **子任务**:
@@ -197,7 +197,7 @@ struct semantic_analyzer {
     types: type_info[]
 }
 
-func semantic_analyze(ast: &ast_node) semantic_result {
+func semantic_analyze(ast: ast_node*) semantic_result {
     // 1. 构建符号表
     // 2. 类型检查
     // 3. 可达性分析
@@ -304,7 +304,7 @@ struct ir_function {
     cfg: control_flow_graph
 }
 
-func build_ir_from_ast(ast: &ast_node) ir_function[] {
+func build_ir_from_ast(ast: ast_node*) ir_function[] {
     // 遍历 AST
     // 生成 IR
     // 构建 CFG
@@ -346,21 +346,21 @@ struct liveness_info {
     use: bitset[]
 }
 
-func build_cfg(blocks: &ir_basicblock[]) control_flow_graph {
+func build_cfg(blocks: ir_basicblock*[]) control_flow_graph {
     // 建立块之间的连接
     // 计算后继/前驱
 }
 
-func compute_dominators(cfg: &control_flow_graph) {
+func compute_dominators(cfg: control_flow_graph*) {
     // 计算支配树（Lengauer-Tarjan 算法）
 }
 
-func compute_liveness(cfg: &control_flow_graph) liveness_info {
+func compute_liveness(cfg: control_flow_graph*) liveness_info {
     // 反向数据流分析
     // 计算每个指令的活跃变量
 }
 
-func compute_reaching_definitions(cfg: &control_flow_graph) reaching_def_info {
+func compute_reaching_definitions(cfg: control_flow_graph*) reaching_def_info {
     // 前向数据流分析
     // 计算到达定义
 }
@@ -391,30 +391,30 @@ struct optimization_pass {
     dependencies: int[]  // 依赖的分析
 }
 
-func opt_constant_folding(func: &ir_function) ir_function {
+func opt_constant_folding(func: ir_function*) ir_function {
     // 在编译期计算常数表达式
     // 如: 2 + 3 → 5, x * 1 → x
 }
 
-func opt_dead_code_elimination(func: &ir_function, liveness: &liveness_info) ir_function {
+func opt_dead_code_elimination(func: ir_function*, liveness: liveness_info*) ir_function {
     // 移除未使用的指令
 }
 
-func opt_global_value_numbering(func: &ir_function) ir_function {
+func opt_global_value_numbering(func: ir_function*) ir_function {
     // 消除重复计算
     // 如: a = b + c; d = b + c; → d = a;
 }
 
-func opt_licm(func: &ir_function, cfg: &control_flow_graph) ir_function {
+func opt_licm(func: ir_function*, cfg: control_flow_graph*) ir_function {
     // Loop Invariant Code Motion
     // 将循环不变式移出循环
 }
 
-func opt_inlining(module: &ir_function[], inline_hints: &int[]) ir_function[] {
+func opt_inlining(module: ir_function*[], inline_hints: int*[]) ir_function[] {
     // 函数内联（基于启发式）
 }
 
-func run_optimization_pipeline(func: &ir_function) ir_function {
+func run_optimization_pipeline(func: ir_function*) ir_function {
     // 按顺序运行优化通道
     // 1. 常数折叠
     // 2. DCE
@@ -512,7 +512,7 @@ struct ssa_rule {
     applicable_archs: int[]
 }
 
-func match_ssa_rule(instr: &ir_instruction, rules: &ssa_rule[]) ssa_rule {
+func match_ssa_rule(instr: ir_instruction*, rules: ssa_rule*[]) ssa_rule {
     // 尝试匹配规则
     // 返回成本最低的规则
 }
@@ -522,7 +522,7 @@ func init_ssa_rules(target_arch: int) ssa_rule[] {
     // 加载目标架构的规则
 }
 
-func apply_ssa_rules(ir: &ir_instruction[], rules: &ssa_rule[]) x86_64_instr[] {
+func apply_ssa_rules(ir: ir_instruction*[], rules: ssa_rule*[]) x86_64_instr[] {
     // 应用规则进行指令选择
 }
 ```
@@ -585,27 +585,27 @@ const REG_RCX = 2
 const NUM_REGS = 16
 const NUM_CALLEE_SAVED = 8
 
-func build_live_ranges(func: &ir_function) live_range[] {
+func build_live_ranges(func: ir_function*) live_range[] {
     // 从生存性信息构建活跃范围
 }
 
-func build_interference_graph(ranges: &live_range[]) interference_graph {
+func build_interference_graph(ranges: live_range*[]) interference_graph {
     // 两个范围重叠且变量互不相同 → 干涉
 }
 
-func allocate_registers(alloc: &mut register_allocator) {
+func allocate_registers(alloc: register_allocator*) {
     // 1. 按活跃范围排序
     // 2. 图着色算法
     // 3. 溢出处理
     // 4. 重新着色
 }
 
-func select_spill_candidate(graph: &interference_graph) int {
+func select_spill_candidate(graph: interference_graph*) int {
     // 选择溢出到栈的变量
     // 启发式：选择成本最低的
 }
 
-func emit_spill_code(func: &ir_function, var_id: int, stack_pos: int) {
+func emit_spill_code(func: ir_function*, var_id: int, stack_pos: int) {
     // 生成 spill 和 reload 指令
 }
 ```
@@ -647,7 +647,7 @@ struct assembler {
     rodata_section: string[]
 }
 
-func generate_code(ir: &ir_function, alloc: &register_allocator) x86_64_instr[] {
+func generate_code(ir: ir_function*, alloc: register_allocator*) x86_64_instr[] {
     // 遍历优化后的 IR
     // 应用 SSA 规则
     // 生成 x86-64 指令
@@ -664,7 +664,7 @@ func emit_function_epilogue() x86_64_instr[] {
     // ret
 }
 
-func assemble_to_asm(instrs: &x86_64_instr[]) string {
+func assemble_to_asm(instrs: x86_64_instr*[]) string {
     // 生成 GNU 汇编代码
     // .globl main
     // main:
@@ -779,7 +779,7 @@ struct linker {
     relocations_pending: relocation[]
 }
 
-func link(object_files: &string[], output: string) int {
+func link(object_files: string*[], output: string) int {
     // 1. 读取所有目标文件
     // 2. 构建全局符号表
     // 3. 合并 sections
@@ -792,24 +792,24 @@ func read_object_file(filename: string) object_file {
     // 提取 sections, symbols, relocations
 }
 
-func merge_sections(files: &object_file[]) merged_section[] {
+func merge_sections(files: object_file*[]) merged_section[] {
     // 合并相同类型的 sections
     // 计算新的地址偏移
 }
 
-func resolve_symbols(files: &object_file[]) symbol_table {
+func resolve_symbols(files: object_file*[]) symbol_table {
     // 构建符号表
     // 检测未定义的符号
     // 检测符号冲突
 }
 
-func apply_relocations(sections: &merged_section[], symbols: &symbol_table) {
+func apply_relocations(sections: merged_section*[], symbols: symbol_table*) {
     // 对每个重定位记录：
     // value = symbol_value + reloc_addend
     // 写入目标地址
 }
 
-func write_elf(output: string, sections: &merged_section[], symbols: &symbol_table) {
+func write_elf(output: string, sections: merged_section*[], symbols: symbol_table*) {
     // 写入 ELF 文件
     // 包括：header, sections, symbol table, string table
 }
@@ -855,7 +855,7 @@ struct heap_allocator {
 struct free_block {
     address: int
     size: int
-    next: &free_block
+    next: free_block*
 }
 
 func malloc(size: int) int {
@@ -871,11 +871,11 @@ func free(ptr: int) {
 }
 
 // 系统调用包装
-func sys_write(fd: int, buf: &string, count: int) int {
+func sys_write(fd: int, buf: string*, count: int) int {
     // syscall(SYSCALL_WRITE, fd, buf, count)
 }
 
-func sys_read(fd: int, buf: &string, count: int) int {
+func sys_read(fd: int, buf: string*, count: int) int {
     // syscall(SYSCALL_READ, fd, buf, count)
 }
 

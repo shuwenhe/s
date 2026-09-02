@@ -21,7 +21,7 @@ func (tc* compiler_toolchain) assemble(asm_file: string, obj_file: string) (int,
     exit_code, output
 }
 
-func (tc* compiler_toolchain) link_executable(obj_files: &string[], output: string) (int, string) {
+func (tc* compiler_toolchain) link_executable(obj_files* string[], output: string) (int, string) {
     cmd := tc.gcc_path + " "
     for i < obj_files.len() {
         cmd = cmd + obj_files[i] + " "
@@ -45,6 +45,6 @@ func (tc* compiler_toolchain) compile_to_executable(asm_file: string, obj_file: 
     0, ""
 }
 
-func (tc* compiler_toolchain) add_stdlib_objects(obj_files: &mut string[]) {
+func (tc* compiler_toolchain) add_stdlib_objects(obj_files* string[]) {
     obj_files.push("libc.so.6")
 }
