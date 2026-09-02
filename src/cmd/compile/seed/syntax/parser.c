@@ -2397,8 +2397,29 @@ static ast_node *parse_switch_statement(parser *p) {
 			ast_free(root);
 			return NULL;
 		}
-		body = parse_statement(p);
+		body = ast_new(AST_BLOCK, peek(p)->pos);
 		if (!body) {
+			ast_free(subject);
+			ast_free(case_value);
+			ast_free(root);
+			return NULL;
+		}
+		while (!check(p, TOKEN_RBRACE) && !is_at_end(p) &&
+			!(check(p, TOKEN_IDENTIFIER) &&
+			  (strcmp(peek(p)->lexeme, "case") == 0 || strcmp(peek(p)->lexeme, "default") == 0))) {
+			ast_node *stmt = parse_statement(p);
+			if (!stmt || !ast_vec_push(&body->as.block.statements, stmt)) {
+				ast_free(stmt);
+				ast_free(body);
+				ast_free(subject);
+				ast_free(case_value);
+				ast_free(root);
+				return NULL;
+			}
+		}
+		if (body->as.block.statements.len == 0) {
+			parse_error(p, peek(p), "switch arm requires a statement");
+			ast_free(body);
 			ast_free(subject);
 			ast_free(case_value);
 			ast_free(root);
@@ -2724,18 +2745,21 @@ static ast_node *parse_const_decl(parser *p) {
 		ast_free(node);
 		return NULL;
 	}
-	if (!check(p, TOKEN_ASSIGN_DECLARE)) {
+	if (!check(p, TOKEN_ASSIGN_DECLARE) && !check(p, TOKEN_ASSIGN)) {
 		char *type_name = NULL;
 		if (!try_parse_type_annotation(p, &type_name)) {
-			parse_error(p, peek(p), "expected constant type or ':='");
+			parse_error(p, peek(p), "expected constant type, '=' or ':='");
 			ast_free(node);
 			return NULL;
 		}
 		node->as.var_decl.type_name = type_name;
 	}
-	if (!expect(p, TOKEN_ASSIGN_DECLARE, "':=' after constant name")) {
+	if (!check(p, TOKEN_ASSIGN_DECLARE) && !expect(p, TOKEN_ASSIGN, "'=' or ':=' after constant name")) {
 		ast_free(node);
 		return NULL;
+	}
+	if (check(p, TOKEN_ASSIGN_DECLARE)) {
+		advance_tok(p);
 	}
 	node->as.var_decl.value = parse_expression(p);
 	if (!node->as.var_decl.value || !consume_optional_semicolon(p)) {
