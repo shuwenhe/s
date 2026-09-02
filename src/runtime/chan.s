@@ -29,15 +29,7 @@ func new_raw_chan(int cap) RawChan {
         i = i + 1
     }
     RawChan {
-        cap:       cap,
-        buf:       buf,
-        head:      0,
-        tail:      0,
-        count:     0,
-        state:     CHAN_OPEN,
-        senders:   Waiter[](),
-        receivers: Waiter[](),
-        mu:        new_mutex(),
+        cap:       cap, buf buf, head 0, tail 0, count 0, state CHAN_OPEN, senders Waiter[](), receivers Waiter[](), mu new_mutex(),
     }
 }
 
@@ -58,14 +50,14 @@ func chan_send(RawChan ch, int val) ((), string) {
             return
         }
         cur := __sroutine_current_id()
-        ch.senders = append(ch.senders, Waiter { sroutine_id: cur, val_idx: val })
+        ch.senders = append(ch.senders, Waiter { sroutine_id: cur, val_idx val })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
         return ())
     }
     for ch.count >= ch.cap {
         cur := __sroutine_current_id()
-        ch.senders = append(ch.senders, Waiter { sroutine_id: cur, val_idx: val })
+        ch.senders = append(ch.senders, Waiter { sroutine_id: cur, val_idx val })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
         ch.mu.lock()
@@ -97,24 +89,24 @@ func chan_recv(RawChan ch) recv_result {
             ch.mu.unlock()
             if w.sroutine_id >= 0 {
                 sroutine_ready(w.sroutine_id)
-                return recv_result { value: w.val_idx, ok: true }
+                return recv_result { value: w.val_idx, ok true }
             }
         }
         if ch.state == CHAN_CLOSED {
             ch.mu.unlock()
-            return recv_result { value: 0, ok: false }
+            return recv_result { value: 0, ok false }
         }
         cur := __sroutine_current_id()
         ch.receivers = append(ch.receivers, Waiter { sroutine_id: cur, val_idx: -1 })
         ch.mu.unlock()
         sroutine_park(SROUTINE_PARK_CHANNEL)
         v := chan_take_delivered(cur)
-        return recv_result { value: v, ok: true }
+        return recv_result { value: v, ok true }
     }
     for ch.count == 0 {
         if ch.state == CHAN_CLOSED {
             ch.mu.unlock()
-            return recv_result { value: 0, ok: false }
+            return recv_result { value: 0, ok false }
         }
         cur := __sroutine_current_id()
         ch.receivers = append(ch.receivers, Waiter { sroutine_id: cur, val_idx: -1 })
@@ -136,10 +128,10 @@ func chan_recv(RawChan ch) recv_result {
             ch.mu.unlock()
             sroutine_ready(w.sroutine_id)
         }
-        return recv_result { value: val, ok: true }
+        return recv_result { value: val, ok true }
     }
     ch.mu.unlock()
-    recv_result { value: val, ok: true }
+    recv_result { value: val, ok true }
 }
 
 struct recv_result {
@@ -185,12 +177,12 @@ func chan_try_recv(RawChan ch) option[recv_result] {
             ch.mu.unlock()
             if w.sroutine_id >= 0 {
                 sroutine_ready(w.sroutine_id)
-                return option::some(recv_result { value: w.val_idx, ok: true })
+                return option::some(recv_result { value: w.val_idx, ok true })
             }
         }
         if ch.state == CHAN_CLOSED {
             ch.mu.unlock()
-            return option::some(recv_result { value: 0, ok: false })
+            return option::some(recv_result { value: 0, ok false })
         }
         ch.mu.unlock()
         return option::none
@@ -198,7 +190,7 @@ func chan_try_recv(RawChan ch) option[recv_result] {
     if ch.count == 0 {
         if ch.state == CHAN_CLOSED {
             ch.mu.unlock()
-            return option::some(recv_result { value: 0, ok: false })
+            return option::some(recv_result { value: 0, ok false })
         }
         ch.mu.unlock()
         return option::none
@@ -207,7 +199,7 @@ func chan_try_recv(RawChan ch) option[recv_result] {
     ch.head  = (ch.head + 1) % ch.cap
     ch.count = ch.count - 1
     ch.mu.unlock()
-    option::some(recv_result { value: val, ok: true })
+    option::some(recv_result { value: val, ok true })
 }
 
 func chan_close(RawChan ch) ((), string) {

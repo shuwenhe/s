@@ -34,9 +34,7 @@ struct semantic_result {
 
 func symbol_table_new() symbol_table {
     symbol_table {
-        symbols: vec[symbol](),
-        scope_stack: vec[int](),
-        current_scope: 0
+        symbols: vec[symbol](), scope_stack vec[int](), current_scope 0
     }
 }
 
@@ -60,14 +58,7 @@ func symbol_table_define(st* symbol_table, string name, int kind, string type_na
     }
     
     sym := symbol {
-        name: name,
-        symbol_kind: kind,
-        value_type: type_name,
-        scope_depth: st.current_scope,
-        line: 0,
-        column: 0,
-        is_exported: 0,
-        is_mut: 0
+        name: name, symbol_kind kind, value_type type_name, scope_depth st.current_scope, line 0, column 0, is_exported 0, is_mut 0
     }
     st.symbols.push(sym)
     1
@@ -89,8 +80,7 @@ struct type_system {
 
 func type_system_new() type_system {
     type_system {
-        defined_types: vec[string](),
-        type_relations: vec[int[]]()
+        defined_types: vec[string](), type_relations vec[int[]]()
     }
 }
 
@@ -125,12 +115,7 @@ struct semantic_analyzer {
 
 func semantic_analyzer_new() semantic_analyzer {
     semantic_analyzer {
-        symbols: symbol_table_new(),
-        types: type_system_new(),
-        errors: vec[string](),
-        current_function: 0,
-        in_loop: 0,
-        in_function: 0
+        symbols: symbol_table_new(), types type_system_new(), errors vec[string](), current_function 0, in_loop 0, in_function 0
     }
 }
 
@@ -144,10 +129,7 @@ func semantic_analyze(ast* ast_node) semantic_result {
     semantic_analyze_node(&mut ana, ast)
     
     semantic_result {
-        ast: ast,
-        symbols: ana.symbols,
-        errors: ana.errors,
-        type_info: vec[string]()
+        ast: ast, symbols ana.symbols, errors ana.errors, type_info vec[string]()
     }
 }
 

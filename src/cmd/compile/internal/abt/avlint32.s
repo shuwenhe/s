@@ -26,8 +26,7 @@ struct find_result {
 
 func new_tree() t {
     t {
-        items: kv32[](),
-        size: 0,
+        items: kv32[](), size 0,
     }
 }
 
@@ -51,8 +50,7 @@ func copy_tree(t tree) t {
         i = i + 1
     }
     t {
-        items: copied,
-        size: tree.size,
+        items: copied, size tree.size,
     }
 }
 
@@ -71,7 +69,7 @@ func insert(t tree, int key, string data) string {
     i := index_of_key(tree, key)
     if i >= 0 {
         old := tree.items[i].data
-        tree.items.set(i, kv32 { key: key, data: data })
+        tree.items.set(i, kv32 { key: key, data data })
         return old
     }
     pos := lower_bound(tree, key)
@@ -81,7 +79,7 @@ func insert(t tree, int key, string data) string {
         out = append(out, tree.items[p])
         p = p + 1
     }
-    out = append(out, kv32 { key: key, data: data })
+    out = append(out, kv32 { key: key, data data })
     for p < len(tree.items) {
         out = append(out, tree.items[p])
         p = p + 1
@@ -112,18 +110,18 @@ func delete(t tree, int key) string {
 
 func min(t tree) find_result {
     if len(tree.items) == 0 {
-        return find_result { ok: false, key: not_key32, data: "" }
+        return find_result { ok: false, key not_key32, data: "" }
     }
     v := tree.items[0]
-    find_result { ok: true, key: v.key, data: v.data }
+    find_result { ok: true, key v.key, data v.data }
 }
 
 func max(t tree) find_result {
     if len(tree.items) == 0 {
-        return find_result { ok: false, key: not_key32, data: "" }
+        return find_result { ok: false, key not_key32, data: "" }
     }
     v := tree.items[len(tree.items) - 1]
-    find_result { ok: true, key: v.key, data: v.data }
+    find_result { ok: true, key v.key, data v.data }
 }
 
 func delete_min(t tree) find_result {
@@ -148,50 +146,49 @@ func glb(t tree, int key) find_result {
     i := len(tree.items) - 1
     for i >= 0 {
         if tree.items[i].key < key {
-            return find_result { ok: true, key: tree.items[i].key, data: tree.items[i].data }
+            return find_result { ok: true, key tree.items[i].key, data tree.items[i].data }
         }
         i = i - 1
     }
-    find_result { ok: false, key: not_key32, data: "" }
+    find_result { ok: false, key not_key32, data: "" }
 }
 
 func glb_eq(t tree, int key) find_result {
     i := len(tree.items) - 1
     for i >= 0 {
         if tree.items[i].key <= key {
-            return find_result { ok: true, key: tree.items[i].key, data: tree.items[i].data }
+            return find_result { ok: true, key tree.items[i].key, data tree.items[i].data }
         }
         i = i - 1
     }
-    find_result { ok: false, key: not_key32, data: "" }
+    find_result { ok: false, key not_key32, data: "" }
 }
 
 func lub(t tree, int key) find_result {
     i := 0
     for i < len(tree.items) {
         if tree.items[i].key > key {
-            return find_result { ok: true, key: tree.items[i].key, data: tree.items[i].data }
+            return find_result { ok: true, key tree.items[i].key, data tree.items[i].data }
         }
         i = i + 1
     }
-    find_result { ok: false, key: not_key32, data: "" }
+    find_result { ok: false, key not_key32, data: "" }
 }
 
 func lub_eq(t tree, int key) find_result {
     i := 0
     for i < len(tree.items) {
         if tree.items[i].key >= key {
-            return find_result { ok: true, key: tree.items[i].key, data: tree.items[i].data }
+            return find_result { ok: true, key tree.items[i].key, data tree.items[i].data }
         }
         i = i + 1
     }
-    find_result { ok: false, key: not_key32, data: "" }
+    find_result { ok: false, key not_key32, data: "" }
 }
 
 func iterator(t tree) iter32 {
     iter32 {
-        items: tree.items,
-        index: 0,
+        items: tree.items, index 0,
     }
 }
 
@@ -201,11 +198,11 @@ func done(iter32 it) bool {
 
 func next(iter32 it) find_result {
     if done(it) {
-        return find_result { ok: false, key: not_key32, data: "" }
+        return find_result { ok: false, key not_key32, data: "" }
     }
     v := it.items[it.index]
     it.index = it.index + 1
-    find_result { ok: true, key: v.key, data: v.data }
+    find_result { ok: true, key v.key, data v.data }
 }
 
 func equals(t left, t right) bool {

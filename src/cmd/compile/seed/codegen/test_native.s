@@ -18,9 +18,7 @@ struct test_suite {
 
 func (suite* test_suite) add_result(string name, bool passed, string message) {
     test_result result = {
-        name: name,
-        passed: passed,
-        message: message,
+        name: name, passed passed, message message,
     }
     suite.results = append(suite.results, result)
     if passed {
@@ -73,8 +71,7 @@ func int_to_string(int value) string {
 
 func test_codegen_emit_line() (bool, string) {
     codegen_context ctx = {
-        assembly_lines: vec[string](),
-        next_label_id: 0,
+        assembly_lines: vec[string](), next_label_id 0,
     }
     emit_line(&ctx, "    mov rax, 0")
     emit_line(&ctx, "    add rax, 1")
@@ -93,9 +90,7 @@ func test_codegen_emit_line() (bool, string) {
 
 func test_register_allocate() (bool, string) {
     register_allocator allocator = {
-        next_free_register: 0,
-        variable_map: vec[string](),
-        register_names: vec[string](),
+        next_free_register: 0, variable_map vec[string](), register_names vec[string](),
     }
     register_allocator_init(allocator*)
     int reg1 = allocate_register(&allocator, "x")
@@ -115,9 +110,7 @@ func test_register_allocate() (bool, string) {
 
 func test_register_spillover() (bool, string) {
     register_allocator allocator = {
-        next_free_register: 0,
-        variable_map: vec[string](),
-        register_names: vec[string](),
+        next_free_register: 0, variable_map vec[string](), register_names vec[string](),
     }
     register_allocator_init(allocator*)
     int regs = 0
@@ -138,8 +131,7 @@ func test_register_spillover() (bool, string) {
 func test_stackframe_allocate() (bool, string) {
     stack_frame frame = {
         base_offset: -16,
-        current_offset: -16,
-        local_variables: vec[string](),
+        current_offset: -16, local_variables vec[string](),
     }
     int offset1 = allocate_local(&frame, "x", 8)
     int offset2 = allocate_local(&frame, "y", 8)
@@ -157,9 +149,7 @@ func test_stackframe_allocate() (bool, string) {
 
 func test_stackframe_size() (bool, string) {
     stack_frame frame = {
-        base_offset: 0,
-        current_offset: 0,
-        local_variables: vec[string](),
+        base_offset: 0, current_offset 0, local_variables vec[string](),
     }
     allocate_local(&frame, "a", 8)
     allocate_local(&frame, "b", 8)
@@ -173,13 +163,10 @@ func test_stackframe_size() (bool, string) {
 
 func test_instruction_select_mov() (bool, string) {
     codegen_context ctx = {
-        assembly_lines: vec[string](),
-        next_label_id: 0,
+        assembly_lines: vec[string](), next_label_id 0,
     }
     register_allocator reg_alloc = {
-        next_free_register: 0,
-        variable_map: vec[string](),
-        register_names: vec[string](),
+        next_free_register: 0, variable_map vec[string](), register_names vec[string](),
     }
     register_allocator_init(reg_alloc*)
     instruction_select_mov(&ctx, &reg_alloc, "x", "10")
@@ -191,13 +178,10 @@ func test_instruction_select_mov() (bool, string) {
 
 func test_instruction_select_add() (bool, string) {
     codegen_context ctx = {
-        assembly_lines: vec[string](),
-        next_label_id: 0,
+        assembly_lines: vec[string](), next_label_id 0,
     }
     register_allocator reg_alloc = {
-        next_free_register: 0,
-        variable_map: vec[string](),
-        register_names: vec[string](),
+        next_free_register: 0, variable_map vec[string](), register_names vec[string](),
     }
     register_allocator_init(reg_alloc*)
     instruction_select_add(&ctx, &reg_alloc, "result", "a", "b")
@@ -209,8 +193,7 @@ func test_instruction_select_add() (bool, string) {
 
 func test_codegen_context_init() (bool, string) {
     codegen_context ctx = {
-        assembly_lines: vec[string](),
-        next_label_id: 0,
+        assembly_lines: vec[string](), next_label_id 0,
     }
     emit_preamble(ctx*)
     if len(ctx.assembly_lines) < 1 {
@@ -221,8 +204,7 @@ func test_codegen_context_init() (bool, string) {
 
 func test_multiple_functions() (bool, string) {
     codegen_context ctx = {
-        assembly_lines: vec[string](),
-        next_label_id: 0,
+        assembly_lines: vec[string](), next_label_id 0,
     }
     emit_function_prologue(&ctx, "main")
     emit_line(&ctx, "    mov rax, 1")
@@ -238,9 +220,7 @@ func test_multiple_functions() (bool, string) {
 
 func run_all_tests() test_suite {
     test_suite suite = {
-        results: vec[test_result](),
-        passed_count: 0,
-        failed_count: 0,
+        results: vec[test_result](), passed_count 0, failed_count 0,
     }
     string test_names = vec[string]()
     test_names = append(test_names, "emit_line")

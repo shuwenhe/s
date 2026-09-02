@@ -72,8 +72,7 @@ extern "intrinsic" func __sys_poller_wait(int poller_fd, int max, int timeout_ms
 func make_net_error(string msg) net_error {
     code := __sys_errno()
     net_error {
-        message:    msg + ": " + __sys_strerror(code),
-        errno_code: code,
+        message:    msg + ": " + __sys_strerror(code), errno_code code,
     }
 }
 
@@ -119,9 +118,7 @@ func accept_addr(int sockfd) (accept_result, net_error) {
         make_net_error("accept")
     } else {
         accept_result {
-            fd: newfd,
-            ip: __sys_peer_ip(newfd),
-            port: __sys_peer_port(newfd),
+            fd: newfd, ip __sys_peer_ip(newfd), port __sys_peer_port(newfd),
         }
     }
 }
@@ -174,7 +171,7 @@ func read_string(int fd, int max_bytes) (string, net_error) {
         if code == 0 {
             ""
         } else {
-            net_error { message: "read: " + __sys_strerror(code), errno_code: code }
+            net_error { message: "read: " + __sys_strerror(code), errno_code code }
         }
     } else {
         data
@@ -209,12 +206,10 @@ func recvfrom_string(int fd, int max_bytes) (recvfrom_result, net_error) {
     data := __sys_recvfrom_string(fd, max_bytes)
     code := __sys_errno()
     if data == "" && code != 0 {
-        net_error { message: "recvfrom: " + __sys_strerror(code), errno_code: code }
+        net_error { message: "recvfrom: " + __sys_strerror(code), errno_code code }
     } else {
         recvfrom_result {
-            data: data,
-            ip: __sys_last_recvfrom_ip(),
-            port: __sys_last_recvfrom_port(),
+            data: data, ip __sys_last_recvfrom_ip(), port __sys_last_recvfrom_port(),
         }
     }
 }

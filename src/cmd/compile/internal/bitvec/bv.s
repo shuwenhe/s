@@ -18,17 +18,14 @@ struct bulk {
 func new(int n) bit_vec {
     nword := (n + word_bits - 1) / word_bits
     bit_vec {
-        n: n,
-        b: make_words(nword),
+        n: n, b make_words(nword),
     }
 }
 
 func new_bulk(int nbit, int count) bulk {
     nword := (nbit + word_bits - 1) / word_bits
     bulk {
-        words: make_words(nword * count),
-        nbit: nbit,
-        nword: nword,
+        words: make_words(nword * count), nbit nbit, nword nword,
     }
 }
 
@@ -47,8 +44,7 @@ func next_bulk(bulk b) bit_vec {
     }
     b.words = rest_words
     bit_vec {
-        n: b.nbit,
-        b: out_words,
+        n: b.nbit, b out_words,
     }
 }
 

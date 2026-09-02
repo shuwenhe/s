@@ -16,7 +16,7 @@ func Listen(network string, address string) Listener {
             close(fd)
             return nil
         }
-        TCPListener l = TCPListener { fd: fd, laddr: TCPAddr { ip: ip, port: port } }
+        TCPListener l = TCPListener { fd: fd, laddr TCPAddr { ip: ip, port port } }
         *l
     } else if network == "udp" {
         fd = socket(AF_INET, SOCK_DGRAM, 0)
@@ -27,7 +27,7 @@ func Listen(network string, address string) Listener {
             close(fd)
             return nil
         }
-        UDPListener l = UDPListener { fd: fd, laddr: UDPAddr { ip: ip, port: port } }
+        UDPListener l = UDPListener { fd: fd, laddr UDPAddr { ip: ip, port port } }
         *l
     } else {
         nil

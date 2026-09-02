@@ -6,8 +6,7 @@ struct sparse_pos_entry {
 
 func make_sparse_pos_entry(int pos, int value) sparse_pos_entry {
     sparse_pos_entry {
-        pos: pos,
-        value: value,
+        pos: pos, value value,
     }
 }
 

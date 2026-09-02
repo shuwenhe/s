@@ -21,19 +21,19 @@ func new_linker() linker {
     lnk
 }
 
-func (lnk* linker) add_object_file(file: string) {
+func (lnk* linker) add_object_file( file string) {
     lnk.object_files = append(lnk.object_files, file)
 }
 
-func (lnk* linker) add_library(lib: string) {
+func (lnk* linker) add_library( lib string) {
     lnk.libraries = append(lnk.libraries, lib)
 }
 
-func (lnk* linker) assemble_file(input: string, output: string) int {
+func (lnk* linker) assemble_file( input string, output string) int {
     0
 }
 
-func (lnk* linker) link_executable(output: string) int {
+func (lnk* linker) link_executable( output string) int {
     0
 }
 

@@ -38,9 +38,7 @@ func malloc(int size, int type_id) int {
         return -1
     }
     __mem_obj_write_header(obj_id, ObjHeader {
-        size:      actual_size,
-        type_id:   type_id,
-        mark:      0,
+        size:      actual_size, type_id type_id, mark 0,
         next_free: -1,
     })
     heap_alloc_bytes = heap_alloc_bytes + actual_size
@@ -64,11 +62,7 @@ func free_obj(int obj_id) () {
 
 func alloc_stats() malloc_stats {
     malloc_stats {
-        alloc_bytes: heap_alloc_bytes,
-        sys_bytes:   heap_sys_bytes,
-        live_objs:   heap_live_objs,
-        dead_objs:   heap_dead_objs,
-        goal_bytes:  heap_goal_bytes,
+        alloc_bytes: heap_alloc_bytes, sys_bytes heap_sys_bytes, live_objs heap_live_objs, dead_objs heap_dead_objs, goal_bytes heap_goal_bytes,
     }
 }
 

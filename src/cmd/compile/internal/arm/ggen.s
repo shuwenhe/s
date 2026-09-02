@@ -18,8 +18,7 @@ func zerorange(prog[] insns, int off, int cnt, bool r0_ready) prog[] {
         out.push(prog {
             op: "MOVW",
             from: "$0",
-            to: "R0",
-            offset: 0,
+            to: "R0", offset 0,
             cond: "",
         })
         has_r0 = true
@@ -31,8 +30,7 @@ func zerorange(prog[] insns, int off, int cnt, bool r0_ready) prog[] {
             out.push(prog {
                 op: "MOVW",
                 from: "R0",
-                to: "[SP]",
-                offset: 4 + off + i,
+                to: "[SP]", offset 4 + off + i,
                 cond: "",
             })
             i = i + ptr_size
@@ -43,8 +41,7 @@ func zerorange(prog[] insns, int off, int cnt, bool r0_ready) prog[] {
         out.push(prog {
             op: "DUFFZERO",
             from: "SP",
-            to: "R1",
-            offset: 4 + off,
+            to: "R1", offset 4 + off,
             cond: "",
         })
         return out
@@ -54,8 +51,7 @@ func zerorange(prog[] insns, int off, int cnt, bool r0_ready) prog[] {
         out.push(prog {
             op: "MOVW",
             from: "R0",
-            to: "[R1]",
-            offset: 4 + off + at,
+            to: "[R1]", offset 4 + off + at,
             cond: "postinc",
         })
         at = at + ptr_size
@@ -68,8 +64,7 @@ func ginsnop(prog[] insns) prog[] {
     out.push(prog {
         op: "AND",
         from: "R0",
-        to: "R0",
-        offset: 0,
+        to: "R0", offset 0,
         cond: "EQ",
     })
     out

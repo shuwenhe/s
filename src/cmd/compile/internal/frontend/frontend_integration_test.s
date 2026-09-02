@@ -238,7 +238,7 @@ func test_frontend_complex_expression() int {
 }
 
 func test_frontend_switch_statement() int {
-    source := "func test(x: int) int {
+    source := "func test( x int) int {
     switch x {
     case 1 : return 10
     case 2 : return 20

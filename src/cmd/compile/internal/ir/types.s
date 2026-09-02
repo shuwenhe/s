@@ -13,13 +13,13 @@ struct Type {
     Type[] params,
 }
 
-func NewPrimitive(string name) Type { Type { kind: TypeKind::primitive, name: name } }
+func NewPrimitive(string name) Type { Type { kind: TypeKind::primitive, name name } }
 
-func NewPointer(Type inner) Type { Type { kind: TypeKind::pointer, inner: option[Type].some(inner) } }
+func NewPointer(Type inner) Type { Type { kind: TypeKind::pointer, inner option[Type].some(inner) } }
 
-func NewSlice(Type inner) Type { Type { kind: TypeKind::slice, inner: option[Type].some(inner) } }
+func NewSlice(Type inner) Type { Type { kind: TypeKind::slice, inner option[Type].some(inner) } }
 
-func NewNamed(string name, Type[] params) Type { Type { kind: TypeKind::named, name: name, params: params } }
+func NewNamed(string name, Type[] params) Type { Type { kind: TypeKind::named, name name, params params } }
 
 func TypeToString(Type t) string {
     switch t.kind {

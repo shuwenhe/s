@@ -89,11 +89,7 @@ func parse_ir(string content) (IRProgram, error) {
             parts := split_string(line, "|")
             if len(parts) >= 2 {
                 instr := Instruction{
-                    opcode: parts[0],
-                    dest: if len(parts) > 1 then parts[1] else "",
-                    src1: if len(parts) > 2 then parts[2] else "",
-                    src2: if len(parts) > 3 then parts[3] else "",
-                    src3: if len(parts) > 4 then parts[4] else "",
+                    opcode: parts[0], dest if len(parts) > 1 then parts[1] else "", src1 if len(parts) > 2 then parts[2] else "", src2 if len(parts) > 3 then parts[3] else "", src3 if len(parts) > 4 then parts[4] else "",
                 }
                 current_func.instructions = append(current_func.instructions, instr)
             }
@@ -110,8 +106,7 @@ func parse_ir(string content) (IRProgram, error) {
 func generate_x86_64(IRProgram program) (string, error) {
     codegen := X86_64CodeGen{
         program: program,
-        buffer: []byte{},
-        label_counter: 0,
+        buffer: []byte{}, label_counter 0,
     }
     asm := ""
     asm += ".globl main\n"

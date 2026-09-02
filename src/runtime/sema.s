@@ -13,8 +13,7 @@ struct Semaphore {
 
 func new_semaphore(int initial) Semaphore {
     Semaphore {
-        id:    __sema_new_id(),
-        count: initial,
+        id:    __sema_new_id(), count initial,
     }
 }
 
@@ -52,8 +51,7 @@ struct Mutex {
 
 func new_mutex() Mutex {
     Mutex {
-        state: 0,
-        sem:   new_semaphore(0),
+        state: 0, sem new_semaphore(0),
     }
 }
 
@@ -89,10 +87,7 @@ struct RWMutex {
 
 func new_rwmutex() RWMutex {
     RWMutex {
-        readers:   0,
-        writer:    0,
-        write_mu:  new_mutex(),
-        read_sem:  new_semaphore(0),
+        readers:   0, writer 0, write_mu new_mutex(), read_sem new_semaphore(0),
     }
 }
 
@@ -130,7 +125,7 @@ struct Once {
 }
 
 func new_once() Once {
-    Once { done: 0, mu: new_mutex() }
+    Once { done: 0, mu new_mutex() }
 }
 
 func (Once* self) do(func f) () {

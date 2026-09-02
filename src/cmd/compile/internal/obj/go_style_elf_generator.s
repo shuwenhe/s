@@ -18,9 +18,7 @@ func make_go_style_elf_generator(
     relocation_context* reloc_ctx
 ) go_style_elf_generator {
     go_style_elf_generator {
-        writer: writer,
-        symtab: symtab,
-        reloc_ctx: reloc_ctx,
+        writer: writer, symtab symtab, reloc_ctx reloc_ctx,
         text_section: []int8()(),
         data_section: []int8()(),
         rodata_section: []int8()(),
@@ -33,16 +31,7 @@ func make_go_style_elf_generator(
 func (gen* go_style_elf_generator) write_section_header(string name, int32 type, int64 flags, int64 size) int32 {
     name_offset := gen.add_to_string_table(name)
     section := elf_section_header {
-        name: name_offset,
-        type: type,
-        flags: flags,
-        addr: 0 as int64,
-        offset: 0 as int64,
-        size: size,
-        link: 0 as int32,
-        info: 0 as int32,
-        addralign: if type == 1 as int32 { 16 as int64 } else { 1 as int64 },
-        entsize: 0 as int64,
+        name: name_offset, type type, flags flags, addr 0 as int64, offset 0 as int64, size size, link 0 as int32, info 0 as int32, addralign if type == 1 as int32 { 16 as int64 } else { 1 as int64 }, entsize 0 as int64,
     }
     gen.sections = append(gen.sections, section)
     (len(gen.sections) - 1) as int32
@@ -65,12 +54,7 @@ func (gen* go_style_elf_generator) write_symbol(
     name_offset := gen.add_to_string_table(name)
     info := ((binding & 0xf) << 4) + (type & 0xf) as int8
     sym := elf_symbol {
-        name: name_offset,
-        info: info,
-        other: 0 as int8,
-        shndx: shndx,
-        value: value,
-        size: size,
+        name: name_offset, info info, other 0 as int8, shndx shndx, value value, size size,
     }
     gen.symbols = append(gen.symbols, sym)
     (len(gen.symbols) - 1) as int32

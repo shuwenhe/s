@@ -1,4 +1,4 @@
-func try_exec_if_present(path: string, args: [string]) {
+func try_exec_if_present( path string, args: [string]) {
     if path != nil && path != "" && os.is_executable(path) {
         os.execv(path, args)
     }

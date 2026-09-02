@@ -54,10 +54,7 @@ func make_register_allocator() register_allocator {
     free_regs = append(free_regs, REG_R13)
     free_regs = append(free_regs, REG_R14)
     register_allocator {
-        free_regs: free_regs,
-        allocated: int[](),
-        reg_count: 12,
-        current_temp: 0,
+        free_regs: free_regs, allocated int[](), reg_count 12, current_temp 0,
     }
 }
 
@@ -82,17 +79,8 @@ func make_amd64_code_gen(
     codegen_config cfg
 ) amd64_code_gen {
     amd64_code_gen {
-        mcg: mcg,
-        symtab: symtab,
-        reloc_ctx: reloc_ctx,
-        config: cfg,
-        reg_alloc: make_register_allocator(),
-        current_func_name: "",
-        stack_depth: 0 as int64,
-        max_stack_depth: 0 as int64,
-        function_start_offset: 0 as int64,
-        label_counter: 0,
-        temp_locations: int64[](),
+        mcg: mcg, symtab symtab, reloc_ctx reloc_ctx, config cfg, reg_alloc make_register_allocator(),
+        current_func_name: "", stack_depth 0 as int64, max_stack_depth 0 as int64, function_start_offset 0 as int64, label_counter 0, temp_locations int64[](),
     }
 }
 

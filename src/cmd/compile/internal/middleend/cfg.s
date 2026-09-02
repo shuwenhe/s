@@ -40,19 +40,14 @@ struct loop_info {
 // CFG 构造
 func cfg_new(func ir_function) control_flow_graph {
     cfg := control_flow_graph {
-        function: func,
-        entry_block_id: 0
+        function: func, entry_block_id 0
     }
     
     // 从 IR 函数构建 CFG 块
     for i := 0; i < func.basic_blocks.len(); i = i + 1 {
         ir_block := func.basic_blocks[i]
         cfg_block := cfg_block {
-            block_id: ir_block.block_id,
-            label: ir_block.label,
-            instructions: ir_block.instructions,
-            predecessors: ir_block.predecessors,
-            successors: ir_block.successors
+            block_id: ir_block.block_id, label ir_block.label, instructions ir_block.instructions, predecessors ir_block.predecessors, successors ir_block.successors
         }
         cfg.blocks = append(cfg.blocks, cfg_block)
     }
@@ -270,8 +265,7 @@ func cfg_find_or_create_loop(loops loop_info[], header_id int) int {
     
     // 创建新循环
     new_loop := loop_info {
-        loop_id: loops.len(),
-        header_id: header_id
+        loop_id: loops.len(), header_id header_id
     }
     loops = append(loops, new_loop)
     loops.len() - 1

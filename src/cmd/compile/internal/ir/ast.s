@@ -93,5 +93,5 @@ struct map_entry_expr { expr_ir key, expr_ir value }
 struct map_expr { option[string] type_name, map_entry_expr[] entries }
 
 func make_empty_package(string name) package_ir {
-    package_ir { name: name, decls: decl_ir[]() }
+    package_ir { name: name, decls decl_ir[]() }
 }

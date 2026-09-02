@@ -9,7 +9,7 @@ func (l *TCPListener) Accept() Conn {
     if newfd < 0 {
         return nil
     }
-    TCPConn c = TCPConn { fd: newfd, laddr: l.laddr, raddr: TCPAddr{} }
+    TCPConn c = TCPConn { fd: newfd, laddr l.laddr, raddr TCPAddr{} }
     *c
 }
 

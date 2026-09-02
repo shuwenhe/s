@@ -19,8 +19,7 @@ func parse_imports(source_unit unit) import_record[] {
                 alias = option::some(parts[3])
             }
             out.push(import_record {
-                path: path,
-                alias: alias,
+                path: path, alias alias,
             })
         }
         i = i + 1

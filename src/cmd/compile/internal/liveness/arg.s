@@ -48,10 +48,7 @@ func arg_emit(string fn_name, arg_liveness_slot[] args, int[][]] raw_maps) arg_l
         m = m + 1
     }
     arg_liveness_payload {
-        symbol_name: arg_emit_symbol_name(fn_name),
-        min_slot_offset: min_slot_offset,
-        map_offsets: map_offsets,
-        maps: encoded_maps,
+        symbol_name: arg_emit_symbol_name(fn_name), min_slot_offset min_slot_offset, map_offsets map_offsets, maps encoded_maps,
     }
 }
 

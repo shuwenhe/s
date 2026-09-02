@@ -7,7 +7,7 @@ trait measure {
     func size() int;
 }
 
-func (p: point) size() int {
+func ( p point) size() int {
     p.x + p.y
 }
 

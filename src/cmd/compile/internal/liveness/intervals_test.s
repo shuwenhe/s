@@ -6,10 +6,10 @@ func intervals_test_case_name() string {
 
 func intervals_test_case_pass() int {
     events := live_event[]()
-    events = append(events, live_event { point: 0, value_id: 1, on: true })
-    events = append(events, live_event { point: 3, value_id: 1, on: false })
-    events = append(events, live_event { point: 2, value_id: 2, on: true })
-    events = append(events, live_event { point: 6, value_id: 2, on: false })
+    events = append(events, live_event { point: 0, value_id 1, on true })
+    events = append(events, live_event { point: 3, value_id 1, on false })
+    events = append(events, live_event { point: 2, value_id 2, on true })
+    events = append(events, live_event { point: 6, value_id 2, on false })
     ivs := build_live_intervals(events)
     if len(ivs) != 2 {
         return 0
