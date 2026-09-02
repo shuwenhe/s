@@ -84,7 +84,7 @@ func run_arch_init(string init_name) string {
         return s390x_init(
     }
     if init_name == "wasm_init" {
-        return wasm_init(
+        return wasm_init()
     }
     "unknown architecture init \"" + init_name + "\""
 }
@@ -102,7 +102,7 @@ func arm_init() string {
 }
 
 func arm64_init() string {
-    ""
+    "arm64 backend: aarch64 registers, stack ABI, and relocation hooks"
 }
 
 func loong64_init() string {
@@ -134,7 +134,7 @@ func s390x_init() string {
 }
 
 func wasm_init() string {
-    ""
+    "wasm backend: value stack ABI and linear-memory relocation hooks"
 }
 
 func not_wired(string arch) string {

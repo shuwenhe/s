@@ -5,17 +5,17 @@ import (
 )
 
 struct file {
-	fd   i32
-	name string
+	i32 fd
+	string name
 }
 
 struct file_error {
-	op   string
-	path string
-	err  error
+	string op
+	string path
+	error err
 }
 
-func (fe file_error*) error() string {
+func (file_error* fe) error() string {
 	fe.op + " " + fe.path + ": " + fe.err
 }
 
@@ -41,7 +41,7 @@ func create(name string) (file*, error) {
 	f, nil
 }
 
-func (f file*) read(b u8[]) (i32, error) {
+func (file* f) read(b u8[]) (i32, error) {
 	if f == nil || f.fd < 0 {
 		0, &file_error{op: "read", path: f.name, err: "file closed"}
 	}
@@ -54,7 +54,7 @@ func (f file*) read(b u8[]) (i32, error) {
 	n, nil
 }
 
-func (f file*) read_at(b u8[], offset i64) (i32, error) {
+func (file* f) read_at(b u8[], offset i64) (i32, error) {
 	if f == nil || f.fd < 0 {
 		0, &file_error{op: "read", path: f.name, err: "file closed"}
 	}
@@ -67,7 +67,7 @@ func (f file*) read_at(b u8[], offset i64) (i32, error) {
 	n, nil
 }
 
-func (f file*) write(b u8[]) (i32, error) {
+func (file* f) write(b u8[]) (i32, error) {
 	if f == nil || f.fd < 0 {
 		0, &file_error{op: "write", path: f.name, err: "file closed"}
 	}
@@ -80,7 +80,7 @@ func (f file*) write(b u8[]) (i32, error) {
 	n, nil
 }
 
-func (f file*) write_at(b u8[], offset i64) (i32, error) {
+func (file* f) write_at(b u8[], offset i64) (i32, error) {
 	if f == nil || f.fd < 0 {
 		0, &file_error{op: "write", path: f.name, err: "file closed"}
 	}
@@ -93,7 +93,7 @@ func (f file*) write_at(b u8[], offset i64) (i32, error) {
 	n, nil
 }
 
-func (f file*) close() error {
+func (file* f) close() error {
 	if f == nil || f.fd < 0 {
 		nil
 	}

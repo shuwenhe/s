@@ -96,11 +96,24 @@ func intervals_interfere(i1 live_interval, i2 live_interval) int {
 func register_allocator_allocate(allocator* register_allocator) {
     for i := 0; i < allocator.intervals.len(); i = i + 1 {
         interval := allocator.intervals[i]
-        
-        available_regs := get_available_registers(allocator)
-        
-        if available_regs.len() > 0 {
-            interval.assigned_reg = available_regs[0]
+        assigned := -1
+        for reg := 0; reg < 14; reg = reg + 1 {
+            blocked := 0
+            for j := 0; j < i; j = j + 1 {
+                if allocator.intervals[j].assigned_reg == reg &&
+                    allocator.graph.edges[i][j] != 0 {
+                    blocked = 1
+                    break
+                }
+            }
+            if blocked == 0 {
+                assigned = reg
+                break
+            }
+        }
+
+        if assigned >= 0 {
+            interval.assigned_reg = assigned
         } else {
             interval.spilled = 1
             allocator.spill_count = allocator.spill_count + 1
@@ -147,4 +160,26 @@ func register_allocator_insert_spill_code(allocator* register_allocator, x86_ins
             instrs.append(spill_instr)
         }
     }
+}
+
+struct spill_reload_action {
+    int value_id
+    int stack_offset
+    int instruction_index
+    bool reload
+}
+
+// Generate both sides of each spill. The backend can lower these actions to
+// target-specific loads and stores after register allocation.
+func register_allocator_spill_reload_plan(register_allocator* allocator) spill_reload_action[] {
+    actions := spill_reload_action[]()
+    for i := 0; i < allocator.intervals.len(); i = i + 1 {
+        interval := allocator.intervals[i]
+        if interval.spilled != 0 {
+            offset := -(i + 1) * 8
+            actions.push(spill_reload_action { value_id: interval.var_id, stack_offset: offset, instruction_index: interval.start, reload: false })
+            actions.push(spill_reload_action { value_id: interval.var_id, stack_offset: offset, instruction_index: interval.end, reload: true })
+        }
+    }
+    actions
 }
