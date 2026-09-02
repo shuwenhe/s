@@ -180,6 +180,96 @@ done:
 	return ok;
 }
 #ifndef SEED_COMPILE_ONLY
+static void dump_ast_indent(FILE *out, int indent) {
+	while (indent-- > 0) fputs("  ", out);
+}
+static void dump_ast_node(const ast_node *node, FILE *out, int indent) {
+	size_t i;
+	if (!node) {
+		dump_ast_indent(out, indent);
+		fputs("<null>\n", out);
+		return;
+	}
+	dump_ast_indent(out, indent);
+	fprintf(out, "%s @%zu:%zu", ast_kind_name(node->kind), node->pos.line, node->pos.column);
+	switch (node->kind) {
+	case AST_FN_STMT:
+		fprintf(out, " name=%s params=%zu\n", node->as.fn_stmt.name, node->as.fn_stmt.param_count);
+		for (i = 0; i < node->as.fn_stmt.param_count; i++) {
+			dump_ast_indent(out, indent + 1);
+			fprintf(out, "param=%s type=%s\n", node->as.fn_stmt.params[i],
+				node->as.fn_stmt.param_types ? node->as.fn_stmt.param_types[i] : "<any>");
+		}
+		dump_ast_node(node->as.fn_stmt.body, out, indent + 1);
+		return;
+	case AST_LET_STMT:
+		fprintf(out, " name=%s type=%s mutable=%d\n", node->as.let_stmt.name,
+			node->as.let_stmt.type_name ? node->as.let_stmt.type_name : "<inferred>",
+			node->as.let_stmt.mutable ? 1 : 0);
+		dump_ast_node(node->as.let_stmt.value, out, indent + 1);
+		return;
+	case AST_IDENT_EXPR:
+		fprintf(out, " name=%s\n", node->as.ident_expr.name);
+		return;
+	case AST_ASSIGN_STMT:
+		fprintf(out, " name=%s\n", node->as.assign_stmt.name);
+		dump_ast_node(node->as.assign_stmt.value, out, indent + 1);
+		return;
+	case AST_RETURN_STMT:
+		fputc('\n', out);
+		dump_ast_node(node->as.return_stmt.value, out, indent + 1);
+		return;
+	case AST_MEMBER_EXPR:
+		fprintf(out, " member=%s\n", node->as.member_expr.member);
+		dump_ast_node(node->as.member_expr.object, out, indent + 1);
+		return;
+	case AST_UNARY_EXPR:
+		fprintf(out, " op=%s\n", token_type_name(node->as.unary_expr.op));
+		dump_ast_node(node->as.unary_expr.operand, out, indent + 1);
+		return;
+	case AST_STRUCT_EXPR:
+		fprintf(out, " type=%s fields=%zu\n", node->as.struct_expr.type_name,
+			node->as.struct_expr.field_count);
+		for (i = 0; i < node->as.struct_expr.field_count; i++) {
+			dump_ast_indent(out, indent + 1);
+			fprintf(out, "field=%s\n", node->as.struct_expr.field_names[i]);
+			dump_ast_node(node->as.struct_expr.field_values.data[i], out, indent + 2);
+		}
+		return;
+	case AST_BLOCK:
+	case AST_PROGRAM:
+		fputc('\n', out);
+		for (i = 0; i < (node->kind == AST_BLOCK ? node->as.block.statements.len : node->as.program.statements.len); i++)
+			dump_ast_node(node->kind == AST_BLOCK ? node->as.block.statements.data[i] : node->as.program.statements.data[i], out, indent + 1);
+		return;
+	case AST_CALL_EXPR:
+		fputs("\n", out);
+		dump_ast_node(node->as.call_expr.callee, out, indent + 1);
+		for (i = 0; i < node->as.call_expr.args.len; i++) dump_ast_node(node->as.call_expr.args.data[i], out, indent + 1);
+		return;
+	default:
+		fputc('\n', out);
+		return;
+	}
+}
+static bool seed_dump_ast_file(const char *input_path, const char *output_path, compile_error *err) {
+	char *source = NULL;
+	token_vec tokens;
+	parse_result parsed;
+	FILE *out;
+	if (!read_file_text(input_path, &source, err)) return false;
+	if (!lexer_scan(source, &tokens, err)) { free(source); return false; }
+	parsed = parser_parse_tokens(&tokens, err);
+	token_vec_free(&tokens);
+	if (!parsed.root) { free(source); return false; }
+	out = fopen(output_path, "wb");
+	if (!out) { parser_parse_result_free(&parsed); free(source); error_set(err, ERR_SEMANTIC, 0, 0, "failed to open AST output: %s", output_path); return false; }
+	dump_ast_node(parsed.root, out, 0);
+	fclose(out);
+	parser_parse_result_free(&parsed);
+	free(source);
+	return true;
+}
 static void write_hex(FILE *out, const char *text) {
 	static const char digits[] = "0123456789abcdef";
 	const unsigned char *p = (const unsigned char *)(text ? text : "");
@@ -305,6 +395,7 @@ static void print_usage(const char *argv0) {
 	fprintf(stderr, "  %s --probe-backend <native|c-abi|cuda|cann>\n", argv0);
 	fprintf(stderr, "  %s --bootstrap <compiler_source.s> [output_dir]\n", argv0);
 	fprintf(stderr, "  %s --dump-tokens <input.s> <output.tokens>\n", argv0);
+	fprintf(stderr, "  %s --dump-ast <input.s> <output.ast>\n", argv0);
 	fprintf(stderr, "  %s --link-ir <output.ir> <input.ir>...\n", argv0);
 	fprintf(stderr, "  %s --compile-unit <output.ir> <input.s>...\n", argv0);
 }
@@ -352,6 +443,11 @@ int main(int argc, char **argv) {
 			print_compile_error(&err);
 			return 1;
 		}
+		return 0;
+	}
+	if (argc >= 2 && strcmp(argv[1], "--dump-ast") == 0) {
+		if (argc != 4) { print_usage(argv[0]); return 2; }
+		if (!seed_dump_ast_file(argv[2], argv[3], &err)) { print_compile_error(&err); return 1; }
 		return 0;
 	}
 	if (argc >= 2 && strcmp(argv[1], "--probe-backend") == 0) {
