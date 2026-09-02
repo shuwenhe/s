@@ -25,6 +25,13 @@ struct stack_frame {
     int slot_count
 }
 
+const callee_saved_rbx = 0x1
+const callee_saved_r12 = 0x2
+const callee_saved_r13 = 0x4
+const callee_saved_r14 = 0x8
+const callee_saved_r15 = 0x10
+const callee_saved_rbp = 0x20
+
 func liveness_analyzer_new(int block_count, int var_count) liveness_analyzer* {
     analyzer := liveness_analyzer {
         block_count: block_count,
@@ -273,10 +280,3 @@ func (frame* stack_frame) verify_alignment() int {
     
     return 0
 }
-
-const callee_saved_rbx = 0x1
-const callee_saved_r12 = 0x2
-const callee_saved_r13 = 0x4
-const callee_saved_r14 = 0x8
-const callee_saved_r15 = 0x10
-const callee_saved_rbp = 0x20
