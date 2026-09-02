@@ -1681,7 +1681,32 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 		}
 		advance_tok(p);
 	}
-	if (last_ident == (size_t)-1 || last_ident == start) {
+	if (last_ident == (size_t)-1) {
+		p->current = saved;
+		return 0;
+	}
+	/* S permits an inferred pointer parameter written as `value*`. */
+	if (last_ident == start && p->current > start) {
+		size_t j = last_ident + 1;
+		int pointer_suffix = 0;
+		while (j < p->current && p->tokens->data[j].type == TOKEN_STAR) {
+			pointer_suffix = 1;
+			j++;
+		}
+		if (j == p->current && pointer_suffix) {
+			*out_name = dup_cstr(p->tokens->data[start].lexeme);
+			*out_type = dup_cstr("any*");
+			if (!*out_name || !*out_type) {
+				free(*out_name); free(*out_type);
+				*out_name = NULL; *out_type = NULL;
+				error_set(p->err, ERR_OUT_OF_MEMORY, p->tokens->data[start].pos.line, p->tokens->data[start].pos.column, "out of memory");
+				p->current = saved;
+				return 0;
+			}
+			return 1;
+		}
+	}
+	if (last_ident == start) {
 		p->current = saved;
 		return 0;
 	}
