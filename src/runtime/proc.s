@@ -105,12 +105,18 @@ func schedule() () {
 
 func find_runnable() int {
     _sched.mu.lock()
-    if !_sched.global_q.is_empty() {
-        sroutine_id := _sched.global_q[0]
-        if sroutine_id >= 0 {
-            _sched.global_q[0] = -1
+    for !_sched.global_q.is_empty() {
+        first := _sched.global_q[0]
+        next_q := int[]()
+        var i = 1
+        for i < len(_sched.global_q) {
+            next_q.push(_sched.global_q[i])
+            i = i + 1
+        }
+        _sched.global_q = next_q
+        if first >= 0 {
             _sched.mu.unlock()
-            return sroutine_id
+            return first
         }
     }
     _sched.mu.unlock()
