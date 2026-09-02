@@ -1941,6 +1941,16 @@ static ast_node *parse_fn_statement(parser *p) {
 				ast_free(node);
 				return NULL;
 			}
+			if (check(p, TOKEN_STAR)) {
+				advance_tok(p);
+				free(param_type);
+				param_type = dup_cstr("any*");
+				if (!param_type) {
+					free(param_name);
+					ast_free(node);
+					return NULL;
+				}
+			}
 			{
 				char *parsed_type = NULL;
 				if (try_parse_type_annotation(p, &parsed_type)) {
