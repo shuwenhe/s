@@ -138,7 +138,20 @@ static type_field_info *find_type_info(const char *type_name) {
 }
 static int register_type_fields(const char *type_name, char **field_names, char **field_types, size_t field_count) {
 	if (!type_name) return 0;
-	if (find_type_info(type_name)) return 1;
+	{
+		type_field_info *existing = find_type_info(type_name);
+		if (existing) {
+			for (size_t i = 0; i < field_count && i < existing->field_count; i++) {
+				if (existing->field_types[i] && strcmp(existing->field_types[i], TYPE_ANY) == 0 && field_types[i] && strcmp(field_types[i], TYPE_ANY) != 0) {
+					char *replacement = dup_cstr(field_types[i]);
+					if (!replacement) return 0;
+					free(existing->field_types[i]);
+					existing->field_types[i] = replacement;
+				}
+			}
+			return 1;
+		}
+	}
 	type_field_info *t = (type_field_info *)malloc(sizeof(type_field_info));
 	if (!t) return 0;
 	t->type_name = dup_cstr(type_name);
@@ -838,8 +851,21 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			lookup_type = lhs_type;
 			if (lookup_type && strncmp(lookup_type, "&mut", 4) == 0) lookup_type += 4;
 			else if (lookup_type && lookup_type[0] == '&') lookup_type++;
+			if (lookup_type) {
+				size_t lookup_len = strlen(lookup_type);
+				if (lookup_len > 0 && lookup_type[lookup_len - 1] == '*') {
+					char *base = dup_cstr(lookup_type);
+					if (!base) return 0;
+					base[lookup_len - 1] = '\0';
+					lookup_type = base;
+				}
+			}
 			if (lhs_type) {
 				const char *resolved = NULL;
+				if (strcmp(lookup_type, TYPE_STRING) == 0 && strcmp(node->as.member_expr.member, "len") == 0) {
+					*out_type = TYPE_INT;
+					return 1;
+				}
 				if (strncmp(lhs_type, "[]", 2) == 0) {
 					char *elem = (char *)lhs_type + 2;
 					resolved = lookup_field_type(elem, node->as.member_expr.member);
@@ -865,10 +891,10 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 						if (!analyze_expr(ctx, se->as.struct_expr.field_values.data[ii], &ft)) ft = TYPE_ANY;
 						f_types[ii] = dup_cstr(ft ? ft : TYPE_ANY);
 					}
-					register_type_fields(lhs_type, f_names, f_types, fc);
+					register_type_fields(lookup_type, f_names, f_types, fc);
 					for (size_t ii = 0; ii < fc; ii++) { free(f_names[ii]); free(f_types[ii]); }
 					free(f_names); free(f_types);
-					resolved = lookup_field_type(lhs_type, node->as.member_expr.member);
+					resolved = lookup_field_type(lookup_type, node->as.member_expr.member);
 					if (resolved) { *out_type = resolved; return 1; }
 				}
 			}
@@ -1131,6 +1157,25 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				}
 				if (lhs_type && strncmp(lhs_type, "&mut", 4) == 0) lhs_type += 4;
 				else if (lhs_type && lhs_type[0] == '&') lhs_type++;
+				if (lhs_type) {
+					size_t lhs_len = strlen(lhs_type);
+					if (lhs_len > 0 && lhs_type[lhs_len - 1] == '*') {
+						char *normalized = dup_cstr(lhs_type);
+						if (!normalized) return 0;
+						normalized[lhs_len - 1] = '\0';
+						lhs_type = normalized;
+					}
+				}
+				if (lhs_type && strcmp(lhs_type, TYPE_STRING) == 0 && strcmp(member->as.member_expr.member, "len") == 0) {
+					if (node->as.call_expr.args.len != 0) {
+						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "string.len expects no arguments");
+						return 0;
+					}
+					free(member->as.member_expr.resolved_method);
+					member->as.member_expr.resolved_method = dup_cstr("__string_len");
+					*out_type = TYPE_INT;
+					return 1;
+				}
 				if ((lhs_type && strncmp(lhs_type, "vec[", 4) == 0) ||
 					(lhs_type && strcmp(lhs_type, TYPE_ARRAY) == 0)) {
 					const char *method = member->as.member_expr.member;
@@ -1284,6 +1329,27 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 	}
 	switch (node->kind) {
 		case AST_PROGRAM:
+			/* Register declared record layouts before analyzing any function bodies. */
+			for (i = 0; i < node->as.program.statements.len; i++) {
+				ast_node *decl = node->as.program.statements.data[i];
+				if (decl->kind == AST_LET_STMT && decl->as.let_stmt.type_name &&
+					strcmp(decl->as.let_stmt.type_name, "struct") == 0 &&
+					decl->as.let_stmt.value && decl->as.let_stmt.value->kind == AST_STRUCT_EXPR) {
+					ast_node *layout = decl->as.let_stmt.value;
+					if (layout->as.struct_expr.type_name && layout->as.struct_expr.field_count > 0) {
+						size_t n = layout->as.struct_expr.field_count;
+						char **types = (char **)calloc(n, sizeof(char *));
+						if (!types) { error_set(ctx->err, ERR_OUT_OF_MEMORY, decl->pos.line, decl->pos.column, "out of memory"); return 0; }
+						for (size_t j = 0; j < n; j++) {
+							ast_node *value = layout->as.struct_expr.field_values.data[j];
+							types[j] = dup_cstr(value && value->kind == AST_STRING_EXPR && value->as.string_expr.literal ? value->as.string_expr.literal : TYPE_ANY);
+						}
+						register_type_fields(layout->as.struct_expr.type_name, layout->as.struct_expr.field_names, types, n);
+						for (size_t j = 0; j < n; j++) free(types[j]);
+						free(types);
+					}
+				}
+			}
 			for (i = 0; i < node->as.program.statements.len; i++) {
 				ast_node *decl = node->as.program.statements.data[i];
 				if (decl->kind == AST_FN_STMT || decl->kind == AST_EXTERN_DECL) {
