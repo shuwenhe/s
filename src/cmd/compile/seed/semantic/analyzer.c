@@ -1278,6 +1278,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 	int status;
 	const char *expr_type;
 	symbol *target;
+	symbol *predeclared;
 	if (!node) {
 		return 1;
 	}
@@ -1416,6 +1417,20 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_BLOCK:
 			return analyze_block_with_new_scope(ctx, node);
 		case AST_LET_STMT:
+			predeclared = NULL;
+			if (!node->as.let_stmt.type_name && node->as.let_stmt.value &&
+				node->as.let_stmt.value->kind == AST_STRUCT_EXPR) {
+				predeclared = scope_lookup_current(ctx->current_scope, node->as.let_stmt.name);
+				if (!predeclared) {
+					status = scope_define(ctx->current_scope, node->as.let_stmt.name,
+						SYMBOL_VAR, node->as.let_stmt.mutable, -1, -1, TYPE_ANY, NULL, 0);
+					if (status < 0) {
+						error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+						return 0;
+					}
+					predeclared = scope_lookup_current(ctx->current_scope, node->as.let_stmt.name);
+				}
+			}
 			if (node->as.let_stmt.type_name && strcmp(node->as.let_stmt.type_name, "struct") == 0 &&
 				node->as.let_stmt.value && node->as.let_stmt.value->kind == AST_STRUCT_EXPR) {
 				ast_node *stype = node->as.let_stmt.value;
@@ -1468,6 +1483,10 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					return 0;
 				}
 				status = scope_define(ctx->current_scope, node->as.let_stmt.name, SYMBOL_VAR, node->as.let_stmt.mutable, -1, -1, decl_type, NULL, 0);
+			} else if (predeclared) {
+				free(predeclared->type_name);
+				predeclared->type_name = dup_cstr(expr_type ? expr_type : TYPE_ANY);
+				status = predeclared->type_name ? 1 : -1;
 			} else {
 				status = scope_define(ctx->current_scope, node->as.let_stmt.name, SYMBOL_VAR, node->as.let_stmt.mutable, -1, -1, expr_type, NULL, 0);
 			}
