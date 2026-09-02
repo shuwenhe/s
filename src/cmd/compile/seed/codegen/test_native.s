@@ -97,7 +97,7 @@ func test_register_allocate() (bool, string) {
         variable_map: vec[string](),
         register_names: vec[string](),
     }
-    register_allocator_init(&allocator)
+    register_allocator_init(allocator*)
     int reg1 = allocate_register(&allocator, "x")
     int reg2 = allocate_register(&allocator, "y")
     int reg3 = allocate_register(&allocator, "z")
@@ -119,7 +119,7 @@ func test_register_spillover() (bool, string) {
         variable_map: vec[string](),
         register_names: vec[string](),
     }
-    register_allocator_init(&allocator)
+    register_allocator_init(allocator*)
     int regs = 0
     int i = 0
     for i < 15 {
@@ -164,7 +164,7 @@ func test_stackframe_size() (bool, string) {
     allocate_local(&frame, "a", 8)
     allocate_local(&frame, "b", 8)
     allocate_local(&frame, "c", 4)
-    int size = get_frame_size(&frame)
+    int size = get_frame_size(frame*)
     if size < 20 {
         return false, "Frame size should be at least 20 bytes"
     }
@@ -181,7 +181,7 @@ func test_instruction_select_mov() (bool, string) {
         variable_map: vec[string](),
         register_names: vec[string](),
     }
-    register_allocator_init(&reg_alloc)
+    register_allocator_init(reg_alloc*)
     instruction_select_mov(&ctx, &reg_alloc, "x", "10")
     if len(ctx.assembly_lines) < 1 {
         return false, "No assembly generated for MOV"
@@ -199,7 +199,7 @@ func test_instruction_select_add() (bool, string) {
         variable_map: vec[string](),
         register_names: vec[string](),
     }
-    register_allocator_init(&reg_alloc)
+    register_allocator_init(reg_alloc*)
     instruction_select_add(&ctx, &reg_alloc, "result", "a", "b")
     if len(ctx.assembly_lines) < 1 {
         return false, "No assembly generated for ADD"
@@ -212,7 +212,7 @@ func test_codegen_context_init() (bool, string) {
         assembly_lines: vec[string](),
         next_label_id: 0,
     }
-    emit_preamble(&ctx)
+    emit_preamble(ctx*)
     if len(ctx.assembly_lines) < 1 {
         return false, "Preamble not generated"
     }
@@ -226,10 +226,10 @@ func test_multiple_functions() (bool, string) {
     }
     emit_function_prologue(&ctx, "main")
     emit_line(&ctx, "    mov rax, 1")
-    emit_function_epilogue(&ctx)
+    emit_function_epilogue(ctx*)
     emit_function_prologue(&ctx, "add")
     emit_line(&ctx, "    add rax, rcx")
-    emit_function_epilogue(&ctx)
+    emit_function_epilogue(ctx*)
     if len(ctx.assembly_lines) < 6 {
         return false, "Expected at least 6 assembly lines for two functions"
     }

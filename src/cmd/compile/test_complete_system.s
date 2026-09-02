@@ -6,7 +6,7 @@ func test_lexer() string {
     source1 := "func main() { }"
     result = result + "测试 1: 简单函数声明\n"
     result = result + "源代码: " + source1 + "\n"
-    lexer1* := lexer_new(&source1)
+    lexer1* := lexer_new(source1*)
     lexer_tokenize(lexer1)
     count1 := lexer_get_token_count(lexer1)
     result = result + "结果: "
@@ -16,7 +16,7 @@ func test_lexer() string {
     source2 := "var x int = 42"
     result = result + "测试 2: 变量声明\n"
     result = result + "源代码: " + source2 + "\n"
-    lexer2* := lexer_new(&source2)
+    lexer2* := lexer_new(source2*)
     lexer_tokenize(lexer2)
     count2 := lexer_get_token_count(lexer2)
     result = result + "结果: "
@@ -26,7 +26,7 @@ func test_lexer() string {
     source3 := "x = 10 + 20"
     result = result + "测试 3: 表达式\n"
     result = result + "源代码: " + source3 + "\n"
-    lexer3* := lexer_new(&source3)
+    lexer3* := lexer_new(source3*)
     lexer_tokenize(lexer3)
     count3 := lexer_get_token_count(lexer3)
     result = result + "结果: "
@@ -44,7 +44,7 @@ func test_parser() string {
     source1 := "func add(a int, b int) int { return a + b }"
     result = result + "测试 1: 函数声明\n"
     result = result + "源代码: " + source1 + "\n"
-    lexer1* := lexer_new(&source1)
+    lexer1* := lexer_new(source1*)
     lexer_tokenize(lexer1)
     tokens1* := lexer_get_tokens(lexer1)
     count1 := lexer_get_token_count(lexer1)
@@ -60,7 +60,7 @@ func test_parser() string {
     source2 := "struct Point { x int; y int }"
     result = result + "测试 2: 结构体声明\n"
     result = result + "源代码: " + source2 + "\n"
-    lexer2* := lexer_new(&source2)
+    lexer2* := lexer_new(source2*)
     lexer_tokenize(lexer2)
     tokens2* := lexer_get_tokens(lexer2)
     count2 := lexer_get_token_count(lexer2)
@@ -76,7 +76,7 @@ func test_parser() string {
     source3 := "if x > 0 { return x }"
     result = result + "测试 3: if 语句\n"
     result = result + "源代码: " + source3 + "\n"
-    lexer3* := lexer_new(&source3)
+    lexer3* := lexer_new(source3*)
     lexer_tokenize(lexer3)
     tokens3* := lexer_get_tokens(lexer3)
     count3 := lexer_get_token_count(lexer3)
@@ -134,12 +134,12 @@ func test_complete_compilation() string {
     source1 := "func main() { return 0 }"
     result = result + "测试 1: 简单程序编译\n"
     result = result + "源代码: " + source1 + "\n\n"
-    info1 := compile_and_get_info(&source1)
+    info1 := compile_and_get_info(source1*)
     result = result + info1 + "\n"
     source2 := "var x int = 42"
     result = result + "测试 2: 变量声明编译\n"
     result = result + "源代码: " + source2 + "\n\n"
-    info2 := compile_and_get_info(&source2)
+    info2 := compile_and_get_info(source2*)
     result = result + info2 + "\n"
     result = result + "════ 编译流程测试结果: 完成 ✓ ════\n"
     return result

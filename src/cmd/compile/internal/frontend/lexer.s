@@ -146,11 +146,11 @@ func lexer_new(string source) lexer {
         column: 0,
         start_column: 0
     }
-    lexer_read_char(&mut lex)
+    lexer_read_char(lex*)
     lex
 }
 
-func lexer_read_char(lex: &mut lexer) {
+func lexer_read_char(lex* lexer) {
     if lex.read_position >= lex.source.len() {
         lex.current_char = '\0'
     } else {
@@ -167,7 +167,7 @@ func lexer_read_char(lex: &mut lexer) {
     }
 }
 
-func lexer_peek_char(lex: &mut lexer) char {
+func lexer_peek_char(lex* lexer) char {
     if lex.read_position >= lex.source.len() {
         '\0'
     } else {
@@ -175,13 +175,13 @@ func lexer_peek_char(lex: &mut lexer) char {
     }
 }
 
-func lexer_skip_whitespace(lex: &mut lexer) {
+func lexer_skip_whitespace(lex* lexer) {
     while is_whitespace(lex.current_char) {
         lexer_read_char(lex)
     }
 }
 
-func lexer_read_ident(lex: &mut lexer) string {
+func lexer_read_ident(lex* lexer) string {
     start := lex.position
     while is_letter(lex.current_char) || is_digit(lex.current_char) {
         lexer_read_char(lex)
@@ -189,7 +189,7 @@ func lexer_read_ident(lex: &mut lexer) string {
     lex.source[start: lex.position]
 }
 
-func lexer_read_number(lex: &mut lexer) (string, int) {
+func lexer_read_number(lex* lexer) (string, int) {
     start := lex.position
     has_dot := 0
     
@@ -208,7 +208,7 @@ func lexer_read_number(lex: &mut lexer) (string, int) {
     }
 }
 
-func lexer_read_string(lex: &mut lexer, char quote) string {
+func lexer_read_string(lex* lexer, char quote) string {
     lexer_read_char(lex)
     start := lex.position
     
@@ -226,13 +226,13 @@ func lexer_read_string(lex: &mut lexer, char quote) string {
     str
 }
 
-func lexer_skip_line_comment(lex: &mut lexer) {
+func lexer_skip_line_comment(lex* lexer) {
     while lex.current_char != '\n' && lex.current_char != '\0' {
         lexer_read_char(lex)
     }
 }
 
-func lexer_skip_block_comment(lex: &mut lexer) {
+func lexer_skip_block_comment(lex* lexer) {
     lexer_read_char(lex)
     lexer_read_char(lex)
     
@@ -246,7 +246,7 @@ func lexer_skip_block_comment(lex: &mut lexer) {
     }
 }
 
-func lexer_next_token(lex: &mut lexer) token {
+func lexer_next_token(lex* lexer) token {
     lexer_skip_whitespace(lex)
     
     lex.start_column = lex.column

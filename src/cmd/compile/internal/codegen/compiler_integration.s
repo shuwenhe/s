@@ -13,7 +13,7 @@ struct s_compiler_full {
 
 func make_s_compiler_full() s_compiler_full {
     link_ctx := make_link_context()
-    mcg := make_machine_code_gen(&link_ctx)
+    mcg := make_machine_code_gen(link_ctx*)
     symtab := make_symbol_table()
     reloc_ctx := make_relocation_context()
     config := make_codegen_config("amd64")
@@ -21,12 +21,12 @@ func make_s_compiler_full() s_compiler_full {
     elf_gen := make_go_style_elf_generator(&elf_writer, &symtab, &reloc_ctx)
     codegen := make_go_style_code_generator(&mcg, &symtab, &reloc_ctx, config)
     s_compiler_full {
-        link_ctx: &link_ctx,
-        mcg: &mcg,
-        symtab: &symtab,
-        reloc_ctx: &reloc_ctx,
-        codegen: &codegen,
-        elf_gen: &elf_gen,
+        link_ctx* link_ctx,
+        mcg* mcg,
+        symtab* symtab,
+        reloc_ctx* reloc_ctx,
+        codegen* codegen,
+        elf_gen* elf_gen,
         config: config,
     }
 }

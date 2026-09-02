@@ -26,7 +26,7 @@ func test_lexer_single_char_tokens() int {
     
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(&mut lex)
+        tok := lexer_next_token(lex*)
         if tok.token_type == TOKEN_EOF {
             break
         }
@@ -72,7 +72,7 @@ func test_lexer_keywords() int {
     
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(&mut lex)
+        tok := lexer_next_token(lex*)
         if tok.token_type == TOKEN_EOF {
             break
         }
@@ -105,7 +105,7 @@ func test_lexer_identifiers() int {
     
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(&mut lex)
+        tok := lexer_next_token(lex*)
         if tok.token_type == TOKEN_EOF {
             break
         }
@@ -139,7 +139,7 @@ func test_lexer_integers() int {
     
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(&mut lex)
+        tok := lexer_next_token(lex*)
         if tok.token_type == TOKEN_EOF {
             break
         }
@@ -161,7 +161,7 @@ func test_lexer_floats() int {
     
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(&mut lex)
+        tok := lexer_next_token(lex*)
         if tok.token_type == TOKEN_EOF {
             break
         }
@@ -183,7 +183,7 @@ func test_lexer_strings() int {
     
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(&mut lex)
+        tok := lexer_next_token(lex*)
         if tok.token_type == TOKEN_EOF {
             break
         }
@@ -220,7 +220,7 @@ func test_lexer_operators() int {
     
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(&mut lex)
+        tok := lexer_next_token(lex*)
         if tok.token_type == TOKEN_EOF {
             break
         }
@@ -249,7 +249,7 @@ y := 10 // another comment"
     
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(&mut lex)
+        tok := lexer_next_token(lex*)
         if tok.token_type == TOKEN_EOF {
             break
         }
@@ -271,21 +271,21 @@ y
 z"
     lex := lexer_new(source)
     
-    tok1 := lexer_next_token(&mut lex)
+    tok1 := lexer_next_token(lex*)
     if tok1.line != 1 {
         return 1
     }
     
-    lexer_next_token(&mut lex)
+    lexer_next_token(lex*)
     
-    tok2 := lexer_next_token(&mut lex)
+    tok2 := lexer_next_token(lex*)
     if tok2.line != 2 {
         return 1
     }
     
-    lexer_next_token(&mut lex)
+    lexer_next_token(lex*)
     
-    tok3 := lexer_next_token(&mut lex)
+    tok3 := lexer_next_token(lex*)
     if tok3.line != 3 {
         return 1
     }
@@ -303,7 +303,7 @@ func test_lexer_complex_expression() int {
     
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(&mut lex)
+        tok := lexer_next_token(lex*)
         if tok.token_type == TOKEN_EOF {
             break
         }

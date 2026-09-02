@@ -22,12 +22,12 @@ func make_s_compiler(string target_arch) s_compiler {
     amd64_gen := make_amd64_code_gen(&mcg, &symtab, &reloc_ctx, config)
     elf_gen := make_elf_generator_for_amd64()
     s_compiler {
-        mcg: &mcg,
-        symtab: &symtab,
-        reloc_ctx: &reloc_ctx,
+        mcg* mcg,
+        symtab* symtab,
+        reloc_ctx* reloc_ctx,
         config: config,
-        amd64_gen: &amd64_gen,
-        elf_gen: &elf_gen,
+        amd64_gen* amd64_gen,
+        elf_gen* elf_gen,
         total_code_size: 0 as int64,
         total_data_size: 0 as int64,
         function_count: 0 as int64,
