@@ -7,7 +7,7 @@ S is a systems programming language and compiler project working toward full sel
 S uses receiver methods as its single core method model:
 
 ```s
-func (writer: &mut File) write(string data) result[(), io_error] {
+func (writer* File) write(string data) ((), io_error) {
     // ...
 }
 ```

@@ -27,7 +27,7 @@ func compiler_native_create(source_file: string, output_file: string) compiler_n
     compiler
 }
 
-func (compiler* compiler_native) generate_assembly(program: &runtime_program) (int, string) {
+func (compiler* compiler_native) generate_assembly(program* runtime_program) (int, string) {
     codegen_emit_preamble(&compiler.codegen)
     for i < program.function_count {
         fn := program.functions[i]
@@ -36,7 +36,7 @@ func (compiler* compiler_native) generate_assembly(program: &runtime_program) (i
     0, ""
 }
 
-func (compiler* compiler_native) generate_function(fn: &runtime_function) {
+func (compiler* compiler_native) generate_function(fn* runtime_function) {
     codegen_emit_function_prologue(&compiler.codegen, fn.name, fn.param_count)
     allocator := register_allocator_create()
     frame := stack_frame_create(fn.param_count)
@@ -47,7 +47,7 @@ func (compiler* compiler_native) generate_function(fn: &runtime_function) {
     codegen_emit_function_epilogue(&compiler.codegen)
 }
 
-func (compiler* compiler_native) generate_instruction(ra: &mut register_allocator, sf: &mut stack_frame, ins: &runtime_ins) {
+func (compiler* compiler_native) generate_instruction(ra* register_allocator, sf* stack_frame, ins* runtime_ins) {
     if ins.op == "MOV" {
         instruction_select_mov(&compiler.codegen, ra, ins.op1, ins.result)
     } else if ins.op == "ADD" {

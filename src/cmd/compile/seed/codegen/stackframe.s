@@ -40,7 +40,7 @@ func (sf* stack_frame) get_param_offset(param_index: int) int {
     (param_index + 1) * 8
 }
 
-func stack_frame_emit_prologue(sf: &stack_frame, ctx: &mut codegen_context, fn_name: string) {
+func stack_frame_emit_prologue(sf* stack_frame, ctx* codegen_context, fn_name: string) {
     ctx.emit_label(fn_name)
     ctx.emit_line("    push %rbp")
     ctx.emit_line("    mov %rsp, %rbp")
@@ -50,15 +50,15 @@ func stack_frame_emit_prologue(sf: &stack_frame, ctx: &mut codegen_context, fn_n
     }
 }
 
-func stack_frame_emit_epilogue(ctx: &mut codegen_context) {
+func stack_frame_emit_epilogue(ctx* codegen_context) {
     ctx.emit_line("    leave")
     ctx.emit_line("    ret")
 }
 
-func stack_frame_emit_spill(ctx: &mut codegen_context, reg: string, offset: int) {
+func stack_frame_emit_spill(ctx* codegen_context, reg: string, offset: int) {
     ctx.emit_line("    mov %" + reg + ", " + offset as string + "(%rbp)")
 }
 
-func stack_frame_emit_restore(ctx: &mut codegen_context, reg: string, offset: int) {
+func stack_frame_emit_restore(ctx* codegen_context, reg: string, offset: int) {
     ctx.emit_line("    mov " + offset as string + "(%rbp), %" + reg)
 }
