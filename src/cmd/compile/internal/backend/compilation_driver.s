@@ -6,7 +6,7 @@ struct native_compilation_driver {
     assembly_output: string
 }
 
-func new_native_compilation_driver( source string, output string) native_compilation_driver {
+func new_native_compilation_driver(string source, string output) native_compilation_driver {
     driver: native_compilation_driver
     driver.input_source = source
     driver.output_executable = output

@@ -20,7 +20,7 @@ struct stack_frame {
     alignment int
 }
 
-func stack_frame_new(func_name string) stack_frame {
+func stack_frame_new(string func_name) stack_frame {
     frame := stack_frame {
         func_name: func_name,
         arg_slots: stack_slot[](),
@@ -32,7 +32,7 @@ func stack_frame_new(func_name string) stack_frame {
     frame
 }
 
-func stack_frame_add_arg(frame* stack_frame, slot_id int, size int) int {
+func stack_frame_add_arg(stack_frame frame*, int slot_id, int size) int {
     offset := frame.arg_slots.len() * 8
     
     slot := stack_slot {
@@ -46,7 +46,7 @@ func stack_frame_add_arg(frame* stack_frame, slot_id int, size int) int {
     offset
 }
 
-func stack_frame_add_local(frame* stack_frame, slot_id int, size int) int {
+func stack_frame_add_local(stack_frame frame*, int slot_id, int size) int {
     offset := -(frame.local_slots.len() + 1) * 8
     
     slot := stack_slot {
@@ -60,7 +60,7 @@ func stack_frame_add_local(frame* stack_frame, slot_id int, size int) int {
     offset
 }
 
-func stack_frame_add_spill(frame* stack_frame, slot_id int, size int) int {
+func stack_frame_add_spill(stack_frame frame*, int slot_id, int size) int {
     base_offset := -(frame.local_slots.len() + 1) * 8
     spill_offset := base_offset - (frame.spill_slots.len() + 1) * 8
     
@@ -75,7 +75,7 @@ func stack_frame_add_spill(frame* stack_frame, slot_id int, size int) int {
     spill_offset
 }
 
-func stack_frame_compute_size(frame* stack_frame) int {
+func stack_frame_compute_size(stack_frame frame*) int {
     local_size := frame.local_slots.len() * 8
     spill_size := frame.spill_slots.len() * 8
     return_addr_size := 8
@@ -90,7 +90,7 @@ func stack_frame_compute_size(frame* stack_frame) int {
     total
 }
 
-func stack_frame_get_slot_offset(frame stack_frame, slot_id int) int {
+func stack_frame_get_slot_offset(stack_frame frame, int slot_id) int {
     for i := 0; i < frame.local_slots.len(); i = i + 1 {
         if frame.local_slots[i].slot_id == slot_id {
             return frame.local_slots[i].offset
@@ -106,7 +106,7 @@ func stack_frame_get_slot_offset(frame stack_frame, slot_id int) int {
     0
 }
 
-func stack_frame_emit_prologue(frame stack_frame, ctx* codegen_context) {
+func stack_frame_emit_prologue(stack_frame frame, ctx* codegen_context) {
     push_instr := x86_instruction {
         instr_type: INSTR_PUSH,
         operand1: x86_operand { operand_type: OPERAND_REG, reg_id: REG_RAX },
@@ -128,7 +128,7 @@ func stack_frame_emit_prologue(frame stack_frame, ctx* codegen_context) {
     }
 }
 
-func stack_frame_emit_epilogue(frame stack_frame, ctx* codegen_context) {
+func stack_frame_emit_epilogue(stack_frame frame, ctx* codegen_context) {
     if frame.stack_size > 0 {
         add_instr := x86_instruction {
             instr_type: INSTR_ADD,

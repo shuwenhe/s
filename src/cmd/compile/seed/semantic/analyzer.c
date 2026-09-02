@@ -1418,8 +1418,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			return analyze_block_with_new_scope(ctx, node);
 		case AST_LET_STMT:
 			predeclared = NULL;
-			if (!node->as.let_stmt.type_name && node->as.let_stmt.value &&
-				node->as.let_stmt.value->kind == AST_STRUCT_EXPR) {
+			if (!node->as.let_stmt.type_name) {
 				predeclared = scope_lookup_current(ctx->current_scope, node->as.let_stmt.name);
 				if (!predeclared) {
 					status = scope_define(ctx->current_scope, node->as.let_stmt.name,

@@ -7,7 +7,7 @@ struct end_to_end_compiler {
     obj_file: string
 }
 
-func new_end_to_end_compiler( source string, output string) end_to_end_compiler {
+func new_end_to_end_compiler(string source, string output) end_to_end_compiler {
     compiler: end_to_end_compiler
     compiler.source_file = source
     compiler.output_file = output
