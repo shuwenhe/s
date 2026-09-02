@@ -58,26 +58,19 @@ func ok_error() noder_error {
     noder_error {
         code: "",
         message: "",
-        path: "",
-        line: 0,
-        column: 0,
+        path: "", line 0, column 0,
     }
 }
 
 func make_error(string code, string message, string path, int line, int column) noder_error {
     noder_error {
-        code: code,
-        message: message,
-        path: path,
-        line: line,
-        column: column,
+        code: code, message message, path path, line line, column column,
     }
 }
 
 func ok_unit(string path, string text) (source_unit, noder_error) {
     source_unit {
-        path: path,
-        text: text,
+        path: path, text text,
     }
 }
 

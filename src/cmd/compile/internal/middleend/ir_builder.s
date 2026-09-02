@@ -39,9 +39,7 @@ struct type_system {
 // IR Builder 初始化
 func ir_builder_context_new() ir_builder_context {
     ir_builder_context {
-        module: ir_module_new(),
-        block_counter: 0,
-        value_counter: 0
+        module: ir_module_new(), block_counter 0, value_counter 0
     }
 }
 

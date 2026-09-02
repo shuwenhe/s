@@ -27,7 +27,7 @@ struct const_rewrite_entry {
 }
 
 func from_syntax(source_file src) ir_ast.package_ir {
-    pkg := ir_ast.package_ir { name: src.pkg, decls: ir_ast.decl_ir[]() }
+    pkg := ir_ast.package_ir { name: src.pkg, decls ir_ast.decl_ir[]() }
     const_entries := collect_const_rewrite_entries(src)
     i := 0
     for i < len(src.items) {
@@ -40,8 +40,7 @@ func from_syntax(source_file src) ir_ast.package_ir {
             item.const(const_decl) : {
                 value_text := lookup_const_expr_text(const_entries, const_decl.name)
                 pkg.decls.push(ir_ast.decl_ir::const(ir_ast.const_decl {
-                    name: const_decl.name,
-                    value: value_text,
+                    name: const_decl.name, value value_text,
                 }))
             }
             item.struct(struct_decl) : {
@@ -55,9 +54,7 @@ func from_syntax(source_file src) ir_ast.package_ir {
             }
             item.method(method_decl) : {
                 pkg.decls.push(ir_ast.decl_ir::method(ir_ast.method_decl {
-                    receiver_name: method_decl.receiver_name,
-                    receiver_type: method_decl.receiver_type,
-                    method: convert_function(method_decl.method, const_entries),
+                    receiver_name: method_decl.receiver_name, receiver_type method_decl.receiver_type, method convert_function(method_decl.method, const_entries),
                 }))
             }
         }
@@ -231,11 +228,11 @@ func contains_text(string text, string needle) bool {
 }
 
 func convert_function(function_decl fd, const_rewrite_entry[] const_entries) ir_ast.func_decl {
-    sig := ir_ast.func_sig { params: ir_ast.param[](), return_type_name: option[string].none, generics: fd.sig.generics }
+    sig := ir_ast.func_sig { params: ir_ast.param[](), return_type_name option[string].none, generics fd.sig.generics }
     pi := 0
     for pi < len(fd.sig.params) {
         p := fd.sig.params[pi]
-        sig.params = append(sig.params, ir_ast.param { name: p.name, type_name: p.type_name })
+        sig.params = append(sig.params, ir_ast.param { name: p.name, type_name p.type_name })
         pi = pi + 1
     }
     ret := option[string].none
@@ -247,7 +244,7 @@ func convert_function(function_decl fd, const_rewrite_entry[] const_entries) ir_
     if fd.body.is_some() {
         body = option[ir_ast.block_ir].some(convert_block(fd.body.unwrap(), const_entries))
     }
-    ir_ast.func_decl { name: fd.sig.name, sig: sig, body: body }
+    ir_ast.func_decl { name: fd.sig.name, sig sig, body body }
 }
 
 func convert_block(block_expr b, const_rewrite_entry[] const_entries) ir_ast.block_ir {
@@ -261,26 +258,23 @@ func convert_block(block_expr b, const_rewrite_entry[] const_entries) ir_ast.blo
     if b.final_expr.is_some() {
         final = option[ir_ast.expr_ir].some(convert_expr(b.final_expr.unwrap(), const_entries))
     }
-    ir_ast.block_ir { statements: stmts, final_expr: final }
+    ir_ast.block_ir { statements: stmts, final_expr final }
 }
 
 func convert_stmt(stmt s, const_rewrite_entry[] const_entries) ir_ast.stmt_ir {
     switch s {
         stmt.let(var_stmt) : {
-            ir_ast.stmt_ir::let(ir_ast.var_stmt { name: var_stmt.name, type_name: var_stmt.type_name, value: convert_expr(var_stmt.value, const_entries) })
+            ir_ast.stmt_ir::let(ir_ast.var_stmt { name: var_stmt.name, type_name var_stmt.type_name, value convert_expr(var_stmt.value, const_entries) })
         }
         stmt.assign(assign_stmt) : {
-            ir_ast.stmt_ir::assign(ir_ast.assign_stmt { name: assign_stmt.name, value: convert_expr(assign_stmt.value, const_entries) })
+            ir_ast.stmt_ir::assign(ir_ast.assign_stmt { name: assign_stmt.name, value convert_expr(assign_stmt.value, const_entries) })
         }
         stmt.increment(increment_stmt) : {
             ir_ast.stmt_ir::increment(ir_ast.increment_stmt { name: increment_stmt.name })
         }
         stmt.c_for(c_for_stmt) : {
             ir_ast.stmt_ir::cfor(ir_ast.c_for_stmt {
-                init: convert_stmt(c_for_stmt.init.value, const_entries),
-                condition: convert_expr(c_for_stmt.condition, const_entries),
-                step: convert_stmt(c_for_stmt.step.value, const_entries),
-                body: convert_block(c_for_stmt.body, const_entries),
+                init: convert_stmt(c_for_stmt.init.value, const_entries), condition convert_expr(c_for_stmt.condition, const_entries), step convert_stmt(c_for_stmt.step.value, const_entries), body convert_block(c_for_stmt.body, const_entries),
             })
         }
         stmt.return(return_stmt) : {
@@ -311,8 +305,8 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
         expr.string(string_expr) : ir_ast.expr_ir::string(string_expr.value),
         expr.bool(bool_expr) : ir_ast.expr_ir::bool(bool_expr.value),
         expr.name(name_expr) : resolve_const_name_expr(name_expr.name, const_entries),
-        expr.borrow(borrow_expr) : ir_ast.expr_ir::borrow(ir_ast.borrow_expr { target: convert_expr(borrow_expr.target.unwrap(), const_entries), mutable: borrow_expr.mutable }),
-        expr.binary(binary_expr) : ir_ast.expr_ir::binary(ir_ast.binary_expr { op: binary_expr.op, left: convert_expr(binary_expr.left.unwrap(), const_entries), right: convert_expr(binary_expr.right.unwrap(), const_entries) }),
+        expr.borrow(borrow_expr) : ir_ast.expr_ir::borrow(ir_ast.borrow_expr { target: convert_expr(borrow_expr.target.unwrap(), const_entries), mutable borrow_expr.mutable }),
+        expr.binary(binary_expr) : ir_ast.expr_ir::binary(ir_ast.binary_expr { op: binary_expr.op, left convert_expr(binary_expr.left.unwrap(), const_entries), right convert_expr(binary_expr.right.unwrap(), const_entries) }),
         expr.call(call_expr) : {
             callee_name := "<call>"
             switch call_expr.callee.unwrap() {
@@ -325,20 +319,18 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
                 args = append(args, convert_expr(call_expr.args[ai], const_entries))
                 ai = ai + 1
             }
-            ir_ast.expr_ir::call(ir_ast.call_expr { callee: callee_name, args: args })
+            ir_ast.expr_ir::call(ir_ast.call_expr { callee: callee_name, args args })
         }
-        expr.if(if_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "if_expr", args: ir_ast.expr_ir[]() }),
+        expr.if(if_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "if_expr", args ir_ast.expr_ir[]() }),
         expr.block(block_expr) : ir_ast.expr_ir::block(convert_block(block_expr, const_entries)),
-        expr.switch(switch_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "switch_expr", args: ir_ast.expr_ir[]() }),
-        expr.while(while_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "while_expr", args: ir_ast.expr_ir[]() }),
-        expr.for(for_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "for_expr", args: ir_ast.expr_ir[]() }),
+        expr.switch(switch_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "switch_expr", args ir_ast.expr_ir[]() }),
+        expr.while(while_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "while_expr", args ir_ast.expr_ir[]() }),
+        expr.for(for_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "for_expr", args ir_ast.expr_ir[]() }),
         expr.member(member_expr) : ir_ast.expr_ir::member(ir_ast.member_expr {
-            target: convert_expr(member_expr.target.value, const_entries),
-            member: member_expr.member,
+            target: convert_expr(member_expr.target.value, const_entries), member member_expr.member,
         }),
         expr.index(index_expr) : ir_ast.expr_ir::index(ir_ast.index_expr {
-            target: convert_expr(index_expr.target.value, const_entries),
-            index: convert_expr(index_expr.index.value, const_entries),
+            target: convert_expr(index_expr.target.value, const_entries), index convert_expr(index_expr.index.value, const_entries),
         }),
         expr.array(array_literal) : array_to_expr(array_literal, const_entries),
         expr.map(map_literal) : map_to_expr(map_literal, const_entries),
@@ -519,44 +511,35 @@ func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
 func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
     switch s {
         stmt.let(var_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
-            callee: "stmt.let",
-            args: ir_ast.expr_ir[] { ir_ast.expr_ir::string(var_stmt.name), convert_expr(var_stmt.value, const_entries) },
+            callee: "stmt.let", args ir_ast.expr_ir[] { ir_ast.expr_ir::string(var_stmt.name), convert_expr(var_stmt.value, const_entries) },
         }),
         stmt.assign(assign_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
-            callee: "stmt.assign",
-            args: ir_ast.expr_ir[] { ir_ast.expr_ir::string(assign_stmt.name), convert_expr(assign_stmt.value, const_entries) },
+            callee: "stmt.assign", args ir_ast.expr_ir[] { ir_ast.expr_ir::string(assign_stmt.name), convert_expr(assign_stmt.value, const_entries) },
         }),
         stmt.increment(increment_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
-            callee: "stmt.increment",
-            args: ir_ast.expr_ir[] { ir_ast.expr_ir::string(increment_stmt.name) },
+            callee: "stmt.increment", args ir_ast.expr_ir[] { ir_ast.expr_ir::string(increment_stmt.name) },
         }),
         stmt.return(return_stmt) : {
             if return_stmt.value.is_some() {
                 return ir_ast.expr_ir::call(ir_ast.call_expr {
-                    callee: "stmt.return",
-                    args: ir_ast.expr_ir[] { convert_expr(return_stmt.value.unwrap(), const_entries) },
+                    callee: "stmt.return", args ir_ast.expr_ir[] { convert_expr(return_stmt.value.unwrap(), const_entries) },
                 })
             }
             ir_ast.expr_ir::call(ir_ast.call_expr {
-                callee: "stmt.return",
-                args: ir_ast.expr_ir[](),
+                callee: "stmt.return", args ir_ast.expr_ir[](),
             })
         }
         stmt.expr(expr_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
-            callee: "stmt.expr",
-            args: ir_ast.expr_ir[] { convert_expr(expr_stmt.expr, const_entries) },
+            callee: "stmt.expr", args ir_ast.expr_ir[] { convert_expr(expr_stmt.expr, const_entries) },
         }),
         stmt.defer(defer_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
-            callee: "stmt.defer",
-            args: ir_ast.expr_ir[] { convert_expr(defer_stmt.expr, const_entries) },
+            callee: "stmt.defer", args ir_ast.expr_ir[] { convert_expr(defer_stmt.expr, const_entries) },
         }),
         stmt.sroutine(sroutine_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
-            callee: "stmt.sroutine",
-            args: ir_ast.expr_ir[] { convert_expr(sroutine_stmt.expr, const_entries) },
+            callee: "stmt.sroutine", args ir_ast.expr_ir[] { convert_expr(sroutine_stmt.expr, const_entries) },
         }),
         stmt.c_for(c_for_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
-            callee: "stmt.c_for",
-            args: ir_ast.expr_ir[] {
+            callee: "stmt.c_for", args ir_ast.expr_ir[] {
                 stmt_to_expr(c_for_stmt.init.value, const_entries),
                 convert_expr(c_for_stmt.condition, const_entries),
                 stmt_to_expr(c_for_stmt.step.value, const_entries),
@@ -578,8 +561,7 @@ func array_to_expr(array_literal lit, const_rewrite_entry[] const_entries) ir_as
         i = i + 1
     }
     ir_ast.expr_ir::array(ir_ast.array_expr {
-        type_name: lit.type_text,
-        items: items,
+        type_name: lit.type_text, items items,
     })
 }
 
@@ -589,14 +571,12 @@ func map_to_expr(map_literal lit, const_rewrite_entry[] const_entries) ir_ast.ex
     for i < len(lit.entries) {
         entry := lit.entries[i]
         entries.push(ir_ast.map_entry_expr {
-            key: convert_expr(entry.key, const_entries),
-            value: convert_expr(entry.value, const_entries),
+            key: convert_expr(entry.key, const_entries), value convert_expr(entry.value, const_entries),
         })
         i = i + 1
     }
     ir_ast.expr_ir::map(ir_ast.map_expr {
-        type_name: lit.type_text,
-        entries: entries,
+        type_name: lit.type_text, entries entries,
     })
 }
 
@@ -605,12 +585,7 @@ func lower_function_to_mir(function_decl fd, const_rewrite_entry[] const_entries
         empty_blocks := mir_basic_block[]()
         empty_blocks = append(empty_blocks, make_block(0, "entry", string[](), "return", mir_control_edge[]()))
         return mir_graph {
-            function_name: fd.sig.name,
-            blocks: empty_blocks,
-            locals: mir_local_slot[](),
-            trace: string[](),
-            entry: 0,
-            exit: 0,
+            function_name: fd.sig.name, blocks empty_blocks, locals mir_local_slot[](), trace string[](), entry 0, exit 0,
         }
     }
     return lower_block_to_mir(fd.sig.name, fd.body.unwrap(), const_entries
@@ -719,10 +694,8 @@ func collect_const_rewrite_entries(source_file src) const_rewrite_entry[] {
     last_value := const_rewrite_entry {
         name: "",
         expr_text: "",
-        value_kind: "unknown",
-        int_value: 0,
-        string_value: "",
-        bool_value: false,
+        value_kind: "unknown", int_value 0,
+        string_value: "", bool_value false,
     }
     i := 0
     for i < len(src.items) {
@@ -731,10 +704,8 @@ func collect_const_rewrite_entries(source_file src) const_rewrite_entry[] {
                 folded := const_rewrite_entry {
                     name: const_decl.name,
                     expr_text: "",
-                    value_kind: "unknown",
-                    int_value: 0,
-                    string_value: "",
-                    bool_value: false,
+                    value_kind: "unknown", int_value 0,
+                    string_value: "", bool_value false,
                 }
                 switch const_decl.value {
                     option.some(value) : {
@@ -743,12 +714,7 @@ func collect_const_rewrite_entries(source_file src) const_rewrite_entry[] {
                     }
                     option.none : {
                         folded = const_rewrite_entry {
-                            name: const_decl.name,
-                            expr_text: last_value.expr_text,
-                            value_kind: last_value.value_kind,
-                            int_value: last_value.int_value,
-                            string_value: last_value.string_value,
-                            bool_value: last_value.bool_value,
+                            name: const_decl.name, expr_text last_value.expr_text, value_kind last_value.value_kind, int_value last_value.int_value, string_value last_value.string_value, bool_value last_value.bool_value,
                         }
                     }
                 }
@@ -765,21 +731,13 @@ func render_const_folded_entry(string name, expr value, const_rewrite_entry[] ou
     folded := eval_const_fold_value(value, out, iota_index)
     if folded.value_kind != "unknown" {
         return const_rewrite_entry {
-            name: name,
-            expr_text: const_fold_value_text(folded),
-            value_kind: folded.value_kind,
-            int_value: folded.int_value,
-            string_value: folded.string_value,
-            bool_value: folded.bool_value,
+            name: name, expr_text const_fold_value_text(folded), value_kind folded.value_kind, int_value folded.int_value, string_value folded.string_value, bool_value folded.bool_value,
         }
     }
     const_rewrite_entry {
-        name: name,
-        expr_text: substitute_const_text(dump_expr(value), out),
-        value_kind: "unknown",
-        int_value: 0,
-        string_value: "",
-        bool_value: false,
+        name: name, expr_text substitute_const_text(dump_expr(value), out),
+        value_kind: "unknown", int_value 0,
+        string_value: "", bool_value false,
     }
 }
 
@@ -793,47 +751,33 @@ struct const_fold_value {
 func eval_const_fold_value(expr value, const_rewrite_entry[] out, int iota_index) const_fold_value {
     switch value {
         expr.int(int_expr) : const_fold_value {
-            value_kind: "int",
-            int_value: parse_int_literal(int_expr.value),
-            string_value: "",
-            bool_value: false,
+            value_kind: "int", int_value parse_int_literal(int_expr.value),
+            string_value: "", bool_value false,
         },
         expr.string(string_expr) : const_fold_value {
-            value_kind: "string",
-            int_value: 0,
-            string_value: string_expr.value,
-            bool_value: false,
+            value_kind: "string", int_value 0, string_value string_expr.value, bool_value false,
         },
         expr.bool(bool_expr) : const_fold_value {
-            value_kind: "bool",
-            int_value: 0,
-            string_value: "",
-            bool_value: bool_expr.value,
+            value_kind: "bool", int_value 0,
+            string_value: "", bool_value bool_expr.value,
         },
         expr.name(name_expr) : {
             if name_expr.name == "iota" {
                 return const_fold_value {
-                    value_kind: "int",
-                    int_value: iota_index,
-                    string_value: "",
-                    bool_value: false,
+                    value_kind: "int", int_value iota_index,
+                    string_value: "", bool_value false,
                 }
             }
             entry := lookup_const_entry(out, name_expr.name)
             if entry.is_none() {
                 return const_fold_value {
-                    value_kind: "unknown",
-                    int_value: 0,
-                    string_value: "",
-                    bool_value: false,
+                    value_kind: "unknown", int_value 0,
+                    string_value: "", bool_value false,
                 }
             }
             e := entry.unwrap()
             const_fold_value {
-                value_kind: e.value_kind,
-                int_value: e.int_value,
-                string_value: e.string_value,
-                bool_value: e.bool_value,
+                value_kind: e.value_kind, int_value e.int_value, string_value e.string_value, bool_value e.bool_value,
             }
         }
         expr.binary(binary_expr) : {
@@ -842,10 +786,8 @@ func eval_const_fold_value(expr value, const_rewrite_entry[] out, int iota_index
             return eval_const_fold_binary(binary_expr.op, left, right
         }
         _ : const_fold_value {
-            value_kind: "unknown",
-            int_value: 0,
-            string_value: "",
-            bool_value: false,
+            value_kind: "unknown", int_value 0,
+            string_value: "", bool_value false,
         },
     }
 }
@@ -853,57 +795,55 @@ func eval_const_fold_value(expr value, const_rewrite_entry[] out, int iota_index
 func eval_const_fold_binary(string op, const_fold_value left, const_fold_value right) const_fold_value {
     if left.value_kind == "int" && right.value_kind == "int" {
         if op == "+" {
-            return const_fold_value { value_kind: "int", int_value: left.int_value + right.int_value, string_value: "", bool_value: false }
+            return const_fold_value { value_kind: "int", int_value left.int_value + right.int_value, string_value: "", bool_value false }
         }
         if op == "-" {
-            return const_fold_value { value_kind: "int", int_value: left.int_value - right.int_value, string_value: "", bool_value: false }
+            return const_fold_value { value_kind: "int", int_value left.int_value - right.int_value, string_value: "", bool_value false }
         }
         if op == "*" {
-            return const_fold_value { value_kind: "int", int_value: left.int_value * right.int_value, string_value: "", bool_value: false }
+            return const_fold_value { value_kind: "int", int_value left.int_value * right.int_value, string_value: "", bool_value false }
         }
         if op == "/" && right.int_value != 0 {
-            return const_fold_value { value_kind: "int", int_value: left.int_value / right.int_value, string_value: "", bool_value: false }
+            return const_fold_value { value_kind: "int", int_value left.int_value / right.int_value, string_value: "", bool_value false }
         }
         if op == "%" && right.int_value != 0 {
-            return const_fold_value { value_kind: "int", int_value: left.int_value % right.int_value, string_value: "", bool_value: false }
+            return const_fold_value { value_kind: "int", int_value left.int_value % right.int_value, string_value: "", bool_value false }
         }
         if op == "==" {
-            return const_fold_value { value_kind: "bool", int_value: 0, string_value: "", bool_value: left.int_value == right.int_value }
+            return const_fold_value { value_kind: "bool", int_value 0, string_value: "", bool_value left.int_value == right.int_value }
         }
         if op == "!=" {
-            return const_fold_value { value_kind: "bool", int_value: 0, string_value: "", bool_value: left.int_value != right.int_value }
+            return const_fold_value { value_kind: "bool", int_value 0, string_value: "", bool_value left.int_value != right.int_value }
         }
     }
     if left.value_kind == "bool" && right.value_kind == "bool" {
         if op == "&&" {
-            return const_fold_value { value_kind: "bool", int_value: 0, string_value: "", bool_value: left.bool_value && right.bool_value }
+            return const_fold_value { value_kind: "bool", int_value 0, string_value: "", bool_value left.bool_value && right.bool_value }
         }
         if op == "||" {
-            return const_fold_value { value_kind: "bool", int_value: 0, string_value: "", bool_value: left.bool_value || right.bool_value }
+            return const_fold_value { value_kind: "bool", int_value 0, string_value: "", bool_value left.bool_value || right.bool_value }
         }
         if op == "==" {
-            return const_fold_value { value_kind: "bool", int_value: 0, string_value: "", bool_value: left.bool_value == right.bool_value }
+            return const_fold_value { value_kind: "bool", int_value 0, string_value: "", bool_value left.bool_value == right.bool_value }
         }
         if op == "!=" {
-            return const_fold_value { value_kind: "bool", int_value: 0, string_value: "", bool_value: left.bool_value != right.bool_value }
+            return const_fold_value { value_kind: "bool", int_value 0, string_value: "", bool_value left.bool_value != right.bool_value }
         }
     }
     if left.value_kind == "string" && right.value_kind == "string" {
         if op == "+" {
-            return const_fold_value { value_kind: "string", int_value: 0, string_value: left.string_value + right.string_value, bool_value: false }
+            return const_fold_value { value_kind: "string", int_value 0, string_value left.string_value + right.string_value, bool_value false }
         }
         if op == "==" {
-            return const_fold_value { value_kind: "bool", int_value: 0, string_value: "", bool_value: left.string_value == right.string_value }
+            return const_fold_value { value_kind: "bool", int_value 0, string_value: "", bool_value left.string_value == right.string_value }
         }
         if op == "!=" {
-            return const_fold_value { value_kind: "bool", int_value: 0, string_value: "", bool_value: left.string_value != right.string_value }
+            return const_fold_value { value_kind: "bool", int_value 0, string_value: "", bool_value left.string_value != right.string_value }
         }
     }
     const_fold_value {
-        value_kind: "unknown",
-        int_value: 0,
-        string_value: "",
-        bool_value: false,
+        value_kind: "unknown", int_value 0,
+        string_value: "", bool_value false,
     }
 }
 
@@ -1023,9 +963,7 @@ func clone_lines(string[] lines) string[] {
 
 func make_edge(string label, int target) mir_control_edge {
     mir_control_edge {
-        label: label,
-        target: target,
-        args: mir_operand[](),
+        label: label, target target, args mir_operand[](),
     }
 }
 
@@ -1042,29 +980,19 @@ func make_block(int id, string label, string[] lines, string term_kind, mir_cont
         args := string[]()
         args = append(args, lines[i])
         statements.push(mir_statement::eval(mir_eval_stmt {
-            op: "line",
-            args: args,
+            op: "line", args args,
         }))
         i = i + 1
     }
     mir_basic_block {
-        id: id,
-        label: label,
-        statements: statements,
-        terminator: mir_terminator {
-            kind: term_kind,
-            edges: edges,
+        id: id, label label, statements statements, terminator mir_terminator {
+            kind: term_kind, edges edges,
         },
     }
 }
 
 func make_graph(string function_name, mir_basic_block[] blocks, string[] trace, int entry, int exit) mir_graph {
     mir_graph {
-        function_name: function_name,
-        blocks: blocks,
-        locals: mir_local_slot[](),
-        trace: trace,
-        entry: entry,
-        exit: exit,
+        function_name: function_name, blocks blocks, locals mir_local_slot[](), trace trace, entry entry, exit exit,
     }
 }

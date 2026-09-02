@@ -98,9 +98,7 @@ func dfa_analyze_liveness(cfg* control_flow_graph) liveness_info[] {
     // 初始化所有块的活跃性信息
     for i := 0; i < n; i = i + 1 {
         liveness = append(liveness, liveness_info {
-            block_id: i,
-            live_in: int_set_new(),
-            live_out: int_set_new()
+            block_id: i, live_in int_set_new(), live_out int_set_new()
         })
     }
     
@@ -185,9 +183,7 @@ func dfa_analyze_reaching_defs(cfg* control_flow_graph) reaching_def_info[] {
     // 初始化
     for i := 0; i < n; i = i + 1 {
         reaching_defs = append(reaching_defs, reaching_def_info {
-            block_id: i,
-            def_in: int_set_new(),
-            def_out: int_set_new()
+            block_id: i, def_in int_set_new(), def_out int_set_new()
         })
     }
     
@@ -276,8 +272,7 @@ func dfa_build_use_def_chains(cfg* control_flow_graph, reaching_defs reaching_de
                 
                 if operand.value_type == IR_VALUE_VAR || operand.value_type == IR_VALUE_PARAM {
                     chain := use_def_chain {
-                        use_instr_id: instr.result.value_id,
-                        def_instr_ids: int[]()
+                        use_instr_id: instr.result.value_id, def_instr_ids int[]()
                     }
                     
                     // 找到所有可达的定义

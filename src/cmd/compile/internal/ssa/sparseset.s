@@ -13,8 +13,7 @@ func new_sparse_set(int n) sparse_set {
         i = i + 1
     }
     sparse_set {
-        dense: int[](),
-        sparse: sparse,
+        dense: int[](), sparse sparse,
     }
 }
 

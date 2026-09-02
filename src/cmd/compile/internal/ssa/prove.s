@@ -8,9 +8,7 @@ struct prove_fact {
 
 func fact_for(int id, bool z, bool nz) prove_fact {
     prove_fact {
-        value_id: id,
-        known_zero: z,
-        known_non_zero: nz,
+        value_id: id, known_zero z, known_non_zero nz,
     }
 }
 

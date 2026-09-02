@@ -28,21 +28,17 @@ func has_debug_hash() bool {
 
 func new_hash_debug(string name, string raw) hash_debug {
     out := hash_debug {
-        name: name,
-        raw: raw,
-        file_suffix_only: false,
-        inline_suffix_only: false,
-        matches: hash_mask[](),
+        name: name, raw raw, file_suffix_only false, inline_suffix_only false, matches hash_mask[](),
     }
     if raw == "" {
         return out
     }
     if raw == "y" || raw == "Y" {
-        out.matches = append(out.matches, hash_mask { name: name, suffix: "", exclude: false })
+        out.matches = append(out.matches, hash_mask { name: name, suffix: "", exclude false })
         return out
     }
     if raw == "n" || raw == "N" {
-        out.matches = append(out.matches, hash_mask { name: name, suffix: "*deny*", exclude: true })
+        out.matches = append(out.matches, hash_mask { name: name, suffix: "*deny*", exclude true })
         return out
     }
     parts := split(raw, "/")
@@ -52,15 +48,11 @@ func new_hash_debug(string name, string raw) hash_debug {
         if p != "" {
             if starts_with(p, "-") {
                 out.matches.push(hash_mask {
-                    name: "exclude" + to_string(i),
-                    suffix: slice(p, 1, len(p)),
-                    exclude: true,
+                    name: "exclude" + to_string(i), suffix slice(p, 1, len(p)), exclude true,
                 })
             } else {
                 out.matches.push(hash_mask {
-                    name: name + to_string(i),
-                    suffix: p,
-                    exclude: false,
+                    name: name + to_string(i), suffix p, exclude false,
                 })
             }
         }

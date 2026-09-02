@@ -27,20 +27,12 @@ func run_mir_suite() int {
     blocks := mir_basic_block[]()
     blocks.push(mir_basic_block {
         id: 0,
-        label: "entry",
-        statements: mir_statement[](),
-        terminator: mir_terminator {
-            kind: "return",
-            edges: mir_control_edge[](),
+        label: "entry", statements mir_statement[](), terminator mir_terminator {
+            kind: "return", edges mir_control_edge[](),
         },
     })
     graph := mir_graph {
-        function_name: "main",
-        blocks: blocks,
-        locals: mir_local_slot[](),
-        trace: string[](),
-        entry: 0,
-        exit: 0,
+        function_name: "main", blocks blocks, locals mir_local_slot[](), trace string[](), entry 0, exit 0,
     }
     if block_count(graph) != 1 {
         return 1

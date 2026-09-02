@@ -19,9 +19,7 @@ func new_sparse_tree(int n) sparse_tree {
         nodes.push(sparse_tree_node {
             parent: -1,
             child: -1,
-            sibling: -1,
-            entry: 0,
-            exit: 0,
+            sibling: -1, entry 0, exit 0,
         })
         i = i + 1
     }

@@ -72,9 +72,7 @@ struct elf_writer {
 
 func make_elf_writer(elf_machine machine) elf_writer {
     elf_writer {
-        data: []int8()(),
-        offset: 0,
-        target_machine: machine,
+        data: []int8()(), offset 0, target_machine machine,
     }
 }
 

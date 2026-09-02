@@ -26,8 +26,7 @@ func make_s_compiler_full() s_compiler_full {
         symtab* symtab,
         reloc_ctx* reloc_ctx,
         codegen* codegen,
-        elf_gen* elf_gen,
-        config: config,
+        elf_gen* elf_gen, config config,
     }
 }
 

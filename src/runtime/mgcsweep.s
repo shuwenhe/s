@@ -42,9 +42,7 @@ func sweep_pass() int {
 
 func sweep_stats() sweep_result {
     sweep_result {
-        freed_bytes: sweep_freed_bytes,
-        freed_count: sweep_freed_count,
-        live_count:  sweep_live_count,
+        freed_bytes: sweep_freed_bytes, freed_count sweep_freed_count, live_count sweep_live_count,
     }
 }
 

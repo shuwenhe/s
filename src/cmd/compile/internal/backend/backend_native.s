@@ -6,7 +6,7 @@ struct backend_context {
     target_os: string
 }
 
-func new_backend_context(input: string, output: string, native: bool) backend_context {
+func new_backend_context( input string, output string, native bool) backend_context {
     ctx: backend_context
     ctx.compiler = new_native_compiler(input, output)
     ctx.native_enabled = native

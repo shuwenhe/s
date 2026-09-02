@@ -17,12 +17,7 @@ func make_go_style_code_generator(
     codegen_config cfg
 ) go_style_code_generator {
     go_style_code_generator {
-        mcg: mcg,
-        symtab: symtab,
-        reloc_ctx: reloc_ctx,
-        config: cfg,
-        current_func_id: 0,
-        current_section_offset: 0 as int64,
+        mcg: mcg, symtab symtab, reloc_ctx reloc_ctx, config cfg, current_func_id 0, current_section_offset 0 as int64,
     }
 }
 

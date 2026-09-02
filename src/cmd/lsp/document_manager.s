@@ -14,18 +14,13 @@ struct parse_error {
 
 func new_document_manager() document_manager {
     document_manager {
-        documents: map[string, text_document](),
-        ast_cache: map[string, s::source_file](),
-        error_cache: map[string, parse_error[]](),
+        documents: map[string, text_document](), ast_cache map[string, s::source_file](), error_cache map[string, parse_error[]](),
     }
 }
 
 func (dm document_manager) open_document(item text_document_item) {
     doc := text_document {
-        uri: item.uri,
-        language_id: item.language_id,
-        version: item.version,
-        text: item.text,
+        uri: item.uri, language_id item.language_id, version item.version, text item.text,
     }
     dm.documents.insert(item.uri, doc)
     dm.parse_document(item.uri)
@@ -35,10 +30,7 @@ func (dm document_manager) update_document(uri string, text string, version int)
     switch dm.documents.get(uri) {
         option::some(doc) : {
             updated := text_document {
-                uri: uri,
-                language_id: doc.language_id,
-                version: version,
-                text: text,
+                uri: uri, language_id doc.language_id, version version, text text,
             }
             dm.documents.insert(uri, updated)
             dm.parse_document(uri)
@@ -80,8 +72,7 @@ func (dm document_manager) parse_document(uri string) {
                         err : {
                             dm.error_cache.insert(uri, parse_error[]{
                                 parse_error {
-                                    message: err.message,
-                                    pos: position { line: err.line, character: err.column }
+                                    message: err.message, pos position { line: err.line, character err.column }
                                 }
                             })
                         }
@@ -90,8 +81,7 @@ func (dm document_manager) parse_document(uri string) {
                 err : {
                     dm.error_cache.insert(uri, parse_error[]{
                         parse_error {
-                            message: err.message,
-                            pos: position { line: err.line, character: err.column }
+                            message: err.message, pos position { line: err.line, character err.column }
                         }
                     })
                 }
@@ -153,66 +143,38 @@ func extract_symbols_from_ast(ast s::source_file) document_symbol[] {
         switch item {
             s::item::function(func) : {
                 symbols.push(document_symbol {
-                    name: func.sig.name,
-                    kind: symbol_kind::function_k,
-                    range_val: range {
-                        start: position { line: func.line, character: 0 },
-                        end: position { line: func.line, character: len(func.sig.name) }
-                    },
-                    selection_range: range {
-                        start: position { line: func.line, character: 0 },
-                        end: position { line: func.line, character: len(func.sig.name) }
-                    },
-                    children: option::none(),
-                    deprecated: option::none()
+                    name: func.sig.name, kind symbol_kind::function_k, range_val range {
+                        start: position { line: func.line, character 0 }, end position { line: func.line, character len(func.sig.name) }
+                    }, selection_range range {
+                        start: position { line: func.line, character 0 }, end position { line: func.line, character len(func.sig.name) }
+                    }, children option::none(), deprecated option::none()
                 })
             },
             s::item::struct(s_decl) : {
                 symbols.push(document_symbol {
-                    name: s_decl.name,
-                    kind: symbol_kind::struct_k,
-                    range_val: range {
-                        start: position { line: s_decl.line, character: 0 },
-                        end: position { line: s_decl.line, character: len(s_decl.name) }
-                    },
-                    selection_range: range {
-                        start: position { line: s_decl.line, character: 0 },
-                        end: position { line: s_decl.line, character: len(s_decl.name) }
-                    },
-                    children: option::none(),
-                    deprecated: option::none()
+                    name: s_decl.name, kind symbol_kind::struct_k, range_val range {
+                        start: position { line: s_decl.line, character 0 }, end position { line: s_decl.line, character len(s_decl.name) }
+                    }, selection_range range {
+                        start: position { line: s_decl.line, character 0 }, end position { line: s_decl.line, character len(s_decl.name) }
+                    }, children option::none(), deprecated option::none()
                 })
             },
             s::item::enum(e_decl) : {
                 symbols.push(document_symbol {
-                    name: e_decl.name,
-                    kind: symbol_kind::enum_k,
-                    range_val: range {
-                        start: position { line: e_decl.line, character: 0 },
-                        end: position { line: e_decl.line, character: len(e_decl.name) }
-                    },
-                    selection_range: range {
-                        start: position { line: e_decl.line, character: 0 },
-                        end: position { line: e_decl.line, character: len(e_decl.name) }
-                    },
-                    children: option::none(),
-                    deprecated: option::none()
+                    name: e_decl.name, kind symbol_kind::enum_k, range_val range {
+                        start: position { line: e_decl.line, character 0 }, end position { line: e_decl.line, character len(e_decl.name) }
+                    }, selection_range range {
+                        start: position { line: e_decl.line, character 0 }, end position { line: e_decl.line, character len(e_decl.name) }
+                    }, children option::none(), deprecated option::none()
                 })
             },
             s::item::trait(t_decl) : {
                 symbols.push(document_symbol {
-                    name: t_decl.name,
-                    kind: symbol_kind::interface_k,
-                    range_val: range {
-                        start: position { line: t_decl.line, character: 0 },
-                        end: position { line: t_decl.line, character: len(t_decl.name) }
-                    },
-                    selection_range: range {
-                        start: position { line: t_decl.line, character: 0 },
-                        end: position { line: t_decl.line, character: len(t_decl.name) }
-                    },
-                    children: option::none(),
-                    deprecated: option::none()
+                    name: t_decl.name, kind symbol_kind::interface_k, range_val range {
+                        start: position { line: t_decl.line, character 0 }, end position { line: t_decl.line, character len(t_decl.name) }
+                    }, selection_range range {
+                        start: position { line: t_decl.line, character 0 }, end position { line: t_decl.line, character len(t_decl.name) }
+                    }, children option::none(), deprecated option::none()
                 })
             },
             _ : {}

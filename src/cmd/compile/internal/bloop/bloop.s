@@ -89,18 +89,14 @@ func collect_keep_alive_names(stmt value) string[] {
 func keep_alive_stmt(string name_value) stmt {
     args := expr[]()
     args.push(expr::name(name_expr {
-        name: name_value,
-        inferred_type: option::none,
+        name: name_value, inferred_type option::none,
     }))
     callee := expr::name(name_expr {
-        name: "keep_alive",
-        inferred_type: option::none,
+        name: "keep_alive", inferred_type option::none,
     })
     stmt::expr(expr_stmt {
         expr: expr::call(call_expr {
-            callee: box(callee),
-            args: args,
-            inferred_type: option::none,
+            callee: box(callee), args args, inferred_type option::none,
         }),
     })
 }
@@ -139,19 +135,13 @@ func is_testing_bloop_expr(expr value) bool {
 func edit_expr(expr value, bool in_bloop) expr {
     switch value {
         expr.borrow(borrow_value) : expr::borrow(borrow_expr {
-            target: box(edit_expr(borrow_value.target.value, in_bloop)),
-            mutable: borrow_value.mutable,
-            inferred_type: borrow_value.inferred_type,
+            target: box(edit_expr(borrow_value.target.value, in_bloop)), mutable borrow_value.mutable, inferred_type borrow_value.inferred_type,
         }),
         expr.member(member_value) : expr::member(member_expr {
-            target: box(edit_expr(member_value.target.value, in_bloop)),
-            member: member_value.member,
-            inferred_type: member_value.inferred_type,
+            target: box(edit_expr(member_value.target.value, in_bloop)), member member_value.member, inferred_type member_value.inferred_type,
         }),
         expr.index(index_value) : expr::index(index_expr {
-            target: box(edit_expr(index_value.target.value, in_bloop)),
-            index: box(edit_expr(index_value.index.value, in_bloop)),
-            inferred_type: index_value.inferred_type,
+            target: box(edit_expr(index_value.target.value, in_bloop)), index box(edit_expr(index_value.index.value, in_bloop)), inferred_type index_value.inferred_type,
         }),
         expr.call(call_value) : {
             out_args := expr[]()
@@ -161,9 +151,7 @@ func edit_expr(expr value, bool in_bloop) expr {
                 i = i + 1
             }
             expr::call(call_expr {
-                callee: box(edit_expr(call_value.callee.value, in_bloop)),
-                args: out_args,
-                inferred_type: call_value.inferred_type,
+                callee: box(edit_expr(call_value.callee.value, in_bloop)), args out_args, inferred_type call_value.inferred_type,
             })
         }
         expr.if(if_value) : {
@@ -176,26 +164,17 @@ func edit_expr(expr value, bool in_bloop) expr {
                 option::none : (),
             }
             expr::if(if_expr {
-                condition: box(edit_expr(if_value.condition.value, in_bloop)),
-                then_branch: then_block,
-                else_branch: else_expr,
-                inferred_type: if_value.inferred_type,
+                condition: box(edit_expr(if_value.condition.value, in_bloop)), then_branch then_block, else_branch else_expr, inferred_type if_value.inferred_type,
             })
         }
         expr.while(while_value) : {
             loop_flag := in_bloop || is_testing_bloop_expr(while_value.condition.value)
             expr::while(while_expr {
-                condition: box(edit_expr(while_value.condition.value, in_bloop)),
-                body: edit_block(while_value.body, loop_flag),
-                inferred_type: while_value.inferred_type,
+                condition: box(edit_expr(while_value.condition.value, in_bloop)), body edit_block(while_value.body, loop_flag), inferred_type while_value.inferred_type,
             })
         }
         expr.for(for_value) : expr::for(for_expr {
-            names: for_value.names,
-            declare: for_value.declare,
-            iterable: box(edit_expr(for_value.iterable.value, in_bloop)),
-            body: edit_block(for_value.body, in_bloop),
-            inferred_type: for_value.inferred_type,
+            names: for_value.names, declare for_value.declare, iterable box(edit_expr(for_value.iterable.value, in_bloop)), body edit_block(for_value.body, in_bloop), inferred_type for_value.inferred_type,
         }),
         expr.block(block_value) : expr::block(edit_block(block_value, in_bloop)),
         expr.switch(switch_value) : {
@@ -203,15 +182,12 @@ func edit_expr(expr value, bool in_bloop) expr {
             i := 0
             for i < len(switch_value.arms) {
                 arms.push(switch_arm {
-                    pattern: switch_value.arms[i].pattern,
-                    expr: edit_expr(switch_value.arms[i].expr, in_bloop),
+                    pattern: switch_value.arms[i].pattern, expr edit_expr(switch_value.arms[i].expr, in_bloop),
                 })
                 i = i + 1
             }
             expr::switch(switch_expr {
-                subject: box(edit_expr(switch_value.subject.value, in_bloop)),
-                arms: arms,
-                inferred_type: switch_value.inferred_type,
+                subject: box(edit_expr(switch_value.subject.value, in_bloop)), arms arms, inferred_type switch_value.inferred_type,
             })
         }
         _ : value,
@@ -223,16 +199,11 @@ func edit_stmt(stmt value, bool in_bloop) stmt {
         stmt.c_for(loop_value) : {
             loop_flag := in_bloop || is_testing_bloop_expr(loop_value.condition)
             stmt::c_for(c_for_stmt {
-                init: box(edit_stmt(loop_value.init.value, in_bloop)),
-                condition: edit_expr(loop_value.condition, in_bloop),
-                step: box(edit_stmt(loop_value.step.value, in_bloop)),
-                body: edit_block(loop_value.body, loop_flag),
+                init: box(edit_stmt(loop_value.init.value, in_bloop)), condition edit_expr(loop_value.condition, in_bloop), step box(edit_stmt(loop_value.step.value, in_bloop)), body edit_block(loop_value.body, loop_flag),
             })
         }
         stmt.let(var_value) : stmt::let(var_stmt {
-            name: var_value.name,
-            type_name: var_value.type_name,
-            value: edit_expr(var_value.value, in_bloop),
+            name: var_value.name, type_name var_value.type_name, value edit_expr(var_value.value, in_bloop),
         }),
         stmt.expr(expr_value) : stmt::expr(expr_stmt {
             expr: edit_expr(expr_value.expr, in_bloop),
@@ -263,9 +234,7 @@ func edit_block(block_expr block_value, bool in_bloop) block_expr {
         option::none : (),
     }
     block_expr {
-        statements: out_stmts,
-        final_expr: final_expr,
-        inferred_type: block_value.inferred_type,
+        statements: out_stmts, final_expr final_expr, inferred_type block_value.inferred_type,
     }
 }
 
@@ -303,9 +272,7 @@ func walk(source_file pkg) source_file {
         i = i + 1
     }
     source_file {
-        pkg: pkg.pkg,
-        uses: pkg.uses,
-        items: out_items,
+        pkg: pkg.pkg, uses pkg.uses, items out_items,
     }
 }
 

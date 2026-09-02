@@ -47,12 +47,9 @@ struct reg_alloc_result {
 
 func new_abi_config(int i_regs_count, int f_regs_count, int offset_for_locals, int which) abi_config {
     abi_config {
-        offset_for_locals: offset_for_locals,
-        reg_amounts: reg_amounts {
-            int_regs: i_regs_count,
-            float_regs: f_regs_count,
-        },
-        which: which,
+        offset_for_locals: offset_for_locals, reg_amounts reg_amounts {
+            int_regs: i_regs_count, float_regs f_regs_count,
+        }, which which,
     }
 }
 
@@ -177,10 +174,7 @@ func num_param_regs(abi_config config, string type_name) int {
 
 func abi_analyze_types(abi_config config, string[] params, string[] results) abi_param_result_info {
     state := assign_state {
-        r_total: config.reg_amounts,
-        r_used: reg_amounts { int_regs: 0, float_regs: 0 },
-        stack_offset: config.offset_for_locals,
-        spill_offset: 0,
+        r_total: config.reg_amounts, r_used reg_amounts { int_regs: 0, float_regs 0 }, stack_offset config.offset_for_locals, spill_offset 0,
     }
     inparams := abi_param_assignment[]()
     i := 0
@@ -190,7 +184,7 @@ func abi_analyze_types(abi_config config, string[] params, string[] results) abi
     }
     state.stack_offset = align_to(state.stack_offset, reg_size())
     in_regs_used := state.r_used.int_regs + state.r_used.float_regs
-    state.r_used = reg_amounts { int_regs: 0, float_regs: 0 }
+    state.r_used = reg_amounts { int_regs: 0, float_regs 0 }
     outparams := abi_param_assignment[]()
     i = 0
     for i < len(results) {
@@ -198,13 +192,7 @@ func abi_analyze_types(abi_config config, string[] params, string[] results) abi
         i = i + 1
     }
     abi_param_result_info {
-        inparams: inparams,
-        outparams: outparams,
-        offset_to_spill_area: align_to(state.stack_offset, reg_size()),
-        spill_area_size: align_to(state.spill_offset, reg_size()),
-        in_registers_used: in_regs_used,
-        out_registers_used: state.r_used.int_regs + state.r_used.float_regs,
-        config: config,
+        inparams: inparams, outparams outparams, offset_to_spill_area align_to(state.stack_offset, reg_size()), spill_area_size align_to(state.spill_offset, reg_size()), in_registers_used in_regs_used, out_registers_used state.r_used.int_regs + state.r_used.float_regs, config config,
     }
 }
 
@@ -223,15 +211,13 @@ func register_types(abi_param_assignment[] assignments) string[] {
 func register_types_and_offsets(abi_param_assignment assignment) register_layout {
     if len(assignment.registers) == 0 {
         return register_layout {
-            types: string[](),
-            offsets: int[](),
+            types: string[](), offsets int[](),
         }
     }
     types := append_param_types(string[](), assignment.type_name)
     pair := append_param_offsets(int[](), 0, assignment.type_name)
     register_layout {
-        types: types,
-        offsets: pair.offsets,
+        types: types, offsets pair.offsets,
     }
 }
 
@@ -266,16 +252,16 @@ struct offset_result {
 func append_param_offsets(int[] offsets, int at, string type_name) offset_result {
     size := type_size(type_name)
     if size == 0 {
-        return offset_result { offsets: offsets, next: at }
+        return offset_result { offsets: offsets, next at }
     }
     if is_complex_type(type_name) || size > reg_size() {
         half := size / 2
         offsets = append(offsets, at)
         offsets = append(offsets, at + half)
-        return offset_result { offsets: offsets, next: at + size }
+        return offset_result { offsets: offsets, next at + size }
     }
     offsets = append(offsets, at)
-    offset_result { offsets: offsets, next: at + size }
+    offset_result { offsets: offsets, next at + size }
 }
 
 func append_param_types(string[] rts, string type_name) string[] {
@@ -327,23 +313,20 @@ func assign_param(assign_state state, string type_name, string name, bool is_res
         state.spill_offset = align_to(offset + type_size(type_name), alignment_for_type(type_name))
     }
     abi_param_assignment {
-        type_name: type_name,
-        name: name,
-        registers: alloc.regs,
-        offset: offset,
+        type_name: type_name, name name, registers alloc.regs, offset offset,
     }
 }
 
 func try_alloc_regs(assign_state state, string type_name) reg_alloc_result {
     if type_size(type_name) == 0 {
-        return reg_alloc_result { ok: false, regs: int[]() }
+        return reg_alloc_result { ok: false, regs int[]() }
     }
     need := reg_amounts_for_type(type_name)
     if need.int_regs > state.r_total.int_regs - state.r_used.int_regs {
-        return reg_alloc_result { ok: false, regs: int[]() }
+        return reg_alloc_result { ok: false, regs int[]() }
     }
     if need.float_regs > state.r_total.float_regs - state.r_used.float_regs {
-        return reg_alloc_result { ok: false, regs: int[]() }
+        return reg_alloc_result { ok: false, regs int[]() }
     }
     regs := int[]()
     i := 0
@@ -358,7 +341,7 @@ func try_alloc_regs(assign_state state, string type_name) reg_alloc_result {
     }
     state.r_used.int_regs = state.r_used.int_regs + need.int_regs
     state.r_used.float_regs = state.r_used.float_regs + need.float_regs
-    reg_alloc_result { ok: true, regs: regs }
+    reg_alloc_result { ok: true, regs regs }
 }
 
 func next_slot(int offset, string type_name) int {
@@ -367,28 +350,28 @@ func next_slot(int offset, string type_name) int {
 
 func reg_amounts_for_type(string type_name) reg_amounts {
     if is_zero_size_type(type_name) {
-        return reg_amounts { int_regs: 0, float_regs: 0 }
+        return reg_amounts { int_regs: 0, float_regs 0 }
     }
     if is_complex_type(type_name) {
-        return reg_amounts { int_regs: 0, float_regs: 2 }
+        return reg_amounts { int_regs: 0, float_regs 2 }
     }
     if is_float_type(type_name) {
-        return reg_amounts { int_regs: 0, float_regs: 1 }
+        return reg_amounts { int_regs: 0, float_regs 1 }
     }
     if is_string_type(type_name) {
-        return reg_amounts { int_regs: 2, float_regs: 0 }
+        return reg_amounts { int_regs: 2, float_regs 0 }
     }
     if is_slice_type(type_name) {
-        return reg_amounts { int_regs: 3, float_regs: 0 }
+        return reg_amounts { int_regs: 3, float_regs 0 }
     }
     if is_interface_type(type_name) {
-        return reg_amounts { int_regs: 2, float_regs: 0 }
+        return reg_amounts { int_regs: 2, float_regs 0 }
     }
     words := (type_size(type_name) + reg_size() - 1) / reg_size()
     if words < 1 {
         words = 1
     }
-    reg_amounts { int_regs: words, float_regs: 0 }
+    reg_amounts { int_regs: words, float_regs 0 }
 }
 
 func reg_size() int {

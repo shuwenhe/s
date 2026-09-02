@@ -9,11 +9,11 @@ trait measure_b {
     func size() int;
 }
 
-func (p: point) size() int {
+func ( p point) size() int {
     p.x
 }
 
-func (p: point) size() int {
+func ( p point) size() int {
     p.x
 }
 

@@ -18,8 +18,7 @@ func bufio_unit_ready() int {
 
 func new_buffer_reader(string data) buffer_reader {
     buffer_reader {
-        data: data,
-        offset: 0,
+        data: data, offset 0,
     }
 }
 

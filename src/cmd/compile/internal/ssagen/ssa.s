@@ -25,8 +25,7 @@ func emit_arg_info(string fn_name, abi_param_desc[] in_params) arg_info_blob {
     }
     bytes = append(bytes, 255)
     arg_info_blob {
-        symbol_name: fn_name + ".arginfo",
-        bytes: bytes,
+        symbol_name: fn_name + ".arginfo", bytes bytes,
     }
 }
 
@@ -58,8 +57,7 @@ func append_param_encoding(int[] bytes, abi_param_desc p) () {
 
 func emit_wrapped_func_info(string fn_name, string wrapped_name) wrap_info_blob {
     wrap_info_blob {
-        symbol_name: fn_name + ".wrapinfo",
-        wrapped_symbol: wrapped_name,
+        symbol_name: fn_name + ".wrapinfo", wrapped_symbol wrapped_name,
     }
 }
 

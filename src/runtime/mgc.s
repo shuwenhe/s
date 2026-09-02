@@ -57,12 +57,7 @@ struct GcStats {
 
 func gc_stats() GcStats {
     GcStats {
-        phase:        gc_phase,
-        heap_alloc:   heap_alloc_bytes,
-        heap_goal:    heap_goal_bytes,
-        num_gc:       gc_run_count,
-        total_freed:  gc_total_freed,
-        live_objects: heap_live_objs,
+        phase:        gc_phase, heap_alloc heap_alloc_bytes, heap_goal heap_goal_bytes, num_gc gc_run_count, total_freed gc_total_freed, live_objects heap_live_objs,
     }
 }
 

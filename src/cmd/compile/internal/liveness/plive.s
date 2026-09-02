@@ -31,14 +31,7 @@ func plive_emit(string fn_name, live_stack_slot[] slots, int[][]] stack_maps) li
         i = i + 1
     }
     liveness_emit_blob {
-        args_symbol: fn_name + ".gcargs",
-        locals_symbol: fn_name + ".gclocals",
-        bitmap_count: len(stack_maps),
-        args_bits: args_bits,
-        locals_bits: locals_bits,
-        args_maps: args_maps,
-        locals_maps: locals_maps,
-        stack_objects: emit_stack_objects(slots),
+        args_symbol: fn_name + ".gcargs", locals_symbol fn_name + ".gclocals", bitmap_count len(stack_maps), args_bits args_bits, locals_bits locals_bits, args_maps args_maps, locals_maps locals_maps, stack_objects emit_stack_objects(slots),
     }
 }
 
