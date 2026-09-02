@@ -8,7 +8,7 @@ S uses receiver methods as its single core method model:
 
 ```s
 func (writer* File) write(string data) ((), io_error) {
-    // ...
+
 }
 ```
 

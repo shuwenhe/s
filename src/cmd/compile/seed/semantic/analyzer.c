@@ -918,6 +918,10 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				*out_type = TYPE_BOOL;
 				return 1;
 			}
+			if (node->as.unary_expr.op == TOKEN_STAR) {
+				*out_type = TYPE_ANY;
+				return 1;
+			}
 			error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "unsupported unary operator");
 			return 0;
 		case AST_BINARY_EXPR:
