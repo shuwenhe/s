@@ -15,7 +15,7 @@ struct LivenessAnalyzer {
     int[][] block_used
 }
 
-struct StackFrame {
+struct stack_frame {
     int total_size
     int spill_area_offset
     int callee_saved_offset
@@ -25,23 +25,24 @@ struct StackFrame {
     int slot_count
 }
 
-func LivenessAnalyzer_new(int block_count, int var_count) LivenessAnalyzer* {
-    analyzer := new LivenessAnalyzer
-    analyzer.block_count = block_count
-    analyzer.var_count = var_count
-    analyzer.block_liveness = new liveness_set[block_count]
-    analyzer.block_killed = new int[][block_count]
-    analyzer.block_used = new int[][block_count]
-    
+func liveness_analyzer_new(int block_count, int var_count) LivenessAnalyzer* {
+    analyzer := LivenessAnalyzer {
+        block_count: block_count,
+        var_count: var_count,
+        block_liveness: new liveness_set[block_count],
+        block_killed: new int[][block_count],
+        block_used: new int[][block_count],
+    }
+
     i := 0
     for i < block_count {
         analyzer.block_liveness[i].live_in = new int[var_count]
         analyzer.block_liveness[i].live_out = new int[var_count]
         analyzer.block_liveness[i].num_vars = var_count
-        
+
         analyzer.block_killed[i] = new int[var_count]
         analyzer.block_used[i] = new int[var_count]
-        
+
         j := 0
         for j < var_count {
             analyzer.block_liveness[i].live_in[j] = 0
@@ -50,11 +51,11 @@ func LivenessAnalyzer_new(int block_count, int var_count) LivenessAnalyzer* {
             analyzer.block_used[i][j] = 0
             j = j + 1
         }
-        
+
         i = i + 1
     }
-    
-    analyzer
+
+    &analyzer
 }
 
 func (analyzer* LivenessAnalyzer) compute_block_gen_kill(block[] blocks, int block_id) int {
@@ -174,31 +175,32 @@ func (analyzer* LivenessAnalyzer) is_live_at_point(int var_id, int block_id, int
     return 0
 }
 
-func StackFrame_new(int num_spills, int num_locals, int num_args) StackFrame* {
-    frame := new StackFrame
-    frame.total_size = 0
-    frame.spill_area_offset = 0
-    frame.callee_saved_offset = 0
-    frame.local_vars_offset = 0
-    frame.arg_area_offset = 0
-    frame.slot_to_var = new int[256]
-    frame.slot_count = 0
-    
+func stack_frame_new(int num_spills, int num_locals, int num_args) stack_frame* {
+    frame := stack_frame {
+        total_size: 0,
+        spill_area_offset: 0,
+        callee_saved_offset: 0,
+        local_vars_offset: 0,
+        arg_area_offset: 0,
+        slot_to_var: new int[256],
+        slot_count: 0,
+    }
+
     return_addr_size := 8
     frame.arg_area_offset = 0
-    
+
     callee_saved_count := count_callee_saved_regs()
     frame.callee_saved_offset = frame.arg_area_offset + num_args * 8
-    
+
     frame.local_vars_offset = frame.callee_saved_offset + callee_saved_count * 8
-    
+
     frame.spill_area_offset = frame.local_vars_offset + num_locals * 8
-    
+
     frame.total_size = frame.spill_area_offset + num_spills * 8
-    
+
     frame.total_size = align_to_16(frame.total_size)
-    
-    frame
+
+    &frame
 }
 
 func count_callee_saved_regs() int {
@@ -213,7 +215,7 @@ func align_to_16(int size) int {
     return size
 }
 
-func (frame* StackFrame) get_var_stack_location(int var_id) int {
+func (frame* stack_frame) get_var_stack_location(int var_id) int {
     i := 0
     for i < frame.slot_count {
         if frame.slot_to_var[i] == var_id {
@@ -229,7 +231,7 @@ func (frame* StackFrame) get_var_stack_location(int var_id) int {
     slot_offset
 }
 
-func (frame* StackFrame) eliminate_dead_slots() int {
+func (frame* stack_frame) eliminate_dead_slots() int {
     live_vars := new int[256]
     
     i := 0
@@ -252,7 +254,7 @@ func (frame* StackFrame) eliminate_dead_slots() int {
     0
 }
 
-func (frame* StackFrame) omit_frame_pointer() int {
+func (frame* stack_frame) omit_frame_pointer() int {
     if frame.total_size <= 128 {
         return 1
     }
@@ -260,11 +262,11 @@ func (frame* StackFrame) omit_frame_pointer() int {
     return 0
 }
 
-func (frame* StackFrame) compute_cfi_directives() string {
+func (frame* stack_frame) compute_cfi_directives() string {
     return ""
 }
 
-func (frame* StackFrame) verify_alignment() int {
+func (frame* stack_frame) verify_alignment() int {
     if frame.total_size & 15 == 0 {
         return 1
     }
