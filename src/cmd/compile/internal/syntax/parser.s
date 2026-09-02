@@ -50,7 +50,7 @@ struct parser {
     pos int
 }
 
-func parser_new(tokens* token, token_count int) parser* {
+func parser_new(tokens* token, int token_count) parser* {
     p := alloc(parser)
     p.tokens = tokens
     p.token_count = token_count
@@ -71,7 +71,7 @@ func parser_advance(p* parser) {
     }
 }
 
-func parser_match(p* parser, token_type int) int {
+func parser_match(p* parser, int token_type) int {
     if parser_current_token(p).type_ == token_type {
         parser_advance(p)
         return 1

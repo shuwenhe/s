@@ -1,7 +1,7 @@
 package seed.codegen
 use std.vec.vec
 use std.string.string
-func instruction_select_mov(ctx* codegen_context, ra* register_allocator, op1 string, result string) {
+func instruction_select_mov(ctx* codegen_context, ra* register_allocator, string op1, string result) {
     dst_reg, _ := ra.allocate(result)
     if is_numeric(op1) {
         value := parse_int(op1)
@@ -12,7 +12,7 @@ func instruction_select_mov(ctx* codegen_context, ra* register_allocator, op1 st
     }
 }
 
-func instruction_select_add(ctx* codegen_context, ra* register_allocator, op1 string, op2 string, result string) {
+func instruction_select_add(ctx* codegen_context, ra* register_allocator, string op1, string op2, string result) {
     dst_reg, _ := ra.allocate(result)
     src_reg, _ := ra.allocate(op1)
     ctx.emit_line("    mov %" + src_reg + ", %" + dst_reg)
@@ -25,7 +25,7 @@ func instruction_select_add(ctx* codegen_context, ra* register_allocator, op1 st
     }
 }
 
-func instruction_select_sub(ctx* codegen_context, ra* register_allocator, op1 string, op2 string, result string) {
+func instruction_select_sub(ctx* codegen_context, ra* register_allocator, string op1, string op2, string result) {
     dst_reg, _ := ra.allocate(result)
     src_reg, _ := ra.allocate(op1)
     ctx.emit_line("    mov %" + src_reg + ", %" + dst_reg)
@@ -38,7 +38,7 @@ func instruction_select_sub(ctx* codegen_context, ra* register_allocator, op1 st
     }
 }
 
-func instruction_select_mul(ctx* codegen_context, ra* register_allocator, op1 string, op2 string, result string) {
+func instruction_select_mul(ctx* codegen_context, ra* register_allocator, string op1, string op2, string result) {
     dst_reg, _ := ra.allocate(result)
     ctx.emit_line("    mov %" + dst_reg + ", %rax")
     if is_numeric(op2) {
@@ -52,7 +52,7 @@ func instruction_select_mul(ctx* codegen_context, ra* register_allocator, op1 st
     ctx.emit_line("    mov %rax, %" + dst_reg)
 }
 
-func instruction_select_cmp(ctx* codegen_context, ra* register_allocator, op1 string, op2 string) {
+func instruction_select_cmp(ctx* codegen_context, ra* register_allocator, string op1, string op2) {
     if is_numeric(op1) {
         ctx.emit_line("    mov $" + op1 + ", %rax")
         src_reg := "rax"
@@ -67,7 +67,7 @@ func instruction_select_cmp(ctx* codegen_context, ra* register_allocator, op1 st
     }
 }
 
-func instruction_select_call(ctx* codegen_context, ra* register_allocator, fn_name string, args string[]) {
+func instruction_select_call(ctx* codegen_context, ra* register_allocator, string fn_name, string[] args) {
     param_regs := vec[]()
     param_regs.push("rdi")
     param_regs.push("rsi")
@@ -89,7 +89,7 @@ func instruction_select_call(ctx* codegen_context, ra* register_allocator, fn_na
     ctx.emit_line("    call " + fn_name)
 }
 
-func instruction_select_ret(ctx* codegen_context, ra* register_allocator, value string) {
+func instruction_select_ret(ctx* codegen_context, ra* register_allocator, string value) {
     if value != "" {
         if is_numeric(value) {
             ctx.emit_line("    mov $" + value + ", %rax")
@@ -104,7 +104,7 @@ func instruction_select_ret(ctx* codegen_context, ra* register_allocator, value 
     ctx.emit_line("    ret")
 }
 
-func is_numeric( s string) bool {
+func is_numeric(string s) bool {
     if s.len() == 0 {
         return false
     }
@@ -117,7 +117,7 @@ func is_numeric( s string) bool {
     true
 }
 
-func parse_int( s string) int {
+func parse_int(string s) int {
     result := 0
     for i < s.len() {
         c := s[i]

@@ -36,7 +36,7 @@ struct loop_info {
     exit_blocks int[]
 }
 
-func cfg_new(func ir_function) control_flow_graph {
+func cfg_new(ir_function func) control_flow_graph {
     cfg := control_flow_graph {
         function: func, entry_block_id 0
     }
@@ -249,7 +249,7 @@ func cfg_detect_loops(cfg* control_flow_graph) loop_info[] {
     loops
 }
 
-func cfg_find_or_create_loop(loops loop_info[], header_id int) int {
+func cfg_find_or_create_loop(loop_info[] loops, int header_id) int {
     for i := 0; i < loops.len(); i = i + 1 {
         if loops[i].header_id == header_id {
             return i

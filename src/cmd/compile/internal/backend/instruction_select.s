@@ -50,7 +50,7 @@ struct instruction_selector {
     stack_offset int
 }
 
-func instruction_selector_new(ir_func ir_function) instruction_selector {
+func instruction_selector_new(ir_function ir_func) instruction_selector {
     selector := instruction_selector {
         ir_func: ir_func,
         x86_instrs: x86_instruction[](),
@@ -60,7 +60,7 @@ func instruction_selector_new(ir_func ir_function) instruction_selector {
     selector
 }
 
-func instruction_selector_select(selector* instruction_selector) {
+func instruction_selector_select(instruction_selector selector*) {
     for b_idx := 0; b_idx < selector.ir_func.blocks.len(); b_idx = b_idx + 1 {
         block := selector.ir_func.blocks[b_idx]
         
@@ -71,7 +71,7 @@ func instruction_selector_select(selector* instruction_selector) {
     }
 }
 
-func instruction_selector_process_instruction(selector* instruction_selector, instr ir_instruction) {
+func instruction_selector_process_instruction(instruction_selector selector*, ir_instruction instr) {
     if instr.instr_type == 1 {
         selector_handle_load(selector, instr)
     } else if instr.instr_type == 2 {
@@ -87,7 +87,7 @@ func instruction_selector_process_instruction(selector* instruction_selector, in
     }
 }
 
-func selector_handle_load(selector* instruction_selector, instr ir_instruction) {
+func selector_handle_load(instruction_selector selector*, ir_instruction instr) {
     src_reg := allocate_register(selector, instr.operands[0].var_name)
     dst_reg := allocate_register(selector, instr.result.var_name)
     
@@ -101,7 +101,7 @@ func selector_handle_load(selector* instruction_selector, instr ir_instruction) 
     selector.x86_instrs = append(selector.x86_instrs, mov_instr)
 }
 
-func selector_handle_store(selector* instruction_selector, instr ir_instruction) {
+func selector_handle_store(instruction_selector selector*, ir_instruction instr) {
     src_reg := allocate_register(selector, instr.operands[0].var_name)
     dst_reg := allocate_register(selector, instr.result.var_name)
     
@@ -115,7 +115,7 @@ func selector_handle_store(selector* instruction_selector, instr ir_instruction)
     selector.x86_instrs = append(selector.x86_instrs, mov_instr)
 }
 
-func selector_handle_binop(selector* instruction_selector, instr ir_instruction) {
+func selector_handle_binop(instruction_selector selector*, ir_instruction instr) {
     left_reg := allocate_register(selector, instr.operands[0].var_name)
     right_reg := allocate_register(selector, instr.operands[1].var_name)
     result_reg := allocate_register(selector, instr.result.var_name)
@@ -132,7 +132,7 @@ func selector_handle_binop(selector* instruction_selector, instr ir_instruction)
     selector.x86_instrs = append(selector.x86_instrs, binop_instr)
 }
 
-func selector_handle_unop(selector* instruction_selector, instr ir_instruction) {
+func selector_handle_unop(instruction_selector selector*, ir_instruction instr) {
     operand_reg := allocate_register(selector, instr.operands[0].var_name)
     result_reg := allocate_register(selector, instr.result.var_name)
     
@@ -146,7 +146,7 @@ func selector_handle_unop(selector* instruction_selector, instr ir_instruction) 
     selector.x86_instrs = append(selector.x86_instrs, mov_instr)
 }
 
-func selector_handle_call(selector* instruction_selector, instr ir_instruction) {
+func selector_handle_call(instruction_selector selector*, ir_instruction instr) {
     call_instr := x86_instruction {
         instr_type: INSTR_CALL,
         operand1: x86_operand { operand_type: OPERAND_LABEL, label_name: instr.operands[0].const_value },
@@ -157,7 +157,7 @@ func selector_handle_call(selector* instruction_selector, instr ir_instruction) 
     selector.x86_instrs = append(selector.x86_instrs, call_instr)
 }
 
-func selector_handle_return(selector* instruction_selector, instr ir_instruction) {
+func selector_handle_return(instruction_selector selector*, ir_instruction instr) {
     ret_instr := x86_instruction {
         instr_type: INSTR_RET,
         operand1: x86_operand { operand_type: 0 },
@@ -168,7 +168,7 @@ func selector_handle_return(selector* instruction_selector, instr ir_instruction
     selector.x86_instrs = append(selector.x86_instrs, ret_instr)
 }
 
-func allocate_register(selector* instruction_selector, var_name string) int {
+func allocate_register(instruction_selector selector*, string var_name) int {
     for i := 0; i < selector.var_to_reg_map.len(); i = i + 1 {
         if selector.var_to_reg_map[i] == var_name {
             return i
@@ -180,7 +180,7 @@ func allocate_register(selector* instruction_selector, var_name string) int {
     reg_id
 }
 
-func ir_opcode_to_x86(opcode int) int {
+func ir_opcode_to_x86(int opcode) int {
     switch opcode {
         case 1:
             return INSTR_ADD
