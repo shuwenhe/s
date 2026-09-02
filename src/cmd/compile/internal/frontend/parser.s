@@ -4,7 +4,7 @@ struct parser {
     lexer: lexer
     current_token: token
     peek_token: token
-    errors: string[]
+    errors: array
 }
 
 // Token values shared with the S frontend lexer.
@@ -27,6 +27,7 @@ const TOKEN_LE = 48
 const TOKEN_GT = 49
 const TOKEN_GE = 50
 const TOKEN_NOT = 59
+const TOKEN_BIT_NOT = 63
 const TOKEN_EOF = 0
 const TOKEN_IDENT = 10
 const TOKEN_INT = 11
@@ -65,6 +66,39 @@ const TOKEN_DOT = 87
 const TOKEN_COLON = 88
 const TOKEN_SEMICOLON = 89
 const TOKEN_NEWLINE = 99
+
+// AST ABI mirrored from ast.s until S module imports are available.
+const AST_PROGRAM = 1
+const AST_PACKAGE = 2
+const AST_IMPORT = 3
+const AST_FUNC_DECL = 4
+const AST_STRUCT_DECL = 5
+const AST_ENUM_DECL = 6
+const AST_VAR_DECL = 7
+const AST_CONST_DECL = 8
+const AST_IF_STMT = 21
+const AST_FOR_STMT = 22
+const AST_WHILE_STMT = 23
+const AST_RETURN_STMT = 24
+const AST_BREAK_STMT = 25
+const AST_CONTINUE_STMT = 26
+const AST_SWITCH_STMT = 27
+const AST_BLOCK_STMT = 28
+const AST_CASE_CLAUSE = 29
+const AST_BINARY_OP = 40
+const AST_UNARY_OP = 41
+const AST_CALL_EXPR = 42
+const AST_INDEX_EXPR = 43
+const AST_MEMBER_EXPR = 44
+const AST_IDENT = 47
+const AST_INT_LIT = 48
+const AST_FLOAT_LIT = 49
+const AST_STRING_LIT = 50
+const AST_BOOL_LIT = 51
+const AST_CAST_EXPR = 53
+const AST_TYPE_IDENT = 60
+const AST_TYPE_ARRAY = 61
+const AST_TYPE_PTR = 66
 
 const PREC_LOWEST = 0
 const PREC_OR = 1
@@ -502,7 +536,7 @@ func parser_parse_block(p* parser) ast_node* {
     while !parser_current_token_is(p, TOKEN_RBRACE) && !parser_current_token_is(p, TOKEN_EOF) {
         parser_skip_newlines(p)
         stmt := parser_parse_statement(p)
-        if stmt != 0 {
+        if stmt {
             ast_add_child(block, stmt)
         }
     }
@@ -573,7 +607,7 @@ func parser_parse_for_stmt(p* parser) ast_node* {
     parser_next_token(p)
 
     init := parser_parse_statement(p)
-    if init != 0 {
+    if init {
         ast_add_child(for_stmt, init)
     }
 
@@ -638,7 +672,7 @@ func parser_parse_switch_stmt(p* parser) ast_node* {
                             break
                         }
                         stmt := parser_parse_statement(p)
-                        if stmt != 0 {
+                        if stmt {
                             ast_add_child(case_clause, stmt)
                         }
                     }
@@ -653,7 +687,7 @@ func parser_parse_switch_stmt(p* parser) ast_node* {
                         break
                     }
                     stmt := parser_parse_statement(p)
-                    if stmt != 0 {
+                    if stmt {
                         ast_add_child(switch_stmt, stmt)
                     }
                 }
@@ -720,7 +754,7 @@ func parser_parse_primary_expression(p* parser) ast_node* {
     }
 }
 
-func parser_parse_infix_expression(p* parser, ast_node left*, int precedence) ast_node* {
+func parser_parse_infix_expression(p* parser, left* ast_node, int precedence) ast_node* {
     while precedence < token_precedence(p.current_token.token_type) {
         if parser_current_token_is(p, TOKEN_LPAREN) {
             call := ast_new(AST_CALL_EXPR, p.current_token.line, p.current_token.column)
