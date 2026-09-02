@@ -228,17 +228,19 @@ bootstrap-pure-s: bootstrap-stage0
 	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/native-bootstrap.sh \
 	  $(SELFHOST_DIR)
 
-selfhost: native-selfhost
+# The seed is allowed to construct stage1 only. native-bootstrap then uses
+# stage1 and stage2 to generate stage2 and stage3 without invoking the seed.
+selfhost: native-bootstrap
+	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/native/stage2 ./bin/s
+	@echo "Installed S self-hosted compiler: ./bin/s"
+	@echo "Verified bootstrap chain: seed -> stage1 -> stage2 -> stage3"
 
 seed-hosted-selfhost: bootstrap-convergence
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/stage2 ./bin/s
 	@echo "Installed seed-hosted S compiler: ./bin/s"
 	@echo "Note: this artifact is not yet a true native self-hosted compiler"
 
-native-selfhost: native-bootstrap
-	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/native/stage2 ./bin/s
-	@echo "Installed native self-hosted S compiler: ./bin/s"
-	@echo "Note: this artifact comes from the native bootstrap frontier"
+native-selfhost: selfhost
 
 selfhost-lexer-check: seed-compiler-bin
 	@mkdir -p $(SELFHOST_DIR) ./bin
