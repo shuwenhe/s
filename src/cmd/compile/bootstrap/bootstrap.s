@@ -11,7 +11,7 @@ struct bootstrap_chain {
     current_stage int
 }
 
-var bootstrap_chain_global bootstrap_chain
+bootstrap_chain bootstrap_chain_global
 
 func bootstrap_init() {
     bootstrap_chain_global.stages = bootstrap_stage[]()

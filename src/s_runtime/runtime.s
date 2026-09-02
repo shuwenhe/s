@@ -28,7 +28,7 @@ struct context {
     exit_code int
 }
 
-var rt_context context
+context rt_context
 
 func rt_init(int heap_size) {
     rt_context.allocator.heap_start = 0x100000

@@ -20,7 +20,7 @@ struct regression_suite {
     total_passed int
 }
 
-var regression_data regression_suite
+regression_suite regression_data
 
 func test_suite_new(string name) test_suite {
     suite := test_suite { name: name, tests: test_case[](), passed: 0, failed: 0 }
