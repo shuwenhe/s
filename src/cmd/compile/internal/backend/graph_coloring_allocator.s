@@ -31,23 +31,24 @@ struct RegisterAllocator {
 }
 
 func RegisterAllocator_new(int num_regs) RegisterAllocator* {
-    allocator := new RegisterAllocator
-    allocator.num_regs = num_regs
-    allocator.available_regs = new int[16]
-    allocator.reg_count = 0
-    allocator.ranges = new live_range[512]
-    allocator.range_count = 0
-    allocator.spill_list = new int[128]
-    allocator.spill_count = 0
-    
+    allocator := RegisterAllocator {
+        num_regs: num_regs,
+        available_regs: new int[16],
+        reg_count: 0,
+        ranges: new live_range[512],
+        range_count: 0,
+        spill_list: new int[128],
+        spill_count: 0,
+    }
+
     i := 0
     for i < num_regs {
         allocator.available_regs[i] = i
         i = i + 1
     }
     allocator.reg_count = num_regs
-    
-    allocator
+
+    &allocator
 }
 
 func (allocator* RegisterAllocator) compute_live_ranges(value[] all_values, int num_values) int {
@@ -55,17 +56,18 @@ func (allocator* RegisterAllocator) compute_live_ranges(value[] all_values, int 
     for i < num_values {
         v := all_values[i]
         
-        live_range := new LiveRange
-        live_range.value_id = v.id
-        live_range.start_block = v.block
-        live_range.start_instr = 0
-        live_range.end_block = v.block
-        live_range.end_instr = 0
-        live_range.reg = -1
-        live_range.spilled = 0
-        live_range.priority = 0
-        
-        allocator.ranges[allocator.range_count] = live_range
+        live_range := LiveRange {
+            value_id: v.id,
+            start_block: v.block,
+            start_instr: 0,
+            end_block: v.block,
+            end_instr: 0,
+            reg: -1,
+            spilled: 0,
+            priority: 0,
+        }
+
+        allocator.ranges[allocator.range_count] = &live_range
         allocator.range_count = allocator.range_count + 1
         
         i = i + 1
@@ -75,12 +77,13 @@ func (allocator* RegisterAllocator) compute_live_ranges(value[] all_values, int 
 }
 
 func (allocator* RegisterAllocator) build_interference_graph() int {
-    graph := new InterferenceGraph
-    graph.node_count = allocator.range_count
-    graph.adjacency = new int[][graph.node_count]
-    graph.color = new int[graph.node_count]
-    graph.degree = new int[graph.node_count]
-    graph.spill_cost = new int[graph.node_count]
+    graph := InterferenceGraph {
+        node_count: allocator.range_count,
+        adjacency: new int[][allocator.range_count],
+        color: new int[allocator.range_count],
+        degree: new int[allocator.range_count],
+        spill_cost: new int[allocator.range_count],
+    }
     
     i := 0
     for i < graph.node_count {
