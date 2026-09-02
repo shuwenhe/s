@@ -31,27 +31,30 @@ struct RuleEngine {
 }
 
 func RuleEngine_new() RuleEngine* {
-    engine := new RuleEngine
-    engine.rule_count = 0
-    engine.pattern_count = 0
-    engine.rules = new rule[512]
-    engine.patterns = new pattern[1024]
-    engine.stats_applied = 0
-    engine.stats_optimizations = 0
-    engine
+    engine := RuleEngine {
+        rule_count: 0,
+        pattern_count: 0,
+        rules: new rule[512],
+        patterns: new pattern[1024],
+        stats_applied: 0,
+        stats_optimizations: 0,
+    }
+    &engine
 }
 
 func (engine* RuleEngine) register_rule(int id, int pattern_op, int result_op, int priority) int {
     idx := engine.rule_count
     engine.rule_count = engine.rule_count + 1
     
-    rule := new Rule
-    rule.id = id
-    rule.pattern_op = pattern_op
-    rule.result_op = result_op
-    rule.priority = priority
-    
-    engine.rules[idx] = rule
+    rule := Rule {
+        id: id,
+        pattern_op: pattern_op,
+        result_op: result_op,
+        priority: priority,
+        apply_func: 0,
+    }
+
+    engine.rules[idx] = &rule
     idx
 }
 
