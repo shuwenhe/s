@@ -164,9 +164,9 @@ func lexer_read_char(lex* lexer) {
 
 func lexer_peek_char(lex* lexer) string {
     if lex.read_position >= lex.source.len() {
-        '\0'
+        return '\0'
     } else {
-        lex.source[lex.read_position]
+        return lex.source[lex.read_position]
     }
 }
 
@@ -207,9 +207,9 @@ func lexer_read_number(lex* lexer) (string, int) {
 
     num_str := lexer_slice(lex.source, start, lex.position)
     if has_dot {
-        num_str, TOKEN_FLOAT
+        return num_str, TOKEN_FLOAT
     } else {
-        num_str, TOKEN_INT
+        return num_str, TOKEN_INT
     }
 }
 
@@ -228,7 +228,7 @@ func lexer_read_string(lex* lexer, string quote) string {
     if lex.current_char == quote {
         lexer_read_char(lex)
     }
-    str
+    return str
 }
 
 func lexer_skip_line_comment(lex* lexer) {
