@@ -25,32 +25,36 @@ struct OptimizationPipeline {
 }
 
 func OptimizationPipeline_new() OptimizationPipeline* {
-    pipeline := new OptimizationPipeline
-    pipeline.phase_count = 0
-    pipeline.phases = new compilation_phase[32]
-    pipeline.debug_enabled = 0
-    pipeline.stats.total_phases = 0
-    pipeline.stats.total_time = 0
-    pipeline.stats.total_optimizations = 0
-    pipeline.stats.code_size_before = 0
-    pipeline.stats.code_size_after = 0
-    pipeline.stats.instr_count_before = 0
-    pipeline.stats.instr_count_after = 0
-    
-    pipeline
+    pipeline := OptimizationPipeline {
+        phase_count: 0,
+        phases: new compilation_phase[32],
+        debug_enabled: 0,
+        stats: OptimizationStats {
+            total_phases: 0,
+            total_time: 0,
+            total_optimizations: 0,
+            code_size_before: 0,
+            code_size_after: 0,
+            instr_count_before: 0,
+            instr_count_after: 0,
+        },
+        
+    }
+    &pipeline
 }
 
 func (pipeline* OptimizationPipeline) register_phase(int phase_id, string phase_name) int {
     idx := pipeline.phase_count
     pipeline.phase_count = pipeline.phase_count + 1
     
-    phase := new CompilationPhase
-    phase.phase_id = phase_id
-    phase.phase_name = phase_name
-    phase.stats_time = 0
-    phase.stats_changes = 0
-    
-    pipeline.phases[idx] = phase
+    phase := CompilationPhase {
+        phase_id: phase_id,
+        phase_name: phase_name,
+        stats_time: 0,
+        stats_changes: 0,
+    }
+
+    pipeline.phases[idx] = &phase
     idx
 }
 

@@ -23,25 +23,27 @@ struct X86RuleEngine {
 }
 
 func X86RuleEngine_new() X86RuleEngine* {
-    engine := new X86RuleEngine
-    engine.rule_count = 0
-    engine.pattern_count = 0
-    engine.rules = new x86_rule[256]
-    engine
+    engine := X86RuleEngine {
+        rule_count: 0,
+        rules: new x86_rule[256],
+        pattern_count: 0,
+    }
+    &engine
 }
 
 func (engine* X86RuleEngine) register_x86_rule(int id, int pattern_op, int x86_opcode, int priority) int {
     idx := engine.rule_count
     engine.rule_count = engine.rule_count + 1
     
-    rule := new X86Rule
-    rule.id = id
-    rule.pattern_op = pattern_op
-    rule.x86_opcode = x86_opcode
-    rule.priority = priority
-    rule.cpu_flags = 0
-    
-    engine.rules[idx] = rule
+    rule := X86Rule {
+        id: id,
+        pattern_op: pattern_op,
+        x86_opcode: x86_opcode,
+        priority: priority,
+        cpu_flags: 0,
+    }
+
+    engine.rules[idx] = &rule
     idx
 }
 
@@ -103,13 +105,14 @@ func (engine* X86RuleEngine) match_div_to_shift(int op, int shift_amount) int {
 }
 
 func (engine* X86RuleEngine) match_addressing_mode(int base, int index, int scale, int offset) AddressMode* {
-    mode := new AddressMode
-    mode.base_reg = base
-    mode.index_reg = index
-    mode.scale = scale
-    mode.offset = offset
-    mode.size = 8
-    mode
+    mode := AddressMode {
+        base_reg: base,
+        index_reg: index,
+        scale: scale,
+        offset: offset,
+        size: 8,
+    }
+    &mode
 }
 
 func (engine* X86RuleEngine) is_power_of_2(int n) int {

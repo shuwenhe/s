@@ -62,13 +62,17 @@ struct ast_node {
 }
 
 func ast_new(int node_type, int line, int column) ast_node* {
-    node := new ast_node {
-        node_type: node_type, line: line, column: column,
-        string_data: "", int_data: 0, children: vec[ast_node](),
+    node := ast_node {
+        node_type: node_type,
+        line: line,
+        column: column,
+        string_data: "",
+        int_data: 0,
+        children: vec[ast_node](),
         name: "",
-        type_name: ""
+        type_name: "",
     }
-    return node
+    &node
 }
 
 func ast_add_child(ast_node node*, ast_node child*) {

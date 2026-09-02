@@ -40,29 +40,31 @@ struct SSABuilder {
 }
 
 func SSABuilder_new() SSABuilder* {
-    builder := new SSABuilder
-    builder.block_count = 0
-    builder.value_count = 0
-    builder.var_count = 0
-    builder.blocks = new block[1024]
-    builder.all_values = new value[8192]
-    builder.var_versions = new var_version[2048]
-    builder.var_stack = new int[512]
-    builder
+    builder := SSABuilder {
+        block_count: 0,
+        value_count: 0,
+        var_count: 0,
+        blocks: new block[1024],
+        all_values: new value[8192],
+        var_versions: new var_version[2048],
+        var_stack: new int[512],
+    }
+    &builder
 }
 
 func (builder* SSABuilder) new_block(int kind) int {
     id := builder.block_count
     builder.block_count = builder.block_count + 1
     
-    block := new Block
-    block.id = id
-    block.preds = new int[16]
-    block.succs = new int[16]
-    block.values = new value[64]
-    block.kind = kind
-    
-    builder.blocks[id] = block
+    block := Block {
+        id: id,
+        preds: new int[16],
+        succs: new int[16],
+        values: new value[64],
+        kind: kind,
+    }
+
+    builder.blocks[id] = &block
     id
 }
 
@@ -70,26 +72,29 @@ func (builder* SSABuilder) add_value(int op, int type_id, int[] args, int block_
     value_id := builder.value_count
     builder.value_count = builder.value_count + 1
     
-    v := new Value
-    v.id = value_id
-    v.op = op
-    v.type_id = type_id
-    v.args = args
-    v.block = block_id
-    v.line = 0
-    v.aux = 0
-    
-    builder.all_values[value_id] = v
+    v := Value {
+        id: value_id,
+        op: op,
+        type_id: type_id,
+        args: args,
+        block: block_id,
+        line: 0,
+        aux: 0,
+    }
+
+    builder.all_values[value_id] = &v
     block := builder.blocks[block_id]
-    block.values = append(block.values, v)
+    block.values = append(block.values, &v)
     
     value_id
 }
 
 func (builder* SSABuilder) add_phi(int value_id, int[] edges) int {
-    phi := new Phi
-    phi.value_id = value_id
-    phi.edges = edges
+    phi := Phi {
+        value_id: value_id,
+        edges: edges,
+    }
+    &phi
     0
 }
 

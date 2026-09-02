@@ -20,12 +20,13 @@ func add_fold_rule(string name, int priority) int {
         return -1
     }
     
-    const_fold_rule* rule = new const_fold_rule
-    rule.id = fold_rule_count
-    rule.name = name
-    rule.priority = priority
-    
-    fold_rules[fold_rule_count] = rule
+    rule := const_fold_rule {
+        id: fold_rule_count,
+        name: name,
+        priority: priority,
+    }
+
+    fold_rules[fold_rule_count] = &rule
     fold_rule_count = fold_rule_count + 1
     
     return rule.id
