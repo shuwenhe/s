@@ -1,51 +1,51 @@
 package compile.internal.frontend
 
-const AST_PROGRAM = 1
-const AST_PACKAGE = 2
-const AST_IMPORT = 3
-const AST_FUNC_DECL = 4
-const AST_STRUCT_DECL = 5
-const AST_ENUM_DECL = 6
-const AST_VAR_DECL = 7
-const AST_CONST_DECL = 8
+const ast_program = 1
+const ast_package = 2
+const ast_import = 3
+const ast_func_decl = 4
+const ast_struct_decl = 5
+const ast_enum_decl = 6
+const ast_var_decl = 7
+const ast_const_decl = 8
 
-const AST_EXPR_STMT = 20
-const AST_IF_STMT = 21
-const AST_FOR_STMT = 22
-const AST_WHILE_STMT = 23
-const AST_RETURN_STMT = 24
-const AST_BREAK_STMT = 25
-const AST_CONTINUE_STMT = 26
-const AST_SWITCH_STMT = 27
-const AST_BLOCK_STMT = 28
-const AST_CASE_CLAUSE = 29
+const ast_expr_stmt = 20
+const ast_if_stmt = 21
+const ast_for_stmt = 22
+const ast_while_stmt = 23
+const ast_return_stmt = 24
+const ast_break_stmt = 25
+const ast_continue_stmt = 26
+const ast_switch_stmt = 27
+const ast_block_stmt = 28
+const ast_case_clause = 29
 
-const AST_BINARY_OP = 40
-const AST_UNARY_OP = 41
-const AST_CALL_EXPR = 42
-const AST_INDEX_EXPR = 43
-const AST_MEMBER_EXPR = 44
-const AST_ARRAY_LIT = 45
-const AST_STRUCT_LIT = 46
-const AST_IDENT = 47
-const AST_INT_LIT = 48
-const AST_FLOAT_LIT = 49
-const AST_STRING_LIT = 50
-const AST_BOOL_LIT = 51
-const AST_PAREN_EXPR = 52
-const AST_CAST_EXPR = 53
+const ast_binary_op = 40
+const ast_unary_op = 41
+const ast_call_expr = 42
+const ast_index_expr = 43
+const ast_member_expr = 44
+const ast_array_lit = 45
+const ast_struct_lit = 46
+const ast_ident = 47
+const ast_int_lit = 48
+const ast_float_lit = 49
+const ast_string_lit = 50
+const ast_bool_lit = 51
+const ast_paren_expr = 52
+const ast_cast_expr = 53
 
-const AST_TYPE_IDENT = 60
-const AST_TYPE_ARRAY = 61
-const AST_TYPE_VEC = 62
-const AST_TYPE_OPTION = 63
-const AST_TYPE_RESULT = 64
-const AST_TYPE_FUNC = 65
-const AST_TYPE_PTR = 66
-const AST_TYPE_MUT_PTR = 67
-const AST_TYPE_STRUCT = 68
-const AST_TYPE_ENUM = 69
-const AST_TYPE_GENERIC = 70
+const ast_type_ident = 60
+const ast_type_array = 61
+const ast_type_vec = 62
+const ast_type_option = 63
+const ast_type_result = 64
+const ast_type_func = 65
+const ast_type_ptr = 66
+const ast_type_mut_ptr = 67
+const ast_type_struct = 68
+const ast_type_enum = 69
+const ast_type_generic = 70
 
 struct ast_node {
     node_type: int
@@ -93,50 +93,50 @@ func ast_set_int_data(ast_node node*, int data) {
 
 func ast_node_type_name(int ast_type) string {
     switch ast_type {
-    case AST_PROGRAM : "PROGRAM"
-    case AST_PACKAGE : "PACKAGE"
-    case AST_IMPORT : "IMPORT"
-    case AST_FUNC_DECL : "FUNC_DECL"
-    case AST_STRUCT_DECL : "STRUCT_DECL"
-    case AST_ENUM_DECL : "ENUM_DECL"
-    case AST_VAR_DECL : "VAR_DECL"
-    case AST_CONST_DECL : "CONST_DECL"
-    case AST_EXPR_STMT : "EXPR_STMT"
-    case AST_IF_STMT : "IF_STMT"
-    case AST_FOR_STMT : "FOR_STMT"
-    case AST_WHILE_STMT : "WHILE_STMT"
-    case AST_RETURN_STMT : "RETURN_STMT"
-    case AST_BREAK_STMT : "BREAK_STMT"
-    case AST_CONTINUE_STMT : "CONTINUE_STMT"
-    case AST_SWITCH_STMT : "SWITCH_STMT"
-    case AST_BLOCK_STMT : "BLOCK_STMT"
-    case AST_CASE_CLAUSE : "CASE_CLAUSE"
-    case AST_BINARY_OP : "BINARY_OP"
-    case AST_UNARY_OP : "UNARY_OP"
-    case AST_CALL_EXPR : "CALL_EXPR"
-    case AST_INDEX_EXPR : "INDEX_EXPR"
-    case AST_MEMBER_EXPR : "MEMBER_EXPR"
-    case AST_ARRAY_LIT : "ARRAY_LIT"
-    case AST_STRUCT_LIT : "STRUCT_LIT"
-    case AST_IDENT : "IDENT"
-    case AST_INT_LIT : "INT_LIT"
-    case AST_FLOAT_LIT : "FLOAT_LIT"
-    case AST_STRING_LIT : "STRING_LIT"
-    case AST_BOOL_LIT : "BOOL_LIT"
-    case AST_PAREN_EXPR : "PAREN_EXPR"
-    case AST_CAST_EXPR : "CAST_EXPR"
-    case AST_TYPE_IDENT : "TYPE_IDENT"
-    case AST_TYPE_ARRAY : "TYPE_ARRAY"
-    case AST_TYPE_VEC : "TYPE_VEC"
-    case AST_TYPE_OPTION : "TYPE_OPTION"
-    case AST_TYPE_RESULT : "TYPE_RESULT"
-    case AST_TYPE_FUNC : "TYPE_FUNC"
-    case AST_TYPE_PTR : "TYPE_PTR"
-    case AST_TYPE_MUT_PTR : "TYPE_MUT_PTR"
-    case AST_TYPE_STRUCT : "TYPE_STRUCT"
-    case AST_TYPE_ENUM : "TYPE_ENUM"
-    case AST_TYPE_GENERIC : "TYPE_GENERIC"
-    default : "UNKNOWN"
+    case ast_program : "program"
+    case ast_package : "package"
+    case ast_import : "import"
+    case ast_func_decl : "func_decl"
+    case ast_struct_decl : "struct_decl"
+    case ast_enum_decl : "enum_decl"
+    case ast_var_decl : "var_decl"
+    case ast_const_decl : "const_decl"
+    case ast_expr_stmt : "expr_stmt"
+    case ast_if_stmt : "if_stmt"
+    case ast_for_stmt : "for_stmt"
+    case ast_while_stmt : "while_stmt"
+    case ast_return_stmt : "return_stmt"
+    case ast_break_stmt : "break_stmt"
+    case ast_continue_stmt : "continue_stmt"
+    case ast_switch_stmt : "switch_stmt"
+    case ast_block_stmt : "block_stmt"
+    case ast_case_clause : "case_clause"
+    case ast_binary_op : "binary_op"
+    case ast_unary_op : "unary_op"
+    case ast_call_expr : "call_expr"
+    case ast_index_expr : "index_expr"
+    case ast_member_expr : "member_expr"
+    case ast_array_lit : "array_lit"
+    case ast_struct_lit : "struct_lit"
+    case ast_ident : "ident"
+    case ast_int_lit : "int_lit"
+    case ast_float_lit : "float_lit"
+    case ast_string_lit : "string_lit"
+    case ast_bool_lit : "bool_lit"
+    case ast_paren_expr : "paren_expr"
+    case ast_cast_expr : "cast_expr"
+    case ast_type_ident : "type_ident"
+    case ast_type_array : "type_array"
+    case ast_type_vec : "type_vec"
+    case ast_type_option : "type_option"
+    case ast_type_result : "type_result"
+    case ast_type_func : "type_func"
+    case ast_type_ptr : "type_ptr"
+    case ast_type_mut_ptr : "type_mut_ptr"
+    case ast_type_struct : "type_struct"
+    case ast_type_enum : "type_enum"
+    case ast_type_generic : "type_generic"
+    default : "unknown"
     }
 }
 
