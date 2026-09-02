@@ -1,38 +1,38 @@
 package backend
 
-const REG_RAX = 0
-const REG_RBX = 1
-const REG_RCX = 2
-const REG_RDX = 3
-const REG_RSI = 4
-const REG_RDI = 5
-const REG_R8 = 6
-const REG_R9 = 7
-const REG_R10 = 8
-const REG_R11 = 9
-const REG_R12 = 10
-const REG_R13 = 11
-const REG_R14 = 12
-const REG_R15 = 13
+const reg_rax = 0
+const reg_rbx = 1
+const reg_rcx = 2
+const reg_rdx = 3
+const reg_rsi = 4
+const reg_rdi = 5
+const reg_r8 = 6
+const reg_r9 = 7
+const reg_r10 = 8
+const reg_r11 = 9
+const reg_r12 = 10
+const reg_r13 = 11
+const reg_r14 = 12
+const reg_r15 = 13
 
 struct live_interval {
-    var_id int
-    start int
-    end int
-    spilled int
-    assigned_reg int
+    int var_id
+    int start
+    int end
+    int spilled
+    int assigned_reg
 }
 
 struct interference_graph {
-    nodes int[]
-    edges int[][]
+    int[] nodes
+    int[][] edges
 }
 
 struct register_allocator {
-    intervals live_interval[]
-    graph interference_graph
-    spill_count int
-    reserved_regs int
+    live_interval[] intervals
+    interference_graph graph
+    int spill_count
+    int reserved_regs
 }
 
 func register_allocator_new() register_allocator {
@@ -138,9 +138,9 @@ func register_allocator_insert_spill_code(allocator* register_allocator, x86_ins
             stack_offset := i * 8
             
             spill_instr := x86_instruction {
-                instr_type: INSTR_STORE,
-                operand1: x86_operand { operand_type: OPERAND_REG, reg_id: REG_RAX },
-                operand2: x86_operand { operand_type: OPERAND_MEM, mem_base: "rbp", mem_offset: -stack_offset },
+                instr_type: instr_store,
+                operand1: x86_operand { operand_type: operand_reg, reg_id: reg_rax },
+                operand2: x86_operand { operand_type: operand_mem, mem_base: "rbp", mem_offset: -stack_offset },
                 operand3: x86_operand { operand_type: 0 }
             }
             
