@@ -81,6 +81,20 @@ is intentionally a failing gate until the complete compiler source is within
 the direct native-code-generation subset. See [`doc/bootstrap.md`](doc/bootstrap.md)
 for the verified state, gaps, and production acceptance plan.
 
+## Runtime foundation
+
+The S runtime foundation is exposed from `src/runtime/runtime_foundation.s` and
+`src/runtime/select.s`. It provides the common contracts for typed allocation
+and collection, scheduler steps, channel send/receive selection, segmented
+stacks, defer/panic/recover state, reflection type descriptors, syscall
+dispatch, profiling samples, and race hooks. `src/runtime/chan.s` and
+`src/runtime/proc.s` contain the corresponding queue and scheduler fixes.
+
+These contracts are intentionally separate from target-specific intrinsic
+lowering. Production support still requires each target backend to implement
+the declared intrinsic ABI and the compiler to emit stack maps and safe-point
+metadata; the presence of an S API alone does not claim that work is complete.
+
 ## Tests
 
 Run the seed compiler tests:
