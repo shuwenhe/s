@@ -101,7 +101,7 @@ sroutine-check: selfhost
 seed-compiler-bin:
 	@mkdir -p ./bin
 	@echo "Building seed compiler..."
-	@set -e; tmp="./bin/s_seed.$$$$"; trap 'rm -f "$$tmp"' EXIT HUP INT TERM; \
+	@set -e; tmp="$$(mktemp ./bin/s_seed.XXXXXX)"; trap 'rm -f "$$tmp"' EXIT HUP INT TERM; \
 	  gcc -std=c11 -Wall -Wextra -Werror \
 	  -o "$$tmp" \
 	  src/cmd/compile/seed/s_seed.c \

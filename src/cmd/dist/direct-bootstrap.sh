@@ -13,6 +13,17 @@ fail() {
     exit 1
 }
 
+report_frontier() {
+    report="$work/frontier.unsupported.txt"
+    if timeout "$timeout_seconds" "$stage1" --report-unsupported \
+        "$source_file" "$report" >/dev/null 2>&1; then
+        printf '%s\n' "bootstrap frontier:" >&2
+        sed -n '3,$p' "$report" >&2
+    else
+        printf '%s\n' "bootstrap frontier: stage1 report unavailable" >&2
+    fi
+}
+
 [ -x "$stage1" ] || fail "stage1 compiler not found: $stage1"
 [ -f "$source_file" ] || fail "compiler source not found: $source_file"
 [ -x "$verify" ] || fail "self-host verifier not found: $verify"
@@ -23,7 +34,7 @@ mkdir -p "$work"
 # compiler must write the next ELF image directly from the S compiler source.
 printf '%s\n' "[1/4] stage1 -> stage2 (direct ELF)"
 timeout "$timeout_seconds" "$stage1" build "$source_file" -o "$work/stage2" ||
-    fail "stage1 cannot directly compile the complete S compiler yet"
+    { report_frontier; fail "stage1 cannot directly compile the complete S compiler yet"; }
 "$verify" "$work/stage2"
 
 printf '%s\n' "[2/4] stage2 -> stage3 (direct ELF)"

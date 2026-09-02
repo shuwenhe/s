@@ -109,6 +109,19 @@ func find_code_word(string source, string word) int {
 func unsupported_report(string source) string {
     string report = "S-BOOTSTRAP-UNSUPPORTED-V1\n"
     report = report + "phase|line|construct|detail\n"
+    // Report only constructs that are outside the current native bootstrap
+    // contract.  Keep the scan source-aware so strings and comments do not
+    // manufacture capability failures.
+    int for_at = find_code_word(source, "for")
+    if for_at >= 0 {
+        report = report + unsupported_item(source, for_at, "semantic", "for-loop",
+            "full Go-style for clauses are not lowered by the bootstrap backend")
+    }
+    int stack_at = first_stack_argument_function_at(source)
+    if stack_at >= 0 {
+        report = report + unsupported_item(source, stack_at, "codegen", "stack-arguments",
+            "native bootstrap ABI currently supports at most six machine-word arguments")
+    }
     return report
 }
 
