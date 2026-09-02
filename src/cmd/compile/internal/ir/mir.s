@@ -48,5 +48,5 @@ struct MirFunction {
 }
 
 func new_empty_function(string name) MirFunction {
-    MirFunction { name: name, locals: MirLocalSlot[](), blocks: MirBasicBlock[](), entry: 0, exit: 0 }
+    MirFunction { name: name, locals MirLocalSlot[](), blocks MirBasicBlock[](), entry 0, exit 0 }
 }

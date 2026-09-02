@@ -25,10 +25,8 @@ func with_capacity[t](int capacity) t[] {
         }
     t[] {
         raw: raw_t[] {
-            storage: box(new_array[t](initial)),
-            capacity: initial,
-        },
-        length: 0,
+            storage: box(new_array[t](initial)), capacity initial,
+        }, length 0,
     }
 }
 

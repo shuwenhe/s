@@ -19,10 +19,7 @@ struct lexer {
 
 func new_lexer(string source) lexer {
     lexer {
-        source: source,
-        index: 0,
-        line: 1,
-        column: 1,
+        source: source, index 0, line 1, column 1,
     }
 }
 
@@ -44,52 +41,35 @@ func (lexer* self) tokenize() (token[], lex_error) {
                 token_kind::ident
             }
             tokens.push(token {
-                kind: kind,
-                value: value,
-                line: start_line,
-                column: start_column,
+                kind: kind, value value, line start_line, column start_column,
             })
             continue
         }
         if is_digit(ch) {
             tokens.push(token {
-                kind: token_kind::int,
-                value: self.read_number(),
-                line: start_line,
-                column: start_column,
+                kind: token_kind::int, value self.read_number(), line start_line, column start_column,
             })
             continue
         }
         if ch == "\"" {
             tokens.push(token {
-                kind: token_kind::string,
-                value: self.read_string(),
-                line: start_line,
-                column: start_column,
+                kind: token_kind::string, value self.read_string(), line start_line, column start_column,
             })
             continue
         }
         if ch == '(' || ch == ')' {
             tokens.push(token {
-                kind: token_kind::symbol,
-                value: self.read_symbol(),
-                line: start_line,
-                column: start_column,
+                kind: token_kind::symbol, value self.read_symbol(), line start_line, column start_column,
             })
             continue
         }
         tokens.push(token {
-            kind: token_kind::symbol,
-            value: self.read_symbol(),
-            line: start_line,
-            column: start_column,
+            kind: token_kind::symbol, value self.read_symbol(), line start_line, column start_column,
         })
         }
         tokens.push(token {
             kind: token_kind::eof,
-            value: "<eof>",
-            line: self.line,
-            column: self.column,
+            value: "<eof>", line self.line, column self.column,
         })
         tokens
     }
@@ -114,7 +94,7 @@ func (lexer* self) skip_ignored() ((), lex_error) {
             for depth > 0 {
                 if self.is_eof() {
                     (), lex_error empty
-                    return empty, lex_error { message: "unterminated block comment", line: self.line, column: self.column }
+                    return empty, lex_error { message: "unterminated block comment", line self.line, column self.column }
                 }
                 if self.match_text("/*") {
                     depth = depth + 1
@@ -252,9 +232,7 @@ func (lexer* self) is_eof() bool {
 
 func (lexer* self) error(string message) lex_error {
     lex_error {
-        message: message,
-        line: self.line,
-        column: self.column,
+        message: message, line self.line, column self.column,
     }
 }
 

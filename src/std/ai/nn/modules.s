@@ -15,10 +15,7 @@ struct Module {
 
 func module_init(string name, string type_name) Module {
     Module {
-        name: name,
-        type_name: type_name,
-        parameters: new auto_grad_tensor[0],
-        buffers: new_map(),
+        name: name, type_name type_name, parameters new auto_grad_tensor[0], buffers new_map(),
     }
 }
 
@@ -248,7 +245,7 @@ func make_causal_mask(int seq_len) tensor {
         }
         i = i + 1
     }
-    tensor { shape: [seq_len, seq_len], data: vals, device: "cpu", requires_grad: false }
+    tensor { shape: [seq_len, seq_len], data vals, device: "cpu", requires_grad false }
 }
 
 struct FeedForward : Module {

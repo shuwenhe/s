@@ -1,4 +1,4 @@
-func wait_for_child(pid: int): int {
+func wait_for_child( pid int): int {
     status := os.waitpid(pid)
     if status.type == "exit" {
         return status.code
@@ -24,7 +24,7 @@ func process_runner_run_argv(argv: [string]): int {
     return wait_for_child(pid
 }
 
-func process_runner_run_shell(command: string): int {
+func process_runner_run_shell( command string): int {
     if command == nil || command == "" {
         return 127
     }

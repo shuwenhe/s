@@ -1,14 +1,14 @@
-func dup_cstr(text: string): string {
+func dup_cstr( text string): string {
     if text == nil {
         return nil
     }
     return text
 }
 
-func host_fs_free(ptr: string) {
+func host_fs_free( ptr string) {
 }
 
-func mkdirs_for_path(path: string) {
+func mkdirs_for_path( path string) {
     if path == nil || path == "" {
         return
     }
@@ -23,14 +23,14 @@ func mkdirs_for_path(path: string) {
     }
 }
 
-func host_fs_read_to_string(path: string): string {
+func host_fs_read_to_string( path string): string {
     if path == nil {
         return nil
     }
     return os.read_file(path
 }
 
-func host_fs_write_text_file(path: string, contents: string): int {
+func host_fs_write_text_file( path string, contents string): int {
     if path == nil || contents == nil {
         return -1
     }
@@ -39,7 +39,7 @@ func host_fs_write_text_file(path: string, contents: string): int {
     return 0
 }
 
-func host_fs_make_temp_dir(prefix: string, base_dir: string): string {
+func host_fs_make_temp_dir( prefix string, base_dir string): string {
     prefix_text := if prefix == nil { "tmp-" } else { prefix }
     root := if base_dir == nil { "/tmp" } else { base_dir }
     mkdirs_for_path(root)

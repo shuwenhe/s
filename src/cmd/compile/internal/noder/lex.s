@@ -29,10 +29,7 @@ func lex_source(source_unit unit) (token_item[], noder_error) {
         wi := 0
         for wi < len(words) {
             out.push(token_item {
-                kind: classify_token(words[wi]),
-                text: words[wi],
-                line: li + 1,
-                column: 1,
+                kind: classify_token(words[wi]), text words[wi], line li + 1, column 1,
             })
             wi = wi + 1
         }

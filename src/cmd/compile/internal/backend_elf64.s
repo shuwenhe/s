@@ -530,8 +530,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         + " pass_trim_unit=" + to_string(pass.removed_unit_lines)
         + " pass_dedup=" + to_string(pass.dedup_lines)
     midend_result {
-        optimized_mir_text: rewritten,
-        report: report,
+        optimized_mir_text: rewritten, report report,
     }
 }
 
@@ -613,12 +612,7 @@ func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
     deduped := dedup_eval_line_pass(rewritten)
     rewritten = deduped.graph
     midend_pass_result {
-        graph: rewritten,
-        simplified_jump_to_return: simplified.count,
-        removed_unit_lines: trimmed.count,
-        dedup_lines: deduped.count,
-        removed_unreachable_blocks: unreachable.count,
-        folded_redundant_branches: folded.count,
+        graph: rewritten, simplified_jump_to_return simplified.count, removed_unit_lines trimmed.count, dedup_lines deduped.count, removed_unreachable_blocks unreachable.count, folded_redundant_branches folded.count,
     }
 }
 
@@ -674,7 +668,7 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     if !contains_int32(reachable, rewritten.exit) {
         rewritten.exit = rewritten.entry
     }
-    graph_pass_count_result { graph: rewritten, count: removed }
+    graph_pass_count_result { graph: rewritten, count removed }
 }
 
 func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
@@ -696,9 +690,7 @@ func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
             if same_target {
                 folded := mir_control_edge[]()
                 folded.push(mir_control_edge {
-                    label: "folded",
-                    target: target,
-                    args: mir_operand[](),
+                    label: "folded", target target, args mir_operand[](),
                 })
                 rewritten.blocks[i].terminator.kind = "jump"
                 rewritten.blocks[i].terminator.edges = folded
@@ -707,7 +699,7 @@ func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
         }
         i = i + 1
     }
-    graph_pass_count_result { graph: rewritten, count: changed }
+    graph_pass_count_result { graph: rewritten, count changed }
 }
 
 func contains_int32(int[] values, int needle) bool {
@@ -746,7 +738,7 @@ func simplify_jump_to_return_pass(mir_graph graph) graph_pass_count_result {
         }
         i = i + 1
     }
-    graph_pass_count_result { graph: rewritten, count: changed }
+    graph_pass_count_result { graph: rewritten, count changed }
 }
 
 func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
@@ -777,7 +769,7 @@ func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
         }
         i = i + 1
     }
-    graph_pass_count_result { graph: rewritten, count: changed }
+    graph_pass_count_result { graph: rewritten, count changed }
 }
 
 func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
@@ -815,7 +807,7 @@ func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
         rewritten.blocks[i].statements = filtered
         i = i + 1
     }
-    graph_pass_count_result { graph: rewritten, count: changed }
+    graph_pass_count_result { graph: rewritten, count changed }
 }
 
 func find_block_index_by_id(mir_graph graph, int id) int {
@@ -1585,10 +1577,7 @@ func collect_function_stackmaps(string arch, source_file source, string ssa_text
                 if fn_decl.body.is_some() {
                     slots := estimate_function_stack_slots(fn_decl, ssa_text)
                     out.push(stackmap_function_entry {
-                        name: fn_decl.sig.name,
-                        slots: slots,
-                        bitmap: build_slot_bitmap(fn_decl.sig.name, slots),
-                        callee_saved: abi_callee_saved_count(arch),
+                        name: fn_decl.sig.name, slots slots, bitmap build_slot_bitmap(fn_decl.sig.name, slots), callee_saved abi_callee_saved_count(arch),
                     })
                 }
             }
@@ -1598,10 +1587,7 @@ func collect_function_stackmaps(string arch, source_file source, string ssa_text
     }
     if len(out) == 0 {
         out.push(stackmap_function_entry {
-            name: "main",
-            slots: estimate_stack_slots(ssa_text),
-            bitmap: build_slot_bitmap("main", estimate_stack_slots(ssa_text)),
-            callee_saved: abi_callee_saved_count(arch),
+            name: "main", slots estimate_stack_slots(ssa_text), bitmap build_slot_bitmap("main", estimate_stack_slots(ssa_text)), callee_saved abi_callee_saved_count(arch),
         })
     }
     out
@@ -1888,16 +1874,7 @@ func collect_abi_behavior(string arch, source_file source) abi_behavior_entry[] 
                 variadic := param_count > abi_variadic_gp_limit(arch)
                 aggregate_size := param_count * 8
                 out.push(abi_behavior_entry {
-                    name: fn_decl.sig.name,
-                    param_count: param_count,
-                    variadic: variadic,
-                    pass_mode: abi_aggregate_pass_mode(arch, aggregate_size),
-                    return_mode: abi_return_mode(arch, "aggregate", aggregate_size),
-                    abi_in_regs: abiutils_in_registers_used(abi_info),
-                    abi_out_regs: abiutils_out_registers_used(abi_info),
-                    abi_spill_size: abiutils_spill_area_size(abi_info),
-                    abi_arg_width: abiutils_arg_width(abi_info),
-                    abi_summary: abiutils_info_string(abi_info),
+                    name: fn_decl.sig.name, param_count param_count, variadic variadic, pass_mode abi_aggregate_pass_mode(arch, aggregate_size), return_mode abi_return_mode(arch, "aggregate", aggregate_size), abi_in_regs abiutils_in_registers_used(abi_info), abi_out_regs abiutils_out_registers_used(abi_info), abi_spill_size abiutils_spill_area_size(abi_info), abi_arg_width abiutils_arg_width(abi_info), abi_summary abiutils_info_string(abi_info),
                 })
             }
             _ : (),
@@ -3016,25 +2993,7 @@ func bool_string(bool value) string {
 
 func make_runtime_state() runtime_state {
     runtime_state {
-        runq: sroutine_task[](),
-        channels: channel_runtime_state[](),
-        next_channel_id: 1,
-        select_rr_cursor: 0,
-        sroutine_scheduled: 0,
-        sroutine_completed: 0,
-        sroutine_panics: 0,
-        sroutine_recovered: 0,
-        sroutine_yields: 0,
-        select_attempts: 0,
-        select_default_fallbacks: 0,
-        select_timeouts: 0,
-        gc_cycles: 0,
-        gc_freed_channels: 0,
-        gc_root_scans: 0,
-        gc_write_barriers: 0,
-        gc_triggered_cycles: 0,
-        gc_heap_goal: 2,
-        gc_alloc_since_cycle: 0,
+        runq: sroutine_task[](), channels channel_runtime_state[](), next_channel_id 1, select_rr_cursor 0, sroutine_scheduled 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0, gc_cycles 0, gc_freed_channels 0, gc_root_scans 0, gc_write_barriers 0, gc_triggered_cycles 0, gc_heap_goal 2, gc_alloc_since_cycle 0,
     }
 }
 
@@ -3052,26 +3011,7 @@ func collect_runtime_metrics(runtime_state runtime) runtime_metrics {
         i = i + 1
     }
     runtime_metrics {
-        sroutine_scheduled: runtime.sroutine_scheduled,
-        sroutine_completed: runtime.sroutine_completed,
-        sroutine_panics: runtime.sroutine_panics,
-        sroutine_recovered: runtime.sroutine_recovered,
-        sroutine_yields: runtime.sroutine_yields,
-        select_attempts: runtime.select_attempts,
-        select_default_fallbacks: runtime.select_default_fallbacks,
-        select_timeouts: runtime.select_timeouts,
-        channels: len(runtime.channels),
-        channel_sends: sends,
-        channel_recvs: recvs,
-        channel_closed: closed,
-        gc_cycles: runtime.gc_cycles,
-        gc_freed_channels: runtime.gc_freed_channels,
-        gc_live_channels: len(runtime.channels),
-        gc_root_scans: runtime.gc_root_scans,
-        gc_write_barriers: runtime.gc_write_barriers,
-        gc_triggered_cycles: runtime.gc_triggered_cycles,
-        gc_heap_goal: runtime.gc_heap_goal,
-        gc_alloc_since_cycle: runtime.gc_alloc_since_cycle,
+        sroutine_scheduled: runtime.sroutine_scheduled, sroutine_completed runtime.sroutine_completed, sroutine_panics runtime.sroutine_panics, sroutine_recovered runtime.sroutine_recovered, sroutine_yields runtime.sroutine_yields, select_attempts runtime.select_attempts, select_default_fallbacks runtime.select_default_fallbacks, select_timeouts runtime.select_timeouts, channels len(runtime.channels), channel_sends sends, channel_recvs recvs, channel_closed closed, gc_cycles runtime.gc_cycles, gc_freed_channels runtime.gc_freed_channels, gc_live_channels len(runtime.channels), gc_root_scans runtime.gc_root_scans, gc_write_barriers runtime.gc_write_barriers, gc_triggered_cycles runtime.gc_triggered_cycles, gc_heap_goal runtime.gc_heap_goal, gc_alloc_since_cycle runtime.gc_alloc_since_cycle,
     }
 }
 
@@ -3103,7 +3043,7 @@ func snapshot_captured_bindings(binding[] env) captured_binding[] {
     out := captured_binding[]()
     i := 0
     for i < len(env) {
-        out = append(out, captured_binding { name: env[i].name, value: env[i].value })
+        out = append(out, captured_binding { name: env[i].name, value env[i].value })
         i = i + 1
     }
     out
@@ -3113,7 +3053,7 @@ func restore_captured_bindings(captured_binding[] captured) binding[] {
     out := binding[]()
     i := 0
     for i < len(captured) {
-        out = append(out, binding { name: captured[i].name, value: captured[i].value })
+        out = append(out, binding { name: captured[i].name, value captured[i].value })
         i = i + 1
     }
     out
@@ -3189,9 +3129,7 @@ func execute_source_main(source_file source) (mir_execution_result, backend_erro
         return code_result.unwrap_err()
     }
     mir_execution_result {
-        writes: writes,
-        exit_code: code_result.unwrap(),
-        runtime: collect_runtime_metrics(runtime),
+        writes: writes, exit_code code_result.unwrap(), runtime collect_runtime_metrics(runtime),
     }
 }
 
@@ -3216,29 +3154,8 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
         }
         if block.terminator.kind == "return" {
             return mir_execution_result {
-                writes: writes,
-                exit_code: 0,
-                runtime: runtime_metrics {
-                    sroutine_scheduled: 0,
-                    sroutine_completed: 0,
-                    sroutine_panics: 0,
-                    sroutine_recovered: 0,
-                    sroutine_yields: 0,
-                    select_attempts: 0,
-                    select_default_fallbacks: 0,
-                    select_timeouts: 0,
-                    channels: 0,
-                    channel_sends: 0,
-                    channel_recvs: 0,
-                    channel_closed: 0,
-                    gc_cycles: 0,
-                    gc_freed_channels: 0,
-                    gc_live_channels: 0,
-                    gc_root_scans: 0,
-                    gc_write_barriers: 0,
-                    gc_triggered_cycles: 0,
-                    gc_heap_goal: 0,
-                    gc_alloc_since_cycle: 0,
+                writes: writes, exit_code 0, runtime runtime_metrics {
+                    sroutine_scheduled: 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0, channels 0, channel_sends 0, channel_recvs 0, channel_closed 0, gc_cycles 0, gc_freed_channels 0, gc_live_channels 0, gc_root_scans 0, gc_write_barriers 0, gc_triggered_cycles 0, gc_heap_goal 0, gc_alloc_since_cycle 0,
                 },
             })
         }
@@ -3305,8 +3222,7 @@ func emit_call_line_to_write(string line, string callee, int fd, write_op[] writ
     }
     rendered := render_literal_text(arg_opt.unwrap())
     writes.push(write_op {
-        fd: fd,
-        text: rendered + "\n",
+        fd: fd, text rendered + "\n",
     })
 }
 
@@ -3481,8 +3397,7 @@ func call_function_with_capture(
     pi := 0
     for pi < len(function.sig.params) {
         env.push(binding {
-            name: function.sig.params[pi].name,
-            value: args[pi],
+            name: function.sig.params[pi].name, value args[pi],
         })
         pi = pi + 1
     }
@@ -3627,8 +3542,7 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
                 expr_result.unwrap_err()
             }
             env.push(binding {
-                name: value.name,
-                value: expr_result.unwrap(),
+                name: value.name, value expr_result.unwrap(),
             })
             ()
         }
@@ -3642,8 +3556,7 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
                 backend_error { message: "backend error: unknown name " + value.name }
             }
             env.set(index, binding {
-                name: value.name,
-                value: expr_result.unwrap(),
+                name: value.name, value expr_result.unwrap(),
             })
             ()
         }
@@ -3656,8 +3569,7 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             switch current {
                 value.int(number) : {
                     env.set(index, binding {
-                        name: value.name,
-                        value: value.int(number + 1),
+                        name: value.name, value value.int(number + 1),
                     })
                     ()
                 }
@@ -3701,10 +3613,7 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] en
                 ai = ai + 1
             }
             runtime.runq.push(sroutine_task {
-                fn_name: fn_name,
-                args: arg_values,
-                captured_env: snapshot_captured_bindings(env),
-                origin: fn_name,
+                fn_name: fn_name, args arg_values, captured_env snapshot_captured_bindings(env), origin fn_name,
             })
             runtime.sroutine_scheduled = runtime.sroutine_scheduled + 1
             runtime.sroutine_yields = runtime.sroutine_yields + 1
@@ -3921,13 +3830,7 @@ func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_o
     runtime.next_channel_id = runtime.next_channel_id + 1
     runtime.gc_alloc_since_cycle = runtime.gc_alloc_since_cycle + 1
     runtime.channels.push(channel_runtime_state {
-        id: id,
-        capacity: cap,
-        buffer: value[](),
-        closed: false,
-        sends: 0,
-        recvs: 0,
-        marked: false,
+        id: id, capacity cap, buffer value[](), closed false, sends 0, recvs 0, marked false,
     })
     value.channel(channel_handle_value { id: id })
 }
@@ -4470,10 +4373,10 @@ func copy_control_binding(binding[] from_env, binding[] to_env, string name) () 
 func set_control(binding[] env, string name, value v) () {
     index := find_binding_index(env, name)
     if index >= 0 {
-        env.set(index, binding { name: name, value: v })
+        env.set(index, binding { name: name, value v })
         return
     }
-    env = append(env, binding { name: name, value: v });
+    env = append(env, binding { name: name, value v });
 }
 
 func control_in_defer_mode(binding[] env) bool {
@@ -4550,8 +4453,7 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
                     return backend_error { message: "backend error: const evaluation failed for " + const_decl.name + ": " + value_result.unwrap_err().message }
                 }
                 out.push(binding {
-                    name: const_decl.name,
-                    value: value_result.unwrap(),
+                    name: const_decl.name, value value_result.unwrap(),
                 })
                 ;
             }
@@ -4668,8 +4570,7 @@ func eval_map_literal(map_literal value, source_file source, binding[] env, writ
             _ : return backend_error { message: "backend error: map literal currently supports function values only" },
         }
         entries.push(fn_map_entry_value {
-            key: stringify_value(key_result.unwrap()),
-            func_name: mapped_name,
+            key: stringify_value(key_result.unwrap()), func_name mapped_name,
         })
         i = i + 1
     }
@@ -4715,9 +4616,9 @@ func eval_print_call(string name, expr[] args, source_file source, binding[] env
     }
     op_text := text + "\n"
     if name == "println" {
-        writes = append(writes, write_op { fd: 1, text: op_text });
+        writes = append(writes, write_op { fd: 1, text op_text });
     } else {
-        writes = append(writes, write_op { fd: 2, text: op_text });
+        writes = append(writes, write_op { fd: 2, text op_text });
     }
     value.unit(unit_value {})
 }

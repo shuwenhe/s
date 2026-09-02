@@ -40,9 +40,7 @@ func linkname(string name, int abi) link_symbol {
 
 func linksym(string pkg, string name, int abi) link_symbol {
     sym := link_symbol {
-        pkg: pkg,
-        name: name,
-        abi: abi,
+        pkg: pkg, name name, abi abi,
     }
     ctxt.symbols = append(ctxt.symbols, sym)
     sym

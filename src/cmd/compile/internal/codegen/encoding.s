@@ -52,20 +52,8 @@ struct amd64_instr {
 
 func make_amd64_instr(amd64_opcode op) amd64_instr {
     amd64_instr {
-        opcode: op,
-        prefix_count: 0,
-        prefixes: []int8()(),
-        rex_byte: 0,
-        opcode_byte1: 0,
-        opcode_byte2: 0,
-        modrm_byte: 0,
-        sib_byte: 0,
-        immediate: 0,
-        has_immediate: false,
-        has_modrm: false,
-        has_sib: false,
-        operand_size: 0,
-        address_size: 64,
+        opcode: op, prefix_count 0,
+        prefixes: []int8()(), rex_byte 0, opcode_byte1 0, opcode_byte2 0, modrm_byte 0, sib_byte 0, immediate 0, has_immediate false, has_modrm false, has_sib false, operand_size 0, address_size 64,
     }
 }
 

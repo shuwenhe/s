@@ -81,9 +81,7 @@ func compute_live_intervals(ssa_func f) live_interval[] {
             need := f.values[i].uses > 0 || op_has_side_effect(f.values[i].op)
             if need {
                 ivs.push(live_interval {
-                    value_id: i,
-                    start: pos[i],
-                    end: pos[i],
+                    value_id: i, start pos[i], end pos[i],
                 })
             }
         }
@@ -168,7 +166,7 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
         cur := ivs[i]
         active_expire(active, cur.start)
         if reg_count <= 0 {
-            assigns = append(assigns, reg_assign { value_id: cur.value_id, reg: "spill" + to_string(spills), spilled: true })
+            assigns = append(assigns, reg_assign { value_id: cur.value_id, reg: "spill" + to_string(spills), spilled true })
             spills = spills + 1
             i = i + 1
             continue
@@ -205,7 +203,7 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
             if picked == "" {
                 picked = "r0"
             }
-            assigns = append(assigns, reg_assign { value_id: cur.value_id, reg: picked, spilled: false })
+            assigns = append(assigns, reg_assign { value_id: cur.value_id, reg picked, spilled false })
             active = append(active, cur)
         } else {
             far_i := 0
@@ -218,23 +216,21 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
             }
             if active[far_i].end > cur.end {
                 stolen_reg := assigned_reg(assigns, active[far_i].value_id)
-                assigns = append(assigns, reg_assign { value_id: cur.value_id, reg: stolen_reg, spilled: false })
+                assigns = append(assigns, reg_assign { value_id: cur.value_id, reg stolen_reg, spilled false })
                 assigns.push(reg_assign {
                     value_id: active[far_i].value_id,
-                    reg: "spill" + to_string(spills),
-                    spilled: true,
+                    reg: "spill" + to_string(spills), spilled true,
                 })
                 spills = spills + 1
                 active[far_i] = cur
             } else {
-                assigns = append(assigns, reg_assign { value_id: cur.value_id, reg: "spill" + to_string(spills), spilled: true })
+                assigns = append(assigns, reg_assign { value_id: cur.value_id, reg: "spill" + to_string(spills), spilled true })
                 spills = spills + 1
             }
         }
         i = i + 1
     }
     regalloc_result {
-        assigns: assigns,
-        spills: spills,
+        assigns: assigns, spills spills,
     }
 }

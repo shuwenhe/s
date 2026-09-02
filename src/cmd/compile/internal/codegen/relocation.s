@@ -24,8 +24,7 @@ struct relocation_context {
 
 func make_relocation_context() relocation_context {
     relocation_context {
-        relocations: relocation_entry[](),
-        processed_symbols: string[](),
+        relocations: relocation_entry[](), processed_symbols string[](),
     }
 }
 
@@ -46,11 +45,7 @@ func (ctx* relocation_context) add_relocation(int64 offset, reloc_type type, str
         return "relocation already exists at offset"
     }
     rel := relocation_entry {
-        offset: offset,
-        type: type,
-        symbol: symbol,
-        addend: addend,
-        rel_size: size,
+        offset: offset, type type, symbol symbol, addend addend, rel_size size,
     }
     ctx.relocations = append(ctx.relocations, rel)
     ""

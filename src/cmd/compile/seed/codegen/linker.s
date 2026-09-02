@@ -15,13 +15,13 @@ func toolchain_create() compiler_toolchain {
     tc
 }
 
-func (tc* compiler_toolchain) assemble(asm_file: string, obj_file: string) (int, string) {
+func (tc* compiler_toolchain) assemble( asm_file string, obj_file string) (int, string) {
     cmd := tc.gcc_path + " -c " + asm_file + " -o " + obj_file
     exit_code, output := run_command(cmd)
     exit_code, output
 }
 
-func (tc* compiler_toolchain) link_executable(obj_files* string[], output: string) (int, string) {
+func (tc* compiler_toolchain) link_executable(obj_files* string[], output string) (int, string) {
     cmd := tc.gcc_path + " "
     for i < obj_files.len() {
         cmd = cmd + obj_files[i] + " "
@@ -31,7 +31,7 @@ func (tc* compiler_toolchain) link_executable(obj_files* string[], output: strin
     exit_code, output
 }
 
-func (tc* compiler_toolchain) compile_to_executable(asm_file: string, obj_file: string, output_exe: string) (int, string) {
+func (tc* compiler_toolchain) compile_to_executable( asm_file string, obj_file string, output_exe string) (int, string) {
     exit_code, msg := tc.assemble(asm_file, obj_file)
     if exit_code != 0 {
         return exit_code, "Assembly failed: " + msg

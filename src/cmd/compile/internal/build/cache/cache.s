@@ -244,14 +244,7 @@ func dependency_graph_state(string source_text, string phase, string target_key)
         minimal_invalidation = 0
     }
     dep_graph_state {
-        max_depth: max_depth,
-        epoch_acc: epoch_acc,
-        dep_count: dep_count,
-        pruned_count: pruned_count,
-        minimal_invalidation_score: minimal_invalidation,
-        parallel_wave_count: waves,
-        direct_signature: direct_signature,
-        pruned_signature: pruned_signature,
+        max_depth: max_depth, epoch_acc epoch_acc, dep_count dep_count, pruned_count pruned_count, minimal_invalidation_score minimal_invalidation, parallel_wave_count waves, direct_signature direct_signature, pruned_signature pruned_signature,
     }
 }
 
@@ -330,9 +323,7 @@ func read_dep_version_state(string pkg_or_use_path) dep_version_state {
     stamp := read_to_string(version_stamp_path(pkg_or_use_path))
     if stamp.is_err() {
         return dep_version_state {
-            version: 0,
-            depth: 0,
-            layer_epoch: 0,
+            version: 0, depth 0, layer_epoch 0,
         }
     }
     text := stamp.unwrap()
@@ -349,9 +340,7 @@ func read_dep_version_state(string pkg_or_use_path) dep_version_state {
         layer = 0
     }
     dep_version_state {
-        version: version,
-        depth: depth,
-        layer_epoch: layer,
+        version: version, depth depth, layer_epoch layer,
     }
 }
 

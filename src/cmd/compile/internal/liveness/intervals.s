@@ -20,7 +20,7 @@ func build_live_intervals(live_event[] events) live_interval[] {
         idx := find_interval_index(out, ev.value_id)
         if ev.on {
             if idx < 0 {
-                out = append(out, live_interval { value_id: ev.value_id, start: ev.point, end: ev.point })
+                out = append(out, live_interval { value_id: ev.value_id, start ev.point, end ev.point })
             } else if ev.point < out[idx].start {
                 out[idx].start = ev.point
             }
@@ -60,7 +60,7 @@ func merge_intervals(live_interval a, live_interval b) live_interval {
     if b.end > end {
         end = b.end
     }
-    live_interval { value_id: a.value_id, start: start, end: end }
+    live_interval { value_id: a.value_id, start start, end end }
 }
 
 func find_interval_index(live_interval[] ivs, int value_id) int {

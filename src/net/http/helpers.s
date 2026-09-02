@@ -63,10 +63,7 @@ func parse_http_request(string raw_request) http_request {
         body = lines[body_start]
     }
     http_request{
-        method: method,
-        path: path,
-        headers: headers,
-        body: body,
+        method: method, path path, headers headers, body body,
     }
 }
 

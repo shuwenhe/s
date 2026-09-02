@@ -48,12 +48,9 @@ func token_precedence(int tok_type) int {
     }
 }
 
-func parser_new(lex: lexer) parser {
+func parser_new( lex lexer) parser {
     p := parser {
-        lexer: lex,
-        current_token: token { token_type: 0, value: "", line: 0, column: 0 },
-        peek_token: token { token_type: 0, value: "", line: 0, column: 0 },
-        errors: vec[string]()
+        lexer: lex, current_token token { token_type: 0, value: "", line 0, column 0 }, peek_token token { token_type: 0, value: "", line 0, column 0 }, errors vec[string]()
     }
     parser_next_token(p*)
     parser_next_token(p*)

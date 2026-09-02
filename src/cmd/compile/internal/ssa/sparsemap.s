@@ -18,8 +18,7 @@ func new_sparse_map(int n) sparse_map {
         i = i + 1
     }
     sparse_map {
-        dense: sparse_entry[](),
-        sparse: sparse,
+        dense: sparse_entry[](), sparse sparse,
     }
 }
 
@@ -51,7 +50,7 @@ func sparse_map_set(sparse_map s, int key, int value) sparse_map {
         s.dense[i].value = value
         return s
     }
-    s.dense = append(s.dense, sparse_entry { key: key, value: value })
+    s.dense = append(s.dense, sparse_entry { key: key, value value })
     s.sparse[key] = len(s.dense) - 1
     s
 }

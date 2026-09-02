@@ -24,7 +24,7 @@ func new_register_allocator() register_allocator {
     allocator
 }
 
-func (ra* register_allocator) allocate_for_variable(var_name: string) string {
+func (ra* register_allocator) allocate_for_variable( var_name string) string {
     if len(ra.available_regs) > 0 {
         reg := ra.available_regs[0]
         i := 1
@@ -45,7 +45,7 @@ func (ra* register_allocator) allocate_for_variable(var_name: string) string {
     }
 }
 
-func (ra* register_allocator) get_variable_location(var_name: string) string {
+func (ra* register_allocator) get_variable_location( var_name string) string {
     i := 0
     for i < len(ra.variable_map) {
         mapping := ra.variable_map[i]
@@ -68,7 +68,7 @@ func (ra* register_allocator) get_variable_location(var_name: string) string {
     ""
 }
 
-func (ra* register_allocator) free_register(reg: string) {
+func (ra* register_allocator) free_register( reg string) {
     ra.available_regs = append(ra.available_regs, reg)
 }
 

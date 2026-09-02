@@ -19,48 +19,37 @@ struct addr {
 
 func make_addr_const(int64 offset) addr {
     addr {
-        type: addr_type_const,
-        offset: offset,
+        type: addr_type_const, offset offset,
     }
 }
 
 func make_addr_reg(int reg) addr {
     addr {
-        type: addr_type_reg,
-        reg: reg,
+        type: addr_type_reg, reg reg,
     }
 }
 
 func make_addr_mem(int base_reg, int64 offset) addr {
     addr {
-        type: addr_type_mem,
-        reg: base_reg,
-        offset: offset,
+        type: addr_type_mem, reg base_reg, offset offset,
     }
 }
 
 func make_addr_indexed(int base_reg, int index_reg, int scale, int64 offset) addr {
     addr {
-        type: addr_type_mem,
-        reg: base_reg,
-        index: index_reg,
-        scale: scale,
-        offset: offset,
+        type: addr_type_mem, reg base_reg, index index_reg, scale scale, offset offset,
     }
 }
 
 func make_addr_sym(string sym, int64 offset) addr {
     addr {
-        type: addr_type_mem,
-        sym: sym,
-        symoff: offset,
+        type: addr_type_mem, sym sym, symoff offset,
     }
 }
 
 func make_addr_branch(string label) addr {
     addr {
-        type: addr_type_branch,
-        sym: label,
+        type: addr_type_branch, sym label,
     }
 }
 

@@ -10,15 +10,15 @@ struct arch_profile {
 
 func lookup_arch(string arch) arch_profile {
     if arch == "amd64" {
-        return arch_profile { name: arch, int_arg_regs: 6, stack_align: 16, caller_saved: 9, callee_saved: 5, has_simd: true }
+        return arch_profile { name: arch, int_arg_regs 6, stack_align 16, caller_saved 9, callee_saved 5, has_simd true }
     }
     if arch == "arm64" {
-        return arch_profile { name: arch, int_arg_regs: 8, stack_align: 16, caller_saved: 18, callee_saved: 10, has_simd: true }
+        return arch_profile { name: arch, int_arg_regs 8, stack_align 16, caller_saved 18, callee_saved 10, has_simd true }
     }
     if arch == "riscv64" {
-        return arch_profile { name: arch, int_arg_regs: 8, stack_align: 16, caller_saved: 15, callee_saved: 12, has_simd: false }
+        return arch_profile { name: arch, int_arg_regs 8, stack_align 16, caller_saved 15, callee_saved 12, has_simd false }
     }
-    arch_profile { name: arch, int_arg_regs: 4, stack_align: 8, caller_saved: 8, callee_saved: 4, has_simd: false }
+    arch_profile { name: arch, int_arg_regs 4, stack_align 8, caller_saved 8, callee_saved 4, has_simd false }
 }
 
 func arch_int_arg_regs(string arch) int {

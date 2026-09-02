@@ -12,11 +12,7 @@ struct ssa_func {
 func make_func(string name) ssa_func {
     f := ssa_func {
         name: name,
-        entry: -1,
-        blocks: ssa_block[](),
-        values: ssa_value[](),
-        next_block_id: 0,
-        next_value_id: 0,
+        entry: -1, blocks ssa_block[](), values ssa_value[](), next_block_id 0, next_value_id 0,
     }
     entry := make_block(f.next_block_id, "entry")
     f.next_block_id = f.next_block_id + 1

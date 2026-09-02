@@ -13,11 +13,7 @@ struct codegen_config {
 
 func make_codegen_config(string arch) codegen_config {
     codegen_config {
-        target_arch: arch,
-        code_section_align: 16 as int64,
-        data_section_align: 8 as int64,
-        emit_debug_info: false,
-        optimize_size: false,
+        target_arch: arch, code_section_align 16 as int64, data_section_align 8 as int64, emit_debug_info false, optimize_size false,
     }
 }
 
@@ -32,12 +28,7 @@ struct codegen_context {
 
 func make_codegen_context(machine_code_gen* mcg, symbol_table* st, codegen_config cfg) codegen_context {
     codegen_context {
-        gen: mcg,
-        symtab: st,
-        config: cfg,
-        code_offset: 0 as int64,
-        data_offset: 0 as int64,
-        generated_functions: string[](),
+        gen: mcg, symtab st, config cfg, code_offset 0 as int64, data_offset 0 as int64, generated_functions string[](),
     }
 }
 
@@ -82,9 +73,7 @@ struct object_file_builder {
 
 func make_object_file_builder(symbol_table* st, relocation_context* rc) object_file_builder {
     object_file_builder {
-        writer: nil as elf_writer*,
-        symtab: st,
-        reloc_ctx: rc,
+        writer: nil as elf_writer*, symtab st, reloc_ctx rc,
         code: []int8()(),
         data: []int8()(),
     }

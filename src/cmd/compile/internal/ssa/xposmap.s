@@ -28,9 +28,7 @@ func new_xpos_map(int_pair[] file_ranges) xpos_map {
             width = 0
         }
         maps.push(xpos_map_entry {
-            file_index: i,
-            lines: line_range { first: left, last: right },
-            data: new_sparse_map(width),
+            file_index: i, lines line_range { first: left, last right }, data new_sparse_map(width),
         })
         i = i + 1
     }

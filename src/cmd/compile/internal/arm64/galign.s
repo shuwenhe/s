@@ -30,9 +30,7 @@ func init_arm64(arch_info arch) arch_info {
 
 func init_arch_info() arch_info {
     info := arch_info {
-        link_arch: "",
-        reg_sp: 0,
-        max_width: 0,
+        link_arch: "", reg_sp 0, max_width 0,
         pad_frame_hook: "",
         zero_range_hook: "",
         ginsnop_hook: "",

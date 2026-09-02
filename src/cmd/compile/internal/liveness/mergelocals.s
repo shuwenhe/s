@@ -30,8 +30,7 @@ func merge_locals(local_slot[] a, local_slot[] b) merged_locals {
         i = i + 1
     }
     merged_locals {
-        slots: slots,
-        frame_size: align_up(cursor, 8),
+        slots: slots, frame_size align_up(cursor, 8),
     }
 }
 

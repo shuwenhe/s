@@ -68,14 +68,7 @@ func parse_type_ref(string text) type_ref {
         }
     }
     type_ref {
-        canonical: canonical,
-        base: base_type_name(rest),
-        is_ref: is_ref,
-        is_mut_ref: is_mut_ref,
-        is_slice: is_slice,
-        is_array: is_array,
-        array_len: array_len,
-        args: extract_type_args(rest),
+        canonical: canonical, base base_type_name(rest), is_ref is_ref, is_mut_ref is_mut_ref, is_slice is_slice, is_array is_array, array_len array_len, args extract_type_args(rest),
     }
 }
 

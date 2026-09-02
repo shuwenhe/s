@@ -38,18 +38,18 @@ func (udp_conn* c) RemoteAddr() Addr {
     c.raddr
 }
 
-func (udp_conn* c) SetDeadline(t: time.Time) error {
+func (udp_conn* c) SetDeadline( t time.Time) error {
     deadline_ns := t.UnixNano()
     c.raw_socket.set_read_deadline(deadline_ns)
     c.raw_socket.set_write_deadline(deadline_ns)
     nil
 }
 
-func (udp_conn* c) SetReadDeadline(t: time.Time) error {
+func (udp_conn* c) SetReadDeadline( t time.Time) error {
     c.raw_socket.set_read_deadline(t.UnixNano())
 }
 
-func (udp_conn* c) SetWriteDeadline(t: time.Time) error {
+func (udp_conn* c) SetWriteDeadline( t time.Time) error {
     c.raw_socket.set_write_deadline(t.UnixNano())
 }
 
@@ -59,17 +59,16 @@ func (udp_conn* c) ReadFromUDP(buf: []byte) (int, *udp_addr, error) {
         return n, nil, err
     }
     *udp_addr{
-        ip: src_ip,
-        port: src_port,
+        ip: src_ip, port src_port,
     }, nil
-    n, *udp_addr{ip: src_ip, port: src_port}, nil
+    n, *udp_addr{ip: src_ip, port src_port}, nil
 }
 
 func (udp_conn* c) WriteToUDP(buf: []byte, ud* addrp_addr) (int, error) {
     c.raw_socket.send_to(buf, addr.ip, addr.port)
 }
 
-func dial_udp(address: string, port: int, timeout_ms: int) (*udp_conn, error) {
+func dial_udp( address string, port int, timeout_ms int) (*udp_conn, error) {
     sock, err := new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
         return nil, err
@@ -88,13 +87,11 @@ func dial_udp(address: string, port: int, timeout_ms: int) (*udp_conn, error) {
         return nil, err
     }
     *udp_conn{
-        raw_socket: sock,
-        laddr: *udp_addr{ip: local_ip, port: local_port},
-        raddr: *udp_addr{ip: address, port: port},
+        raw_socket: sock, laddr *udp_addr{ip: local_ip, port local_port}, raddr *udp_addr{ip: address, port port},
     }, nil
 }
 
-func listen_udp(address: string, port: int) (*udp_listener, error) {
+func listen_udp( address string, port int) (*udp_listener, error) {
     sock, err := new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
         return nil, err
@@ -110,8 +107,7 @@ func listen_udp(address: string, port: int) (*udp_listener, error) {
         return nil, err
     }
     *udp_listener{
-        raw_socket: sock,
-        addr: *udp_addr{ip: local_ip, port: local_port},
+        raw_socket: sock, addr *udp_addr{ip: local_ip, port local_port},
     }, nil
 }
 
@@ -133,7 +129,7 @@ func (udp_listener* l) ReadFromUDP(buf: []byte) (int, *udp_addr, error) {
     if err != nil {
         return n, nil, err
     }
-    n, *udp_addr{ip: src_ip, port: src_port}, nil
+    n, *udp_addr{ip: src_ip, port src_port}, nil
 }
 
 func (udp_listener* l) WriteToUDP(buf: []byte, ud* addrp_addr) (int, error) {

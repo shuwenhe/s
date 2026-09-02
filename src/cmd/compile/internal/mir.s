@@ -90,22 +90,14 @@ func lower_function_graph(function_decl function) mir_graph {
     blocks := mir_basic_block[]()
     blocks.push(mir_basic_block {
         id: 0,
-        label: "entry",
-        statements: empty_statements,
-        terminator: mir_terminator {
-            kind: "return",
-            edges: empty_edges,
+        label: "entry", statements empty_statements, terminator mir_terminator {
+            kind: "return", edges empty_edges,
         },
     })
     trace := string[]()
     trace = append(trace, "block |   yield unit")
     mir_graph {
-        function_name: function.sig.name,
-        blocks: blocks,
-        locals: mir_local_slot[](),
-        trace: trace,
-        entry: 0,
-        exit: 0,
+        function_name: function.sig.name, blocks blocks, locals mir_local_slot[](), trace trace, entry 0, exit 0,
     }
 }
 
@@ -117,8 +109,7 @@ func lower_block_graph(string function_name, block_expr block) mir_graph {
         args := string[]()
         args = append(args, stmt_text)
         statements.push(mir_statement::eval(mir_eval_stmt {
-            op: "stmt",
-            args: args,
+            op: "stmt", args args,
         }))
         index = index + 1
     }
@@ -139,20 +130,12 @@ func lower_block_graph(string function_name, block_expr block) mir_graph {
     blocks := mir_basic_block[]()
     blocks.push(mir_basic_block {
         id: 0,
-        label: "entry",
-        statements: statements,
-        terminator: mir_terminator {
-            kind: "return",
-            edges: mir_control_edge[](),
+        label: "entry", statements statements, terminator mir_terminator {
+            kind: "return", edges mir_control_edge[](),
         },
     })
     mir_graph {
-        function_name: function_name,
-        blocks: blocks,
-        locals: mir_local_slot[](),
-        trace: trace,
-        entry: 0,
-        exit: 0,
+        function_name: function_name, blocks blocks, locals mir_local_slot[](), trace trace, entry 0, exit 0,
     }
 }
 

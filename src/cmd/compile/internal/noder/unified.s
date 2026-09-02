@@ -20,12 +20,6 @@ func run_unified(string path, string[] quirks) (noder_output, noder_error) {
     notes = append(notes, "tokens=" + to_string(len(tokens)))
     notes = append(notes, "exports=" + to_string(len(exports)))
     noder_output {
-        unit: unit,
-        tokens: tokens,
-        imports: imports,
-        ast: ast,
-        ir: ir,
-        exports: exports,
-        notes: notes,
+        unit: unit, tokens tokens, imports imports, ast ast, ir ir, exports exports, notes notes,
     }
 }

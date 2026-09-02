@@ -10,14 +10,7 @@ struct start_heap_state {
     bool active
 }
 start_heap := start_heap_state {
-    requested_heap_goal: 0,
-    derate_break: 600,
-    derate_lo_pct: 70,
-    derate_hi_pct: 55,
-    log_heap_tweaks: false,
-    current_gogc: 100,
-    original_gogc: 100,
-    active: false,
+    requested_heap_goal: 0, derate_break 600, derate_lo_pct 70, derate_hi_pct 55, log_heap_tweaks false, current_gogc 100, original_gogc 100, active false,
 }
 
 func gogc_derate(int gogc) int {

@@ -120,9 +120,7 @@ func DialTCP(address string, port int, timeout_ms int) (*TCPConn, error) {
     local_ip, local_port, _ := sock.get_local_addr()
     remote_ip, remote_port, _ := sock.get_remote_addr()
     *TCPConn{
-        raw_socket: sock,
-        laddr: *TCPAddr{ip: local_ip, port: local_port},
-        raddr: *TCPAddr{ip: remote_ip, port: remote_port},
+        raw_socket: sock, laddr *TCPAddr{ip: local_ip, port local_port}, raddr *TCPAddr{ip: remote_ip, port remote_port},
     }, nil
 }
 
@@ -152,8 +150,7 @@ func ListenTCP(address string, port int) (*TCPListener, error) {
         return nil, err
     }
     *TCPListener{
-        raw_socket: sock,
-        addr: *TCPAddr{ip: address, port: port},
+        raw_socket: sock, addr *TCPAddr{ip: address, port port},
     }, nil
 }
 
@@ -168,9 +165,7 @@ func (TCPListener* l) Accept() (*TCPConn, error) {
     remote_ip, remote_port, _ := client_sock.get_remote_addr()
     local_ip, local_port, _ := client_sock.get_local_addr()
     *TCPConn{
-        raw_socket: client_sock,
-        laddr: *TCPAddr{ip: local_ip, port: local_port},
-        raddr: *TCPAddr{ip: remote_ip, port: remote_port},
+        raw_socket: client_sock, laddr *TCPAddr{ip: local_ip, port local_port}, raddr *TCPAddr{ip: remote_ip, port remote_port},
     }, nil
 }
 

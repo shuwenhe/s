@@ -389,108 +389,7 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
     debug_lines := build_debug_lines(optimized_mir, allocation.allocated_regs)
     debug_var_locations := build_var_locations(allocation.allocated_regs)
     ssa_program {
-        function_name: function_name,
-        optimized_mir_text: optimized_mir,
-        pass_mir_trace: pass_mir_trace,
-        pass_delta_trace: pass_delta_trace,
-        pass_delta_summary: pass_delta_summary,
-        pass_delta_structural_summary: pass_delta_structural_summary,
-        pass_delta_value_summary: pass_delta_value_summary,
-        pass_delta_hot_summary: pass_delta_hot_summary,
-        instruction_block_count: instruction_summary.instruction_block_count,
-        instruction_value_count: instruction_summary.instruction_value_count,
-        dominator_tree_depth: instruction_summary.dominator_tree_depth,
-        loop_backedge_count: instruction_summary.loop_backedge_count,
-        instruction_verifier_error_count: instruction_summary.instruction_verifier_error_count,
-        instruction_verifier_error_code: instruction_summary.instruction_verifier_error_code,
-        instruction_verifier_flags: instruction_summary.instruction_verifier_flags,
-        instruction_verifier_primary: instruction_summary.instruction_verifier_primary,
-        instruction_verifier_stage_hint: instruction_summary.instruction_verifier_stage_hint,
-        instruction_verifier_stage_evidence: instruction_summary.instruction_verifier_stage_evidence,
-        instruction_verifier_pick_matches_top: instruction_summary.instruction_verifier_pick_matches_top,
-        instruction_verifier_pick_reason: instruction_summary.instruction_verifier_pick_reason,
-        memory_ssa_node_count: instruction_summary.memory_ssa_node_count,
-        points_to_set_count: instruction_summary.points_to_set_count,
-        load_store_proof_count: instruction_summary.load_store_proof_count,
-        spill_reload_pair_count: instruction_summary.spill_reload_pair_count,
-        parallel_copy_resolution_count: instruction_summary.parallel_copy_resolution_count,
-        escape_stack_alloc_count: instruction_summary.escape_stack_alloc_count,
-        escape_heap_alloc_count: instruction_summary.escape_heap_alloc_count,
-        inline_budget_score: instruction_summary.inline_budget_score,
-        devirtualization_gain_score: instruction_summary.devirtualization_gain_score,
-        instruction_block_graph: instruction_summary.instruction_block_graph,
-        instruction_value_graph: instruction_summary.instruction_value_graph,
-        instruction_dominator_tree: instruction_summary.instruction_dominator_tree,
-        instruction_loop_forest: instruction_summary.instruction_loop_forest,
-        instruction_memory_dep_graph: instruction_summary.instruction_memory_dep_graph,
-        instruction_regalloc_plan: instruction_summary.instruction_regalloc_plan,
-        block_count: optimized_block_count,
-        value_count: value_count,
-        cfg_edge_count: estimate_cfg_edges(optimized_mir),
-        branch_block_count: count_token(optimized_mir, " term=branch"),
-        optimized_value_count: optimized_value_count,
-        folded_constant_count: pass_stats.folded_constant_count,
-        dce_removed_count: pass_stats.dce_removed_count,
-        coalesced_move_count: pass_stats.coalesced_move_count,
-        simplified_branch_count: pass_stats.simplified_branch_count,
-        gvn_rewrite_count: pass_stats.gvn_rewrite_count,
-        sccp_rewrite_count: pass_stats.sccp_rewrite_count,
-        pre_eliminated_count: pass_stats.pre_eliminated_count,
-        cse_eliminated_count: pass_stats.cse_eliminated_count,
-        licm_hoisted_count: pass_stats.licm_hoisted_count,
-        bce_removed_count: pass_stats.bce_removed_count,
-        phi_node_count: pass_stats.phi_node_count,
-        def_use_edge_count: pass_stats.def_use_edge_count,
-        alias_set_count: pass_stats.alias_set_count,
-        memory_version_count: pass_stats.memory_version_count,
-        live_in_fact_count: pass_stats.live_in_fact_count,
-        loop_header_count: pass_stats.loop_header_count,
-        semantic_rewrite_count: rewrite.rewrite_count,
-        fixed_point_iterations: pass_stats.fixed_point_iterations,
-        verification_error_count: pass_stats.verification_error_count,
-        rollback_count: pass_stats.rollback_count,
-        proof_obligation_count: pass_stats.proof_obligation_count,
-        proof_failed_count: pass_stats.proof_failed_count,
-        scheduled_pass_count: pass_stats.scheduled_pass_count,
-        blocked_pass_count: pass_stats.blocked_pass_count,
-        dag_level_count: pass_stats.dag_level_count,
-        rerun_count: pass_stats.rerun_count,
-        rollback_checkpoint_count: pass_stats.rollback_checkpoint_count,
-        invalidation_rerun_count: pass_stats.invalidation_rerun_count,
-        replay_step_count: pass_stats.replay_step_count,
-        debug_budget_score: debug_budget,
-        scheduler_priority_score: pass_stats.scheduler_priority_score,
-        scheduler_conflict_count: pass_stats.scheduler_conflict_count,
-        replay_stability_hash: pass_stats.replay_stability_hash,
-        alias_precision_level: pass_stats.alias_precision_level,
-        memory_ssa_chain_count: pass_stats.memory_ssa_chain_count,
-        global_value_number_count: pass_stats.global_value_number_count,
-        loop_proof_chain_count: pass_stats.loop_proof_chain_count,
-        spill_cost_score: regalloc_quality.spill_cost_score,
-        split_quality_score: regalloc_quality.split_quality_score,
-        cross_block_gain_score: regalloc_quality.cross_block_gain_score,
-        sched_throughput_score: sched_quality.throughput_score,
-        sched_latency_balance_score: sched_quality.latency_balance_score,
-        microarch_specialization_score: sched_quality.microarch_specialization_score,
-        cost_model_score: pass_stats.cost_model_score,
-        solver_convergence_score: pass_stats.solver_convergence_score,
-        replay_determinism_score: pass_stats.replay_determinism_score,
-        pass_dsl: pass_stats.pass_dsl,
-        invalidation_policy: pass_stats.invalidation_policy,
-        pass_topology_log: pass_stats.pass_topology_log,
-        pass_replay_log: pass_stats.pass_replay_log,
-        rollback_node: pass_stats.rollback_node,
-        spill_count: allocation.spill_count,
-        spill_reload_count: allocation.spill_reload_count,
-        call_pressure_event_count: allocation.call_pressure_events,
-        live_range_split_count: allocation.live_range_splits,
-        rematerialized_value_count: allocation.rematerialized_values,
-        regalloc_reuse_count: allocation.reuse_count,
-        regalloc_max_live: allocation.max_live,
-        debug_line_count: len(debug_lines),
-        allocated_regs: allocation.allocated_regs,
-        debug_lines: debug_lines,
-        debug_var_locations: debug_var_locations,
+        function_name: function_name, optimized_mir_text optimized_mir, pass_mir_trace pass_mir_trace, pass_delta_trace pass_delta_trace, pass_delta_summary pass_delta_summary, pass_delta_structural_summary pass_delta_structural_summary, pass_delta_value_summary pass_delta_value_summary, pass_delta_hot_summary pass_delta_hot_summary, instruction_block_count instruction_summary.instruction_block_count, instruction_value_count instruction_summary.instruction_value_count, dominator_tree_depth instruction_summary.dominator_tree_depth, loop_backedge_count instruction_summary.loop_backedge_count, instruction_verifier_error_count instruction_summary.instruction_verifier_error_count, instruction_verifier_error_code instruction_summary.instruction_verifier_error_code, instruction_verifier_flags instruction_summary.instruction_verifier_flags, instruction_verifier_primary instruction_summary.instruction_verifier_primary, instruction_verifier_stage_hint instruction_summary.instruction_verifier_stage_hint, instruction_verifier_stage_evidence instruction_summary.instruction_verifier_stage_evidence, instruction_verifier_pick_matches_top instruction_summary.instruction_verifier_pick_matches_top, instruction_verifier_pick_reason instruction_summary.instruction_verifier_pick_reason, memory_ssa_node_count instruction_summary.memory_ssa_node_count, points_to_set_count instruction_summary.points_to_set_count, load_store_proof_count instruction_summary.load_store_proof_count, spill_reload_pair_count instruction_summary.spill_reload_pair_count, parallel_copy_resolution_count instruction_summary.parallel_copy_resolution_count, escape_stack_alloc_count instruction_summary.escape_stack_alloc_count, escape_heap_alloc_count instruction_summary.escape_heap_alloc_count, inline_budget_score instruction_summary.inline_budget_score, devirtualization_gain_score instruction_summary.devirtualization_gain_score, instruction_block_graph instruction_summary.instruction_block_graph, instruction_value_graph instruction_summary.instruction_value_graph, instruction_dominator_tree instruction_summary.instruction_dominator_tree, instruction_loop_forest instruction_summary.instruction_loop_forest, instruction_memory_dep_graph instruction_summary.instruction_memory_dep_graph, instruction_regalloc_plan instruction_summary.instruction_regalloc_plan, block_count optimized_block_count, value_count value_count, cfg_edge_count estimate_cfg_edges(optimized_mir), branch_block_count count_token(optimized_mir, " term=branch"), optimized_value_count optimized_value_count, folded_constant_count pass_stats.folded_constant_count, dce_removed_count pass_stats.dce_removed_count, coalesced_move_count pass_stats.coalesced_move_count, simplified_branch_count pass_stats.simplified_branch_count, gvn_rewrite_count pass_stats.gvn_rewrite_count, sccp_rewrite_count pass_stats.sccp_rewrite_count, pre_eliminated_count pass_stats.pre_eliminated_count, cse_eliminated_count pass_stats.cse_eliminated_count, licm_hoisted_count pass_stats.licm_hoisted_count, bce_removed_count pass_stats.bce_removed_count, phi_node_count pass_stats.phi_node_count, def_use_edge_count pass_stats.def_use_edge_count, alias_set_count pass_stats.alias_set_count, memory_version_count pass_stats.memory_version_count, live_in_fact_count pass_stats.live_in_fact_count, loop_header_count pass_stats.loop_header_count, semantic_rewrite_count rewrite.rewrite_count, fixed_point_iterations pass_stats.fixed_point_iterations, verification_error_count pass_stats.verification_error_count, rollback_count pass_stats.rollback_count, proof_obligation_count pass_stats.proof_obligation_count, proof_failed_count pass_stats.proof_failed_count, scheduled_pass_count pass_stats.scheduled_pass_count, blocked_pass_count pass_stats.blocked_pass_count, dag_level_count pass_stats.dag_level_count, rerun_count pass_stats.rerun_count, rollback_checkpoint_count pass_stats.rollback_checkpoint_count, invalidation_rerun_count pass_stats.invalidation_rerun_count, replay_step_count pass_stats.replay_step_count, debug_budget_score debug_budget, scheduler_priority_score pass_stats.scheduler_priority_score, scheduler_conflict_count pass_stats.scheduler_conflict_count, replay_stability_hash pass_stats.replay_stability_hash, alias_precision_level pass_stats.alias_precision_level, memory_ssa_chain_count pass_stats.memory_ssa_chain_count, global_value_number_count pass_stats.global_value_number_count, loop_proof_chain_count pass_stats.loop_proof_chain_count, spill_cost_score regalloc_quality.spill_cost_score, split_quality_score regalloc_quality.split_quality_score, cross_block_gain_score regalloc_quality.cross_block_gain_score, sched_throughput_score sched_quality.throughput_score, sched_latency_balance_score sched_quality.latency_balance_score, microarch_specialization_score sched_quality.microarch_specialization_score, cost_model_score pass_stats.cost_model_score, solver_convergence_score pass_stats.solver_convergence_score, replay_determinism_score pass_stats.replay_determinism_score, pass_dsl pass_stats.pass_dsl, invalidation_policy pass_stats.invalidation_policy, pass_topology_log pass_stats.pass_topology_log, pass_replay_log pass_stats.pass_replay_log, rollback_node pass_stats.rollback_node, spill_count allocation.spill_count, spill_reload_count allocation.spill_reload_count, call_pressure_event_count allocation.call_pressure_events, live_range_split_count allocation.live_range_splits, rematerialized_value_count allocation.rematerialized_values, regalloc_reuse_count allocation.reuse_count, regalloc_max_live allocation.max_live, debug_line_count len(debug_lines), allocated_regs allocation.allocated_regs, debug_lines debug_lines, debug_var_locations debug_var_locations,
     }
 }
 
@@ -539,33 +438,7 @@ func analyze_instruction_ssa(string mir_text, ssa_dataflow_model model, ssa_pass
     verify_pick_matches_top := instruction_verify_pick_matches_top(verify_primary, pass_delta_summary, verify_stage_hint)
     verify_pick_reason := instruction_verify_pick_reason(verify_primary, pass_delta_summary, verify_stage_hint)
     instruction_ssa_summary {
-        instruction_block_count: instruction_blocks,
-        instruction_value_count: instruction_values,
-        dominator_tree_depth: dom_depth,
-        loop_backedge_count: backedges,
-        instruction_verifier_error_count: verifier.error_count,
-        instruction_verifier_error_code: verifier.error_code,
-        instruction_verifier_flags: format_instruction_verify_flags(verifier.error_code),
-        instruction_verifier_primary: verify_primary,
-        instruction_verifier_stage_hint: verify_stage_hint,
-        instruction_verifier_stage_evidence: verify_stage_evidence,
-        instruction_verifier_pick_matches_top: verify_pick_matches_top,
-        instruction_verifier_pick_reason: verify_pick_reason,
-        memory_ssa_node_count: memory_nodes,
-        points_to_set_count: model.alias_set_count,
-        load_store_proof_count: load_store_proofs,
-        spill_reload_pair_count: spill_pairs,
-        parallel_copy_resolution_count: parallel_copies,
-        escape_stack_alloc_count: stack_allocs,
-        escape_heap_alloc_count: heap_allocs,
-        inline_budget_score: inline_budget,
-        devirtualization_gain_score: devirt_gain,
-        instruction_block_graph: block_graph,
-        instruction_value_graph: value_graph,
-        instruction_dominator_tree: dominator_tree,
-        instruction_loop_forest: loop_forest,
-        instruction_memory_dep_graph: memory_dep_graph,
-        instruction_regalloc_plan: regalloc_plan,
+        instruction_block_count: instruction_blocks, instruction_value_count instruction_values, dominator_tree_depth dom_depth, loop_backedge_count backedges, instruction_verifier_error_count verifier.error_count, instruction_verifier_error_code verifier.error_code, instruction_verifier_flags format_instruction_verify_flags(verifier.error_code), instruction_verifier_primary verify_primary, instruction_verifier_stage_hint verify_stage_hint, instruction_verifier_stage_evidence verify_stage_evidence, instruction_verifier_pick_matches_top verify_pick_matches_top, instruction_verifier_pick_reason verify_pick_reason, memory_ssa_node_count memory_nodes, points_to_set_count model.alias_set_count, load_store_proof_count load_store_proofs, spill_reload_pair_count spill_pairs, parallel_copy_resolution_count parallel_copies, escape_stack_alloc_count stack_allocs, escape_heap_alloc_count heap_allocs, inline_budget_score inline_budget, devirtualization_gain_score devirt_gain, instruction_block_graph block_graph, instruction_value_graph value_graph, instruction_dominator_tree dominator_tree, instruction_loop_forest loop_forest, instruction_memory_dep_graph memory_dep_graph, instruction_regalloc_plan regalloc_plan,
     }
 }
 
@@ -966,8 +839,7 @@ func verify_instruction_ssa(
         code = set_error_flag(code, E_MEM_COUNT)
     }
     instruction_verify_result {
-        error_count: errors,
-        error_code: code,
+        error_count: errors, error_code code,
     }
 }
 
@@ -1157,8 +1029,7 @@ func canonicalize_mir(string mir_text) ssa_rewrite_result {
         rewrites = rewrites + 1
     }
     ssa_rewrite_result {
-        rewritten_mir: rewritten,
-        rewrite_count: rewrites,
+        rewritten_mir: rewritten, rewrite_count rewrites,
     }
 }
 
@@ -1171,13 +1042,11 @@ func replace_first_token(string text, string needle, string replacement) replace
     pos := find_token(text, needle)
     if pos > len(text) {
         return replace_result {
-            text: text,
-            changed: false,
+            text: text, changed false,
         }
     }
     replace_result {
-        text: slice(text, 0, pos) + replacement + slice(text, pos + len(needle), len(text)),
-        changed: true,
+        text: slice(text, 0, pos) + replacement + slice(text, pos + len(needle), len(text)), changed true,
     }
 }
 
@@ -1214,14 +1083,7 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
     }
     if len(regs) == 0 {
         return regalloc_result {
-            allocated_regs: string[](),
-            spill_count: value_count,
-            spill_reload_count: value_count,
-            call_pressure_events: call_sites,
-            live_range_splits: 0,
-            rematerialized_values: 0,
-            reuse_count: 0,
-            max_live: 0,
+            allocated_regs: string[](), spill_count value_count, spill_reload_count value_count, call_pressure_events call_sites, live_range_splits 0, rematerialized_values 0, reuse_count 0, max_live 0,
         }
     }
     active_until := int[]()
@@ -1285,14 +1147,7 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
         i = i + 1
     }
     regalloc_result {
-        allocated_regs: out,
-        spill_count: spills,
-        spill_reload_count: spill_reloads,
-        call_pressure_events: call_sites,
-        live_range_splits: splits,
-        rematerialized_values: remat,
-        reuse_count: reuse,
-        max_live: max_live,
+        allocated_regs: out, spill_count spills, spill_reload_count spill_reloads, call_pressure_events call_sites, live_range_splits splits, rematerialized_values remat, reuse_count reuse, max_live max_live,
     }
 }
 
@@ -1379,9 +1234,7 @@ func register_bank(string goarch) string[] {
 
 func default_options() ssa_pipeline_options {
     ssa_pipeline_options {
-        enable_dce: true,
-        enable_coalesce: true,
-        enable_simplify_cfg: true,
+        enable_dce: true, enable_coalesce true, enable_simplify_cfg true,
         dominant_margin_override: -1,
     }
 }
@@ -1735,37 +1588,23 @@ struct append_metric_result {
 func append_changed_metric(string details, string label, int before, int after) append_metric_result {
     if before == after {
         return append_metric_result {
-            details: details,
-            changed: 0,
+            details: details, changed 0,
         }
     }
     part := format_metric_delta(label, before, after)
     if details == "" {
         return append_metric_result {
-            details: part,
-            changed: 1,
+            details: part, changed 1,
         }
     }
     append_metric_result {
-        details: details + "," + part,
-        changed: 1,
+        details: details + "," + part, changed 1,
     }
 }
 
 func collect_mir_metrics(string mir_text) mir_metrics {
     mir_metrics {
-        blocks: parse_int_after(mir_text, "blocks="),
-        stmts: parse_total_stmt_count(mir_text),
-        branches: count_token(mir_text, " term=branch"),
-        jumps: count_token(mir_text, " term=jump"),
-        consts: count_numeric_marker_total(mir_text, " const="),
-        imms: count_numeric_marker_total(mir_text, " imm="),
-        literals: count_numeric_marker_total(mir_text, " literal="),
-        phi: count_numeric_marker_total(mir_text, " phi="),
-        memphi: count_numeric_marker_total(mir_text, " memphi="),
-        copy: count_numeric_marker_total(mir_text, " copy="),
-        load: count_numeric_marker_total(mir_text, " load="),
-        store: count_numeric_marker_total(mir_text, " store="),
+        blocks: parse_int_after(mir_text, "blocks="), stmts parse_total_stmt_count(mir_text), branches count_token(mir_text, " term=branch"), jumps count_token(mir_text, " term=jump"), consts count_numeric_marker_total(mir_text, " const="), imms count_numeric_marker_total(mir_text, " imm="), literals count_numeric_marker_total(mir_text, " literal="), phi count_numeric_marker_total(mir_text, " phi="), memphi count_numeric_marker_total(mir_text, " memphi="), copy count_numeric_marker_total(mir_text, " copy="), load count_numeric_marker_total(mir_text, " load="), store count_numeric_marker_total(mir_text, " store="),
     }
 }
 
@@ -1960,20 +1799,7 @@ func build_dataflow_model(string mir_text, int block_count, int value_count) ssa
     live_in := estimate_live_in_facts_with_model(block_count, edges, calls)
     loops := estimate_loop_headers(branches, jumps)
     ssa_dataflow_model {
-        block_count: block_count,
-        edge_count: edges,
-        value_count: value_count,
-        branch_count: branches,
-        jump_count: jumps,
-        call_count: calls,
-        load_count: loads,
-        store_count: stores,
-        phi_count: phi,
-        memphi_count: memphi,
-        alias_set_count: alias_sets,
-        def_use_edges: def_use,
-        live_in_facts: live_in,
-        loop_headers: loops,
+        block_count: block_count, edge_count edges, value_count value_count, branch_count branches, jump_count jumps, call_count calls, load_count loads, store_count stores, phi_count phi, memphi_count memphi, alias_set_count alias_sets, def_use_edges def_use, live_in_facts live_in, loop_headers loops,
     }
 }
 
@@ -2169,50 +1995,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         }
     }
     ssa_pass_stats {
-        folded_constant_count: folded,
-        dce_removed_count: dce_removed,
-        coalesced_move_count: coalesced,
-        simplified_branch_count: simplified,
-        gvn_rewrite_count: gvn_rewrites,
-        sccp_rewrite_count: sccp_rewrites,
-        pre_eliminated_count: pre_eliminated,
-        cse_eliminated_count: cse_eliminated,
-        licm_hoisted_count: licm_hoisted,
-        bce_removed_count: bce_removed,
-        phi_node_count: phi_nodes,
-        def_use_edge_count: model.def_use_edges,
-        alias_set_count: model.alias_set_count,
-        memory_version_count: memory_versions,
-        live_in_fact_count: live_in_facts,
-        loop_header_count: model.loop_headers,
-        fixed_point_iterations: fixed_iters,
-        verification_error_count: verify_errors,
-        rollback_count: rollback,
-        proof_obligation_count: proof_obligations,
-        proof_failed_count: proof_failed,
-        scheduled_pass_count: scheduled_passes,
-        blocked_pass_count: blocked_passes,
-        dag_level_count: dag_levels,
-        rerun_count: reruns,
-        rollback_checkpoint_count: rollback_points,
-        invalidation_rerun_count: invalidation_reruns,
-        replay_step_count: replay_steps,
-        scheduler_priority_score: scheduler_priority,
-        scheduler_conflict_count: scheduler_conflicts,
-        replay_stability_hash: hash_text(replay_log),
-        cost_model_score: normalize_score(cost_model_score, 0, 1000),
-        solver_convergence_score: normalize_score(solver_convergence, 0, 100),
-        replay_determinism_score: replay_determinism_score(replay_log, scheduler_conflicts),
-        alias_precision_level: estimate_alias_precision_level(model),
-        memory_ssa_chain_count: estimate_memory_ssa_chain_count(model, pre_eliminated),
-        global_value_number_count: gvn_rewrites + cse_eliminated,
-        loop_proof_chain_count: estimate_loop_proof_chain_count(model, licm_hoisted, proof_obligations),
-        pass_dsl: pass_dsl,
-        invalidation_policy: invalidation_policy,
-        pass_topology_log: topology_log,
-        pass_replay_log: replay_log,
-        rollback_node: rollback_node,
-        optimized_value_count: current,
+        folded_constant_count: folded, dce_removed_count dce_removed, coalesced_move_count coalesced, simplified_branch_count simplified, gvn_rewrite_count gvn_rewrites, sccp_rewrite_count sccp_rewrites, pre_eliminated_count pre_eliminated, cse_eliminated_count cse_eliminated, licm_hoisted_count licm_hoisted, bce_removed_count bce_removed, phi_node_count phi_nodes, def_use_edge_count model.def_use_edges, alias_set_count model.alias_set_count, memory_version_count memory_versions, live_in_fact_count live_in_facts, loop_header_count model.loop_headers, fixed_point_iterations fixed_iters, verification_error_count verify_errors, rollback_count rollback, proof_obligation_count proof_obligations, proof_failed_count proof_failed, scheduled_pass_count scheduled_passes, blocked_pass_count blocked_passes, dag_level_count dag_levels, rerun_count reruns, rollback_checkpoint_count rollback_points, invalidation_rerun_count invalidation_reruns, replay_step_count replay_steps, scheduler_priority_score scheduler_priority, scheduler_conflict_count scheduler_conflicts, replay_stability_hash hash_text(replay_log), cost_model_score normalize_score(cost_model_score, 0, 1000), solver_convergence_score normalize_score(solver_convergence, 0, 100), replay_determinism_score replay_determinism_score(replay_log, scheduler_conflicts), alias_precision_level estimate_alias_precision_level(model), memory_ssa_chain_count estimate_memory_ssa_chain_count(model, pre_eliminated), global_value_number_count gvn_rewrites + cse_eliminated, loop_proof_chain_count estimate_loop_proof_chain_count(model, licm_hoisted, proof_obligations), pass_dsl pass_dsl, invalidation_policy invalidation_policy, pass_topology_log topology_log, pass_replay_log replay_log, rollback_node rollback_node, optimized_value_count current,
     }
 }
 
@@ -2316,9 +2099,7 @@ func compute_regalloc_quality(regalloc_result allocation, int block_count) regal
         cross_block = cross_block + block_count
     }
     regalloc_quality_result {
-        spill_cost_score: spill_cost,
-        split_quality_score: split_quality,
-        cross_block_gain_score: cross_block,
+        spill_cost_score: spill_cost, split_quality_score split_quality, cross_block_gain_score cross_block,
     }
 }
 
@@ -2341,9 +2122,7 @@ func compute_schedule_quality(ssa_pass_stats pass_stats, ssa_dataflow_model mode
         microarch = 0
     }
     schedule_quality_result {
-        throughput_score: throughput,
-        latency_balance_score: latency,
-        microarch_specialization_score: microarch,
+        throughput_score: throughput, latency_balance_score latency, microarch_specialization_score microarch,
     }
 }
 
@@ -2412,22 +2191,16 @@ func should_auto_invalidate_pass(string pass_name, ssa_dataflow_model model, int
 func execute_pass_node(string name, bool ready, int raw_rewrites) pass_node_result {
     if ready {
         return pass_node_result {
-            rewrites: raw_rewrites,
-            blocked: 0,
-            replay_token: name + ":ok(" + to_string(raw_rewrites) + ")",
+            rewrites: raw_rewrites, blocked 0, replay_token name + ":ok(" + to_string(raw_rewrites) + ")",
         }
     }
     if raw_rewrites > 0 {
         return pass_node_result {
-            rewrites: 0,
-            blocked: 1,
-            replay_token: name + ":blocked",
+            rewrites: 0, blocked 1, replay_token name + ":blocked",
         }
     }
     pass_node_result {
-        rewrites: 0,
-        blocked: 0,
-        replay_token: name + ":idle",
+        rewrites: 0, blocked 0, replay_token name + ":idle",
     }
 }
 

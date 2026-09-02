@@ -6,15 +6,13 @@ struct int_pair {
 
 func make_int_pair(int left, int right) int_pair {
     int_pair {
-        left: left,
-        right: right,
+        left: left, right right,
     }
 }
 
 func pair_swap(int_pair p) int_pair {
     int_pair {
-        left: p.right,
-        right: p.left,
+        left: p.right, right p.left,
     }
 }
 

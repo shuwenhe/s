@@ -33,11 +33,7 @@ struct link_context {
 
 func make_link_context() link_context {
     link_context {
-        symbols: link_sym[](),
-        symbol_names: string[](),
-        text_size: 0,
-        data_size: 0,
-        bss_size: 0,
+        symbols: link_sym[](), symbol_names string[](), text_size 0, data_size 0, bss_size 0,
     }
 }
 
@@ -58,13 +54,8 @@ func (ctx* link_context) create_symbol(string name, sym_type type) (link_sym*, s
         return existing, "symbol already exists"
     }
     sym := link_sym {
-        name: name,
-        type: type,
-        size: 0,
-        value: 0,
-        data: []int8()(),
-        relocs: link_reloc[](),
-        is_defined: false,
+        name: name, type type, size 0, value 0,
+        data: []int8()(), relocs link_reloc[](), is_defined false,
     }
     ctx.symbols = append(ctx.symbols, sym)
     ctx.symbol_names = append(ctx.symbol_names, name)
@@ -89,10 +80,7 @@ func (ctx* link_context) add_relocation(string sym_name, int64 offset, int64 siz
         return "symbol not found"
     }
     reloc := link_reloc {
-        offset: offset,
-        size: size,
-        target_sym: target,
-        add_end: add,
+        offset: offset, size size, target_sym target, add_end add,
     }
     sym.relocs = append(sym.relocs, reloc)
     ""

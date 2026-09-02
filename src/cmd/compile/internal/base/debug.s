@@ -27,28 +27,11 @@ debug := default_debug_flags()
 
 func default_debug_flags() debug_flags {
     debug_flags {
-        align_hot: 1,
-        append: 0,
+        align_hot: 1, append 0,
         ast_dump: "",
-        checkptr: -1,
-        closure: 0,
-        compress_instructions: 1,
-        escape_debug: 0,
-        gc_adjust: 0,
-        gc_start: 0,
-        gossa_hash: "",
-        inl_funcs_with_closures: 1,
-        inl_static_init: 1,
-        loop_var: 1,
-        loop_var_hash: "",
-        merge_locals: 1,
-        panic: 0,
-        pgo_inline: 1,
-        pgo_devirtualize: 2,
-        range_func_check: 1,
-        variable_make_threshold: 32,
-        zero_copy: 1,
-        concurrent_ok: true,
+        checkptr: -1, closure 0, compress_instructions 1, escape_debug 0, gc_adjust 0, gc_start 0,
+        gossa_hash: "", inl_funcs_with_closures 1, inl_static_init 1, loop_var 1,
+        loop_var_hash: "", merge_locals 1, panic 0, pgo_inline 1, pgo_devirtualize 2, range_func_check 1, variable_make_threshold 32, zero_copy 1, concurrent_ok true,
     }
 }
 

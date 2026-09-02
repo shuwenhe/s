@@ -15,9 +15,9 @@ func allocate_read_buffer() []byte {
 func file_open_read(string path) (FileHandle, int) {
     fd := syscall.open_file(path, syscall.O_RDONLY, 0)
     if fd < 0 {
-        return FileHandle{fd: -1, path: path, mode: "r"}, fd
+        return FileHandle{fd: -1, path path, mode: "r"}, fd
     }
-    FileHandle{fd: fd, path: path, mode: "r"}, 0
+    FileHandle{fd: fd, path path, mode: "r"}, 0
 }
 
 func file_open_write(string path) (FileHandle, int) {
@@ -25,9 +25,9 @@ func file_open_write(string path) (FileHandle, int) {
         syscall.O_WRONLY | syscall.O_CREAT | syscall.O_TRUNC,
         0o644)
     if fd < 0 {
-        return FileHandle{fd: -1, path: path, mode: "w"}, fd
+        return FileHandle{fd: -1, path path, mode: "w"}, fd
     }
-    FileHandle{fd: fd, path: path, mode: "w"}, 0
+    FileHandle{fd: fd, path path, mode: "w"}, 0
 }
 
 func file_close(FileHandle f) int {

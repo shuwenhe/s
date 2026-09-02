@@ -16,7 +16,7 @@ struct net_error {
 }
 
 func wrap_sc_err(sc.net_error e) net_error {
-    net_error { message: e.message, errno_code: e.errno_code }
+    net_error { message: e.message, errno_code e.errno_code }
 }
 
 struct tcp_listener {
@@ -52,18 +52,14 @@ func listen_tcp(string host, int port) (tcp_listener, net_error) {
             return wrap_sc_err(e)
         },
     }
-    tcp_listener { fd: fd, host: sc.local_ip(fd), port: sc.local_port(fd) }
+    tcp_listener { fd: fd, host sc.local_ip(fd), port sc.local_port(fd) }
 }
 
 func (tcp_listener self) accept() (tcp_conn, net_error) {
     res := sc.accept_addr(self.fd)
         switch res {
             ar  : tcp_conn {
-                fd:        ar.fd,
-                remote_ip: ar.ip,
-                remote_port: ar.port,
-                read_timeout_ms: 0,
-                write_timeout_ms: 0,
+                fd:        ar.fd, remote_ip ar.ip, remote_port ar.port, read_timeout_ms 0, write_timeout_ms 0,
             },
             e : wrap_sc_err(e),
         }
@@ -106,11 +102,7 @@ func dial_tcp(string host, int port) (tcp_conn, net_error) {
         },
     }
     tcp_conn {
-        fd: fd,
-        remote_ip: host,
-        remote_port: port,
-        read_timeout_ms: 0,
-        write_timeout_ms: 0,
+        fd: fd, remote_ip host, remote_port port, read_timeout_ms 0, write_timeout_ms 0,
     }
 }
 
@@ -128,11 +120,7 @@ func dial_tcp_timeout(string host, int port, int timeout_ms) (tcp_conn, net_erro
         },
     }
     tcp_conn {
-        fd: fd,
-        remote_ip: sc.peer_ip(fd),
-        remote_port: sc.peer_port(fd),
-        read_timeout_ms: 0,
-        write_timeout_ms: 0,
+        fd: fd, remote_ip sc.peer_ip(fd), remote_port sc.peer_port(fd), read_timeout_ms 0, write_timeout_ms 0,
     }
 }
 
@@ -150,11 +138,7 @@ func dial_tcp6_timeout(string host, int port, int timeout_ms) (tcp_conn, net_err
         },
     }
     tcp_conn {
-        fd: fd,
-        remote_ip: sc.peer_ip(fd),
-        remote_port: sc.peer_port(fd),
-        read_timeout_ms: 0,
-        write_timeout_ms: 0,
+        fd: fd, remote_ip sc.peer_ip(fd), remote_port sc.peer_port(fd), read_timeout_ms 0, write_timeout_ms 0,
     }
 }
 
@@ -313,11 +297,7 @@ func listen_udp(string host, int port) (udp_conn, net_error) {
         },
     }
     udp_conn {
-        fd: fd,
-        local_ip: sc.local_ip(fd),
-        local_port: sc.local_port(fd),
-        read_timeout_ms: 0,
-        write_timeout_ms: 0,
+        fd: fd, local_ip sc.local_ip(fd), local_port sc.local_port(fd), read_timeout_ms 0, write_timeout_ms 0,
     }
 }
 

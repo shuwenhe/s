@@ -89,8 +89,7 @@ func memrun(compare_struct t, int start) memrun_result {
         }
     }
     memrun_result {
-        size: field_end(t.fields[next - 1]) - t.fields[start].offset,
-        next: next,
+        size: field_end(t.fields[next - 1]) - t.fields[start].offset, next next,
     }
 }
 
@@ -130,16 +129,12 @@ func eq_struct_field_cost(compare_struct t, int i) field_cost_result {
             cost = cost + 1
         }
         return field_cost_result {
-            cost: cost,
-            size: run.size,
-            next: run.next,
+            cost: cost, size run.size, next run.next,
         }
     }
     f := t.fields[i]
     field_cost_result {
-        cost: calculate_cost_for_field(f, t.reg_size),
-        size: f.size,
-        next: i + 1,
+        cost: calculate_cost_for_field(f, t.reg_size), size f.size, next i + 1,
     }
 }
 
@@ -183,12 +178,11 @@ func eq_struct(compare_struct t, string np, string nq) eq_struct_result {
             }
             if f.type_kind == "string" {
                 sres := eq_string(np + "." + f.name, nq + "." + f.name)
-                append_segment_node(segments, compare_node { expr: sres.eqlen, is_call: false })
-                append_segment_node(segments, compare_node { expr: sres.eqmem, is_call: true })
+                append_segment_node(segments, compare_node { expr: sres.eqlen, is_call false })
+                append_segment_node(segments, compare_node { expr: sres.eqmem, is_call true })
             } else {
                 append_segment_node(segments, compare_node {
-                    expr: eq_field(np, nq, f.name),
-                    is_call: false,
+                    expr: eq_field(np, nq, f.name), is_call false,
                 })
             }
             if type_can_panic {
@@ -203,15 +197,13 @@ func eq_struct(compare_struct t, string np, string nq) eq_struct_result {
             for j < fc.next {
                 fj := t.fields[j]
                 append_segment_node(segments, compare_node {
-                    expr: eq_field(np, nq, fj.name),
-                    is_call: false,
+                    expr: eq_field(np, nq, fj.name), is_call false,
                 })
                 j = j + 1
             }
         } else {
             append_segment_node(segments, compare_node {
-                expr: eq_mem(np, nq, f.name, fc.size, f.alignment, t.arch_alignment, t.can_merge_loads),
-                is_call: true,
+                expr: eq_mem(np, nq, f.name, fc.size, f.alignment, t.arch_alignment, t.can_merge_loads), is_call true,
             })
         }
         i = fc.next
@@ -228,8 +220,7 @@ func eq_struct(compare_struct t, string np, string nq) eq_struct_result {
         s = s + 1
     }
     eq_struct_result {
-        conds: flat,
-        can_panic: len(segments) > 1,
+        conds: flat, can_panic len(segments) > 1,
     }
 }
 
@@ -246,8 +237,7 @@ func eq_interface(string s, string t, bool is_empty_interface) eq_interface_resu
         fn_name = "efaceeq"
     }
     eq_interface_result {
-        eqtab: "itab(" + s + ") == itab(" + t + ")",
-        eqdata: fn_name + "(itab(" + s + "), idata(" + s + "), idata(" + t + "))",
+        eqtab: "itab(" + s + ") == itab(" + t + ")", eqdata fn_name + "(itab(" + s + "), idata(" + s + "), idata(" + t + "))",
     }
 }
 
@@ -268,21 +258,21 @@ func eq_mem_func(int size, int alignment, int arch_alignment, bool can_merge_loa
         size = 0
     }
     if size == 1 {
-        return eqmem_func_result { name: "memequal8", need_size: false }
+        return eqmem_func_result { name: "memequal8", need_size false }
     }
     if size == 2 {
-        return eqmem_func_result { name: "memequal16", need_size: false }
+        return eqmem_func_result { name: "memequal16", need_size false }
     }
     if size == 4 {
-        return eqmem_func_result { name: "memequal32", need_size: false }
+        return eqmem_func_result { name: "memequal32", need_size false }
     }
     if size == 8 {
-        return eqmem_func_result { name: "memequal64", need_size: false }
+        return eqmem_func_result { name: "memequal64", need_size false }
     }
     if size == 16 {
-        return eqmem_func_result { name: "memequal128", need_size: false }
+        return eqmem_func_result { name: "memequal128", need_size false }
     }
-    eqmem_func_result { name: "memequal", need_size: true }
+    eqmem_func_result { name: "memequal", need_size true }
 }
 
 func append_segment_node(compare_node[[]] segments, compare_node node) () {

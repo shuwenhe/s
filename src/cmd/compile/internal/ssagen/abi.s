@@ -22,7 +22,7 @@ func assign_abi_layout(string arch, int params, int results) abi_layout {
         if i < int_regs {
             out_params = append(out_params, abi_location { in_reg: true, place: "r" + to_string(i), stack_offset: -1 })
         } else {
-            out_params = append(out_params, abi_location { in_reg: false, place: "stack", stack_offset: stack_off })
+            out_params = append(out_params, abi_location { in_reg: false, place: "stack", stack_offset stack_off })
             stack_off = stack_off + 8
         }
         i = i + 1
@@ -32,15 +32,13 @@ func assign_abi_layout(string arch, int params, int results) abi_layout {
         if j < int_regs {
             out_results = append(out_results, abi_location { in_reg: true, place: "ret" + to_string(j), stack_offset: -1 })
         } else {
-            out_results = append(out_results, abi_location { in_reg: false, place: "stack", stack_offset: stack_off })
+            out_results = append(out_results, abi_location { in_reg: false, place: "stack", stack_offset stack_off })
             stack_off = stack_off + 8
         }
         j = j + 1
     }
     abi_layout {
-        params: out_params,
-        results: out_results,
-        spill_size: align_stack(stack_off, arch_stack_align(arch)),
+        params: out_params, results out_results, spill_size align_stack(stack_off, arch_stack_align(arch)),
     }
 }
 

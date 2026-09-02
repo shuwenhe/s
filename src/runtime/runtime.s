@@ -34,11 +34,7 @@ struct MemStats {
 
 func read_mem_stats() MemStats {
     MemStats {
-        alloc:       heap_alloc_bytes,
-        total_alloc: heap_alloc_bytes + gc_total_freed,
-        sys:         heap_sys_bytes,
-        num_gc:      gc_run_count,
-        freed:       gc_total_freed,
+        alloc:       heap_alloc_bytes, total_alloc heap_alloc_bytes + gc_total_freed, sys heap_sys_bytes, num_gc gc_run_count, freed gc_total_freed,
     }
 }
 

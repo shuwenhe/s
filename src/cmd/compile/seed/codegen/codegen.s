@@ -38,7 +38,7 @@ struct code_global {
     value: string
 }
 
-func codegen_context_create(prog_name: string) codegen_context {
+func codegen_context_create( prog_name string) codegen_context {
     ctx: codegen_context
     ctx.program_name = prog_name
     ctx.functions = vec[]()
@@ -54,19 +54,19 @@ func (ctx* codegen_context) gen_label() string {
     ".L" + label_id as string
 }
 
-func (ctx* codegen_context) emit_line(line: string) {
+func (ctx* codegen_context) emit_line( line string) {
     ctx.assembly_lines.push(line)
 }
 
-func (ctx* codegen_context) emit_comment(text: string) {
+func (ctx* codegen_context) emit_comment( text string) {
     ctx.emit_line("# " + text)
 }
 
-func (ctx* codegen_context) emit_label(label: string) {
+func (ctx* codegen_context) emit_label( label string) {
     ctx.emit_line(label + ":")
 }
 
-func (ctx* codegen_context) emit_directive(directive: string) {
+func (ctx* codegen_context) emit_directive( directive string) {
     ctx.emit_line("." + directive)
 }
 
@@ -77,7 +77,7 @@ func codegen_emit_preamble(ctx* codegen_context) {
     ctx.emit_line("")
 }
 
-func codegen_emit_function_prologue(ctx* codegen_context, fn_name: string, param_count: int) {
+func codegen_emit_function_prologue(ctx* codegen_context, fn_name string, param_count int) {
     ctx.emit_label(fn_name)
     ctx.emit_line("    push %rbp")
     ctx.emit_line("    mov %rsp, %rbp")
@@ -92,47 +92,47 @@ func codegen_emit_function_epilogue(ctx* codegen_context) {
     ctx.emit_line("    ret")
 }
 
-func codegen_emit_mov_reg_imm(ctx* codegen_context, reg: string, imm: int) {
+func codegen_emit_mov_reg_imm(ctx* codegen_context, reg string, imm int) {
     ctx.emit_line("    mov $" + imm as string + ", %" + reg)
 }
 
-func codegen_emit_mov_reg_reg(ctx* codegen_context, dst: string, src: string) {
+func codegen_emit_mov_reg_reg(ctx* codegen_context, dst string, src string) {
     ctx.emit_line("    mov %" + src + ", %" + dst)
 }
 
-func codegen_emit_add_reg_reg(ctx* codegen_context, dst: string, src: string) {
+func codegen_emit_add_reg_reg(ctx* codegen_context, dst string, src string) {
     ctx.emit_line("    add %" + src + ", %" + dst)
 }
 
-func codegen_emit_sub_reg_reg(ctx* codegen_context, dst: string, src: string) {
+func codegen_emit_sub_reg_reg(ctx* codegen_context, dst string, src string) {
     ctx.emit_line("    sub %" + src + ", %" + dst)
 }
 
-func codegen_emit_mul_reg_reg(ctx* codegen_context, dst: string, src: string) {
+func codegen_emit_mul_reg_reg(ctx* codegen_context, dst string, src string) {
     ctx.emit_line("    imul %" + src + ", %" + dst)
 }
 
-func codegen_emit_cmp_reg_reg(ctx* codegen_context, dst: string, src: string) {
+func codegen_emit_cmp_reg_reg(ctx* codegen_context, dst string, src string) {
     ctx.emit_line("    cmp %" + src + ", %" + dst)
 }
 
-func codegen_emit_jmp(ctx* codegen_context, label: string) {
+func codegen_emit_jmp(ctx* codegen_context, label string) {
     ctx.emit_line("    jmp " + label)
 }
 
-func codegen_emit_jne(ctx* codegen_context, label: string) {
+func codegen_emit_jne(ctx* codegen_context, label string) {
     ctx.emit_line("    jne " + label)
 }
 
-func codegen_emit_je(ctx* codegen_context, label: string) {
+func codegen_emit_je(ctx* codegen_context, label string) {
     ctx.emit_line("    je " + label)
 }
 
-func codegen_emit_call(ctx* codegen_context, fn_name: string) {
+func codegen_emit_call(ctx* codegen_context, fn_name string) {
     ctx.emit_line("    call " + fn_name)
 }
 
-func codegen_emit_ret_reg(ctx* codegen_context, reg: string) {
+func codegen_emit_ret_reg(ctx* codegen_context, reg string) {
     ctx.emit_line("    mov %" + reg + ", %rax")
     ctx.emit_line("    leave")
     ctx.emit_line("    ret")
@@ -142,7 +142,7 @@ func codegen_get_assembly(ctx* codegen_context) string[] {
     ctx.assembly_lines
 }
 
-func codegen_write_to_file(ctx* codegen_context, output_file: string) (int, string) {
+func codegen_write_to_file(ctx* codegen_context, output_file string) (int, string) {
     f := file_create(output_file)
     if f.is_error {
         return -1, "Failed to create file: " + output_file

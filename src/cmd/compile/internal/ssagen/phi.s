@@ -35,10 +35,7 @@ func lower_phi(int target, phi_input[] inputs) lowered_phi {
         trivial = false
     }
     lowered_phi {
-        target: target,
-        incoming: incoming,
-        trivial: trivial,
-        chosen: chosen,
+        target: target, incoming incoming, trivial trivial, chosen chosen,
     }
 }
 

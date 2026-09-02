@@ -108,13 +108,7 @@ func module_summary(Module m, string indent) void {
 
 func default_gpt_config() GPTConfig {
     GPTConfig {
-        vocab_size: 256,
-        embed_dim: 128,
-        num_heads: 4,
-        ffn_dim: 512,
-        num_layers: 4,
-        max_seq_len: 32,
-        dropout_prob: 0.1,
+        vocab_size: 256, embed_dim 128, num_heads 4, ffn_dim 512, num_layers 4, max_seq_len 32, dropout_prob 0.1,
     }
 }
 

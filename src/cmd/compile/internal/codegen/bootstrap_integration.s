@@ -24,14 +24,9 @@ func make_s_compiler(string target_arch) s_compiler {
     s_compiler {
         mcg* mcg,
         symtab* symtab,
-        reloc_ctx* reloc_ctx,
-        config: config,
+        reloc_ctx* reloc_ctx, config config,
         amd64_gen* amd64_gen,
-        elf_gen* elf_gen,
-        total_code_size: 0 as int64,
-        total_data_size: 0 as int64,
-        function_count: 0 as int64,
-        symbol_count: 0 as int64,
+        elf_gen* elf_gen, total_code_size 0 as int64, total_data_size 0 as int64, function_count 0 as int64, symbol_count 0 as int64,
     }
 }
 
@@ -90,21 +85,13 @@ func compile_s_source_to_executable(string source_file, string output_file) int 
 
 func make_bootstrap_compiler_config() codegen_config {
     codegen_config {
-        target_arch: "x86-64",
-        code_section_align: 4096 as int64,
-        data_section_align: 8 as int64,
-        emit_debug_info: false,
-        optimize_size: true,
+        target_arch: "x86-64", code_section_align 4096 as int64, data_section_align 8 as int64, emit_debug_info false, optimize_size true,
     }
 }
 
 func make_debug_compiler_config() codegen_config {
     codegen_config {
-        target_arch: "x86-64",
-        code_section_align: 16 as int64,
-        data_section_align: 8 as int64,
-        emit_debug_info: true,
-        optimize_size: false,
+        target_arch: "x86-64", code_section_align 16 as int64, data_section_align 8 as int64, emit_debug_info true, optimize_size false,
     }
 }
 

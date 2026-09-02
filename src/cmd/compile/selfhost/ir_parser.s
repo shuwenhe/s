@@ -64,10 +64,7 @@ func parse_ir(string content) (IRModule, error) {
             default:
                 if current_func != nil {
                     instr := IRInstruction{
-                        opcode: opcode,
-                        dest: if len(parts) > 1 then parts[1] else "",
-                        src1: if len(parts) > 2 then parts[2] else "",
-                        src2: if len(parts) > 3 then parts[3] else "",
+                        opcode: opcode, dest if len(parts) > 1 then parts[1] else "", src1 if len(parts) > 2 then parts[2] else "", src2 if len(parts) > 3 then parts[3] else "",
                     }
                     current_func.instructions = append(
                         current_func.instructions,

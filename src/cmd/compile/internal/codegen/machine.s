@@ -28,10 +28,7 @@ struct instr_stream {
 
 func make_instr_stream() instr_stream {
     instr_stream {
-        code: []int8()(),
-        offset: 0,
-        labels: string[](),
-        label_offsets: int64[](),
+        code: []int8()(), offset 0, labels string[](), label_offsets int64[](),
     }
 }
 
@@ -137,11 +134,7 @@ struct machine_code_gen {
 
 func make_machine_code_gen(link_context* ctx) machine_code_gen {
     machine_code_gen {
-        stream: make_instr_stream(),
-        link_ctx: ctx,
-        reloc_ctx: make_relocation_context(),
-        text_base: 0x400000 as int64,
-        data_base: 0x600000 as int64,
+        stream: make_instr_stream(), link_ctx ctx, reloc_ctx make_relocation_context(), text_base 0x400000 as int64, data_base 0x600000 as int64,
     }
 }
 

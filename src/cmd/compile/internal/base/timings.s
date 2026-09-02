@@ -16,8 +16,7 @@ struct timings {
     timing_event[] events
 }
 timer := timings {
-    list: timestamp[](),
-    events: timing_event[](),
+    list: timestamp[](), events timing_event[](),
 }
 
 func timing_tick() int {
@@ -26,24 +25,19 @@ func timing_tick() int {
 
 func timings_start(string[] labels) () {
     timer.list.push(timestamp {
-        tick: timing_tick(),
-        label: join_with_colon(labels),
-        start: true,
+        tick: timing_tick(), label join_with_colon(labels), start true,
     })
 }
 
 func timings_stop(string[] labels) () {
     timer.list.push(timestamp {
-        tick: timing_tick(),
-        label: join_with_colon(labels),
-        start: false,
+        tick: timing_tick(), label join_with_colon(labels), start false,
     })
 }
 
 func timings_add_event(int size, string unit) () {
     timer.events.push(timing_event {
-        size: size,
-        unit: unit,
+        size: size, unit unit,
     })
 }
 

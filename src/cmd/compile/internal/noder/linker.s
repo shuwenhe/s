@@ -11,9 +11,7 @@ func build_link_symbols(string pkg_name, export_record[] exports) link_symbol[] 
     i := 0
     for i < len(exports) {
         out.push(link_symbol {
-            pkg: pkg_name,
-            name: pkg_name + "." + exports[i].name,
-            kind: exports[i].kind,
+            pkg: pkg_name, name pkg_name + "." + exports[i].name, kind exports[i].kind,
         })
         i = i + 1
     }
@@ -41,9 +39,7 @@ func build_link_symbols(string pkg_name, export_record[] exports) link_symbol[] 
     i := 0
     for i < len(exports) {
         out.push(link_symbol {
-            pkg: pkg_name,
-            name: pkg_name + "." + exports[i].name,
-            kind: exports[i].kind,
+            pkg: pkg_name, name pkg_name + "." + exports[i].name, kind exports[i].kind,
         })
         i = i + 1
     }

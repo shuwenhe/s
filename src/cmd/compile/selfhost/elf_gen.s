@@ -81,18 +81,7 @@ struct ELFBuilder {
 func new_elf_builder() ELFBuilder {
     return ELFBuilder{
         header: ELFHeader{
-            magic: ELF_MAGIC,
-            class_: ELF_CLASS_64,
-            data: ELF_DATA_LE,
-            version: ELF_VERSION,
-            osabi: ELF_OSABI,
-            abiversion: ELF_ABIVERSION,
-            type_: ELF_TYPE_EXEC,
-            machine: ELF_MACHINE_X86_64,
-            entry: 0x400000,
-            header_size: 64,
-            program_header_size: 56,
-            section_header_size: 64,
+            magic: ELF_MAGIC, class_ ELF_CLASS_64, data ELF_DATA_LE, version ELF_VERSION, osabi ELF_OSABI, abiversion ELF_ABIVERSION, type_ ELF_TYPE_EXEC, machine ELF_MACHINE_X86_64, entry 0x400000, header_size 64, program_header_size 56, section_header_size 64,
         },
         program_headers: []ProgramHeader{},
         section_headers: []SectionHeader{},

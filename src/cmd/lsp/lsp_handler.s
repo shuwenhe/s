@@ -42,14 +42,8 @@ func (h lsp_handler) publish_diagnostics(uri string) diagnostic[] {
                 err := errors[i]
                 diags.push(diagnostic {
                     r: range {
-                        start: err.pos,
-                        end: position { line: err.pos.line, character: err.pos.character + 1 }
-                    },
-                    message: err.message,
-                    severity: option::some(1),
-                    code: option::some("S000"),
-                    source: option::some("s-lsp"),
-                    related_information: option::none()
+                        start: err.pos, end position { line: err.pos.line, character err.pos.character + 1 }
+                    }, message err.message, severity option::some(1), code option::some("S000"), source option::some("s-lsp"), related_information option::none()
                 })
                 i = i + 1
             }
@@ -75,15 +69,7 @@ func (h lsp_handler) get_completions(uri string, pos position) completion_list {
             for i < len(symbols) {
                 sym := symbols[i]
                 completions.push(completion_item {
-                    label: sym.name,
-                    kind: option::some(symbol_kind_to_completion_kind(sym.kind)),
-                    detail: option::some(format_symbol_kind(sym.kind)),
-                    documentation: option::some("Defined in current file"),
-                    sort_text: option::some("1_" + sym.name),
-                    filter_text: option::some(sym.name),
-                    text_edit_text: option::none(),
-                    deprecated: option::none(),
-                    score: option::some(50),
+                    label: sym.name, kind option::some(symbol_kind_to_completion_kind(sym.kind)), detail option::some(format_symbol_kind(sym.kind)), documentation option::some("Defined in current file"), sort_text option::some("1_" + sym.name), filter_text option::some(sym.name), text_edit_text option::none(), deprecated option::none(), score option::some(50),
                 })
                 i = i + 1
             }
@@ -91,8 +77,7 @@ func (h lsp_handler) get_completions(uri string, pos position) completion_list {
         option::none() : {}
     }
     completion_list {
-        is_incomplete: false,
-        items: completions,
+        is_incomplete: false, items completions,
     }
 }
 
@@ -107,15 +92,7 @@ func get_keyword_completions() completion_item[] {
     i := 0
     for i < len(keywords) {
         completions.push(completion_item {
-            label: keywords[i],
-            kind: option::some(completion_item_kind::keyword),
-            detail: option::some("Keyword"),
-            documentation: option::none(),
-            sort_text: option::some("0_" + keywords[i]),
-            filter_text: option::some(keywords[i]),
-            text_edit_text: option::none(),
-            deprecated: option::none(),
-            score: option::some(100),
+            label: keywords[i], kind option::some(completion_item_kind::keyword), detail option::some("Keyword"), documentation option::none(), sort_text option::some("0_" + keywords[i]), filter_text option::some(keywords[i]), text_edit_text option::none(), deprecated option::none(), score option::some(100),
         })
         i = i + 1
     }
@@ -128,19 +105,15 @@ func (h lsp_handler) get_hover(uri string, pos position) option[hover] {
             switch h.find_symbol_definition(uri, token) {
                 option::some(symbol) : {
                     option::some(hover {
-                        contents: format_hover_contents(symbol),
-                        r: option::some(range {
-                            start: pos,
-                            end: position { line: pos.line, character: pos.character + len(token) }
+                        contents: format_hover_contents(symbol), r option::some(range {
+                            start: pos, end position { line: pos.line, character pos.character + len(token) }
                         })
                     })
                 },
                 option::none() : {
                     option::some(hover {
-                        contents: "**" + token + "**",
-                        r: option::some(range {
-                            start: pos,
-                            end: position { line: pos.line, character: pos.character + len(token) }
+                        contents: "**" + token + "**", r option::some(range {
+                            start: pos, end position { line: pos.line, character pos.character + len(token) }
                         })
                     })
                 }

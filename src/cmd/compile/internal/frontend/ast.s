@@ -63,12 +63,8 @@ struct ast_node {
 
 func ast_new(int node_type, int line, int column) &ast_node {
     node := new ast_node {
-        node_type: node_type,
-        line: line,
-        column: column,
-        string_data: "",
-        int_data: 0,
-        children: new ast_node[],
+        node_type: node_type, line line, column column,
+        string_data: "", int_data 0, children new ast_node[],
         name: "",
         type_name: ""
     }

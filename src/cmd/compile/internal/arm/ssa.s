@@ -79,7 +79,7 @@ func makeregshift(int r1, int typ, int r2) int {
 
 func get_bfc(int v) bfc_result {
     if v == 0 {
-        return bfc_result { ok: false, lsb: -1, width: 0 }
+        return bfc_result { ok: false, lsb: -1, width 0 }
     }
     lsb := 0
     t := v
@@ -97,15 +97,15 @@ func get_bfc(int v) bfc_result {
         width = width + 1
     }
     if u != 0 {
-        return bfc_result { ok: false, lsb: -1, width: 0 }
+        return bfc_result { ok: false, lsb: -1, width 0 }
     }
     if lsb < 0 || lsb > 31 {
-        return bfc_result { ok: false, lsb: -1, width: 0 }
+        return bfc_result { ok: false, lsb: -1, width 0 }
     }
     if width <= 0 || width > (32 - lsb) {
-        return bfc_result { ok: false, lsb: -1, width: 0 }
+        return bfc_result { ok: false, lsb: -1, width 0 }
     }
-    bfc_result { ok: true, lsb: lsb, width: width }
+    bfc_result { ok: true, lsb lsb, width width }
 }
 
 func ssa_gen_value(ssa_value value) string {

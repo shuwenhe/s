@@ -29,10 +29,7 @@ func init_arm(arch_info arch) arch_info {
 
 func init_arch_info() arch_info {
     info := arch_info {
-        link_arch: "",
-        reg_sp: 0,
-        max_width: 0,
-        soft_float: false,
+        link_arch: "", reg_sp 0, max_width 0, soft_float false,
         zero_range_hook: "",
         ginsnop_hook: "",
         ssa_mark_moves_hook: "",

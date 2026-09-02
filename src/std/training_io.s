@@ -46,40 +46,21 @@ struct checkpoint {
 func default_meta() CheckpointMeta {
     CheckpointMeta {
         format_version: "2.0",
-        framework: "S-AI-Lib-v1.0",
-        timestamp: _get_timestamp(),
+        framework: "S-AI-Lib-v1.0", timestamp _get_timestamp(),
         s_compiler_version: "1.0-enhanced"
     }
 }
 
 func initial_train_state() TrainState {
     TrainState {
-        global_step: 0,
-        current_loss: 5.0,
-        best_loss: 5.0,
-        best_step: 0,
-        training_complete: false,
-        loss_history: new float[20],
-        grad_norm: 0.0,
-        learning_rate: 0.001,
-        epoch_time_ms: 0,
-        total_time_ms: 0,
-        tokens_per_second: 0.0,
+        global_step: 0, current_loss 5.0, best_loss 5.0, best_step 0, training_complete false, loss_history new float[20], grad_norm 0.0, learning_rate 0.001, epoch_time_ms 0, total_time_ms 0, tokens_per_second 0.0,
     }
 }
 
 func make_config_snapshot(int vocab, int embed, int heads, int ffn,
                             int layers, int seq_len, float dropout, int total_params) ModelConfigSnapshot {
     ModelConfigSnapshot {
-        vocab_size: vocab,
-        embed_dim: embed,
-        num_heads: heads,
-        ffn_dim: ffn,
-        num_layers: layers,
-        max_seq_len: seq_len,
-        dropout_prob: dropout,
-        total_param_count: total_params,
-        trainable_param_count: total_params,
+        vocab_size: vocab, embed_dim embed, num_heads heads, ffn_dim ffn, num_layers layers, max_seq_len seq_len, dropout_prob dropout, total_param_count total_params, trainable_param_count total_params,
     }
 }
 
@@ -291,8 +272,7 @@ var _log_count = 0
 func log_entry(int step, float loss, float best_loss, float grad_n, float lr, int ms, string msg) void {
     if _log_count < 5000 {
         _log_entries[_log_count] = TrainingLogEntry {
-            step: step, loss: loss, best_loss: best_loss,
-            grad_norm: grad_n, lr: lr, elapsed_ms: ms, message: msg
+            step: step, loss loss, best_loss best_loss, grad_norm grad_n, lr lr, elapsed_ms ms, message msg
         }
         _log_count = _log_count + 1
     }
@@ -505,7 +485,7 @@ extern "intrinsic" func __host_file_exists(string path) int
 
 func _write_file(string path, string content) WriteResult {
     int ret = __host_write_text_file(path, content)
-    WriteResult { ok: ret >= 0, error_code: ret }
+    WriteResult { ok: ret >= 0, error_code ret }
 }
 
 func _read_file(string path) ReadResult {
@@ -513,7 +493,7 @@ func _read_file(string path) ReadResult {
         return ReadResult { ok: false, data: "", error: "file not found" }
     }
     string data = __host_read_to_string(path)
-    ReadResult { ok: true, data: data, error: "" }
+    ReadResult { ok: true, data data, error: "" }
 }
 
 struct WriteResult {

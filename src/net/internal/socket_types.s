@@ -172,7 +172,7 @@ func (socket_error* e) Error() string {
     e.syscall_name + ": " + e.message
 }
 
-func new_socket_error(errno: int, syscall_name: string) *socket_error {
+func new_socket_error( errno int, syscall_name string) *socket_error {
     var msg string
     case errno {
     econnrefused → msg = "connection refused"
@@ -196,16 +196,14 @@ func new_socket_error(errno: int, syscall_name: string) *socket_error {
     default → msg = "errno: " + itoa(errno)
     }
     *socket_error{
-        errno: errno,
-        message: msg,
-        syscall_name: syscall_name,
+        errno: errno, message msg, syscall_name syscall_name,
     }
 }
 
-func is_temporary_error(errno: int) bool {
+func is_temporary_error( errno int) bool {
     errno == eagain || errno == ewouldblock || errno == eintr
 }
 
-func is_timeout_error(errno: int) bool {
+func is_timeout_error( errno int) bool {
     errno == etimedout
 }

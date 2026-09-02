@@ -16,11 +16,7 @@ func make_compilation_session() compilation_session {
     cfg := make_codegen_config("amd64")
     pipeline := &(make_codegen_pipeline(mcg, symtab, cfg))
     compilation_session {
-        link_ctx: link_ctx,
-        mcg: mcg,
-        symtab: symtab,
-        reloc_ctx: make_relocation_context(),
-        pipeline: pipeline,
+        link_ctx: link_ctx, mcg mcg, symtab symtab, reloc_ctx make_relocation_context(), pipeline pipeline,
     }
 }
 

@@ -45,7 +45,7 @@ func run_dom(ssa_func f) dom_tree {
         cur := ids[bi]
         guard := 0
         for cur != -1 && cur != f.entry && guard < len(ids) + 1 {
-            ci := dom_index(dom_tree { block_ids: ids, idom: idom, depth: depth }, cur)
+            ci := dom_index(dom_tree { block_ids: ids, idom idom, depth depth }, cur)
             if ci < 0 {
                 break
             }
@@ -57,9 +57,7 @@ func run_dom(ssa_func f) dom_tree {
         bi = bi + 1
     }
     dom_tree {
-        block_ids: ids,
-        idom: idom,
-        depth: depth,
+        block_ids: ids, idom idom, depth depth,
     }
 }
 

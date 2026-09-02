@@ -297,16 +297,9 @@ func append_anchor_summaries(semantic_error[] diagnostics) semantic_error[] {
                 summaries.push(semantic_error {
                     code: "s0001",
                     message: "anchor summary",
-                    stage: "semantic",
-                    chain_id: chain_id_from_anchor(d.anchor),
-                    upstream_code: d.code,
+                    stage: "semantic", chain_id chain_id_from_anchor(d.anchor), upstream_code d.code,
                     severity: "warning",
-                    hint: "multiple diagnostics share recovery anchor " + d.anchor,
-                    anchor: d.anchor,
-                    tier: 3,
-                    repeat_count: d.repeat_count,
-                    line: d.line,
-                    column: d.column,
+                    hint: "multiple diagnostics share recovery anchor " + d.anchor, anchor d.anchor, tier 3, repeat_count d.repeat_count, line d.line, column d.column,
                 })
             } else {
                 summaries[at].repeat_count = summaries[at].repeat_count + d.repeat_count
@@ -536,12 +529,8 @@ func make_function_binding(function_decl function_decl) function_binding {
         }
     return function_binding {
         name: function_decl.sig.name,
-        owner_type: "",
-        has_receiver: false,
-        receiver_mode: "value",
-        generic_names: generic_names,
-        param_types: params,
-        return_type: return_type,
+        owner_type: "", has_receiver false,
+        receiver_mode: "value", generic_names generic_names, param_types params, return_type return_type,
     };
 }
 
@@ -615,15 +604,11 @@ func collect_consts(item[] items, function_binding[] functions, trait_binding[] 
                     }
                 }
                 out.push(const_binding {
-                    name: const_decl.name,
-                    type_name: ty,
-                    has_int_value: has_int_value,
-                    int_value: int_value,
+                    name: const_decl.name, type_name ty, has_int_value has_int_value, int_value int_value,
                 })
                 ;
                 type_env.push(type_binding {
-                    name: const_decl.name,
-                    type_name: ty,
+                    name: const_decl.name, type_name ty,
                 })
                 ;
             }
@@ -637,15 +622,13 @@ func collect_consts(item[] items, function_binding[] functions, trait_binding[] 
 func eval_const_int_expr(expr value, const_binding[] known_consts, int iota_value) const_eval_int_result {
     switch value {
         expr::int(int_expr) : const_eval_int_result {
-            ok: true,
-            value: parse_const_int_literal(int_expr.value),
+            ok: true, value parse_const_int_literal(int_expr.value),
             error: "",
         },
         expr::name(name_expr) : {
             if name_expr.name == "iota" {
                 return const_eval_int_result {
-                    ok: true,
-                    value: iota_value,
+                    ok: true, value iota_value,
                     error: "",
                 }
             }
@@ -655,21 +638,18 @@ func eval_const_int_expr(expr value, const_binding[] known_consts, int iota_valu
                 if known_consts[i].name == name_expr.name {
                     if known_consts[i].has_int_value {
                         return const_eval_int_result {
-                            ok: true,
-                            value: known_consts[i].int_value,
+                            ok: true, value known_consts[i].int_value,
                             error: "",
                         }
                     }
                     return const_eval_int_result {
-                        ok: false,
-                        value: 0,
+                        ok: false, value 0,
                         error: "name " + name_expr.name + " is not an int constant",
                     }
                 }
             }
             const_eval_int_result {
-                ok: false,
-                value: 0,
+                ok: false, value 0,
                 error: "unknown constant name " + name_expr.name,
             }
         }
@@ -683,35 +663,33 @@ func eval_const_int_expr(expr value, const_binding[] known_consts, int iota_valu
                 return right
             }
             if binary_expr.op == "+" {
-                return const_eval_int_result { ok: true, value: left.value + right.value, error: "" }
+                return const_eval_int_result { ok: true, value left.value + right.value, error: "" }
             }
             if binary_expr.op == "-" {
-                return const_eval_int_result { ok: true, value: left.value - right.value, error: "" }
+                return const_eval_int_result { ok: true, value left.value - right.value, error: "" }
             }
             if binary_expr.op == "*" {
-                return const_eval_int_result { ok: true, value: left.value * right.value, error: "" }
+                return const_eval_int_result { ok: true, value left.value * right.value, error: "" }
             }
             if binary_expr.op == "/" {
                 if right.value == 0 {
-                    return const_eval_int_result { ok: false, value: 0, error: "division by zero" }
+                    return const_eval_int_result { ok: false, value 0, error: "division by zero" }
                 }
-                return const_eval_int_result { ok: true, value: left.value / right.value, error: "" }
+                return const_eval_int_result { ok: true, value left.value / right.value, error: "" }
             }
             if binary_expr.op == "%" {
                 if right.value == 0 {
-                    return const_eval_int_result { ok: false, value: 0, error: "modulo by zero" }
+                    return const_eval_int_result { ok: false, value 0, error: "modulo by zero" }
                 }
-                return const_eval_int_result { ok: true, value: left.value % right.value, error: "" }
+                return const_eval_int_result { ok: true, value left.value % right.value, error: "" }
             }
             const_eval_int_result {
-                ok: false,
-                value: 0,
+                ok: false, value 0,
                 error: "unsupported int operator " + binary_expr.op,
             }
         }
         _ : const_eval_int_result {
-            ok: false,
-            value: 0,
+            ok: false, value 0,
             error: "expression is not a supported int const form",
         },
     }
@@ -791,17 +769,13 @@ func collect_traits(item[] items) trait_binding[] {
                             option.none : "()",
                         }
                     methods.push(method_binding {
-                        name: trait_decl.methods[mi].name,
-                        receiver_mode: receiver_mode_from_param_name(trait_decl.methods[mi].params),
-                        param_types: params,
-                        return_type: return_type,
+                        name: trait_decl.methods[mi].name, receiver_mode receiver_mode_from_param_name(trait_decl.methods[mi].params), param_types params, return_type return_type,
                     })
                     ;
                     mi = mi + 1
                 }
                 out.push(trait_binding {
-                    name: trait_decl.name,
-                    methods: methods,
+                    name: trait_decl.name, methods methods,
                 })
                 ;
             }
@@ -921,21 +895,18 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     i := 0
     for i < len(consts) {
         env.push(type_binding {
-            name: consts[i].name,
-            type_name: consts[i].type_name,
+            name: consts[i].name, type_name consts[i].type_name,
         })
         i = i + 1
     }
     env.push(type_binding {
-        name: method_decl.receiver_name,
-        type_name: parse_type(method_decl.receiver_type),
+        name: method_decl.receiver_name, type_name parse_type(method_decl.receiver_type),
     })
     i = 0
     for i < len(method.sig.params) {
         param := method.sig.params[i]
         env.push(type_binding {
-            name: param.name,
-            type_name: parse_type(param.type_name),
+            name: param.name, type_name parse_type(param.type_name),
         })
         i = i + 1
     }
@@ -962,8 +933,7 @@ func check_function(function_decl function_decl, function_binding[] functions, t
     i := 0
     for i < len(consts) {
         env.push(type_binding {
-            name: consts[i].name,
-            type_name: consts[i].type_name,
+            name: consts[i].name, type_name consts[i].type_name,
         })
         ;
         i = i + 1
@@ -972,8 +942,7 @@ func check_function(function_decl function_decl, function_binding[] functions, t
     for i < len(function_decl.sig.params) {
         param := function_decl.sig.params[i]
         env.push(type_binding {
-            name: param.name,
-            type_name: parse_type(param.type_name),
+            name: param.name, type_name parse_type(param.type_name),
         })
         ;
         i = i + 1
@@ -1036,13 +1005,11 @@ func infer_block_expr(block_expr block, type_binding[] outer_env, string expecte
         option.some(final_expr) : {
             final_result := infer_expr(final_expr, local_env, expected_return, functions, traits, source, diagnostics)
             check_result {
-                type_name: final_result.type_name,
-                errors: errors + final_result.errors,
+                type_name: final_result.type_name, errors errors + final_result.errors,
             }
         }
         option.none : check_result {
-            type_name: "()",
-            errors: errors,
+            type_name: "()", errors errors,
         },
     }
 }
@@ -1061,8 +1028,7 @@ func check_stmt(stmt stmt, type_binding[] env, string expected_return, function_
                 binding_type = declared
             }
             env.push(type_binding {
-                name: value.name,
-                type_name: binding_type,
+                name: value.name, type_name binding_type,
             })
             ;
             errors
@@ -1147,8 +1113,7 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                     return ok_type("fn"
                 }
                 return check_result {
-                    type_name: "unknown",
-                    errors: add_error(source, diagnostics, "e3010", "undefined identifier", value.name),
+                    type_name: "unknown", errors add_error(source, diagnostics, "e3010", "undefined identifier", value.name),
                 }
             }
             ok_type(ty)
@@ -1160,8 +1125,7 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
             }
             prefix := if value.mutable { "&" } else { "&" }
             check_result {
-                type_name: prefix + base.type_name,
-                errors: base.errors,
+                type_name: prefix + base.type_name, errors base.errors,
             }
         }
         expr::binary(value) : {
@@ -1174,13 +1138,11 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
             field_type := lookup_builtin_field_type(target.type_name, value.member)
             if field_type == "" {
                 return check_result {
-                    type_name: "unknown",
-                    errors: target.errors + add_error(source, diagnostics, "e3011", "unknown member", value.member),
+                    type_name: "unknown", errors target.errors + add_error(source, diagnostics, "e3011", "unknown member", value.member),
                 }
             }
             check_result {
-                type_name: parse_type(field_type),
-                errors: target.errors,
+                type_name: parse_type(field_type), errors target.errors,
             }
         }
         expr::index(value) : {
@@ -1192,8 +1154,7 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                     errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
                 }
                 return check_result {
-                    type_name: parse_type(slice(target.type_name, 2, len(target.type_name))),
-                    errors: errors,
+                    type_name: parse_type(slice(target.type_name, 2, len(target.type_name))), errors errors,
                 }
             }
             if starts_with(target.type_name, "[") {
@@ -1201,8 +1162,7 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                     errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
                 }
                 return check_result {
-                    type_name: strip_array_prefix(target.type_name),
-                    errors: errors,
+                    type_name: strip_array_prefix(target.type_name), errors errors,
                 }
             }
             if starts_with(target.type_name, "string") {
@@ -1210,19 +1170,16 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                     errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
                 }
                 return check_result {
-                    type_name: "u8",
-                    errors: errors,
+                    type_name: "u8", errors errors,
                 }
             }
             if target.type_name == "map" {
                 return check_result {
-                    type_name: "fn",
-                    errors: errors,
+                    type_name: "fn", errors errors,
                 }
             }
             check_result {
-                type_name: "unknown",
-                errors: errors + add_error(source, diagnostics, "e3013", "index target is not indexable", "["),
+                type_name: "unknown", errors errors + add_error(source, diagnostics, "e3013", "index target is not indexable", "["),
             }
         }
         expr::call(value) : {
@@ -1260,8 +1217,7 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                         }
                         if len(matches) == 0 {
                             return check_result {
-                                type_name: "unknown",
-                                errors: errors + add_error(source, diagnostics, "e1002", "no matching overload", member.member),
+                                type_name: "unknown", errors errors + add_error(source, diagnostics, "e1002", "no matching overload", member.member),
                             }
                         }
                         best := matches[0]
@@ -1278,19 +1234,16 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                         }
                         if ambiguous {
                             return check_result {
-                                type_name: "unknown",
-                                errors: errors + add_error(source, diagnostics, "e1003", "ambiguous overload", member.member),
+                                type_name: "unknown", errors errors + add_error(source, diagnostics, "e1003", "ambiguous overload", member.member),
                             }
                         }
                         return check_result {
-                            type_name: best.return_type,
-                            errors: errors,
+                            type_name: best.return_type, errors errors,
                         }
                     }
                     if len(named_methods) > 0 {
                         return check_result {
-                            type_name: "unknown",
-                            errors: errors + add_error(source, diagnostics, "e3051", receiver_requirement_message(member.member, named_methods[0].receiver_mode), member.member),
+                            type_name: "unknown", errors errors + add_error(source, diagnostics, "e3051", receiver_requirement_message(member.member, named_methods[0].receiver_mode), member.member),
                         }
                     }
                     trait_result := find_trait_binding(traits, target.type_name)
@@ -1300,23 +1253,20 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                             requirement := required_method.unwrap()
                             if len(requirement.param_types) != len(arg_types) {
                                 return check_result {
-                                    type_name: "unknown",
-                                    errors: errors + add_error(source, diagnostics, "e1002", "no matching interface method", member.member),
+                                    type_name: "unknown", errors errors + add_error(source, diagnostics, "e1002", "no matching interface method", member.member),
                                 }
                             }
                             ai := 0
                             for ai < len(arg_types) {
                                 if !types_compatible(requirement.param_types[ai], arg_types[ai]) {
                                     return check_result {
-                                        type_name: "unknown",
-                                        errors: errors + add_error(source, diagnostics, "e1002", "no matching interface method", member.member),
+                                        type_name: "unknown", errors errors + add_error(source, diagnostics, "e1002", "no matching interface method", member.member),
                                     }
                                 }
                                 ai = ai + 1
                             }
                             return check_result {
-                                type_name: requirement.return_type,
-                                errors: errors,
+                                type_name: requirement.return_type, errors errors,
                             }
                         }
                     }
@@ -1327,21 +1277,18 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                     method_type := lookup_builtin_method_type(target.type_name, member.member)
                     if method_type == "" {
                         return check_result {
-                            type_name: "unknown",
-                            errors: errors + add_error(source, diagnostics, "e1006", "unknown method", member.member),
+                            type_name: "unknown", errors errors + add_error(source, diagnostics, "e1006", "unknown method", member.member),
                         }
                     }
                     check_result {
-                        type_name: resolve_method_return(target.type_name, method_type),
-                        errors: errors,
+                        type_name: resolve_method_return(target.type_name, method_type), errors errors,
                     }
                 }
                 expr::name(callee_name) : {
                     candidates := lookup_functions(functions, callee_name.name)
                     if len(candidates) == 0 {
                         return check_result {
-                            type_name: "unknown",
-                            errors: errors + add_error(source, diagnostics, "e1001", "undefined function", callee_name.name),
+                            type_name: "unknown", errors errors + add_error(source, diagnostics, "e1001", "undefined function", callee_name.name),
                         }
                     }
                     matches := signature_match[]()
@@ -1355,8 +1302,7 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                     }
                     if len(matches) == 0 {
                         return check_result {
-                            type_name: "unknown",
-                            errors: errors + add_error(source, diagnostics, "e1002", "no matching overload", callee_name.name),
+                            type_name: "unknown", errors errors + add_error(source, diagnostics, "e1002", "no matching overload", callee_name.name),
                         }
                     }
                     best := matches[0]
@@ -1373,20 +1319,17 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                     }
                     if ambiguous {
                         return check_result {
-                            type_name: "unknown",
-                            errors: errors + add_error(source, diagnostics, "e1003", "ambiguous overload", callee_name.name),
+                            type_name: "unknown", errors errors + add_error(source, diagnostics, "e1003", "ambiguous overload", callee_name.name),
                         }
                     }
                     check_result {
-                        type_name: best.return_type,
-                        errors: errors,
+                        type_name: best.return_type, errors errors,
                     }
                 }
                 _ : {
                     callee := infer_expr(value.callee.value, env, expected_return, functions, traits, source, diagnostics)
                     check_result {
-                        type_name: "unknown",
-                        errors: errors + callee.errors,
+                        type_name: "unknown", errors errors + callee.errors,
                     }
                 }
             }
@@ -1424,8 +1367,7 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                 errors = errors + add_error(source, diagnostics, "e2001", "non-exhaustive switch", "switch")
             }
             check_result {
-                type_name: arm_type,
-                errors: errors,
+                type_name: arm_type, errors errors,
             }
         }
         expr::if(value) : {
@@ -1443,13 +1385,11 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                         errors = errors + add_error(source, diagnostics, "e3015", "if/else type mismatch", "if")
                     }
                     check_result {
-                        type_name: then_result.type_name,
-                        errors: errors,
+                        type_name: then_result.type_name, errors errors,
                     }
                 }
                 option::none : check_result {
-                    type_name: "()",
-                    errors: errors,
+                    type_name: "()", errors errors,
                 },
             }
         }
@@ -1461,16 +1401,14 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                 errors = errors + add_error(source, diagnostics, "e3016", "while condition must be bool", "while")
             }
             check_result {
-                type_name: "()",
-                errors: errors,
+                type_name: "()", errors errors,
             }
         }
         expr::for(value) : {
             iter := infer_expr(value.iterable.value, env, expected_return, functions, traits, source, diagnostics)
             body_result := infer_block_expr(value.body, env, expected_return, functions, traits, source, diagnostics)
             check_result {
-                type_name: "()",
-                errors: iter.errors + body_result.errors,
+                type_name: "()", errors iter.errors + body_result.errors,
             }
         }
         expr::block(value) : {
@@ -1492,8 +1430,7 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                 i = i + 1
             }
             check_result {
-                type_name: "[]" + first.type_name,
-                errors: errors,
+                type_name: "[]" + first.type_name, errors errors,
             }
         }
         expr::map(value) : {
@@ -1505,8 +1442,7 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                 i = i + 1
             }
             check_result {
-                type_name: "map",
-                errors: errors,
+                type_name: "map", errors errors,
             }
         }
     }
@@ -1516,8 +1452,7 @@ func check_pattern(pattern pattern, string expected_type, string source, semanti
     bindings := type_binding[]()
     errors := bind_pattern(pattern, expected_type, bindings, source, diagnostics)
     pattern_check_result {
-        bindings: bindings,
-        errors: errors,
+        bindings: bindings, errors errors,
     }
 }
 
@@ -1590,8 +1525,7 @@ func add_binding(type_binding[] bindings, string name, string type_name, string 
         i = i + 1
     }
     bindings.push(type_binding {
-        name: name,
-        type_name: parse_type(type_name),
+        name: name, type_name parse_type(type_name),
     })
     ;
     0
@@ -1805,8 +1739,7 @@ func infer_binary(string op, check_result left, check_result right, string sourc
             errors = errors + add_error(source, diagnostics, "e3018", "arithmetic requires int", op)
         }
         return check_result {
-            type_name: "int",
-            errors: errors,
+            type_name: "int", errors errors,
         }
     }
     if op == "<" || op == "<=" || op == ">" || op == ">=" {
@@ -1814,8 +1747,7 @@ func infer_binary(string op, check_result left, check_result right, string sourc
             errors = errors + add_error(source, diagnostics, "e3019", "ordering compare requires int", op)
         }
         return check_result {
-            type_name: "bool",
-            errors: errors,
+            type_name: "bool", errors errors,
         }
     }
     if op == "==" || op == "!=" {
@@ -1828,8 +1760,7 @@ func infer_binary(string op, check_result left, check_result right, string sourc
             }
         }
         return check_result {
-            type_name: "bool",
-            errors: errors,
+            type_name: "bool", errors errors,
         }
     }
     if op == "&&" || op == "||" {
@@ -1837,13 +1768,11 @@ func infer_binary(string op, check_result left, check_result right, string sourc
             errors = errors + add_error(source, diagnostics, "e3021", "logical op requires bool", op)
         }
         return check_result {
-            type_name: "bool",
-            errors: errors,
+            type_name: "bool", errors errors,
         }
     }
     check_result {
-        type_name: "unknown",
-        errors: errors,
+        type_name: "unknown", errors errors,
     }
 }
 
@@ -1950,10 +1879,7 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
     if len(binding.param_types) != len(arg_types) {
         return signature_match {
             ok: false,
-            return_type: "unknown",
-            score: 0,
-            generic_bind_count: 0,
-            unknown_arg_count: 0,
+            return_type: "unknown", score 0, generic_bind_count 0, unknown_arg_count 0,
         }
     }
     generic_bindings := type_binding[]()
@@ -1976,21 +1902,14 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
         if !matched {
             return signature_match {
                 ok: false,
-                return_type: "unknown",
-                score: 0,
-                generic_bind_count: 0,
-                unknown_arg_count: 0,
+                return_type: "unknown", score 0, generic_bind_count 0, unknown_arg_count 0,
             }
         }
         score = score + match_specificity(expected_ref, actual_ref, binding.generic_names)
         i = i + 1
     }
     signature_match {
-        ok: true,
-        return_type: instantiate_type(binding.return_type, binding.generic_names, generic_bindings),
-        score: score,
-        generic_bind_count: len(generic_bindings),
-        unknown_arg_count: unknown_arg_count,
+        ok: true, return_type instantiate_type(binding.return_type, binding.generic_names, generic_bindings), score score, generic_bind_count len(generic_bindings), unknown_arg_count unknown_arg_count,
     }
 }
 
@@ -2020,8 +1939,7 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, string[] gen
         bound := lookup_name_type(generic_bindings, p)
         if is_unknown(bound) {
             generic_bindings.push(type_binding {
-                name: p,
-                type_name: a,
+                name: p, type_name a,
             })
             ;
             return true
@@ -2227,8 +2145,7 @@ func lookup_name_type(type_binding[] env, string name) string {
 
 func ok_type(string type_name) check_result {
     check_result {
-        type_name: parse_type(type_name),
-        errors: 0,
+        type_name: parse_type(type_name), errors 0,
     }
 }
 
@@ -2313,18 +2230,9 @@ func add_error(string source, semantic_error[] diagnostics, string code, string 
     tier := diagnostic_tier(code)
     hint := diagnostic_hint(code, recovery_anchor)
     diagnostics.push(semantic_error {
-        code: code,
-        message: message,
-        stage: "semantic",
-        chain_id: chain_id,
-        upstream_code: "",
-        severity: severity,
-        hint: hint,
-        anchor: recovery_anchor,
-        tier: tier,
-        repeat_count: 1,
-        line: pos.line,
-        column: pos.column,
+        code: code, message message,
+        stage: "semantic", chain_id chain_id,
+        upstream_code: "", severity severity, hint hint, anchor recovery_anchor, tier tier, repeat_count 1, line pos.line, column pos.column,
     })
     ;
     1
@@ -2418,15 +2326,13 @@ func starts_with_text(string text, string prefix) bool {
 func locate_anchor(string source, string anchor) source_pos {
     if anchor == "" {
         return source_pos {
-            line: 0,
-            column: 0,
+            line: 0, column 0,
         }
     }
     idx := find_substring(source, anchor)
     if idx < 0 {
         return source_pos {
-            line: 0,
-            column: 0,
+            line: 0, column 0,
         }
     }
     index_to_pos(source, idx)
@@ -2463,8 +2369,7 @@ func index_to_pos(string source, int index) source_pos {
         i = i + 1
     }
     source_pos {
-        line: line,
-        column: column,
+        line: line, column column,
     }
 }
 

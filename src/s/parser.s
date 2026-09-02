@@ -19,17 +19,14 @@ func parse_source(string source) (source_file, parse_error) {
     switch new_lexer(source).tokenize() {
         tokens : parse_tokens(tokens),
         err : parse_error {
-            message: err.message,
-            line: err.line,
-            column: err.column,
+            message: err.message, line err.line, column err.column,
         },
     }
 }
 
 func parse_tokens(token[] tokens) (source_file, parse_error) {
     parser p := parser {
-        tokens: tokens,
-        index: 0,
+        tokens: tokens, index 0,
     }
     p.parse_source_file()
 }
@@ -86,9 +83,7 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
     global_parse_depth = global_parse_depth - 1
     log_depth("parse_source_file exit depth: " + to_string(global_parse_depth))
     source_file {
-        pkg: pkg,
-        uses: uses,
-        items: items,
+        pkg: pkg, uses uses, items items,
     }
 }
 
@@ -118,8 +113,7 @@ func (parser* self) parse_use_decl() (use_decl, parse_error) {
         alias = option::some(alias_val)
     }
     use_decl {
-        path: path,
-        alias: alias,
+        path: path, alias alias,
     }
 }
 
@@ -133,18 +127,14 @@ func (parser* self) parse_item() (item, parse_error) {
         switch parsed.receiver {
             option::some(r) : {
                 method := function_decl {
-                    sig: parsed.sig,
-                    body: parsed.body,
-                    is_public: starts_with_upper(parsed.sig.name),
+                    sig: parsed.sig, body parsed.body, is_public starts_with_upper(parsed.sig.name),
                 }
                 return item::method(receiver_method_decl {
-                    receiver_name: r.name,
-                    receiver_type: r.type_name,
-                    method: method,
-                }), parse_error{ message: "", line: 0, column: 0 }
+                    receiver_name: r.name, receiver_type r.type_name, method method,
+                }), parse_error{ message: "", line 0, column 0 }
             },
             option::none : {
-                return item::function(parsed), parse_error{ message: "", line: 0, column: 0 }
+                return item::function(parsed), parse_error{ message: "", line 0, column 0 }
             }
         }
     }
@@ -154,7 +144,7 @@ func (parser* self) parse_item() (item, parse_error) {
             item empty
             return empty, err
         }
-        return item::const(decl), parse_error{ message: "", line: 0, column: 0 }
+        return item::const(decl), parse_error{ message: "", line 0, column 0 }
     }
     if self.at_keyword("var") {
         decl, err := self.parse_var_decl()
@@ -162,7 +152,7 @@ func (parser* self) parse_item() (item, parse_error) {
             item empty
             return empty, err
         }
-        return item::var(decl), parse_error{ message: "", line: 0, column: 0 }
+        return item::var(decl), parse_error{ message: "", line 0, column 0 }
     }
     if self.at_keyword("struct") {
         decl, err := self.parse_struct_decl()
@@ -170,7 +160,7 @@ func (parser* self) parse_item() (item, parse_error) {
             item empty
             return empty, err
         }
-        return item::struct(decl), parse_error{ message: "", line: 0, column: 0 }
+        return item::struct(decl), parse_error{ message: "", line 0, column 0 }
     }
     if self.at_keyword("enum") {
         decl, err := self.parse_enum_decl()
@@ -178,7 +168,7 @@ func (parser* self) parse_item() (item, parse_error) {
             item empty
             return empty, err
         }
-        return item::enum(decl), parse_error{ message: "", line: 0, column: 0 }
+        return item::enum(decl), parse_error{ message: "", line 0, column 0 }
     }
     if self.at_keyword("trait") {
         decl, err := self.parse_trait_decl()
@@ -186,7 +176,7 @@ func (parser* self) parse_item() (item, parse_error) {
             item empty
             return empty, err
         }
-        return item::trait(decl), parse_error{ message: "", line: 0, column: 0 }
+        return item::trait(decl), parse_error{ message: "", line 0, column 0 }
     }
     item empty
     return empty, self.error_here("unexpected token")
@@ -255,9 +245,7 @@ func (parser* self) parse_const_entry(bool allow_omitted_value, int iota_index) 
         return self.error_here("expected symbol =")
     }
     const_decl {
-        name: name,
-        value: value,
-        iota_index: iota_index,
+        name: name, value value, iota_index iota_index,
     }
 }
 
@@ -292,9 +280,7 @@ func (parser* self) parse_var_decl() (var_decl, parse_error) {
     }
     self.eat_symbol(";")
     var_decl {
-        name: name,
-        type_name: type_name,
-        value: value,
+        name: name, type_name type_name, value value,
     }
 }
 
@@ -308,9 +294,7 @@ func (parser* self) parse_function_decl() (function_decl, parse_error) {
         return self.error_here("method receiver not allowed in this context")
     }
     function_decl {
-        sig: pair.sig,
-        body: pair.body,
-        is_public: starts_with_upper(pair.sig.name),
+        sig: pair.sig, body pair.body, is_public starts_with_upper(pair.sig.name),
     }
 }
 
@@ -343,17 +327,12 @@ func (parser* self) parse_struct_decl() (struct_decl, parse_error) {
             return empty, err
         }
         fields.push(field {
-            name: f.name,
-            type_name: f.type_name,
-            is_public: starts_with_upper(f.name),
+            name: f.name, type_name f.type_name, is_public starts_with_upper(f.name),
         })
         self.eat_symbol(",")
     }
     struct_decl {
-        name: name,
-        generics: generics,
-        fields: fields,
-        is_public: starts_with_upper(name),
+        name: name, generics generics, fields fields, is_public starts_with_upper(name),
     }
 }
 
@@ -400,16 +379,12 @@ func (parser* self) parse_enum_decl() (enum_decl, parse_error) {
             payload = option::some(ty)
         }
         variants.push(enum_variant {
-            name: variant_name,
-            payload: payload,
+            name: variant_name, payload payload,
         })
         self.eat_symbol(",")
     }
     enum_decl {
-        name: name,
-        generics: generics,
-        variants: variants,
-        is_public: starts_with_upper(name),
+        name: name, generics generics, variants variants, is_public starts_with_upper(name),
     }
 }
 
@@ -449,10 +424,7 @@ func (parser* self) parse_trait_decl() (trait_decl, parse_error) {
         }
     }
     trait_decl {
-        name: name,
-        generics: generics,
-        methods: methods,
-        is_public: starts_with_upper(name),
+        name: name, generics generics, methods methods, is_public starts_with_upper(name),
     }
 }
 
@@ -537,13 +509,8 @@ func (parser* self) parse_function(bool require_body) (parsed_function, parse_er
     }
     parsed_function {
         sig: function_sig {
-            name: name,
-            generics: generics,
-            params: params,
-            return_type: return_type,
-        },
-        body: body,
-        receiver: receiver,
+            name: name, generics generics, params params, return_type return_type,
+        }, body body, receiver receiver,
     }
 }
 
@@ -559,8 +526,7 @@ func (parser* self) parse_params() (param[], parse_error) {
             return empty, err
         }
         params.push(param {
-            name: part.name,
-            type_name: part.type_name,
+            name: part.name, type_name part.type_name,
         })
         if !self.eat_symbol(",") || self.at_symbol(")") {
             break
@@ -708,9 +674,7 @@ func (parser* self) parse_block_expr() (block_expr, parse_error) {
         return empty, err
     }
     block_expr {
-        statements: statements,
-        final_expr: final_expr,
-        inferred_type: option::none,
+        statements: statements, final_expr final_expr, inferred_type option::none,
     }
 }
 
@@ -847,9 +811,7 @@ func (parser* self) parse_typed_var_stmt(bool consume_semicolon) (var_stmt, pars
         self.eat_symbol(";")
     }
     var_stmt {
-        name: named.name,
-        type_name: option::some(named.type_name),
-        value: value,
+        name: named.name, type_name option::some(named.type_name), value value,
     }
 }
 
@@ -873,8 +835,7 @@ func (parser* self) parse_assign_stmt(bool consume_semicolon) (assign_stmt, pars
         self.eat_symbol(";")
     }
     assign_stmt {
-        name: name,
-        value: value,
+        name: name, value value,
     }
 }
 
@@ -944,10 +905,7 @@ func (parser* self) parse_cfor_stmt() (c_for_stmt, parse_error) {
         return empty, err
     }
     c_for_stmt {
-        init: box(init),
-        condition: condition,
-        step: box(step),
-        body: body,
+        init: box(init), condition condition, step box(step), body body,
     }
 }
 
@@ -1179,15 +1137,12 @@ func (parser* self) parse_switch_expr() (expr, parse_error) {
                 expr empty
                 return empty, err
             }
-                pattern: pattern,
-                expr: expr,
+                pattern: pattern, expr expr,
             })
             self.eat_symbol(",")
         }
         expr::switch(switch_expr {
-            subject: box(subject),
-            arms: arms,
-            inferred_type: option::none,
+            subject: box(subject), arms arms, inferred_type option::none,
         })
 }
 
@@ -1207,10 +1162,7 @@ func (parser* self) parse_if_expr() (expr, parse_error) {
                 option::none
             }
         expr::if(if_expr {
-            condition: box(condition),
-            then_branch: then_branch,
-            else_branch: else_branch,
-            inferred_type: option::none,
+            condition: box(condition), then_branch then_branch, else_branch else_branch, inferred_type option::none,
         })
 }
 
@@ -1223,13 +1175,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
                 return empty, err
             }
             return expr::for(for_expr {
-                init: option::none,
-                condition: option::none,
-                post: option::none,
-                names: string[](),
-                iterable: option::none,
-                body: body,
-                inferred_type: option::none,
+                init: option::none, condition option::none, post option::none, names string[](), iterable option::none, body body, inferred_type option::none,
             }))
         }
         if self.at_symbol("(") {
@@ -1258,13 +1204,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
                 return empty, err
             }
             return expr::for(for_expr {
-                init: option::some(box(init)),
-                condition: option::some(box(condition)),
-                post: option::some(box(post)),
-                names: string[](),
-                iterable: option::none,
-                body: body,
-                inferred_type: option::none,
+                init: option::some(box(init)), condition option::some(box(condition)), post option::some(box(post)), names string[](), iterable option::none, body body, inferred_type option::none,
             }))
         }
         token, err := self.peek()
@@ -1283,13 +1223,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
                 return empty, err
             }
             return expr::for(for_expr {
-                init: option::none,
-                condition: option::none,
-                post: option::none,
-                names: string[] { name },
-                iterable: option::some(box(iterable)),
-                body: body,
-                inferred_type: option::none,
+                init: option::none, condition option::none, post option::none, names string[] { name }, iterable option::some(box(iterable)), body body, inferred_type option::none,
             }))
         }
         condition, err := self.parse_expr()
@@ -1298,13 +1232,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
             return empty, err
         }
         expr::for(for_expr {
-            init: option::none,
-            condition: option::some(box(condition)),
-            post: option::none,
-            names: string[](),
-            iterable: option::none,
-            body: body,
-            inferred_type: option::none,
+            init: option::none, condition option::some(box(condition)), post option::none, names string[](), iterable option::none, body body, inferred_type option::none,
         })
 }
 
@@ -1320,8 +1248,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::int(int_expr {
-                    value: token.value,
-                    inferred_type: option::none,
+                    value: token.value, inferred_type option::none,
                 }),
             }))
         }
@@ -1329,8 +1256,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::string(string_expr {
-                    value: token.value,
-                    inferred_type: option::none,
+                    value: token.value, inferred_type option::none,
                 }),
             }))
         }
@@ -1338,8 +1264,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::bool(bool_expr {
-                    value: true,
-                    inferred_type: option::none,
+                    value: true, inferred_type option::none,
                 }),
             }))
         }
@@ -1347,8 +1272,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::bool(bool_expr {
-                    value: false,
-                    inferred_type: option::none,
+                    value: false, inferred_type option::none,
                 }),
             }))
         }
@@ -1369,14 +1293,12 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             _, err := self.expect_symbol(")")
             if err.message != "" { expr empty; return empty, err }
             return pattern::variant(variant_pattern {
-                path: path,
-                args: args,
+                path: path, args args,
             }))
         }
         if path_contains_dot(path) || starts_with_upper(path) {
             return pattern::variant(variant_pattern {
-                path: path,
-                args: pattern[](),
+                path: path, args pattern[](),
             }))
         }
         pattern::name(name_pattern { name: path })
@@ -1402,10 +1324,7 @@ func (parser* self) parse_binary_expr(int min_precedence) (expr, parse_error) {
                 return empty, err
             }
             expr = expr::binary(binary_expr {
-                left: box(expr),
-                op: op,
-                right: box(rhs),
-                inferred_type: option::none,
+                left: box(expr), op op, right box(rhs), inferred_type option::none,
             })
         }
         expr
@@ -1420,9 +1339,7 @@ func (parser* self) parse_unary_expr() (expr, parse_error) {
             return empty, err
         }
         return expr::borrow(borrow_expr {
-            target: box(target),
-            mutable: mutable,
-            inferred_type: option::none,
+            target: box(target), mutable mutable, inferred_type option::none,
         }), parse_error { message: "" }
     }
     self.parse_call_expr()
@@ -1448,26 +1365,20 @@ func (parser* self) parse_call_expr() (expr, parse_error) {
                 _, err := self.expect_symbol(")")
             if err.message != "" { expr empty; return empty, err }
                 expr = expr::call(call_expr {
-                    callee: box(expr),
-                    args: args,
-                    inferred_type: option::none,
+                    callee: box(expr), args args, inferred_type option::none,
                 })
                 continue
             }
             if self.eat_symbol(".") {
                 expr = expr::member(member_expr {
-                    target: box(expr),
-                    member: self.expect_ident(),
-                    inferred_type: option::none,
+                    target: box(expr), member self.expect_ident(), inferred_type option::none,
                 })
                 continue
             }
             if self.eat_symbol(":") {
                 self.expect_symbol(":")
                 expr = expr::member(member_expr {
-                    target: box(expr),
-                    member: self.expect_ident(),
-                    inferred_type: option::none,
+                    target: box(expr), member self.expect_ident(), inferred_type option::none,
                 })
                 continue
             }
@@ -1479,9 +1390,7 @@ func (parser* self) parse_call_expr() (expr, parse_error) {
                 }
                 self.expect_symbol("]")
                 expr = expr::index(index_expr {
-                    target: box(expr),
-                    index: box(index),
-                    inferred_type: option::none,
+                    target: box(expr), index box(index), inferred_type option::none,
                 })
                 continue
             }
@@ -1498,36 +1407,31 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
         }
             self.advance()
             return expr::int(int_expr {
-                value: token.value,
-                inferred_type: option::none,
+                value: token.value, inferred_type option::none,
             }))
         }
         if token.kind == token_kind::string {
             self.advance()
             return expr::string(string_expr {
-                value: token.value,
-                inferred_type: option::none,
+                value: token.value, inferred_type option::none,
             }))
         }
         if self.at_keyword("true") {
             self.advance()
             return expr::bool(bool_expr {
-                value: true,
-                inferred_type: option::none,
+                value: true, inferred_type option::none,
             }))
         }
         if self.at_keyword("false") {
             self.advance()
             return expr::bool(bool_expr {
-                value: false,
-                inferred_type: option::none,
+                value: false, inferred_type option::none,
             }))
         }
         if self.at_keyword("nil") {
             self.advance()
             return expr::name(name_expr {
-                name: "nil",
-                inferred_type: option::none,
+                name: "nil", inferred_type option::none,
             }))
         }
         if self.at_symbol("{") {
@@ -1567,7 +1471,7 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
                 }
             }
             self.expect_symbol("}")
-            return expr::array(array_literal { type_text: option::some(type_text.trim()), items: items }))
+            return expr::array(array_literal { type_text: option::some(type_text.trim()), items items }))
         }
         if token.kind == token_kind::ident && token.value == "map" {
             self.advance()
@@ -1601,18 +1505,17 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
                         expr empty
                         return empty, err
                     }
-                    entries = append(entries, map_entry { key: key, value: value })
+                    entries = append(entries, map_entry { key: key, value value })
                     if !self.eat_symbol(",") || self.at_symbol("}") {
                         break
                     }
                 }
             }
             self.expect_symbol("}")
-            return expr::map(map_literal { type_text: option::some(type_text.trim()), entries: entries }))
+            return expr::map(map_literal { type_text: option::some(type_text.trim()), entries entries }))
         }
         expr::name(name_expr {
-            name: self.expect_ident(),
-            inferred_type: option::none,
+            name: self.expect_ident(), inferred_type option::none,
         })
     }
 
@@ -1849,9 +1752,7 @@ func (parser* self) expect_keyword(string value) (token, parse_error) {
         return self.advance()
     }
     parse_error {
-        message: "expected keyword " + value,
-        line: t.line,
-        column: t.column,
+        message: "expected keyword " + value, line t.line, column t.column,
     }
 }
 
@@ -1865,9 +1766,7 @@ func (parser* self) expect_symbol(string value) (token, parse_error) {
         return self.advance()
     }
     parse_error {
-        message: "expected symbol " + value,
-        line: t.line,
-        column: t.column,
+        message: "expected symbol " + value, line t.line, column t.column,
     }
 }
 
@@ -1894,9 +1793,7 @@ func (parser* self) expect_ident() (string, parse_error) {
         return t.value, parse_error { message: "" }
     }
     parse_error {
-        message: "expected identifier",
-        line: t.line,
-        column: t.column,
+        message: "expected identifier", line t.line, column t.column,
     }
 }
 
@@ -1907,9 +1804,7 @@ func (parser* self) peek() (token, parse_error) {
 func (parser* self) peek_at(int offset) (token, parse_error) {
         if self.index >= len(self.tokens) {
             return parse_error {
-                message: "unexpected eof",
-                line: 0,
-                column: 0,
+                message: "unexpected eof", line 0, column 0,
             }
         }
         int target = self.index + offset        if target >= len(self.tokens) {
@@ -1931,9 +1826,7 @@ func (parser* self) advance() (token, parse_error) {
 func (parser* self) error_here(string message) parse_error {
         token token = self.peek().unwrap()
         parse_error {
-            message: message,
-            line: token.line,
-            column: token.column,
+            message: message, line token.line, column token.column,
         }
     }
 
@@ -1970,11 +1863,8 @@ func (parser* self) find_top_level_symbol_offset(string value) int {
 func build_call_expr(string callee_name, expr[] args) expr {
     expr::call(call_expr {
         callee: box(expr::name(name_expr {
-            name: callee_name,
-            inferred_type: option::none,
-        })),
-        args: args,
-        inferred_type: option::none,
+            name: callee_name, inferred_type option::none,
+        })), args args, inferred_type option::none,
     })
 }
 
@@ -1996,14 +1886,11 @@ func decode_receiver_type(token[] tokens) (named_type, parse_error) {
     }
     if len(tokens) >= 2 && tokens[0].kind == token_kind::ident {
         return named_type {
-            name: tokens[0].value,
-            type_name: normalize_type_text(join_token_values(slice_tokens(tokens, 1, len(tokens)))),
+            name: tokens[0].value, type_name normalize_type_text(join_token_values(slice_tokens(tokens, 1, len(tokens)))),
         })
     }
     parse_error {
-        message: "expected receiver in '(name Type)' or '(name: Type)' form",
-        line: 0,
-        column: 0,
+        message: "expected receiver in '(name Type)' or '( name Type)' form", line 0, column 0,
     }
 }
 
@@ -2013,21 +1900,17 @@ func decode_named_type(token[] tokens) (named_type, parse_error) {
         name_tokens := slice_tokens(tokens, 0, colon)
         type_tokens := slice_tokens(tokens, colon + 1, len(tokens))
         return named_type {
-            name: normalize_type_text(join_token_values(name_tokens)),
-            type_name: normalize_type_text(join_token_values(type_tokens)),
+            name: normalize_type_text(join_token_values(name_tokens)), type_name normalize_type_text(join_token_values(type_tokens)),
         }
     }
     int split = find_decl_name_index(tokens)
     if split <= 0 {
         return parse_error {
-            message: "expected typed name",
-            line: 0,
-            column: 0,
+            message: "expected typed name", line 0, column 0,
         }
     }
     named_type {
-        name: tokens[split].value,
-        type_name: normalize_type_text(join_token_values(slice_tokens(tokens, 0, split))),
+        name: tokens[split].value, type_name normalize_type_text(join_token_values(slice_tokens(tokens, 0, split))),
     }
 }
 

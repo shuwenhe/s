@@ -40,37 +40,16 @@ flag := default_cmd_flags()
 
 func default_cmd_flags() cmd_flags {
     cmd_flags {
-        b: 0,
-        c: 0,
-        d: "",
-        e: 0,
-        n: 0,
-        s: 0,
-        lower_c: 1,
-        lower_e: 0,
-        lower_h: 0,
-        lower_l: 0,
-        lower_m: 0,
+        b: 0, c 0,
+        d: "", e 0, n 0, s 0, lower_c 1, lower_e 0, lower_h 0, lower_l 0, lower_m 0,
         lower_o: "",
-        lower_p: "",
-        lower_t: false,
-        complete: false,
-        dwarf: true,
-        race: false,
-        msan: false,
-        asan: false,
-        std: false,
-        compiling_runtime: false,
+        lower_p: "", lower_t false, complete false, dwarf true, race false, msan false, asan false, std false, compiling_runtime false,
         build_id: "",
         trim_path: "",
         go_version: "",
         lang: "",
-        spectre: "",
-        cfg: cmd_cfg {
-            import_dirs: string[](),
-            import_map: string[](),
-            spectre_index: false,
-            instrumenting: false,
+        spectre: "", cfg cmd_cfg {
+            import_dirs: string[](), import_map string[](), spectre_index false, instrumenting false,
         },
     }
 }

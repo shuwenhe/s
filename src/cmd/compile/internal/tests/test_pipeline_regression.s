@@ -158,8 +158,7 @@ func run_pipeline_regression_suite() int {
         return 1
     }
     metric_graph := mir_graph {
-        blocks: mir_block[](),
-        trace: string[](
+        blocks: mir_block[](), trace string[](
             "stmt sroutine worker()",
             "expr call select_recv_weighted(ch1, 2, ch2, 1)",
             "expr call select_recv_timeout(ch1, ch2, 3)",
