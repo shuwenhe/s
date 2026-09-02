@@ -266,12 +266,13 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 			}
 			continue;
 		}
-		if (c == '"') {
+		if (c == '"' || c == '\'') {
+			char quote = c;
 			size_t start;
 			i++;
 			col++;
 			start = i;
-			while (source[i] != '\0' && source[i] != '"' && source[i] != '\n') {
+			while (source[i] != '\0' && source[i] != quote && source[i] != '\n') {
 				if (source[i] == '\\' && source[i + 1] != '\0' && source[i + 1] != '\n') {
 					i += 2;
 					col += 2;
@@ -280,8 +281,8 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 				i++;
 				col++;
 			}
-			if (source[i] != '"') {
-				error_set(err, ERR_UNTERMINATED_STRING, tok_line, tok_col, "unterminated string literal");
+			if (source[i] != quote) {
+				error_set(err, ERR_UNTERMINATED_STRING, tok_line, tok_col, "unterminated quoted literal");
 				token_vec_free(out_tokens);
 				return false;
 			}

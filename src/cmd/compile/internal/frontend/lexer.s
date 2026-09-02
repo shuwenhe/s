@@ -11,7 +11,7 @@ struct lexer {
     source: string
     position: int
     read_position: int
-    current_char: char
+    current_char: string
     line: int
     column: int
     start_column: int
@@ -124,16 +124,16 @@ func keyword_to_token(string kw) int {
     }
 }
 
-func is_letter(char c) int {
-    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+func is_letter(string c) bool {
+    return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c == "_"
 }
 
-func is_digit(char c) int {
-    c >= '0' && c <= '9'
+func is_digit(string c) bool {
+    return c >= "0" && c <= "9"
 }
 
-func is_whitespace(char c) int {
-    c == ' ' || c == '\t' || c == '\r'
+func is_whitespace(string c) bool {
+    return c == " " || c == "\t" || c == "\r"
 }
 
 func lexer_new(string source) lexer {
@@ -167,7 +167,7 @@ func lexer_read_char(lex* lexer) {
     }
 }
 
-func lexer_peek_char(lex* lexer) char {
+func lexer_peek_char(lex* lexer) string {
     if lex.read_position >= lex.source.len() {
         '\0'
     } else {
@@ -186,7 +186,17 @@ func lexer_read_ident(lex* lexer) string {
     while is_letter(lex.current_char) || is_digit(lex.current_char) {
         lexer_read_char(lex)
     }
-    lex.source[start: lex.position]
+    lexer_slice(lex.source, start, lex.position)
+}
+
+func lexer_slice(string source, int start, int end) string {
+    result := ""
+    i := start
+    while i < end {
+        result = result + source[i]
+        i = i + 1
+    }
+    result
 }
 
 func lexer_read_number(lex* lexer) (string, int) {
@@ -200,7 +210,7 @@ func lexer_read_number(lex* lexer) (string, int) {
         lexer_read_char(lex)
     }
     
-    num_str := lex.source[start: lex.position]
+    num_str := lexer_slice(lex.source, start, lex.position)
     if has_dot {
         num_str, TOKEN_FLOAT
     } else {
@@ -208,7 +218,7 @@ func lexer_read_number(lex* lexer) (string, int) {
     }
 }
 
-func lexer_read_string(lex* lexer, char quote) string {
+func lexer_read_string(lex* lexer, string quote) string {
     lexer_read_char(lex)
     start := lex.position
     
@@ -219,7 +229,7 @@ func lexer_read_string(lex* lexer, char quote) string {
         lexer_read_char(lex)
     }
     
-    str := lex.source[start: lex.position]
+    str := lexer_slice(lex.source, start, lex.position)
     if lex.current_char == quote {
         lexer_read_char(lex)
     }
