@@ -106,7 +106,7 @@ struct lexer {
     token_capacity int
 }
 
-func lexer_new(source* string) lexer* {
+func lexer_new(string source*) lexer* {
     l := alloc(lexer)
     l.source = source
     l.pos = 0
@@ -125,7 +125,7 @@ func lexer_current_char(l* lexer) int {
     return l.source[l.pos]
 }
 
-func lexer_peek_char(l* lexer, offset int) int {
+func lexer_peek_char(l* lexer, int offset) int {
     pos := l.pos + offset
     if pos >= len(l.source) {
         return 0
@@ -182,17 +182,17 @@ func lexer_skip_block_comment(l* lexer) {
     }
 }
 
-func is_letter(ch int) int {
+func is_letter(int ch) int {
     return (ch >= 97 && ch <= 122) ||
            (ch >= 65 && ch <= 90) ||
            ch == 95
 }
 
-func is_digit(ch int) int {
+func is_digit(int ch) int {
     return ch >= 48 && ch <= 57
 }
 
-func is_alphanum(ch int) int {
+func is_alphanum(int ch) int {
     return is_letter(ch) || is_digit(ch) || ch == 95
 }
 
@@ -218,7 +218,7 @@ func lexer_read_ident(l* lexer) token {
     return *tok
 }
 
-func lexer_keyword_type(s* string) int {
+func lexer_keyword_type(string s*) int {
     if s == nil {
         return 0
     }

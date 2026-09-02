@@ -217,7 +217,7 @@ func int_to_string(int value) string {
     result + digits
 }
 
-func compile_s_source(source* string) []int8 {
+func compile_s_source(string source*) []int8 {
     lexer* := lexer_new(source)
     lexer_tokenize(lexer)
     tokens* := lexer_get_tokens(lexer)
@@ -241,7 +241,7 @@ func compile_s_source(source* string) []int8 {
     return object_code
 }
 
-func compile_s_to_executable(source* string) []int8 {
+func compile_s_to_executable(string source*) []int8 {
     lexer* := lexer_new(source)
     lexer_tokenize(lexer)
     tokens* := lexer_get_tokens(lexer)
@@ -265,7 +265,7 @@ func compile_s_to_executable(source* string) []int8 {
     return executable
 }
 
-func compile_and_get_info(source* string) string {
+func compile_and_get_info(string source*) string {
     lexer* := lexer_new(source)
     lexer_tokenize(lexer)
     tokens* := lexer_get_tokens(lexer)

@@ -98,107 +98,107 @@ struct ir_module {
     global_vars ir_value[]
 }
 
-func ir_value_const(const_val string, type_info string) ir_value {
+func ir_value_const(string const_val, string type_info) ir_value {
     ir_value {
         value_type: IR_VALUE_CONST, value_id 0, type_info type_info, const_value const_val, line 0, column 0
     }
 }
 
-func ir_value_var(name string, type_info string) ir_value {
+func ir_value_var(string name, string type_info) ir_value {
     ir_value {
         value_type: IR_VALUE_VAR, value_id 0, type_info type_info, var_name name, line 0, column 0
     }
 }
 
-func ir_value_param(index int, type_info string) ir_value {
+func ir_value_param(int index, string type_info) ir_value {
     ir_value {
         value_type: IR_VALUE_PARAM, value_id 0, type_info type_info, param_index index, line 0, column 0
     }
 }
 
-func ir_instr_binop(op int, left ir_value, right ir_value, result_type string) ir_instruction {
+func ir_instr_binop(int op, ir_value left, ir_value right, string result_type) ir_instruction {
     ir_instruction {
         instr_type: IR_INSTR_BINOP, opcode op,
         operands: [left, right], result ir_value { value_type: IR_VALUE_BINOP, type_info result_type }
     }
 }
 
-func ir_instr_unop(op int, operand ir_value, result_type string) ir_instruction {
+func ir_instr_unop(int op, ir_value operand, string result_type) ir_instruction {
     ir_instruction {
         instr_type: IR_INSTR_UNOP, opcode op,
         operands: [operand], result ir_value { value_type: IR_VALUE_UNOP, type_info result_type }
     }
 }
 
-func ir_instr_call(func_name string, args ir_value[], return_type string) ir_instruction {
+func ir_instr_call(string func_name, ir_value[] args, string return_type) ir_instruction {
     ir_instruction {
         instr_type: IR_INSTR_CALL, var_name func_name, operands args, result ir_value { value_type: IR_VALUE_CALL, type_info return_type }
     }
 }
 
-func ir_instr_return(value ir_value) ir_instruction {
+func ir_instr_return(ir_value value) ir_instruction {
     ir_instruction {
         instr_type: IR_INSTR_RETURN,
         operands: [value]
     }
 }
 
-func ir_instr_br(target_block_id int) ir_instruction {
+func ir_instr_br(int target_block_id) ir_instruction {
     ir_instruction {
         instr_type: IR_INSTR_BR, branch_target_true target_block_id
     }
 }
 
-func ir_instr_condbr(cond ir_value, true_block int, false_block int) ir_instruction {
+func ir_instr_condbr(ir_value cond, int true_block, int false_block) ir_instruction {
     ir_instruction {
         instr_type: IR_INSTR_CONDBR,
         operands: [cond], branch_target_true true_block, branch_target_false false_block
     }
 }
 
-func ir_instr_phi(operands ir_value[], operand_blocks int[]) ir_instruction {
+func ir_instr_phi(ir_value[] operands, int[] operand_blocks) ir_instruction {
     ir_instruction {
         instr_type: IR_INSTR_PHI, operands operands, branch_targets operand_blocks
     }
 }
 
-func ir_basicblock_new(block_id int, label string) ir_basicblock {
+func ir_basicblock_new(int block_id, string label) ir_basicblock {
     ir_basicblock {
         block_id: block_id, label label
     }
 }
 
-func ir_basicblock_add_instr(block* ir_basicblock, instr ir_instruction) {
+func ir_basicblock_add_instr(ir_basicblock block*, ir_instruction instr) {
     block.instructions = append(block.instructions, instr)
 }
 
-func ir_basicblock_set_terminator(block* ir_basicblock, instr ir_instruction) {
+func ir_basicblock_set_terminator(ir_basicblock block*, ir_instruction instr) {
     block.terminator = instr
 }
 
-func ir_basicblock_add_predecessor(block* ir_basicblock, pred_id int) {
+func ir_basicblock_add_predecessor(ir_basicblock block*, int pred_id) {
     block.predecessors = append(block.predecessors, pred_id)
 }
 
-func ir_basicblock_add_successor(block* ir_basicblock, succ_id int) {
+func ir_basicblock_add_successor(ir_basicblock block*, int succ_id) {
     block.successors = append(block.successors, succ_id)
 }
 
-func ir_function_new(name string, return_type string) ir_function {
+func ir_function_new(string name, string return_type) ir_function {
     ir_function {
         name: name, return_type return_type, value_counter 0
     }
 }
 
-func ir_function_add_param(func* ir_function, param ir_value) {
+func ir_function_add_param(ir_function func*, ir_value param) {
     func.parameters = append(func.parameters, param)
 }
 
-func ir_function_add_block(func* ir_function, block ir_basicblock) {
+func ir_function_add_block(ir_function func*, ir_basicblock block) {
     func.basic_blocks = append(func.basic_blocks, block)
 }
 
-func ir_function_gen_value_id(func* ir_function) int {
+func ir_function_gen_value_id(ir_function func*) int {
     func.value_counter = func.value_counter + 1
     func.value_counter
 }
@@ -207,11 +207,11 @@ func ir_module_new() ir_module {
     ir_module {}
 }
 
-func ir_module_add_function(module* ir_module, func ir_function) {
+func ir_module_add_function(ir_module module*, ir_function func) {
     module.functions = append(module.functions, func)
 }
 
-func ir_module_add_global(module* ir_module, global ir_value) {
+func ir_module_add_global(ir_module module*, ir_value global) {
     module.global_vars = append(module.global_vars, global)
 }
 

@@ -45,7 +45,7 @@ func register_allocator_new() register_allocator {
     allocator
 }
 
-func register_allocator_build_intervals(allocator* register_allocator, instrs x86_instruction[]) {
+func register_allocator_build_intervals(allocator* register_allocator, x86_instruction[] instrs) {
     for i := 0; i < instrs.len(); i = i + 1 {
         instr := instrs[i]
         
@@ -130,7 +130,7 @@ func get_available_registers(allocator* register_allocator) int[] {
     available
 }
 
-func register_allocator_insert_spill_code(allocator* register_allocator, instrs* x86_instruction[]) {
+func register_allocator_insert_spill_code(allocator* register_allocator, x86_instruction[] instrs*) {
     for i := 0; i < allocator.intervals.len(); i = i + 1 {
         interval := allocator.intervals[i]
         

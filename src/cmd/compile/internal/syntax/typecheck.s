@@ -95,7 +95,7 @@ func typecheck_add_builtin_types(scope* scope) {
     typecheck_add_symbol(scope, "bool", bool_type, 0, 0, 0)
 }
 
-func typecheck_add_symbol(scope* scope, name* string, type_* type_info, kind int, line int, col int) {
+func typecheck_add_symbol(scope* scope, string name*, type_* type_info, int kind, int line, int col) {
     entry := alloc(symbol_entry)
     entry.name = name
     entry.type_ = type_
@@ -106,7 +106,7 @@ func typecheck_add_symbol(scope* scope, name* string, type_* type_info, kind int
     scope.symbols = entry
 }
 
-func typecheck_lookup_symbol(ctx* typecheck_context, name* string) symbol_entry* {
+func typecheck_lookup_symbol(ctx* typecheck_context, string name*) symbol_entry* {
     scope := ctx.current_scope
     for {
         if scope == nil {
@@ -140,7 +140,7 @@ func typecheck_exit_scope(ctx* typecheck_context) {
     }
 }
 
-func typecheck_expr(ctx* typecheck_context, expr* ast_node) type_info* {
+func typecheck_expr(ctx* typecheck_context, ast_node expr*) type_info* {
     if expr == nil {
         return typecheck_get_builtin_type(ctx, "void")
     }
@@ -192,7 +192,7 @@ func typecheck_expr(ctx* typecheck_context, expr* ast_node) type_info* {
     return typecheck_get_builtin_type(ctx, "unknown")
 }
 
-func typecheck_get_literal_type(ctx* typecheck_context, expr* ast_node) type_info* {
+func typecheck_get_literal_type(ctx* typecheck_context, ast_node expr*) type_info* {
     return typecheck_get_builtin_type(ctx, "int")
 }
 
@@ -203,7 +203,7 @@ func typecheck_is_numeric(type_* type_info) int {
     return 0
 }
 
-func typecheck_get_builtin_type(ctx* typecheck_context, name* string) type_info* {
+func typecheck_get_builtin_type(ctx* typecheck_context, string name*) type_info* {
     entry := typecheck_lookup_symbol(ctx, name)
     if entry != nil {
         return entry.type_
@@ -214,7 +214,7 @@ func typecheck_get_builtin_type(ctx* typecheck_context, name* string) type_info*
     return unknown
 }
 
-func typecheck_resolve_type(ctx* typecheck_context, node* ast_node) type_info* {
+func typecheck_resolve_type(ctx* typecheck_context, ast_node node*) type_info* {
     if node == nil { return typecheck_get_builtin_type(ctx, "unknown") }
     if node.type_ == AST_POINTER_TYPE {
         elem := typecheck_resolve_type(ctx, node.child)
@@ -254,7 +254,7 @@ func typecheck_is_compatible(type1* type_info, type2* type_info) int {
     return 0
 }
 
-func typecheck_var_decl(ctx* typecheck_context, var_decl* ast_node) int {
+func typecheck_var_decl(ctx* typecheck_context, ast_node var_decl*) int {
     if var_decl.value == nil || var_decl.value == "" {
         typecheck_error(ctx, "variable declaration requires a name", var_decl.line, var_decl.col)
         return 0
@@ -272,7 +272,7 @@ func typecheck_var_decl(ctx* typecheck_context, var_decl* ast_node) int {
     return 1
 }
 
-func typecheck_func_decl(ctx* typecheck_context, func_decl* ast_node) int {
+func typecheck_func_decl(ctx* typecheck_context, ast_node func_decl*) int {
     if func_decl.value == nil || func_decl.value == "" {
         typecheck_error(ctx, "function declaration requires a name", func_decl.line, func_decl.col)
         return 0
@@ -296,7 +296,7 @@ func typecheck_func_decl(ctx* typecheck_context, func_decl* ast_node) int {
     return 1
 }
 
-func typecheck_struct_decl(ctx* typecheck_context, struct_decl* ast_node) int {
+func typecheck_struct_decl(ctx* typecheck_context, ast_node struct_decl*) int {
     struct_type := alloc(type_info)
     struct_type.kind = TYPE_STRUCT
     struct_type.name = struct_decl.value
@@ -312,13 +312,13 @@ func typecheck_struct_decl(ctx* typecheck_context, struct_decl* ast_node) int {
     return 1
 }
 
-func typecheck_block_stmt(ctx* typecheck_context, block* ast_node) int {
+func typecheck_block_stmt(ctx* typecheck_context, ast_node block*) int {
     typecheck_enter_scope(ctx)
     typecheck_exit_scope(ctx)
     return 1
 }
 
-func typecheck_return_stmt(ctx* typecheck_context, ret* ast_node) int {
+func typecheck_return_stmt(ctx* typecheck_context, ast_node ret*) int {
     if ctx.function_return == nil {
         typecheck_error(ctx, "return outside function", ret.line, ret.col)
         return 0
@@ -331,7 +331,7 @@ func typecheck_return_stmt(ctx* typecheck_context, ret* ast_node) int {
     return 1
 }
 
-func typecheck_if_stmt(ctx* typecheck_context, if_stmt* ast_node) int {
+func typecheck_if_stmt(ctx* typecheck_context, ast_node if_stmt*) int {
     cond_type := typecheck_expr(ctx, nil)
     if cond_type.kind != TYPE_BOOL {
         return 0
@@ -340,13 +340,13 @@ func typecheck_if_stmt(ctx* typecheck_context, if_stmt* ast_node) int {
     return 1
 }
 
-func typecheck_for_stmt(ctx* typecheck_context, for_stmt* ast_node) int {
+func typecheck_for_stmt(ctx* typecheck_context, ast_node for_stmt*) int {
     typecheck_enter_scope(ctx)
     typecheck_exit_scope(ctx)
     return 1
 }
 
-func typecheck_statement(ctx* typecheck_context, stmt* ast_node) int {
+func typecheck_statement(ctx* typecheck_context, ast_node stmt*) int {
     if stmt == nil {
         return 1
     }
@@ -367,7 +367,7 @@ func typecheck_statement(ctx* typecheck_context, stmt* ast_node) int {
     return 1
 }
 
-func typecheck_program(ctx* typecheck_context, program* ast_node) int {
+func typecheck_program(ctx* typecheck_context, ast_node program*) int {
     if program == nil {
         return 0
     }
@@ -382,7 +382,7 @@ func typecheck_program(ctx* typecheck_context, program* ast_node) int {
     return 1 - ctx.error_count
 }
 
-func typecheck_error(ctx* typecheck_context, message* string, line int, col int) {
+func typecheck_error(ctx* typecheck_context, string message*, int line, int col) {
     if ctx.error_count >= ctx.max_errors {
         return
     }

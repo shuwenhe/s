@@ -71,23 +71,23 @@ func ast_new(int node_type, int line, int column) &ast_node {
     &node
 }
 
-func ast_add_child(node* ast_node, child* ast_node) {
+func ast_add_child(ast_node node*, ast_node child*) {
     node.children.push(child)
 }
 
-func ast_set_name(node* ast_node, string name) {
+func ast_set_name(ast_node node*, string name) {
     node.name = name
 }
 
-func ast_set_type_name(node* ast_node, string type_name) {
+func ast_set_type_name(ast_node node*, string type_name) {
     node.type_name = type_name
 }
 
-func ast_set_string_data(node* ast_node, string data) {
+func ast_set_string_data(ast_node node*, string data) {
     node.string_data = data
 }
 
-func ast_set_int_data(node* ast_node, int data) {
+func ast_set_int_data(ast_node node*, int data) {
     node.int_data = data
 }
 
@@ -140,7 +140,7 @@ func ast_node_type_name(int ast_type) string {
     }
 }
 
-func ast_dump(node* ast_node, int indent) {
+func ast_dump(ast_node node*, int indent) {
     for i := 0; i < indent; i = i + 1 {
         eprintln("  ")
     }

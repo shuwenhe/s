@@ -8,7 +8,7 @@ struct native_compiler {
     builder: machine_code_builder
 }
 
-func new_native_compiler( input string, output string) native_compiler {
+func new_native_compiler(string input, string output) native_compiler {
     compiler: native_compiler
     compiler.input_file = input
     compiler.output_file = output

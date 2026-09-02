@@ -661,7 +661,7 @@ func parser_parse_primary_expression(p* parser) &ast_node {
     }
 }
 
-func parser_parse_infix_expression(p* parser, left* ast_node, int precedence) &ast_node {
+func parser_parse_infix_expression(p* parser, ast_node left*, int precedence) &ast_node {
     while precedence < token_precedence(p.current_token.token_type) {
         if parser_current_token_is(p, TOKEN_LPAREN) {
             call := ast_new(AST_CALL_EXPR, p.current_token.line, p.current_token.column)
