@@ -8,6 +8,7 @@ source_file=${S_BOOTSTRAP_SOURCE:-"$root/src/cmd/compile/selfhost/compiler.s"}
 verify="$root/misc/scripts/verify_true_selfhost.sh"
 assembler=${S_BOOTSTRAP_AS:-as}
 linker=${S_BOOTSTRAP_LD:-ld}
+timeout_seconds=${S_BOOTSTRAP_TIMEOUT:-120}
 
 fail() {
     printf '%s\n' "native bootstrap failed: $*" >&2
@@ -31,7 +32,7 @@ compile_native_stage() {
     output=$3
     assembly="${output}.S"
     object="${output}.o"
-    "$compiler" --emit-asm "$input" "$assembly"
+    timeout "$timeout_seconds" "$compiler" --emit-asm "$input" "$assembly"
     "$assembler" --64 -o "$object" "$assembly"
     "$linker" -static -T "$root/src/runtime/linker/nostdlib.ld" \
         -o "$output" "$runtime_object" "$object"
@@ -44,7 +45,7 @@ run_conformance() {
     assembly="$work/${name}.S"
     object="$work/${name}.o"
     binary="$work/${name}"
-    "$compiler" --emit-asm "$source" "$assembly"
+    timeout "$timeout_seconds" "$compiler" --emit-asm "$source" "$assembly"
     "$assembler" --64 -o "$object" "$assembly"
     "$linker" -static -T "$root/src/runtime/linker/nostdlib.ld" \
         -o "$binary" "$runtime_object" "$object"
