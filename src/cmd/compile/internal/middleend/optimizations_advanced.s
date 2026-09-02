@@ -1,15 +1,15 @@
 package optimizations_advanced
 
-const INLINE_COST_CALL = 1
-const INLINE_COST_LOAD = 1
-const INLINE_COST_STORE = 2
-const INLINE_COST_BINOP = 1
-const INLINE_COST_BRANCH = 5
-const INLINE_COST_LOOP = 10
+const inline_cost_call = 1
+const inline_cost_load = 1
+const inline_cost_store = 2
+const inline_cost_binop = 1
+const inline_cost_branch = 5
+const inline_cost_loop = 10
 
-const INLINE_THRESHOLD_SMALL = 40
-const INLINE_THRESHOLD_MEDIUM = 80
-const INLINE_THRESHOLD_LARGE = 160
+const inline_threshold_small = 40
+const inline_threshold_medium = 80
+const inline_threshold_large = 160
 
 struct inline_candidate {
     func_name string
@@ -38,16 +38,16 @@ func estimate_inline_cost(ir_function func) int {
         for i := 0; i < block.instructions.len(); i = i + 1 {
             instr := block.instructions[i]
             
-            if instr.instr_type == IR_INSTR_CALL {
-                cost = cost + INLINE_COST_CALL
-            } else if instr.instr_type == IR_INSTR_LOAD {
-                cost = cost + INLINE_COST_LOAD
-            } else if instr.instr_type == IR_INSTR_STORE {
-                cost = cost + INLINE_COST_STORE
-            } else if instr.instr_type == IR_INSTR_BINOP {
-                cost = cost + INLINE_COST_BINOP
-            } else if instr.instr_type == IR_INSTR_BRANCH {
-                cost = cost + INLINE_COST_BRANCH
+            if instr.instr_type == ir_instr_call {
+                cost = cost + inline_cost_call
+            } else if instr.instr_type == ir_instr_load {
+                cost = cost + inline_cost_load
+            } else if instr.instr_type == ir_instr_store {
+                cost = cost + inline_cost_store
+            } else if instr.instr_type == ir_instr_binop {
+                cost = cost + inline_cost_binop
+            } else if instr.instr_type == ir_instr_branch {
+                cost = cost + inline_cost_branch
             }
         }
     }
@@ -58,7 +58,7 @@ func estimate_inline_cost(ir_function func) int {
 func is_inline_candidate(ir_function func) int {
     cost := estimate_inline_cost(func)
     
-    if cost > INLINE_THRESHOLD_SMALL {
+    if cost > inline_threshold_small {
         return 0
     }
     
@@ -78,7 +78,7 @@ func inline_function_call(ir_module module, ir_instruction call_instr, ir_functi
         for j := 0; j < block.instructions.len(); j = j + 1 {
             instr := block.instructions[j]
             
-            if instr.instr_type == IR_INSTR_RETURN {
+            if instr.instr_type == ir_instr_return {
                 result = append(result, ir_instr_assign(call_instr.result, instr.operands[0]))
             } else {
                 result = append(result, instr)
@@ -101,7 +101,7 @@ func perform_inlining(ir_module module) {
             for i := 0; i < block.instructions.len(); i = i + 1 {
                 instr := block.instructions[i]
                 
-                if instr.instr_type == IR_INSTR_CALL {
+                if instr.instr_type == ir_instr_call {
                     callee_name := instr.operands[0].const_value
                     
                     callee := find_function(&module, callee_name)
@@ -132,11 +132,11 @@ func escape_analyze_var(ir_function func, string var_name) int {
         for i := 0; i < block.instructions.len(); i = i + 1 {
             instr := block.instructions[i]
             
-            if instr.instr_type == IR_INSTR_STORE {
+            if instr.instr_type == ir_instr_store {
                 if instr.operands[0].var_name == var_name {
                     escapes = 1
                 }
-            } else if instr.instr_type == IR_INSTR_CALL {
+            } else if instr.instr_type == ir_instr_call {
                 for j := 0; j < instr.operands.len(); j = j + 1 {
                     if instr.operands[j].var_name == var_name {
                         escapes = 1
@@ -158,7 +158,7 @@ func build_escape_graph(ir_function func) escape_graph {
         for i := 0; i < block.instructions.len(); i = i + 1 {
             instr := block.instructions[i]
             
-            if instr.instr_type == IR_INSTR_ALLOC {
+            if instr.instr_type == ir_instr_alloc {
                 var_name := instr.result.var_name
                 escapes := escape_analyze_var(func, var_name)
                 
@@ -210,7 +210,7 @@ func perform_devirtualization(ir_module module) {
             for i := 0; i < block.instructions.len(); i = i + 1 {
                 instr := block.instructions[i]
                 
-                if instr.instr_type == IR_INSTR_CALL {
+                if instr.instr_type == ir_instr_call {
                 }
             }
         }
@@ -218,7 +218,7 @@ func perform_devirtualization(ir_module module) {
 }
 
 func ir_instr_assign(ir_value result, ir_value value) ir_instruction {
-    instr := ir_instruction { instr_type: IR_INSTR_ASSIGN, result: result }
+    instr := ir_instruction { instr_type: ir_instr_assign, result: result }
     instr.operands = append(instr.operands, value)
     instr
 }

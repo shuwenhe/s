@@ -1,5 +1,5 @@
 package cmd
-use std.io.File as file_type
+use std.io.file as file_type
 use std.io.open as io_open
 use std.io.write as io_write
 use std.io.read_all as io_read_all
@@ -7,21 +7,21 @@ use std.strings.split as split_string
 use std.strings.trim as trim_string
 use std.strings.contains as contains_string
 use std.fmt.sprintf
-struct IRProgram {
-    functions: []Function
-    globals: []Global
-    metadata: Metadata
+struct ir_program {
+    functions: []function
+    globals: []global
+    metadata: metadata
 }
 
-struct Function {
+struct function {
     name: string
     is_exported: bool
-    instructions: []Instruction
-    locals: []Local
+    instructions: []instruction
+    locals: []local
     max_temp: int
 }
 
-struct Instruction {
+struct instruction {
     opcode: string
     dest: string
     src1: string
@@ -29,34 +29,34 @@ struct Instruction {
     src3: string
 }
 
-struct Local {
+struct local {
     name: string
     type_str: string
     size: int
 }
 
-struct Global {
+struct global {
     name: string
     value: string
     is_const: bool
 }
 
-struct Metadata {
+struct metadata {
     target: string
     version: string
 }
 
-struct X86_64CodeGen {
-    program: IRProgram
+struct x86_64_code_gen {
+    program: ir_program
     buffer: []byte
     label_counter: int
     register_map: map[string]int
 }
 
-func parse_ir(string content) (IRProgram, error) {
+func parse_ir(string content) (ir_program, error) {
     lines := split_string(content, "\n")
-    prog := IRProgram{}
-    current_func: *Function = nil
+    prog := ir_program{}
+    current_func: *function = nil
     line_idx := 0
     if line_idx >= len(lines) {
         return prog, error("empty IR file"
@@ -75,10 +75,10 @@ func parse_ir(string content) (IRProgram, error) {
         if contains_string(line, "FUNC_BEGIN") {
             parts := split_string(line, "|")
             if len(parts) >= 2 {
-                func := Function{
+                func := function{
                     name: parts[1],
-                    instructions: []Instruction{},
-                    locals: []Local{},
+                    instructions: []instruction{},
+                    locals: []local{},
                 }
                 current_func = *func
                 prog.functions = append(prog.functions, func)
@@ -88,7 +88,7 @@ func parse_ir(string content) (IRProgram, error) {
         } else if current_func != nil && contains_string(line, "|") {
             parts := split_string(line, "|")
             if len(parts) >= 2 {
-                instr := Instruction{
+                instr := instruction{
                     opcode: parts[0], dest if len(parts) > 1 then parts[1] else "", src1 if len(parts) > 2 then parts[2] else "", src2 if len(parts) > 3 then parts[3] else "", src3 if len(parts) > 4 then parts[4] else "",
                 }
                 current_func.instructions = append(current_func.instructions, instr)
@@ -96,15 +96,15 @@ func parse_ir(string content) (IRProgram, error) {
         }
         line_idx += 1
     }
-    prog.metadata = Metadata{
+    prog.metadata = metadata{
         target: "x86_64",
         version: "1",
     }
     return prog, nil
 }
 
-func generate_x86_64(IRProgram program) (string, error) {
-    codegen := X86_64CodeGen{
+func generate_x86_64(ir_program program) (string, error) {
+    codegen := x86_64_code_gen{
         program: program,
         buffer: []byte{}, label_counter 0,
     }
@@ -134,21 +134,21 @@ func generate_x86_64(IRProgram program) (string, error) {
 
 func generate_instruction(Instruction instr) (string, error) {
     switch instr.opcode {
-        case "MOV":
+        case "mov":
             return "    mov " + instr.src1 + ", " + instr.dest + "\n", nil
-        case "ADD":
+        case "add":
             return "    add " + instr.src2 + ", " + instr.src1 + "\n", nil
-        case "CALL":
+        case "call":
             return "    call " + instr.src1 + "\n", nil
-        case "RET":
+        case "ret":
             return "    ret\n", nil
-        case "CMP_EQ", "CMP_NE":
+        case "cmp_eq", "cmp_ne":
             return "    cmp " + instr.src2 + ", " + instr.src1 + "\n", nil
-        case "JUMP_IF_FALSE":
+        case "jump_if_false":
             return "    je " + instr.src1 + "\n", nil
-        case "JUMP":
+        case "jump":
             return "    jmp " + instr.src1 + "\n", nil
-        case "LABEL":
+        case "label":
             return instr.src1 + ":\n", nil
         default:
             return "", error("unknown opcode: " + instr.opcode

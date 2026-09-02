@@ -60,27 +60,27 @@ func assembler_finalize(asm* assembler) string {
 }
 
 func x86_instruction_to_asm(x86_instruction instr) string {
-    if instr.instr_type == INSTR_MOV {
+    if instr.instr_type == instr_mov {
         return x86_emit_mov(instr)
-    } else if instr.instr_type == INSTR_ADD {
+    } else if instr.instr_type == instr_add {
         return x86_emit_add(instr)
-    } else if instr.instr_type == INSTR_SUB {
+    } else if instr.instr_type == instr_sub {
         return x86_emit_sub(instr)
-    } else if instr.instr_type == INSTR_MUL {
+    } else if instr.instr_type == instr_mul {
         return x86_emit_mul(instr)
-    } else if instr.instr_type == INSTR_DIV {
+    } else if instr.instr_type == instr_div {
         return x86_emit_div(instr)
-    } else if instr.instr_type == INSTR_PUSH {
+    } else if instr.instr_type == instr_push {
         return x86_emit_push(instr)
-    } else if instr.instr_type == INSTR_POP {
+    } else if instr.instr_type == instr_pop {
         return x86_emit_pop(instr)
-    } else if instr.instr_type == INSTR_CALL {
+    } else if instr.instr_type == instr_call {
         return x86_emit_call(instr)
-    } else if instr.instr_type == INSTR_RET {
+    } else if instr.instr_type == instr_ret {
         return x86_emit_ret(instr)
-    } else if instr.instr_type == INSTR_CMP {
+    } else if instr.instr_type == instr_cmp {
         return x86_emit_cmp(instr)
-    } else if instr.instr_type == INSTR_JMP {
+    } else if instr.instr_type == instr_jmp {
         return x86_emit_jmp(instr)
     }
     ""
@@ -146,46 +146,46 @@ func x86_emit_jmp(x86_instruction instr) string {
 }
 
 func x86_operand_to_asm(x86_operand op) string {
-    if op.operand_type == OPERAND_REG {
+    if op.operand_type == operand_reg {
         return x86_register_name(op.reg_id)
-    } else if op.operand_type == OPERAND_IMM {
+    } else if op.operand_type == operand_imm {
         return "$" + op.imm_value
-    } else if op.operand_type == OPERAND_MEM {
+    } else if op.operand_type == operand_mem {
         return op.mem_offset as string + "(" + op.mem_base + ")"
-    } else if op.operand_type == OPERAND_LABEL {
+    } else if op.operand_type == operand_label {
         return op.label_name
     }
     ""
 }
 
 func x86_register_name(int reg_id) string {
-    if reg_id == REG_RAX {
+    if reg_id == reg_rax {
         return "%rax"
-    } else if reg_id == REG_RBX {
+    } else if reg_id == reg_rbx {
         return "%rbx"
-    } else if reg_id == REG_RCX {
+    } else if reg_id == reg_rcx {
         return "%rcx"
-    } else if reg_id == REG_RDX {
+    } else if reg_id == reg_rdx {
         return "%rdx"
-    } else if reg_id == REG_RSI {
+    } else if reg_id == reg_rsi {
         return "%rsi"
-    } else if reg_id == REG_RDI {
+    } else if reg_id == reg_rdi {
         return "%rdi"
-    } else if reg_id == REG_R8 {
+    } else if reg_id == reg_r8 {
         return "%r8"
-    } else if reg_id == REG_R9 {
+    } else if reg_id == reg_r9 {
         return "%r9"
-    } else if reg_id == REG_R10 {
+    } else if reg_id == reg_r10 {
         return "%r10"
-    } else if reg_id == REG_R11 {
+    } else if reg_id == reg_r11 {
         return "%r11"
-    } else if reg_id == REG_R12 {
+    } else if reg_id == reg_r12 {
         return "%r12"
-    } else if reg_id == REG_R13 {
+    } else if reg_id == reg_r13 {
         return "%r13"
-    } else if reg_id == REG_R14 {
+    } else if reg_id == reg_r14 {
         return "%r14"
-    } else if reg_id == REG_R15 {
+    } else if reg_id == reg_r15 {
         return "%r15"
     }
     ""

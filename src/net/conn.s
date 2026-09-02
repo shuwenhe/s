@@ -1,11 +1,11 @@
 package src.net
-interface Conn {
-    Read([]byte) (int, error)
-    Write([]byte) (int, error)
-    Close() error
-    LocalAddr() Addr
-    RemoteAddr() Addr
-    SetDeadline(int64) error
-    SetReadDeadline(int64) error
-    SetWriteDeadline(int64) error
+interface conn {
+    read([]byte) (int, error)
+    write([]byte) (int, error)
+    close() error
+    local_addr() addr
+    remote_addr() addr
+    set_deadline(int64) error
+    set_read_deadline(int64) error
+    set_write_deadline(int64) error
 }

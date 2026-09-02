@@ -1,24 +1,24 @@
 package types_complete
 
-const TYPE_INVALID = 0
-const TYPE_INT = 1
-const TYPE_FLOAT = 2
-const TYPE_STRING = 3
-const TYPE_BOOL = 4
-const TYPE_CHAR = 5
-const TYPE_VOID = 6
-const TYPE_PTR = 7
-const TYPE_ARRAY = 8
-const TYPE_SLICE = 9
-const TYPE_MAP = 10
-const TYPE_STRUCT = 11
-const TYPE_ENUM = 12
-const TYPE_INTERFACE = 13
-const TYPE_FUNC = 14
-const TYPE_GENERIC = 15
-const TYPE_NAMED = 16
-const TYPE_UNION = 17
-const TYPE_ERROR = 18
+const type_invalid = 0
+const type_int = 1
+const type_float = 2
+const type_string = 3
+const type_bool = 4
+const type_char = 5
+const type_void = 6
+const type_ptr = 7
+const type_array = 8
+const type_slice = 9
+const type_map = 10
+const type_struct = 11
+const type_enum = 12
+const type_interface = 13
+const type_func = 14
+const type_generic = 15
+const type_named = 16
+const type_union = 17
+const type_error = 18
 
 struct type_constraint {
     name string
@@ -78,16 +78,16 @@ func type_table_new() type_table {
 }
 
 func type_register_builtin(type_table* table) {
-    int_type := type_info { kind: TYPE_INT, name: "int", size: 8, align: 8 }
+    int_type := type_info { kind: type_int, name: "int", size: 8, align: 8 }
     table.types = append(table.types, int_type)
     
-    float_type := type_info { kind: TYPE_FLOAT, name: "float", size: 8, align: 8 }
+    float_type := type_info { kind: type_float, name: "float", size: 8, align: 8 }
     table.types = append(table.types, float_type)
     
-    string_type := type_info { kind: TYPE_STRING, name: "string", size: 24, align: 8 }
+    string_type := type_info { kind: type_string, name: "string", size: 24, align: 8 }
     table.types = append(table.types, string_type)
     
-    bool_type := type_info { kind: TYPE_BOOL, name: "bool", size: 1, align: 1 }
+    bool_type := type_info { kind: type_bool, name: "bool", size: 1, align: 1 }
     table.types = append(table.types, bool_type)
 }
 
@@ -98,12 +98,12 @@ func type_lookup(type_table* table, string name) type_info {
         }
     }
     
-    type_info { kind: TYPE_INVALID, name: "invalid" }
+    type_info { kind: type_invalid, name: "invalid" }
 }
 
 func type_create_pointer(type_table* table, string elem_type) type_info {
     ptr_type := type_info { 
-        kind: TYPE_PTR, 
+        kind: type_ptr, 
         name: elem_type + "*", 
         size: 8, 
         align: 8,
@@ -116,7 +116,7 @@ func type_create_pointer(type_table* table, string elem_type) type_info {
 func type_create_array(type_table* table, string elem_type, int size) type_info {
     elem := type_lookup(table, elem_type)
     array_type := type_info { 
-        kind: TYPE_ARRAY, 
+        kind: type_array, 
         name: elem_type + "[]", 
         size: elem.size * size, 
         align: elem.align,
@@ -128,7 +128,7 @@ func type_create_array(type_table* table, string elem_type, int size) type_info 
 
 func type_create_slice(type_table* table, string elem_type) type_info {
     slice_type := type_info { 
-        kind: TYPE_SLICE, 
+        kind: type_slice, 
         name: "[]" + elem_type, 
         size: 24, 
         align: 8,
@@ -156,7 +156,7 @@ func type_create_func(type_table* table, string[] params, string[] returns) type
     func_name = func_name + ")"
     
     func_type := type_info { 
-        kind: TYPE_FUNC, 
+        kind: type_func, 
         name: func_name, 
         size: 16, 
         align: 8,
@@ -169,7 +169,7 @@ func type_create_func(type_table* table, string[] params, string[] returns) type
 
 func type_create_struct(type_table* table, string name, string[] fields) type_info {
     struct_type := type_info { 
-        kind: TYPE_STRUCT, 
+        kind: type_struct, 
         name: name, 
         size: 0, 
         align: 8,
@@ -181,7 +181,7 @@ func type_create_struct(type_table* table, string name, string[] fields) type_in
 
 func type_create_interface(type_table* table, string name, string[] methods) type_info {
     iface_type := type_info { 
-        kind: TYPE_INTERFACE, 
+        kind: type_interface, 
         name: name, 
         size: 16, 
         align: 8,
@@ -219,7 +219,7 @@ func type_instantiate_generic(type_table* table, string generic_name, string[] t
     }
     inst_name = inst_name + "]"
     
-    type_info { kind: TYPE_GENERIC, name: inst_name }
+    type_info { kind: type_generic, name: inst_name }
 }
 
 func type_is_assignable(type_table* table, string from_type, string to_type) int {
@@ -230,11 +230,11 @@ func type_is_assignable(type_table* table, string from_type, string to_type) int
     from := type_lookup(table, from_type)
     to := type_lookup(table, to_type)
     
-    if from.kind == TYPE_INVALID || to.kind == TYPE_INVALID {
+    if from.kind == type_invalid || to.kind == type_invalid {
         return 0
     }
     
-    if from.kind == TYPE_PTR && to.kind == TYPE_PTR {
+    if from.kind == type_ptr && to.kind == type_ptr {
         return type_is_assignable(table, from.elem_type, to.elem_type)
     }
     
@@ -245,7 +245,7 @@ func type_implements_interface(type_table* table, string type_name, string inter
     type_type := type_lookup(table, type_name)
     iface := type_lookup(table, interface_name)
     
-    if iface.kind != TYPE_INTERFACE {
+    if iface.kind != type_interface {
         return 0
     }
     

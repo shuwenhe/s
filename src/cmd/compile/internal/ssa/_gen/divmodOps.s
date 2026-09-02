@@ -1,8 +1,8 @@
 package compile.internal.ssa._gen
-func divmodOps_rule_name() string {
+func divmod_ops_rule_name() string {
     "ssa/_gen/divmodOps.s"
 }
 
-func divmodOps_rule_count() int {
+func divmod_ops_rule_count() int {
     0
 }

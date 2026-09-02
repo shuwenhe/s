@@ -1,8 +1,8 @@
 package src.cmd.internal.obj.arm64
-func sysRegEnc_unit_name() string {
+func sys_reg_enc_unit_name() string {
     "src/cmd/internal/obj/arm64/sysRegEnc"
 }
 
-func sysRegEnc_unit_ready() int {
+func sys_reg_enc_unit_ready() int {
     1
 }

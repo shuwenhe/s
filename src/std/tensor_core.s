@@ -1,7 +1,7 @@
 package std.tensor_core
-const FLOAT_EPSILON = 1e-7
-const FLOAT_INF = 1e308
-const FLOAT_NEG_INF = -1e308
+const float_epsilon = 1e-7
+const float_inf = 1e308
+const float_neg_inf = -1e308
 struct tensor_shape {
     int[] dims
     int ndim
@@ -401,7 +401,7 @@ func div(tensor a, tensor b) tensor {
     if is_scalar(b) { return div_scalar(a, item(b)) }
     if same_shape(a, b) {
         return elemwise_op2(a, b, func(float x, float y) float {
-            if abs(y) < FLOAT_EPSILON { return 0.0 }
+            if abs(y) < float_epsilon { return 0.0 }
             x / y
         })
     }
@@ -409,7 +409,7 @@ func div(tensor a, tensor b) tensor {
 }
 
 func div_scalar(tensor t, float s) tensor {
-    if abs(s) < FLOAT_EPSILON { return t }
+    if abs(s) < float_epsilon { return t }
     mul_scalar(t, 1.0 / s)
 }
 
@@ -447,7 +447,7 @@ func log_t(tensor t) tensor {
     int i = 0
     for i < t.shape.size {
         if t.data[i] > 0 { v[i] = log_f(t.data[i]) }
-        else { v[i] = FLOAT_NEG_INF }
+        else { v[i] = float_neg_inf }
         i = i + 1
     }
     tensor { shape: t.shape, data v, device: "cpu", requires_grad false }
@@ -535,7 +535,7 @@ func mean_dim(tensor t, int dim, bool keepdim) tensor {
 }
 
 func max_all(tensor t) tensor {
-    if t.shape.size == 0 { return scalar(FLOAT_NEG_INF) }
+    if t.shape.size == 0 { return scalar(float_neg_inf) }
     float m = t.data[0]
     int i = 1
     for i < t.shape.size {
@@ -546,7 +546,7 @@ func max_all(tensor t) tensor {
 }
 
 func min_all(tensor t) tensor {
-    if t.shape.size == 0 { return scalar(FLOAT_INF) }
+    if t.shape.size == 0 { return scalar(float_inf) }
     float m = t.data[0]
     int i = 1
     for i < t.shape.size {
@@ -565,30 +565,30 @@ func norm(tensor t) tensor {
 
 func matmul(tensor a, tensor b) tensor {
     if a.shape.ndim != 2 || b.shape.ndim != 2 { return a }
-    int M = a.shape.dims[0]
-    int K = a.shape.dims[1]
-    int K2 = b.shape.dims[0]
-    int N = b.shape.dims[1]
-    if K != K2 { return a }
-    float[] v = new float[M * N]
+    int m = a.shape.dims[0]
+    int k = a.shape.dims[1]
+    int k2 = b.shape.dims[0]
+    int n = b.shape.dims[1]
+    if k != k2 { return a }
+    float[] v = new float[m * n]
     int m = 0
-    for m < M {
+    for m < m {
         int n = 0
-        for n < N {
+        for n < n {
             float s = 0.0
             int k = 0
-            for k < K {
-                s = s + a.data[m * K + k] * b.data[k * N + n]
+            for k < k {
+                s = s + a.data[m * k + k] * b.data[k * n + n]
                 k = k + 1
             }
-            v[m * N + n] = s
+            v[m * n + n] = s
             n = n + 1
         }
         m = m + 1
     }
     int[] out_s = new int[2]
-    out_s[0] = M
-    out_s[1] = N
+    out_s[0] = m
+    out_s[1] = n
     tensor { shape: make_shape(out_s), data v, device: "cpu", requires_grad false }
 }
 
@@ -835,13 +835,13 @@ func pow_f(float base, float exp) float {
 }
 
 func exp_f(float x) float {
-    if x > 700 { return FLOAT_INF }
+    if x > 700 { return float_inf }
     if x < -700 { return 0.0 }
     bool neg = x < 0
     if neg { x = -x }
-    float LN2_VAL = 0.6931471805599453
-    int k = x / LN2_VAL as int
-    float r = x - (k as float) * LN2_VAL
+    float ln2_val = 0.6931471805599453
+    int k = x / ln2_val as int
+    float r = x - (k as float) * ln2_val
     float term = 1.0
     float sum = 1.0
     float ri = r
@@ -858,12 +858,12 @@ func exp_f(float x) float {
 }
 
 func log_f(float x) float {
-    if x <= 0 { return FLOAT_NEG_INF }
+    if x <= 0 { return float_neg_inf }
     if x == 1.0 { return 0.0 }
     float y = 0.0
-    float LN2_VAL = 0.6931471805599453
-    for x >= 2.0 { x = x / 2.0; y = y + LN2_VAL }
-    for x < 1.0 { x = x * 2.0; y = y - LN2_VAL }
+    float ln2_val = 0.6931471805599453
+    for x >= 2.0 { x = x / 2.0; y = y + ln2_val }
+    for x < 1.0 { x = x * 2.0; y = y - ln2_val }
     float guess = x - 1.0
     int i = 0
     for i < 15 {
@@ -875,11 +875,11 @@ func log_f(float x) float {
 }
 
 func sin_f(float x) float {
-    float PI_VAL = 3.141592653589793
-    float TWO_PI = 2.0 * PI_VAL
-    x = x - (x / TWO_PI as int) as float * TWO_PI
-    if x > PI_VAL { x = x - TWO_PI }
-    if x < -PI_VAL { x = x + TWO_PI }
+    float pi_val = 3.141592653589793
+    float two_pi = 2.0 * pi_val
+    x = x - (x / two_pi as int) as float * two_pi
+    if x > pi_val { x = x - two_pi }
+    if x < -pi_val { x = x + two_pi }
     float term = x
     float sum = x
     float xx = x * x
@@ -897,8 +897,8 @@ func sin_f(float x) float {
 }
 
 func cos_f(float x) float {
-    float PI_VAL = 3.141592653589793
-    sin_f(x + PI_VAL / 2.0)
+    float pi_val = 3.141592653589793
+    sin_f(x + pi_val / 2.0)
 }
 
 func tanh_f_func(float x) float {

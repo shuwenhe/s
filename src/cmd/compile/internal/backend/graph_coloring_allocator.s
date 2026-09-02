@@ -1,6 +1,6 @@
 package register_allocator
 
-struct LiveRange {
+struct live_range {
     int value_id
     int start_block
     int start_instr
@@ -11,7 +11,7 @@ struct LiveRange {
     int priority
 }
 
-struct InterferenceGraph {
+struct interference_graph {
     int node_count
     int[][] adjacency
     int[] color
@@ -19,7 +19,7 @@ struct InterferenceGraph {
     int[] spill_cost
 }
 
-struct RegisterAllocator {
+struct register_allocator {
     int num_regs
     int[] available_regs
     int reg_count
@@ -30,8 +30,8 @@ struct RegisterAllocator {
     int spill_count
 }
 
-func RegisterAllocator_new(int num_regs) RegisterAllocator* {
-    allocator := RegisterAllocator {
+func register_allocator_new(int num_regs) register_allocator* {
+    allocator := register_allocator {
         num_regs: num_regs,
         available_regs: new int[16],
         reg_count: 0,
@@ -51,12 +51,12 @@ func RegisterAllocator_new(int num_regs) RegisterAllocator* {
     &allocator
 }
 
-func (allocator* RegisterAllocator) compute_live_ranges(value[] all_values, int num_values) int {
+func (allocator* register_allocator) compute_live_ranges(value[] all_values, int num_values) int {
     i := 0
     for i < num_values {
         v := all_values[i]
         
-        live_range := LiveRange {
+        live_range := live_range {
             value_id: v.id,
             start_block: v.block,
             start_instr: 0,
@@ -76,8 +76,8 @@ func (allocator* RegisterAllocator) compute_live_ranges(value[] all_values, int 
     allocator.range_count
 }
 
-func (allocator* RegisterAllocator) build_interference_graph() int {
-    graph := InterferenceGraph {
+func (allocator* register_allocator) build_interference_graph() int {
+    graph := interference_graph {
         node_count: allocator.range_count,
         adjacency: new int[][allocator.range_count],
         color: new int[allocator.range_count],
@@ -138,7 +138,7 @@ func ranges_interfere(live_range* range_a, live_range* range_b) int {
     return 0
 }
 
-func (allocator* RegisterAllocator) color_graph() int {
+func (allocator* register_allocator) color_graph() int {
     graph := allocator.graph
     
     worklist := new int[graph.node_count]
@@ -212,7 +212,7 @@ func (allocator* RegisterAllocator) color_graph() int {
     allocator.spill_count
 }
 
-func (allocator* RegisterAllocator) assign_registers() int {
+func (allocator* register_allocator) assign_registers() int {
     i := 0
     for i < allocator.range_count {
         range_obj := allocator.ranges[i]
@@ -230,7 +230,7 @@ func (allocator* RegisterAllocator) assign_registers() int {
     allocator.spill_count
 }
 
-func (allocator* RegisterAllocator) perform_move_coalescing() int {
+func (allocator* register_allocator) perform_move_coalescing() int {
     i := 0
     for i < allocator.range_count {
         range_i := allocator.ranges[i]
@@ -264,7 +264,7 @@ func can_coalesce(live_range* range_a, live_range* range_b) int {
     return 1
 }
 
-func (allocator* RegisterAllocator) generate_spill_code(int num_stack_slots) int {
+func (allocator* register_allocator) generate_spill_code(int num_stack_slots) int {
     i := 0
     for i < allocator.spill_count {
         spill_node := allocator.spill_list[i]
@@ -278,7 +278,7 @@ func (allocator* RegisterAllocator) generate_spill_code(int num_stack_slots) int
     allocator.spill_count
 }
 
-func (allocator* RegisterAllocator) optimize_allocation_order() int {
+func (allocator* register_allocator) optimize_allocation_order() int {
     i := 0
     for i < allocator.range_count {
         allocator.ranges[i].priority = compute_priority(allocator.ranges[i])
@@ -319,7 +319,7 @@ func sort_by_priority(live_range[] ranges, int count) int {
     0
 }
 
-func (allocator* RegisterAllocator) verify_coloring() int {
+func (allocator* register_allocator) verify_coloring() int {
     i := 0
     for i < allocator.range_count {
         range_i := allocator.ranges[i]
@@ -349,17 +349,17 @@ func (allocator* RegisterAllocator) verify_coloring() int {
     1
 }
 
-const REG_RAX = 0
-const REG_RBX = 1
-const REG_RCX = 2
-const REG_RDX = 3
-const REG_RSI = 4
-const REG_RDI = 5
-const REG_R8 = 6
-const REG_R9 = 7
-const REG_R10 = 8
-const REG_R11 = 9
-const REG_R12 = 10
-const REG_R13 = 11
-const REG_R14 = 12
-const REG_R15 = 13
+const reg_rax = 0
+const reg_rbx = 1
+const reg_rcx = 2
+const reg_rdx = 3
+const reg_rsi = 4
+const reg_rdi = 5
+const reg_r8 = 6
+const reg_r9 = 7
+const reg_r10 = 8
+const reg_r11 = 9
+const reg_r12 = 10
+const reg_r13 = 11
+const reg_r14 = 12
+const reg_r15 = 13

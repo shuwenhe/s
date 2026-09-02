@@ -32,9 +32,9 @@ func test_instruction_selector_simple_mov() {
 func test_register_allocator_allocation() {
     allocator := register_allocator_new()
     
-    instr1 := x86_instruction { instr_type: INSTR_MOV }
-    instr2 := x86_instruction { instr_type: INSTR_ADD }
-    instr3 := x86_instruction { instr_type: INSTR_SUB }
+    instr1 := x86_instruction { instr_type: instr_mov }
+    instr2 := x86_instruction { instr_type: instr_add }
+    instr3 := x86_instruction { instr_type: instr_sub }
     
     instrs := x86_instruction[]()
     instrs = append(instrs, instr1)
@@ -60,9 +60,9 @@ func test_assembler_emission() {
     asm := assembler_new()
     
     mov_instr := x86_instruction {
-        instr_type: INSTR_MOV,
-        operand1: x86_operand { operand_type: OPERAND_REG, reg_id: REG_RAX },
-        operand2: x86_operand { operand_type: OPERAND_REG, reg_id: REG_RBX },
+        instr_type: instr_mov,
+        operand1: x86_operand { operand_type: operand_reg, reg_id: reg_rax },
+        operand2: x86_operand { operand_type: operand_reg, reg_id: reg_rbx },
         operand3: x86_operand { operand_type: 0 }
     }
     
@@ -74,10 +74,10 @@ func test_assembler_emission() {
 }
 
 func test_x86_operand_to_asm() {
-    reg_op := x86_operand { operand_type: OPERAND_REG, reg_id: REG_RAX }
-    imm_op := x86_operand { operand_type: OPERAND_IMM, imm_value: "42" }
-    mem_op := x86_operand { operand_type: OPERAND_MEM, mem_base: "rbp", mem_offset: -8 }
-    label_op := x86_operand { operand_type: OPERAND_LABEL, label_name: "loop_start" }
+    reg_op := x86_operand { operand_type: operand_reg, reg_id: reg_rax }
+    imm_op := x86_operand { operand_type: operand_imm, imm_value: "42" }
+    mem_op := x86_operand { operand_type: operand_mem, mem_base: "rbp", mem_offset: -8 }
+    label_op := x86_operand { operand_type: operand_label, label_name: "loop_start" }
     
     reg_asm := x86_operand_to_asm(reg_op)
     imm_asm := x86_operand_to_asm(imm_op)

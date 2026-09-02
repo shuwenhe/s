@@ -1,8 +1,8 @@
 package compile.internal.ssa._gen
-func ARMOps_rule_name() string {
+func arm_ops_rule_name() string {
     "ssa/_gen/ARMOps.s"
 }
 
-func ARMOps_rule_count() int {
+func arm_ops_rule_count() int {
     0
 }

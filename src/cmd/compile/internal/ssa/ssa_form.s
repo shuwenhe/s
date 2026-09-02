@@ -1,6 +1,6 @@
 package ssa_form
 
-struct Block {
+struct block {
     int id
     int[] preds
     int[] succs
@@ -8,7 +8,7 @@ struct Block {
     int kind
 }
 
-struct Value {
+struct value {
     int id
     int op
     int type_id
@@ -18,18 +18,18 @@ struct Value {
     int aux
 }
 
-struct Phi {
+struct phi {
     int value_id
     int[] edges
 }
 
-struct VarVersion {
+struct var_version {
     int var_id
     int version
     int value_id
 }
 
-struct SSABuilder {
+struct ssa_builder {
     int block_count
     int value_count
     int var_count
@@ -39,8 +39,8 @@ struct SSABuilder {
     int[] var_stack
 }
 
-func SSABuilder_new() SSABuilder* {
-    builder := SSABuilder {
+func ssa_builder_new() ssa_builder* {
+    builder := ssa_builder {
         block_count: 0,
         value_count: 0,
         var_count: 0,
@@ -52,11 +52,11 @@ func SSABuilder_new() SSABuilder* {
     &builder
 }
 
-func (builder* SSABuilder) new_block(int kind) int {
+func (builder* ssa_builder) new_block(int kind) int {
     id := builder.block_count
     builder.block_count = builder.block_count + 1
     
-    block := Block {
+    block := block {
         id: id,
         preds: new int[16],
         succs: new int[16],
@@ -68,11 +68,11 @@ func (builder* SSABuilder) new_block(int kind) int {
     id
 }
 
-func (builder* SSABuilder) add_value(int op, int type_id, int[] args, int block_id) int {
+func (builder* ssa_builder) add_value(int op, int type_id, int[] args, int block_id) int {
     value_id := builder.value_count
     builder.value_count = builder.value_count + 1
     
-    v := Value {
+    v := value {
         id: value_id,
         op: op,
         type_id: type_id,
@@ -89,8 +89,8 @@ func (builder* SSABuilder) add_value(int op, int type_id, int[] args, int block_
     value_id
 }
 
-func (builder* SSABuilder) add_phi(int value_id, int[] edges) int {
-    phi := Phi {
+func (builder* ssa_builder) add_phi(int value_id, int[] edges) int {
+    phi := phi {
         value_id: value_id,
         edges: edges,
     }
@@ -98,7 +98,7 @@ func (builder* SSABuilder) add_phi(int value_id, int[] edges) int {
     0
 }
 
-func (builder* SSABuilder) connect_blocks(int pred_id, int succ_id) int {
+func (builder* ssa_builder) connect_blocks(int pred_id, int succ_id) int {
     pred_block := builder.blocks[pred_id]
     succ_block := builder.blocks[succ_id]
     
@@ -108,7 +108,7 @@ func (builder* SSABuilder) connect_blocks(int pred_id, int succ_id) int {
     0
 }
 
-func (builder* SSABuilder) define_var(int var_id, int version, int value_id) int {
+func (builder* ssa_builder) define_var(int var_id, int version, int value_id) int {
     idx := var_id * 1024 + version
     builder.var_versions[idx].var_id = var_id
     builder.var_versions[idx].version = version
@@ -116,7 +116,7 @@ func (builder* SSABuilder) define_var(int var_id, int version, int value_id) int
     0
 }
 
-func (builder* SSABuilder) get_var_version(int var_id, int version) int {
+func (builder* ssa_builder) get_var_version(int var_id, int version) int {
     idx := var_id * 1024 + version
     builder.var_versions[idx].value_id
 }
@@ -290,26 +290,26 @@ func rename_variables(block[] blocks, int block_id, var_version[] var_stack) int
     0
 }
 
-const OP_PHI = 1
-const OP_CONST = 2
-const OP_ADD = 3
-const OP_SUB = 4
-const OP_MUL = 5
-const OP_DIV = 6
-const OP_LOAD = 7
-const OP_STORE = 8
-const OP_CALL = 9
-const OP_RETURN = 10
-const OP_BRANCH = 11
-const OP_COND_BRANCH = 12
-const OP_PHI_EDGE = 13
+const op_phi = 1
+const op_const = 2
+const op_add = 3
+const op_sub = 4
+const op_mul = 5
+const op_div = 6
+const op_load = 7
+const op_store = 8
+const op_call = 9
+const op_return = 10
+const op_branch = 11
+const op_cond_branch = 12
+const op_phi_edge = 13
 
-const BLOCK_ENTRY = 0
-const BLOCK_EXIT = 1
-const BLOCK_REGULAR = 2
-const BLOCK_LOOP = 3
+const block_entry = 0
+const block_exit = 1
+const block_regular = 2
+const block_loop = 3
 
-func (builder* SSABuilder) verify_ssa() int {
+func (builder* ssa_builder) verify_ssa() int {
     i := 0
     for i < builder.block_count {
         block := builder.blocks[i]

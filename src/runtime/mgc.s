@@ -1,9 +1,9 @@
 package src.runtime
 use std.slices
-const GC_PHASE_OFF   = 0
-const GC_PHASE_MARK  = 1
-const GC_PHASE_SWEEP = 2
-var gc_phase        = GC_PHASE_OFF
+const gc_phase_off   = 0
+const gc_phase_mark  = 1
+const gc_phase_sweep = 2
+var gc_phase        = gc_phase_off
 var gc_run_count    = 0
 var gc_total_freed  = 0
 var gc_enabled      = true
@@ -21,20 +21,20 @@ func gc_trigger() () {
 }
 
 func run_gc() () {
-    if gc_phase != GC_PHASE_OFF {
+    if gc_phase != gc_phase_off {
         return
     }
     t0 := __runtime_nanotime()
     __gc_stw_start()
-    gc_phase = GC_PHASE_MARK
+    gc_phase = gc_phase_mark
     mark_init()
     mark_roots()
     drain_mark_queue()
-    gc_phase = GC_PHASE_SWEEP
+    gc_phase = gc_phase_sweep
     freed := sweep_pass()
     gc_total_freed = gc_total_freed + freed
     gc_run_count = gc_run_count + 1
-    gc_phase     = GC_PHASE_OFF
+    gc_phase     = gc_phase_off
     heap_goal_bytes = heap_alloc_bytes * 2
     if heap_goal_bytes < 4194304 {
         heap_goal_bytes = 4194304
@@ -46,7 +46,7 @@ func force_gc() () {
     run_gc()
 }
 
-struct GcStats {
+struct gc_stats {
     int phase
     int heap_alloc
     int heap_goal
@@ -55,8 +55,8 @@ struct GcStats {
     int live_objects
 }
 
-func gc_stats() GcStats {
-    GcStats {
+func gc_stats() gc_stats {
+    gc_stats {
         phase:        gc_phase, heap_alloc heap_alloc_bytes, heap_goal heap_goal_bytes, num_gc gc_run_count, total_freed gc_total_freed, live_objects heap_live_objs,
     }
 }

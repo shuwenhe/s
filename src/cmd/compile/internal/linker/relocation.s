@@ -30,16 +30,16 @@ func relocation_resolve(relocation_context ctx*, int symbol_value, int load_base
     }
     
     switch ctx.relocation_type {
-        case R_X86_64_64:
+        case r_x86_64_64:
             result.resolved_address = symbol_value + load_base + ctx.addend
             return result
         
-        case R_X86_64_PC32:
+        case r_x86_64_pc32:
             pc := load_base + ctx.offset
             result.resolved_address = (symbol_value + load_base) - pc + ctx.addend
             return result
         
-        case R_X86_64_RELATIVE:
+        case r_x86_64_relative:
             result.resolved_address = load_base + ctx.addend
             return result
         
@@ -54,13 +54,13 @@ func relocation_resolve(relocation_context ctx*, int symbol_value, int load_base
 
 func relocation_get_type_name(int reloc_type) string {
     switch reloc_type {
-        case R_X86_64_NONE:
+        case r_x86_64_none:
             return "R_X86_64_NONE"
-        case R_X86_64_64:
+        case r_x86_64_64:
             return "R_X86_64_64"
-        case R_X86_64_PC32:
+        case r_x86_64_pc32:
             return "R_X86_64_PC32"
-        case R_X86_64_RELATIVE:
+        case r_x86_64_relative:
             return "R_X86_64_RELATIVE"
         default:
             return "UNKNOWN"
@@ -68,24 +68,24 @@ func relocation_get_type_name(int reloc_type) string {
 }
 
 func relocation_is_absolute(int reloc_type) int {
-    if reloc_type == R_X86_64_64 {
+    if reloc_type == r_x86_64_64 {
         return 1
     }
-    if reloc_type == R_X86_64_RELATIVE {
+    if reloc_type == r_x86_64_relative {
         return 1
     }
     0
 }
 
 func relocation_is_relative(int reloc_type) int {
-    if reloc_type == R_X86_64_PC32 {
+    if reloc_type == r_x86_64_pc32 {
         return 1
     }
     0
 }
 
 func relocation_is_plt(int reloc_type) int {
-    if reloc_type == R_X86_64_PLT32 {
+    if reloc_type == r_x86_64_plt32 {
         return 1
     }
     0

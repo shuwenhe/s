@@ -1,36 +1,36 @@
 package std.io_syscall
 use std.syscall
-struct FileHandle {
+struct file_handle {
     fd: int
     path: string
     mode: string
 }
-const FILE_READ_BUFFER_SIZE = 65536
+const file_read_buffer_size = 65536
 var __read_buffer = allocate_read_buffer()
 
 func allocate_read_buffer() []byte {
     []byte{}
 }
 
-func file_open_read(string path) (FileHandle, int) {
-    fd := syscall.open_file(path, syscall.O_RDONLY, 0)
+func file_open_read(string path) (file_handle, int) {
+    fd := syscall.open_file(path, syscall.o_rdonly, 0)
     if fd < 0 {
-        return FileHandle{fd: -1, path path, mode: "r"}, fd
+        return file_handle{fd: -1, path path, mode: "r"}, fd
     }
-    FileHandle{fd: fd, path path, mode: "r"}, 0
+    file_handle{fd: fd, path path, mode: "r"}, 0
 }
 
-func file_open_write(string path) (FileHandle, int) {
+func file_open_write(string path) (file_handle, int) {
     fd := syscall.open_file(path,
-        syscall.O_WRONLY | syscall.O_CREAT | syscall.O_TRUNC,
+        syscall.o_wronly | syscall.o_creat | syscall.o_trunc,
         0o644)
     if fd < 0 {
-        return FileHandle{fd: -1, path path, mode: "w"}, fd
+        return file_handle{fd: -1, path path, mode: "w"}, fd
     }
-    FileHandle{fd: fd, path path, mode: "w"}, 0
+    file_handle{fd: fd, path path, mode: "w"}, 0
 }
 
-func file_close(FileHandle f) int {
+func file_close(file_handle f) int {
     if f.fd < 0 {
         return -1
     }
@@ -64,7 +64,7 @@ func file_read_lines(string path, func(string) int callback) int {
 
 func file_append(string path, string content) int {
     fd := syscall.open_file(path,
-        syscall.O_WRONLY | syscall.O_APPEND | syscall.O_CREAT,
+        syscall.o_wronly | syscall.o_append | syscall.o_creat,
         0o644)
     if fd < 0 {
         return fd
@@ -111,6 +111,6 @@ func files_equal(string path1, string path2) bool {
     true
 }
 
-func temp_file() (FileHandle, string, int) {
-    FileHandle{}, "", 0
+func temp_file() (file_handle, string, int) {
+    file_handle{}, "", 0
 }

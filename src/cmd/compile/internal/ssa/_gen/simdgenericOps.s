@@ -1,8 +1,8 @@
 package compile.internal.ssa._gen
-func simdgenericOps_rule_name() string {
+func simdgeneric_ops_rule_name() string {
     "ssa/_gen/simdgenericOps.s"
 }
 
-func simdgenericOps_rule_count() int {
+func simdgeneric_ops_rule_count() int {
     0
 }

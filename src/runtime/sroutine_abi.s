@@ -1,15 +1,15 @@
 package src.runtime
-const SROUTINE_ABI_VERSION = 1
-const SROUTINE_IDLE     = 0
-const SROUTINE_RUNNABLE = 1
-const SROUTINE_RUNNING  = 2
-const SROUTINE_WAITING  = 3
-const SROUTINE_DEAD     = 4
-const SROUTINE_PARK_NONE    = 0
-const SROUTINE_PARK_CHANNEL = 1
-const SROUTINE_PARK_NETPOLL = 2
-const SROUTINE_PARK_TIMER   = 3
-const SROUTINE_PARK_JOIN    = 4
+const sroutine_abi_version = 1
+const sroutine_idle     = 0
+const sroutine_runnable = 1
+const sroutine_running  = 2
+const sroutine_waiting  = 3
+const sroutine_dead     = 4
+const sroutine_park_none    = 0
+const sroutine_park_channel = 1
+const sroutine_park_netpoll = 2
+const sroutine_park_timer   = 3
+const sroutine_park_join    = 4
 extern "intrinsic" func __sroutine_abi_version() int
 extern "intrinsic" func __sroutine_current_id() int
 extern "intrinsic" func __sroutine_stack_create(int sroutine_id, int entry_id, int stack_size) int
@@ -20,21 +20,21 @@ extern "intrinsic" func __runtime_thread_wake(int thread_id) int
 extern "intrinsic" func __runtime_nanotime() int
 extern "intrinsic" func __runtime_sleep_briefly() ()
 func sroutine_abi_ready() bool {
-    __sroutine_abi_version() == SROUTINE_ABI_VERSION
+    __sroutine_abi_version() == sroutine_abi_version
 }
 
 func sroutine_state_can_transition(int from, int to) bool {
-    if from == SROUTINE_IDLE {
-        return to == SROUTINE_RUNNABLE
+    if from == sroutine_idle {
+        return to == sroutine_runnable
     }
-    if from == SROUTINE_RUNNABLE {
-        return to == SROUTINE_RUNNING || to == SROUTINE_DEAD
+    if from == sroutine_runnable {
+        return to == sroutine_running || to == sroutine_dead
     }
-    if from == SROUTINE_RUNNING {
-        return to == SROUTINE_RUNNABLE || to == SROUTINE_WAITING || to == SROUTINE_DEAD
+    if from == sroutine_running {
+        return to == sroutine_runnable || to == sroutine_waiting || to == sroutine_dead
     }
-    if from == SROUTINE_WAITING {
-        return to == SROUTINE_RUNNABLE || to == SROUTINE_DEAD
+    if from == sroutine_waiting {
+        return to == sroutine_runnable || to == sroutine_dead
     }
     false
 }

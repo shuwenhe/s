@@ -3,12 +3,12 @@ package middleend
 func test_ir_basic_types() {
 
     const_val := ir_value_const("42", "int")
-    if const_val.value_type != IR_VALUE_CONST || const_val.const_value != "42" {
+    if const_val.value_type != ir_value_const || const_val.const_value != "42" {
         panic("IR constant value creation failed")
     }
 
     var_val := ir_value_var("x", "int")
-    if var_val.value_type != IR_VALUE_VAR || var_val.var_name != "x" {
+    if var_val.value_type != ir_value_var || var_val.var_name != "x" {
         panic("IR variable value creation failed")
     }
 
@@ -20,14 +20,14 @@ func test_ir_instructions() {
     left := ir_value_const("10", "int")
     right := ir_value_const("20", "int")
 
-    add_instr := ir_instr_binop(IR_OP_ADD, left, right, "int")
-    if add_instr.instr_type != IR_INSTR_BINOP || add_instr.opcode != IR_OP_ADD {
+    add_instr := ir_instr_binop(ir_op_add, left, right, "int")
+    if add_instr.instr_type != ir_instr_binop || add_instr.opcode != ir_op_add {
         panic("IR binary operation instruction creation failed")
     }
 
     cond := ir_value_const("1", "bool")
     br_instr := ir_instr_condbr(cond, 1, 2)
-    if br_instr.instr_type != IR_INSTR_CONDBR {
+    if br_instr.instr_type != ir_instr_condbr {
         panic("IR conditional branch instruction creation failed")
     }
 
@@ -41,7 +41,7 @@ func test_ir_basicblock() {
         panic("IR basic block creation failed")
     }
 
-    instr := ir_instr_binop(IR_OP_ADD,
+    instr := ir_instr_binop(ir_op_add,
                            ir_value_const("1", "int"),
                            ir_value_const("2", "int"),
                            "int")
@@ -189,12 +189,12 @@ func test_optimization_constant_folding() {
     left := ir_value_const("10", "int")
     right := ir_value_const("20", "int")
 
-    result := opt_fold_constant(IR_OP_ADD, "10", "20")
+    result := opt_fold_constant(ir_op_add, "10", "20")
     if result != "30" {
         panic("Constant folding addition failed")
     }
 
-    result = opt_fold_constant(IR_OP_MUL, "5", "3")
+    result = opt_fold_constant(ir_op_mul, "5", "3")
     if result != "15" {
         panic("Constant folding multiplication failed")
     }

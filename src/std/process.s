@@ -1,12 +1,12 @@
 package std.process
 use std.syscall
 use std.io_syscall
-struct Process {
+struct process {
     pid: int
     status: int
 }
 
-struct ProcessResult {
+struct process_result {
     exit_code: int
     stdout: string
     stderr: string

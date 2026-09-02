@@ -1,50 +1,50 @@
 package linker
 
-const ELF64_HEADER_SIZE = 64
-const ELF64_PROG_HEADER_SIZE = 56
-const ELF64_SECT_HEADER_SIZE = 64
+const elf64_header_size = 64
+const elf64_prog_header_size = 56
+const elf64_sect_header_size = 64
 
-const ELFMAG0 = 0x7f
-const ELFCLASS64 = 2
-const ELFDATA2LSB = 1
-const ELFOSABI_SYSV = 0
-const ET_EXEC = 2
-const ET_DYN = 3
-const EM_X86_64 = 62
+const elfmag0 = 0x7f
+const elfclass64 = 2
+const elfdata2_lsb = 1
+const elfosabi_sysv = 0
+const et_exec = 2
+const et_dyn = 3
+const em_x86_64 = 62
 
-const SHT_NULL = 0
-const SHT_PROGBITS = 1
-const SHT_SYMTAB = 2
-const SHT_STRTAB = 3
-const SHT_RELA = 4
-const SHT_NOBITS = 8
-const SHT_REL = 9
+const sht_null = 0
+const sht_progbits = 1
+const sht_symtab = 2
+const sht_strtab = 3
+const sht_rela = 4
+const sht_nobits = 8
+const sht_rel = 9
 
-const SHF_WRITE = 1
-const SHF_ALLOC = 2
-const SHF_EXECINSTR = 4
+const shf_write = 1
+const shf_alloc = 2
+const shf_execinstr = 4
 
-const PT_NULL = 0
-const PT_LOAD = 1
-const PT_DYNAMIC = 3
-const PT_INTERP = 3
-const PT_PHDR = 4
+const pt_null = 0
+const pt_load = 1
+const pt_dynamic = 3
+const pt_interp = 3
+const pt_phdr = 4
 
-const STB_LOCAL = 0
-const STB_GLOBAL = 1
-const STB_WEAK = 2
+const stb_local = 0
+const stb_global = 1
+const stb_weak = 2
 
-const STT_NOTYPE = 0
-const STT_OBJECT = 1
-const STT_FUNC = 2
-const STT_SECTION = 3
+const stt_notype = 0
+const stt_object = 1
+const stt_func = 2
+const stt_section = 3
 
-const R_X86_64_NONE = 0
-const R_X86_64_64 = 1
-const R_X86_64_PC32 = 2
-const R_X86_64_GOT32 = 3
-const R_X86_64_PLT32 = 4
-const R_X86_64_RELATIVE = 8
+const r_x86_64_none = 0
+const r_x86_64_64 = 1
+const r_x86_64_pc32 = 2
+const r_x86_64_got32 = 3
+const r_x86_64_plt32 = 4
+const r_x86_64_relative = 8
 
 struct elf64_header {
     magic int
@@ -111,13 +111,13 @@ struct elf64_program_header {
 func elf64_header_new() elf64_header {
     header := elf64_header {
         magic: 0x7f454c46,
-        class: ELFCLASS64,
-        data: ELFDATA2LSB,
+        class: elfclass64,
+        data: elfdata2_lsb,
         version: 1,
-        osabi: ELFOSABI_SYSV,
+        osabi: elfosabi_sysv,
         abiversion: 0,
-        type: ET_EXEC,
-        machine: EM_X86_64,
+        type: et_exec,
+        machine: em_x86_64,
         e_version: 1,
         entry: 0x400000,
         phoff: 64,

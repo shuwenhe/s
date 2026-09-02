@@ -1,16 +1,16 @@
 package cmd
-use std.io.File as file_type
+use std.io.file as file_type
 use std.encoding.binary.write as binary_write
 use std.encoding.binary.little_endian
-const ELF_MAGIC = 0x464c457f
-const ELF_CLASS_64 = 2
-const ELF_DATA_LE = 1
-const ELF_VERSION = 1
-const ELF_OSABI = 0
-const ELF_ABIVERSION = 0
-const ELF_TYPE_EXEC = 2
-const ELF_MACHINE_X86_64 = 0x3E
-struct ELFHeader {
+const elf_magic = 0x464c457f
+const elf_class_64 = 2
+const elf_data_le = 1
+const elf_version = 1
+const elf_osabi = 0
+const elf_abiversion = 0
+const elf_type_exec = 2
+const elf_machine_x86_64 = 0x3_e
+struct elf_header {
     magic: u32
     class_: u8
     data: u8
@@ -33,7 +33,7 @@ struct ELFHeader {
     section_header_string_index: u16
 }
 
-struct ProgramHeader {
+struct program_header {
     type_: u32
     flags: u32
     offset: u64
@@ -44,7 +44,7 @@ struct ProgramHeader {
     align: u64
 }
 
-struct SectionHeader {
+struct section_header {
     name: u32
     type_: u32
     flags: u64
@@ -56,35 +56,35 @@ struct SectionHeader {
     addralign: u64
     entsize: u64
 }
-const PT_LOAD = 1
-const PT_DYNAMIC = 3
-const PT_INTERP = 3
-const SHT_NULL = 0
-const SHT_PROGBITS = 1
-const SHT_SYMTAB = 2
-const SHT_STRTAB = 3
-const SHT_RELA = 4
-const SHF_WRITE = 0x1
-const SHF_ALLOC = 0x2
-const SHF_EXECINSTR = 0x4
+const pt_load = 1
+const pt_dynamic = 3
+const pt_interp = 3
+const sht_null = 0
+const sht_progbits = 1
+const sht_symtab = 2
+const sht_strtab = 3
+const sht_rela = 4
+const shf_write = 0x1
+const shf_alloc = 0x2
+const shf_execinstr = 0x4
 
-struct ELFBuilder {
-    header: ELFHeader
-    program_headers: []ProgramHeader
-    section_headers: []SectionHeader
+struct elf_builder {
+    header: elf_header
+    program_headers: []program_header
+    section_headers: []section_header
     code_section: []byte
     data_section: []byte
     string_table: []byte
     symbol_table: []byte
 }
 
-func new_elf_builder() ELFBuilder {
-    return ELFBuilder{
-        header: ELFHeader{
-            magic: ELF_MAGIC, class_ ELF_CLASS_64, data ELF_DATA_LE, version ELF_VERSION, osabi ELF_OSABI, abiversion ELF_ABIVERSION, type_ ELF_TYPE_EXEC, machine ELF_MACHINE_X86_64, entry 0x400000, header_size 64, program_header_size 56, section_header_size 64,
+func new_elf_builder() elf_builder {
+    return elf_builder{
+        header: elf_header{
+            magic: elf_magic, class_ elf_class_64, data elf_data_le, version elf_version, osabi elf_osabi, abiversion elf_abiversion, type_ elf_type_exec, machine elf_machine_x86_64, entry 0x400000, header_size 64, program_header_size 56, section_header_size 64,
         },
-        program_headers: []ProgramHeader{},
-        section_headers: []SectionHeader{},
+        program_headers: []program_header{},
+        section_headers: []section_header{},
         code_section: []byte{},
         data_section: []byte{},
         string_table: []byte{},
@@ -92,11 +92,11 @@ func new_elf_builder() ELFBuilder {
     }
 }
 
-func (ELFBuilder* builder) add_code([]byte code) {
+func (elf_builder* builder) add_code([]byte code) {
     builder.code_section = append_slice(builder.code_section, code)
 }
 
-func (ELFBuilder* builder) generate() []byte {
+func (elf_builder* builder) generate() []byte {
     buffer: []byte = []byte{}
     return buffer
 }

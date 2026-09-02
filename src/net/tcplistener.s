@@ -1,25 +1,25 @@
 package src.net
-struct TCPListener {
+struct tcp_listener {
     int fd
-    TCPAddr laddr
+    tcp_addr laddr
 }
 
-func (l *TCPListener) Accept() Conn {
+func (l *tcp_listener) accept() conn {
     newfd = accept(l.fd)
     if newfd < 0 {
         return nil
     }
-    TCPConn c = TCPConn { fd: newfd, laddr l.laddr, raddr TCPAddr{} }
+    tcp_conn c = tcp_conn { fd: newfd, laddr l.laddr, raddr tcp_addr{} }
     *c
 }
 
-func (l *TCPListener) Close() error {
+func (l *tcp_listener) close() error {
     if close(l.fd) != 0 {
         return "close error"
     }
     nil
 }
 
-func (l *TCPListener) Addr() Addr {
+func (l *tcp_listener) addr() addr {
     *l.laddr
 }

@@ -75,9 +75,9 @@ func (gen* go_style_elf_generator) create_standard_sections() {
 func (gen* go_style_elf_generator) create_elf_header() []int8 {
     header := []int8()()
     header = append(header, 0x7f as int8)
-    header = append(header, 'E' as int8)
-    header = append(header, 'L' as int8)
-    header = append(header, 'F' as int8)
+    header = append(header, 'e' as int8)
+    header = append(header, 'l' as int8)
+    header = append(header, 'f' as int8)
     header = append(header, 2 as int8)
     header = append(header, 1 as int8)
     header = append(header, 1 as int8)

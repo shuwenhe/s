@@ -1,8 +1,8 @@
 package compile.internal.ssa._gen
-func genericOps_rule_name() string {
+func generic_ops_rule_name() string {
     "ssa/_gen/genericOps.s"
 }
 
-func genericOps_rule_count() int {
+func generic_ops_rule_count() int {
     0
 }

@@ -1,4 +1,4 @@
 package src.net.http
-func (r *http_request) Body() string {
+func (r *http_request) body() string {
     r.body
 }

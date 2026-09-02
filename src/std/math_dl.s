@@ -1,13 +1,13 @@
 package std.math_dl
-const PI = 3.14159265358979323846
-const E = 2.71828182845904523536
-const LN2 = 0.69314718055994530942
-const LN10 = 2.30258509299404568402
-const SQRT2 = 1.41421356237309504880
-const LOG2E = 1.44269504088896340736
-const EPSILON = 1e-7
-const INF = 1e308
-const NEG_INF = -1e308
+const pi = 3.14159265358979323846
+const e = 2.71828182845904523536
+const ln2 = 0.69314718055994530942
+const ln10 = 2.30258509299404568402
+const sqrt2 = 1.41421356237309504880
+const log2_e = 1.44269504088896340736
+const epsilon = 1e-7
+const inf = 1e308
+const neg_inf = -1e308
 func abs(float x) float {
     if x < 0 { return -x }
     x
@@ -82,7 +82,7 @@ func cbrt(float x) float {
 }
 
 func rsqrt(float x) float {
-    if x <= 0.0 { return INF }
+    if x <= 0.0 { return inf }
     1.0 / sqrt(x)
 }
 
@@ -100,12 +100,12 @@ func hypot(float a, float b) float {
 }
 
 func exp(float x) float {
-    if x > 709.78 { return INF }
+    if x > 709.78 { return inf }
     if x < -745.13 { return 0.0 }
     bool neg = false
     if x < 0 { neg = true; x = -x }
-    int k = (x / LN2) as int
-    float r = x - (k as float) * LN2
+    int k = (x / ln2) as int
+    float r = x - (k as float) * ln2
     float term = 1.0
     float sum = 1.0
     float ri = r
@@ -129,11 +129,11 @@ func expm1(float x) float {
 }
 
 func log(float x) float {
-    if x <= 0.0 { return NEG_INF }
+    if x <= 0.0 { return neg_inf }
     if x == 1.0 { return 0.0 }
     float y = 0.0
-    for x >= 2.0 { x = x / 2.0; y = y + LN2 }
-    for x < 1.0 { x = x * 2.0; y = y - LN2 }
+    for x >= 2.0 { x = x / 2.0; y = y + ln2 }
+    for x < 1.0 { x = x * 2.0; y = y - ln2 }
     float guess = x - 1.0
     int i = 0
     for i < 20 {
@@ -151,15 +151,15 @@ func log1p(float x) float {
     log(1.0 + x)
 }
 
-func log10(float x) float { log(x) / LN10 }
+func log10(float x) float { log(x) / ln10 }
 
-func log2(float x) float { log(x) / LN2 }
+func log2(float x) float { log(x) / ln2 }
 
 func sin(float x) float {
-    float TWO_PI = 2.0 * PI
-    x = x - ((x / TWO_PI) as int as float) * TWO_PI
-    if x > PI { x = x - TWO_PI }
-    if x < -PI { x = x + TWO_PI }
+    float two_pi = 2.0 * pi
+    x = x - ((x / two_pi) as int as float) * two_pi
+    if x > pi { x = x - two_pi }
+    if x < -pi { x = x + two_pi }
     float xx = x * x
     float term = x
     float sum = x
@@ -177,13 +177,13 @@ func sin(float x) float {
 }
 
 func cos(float x) float {
-    sin(x + PI / 2.0)
+    sin(x + pi / 2.0)
 }
 
 func tan(float x) float {
     float c = cos(x)
-    if abs(c) < EPSILON {
-        if x > 0 { return INF } else { return NEG_INF }
+    if abs(c) < epsilon {
+        if x > 0 { return inf } else { return neg_inf }
     }
     sin(x) / c
 }
@@ -196,8 +196,8 @@ func asin(float x) float {
     for i < 20 {
         float sg = sin(guess)
         float cg = cos(guess)
-        if abs(sg - x) < EPSILON { break }
-        if abs(cg) < EPSILON { break }
+        if abs(sg - x) < epsilon { break }
+        if abs(cg) < epsilon { break }
         guess = guess + (x - sg) / cg
         i = i + 1
     }
@@ -205,12 +205,12 @@ func asin(float x) float {
 }
 
 func acos(float x) float {
-    PI / 2.0 - asin(x)
+    pi / 2.0 - asin(x)
 }
 
 func atan(float x) float {
-    if x > 1e10 { return PI / 2.0 }
-    if x < -1e10 { return -PI / 2.0 }
+    if x > 1e10 { return pi / 2.0 }
+    if x < -1e10 { return -pi / 2.0 }
     if x == 0.0 { return 0.0 }
     bool invert = false
     if abs(x) > 1.0 { x = 1.0 / x; invert = true }
@@ -225,24 +225,24 @@ func atan(float x) float {
         n = n + 1
     }
     if invert {
-        if sum >= 0 { return PI / 2.0 - sum }
-        return -PI / 2.0 - sum
+        if sum >= 0 { return pi / 2.0 - sum }
+        return -pi / 2.0 - sum
     }
     sum
 }
 
 func atan2(float y, float x) float {
     if x > 0.0 { return atan(y / x) }
-    if x < 0.0 && y >= 0.0 { return atan(y / x) + PI }
-    if x < 0.0 && y < 0.0 { return atan(y / x) - PI }
-    if y > 0.0 { return PI / 2.0 }
-    if y < 0.0 { return -PI / 2.0 }
+    if x < 0.0 && y >= 0.0 { return atan(y / x) + pi }
+    if x < 0.0 && y < 0.0 { return atan(y / x) - pi }
+    if y > 0.0 { return pi / 2.0 }
+    if y < 0.0 { return -pi / 2.0 }
     0.0
 }
 
-func deg2rad(float degrees) float { degrees * PI / 180.0 }
+func deg2rad(float degrees) float { degrees * pi / 180.0 }
 
-func rad2deg(float radians) float { radians * 180.0 / PI }
+func rad2deg(float radians) float { radians * 180.0 / pi }
 
 func sinh(float x) float {
     (exp(x) - exp(-x)) / 2.0
@@ -311,8 +311,8 @@ func leaky_relu(float x, float alpha) float {
 }
 
 func gelu(float x) float {
-    float SQRT_2_OVER_PI = 0.7978845608028654
-    float inner = SQRT_2_OVER_PI * (x + 0.044715 * x * x * x)
+    float sqrt_2_over_pi = 0.7978845608028654
+    float inner = sqrt_2_over_pi * (x + 0.044715 * x * x * x)
     0.5 * x * (1.0 + tanh_h(inner))
 }
 
@@ -362,9 +362,9 @@ func erf(float x) float {
 
 func erfc(float x) float { 1.0 - erf(x) }
 
-func normal_cdf(float x) float { 0.5 * (1.0 + erf(x / SQRT2)) }
+func normal_cdf(float x) float { 0.5 * (1.0 + erf(x / sqrt2)) }
 
-func normal_pdf(float x) float { exp(-0.5 * x * x) / (SQRT2 * sqrt(PI)) }
+func normal_pdf(float x) float { exp(-0.5 * x * x) / (sqrt2 * sqrt(pi)) }
 
 func log_sum_exp(float[] values, int count) float {
     if count <= 0 { return 0.0 }
@@ -391,7 +391,7 @@ func sigmoid_xent(float x) float {
 func lerp(float a, float b, float t) float { a + t * (b - a) }
 
 func inv_lerp(float a, float b, float c) float {
-    if abs(b - a) < EPSILON { return 0.0 }
+    if abs(b - a) < epsilon { return 0.0 }
     (c - a) / (b - a)
 }
 
@@ -421,16 +421,16 @@ func l2_dist(float a, float b) float { sqrt(l2_sq_dist(a, b)) }
 func cosine_sim(float a, float b) float {
     float na = abs(a)
     float nb = abs(b)
-    if na < EPSILON || nb < EPSILON { return 0.0 }
+    if na < epsilon || nb < epsilon { return 0.0 }
     (a * b) / (na * nb)
 }
 
-func is_finite(float x) bool { x > NEG_INF && x < INF }
+func is_finite(float x) bool { x > neg_inf && x < inf }
 
 func is_nan(float x) bool { !(x == x) }
 
 func safe_div(float a, float b, float fallback) float {
-    if abs(b) < EPSILON { return fallback }
+    if abs(b) < epsilon { return fallback }
     a / b
 }
 

@@ -61,7 +61,7 @@ func linker_resolve_symbols(linker_context ctx*) int {
             symbol := obj.symbols[j]
             bind := (symbol.info >> 4) & 0xf
             
-            if bind == STB_GLOBAL {
+            if bind == stb_global {
                 sym_name := ctx.string_table
                 
                 if symbol_map[sym_name] == 0 {
@@ -89,9 +89,9 @@ func linker_apply_relocations(linker_context ctx*) int {
                 symbol := ctx.symbols[sym_idx]
                 
                 switch reloc_type {
-                    case R_X86_64_64:
+                    case r_x86_64_64:
                         reloc.addend = symbol.value
-                    case R_X86_64_PC32:
+                    case r_x86_64_pc32:
                         reloc.addend = symbol.value - reloc.offset
                     default:
                         continue
@@ -110,10 +110,10 @@ func linker_allocate_sections(linker_context ctx*) int {
     for i := 0; i < ctx.sections.len(); i = i + 1 {
         section := ctx.sections[i]
         
-        if section.flags & SHF_EXECINSTR != 0 {
+        if section.flags & shf_execinstr != 0 {
             section.addr = text_offset
             text_offset = text_offset + section.size
-        } else if section.flags & SHF_ALLOC != 0 {
+        } else if section.flags & shf_alloc != 0 {
             section.addr = data_offset
             data_offset = data_offset + section.size
         }

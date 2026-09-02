@@ -168,7 +168,7 @@ struct socket_error {
     string syscall_name
 }
 
-func (socket_error* e) Error() string {
+func (socket_error* e) error() string {
     e.syscall_name + ": " + e.message
 }
 

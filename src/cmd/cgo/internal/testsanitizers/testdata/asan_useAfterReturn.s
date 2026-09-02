@@ -1,8 +1,8 @@
 package src.cmd.cgo.internal.testsanitizers.testdata
-func asan_useAfterReturn_unit_name() string {
+func asan_use_after_return_unit_name() string {
     "src/cmd/cgo/internal/testsanitizers/testdata/asan_useAfterReturn"
 }
 
-func asan_useAfterReturn_unit_ready() int {
+func asan_use_after_return_unit_ready() int {
     1
 }
