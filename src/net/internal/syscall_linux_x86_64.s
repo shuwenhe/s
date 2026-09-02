@@ -199,13 +199,13 @@ func ipv4_to_sockaddr(byte* ip_str, port int) (sockaddr_inet, bool) {
 }
 
 func htons( host int) int {
-    ((host & 0xFF00) >> 8) | ((host & 0x00FF) << 8)
+    ((host & 0x_ff00) >> 8) | ((host & 0x00_ff) << 8)
 }
 
 func htonl( host int) int {
-    b1 := (host >> 24) & 0xFF
-    b2 := (host >> 16) & 0xFF
-    b3 := (host >> 8) & 0xFF
-    b4 := host & 0xFF
+    b1 := (host >> 24) & 0x_ff
+    b2 := (host >> 16) & 0x_ff
+    b3 := (host >> 8) & 0x_ff
+    b4 := host & 0x_ff
     (b4 << 24) | (b3 << 16) | (b2 << 8) | b1
 }

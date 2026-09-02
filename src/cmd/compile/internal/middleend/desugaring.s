@@ -1,8 +1,8 @@
 package desugaring
 
-const SWITCH_LINEAR = 0
-const SWITCH_BINARY_SEARCH = 1
-const SWITCH_JUMP_TABLE = 2
+const switch_linear = 0
+const switch_binary_search = 1
+const switch_jump_table = 2
 
 struct switch_optimization {
     case_count int
@@ -27,13 +27,13 @@ func optimize_switch_statement(ir_instruction switch_instr) switch_optimization 
     case_count := switch_instr.operands.len()
     
     if case_count < 4 {
-        opt := switch_optimization { case_count: case_count, strategy: SWITCH_LINEAR }
+        opt := switch_optimization { case_count: case_count, strategy: switch_linear }
         opt
     } else if case_count < 32 {
-        opt := switch_optimization { case_count: case_count, strategy: SWITCH_BINARY_SEARCH }
+        opt := switch_optimization { case_count: case_count, strategy: switch_binary_search }
         opt
     } else {
-        opt := switch_optimization { case_count: case_count, strategy: SWITCH_JUMP_TABLE }
+        opt := switch_optimization { case_count: case_count, strategy: switch_jump_table }
         opt
     }
 }
@@ -44,7 +44,7 @@ func generate_linear_switch(ir_instruction switch_instr) ir_instruction[] {
     for i := 0; i < switch_instr.operands.len(); i = i + 1 {
         case_val := switch_instr.operands[i]
         
-        cond := ir_instruction { instr_type: IR_INSTR_BINOP }
+        cond := ir_instruction { instr_type: ir_instr_binop }
         cond.operands = append(cond.operands, switch_instr.operands[0])
         cond.operands = append(cond.operands, case_val)
         result = append(result, cond)
@@ -68,11 +68,11 @@ func generate_jump_table_switch(ir_instruction switch_instr) ir_instruction[] {
 func desugar_range_loop(ast_node loop_node) ast_node[] {
     result := ast_node[]()
     
-    if loop_node.node_type == AST_FOR_RANGE {
+    if loop_node.node_type == ast_for_range {
         var_name := loop_node.string_data
         collection_idx := 0
         
-        for_node := ast_node { node_type: AST_FOR, line: loop_node.line, column: loop_node.column }
+        for_node := ast_node { node_type: ast_for, line: loop_node.line, column: loop_node.column }
         result = append(result, for_node)
     }
     
@@ -82,7 +82,7 @@ func desugar_range_loop(ast_node loop_node) ast_node[] {
 func desugar_defer(ast_node defer_node) ir_instruction[] {
     result := ir_instruction[]()
     
-    instr := ir_instruction { instr_type: IR_INSTR_DEFER }
+    instr := ir_instruction { instr_type: ir_instr_defer }
     result = append(result, instr)
     
     result
@@ -97,7 +97,7 @@ func implement_defer_stack(ir_function func) {
         for i := 0; i < block.instructions.len(); i = i + 1 {
             instr := block.instructions[i]
             
-            if instr.instr_type == IR_INSTR_DEFER {
+            if instr.instr_type == ir_instr_defer {
                 defer_count = defer_count + 1
             }
         }
@@ -115,7 +115,7 @@ func optimize_defer_open_coded(ir_function func) int {
 func desugar_type_assert(ir_instruction type_assert) ir_instruction[] {
     result := ir_instruction[]()
     
-    check := ir_instruction { instr_type: IR_INSTR_TYPECMP }
+    check := ir_instruction { instr_type: ir_instr_typecmp }
     result = append(result, check)
     
     result
@@ -139,15 +139,15 @@ func lower_operations(ir_module module) {
             for i := 0; i < block.instructions.len(); i = i + 1 {
                 instr := block.instructions[i]
                 
-                if instr.instr_type == IR_INSTR_SWITCH {
+                if instr.instr_type == ir_instr_switch {
                     opt := optimize_switch_statement(instr)
                     
-                    if opt.strategy == SWITCH_LINEAR {
+                    if opt.strategy == switch_linear {
                         linear := generate_linear_switch(instr)
                         for j := 0; j < linear.len(); j = j + 1 {
                             new_instrs = append(new_instrs, linear[j])
                         }
-                    } else if opt.strategy == SWITCH_BINARY_SEARCH {
+                    } else if opt.strategy == switch_binary_search {
                         binary := generate_binary_search_switch(instr)
                         for j := 0; j < binary.len(); j = j + 1 {
                             new_instrs = append(new_instrs, binary[j])

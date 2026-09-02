@@ -21,13 +21,13 @@ func test_elf64_header_creation() linker_test_result {
         return result
     }
     
-    if header.class != ELFCLASS64 {
+    if header.class != elfclass64 {
         result.passed = 0
         result.error_message = "Invalid class"
         return result
     }
     
-    if header.machine != EM_X86_64 {
+    if header.machine != em_x86_64 {
         result.passed = 0
         result.error_message = "Invalid machine type"
         return result
@@ -37,7 +37,7 @@ func test_elf64_header_creation() linker_test_result {
 }
 
 func test_elf64_section_creation() linker_test_result {
-    section := elf64_section_new(1, SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR)
+    section := elf64_section_new(1, sht_progbits, shf_alloc | shf_execinstr)
     
     result := linker_test_result {
         test_name: "ELF64 Section Creation",
@@ -45,7 +45,7 @@ func test_elf64_section_creation() linker_test_result {
         error_message: ""
     }
     
-    if section.type != SHT_PROGBITS {
+    if section.type != sht_progbits {
         result.passed = 0
         result.error_message = "Invalid section type"
         return result
@@ -61,7 +61,7 @@ func test_elf64_section_creation() linker_test_result {
 }
 
 func test_elf64_symbol_creation() linker_test_result {
-    symbol := elf64_symbol_new(0, STB_GLOBAL, STT_FUNC, 1)
+    symbol := elf64_symbol_new(0, stb_global, stt_func, 1)
     
     result := linker_test_result {
         test_name: "ELF64 Symbol Creation",
@@ -76,7 +76,7 @@ func test_elf64_symbol_creation() linker_test_result {
     }
     
     bind := (symbol.info >> 4) & 0xf
-    if bind != STB_GLOBAL {
+    if bind != stb_global {
         result.passed = 0
         result.error_message = "Invalid binding"
         return result
@@ -86,7 +86,7 @@ func test_elf64_symbol_creation() linker_test_result {
 }
 
 func test_relocation_creation() linker_test_result {
-    reloc := elf64_relocation_new(0x1000, R_X86_64_64, 5)
+    reloc := elf64_relocation_new(0x1000, r_x86_64_64, 5)
     
     result := linker_test_result {
         test_name: "Relocation Creation",
@@ -114,7 +114,7 @@ func test_relocation_resolve_64() linker_test_result {
     ctx := relocation_context {
         section_index: 0,
         symbol_index: 0,
-        relocation_type: R_X86_64_64,
+        relocation_type: r_x86_64_64,
         offset: 0,
         addend: 0x100
     }
@@ -147,7 +147,7 @@ func test_relocation_resolve_pc32() linker_test_result {
     ctx := relocation_context {
         section_index: 0,
         symbol_index: 0,
-        relocation_type: R_X86_64_PC32,
+        relocation_type: r_x86_64_pc32,
         offset: 0x500,
         addend: 0
     }

@@ -1,18 +1,18 @@
 package std.slices
-func grow_capacity(int oldCap, int needed) int {
-    if oldCap == 0 {
+func grow_capacity(int old_cap, int needed) int {
+    if old_cap == 0 {
         return 4
     }
-    if oldCap < 256 {
-        return oldCap * 2
+    if old_cap < 256 {
+        return old_cap * 2
     }
     loop {
-        oldCap = oldCap + oldCap / 4
-        if oldCap >= needed {
+        old_cap = old_cap + old_cap / 4
+        if old_cap >= needed {
             break
         }
     }
-    oldCap
+    old_cap
 }
 
 func copy[t](t[] dst, t[] src) int {

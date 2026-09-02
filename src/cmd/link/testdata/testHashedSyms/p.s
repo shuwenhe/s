@@ -1,4 +1,4 @@
-package src.cmd.link.testdata.testHashedSyms
+package src.cmd.link.testdata.test_hashed_syms
 func p_unit_name() string {
     "src/cmd/link/testdata/testHashedSyms/p"
 }

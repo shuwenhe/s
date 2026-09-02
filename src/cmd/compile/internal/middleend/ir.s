@@ -1,52 +1,52 @@
 package middleend
 
-const IR_VALUE_CONST = 1
-const IR_VALUE_VAR = 2
-const IR_VALUE_PARAM = 3
-const IR_VALUE_CALL = 4
-const IR_VALUE_BINOP = 5
-const IR_VALUE_UNOP = 6
-const IR_VALUE_LOAD = 7
-const IR_VALUE_STORE = 8
-const IR_VALUE_ALLOCA = 9
-const IR_VALUE_PHI = 10
-const IR_VALUE_CAST = 11
+const ir_value_const = 1
+const ir_value_var = 2
+const ir_value_param = 3
+const ir_value_call = 4
+const ir_value_binop = 5
+const ir_value_unop = 6
+const ir_value_load = 7
+const ir_value_store = 8
+const ir_value_alloca = 9
+const ir_value_phi = 10
+const ir_value_cast = 11
 
-const IR_OP_ADD = 100
-const IR_OP_SUB = 101
-const IR_OP_MUL = 102
-const IR_OP_DIV = 103
-const IR_OP_MOD = 104
-const IR_OP_AND = 105
-const IR_OP_OR = 106
-const IR_OP_XOR = 107
-const IR_OP_SHL = 108
-const IR_OP_SHR = 109
-const IR_OP_EQ = 110
-const IR_OP_NE = 111
-const IR_OP_LT = 112
-const IR_OP_LE = 113
-const IR_OP_GT = 114
-const IR_OP_GE = 115
-const IR_OP_LAND = 116
-const IR_OP_LOR = 117
+const ir_op_add = 100
+const ir_op_sub = 101
+const ir_op_mul = 102
+const ir_op_div = 103
+const ir_op_mod = 104
+const ir_op_and = 105
+const ir_op_or = 106
+const ir_op_xor = 107
+const ir_op_shl = 108
+const ir_op_shr = 109
+const ir_op_eq = 110
+const ir_op_ne = 111
+const ir_op_lt = 112
+const ir_op_le = 113
+const ir_op_gt = 114
+const ir_op_ge = 115
+const ir_op_land = 116
+const ir_op_lor = 117
 
-const IR_OP_NEG = 200
-const IR_OP_NOT = 201
-const IR_OP_LNOT = 202
+const ir_op_neg = 200
+const ir_op_not = 201
+const ir_op_lnot = 202
 
-const IR_INSTR_BINOP = 300
-const IR_INSTR_UNOP = 301
-const IR_INSTR_CALL = 302
-const IR_INSTR_LOAD = 303
-const IR_INSTR_STORE = 304
-const IR_INSTR_ALLOCA = 305
-const IR_INSTR_RETURN = 306
-const IR_INSTR_BR = 307
-const IR_INSTR_CONDBR = 308
-const IR_INSTR_PHI = 309
-const IR_INSTR_CAST = 310
-const IR_INSTR_SWITCH = 311
+const ir_instr_binop = 300
+const ir_instr_unop = 301
+const ir_instr_call = 302
+const ir_instr_load = 303
+const ir_instr_store = 304
+const ir_instr_alloca = 305
+const ir_instr_return = 306
+const ir_instr_br = 307
+const ir_instr_condbr = 308
+const ir_instr_phi = 309
+const ir_instr_cast = 310
+const ir_instr_switch = 311
 
 struct ir_value {
     value_type int
@@ -100,65 +100,65 @@ struct ir_module {
 
 func ir_value_const(string const_val, string type_info) ir_value {
     ir_value {
-        value_type: IR_VALUE_CONST, value_id 0, type_info type_info, const_value const_val, line 0, column 0
+        value_type: ir_value_const, value_id 0, type_info type_info, const_value const_val, line 0, column 0
     }
 }
 
 func ir_value_var(string name, string type_info) ir_value {
     ir_value {
-        value_type: IR_VALUE_VAR, value_id 0, type_info type_info, var_name name, line 0, column 0
+        value_type: ir_value_var, value_id 0, type_info type_info, var_name name, line 0, column 0
     }
 }
 
 func ir_value_param(int index, string type_info) ir_value {
     ir_value {
-        value_type: IR_VALUE_PARAM, value_id 0, type_info type_info, param_index index, line 0, column 0
+        value_type: ir_value_param, value_id 0, type_info type_info, param_index index, line 0, column 0
     }
 }
 
 func ir_instr_binop(int op, ir_value left, ir_value right, string result_type) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_BINOP, opcode op,
-        operands: [left, right], result ir_value { value_type: IR_VALUE_BINOP, type_info result_type }
+        instr_type: ir_instr_binop, opcode op,
+        operands: [left, right], result ir_value { value_type: ir_value_binop, type_info result_type }
     }
 }
 
 func ir_instr_unop(int op, ir_value operand, string result_type) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_UNOP, opcode op,
-        operands: [operand], result ir_value { value_type: IR_VALUE_UNOP, type_info result_type }
+        instr_type: ir_instr_unop, opcode op,
+        operands: [operand], result ir_value { value_type: ir_value_unop, type_info result_type }
     }
 }
 
 func ir_instr_call(string func_name, ir_value[] args, string return_type) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_CALL, var_name func_name, operands args, result ir_value { value_type: IR_VALUE_CALL, type_info return_type }
+        instr_type: ir_instr_call, var_name func_name, operands args, result ir_value { value_type: ir_value_call, type_info return_type }
     }
 }
 
 func ir_instr_return(ir_value value) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_RETURN,
+        instr_type: ir_instr_return,
         operands: [value]
     }
 }
 
 func ir_instr_br(int target_block_id) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_BR, branch_target_true target_block_id
+        instr_type: ir_instr_br, branch_target_true target_block_id
     }
 }
 
 func ir_instr_condbr(ir_value cond, int true_block, int false_block) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_CONDBR,
+        instr_type: ir_instr_condbr,
         operands: [cond], branch_target_true true_block, branch_target_false false_block
     }
 }
 
 func ir_instr_phi(ir_value[] operands, int[] operand_blocks) ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_PHI, operands operands, branch_targets operand_blocks
+        instr_type: ir_instr_phi, operands operands, branch_targets operand_blocks
     }
 }
 

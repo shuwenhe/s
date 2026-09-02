@@ -1,13 +1,13 @@
 package std.training_io
-use std.tensor_core as T
-struct CheckpointMeta {
+use std.tensor_core as t
+struct checkpoint_meta {
     string format_version
     string framework
     string timestamp
     string s_compiler_version
 }
 
-struct TrainState {
+struct train_state {
     int global_step
     float current_loss
     float best_loss
@@ -21,7 +21,7 @@ struct TrainState {
     float tokens_per_second
 }
 
-struct ModelConfigSnapshot {
+struct model_config_snapshot {
     int vocab_size
     int embed_dim
     int num_heads
@@ -34,32 +34,32 @@ struct ModelConfigSnapshot {
 }
 
 struct checkpoint {
-    CheckpointMeta meta
-    TrainState state
-    ModelConfigSnapshot config
-    Map<string, T.tensor> weight_map
+    checkpoint_meta meta
+    train_state state
+    model_config_snapshot config
+    map<string, t.tensor> weight_map
     string file_path
     long file_size_bytes
     string checksum_md5
 }
 
-func default_meta() CheckpointMeta {
-    CheckpointMeta {
+func default_meta() checkpoint_meta {
+    checkpoint_meta {
         format_version: "2.0",
         framework: "S-AI-Lib-v1.0", timestamp _get_timestamp(),
         s_compiler_version: "1.0-enhanced"
     }
 }
 
-func initial_train_state() TrainState {
-    TrainState {
+func initial_train_state() train_state {
+    train_state {
         global_step: 0, current_loss 5.0, best_loss 5.0, best_step 0, training_complete false, loss_history new float[20], grad_norm 0.0, learning_rate 0.001, epoch_time_ms 0, total_time_ms 0, tokens_per_second 0.0,
     }
 }
 
 func make_config_snapshot(int vocab, int embed, int heads, int ffn,
-                            int layers, int seq_len, float dropout, int total_params) ModelConfigSnapshot {
-    ModelConfigSnapshot {
+                            int layers, int seq_len, float dropout, int total_params) model_config_snapshot {
+    model_config_snapshot {
         vocab_size: vocab, embed_dim embed, num_heads heads, ffn_dim ffn, num_layers layers, max_seq_len seq_len, dropout_prob dropout, total_param_count total_params, trainable_param_count total_params,
     }
 }
@@ -160,7 +160,7 @@ func save_checkpoint(checkpoint ckpt, string output_dir, string name_prefix) str
 }
 
 func quick_save(string output_dir, int step, float loss, float best_loss, int best_step,
-                 ModelConfigSnapshot config, Map<string, T.tensor> weights,
+                 model_config_snapshot config, map<string, t.tensor> weights,
                  float[] recent_losses) string {
     checkpoint ckpt
     ckpt.meta = default_meta()
@@ -196,7 +196,7 @@ func load_checkpoint(string filepath) checkpoint {
     ckpt
 }
 
-func load_training_state(string filepath) TrainState {
+func load_training_state(string filepath) train_state {
     checkpoint ckpt = load_checkpoint(filepath)
     ckpt.state
 }
@@ -225,8 +225,8 @@ func get_latest_checkpoint(string manifest_path) string {
     cpts[len(cpts) - 1]
 }
 
-func export_weights(AG.ag_tensor[] params) Map<string, T.tensor> {
-    Map<string, T.tensor> wmap = new_map()
+func export_weights(ag.ag_tensor[] params) map<string, t.tensor> {
+    map<string, t.tensor> wmap = new_map()
     int i = 0
     for i < len(params) {
         map_put(wmap, params[i].name, params[i].data)
@@ -235,7 +235,7 @@ func export_weights(AG.ag_tensor[] params) Map<string, T.tensor> {
     wmap
 }
 
-func import_weights(Map<string, T.tensor> wmap, AG.ag_tensor[] params) void {
+func import_weights(map<string, t.tensor> wmap, ag.ag_tensor[] params) void {
     int i = 0
     for i < len(params) {
         if params[i].name in wmap {
@@ -245,8 +245,8 @@ func import_weights(Map<string, T.tensor> wmap, AG.ag_tensor[] params) void {
     }
 }
 
-func export_weights_binary(AG.ag_tensor[] params, string output_path) string {
-    Map<string, T.tensor> wmap = export_weights(params)
+func export_weights_binary(ag.ag_tensor[] params, string output_path) string {
+    map<string, t.tensor> wmap = export_weights(params)
     checkpoint dummy
     dummy.meta = default_meta()
     dummy.state = initial_train_state()
@@ -257,7 +257,7 @@ func export_weights_binary(AG.ag_tensor[] params, string output_path) string {
     output_path
 }
 
-struct TrainingLogEntry {
+struct training_log_entry {
     int step
     float loss
     float best_loss
@@ -266,12 +266,12 @@ struct TrainingLogEntry {
     int elapsed_ms
     string message
 }
-var _log_entries = new TrainingLogEntry[5000]
+var _log_entries = new training_log_entry[5000]
 var _log_count = 0
 
 func log_entry(int step, float loss, float best_loss, float grad_n, float lr, int ms, string msg) void {
     if _log_count < 5000 {
-        _log_entries[_log_count] = TrainingLogEntry {
+        _log_entries[_log_count] = training_log_entry {
             step: step, loss loss, best_loss best_loss, grad_norm grad_n, lr lr, elapsed_ms ms, message msg
         }
         _log_count = _log_count + 1
@@ -283,7 +283,7 @@ func save_log(string log_path) void {
     string lines = header
     int i = 0
     for i < _log_count {
-        TrainingLogEntry e = _log_entries[i]
+        training_log_entry e = _log_entries[i]
         lines = lines + int_to_str(e.step) + "\t" +
                  fmt_float(e.loss, 6) + "\t" +
                  fmt_float(e.best_loss, 6) + "\t" +
@@ -302,7 +302,7 @@ func print_log_summary() void {
     println("-----|----------|---------|--------|----------|------|-----")
     int i = 0
     for i < _log_count {
-        TrainingLogEntry e = _log_entries[i]
+        training_log_entry e = _log_entries[i]
         string line = pad_int(e.step, 4) + " | " +
                        pad_float(e.loss, 8, 6) + " | " +
                        pad_float(e.best_loss, 7, 6) + " | " +
@@ -483,34 +483,34 @@ extern "intrinsic" func __host_write_text_file(string path, string contents) int
 extern "intrinsic" func __host_read_to_string(string path) string
 extern "intrinsic" func __host_file_exists(string path) int
 
-func _write_file(string path, string content) WriteResult {
+func _write_file(string path, string content) write_result {
     int ret = __host_write_text_file(path, content)
-    WriteResult { ok: ret >= 0, error_code ret }
+    write_result { ok: ret >= 0, error_code ret }
 }
 
-func _read_file(string path) ReadResult {
+func _read_file(string path) read_result {
     if __host_file_exists(path) == 0 {
-        return ReadResult { ok: false, data: "", error: "file not found" }
+        return read_result { ok: false, data: "", error: "file not found" }
     }
     string data = __host_read_to_string(path)
-    ReadResult { ok: true, data data, error: "" }
+    read_result { ok: true, data data, error: "" }
 }
 
-struct WriteResult {
+struct write_result {
     bool ok
     int error_code
 }
 
-struct ReadResult {
+struct read_result {
     bool ok
     string data
     string error
 }
 
-func result_is_ok(WriteResult r) bool { r.ok }
+func result_is_ok(write_result r) bool { r.ok }
 
-func result_is_ok(ReadResult r) bool { r.ok }
+func result_is_ok(read_result r) bool { r.ok }
 
-func get_result_string(ReadResult r) string { r.data }
+func get_result_string(read_result r) string { r.data }
 
 func char(int code) string { string(code) }

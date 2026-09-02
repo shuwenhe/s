@@ -1,17 +1,17 @@
 package src.net
-interface Addr {
-    Network() string
-    String() string
+interface addr {
+    network() string
+    string() string
 }
-struct TCPAddr {
+struct tcp_addr {
     string ip
     int port
 }
 
-func (a *TCPAddr) Network() string {
+func (a *tcp_addr) network() string {
     "tcp"
 }
 
-func (a *TCPAddr) String() string {
+func (a *tcp_addr) string() string {
     a.ip + ":" + itoa(a.port)
 }

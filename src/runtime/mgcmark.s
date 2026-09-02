@@ -1,8 +1,8 @@
 package src.runtime
 use std.slices
-const GC_WHITE = 0
-const GC_GRAY  = 1
-const GC_BLACK = 2
+const gc_white = 0
+const gc_gray  = 1
+const gc_black = 2
 extern "intrinsic" func __gc_scan_roots(int[] out_roots) ()
 extern "intrinsic" func __gc_get_children(int obj_id) int[]
 extern "intrinsic" func __gc_cas_mark(int obj_id, int expected, int new_val) bool
@@ -19,7 +19,7 @@ func mark_object(int obj_id) bool {
     if obj_id < 0 {
         return false
     }
-    __gc_cas_mark(obj_id, GC_WHITE, GC_GRAY)
+    __gc_cas_mark(obj_id, gc_white, gc_gray)
 }
 
 func mark_roots() () {
@@ -56,7 +56,7 @@ func drain_mark_queue() () {
             }
             j = j + 1
         }
-        __gc_cas_mark(obj_id, GC_GRAY, GC_BLACK)
+        __gc_cas_mark(obj_id, gc_gray, gc_black)
         mark_total_count = mark_total_count + 1
     }
 }

@@ -1,19 +1,19 @@
 package src.net
-struct ParseError {
+struct parse_error {
     string typ
     string text
 }
 
-func (e *ParseError) Error() string {
+func (e *parse_error) error() string {
     "invalid " + e.typ + ": " + e.text
 }
 
-struct AddrError {
+struct addr_error {
     string err
     string addr
 }
 
-func (e *AddrError) Error() string {
+func (e *addr_error) error() string {
     if e == nil {
         return "<nil>"
     }
@@ -24,27 +24,27 @@ func (e *AddrError) Error() string {
     s
 }
 
-struct UnknownNetworkError {
+struct unknown_network_error {
     string net
 }
 
-func (e *UnknownNetworkError) Error() string {
+func (e *unknown_network_error) error() string {
     "unknown network " + e.net
 }
 
-struct timeoutError {}
+struct timeout_error {}
 
-func (e *timeoutError) Error() string { "i/o timeout" }
+func (e *timeout_error) error() string { "i/o timeout" }
 
-struct OpError {
+struct op_error {
     string op
     string net
-    Addr source
-    Addr addr
+    addr source
+    addr addr
     string err
 }
 
-func (e *OpError) Error() string {
+func (e *op_error) error() string {
     if e == nil {
         return "<nil>"
     }
@@ -53,7 +53,7 @@ func (e *OpError) Error() string {
         s = s + " " + e.net
     }
     if e.source != nil {
-        s = s + " " + e.source.String()
+        s = s + " " + e.source.string()
     }
     if e.addr != nil {
         if e.source != nil {
@@ -61,7 +61,7 @@ func (e *OpError) Error() string {
         } else {
             s = s + " "
         }
-        s = s + e.addr.String()
+        s = s + e.addr.string()
     }
     s = s + ": " + e.err
     s

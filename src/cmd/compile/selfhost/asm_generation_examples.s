@@ -15,7 +15,7 @@ main:
 func example_ir_to_asm_patterns() string[] {
     patterns := string[]{
         "
-        "MOV-PATTERN: mov [temp_location], %rax",
+        "mov-pattern: mov [temp_location], %rax",
         "               mov %rax, [result_location]",
         "",
         "
@@ -24,8 +24,8 @@ func example_ir_to_asm_patterns() string[] {
         "             jne L0                 # Jump if not equal",
         "",
         "
-        "CALL-PATTERN: call host_args       # Call external function",
-        "              mov %rax, [t0]       # Save result to temp",
+        "call-pattern: call host_args       # call external function",
+        "              mov %rax, [t0]       # save result to temp",
         "",
         "
         "RET-PATTERN: mov $2, %rax         # Load return value",
@@ -37,43 +37,43 @@ func example_ir_to_asm_patterns() string[] {
 
 func explain_register_allocation() string {
     return `
-Simple Register Allocation Strategy for MVP:
-1. Available x86-64 registers (caller-saved, can be clobbered):
+simple register allocation strategy for mvp:
+1. available x86-64 registers (caller-saved, can be clobbered):
    %rax, %rcx, %rdx, %rsi, %rdi, %r8-r11
-2. For each IR temporary variable (t0, t1, ...):
-   First 6: use %rax, %rcx, %rdx, %rsi, %rdi, %r8
-   Rest 6:  use %r9, %r10, %r11, and stack (spill)
-3. Allocation algorithm:
-   - Maintain temp -> register mapping
-   - On first use, allocate a free register
-   - If no free register, allocate stack location
-   - Spilled values accessed via [offset(%rbp)]
-Example:
-   IR temp: t0
-   Register: %rax
-   IR temp: t10
-   Register: -16(%rbp)    # 16 bytes below RBP on stack
-Usage:
-   CALL|t0|func|0
+2. for each ir temporary variable (t0, t1, ...):
+   first 6: use %rax, %rcx, %rdx, %rsi, %rdi, %r8
+   rest 6:  use %r9, %r10, %r11, and stack (spill)
+3. allocation algorithm:
+   - maintain temp -> register mapping
+   - on first use, allocate a free register
+   - if no free register, allocate stack location
+   - spilled values accessed via [offset(%rbp)]
+example:
+   ir temp: t0
+   register: %rax
+   ir temp: t10
+   register: -16(%rbp)    # 16 bytes below rbp on stack
+usage:
+   call|t0|func|0
    → call func; mov %rax, -0(%rbp)    # or -8(%rbp) for next
 `
 }
 
 func full_example_compilation() string {
     return `
-========== EXAMPLE: Compiling Simple IR to x86-64 ==========
-INPUT IR (compiler.ir):
+========== example: compiling simple ir to x86-64 ==========
+input ir (compiler.ir):
 ------------------------
-SSEED-TARGET-V1
-FUNC_BEGIN|main|_|_
-CALL|t0|host_args|0
-MOV|args|t0|_
-RET|0|_|_
-FUNC_END|main|_|_
-FUNC_BEGIN|host_args|_|_
-RET|0|_|_
-FUNC_END|host_args|_|_
-GENERATED x86-64 ASSEMBLY (compiler.s):
+sseed-target-v1
+func_begin|main|_|_
+call|t0|host_args|0
+mov|args|t0|_
+ret|0|_|_
+func_end|main|_|_
+func_begin|host_args|_|_
+ret|0|_|_
+func_end|host_args|_|_
+generated x86-64 assembly (compiler.s):
 ------------------------
 .text
 .globl main
@@ -87,51 +87,51 @@ host_args:
 main:
     push %rbp
     mov %rsp, %rbp
-    sub $16, %rsp           # Space for locals
+    sub $16, %rsp           # space for locals
     call host_args
-    mov %rax, -8(%rbp)      # Store to args
-    xor %eax, %eax          # Return 0
+    mov %rax, -8(%rbp)      # store to args
+    xor %eax, %eax          # return 0
     add $16, %rsp
     pop %rbp
     ret
-COMPILATION COMMAND:
+compilation command:
 ------------------------
 gcc -no-pie -o compiler.bin compiler.s
-VERIFICATION:
+verification:
 ------------------------
 file compiler.bin
-  → ELF 64-bit LSB executable
+  → elf 64-bit lsb executable
 ldd compiler.bin
   → normal x86-64 binary with libc dependency
 nm compiler.bin | grep seed_compile
-  → (empty! No C seed symbols!)
-Execution:
+  → (empty! no c seed symbols!)
+execution:
 ./compiler.bin
 echo $?
-  → 0  (Success!)
+  → 0  (success!)
 `
 }
 
 func key_insight() string {
     return `
-WHY THIS WORKS FOR TRUE SELF-HOSTING:
-1. Seed compiler generates IR (using C implementation)
-   S source code → IR
-2. New S-based IR compiler generates x86-64 assembly
-   IR → x86-64 assembly (PURE S IMPLEMENTATION)
+why this works for true self-hosting:
+1. seed compiler generates ir (using c implementation)
+   s source code → ir
+2. new s-based ir compiler generates x86-64 assembly
+   ir → x86-64 assembly (pure s implementation)
 3. gcc assembles and links
-   x86-64 assembly → ELF binary
-4. Result binary can self-compile!
-   No C seed backend needed anymore
-5. Proof of success:
-   - No seed_compile symbols in final binary
-   - Can compile S source code independently
-   - Results are deterministic
-This is how Go achieved self-hosting:
-1. Early Go used C backend
-2. Implemented Go backend in Go
-3. Bootstrapped with Go backend
-4. Now Go compiles itself entirely
-We're doing the same for S!
+   x86-64 assembly → elf binary
+4. result binary can self-compile!
+   no c seed backend needed anymore
+5. proof of success:
+   - no seed_compile symbols in final binary
+   - can compile s source code independently
+   - results are deterministic
+this is how go achieved self-hosting:
+1. early go used c backend
+2. implemented go backend in go
+3. bootstrapped with go backend
+4. now go compiles itself entirely
+we're doing the same for s!
 `
 }

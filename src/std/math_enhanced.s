@@ -1,12 +1,12 @@
 package std.switch
-const PI = 3.14159265358979323846
-const E = 2.71828182845904523536
-const LN2 = 0.69314718055994530942
-const LN10 = 2.30258509299404568402
-const SQRT2 = 1.41421356237309504880
-const EPSILON = 1e-7
-const INF = 1e308
-const NEG_INF = -1e308
+const pi = 3.14159265358979323846
+const e = 2.71828182845904523536
+const ln2 = 0.69314718055994530942
+const ln10 = 2.30258509299404568402
+const sqrt2 = 1.41421356237309504880
+const epsilon = 1e-7
+const inf = 1e308
+const neg_inf = -1e308
 func abs(float x) float {
     if x < 0 { return -x }
     x
@@ -92,15 +92,15 @@ func cbrt(float x) float {
 }
 
 func exp(float x) float {
-    if x > 700 { return INF }
+    if x > 700 { return inf }
     if x < -700 { return 0.0 }
     bool negative = false
     if x < 0 {
         negative = true
         x = -x
     }
-    int k = x / LN2
-    float r = x - (k as float) * LN2
+    int k = x / ln2
+    float r = x - (k as float) * ln2
     float term = 1.0
     float sum = 1.0
     float rn = 1.0
@@ -129,16 +129,16 @@ func exp(float x) float {
 }
 
 func log(float x) float {
-    if x <= 0 { return NEG_INF }
+    if x <= 0 { return neg_inf }
     if x == 1 { return 0.0 }
     float y = 0.0
     for x >= 2.0 {
         x = x / 2.0
-        y = y + LN2
+        y = y + ln2
     }
     for x < 1.0 {
         x = x * 2.0
-        y = y - LN2
+        y = y - ln2
     }
     float guess = x - 1.0
     int i = 0
@@ -151,11 +151,11 @@ func log(float x) float {
 }
 
 func log10(float x) float {
-    log(x) / LN10
+    log(x) / ln10
 }
 
 func log2(float x) float {
-    log(x) / LN2
+    log(x) / ln2
 }
 
 func log1p(float x) float {
@@ -166,9 +166,9 @@ func log1p(float x) float {
 }
 
 func sin(float x) float {
-    x = fmod(x, 2.0 * PI)
-    if x > PI { x = x - 2.0 * PI }
-    if x < -PI { x = x + 2.0 * PI }
+    x = fmod(x, 2.0 * pi)
+    if x > pi { x = x - 2.0 * pi }
+    if x < -pi { x = x + 2.0 * pi }
     float term = x
     float sum = x
     float xx = x * x
@@ -189,13 +189,13 @@ func sin(float x) float {
 }
 
 func cos(float x) float {
-    sin(x + PI / 2.0)
+    sin(x + pi / 2.0)
 }
 
 func tan(float x) float {
     float c = cos(x)
-    if abs(c) < EPSILON {
-        if x > 0 { return INF } else { return NEG_INF }
+    if abs(c) < epsilon {
+        if x > 0 { return inf } else { return neg_inf }
     }
     sin(x) / c
 }
@@ -207,9 +207,9 @@ func asin(float x) float {
     int i = 0
     for i < 20 {
         float sg = sin(guess)
-        if abs(sg - x) < EPSILON { break }
+        if abs(sg - x) < epsilon { break }
         float cg = cos(guess)
-        if abs(cg) < EPSILON { break }
+        if abs(cg) < epsilon { break }
         guess = guess + (x - sg) / cg
         i = i + 1
     }
@@ -217,12 +217,12 @@ func asin(float x) float {
 }
 
 func acos(float x) float {
-    PI / 2.0 - asin(x)
+    pi / 2.0 - asin(x)
 }
 
 func atan(float x) float {
-    if x > 1e10 { return PI / 2.0 }
-    if x < -1e10 { return -PI / 2.0 }
+    if x > 1e10 { return pi / 2.0 }
+    if x < -1e10 { return -pi / 2.0 }
     if x == 0 { return 0.0 }
     bool invert = false
     if abs(x) > 1.0 {
@@ -240,18 +240,18 @@ func atan(float x) float {
         i = i + 1
     }
     if invert {
-        if sum > 0 { return PI / 2.0 - sum }
-        return -PI / 2.0 - sum
+        if sum > 0 { return pi / 2.0 - sum }
+        return -pi / 2.0 - sum
     }
     sum
 }
 
 func atan2(float y, float x) float {
     if x > 0 { return atan(y / x) }
-    if x < 0 && y >= 0 { return atan(y / x) + PI }
-    if x < 0 && y < 0 { return atan(y / x) - PI }
-    if y > 0 { return PI / 2.0 }
-    if y < 0 { return -PI / 2.0 }
+    if x < 0 && y >= 0 { return atan(y / x) + pi }
+    if x < 0 && y < 0 { return atan(y / x) - pi }
+    if y > 0 { return pi / 2.0 }
+    if y < 0 { return -pi / 2.0 }
     0.0
 }
 
@@ -390,11 +390,11 @@ func erfc(float x) float {
 }
 
 func normal_cdf(float x) float {
-    0.5 * (1.0 + erf(x / SQRT2))
+    0.5 * (1.0 + erf(x / sqrt2))
 }
 
 func normal_pdf(float x) float {
-    exp(-0.5 * x * x) / (SQRT2 * sqrt(PI))
+    exp(-0.5 * x * x) / (sqrt2 * sqrt(pi))
 }
 
 func euclidean_distance(float a, float b) float {
@@ -413,6 +413,6 @@ func l1_distance(float a, float b) float {
 func cosine_similarity(float a, float b) float {
     float norm_a = abs(a)
     float norm_b = abs(b)
-    if norm_a < EPSILON || norm_b < EPSILON { return 0.0 }
+    if norm_a < epsilon || norm_b < epsilon { return 0.0 }
     (a * b) / (norm_a * norm_b)
 }

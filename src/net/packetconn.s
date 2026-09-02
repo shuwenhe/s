@@ -1,10 +1,10 @@
 package src.net
-interface PacketConn {
-    ReadFrom([]byte) (int, Addr, error)
-    WriteTo([]byte, Addr) (int, error)
-    Close() error
-    LocalAddr() Addr
-    SetDeadline(int64) error
-    SetReadDeadline(int64) error
-    SetWriteDeadline(int64) error
+interface packet_conn {
+    read_from([]byte) (int, addr, error)
+    write_to([]byte, addr) (int, error)
+    close() error
+    local_addr() addr
+    set_deadline(int64) error
+    set_read_deadline(int64) error
+    set_write_deadline(int64) error
 }

@@ -1,4 +1,4 @@
-package src.cmd.cgo.internal.testshared.testdata.depBase
+package src.cmd.cgo.internal.testshared.testdata.dep_base
 func gccgo_unit_name() string {
     "src/cmd/cgo/internal/testshared/testdata/depBase/gccgo"
 }

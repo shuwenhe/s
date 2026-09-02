@@ -756,62 +756,62 @@ func verify_instruction_ssa(
 ) instruction_verify_result {
     errors := 0
     code := 0
-    E_FORMAT := verify_flag_format()
-    E_SHAPE := verify_flag_shape()
-    E_DEFUSE := verify_flag_defuse()
-    E_MEM_NODE := verify_flag_mem_node()
-    E_MEM_CHAIN := verify_flag_mem_chain()
-    E_BLOCK_SAMPLE := verify_flag_block_sample()
-    E_VALUE_SAMPLE := verify_flag_value_sample()
-    E_DOM_SAMPLE := verify_flag_dom_sample()
-    E_MEM_SAMPLE := verify_flag_mem_sample()
-    E_REGALLOC_SAMPLE := verify_flag_regalloc_sample()
-    E_BLOCK_COUNT := verify_flag_block_count()
-    E_VALUE_COUNT := verify_flag_value_count()
-    E_DOM_COUNT := verify_flag_dom_count()
-    E_MEM_COUNT := verify_flag_mem_count()
+    e_format := verify_flag_format()
+    e_shape := verify_flag_shape()
+    e_defuse := verify_flag_defuse()
+    e_mem_node := verify_flag_mem_node()
+    e_mem_chain := verify_flag_mem_chain()
+    e_block_sample := verify_flag_block_sample()
+    e_value_sample := verify_flag_value_sample()
+    e_dom_sample := verify_flag_dom_sample()
+    e_mem_sample := verify_flag_mem_sample()
+    e_regalloc_sample := verify_flag_regalloc_sample()
+    e_block_count := verify_flag_block_count()
+    e_value_count := verify_flag_value_count()
+    e_dom_count := verify_flag_dom_count()
+    e_mem_count := verify_flag_mem_count()
     if !starts_with(mir_text, "mir ") {
         errors = errors + 1
-        code = set_error_flag(code, E_FORMAT)
+        code = set_error_flag(code, e_format)
     }
     if blocks <= 0 || values <= 0 {
         errors = errors + 1
-        code = set_error_flag(code, E_SHAPE)
+        code = set_error_flag(code, e_shape)
     }
     if model.def_use_edges < values {
         errors = errors + 1
-        code = set_error_flag(code, E_DEFUSE)
+        code = set_error_flag(code, e_defuse)
     }
     if memory_nodes < model.memphi_count {
         errors = errors + 1
-        code = set_error_flag(code, E_MEM_NODE)
+        code = set_error_flag(code, e_mem_node)
     }
     if pass_stats.memory_ssa_chain_count < model.memphi_count {
         errors = errors + 1
-        code = set_error_flag(code, E_MEM_CHAIN)
+        code = set_error_flag(code, e_mem_chain)
     }
     if blocks >= 2 && !contains_token_text(block_graph, "bb0->bb1") {
         errors = errors + 1
-        code = set_error_flag(code, E_BLOCK_SAMPLE)
+        code = set_error_flag(code, e_block_sample)
     }
     if values >= 2 && !contains_token_text(value_graph, "v0->v1") {
         errors = errors + 1
-        code = set_error_flag(code, E_VALUE_SAMPLE)
+        code = set_error_flag(code, e_value_sample)
     }
     if blocks >= 2 && !contains_token_text(dominator_tree, "bb0>bb1") {
         errors = errors + 1
-        code = set_error_flag(code, E_DOM_SAMPLE)
+        code = set_error_flag(code, e_dom_sample)
     }
     if model.store_count > 0 && model.load_count > 0 {
         if !contains_token_text(memory_dep_graph, "store0->load0") {
             errors = errors + 1
-            code = set_error_flag(code, E_MEM_SAMPLE)
+            code = set_error_flag(code, e_mem_sample)
         }
     }
     if parallel_copies > 0 {
         if !contains_token_text(regalloc_plan, "pcopy(v0->v1)") {
             errors = errors + 1
-            code = set_error_flag(code, E_REGALLOC_SAMPLE)
+            code = set_error_flag(code, e_regalloc_sample)
         }
     }
     block_rel := count_token(block_graph, "->")
@@ -821,22 +821,22 @@ func verify_instruction_ssa(
     }
     if block_rel > block_cap || block_rel > model.edge_count {
         errors = errors + 1
-        code = set_error_flag(code, E_BLOCK_COUNT)
+        code = set_error_flag(code, e_block_count)
     }
     value_rel := count_token(value_graph, "->")
     if value_rel > model.def_use_edges {
         errors = errors + 1
-        code = set_error_flag(code, E_VALUE_COUNT)
+        code = set_error_flag(code, e_value_count)
     }
     dom_rel := count_token(dominator_tree, ">")
     if dom_rel > block_cap {
         errors = errors + 1
-        code = set_error_flag(code, E_DOM_COUNT)
+        code = set_error_flag(code, e_dom_count)
     }
     mem_rel := count_token(memory_dep_graph, "->")
     if mem_rel > (model.load_count + model.store_count + model.memphi_count) {
         errors = errors + 1
-        code = set_error_flag(code, E_MEM_COUNT)
+        code = set_error_flag(code, e_mem_count)
     }
     instruction_verify_result {
         error_count: errors, error_code code,
