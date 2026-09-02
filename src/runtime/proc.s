@@ -36,7 +36,7 @@ struct Scheduler {
     int      num_p
     Mutex    mu
 }
-var _sched Scheduler = init_scheduler()
+Scheduler _sched = init_scheduler()
 
 func init_scheduler() Scheduler {
     Scheduler {

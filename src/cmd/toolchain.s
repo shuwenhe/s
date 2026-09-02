@@ -25,8 +25,8 @@ struct build_system {
     output_dir string
 }
 
-var global_toolchain toolchain_config
-var global_build global_build_system
+toolchain_config global_toolchain
+global_build_system global_build
 
 func toolchain_init(string target) {
     global_toolchain.target = target
