@@ -123,7 +123,7 @@ func semantic_analyzer_add_error(ana* semantic_analyzer, string msg) {
     ana.errors.push(msg)
 }
 
-func semantic_analyze(ast* ast_node) semantic_result {
+func semantic_analyze(ast_node ast*) semantic_result {
     ana := semantic_analyzer_new()
 
     semantic_analyze_node(&mut ana, ast)
@@ -133,7 +133,7 @@ func semantic_analyze(ast* ast_node) semantic_result {
     }
 }
 
-func semantic_analyze_node(ana* semantic_analyzer, node* ast_node) {
+func semantic_analyze_node(ana* semantic_analyzer, ast_node node*) {
     if node == 0 {
         return
     }
