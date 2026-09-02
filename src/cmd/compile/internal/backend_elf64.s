@@ -2402,16 +2402,94 @@ func gc_safepoint_count(function_decl fn_decl, string ssa_text) int {
 
 func build_export_data_artifact(source_file source, string arch) string {
     lines := string[]()
-    lines = append(lines, "export-data version=1 arch=" + arch)
+    lines = append(lines, "export-data version=2 arch=" + arch + " package=" + source.pkg)
+    lines = append(lines, "imports=" + to_string(len(source.uses)))
+    u := 0
+    for u < len(source.uses) {
+        alias := ""
+        switch source.uses[u].alias {
+            option.some(value) : alias = value,
+            option.none : (),
+        }
+        lines = append(lines, "import path=" + source.uses[u].path + " alias=" + alias)
+        u = u + 1
+    }
     i := 0
     for i < len(source.items) {
         switch source.items[i] {
             item.function(fn_decl) : {
+                signature := ""
+                p := 0
+                for p < len(fn_decl.sig.params) {
+                    if p > 0 { signature = signature + "," }
+                    signature = signature + fn_decl.sig.params[p].name + ":" + fn_decl.sig.params[p].type_name
+                    p = p + 1
+                }
+                result_type := ""
+                switch fn_decl.sig.return_type {
+                    option.some(value) : result_type = value,
+                    option.none : (),
+                }
                 lines.push(
                     "fn " + fn_decl.sig.name
-                        + " params=" + to_string(len(fn_decl.sig.params))
-                        + " generics=" + to_string(len(fn_decl.sig.generics))
+                        + " public=" + to_string(fn_decl.is_public as int)
+                        + " params=" + signature
+                        + " generics=" + join_with(fn_decl.sig.generics, ",")
+                        + " returns=" + result_type
                 )
+            }
+            item.struct(st) : {
+                fields := ""
+                f := 0
+                for f < len(st.fields) {
+                    if f > 0 { fields = fields + "," }
+                    fields = fields + st.fields[f].name + ":" + st.fields[f].type_name
+                    f = f + 1
+                }
+                lines.push("struct " + st.name + " public=" + to_string(st.is_public as int)
+                    + " generics=" + join_with(st.generics, ",") + " fields=" + fields)
+            }
+            item.enum(en) : {
+                variants := ""
+                v := 0
+                for v < len(en.variants) {
+                    if v > 0 { variants = variants + "," }
+                    variants = variants + en.variants[v].name
+                    switch en.variants[v].payload {
+                        option.some(payload) : variants = variants + ":" + payload,
+                        option.none : (),
+                    }
+                    v = v + 1
+                }
+                lines.push("enum " + en.name + " public=" + to_string(en.is_public as int)
+                    + " generics=" + join_with(en.generics, ",") + " variants=" + variants)
+            }
+            item.trait(tr) : {
+                methods := ""
+                m := 0
+                for m < len(tr.methods) {
+                    if m > 0 { methods = methods + "," }
+                    methods = methods + tr.methods[m].name
+                    m = m + 1
+                }
+                lines.push("trait " + tr.name + " public=" + to_string(tr.is_public as int)
+                    + " generics=" + join_with(tr.generics, ",") + " methods=" + methods)
+            }
+            item.method(method) : {
+                fn_decl := method.method
+                lines.push("method " + method.receiver_type + "." + fn_decl.sig.name
+                    + " public=" + to_string(fn_decl.is_public as int)
+                    + " params=" + to_string(len(fn_decl.sig.params))
+                    + " generics=" + join_with(fn_decl.sig.generics, ","))
+            }
+            item.const(cn) : lines.push("const " + cn.name + " iota=" + to_string(cn.iota_index)),
+            item.var(vr) : {
+                type_name := ""
+                switch vr.type_name {
+                    option.some(value) : type_name = value,
+                    option.none : (),
+                }
+                lines.push("var " + vr.name + " type=" + type_name)
             }
             _ : (),
         }
