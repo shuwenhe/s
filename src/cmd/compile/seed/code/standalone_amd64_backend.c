@@ -330,6 +330,7 @@ static bool emit_store(FILE *out, standalone_function *fn, const char *name, con
 }
 static const char *runtime_callee(const char *name) {
 	if (strcmp(name, "len") == 0) return "s_value_len";
+	if (strcmp(name, "__string_len") == 0) return "s_value_len";
 	if (strcmp(name, "host_args") == 0) return "s_host_args_value";
 	if (strcmp(name, "eprintln") == 0) return "s_eprintln_value";
 	if (strcmp(name, "__host_char_at") == 0) return "s_string_char_at";
