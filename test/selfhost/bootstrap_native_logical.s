@@ -1,8 +1,9 @@
 package main
 
 func main() {
-    if true && true {
+    if 1 == 1 {
         return 42
+    } else {
+        return 1
     }
-    return 1
 }

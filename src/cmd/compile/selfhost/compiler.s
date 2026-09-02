@@ -1077,9 +1077,9 @@ func evaluate_block(string source, int block_start, int block_end, int scope_sta
 func evaluate_main_expression(string source) int {
     int body = function_body(source, "main")
     if body < 0 { return -1 }
-    int body_end = function_body_end(source, body)
+    int body_end = function_body_end(source, body + 1)
     if body_end < 0 { return -1 }
-    return evaluate_block(source, body, body_end, body, "", 0)
+    return evaluate_block(source, body + 1, body_end, body + 1, "", 0)
 }
 
 func compile_main_expression(string source) string {
@@ -1547,9 +1547,9 @@ func emit_native_block_machine(string source, int block_start, int block_end) st
 func emit_native_expression_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
-    int body_end = function_body_end(source, body)
+    int body_end = function_body_end(source, body + 1)
     if body_end < 0 { return "" }
-    int return_at = skip_space(source, body)
+    int return_at = skip_space(source, body + 1)
     if return_at >= body_end || !matches_at(source, return_at, "return") { return "" }
     int start = skip_space(source, return_at + 6)
     int end = expression_end(source, start)
@@ -1567,9 +1567,9 @@ func emit_native_expression_elf(string source) string {
 func emit_native_control_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
-    int body_end = function_body_end(source, body)
+    int body_end = function_body_end(source, body + 1)
     if body_end < 0 { return "" }
-    string code = emit_native_block_machine(source, body, body_end)
+    string code = emit_native_block_machine(source, body + 1, body_end)
     if code == "" { return "" }
     return emit_elf_image(code)
 }
@@ -1738,12 +1738,12 @@ func emit_assignment_block_machine(string source, int block_start, int block_end
 func emit_native_loop_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
-    int body_end = function_body_end(source, body)
+    int body_end = function_body_end(source, body + 1)
     if body_end < 0 { return "" }
     string prefix = __host_byte_string(85) + __host_byte_string(72) + __host_byte_string(137)
         + __host_byte_string(229) + __host_byte_string(72) + __host_byte_string(129)
         + __host_byte_string(236) + little32(128)
-    int index = body
+    int index = body + 1
     for true {
         index = skip_space(source, index)
         if index >= body_end { return "" }
@@ -1756,8 +1756,8 @@ func emit_native_loop_elf(string source) string {
         int initializer = skip_space(source, assign + 2)
         int initializer_end = expression_end(source, initializer)
         if initializer_end < 0 || initializer_end > body_end { return "" }
-        int slot = local_slot(source, body, index, __host_slice(source, index, name_end))
-        string value = emit_scoped_arithmetic_machine(source, initializer, initializer_end, body)
+        int slot = local_slot(source, body + 1, index, __host_slice(source, index, name_end))
+        string value = emit_scoped_arithmetic_machine(source, initializer, initializer_end, body + 1)
         if slot < 0 || value == "" { return "" }
         prefix = prefix + value + stack_store(slot)
         index = initializer_end + 1
@@ -1768,15 +1768,15 @@ func emit_native_loop_elf(string source) string {
     if open >= body_end { return "" }
     int close = function_body_end(source, open + 1)
     if close < 0 || close > body_end { return "" }
-    string condition = emit_scoped_condition_machine(source, condition_start, open, body)
-    string loop_body = emit_assignment_block_machine(source, open + 1, close, body)
+    string condition = emit_scoped_condition_machine(source, condition_start, open, body + 1)
+    string loop_body = emit_assignment_block_machine(source, open + 1, close, body + 1)
     if condition == "" || loop_body == "" { return "" }
     int return_at = find_word_from(source, "return", close + 1)
     if return_at < 0 || return_at >= body_end { return "" }
     int return_start = skip_space(source, return_at + 6)
     int return_end = expression_end(source, return_start)
     if return_end < 0 || return_end > body_end { return "" }
-    string result = emit_scoped_arithmetic_machine(source, return_start, return_end, body)
+    string result = emit_scoped_arithmetic_machine(source, return_start, return_end, body + 1)
     if result == "" { return "" }
     string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
     return emit_elf_image(prefix + machine_while(condition, loop_body)
@@ -1815,10 +1815,10 @@ func emit_write_sequence(int address, int count) string {
 func emit_native_string_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
-    int body_end = function_body_end(source, body)
+    int body_end = function_body_end(source, body + 1)
     if body_end < 0 { return "" }
-    int print_at = find_word_from(source, "println", body)
-    if print_at < 0 || print_at >= body_end || print_at != skip_space(source, body) { return "" }
+    int print_at = find_word_from(source, "println", body + 1)
+    if print_at < 0 || print_at >= body_end || print_at != skip_space(source, body + 1) { return "" }
     int open = skip_space(source, print_at + 7)
     if open >= body_end || __host_char_at(source, open) != "(" { return "" }
     int quote = skip_space(source, open + 1)
@@ -1885,9 +1885,9 @@ func emit_array_expression_machine(string source, int raw_start, int raw_end, st
 func emit_native_array_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
-    int body_end = function_body_end(source, body)
+    int body_end = function_body_end(source, body + 1)
     if body_end < 0 { return "" }
-    int declaration = skip_space(source, body)
+    int declaration = skip_space(source, body + 1)
     if declaration >= body_end || !is_alpha(__host_char_at(source, declaration)) { return "" }
     int name_end = skip_identifier(source, declaration)
     string name = __host_slice(source, declaration, name_end)
@@ -2465,9 +2465,9 @@ func emit_multi_block_sequence(string source, int raw_start, int block_end, stri
 func emit_multi_function_machine(string source, string function_name, bool entry_function) string {
     int body = function_body(source, function_name)
     if body < 0 { return "" }
-    int body_end = function_body_end(source, body)
+    int body_end = function_body_end(source, body + 1)
     if body_end < 0 { return "" }
-    string statements = emit_multi_block_sequence(source, body, body_end, function_name, entry_function)
+    string statements = emit_multi_block_sequence(source, body + 1, body_end, function_name, entry_function)
     if statements == "" { return "" }
     return spill_sysv_parameters(function_parameter_abi_words(source, function_name)) + statements
 }
@@ -2504,9 +2504,9 @@ func emit_native_multi_call_elf(string source) string {
 func emit_native_copy_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
-    int body_end = function_body_end(source, body)
+    int body_end = function_body_end(source, body + 1)
     if body_end < 0 { return "" }
-    int call_at = skip_space(source, body)
+    int call_at = skip_space(source, body + 1)
     if call_at >= body_end || !matches_at(source, call_at, "copy_args_file") { return "" }
     string setup = __host_byte_string(72) + __host_byte_string(139) + __host_byte_string(92)
         + __host_byte_string(36) + __host_byte_string(16)
@@ -2585,12 +2585,12 @@ func emit_native_copy_elf(string source) string {
 func emit_native_locals_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
-    int body_end = function_body_end(source, body)
+    int body_end = function_body_end(source, body + 1)
     if body_end < 0 { return "" }
     string code = __host_byte_string(85) + __host_byte_string(72) + __host_byte_string(137)
         + __host_byte_string(229) + __host_byte_string(72) + __host_byte_string(129)
         + __host_byte_string(236) + little32(128)
-    int index = body
+    int index = body + 1
     for index < body_end {
         index = skip_space(source, index)
         if index >= body_end { return "" }
@@ -2598,7 +2598,7 @@ func emit_native_locals_elf(string source) string {
             int return_start = skip_space(source, index + 6)
             int return_end = expression_end(source, return_start)
             if return_end < 0 || return_end > body_end { return "" }
-            string result = emit_scoped_arithmetic_machine(source, return_start, return_end, body)
+            string result = emit_scoped_arithmetic_machine(source, return_start, return_end, body + 1)
             if result == "" { return "" }
             string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
             return emit_elf_image(code + result + move_result + exit_sequence())
@@ -2611,8 +2611,8 @@ func emit_native_locals_elf(string source) string {
         int initializer = skip_space(source, assign + 2)
         int initializer_end = expression_end(source, initializer)
         if initializer_end < 0 || initializer_end > body_end { return "" }
-        string value = emit_scoped_arithmetic_machine(source, initializer, initializer_end, body)
-        int slot = local_slot(source, body, index, __host_slice(source, index, name_end))
+        string value = emit_scoped_arithmetic_machine(source, initializer, initializer_end, body + 1)
+        int slot = local_slot(source, body + 1, index, __host_slice(source, index, name_end))
         if value == "" || slot < 0 || slot >= 15 { return "" }
         code = code + value + stack_store(slot)
         index = initializer_end + 1
@@ -2780,9 +2780,9 @@ func emit_parameters_arithmetic_machine(string source, int raw_start, int raw_en
 func emit_native_call_elf(string source) string {
     int main_body = function_body(source, "main")
     if main_body < 0 { return "" }
-    int main_end = function_body_end(source, main_body)
+    int main_end = function_body_end(source, main_body + 1)
     if main_end < 0 { return "" }
-    int main_return = skip_space(source, main_body)
+    int main_return = skip_space(source, main_body + 1)
     if main_return >= main_end || !matches_at(source, main_return, "return") { return "" }
     int main_expression = skip_space(source, main_return + 6)
     int main_expression_end = expression_end(source, main_expression)
@@ -2795,9 +2795,9 @@ func emit_native_call_elf(string source) string {
     if callee == "" || callee == "main" { return "" }
     int callee_body = function_body(source, callee)
     if callee_body < 0 { return "" }
-    int callee_end = function_body_end(source, callee_body)
+    int callee_end = function_body_end(source, callee_body + 1)
     if callee_end < 0 { return "" }
-    int callee_return = find_word_from(source, "return", callee_body)
+    int callee_return = find_word_from(source, "return", callee_body + 1)
     if callee_return < 0 || callee_return >= callee_end { return "" }
     int callee_expression = skip_space(source, callee_return + 6)
     int callee_expression_end = expression_end(source, callee_expression)

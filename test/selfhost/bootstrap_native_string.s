@@ -1,6 +1,6 @@
 package main
 
 func main() {
-    eprintln("selfhost-string")
+    println("selfhost-string")
     return 42
 }
