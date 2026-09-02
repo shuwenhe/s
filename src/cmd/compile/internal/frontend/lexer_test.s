@@ -27,10 +27,10 @@ func test_lexer_single_char_tokens() int {
     tokens := vec[token]()
     for {
         tok := lexer_next_token(lex*)
-        if tok.token_type == TOKEN_EOF {
+        if tok.token_type == token_eof {
             break
         }
-        if tok.token_type == TOKEN_NEWLINE {
+        if tok.token_type == token_newline {
             continue
         }
         tokens.push(tok)
@@ -47,33 +47,33 @@ func test_lexer_keywords() int {
     lex := lexer_new(source)
 
     expected := vec[int]()
-    expected.push(TOKEN_PACKAGE)
-    expected.push(TOKEN_USE)
-    expected.push(TOKEN_FUNC)
-    expected.push(TOKEN_STRUCT)
-    expected.push(TOKEN_ENUM)
-    expected.push(TOKEN_IF)
-    expected.push(TOKEN_ELSE)
-    expected.push(TOKEN_FOR)
-    expected.push(TOKEN_WHILE)
-    expected.push(TOKEN_RETURN)
-    expected.push(TOKEN_BREAK)
-    expected.push(TOKEN_CONTINUE)
-    expected.push(TOKEN_SWITCH)
-    expected.push(TOKEN_CASE)
-    expected.push(TOKEN_DEFAULT)
-    expected.push(TOKEN_VAR)
-    expected.push(TOKEN_CONST)
-    expected.push(TOKEN_TRUE)
-    expected.push(TOKEN_FALSE)
-    expected.push(TOKEN_AS)
-    expected.push(TOKEN_NEW)
-    expected.push(TOKEN_DELETE)
+    expected.push(token_package)
+    expected.push(token_use)
+    expected.push(token_func)
+    expected.push(token_struct)
+    expected.push(token_enum)
+    expected.push(token_if)
+    expected.push(token_else)
+    expected.push(token_for)
+    expected.push(token_while)
+    expected.push(token_return)
+    expected.push(token_break)
+    expected.push(token_continue)
+    expected.push(token_switch)
+    expected.push(token_case)
+    expected.push(token_default)
+    expected.push(token_var)
+    expected.push(token_const)
+    expected.push(token_true)
+    expected.push(token_false)
+    expected.push(token_as)
+    expected.push(token_new)
+    expected.push(token_delete)
 
     tokens := vec[token]()
     for {
         tok := lexer_next_token(lex*)
-        if tok.token_type == TOKEN_EOF {
+        if tok.token_type == token_eof {
             break
         }
         tokens.push(tok)
@@ -106,10 +106,10 @@ func test_lexer_identifiers() int {
     tokens := vec[token]()
     for {
         tok := lexer_next_token(lex*)
-        if tok.token_type == TOKEN_EOF {
+        if tok.token_type == token_eof {
             break
         }
-        if tok.token_type != TOKEN_NEWLINE {
+        if tok.token_type != token_newline {
             tokens.push(tok)
         }
     }
@@ -140,10 +140,10 @@ func test_lexer_integers() int {
     tokens := vec[token]()
     for {
         tok := lexer_next_token(lex*)
-        if tok.token_type == TOKEN_EOF {
+        if tok.token_type == token_eof {
             break
         }
-        if tok.token_type == TOKEN_INT {
+        if tok.token_type == token_int {
             tokens.push(tok)
         }
     }
@@ -162,10 +162,10 @@ func test_lexer_floats() int {
     tokens := vec[token]()
     for {
         tok := lexer_next_token(lex*)
-        if tok.token_type == TOKEN_EOF {
+        if tok.token_type == token_eof {
             break
         }
-        if tok.token_type == TOKEN_FLOAT {
+        if tok.token_type == token_float {
             tokens.push(tok)
         }
     }
@@ -184,10 +184,10 @@ func test_lexer_strings() int {
     tokens := vec[token]()
     for {
         tok := lexer_next_token(lex*)
-        if tok.token_type == TOKEN_EOF {
+        if tok.token_type == token_eof {
             break
         }
-        if tok.token_type == TOKEN_STRING {
+        if tok.token_type == token_string {
             tokens.push(tok)
         }
     }
@@ -204,27 +204,27 @@ func test_lexer_operators() int {
     lex := lexer_new(source)
 
     expected := vec[int]()
-    expected.push(TOKEN_COLON_ASSIGN)
-    expected.push(TOKEN_EQ)
-    expected.push(TOKEN_NE)
-    expected.push(TOKEN_LE)
-    expected.push(TOKEN_GE)
-    expected.push(TOKEN_AND)
-    expected.push(TOKEN_OR)
-    expected.push(TOKEN_LSHIFT)
-    expected.push(TOKEN_RSHIFT)
-    expected.push(TOKEN_PLUS_ASSIGN)
-    expected.push(TOKEN_MINUS_ASSIGN)
-    expected.push(TOKEN_STAR_ASSIGN)
-    expected.push(TOKEN_SLASH_ASSIGN)
+    expected.push(token_colon_assign)
+    expected.push(token_eq)
+    expected.push(token_ne)
+    expected.push(token_le)
+    expected.push(token_ge)
+    expected.push(token_and)
+    expected.push(token_or)
+    expected.push(token_lshift)
+    expected.push(token_rshift)
+    expected.push(token_plus_assign)
+    expected.push(token_minus_assign)
+    expected.push(token_star_assign)
+    expected.push(token_slash_assign)
 
     tokens := vec[token]()
     for {
         tok := lexer_next_token(lex*)
-        if tok.token_type == TOKEN_EOF {
+        if tok.token_type == token_eof {
             break
         }
-        if tok.token_type != TOKEN_NEWLINE {
+        if tok.token_type != token_newline {
             tokens.push(tok)
         }
     }
@@ -304,7 +304,7 @@ func test_lexer_complex_expression() int {
     tokens := vec[token]()
     for {
         tok := lexer_next_token(lex*)
-        if tok.token_type == TOKEN_EOF {
+        if tok.token_type == token_eof {
             break
         }
         tokens.push(tok)

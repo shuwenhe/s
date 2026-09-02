@@ -1,6 +1,6 @@
 package ssa_rules
 
-struct Rule {
+struct rule {
     int id
     int pattern_op
     int result_op
@@ -8,20 +8,20 @@ struct Rule {
     func_ptr apply_func
 }
 
-struct Pattern {
+struct pattern {
     int op
     int[] arg_ops
     int num_args
     int constants
 }
 
-struct Rewrite {
+struct rewrite {
     int result_op
     int[] result_args
     int num_args
 }
 
-struct RuleEngine {
+struct rule_engine {
     int rule_count
     rule[] rules
     int pattern_count
@@ -30,8 +30,8 @@ struct RuleEngine {
     int stats_optimizations
 }
 
-func RuleEngine_new() RuleEngine* {
-    engine := RuleEngine {
+func rule_engine_new() rule_engine* {
+    engine := rule_engine {
         rule_count: 0,
         pattern_count: 0,
         rules: new rule[512],
@@ -42,11 +42,11 @@ func RuleEngine_new() RuleEngine* {
     &engine
 }
 
-func (engine* RuleEngine) register_rule(int id, int pattern_op, int result_op, int priority) int {
+func (engine* rule_engine) register_rule(int id, int pattern_op, int result_op, int priority) int {
     idx := engine.rule_count
     engine.rule_count = engine.rule_count + 1
     
-    rule := Rule {
+    rule := rule {
         id: id,
         pattern_op: pattern_op,
         result_op: result_op,
@@ -61,33 +61,33 @@ func (engine* RuleEngine) register_rule(int id, int pattern_op, int result_op, i
 func apply_const_fold(int op, int[] args, int[] arg_values) (int, int) {
     result := 0
     
-    if op == OP_ADD {
+    if op == op_add {
         result = arg_values[0] + arg_values[1]
     } else {
-        if op == OP_SUB {
+        if op == op_sub {
             result = arg_values[0] - arg_values[1]
         } else {
-            if op == OP_MUL {
+            if op == op_mul {
                 result = arg_values[0] * arg_values[1]
             } else {
-                if op == OP_DIV {
+                if op == op_div {
                     if arg_values[1] != 0 {
                         result = arg_values[0] / arg_values[1]
                     }
                 } else {
-                    if op == OP_AND {
+                    if op == op_and {
                         result = arg_values[0] & arg_values[1]
                     } else {
-                        if op == OP_OR {
+                        if op == op_or {
                             result = arg_values[0] | arg_values[1]
                         } else {
-                            if op == OP_XOR {
+                            if op == op_xor {
                                 result = arg_values[0] ^ arg_values[1]
                             } else {
-                                if op == OP_SHL {
+                                if op == op_shl {
                                     result = arg_values[0] << arg_values[1]
                                 } else {
-                                    if op == OP_SHR {
+                                    if op == op_shr {
                                         result = arg_values[0] >> arg_values[1]
                                     }
                                 }
@@ -106,7 +106,7 @@ func apply_algebraic_simp(int op, int[] args, int[] arg_values) (int, int) {
     a := arg_values[0]
     b := arg_values[1]
     
-    if op == OP_ADD {
+    if op == op_add {
         if a == 0 {
             return b, 1
         }
@@ -117,7 +117,7 @@ func apply_algebraic_simp(int op, int[] args, int[] arg_values) (int, int) {
             return 0, 0
         }
     } else {
-        if op == OP_SUB {
+        if op == op_sub {
             if b == 0 {
                 return a, 1
             }
@@ -125,7 +125,7 @@ func apply_algebraic_simp(int op, int[] args, int[] arg_values) (int, int) {
                 return 0, 1
             }
         } else {
-            if op == OP_MUL {
+            if op == op_mul {
                 if a == 0 || b == 0 {
                     return 0, 1
                 }
@@ -136,7 +136,7 @@ func apply_algebraic_simp(int op, int[] args, int[] arg_values) (int, int) {
                     return a, 1
                 }
             } else {
-                if op == OP_DIV {
+                if op == op_div {
                     if b == 1 {
                         return a, 1
                     }
@@ -144,7 +144,7 @@ func apply_algebraic_simp(int op, int[] args, int[] arg_values) (int, int) {
                         return 1, 1
                     }
                 } else {
-                    if op == OP_AND {
+                    if op == op_and {
                         if a == 0 || b == 0 {
                             return 0, 1
                         }
@@ -152,7 +152,7 @@ func apply_algebraic_simp(int op, int[] args, int[] arg_values) (int, int) {
                             return a, 1
                         }
                     } else {
-                        if op == OP_OR {
+                        if op == op_or {
                             if a == 0 {
                                 return b, 1
                             }
@@ -163,7 +163,7 @@ func apply_algebraic_simp(int op, int[] args, int[] arg_values) (int, int) {
                                 return a, 1
                             }
                         } else {
-                            if op == OP_XOR {
+                            if op == op_xor {
                                 if a == 0 {
                                     return b, 1
                                 }
@@ -188,7 +188,7 @@ func apply_strength_reduction(int op, int[] args, int[] arg_values) (int, int) {
     a := arg_values[0]
     b := arg_values[1]
     
-    if op == OP_MUL {
+    if op == op_mul {
         if b == 2 {
             return 0, 0
         }
@@ -199,7 +199,7 @@ func apply_strength_reduction(int op, int[] args, int[] arg_values) (int, int) {
             return 0, 0
         }
     } else {
-        if op == OP_DIV {
+        if op == op_div {
             if b == 2 {
                 return 0, 0
             }
@@ -213,11 +213,11 @@ func apply_strength_reduction(int op, int[] args, int[] arg_values) (int, int) {
 }
 
 func apply_dead_code_elim(int op, int[] args) (int, int) {
-    if op == OP_STORE {
+    if op == op_store {
         return 0, 1
     }
     
-    if op == OP_LOAD {
+    if op == op_load {
         return 0, 0
     }
     
@@ -225,7 +225,7 @@ func apply_dead_code_elim(int op, int[] args) (int, int) {
 }
 
 func apply_reassociate(int op, int[] args, int[] arg_values) (int, int) {
-    if op == OP_ADD || op == OP_MUL {
+    if op == op_add || op == op_mul {
         return 0, 0
     }
     
@@ -233,7 +233,7 @@ func apply_reassociate(int op, int[] args, int[] arg_values) (int, int) {
 }
 
 func apply_distribute(int op, int[] args, int[] arg_values) (int, int) {
-    if op == OP_MUL {
+    if op == op_mul {
         return 0, 0
     }
     
@@ -241,7 +241,7 @@ func apply_distribute(int op, int[] args, int[] arg_values) (int, int) {
 }
 
 func apply_branch_simplify(int cond_op, int[] args) (int, int, int) {
-    if cond_op == OP_CMP {
+    if cond_op == op_cmp {
         return 0, 0, 0
     }
     
@@ -293,7 +293,7 @@ func apply_bounds_check_elim(int[] bounds_checks) int {
     return len(bounds_checks)
 }
 
-func (engine* RuleEngine) match_pattern(int value_op, int[] value_args) int {
+func (engine* rule_engine) match_pattern(int value_op, int[] value_args) int {
     match := -1
     
     i := 0
@@ -312,7 +312,7 @@ func (engine* RuleEngine) match_pattern(int value_op, int[] value_args) int {
     match
 }
 
-func (engine* RuleEngine) apply_rules(int value_op, int[] value_args, int[] arg_values) (int, int) {
+func (engine* rule_engine) apply_rules(int value_op, int[] value_args, int[] arg_values) (int, int) {
     result_op := value_op
     result_val := 0
     
@@ -321,11 +321,11 @@ func (engine* RuleEngine) apply_rules(int value_op, int[] value_args, int[] arg_
         rule := engine.rules[i]
         
         if rule.pattern_op == value_op {
-            if value_op == OP_ADD || value_op == OP_SUB || value_op == OP_MUL {
+            if value_op == op_add || value_op == op_sub || value_op == op_mul {
                 result_val, result_op = apply_const_fold(value_op, value_args, arg_values)
             }
             
-            if value_op == OP_ADD || value_op == OP_SUB || value_op == OP_MUL {
+            if value_op == op_add || value_op == op_sub || value_op == op_mul {
                 result_val, result_op = apply_algebraic_simp(value_op, value_args, arg_values)
             }
         }
@@ -336,7 +336,7 @@ func (engine* RuleEngine) apply_rules(int value_op, int[] value_args, int[] arg_
     return result_val, result_op
 }
 
-func (engine* RuleEngine) run_on_block(value[] block_values) int {
+func (engine* rule_engine) run_on_block(value[] block_values) int {
     i := 0
     for i < len(block_values) {
         v := block_values[i]
@@ -353,36 +353,36 @@ func (engine* RuleEngine) run_on_block(value[] block_values) int {
     engine.stats_applied
 }
 
-const OP_PHI = 1
-const OP_CONST = 2
-const OP_ADD = 3
-const OP_SUB = 4
-const OP_MUL = 5
-const OP_DIV = 6
-const OP_MOD = 7
-const OP_AND = 8
-const OP_OR = 9
-const OP_XOR = 10
-const OP_SHL = 11
-const OP_SHR = 12
-const OP_LOAD = 13
-const OP_STORE = 14
-const OP_CALL = 15
-const OP_RETURN = 16
-const OP_BRANCH = 17
-const OP_COND_BRANCH = 18
-const OP_CMP = 19
-const OP_NEG = 20
-const OP_NOT = 21
+const op_phi = 1
+const op_const = 2
+const op_add = 3
+const op_sub = 4
+const op_mul = 5
+const op_div = 6
+const op_mod = 7
+const op_and = 8
+const op_or = 9
+const op_xor = 10
+const op_shl = 11
+const op_shr = 12
+const op_load = 13
+const op_store = 14
+const op_call = 15
+const op_return = 16
+const op_branch = 17
+const op_cond_branch = 18
+const op_cmp = 19
+const op_neg = 20
+const op_not = 21
 
-func init_builtin_rules(engine* RuleEngine) int {
-    engine.register_rule(1, OP_ADD, OP_ADD, 10)
-    engine.register_rule(2, OP_SUB, OP_SUB, 10)
-    engine.register_rule(3, OP_MUL, OP_MUL, 10)
-    engine.register_rule(4, OP_DIV, OP_DIV, 10)
-    engine.register_rule(5, OP_AND, OP_AND, 10)
-    engine.register_rule(6, OP_OR, OP_OR, 10)
-    engine.register_rule(7, OP_XOR, OP_XOR, 10)
+func init_builtin_rules(engine* rule_engine) int {
+    engine.register_rule(1, op_add, op_add, 10)
+    engine.register_rule(2, op_sub, op_sub, 10)
+    engine.register_rule(3, op_mul, op_mul, 10)
+    engine.register_rule(4, op_div, op_div, 10)
+    engine.register_rule(5, op_and, op_and, 10)
+    engine.register_rule(6, op_or, op_or, 10)
+    engine.register_rule(7, op_xor, op_xor, 10)
     
     0
 }

@@ -3,30 +3,30 @@ use std.strings.split as split_string
 use std.strings.trim as trim_string
 use std.strings.contains as contains_string
 use std.fmt.sprintf
-struct IRInstruction {
+struct ir_instruction {
     opcode: string
     dest: string
     src1: string
     src2: string
 }
 
-struct IRFunction {
+struct ir_function {
     name: string
-    instructions: []IRInstruction
+    instructions: []ir_instruction
 }
 
-struct IRModule {
+struct ir_module {
     target: string
     version: string
-    functions: []IRFunction
+    functions: []ir_function
 }
 
-func parse_ir(string content) (IRModule, error) {
+func parse_ir(string content) (ir_module, error) {
     lines := split_string(content, "\n")
-    module := IRModule{
+    module := ir_module{
         target: "x86_64",
         version: "1",
-        functions: []IRFunction{},
+        functions: []ir_function{},
     }
     if len(lines) == 0 {
         return module, error("empty IR"
@@ -36,7 +36,7 @@ func parse_ir(string content) (IRModule, error) {
         return module, error("invalid IR header: " + header
     }
     i := 1
-    current_func: *IRFunction = nil
+    current_func: *ir_function = nil
     for i < len(lines) {
         line := trim_string(lines[i])
         if line == "" {
@@ -52,9 +52,9 @@ func parse_ir(string content) (IRModule, error) {
         switch opcode {
             case "FUNC_BEGIN":
                 if len(parts) >= 2 {
-                    func := IRFunction{
+                    func := ir_function{
                         name: parts[1],
-                        instructions: []IRInstruction{},
+                        instructions: []ir_instruction{},
                     }
                     current_func = *func
                     module.functions = append(module.functions, func)
@@ -63,7 +63,7 @@ func parse_ir(string content) (IRModule, error) {
                 current_func = nil
             default:
                 if current_func != nil {
-                    instr := IRInstruction{
+                    instr := ir_instruction{
                         opcode: opcode, dest if len(parts) > 1 then parts[1] else "", src1 if len(parts) > 2 then parts[2] else "", src2 if len(parts) > 3 then parts[3] else "",
                     }
                     current_func.instructions = append(
@@ -77,7 +77,7 @@ func parse_ir(string content) (IRModule, error) {
     return module, nil
 }
 
-func get_ir_stats(IRModule module) map[string]int {
+func get_ir_stats(ir_module module) map[string]int {
     stats := map[string]int{}
     stats["total_functions"] = len(module.functions)
     total_instrs := 0
@@ -96,7 +96,7 @@ func get_ir_stats(IRModule module) map[string]int {
     return stats
 }
 
-func verify_ir(IRModule module) error {
+func verify_ir(ir_module module) error {
     if len(module.functions) == 0 {
         return error("no functions in IR"
     }
@@ -108,7 +108,7 @@ func verify_ir(IRModule module) error {
     return nil
 }
 
-func instruction_to_string(IRInstruction instr) string {
+func instruction_to_string(ir_instruction instr) string {
     s := instr.opcode
     s += "|" + instr.dest
     s += "|" + instr.src1

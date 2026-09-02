@@ -1,37 +1,37 @@
 package compile.internal.syntax
 enum ast_node_type {
-    AST_PROGRAM = 1,
-    AST_PACKAGE = 2,
-    AST_IMPORT = 3,
-    AST_FUNC_DECL = 4,
-    AST_FUNC_TYPE = 5,
-    AST_STRUCT_DECL = 6,
-    AST_INTERFACE_DECL = 7,
-    AST_VAR_DECL = 8,
-    AST_CONST_DECL = 9,
-    AST_TYPE_DECL = 10,
-    AST_BLOCK_STMT = 20,
-    AST_EXPR_STMT = 21,
-    AST_RETURN_STMT = 22,
-    AST_IF_STMT = 23,
-    AST_FOR_STMT = 24,
-    AST_BREAK_STMT = 25,
-    AST_CONTINUE_STMT = 26,
-    AST_SWITCH_STMT = 27,
-    AST_DEFER_STMT = 28,
-    AST_BINARY_EXPR = 40,
-    AST_UNARY_EXPR = 41,
-    AST_CALL_EXPR = 42,
-    AST_INDEX_EXPR = 43,
-    AST_SLICE_EXPR = 44,
-    AST_MEMBER_EXPR = 45,
-    AST_IDENT_EXPR = 46,
-    AST_LITERAL_EXPR = 47,
-    AST_PAREN_EXPR = 48,
-    AST_ARRAY_TYPE = 49,
-    AST_MAP_TYPE = 50,
-    AST_CHAN_TYPE = 51,
-    AST_POINTER_TYPE = 52,
+    ast_program = 1,
+    ast_package = 2,
+    ast_import = 3,
+    ast_func_decl = 4,
+    ast_func_type = 5,
+    ast_struct_decl = 6,
+    ast_interface_decl = 7,
+    ast_var_decl = 8,
+    ast_const_decl = 9,
+    ast_type_decl = 10,
+    ast_block_stmt = 20,
+    ast_expr_stmt = 21,
+    ast_return_stmt = 22,
+    ast_if_stmt = 23,
+    ast_for_stmt = 24,
+    ast_break_stmt = 25,
+    ast_continue_stmt = 26,
+    ast_switch_stmt = 27,
+    ast_defer_stmt = 28,
+    ast_binary_expr = 40,
+    ast_unary_expr = 41,
+    ast_call_expr = 42,
+    ast_index_expr = 43,
+    ast_slice_expr = 44,
+    ast_member_expr = 45,
+    ast_ident_expr = 46,
+    ast_literal_expr = 47,
+    ast_paren_expr = 48,
+    ast_array_type = 49,
+    ast_map_type = 50,
+    ast_chan_type = 51,
+    ast_pointer_type = 52,
 }
 struct ast_node {
     type_* int
@@ -91,7 +91,7 @@ func parser_skip_newlines(p* parser) {
 func parser_parse_program(p* parser) ast_node* {
     parser_skip_newlines(p)
     prog := alloc(ast_node)
-    prog.type_ = AST_PROGRAM
+    prog.type_ = ast_program
     prog.line = parser_current_token(p).line
     prog.col = parser_current_token(p).col
     tail := prog
@@ -122,7 +122,7 @@ func parser_parse_program(p* parser) ast_node* {
 
 func parser_parse_func_decl(p* parser) ast_node* {
     func_decl := alloc(ast_node)
-    func_decl.type_ = AST_FUNC_DECL
+    func_decl.type_ = ast_func_decl
     func_decl.line = parser_current_token(p).line
     func_decl.col = parser_current_token(p).col
     if !parser_match(p, 10) {
@@ -150,7 +150,7 @@ func parser_parse_func_decl(p* parser) ast_node* {
 
 func parser_parse_struct_decl(p* parser) ast_node* {
     struct_decl := alloc(ast_node)
-    struct_decl.type_ = AST_STRUCT_DECL
+    struct_decl.type_ = ast_struct_decl
     if !parser_match(p, 20) {
         return nil
     }
@@ -179,7 +179,7 @@ func parser_parse_struct_decl(p* parser) ast_node* {
 
 func parser_parse_var_decl(p* parser) ast_node* {
     var_decl := alloc(ast_node)
-    var_decl.type_ = AST_VAR_DECL
+    var_decl.type_ = ast_var_decl
     if !parser_match(p, 21) {
         return nil
     }
@@ -198,7 +198,7 @@ func parser_parse_var_decl(p* parser) ast_node* {
 
 func parser_parse_const_decl(p* parser) ast_node* {
     const_decl := alloc(ast_node)
-    const_decl.type_ = AST_CONST_DECL
+    const_decl.type_ = ast_const_decl
     if !parser_match(p, 22) {
         return nil
     }
@@ -254,13 +254,13 @@ func parser_parse_type(p* parser) ast_node* {
     current := parser_current_token(p)
     if current.type_ == 52 {
         parser_advance(p)
-        type_node.type_ = AST_POINTER_TYPE
+        type_node.type_ = ast_pointer_type
         type_node.child = parser_parse_type(p)
         return type_node
     }
     if current.type_ == 26 {
         parser_advance(p)
-        type_node.type_ = AST_ARRAY_TYPE
+        type_node.type_ = ast_array_type
         if parser_current_token(p).type_ != 27 {
             parser_parse_expression(p)
         }
@@ -279,7 +279,7 @@ func parser_parse_type(p* parser) ast_node* {
 
 func parser_parse_block_stmt(p* parser) ast_node* {
     block := alloc(ast_node)
-    block.type_ = AST_BLOCK_STMT
+    block.type_ = ast_block_stmt
     if parser_current_token(p).type_ == 28 {
         parser_advance(p)
         for {
@@ -306,12 +306,12 @@ func parser_parse_statement(p* parser) ast_node* {
     } else if current.type_ == 14 {
         parser_advance(p)
         stmt := alloc(ast_node)
-        stmt.type_ = AST_BREAK_STMT
+        stmt.type_ = ast_break_stmt
         return stmt
     } else if current.type_ == 15 {
         parser_advance(p)
         stmt := alloc(ast_node)
-        stmt.type_ = AST_CONTINUE_STMT
+        stmt.type_ = ast_continue_stmt
         return stmt
     } else if current.type_ == 28 {
         return parser_parse_block_stmt(p)
@@ -322,7 +322,7 @@ func parser_parse_statement(p* parser) ast_node* {
 
 func parser_parse_return_stmt(p* parser) ast_node* {
     ret := alloc(ast_node)
-    ret.type_ = AST_RETURN_STMT
+    ret.type_ = ast_return_stmt
     if parser_current_token(p).type_ == 11 {
         parser_advance(p)
     }
@@ -335,7 +335,7 @@ func parser_parse_return_stmt(p* parser) ast_node* {
 
 func parser_parse_if_stmt(p* parser) ast_node* {
     if_stmt := alloc(ast_node)
-    if_stmt.type_ = AST_IF_STMT
+    if_stmt.type_ = ast_if_stmt
     if parser_current_token(p).type_ == 12 {
         parser_advance(p)
     }
@@ -350,7 +350,7 @@ func parser_parse_if_stmt(p* parser) ast_node* {
 
 func parser_parse_for_stmt(p* parser) ast_node* {
     for_stmt := alloc(ast_node)
-    for_stmt.type_ = AST_FOR_STMT
+    for_stmt.type_ = ast_for_stmt
     if parser_current_token(p).type_ == 13 {
         parser_advance(p)
     }
@@ -363,7 +363,7 @@ func parser_parse_for_stmt(p* parser) ast_node* {
 
 func parser_parse_expr_stmt(p* parser) ast_node* {
     expr_stmt := alloc(ast_node)
-    expr_stmt.type_ = AST_EXPR_STMT
+    expr_stmt.type_ = ast_expr_stmt
     parser_parse_expression(p)
     return expr_stmt
 }
@@ -388,7 +388,7 @@ func parser_parse_logical_or(p* parser) ast_node* {
             parser_advance(p)
             right := parser_parse_logical_and(p)
             expr := alloc(ast_node)
-            expr.type_ = AST_BINARY_EXPR
+            expr.type_ = ast_binary_expr
             expr.left = left
             expr.right = right
             left = expr
@@ -406,7 +406,7 @@ func parser_parse_logical_and(p* parser) ast_node* {
             parser_advance(p)
             right := parser_parse_equality(p)
             expr := alloc(ast_node)
-            expr.type_ = AST_BINARY_EXPR
+            expr.type_ = ast_binary_expr
             expr.left = left
             expr.right = right
             left = expr
@@ -425,7 +425,7 @@ func parser_parse_equality(p* parser) ast_node* {
             parser_advance(p)
             right := parser_parse_comparison(p)
             expr := alloc(ast_node)
-            expr.type_ = AST_BINARY_EXPR
+            expr.type_ = ast_binary_expr
             expr.left = left
             expr.right = right
             left = expr
@@ -445,7 +445,7 @@ func parser_parse_comparison(p* parser) ast_node* {
             parser_advance(p)
             right := parser_parse_additive(p)
             expr := alloc(ast_node)
-            expr.type_ = AST_BINARY_EXPR
+            expr.type_ = ast_binary_expr
             expr.left = left
             expr.right = right
             left = expr
@@ -463,7 +463,7 @@ func parser_parse_additive(p* parser) ast_node* {
             parser_advance(p)
             right := parser_parse_multiplicative(p)
             expr := alloc(ast_node)
-            expr.type_ = AST_BINARY_EXPR
+            expr.type_ = ast_binary_expr
             expr.left = left
             expr.right = right
             left = expr
@@ -482,7 +482,7 @@ func parser_parse_multiplicative(p* parser) ast_node* {
             parser_advance(p)
             right := parser_parse_unary(p)
             expr := alloc(ast_node)
-            expr.type_ = AST_BINARY_EXPR
+            expr.type_ = ast_binary_expr
             expr.left = left
             expr.right = right
             left = expr
@@ -498,7 +498,7 @@ func parser_parse_unary(p* parser) ast_node* {
     if current_type == 54 || current_type == 52 || current_type == 75 {
         parser_advance(p)
         unary := alloc(ast_node)
-        unary.type_ = AST_UNARY_EXPR
+        unary.type_ = ast_unary_expr
         unary.child = parser_parse_unary(p)
         return unary
     }
@@ -511,7 +511,7 @@ func parser_parse_postfix(p* parser) ast_node* {
         if parser_current_token(p).type_ == 24 {
             parser_advance(p)
             call := alloc(ast_node)
-            call.type_ = AST_CALL_EXPR
+            call.type_ = ast_call_expr
             while parser_current_token(p).type_ != 25 {
                 parser_parse_expression(p)
                 if parser_current_token(p).type_ == 58 {
@@ -527,7 +527,7 @@ func parser_parse_postfix(p* parser) ast_node* {
         } else if parser_current_token(p).type_ == 26 {
             parser_advance(p)
             index := alloc(ast_node)
-            index.type_ = AST_INDEX_EXPR
+            index.type_ = ast_index_expr
             parser_parse_expression(p)
             if parser_current_token(p).type_ == 27 {
                 parser_advance(p)
@@ -536,7 +536,7 @@ func parser_parse_postfix(p* parser) ast_node* {
         } else if parser_current_token(p).type_ == 59 {
             parser_advance(p)
             member := alloc(ast_node)
-            member.type_ = AST_MEMBER_EXPR
+            member.type_ = ast_member_expr
             if parser_current_token(p).type_ == 85 {
                 parser_advance(p)
             }
@@ -552,17 +552,17 @@ func parser_parse_primary(p* parser) ast_node* {
     current := parser_current_token(p)
     primary := alloc(ast_node)
     if current.type_ == 85 {
-        primary.type_ = AST_IDENT_EXPR
+        primary.type_ = ast_ident_expr
         primary.value = current.value
         parser_advance(p)
     } else if current.type_ == 80 || current.type_ == 81 || current.type_ == 82 ||
               current.type_ == 83 || current.type_ == 84 {
-        primary.type_ = AST_LITERAL_EXPR
+        primary.type_ = ast_literal_expr
         primary.value = current.value
         parser_advance(p)
     } else if current.type_ == 24 {
         parser_advance(p)
-        primary.type_ = AST_PAREN_EXPR
+        primary.type_ = ast_paren_expr
         primary.child = parser_parse_expression(p)
         if parser_current_token(p).type_ == 25 {
             parser_advance(p)

@@ -1,8 +1,8 @@
 package src.simd.archsimd._gen.simdgen
-func gen_simdTypes_unit_name() string {
+func gen_simd_types_unit_name() string {
     "src/simd/archsimd/_gen/simdgen/gen_simdTypes"
 }
 
-func gen_simdTypes_unit_ready() int {
+func gen_simd_types_unit_ready() int {
     1
 }

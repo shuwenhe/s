@@ -1,16 +1,16 @@
-func (l *UDPListener) Close() error {
+func (l *udp_listener) close() error {
     if close(l.fd) != 0 {
         return "close error"
     }
     nil
 }
 
-func (l *UDPListener) Addr() Addr {
+func (l *udp_listener) addr() addr {
     *l.laddr
 }
 package src.net
 
-struct UDPListener {
+struct udp_listener {
     int fd
-    UDPAddr laddr
+    udp_addr laddr
 }

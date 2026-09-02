@@ -1,7 +1,7 @@
 package src.runtime
 use std.slices
 extern "intrinsic" func __mem_heap_list_all() int[]
-extern "intrinsic" func __mem_obj_read_header(int obj_id) ObjHeader
+extern "intrinsic" func __mem_obj_read_header(int obj_id) obj_header
 extern "intrinsic" func __mem_obj_set_mark(int obj_id, int mark) ()
 extern "intrinsic" func __mem_os_free(int obj_id) ()
 var sweep_freed_bytes = 0
@@ -17,7 +17,7 @@ func sweep_pass() int {
         obj_id := all_objs.get(i).unwrap_or(-1)
         if obj_id >= 0 {
             hdr := __mem_obj_read_header(obj_id)
-            if hdr.mark == GC_WHITE {
+            if hdr.mark == gc_white {
                 sweep_freed_bytes = sweep_freed_bytes + hdr.size
                 sweep_freed_count = sweep_freed_count + 1
                 heap_alloc_bytes = heap_alloc_bytes - hdr.size
@@ -31,7 +31,7 @@ func sweep_pass() int {
                 heap_dead_objs = heap_dead_objs + 1
                 __mem_os_free(obj_id)
             } else {
-                __mem_obj_set_mark(obj_id, GC_WHITE)
+                __mem_obj_set_mark(obj_id, gc_white)
                 sweep_live_count = sweep_live_count + 1
             }
         }

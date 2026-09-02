@@ -1,6 +1,6 @@
 package src.runtime
 use std.io as io
-const RUNTIME_VERSION = "0.2.0"
+const runtime_version = "0.2.0"
 extern "intrinsic" func __runtime_install_signals() ()
 func runtime_init() () {
     __runtime_install_signals()
@@ -9,7 +9,7 @@ func runtime_init() () {
     heap_dead_objs   = 0
     heap_goal_bytes  = 4194304
     gc_enabled = true
-    gc_phase   = GC_PHASE_OFF
+    gc_phase   = gc_phase_off
 }
 
 func set_max_procs(int n) int {
@@ -24,7 +24,7 @@ func gc() () {
     force_gc()
 }
 
-struct MemStats {
+struct mem_stats {
     int alloc
     int total_alloc
     int sys
@@ -32,8 +32,8 @@ struct MemStats {
     int freed
 }
 
-func read_mem_stats() MemStats {
-    MemStats {
+func read_mem_stats() mem_stats {
+    mem_stats {
         alloc:       heap_alloc_bytes, total_alloc heap_alloc_bytes + gc_total_freed, sys heap_sys_bytes, num_gc gc_run_count, freed gc_total_freed,
     }
 }
@@ -49,7 +49,7 @@ func panic(string msg) () {
 }
 
 func version() string {
-    RUNTIME_VERSION
+    runtime_version
 }
 
 func runtime_unit_name() string { "src/runtime/runtime" }

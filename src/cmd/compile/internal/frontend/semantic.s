@@ -11,13 +11,13 @@ struct symbol {
     is_mut: int
 }
 
-const SYMBOL_VAR = 1
-const SYMBOL_FUNC = 2
-const SYMBOL_STRUCT = 3
-const SYMBOL_ENUM = 4
-const SYMBOL_CONST = 5
-const SYMBOL_PARAM = 6
-const SYMBOL_FIELD = 7
+const symbol_var = 1
+const symbol_func = 2
+const symbol_struct = 3
+const symbol_enum = 4
+const symbol_const = 5
+const symbol_param = 6
+const symbol_field = 7
 
 struct symbol_table {
     symbols: symbol[]
@@ -139,20 +139,20 @@ func semantic_analyze_node(ana* semantic_analyzer, ast_node node*) {
     }
 
     switch node.node_type {
-    case AST_PROGRAM :
+    case ast_program :
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
 
-    case AST_PACKAGE :
+    case ast_package :
         return
 
-    case AST_IMPORT :
+    case ast_import :
         return
 
-    case AST_FUNC_DECL :
+    case ast_func_decl :
         ana.in_function = 1
-        symbol_table_define(&mut ana.symbols, node.name, SYMBOL_FUNC, "")
+        symbol_table_define(&mut ana.symbols, node.name, symbol_func, "")
         symbol_table_push_scope(&mut ana.symbols)
 
         for i := 0; i < node.children.len(); i = i + 1 {
@@ -162,8 +162,8 @@ func semantic_analyze_node(ana* semantic_analyzer, ast_node node*) {
         symbol_table_pop_scope(&mut ana.symbols)
         ana.in_function = 0
 
-    case AST_STRUCT_DECL :
-        symbol_table_define(&mut ana.symbols, node.name, SYMBOL_STRUCT, "")
+    case ast_struct_decl :
+        symbol_table_define(&mut ana.symbols, node.name, symbol_struct, "")
         symbol_table_push_scope(&mut ana.symbols)
 
         for i := 0; i < node.children.len(); i = i + 1 {
@@ -172,51 +172,51 @@ func semantic_analyze_node(ana* semantic_analyzer, ast_node node*) {
 
         symbol_table_pop_scope(&mut ana.symbols)
 
-    case AST_ENUM_DECL :
-        symbol_table_define(&mut ana.symbols, node.name, SYMBOL_ENUM, "")
+    case ast_enum_decl :
+        symbol_table_define(&mut ana.symbols, node.name, symbol_enum, "")
 
-    case AST_VAR_DECL :
+    case ast_var_decl :
         if node.type_name == "" {
             semantic_analyzer_add_error(ana, "Variable " + node.name + " has no type")
         }
-        symbol_table_define(&mut ana.symbols, node.name, SYMBOL_VAR, node.type_name)
+        symbol_table_define(&mut ana.symbols, node.name, symbol_var, node.type_name)
 
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
 
-    case AST_CONST_DECL :
-        symbol_table_define(&mut ana.symbols, node.name, SYMBOL_CONST, node.type_name)
+    case ast_const_decl :
+        symbol_table_define(&mut ana.symbols, node.name, symbol_const, node.type_name)
 
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
 
-    case AST_FOR_STMT :
+    case ast_for_stmt :
         ana.in_loop = 1
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
         ana.in_loop = 0
 
-    case AST_WHILE_STMT :
+    case ast_while_stmt :
         ana.in_loop = 1
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
         ana.in_loop = 0
 
-    case AST_BREAK_STMT :
+    case ast_break_stmt :
         if !ana.in_loop {
             semantic_analyzer_add_error(ana, "break statement outside loop")
         }
 
-    case AST_CONTINUE_STMT :
+    case ast_continue_stmt :
         if !ana.in_loop {
             semantic_analyzer_add_error(ana, "continue statement outside loop")
         }
 
-    case AST_RETURN_STMT :
+    case ast_return_stmt :
         if !ana.in_function {
             semantic_analyzer_add_error(ana, "return statement outside function")
         }
@@ -224,42 +224,42 @@ func semantic_analyze_node(ana* semantic_analyzer, ast_node node*) {
             semantic_analyze_node(ana, node.children[i])
         }
 
-    case AST_BLOCK_STMT :
+    case ast_block_stmt :
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
 
-    case AST_IF_STMT :
+    case ast_if_stmt :
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
 
-    case AST_SWITCH_STMT :
+    case ast_switch_stmt :
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
 
-    case AST_EXPR_STMT :
+    case ast_expr_stmt :
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
 
-    case AST_BINARY_OP :
+    case ast_binary_op :
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
 
-    case AST_UNARY_OP :
+    case ast_unary_op :
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
 
-    case AST_CALL_EXPR :
+    case ast_call_expr :
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
 
-    case AST_IDENT :
+    case ast_ident :
         if symbol_table_lookup(&ana.symbols, node.name) == 0 {
             semantic_analyzer_add_error(ana, "undefined identifier: " + node.name)
         }

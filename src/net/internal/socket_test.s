@@ -1,162 +1,162 @@
 package src.net.internal
 import "src.std.testing"
-func TestSocketCreate(t *testing.T) {
+func test_socket_create(t *testing.t) {
     sock, err := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     if err != nil {
-        t.Errorf("Failed to create socket: %v", err)
+        t.errorf("Failed to create socket: %v", err)
         return
     }
     if sock == nil {
-        t.Error("Socket pointer is nil")
+        t.error("Socket pointer is nil")
         return
     }
     if sock.fd < 0 {
-        t.Errorf("Invalid file descriptor: %d", sock.fd)
+        t.errorf("Invalid file descriptor: %d", sock.fd)
         return
     }
     if sock.family != af_inet {
-        t.Errorf("Expected family AF_INET, got %d", sock.family)
+        t.errorf("Expected family AF_INET, got %d", sock.family)
     }
     if sock.socktype != sock_stream {
-        t.Errorf("Expected socktype SOCK_STREAM, got %d", sock.socktype)
+        t.errorf("Expected socktype SOCK_STREAM, got %d", sock.socktype)
     }
     err = sock.close()
     if err != nil {
-        t.Errorf("Failed to close socket: %v", err)
+        t.errorf("Failed to close socket: %v", err)
     }
 }
 
-func TestSocketCreateUDP(t *testing.T) {
+func test_socket_create_udp(t *testing.t) {
     sock, err := new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
-        t.Errorf("Failed to create UDP socket: %v", err)
+        t.errorf("Failed to create UDP socket: %v", err)
         return
     }
     if sock == nil {
-        t.Error("UDP socket pointer is nil")
+        t.error("UDP socket pointer is nil")
         return
     }
     if sock.socktype != sock_dgram {
-        t.Errorf("Expected SOCK_DGRAM, got %d", sock.socktype)
+        t.errorf("Expected SOCK_DGRAM, got %d", sock.socktype)
     }
     sock.close()
 }
 
-func TestSocketClose(t *testing.T) {
+func test_socket_close(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     err := sock.close()
     if err != nil {
-        t.Errorf("Failed to close socket: %v", err)
+        t.errorf("Failed to close socket: %v", err)
     }
     err = sock.close()
     if err == nil {
-        t.Error("Expected error on second close")
+        t.error("Expected error on second close")
     }
 }
 
-func TestSetReuseAddr(t *testing.T) {
+func test_set_reuse_addr(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     defer sock.close()
     err := sock.set_reuse_addr(true)
     if err != nil {
-        t.Errorf("Failed to set SO_REUSEADDR: %v", err)
+        t.errorf("Failed to set SO_REUSEADDR: %v", err)
     }
     err = sock.set_reuse_addr(false)
     if err != nil {
-        t.Errorf("Failed to unset SO_REUSEADDR: %v", err)
+        t.errorf("Failed to unset SO_REUSEADDR: %v", err)
     }
 }
 
-func TestSetTCPNoDelay(t *testing.T) {
+func test_set_tcp_no_delay(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     defer sock.close()
     err := sock.set_tcp_no_delay(true)
     if err != nil {
-        t.Errorf("Failed to set TCP_NODELAY: %v", err)
+        t.errorf("Failed to set TCP_NODELAY: %v", err)
     }
 }
 
-func TestSetBufferSize(t *testing.T) {
+func test_set_buffer_size(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     defer sock.close()
     err := sock.set_send_buffer_size(65536)
     if err != nil {
-        t.Errorf("Failed to set send buffer size: %v", err)
+        t.errorf("Failed to set send buffer size: %v", err)
     }
     err = sock.set_recv_buffer_size(65536)
     if err != nil {
-        t.Errorf("Failed to set recv buffer size: %v", err)
+        t.errorf("Failed to set recv buffer size: %v", err)
     }
 }
 
-func TestSetReadDeadline(t *testing.T) {
+func test_set_read_deadline(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     defer sock.close()
 }
 
-func TestSetWriteDeadline(t *testing.T) {
+func test_set_write_deadline(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     defer sock.close()
 }
 
-func TestHtons(t *testing.T) {
+func test_htons(t *testing.t) {
     result := htons(0x1234)
     expected := 0x3412
     if result != expected {
-        t.Errorf("htons(0x1234) = 0x%04x, expected 0x%04x", result, expected)
+        t.errorf("htons(0x1234) = 0x%04x, expected 0x%04x", result, expected)
     }
 }
 
-func TestNtohs(t *testing.T) {
+func test_ntohs(t *testing.t) {
     result := ntohs(0x3412)
     expected := 0x1234
     if result != expected {
-        t.Errorf("ntohs(0x3412) = 0x%04x, expected 0x%04x", result, expected)
+        t.errorf("ntohs(0x3412) = 0x%04x, expected 0x%04x", result, expected)
     }
 }
 
-func TestSocketError(t *testing.T) {
+func test_socket_error(t *testing.t) {
     err := new_socket_error(econnrefused, "connect")
     if err == nil {
-        t.Error("Failed to create socket error")
+        t.error("Failed to create socket error")
         return
     }
     if err.errno != econnrefused {
-        t.Errorf("Expected errno %d, got %d", econnrefused, err.errno)
+        t.errorf("Expected errno %d, got %d", econnrefused, err.errno)
     }
     if err.syscall_name != "connect" {
-        t.Errorf("Expected syscall name 'connect', got '%s'", err.syscall_name)
+        t.errorf("Expected syscall name 'connect', got '%s'", err.syscall_name)
     }
 }
 
-func TestIsTemporaryError(t *testing.T) {
+func test_is_temporary_error(t *testing.t) {
     if !is_temporary_error(eagain) {
-        t.Error("EAGAIN should be temporary error")
+        t.error("EAGAIN should be temporary error")
     }
     if !is_temporary_error(ewouldblock) {
-        t.Error("EWOULDBLOCK should be temporary error")
+        t.error("EWOULDBLOCK should be temporary error")
     }
     if is_temporary_error(econnrefused) {
-        t.Error("ECONNREFUSED should not be temporary error")
+        t.error("ECONNREFUSED should not be temporary error")
     }
 }
 
-func TestIsTimeoutError(t *testing.T) {
+func test_is_timeout_error(t *testing.t) {
     if !is_timeout_error(etimedout) {
-        t.Error("ETIMEDOUT should be timeout error")
+        t.error("ETIMEDOUT should be timeout error")
     }
     if is_timeout_error(eagain) {
-        t.Error("EAGAIN should not be timeout error")
+        t.error("EAGAIN should not be timeout error")
     }
 }
 
-struct TestServer {
-    listener *TCPListener
+struct test_server {
+    listener *tcp_listener
     port int
 }
 
-func (TestServer* ts) Start(port int) error {
-    listener, err := ListenTCP("127.0.0.1", port)
+func (test_server* ts) start(port int) error {
+    listener, err := listen_tcp("127.0.0.1", port)
     if err != nil {
         return err
     }
@@ -165,131 +165,131 @@ func (TestServer* ts) Start(port int) error {
     nil
 }
 
-func (TestServer* ts) Stop() error {
+func (test_server* ts) stop() error {
     if ts.listener != nil {
-        ts.listener.Close()
+        ts.listener.close()
     }
     nil
 }
 
-func TestTCPServerClientIntegration(t *testing.T) {
+func test_tcp_server_client_integration(t *testing.t) {
     server_sock, err := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     if err != nil {
-        t.Errorf("Failed to create server socket: %v", err)
+        t.errorf("Failed to create server socket: %v", err)
         return
     }
     defer server_sock.close()
     server_sock.set_reuse_addr(true)
     err = server_sock.bind("127.0.0.1", 19998)
     if err != nil {
-        t.Errorf("Failed to bind server: %v", err)
+        t.errorf("Failed to bind server: %v", err)
         return
     }
     err = server_sock.listen(1)
     if err != nil {
-        t.Errorf("Failed to listen: %v", err)
+        t.errorf("Failed to listen: %v", err)
         return
     }
     client_sock, err := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     if err != nil {
-        t.Errorf("Failed to create client socket: %v", err)
+        t.errorf("Failed to create client socket: %v", err)
         return
     }
     defer client_sock.close()
     err = client_sock.connect("127.0.0.1", 19998, 1000)
     if err != nil {
-        t.Errorf("Failed to connect: %v", err)
+        t.errorf("Failed to connect: %v", err)
         return
     }
     accept_sock, err := server_sock.accept()
     if err != nil {
-        t.Errorf("Failed to accept: %v", err)
+        t.errorf("Failed to accept: %v", err)
         return
     }
     defer accept_sock.close()
-    test_data := []byte{'H', 'i', 'T', 'C', 'P'}
+    test_data := []byte{'h', 'i', 't', 'c', 'p'}
     n, err := client_sock.write(test_data)
     if err != nil {
-        t.Errorf("Failed to write: %v", err)
+        t.errorf("Failed to write: %v", err)
         return
     }
     if n != len(test_data) {
-        t.Errorf("Expected to write %d bytes, wrote %d bytes", len(test_data), n)
+        t.errorf("Expected to write %d bytes, wrote %d bytes", len(test_data), n)
         return
     }
     var recv_buf = [256]byte{}
     n, err = accept_sock.read(recv_buf[:])
     if err != nil {
-        t.Errorf("Failed to read: %v", err)
+        t.errorf("Failed to read: %v", err)
         return
     }
     if n != len(test_data) {
-        t.Errorf("Expected to read %d bytes, read %d bytes", len(test_data), n)
+        t.errorf("Expected to read %d bytes, read %d bytes", len(test_data), n)
         return
     }
     for i := 0; i < n; i++ {
         if recv_buf[i] != test_data[i] {
-            t.Errorf("Received data mismatch at index %d: expected %d, got %d", i, test_data[i], recv_buf[i])
+            t.errorf("Received data mismatch at index %d: expected %d, got %d", i, test_data[i], recv_buf[i])
             return
         }
     }
 }
 
-func TestUDPCommunication(t *testing.T) {
+func test_udp_communication(t *testing.t) {
     server_sock, err := new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
-        t.Errorf("Failed to create server socket: %v", err)
+        t.errorf("Failed to create server socket: %v", err)
         return
     }
     defer server_sock.close()
     err = server_sock.udp_bind("127.0.0.1", 19999)
     if err != nil {
-        t.Errorf("Failed to bind server: %v", err)
+        t.errorf("Failed to bind server: %v", err)
         return
     }
     client_sock, err := new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
-        t.Errorf("Failed to create client socket: %v", err)
+        t.errorf("Failed to create client socket: %v", err)
         return
     }
     defer client_sock.close()
     err = client_sock.udp_bind("127.0.0.1", 0)
     if err != nil {
-        t.Errorf("Failed to bind client: %v", err)
+        t.errorf("Failed to bind client: %v", err)
         return
     }
-    test_data := []byte{'H', 'e', 'l', 'l', 'o', 'U', 'D', 'P'}
+    test_data := []byte{'h', 'e', 'l', 'l', 'o', 'u', 'd', 'p'}
     n, err := client_sock.send_to(test_data, "127.0.0.1", 19999)
     if err != nil {
-        t.Errorf("Failed to send UDP data: %v", err)
+        t.errorf("Failed to send UDP data: %v", err)
         return
     }
     if n != len(test_data) {
-        t.Errorf("Expected to send %d bytes, sent %d bytes", len(test_data), n)
+        t.errorf("Expected to send %d bytes, sent %d bytes", len(test_data), n)
         return
     }
     var recv_buf = [256]byte{}
     n, src_ip, src_port, err := server_sock.recv_from(recv_buf[:])
     if err != nil {
-        t.Errorf("Failed to receive UDP data: %v", err)
+        t.errorf("Failed to receive UDP data: %v", err)
         return
     }
     if n != len(test_data) {
-        t.Errorf("Expected to receive %d bytes, received %d bytes", len(test_data), n)
+        t.errorf("Expected to receive %d bytes, received %d bytes", len(test_data), n)
         return
     }
     for i := 0; i < n; i++ {
         if recv_buf[i] != test_data[i] {
-            t.Errorf("Received data mismatch at index %d: expected %d, got %d", i, test_data[i], recv_buf[i])
+            t.errorf("Received data mismatch at index %d: expected %d, got %d", i, test_data[i], recv_buf[i])
             return
         }
     }
 }
 
-func TestTimeoutHandling(t *testing.T) {
+func test_timeout_handling(t *testing.t) {
     sock, err := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     if err != nil {
-        t.Errorf("Failed to create socket: %v", err)
+        t.errorf("Failed to create socket: %v", err)
         return
     }
     defer sock.close()
@@ -299,30 +299,30 @@ func TestTimeoutHandling(t *testing.T) {
     var buf = [1]byte{}
     _, err = sock.read(buf[:])
     if err == nil {
-        t.Error("Expected timeout error, got nil")
+        t.error("Expected timeout error, got nil")
         return
     }
     if !is_timeout_error(etimedout) {
-        t.Error("Timeout handling failed")
+        t.error("Timeout handling failed")
     }
 }
 
-func TestConcurrentConnections(t *testing.T) {
+func test_concurrent_connections(t *testing.t) {
     server_sock, err := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     if err != nil {
-        t.Errorf("Failed to create server socket: %v", err)
+        t.errorf("Failed to create server socket: %v", err)
         return
     }
     defer server_sock.close()
     server_sock.set_reuse_addr(true)
     err = server_sock.bind("127.0.0.1", 19997)
     if err != nil {
-        t.Errorf("Failed to bind server: %v", err)
+        t.errorf("Failed to bind server: %v", err)
         return
     }
     err = server_sock.listen(5)
     if err != nil {
-        t.Errorf("Failed to listen: %v", err)
+        t.errorf("Failed to listen: %v", err)
         return
     }
     var clients [3]*raw_socket
@@ -330,12 +330,12 @@ func TestConcurrentConnections(t *testing.T) {
     for i < 3 {
         client, err := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
         if err != nil {
-            t.Errorf("Failed to create client %d: %v", i, err)
+            t.errorf("Failed to create client %d: %v", i, err)
             return
         }
         err = client.connect("127.0.0.1", 19997, 1000)
         if err != nil {
-            t.Errorf("Failed to connect client %d: %v", i, err)
+            t.errorf("Failed to connect client %d: %v", i, err)
             return
         }
         clients[i] = client
@@ -345,7 +345,7 @@ func TestConcurrentConnections(t *testing.T) {
     for j < 3 {
         accept_sock, err := server_sock.accept()
         if err != nil {
-            t.Errorf("Failed to accept connection %d: %v", j, err)
+            t.errorf("Failed to accept connection %d: %v", j, err)
             return
         }
         defer accept_sock.close()

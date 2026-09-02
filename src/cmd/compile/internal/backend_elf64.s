@@ -1751,7 +1751,7 @@ func abi_emit_aggregate_mode(string ret_type, int ret_parts, int aggregate_size)
         return "tuple2"
     }
     if aggregate_size > 16 || ret_parts > 2 {
-        return "tupleN"
+        return "tuple_n"
     }
     "scalar"
 }
@@ -2225,7 +2225,7 @@ func validate_gc_contract_chain(string gc_payload, source_file source, string ss
     }
     proof_fail := parse_number_after(ssa_text, "proof_fail=")
     if proof_fail > 0 {
-        return backend_error { message: "backend error: gc contract blocked by failed SSA proofs" }
+        return backend_error { message: "backend error: gc contract blocked by failed ssa proofs" }
     }
     ()
 }
@@ -2273,7 +2273,7 @@ func validate_backend_perf_baseline(string payload) ((), backend_error) {
         return backend_error { message: "backend error: perf baseline regression gate missing" }
     }
     if !has_substring(payload, "ssa spills=") {
-        return backend_error { message: "backend error: perf baseline SSA metrics missing" }
+        return backend_error { message: "backend error: perf baseline ssa metrics missing" }
     }
     if !has_substring(payload, "scheduler queue_policy=") {
         return backend_error { message: "backend error: perf baseline scheduler metrics missing" }
@@ -2623,7 +2623,7 @@ func lookup_package_index(string module) option[string] {
 
 func package_index_candidate_paths() string[] {
     paths := string[]()
-    switch env_get("S_PACKAGE_INDEX") {
+    switch env_get("s_package_index") {
         option.some(value) : {
             if value != "" {
                 paths = append(paths, value)
@@ -2809,7 +2809,7 @@ func module_search_roots() string[] {
 }
 
 func push_workspace_roots(string[] roots) () {
-    switch env_get("S_WORK_FILE") {
+    switch env_get("s_work_file") {
         option.some(path) : {
             if path != "" {
                 work := read_to_string(path)

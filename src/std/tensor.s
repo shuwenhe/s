@@ -1,5 +1,5 @@
 package std.tensor
-use std.switch.{abs, sqrt, exp, log, pow, max as fmax, min as fmin, EPSILON}
+use std.switch.{abs, sqrt, exp, log, pow, max as fmax, min as fmin, epsilon}
 struct tensor_shape {
     int[] dims
     int ndim
@@ -461,7 +461,7 @@ func div(tensor a, tensor b) tensor {
         float[] vals = new float[a.shape.size]
         int i = 0
         for i < a.shape.size {
-            if abs(b.data.values[i]) > EPSILON { vals[i] = a.data.values[i] / b.data.values[i] }
+            if abs(b.data.values[i]) > epsilon { vals[i] = a.data.values[i] / b.data.values[i] }
             else { vals[i] = 0.0 }
             i = i + 1
         }
@@ -471,7 +471,7 @@ func div(tensor a, tensor b) tensor {
 }
 
 func div_scalar(tensor t, float scalar) tensor {
-    if abs(scalar) < EPSILON { return t }
+    if abs(scalar) < epsilon { return t }
     mul_scalar(t, 1.0 / scalar)
 }
 
@@ -519,7 +519,7 @@ func log_tensor(tensor t) tensor {
     int i = 0
     for i < t.shape.size {
         if t.data.values[i] > 0 { vals[i] = log(t.data.values[i]) }
-        else { vals[i] = NEG_INF }
+        else { vals[i] = neg_inf }
         i = i + 1
     }
     tensor { shape: t.shape, data tensor_data{values: vals, length t.shape.size, owns_data true}, device: "cpu", requires_grad false }
@@ -617,7 +617,7 @@ func mean_dim(tensor t, int dim, bool keepdim) tensor {
 }
 
 func max_all(tensor t) tensor {
-    if t.shape.size == 0 { return scalar(NEG_INF) }
+    if t.shape.size == 0 { return scalar(neg_inf) }
     float m = t.data.values[0]
     int i = 1
     for i < t.shape.size {
@@ -628,7 +628,7 @@ func max_all(tensor t) tensor {
 }
 
 func min_all(tensor t) tensor {
-    if t.shape.size == 0 { return scalar(INF) }
+    if t.shape.size == 0 { return scalar(inf) }
     float m = t.data.values[0]
     int i = 1
     for i < t.shape.size {
@@ -650,30 +650,30 @@ func norm(tensor t) tensor {
 
 func matmul_2d(tensor a, tensor b) tensor {
     if a.shape.ndim != 2 || b.shape.ndim != 2 { return a }
-    int M = a.shape.dims[0]
-    int K = a.shape.dims[1]
-    int K2 = b.shape.dims[0]
-    int N = b.shape.dims[1]
-    if K != K2 { return a }
-    float[] result = new float[M * N]
+    int m = a.shape.dims[0]
+    int k = a.shape.dims[1]
+    int k2 = b.shape.dims[0]
+    int n = b.shape.dims[1]
+    if k != k2 { return a }
+    float[] result = new float[m * n]
     int m = 0
-    for m < M {
+    for m < m {
         int n = 0
-        for n < N {
+        for n < n {
             float s = 0.0
             int k = 0
-            for k < K {
-                s = s + a.data.values[m * K + k] * b.data.values[k * N + n]
+            for k < k {
+                s = s + a.data.values[m * k + k] * b.data.values[k * n + n]
                 k = k + 1
             }
-            (m * N + n) = s
+            (m * n + n) = s
             n = n + 1
         }
         m = m + 1
     }
     int[] out_shape = new int[2]
-    out_shape[0] = M
-    out_shape[1] = N
+    out_shape[0] = m
+    out_shape[1] = n
     tensor(result, out_shape)
 }
 

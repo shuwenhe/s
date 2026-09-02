@@ -1,31 +1,31 @@
 package backend
 
-const INSTR_MOV = 1
-const INSTR_ADD = 2
-const INSTR_SUB = 3
-const INSTR_MUL = 4
-const INSTR_DIV = 5
-const INSTR_MOD = 6
-const INSTR_AND = 7
-const INSTR_OR = 8
-const INSTR_XOR = 9
-const INSTR_SHL = 10
-const INSTR_SHR = 11
-const INSTR_CMP = 12
-const INSTR_JMP = 13
-const INSTR_JZ = 14
-const INSTR_JNZ = 15
-const INSTR_CALL = 16
-const INSTR_RET = 17
-const INSTR_PUSH = 18
-const INSTR_POP = 19
-const INSTR_LOAD = 20
-const INSTR_STORE = 21
+const instr_mov = 1
+const instr_add = 2
+const instr_sub = 3
+const instr_mul = 4
+const instr_div = 5
+const instr_mod = 6
+const instr_and = 7
+const instr_or = 8
+const instr_xor = 9
+const instr_shl = 10
+const instr_shr = 11
+const instr_cmp = 12
+const instr_jmp = 13
+const instr_jz = 14
+const instr_jnz = 15
+const instr_call = 16
+const instr_ret = 17
+const instr_push = 18
+const instr_pop = 19
+const instr_load = 20
+const instr_store = 21
 
-const OPERAND_REG = 1
-const OPERAND_IMM = 2
-const OPERAND_MEM = 3
-const OPERAND_LABEL = 4
+const operand_reg = 1
+const operand_imm = 2
+const operand_mem = 3
+const operand_label = 4
 
 struct x86_operand {
     operand_type int
@@ -92,9 +92,9 @@ func selector_handle_load(instruction_selector selector*, ir_instruction instr) 
     dst_reg := allocate_register(selector, instr.result.var_name)
     
     mov_instr := x86_instruction {
-        instr_type: INSTR_MOV,
-        operand1: x86_operand { operand_type: OPERAND_REG, reg_id: src_reg },
-        operand2: x86_operand { operand_type: OPERAND_REG, reg_id: dst_reg },
+        instr_type: instr_mov,
+        operand1: x86_operand { operand_type: operand_reg, reg_id: src_reg },
+        operand2: x86_operand { operand_type: operand_reg, reg_id: dst_reg },
         operand3: x86_operand { operand_type: 0 }
     }
     
@@ -106,9 +106,9 @@ func selector_handle_store(instruction_selector selector*, ir_instruction instr)
     dst_reg := allocate_register(selector, instr.result.var_name)
     
     mov_instr := x86_instruction {
-        instr_type: INSTR_MOV,
-        operand1: x86_operand { operand_type: OPERAND_REG, reg_id: src_reg },
-        operand2: x86_operand { operand_type: OPERAND_REG, reg_id: dst_reg },
+        instr_type: instr_mov,
+        operand1: x86_operand { operand_type: operand_reg, reg_id: src_reg },
+        operand2: x86_operand { operand_type: operand_reg, reg_id: dst_reg },
         operand3: x86_operand { operand_type: 0 }
     }
     
@@ -124,9 +124,9 @@ func selector_handle_binop(instruction_selector selector*, ir_instruction instr)
     
     binop_instr := x86_instruction {
         instr_type: instr_type,
-        operand1: x86_operand { operand_type: OPERAND_REG, reg_id: left_reg },
-        operand2: x86_operand { operand_type: OPERAND_REG, reg_id: right_reg },
-        operand3: x86_operand { operand_type: OPERAND_REG, reg_id: result_reg }
+        operand1: x86_operand { operand_type: operand_reg, reg_id: left_reg },
+        operand2: x86_operand { operand_type: operand_reg, reg_id: right_reg },
+        operand3: x86_operand { operand_type: operand_reg, reg_id: result_reg }
     }
     
     selector.x86_instrs = append(selector.x86_instrs, binop_instr)
@@ -137,9 +137,9 @@ func selector_handle_unop(instruction_selector selector*, ir_instruction instr) 
     result_reg := allocate_register(selector, instr.result.var_name)
     
     mov_instr := x86_instruction {
-        instr_type: INSTR_MOV,
-        operand1: x86_operand { operand_type: OPERAND_REG, reg_id: operand_reg },
-        operand2: x86_operand { operand_type: OPERAND_REG, reg_id: result_reg },
+        instr_type: instr_mov,
+        operand1: x86_operand { operand_type: operand_reg, reg_id: operand_reg },
+        operand2: x86_operand { operand_type: operand_reg, reg_id: result_reg },
         operand3: x86_operand { operand_type: 0 }
     }
     
@@ -148,8 +148,8 @@ func selector_handle_unop(instruction_selector selector*, ir_instruction instr) 
 
 func selector_handle_call(instruction_selector selector*, ir_instruction instr) {
     call_instr := x86_instruction {
-        instr_type: INSTR_CALL,
-        operand1: x86_operand { operand_type: OPERAND_LABEL, label_name: instr.operands[0].const_value },
+        instr_type: instr_call,
+        operand1: x86_operand { operand_type: operand_label, label_name: instr.operands[0].const_value },
         operand2: x86_operand { operand_type: 0 },
         operand3: x86_operand { operand_type: 0 }
     }
@@ -159,7 +159,7 @@ func selector_handle_call(instruction_selector selector*, ir_instruction instr) 
 
 func selector_handle_return(instruction_selector selector*, ir_instruction instr) {
     ret_instr := x86_instruction {
-        instr_type: INSTR_RET,
+        instr_type: instr_ret,
         operand1: x86_operand { operand_type: 0 },
         operand2: x86_operand { operand_type: 0 },
         operand3: x86_operand { operand_type: 0 }
@@ -183,14 +183,14 @@ func allocate_register(instruction_selector selector*, string var_name) int {
 func ir_opcode_to_x86(int opcode) int {
     switch opcode {
         case 1:
-            return INSTR_ADD
+            return instr_add
         case 2:
-            return INSTR_SUB
+            return instr_sub
         case 3:
-            return INSTR_MUL
+            return instr_mul
         case 4:
-            return INSTR_DIV
+            return instr_div
         default:
-            return INSTR_MOV
+            return instr_mov
     }
 }

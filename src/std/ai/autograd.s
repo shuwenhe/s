@@ -58,7 +58,7 @@ func dfs_visit(int idx, bool[] visited, int[] order, int order_len_ref) void {
     order_len_ref = order_len_ref + 1
 }
 
-func backward(auto_grad_tensor loss_tensor) Map<string, tensor> {
+func backward(auto_grad_tensor loss_tensor) map<string, tensor> {
     loss_tensor.grad = ones_like(loss_tensor.data)
     int[] topo_order = topological_sort(loss_tensor.grad_ctx.graph_idx)
     int i = len(topo_order) - 1
@@ -81,8 +81,8 @@ func backward(auto_grad_tensor loss_tensor) Map<string, tensor> {
     return collect_leaf_gradients(
 }
 
-func collect_leaf_gradients() Map<string, tensor> {
-    Map<string, tensor> result = new_map()
+func collect_leaf_gradients() map<string, tensor> {
+    map<string, tensor> result = new_map()
     int i = 0
     for i < graph_size {
         graph_node node = current_graph[i]
@@ -324,8 +324,8 @@ struct optimizer_state {
     float weight_decay
     float eps
     int step_count
-    Map<string, tensor> velocity
-    Map<string, tensor> second_moment
+    map<string, tensor> velocity
+    map<string, tensor> second_moment
 }
 
 func new_sgd_optimizer(float lr, float momentum, float weight_decay) optimizer_state {
@@ -340,13 +340,13 @@ func new_adam_optimizer(float lr, float beta1, float beta2, float weight_decay, 
     }
 }
 
-func zero_grad(Map<string, auto_grad_tensor> params) void {
+func zero_grad(map<string, auto_grad_tensor> params) void {
     for name, param in params {
         param.grad = zeros(param.data.shape)
     }
 }
 
-func sgd_step(optimizer_state opt, Map<string, auto_grad_tensor> params) void {
+func sgd_step(optimizer_state opt, map<string, auto_grad_tensor> params) void {
     opt.step_count = opt.step_count + 1
     for name, param in params {
         if !param.requires_grad { continue }
@@ -366,7 +366,7 @@ func sgd_step(optimizer_state opt, Map<string, auto_grad_tensor> params) void {
     }
 }
 
-func adam_step(optimizer_state opt, Map<string, auto_grad_tensor> params) void {
+func adam_step(optimizer_state opt, map<string, auto_grad_tensor> params) void {
     int t = opt.step_count + 1
     opt.step_count = t
     float bias_corr1 = 1.0 - pow(opt.momentum, t as float)
@@ -395,11 +395,11 @@ func lr_step(optimizer_state opt, string scheduler, int epoch) void {
     }
     else if scheduler == "cosine" {
         float progress = epoch as float / 100.0
-        opt.learning_rate = opt.learning_rate * 0.5 * (1.0 + cos(PI * progress))
+        opt.learning_rate = opt.learning_rate * 0.5 * (1.0 + cos(pi * progress))
     }
 }
 
-func clip_grad_norm_(Map<string, auto_grad_tensor> params, float max_norm) float {
+func clip_grad_norm_(map<string, auto_grad_tensor> params, float max_norm) float {
     float total_norm_sq = 0.0
     for name, param in params {
         total_norm_sq = total_norm_sq + sum(square(param.grad)).item()
@@ -414,7 +414,7 @@ func clip_grad_norm_(Map<string, auto_grad_tensor> params, float max_norm) float
     total_norm
 }
 
-func clip_grad_value_(Map<string, auto_grad_tensor> params, float clip_value) void {
+func clip_grad_value_(map<string, auto_grad_tensor> params, float clip_value) void {
     for name, param in params {
         param.grad = clamp(param.grad, -clip_value, clip_value)
     }

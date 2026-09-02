@@ -2,40 +2,40 @@ package src.runtime
 use std.slices
 use std.result.result
 use std.option.option
-const CHAN_OPEN   = 0
-const CHAN_CLOSED = 1
-struct Waiter {
+const chan_open   = 0
+const chan_closed = 1
+struct waiter {
     int sroutine_id
     int val_idx
 }
 
-struct RawChan {
+struct raw_chan {
     int      cap
     int[] buf
     int      head
     int      tail
     int      count
     int      state
-    Waiter[] senders
-    Waiter[] receivers
-    Mutex    mu
+    waiter[] senders
+    waiter[] receivers
+    mutex    mu
 }
 
-func new_raw_chan(int cap) RawChan {
+func new_raw_chan(int cap) raw_chan {
     buf := int[]()
     var i = 0
     for i < cap {
         buf = append(buf, 0)
         i = i + 1
     }
-    RawChan {
-        cap:       cap, buf buf, head 0, tail 0, count 0, state CHAN_OPEN, senders Waiter[](), receivers Waiter[](), mu new_mutex(),
+    raw_chan {
+        cap:       cap, buf buf, head 0, tail 0, count 0, state chan_open, senders waiter[](), receivers waiter[](), mu new_mutex(),
     }
 }
 
-func chan_send(RawChan ch, int val) ((), string) {
+func chan_send(raw_chan ch, int val) ((), string) {
     ch.mu.lock()
-    if ch.state == CHAN_CLOSED {
+    if ch.state == chan_closed {
         ch.mu.unlock()
         return "send on closed channel"
     }
@@ -50,18 +50,18 @@ func chan_send(RawChan ch, int val) ((), string) {
             return
         }
         cur := __sroutine_current_id()
-        ch.senders = append(ch.senders, Waiter { sroutine_id: cur, val_idx val })
+        ch.senders = append(ch.senders, waiter { sroutine_id: cur, val_idx val })
         ch.mu.unlock()
-        sroutine_park(SROUTINE_PARK_CHANNEL)
+        sroutine_park(sroutine_park_channel)
         return ())
     }
     for ch.count >= ch.cap {
         cur := __sroutine_current_id()
-        ch.senders = append(ch.senders, Waiter { sroutine_id: cur, val_idx val })
+        ch.senders = append(ch.senders, waiter { sroutine_id: cur, val_idx val })
         ch.mu.unlock()
-        sroutine_park(SROUTINE_PARK_CHANNEL)
+        sroutine_park(sroutine_park_channel)
         ch.mu.lock()
-        if ch.state == CHAN_CLOSED {
+        if ch.state == chan_closed {
             ch.mu.unlock()
             return "send on closed channel"
         }
@@ -81,7 +81,7 @@ func chan_send(RawChan ch, int val) ((), string) {
     ()
 }
 
-func chan_recv(RawChan ch) recv_result {
+func chan_recv(raw_chan ch) recv_result {
     ch.mu.lock()
     if ch.cap == 0 {
         if !ch.senders.is_empty() {
@@ -92,26 +92,26 @@ func chan_recv(RawChan ch) recv_result {
                 return recv_result { value: w.val_idx, ok true }
             }
         }
-        if ch.state == CHAN_CLOSED {
+        if ch.state == chan_closed {
             ch.mu.unlock()
             return recv_result { value: 0, ok false }
         }
         cur := __sroutine_current_id()
-        ch.receivers = append(ch.receivers, Waiter { sroutine_id: cur, val_idx: -1 })
+        ch.receivers = append(ch.receivers, waiter { sroutine_id: cur, val_idx: -1 })
         ch.mu.unlock()
-        sroutine_park(SROUTINE_PARK_CHANNEL)
+        sroutine_park(sroutine_park_channel)
         v := chan_take_delivered(cur)
         return recv_result { value: v, ok true }
     }
     for ch.count == 0 {
-        if ch.state == CHAN_CLOSED {
+        if ch.state == chan_closed {
             ch.mu.unlock()
             return recv_result { value: 0, ok false }
         }
         cur := __sroutine_current_id()
-        ch.receivers = append(ch.receivers, Waiter { sroutine_id: cur, val_idx: -1 })
+        ch.receivers = append(ch.receivers, waiter { sroutine_id: cur, val_idx: -1 })
         ch.mu.unlock()
-        sroutine_park(SROUTINE_PARK_CHANNEL)
+        sroutine_park(sroutine_park_channel)
         ch.mu.lock()
     }
     val := ch.buf[ch.head]
@@ -139,9 +139,9 @@ struct recv_result {
     bool ok
 }
 
-func chan_try_send(RawChan ch, int val) bool {
+func chan_try_send(raw_chan ch, int val) bool {
     ch.mu.lock()
-    if ch.state == CHAN_CLOSED {
+    if ch.state == chan_closed {
         ch.mu.unlock()
         return false
     }
@@ -169,7 +169,7 @@ func chan_try_send(RawChan ch, int val) bool {
     true
 }
 
-func chan_try_recv(RawChan ch) option[recv_result] {
+func chan_try_recv(raw_chan ch) option[recv_result] {
     ch.mu.lock()
     if ch.cap == 0 {
         if !ch.senders.is_empty() {
@@ -180,7 +180,7 @@ func chan_try_recv(RawChan ch) option[recv_result] {
                 return option::some(recv_result { value: w.val_idx, ok true })
             }
         }
-        if ch.state == CHAN_CLOSED {
+        if ch.state == chan_closed {
             ch.mu.unlock()
             return option::some(recv_result { value: 0, ok false })
         }
@@ -188,7 +188,7 @@ func chan_try_recv(RawChan ch) option[recv_result] {
         return option::none
     }
     if ch.count == 0 {
-        if ch.state == CHAN_CLOSED {
+        if ch.state == chan_closed {
             ch.mu.unlock()
             return option::some(recv_result { value: 0, ok false })
         }
@@ -202,13 +202,13 @@ func chan_try_recv(RawChan ch) option[recv_result] {
     option::some(recv_result { value: val, ok true })
 }
 
-func chan_close(RawChan ch) ((), string) {
+func chan_close(raw_chan ch) ((), string) {
     ch.mu.lock()
-    if ch.state == CHAN_CLOSED {
+    if ch.state == chan_closed {
         ch.mu.unlock()
         return "close of closed channel"
     }
-    ch.state = CHAN_CLOSED
+    ch.state = chan_closed
     for !ch.receivers.is_empty() {
         w := dequeue_waiter(ch.receivers)
         if w.sroutine_id >= 0 {
@@ -219,12 +219,12 @@ func chan_close(RawChan ch) ((), string) {
     ()
 }
 
-func dequeue_waiter(Waiter[] q) Waiter {
+func dequeue_waiter(waiter[] q) waiter {
     if q.is_empty() {
-        return Waiter { sroutine_id: -1, val_idx: -1 }
+        return waiter { sroutine_id: -1, val_idx: -1 }
     }
     w := q[0]
-    new_q := Waiter[]()
+    new_q := waiter[]()
     var i = 1
     for i < len(q) {
         new_q = append(new_q, q[i])
@@ -244,9 +244,9 @@ func chan_take_delivered(int sroutine_id) int {
     __chan_take_delivered(sroutine_id)
 }
 
-func chan_len(RawChan ch) int  { ch.count }
+func chan_len(raw_chan ch) int  { ch.count }
 
-func chan_cap(RawChan ch) int  { ch.cap   }
+func chan_cap(raw_chan ch) int  { ch.cap   }
 
 func chan_unit_name() string { "src/runtime/chan" }
 

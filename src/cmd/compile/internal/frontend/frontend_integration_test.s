@@ -17,7 +17,7 @@ func test_frontend_simple_function() int {
     }
 
     func_decl := prog.children[0]
-    if func_decl.node_type != AST_FUNC_DECL {
+    if func_decl.node_type != ast_func_decl {
         return 1
     }
 
@@ -46,7 +46,7 @@ func test_frontend_struct_with_fields() int {
     }
 
     struct_decl := prog.children[0]
-    if struct_decl.node_type != AST_STRUCT_DECL {
+    if struct_decl.node_type != ast_struct_decl {
         return 1
     }
 
@@ -79,7 +79,7 @@ func test() {
     }
 
     pkg := prog.children[0]
-    if pkg.node_type != AST_PACKAGE {
+    if pkg.node_type != ast_package {
         return 1
     }
 
@@ -88,7 +88,7 @@ func test() {
     }
 
     imp := prog.children[1]
-    if imp.node_type != AST_IMPORT {
+    if imp.node_type != ast_import {
         return 1
     }
 
@@ -111,7 +111,7 @@ y: int = 20"
     }
 
     var1 := prog.children[0]
-    if var1.node_type != AST_VAR_DECL {
+    if var1.node_type != ast_var_decl {
         return 1
     }
 
@@ -209,7 +209,7 @@ func test_frontend_enum_declaration() int {
     }
 
     enum_decl := prog.children[0]
-    if enum_decl.node_type != AST_ENUM_DECL {
+    if enum_decl.node_type != ast_enum_decl {
         return 1
     }
 

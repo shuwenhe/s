@@ -1,20 +1,20 @@
 package compile.internal.syntax
 
 enum type_kind {
-    TYPE_VOID = 0,
-    TYPE_INT = 1,
-    TYPE_FLOAT = 2,
-    TYPE_STRING = 3,
-    TYPE_BOOL = 4,
-    TYPE_ARRAY = 5,
-    TYPE_SLICE = 6,
-    TYPE_MAP = 7,
-    TYPE_STRUCT = 8,
-    TYPE_INTERFACE = 9,
-    TYPE_POINTER = 10,
-    TYPE_FUNCTION = 11,
-    TYPE_CHAN = 12,
-    TYPE_UNKNOWN = 99,
+    type_void = 0,
+    type_int = 1,
+    type_float = 2,
+    type_string = 3,
+    type_bool = 4,
+    type_array = 5,
+    type_slice = 6,
+    type_map = 7,
+    type_struct = 8,
+    type_interface = 9,
+    type_pointer = 10,
+    type_function = 11,
+    type_chan = 12,
+    type_unknown = 99,
 }
 
 struct type_info {
@@ -70,25 +70,25 @@ func typecheck_new() typecheck_context* {
 
 func typecheck_add_builtin_types(scope* scope) {
     int_type := alloc(type_info)
-    int_type.kind = TYPE_INT
+    int_type.kind = type_int
     int_type.name = "int"
     int_type.size = 8
     int_type.align = 8
     typecheck_add_symbol(scope, "int", int_type, 0, 0, 0)
     float_type := alloc(type_info)
-    float_type.kind = TYPE_FLOAT
+    float_type.kind = type_float
     float_type.name = "float64"
     float_type.size = 8
     float_type.align = 8
     typecheck_add_symbol(scope, "float64", float_type, 0, 0, 0)
     string_type := alloc(type_info)
-    string_type.kind = TYPE_STRING
+    string_type.kind = type_string
     string_type.name = "string"
     string_type.size = 16
     string_type.align = 8
     typecheck_add_symbol(scope, "string", string_type, 0, 0, 0)
     bool_type := alloc(type_info)
-    bool_type.kind = TYPE_BOOL
+    bool_type.kind = type_bool
     bool_type.name = "bool"
     bool_type.size = 1
     bool_type.align = 1
@@ -144,39 +144,39 @@ func typecheck_expr(ctx* typecheck_context, ast_node expr*) type_info* {
     if expr == nil {
         return typecheck_get_builtin_type(ctx, "void")
     }
-    if expr.type_ == AST_IDENT_EXPR {
+    if expr.type_ == ast_ident_expr {
         entry := typecheck_lookup_symbol(ctx, expr.value)
         if entry != nil {
             return entry.type_
         }
         return typecheck_get_builtin_type(ctx, "unknown")
-    } else if expr.type_ == AST_LITERAL_EXPR {
+    } else if expr.type_ == ast_literal_expr {
         return typecheck_get_literal_type(ctx, expr)
-    } else if expr.type_ == AST_BINARY_EXPR {
+    } else if expr.type_ == ast_binary_expr {
         left_type := typecheck_expr(ctx, expr.left)
         right_type := typecheck_expr(ctx, expr.right)
         if typecheck_is_numeric(left_type) && typecheck_is_numeric(right_type) {
             return left_type
         }
         return typecheck_get_builtin_type(ctx, "unknown")
-    } else if expr.type_ == AST_UNARY_EXPR {
+    } else if expr.type_ == ast_unary_expr {
         operand_type := typecheck_expr(ctx, expr.child)
         return operand_type
-    } else if expr.type_ == AST_CALL_EXPR {
+    } else if expr.type_ == ast_call_expr {
         entry := typecheck_lookup_symbol(ctx, "")
-        if entry != nil && entry.type_.kind == TYPE_FUNCTION {
+        if entry != nil && entry.type_.kind == type_function {
             return entry.type_.val_type
         }
         return typecheck_get_builtin_type(ctx, "unknown")
-    } else if expr.type_ == AST_INDEX_EXPR {
+    } else if expr.type_ == ast_index_expr {
         array_type := typecheck_expr(ctx, nil)
-        if array_type.kind == TYPE_ARRAY {
+        if array_type.kind == type_array {
             return array_type.elem_type
         }
         return typecheck_get_builtin_type(ctx, "unknown")
-    } else if expr.type_ == AST_MEMBER_EXPR {
+    } else if expr.type_ == ast_member_expr {
         struct_type := typecheck_expr(ctx, nil)
-        if struct_type.kind == TYPE_STRUCT {
+        if struct_type.kind == type_struct {
             i := 0
             for {
                 if i >= struct_type.field_count {
@@ -186,7 +186,7 @@ func typecheck_expr(ctx* typecheck_context, ast_node expr*) type_info* {
             }
         }
         return typecheck_get_builtin_type(ctx, "unknown")
-    } else if expr.type_ == AST_PAREN_EXPR {
+    } else if expr.type_ == ast_paren_expr {
         return typecheck_expr(ctx, expr.child)
     }
     return typecheck_get_builtin_type(ctx, "unknown")
@@ -197,7 +197,7 @@ func typecheck_get_literal_type(ctx* typecheck_context, ast_node expr*) type_inf
 }
 
 func typecheck_is_numeric(type_* type_info) int {
-    if type_.kind == TYPE_INT || type_.kind == TYPE_FLOAT {
+    if type_.kind == type_int || type_.kind == type_float {
         return 1
     }
     return 0
@@ -209,17 +209,17 @@ func typecheck_get_builtin_type(ctx* typecheck_context, string name*) type_info*
         return entry.type_
     }
     unknown := alloc(type_info)
-    unknown.kind = TYPE_UNKNOWN
+    unknown.kind = type_unknown
     unknown.name = "unknown"
     return unknown
 }
 
 func typecheck_resolve_type(ctx* typecheck_context, ast_node node*) type_info* {
     if node == nil { return typecheck_get_builtin_type(ctx, "unknown") }
-    if node.type_ == AST_POINTER_TYPE {
+    if node.type_ == ast_pointer_type {
         elem := typecheck_resolve_type(ctx, node.child)
         pointer := alloc(type_info)
-        pointer.kind = TYPE_POINTER
+        pointer.kind = type_pointer
         pointer.name = "*"
         pointer.elem_type = elem
         pointer.size = 8
@@ -227,10 +227,10 @@ func typecheck_resolve_type(ctx* typecheck_context, ast_node node*) type_info* {
         pointer.is_pointer = 1
         return pointer
     }
-    if node.type_ == AST_ARRAY_TYPE {
+    if node.type_ == ast_array_type {
         elem := typecheck_resolve_type(ctx, node.child)
         array := alloc(type_info)
-        array.kind = TYPE_ARRAY
+        array.kind = type_array
         array.name = "[]"
         array.elem_type = elem
         array.size = 24
@@ -247,8 +247,8 @@ func typecheck_is_compatible(type1* type_info, type2* type_info) int {
     if type1.kind == type2.kind {
         return 1
     }
-    if (type1.kind == TYPE_INT && type2.kind == TYPE_FLOAT) { return 1 }
-    if (type1.kind == TYPE_FLOAT && type2.kind == TYPE_INT) {
+    if (type1.kind == type_int && type2.kind == type_float) { return 1 }
+    if (type1.kind == type_float && type2.kind == type_int) {
         return 1
     }
     return 0
@@ -264,7 +264,7 @@ func typecheck_var_decl(ctx* typecheck_context, ast_node var_decl*) int {
         return 0
     }
     resolved_type := typecheck_resolve_type(ctx, var_decl.child)
-    if resolved_type.kind == TYPE_UNKNOWN {
+    if resolved_type.kind == type_unknown {
         typecheck_error(ctx, "unknown variable type", var_decl.line, var_decl.col)
         return 0
     }
@@ -283,7 +283,7 @@ func typecheck_func_decl(ctx* typecheck_context, ast_node func_decl*) int {
     }
     return_type := typecheck_resolve_type(ctx, func_decl.child)
     fn_type := alloc(type_info)
-    fn_type.kind = TYPE_FUNCTION
+    fn_type.kind = type_function
     fn_type.name = func_decl.value
     fn_type.val_type = return_type
     typecheck_add_symbol(ctx.current_scope, func_decl.value, fn_type, 3, func_decl.line, func_decl.col)
@@ -298,7 +298,7 @@ func typecheck_func_decl(ctx* typecheck_context, ast_node func_decl*) int {
 
 func typecheck_struct_decl(ctx* typecheck_context, ast_node struct_decl*) int {
     struct_type := alloc(type_info)
-    struct_type.kind = TYPE_STRUCT
+    struct_type.kind = type_struct
     struct_type.name = struct_decl.value
     if struct_type.name == nil || struct_type.name == "" {
         typecheck_error(ctx, "struct declaration requires a name", struct_decl.line, struct_decl.col)
@@ -333,7 +333,7 @@ func typecheck_return_stmt(ctx* typecheck_context, ast_node ret*) int {
 
 func typecheck_if_stmt(ctx* typecheck_context, ast_node if_stmt*) int {
     cond_type := typecheck_expr(ctx, nil)
-    if cond_type.kind != TYPE_BOOL {
+    if cond_type.kind != type_bool {
         return 0
     }
     typecheck_block_stmt(ctx, nil)
@@ -350,17 +350,17 @@ func typecheck_statement(ctx* typecheck_context, ast_node stmt*) int {
     if stmt == nil {
         return 1
     }
-    if stmt.type_ == AST_VAR_DECL {
+    if stmt.type_ == ast_var_decl {
         return typecheck_var_decl(ctx, stmt)
-    } else if stmt.type_ == AST_RETURN_STMT {
+    } else if stmt.type_ == ast_return_stmt {
         return typecheck_return_stmt(ctx, stmt)
-    } else if stmt.type_ == AST_IF_STMT {
+    } else if stmt.type_ == ast_if_stmt {
         return typecheck_if_stmt(ctx, stmt)
-    } else if stmt.type_ == AST_FOR_STMT {
+    } else if stmt.type_ == ast_for_stmt {
         return typecheck_for_stmt(ctx, stmt)
-    } else if stmt.type_ == AST_BLOCK_STMT {
+    } else if stmt.type_ == ast_block_stmt {
         return typecheck_block_stmt(ctx, stmt)
-    } else if stmt.type_ == AST_EXPR_STMT {
+    } else if stmt.type_ == ast_expr_stmt {
         typecheck_expr(ctx, nil)
         return 1
     }
@@ -374,9 +374,9 @@ func typecheck_program(ctx* typecheck_context, ast_node program*) int {
     decl := program.next
     for {
         if decl == nil { break }
-        if decl.type_ == AST_STRUCT_DECL { typecheck_struct_decl(ctx, decl) }
-        else if decl.type_ == AST_VAR_DECL { typecheck_var_decl(ctx, decl) }
-        else if decl.type_ == AST_FUNC_DECL { typecheck_func_decl(ctx, decl) }
+        if decl.type_ == ast_struct_decl { typecheck_struct_decl(ctx, decl) }
+        else if decl.type_ == ast_var_decl { typecheck_var_decl(ctx, decl) }
+        else if decl.type_ == ast_func_decl { typecheck_func_decl(ctx, decl) }
         decl = decl.next
     }
     return 1 - ctx.error_count
