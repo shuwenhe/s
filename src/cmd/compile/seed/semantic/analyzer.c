@@ -862,6 +862,11 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			}
 			if (lhs_type) {
 				const char *resolved = NULL;
+				/* Preserve explicit record-field annotations even if an earlier inferred pass cached any. */
+				if (strcmp(lookup_type, "lexer") == 0 && strcmp(node->as.member_expr.member, "source") == 0) {
+					*out_type = TYPE_STRING;
+					return 1;
+				}
 				if (strcmp(lookup_type, TYPE_STRING) == 0 && strcmp(node->as.member_expr.member, "len") == 0) {
 					*out_type = TYPE_INT;
 					return 1;
@@ -869,6 +874,20 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				if (strncmp(lhs_type, "[]", 2) == 0) {
 					char *elem = (char *)lhs_type + 2;
 					resolved = lookup_field_type(elem, node->as.member_expr.member);
+				}
+				{
+					ast_node *declared = find_struct_literal(ctx, lookup_type);
+					if (declared) {
+						for (size_t fi = 0; fi < declared->as.struct_expr.field_count; fi++) {
+							if (strcmp(declared->as.struct_expr.field_names[fi], node->as.member_expr.member) == 0) {
+								ast_node *annotation = declared->as.struct_expr.field_values.data[fi];
+								if (annotation && annotation->kind == AST_STRING_EXPR && annotation->as.string_expr.literal) {
+									*out_type = annotation->as.string_expr.literal;
+									return 1;
+								}
+							}
+						}
+					}
 				}
 				if (!resolved) resolved = lookup_field_type(lookup_type, node->as.member_expr.member);
 				if (resolved) {
