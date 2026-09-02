@@ -24,11 +24,38 @@ Traits are satisfied implicitly by method-set compatibility. A type implements a
 - `test`: syntax, ABI, lexer, and compiler tests.
 - `misc`: editor support and development utilities.
 
+## Host and target platforms
+
+S follows Go's host/target split. `S_HOST_OS` and `S_HOST_ARCH` describe the
+machine executing the compiler; `S_TARGET_OS` and `S_TARGET_ARCH` describe the
+binary being produced. They need not be equal for compilation, but a bootstrap
+stage can execute only on its target or through `S_BOOTSTRAP_RUNNER`.
+
+The current independently executable compiler backend is **Linux/amd64 ELF**.
+The C seed compiler runs on Linux and macOS and can report a requested target,
+but Darwin/arm64 Mach-O emission and its native self-host runtime are not yet
+implemented. This prevents macOS from being incorrectly advertised as a native
+self-host target.
+
+Inspect the active target with:
+
+```sh
+make target-info S_TARGET_OS=linux S_TARGET_ARCH=amd64
+```
+
+See [`doc/platforms.md`](doc/platforms.md) for the support matrix and the
+requirements for adding a target.
+
 ## Requirements
 
-- Linux or macOS
+- Linux or macOS for the C seed compiler
 - GNU Make
 - A C11-compatible compiler such as GCC or Clang
+
+For native self-hosting, the target is currently Linux/amd64 and requires GNU
+binutils. When cross-building on macOS, Homebrew's `x86_64-elf-*` tools are
+selected automatically; set `S_BOOTSTRAP_RUNNER` to a Linux/amd64 executor to
+run stage1, stage2, and stage3.
 
 ## Build the seed compiler
 

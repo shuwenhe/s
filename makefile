@@ -1,10 +1,25 @@
 PREFIX ?= $(HOME)/.local
+.DEFAULT_GOAL := run
 INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_PROGRAM ?= install
 SUDO ?=
 SELFHOST_DIR ?= $(CURDIR)/.bootstrap/selfhost
 BOOTSTRAP_MANIFEST ?= $(SELFHOST_DIR)/manifest.txt
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
+S_TARGET_OS ?= linux
+S_TARGET_ARCH ?= amd64
+
+target-info: seed-compiler-bin
+	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./misc/scripts/target-info.sh
+	@S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./bin/s_seed --target-info
+
+target-config-check: seed-compiler-bin
+	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=linux S_TARGET_ARCH=amd64 ./misc/scripts/target-info.sh | grep -q '^standalone_backend=linux/amd64 ELF$$'
+	@S_TARGET_OS=linux S_TARGET_ARCH=amd64 ./bin/s_seed --target-info | grep -q '^standalone backend: available$$'
+	@S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --target-info | grep -q '^configured target: darwin/arm64 (macho)$$'
+	@S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --target-info | grep -q '^standalone backend: unavailable'
+	@! S_TARGET_OS=plan9 S_TARGET_ARCH=amd64 ./bin/s_seed --target-info >/dev/null 2>&1
+	@echo "Target configuration checks passed"
 
 run: bin/s
 	@echo "Installing S compiler bootstrap binary (bin/s) for $$(uname -m)..."
@@ -279,13 +294,13 @@ bootstrap-audit: selfhost
 # Build a genuinely independent compiler chain. Unlike bootstrap-convergence,
 # this target compares S-generated assembly and compiler executables.
 native-bootstrap: seed-compiler-bin
-	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/native-bootstrap.sh \
+	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./src/cmd/dist/native-bootstrap.sh \
 	  $(SELFHOST_DIR)/native
 
 # Strict self-host gate: every stage writes the next ELF image directly. This
 # target intentionally forbids the assembly/link steps used by native-bootstrap.
 direct-bootstrap:
-	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/direct-bootstrap.sh \
+	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./src/cmd/dist/direct-bootstrap.sh \
 	  $(SELFHOST_DIR)/direct
 
 # Strict self-host target: produce a compiler that does not rely on the C seed
@@ -637,7 +652,7 @@ selfhost-runtime-check:
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
 
-.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+.PHONY: help target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 verify-true-selfhost:
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
@@ -646,6 +661,8 @@ help:
 	@echo "  make run"
 	@echo "  make build-x86_64"
 	@echo "  make build-arm64"
+	@echo "  make target-info S_TARGET_OS=linux S_TARGET_ARCH=amd64"
+	@echo "  make target-config-check"
 	@echo "  make seed-tests"
 	@echo "  make seed-runtime-regression"
 	@echo "  make seed-network-tests"
