@@ -932,7 +932,8 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				return 0;
 			}
 			if (lhs_type && strcmp(lhs_type, TYPE_STRING) == 0) {
-				*out_type = TYPE_INT;
+				/* S models a character as a one-character string. */
+				*out_type = TYPE_STRING;
 				return 1;
 			}
 			if (lhs_type && strncmp(lhs_type, "[]", 2) == 0) {
@@ -1626,6 +1627,14 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"return statement outside function");
 				return 0;
+			}
+			if (node->as.return_stmt.values.len > 0 && ctx->current_return_type && strchr(ctx->current_return_type, ',')) {
+				/* Tuple returns are represented as a primary value plus trailing values. */
+				if (!analyze_expr(ctx, node->as.return_stmt.value, &expr_type)) return 0;
+				for (i = 0; i < node->as.return_stmt.values.len; i++) {
+					if (!analyze_expr(ctx, node->as.return_stmt.values.data[i], &expr_type)) return 0;
+				}
+				return 1;
 			}
 			if (!analyze_expr(ctx, node->as.return_stmt.value, &expr_type)) {
 				return 0;
