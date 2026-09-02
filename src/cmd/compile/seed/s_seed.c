@@ -393,6 +393,7 @@ static void print_usage(const char *argv0) {
 	fprintf(stderr, "  %s --emit-standalone-amd64-obj <input.ir> <output.o>\n", argv0);
 	fprintf(stderr, "  %s --emit-shared <input.ir> <output.dylib|output.so>\n", argv0);
 	fprintf(stderr, "  %s --probe-backend <native|c-abi|cuda|cann>\n", argv0);
+	fprintf(stderr, "  %s --target-info\n", argv0);
 	fprintf(stderr, "  %s --bootstrap <compiler_source.s> [output_dir]\n", argv0);
 	fprintf(stderr, "  %s --dump-tokens <input.s> <output.tokens>\n", argv0);
 	fprintf(stderr, "  %s --dump-ast <input.s> <output.ast>\n", argv0);
@@ -469,6 +470,21 @@ int main(int argc, char **argv) {
 		available = s_target_backend_probe(backend, detail, sizeof(detail));
 		printf("%s: %s\n", s_target_backend_name(backend), detail);
 		return available ? 0 : 3;
+	}
+	if (argc >= 2 && strcmp(argv[1], "--target-info") == 0) {
+		s_target_platform target;
+		char detail[256];
+		if (argc != 2) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (!s_target_platform_from_environment(&target, detail, sizeof(detail))) {
+			fprintf(stderr, "invalid target: %s\n", detail);
+			return 2;
+		}
+		printf("configured target: %s\n", detail);
+		printf("standalone backend: %s\n", s_target_platform_supports_standalone(&target) ? "available" : "unavailable (implemented: linux/amd64 ELF)");
+		return 0;
 	}
 	if (argc >= 2 && strcmp(argv[1], "--emit-bin") == 0) {
 		if (argc != 4) {
