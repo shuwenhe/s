@@ -1640,6 +1640,45 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 	int brace_depth = 0;
 	*out_type = NULL;
 	*out_name = NULL;
+	if (check(p, TOKEN_IDENTIFIER) && p->current + 2 < p->tokens->len &&
+		p->tokens->data[p->current + 1].type == TOKEN_STAR &&
+		p->tokens->data[p->current + 2].type == TOKEN_IDENTIFIER) {
+		char *base_type = NULL;
+		*out_name = dup_cstr(p->tokens->data[p->current].lexeme);
+		advance_tok(p);
+		advance_tok(p);
+		if (try_parse_type_annotation(p, &base_type)) {
+			size_t n = strlen(base_type);
+			*out_type = (char *)malloc(n + 2);
+			if (*out_type) snprintf(*out_type, n + 2, "%s*", base_type);
+			free(base_type);
+		} else {
+			*out_type = dup_cstr("any*");
+		}
+		if (!*out_name || !*out_type) {
+			free(*out_name); free(*out_type);
+			*out_name = NULL; *out_type = NULL;
+			error_set(p->err, ERR_OUT_OF_MEMORY, peek(p)->pos.line, peek(p)->pos.column, "out of memory");
+			p->current = saved;
+			return 0;
+		}
+		return 1;
+	}
+	if (check(p, TOKEN_IDENTIFIER) && p->current + 1 < p->tokens->len &&
+		p->tokens->data[p->current + 1].type == TOKEN_STAR) {
+		*out_name = dup_cstr(p->tokens->data[p->current].lexeme);
+		*out_type = dup_cstr("any*");
+		if (!*out_name || !*out_type) {
+			free(*out_name); free(*out_type);
+			*out_name = NULL; *out_type = NULL;
+			error_set(p->err, ERR_OUT_OF_MEMORY, peek(p)->pos.line, peek(p)->pos.column, "out of memory");
+			p->current = saved;
+			return 0;
+		}
+		advance_tok(p);
+		advance_tok(p);
+		return 1;
+	}
 	while (!is_at_end(p)) {
 		token_type t = peek(p)->type;
 		if (t == TOKEN_RBRACE && bracket_depth == 0 && paren_depth == 0 && brace_depth == 0) {
