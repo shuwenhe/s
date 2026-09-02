@@ -51,12 +51,12 @@ struct ast_node {
     node_type: int
     line: int
     column: int
-    
+
     string_data: string
     int_data: int
-    
+
     children* ast_node[]
-    
+
     name: string
     type_name: string
 }
@@ -154,7 +154,7 @@ func ast_dump(node* ast_node, int indent) {
         eprintln(node.type_name)
     }
     eprintln("\n")
-    
+
     for i := 0; i < node.children.len(); i = i + 1 {
         ast_dump(node.children[i], indent + 1)
     }
