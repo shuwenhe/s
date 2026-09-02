@@ -4,16 +4,16 @@ use std.env as env
 use std.io  as io
 use std.slices
 use std.result.result
-const BOOTSTRAP_VERSION = "0.2.0"
-const BOOTSTRAP_STAGE   = "stage1"
-const CMD_UNKNOWN = 0
-const CMD_CHECK   = 1
-const CMD_BUILD   = 2
-const CMD_RUN     = 3
-const CMD_LEX     = 4
-const CMD_AST     = 5
-const CMD_VERSION = 6
-const CMD_HELP    = 7
+const bootstrap_version = "0.2.0"
+const bootstrap_stage   = "stage1"
+const cmd_unknown = 0
+const cmd_check   = 1
+const cmd_build   = 2
+const cmd_run     = 3
+const cmd_lex     = 4
+const cmd_ast     = 5
+const cmd_version = 6
+const cmd_help    = 7
 func main() {
     runtime_init()
     gc_disable()
@@ -25,15 +25,15 @@ func main() {
     cmd_str := args.get(1).unwrap_or("")
     cmd     := parse_command(cmd_str)
     switch cmd {
-        CMD_VERSION : {
-            io.println("s compiler " + BOOTSTRAP_VERSION + " (" + BOOTSTRAP_STAGE + ")")
+        cmd_version : {
+            io.println("s compiler " + bootstrap_version + " (" + bootstrap_stage + ")")
             return 0
         },
-        CMD_HELP : {
+        cmd_help : {
             print_usage()
             return 0
         },
-        CMD_UNKNOWN : {
+        cmd_unknown : {
             compiler_main(args)
         },
         _ : {
@@ -44,21 +44,21 @@ func main() {
 }
 
 func parse_command(string s) int {
-    if s == "check"   { return CMD_CHECK   }
-    if s == "build"   { return CMD_BUILD   }
-    if s == "run"     { return CMD_RUN     }
-    if s == "lex"     { return CMD_LEX     }
-    if s == "ast"     { return CMD_AST     }
-    if s == "version" { return CMD_VERSION }
-    if s == "--version" { return CMD_VERSION }
-    if s == "help"    { return CMD_HELP    }
-    if s == "--help"  { return CMD_HELP    }
-    if s == "-h"      { return CMD_HELP    }
-    CMD_UNKNOWN
+    if s == "check"   { return cmd_check   }
+    if s == "build"   { return cmd_build   }
+    if s == "run"     { return cmd_run     }
+    if s == "lex"     { return cmd_lex     }
+    if s == "ast"     { return cmd_ast     }
+    if s == "version" { return cmd_version }
+    if s == "--version" { return cmd_version }
+    if s == "help"    { return cmd_help    }
+    if s == "--help"  { return cmd_help    }
+    if s == "-h"      { return cmd_help    }
+    cmd_unknown
 }
 
 func print_usage() () {
-    io.println("s compiler " + BOOTSTRAP_VERSION)
+    io.println("s compiler " + bootstrap_version)
     io.println("")
     io.println("Usage:")
     io.println("  s check  <path>            Check syntax and types")

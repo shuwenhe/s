@@ -4,15 +4,15 @@ use std.strings.contains as contains_string
 use std.strings.trim as trim_string
 use std.fmt.sprintf
 use std.io.eprintln
-struct X86_64Gen {
+struct x86_64_gen {
     asm_lines: string[]
     register_stack: string[]
     temp_allocations: map[string]string
     label_count: int
 }
 
-func new_x86_64_gen() X86_64Gen {
-    return X86_64Gen{
+func new_x86_64_gen() x86_64_gen {
+    return x86_64_gen{
         asm_lines: string[]{},
         register_stack: []{
             "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%rdi",
@@ -22,15 +22,15 @@ func new_x86_64_gen() X86_64Gen {
     }
 }
 
-func (X86_64Gen* gen) emit(string line) {
+func (x86_64_gen* gen) emit(string line) {
     gen.asm_lines = append(gen.asm_lines, "    " + line)
 }
 
-func (X86_64Gen* gen) emit_label(string label) {
+func (x86_64_gen* gen) emit_label(string label) {
     gen.asm_lines = append(gen.asm_lines, label + ":")
 }
 
-func (X86_64Gen* gen) allocate_register() string {
+func (x86_64_gen* gen) allocate_register() string {
     if len(gen.register_stack) > 0 {
         reg := gen.register_stack[0]
         gen.register_stack = gen.register_stack[1:]
@@ -39,11 +39,11 @@ func (X86_64Gen* gen) allocate_register() string {
     return ""
 }
 
-func (X86_64Gen* gen) free_register(string reg) {
+func (x86_64_gen* gen) free_register(string reg) {
     gen.register_stack = append(gen.register_stack, reg)
 }
 
-func (X86_64Gen* gen) get_location(string variable) string {
+func (x86_64_gen* gen) get_location(string variable) string {
     if loc, exists := gen.temp_allocations[variable]; exists {
         return loc
     }
@@ -58,7 +58,7 @@ func (X86_64Gen* gen) get_location(string variable) string {
     return stack_loc
 }
 
-func (X86_64Gen* gen) translate_instruction(Instruction instr) error {
+func (x86_64_gen* gen) translate_instruction(instruction instr) error {
     switch instr.opcode {
         case "FUNC_BEGIN":
             gen.emit("push %rbp")
@@ -148,7 +148,7 @@ func (X86_64Gen* gen) translate_instruction(Instruction instr) error {
     }
 }
 
-func generate_assembly_from_ir([]Instruction instructions) (string, error) {
+func generate_assembly_from_ir([]instruction instructions) (string, error) {
     gen := new_x86_64_gen()
     gen.asm_lines = append(gen.asm_lines, ".globl main")
     gen.asm_lines = append(gen.asm_lines, ".text")

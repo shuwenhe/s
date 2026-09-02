@@ -143,7 +143,7 @@ func dfa_compute_use_def(cfg_block block) int_set {
 
         for j := 0; j < instr.operands.len(); j = j + 1 {
             operand := instr.operands[j]
-            if operand.value_type == IR_VALUE_VAR || operand.value_type == IR_VALUE_PARAM {
+            if operand.value_type == ir_value_var || operand.value_type == ir_value_param {
                 int_set_add(&use_set, operand.value_id)
             }
         }
@@ -261,7 +261,7 @@ func dfa_build_use_def_chains(cfg* control_flow_graph, reaching_def_info[] reach
             for op_idx := 0; op_idx < instr.operands.len(); op_idx = op_idx + 1 {
                 operand := instr.operands[op_idx]
 
-                if operand.value_type == IR_VALUE_VAR || operand.value_type == IR_VALUE_PARAM {
+                if operand.value_type == ir_value_var || operand.value_type == ir_value_param {
                     chain := use_def_chain {
                         use_instr_id: instr.result.value_id, def_instr_ids int[]()
                     }

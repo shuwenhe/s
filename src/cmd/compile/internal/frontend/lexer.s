@@ -17,110 +17,110 @@ struct lexer {
     start_column: int
 }
 
-const TOKEN_EOF = 0
-const TOKEN_ERROR = 1
+const token_eof = 0
+const token_error = 1
 
-const TOKEN_IDENT = 10
-const TOKEN_INT = 11
-const TOKEN_FLOAT = 12
-const TOKEN_STRING = 13
-const TOKEN_CHAR = 14
-const TOKEN_TRUE = 15
-const TOKEN_FALSE = 16
+const token_ident = 10
+const token_int = 11
+const token_float = 12
+const token_string = 13
+const token_char = 14
+const token_true = 15
+const token_false = 16
 
-const TOKEN_PACKAGE = 20
-const TOKEN_USE = 21
-const TOKEN_FUNC = 22
-const TOKEN_STRUCT = 23
-const TOKEN_ENUM = 24
-const TOKEN_IF = 25
-const TOKEN_ELSE = 26
-const TOKEN_FOR = 27
-const TOKEN_WHILE = 28
-const TOKEN_RETURN = 29
-const TOKEN_BREAK = 30
-const TOKEN_CONTINUE = 31
-const TOKEN_SWITCH = 32
-const TOKEN_CASE = 33
-const TOKEN_DEFAULT = 34
-const TOKEN_VAR = 35
-const TOKEN_CONST = 36
-const TOKEN_AS = 37
-const TOKEN_NEW = 38
-const TOKEN_DELETE = 39
+const token_package = 20
+const token_use = 21
+const token_func = 22
+const token_struct = 23
+const token_enum = 24
+const token_if = 25
+const token_else = 26
+const token_for = 27
+const token_while = 28
+const token_return = 29
+const token_break = 30
+const token_continue = 31
+const token_switch = 32
+const token_case = 33
+const token_default = 34
+const token_var = 35
+const token_const = 36
+const token_as = 37
+const token_new = 38
+const token_delete = 39
 
-const TOKEN_PLUS = 40
-const TOKEN_MINUS = 41
-const TOKEN_STAR = 42
-const TOKEN_SLASH = 43
-const TOKEN_PERCENT = 44
-const TOKEN_EQ = 45
-const TOKEN_NE = 46
-const TOKEN_LT = 47
-const TOKEN_LE = 48
-const TOKEN_GT = 49
-const TOKEN_GE = 50
-const TOKEN_ASSIGN = 51
-const TOKEN_COLON_ASSIGN = 52
-const TOKEN_PLUS_ASSIGN = 53
-const TOKEN_MINUS_ASSIGN = 54
-const TOKEN_STAR_ASSIGN = 55
-const TOKEN_SLASH_ASSIGN = 56
-const TOKEN_AND = 57
-const TOKEN_OR = 58
-const TOKEN_NOT = 59
-const TOKEN_BIT_AND = 60
-const TOKEN_BIT_OR = 61
-const TOKEN_BIT_XOR = 62
-const TOKEN_BIT_NOT = 63
-const TOKEN_LSHIFT = 64
-const TOKEN_RSHIFT = 65
-const TOKEN_LSHIFT_ASSIGN = 66
-const TOKEN_RSHIFT_ASSIGN = 67
-const TOKEN_AND_ASSIGN = 68
-const TOKEN_OR_ASSIGN = 69
-const TOKEN_XOR_ASSIGN = 70
+const token_plus = 40
+const token_minus = 41
+const token_star = 42
+const token_slash = 43
+const token_percent = 44
+const token_eq = 45
+const token_ne = 46
+const token_lt = 47
+const token_le = 48
+const token_gt = 49
+const token_ge = 50
+const token_assign = 51
+const token_colon_assign = 52
+const token_plus_assign = 53
+const token_minus_assign = 54
+const token_star_assign = 55
+const token_slash_assign = 56
+const token_and = 57
+const token_or = 58
+const token_not = 59
+const token_bit_and = 60
+const token_bit_or = 61
+const token_bit_xor = 62
+const token_bit_not = 63
+const token_lshift = 64
+const token_rshift = 65
+const token_lshift_assign = 66
+const token_rshift_assign = 67
+const token_and_assign = 68
+const token_or_assign = 69
+const token_xor_assign = 70
 
-const TOKEN_LPAREN = 80
-const TOKEN_RPAREN = 81
-const TOKEN_LBRACE = 82
-const TOKEN_RBRACE = 83
-const TOKEN_LBRACKET = 84
-const TOKEN_RBRACKET = 85
-const TOKEN_COMMA = 86
-const TOKEN_DOT = 87
-const TOKEN_COLON = 88
-const TOKEN_SEMICOLON = 89
-const TOKEN_ARROW = 90
-const TOKEN_QUESTION = 91
+const token_lparen = 80
+const token_rparen = 81
+const token_lbrace = 82
+const token_rbrace = 83
+const token_lbracket = 84
+const token_rbracket = 85
+const token_comma = 86
+const token_dot = 87
+const token_colon = 88
+const token_semicolon = 89
+const token_arrow = 90
+const token_question = 91
 
-const TOKEN_NEWLINE = 99
+const token_newline = 99
 
 func keyword_to_token(string kw) int {
     switch kw {
-    case "package" : TOKEN_PACKAGE
-    case "use" : TOKEN_USE
-    case "func" : TOKEN_FUNC
-    case "struct" : TOKEN_STRUCT
-    case "enum" : TOKEN_ENUM
-    case "if" : TOKEN_IF
-    case "else" : TOKEN_ELSE
-    case "for" : TOKEN_FOR
-    case "while" : TOKEN_WHILE
-    case "return" : TOKEN_RETURN
-    case "break" : TOKEN_BREAK
-    case "continue" : TOKEN_CONTINUE
-    case "switch" : TOKEN_SWITCH
-    case "case" : TOKEN_CASE
-    case "default" : TOKEN_DEFAULT
-    case "var" : TOKEN_VAR
-    case "const" : TOKEN_CONST
-    case "true" : TOKEN_TRUE
-    case "false" : TOKEN_FALSE
-    case "as" : TOKEN_AS
-    case "new" : TOKEN_NEW
-    case "delete" : TOKEN_DELETE
-    default : TOKEN_IDENT
+    case "package" : token_package
+    case "use" : token_use
+    case "func" : token_func
+    case "struct" : token_struct
+    case "enum" : token_enum
+    case "if" : token_if
+    case "else" : token_else
+    case "for" : token_for
+    case "while" : token_while
+    case "return" : token_return
+    case "break" : token_break
+    case "continue" : token_continue
+    case "switch" : token_switch
+    case "case" : token_case
+    case "default" : token_default
+    case "var" : token_var
+    case "const" : token_const
+    case "true" : token_true
+    case "false" : token_false
+    case "as" : token_as
+    case "new" : token_new
+    case "delete" : token_delete
+    default : token_ident
     }
 }
 
@@ -207,9 +207,9 @@ func lexer_read_number(lex* lexer) (string, int) {
 
     num_str := lexer_slice(lex.source, start, lex.position)
     if has_dot {
-        return num_str, TOKEN_FLOAT
+        return num_str, token_float
     } else {
-        return num_str, TOKEN_INT
+        return num_str, token_int
     }
 }
 
@@ -258,163 +258,163 @@ func lexer_next_token(lex* lexer) token {
     line := lex.line
     column := lex.column
 
-    tok_type := TOKEN_EOF
+    tok_type := token_eof
     tok_value := ""
 
     switch lex.current_char {
     case '\0' :
-        tok_type = TOKEN_EOF
+        tok_type = token_eof
         tok_value = ""
     case '\n' :
-        tok_type = TOKEN_NEWLINE
+        tok_type = token_newline
         tok_value = "\n"
         lexer_read_char(lex)
     case '(' :
-        tok_type = TOKEN_LPAREN
+        tok_type = token_lparen
         tok_value = "("
         lexer_read_char(lex)
     case ')' :
-        tok_type = TOKEN_RPAREN
+        tok_type = token_rparen
         tok_value = ")"
         lexer_read_char(lex)
     case '{' :
-        tok_type = TOKEN_LBRACE
+        tok_type = token_lbrace
         tok_value = "{"
         lexer_read_char(lex)
     case '}' :
-        tok_type = TOKEN_RBRACE
+        tok_type = token_rbrace
         tok_value = "}"
         lexer_read_char(lex)
     case '[' :
-        tok_type = TOKEN_LBRACKET
+        tok_type = token_lbracket
         tok_value = "["
         lexer_read_char(lex)
     case ']' :
-        tok_type = TOKEN_RBRACKET
+        tok_type = token_rbracket
         tok_value = "]"
         lexer_read_char(lex)
     case ',' :
-        tok_type = TOKEN_COMMA
+        tok_type = token_comma
         tok_value = ","
         lexer_read_char(lex)
     case '.' :
-        tok_type = TOKEN_DOT
+        tok_type = token_dot
         tok_value = "."
         lexer_read_char(lex)
     case ':' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_COLON_ASSIGN
+            tok_type = token_colon_assign
             tok_value = ":="
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else {
-            tok_type = TOKEN_COLON
+            tok_type = token_colon
             tok_value = ":"
             lexer_read_char(lex)
         }
     case ';' :
-        tok_type = TOKEN_SEMICOLON
+        tok_type = token_semicolon
         tok_value = ";"
         lexer_read_char(lex)
     case '?' :
-        tok_type = TOKEN_QUESTION
+        tok_type = token_question
         tok_value = "?"
         lexer_read_char(lex)
     case '!' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_NE
+            tok_type = token_ne
             tok_value = "!="
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else {
-            tok_type = TOKEN_NOT
+            tok_type = token_not
             tok_value = "!"
             lexer_read_char(lex)
         }
     case '=' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_EQ
+            tok_type = token_eq
             tok_value = "=="
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else if lexer_peek_char(lex) == '>' {
-            tok_type = TOKEN_ARROW
+            tok_type = token_arrow
             tok_value = "=>"
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else {
-            tok_type = TOKEN_ASSIGN
+            tok_type = token_assign
             tok_value = "="
             lexer_read_char(lex)
         }
     case '<' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_LE
+            tok_type = token_le
             tok_value = "<="
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else if lexer_peek_char(lex) == '<' {
-            tok_type = TOKEN_LSHIFT
+            tok_type = token_lshift
             tok_value = "<<"
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else {
-            tok_type = TOKEN_LT
+            tok_type = token_lt
             tok_value = "<"
             lexer_read_char(lex)
         }
     case '>' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_GE
+            tok_type = token_ge
             tok_value = ">="
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else if lexer_peek_char(lex) == '>' {
-            tok_type = TOKEN_RSHIFT
+            tok_type = token_rshift
             tok_value = ">>"
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else {
-            tok_type = TOKEN_GT
+            tok_type = token_gt
             tok_value = ">"
             lexer_read_char(lex)
         }
     case '+' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_PLUS_ASSIGN
+            tok_type = token_plus_assign
             tok_value = "+="
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else {
-            tok_type = TOKEN_PLUS
+            tok_type = token_plus
             tok_value = "+"
             lexer_read_char(lex)
         }
     case '-' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_MINUS_ASSIGN
+            tok_type = token_minus_assign
             tok_value = "-="
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else {
-            tok_type = TOKEN_MINUS
+            tok_type = token_minus
             tok_value = "-"
             lexer_read_char(lex)
         }
     case '*' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_STAR_ASSIGN
+            tok_type = token_star_assign
             tok_value = "*="
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else {
-            tok_type = TOKEN_STAR
+            tok_type = token_star
             tok_value = "*"
             lexer_read_char(lex)
         }
     case '/' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_SLASH_ASSIGN
+            tok_type = token_slash_assign
             tok_value = "/="
             lexer_read_char(lex)
             lexer_read_char(lex)
@@ -425,66 +425,66 @@ func lexer_next_token(lex* lexer) token {
             lexer_skip_block_comment(lex)
             return lexer_next_token(lex)
         } else {
-            tok_type = TOKEN_SLASH
+            tok_type = token_slash
             tok_value = "/"
             lexer_read_char(lex)
         }
     case '%' :
-        tok_type = TOKEN_PERCENT
+        tok_type = token_percent
         tok_value = "%"
         lexer_read_char(lex)
     case '&' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_AND_ASSIGN
+            tok_type = token_and_assign
             tok_value = "&="
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else if lexer_peek_char(lex) == '&' {
-            tok_type = TOKEN_AND
+            tok_type = token_and
             tok_value = "&&"
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else {
-            tok_type = TOKEN_BIT_AND
+            tok_type = token_bit_and
             tok_value = "&"
             lexer_read_char(lex)
         }
     case '|' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_OR_ASSIGN
+            tok_type = token_or_assign
             tok_value = "|="
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else if lexer_peek_char(lex) == '|' {
-            tok_type = TOKEN_OR
+            tok_type = token_or
             tok_value = "||"
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else {
-            tok_type = TOKEN_BIT_OR
+            tok_type = token_bit_or
             tok_value = "|"
             lexer_read_char(lex)
         }
     case '^' :
         if lexer_peek_char(lex) == '=' {
-            tok_type = TOKEN_XOR_ASSIGN
+            tok_type = token_xor_assign
             tok_value = "^="
             lexer_read_char(lex)
             lexer_read_char(lex)
         } else {
-            tok_type = TOKEN_BIT_XOR
+            tok_type = token_bit_xor
             tok_value = "^"
             lexer_read_char(lex)
         }
     case '~' :
-        tok_type = TOKEN_BIT_NOT
+        tok_type = token_bit_not
         tok_value = "~"
         lexer_read_char(lex)
     case '"' :
-        tok_type = TOKEN_STRING
+        tok_type = token_string
         tok_value = lexer_read_string(lex, '"')
     case '\'' :
-        tok_type = TOKEN_CHAR
+        tok_type = token_char
         tok_value = lexer_read_string(lex, '\'')
     default :
         if is_letter(lex.current_char) {
@@ -494,7 +494,7 @@ func lexer_next_token(lex* lexer) token {
         } else if is_digit(lex.current_char) {
             tok_value, tok_type = lexer_read_number(lex)
         } else {
-            tok_type = TOKEN_ERROR
+            tok_type = token_error
             tok_value = ""
             tok_value = tok_value + lex.current_char
             lexer_read_char(lex)
@@ -508,79 +508,79 @@ func lexer_next_token(lex* lexer) token {
 
 func token_type_name(int tok_type) string {
     switch tok_type {
-    case TOKEN_EOF : "EOF"
-    case TOKEN_ERROR : "ERROR"
-    case TOKEN_IDENT : "IDENT"
-    case TOKEN_INT : "INT"
-    case TOKEN_FLOAT : "FLOAT"
-    case TOKEN_STRING : "STRING"
-    case TOKEN_CHAR : "CHAR"
-    case TOKEN_TRUE : "TRUE"
-    case TOKEN_FALSE : "FALSE"
-    case TOKEN_PACKAGE : "PACKAGE"
-    case TOKEN_USE : "USE"
-    case TOKEN_FUNC : "FUNC"
-    case TOKEN_STRUCT : "STRUCT"
-    case TOKEN_ENUM : "ENUM"
-    case TOKEN_IF : "IF"
-    case TOKEN_ELSE : "ELSE"
-    case TOKEN_FOR : "FOR"
-    case TOKEN_WHILE : "WHILE"
-    case TOKEN_RETURN : "RETURN"
-    case TOKEN_BREAK : "BREAK"
-    case TOKEN_CONTINUE : "CONTINUE"
-    case TOKEN_SWITCH : "SWITCH"
-    case TOKEN_CASE : "CASE"
-    case TOKEN_DEFAULT : "DEFAULT"
-    case TOKEN_VAR : "VAR"
-    case TOKEN_CONST : "CONST"
-    case TOKEN_AS : "AS"
-    case TOKEN_NEW : "NEW"
-    case TOKEN_DELETE : "DELETE"
-    case TOKEN_PLUS : "PLUS"
-    case TOKEN_MINUS : "MINUS"
-    case TOKEN_STAR : "STAR"
-    case TOKEN_SLASH : "SLASH"
-    case TOKEN_PERCENT : "PERCENT"
-    case TOKEN_EQ : "EQ"
-    case TOKEN_NE : "NE"
-    case TOKEN_LT : "LT"
-    case TOKEN_LE : "LE"
-    case TOKEN_GT : "GT"
-    case TOKEN_GE : "GE"
-    case TOKEN_ASSIGN : "ASSIGN"
-    case TOKEN_COLON_ASSIGN : "COLON_ASSIGN"
-    case TOKEN_PLUS_ASSIGN : "PLUS_ASSIGN"
-    case TOKEN_MINUS_ASSIGN : "MINUS_ASSIGN"
-    case TOKEN_STAR_ASSIGN : "STAR_ASSIGN"
-    case TOKEN_SLASH_ASSIGN : "SLASH_ASSIGN"
-    case TOKEN_AND : "AND"
-    case TOKEN_OR : "OR"
-    case TOKEN_NOT : "NOT"
-    case TOKEN_BIT_AND : "BIT_AND"
-    case TOKEN_BIT_OR : "BIT_OR"
-    case TOKEN_BIT_XOR : "BIT_XOR"
-    case TOKEN_BIT_NOT : "BIT_NOT"
-    case TOKEN_LSHIFT : "LSHIFT"
-    case TOKEN_RSHIFT : "RSHIFT"
-    case TOKEN_LSHIFT_ASSIGN : "LSHIFT_ASSIGN"
-    case TOKEN_RSHIFT_ASSIGN : "RSHIFT_ASSIGN"
-    case TOKEN_AND_ASSIGN : "AND_ASSIGN"
-    case TOKEN_OR_ASSIGN : "OR_ASSIGN"
-    case TOKEN_XOR_ASSIGN : "XOR_ASSIGN"
-    case TOKEN_LPAREN : "LPAREN"
-    case TOKEN_RPAREN : "RPAREN"
-    case TOKEN_LBRACE : "LBRACE"
-    case TOKEN_RBRACE : "RBRACE"
-    case TOKEN_LBRACKET : "LBRACKET"
-    case TOKEN_RBRACKET : "RBRACKET"
-    case TOKEN_COMMA : "COMMA"
-    case TOKEN_DOT : "DOT"
-    case TOKEN_COLON : "COLON"
-    case TOKEN_SEMICOLON : "SEMICOLON"
-    case TOKEN_ARROW : "ARROW"
-    case TOKEN_QUESTION : "QUESTION"
-    case TOKEN_NEWLINE : "NEWLINE"
+    case token_eof : "EOF"
+    case token_error : "ERROR"
+    case token_ident : "IDENT"
+    case token_int : "INT"
+    case token_float : "FLOAT"
+    case token_string : "STRING"
+    case token_char : "CHAR"
+    case token_true : "TRUE"
+    case token_false : "FALSE"
+    case token_package : "PACKAGE"
+    case token_use : "USE"
+    case token_func : "FUNC"
+    case token_struct : "STRUCT"
+    case token_enum : "ENUM"
+    case token_if : "IF"
+    case token_else : "ELSE"
+    case token_for : "FOR"
+    case token_while : "WHILE"
+    case token_return : "RETURN"
+    case token_break : "BREAK"
+    case token_continue : "CONTINUE"
+    case token_switch : "SWITCH"
+    case token_case : "CASE"
+    case token_default : "DEFAULT"
+    case token_var : "VAR"
+    case token_const : "CONST"
+    case token_as : "AS"
+    case token_new : "NEW"
+    case token_delete : "DELETE"
+    case token_plus : "PLUS"
+    case token_minus : "MINUS"
+    case token_star : "STAR"
+    case token_slash : "SLASH"
+    case token_percent : "PERCENT"
+    case token_eq : "EQ"
+    case token_ne : "NE"
+    case token_lt : "LT"
+    case token_le : "LE"
+    case token_gt : "GT"
+    case token_ge : "GE"
+    case token_assign : "ASSIGN"
+    case token_colon_assign : "COLON_ASSIGN"
+    case token_plus_assign : "PLUS_ASSIGN"
+    case token_minus_assign : "MINUS_ASSIGN"
+    case token_star_assign : "STAR_ASSIGN"
+    case token_slash_assign : "SLASH_ASSIGN"
+    case token_and : "AND"
+    case token_or : "OR"
+    case token_not : "NOT"
+    case token_bit_and : "BIT_AND"
+    case token_bit_or : "BIT_OR"
+    case token_bit_xor : "BIT_XOR"
+    case token_bit_not : "BIT_NOT"
+    case token_lshift : "LSHIFT"
+    case token_rshift : "RSHIFT"
+    case token_lshift_assign : "LSHIFT_ASSIGN"
+    case token_rshift_assign : "RSHIFT_ASSIGN"
+    case token_and_assign : "AND_ASSIGN"
+    case token_or_assign : "OR_ASSIGN"
+    case token_xor_assign : "XOR_ASSIGN"
+    case token_lparen : "LPAREN"
+    case token_rparen : "RPAREN"
+    case token_lbrace : "LBRACE"
+    case token_rbrace : "RBRACE"
+    case token_lbracket : "LBRACKET"
+    case token_rbracket : "RBRACKET"
+    case token_comma : "COMMA"
+    case token_dot : "DOT"
+    case token_colon : "COLON"
+    case token_semicolon : "SEMICOLON"
+    case token_arrow : "ARROW"
+    case token_question : "QUESTION"
+    case token_newline : "NEWLINE"
     default : "UNKNOWN"
     }
 }

@@ -1,6 +1,6 @@
 package ssa_x86_rules
 
-struct X86Rule {
+struct x86_rule {
     int id
     int pattern_op
     int x86_opcode
@@ -8,7 +8,7 @@ struct X86Rule {
     int cpu_flags
 }
 
-struct AddressMode {
+struct address_mode {
     int base_reg
     int index_reg
     int scale
@@ -16,14 +16,14 @@ struct AddressMode {
     int size
 }
 
-struct X86RuleEngine {
+struct x86_rule_engine {
     int rule_count
     x86_rule[] rules
     int pattern_count
 }
 
-func X86RuleEngine_new() X86RuleEngine* {
-    engine := X86RuleEngine {
+func x86_rule_engine_new() x86_rule_engine* {
+    engine := x86_rule_engine {
         rule_count: 0,
         rules: new x86_rule[256],
         pattern_count: 0,
@@ -31,11 +31,11 @@ func X86RuleEngine_new() X86RuleEngine* {
     &engine
 }
 
-func (engine* X86RuleEngine) register_x86_rule(int id, int pattern_op, int x86_opcode, int priority) int {
+func (engine* x86_rule_engine) register_x86_rule(int id, int pattern_op, int x86_opcode, int priority) int {
     idx := engine.rule_count
     engine.rule_count = engine.rule_count + 1
     
-    rule := X86Rule {
+    rule := x86_rule {
         id: id,
         pattern_op: pattern_op,
         x86_opcode: x86_opcode,
@@ -47,16 +47,16 @@ func (engine* X86RuleEngine) register_x86_rule(int id, int pattern_op, int x86_o
     idx
 }
 
-func (engine* X86RuleEngine) match_lea_pattern(int op, int[] args) (int, int, int) {
+func (engine* x86_rule_engine) match_lea_pattern(int op, int[] args) (int, int, int) {
     base := 0
     offset := 0
     scale := 0
     
-    if op == OP_ADD {
+    if op == op_add {
         base = args[0]
         offset = args[1]
     } else {
-        if op == OP_MUL {
+        if op == op_mul {
             base = args[0]
             scale = args[1]
         }
@@ -65,15 +65,15 @@ func (engine* X86RuleEngine) match_lea_pattern(int op, int[] args) (int, int, in
     return base, offset, scale
 }
 
-func (engine* X86RuleEngine) match_shift_pattern(int op, int[] args) (int, int) {
+func (engine* x86_rule_engine) match_shift_pattern(int op, int[] args) (int, int) {
     value := args[0]
     shift_amount := args[1]
     
     return value, shift_amount
 }
 
-func (engine* X86RuleEngine) match_mul_to_shift(int op, int shift_amount) int {
-    if op == OP_MUL {
+func (engine* x86_rule_engine) match_mul_to_shift(int op, int shift_amount) int {
+    if op == op_mul {
         if shift_amount == 2 {
             return 1
         }
@@ -88,8 +88,8 @@ func (engine* X86RuleEngine) match_mul_to_shift(int op, int shift_amount) int {
     return 0
 }
 
-func (engine* X86RuleEngine) match_div_to_shift(int op, int shift_amount) int {
-    if op == OP_DIV {
+func (engine* x86_rule_engine) match_div_to_shift(int op, int shift_amount) int {
+    if op == op_div {
         if shift_amount == 2 {
             return 1
         }
@@ -104,8 +104,8 @@ func (engine* X86RuleEngine) match_div_to_shift(int op, int shift_amount) int {
     return 0
 }
 
-func (engine* X86RuleEngine) match_addressing_mode(int base, int index, int scale, int offset) AddressMode* {
-    mode := AddressMode {
+func (engine* x86_rule_engine) match_addressing_mode(int base, int index, int scale, int offset) address_mode* {
+    mode := address_mode {
         base_reg: base,
         index_reg: index,
         scale: scale,
@@ -115,7 +115,7 @@ func (engine* X86RuleEngine) match_addressing_mode(int base, int index, int scal
     &mode
 }
 
-func (engine* X86RuleEngine) is_power_of_2(int n) int {
+func (engine* x86_rule_engine) is_power_of_2(int n) int {
     if n <= 0 {
         return 0
     }
@@ -127,7 +127,7 @@ func (engine* X86RuleEngine) is_power_of_2(int n) int {
     return 0
 }
 
-func (engine* X86RuleEngine) log2_value(int n) int {
+func (engine* x86_rule_engine) log2_value(int n) int {
     result := 0
     
     i := 1
@@ -139,7 +139,7 @@ func (engine* X86RuleEngine) log2_value(int n) int {
     result
 }
 
-func (engine* X86RuleEngine) optimize_mul_to_lea(int base, int shift_amount) int {
+func (engine* x86_rule_engine) optimize_mul_to_lea(int base, int shift_amount) int {
     if shift_amount == 1 {
         return 1
     }
@@ -156,7 +156,7 @@ func (engine* X86RuleEngine) optimize_mul_to_lea(int base, int shift_amount) int
     return 0
 }
 
-func (engine* X86RuleEngine) optimize_add_to_lea(int base, int offset) int {
+func (engine* x86_rule_engine) optimize_add_to_lea(int base, int offset) int {
     if offset == 0 {
         return 0
     }
@@ -167,26 +167,26 @@ func (engine* X86RuleEngine) optimize_add_to_lea(int base, int offset) int {
     return 1
 }
 
-func (engine* X86RuleEngine) optimize_compare_and_branch(int cmp_op, int branch_cond) (int, int) {
+func (engine* x86_rule_engine) optimize_compare_and_branch(int cmp_op, int branch_cond) (int, int) {
     x86_cond := 0
     
-    if branch_cond == COND_EQ {
-        x86_cond = X86_JE
+    if branch_cond == cond_eq {
+        x86_cond = x86_je
     } else {
-        if branch_cond == COND_NE {
-            x86_cond = X86_JNE
+        if branch_cond == cond_ne {
+            x86_cond = x86_jne
         } else {
-            if branch_cond == COND_LT {
-                x86_cond = X86_JL
+            if branch_cond == cond_lt {
+                x86_cond = x86_jl
             } else {
-                if branch_cond == COND_LE {
-                    x86_cond = X86_JLE
+                if branch_cond == cond_le {
+                    x86_cond = x86_jle
                 } else {
-                    if branch_cond == COND_GT {
-                        x86_cond = X86_JG
+                    if branch_cond == cond_gt {
+                        x86_cond = x86_jg
                     } else {
-                        if branch_cond == COND_GE {
-                            x86_cond = X86_JGE
+                        if branch_cond == cond_ge {
+                            x86_cond = x86_jge
                         }
                     }
                 }
@@ -197,23 +197,23 @@ func (engine* X86RuleEngine) optimize_compare_and_branch(int cmp_op, int branch_
     return x86_cond, 1
 }
 
-func (engine* X86RuleEngine) fuse_load_op(int load_op, int op, int store_op) (int, int) {
-    if op == OP_ADD {
-        if load_op == X86_MOV && store_op == X86_MOV {
-            return X86_ADD, 1
+func (engine* x86_rule_engine) fuse_load_op(int load_op, int op, int store_op) (int, int) {
+    if op == op_add {
+        if load_op == x86_mov && store_op == x86_mov {
+            return x86_add, 1
         }
     } else {
-        if op == OP_SUB {
-            return X86_SUB, 1
+        if op == op_sub {
+            return x86_sub, 1
         } else {
-            if op == OP_AND {
-                return X86_AND, 1
+            if op == op_and {
+                return x86_and, 1
             } else {
-                if op == OP_OR {
-                    return X86_OR, 1
+                if op == op_or {
+                    return x86_or, 1
                 } else {
-                    if op == OP_XOR {
-                        return X86_XOR, 1
+                    if op == op_xor {
+                        return x86_xor, 1
                     }
                 }
             }
@@ -223,7 +223,7 @@ func (engine* X86RuleEngine) fuse_load_op(int load_op, int op, int store_op) (in
     return 0, 0
 }
 
-func (engine* X86RuleEngine) optimize_push_pop(int pop_reg, int push_reg) int {
+func (engine* x86_rule_engine) optimize_push_pop(int pop_reg, int push_reg) int {
     if pop_reg == push_reg {
         return 1
     }
@@ -231,7 +231,7 @@ func (engine* X86RuleEngine) optimize_push_pop(int pop_reg, int push_reg) int {
     return 0
 }
 
-func (engine* X86RuleEngine) optimize_register_move(int src_reg, int dst_reg) int {
+func (engine* x86_rule_engine) optimize_register_move(int src_reg, int dst_reg) int {
     if src_reg == dst_reg {
         return 1
     }
@@ -239,7 +239,7 @@ func (engine* X86RuleEngine) optimize_register_move(int src_reg, int dst_reg) in
     return 0
 }
 
-func (engine* X86RuleEngine) optimize_zero_extension(int size) int {
+func (engine* x86_rule_engine) optimize_zero_extension(int size) int {
     if size == 1 || size == 2 || size == 4 {
         return 1
     }
@@ -247,7 +247,7 @@ func (engine* X86RuleEngine) optimize_zero_extension(int size) int {
     return 0
 }
 
-func (engine* X86RuleEngine) optimize_sign_extension(int size) int {
+func (engine* x86_rule_engine) optimize_sign_extension(int size) int {
     if size == 1 || size == 2 || size == 4 {
         return 1
     }
@@ -255,7 +255,7 @@ func (engine* X86RuleEngine) optimize_sign_extension(int size) int {
     return 0
 }
 
-func (engine* X86RuleEngine) optimize_memory_access(int addr_base, int offset) int {
+func (engine* x86_rule_engine) optimize_memory_access(int addr_base, int offset) int {
     if offset >= -128 && offset <= 127 {
         return 1
     }
@@ -263,70 +263,70 @@ func (engine* X86RuleEngine) optimize_memory_access(int addr_base, int offset) i
     return 0
 }
 
-func (engine* X86RuleEngine) fuse_compare_branch(int cmp_op, int branch_op) int {
-    if cmp_op == OP_CMP && branch_op == OP_BRANCH {
+func (engine* x86_rule_engine) fuse_compare_branch(int cmp_op, int branch_op) int {
+    if cmp_op == op_cmp && branch_op == op_branch {
         return 1
     }
     
     return 0
 }
 
-const OP_ADD = 3
-const OP_SUB = 4
-const OP_MUL = 5
-const OP_DIV = 6
-const OP_MOD = 7
-const OP_AND = 8
-const OP_OR = 9
-const OP_XOR = 10
-const OP_SHL = 11
-const OP_SHR = 12
-const OP_LOAD = 13
-const OP_STORE = 14
-const OP_CALL = 15
-const OP_CMP = 19
-const OP_BRANCH = 17
+const op_add = 3
+const op_sub = 4
+const op_mul = 5
+const op_div = 6
+const op_mod = 7
+const op_and = 8
+const op_or = 9
+const op_xor = 10
+const op_shl = 11
+const op_shr = 12
+const op_load = 13
+const op_store = 14
+const op_call = 15
+const op_cmp = 19
+const op_branch = 17
 
-const X86_MOV = 0x88
-const X86_ADD = 0x01
-const X86_SUB = 0x29
-const X86_MUL = 0xF7
-const X86_DIV = 0xF7
-const X86_AND = 0x21
-const X86_OR = 0x09
-const X86_XOR = 0x31
-const X86_SHL = 0xC1
-const X86_SHR = 0xC1
-const X86_SAR = 0xC1
-const X86_LEA = 0x8D
-const X86_CMP = 0x39
-const X86_JE = 0x74
-const X86_JNE = 0x75
-const X86_JL = 0x7C
-const X86_JLE = 0x7E
-const X86_JG = 0x7F
-const X86_JGE = 0x7D
+const x86_mov = 0x88
+const x86_add = 0x01
+const x86_sub = 0x29
+const x86_mul = 0x_f7
+const x86_div = 0x_f7
+const x86_and = 0x21
+const x86_or = 0x09
+const x86_xor = 0x31
+const x86_shl = 0x_c1
+const x86_shr = 0x_c1
+const x86_sar = 0x_c1
+const x86_lea = 0x8_d
+const x86_cmp = 0x39
+const x86_je = 0x74
+const x86_jne = 0x75
+const x86_jl = 0x7_c
+const x86_jle = 0x7_e
+const x86_jg = 0x7_f
+const x86_jge = 0x7_d
 
-const COND_EQ = 1
-const COND_NE = 2
-const COND_LT = 3
-const COND_LE = 4
-const COND_GT = 5
-const COND_GE = 6
+const cond_eq = 1
+const cond_ne = 2
+const cond_lt = 3
+const cond_le = 4
+const cond_gt = 5
+const cond_ge = 6
 
-func init_x86_rules(engine* X86RuleEngine) int {
-    engine.register_x86_rule(1, OP_ADD, X86_ADD, 10)
-    engine.register_x86_rule(2, OP_SUB, X86_SUB, 10)
-    engine.register_x86_rule(3, OP_MUL, X86_MUL, 20)
-    engine.register_x86_rule(4, OP_DIV, X86_DIV, 20)
-    engine.register_x86_rule(5, OP_AND, X86_AND, 10)
-    engine.register_x86_rule(6, OP_OR, X86_OR, 10)
-    engine.register_x86_rule(7, OP_XOR, X86_XOR, 10)
-    engine.register_x86_rule(8, OP_SHL, X86_SHL, 15)
-    engine.register_x86_rule(9, OP_SHR, X86_SHR, 15)
-    engine.register_x86_rule(10, OP_LOAD, X86_MOV, 5)
-    engine.register_x86_rule(11, OP_STORE, X86_MOV, 5)
-    engine.register_x86_rule(12, OP_CMP, X86_CMP, 8)
+func init_x86_rules(engine* x86_rule_engine) int {
+    engine.register_x86_rule(1, op_add, x86_add, 10)
+    engine.register_x86_rule(2, op_sub, x86_sub, 10)
+    engine.register_x86_rule(3, op_mul, x86_mul, 20)
+    engine.register_x86_rule(4, op_div, x86_div, 20)
+    engine.register_x86_rule(5, op_and, x86_and, 10)
+    engine.register_x86_rule(6, op_or, x86_or, 10)
+    engine.register_x86_rule(7, op_xor, x86_xor, 10)
+    engine.register_x86_rule(8, op_shl, x86_shl, 15)
+    engine.register_x86_rule(9, op_shr, x86_shr, 15)
+    engine.register_x86_rule(10, op_load, x86_mov, 5)
+    engine.register_x86_rule(11, op_store, x86_mov, 5)
+    engine.register_x86_rule(12, op_cmp, x86_cmp, 8)
     
     0
 }

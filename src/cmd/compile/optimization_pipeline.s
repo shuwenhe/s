@@ -1,13 +1,13 @@
 package optimization_pipeline
 
-struct CompilationPhase {
+struct compilation_phase {
     int phase_id
     string phase_name
     int stats_time
     int stats_changes
 }
 
-struct OptimizationStats {
+struct optimization_stats {
     int total_phases
     int total_time
     int total_optimizations
@@ -17,19 +17,19 @@ struct OptimizationStats {
     int instr_count_after
 }
 
-struct OptimizationPipeline {
+struct optimization_pipeline {
     int phase_count
     compilation_phase[] phases
     optimization_stats stats
     int debug_enabled
 }
 
-func OptimizationPipeline_new() OptimizationPipeline* {
-    pipeline := OptimizationPipeline {
+func optimization_pipeline_new() optimization_pipeline* {
+    pipeline := optimization_pipeline {
         phase_count: 0,
         phases: new compilation_phase[32],
         debug_enabled: 0,
-        stats: OptimizationStats {
+        stats: optimization_stats {
             total_phases: 0,
             total_time: 0,
             total_optimizations: 0,
@@ -43,11 +43,11 @@ func OptimizationPipeline_new() OptimizationPipeline* {
     &pipeline
 }
 
-func (pipeline* OptimizationPipeline) register_phase(int phase_id, string phase_name) int {
+func (pipeline* optimization_pipeline) register_phase(int phase_id, string phase_name) int {
     idx := pipeline.phase_count
     pipeline.phase_count = pipeline.phase_count + 1
     
-    phase := CompilationPhase {
+    phase := compilation_phase {
         phase_id: phase_id,
         phase_name: phase_name,
         stats_time: 0,
@@ -58,7 +58,7 @@ func (pipeline* OptimizationPipeline) register_phase(int phase_id, string phase_
     idx
 }
 
-func (pipeline* OptimizationPipeline) execute_pipeline(value[] all_values, block[] all_blocks, int num_blocks) int {
+func (pipeline* optimization_pipeline) execute_pipeline(value[] all_values, block[] all_blocks, int num_blocks) int {
     pipeline.stats.code_size_before = compute_code_size(all_values)
     pipeline.stats.instr_count_before = len(all_values)
     
@@ -79,40 +79,40 @@ func (pipeline* OptimizationPipeline) execute_pipeline(value[] all_values, block
 }
 
 func execute_optimization_phase(compilation_phase* phase, value[] all_values, block[] all_blocks, int num_blocks) int {
-    if phase.phase_id == PHASE_SSA_CONSTRUCTION {
+    if phase.phase_id == phase_ssa_construction {
         return execute_ssa_construction(all_values, all_blocks)
     } else {
-        if phase.phase_id == PHASE_CONSTANT_FOLDING {
+        if phase.phase_id == phase_constant_folding {
             return execute_constant_folding(all_values)
         } else {
-            if phase.phase_id == PHASE_DEAD_CODE_ELIM {
+            if phase.phase_id == phase_dead_code_elim {
                 return execute_dead_code_elim(all_values, all_blocks)
             } else {
-                if phase.phase_id == PHASE_COMMON_SUBEXPR_ELIM {
+                if phase.phase_id == phase_common_subexpr_elim {
                     return execute_cse(all_values)
                 } else {
-                    if phase.phase_id == PHASE_ALGEBRAIC_SIMP {
+                    if phase.phase_id == phase_algebraic_simp {
                         return execute_algebraic_simp(all_values)
                     } else {
-                        if phase.phase_id == PHASE_LOOP_INVARIANT_CM {
+                        if phase.phase_id == phase_loop_invariant_cm {
                             return execute_licm(all_values, all_blocks)
                         } else {
-                            if phase.phase_id == PHASE_STRENGTH_REDUCTION {
+                            if phase.phase_id == phase_strength_reduction {
                                 return execute_strength_reduction(all_values)
                             } else {
-                                if phase.phase_id == PHASE_INLINING {
+                                if phase.phase_id == phase_inlining {
                                     return execute_inlining(all_values)
                                 } else {
-                                    if phase.phase_id == PHASE_ESCAPE_ANALYSIS {
+                                    if phase.phase_id == phase_escape_analysis {
                                         return execute_escape_analysis(all_values)
                                     } else {
-                                        if phase.phase_id == PHASE_DEVIRT {
+                                        if phase.phase_id == phase_devirt {
                                             return execute_devirtualization(all_values)
                                         } else {
-                                            if phase.phase_id == PHASE_LIVENESS_ANALYSIS {
+                                            if phase.phase_id == phase_liveness_analysis {
                                                 return execute_liveness_analysis(all_blocks)
                                             } else {
-                                                if phase.phase_id == PHASE_REGISTER_ALLOCATION {
+                                                if phase.phase_id == phase_register_allocation {
                                                     return execute_register_allocation(all_values)
                                                 }
                                             }
@@ -141,7 +141,7 @@ func execute_constant_folding(value[] all_values) int {
     for i < len(all_values) {
         v := all_values[i]
         
-        if v.op >= OP_ADD && v.op <= OP_XOR {
+        if v.op >= op_add && v.op <= op_xor {
             changes = changes + 1
         }
         
@@ -158,7 +158,7 @@ func execute_dead_code_elim(value[] all_values, block[] all_blocks) int {
     for i < len(all_values) {
         v := all_values[i]
         
-        if v.op == OP_STORE {
+        if v.op == op_store {
             changes = changes + 1
         }
         
@@ -211,7 +211,7 @@ func execute_strength_reduction(value[] all_values) int {
     for i < len(all_values) {
         v := all_values[i]
         
-        if v.op == OP_MUL || v.op == OP_DIV {
+        if v.op == op_mul || v.op == op_div {
             changes = changes + 1
         }
         
@@ -226,7 +226,7 @@ func execute_inlining(value[] all_values) int {
     
     i := 0
     for i < len(all_values) {
-        if all_values[i].op == OP_CALL {
+        if all_values[i].op == op_call {
             changes = changes + 1
         }
         i = i + 1
@@ -246,7 +246,7 @@ func execute_devirtualization(value[] all_values) int {
     
     i := 0
     for i < len(all_values) {
-        if all_values[i].op == OP_CALL {
+        if all_values[i].op == op_call {
             changes = changes + 1
         }
         i = i + 1
@@ -276,19 +276,19 @@ func compute_code_size(value[] all_values) int {
 }
 
 func estimate_instr_size(int op) int {
-    if op == OP_CONST {
+    if op == op_const {
         return 8
     } else {
-        if op == OP_LOAD || op == OP_STORE {
+        if op == op_load || op == op_store {
             return 8
         } else {
-            if op == OP_CALL {
+            if op == op_call {
                 return 6
             } else {
-                if op == OP_BRANCH {
+                if op == op_branch {
                     return 6
                 } else {
-                    if op == OP_COND_BRANCH {
+                    if op == op_cond_branch {
                         return 8
                     }
                 }
@@ -299,33 +299,33 @@ func estimate_instr_size(int op) int {
     return 4
 }
 
-func (pipeline* OptimizationPipeline) print_stats() int {
+func (pipeline* optimization_pipeline) print_stats() int {
     return 0
 }
 
-const PHASE_SSA_CONSTRUCTION = 0
-const PHASE_CONSTANT_FOLDING = 1
-const PHASE_DEAD_CODE_ELIM = 2
-const PHASE_COMMON_SUBEXPR_ELIM = 3
-const PHASE_ALGEBRAIC_SIMP = 4
-const PHASE_LOOP_INVARIANT_CM = 5
-const PHASE_STRENGTH_REDUCTION = 6
-const PHASE_INLINING = 7
-const PHASE_ESCAPE_ANALYSIS = 8
-const PHASE_DEVIRT = 9
-const PHASE_LIVENESS_ANALYSIS = 10
-const PHASE_REGISTER_ALLOCATION = 11
+const phase_ssa_construction = 0
+const phase_constant_folding = 1
+const phase_dead_code_elim = 2
+const phase_common_subexpr_elim = 3
+const phase_algebraic_simp = 4
+const phase_loop_invariant_cm = 5
+const phase_strength_reduction = 6
+const phase_inlining = 7
+const phase_escape_analysis = 8
+const phase_devirt = 9
+const phase_liveness_analysis = 10
+const phase_register_allocation = 11
 
-const OP_CONST = 2
-const OP_ADD = 3
-const OP_SUB = 4
-const OP_MUL = 5
-const OP_DIV = 6
-const OP_AND = 8
-const OP_OR = 9
-const OP_XOR = 10
-const OP_LOAD = 13
-const OP_STORE = 14
-const OP_CALL = 15
-const OP_BRANCH = 17
-const OP_COND_BRANCH = 18
+const op_const = 2
+const op_add = 3
+const op_sub = 4
+const op_mul = 5
+const op_div = 6
+const op_and = 8
+const op_or = 9
+const op_xor = 10
+const op_load = 13
+const op_store = 14
+const op_call = 15
+const op_branch = 17
+const op_cond_branch = 18

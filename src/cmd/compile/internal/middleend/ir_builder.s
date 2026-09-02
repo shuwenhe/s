@@ -57,15 +57,15 @@ func ir_builder_visit_node(ir_builder_context ctx*, node* frontend.ast_node) {
     }
 
     switch node.node_type {
-        case frontend.AST_PROGRAM:
+        case frontend.ast_program:
             ir_builder_visit_program(ctx, node)
-        case frontend.AST_FUNC:
+        case frontend.ast_func:
             ir_builder_visit_func_decl(ctx, node)
-        case frontend.AST_PACKAGE:
+        case frontend.ast_package:
             ir_builder_visit_package(ctx, node)
-        case frontend.AST_STRUCT:
+        case frontend.ast_struct:
             ir_builder_visit_struct_decl(ctx, node)
-        case frontend.AST_VAR:
+        case frontend.ast_var:
             ir_builder_visit_var_decl(ctx, node)
     }
 }
@@ -154,17 +154,17 @@ func ir_builder_visit_statement(ir_builder_context ctx*, stmt_node* frontend.ast
     }
 
     switch stmt_node.node_type {
-        case frontend.AST_RETURN:
+        case frontend.ast_return:
             ir_builder_visit_return_stmt(ctx, stmt_node)
-        case frontend.AST_VAR:
+        case frontend.ast_var:
             ir_builder_visit_var_decl(ctx, stmt_node)
-        case frontend.AST_IF:
+        case frontend.ast_if:
             ir_builder_visit_if_stmt(ctx, stmt_node)
-        case frontend.AST_FOR:
+        case frontend.ast_for:
             ir_builder_visit_for_stmt(ctx, stmt_node)
-        case frontend.AST_WHILE:
+        case frontend.ast_while:
             ir_builder_visit_while_stmt(ctx, stmt_node)
-        case frontend.AST_EXPR_STMT:
+        case frontend.ast_expr_stmt:
             ir_builder_visit_expr_stmt(ctx, stmt_node)
     }
 }
@@ -236,13 +236,13 @@ func ir_builder_visit_expression(ir_builder_context ctx*, expr_node* frontend.as
     }
 
     switch expr_node.node_type {
-        case frontend.AST_INT_LIT:
+        case frontend.ast_int_lit:
             return ir_builder_visit_int_lit(ctx, expr_node)
-        case frontend.AST_BINARY_OP:
+        case frontend.ast_binary_op:
             return ir_builder_visit_binary_op(ctx, expr_node)
-        case frontend.AST_IDENT:
+        case frontend.ast_ident:
             return ir_builder_visit_ident(ctx, expr_node)
-        case frontend.AST_CALL:
+        case frontend.ast_call:
             return ir_builder_visit_call(ctx, expr_node)
         default:
             return ir_value_const("0", "int")
@@ -290,7 +290,7 @@ func ir_builder_visit_call(ir_builder_context ctx*, call_node* frontend.ast_node
 
 func ir_instr_alloca() ir_instruction {
     ir_instruction {
-        instr_type: IR_INSTR_ALLOCA
+        instr_type: ir_instr_alloca
     }
 }
 

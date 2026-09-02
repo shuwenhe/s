@@ -1,11 +1,11 @@
 package middleend
 
-const OPT_CONSTANT_FOLDING = 1
-const OPT_DEAD_CODE_ELIMINATION = 2
-const OPT_CONSTANT_PROPAGATION = 3
-const OPT_GLOBAL_VALUE_NUMBERING = 4
-const OPT_LICM = 5
-const OPT_INLINING = 6
+const opt_constant_folding = 1
+const opt_dead_code_elimination = 2
+const opt_constant_propagation = 3
+const opt_global_value_numbering = 4
+const opt_licm = 5
+const opt_inlining = 6
 
 struct optimization_pass {
     pass_type int
@@ -47,11 +47,11 @@ func opt_constant_folding(cfg* control_flow_graph) {
             instr := block.instructions[i]
 
 
-            if instr.instr_type == IR_INSTR_BINOP {
+            if instr.instr_type == ir_instr_binop {
                 left := instr.operands[0]
                 right := instr.operands[1]
 
-                if left.value_type == IR_VALUE_CONST && right.value_type == IR_VALUE_CONST {
+                if left.value_type == ir_value_const && right.value_type == ir_value_const {
 
                     result := opt_fold_constant(instr.opcode, left.const_value, right.const_value)
 
@@ -73,27 +73,27 @@ func opt_fold_constant(int op, string left, string right) string {
     right_val := 0
 
     switch op {
-        case IR_OP_ADD:
+        case ir_op_add:
             return (left_val + right_val) as string
-        case IR_OP_SUB:
+        case ir_op_sub:
             return (left_val - right_val) as string
-        case IR_OP_MUL:
+        case ir_op_mul:
             return (left_val * right_val) as string
-        case IR_OP_DIV:
+        case ir_op_div:
             if right_val != 0 {
                 return (left_val / right_val) as string
             }
             return "0"
-        case IR_OP_MOD:
+        case ir_op_mod:
             if right_val != 0 {
                 return (left_val % right_val) as string
             }
             return "0"
-        case IR_OP_AND:
+        case ir_op_and:
             return (left_val & right_val) as string
-        case IR_OP_OR:
+        case ir_op_or:
             return (left_val | right_val) as string
-        case IR_OP_XOR:
+        case ir_op_xor:
             return (left_val ^ right_val) as string
         default:
             return left
@@ -113,9 +113,9 @@ func opt_dead_code_elimination(cfg* control_flow_graph) {
             instr := block.instructions[i]
 
 
-            if instr.instr_type == IR_INSTR_STORE ||
-               instr.instr_type == IR_INSTR_CALL ||
-               instr.instr_type == IR_INSTR_RETURN {
+            if instr.instr_type == ir_instr_store ||
+               instr.instr_type == ir_instr_call ||
+               instr.instr_type == ir_instr_return {
                 new_instrs = append(new_instrs, instr)
                 continue
             }
@@ -162,18 +162,18 @@ func opt_constant_propagation(cfg* control_flow_graph) {
             instr := block.instructions[i]
 
 
-            if instr.result.value_type == IR_VALUE_VAR &&
+            if instr.result.value_type == ir_value_var &&
                instr.operands.len() == 1 &&
-               instr.operands[0].value_type == IR_VALUE_CONST {
+               instr.operands[0].value_type == ir_value_const {
 
                 constants[instr.result.var_name] = instr.operands[0]
             }
 
 
             for j := 0; j < instr.operands.len(); j = j + 1 {
-                if instr.operands[j].value_type == IR_VALUE_VAR {
+                if instr.operands[j].value_type == ir_value_var {
 
-                    if constants[instr.operands[j].var_name].value_type == IR_VALUE_CONST {
+                    if constants[instr.operands[j].var_name].value_type == ir_value_const {
                         instr.operands[j] = constants[instr.operands[j].var_name]
                     }
                 }
@@ -219,7 +219,7 @@ func opt_compute_instruction_signature(ir_instruction instr) string {
 
     sig := ""
 
-    if instr.instr_type == IR_INSTR_BINOP {
+    if instr.instr_type == ir_instr_binop {
         sig = "binop_" + instr.opcode as string + "_"
         for i := 0; i < instr.operands.len(); i = i + 1 {
             sig = sig + instr.operands[i].const_value + "_"
@@ -267,7 +267,7 @@ func opt_licm(cfg* control_flow_graph, loop_info[] loops) {
                 is_invariant := 1
                 for j := 0; j < instr.operands.len(); j = j + 1 {
                     operand := instr.operands[j]
-                    if operand.value_type == IR_VALUE_VAR {
+                    if operand.value_type == ir_value_var {
 
                         is_invariant = 0
                     }

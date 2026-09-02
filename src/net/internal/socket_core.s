@@ -315,13 +315,13 @@ func (raw_socket* s) get_remote_addr() (string, int, error) {
 }
 
 func ntohs( net int) int {
-    ((net & 0xFF00) >> 8) | ((net & 0x00FF) << 8)
+    ((net & 0x_ff00) >> 8) | ((net & 0x00_ff) << 8)
 }
 
 func ntohl( net int) int {
-    b1 := (net >> 24) & 0xFF
-    b2 := (net >> 16) & 0xFF
-    b3 := (net >> 8) & 0xFF
-    b4 := net & 0xFF
+    b1 := (net >> 24) & 0x_ff
+    b2 := (net >> 16) & 0x_ff
+    b3 := (net >> 8) & 0x_ff
+    b4 := net & 0x_ff
     (b4 << 24) | (b3 << 16) | (b2 << 8) | b1
 }

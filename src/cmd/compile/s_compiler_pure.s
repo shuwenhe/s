@@ -43,14 +43,14 @@ func compile_source(string source, string filename) compilation_result {
     }
     
     ast := parser_parse(tokens, filename)
-    if ast.node_type == AST_INVALID {
+    if ast.node_type == ast_invalid {
         result := compilation_result { success: 0, output: "", errors: string[]() }
         result.errors = append(result.errors, "syntax error in " + filename)
         result
     }
     
     type_checked := semantic_analyze(ast)
-    if type_checked.node_type == AST_INVALID {
+    if type_checked.node_type == ast_invalid {
         result := compilation_result { success: 0, output: "", errors: string[]() }
         result.errors = append(result.errors, "semantic error in " + filename)
         result
@@ -177,7 +177,7 @@ func lexer_tokenize(string source, string filename) int[] {
 }
 
 func parser_parse(int[] tokens, string filename) ast_node {
-    ast_node { node_type: AST_PROGRAM }
+    ast_node { node_type: ast_program }
 }
 
 func semantic_analyze(ast_node ast) ast_node {

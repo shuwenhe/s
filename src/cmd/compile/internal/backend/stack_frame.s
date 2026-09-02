@@ -1,8 +1,8 @@
 package backend
 
-const FRAME_ARG_AREA = 1
-const FRAME_LOCAL_AREA = 2
-const FRAME_SPILL_AREA = 3
+const frame_arg_area = 1
+const frame_local_area = 2
+const frame_spill_area = 3
 
 struct stack_slot {
     slot_id int
@@ -39,7 +39,7 @@ func stack_frame_add_arg(stack_frame frame*, int slot_id, int size) int {
         slot_id: slot_id,
         offset: offset,
         size: size,
-        slot_type: FRAME_ARG_AREA
+        slot_type: frame_arg_area
     }
     
     frame.arg_slots = append(frame.arg_slots, slot)
@@ -53,7 +53,7 @@ func stack_frame_add_local(stack_frame frame*, int slot_id, int size) int {
         slot_id: slot_id,
         offset: offset,
         size: size,
-        slot_type: FRAME_LOCAL_AREA
+        slot_type: frame_local_area
     }
     
     frame.local_slots = append(frame.local_slots, slot)
@@ -68,7 +68,7 @@ func stack_frame_add_spill(stack_frame frame*, int slot_id, int size) int {
         slot_id: slot_id,
         offset: spill_offset,
         size: size,
-        slot_type: FRAME_SPILL_AREA
+        slot_type: frame_spill_area
     }
     
     frame.spill_slots = append(frame.spill_slots, slot)
@@ -108,8 +108,8 @@ func stack_frame_get_slot_offset(stack_frame frame, int slot_id) int {
 
 func stack_frame_emit_prologue(stack_frame frame, ctx* codegen_context) {
     push_instr := x86_instruction {
-        instr_type: INSTR_PUSH,
-        operand1: x86_operand { operand_type: OPERAND_REG, reg_id: REG_RAX },
+        instr_type: instr_push,
+        operand1: x86_operand { operand_type: operand_reg, reg_id: reg_rax },
         operand2: x86_operand { operand_type: 0 },
         operand3: x86_operand { operand_type: 0 }
     }
@@ -118,9 +118,9 @@ func stack_frame_emit_prologue(stack_frame frame, ctx* codegen_context) {
     
     if frame.stack_size > 0 {
         sub_instr := x86_instruction {
-            instr_type: INSTR_SUB,
-            operand1: x86_operand { operand_type: OPERAND_REG, reg_id: REG_RSP },
-            operand2: x86_operand { operand_type: OPERAND_IMM, imm_value: frame.stack_size as string },
+            instr_type: instr_sub,
+            operand1: x86_operand { operand_type: operand_reg, reg_id: reg_rsp },
+            operand2: x86_operand { operand_type: operand_imm, imm_value: frame.stack_size as string },
             operand3: x86_operand { operand_type: 0 }
         }
         
@@ -131,9 +131,9 @@ func stack_frame_emit_prologue(stack_frame frame, ctx* codegen_context) {
 func stack_frame_emit_epilogue(stack_frame frame, ctx* codegen_context) {
     if frame.stack_size > 0 {
         add_instr := x86_instruction {
-            instr_type: INSTR_ADD,
-            operand1: x86_operand { operand_type: OPERAND_REG, reg_id: REG_RSP },
-            operand2: x86_operand { operand_type: OPERAND_IMM, imm_value: frame.stack_size as string },
+            instr_type: instr_add,
+            operand1: x86_operand { operand_type: operand_reg, reg_id: reg_rsp },
+            operand2: x86_operand { operand_type: operand_imm, imm_value: frame.stack_size as string },
             operand3: x86_operand { operand_type: 0 }
         }
         
@@ -141,8 +141,8 @@ func stack_frame_emit_epilogue(stack_frame frame, ctx* codegen_context) {
     }
     
     pop_instr := x86_instruction {
-        instr_type: INSTR_POP,
-        operand1: x86_operand { operand_type: OPERAND_REG, reg_id: REG_RAX },
+        instr_type: instr_pop,
+        operand1: x86_operand { operand_type: operand_reg, reg_id: reg_rax },
         operand2: x86_operand { operand_type: 0 },
         operand3: x86_operand { operand_type: 0 }
     }
