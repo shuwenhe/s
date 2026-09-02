@@ -139,6 +139,15 @@ seed-module-link-test: seed-compiler-bin
 	@/tmp/s_seed_module_link_test/program
 	@echo "Seed multi-module IR link test passed."
 
+.PHONY: seed-frontend-lexer-check
+seed-frontend-lexer-check: seed-compiler-bin
+	@mkdir -p /tmp/s_seed_frontend_check
+	@./bin/s_seed src/cmd/compile/internal/frontend/lexer.s /tmp/s_seed_frontend_check/lexer.ir
+	@test -s /tmp/s_seed_frontend_check/lexer.ir
+	@rg -q '^CALL\|.*__string_len\|' /tmp/s_seed_frontend_check/lexer.ir
+	@rg -q '^PARAM\|lex\|' /tmp/s_seed_frontend_check/lexer.ir
+	@echo "Seed frontend lexer IR check passed"
+
 bootstrap-stage0: seed-compiler-bin
 	@echo "Bootstrap stage0 ready: ./bin/s_seed (trusted C seed)"
 
@@ -609,7 +618,7 @@ selfhost-runtime-check:
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
 
-.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+.PHONY: help bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
 
 verify-true-selfhost:
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
