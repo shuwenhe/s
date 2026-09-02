@@ -286,6 +286,16 @@ direct-bootstrap:
 	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/direct-bootstrap.sh \
 	  $(SELFHOST_DIR)/direct
 
+# Strict self-host target: produce a compiler that does not rely on the C seed
+# at any later stage. Uses the `direct-bootstrap` frontier which writes ELF
+# images directly and then verifies the produced compiler is a true
+# self-hosted binary (no C seed linkage).
+selfhost_strict: direct-bootstrap
+	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/direct/stage2 ./bin/s
+	@echo "Installed strict native self-hosted S compiler: ./bin/s"
+	@./misc/scripts/verify_true_selfhost.sh ./bin/s
+	@echo "Strict self-host check passed: ./bin/s does not link the C seed compiler"
+
 native-bootstrap-install: native-bootstrap
 	@$(MAKE) native-selfhost
 
