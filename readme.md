@@ -50,10 +50,10 @@ Compile an S source file to IR:
 make selfhost
 ```
 
-The resulting compiler is installed as `bin/s`. This is an intermediate native
-bootstrap frontier: the installed binary is a static stage2 artifact, but C
-seed builds stage1 and host `as`/`ld` build stage2. It must not be described as
-an independently pure-S bootstrap yet.
+The resulting compiler is installed as `bin/s`. The C seed is used only to
+construct stage1; stage1 generates stage2 and stage2 generates stage3. Host
+`as`/`ld` link the generated native artifacts, but the C seed is not used to
+generate stage2 or stage3.
 
 To verify compiler bootstrapping and lexer compatibility:
 
@@ -74,7 +74,8 @@ The executable bootstrap work and its acceptance criteria are documented in
 [`doc/bootstrap.md`](doc/bootstrap.md). The first static pure-S frontend slice
 can be exercised with `make bootstrap-slice1-check`.
 For the seed-hosted compatibility path, use `make seed-hosted-selfhost`.
-`make native-bootstrap` verifies the intermediate C-seed/host-linker path.
+`make native-bootstrap` verifies the staged chain and stage2/stage3
+convergence. The C seed is used only for stage1.
 The complete direct S-to-ELF convergence target is `make direct-bootstrap`; it
 is intentionally a failing gate until the complete compiler source is within
 the direct native-code-generation subset. See [`doc/bootstrap.md`](doc/bootstrap.md)
