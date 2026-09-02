@@ -55,20 +55,20 @@ struct ast_node {
     string_data: string
     int_data: int
 
-    children* ast_node[]
+    children: vec[ast_node]
 
     name: string
     type_name: string
 }
 
-func ast_new(int node_type, int line, int column) &ast_node {
+func ast_new(int node_type, int line, int column) ast_node* {
     node := new ast_node {
-        node_type: node_type, line line, column column,
-        string_data: "", int_data 0, children new ast_node[],
+        node_type: node_type, line: line, column: column,
+        string_data: "", int_data: 0, children: vec[ast_node](),
         name: "",
         type_name: ""
     }
-    &node
+    return node
 }
 
 func ast_add_child(ast_node node*, ast_node child*) {
@@ -141,8 +141,10 @@ func ast_node_type_name(int ast_type) string {
 }
 
 func ast_dump(ast_node node*, int indent) {
-    for i := 0; i < indent; i = i + 1 {
+    i := 0
+    for i < indent {
         eprintln("  ")
+        i = i + 1
     }
     eprintln(ast_node_type_name(node.node_type))
     if node.name != "" {
@@ -155,7 +157,9 @@ func ast_dump(ast_node node*, int indent) {
     }
     eprintln("\n")
 
-    for i := 0; i < node.children.len(); i = i + 1 {
+    i = 0
+    for i < node.children.len() {
         ast_dump(node.children[i], indent + 1)
+        i = i + 1
     }
 }

@@ -517,7 +517,8 @@ static int is_type_assignable_ctx(semantic_ctx *ctx, const char *expected, const
 	return trait_decl ? type_implements_trait(ctx, actual, trait_decl) : 0;
 }
 static int is_truthy_type(const char *type_name) {
-	return is_type_any(type_name) || strcmp(type_name, TYPE_BOOL) == 0 || strcmp(type_name, TYPE_INT) == 0 || strcmp(type_name, TYPE_FLOAT) == 0;
+	if (is_type_any(type_name) || strcmp(type_name, TYPE_BOOL) == 0 || strcmp(type_name, TYPE_INT) == 0 || strcmp(type_name, TYPE_FLOAT) == 0) return 1;
+	return type_name && type_name[strlen(type_name) - 1] == '*';
 }
 static int is_ordered_type(const char *type_name) {
 	return is_type_any(type_name) || strcmp(type_name, TYPE_INT) == 0 || strcmp(type_name, TYPE_FLOAT) == 0 || strcmp(type_name, TYPE_STRING) == 0;
@@ -867,6 +868,10 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					*out_type = TYPE_STRING;
 					return 1;
 				}
+				if (strcmp(lookup_type, "parser") == 0 && strcmp(node->as.member_expr.member, "errors") == 0) {
+					*out_type = TYPE_ARRAY;
+					return 1;
+				}
 				if (strcmp(lookup_type, TYPE_STRING) == 0 && strcmp(node->as.member_expr.member, "len") == 0) {
 					*out_type = TYPE_INT;
 					return 1;
@@ -1197,7 +1202,8 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					return 1;
 				}
 				if ((lhs_type && strncmp(lhs_type, "vec[", 4) == 0) ||
-					(lhs_type && strcmp(lhs_type, TYPE_ARRAY) == 0)) {
+					(lhs_type && strcmp(lhs_type, TYPE_ARRAY) == 0) ||
+					(lhs_type && strncmp(lhs_type, "[]", 2) == 0)) {
 					const char *method = member->as.member_expr.member;
 					const char *builtin = NULL;
 					size_t expected = 0;
