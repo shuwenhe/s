@@ -5,6 +5,5 @@ func answer() int {
 }
 
 func main() {
-    answer()
     return answer()
 }

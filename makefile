@@ -298,7 +298,7 @@ native-codegen-check: seed-compiler-bin
 	  $(SELFHOST_DIR)/native-codegen/compiler --emit-native \
 	    $$source_file $$output_file || exit 1; \
 	  ./misc/scripts/verify_true_selfhost.sh $$output_file || exit 1; \
-	  set +e; $$output_file >/dev/null; status=$$?; set -e; \
+	  set +e; timeout 5s $$output_file >/dev/null; status=$$?; set -e; \
 	  test $$status -eq 42 || exit 1; \
 	done
 	@$(SELFHOST_DIR)/native-codegen/compiler --emit-native \
@@ -306,7 +306,7 @@ native-codegen-check: seed-compiler-bin
 	  $(SELFHOST_DIR)/native-codegen/string
 	@./misc/scripts/verify_true_selfhost.sh \
 	  $(SELFHOST_DIR)/native-codegen/string
-	@set +e; $(SELFHOST_DIR)/native-codegen/string \
+	@set +e; timeout 5s $(SELFHOST_DIR)/native-codegen/string \
 	  >$(SELFHOST_DIR)/native-codegen/string.out; status=$$?; set -e; \
 	  test $$status -eq 42
 	@test "$$(cat $(SELFHOST_DIR)/native-codegen/string.out)" = "selfhost-string"
