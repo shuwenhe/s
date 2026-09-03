@@ -21,15 +21,15 @@ const symbol_field = 7
 
 struct symbol_table {
     symbols: symbol[]
-    scope_stack: int[]
+    scope_stack: []int
     current_scope: int
 }
 
 struct semantic_result {
     ast* ast_node
     symbols: symbol_table
-    errors: string[]
-    type_info: string[]
+    errors: []string
+    type_info: []string
 }
 
 func symbol_table_new() symbol_table {
@@ -74,13 +74,13 @@ func symbol_table_lookup(st* symbol_table, string name) &symbol {
 }
 
 struct type_system {
-    defined_types: string[]
-    type_relations: int[][]
+    defined_types: []string
+    type_relations: []int[]
 }
 
 func type_system_new() type_system {
     type_system {
-        defined_types: vec[string](), type_relations vec[int[]]()
+        defined_types: vec[string](), type_relations vec[[]int]()
     }
 }
 
@@ -107,7 +107,7 @@ func types_compatible(string type1, string type2) int {
 struct semantic_analyzer {
     symbols: symbol_table
     types: type_system
-    errors: string[]
+    errors: []string
     current_function* ast_node
     in_loop: int
     in_function: int

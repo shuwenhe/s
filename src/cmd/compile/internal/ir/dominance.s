@@ -5,7 +5,7 @@ struct dominator_tree {
     i32[][] dom_children
     i32[][] dom_frontier
     i32[][] strict_dom_frontier
-    bool[] computed
+    []bool computed
 }
 
 func new_dominator_tree(num_blocks i32) dominator_tree* {
@@ -14,7 +14,7 @@ func new_dominator_tree(num_blocks i32) dominator_tree* {
     dt.dom_children = make(i32[][], num_blocks)
     dt.dom_frontier = make(i32[][], num_blocks)
     dt.strict_dom_frontier = make(i32[][], num_blocks)
-    dt.computed = make(bool[], num_blocks)
+    dt.computed = make([]bool, num_blocks)
     
     for i := i32(0); i < num_blocks; i += 1 {
         dt.immediate_dominator[i] = -1
@@ -28,10 +28,10 @@ func new_dominator_tree(num_blocks i32) dominator_tree* {
 
 func (dt dominator_tree*) compute_dominators(preds i32[][], entry i32) {
     n := i32(len(preds))
-    dom := make(bool[][], n)
+    dom := make([]bool[], n)
     
     for i := i32(0); i < n; i += 1 {
-        dom[i] = make(bool[], n)
+        dom[i] = make([]bool, n)
         for j := i32(0); j < n; j += 1 {
             dom[i][j] = true
         }
@@ -57,7 +57,7 @@ func (dt dominator_tree*) compute_dominators(preds i32[][], entry i32) {
                 continue
             }
             
-            new_dom := make(bool[], n)
+            new_dom := make([]bool, n)
             for j := i32(0); j < n; j += 1 {
                 new_dom[j] = true
             }

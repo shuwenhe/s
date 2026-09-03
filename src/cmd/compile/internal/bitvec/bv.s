@@ -6,11 +6,11 @@ word_mask := 31
 word_shift := 5
 struct bit_vec {
     int n
-    int[] b
+    []int b
 }
 
 struct bulk {
-    int[] words
+    []int words
     int nbit
     int nword
 }
@@ -30,13 +30,13 @@ func new_bulk(int nbit, int count) bulk {
 }
 
 func next_bulk(bulk b) bit_vec {
-    out_words := int[]()
+    out_words := []int()
     i := 0
     for i < b.nword && i < len(b.words) {
         out_words = append(out_words, b.words[i])
         i = i + 1
     }
-    rest_words := int[]()
+    rest_words := []int()
     i = b.nword
     for i < len(b.words) {
         rest_words = append(rest_words, b.words[i])
@@ -219,8 +219,8 @@ func clear(bit_vec bv) () {
     }
 }
 
-func make_words(int count) int[] {
-    out := int[]()
+func make_words(int count) []int {
+    out := []int()
     i := 0
     for i < count {
         out = append(out, 0)

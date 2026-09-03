@@ -789,7 +789,7 @@ func contains(string text, string needle) bool {
     false
 }
 
-func contains_all(string text, string[] needles) bool {
+func contains_all(string text, []string needles) bool {
     i := 0
     for i < len(needles) {
         if !contains(text, needles[i]) {
@@ -808,7 +808,7 @@ func read_artifact_or_empty(string path) string {
     content.unwrap()
 }
 
-func require_artifact_markers(string path, string[] markers) string {
+func require_artifact_markers(string path, []string markers) string {
     content := read_artifact_or_empty(path)
     if content == "" {
         return ""
@@ -820,45 +820,45 @@ func require_artifact_markers(string path, string[] markers) string {
 }
 
 func validate_emitted_artifacts(string out_path) bool {
-    opt := require_artifact_markers(out_path + ".opt", string[]("midend-opt version=1", "scheduler_opt sroutine_sites=1", "select_timeout_sites=1", "select_send_sites=1"))
+    opt := require_artifact_markers(out_path + ".opt", []string("midend-opt version=1", "scheduler_opt sroutine_sites=1", "select_timeout_sites=1", "select_send_sites=1"))
     if opt == "" || validate_midend_opt_artifact(opt).is_err() {
         return false
     }
-    perf := require_artifact_markers(out_path + ".perf", string[]("perf-baseline version=1", "scheduler queue_policy=priority-rr select_policy=multi-chan-priority-rr", "select_timeout_sites=1", "select_send_sites=1", "scheduler_counters", "runtime_sched sroutine_scheduled=1", "runtime_gc cycles=", "heap_goal="))
+    perf := require_artifact_markers(out_path + ".perf", []string("perf-baseline version=1", "scheduler queue_policy=priority-rr select_policy=multi-chan-priority-rr", "select_timeout_sites=1", "select_send_sites=1", "scheduler_counters", "runtime_sched sroutine_scheduled=1", "runtime_gc cycles=", "heap_goal="))
     if perf == "" || validate_backend_perf_baseline(perf).is_err() {
         return false
     }
-    toolchain := require_artifact_markers(out_path + ".toolchain", string[]("toolchain-compat version=1", "asm=go-plan9-min", "go_asm syntax=plan9 translator=enabled status=ok"))
+    toolchain := require_artifact_markers(out_path + ".toolchain", []string("toolchain-compat version=1", "asm=go-plan9-min", "go_asm syntax=plan9 translator=enabled status=ok"))
     if toolchain == "" || validate_toolchain_compat_artifact(toolchain).is_err() {
         return false
     }
-    if require_artifact_markers(out_path + ".gcmap", string[]("gcmap version=1", "collector plan=go-like-mark-sweep", "safepoints=alloc-trigger", "ptr_bitmap=", "contract e2e_safepoint=")) == "" {
+    if require_artifact_markers(out_path + ".gcmap", []string("gcmap version=1", "collector plan=go-like-mark-sweep", "safepoints=alloc-trigger", "ptr_bitmap=", "contract e2e_safepoint=")) == "" {
         return false
     }
-    cfi := require_artifact_markers(out_path + ".cfi", string[]("cfi version=1", ".cfi_startproc", ".cfi_def_cfa", ".cfi_endproc"))
+    cfi := require_artifact_markers(out_path + ".cfi", []string("cfi version=1", ".cfi_startproc", ".cfi_def_cfa", ".cfi_endproc"))
     if cfi == "" || validate_cfi_artifact(cfi).is_err() {
         return false
     }
-    dwarf := require_artifact_markers(out_path + ".dwarf", string[]("section .debug_info", "section .debug_line", "section .debug_loc", "section .debug_ranges", "policy debug_budget_mode=", "metric location_continuity="))
+    dwarf := require_artifact_markers(out_path + ".dwarf", []string("section .debug_info", "section .debug_line", "section .debug_loc", "section .debug_ranges", "policy debug_budget_mode=", "metric location_continuity="))
     if dwarf == "" || validate_dwarf_consumability(dwarf, "ssa dbg_budget=30").is_err() {
         return false
     }
-    if require_artifact_markers(out_path + ".stackmap", string[]("stackmap version=1", "fn main slots=", "bitmap=", "callee_saved=")) == "" {
+    if require_artifact_markers(out_path + ".stackmap", []string("stackmap version=1", "fn main slots=", "bitmap=", "callee_saved=")) == "" {
         return false
     }
-    if require_artifact_markers(out_path + ".abi", string[]("abi version=1", "fn main params=0", "pass=", "ret=", "abi_in_regs=", "abi_summary=")) == "" {
+    if require_artifact_markers(out_path + ".abi", []string("abi version=1", "fn main params=0", "pass=", "ret=", "abi_in_regs=", "abi_summary=")) == "" {
         return false
     }
-    if require_artifact_markers(out_path + ".abi.emit", string[]("abi-emit version=1", "fn main", "ret_arity=1", "callseq=", "abi_in_regs=")) == "" {
+    if require_artifact_markers(out_path + ".abi.emit", []string("abi-emit version=1", "fn main", "ret_arity=1", "callseq=", "abi_in_regs=")) == "" {
         return false
     }
-    if require_artifact_markers(out_path + ".export", string[]("export-data version=1", "fn worker params=0 generics=0", "fn main params=0 generics=0")) == "" {
+    if require_artifact_markers(out_path + ".export", []string("export-data version=1", "fn worker params=0 generics=0", "fn main params=0 generics=0")) == "" {
         return false
     }
-    if require_artifact_markers(out_path + ".abi.matrix", string[]("abi-matrix version=1", "axis caller_saved=", "matrix callseq=", "cross_arch_consistency=")) == "" {
+    if require_artifact_markers(out_path + ".abi.matrix", []string("abi-matrix version=1", "axis caller_saved=", "matrix callseq=", "cross_arch_consistency=")) == "" {
         return false
     }
-    if require_artifact_markers(out_path + ".dbg", string[]("ssa\n", "\n\ndebug\n", "value#", "dbg_lines=")) == "" {
+    if require_artifact_markers(out_path + ".dbg", []string("ssa\n", "\n\ndebug\n", "value#", "dbg_lines=")) == "" {
         return false
     }
     true

@@ -16,7 +16,7 @@ struct interval {
 struct reg_alloc_state {
     live_range* ranges
     int range_count
-    int[] free_regs
+    []int free_regs
     int next_stack_offset
 }
 
@@ -24,7 +24,7 @@ func make_reg_alloc_state() reg_alloc_state {
     state: reg_alloc_state
     state.ranges = nil
     state.range_count = 0
-    state.free_regs = int[]()
+    state.free_regs = []int()
     state.next_stack_offset = 0
     i := 0
     while i < 15 {
@@ -43,7 +43,7 @@ func (s* reg_alloc_state) add_live_range(int value_id, int start, int end) {
 func (s* reg_alloc_state) allocate_register(int value_id, int position) int {
     if len(s.free_regs) > 0 {
         reg := s.free_regs[0]
-        new_free := int[]()
+        new_free := []int()
         i := 1
         while i < len(s.free_regs) {
             new_free = append(new_free, s.free_regs[i])

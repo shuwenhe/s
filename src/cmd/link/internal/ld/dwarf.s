@@ -102,8 +102,8 @@ struct dwarf_line_info {
 	line_range            i32
 	opcode_base           i32
 	prologue u8[]
-	file_names string[]
-	directory_names string[]
+	file_names []string
+	directory_names []string
 	statements dwarf_line_statement[]
 }
 

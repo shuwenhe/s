@@ -10,14 +10,14 @@ struct rule {
 
 struct pattern {
     int op
-    int[] arg_ops
+    []int arg_ops
     int num_args
     int constants
 }
 
 struct rewrite {
     int result_op
-    int[] result_args
+    []int result_args
     int num_args
 }
 
@@ -58,7 +58,7 @@ func (engine* rule_engine) register_rule(int id, int pattern_op, int result_op, 
     idx
 }
 
-func apply_const_fold(int op, int[] args, int[] arg_values) (int, int) {
+func apply_const_fold(int op, []int args, []int arg_values) (int, int) {
     result := 0
     
     if op == op_add {
@@ -102,7 +102,7 @@ func apply_const_fold(int op, int[] args, int[] arg_values) (int, int) {
     return result, 0
 }
 
-func apply_algebraic_simp(int op, int[] args, int[] arg_values) (int, int) {
+func apply_algebraic_simp(int op, []int args, []int arg_values) (int, int) {
     a := arg_values[0]
     b := arg_values[1]
     
@@ -184,7 +184,7 @@ func apply_algebraic_simp(int op, int[] args, int[] arg_values) (int, int) {
     return 0, 0
 }
 
-func apply_strength_reduction(int op, int[] args, int[] arg_values) (int, int) {
+func apply_strength_reduction(int op, []int args, []int arg_values) (int, int) {
     a := arg_values[0]
     b := arg_values[1]
     
@@ -212,7 +212,7 @@ func apply_strength_reduction(int op, int[] args, int[] arg_values) (int, int) {
     return 0, 0
 }
 
-func apply_dead_code_elim(int op, int[] args) (int, int) {
+func apply_dead_code_elim(int op, []int args) (int, int) {
     if op == op_store {
         return 0, 1
     }
@@ -224,7 +224,7 @@ func apply_dead_code_elim(int op, int[] args) (int, int) {
     return 0, 0
 }
 
-func apply_reassociate(int op, int[] args, int[] arg_values) (int, int) {
+func apply_reassociate(int op, []int args, []int arg_values) (int, int) {
     if op == op_add || op == op_mul {
         return 0, 0
     }
@@ -232,7 +232,7 @@ func apply_reassociate(int op, int[] args, int[] arg_values) (int, int) {
     return 0, 0
 }
 
-func apply_distribute(int op, int[] args, int[] arg_values) (int, int) {
+func apply_distribute(int op, []int args, []int arg_values) (int, int) {
     if op == op_mul {
         return 0, 0
     }
@@ -240,7 +240,7 @@ func apply_distribute(int op, int[] args, int[] arg_values) (int, int) {
     return 0, 0
 }
 
-func apply_branch_simplify(int cond_op, int[] args) (int, int, int) {
+func apply_branch_simplify(int cond_op, []int args) (int, int, int) {
     if cond_op == op_cmp {
         return 0, 0, 0
     }
@@ -248,7 +248,7 @@ func apply_branch_simplify(int cond_op, int[] args) (int, int, int) {
     return 0, 0, 0
 }
 
-func apply_common_subexpr_elim(int op1, int[] args1, int op2, int[] args2) int {
+func apply_common_subexpr_elim(int op1, []int args1, int op2, []int args2) int {
     if op1 == op2 {
         return 1
     }
@@ -256,7 +256,7 @@ func apply_common_subexpr_elim(int op1, int[] args1, int op2, int[] args2) int {
     return 0
 }
 
-func apply_phi_simplify(int num_edges, int[] values) int {
+func apply_phi_simplify(int num_edges, []int values) int {
     if num_edges == 0 {
         return 0
     }
@@ -273,7 +273,7 @@ func apply_phi_simplify(int num_edges, int[] values) int {
     1
 }
 
-func apply_load_store_forward(int[] stores, int load_addr) int {
+func apply_load_store_forward([]int stores, int load_addr) int {
     i := 0
     for i < len(stores) {
         if stores[i] == load_addr {
@@ -289,11 +289,11 @@ func apply_null_check_elim(int ptr_def) int {
     return 0
 }
 
-func apply_bounds_check_elim(int[] bounds_checks) int {
+func apply_bounds_check_elim([]int bounds_checks) int {
     return len(bounds_checks)
 }
 
-func (engine* rule_engine) match_pattern(int value_op, int[] value_args) int {
+func (engine* rule_engine) match_pattern(int value_op, []int value_args) int {
     match := -1
     
     i := 0
@@ -312,7 +312,7 @@ func (engine* rule_engine) match_pattern(int value_op, int[] value_args) int {
     match
 }
 
-func (engine* rule_engine) apply_rules(int value_op, int[] value_args, int[] arg_values) (int, int) {
+func (engine* rule_engine) apply_rules(int value_op, []int value_args, []int arg_values) (int, int) {
     result_op := value_op
     result_val := 0
     

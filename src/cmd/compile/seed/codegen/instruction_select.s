@@ -67,7 +67,7 @@ func instruction_select_cmp(ctx* codegen_context, ra* register_allocator, string
     }
 }
 
-func instruction_select_call(ctx* codegen_context, ra* register_allocator, string fn_name, string[] args) {
+func instruction_select_call(ctx* codegen_context, ra* register_allocator, string fn_name, []string args) {
     param_regs := vec[]()
     param_regs.push("rdi")
     param_regs.push("rsi")

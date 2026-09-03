@@ -301,7 +301,7 @@ func build_object(string path, string output, string ssa_margin_override) int {
     if write_result.is_err() {
         return report_failure("failed to write assembly: " + write_result.unwrap_err().message)
     }
-    as_argv := string[]()
+    as_argv := []string()
     as_argv = append(as_argv, "as")
     as_argv = append(as_argv, "-o")
     as_argv = append(as_argv, output)
@@ -393,7 +393,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         if write_result.is_err() {
             return report_failure("failed to write assembly: " + write_result.unwrap_err().message
         }
-        as_argv := string[]()
+        as_argv := []string()
         as_argv = append(as_argv, "as");
         as_argv = append(as_argv, "-o");
         as_argv = append(as_argv, obj_path);
@@ -402,7 +402,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         if as_result.is_err() {
             return report_failure("toolchain failed: " + as_result.unwrap_err().message
         }
-        ld_argv := string[]()
+        ld_argv := []string()
         ld_argv = append(ld_argv, "ld")
         if nostdlib {
             ld_argv = append(ld_argv, "-nostdlib")
@@ -692,8 +692,8 @@ func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
 
 func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
-    reachable := int[]()
-    work := int[]()
+    reachable := []int()
+    work := []int()
     work = append(work, rewritten.entry)
     for len(work) > 0 {
         id := work[len(work) - 1]
@@ -776,7 +776,7 @@ func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
     graph_pass_count_result { graph: rewritten, count changed }
 }
 
-func contains_int32(int[] values, int needle) bool {
+func contains_int32([]int values, int needle) bool {
     i := 0
     for i < len(values) {
         if values[i] == needle {
@@ -939,7 +939,7 @@ func validate_callsite_preservation(string ssa_text) ((), backend_error) {
 }
 
 func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "cfi version=1 arch=" + arch)
     lines = append(lines, ".cfi_startproc")
     lines = append(lines, ".cfi_def_cfa sp, " + to_string(abi_stack_alignment(arch)))
@@ -1025,7 +1025,7 @@ func build_wasm_binary_probe_plan(string output) string {
 }
 
 func validate_wasi_binary_artifact(string output) ((), backend_error) {
-    probe := string[]()
+    probe := []string()
     probe = append(probe, "sh")
     probe = append(probe, "-c")
     probe = append(probe, build_wasm_binary_probe_plan(output))
@@ -1050,7 +1050,7 @@ func build_wasm_object_chain(string temp_dir, string output, write_op[] writes, 
     if write_result.is_err() {
         return backend_error { message: "failed to write wasm c source: " + write_result.unwrap_err().message }
     }
-    cc_argv := string[]()
+    cc_argv := []string()
     cc_argv = append(cc_argv, "clang")
     cc_argv = append(cc_argv, "--target=wasm32-wasi")
     cc_argv = append(cc_argv, "-c")
@@ -1063,7 +1063,7 @@ func build_wasm_object_chain(string temp_dir, string output, write_op[] writes, 
             message: "wasm object compile failed: " + cc_result.unwrap_err().message + " | plan: " + build_wasm_toolchain_plan(c_path, obj_path, output),
         }
     }
-    ld_argv := string[]()
+    ld_argv := []string()
     ld_argv = append(ld_argv, "wasm-ld")
     ld_argv = append(ld_argv, "--no-entry")
     ld_argv = append(ld_argv, "--export=_start")
@@ -1100,7 +1100,7 @@ func validate_wasi_contract_source(string source) ((), backend_error) {
 }
 
 func emit_wasm_c_source(write_op[] writes, int exit_code) string {
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "typedef unsigned int u32;")
     lines = append(lines, "typedef unsigned int usize;")
     lines = append(lines, "struct ciovec { const char* buf; usize len; };")
@@ -1140,7 +1140,7 @@ func estimate_ipo_synergy(int inlined, int escaped, int devirt, int cross_pkg_in
 }
 
 func build_abi_machine_matrix_artifact(string arch, source_file source, string ssa_text) string {
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "abi-matrix version=1 arch=" + arch)
     lines = append(lines, "axis caller_saved=" + to_string(abi_caller_saved_count(arch)) + " callee_saved=" + to_string(abi_callee_saved_count(arch)))
     lines = append(lines, "axis stack_align=" + to_string(abi_stack_alignment(arch)) + " variadic_gp=" + to_string(abi_variadic_gp_limit(arch)))
@@ -1190,7 +1190,7 @@ func validate_abi_machine_matrix(string payload) ((), backend_error) {
 }
 
 func build_toolchain_compat_artifact(source_file source, string arch) string {
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "toolchain-compat version=1 arch=" + arch)
     lines = append(lines, "module=partial build_tags=partial test=integrated cover=partial profile=partial go_cmd_equiv=partial")
     lines = append(lines, "cgo=unsupported asm=go-plan9-min linker=elf64 archive=partial relocation=partial")
@@ -1235,7 +1235,7 @@ func validate_toolchain_compat_artifact(string payload) ((), backend_error) {
 }
 
 func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "go-asm version=1 arch=" + arch + " syntax=plan9")
     translated := translate_go_plan9_to_gas(arch, plan9_source)
     if translated.is_err() {
@@ -1267,7 +1267,7 @@ func validate_go_asm_bridge_artifact(string payload) ((), backend_error) {
 
 func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backend_error) {
     input_lines := split_lines_local(plan9_source)
-    output_lines := string[]()
+    output_lines := []string()
     saw_text_directive := false
     i := 0
     for i < len(input_lines) {
@@ -1583,8 +1583,8 @@ func strip_go_asm_comment(string line) string {
     out
 }
 
-func split_lines_local(string text) string[] {
-    lines := string[]()
+func split_lines_local(string text) []string {
+    lines := []string()
     start := 0
     i := 0
     for i < len(text) {
@@ -1602,7 +1602,7 @@ func split_lines_local(string text) string[] {
 
 func flatten_multiline(string text) string {
     lines := split_lines_local(text)
-    out := string[]()
+    out := []string()
     i := 0
     for i < len(lines) {
         line := trim_spaces(lines[i])
@@ -1617,7 +1617,7 @@ func flatten_multiline(string text) string {
 func build_stackmap_artifact(string arch, source_file source, string ssa_text, string debug_map) string {
     entries := collect_function_stackmaps(arch, source, ssa_text)
     header := "stackmap version=2 arch=" + arch + " functions=" + to_string(len(entries))
-    lines := string[]()
+    lines := []string()
     lines = append(lines, header)
     i := 0
     for i < len(entries) {
@@ -1704,7 +1704,7 @@ func build_slot_bitmap(string function_name, int slots) string {
 
 func build_abi_behavior_artifact(string arch, source_file source) string {
     entries := collect_abi_behavior(arch, source)
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "abi version=1 arch=" + arch + " functions=" + to_string(len(entries)))
     i := 0
     for i < len(entries) {
@@ -1727,7 +1727,7 @@ func build_abi_behavior_artifact(string arch, source_file source) string {
 }
 
 func build_abi_emit_plan(string arch, source_file source) string {
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "abi-emit version=1 arch=" + arch)
     i := 0
     for i < len(source.items) {
@@ -1958,8 +1958,8 @@ func collect_abi_behavior(string arch, source_file source) abi_behavior_entry[] 
     out
 }
 
-func collect_fn_param_types(function_decl fn_decl) string[] {
-    out := string[]()
+func collect_fn_param_types(function_decl fn_decl) []string {
+    out := []string()
     i := 0
     for i < len(fn_decl.sig.params) {
         out = append(out, trim_spaces(fn_decl.sig.params[i].type_name))
@@ -1968,25 +1968,25 @@ func collect_fn_param_types(function_decl fn_decl) string[] {
     out
 }
 
-func collect_fn_result_types(function_decl fn_decl) string[] {
+func collect_fn_result_types(function_decl fn_decl) []string {
     switch fn_decl.sig.return_type {
         option.some(value) : return split_signature_types(trim_spaces(value)),
-        option.none : return string[](),
+        option.none : return []string(),
     }
 }
 
-func split_signature_types(string type_text) string[] {
+func split_signature_types(string type_text) []string {
     t := trim_spaces(type_text)
     if t == "" {
-        return string[](
+        return []string(
     }
     if abi_text_starts_with(t, "(") && abi_text_ends_with(t, ")") {
         t = trim_spaces(slice(t, 1, len(t) - 1))
     }
     if t == "" {
-        return string[](
+        return []string(
     }
-    out := string[]()
+    out := []string()
     start := 0
     paren := 0
     bracket := 0
@@ -2046,7 +2046,7 @@ func abi_float_param_reg_limit(string arch) int {
 }
 
 func build_dwarf_like_artifact(source_file source, string ssa_text, string debug_map) string {
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "dwarf-lite version=1")
     lines = append(lines, "section .debug_info")
     lines = append(lines, "  compile_unit name=" + parse_name_after(ssa_text, "ssa "))
@@ -2126,7 +2126,7 @@ func build_dwarf_regression_gate(string ssa_text, string debug_map) string {
         + " locs=" + to_string(locs)
 }
 
-func append_debug_loc_section(string[] lines, string debug_map) () {
+func append_debug_loc_section([]string lines, string debug_map) () {
     marker := "let v"
     cursor := 0
     loc_id := 0
@@ -2151,7 +2151,7 @@ func append_debug_loc_section(string[] lines, string debug_map) () {
     }
 }
 
-func append_debug_ranges_section(string[] lines, source_file source, string ssa_text) () {
+func append_debug_ranges_section([]string lines, source_file source, string ssa_text) () {
     dbg_lines := parse_number_after(ssa_text, "dbg_lines=")
     if dbg_lines < 1 {
         dbg_lines = 1
@@ -2206,7 +2206,7 @@ func dwarf_inline_depth_hint(string fn_name, string ssa_text) int {
 }
 
 func build_gc_metadata_artifact(string arch, source_file source, string ssa_text) string {
-    lines := string[]()
+    lines := []string()
     spills := estimate_stack_slots(ssa_text)
     lines = append(lines, "gcmap version=1 arch=" + arch + " spills=" + to_string(spills))
     lines = append(lines, "collector plan=go-like-mark-sweep roots=env+runq+chan-buffer barriers=hybrid safepoints=alloc-trigger")
@@ -2305,7 +2305,7 @@ func validate_gc_contract_chain(string gc_payload, source_file source, string ss
 }
 
 func build_backend_perf_baseline_artifact(string arch, string ssa_text, string midend_report, string runtime_report) string {
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "perf-baseline version=1 arch=" + arch)
     lines = append(lines, "ssa spills=" + to_string(parse_number_after(ssa_text, "spills="))
         + " splits=" + to_string(parse_number_after(ssa_text, "splits="))
@@ -2371,7 +2371,7 @@ func validate_backend_perf_baseline(string payload) ((), backend_error) {
 }
 
 func build_midend_opt_artifact(string midend_report) string {
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "midend-opt version=1")
     lines = append(lines, "report " + midend_report)
     lines.push("summary"
@@ -2475,7 +2475,7 @@ func gc_safepoint_count(function_decl fn_decl, string ssa_text) int {
 }
 
 func build_export_data_artifact(source_file source, string arch) string {
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "export-data version=2 arch=" + arch + " package=" + source.pkg)
     lines = append(lines, "imports=" + to_string(len(source.uses)))
     u := 0
@@ -2592,7 +2592,7 @@ func load_source_graph(string path, string source) (source_file, backend_error) 
         return backend_error { message: "parse failed: " + parsed_result.unwrap_err().message }
     }
     combined := parsed_result.unwrap()
-    visited := string[]()
+    visited := []string()
     visited = append(visited, path)
     deps_result := append_dependency_items(combined, combined.uses, visited)
     if deps_result.is_err() {
@@ -2601,7 +2601,7 @@ func load_source_graph(string path, string source) (source_file, backend_error) 
     combined
 }
 
-func append_dependency_items(source_file combined, use_decl[] uses, string[] visited) ((), backend_error) {
+func append_dependency_items(source_file combined, use_decl[] uses, []string visited) ((), backend_error) {
     i := 0
     for i < len(uses) {
         module_result := resolve_module_source_path(uses[i].path)
@@ -2639,7 +2639,7 @@ func append_source_items(source_file combined, source_file dep) () {
     }
 }
 
-func string_vec_contains(string[] values, string value) bool {
+func string_vec_contains([]string values, string value) bool {
     i := 0
     for i < len(values) {
         if values[i] == value {
@@ -2662,7 +2662,7 @@ func resolve_module_source_path(string module) option[string] {
     if indexed.is_some() {
         return indexed
     }
-    candidates := string[]()
+    candidates := []string()
     add_module_candidates(candidates, module)
     i := 0
     for i < len(candidates) {
@@ -2695,8 +2695,8 @@ func lookup_package_index(string module) option[string] {
     option::none
 }
 
-func package_index_candidate_paths() string[] {
-    paths := string[]()
+func package_index_candidate_paths() []string {
+    paths := []string()
     switch env_get("s_package_index") {
         option.some(value) : {
             if value != "" {
@@ -2760,7 +2760,7 @@ func find_tab_index(string text) int {
     -1
 }
 
-func add_module_candidates(string[] candidates, string module) () {
+func add_module_candidates([]string candidates, string module) () {
     roots := module_search_roots()
     i := 0
     for i < len(roots) {
@@ -2769,7 +2769,7 @@ func add_module_candidates(string[] candidates, string module) () {
     }
 }
 
-func add_module_candidates_in_root(string[] candidates, string root, string module) () {
+func add_module_candidates_in_root([]string candidates, string root, string module) () {
     if root == "" {
         return
     }
@@ -2797,7 +2797,7 @@ func add_module_candidates_in_root(string[] candidates, string root, string modu
     candidates = append(candidates, root + "/" + dot_to_slash(module) + "/" + last_segment(module) + ".s")
 }
 
-func add_neurx_module_candidates(string[] candidates, string root, string tail) () {
+func add_neurx_module_candidates([]string candidates, string root, string tail) () {
     add_std_layout_candidates(candidates, root, tail)
     if has_dot_local(tail) {
         last := last_segment(tail)
@@ -2819,7 +2819,7 @@ func has_dot_local(string text) bool {
     false
 }
 
-func add_compile_module_candidates(string[] candidates, string root, string tail) () {
+func add_compile_module_candidates([]string candidates, string root, string tail) () {
     candidates = append(candidates, root + "/src/cmd/compile/" + dot_to_slash(tail) + ".s")
     candidates = append(candidates, root + "/src/cmd/compile/" + dot_to_slash(tail) + "/" + last_segment(tail) + ".s")
     pkg := drop_last_segment(tail)
@@ -2832,7 +2832,7 @@ func add_compile_module_candidates(string[] candidates, string root, string tail
     }
 }
 
-func add_std_module_candidates(string[] candidates, string root, string tail) () {
+func add_std_module_candidates([]string candidates, string root, string tail) () {
     if starts_with_local(tail, "prelude.") {
         candidates = append(candidates, root + "/src/prelude/prelude.s")
         return
@@ -2845,7 +2845,7 @@ func add_std_module_candidates(string[] candidates, string root, string tail) ()
     candidates = append(candidates, root + "/src/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
 }
 
-func add_std_layout_candidates(string[] candidates, string root, string tail) () {
+func add_std_layout_candidates([]string candidates, string root, string tail) () {
     slash_path := dot_to_slash(tail)
     candidates = append(candidates, root + "/" + slash_path + ".s")
     candidates = append(candidates, root + "/" + slash_path + "/" + last_segment(tail) + ".s")
@@ -2857,7 +2857,7 @@ func add_std_layout_candidates(string[] candidates, string root, string tail) ()
     }
 }
 
-func add_s_module_candidates(string[] candidates, string root, string symbol) () {
+func add_s_module_candidates([]string candidates, string root, string symbol) () {
     if symbol == "parse_source" || symbol == "parse_tokens" {
         candidates = append(candidates, root + "/src/s/parser.s")
     }
@@ -2873,8 +2873,8 @@ func add_s_module_candidates(string[] candidates, string root, string symbol) ()
     candidates = append(candidates, root + "/src/s/tokens.s")
 }
 
-func module_search_roots() string[] {
-    roots := string[]()
+func module_search_roots() []string {
+    roots := []string()
     push_module_search_root(roots, resolve_s_root())
     push_module_search_root(roots, resolve_project_root())
     push_workspace_roots(roots)
@@ -2882,7 +2882,7 @@ func module_search_roots() string[] {
     roots
 }
 
-func push_workspace_roots(string[] roots) () {
+func push_workspace_roots([]string roots) () {
     switch env_get("s_work_file") {
         option.some(path) : {
             if path != "" {
@@ -2896,7 +2896,7 @@ func push_workspace_roots(string[] roots) () {
     }
 }
 
-func append_workspace_roots(string[] roots, string text) () {
+func append_workspace_roots([]string roots, string text) () {
     lines := split_lines_local(text)
     i := 0
     for i < len(lines) {
@@ -2936,7 +2936,7 @@ func resolve_project_root() string {
     ""
 }
 
-func push_module_search_root(string[] roots, string root) () {
+func push_module_search_root([]string roots, string root) () {
     if root == "" {
         return
     }
@@ -3030,7 +3030,7 @@ func build_compiler_runtime_launcher(string output) int {
     if write_result.is_err() {
         return report_failure("failed to write launcher assembly: " + write_result.unwrap_err().message
     }
-    as_argv := string[]()
+    as_argv := []string()
     as_argv = append(as_argv, "as")
     as_argv = append(as_argv, "-o")
     as_argv = append(as_argv, obj_path)
@@ -3039,7 +3039,7 @@ func build_compiler_runtime_launcher(string output) int {
     if as_result.is_err() {
         return report_failure("launcher assembler failed: " + as_result.unwrap_err().message
     }
-    ld_argv := string[]()
+    ld_argv := []string()
     ld_argv = append(ld_argv, "ld")
     ld_argv = append(ld_argv, "-o")
     ld_argv = append(ld_argv, output)
@@ -3562,11 +3562,11 @@ func call_function_with_capture(
 }
 
 func find_function(source_file source, string name) (function_decl, backend_error) {
-    visited := string[]()
+    visited := []string()
     return find_function_in_source_graph(source, name, visited
 }
 
-func find_function_in_source_graph(source_file source, string name, string[] visited) (function_decl, backend_error) {
+func find_function_in_source_graph(source_file source, string name, []string visited) (function_decl, backend_error) {
     if string_vec_contains(visited, source.pkg) {
         return backend_error { message: "backend error: unknown function " + name }
     }
@@ -4568,7 +4568,7 @@ func control_panic_payload_text(binding[] env) string {
 
 func collect_const_bindings(source_file source) (binding[], backend_error) {
     out := binding[]()
-    visited := string[]()
+    visited := []string()
     collect_result := collect_const_bindings_in_source(source, out, visited)
     if collect_result.is_err() {
         return collect_result.unwrap_err())
@@ -4576,7 +4576,7 @@ func collect_const_bindings(source_file source) (binding[], backend_error) {
     out
 }
 
-func collect_const_bindings_in_source(source_file source, binding[] out, string[] visited) ((), backend_error) {
+func collect_const_bindings_in_source(source_file source, binding[] out, []string visited) ((), backend_error) {
     if string_vec_contains(visited, source.pkg) {
         return
     }
@@ -5405,8 +5405,8 @@ func abi_callee_saved_count(string arch) int {
 }
 
 func emit_asm_amd64(write_op[] writes, int exit_code) string {
-    data_lines := string[]()
-    text_lines := string[]()
+    data_lines := []string()
+    text_lines := []string()
     data_lines = append(data_lines, ".section .data")
     text_lines = append(text_lines, ".section .text")
     text_lines = append(text_lines, ".global _start")
@@ -5436,8 +5436,8 @@ func emit_asm_amd64(write_op[] writes, int exit_code) string {
 }
 
 func emit_asm_arm64(write_op[] writes, int exit_code) string {
-    data_lines := string[]()
-    text_lines := string[]()
+    data_lines := []string()
+    text_lines := []string()
     data_lines = append(data_lines, ".section .data")
     text_lines = append(text_lines, ".section .text")
     text_lines = append(text_lines, ".global _start")
@@ -5464,8 +5464,8 @@ func emit_asm_arm64(write_op[] writes, int exit_code) string {
 }
 
 func emit_asm_riscv64(write_op[] writes, int exit_code) string {
-    data_lines := string[]()
-    text_lines := string[]()
+    data_lines := []string()
+    text_lines := []string()
     data_lines = append(data_lines, ".section .data")
     text_lines = append(text_lines, ".section .text")
     text_lines = append(text_lines, ".global _start")
@@ -5493,8 +5493,8 @@ func emit_asm_riscv64(write_op[] writes, int exit_code) string {
 }
 
 func emit_asm_s390x(write_op[] writes, int exit_code) string {
-    data_lines := string[]()
-    text_lines := string[]()
+    data_lines := []string()
+    text_lines := []string()
     data_lines = append(data_lines, ".section .data")
     text_lines = append(text_lines, ".section .text")
     text_lines = append(text_lines, ".globl _start")
@@ -5517,7 +5517,7 @@ func emit_asm_s390x(write_op[] writes, int exit_code) string {
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
 
-func append_write_op(string[] data_lines, string[] text_lines, write_op op, int index) () {
+func append_write_op([]string data_lines, []string text_lines, write_op op, int index) () {
     label := "message_" + to_string(index)
     data_lines = append(data_lines, label + ":")
     data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
@@ -5528,7 +5528,7 @@ func append_write_op(string[] data_lines, string[] text_lines, write_op op, int 
     text_lines = append(text_lines, "    syscall")
 }
 
-func append_write_op_arm64(string[] data_lines, string[] text_lines, write_op op, int index) () {
+func append_write_op_arm64([]string data_lines, []string text_lines, write_op op, int index) () {
     label := "message_" + to_string(index)
     data_lines = append(data_lines, label + ":")
     data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
@@ -5540,7 +5540,7 @@ func append_write_op_arm64(string[] data_lines, string[] text_lines, write_op op
     text_lines = append(text_lines, "    svc #0")
 }
 
-func append_write_op_riscv64(string[] data_lines, string[] text_lines, write_op op, int index) () {
+func append_write_op_riscv64([]string data_lines, []string text_lines, write_op op, int index) () {
     label := "message_" + to_string(index)
     data_lines = append(data_lines, label + ":")
     data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
@@ -5551,7 +5551,7 @@ func append_write_op_riscv64(string[] data_lines, string[] text_lines, write_op 
     text_lines = append(text_lines, "    ecall")
 }
 
-func append_write_op_s390x(string[] data_lines, string[] text_lines, write_op op, int index) () {
+func append_write_op_s390x([]string data_lines, []string text_lines, write_op op, int index) () {
     label := "message_" + to_string(index)
     data_lines = append(data_lines, label + ":")
     data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
@@ -5617,7 +5617,7 @@ func propagate_bindings(binding[] outer, binding[] inner) () {
     }
 }
 
-func join_lines(string[] lines) string {
+func join_lines([]string lines) string {
     join_with(lines, "\n")
 }
 
@@ -5638,7 +5638,7 @@ func count_occurrences(string text, string token) int {
     total
 }
 
-func join_with(string[] values, string sep) string {
+func join_with([]string values, string sep) string {
     out := ""
     first := true
     i := 0

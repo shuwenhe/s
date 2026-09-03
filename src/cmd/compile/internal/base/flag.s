@@ -1,8 +1,8 @@
 package compile.internal.base
 use std.slices
 struct cmd_cfg {
-    string[] import_dirs
-    string[] import_map
+    []string import_dirs
+    []string import_map
     bool spectre_index
     bool instrumenting
 }
@@ -49,7 +49,7 @@ func default_cmd_flags() cmd_flags {
         go_version: "",
         lang: "",
         spectre: "", cfg cmd_cfg {
-            import_dirs: string[](), import_map string[](), spectre_index false, instrumenting false,
+            import_dirs: []string(), import_map []string(), spectre_index false, instrumenting false,
         },
     }
 }

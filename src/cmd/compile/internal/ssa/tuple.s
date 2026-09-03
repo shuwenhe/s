@@ -1,11 +1,11 @@
 package compile.internal.ssa
 use std.slices
 struct int_tuple {
-    int[] items
+    []int items
 }
 
 func make_tuple2(int first, int second) int_tuple {
-    items := int[]()
+    items := []int()
     items = append(items, first)
     items = append(items, second)
     int_tuple { items: items }

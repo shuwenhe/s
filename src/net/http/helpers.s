@@ -3,18 +3,18 @@ use std.conv.int_to_string
 struct http_request {
     string method
     string path
-    string[] headers
+    []string headers
     string body
 }
 
 struct http_response {
     int status_code
-    string[] headers
+    []string headers
     string body
 }
 
-func split_http_string(string s, string sep) string[] {
-    result := string[]{}
+func split_http_string(string s, string sep) []string {
+    result := []string{}
     if len(s) == 0 { return result }
     current := ""
     for i := 0; i < len(s); i++ {
@@ -48,7 +48,7 @@ func parse_http_request(string raw_request) http_request {
         method = parts[0]
         path = parts[1]
     }
-    headers := string[]{}
+    headers := []string{}
     body_start := 0
     for i := 1; i < len(lines); i++ {
         line := lines[i]

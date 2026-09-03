@@ -2,7 +2,7 @@ package compile.internal.build.parse
 use std.prelude.char_at
 use std.prelude.slice
 use std.slices
-func parse_options(string[] args)  string[] {
+func parse_options([]string args)  []string {
     if len(args) < 2 {
         return make_options("help", "", "", "", false
     }
@@ -99,8 +99,8 @@ func usage()  string {
     + "  Run 's mod index' in the project to generate build/s-package-index.tsv for mismatched packages.\n"
 }
 
-func make_options(string command, string path, string output, string ssa_margin, bool nostdlib)  string[] {
-    options := string[]()
+func make_options(string command, string path, string output, string ssa_margin, bool nostdlib)  []string {
+    options := []string()
     options = append(options, command)
     options = append(options, path)
     options = append(options, output)
@@ -111,7 +111,7 @@ func make_options(string command, string path, string output, string ssa_margin,
     options
 }
 
-func has_flag(string[] args, int start_index, string flag) bool {
+func has_flag([]string args, int start_index, string flag) bool {
     i := start_index
     for i < len(args) {
         if args[i] == flag {
@@ -122,7 +122,7 @@ func has_flag(string[] args, int start_index, string flag) bool {
     false
 }
 
-func parse_optional_margin(string[] args, int start_index) string {
+func parse_optional_margin([]string args, int start_index) string {
     if len(args) <= start_index {
         return ""
     }

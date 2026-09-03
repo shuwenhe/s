@@ -28,7 +28,7 @@ func (b* ir_builder) create_block(int id, string label) {
         id: id,
         label: label,
         statements: mir.mir_statement[](),
-        terminator: mir.mir_terminator { kind: "fallthrough", targets: int[]() }
+        terminator: mir.mir_terminator { kind: "fallthrough", targets: []int() }
     }
     b.current_function.blocks.push(block)
     b.current_block_id = id
@@ -43,7 +43,7 @@ func (b* ir_builder) add_local(int id, string name, string type_name) {
     b.current_function.locals.push(local)
 }
 
-func (b* ir_builder) emit_assign(int target, string op, int[] args) {
+func (b* ir_builder) emit_assign(int target, string op, []int args) {
     if b.current_block_id < b.current_function.blocks.len() {
         stmt := mir.mir_statement::assign(mir.mir_assign_stmt {
             target: target,
@@ -55,7 +55,7 @@ func (b* ir_builder) emit_assign(int target, string op, int[] args) {
     }
 }
 
-func (b* ir_builder) emit_eval(string op, int[] args) {
+func (b* ir_builder) emit_eval(string op, []int args) {
     if b.current_block_id < b.current_function.blocks.len() {
         stmt := mir.mir_statement::eval(mir.mir_eval_stmt {
             op: op,
@@ -66,7 +66,7 @@ func (b* ir_builder) emit_eval(string op, int[] args) {
     }
 }
 
-func (b* ir_builder) set_terminator(string kind, int[] targets) {
+func (b* ir_builder) set_terminator(string kind, []int targets) {
     if b.current_block_id < b.current_function.blocks.len() {
         b.current_function.blocks[b.current_block_id].terminator = mir.mir_terminator {
             kind: kind,

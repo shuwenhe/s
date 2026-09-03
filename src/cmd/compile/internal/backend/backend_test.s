@@ -11,8 +11,8 @@ func test_instruction_selector_simple_mov() {
     block := ir_basicblock {
         block_id: 0,
         instructions: ir_instruction[](),
-        successors: int[](),
-        predecessors: int[]()
+        successors: []int(),
+        predecessors: []int()
     }
     
     mov_instr := ir_instruction {
