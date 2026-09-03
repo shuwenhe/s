@@ -168,7 +168,7 @@ func (la liveness_analyzer*) is_live_at_point(value_id i32, block_id i32, instr_
 }
 
 func (la liveness_analyzer*) get_live_values(block_id i32) i32[] {
-    result := new i32[]()
+    i32[] result
     if block_id >= 0 && block_id < la.num_blocks {
         for v := i32(0); v < la.num_values; v += 1 {
             is_live := false
@@ -188,7 +188,7 @@ func (la liveness_analyzer*) get_live_values(block_id i32) i32[] {
 }
 
 func (la liveness_analyzer*) get_live_in(block_id i32) i32[] {
-    result := new i32[]()
+    i32[] result
     if block_id >= 0 && block_id < la.num_blocks {
         for v := i32(0); v < la.num_values; v += 1 {
             if la.infos[v].live_in[block_id][0] != 0 {
@@ -200,7 +200,7 @@ func (la liveness_analyzer*) get_live_in(block_id i32) i32[] {
 }
 
 func (la liveness_analyzer*) get_live_out(block_id i32) i32[] {
-    result := new i32[]()
+    i32[] result
     if block_id >= 0 && block_id < la.num_blocks {
         for v := i32(0); v < la.num_values; v += 1 {
             if la.infos[v].live_out[block_id][0] != 0 {

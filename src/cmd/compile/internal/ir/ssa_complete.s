@@ -307,7 +307,7 @@ func ssa_mark_live(ssa_function* f, int id, bool[] live) {
 }
 
 func ssa_eliminate_dead_values(ssa_function* f) int {
-    live := new bool[len(f.values)]
+    bool[len(f.values)] live
     for i := 0; i < len(f.values); i = i + 1 {
         value := f.values[i]
         if value.op == op_store || value.op == op_call || value.op == op_return || value.op == op_branch || value.op == op_switch {

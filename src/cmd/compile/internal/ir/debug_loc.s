@@ -145,7 +145,7 @@ func (di* debug_info) get_scope_variables(int scope_id) debug_variable[] {
 }
 
 func (di* debug_info) generate_line_number_table() int[] {
-    table := new int[di.num_instructions]
+    int[di.num_instructions] table
     for i in 0..di.num_instructions {
         table[i] = di.line_numbers[i]
     }
