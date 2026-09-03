@@ -20,19 +20,19 @@ enum amd64_register {
     reg_r15 = 15,
 }
 struct instr_stream {
-    []int8 code
+    int8[] code
     int64 offset
-    []string labels
+    string[] labels
     int64[] label_offsets
 }
 
 func make_instr_stream() instr_stream {
     instr_stream {
-        code: []int8()(), offset 0, labels []string(), label_offsets int64[](),
+        code: int8[]()(), offset 0, labels string[](), label_offsets int64[](),
     }
 }
 
-func (stream* instr_stream) emit_bytes([]int8 bytes) int64 {
+func (stream* instr_stream) emit_bytes(int8[] bytes) int64 {
     start := stream.offset
     i := 0
     for i < len(bytes) {
@@ -98,7 +98,7 @@ func (stream* instr_stream) emit_nop() int64 {
     stream.emit_bytes(bytes)
 }
 
-func (stream* instr_stream) emit_raw_bytes([]int8 bytes) int64 {
+func (stream* instr_stream) emit_raw_bytes(int8[] bytes) int64 {
     stream.emit_bytes(bytes)
 }
 
@@ -120,7 +120,7 @@ func (stream* instr_stream) lookup_label(string label_name) (int64, bool) {
     0, false
 }
 
-func (stream* instr_stream) get_code() []int8 {
+func (stream* instr_stream) get_code() int8[] {
     stream.code
 }
 
@@ -194,7 +194,7 @@ func (gen* machine_code_gen) emit_add_function() string {
     ""
 }
 
-func (gen* machine_code_gen) get_code() []int8 {
+func (gen* machine_code_gen) get_code() int8[] {
     gen.stream.get_code()
 }
 

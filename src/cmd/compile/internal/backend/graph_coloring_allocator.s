@@ -13,20 +13,20 @@ struct live_range {
 
 struct interference_graph {
     int node_count
-    []int[] adjacency
-    []int color
-    []int degree
-    []int spill_cost
+    int[][] adjacency
+    int[] color
+    int[] degree
+    int[] spill_cost
 }
 
 struct register_allocator {
     int num_regs
-    []int available_regs
+    int[] available_regs
     int reg_count
     live_range[] ranges
     int range_count
     interference_graph graph
-    []int spill_list
+    int[] spill_list
     int spill_count
 }
 
@@ -79,7 +79,7 @@ func (allocator* register_allocator) compute_live_ranges(value[] all_values, int
 func (allocator* register_allocator) build_interference_graph() int {
     graph := interference_graph {
         node_count: allocator.range_count,
-        adjacency: new []int[allocator.range_count],
+        adjacency: new int[][allocator.range_count],
         color: new int[allocator.range_count],
         degree: new int[allocator.range_count],
         spill_cost: new int[allocator.range_count],

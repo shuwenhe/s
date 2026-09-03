@@ -51,7 +51,7 @@ struct noder_output {
     source_file ast
     ir_node[] ir
     export_record[] exports
-    []string notes
+    string[] notes
 }
 
 func ok_error() noder_error {

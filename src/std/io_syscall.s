@@ -8,8 +8,8 @@ struct file_handle {
 const file_read_buffer_size = 65536
 var __read_buffer = allocate_read_buffer()
 
-func allocate_read_buffer() []byte {
-    []byte{}
+func allocate_read_buffer() byte[] {
+    byte[]{}
 }
 
 func file_open_read(string path) (file_handle, int) {

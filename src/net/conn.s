@@ -1,7 +1,7 @@
 package src.net
 interface conn {
-    read([]byte) (int, error)
-    write([]byte) (int, error)
+    read(byte[]) (int, error)
+    write(byte[]) (int, error)
     close() error
     local_addr() addr
     remote_addr() addr

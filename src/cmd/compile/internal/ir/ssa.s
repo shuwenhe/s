@@ -3,7 +3,7 @@ package compile.internal.ir.ssa
 struct ssa_value {
     int id
     string op
-    []int args
+    int[] args
     int block_id
     int version
     option[string] type_name
@@ -12,8 +12,8 @@ struct ssa_value {
 struct ssa_phi_node {
     int id
     int target_block
-    []int incoming_blocks
-    []int incoming_values
+    int[] incoming_blocks
+    int[] incoming_values
     string type_name
 }
 
@@ -22,8 +22,8 @@ struct ssa_block {
     string label
     ssa_value[] values
     ssa_phi_node[] phis
-    []int predecessors
-    []int successors
+    int[] predecessors
+    int[] successors
     int terminator_value
 }
 
@@ -33,7 +33,7 @@ struct static_single_assignment {
     ssa_phi_node[] all_phis
     int value_counter
     int phi_counter
-    []int variable_versions
+    int[] variable_versions
     int entry_block
     int exit_block
 }
@@ -45,13 +45,13 @@ func new_ssa() static_single_assignment {
         all_phis: ssa_phi_node[](),
         value_counter: 0,
         phi_counter: 0,
-        variable_versions: []int(),
+        variable_versions: int[](),
         entry_block: 0,
         exit_block: -1
     }
 }
 
-func (ssa* static_single_assignment) create_value(string op, []int args, int block_id, string type_name) ssa_value {
+func (ssa* static_single_assignment) create_value(string op, int[] args, int block_id, string type_name) ssa_value {
     val := ssa_value {
         id: ssa.value_counter,
         op: op,
@@ -65,7 +65,7 @@ func (ssa* static_single_assignment) create_value(string op, []int args, int blo
     val
 }
 
-func (ssa* static_single_assignment) create_phi(int block_id, []int incoming_blocks, []int incoming_values, string type_name) ssa_phi_node {
+func (ssa* static_single_assignment) create_phi(int block_id, int[] incoming_blocks, int[] incoming_values, string type_name) ssa_phi_node {
     phi := ssa_phi_node {
         id: ssa.phi_counter,
         target_block: block_id,
@@ -84,17 +84,17 @@ func (ssa* static_single_assignment) add_block(int id, string label) ssa_block {
         label: label,
         values: ssa_value[](),
         phis: ssa_phi_node[](),
-        predecessors: []int(),
-        successors: []int(),
+        predecessors: int[](),
+        successors: int[](),
         terminator_value: -1
     }
     ssa.blocks.push(block)
     block
 }
 
-func (ssa* static_single_assignment) insert_phi_nodes([]int dominance_frontier) {
+func (ssa* static_single_assignment) insert_phi_nodes(int[] dominance_frontier) {
     n := ssa.blocks.len()
-    work_list := []int()
+    work_list := int[]()
 
     for df_block in dominance_frontier {
         work_list.push(df_block)
@@ -138,11 +138,11 @@ func (ssa* static_single_assignment) insert_phi_nodes([]int dominance_frontier) 
 }
 
 func (ssa* static_single_assignment) rename_variables() {
-    stacks := []int[]()
+    stacks := int[][]()
     n := ssa.variable_versions.len()
 
     for i in 0..n {
-        stacks.push([]int())
+        stacks.push(int[]())
     }
 
     func rename_block(int block_id) {
@@ -244,6 +244,6 @@ func (ssa* static_single_assignment) is_phi_function(ssa_phi_node phi) bool {
     phi.incoming_values.len() > 1
 }
 
-func (ssa* static_single_assignment) get_phi_operands(ssa_phi_node phi) ([]int, []int) {
+func (ssa* static_single_assignment) get_phi_operands(ssa_phi_node phi) (int[], int[]) {
     (phi.incoming_blocks, phi.incoming_values)
 }

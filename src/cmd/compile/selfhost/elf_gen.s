@@ -70,12 +70,12 @@ const shf_execinstr = 0x4
 
 struct elf_builder {
     header: elf_header
-    program_headers: []program_header
-    section_headers: []section_header
-    code_section: []byte
-    data_section: []byte
-    string_table: []byte
-    symbol_table: []byte
+    program_headers: program_header[]
+    section_headers: section_header[]
+    code_section: byte[]
+    data_section: byte[]
+    string_table: byte[]
+    symbol_table: byte[]
 }
 
 func new_elf_builder() elf_builder {
@@ -83,21 +83,21 @@ func new_elf_builder() elf_builder {
         header: elf_header{
             magic: elf_magic, class_ elf_class_64, data elf_data_le, version elf_version, osabi elf_osabi, abiversion elf_abiversion, type_ elf_type_exec, machine elf_machine_x86_64, entry 0x400000, header_size 64, program_header_size 56, section_header_size 64,
         },
-        program_headers: []program_header{},
-        section_headers: []section_header{},
-        code_section: []byte{},
-        data_section: []byte{},
-        string_table: []byte{},
-        symbol_table: []byte{},
+        program_headers: program_header[]{},
+        section_headers: section_header[]{},
+        code_section: byte[]{},
+        data_section: byte[]{},
+        string_table: byte[]{},
+        symbol_table: byte[]{},
     }
 }
 
-func (elf_builder* builder) add_code([]byte code) {
+func (elf_builder* builder) add_code(byte[] code) {
     builder.code_section = append_slice(builder.code_section, code)
 }
 
-func (elf_builder* builder) generate() []byte {
-    buffer: []byte = []byte{}
+func (elf_builder* builder) generate() byte[] {
+    buffer: byte[] = byte[]{}
     return buffer
 }
 

@@ -259,8 +259,8 @@ static bool test_runtime_network_poller(void) {
 }
 static bool test_runtime_dns_and_interfaces(void) {
 	const char *src =
-		"extern \"intrinsic\" func __sys_resolve_ip(string host, int family) []string; "
-		"extern \"intrinsic\" func __sys_interface_addresses() []string; "
+		"extern \"intrinsic\" func __sys_resolve_ip(string host, int family) string[]; "
+		"extern \"intrinsic\" func __sys_interface_addresses() string[]; "
 		"fn main() int { "
 		"  var addresses = __sys_resolve_ip(\"localhost\", 0); if len(addresses) == 0 { return 50; } "
 		"  var interfaces = __sys_interface_addresses(); if len(interfaces) == 0 { return 51; } return 1; "

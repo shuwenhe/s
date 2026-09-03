@@ -147,7 +147,7 @@ func (lexer* self) read_string() (string, lex_error) {
 }
 
 func (lexer* self) read_symbol() (string, lex_error) {
-    []string multi = []string {
+    string[] multi = string[] {
         "->",
         ":",
         "==",

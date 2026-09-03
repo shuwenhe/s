@@ -6,7 +6,7 @@ func analyze_block() int {
     return 0
 }
 
-func analyze_trace(string scope, []string type_env, string block_text) string {
+func analyze_trace(string scope, string[] type_env, string block_text) string {
     plan := make_plan_trace(type_env)
     text := "borrow " + scope
     if block_text != "" {
@@ -18,7 +18,7 @@ func analyze_trace(string scope, []string type_env, string block_text) string {
     return text + " | plan " + join_text(plan, ", "
 }
 
-func analyze_function(string name, []string type_env, string body_text) string {
+func analyze_function(string name, string[] type_env, string body_text) string {
     return analyze_trace(name, type_env, body_text
 }
 
@@ -29,7 +29,7 @@ func analyze_expr(string scope, string expr_text) string {
     return "expr " + scope + " | " + expr_text
 }
 
-func join_text([]string values, string sep) string {
+func join_text(string[] values, string sep) string {
     out := ""
     i := 0
     for i < len(values) {
@@ -42,8 +42,8 @@ func join_text([]string values, string sep) string {
     return out
 }
 
-func make_plan_trace([]string type_env) []string {
-    plan := []string()
+func make_plan_trace(string[] type_env) string[] {
+    plan := string[]()
     i := 0
     for i < len(type_env) {
         ty := type_env[i]

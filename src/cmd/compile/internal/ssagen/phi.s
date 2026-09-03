@@ -7,13 +7,13 @@ struct phi_input {
 
 struct lowered_phi {
     int target
-    []int incoming
+    int[] incoming
     bool trivial
     int chosen
 }
 
 func lower_phi(int target, phi_input[] inputs) lowered_phi {
-    incoming := []int()
+    incoming := int[]()
     i := 0
     for i < len(inputs) {
         incoming = append(incoming, inputs[i].value)

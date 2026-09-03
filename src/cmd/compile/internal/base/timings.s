@@ -23,13 +23,13 @@ func timing_tick() int {
     len(timer.list) + len(timer.events)
 }
 
-func timings_start([]string labels) () {
+func timings_start(string[] labels) () {
     timer.list.push(timestamp {
         tick: timing_tick(), label join_with_colon(labels), start true,
     })
 }
 
-func timings_stop([]string labels) () {
+func timings_stop(string[] labels) () {
     timer.list.push(timestamp {
         tick: timing_tick(), label join_with_colon(labels), start false,
     })
@@ -57,7 +57,7 @@ func timings_write(string prefix) string {
     out
 }
 
-func join_with_colon([]string labels) string {
+func join_with_colon(string[] labels) string {
     if len(labels) == 0 {
         return ""
     }

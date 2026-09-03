@@ -5,13 +5,13 @@ struct ssa_value {
     string name
     string op
     string ty
-    []int args
+    int[] args
     int uses
     bool removed
     string literal
 }
 
-func make_value(int id, string name, string op, string ty, []int args, string literal) ssa_value {
+func make_value(int id, string name, string op, string ty, int[] args, string literal) ssa_value {
     ssa_value {
         id: id, name name, op op, ty ty, args args, uses 0, removed false, literal literal,
     }

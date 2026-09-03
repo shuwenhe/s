@@ -25,15 +25,15 @@ struct reaching_def_info {
 
 struct use_def_chain {
     use_instr_id int
-    def_instr_ids []int
+    def_instr_ids int[]
 }
 
 struct int_set {
-    values []int
+    values int[]
 }
 
 func int_set_new() int_set {
-    int_set { values: []int() }
+    int_set { values: int[]() }
 }
 
 func int_set_add(set* int_set, int value) {
@@ -246,7 +246,7 @@ func dfa_build_use_def_chains(cfg* control_flow_graph, reaching_def_info[] reach
 
                 if operand.value_type == ir_value_var || operand.value_type == ir_value_param {
                     chain := use_def_chain {
-                        use_instr_id: instr.result.value_id, def_instr_ids []int()
+                        use_instr_id: instr.result.value_id, def_instr_ids int[]()
                     }
 
                     for def_id := 0; def_id < reaching_defs[block_idx].def_in.values.len(); def_id = def_id + 1 {

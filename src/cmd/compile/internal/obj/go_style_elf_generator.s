@@ -4,11 +4,11 @@ struct go_style_elf_generator {
     elf_writer* writer
     symbol_table* symtab
     relocation_context* reloc_ctx
-    []int8 text_section
-    []int8 data_section
-    []int8 rodata_section
-    []elf_section_header sections
-    []elf_symbol symbols
+    int8[] text_section
+    int8[] data_section
+    int8[] rodata_section
+    elf_section_header[] sections
+    elf_symbol[] symbols
     string string_table
 }
 
@@ -19,11 +19,11 @@ func make_go_style_elf_generator(
 ) go_style_elf_generator {
     go_style_elf_generator {
         writer: writer, symtab symtab, reloc_ctx reloc_ctx,
-        text_section: []int8()(),
-        data_section: []int8()(),
-        rodata_section: []int8()(),
-        sections: []elf_section_header()(),
-        symbols: []elf_symbol()(),
+        text_section: int8[]()(),
+        data_section: int8[]()(),
+        rodata_section: int8[]()(),
+        sections: elf_section_header[]()(),
+        symbols: elf_symbol[]()(),
         string_table: "",
     }
 }
@@ -72,8 +72,8 @@ func (gen* go_style_elf_generator) create_standard_sections() {
     gen.write_section_header(".rel.text", 4 as int32, 0 as int64, 0 as int64)
 }
 
-func (gen* go_style_elf_generator) create_elf_header() []int8 {
-    header := []int8()()
+func (gen* go_style_elf_generator) create_elf_header() int8[] {
+    header := int8[]()()
     header = append(header, 0x7f as int8)
     header = append(header, 'e' as int8)
     header = append(header, 'l' as int8)
@@ -137,12 +137,12 @@ func (gen* go_style_elf_generator) add_symbol_entry(string name, int64 value, in
     gen.write_symbol(name, value, size, binding as int8, type as int8, 1 as int16)
 }
 
-func (gen* go_style_elf_generator) generate_elf_object() []int8 {
+func (gen* go_style_elf_generator) generate_elf_object() int8[] {
     gen.create_standard_sections()
     gen.add_symbol_entry("", 0 as int64, 0 as int64, 0, 0)
     gen.add_symbol_entry("main", 0 as int64, 0 as int64, 1, 2)
     elf_header := gen.create_elf_header()
-    result := []int8()()
+    result := int8[]()()
     result = append_bytes_into_result(result, elf_header)
     result = append_bytes_into_result(result, gen.text_section)
     result = append_bytes_into_result(result, gen.data_section)
@@ -164,12 +164,12 @@ func (gen* go_style_elf_generator) generate_elf_object() []int8 {
     result
 }
 
-func (gen* go_style_elf_generator) generate_elf_executable() []int8 {
+func (gen* go_style_elf_generator) generate_elf_executable() int8[] {
     executable := gen.generate_elf_object()
     executable
 }
 
-func append_bytes_into_result([]int8 result, []int8 bytes) []int8 {
+func append_bytes_into_result(int8[] result, int8[] bytes) int8[] {
     res := result
     i := 0
     for i < len(bytes) {
@@ -179,8 +179,8 @@ func append_bytes_into_result([]int8 result, []int8 bytes) []int8 {
     res
 }
 
-func section_header_to_bytes(elf_section_header sec) []int8 {
-    result := []int8()()
+func section_header_to_bytes(elf_section_header sec) int8[] {
+    result := int8[]()()
     name_bytes := int32_to_bytes(sec.name)
     result = append_bytes_into_result(result, name_bytes)
     type_bytes := int32_to_bytes(sec.type)
@@ -204,8 +204,8 @@ func section_header_to_bytes(elf_section_header sec) []int8 {
     result
 }
 
-func symbol_to_bytes(elf_symbol sym) []int8 {
-    result := []int8()()
+func symbol_to_bytes(elf_symbol sym) int8[] {
+    result := int8[]()()
     name_bytes := int32_to_bytes(sym.name)
     result = append_bytes_into_result(result, name_bytes)
     result = append(result, sym.info)
@@ -219,8 +219,8 @@ func symbol_to_bytes(elf_symbol sym) []int8 {
     result
 }
 
-func string_table_to_bytes(string strtab) []int8 {
-    result := []int8()()
+func string_table_to_bytes(string strtab) int8[] {
+    result := int8[]()()
     i := 0
     for i < len(strtab) {
         result = append(result, (strtab[i] as int8))
@@ -229,8 +229,8 @@ func string_table_to_bytes(string strtab) []int8 {
     result
 }
 
-func int32_to_bytes(int32 value) []int8 {
-    result := []int8()()
+func int32_to_bytes(int32 value) int8[] {
+    result := int8[]()()
     result = append(result, (value as int8))
     result = append(result, ((value >> 8) as int8))
     result = append(result, ((value >> 16) as int8))
@@ -238,15 +238,15 @@ func int32_to_bytes(int32 value) []int8 {
     result
 }
 
-func int16_to_bytes(int16 value) []int8 {
-    result := []int8()()
+func int16_to_bytes(int16 value) int8[] {
+    result := int8[]()()
     result = append(result, (value as int8))
     result = append(result, ((value >> 8) as int8))
     result
 }
 
-func int64_to_bytes(int64 value) []int8 {
-    result := []int8()()
+func int64_to_bytes(int64 value) int8[] {
+    result := int8[]()()
     i := 0
     for i < 8 {
         result = append(result, (((value >> (i * 8)) & 0xff) as int8))

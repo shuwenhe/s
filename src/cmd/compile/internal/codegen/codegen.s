@@ -23,12 +23,12 @@ struct codegen_context {
     codegen_config config
     int64 code_offset
     int64 data_offset
-    []string generated_functions
+    string[] generated_functions
 }
 
 func make_codegen_context(machine_code_gen* mcg, symbol_table* st, codegen_config cfg) codegen_context {
     codegen_context {
-        gen: mcg, symtab st, config cfg, code_offset 0 as int64, data_offset 0 as int64, generated_functions []string(),
+        gen: mcg, symtab st, config cfg, code_offset 0 as int64, data_offset 0 as int64, generated_functions string[](),
     }
 }
 
@@ -67,27 +67,27 @@ struct object_file_builder {
     elf_writer* writer
     symbol_table* symtab
     relocation_context* reloc_ctx
-    []int8 code
-    []int8 data
+    int8[] code
+    int8[] data
 }
 
 func make_object_file_builder(symbol_table* st, relocation_context* rc) object_file_builder {
     object_file_builder {
         writer: nil as elf_writer*, symtab st, reloc_ctx rc,
-        code: []int8()(),
-        data: []int8()(),
+        code: int8[]()(),
+        data: int8[]()(),
     }
 }
 
-func (builder* object_file_builder) set_code([]int8 code) {
+func (builder* object_file_builder) set_code(int8[] code) {
     builder.code = code
 }
 
-func (builder* object_file_builder) set_data([]int8 data) {
+func (builder* object_file_builder) set_data(int8[] data) {
     builder.data = data
 }
 
-func (builder* object_file_builder) build_elf64(elf_machine machine) []int8 {
+func (builder* object_file_builder) build_elf64(elf_machine machine) int8[] {
     writer := make_elf_writer(machine)
     code_offset := 120 as int64
     image_base := 0x400000 as int64
@@ -119,7 +119,7 @@ func (builder* object_file_builder) build_elf64(elf_machine machine) []int8 {
     data
 }
 
-func (builder* object_file_builder) write_to_file(string path, []int8 data) string {
+func (builder* object_file_builder) write_to_file(string path, int8[] data) string {
     contents := ""
     i := 0
     for i < len(data) {
@@ -141,7 +141,7 @@ func make_codegen_pipeline(machine_code_gen* gen, symbol_table* st, codegen_conf
     }
 }
 
-func (pipeline* codegen_pipeline) generate_all() ([]int8, string) {
+func (pipeline* codegen_pipeline) generate_all() (int8[], string) {
     err := pipeline.ctx.codegen_func_main()
     if err != "" {
         return nil, "Failed to generate main: " + err

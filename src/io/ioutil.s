@@ -58,8 +58,8 @@ func append_file(string filename, data u8[]) error {
 	return err
 }
 
-func read_dir(dirname string) ([]string, error) {
-	files := make([]string, 0)
+func read_dir(dirname string) (string[], error) {
+	files := make(string[], 0)
 	return files, nil
 }
 
