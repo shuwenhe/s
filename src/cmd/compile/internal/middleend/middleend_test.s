@@ -120,11 +120,9 @@ func test_cfg_construction() {
 
     func := ir_function_new("test", "int")
 
-
     block0 := ir_basicblock_new(0, "entry")
     block1 := ir_basicblock_new(1, "then")
     block2 := ir_basicblock_new(2, "merge")
-
 
     block0.successors = append(block0.successors, 1)
     block0.successors = append(block0.successors, 2)
@@ -176,7 +174,6 @@ func test_cfg_dominators() {
         panic("CFG dominator computation failed")
     }
 
-
     if cfg.dominators[2][0] == 0 {
         panic("CFG dominator relationship incorrect")
     }
@@ -206,22 +203,18 @@ func run_stage2_tests() {
     print("Running Stage 2 (Middle End) Tests...\n")
     print("=====================================\n")
 
-
     print("\n[IR Module Tests]\n")
     test_ir_basic_types()
     test_ir_instructions()
     test_ir_basicblock()
     test_ir_function()
 
-
     print("\n[CFG Module Tests]\n")
     test_cfg_construction()
     test_cfg_dominators()
 
-
     print("\n[Data Structure Tests]\n")
     test_int_set_operations()
-
 
     print("\n[Optimization Tests]\n")
     test_optimization_constant_folding()

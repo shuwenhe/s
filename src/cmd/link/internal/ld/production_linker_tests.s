@@ -6,7 +6,6 @@ import (
 	"src/testing"
 )
 
-
 func TestELFObjectParsing(t testing.T) {
 	
 	obj := NewELFObject(0x3e) 
@@ -42,7 +41,6 @@ func TestELFObjectParsing(t testing.T) {
 
 	fmt.Printf("ELF object creation test passed!\n")
 }
-
 
 func TestSymbolResolution(t testing.T) {
 	sm := NewSymbolManager()
@@ -96,7 +94,6 @@ func TestSymbolResolution(t testing.T) {
 	fmt.Printf("Symbol resolution test passed!\n")
 }
 
-
 func TestRelocations(t testing.T) {
 	rp := NewRelocProcessor()
 
@@ -138,7 +135,6 @@ func TestRelocations(t testing.T) {
 	fmt.Printf("Relocation test passed!\n")
 }
 
-
 func TestGOTAllocation(t testing.T) {
 	gm := NewGOTManager()
 
@@ -166,7 +162,6 @@ func TestGOTAllocation(t testing.T) {
 	fmt.Printf("GOT allocation test passed!\n")
 }
 
-
 func TestPLTGeneration(t testing.T) {
 	pm := NewPLTManager()
 
@@ -189,7 +184,6 @@ func TestPLTGeneration(t testing.T) {
 
 	fmt.Printf("PLT generation test passed!\n")
 }
-
 
 func TestTLSAllocation(t testing.T) {
 	tm := NewTLSManager()
@@ -215,7 +209,6 @@ func TestTLSAllocation(t testing.T) {
 	fmt.Printf("TLS allocation test passed!\n")
 }
 
-
 func TestBuildIDGeneration(t testing.T) {
 	bm := NewBuildIDManager(BID_SHA256)
 
@@ -237,7 +230,6 @@ func TestBuildIDGeneration(t testing.T) {
 
 	fmt.Printf("Build-ID generation test passed: %s\n", bidStr)
 }
-
 
 func TestProductionLinkerWorkflow(t testing.T) {
 	
@@ -297,7 +289,6 @@ func TestProductionLinkerWorkflow(t testing.T) {
 
 	fmt.Printf("Production linker workflow test passed!\n")
 }
-
 
 func ExampleCompleteLinkerUsage() {
 	fmt.Println("=== S Language Production Linker Example ===")
