@@ -156,48 +156,37 @@ func (dm dwarf_manager*) GenerateDebugLine() u8[] {
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
 
 		versionStart := len(data)
-
 		
 		data = append(data, 4, 0) 
-
 		
 		hdrLenOffset := len(data)
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
-
 		
 		data = append(data, u8(lineInfo.MinInstructionLength))
-
 		
 		data = append(data, 1)
-
 		
 		data = append(data, 1)
-
 		
 		data = append(data,
 			u8(lineInfo.LineBase),
 			u8(lineInfo.LineBase >> 8),
 			u8(lineInfo.LineBase >> 16),
 			u8(lineInfo.LineBase >> 24))
-
 		
 		data = append(data, u8(lineInfo.LineRange))
-
 		
 		data = append(data, u8(lineInfo.OpcodeBase))
-
 		
 		for i := i32(1); i < lineInfo.OpcodeBase; i += 1 {
 			data = append(data, 0)
 		}
-
 		
 		for _, dir := range lineInfo.DirectoryNames {
 			data = append(data, u8[](dir)...)
 			data = append(data, 0)
 		}
 		data = append(data, 0) 
-
 		
 		for _, fname := range lineInfo.FileNames {
 			data = append(data, u8[](fname)...)
@@ -256,7 +245,6 @@ func NewUnwindManager() unwind_manager {
 
 func (um unwind_manager*) GenerateEhFrame() u8[] {
 	data := make(u8[], 0)
-
 	
 	for _, cie := range um.UnwindInfo.Cies {
 		data = append(data,
@@ -281,7 +269,6 @@ func (um unwind_manager*) GenerateEhFrame() u8[] {
 
 		data = append(data, cie.AugmentationData...)
 	}
-
 	
 	for _, fde := range um.UnwindInfo.Fdes {
 		data = append(data,

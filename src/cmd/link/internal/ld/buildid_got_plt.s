@@ -46,7 +46,6 @@ func (bim build_id_manager*) get_build_id_string() string {
 
 func (bim build_id_manager*) generate_note_section() u8[] {
 	data := make(u8[], 0)
-
 	
 	
 	
@@ -57,35 +56,27 @@ func (bim build_id_manager*) generate_note_section() u8[] {
 	name := "GNU"
 	namesz := i32(len(name) + 1)
 	descsz := i32(len(bim.id))
-
 	
 	aligned_namesz := (namesz + 3) & ^3
 	aligned_descsz := (descsz + 3) & ^3
-
 	
 	binary.LittleEndian.PutUint32(data[0:4], u32(namesz))
 	data = append(data, 0, 0, 0, 0)
-
 	
 	binary.LittleEndian.PutUint32(data[4:8], u32(descsz))
 	data = append(data, 0, 0, 0, 0)
-
 	
 	binary.LittleEndian.PutUint32(data[8:12], 3)
 	data = append(data, 0, 0, 0, 0)
-
 	
 	data = append(data, u8[](name)...)
 	data = append(data, 0)
-
 	
 	for i := namesz; i < aligned_namesz; i += 1 {
 		data = append(data, 0)
 	}
-
 	
 	data = append(data, bim.id...)
-
 	
 	for i := descsz; i < aligned_descsz; i += 1 {
 		data = append(data, 0)
@@ -137,7 +128,6 @@ func (gm got_manager*) lookup_or_create(sym_idx i32, reloc_type reloc_type) i64 
 			entry.address
 		}
 	}
-
 	
 	gm.add_entry(sym_idx, reloc_type)
 }
@@ -200,7 +190,6 @@ func (pm plt_manager*) add_entry(sym_idx i32, got_addr i64) i64 {
 
 func (pm plt_manager*) generate_plt_code() u8[] {
 	data := make(u8[], pm.offset)
-
 	
 	
 	
@@ -208,19 +197,15 @@ func (pm plt_manager*) generate_plt_code() u8[] {
 
 	for i, entry := range pm.entries {
 		offset := i * 16
-
 		
 		data[offset] = 0xff
 		data[offset+1] = 0x25
-
 		
 		rip_rel_offset := entry.got_address - (entry.stub_address + 6)
 		binary.LittleEndian.PutUint32(data[offset+2:offset+6], u32(rip_rel_offset))
-
 		
 		data[offset+6] = 0x68
 		binary.LittleEndian.PutUint32(data[offset+7:offset+11], u32(entry.symbol_index))
-
 		
 		jmp_offset := -i32(offset+11) - 5 
 		binary.LittleEndian.PutUint32(data[offset+11:offset+15], u32(jmp_offset))

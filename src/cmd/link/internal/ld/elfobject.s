@@ -98,7 +98,6 @@ func new_elf_object(machine i16) elf_object {
 		flags: 0,
 		endian: int(binary.LittleEndian),
 	}
-
 	
 	obj.header.magic = elf_magic
 	obj.header.class = elf_class_64
@@ -163,14 +162,12 @@ func read_elf_object(string filename) (elf_object, error) {
 	defer file.close()
 
 	obj := new_elf_object(0)
-
 	
 	hdr_buf := make(u8[], 64)
 	n, err := file.read(hdr_buf)
 	if err != nil || n < 52 {
 		elf_object{}, "failed to read ELF header"
 	}
-
 	
 	obj.header.magic = binary.LittleEndian.Uint32(hdr_buf[0:4])
 	if obj.header.magic != elf_magic {
@@ -189,7 +186,6 @@ func read_elf_object(string filename) (elf_object, error) {
 		obj.header.shdr_num = i16(binary.LittleEndian.Uint16(hdr_buf[48:50]))
 		obj.header.shdr_entry_size = i16(binary.LittleEndian.Uint16(hdr_buf[58:60]))
 	}
-
 	
 	for i := i32(0); i < i32(obj.header.shdr_num); i += 1 {
 		shdr_buf := make(u8[], 64)
@@ -212,7 +208,6 @@ func read_elf_object(string filename) (elf_object, error) {
 		}
 
 		obj.sections = append(obj.sections, shdr)
-
 		
 		if shdr.size > 0 {
 			data := make(u8[], shdr.size)
@@ -232,10 +227,8 @@ func (elf_object* eo) write_to_file(string filename) error {
 		err
 	}
 	defer file.close()
-
 	
 	hdr_buf := make(u8[], 64)
-
 	
 	binary.LittleEndian.PutUint32(hdr_buf[0:4], eo.header.magic)
 	hdr_buf[4] = eo.header.class
@@ -243,12 +236,10 @@ func (elf_object* eo) write_to_file(string filename) error {
 	hdr_buf[6] = eo.header.version
 	hdr_buf[7] = eo.header.os_abi
 	hdr_buf[8] = eo.header.abi_version
-
 	
 	binary.LittleEndian.PutUint16(hdr_buf[16:18], u16(eo.header.type))
 	binary.LittleEndian.PutUint16(hdr_buf[18:20], u16(eo.header.machine))
 	binary.LittleEndian.PutUint32(hdr_buf[20:24], u32(eo.header.version))
-
 	
 	binary.LittleEndian.PutUint64(hdr_buf[32:40], eo.header.shdr_offset)
 	binary.LittleEndian.PutUint16(hdr_buf[48:50], u16(eo.header.shdr_num))
@@ -259,13 +250,10 @@ func (elf_object* eo) write_to_file(string filename) error {
 	if err != nil {
 		err
 	}
-
 	
-
 	
 	var offset i64 = i64(len(hdr_buf))
 	var shdr_offset i64 = 0
-
 	
 	for _, shdr := range eo.sections {
 		if shdr.type != 8 { 
@@ -274,7 +262,6 @@ func (elf_object* eo) write_to_file(string filename) error {
 	}
 
 	shdr_offset = offset
-
 	
 	current_offset := i64(len(hdr_buf))
 	for i, shdr := range eo.sections {
@@ -288,7 +275,6 @@ func (elf_object* eo) write_to_file(string filename) error {
 			}
 		}
 	}
-
 	
 	eo.header.shdr_offset = u64(shdr_offset)
 	eo.header.shdr_num = i16(len(eo.sections))

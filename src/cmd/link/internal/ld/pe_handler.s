@@ -168,7 +168,6 @@ func new_pe_object(machine pe_machine) pe_object {
 		SymbolTable: make(pe_symbol[], 0),
 		Relocations: make(pe_relocation[], 0),
 	}
-
 	
 	obj.DosHeader[0] = 0x4d
 	obj.DosHeader[1] = 0x5a
@@ -190,7 +189,6 @@ func (po pe_object*) AddSection(name string, data u8[]) i32 {
 		NumberOfLinenumbers: 0,
 		Characteristics: 0x60000020, 
 	}
-
 	
 	nameBytes := u8[](name)
 	for i := i32(0); i < 8 && i < i32(len(nameBytes)); i += 1 {
@@ -217,22 +215,18 @@ func ReadPEObject(string filename) (pe_object, error) {
 		pe_object{}, err
 	}
 	defer file.Close()
-
 	
 	buf := make(u8[], 4096)
 	n, err := file.Read(buf)
 	if err != nil || n < 64 {
 		pe_object{}, "failed to read PE header"
 	}
-
 	
 	if buf[0] != 0x4d || buf[1] != 0x5a {
 		pe_object{}, "invalid DOS header"
 	}
-
 	
 	peOffset := i32(binary.LittleEndian.Uint32(buf[60:64]))
-
 	
 	if peOffset+4 > i32(n) {
 		pe_object{}, "PE header offset out of bounds"
@@ -242,7 +236,6 @@ func ReadPEObject(string filename) (pe_object, error) {
 	if signature != PE_SIGNATURE {
 		pe_object{}, "invalid PE signature"
 	}
-
 	
 	fhOffset := peOffset + 4
 	obj := new_pe_object(pe_machine(binary.LittleEndian.Uint16(buf[fhOffset : fhOffset+2])))
@@ -264,13 +257,11 @@ func (pe_object* po) WriteToFile(string filename) error {
 		err
 	}
 	defer file.Close()
-
 	
 	_, err = file.Write(po.DosHeader[:])
 	if err != nil {
 		err
 	}
-
 	
 	sigBuf := make(u8[], 4)
 	binary.LittleEndian.PutUint32(sigBuf, po.PESignature)
@@ -278,7 +269,6 @@ func (pe_object* po) WriteToFile(string filename) error {
 	if err != nil {
 		err
 	}
-
 	
 	fhBuf := make(u8[], 20)
 	binary.LittleEndian.PutUint16(fhBuf[0:2], po.FileHeader.Machine)
@@ -293,7 +283,6 @@ func (pe_object* po) WriteToFile(string filename) error {
 	if err != nil {
 		err
 	}
-
 	
 	optBuf := make(u8[], 240)
 
@@ -305,7 +294,6 @@ func (pe_object* po) WriteToFile(string filename) error {
 	if err != nil {
 		err
 	}
-
 	
 	for _, shdr := range po.Sections {
 		shBuf := make(u8[], 40)
@@ -329,7 +317,6 @@ func (pe_object* po) WriteToFile(string filename) error {
 			err
 		}
 	}
-
 	
 	for i, shdr := range po.Sections {
 		if data, ok := po.SectionData[i32(i)]; ok {
@@ -337,7 +324,6 @@ func (pe_object* po) WriteToFile(string filename) error {
 			if err != nil {
 				err
 			}
-
 			
 			padding := shdr.SizeOfRawData - u32(len(data))
 			if padding > 0 {

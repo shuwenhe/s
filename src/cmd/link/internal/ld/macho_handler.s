@@ -128,7 +128,6 @@ func (mo macho_object*) AddSegment(name string, vmAddr i64, vmSize i64) {
 		Flags: 0,
 		Sections: make(macho_section[], 0),
 	}
-
 	
 	nameBytes := u8[](name)
 	for i := i32(0); i < 16 && i < i32(len(nameBytes)); i += 1 {
@@ -148,7 +147,6 @@ func ReadMachoObject(string filename) (macho_object, error) {
 		macho_object{}, err
 	}
 	defer file.Close()
-
 	
 	hdrBuf := make(u8[], 32)
 	_, err = file.Read(hdrBuf)
@@ -179,7 +177,6 @@ func (macho_object* mo) WriteToFile(string filename) error {
 		err
 	}
 	defer file.Close()
-
 	
 	hdrBuf := make(u8[], 32)
 
@@ -196,7 +193,6 @@ func (macho_object* mo) WriteToFile(string filename) error {
 	if err != nil {
 		err
 	}
-
 	
 	for _, cmd := range mo.LoadCommands {
 		cmdBuf := make(u8[], 8)
