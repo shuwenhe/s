@@ -18,11 +18,11 @@ struct udp_conn {
     raddr: *udp_addr
 }
 
-func (udp_conn* c) read(buf: []byte) (int, error) {
+func (udp_conn* c) read(buf: byte[]) (int, error) {
     c.raw_socket.read(buf)
 }
 
-func (udp_conn* c) write(buf: []byte) (int, error) {
+func (udp_conn* c) write(buf: byte[]) (int, error) {
     c.raw_socket.write(buf)
 }
 
@@ -53,7 +53,7 @@ func (udp_conn* c) set_write_deadline( t time.time) error {
     c.raw_socket.set_write_deadline(t.unix_nano())
 }
 
-func (udp_conn* c) read_from_udp(buf: []byte) (int, *udp_addr, error) {
+func (udp_conn* c) read_from_udp(buf: byte[]) (int, *udp_addr, error) {
     n, src_ip, src_port, err := c.raw_socket.recv_from(buf)
     if err != nil {
         return n, nil, err
@@ -64,7 +64,7 @@ func (udp_conn* c) read_from_udp(buf: []byte) (int, *udp_addr, error) {
     n, *udp_addr{ip: src_ip, port src_port}, nil
 }
 
-func (udp_conn* c) write_to_udp(buf: []byte, ud* addrp_addr) (int, error) {
+func (udp_conn* c) write_to_udp(buf: byte[], ud* addrp_addr) (int, error) {
     c.raw_socket.send_to(buf, addr.ip, addr.port)
 }
 
@@ -124,7 +124,7 @@ func (udp_listener* l) addr() addr {
     l.addr
 }
 
-func (udp_listener* l) read_from_udp(buf: []byte) (int, *udp_addr, error) {
+func (udp_listener* l) read_from_udp(buf: byte[]) (int, *udp_addr, error) {
     n, src_ip, src_port, err := l.raw_socket.recv_from(buf)
     if err != nil {
         return n, nil, err
@@ -132,6 +132,6 @@ func (udp_listener* l) read_from_udp(buf: []byte) (int, *udp_addr, error) {
     n, *udp_addr{ip: src_ip, port src_port}, nil
 }
 
-func (udp_listener* l) write_to_udp(buf: []byte, ud* addrp_addr) (int, error) {
+func (udp_listener* l) write_to_udp(buf: byte[], ud* addrp_addr) (int, error) {
     l.raw_socket.send_to(buf, addr.ip, addr.port)
 }

@@ -80,7 +80,7 @@ enum dwarf_attribute_value {
 	IntValue(i64)
 	StringValue(string)
 	RefValue(i64)
-	BlockValue([]u8)
+	BlockValue(u8[])
 	AddressValue(i64)
 	BoolValue(bool)
 }
@@ -93,7 +93,7 @@ struct dwarf_compile_unit {
 	unit_type       i32
 	die            dwarf_die
 	line_info       dwarf_line_info
-	location_info   []DWARFLocationInfo
+	location_info   DWARFLocationInfo[]
 }
 
 struct dwarf_line_info {
@@ -102,8 +102,8 @@ struct dwarf_line_info {
 	line_range            i32
 	opcode_base           i32
 	prologue u8[]
-	file_names []string
-	directory_names []string
+	file_names string[]
+	directory_names string[]
 	statements dwarf_line_statement[]
 }
 
@@ -215,8 +215,8 @@ func (dm dwarf_manager*) GenerateDebugLine() u8[] {
 struct UnwindInfo {
 	version       i32
 	eh_frame_offset i64
-	fdes          []FrameDescriptionEntry
-	cies          []CommonInformationEntry
+	fdes          FrameDescriptionEntry[]
+	cies          CommonInformationEntry[]
 }
 
 struct CommonInformationEntry {
@@ -248,8 +248,8 @@ func NewUnwindManager() unwind_manager {
 		UnwindInfo: UnwindInfo{
 			Version: 1,
 			EhFrameOffset: 0,
-			Fdes: make([]FrameDescriptionEntry, 0),
-			Cies: make([]CommonInformationEntry, 0),
+			Fdes: make(FrameDescriptionEntry[], 0),
+			Cies: make(CommonInformationEntry[], 0),
 		},
 	}
 }

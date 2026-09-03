@@ -142,7 +142,7 @@ func dial_tcp6_timeout(string host, int port, int timeout_ms) (tcp_conn, net_err
     }
 }
 
-func resolve_host(string host) ([]string, net_error) {
+func resolve_host(string host) (string[], net_error) {
     switch sc.resolve_ip(host, sc.af_unspec) {
         addresses : addresses,
         e : wrap_sc_err(e),
@@ -261,7 +261,7 @@ func (poller self) del(int sock_fd) ((), net_error) {
         }
     }
 
-func (poller self) wait(int max, int timeout_ms) ([]int, net_error) {
+func (poller self) wait(int max, int timeout_ms) (int[], net_error) {
     switch sc.poller_wait(self.fd, max, timeout_ms) {
             fds : fds,
             e  : wrap_sc_err(e),

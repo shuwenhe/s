@@ -20,7 +20,7 @@ enum elf_machine {
     elf_machine_riscv = 243,
 }
 struct elf_header {
-    []int8 ident
+    int8[] ident
     elf_type type
     elf_machine machine
     int32 version
@@ -65,18 +65,18 @@ struct elf_relocation {
 }
 
 struct elf_writer {
-    []int8 data
+    int8[] data
     int64 offset
     elf_machine target_machine
 }
 
 func make_elf_writer(elf_machine machine) elf_writer {
     elf_writer {
-        data: []int8()(), offset 0, target_machine machine,
+        data: int8[]()(), offset 0, target_machine machine,
     }
 }
 
-func (w* elf_writer) write_bytes([]int8 bytes) int64 {
+func (w* elf_writer) write_bytes(int8[] bytes) int64 {
     start := w.offset
     i := 0
     for i < len(bytes) {
@@ -183,7 +183,7 @@ func (w* elf_writer) write_elf_header(elf_machine machine) {
     w.write_u16(0 as int16)
 }
 
-func (w* elf_writer) write_section_headers([]elf_section_header sections) {
+func (w* elf_writer) write_section_headers(elf_section_header[] sections) {
     i := 0
     for i < len(sections) {
         sh := sections[i]
@@ -201,7 +201,7 @@ func (w* elf_writer) write_section_headers([]elf_section_header sections) {
     }
 }
 
-func (w* elf_writer) write_symbol_table([]elf_symbol symbols) {
+func (w* elf_writer) write_symbol_table(elf_symbol[] symbols) {
     i := 0
     for i < len(symbols) {
         sym := symbols[i]
@@ -215,7 +215,7 @@ func (w* elf_writer) write_symbol_table([]elf_symbol symbols) {
     }
 }
 
-func (w* elf_writer) write_relocations([]elf_relocation relocs) {
+func (w* elf_writer) write_relocations(elf_relocation[] relocs) {
     i := 0
     for i < len(relocs) {
         r := relocs[i]
@@ -226,6 +226,6 @@ func (w* elf_writer) write_relocations([]elf_relocation relocs) {
     }
 }
 
-func (w* elf_writer) get_data() []int8 {
+func (w* elf_writer) get_data() int8[] {
     w.data
 }

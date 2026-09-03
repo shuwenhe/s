@@ -3,7 +3,7 @@ use compile.internal.arch.dispatch_init as arch_dispatch_init
 use internal.buildcfg.check as buildcfg_check
 use internal.buildcfg.goarch as buildcfg_goarch
 use std.slices
-func compile_main([]string args) int {
+func compile_main(string[] args) int {
     init_err := init_compile_environment()
     if init_err != "" {
         return 2

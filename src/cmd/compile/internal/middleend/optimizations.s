@@ -215,8 +215,8 @@ func opt_compute_instruction_signature(ir_instruction instr) string {
     sig
 }
 
-func make_string_value_map() []string {
-    []string()
+func make_string_value_map() string[] {
+    string[]()
 }
 
 func make_string_instruction_map() ir_instruction[] {

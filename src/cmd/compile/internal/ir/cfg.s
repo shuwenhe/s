@@ -9,8 +9,8 @@ struct cfg_edge {
 struct cfg_block {
     int id
     string label
-    []int predecessors
-    []int successors
+    int[] predecessors
+    int[] successors
     int loop_depth
     bool is_loop_header
     bool is_exception_handler
@@ -21,12 +21,12 @@ struct control_flow_graph {
     cfg_edge[] edges
     int entry_block
     int exit_block
-    []int loop_headers
-    []int[] dominator_tree
-    []int[] post_dominator_tree
-    []int immediate_dominator
-    []int immediate_post_dominator
-    []int[] dominance_frontier
+    int[] loop_headers
+    int[][] dominator_tree
+    int[][] post_dominator_tree
+    int[] immediate_dominator
+    int[] immediate_post_dominator
+    int[][] dominance_frontier
 }
 
 func new_cfg() control_flow_graph {
@@ -35,12 +35,12 @@ func new_cfg() control_flow_graph {
         edges: cfg_edge[](),
         entry_block: 0,
         exit_block: -1,
-        loop_headers: []int(),
-        dominator_tree: []int[](),
-        post_dominator_tree: []int[](),
-        immediate_dominator: []int(),
-        immediate_post_dominator: []int(),
-        dominance_frontier: []int[]()
+        loop_headers: int[](),
+        dominator_tree: int[][](),
+        post_dominator_tree: int[][](),
+        immediate_dominator: int[](),
+        immediate_post_dominator: int[](),
+        dominance_frontier: int[][]()
     }
 }
 
@@ -48,8 +48,8 @@ func (cfg* control_flow_graph) add_block(int id, string label) cfg_block {
     block := cfg_block {
         id: id,
         label: label,
-        predecessors: []int(),
-        successors: []int(),
+        predecessors: int[](),
+        successors: int[](),
         loop_depth: 0,
         is_loop_header: false,
         is_exception_handler: false
@@ -72,10 +72,10 @@ func (cfg* control_flow_graph) add_edge(int from, int to, string edge_type) {
 func (cfg* control_flow_graph) compute_dominators() {
     n := cfg.blocks.len()
     cfg.immediate_dominator = new int[n]
-    cfg.dominator_tree = new []int[n]
+    cfg.dominator_tree = new int[][n]
 
     for i in 0..n {
-        cfg.dominator_tree[i] = []int()
+        cfg.dominator_tree[i] = int[]()
     }
 
     for i in 0..n {
@@ -131,10 +131,10 @@ func (cfg* control_flow_graph) intersect_dominators(int b1, int b2) int {
 func (cfg* control_flow_graph) compute_post_dominators() {
     n := cfg.blocks.len()
     cfg.immediate_post_dominator = new int[n]
-    cfg.post_dominator_tree = new []int[n]
+    cfg.post_dominator_tree = new int[][n]
 
     for i in 0..n {
-        cfg.post_dominator_tree[i] = []int()
+        cfg.post_dominator_tree[i] = int[]()
     }
 
     for i in 0..n {
@@ -189,10 +189,10 @@ func (cfg* control_flow_graph) intersect_post_dominators(int b1, int b2) int {
 
 func (cfg* control_flow_graph) compute_dominance_frontier() {
     n := cfg.blocks.len()
-    cfg.dominance_frontier = new []int[n]
+    cfg.dominance_frontier = new int[][n]
 
     for i in 0..n {
-        cfg.dominance_frontier[i] = []int()
+        cfg.dominance_frontier[i] = int[]()
     }
 
     for x in 0..n {
@@ -222,7 +222,7 @@ func (cfg* control_flow_graph) compute_dominance_frontier() {
 
 func (cfg* control_flow_graph) detect_loops() {
     n := cfg.blocks.len()
-    cfg.loop_headers = []int()
+    cfg.loop_headers = int[]()
 
     visited := new bool[n]
     for i in 0..n {
@@ -275,11 +275,11 @@ func (cfg* control_flow_graph) compute_loop_depths() {
     }
 }
 
-func (cfg* control_flow_graph) get_loop_body(int loop_header) []int {
-    body := []int()
+func (cfg* control_flow_graph) get_loop_body(int loop_header) int[] {
+    body := int[]()
     body.push(loop_header)
 
-    worklist := []int()
+    worklist := int[]()
     for succ in cfg.blocks[loop_header].successors {
         worklist.push(succ)
     }

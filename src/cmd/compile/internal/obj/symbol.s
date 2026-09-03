@@ -24,13 +24,13 @@ struct symbol_entry {
 
 struct symbol_table {
     symbol_entry[] entries
-    []string names
+    string[] names
     int64 string_table_offset
 }
 
 func make_symbol_table() symbol_table {
     symbol_table {
-        entries: symbol_entry[](), names []string(), string_table_offset 0,
+        entries: symbol_entry[](), names string[](), string_table_offset 0,
     }
 }
 
@@ -116,8 +116,8 @@ func (st* symbol_table) dump() string {
     result
 }
 
-func (st* symbol_table) encode_elf_symbols() []elf_symbol {
-    result := []elf_symbol()()
+func (st* symbol_table) encode_elf_symbols() elf_symbol[] {
+    result := elf_symbol[]()()
     null_sym := elf_symbol {
         name: 0 as int32, info 0 as int8, other 0 as int8, shndx 0 as int16, value 0 as int64, size 0 as int64,
     }

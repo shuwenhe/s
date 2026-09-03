@@ -38,7 +38,7 @@ func normalize_ascii_text(string text) string {
     return result
 }
 
-func bytes_to_string([]int bytes) string {
+func bytes_to_string(int[] bytes) string {
     string result = ""
     int i = 0
     for i < len(bytes) {
@@ -48,8 +48,8 @@ func bytes_to_string([]int bytes) string {
     return result
 }
 
-func str_to_bytes(string text) []int {
-    []int result
+func str_to_bytes(string text) int[] {
+    int[] result
     int i = 0
     for i < len(text) {
         result = append(result, normalize_byte(int(byte(text[i]))))
@@ -58,7 +58,7 @@ func str_to_bytes(string text) []int {
     return result
 }
 
-func bytes_to_string_range([]int bytes, int start, int length) string {
+func bytes_to_string_range(int[] bytes, int start, int length) string {
     string result = ""
     int i = 0
     for i < length && start + i < len(bytes) {

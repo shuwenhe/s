@@ -8,8 +8,8 @@ func make_decision(string ty) string {
     "drop:" + ty
 }
 
-func make_plan([]string type_env) []string {
-    plan := []string()
+func make_plan(string[] type_env) string[] {
+    plan := string[]()
     i := 0
     for i < len(type_env) {
         ty := type_env[i]

@@ -366,7 +366,7 @@ func normal_cdf(float x) float { 0.5 * (1.0 + erf(x / sqrt2)) }
 
 func normal_pdf(float x) float { exp(-0.5 * x * x) / (sqrt2 * sqrt(pi)) }
 
-func log_sum_exp([]float values, int count) float {
+func log_sum_exp(float[] values, int count) float {
     if count <= 0 { return 0.0 }
     float m = values[0]
     int i = 1

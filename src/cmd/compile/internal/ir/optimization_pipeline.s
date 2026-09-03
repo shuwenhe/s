@@ -16,7 +16,7 @@ struct compiler_pipeline {
     alias_analysis*[] alias_analyses
     wb_inserter*[] write_barriers
     debug_loc_propagator*[] debug_propagators
-    []bool computed
+    bool[] computed
 }
 
 func new_compiler_pipeline() compiler_pipeline* {
@@ -27,7 +27,7 @@ func new_compiler_pipeline() compiler_pipeline* {
     cp.alias_analyses = new alias_analysis*[]()
     cp.write_barriers = new wb_inserter*[]()
     cp.debug_propagators = new debug_loc_propagator*[]()
-    cp.computed = new []bool()
+    cp.computed = new bool[]()
     cp
 }
 

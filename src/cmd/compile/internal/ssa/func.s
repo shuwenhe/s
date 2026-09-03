@@ -28,7 +28,7 @@ func func_add_block(ssa_func f, string kind) int {
     id
 }
 
-func func_add_value(ssa_func f, string name, string op, string ty, []int args, string literal) int {
+func func_add_value(ssa_func f, string name, string op, string ty, int[] args, string literal) int {
     id := f.next_value_id
     f.next_value_id = f.next_value_id + 1
     f.values = append(f.values, make_value(id, name, op, ty, args, literal))

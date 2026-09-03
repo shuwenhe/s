@@ -12,13 +12,13 @@ struct ir_instruction {
 
 struct ir_function {
     name: string
-    instructions: []ir_instruction
+    instructions: ir_instruction[]
 }
 
 struct ir_module {
     target: string
     version: string
-    functions: []ir_function
+    functions: ir_function[]
 }
 
 func parse_ir(string content) (ir_module, error) {
@@ -26,7 +26,7 @@ func parse_ir(string content) (ir_module, error) {
     module := ir_module{
         target: "x86_64",
         version: "1",
-        functions: []ir_function{},
+        functions: ir_function[]{},
     }
     if len(lines) == 0 {
         return module, error("empty IR"
@@ -54,7 +54,7 @@ func parse_ir(string content) (ir_module, error) {
                 if len(parts) >= 2 {
                     func := ir_function{
                         name: parts[1],
-                        instructions: []ir_instruction{},
+                        instructions: ir_instruction[]{},
                     }
                     current_func = *func
                     module.functions = append(module.functions, func)

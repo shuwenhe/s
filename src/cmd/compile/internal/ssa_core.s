@@ -114,9 +114,9 @@ struct ssa_program {
     int regalloc_reuse_count
     int regalloc_max_live
     int debug_line_count
-    []string allocated_regs
-    []string debug_lines
-    []string debug_var_locations
+    string[] allocated_regs
+    string[] debug_lines
+    string[] debug_var_locations
 }
 
 struct ssa_rewrite_result {
@@ -554,8 +554,8 @@ func instruction_verify_pick_reason(string primary, string pass_delta_summary, s
     "fallback"
 }
 
-func stage_candidates_for_verify_primary(string primary) []string {
-    out := []string()
+func stage_candidates_for_verify_primary(string primary) string[] {
+    out := string[]()
     if primary == "format" {
         out = append(out, "constfold")
         out = append(out, "sccp")
@@ -1051,7 +1051,7 @@ func replace_first_token(string text, string needle, string replacement) replace
 }
 
 struct regalloc_result {
-    []string allocated_regs
+    string[] allocated_regs
     int spill_count
     int spill_reload_count
     int call_pressure_events
@@ -1083,16 +1083,16 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
     }
     if len(regs) == 0 {
         return regalloc_result {
-            allocated_regs: []string(), spill_count value_count, spill_reload_count value_count, call_pressure_events call_sites, live_range_splits 0, rematerialized_values 0, reuse_count 0, max_live 0,
+            allocated_regs: string[](), spill_count value_count, spill_reload_count value_count, call_pressure_events call_sites, live_range_splits 0, rematerialized_values 0, reuse_count 0, max_live 0,
         }
     }
-    active_until := []int()
+    active_until := int[]()
     ri := 0
     for ri < len(regs) {
         active_until = append(active_until, 0)
         ri = ri + 1
     }
-    out := []string()
+    out := string[]()
     spills := 0
     spill_reloads := 0
     splits := 0
@@ -1162,7 +1162,7 @@ func choose_live_width(int index, int value_count, int base_width, int call_site
     width
 }
 
-func pick_split_victim([]int active_until) int {
+func pick_split_victim(int[] active_until) int {
     victim := 0
     max_until := active_until[0]
     i := 1
@@ -1199,7 +1199,7 @@ func should_split_live_range(int index, int victim_live_until, int value_count, 
     index > (value_count / 2) && blocks > 1
 }
 
-func count_live_regs([]int active_until, int cursor) int {
+func count_live_regs(int[] active_until, int cursor) int {
     count := 0
     i := 0
     for i < len(active_until) {
@@ -1211,8 +1211,8 @@ func count_live_regs([]int active_until, int cursor) int {
     count
 }
 
-func register_bank(string goarch) []string {
-    regs := []string()
+func register_bank(string goarch) string[] {
+    regs := string[]()
     if goarch == "arm64" {
         regs = append(regs, "x9")
         regs = append(regs, "x10")
@@ -2556,8 +2556,8 @@ func estimate_cfg_edges(string mir_text) int {
     jumps + branches * 2 + returns
 }
 
-func build_debug_lines(string mir_text, []string allocated_regs) []string {
-    out := []string()
+func build_debug_lines(string mir_text, string[] allocated_regs) string[] {
+    out := string[]()
     blocks := parse_int_after(mir_text, "blocks=")
     if blocks <= 0 {
         blocks = 1
@@ -2574,8 +2574,8 @@ func build_debug_lines(string mir_text, []string allocated_regs) []string {
     out
 }
 
-func build_var_locations([]string allocated_regs) []string {
-    out := []string()
+func build_var_locations(string[] allocated_regs) string[] {
+    out := string[]()
     i := 0
     for i < len(allocated_regs) {
         out = append(out, "let v" + to_string(i) + " -> " + allocated_regs[i])

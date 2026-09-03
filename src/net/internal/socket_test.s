@@ -207,7 +207,7 @@ func test_tcp_server_client_integration(t *testing.t) {
         return
     }
     defer accept_sock.close()
-    test_data := []byte{'h', 'i', 't', 'c', 'p'}
+    test_data := byte[]{'h', 'i', 't', 'c', 'p'}
     n, err := client_sock.write(test_data)
     if err != nil {
         t.errorf("Failed to write: %v", err)
@@ -258,7 +258,7 @@ func test_udp_communication(t *testing.t) {
         t.errorf("Failed to bind client: %v", err)
         return
     }
-    test_data := []byte{'h', 'e', 'l', 'l', 'o', 'u', 'd', 'p'}
+    test_data := byte[]{'h', 'e', 'l', 'l', 'o', 'u', 'd', 'p'}
     n, err := client_sock.send_to(test_data, "127.0.0.1", 19999)
     if err != nil {
         t.errorf("Failed to send UDP data: %v", err)

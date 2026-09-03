@@ -108,7 +108,7 @@ func (raw_socket* s) udp_bind( addr_str string, port int) error {
     nil
 }
 
-func (raw_socket* s) send_to(buf: []byte, addr_str string, port int) (int, error) {
+func (raw_socket* s) send_to(buf: byte[], addr_str string, port int) (int, error) {
     if s.fd < 0 {
         return 0, new_socket_error(ebadf, "sendto"
     }
@@ -135,7 +135,7 @@ func (raw_socket* s) send_to(buf: []byte, addr_str string, port int) (int, error
     nsent, nil
 }
 
-func (raw_socket* s) recv_from(buf: []byte) (int, string, int, error) {
+func (raw_socket* s) recv_from(buf: byte[]) (int, string, int, error) {
     if s.fd < 0 {
         return 0, "", 0, new_socket_error(ebadf, "recvfrom"
     }
@@ -162,7 +162,7 @@ func (raw_socket* s) recv_from(buf: []byte) (int, string, int, error) {
     nread, "", src_port, nil
 }
 
-func (raw_socket* s) read(buf: []byte) (int, error) {
+func (raw_socket* s) read(buf: byte[]) (int, error) {
     if s.fd < 0 {
         return 0, new_socket_error(ebadf, "read"
     }
@@ -189,7 +189,7 @@ func (raw_socket* s) read(buf: []byte) (int, error) {
     nread, nil
 }
 
-func (raw_socket* s) write(buf: []byte) (int, error) {
+func (raw_socket* s) write(buf: byte[]) (int, error) {
     if s.fd < 0 {
         return 0, new_socket_error(ebadf, "write"
     }

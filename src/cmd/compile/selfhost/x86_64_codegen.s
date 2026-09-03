@@ -5,15 +5,15 @@ use std.strings.trim as trim_string
 use std.fmt.sprintf
 use std.io.eprintln
 struct x86_64_gen {
-    asm_lines: []string
-    register_stack: []string
+    asm_lines: string[]
+    register_stack: string[]
     temp_allocations: map[string]string
     label_count: int
 }
 
 func new_x86_64_gen() x86_64_gen {
     return x86_64_gen{
-        asm_lines: []string{},
+        asm_lines: string[]{},
         register_stack: []{
             "%rax", "%rbx", "%rcx", "%rdx", "%rsi", "%rdi",
             "%r8", "%r9", "%r10", "%r11", "%r12", "%r13",
@@ -148,7 +148,7 @@ func (x86_64_gen* gen) translate_instruction(instruction instr) error {
     }
 }
 
-func generate_assembly_from_ir([]instruction instructions) (string, error) {
+func generate_assembly_from_ir(instruction[] instructions) (string, error) {
     gen := new_x86_64_gen()
     gen.asm_lines = append(gen.asm_lines, ".globl main")
     gen.asm_lines = append(gen.asm_lines, ".text")

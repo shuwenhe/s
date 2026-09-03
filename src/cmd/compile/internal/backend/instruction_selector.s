@@ -43,8 +43,8 @@ func (instruction_selector is*) select_mov_instruction( src string, dst string) 
     is.builder.emit_mov_register_to_register(src_reg, dst_reg)
 }
 
-func (instruction_selector is*) select_call_instruction( target string, args []string) {
-    param_regs := make([]string)
+func (instruction_selector is*) select_call_instruction( target string, args string[]) {
+    param_regs := make(string[])
     param_regs = append(param_regs, "rdi")
     param_regs = append(param_regs, "rsi")
     param_regs = append(param_regs, "rdx")

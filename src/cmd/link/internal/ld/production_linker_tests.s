@@ -11,7 +11,7 @@ func TestELFObjectParsing(t testing.T) {
 	obj := NewELFObject(0x3e) 
 
 	
-	data := make([]u8, 100)
+	data := make(u8[], 100)
 	for i := i32(0); i < 100; i += 1 {
 		data[i] = u8(i)
 	}
@@ -213,7 +213,7 @@ func TestBuildIDGeneration(t testing.T) {
 	bm := NewBuildIDManager(BID_SHA256)
 
 	
-	data := []u8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	data := u8[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	bm.GenerateBuildID(data)
 
 	
@@ -237,7 +237,7 @@ func TestProductionLinkerWorkflow(t testing.T) {
 		Format: FORMAT_ELF,
 		Machine: 0x3e, 
 		OutputFile: "output.o",
-		InputFiles: make([]string, 0),
+		InputFiles: make(string[], 0),
 		SymbolStripMode: 0,
 		OptimizeLevel: 2,
 		GenerateDebugInfo: true,
@@ -255,7 +255,7 @@ func TestProductionLinkerWorkflow(t testing.T) {
 	obj := NewELFObject(0x3e)
 
 	
-	codeData := []u8{0x55, 0x48, 0x89, 0xe5} 
+	codeData := u8[]{0x55, 0x48, 0x89, 0xe5}
 	obj.AddSection(".text", 1, 0x6, codeData)
 
 	
@@ -299,7 +299,7 @@ func ExampleCompleteLinkerUsage() {
 		Format: FORMAT_ELF,
 		Machine: 0x3e,
 		OutputFile: "program",
-		InputFiles: []string{"object1.o", "object2.o"},
+		InputFiles: string[]{"object1.o", "object2.o"},
 		GenerateDebugInfo: true,
 		GenerateBuildID: true,
 		EnableRelro: true,
@@ -321,7 +321,7 @@ func ExampleCompleteLinkerUsage() {
 	fmt.Println("Creating sample ELF objects...")
 
 	obj1 := NewELFObject(0x3e)
-	codeData := []u8{
+	codeData := u8[]{
 		0x55, 0x48, 0x89, 0xe5, 
 		0xc9, 0xc3,              
 	}
@@ -361,7 +361,7 @@ func ExampleCompleteLinkerUsage() {
 	
 	if config.GenerateBuildID {
 		fmt.Println("Generating Build-ID...")
-		outputData := []u8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+		outputData := u8[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 		linker.BuildIDManager.GenerateBuildID(outputData)
 		fmt.Printf("  Build-ID: %s\n", linker.BuildIDManager.GetBuildIDString())
 	}

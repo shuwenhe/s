@@ -17,7 +17,7 @@ func run_deadcode(ssa_func f) int {
     }
     bi := 0
     for bi < len(f.blocks) {
-        compact := []int()
+        compact := int[]()
         j := 0
         for j < len(f.blocks[bi].values) {
             id := f.blocks[bi].values[j]

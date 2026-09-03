@@ -5,7 +5,7 @@ struct codegen_context {
     string current_func
     int current_pos
     int next_label_id
-    []string labels
+    string[] labels
 }
 
 func make_codegen_context() codegen_context {
@@ -16,7 +16,7 @@ func make_codegen_context() codegen_context {
     ctx.current_func = ""
     ctx.current_pos = 0
     ctx.next_label_id = 0
-    ctx.labels = []string()
+    ctx.labels = string[]()
     ctx
 }
 

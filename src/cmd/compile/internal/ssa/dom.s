@@ -1,9 +1,9 @@
 package compile.internal.ssa
 use std.slices
 struct dom_tree {
-    []int block_ids
-    []int idom
-    []int depth
+    int[] block_ids
+    int[] idom
+    int[] depth
 }
 
 func dom_index(dom_tree t, int block_id) int {
@@ -18,9 +18,9 @@ func dom_index(dom_tree t, int block_id) int {
 }
 
 func run_dom(ssa_func f) dom_tree {
-    ids := []int()
-    idom := []int()
-    depth := []int()
+    ids := int[]()
+    idom := int[]()
+    depth := int[]()
     bi := 0
     for bi < len(f.blocks) {
         ids = append(ids, f.blocks[bi].id)

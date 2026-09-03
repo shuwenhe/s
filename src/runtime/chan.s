@@ -11,7 +11,7 @@ struct waiter {
 
 struct raw_chan {
     int      buffer_capacity
-    []int buf
+    int[] buf
     int      head
     int      tail
     int      count
@@ -22,7 +22,7 @@ struct raw_chan {
 }
 
 func new_raw_chan(int cap) raw_chan {
-    buf := []int()
+    buf := int[]()
     var i = 0
     for i < cap {
         buf = append(buf, 0)

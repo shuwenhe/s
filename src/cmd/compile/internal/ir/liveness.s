@@ -4,25 +4,25 @@ struct liveness_info {
     int var_id
     int first_use
     int last_use
-    []bool live_in_blocks
-    []bool live_out_blocks
-    []int live_range
+    bool[] live_in_blocks
+    bool[] live_out_blocks
+    int[] live_range
 }
 
 struct liveness_analysis {
     liveness_info[] vars
-    []int def_points
-    []int use_points
-    []int phi_references
+    int[] def_points
+    int[] use_points
+    int[] phi_references
     int num_blocks
 }
 
 func new_liveness_analysis(int num_blocks) liveness_analysis {
     liveness_analysis {
         vars: liveness_info[](),
-        def_points: []int(),
-        use_points: []int(),
-        phi_references: []int(),
+        def_points: int[](),
+        use_points: int[](),
+        phi_references: int[](),
         num_blocks: num_blocks
     }
 }
@@ -34,7 +34,7 @@ func (la* liveness_analysis) add_variable(int var_id) {
         last_use: -1,
         live_in_blocks: new bool[la.num_blocks],
         live_out_blocks: new bool[la.num_blocks],
-        live_range: []int()
+        live_range: int[]()
     }
 
     for i in 0..la.num_blocks {
@@ -127,9 +127,9 @@ func (la* liveness_analysis) variables_interfere(int var1, int var2) bool {
     false
 }
 
-func (la* liveness_analysis) get_interference_graph() ([]int, []int) {
-    edges_from := []int()
-    edges_to := []int()
+func (la* liveness_analysis) get_interference_graph() (int[], int[]) {
+    edges_from := int[]()
+    edges_to := int[]()
 
     for i in 0..la.vars.len() {
         for j in i + 1..la.vars.len() {
@@ -143,7 +143,7 @@ func (la* liveness_analysis) get_interference_graph() ([]int, []int) {
     (edges_from, edges_to)
 }
 
-func (la* liveness_analysis) compute_phi_liveness([]int phi_blocks) {
+func (la* liveness_analysis) compute_phi_liveness(int[] phi_blocks) {
     for phi_block in phi_blocks {
         for info in la.vars {
             if info.live_in_blocks[phi_block] || info.live_out_blocks[phi_block] {

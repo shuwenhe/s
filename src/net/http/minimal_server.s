@@ -9,7 +9,7 @@ struct route_entry {
 struct server {
     string host
     int port
-    []route_entry routes
+    route_entry[] routes
 }
 
 func (s *server) add_route(string method, string path, handler_func handler) {

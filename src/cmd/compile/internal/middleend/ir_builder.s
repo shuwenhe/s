@@ -13,7 +13,7 @@ struct ir_builder_context {
     block_counter int
     value_counter int
 
-    errors []string
+    errors string[]
 }
 
 struct ir_symbol_table {
@@ -42,7 +42,7 @@ func ir_builder_context_new() ir_builder_context {
     }
 }
 
-func ir_builder_build(ast* frontend.ast_node) (ir_module, []string) {
+func ir_builder_build(ast* frontend.ast_node) (ir_module, string[]) {
     ctx := ir_builder_context_new()
 
     ir_builder_visit_node(&ctx, ast)

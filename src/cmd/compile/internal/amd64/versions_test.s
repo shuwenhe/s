@@ -11,7 +11,7 @@ func run_versions_test_suite() int {
         return 1
     }
     v := ssa_value {
-        op: "OpAMD64MOVQconst", args []string(), flags false, marked false,
+        op: "OpAMD64MOVQconst", args string[](), flags false, marked false,
         aux: "", reg 1,
     }
     b := ssa_block {
@@ -22,7 +22,7 @@ func run_versions_test_suite() int {
         return 1
     }
     simd := ssa_value {
-        op: "OpAMD64VADDPS128", args []string(), flags false, marked false,
+        op: "OpAMD64VADDPS128", args string[](), flags false, marked false,
         aux: "", reg 100,
     }
     if !ssa_gen_simd_value(simd) {

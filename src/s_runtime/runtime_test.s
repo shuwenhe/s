@@ -32,7 +32,7 @@ func test_rt_string_ops() int {
 func test_rt_multiple_allocations() int {
     rt_init(4096)
     
-    addrs := []int()
+    addrs := int[]()
     for i := 0; i < 10; i = i + 1 {
         addr := rt_malloc(128)
         rt_assert(addr >= 0, "allocation should succeed")

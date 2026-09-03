@@ -113,20 +113,20 @@ struct sockaddr_inet {
     u16 sin_family
     u16 sin_port
     u32 sin_addr
-    []byte sin_zero
+    byte[] sin_zero
 }
 
 struct sockaddr_inet6 {
     u16 sin6_family
     u16 sin6_port
     u32 sin6_flowinfo
-    []byte sin6_addr
+    byte[] sin6_addr
     u32 sin6_scope_id
 }
 
 struct sockaddr {
     u16 sa_family
-    []byte sa_data
+    byte[] sa_data
 }
 
 struct pollfd {
@@ -147,19 +147,19 @@ struct raw_socket {
 
 struct tcp_conn_state {
     raw_socket sock
-    []byte local_addr
-    []byte remote_addr
+    byte[] local_addr
+    byte[] remote_addr
 }
 
 struct udp_conn_state {
     raw_socket sock
-    []byte local_addr
-    []byte remote_addr
+    byte[] local_addr
+    byte[] remote_addr
 }
 
 struct tcp_listener_state {
     raw_socket sock
-    []byte addr
+    byte[] addr
 }
 
 struct socket_error {

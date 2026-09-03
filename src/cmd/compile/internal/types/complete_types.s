@@ -22,8 +22,8 @@ const type_error = 18
 
 struct type_constraint {
     name string
-    bounds []string
-    methods []string
+    bounds string[]
+    methods string[]
 }
 
 struct type_param {
@@ -41,8 +41,8 @@ struct generic_type {
 struct method_info {
     name string
     receiver string
-    params []string
-    returns []string
+    params string[]
+    returns string[]
     is_pointer int
 }
 
@@ -51,16 +51,16 @@ struct type_info {
     name string
     size int
     align int
-    fields []string
+    fields string[]
     methods method_info[]
-    constraints type_constra[]int
+    constraints type_constraint[]
     generic_params type_param[]
     underlying string
     elem_type string
     key_type string
     value_type string
-    params []string
-    returns []string
+    params string[]
+    returns string[]
 }
 
 struct type_table {
@@ -138,7 +138,7 @@ func type_create_slice(type_table* table, string elem_type) type_info {
     slice_type
 }
 
-func type_create_func(type_table* table, []string params, []string returns) type_info {
+func type_create_func(type_table* table, string[] params, string[] returns) type_info {
     func_name := "func("
     for i := 0; i < params.len(); i = i + 1 {
         if i > 0 {
@@ -167,7 +167,7 @@ func type_create_func(type_table* table, []string params, []string returns) type
     func_type
 }
 
-func type_create_struct(type_table* table, string name, []string fields) type_info {
+func type_create_struct(type_table* table, string name, string[] fields) type_info {
     struct_type := type_info { 
         kind: type_struct, 
         name: name, 
@@ -179,7 +179,7 @@ func type_create_struct(type_table* table, string name, []string fields) type_in
     struct_type
 }
 
-func type_create_interface(type_table* table, string name, []string methods) type_info {
+func type_create_interface(type_table* table, string name, string[] methods) type_info {
     iface_type := type_info { 
         kind: type_interface, 
         name: name, 
@@ -209,7 +209,7 @@ func type_create_generic(type_table* table, string name, type_param[] params) ge
     gen_type
 }
 
-func type_instantiate_generic(type_table* table, string generic_name, []string type_args) type_info {
+func type_instantiate_generic(type_table* table, string generic_name, string[] type_args) type_info {
     inst_name := generic_name + "["
     for i := 0; i < type_args.len(); i = i + 1 {
         if i > 0 {

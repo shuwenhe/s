@@ -10,7 +10,7 @@ func profile_name(string target, string suffix) string {
     target + suffix
 }
 
-func pick_pkgpath([]string args) string {
+func pick_pkgpath(string[] args) string {
     if len(args) > 2 {
         return args[2]
     }

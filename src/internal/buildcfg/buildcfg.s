@@ -61,7 +61,7 @@ func check() string {
 }
 
 func first_non_empty_goos_env() string {
-    names := []string()
+    names := string[]()
     names = append(names, "S_GOOS")
     names = append(names, "s_goos")
     names = append(names, "GOOS")
@@ -83,7 +83,7 @@ func first_non_empty_goos_env() string {
 }
 
 func infer_goos_from_host_env() string {
-    names := []string()
+    names := string[]()
     names = append(names, "OSTYPE")
     names = append(names, "OS")
     names = append(names, "VSCODE_CLI_OS")
@@ -142,7 +142,7 @@ func is_supported_goos(string os) bool {
 }
 
 func first_non_empty_env() string {
-    names := []string()
+    names := string[]()
     names = append(names, "S_GOARCH")
     names = append(names, "s_goarch")
     names = append(names, "GOARCH")
@@ -164,7 +164,7 @@ func first_non_empty_env() string {
 }
 
 func infer_goarch_from_host_env() string {
-    names := []string()
+    names := string[]()
     names = append(names, "HOSTTYPE")
     names = append(names, "MACHTYPE")
     names = append(names, "PROCESSOR_ARCHITECTURE")

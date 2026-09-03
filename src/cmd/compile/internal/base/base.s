@@ -13,8 +13,8 @@ func at_exit(string name) () {
     at_exit_funcs = append(at_exit_funcs, at_exit_entry { name: name })
 }
 
-func run_at_exit() []string {
-    out := []string()
+func run_at_exit() string[] {
+    out := string[]()
     i := len(at_exit_funcs)
     for i > 0 {
         i = i - 1

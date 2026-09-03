@@ -14,7 +14,7 @@ struct ssa_rule {
 
 struct rule_context {
     instr: ssa_instr_ptr
-    operands: []ssa_value_ptr
+    operands: ssa_value_ptr[]
     config: compile_config
 }
 
@@ -29,7 +29,7 @@ enum optimization_category {
     ccp,
 }
 
-func load_generic_rules() []ssa_rule {
+func load_generic_rules() ssa_rule[] {
     rules := vec()
     
     rules.push_all(get_const_fold_rules())
@@ -40,7 +40,7 @@ func load_generic_rules() []ssa_rule {
     return rules
 }
 
-func get_const_fold_rules() []ssa_rule {
+func get_const_fold_rules() ssa_rule[] {
     rules := vec()
     
     rules.push(ssa_rule{
@@ -163,7 +163,7 @@ func get_const_fold_rules() []ssa_rule {
     return rules
 }
 
-func get_algebraic_simp_rules() []ssa_rule {
+func get_algebraic_simp_rules() ssa_rule[] {
     rules := vec()
     
     rules.push(ssa_rule{
@@ -349,7 +349,7 @@ func get_algebraic_simp_rules() []ssa_rule {
     return rules
 }
 
-func get_condition_opt_rules() []ssa_rule {
+func get_condition_opt_rules() ssa_rule[] {
     rules := vec()
     
     rules.push(ssa_rule{
@@ -391,7 +391,7 @@ func get_condition_opt_rules() []ssa_rule {
     return rules
 }
 
-func get_cse_rules() []ssa_rule {
+func get_cse_rules() ssa_rule[] {
     rules := vec()
     
     rules.push(ssa_rule{
@@ -415,7 +415,7 @@ func get_cse_rules() []ssa_rule {
     return rules
 }
 
-func get_licm_rules() []ssa_rule {
+func get_licm_rules() ssa_rule[] {
     rules := vec()
     
     rules.push(ssa_rule{
@@ -430,7 +430,7 @@ func get_licm_rules() []ssa_rule {
     return rules
 }
 
-func get_gvn_rules() []ssa_rule {
+func get_gvn_rules() ssa_rule[] {
     rules := vec()
     
     rules.push(ssa_rule{
@@ -445,7 +445,7 @@ func get_gvn_rules() []ssa_rule {
     return rules
 }
 
-func get_dce_rules() []ssa_rule {
+func get_dce_rules() ssa_rule[] {
     rules := vec()
     
     rules.push(ssa_rule{
@@ -461,7 +461,7 @@ func get_dce_rules() []ssa_rule {
 }
 
 struct ssa_optimizer {
-    rules: []ssa_rule
+    rules: ssa_rule[]
     stats: optimization_stats
 }
 

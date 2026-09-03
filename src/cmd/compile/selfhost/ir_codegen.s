@@ -8,16 +8,16 @@ use std.strings.trim as trim_string
 use std.strings.contains as contains_string
 use std.fmt.sprintf
 struct ir_program {
-    functions: []function
-    globals: []global
+    functions: function[]
+    globals: global[]
     metadata: metadata
 }
 
 struct function {
     name: string
     is_exported: bool
-    instructions: []instruction
-    locals: []local
+    instructions: instruction[]
+    locals: local[]
     max_temp: int
 }
 
@@ -48,7 +48,7 @@ struct metadata {
 
 struct x86_64_code_gen {
     program: ir_program
-    buffer: []byte
+    buffer: byte[]
     label_counter: int
     register_map: map[string]int
 }
@@ -77,8 +77,8 @@ func parse_ir(string content) (ir_program, error) {
             if len(parts) >= 2 {
                 func := function{
                     name: parts[1],
-                    instructions: []instruction{},
-                    locals: []local{},
+                    instructions: instruction[]{},
+                    locals: local[]{},
                 }
                 current_func = *func
                 prog.functions = append(prog.functions, func)
@@ -106,7 +106,7 @@ func parse_ir(string content) (ir_program, error) {
 func generate_x86_64(ir_program program) (string, error) {
     codegen := x86_64_code_gen{
         program: program,
-        buffer: []byte{}, label_counter 0,
+        buffer: byte[]{}, label_counter 0,
     }
     asm := ""
     asm += ".globl main\n"
@@ -173,7 +173,7 @@ func ir_compile_to_elf(string ir_path, string output_path) error {
     if asm_file == nil {
         return error("failed to open temp assembly file"
     }
-    io_write(asm_file, []byte(asm_code))
+    io_write(asm_file, byte[](asm_code))
     asm_file.close()
     return nil
 }

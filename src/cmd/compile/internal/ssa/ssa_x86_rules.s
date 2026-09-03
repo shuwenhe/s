@@ -47,7 +47,7 @@ func (engine* x86_rule_engine) register_x86_rule(int id, int pattern_op, int x86
     idx
 }
 
-func (engine* x86_rule_engine) match_lea_pattern(int op, []int args) (int, int, int) {
+func (engine* x86_rule_engine) match_lea_pattern(int op, int[] args) (int, int, int) {
     base := 0
     offset := 0
     scale := 0
@@ -65,7 +65,7 @@ func (engine* x86_rule_engine) match_lea_pattern(int op, []int args) (int, int, 
     return base, offset, scale
 }
 
-func (engine* x86_rule_engine) match_shift_pattern(int op, []int args) (int, int) {
+func (engine* x86_rule_engine) match_shift_pattern(int op, int[] args) (int, int) {
     value := args[0]
     shift_amount := args[1]
     

@@ -40,8 +40,8 @@ func trim_spaces(string text) string {
     slice(text, start, end)
 }
 
-func split_lines(string text) []string {
-    out := []string()
+func split_lines(string text) string[] {
+    out := string[]()
     start := 0
     i := 0
     for i < len(text) {
@@ -55,8 +55,8 @@ func split_lines(string text) []string {
     out
 }
 
-func split_words(string line) []string {
-    out := []string()
+func split_words(string line) string[] {
+    out := string[]()
     current := ""
     i := 0
     for i < len(line) {
@@ -85,7 +85,7 @@ func normalize_import_path(string raw) string {
     text
 }
 
-func join_path([]string parts) string {
+func join_path(string[] parts) string {
     if len(parts) == 0 {
         return ""
     }

@@ -168,7 +168,7 @@ func fork() (i32, error) {
 	return 0, nil
 }
 
-func exec(path string, args []string) error {
+func exec(path string, args string[]) error {
 	return nil
 }
 

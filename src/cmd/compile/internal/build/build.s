@@ -9,7 +9,7 @@ use internal.buildcfg.goos as buildcfg_goos
 use std.io.println
 use std.slices
 use backend
-func main([]string args)  int {
+func main(string[] args)  int {
     options := parse_options(args)
     if options[0] == "help" {
         report_usage(parse_usage())
@@ -46,7 +46,7 @@ func emit_target_log(string command) () {
     }
 }
 
-func has_native_flag([]string options) bool {
+func has_native_flag(string[] options) bool {
     i := 0
     for i < len(options) {
         if options[i] == "native" {
@@ -65,8 +65,8 @@ func build_with_backend(string path, string output, string ssa_margin, bool use_
     }
 }
 
-func make_build_options(string path, string output, string ssa_margin) []string {
-    options := []string()
+func make_build_options(string path, string output, string ssa_margin) string[] {
+    options := string[]()
     options = append(options, "build")
     options = append(options, path)
     options = append(options, output)

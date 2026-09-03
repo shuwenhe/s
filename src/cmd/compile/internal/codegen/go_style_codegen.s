@@ -33,7 +33,7 @@ func (gen* go_style_code_generator) gen_func_body(string func_name, int64 stack_
 }
 
 func (gen* go_style_code_generator) gen_func_epilogue(int64 stack_size) string {
-    epilogue := []int8()()
+    epilogue := int8[]()()
     if stack_size > 0 {
         add_code := encode_add_imm_to_reg(4 as int, stack_size)
         epilogue = append_bytes(epilogue, add_code)
@@ -66,7 +66,7 @@ func (gen* go_style_code_generator) gen_load_const(int64 value, int dest_reg) st
 }
 
 func (gen* go_style_code_generator) gen_binop(string op, int left_reg, int right_reg, int result_reg) string {
-    code := []int8()()
+    code := int8[]()()
     if op == "add" {
         code = encode_add_reg_to_reg(left_reg, right_reg)
     } else if op == "sub" {
@@ -86,7 +86,7 @@ func (gen* go_style_code_generator) gen_binop(string op, int left_reg, int right
 }
 
 func (gen* go_style_code_generator) gen_store(int source_reg, int64 stack_offset, int size) string {
-    code := []int8()()
+    code := int8[]()()
     if size == 8 {
         code = encode_store_reg_to_memory(source_reg, 5 as int, stack_offset)
     } else if size == 4 {
@@ -98,7 +98,7 @@ func (gen* go_style_code_generator) gen_store(int source_reg, int64 stack_offset
 }
 
 func (gen* go_style_code_generator) gen_load(int dest_reg, int64 stack_offset, int size) string {
-    code := []int8()()
+    code := int8[]()()
     if size == 8 {
         code = encode_load_memory_to_reg(dest_reg, 5 as int, stack_offset)
     } else if size == 4 {
@@ -121,8 +121,8 @@ func (gen* go_style_code_generator) gen_main_function() string {
     ""
 }
 
-func (gen* go_style_code_generator) gen_program_entry() []int8 {
-    entry_code := []int8()()
+func (gen* go_style_code_generator) gen_program_entry() int8[] {
+    entry_code := int8[]()()
     entry_code = encode_jmp_direct("main")
     entry_code
 }
@@ -132,8 +132,8 @@ func (gen* go_style_code_generator) compile_complete_program() string {
     ""
 }
 
-func encode_sub_imm_from_reg(int reg, int64 imm) []int8 {
-    result := []int8()()
+func encode_sub_imm_from_reg(int reg, int64 imm) int8[] {
+    result := int8[]()()
     if imm == 0 {
         return result
     }
@@ -154,8 +154,8 @@ func encode_sub_imm_from_reg(int reg, int64 imm) []int8 {
     result
 }
 
-func encode_add_imm_to_reg(int reg, int64 imm) []int8 {
-    result := []int8()()
+func encode_add_imm_to_reg(int reg, int64 imm) int8[] {
+    result := int8[]()()
     if imm == 0 {
         return result
     }
@@ -173,8 +173,8 @@ func encode_add_imm_to_reg(int reg, int64 imm) []int8 {
     result
 }
 
-func encode_imul_reg_reg(int dest_reg, int src_reg) []int8 {
-    result := []int8()()
+func encode_imul_reg_reg(int dest_reg, int src_reg) int8[] {
+    result := int8[]()()
     result = append(result, 0x48 as int8)
     result = append(result, 0x0f as int8)
     result = append(result, 0xaf as int8)
@@ -182,16 +182,16 @@ func encode_imul_reg_reg(int dest_reg, int src_reg) []int8 {
     result
 }
 
-func encode_cmp_reg_reg(int left_reg, int right_reg) []int8 {
-    result := []int8()()
+func encode_cmp_reg_reg(int left_reg, int right_reg) int8[] {
+    result := int8[]()()
     result = append(result, 0x48 as int8)
     result = append(result, 0x39 as int8)
     result = append(result, ((0xc0 + ((right_reg & 7) << 3) + (left_reg & 7)) as int8))
     result
 }
 
-func encode_store_reg_to_memory(int src_reg, int base_reg, int64 offset) []int8 {
-    result := []int8()()
+func encode_store_reg_to_memory(int src_reg, int base_reg, int64 offset) int8[] {
+    result := int8[]()()
     result = append(result, 0x48 as int8)
     result = append(result, 0x89 as int8)
     if offset >= -128 as int64 && offset < 128 as int64 {
@@ -209,8 +209,8 @@ func encode_store_reg_to_memory(int src_reg, int base_reg, int64 offset) []int8 
     result
 }
 
-func encode_store_reg_to_memory_32(int src_reg, int base_reg, int64 offset) []int8 {
-    result := []int8()()
+func encode_store_reg_to_memory_32(int src_reg, int base_reg, int64 offset) int8[] {
+    result := int8[]()()
     result = append(result, 0x89 as int8)
     if offset >= -128 as int64 && offset < 128 as int64 {
         result = append(result, ((0x40 + ((src_reg & 7) << 3) + (base_reg & 7)) as int8))
@@ -227,8 +227,8 @@ func encode_store_reg_to_memory_32(int src_reg, int base_reg, int64 offset) []in
     result
 }
 
-func encode_load_memory_to_reg(int dest_reg, int base_reg, int64 offset) []int8 {
-    result := []int8()()
+func encode_load_memory_to_reg(int dest_reg, int base_reg, int64 offset) int8[] {
+    result := int8[]()()
     result = append(result, 0x48 as int8)
     result = append(result, 0x8b as int8)
     if offset >= -128 as int64 && offset < 128 as int64 {
@@ -246,8 +246,8 @@ func encode_load_memory_to_reg(int dest_reg, int base_reg, int64 offset) []int8 
     result
 }
 
-func encode_load_memory_to_reg_32(int dest_reg, int base_reg, int64 offset) []int8 {
-    result := []int8()()
+func encode_load_memory_to_reg_32(int dest_reg, int base_reg, int64 offset) int8[] {
+    result := int8[]()()
     result = append(result, 0x8b as int8)
     if offset >= -128 as int64 && offset < 128 as int64 {
         result = append(result, ((0x40 + ((dest_reg & 7) << 3) + (base_reg & 7)) as int8))
@@ -264,8 +264,8 @@ func encode_load_memory_to_reg_32(int dest_reg, int base_reg, int64 offset) []in
     result
 }
 
-func encode_call_direct(string func_name) []int8 {
-    result := []int8()()
+func encode_call_direct(string func_name) int8[] {
+    result := int8[]()()
     result = append(result, 0xe8 as int8)
     result = append(result, 0x00 as int8)
     result = append(result, 0x00 as int8)
@@ -274,8 +274,8 @@ func encode_call_direct(string func_name) []int8 {
     result
 }
 
-func encode_jmp_direct(string target) []int8 {
-    result := []int8()()
+func encode_jmp_direct(string target) int8[] {
+    result := int8[]()()
     result = append(result, 0xe9 as int8)
     result = append(result, 0x00 as int8)
     result = append(result, 0x00 as int8)

@@ -7,11 +7,11 @@ struct sparse_entry {
 
 struct sparse_map {
     sparse_entry[] dense
-    []int sparse
+    int[] sparse
 }
 
 func new_sparse_map(int n) sparse_map {
-    sparse := []int()
+    sparse := int[]()
     i := 0
     for i < n {
         sparse = append(sparse, 0)
