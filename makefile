@@ -136,7 +136,13 @@ sroutine-check: selfhost
 		rg -q "channel deadlock" /tmp/s_sroutine_check/deadlock.out; \
 	fi
 
-seed-compiler-bin:
+# Keep the seed compiler in sync with backend changes; this target is used by
+# benchmarks and AOT tests, so a stale binary can invalidate their results.
+SEED_COMPILER_SOURCES := $(wildcard src/cmd/compile/seed/*.c src/cmd/compile/seed/*/*.c src/cmd/compile/seed/*/*/*.c src/cmd/compile/seed/*/*/*/*.c src/cmd/compile/seed/*/*.h src/cmd/compile/seed/*/*/*.h)
+
+seed-compiler-bin: bin/s_seed
+
+bin/s_seed: $(SEED_COMPILER_SOURCES)
 	@mkdir -p ./bin
 	@echo "Building seed compiler..."
 	@set -e; tmp="$$(mktemp ./bin/s_seed.XXXXXX)"; trap 'rm -f "$$tmp"' EXIT HUP INT TERM; \
