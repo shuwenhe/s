@@ -396,6 +396,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
 				!emit_store(out, fn, ins->result, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "ADD") == 0) {
+			const char *store_name = ins->result;
 			if (!emit_load(out, module, fn, ins->operand1, "%rdi", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rsi", err)) return false;
 			/* Integers are tagged with bit 0 set; keep the common path local. */
@@ -404,7 +405,12 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			fprintf(out, "    lea -1(%%rdi,%%rsi), %%rax\n    jmp .Ls_%s_add_done_%zu\n", symbol, i);
 			fprintf(out, ".Ls_%s_add_slow_%zu:\n    call s_value_add\n", symbol, i);
 			fprintf(out, ".Ls_%s_add_done_%zu:\n", symbol, i);
-			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+			if (i + 1 < fn->end && strcmp(module->ir.ins[i + 1].op, "MOV") == 0 &&
+				strcmp(module->ir.ins[i + 1].operand1, ins->result) == 0) {
+				store_name = module->ir.ins[i + 1].result;
+				i++;
+			}
+			if (!emit_store(out, fn, store_name, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "SUB") == 0 || strcmp(ins->op, "MUL") == 0) {
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
@@ -420,6 +426,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			fprintf(out, "    lea 1(%%rax,%%rax), %%rax\n");
 			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
 		} else if (strncmp(ins->op, "CMP_", 4) == 0) {
+			const char *store_name = ins->result;
 			const char *setcc = "sete";
 			if (strcmp(ins->op, "CMP_NE") == 0) setcc = "setne";
 			else if (strcmp(ins->op, "CMP_LT") == 0) setcc = "setl";
@@ -433,7 +440,12 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			fprintf(out, "    cmp %%rsi, %%rdi\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n    jmp .Ls_%s_cmp_done_%zu\n", setcc, symbol, i);
 			fprintf(out, ".Ls_%s_cmp_slow_%zu:\n    call s_value_cmp\n    cmp $0, %%rax\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n", symbol, i, setcc);
 			fprintf(out, ".Ls_%s_cmp_done_%zu:\n", symbol, i);
-			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+			if (i + 1 < fn->end && strcmp(module->ir.ins[i + 1].op, "MOV") == 0 &&
+				strcmp(module->ir.ins[i + 1].operand1, ins->result) == 0) {
+				store_name = module->ir.ins[i + 1].result;
+				i++;
+			}
+			if (!emit_store(out, fn, store_name, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "JUMP_IF_FALSE") == 0) {
 			char label[STANDALONE_TEXT_CAP];
 			symbol_text(ins->result, label, sizeof(label));
