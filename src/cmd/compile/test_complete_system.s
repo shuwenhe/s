@@ -185,7 +185,7 @@ func int_to_string(int value) string {
         v = -v
     }
     digits := ""
-    while v > 0 {
+    for v > 0 {
         digit := v % 10
         digit_char := (0x30 as int8 + (digit as int8)) as string
         digits = digit_char + digits

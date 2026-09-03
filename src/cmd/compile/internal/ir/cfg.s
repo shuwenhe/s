@@ -84,7 +84,7 @@ func (cfg* control_flow_graph) compute_dominators() {
     cfg.immediate_dominator[cfg.entry_block] = cfg.entry_block
 
     changed := true
-    while changed {
+    for changed {
         changed = false
         for i in 0..n {
             if i == cfg.entry_block {
@@ -117,11 +117,11 @@ func (cfg* control_flow_graph) compute_dominators() {
 func (cfg* control_flow_graph) intersect_dominators(int b1, int b2) int {
     finger1 := b1
     finger2 := b2
-    while finger1 != finger2 {
-        while finger1 > finger2 {
+    for finger1 != finger2 {
+        for finger1 > finger2 {
             finger1 = cfg.immediate_dominator[finger1]
         }
-        while finger2 > finger1 {
+        for finger2 > finger1 {
             finger2 = cfg.immediate_dominator[finger2]
         }
     }
@@ -143,7 +143,7 @@ func (cfg* control_flow_graph) compute_post_dominators() {
     cfg.immediate_post_dominator[cfg.exit_block] = cfg.exit_block
 
     changed := true
-    while changed {
+    for changed {
         changed = false
         for i in 0..n {
             if i == cfg.exit_block {
@@ -176,11 +176,11 @@ func (cfg* control_flow_graph) compute_post_dominators() {
 func (cfg* control_flow_graph) intersect_post_dominators(int b1, int b2) int {
     finger1 := b1
     finger2 := b2
-    while finger1 != finger2 {
-        while finger1 > finger2 {
+    for finger1 != finger2 {
+        for finger1 > finger2 {
             finger1 = cfg.immediate_post_dominator[finger1]
         }
-        while finger2 > finger1 {
+        for finger2 > finger1 {
             finger2 = cfg.immediate_post_dominator[finger2]
         }
     }
@@ -199,7 +199,7 @@ func (cfg* control_flow_graph) compute_dominance_frontier() {
         if cfg.blocks[x].predecessors.len() >= 2 {
             for p in cfg.blocks[x].predecessors {
                 runner := p
-                while runner != cfg.immediate_dominator[x] {
+                for runner != cfg.immediate_dominator[x] {
                     found := false
                     for df in cfg.dominance_frontier[runner] {
                         if df == x {
@@ -262,7 +262,7 @@ func (cfg* control_flow_graph) compute_loop_depths() {
     }
 
     changed := true
-    while changed {
+    for changed {
         changed = false
         for i in 0..n {
             for p in cfg.blocks[i].predecessors {
@@ -284,7 +284,7 @@ func (cfg* control_flow_graph) get_loop_body(int loop_header) int[] {
         worklist.push(succ)
     }
 
-    while worklist.len() > 0 {
+    for worklist.len() > 0 {
         block := worklist[0]
         worklist[0] = worklist[worklist.len() - 1]
         worklist = worklist[0..worklist.len() - 1]

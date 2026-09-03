@@ -100,7 +100,7 @@ func (ssa* static_single_assignment) insert_phi_nodes(int[] dominance_frontier) 
         work_list.push(df_block)
     }
 
-    while work_list.len() > 0 {
+    for work_list.len() > 0 {
         block := work_list[0]
         work_list[0] = work_list[work_list.len() - 1]
         work_list = work_list[0..work_list.len() - 1]
