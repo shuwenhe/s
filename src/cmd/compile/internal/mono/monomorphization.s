@@ -54,7 +54,7 @@ func same_type_args(string[] left, string[] right) bool {
     true
 }
 
-func (cache* mono_cache) lookup(string generic_name, string[] type_args) string {
+func (mono_cache* cache) lookup(string generic_name, string[] type_args) string {
     i := 0
     for i < len(cache.instances) {
         instance := cache.instances[i]
@@ -66,7 +66,7 @@ func (cache* mono_cache) lookup(string generic_name, string[] type_args) string 
     ""
 }
 
-func (cache* mono_cache) get_or_create(string generic_name, string[] type_args) string {
+func (mono_cache* cache) get_or_create(string generic_name, string[] type_args) string {
     existing := cache.lookup(generic_name, type_args)
     if existing != "" { return existing }
     name := make_instance_name(generic_name, type_args)
@@ -78,7 +78,7 @@ func (cache* mono_cache) get_or_create(string generic_name, string[] type_args) 
     name
 }
 
-func (cache* mono_cache) count() int {
+func (mono_cache* cache) count() int {
     len(cache.instances)
 }
 
