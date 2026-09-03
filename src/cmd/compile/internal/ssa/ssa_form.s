@@ -44,10 +44,10 @@ func ssa_builder_new() ssa_builder* {
         block_count: 0,
         value_count: 0,
         var_count: 0,
-        blocks: new block[1024],
-        all_values: new value[8192],
-        var_versions: new var_version[2048],
-        var_stack: new int[512],
+        blocks: block[1024],
+        all_values: value[8192],
+        var_versions: var_version[2048],
+        var_stack: int[512],
     }
     &builder
 }
@@ -58,9 +58,9 @@ func (builder* ssa_builder) new_block(int kind) int {
     
     block := block {
         id: id,
-        preds: new int[16],
-        succs: new int[16],
-        values: new value[64],
+        preds: int[16],
+        succs: int[16],
+        values: value[64],
         kind: kind,
     }
 

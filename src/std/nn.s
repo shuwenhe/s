@@ -117,7 +117,7 @@ func make_gpt(gpt_config cfg) gpt_model {
     model.config = cfg
     model.tok_embed = make_embedding(cfg.vocab_size, cfg.embed_dim, -1)
     model.pos_embed = make_embedding(cfg.max_seq_len, cfg.embed_dim, -1)
-    model.blocks = new transformer_block[cfg.num_layers]
+    model.blocks = transformer_block[cfg.num_layers]
     int i = 0
     for i < cfg.num_layers {
         model.blocks[i] = make_transformer_block(
@@ -178,7 +178,7 @@ func gpt_total_params(gpt_model self) int {
 func forward(gpt_model self, int[] token_ids, int batch_size, int seq_len) ag.auto_grad_tensor {
     ag.auto_grad_tensor tok_emb = ai.forward(self.tok_embed, token_ids, batch_size, seq_len)
     int total_tokens = batch_size * seq_len
-    int[] pos_ids = new int[total_tokens]
+    int[] pos_ids = int[total_tokens]
     int idx = 0
     for idx < total_tokens {
         pos_ids[idx] = idx % seq_len

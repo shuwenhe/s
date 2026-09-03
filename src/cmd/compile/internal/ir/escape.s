@@ -141,10 +141,10 @@ func (ea* escape_analysis) analyze_return(int return_var, int caller_var) {
 
 func (ea* escape_analysis) build_alias_sets(int[] vars) {
     n := vars.len()
-    ea.may_alias = new bool[][n]
+    ea.may_alias = bool[][n]
 
     for i in 0..n {
-        ea.may_alias[i] = new bool[n]
+        ea.may_alias[i] = bool[n]
         for j in 0..n {
             if i == j {
                 ea.may_alias[i][j] = true

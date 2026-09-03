@@ -12,7 +12,7 @@ amd64_rule*[] amd64_rules
 int amd64_rule_count
 
 func init_amd64_rules() int {
-    amd64_rules = new amd64_rule*[500]
+    amd64_rules = amd64_rule*[500]
     amd64_rule_count = 0
     return 0
 }

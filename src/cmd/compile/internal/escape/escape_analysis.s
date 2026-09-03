@@ -17,7 +17,7 @@ struct escape_context {
 
 func escape_new_context(int func_id) escape_context {
     ctx := escape_context {
-        escape_infos: new escape_info[10000],
+        escape_infos: escape_info[10000],
         func_id: func_id,
         max_depth: 0
     }

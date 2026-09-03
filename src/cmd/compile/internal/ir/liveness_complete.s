@@ -33,7 +33,7 @@ func new_liveness_analyzer(num_values i32, num_blocks i32) liveness_analyzer* {
         la.infos[i].value_id = i
         la.infos[i].live_in = make(bool[][], num_blocks)
         la.infos[i].live_out = make(bool[][], num_blocks)
-        la.infos[i].ranges = new live_range[]()
+        la.infos[i].ranges = live_range[]()
         
         for j := i32(0); j < num_blocks; j += 1 {
             la.infos[i].live_in[j] = make(bool[], num_values)
@@ -42,8 +42,8 @@ func new_liveness_analyzer(num_values i32, num_blocks i32) liveness_analyzer* {
     }
     
     for j := i32(0); j < num_blocks; j += 1 {
-        la.gen_set[j] = new i32[]()
-        la.kill_set[j] = new i32[]()
+        la.gen_set[j] = i32[]()
+        la.kill_set[j] = i32[]()
     }
     
     la

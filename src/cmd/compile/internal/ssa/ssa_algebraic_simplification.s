@@ -10,7 +10,7 @@ algebraic_rule*[] algebra_rules
 int algebra_rule_count
 
 func init_algebraic_rules() int {
-    algebra_rules = new algebraic_rule*[500]
+    algebra_rules = algebraic_rule*[500]
     algebra_rule_count = 0
     return 0
 }

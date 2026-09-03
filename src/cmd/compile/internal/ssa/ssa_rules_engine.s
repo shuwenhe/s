@@ -67,7 +67,7 @@ int rule_count
 int max_rules
 
 func init_ssa() int {
-    all_rules = new ssa_rule[10000]
+    all_rules = ssa_rule[10000]
     rule_count = 0
     max_rules = 10000
     return 0
@@ -94,8 +94,8 @@ func ssa_value_new(int id, int op, int type_id) ssa_value* {
         id: id,
         op: op,
         type_id: type_id,
-        args: new ssa_value*[16],
-        aux_int: new int[4],
+        args: ssa_value*[16],
+        aux_int: int[4],
         aux_string: "",
         line: 0,
         column: 0,
@@ -107,9 +107,9 @@ func ssa_block_new(int id, string name) ssa_block* {
     b := ssa_block {
         id: id,
         name: name,
-        values: new ssa_value*[1000],
-        preds: new ssa_block*[10],
-        succs: new ssa_block*[10],
+        values: ssa_value*[1000],
+        preds: ssa_block*[10],
+        succs: ssa_block*[10],
         pred_count: 0,
         succ_count: 0,
     }
@@ -120,7 +120,7 @@ func ssa_function_new(int id, string name) ssa_function* {
     f := ssa_function {
         id: id,
         name: name,
-        blocks: new ssa_block*[100],
+        blocks: ssa_block*[100],
         entry_block: 0,
         block_count: 0,
         value_count: 0,
