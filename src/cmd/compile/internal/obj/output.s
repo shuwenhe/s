@@ -2,18 +2,18 @@ package compile.internal.obj
 use compile.internal.codegen
 struct elf_output {
     elf_writer writer
-    []elf_section_header sections
-    []elf_symbol symbols
-    []int32 section_offsets
+    elf_section_header[] sections
+    elf_symbol[] symbols
+    int32[] section_offsets
     string string_table
 }
 
 func make_elf_output() elf_output {
     elf_output {
         writer: make_elf_writer(elf_machine_x86_64),
-        sections: []elf_section_header()(),
-        symbols: []elf_symbol()(),
-        section_offsets: []int32()(),
+        sections: elf_section_header[]()(),
+        symbols: elf_symbol[]()(),
+        section_offsets: int32[]()(),
         string_table: "",
     }
 }
@@ -49,8 +49,8 @@ func (out* elf_output) add_symbol(string name, int64 value, int64 size, int8 inf
     out.symbols = append(out.symbols, sym)
 }
 
-func (out* elf_output) write_elf_file() []int8 {
-    result := []int8()()
+func (out* elf_output) write_elf_file() int8[] {
+    result := int8[]()()
     out.writer.write_elf_header(elf_machine_x86_64)
     result = out.writer.get_data()
     result
@@ -69,7 +69,7 @@ func make_object_file_generator(machine_code_gen* cg, symbol_table* st, relocati
     }
 }
 
-func (gen* object_file_generator) generate() []int8 {
+func (gen* object_file_generator) generate() int8[] {
     gen.elf_out.build_standard_sections()
     code := gen.code_gen.get_code()
     gen.elf_out.add_symbol("", 0 as int64, 0 as int64, 0 as int8, 0 as int16)

@@ -27,8 +27,8 @@ func parse_imports(source_unit unit) import_record[] {
     out
 }
 
-func import_map(import_record[] imports) []string {
-    out := []string()
+func import_map(import_record[] imports) string[] {
+    out := string[]()
     i := 0
     for i < len(imports) {
         switch imports[i].alias {

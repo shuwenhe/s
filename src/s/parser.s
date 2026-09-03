@@ -321,7 +321,7 @@ func (parser* self) parse_struct_decl() (struct_decl, parse_error) {
     }
     field[] fields = field[]()
     for !self.eat_symbol("}") {
-        f, err := self.parse_named_type([]string { ",", "}" })
+        f, err := self.parse_named_type(string[] { ",", "}" })
         if err.message != "" {
             struct_decl empty
             return empty, err
@@ -366,7 +366,7 @@ func (parser* self) parse_enum_decl() (enum_decl, parse_error) {
         }
         option[string] payload = option::none
         if self.eat_symbol("(") {
-            ty, err := self.parse_type_text([]string { ")" })
+            ty, err := self.parse_type_text(string[] { ")" })
             if err.message != "" {
                 enum_decl empty
                 return empty, err
@@ -441,7 +441,7 @@ func (parser* self) parse_function(bool require_body) (parsed_function, parse_er
             parsed_function empty
             return empty, err
         }
-        receiver_tokens, err := self.parse_token_segment([]string { ")" })
+        receiver_tokens, err := self.parse_token_segment(string[] { ")" })
         if err.message != "" {
             parsed_function empty
             return empty, err
@@ -486,7 +486,7 @@ func (parser* self) parse_function(bool require_body) (parsed_function, parse_er
     option[string] return_type = option::none
     token next = self.peek()
     if !(next.kind == token_kind::symbol && (next.value == "{" || next.value == ";")) && !(next.kind == token_kind::keyword && next.value == "where") {
-        ty, err := self.parse_type_text([]string { "where", "{", ";" })
+        ty, err := self.parse_type_text(string[] { "where", "{", ";" })
         if err.message != "" {
             parsed_function empty
             return empty, err
@@ -520,7 +520,7 @@ func (parser* self) parse_params() (param[], parse_error) {
         return params, parse_error { message: "" }
     }
     for true {
-        part, err := self.parse_named_type([]string { ",", ")" })
+        part, err := self.parse_named_type(string[] { ",", ")" })
         if err.message != "" {
             param[] empty
             return empty, err
@@ -535,30 +535,30 @@ func (parser* self) parse_params() (param[], parse_error) {
     params, parse_error { message: "" }
 }
 
-func (parser* self) parse_generic_params() ([]string, parse_error) {
-    []string generics = []string()
+func (parser* self) parse_generic_params() (string[], parse_error) {
+    string[] generics = string[]()
     if !self.eat_symbol("[") {
         return generics, parse_error { message: "" }
     }
     for !self.eat_symbol("]") {
         name, err := self.expect_ident()
         if err.message != "" {
-            []string empty
+            string[] empty
             return empty, err
         }
         string item = name
         if self.eat_symbol(":") {
-            []string bounds = []string()
+            string[] bounds = string[]()
             p, err := self.parse_path()
             if err.message != "" {
-                []string empty
+                string[] empty
                 return empty, err
             }
             bounds = append(bounds, p)
             for self.eat_symbol("+") {
                 p, err := self.parse_path()
                 if err.message != "" {
-                    []string empty
+                    string[] empty
                     return empty, err
                 }
                 bounds = append(bounds, p)
@@ -576,7 +576,7 @@ func (parser* self) parse_where_clause() ((), parse_error) {
         return , parse_error { message: "" }
     }
     for true {
-        _, err := self.parse_type_text([]string { ",", "{", ";" })
+        _, err := self.parse_type_text(string[] { ",", "{", ";" })
         if err.message != "" {
             return , err
         }
@@ -587,7 +587,7 @@ func (parser* self) parse_where_clause() ((), parse_error) {
     (), parse_error { message: "" }
 }
 
-func (parser* self) parse_named_type([]string stop_values) (named_type, parse_error) {
+func (parser* self) parse_named_type(string[] stop_values) (named_type, parse_error) {
     segment, err := self.parse_token_segment(stop_values)
     if err.message != "" {
         named_type empty
@@ -596,7 +596,7 @@ func (parser* self) parse_named_type([]string stop_values) (named_type, parse_er
     decode_named_type(segment)
 }
 
-func (parser* self) parse_token_segment([]string stop_values) (token[], parse_error) {
+func (parser* self) parse_token_segment(string[] stop_values) (token[], parse_error) {
     token[] segment = token[]()
     int bracket = 0
     int paren = 0
@@ -787,7 +787,7 @@ func (parser* self) parse_sroutine_stmt() (sroutine_stmt, parse_error) {
 }
 
 func (parser* self) parse_typed_var_stmt(bool consume_semicolon) (var_stmt, parse_error) {
-    segment, err := self.parse_token_segment([]string { "=" })
+    segment, err := self.parse_token_segment(string[] { "=" })
     if err.message != "" {
         var_stmt empty
         return empty, err
@@ -1175,7 +1175,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
                 return empty, err
             }
             return expr::for(for_expr {
-                init: option::none, condition option::none, post option::none, names []string(), iterable option::none, body body, inferred_type option::none,
+                init: option::none, condition option::none, post option::none, names string[](), iterable option::none, body body, inferred_type option::none,
             }))
         }
         if self.at_symbol("(") {
@@ -1204,7 +1204,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
                 return empty, err
             }
             return expr::for(for_expr {
-                init: option::some(box(init)), condition option::some(box(condition)), post option::some(box(post)), names []string(), iterable option::none, body body, inferred_type option::none,
+                init: option::some(box(init)), condition option::some(box(condition)), post option::some(box(post)), names string[](), iterable option::none, body body, inferred_type option::none,
             }))
         }
         token, err := self.peek()
@@ -1223,7 +1223,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
                 return empty, err
             }
             return expr::for(for_expr {
-                init: option::none, condition option::none, post option::none, names []string { name }, iterable option::some(box(iterable)), body body, inferred_type option::none,
+                init: option::none, condition option::none, post option::none, names string[] { name }, iterable option::some(box(iterable)), body body, inferred_type option::none,
             }))
         }
         condition, err := self.parse_expr()
@@ -1232,7 +1232,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
             return empty, err
         }
         expr::for(for_expr {
-            init: option::none, condition option::some(box(condition)), post option::none, names []string(), iterable option::none, body body, inferred_type option::none,
+            init: option::none, condition option::some(box(condition)), post option::none, names string[](), iterable option::none, body body, inferred_type option::none,
         })
 }
 
@@ -1453,7 +1453,7 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
             }
             type_text := bracket
             token token = self.peek().unwrap()            if token.kind != token_kind::symbol || token.value != "{" {
-                seg, err := self.parse_token_segment([]string { "{" })
+                seg, err := self.parse_token_segment(string[] { "{" })
                 if err.message != "" {
                     expr empty
                     return empty, err
@@ -1483,7 +1483,7 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
             type_text := "map" + bracket
             token2 := self.peek().unwrap()
             if token2.kind == token_kind::ident || token2.kind == token_kind::symbol {
-                seg, err := self.parse_token_segment([]string { "{" })
+                seg, err := self.parse_token_segment(string[] { "{" })
                 if err.message != "" {
                     expr empty
                     return empty, err
@@ -1539,11 +1539,11 @@ func (parser* self) binary_precedence(string op) int {
     }
 
 func (parser* self) parse_use_path() (string, parse_error) {
-        []string parts = []string()
+        string[] parts = string[]()
         parts = append(parts, self.expect_ident())
         for self.eat_symbol(".") {
             if self.eat_symbol("{") {
-                []string members = []string()
+                string[] members = string[]()
                 for !self.eat_symbol("}") {
                     member, err := self.expect_ident()
                     if err.message != "" {
@@ -1566,7 +1566,7 @@ func (parser* self) parse_use_path() (string, parse_error) {
     }
 
 func (parser* self) parse_path() (string, parse_error) {
-    []string parts = []string()
+    string[] parts = string[]()
     ident, err := self.expect_ident()
     if err.message != "" {
         string empty
@@ -1611,8 +1611,8 @@ func (parser* self) parse_path() (string, parse_error) {
     join_strings(parts, "."), parse_error { message: "" }
 }
 
-func (parser* self) parse_type_text([]string stop_values) (string, parse_error) {
-    []string parts = []string()
+func (parser* self) parse_type_text(string[] stop_values) (string, parse_error) {
+    string[] parts = string[]()
     int bracket = 0
     int paren = 0
     for true {
@@ -1650,7 +1650,7 @@ func (parser* self) parse_type_text([]string stop_values) (string, parse_error) 
 }
 
 func (parser* self) parse_bracket_group() (string, parse_error) {
-    []string parts = []string()
+    string[] parts = string[]()
     tok, err := self.advance()
     if err.message != "" {
         string empty
@@ -1925,7 +1925,7 @@ func slice_tokens(token[] tokens, int start, int end) token[] {
 }
 
 func join_token_values(token[] tokens) string {
-    []string parts = []string()
+    string[] parts = string[]()
     for token in tokens {
         parts = append(parts, token.value)
     }
@@ -1989,7 +1989,7 @@ func normalize_type_text(string text) string {
         .replace(" [", "[")
 }
 
-func contains_string([]string values, string target) bool {
+func contains_string(string[] values, string target) bool {
     for value in values {
         if value == target {
             return true
@@ -1998,7 +1998,7 @@ func contains_string([]string values, string target) bool {
     false
 }
 
-func join_strings([]string values, string sep) string {
+func join_strings(string[] values, string sep) string {
     string out = ""
     bool first = true
     for value in values {

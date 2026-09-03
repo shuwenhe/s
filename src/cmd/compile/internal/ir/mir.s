@@ -23,12 +23,12 @@ struct mir_local_slot {
 struct mir_assign_stmt {
     int target
     string op
-    []string args
+    string[] args
 }
 
 struct mir_eval_stmt {
     string op
-    []string args
+    string[] args
 }
 
 enum mir_statement {
@@ -38,7 +38,7 @@ enum mir_statement {
 
 struct mir_terminator {
     string kind
-    []int targets
+    int[] targets
 }
 
 struct mir_basic_block {
@@ -153,14 +153,14 @@ func (f* ir_function) build_ssa() {
         for stmt in f.blocks[i].statements {
             switch stmt {
                 mir_statement::assign(a): {
-                    args_int := []int()
+                    args_int := int[]()
                     for arg in a.args {
                         args_int.push(0)
                     }
                     _ = f.ssa.create_value(a.op, args_int, f.blocks[i].id, "")
                 }
                 mir_statement::eval(e): {
-                    args_int := []int()
+                    args_int := int[]()
                     for arg in e.args {
                         args_int.push(0)
                     }

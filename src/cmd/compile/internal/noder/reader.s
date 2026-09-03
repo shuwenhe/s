@@ -8,7 +8,7 @@ func read_unit(string path) (source_unit, noder_error) {
     }
 }
 
-func read_units([]string paths) (source_unit[], noder_error) {
+func read_units(string[] paths) (source_unit[], noder_error) {
     out := source_unit[]()
     i := 0
     for i < len(paths) {

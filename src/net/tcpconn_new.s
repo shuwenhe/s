@@ -19,14 +19,14 @@ struct tcp_conn {
     raddr *tcp_addr
 }
 
-func (tcp_conn* c) read(buf []byte) (int, error) {
+func (tcp_conn* c) read(buf byte[]) (int, error) {
     if c.raw_socket == nil {
         return 0, "connection closed"
     }
     c.raw_socket.read(buf)
 }
 
-func (tcp_conn* c) write(buf []byte) (int, error) {
+func (tcp_conn* c) write(buf byte[]) (int, error) {
     if c.raw_socket == nil {
         return 0, "connection closed"
     }
@@ -48,11 +48,11 @@ func (tcp_conn* c) remote_addr() addr {
     c.raddr
 }
 
-func (tcp_conn* c) read_from(buf []byte) (int, addr, error) {
+func (tcp_conn* c) read_from(buf byte[]) (int, addr, error) {
     0, nil, "tcp does not support ReadFrom"
 }
 
-func (tcp_conn* c) write_to(buf []byte, addr addr) (int, error) {
+func (tcp_conn* c) write_to(buf byte[], addr addr) (int, error) {
     0, "tcp does not support WriteTo"
 }
 

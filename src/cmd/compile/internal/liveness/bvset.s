@@ -1,14 +1,14 @@
 package compile.internal.liveness
 use std.slices
 struct bv_set {
-    []int[]] rows
+    int[][]] rows
 }
 
 func new_bv_set() bv_set {
-    bv_set { rows: []int[]]() }
+    bv_set { rows: int[][]]() }
 }
 
-func bvset_add([]int[]] rows, []int bits) []int[]] {
+func bvset_add(int[][]] rows, int[] bits) int[][]] {
     normalized := normalize_bits(bits)
     i := 0
     for i < len(rows) {
@@ -21,12 +21,12 @@ func bvset_add([]int[]] rows, []int bits) []int[]] {
     rows
 }
 
-func bvset_extract_unique(bv_set set) []int[]] {
+func bvset_extract_unique(bv_set set) int[][]] {
     set.rows
 }
 
-func normalize_bits([]int bits) []int {
-    out := []int()
+func normalize_bits(int[] bits) int[] {
+    out := int[]()
     i := 0
     for i < len(bits) {
         if bits[i] != 0 {
@@ -39,7 +39,7 @@ func normalize_bits([]int bits) []int {
     out
 }
 
-func bitmap_equal([]int left, []int right) bool {
+func bitmap_equal(int[] left, int[] right) bool {
     if len(left) != len(right) {
         return false
     }

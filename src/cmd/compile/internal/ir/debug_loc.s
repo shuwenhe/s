@@ -14,7 +14,7 @@ struct debug_scope {
     string scope_name
     int start_instr
     int end_instr
-    []int local_vars
+    int[] local_vars
     int line_start
     int line_end
 }
@@ -24,17 +24,17 @@ struct debug_variable {
     string name
     string type_name
     int scope_id
-    []int ssa_values
+    int[] ssa_values
     source_location def_location
-    []int use_locations
+    int[] use_locations
 }
 
 struct debug_info {
     debug_scope[] scopes
     debug_variable[] variables
     source_location[] instr_locations
-    []int line_numbers
-    []string file_names
+    int[] line_numbers
+    string[] file_names
     int num_instructions
 }
 
@@ -44,7 +44,7 @@ func new_debug_info(int num_instructions) debug_info {
         variables: debug_variable[](),
         instr_locations: new source_location[num_instructions],
         line_numbers: new int[num_instructions],
-        file_names: []string(),
+        file_names: string[](),
         num_instructions: num_instructions
     }
 }
@@ -56,7 +56,7 @@ func (di* debug_info) add_scope(int id, int parent, string name, int start, int 
         scope_name: name,
         start_instr: start,
         end_instr: end,
-        local_vars: []int(),
+        local_vars: int[](),
         line_start: -1,
         line_end: -1
     }
@@ -70,9 +70,9 @@ func (di* debug_info) add_variable(int id, string name, string type_name, int sc
         name: name,
         type_name: type_name,
         scope_id: scope_id,
-        ssa_values: []int(),
+        ssa_values: int[](),
         def_location: def_loc,
-        use_locations: []int()
+        use_locations: int[]()
     }
     di.variables.push(var)
 
@@ -144,7 +144,7 @@ func (di* debug_info) get_scope_variables(int scope_id) debug_variable[] {
     result
 }
 
-func (di* debug_info) generate_line_number_table() []int {
+func (di* debug_info) generate_line_number_table() int[] {
     table := new int[di.num_instructions]
     for i in 0..di.num_instructions {
         table[i] = di.line_numbers[i]
@@ -152,8 +152,8 @@ func (di* debug_info) generate_line_number_table() []int {
     table
 }
 
-func (di* debug_info) generate_location_info() []string {
-    info := []string()
+func (di* debug_info) generate_location_info() string[] {
+    info := string[]()
     for i in 0..di.num_instructions {
         if i < di.instr_locations.len() {
             loc := di.instr_locations[i]
