@@ -675,12 +675,16 @@ selfhost-runtime-check:
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
 
-.PHONY: help target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+.PHONY: benchmark help target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+
+benchmark: seed-compiler-bin
+	@sh benchmarks/run.sh
 
 verify-true-selfhost:
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
 
 help:
+	@echo "  make benchmark              # Compare S AOT, C, and Go on the loop benchmark"
 	@echo "  make run"
 	@echo "  make build-x86_64"
 	@echo "  make build-arm64"
