@@ -22,8 +22,8 @@ func parse_type(string text) string {
     if is_builtin_primitive(clean) {
         return clean
     }
-    if starts_with(clean, "&") {
-        return "&" + parse_type(slice(clean, 5, len(clean)))
+    if starts_with(clean, "&mut") {
+        return "&mut" + parse_type(slice(clean, 4, len(clean)))
     }
     if starts_with(clean, "&") {
         return "&" + parse_type(slice(clean, 1, len(clean)))
@@ -48,10 +48,10 @@ func parse_type_ref(string text) type_ref {
     is_slice := false
     is_array := false
     string array_len = ""
-    if starts_with(rest, "&") {
+    if starts_with(rest, "&mut") {
         is_ref = true
         is_mut_ref = true
-        rest = parse_type(slice(rest, 5, len(rest)))
+        rest = parse_type(slice(rest, 4, len(rest)))
     } else if starts_with(rest, "&") {
         is_ref = true
         rest = parse_type(slice(rest, 1, len(rest)))
@@ -135,7 +135,11 @@ func rules_consistent() bool {
         return false
     }
     ref_ref := parse_type_ref("&[]int")
-    if !ref_ref.is_ref || !ref_ref.is_mut_ref {
+    if !ref_ref.is_ref || ref_ref.is_mut_ref {
+        return false
+    }
+    mut_ref := parse_type_ref("&mut []int")
+    if !mut_ref.is_ref || !mut_ref.is_mut_ref || mut_ref.base != "int" {
         return false
     }
     array_ref := parse_type_ref("int[4]")
@@ -151,8 +155,8 @@ func dump_type(string ty) string {
 
 func base_type_name(string ty) string {
     clean := parse_type(ty)
-    if starts_with(clean, "&") {
-        return base_type_name(slice(clean, 5, len(clean)))
+    if starts_with(clean, "&mut") {
+        return base_type_name(slice(clean, 4, len(clean)))
     }
     if starts_with(clean, "&") {
         return base_type_name(slice(clean, 1, len(clean)))
