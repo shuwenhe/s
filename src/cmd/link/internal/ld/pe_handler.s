@@ -224,7 +224,7 @@ func (po pe_object*) AddRelocation(reloc pe_relocation) {
 }
 
 // 从文件读取 PE
-func ReadPEObject(filename string) (pe_object, error) {
+func ReadPEObject(string filename) (pe_object, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		pe_object{}, err
@@ -272,7 +272,7 @@ func ReadPEObject(filename string) (pe_object, error) {
 }
 
 // 将 PE 对象写入文件
-func (po pe_object*) WriteToFile(filename string) error {
+func (pe_object* po) WriteToFile(string filename) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		err
