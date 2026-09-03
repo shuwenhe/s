@@ -365,6 +365,7 @@ static ast_node *parse_assignment(parser *p);
 static ast_node *parse_term(parser *p);
 static ast_node *parse_equality(parser *p);
 static ast_node *parse_statement(parser *p);
+static ast_node *parse_var_binding_statement(parser *p);
 static ast_node *parse_struct_decl(parser *p);
 static ast_node *parse_trait_decl(parser *p);
 static bool parse_enum_decl(parser *p, ast_vec *out_constants);
@@ -1035,7 +1036,16 @@ static ast_node *parse_block(parser *p) {
 	next_block_id++;
 	while (!check(p, TOKEN_RBRACE) && !is_at_end(p)) {
 		ast_node *stmt = NULL;
-		if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
+		if (check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "var") == 0 &&
+			peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_IDENTIFIER &&
+			peek_ahead(p, 2) && peek_ahead(p, 2)->type == TOKEN_ASSIGN) {
+			advance_tok(p);
+			stmt = parse_var_binding_statement(p);
+			if (!stmt) {
+				ast_free(block);
+				return NULL;
+			}
+		} else if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
 			stmt = parse_assign_declare_statement(p);
 			if (!stmt) {
 				ast_free(block);
@@ -1087,6 +1097,32 @@ static ast_node *parse_assign_declare_statement(parser *p) {
 	node->as.let_stmt.mutable = 1;
 	node->as.let_stmt.type_name = NULL;
 	if (!expect(p, TOKEN_ASSIGN_DECLARE, ":=")) {
+		ast_free(node);
+		return NULL;
+	}
+	node->as.let_stmt.value = parse_expression(p);
+	if (!node->as.let_stmt.value) {
+		ast_free(node);
+		return NULL;
+	}
+	if (!consume_optional_semicolon(p)) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
+}
+static ast_node *parse_var_binding_statement(parser *p) {
+	ast_node *node = ast_new(AST_LET_STMT, peek(p)->pos);
+	if (!node) return NULL;
+	/* `var name = expr` is inferred, unlike a typed `name type = expr`. */
+	if (!expect(p, TOKEN_IDENTIFIER, "variable name")) {
+		ast_free(node);
+		return NULL;
+	}
+	node->as.let_stmt.name = dup_cstr(prev(p)->lexeme);
+	node->as.let_stmt.mutable = 1;
+	node->as.let_stmt.type_name = NULL;
+	if (!node->as.let_stmt.name || !expect(p, TOKEN_ASSIGN, "=")) {
 		ast_free(node);
 		return NULL;
 	}
