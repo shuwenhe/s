@@ -81,7 +81,7 @@ func (lexer* self) skip_ignored() ((), lex_error) {
             self.advance()
             continue
         }
-        if self.match_text("//") {
+        if self.match_text("
             for !self.is_eof() && self.peek() != "\n" {
                 self.advance()
             }

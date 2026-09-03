@@ -215,7 +215,7 @@ func validate_recovery_semantics(string source, semantic_error[] diagnostics) in
         errors = errors + add_error(source, diagnostics, "e3027", "recover coverage exceeds deferred handlers", "recover")
     }
     if panic_count > 0 && count_token_text(source, "return") == 0 {
-        errors = errors + add_error(source, diagnostics, "e3032", "panic path requires explicit return or recovery bridge", "panic"
+        errors = errors + add_error(source, diagnostics, "e3032", "panic path requires explicit return or recovery bridge", "panic")
     }
     if recover_count > 0 && panic_count == 0 {
         errors = errors + add_error(source, diagnostics, "e3033", "recover without panic path may break semantic equivalence", "recover")
@@ -295,15 +295,12 @@ func append_anchor_summaries(semantic_error[] diagnostics) semantic_error[] {
         if d.anchor != "" {
             at := find_anchor_summary_index(summaries, d.anchor)
             if at < 0 {
-                summaries.push(semantic_error {
-                    code: "s0001",
-                    message: "anchor summary",
-                    stage: "semantic", chain_id chain_id_from_anchor(d.anchor), upstream_code d.code,
-                    severity: "warning",
-                    hint: "multiple diagnostics share recovery anchor " + d.anchor, anchor d.anchor, tier 3, repeat_count d.repeat_count, line d.line, column d.column,
-                })
+                summary := make_anchor_summary(d)
+                summaries = append(summaries, summary)
             } else {
-                summaries[at].repeat_count = summaries[at].repeat_count + d.repeat_count
+                summary := summaries[at]
+                summary.repeat_count = summary.repeat_count + d.repeat_count
+                summaries[at] = summary
             }
         }
         i = i + 1
@@ -316,6 +313,16 @@ func append_anchor_summaries(semantic_error[] diagnostics) semantic_error[] {
         i = i + 1
     }
     out
+}
+
+func make_anchor_summary(semantic_error diagnostic) semantic_error {
+    return semantic_error {
+        code: "s0001",
+        message: "anchor summary",
+        stage: "semantic", chain_id chain_id_from_anchor(diagnostic.anchor), upstream_code diagnostic.code,
+        severity: "warning",
+        hint: "multiple diagnostics share recovery anchor " + diagnostic.anchor, anchor diagnostic.anchor, tier 3, repeat_count diagnostic.repeat_count, line diagnostic.line, column diagnostic.column,
+    }
 }
 
 func find_anchor_summary_index(semantic_error[] diagnostics, string anchor) int {
@@ -791,7 +798,7 @@ func find_trait_binding(trait_binding[] traits, string name) option[trait_bindin
     i := 0
     for i < len(traits) {
         if traits[i].name == name || traits[i].name == base_type_name(name) {
-            return option.some(traits[i]
+            return option.some(traits[i])
         }
         i = i + 1
     }
@@ -802,7 +809,7 @@ func find_trait_method(trait_binding trait_info, string name) option[method_bind
     i := 0
     for i < len(trait_info.methods) {
         if trait_info.methods[i].name == name {
-            return option.some(trait_info.methods[i]
+            return option.some(trait_info.methods[i])
         }
         i = i + 1
     }
@@ -914,7 +921,7 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     result := infer_block_expr(method.body.unwrap(), env, expected_return, functions, traits, source, diagnostics)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
         if !same_type(expected_return, result.type_name) {
-            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "method return type mismatch", method.sig.name
+            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "method return type mismatch", method.sig.name)
         }
     }
     pre_errors + result.errors
@@ -951,7 +958,7 @@ func check_function(function_decl function_decl, function_binding[] functions, t
     result := infer_block_expr(function_decl.body.unwrap(), env, expected_return, functions, traits, source, diagnostics)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
         if !same_type(expected_return, result.type_name) {
-            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "function return type mismatch", function_decl.sig.name
+            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "function return type mismatch", function_decl.sig.name)
         }
     }
     pre_errors + result.errors
@@ -1042,17 +1049,17 @@ func check_stmt(stmt stmt, type_binding[] env, string expected_return, function_
             rhs := infer_expr(value.value, env, expected_return, functions, traits, source, diagnostics)
             errors := rhs.errors
             if is_unknown(target_type) {
-                return errors + add_error(source, diagnostics, "e3002", "assignment to undefined name", value.name
+                return errors + add_error(source, diagnostics, "e3002", "assignment to undefined name", value.name)
             }
             if !types_compatible(target_type, rhs.type_name) {
-                return errors + add_error(source, diagnostics, "e3003", "assignment type mismatch", value.name
+                return errors + add_error(source, diagnostics, "e3003", "assignment type mismatch", value.name)
             }
             errors
         }
         stmt.increment(value) : {
             ty := lookup_name_type(env, value.name)
             if !types_compatible("int", ty) {
-                return add_error(source, diagnostics, "e3005", "increment requires int", value.name
+                return add_error(source, diagnostics, "e3005", "increment requires int", value.name)
             }
             0
         }
@@ -1074,13 +1081,13 @@ func check_stmt(stmt stmt, type_binding[] env, string expected_return, function_
                 option.some(expr) : {
                     expr_result := infer_expr(expr, env, expected_return, functions, traits, source, diagnostics)
                     if is_borrow_expr(expr) {
-                        return expr_result.errors + add_error(source, diagnostics, "e3053", "borrowed reference cannot be returned because its lifetime is not proven", "return"
+                        return expr_result.errors + add_error(source, diagnostics, "e3053", "borrowed reference cannot be returned because its lifetime is not proven", "return")
                     }
                     if expected_return == "()" {
-                        return expr_result.errors + add_error(source, diagnostics, "e3007", "unexpected return value", "return"
+                        return expr_result.errors + add_error(source, diagnostics, "e3007", "unexpected return value", "return")
                     }
                     if !types_compatible(expected_return, expr_result.type_name) {
-                        return expr_result.errors + add_error(source, diagnostics, "e3008", "return type mismatch", "return"
+                        return expr_result.errors + add_error(source, diagnostics, "e3008", "return type mismatch", "return")
                     }
                     expr_result.errors
                 }
@@ -1088,7 +1095,7 @@ func check_stmt(stmt stmt, type_binding[] env, string expected_return, function_
                     if expected_return == "()" {
                         return 0
                     }
-                    add_error(source, diagnostics, "e3009", "missing return value", "return"
+                    add_error(source, diagnostics, "e3009", "missing return value", "return")
                 }
             }
         }
@@ -1506,32 +1513,32 @@ func bind_pattern(pattern pattern, string expected_type, type_binding[] bindings
             if base == "option" {
                 if variant == "some" {
                     if len(value.args) != 1 {
-                        return add_error(source, diagnostics, "e2004", "some payload arity mismatch", value.path
+                        return add_error(source, diagnostics, "e2004", "some payload arity mismatch", value.path)
                     }
-                    return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics
+                    return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics)
                 }
                 if variant == "none" {
                     if len(value.args) == 0 {
                         return 0
                     }
-                    return add_error(source, diagnostics, "e2004", "none must not have payload", value.path
+                    return add_error(source, diagnostics, "e2004", "none must not have payload", value.path)
                 }
-                return add_error(source, diagnostics, "e2006", "invalid option constructor", value.path
+                return add_error(source, diagnostics, "e2006", "invalid option constructor", value.path)
             }
             if base == "result" {
                 if variant == "ok" {
                     if len(value.args) != 1 {
-                        return add_error(source, diagnostics, "e2004", "ok payload arity mismatch", value.path
+                        return add_error(source, diagnostics, "e2004", "ok payload arity mismatch", value.path)
                     }
-                    return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics
+                    return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics)
                 }
                 if variant == "err" {
                     if len(value.args) != 1 {
-                        return add_error(source, diagnostics, "e2004", "err payload arity mismatch", value.path
+                        return add_error(source, diagnostics, "e2004", "err payload arity mismatch", value.path)
                     }
-                    return bind_pattern(value.args[0], second_type_arg(expected_type), bindings, source, diagnostics
+                    return bind_pattern(value.args[0], second_type_arg(expected_type), bindings, source, diagnostics)
                 }
-                return add_error(source, diagnostics, "e2006", "invalid result constructor", value.path
+                return add_error(source, diagnostics, "e2006", "invalid result constructor", value.path)
             }
             add_error(source, diagnostics, "e2006", "variant pattern not allowed for this type", value.path)
         }
@@ -1546,7 +1553,7 @@ func add_binding(type_binding[] bindings, string name, string type_name, string 
     for i < len(bindings) {
         if bindings[i].name == name {
             if !types_compatible(bindings[i].type_name, type_name) {
-                return add_error(source, diagnostics, "e2008", "conflicting binding type in pattern", name
+                return add_error(source, diagnostics, "e2008", "conflicting binding type in pattern", name)
             }
             return 0
         }

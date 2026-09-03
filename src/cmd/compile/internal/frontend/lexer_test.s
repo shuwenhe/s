@@ -243,7 +243,7 @@ func test_lexer_operators() int {
 }
 
 func test_lexer_line_comments() int {
-    source := "x := 5 // this is a comment
+    source := "x := 5
 y := 10
     lex := lexer_new(source)
 
