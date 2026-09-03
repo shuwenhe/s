@@ -34,7 +34,7 @@ func (gen* direct_code_generator) generate_function_epilogue() {
 func (gen* direct_code_generator) generate_text_section() string {
     result := ".section\t.text\n"
     p := gen.main_code.first()
-    while p != nil {
+    for p != nil {
         result = result + p.as_string + "\n"
         p = p.next
     }
@@ -44,7 +44,7 @@ func (gen* direct_code_generator) generate_text_section() string {
 func (gen* direct_code_generator) generate_data_section() string {
     result := ".section\t.data\n"
     p := gen.data_section.first()
-    while p != nil {
+    for p != nil {
         result = result + p.as_string + "\n"
         p = p.next
     }

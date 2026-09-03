@@ -135,7 +135,7 @@ func (wba* write_barrier_analysis) get_barriers_in_range(int start, int end) wri
 
 func (wba* write_barrier_analysis) optimize_barriers() {
     i := 0
-    while i < wba.barriers.len() {
+    for i < wba.barriers.len() {
         if i + 1 < wba.barriers.len() {
             if wba.barriers[i].target_var == wba.barriers[i + 1].target_var &&
                wba.barriers[i].instr_id + 1 == wba.barriers[i + 1].instr_id {

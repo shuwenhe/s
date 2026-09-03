@@ -27,7 +27,7 @@ func make_reg_alloc_state() reg_alloc_state {
     state.free_regs = int[]()
     state.next_stack_offset = 0
     i := 0
-    while i < 15 {
+    for i < 15 {
         state.free_regs = append(state.free_regs, i)
         i = i + 1
     }
@@ -45,7 +45,7 @@ func (s* reg_alloc_state) allocate_register(int value_id, int position) int {
         reg := s.free_regs[0]
         new_free := int[]()
         i := 1
-        while i < len(s.free_regs) {
+        for i < len(s.free_regs) {
             new_free = append(new_free, s.free_regs[i])
             i = i + 1
         }
@@ -70,7 +70,7 @@ func (s* reg_alloc_state) get_stack_size() int {
 
 func (s* reg_alloc_state) get_allocation(int value_id) (int, int) {
     i := 0
-    while i < s.range_count {
+    for i < s.range_count {
         if s.ranges[i].value_id == value_id {
             s.ranges[i].reg, s.ranges[i].stack_offset
         }
@@ -92,11 +92,11 @@ func overlap_intervals(interval a, interval b) bool {
 func (s* reg_alloc_state) try_allocate_free_reg(int value_id, interval iv) int {
     reg_candidate := -1
     i := 0
-    while i < len(s.free_regs) {
+    for i < len(s.free_regs) {
         reg := s.free_regs[i]
         conflict := false
         j := 0
-        while j < s.range_count {
+        for j < s.range_count {
             if s.ranges[j].reg == reg {
                 range_iv := interval { s.ranges[j].start, s.ranges[j].end }
                 if overlap_intervals(iv, range_iv) {
