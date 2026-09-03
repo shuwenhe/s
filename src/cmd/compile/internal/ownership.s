@@ -61,8 +61,8 @@ func ownership_contains(string[] names, string name) bool {
     false
 }
 
-// Validate linear ownership events and produce scope-exit drop glue.
-// Events are declare:name:type, move:name, use:name, and scope_exit.
+
+
 func ownership_check_events(string[] events) ownership_result {
     slots := ownership_slot[] {}
     moved := string[] {}
@@ -115,7 +115,7 @@ func ownership_check_events(string[] events) ownership_result {
                 errors = errors + 1
                 message = message + "move-after-move:" + payload + ";"
             } else if is_copy_type(slots[slot_id].type_name) {
-                // Copy values remain available after a move expression.
+
             } else {
                 moved = append(moved, payload)
             }
