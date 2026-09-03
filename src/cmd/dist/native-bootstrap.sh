@@ -45,6 +45,28 @@ run_with_timeout() {
     fi
 }
 
+run_with_progress() {
+    label=$1
+    shift
+    "$@" &
+    pid=$!
+    while kill -0 "$pid" 2>/dev/null; do
+        state=$(ps -o stat= -p "$pid" 2>/dev/null || true)
+        case "$state" in
+            Z*) break ;;
+        esac
+        sleep 10
+        if kill -0 "$pid" 2>/dev/null; then
+            printf '%s\n' "    still working: $label"
+        fi
+    done
+    set +e
+    wait "$pid"
+    status=$?
+    set -e
+    return "$status"
+}
+
 fail() {
     printf '%s\n' "native bootstrap failed: $*" >&2
     exit 1
@@ -75,10 +97,15 @@ compile_native_stage() {
     assembly="${output}.S"
     object="${output}.o"
     printf '%s\n' "  compiling $input -> $assembly"
-    run_with_timeout "$compiler" --emit-asm "$input" "$assembly"
+    run_with_progress "compiling $input" \
+        run_with_timeout "$compiler" --emit-asm "$input" "$assembly"
+    printf '%s\n' "  generated $assembly"
+    printf '%s\n' "  assembling $assembly -> $object"
     "$assembler" --64 -o "$object" "$assembly"
+    printf '%s\n' "  linking $output"
     "$linker" -static -T "$root/src/runtime/linker/nostdlib.ld" \
         -o "$output" "$runtime_object" "$object"
+    printf '%s\n' "  verifying $output"
 }
 
 run_conformance() {
@@ -89,8 +116,12 @@ run_conformance() {
     object="$work/${name}.o"
     binary="$work/${name}"
     printf '%s\n' "  compiling $source -> $assembly"
-    run_with_timeout "$compiler" --emit-asm "$source" "$assembly"
+    run_with_progress "compiling $source" \
+        run_with_timeout "$compiler" --emit-asm "$source" "$assembly"
+    printf '%s\n' "  generated $assembly"
+    printf '%s\n' "  assembling $assembly -> $object"
     "$assembler" --64 -o "$object" "$assembly"
+    printf '%s\n' "  linking $binary"
     "$linker" -static -T "$root/src/runtime/linker/nostdlib.ld" \
         -o "$binary" "$runtime_object" "$object"
     verify_stage "$binary"
