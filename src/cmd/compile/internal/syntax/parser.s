@@ -232,7 +232,7 @@ func parser_parse_receiver(p* parser) {
 func parser_parse_params(p* parser) {
     if parser_current_token(p).type_ == 24 {
         parser_advance(p)
-        while parser_current_token(p).type_ != 25 {
+        for parser_current_token(p).type_ != 25 {
             if parser_current_token(p).type_ == 85 {
                 parser_advance(p)
             }
@@ -512,7 +512,7 @@ func parser_parse_postfix(p* parser) ast_node* {
             parser_advance(p)
             call := alloc(ast_node)
             call.type_ = ast_call_expr
-            while parser_current_token(p).type_ != 25 {
+            for parser_current_token(p).type_ != 25 {
                 parser_parse_expression(p)
                 if parser_current_token(p).type_ == 58 {
                     parser_advance(p)

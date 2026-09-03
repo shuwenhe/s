@@ -71,7 +71,7 @@ func (cp* compiler_pipeline) compile_multiple_functions() string {
     cp.codegen.emit_const_i64(100, 0)
     cp.codegen.generate_function_epilogue()
     p := cp.codegen.main_code.first()
-    while p != nil {
+    for p != nil {
         result = result + p.as_string + "\n"
         p = p.next
     }

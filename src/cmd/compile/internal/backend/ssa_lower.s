@@ -15,7 +15,7 @@ func make_ssa_to_machine(codegen_context* ctx, ssa_function* func) ssa_to_machin
 
 func (tm* ssa_to_machine) lower_block(ssa_block* b) {
     i := 0
-    while i < len(b.values) {
+    for i < len(b.values) {
         value_id := b.values[i]
         tm.lower_value(value_id)
         i = i + 1
@@ -91,7 +91,7 @@ func (tm* ssa_to_machine) generate() prog_list {
     tm.ctx.current_func = tm.func.name
     tm.ctx.emit_prologue()
     i := 0
-    while i < tm.func.block_count {
+    for i < tm.func.block_count {
         tm.lower_block(&tm.func.blocks[i])
         i = i + 1
     }
