@@ -61,8 +61,6 @@ func ownership_contains(string[] names, string name) bool {
     false
 }
 
-
-
 func ownership_check_events(string[] events) ownership_result {
     slots := ownership_slot[] {}
     moved := string[] {}

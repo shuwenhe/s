@@ -91,7 +91,6 @@ func (rp reloc_processor*) AddSymbol(sym symbol_entry) i32 {
 func (rp reloc_processor*) AllocateGOTEntry(symIndex i32, relocType reloc_type) i64 {
 	offset := rp.GOTOffset
 	rp.GOTOffset += 8 
-
 	
 	reloc := relocation{
 		Offset: offset,
@@ -108,7 +107,6 @@ func (rp reloc_processor*) AllocatePLTEntry(symIndex i32, gotIndex i64) i64 {
 	pltSize := i64(16)
 	offset := rp.PLTOffset
 	rp.PLTOffset += pltSize
-
 	
 	
 	
@@ -134,7 +132,6 @@ func (rp reloc_processor*) ResolveSymbols() {
 		if found {
 			
 			existingSym := rp.SymbolTable[existing]
-
 			
 			if sym.Binding == 1 && existingSym.Binding == 2 { 
 				symbolMap[sym.Name] = i32(i)
@@ -153,14 +150,12 @@ func (rp reloc_processor*) ApplyRelocations(targetBuffer u8[]) error {
 
 		sym := rp.SymbolTable[reloc.SymIndex]
 		targetAddr := reloc.Offset
-
 		
 		if targetAddr < 0 || targetAddr+8 > i64(len(targetBuffer)) {
 			continue
 		}
 
 		value := i64(0)
-
 		
 		switch reloc.Type {
 		case RELOC_ABSOLUTE:
@@ -180,7 +175,6 @@ func (rp reloc_processor*) ApplyRelocations(targetBuffer u8[]) error {
 		case RELOC_TLS_IE:
 			value = rp.AllocateGOTEntry(reloc.SymIndex, RELOC_TLS_IE)
 		}
-
 		
 		binary.LittleEndian.PutUint64(targetBuffer[targetAddr:], u64(value))
 	}
@@ -194,7 +188,6 @@ func (rp reloc_processor*) ValidateRelocations() error {
 		if reloc.SymIndex < 0 || reloc.SymIndex >= i32(len(rp.SymbolTable)) {
 			fmt.Printf("Warning: Invalid symbol index %d in relocation %d\n", reloc.SymIndex, i)
 		}
-
 		
 		if reloc.SectionIndex < 0 || reloc.SectionIndex >= i32(len(rp.SectionTable)) {
 			fmt.Printf("Warning: Invalid section index %d in relocation %d\n", reloc.SectionIndex, i)
