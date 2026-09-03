@@ -47,10 +47,7 @@ func malloc(int size) int {
     }
     ptr := heap_top
     heap_top = heap_top + size
-    remainder := heap_top % 16
-    if remainder != 0 {
-        heap_top = heap_top + (16 - remainder)
-    }
+    heap_top = (heap_top + 15) & -16
     ptr
 }
 
