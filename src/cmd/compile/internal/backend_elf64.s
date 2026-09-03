@@ -239,6 +239,80 @@ struct abi_behavior_entry {
     string abi_summary
 }
 
+func build_object(string path, string output, string ssa_margin_override) int {
+    source_result := read_to_string(path)
+    if source_result.is_err() {
+        return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message)
+    }
+    source := source_result.unwrap()
+    parsed_result := load_source_graph(path, source)
+    if parsed_result.is_err() {
+        return report_failure(parsed_result.unwrap_err().message)
+    }
+    parsed := parsed_result.unwrap()
+    if !should_skip_semantic_check(path) && check_text(source) != 0 {
+        return report_failure("semantic check failed")
+    }
+    mir_result := lower_main_to_mir(parsed)
+    if mir_result.is_err() {
+        return report_failure("mir lowering failed: " + mir_result.unwrap_err())
+    }
+    graph := mir_result.unwrap()
+    arch := buildcfg_goarch()
+    margin_result := parse_ssa_margin_override(ssa_margin_override)
+    if margin_result.is_err() {
+        return report_failure(margin_result.unwrap_err().message)
+    }
+    dominant_margin := margin_result.unwrap()
+    midend := run_midend_pipeline(graph)
+    ssa_program := build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
+    ssa_text := dump_ssa_pipeline(ssa_program)
+    if ssa_text == "" {
+        return report_failure("ssa lowering failed: empty pipeline")
+    }
+    debug_map := dump_ssa_debug_map(ssa_program)
+    if debug_map == "" {
+        return report_failure("ssa debug map failed: empty map")
+    }
+    abi_runtime_check := validate_ssa_abi_contracts(arch, ssa_text)
+    if abi_runtime_check.is_err() {
+        return report_failure(abi_runtime_check.unwrap_err().message)
+    }
+    abi_check := validate_abi_coverage(arch)
+    if abi_check.is_err() {
+        return report_failure(abi_check.unwrap_err().message)
+    }
+    writes_result := compile_writes(parsed, graph)
+    if writes_result.is_err() {
+        return report_failure(writes_result.unwrap_err().message)
+    }
+    exit_code_result := compile_exit_code(parsed, graph)
+    if exit_code_result.is_err() {
+        return report_failure(exit_code_result.unwrap_err().message)
+    }
+    temp_dir_result := make_temp_dir("s-object-")
+    if temp_dir_result.is_err() {
+        return report_failure("could not create temporary output directory: " + temp_dir_result.unwrap_err().message)
+    }
+    temp_dir := temp_dir_result.unwrap()
+    asm_path := temp_dir + "/out.s"
+    asm_text := emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
+    write_result := write_text_file(asm_path, asm_text)
+    if write_result.is_err() {
+        return report_failure("failed to write assembly: " + write_result.unwrap_err().message)
+    }
+    as_argv := string[]()
+    as_argv = append(as_argv, "as")
+    as_argv = append(as_argv, "-o")
+    as_argv = append(as_argv, output)
+    as_argv = append(as_argv, asm_path)
+    as_result := run_process(as_argv)
+    if as_result.is_err() {
+        return report_failure("toolchain failed: " + as_result.unwrap_err().message)
+    }
+    0
+}
+
 func build(string path, string output, string ssa_margin_override, bool nostdlib) int {
     source_result := read_to_string(path)
     if source_result.is_err() {
@@ -1498,7 +1572,7 @@ func normalize_go_symbol(string text) string {
 
 func strip_go_asm_comment(string line) string {
     out := line
-    slash := index_of(out, "
+    slash := index_of(out, "//")
     if slash >= 0 {
         out = slice(out, 0, slash)
     }

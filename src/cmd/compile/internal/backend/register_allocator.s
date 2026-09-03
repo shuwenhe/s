@@ -169,8 +169,8 @@ struct spill_reload_action {
     bool reload
 }
 
-// Generate both sides of each spill. The backend can lower these actions to
-// target-specific loads and stores after register allocation.
+
+
 func register_allocator_spill_reload_plan(register_allocator* allocator) spill_reload_action[] {
     actions := spill_reload_action[]()
     for i := 0; i < allocator.intervals.len(); i = i + 1 {

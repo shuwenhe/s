@@ -5,13 +5,13 @@ import (
 	"src/os"
 )
 
-// Mach-O 常量
+
 const (
 	MACHO_MAGIC_64 = 0xfeedf00f
 	MACHO_MAGIC_FAT = 0xcafebabe
 )
 
-// Mach-O CPU 类型
+
 enum macho_machine {
 	CPU_TYPE_I386 = 7
 	CPU_TYPE_X86 = 7
@@ -22,7 +22,7 @@ enum macho_machine {
 	CPU_TYPE_POWERPC64 = 0x01000012
 }
 
-// Mach-O 文件类型
+
 enum macho_file_type {
 	MH_OBJECT = 0x1
 	MH_EXECUTE = 0x2
@@ -37,7 +37,7 @@ enum macho_file_type {
 	MH_KEXT_BUNDLE = 0xb
 }
 
-// Mach-O Header
+
 struct macho_header {
 	magic          u32
 	cpu_type        i32
@@ -46,17 +46,17 @@ struct macho_header {
 	num_commands    u32
 	commands_size   u32
 	flags          u32
-	reserved       u32  // 仅在 64-bit
+	reserved       u32  
 }
 
-// Mach-O Load Command
+
 struct macho_load_command {
 	cmd  u32
 	size u32
 	data u8[]
 }
 
-// Mach-O Segment Command
+
 struct macho_segment {
 	name         [16]u8
 	vm_addr       u64
@@ -70,7 +70,7 @@ struct macho_segment {
 	sections macho_section[]
 }
 
-// Mach-O section
+
 struct macho_section {
 	name       [16]u8
 	seg_name    [16]u8
@@ -86,7 +86,7 @@ struct macho_section {
 	reserved3  u32
 }
 
-// Mach-O 对象
+
 struct macho_object {
 	header       macho_header
 	load_commands macho_load_command[]
@@ -95,7 +95,7 @@ struct macho_object {
 	strings u8[]
 }
 
-// Mach-O 符号
+
 struct macho_symbol {
 	name    string
 	value   u64
@@ -104,7 +104,7 @@ struct macho_symbol {
 	type    u8
 }
 
-// 创建 Mach-O 对象
+
 func new_macho_object(cpuType macho_machine, filetype macho_file_type) macho_object {
 	obj := macho_object{
 		Header: macho_header{
@@ -126,21 +126,21 @@ func new_macho_object(cpuType macho_machine, filetype macho_file_type) macho_obj
 	obj
 }
 
-// 添加 segment
+
 func (mo macho_object*) AddSegment(name string, vmAddr i64, vmSize i64) {
 	seg := macho_segment{
 		VmAddr: u64(vmAddr),
 		VmSize: u64(vmSize),
 		FileOffset: 0,
 		FileSize: 0,
-		MaxProt: 3,  // VM_PROT_READ | VM_PROT_WRITE
-		InitProt: 1, // VM_PROT_READ
+		MaxProt: 3,  
+		InitProt: 1, 
 		NumSections: 0,
 		Flags: 0,
 		Sections: make(macho_section[], 0),
 	}
 
-	// 复制名称
+	
 	nameBytes := u8[](name)
 	for i := i32(0); i < 16 && i < i32(len(nameBytes)); i += 1 {
 		seg.Name[i] = nameBytes[i]
@@ -149,12 +149,12 @@ func (mo macho_object*) AddSegment(name string, vmAddr i64, vmSize i64) {
 	mo.Segments = append(mo.Segments, seg)
 }
 
-// 添加符号
+
 func (mo macho_object*) AddSymbol(sym macho_symbol) {
 	mo.SymbolTable = append(mo.SymbolTable, sym)
 }
 
-// 从文件读取 Mach-O
+
 func ReadMachoObject(string filename) (macho_object, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -162,7 +162,7 @@ func ReadMachoObject(string filename) (macho_object, error) {
 	}
 	defer file.Close()
 
-	// 读取头部
+	
 	hdrBuf := make(u8[], 32)
 	_, err = file.Read(hdrBuf)
 	if err != nil {
@@ -186,7 +186,7 @@ func ReadMachoObject(string filename) (macho_object, error) {
 	obj, nil
 }
 
-// 将 Mach-O 对象写入文件
+
 func (macho_object* mo) WriteToFile(string filename) error {
 	file, err := os.Create(filename)
 	if err != nil {
@@ -194,7 +194,7 @@ func (macho_object* mo) WriteToFile(string filename) error {
 	}
 	defer file.Close()
 
-	// 写入 Mach-O 头
+	
 	hdrBuf := make(u8[], 32)
 
 	binary.LittleEndian.PutUint32(hdrBuf[0:4], mo.Header.Magic)
@@ -211,7 +211,7 @@ func (macho_object* mo) WriteToFile(string filename) error {
 		err
 	}
 
-	// 写入 load commands
+	
 	for _, cmd := range mo.LoadCommands {
 		cmdBuf := make(u8[], 8)
 		binary.LittleEndian.PutUint32(cmdBuf[0:4], cmd.Cmd)

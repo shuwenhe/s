@@ -7,7 +7,7 @@ struct parser {
     errors: array
 }
 
-// Token values shared with the S frontend lexer.
+
 const token_and = 57
 const token_or = 58
 const token_bit_and = 60
@@ -67,7 +67,7 @@ const token_colon = 88
 const token_semicolon = 89
 const token_newline = 99
 
-// AST ABI mirrored from ast.s until S module imports are available.
+
 const ast_program = 1
 const ast_package = 2
 const ast_import = 3
