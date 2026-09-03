@@ -3,7 +3,7 @@ use std.fs.write_text_file
 use std.io.eprintln
 use std.io_syscall.mkdir
 use std.process.run_process
-extern "intrinsic" func host_args() []string;
+extern "intrinsic" func host_args() string[];
 func main() {
     args := host_args()
     compiler_src := "./src/cmd/compile/selfhost/compiler.s"

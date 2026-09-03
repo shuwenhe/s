@@ -45,7 +45,7 @@ func main() {
         eprintln("ERROR: Cannot write temp assembly file: " + temp_asm)
         return 5
     }
-    io_write(asm_file, []byte(asm_code))
+    io_write(asm_file, byte[](asm_code))
     eprintln("[✓] Generated " + sprintf("%d", len(asm_code)) + " bytes of assembly")
     eprintln("[4/4] Assembling and linking with gcc...")
     link_cmd := "gcc -o " + output_bin + " " + temp_asm + " -no-pie"
@@ -74,5 +74,5 @@ func generate_x86_64(ir_program program) (string, error) {
 }
 
 struct ir_program {
-    functions: []struct{}
+    functions: struct[]{}
 }

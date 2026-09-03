@@ -30,7 +30,7 @@ func make_s_compiler_full() s_compiler_full {
     }
 }
 
-func (compiler* s_compiler_full) compile_and_generate_object() []int8 {
+func (compiler* s_compiler_full) compile_and_generate_object() int8[] {
     compiler.codegen.gen_main_function()
     machine_code := compiler.mcg.stream.get_code()
     compiler.elf_gen.text_section = machine_code
@@ -38,7 +38,7 @@ func (compiler* s_compiler_full) compile_and_generate_object() []int8 {
     elf_object
 }
 
-func (compiler* s_compiler_full) compile_and_generate_executable() []int8 {
+func (compiler* s_compiler_full) compile_and_generate_executable() int8[] {
     compiler.codegen.gen_main_function()
     machine_code := compiler.mcg.stream.get_code()
     compiler.elf_gen.text_section = machine_code
@@ -172,7 +172,7 @@ func generate_complete_demo_report() string {
     report
 }
 
-func byte_array_to_hex([]int8 data) string {
+func byte_array_to_hex(int8[] data) string {
     result := ""
     i := 0
     for i < len(data) {
@@ -217,7 +217,7 @@ func int_to_string(int value) string {
     result + digits
 }
 
-func compile_s_source(string source*) []int8 {
+func compile_s_source(string source*) int8[] {
     lexer* := lexer_new(source)
     lexer_tokenize(lexer)
     tokens* := lexer_get_tokens(lexer)
@@ -241,7 +241,7 @@ func compile_s_source(string source*) []int8 {
     return object_code
 }
 
-func compile_s_to_executable(string source*) []int8 {
+func compile_s_to_executable(string source*) int8[] {
     lexer* := lexer_new(source)
     lexer_tokenize(lexer)
     tokens* := lexer_get_tokens(lexer)

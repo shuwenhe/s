@@ -27,7 +27,7 @@ struct func_decl {
 struct func_sig {
     param[] params
     option[string] return_type_name
-    []string generics
+    string[] generics
 }
 
 struct param { string name, string type_name }

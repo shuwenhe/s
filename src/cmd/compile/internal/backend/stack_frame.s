@@ -153,6 +153,6 @@ func stack_frame_emit_epilogue(stack_frame frame, ctx* codegen_context) {
 struct codegen_context {
     module ir_module
     instrs x86_instruction[]
-    labels []string
+    labels string[]
     current_func ir_function
 }

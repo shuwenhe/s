@@ -17,7 +17,7 @@ struct linker_config {
 	format             object_format
 	machine            i16
 	output_file         string
-	input_files []string
+	input_files string[]
 	symbol_strip_mode    i32  
 	optimize_level      i32
 	generate_debug_info  bool
