@@ -31,11 +31,15 @@ machine executing the compiler; `S_TARGET_OS` and `S_TARGET_ARCH` describe the
 binary being produced. They need not be equal for compilation, but a bootstrap
 stage can execute only on its target or through `S_BOOTSTRAP_RUNNER`.
 
-The current independently executable compiler backend is **Linux/amd64 ELF**.
-The C seed compiler runs on Linux and macOS and can report a requested target,
-but Darwin/arm64 Mach-O emission and its native self-host runtime are not yet
-implemented. This prevents macOS from being incorrectly advertised as a native
-self-host target.
+The independently executable compiler backend is **Linux/amd64 ELF**. On an
+Apple Silicon Mac, `make darwin-arm64-hosted-compiler` builds a native
+`Mach-O/arm64` compiler whose compiler program is `compiler.s`; its bootstrap
+runtime is still supplied by the trusted C seed. It is therefore a native Mac
+compiler, but not yet a C-free, converged S self-host chain. Direct Mach-O
+code generation begins with `make darwin-arm64-slice-check`: its ARM64
+instruction selection is implemented in `compiler.s` and produces a runnable
+Mach-O binary for the arithmetic/call bootstrap slice. The Darwin self-host
+runtime and the remaining language constructs remain the next frontier.
 
 Inspect the active target with:
 

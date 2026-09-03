@@ -20,7 +20,7 @@ target-config-check: seed-compiler-bin
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=linux S_TARGET_ARCH=amd64 ./misc/scripts/target-info.sh | grep -q '^standalone_backend=linux/amd64 ELF$$'
 	@S_TARGET_OS=linux S_TARGET_ARCH=amd64 ./bin/s_seed --target-info | grep -q '^standalone backend: available$$'
 	@S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --target-info | grep -q '^configured target: darwin/arm64 (macho)$$'
-	@S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --target-info | grep -q '^standalone backend: unavailable'
+	@S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --target-info | grep -q '^standalone backend: available$$'
 	@! S_TARGET_OS=plan9 S_TARGET_ARCH=amd64 ./bin/s_seed --target-info >/dev/null 2>&1
 	@echo "Target configuration checks passed"
 
@@ -287,6 +287,31 @@ seed-hosted-selfhost: bootstrap-convergence
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/stage2 ./bin/s
 	@echo "Installed seed-hosted S compiler: ./bin/s"
 	@echo "Note: this artifact is not yet a true native self-hosted compiler"
+
+# Darwin/arm64 has a native, hosted stage1: compiler semantics come from the
+# S implementation in compiler.s, while the temporary C seed runtime provides
+# the bootstrap execution substrate.  Keep its output distinct from bin/s so a
+# Linux/amd64 true-selfhost artifact can never be overwritten accidentally.
+darwin-arm64-hosted-compiler: seed-compiler-bin
+	@mkdir -p $(SELFHOST_DIR)/darwin-arm64 ./bin
+	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/darwin-arm64/compiler.ir
+	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=darwin S_TARGET_ARCH=arm64 \
+	  ./bin/s_seed --emit-aot $(SELFHOST_DIR)/darwin-arm64/compiler.ir ./bin/s_darwin_arm64
+	@file ./bin/s_darwin_arm64 | grep -q 'Mach-O 64-bit executable arm64'
+	@echo "Installed Darwin/arm64 hosted S compiler: ./bin/s_darwin_arm64"
+
+# Exercise the direct S -> ARM64 assembly path without using the C backend for
+# instruction selection.  The C seed only constructs the initial S compiler.
+darwin-arm64-slice-check: darwin-arm64-hosted-compiler
+	@mkdir -p $(SELFHOST_DIR)/darwin-arm64
+	@./bin/s_darwin_arm64 --emit-asm-darwin-arm64 test/aot/basic.s $(SELFHOST_DIR)/darwin-arm64/basic.s
+	@clang -arch arm64 -mmacosx-version-min=14.0 -c -o $(SELFHOST_DIR)/darwin-arm64/basic.o $(SELFHOST_DIR)/darwin-arm64/basic.s
+	@ld -arch arm64 -e _start -platform_version macos 14.0 14.0 \
+	  -syslibroot "$$(xcrun --show-sdk-path)" -lSystem \
+	  -o $(SELFHOST_DIR)/darwin-arm64/basic $(SELFHOST_DIR)/darwin-arm64/basic.o
+	@$(SELFHOST_DIR)/darwin-arm64/basic; rc=$$?; test $$rc -eq 42
+	@file $(SELFHOST_DIR)/darwin-arm64/basic | grep -q 'Mach-O 64-bit executable arm64'
+	@echo "Darwin/arm64 direct S backend slice passed"
 
 native-selfhost: selfhost
 
@@ -697,7 +722,7 @@ selfhost-runtime-check:
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
 
-.PHONY: benchmark help target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test test-quick test-full build-parallel selfhost-full
+.PHONY: benchmark help target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test darwin-arm64-hosted-compiler darwin-arm64-slice-check test-quick test-full build-parallel selfhost-full
 
 benchmark: seed-compiler-bin
 	@sh test/benchmarks/run.sh
@@ -712,6 +737,8 @@ help:
 	@echo "  make build-arm64"
 	@echo "  make target-info S_TARGET_OS=linux S_TARGET_ARCH=amd64"
 	@echo "  make target-config-check"
+	@echo "  make darwin-arm64-hosted-compiler # Build a native macOS/ARM64 S compiler"
+	@echo "  make darwin-arm64-slice-check     # Verify direct S -> Mach-O/ARM64 codegen"
 	@echo "  make seed-tests"
 	@echo "  make seed-runtime-regression"
 	@echo "  make seed-network-tests"

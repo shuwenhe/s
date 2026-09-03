@@ -486,7 +486,7 @@ int main(int argc, char **argv) {
 			return 2;
 		}
 		printf("configured target: %s\n", detail);
-		printf("standalone backend: %s\n", s_target_platform_supports_standalone(&target) ? "available" : "unavailable (implemented: linux/amd64 ELF)");
+		printf("standalone backend: %s\n", s_target_platform_supports_standalone(&target) ? "available" : "unavailable (implemented: linux/amd64 ELF, darwin/arm64 Mach-O hosted)");
 		return 0;
 	}
 	if (argc >= 2 && strcmp(argv[1], "--emit-bin") == 0) {
