@@ -5,12 +5,10 @@ import (
 	"src/os"
 )
 
-
 const (
 	MACHO_MAGIC_64 = 0xfeedf00f
 	MACHO_MAGIC_FAT = 0xcafebabe
 )
-
 
 enum macho_machine {
 	CPU_TYPE_I386 = 7
@@ -21,7 +19,6 @@ enum macho_machine {
 	CPU_TYPE_POWERPC = 18
 	CPU_TYPE_POWERPC64 = 0x01000012
 }
-
 
 enum macho_file_type {
 	MH_OBJECT = 0x1
@@ -37,7 +34,6 @@ enum macho_file_type {
 	MH_KEXT_BUNDLE = 0xb
 }
 
-
 struct macho_header {
 	magic          u32
 	cpu_type        i32
@@ -49,13 +45,11 @@ struct macho_header {
 	reserved       u32  
 }
 
-
 struct macho_load_command {
 	cmd  u32
 	size u32
 	data u8[]
 }
-
 
 struct macho_segment {
 	name         [16]u8
@@ -69,7 +63,6 @@ struct macho_segment {
 	flags        u32
 	sections macho_section[]
 }
-
 
 struct macho_section {
 	name       [16]u8
@@ -86,7 +79,6 @@ struct macho_section {
 	reserved3  u32
 }
 
-
 struct macho_object {
 	header       macho_header
 	load_commands macho_load_command[]
@@ -95,7 +87,6 @@ struct macho_object {
 	strings u8[]
 }
 
-
 struct macho_symbol {
 	name    string
 	value   u64
@@ -103,7 +94,6 @@ struct macho_symbol {
 	desc    u16
 	type    u8
 }
-
 
 func new_macho_object(cpuType macho_machine, filetype macho_file_type) macho_object {
 	obj := macho_object{
@@ -125,7 +115,6 @@ func new_macho_object(cpuType macho_machine, filetype macho_file_type) macho_obj
 
 	obj
 }
-
 
 func (mo macho_object*) AddSegment(name string, vmAddr i64, vmSize i64) {
 	seg := macho_segment{
@@ -149,11 +138,9 @@ func (mo macho_object*) AddSegment(name string, vmAddr i64, vmSize i64) {
 	mo.Segments = append(mo.Segments, seg)
 }
 
-
 func (mo macho_object*) AddSymbol(sym macho_symbol) {
 	mo.SymbolTable = append(mo.SymbolTable, sym)
 }
-
 
 func ReadMachoObject(string filename) (macho_object, error) {
 	file, err := os.Open(filename)
@@ -185,7 +172,6 @@ func ReadMachoObject(string filename) (macho_object, error) {
 
 	obj, nil
 }
-
 
 func (macho_object* mo) WriteToFile(string filename) error {
 	file, err := os.Create(filename)

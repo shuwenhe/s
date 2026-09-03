@@ -1,8 +1,3 @@
-
-
-
-
-
 package ssa
 
 struct rule {
@@ -20,7 +15,6 @@ struct rules_engine {
     int[] transform_count
 }
 
-
 func (engine* rules_engine) init() void {
     engine.rules = vec()
     engine.rules_by_opcode = map()
@@ -30,7 +24,6 @@ func (engine* rules_engine) init() void {
     engine.register_algebraic_rules()
     engine.register_expr_rules()
 }
-
 
 func (engine* rules_engine) register_const_fold_rules() void {
     
@@ -98,7 +91,6 @@ func (engine* rules_engine) register_const_fold_rules() void {
     
     
 }
-
 
 func (engine* rules_engine) register_algebraic_rules() void {
     
@@ -186,7 +178,6 @@ func (engine* rules_engine) register_algebraic_rules() void {
     
 }
 
-
 func (engine* rules_engine) register_expr_rules() void {
     
     engine.add_rule(rule {
@@ -235,7 +226,6 @@ func (engine* rules_engine) register_expr_rules() void {
     })
 }
 
-
 func (engine* rules_engine) add_rule(r rule) void {
     engine.rules.push(r)
     
@@ -243,7 +233,6 @@ func (engine* rules_engine) add_rule(r rule) void {
     
     
 }
-
 
 func (engine* rules_engine) apply_block(block* basic_block) int {
     let total_transforms := 0
@@ -286,7 +275,6 @@ func (engine* rules_engine) apply_block(block* basic_block) int {
     return total_transforms
 }
 
-
 func (engine* rules_engine) apply_func(func* ir_func) int {
     let total := 0
     
@@ -296,7 +284,6 @@ func (engine* rules_engine) apply_func(func* ir_func) int {
     
     return total
 }
-
 
 func ir_equals(a, b IR) bool {
     if a.opcode != b.opcode {
@@ -319,10 +306,6 @@ func replace_instruction(block* basic_block, old_instr, new_instr IR) void {
         }
     }
 }
-
-
-
-
 
 func main() void {
     

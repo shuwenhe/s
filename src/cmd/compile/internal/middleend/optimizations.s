@@ -23,18 +23,15 @@ func run_optimization_pipeline(ir_module module*) {
     for f_idx := 0; f_idx < module.functions.len(); f_idx = f_idx + 1 {
         func := module.functions[f_idx]
 
-
         cfg := cfg_new(func)
         cfg_compute_dominators(&cfg)
         cfg_compute_post_dominators(&cfg)
         cfg_compute_dominance_frontier(&cfg)
 
-
         opt_constant_folding(&cfg)
         opt_dead_code_elimination(&cfg)
         opt_constant_propagation(&cfg)
         opt_global_value_numbering(&cfg)
-
 
     }
 }
@@ -46,7 +43,6 @@ func opt_constant_folding(cfg* control_flow_graph) {
         for i := 0; i < block.instructions.len(); i = i + 1 {
             instr := block.instructions[i]
 
-
             if instr.instr_type == ir_instr_binop {
                 left := instr.operands[0]
                 right := instr.operands[1]
@@ -54,7 +50,6 @@ func opt_constant_folding(cfg* control_flow_graph) {
                 if left.value_type == ir_value_const && right.value_type == ir_value_const {
 
                     result := opt_fold_constant(instr.opcode, left.const_value, right.const_value)
-
 
                     new_instr := ir_instr_binop(instr.opcode,
                                                ir_value_const(result, instr.result.type_info),
@@ -112,14 +107,12 @@ func opt_dead_code_elimination(cfg* control_flow_graph) {
         for i := 0; i < block.instructions.len(); i = i + 1 {
             instr := block.instructions[i]
 
-
             if instr.instr_type == ir_instr_store ||
                instr.instr_type == ir_instr_call ||
                instr.instr_type == ir_instr_return {
                 new_instrs = append(new_instrs, instr)
                 continue
             }
-
 
             is_used := 0
             for j := i + 1; j < block.instructions.len(); j = j + 1 {
@@ -131,7 +124,6 @@ func opt_dead_code_elimination(cfg* control_flow_graph) {
                 }
             }
 
-
             if is_used == 0 {
                 for l := 0; l < dfa.liveness.len(); l = l + 1 {
                     if dfa.liveness[l].block_id == block.block_id {
@@ -141,7 +133,6 @@ func opt_dead_code_elimination(cfg* control_flow_graph) {
                     }
                 }
             }
-
 
             if is_used != 0 {
                 new_instrs = append(new_instrs, instr)
@@ -161,14 +152,12 @@ func opt_constant_propagation(cfg* control_flow_graph) {
         for i := 0; i < block.instructions.len(); i = i + 1 {
             instr := block.instructions[i]
 
-
             if instr.result.value_type == ir_value_var &&
                instr.operands.len() == 1 &&
                instr.operands[0].value_type == ir_value_const {
 
                 constants[instr.result.var_name] = instr.operands[0]
             }
-
 
             for j := 0; j < instr.operands.len(); j = j + 1 {
                 if instr.operands[j].value_type == ir_value_var {
@@ -193,14 +182,11 @@ func opt_global_value_numbering(cfg* control_flow_graph) {
         for i := 0; i < block.instructions.len(); i = i + 1 {
             instr := block.instructions[i]
 
-
             signature := opt_compute_instruction_signature(instr)
-
 
             if signature != "" && value_map[signature].result.value_id != 0 {
 
                 prev_result := value_map[signature].result
-
 
                 new_instrs = append(new_instrs, instr)
             } else {
@@ -241,12 +227,10 @@ func opt_licm(cfg* control_flow_graph, loop_info[] loops) {
     for loop_idx := 0; loop_idx < loops.len(); loop_idx = loop_idx + 1 {
         loop := loops[loop_idx]
 
-
         invariant_instrs := ir_instruction[]()
 
         for b_idx := 0; b_idx < cfg.blocks.len(); b_idx = b_idx + 1 {
             block := cfg.blocks[b_idx]
-
 
             is_in_loop := 0
             for l_idx := 0; l_idx < loop.body_blocks.len(); l_idx = l_idx + 1 {
@@ -259,10 +243,8 @@ func opt_licm(cfg* control_flow_graph, loop_info[] loops) {
                 continue
             }
 
-
             for i := 0; i < block.instructions.len(); i = i + 1 {
                 instr := block.instructions[i]
-
 
                 is_invariant := 1
                 for j := 0; j < instr.operands.len(); j = j + 1 {
@@ -278,7 +260,6 @@ func opt_licm(cfg* control_flow_graph, loop_info[] loops) {
                 }
             }
         }
-
 
         if invariant_instrs.len() > 0 && loop.header_id >= 0 {
             header_block := cfg.blocks[loop.header_id]

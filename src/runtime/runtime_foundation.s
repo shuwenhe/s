@@ -1,10 +1,6 @@
 package src.runtime
 use std.option.option
 
-
-
-
-
 const runtime_feature_gc = 1
 const runtime_feature_scheduler = 2
 const runtime_feature_channels = 4
@@ -21,8 +17,6 @@ func runtime_features() int {
         runtime_feature_syscall + runtime_feature_profile + runtime_feature_race
 }
 
-
-
 func runtime_gc_alloc(int size, int type_id) int {
     object_id := malloc(size, type_id)
     if object_id >= 0 {
@@ -34,8 +28,6 @@ func runtime_gc_alloc(int size, int type_id) int {
 func runtime_gc_collect() () {
     force_gc()
 }
-
-
 
 func runtime_schedule_step() bool {
     started := __runtime_nanotime()
@@ -55,8 +47,6 @@ func runtime_spawn(int entry_id, string name) int {
 func runtime_yield() () {
     sroutine_yield()
 }
-
-
 
 struct runtime_stack_segment {
     int[] words
@@ -134,8 +124,6 @@ func runtime_stack_pop(runtime_stack* self) int {
     value
 }
 
-
-
 struct runtime_defer_record {
     func callback
     bool active
@@ -184,8 +172,6 @@ func runtime_recover(runtime_panic_state* self) string {
     message
 }
 
-
-
 struct runtime_type {
     int id
     string name
@@ -205,8 +191,6 @@ func runtime_type_of(int id, string name, int size, int pointer_words) runtime_t
 func runtime_value_assignable(runtime_value value, runtime_type target) bool {
     value.type.id == target.id
 }
-
-
 
 extern "intrinsic" func __syscall0(int nr) int;
 extern "intrinsic" func __syscall1(int nr, int a1) int;

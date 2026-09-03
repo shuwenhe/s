@@ -4,12 +4,9 @@ struct dataflow_analysis {
     function ir_function
     cfg control_flow_graph
 
-
     liveness liveness_info[]
 
-
     reaching_defs reaching_def_info[]
-
 
     use_def_chains use_def_chain[]
 }
@@ -90,22 +87,18 @@ func dfa_analyze_liveness(cfg* control_flow_graph) liveness_info[] {
 
     n := cfg.blocks.len()
 
-
     for i := 0; i < n; i = i + 1 {
         liveness = append(liveness, liveness_info {
             block_id: i, live_in int_set_new(), live_out int_set_new()
         })
     }
 
-
     for iteration := 0; iteration < 1000; iteration = iteration + 1 {
         changed := 0
-
 
         for i := n - 1; i >= 0; i = i - 1 {
             block := cfg.blocks[i]
             old_live_in := liveness[i].live_in
-
 
             new_live_out := int_set_new()
             for j := 0; j < block.successors.len(); j = j + 1 {
@@ -114,12 +107,10 @@ func dfa_analyze_liveness(cfg* control_flow_graph) liveness_info[] {
             }
             liveness[i].live_out = new_live_out
 
-
             new_live_in := dfa_compute_use_def(block)
             new_live_in = int_set_union(new_live_in,
                                         int_set_difference(new_live_out, dfa_compute_def(block)))
             liveness[i].live_in = new_live_in
-
 
             if old_live_in.values.len() != new_live_in.values.len() {
                 changed = 1
@@ -140,7 +131,6 @@ func dfa_compute_use_def(cfg_block block) int_set {
     for i := 0; i < block.instructions.len(); i = i + 1 {
         instr := block.instructions[i]
 
-
         for j := 0; j < instr.operands.len(); j = j + 1 {
             operand := instr.operands[j]
             if operand.value_type == ir_value_var || operand.value_type == ir_value_param {
@@ -158,7 +148,6 @@ func dfa_compute_def(cfg_block block) int_set {
     for i := 0; i < block.instructions.len(); i = i + 1 {
         instr := block.instructions[i]
 
-
         if instr.result.value_id != 0 {
             int_set_add(&def_set, instr.result.value_id)
         }
@@ -172,13 +161,11 @@ func dfa_analyze_reaching_defs(cfg* control_flow_graph) reaching_def_info[] {
 
     n := cfg.blocks.len()
 
-
     for i := 0; i < n; i = i + 1 {
         reaching_defs = append(reaching_defs, reaching_def_info {
             block_id: i, def_in int_set_new(), def_out int_set_new()
         })
     }
-
 
     for iteration := 0; iteration < 1000; iteration = iteration + 1 {
         changed := 0
@@ -187,7 +174,6 @@ func dfa_analyze_reaching_defs(cfg* control_flow_graph) reaching_def_info[] {
             block := cfg.blocks[i]
             old_def_out := reaching_defs[i].def_out
 
-
             new_def_in := int_set_new()
             for j := 0; j < block.predecessors.len(); j = j + 1 {
                 pred_id := block.predecessors[j]
@@ -195,12 +181,10 @@ func dfa_analyze_reaching_defs(cfg* control_flow_graph) reaching_def_info[] {
             }
             reaching_defs[i].def_in = new_def_in
 
-
             gen := dfa_compute_gen(block)
             kill := dfa_compute_kill(block)
             new_def_out := int_set_union(gen, int_set_difference(new_def_in, kill))
             reaching_defs[i].def_out = new_def_out
-
 
             if old_def_out.values.len() != new_def_out.values.len() {
                 changed = 1
@@ -257,7 +241,6 @@ func dfa_build_use_def_chains(cfg* control_flow_graph, reaching_def_info[] reach
         for instr_idx := 0; instr_idx < block.instructions.len(); instr_idx = instr_idx + 1 {
             instr := block.instructions[instr_idx]
 
-
             for op_idx := 0; op_idx < instr.operands.len(); op_idx = op_idx + 1 {
                 operand := instr.operands[op_idx]
 
@@ -265,7 +248,6 @@ func dfa_build_use_def_chains(cfg* control_flow_graph, reaching_def_info[] reach
                     chain := use_def_chain {
                         use_instr_id: instr.result.value_id, def_instr_ids int[]()
                     }
-
 
                     for def_id := 0; def_id < reaching_defs[block_idx].def_in.values.len(); def_id = def_id + 1 {
                         if reaching_defs[block_idx].def_in.values[def_id] == operand.value_id {
