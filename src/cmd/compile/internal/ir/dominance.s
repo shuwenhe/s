@@ -18,9 +18,9 @@ func new_dominator_tree(num_blocks i32) dominator_tree* {
     
     for i := i32(0); i < num_blocks; i += 1 {
         dt.immediate_dominator[i] = -1
-        dt.dom_children[i] = new i32[]()
-        dt.dom_frontier[i] = new i32[]()
-        dt.strict_dom_frontier[i] = new i32[]()
+        dt.dom_children[i] = i32[]()
+        dt.dom_frontier[i] = i32[]()
+        dt.strict_dom_frontier[i] = i32[]()
         dt.computed[i] = false
     }
     dt
@@ -164,12 +164,12 @@ func (dt dominator_tree*) get_dom_children(block i32) i32[] {
     if block >= 0 && block < i32(len(dt.dom_children)) {
         return dt.dom_children[block]
     }
-    new i32[]()
+    i32[]()
 }
 
 func (dt dominator_tree*) get_dominance_frontier(block i32) i32[] {
     if block >= 0 && block < i32(len(dt.dom_frontier)) {
         return dt.dom_frontier[block]
     }
-    new i32[]()
+    i32[]()
 }

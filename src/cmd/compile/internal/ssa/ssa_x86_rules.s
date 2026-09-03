@@ -25,7 +25,7 @@ struct x86_rule_engine {
 func x86_rule_engine_new() x86_rule_engine* {
     engine := x86_rule_engine {
         rule_count: 0,
-        rules: new x86_rule[256],
+        rules: x86_rule[256],
         pattern_count: 0,
     }
     &engine

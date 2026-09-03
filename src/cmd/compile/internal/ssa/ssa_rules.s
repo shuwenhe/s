@@ -34,8 +34,8 @@ func rule_engine_new() rule_engine* {
     engine := rule_engine {
         rule_count: 0,
         pattern_count: 0,
-        rules: new rule[512],
-        patterns: new pattern[1024],
+        rules: rule[512],
+        patterns: pattern[1024],
         stats_applied: 0,
         stats_optimizations: 0,
     }
@@ -341,7 +341,7 @@ func (engine* rule_engine) run_on_block(value[] block_values) int {
     for i < len(block_values) {
         v := block_values[i]
         
-        result_val, result_op := engine.apply_rules(v.op, v.args, new int[16])
+        result_val, result_op := engine.apply_rules(v.op, v.args, int[16])
         
         if result_op != v.op {
             engine.stats_applied = engine.stats_applied + 1

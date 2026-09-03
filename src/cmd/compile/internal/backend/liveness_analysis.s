@@ -36,19 +36,19 @@ func liveness_analyzer_new(int block_count, int var_count) liveness_analyzer* {
     analyzer := liveness_analyzer {
         block_count: block_count,
         var_count: var_count,
-        block_liveness: new liveness_set[block_count],
-        block_killed: new int[][block_count],
-        block_used: new int[][block_count],
+        block_liveness: liveness_set[block_count],
+        block_killed: int[][block_count],
+        block_used: int[][block_count],
     }
 
     i := 0
     for i < block_count {
-        analyzer.block_liveness[i].live_in = new int[var_count]
-        analyzer.block_liveness[i].live_out = new int[var_count]
+        analyzer.block_liveness[i].live_in = int[var_count]
+        analyzer.block_liveness[i].live_out = int[var_count]
         analyzer.block_liveness[i].num_vars = var_count
 
-        analyzer.block_killed[i] = new int[var_count]
-        analyzer.block_used[i] = new int[var_count]
+        analyzer.block_killed[i] = int[var_count]
+        analyzer.block_used[i] = int[var_count]
 
         j := 0
         for j < var_count {
@@ -189,7 +189,7 @@ func stack_frame_new(int num_spills, int num_locals, int num_args) stack_frame* 
         callee_saved_offset: 0,
         local_vars_offset: 0,
         arg_area_offset: 0,
-        slot_to_var: new int[256],
+        slot_to_var: int[256],
         slot_count: 0,
     }
 

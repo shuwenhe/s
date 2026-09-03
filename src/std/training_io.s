@@ -53,7 +53,7 @@ func default_meta() checkpoint_meta {
 
 func initial_train_state() train_state {
     train_state {
-        global_step: 0, current_loss 5.0, best_loss 5.0, best_step 0, training_complete false, loss_history new float[20], grad_norm 0.0, learning_rate 0.001, epoch_time_ms 0, total_time_ms 0, tokens_per_second 0.0,
+        global_step: 0, current_loss 5.0, best_loss 5.0, best_step 0, training_complete false, loss_history float[20], grad_norm 0.0, learning_rate 0.001, epoch_time_ms 0, total_time_ms 0, tokens_per_second 0.0,
     }
 }
 
@@ -213,7 +213,7 @@ func update_manifest(string manifest_path, string new_ckpt_path) void {
 
 func list_checkpoints(string manifest_path) string[] {
     var r = _read_file(manifest_path)
-    if !result_is_ok(r) { return new string[0] }
+    if !result_is_ok(r) { return string[0] }
     string content = get_result_string(r)
     string[] paths = split_lines(content)
     paths
@@ -266,7 +266,7 @@ struct training_log_entry {
     int elapsed_ms
     string message
 }
-var _log_entries = new training_log_entry[5000]
+var _log_entries = training_log_entry[5000]
 var _log_count = 0
 
 func log_entry(int step, float loss, float best_loss, float grad_n, float lr, int ms, string msg) void {
@@ -374,7 +374,7 @@ func split_lines(string text) string[] {
         if text[i] == char(10) { count = count + 1 }
         i = i + 1
     }
-    string[] result = new string[count]
+    string[] result = string[count]
     string current = ""
     int idx = 0
     i = 0

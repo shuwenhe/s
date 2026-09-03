@@ -28,17 +28,17 @@ struct stack_frame {
 func liveness_set_new(int block_count, int value_count) liveness_set* {
     liveness_set* lv = new liveness_set
     
-    lv.gen = new int*[block_count]
-    lv.kill = new int*[block_count]
-    lv.in_set = new int*[block_count]
-    lv.out_set = new int*[block_count]
+    lv.gen = int*[block_count]
+    lv.kill = int*[block_count]
+    lv.in_set = int*[block_count]
+    lv.out_set = int*[block_count]
     
     int i = 0
     for i = 0; i < block_count; i = i + 1 {
-        lv.gen[i] = new int[value_count]
-        lv.kill[i] = new int[value_count]
-        lv.in_set[i] = new int[value_count]
-        lv.out_set[i] = new int[value_count]
+        lv.gen[i] = int[value_count]
+        lv.kill[i] = int[value_count]
+        lv.in_set[i] = int[value_count]
+        lv.out_set[i] = int[value_count]
         
         int j = 0
         for j = 0; j < value_count; j = j + 1 {
@@ -163,7 +163,7 @@ func compute_liveness(ssa_function* func, liveness_set* lv) int {
 
 func stack_frame_new(int value_count) stack_frame* {
     stack_frame* frame = new stack_frame
-    frame.slots = new stack_slot*[value_count]
+    frame.slots = stack_slot*[value_count]
     frame.slot_count = 0
     frame.total_size = 0
     frame.alignment = 8
@@ -260,11 +260,11 @@ func compute_gc_pointer_map(ssa_function* func, liveness_set* lv) int*[] {
         return 0
     }
     
-    int*[] pointer_maps = new int*[func.block_count]
+    int*[] pointer_maps = int*[func.block_count]
     
     int i = 0
     for i = 0; i < func.block_count; i = i + 1 {
-        pointer_maps[i] = new int[1000]
+        pointer_maps[i] = int[1000]
         
         int j = 0
         for j = 0; j < lv.value_count; j = j + 1 {

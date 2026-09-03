@@ -24,8 +24,8 @@ struct debug_loc_propagator {
 
 func new_debug_loc_propagator() debug_loc_propagator* {
     dlp := new(debug_loc_propagator)
-    dlp.loc_infos = new debug_loc_info[]()
-    dlp.file_locations = new source_location[]()
+    dlp.loc_infos = debug_loc_info[]()
+    dlp.file_locations = source_location[]()
     dlp.scope_stack = make(string[], 100)
     dlp.current_depth = 0
     dlp
@@ -159,7 +159,7 @@ func (dlp debug_loc_propagator*) get_location(instr_id i32) source_location {
 }
 
 func (debug_loc_propagator* dlp) get_locations_by_file(string filename) debug_loc_info[] {
-    result := new debug_loc_info[]()
+    result := debug_loc_info[]()
     for info in dlp.loc_infos {
         if info.loc.filename == filename {
             result = append(result, info)
@@ -169,7 +169,7 @@ func (debug_loc_propagator* dlp) get_locations_by_file(string filename) debug_lo
 }
 
 func (dlp debug_loc_propagator*) get_locations_by_scope(scope string) debug_loc_info[] {
-    result := new debug_loc_info[]()
+    result := debug_loc_info[]()
     for info in dlp.loc_infos {
         if info.scope == scope {
             result = append(result, info)
@@ -193,7 +193,7 @@ func (dlp debug_loc_propagator*) compute_line_maps() map[string]i32[] {
     for info in dlp.loc_infos {
         filename := info.loc.filename
         if line_map[filename] == nil {
-            line_map[filename] = new i32[]()
+            line_map[filename] = i32[]()
         }
     }
     

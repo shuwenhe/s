@@ -42,8 +42,8 @@ func new_debug_info(int num_instructions) debug_info {
     debug_info {
         scopes: debug_scope[](),
         variables: debug_variable[](),
-        instr_locations: new source_location[num_instructions],
-        line_numbers: new int[num_instructions],
+        instr_locations: source_location[num_instructions],
+        line_numbers: int[num_instructions],
         file_names: string[](),
         num_instructions: num_instructions
     }

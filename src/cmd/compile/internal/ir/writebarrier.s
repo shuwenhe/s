@@ -29,7 +29,7 @@ func new_write_barrier_analysis(int num_vars) write_barrier_analysis {
     write_barrier_analysis {
         barriers: write_barrier[](),
         gc_safe_points: int[](),
-        var_needs_barrier: new bool[num_vars],
+        var_needs_barrier: bool[num_vars],
         num_vars: num_vars
     }
 }

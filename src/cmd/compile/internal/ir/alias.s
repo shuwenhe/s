@@ -22,7 +22,7 @@ struct alias_analysis {
 
 func new_alias_analysis(num_values i32) alias_analysis* {
     aa := new(alias_analysis)
-    aa.relations = new alias_relation[]()
+    aa.relations = alias_relation[]()
     aa.may_alias_matrix = make(i32[][], num_values)
     aa.must_alias_matrix = make(i32[][], num_values)
     aa.value_names = make(string[], num_values)

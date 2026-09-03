@@ -27,8 +27,8 @@ struct loop_context {
 
 func loop_new_context() loop_context {
     ctx := loop_context {
-        loops: new loop_info[1000],
-        invariants: new invariant_expr[10000],
+        loops: loop_info[1000],
+        invariants: invariant_expr[10000],
         loop_count: 0,
         invariant_count: 0
     }

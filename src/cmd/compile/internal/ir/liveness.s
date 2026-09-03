@@ -32,8 +32,8 @@ func (la* liveness_analysis) add_variable(int var_id) {
         var_id: var_id,
         first_use: -1,
         last_use: -1,
-        live_in_blocks: new bool[la.num_blocks],
-        live_out_blocks: new bool[la.num_blocks],
+        live_in_blocks: bool[la.num_blocks],
+        live_out_blocks: bool[la.num_blocks],
         live_range: int[]()
     }
 

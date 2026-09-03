@@ -92,9 +92,9 @@ func build_interference_graph(live_range*[] ranges, int range_count) interferenc
     }
     
     interference_graph* graph = new interference_graph
-    graph.adjacency = new int*[range_count]
-    graph.node_colors = new int[range_count]
-    graph.spill_costs = new int[range_count]
+    graph.adjacency = int*[range_count]
+    graph.node_colors = int[range_count]
+    graph.spill_costs = int[range_count]
     graph.node_count = range_count
     graph.color_count = 16
     
@@ -102,7 +102,7 @@ func build_interference_graph(live_range*[] ranges, int range_count) interferenc
     int j = 0
     
     for i = 0; i < range_count; i = i + 1 {
-        graph.adjacency[i] = new int[range_count]
+        graph.adjacency[i] = int[range_count]
         graph.node_colors[i] = -1
         graph.spill_costs[i] = 0
         
@@ -232,7 +232,7 @@ func allocate_registers(ssa_function* func) int {
         return -1
     }
     
-    live_range*[] ranges = new live_range*[func.value_count]
+    live_range*[] ranges = live_range*[func.value_count]
     int range_count = compute_live_ranges(func, ranges)
     
     if range_count <= 0 {
@@ -315,7 +315,7 @@ func regalloc_greedy_graph_coloring(ssa_function* func) int {
         return -1
     }
     
-    live_range*[] ranges = new live_range*[func.value_count]
+    live_range*[] ranges = live_range*[func.value_count]
     int range_count = compute_live_ranges(func, ranges)
     
     interference_graph* graph = build_interference_graph(ranges, range_count)

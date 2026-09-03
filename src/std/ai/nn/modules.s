@@ -15,7 +15,7 @@ struct module {
 
 func module_init(string name, string type_name) module {
     module {
-        name: name, type_name type_name, parameters new auto_grad_tensor[0], buffers new_map(),
+        name: name, type_name type_name, parameters auto_grad_tensor[0], buffers new_map(),
     }
 }
 
@@ -97,7 +97,7 @@ func new_embedding(int num_embed, int embed_dim, int pad_idx) embedding {
 
 func forward(embedding self, int[] token_ids, int batch_size, int seq_len) auto_grad_tensor {
     int num_tokens = batch_size * seq_len
-    float[] emb_values = new float[num_tokens * self.embedding_dim]
+    float[] emb_values = float[num_tokens * self.embedding_dim]
     int i = 0
     for i < num_tokens {
         int token_id = token_ids[i]
@@ -234,7 +234,7 @@ func forward(multi_head_attention self, auto_grad_tensor x, tensor mask) auto_gr
 }
 
 func make_causal_mask(int seq_len) tensor {
-    float[] vals = new float[seq_len * seq_len]
+    float[] vals = float[seq_len * seq_len]
     int i = 0
     for i < seq_len {
         int j = 0

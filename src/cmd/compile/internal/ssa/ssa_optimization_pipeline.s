@@ -11,7 +11,7 @@ optimization_pass*[] optimization_passes
 int optimization_pass_count
 
 func init_optimization_pipeline() int {
-    optimization_passes = new optimization_pass*[100]
+    optimization_passes = optimization_pass*[100]
     optimization_pass_count = 0
     
     add_optimization_pass("const_folding", 100, 1)

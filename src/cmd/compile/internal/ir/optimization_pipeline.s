@@ -21,13 +21,13 @@ struct compiler_pipeline {
 
 func new_compiler_pipeline() compiler_pipeline* {
     cp := new(compiler_pipeline)
-    cp.functions = new ssa_function*[]()
-    cp.dominators = new dominator_tree*[]()
-    cp.liveness_analyses = new liveness_analyzer*[]()
-    cp.alias_analyses = new alias_analysis*[]()
-    cp.write_barriers = new wb_inserter*[]()
-    cp.debug_propagators = new debug_loc_propagator*[]()
-    cp.computed = new bool[]()
+    cp.functions = ssa_function*[]()
+    cp.dominators = dominator_tree*[]()
+    cp.liveness_analyses = liveness_analyzer*[]()
+    cp.alias_analyses = alias_analysis*[]()
+    cp.write_barriers = wb_inserter*[]()
+    cp.debug_propagators = debug_loc_propagator*[]()
+    cp.computed = bool[]()
     cp
 }
 

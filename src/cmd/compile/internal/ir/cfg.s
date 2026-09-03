@@ -71,8 +71,8 @@ func (cfg* control_flow_graph) add_edge(int from, int to, string edge_type) {
 
 func (cfg* control_flow_graph) compute_dominators() {
     n := cfg.blocks.len()
-    cfg.immediate_dominator = new int[n]
-    cfg.dominator_tree = new int[][n]
+    cfg.immediate_dominator = int[n]
+    cfg.dominator_tree = int[][n]
 
     for i in 0..n {
         cfg.dominator_tree[i] = int[]()
@@ -130,8 +130,8 @@ func (cfg* control_flow_graph) intersect_dominators(int b1, int b2) int {
 
 func (cfg* control_flow_graph) compute_post_dominators() {
     n := cfg.blocks.len()
-    cfg.immediate_post_dominator = new int[n]
-    cfg.post_dominator_tree = new int[][n]
+    cfg.immediate_post_dominator = int[n]
+    cfg.post_dominator_tree = int[][n]
 
     for i in 0..n {
         cfg.post_dominator_tree[i] = int[]()
@@ -189,7 +189,7 @@ func (cfg* control_flow_graph) intersect_post_dominators(int b1, int b2) int {
 
 func (cfg* control_flow_graph) compute_dominance_frontier() {
     n := cfg.blocks.len()
-    cfg.dominance_frontier = new int[][n]
+    cfg.dominance_frontier = int[][n]
 
     for i in 0..n {
         cfg.dominance_frontier[i] = int[]()

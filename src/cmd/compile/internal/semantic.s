@@ -72,6 +72,7 @@ struct const_eval_int_result {
 struct signature_match {
     bool ok
     string return_type
+    string instance_name
     int score
     int generic_bind_count
     int unknown_arg_count
@@ -1906,7 +1907,7 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
     if len(binding.param_types) != len(arg_types) {
         return signature_match {
             ok: false,
-            return_type: "unknown", score 0, generic_bind_count 0, unknown_arg_count 0,
+            return_type: "unknown", instance_name: "", score 0, generic_bind_count 0, unknown_arg_count 0,
         }
     }
     generic_bindings := type_binding[]()
@@ -1929,15 +1930,48 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
         if !matched {
             return signature_match {
                 ok: false,
-                return_type: "unknown", score 0, generic_bind_count 0, unknown_arg_count 0,
+                return_type: "unknown", instance_name: "", score 0, generic_bind_count 0, unknown_arg_count 0,
             }
         }
         score = score + match_specificity(expected_ref, actual_ref, binding.generic_names)
         i = i + 1
     }
     signature_match {
-        ok: true, return_type instantiate_type(binding.return_type, binding.generic_names, generic_bindings), score score, generic_bind_count len(generic_bindings), unknown_arg_count unknown_arg_count,
+        ok: true, return_type instantiate_type(binding.return_type, binding.generic_names, generic_bindings), instance_name specialized_instance_name(binding, generic_bindings), score score, generic_bind_count len(generic_bindings), unknown_arg_count unknown_arg_count,
     }
+}
+
+func specialized_instance_name(function_binding binding, type_binding[] bindings) string {
+    if len(binding.generic_names) == 0 {
+        return binding.name
+    }
+    name := binding.name + "__mono"
+    i := 0
+    for i < len(binding.generic_names) {
+        bound := lookup_name_type(bindings, binding.generic_names[i])
+        if is_unknown(bound) {
+            bound = "unknown"
+        }
+        name = name + "_" + mono_type_name(bound)
+        i = i + 1
+    }
+    name
+}
+
+func mono_type_name(string type_name) string {
+    out := ""
+    i := 0
+    for i < len(type_name) {
+        ch := string(type_name[i])
+        if ch == "&" { out = out + "ref"
+        } else if ch == "[" { out = out + "arr"
+        } else if ch == "]" { out = out + "end"
+        } else if ch == " " || ch == "," { out = out + "_"
+        } else { out = out + ch }
+        i = i + 1
+    }
+    if out == "" { return "unknown" }
+    out
 }
 
 func better_match(signature_match left, signature_match right) bool {

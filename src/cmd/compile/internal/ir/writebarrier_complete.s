@@ -25,7 +25,7 @@ struct wb_inserter {
 
 func new_wb_inserter(i32 num_values) wb_inserter* {
     wbi := new(wb_inserter)
-    wbi.barriers = new wb_info[]()
+    wbi.barriers = wb_info[]()
     wbi.num_barriers = 0
     wbi.is_heap_allocated = make(bool[], num_values)
     wbi.is_pointer_type = make(bool[], num_values)
@@ -125,7 +125,7 @@ func (wb_inserter* wbi) insert_interface_write_barrier(i32 instr_id, i32 iface_p
 }
 
 func (wb_inserter* wbi) get_barriers_for_instruction(i32 instr_id) wb_info[] {
-    result := new wb_info[]()
+    result := wb_info[]()
     for info in wbi.barriers {
         if info.instr_id == instr_id {
             result = append(result, info)
@@ -135,7 +135,7 @@ func (wb_inserter* wbi) get_barriers_for_instruction(i32 instr_id) wb_info[] {
 }
 
 func (wb_inserter* wbi) get_all_barriers() wb_info[] {
-    result := new wb_info[]()
+    result := wb_info[]()
     for info in wbi.barriers {
         result = append(result, info)
     }
