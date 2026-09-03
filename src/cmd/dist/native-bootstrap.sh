@@ -74,6 +74,7 @@ compile_native_stage() {
     output=$3
     assembly="${output}.S"
     object="${output}.o"
+    printf '%s\n' "  compiling $input -> $assembly"
     run_with_timeout "$compiler" --emit-asm "$input" "$assembly"
     "$assembler" --64 -o "$object" "$assembly"
     "$linker" -static -T "$root/src/runtime/linker/nostdlib.ld" \
@@ -87,6 +88,7 @@ run_conformance() {
     assembly="$work/${name}.S"
     object="$work/${name}.o"
     binary="$work/${name}"
+    printf '%s\n' "  compiling $source -> $assembly"
     run_with_timeout "$compiler" --emit-asm "$source" "$assembly"
     "$assembler" --64 -o "$object" "$assembly"
     "$linker" -static -T "$root/src/runtime/linker/nostdlib.ld" \
