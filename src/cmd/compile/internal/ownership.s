@@ -9,7 +9,7 @@ func make_decision(string ty) string {
 }
 
 func make_plan(string[] type_env) string[] {
-    plan := string[] {}
+    string[] plan
     i := 0
     for i < len(type_env) {
         ty := type_env[i]
@@ -62,10 +62,10 @@ func ownership_contains(string[] names, string name) bool {
 }
 
 func ownership_check_events(string[] events) ownership_result {
-    slots := ownership_slot[] {}
-    moved := string[] {}
-    dropped := string[] {}
-    drops := string[] {}
+    ownership_slot[] slots
+    string[] moved
+    string[] dropped
+    string[] drops
     errors := 0
     message := ""
     i := 0

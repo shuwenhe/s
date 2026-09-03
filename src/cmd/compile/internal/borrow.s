@@ -44,7 +44,7 @@ func join_text(string[] values, string sep) string {
 }
 
 func make_plan_trace(string[] type_env) string[] {
-    plan := string[] {}
+    string[] plan
     i := 0
     for i < len(type_env) {
         ty := type_env[i]
@@ -91,7 +91,7 @@ func borrow_find_slot(borrow_slot[] slots, string name) int {
 }
 
 func borrow_check_events(string[] events) borrow_check_result {
-    slots := borrow_slot[] {}
+    borrow_slot[] slots
     errors := 0
     message := ""
     i := 0
@@ -205,10 +205,10 @@ func lifetime_second_colon(string text, int first) int {
 }
 
 func lifetime_check_events(string[] events) lifetime_check_result {
-    refs := lifetime_reference[] {}
-    active_scopes := string[] {}
-    ended_scopes := string[] {}
-    ended_refs := string[] {}
+    lifetime_reference[] refs
+    string[] active_scopes
+    string[] ended_scopes
+    string[] ended_refs
     errors := 0
     message := ""
     i := 0
