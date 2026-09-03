@@ -161,7 +161,7 @@ func (aa alias_analysis*) compute_transitive_closure() {
 }
 
 func (aa alias_analysis*) get_all_aliases(v i32) i32[] {
-    aliases := new i32[]()
+    i32[] aliases
     if v >= 0 && v < aa.num_values {
         for i := i32(0); i < aa.num_values; i += 1 {
             if aa.may_alias_matrix[v][i] != 0 {

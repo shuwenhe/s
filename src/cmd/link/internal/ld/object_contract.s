@@ -153,7 +153,7 @@ func s_elf_read_rel_object(u8[] data) (s_object, int) {
 }
 
 func s_elf_write_rel_header(int machine, int shoff, int shnum, int shstrndx) u8[] {
-    header := new u8[64]
+    u8[64] header
     header[0] = 0x7f
     header[1] = 69
     header[2] = 76
