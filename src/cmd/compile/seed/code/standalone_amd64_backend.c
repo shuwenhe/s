@@ -30,6 +30,7 @@ typedef struct standalone_ir {
 } standalone_ir;
 typedef struct standalone_slot {
 	char name[STANDALONE_TEXT_CAP];
+	char reg[8];
 	int offset;
 } standalone_slot;
 typedef struct standalone_function {
@@ -39,6 +40,7 @@ typedef struct standalone_function {
 	standalone_slot slots[STANDALONE_MAX_SLOTS];
 	size_t slot_count;
 	int frame_size;
+	bool integer_only;
 } standalone_function;
 typedef struct standalone_literal {
 	char encoded[STANDALONE_TEXT_CAP];
@@ -176,6 +178,36 @@ static bool collect_operand(standalone_function *fn, const char *operand, compil
 	}
 	return true;
 }
+static void assign_local_registers(standalone_function *fn) {
+	static const char *regs[] = {"%r12", "%r13", "%r14", "%r15"};
+	size_t i;
+	for (i = 0; i < fn->slot_count && i < sizeof(regs) / sizeof(regs[0]); i++) {
+		copy_text(fn->slots[i].reg, sizeof(fn->slots[i].reg), regs[i]);
+	}
+}
+static void detect_integer_only(standalone_module *module, standalone_function *fn) {
+	size_t i;
+	fn->integer_only = true;
+	for (i = fn->begin; i < fn->end; i++) {
+		standalone_ins *ins = &module->ir.ins[i];
+		if (strcmp(ins->op, "PARAM") == 0 || strcmp(ins->op, "CALL") == 0 ||
+			strcmp(ins->op, "INDEX_GET") == 0 || strcmp(ins->op, "INDEX_SET") == 0 ||
+			is_string_literal(ins->result) || is_string_literal(ins->operand1) ||
+			is_string_literal(ins->operand2)) {
+			fn->integer_only = false;
+			return;
+		}
+		if (strcmp(ins->op, "MOV") != 0 && strcmp(ins->op, "ADD") != 0 &&
+			strcmp(ins->op, "SUB") != 0 && strcmp(ins->op, "MUL") != 0 &&
+			strcmp(ins->op, "DIV") != 0 && strcmp(ins->op, "MOD") != 0 &&
+			strncmp(ins->op, "CMP_", 4) != 0 && strcmp(ins->op, "JUMP") != 0 &&
+			strcmp(ins->op, "JUMP_IF_FALSE") != 0 && strcmp(ins->op, "LABEL") != 0 &&
+			strcmp(ins->op, "RET") != 0 && strcmp(ins->op, "NOP") != 0) {
+			fn->integer_only = false;
+			return;
+		}
+	}
+}
 static bool decode_literal(const char *encoded, standalone_literal *lit, compile_error *err) {
 	size_t i;
 	size_t n = strlen(encoded);
@@ -241,6 +273,8 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 				return false;
 			}
 			current->end = i;
+			assign_local_registers(current);
+			detect_integer_only(module, current);
 			current->frame_size = (int)(((current->slot_count * 8 + 15) / 16) * 16);
 			current = NULL;
 			continue;
@@ -314,7 +348,8 @@ static bool emit_load(FILE *out, standalone_module *module, standalone_function 
 		error_set(err, ERR_SEMANTIC, 0, 0, "unknown standalone value %s in %s", value, fn->name);
 		return false;
 	}
-	fprintf(out, "    mov %d(%%rbp), %s\n", fn->slots[slot].offset, reg);
+	if (fn->slots[slot].reg[0] != '\0') fprintf(out, "    mov %s, %s\n", fn->slots[slot].reg, reg);
+	else fprintf(out, "    mov %d(%%rbp), %s\n", fn->slots[slot].offset, reg);
 	return true;
 }
 static bool emit_store(FILE *out, standalone_function *fn, const char *name, const char *reg, compile_error *err) {
@@ -325,7 +360,8 @@ static bool emit_store(FILE *out, standalone_function *fn, const char *name, con
 		error_set(err, ERR_SEMANTIC, 0, 0, "unknown standalone destination %s in %s", name, fn->name);
 		return false;
 	}
-	fprintf(out, "    mov %s, %d(%%rbp)\n", reg, fn->slots[slot].offset);
+	if (fn->slots[slot].reg[0] != '\0') fprintf(out, "    mov %s, %s\n", reg, fn->slots[slot].reg);
+	else fprintf(out, "    mov %s, %d(%%rbp)\n", reg, fn->slots[slot].offset);
 	return true;
 }
 static const char *runtime_callee(const char *name) {
@@ -353,6 +389,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 	symbol_text(fn->name, symbol, sizeof(symbol));
 	fprintf(out, ".global s_fn_%s\n.type s_fn_%s, @function\ns_fn_%s:\n", symbol, symbol, symbol);
 	fprintf(out, "    push %%rbp\n    mov %%rsp, %%rbp\n");
+	if (fn->slot_count > 0) fprintf(out, "    push %%r12\n    push %%r13\n    push %%r14\n    push %%r15\n");
 	if (fn->frame_size > 0) fprintf(out, "    sub $%d, %%rsp\n", fn->frame_size);
 	for (i = fn->begin; i < fn->end; i++) {
 		standalone_ins *ins = &module->ir.ins[i];
@@ -399,12 +436,15 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			const char *store_name = ins->result;
 			if (!emit_load(out, module, fn, ins->operand1, "%rdi", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rsi", err)) return false;
-			/* Integers are tagged with bit 0 set; keep the common path local. */
-			fprintf(out, "    test $1, %%rdi\n    jz .Ls_%s_add_slow_%zu\n", symbol, i);
-			fprintf(out, "    test $1, %%rsi\n    jz .Ls_%s_add_slow_%zu\n", symbol, i);
-			fprintf(out, "    lea -1(%%rdi,%%rsi), %%rax\n    jmp .Ls_%s_add_done_%zu\n", symbol, i);
-			fprintf(out, ".Ls_%s_add_slow_%zu:\n    call s_value_add\n", symbol, i);
-			fprintf(out, ".Ls_%s_add_done_%zu:\n", symbol, i);
+			if (fn->integer_only) {
+				fprintf(out, "    lea -1(%%rdi,%%rsi), %%rax\n");
+			} else {
+				fprintf(out, "    test $1, %%rdi\n    jz .Ls_%s_add_slow_%zu\n", symbol, i);
+				fprintf(out, "    test $1, %%rsi\n    jz .Ls_%s_add_slow_%zu\n", symbol, i);
+				fprintf(out, "    lea -1(%%rdi,%%rsi), %%rax\n    jmp .Ls_%s_add_done_%zu\n", symbol, i);
+				fprintf(out, ".Ls_%s_add_slow_%zu:\n    call s_value_add\n", symbol, i);
+				fprintf(out, ".Ls_%s_add_done_%zu:\n", symbol, i);
+			}
 			if (i + 1 < fn->end && strcmp(module->ir.ins[i + 1].op, "MOV") == 0 &&
 				strcmp(module->ir.ins[i + 1].operand1, ins->result) == 0) {
 				store_name = module->ir.ins[i + 1].result;
@@ -445,19 +485,27 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				strcmp(module->ir.ins[i + 1].operand1, ins->result) == 0) {
 				char label[STANDALONE_TEXT_CAP];
 				symbol_text(module->ir.ins[i + 1].result, label, sizeof(label));
-				fprintf(out, "    test $1, %%rdi\n    jz .Ls_%s_cmp_branch_slow_%zu\n", symbol, i);
-				fprintf(out, "    test $1, %%rsi\n    jz .Ls_%s_cmp_branch_slow_%zu\n", symbol, i);
-				fprintf(out, "    cmp %%rsi, %%rdi\n    %s .Ls_%s_%s\n    jmp .Ls_%s_cmp_branch_done_%zu\n", falsecc, symbol, label, symbol, i);
-				fprintf(out, ".Ls_%s_cmp_branch_slow_%zu:\n    call s_value_cmp\n    cmp $0, %%rax\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n    cmp $1, %%rax\n    je .Ls_%s_%s\n", symbol, i, setcc, symbol, label);
-				fprintf(out, ".Ls_%s_cmp_branch_done_%zu:\n", symbol, i);
+				if (fn->integer_only) {
+					fprintf(out, "    cmp %%rsi, %%rdi\n    %s .Ls_%s_%s\n", falsecc, symbol, label);
+				} else {
+					fprintf(out, "    test $1, %%rdi\n    jz .Ls_%s_cmp_branch_slow_%zu\n", symbol, i);
+					fprintf(out, "    test $1, %%rsi\n    jz .Ls_%s_cmp_branch_slow_%zu\n", symbol, i);
+					fprintf(out, "    cmp %%rsi, %%rdi\n    %s .Ls_%s_%s\n    jmp .Ls_%s_cmp_branch_done_%zu\n", falsecc, symbol, label, symbol, i);
+					fprintf(out, ".Ls_%s_cmp_branch_slow_%zu:\n    call s_value_cmp\n    cmp $0, %%rax\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n    cmp $1, %%rax\n    je .Ls_%s_%s\n", symbol, i, setcc, symbol, label);
+					fprintf(out, ".Ls_%s_cmp_branch_done_%zu:\n", symbol, i);
+				}
 				i++;
 				continue;
 			}
-			fprintf(out, "    test $1, %%rdi\n    jz .Ls_%s_cmp_slow_%zu\n", symbol, i);
-			fprintf(out, "    test $1, %%rsi\n    jz .Ls_%s_cmp_slow_%zu\n", symbol, i);
-			fprintf(out, "    cmp %%rsi, %%rdi\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n    jmp .Ls_%s_cmp_done_%zu\n", setcc, symbol, i);
-			fprintf(out, ".Ls_%s_cmp_slow_%zu:\n    call s_value_cmp\n    cmp $0, %%rax\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n", symbol, i, setcc);
-			fprintf(out, ".Ls_%s_cmp_done_%zu:\n", symbol, i);
+			if (fn->integer_only) {
+				fprintf(out, "    cmp %%rsi, %%rdi\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n", setcc);
+			} else {
+				fprintf(out, "    test $1, %%rdi\n    jz .Ls_%s_cmp_slow_%zu\n", symbol, i);
+				fprintf(out, "    test $1, %%rsi\n    jz .Ls_%s_cmp_slow_%zu\n", symbol, i);
+				fprintf(out, "    cmp %%rsi, %%rdi\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n    jmp .Ls_%s_cmp_done_%zu\n", setcc, symbol, i);
+				fprintf(out, ".Ls_%s_cmp_slow_%zu:\n    call s_value_cmp\n    cmp $0, %%rax\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n", symbol, i, setcc);
+				fprintf(out, ".Ls_%s_cmp_done_%zu:\n", symbol, i);
+			}
 			if (i + 1 < fn->end && strcmp(module->ir.ins[i + 1].op, "MOV") == 0 &&
 				strcmp(module->ir.ins[i + 1].operand1, ins->result) == 0) {
 				store_name = module->ir.ins[i + 1].result;
@@ -490,8 +538,10 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			return false;
 		}
 	}
-	fprintf(out, "    mov $1, %%rax\n.Ls_%s_return:\n    leave\n", symbol);
-	fprintf(out, "    ret\n.size s_fn_%s, .-s_fn_%s\n\n", symbol, symbol);
+	fprintf(out, "    mov $1, %%rax\n.Ls_%s_return:\n", symbol);
+	if (fn->frame_size > 0) fprintf(out, "    add $%d, %%rsp\n", fn->frame_size);
+	if (fn->slot_count > 0) fprintf(out, "    pop %%r15\n    pop %%r14\n    pop %%r13\n    pop %%r12\n");
+	fprintf(out, "    leave\n    ret\n.size s_fn_%s, .-s_fn_%s\n\n", symbol, symbol);
 	return true;
 }
 static bool emit_assembly(FILE *out, standalone_module *module, compile_error *err) {
