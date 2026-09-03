@@ -1,9 +1,9 @@
 package src.runtime
 use std.option.option
 
-// The foundation API is deliberately small. Compiler lowering and platform
-// code can depend on these stable operations without knowing the heap or ABI
-// representation used by a particular target.
+
+
+
 
 const runtime_feature_gc = 1
 const runtime_feature_scheduler = 2
@@ -21,8 +21,8 @@ func runtime_features() int {
         runtime_feature_syscall + runtime_feature_profile + runtime_feature_race
 }
 
-// GC entry points. Allocation remains type-aware and is collected by the
-// mark/sweep implementation in malloc.s, mgcmark.s and mgcsweep.s.
+
+
 func runtime_gc_alloc(int size, int type_id) int {
     object_id := malloc(size, type_id)
     if object_id >= 0 {
@@ -35,8 +35,8 @@ func runtime_gc_collect() () {
     force_gc()
 }
 
-// A scheduler step is useful to compiler-generated safe points and to tests.
-// The platform scheduler may replace this with a preemptive implementation.
+
+
 func runtime_schedule_step() bool {
     started := __runtime_nanotime()
     next := find_runnable()
@@ -56,8 +56,8 @@ func runtime_yield() () {
     sroutine_yield()
 }
 
-// Segmented stacks grow by allocating a new segment and copying live words.
-// The compiler records the live word count at a safe point.
+
+
 struct runtime_stack_segment {
     int[] words
     int used
@@ -134,8 +134,8 @@ func runtime_stack_pop(runtime_stack* self) int {
     value
 }
 
-// Explicit defer records make unwind order deterministic even before compiler
-// lowering emits native defer frames.
+
+
 struct runtime_defer_record {
     func callback
     bool active
@@ -184,8 +184,8 @@ func runtime_recover(runtime_panic_state* self) string {
     message
 }
 
-// Reflection metadata is immutable after publication. Values are represented
-// by an address plus a type descriptor so type checks stay cheap and explicit.
+
+
 struct runtime_type {
     int id
     string name
@@ -206,8 +206,8 @@ func runtime_value_assignable(runtime_value value, runtime_type target) bool {
     value.type.id == target.id
 }
 
-// Syscall dispatch is kept behind one S ABI. Platform files provide the
-// intrinsic implementation and can reject unsupported numbers consistently.
+
+
 extern "intrinsic" func __syscall0(int nr) int;
 extern "intrinsic" func __syscall1(int nr, int a1) int;
 extern "intrinsic" func __syscall2(int nr, int a1, int a2) int;
