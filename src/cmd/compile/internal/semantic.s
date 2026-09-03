@@ -1019,6 +1019,9 @@ func check_stmt(stmt stmt, type_binding[] env, string expected_return, function_
         stmt.let(value) : {
             rhs := infer_expr(value.value, env, expected_return, functions, traits, source, diagnostics)
             errors := rhs.errors
+            if is_borrow_expr(value.value) {
+                errors = errors + add_error(source, diagnostics, "e3052", "borrowed reference cannot be stored in a local binding before lifetime checking is implemented", value.name)
+            }
             binding_type := rhs.type_name
             if value.type_name.is_some() {
                 declared := parse_type(value.type_name.unwrap())
@@ -1069,6 +1072,9 @@ func check_stmt(stmt stmt, type_binding[] env, string expected_return, function_
             switch value.value {
                 option.some(expr) : {
                     expr_result := infer_expr(expr, env, expected_return, functions, traits, source, diagnostics)
+                    if is_borrow_expr(expr) {
+                        return expr_result.errors + add_error(source, diagnostics, "e3053", "borrowed reference cannot be returned because its lifetime is not proven", "return"
+                    }
                     if expected_return == "()" {
                         return expr_result.errors + add_error(source, diagnostics, "e3007", "unexpected return value", "return"
                     }
@@ -1119,6 +1125,20 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
             ok_type(ty)
         }
         expr::borrow(value) : {
+            switch value.target.value {
+                expr::name(name_value) : {
+                    if is_unknown(lookup_name_type(env, name_value.name)) {
+                        return check_result {
+                            type_name: "unknown", errors add_error(source, diagnostics, "e3054", "cannot borrow an undefined name", name_value.name),
+                        }
+                    }
+                }
+                _ : {
+                    return check_result {
+                        type_name: "unknown", errors add_error(source, diagnostics, "e3055", "borrow target must be a named local or parameter", "&"),
+                    }
+                }
+            }
             base := infer_expr(value.target.value, env, expected_return, functions, traits, source, diagnostics)
             if is_unknown(base.type_name) {
                 return base
@@ -1445,6 +1465,13 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                 type_name: "map", errors errors,
             }
         }
+    }
+}
+
+func is_borrow_expr(expr value) bool {
+    switch value {
+        expr::borrow(_) : true,
+        _ : false,
     }
 }
 
