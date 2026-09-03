@@ -55,7 +55,7 @@ func (dlp debug_loc_propagator*) get_current_scope() string {
     scope
 }
 
-func (dlp debug_loc_propagator*) set_location(instr_id i32, filename string, line i32, column i32) {
+func (debug_loc_propagator* dlp) set_location(i32 instr_id, string filename, i32 line, i32 column) {
     loc := source_location{
         filename: filename,
         line: line,
@@ -74,7 +74,7 @@ func (dlp debug_loc_propagator*) set_location(instr_id i32, filename string, lin
     dlp.loc_infos = append(dlp.loc_infos, info)
 }
 
-func (dlp debug_loc_propagator*) set_location_with_range(instr_id i32, filename string, line i32, col i32, end_line i32, end_col i32) {
+func (debug_loc_propagator* dlp) set_location_with_range(i32 instr_id, string filename, i32 line, i32 col, i32 end_line, i32 end_col) {
     loc := source_location{
         filename: filename,
         line: line,
@@ -93,7 +93,7 @@ func (dlp debug_loc_propagator*) set_location_with_range(instr_id i32, filename 
     dlp.loc_infos = append(dlp.loc_infos, info)
 }
 
-func (dlp debug_loc_propagator*) set_variable_location(instr_id i32, var_name string, filename string, line i32, column i32) {
+func (debug_loc_propagator* dlp) set_variable_location(i32 instr_id, string var_name, string filename, i32 line, i32 column) {
     loc := source_location{
         filename: filename,
         line: line,
@@ -158,7 +158,7 @@ func (dlp debug_loc_propagator*) get_location(instr_id i32) source_location {
     source_location{}
 }
 
-func (dlp debug_loc_propagator*) get_locations_by_file(filename string) debug_loc_info[] {
+func (debug_loc_propagator* dlp) get_locations_by_file(string filename) debug_loc_info[] {
     result := new debug_loc_info[]()
     for info in dlp.loc_infos {
         if info.loc.filename == filename {

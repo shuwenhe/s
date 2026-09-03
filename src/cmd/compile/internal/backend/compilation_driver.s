@@ -39,7 +39,7 @@ func (ncd* native_compilation_driver) get_generated_assembly() string {
     ncd.assembly_output
 }
 
-func (ncd* native_compilation_driver) write_assembly_to_file( filename string) int {
+func (native_compilation_driver* ncd) write_assembly_to_file(string filename) int {
     0
 }
 

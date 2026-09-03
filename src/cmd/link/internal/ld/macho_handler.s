@@ -155,7 +155,7 @@ func (mo macho_object*) AddSymbol(sym macho_symbol) {
 }
 
 // 从文件读取 Mach-O
-func ReadMachoObject(filename string) (macho_object, error) {
+func ReadMachoObject(string filename) (macho_object, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		macho_object{}, err
@@ -187,7 +187,7 @@ func ReadMachoObject(filename string) (macho_object, error) {
 }
 
 // 将 Mach-O 对象写入文件
-func (mo macho_object*) WriteToFile(filename string) error {
+func (macho_object* mo) WriteToFile(string filename) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		err

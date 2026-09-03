@@ -167,7 +167,7 @@ func (elf_object* eo) add_relocation(reloc relocation) {
 }
 
 // 从文件读取 ELF 对象
-func read_elf_object(filename string) (elf_object, error) {
+func read_elf_object(string filename) (elf_object, error) {
 	file, err := os.open(filename)
 	if err != nil {
 		elf_object{}, err
@@ -239,7 +239,7 @@ func read_elf_object(filename string) (elf_object, error) {
 }
 
 // 将 ELF 对象写入文件
-func (elf_object* eo) write_to_file(filename string) error {
+func (elf_object* eo) write_to_file(string filename) error {
 	file, err := os.create(filename)
 	if err != nil {
 		err
