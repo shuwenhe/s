@@ -1,12 +1,15 @@
 package compile.internal.ssa_core
+
 use compile.internal.mir.mir_graph
-use compile.internal.mir.mir_statement
 use compile.internal.mir.dump_graph
+use compile.internal.mir.mir_statement
+use compile.internal.bounds.bounds_prove_constant_index
 use std.prelude.char_at
 use std.prelude.len
 use std.prelude.slice
 use std.prelude.to_string
 use std.slices
+
 struct ssa_pipeline_options {
     bool enable_dce
     bool enable_coalesce
@@ -1644,7 +1647,15 @@ func apply_licm_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
 }
 
 func apply_bce_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
-    reduce_numeric_marker_budget(mir_text, " load=", pass_stats.bce_removed_count)
+    if count_token(mir_text, " index_const=") > 0 && count_token(mir_text, " len=") > 0 {
+        index := parse_int_after(mir_text, " index_const=")
+        length := parse_int_after(mir_text, " len=")
+        proof := bounds_prove_constant_index(index, length)
+        if proof.safe {
+            return replace_first_n_tokens(mir_text, " bounds_check", "", 1)
+        }
+    }
+    mir_text
 }
 
 func apply_cfg_rewrites(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
