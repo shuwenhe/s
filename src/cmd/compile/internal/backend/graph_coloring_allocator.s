@@ -33,11 +33,11 @@ struct register_allocator {
 func register_allocator_new(int num_regs) register_allocator* {
     allocator := register_allocator {
         num_regs: num_regs,
-        available_regs: new int[16],
+        available_regs: int[16],
         reg_count: 0,
-        ranges: new live_range[512],
+        ranges: live_range[512],
         range_count: 0,
-        spill_list: new int[128],
+        spill_list: int[128],
         spill_count: 0,
     }
 
@@ -79,15 +79,15 @@ func (allocator* register_allocator) compute_live_ranges(value[] all_values, int
 func (allocator* register_allocator) build_interference_graph() int {
     graph := interference_graph {
         node_count: allocator.range_count,
-        adjacency: new int[][allocator.range_count],
-        color: new int[allocator.range_count],
-        degree: new int[allocator.range_count],
-        spill_cost: new int[allocator.range_count],
+        adjacency: int[][allocator.range_count],
+        color: int[allocator.range_count],
+        degree: int[allocator.range_count],
+        spill_cost: int[allocator.range_count],
     }
     
     i := 0
     for i < graph.node_count {
-        graph.adjacency[i] = new int[graph.node_count]
+        graph.adjacency[i] = int[graph.node_count]
         graph.color[i] = -1
         graph.degree[i] = 0
         graph.spill_cost[i] = 0

@@ -66,8 +66,8 @@ struct ssa_function {
 func new_ssa_function(name string) ssa_function* {
     f := new(ssa_function)
     f.name = name
-    f.blocks = new ssa_block*[]()
-    f.values = new ssa_value*[]()
+    f.blocks = ssa_block*[]()
+    f.values = ssa_value*[]()
     f.value_counter = 0
     f.block_counter = 0
     f.entry_block = 0
@@ -80,10 +80,10 @@ func (f ssa_function*) new_block(label string) ssa_block* {
     block := new(ssa_block)
     block.id = f.block_counter
     block.label = label
-    block.values = new ssa_value*[]()
-    block.predecessors = new i32[]()
-    block.successors = new i32[]()
-    block.phis = new ssa_phi*[]()
+    block.values = ssa_value*[]()
+    block.predecessors = i32[]()
+    block.successors = i32[]()
+    block.phis = ssa_phi*[]()
     block.removed = false
     f.block_counter += 1
     f.blocks = append(f.blocks, block)
@@ -96,7 +96,7 @@ func (f ssa_function*) new_value(op value_op, name string, type_str string) ssa_
     val.op = op
     val.name = name
     val.type_str = type_str
-    val.args = new i32[]()
+    val.args = i32[]()
     val.block = -1
     val.is_const = false
     val.removed = false
@@ -127,8 +127,8 @@ func (b ssa_block*) add_phi(var_id i32, type_str string) ssa_phi* {
     phi := new(ssa_phi)
     phi.id = i32(len(b.phis))
     phi.var_id = var_id
-    phi.block_preds = new i32[]()
-    phi.value_preds = new i32[]()
+    phi.block_preds = i32[]()
+    phi.value_preds = i32[]()
     phi.type_str = type_str
     b.phis = append(b.phis, phi)
     phi
