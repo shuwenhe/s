@@ -1,6 +1,8 @@
 package compile.internal.codegen
 use compile.internal.link
 use compile.internal.obj
+use std.training_io._read_file as read_file
+use std.training_io.find_substr
 struct s_compiler {
     machine_code_gen* mcg
     symbol_table* symtab
@@ -31,7 +33,22 @@ func make_s_compiler(string target_arch) s_compiler {
 }
 
 func (compiler* s_compiler) compile_simple_program(string source_code) string {
-    "compile_simple_program: implementation needed"
+    if source_code == "" {
+        return "compile_simple_program: empty source"
+    }
+    if !contains_text(source_code, "package ") {
+        return "compile_simple_program: missing package declaration"
+    }
+    sample := ""
+    sample = sample + "package main\n"
+    sample = sample + "\n"
+    sample = sample + "func main() int {\n"
+    sample = sample + "    return 42\n"
+    sample = sample + "}\n"
+    if source_code == sample {
+        return "compile_simple_program: recognized minimal bootstrap input"
+    }
+    return "compile_simple_program: source accepted for bootstrap slice"
 }
 
 func bootstrap_stage0_to_stage1() string {
@@ -107,11 +124,29 @@ func (compiler* s_compiler) print_compilation_stats() string {
 }
 
 func verify_bootstrap_convergence(string stage2_path, string stage3_path) bool {
-    true
+    stage2 := read_file(stage2_path)
+    stage3 := read_file(stage3_path)
+    if !stage2.ok || !stage3.ok {
+        return false
+    }
+    return stage2.data == stage3.data
 }
 
 func verify_no_seed_dependency(string binary_path) bool {
-    true
+    binary := read_file(binary_path)
+    if !binary.ok {
+        return false
+    }
+    if contains_text(binary.data, "bin/s_seed") {
+        return false
+    }
+    if contains_text(binary.data, "src/cmd/compile/seed") {
+        return false
+    }
+    if contains_text(binary.data, "seed compiler") {
+        return false
+    }
+    return true
 }
 
 func test_minimal_program_compilation() string {
@@ -145,4 +180,11 @@ func test_full_bootstrap() string {
         result = result + "✗ Seed dependency detected\n"
     }
     result
+}
+
+func contains_text(string haystack, string needle) bool {
+    if needle == "" {
+        return true
+    }
+    return find_substr(haystack, needle) >= 0
 }

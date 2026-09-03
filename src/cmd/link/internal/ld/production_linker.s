@@ -71,7 +71,7 @@ func new_production_linker(config linker_config) production_linker {
 }
 
 // 加载输入对象文件
-func (pl production_linker*) LoadObjectFile(filename string) error {
+func (production_linker* pl) LoadObjectFile(string filename) error {
 	fmt.Printf("Loading %s...\n", filename)
 
 	// 检测文件格式
