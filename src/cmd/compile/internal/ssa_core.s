@@ -510,7 +510,7 @@ func analyze_instruction_ssa(string mir_text, ssa_dataflow_model model, ssa_pass
         value_graph,
         dominator_tree,
         memory_dep_graph,
-        regalloc_plan,
+        regalloc_plan
     )
     verify_primary := primary_instruction_verify_flag(verifier.error_code)
     verify_stage_hint := choose_instruction_verify_stage(verify_primary, pass_delta_summary)
@@ -518,7 +518,7 @@ func analyze_instruction_ssa(string mir_text, ssa_dataflow_model model, ssa_pass
     verify_pick_matches_top := instruction_verify_pick_matches_top(verify_primary, pass_delta_summary, verify_stage_hint)
     verify_pick_reason := instruction_verify_pick_reason(verify_primary, pass_delta_summary, verify_stage_hint)
     instruction_ssa_summary {
-        instruction_block_count: instruction_blocks, instruction_value_count instruction_values, dominator_tree_depth dom_depth, loop_backedge_count backedges, instruction_verifier_error_count verifier.error_count, instruction_verifier_error_code verifier.error_code, instruction_verifier_flags format_instruction_verify_flags(verifier.error_code), instruction_verifier_primary verify_primary, instruction_verifier_stage_hint verify_stage_hint, instruction_verifier_stage_evidence verify_stage_evidence, instruction_verifier_pick_matches_top verify_pick_matches_top, instruction_verifier_pick_reason verify_pick_reason, memory_ssa_node_count memory_nodes, points_to_set_count model.alias_set_count, load_store_proof_count load_store_proofs, spill_reload_pair_count spill_pairs, parallel_copy_resolution_count parallel_copies, escape_stack_alloc_count stack_allocs, escape_heap_alloc_count heap_allocs, inline_budget_score inline_budget, devirtualization_gain_score devirt_gain, instruction_block_graph block_graph, instruction_value_graph value_graph, instruction_dominator_tree dominator_tree, instruction_loop_forest loop_forest, instruction_memory_dep_graph memory_dep_graph, instruction_regalloc_plan regalloc_plan,
+        instruction_block_count instruction_blocks, instruction_value_count instruction_values, dominator_tree_depth dom_depth, loop_backedge_count backedges, instruction_verifier_error_count verifier.error_count, instruction_verifier_error_code verifier.error_code, instruction_verifier_flags format_instruction_verify_flags(verifier.error_code), instruction_verifier_primary verify_primary, instruction_verifier_stage_hint verify_stage_hint, instruction_verifier_stage_evidence verify_stage_evidence, instruction_verifier_pick_matches_top verify_pick_matches_top, instruction_verifier_pick_reason verify_pick_reason, memory_ssa_node_count memory_nodes, points_to_set_count model.alias_set_count, load_store_proof_count load_store_proofs, spill_reload_pair_count spill_pairs, parallel_copy_resolution_count parallel_copies, escape_stack_alloc_count stack_allocs, escape_heap_alloc_count heap_allocs, inline_budget_score inline_budget, devirtualization_gain_score devirt_gain, instruction_block_graph block_graph, instruction_value_graph value_graph, instruction_dominator_tree dominator_tree, instruction_loop_forest loop_forest, instruction_memory_dep_graph memory_dep_graph, instruction_regalloc_plan regalloc_plan
     }
 }
 
@@ -919,7 +919,7 @@ func verify_instruction_ssa(
         code = set_error_flag(code, e_mem_count)
     }
     instruction_verify_result {
-        error_count: errors, error_code code,
+        error_count errors, error_code code
     }
 }
 
@@ -1098,7 +1098,7 @@ func int32_min(int left, int right) int {
 func canonicalize_mir(string mir_text) ssa_rewrite_result {
     rewritten := mir_text
     rewrites := 0
-    r0 := replace_first_token(rewritten, " term=jump |", " term=return |"
+    r0 := replace_first_token(rewritten, " term=jump |", " term=return |")
     if r0.changed {
         rewritten = r0.text
         rewrites = rewrites + 1
@@ -1109,7 +1109,7 @@ func canonicalize_mir(string mir_text) ssa_rewrite_result {
         rewrites = rewrites + 1
     }
     ssa_rewrite_result {
-        rewritten_mir: rewritten, rewrite_count rewrites,
+        rewritten_mir rewritten, rewrite_count rewrites
     }
 }
 
@@ -1122,11 +1122,11 @@ func replace_first_token(string text, string needle, string replacement) replace
     pos := find_token(text, needle)
     if pos > len(text) {
         return replace_result {
-            text: text, changed false,
+            text text, changed false
         }
     }
     replace_result {
-        text: slice(text, 0, pos) + replacement + slice(text, pos + len(needle), len(text)), changed true,
+        text slice(text, 0, pos) + replacement + slice(text, pos + len(needle), len(text)), changed true
     }
 }
 
