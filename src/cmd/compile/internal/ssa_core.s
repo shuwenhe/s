@@ -1162,8 +1162,8 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
         blocks = 1
     }
     if len(regs) == 0 {
-        return regalloc_result {
-            allocated_regs: string[](), spill_count value_count, spill_reload_count value_count, call_pressure_events call_sites, live_range_splits 0, rematerialized_values 0, reuse_count 0, max_live 0,
+        return regalloc_result{
+            allocated_regs string[](), spill_count value_count, spill_reload_count value_count, call_pressure_events call_sites, live_range_splits 0, rematerialized_values 0, reuse_count 0, max_live 0
         }
     }
     active_until := int[]()
@@ -1226,8 +1226,8 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
         }
         i = i + 1
     }
-    regalloc_result {
-        allocated_regs: out, spill_count spills, spill_reload_count spill_reloads, call_pressure_events call_sites, live_range_splits splits, rematerialized_values remat, reuse_count reuse, max_live max_live,
+    regalloc_result{
+        allocated_regs out, spill_count spills, spill_reload_count spill_reloads, call_pressure_events call_sites, live_range_splits splits, rematerialized_values remat, reuse_count reuse, max_live max_live
     }
 }
 
@@ -1313,9 +1313,9 @@ func register_bank(string goarch) string[] {
 }
 
 func default_options() ssa_pipeline_options {
-    ssa_pipeline_options {
-        enable_dce: true, enable_coalesce true, enable_simplify_cfg true,
-        dominant_margin_override: -1,
+    ssa_pipeline_options{
+        enable_dce true, enable_coalesce true, enable_simplify_cfg true,
+        dominant_margin_override -1
     }
 }
 
@@ -1667,24 +1667,24 @@ struct append_metric_result {
 
 func append_changed_metric(string details, string label, int before, int after) append_metric_result {
     if before == after {
-        return append_metric_result {
-            details: details, changed 0,
+            return append_metric_result{
+                details details, changed 0
         }
     }
     part := format_metric_delta(label, before, after)
     if details == "" {
-        return append_metric_result {
-            details: part, changed 1,
+        return append_metric_result{
+            details part, changed 1
         }
     }
-    append_metric_result {
-        details: details + "," + part, changed 1,
+    append_metric_result{
+        details details + "," + part, changed 1
     }
 }
 
 func collect_mir_metrics(string mir_text) mir_metrics {
-    mir_metrics {
-        blocks: parse_int_after(mir_text, "blocks="), stmts parse_total_stmt_count(mir_text), branches count_token(mir_text, " term=branch"), jumps count_token(mir_text, " term=jump"), consts count_numeric_marker_total(mir_text, " const="), imms count_numeric_marker_total(mir_text, " imm="), literals count_numeric_marker_total(mir_text, " literal="), phi count_numeric_marker_total(mir_text, " phi="), memphi count_numeric_marker_total(mir_text, " memphi="), copy count_numeric_marker_total(mir_text, " copy="), load count_numeric_marker_total(mir_text, " load="), store count_numeric_marker_total(mir_text, " store="),
+    mir_metrics{
+        blocks parse_int_after(mir_text, "blocks="), stmts parse_total_stmt_count(mir_text), branches count_token(mir_text, " term=branch"), jumps count_token(mir_text, " term=jump"), consts count_numeric_marker_total(mir_text, " const="), imms count_numeric_marker_total(mir_text, " imm="), literals count_numeric_marker_total(mir_text, " literal="), phi count_numeric_marker_total(mir_text, " phi="), memphi count_numeric_marker_total(mir_text, " memphi="), copy count_numeric_marker_total(mir_text, " copy="), load count_numeric_marker_total(mir_text, " load="), store count_numeric_marker_total(mir_text, " store=")
     }
 }
 
