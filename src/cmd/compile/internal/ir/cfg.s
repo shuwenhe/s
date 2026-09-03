@@ -224,7 +224,7 @@ func (cfg* control_flow_graph) detect_loops() {
     n := cfg.blocks.len()
     cfg.loop_headers = int[]()
 
-    visited := new bool[n]
+    bool[n] visited
     for i in 0..n {
         visited[i] = false
     }

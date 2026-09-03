@@ -122,7 +122,7 @@ func (builder* ssa_builder) get_var_version(int var_id, int version) int {
 }
 
 func compute_dominators(block[] blocks, int num_blocks) int[] {
-    dominators := new int[num_blocks * num_blocks]
+    int[num_blocks * num_blocks] dominators
     
     i := 0
     for i < num_blocks {
@@ -180,7 +180,7 @@ func compute_dominators(block[] blocks, int num_blocks) int[] {
 }
 
 func compute_dominance_frontier(block[] blocks, int num_blocks, int[] dominators) int[] {
-    frontier := new int[num_blocks * num_blocks]
+    int[num_blocks * num_blocks] frontier
     
     i := 0
     for i < num_blocks {
@@ -228,7 +228,7 @@ func compute_dominance_frontier(block[] blocks, int num_blocks, int[] dominators
 }
 
 func insert_phis_for_var(value[] all_values, int var_id, int[] definitions, int[] dominance_frontier, int num_blocks) int {
-    work_list := new int[num_blocks]
+    int[num_blocks] work_list
     work_list_size := 0
     
     i := 0
@@ -240,7 +240,7 @@ func insert_phis_for_var(value[] all_values, int var_id, int[] definitions, int[
         i = i + 1
     }
     
-    processed := new int[num_blocks]
+    int[num_blocks] processed
     
     work_idx := 0
     for work_idx < work_list_size {

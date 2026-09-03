@@ -103,8 +103,8 @@ func (analyzer* liveness_analyzer) compute_live_ranges_iterative(block[] blocks)
         for i < analyzer.block_count {
             block := blocks[i]
             
-            new_live_in := new int[analyzer.var_count]
-            new_live_out := new int[analyzer.var_count]
+            int[analyzer.var_count] new_live_in
+            int[analyzer.var_count] new_live_out
             
             j := 0
             for j < analyzer.var_count {
@@ -239,7 +239,7 @@ func (frame* stack_frame) get_var_stack_location(int var_id) int {
 }
 
 func (frame* stack_frame) eliminate_dead_slots() int {
-    live_vars := new int[256]
+    int[256] live_vars
     
     i := 0
     for i < frame.slot_count {
