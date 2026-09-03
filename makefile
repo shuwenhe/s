@@ -3,6 +3,7 @@ PREFIX ?= $(HOME)/.local
 INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_PROGRAM ?= install
 SUDO ?=
+VERBOSE ?= 0
 SELFHOST_DIR ?= $(CURDIR)/.bootstrap/selfhost
 BOOTSTRAP_MANIFEST ?= $(SELFHOST_DIR)/manifest.txt
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
@@ -22,11 +23,11 @@ target-config-check: seed-compiler-bin
 	@echo "Target configuration checks passed"
 
 run: bin/s
-	@echo "Installing S compiler bootstrap binary (bin/s) for $$(uname -m)..."
 	@mkdir -p "$(INSTALL_BIN_DIR)"
-	@echo "Installing bin/s to $(INSTALL_BIN_DIR)/s..."
+	@$(if $(filter 1,$(VERBOSE)),echo "Installing S compiler bootstrap binary (bin/s) for $$(uname -m)...";)
+	@$(if $(filter 1,$(VERBOSE)),echo "Installing bin/s to $(INSTALL_BIN_DIR)/s...";)
 	@$(SUDO) $(INSTALL_PROGRAM) -m 0755 ./bin/s "$(INSTALL_BIN_DIR)/s"
-	@echo "S compiler installed successfully."
+	@$(if $(filter 1,$(VERBOSE)),echo "S compiler installed successfully.";)
 
 build-x86_64: bin/s
 	@echo "✓ S compiler ready for x86_64 (bootstrap: bin/s)"
