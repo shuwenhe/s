@@ -54,7 +54,7 @@ func bootstrap_demo_main() {
     print("   - Token 类型定义 (87 种)\n")
     print("   - 标识符/关键字识别\n")
     print("   - 数字/字符串处理\n")
-    print("   - 注释处理 (// 和 )\n")
+    print("   - 注释处理 (
     print("   - 操作符和分隔符识别\n\n")
     print("2. 语法分析器 (Parser)\n")
     print("   ✅ 已实现 - parser.s (300+ 行)\n")
@@ -87,7 +87,7 @@ func bootstrap_demo_main() {
     print("   ↓\n")
     print("[ELF 生成] → test.o (对象文件)\n\n")
     print("\n【使用示例】\n\n")
-    print("// S 程序源代码\n")
+    print("
     print("package main\n\n")
     print("func main() {\n")
     print("    return 42\n")

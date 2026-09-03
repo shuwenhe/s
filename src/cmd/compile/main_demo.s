@@ -33,19 +33,19 @@ func demonstrate_machine_code_generation() string {
     result = result + "  main:\n"
     result = result + "      push rbp\n"
     result = result + "      mov rbp, rsp\n"
-    result = result + "      mov rax, 60        // sys_exit\n"
-    result = result + "      mov rdi, 42        // exit code\n"
+    result = result + "      mov rax, 60
+    result = result + "      mov rdi, 42
     result = result + "      syscall\n"
     result = result + "      pop rbp\n"
     result = result + "      ret\n\n"
     result = result + "直接生成机器码 (无 IR):\n"
-    result = result + "  55                    // push rbp\n"
-    result = result + "  48 89 e5              // mov rbp, rsp\n"
-    result = result + "  b8 3c 00 00 00        // mov rax, 60\n"
-    result = result + "  bf 2a 00 00 00        // mov rdi, 42\n"
-    result = result + "  0f 05                 // syscall\n"
-    result = result + "  5d                    // pop rbp\n"
-    result = result + "  c3                    // ret\n\n"
+    result = result + "  55
+    result = result + "  48 89 e5
+    result = result + "  b8 3c 00 00 00
+    result = result + "  bf 2a 00 00 00
+    result = result + "  0f 05
+    result = result + "  5d
+    result = result + "  c3
     result
 }
 
