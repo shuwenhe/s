@@ -81,6 +81,134 @@ struct borrow_check_result {
     string message
 }
 
+// Ownership events are the small contract consumed by the future MIR pass.
+// The checker deliberately operates on named places first; field- and
+// projection-sensitive places can be added without changing the state model.
+struct ownership_slot {
+    string name
+    bool copyable
+    bool moved
+    bool dropped
+}
+
+struct ownership_check_result {
+    bool ok
+    int errors
+    string message
+}
+
+func ownership_find_slot(ownership_slot[] slots, string name) int {
+    i := 0
+    for i < len(slots) {
+        if slots[i].name == name { return i }
+        i = i + 1
+    }
+    -1
+}
+
+func ownership_event_payload(string event, int first) string {
+    slice(event, first + 1, len(event))
+}
+
+func ownership_next_colon(string text, int start) int {
+    i := start
+    for i < len(text) {
+        if string(text[i]) == ":" { return i }
+        i = i + 1
+    }
+    -1
+}
+
+// Check ownership events emitted by MIR lowering.
+// Supported events:
+//   declare:name:copy, declare:name:move, use:name, move:name,
+//   copy:name, drop:name
+func ownership_check_events(string[] events) ownership_check_result {
+    ownership_slot[] slots
+    errors := 0
+    message := ""
+    i := 0
+    for i < len(events) {
+        event := events[i]
+        first := find_event_colon(event)
+        if first <= 0 {
+            errors = errors + 1
+            message = message + "invalid-ownership-event;"
+            i = i + 1
+            continue
+        }
+        kind := slice(event, 0, first)
+        payload := ownership_event_payload(event, first)
+
+        if kind == "declare" {
+            second := ownership_next_colon(payload, 0)
+            if second <= 0 {
+                errors = errors + 1
+                message = message + "invalid-declaration;"
+                i = i + 1
+                continue
+            }
+            name := slice(payload, 0, second)
+            mode := slice(payload, second + 1, len(payload))
+            if ownership_find_slot(slots, name) >= 0 {
+                errors = errors + 1
+                message = message + "duplicate-declaration:" + name + ";"
+            } else if mode != "copy" && mode != "move" {
+                errors = errors + 1
+                message = message + "unknown-ownership-mode:" + mode + ";"
+            } else {
+                slots = append(slots, ownership_slot {
+                    name: name, copyable: mode == "copy", moved: false, dropped: false,
+                })
+            }
+            i = i + 1
+            continue
+        }
+
+        slot_id := ownership_find_slot(slots, payload)
+        if slot_id < 0 {
+            errors = errors + 1
+            message = message + "unknown-place:" + payload + ";"
+            i = i + 1
+            continue
+        }
+        slot := slots[slot_id]
+        if kind == "use" {
+            if slot.moved || slot.dropped {
+                errors = errors + 1
+                message = message + "use-after-move-or-drop:" + payload + ";"
+            }
+        } else if kind == "move" {
+            if slot.moved || slot.dropped {
+                errors = errors + 1
+                message = message + "move-after-move-or-drop:" + payload + ";"
+            } else {
+                slot.moved = true
+            }
+        } else if kind == "copy" {
+            if !slot.copyable {
+                errors = errors + 1
+                message = message + "copy-of-noncopy:" + payload + ";"
+            } else if slot.moved || slot.dropped {
+                errors = errors + 1
+                message = message + "copy-after-move-or-drop:" + payload + ";"
+            }
+        } else if kind == "drop" {
+            if slot.dropped {
+                errors = errors + 1
+                message = message + "double-drop:" + payload + ";"
+            } else {
+                slot.dropped = true
+            }
+        } else {
+            errors = errors + 1
+            message = message + "unknown-ownership-event:" + kind + ";"
+        }
+        i = i + 1
+    }
+    ownership_check_result { ok: errors == 0, errors: errors, message: message }
+}
+
 func borrow_find_slot(borrow_slot[] slots, string name) int {
     i := 0
     for i < len(slots) {
