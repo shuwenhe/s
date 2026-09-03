@@ -143,7 +143,7 @@ func ranges_interfere(live_range* range_a, live_range* range_b) int {
 func (allocator* register_allocator) color_graph() int {
     graph := allocator.graph
     
-    worklist := new int[graph.node_count]
+    int[graph.node_count] worklist
     worklist_size := 0
     
     i := 0
@@ -155,7 +155,7 @@ func (allocator* register_allocator) color_graph() int {
         i = i + 1
     }
     
-    simplified := new int[graph.node_count]
+    int[graph.node_count] simplified
     simplified_count := 0
     
     for worklist_size > 0 {
@@ -183,7 +183,7 @@ func (allocator* register_allocator) color_graph() int {
     for i >= 0 {
         node := simplified[i]
         
-        used_colors := new int[allocator.num_regs]
+        int[allocator.num_regs] used_colors
         
         j := 0
         for j < graph.node_count {
