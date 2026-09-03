@@ -13,7 +13,7 @@ generic_rule*[] generic_rules
 int generic_rule_count
 
 func init_generic_rules() int {
-    generic_rules = new generic_rule*[1000]
+    generic_rules = generic_rule*[1000]
     generic_rule_count = 0
     return 0
 }

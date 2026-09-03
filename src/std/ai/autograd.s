@@ -18,7 +18,7 @@ struct auto_grad_tensor {
     grad_context grad_ctx
     bool requires_grad
 }
-var current_graph = new graph_node[1000]
+var current_graph = graph_node[1000]
 var graph_size = 0
 
 func start_graph() void {
@@ -38,8 +38,8 @@ func add_to_graph(graph_node node) int {
 }
 
 func topological_sort(int root_idx) int[] {
-    bool[] visited = new bool[graph_size]
-    int[] order = new int[graph_size]
+    bool[] visited = bool[graph_size]
+    int[] order = int[graph_size]
     int order_len = 0
     dfs_visit(root_idx, visited, order, order_len)
     order
@@ -165,7 +165,7 @@ func autograd_relu(auto_grad_tensor x) auto_grad_tensor {
 }
 
 func relu_backward_mask(tensor x) tensor {
-    float[] mask = new float[x.shape.size]
+    float[] mask = float[x.shape.size]
     int i = 0
     for i < x.shape.size {
         if x.data.values[i] > 0 { mask[i] = 1.0 }

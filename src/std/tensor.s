@@ -65,7 +65,7 @@ func flat_index(tensor_shape shape, int[] indices) int {
 }
 
 func unflatten_index(tensor_shape shape, int flat_idx) int[] {
-    int[] result = new int[shape.ndim]
+    int[] result = int[shape.ndim]
     int remaining = flat_idx
     int d = shape.ndim - 1
     for d >= 0 {
@@ -86,7 +86,7 @@ func tensor(float[] values, int[] shape) tensor {
 
 func zeros(int[] shape) tensor {
     tensor_shape sh = shape_from_dims(shape)
-    float[] vals = new float[sh.size]
+    float[] vals = float[sh.size]
     int i = 0
     for i < sh.size {
         vals[i] = 0.0
@@ -97,7 +97,7 @@ func zeros(int[] shape) tensor {
 
 func ones(int[] shape) tensor {
     tensor_shape sh = shape_from_dims(shape)
-    float[] vals = new float[sh.size]
+    float[] vals = float[sh.size]
     int i = 0
     for i < sh.size {
         vals[i] = 1.0
@@ -108,7 +108,7 @@ func ones(int[] shape) tensor {
 
 func full(int[] shape, float fill_value) tensor {
     tensor_shape sh = shape_from_dims(shape)
-    float[] vals = new float[sh.size]
+    float[] vals = float[sh.size]
     int i = 0
     for i < sh.size {
         vals[i] = fill_value
@@ -120,7 +120,7 @@ func full(int[] shape, float fill_value) tensor {
 func arange(int start, int stop, int step) tensor {
     int count = (stop - start) / step
     if count <= 0 { count = 1 }
-    float[] vals = new float[count]
+    float[] vals = float[count]
     int i = 0
     int v = start
     for i < count {
@@ -128,13 +128,13 @@ func arange(int start, int stop, int step) tensor {
         v = v + step
         i = i + 1
     }
-    int[] shape = new int[1]
+    int[] shape = int[1]
     shape[0] = count
     tensor(vals, shape)
 }
 
 func linspace(float start, float stop, int n) tensor {
-    float[] vals = new float[n]
+    float[] vals = float[n]
     float delta = 0.0
     if n > 1 { delta = (stop - start) / (n - 1) }
     int i = 0
@@ -142,14 +142,14 @@ func linspace(float start, float stop, int n) tensor {
         vals[i] = start + i * delta
         i = i + 1
     }
-    int[] shape = new int[1]
+    int[] shape = int[1]
     shape[0] = n
     tensor(vals, shape)
 }
 
 func eye(int n) tensor {
-    float[] vals = new float[n * n]
-    int[] shape = new int[2]
+    float[] vals = float[n * n]
+    int[] shape = int[2]
     shape[0] = n
     shape[1] = n
     int r = 0
@@ -166,9 +166,9 @@ func eye(int n) tensor {
 }
 
 func scalar(float value) tensor {
-    float[] vals = new float[1]
+    float[] vals = float[1]
     vals[0] = value
-    int[] shape = new int[1]
+    int[] shape = int[1]
     shape[0] = 1
     tensor(vals, shape)
 }
@@ -190,7 +190,7 @@ func rand_float(rand_state state) float {
 
 func rand_uniform(int[] shape) tensor {
     tensor_shape sh = shape_from_dims(shape)
-    float[] vals = new float[sh.size]
+    float[] vals = float[sh.size]
     int i = 0
     for i < sh.size {
         vals[i] = rand_float(global_rand_state)
@@ -201,7 +201,7 @@ func rand_uniform(int[] shape) tensor {
 
 func randn(int[] shape, float mean, float stddev) tensor {
     tensor_shape sh = shape_from_dims(shape)
-    float[] vals = new float[sh.size]
+    float[] vals = float[sh.size]
     int i = 0
     for i < sh.size {
         float u1 = rand_float(global_rand_state)
@@ -215,7 +215,7 @@ func randn(int[] shape, float mean, float stddev) tensor {
 }
 
 func xavier_uniform(int[] fan_in, int[] fan_out) tensor {
-    int[] shape = new int[2]
+    int[] shape = int[2]
     shape[0] = fan_in[0]
     shape[1] = fan_out[0]
     float limit = sqrt(6.0 / ((fan_in[0] as float) + (fan_out[0] as float)))
@@ -229,7 +229,7 @@ func xavier_uniform(int[] fan_in, int[] fan_out) tensor {
 }
 
 func kaiming_normal(int[] fan_in, int[] fan_out) tensor {
-    int[] shape = new int[2]
+    int[] shape = int[2]
     shape[0] = fan_in[0]
     shape[1] = fan_out[0]
     float std = sqrt(2.0 / fan_in[0] as float)
@@ -269,7 +269,7 @@ func reshape(tensor t, int[] new_shape) tensor {
 }
 
 func flatten(tensor t) tensor {
-    int[] flat_shape = new int[1]
+    int[] flat_shape = int[1]
     flat_shape[0] = t.shape.size
     reshape(t, flat_shape)
 }
@@ -281,7 +281,7 @@ func squeeze(tensor t) tensor {
         if t.shape.dims[i] != 1 { new_ndim = new_ndim + 1 }
         i = i + 1
     }
-    int[] new_dims = new int[new_ndim]
+    int[] new_dims = int[new_ndim]
     int j = 0
     i = 0
     for i < t.shape.ndim {
@@ -296,7 +296,7 @@ func squeeze(tensor t) tensor {
 
 func unsqueeze(tensor t, int dim) tensor {
     int new_ndim = t.shape.ndim + 1
-    int[] new_dims = new int[new_ndim]
+    int[] new_dims = int[new_ndim]
     int i = 0
     int j = 0
     for i < new_ndim {
@@ -312,7 +312,7 @@ func unsqueeze(tensor t, int dim) tensor {
 
 func transpose(tensor t, int dim0, int dim1) tensor {
     if t.shape.ndim < 2 { return t }
-    int[] new_dims = new int[t.shape.ndim]
+    int[] new_dims = int[t.shape.ndim]
     int i = 0
     for i < t.shape.ndim {
         if i == dim0 { new_dims[i] = t.shape.dims[dim1] }
@@ -329,7 +329,7 @@ func transpose(tensor t, int dim0, int dim1) tensor {
 func transpose_2d(tensor t) tensor {
     int rows = t.shape.dims[0]
     int cols = t.shape.dims[1]
-    float[] vals = new float[rows * cols]
+    float[] vals = float[rows * cols]
     int r = 0
     for r < rows {
         int c = 0
@@ -339,14 +339,14 @@ func transpose_2d(tensor t) tensor {
         }
         r = r + 1
     }
-    int[] new_shape = new int[2]
+    int[] new_shape = int[2]
     new_shape[0] = cols
     new_shape[1] = rows
     tensor(vals, new_shape)
 }
 
 func permute(tensor t, int[] order) tensor {
-    int[] new_dims = new int[t.shape.ndim]
+    int[] new_dims = int[t.shape.ndim]
     int i = 0
     for i < t.shape.ndim {
         new_dims[i] = t.shape.dims[order[i]]
@@ -365,7 +365,7 @@ func contiguous(tensor t) tensor {
 
 func add(tensor a, tensor b) tensor {
     if a.shape.size == b.shape.size {
-        float[] vals = new float[a.shape.size]
+        float[] vals = float[a.shape.size]
         int i = 0
         for i < a.shape.size {
             vals[i] = a.data.values[i] + b.data.values[i]
@@ -374,7 +374,7 @@ func add(tensor a, tensor b) tensor {
         tensor { shape: a.shape, data tensor_data{values: vals, length a.shape.size, owns_data true}, device: "cpu", requires_grad false }
     }
     else if b.shape.size == 1 {
-        float[] vals = new float[a.shape.size]
+        float[] vals = float[a.shape.size]
         float bv = b.data.values[0]
         int i = 0
         for i < a.shape.size {
@@ -384,7 +384,7 @@ func add(tensor a, tensor b) tensor {
         tensor { shape: a.shape, data tensor_data{values: vals, length a.shape.size, owns_data true}, device: "cpu", requires_grad false }
     }
     else if a.shape.size == 1 {
-        float[] vals = new float[b.shape.size]
+        float[] vals = float[b.shape.size]
         float av = a.data.values[0]
         int i = 0
         for i < b.shape.size {
@@ -399,7 +399,7 @@ func add(tensor a, tensor b) tensor {
 }
 
 func add_scalar(tensor t, float scalar) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     int i = 0
     for i < t.shape.size {
         vals[i] = t.data.values[i] + scalar
@@ -413,7 +413,7 @@ func sub(tensor a, tensor b) tensor {
         add_scalar(a, -b.data.values[0])
     }
     else if b.shape.size == a.shape.size {
-        float[] vals = new float[a.shape.size]
+        float[] vals = float[a.shape.size]
         int i = 0
         for i < a.shape.size {
             vals[i] = a.data.values[i] - b.data.values[i]
@@ -432,7 +432,7 @@ func mul(tensor a, tensor b) tensor {
         mul_scalar(b, a.data.values[0])
     }
     else if b.shape.size == a.shape.size {
-        float[] vals = new float[a.shape.size]
+        float[] vals = float[a.shape.size]
         int i = 0
         for i < a.shape.size {
             vals[i] = a.data.values[i] * b.data.values[i]
@@ -444,7 +444,7 @@ func mul(tensor a, tensor b) tensor {
 }
 
 func mul_scalar(tensor t, float scalar) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     int i = 0
     for i < t.shape.size {
         vals[i] = t.data.values[i] * scalar
@@ -458,7 +458,7 @@ func div(tensor a, tensor b) tensor {
         div_scalar(a, b.data.values[0])
     }
     else if b.shape.size == a.shape.size {
-        float[] vals = new float[a.shape.size]
+        float[] vals = float[a.shape.size]
         int i = 0
         for i < a.shape.size {
             if abs(b.data.values[i]) > epsilon { vals[i] = a.data.values[i] / b.data.values[i] }
@@ -480,7 +480,7 @@ func neg(tensor t) tensor {
 }
 
 func pow_tensor(tensor t, float exponent) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     int i = 0
     for i < t.shape.size {
         vals[i] = pow(t.data.values[i], exponent)
@@ -494,7 +494,7 @@ func square(tensor t) tensor {
 }
 
 func sqrt_tensor(tensor t) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     int i = 0
     for i < t.shape.size {
         if t.data.values[i] >= 0 { vals[i] = sqrt(t.data.values[i]) }
@@ -505,7 +505,7 @@ func sqrt_tensor(tensor t) tensor {
 }
 
 func exp_tensor(tensor t) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     int i = 0
     for i < t.shape.size {
         vals[i] = exp(t.data.values[i])
@@ -515,7 +515,7 @@ func exp_tensor(tensor t) tensor {
 }
 
 func log_tensor(tensor t) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     int i = 0
     for i < t.shape.size {
         if t.data.values[i] > 0 { vals[i] = log(t.data.values[i]) }
@@ -526,7 +526,7 @@ func log_tensor(tensor t) tensor {
 }
 
 func abs_tensor(tensor t) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     int i = 0
     for i < t.shape.size {
         vals[i] = abs(t.data.values[i])
@@ -536,7 +536,7 @@ func abs_tensor(tensor t) tensor {
 }
 
 func clamp_tensor(tensor t, float lo, float hi) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     int i = 0
     for i < t.shape.size {
         float v = t.data.values[i]
@@ -571,7 +571,7 @@ func sum_dim(tensor t, int dim, bool keepdim) tensor {
     k = target_dim + 1
     for k < t.shape.ndim { inner_size = inner_size * t.shape.dims[k]; k = k + 1 }
     int output_size = t.shape.size / dim_size
-    float[] sums = new float[output_size]
+    float[] sums = float[output_size]
     int i = 0
     for i < output_size { sums[i] = 0.0; i = i + 1 }
     i = 0
@@ -582,7 +582,7 @@ func sum_dim(tensor t, int dim, bool keepdim) tensor {
     }
     int new_ndim = t.shape.ndim - 1
     if keepdim { new_ndim = t.shape.ndim }
-    int[] new_dims = new int[new_ndim]
+    int[] new_dims = int[new_ndim]
     if keepdim {
         int j = 0
         for j < t.shape.ndim {
@@ -655,7 +655,7 @@ func matmul_2d(tensor a, tensor b) tensor {
     int k2 = b.shape.dims[0]
     int n = b.shape.dims[1]
     if k != k2 { return a }
-    float[] result = new float[m * n]
+    float[] result = float[m * n]
     int m = 0
     for m < m {
         int n = 0
@@ -671,7 +671,7 @@ func matmul_2d(tensor a, tensor b) tensor {
         }
         m = m + 1
     }
-    int[] out_shape = new int[2]
+    int[] out_shape = int[2]
     out_shape[0] = m
     out_shape[1] = n
     tensor(result, out_shape)
@@ -693,7 +693,7 @@ func dot(tensor a, tensor b) tensor {
 func outer(tensor a, tensor b) tensor {
     int m = a.shape.dims[0]
     int n = b.shape.dims[0]
-    float[] result = new float[m * n]
+    float[] result = float[m * n]
     int i = 0
     for i < m {
         int j = 0
@@ -703,14 +703,14 @@ func outer(tensor a, tensor b) tensor {
         }
         i = i + 1
     }
-    int[] shape = new int[2]
+    int[] shape = int[2]
     shape[0] = m
     shape[1] = n
     tensor(result, shape)
 }
 
 func cat(tensor[] tensors, int dim) tensor {
-    if len(tensors) == 0 { return zeros(new int[]{0}) }
+    if len(tensors) == 0 { return zeros(int[]{0}) }
     if len(tensors) == 1 { return tensors[0] }
     int target_dim = dim
     if target_dim < 0 { target_dim = tensors[0].shape.ndim + target_dim }
@@ -720,7 +720,7 @@ func cat(tensor[] tensors, int dim) tensor {
         total_concat = total_concat + tensors[i].shape.dims[target_dim]
         i = i + 1
     }
-    int[] out_shape = new int[tensors[0].shape.ndim]
+    int[] out_shape = int[tensors[0].shape.ndim]
     int j = 0
     for j < tensors[0].shape.ndim {
         if j == target_dim { out_shape[j] = total_concat }
@@ -728,7 +728,7 @@ func cat(tensor[] tensors, int dim) tensor {
         j = j + 1
     }
     int total_size = shape_from_dims(out_shape).size
-    float[] vals = new float[total_size]
+    float[] vals = float[total_size]
     int offset = 0
     i = 0
     for i < len(tensors) {
@@ -745,11 +745,11 @@ func cat(tensor[] tensors, int dim) tensor {
 }
 
 func stack(tensor[] tensors, int dim) tensor {
-    if len(tensors) == 0 { return zeros(new int[]{0}) }
+    if len(tensors) == 0 { return zeros(int[]{0}) }
     int n = len(tensors)
     int target_dim = dim
     if target_dim < 0 { target_dim = tensors[0].shape.ndim + 1 + target_dim }
-    int[] out_shape = new int[tensors[0].shape.ndim + 1]
+    int[] out_shape = int[tensors[0].shape.ndim + 1]
     int i = 0
     int j = 0
     for i < len(out_shape) {
@@ -761,7 +761,7 @@ func stack(tensor[] tensors, int dim) tensor {
 }
 
 func relu_tensor(tensor t) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     int i = 0
     for i < t.shape.size {
         if t.data.values[i] > 0 { vals[i] = t.data.values[i] }
@@ -772,7 +772,7 @@ func relu_tensor(tensor t) tensor {
 }
 
 func gelu_tensor(tensor t) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     float sqrt_2_over_pi = 0.7978845608028654
     int i = 0
     for i < t.shape.size {
@@ -810,7 +810,7 @@ func layer_norm(tensor t, float eps) tensor {
 }
 
 func sigmoid_tensor(tensor t) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     int i = 0
     for i < t.shape.size {
         float x = t.data.values[i]
@@ -826,7 +826,7 @@ func sigmoid_tensor(tensor t) tensor {
 }
 
 func tanh_tensor(tensor t) tensor {
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     int i = 0
     for i < t.shape.size {
         float x = t.data.values[i]
@@ -840,7 +840,7 @@ func tanh_tensor(tensor t) tensor {
 
 func dropout(tensor t, float p, bool training) tensor {
     if !training || p == 0.0 { return t }
-    float[] vals = new float[t.shape.size]
+    float[] vals = float[t.shape.size]
     float scale = 1.0 / (1.0 - p)
     int i = 0
     for i < t.shape.size {
@@ -863,7 +863,7 @@ func gather(tensor t, int[] indices, int dim) tensor {
         elem_size = elem_size * t.shape.dims[k]
         k = k + 1
     }
-    float[] vals = new float[num_indices * elem_size]
+    float[] vals = float[num_indices * elem_size]
     int i = 0
     for i < num_indices {
         int src_start = indices[i] * elem_size
@@ -875,7 +875,7 @@ func gather(tensor t, int[] indices, int dim) tensor {
         }
         i = i + 1
     }
-    int[] out_shape = new int[t.shape.ndim]
+    int[] out_shape = int[t.shape.ndim]
     out_shape[0] = num_indices
     k = 1
     for k < t.shape.ndim { out_shape[k] = t.shape.dims[k]; k = k + 1 }
@@ -884,7 +884,7 @@ func gather(tensor t, int[] indices, int dim) tensor {
 
 func one_hot(int[] indices, int num_classes) tensor {
     int n = len(indices)
-    float[] vals = new float[n * num_classes]
+    float[] vals = float[n * num_classes]
     int i = 0
     for i < n * num_classes { vals[i] = 0.0; i = i + 1 }
     i = 0
@@ -893,7 +893,7 @@ func one_hot(int[] indices, int num_classes) tensor {
         if cls >= 0 && cls < num_classes { vals[i * num_classes + cls] = 1.0 }
         i = i + 1
     }
-    int[] shape = new int[2]
+    int[] shape = int[2]
     shape[0] = n
     shape[1] = num_classes
     tensor(vals, shape)

@@ -10,7 +10,7 @@ const_fold_rule*[] fold_rules
 int fold_rule_count
 
 func init_const_fold_rules() int {
-    fold_rules = new const_fold_rule*[500]
+    fold_rules = const_fold_rule*[500]
     fold_rule_count = 0
     return 0
 }

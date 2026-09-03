@@ -27,7 +27,7 @@ struct optimization_pipeline {
 func optimization_pipeline_new() optimization_pipeline* {
     pipeline := optimization_pipeline {
         phase_count: 0,
-        phases: new compilation_phase[32],
+        phases: compilation_phase[32],
         debug_enabled: 0,
         stats: optimization_stats {
             total_phases: 0,
