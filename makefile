@@ -6,6 +6,8 @@ SUDO ?=
 VERBOSE ?= 1
 SELFHOST_DIR ?= $(CURDIR)/.bootstrap/selfhost
 BOOTSTRAP_MANIFEST ?= $(SELFHOST_DIR)/manifest.txt
+NATIVE_BOOTSTRAP_DIR := $(SELFHOST_DIR)/native
+NATIVE_BOOTSTRAP_STAMP := $(NATIVE_BOOTSTRAP_DIR)/.complete
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 S_TARGET_OS ?= linux
 S_TARGET_ARCH ?= amd64
@@ -22,7 +24,8 @@ target-config-check: seed-compiler-bin
 	@! S_TARGET_OS=plan9 S_TARGET_ARCH=amd64 ./bin/s_seed --target-info >/dev/null 2>&1
 	@echo "Target configuration checks passed"
 
-run: bin/s
+# The default build compiles the self-hosted compiler before installing it.
+run: selfhost
 	@mkdir -p "$(INSTALL_BIN_DIR)"
 	@$(if $(filter 1,$(VERBOSE)),echo "Installing S compiler bootstrap binary (bin/s) for $$(uname -m)...";)
 	@$(if $(filter 1,$(VERBOSE)),echo "Installing bin/s to $(INSTALL_BIN_DIR)/s...";)
@@ -322,10 +325,22 @@ bootstrap-audit: selfhost
 	@./src/cmd/dist/checks/audit.sh "$(SELFHOST_DIR)/native" ./bin/s
 
 # Build a genuinely independent compiler chain. Unlike bootstrap-convergence,
-# this target compares S-generated assembly and compiler executables.
-native-bootstrap: seed-compiler-bin
+# this target compares S-generated assembly and compiler executables. The stamp
+# avoids repeating the expensive chain when none of its inputs changed.
+NATIVE_BOOTSTRAP_INPUTS := \
+  $(SEED_COMPILER_SOURCES) \
+  src/cmd/compile/selfhost/compiler.s \
+  src/cmd/dist/native-bootstrap.sh \
+  src/runtime/selfhost_linux_amd64.S \
+  src/runtime/linker/nostdlib.ld
+
+native-bootstrap: seed-compiler-bin $(NATIVE_BOOTSTRAP_STAMP)
+
+$(NATIVE_BOOTSTRAP_STAMP): $(NATIVE_BOOTSTRAP_INPUTS)
+	@mkdir -p "$(NATIVE_BOOTSTRAP_DIR)"
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./src/cmd/dist/native-bootstrap.sh \
-	  $(SELFHOST_DIR)/native
+	  "$(NATIVE_BOOTSTRAP_DIR)"
+	@touch "$@"
 
 # Strict self-host gate: every stage writes the next ELF image directly. This
 # target intentionally forbids the assembly/link steps used by native-bootstrap.
