@@ -1,8 +1,8 @@
 package src.cmd.link.internal.ld
 
-// This file is the small, dependency-free object contract used by the S linker.
-// It deliberately uses arrays instead of maps so it also works in freestanding
-// compiler builds.
+
+
+
 
 const s_obj_elf = 1
 const s_obj_macho = 2
@@ -117,7 +117,7 @@ func s_obj_put_u64(u8[] data, int at, int value) () {
     s_obj_put_u32(data, at + 4, value >> 32)
 }
 
-// Read the fixed ELF64 header and section table. Return 0 for malformed input.
+
 func s_elf_read_rel_object(u8[] data) (s_object, int) {
     obj := s_obj_empty()
     if data.len() < 64 || data[0] != 0x7f || data[1] != 69 || data[2] != 76 || data[3] != 70 {
@@ -157,8 +157,8 @@ func s_elf_read_rel_object(u8[] data) (s_object, int) {
     obj, 1
 }
 
-// Emit a valid minimal ELF64 relocatable header. Section payload emission is
-// performed by the caller after layout, using s_obj_put_u64 for offsets.
+
+
 func s_elf_write_rel_header(int machine, int shoff, int shnum, int shstrndx) u8[] {
     header := new u8[64]
     header[0] = 0x7f
@@ -186,8 +186,8 @@ func s_obj_find_symbol(s_obj_symbol[] symbols, string name) int {
     -1
 }
 
-// Strong definitions win over weak definitions; hidden/internal definitions
-// are never exported as interposable symbols.
+
+
 func s_obj_merge_symbol(s_obj_symbol[] symbols, s_obj_symbol candidate) int {
     old := s_obj_find_symbol(symbols, candidate.name)
     if old < 0 { old }
@@ -278,8 +278,8 @@ struct s_build_id {
     u8[] bytes
 }
 
-// A stable, allocation-free digest for reproducible artifacts. The linker can
-// replace this with SHA-256 without changing the build-id interface.
+
+
 func s_build_id_for(u8[] data) s_build_id {
     a := 2166136261
     b := 16777619
@@ -322,7 +322,7 @@ func s_dwarf_line_program(s_dwarf_range[] ranges) u8[] {
 }
 
 func s_unwind_cfi(int cfa_register, int cfa_offset) u8[] {
-    // DW_CFA_def_cfa, followed by register and ULEB128 offset.
+    
     data := u8[] { 0x0c, u8(cfa_register), u8(cfa_offset) }
     data
 }

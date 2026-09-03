@@ -16,7 +16,7 @@ struct runtime_select_case {
     int value
 }
 
-// Try all cases once. A negative index means that no case is ready.
+
 func runtime_select_try(runtime_select_case[] cases) runtime_select_result {
     int i = 0
     for i < len(cases) {
@@ -37,8 +37,8 @@ func runtime_select_try(runtime_select_case[] cases) runtime_select_result {
     runtime_select_result { index: -1, value: 0, ok: false }
 }
 
-// Probe receive cases in source order. The caller parks and retries when the
-// result index is negative, which keeps the operation race-free with senders.
+
+
 func runtime_select_recv(raw_chan[] channels) runtime_select_result {
     int i = 0
     for i < len(channels) {
