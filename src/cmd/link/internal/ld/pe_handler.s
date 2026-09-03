@@ -5,14 +5,14 @@ import (
 	"src/os"
 )
 
-// PE 常量
+
 const (
-	PE_SIGNATURE = 0x00004550 // "PE\0\0"
+	PE_SIGNATURE = 0x00004550 
 	PE_MAGIC_PE32 = 0x10b
 	PE_MAGIC_PE32PLUS = 0x20b
 )
 
-// PE 机器类型
+
 enum pe_machine {
 	MACHINE_UNKNOWN = 0x0
 	MACHINE_I386 = 0x14c
@@ -39,7 +39,7 @@ enum pe_machine {
 	MACHINE_CHPE_X86_64 = 0x3a64
 }
 
-// PE 文件头
+
 struct pe_file_header {
 	machine              u16
 	number_of_sections     u16
@@ -50,7 +50,7 @@ struct pe_file_header {
 	characteristics      u16
 }
 
-// PE 可选头
+
 struct pe_optional_header {
 	magic                       u16
 	major_linker_version          u8
@@ -84,7 +84,7 @@ struct pe_optional_header {
 	number_of_rva_and_sizes         u32
 }
 
-// PE section Header
+
 struct pe_section_header {
 	name                 [8]u8
 	virtual_size          u32
@@ -98,7 +98,7 @@ struct pe_section_header {
 	characteristics      u32
 }
 
-// PE 对象
+
 struct pe_object {
 	dos_header       [64]u8
 	pe_signature     u32
@@ -110,7 +110,7 @@ struct pe_object {
 	relocations pe_relocation[]
 }
 
-// PE 符号
+
 struct pe_symbol {
 	name          string
 	value         u32
@@ -120,14 +120,14 @@ struct pe_symbol {
 	aux_symbols    i32
 }
 
-// PE relocation
+
 struct pe_relocation {
 	virtual_address u32
 	symbol_index    u32
 	type           u16
 }
 
-// 创建 PE 对象
+
 func new_pe_object(machine pe_machine) pe_object {
 	obj := pe_object{
 		PESignature: PE_SIGNATURE,
@@ -137,8 +137,8 @@ func new_pe_object(machine pe_machine) pe_object {
 			TimeDateStamp: 0,
 			PointerToSymbolTable: 0,
 			NumberOfSymbols: 0,
-			SizeOfOptionalHeader: 240, // PE32+ 可选头大小
-			Characteristics: 0x0002 | 0x0004 | 0x0008, // EXECUTABLE_IMAGE | LARGE_ADDRESS_AWARE
+			SizeOfOptionalHeader: 240, 
+			Characteristics: 0x0002 | 0x0004 | 0x0008, 
 		},
 		OptionalHeader: pe_optional_header{
 			Magic: PE_MAGIC_PE32PLUS,
@@ -163,7 +163,7 @@ func new_pe_object(machine pe_machine) pe_object {
 			SizeOfImage: 0,
 			SizeOfHeaders: 0x400,
 			CheckSum: 0,
-			Subsystem: 3,  // WINDOWS_CUI
+			Subsystem: 3,  
 			DllCharacteristics: 0,
 			SizeOfStackReserve: 0x100000,
 			SizeOfStackCommit: 0x1000,
@@ -178,14 +178,14 @@ func new_pe_object(machine pe_machine) pe_object {
 		Relocations: make(pe_relocation[], 0),
 	}
 
-	// 初始化 DOS 头
+	
 	obj.DosHeader[0] = 0x4d
 	obj.DosHeader[1] = 0x5a
 
 	obj
 }
 
-// 添加 section
+
 func (po pe_object*) AddSection(name string, data u8[]) i32 {
 	idx := i32(len(po.Sections))
 
@@ -198,10 +198,10 @@ func (po pe_object*) AddSection(name string, data u8[]) i32 {
 		PointerToLinenumbers: 0,
 		NumberOfRelocations: 0,
 		NumberOfLinenumbers: 0,
-		Characteristics: 0x60000020, // CNT_CODE | MEM_EXECUTE | MEM_READ
+		Characteristics: 0x60000020, 
 	}
 
-	// 复制名称
+	
 	nameBytes := u8[](name)
 	for i := i32(0); i < 8 && i < i32(len(nameBytes)); i += 1 {
 		shdr.Name[i] = nameBytes[i]
@@ -213,17 +213,17 @@ func (po pe_object*) AddSection(name string, data u8[]) i32 {
 	idx
 }
 
-// 添加符号
+
 func (po pe_object*) AddSymbol(sym pe_symbol) {
 	po.SymbolTable = append(po.SymbolTable, sym)
 }
 
-// 添加重定位
+
 func (po pe_object*) AddRelocation(reloc pe_relocation) {
 	po.Relocations = append(po.Relocations, reloc)
 }
 
-// 从文件读取 PE
+
 func ReadPEObject(string filename) (pe_object, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -231,22 +231,22 @@ func ReadPEObject(string filename) (pe_object, error) {
 	}
 	defer file.Close()
 
-	// 读取 DOS 头和 PE 头
+	
 	buf := make(u8[], 4096)
 	n, err := file.Read(buf)
 	if err != nil || n < 64 {
 		pe_object{}, "failed to read PE header"
 	}
 
-	// 检查 DOS 头
+	
 	if buf[0] != 0x4d || buf[1] != 0x5a {
 		pe_object{}, "invalid DOS header"
 	}
 
-	// 获取 PE 头偏移
+	
 	peOffset := i32(binary.LittleEndian.Uint32(buf[60:64]))
 
-	// 检查 PE 签名
+	
 	if peOffset+4 > i32(n) {
 		pe_object{}, "PE header offset out of bounds"
 	}
@@ -256,7 +256,7 @@ func ReadPEObject(string filename) (pe_object, error) {
 		pe_object{}, "invalid PE signature"
 	}
 
-	// 解析文件头
+	
 	fhOffset := peOffset + 4
 	obj := new_pe_object(pe_machine(binary.LittleEndian.Uint16(buf[fhOffset : fhOffset+2])))
 
@@ -271,7 +271,7 @@ func ReadPEObject(string filename) (pe_object, error) {
 	obj, nil
 }
 
-// 将 PE 对象写入文件
+
 func (pe_object* po) WriteToFile(string filename) error {
 	file, err := os.Create(filename)
 	if err != nil {
@@ -279,13 +279,13 @@ func (pe_object* po) WriteToFile(string filename) error {
 	}
 	defer file.Close()
 
-	// 写入 DOS 头
+	
 	_, err = file.Write(po.DosHeader[:])
 	if err != nil {
 		err
 	}
 
-	// 写入 PE 签名
+	
 	sigBuf := make(u8[], 4)
 	binary.LittleEndian.PutUint32(sigBuf, po.PESignature)
 	_, err = file.Write(sigBuf)
@@ -293,7 +293,7 @@ func (pe_object* po) WriteToFile(string filename) error {
 		err
 	}
 
-	// 写入文件头
+	
 	fhBuf := make(u8[], 20)
 	binary.LittleEndian.PutUint16(fhBuf[0:2], po.FileHeader.Machine)
 	binary.LittleEndian.PutUint16(fhBuf[2:4], po.FileHeader.NumberOfSections)
@@ -308,7 +308,7 @@ func (pe_object* po) WriteToFile(string filename) error {
 		err
 	}
 
-	// 写入可选头
+	
 	optBuf := make(u8[], 240)
 
 	binary.LittleEndian.PutUint16(optBuf[0:2], po.OptionalHeader.Magic)
@@ -320,7 +320,7 @@ func (pe_object* po) WriteToFile(string filename) error {
 		err
 	}
 
-	// 写入 section 头
+	
 	for _, shdr := range po.Sections {
 		shBuf := make(u8[], 40)
 
@@ -344,7 +344,7 @@ func (pe_object* po) WriteToFile(string filename) error {
 		}
 	}
 
-	// 写入 section 数据
+	
 	for i, shdr := range po.Sections {
 		if data, ok := po.SectionData[i32(i)]; ok {
 			_, err = file.Write(data)
@@ -352,7 +352,7 @@ func (pe_object* po) WriteToFile(string filename) error {
 				err
 			}
 
-			// 填充到对齐
+			
 			padding := shdr.SizeOfRawData - u32(len(data))
 			if padding > 0 {
 				padBuf := make(u8[], padding)

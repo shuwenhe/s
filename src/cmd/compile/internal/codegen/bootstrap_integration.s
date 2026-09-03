@@ -1,6 +1,8 @@
 package compile.internal.codegen
 use compile.internal.link
 use compile.internal.obj
+use compile.internal.backend_elf64.build as backend_build
+use compile.internal.backend_elf64.build_object as backend_build_object
 use std.training_io._read_file as read_file
 use std.training_io.find_substr
 struct s_compiler {
@@ -8,8 +10,6 @@ struct s_compiler {
     symbol_table* symtab
     relocation_context* reloc_ctx
     codegen_config config
-    amd64_code_gen* amd64_gen
-    elf_generator* elf_gen
     int64 total_code_size
     int64 total_data_size
     int64 function_count
@@ -17,18 +17,14 @@ struct s_compiler {
 }
 
 func make_s_compiler(string target_arch) s_compiler {
-    mcg := make_machine_code_gen()
+    link_ctx := make_link_context()
+    mcg := make_machine_code_gen(link_ctx*)
     symtab := make_symbol_table()
     reloc_ctx := make_relocation_context()
     config := make_codegen_config(target_arch)
-    amd64_gen := make_amd64_code_gen(&mcg, &symtab, &reloc_ctx, config)
-    elf_gen := make_elf_generator_for_amd64()
     s_compiler {
-        mcg* mcg,
-        symtab* symtab,
-        reloc_ctx* reloc_ctx, config config,
-        amd64_gen* amd64_gen,
-        elf_gen* elf_gen, total_code_size 0 as int64, total_data_size 0 as int64, function_count 0 as int64, symbol_count 0 as int64,
+        mcg: mcg*, symtab: symtab*, reloc_ctx: reloc_ctx*, config: config,
+        total_code_size: 0 as int64, total_data_size: 0 as int64, function_count: 0 as int64, symbol_count: 0 as int64
     }
 }
 
@@ -92,23 +88,30 @@ func generate_loop_s_program() string {
 }
 
 func compile_s_source_to_object(string source_file, string output_file) int {
-    compiler := make_s_compiler("x86-64")
-    0
+    source := read_file(source_file)
+    if !source.ok {
+        return 1
+    }
+    return backend_build_object(source_file, output_file, "")
 }
 
 func compile_s_source_to_executable(string source_file, string output_file) int {
-    0
+    source := read_file(source_file)
+    if !source.ok {
+        return 1
+    }
+    return backend_build(source_file, output_file, "", false)
 }
 
 func make_bootstrap_compiler_config() codegen_config {
     codegen_config {
-        target_arch: "x86-64", code_section_align 4096 as int64, data_section_align 8 as int64, emit_debug_info false, optimize_size true,
+        target_arch "x86-64", code_section_align 4096 as int64, data_section_align 8 as int64, emit_debug_info false, optimize_size true
     }
 }
 
 func make_debug_compiler_config() codegen_config {
     codegen_config {
-        target_arch: "x86-64", code_section_align 16 as int64, data_section_align 8 as int64, emit_debug_info true, optimize_size false,
+        target_arch "x86-64", code_section_align 16 as int64, data_section_align 8 as int64, emit_debug_info true, optimize_size false
     }
 }
 
@@ -168,7 +171,7 @@ func test_full_bootstrap() string {
     result = result + "[2/3] " + bootstrap_stage1_to_stage2() + "\n"
     result = result + "[3/3] " + bootstrap_stage2_to_stage3() + "\n"
     result = result + "\nVerifying bootstrap convergence...\n"
-    if verify_bootstrap_convergence(".bootstrap/stage2", ".bootstrap/stage3") {
+    if verify_bootstrap_convergence(".bootstrap/stage2.ir", ".bootstrap/stage3.ir") {
         result = result + "✓ Bootstrap convergence verified\n"
     } else {
         result = result + "✗ Bootstrap convergence FAILED\n"

@@ -6,7 +6,7 @@ import (
 	"src/crypto/sha256"
 )
 
-// DWARF 版本
+
 const (
 	DWARF_VERSION_2 = 2
 	DWARF_VERSION_3 = 3
@@ -14,7 +14,7 @@ const (
 	DWARF_VERSION_5 = 5
 )
 
-// DWARF TAg
+
 enum dwarf_tag {
 	DW_TAG_COMPILE_UNIT = 0x11
 	DW_TAG_TYPE_UNIT = 0x41
@@ -33,7 +33,7 @@ enum dwarf_tag {
 	DW_TAG_MODULE = 0x1d
 }
 
-// DWARF Attribute
+
 enum dwarf_attribute {
 	DW_AT_NAME = 0x03
 	DW_AT_TYPE = 0x49
@@ -53,7 +53,7 @@ enum dwarf_attribute {
 	DW_AT_EXTERNAL = 0x3f
 }
 
-// DWARF 编码
+
 enum dwarf_encoding {
 	DW_ATE_ADDRESS = 0x1
 	DW_ATE_BOOLEAN = 0x2
@@ -73,7 +73,7 @@ enum dwarf_encoding {
 	DW_ATE_UTF = 0x10
 }
 
-// DWARF DIE (Debugging Information Entry)
+
 struct dwarf_die {
 	tag       dwarf_tag
 	attributes map[dwarf_attribute]dwarf_attribute_value
@@ -81,7 +81,7 @@ struct dwarf_die {
 	offset     i64
 }
 
-// DWARF 属性值
+
 enum dwarf_attribute_value {
 	IntValue(i64)
 	StringValue(string)
@@ -91,7 +91,7 @@ enum dwarf_attribute_value {
 	BoolValue(bool)
 }
 
-// DWARF 编译单元
+
 struct dwarf_compile_unit {
 	version        i32
 	abbrev_offset   i64
@@ -103,7 +103,7 @@ struct dwarf_compile_unit {
 	location_info   []DWARFLocationInfo
 }
 
-// DWARF 行信息
+
 struct dwarf_line_info {
 	min_instruction_length i32
 	line_base             i32
@@ -115,7 +115,7 @@ struct dwarf_line_info {
 	statements dwarf_line_statement[]
 }
 
-// DWARF 行语句
+
 struct dwarf_line_statement {
 	address  i64
 	file     i32
@@ -126,7 +126,7 @@ struct dwarf_line_statement {
 	end_sequence bool
 }
 
-// DWARF 位置信息
+
 struct DWARFLocationInfo {
 	variable string
 	address  i64
@@ -135,7 +135,7 @@ struct DWARFLocationInfo {
 	offset   i64
 }
 
-// DWARF 管理器
+
 struct dwarf_manager {
 	compile_units dwarf_compile_unit[]
 	abbrev_table  map[i32]u8[]
@@ -144,7 +144,7 @@ struct dwarf_manager {
 	version      i32
 }
 
-// 创建 DWARF 管理器
+
 func NewDWARFManager(version i32) dwarf_manager {
 	dwarf_manager{
 		CompileUnits: make(dwarf_compile_unit[], 0),
@@ -155,78 +155,78 @@ func NewDWARFManager(version i32) dwarf_manager {
 	}
 }
 
-// 添加编译单元
+
 func (dm dwarf_manager*) AddCompileUnit(cu dwarf_compile_unit) {
 	dm.CompileUnits = append(dm.CompileUnits, cu)
 }
 
-// 生成行号信息 section
+
 func (dm dwarf_manager*) GenerateDebugLine() u8[] {
 	data := make(u8[], 0)
 
 	for _, lineInfo := range dm.LineInfo {
-		// 行号程序头
+		
 		lenOffset := len(data)
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
 
 		versionStart := len(data)
 
-		// 版本
-		data = append(data, 4, 0) // DWARF 4
+		
+		data = append(data, 4, 0) 
 
-		// 头长度
+		
 		hdrLenOffset := len(data)
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
 
-		// 最小指令长度
+		
 		data = append(data, u8(lineInfo.MinInstructionLength))
 
-		// 最大操作数长度
+		
 		data = append(data, 1)
 
-		// 默认为 true
+		
 		data = append(data, 1)
 
-		// 行基数
+		
 		data = append(data,
 			u8(lineInfo.LineBase),
 			u8(lineInfo.LineBase >> 8),
 			u8(lineInfo.LineBase >> 16),
 			u8(lineInfo.LineBase >> 24))
 
-		// 行范围
+		
 		data = append(data, u8(lineInfo.LineRange))
 
-		// 操作码基数
+		
 		data = append(data, u8(lineInfo.OpcodeBase))
 
-		// 标准操作码长度
+		
 		for i := i32(1); i < lineInfo.OpcodeBase; i += 1 {
 			data = append(data, 0)
 		}
 
-		// 包含目录
+		
 		for _, dir := range lineInfo.DirectoryNames {
 			data = append(data, u8[](dir)...)
 			data = append(data, 0)
 		}
-		data = append(data, 0) // 目录列表结束
+		data = append(data, 0) 
 
-		// 文件名
+		
 		for _, fname := range lineInfo.FileNames {
 			data = append(data, u8[](fname)...)
 			data = append(data, 0)
-			data = append(data, 1) // 目录索引
-			data = append(data, 0) // 修改时间
-			data = append(data, 0) // 文件大小
+			data = append(data, 1) 
+			data = append(data, 0) 
+			data = append(data, 0) 
 		}
-		data = append(data, 0) // 文件列表结束
+		data = append(data, 0) 
 	}
 
 	data
 }
 
-// Unwind 信息处理 (CFI/DWARF Unwinding)
+
 struct UnwindInfo {
 	version       i32
 	eh_frame_offset i64
@@ -234,7 +234,7 @@ struct UnwindInfo {
 	cies          []CommonInformationEntry
 }
 
-// CIE (Common Information Entry)
+
 struct CommonInformationEntry {
 	length                i32
 	cie_id                 i32
@@ -246,7 +246,7 @@ struct CommonInformationEntry {
 	augmentation_data u8[]
 }
 
-// FDE (Frame Description Entry)
+
 struct FrameDescriptionEntry {
 	length          i32
 	cie_pointer      i32
@@ -256,12 +256,12 @@ struct FrameDescriptionEntry {
 	instructions u8[]
 }
 
-// Unwind 管理器
+
 struct unwind_manager {
 	unwind_info UnwindInfo
 }
 
-// 创建 Unwind 管理器
+
 func NewUnwindManager() unwind_manager {
 	unwind_manager{
 		UnwindInfo: UnwindInfo{
@@ -273,11 +273,11 @@ func NewUnwindManager() unwind_manager {
 	}
 }
 
-// 生成 .eh_frame section
+
 func (um unwind_manager*) GenerateEhFrame() u8[] {
 	data := make(u8[], 0)
 
-	// 生成 CIE
+	
 	for _, cie := range um.UnwindInfo.Cies {
 		data = append(data,
 			u8(cie.Length),
@@ -302,7 +302,7 @@ func (um unwind_manager*) GenerateEhFrame() u8[] {
 		data = append(data, cie.AugmentationData...)
 	}
 
-	// 生成 FDE
+	
 	for _, fde := range um.UnwindInfo.Fdes {
 		data = append(data,
 			u8(fde.Length),
