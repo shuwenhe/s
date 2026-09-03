@@ -367,7 +367,7 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
     debug_lines := build_debug_lines(optimized_mir, allocation.allocated_regs)
     debug_var_locations := build_var_locations(allocation.allocated_regs)
     return ssa_program{
-        function_name: function_name,
+        function_name function_name,
         optimized_mir_text optimized_mir,
         pass_mir_trace pass_mir_trace,
         pass_delta_trace pass_delta_trace,
@@ -469,7 +469,7 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         debug_line_count len(debug_lines),
         allocated_regs allocation.allocated_regs,
         debug_lines debug_lines,
-        debug_var_locations debug_var_locations,
+        debug_var_locations debug_var_locations
     }
 }
 
