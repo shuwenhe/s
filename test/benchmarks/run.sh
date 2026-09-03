@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 out=${TMPDIR:-/tmp}/s-benchmark-$$
 trap 'rm -rf "$out"' EXIT HUP INT TERM
 mkdir -p "$out"
@@ -17,14 +17,14 @@ gocache=$out/go-cache
 expected_status=128
 
 echo "Building S (seed AOT)..."
-"$root/bin/s_seed" "$root/benchmarks/loop.s" "$out/loop.ir"
+"$root/bin/s_seed" "$root/test/benchmarks/loop.s" "$out/loop.ir"
 S_SOURCE_ROOT="$root" "$root/bin/s_seed" --emit-aot "$out/loop.ir" "$out/loop-s"
 
 echo "Building C..."
-"$cc" -O3 -march=native -o "$out/loop-c" "$root/benchmarks/loop.c"
+"$cc" -O3 -march=native -o "$out/loop-c" "$root/test/benchmarks/loop.c"
 
 echo "Building Go..."
-GOCACHE="$gocache" GO111MODULE=off "$go" build -trimpath -o "$out/loop-go" "$root/benchmarks/loop.go"
+GOCACHE="$gocache" GO111MODULE=off "$go" build -trimpath -o "$out/loop-go" "$root/test/benchmarks/loop.go"
 
 echo
 echo "Runtime (lower is better; one run, use repeated runs for conclusions):"
