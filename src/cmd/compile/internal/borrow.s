@@ -164,3 +164,124 @@ func find_event_colon(string event) int {
     }
     -1
 }
+
+struct lifetime_reference {
+    string reference_name
+    string owner_name
+    string scope_name
+}
+
+struct lifetime_check_result {
+    bool ok
+    int errors
+    string message
+}
+
+func lifetime_find_reference(lifetime_reference[] refs, string name) int {
+    i := 0
+    for i < len(refs) {
+        if refs[i].reference_name == name { return i }
+        i = i + 1
+    }
+    -1
+}
+
+func lifetime_contains(string[] names, string name) bool {
+    i := 0
+    for i < len(names) {
+        if names[i] == name { return true }
+        i = i + 1
+    }
+    false
+}
+
+func lifetime_second_colon(string text, int first) int {
+    i := first + 1
+    for i < len(text) {
+        if string(text[i]) == ":" { return i }
+        i = i + 1
+    }
+    -1
+}
+
+// Check that references never outlive their owner scope.
+// Events are scope:name, end_scope:name, borrow:ref:owner:scope,
+// use_ref:ref, and end_borrow:ref.
+func lifetime_check_events(string[] events) lifetime_check_result {
+    refs := lifetime_reference[] {}
+    active_scopes := string[] {}
+    ended_scopes := string[] {}
+    ended_refs := string[] {}
+    errors := 0
+    message := ""
+    i := 0
+    for i < len(events) {
+        event := events[i]
+        first := find_event_colon(event)
+        if first <= 0 {
+            errors = errors + 1
+            message = message + "invalid-lifetime-event;"
+            i = i + 1
+            continue
+        }
+        kind := slice(event, 0, first)
+        payload := slice(event, first + 1, len(event))
+        if kind == "scope" {
+            if lifetime_contains(active_scopes, payload) || lifetime_contains(ended_scopes, payload) {
+                errors = errors + 1
+                message = message + "duplicate-scope:" + payload + ";"
+            } else {
+                active_scopes = append(active_scopes, payload)
+            }
+        } else if kind == "end_scope" {
+            if !lifetime_contains(active_scopes, payload) {
+                errors = errors + 1
+                message = message + "unknown-scope:" + payload + ";"
+            } else {
+                ended_scopes = append(ended_scopes, payload)
+            }
+        } else if kind == "borrow" {
+            second := lifetime_second_colon(payload, 0)
+            if second <= 0 {
+                errors = errors + 1
+                message = message + "invalid-borrow-lifetime;"
+            } else {
+                ref_name := slice(payload, 0, second)
+                rest := slice(payload, second + 1, len(payload))
+                third := lifetime_second_colon(rest, 0)
+                if third <= 0 {
+                    errors = errors + 1
+                    message = message + "invalid-borrow-lifetime;"
+                } else {
+                    owner := slice(rest, 0, third)
+                    scope := slice(rest, third + 1, len(rest))
+                    if lifetime_find_reference(refs, ref_name) >= 0 || !lifetime_contains(active_scopes, owner) || !lifetime_contains(active_scopes, scope) {
+                        errors = errors + 1
+                        message = message + "borrow-lifetime-conflict:" + ref_name + ";"
+                    } else {
+                        refs = append(refs, lifetime_reference { reference_name: ref_name, owner_name: owner, scope_name: scope })
+                    }
+                }
+            }
+        } else if kind == "use_ref" || kind == "end_borrow" {
+            ref_id := lifetime_find_reference(refs, payload)
+            if ref_id < 0 || lifetime_contains(ended_refs, payload) {
+                errors = errors + 1
+                message = message + "invalid-reference:" + payload + ";"
+            } else {
+                ref := refs[ref_id]
+                if lifetime_contains(ended_scopes, ref.owner_name) || lifetime_contains(ended_scopes, ref.scope_name) {
+                    errors = errors + 1
+                    message = message + "dangling-reference:" + payload + ";"
+                } else if kind == "end_borrow" {
+                    ended_refs = append(ended_refs, payload)
+                }
+            }
+        } else {
+            errors = errors + 1
+            message = message + "unknown-lifetime-event:" + kind + ";"
+        }
+        i = i + 1
+    }
+    lifetime_check_result { ok: errors == 0, errors: errors, message: message }
+}
