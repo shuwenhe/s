@@ -20,15 +20,15 @@ struct write_barrier {
 
 struct write_barrier_analysis {
     write_barrier[] barriers
-    int[] gc_safe_points
-    bool[] var_needs_barrier
+    []int gc_safe_points
+    []bool var_needs_barrier
     int num_vars
 }
 
 func new_write_barrier_analysis(int num_vars) write_barrier_analysis {
     write_barrier_analysis {
         barriers: write_barrier[](),
-        gc_safe_points: int[](),
+        gc_safe_points: []int(),
         var_needs_barrier: new bool[num_vars],
         num_vars: num_vars
     }
@@ -152,8 +152,8 @@ func (wba* write_barrier_analysis) optimize_barriers() {
     }
 }
 
-func (wba* write_barrier_analysis) insert_barrier_code(write_barrier wb) string[] {
-    code := string[]()
+func (wba* write_barrier_analysis) insert_barrier_code(write_barrier wb) []string {
+    code := []string()
 
     if wb.needs_nil_check {
         code.push("if target_var != nil {")

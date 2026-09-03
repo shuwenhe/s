@@ -1,8 +1,8 @@
 package liveness_analysis
 
 struct liveness_set {
-    int[] live_in
-    int[] live_out
+    []int live_in
+    []int live_out
     int num_vars
 }
 
@@ -11,8 +11,8 @@ struct liveness_analyzer {
     int instr_count
     int var_count
     liveness_set[] block_liveness
-    int[][] block_killed
-    int[][] block_used
+    []int[] block_killed
+    []int[] block_used
 }
 
 struct stack_frame {
@@ -21,7 +21,7 @@ struct stack_frame {
     int callee_saved_offset
     int local_vars_offset
     int arg_area_offset
-    int[] slot_to_var
+    []int slot_to_var
     int slot_count
 }
 
@@ -37,8 +37,8 @@ func liveness_analyzer_new(int block_count, int var_count) liveness_analyzer* {
         block_count: block_count,
         var_count: var_count,
         block_liveness: new liveness_set[block_count],
-        block_killed: new int[][block_count],
-        block_used: new int[][block_count],
+        block_killed: new []int[block_count],
+        block_used: new []int[block_count],
     }
 
     i := 0

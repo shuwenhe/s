@@ -52,15 +52,15 @@ func normalize_ascii_text(string text) string {
     encoding_normalize_ascii_text(text)
 }
 
-func bytes_to_string(int[] bytes) string {
+func bytes_to_string([]int bytes) string {
     encoding_bytes_to_string(bytes)
 }
 
-func str_to_bytes(string text) int[] {
+func str_to_bytes(string text) []int {
     encoding_str_to_bytes(text)
 }
 
-func bytes_to_string_range(int[] bytes, int start, int length) string {
+func bytes_to_string_range([]int bytes, int start, int length) string {
     encoding_bytes_to_string_range(bytes, start, length)
 }
 

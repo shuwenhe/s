@@ -4,11 +4,11 @@ use std.math_dl as m
 struct graph_node {
     int id
     string op_name
-    int[] input_node_ids
+    []int input_node_ids
     int output_node_id
     t.tensor output_data
-    float[] cache_float
-    int[] cache_int
+    []float cache_float
+    []int cache_int
     bool is_leaf
     bool requires_grad
     t.tensor grad
@@ -26,7 +26,7 @@ struct ag_tensor {
 struct computation_graph {
     graph_node[] nodes
     int node_count
-    int[] topo_order
+    []int topo_order
 }
 var _global_graph = computation_graph { nodes: new graph_node[2000], node_count 0 }
 var _next_node_id = 0
@@ -56,7 +56,7 @@ func get_node(computation_graph g, int id) graph_node {
     graph_node {}
 }
 
-func _dfs_topo(int node_idx, bool[] visited, int[] order, int order_pos) void {
+func _dfs_topo(int node_idx, []bool visited, []int order, int order_pos) void {
     if visited[node_idx] { return }
     visited[node_idx] = true
     graph_node n = get_node(_global_graph, node_idx)
@@ -69,9 +69,9 @@ func _dfs_topo(int node_idx, bool[] visited, int[] order, int order_pos) void {
     order_pos = order_pos + 1
 }
 
-func topological_sort() int[] {
-    bool[] visited = new bool[_global_graph.node_count]
-    int[] order = new int[_global_graph.node_count]
+func topological_sort() []int {
+    []bool visited = new bool[_global_graph.node_count]
+    []int order = new int[_global_graph.node_count]
     int pos = 0
     int i = 0
     for i < _global_graph.node_count {
@@ -195,7 +195,7 @@ func ag_gelu(ag_tensor x) ag_tensor {
 func ag_softmax(ag_tensor x, int dim) ag_tensor {
     t.tensor out_data = t.softmax(x.data, dim)
     int sz = t.numel(out_data)
-    float[] cache = new float[sz]
+    []float cache = new float[sz]
     int i = 0
     for i < sz { cache[i] = out_data.data[i]; i = i + 1 }
     int nid = register_op("softmax", [x.graph_node_id], out_data, x.requires_grad, cache, [dim])
@@ -211,7 +211,7 @@ func ag_layer_norm(ag_tensor x, float eps) ag_tensor {
 func ag_sigmoid(ag_tensor x) ag_tensor {
     t.tensor out_data = t.sigmoid(x.data)
     int sz = t.numel(out_data)
-    float[] cache = new float[sz]
+    []float cache = new float[sz]
     int i = 0
     for i < sz { cache[i] = out_data.data[i]; i = i + 1 }
     int nid = register_op("sigmoid", [x.graph_node_id], out_data, x.requires_grad, cache, new int[0])
@@ -221,7 +221,7 @@ func ag_sigmoid(ag_tensor x) ag_tensor {
 func ag_tanh(ag_tensor x) ag_tensor {
     t.tensor out_data = t.tanh_t(x.data)
     int sz = t.numel(out_data)
-    float[] cache = new float[sz]
+    []float cache = new float[sz]
     int i = 0
     for i < sz { cache[i] = out_data.data[i]; i = i + 1 }
     int nid = register_op("tanh", [x.graph_node_id], out_data, x.requires_grad, cache, new int[0])
@@ -240,7 +240,7 @@ func ag_sum(ag_tensor x, int dim, bool keepdim) ag_tensor {
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "sum" }
 }
 
-func ag_view(ag_tensor x, int[] shape) ag_tensor {
+func ag_view(ag_tensor x, []int shape) ag_tensor {
     t.tensor out_data = t.reshape(x.data, shape)
     int nid = register_op("view", [x.graph_node_id], out_data, x.requires_grad, new float[0], shape)
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "view" }
@@ -271,7 +271,7 @@ func ag_mse_loss(ag_tensor pred, ag_tensor target) ag_tensor {
     ag_tensor { data: loss_data, grad t.zeros_like(loss_data), graph_node_id nid, requires_grad true, is_leaf false, name: "mse_loss" }
 }
 
-func ag_cross_entropy(ag_tensor logits, int[] target_classes) ag_tensor {
+func ag_cross_entropy(ag_tensor logits, []int target_classes) ag_tensor {
     t.tensor probs = t.softmax(logits.data, logits.data.shape.ndim - 1)
     t.tensor log_probs = t.log_t(probs)
     int batch_size = logits.data.shape.dims[0]
@@ -290,7 +290,7 @@ func ag_cross_entropy(ag_tensor logits, int[] target_classes) ag_tensor {
     loss_val = loss_val / batch_size as float
     t.tensor loss_data = t.scalar(loss_val)
     int psz = t.numel(probs)
-    float[] cache = new float[psz + batch_size]
+    []float cache = new float[psz + batch_size]
     int j = 0
     for j < psz { cache[j] = probs.data[j]; j = j + 1 }
     j = 0
@@ -318,7 +318,7 @@ func backward(ag_tensor loss_tensor) map<string, t.tensor> {
     if loss_nid >= 0 && loss_nid < _global_graph.node_count {
         _global_graph.nodes[loss_nid].grad = t.ones_like(loss_tensor.data)
     }
-    int[] topo = topological_sort()
+    []int topo = topological_sort()
     int idx = len(topo) - 1
     for idx >= 0 {
         int nid = topo[idx]
@@ -376,7 +376,7 @@ func compute_backward(graph_node node) void {
     else if op == "relu" {
         t.tensor inp = get_output(node.input_node_ids[0])
         int n = t.numel(inp)
-        float[] mask_v = new float[n]
+        []float mask_v = new float[n]
         int i = 0
         for i < n {
             if inp.data[i] > 0 { mask_v[i] = 1.0 }
@@ -389,7 +389,7 @@ func compute_backward(graph_node node) void {
     else if op == "gelu" {
         t.tensor inp = get_output(node.input_node_ids[0])
         int n = t.numel(inp)
-        float[] gv = new float[n]
+        []float gv = new float[n]
         float sqrt_2_pi = 0.7978845608028654
         int i = 0
         for i < n {
@@ -441,7 +441,7 @@ func compute_backward(graph_node node) void {
         accumulate_grad(node.input_node_ids[0], expanded)
     }
     else if op == "view" {
-        int[] orig_shape = cache_to_ints(node.cache_int, 1, len(node.output_data.shape.dims))
+        []int orig_shape = cache_to_ints(node.cache_int, 1, len(node.output_data.shape.dims))
         t.tensor reshaped = t.reshape(grad_out, orig_shape)
         accumulate_grad(node.input_node_ids[0], reshaped)
     }
@@ -535,19 +535,19 @@ func get_output(int nid) t.tensor {
     t.zeros({0})
 }
 
-func make_cache_tensor(float[] cache, int[] shape) t.tensor {
+func make_cache_tensor([]float cache, []int shape) t.tensor {
     t.tensor t = t.make_tensor(cache, shape)
     t
 }
 
-func broadcast_to(t.tensor grad, int[] orig_shape) t.tensor {
+func broadcast_to(t.tensor grad, []int orig_shape) t.tensor {
     t.tensor r = t.reshape(grad, orig_shape)
     r
 }
 
 func elemwise_sign(t.tensor t) t.tensor {
     int n = t.numel(t)
-    float[] v = new float[n]
+    []float v = new float[n]
     int i = 0
     for i < n {
         if t.data[i] > 0 { v[i] = 1.0 }
@@ -558,8 +558,8 @@ func elemwise_sign(t.tensor t) t.tensor {
     t.tensor { shape: t.shape, data v, device: "cpu", requires_grad false }
 }
 
-func register_op(string op_name, int[] input_ids, t.tensor output, bool req_grad,
-                  float[] cache_f, int[] cache_i) int {
+func register_op(string op_name, []int input_ids, t.tensor output, bool req_grad,
+                  []float cache_f, []int cache_i) int {
     graph_node n
     n.op_name = op_name
     n.input_node_ids = input_ids
@@ -572,8 +572,8 @@ func register_op(string op_name, int[] input_ids, t.tensor output, bool req_grad
     add_node(_global_graph, n)
 }
 
-func cache_to_ints(int[] arr, int start, int count) int[] {
-    int[] result = new int[count]
+func cache_to_ints([]int arr, int start, int count) []int {
+    []int result = new int[count]
     int i = 0
     for i < count { (i) = arr[start + i]; i = i + 1 }
     result

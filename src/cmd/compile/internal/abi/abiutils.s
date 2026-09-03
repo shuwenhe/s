@@ -14,7 +14,7 @@ struct abi_config {
 struct abi_param_assignment {
     string type_name
     string name
-    int[] registers
+    []int registers
     int offset
 }
 
@@ -29,8 +29,8 @@ struct abi_param_result_info {
 }
 
 struct register_layout {
-    string[] types
-    int[] offsets
+    []string types
+    []int offsets
 }
 
 struct assign_state {
@@ -42,7 +42,7 @@ struct assign_state {
 
 struct reg_alloc_result {
     bool ok
-    int[] regs
+    []int regs
 }
 
 func new_abi_config(int i_regs_count, int f_regs_count, int offset_for_locals, int which) abi_config {
@@ -172,7 +172,7 @@ func num_param_regs(abi_config config, string type_name) int {
     need.int_regs + need.float_regs
 }
 
-func abi_analyze_types(abi_config config, string[] params, string[] results) abi_param_result_info {
+func abi_analyze_types(abi_config config, []string params, []string results) abi_param_result_info {
     state := assign_state {
         r_total: config.reg_amounts, r_used reg_amounts { int_regs: 0, float_regs 0 }, stack_offset config.offset_for_locals, spill_offset 0,
     }
@@ -196,8 +196,8 @@ func abi_analyze_types(abi_config config, string[] params, string[] results) abi
     }
 }
 
-func register_types(abi_param_assignment[] assignments) string[] {
-    rts := string[]()
+func register_types(abi_param_assignment[] assignments) []string {
+    rts := []string()
     i := 0
     for i < len(assignments) {
         if assignments[i]len(.registers) > 0 {
@@ -211,18 +211,18 @@ func register_types(abi_param_assignment[] assignments) string[] {
 func register_types_and_offsets(abi_param_assignment assignment) register_layout {
     if len(assignment.registers) == 0 {
         return register_layout {
-            types: string[](), offsets int[](),
+            types: []string(), offsets []int(),
         }
     }
-    types := append_param_types(string[](), assignment.type_name)
-    pair := append_param_offsets(int[](), 0, assignment.type_name)
+    types := append_param_types([]string(), assignment.type_name)
+    pair := append_param_offsets([]int(), 0, assignment.type_name)
     register_layout {
         types: types, offsets pair.offsets,
     }
 }
 
-func compute_padding(abi_param_assignment assignment, int slots) int[] {
-    padding := int[]()
+func compute_padding(abi_param_assignment assignment, int slots) []int {
+    padding := []int()
     i := 0
     for i < slots {
         padding = append(padding, 0)
@@ -245,11 +245,11 @@ func compute_padding(abi_param_assignment assignment, int slots) int[] {
 }
 
 struct offset_result {
-    int[] offsets
+    []int offsets
     int next
 }
 
-func append_param_offsets(int[] offsets, int at, string type_name) offset_result {
+func append_param_offsets([]int offsets, int at, string type_name) offset_result {
     size := type_size(type_name)
     if size == 0 {
         return offset_result { offsets: offsets, next at }
@@ -264,7 +264,7 @@ func append_param_offsets(int[] offsets, int at, string type_name) offset_result
     offset_result { offsets: offsets, next at + size }
 }
 
-func append_param_types(string[] rts, string type_name) string[] {
+func append_param_types([]string rts, string type_name) []string {
     if type_size(type_name) == 0 {
         return rts
     }
@@ -319,16 +319,16 @@ func assign_param(assign_state state, string type_name, string name, bool is_res
 
 func try_alloc_regs(assign_state state, string type_name) reg_alloc_result {
     if type_size(type_name) == 0 {
-        return reg_alloc_result { ok: false, regs int[]() }
+        return reg_alloc_result { ok: false, regs []int() }
     }
     need := reg_amounts_for_type(type_name)
     if need.int_regs > state.r_total.int_regs - state.r_used.int_regs {
-        return reg_alloc_result { ok: false, regs int[]() }
+        return reg_alloc_result { ok: false, regs []int() }
     }
     if need.float_regs > state.r_total.float_regs - state.r_used.float_regs {
-        return reg_alloc_result { ok: false, regs int[]() }
+        return reg_alloc_result { ok: false, regs []int() }
     }
-    regs := int[]()
+    regs := []int()
     i := 0
     for i < need.int_regs {
         regs = append(regs, state.r_used.int_regs + i)

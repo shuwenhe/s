@@ -17,8 +17,8 @@ func example_simple_function() mir.ir_function {
     b.add_local(3, "result", "int")
 
     b.create_block(0, "entry")
-    b.emit_assign(3, "add", int[]{1, 2})
-    b.set_terminator("return", int[]{})
+    b.emit_assign(3, "add", []int{1, 2})
+    b.set_terminator("return", []int{})
 
     b.set_entry_exit(0, 0)
 
@@ -35,21 +35,21 @@ func example_loop_function() mir.ir_function {
     b.add_local(3, "sum", "int")
 
     b.create_block(0, "entry")
-    b.emit_assign(2, "const", int[]{})
-    b.emit_assign(3, "const", int[]{})
-    b.set_terminator("br", int[]{1})
+    b.emit_assign(2, "const", []int{})
+    b.emit_assign(3, "const", []int{})
+    b.set_terminator("br", []int{1})
 
     b.create_block(1, "loop_header")
-    b.emit_eval("cmp_lt", int[]{2, 1})
-    b.set_terminator("br_cond", int[]{2, 3})
+    b.emit_eval("cmp_lt", []int{2, 1})
+    b.set_terminator("br_cond", []int{2, 3})
 
     b.create_block(2, "loop_body")
-    b.emit_assign(3, "add", int[]{3, 2})
-    b.emit_assign(2, "add", int[]{2, 1})
-    b.set_terminator("br", int[]{1})
+    b.emit_assign(3, "add", []int{3, 2})
+    b.emit_assign(2, "add", []int{2, 1})
+    b.set_terminator("br", []int{1})
 
     b.create_block(3, "exit")
-    b.set_terminator("return", int[]{})
+    b.set_terminator("return", []int{})
 
     b.set_entry_exit(0, 3)
 

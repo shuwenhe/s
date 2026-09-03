@@ -32,7 +32,7 @@ func run_mir_suite() int {
         },
     })
     graph := mir_graph {
-        function_name: "main", blocks blocks, locals mir_local_slot[](), trace string[](), entry 0, exit 0,
+        function_name: "main", blocks blocks, locals mir_local_slot[](), trace []string(), entry 0, exit 0,
     }
     if block_count(graph) != 1 {
         return 1

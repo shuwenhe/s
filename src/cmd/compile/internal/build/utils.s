@@ -12,7 +12,7 @@ use compile.internal.build.report.usage as report_usage_impl
 use compile.internal.build.backend.build as backend_build_impl
 use compile.internal.build.backend.run as backend_run_impl
 use compile.internal.build.frontend.load as frontend_load_impl
-func parse_options(string[] args)  string[] {
+func parse_options([]string args)  []string {
     return parse_options_impl(args
 }
 

@@ -39,15 +39,15 @@ struct function_binding {
     string owner_type
     bool has_receiver
     string receiver_mode
-    string[] generic_names
-    string[] param_types
+    []string generic_names
+    []string param_types
     string return_type
 }
 
 struct method_binding {
     string name
     string receiver_mode
-    string[] param_types
+    []string param_types
     string return_type
 }
 
@@ -477,7 +477,7 @@ func validate_function_set(function_binding[] functions, string source, semantic
     errors
 }
 
-func same_param_types(string[] left, string[] right) bool {
+func same_param_types([]string left, []string right) bool {
     if len(left) != len(right) {
         return false
     }
@@ -510,13 +510,13 @@ func collect_functions(item[] items) function_binding[] {
 }
 
 func make_function_binding(function_decl function_decl) function_binding {
-    generic_names := string[]()
+    generic_names := []string()
     i := 0
     for i < len(function_decl.sig.generics) {
         generic_names = append(generic_names, generic_name(function_decl.sig.generics[i]));
         i = i + 1
     }
-    params := string[]()
+    params := []string()
     i = 0
     for i < len(function_decl.sig.params) {
         params = append(params, parse_type(function_decl.sig.params[i].type_name));
@@ -536,7 +536,7 @@ func make_function_binding(function_decl function_decl) function_binding {
 
 func make_receiver_method_binding(receiver_method_decl method_decl) function_binding {
     binding := make_function_binding(method_decl.method)
-    params := string[]()
+    params := []string()
     params = append(params, parse_type(method_decl.receiver_type))
     i := 0
     for i < len(binding.param_types) {
@@ -757,7 +757,7 @@ func collect_traits(item[] items) trait_binding[] {
                 methods := method_binding[]()
                 mi := 0
                 for mi < len(trait_decl.methods) {
-                    params := string[]()
+                    params := []string()
                     pi := 0
                     for pi < trait_decl.methods[mi]len(.params) {
                         params = append(params, parse_type(trait_decl.methods[mi].params[pi].type_name));
@@ -1184,7 +1184,7 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
         }
         expr::call(value) : {
             errors := 0
-            arg_types := string[]()
+            arg_types := []string()
             i := 0
             for i < len(value.args) {
                 arg_result := infer_expr(value.args[i], env, expected_return, functions, traits, source, diagnostics)
@@ -1202,7 +1202,7 @@ func infer_expr(expr expr, type_binding[] env, string expected_return, function_
                         matches := signature_match[]()
                         j := 0
                         for j < len(methods) {
-                            method_arg_types := string[]()
+                            method_arg_types := []string()
                             method_arg_types = append(method_arg_types, method_receiver_arg_type(target.type_name, methods[j].receiver_mode));
                             ai := 0
                             for ai < len(arg_types) {
@@ -1875,7 +1875,7 @@ func receiver_requirement_message(string method_name, string receiver_mode) stri
     "method " + method_name + " requires compatible receiver"
 }
 
-func try_match_signature(function_binding binding, string[] arg_types, function_binding[] functions, trait_binding[] traits) signature_match {
+func try_match_signature(function_binding binding, []string arg_types, function_binding[] functions, trait_binding[] traits) signature_match {
     if len(binding.param_types) != len(arg_types) {
         return signature_match {
             ok: false,
@@ -1932,7 +1932,7 @@ func same_match_rank(signature_match left, signature_match right) bool {
         && left.generic_bind_count == right.generic_bind_count
 }
 
-func match_type_pattern_ref(type_ref param_type, type_ref arg_type, string[] generic_names, type_binding[] generic_bindings) bool {
+func match_type_pattern_ref(type_ref param_type, type_ref arg_type, []string generic_names, type_binding[] generic_bindings) bool {
     p := param_type.canonical
     a := arg_type.canonical
     if is_generic_name(generic_names, p) {
@@ -1981,7 +1981,7 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, string[] gen
     true
 }
 
-func match_specificity(type_ref expected, type_ref actual, string[] generic_names) int {
+func match_specificity(type_ref expected, type_ref actual, []string generic_names) int {
     if same_type_ref(expected, actual) {
         return 5
     }
@@ -2004,7 +2004,7 @@ func match_specificity(type_ref expected, type_ref actual, string[] generic_name
     score
 }
 
-func instantiate_type(string ty, string[] generic_names, type_binding[] generic_bindings) string {
+func instantiate_type(string ty, []string generic_names, type_binding[] generic_bindings) string {
     clean := parse_type(ty)
     if is_generic_name(generic_names, clean) {
         bound := lookup_name_type(generic_bindings, clean)
@@ -2041,7 +2041,7 @@ func instantiate_type(string ty, string[] generic_names, type_binding[] generic_
     built + "]"
 }
 
-func type_contains_generic(string ty, string[] generic_names) bool {
+func type_contains_generic(string ty, []string generic_names) bool {
     clean := parse_type(ty)
     if is_generic_name(generic_names, clean) {
         return true
@@ -2069,7 +2069,7 @@ func type_contains_generic(string ty, string[] generic_names) bool {
     false
 }
 
-func is_generic_name(string[] generic_names, string name) bool {
+func is_generic_name([]string generic_names, string name) bool {
     i := 0
     for i < len(generic_names) {
         if generic_names[i] == name {

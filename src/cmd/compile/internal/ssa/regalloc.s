@@ -40,8 +40,8 @@ func sort_intervals(live_interval[] ivs) {
     }
 }
 
-func build_positions(ssa_func f) int[] {
-    pos := int[]()
+func build_positions(ssa_func f) []int {
+    pos := []int()
     i := 0
     for i < len(f.values) {
         pos = append(pos, -1)
@@ -172,7 +172,7 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
             continue
         }
         if len(active) < reg_count {
-            used := string[]()
+            used := []string()
             ai := 0
             for ai < len(active) {
                 r := assigned_reg(assigns, active[ai].value_id)

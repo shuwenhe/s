@@ -27,7 +27,7 @@ use std.io.eprintln
 use std.io.println
 use std.prelude.char_at
 use std.prelude.len
-func run(string[] options) int {
+func run([]string options) int {
     if options[0] == "help" {
         return 0
     }
@@ -110,7 +110,7 @@ func run(string[] options) int {
     return 1
 }
 
-func run_test_command(string[] options) int {
+func run_test_command([]string options) int {
     fixtures_root := resolve_fixtures_root(options[1])
     semantic_result := run_semantic_suite(fixtures_root)
     if semantic_result != 0 {
@@ -162,7 +162,7 @@ func resolve_fixtures_root(string override) string {
     "cmd/compile/internal/tests/fixtures"
 }
 
-func run_mod_command(string[] options) int {
+func run_mod_command([]string options) int {
     if options[1] == "init" {
         return run_mod_init(options[2]
     }
@@ -182,7 +182,7 @@ func run_mod_index(string dir) int {
         return 1
     }
     println("mod index: scanning " + dir + "...")
-    cmd := string[]()
+    cmd := []string()
     cmd = append(cmd, "sh")
     cmd = append(cmd, "-c")
     script := "find " + dir + " -name '*.s' -not -path '*/.*' | while read f; do " +

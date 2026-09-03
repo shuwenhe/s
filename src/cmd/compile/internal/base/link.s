@@ -9,7 +9,7 @@ struct link_symbol {
 struct link_context {
     link_symbol[] symbols
 }
-reserved_imports := string[]{"go", "type"}
+reserved_imports := []string{"go", "type"}
 ctxt := link_context { symbols: link_symbol[]() }
 
 func is_reserved_import(string prefix) bool {

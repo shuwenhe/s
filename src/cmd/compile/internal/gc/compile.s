@@ -6,7 +6,7 @@ struct compile_result {
     string report
 }
 
-func compile_package(string[] args) compile_result {
+func compile_package([]string args) compile_result {
     status := build_main(args)
     if status != 0 {
         return compile_result {
@@ -15,7 +15,7 @@ func compile_package(string[] args) compile_result {
         }
     }
     pkg := pick_pkgpath(args)
-    exported := string[]()
+    exported := []string()
     exported = append(exported, "main")
     export_payload := dump_export_data(pkg, exported)
     obj_payload := dump_object_bundle(pkg, export_payload, "linker-objects", mode_compiler_obj() | mode_linker_obj())
@@ -24,11 +24,11 @@ func compile_package(string[] args) compile_result {
     }
 }
 
-func enqueue_func(string[] queue, string fn_name) string[] {
+func enqueue_func([]string queue, string fn_name) []string {
     if fn_name == "" || fn_name == "_" {
         return queue
     }
-    out := string[]()
+    out := []string()
     i := 0
     for i < len(queue) {
         out = append(out, queue[i])
@@ -45,7 +45,7 @@ func prepare_func(string fn_name) string {
     "prepared:" + fn_name
 }
 
-func compile_functions(string[] queue, int workers) string {
+func compile_functions([]string queue, int workers) string {
     bounded_workers := clamp_backend_workers(workers)
     out := "workers=" + to_string(bounded_workers) + "\n"
     i := 0

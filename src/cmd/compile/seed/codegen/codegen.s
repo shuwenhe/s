@@ -6,17 +6,17 @@ struct codegen_context {
     program_name: string
     functions: code_function[]
     globals: code_global[]
-    assembly_lines: string[]
+    assembly_lines: []string
     next_label_id: int
 }
 
 struct code_function {
     name: string
-    params: string[]
+    params: []string
     locals: code_local[]
     instructions: code_instruction[]
-    prologue: string[]
-    epilogue: string[]
+    prologue: []string
+    epilogue: []string
 }
 
 struct code_local {
@@ -138,7 +138,7 @@ func codegen_emit_ret_reg(ctx* codegen_context, string reg) {
     ctx.emit_line("    ret")
 }
 
-func codegen_get_assembly(ctx* codegen_context) string[] {
+func codegen_get_assembly(ctx* codegen_context) []string {
     ctx.assembly_lines
 }
 

@@ -82,7 +82,7 @@ func (h lsp_handler) get_completions(uri string, pos position) completion_list {
 }
 
 func get_keyword_completions() completion_item[] {
-    keywords := string[]{
+    keywords := []string{
         "package", "use", "pub", "func", "struct", "enum", "trait",
         "const", "static", "if", "else", "for", "while", "switch",
         "case", "default", "return", "break", "continue", "true", "false",
@@ -164,7 +164,7 @@ func apply_content_changes(text string, changes text_document_content_change_eve
     result
 }
 
-func position_to_offset(lines string[], pos position) int {
+func position_to_offset(lines []string, pos position) int {
     offset := 0
     i := 0
     for i < pos.line && i < len(lines) {

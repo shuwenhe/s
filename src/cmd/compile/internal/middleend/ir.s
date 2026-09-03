@@ -70,7 +70,7 @@ struct ir_instruction {
 
     branch_target_true int
     branch_target_false int
-    branch_targets int[]
+    branch_targets []int
 }
 
 struct ir_basicblock {
@@ -79,8 +79,8 @@ struct ir_basicblock {
     instructions ir_instruction[]
     terminator ir_instruction
 
-    predecessors int[]
-    successors int[]
+    predecessors []int
+    successors []int
 }
 
 struct ir_function {
@@ -154,7 +154,7 @@ func ir_instr_condbr(ir_value cond, int true_block, int false_block) ir_instruct
     }
 }
 
-func ir_instr_phi(ir_value[] operands, int[] operand_blocks) ir_instruction {
+func ir_instr_phi(ir_value[] operands, []int operand_blocks) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_phi, operands operands, branch_targets operand_blocks
     }

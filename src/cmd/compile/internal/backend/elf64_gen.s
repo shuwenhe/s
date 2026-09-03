@@ -32,7 +32,7 @@ struct elf64_section {
     int sh_addralign
     int sh_entsize
     string name
-    int[] data
+    []int data
 }
 
 struct elf64_writer {
@@ -51,7 +51,7 @@ func make_elf64_writer() elf64_writer {
     writer
 }
 
-func (w* elf64_writer) add_section(string name, int sh_type, int[] data) {
+func (w* elf64_writer) add_section(string name, int sh_type, []int data) {
     section: elf64_section
     section.name = name
     section.sh_type = sh_type
@@ -64,7 +64,7 @@ func (w* elf64_writer) add_section(string name, int sh_type, int[] data) {
 }
 
 func (w* elf64_writer) add_text_section(string code) {
-    data := int[]()
+    data := []int()
     i := 0
     while i < len(code) {
         ch := code[i]

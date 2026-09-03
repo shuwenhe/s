@@ -21,7 +21,7 @@ struct prog {
 
 struct ssa_value {
 	string op
-	string[] args
+	[]string args
 	bool flags
 	bool marked
 	string aux

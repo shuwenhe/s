@@ -447,13 +447,35 @@ static int normalized_type_equal(const char *left, const char *right) {
 	normalized_type_span(right, &right_start, &right_len);
 	return left_len == right_len && strncmp(left_start, right_start, left_len) == 0;
 }
+static int equivalent_array_type(const char *left, const char *right) {
+	size_t left_len = left ? strlen(left) : 0;
+	size_t right_len = right ? strlen(right) : 0;
+	if (left_len >= 2 && right_len >= 2 &&
+		left[left_len - 2] == '[' && left[left_len - 1] == ']' &&
+		right[0] == '[' && right[1] == ']') {
+		return left_len == right_len &&
+			strncmp(left, right + 2, left_len - 2) == 0;
+	}
+	if (right_len >= 2 && left_len >= 2 &&
+		right[right_len - 2] == '[' && right[right_len - 1] == ']' &&
+		left[0] == '[' && left[1] == ']') {
+		return right_len == left_len &&
+			strncmp(right, left + 2, right_len - 2) == 0;
+	}
+	return 0;
+}
 static int is_type_assignable(const char *expected, const char *actual) {
 	if (is_type_any(expected) || is_type_any(actual)) {
 		return 1;
 	}
 	if (normalized_type_equal(expected, actual)) return 1;
-	if ((strncmp(expected, "[]", 2) == 0 && strcmp(actual, TYPE_ARRAY) == 0) ||
-		(strncmp(actual, "[]", 2) == 0 && strcmp(expected, TYPE_ARRAY) == 0)) {
+	if (equivalent_array_type(expected, actual)) return 1;
+	if (((strncmp(expected, "[]", 2) == 0 ||
+		(strlen(expected) >= 2 && strcmp(expected + strlen(expected) - 2, "[]") == 0)) &&
+		strcmp(actual, TYPE_ARRAY) == 0) ||
+		((strncmp(actual, "[]", 2) == 0 ||
+		(strlen(actual) >= 2 && strcmp(actual + strlen(actual) - 2, "[]") == 0)) &&
+		strcmp(expected, TYPE_ARRAY) == 0)) {
 		return 1;
 	}
 	if ((strcmp(expected, TYPE_FLOAT) == 0 && strcmp(actual, TYPE_INT) == 0) ||

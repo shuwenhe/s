@@ -22,13 +22,13 @@ enum amd64_register {
 struct instr_stream {
     []int8 code
     int64 offset
-    string[] labels
+    []string labels
     int64[] label_offsets
 }
 
 func make_instr_stream() instr_stream {
     instr_stream {
-        code: []int8()(), offset 0, labels string[](), label_offsets int64[](),
+        code: []int8()(), offset 0, labels []string(), label_offsets int64[](),
     }
 }
 

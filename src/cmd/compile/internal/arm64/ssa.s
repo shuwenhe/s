@@ -2,7 +2,7 @@ package compile.internal.arm64
 use std.slices
 struct ssa_value {
     string op
-    string[] args
+    []string args
     int reg
     int reg0
     int aux_int
@@ -167,8 +167,8 @@ func ssa_gen_value(ssa_value value) string {
     "GENERIC"
 }
 
-func ssa_gen_block(string kind, int next_succ, int likely) string[] {
-    out := string[]()
+func ssa_gen_block(string kind, int next_succ, int likely) []string {
+    out := []string()
     if kind == "BlockPlain" || kind == "BlockDefer" {
         if next_succ != 0 {
             out = append(out, "B")

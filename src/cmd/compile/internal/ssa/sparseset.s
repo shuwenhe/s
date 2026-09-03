@@ -1,19 +1,19 @@
 package compile.internal.ssa
 use std.slices
 struct sparse_set {
-    int[] dense
-    int[] sparse
+    []int dense
+    []int sparse
 }
 
 func new_sparse_set(int n) sparse_set {
-    sparse := int[]()
+    sparse := []int()
     i := 0
     for i < n {
         sparse = append(sparse, 0)
         i = i + 1
     }
     sparse_set {
-        dense: int[](), sparse sparse,
+        dense: []int(), sparse sparse,
     }
 }
 
@@ -70,6 +70,6 @@ func sparse_set_pop(sparse_set s) int_pair {
 }
 
 func sparse_set_clear(sparse_set s) sparse_set {
-    s.dense = int[]()
+    s.dense = []int()
     s
 }

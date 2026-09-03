@@ -19,16 +19,16 @@ struct wb_info {
 struct wb_inserter {
     wb_info[] barriers
     i32 num_barriers
-    bool[] is_heap_allocated
-    bool[] is_pointer_type
+    []bool is_heap_allocated
+    []bool is_pointer_type
 }
 
 func new_wb_inserter(i32 num_values) wb_inserter* {
     wbi := new(wb_inserter)
     wbi.barriers = new wb_info[]()
     wbi.num_barriers = 0
-    wbi.is_heap_allocated = make(bool[], num_values)
-    wbi.is_pointer_type = make(bool[], num_values)
+    wbi.is_heap_allocated = make([]bool, num_values)
+    wbi.is_pointer_type = make([]bool, num_values)
     
     for i := i32(0); i < num_values; i += 1 {
         wbi.is_heap_allocated[i] = false

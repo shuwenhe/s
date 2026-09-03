@@ -6,9 +6,9 @@ struct control_flow_graph {
     entry_block_id int
     exit_block_id int
 
-    dominators int[][]
-    post_dominators int[][]
-    dominance_frontier int[][]
+    dominators []int[]
+    post_dominators []int[]
+    dominance_frontier []int[]
 }
 
 struct cfg_block {
@@ -16,8 +16,8 @@ struct cfg_block {
     label string
     instructions ir_instruction[]
 
-    predecessors int[]
-    successors int[]
+    predecessors []int
+    successors []int
 
     is_loop_header int
     loop_id int
@@ -29,9 +29,9 @@ struct cfg_block {
 struct loop_info {
     loop_id int
     header_id int
-    back_edges int[]
-    body_blocks int[]
-    exit_blocks int[]
+    back_edges []int
+    body_blocks []int
+    exit_blocks []int
 }
 
 func cfg_new(ir_function func) control_flow_graph {
@@ -53,9 +53,9 @@ func cfg_new(ir_function func) control_flow_graph {
 func cfg_compute_dominators(cfg* control_flow_graph) {
     n := cfg.blocks.len()
 
-    doms := make(int[][], n)
+    doms := make([]int[], n)
     for i := 0; i < n; i = i + 1 {
-        doms[i] = make(int[], n)
+        doms[i] = make([]int, n)
     }
 
     doms[0][0] = 1
@@ -70,7 +70,7 @@ func cfg_compute_dominators(cfg* control_flow_graph) {
         changed := 0
 
         for i := 1; i < n; i = i + 1 {
-            new_dom := make(int[], n)
+            new_dom := make([]int, n)
 
             for j := 0; j < n; j = j + 1 {
                 new_dom[j] = 1
@@ -109,9 +109,9 @@ func cfg_compute_dominators(cfg* control_flow_graph) {
 func cfg_compute_post_dominators(cfg* control_flow_graph) {
     n := cfg.blocks.len()
 
-    post_doms := make(int[][], n)
+    post_doms := make([]int[], n)
     for i := 0; i < n; i = i + 1 {
-        post_doms[i] = make(int[], n)
+        post_doms[i] = make([]int, n)
     }
 
     if cfg.exit_block_id >= 0 && cfg.exit_block_id < n {
@@ -134,7 +134,7 @@ func cfg_compute_post_dominators(cfg* control_flow_graph) {
                 continue
             }
 
-            new_post_dom := make(int[], n)
+            new_post_dom := make([]int, n)
 
             for j := 0; j < n; j = j + 1 {
                 new_post_dom[j] = 1
@@ -172,10 +172,10 @@ func cfg_compute_post_dominators(cfg* control_flow_graph) {
 
 func cfg_compute_dominance_frontier(cfg* control_flow_graph) {
     n := cfg.blocks.len()
-    frontier := make(int[][], n)
+    frontier := make([]int[], n)
 
     for i := 0; i < n; i = i + 1 {
-        frontier[i] = make(int[], 0)
+        frontier[i] = make([]int, 0)
     }
 
     for x := 0; x < n; x = x + 1 {

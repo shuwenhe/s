@@ -37,9 +37,9 @@ extern "intrinsic" func __sys_listen(int sockfd, int backlog) int
 extern "intrinsic" func __sys_accept(int sockfd) int
 extern "intrinsic" func __sys_connect(int sockfd, string ip, int port, int family) int
 extern "intrinsic" func __sys_connect_deadline(int sockfd, string host, int port, int family, int timeout_ms) int
-extern "intrinsic" func __sys_resolve_ip(string host, int family) string[]
-extern "intrinsic" func __sys_read(int fd, int[] buf, int n) int
-extern "intrinsic" func __sys_write(int fd, int[] buf, int n) int
+extern "intrinsic" func __sys_resolve_ip(string host, int family) []string
+extern "intrinsic" func __sys_read(int fd, []int buf, int n) int
+extern "intrinsic" func __sys_write(int fd, []int buf, int n) int
 extern "intrinsic" func __sys_read_string(int fd, int n) string
 extern "intrinsic" func __sys_write_string(int fd, string data) int
 extern "intrinsic" func __sys_sendto_string(int fd, string data, string ip, int port, int family) int
@@ -47,7 +47,7 @@ extern "intrinsic" func __sys_recvfrom_string(int fd, int n) string
 extern "intrinsic" func __sys_last_recvfrom_ip() string
 extern "intrinsic" func __sys_last_recvfrom_port() int
 extern "intrinsic" func __sys_close(int fd) int
-extern "intrinsic" func __sys_poll(int[] fds, int nfds, int events, int timeout_ms) int
+extern "intrinsic" func __sys_poll([]int fds, int nfds, int events, int timeout_ms) int
 extern "intrinsic" func __sys_poll_ready(int fd, int events, int timeout_ms) int
 extern "intrinsic" func __sys_fcntl(int fd, int cmd, int arg) int
 extern "intrinsic" func __sys_setsockopt(int sockfd, int level, int optname, int val) int
@@ -62,12 +62,12 @@ extern "intrinsic" func __sys_errno() int
 extern "intrinsic" func __sys_strerror(int errno_code) string
 extern "intrinsic" func __sys_sendfile(int out_fd, int in_fd, int offset, int count) int
 extern "intrinsic" func __sys_splice(int in_fd, int out_fd, int count) int
-extern "intrinsic" func __sys_interface_addresses() string[]
+extern "intrinsic" func __sys_interface_addresses() []string
 extern "intrinsic" func __sys_open_read(string path) int
 extern "intrinsic" func __sys_poller_create() int
 extern "intrinsic" func __sys_poller_add(int poller_fd, int fd, int events) int
 extern "intrinsic" func __sys_poller_del(int poller_fd, int fd) int
-extern "intrinsic" func __sys_poller_wait(int poller_fd, int max, int timeout_ms) int[]
+extern "intrinsic" func __sys_poller_wait(int poller_fd, int max, int timeout_ms) []int
 
 func make_net_error(string msg) net_error {
     code := __sys_errno()
@@ -155,7 +155,7 @@ func connect_deadline(int sockfd, string host, int port, int family, int timeout
     }
 }
 
-func resolve_ip(string host, int family) (string[], net_error) {
+func resolve_ip(string host, int family) ([]string, net_error) {
     addresses := __sys_resolve_ip(host, family)
     if len(addresses) == 0 && __sys_errno() != 0 {
         make_net_error("resolve")
@@ -224,7 +224,7 @@ func splice(int in_fd, int out_fd, int count) (int, net_error) {
     if n < 0 { make_net_error("splice") } else { n }
 }
 
-func interface_addresses() (string[], net_error) {
+func interface_addresses() ([]string, net_error) {
     addresses := __sys_interface_addresses()
     if len(addresses) == 0 && __sys_errno() != 0 {
         make_net_error("getifaddrs")
@@ -327,7 +327,7 @@ func poller_del(int poller_fd, int fd) ((), net_error) {
     }
 }
 
-func poller_wait(int poller_fd, int max, int timeout_ms) (int[], net_error) {
+func poller_wait(int poller_fd, int max, int timeout_ms) ([]int, net_error) {
     ready := __sys_poller_wait(poller_fd, max, timeout_ms)
     if __sys_errno() != 0 {
         make_net_error("poller_wait")

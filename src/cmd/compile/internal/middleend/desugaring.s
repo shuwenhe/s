@@ -13,7 +13,7 @@ struct switch_optimization {
 
 struct defer_info {
     func_name string
-    args string[]
+    args []string
     cleanup_block int
 }
 

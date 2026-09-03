@@ -19,7 +19,7 @@ func run(string path, string ssa_margin, bool nostdlib) int {
         eprintln("run failed: build step failed");
         return 1
     }
-    run_argv := string[]()
+    run_argv := []string()
     run_argv = append(run_argv, output_path);
     run_result := run_process(run_argv)
     if run_result.is_err() {

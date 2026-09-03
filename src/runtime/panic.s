@@ -23,7 +23,7 @@ struct defer_entry {
 
 struct panic_entry {
 	string message
-	string[] stack_trace
+	[]string stack_trace
 	bool recovered
 	i64 panic_time
 	panic_state state
@@ -130,19 +130,19 @@ func get_panic_message() string {
 	return ""
 }
 
-func get_stack_trace() string[] {
+func get_stack_trace() []string {
 	if global_exception_context.current_panic != nil {
 		return global_exception_context.current_panic.stack_trace
 	}
-	return make(string[], 0)
+	return make([]string, 0)
 }
 
-func capture_stack_trace() string[] {
-	trace := make(string[], 0)
+func capture_stack_trace() []string {
+	trace := make([]string, 0)
 	return trace
 }
 
-func abort_with_panic_message(msg string, trace string[]) {
+func abort_with_panic_message(msg string, trace []string) {
 	fmt.fprintf(fmt.stderr, "panic: %s\n", msg)
 
 	for i := i32(0); i < i32(len(trace)); i += 1 {

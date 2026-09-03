@@ -21,7 +21,7 @@ use compile.internal.mir.dump_graph
 use std.prelude.slice
 use std.slices
 func run_pipeline_regression_suite() int {
-    cli_build_eq := string[]()
+    cli_build_eq := []string()
     cli_build_eq = append(cli_build_eq, "compile")
     cli_build_eq = append(cli_build_eq, "build")
     cli_build_eq = append(cli_build_eq, "demo.s")
@@ -32,7 +32,7 @@ func run_pipeline_regression_suite() int {
     if len(parsed_build_eq) < 4 || parsed_build_eq[3] != "5" {
         return 1
     }
-    cli_run_split := string[]()
+    cli_run_split := []string()
     cli_run_split = append(cli_run_split, "compile")
     cli_run_split = append(cli_run_split, "run")
     cli_run_split = append(cli_run_split, "demo.s")
@@ -42,7 +42,7 @@ func run_pipeline_regression_suite() int {
     if len(parsed_run_split) < 4 || parsed_run_split[3] != "7" {
         return 1
     }
-    cli_bad_margin := string[]()
+    cli_bad_margin := []string()
     cli_bad_margin = append(cli_bad_margin, "compile")
     cli_bad_margin = append(cli_bad_margin, "build")
     cli_bad_margin = append(cli_bad_margin, "demo.s")
@@ -158,7 +158,7 @@ func run_pipeline_regression_suite() int {
         return 1
     }
     metric_graph := mir_graph {
-        blocks: mir_block[](), trace string[](
+        blocks: mir_block[](), trace []string(
             "stmt sroutine worker()",
             "expr call select_recv_weighted(ch1, 2, ch2, 1)",
             "expr call select_recv_timeout(ch1, ch2, 3)",

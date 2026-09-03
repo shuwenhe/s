@@ -16,7 +16,7 @@ struct alias_analysis {
     alias_relation[] relations
     i32[][] may_alias_matrix
     i32[][] must_alias_matrix
-    string[] value_names
+    []string value_names
     i32 num_values
 }
 
@@ -25,7 +25,7 @@ func new_alias_analysis(num_values i32) alias_analysis* {
     aa.relations = new alias_relation[]()
     aa.may_alias_matrix = make(i32[][], num_values)
     aa.must_alias_matrix = make(i32[][], num_values)
-    aa.value_names = make(string[], num_values)
+    aa.value_names = make([]string, num_values)
     aa.num_values = num_values
     
     for i := i32(0); i < num_values; i += 1 {
@@ -128,7 +128,7 @@ func (aa alias_analysis*) analyze_pointer_stores(store_values i32[], store_targe
     }
 }
 
-func (aa alias_analysis*) analyze_function_parameters(param_values i32[], escape_flags bool[]) {
+func (aa alias_analysis*) analyze_function_parameters(param_values i32[], escape_flags []bool) {
     for i := i32(0); i < i32(len(param_values)); i += 1 {
         param := param_values[i]
         if param >= 0 && escape_flags[i] {

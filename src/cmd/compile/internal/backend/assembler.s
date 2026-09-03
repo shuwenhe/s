@@ -1,20 +1,20 @@
 package backend
 
 struct assembler {
-    output string[]
-    labels string[]
+    output []string
+    labels []string
     current_section string
-    data_section string[]
-    text_section string[]
+    data_section []string
+    text_section []string
 }
 
 func assembler_new() assembler {
     asm := assembler {
-        output: string[](),
-        labels: string[](),
+        output: []string(),
+        labels: []string(),
         current_section: "text",
-        data_section: string[](),
-        text_section: string[]()
+        data_section: []string(),
+        text_section: []string()
     }
     asm
 }

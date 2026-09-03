@@ -8,8 +8,8 @@ struct live_range {
 
 struct liveness_info {
     i32 value_id
-    bool[][] live_in
-    bool[][] live_out
+    []bool[] live_in
+    []bool[] live_out
     live_range[] ranges
 }
 
@@ -31,13 +31,13 @@ func new_liveness_analyzer(num_values i32, num_blocks i32) liveness_analyzer* {
     
     for i := i32(0); i < num_values; i += 1 {
         la.infos[i].value_id = i
-        la.infos[i].live_in = make(bool[][], num_blocks)
-        la.infos[i].live_out = make(bool[][], num_blocks)
+        la.infos[i].live_in = make([]bool[], num_blocks)
+        la.infos[i].live_out = make([]bool[], num_blocks)
         la.infos[i].ranges = new live_range[]()
         
         for j := i32(0); j < num_blocks; j += 1 {
-            la.infos[i].live_in[j] = make(bool[], num_values)
-            la.infos[i].live_out[j] = make(bool[], num_values)
+            la.infos[i].live_in[j] = make([]bool, num_values)
+            la.infos[i].live_out[j] = make([]bool, num_values)
         }
     }
     
@@ -87,7 +87,7 @@ func (la liveness_analyzer*) compute_liveness(succs i32[][]) {
         for b := i32(0); b < la.num_blocks; b += 1 {
             succ_list := succs[b]
             
-            new_live_out := make(bool[], la.num_values)
+            new_live_out := make([]bool, la.num_values)
             for s in succ_list {
                 if s >= 0 && s < la.num_blocks {
                     for v := i32(0); v < la.num_values; v += 1 {

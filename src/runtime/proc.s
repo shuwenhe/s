@@ -14,7 +14,7 @@ struct sroutine {
 struct p {
     int    id
     int    current_sroutine
-    int[] local_q
+    []int local_q
     int    local_head
     int    local_tail
 }
@@ -30,7 +30,7 @@ struct scheduler {
     sroutine[]   task
     m[]   ms
     p[]   ps
-    int[] global_q
+    []int global_q
     int      next_sroutine_id
     int      next_mid
     int      num_p
@@ -40,7 +40,7 @@ scheduler _sched = init_scheduler()
 
 func init_scheduler() scheduler {
     scheduler {
-        task:        sroutine[](), ms m[](), ps p[](), global_q int[](), next_sroutine_id 1, next_mid 1, num_p __runtime_num_cpu(), mu new_mutex(),
+        task:        sroutine[](), ms m[](), ps p[](), global_q []int(), next_sroutine_id 1, next_mid 1, num_p __runtime_num_cpu(), mu new_mutex(),
     }
 }
 
@@ -107,7 +107,7 @@ func find_runnable() int {
     _sched.mu.lock()
     for !_sched.global_q.is_empty() {
         first := _sched.global_q[0]
-        next_q := int[]()
+        next_q := []int()
         var i = 1
         for i < len(_sched.global_q) {
             next_q.push(_sched.global_q[i])
@@ -202,7 +202,7 @@ func runtime_init() () {
     for i < num {
         p := p {
             id:         i,
-            current_sroutine:      -1, local_q int[](), local_head 0, local_tail 0,
+            current_sroutine:      -1, local_q []int(), local_head 0, local_tail 0,
         }
         _sched.ps = append(_sched.ps, p)
         i = i + 1

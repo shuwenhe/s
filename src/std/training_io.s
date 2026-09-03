@@ -13,7 +13,7 @@ struct train_state {
     float best_loss
     int best_step
     bool training_complete
-    float[] loss_history
+    []float loss_history
     float grad_norm
     float learning_rate
     int epoch_time_ms
@@ -161,7 +161,7 @@ func save_checkpoint(checkpoint ckpt, string output_dir, string name_prefix) str
 
 func quick_save(string output_dir, int step, float loss, float best_loss, int best_step,
                  model_config_snapshot config, map<string, t.tensor> weights,
-                 float[] recent_losses) string {
+                 []float recent_losses) string {
     checkpoint ckpt
     ckpt.meta = default_meta()
     ckpt.state.global_step = step
@@ -211,16 +211,16 @@ func update_manifest(string manifest_path, string new_ckpt_path) void {
     _write_file(manifest_path, updated)
 }
 
-func list_checkpoints(string manifest_path) string[] {
+func list_checkpoints(string manifest_path) []string {
     var r = _read_file(manifest_path)
     if !result_is_ok(r) { return new string[0] }
     string content = get_result_string(r)
-    string[] paths = split_lines(content)
+    []string paths = split_lines(content)
     paths
 }
 
 func get_latest_checkpoint(string manifest_path) string {
-    string[] cpts = list_checkpoints(manifest_path)
+    []string cpts = list_checkpoints(manifest_path)
     if len(cpts) == 0 { return "" }
     cpts[len(cpts) - 1]
 }
@@ -367,14 +367,14 @@ func ends_with(string s, string suffix) bool {
     true
 }
 
-func split_lines(string text) string[] {
+func split_lines(string text) []string {
     int count = 1
     int i = 0
     for i < len(text) {
         if text[i] == char(10) { count = count + 1 }
         i = i + 1
     }
-    string[] result = new string[count]
+    []string result = new string[count]
     string current = ""
     int idx = 0
     i = 0

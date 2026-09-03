@@ -11,7 +11,7 @@ struct type_ref {
     bool is_slice
     bool is_array
     string array_len
-    string[] args
+    []string args
 }
 
 func parse_type(string text) string {
@@ -112,7 +112,7 @@ func rules_consistent() bool {
     if parse_type("  int  ") != "int" {
         return false
     }
-    if !same_type("int[]", "int[]") {
+    if !same_type("[]int", "[]int") {
         return false
     }
     if !same_type("int[4]", "int[4]") {
@@ -134,7 +134,7 @@ func rules_consistent() bool {
     if generic_arity("(int, string)") != 2 {
         return false
     }
-    ref_ref := parse_type_ref("&int[]")
+    ref_ref := parse_type_ref("&[]int")
     if !ref_ref.is_ref || !ref_ref.is_mut_ref {
         return false
     }
@@ -181,8 +181,8 @@ func base_type_name(string ty) string {
     return clean
 }
 
-func extract_type_args(string type_name) string[] {
-    out := string[]()
+func extract_type_args(string type_name) []string {
+    out := []string()
     clean := parse_type(type_name)
     if starts_with(clean, "[") && !starts_with(clean, "[]") {
         close := find_char(clean, "]")
@@ -392,8 +392,8 @@ func is_tuple_type(string ty) bool {
     return starts_with(clean, "(") && ends_with(clean, ")"
 }
 
-func extract_tuple_args(string type_name) string[] {
-    out := string[]()
+func extract_tuple_args(string type_name) []string {
+    out := []string()
     clean := parse_type(type_name)
     if !is_tuple_type(clean) {
         return out

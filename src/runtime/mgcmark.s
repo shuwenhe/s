@@ -3,14 +3,14 @@ use std.slices
 const gc_white = 0
 const gc_gray  = 1
 const gc_black = 2
-extern "intrinsic" func __gc_scan_roots(int[] out_roots) ()
-extern "intrinsic" func __gc_get_children(int obj_id) int[]
+extern "intrinsic" func __gc_scan_roots([]int out_roots) ()
+extern "intrinsic" func __gc_get_children(int obj_id) []int
 extern "intrinsic" func __gc_cas_mark(int obj_id, int expected, int new_val) bool
-var mark_gray_queue  = int[]()
+var mark_gray_queue  = []int()
 var mark_total_count = 0
 var mark_root_count  = 0
 func mark_init() () {
-    mark_gray_queue  = int[]()
+    mark_gray_queue  = []int()
     mark_total_count = 0
     mark_root_count  = 0
 }
@@ -23,7 +23,7 @@ func mark_object(int obj_id) bool {
 }
 
 func mark_roots() () {
-    roots := int[]()
+    roots := []int()
     __gc_scan_roots(roots)
     i := 0
     for i < len(roots) {

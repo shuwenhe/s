@@ -33,14 +33,14 @@ const op_jne_rel32   = 0x850_f
 const op_cmp_r_r64   = 0x4839
 const op_test_r_r64  = 0x4885
 struct register_allocator {
-    int[] free_regs
-    int[] allocated
+    []int free_regs
+    []int allocated
     int reg_count
     int current_temp
 }
 
 func make_register_allocator() register_allocator {
-    free_regs := int[]()
+    free_regs := []int()
     free_regs = append(free_regs, reg_rax)
     free_regs = append(free_regs, reg_rcx)
     free_regs = append(free_regs, reg_rdx)
@@ -54,7 +54,7 @@ func make_register_allocator() register_allocator {
     free_regs = append(free_regs, reg_r13)
     free_regs = append(free_regs, reg_r14)
     register_allocator {
-        free_regs: free_regs, allocated int[](), reg_count 12, current_temp 0,
+        free_regs: free_regs, allocated []int(), reg_count 12, current_temp 0,
     }
 }
 

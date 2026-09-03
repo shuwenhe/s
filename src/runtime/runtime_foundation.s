@@ -49,7 +49,7 @@ func runtime_yield() () {
 }
 
 struct runtime_stack_segment {
-    int[] words
+    []int words
     int used
     int previous
 }
@@ -64,7 +64,7 @@ func runtime_stack_new(int initial_words) runtime_stack {
     if initial_words < 64 {
         initial_words = 64
     }
-    first := runtime_stack_segment { words: int[](), used: 0, previous: -1 }
+    first := runtime_stack_segment { words: []int(), used: 0, previous: -1 }
     int i = 0
     for i < initial_words {
         first.words.push(0)
@@ -84,7 +84,7 @@ func runtime_stack_grow(runtime_stack* self, int required_words) bool {
     for next_limit < required_words {
         next_limit = next_limit * 2
     }
-    next := runtime_stack_segment { words: int[](), used: old.used, previous: self.current }
+    next := runtime_stack_segment { words: []int(), used: old.used, previous: self.current }
     int i = 0
     for i < next_limit {
         if i < old.used {

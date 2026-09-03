@@ -25,12 +25,12 @@ struct mir_local_slot {
 struct mir_assign_stmt {
     int target
     string op
-    string[] args
+    []string args
 }
 
 struct mir_eval_stmt {
     string op
-    string[] args
+    []string args
 }
 
 struct mir_move_stmt {
@@ -76,7 +76,7 @@ struct mir_graph {
     string function_name
     mir_basic_block[] blocks
     mir_local_slot[] locals
-    string[] trace
+    []string trace
     int entry
     int exit
 }
@@ -94,7 +94,7 @@ func lower_function_graph(function_decl function) mir_graph {
             kind: "return", edges empty_edges,
         },
     })
-    trace := string[]()
+    trace := []string()
     trace = append(trace, "block |   yield unit")
     mir_graph {
         function_name: function.sig.name, blocks blocks, locals mir_local_slot[](), trace trace, entry 0, exit 0,
@@ -106,14 +106,14 @@ func lower_block_graph(string function_name, block_expr block) mir_graph {
     index := 0
     for index < len(block.statements) {
         stmt_text := join_text(dump_stmt(block.statements[index], indent(1)), " | ")
-        args := string[]()
+        args := []string()
         args = append(args, stmt_text)
         statements.push(mir_statement::eval(mir_eval_stmt {
             op: "stmt", args args,
         }))
         index = index + 1
     }
-    trace := string[]()
+    trace := []string()
     trace_text := "block"
     index = 0
     for index < len(block.statements) {
@@ -162,7 +162,7 @@ func block_count(mir_graph graph) int {
 
 func lower_function(function_decl function) string {
     graph := lower_function_graph(function)
-    return analyze_borrow_function(function.sig.name, string[](), dump_graph(graph))
+    return analyze_borrow_function(function.sig.name, []string(), dump_graph(graph))
 }
 
 func lower_block(block_expr block) string {
@@ -209,7 +209,7 @@ func indent(int depth) string {
     return out
 }
 
-func join_text(string[] values, string sep) string {
+func join_text([]string values, string sep) string {
     out := ""
     i := 0
     for i < len(values) {

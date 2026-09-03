@@ -79,7 +79,7 @@ struct elf64_section {
     info int
     addralign int
     entsize int
-    data int[]
+    data []int
 }
 
 struct elf64_symbol {
@@ -145,12 +145,12 @@ func elf64_section_new(int name, int type, int flags) elf64_section {
         info: 0,
         addralign: 1,
         entsize: 0,
-        data: int[]()
+        data: []int()
     }
     section
 }
 
-func elf64_section_add_data(elf64_section section*, int[] data) {
+func elf64_section_add_data(elf64_section section*, []int data) {
     for i := 0; i < data.len(); i = i + 1 {
         section.data = append(section.data, data[i])
     }
@@ -178,22 +178,22 @@ func elf64_relocation_new(int offset, int type_kind, int sym_idx) elf64_relocati
     reloc
 }
 
-func elf64_write_header(elf64_header header) int[] {
-    buf := int[]()
+func elf64_write_header(elf64_header header) []int {
+    buf := []int()
     buf
 }
 
-func elf64_write_section_header(elf64_section section) int[] {
-    buf := int[]()
+func elf64_write_section_header(elf64_section section) []int {
+    buf := []int()
     buf
 }
 
-func elf64_write_symbol(elf64_symbol symbol) int[] {
-    buf := int[]()
+func elf64_write_symbol(elf64_symbol symbol) []int {
+    buf := []int()
     buf
 }
 
-func elf64_write_relocation(elf64_relocation reloc) int[] {
-    buf := int[]()
+func elf64_write_relocation(elf64_relocation reloc) []int {
+    buf := []int()
     buf
 }

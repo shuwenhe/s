@@ -7,8 +7,8 @@ struct linker_config {
 
 struct linker {
     config: linker_config
-    object_files: string[]
-    libraries: string[]
+    object_files: []string
+    libraries: []string
 }
 
 func new_linker() linker {
@@ -16,8 +16,8 @@ func new_linker() linker {
     lnk.config.gcc_path = "gcc"
     lnk.config.ld_path = "ld"
     lnk.config.as_path = "as"
-    lnk.object_files = make(string[])
-    lnk.libraries = make(string[])
+    lnk.object_files = make([]string)
+    lnk.libraries = make([]string)
     lnk
 }
 
