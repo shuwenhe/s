@@ -13,10 +13,10 @@ func make_optimizer(prog_list* prog) optimizer {
 
 func (opt* optimizer) remove_dead_code() {
     changed := true
-    while changed {
+    for changed {
         changed = false
         p := opt.prog.first()
-        while p != nil {
+        for p != nil {
             next_p := p.next
             if p.op == prog_op_nop() {
                 opt.prog.remove_prog(p)
@@ -30,7 +30,7 @@ func (opt* optimizer) remove_dead_code() {
 
 func (opt* optimizer) combine_redundant_moves() {
     p := opt.prog.first()
-    while p != nil && p.next != nil {
+    for p != nil && p.next != nil {
         curr := p
         next_p := p.next
         if curr.op == prog_op_mov() && next_p.op == prog_op_mov() {
@@ -45,7 +45,7 @@ func (opt* optimizer) combine_redundant_moves() {
 
 func (opt* optimizer) remove_redundant_pushes() {
     p := opt.prog.first()
-    while p != nil && p.next != nil {
+    for p != nil && p.next != nil {
         curr := p
         next_p := p.next
         if curr.op == prog_op_push() && next_p.op == prog_op_pop() {
@@ -59,7 +59,7 @@ func (opt* optimizer) remove_redundant_pushes() {
 
 func (opt* optimizer) optimize_constant_folding() {
     p := opt.prog.first()
-    while p != nil {
+    for p != nil {
         if p.op == prog_op_add() || p.op == prog_op_sub() || p.op == prog_op_mul() {
         }
         p = p.next
@@ -69,7 +69,7 @@ func (opt* optimizer) optimize_constant_folding() {
 
 func (opt* optimizer) optimize_register_moves() {
     p := opt.prog.first()
-    while p != nil && p.next != nil {
+    for p != nil && p.next != nil {
         curr := p
         next_p := p.next
         if curr.op == prog_op_mov() {

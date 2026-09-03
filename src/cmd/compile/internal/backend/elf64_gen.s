@@ -66,7 +66,7 @@ func (w* elf64_writer) add_section(string name, int sh_type, int[] data) {
 func (w* elf64_writer) add_text_section(string code) {
     data := int[]()
     i := 0
-    while i < len(code) {
+    for i < len(code) {
         ch := code[i]
         if ch != ' ' && ch != '\t' && ch != '\n' {
             data = append(data, ch)
@@ -89,7 +89,7 @@ func (w* elf64_writer) write_header() string {
 func (w* elf64_writer) generate_elf() string {
     result := w.write_header()
     i := 0
-    while i < w.section_count {
+    for i < w.section_count {
         result = result + ""
         i = i + 1
     }

@@ -138,7 +138,7 @@ func (pl* prog_list) len() int {
 func (pl* prog_list) dump() string {
     result := ""
     p := pl.head
-    while p != nil {
+    for p != nil {
         result = result + p.as_string + "\n"
         p = p.next
     }

@@ -171,14 +171,14 @@ func lexer_peek_char(lex* lexer) string {
 }
 
 func lexer_skip_whitespace(lex* lexer) {
-    while is_whitespace(lex.current_char) {
+    for is_whitespace(lex.current_char) {
         lexer_read_char(lex)
     }
 }
 
 func lexer_read_ident(lex* lexer) string {
     start := lex.position
-    while is_letter(lex.current_char) || is_digit(lex.current_char) {
+    for is_letter(lex.current_char) || is_digit(lex.current_char) {
         lexer_read_char(lex)
     }
     lexer_slice(lex.source, start, lex.position)
@@ -187,7 +187,7 @@ func lexer_read_ident(lex* lexer) string {
 func lexer_slice(string source, int start, int end) string {
     result := ""
     i := start
-    while i < end {
+    for i < end {
         result = result + source[i]
         i = i + 1
     }
@@ -198,7 +198,7 @@ func lexer_read_number(lex* lexer) (string, int) {
     start := lex.position
     has_dot := 0
 
-    while is_digit(lex.current_char) || (lex.current_char == '.' && !has_dot) {
+    for is_digit(lex.current_char) || (lex.current_char == '.' && !has_dot) {
         if lex.current_char == '.' {
             has_dot = 1
         }
@@ -217,7 +217,7 @@ func lexer_read_string(lex* lexer, string quote) string {
     lexer_read_char(lex)
     start := lex.position
 
-    while lex.current_char != quote && lex.current_char != '\0' {
+    for lex.current_char != quote && lex.current_char != '\0' {
         if lex.current_char == '\\' {
             lexer_read_char(lex)
         }
@@ -232,7 +232,7 @@ func lexer_read_string(lex* lexer, string quote) string {
 }
 
 func lexer_skip_line_comment(lex* lexer) {
-    while lex.current_char != '\n' && lex.current_char != '\0' {
+    for lex.current_char != '\n' && lex.current_char != '\0' {
         lexer_read_char(lex)
     }
 }
@@ -241,7 +241,7 @@ func lexer_skip_block_comment(lex* lexer) {
     lexer_read_char(lex)
     lexer_read_char(lex)
 
-    while lex.current_char != '\0' {
+    for lex.current_char != '\0' {
         if lex.current_char == '*' && lexer_peek_char(lex) == '/' {
             lexer_read_char(lex)
             lexer_read_char(lex)
