@@ -398,7 +398,12 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 		} else if (strcmp(ins->op, "ADD") == 0) {
 			if (!emit_load(out, module, fn, ins->operand1, "%rdi", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rsi", err)) return false;
-			fprintf(out, "    call s_value_add\n");
+			/* Integers are tagged with bit 0 set; keep the common path local. */
+			fprintf(out, "    test $1, %%rdi\n    jz .Ls_%s_add_slow_%zu\n", symbol, i);
+			fprintf(out, "    test $1, %%rsi\n    jz .Ls_%s_add_slow_%zu\n", symbol, i);
+			fprintf(out, "    lea -1(%%rdi,%%rsi), %%rax\n    jmp .Ls_%s_add_done_%zu\n", symbol, i);
+			fprintf(out, ".Ls_%s_add_slow_%zu:\n    call s_value_add\n", symbol, i);
+			fprintf(out, ".Ls_%s_add_done_%zu:\n", symbol, i);
 			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "SUB") == 0 || strcmp(ins->op, "MUL") == 0) {
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
@@ -423,7 +428,11 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			else if (strcmp(ins->op, "CMP_GE") == 0) setcc = "setge";
 			if (!emit_load(out, module, fn, ins->operand1, "%rdi", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rsi", err)) return false;
-			fprintf(out, "    call s_value_cmp\n    cmp $0, %%rax\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n", setcc);
+			fprintf(out, "    test $1, %%rdi\n    jz .Ls_%s_cmp_slow_%zu\n", symbol, i);
+			fprintf(out, "    test $1, %%rsi\n    jz .Ls_%s_cmp_slow_%zu\n", symbol, i);
+			fprintf(out, "    cmp %%rsi, %%rdi\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n    jmp .Ls_%s_cmp_done_%zu\n", setcc, symbol, i);
+			fprintf(out, ".Ls_%s_cmp_slow_%zu:\n    call s_value_cmp\n    cmp $0, %%rax\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n", symbol, i, setcc);
+			fprintf(out, ".Ls_%s_cmp_done_%zu:\n", symbol, i);
 			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "JUMP_IF_FALSE") == 0) {
 			char label[STANDALONE_TEXT_CAP];
