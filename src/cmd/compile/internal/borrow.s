@@ -204,9 +204,6 @@ func lifetime_second_colon(string text, int first) int {
     -1
 }
 
-
-
-
 func lifetime_check_events(string[] events) lifetime_check_result {
     refs := lifetime_reference[] {}
     active_scopes := string[] {}
