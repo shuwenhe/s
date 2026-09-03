@@ -7,7 +7,6 @@ struct parser {
     errors: array
 }
 
-
 const token_and = 57
 const token_or = 58
 const token_bit_and = 60
@@ -66,7 +65,6 @@ const token_dot = 87
 const token_colon = 88
 const token_semicolon = 89
 const token_newline = 99
-
 
 const ast_program = 1
 const ast_package = 2

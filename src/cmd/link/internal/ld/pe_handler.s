@@ -5,13 +5,11 @@ import (
 	"src/os"
 )
 
-
 const (
 	PE_SIGNATURE = 0x00004550 
 	PE_MAGIC_PE32 = 0x10b
 	PE_MAGIC_PE32PLUS = 0x20b
 )
-
 
 enum pe_machine {
 	MACHINE_UNKNOWN = 0x0
@@ -39,7 +37,6 @@ enum pe_machine {
 	MACHINE_CHPE_X86_64 = 0x3a64
 }
 
-
 struct pe_file_header {
 	machine              u16
 	number_of_sections     u16
@@ -49,7 +46,6 @@ struct pe_file_header {
 	size_of_optional_header u16
 	characteristics      u16
 }
-
 
 struct pe_optional_header {
 	magic                       u16
@@ -84,7 +80,6 @@ struct pe_optional_header {
 	number_of_rva_and_sizes         u32
 }
 
-
 struct pe_section_header {
 	name                 [8]u8
 	virtual_size          u32
@@ -98,7 +93,6 @@ struct pe_section_header {
 	characteristics      u32
 }
 
-
 struct pe_object {
 	dos_header       [64]u8
 	pe_signature     u32
@@ -110,7 +104,6 @@ struct pe_object {
 	relocations pe_relocation[]
 }
 
-
 struct pe_symbol {
 	name          string
 	value         u32
@@ -120,13 +113,11 @@ struct pe_symbol {
 	aux_symbols    i32
 }
 
-
 struct pe_relocation {
 	virtual_address u32
 	symbol_index    u32
 	type           u16
 }
-
 
 func new_pe_object(machine pe_machine) pe_object {
 	obj := pe_object{
@@ -185,7 +176,6 @@ func new_pe_object(machine pe_machine) pe_object {
 	obj
 }
 
-
 func (po pe_object*) AddSection(name string, data u8[]) i32 {
 	idx := i32(len(po.Sections))
 
@@ -213,16 +203,13 @@ func (po pe_object*) AddSection(name string, data u8[]) i32 {
 	idx
 }
 
-
 func (po pe_object*) AddSymbol(sym pe_symbol) {
 	po.SymbolTable = append(po.SymbolTable, sym)
 }
 
-
 func (po pe_object*) AddRelocation(reloc pe_relocation) {
 	po.Relocations = append(po.Relocations, reloc)
 }
-
 
 func ReadPEObject(string filename) (pe_object, error) {
 	file, err := os.Open(filename)
@@ -270,7 +257,6 @@ func ReadPEObject(string filename) (pe_object, error) {
 
 	obj, nil
 }
-
 
 func (pe_object* po) WriteToFile(string filename) error {
 	file, err := os.Create(filename)

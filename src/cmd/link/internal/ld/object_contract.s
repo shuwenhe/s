@@ -1,9 +1,5 @@
 package src.cmd.link.internal.ld
 
-
-
-
-
 const s_obj_elf = 1
 const s_obj_macho = 2
 const s_obj_pe = 3
@@ -117,7 +113,6 @@ func s_obj_put_u64(u8[] data, int at, int value) () {
     s_obj_put_u32(data, at + 4, value >> 32)
 }
 
-
 func s_elf_read_rel_object(u8[] data) (s_object, int) {
     obj := s_obj_empty()
     if data.len() < 64 || data[0] != 0x7f || data[1] != 69 || data[2] != 76 || data[3] != 70 {
@@ -157,8 +152,6 @@ func s_elf_read_rel_object(u8[] data) (s_object, int) {
     obj, 1
 }
 
-
-
 func s_elf_write_rel_header(int machine, int shoff, int shnum, int shstrndx) u8[] {
     header := new u8[64]
     header[0] = 0x7f
@@ -185,8 +178,6 @@ func s_obj_find_symbol(s_obj_symbol[] symbols, string name) int {
     }
     -1
 }
-
-
 
 func s_obj_merge_symbol(s_obj_symbol[] symbols, s_obj_symbol candidate) int {
     old := s_obj_find_symbol(symbols, candidate.name)
@@ -277,8 +268,6 @@ func s_obj_format_ready(int format) bool {
 struct s_build_id {
     u8[] bytes
 }
-
-
 
 func s_build_id_for(u8[] data) s_build_id {
     a := 2166136261

@@ -6,14 +6,12 @@ import (
 	"src/crypto/sha256"
 )
 
-
 const (
 	DWARF_VERSION_2 = 2
 	DWARF_VERSION_3 = 3
 	DWARF_VERSION_4 = 4
 	DWARF_VERSION_5 = 5
 )
-
 
 enum dwarf_tag {
 	DW_TAG_COMPILE_UNIT = 0x11
@@ -32,7 +30,6 @@ enum dwarf_tag {
 	DW_TAG_NAMESPACE = 0x39
 	DW_TAG_MODULE = 0x1d
 }
-
 
 enum dwarf_attribute {
 	DW_AT_NAME = 0x03
@@ -53,7 +50,6 @@ enum dwarf_attribute {
 	DW_AT_EXTERNAL = 0x3f
 }
 
-
 enum dwarf_encoding {
 	DW_ATE_ADDRESS = 0x1
 	DW_ATE_BOOLEAN = 0x2
@@ -73,14 +69,12 @@ enum dwarf_encoding {
 	DW_ATE_UTF = 0x10
 }
 
-
 struct dwarf_die {
 	tag       dwarf_tag
 	attributes map[dwarf_attribute]dwarf_attribute_value
 	children dwarf_die[]
 	offset     i64
 }
-
 
 enum dwarf_attribute_value {
 	IntValue(i64)
@@ -90,7 +84,6 @@ enum dwarf_attribute_value {
 	AddressValue(i64)
 	BoolValue(bool)
 }
-
 
 struct dwarf_compile_unit {
 	version        i32
@@ -103,7 +96,6 @@ struct dwarf_compile_unit {
 	location_info   []DWARFLocationInfo
 }
 
-
 struct dwarf_line_info {
 	min_instruction_length i32
 	line_base             i32
@@ -115,7 +107,6 @@ struct dwarf_line_info {
 	statements dwarf_line_statement[]
 }
 
-
 struct dwarf_line_statement {
 	address  i64
 	file     i32
@@ -126,7 +117,6 @@ struct dwarf_line_statement {
 	end_sequence bool
 }
 
-
 struct DWARFLocationInfo {
 	variable string
 	address  i64
@@ -135,7 +125,6 @@ struct DWARFLocationInfo {
 	offset   i64
 }
 
-
 struct dwarf_manager {
 	compile_units dwarf_compile_unit[]
 	abbrev_table  map[i32]u8[]
@@ -143,7 +132,6 @@ struct dwarf_manager {
 	line_info dwarf_line_info[]
 	version      i32
 }
-
 
 func NewDWARFManager(version i32) dwarf_manager {
 	dwarf_manager{
@@ -155,11 +143,9 @@ func NewDWARFManager(version i32) dwarf_manager {
 	}
 }
 
-
 func (dm dwarf_manager*) AddCompileUnit(cu dwarf_compile_unit) {
 	dm.CompileUnits = append(dm.CompileUnits, cu)
 }
-
 
 func (dm dwarf_manager*) GenerateDebugLine() u8[] {
 	data := make(u8[], 0)
@@ -226,14 +212,12 @@ func (dm dwarf_manager*) GenerateDebugLine() u8[] {
 	data
 }
 
-
 struct UnwindInfo {
 	version       i32
 	eh_frame_offset i64
 	fdes          []FrameDescriptionEntry
 	cies          []CommonInformationEntry
 }
-
 
 struct CommonInformationEntry {
 	length                i32
@@ -246,7 +230,6 @@ struct CommonInformationEntry {
 	augmentation_data u8[]
 }
 
-
 struct FrameDescriptionEntry {
 	length          i32
 	cie_pointer      i32
@@ -256,11 +239,9 @@ struct FrameDescriptionEntry {
 	instructions u8[]
 }
 
-
 struct unwind_manager {
 	unwind_info UnwindInfo
 }
-
 
 func NewUnwindManager() unwind_manager {
 	unwind_manager{
@@ -272,7 +253,6 @@ func NewUnwindManager() unwind_manager {
 		},
 	}
 }
-
 
 func (um unwind_manager*) GenerateEhFrame() u8[] {
 	data := make(u8[], 0)

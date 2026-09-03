@@ -7,7 +7,6 @@ import (
 	"src/os"
 )
 
-
 const (
 	elf_magic = 0x464c457f 
 	elf_class_32 = 1
@@ -19,7 +18,6 @@ const (
 	elf_osabi_linux = 3
 )
 
-
 enum elf_type {
 	et_none = 0
 	et_rel = 1     
@@ -29,7 +27,6 @@ enum elf_type {
 	et_loproc = 0xff00
 	et_hiproc = 0xffff
 }
-
 
 struct elf_header {
 	magic         u32
@@ -54,7 +51,6 @@ struct elf_header {
 	shdr_str_index i16
 }
 
-
 struct section_header {
 	name        i32
 	type        i32
@@ -68,7 +64,6 @@ struct section_header {
 	entry_size  i64
 }
 
-
 struct program_header {
 	type       i32
 	flags      i32
@@ -79,7 +74,6 @@ struct program_header {
 	mem_size   i64
 	align      i64
 }
-
 
 struct elf_object {
 	header           elf_header
@@ -92,7 +86,6 @@ struct elf_object {
 	flags            i32
 	endian           int             
 }
-
 
 func new_elf_object(machine i16) elf_object {
 	obj := elf_object{
@@ -121,7 +114,6 @@ func new_elf_object(machine i16) elf_object {
 	obj
 }
 
-
 func (elf_object* eo) add_section(name string, sec_type i32, flags i64, data u8[]) i32 {
 	idx := i32(len(eo.sections))
 
@@ -146,13 +138,11 @@ func (elf_object* eo) add_section(name string, sec_type i32, flags i64, data u8[
 	idx
 }
 
-
 func (elf_object* eo) add_symbol(sym symbol_entry) i32 {
 	idx := i32(len(eo.symbols))
 	eo.symbols = append(eo.symbols, sym)
 	idx
 }
-
 
 func (elf_object* eo) add_string(s string) i32 {
 	
@@ -161,11 +151,9 @@ func (elf_object* eo) add_string(s string) i32 {
 	idx
 }
 
-
 func (elf_object* eo) add_relocation(reloc relocation) {
 	eo.relocations = append(eo.relocations, reloc)
 }
-
 
 func read_elf_object(string filename) (elf_object, error) {
 	file, err := os.open(filename)
@@ -237,7 +225,6 @@ func read_elf_object(string filename) (elf_object, error) {
 
 	obj, nil
 }
-
 
 func (elf_object* eo) write_to_file(string filename) error {
 	file, err := os.create(filename)
@@ -330,7 +317,6 @@ func (elf_object* eo) write_to_file(string filename) error {
 	nil
 }
 
-
 const (
 	sht_null = 0
 	sht_progbits = 1
@@ -350,7 +336,6 @@ const (
 	sht_group = 17
 	sht_symtab_shndx = 18
 )
-
 
 const (
 	shf_write = 0x1
