@@ -21,7 +21,7 @@ struct param {
 
 struct function_sig {
     string name
-    string[] generics
+    []string generics
     param[] params
     option[string] return_type
 }
@@ -120,7 +120,7 @@ struct for_expr {
     option[box[stmt]] init
     option[box[expr]] condition
     option[box[stmt]] post
-    string[] names
+    []string names
     option[box[expr]] iterable
     block_expr body
     option[string] inferred_type
@@ -220,7 +220,7 @@ struct function_decl {
 
 struct struct_decl {
     string name
-    string[] generics
+    []string generics
     field[] fields
     bool is_public
 }
@@ -232,14 +232,14 @@ struct enum_variant {
 
 struct enum_decl {
     string name
-    string[] generics
+    []string generics
     enum_variant[] variants
     bool is_public
 }
 
 struct trait_decl {
     string name
-    string[] generics
+    []string generics
     function_sig[] methods
     bool is_public
 }
@@ -278,7 +278,7 @@ struct source_file {
 }
 
 func dump_source_file(source_file source) string {
-    lines := string[]()
+    lines := []string()
     lines = append(lines, "package " + source.pkg);
     ui := 0
     for ui < len(source.uses) {
@@ -300,7 +300,7 @@ func dump_source_file(source_file source) string {
     join_lines(lines)
 }
 
-func append_item_dump(string[] lines, item item) () {
+func append_item_dump([]string lines, item item) () {
     switch item {
         item.function(value) : append_lines(lines, dump_function(value, "")),
         item.const(value) : append_lines(lines, dump_const(value)),
@@ -312,35 +312,35 @@ func append_item_dump(string[] lines, item item) () {
     }
 }
 
-func dump_const(const_decl item) string[] {
+func dump_const(const_decl item) []string {
     switch item.value {
-        option.some(value) : string[] { "const " + item.name + " = " + dump_expr(value) },
-        option.none : string[] { "const " + item.name },
+        option.some(value) : []string { "const " + item.name + " = " + dump_expr(value) },
+        option.none : []string { "const " + item.name },
     }
 }
 
-func dump_var(var_decl item) string[] {
+func dump_var(var_decl item) []string {
     decl := "var " + item.name
     switch item.type_name {
         option.some(t) : decl = decl + " " + t,
         option.none : {},
     }
     switch item.value {
-        option.some(v) : string[] { decl + " = " + dump_expr(v) },
-        option.none : string[] { decl },
+        option.some(v) : []string { decl + " = " + dump_expr(v) },
+        option.none : []string { decl },
     }
 }
 
-func fmt_generics(string[] generics) string {
+func fmt_generics([]string generics) string {
     if len(generics) == 0 {
         return ""
     }
     "[" + join_with(generics, ", ") + "]"
 }
 
-func dump_function(function_decl item, string indent) string[] {
-    lines := string[]()
-    params := string[]()
+func dump_function(function_decl item, string indent) []string {
+    lines := []string()
+    params := []string()
     _pi := 0
     for _pi < len(item.sig.params) {
         param := item.sig.params[_pi]
@@ -371,8 +371,8 @@ func dump_function(function_decl item, string indent) string[] {
     lines
 }
 
-func dump_struct(struct_decl item) string[] {
-    lines := string[]()
+func dump_struct(struct_decl item) []string {
+    lines := []string()
     prefix := if item.is_public { "pub " } else { "" }
     lines = append(lines, prefix + "struct " + item.name + fmt_generics(item.generics))
     _fi := 0
@@ -385,8 +385,8 @@ func dump_struct(struct_decl item) string[] {
     lines
 }
 
-func dump_enum(enum_decl item) string[] {
-    lines := string[]()
+func dump_enum(enum_decl item) []string {
+    lines := []string()
     lines = append(lines, "enum " + item.name + fmt_generics(item.generics))
     _vi := 0
     for _vi < len(item.variants) {
@@ -400,14 +400,14 @@ func dump_enum(enum_decl item) string[] {
     lines
 }
 
-func dump_trait(trait_decl item) string[] {
-    lines := string[]()
+func dump_trait(trait_decl item) []string {
+    lines := []string()
     prefix := if item.is_public { "pub " } else { "" }
     lines = append(lines, prefix + "trait " + item.name + fmt_generics(item.generics))
     _mi := 0
     for _mi < len(item.methods) {
         method := item.methods[_mi]
-        params := string[]()
+        params := []string()
         _mpi := 0
         for _mpi < len(method.params) {
             param := method.params[_mpi]
@@ -432,10 +432,10 @@ func dump_trait(trait_decl item) string[] {
     lines
 }
 
-func dump_receiver_method(receiver_method_decl item) string[] {
-    lines := string[]()
+func dump_receiver_method(receiver_method_decl item) []string {
+    lines := []string()
     method := item.method
-    params := string[]()
+    params := []string()
     _mi2 := 0
     for _mi2 < len(method.sig.params) {
         param := method.sig.params[_mi2]
@@ -467,8 +467,8 @@ func dump_receiver_method(receiver_method_decl item) string[] {
     lines
 }
 
-func dump_block(block_expr block, string indent) string[] {
-    lines := string[]()
+func dump_block(block_expr block, string indent) []string {
+    lines := []string()
     _si := 0
     for _si < len(block.statements) {
         stmt := block.statements[_si]
@@ -482,7 +482,7 @@ func dump_block(block_expr block, string indent) string[] {
     lines
 }
 
-func dump_stmt(stmt stmt, string indent) string[] {
+func dump_stmt(stmt stmt, string indent) []string {
     switch stmt {
         stmt.let(value) : {
             text :=
@@ -499,7 +499,7 @@ func dump_stmt(stmt stmt, string indent) string[] {
             single_line(indent + value.name + "++")
         }
         stmt.c_for(value) : {
-            lines := string[]()
+            lines := []string()
             lines.push(
                 indent
                     + "for ("
@@ -576,13 +576,13 @@ func dump_expr(expr expr) string {
         }
         expr.block(_) : "{...}",
         expr.array(value) : {
-            elems := string[]()
+            elems := []string()
             _ei := 0
             for _ei < len(value.items) { elems = append(elems, dump_expr(value.items[_ei])); _ei = _ei + 1 }
             "[" + join_with(elems, ", ") + "]"
         }
         expr.map(value) : {
-            parts := string[]()
+            parts := []string()
             _en := 0
             for _en < len(value.entries) { entry := value.entries[_en]; parts = append(parts, dump_expr(entry.key) + ": " + dump_expr(entry.value)); _en = _en + 1 }
             "{" + join_with(parts, ", ") + "}"
@@ -613,7 +613,7 @@ func dump_pattern(pattern pattern) string {
 }
 
 func join_exprs(expr[] values) string {
-    parts := string[]()
+    parts := []string()
     _iv := 0
     for _iv < len(values) {
         value := values[_iv]
@@ -624,14 +624,14 @@ func join_exprs(expr[] values) string {
 }
 
 func join_patterns(pattern[] values) string {
-    parts := string[]()
+    parts := []string()
     _pv := 0
     for _pv < len(values) { parts = append(parts, dump_pattern(values[_pv])); _pv = _pv + 1 }
     join_with(parts, ", ")
 }
 
 func join_switch_arms(switch_arm[] values) string {
-    parts := string[]()
+    parts := []string()
     _mv := 0
     for _mv < len(values) {
         value := values[_mv]
@@ -641,7 +641,7 @@ func join_switch_arms(switch_arm[] values) string {
     join_with(parts, "; ")
 }
 
-func append_lines(string[] dest, string[] source) () {
+func append_lines([]string dest, []string source) () {
     _li := 0
     for _li < len(source) {
         dest = append(dest, source[_li])
@@ -649,17 +649,17 @@ func append_lines(string[] dest, string[] source) () {
     }
 }
 
-func single_line(string text) string[] {
-    lines := string[]()
+func single_line(string text) []string {
+    lines := []string()
     lines = append(lines, text)
     lines
 }
 
-func join_lines(string[] lines) string {
+func join_lines([]string lines) string {
     join_with(lines, "\n")
 }
 
-func join_with(string[] values, string sep) string {
+func join_with([]string values, string sep) string {
     out := ""
     first := true
     _j := 0

@@ -113,7 +113,7 @@ func (is* instr_selector) select_store_i64(int source_reg, string addr) {
     is.ctx.progs.append_prog(prog_op_store(), instr)
 }
 
-func (is* instr_selector) select_call(string target, int[] clobber_regs) {
+func (is* instr_selector) select_call(string target, []int clobber_regs) {
     instr := "\tcall\t" + target
     is.ctx.progs.append_prog(prog_op_call(), instr)
 }

@@ -33,7 +33,7 @@ func apply_quirk(string name, source_unit unit) ((), noder_error) {
     make_error(code_unknown_quirk(), "unknown quirk: " + name, unit.path, 0, 0)
 }
 
-func apply_quirks(string[] quirks, source_unit unit) ((), noder_error) {
+func apply_quirks([]string quirks, source_unit unit) ((), noder_error) {
     i := 0
     for i < len(quirks) {
         r := apply_quirk(quirks[i], unit)

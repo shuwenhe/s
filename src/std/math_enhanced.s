@@ -350,7 +350,7 @@ func softmax_component(float x, float max_x, float sum_exp) float {
     exp(x - max_x) / sum_exp
 }
 
-func log_sum_exp(float[] values, int count) float {
+func log_sum_exp([]float values, int count) float {
     if count <= 0 { return 0.0 }
     float m = values[0]
     int i = 1

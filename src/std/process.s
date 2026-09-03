@@ -22,7 +22,7 @@ func run_command(string cmd_line) (int, string) {
         return pid, "fork failed"
     }
     if pid == 0 {
-        _ := syscall.execve(argv[0], argv, string[]{})
+        _ := syscall.execve(argv[0], argv, []string{})
         syscall.exit(127)
     }
     exit_code := wait_for_process(pid)
@@ -46,8 +46,8 @@ func wait_for_process(int pid) int {
     0
 }
 
-func parse_command_line(string cmd_line) string[] {
-    string[]{}
+func parse_command_line(string cmd_line) []string {
+    []string{}
 }
 
 func find_in_path(string program) (string, bool) {

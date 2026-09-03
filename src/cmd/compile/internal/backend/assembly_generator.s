@@ -2,14 +2,14 @@ package backend
 struct assembly_generator {
     buffer: string
     current_section: string
-    symbols: string[]
+    symbols: []string
 }
 
 func new_assembly_generator() assembly_generator {
     gen: assembly_generator
     gen.buffer = ""
     gen.current_section = ""
-    gen.symbols = make(string[])
+    gen.symbols = make([]string)
     gen
 }
 

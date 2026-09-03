@@ -85,7 +85,7 @@ static bool test_runtime_array_len_and_index(void) {
 static bool test_runtime_array_index_assignment(void) {
 	const char *src =
 		"fn main() int { "
-		"  var xs = []float{cap: 3}; "
+		"  var xs = float[]{cap: 3}; "
 		"  var i = 0; "
 		"  while i < 3 { "
 		"    xs[i] = i + 1; "
@@ -239,7 +239,7 @@ static bool test_runtime_network_poller(void) {
 		"extern \"intrinsic\" func __sys_poller_create() int; "
 		"extern \"intrinsic\" func __sys_poller_add(int poller_fd, int fd, int events) int; "
 		"extern \"intrinsic\" func __sys_poller_del(int poller_fd, int fd) int; "
-		"extern \"intrinsic\" func __sys_poller_wait(int poller_fd, int max_events, int timeout_ms) []int; "
+		"extern \"intrinsic\" func __sys_poller_wait(int poller_fd, int max_events, int timeout_ms) int[]; "
 		"extern \"intrinsic\" func __sys_close(int fd) int; "
 		"fn main() int { "
 		"  var server = __sys_socket(2, 1, 6); if server < 0 { return 40; } "

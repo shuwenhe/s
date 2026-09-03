@@ -373,6 +373,7 @@ static ast_node *clone_expr(const ast_node *node);
 static int skip_brace_initializer(parser *p);
 static ast_node *parse_struct_literal_expr(parser *p, const token *type_tok);
 static int looks_like_struct_literal(parser *p);
+static ast_node *parse_typed_array_literal(parser *p, const token *type_tok);
 static int parse_dotted_path(parser *p,
 	char *path,
 	size_t path_size,
@@ -579,6 +580,13 @@ static ast_node *parse_primary(parser *p) {
 			ast_free(node);
 			return NULL;
 		}
+		if (check(p, TOKEN_LBRACKET) && peek_ahead(p, 1) &&
+			peek_ahead(p, 1)->type == TOKEN_RBRACKET && peek_ahead(p, 2) &&
+			peek_ahead(p, 2)->type == TOKEN_LBRACE) {
+			ast_node *array_expr = parse_typed_array_literal(p, tok);
+			ast_free(node);
+			return array_expr;
+		}
 		if (strcmp(tok->lexeme, "map") == 0 && check(p, TOKEN_LBRACKET)) {
 			size_t saved = p->current;
 			char *map_type = NULL;
@@ -623,6 +631,40 @@ static ast_node *parse_primary(parser *p) {
 	parse_error(p, tok, "expected expression, got %s", token_type_name(tok->type));
 	return NULL;
 }
+static ast_node *parse_typed_array_literal(parser *p, const token *type_tok) {
+	ast_node *node = ast_new(AST_ARRAY_EXPR, type_tok->pos);
+	if (!node) return NULL;
+	advance_tok(p);
+	advance_tok(p);
+	if (!expect(p, TOKEN_LBRACE, "{")) {
+		ast_free(node);
+		return NULL;
+	}
+	if (check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "cap") == 0) {
+		advance_tok(p);
+		if (!expect(p, TOKEN_COLON, ":") || !parse_assignment(p)) {
+			ast_free(node);
+			return NULL;
+		}
+		match(p, TOKEN_COMMA);
+	}
+	if (!check(p, TOKEN_RBRACE)) {
+		for (;;) {
+			ast_node *item = parse_assignment(p);
+			if (!item || !ast_vec_push(&node->as.array_expr.items, item)) {
+				ast_free(item);
+				ast_free(node);
+				return NULL;
+			}
+			if (!match(p, TOKEN_COMMA) || check(p, TOKEN_RBRACE)) break;
+		}
+	}
+	if (!expect(p, TOKEN_RBRACE, "}")) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
+}
 static ast_node *parse_call(parser *p) {
 	(void)p;
 	ast_node *expr = parse_primary(p);
@@ -658,6 +700,30 @@ static ast_node *parse_call(parser *p) {
 				return NULL;
 			}
 			call->as.call_expr.callee = expr;
+			/* make's first argument is a type, not a runtime expression. */
+			if (expr->kind == AST_IDENT_EXPR &&
+				strcmp(expr->as.ident_expr.name, "make") == 0 &&
+				(check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_LBRACKET))) {
+				char *type_name = NULL;
+				if (try_parse_type_annotation(p, &type_name) &&
+					(check(p, TOKEN_COMMA) || check(p, TOKEN_RPAREN))) {
+					ast_node *type_arg = ast_new(AST_STRING_EXPR, prev(p)->pos);
+					if (!type_arg) {
+						free(type_name);
+						ast_free(call);
+						return NULL;
+					}
+					type_arg->as.string_expr.literal = type_name;
+					if (!ast_vec_push(&call->as.call_expr.args, type_arg)) {
+						ast_free(type_arg);
+						ast_free(call);
+						return NULL;
+					}
+					match(p, TOKEN_COMMA);
+				} else {
+					free(type_name);
+				}
+			}
 			if (!check(p, TOKEN_RPAREN)) {
 				for (;;) {
 					ast_node *arg = parse_expression(p);
