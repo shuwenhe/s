@@ -31,6 +31,9 @@ typedef struct s_target_platform {
 
 void generate_code(IR *ir, FILE *output);
 bool emit_native_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err);
+bool emit_aot_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err);
+bool emit_aot_assembly_from_ir_file(const char *input_ir_path, const char *output_assembly_path, compile_error *err);
+bool emit_aot_object_from_ir_file(const char *input_ir_path, const char *output_object_path, compile_error *err);
 bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err);
 bool emit_standalone_amd64_assembly_from_ir_file(const char *input_ir_path, const char *output_assembly_path, compile_error *err);
 bool emit_standalone_amd64_object_from_ir_file(const char *input_ir_path, const char *output_object_path, compile_error *err);

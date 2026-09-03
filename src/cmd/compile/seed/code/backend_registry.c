@@ -109,6 +109,42 @@ bool s_target_platform_supports_standalone(const s_target_platform *target) {
 	return target && target->os == S_TARGET_OS_LINUX && target->arch == S_TARGET_ARCH_AMD64;
 }
 
+static bool require_aot_target(s_target_platform *target, compile_error *err) {
+	char detail[256];
+	if (!s_target_platform_from_environment(target, detail, sizeof(detail))) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "invalid AOT target: %s", detail);
+		return false;
+	}
+	if (!s_target_platform_supports_standalone(target)) {
+		error_set(err, ERR_SEMANTIC, 0, 0,
+			"AOT target %s/%s is not implemented; available target: linux/amd64",
+			s_target_os_name(target->os), s_target_arch_name(target->arch));
+		return false;
+	}
+	return true;
+}
+
+bool emit_aot_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err) {
+	s_target_platform target;
+	error_clear(err);
+	if (!require_aot_target(&target, err)) return false;
+	return emit_standalone_amd64_from_ir_file(input_ir_path, output_binary_path, err);
+}
+
+bool emit_aot_assembly_from_ir_file(const char *input_ir_path, const char *output_assembly_path, compile_error *err) {
+	s_target_platform target;
+	error_clear(err);
+	if (!require_aot_target(&target, err)) return false;
+	return emit_standalone_amd64_assembly_from_ir_file(input_ir_path, output_assembly_path, err);
+}
+
+bool emit_aot_object_from_ir_file(const char *input_ir_path, const char *output_object_path, compile_error *err) {
+	s_target_platform target;
+	error_clear(err);
+	if (!require_aot_target(&target, err)) return false;
+	return emit_standalone_amd64_object_from_ir_file(input_ir_path, output_object_path, err);
+}
+
 const char *s_target_backend_name(s_target_backend backend) {
 	switch (backend) {
 		case S_TARGET_NATIVE: return "native";
