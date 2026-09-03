@@ -89,6 +89,29 @@ seed-runtime-regression-bin:
 seed-runtime-regression: seed-runtime-regression-bin
 	@./bin/seed_runtime_regression
 
+.PHONY: seed-aot-test
+seed-aot-test: seed-compiler-bin
+	@mkdir -p /tmp/s_seed_aot_test
+	@./bin/s_seed test/aot/basic.s /tmp/s_seed_aot_test/basic.ir
+	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=linux S_TARGET_ARCH=amd64 \
+	  ./bin/s_seed --emit-aot /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/basic
+	@set +e; /tmp/s_seed_aot_test/basic; status=$$?; set -e; test $$status -eq 42
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-aot-asm \
+	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/basic.S
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-aot-obj \
+	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/basic.o
+	@file /tmp/s_seed_aot_test/basic | grep -q 'ELF 64-bit.*executable'
+	@file /tmp/s_seed_aot_test/basic.o | grep -q 'ELF 64-bit.*relocatable'
+	@! grep -a -q 'SSEED-TARGET-V1' /tmp/s_seed_aot_test/basic
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-bin \
+	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/embedded
+	@S_SOURCE_ROOT=$(CURDIR) /tmp/s_seed_aot_test/embedded --emit-aot \
+	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/from_embedded
+	@set +e; /tmp/s_seed_aot_test/from_embedded; status=$$?; set -e; test $$status -eq 42
+	@! S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --emit-aot \
+	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/unsupported 2>/dev/null
+	@echo "Seed AOT compilation test passed"
+
 seed-network-tests: seed-runtime-regression-bin
 	@./bin/seed_runtime_regression --network-only
 
