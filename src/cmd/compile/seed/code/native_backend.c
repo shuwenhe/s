@@ -122,6 +122,9 @@ static bool write_runner_c_file(FILE *out, const char *ir_text, compile_error *e
 		"#include \"runtime/memory.h\"\n"
 		"#include \"error/error.h\"\n\n"
 		"bool emit_native_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err);\n\n"
+		"bool emit_aot_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err);\n"
+		"bool emit_aot_assembly_from_ir_file(const char *input_ir_path, const char *output_assembly_path, compile_error *err);\n"
+		"bool emit_aot_object_from_ir_file(const char *input_ir_path, const char *output_object_path, compile_error *err);\n\n"
 		"bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char *output_dir, compile_error *err);\n\n"
 		"static const char *embedded_ir;\n\n"
 		"static void print_compile_error(const compile_error *err) {\n"
@@ -134,6 +137,9 @@ static bool write_runner_c_file(FILE *out, const char *ir_text, compile_error *e
 		"    fprintf(stderr, \"usage:\\n\");\n"
 		"    fprintf(stderr, \"  %%s <input.s> <output.ir>\\n\", argv0);\n"
 		"    fprintf(stderr, \"  %%s --emit-bin <input.ir> <output.bin>\\n\", argv0);\n"
+		"    fprintf(stderr, \"  %%s --emit-aot <input.ir> <output.bin>\\n\", argv0);\n"
+		"    fprintf(stderr, \"  %%s --emit-aot-asm <input.ir> <output.S>\\n\", argv0);\n"
+		"    fprintf(stderr, \"  %%s --emit-aot-obj <input.ir> <output.o>\\n\", argv0);\n"
 		"    fprintf(stderr, \"  %%s --bootstrap <compiler_source.s> [output_dir]\\n\", argv0);\n"
 		"}\n\n"
 		"static int run_embedded_program(int argc, char **argv) {\n"
@@ -176,6 +182,28 @@ static bool write_runner_c_file(FILE *out, const char *ir_text, compile_error *e
 		"            return 1;\n"
 		"        }\n"
 		"        printf(\"compiled %%s -> %%s\\n\", argv[2], argv[3]);\n"
+		"        return 0;\n"
+		"    }\n"
+		"    if (argc >= 2 && (strcmp(argv[1], \"--emit-aot\") == 0 ||\n"
+		"                           strcmp(argv[1], \"--emit-aot-asm\") == 0 ||\n"
+		"                           strcmp(argv[1], \"--emit-aot-obj\") == 0)) {\n"
+		"        bool ok;\n"
+		"        error_clear(&err);\n"
+		"        if (argc != 4) {\n"
+		"            print_usage(argv[0]);\n"
+		"            return 2;\n"
+		"        }\n"
+		"        if (strcmp(argv[1], \"--emit-aot-asm\") == 0)\n"
+		"            ok = emit_aot_assembly_from_ir_file(argv[2], argv[3], &err);\n"
+		"        else if (strcmp(argv[1], \"--emit-aot-obj\") == 0)\n"
+		"            ok = emit_aot_object_from_ir_file(argv[2], argv[3], &err);\n"
+		"        else\n"
+		"            ok = emit_aot_from_ir_file(argv[2], argv[3], &err);\n"
+		"        if (!ok) {\n"
+		"            print_compile_error(&err);\n"
+		"            return 1;\n"
+		"        }\n"
+		"        printf(\"AOT compiled %%s -> %%s\\n\", argv[2], argv[3]);\n"
 		"        return 0;\n"
 		"    }\n"
 		"    if (argc >= 2 && strcmp(argv[1], \"--bootstrap\") == 0) {\n"
@@ -241,7 +269,8 @@ bool emit_native_from_ir_file(const char *input_ir_path, const char *output_bina
 	snprintf(command, sizeof(command),
 		"gcc -std=c11 -O2 -Wall -Wextra -Werror -DSEED_COMPILE_ONLY -I %s/src/cmd/compile/seed -o %s %s "
 		"%s/src/cmd/compile/seed/runtime/runtime.c %s/src/cmd/compile/seed/error/error.c "
-		"%s/src/cmd/compile/seed/code/native_backend.c "
+		"%s/src/cmd/compile/seed/code/native_backend.c %s/src/cmd/compile/seed/code/backend_registry.c "
+		"%s/src/cmd/compile/seed/code/standalone_amd64_backend.c "
 		"%s/src/cmd/compile/seed/lexical/lexer.c %s/src/cmd/compile/seed/lexical/selfhost_bridge.c %s/src/cmd/compile/seed/syntax/parser.c "
 		"%s/src/cmd/compile/seed/semantic/analyzer.c %s/src/cmd/compile/seed/intermediate/ir.c "
 		"%s/src/cmd/compile/seed/code/generator.c %s/src/cmd/compile/seed/bootstrap/bootstrap.c "
@@ -250,7 +279,7 @@ bool emit_native_from_ir_file(const char *input_ir_path, const char *output_bina
 		output_binary_path,
 		temp_path,
 		s_source_root, s_source_root,
-		s_source_root,
+		s_source_root, s_source_root, s_source_root,
 		s_source_root, s_source_root,
 		s_source_root, s_source_root, s_source_root,
 		s_source_root, s_source_root, s_source_root);
