@@ -13,7 +13,7 @@ struct linker_context {
     object_files object_file[]
     sections elf64_section[]
     symbols elf64_symbol[]
-    symbol_table string[]
+    symbol_table []string
     string_table string
     load_address int
     current_offset int
@@ -31,7 +31,7 @@ func linker_context_new(string output_file) linker_context {
         object_files: object_file[](),
         sections: elf64_section[](),
         symbols: elf64_symbol[](),
-        symbol_table: string[](),
+        symbol_table: []string(),
         string_table: "",
         load_address: 0x400000,
         current_offset: 0
@@ -150,8 +150,8 @@ func linker_write_executable(linker_context ctx*) link_result {
     result
 }
 
-func make_string_int_map() string[] {
-    string[]()
+func make_string_int_map() []string {
+    []string()
 }
 
 func linker_load_object_file(string filename) object_file {
@@ -165,7 +165,7 @@ func linker_load_object_file(string filename) object_file {
     obj
 }
 
-func linker_link_files(string output_file, string[] input_files) link_result {
+func linker_link_files(string output_file, []string input_files) link_result {
     ctx := linker_context_new(output_file)
     
     for i := 0; i < input_files.len(); i = i + 1 {

@@ -2,8 +2,8 @@ package ssa_form
 
 struct block {
     int id
-    int[] preds
-    int[] succs
+    []int preds
+    []int succs
     value[] values
     int kind
 }
@@ -12,7 +12,7 @@ struct value {
     int id
     int op
     int type_id
-    int[] args
+    []int args
     int block
     int line
     int aux
@@ -20,7 +20,7 @@ struct value {
 
 struct phi {
     int value_id
-    int[] edges
+    []int edges
 }
 
 struct var_version {
@@ -36,7 +36,7 @@ struct ssa_builder {
     block[] blocks
     value[] all_values
     var_version[] var_versions
-    int[] var_stack
+    []int var_stack
 }
 
 func ssa_builder_new() ssa_builder* {
@@ -68,7 +68,7 @@ func (builder* ssa_builder) new_block(int kind) int {
     id
 }
 
-func (builder* ssa_builder) add_value(int op, int type_id, int[] args, int block_id) int {
+func (builder* ssa_builder) add_value(int op, int type_id, []int args, int block_id) int {
     value_id := builder.value_count
     builder.value_count = builder.value_count + 1
     
@@ -89,7 +89,7 @@ func (builder* ssa_builder) add_value(int op, int type_id, int[] args, int block
     value_id
 }
 
-func (builder* ssa_builder) add_phi(int value_id, int[] edges) int {
+func (builder* ssa_builder) add_phi(int value_id, []int edges) int {
     phi := phi {
         value_id: value_id,
         edges: edges,
@@ -121,7 +121,7 @@ func (builder* ssa_builder) get_var_version(int var_id, int version) int {
     builder.var_versions[idx].value_id
 }
 
-func compute_dominators(block[] blocks, int num_blocks) int[] {
+func compute_dominators(block[] blocks, int num_blocks) []int {
     dominators := new int[num_blocks * num_blocks]
     
     i := 0
@@ -179,7 +179,7 @@ func compute_dominators(block[] blocks, int num_blocks) int[] {
     dominators
 }
 
-func compute_dominance_frontier(block[] blocks, int num_blocks, int[] dominators) int[] {
+func compute_dominance_frontier(block[] blocks, int num_blocks, []int dominators) []int {
     frontier := new int[num_blocks * num_blocks]
     
     i := 0
@@ -227,7 +227,7 @@ func compute_dominance_frontier(block[] blocks, int num_blocks, int[] dominators
     frontier
 }
 
-func insert_phis_for_var(value[] all_values, int var_id, int[] definitions, int[] dominance_frontier, int num_blocks) int {
+func insert_phis_for_var(value[] all_values, int var_id, []int definitions, []int dominance_frontier, int num_blocks) int {
     work_list := new int[num_blocks]
     work_list_size := 0
     

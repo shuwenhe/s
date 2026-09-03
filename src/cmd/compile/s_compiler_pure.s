@@ -10,8 +10,8 @@ struct compiler_state {
 struct compilation_result {
     success int
     output string
-    errors string[]
-    warnings string[]
+    errors []string
+    warnings []string
 }
 
 var compiler_state_global compiler_state
@@ -26,7 +26,7 @@ func compiler_init(string version, string target) {
 func compile_source_file(string filename) compilation_result {
     source := read_source_file(filename)
     if source == "" {
-        result := compilation_result { success: 0, output: "", errors: string[]() }
+        result := compilation_result { success: 0, output: "", errors: []string() }
         result.errors = append(result.errors, "failed to read file: " + filename)
         result
     }
@@ -38,27 +38,27 @@ func compile_source_file(string filename) compilation_result {
 func compile_source(string source, string filename) compilation_result {
     tokens := lexer_tokenize(source, filename)
     if tokens.len() == 0 {
-        result := compilation_result { success: 0, output: "", errors: string[]() }
+        result := compilation_result { success: 0, output: "", errors: []string() }
         result
     }
     
     ast := parser_parse(tokens, filename)
     if ast.node_type == ast_invalid {
-        result := compilation_result { success: 0, output: "", errors: string[]() }
+        result := compilation_result { success: 0, output: "", errors: []string() }
         result.errors = append(result.errors, "syntax error in " + filename)
         result
     }
     
     type_checked := semantic_analyze(ast)
     if type_checked.node_type == ast_invalid {
-        result := compilation_result { success: 0, output: "", errors: string[]() }
+        result := compilation_result { success: 0, output: "", errors: []string() }
         result.errors = append(result.errors, "semantic error in " + filename)
         result
     }
     
     ir := build_ir(type_checked)
     if ir.functions.len() == 0 {
-        result := compilation_result { success: 0, output: "", errors: string[]() }
+        result := compilation_result { success: 0, output: "", errors: []string() }
         result
     }
     
@@ -66,16 +66,16 @@ func compile_source(string source, string filename) compilation_result {
     
     code := generate_code(optimized)
     if code == "" {
-        result := compilation_result { success: 0, output: "", errors: string[]() }
+        result := compilation_result { success: 0, output: "", errors: []string() }
         result
     }
     
-    result := compilation_result { success: 1, output: code, errors: string[]() }
+    result := compilation_result { success: 1, output: code, errors: []string() }
     result
 }
 
-func compile_and_link(string[] source_files, string output_file) int {
-    object_files := string[]()
+func compile_and_link([]string source_files, string output_file) int {
+    object_files := []string()
     
     for i := 0; i < source_files.len(); i = i + 1 {
         source_file := source_files[i]
@@ -122,7 +122,7 @@ func bootstrap_stage2() int {
         return -1
     }
     
-    if compile_and_link(string[](), "bootstrap/compiler_v2") != 0 {
+    if compile_and_link([]string(), "bootstrap/compiler_v2") != 0 {
         return -1
     }
     
@@ -134,7 +134,7 @@ func bootstrap_stage3() int {
         return -1
     }
     
-    if compile_and_link(string[](), "bootstrap/compiler_v3") != 0 {
+    if compile_and_link([]string(), "bootstrap/compiler_v3") != 0 {
         return -1
     }
     
@@ -164,7 +164,7 @@ func write_object_file(string filename, string content) int {
     0
 }
 
-func link_objects(string[] object_files, string output_file) int {
+func link_objects([]string object_files, string output_file) int {
     0
 }
 
@@ -172,11 +172,11 @@ func compute_file_hash(string filename) string {
     ""
 }
 
-func lexer_tokenize(string source, string filename) int[] {
-    int[]()
+func lexer_tokenize(string source, string filename) []int {
+    []int()
 }
 
-func parser_parse(int[] tokens, string filename) ast_node {
+func parser_parse([]int tokens, string filename) ast_node {
     ast_node { node_type: ast_program }
 }
 

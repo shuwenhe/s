@@ -18,7 +18,7 @@ struct race_event {
 	g_id u64
 	event_type race_type
 	timestamp i64
-	stack_trace string[]
+	stack_trace []string
 	is_write bool
 }
 
@@ -141,7 +141,7 @@ struct profile_sample {
 	g_id u64
 	pc u64
 	timestamp i64
-	stack_trace string[]
+	stack_trace []string
 	mem_used u64
 	cpu_time i64
 }

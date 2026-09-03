@@ -97,8 +97,8 @@ func match_pkg_func(hash_debug hd, string pkg, string fn_name) bool {
     included
 }
 
-func split(string text, string sep) string[] {
-    out := string[]()
+func split(string text, string sep) []string {
+    out := []string()
     if sep == "" {
         out = append(out, text)
         return out

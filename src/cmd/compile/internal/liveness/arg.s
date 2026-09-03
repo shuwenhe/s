@@ -9,15 +9,15 @@ struct arg_liveness_slot {
 struct arg_liveness_payload {
     string symbol_name
     int min_slot_offset
-    int[] map_offsets
-    string[] maps
+    []int map_offsets
+    []string maps
 }
 
 func arg_emit_symbol_name(string fn_name) string {
     fn_name + ".argliveinfo"
 }
 
-func arg_emit(string fn_name, arg_liveness_slot[] args, int[][]] raw_maps) arg_liveness_payload {
+func arg_emit(string fn_name, arg_liveness_slot[] args, []int[]] raw_maps) arg_liveness_payload {
     maps := dedupe_bitmaps(raw_maps)
     min_slot_offset := 0
     if len(args) > 0 {
@@ -36,8 +36,8 @@ func arg_emit(string fn_name, arg_liveness_slot[] args, int[][]] raw_maps) arg_l
     if min_slot_offset > 255 {
         min_slot_offset = 255
     }
-    map_offsets := int[]()
-    encoded_maps := string[]()
+    map_offsets := []int()
+    encoded_maps := []string()
     off := min_slot_offset
     m := 0
     for m < len(maps) {
@@ -52,8 +52,8 @@ func arg_emit(string fn_name, arg_liveness_slot[] args, int[][]] raw_maps) arg_l
     }
 }
 
-func dedupe_bitmaps(int[][]] maps) int[][]] {
-    out := int[][]]()
+func dedupe_bitmaps([]int[]] maps) []int[]] {
+    out := []int[]]()
     i := 0
     for i < len(maps) {
         seen := false
@@ -73,7 +73,7 @@ func dedupe_bitmaps(int[][]] maps) int[][]] {
     out
 }
 
-func bitmap_equal(int[] left, int[] right) bool {
+func bitmap_equal([]int left, []int right) bool {
     if len(left) != len(right) {
         return false
     }
@@ -87,7 +87,7 @@ func bitmap_equal(int[] left, int[] right) bool {
     true
 }
 
-func encode_bitmap(int[] bits) string {
+func encode_bitmap([]int bits) string {
     out := ""
     i := 0
     for i < len(bits) {

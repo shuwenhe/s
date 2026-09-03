@@ -10,7 +10,7 @@ enum escape_level {
 struct escape_info {
     int var_id
     escape_level level
-    int[] escapes_to
+    []int escapes_to
     bool is_pointer_receiver
     bool assigned_to_global
     bool returned_to_caller
@@ -19,17 +19,17 @@ struct escape_info {
 
 struct escape_analysis {
     escape_info[] infos
-    int[] call_graph
-    int[][] alias_sets
-    bool[][] may_alias
+    []int call_graph
+    []int[] alias_sets
+    []bool[] may_alias
 }
 
 func new_escape_analysis() escape_analysis {
     escape_analysis {
         infos: escape_info[](),
-        call_graph: int[](),
-        alias_sets: int[][](),
-        may_alias: bool[][]()
+        call_graph: []int(),
+        alias_sets: []int[](),
+        may_alias: []bool[]()
     }
 }
 
@@ -51,7 +51,7 @@ func (ea* escape_analysis) analyze_variable(int var_id, bool is_pointer, bool as
     info := escape_info {
         var_id: var_id,
         level: level,
-        escapes_to: int[](),
+        escapes_to: []int(),
         is_pointer_receiver: is_pointer,
         assigned_to_global: assigned_global,
         returned_to_caller: returned,
@@ -139,9 +139,9 @@ func (ea* escape_analysis) analyze_return(int return_var, int caller_var) {
     ea.analyze_flow(return_var, caller_var)
 }
 
-func (ea* escape_analysis) build_alias_sets(int[] vars) {
+func (ea* escape_analysis) build_alias_sets([]int vars) {
     n := vars.len()
-    ea.may_alias = new bool[][n]
+    ea.may_alias = new []bool[n]
 
     for i in 0..n {
         ea.may_alias[i] = new bool[n]
@@ -176,7 +176,7 @@ func (ea* escape_analysis) build_alias_sets(int[] vars) {
     }
 }
 
-func (ea* escape_analysis) may_alias_with(int var1, int var2, int[] all_vars) bool {
+func (ea* escape_analysis) may_alias_with(int var1, int var2, []int all_vars) bool {
     idx1 := -1
     idx2 := -1
 

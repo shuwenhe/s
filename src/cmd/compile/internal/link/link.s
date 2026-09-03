@@ -25,7 +25,7 @@ struct link_reloc {
 
 struct link_context {
     link_sym[] symbols
-    string[] symbol_names
+    []string symbol_names
     int64 text_size
     int64 data_size
     int64 bss_size
@@ -33,7 +33,7 @@ struct link_context {
 
 func make_link_context() link_context {
     link_context {
-        symbols: link_sym[](), symbol_names string[](), text_size 0, data_size 0, bss_size 0,
+        symbols: link_sym[](), symbol_names []string(), text_size 0, data_size 0, bss_size 0,
     }
 }
 

@@ -35,7 +35,7 @@ func get_name_from_expr(expr value) option[string] {
     }
 }
 
-func append_unique(string[] names, string value) () {
+func append_unique([]string names, string value) () {
     if value == "" || value == "_" {
         return
     }
@@ -49,8 +49,8 @@ func append_unique(string[] names, string value) () {
     names = append(names, value)
 }
 
-func collect_call_arg_names(call_expr call_value) string[] {
-    out := string[]()
+func collect_call_arg_names(call_expr call_value) []string {
+    out := []string()
     i := 0
     for i < len(call_value.args) {
         switch get_name_from_expr(call_value.args[i]) {
@@ -62,8 +62,8 @@ func collect_call_arg_names(call_expr call_value) string[] {
     out
 }
 
-func collect_keep_alive_names(stmt value) string[] {
-    out := string[]()
+func collect_keep_alive_names(stmt value) []string {
+    out := []string()
     switch value {
         stmt.assign(assign_value) : append_unique(out, assign_value.name),
         stmt.increment(increment_value) : append_unique(out, increment_value.name),

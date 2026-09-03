@@ -19,12 +19,12 @@ struct relocation_entry {
 
 struct relocation_context {
     relocation_entry[] relocations
-    string[] processed_symbols
+    []string processed_symbols
 }
 
 func make_relocation_context() relocation_context {
     relocation_context {
-        relocations: relocation_entry[](), processed_symbols string[](),
+        relocations: relocation_entry[](), processed_symbols []string(),
     }
 }
 

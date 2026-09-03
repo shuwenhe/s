@@ -24,13 +24,13 @@ struct symbol_entry {
 
 struct symbol_table {
     symbol_entry[] entries
-    string[] names
+    []string names
     int64 string_table_offset
 }
 
 func make_symbol_table() symbol_table {
     symbol_table {
-        entries: symbol_entry[](), names string[](), string_table_offset 0,
+        entries: symbol_entry[](), names []string(), string_table_offset 0,
     }
 }
 

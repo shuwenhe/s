@@ -54,8 +54,8 @@ func new_linear(int in_feat, int out_feat, bool use_bias) linear {
     layer.in_features = in_feat
     layer.out_features = out_feat
     layer.bias_enabled = use_bias
-    int[] fan_in = [in_feat]
-    int[] fan_out = [out_feat]
+    []int fan_in = [in_feat]
+    []int fan_out = [out_feat]
     tensor w_data = xavier_uniform(fan_in, fan_out)
     layer.weight = parameter(w_data, "weight")
     if use_bias {
@@ -88,16 +88,16 @@ func new_embedding(int num_embed, int embed_dim, int pad_idx) embedding {
     layer.num_embeddings = num_embed
     layer.embedding_dim = embed_dim
     layer.padding_idx = pad_idx
-    int[] shape = [num_embed, embed_dim]
+    []int shape = [num_embed, embed_dim]
     tensor w_data = randn(shape, 0.0, 1.0)
     layer.weight = parameter(w_data, "weight")
     append(layer.parameters, layer.weight)
     layer
 }
 
-func forward(embedding self, int[] token_ids, int batch_size, int seq_len) auto_grad_tensor {
+func forward(embedding self, []int token_ids, int batch_size, int seq_len) auto_grad_tensor {
     int num_tokens = batch_size * seq_len
-    float[] emb_values = new float[num_tokens * self.embedding_dim]
+    []float emb_values = new float[num_tokens * self.embedding_dim]
     int i = 0
     for i < num_tokens {
         int token_id = token_ids[i]
@@ -117,7 +117,7 @@ func forward(embedding self, int[] token_ids, int batch_size, int seq_len) auto_
         }
         i = i + 1
     }
-    int[] out_shape = [batch_size, seq_len, self.embedding_dim]
+    []int out_shape = [batch_size, seq_len, self.embedding_dim]
     tensor out_data = tensor(emb_values, out_shape)
     create_autograd_tensor(out_data, true)
 }
@@ -125,11 +125,11 @@ func forward(embedding self, int[] token_ids, int batch_size, int seq_len) auto_
 struct layer_norm : module {
     auto_grad_tensor gamma
     auto_grad_tensor beta
-    int[] normalized_shape
+    []int normalized_shape
     float eps
 }
 
-func new_layer_norm(int[] norm_shape, float eps) layer_norm {
+func new_layer_norm([]int norm_shape, float eps) layer_norm {
     layer_norm layer
     layer.type_name = "LayerNorm"
     layer.normalized_shape = norm_shape
@@ -234,7 +234,7 @@ func forward(multi_head_attention self, auto_grad_tensor x, tensor mask) auto_gr
 }
 
 func make_causal_mask(int seq_len) tensor {
-    float[] vals = new float[seq_len * seq_len]
+    []float vals = new float[seq_len * seq_len]
     int i = 0
     for i < seq_len {
         int j = 0
@@ -264,7 +264,7 @@ func new_feed_forward(int d_model, int d_ff, float dropout_p, string act_fn) fee
     ff.fc1 = new_linear(d_model, d_ff, true)
     ff.fc2 = new_linear(d_ff, d_model, true)
     ff.norm = new_layer_norm([d_model], 1e-5)
-    int[][] linears = [[ff.fc1], [ff.fc2]]
+    []int[] linears = [[ff.fc1], [ff.fc2]]
     int li = 0
     for li < 2 {
         linear l = [ff.fc1, ff.fc2][li]

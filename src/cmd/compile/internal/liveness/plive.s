@@ -14,16 +14,16 @@ struct liveness_emit_blob {
     int bitmap_count
     int args_bits
     int locals_bits
-    string[] args_maps
-    string[] locals_maps
-    string[] stack_objects
+    []string args_maps
+    []string locals_maps
+    []string stack_objects
 }
 
-func plive_emit(string fn_name, live_stack_slot[] slots, int[][]] stack_maps) liveness_emit_blob {
+func plive_emit(string fn_name, live_stack_slot[] slots, []int[]] stack_maps) liveness_emit_blob {
     args_bits := max_bitmap_words(slots, true)
     locals_bits := max_bitmap_words(slots, false)
-    args_maps := string[]()
-    locals_maps := string[]()
+    args_maps := []string()
+    locals_maps := []string()
     i := 0
     for i < len(stack_maps) {
         args_maps = append(args_maps, build_bitmap(args_bits, slots, stack_maps[i], true))
@@ -59,11 +59,11 @@ func slot_word_index(live_stack_slot slot) int {
     (-slot.frame_offset) / 8
 }
 
-func build_bitmap(int width, live_stack_slot[] slots, int[] live, bool want_args) string {
+func build_bitmap(int width, live_stack_slot[] slots, []int live, bool want_args) string {
     if width <= 0 {
         return ""
     }
-    bits := int[]()
+    bits := []int()
     i := 0
     for i < width {
         bits = append(bits, 0)
@@ -88,8 +88,8 @@ func build_bitmap(int width, live_stack_slot[] slots, int[] live, bool want_args
     encode_bitmap(bits)
 }
 
-func emit_stack_objects(live_stack_slot[] slots) string[] {
-    out := string[]()
+func emit_stack_objects(live_stack_slot[] slots) []string {
+    out := []string()
     i := 0
     for i < len(slots) {
         s := slots[i]
@@ -101,7 +101,7 @@ func emit_stack_objects(live_stack_slot[] slots) string[] {
     out
 }
 
-func encode_bitmap(int[] bits) string {
+func encode_bitmap([]int bits) string {
     out := ""
     i := 0
     for i < len(bits) {

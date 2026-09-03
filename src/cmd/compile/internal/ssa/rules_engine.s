@@ -11,8 +11,8 @@ struct rule {
 struct rules_engine {
     rule[] rules
     map[string]rule[] rules_by_opcode
-    int[] match_count
-    int[] transform_count
+    []int match_count
+    []int transform_count
 }
 
 func (engine* rules_engine) init() void {

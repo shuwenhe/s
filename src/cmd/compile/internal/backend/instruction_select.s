@@ -46,7 +46,7 @@ struct x86_instruction {
 struct instruction_selector {
     ir_func ir_function
     x86_instrs x86_instruction[]
-    var_to_reg_map string[]
+    var_to_reg_map []string
     stack_offset int
 }
 
@@ -54,7 +54,7 @@ func instruction_selector_new(ir_function ir_func) instruction_selector {
     selector := instruction_selector {
         ir_func: ir_func,
         x86_instrs: x86_instruction[](),
-        var_to_reg_map: string[](),
+        var_to_reg_map: []string(),
         stack_offset: 0
     }
     selector

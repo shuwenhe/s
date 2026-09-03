@@ -7,9 +7,9 @@ struct grad_context {
     tensor[] inputs
     tensor output
     func backward_fn
-    float[] cache_floats
-    int[] cache_ints
-    bool[] cache_bools
+    []float cache_floats
+    []int cache_ints
+    []bool cache_bools
 }
 
 struct auto_grad_tensor {
@@ -37,15 +37,15 @@ func add_to_graph(graph_node node) int {
     graph_size - 1
 }
 
-func topological_sort(int root_idx) int[] {
-    bool[] visited = new bool[graph_size]
-    int[] order = new int[graph_size]
+func topological_sort(int root_idx) []int {
+    []bool visited = new bool[graph_size]
+    []int order = new int[graph_size]
     int order_len = 0
     dfs_visit(root_idx, visited, order, order_len)
     order
 }
 
-func dfs_visit(int idx, bool[] visited, int[] order, int order_len_ref) void {
+func dfs_visit(int idx, []bool visited, []int order, int order_len_ref) void {
     if visited[idx] { return }
     visited[idx] = true
     graph_node node = current_graph[idx]
@@ -60,7 +60,7 @@ func dfs_visit(int idx, bool[] visited, int[] order, int order_len_ref) void {
 
 func backward(auto_grad_tensor loss_tensor) map<string, tensor> {
     loss_tensor.grad = ones_like(loss_tensor.data)
-    int[] topo_order = topological_sort(loss_tensor.grad_ctx.graph_idx)
+    []int topo_order = topological_sort(loss_tensor.grad_ctx.graph_idx)
     int i = len(topo_order) - 1
     for i >= 0 {
         int node_idx = topo_order[i]
@@ -165,7 +165,7 @@ func autograd_relu(auto_grad_tensor x) auto_grad_tensor {
 }
 
 func relu_backward_mask(tensor x) tensor {
-    float[] mask = new float[x.shape.size]
+    []float mask = new float[x.shape.size]
     int i = 0
     for i < x.shape.size {
         if x.data.values[i] > 0 { mask[i] = 1.0 }
@@ -175,7 +175,7 @@ func relu_backward_mask(tensor x) tensor {
     tensor { shape: x.shape, data mask, device: "cpu", requires_grad false }
 }
 
-func cross_entropy_loss(auto_grad_tensor logits, int[] target_classes) auto_grad_tensor {
+func cross_entropy_loss(auto_grad_tensor logits, []int target_classes) auto_grad_tensor {
     tensor probs = softmax(logits.data)
     int batch_size = logits.shape.dims[0]
     float loss_val = 0.0
@@ -207,7 +207,7 @@ func cross_entropy_loss(auto_grad_tensor logits, int[] target_classes) auto_grad
     result
 }
 
-func compute_ce_grad(tensor probs, int[] targets, int batch_size) tensor {
+func compute_ce_grad(tensor probs, []int targets, int batch_size) tensor {
     tensor grad = zeros_like(probs)
     int i = 0
     for i < batch_size {
@@ -280,7 +280,7 @@ func autograd_sum(auto_grad_tensor x, int dim, bool keepdim) auto_grad_tensor {
     result
 }
 
-func autograd_view(auto_grad_tensor x, int[] shape) auto_grad_tensor {
+func autograd_view(auto_grad_tensor x, []int shape) auto_grad_tensor {
     tensor out_data = view(x.data, shape)
     auto_grad_tensor result = create_autograd_tensor(out_data, x.requires_grad)
     if result.requires_grad {

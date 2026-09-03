@@ -18,7 +18,7 @@ struct debug_loc_info {
 struct debug_loc_propagator {
     debug_loc_info[] loc_infos
     source_location[] file_locations
-    string[] scope_stack
+    []string scope_stack
     i32 current_depth
 }
 
@@ -26,7 +26,7 @@ func new_debug_loc_propagator() debug_loc_propagator* {
     dlp := new(debug_loc_propagator)
     dlp.loc_infos = new debug_loc_info[]()
     dlp.file_locations = new source_location[]()
-    dlp.scope_stack = make(string[], 100)
+    dlp.scope_stack = make([]string, 100)
     dlp.current_depth = 0
     dlp
 }
