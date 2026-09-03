@@ -105,19 +105,15 @@ func (allocator* register_allocator) build_interference_graph() int {
     for i < allocator.range_count {
         range_i := allocator.ranges[i]
         
-        j := 0
+        j := i + 1
         for j < allocator.range_count {
-            if i != j {
-                range_j := allocator.ranges[j]
-                
-                if ranges_interfere(range_i, range_j) == 1 {
-                    graph.adjacency[i][j] = 1
-                    graph.adjacency[j][i] = 1
-                    graph.degree[i] = graph.degree[i] + 1
-                    graph.degree[j] = graph.degree[j] + 1
-                }
+            range_j := allocator.ranges[j]
+            if ranges_interfere(range_i, range_j) == 1 {
+                graph.adjacency[i][j] = 1
+                graph.adjacency[j][i] = 1
+                graph.degree[i] = graph.degree[i] + 1
+                graph.degree[j] = graph.degree[j] + 1
             }
-            
             j = j + 1
         }
         
@@ -129,13 +125,19 @@ func (allocator* register_allocator) build_interference_graph() int {
 }
 
 func ranges_interfere(live_range* range_a, live_range* range_b) int {
-    if range_a.start_block == range_b.start_block {
-        if range_a.start_instr < range_b.end_instr && range_b.start_instr < range_a.end_instr {
-            return 1
-        }
+    if range_a.end_block < range_b.start_block {
+        return 0
     }
-    
-    return 0
+    if range_b.end_block < range_a.start_block {
+        return 0
+    }
+    if range_a.end_block == range_b.start_block && range_a.end_instr <= range_b.start_instr {
+        return 0
+    }
+    if range_b.end_block == range_a.start_block && range_b.end_instr <= range_a.start_instr {
+        return 0
+    }
+    1
 }
 
 func (allocator* register_allocator) color_graph() int {
