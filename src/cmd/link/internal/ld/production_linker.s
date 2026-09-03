@@ -5,7 +5,6 @@ import (
 	"src/os"
 )
 
-
 enum object_format {
 	format_elf = 0
 	format_macho = 1
@@ -13,7 +12,6 @@ enum object_format {
 	format_wasm = 3
 	format_xcoff = 4
 }
-
 
 struct linker_config {
 	format             object_format
@@ -29,7 +27,6 @@ struct linker_config {
 	pie                bool  
 	pie_library         bool  
 }
-
 
 struct production_linker {
 	config              linker_config
@@ -47,7 +44,6 @@ struct production_linker {
 	dynamic_reloc_manager dynamic_reloc_manager
 	sections            map[string]section
 }
-
 
 func new_production_linker(config linker_config) production_linker {
 	linker := production_linker{
@@ -69,7 +65,6 @@ func new_production_linker(config linker_config) production_linker {
 
 	linker
 }
-
 
 func (production_linker* pl) LoadObjectFile(string filename) error {
 	fmt.Printf("Loading %s...\n", filename)
@@ -121,7 +116,6 @@ func (production_linker* pl) LoadObjectFile(string filename) error {
 	nil
 }
 
-
 func (pl production_linker*) Link() error {
 	fmt.Printf("Linking %d object files...\n", len(pl.Config.InputFiles))
 
@@ -155,7 +149,6 @@ func (pl production_linker*) Link() error {
 	nil
 }
 
-
 func (pl production_linker*) MergeSymbols() error {
 	
 	for _, obj := range pl.elf_objects {
@@ -172,7 +165,6 @@ func (pl production_linker*) MergeSymbols() error {
 
 	nil
 }
-
 
 func (pl production_linker*) ProcessRelocations() error {
 	
@@ -214,7 +206,6 @@ func (pl production_linker*) ProcessRelocations() error {
 	nil
 }
 
-
 func (pl production_linker*) GenerateOutput() error {
 	
 
@@ -243,7 +234,6 @@ func (pl production_linker*) GenerateOutput() error {
 
 	nil
 }
-
 
 func (pl production_linker*) generateELFOutput() error {
 	
@@ -303,7 +293,6 @@ func (pl production_linker*) generateELFOutput() error {
 	nil
 }
 
-
 func (pl production_linker*) generateMachoOutput() error {
 	output := NewMachoObject(CPU_TYPE_X86_64, MH_OBJECT)
 
@@ -319,7 +308,6 @@ func (pl production_linker*) generateMachoOutput() error {
 
 	nil
 }
-
 
 func (pl production_linker*) generatePEOutput() error {
 	output := NewPEObject(MACHINE_AMD64)
@@ -339,7 +327,6 @@ func (pl production_linker*) generatePEOutput() error {
 
 	nil
 }
-
 
 func (pl production_linker*) Validate() error {
 	

@@ -6,7 +6,6 @@ import (
 	"src/encoding/binary"
 )
 
-
 enum build_id_type {
 	bid_uuid = 0
 	bid_md5 = 1
@@ -14,13 +13,11 @@ enum build_id_type {
 	bid_sha256 = 3
 }
 
-
 struct build_id_manager {
 	type    build_id_type
 	id u8[]
 	version string
 }
-
 
 func new_build_id_manager(t build_id_type) build_id_manager {
 	build_id_manager{
@@ -29,7 +26,6 @@ func new_build_id_manager(t build_id_type) build_id_manager {
 		version: "1.0",
 	}
 }
-
 
 func (bim build_id_manager*) generate_build_id(data u8[]) {
 	
@@ -40,7 +36,6 @@ func (bim build_id_manager*) generate_build_id(data u8[]) {
 	}
 }
 
-
 func (bim build_id_manager*) get_build_id_string() string {
 	s := ""
 	for _, b := range bim.id {
@@ -48,7 +43,6 @@ func (bim build_id_manager*) get_build_id_string() string {
 	}
 	s
 }
-
 
 func (bim build_id_manager*) generate_note_section() u8[] {
 	data := make(u8[], 0)
@@ -100,12 +94,10 @@ func (bim build_id_manager*) generate_note_section() u8[] {
 	data
 }
 
-
 struct got_manager {
 	entries got_entry[]
 	offset  i64
 }
-
 
 struct got_entry {
 	symbol_index i32
@@ -115,14 +107,12 @@ struct got_entry {
 	is_resolved  bool
 }
 
-
 func new_got_manager() got_manager {
 	got_manager{
 		entries: make(got_entry[], 0),
 		offset: 0,
 	}
 }
-
 
 func (gm got_manager*) add_entry(sym_idx i32, reloc_type reloc_type) i64 {
 	entry := got_entry{
@@ -140,7 +130,6 @@ func (gm got_manager*) add_entry(sym_idx i32, reloc_type reloc_type) i64 {
 	idx
 }
 
-
 func (gm got_manager*) lookup_or_create(sym_idx i32, reloc_type reloc_type) i64 {
 	
 	for _, entry := range gm.entries {
@@ -153,7 +142,6 @@ func (gm got_manager*) lookup_or_create(sym_idx i32, reloc_type reloc_type) i64 
 	gm.add_entry(sym_idx, reloc_type)
 }
 
-
 func (gm got_manager*) resolve_entry(index i64, value i64) {
 	idx := index / 8
 	if idx >= 0 && idx < i64(len(gm.entries)) {
@@ -161,7 +149,6 @@ func (gm got_manager*) resolve_entry(index i64, value i64) {
 		gm.entries[idx].is_resolved = true
 	}
 }
-
 
 func (gm got_manager*) generate_got_data() u8[] {
 	data := make(u8[], gm.offset)
@@ -174,12 +161,10 @@ func (gm got_manager*) generate_got_data() u8[] {
 	data
 }
 
-
 struct plt_manager {
 	entries plt_entry[]
 	offset  i64
 }
-
 
 struct plt_entry {
 	symbol_index  i32
@@ -188,14 +173,12 @@ struct plt_entry {
 	resolver_addr i64
 }
 
-
 func new_plt_manager() plt_manager {
 	plt_manager{
 		entries: make(plt_entry[], 0),
 		offset: 0,
 	}
 }
-
 
 func (pm plt_manager*) add_entry(sym_idx i32, got_addr i64) i64 {
 	
@@ -214,7 +197,6 @@ func (pm plt_manager*) add_entry(sym_idx i32, got_addr i64) i64 {
 
 	idx
 }
-
 
 func (pm plt_manager*) generate_plt_code() u8[] {
 	data := make(u8[], pm.offset)
@@ -247,12 +229,10 @@ func (pm plt_manager*) generate_plt_code() u8[] {
 	data
 }
 
-
 struct tls_manager {
 	blocks tls_block[]
 	offset i64
 }
-
 
 struct tls_block {
 	symbol    string
@@ -261,14 +241,12 @@ struct tls_block {
 	alignment i64
 }
 
-
 func new_tls_manager() tls_manager {
 	tls_manager{
 		blocks: make(tls_block[], 0),
 		offset: 0,
 	}
 }
-
 
 func (tm tls_manager*) add_variable(symbol string, size i64, alignment i64) i64 {
 	
@@ -290,11 +268,9 @@ func (tm tls_manager*) add_variable(symbol string, size i64, alignment i64) i64 
 	idx
 }
 
-
 func (tm tls_manager*) get_tls_size() i64 {
 	tm.offset
 }
-
 
 func (tm tls_manager*) generate_tls_data() u8[] {
 	data := make(u8[], tm.offset)
@@ -305,7 +281,6 @@ func (tm tls_manager*) generate_tls_data() u8[] {
 	data
 }
 
-
 struct dynamic_relocation {
 	offset   i64
 	type     i32  
@@ -313,18 +288,15 @@ struct dynamic_relocation {
 	addend   i64
 }
 
-
 struct dynamic_reloc_manager {
 	relocs dynamic_relocation[]
 }
-
 
 func new_dynamic_reloc_manager() dynamic_reloc_manager {
 	dynamic_reloc_manager{
 		relocs: make(dynamic_relocation[], 0),
 	}
 }
-
 
 func (drm dynamic_reloc_manager*) add_relocation(offset i64, rel_type i32, sym_idx i32, addend i64) {
 	reloc := dynamic_relocation{
@@ -336,7 +308,6 @@ func (drm dynamic_reloc_manager*) add_relocation(offset i64, rel_type i32, sym_i
 
 	drm.relocs = append(drm.relocs, reloc)
 }
-
 
 func (drm dynamic_reloc_manager*) generate_rela_dyn() u8[] {
 	data := make(u8[], 0)

@@ -6,7 +6,6 @@ import (
 	"src/fmt"
 )
 
-
 enum reloc_type {
 	RELOC_NONE = 0
 	RELOC_ABSOLUTE = 1
@@ -24,7 +23,6 @@ enum reloc_type {
 	RELOC_IRELATIVE = 13
 }
 
-
 struct relocation {
 	offset    i64      
 	type      reloc_type 
@@ -32,7 +30,6 @@ struct relocation {
 	addend    i64      
 	section_index i32   
 }
-
 
 struct reloc_processor {
 	relocs relocation[]
@@ -42,7 +39,6 @@ struct reloc_processor {
 	plt_offset     i64
 	tls_offset     i64
 }
-
 
 struct symbol_entry {
 	name      string
@@ -56,7 +52,6 @@ struct symbol_entry {
 	is_weak    bool
 	is_global  bool
 }
-
 
 struct section {
 	name          string
@@ -72,7 +67,6 @@ struct section {
 	relocs relocation[]
 }
 
-
 func new_reloc_processor() reloc_processor {
 	reloc_processor{
 		Relocs: make(relocation[], 0),
@@ -84,18 +78,15 @@ func new_reloc_processor() reloc_processor {
 	}
 }
 
-
 func (rp reloc_processor*) AddRelocation(r relocation) {
 	rp.Relocs = append(rp.Relocs, r)
 }
-
 
 func (rp reloc_processor*) AddSymbol(sym symbol_entry) i32 {
 	idx := i32(len(rp.SymbolTable))
 	rp.SymbolTable = append(rp.SymbolTable, sym)
 	idx
 }
-
 
 func (rp reloc_processor*) AllocateGOTEntry(symIndex i32, relocType reloc_type) i64 {
 	offset := rp.GOTOffset
@@ -112,7 +103,6 @@ func (rp reloc_processor*) AllocateGOTEntry(symIndex i32, relocType reloc_type) 
 	offset
 }
 
-
 func (rp reloc_processor*) AllocatePLTEntry(symIndex i32, gotIndex i64) i64 {
 	
 	pltSize := i64(16)
@@ -125,13 +115,11 @@ func (rp reloc_processor*) AllocatePLTEntry(symIndex i32, gotIndex i64) i64 {
 	offset
 }
 
-
 func (rp reloc_processor*) AllocateTLSBlock(size i64) i64 {
 	offset := rp.TLSOffset
 	rp.TLSOffset += size
 	offset
 }
-
 
 func (rp reloc_processor*) ResolveSymbols() {
 	
@@ -156,7 +144,6 @@ func (rp reloc_processor*) ResolveSymbols() {
 		}
 	}
 }
-
 
 func (rp reloc_processor*) ApplyRelocations(targetBuffer u8[]) error {
 	for _, reloc := range rp.Relocs {
@@ -201,7 +188,6 @@ func (rp reloc_processor*) ApplyRelocations(targetBuffer u8[]) error {
 	nil
 }
 
-
 func (rp reloc_processor*) ValidateRelocations() error {
 	for i, reloc := range rp.Relocs {
 		
@@ -218,7 +204,6 @@ func (rp reloc_processor*) ValidateRelocations() error {
 	nil
 }
 
-
 func (rp reloc_processor*) GenerateDynamicSymtab() symbol_entry[] {
 	dynSyms := make(symbol_entry[], 0)
 
@@ -232,11 +217,9 @@ func (rp reloc_processor*) GenerateDynamicSymtab() symbol_entry[] {
 	dynSyms
 }
 
-
 func (rp reloc_processor*) GetRelocationTableSize() i64 {
 	i64(len(rp.Relocs)) * 24 
 }
-
 
 func (rp reloc_processor*) GenerateRelocationData() u8[] {
 	data := make(u8[], 0)

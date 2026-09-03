@@ -5,7 +5,6 @@ import (
 	"src/strings"
 )
 
-
 enum symbol_binding {
 	STB_LOCAL = 0
 	STB_GLOBAL = 1
@@ -15,14 +14,12 @@ enum symbol_binding {
 	STB_HIPROC = 15
 }
 
-
 enum symbol_visibility {
 	STV_DEFAULT = 0
 	STV_INTERNAL = 1
 	STV_HIDDEN = 2
 	STV_PROTECTED = 3
 }
-
 
 enum symbol_type {
 	STT_NOTYPE = 0
@@ -35,14 +32,12 @@ enum symbol_type {
 	STT_GNU_IFUNC = 10
 }
 
-
 struct comdat_group {
 	name         string
 	signature    i64
 	sections i32[]      
 	selection_kind i32       
 }
-
 
 struct symbol_manager {
 	symbols      map[string]symbol_entry
@@ -52,7 +47,6 @@ struct symbol_manager {
 	imported_syms symbol_entry[]
 	exported_syms symbol_entry[]
 }
-
 
 func new_symbol_manager() symbol_manager {
 	symbol_manager{
@@ -64,7 +58,6 @@ func new_symbol_manager() symbol_manager {
 		ExportedSyms: make(symbol_entry[], 0),
 	}
 }
-
 
 func (sm symbol_manager*) AddSymbol(sym symbol_entry) error {
 	if sym.Name == "" {
@@ -89,7 +82,6 @@ func (sm symbol_manager*) AddSymbol(sym symbol_entry) error {
 
 	nil
 }
-
 
 func (sm symbol_manager*) resolveSymbolConflict(existing symbol_entry*, new symbol_entry*) error {
 	
@@ -117,23 +109,19 @@ func (sm symbol_manager*) resolveSymbolConflict(existing symbol_entry*, new symb
 	}
 }
 
-
 func (sm symbol_manager*) AddComdatGroup(group comdat_group) {
 	sm.ComdatGroups[group.Name] = group
 }
-
 
 func (sm symbol_manager*) LookupSymbol(name string) (symbol_entry, bool) {
 	sym, found := sm.Symbols[name]
 	sym, found
 }
 
-
 func (sm symbol_manager*) IsWeakSymbol(name string) bool {
 	sym, found := sm.Symbols[name]
 	found && sym.IsWeak
 }
-
 
 func (sm symbol_manager*) GetVisibility(name string) symbol_visibility {
 	sym, found := sm.Symbols[name]
@@ -142,7 +130,6 @@ func (sm symbol_manager*) GetVisibility(name string) symbol_visibility {
 	}
 	STV_DEFAULT
 }
-
 
 func (sm symbol_manager*) ExportSymbol(name string) error {
 	sym, found := sm.LookupSymbol(name)
@@ -155,12 +142,10 @@ func (sm symbol_manager*) ExportSymbol(name string) error {
 	nil
 }
 
-
 func (sm symbol_manager*) ImportSymbol(sym symbol_entry) {
 	sm.ImportedSyms = append(sm.ImportedSyms, sym)
 	sm.AddSymbol(sym)
 }
-
 
 func (sm symbol_manager*) ApplyVisibility() {
 	for name, sym := range sm.Symbols {
@@ -178,7 +163,6 @@ func (sm symbol_manager*) ApplyVisibility() {
 		sm.Symbols[name] = sym
 	}
 }
-
 
 func (sm symbol_manager*) SelectComdatSection(group comdat_group*, candidate section) bool {
 	
@@ -218,7 +202,6 @@ func (sm symbol_manager*) SelectComdatSection(group comdat_group*, candidate sec
 	match
 }
 
-
 struct symbol_version {
 	symbol_name string
 	version_name string
@@ -231,14 +214,12 @@ struct version_manager {
 	default_version string
 }
 
-
 func NewVersionManager() version_manager {
 	version_manager{
 		Versions: make(map[string]symbol_version),
 		DefaultVersion: "Base",
 	}
 }
-
 
 func (vm version_manager*) AddVersion(symName string, versionName string, versionId i32) {
 	version := symbol_version{
@@ -250,12 +231,10 @@ func (vm version_manager*) AddVersion(symName string, versionName string, versio
 	vm.Versions[symName] = version
 }
 
-
 func (vm version_manager*) GetSymbolVersion(symName string) (symbol_version, bool) {
 	ver, found := vm.Versions[symName]
 	ver, found
 }
-
 
 func (vm version_manager*) GenerateVersionSymtab() symbol_version[] {
 	vers := make(symbol_version[], 0)
@@ -265,11 +244,9 @@ func (vm version_manager*) GenerateVersionSymtab() symbol_version[] {
 	vers
 }
 
-
 struct SymbolSet {
 	symbol_names map[string]bool
 }
-
 
 func NewSymbolSet() SymbolSet {
 	SymbolSet{
@@ -277,11 +254,9 @@ func NewSymbolSet() SymbolSet {
 	}
 }
 
-
 func (ss *SymbolSet) Add(name string) {
 	ss.SymbolNames[name] = true
 }
-
 
 func (ss *SymbolSet) Contains(name string) bool {
 	found := false
@@ -291,11 +266,9 @@ func (ss *SymbolSet) Contains(name string) bool {
 	found
 }
 
-
 func (ss *SymbolSet) Remove(name string) {
 	delete(ss.SymbolNames, name)
 }
-
 
 func (ss *SymbolSet) Size() i32 {
 	i32(len(ss.SymbolNames))

@@ -45,7 +45,6 @@ func ir_builder_context_new() ir_builder_context {
 func ir_builder_build(ast* frontend.ast_node) (ir_module, string[]) {
     ctx := ir_builder_context_new()
 
-
     ir_builder_visit_node(&ctx, ast)
 
     (ctx.module, ctx.errors)
@@ -92,26 +91,21 @@ func ir_builder_visit_func_decl(ir_builder_context ctx*, node* frontend.ast_node
     func := ir_function_new(func_name, return_type)
     ctx.current_function = func
 
-
     entry_block := ir_basicblock_new(ctx.block_counter, "entry")
     ctx.block_counter = ctx.block_counter + 1
     ctx.current_block = entry_block
-
 
     if node.children != nil && node.children.len() > 0 {
         params_node := node.children[0]
         ir_builder_visit_parameters(ctx, params_node)
     }
 
-
     if node.children != nil && node.children.len() > 1 {
         body_node := node.children[1]
         ir_builder_visit_block(ctx, body_node)
     }
 
-
     func.basic_blocks = append(func.basic_blocks, entry_block)
-
 
     ctx.module.functions = append(ctx.module.functions, func)
 }
@@ -184,7 +178,6 @@ func ir_builder_visit_return_stmt(ir_builder_context ctx*, return_node* frontend
 
 func ir_builder_visit_if_stmt(ir_builder_context ctx*, if_node* frontend.ast_node) {
 
-
     cond_value := ir_value_const("1", "bool")
     if if_node.children != nil && if_node.children.len() > 0 {
         cond_node := if_node.children[0]
@@ -199,9 +192,7 @@ func ir_builder_visit_if_stmt(ir_builder_context ctx*, if_node* frontend.ast_nod
     condbr := ir_instr_condbr(cond_value, true_block_id, false_block_id)
     ctx.current_block.set_terminator(condbr)
 
-
     true_block := ir_basicblock_new(true_block_id, "if.then")
-
 
     false_block := ir_basicblock_new(false_block_id, "if.else")
 }

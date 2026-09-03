@@ -169,8 +169,6 @@ struct spill_reload_action {
     bool reload
 }
 
-
-
 func register_allocator_spill_reload_plan(register_allocator* allocator) spill_reload_action[] {
     actions := spill_reload_action[]()
     for i := 0; i < allocator.intervals.len(); i = i + 1 {

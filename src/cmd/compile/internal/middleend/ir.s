@@ -55,7 +55,6 @@ struct ir_value {
     line int
     column int
 
-
     const_value string
     var_name string
     param_index int
@@ -68,7 +67,6 @@ struct ir_instruction {
     opcode int
     line int
     column int
-
 
     branch_target_true int
     branch_target_false int
