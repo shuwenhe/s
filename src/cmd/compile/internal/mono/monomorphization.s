@@ -113,7 +113,7 @@ func find_char(string text, string needle) int {
 }
 
 func specialize_function(function_decl source, string[] type_args) function_decl {
-    generic_names := string[] {}
+    string[] generic_names
     i := 0
     for i < len(source.sig.generics) {
         raw := source.sig.generics[i]
@@ -122,7 +122,7 @@ func specialize_function(function_decl source, string[] type_args) function_decl
         generic_names = append(generic_names, raw)
         i = i + 1
     }
-    params := param[] {}
+    param[] params
     i = 0
     for i < len(source.sig.params) {
         original := source.sig.params[i]

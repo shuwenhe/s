@@ -65,7 +65,7 @@ func register_allocator_build_interference_graph(allocator* register_allocator) 
     graph_size := allocator.intervals.len()
     
     for i := 0; i < graph_size; i = i + 1 {
-        row := int[] {}
+        int[] row
         for j := 0; j < graph_size; j = j + 1 {
             row = append(row, 0)
         }
@@ -124,7 +124,7 @@ func register_allocator_allocate(allocator* register_allocator) {
 }
 
 func get_available_registers(allocator* register_allocator) int[] {
-    available := int[] {}
+    int[] available
     
     for reg := 0; reg < 14; reg = reg + 1 {
         is_available := 1
