@@ -204,9 +204,9 @@ func lifetime_second_colon(string text, int first) int {
     -1
 }
 
-// Check that references never outlive their owner scope.
-// Events are scope:name, end_scope:name, borrow:ref:owner:scope,
-// use_ref:ref, and end_borrow:ref.
+
+
+
 func lifetime_check_events(string[] events) lifetime_check_result {
     refs := lifetime_reference[] {}
     active_scopes := string[] {}
