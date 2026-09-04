@@ -280,6 +280,16 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(whole_struct_field_borrow_diags, "e3057") {
         return 1
     }
+    branch_move_fail := "package demo.flow\nstruct Box {\n  int n\n}\nfunc take(Box value) int {\n  value.n\n}\nfunc main() {\n  box := Box { n: 1 }\n  if true {\n    take(box)\n  }\n  box.n\n}"
+    branch_move_diags := check_detailed(branch_move_fail)
+    if !has_code(branch_move_diags, "e3059") {
+        return 1
+    }
+    loop_move_fail := "package demo.flow\nstruct Box {\n  int n\n}\nfunc take(Box value) int {\n  value.n\n}\nfunc main() {\n  box := Box { n: 1 }\n  while true {\n    take(box)\n  }\n  box.n\n}"
+    loop_move_diags := check_detailed(loop_move_fail)
+    if !has_code(loop_move_diags, "e3059") {
+        return 1
+    }
     duplicate_receiver_method := "package demo.iface\nstruct Calc {}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc main() {\n  0\n}"
     duplicate_receiver_diags := check_detailed(duplicate_receiver_method)
     if !has_code(duplicate_receiver_diags, "e3042") {
