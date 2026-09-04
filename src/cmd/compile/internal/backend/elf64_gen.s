@@ -51,7 +51,7 @@ func make_elf64_writer() elf64_writer {
     writer
 }
 
-func (w* elf64_writer) add_section(string name, int sh_type, int[] data) {
+func (elf64_writer* w) add_section(string name, int sh_type, int[] data) {
     section: elf64_section
     section.name = name
     section.sh_type = sh_type
@@ -63,7 +63,7 @@ func (w* elf64_writer) add_section(string name, int sh_type, int[] data) {
     w.file_offset = w.file_offset + section.sh_size
 }
 
-func (w* elf64_writer) add_text_section(string code) {
+func (elf64_writer* w) add_text_section(string code) {
     data := int[]()
     i := 0
     for i < len(code) {
@@ -76,7 +76,7 @@ func (w* elf64_writer) add_text_section(string code) {
     w.add_section(".text", 1, data)
 }
 
-func (w* elf64_writer) write_header() string {
+func (elf64_writer* w) write_header() string {
     header := ""
     header = header + "\x7fELF"
     header = header + "\x02"
@@ -86,7 +86,7 @@ func (w* elf64_writer) write_header() string {
     header
 }
 
-func (w* elf64_writer) generate_elf() string {
+func (elf64_writer* w) generate_elf() string {
     result := w.write_header()
     i := 0
     for i < w.section_count {

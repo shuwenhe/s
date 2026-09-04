@@ -15,7 +15,7 @@ func new_backend_context(string input, string output, bool native) backend_conte
     ctx
 }
 
-func (bc* backend_context) compile_native() int {
+func (backend_context* bc) compile_native() int {
     if !bc.native_enabled {
         return -1
     }
@@ -34,6 +34,6 @@ func (bc* backend_context) compile_native() int {
     0
 }
 
-func (bc* backend_context) get_assembly_output() string {
+func (backend_context* bc) get_assembly_output() string {
     bc.compiler.get_assembly()
 }

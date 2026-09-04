@@ -69,7 +69,7 @@ func make_prog_list() prog_list {
     prog_list { nil, nil, 0 }
 }
 
-func (pl* prog_list) append_prog(int op, string as_string) {
+func (prog_list* pl) append_prog(int op, string as_string) {
     p := &prog { pl.count, op, pl.tail, nil, as_string, 0 }
     if pl.tail != nil {
         pl.tail.next = p
@@ -81,7 +81,7 @@ func (pl* prog_list) append_prog(int op, string as_string) {
     pl.count = pl.count + 1
 }
 
-func (pl* prog_list) append_prog_at_head(int op, string as_string) {
+func (prog_list* pl) append_prog_at_head(int op, string as_string) {
     p := &prog { pl.count, op, nil, pl.head, as_string, 0 }
     if pl.head != nil {
         pl.head.prev = p
@@ -93,7 +93,7 @@ func (pl* prog_list) append_prog_at_head(int op, string as_string) {
     pl.count = pl.count + 1
 }
 
-func (pl* prog_list) insert_after(prog* pos, int op, string as_string) {
+func (prog_list* pl) insert_after(prog* pos, int op, string as_string) {
     if pos == nil {
         pl.append_prog_at_head(op, as_string)
         return
@@ -109,7 +109,7 @@ func (pl* prog_list) insert_after(prog* pos, int op, string as_string) {
     pl.count = pl.count + 1
 }
 
-func (pl* prog_list) remove_prog(prog* p) {
+func (prog_list* pl) remove_prog(prog* p) {
     if p.prev != nil {
         p.prev.next = p.next
     } else {
@@ -123,19 +123,19 @@ func (pl* prog_list) remove_prog(prog* p) {
     pl.count = pl.count - 1
 }
 
-func (pl* prog_list) first() prog* {
+func (prog_list* pl) first() prog* {
     pl.head
 }
 
-func (pl* prog_list) last() prog* {
+func (prog_list* pl) last() prog* {
     pl.tail
 }
 
-func (pl* prog_list) len() int {
+func (prog_list* pl) len() int {
     pl.count
 }
 
-func (pl* prog_list) dump() string {
+func (prog_list* pl) dump() string {
     result := ""
     p := pl.head
     for p != nil {

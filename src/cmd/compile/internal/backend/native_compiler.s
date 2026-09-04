@@ -19,7 +19,7 @@ func new_native_compiler(string input, string output) native_compiler {
     compiler
 }
 
-func (nc* native_compiler) compile_to_assembly() int {
+func (native_compiler* nc) compile_to_assembly() int {
     nc.builder.emit_text_section()
     nc.builder.emit_global_symbol("main")
     nc.builder.emit_function_prologue("main")
@@ -28,15 +28,15 @@ func (nc* native_compiler) compile_to_assembly() int {
     0
 }
 
-func (nc* native_compiler) assemble_to_object() int {
+func (native_compiler* nc) assemble_to_object() int {
     0
 }
 
-func (nc* native_compiler) link_to_executable() int {
+func (native_compiler* nc) link_to_executable() int {
     0
 }
 
-func (nc* native_compiler) compile() int {
+func (native_compiler* nc) compile() int {
     result := nc.compile_to_assembly()
     if result != 0 {
         return result
@@ -52,10 +52,10 @@ func (nc* native_compiler) compile() int {
     0
 }
 
-func (nc* native_compiler) get_assembly() string {
+func (native_compiler* nc) get_assembly() string {
     nc.builder.get_assembly()
 }
 
-func (nc* native_compiler) get_machine_code() int[] {
+func (native_compiler* nc) get_machine_code() int[] {
     nc.builder.get_machine_code()
 }

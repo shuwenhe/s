@@ -53,7 +53,7 @@ func make_addr_branch(string label) addr {
     }
 }
 
-func (a* addr) string_repr() string {
+func (addr* a) string_repr() string {
     switch a.type {
         case addr_type_const: return a.offset as string
         case addr_type_reg: return "r" + (a.reg as string)

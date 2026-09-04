@@ -13,7 +13,7 @@ func make_ssa_to_machine(codegen_context* ctx, ssa_function* func) ssa_to_machin
     tm
 }
 
-func (tm* ssa_to_machine) lower_block(ssa_block* b) {
+func (ssa_to_machine* tm) lower_block(ssa_block* b) {
     i := 0
     for i < len(b.values) {
         value_id := b.values[i]
@@ -22,28 +22,28 @@ func (tm* ssa_to_machine) lower_block(ssa_block* b) {
     }
 }
 
-func (tm* ssa_to_machine) lower_value(int value_id) {
+func (ssa_to_machine* tm) lower_value(int value_id) {
 }
 
-func (tm* ssa_to_machine) emit_alloca(int size) string {
+func (ssa_to_machine* tm) emit_alloca(int size) string {
     offset := tm.ctx.alloc_state.next_stack_offset - size
     tm.ctx.alloc_state.next_stack_offset = offset
     "-" + to_string(-offset) + "(%rbp)"
 }
 
-func (tm* ssa_to_machine) emit_load(string addr, int reg) {
+func (ssa_to_machine* tm) emit_load(string addr, int reg) {
     reg_name := x86_64_reg_name(reg)
     instr := "\tmovq\t" + addr + ", %" + reg_name
     tm.progs.append_prog(prog_op_load(), instr)
 }
 
-func (tm* ssa_to_machine) emit_store(int reg, string addr) {
+func (ssa_to_machine* tm) emit_store(int reg, string addr) {
     reg_name := x86_64_reg_name(reg)
     instr := "\tmovq\t%" + reg_name + ", " + addr
     tm.progs.append_prog(prog_op_store(), instr)
 }
 
-func (tm* ssa_to_machine) emit_binary_op(string op, int left_reg, int right_reg, int result_reg) {
+func (ssa_to_machine* tm) emit_binary_op(string op, int left_reg, int right_reg, int result_reg) {
     left_name := x86_64_reg_name(left_reg)
     right_name := x86_64_reg_name(right_reg)
     result_name := x86_64_reg_name(result_reg)
@@ -65,7 +65,7 @@ func (tm* ssa_to_machine) emit_binary_op(string op, int left_reg, int right_reg,
     tm.progs.append_prog(1, instr)
 }
 
-func (tm* ssa_to_machine) emit_comparison(string cond, int left_reg, int right_reg) int {
+func (ssa_to_machine* tm) emit_comparison(string cond, int left_reg, int right_reg) int {
     left_name := x86_64_reg_name(left_reg)
     right_name := x86_64_reg_name(right_reg)
     cmp_instr := "\tcmpq\t%" + right_name + ", %" + left_name
@@ -87,7 +87,7 @@ func (tm* ssa_to_machine) emit_comparison(string cond, int left_reg, int right_r
     result_reg
 }
 
-func (tm* ssa_to_machine) generate() prog_list {
+func (ssa_to_machine* tm) generate() prog_list {
     tm.ctx.current_func = tm.func.name
     tm.ctx.emit_prologue()
     i := 0

@@ -23,23 +23,23 @@ func new_machine_code_builder() machine_code_builder {
     builder
 }
 
-func (b* machine_code_builder) emit_byte(int value) {
+func (machine_code_builder* b) emit_byte(int value) {
     b.machine_code = append(b.machine_code, value & 255)
 }
 
-func (b* machine_code_builder) emit_u32(int value) {
+func (machine_code_builder* b) emit_u32(int value) {
     b.emit_byte(value & 255)
     b.emit_byte((value >> 8) & 255)
     b.emit_byte((value >> 16) & 255)
     b.emit_byte((value >> 24) & 255)
 }
 
-func (b* machine_code_builder) emit_u64(int value) {
+func (machine_code_builder* b) emit_u64(int value) {
     b.emit_u32(value & 4294967295)
     b.emit_u32((value >> 32) & 4294967295)
 }
 
-func (b* machine_code_builder) reg_code(string reg) int {
+func (machine_code_builder* b) reg_code(string reg) int {
     switch reg {
         case "rax" : 0,
         case "rcx" : 1,
@@ -61,7 +61,7 @@ func (b* machine_code_builder) reg_code(string reg) int {
     }
 }
 
-func (b* machine_code_builder) emit_rex(bool w, int r, int bbit) {
+func (machine_code_builder* b) emit_rex(bool w, int r, int bbit) {
     prefix := 64
     if w {
         prefix = prefix + 8
@@ -77,16 +77,16 @@ func (b* machine_code_builder) emit_rex(bool w, int r, int bbit) {
     }
 }
 
-func (b* machine_code_builder) emit_text_section() {
+func (machine_code_builder* b) emit_text_section() {
     b.instructions = append(b.instructions, ".section\t.text")
 }
 
-func (b* machine_code_builder) emit_global_symbol( name string) {
+func (machine_code_builder* b) emit_global_symbol( name string) {
     b.instructions = append(b.instructions, ".globl\t" + name)
     b.instructions = append(b.instructions, ".type\t" + name + ", @function")
 }
 
-func (b* machine_code_builder) emit_function_prologue( name string) {
+func (machine_code_builder* b) emit_function_prologue( name string) {
     b.instructions = append(b.instructions, name + ":")
     b.instructions = append(b.instructions, "\tpush\t%rbp")
     b.instructions = append(b.instructions, "\tmov\t%rsp, %rbp")
@@ -96,14 +96,14 @@ func (b* machine_code_builder) emit_function_prologue( name string) {
     b.emit_byte(229)
 }
 
-func (b* machine_code_builder) emit_function_epilogue() {
+func (machine_code_builder* b) emit_function_epilogue() {
     b.instructions = append(b.instructions, "\tpop\t%rbp")
     b.instructions = append(b.instructions, "\tret")
     b.emit_byte(93)
     b.emit_byte(195)
 }
 
-func (b* machine_code_builder) emit_mov_immediate_to_register( value int, reg string) {
+func (machine_code_builder* b) emit_mov_immediate_to_register( value int, reg string) {
     b.instructions = append(b.instructions, "\tmov\t$" + value as string + ", %" + reg)
     reg_id := b.reg_code(reg)
     if reg_id >= 0 {
@@ -113,7 +113,7 @@ func (b* machine_code_builder) emit_mov_immediate_to_register( value int, reg st
     }
 }
 
-func (b* machine_code_builder) emit_mov_register_to_register( src string, dst string) {
+func (machine_code_builder* b) emit_mov_register_to_register( src string, dst string) {
     b.instructions = append(b.instructions, "\tmov\t%" + src + ", %" + dst)
     src_id := b.reg_code(src)
     dst_id := b.reg_code(dst)
@@ -124,7 +124,7 @@ func (b* machine_code_builder) emit_mov_register_to_register( src string, dst st
     }
 }
 
-func (b* machine_code_builder) emit_add_registers( src string, dst string) {
+func (machine_code_builder* b) emit_add_registers( src string, dst string) {
     b.instructions = append(b.instructions, "\tadd\t%" + src + ", %" + dst)
     src_id := b.reg_code(src)
     dst_id := b.reg_code(dst)
@@ -135,7 +135,7 @@ func (b* machine_code_builder) emit_add_registers( src string, dst string) {
     }
 }
 
-func (b* machine_code_builder) emit_sub_registers( src string, dst string) {
+func (machine_code_builder* b) emit_sub_registers( src string, dst string) {
     b.instructions = append(b.instructions, "\tsub\t%" + src + ", %" + dst)
     src_id := b.reg_code(src)
     dst_id := b.reg_code(dst)
@@ -146,16 +146,16 @@ func (b* machine_code_builder) emit_sub_registers( src string, dst string) {
     }
 }
 
-func (b* machine_code_builder) emit_call( target string) {
+func (machine_code_builder* b) emit_call( target string) {
     b.instructions = append(b.instructions, "\tcall\t" + target)
 }
 
-func (b* machine_code_builder) emit_return_value( reg string) {
+func (machine_code_builder* b) emit_return_value( reg string) {
     b.instructions = append(b.instructions, "\tmov\t%" + reg + ", %rax")
     b.emit_mov_register_to_register(reg, "rax")
 }
 
-func (b* machine_code_builder) get_assembly() string {
+func (machine_code_builder* b) get_assembly() string {
     result := ""
     i := 0
     for i < len(b.instructions) {
@@ -165,6 +165,6 @@ func (b* machine_code_builder) get_assembly() string {
     result
 }
 
-func (b* machine_code_builder) get_machine_code() int[] {
+func (machine_code_builder* b) get_machine_code() int[] {
     b.machine_code
 }

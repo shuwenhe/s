@@ -11,7 +11,7 @@ func make_compiler_pipeline() compiler_pipeline {
     pipeline
 }
 
-func (cp* compiler_pipeline) compile_simple_function() string {
+func (compiler_pipeline* cp) compile_simple_function() string {
     cp.codegen.generate_function_prologue("add", 0)
     cp.codegen.emit_const_i64(10, 0)
     cp.codegen.emit_const_i64(20, 1)
@@ -20,7 +20,7 @@ func (cp* compiler_pipeline) compile_simple_function() string {
     cp.codegen.get_asm()
 }
 
-func (cp* compiler_pipeline) compile_with_stack() string {
+func (compiler_pipeline* cp) compile_with_stack() string {
     stack_size := 32
     cp.codegen.generate_function_prologue("compute", stack_size)
     cp.codegen.emit_const_i64(42, 0)
@@ -29,7 +29,7 @@ func (cp* compiler_pipeline) compile_with_stack() string {
     cp.codegen.get_asm()
 }
 
-func (cp* compiler_pipeline) compile_branching() string {
+func (compiler_pipeline* cp) compile_branching() string {
     cp.codegen.generate_function_prologue("branching", 0)
     cp.codegen.emit_const_i64(5, 0)
     label1 := "L1"
@@ -45,7 +45,7 @@ func (cp* compiler_pipeline) compile_branching() string {
     cp.codegen.get_asm()
 }
 
-func (cp* compiler_pipeline) compile_loop() string {
+func (compiler_pipeline* cp) compile_loop() string {
     cp.codegen.generate_function_prologue("loop_func", 0)
     cp.codegen.emit_const_i64(0, 0)
     loop_start := "L_loop_start"
@@ -61,7 +61,7 @@ func (cp* compiler_pipeline) compile_loop() string {
     cp.codegen.get_asm()
 }
 
-func (cp* compiler_pipeline) compile_multiple_functions() string {
+func (compiler_pipeline* cp) compile_multiple_functions() string {
     result := ".intel_syntax noprefix\n"
     result = result + ".section\t.text\n"
     cp.codegen.generate_function_prologue("func1", 0)

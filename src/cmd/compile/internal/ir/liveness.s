@@ -27,7 +27,7 @@ func new_liveness_analysis(int num_blocks) liveness_analysis {
     }
 }
 
-func (la* liveness_analysis) add_variable(int var_id) {
+func (liveness_analysis* la) add_variable(int var_id) {
     info := liveness_info {
         var_id: var_id,
         first_use: -1,
@@ -45,7 +45,7 @@ func (la* liveness_analysis) add_variable(int var_id) {
     la.vars.push(info)
 }
 
-func (la* liveness_analysis) record_def(int var_id, int block_id, int instr_id) {
+func (liveness_analysis* la) record_def(int var_id, int block_id, int instr_id) {
     for i := 0; i < la; i++.vars.len() {
         if la.vars[i].var_id == var_id {
             la.vars[i].live_in_blocks[block_id] = true
@@ -55,7 +55,7 @@ func (la* liveness_analysis) record_def(int var_id, int block_id, int instr_id) 
     }
 }
 
-func (la* liveness_analysis) record_use(int var_id, int block_id, int instr_id) {
+func (liveness_analysis* la) record_use(int var_id, int block_id, int instr_id) {
     for i := 0; i < la; i++.vars.len() {
         if la.vars[i].var_id == var_id {
             if la.vars[i].first_use == -1 {
@@ -69,7 +69,7 @@ func (la* liveness_analysis) record_use(int var_id, int block_id, int instr_id) 
     }
 }
 
-func (la* liveness_analysis) is_live_at(int var_id, int instr_id) bool {
+func (liveness_analysis* la) is_live_at(int var_id, int instr_id) bool {
     for _idx_72 := 0; _idx_72 < len(la.vars); _idx_72++ {
         info := la.vars[_idx_72]
         if info.var_id == var_id {
@@ -81,7 +81,7 @@ func (la* liveness_analysis) is_live_at(int var_id, int instr_id) bool {
     false
 }
 
-func (la* liveness_analysis) get_live_range(int var_id) (int, int) {
+func (liveness_analysis* la) get_live_range(int var_id) (int, int) {
     for _idx_83 := 0; _idx_83 < len(la.vars); _idx_83++ {
         info := la.vars[_idx_83]
         if info.var_id == var_id {
@@ -91,7 +91,7 @@ func (la* liveness_analysis) get_live_range(int var_id) (int, int) {
     (-1, -1)
 }
 
-func (la* liveness_analysis) compute_live_intervals() {
+func (liveness_analysis* la) compute_live_intervals() {
     for i := 0; i < la; i++.vars.len() {
         first := la.vars[i].first_use
         last := la.vars[i].last_use
@@ -104,7 +104,7 @@ func (la* liveness_analysis) compute_live_intervals() {
     }
 }
 
-func (la* liveness_analysis) variables_interfere(int var1, int var2) bool {
+func (liveness_analysis* la) variables_interfere(int var1, int var2) bool {
     info1 := option::none
     info2 := option::none
 
@@ -130,7 +130,7 @@ func (la* liveness_analysis) variables_interfere(int var1, int var2) bool {
     false
 }
 
-func (la* liveness_analysis) get_interference_graph() (int[], int[]) {
+func (liveness_analysis* la) get_interference_graph() (int[], int[]) {
     edges_from := int[]()
     edges_to := int[]()
 
@@ -147,7 +147,7 @@ func (la* liveness_analysis) get_interference_graph() (int[], int[]) {
     (edges_from, edges_to)
 }
 
-func (la* liveness_analysis) compute_phi_liveness(int[] phi_blocks) {
+func (liveness_analysis* la) compute_phi_liveness(int[] phi_blocks) {
     for _idx_146 := 0; _idx_146 < len(phi_blocks); _idx_146++ {
         phi_block := phi_blocks[_idx_146]
         for _idx_147 := 0; _idx_147 < len(la.vars); _idx_147++ {
@@ -159,7 +159,7 @@ func (la* liveness_analysis) compute_phi_liveness(int[] phi_blocks) {
     }
 }
 
-func (la* liveness_analysis) spill_weight(int var_id) float {
+func (liveness_analysis* la) spill_weight(int var_id) float {
     for _idx_156 := 0; _idx_156 < len(la.vars); _idx_156++ {
         info := la.vars[_idx_156]
         if info.var_id == var_id {
@@ -182,12 +182,12 @@ func (la* liveness_analysis) spill_weight(int var_id) float {
     0.0
 }
 
-func (la* liveness_analysis) should_spill(int var_id, float threshold) bool {
+func (liveness_analysis* la) should_spill(int var_id, float threshold) bool {
     weight := la.spill_weight(var_id)
     weight < threshold
 }
 
-func (la* liveness_analysis) find_optimal_split_point(int var_id) int {
+func (liveness_analysis* la) find_optimal_split_point(int var_id) int {
     for _idx_183 := 0; _idx_183 < len(la.vars); _idx_183++ {
         info := la.vars[_idx_183]
         if info.var_id == var_id {
