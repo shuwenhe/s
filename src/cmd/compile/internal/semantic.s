@@ -1111,8 +1111,6 @@ func validate_function_signature(function_decl function_decl, string source, sem
     switch function_decl.sig.return_type {
         option.some(type_name) : {
             if starts_with(parse_type(type_name), "&") {
-                // S has no explicit lifetime parameters yet. Reject reference
-                // returns until the returned lifetime is proven to outlive the caller.
                 errors = errors + add_error(source, diagnostics, "e3069", "reference return requires an explicit lifetime proof", function_decl.sig.name)
             }
         }
