@@ -95,7 +95,7 @@ func (la* liveness_analysis) compute_live_intervals() {
         last := la.vars[i].last_use
 
         if first != -1 && last != -1 {
-            for j in first..last {
+            for j := first; j < last; j++ {
                 la.vars[i].live_range.push(j)
             }
         }
