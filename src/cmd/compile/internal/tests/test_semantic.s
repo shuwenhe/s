@@ -296,6 +296,11 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(whole_struct_field_borrow_diags, "e3057") {
         return 1
     }
+    field_borrow_then_move_fail := "package demo.fields\nstruct Pair {\n  int left\n  int right\n}\nfunc consume(&int field, Pair value) {\n  field\n}\nfunc main() {\n  pair := Pair { left: 1, right: 2 }\n  consume(&pair.left, pair)\n}"
+    field_borrow_then_move_diags := check_detailed(field_borrow_then_move_fail)
+    if !has_code(field_borrow_then_move_diags, "e3057") {
+        return 1
+    }
     branch_move_fail := "package demo.flow\nstruct Box {\n  int n\n}\nfunc take(Box value) int {\n  value.n\n}\nfunc main() {\n  box := Box { n: 1 }\n  if true {\n    take(box)\n  }\n  box.n\n}"
     branch_move_diags := check_detailed(branch_move_fail)
     if !has_code(branch_move_diags, "e3059") {

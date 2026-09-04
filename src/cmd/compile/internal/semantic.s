@@ -226,6 +226,15 @@ func borrow_state_mark_move(borrow_record[] state, string name, string type_name
     }
 }
 
+func check_move_value(string name, string type_name, borrow_record[] state, string source, semantic_error[] diagnostics) int {
+    errors := 0
+    if !borrow_type_is_copy(type_name) && borrow_state_has_conflict(state, name, true) {
+        errors = errors + add_error(source, diagnostics, "e3057", "cannot move a value while it is borrowed", name)
+    }
+    borrow_state_mark_move(state, name, type_name)
+    errors
+}
+
 func borrow_state_is_moved(borrow_record[] state, string name) bool {
     index := borrow_state_find(state, name)
     index >= 0 && state[index].moved
@@ -1212,7 +1221,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                 name: value.name, type_name binding_type,
             })
             switch value.value {
-                expr::name(name_value) : borrow_state_mark_move(borrow_state, name_value.name, rhs.type_name),
+                expr::name(name_value) : errors = errors + check_move_value(name_value.name, rhs.type_name, borrow_state, source, diagnostics),
                 _ : (),
             }
             ;
@@ -1232,7 +1241,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                 return errors + add_error(source, diagnostics, "e3003", "assignment type mismatch", value.name
             }
             switch value.value {
-                expr::name(name_value) : borrow_state_mark_move(borrow_state, name_value.name, rhs.type_name),
+                expr::name(name_value) : errors = errors + check_move_value(name_value.name, rhs.type_name, borrow_state, source, diagnostics),
                 _ : (),
             }
             errors
@@ -1274,7 +1283,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                         return expr_result.errors + add_error(source, diagnostics, "e3008", "return type mismatch", "return"
                     }
                     switch expr {
-                        expr::name(name_value) : borrow_state_mark_move(borrow_state, name_value.name, expr_result.type_name),
+                        expr::name(name_value) : expr_result.errors = expr_result.errors + check_move_value(name_value.name, expr_result.type_name, borrow_state, source, diagnostics),
                         _ : (),
                     }
                     expr_result.errors
@@ -1430,7 +1439,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 errors = errors + arg_result.errors
                 arg_types = append(arg_types, arg_result.type_name);
                 switch value.args[i] {
-                    expr::name(name_value) : borrow_state_mark_move(borrow_state, name_value.name, arg_result.type_name),
+                    expr::name(name_value) : errors = errors + check_move_value(name_value.name, arg_result.type_name, borrow_state, source, diagnostics),
                     _ : (),
                 }
                 i = i + 1
@@ -1536,7 +1545,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         }
                         inner := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics)
                         switch value.args[0] {
-                            expr::name(name_value) : borrow_state_mark_move(borrow_state, name_value.name, inner.type_name),
+                            expr::name(name_value) : errors = errors + check_move_value(name_value.name, inner.type_name, borrow_state, source, diagnostics),
                             _ : (),
                         }
                         return check_result {
@@ -1555,8 +1564,8 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                                 type_name: "unknown", errors errors + owned.errors + add_error(source, diagnostics, "e3067", "box_free requires an explicit box[T] value", "box_free"),
                             }
                         }
-                        switch value.args[0] {
-                            expr::name(name_value) : borrow_state_mark_move(borrow_state, name_value.name, owned.type_name),
+                            switch value.args[0] {
+                            expr::name(name_value) : errors = errors + check_move_value(name_value.name, owned.type_name, borrow_state, source, diagnostics),
                             _ : (),
                         }
                         return check_result {
