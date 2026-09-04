@@ -1,7 +1,11 @@
 package compile.internal.mir
+use compile.internal.borrow.borrow_check_events
 use compile.internal.borrow.analyze_function as analyze_borrow_function
 use s.block_expr
 use s.function_decl
+use s.param
+use s.expr
+use s.stmt
 use s.dump_expr
 use s.dump_stmt
 use std.option.option
@@ -79,11 +83,14 @@ struct mir_graph {
     string[] trace
     int entry
     int exit
+    bool borrow_ok
+    int borrow_errors
+    string borrow_message
 }
 
 func lower_function_graph(function_decl function) mir_graph {
     if function.body.is_some() {
-        return lower_block_graph(function.sig.name, function.body.unwrap())
+        return lower_block_graph(function.sig.name, function.sig.params, function.body.unwrap())
     }
     empty_statements := mir_statement[]()
     empty_edges := mir_control_edge[]()
@@ -98,11 +105,19 @@ func lower_function_graph(function_decl function) mir_graph {
     trace = append(trace, "block |   yield unit")
     mir_graph {
         function_name: function.sig.name, blocks blocks, locals mir_local_slot[](), trace trace, entry 0, exit 0,
+        borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
 }
 
-func lower_block_graph(string function_name, block_expr block) mir_graph {
+func lower_block_graph(string function_name, param[] params, block_expr block) mir_graph {
+    locals := mir_collect_locals(params, block)
     statements := mir_statement[]()
+    events := string[]()
+    local_index := 0
+    for local_index < len(locals) {
+        events = append(events, "declare:" + locals[local_index].name)
+        local_index = local_index + 1
+    }
     index := 0
     for index < len(block.statements) {
         stmt_text := join_text(dump_stmt(block.statements[index], indent(1)), " | ")
@@ -111,8 +126,13 @@ func lower_block_graph(string function_name, block_expr block) mir_graph {
         statements.push(mir_statement::eval(mir_eval_stmt {
             op: "stmt", args args,
         }))
+        events = mir_extend_events(events, mir_stmt_events(block.statements[index], locals))
         index = index + 1
     }
+    if block.final_expr.is_some() {
+        events = mir_extend_events(events, mir_expr_events(block.final_expr.unwrap(), locals, true))
+    }
+    borrow_result := borrow_check_events(events)
     trace := string[]()
     trace_text := "block"
     index = 0
@@ -135,8 +155,147 @@ func lower_block_graph(string function_name, block_expr block) mir_graph {
         },
     })
     mir_graph {
-        function_name: function_name, blocks blocks, locals mir_local_slot[](), trace trace, entry 0, exit 0,
+        function_name: function_name, blocks blocks, locals locals, trace trace, entry 0, exit 0,
+        borrow_ok: borrow_result.ok, borrow_errors: borrow_result.errors, borrow_message: borrow_result.message,
     }
+}
+
+func mir_find_local(mir_local_slot[] locals, string name) int {
+    i := 0
+    for i < len(locals) {
+        if locals[i].name == name { return i }
+        i = i + 1
+    }
+    -1
+}
+
+func mir_type_is_copy(string type_name) bool {
+    type_name == "int" || type_name == "float" || type_name == "float64" || type_name == "bool" || type_name == "char" || type_name == "&" || type_name == "*"
+}
+
+func mir_extend_events(string[] base, string[] extra) string[] {
+    i := 0
+    for i < len(extra) {
+        base = append(base, extra[i])
+        i = i + 1
+    }
+    base
+}
+
+func mir_collect_locals(param[] params, block_expr block) mir_local_slot[] {
+    locals := mir_local_slot[]()
+    i := 0
+    for i < len(params) {
+        locals = append(locals, mir_local_slot { id: len(locals), name: params[i].name, kind: "param", version: 0, type_name: params[i].type_name, copyable: mir_type_is_copy(params[i].type_name) })
+        i = i + 1
+    }
+    i = 0
+    for i < len(block.statements) {
+        switch block.statements[i] {
+            stmt.let(let_stmt) : {
+                if mir_find_local(locals, let_stmt.name) < 0 {
+                    type_name := "unknown"
+                    if let_stmt.type_name.is_some() { type_name = let_stmt.type_name.unwrap() }
+                    locals = append(locals, mir_local_slot { id: len(locals), name: let_stmt.name, kind: "local", version: 0, type_name: type_name, copyable: mir_type_is_copy(type_name) })
+                }
+            }
+            _ : { }
+        }
+        i = i + 1
+    }
+    locals
+}
+
+func mir_expr_events(expr value, mir_local_slot[] locals, bool consume) string[] {
+    events := string[]()
+    switch value {
+        expr.name(name_expr) : {
+            local_id := mir_find_local(locals, name_expr.name)
+            if local_id >= 0 {
+                if consume && !locals[local_id].copyable {
+                    events = append(events, "move:" + name_expr.name)
+                } else {
+                    events = append(events, "read:" + name_expr.name)
+                }
+            } else {
+                events = append(events, "read:" + name_expr.name)
+            }
+        }
+        expr.borrow(borrow_expr) : {
+            target_events := mir_expr_events(borrow_expr.target.unwrap(), locals, false)
+            events = mir_extend_events(events, target_events)
+            target_name := mir_place_name(borrow_expr.target.unwrap())
+            if target_name != "" {
+                if borrow_expr.mutable { events = append(events, "mutable:" + target_name) }
+                else { events = append(events, "shared:" + target_name) }
+            }
+        }
+        expr.binary(binary_expr) : {
+            events = mir_extend_events(events, mir_expr_events(binary_expr.left.unwrap(), locals, false))
+            events = mir_extend_events(events, mir_expr_events(binary_expr.right.unwrap(), locals, false))
+        }
+        expr.call(call_expr) : {
+            events = mir_extend_events(events, mir_expr_events(call_expr.callee.unwrap(), locals, false))
+            i := 0
+            for i < len(call_expr.args) {
+                events = mir_extend_events(events, mir_expr_events(call_expr.args[i], locals, true))
+                i = i + 1
+            }
+        }
+        expr.member(member_expr) : {
+            events = mir_extend_events(events, mir_expr_events(member_expr.target.unwrap(), locals, consume))
+        }
+        expr.index(index_expr) : {
+            events = mir_extend_events(events, mir_expr_events(index_expr.target.unwrap(), locals, false))
+            events = mir_extend_events(events, mir_expr_events(index_expr.index.unwrap(), locals, false))
+        }
+        expr.block(block_expr) : {
+            i := 0
+            for i < len(block_expr.statements) {
+                events = mir_extend_events(events, mir_stmt_events(block_expr.statements[i], locals))
+                i = i + 1
+            }
+            if block_expr.final_expr.is_some() { events = mir_extend_events(events, mir_expr_events(block_expr.final_expr.unwrap(), locals, consume)) }
+        }
+        _ : { }
+    }
+    events
+}
+
+func mir_place_name(expr value) string {
+    switch value {
+        expr.name(name_expr) : return name_expr.name
+        expr.member(member_expr) : return mir_place_name(member_expr.target.unwrap()) + "." + member_expr.member
+        expr.index(index_expr) : return mir_place_name(index_expr.target.unwrap())
+        _ : return ""
+    }
+}
+
+func mir_stmt_events(stmt value, mir_local_slot[] locals) string[] {
+    events := string[]()
+    switch value {
+        stmt.let(let_stmt) : {
+            events = mir_extend_events(events, mir_expr_events(let_stmt.value, locals, true))
+        }
+        stmt.assign(assign_stmt) : {
+            events = mir_extend_events(events, mir_expr_events(assign_stmt.value, locals, true))
+            events = append(events, "write:" + assign_stmt.name)
+        }
+        stmt.increment(increment_stmt) : {
+            events = append(events, "read:" + increment_stmt.name)
+            events = append(events, "write:" + increment_stmt.name)
+        }
+        stmt.expr(expr_stmt) : {
+            events = mir_extend_events(events, mir_expr_events(expr_stmt.expr, locals, false))
+        }
+        stmt.return(return_stmt) : {
+            if return_stmt.value.is_some() { events = mir_extend_events(events, mir_expr_events(return_stmt.value.unwrap(), locals, true)) }
+        }
+        stmt.defer(defer_stmt) : { events = mir_extend_events(events, mir_expr_events(defer_stmt.expr, locals, true)) }
+        stmt.sroutine(sroutine_stmt) : { events = mir_extend_events(events, mir_expr_events(sroutine_stmt.expr, locals, true)) }
+        _ : { }
+    }
+    events
 }
 
 func dump_graph(mir_graph graph) string {

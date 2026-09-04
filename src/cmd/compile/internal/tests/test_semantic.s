@@ -238,6 +238,29 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(method_temp_mut_ref_diags, "e3051") {
         return 1
     }
+    move_after_use_ok := "package demo.move\nfunc take(int v) int {\n  v\n}\nfunc main() {\n  n := 1\n  take(n)\n  n\n}"
+    if check_text(move_after_use_ok) != 0 {
+        return 1
+    }
+    move_after_move_fail := "package demo.move\nstruct Box {\n  int n\n}\nfunc take(Box b) int {\n  b.n\n}\nfunc main() {\n  b := Box { n: 1 }\n  take(b)\n  b.n\n}"
+    move_after_move_diags := check_detailed(move_after_move_fail)
+    if !has_code(move_after_move_diags, "e3059") {
+        return 1
+    }
+    shared_borrow_ok := "package demo.borrow\nfunc read_pair(&int left, &int right) int {\n  left\n}\nfunc main() {\n  value := 1\n  read_pair(&value, &value)\n  value\n}"
+    if check_text(shared_borrow_ok) != 0 {
+        return 1
+    }
+    shared_then_mutable_fail := "package demo.borrow\nfunc read_then_write(&int left, &mut int right) int {\n  left\n}\nfunc main() {\n  value := 1\n  read_then_write(&value, &mut value)\n}"
+    shared_then_mutable_diags := check_detailed(shared_then_mutable_fail)
+    if !has_code(shared_then_mutable_diags, "e3057") {
+        return 1
+    }
+    mutable_then_shared_fail := "package demo.borrow\nfunc write_then_read(&mut int left, &int right) int {\n  right\n}\nfunc main() {\n  value := 1\n  write_then_read(&mut value, &value)\n}"
+    mutable_then_shared_diags := check_detailed(mutable_then_shared_fail)
+    if !has_code(mutable_then_shared_diags, "e3058") {
+        return 1
+    }
     duplicate_receiver_method := "package demo.iface\nstruct Calc {}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc main() {\n  0\n}"
     duplicate_receiver_diags := check_detailed(duplicate_receiver_method)
     if !has_code(duplicate_receiver_diags, "e3042") {

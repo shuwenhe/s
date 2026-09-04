@@ -1332,7 +1332,7 @@ func (parser* self) parse_binary_expr(int min_precedence) (expr, parse_error) {
 
 func (parser* self) parse_unary_expr() (expr, parse_error) {
     if self.eat_symbol("&") {
-        bool mutable = false
+        bool mutable = self.eat_ident_value("mut")
         target, err := self.parse_unary_expr()
         if err.message != "" {
             expr empty
