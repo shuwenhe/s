@@ -105,8 +105,8 @@ func (ir_function* f) build_cfg() {
         targets := f.blocks[i].terminator.targets
         edge_type := f.blocks[i].terminator.kind
 
-        for target_idx := 0; target_idx < len(targets); target_idx++ {
-            target := targets[target_idx]
+        for idx := 0; idx < len(targets); idx++ {
+            target := targets[idx]
             f.cfg.add_edge(f.blocks[i].id, target, edge_type)
         }
     }
