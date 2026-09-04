@@ -3912,9 +3912,6 @@ func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op
     }
 }
 
-// This is the interpreter-side drop glue. Values returned from a block remain
-// owned by the caller; all other live owned locals are released in reverse
-// declaration order, matching Rust's scope-exit drop order.
 func cleanup_scope_owned_values(binding[] env, int local_start, value keep, runtime_state runtime) () {
     keep_id := -1
     switch keep {
