@@ -175,8 +175,6 @@ func mir_type_is_copy(string type_name) bool {
     is_copy_type(type_name)
 }
 
-// Drop elaboration runs after move analysis. A moved local no longer owns a
-// value at scope exit, so inserting another drop would be a double release.
 func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements, string[] events) () {
     i := len(locals) - 1
     for i >= 0 {
@@ -195,7 +193,6 @@ func mir_local_moved_at_exit(string name, string[] events) bool {
         if starts_with(event, "move:") && slice(event, 5, len(event)) == name {
             moved = true
         } else if starts_with(event, "write:") && slice(event, 6, len(event)) == name {
-            // Assignment reinitializes the place, making it owned again.
             moved = false
         }
         i = i + 1
