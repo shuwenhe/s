@@ -1137,8 +1137,18 @@ func validate_function_signature(function_decl function_decl, string source, sem
             if has_unknown_component(rt) {
                 errors = errors + add_error(source, diagnostics, "e3014", "return type has unknown component", function_decl.sig.name
             }
+            if !declared_type_is_safe(rt) {
+                errors = errors + add_error(source, diagnostics, "e3063", "return type cannot be resolved at compile time", function_decl.sig.name)
+            }
         }
         option.none : (),
+    }
+    i = 0
+    for i < len(function_decl.sig.params) {
+        if !declared_type_is_safe(function_decl.sig.params[i].type_name) {
+            errors = errors + add_error(source, diagnostics, "e3063", "parameter type cannot be resolved at compile time", function_decl.sig.params[i].name)
+        }
+        i = i + 1
     }
     errors
 }
@@ -1179,10 +1189,16 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
             binding_type := rhs.type_name
             if value.type_name.is_some() {
                 declared := parse_type(value.type_name.unwrap())
+                if !declared_type_is_safe(declared) {
+                    errors = errors + add_error(source, diagnostics, "e3063", "declared type cannot be resolved at compile time", value.name)
+                }
                 if !types_compatible(declared, rhs.type_name) {
                     errors = errors + add_error(source, diagnostics, "e3001", "variable initializer type mismatch", value.name)
                 }
                 binding_type = declared
+            }
+            if has_duplicate_binding(env, value.name) {
+                errors = errors + add_error(source, diagnostics, "e3064", "duplicate local binding in the same scope", value.name)
             }
             env.push(type_binding {
                 name: value.name, type_name binding_type,
@@ -1338,7 +1354,11 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
         expr::binary(value) : {
             left := infer_expr(value.left.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
             right := infer_expr(value.right.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
-            infer_binary(value.op, left, right, source, diagnostics)
+            result := infer_binary(value.op, left, right, source, diagnostics)
+            if (value.op == "/" || value.op == "%") && is_zero_int_expr(value.right.value) {
+                result.errors = result.errors + add_error(source, diagnostics, "e3065", "division or modulo by zero is known at compile time", value.op)
+            }
+            result
         }
         expr::member(value) : {
             target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
@@ -1496,6 +1516,41 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     }
                 }
                 expr::name(callee_name) : {
+                    if callee_name.name == "box" || callee_name.name == "box_new" {
+                        if len(value.args) != 1 {
+                            return check_result {
+                                type_name: "unknown", errors errors + add_error(source, diagnostics, "e3066", "box expects exactly one value", callee_name.name),
+                            }
+                        }
+                        inner := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics)
+                        switch value.args[0] {
+                            expr::name(name_value) : borrow_state_mark_move(borrow_state, name_value.name, inner.type_name),
+                            _ : (),
+                        }
+                        return check_result {
+                            type_name: "box[" + inner.type_name + "]", errors errors + inner.errors,
+                        }
+                    }
+                    if callee_name.name == "box_free" {
+                        if len(value.args) != 1 {
+                            return check_result {
+                                type_name: "unknown", errors errors + add_error(source, diagnostics, "e3067", "box_free expects exactly one owned value", "box_free"),
+                            }
+                        }
+                        owned := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics)
+                        if base_type_name(owned.type_name) != "box" {
+                            return check_result {
+                                type_name: "unknown", errors errors + owned.errors + add_error(source, diagnostics, "e3067", "box_free requires an explicit box[T] value", "box_free"),
+                            }
+                        }
+                        switch value.args[0] {
+                            expr::name(name_value) : borrow_state_mark_move(borrow_state, name_value.name, owned.type_name),
+                            _ : (),
+                        }
+                        return check_result {
+                            type_name: "()", errors errors + owned.errors,
+                        }
+                    }
                     candidates := lookup_functions(functions, callee_name.name)
                     if len(candidates) == 0 {
                         return check_result {
@@ -2457,6 +2512,37 @@ func is_nilable_type(string type_name) bool {
 func is_unknown(string type_name) bool {
     clean := parse_type(type_name)
     clean == "" || clean == "unknown"
+}
+
+func declared_type_is_safe(string type_name) bool {
+    if is_unknown(type_name) {
+        return false
+    }
+    if has_unknown_component(type_name) {
+        return false
+    }
+    if type_name == "nil" {
+        return false
+    }
+    true
+}
+
+func has_duplicate_binding(type_binding[] env, string name) bool {
+    i := 0
+    for i < len(env) {
+        if env[i].name == name {
+            return true
+        }
+        i = i + 1
+    }
+    false
+}
+
+func is_zero_int_expr(expr value) bool {
+    switch value {
+        expr::int(number) : number.value == "0",
+        _ : false,
+    }
 }
 
 func resolve_method_return(string target_type, string method_type) string {
