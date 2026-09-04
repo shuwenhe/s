@@ -4218,91 +4218,6 @@ func find_channel_index(runtime_state runtime, value v) int {
     -1
 }
 
-func run_gc_cycle(binding[] env, runtime_state runtime) () {
-    runtime.gc_cycles = runtime.gc_cycles + 1
-    runtime.gc_root_scans = runtime.gc_root_scans + len(env) + len(runtime.runq)
-    i := 0
-    for i < len(runtime.channels) {
-        ch := runtime.channels[i]
-        ch.marked = false
-        runtime.channels.set(i, ch)
-        i = i + 1
-    }
-    i = 0
-    for i < len(env) {
-        mark_value_channels(env[i].value, runtime)
-        i = i + 1
-    }
-    i = 0
-    for i < len(runtime.runq) {
-        ai := 0
-        for ai < runtime.runq[i]len(.args) {
-            mark_value_channels(runtime.runq[i].args[ai], runtime)
-            ai = ai + 1
-        }
-        ai = 0
-        for ai < runtime.runq[i]len(.captured_env) {
-            mark_value_channels(runtime.runq[i].captured_env[ai].value, runtime)
-            ai = ai + 1
-        }
-        i = i + 1
-    }
-    kept := channel_runtime_state[]()
-    i = 0
-    for i < len(runtime.channels) {
-        ch := runtime.channels[i]
-        if ch.marked {
-            ch.marked = false
-            kept = append(kept, ch)
-        } else {
-            runtime.gc_freed_channels = runtime.gc_freed_channels + 1
-        }
-        i = i + 1
-    }
-    runtime.channels = kept
-    runtime.gc_alloc_since_cycle = 0
-    next_goal := len(runtime.channels) * 2 + 1
-    if next_goal < 2 {
-        next_goal = 2
-    }
-    runtime.gc_heap_goal = next_goal
-}
-
-func mark_value_channels(value v, runtime_state runtime) () {
-    switch v {
-        value.channel(handle) : mark_channel_id(handle.id, runtime),
-        _ : (),
-    }
-}
-
-func mark_channel_id(int id, runtime_state runtime) () {
-    i := 0
-    for i < len(runtime.channels) {
-        if runtime.channels[i].id == id {
-            if runtime.channels[i].marked {
-                return
-            }
-            ch := runtime.channels[i]
-            ch.marked = true
-            runtime.channels.set(i, ch)
-            bi := 0
-            for bi < len(ch.buffer) {
-                mark_value_channels(ch.buffer[bi], runtime)
-                bi = bi + 1
-            }
-            return
-        }
-        i = i + 1
-    }
-}
-
-func value_contains_channel(value v) bool {
-    switch v {
-        value.channel(_) : true,
-        _ : false,
-    }
-}
-
 func execute_deferred(expr[] deferred, source_file source, binding[] env, write_op[] writes, runtime_state runtime, string panic_payload_text) ((), backend_error) {
     if panic_payload_text != "" {
         set_control(env, control_panic_active, value.bool(true))
@@ -4353,7 +4268,6 @@ func run_sroutine_scheduler_step(source_file source, binding[] env, write_op[] w
         return err
     }
     runtime.sroutine_completed = runtime.sroutine_completed + 1
-    run_gc_safepoint(env, runtime)
     ()
 }
 
