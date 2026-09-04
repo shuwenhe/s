@@ -3533,6 +3533,7 @@ func execute_block(block_expr block, source_file source, binding[] env, write_op
 }
 
 func execute_block_in_place(block_expr block, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+    local_start := len(env)
     deferred := expr[]()
     si := 0
     for si < len(block.statements) {
@@ -3550,13 +3551,17 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
             if is_panic_error(err) {
                 run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                 if run_deferred.is_err() {
+                    cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
                     return run_deferred.unwrap_err()
                 }
                 if control_panic_is_active(env) {
+                    cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
                     return panic_error(control_panic_payload_text(env))
                 }
+                cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
                 return value.unit(unit_value {}))
             }
+            cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
             return err
         }
         schedule_step := run_sroutine_scheduler_step(source, env, writes, runtime)
@@ -3565,13 +3570,17 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
             if is_panic_error(err) {
                 run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                 if run_deferred.is_err() {
+                    cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
                     return run_deferred.unwrap_err()
                 }
                 if control_panic_is_active(env) {
+                    cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
                     return panic_error(control_panic_payload_text(env))
                 }
+                cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
                 return value.unit(unit_value {})
             }
+            cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
             return err
         }
         si = si + 1
@@ -3585,13 +3594,17 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
                 if is_panic_error(err) {
                     run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                     if run_deferred.is_err() {
+                        cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
                         return run_deferred.unwrap_err()
                     }
                     if control_panic_is_active(env) {
+                        cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
                         return panic_error(control_panic_payload_text(env))
                     }
+                    cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
                     return value.unit(unit_value {})
                 }
+                cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
                 return err
             }
             final_value = final_result.unwrap()
@@ -3600,12 +3613,15 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
     }
     run_deferred := execute_deferred(deferred, source, env, writes, runtime, "")
     if run_deferred.is_err() {
+        cleanup_scope_owned_values(env, local_start, final_value, runtime)
         return run_deferred.unwrap_err()
     }
     schedule_flush := run_sroutine_scheduler_flush(source, env, writes, runtime)
     if schedule_flush.is_err() {
+        cleanup_scope_owned_values(env, local_start, final_value, runtime)
         return schedule_flush.unwrap_err()
     }
+    cleanup_scope_owned_values(env, local_start, final_value, runtime)
     final_value
 }
 
@@ -3893,6 +3909,38 @@ func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op
             return fail_value("backend error: unknown owned box")
         }
         _ : fail_value("backend error: box_free requires a box value"),
+    }
+}
+
+// This is the interpreter-side drop glue. Values returned from a block remain
+// owned by the caller; all other live owned locals are released in reverse
+// declaration order, matching Rust's scope-exit drop order.
+func cleanup_scope_owned_values(binding[] env, int local_start, value keep, runtime_state runtime) () {
+    keep_id := -1
+    switch keep {
+        value.owned_box(handle) : keep_id = handle.id
+        _ : { }
+    }
+    i := len(env) - 1
+    for i >= local_start {
+        switch env[i].value {
+            value.owned_box(handle) : {
+                if handle.id != keep_id {
+                    j := 0
+                    for j < len(runtime.owned_boxes) {
+                        if runtime.owned_boxes[j].id == handle.id {
+                            if runtime.owned_boxes[j].live {
+                                runtime.owned_boxes[j].live = false
+                            }
+                            break
+                        }
+                        j = j + 1
+                    }
+                }
+            }
+            _ : { }
+        }
+        i = i - 1
     }
 }
 

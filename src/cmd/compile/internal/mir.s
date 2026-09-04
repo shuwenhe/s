@@ -133,7 +133,7 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
     if block.final_expr.is_some() {
         events = mir_extend_events(events, mir_expr_events(block.final_expr.unwrap(), locals, true))
     }
-    mir_append_scope_drops(locals, statements)
+    mir_append_scope_drops(locals, statements, events)
     borrow_result := borrow_check_events(events)
     trace := string[]()
     trace_text := "block"
@@ -175,14 +175,32 @@ func mir_type_is_copy(string type_name) bool {
     is_copy_type(type_name)
 }
 
-func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements) () {
+// Drop elaboration runs after move analysis. A moved local no longer owns a
+// value at scope exit, so inserting another drop would be a double release.
+func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements, string[] events) () {
     i := len(locals) - 1
     for i >= 0 {
-        if !locals[i].copyable && locals[i].type_name != "unknown" {
+        if !locals[i].copyable && locals[i].type_name != "unknown" && !mir_local_moved_at_exit(locals[i].name, events) {
             statements.push(mir_statement::drop(mir_drop_stmt { slot: locals[i].id }))
         }
         i = i - 1
     }
+}
+
+func mir_local_moved_at_exit(string name, string[] events) bool {
+    moved := false
+    i := 0
+    for i < len(events) {
+        event := events[i]
+        if starts_with(event, "move:") && slice(event, 5, len(event)) == name {
+            moved = true
+        } else if starts_with(event, "write:") && slice(event, 6, len(event)) == name {
+            // Assignment reinitializes the place, making it owned again.
+            moved = false
+        }
+        i = i + 1
+    }
+    moved
 }
 
 func mir_extend_events(string[] base, string[] extra) string[] {
@@ -206,7 +224,7 @@ func mir_collect_locals(param[] params, block_expr block) mir_local_slot[] {
         switch block.statements[i] {
             stmt.let(let_stmt) : {
                 if mir_find_local(locals, let_stmt.name) < 0 {
-                    type_name := "unknown"
+                    type_name := mir_expr_type_name(let_stmt.value)
                     if let_stmt.type_name.is_some() { type_name = let_stmt.type_name.unwrap() }
                     locals = append(locals, mir_local_slot { id: len(locals), name: let_stmt.name, kind: "local", version: 0, type_name: type_name, copyable: mir_type_is_copy(type_name) })
                 }
@@ -216,6 +234,27 @@ func mir_collect_locals(param[] params, block_expr block) mir_local_slot[] {
         i = i + 1
     }
     locals
+}
+
+func mir_expr_type_name(expr value) string {
+    switch value {
+        expr.int(_) : return "int"
+        expr.string(_) : return "string"
+        expr.bool(_) : return "bool"
+        expr.call(call_value) : {
+            switch call_value.callee.unwrap() {
+                expr.name(name_value) : {
+                    if name_value.name == "box" || name_value.name == "box_new" {
+                        return "box[unknown]"
+                    }
+                }
+                _ : { }
+            }
+            if call_value.inferred_type.is_some() { return call_value.inferred_type.unwrap() }
+        }
+        _ : { }
+    }
+    "unknown"
 }
 
 func mir_expr_events(expr value, mir_local_slot[] locals, bool consume) string[] {

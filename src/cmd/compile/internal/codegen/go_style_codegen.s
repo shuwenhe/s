@@ -59,9 +59,18 @@ func (gen* go_style_code_generator) gen_call(string func_name, int arg_count) st
 }
 
 // Owned values use the normal System V call ABI and remain outside value copies.
-func (gen* go_style_code_generator) gen_owned_alloc(int64 size) string {
+// runtime_owned_alloc(size, type_id) returns the owned handle in rax.
+func (gen* go_style_code_generator) gen_owned_alloc(int64 size, int64 type_id) string {
     gen_load_const(size, 7)
-    gen.gen_call("runtime_owned_alloc", 1)
+    gen_load_const(type_id, 6)
+    gen.gen_call("runtime_owned_alloc", 2)
+    ""
+}
+
+// A box is represented by the runtime handle; the payload stays in the caller's
+// value representation and is not copied by this allocation helper.
+func (gen* go_style_code_generator) gen_box_alloc(int64 size, int64 type_id) string {
+    gen.gen_owned_alloc(size, type_id)
     ""
 }
 
@@ -72,6 +81,13 @@ func (gen* go_style_code_generator) gen_owned_free(int handle_reg) string {
         gen.current_section_offset = gen.current_section_offset + (len(move) as int64)
     }
     gen.gen_call("runtime_owned_free", 1)
+    ""
+}
+
+// Lower a compiler-inserted drop for a stack-resident owned handle.
+func (gen* go_style_code_generator) gen_drop_owned_slot(int64 stack_offset) string {
+    gen_load(0, stack_offset, 8)
+    gen.gen_owned_free(0)
     ""
 }
 
