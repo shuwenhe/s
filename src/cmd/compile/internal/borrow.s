@@ -81,9 +81,6 @@ struct borrow_check_result {
     string message
 }
 
-// Ownership events are the small contract consumed by the future MIR pass.
-// The checker deliberately operates on named places first; field- and
-// projection-sensitive places can be added without changing the state model.
 struct ownership_slot {
     string name
     bool copyable
@@ -119,10 +116,6 @@ func ownership_next_colon(string text, int start) int {
     -1
 }
 
-// Check ownership events emitted by MIR lowering.
-// Supported events:
-//   declare:name:copy, declare:name:move, use:name, move:name,
-//   copy:name, drop:name
 func ownership_check_events(string[] events) ownership_check_result {
     ownership_slot[] slots
     errors := 0
