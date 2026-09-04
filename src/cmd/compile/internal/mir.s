@@ -1,6 +1,7 @@
 package compile.internal.mir
 use compile.internal.borrow.borrow_check_events
 use compile.internal.borrow.analyze_function as analyze_borrow_function
+use compile.internal.typesys.is_copy_type
 use s.block_expr
 use s.function_decl
 use s.param
@@ -132,6 +133,7 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
     if block.final_expr.is_some() {
         events = mir_extend_events(events, mir_expr_events(block.final_expr.unwrap(), locals, true))
     }
+    mir_append_scope_drops(locals, statements)
     borrow_result := borrow_check_events(events)
     trace := string[]()
     trace_text := "block"
@@ -170,7 +172,17 @@ func mir_find_local(mir_local_slot[] locals, string name) int {
 }
 
 func mir_type_is_copy(string type_name) bool {
-    type_name == "int" || type_name == "float" || type_name == "float64" || type_name == "bool" || type_name == "char" || type_name == "&" || type_name == "*"
+    is_copy_type(type_name)
+}
+
+func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements) () {
+    i := len(locals) - 1
+    for i >= 0 {
+        if !locals[i].copyable && locals[i].type_name != "unknown" {
+            statements.push(mir_statement::drop(mir_drop_stmt { slot: locals[i].id }))
+        }
+        i = i - 1
+    }
 }
 
 func mir_extend_events(string[] base, string[] extra) string[] {
