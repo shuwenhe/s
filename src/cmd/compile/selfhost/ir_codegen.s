@@ -111,12 +111,14 @@ func generate_x86_64(ir_program program) (string, error) {
     asm := ""
     asm += ".globl main\n"
     asm += ".text\n\n"
-    for _, func in program.functions {
+    for _idx_113 := 0; _idx_113 < len(program.functions); _idx_113++ {
+        func := program.functions[_idx_113]
         asm += "
         asm += func.name + ":\n"
         asm += "    push %rbp\n"
         asm += "    mov %rsp, %rbp\n"
-        for _, instr in func.instructions {
+        for _idx_118 := 0; _idx_118 < len(func.instructions); _idx_118++ {
+            instr := func.instructions[_idx_118]
             instr_asm, err := generate_instruction(instr)
             if err != nil {
                 return "", err

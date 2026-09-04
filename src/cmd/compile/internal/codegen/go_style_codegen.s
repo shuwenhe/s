@@ -58,6 +58,23 @@ func (gen* go_style_code_generator) gen_call(string func_name, int arg_count) st
     ""
 }
 
+// Owned values use the normal System V call ABI and remain outside value copies.
+func (gen* go_style_code_generator) gen_owned_alloc(int64 size) string {
+    gen_load_const(size, 7)
+    gen.gen_call("runtime_owned_alloc", 1)
+    ""
+}
+
+func (gen* go_style_code_generator) gen_owned_free(int handle_reg) string {
+    if handle_reg != 7 {
+        move := encode_mov_reg_to_reg(7, handle_reg)
+        gen.mcg.stream.emit_raw_bytes(move)
+        gen.current_section_offset = gen.current_section_offset + (len(move) as int64)
+    }
+    gen.gen_call("runtime_owned_free", 1)
+    ""
+}
+
 func (gen* go_style_code_generator) gen_load_const(int64 value, int dest_reg) string {
     code := encode_mov_imm_to_reg(value, dest_reg)
     gen.mcg.stream.emit_raw_bytes(code)

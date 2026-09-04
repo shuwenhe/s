@@ -153,14 +153,16 @@ func generate_assembly_from_ir(instruction[] instructions) (string, error) {
     gen.asm_lines = append(gen.asm_lines, ".globl main")
     gen.asm_lines = append(gen.asm_lines, ".text")
     gen.asm_lines = append(gen.asm_lines, "")
-    for _, instr in instructions {
+    for _idx_155 := 0; _idx_155 < len(instructions); _idx_155++ {
+        instr := instructions[_idx_155]
         err := gen.translate_instruction(instr)
         if err != nil {
             return "", err
         }
     }
     result := ""
-    for _, line in gen.asm_lines {
+    for _idx_162 := 0; _idx_162 < len(gen.asm_lines); _idx_162++ {
+        line := gen.asm_lines[_idx_162]
         result += line + "\n"
     }
     return result, nil

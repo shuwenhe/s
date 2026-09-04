@@ -91,7 +91,8 @@ func (cfg* control_flow_graph) compute_dominators() {
                 continue
             }
             new_idom := -1
-            for p in cfg.blocks[i].predecessors {
+            for _idx_93 := 0; _idx_93 < len(cfg.blocks[i].predecessors); _idx_93++ {
+                p := cfg.blocks[i].predecessors[_idx_93]
                 if cfg.immediate_dominator[p] != -1 {
                     if new_idom == -1 {
                         new_idom = p
@@ -150,7 +151,8 @@ func (cfg* control_flow_graph) compute_post_dominators() {
                 continue
             }
             new_ipdom := -1
-            for s in cfg.blocks[i].successors {
+            for _idx_152 := 0; _idx_152 < len(cfg.blocks[i].successors); _idx_152++ {
+                s := cfg.blocks[i].successors[_idx_152]
                 if cfg.immediate_post_dominator[s] != -1 {
                     if new_ipdom == -1 {
                         new_ipdom = s
@@ -197,11 +199,13 @@ func (cfg* control_flow_graph) compute_dominance_frontier() {
 
     for x := 0; x < n; x++ {
         if cfg.blocks[x].predecessors.len() >= 2 {
-            for p in cfg.blocks[x].predecessors {
+            for _idx_199 := 0; _idx_199 < len(cfg.blocks[x].predecessors); _idx_199++ {
+                p := cfg.blocks[x].predecessors[_idx_199]
                 runner := p
                 for runner != cfg.immediate_dominator[x] {
                     found := false
-                    for df in cfg.dominance_frontier[runner] {
+                    for _idx_203 := 0; _idx_203 < len(cfg.dominance_frontier[runner]); _idx_203++ {
+                        df := cfg.dominance_frontier[runner][_idx_203]
                         if df == x {
                             found = true
                             break
@@ -231,13 +235,15 @@ func (cfg* control_flow_graph) detect_loops() {
 
     func detect_loop_dfs(int block) {
         visited[block] = true
-        for succ in cfg.blocks[block].successors {
+        for _idx_233 := 0; _idx_233 < len(cfg.blocks[block].successors); _idx_233++ {
+            succ := cfg.blocks[block].successors[_idx_233]
             if !visited[succ] {
                 detect_loop_dfs(succ)
             } else {
                 if succ <= block {
                     is_header := false
-                    for h in cfg.loop_headers {
+                    for _idx_239 := 0; _idx_239 < len(cfg.loop_headers); _idx_239++ {
+                        h := cfg.loop_headers[_idx_239]
                         if h == succ {
                             is_header = true
                             break
@@ -265,7 +271,8 @@ func (cfg* control_flow_graph) compute_loop_depths() {
     for changed {
         changed = false
         for i := 0; i < n; i++ {
-            for p in cfg.blocks[i].predecessors {
+            for _idx_267 := 0; _idx_267 < len(cfg.blocks[i].predecessors); _idx_267++ {
+                p := cfg.blocks[i].predecessors[_idx_267]
                 if cfg.blocks[p].is_loop_header && cfg.blocks[p].loop_depth >= cfg.blocks[i].loop_depth {
                     cfg.blocks[i].loop_depth = cfg.blocks[p].loop_depth + 1
                     changed = true
@@ -280,7 +287,8 @@ func (cfg* control_flow_graph) get_loop_body(int loop_header) int[] {
     body.push(loop_header)
 
     worklist := int[]()
-    for succ in cfg.blocks[loop_header].successors {
+    for _idx_282 := 0; _idx_282 < len(cfg.blocks[loop_header].successors); _idx_282++ {
+        succ := cfg.blocks[loop_header].successors[_idx_282]
         worklist.push(succ)
     }
 
@@ -290,7 +298,8 @@ func (cfg* control_flow_graph) get_loop_body(int loop_header) int[] {
         worklist = worklist[0..worklist.len() - 1]
 
         found := false
-        for b in body {
+        for _idx_292 := 0; _idx_292 < len(body); _idx_292++ {
+            b := body[_idx_292]
             if b == block {
                 found = true
                 break
@@ -299,7 +308,8 @@ func (cfg* control_flow_graph) get_loop_body(int loop_header) int[] {
 
         if !found {
             body.push(block)
-            for s in cfg.blocks[block].successors {
+            for _idx_301 := 0; _idx_301 < len(cfg.blocks[block].successors); _idx_301++ {
+                s := cfg.blocks[block].successors[_idx_301]
                 worklist.push(s)
             }
         }

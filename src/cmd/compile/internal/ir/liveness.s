@@ -70,7 +70,8 @@ func (la* liveness_analysis) record_use(int var_id, int block_id, int instr_id) 
 }
 
 func (la* liveness_analysis) is_live_at(int var_id, int instr_id) bool {
-    for info in la.vars {
+    for _idx_72 := 0; _idx_72 < len(la.vars); _idx_72++ {
+        info := la.vars[_idx_72]
         if info.var_id == var_id {
             if info.first_use != -1 && info.last_use != -1 {
                 return instr_id >= info.first_use && instr_id <= info.last_use
@@ -81,7 +82,8 @@ func (la* liveness_analysis) is_live_at(int var_id, int instr_id) bool {
 }
 
 func (la* liveness_analysis) get_live_range(int var_id) (int, int) {
-    for info in la.vars {
+    for _idx_83 := 0; _idx_83 < len(la.vars); _idx_83++ {
+        info := la.vars[_idx_83]
         if info.var_id == var_id {
             return (info.first_use, info.last_use)
         }
@@ -106,7 +108,8 @@ func (la* liveness_analysis) variables_interfere(int var1, int var2) bool {
     info1 := option::none
     info2 := option::none
 
-    for info in la.vars {
+    for _idx_108 := 0; _idx_108 < len(la.vars); _idx_108++ {
+        info := la.vars[_idx_108]
         if info.var_id == var1 {
             info1 = option::some(info)
         }
@@ -132,7 +135,8 @@ func (la* liveness_analysis) get_interference_graph() (int[], int[]) {
     edges_to := int[]()
 
     for i := 0; i < la; i++.vars.len() {
-        for j in i + 1..la.vars.len() {
+        for _idx_134 := 0; _idx_134 < len(i + 1..la.vars.len()); _idx_134++ {
+            j := i + 1..la.vars.len()[_idx_134]
             if la.variables_interfere(la.vars[i].var_id, la.vars[j].var_id) {
                 edges_from.push(la.vars[i].var_id)
                 edges_to.push(la.vars[j].var_id)
@@ -144,8 +148,10 @@ func (la* liveness_analysis) get_interference_graph() (int[], int[]) {
 }
 
 func (la* liveness_analysis) compute_phi_liveness(int[] phi_blocks) {
-    for phi_block in phi_blocks {
-        for info in la.vars {
+    for _idx_146 := 0; _idx_146 < len(phi_blocks); _idx_146++ {
+        phi_block := phi_blocks[_idx_146]
+        for _idx_147 := 0; _idx_147 < len(la.vars); _idx_147++ {
+            info := la.vars[_idx_147]
             if info.live_in_blocks[phi_block] || info.live_out_blocks[phi_block] {
                 la.phi_references.push(info.var_id)
             }
@@ -154,7 +160,8 @@ func (la* liveness_analysis) compute_phi_liveness(int[] phi_blocks) {
 }
 
 func (la* liveness_analysis) spill_weight(int var_id) float {
-    for info in la.vars {
+    for _idx_156 := 0; _idx_156 < len(la.vars); _idx_156++ {
+        info := la.vars[_idx_156]
         if info.var_id == var_id {
             if info.first_use == -1 || info.last_use == -1 {
                 return 0.0
@@ -162,7 +169,7 @@ func (la* liveness_analysis) spill_weight(int var_id) float {
 
             weight := (info.last_use - info.first_use) as float
             uses := 0
-            for _ in info.live_range {
+            for _unused_171 := 0; _unused_171 < len(info.live_range); _unused_171++ {
                 uses = uses + 1
             }
 
@@ -181,7 +188,8 @@ func (la* liveness_analysis) should_spill(int var_id, float threshold) bool {
 }
 
 func (la* liveness_analysis) find_optimal_split_point(int var_id) int {
-    for info in la.vars {
+    for _idx_183 := 0; _idx_183 < len(la.vars); _idx_183++ {
+        info := la.vars[_idx_183]
         if info.var_id == var_id {
             if info.first_use == -1 || info.last_use == -1 {
                 return -1
