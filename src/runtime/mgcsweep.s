@@ -17,7 +17,11 @@ func sweep_pass() int {
         obj_id := all_objs.get(i).unwrap_or(-1)
         if obj_id >= 0 {
             hdr := __mem_obj_read_header(obj_id)
-            if hdr.mark == gc_white {
+            if runtime_owned_is_tracked(obj_id) {
+                // Explicitly owned objects are released only by drop glue.
+                __mem_obj_set_mark(obj_id, gc_white)
+                sweep_live_count = sweep_live_count + 1
+            } else if hdr.mark == gc_white {
                 sweep_freed_bytes = sweep_freed_bytes + hdr.size
                 sweep_freed_count = sweep_freed_count + 1
                 heap_alloc_bytes = heap_alloc_bytes - hdr.size

@@ -19,7 +19,7 @@ use compile.internal.ssa_core.build_pipeline_with_graph_hints_and_margin as buil
 use compile.internal.ssa_core.dump_pipeline as dump_ssa_pipeline
 use compile.internal.ssa_core.dump_debug_map as dump_ssa_debug_map
 use internal.buildcfg.goarch as buildcfg_goarch
-use compile.internal.semantic.check_text
+use compile.internal.safety.prove_safety
 use compile.internal.syntax.parse_source
 use s.assign_stmt
 use s.binary_expr
@@ -244,8 +244,11 @@ func build_object(string path, string output, string ssa_margin_override) int {
         return report_failure(parsed_result.unwrap_err().message)
     }
     parsed := parsed_result.unwrap()
-    if !should_skip_semantic_check(path) && check_text(source) != 0 {
-        return report_failure("semantic check failed")
+    if !should_skip_semantic_check(path) {
+        safety := prove_safety(source)
+        if !safety.proven {
+            return report_failure("safety proof failed: " + safety.summary)
+        }
     }
     mir_result := lower_main_to_mir(parsed)
     if mir_result.is_err() {
@@ -321,8 +324,11 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         return report_failure(parsed_result.unwrap_err().message
     }
     parsed := parsed_result.unwrap()
-    if !should_skip_semantic_check(path) && check_text(source) != 0 {
-        return report_failure("semantic check failed"
+    if !should_skip_semantic_check(path) {
+        safety := prove_safety(source)
+        if !safety.proven {
+            return report_failure("safety proof failed: " + safety.summary
+        }
     }
     mir_result := lower_main_to_mir(parsed)
     if mir_result.is_err() {
@@ -3642,12 +3648,19 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             if expr_result.is_err() {
                 expr_result.unwrap_err()
             }
+            replacement := expr_result.unwrap()
             index := find_binding_index(env, value.name)
             if index < 0 {
                 backend_error { message: "backend error: unknown name " + value.name }
             }
+            replacement_id := -1
+            switch replacement {
+                value.owned_box(handle) : replacement_id = handle.id
+                _ : { }
+            }
+            release_owned_value(env.get(index).unwrap().value, runtime, replacement_id)
             env.set(index, binding {
-                name: value.name, value expr_result.unwrap(),
+                name: value.name, value replacement,
             })
             ()
         }
@@ -3920,24 +3933,29 @@ func cleanup_scope_owned_values(binding[] env, int local_start, value keep, runt
     }
     i := len(env) - 1
     for i >= local_start {
-        switch env[i].value {
-            value.owned_box(handle) : {
-                if handle.id != keep_id {
-                    j := 0
-                    for j < len(runtime.owned_boxes) {
-                        if runtime.owned_boxes[j].id == handle.id {
-                            if runtime.owned_boxes[j].live {
-                                runtime.owned_boxes[j].live = false
-                            }
-                            break
-                        }
-                        j = j + 1
-                    }
-                }
-            }
-            _ : { }
-        }
+        release_owned_value(env[i].value, runtime, keep_id)
         i = i - 1
+    }
+}
+
+func release_owned_value(value candidate, runtime_state runtime, int keep_id) () {
+    switch candidate {
+        value.owned_box(handle) : {
+            if handle.id == keep_id {
+                return
+            }
+            j := 0
+            for j < len(runtime.owned_boxes) {
+                if runtime.owned_boxes[j].id == handle.id {
+                    if runtime.owned_boxes[j].live {
+                        runtime.owned_boxes[j].live = false
+                    }
+                    return
+                }
+                j = j + 1
+            }
+        }
+        _ : { }
     }
 }
 
