@@ -2,6 +2,7 @@ package compile.internal.tests.test_typesys
 use compile.internal.typesys.assignable_type
 use compile.internal.typesys.comparable_type
 use compile.internal.typesys.compatible_type
+use compile.internal.typesys.is_copy_type
 func run_typesys_suite() int {
     if !assignable_type("int", "u8") {
         return 1
@@ -55,6 +56,15 @@ func run_typesys_suite() int {
         return 1
     }
     if comparable_type("(int, int[])") {
+        return 1
+    }
+    if !is_copy_type("int") || !is_copy_type("&int") {
+        return 1
+    }
+    if !is_copy_type("int[4]") {
+        return 1
+    }
+    if is_copy_type("string") || is_copy_type("box[int]") || is_copy_type("int[]") {
         return 1
     }
     0

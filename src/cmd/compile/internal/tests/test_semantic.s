@@ -2,6 +2,7 @@ package compile.internal.tests.test_semantic
 use compile.internal.semantic.check_text
 use compile.internal.semantic.check_detailed
 use compile.internal.semantic.semantic_error
+use compile.internal.safety.prove_safety
 use std.fs.read_to_string
 func run_semantic_suite(string fixtures_root) int {
     ok_path := fixtures_root + "/check_ok.s"
@@ -24,8 +25,16 @@ func run_semantic_suite(string fixtures_root) int {
     if check_text(inline_ok) != 0 {
         return 1
     }
+    inline_proof := prove_safety(inline_ok)
+    if !inline_proof.proven || inline_proof.diagnostic_count != 0 {
+        return 1
+    }
     inline_fail := "package demo.inline\nfunc broken() bool {\n    flag: bool = 1\n    flag\n}"
     if check_text(inline_fail) == 0 {
+        return 1
+    }
+    inline_fail_proof := prove_safety(inline_fail)
+    if inline_fail_proof.proven || inline_fail_proof.type_errors == 0 {
         return 1
     }
     call_ok := "package demo.call\nfunc add(int a, int b) int {\n  a + b\n}\nfunc main() {\n  add(1, 2)\n}"

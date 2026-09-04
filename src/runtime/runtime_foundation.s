@@ -11,6 +11,9 @@ const runtime_feature_syscall = 64
 const runtime_feature_profile = 128
 const runtime_feature_race = 256
 
+// Owned objects are tracked separately so an explicit GC cannot reclaim them.
+var runtime_owned_object_ids = int[]()
+
 func runtime_features() int {
     runtime_feature_gc + runtime_feature_scheduler + runtime_feature_channels +
         runtime_feature_stack + runtime_feature_panic + runtime_feature_reflect +
@@ -30,13 +33,37 @@ func runtime_gc_collect() () {
 }
 
 func runtime_owned_alloc(int size, int type_id) int {
-    malloc(size, type_id)
+    object_id := malloc(size, type_id)
+    if object_id >= 0 {
+        runtime_owned_object_ids.push(object_id)
+    }
+    object_id
 }
 
 func runtime_owned_free(int object_id) () {
     if object_id >= 0 {
         free_obj(object_id)
+        kept := int[]()
+        i := 0
+        for i < len(runtime_owned_object_ids) {
+            if runtime_owned_object_ids[i] != object_id {
+                kept.push(runtime_owned_object_ids[i])
+            }
+            i = i + 1
+        }
+        runtime_owned_object_ids = kept
     }
+}
+
+func runtime_owned_is_tracked(int object_id) bool {
+    i := 0
+    for i < len(runtime_owned_object_ids) {
+        if runtime_owned_object_ids[i] == object_id {
+            return true
+        }
+        i = i + 1
+    }
+    false
 }
 
 func runtime_schedule_step() bool {
