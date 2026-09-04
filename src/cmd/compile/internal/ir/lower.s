@@ -586,6 +586,7 @@ func lower_function_to_mir(function_decl fd, const_rewrite_entry[] const_entries
         empty_blocks = append(empty_blocks, make_block(0, "entry", string[](), "return", mir_control_edge[]()))
         return mir_graph {
             function_name: fd.sig.name, blocks empty_blocks, locals mir_local_slot[](), trace string[](), entry 0, exit 0,
+            borrow_ok: true, borrow_errors: 0, borrow_message: "",
         }
     }
     return lower_block_to_mir(fd.sig.name, fd.body.unwrap(), const_entries
@@ -994,5 +995,6 @@ func make_block(int id, string label, string[] lines, string term_kind, mir_cont
 func make_graph(string function_name, mir_basic_block[] blocks, string[] trace, int entry, int exit) mir_graph {
     mir_graph {
         function_name: function_name, blocks blocks, locals mir_local_slot[](), trace trace, entry entry, exit exit,
+        borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
 }

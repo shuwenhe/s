@@ -4,17 +4,25 @@ use compile.internal.borrow.lifetime_check_events
 use compile.internal.borrow.ownership_check_events
 
 func run_borrow_checker_test() int {
-    shared_ok := string[] { "shared:x", "shared:x", "read:x", "end_shared:x", "end_shared:x", "write:x" }
+    shared_ok := string[] { "declare:x", "shared:x", "shared:x", "read:x", "end_shared:x", "end_shared:x", "write:x" }
     if borrow_check_events(shared_ok).ok == false {
         return 1
     }
-    shared_mut_conflict := string[] { "shared:x", "mutable:x" }
+    shared_mut_conflict := string[] { "declare:x", "shared:x", "mutable:x" }
     if borrow_check_events(shared_mut_conflict).ok {
         return 2
     }
-    move_conflict := string[] { "move:text", "read:text" }
-    if borrow_check_events(move_conflict).ok {
+    mutable_shared_conflict := string[] { "declare:x", "mutable:x", "shared:x" }
+    if borrow_check_events(mutable_shared_conflict).ok {
         return 3
+    }
+    mutable_mut_conflict := string[] { "declare:x", "mutable:x", "mutable:x" }
+    if borrow_check_events(mutable_mut_conflict).ok {
+        return 4
+    }
+    move_conflict := string[] { "declare:text", "move:text", "read:text" }
+    if borrow_check_events(move_conflict).ok {
+        return 5
     }
     0
 }
