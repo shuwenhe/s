@@ -29,6 +29,21 @@ func runtime_gc_collect() () {
     force_gc()
 }
 
+// Explicit owned values use the runtime allocator; ordinary values stay inline.
+func runtime_owned_alloc(int size, int type_id) int {
+    object_id := malloc(size, type_id)
+    if object_id >= 0 {
+        gc_trigger()
+    }
+    object_id
+}
+
+func runtime_owned_free(int object_id) () {
+    if object_id >= 0 {
+        free_obj(object_id)
+    }
+}
+
 func runtime_schedule_step() bool {
     started := __runtime_nanotime()
     next := find_runnable()

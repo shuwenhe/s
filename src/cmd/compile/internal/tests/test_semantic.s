@@ -352,6 +352,40 @@ func run_semantic_suite(string fixtures_root) int {
     if check_text(nil_assign_fail) == 0 {
         return 1
     }
+    compile_time_div_zero_fail := "package demo.arithmetic\nfunc main() {\n  10 / 0\n}"
+    compile_time_div_zero_diags := check_detailed(compile_time_div_zero_fail)
+    if !has_code(compile_time_div_zero_diags, "e3065") {
+        return 1
+    }
+    compile_time_mod_zero_fail := "package demo.arithmetic\nfunc main() {\n  10 % 0\n}"
+    compile_time_mod_zero_diags := check_detailed(compile_time_mod_zero_fail)
+    if !has_code(compile_time_mod_zero_diags, "e3065") {
+        return 1
+    }
+    compile_time_type_fail := "package demo.types\nfunc main() {\n  value: missing.Type = 0\n  value\n}"
+    compile_time_type_diags := check_detailed(compile_time_type_fail)
+    if !has_code(compile_time_type_diags, "e3063") {
+        return 1
+    }
+    duplicate_local_fail := "package demo.scope\nfunc main() {\n  value := 1\n  value := 2\n  value\n}"
+    duplicate_local_diags := check_detailed(duplicate_local_fail)
+    if !has_code(duplicate_local_diags, "e3064") {
+        return 1
+    }
+    explicit_box_ok := "package demo.ownership\nfunc main() {\n  value := box(1)\n  box_free(value)\n  0\n}"
+    if check_text(explicit_box_ok) != 0 {
+        return 1
+    }
+    implicit_box_free_fail := "package demo.ownership\nfunc main() {\n  box_free(1)\n  0\n}"
+    implicit_box_free_diags := check_detailed(implicit_box_free_fail)
+    if !has_code(implicit_box_free_diags, "e3067") {
+        return 1
+    }
+    box_double_free_fail := "package demo.ownership\nfunc main() {\n  value := box(1)\n  box_free(value)\n  box_free(value)\n  0\n}"
+    box_double_free_diags := check_detailed(box_double_free_fail)
+    if !has_code(box_double_free_diags, "e3059") {
+        return 1
+    }
     0
 }
 
