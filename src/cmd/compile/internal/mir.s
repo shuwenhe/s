@@ -2,6 +2,7 @@ package compile.internal.mir
 use compile.internal.borrow.borrow_check_events
 use compile.internal.borrow.analyze_function as analyze_borrow_function
 use compile.internal.typesys.is_copy_type
+use compile.internal.typesys.requires_drop
 use s.block_expr
 use s.function_decl
 use s.param
@@ -178,7 +179,7 @@ func mir_type_is_copy(string type_name) bool {
 func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements, string[] events) () {
     i := len(locals) - 1
     for i >= 0 {
-        if !locals[i].copyable && locals[i].type_name != "unknown" && !mir_local_moved_at_exit(locals[i].name, events) {
+        if requires_drop(locals[i].type_name) && locals[i].type_name != "unknown" && !mir_local_moved_at_exit(locals[i].name, events) {
             statements.push(mir_statement::drop(mir_drop_stmt { slot: locals[i].id }))
         }
         i = i - 1

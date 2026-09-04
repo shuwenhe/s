@@ -279,6 +279,9 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(return_local_reference_diags, "e3053") {
         return 1
     }
+    if !has_code(return_local_reference_diags, "e3069") {
+        return 1
+    }
     disjoint_field_borrows_ok := "package demo.fields\nstruct Pair {\n  int left\n  int right\n}\nfunc use_fields(&int left, &mut int right) int {\n  left\n}\nfunc main() {\n  pair := Pair { left: 1, right: 2 }\n  use_fields(&pair.left, &mut pair.right)\n}"
     if check_text(disjoint_field_borrows_ok) != 0 {
         return 1
