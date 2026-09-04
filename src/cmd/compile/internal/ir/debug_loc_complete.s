@@ -122,7 +122,8 @@ func (dlp debug_loc_propagator*) propagate_locations(instr_ids i32[]) {
         prev_instr_id := instr_ids[i - 1]
         
         prev_loc := source_location{}
-        for info in dlp.loc_infos {
+        for _for_idx_124 := 0; _for_idx_124 < len(dlp.loc_infos); _for_idx_124++ {
+            info := dlp.loc_infos[_for_idx_124]
             if info.instr_id == prev_instr_id {
                 prev_loc = info.loc
                 break
@@ -130,7 +131,7 @@ func (dlp debug_loc_propagator*) propagate_locations(instr_ids i32[]) {
         }
         
         found := false
-        for j in 0..i32(len(dlp.loc_infos)) {
+        for j := 0; j < i32; j++(len(dlp.loc_infos)) {
             if dlp.loc_infos[j].instr_id == instr_id {
                 found = true
                 break
@@ -150,7 +151,8 @@ func (dlp debug_loc_propagator*) propagate_locations(instr_ids i32[]) {
 }
 
 func (dlp debug_loc_propagator*) get_location(instr_id i32) source_location {
-    for info in dlp.loc_infos {
+    for _for_idx_152 := 0; _for_idx_152 < len(dlp.loc_infos); _for_idx_152++ {
+        info := dlp.loc_infos[_for_idx_152]
         if info.instr_id == instr_id {
             return info.loc
         }
@@ -160,7 +162,8 @@ func (dlp debug_loc_propagator*) get_location(instr_id i32) source_location {
 
 func (debug_loc_propagator* dlp) get_locations_by_file(string filename) debug_loc_info[] {
     result := debug_loc_info[]()
-    for info in dlp.loc_infos {
+    for _for_idx_162 := 0; _for_idx_162 < len(dlp.loc_infos); _for_idx_162++ {
+        info := dlp.loc_infos[_for_idx_162]
         if info.loc.filename == filename {
             result = append(result, info)
         }
@@ -170,7 +173,8 @@ func (debug_loc_propagator* dlp) get_locations_by_file(string filename) debug_lo
 
 func (dlp debug_loc_propagator*) get_locations_by_scope(scope string) debug_loc_info[] {
     result := debug_loc_info[]()
-    for info in dlp.loc_infos {
+    for _for_idx_172 := 0; _for_idx_172 < len(dlp.loc_infos); _for_idx_172++ {
+        info := dlp.loc_infos[_for_idx_172]
         if info.scope == scope {
             result = append(result, info)
         }
@@ -179,7 +183,8 @@ func (dlp debug_loc_propagator*) get_locations_by_scope(scope string) debug_loc_
 }
 
 func (dlp debug_loc_propagator*) get_location_info(instr_id i32) debug_loc_info {
-    for info in dlp.loc_infos {
+    for _for_idx_181 := 0; _for_idx_181 < len(dlp.loc_infos); _for_idx_181++ {
+        info := dlp.loc_infos[_for_idx_181]
         if info.instr_id == instr_id {
             return info
         }
@@ -190,7 +195,8 @@ func (dlp debug_loc_propagator*) get_location_info(instr_id i32) debug_loc_info 
 func (dlp debug_loc_propagator*) compute_line_maps() map[string]i32[] {
     line_map := make(map[string]i32[])
     
-    for info in dlp.loc_infos {
+    for _for_idx_192 := 0; _for_idx_192 < len(dlp.loc_infos); _for_idx_192++ {
+        info := dlp.loc_infos[_for_idx_192]
         filename := info.loc.filename
         if line_map[filename] == nil {
             line_map[filename] = i32[]()
@@ -203,7 +209,8 @@ func (dlp debug_loc_propagator*) compute_line_maps() map[string]i32[] {
 func (dlp debug_loc_propagator*) emit_dwarf_debug_info() string {
     s := ".section .debug_info\n"
     
-    for info in dlp.loc_infos {
+    for _for_idx_205 := 0; _for_idx_205 < len(dlp.loc_infos); _for_idx_205++ {
+        info := dlp.loc_infos[_for_idx_205]
         s += ".long " + string(info.instr_id) + "\n"
         s += ".string \"" + info.loc.filename + "\"\n"
         s += ".long " + string(info.loc.line) + "\n"
@@ -215,7 +222,8 @@ func (dlp debug_loc_propagator*) emit_dwarf_debug_info() string {
 
 func (dlp debug_loc_propagator*) to_string() string {
     s := "Debug Location Map:\n"
-    for info in dlp.loc_infos {
+    for _for_idx_217 := 0; _for_idx_217 < len(dlp.loc_infos); _for_idx_217++ {
+        info := dlp.loc_infos[_for_idx_217]
         s += "  Instr[" + string(info.instr_id) + "]: "
         s += info.loc.filename + ":" + string(info.loc.line) + ":" + string(info.loc.column)
         if info.var_name != "" {

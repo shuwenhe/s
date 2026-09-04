@@ -97,7 +97,7 @@ func (ea* escape_analysis) stays_local(int var_id) bool {
 }
 
 func (ea* escape_analysis) analyze_flow(int from_var, int to_var) {
-    for i in 0..ea.infos.len() {
+    for i := 0; i < ea; i++.infos.len() {
         if ea.infos[i].var_id == from_var {
             to_level := escape_level::escape_none
             for info in ea.infos {
@@ -118,7 +118,7 @@ func (ea* escape_analysis) analyze_flow(int from_var, int to_var) {
 }
 
 func (ea* escape_analysis) analyze_call_argument(int caller, int callee, int arg_var, int param_var) {
-    for i in 0..ea.infos.len() {
+    for i := 0; i < ea; i++.infos.len() {
         if ea.infos[i].var_id == param_var {
             ea.infos[i].passed_to_func = true
             break
@@ -129,7 +129,7 @@ func (ea* escape_analysis) analyze_call_argument(int caller, int callee, int arg
 }
 
 func (ea* escape_analysis) analyze_return(int return_var, int caller_var) {
-    for i in 0..ea.infos.len() {
+    for i := 0; i < ea; i++.infos.len() {
         if ea.infos[i].var_id == return_var {
             ea.infos[i].returned_to_caller = true
             break
@@ -143,9 +143,9 @@ func (ea* escape_analysis) build_alias_sets(int[] vars) {
     n := vars.len()
     ea.may_alias = bool[][n]
 
-    for i in 0..n {
+    for i := 0; i < n; i++ {
         ea.may_alias[i] = bool[n]
-        for j in 0..n {
+        for j := 0; j < n; j++ {
             if i == j {
                 ea.may_alias[i][j] = true
             } else {
@@ -154,7 +154,7 @@ func (ea* escape_analysis) build_alias_sets(int[] vars) {
         }
     }
 
-    for i in 0..n {
+    for i := 0; i < n; i++ {
         for j in i + 1..n {
             var1_escapes := false
             var2_escapes := false
@@ -180,7 +180,7 @@ func (ea* escape_analysis) may_alias_with(int var1, int var2, int[] all_vars) bo
     idx1 := -1
     idx2 := -1
 
-    for i in 0..all_vars.len() {
+    for i := 0; i < all_vars; i++.len() {
         if all_vars[i] == var1 {
             idx1 = i
         }

@@ -141,7 +141,7 @@ func (ssa* static_single_assignment) rename_variables() {
     stacks := int[][]()
     n := ssa.variable_versions.len()
 
-    for i in 0..n {
+    for i := 0; i < n; i++ {
         stacks.push(int[]())
     }
 
@@ -154,7 +154,7 @@ func (ssa* static_single_assignment) rename_variables() {
 
         for phi in block.phis {
             var_index := 0
-            for i in 0..n {
+            for i := 0; i < n; i++ {
                 if i == var_index {
                     version := ssa.variable_versions[var_index]
                     stacks[var_index].push(version)
@@ -173,7 +173,7 @@ func (ssa* static_single_assignment) rename_variables() {
             }
 
             var_index := 0
-            for i in 0..n {
+            for i := 0; i < n; i++ {
                 if i == var_index {
                     version := ssa.variable_versions[var_index]
                     stacks[var_index].push(version)
@@ -187,7 +187,7 @@ func (ssa* static_single_assignment) rename_variables() {
             if succ < ssa.blocks.len() {
                 for phi in ssa.blocks[succ].phis {
                     var_index := 0
-                    for i in 0..n {
+                    for i := 0; i < n; i++ {
                         if i == var_index {
                             if stacks[var_index].len() > 0 {
                                 phi.incoming_values.push(stacks[var_index][stacks[var_index].len() - 1])
@@ -199,7 +199,7 @@ func (ssa* static_single_assignment) rename_variables() {
             }
         }
 
-        for child in 0..ssa.blocks.len() {
+        for child := 0; child < ssa; child++.blocks.len() {
             children_ok := false
             for s in block.successors {
                 if s == child {
@@ -214,7 +214,7 @@ func (ssa* static_single_assignment) rename_variables() {
 
         for phi in block.phis {
             var_index := 0
-            for i in 0..n {
+            for i := 0; i < n; i++ {
                 if i == var_index {
                     if stacks[var_index].len() > 0 {
                         stacks[var_index][stacks[var_index].len() - 1] = stacks[var_index][stacks[var_index].len() - 1] - 1
@@ -226,7 +226,7 @@ func (ssa* static_single_assignment) rename_variables() {
 
         for value in block.values {
             var_index := 0
-            for i in 0..n {
+            for i := 0; i < n; i++ {
                 if i == var_index {
                     if stacks[var_index].len() > 0 {
                         stacks[var_index][stacks[var_index].len() - 1] = stacks[var_index][stacks[var_index].len() - 1] - 1

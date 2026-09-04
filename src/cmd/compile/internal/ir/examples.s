@@ -66,7 +66,7 @@ func example_cfg_analysis(mir.ir_function f) {
     n_blocks := cfg.blocks.len()
     _ = n_blocks
 
-    for i in 0..cfg.blocks.len() {
+    for i := 0; i < cfg; i++.blocks.len() {
         block := cfg.blocks[i]
         n_pred := block.predecessors.len()
         n_succ := block.successors.len()
@@ -92,7 +92,7 @@ func example_ssa_analysis(mir.ir_function f) {
     _ = n_values
     _ = n_phis
 
-    for i in 0..ssa.blocks.len() {
+    for i := 0; i < ssa; i++.blocks.len() {
         block := ssa.blocks[i]
         for phi in block.phis {
             incoming := phi.incoming_values.len()
@@ -175,7 +175,7 @@ func example_combined_optimization(mir.ir_function f) {
     liveness := f.get_liveness_analysis()
     barriers := f.get_write_barriers()
 
-    for i in 0..cfg.blocks.len() {
+    for i := 0; i < cfg; i++.blocks.len() {
         block := cfg.blocks[i]
         loop_depth := block.loop_depth
 
