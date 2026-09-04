@@ -408,6 +408,15 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(assignment_move_diags, "e3059") {
         return 1
     }
+    explicit_copy_ok := "package demo.copy\nfunc main() {\n  value := 1\n  copy(value)\n  value\n}"
+    if check_text(explicit_copy_ok) != 0 {
+        return 1
+    }
+    explicit_copy_fail := "package demo.copy\nfunc main() {\n  value := \"owned\"\n  copy(value)\n}"
+    explicit_copy_diags := check_detailed(explicit_copy_fail)
+    if !has_code(explicit_copy_diags, "e3068") {
+        return 1
+    }
     0
 }
 
