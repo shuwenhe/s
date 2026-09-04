@@ -344,6 +344,15 @@ func lifetime_contains(string[] names, string name) bool {
     false
 }
 
+func lifetime_index(string[] names, string name) int {
+    i := 0
+    for i < len(names) {
+        if names[i] == name { return i }
+        i = i + 1
+    }
+    -1
+}
+
 func lifetime_second_colon(string text, int first) int {
     i := first + 1
     for i < len(text) {
@@ -401,7 +410,13 @@ func lifetime_check_events(string[] events) lifetime_check_result {
                 } else {
                     owner := slice(rest, 0, third)
                     scope := slice(rest, third + 1, len(rest))
-                    if lifetime_find_reference(refs, ref_name) >= 0 || !lifetime_contains(active_scopes, owner) || !lifetime_contains(active_scopes, scope) {
+                    owner_index := lifetime_index(active_scopes, owner)
+                    scope_index := lifetime_index(active_scopes, scope)
+                    if lifetime_find_reference(refs, ref_name) >= 0
+                        || lifetime_contains(ended_scopes, owner)
+                        || lifetime_contains(ended_scopes, scope)
+                        || owner_index < 0 || scope_index < 0
+                        || owner_index > scope_index {
                         errors = errors + 1
                         message = message + "borrow-lifetime-conflict:" + ref_name + ";"
                     } else {
