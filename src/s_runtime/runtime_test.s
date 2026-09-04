@@ -41,6 +41,15 @@ func test_rt_multiple_allocations() int {
     1
 }
 
+func test_rt_free_reuses_block() int {
+    rt_init(128)
+    first := rt_malloc(32)
+    rt_free(first)
+    reused := rt_malloc(16)
+    rt_assert(reused == first, "free should make a block reusable")
+    1
+}
+
 func run_all_runtime_tests() int {
     result := 0
     
@@ -57,6 +66,10 @@ func run_all_runtime_tests() int {
     }
     
     if test_rt_multiple_allocations() != 0 {
+        result = result + 1
+    }
+
+    if test_rt_free_reuses_block() != 0 {
         result = result + 1
     }
     
