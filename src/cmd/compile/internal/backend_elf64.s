@@ -3057,7 +3057,7 @@ func bool_string(bool value) string {
 
 func make_runtime_state() runtime_state {
     runtime_state {
-        runq: sroutine_task[](), channels channel_runtime_state[](), next_channel_id 1, select_rr_cursor 0, sroutine_scheduled 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0, gc_cycles 0, gc_freed_channels 0, gc_root_scans 0, gc_write_barriers 0, gc_triggered_cycles 0, gc_heap_goal 2, gc_alloc_since_cycle 0,
+        runq: sroutine_task[](), channels channel_runtime_state[](), next_channel_id 1, select_rr_cursor 0, sroutine_scheduled 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0,
     }
 }
 
@@ -3075,7 +3075,7 @@ func collect_runtime_metrics(runtime_state runtime) runtime_metrics {
         i = i + 1
     }
     runtime_metrics {
-        sroutine_scheduled: runtime.sroutine_scheduled, sroutine_completed runtime.sroutine_completed, sroutine_panics runtime.sroutine_panics, sroutine_recovered runtime.sroutine_recovered, sroutine_yields runtime.sroutine_yields, select_attempts runtime.select_attempts, select_default_fallbacks runtime.select_default_fallbacks, select_timeouts runtime.select_timeouts, channels len(runtime.channels), channel_sends sends, channel_recvs recvs, channel_closed closed, gc_cycles runtime.gc_cycles, gc_freed_channels runtime.gc_freed_channels, gc_live_channels len(runtime.channels), gc_root_scans runtime.gc_root_scans, gc_write_barriers runtime.gc_write_barriers, gc_triggered_cycles runtime.gc_triggered_cycles, gc_heap_goal runtime.gc_heap_goal, gc_alloc_since_cycle runtime.gc_alloc_since_cycle,
+        sroutine_scheduled: runtime.sroutine_scheduled, sroutine_completed runtime.sroutine_completed, sroutine_panics runtime.sroutine_panics, sroutine_recovered runtime.sroutine_recovered, sroutine_yields runtime.sroutine_yields, select_attempts runtime.select_attempts, select_default_fallbacks runtime.select_default_fallbacks, select_timeouts runtime.select_timeouts, channels len(runtime.channels), channel_sends sends, channel_recvs recvs, channel_closed closed,
     }
 }
 
@@ -3093,14 +3093,7 @@ func runtime_metrics_text(runtime_metrics metrics) string {
         + " channel_sends=" + to_string(metrics.channel_sends)
         + " channel_recvs=" + to_string(metrics.channel_recvs)
         + " channel_closed=" + to_string(metrics.channel_closed)
-        + " gc_cycles=" + to_string(metrics.gc_cycles)
-        + " gc_freed_channels=" + to_string(metrics.gc_freed_channels)
-        + " gc_live_channels=" + to_string(metrics.gc_live_channels)
-        + " gc_root_scans=" + to_string(metrics.gc_root_scans)
-        + " gc_write_barriers=" + to_string(metrics.gc_write_barriers)
-        + " gc_triggered_cycles=" + to_string(metrics.gc_triggered_cycles)
-        + " gc_heap_goal=" + to_string(metrics.gc_heap_goal)
-        + " gc_alloc_since_cycle=" + to_string(metrics.gc_alloc_since_cycle)
+        + " memory_strategy=ownership+explicit-drop"
 }
 
 func snapshot_captured_bindings(binding[] env) captured_binding[] {
@@ -3219,7 +3212,7 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
         if block.terminator.kind == "return" {
             return mir_execution_result {
                 writes: writes, exit_code 0, runtime runtime_metrics {
-                    sroutine_scheduled: 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0, channels 0, channel_sends 0, channel_recvs 0, channel_closed 0, gc_cycles 0, gc_freed_channels 0, gc_live_channels 0, gc_root_scans 0, gc_write_barriers 0, gc_triggered_cycles 0, gc_heap_goal 0, gc_alloc_since_cycle 0,
+                    sroutine_scheduled: 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0, channels 0, channel_sends 0, channel_recvs 0, channel_closed 0,
                 },
             })
         }
@@ -3561,7 +3554,6 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
             }
             return err
         }
-        run_gc_safepoint(env, runtime)
         si = si + 1
     }
     final_value := value.unit(unit_value {})
@@ -3594,7 +3586,6 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
     if schedule_flush.is_err() {
         return schedule_flush.unwrap_err()
     }
-    run_gc_safepoint(env, runtime)
     final_value
 }
 
@@ -3782,9 +3773,6 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
             if callee_name.name == "recover" {
                 return eval_recover_call(env, runtime
             }
-            if callee_name.name == "gc_collect" {
-                return eval_gc_collect_call(value.args, source, env, writes, runtime
-            }
             if callee_name.name == "chan_make" {
                 return eval_chan_make_call(value.args, source, env, writes, runtime
             }
@@ -3865,14 +3853,6 @@ func eval_recover_call(binding[] env, runtime_state runtime) (value, backend_err
     value.string(payload)
 }
 
-func eval_gc_collect_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) != 0 {
-        return backend_error { message: "backend error: gc_collect expects no arguments" }
-    }
-    run_gc_cycle(env, runtime)
-    value.unit(unit_value {})
-}
-
 func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if len(args) != 1 {
         return backend_error { message: "backend error: chan_make expects one capacity argument" }
@@ -3892,9 +3872,8 @@ func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_o
     }
     id := runtime.next_channel_id
     runtime.next_channel_id = runtime.next_channel_id + 1
-    runtime.gc_alloc_since_cycle = runtime.gc_alloc_since_cycle + 1
     runtime.channels.push(channel_runtime_state {
-        id: id, capacity cap, buffer value[](), closed false, sends 0, recvs 0, marked false,
+        id: id, capacity cap, buffer value[](), closed false, sends 0, recvs 0,
     })
     value.channel(channel_handle_value { id: id })
 }
@@ -3922,9 +3901,6 @@ func eval_chan_send_call(expr[] args, source_file source, binding[] env, write_o
         return backend_error { message: "backend error: chan_send would block" }
     }
     ch_state := runtime.channels[idx]
-    if value_contains_channel(payload.unwrap()) {
-        runtime.gc_write_barriers = runtime.gc_write_barriers + 1
-    }
     ch_state.buffer = append(ch_state.buffer, payload.unwrap())
     ch_state.sends = ch_state.sends + 1
     runtime.channels.set(idx, ch_state)
@@ -4240,20 +4216,6 @@ func find_channel_index(runtime_state runtime, value v) int {
         i = i + 1
     }
     -1
-}
-
-func run_gc_safepoint(binding[] env, runtime_state runtime) () {
-    if len(runtime.channels) == 0 {
-        return
-    }
-    if runtime.gc_heap_goal <= 0 {
-        runtime.gc_heap_goal = 2
-    }
-    if runtime.gc_alloc_since_cycle < runtime.gc_heap_goal {
-        return
-    }
-    runtime.gc_triggered_cycles = runtime.gc_triggered_cycles + 1
-    run_gc_cycle(env, runtime)
 }
 
 func run_gc_cycle(binding[] env, runtime_state runtime) () {
