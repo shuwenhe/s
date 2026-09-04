@@ -502,7 +502,29 @@ func is_copy_type(string ty) bool {
     if starts_with(clean, "&") {
         return true
     }
+    // Fixed-size arrays inherit Copy only when their element type is Copy.
+    // Slices, vectors, maps, strings, boxes and function values remain owned.
+    open := find_char(clean, "[")
+    close := find_char(clean, "]")
+    if open > 0 && close == len(clean) - 1 && is_array_length(slice(clean, open + 1, close)) {
+        return is_copy_type(slice(clean, 0, open))
+    }
     return false
+}
+
+func is_array_length(string text) bool {
+    if text == "" {
+        return false
+    }
+    i := 0
+    for i < len(text) {
+        ch := slice(text, i, i + 1)
+        if ch < "0" || ch > "9" {
+            return false
+        }
+        i = i + 1
+    }
+    true
 }
 
 func is_explicit_owned_type(string ty) bool {
