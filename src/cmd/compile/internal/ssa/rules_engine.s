@@ -241,12 +241,14 @@ func (engine* rules_engine) apply_block(block* basic_block) int {
     for iteration := 0; iteration < max_iterations; iteration++ {
         let changed_in_iteration := 0
         
-        for instruction in block.instructions {
+        for _for_idx_243 := 0; _for_idx_243 < len(block.instructions); _for_idx_243++ {
+            instruction := block.instructions[_for_idx_243]
             let original := instruction
             let transformed := false
             
             
-            for rule in engine.rules {
+            for _for_idx_248 := 0; _for_idx_248 < len(engine.rules); _for_idx_248++ {
+                rule := engine.rules[_for_idx_248]
                 if rule.matcher(instruction) {
                     let result := rule.transformer(instruction)
                     
@@ -278,7 +280,8 @@ func (engine* rules_engine) apply_block(block* basic_block) int {
 func (engine* rules_engine) apply_func(func* ir_func) int {
     let total := 0
     
-    for block in func.blocks {
+    for _for_idx_280 := 0; _for_idx_280 < len(func.blocks); _for_idx_280++ {
+        block := func.blocks[_for_idx_280]
         total += engine.apply_block(block)
     }
     

@@ -126,7 +126,8 @@ func (wb_inserter* wbi) insert_interface_write_barrier(i32 instr_id, i32 iface_p
 
 func (wb_inserter* wbi) get_barriers_for_instruction(i32 instr_id) wb_info[] {
     result := wb_info[]()
-    for info in wbi.barriers {
+    for _for_idx_128 := 0; _for_idx_128 < len(wbi.barriers); _for_idx_128++ {
+        info := wbi.barriers[_for_idx_128]
         if info.instr_id == instr_id {
             result = append(result, info)
         }
@@ -136,7 +137,8 @@ func (wb_inserter* wbi) get_barriers_for_instruction(i32 instr_id) wb_info[] {
 
 func (wb_inserter* wbi) get_all_barriers() wb_info[] {
     result := wb_info[]()
-    for info in wbi.barriers {
+    for _for_idx_138 := 0; _for_idx_138 < len(wbi.barriers); _for_idx_138++ {
+        info := wbi.barriers[_for_idx_138]
         result = append(result, info)
     }
     result
@@ -171,7 +173,8 @@ func (wb_inserter* wbi) generate_barrier_call(wb_info info) string {
 func (wb_inserter* wbi) to_string() string {
     s := "Write Barrier Inserter:\n"
     s += "Total barriers: " + string(wbi.num_barriers) + "\n"
-    for info in wbi.barriers {
+    for _for_idx_173 := 0; _for_idx_173 < len(wbi.barriers); _for_idx_173++ {
+        info := wbi.barriers[_for_idx_173]
         s += "  Instr[" + string(info.instr_id) + "]: "
         switch info.kind {
             wb_ptr_write: { s += "PtrWrite" }
