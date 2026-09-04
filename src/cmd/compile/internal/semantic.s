@@ -1223,6 +1223,10 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
             if !types_compatible(target_type, rhs.type_name) {
                 return errors + add_error(source, diagnostics, "e3003", "assignment type mismatch", value.name
             }
+            switch value.value {
+                expr::name(name_value) : borrow_state_mark_move(borrow_state, name_value.name, rhs.type_name),
+                _ : (),
+            }
             errors
         }
         stmt.increment(value) : {
