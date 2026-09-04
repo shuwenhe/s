@@ -531,6 +531,25 @@ func is_explicit_owned_type(string ty) bool {
     base_type_name(ty) == "box"
 }
 
+// Canonical ownership classification used by semantic and MIR passes.
+func ownership_mode(string ty) string {
+    clean := parse_type(ty)
+    if starts_with(clean, "&") {
+        return "borrow"
+    }
+    if is_copy_type(clean) {
+        return "copy"
+    }
+    if is_explicit_owned_type(clean) {
+        return "owned"
+    }
+    "move"
+}
+
+func requires_drop(string ty) bool {
+    ownership_mode(ty) == "move" || ownership_mode(ty) == "owned"
+}
+
 func is_heap_reference_type(string ty) bool {
     clean := parse_type(ty)
     if is_explicit_owned_type(clean) {

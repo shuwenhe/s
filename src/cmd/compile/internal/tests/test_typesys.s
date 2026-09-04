@@ -3,6 +3,8 @@ use compile.internal.typesys.assignable_type
 use compile.internal.typesys.comparable_type
 use compile.internal.typesys.compatible_type
 use compile.internal.typesys.is_copy_type
+use compile.internal.typesys.ownership_mode
+use compile.internal.typesys.requires_drop
 func run_typesys_suite() int {
     if !assignable_type("int", "u8") {
         return 1
@@ -65,6 +67,15 @@ func run_typesys_suite() int {
         return 1
     }
     if is_copy_type("string") || is_copy_type("box[int]") || is_copy_type("int[]") {
+        return 1
+    }
+    if ownership_mode("int") != "copy" || ownership_mode("&int") != "borrow" {
+        return 1
+    }
+    if ownership_mode("box[int]") != "owned" || ownership_mode("string") != "move" {
+        return 1
+    }
+    if !requires_drop("box[int]") || !requires_drop("string") || requires_drop("int") {
         return 1
     }
     0
