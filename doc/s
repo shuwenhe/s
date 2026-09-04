@@ -236,12 +236,8 @@ if x > 0 {
 }
 
 for loop
-for i in 0..10 {
-    // i from 0 to 9
-}
-
-for item in array {
-    // Iterate over array
+for i := 0; i < n; i++ {
+    // ...
 }
 
 switch expression
