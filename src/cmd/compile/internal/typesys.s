@@ -272,7 +272,7 @@ func comparable_type(string ty) bool {
     if is_builtin_primitive(clean) {
         return true
     }
-    if starts_with(clean, "&") {
+    if starts_with(clean, "&") || (len(clean) > 0 && char_at(clean, len(clean) - 1) == "*") {
         return true
     }
     if starts_with(clean, "[]") {
