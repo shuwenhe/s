@@ -21,7 +21,7 @@ func make_go_style_code_generator(
     }
 }
 
-func (gen* go_style_code_generator) gen_func_body(string func_name, int64 stack_size) string {
+func (go_style_code_generator* gen) gen_func_body(string func_name, int64 stack_size) string {
     prologue := encode_push_reg(5)
     prologue = append_bytes(prologue, encode_mov_reg_to_reg(5, 4))
     if stack_size > 0 {
@@ -32,7 +32,7 @@ func (gen* go_style_code_generator) gen_func_body(string func_name, int64 stack_
     ""
 }
 
-func (gen* go_style_code_generator) gen_func_epilogue(int64 stack_size) string {
+func (go_style_code_generator* gen) gen_func_epilogue(int64 stack_size) string {
     epilogue := int8[]()()
     if stack_size > 0 {
         add_code := encode_add_imm_to_reg(4 as int, stack_size)
@@ -44,7 +44,7 @@ func (gen* go_style_code_generator) gen_func_epilogue(int64 stack_size) string {
     ""
 }
 
-func (gen* go_style_code_generator) gen_call(string func_name, int arg_count) string {
+func (go_style_code_generator* gen) gen_call(string func_name, int arg_count) string {
     call_code := encode_call_direct(func_name)
     gen.mcg.stream.emit_raw_bytes(call_code)
     gen.reloc_ctx.add_relocation(
@@ -58,19 +58,19 @@ func (gen* go_style_code_generator) gen_call(string func_name, int arg_count) st
     ""
 }
 
-func (gen* go_style_code_generator) gen_owned_alloc(int64 size, int64 type_id) string {
+func (go_style_code_generator* gen) gen_owned_alloc(int64 size, int64 type_id) string {
     gen_load_const(size, 7)
     gen_load_const(type_id, 6)
     gen.gen_call("runtime_owned_alloc", 2)
     ""
 }
 
-func (gen* go_style_code_generator) gen_box_alloc(int64 size, int64 type_id) string {
+func (go_style_code_generator* gen) gen_box_alloc(int64 size, int64 type_id) string {
     gen.gen_owned_alloc(size, type_id)
     ""
 }
 
-func (gen* go_style_code_generator) gen_owned_free(int handle_reg) string {
+func (go_style_code_generator* gen) gen_owned_free(int handle_reg) string {
     if handle_reg != 7 {
         move := encode_mov_reg_to_reg(7, handle_reg)
         gen.mcg.stream.emit_raw_bytes(move)
@@ -80,20 +80,20 @@ func (gen* go_style_code_generator) gen_owned_free(int handle_reg) string {
     ""
 }
 
-func (gen* go_style_code_generator) gen_drop_owned_slot(int64 stack_offset) string {
+func (go_style_code_generator* gen) gen_drop_owned_slot(int64 stack_offset) string {
     gen_load(0, stack_offset, 8)
     gen.gen_owned_free(0)
     ""
 }
 
-func (gen* go_style_code_generator) gen_load_const(int64 value, int dest_reg) string {
+func (go_style_code_generator* gen) gen_load_const(int64 value, int dest_reg) string {
     code := encode_mov_imm_to_reg(value, dest_reg)
     gen.mcg.stream.emit_raw_bytes(code)
     gen.current_section_offset = gen.current_section_offset + (len(code) as int64)
     ""
 }
 
-func (gen* go_style_code_generator) gen_binop(string op, int left_reg, int right_reg, int result_reg) string {
+func (go_style_code_generator* gen) gen_binop(string op, int left_reg, int right_reg, int result_reg) string {
     code := int8[]()()
     if op == "add" {
         code = encode_add_reg_to_reg(left_reg, right_reg)
@@ -113,7 +113,7 @@ func (gen* go_style_code_generator) gen_binop(string op, int left_reg, int right
     ""
 }
 
-func (gen* go_style_code_generator) gen_store(int source_reg, int64 stack_offset, int size) string {
+func (go_style_code_generator* gen) gen_store(int source_reg, int64 stack_offset, int size) string {
     code := int8[]()()
     if size == 8 {
         code = encode_store_reg_to_memory(source_reg, 5 as int, stack_offset)
@@ -125,7 +125,7 @@ func (gen* go_style_code_generator) gen_store(int source_reg, int64 stack_offset
     ""
 }
 
-func (gen* go_style_code_generator) gen_load(int dest_reg, int64 stack_offset, int size) string {
+func (go_style_code_generator* gen) gen_load(int dest_reg, int64 stack_offset, int size) string {
     code := int8[]()()
     if size == 8 {
         code = encode_load_memory_to_reg(dest_reg, 5 as int, stack_offset)
@@ -137,7 +137,7 @@ func (gen* go_style_code_generator) gen_load(int dest_reg, int64 stack_offset, i
     ""
 }
 
-func (gen* go_style_code_generator) gen_main_function() string {
+func (go_style_code_generator* gen) gen_main_function() string {
     func_name := "main"
     gen.gen_func_body(func_name, 0 as int64)
     gen.gen_load_const(60 as int64, 0)
@@ -149,13 +149,13 @@ func (gen* go_style_code_generator) gen_main_function() string {
     ""
 }
 
-func (gen* go_style_code_generator) gen_program_entry() int8[] {
+func (go_style_code_generator* gen) gen_program_entry() int8[] {
     entry_code := int8[]()()
     entry_code = encode_jmp_direct("main")
     entry_code
 }
 
-func (gen* go_style_code_generator) compile_complete_program() string {
+func (go_style_code_generator* gen) compile_complete_program() string {
     gen.gen_main_function()
     ""
 }
