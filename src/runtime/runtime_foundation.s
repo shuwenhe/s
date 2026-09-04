@@ -40,7 +40,7 @@ func runtime_owned_alloc(int size, int type_id) int {
 }
 
 func runtime_owned_free(int object_id) () {
-    if object_id >= 0 {
+    if object_id >= 0 && runtime_owned_is_tracked(object_id) {
         free_obj(object_id)
         kept := int[]()
         i := 0
