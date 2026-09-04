@@ -123,6 +123,30 @@ func run_pipeline_regression_suite() int {
     if !saw_pkg_functions {
         return 1
     }
+    move_drop_source := "package demo.drop\nfunc consume(string value) {\n  value\n}\nfunc main() {\n  left: string = \"a\"\n  consume(left)\n}"
+    move_drop_parsed := parse_source(move_drop_source)
+    if move_drop_parsed.is_err() {
+        return 1
+    }
+    move_drop_graph := lower_main_to_mir(move_drop_parsed.unwrap())
+    if move_drop_graph.is_err() {
+        return 1
+    }
+    if count_mir_drops(move_drop_graph.unwrap()) != 0 {
+        return 1
+    }
+    reinit_drop_source := "package demo.drop\nfunc consume(string value) {\n  value\n}\nfunc main() {\n  left: string = \"a\"\n  consume(left)\n  left = \"b\"\n}"
+    reinit_drop_parsed := parse_source(reinit_drop_source)
+    if reinit_drop_parsed.is_err() {
+        return 1
+    }
+    reinit_drop_graph := lower_main_to_mir(reinit_drop_parsed.unwrap())
+    if reinit_drop_graph.is_err() {
+        return 1
+    }
+    if count_mir_drops(reinit_drop_graph.unwrap()) != 1 {
+        return 1
+    }
     midend := run_midend_pipeline(graph)
     if !contains(midend.report, "inline_sites=") {
         return 1
@@ -212,6 +236,23 @@ func run_pipeline_regression_suite() int {
         return 1
     }
     0
+}
+
+func count_mir_drops(mir_graph graph) int {
+    count := 0
+    i := 0
+    while i < len(graph.blocks) {
+        j := 0
+        while j < len(graph.blocks[i].statements) {
+            switch graph.blocks[i].statements[j] {
+                mir_statement::drop(_) : count = count + 1
+                _ : { }
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    count
 }
 
 func count_const_decls(ir_ast.package_ir pkg) int {
