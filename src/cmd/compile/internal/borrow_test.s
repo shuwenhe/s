@@ -36,9 +36,17 @@ func run_lifetime_checker_test() int {
     if lifetime_check_events(dangling).ok {
         return 2
     }
+    shorter_owner := string[] { "scope:outer", "scope:inner", "borrow:r:inner:outer" }
+    if lifetime_check_events(shorter_owner).ok {
+        return 3
+    }
+    ended_owner := string[] { "scope:outer", "end_scope:outer", "scope:inner", "borrow:r:outer:inner" }
+    if lifetime_check_events(ended_owner).ok {
+        return 4
+    }
     ended := string[] { "scope:outer", "scope:inner", "borrow:r:outer:inner", "end_borrow:r", "use_ref:r" }
     if lifetime_check_events(ended).ok {
-        return 3
+        return 5
     }
     0
 }
