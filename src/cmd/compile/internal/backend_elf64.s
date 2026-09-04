@@ -456,6 +456,16 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     if cfi_write.is_err() {
         return report_failure("failed to write CFI artifact: " + cfi_write.unwrap_err().message
     }
+    drop_path := output + ".dropmap"
+    drop_payload := build_drop_metadata_artifact(arch, parsed, ssa_text)
+    drop_check := validate_drop_contract_chain(drop_payload, parsed, ssa_text)
+    if drop_check.is_err() {
+        return report_failure(drop_check.unwrap_err().message
+    }
+    drop_write := write_text_file(drop_path, drop_payload)
+    if drop_write.is_err() {
+        return report_failure("failed to write drop metadata artifact: " + drop_write.unwrap_err().message
+    }
     export_path := output + ".export"
     export_payload := build_export_data_artifact(parsed, arch)
     export_write := write_text_file(export_path, export_payload)
