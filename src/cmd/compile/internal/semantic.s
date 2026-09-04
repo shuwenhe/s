@@ -15,6 +15,7 @@ use compile.internal.typesys.same_type_ref
 use compile.internal.typesys.type_arg
 use compile.internal.typesys.type_ref
 use compile.internal.typesys.has_unknown_component
+use compile.internal.typesys.is_copy_type
 use s.block_expr
 use s.expr
 use s.function_decl
@@ -210,9 +211,7 @@ func borrow_state_find(borrow_record[] state, string name) int {
 }
 
 func borrow_type_is_copy(string type_name) bool {
-    ty := parse_type(type_name)
-    ty == "int" || ty == "bool" || ty == "float" || ty == "float64"
-        || ty == "char" || starts_with(ty, "&") || starts_with(ty, "*")
+    is_copy_type(type_name)
 }
 
 func borrow_state_mark_move(borrow_record[] state, string name, string type_name) {
