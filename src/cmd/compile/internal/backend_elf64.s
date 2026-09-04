@@ -35,6 +35,7 @@ use s.increment_stmt
 use s.int_expr
 use s.item
 use s.name_expr
+use s.member_expr
 use s.source_file
 use s.stmt
 use s.string_expr
@@ -122,6 +123,12 @@ struct channel_handle_value {
     int id
 }
 
+struct owned_box_value {
+    int id
+    value payload
+    bool live
+}
+
 struct channel_runtime_state {
     int id
     int capacity
@@ -146,6 +153,8 @@ struct sroutine_task {
 struct runtime_state {
     sroutine_task[] runq
     channel_runtime_state[] channels
+    owned_box_value[] owned_boxes
+    int next_owned_box_id
     int next_channel_id
     int select_rr_cursor
     int sroutine_scheduled
@@ -180,6 +189,7 @@ enum value {
     channel(channel_handle_value),
     fn_ref(string),
     fn_map(fn_map_entry_value[]),
+    owned_box(owned_box_value),
 }
 
 struct binding {
@@ -3067,7 +3077,7 @@ func bool_string(bool value) string {
 
 func make_runtime_state() runtime_state {
     runtime_state {
-        runq: sroutine_task[](), channels channel_runtime_state[](), next_channel_id 1, select_rr_cursor 0, sroutine_scheduled 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0,
+        runq: sroutine_task[](), channels channel_runtime_state[](), owned_boxes owned_box_value[](), next_owned_box_id 1, next_channel_id 1, select_rr_cursor 0, sroutine_scheduled 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0,
     }
 }
 
@@ -3735,7 +3745,7 @@ func eval_expr(expr expr, source_file source, binding[] env, write_op[] writes, 
         expr.for(_) : backend_error { message: "backend error: for expressions are not supported in the mvp backend" },
         expr.switch(_) : backend_error { message: "backend error: switch expressions are not supported in the mvp backend" },
         expr.borrow(_) : backend_error { message: "backend error: borrow expressions are not supported in the mvp backend" },
-        expr.member(_) : backend_error { message: "backend error: member expressions are not supported in the mvp backend" },
+        expr.member(value) : eval_member_expr(value, source, env, writes, runtime),
         expr.index(value) : eval_index_expr(value, source, env, writes, runtime),
         expr.array(_) : backend_error { message: "backend error: array literals are not supported in the mvp backend" },
         expr.map(value) : eval_map_literal(value, source, env, writes, runtime),
@@ -3782,6 +3792,12 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
             }
             if callee_name.name == "recover" {
                 return eval_recover_call(env, runtime
+            }
+            if callee_name.name == "box" || callee_name.name == "box_new" {
+                return eval_box_new_call(value.args, source, env, writes, runtime
+            }
+            if callee_name.name == "box_free" {
+                return eval_box_free_call(value.args, source, env, writes, runtime
             }
             if callee_name.name == "chan_make" {
                 return eval_chan_make_call(value.args, source, env, writes, runtime
@@ -3838,7 +3854,78 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
         _ : backend_error { message: "backend error: unsupported call target" },
     }
 }
-    func eval_panic_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_box_new_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+    if len(args) != 1 {
+        return fail_value("backend error: box expects exactly one value")
+    }
+    payload_result := eval_expr(args[0], source, env, writes, runtime)
+    if payload_result.is_err() {
+        return payload_result.unwrap_err()
+    }
+    id := runtime.next_owned_box_id
+    runtime.next_owned_box_id = runtime.next_owned_box_id + 1
+    owned := owned_box_value { id: id, payload payload_result.unwrap(), live true }
+    runtime.owned_boxes.push(owned)
+    value.owned_box(owned)
+}
+
+func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+    if len(args) != 1 {
+        return fail_value("backend error: box_free expects exactly one value")
+    }
+    owned_result := eval_expr(args[0], source, env, writes, runtime)
+    if owned_result.is_err() {
+        return owned_result.unwrap_err()
+    }
+    switch owned_result.unwrap() {
+        value.owned_box(handle) : {
+            i := 0
+            for i < len(runtime.owned_boxes) {
+                if runtime.owned_boxes[i].id == handle.id {
+                    if !runtime.owned_boxes[i].live {
+                        return fail_value("backend error: box_free on released box")
+                    }
+                    runtime.owned_boxes[i].live = false
+                    return value.unit(unit_value {})
+                }
+                i = i + 1
+            }
+            return fail_value("backend error: unknown owned box")
+        }
+        _ : fail_value("backend error: box_free requires a box value"),
+    }
+}
+
+func eval_member_expr(member member_expr, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+    target_result := eval_expr(member.target.value, source, env, writes, runtime)
+    if target_result.is_err() {
+        return target_result.unwrap_err()
+    }
+    switch target_result.unwrap() {
+        value.owned_box(handle) : {
+            if member.member != "unwrap" {
+                return fail_value("backend error: unknown box member " + member.member)
+            }
+            if !handle.live {
+                return fail_value("backend error: use of released box")
+            }
+            i := 0
+            for i < len(runtime.owned_boxes) {
+                if runtime.owned_boxes[i].id == handle.id {
+                    if !runtime.owned_boxes[i].live {
+                        return fail_value("backend error: use of released box")
+                    }
+                    return ok_value(runtime.owned_boxes[i].payload)
+                }
+                i = i + 1
+            }
+            return fail_value("backend error: unknown owned box")
+        }
+        _ : fail_value("backend error: member access is not supported for this value"),
+    }
+}
+
+func eval_panic_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if len(args) != 1 {
         return backend_error { message: "backend error: panic expects exactly one argument" }
     }
