@@ -33,7 +33,7 @@ func new_escape_analysis() escape_analysis {
     }
 }
 
-func (ea* escape_analysis) analyze_variable(int var_id, bool is_pointer, bool assigned_global, bool returned, bool passed_func) escape_level {
+func (escape_analysis* ea) analyze_variable(int var_id, bool is_pointer, bool assigned_global, bool returned, bool passed_func) escape_level {
     level := escape_level::escape_none
 
     if assigned_global {
@@ -62,7 +62,7 @@ func (ea* escape_analysis) analyze_variable(int var_id, bool is_pointer, bool as
     level
 }
 
-func (ea* escape_analysis) escape_to_heap(int var_id) bool {
+func (escape_analysis* ea) escape_to_heap(int var_id) bool {
     for _idx_65 := 0; _idx_65 < len(ea.infos); _idx_65++ {
         info := ea.infos[_idx_65]
         if info.var_id == var_id {
@@ -75,7 +75,7 @@ func (ea* escape_analysis) escape_to_heap(int var_id) bool {
     false
 }
 
-func (ea* escape_analysis) escape_to_global(int var_id) bool {
+func (escape_analysis* ea) escape_to_global(int var_id) bool {
     for _idx_77 := 0; _idx_77 < len(ea.infos); _idx_77++ {
         info := ea.infos[_idx_77]
         if info.var_id == var_id {
@@ -87,7 +87,7 @@ func (ea* escape_analysis) escape_to_global(int var_id) bool {
     false
 }
 
-func (ea* escape_analysis) stays_local(int var_id) bool {
+func (escape_analysis* ea) stays_local(int var_id) bool {
     for _idx_88 := 0; _idx_88 < len(ea.infos); _idx_88++ {
         info := ea.infos[_idx_88]
         if info.var_id == var_id {
@@ -99,7 +99,7 @@ func (ea* escape_analysis) stays_local(int var_id) bool {
     false
 }
 
-func (ea* escape_analysis) analyze_flow(int from_var, int to_var) {
+func (escape_analysis* ea) analyze_flow(int from_var, int to_var) {
     for i := 0; i < ea; i++.infos.len() {
         if ea.infos[i].var_id == from_var {
             to_level := escape_level::escape_none
@@ -121,7 +121,7 @@ func (ea* escape_analysis) analyze_flow(int from_var, int to_var) {
     }
 }
 
-func (ea* escape_analysis) analyze_call_argument(int caller, int callee, int arg_var, int param_var) {
+func (escape_analysis* ea) analyze_call_argument(int caller, int callee, int arg_var, int param_var) {
     for i := 0; i < ea; i++.infos.len() {
         if ea.infos[i].var_id == param_var {
             ea.infos[i].passed_to_func = true
@@ -132,7 +132,7 @@ func (ea* escape_analysis) analyze_call_argument(int caller, int callee, int arg
     ea.analyze_flow(arg_var, param_var)
 }
 
-func (ea* escape_analysis) analyze_return(int return_var, int caller_var) {
+func (escape_analysis* ea) analyze_return(int return_var, int caller_var) {
     for i := 0; i < ea; i++.infos.len() {
         if ea.infos[i].var_id == return_var {
             ea.infos[i].returned_to_caller = true
@@ -143,7 +143,7 @@ func (ea* escape_analysis) analyze_return(int return_var, int caller_var) {
     ea.analyze_flow(return_var, caller_var)
 }
 
-func (ea* escape_analysis) build_alias_sets(int[] vars) {
+func (escape_analysis* ea) build_alias_sets(int[] vars) {
     n := vars.len()
     ea.may_alias = bool[][n]
 
@@ -182,7 +182,7 @@ func (ea* escape_analysis) build_alias_sets(int[] vars) {
     }
 }
 
-func (ea* escape_analysis) may_alias_with(int var1, int var2, int[] all_vars) bool {
+func (escape_analysis* ea) may_alias_with(int var1, int var2, int[] all_vars) bool {
     idx1 := -1
     idx2 := -1
 

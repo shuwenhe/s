@@ -24,7 +24,7 @@ func new_ir_builder(string func_name) ir_builder {
     }
 }
 
-func (b* ir_builder) create_block(int id, string label) {
+func (ir_builder* b) create_block(int id, string label) {
     block := mir.mir_basic_block {
         id: id,
         label: label,
@@ -35,7 +35,7 @@ func (b* ir_builder) create_block(int id, string label) {
     b.current_block_id = id
 }
 
-func (b* ir_builder) add_local(int id, string name, string type_name) {
+func (ir_builder* b) add_local(int id, string name, string type_name) {
     local := mir.mir_local_slot {
         id: id,
         name: name,
@@ -44,7 +44,7 @@ func (b* ir_builder) add_local(int id, string name, string type_name) {
     b.current_function.locals.push(local)
 }
 
-func (b* ir_builder) emit_assign(int target, string op, int[] args) {
+func (ir_builder* b) emit_assign(int target, string op, int[] args) {
     if b.current_block_id < b.current_function.blocks.len() {
         stmt := mir.mir_statement::assign(mir.mir_assign_stmt {
             target: target,
@@ -56,7 +56,7 @@ func (b* ir_builder) emit_assign(int target, string op, int[] args) {
     }
 }
 
-func (b* ir_builder) emit_eval(string op, int[] args) {
+func (ir_builder* b) emit_eval(string op, int[] args) {
     if b.current_block_id < b.current_function.blocks.len() {
         stmt := mir.mir_statement::eval(mir.mir_eval_stmt {
             op: op,
@@ -67,7 +67,7 @@ func (b* ir_builder) emit_eval(string op, int[] args) {
     }
 }
 
-func (b* ir_builder) set_terminator(string kind, int[] targets) {
+func (ir_builder* b) set_terminator(string kind, int[] targets) {
     if b.current_block_id < b.current_function.blocks.len() {
         b.current_function.blocks[b.current_block_id].terminator = mir.mir_terminator {
             kind: kind,
@@ -76,20 +76,20 @@ func (b* ir_builder) set_terminator(string kind, int[] targets) {
     }
 }
 
-func (b* ir_builder) set_entry_exit(int entry, int exit) {
+func (ir_builder* b) set_entry_exit(int entry, int exit) {
     b.current_function.entry = entry
     b.current_function.exit = exit
     b.current_function.cfg.entry_block = entry
     b.current_function.cfg.exit_block = exit
 }
 
-func (b* ir_builder) finalize() mir.ir_function {
+func (ir_builder* b) finalize() mir.ir_function {
     b.current_function.debug_info = debug_loc.new_debug_info(b.instruction_counter)
     b.current_function.run_all_analyses()
     *b.current_function
 }
 
-func (b* ir_builder) add_debug_location(int instr_id, string file, int line, int col) {
+func (ir_builder* b) add_debug_location(int instr_id, string file, int line, int col) {
     loc := debug_loc.source_location {
         file: file,
         line: line,
@@ -100,11 +100,11 @@ func (b* ir_builder) add_debug_location(int instr_id, string file, int line, int
     b.current_function.add_debug_location(instr_id, loc)
 }
 
-func (b* ir_builder) get_function() mir.ir_function {
+func (ir_builder* b) get_function() mir.ir_function {
     *b.current_function
 }
 
-func (b* ir_builder) analyze_optimizations() {
+func (ir_builder* b) analyze_optimizations() {
     f := b.current_function
 
     f.analyze_escapes()
@@ -146,7 +146,7 @@ func (b* ir_builder) analyze_optimizations() {
     }
 }
 
-func (b* ir_builder) print_cfg_stats() {
+func (ir_builder* b) print_cfg_stats() {
     f := b.current_function
     if !f.cfg_computed {
         f.build_cfg()
@@ -161,7 +161,7 @@ func (b* ir_builder) print_cfg_stats() {
     _ = n_loops
 }
 
-func (b* ir_builder) print_ssa_stats() {
+func (ir_builder* b) print_ssa_stats() {
     f := b.current_function
     if !f.ssa_computed {
         f.build_ssa()
@@ -174,7 +174,7 @@ func (b* ir_builder) print_ssa_stats() {
     _ = n_phis
 }
 
-func (b* ir_builder) print_analysis_stats() {
+func (ir_builder* b) print_analysis_stats() {
     f := b.current_function
 
     escape_locals := 0

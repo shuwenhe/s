@@ -34,13 +34,13 @@ func make_reg_alloc_state() reg_alloc_state {
     state
 }
 
-func (s* reg_alloc_state) add_live_range(int value_id, int start, int end) {
+func (reg_alloc_state* s) add_live_range(int value_id, int start, int end) {
     lr := &live_range { value_id, start, end, -1, false, 0 }
     s.ranges = lr
     s.range_count = s.range_count + 1
 }
 
-func (s* reg_alloc_state) allocate_register(int value_id, int position) int {
+func (reg_alloc_state* s) allocate_register(int value_id, int position) int {
     if len(s.free_regs) > 0 {
         reg := s.free_regs[0]
         new_free := int[]()
@@ -60,15 +60,15 @@ func (s* reg_alloc_state) allocate_register(int value_id, int position) int {
     }
 }
 
-func (s* reg_alloc_state) free_register(int reg) {
+func (reg_alloc_state* s) free_register(int reg) {
     s.free_regs = append(s.free_regs, reg)
 }
 
-func (s* reg_alloc_state) get_stack_size() int {
+func (reg_alloc_state* s) get_stack_size() int {
     -s.next_stack_offset
 }
 
-func (s* reg_alloc_state) get_allocation(int value_id) (int, int) {
+func (reg_alloc_state* s) get_allocation(int value_id) (int, int) {
     i := 0
     for i < s.range_count {
         if s.ranges[i].value_id == value_id {
@@ -89,7 +89,7 @@ func overlap_intervals(interval a, interval b) bool {
     }
 }
 
-func (s* reg_alloc_state) try_allocate_free_reg(int value_id, interval iv) int {
+func (reg_alloc_state* s) try_allocate_free_reg(int value_id, interval iv) int {
     reg_candidate := -1
     i := 0
     for i < len(s.free_regs) {
