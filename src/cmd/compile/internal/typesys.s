@@ -502,8 +502,6 @@ func is_copy_type(string ty) bool {
     if starts_with(clean, "&") {
         return true
     }
-    // Fixed-size arrays inherit Copy only when their element type is Copy.
-    // Slices, vectors, maps, strings, boxes and function values remain owned.
     open := find_char(clean, "[")
     close := find_char(clean, "]")
     if open > 0 && close == len(clean) - 1 && is_array_length(slice(clean, open + 1, close)) {
@@ -531,7 +529,6 @@ func is_explicit_owned_type(string ty) bool {
     base_type_name(ty) == "box"
 }
 
-// Canonical ownership classification used by semantic and MIR passes.
 func ownership_mode(string ty) string {
     clean := parse_type(ty)
     if starts_with(clean, "&") {

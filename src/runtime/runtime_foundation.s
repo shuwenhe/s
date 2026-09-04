@@ -11,7 +11,6 @@ const runtime_feature_syscall = 64
 const runtime_feature_profile = 128
 const runtime_feature_race = 256
 
-// Owned objects are tracked separately so an explicit GC cannot reclaim them.
 var runtime_owned_object_ids = int[]()
 
 func runtime_features() int {

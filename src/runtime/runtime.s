@@ -9,7 +9,6 @@ func runtime_init() () {
     heap_dead_objs   = 0
     heap_goal_bytes  = 4194304
     runtime_owned_object_ids = int[]()
-    // S uses compiler-inserted drop by default; GC is opt-in compatibility code.
     gc_enabled = false
     gc_phase   = gc_phase_off
 }
