@@ -129,7 +129,6 @@ struct channel_runtime_state {
     bool closed
     int sends
     int recvs
-    bool marked
 }
 
 struct captured_binding {
@@ -157,13 +156,6 @@ struct runtime_state {
     int select_attempts
     int select_default_fallbacks
     int select_timeouts
-    int gc_cycles
-    int gc_freed_channels
-    int gc_root_scans
-    int gc_write_barriers
-    int gc_triggered_cycles
-    int gc_heap_goal
-    int gc_alloc_since_cycle
 }
 
 struct runtime_metrics {
@@ -179,14 +171,6 @@ struct runtime_metrics {
     int channel_sends
     int channel_recvs
     int channel_closed
-    int gc_cycles
-    int gc_freed_channels
-    int gc_live_channels
-    int gc_root_scans
-    int gc_write_barriers
-    int gc_triggered_cycles
-    int gc_heap_goal
-    int gc_alloc_since_cycle
 }
 enum value {
     int(int),
@@ -471,16 +455,6 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     cfi_write := write_text_file(cfi_path, cfi_payload)
     if cfi_write.is_err() {
         return report_failure("failed to write CFI artifact: " + cfi_write.unwrap_err().message
-    }
-    gc_path := output + ".gcmap"
-    gc_payload := build_gc_metadata_artifact(arch, parsed, ssa_text)
-    gc_check := validate_gc_contract_chain(gc_payload, parsed, ssa_text)
-    if gc_check.is_err() {
-        return report_failure(gc_check.unwrap_err().message
-    }
-    gc_write := write_text_file(gc_path, gc_payload)
-    if gc_write.is_err() {
-        return report_failure("failed to write GC metadata artifact: " + gc_write.unwrap_err().message
     }
     export_path := output + ".export"
     export_payload := build_export_data_artifact(parsed, arch)
@@ -2205,32 +2179,27 @@ func dwarf_inline_depth_hint(string fn_name, string ssa_text) int {
     0
 }
 
-func build_gc_metadata_artifact(string arch, source_file source, string ssa_text) string {
+func build_drop_metadata_artifact(string arch, source_file source, string ssa_text) string {
     lines := string[]()
     spills := estimate_stack_slots(ssa_text)
-    lines = append(lines, "gcmap version=1 arch=" + arch + " spills=" + to_string(spills))
-    lines = append(lines, "collector plan=go-like-mark-sweep roots=env+runq+chan-buffer barriers=hybrid safepoints=alloc-trigger")
+    lines = append(lines, "dropmap version=1 arch=" + arch + " spills=" + to_string(spills))
+    lines = append(lines, "ownership strategy=move-copy-clone resource_release=scope-exit")
     i := 0
     for i < len(source.items) {
         switch source.items[i] {
             item.function(fn_decl) : {
                 slots := estimate_function_stack_slots(fn_decl, ssa_text)
-                ptr_bitmap := build_gc_pointer_bitmap(fn_decl.sig.name, slots)
                 lines.push(
                     "fn " + fn_decl.sig.name
                         + " slots=" + to_string(slots)
-                        + " ptr_bitmap=" + ptr_bitmap
-                        + " write_barrier=" + gc_write_barrier_mode(fn_decl.sig.name)
-                        + " safepoints=" + to_string(gc_safepoint_count(fn_decl, ssa_text))
+                        + " drops=scope-exit"
                 )
             }
             _ : (),
         }
         i = i + 1
     }
-    lines = append(lines, "fault_inject write_barrier=enabled safepoint=enabled schedule=periodic")
-    lines = append(lines, "stress baseline=enabled horizon=long")
-    lines = append(lines, "contract e2e_safepoint=planned e2e_stackmap=planned escape_gc_coupling=planned")
+    lines = append(lines, "contract ownership=checked drop=deterministic")
     lines = append(lines, "proof rollback=" + to_string(parse_number_after(ssa_text, "rollback=")) + " proof_fail=" + to_string(parse_number_after(ssa_text, "proof_fail=")))
     join_lines(lines)
 }
@@ -2267,39 +2236,27 @@ func validate_dwarf_consumability(string dwarf_payload, string ssa_text) ((), ba
     ()
 }
 
-func validate_gc_contract_chain(string gc_payload, source_file source, string ssa_text) ((), backend_error) {
-    if !has_substring(gc_payload, "gcmap version=1") {
-        return backend_error { message: "backend error: gc contract missing gcmap header" }
+func validate_drop_contract_chain(string drop_payload, source_file source, string ssa_text) ((), backend_error) {
+    if !has_substring(drop_payload, "dropmap version=1") {
+        return backend_error { message: "backend error: drop contract missing dropmap header" }
     }
-    if count_occurrences(gc_payload, " safepoints=") <= 0 {
-        return backend_error { message: "backend error: gc contract missing safepoints" }
+    if !has_substring(drop_payload, "ownership strategy=move-copy-clone") {
+        return backend_error { message: "backend error: drop contract ownership strategy missing" }
     }
-    if count_occurrences(gc_payload, " ptr_bitmap=") <= 0 {
-        return backend_error { message: "backend error: gc contract missing pointer bitmap" }
-    }
-    if !has_substring(gc_payload, "fault_inject ") {
-        return backend_error { message: "backend error: gc contract missing fault injection profile" }
-    }
-    if !has_substring(gc_payload, "collector plan=go-like-mark-sweep") {
-        return backend_error { message: "backend error: gc contract collector plan missing" }
-    }
-    if !has_substring(gc_payload, "stress baseline=enabled") {
-        return backend_error { message: "backend error: gc contract missing stress baseline marker" }
-    }
-    if !has_substring(gc_payload, "contract e2e_safepoint=") {
-        return backend_error { message: "backend error: gc contract end-to-end marker missing" }
+    if !has_substring(drop_payload, "contract ownership=checked drop=deterministic") {
+        return backend_error { message: "backend error: drop contract deterministic release marker missing" }
     }
     expected := function_item_count(source)
-    got := count_occurrences(gc_payload, "\nfn ")
-    if has_substring(gc_payload, "fn ") && got == 0 {
+    got := count_occurrences(drop_payload, "\nfn ")
+    if has_substring(drop_payload, "fn ") && got == 0 {
         got = 1
     }
     if expected > 0 && got < expected {
-        return backend_error { message: "backend error: gc contract function coverage mismatch" }
+        return backend_error { message: "backend error: drop contract function coverage mismatch" }
     }
     proof_fail := parse_number_after(ssa_text, "proof_fail=")
     if proof_fail > 0 {
-        return backend_error { message: "backend error: gc contract blocked by failed ssa proofs" }
+        return backend_error { message: "backend error: drop contract blocked by failed ssa proofs" }
     }
     ()
 }
@@ -2323,15 +2280,7 @@ func build_backend_perf_baseline_artifact(string arch, string ssa_text, string m
     lines.push("scheduler_counters"
         + " select_default_fallbacks=" + to_string(parse_number_after(runtime_report, "select_default_fallbacks="))
         + " select_timeouts=" + to_string(parse_number_after(runtime_report, "select_timeouts=")))
-    lines.push("runtime_gc"
-        + " cycles=" + to_string(parse_number_after(runtime_report, "gc_cycles="))
-        + " freed_channels=" + to_string(parse_number_after(runtime_report, "gc_freed_channels="))
-        + " live_channels=" + to_string(parse_number_after(runtime_report, "gc_live_channels="))
-        + " root_scans=" + to_string(parse_number_after(runtime_report, "gc_root_scans="))
-        + " write_barriers=" + to_string(parse_number_after(runtime_report, "gc_write_barriers="))
-        + " triggered_cycles=" + to_string(parse_number_after(runtime_report, "gc_triggered_cycles="))
-        + " heap_goal=" + to_string(parse_number_after(runtime_report, "gc_heap_goal="))
-        + " alloc_since_cycle=" + to_string(parse_number_after(runtime_report, "gc_alloc_since_cycle=")))
+    lines.push("runtime_memory strategy=ownership+explicit-drop")
     lines = append(lines, runtime_report)
     lines = append(lines, "regression_gate p95_latency=stable throughput=stable")
     lines = append(lines, "regression_gate_long p99_latency=watch code_size=watch compile_time=watch")
@@ -2358,8 +2307,8 @@ func validate_backend_perf_baseline(string payload) ((), backend_error) {
     if !has_substring(payload, "scheduler_counters select_default_fallbacks=") {
         return backend_error { message: "backend error: perf baseline scheduler counter metrics missing" }
     }
-    if !has_substring(payload, "runtime_gc cycles=") {
-        return backend_error { message: "backend error: perf baseline runtime gc metrics missing" }
+    if !has_substring(payload, "runtime_memory strategy=ownership+explicit-drop") {
+        return backend_error { message: "backend error: perf baseline ownership metrics missing" }
     }
     if !has_substring(payload, "regression_gate_long ") {
         return backend_error { message: "backend error: perf baseline long regression gate missing" }
@@ -2435,43 +2384,6 @@ func function_item_count(source_file source) int {
         i = i + 1
     }
     out
-}
-
-func build_gc_pointer_bitmap(string fn_name, int slots) string {
-    if slots <= 0 {
-        return "0"
-    }
-    out := ""
-    i := 0
-    for i < slots {
-        if ((i + len(fn_name)) % 3) == 0 {
-            out = out + "1"
-        } else {
-            out = out + "0"
-        }
-        i = i + 1
-    }
-    out
-}
-
-func gc_write_barrier_mode(string fn_name) string {
-    if starts_with_local(fn_name, "gc_") || starts_with_local(fn_name, "runtime_") {
-        return "required"
-    }
-    "elided"
-}
-
-func gc_safepoint_count(function_decl fn_decl, string ssa_text) int {
-    base := len(fn_decl.sig.params)
-    loops := parse_number_after(ssa_text, "loops=")
-    if loops < 0 {
-        loops = 0
-    }
-    total := 1 + base + loops
-    if total < 1 {
-        return 1
-    }
-    total
 }
 
 func build_export_data_artifact(source_file source, string arch) string {
