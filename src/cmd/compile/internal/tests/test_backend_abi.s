@@ -1,7 +1,8 @@
 package compile.internal.tests.test_backend_abi
 use compile.internal.backend_elf64.build_abi_emit_plan
 use compile.internal.backend_elf64.build_dwarf_like_artifact
-use compile.internal.backend_elf64.build_gc_metadata_artifact
+use compile.internal.backend_elf64.build_drop_metadata_artifact
+use compile.internal.backend_elf64.validate_drop_contract_chain
 use compile.internal.backend_elf64.build_abi_machine_matrix_artifact
 use compile.internal.backend_elf64.build_toolchain_compat_artifact
 use compile.internal.backend_elf64.build_go_asm_bridge_artifact
@@ -108,29 +109,23 @@ func run_backend_abi_suite() int {
     if !contains(dwarf, "metric location_continuity=") {
         return 1
     }
-    gcmap := build_gc_metadata_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 loops=1 spills=2 rollback=0 proof_fail=0")
-    if !contains(gcmap, "gcmap version=1") {
+    dropmap := build_drop_metadata_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 loops=1 spills=2 rollback=0 proof_fail=0")
+    if !contains(dropmap, "dropmap version=1") {
         return 1
     }
-    if !contains(gcmap, "safepoints=") {
+    if !contains(dropmap, "ownership strategy=move-copy-clone") {
         return 1
     }
-    if !contains(gcmap, "ptr_bitmap=") {
+    if !contains(dropmap, "resource_release=scope-exit") {
         return 1
     }
-    if !contains(gcmap, "proof rollback=0 proof_fail=0") {
+    if !contains(dropmap, "proof rollback=0 proof_fail=0") {
         return 1
     }
-    if !contains(gcmap, "fault_inject ") {
+    if !contains(dropmap, "contract ownership=checked drop=deterministic") {
         return 1
     }
-    if !contains(gcmap, "collector plan=go-like-mark-sweep") {
-        return 1
-    }
-    if !contains(gcmap, "stress baseline=enabled") {
-        return 1
-    }
-    if !contains(gcmap, "contract e2e_safepoint=") {
+    if validate_drop_contract_chain(dropmap, parsed.unwrap(), "ssa rollback=0 proof_fail=0").is_err() {
         return 1
     }
     matrix := build_abi_machine_matrix_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 spills=2")
@@ -503,96 +498,6 @@ func run_backend_abi_suite() int {
         return 1
     }
     if sroutine_chan_metrics.unwrap().channel_recvs != 3 {
-        return 1
-    }
-    gc_collect_src := "package demo.gc\nfunc allocate_temp() int {\n  temp := chan_make(1)\n  0\n}\nfunc main() {\n  survivor := chan_make(1)\n  allocate_temp()\n  gc_collect()\n  println(survivor)\n  0\n}"
-    gc_collect_parsed := parse_source(gc_collect_src)
-    if gc_collect_parsed.is_err() {
-        return 1
-    }
-    gc_collect_graph := lower_main_to_mir(gc_collect_parsed.unwrap())
-    if gc_collect_graph.is_err() {
-        return 1
-    }
-    gc_collect_writes := compile_writes(gc_collect_parsed.unwrap(), gc_collect_graph.unwrap())
-    if gc_collect_writes.is_err() {
-        return 1
-    }
-    if gc_collect_writes.unwrap().len() != 1 {
-        return 1
-    }
-    if gc_collect_writes.unwrap()[0].text != "<chan:1>\n" {
-        return 1
-    }
-    gc_collect_metrics := compile_runtime_metrics(gc_collect_parsed.unwrap(), gc_collect_graph.unwrap())
-    if gc_collect_metrics.is_err() {
-        return 1
-    }
-    if gc_collect_metrics.unwrap().gc_cycles < 1 {
-        return 1
-    }
-    if gc_collect_metrics.unwrap().gc_freed_channels < 1 {
-        return 1
-    }
-    if gc_collect_metrics.unwrap().gc_live_channels != 1 {
-        return 1
-    }
-    gc_barrier_src := "package demo.gcbarrier\nfunc main() {\n  outer := chan_make(1)\n  inner := chan_make(1)\n  select_send(outer, inner)\n  gc_collect()\n  println(chan_recv(outer))\n  0\n}"
-    gc_barrier_parsed := parse_source(gc_barrier_src)
-    if gc_barrier_parsed.is_err() {
-        return 1
-    }
-    gc_barrier_graph := lower_main_to_mir(gc_barrier_parsed.unwrap())
-    if gc_barrier_graph.is_err() {
-        return 1
-    }
-    gc_barrier_writes := compile_writes(gc_barrier_parsed.unwrap(), gc_barrier_graph.unwrap())
-    if gc_barrier_writes.is_err() {
-        return 1
-    }
-    if gc_barrier_writes.unwrap().len() != 1 {
-        return 1
-    }
-    if gc_barrier_writes.unwrap()[0].text != "<chan:2>\n" {
-        return 1
-    }
-    gc_barrier_metrics := compile_runtime_metrics(gc_barrier_parsed.unwrap(), gc_barrier_graph.unwrap())
-    if gc_barrier_metrics.is_err() {
-        return 1
-    }
-    if gc_barrier_metrics.unwrap().gc_write_barriers != 1 {
-        return 1
-    }
-    if gc_barrier_metrics.unwrap().gc_live_channels != 2 {
-        return 1
-    }
-    gc_auto_src := "package demo.gcauto\nfunc alloc_many() int {\n  a := chan_make(1)\n  b := chan_make(1)\n  c := chan_make(1)\n  0\n}\nfunc main() {\n  survivor := chan_make(1)\n  alloc_many()\n  println(survivor)\n  0\n}"
-    gc_auto_parsed := parse_source(gc_auto_src)
-    if gc_auto_parsed.is_err() {
-        return 1
-    }
-    gc_auto_graph := lower_main_to_mir(gc_auto_parsed.unwrap())
-    if gc_auto_graph.is_err() {
-        return 1
-    }
-    gc_auto_writes := compile_writes(gc_auto_parsed.unwrap(), gc_auto_graph.unwrap())
-    if gc_auto_writes.is_err() {
-        return 1
-    }
-    if gc_auto_writes.unwrap().len() != 1 {
-        return 1
-    }
-    if gc_auto_writes.unwrap()[0].text != "<chan:1>\n" {
-        return 1
-    }
-    gc_auto_metrics := compile_runtime_metrics(gc_auto_parsed.unwrap(), gc_auto_graph.unwrap())
-    if gc_auto_metrics.is_err() {
-        return 1
-    }
-    if gc_auto_metrics.unwrap().gc_triggered_cycles < 1 {
-        return 1
-    }
-    if gc_auto_metrics.unwrap().gc_live_channels != 1 {
         return 1
     }
     weighted_timeout_src := "package demo.weighted\nfunc producer1() int {\n  chan_send(ch1, 7)\n  0\n}\nfunc producer2() int {\n  chan_send(ch2, 9)\n  0\n}\nfunc main() {\n  ch1 := chan_make(2)\n  ch2 := chan_make(2)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv_weighted(ch1, 2, ch2, 1))\n  println(select_recv_timeout(ch1, ch2, 3))\n  println(select_recv_timeout(ch1, ch2, 3))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
