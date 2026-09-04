@@ -3447,9 +3447,6 @@ func compile_native_assembly(string source, string output_path) int {
     return 0
 }
 
-// Darwin/arm64 bootstrap assembly backend.  This is deliberately implemented
-// in S (rather than delegating instruction selection to the C seed): it is the
-// first direct Mach-O code-generation slice used to grow the native backend.
 func arm64_asm_argument_pop(int index) string {
     if index == 0 { return "    ldr x0, [sp], #16\n" }
     if index == 1 { return "    ldr x1, [sp], #16\n" }
