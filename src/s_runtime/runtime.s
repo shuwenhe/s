@@ -12,18 +12,11 @@ struct allocator {
     heap_size int
     total_allocated int
     block_list int
-}
-
-struct gc_state {
-    enabled int
-    threshold int
-    collected int
-    root_count int
+    memory_block[] blocks
 }
 
 struct context {
     allocator allocator
-    gc gc_state
     panic_msg string
     exit_code int
 }
@@ -35,11 +28,7 @@ func rt_init(int heap_size) {
     rt_context.allocator.heap_size = heap_size
     rt_context.allocator.total_allocated = 0
     rt_context.allocator.block_list = -1
-    
-    rt_context.gc.enabled = 1
-    rt_context.gc.threshold = heap_size / 2
-    rt_context.gc.collected = 0
-    rt_context.gc.root_count = 0
+    rt_context.allocator.blocks = memory_block[]()
     
     rt_context.exit_code = 0
 }
@@ -49,22 +38,33 @@ func rt_malloc(int size) int {
         return -1
     }
     
-    if rt_context.allocator.total_allocated + size > rt_context.allocator.heap_size {
-        if rt_context.gc.enabled != 0 {
-            rt_gc_collect()
+    i := 0
+    for i < len(rt_context.allocator.blocks) {
+        block := rt_context.allocator.blocks[i]
+        if block.used == 0 && block.size >= size {
+            rt_context.allocator.blocks[i].used = size
+            return block.addr
         }
+        i = i + 1
     }
-    
+    if rt_context.allocator.total_allocated + size > rt_context.allocator.heap_size {
+        return -1
+    }
     addr := rt_context.allocator.heap_start + rt_context.allocator.total_allocated
     rt_context.allocator.total_allocated = rt_context.allocator.total_allocated + size
+    rt_context.allocator.blocks.push(memory_block { addr: addr, size: size, used: size, next: -1 })
     addr
 }
 
 func rt_free(int addr) {
-}
-
-func rt_gc_collect() {
-    rt_context.gc.collected = rt_context.gc.collected + 1
+    i := 0
+    for i < len(rt_context.allocator.blocks) {
+        if rt_context.allocator.blocks[i].addr == addr {
+            rt_context.allocator.blocks[i].used = 0
+            return
+        }
+        i = i + 1
+    }
 }
 
 func rt_panic(string msg) {
