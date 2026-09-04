@@ -29,7 +29,8 @@ func token_kind_name(token_kind kind) string {
 
 func dump_tokens(token[] tokens) string {
     out := ""
-    for token in tokens {
+    for _for_idx_31 := 0; _for_idx_31 < len(tokens); _for_idx_31++ {
+        token := tokens[_for_idx_31]
         if out != "" {
             out = out + "\n"
         }

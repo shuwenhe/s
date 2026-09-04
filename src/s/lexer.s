@@ -163,7 +163,8 @@ func (lexer* self) read_symbol() (string, lex_error) {
         ">>",
         "::",
     }
-    for symbol in multi {
+    for _for_idx_165 := 0; _for_idx_165 < len(multi); _for_idx_165++ {
+        symbol := multi[_for_idx_165]
         if self.match_text(symbol) {
             string out = ""
             int count = len(symbol)

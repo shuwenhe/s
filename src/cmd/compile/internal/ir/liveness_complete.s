@@ -52,7 +52,8 @@ func new_liveness_analyzer(num_values i32, num_blocks i32) liveness_analyzer* {
 func (la liveness_analyzer*) mark_use(block_id i32, value_id i32) {
     if block_id >= 0 && block_id < la.num_blocks && value_id >= 0 && value_id < la.num_values {
         found := false
-        for v in la.gen_set[block_id] {
+        for _for_idx_54 := 0; _for_idx_54 < len(la.gen_set[block_id]); _for_idx_54++ {
+            v := la.gen_set[block_id][_for_idx_54]
             if v == value_id {
                 found = true
                 break
@@ -67,7 +68,8 @@ func (la liveness_analyzer*) mark_use(block_id i32, value_id i32) {
 func (la liveness_analyzer*) mark_def(block_id i32, value_id i32) {
     if block_id >= 0 && block_id < la.num_blocks && value_id >= 0 && value_id < la.num_values {
         found := false
-        for v in la.kill_set[block_id] {
+        for _for_idx_69 := 0; _for_idx_69 < len(la.kill_set[block_id]); _for_idx_69++ {
+            v := la.kill_set[block_id][_for_idx_69]
             if v == value_id {
                 found = true
                 break
@@ -88,7 +90,8 @@ func (la liveness_analyzer*) compute_liveness(succs i32[][]) {
             succ_list := succs[b]
             
             new_live_out := make(bool[], la.num_values)
-            for s in succ_list {
+            for _for_idx_90 := 0; _for_idx_90 < len(succ_list); _for_idx_90++ {
+                s := succ_list[_for_idx_90]
                 if s >= 0 && s < la.num_blocks {
                     for v := i32(0); v < la.num_values; v += 1 {
                         if la.infos[v].live_in[s][b] {
@@ -119,7 +122,8 @@ func (la liveness_analyzer*) compute_liveness(succs i32[][]) {
         for b := i32(0); b < la.num_blocks; b += 1 {
             for v := i32(0); v < la.num_values; v += 1 {
                 is_used := false
-                for u in la.gen_set[b] {
+                for _for_idx_121 := 0; _for_idx_121 < len(la.gen_set[b]); _for_idx_121++ {
+                    u := la.gen_set[b][_for_idx_121]
                     if u == v {
                         is_used = true
                         break
@@ -127,7 +131,8 @@ func (la liveness_analyzer*) compute_liveness(succs i32[][]) {
                 }
                 
                 is_defined := false
-                for d in la.kill_set[b] {
+                for _for_idx_129 := 0; _for_idx_129 < len(la.kill_set[b]); _for_idx_129++ {
+                    d := la.kill_set[b][_for_idx_129]
                     if d == v {
                         is_defined = true
                         break
@@ -151,7 +156,8 @@ func (la liveness_analyzer*) compute_liveness(succs i32[][]) {
 func (la liveness_analyzer*) is_live_at_point(value_id i32, block_id i32, instr_index i32) bool {
     if value_id >= 0 && value_id < la.num_values && block_id >= 0 && block_id < la.num_blocks {
         is_used := false
-        for u in la.gen_set[block_id] {
+        for _for_idx_153 := 0; _for_idx_153 < len(la.gen_set[block_id]); _for_idx_153++ {
+            u := la.gen_set[block_id][_for_idx_153]
             if u == value_id {
                 is_used = true
                 break
@@ -216,11 +222,13 @@ func (la liveness_analyzer*) to_string() string {
     for b := i32(0); b < la.num_blocks; b += 1 {
         s += "Block " + string(b) + ":\n"
         s += "  Gen set: "
-        for v in la.gen_set[b] {
+        for _for_idx_218 := 0; _for_idx_218 < len(la.gen_set[b]); _for_idx_218++ {
+            v := la.gen_set[b][_for_idx_218]
             s += string(v) + " "
         }
         s += "\n  Kill set: "
-        for v in la.kill_set[b] {
+        for _for_idx_222 := 0; _for_idx_222 < len(la.kill_set[b]); _for_idx_222++ {
+            v := la.kill_set[b][_for_idx_222]
             s += string(v) + " "
         }
         s += "\n"

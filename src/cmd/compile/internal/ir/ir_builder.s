@@ -7,6 +7,7 @@ use compile.internal.ir.escape
 use compile.internal.ir.liveness
 use compile.internal.ir.writebarrier
 use compile.internal.ir.debug_loc
+use compile.internal.typesys.is_heap_reference_type
 
 struct ir_builder {
     current_function* mir.ir_function
@@ -108,9 +109,13 @@ func (b* ir_builder) analyze_optimizations() {
 
     f.analyze_escapes()
 
-    for i in 0..f.locals.len() {
+    for i := 0; i < f; i++.locals.len() {
         local := f.locals[i]
-        escape_level := f.escape_analysis.analyze_variable(local.id, true, false, false, false)
+        is_pointer := false
+        if local.type_name != option::none {
+            is_pointer = is_heap_reference_type(local.type_name.unwrap())
+        }
+        escape_level := f.escape_analysis.analyze_variable(local.id, is_pointer, false, false, false)
 
         switch escape_level {
             escape.escape_level::escape_none: {
@@ -127,7 +132,7 @@ func (b* ir_builder) analyze_optimizations() {
     f.analyze_liveness()
 
     (edges_from, edges_to) := f.liveness_analysis.get_interference_graph()
-    for i in 0..edges_from.len() {
+    for i := 0; i < edges_from; i++.len() {
         _ = edges_from[i]
         _ = edges_to[i]
     }

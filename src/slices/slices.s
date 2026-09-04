@@ -23,7 +23,7 @@ func copy[t](t[] dst, t[] src) int {
         copied = len(src)
     }
     if copied > 0 {
-        for i in 0..copied {
+        for i := 0; i < copied; i++ {
             dst[i] = src[i]
         }
     }
@@ -31,7 +31,7 @@ func copy[t](t[] dst, t[] src) int {
 }
 
 func contains[t](t[] s, t value) bool {
-    for i in 0..len(s) {
+    for i := 0; i < len(s); i++ {
         if s[i] == value {
             return true
         }
@@ -40,7 +40,7 @@ func contains[t](t[] s, t value) bool {
 }
 
 func find[t](t[] s, t value) int {
-    for i in 0..len(s) {
+    for i := 0; i < len(s); i++ {
         if s[i] == value {
             return i
         }
@@ -115,7 +115,7 @@ func remove_range[t](t[] s, int start, int end) (t[], string) {
 }
 
 func fill[t](t[] s, t value) t[] {
-    for i in 0..len(s) {
+    for i := 0; i < len(s); i++ {
         s[i] = value
     }
     s

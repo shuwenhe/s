@@ -478,7 +478,8 @@ func (opt: &mut ssa_optimizer) run_optimization(ssa: &mut ssa_function) () {
     
     start_time := now_ns()
     
-    for rule in opt.rules {
+    for _for_idx_480 := 0; _for_idx_480 < len(opt.rules); _for_idx_480++ {
+        rule := opt.rules[_for_idx_480]
         opt.apply_rule(ssa, rule)
     }
     
@@ -496,8 +497,10 @@ func (opt: &mut ssa_optimizer) run_optimization(ssa: &mut ssa_function) () {
 }
 
 func (opt: &mut ssa_optimizer) apply_rule(ssa: &mut ssa_function, rule: ssa_rule) () {
-    for block in ssa.blocks {
-        for instr in block.instrs {
+    for _for_idx_498 := 0; _for_idx_498 < len(ssa.blocks); _for_idx_498++ {
+        block := ssa.blocks[_for_idx_498]
+        for _for_idx_499 := 0; _for_idx_499 < len(block.instrs); _for_idx_499++ {
+            instr := block.instrs[_for_idx_499]
             if opt.matches_pattern(instr, rule.pattern) {
                 opt.apply_replacement(instr, rule.replacement)
             }
@@ -514,7 +517,8 @@ func (opt: &mut ssa_optimizer) apply_replacement(instr: ssa_instr_ptr, replaceme
 
 func (opt: &ssa_optimizer) count_instructions(ssa: &ssa_function) int64 {
     count: int64 = 0
-    for block in ssa.blocks {
+    for _for_idx_516 := 0; _for_idx_516 < len(ssa.blocks); _for_idx_516++ {
+        block := ssa.blocks[_for_idx_516]
         count += block.instrs.len()
     }
     return count

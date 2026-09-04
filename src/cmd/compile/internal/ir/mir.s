@@ -96,12 +96,12 @@ func new_empty_function(string name) ir_function {
 
 func (ir_function* f) build_cfg() {
     n := f.blocks.len()
-    for i in 0..n {
+    for i := 0; i < n; i++ {
         block := f.cfg.add_block(f.blocks[i].id, f.blocks[i].label)
         _ = block
     }
 
-    for i in 0..n {
+    for i := 0; i < n; i++ {
         targets := f.blocks[i].terminator.targets
         edge_type := f.blocks[i].terminator.kind
 
@@ -146,12 +146,12 @@ func (ir_function* f) build_ssa() {
     f.ssa.exit_block = f.exit
 
     n := f.blocks.len()
-    for i in 0..n {
+    for i := 0; i < n; i++ {
         block := f.ssa.add_block(f.blocks[i].id, f.blocks[i].label)
         _ = block
     }
 
-    for i in 0..n {
+    for i := 0; i < n; i++ {
         for stmt in f.blocks[i].statements {
             switch stmt {
                 mir_statement::assign(a): {
@@ -181,7 +181,7 @@ func (ir_function* f) insert_phi_nodes() {
     }
 
     n := f.cfg.blocks.len()
-    for i in 0..n {
+    for i := 0; i < n; i++ {
         f.ssa.insert_phi_nodes(f.cfg.dominance_frontier[i])
     }
 }
@@ -194,7 +194,7 @@ func (ir_function* f) analyze_escapes() {
     n := f.locals.len()
     f.escape_analysis = escape.new_escape_analysis()
 
-    for i in 0..n {
+    for i := 0; i < n; i++ {
         local := f.locals[i]
         is_pointer := false
         if local.type_name != option::none {
@@ -211,13 +211,13 @@ func (ir_function* f) analyze_liveness() {
     n := f.cfg.blocks.len()
     f.liveness_analysis = liveness.new_liveness_analysis(n)
 
-    for i in 0..f.locals.len() {
+    for i := 0; i < f; i++.locals.len() {
         f.liveness_analysis.add_variable(f.locals[i].id)
     }
 
-    for block_idx in 0..f.blocks.len() {
+    for block_idx := 0; block_idx < f; block_idx++.blocks.len() {
         block := f.blocks[block_idx]
-        for i in 0..block.statements.len() {
+        for i := 0; i < block; i++.statements.len() {
             switch block.statements[i] {
                 mir_statement::assign(a): {
                     f.liveness_analysis.record_def(a.target, block_idx, i)
@@ -243,7 +243,7 @@ func (ir_function* f) analyze_write_barriers() {
     f.write_barriers = writebarrier.new_write_barrier_analysis(n)
 
     for block in f.blocks {
-        for i in 0..block.statements.len() {
+        for i := 0; i < block; i++.statements.len() {
             switch block.statements[i] {
                 mir_statement::assign(a): {
                     if a.op == "store" && a.args.len() > 0 {

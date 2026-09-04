@@ -14,7 +14,8 @@ func mkdirs_for_path( path string) {
     }
     parts := path.split("/")
     current := ""
-    for part in parts {
+    for _for_idx_16 := 0; _for_idx_16 < len(parts); _for_idx_16++ {
+        part := parts[_for_idx_16]
         if part == "" {
             continue
         }

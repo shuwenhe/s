@@ -76,7 +76,7 @@ func (di* debug_info) add_variable(int id, string name, string type_name, int sc
     }
     di.variables.push(var)
 
-    for i in 0..di.scopes.len() {
+    for i := 0; i < di; i++.scopes.len() {
         if di.scopes[i].id == scope_id {
             di.scopes[i].local_vars.push(id)
             break
@@ -94,7 +94,7 @@ func (di* debug_info) set_instr_location(int instr_id, source_location loc) {
 }
 
 func (di* debug_info) add_file(string file_name) int {
-    for i in 0..di.file_names.len() {
+    for i := 0; i < di; i++.file_names.len() {
         if di.file_names[i] == file_name {
             return i
         }
@@ -104,7 +104,7 @@ func (di* debug_info) add_file(string file_name) int {
 }
 
 func (di* debug_info) record_variable_use(int var_id, int instr_id) {
-    for i in 0..di.variables.len() {
+    for i := 0; i < di; i++.variables.len() {
         if di.variables[i].id == var_id {
             di.variables[i].use_locations.push(instr_id)
             break
@@ -113,7 +113,7 @@ func (di* debug_info) record_variable_use(int var_id, int instr_id) {
 }
 
 func (di* debug_info) add_ssa_value_to_var(int var_id, int ssa_value_id) {
-    for i in 0..di.variables.len() {
+    for i := 0; i < di; i++.variables.len() {
         if di.variables[i].id == var_id {
             di.variables[i].ssa_values.push(ssa_value_id)
             break
@@ -146,7 +146,7 @@ func (di* debug_info) get_scope_variables(int scope_id) debug_variable[] {
 
 func (di* debug_info) generate_line_number_table() int[] {
     int[di.num_instructions] table
-    for i in 0..di.num_instructions {
+    for i := 0; i < di; i++.num_instructions {
         table[i] = di.line_numbers[i]
     }
     table
@@ -154,7 +154,7 @@ func (di* debug_info) generate_line_number_table() int[] {
 
 func (di* debug_info) generate_location_info() string[] {
     info := string[]()
-    for i in 0..di.num_instructions {
+    for i := 0; i < di; i++.num_instructions {
         if i < di.instr_locations.len() {
             loc := di.instr_locations[i]
             if loc.file != "" {
@@ -174,7 +174,7 @@ func (di* debug_info) get_instr_location(int instr_id) source_location {
 }
 
 func (di* debug_info) compute_scope_lines() {
-    for i in 0..di.scopes.len() {
+    for i := 0; i < di; i++.scopes.len() {
         scope := &di.scopes[i]
         first_line := -1
         last_line := -1
