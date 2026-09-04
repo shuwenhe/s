@@ -105,8 +105,8 @@ func (ir_function* f) build_cfg() {
         targets := f.blocks[i].terminator.targets
         edge_type := f.blocks[i].terminator.kind
 
-        for _idx_107 := 0; _idx_107 < len(targets); _idx_107++ {
-            target := targets[_idx_107]
+        for target_idx := 0; target_idx < len(targets); target_idx++ {
+            target := targets[target_idx]
             f.cfg.add_edge(f.blocks[i].id, target, edge_type)
         }
     }
@@ -153,21 +153,21 @@ func (ir_function* f) build_ssa() {
     }
 
     for i := 0; i < n; i++ {
-        for _idx_154 := 0; _idx_154 < len(f.blocks[i].statements); _idx_154++ {
-            stmt := f.blocks[i].statements[_idx_154]
+        for stmt_idx := 0; stmt_idx < len(f.blocks[i].statements); stmt_idx++ {
+            stmt := f.blocks[i].statements[stmt_idx]
             switch stmt {
                 mir_statement::assign(a): {
                     args_int := int[]()
-                    for _idx_158 := 0; _idx_158 < len(a.args); _idx_158++ {
-                        arg := a.args[_idx_158]
+                    for arg_idx := 0; arg_idx < len(a.args); arg_idx++ {
+                        arg := a.args[arg_idx]
                         args_int.push(0)
                     }
                     _ = f.ssa.create_value(a.op, args_int, f.blocks[i].id, "")
                 }
                 mir_statement::eval(e): {
                     args_int := int[]()
-                    for _idx_165 := 0; _idx_165 < len(e.args); _idx_165++ {
-                        arg := e.args[_idx_165]
+                    for arg_idx := 0; arg_idx < len(e.args); arg_idx++ {
+                        arg := e.args[arg_idx]
                         args_int.push(0)
                     }
                     _ = f.ssa.create_value(e.op, args_int, f.blocks[i].id, "")
@@ -225,14 +225,14 @@ func (ir_function* f) analyze_liveness() {
             switch block.statements[i] {
                 mir_statement::assign(a): {
                     f.liveness_analysis.record_def(a.target, block_idx, i)
-                    for _idx_223 := 0; _idx_223 < len(a.args); _idx_223++ {
-                        arg := a.args[_idx_223]
+                    for arg_idx := 0; arg_idx < len(a.args); arg_idx++ {
+                        arg := a.args[arg_idx]
                         f.liveness_analysis.record_use(arg, block_idx, i)
                     }
                 }
                 mir_statement::eval(e): {
-                    for _idx_228 := 0; _idx_228 < len(e.args); _idx_228++ {
-                        arg := e.args[_idx_228]
+                    for arg_idx := 0; arg_idx < len(e.args); arg_idx++ {
+                        arg := e.args[arg_idx]
                         f.liveness_analysis.record_use(arg, block_idx, i)
                     }
                 }
@@ -248,8 +248,8 @@ func (ir_function* f) analyze_write_barriers() {
     n := f.locals.len()
     f.write_barriers = writebarrier.new_write_barrier_analysis(n)
 
-    for _idx_244 := 0; _idx_244 < len(f.blocks); _idx_244++ {
-        block := f.blocks[_idx_244]
+    for block_idx := 0; block_idx < len(f.blocks); block_idx++ {
+        block := f.blocks[block_idx]
         for i := 0; i < block; i++.statements.len() {
             switch block.statements[i] {
                 mir_statement::assign(a): {
