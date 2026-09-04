@@ -266,6 +266,20 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(return_local_reference_diags, "e3053") {
         return 1
     }
+    disjoint_field_borrows_ok := "package demo.fields\nstruct Pair {\n  int left\n  int right\n}\nfunc use_fields(&int left, &mut int right) int {\n  left\n}\nfunc main() {\n  pair := Pair { left: 1, right: 2 }\n  use_fields(&pair.left, &mut pair.right)\n}"
+    if check_text(disjoint_field_borrows_ok) != 0 {
+        return 1
+    }
+    same_field_borrow_fail := "package demo.fields\nstruct Pair {\n  int left\n  int right\n}\nfunc use_fields(&int left, &mut int right) int {\n  left\n}\nfunc main() {\n  pair := Pair { left: 1, right: 2 }\n  use_fields(&pair.left, &mut pair.left)\n}"
+    same_field_borrow_diags := check_detailed(same_field_borrow_fail)
+    if !has_code(same_field_borrow_diags, "e3057") {
+        return 1
+    }
+    whole_struct_field_borrow_fail := "package demo.fields\nstruct Pair {\n  int left\n  int right\n}\nfunc use_pair(&Pair whole, &mut int field) int {\n  field\n}\nfunc main() {\n  pair := Pair { left: 1, right: 2 }\n  use_pair(&pair, &mut pair.left)\n}"
+    whole_struct_field_borrow_diags := check_detailed(whole_struct_field_borrow_fail)
+    if !has_code(whole_struct_field_borrow_diags, "e3057") {
+        return 1
+    }
     duplicate_receiver_method := "package demo.iface\nstruct Calc {}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc main() {\n  0\n}"
     duplicate_receiver_diags := check_detailed(duplicate_receiver_method)
     if !has_code(duplicate_receiver_diags, "e3042") {
