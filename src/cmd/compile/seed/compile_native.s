@@ -40,7 +40,8 @@ func (compiler* compiler_native) generate_function(fn* runtime_function) {
     codegen_emit_function_prologue(&compiler.codegen, fn.name, fn.param_count)
     allocator := register_allocator_create()
     frame := stack_frame_create(fn.param_count)
-    for pc in fn.start_pc..fn.end_pc {
+    for _idx_42 := 0; _idx_42 < len(fn.start_pc..fn.end_pc); _idx_42++ {
+        pc := fn.start_pc..fn.end_pc[_idx_42]
         ins := &compiler.codegen.prog.data[pc]
         compiler.generate_instruction(&allocator, &frame, ins)
     }

@@ -82,9 +82,11 @@ func get_ir_stats(ir_module module) map[string]int {
     stats["total_functions"] = len(module.functions)
     total_instrs := 0
     opcode_counts := map[string]int{}
-    for _, func in module.functions {
+    for _idx_84 := 0; _idx_84 < len(module.functions); _idx_84++ {
+        func := module.functions[_idx_84]
         total_instrs += len(func.instructions)
-        for _, instr in func.instructions {
+        for _idx_86 := 0; _idx_86 < len(func.instructions); _idx_86++ {
+            instr := func.instructions[_idx_86]
             if count, exists := opcode_counts[instr.opcode]; exists {
                 opcode_counts[instr.opcode] = count + 1
             } else {
@@ -100,7 +102,8 @@ func verify_ir(ir_module module) error {
     if len(module.functions) == 0 {
         return error("no functions in IR"
     }
-    for _, func in module.functions {
+    for _idx_102 := 0; _idx_102 < len(module.functions); _idx_102++ {
+        func := module.functions[_idx_102]
         if func.name == "" {
             return error("function with empty name"
         }
