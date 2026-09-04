@@ -294,6 +294,16 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(loop_move_diags, "e3059") {
         return 1
     }
+    unsafe_raw_access_fail := "package demo.unsafe\nfunc main() {\n  unsafe.load_i32(ptr)\n}"
+    unsafe_raw_access_diags := check_detailed(unsafe_raw_access_fail)
+    if !has_code(unsafe_raw_access_diags, "e3060") {
+        return 1
+    }
+    unsafe_asm_fail := "package demo.unsafe\nfunc main() {\n  asm(\"nop\")\n}"
+    unsafe_asm_diags := check_detailed(unsafe_asm_fail)
+    if !has_code(unsafe_asm_diags, "e3061") {
+        return 1
+    }
     duplicate_receiver_method := "package demo.iface\nstruct Calc {}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc main() {\n  0\n}"
     duplicate_receiver_diags := check_detailed(duplicate_receiver_method)
     if !has_code(duplicate_receiver_diags, "e3042") {

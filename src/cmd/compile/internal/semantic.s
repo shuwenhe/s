@@ -273,6 +273,29 @@ func run_preparse_semantic_completeness_checks(string source, semantic_error[] d
     ignored2 := validate_method_interface_semantics(source, diagnostics)
     ignored3 := validate_concurrency_semantics(source, diagnostics)
     ignored4 := validate_semantic_proof_chain(source, diagnostics)
+    ignored5 := validate_unsafe_boundaries(source, diagnostics)
+}
+
+func validate_unsafe_boundaries(string source, semantic_error[] diagnostics) int {
+    errors := 0
+    unsafe_blocks := count_token_text(source, "unsafe {")
+    raw_accesses := count_token_text(source, "unsafe.load_")
+        + count_token_text(source, "unsafe.store_")
+        + count_token_text(source, "unsafe.read_")
+        + count_token_text(source, "unsafe.write_")
+        + count_token_text(source, "unsafe.ptr_")
+    asm_count := count_token_text(source, "asm(") + count_token_text(source, "asm ")
+    extern_count := count_token_text(source, "extern ")
+    if unsafe_blocks == 0 && raw_accesses > 0 {
+        errors = errors + add_error(source, diagnostics, "e3060", "raw memory access requires an unsafe block", "unsafe")
+    }
+    if unsafe_blocks == 0 && asm_count > 0 {
+        errors = errors + add_error(source, diagnostics, "e3061", "inline assembly requires an unsafe block", "asm")
+    }
+    if unsafe_blocks == 0 && extern_count > 0 {
+        errors = errors + add_error(source, diagnostics, "e3062", "FFI declarations require an unsafe block", "extern")
+    }
+    errors
 }
 
 func validate_concurrency_semantics(string source, semantic_error[] diagnostics) int {
