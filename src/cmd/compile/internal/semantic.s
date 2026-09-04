@@ -137,7 +137,7 @@ func borrow_state_clone(borrow_record[] state) borrow_record[] {
     copied
 }
 
-func borrow_state_merge_moves(borrow_record[] target, borrow_record[] source) () {
+func borrow_state_merge_moves(borrow_record[] target, borrow_record[] source) {
     i := 0
     for i < len(source) {
         if source[i].moved {
@@ -152,13 +152,13 @@ func borrow_state_merge_moves(borrow_record[] target, borrow_record[] source) ()
     }
 }
 
-func borrow_state_push(borrow_record[] state, string name, bool mutable) () {
+func borrow_state_push(borrow_record[] state, string name, bool mutable) {
     state.push(borrow_record {
         name: name, mutable mutable, moved: false, copyable: false,
     })
 }
 
-func borrow_state_clear(borrow_record[] state) () {
+func borrow_state_clear(borrow_record[] state) {
     kept := borrow_record[]()
     i := 0
     for i < len(state) {
@@ -215,7 +215,7 @@ func borrow_type_is_copy(string type_name) bool {
         || ty == "char" || starts_with(ty, "&") || starts_with(ty, "*")
 }
 
-func borrow_state_mark_move(borrow_record[] state, string name, string type_name) () {
+func borrow_state_mark_move(borrow_record[] state, string name, string type_name) {
     index := borrow_state_find(state, name)
     copyable := borrow_type_is_copy(type_name)
     if index < 0 {
@@ -268,7 +268,7 @@ func check_detailed(string source) semantic_error[] {
     finalize_diagnostics(diagnostics)
 }
 
-func run_preparse_semantic_completeness_checks(string source, semantic_error[] diagnostics) () {
+func run_preparse_semantic_completeness_checks(string source, semantic_error[] diagnostics) {
     ignored0 := validate_control_flow_semantics(source, diagnostics)
     ignored1 := validate_recovery_semantics(source, diagnostics)
     ignored2 := validate_method_interface_semantics(source, diagnostics)
@@ -510,7 +510,7 @@ func sort_diagnostics(semantic_error[] diagnostics) semantic_error[] {
     out
 }
 
-func insert_diagnostic(semantic_error[] diagnostics, int at, semantic_error item) () {
+func insert_diagnostic(semantic_error[] diagnostics, int at, semantic_error item) {
     diagnostics = append(diagnostics, item)
     i := len(diagnostics) - 1
     for i > at {
@@ -1528,6 +1528,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             errors := subject.errors
             arm_type := "unknown"
             seen_patterns := pattern[]()
+            arm_base_borrows := borrow_state_clone(borrow_state)
             i := 0
             for i < len(value.arms) {
                 arm := value.arms[i]
@@ -1541,8 +1542,10 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 errors = errors + pattern_result.errors
                 arm_env := clone_env(env)
                 append_bindings(arm_env, pattern_result.bindings)
-                arm_result := infer_expr(arm.expr, arm_env, borrow_state_new(), expected_return, functions, traits, source, diagnostics)
+                arm_borrows := borrow_state_clone(arm_base_borrows)
+                arm_result := infer_expr(arm.expr, arm_env, arm_borrows, expected_return, functions, traits, source, diagnostics)
                 errors = errors + arm_result.errors
+                borrow_state_merge_moves(borrow_state, arm_borrows)
                 if is_unknown(arm_type) {
                     arm_type = arm_result.type_name
                 } else if !types_compatible(arm_type, arm_result.type_name) {
@@ -1736,7 +1739,7 @@ func add_binding(type_binding[] bindings, string name, string type_name, string 
     0
 }
 
-func append_bindings(type_binding[] target, type_binding[] source) () {
+func append_bindings(type_binding[] target, type_binding[] source) {
     i := 0
     for i < len(source) {
         target = append(target, source[i]);
