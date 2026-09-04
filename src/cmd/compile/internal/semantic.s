@@ -127,6 +127,31 @@ func borrow_state_new() borrow_record[] {
     borrow_record[]()
 }
 
+func borrow_state_clone(borrow_record[] state) borrow_record[] {
+    copied := borrow_record[]()
+    i := 0
+    for i < len(state) {
+        copied.push(state[i])
+        i = i + 1
+    }
+    copied
+}
+
+func borrow_state_merge_moves(borrow_record[] target, borrow_record[] source) () {
+    i := 0
+    for i < len(source) {
+        if source[i].moved {
+            index := borrow_state_find(target, source[i].name)
+            if index < 0 {
+                target.push(source[i])
+            } else {
+                target[index].moved = true
+            }
+        }
+        i = i + 1
+    }
+}
+
 func borrow_state_push(borrow_record[] state, string name, bool mutable) () {
     state.push(borrow_record {
         name: name, mutable mutable, moved: false, copyable: false,
@@ -1013,7 +1038,7 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
         })
         i = i + 1
     }
-    result := infer_block_expr(method.body.unwrap(), env, expected_return, functions, traits, source, diagnostics)
+    result := infer_block_expr(method.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
         if !same_type(expected_return, result.type_name) {
             return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "method return type mismatch", method.sig.name
@@ -1050,7 +1075,7 @@ func check_function(function_decl function_decl, function_binding[] functions, t
         ;
         i = i + 1
     }
-    result := infer_block_expr(function_decl.body.unwrap(), env, expected_return, functions, traits, source, diagnostics)
+    result := infer_block_expr(function_decl.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
         if !same_type(expected_return, result.type_name) {
             return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "function return type mismatch", function_decl.sig.name
@@ -1096,9 +1121,9 @@ func validate_function_signature(function_decl function_decl, string source, sem
     errors
 }
 
-func infer_block_expr(block_expr block, type_binding[] outer_env, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) check_result {
+func infer_block_expr(block_expr block, type_binding[] outer_env, borrow_record[] incoming_borrows, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) check_result {
     local_env := clone_env(outer_env)
-    borrow_state := borrow_state_new()
+    borrow_state := borrow_state_clone(incoming_borrows)
     errors := 0
     i := 0
     for i < len(block.statements) {
@@ -1109,11 +1134,13 @@ func infer_block_expr(block_expr block, type_binding[] outer_env, string expecte
     switch block.final_expr {
         option.some(final_expr) : {
             final_result := infer_expr(final_expr, local_env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            borrow_state_merge_moves(incoming_borrows, borrow_state)
             check_result {
                 type_name: final_result.type_name, errors errors + final_result.errors,
             }
         }
         option.none : check_result {
+            borrow_state_merge_moves(incoming_borrows, borrow_state)
             type_name: "()", errors errors,
         },
     }
@@ -1179,7 +1206,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                 errors = errors + add_error(source, diagnostics, "e3006", "for condition must be bool", "for")
             }
             errors = errors + check_stmt(value.step.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
-            body_result := infer_block_expr(value.body, env, expected_return, functions, traits, source, diagnostics)
+            body_result := infer_block_expr(value.body, env, borrow_state, expected_return, functions, traits, source, diagnostics)
             errors = errors + body_result.errors
             errors
         }
@@ -1534,15 +1561,19 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
         }
         expr::if(value) : {
             cond := infer_expr(value.condition.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
-            then_result := infer_block_expr(value.then_branch, env, expected_return, functions, traits, source, diagnostics)
+            then_borrows := borrow_state_clone(borrow_state)
+            then_result := infer_block_expr(value.then_branch, env, then_borrows, expected_return, functions, traits, source, diagnostics)
+            else_borrows := borrow_state_clone(borrow_state)
             errors := cond.errors + then_result.errors
             if !types_compatible("bool", cond.type_name) {
                 errors = errors + add_error(source, diagnostics, "e3014", "if condition must be bool", "if")
             }
             switch value.else_branch {
                 option::some(else_expr) : {
-                    else_result := infer_expr(else_expr.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+                    else_result := infer_expr(else_expr.value, env, else_borrows, expected_return, functions, traits, source, diagnostics)
                     errors = errors + else_result.errors
+                    borrow_state_merge_moves(borrow_state, then_borrows)
+                    borrow_state_merge_moves(borrow_state, else_borrows)
                     if !types_compatible(then_result.type_name, else_result.type_name) {
                         errors = errors + add_error(source, diagnostics, "e3015", "if/else type mismatch", "if")
                     }
@@ -1551,13 +1582,16 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     }
                 }
                 option::none : check_result {
+                    borrow_state_merge_moves(borrow_state, then_borrows)
                     type_name: "()", errors errors,
                 },
             }
         }
         expr::while(value) : {
             cond := infer_expr(value.condition.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
-            body_result := infer_block_expr(value.body, env, expected_return, functions, traits, source, diagnostics)
+            body_borrows := borrow_state_clone(borrow_state)
+            body_result := infer_block_expr(value.body, env, body_borrows, expected_return, functions, traits, source, diagnostics)
+            borrow_state_merge_moves(borrow_state, body_borrows)
             errors := cond.errors + body_result.errors
             if !types_compatible("bool", cond.type_name) {
                 errors = errors + add_error(source, diagnostics, "e3016", "while condition must be bool", "while")
@@ -1568,13 +1602,15 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
         }
         expr::for(value) : {
             iter := infer_expr(value.iterable.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
-            body_result := infer_block_expr(value.body, env, expected_return, functions, traits, source, diagnostics)
+            body_borrows := borrow_state_clone(borrow_state)
+            body_result := infer_block_expr(value.body, env, body_borrows, expected_return, functions, traits, source, diagnostics)
+            borrow_state_merge_moves(borrow_state, body_borrows)
             check_result {
                 type_name: "()", errors iter.errors + body_result.errors,
             }
         }
         expr::block(value) : {
-            infer_block_expr(value, env, expected_return, functions, traits, source, diagnostics)
+            infer_block_expr(value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
         }
         expr::array(value) : {
             if len(value.items) == 0 {
