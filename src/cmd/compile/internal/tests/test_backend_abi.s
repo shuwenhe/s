@@ -251,7 +251,7 @@ func run_backend_abi_suite() int {
     if !contains(perf, "scheduler_counters select_default_fallbacks=1 select_timeouts=1") {
         return 1
     }
-    if !contains(perf, "runtime_gc cycles=") {
+    if !contains(perf, "runtime_memory strategy=ownership+explicit-drop") {
         return 1
     }
     opt := build_midend_opt_artifact(
@@ -729,7 +729,7 @@ func validate_emitted_artifacts(string out_path) bool {
     if opt == "" || validate_midend_opt_artifact(opt).is_err() {
         return false
     }
-    perf := require_artifact_markers(out_path + ".perf", string[]("perf-baseline version=1", "scheduler queue_policy=priority-rr select_policy=multi-chan-priority-rr", "select_timeout_sites=1", "select_send_sites=1", "scheduler_counters", "runtime_sched sroutine_scheduled=1", "runtime_gc cycles=", "heap_goal="))
+    perf := require_artifact_markers(out_path + ".perf", string[]("perf-baseline version=1", "scheduler queue_policy=priority-rr select_policy=multi-chan-priority-rr", "select_timeout_sites=1", "select_send_sites=1", "scheduler_counters", "runtime_sched sroutine_scheduled=1", "runtime_memory strategy=ownership+explicit-drop"))
     if perf == "" || validate_backend_perf_baseline(perf).is_err() {
         return false
     }
@@ -737,7 +737,7 @@ func validate_emitted_artifacts(string out_path) bool {
     if toolchain == "" || validate_toolchain_compat_artifact(toolchain).is_err() {
         return false
     }
-    if require_artifact_markers(out_path + ".gcmap", string[]("gcmap version=1", "collector plan=go-like-mark-sweep", "safepoints=alloc-trigger", "ptr_bitmap=", "contract e2e_safepoint=")) == "" {
+    if require_artifact_markers(out_path + ".dropmap", string[]("dropmap version=1", "ownership strategy=move-copy-clone", "resource_release=scope-exit", "contract ownership=checked drop=deterministic")) == "" {
         return false
     }
     cfi := require_artifact_markers(out_path + ".cfi", string[]("cfi version=1", ".cfi_startproc", ".cfi_def_cfa", ".cfi_endproc"))
