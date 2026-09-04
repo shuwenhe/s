@@ -505,6 +505,22 @@ func is_copy_type(string ty) bool {
     return false
 }
 
+func is_explicit_owned_type(string ty) bool {
+    base_type_name(ty) == "box"
+}
+
+func is_heap_reference_type(string ty) bool {
+    clean := parse_type(ty)
+    if is_explicit_owned_type(clean) {
+        return true
+    }
+    if starts_with(clean, "&") || starts_with(clean, "[]") {
+        return true
+    }
+    base := base_type_name(clean)
+    base == "vec" || base == "map" || base == "string"
+}
+
 func is_reference_type(string ty) bool {
     return starts_with(trim_text(ty), "&"
 }
