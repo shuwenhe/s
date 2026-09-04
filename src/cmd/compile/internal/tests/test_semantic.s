@@ -261,6 +261,11 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(mutable_then_shared_diags, "e3058") {
         return 1
     }
+    return_local_reference_fail := "package demo.lifetime\nfunc bad() &int {\n  local := 1\n  return &local\n}\nfunc main() {\n  bad()\n}"
+    return_local_reference_diags := check_detailed(return_local_reference_fail)
+    if !has_code(return_local_reference_diags, "e3053") {
+        return 1
+    }
     duplicate_receiver_method := "package demo.iface\nstruct Calc {}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc main() {\n  0\n}"
     duplicate_receiver_diags := check_detailed(duplicate_receiver_method)
     if !has_code(duplicate_receiver_diags, "e3042") {

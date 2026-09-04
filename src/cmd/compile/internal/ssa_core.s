@@ -2706,7 +2706,7 @@ func dump_pipeline(ssa_program program) string {
         + " issa_vgraph=" + program.instruction_value_graph
         + " issa_dom=" + program.instruction_dominator_tree
         + " issa_loops=" + program.instruction_loop_forest
-        + " issa_mdep=" + program.instruction_memory_dep_graph
+        + " issa_mdep=" + program.instruction_memory_dep_graph`
         + " issa_rplan=" + program.instruction_regalloc_plan
         + " blocks=" + to_string(program.block_count)
         + " values=" + to_string(program.value_count)
