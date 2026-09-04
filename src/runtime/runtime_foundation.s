@@ -29,7 +29,6 @@ func runtime_gc_collect() () {
     force_gc()
 }
 
-// Explicit owned values use the runtime allocator; ordinary values stay inline.
 func runtime_owned_alloc(int size, int type_id) int {
     object_id := malloc(size, type_id)
     if object_id >= 0 {
