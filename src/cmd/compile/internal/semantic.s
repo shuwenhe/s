@@ -1188,7 +1188,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                 option.some(expr) : {
                     expr_result := infer_expr(expr, env, borrow_state, expected_return, functions, traits, source, diagnostics)
                     if is_borrow_expr(expr) {
-                        return expr_result.errors + add_error(source, diagnostics, "e3053", "borrowed reference cannot be returned because its lifetime is not proven", "return"
+                        return expr_result.errors + add_error(source, diagnostics, "e3053", "cannot return a reference to a local value because it does not live long enough", "return"
                     }
                     if expected_return == "()" {
                         return expr_result.errors + add_error(source, diagnostics, "e3007", "unexpected return value", "return"
