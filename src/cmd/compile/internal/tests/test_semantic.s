@@ -386,6 +386,11 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(box_double_free_diags, "e3059") {
         return 1
     }
+    assignment_move_fail := "package demo.ownership\nfunc main() {\n  left := \"left\"\n  right := \"right\"\n  left = right\n  right\n}"
+    assignment_move_diags := check_detailed(assignment_move_fail)
+    if !has_code(assignment_move_diags, "e3059") {
+        return 1
+    }
     0
 }
 
