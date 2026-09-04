@@ -63,7 +63,8 @@ func (ea* escape_analysis) analyze_variable(int var_id, bool is_pointer, bool as
 }
 
 func (ea* escape_analysis) escape_to_heap(int var_id) bool {
-    for info in ea.infos {
+    for _idx_65 := 0; _idx_65 < len(ea.infos); _idx_65++ {
+        info := ea.infos[_idx_65]
         if info.var_id == var_id {
             switch info.level {
                 escape_level::escape_global: { return true }
@@ -75,7 +76,8 @@ func (ea* escape_analysis) escape_to_heap(int var_id) bool {
 }
 
 func (ea* escape_analysis) escape_to_global(int var_id) bool {
-    for info in ea.infos {
+    for _idx_77 := 0; _idx_77 < len(ea.infos); _idx_77++ {
+        info := ea.infos[_idx_77]
         if info.var_id == var_id {
             if info.level == escape_level::escape_global {
                 return true
@@ -86,7 +88,8 @@ func (ea* escape_analysis) escape_to_global(int var_id) bool {
 }
 
 func (ea* escape_analysis) stays_local(int var_id) bool {
-    for info in ea.infos {
+    for _idx_88 := 0; _idx_88 < len(ea.infos); _idx_88++ {
+        info := ea.infos[_idx_88]
         if info.var_id == var_id {
             if info.level == escape_level::escape_none {
                 return true
@@ -100,7 +103,8 @@ func (ea* escape_analysis) analyze_flow(int from_var, int to_var) {
     for i := 0; i < ea; i++.infos.len() {
         if ea.infos[i].var_id == from_var {
             to_level := escape_level::escape_none
-            for info in ea.infos {
+            for _idx_102 := 0; _idx_102 < len(ea.infos); _idx_102++ {
+                info := ea.infos[_idx_102]
                 if info.var_id == to_var {
                     to_level = info.level
                     break
@@ -155,11 +159,13 @@ func (ea* escape_analysis) build_alias_sets(int[] vars) {
     }
 
     for i := 0; i < n; i++ {
-        for j in i + 1..n {
+        for _idx_157 := 0; _idx_157 < len(i + 1..n); _idx_157++ {
+            j := i + 1..n[_idx_157]
             var1_escapes := false
             var2_escapes := false
 
-            for info in ea.infos {
+            for _idx_161 := 0; _idx_161 < len(ea.infos); _idx_161++ {
+                info := ea.infos[_idx_161]
                 if info.var_id == vars[i] && info.level != escape_level::escape_none {
                     var1_escapes = true
                 }

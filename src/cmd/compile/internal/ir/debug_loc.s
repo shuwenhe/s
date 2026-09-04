@@ -123,8 +123,10 @@ func (di* debug_info) add_ssa_value_to_var(int var_id, int ssa_value_id) {
 
 func (di* debug_info) get_variable_at_location(int instr_id) debug_variable[] {
     result := debug_variable[]()
-    for var in di.variables {
-        for use_loc in var.use_locations {
+    for _idx_125 := 0; _idx_125 < len(di.variables); _idx_125++ {
+        var := di.variables[_idx_125]
+        for _idx_126 := 0; _idx_126 < len(var.use_locations); _idx_126++ {
+            use_loc := var.use_locations[_idx_126]
             if use_loc == instr_id {
                 result.push(var)
                 break
@@ -136,7 +138,8 @@ func (di* debug_info) get_variable_at_location(int instr_id) debug_variable[] {
 
 func (di* debug_info) get_scope_variables(int scope_id) debug_variable[] {
     result := debug_variable[]()
-    for var in di.variables {
+    for _idx_138 := 0; _idx_138 < len(di.variables); _idx_138++ {
+        var := di.variables[_idx_138]
         if var.scope_id == scope_id {
             result.push(var)
         }
@@ -179,7 +182,8 @@ func (di* debug_info) compute_scope_lines() {
         first_line := -1
         last_line := -1
 
-        for instr_id in scope.start_instr..scope.end_instr {
+        for _idx_181 := 0; _idx_181 < len(scope.start_instr..scope.end_instr); _idx_181++ {
+            instr_id := scope.start_instr..scope.end_instr[_idx_181]
             if instr_id < di.instr_locations.len() {
                 line := di.instr_locations[instr_id].line
                 if line != -1 {
@@ -197,7 +201,8 @@ func (di* debug_info) compute_scope_lines() {
 }
 
 func (di* debug_info) find_scope_for_instr(int instr_id) int {
-    for scope in di.scopes {
+    for _idx_199 := 0; _idx_199 < len(di.scopes); _idx_199++ {
+        scope := di.scopes[_idx_199]
         if instr_id >= scope.start_instr && instr_id <= scope.end_instr {
             return scope.id
         }

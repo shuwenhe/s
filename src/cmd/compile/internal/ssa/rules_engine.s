@@ -302,7 +302,8 @@ func ir_equals(a, b IR) bool {
 }
 
 func replace_instruction(block* basic_block, old_instr, new_instr IR) void {
-    for i, instr in block.instructions {
+    for i := 0; i < len(block.instructions); i++ {
+        instr := block.instructions[i]
         if instr == old_instr {
             block.instructions[i] = new_instr
             return

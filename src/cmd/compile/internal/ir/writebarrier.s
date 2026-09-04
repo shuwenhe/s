@@ -115,7 +115,8 @@ func (wba* write_barrier_analysis) record_gc_safe_point(int instr_id) {
 }
 
 func (wba* write_barrier_analysis) is_gc_safe_point(int instr_id) bool {
-    for sp in wba.gc_safe_points {
+    for _idx_117 := 0; _idx_117 < len(wba.gc_safe_points); _idx_117++ {
+        sp := wba.gc_safe_points[_idx_117]
         if sp == instr_id {
             return true
         }
@@ -125,7 +126,8 @@ func (wba* write_barrier_analysis) is_gc_safe_point(int instr_id) bool {
 
 func (wba* write_barrier_analysis) get_barriers_in_range(int start, int end) write_barrier[] {
     result := write_barrier[]()
-    for barrier in wba.barriers {
+    for _idx_127 := 0; _idx_127 < len(wba.barriers); _idx_127++ {
+        barrier := wba.barriers[_idx_127]
         if barrier.instr_id >= start && barrier.instr_id <= end {
             result.push(barrier)
         }
