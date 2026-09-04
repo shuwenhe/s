@@ -3825,6 +3825,9 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
             if callee_name.name == "box" || callee_name.name == "box_new" {
                 return eval_box_new_call(value.args, source, env, writes, runtime
             }
+            if callee_name.name == "copy" {
+                return eval_copy_call(value.args, source, env, writes, runtime
+            }
             if callee_name.name == "box_free" {
                 return eval_box_free_call(value.args, source, env, writes, runtime
             }
@@ -3896,6 +3899,13 @@ func eval_box_new_call(expr[] args, source_file source, binding[] env, write_op[
     owned := owned_box_value { id: id, payload payload_result.unwrap(), live true }
     runtime.owned_boxes.push(owned)
     value.owned_box(owned)
+}
+
+func eval_copy_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+    if len(args) != 1 {
+        return fail_value("backend error: copy expects exactly one value")
+    }
+    eval_expr(args[0], source, env, writes, runtime)
 }
 
 func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {

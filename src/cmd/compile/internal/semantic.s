@@ -1537,6 +1537,22 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     }
                 }
                 expr::name(callee_name) : {
+                    if callee_name.name == "copy" {
+                        if len(value.args) != 1 {
+                            return check_result {
+                                type_name: "unknown", errors errors + add_error(source, diagnostics, "e3068", "copy expects exactly one value", "copy"),
+                            }
+                        }
+                        copied := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics)
+                        if !is_copy_type(copied.type_name) {
+                            return check_result {
+                                type_name: "unknown", errors errors + copied.errors + add_error(source, diagnostics, "e3068", "copy requires a Copy type; move or clone the value explicitly", "copy"),
+                            }
+                        }
+                        return check_result {
+                            type_name: copied.type_name, errors errors + copied.errors,
+                        }
+                    }
                     if callee_name.name == "box" || callee_name.name == "box_new" {
                         if len(value.args) != 1 {
                             return check_result {
