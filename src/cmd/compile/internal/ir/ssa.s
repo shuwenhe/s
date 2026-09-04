@@ -96,7 +96,8 @@ func (ssa* static_single_assignment) insert_phi_nodes(int[] dominance_frontier) 
     n := ssa.blocks.len()
     work_list := int[]()
 
-    for df_block in dominance_frontier {
+    for _idx_98 := 0; _idx_98 < len(dominance_frontier); _idx_98++ {
+        df_block := dominance_frontier[_idx_98]
         work_list.push(df_block)
     }
 
@@ -106,10 +107,13 @@ func (ssa* static_single_assignment) insert_phi_nodes(int[] dominance_frontier) 
         work_list = work_list[0..work_list.len() - 1]
 
         if block < ssa.blocks.len() {
-            for phi in ssa.blocks[block].phis {
-                for df in dominance_frontier {
+            for _idx_108 := 0; _idx_108 < len(ssa.blocks[block].phis); _idx_108++ {
+                phi := ssa.blocks[block].phis[_idx_108]
+                for _idx_109 := 0; _idx_109 < len(dominance_frontier); _idx_109++ {
+                    df := dominance_frontier[_idx_109]
                     already_has := false
-                    for existing_phi in ssa.blocks[df].phis {
+                    for _idx_111 := 0; _idx_111 < len(ssa.blocks[df].phis); _idx_111++ {
+                        existing_phi := ssa.blocks[df].phis[_idx_111]
                         if existing_phi.id == phi.id {
                             already_has = true
                             break
@@ -121,7 +125,8 @@ func (ssa* static_single_assignment) insert_phi_nodes(int[] dominance_frontier) 
                         ssa.blocks[df].phis.push(new_phi)
 
                         in_list := false
-                        for w in work_list {
+                        for _idx_123 := 0; _idx_123 < len(work_list); _idx_123++ {
+                            w := work_list[_idx_123]
                             if w == df {
                                 in_list = true
                                 break
@@ -152,7 +157,8 @@ func (ssa* static_single_assignment) rename_variables() {
 
         block := &ssa.blocks[block_id]
 
-        for phi in block.phis {
+        for _idx_154 := 0; _idx_154 < len(block.phis); _idx_154++ {
+            phi := block.phis[_idx_154]
             var_index := 0
             for i := 0; i < n; i++ {
                 if i == var_index {
@@ -164,8 +170,10 @@ func (ssa* static_single_assignment) rename_variables() {
             }
         }
 
-        for value in block.values {
-            for arg in value.args {
+        for _idx_166 := 0; _idx_166 < len(block.values); _idx_166++ {
+            value := block.values[_idx_166]
+            for _idx_167 := 0; _idx_167 < len(value.args); _idx_167++ {
+                arg := value.args[_idx_167]
                 var_stack := stacks[arg]
                 if var_stack.len() > 0 {
                     value.args[arg] = var_stack[var_stack.len() - 1]
@@ -183,9 +191,11 @@ func (ssa* static_single_assignment) rename_variables() {
             }
         }
 
-        for succ in block.successors {
+        for _idx_185 := 0; _idx_185 < len(block.successors); _idx_185++ {
+            succ := block.successors[_idx_185]
             if succ < ssa.blocks.len() {
-                for phi in ssa.blocks[succ].phis {
+                for _idx_187 := 0; _idx_187 < len(ssa.blocks[succ].phis); _idx_187++ {
+                    phi := ssa.blocks[succ].phis[_idx_187]
                     var_index := 0
                     for i := 0; i < n; i++ {
                         if i == var_index {
@@ -201,7 +211,8 @@ func (ssa* static_single_assignment) rename_variables() {
 
         for child := 0; child < ssa; child++.blocks.len() {
             children_ok := false
-            for s in block.successors {
+            for _idx_203 := 0; _idx_203 < len(block.successors); _idx_203++ {
+                s := block.successors[_idx_203]
                 if s == child {
                     children_ok = true
                     break
@@ -212,7 +223,8 @@ func (ssa* static_single_assignment) rename_variables() {
             }
         }
 
-        for phi in block.phis {
+        for _idx_214 := 0; _idx_214 < len(block.phis); _idx_214++ {
+            phi := block.phis[_idx_214]
             var_index := 0
             for i := 0; i < n; i++ {
                 if i == var_index {
@@ -224,7 +236,8 @@ func (ssa* static_single_assignment) rename_variables() {
             }
         }
 
-        for value in block.values {
+        for _idx_226 := 0; _idx_226 < len(block.values); _idx_226++ {
+            value := block.values[_idx_226]
             var_index := 0
             for i := 0; i < n; i++ {
                 if i == var_index {

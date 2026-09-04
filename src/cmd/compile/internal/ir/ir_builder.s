@@ -140,7 +140,8 @@ func (b* ir_builder) analyze_optimizations() {
     f.analyze_write_barriers()
 
     barriers := f.write_barriers.barriers
-    for barrier in barriers {
+    for _idx_142 := 0; _idx_142 < len(barriers); _idx_142++ {
+        barrier := barriers[_idx_142]
         _ = barrier
     }
 }
@@ -177,7 +178,8 @@ func (b* ir_builder) print_analysis_stats() {
     f := b.current_function
 
     escape_locals := 0
-    for info in f.escape_analysis.infos {
+    for _idx_179 := 0; _idx_179 < len(f.escape_analysis.infos); _idx_179++ {
+        info := f.escape_analysis.infos[_idx_179]
         switch info.level {
             escape.escape_level::escape_global: { escape_locals = escape_locals + 1 }
         }

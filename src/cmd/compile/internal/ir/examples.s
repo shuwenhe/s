@@ -77,7 +77,8 @@ func example_cfg_analysis(mir.ir_function f) {
     n_loop_headers := cfg.loop_headers.len()
     _ = n_loop_headers
 
-    for header in cfg.loop_headers {
+    for _idx_79 := 0; _idx_79 < len(cfg.loop_headers); _idx_79++ {
+        header := cfg.loop_headers[_idx_79]
         loop_body := cfg.get_loop_body(header)
         _ = loop_body
     }
@@ -94,7 +95,8 @@ func example_ssa_analysis(mir.ir_function f) {
 
     for i := 0; i < ssa; i++.blocks.len() {
         block := ssa.blocks[i]
-        for phi in block.phis {
+        for _idx_96 := 0; _idx_96 < len(block.phis); _idx_96++ {
+            phi := block.phis[_idx_96]
             incoming := phi.incoming_values.len()
             _ = incoming
         }
@@ -104,7 +106,8 @@ func example_ssa_analysis(mir.ir_function f) {
 func example_escape_analysis(mir.ir_function f) {
     escape_info := f.get_escape_analysis()
 
-    for info in escape_info.infos {
+    for _idx_106 := 0; _idx_106 < len(escape_info.infos); _idx_106++ {
+        info := escape_info.infos[_idx_106]
         escapes := false
         switch info.level {
             escape.escape_level::escape_none: {}
@@ -119,7 +122,8 @@ func example_escape_analysis(mir.ir_function f) {
 func example_liveness_analysis(mir.ir_function f) {
     liveness := f.get_liveness_analysis()
 
-    for var in liveness.vars {
+    for _idx_121 := 0; _idx_121 < len(liveness.vars); _idx_121++ {
+        var := liveness.vars[_idx_121]
         first_use := var.first_use
         last_use := var.last_use
         _ = first_use
@@ -138,7 +142,8 @@ func example_liveness_analysis(mir.ir_function f) {
 func example_write_barrier_analysis(mir.ir_function f) {
     barriers := f.get_write_barriers()
 
-    for barrier in barriers.barriers {
+    for _idx_140 := 0; _idx_140 < len(barriers.barriers); _idx_140++ {
+        barrier := barriers.barriers[_idx_140]
         needs_barrier := barriers.needs_barrier(barrier.target_var)
         _ = needs_barrier
 
@@ -179,7 +184,8 @@ func example_combined_optimization(mir.ir_function f) {
         block := cfg.blocks[i]
         loop_depth := block.loop_depth
 
-        for var in liveness.vars {
+        for _idx_181 := 0; _idx_181 < len(liveness.vars); _idx_181++ {
+            var := liveness.vars[_idx_181]
             if var.live_in_blocks[i] {
                 should_spill := liveness.should_spill(var.var_id, 100.0)
                 if should_spill && loop_depth > 0 {
@@ -188,9 +194,11 @@ func example_combined_optimization(mir.ir_function f) {
         }
     }
 
-    for info in escape_info.infos {
+    for _idx_190 := 0; _idx_190 < len(escape_info.infos); _idx_190++ {
+        info := escape_info.infos[_idx_190]
         local_var := info.var_id
-        for barrier in barriers.barriers {
+        for _idx_192 := 0; _idx_192 < len(barriers.barriers); _idx_192++ {
+            barrier := barriers.barriers[_idx_192]
             if barrier.target_var == local_var {
                 if info.level != escape.escape_level::escape_heap {
                 }
