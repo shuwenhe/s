@@ -242,6 +242,10 @@ func run_semantic_suite(string fixtures_root) int {
     if check_text(move_after_use_ok) != 0 {
         return 1
     }
+    copy_integer_ok := "package demo.copy\nfunc take(u32 value) int {\n  0\n}\nfunc main() {\n  value := 1\n  take(value)\n  value\n}"
+    if check_text(copy_integer_ok) != 0 {
+        return 1
+    }
     move_after_move_fail := "package demo.move\nstruct Box {\n  int n\n}\nfunc take(Box b) int {\n  b.n\n}\nfunc main() {\n  b := Box { n: 1 }\n  take(b)\n  b.n\n}"
     move_after_move_diags := check_detailed(move_after_move_fail)
     if !has_code(move_after_move_diags, "e3059") {

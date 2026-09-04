@@ -117,6 +117,11 @@ func ownership_check_events(string[] events) ownership_result {
             } else {
                 moved = append(moved, payload)
             }
+        } else if kind == "clone" {
+            if ownership_contains(moved, payload) || ownership_contains(dropped, payload) {
+                errors = errors + 1
+                message = message + "clone-after-move:" + payload + ";"
+            }
         } else if kind == "use" {
             if ownership_contains(moved, payload) || ownership_contains(dropped, payload) {
                 errors = errors + 1
