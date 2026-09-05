@@ -1115,6 +1115,19 @@ static bool execute_source_main(const char *src, long *ret, compile_error *err) 
 	parser_parse_result_free(&result);
 	return ok;
 }
+static bool test_runtime_string_record_collision(void) {
+	const char *src =
+	    "struct State { int x } "
+	    "func identity(string text) string { return text; } "
+	    "func main() { state := State { x: 42 }; "
+	    "text := \"state\"; copy := text; returned := identity(text); "
+	    "if copy != \"state\" { return 1; } "
+	    "if returned != \"state\" { return 2; } "
+	    "other := state; return other.x; }";
+	compile_error err;
+	long ret = 0;
+	return execute_source_main(src, &ret, &err) && ret == 42;
+}
 static bool test_runtime_receiver_method(void) {
 	const char *src =
 		"struct Point { int x } "
@@ -1523,6 +1536,7 @@ int main(void) {
 	RUN_TEST(test_runtime_nested_member_alias_compare);
 	RUN_TEST(test_runtime_nested_member_return_alias);
 	RUN_TEST(test_runtime_function_call_and_tail_expr_return);
+	RUN_TEST(test_runtime_string_record_collision);
 	RUN_TEST(test_runtime_receiver_method);
 	RUN_TEST(test_runtime_implicit_trait_dispatch);
 	RUN_TEST(test_semantic_implicit_trait_missing_method);
