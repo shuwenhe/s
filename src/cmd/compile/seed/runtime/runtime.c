@@ -63,6 +63,7 @@ typedef enum runtime_value_kind {
 } runtime_value_kind;
 typedef struct runtime_data_value runtime_data_value;
 typedef struct runtime_data_value {
+	int record_alias;
 	runtime_value_kind kind;
 	long int_value;
 	double float_value;
@@ -164,6 +165,7 @@ static void runtime_profile_dump_summary(void) {
 }
 static runtime_data_value value_make_int(long v) {
 	runtime_data_value out;
+	out.record_alias = 0;
 	out.kind = RUNTIME_INT;
 	out.int_value = v;
 	out.float_value = (double)v;
@@ -174,6 +176,7 @@ static runtime_data_value value_make_int(long v) {
 }
 static runtime_data_value value_make_float(double v) {
 	runtime_data_value out;
+	out.record_alias = 0;
 	out.kind = RUNTIME_FLOAT;
 	out.int_value = (long)v;
 	out.float_value = v;
@@ -184,6 +187,7 @@ static runtime_data_value value_make_float(double v) {
 }
 static runtime_data_value value_make_string_owned(char *s) {
 	runtime_data_value out;
+	out.record_alias = 0;
 	out.kind = RUNTIME_STRING;
 	out.int_value = 0;
 	out.float_value = 0.0;
@@ -194,6 +198,7 @@ static runtime_data_value value_make_string_owned(char *s) {
 }
 static runtime_data_value value_make_array_owned(runtime_data_value *items, size_t len) {
 	runtime_data_value out;
+	out.record_alias = 0;
 	out.kind = RUNTIME_ARRAY;
 	out.int_value = 0;
 	out.float_value = 0.0;
@@ -214,6 +219,11 @@ static runtime_data_value value_make_string_copy(const char *s) {
 	strcpy(dup, s);
 	return value_make_string_owned(dup);
 }
+static runtime_data_value value_make_record_alias(const char *name) {
+	runtime_data_value value = value_make_string_copy(name);
+	value.record_alias = 1;
+	return value;
+}
 static void value_clear(runtime_data_value *v) {
 	if (!v) {
 		return;
@@ -227,6 +237,7 @@ static void value_clear(runtime_data_value *v) {
 		}
 		free(v->array_items);
 	}
+	v->record_alias = 0;
 	v->kind = RUNTIME_INT;
 	v->int_value = 0;
 	v->float_value = 0.0;
@@ -266,6 +277,7 @@ static int value_copy(runtime_data_value *dst, const runtime_data_value *src) {
 		return 1;
 	}
 	*dst = value_make_string_copy(src->str_value ? src->str_value : "");
+	dst->record_alias = src->record_alias;
 	return dst->str_value != NULL;
 }
 static int is_string_literal(const char *s) {
@@ -2588,7 +2600,7 @@ static int values_set_runtime_command_result(
 	const char *error_text
 ) {
 	char field_name[2048];
-	runtime_data_value value = value_make_string_copy(name);
+	runtime_data_value value = value_make_record_alias(name);
 	if (!value.str_value || !values_set(vals, name, &value)) {
 		value_clear(&value);
 		return 0;
@@ -2665,7 +2677,7 @@ static int values_copy_prefixed_depth(const runtime_values *src, const char *old
 		if (!values_set(dst, mapped_name, &src->data[i].value)) {
 			return 0;
 		}
-		if (src->data[i].value.kind == RUNTIME_STRING &&
+		if (src->data[i].value.record_alias && src->data[i].value.kind == RUNTIME_STRING &&
 		    src->data[i].value.str_value &&
 		    src->data[i].value.str_value[0] != '\0' &&
 		    values_have_prefixed(src, src->data[i].value.str_value) &&
@@ -2836,15 +2848,15 @@ static int resolve_dotted_value(const runtime_values *vals, const char *name, ru
 		return 0;
 	}
 	if (values_get(vals, name, out)) {
-		if (out->kind == RUNTIME_STRING && values_have_prefixed(vals, name)) {
+		if (out->record_alias && out->kind == RUNTIME_STRING && values_have_prefixed(vals, name)) {
 			value_clear(out);
-			*out = value_make_string_copy(name);
+			*out = value_make_record_alias(name);
 			return out->str_value != NULL;
 		}
 		return 1;
 	}
 	if (values_have_prefixed(vals, name)) {
-		*out = value_make_string_copy(name);
+		*out = value_make_record_alias(name);
 		return out->str_value != NULL;
 	}
 	if (strlen(name) >= 3 && strcmp(name + strlen(name) - 3, ".[]") == 0) {
@@ -3563,9 +3575,9 @@ static int execute_function(
 		return 1;
 	}
 	for (i = 0; i < argc; i++) {
-		if (caller_vals && args[i].kind == RUNTIME_STRING && args[i].str_value && args[i].str_value[0] != '\0' &&
+		if (caller_vals && args[i].record_alias && args[i].kind == RUNTIME_STRING && args[i].str_value && args[i].str_value[0] != '\0' &&
 		    values_have_prefixed(caller_vals, args[i].str_value)) {
-			runtime_data_value remapped_arg = value_make_string_copy(fn->params[i]);
+			runtime_data_value remapped_arg = value_make_record_alias(fn->params[i]);
 			if (remapped_arg.str_value == NULL ||
 			    !values_set(&vals, fn->params[i], &remapped_arg) ||
 			    !values_copy_prefixed(caller_vals, args[i].str_value, &vals, fn->params[i])) {
@@ -3653,10 +3665,10 @@ static int execute_function(
 				values_free(&vals);
 				return 0;
 			}
-			remap_alias = a.kind == RUNTIME_STRING && a.str_value && a.str_value[0] != '\0' &&
+			remap_alias = a.record_alias && a.kind == RUNTIME_STRING && a.str_value && a.str_value[0] != '\0' &&
 				values_have_prefixed(&vals, a.str_value);
 			if (remap_alias) {
-				runtime_data_value remapped_alias = value_make_string_copy(ins->result);
+				runtime_data_value remapped_alias = value_make_record_alias(ins->result);
 				if (remapped_alias.str_value == NULL) {
 					error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 					value_clear(&a);
@@ -3681,6 +3693,20 @@ static int execute_function(
 				value_clear(&a);
 				values_free(&vals);
 				return 0;
+			}
+			/* A record handle is tagged by construction, never inferred from
+			   ordinary string contents that happen to name another value. */
+			{
+				size_t result_len = strlen(ins->result);
+				if (result_len > 7 && strcmp(ins->result + result_len - 7, ".__type") == 0) {
+					char owner_name[sizeof(ins->result)];
+					runtime_data_value *owner;
+					memcpy(owner_name, ins->result, result_len - 7);
+					owner_name[result_len - 7] = '\0';
+					owner = values_get_ref(&vals, owner_name);
+					if (owner && owner->kind == RUNTIME_STRING && owner->str_value &&
+					    strcmp(owner->str_value, owner_name) == 0) owner->record_alias = 1;
+				}
 			}
 			value_clear(&a);
 			pc++;
@@ -4079,7 +4105,7 @@ static int execute_function(
 					return 0;
 				}
 				if (callee_return_fields.len > 0 && callee_ret.kind == RUNTIME_STRING && callee_ret.str_value && callee_ret.str_value[0] != '\0') {
-					runtime_data_value remapped_alias = value_make_string_copy(ins->result);
+					runtime_data_value remapped_alias = value_make_record_alias(ins->result);
 					if (remapped_alias.str_value == NULL) {
 						for (j = call_base; j < pending_len; j++) {
 							value_clear(&pending_args[j]);
@@ -4138,7 +4164,7 @@ static int execute_function(
 				values_free(&vals);
 				return 0;
 			}
-			if (out_return_fields && out_return->kind == RUNTIME_STRING && out_return->str_value && out_return->str_value[0] != '\0') {
+			if (out_return_fields && out_return->record_alias && out_return->kind == RUNTIME_STRING && out_return->str_value && out_return->str_value[0] != '\0') {
 				if (!values_copy_prefixed(&vals, out_return->str_value, out_return_fields, out_return->str_value)) {
 					error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 					values_free(&vals);
