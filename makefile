@@ -809,3 +809,16 @@ selfhost-bin:
 		exit 1; \
 	fi
 	./scripts/selfhost_emit_bin.sh "$(COMPILER)" "$(OUT_BIN)" "$(OUT_IR)" "$(WORK_DIR)"
+
+# The ownership checker and C lowering are written in S. The trusted seed
+# constructs a host executable; generated applications do not link its runtime.
+.PHONY: nogc-compiler nogc-check
+nogc-compiler: seed-compiler-bin
+	@mkdir -p .bootstrap/nogc bin
+	@./bin/s_seed src/cmd/compile/nogc/compiler.s .bootstrap/nogc/compiler.ir
+	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \
+	  S_TARGET_ARCH=$$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/') \
+	  ./bin/s_seed --emit-aot .bootstrap/nogc/compiler.ir ./bin/s_nogc_compiler
+
+nogc-check: nogc-compiler
+	@python3 test/nogc/check.py
