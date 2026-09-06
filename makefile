@@ -9,8 +9,26 @@ BOOTSTRAP_MANIFEST ?= $(SELFHOST_DIR)/manifest.txt
 NATIVE_BOOTSTRAP_DIR := $(SELFHOST_DIR)/native
 NATIVE_BOOTSTRAP_STAMP := $(NATIVE_BOOTSTRAP_DIR)/.complete
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
-S_TARGET_OS ?= linux
-S_TARGET_ARCH ?= amd64
+S_HOST_OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+S_HOST_ARCH := $(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
+S_TARGET_OS ?= $(S_HOST_OS)
+S_TARGET_ARCH ?= $(S_HOST_ARCH)
+
+# The native bootstrap chain currently emits Linux/amd64 binaries. Darwin/
+# arm64 uses the hosted compiler path until a converged Darwin self-host chain
+# is available.
+ifeq ($(S_TARGET_OS),darwin)
+ifeq ($(S_TARGET_ARCH),arm64)
+RUN_COMPILER_TARGET := darwin-arm64-hosted-compiler
+RUN_COMPILER_BIN := ./bin/s_darwin_arm64
+else
+RUN_COMPILER_TARGET := selfhost
+RUN_COMPILER_BIN := ./bin/s
+endif
+else
+RUN_COMPILER_TARGET := selfhost
+RUN_COMPILER_BIN := ./bin/s
+endif
 
 target-info: seed-compiler-bin
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./misc/scripts/target-info.sh
@@ -25,11 +43,11 @@ target-config-check: seed-compiler-bin
 	@echo "Target configuration checks passed"
 
 # The default build compiles the self-hosted compiler before installing it.
-run: selfhost
+run: $(RUN_COMPILER_TARGET)
 	@mkdir -p "$(INSTALL_BIN_DIR)"
 	@$(if $(filter 1,$(VERBOSE)),echo "Installing S compiler bootstrap binary (bin/s) for $$(uname -m)...";)
-	@$(if $(filter 1,$(VERBOSE)),echo "Installing bin/s to $(INSTALL_BIN_DIR)/s...";)
-	@$(SUDO) $(INSTALL_PROGRAM) -m 0755 ./bin/s "$(INSTALL_BIN_DIR)/s"
+	@$(if $(filter 1,$(VERBOSE)),echo "Installing $(RUN_COMPILER_BIN) to $(INSTALL_BIN_DIR)/s...";)
+	@$(SUDO) $(INSTALL_PROGRAM) -m 0755 $(RUN_COMPILER_BIN) "$(INSTALL_BIN_DIR)/s"
 	@$(if $(filter 1,$(VERBOSE)),echo "S compiler installed successfully.";)
 
 build-x86_64: bin/s
