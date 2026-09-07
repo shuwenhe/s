@@ -61,13 +61,12 @@ func compiler_fail(compiler_state initial, string message) compiler_state {
 
 func compiler_next(compiler_state initial) compiler_state {
     s := initial
-    eprintln("debug: next enter")
     if s.error != "" { return s }
     int n = len(s.source)
-    eprintln("debug: next len")
     for s.pos < n {
         string c = __host_char_at(s.source, s.pos)
-        string d = __host_char_at(s.source, s.pos + 1)
+        string d = ""
+        if s.pos + 1 < n { d = __host_char_at(s.source, s.pos + 1) }
         if c == " " || c == "\t" || c == "\r" || c == "\n" {
             if c == "\n" { s.line = s.line + 1 }
             s.pos = s.pos + 1
@@ -78,7 +77,8 @@ func compiler_next(compiler_state initial) compiler_state {
             int nesting = 1
             for s.pos < n && nesting > 0 {
                 c = __host_char_at(s.source, s.pos)
-                d = __host_char_at(s.source, s.pos + 1)
+                d = ""
+                if s.pos + 1 < n { d = __host_char_at(s.source, s.pos + 1) }
                 if c == "/" && d == "*" { nesting = nesting + 1; s.pos = s.pos + 2 }
                 else if c == "*" && d == "/" { nesting = nesting - 1; s.pos = s.pos + 2 }
                 else { if c == "\n" { s.line = s.line + 1 } s.pos = s.pos + 1 }
@@ -88,7 +88,6 @@ func compiler_next(compiler_state initial) compiler_state {
     }
     if s.pos >= n { s.token = ""; return s }
     int start = s.pos
-    eprintln("debug: next scan")
     string c = __host_char_at(s.source, s.pos)
     s.pos = s.pos + 1
     if compiler_alpha(c) || compiler_digit(c) {
@@ -98,7 +97,8 @@ func compiler_next(compiler_state initial) compiler_state {
             s.pos = s.pos + 1
         }
     } else {
-        string pair = c + __host_char_at(s.source, s.pos)
+        string pair = c
+        if s.pos < n { pair = pair + __host_char_at(s.source, s.pos) }
         if pair == ":=" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "&&" || pair == "||" {
             s.pos = s.pos + 1
         } else if c != "(" && c != ")" && c != "{" && c != "}" && c != ";" && c != "+" && c != "-" && c != "*" && c != "/" && c != "%" && c != "&" && c != "=" && c != "!" && c != "<" && c != ">" {
@@ -106,7 +106,6 @@ func compiler_next(compiler_state initial) compiler_state {
         }
     }
     s.token = "" + __host_slice(s.source, start, s.pos)
-    eprintln("debug: next token ready")
     return s
 }
 
@@ -501,50 +500,38 @@ func compiler_statement(compiler_state initial) compiler_state {
 }
 
 func compiler_compile(string source) compiler_state {
-    eprintln("debug: compile enter")
     names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     live := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     roots := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     parents := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\nint main(void)\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, new_borrow: false }
-    eprintln("debug: state ready")
     s = compiler_next(s)
-    eprintln("debug: first token=" + s.token)
     s = compiler_expect(s, "package")
-    eprintln("debug: package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
     s = compiler_next(s)
-    eprintln("debug: package name")
     if s.token == ";" { s = compiler_next(s) }
     s = compiler_expect(s, "func")
-    eprintln("debug: func")
     s = compiler_expect(s, "main")
     s = compiler_expect(s, "(")
     s = compiler_expect(s, ")")
     s = compiler_expect(s, "int")
-    eprintln("debug: signature")
     s.code = s.code + "{\n"
     s = compiler_block(s)
-    eprintln("debug: block")
     s.code = s.code + "return compiler_finish(0);\n}\n"
     if s.token != "" { s = compiler_fail(s, "only one main function is supported; imports and extern declarations are forbidden") }
     return s
 }
 
 func main() int {
-    eprintln("debug: enter main")
     args := host_args()
-    eprintln("debug: got args")
     if len(args) != 4 || args[1] != "--emit-c" {
         eprintln("usage: s_compiler --emit-c input.s output.c")
         return 2
     }
     string source = __host_read_to_string(args[2])
-    eprintln("debug: read source")
     if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
     result := compiler_compile(source)
-    eprintln("debug: compiled")
     if result.error != "" { eprintln(result.error); return 1 }
     if __host_write_text_file(args[3], result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
     return 0
