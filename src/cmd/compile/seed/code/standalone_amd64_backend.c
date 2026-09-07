@@ -314,6 +314,69 @@ static int find_literal(const standalone_module *module, const char *encoded) {
 	}
 	return -1;
 }
+static bool is_array_literal(const char *value) {
+	size_t length;
+	if (!value) return false;
+	length = strlen(value);
+	return length >= 2 && value[0] == '[' && value[length - 1] == ']';
+}
+static bool emit_load(FILE *out, standalone_module *module, standalone_function *fn,
+	const char *value, const char *reg, compile_error *err);
+static bool emit_array_literal(FILE *out, standalone_module *module, standalone_function *fn,
+	const char *value, const char *reg, compile_error *err) {
+	const char *p;
+	const char *start;
+	const char *end = value + strlen(value) - 1;
+	char item[STANDALONE_TEXT_CAP];
+	char *trim_end;
+	int count = 0;
+	int depth;
+	int in_string;
+	long tagged_length;
+
+	for (p = value + 1, start = p, depth = 0, in_string = 0; p <= end; p++) {
+		int separator = p == end || (*p == ',' && !in_string && depth == 0);
+		if (*p == '"' && (p == value + 1 || p[-1] != '\\')) in_string = !in_string;
+		if (*p == '[' && !in_string) depth++;
+		if (*p == ']' && !in_string && depth > 0) depth--;
+		if (!separator) continue;
+		if (p - start >= (long)sizeof(item)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "array literal item too long in %s", fn->name);
+			return false;
+		}
+		memcpy(item, start, (size_t)(p - start));
+		item[p - start] = '\0';
+		trim_end = item + strlen(item);
+		while (trim_end > item && isspace((unsigned char)trim_end[-1])) *--trim_end = '\0';
+		memmove(item, item + strspn(item, " \t\r\n"), strlen(item) + 1);
+		if (item[0] != '\0') count++;
+		start = p + 1;
+	}
+
+	tagged_length = (long)count * 2 + 1;
+	fprintf(out, "    mov $%ld, %%rdi\n    call s_array_new\n", tagged_length);
+	for (p = value + 1, start = p, depth = 0, in_string = 0, count = 0; p <= end; p++) {
+		int separator = p == end || (*p == ',' && !in_string && depth == 0);
+		if (*p == '"' && (p == value + 1 || p[-1] != '\\')) in_string = !in_string;
+		if (*p == '[' && !in_string) depth++;
+		if (*p == ']' && !in_string && depth > 0) depth--;
+		if (!separator) continue;
+		memcpy(item, start, (size_t)(p - start));
+		item[p - start] = '\0';
+		trim_end = item + strlen(item);
+		while (trim_end > item && isspace((unsigned char)trim_end[-1])) *--trim_end = '\0';
+		memmove(item, item + strspn(item, " \t\r\n"), strlen(item) + 1);
+		if (item[0] != '\0') {
+			fprintf(out, "    push %%rax\n");
+			if (!emit_load(out, module, fn, item, "%rdx", err)) return false;
+			fprintf(out, "    pop %%rax\n    mov %%rdx, %d(%%rax)\n", 16 + count * 8);
+			count++;
+		}
+		start = p + 1;
+	}
+	if (strcmp(reg, "%rax") != 0) fprintf(out, "    mov %%rax, %s\n", reg);
+	return true;
+}
 static bool emit_load(FILE *out, standalone_module *module, standalone_function *fn,
 	const char *value, const char *reg, compile_error *err) {
 	int slot;
@@ -329,6 +392,7 @@ static bool emit_load(FILE *out, standalone_module *module, standalone_function 
 		fprintf(out, "    mov $1, %s\n", reg);
 		return true;
 	}
+	if (is_array_literal(value)) return emit_array_literal(out, module, fn, value, reg, err);
 	if (is_integer(value)) {
 		long long raw = strtoll(value, NULL, 10);
 		fprintf(out, "    mov $%lld, %s\n", raw * 2 + 1, reg);
