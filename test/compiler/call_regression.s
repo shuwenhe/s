@@ -87,9 +87,15 @@ func main() int {
     if run_case(dir, compiler, cc, "owned_slice",
         "func sum_slice(slice values) int { values[1] = values[1] + 1; return values[0] + values[1] - 1; }",
         "values := [20, 22]; s := slice(values); assert(live_allocations() == 2); assert(sum_slice(s) == 42); assert(live_allocations() == 0); return 42;", true) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "borrowed_slice",
+        "func read_slice(slice[] values) int { return values[0] + values[1]; } func mutate_slice(mutslice[] values) int { values[0] = values[0] + 1; return values[0]; }",
+        "values := [20, 22]; s := slice(values); assert(read_slice(s) == 42); assert(mutate_slice(s) == 21); assert(read_slice(s) == 43); drop(s); return 42;", true) != 0 { return 1 }
     if run_case(dir, compiler, cc, "array_borrow_conflict",
         "func bad(mutint[] left, int[] right) int { return left[0] + right[0]; }",
         "values := [21]; return bad(values, values);", false) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "slice_borrow_conflict",
+        "func bad(mutslice[] left, slice[] right) int { return left[0] + right[0]; }",
+        "values := [21]; s := slice(values); return bad(s, s);", false) != 0 { return 1 }
     if run_case(dir, compiler, cc, "pair_fields",
         "",
         "p := pair(box(20), box(22)); return *p.left + *p.right;", true) != 0 { return 1 }
