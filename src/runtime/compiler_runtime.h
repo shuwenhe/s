@@ -37,6 +37,10 @@ static inline int64_t *compiler_move(int64_t **source) {
     *source = NULL;
     return p;
 }
+static inline int64_t compiler_index(int64_t length, int64_t index) {
+    if (index < 0 || index >= length) compiler_trap("array index out of bounds");
+    return index;
+}
 static inline void compiler_drop(int64_t **owner);
 typedef struct compiler_pair {
     int64_t *left;
