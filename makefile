@@ -847,3 +847,5 @@ compiler-s-check: compiler
 	@mkdir -p .bootstrap/compiler
 	@S_PROJECT_ROOT=$(CURDIR) ./bin/s build test/compiler/check.s -o .bootstrap/compiler/check
 	@S_PROJECT_ROOT=$(CURDIR) ./.bootstrap/compiler/check
+	@S_PROJECT_ROOT=$(CURDIR) ./bin/s build test/compiler/call_regression.s -o .bootstrap/compiler/call_regression
+	@S_PROJECT_ROOT=$(CURDIR) ./.bootstrap/compiler/call_regression
