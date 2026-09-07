@@ -81,6 +81,9 @@ func main() int {
     if run_case(dir, compiler, cc, "integer_array",
         "",
         "values := [20, 22]; assert(len(values) == 2); values[1] = 23; return values[0] + values[1] - 1;", true) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "mutable_array_parameter",
+        "func bump(mutint[] values) int { values[0] = values[0] + 1; return values[0]; }",
+        "values := [20]; assert(bump(values) == 21); return values[0] + 21;", true) != 0 { return 1 }
     if run_case(dir, compiler, cc, "pair_fields",
         "",
         "p := pair(box(20), box(22)); return *p.left + *p.right;", true) != 0 { return 1 }
