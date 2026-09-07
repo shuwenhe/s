@@ -1,6 +1,7 @@
 # Ownership Call Regressions
 
-Build with `make compiler`, then run `python3 test/compiler/call_regression.py`.
+Build with `make compiler`, then build and run `test/compiler/call_regression.s`
+with the S test driver.
 The tests compile generated C with strict warnings and allocation counting.
 Rejected programs must leave existing output files untouched.
 
