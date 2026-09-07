@@ -22,3 +22,9 @@ Returning an owner moves it before local cleanup. Other owned resources are
 released, and the caller owns the returned box. Borrowed owners cannot be
 returned. Box functions must explicitly return on every accepted control-flow
 path; reference returns remain unsupported. Helpers precede main.
+
+Arguments and binary operands evaluate from left to right. Calls accept fresh
+boxes and box-returning calls as owning arguments. Logical operators preserve
+short circuiting; a move on their right side makes the owner possibly moved
+after the expression. Loop conditions cannot consume outer owners. Writes
+through an owner are rejected if evaluating the right side consumes it.

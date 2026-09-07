@@ -295,6 +295,8 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         int function_index = compiler_find_func(s, t)
         s = compiler_expect(compiler_next(s), "(")
         string args = ""
+        string evaluations = ""
+        string call_id = compiler_number(s.pos)
         int arg = 0
         int loan_floor = s.count
         for s.error == "" && s.token != ")" && s.token != "" {
@@ -322,19 +324,26 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 s.count = s.count + 1
             }
             if expected == 2 {
-                if s.value_slot < 0 { return compiler_fail(s, "owner argument must be a variable") }
-                int origin = s.value_slot
-                s = compiler_consume(s, origin)
-                argument = "compiler_move(&" + compiler_var(origin) + ")"
+                if s.value_slot >= 0 {
+                    int origin = s.value_slot
+                    s = compiler_consume(s, origin)
+                    argument = "compiler_move(&" + compiler_var(origin) + ")"
+                }
             }
+            string temporary = "s_arg" + call_id + "_" + compiler_number(arg)
+            string argument_type = "int64_t "
+            if expected == 2 || expected == 4 { argument_type = "int64_t *" }
+            if expected == 3 { argument_type = "const int64_t *" }
+            s.code = s.code + argument_type + temporary + ";\n"
+            evaluations = evaluations + "(" + temporary + " = " + argument + "),"
             if arg > 0 { args = args + "," }
-            args = args + argument
+            args = args + temporary
             arg = arg + 1
         }
         if arg != s.function_counts[function_index] { return compiler_fail(s, "wrong number of function arguments") }
         s = compiler_expect(s, ")")
         s.count = loan_floor
-        s.value = s.function_names[function_index] + "(" + args + ")"
+        s.value = "(" + evaluations + s.function_names[function_index] + "(" + args + "))"
         s.value_kind = s.function_returns[function_index]
         s.value_slot = -1
         s.new_borrow = false
@@ -375,9 +384,16 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
         string op = s.token
         int precedence = compiler_precedence(op)
         string left = s.value
+        string temporary = "s_left" + compiler_number(s.pos)
         if s.value_kind != 1 { return compiler_fail(s, "binary operator requires integers") }
+        before := s
+        if op != "&&" && op != "||" {
+            s.code = s.code + "int64_t " + temporary + ";\n"
+        }
         s = compiler_expression(compiler_next(s), precedence + 1)
         if s.value_kind != 1 { return compiler_fail(s, "binary operator requires integers") }
+        string original_left = left
+        if op != "&&" && op != "||" { left = temporary }
         string helper = ""
         if op == "+" { helper = "compiler_add" }
         if op == "-" { helper = "compiler_sub" }
@@ -386,6 +402,15 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
         if op == "%" { helper = "compiler_mod" }
         if helper != "" { s.value = helper + "(" + left + "," + s.value + ")" }
         else { s.value = "(" + left + op + s.value + ")" }
+        if op != "&&" && op != "||" {
+            s.value = "((" + temporary + " = " + original_left + ")," + s.value + ")"
+        } else {
+            int i = 0
+            for i < before.count {
+                if before.live[i] != s.live[i] { s.live[i] = 2 }
+                i = i + 1
+            }
+        }
         s.value_kind = 1
         s.value_slot = -1
         s.new_borrow = false
@@ -490,10 +515,11 @@ func compiler_statement(compiler_state initial) compiler_state {
         return no
     }
     if s.token == "while" {
+        int old_floor = s.loop_floor
+        s.loop_floor = s.count
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != 1 { return compiler_fail(s, "condition requires an integer") }
         s.code = s.code + "while (" + s.value + ")\n"
-        int old_floor = s.loop_floor
         int old_cleanup = s.loop_cleanup
         s.loop_cleanup = s.count
         s.loop_floor = s.count
@@ -566,6 +592,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         s = compiler_expect(compiler_next(s), "=")
         s = compiler_expression(s, 1)
         if s.value_kind != 1 { return compiler_fail(s, "box write requires an integer") }
+        s = compiler_available(s, slot)
         s = compiler_expect(s, ";")
         s.code = s.code + "*" + compiler_var(slot) + " = " + s.value + ";\n"
         return s
