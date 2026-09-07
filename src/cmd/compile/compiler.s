@@ -435,7 +435,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         for s.error == "" && s.token != ")" && s.token != "" {
             if arg > 0 { s = compiler_expect(s, ",") }
             s = compiler_expression(s, 1)
-            if s.value_kind < 1 || s.value_kind > 5 { return compiler_fail(s, "function arguments require integers, owners, pairs or references") }
+            if s.value_kind < 1 || s.value_kind > 7 { return compiler_fail(s, "function arguments require integers, owners, arrays, pairs or references") }
             if arg >= s.function_counts[function_index] { return compiler_fail(s, "too many function arguments") }
             int expected = s.function_param_kinds[s.function_starts[function_index] + arg]
             if expected == 7 {
