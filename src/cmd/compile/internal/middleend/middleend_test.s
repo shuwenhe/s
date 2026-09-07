@@ -222,4 +222,3 @@ func run_stage2_tests() {
     print("\n=====================================\n")
     print("✓ All Stage 2 tests passed!\n")
 }
-

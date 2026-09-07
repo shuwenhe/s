@@ -6,6 +6,7 @@ enum sym_type {
     sym_type_rodata,
     sym_type_extern,
 }
+
 struct link_sym {
     string name
     sym_type type

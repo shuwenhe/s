@@ -3886,6 +3886,7 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
         _ : backend_error { message: "backend error: unsupported call target" },
     }
 }
+
 func eval_box_new_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if len(args) != 1 {
         return fail_value("backend error: box expects exactly one value")

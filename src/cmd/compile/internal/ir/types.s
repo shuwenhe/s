@@ -6,6 +6,7 @@ enum type_kind {
     named,
     generic,
 }
+
 struct type {
     type_kind kind
     string name,

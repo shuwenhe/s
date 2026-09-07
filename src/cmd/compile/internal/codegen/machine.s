@@ -19,6 +19,7 @@ enum amd64_register {
     reg_r14 = 14,
     reg_r15 = 15,
 }
+
 struct instr_stream {
     int8[] code
     int64 offset

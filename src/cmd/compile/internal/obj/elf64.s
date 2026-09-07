@@ -19,6 +19,7 @@ enum elf_machine {
     elf_machine_arm64 = 183,
     elf_machine_riscv = 243,
 }
+
 struct elf_header {
     int8[] ident
     elf_type type

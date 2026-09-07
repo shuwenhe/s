@@ -9,6 +9,7 @@ enum token_kind {
     symbol,
     eof,
 }
+
 struct token {
     token_kind kind
     string value

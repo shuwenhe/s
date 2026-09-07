@@ -12,6 +12,7 @@ enum symbol_type {
     symbol_type_section,
     symbol_type_file,
 }
+
 struct symbol_entry {
     string name
     symbol_bind bind

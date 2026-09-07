@@ -22,6 +22,7 @@ enum value_op {
     op_branch,
     op_switch,
 }
+
 struct ssa_value {
     i32 id
     string name

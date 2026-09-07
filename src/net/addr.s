@@ -3,6 +3,7 @@ interface addr {
     network() string
     string() string
 }
+
 struct tcp_addr {
     string ip
     int port

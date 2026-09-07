@@ -89,6 +89,7 @@ enum token_type {
     tok_newline = 86,
     tok_error = 87,
 }
+
 struct token {
     type_* int
     value* string

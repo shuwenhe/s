@@ -35,10 +35,13 @@ func compiler_number(int n) string {
     if n < 10 { return __host_char_at(digits, n) }
     return compiler_number(n / 10) + __host_char_at(digits, n % 10)
 }
+
 func compiler_digit(string c) bool { return c != "" && c >= "0" && c <= "9" }
+
 func compiler_alpha(string c) bool {
     return c != "" && ((c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c == "_")
 }
+
 func compiler_ident(string t) bool {
     if !compiler_alpha(__host_char_at(t, 0)) { return false }
     int i = 1
@@ -49,15 +52,19 @@ func compiler_ident(string t) bool {
     }
     return true
 }
+
 func compiler_fail(compiler_state initial, string message) compiler_state {
     s := initial
     if s.error == "" { s.error = "compiler:" + compiler_number(s.line) + ": " + message }
     return s
 }
+
 func compiler_next(compiler_state initial) compiler_state {
     s := initial
+    eprintln("debug: next enter")
     if s.error != "" { return s }
     int n = len(s.source)
+    eprintln("debug: next len")
     for s.pos < n {
         string c = __host_char_at(s.source, s.pos)
         string d = __host_char_at(s.source, s.pos + 1)
@@ -81,6 +88,7 @@ func compiler_next(compiler_state initial) compiler_state {
     }
     if s.pos >= n { s.token = ""; return s }
     int start = s.pos
+    eprintln("debug: next scan")
     string c = __host_char_at(s.source, s.pos)
     s.pos = s.pos + 1
     if compiler_alpha(c) || compiler_digit(c) {
@@ -97,14 +105,17 @@ func compiler_next(compiler_state initial) compiler_state {
             return compiler_fail(s, "unsupported token: " + c)
         }
     }
-    s.token = __host_slice(s.source, start, s.pos)
+    s.token = "" + __host_slice(s.source, start, s.pos)
+    eprintln("debug: next token ready")
     return s
 }
+
 func compiler_expect(compiler_state initial, string token) compiler_state {
     s := initial
     if s.token != token { return compiler_fail(s, "expected '" + token + "', found '" + s.token + "'") }
     return compiler_next(s)
 }
+
 func compiler_find(compiler_state initial, string name) int {
     s := initial
     int i = s.count - 1
@@ -114,7 +125,9 @@ func compiler_find(compiler_state initial, string name) int {
     }
     return -1
 }
+
 func compiler_var(int slot) string { return "s_v" + compiler_number(slot) }
+
 func compiler_conflict(compiler_state initial, int owner, bool exclusive) bool {
     s := initial
     int i = 0
@@ -124,6 +137,7 @@ func compiler_conflict(compiler_state initial, int owner, bool exclusive) bool {
     }
     return false
 }
+
 func compiler_child_conflict(compiler_state initial, int parent, bool exclusive) bool {
     s := initial
     int i = 0
@@ -133,12 +147,14 @@ func compiler_child_conflict(compiler_state initial, int parent, bool exclusive)
     }
     return false
 }
+
 func compiler_available(compiler_state initial, int slot) compiler_state {
     s := initial
     if slot < 0 { return compiler_fail(s, "unknown variable") }
     if s.live[slot] != 1 { return compiler_fail(s, "use of moved, dropped or conditionally initialized value: " + s.names[slot]) }
     return s
 }
+
 func compiler_consume(compiler_state initial, int slot) compiler_state {
     s := initial
     s = compiler_available(s, slot)
@@ -148,6 +164,7 @@ func compiler_consume(compiler_state initial, int slot) compiler_state {
     s.live[slot] = 0
     return s
 }
+
 func compiler_cleanup(compiler_state initial, int floor) string {
     s := initial
     string code = ""
@@ -158,6 +175,7 @@ func compiler_cleanup(compiler_state initial, int floor) string {
     }
     return code
 }
+
 func compiler_precedence(string op) int {
     if op == "||" { return 1 }
     if op == "&&" { return 2 }
@@ -167,6 +185,7 @@ func compiler_precedence(string op) int {
     if op == "*" || op == "/" || op == "%" { return 6 }
     return 0
 }
+
 func compiler_atom(compiler_state initial) compiler_state {
     s := initial
     if s.error != "" { return s }
@@ -176,6 +195,7 @@ func compiler_atom(compiler_state initial) compiler_state {
     s.expr_depth = s.expr_depth - 1
     return s
 }
+
 func compiler_atom_inner(compiler_state initial) compiler_state {
     s := initial
     string t = s.token
@@ -279,6 +299,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     s.value_slot = slot
     return compiler_next(s)
 }
+
 func compiler_expression(compiler_state initial, int minimum) compiler_state {
     s := initial
     s = compiler_atom(s)
@@ -303,6 +324,7 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
     }
     return s
 }
+
 func compiler_bind(compiler_state initial, string name, bool declaration) compiler_state {
     s := initial
     int slot = compiler_find(s, name)
@@ -350,6 +372,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if declaration { s.count = s.count + 1 }
     return s
 }
+
 func compiler_block(compiler_state initial) compiler_state {
     s := initial
     int floor = s.count
@@ -368,6 +391,7 @@ func compiler_block(compiler_state initial) compiler_state {
     s.depth = s.depth - 1
     return s
 }
+
 func compiler_statement(compiler_state initial) compiler_state {
     s := initial
     if s.token == "{" { return compiler_block(s) }
@@ -475,38 +499,52 @@ func compiler_statement(compiler_state initial) compiler_state {
     s = compiler_bind(s, name, declaration)
     return compiler_expect(s, ";")
 }
+
 func compiler_compile(string source) compiler_state {
+    eprintln("debug: compile enter")
     names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     live := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     roots := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     parents := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\nint main(void)\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, new_borrow: false }
+    eprintln("debug: state ready")
     s = compiler_next(s)
+    eprintln("debug: first token=" + s.token)
     s = compiler_expect(s, "package")
+    eprintln("debug: package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
     s = compiler_next(s)
+    eprintln("debug: package name")
     if s.token == ";" { s = compiler_next(s) }
     s = compiler_expect(s, "func")
+    eprintln("debug: func")
     s = compiler_expect(s, "main")
     s = compiler_expect(s, "(")
     s = compiler_expect(s, ")")
     s = compiler_expect(s, "int")
+    eprintln("debug: signature")
     s.code = s.code + "{\n"
     s = compiler_block(s)
+    eprintln("debug: block")
     s.code = s.code + "return compiler_finish(0);\n}\n"
     if s.token != "" { s = compiler_fail(s, "only one main function is supported; imports and extern declarations are forbidden") }
     return s
 }
+
 func main() int {
+    eprintln("debug: enter main")
     args := host_args()
+    eprintln("debug: got args")
     if len(args) != 4 || args[1] != "--emit-c" {
         eprintln("usage: s_compiler --emit-c input.s output.c")
         return 2
     }
     string source = __host_read_to_string(args[2])
+    eprintln("debug: read source")
     if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
     result := compiler_compile(source)
+    eprintln("debug: compiled")
     if result.error != "" { eprintln(result.error); return 1 }
     if __host_write_text_file(args[3], result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
     return 0
