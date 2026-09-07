@@ -14,21 +14,21 @@ func (writer* File) write(string data) ((), io_error) {
 
 Traits are satisfied implicitly by method-set compatibility. A type implements a trait when its receiver methods contain every method required by that trait with compatible parameter and return types. S does not use `impl` declarations.
 
-## Ownership compiler without tracing GC
+## Compiler ownership and lowering
 
-`make nogc-compiler` builds an S-written ownership checker and C backend for
+`make compiler` builds an S-written ownership checker and C backend for
 an explicit language subset. It supports owned integer boxes, moves, lexical
 shared/mutable borrows, branch checks, and automatic cleanup on scope exit,
 return and loop control. Generated applications do not link the S GC.
 
 ```sh
-./misc/scripts/s-nogc.sh build test/nogc/ownership.s -o /tmp/s-owned
-make nogc-check
+./misc/scripts/s-compiler.sh build test/compiler/ownership.s -o /tmp/s-owned
+make compiler-check
 ```
 
-See [the no-GC compiler guide](doc/nogc.md) for the supported syntax, tests and
+See [the compiler guide](doc/compiler.md) for the supported syntax, tests and
 limitations. The compiler is seed-hosted; this is not yet full-language or
-converged self-hosted no-GC compilation.
+converged self-hosted ownership-aware compilation.
 
 ## Performance Comparison
 
