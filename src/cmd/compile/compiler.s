@@ -285,13 +285,16 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             s = compiler_next(s)
             if s.token == "left" { field = 0 }
             if s.token == "right" { field = 1 }
-            if field < 0 || s.kinds[slot] != 5 { return compiler_fail(s, "invalid pair field dereference") }
-            if (field == 0 && s.field_left_live[slot] != 1) || (field == 1 && s.field_right_live[slot] != 1) { return compiler_fail(s, "use of moved pair field") }
+            if field < 0 { return compiler_fail(s, "invalid pair field dereference") }
+            if s.kinds[slot] != 5 { return compiler_fail(s, "invalid pair field dereference") }
+            if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
+            if field == 1 && s.field_right_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
             s.value = "(*" + compiler_var(slot) + "->" + compiler_field_name(field) + ")"
+            s = compiler_next(s)
         } else {
             s.value = "(*" + compiler_var(slot) + ")"
         }
-        if s.kinds[slot] >= 3 && compiler_child_conflict(s, slot, false) { return compiler_fail(s, "cannot read reference during a mutable reborrow") }
+        if s.kinds[slot] >= 3 && s.kinds[slot] <= 4 && compiler_child_conflict(s, slot, false) { return compiler_fail(s, "cannot read reference during a mutable reborrow") }
         if s.kinds[slot] == 2 && compiler_conflict(s, slot, false) { return compiler_fail(s, "owner cannot be read during a mutable borrow") }
         s.value_kind = 1
         s.value_slot = -1
@@ -314,8 +317,15 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         string left = s.value
         if s.value_slot >= 0 {
             int origin = s.value_slot
-            s = compiler_consume(s, origin)
-            left = "compiler_move(&" + compiler_var(origin) + ")"
+            if s.value_field >= 0 {
+                if compiler_conflict(s, origin, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+                if s.value_field == 0 { s.field_left_live[origin] = 0 }
+                else { s.field_right_live[origin] = 0 }
+                left = "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(s.value_field) + ")"
+            } else {
+                s = compiler_consume(s, origin)
+                left = "compiler_move(&" + compiler_var(origin) + ")"
+            }
         }
         s = compiler_expect(s, ",")
         s = compiler_expression(s, 1)
@@ -323,8 +333,15 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         string right = s.value
         if s.value_slot >= 0 {
             int origin = s.value_slot
-            s = compiler_consume(s, origin)
-            right = "compiler_move(&" + compiler_var(origin) + ")"
+            if s.value_field >= 0 {
+                if compiler_conflict(s, origin, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+                if s.value_field == 0 { s.field_left_live[origin] = 0 }
+                else { s.field_right_live[origin] = 0 }
+                right = "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(s.value_field) + ")"
+            } else {
+                s = compiler_consume(s, origin)
+                right = "compiler_move(&" + compiler_var(origin) + ")"
+            }
         }
         s = compiler_expect(s, ")")
         s.value = "compiler_pair_make(" + left + "," + right + ")"
@@ -351,12 +368,12 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         for s.error == "" && s.token != ")" && s.token != "" {
             if arg > 0 { s = compiler_expect(s, ",") }
             s = compiler_expression(s, 1)
-            if s.value_kind < 1 || s.value_kind > 4 { return compiler_fail(s, "function arguments require integers, owners or references") }
+            if s.value_kind < 1 || s.value_kind > 5 { return compiler_fail(s, "function arguments require integers, owners, pairs or references") }
             if arg >= s.function_counts[function_index] { return compiler_fail(s, "too many function arguments") }
             int expected = s.function_param_kinds[s.function_starts[function_index] + arg]
             if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
             string argument = s.value
-            if expected >= 3 {
+            if expected >= 3 && expected <= 4 {
                 int root = s.value_slot
                 int parent = s.value_parent
                 if !s.new_borrow {
@@ -370,21 +387,23 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 s.live[s.count] = 1
                 s.roots[s.count] = root
                 s.parents[s.count] = parent
-                if s.function_returns[function_index] >= 3 && arg == s.function_return_params[function_index] {
+                if s.function_returns[function_index] >= 3 && s.function_returns[function_index] <= 4 && arg == s.function_return_params[function_index] {
                     returned_loan_slot = s.count
                 }
                 s.count = s.count + 1
             }
-            if expected == 2 {
+            if expected == 2 || expected == 5 {
                 if s.value_slot >= 0 {
                     int origin = s.value_slot
                     s = compiler_consume(s, origin)
-                    argument = "compiler_move(&" + compiler_var(origin) + ")"
+                    if expected == 5 { argument = "compiler_pair_move(&" + compiler_var(origin) + ")" }
+                    else { argument = "compiler_move(&" + compiler_var(origin) + ")" }
                 }
             }
             string temporary = "s_arg" + call_id + "_" + compiler_number(arg)
             string argument_type = "int64_t "
             if expected == 2 || expected == 4 { argument_type = "int64_t *" }
+            if expected == 5 { argument_type = "compiler_pair *" }
             if expected == 3 { argument_type = "const int64_t *" }
             s.code = s.code + argument_type + temporary + ";\n"
             evaluations = evaluations + "(" + temporary + " = " + argument + "),"
@@ -396,7 +415,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s = compiler_expect(s, ")")
         int returned_root = -1
         int returned_parent = -1
-        if s.function_returns[function_index] >= 3 {
+        if s.function_returns[function_index] >= 3 && s.function_returns[function_index] <= 4 {
             if returned_loan_slot < 0 || returned_loan_slot >= s.count { return compiler_fail(s, "reference return argument is unavailable") }
             returned_root = s.roots[returned_loan_slot]
             returned_parent = s.parents[returned_loan_slot]
@@ -404,14 +423,14 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.count = loan_floor
         s.value = "(" + evaluations + s.function_names[function_index] + "(" + args + "))"
         s.value_kind = s.function_returns[function_index]
-        if s.value_kind >= 3 {
+        if s.value_kind >= 3 && s.value_kind <= 4 {
             s.new_borrow = true
             s.value_parent = returned_parent
             s.value_slot = returned_root
         } else {
             s.value_slot = -1
         }
-        if s.value_kind < 3 { s.new_borrow = false }
+        if s.value_kind < 3 || s.value_kind > 4 { s.new_borrow = false }
         return s
     }
     if t == "true" || t == "false" {
@@ -444,13 +463,17 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         if s.token == "right" { field = 1 }
         if field < 0 { return compiler_fail(s, "pair has only left and right fields") }
         if s.kinds[slot] != 5 { return compiler_fail(s, "field access requires a pair") }
-        if (field == 0 && s.field_left_live[slot] != 1) || (field == 1 && s.field_right_live[slot] != 1) {
+        if field == 0 && s.field_left_live[slot] != 1 {
+            return compiler_fail(s, "use of moved pair field")
+        }
+        if field == 1 && s.field_right_live[slot] != 1 {
             return compiler_fail(s, "use of moved pair field")
         }
         s.value = compiler_var(slot) + "->" + compiler_field_name(field)
         s.value_kind = 2
         s.value_slot = slot
         s.value_field = field
+        s = compiler_next(s)
         return s
     }
     s.value = compiler_var(slot)
@@ -508,7 +531,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if !compiler_ident(name) { return compiler_fail(s, "expected variable name") }
     if declaration { slot = s.count }
     if !declaration && s.kinds[slot] != s.value_kind { return compiler_fail(s, "assignment changes variable type") }
-    if !declaration && s.value_kind >= 3 { return compiler_fail(s, "reference reassignment is not supported") }
+    if !declaration && s.value_kind >= 3 && s.value_kind <= 4 { return compiler_fail(s, "reference reassignment is not supported") }
     string rhs = s.value
     int origin = s.value_slot
     if s.value_kind == 2 || s.value_kind == 5 {
@@ -532,7 +555,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         }
     }
     int parent = s.value_parent
-    if s.value_kind >= 3 && !s.new_borrow {
+    if s.value_kind >= 3 && s.value_kind <= 4 && !s.new_borrow {
         if s.value_kind == 4 { return compiler_fail(s, "mutable reference copying is not supported; create a reborrow") }
         parent = s.parents[origin]
         origin = s.roots[origin]
@@ -557,7 +580,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     s.roots[slot] = -1
     s.parents[slot] = -1
     if s.value_kind == 5 { s.field_left_live[slot] = 1; s.field_right_live[slot] = 1 }
-    if s.value_kind >= 3 { s.roots[slot] = origin; s.parents[slot] = parent }
+    if s.value_kind >= 3 && s.value_kind <= 4 { s.roots[slot] = origin; s.parents[slot] = parent }
     if declaration { s.count = s.count + 1 }
     return s
 }
@@ -607,7 +630,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         }
         int both_terminated = 0
         if yes.terminated != 0 && no.terminated != 0 { both_terminated = 1 }
-        if s.return_kind >= 3 {
+        if s.return_kind >= 3 && s.return_kind <= 4 {
             int returned_param = -1
             if yes.terminated != 0 { returned_param = yes.return_param }
             if no.terminated != 0 {
@@ -640,10 +663,10 @@ func compiler_statement(compiler_state initial) compiler_state {
     if s.token == "return" {
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != s.return_kind { return compiler_fail(s, "return type mismatch") }
-        if s.return_kind >= 3 && (s.value_slot < 0 || s.value_slot >= s.parameter_count) {
+        if s.return_kind >= 3 && s.return_kind <= 4 && (s.value_slot < 0 || s.value_slot >= s.parameter_count) {
             return compiler_fail(s, "reference return must use a parameter")
         }
-        if s.return_kind >= 3 {
+        if s.return_kind >= 3 && s.return_kind <= 4 {
             if s.return_param < 0 { s.return_param = s.value_slot }
             else if s.return_param != s.value_slot { return compiler_fail(s, "reference return parameter differs across paths") }
             s.function_return_params[s.function_count - 1] = s.return_param
@@ -658,6 +681,14 @@ func compiler_statement(compiler_state initial) compiler_state {
             }
         } else if s.value_kind == 3 { result_type = "const int64_t *" }
         else if s.value_kind == 4 { result_type = "int64_t *" }
+        else if s.value_kind == 5 {
+            result_type = "compiler_pair *"
+            if s.value_slot >= 0 {
+                int origin = s.value_slot
+                s = compiler_consume(s, origin)
+                s.value = "compiler_pair_move(&" + compiler_var(origin) + ")"
+            }
+        }
         s = compiler_expect(s, ";")
         string finish = "return compiler_result;"
         if s.function_main { finish = "return compiler_finish(compiler_result);" }
@@ -742,7 +773,8 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         else if s.token == "box" { kind = 2 }
         else if s.token == "ref" { kind = 3 }
         else if s.token == "mutref" { kind = 4 }
-        else { return compiler_fail(s, "function parameters require int, box, ref or mutref") }
+        else if s.token == "pair" { kind = 5 }
+        else { return compiler_fail(s, "function parameters require int, box, ref, mutref or pair") }
         s = compiler_next(s)
         string param = s.token
         if !compiler_ident(param) { return compiler_fail(s, "expected parameter name") }
@@ -757,7 +789,8 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     if s.token == "box" { s.return_kind = 2 }
     else if s.token == "ref" { s.return_kind = 3 }
     else if s.token == "mutref" { s.return_kind = 4 }
-    else if s.token != "int" { return compiler_fail(s, "function return type must be int, box, ref or mutref") }
+    else if s.token == "pair" { s.return_kind = 5 }
+    else if s.token != "int" { return compiler_fail(s, "function return type must be int, box, ref, mutref or pair") }
     s = compiler_next(s)
     s.parameter_count = param_count
     s.return_param = -1
@@ -778,11 +811,13 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
 
     string signature = "static int64_t " + name + "("
     if s.return_kind == 2 || s.return_kind == 4 { signature = "static int64_t *" + name + "(" }
+    else if s.return_kind == 5 { signature = "static compiler_pair *" + name + "(" }
     else if s.return_kind == 3 { signature = "static const int64_t *" + name + "(" }
     pi = 0
     for pi < param_count {
         if pi > 0 { signature = signature + ", " }
         if s.kinds[pi] == 2 || s.kinds[pi] == 4 { signature = signature + "int64_t *" }
+        else if s.kinds[pi] == 5 { signature = signature + "compiler_pair *" }
         else if s.kinds[pi] == 3 { signature = signature + "const int64_t *" }
         else { signature = signature + "int64_t " }
         signature = signature + "p" + compiler_number(pi)
@@ -802,13 +837,15 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     for pi < param_count {
         string ctype = "int64_t "
         if s.kinds[pi] == 2 || s.kinds[pi] == 4 { ctype = "int64_t *" }
+        else if s.kinds[pi] == 5 { ctype = "compiler_pair *" }
         else if s.kinds[pi] == 3 { ctype = "const int64_t *" }
         s.code = s.code + ctype + compiler_var(pi) + " = p" + compiler_number(pi) + ";\n"
         s.code = s.code + "(void)" + compiler_var(pi) + ";\n"
         s.live[pi] = 1
         s.roots[pi] = -1
-        if s.kinds[pi] >= 3 { s.roots[pi] = pi }
+        if s.kinds[pi] >= 3 && s.kinds[pi] <= 4 { s.roots[pi] = pi }
         s.parents[pi] = -1
+        if s.kinds[pi] == 5 { s.field_left_live[pi] = 1; s.field_right_live[pi] = 1 }
         s.count = s.count + 1
         pi = pi + 1
     }
@@ -826,13 +863,15 @@ func compiler_compile(string source) compiler_state {
     live := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     roots := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     parents := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    field_left_live := live
+    field_right_live := live
     function_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]; 
     function_counts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_returns := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_return_params := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_starts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_param_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, function_name: "", function_main: false }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
