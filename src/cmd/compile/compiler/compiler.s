@@ -63,8 +63,10 @@ func compiler_next(compiler_state initial) compiler_state {
     s := initial
     if s.error != "" { return s }
     int n = len(s.source)
+    eprintln("trace next a")
     for s.pos < n {
         string c = __host_char_at(s.source, s.pos)
+        eprintln("trace next b")
         string d = ""
         if s.pos + 1 < n { d = __host_char_at(s.source, s.pos + 1) }
         if c == " " || c == "\t" || c == "\r" || c == "\n" {
@@ -87,8 +89,10 @@ func compiler_next(compiler_state initial) compiler_state {
         } else { break }
     }
     if s.pos >= n { s.token = ""; return s }
+    eprintln("trace next c")
     int start = s.pos
     string c = __host_char_at(s.source, s.pos)
+    eprintln("trace next d")
     s.pos = s.pos + 1
     if compiler_alpha(c) || compiler_digit(c) {
         for s.pos < n {
@@ -106,6 +110,7 @@ func compiler_next(compiler_state initial) compiler_state {
         }
     }
     s.token = "" + __host_slice(s.source, start, s.pos)
+    eprintln("trace next e")
     return s
 }
 
@@ -500,12 +505,14 @@ func compiler_statement(compiler_state initial) compiler_state {
 }
 
 func compiler_compile(string source) compiler_state {
+    eprintln("trace compile a")
     names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     live := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     roots := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     parents := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\nint main(void)\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, new_borrow: false }
+    eprintln("trace compile b")
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
@@ -524,14 +531,19 @@ func compiler_compile(string source) compiler_state {
 }
 
 func main() {
+    eprintln("trace main a")
     args := host_args()
+    eprintln("trace main b")
     if len(args) != 4 || args[1] != "--emit-c" {
         eprintln("usage: s_compiler --emit-c input.s output.c")
         return 2
     }
     string source = __host_read_to_string(args[2])
+    eprintln("trace main c")
     if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
+    eprintln("trace main d")
     result := compiler_compile(source)
+    eprintln("trace main e")
     if result.error != "" { eprintln(result.error); return 1 }
     if __host_write_text_file(args[3], result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
     return 0
