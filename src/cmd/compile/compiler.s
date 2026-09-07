@@ -172,7 +172,9 @@ func compiler_conflict_at(compiler_state initial, int owner, int field, bool exc
     int i = 0
     for i < s.count {
         bool same_field = field < 0 || s.loan_fields[i] < 0 || s.loan_fields[i] == field
-        if s.live[i] != 0 && s.roots[i] == owner && same_field && (s.kinds[i] == 4 || (exclusive && s.kinds[i] == 3)) { return true }
+        bool mutable_loan = s.kinds[i] == 4 || s.kinds[i] == 11
+        bool shared_loan = s.kinds[i] == 3 || s.kinds[i] == 10
+        if s.live[i] != 0 && s.roots[i] == owner && same_field && (mutable_loan || (exclusive && shared_loan)) { return true }
         i = i + 1
     }
     return false
@@ -216,6 +218,7 @@ func compiler_cleanup(compiler_state initial, int floor) string {
     for i >= floor {
         if s.kinds[i] == 2 { code = code + "compiler_drop(&" + compiler_var(i) + ");\n" }
         if s.kinds[i] == 5 { code = code + "compiler_pair_drop(&" + compiler_var(i) + ");\n" }
+        if s.kinds[i] == 9 { code = code + "compiler_slice_drop(&" + compiler_var(i) + ");\n" }
         i = i - 1
     }
     return code
@@ -369,11 +372,25 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         int slot = compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
-        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 { return compiler_fail(s, "len requires an integer array") }
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 { return compiler_fail(s, "len requires an integer array or slice") }
         s = compiler_expect(compiler_next(s), ")")
         s.value = "INT64_C(" + compiler_array_length(s, slot) + ")"
-        if s.array_lengths[slot] < 0 { s.value = compiler_var(slot) + "_len" }
+        if s.kinds[slot] == 9 { s.value = compiler_var(slot) + "->len" }
+        else if s.array_lengths[slot] < 0 { s.value = compiler_var(slot) + "_len" }
         s.value_kind = 1
+        s.value_slot = -1
+        return s
+    }
+    if t == "slice" {
+        s = compiler_expect(compiler_next(s), "(")
+        int slot = compiler_find(s, s.token)
+        s = compiler_available(s, slot)
+        if s.error != "" { return s }
+        if s.kinds[slot] != 6 { return compiler_fail(s, "slice requires a fixed integer array") }
+        int length = s.array_lengths[slot]
+        s = compiler_expect(compiler_next(s), ")")
+        s.value = "compiler_slice_from_array(" + compiler_var(slot) + "," + compiler_number(length) + ")"
+        s.value_kind = 9
         s.value_slot = -1
         return s
     }
@@ -435,7 +452,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         for s.error == "" && s.token != ")" && s.token != "" {
             if arg > 0 { s = compiler_expect(s, ",") }
             s = compiler_expression(s, 1)
-            if s.value_kind < 1 || s.value_kind > 8 { return compiler_fail(s, "function arguments require integers, owners, arrays, pairs or references") }
+            if s.value_kind < 1 || s.value_kind > 9 { return compiler_fail(s, "function arguments require integers, owners, arrays, slices, pairs or references") }
             if arg >= s.function_counts[function_index] { return compiler_fail(s, "too many function arguments") }
             int expected = s.function_param_kinds[s.function_starts[function_index] + arg]
             if expected == 7 || expected == 8 {
@@ -468,11 +485,27 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 }
                 s.count = s.count + 1
             }
-            if expected == 2 || expected == 5 {
+            if expected == 7 || expected == 8 {
+                if s.value_slot < 0 { return compiler_fail(s, "array argument requires a named array") }
+                bool exclusive = expected == 8
+                if compiler_conflict(s, s.value_slot, exclusive) { return compiler_fail(s, "conflicting array argument borrow") }
+                if s.count >= len(s.names) { return compiler_fail(s, "argument loan capacity exceeded") }
+                s.names[s.count] = ""
+                if expected == 8 { s.kinds[s.count] = 11 }
+                else { s.kinds[s.count] = 10 }
+                s.live[s.count] = 1
+                s.roots[s.count] = s.value_slot
+                s.parents[s.count] = -1
+                s.loan_fields[s.count] = -1
+                s.array_lengths[s.count] = 0
+                s.count = s.count + 1
+            }
+            if expected == 2 || expected == 5 || expected == 9 {
                 if s.value_slot >= 0 {
                     int origin = s.value_slot
                     s = compiler_consume(s, origin)
                     if expected == 5 { argument = "compiler_pair_move(&" + compiler_var(origin) + ")" }
+                    else if expected == 9 { argument = "compiler_slice_move(&" + compiler_var(origin) + ")" }
                     else { argument = "compiler_move(&" + compiler_var(origin) + ")" }
                 }
             }
@@ -480,6 +513,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             string argument_type = "int64_t "
             if expected == 2 || expected == 4 { argument_type = "int64_t *" }
             if expected == 5 { argument_type = "compiler_pair *" }
+            if expected == 9 { argument_type = "compiler_slice *" }
             if expected == 7 { argument_type = "const int64_t *" }
             if expected == 8 { argument_type = "int64_t *" }
             if expected == 3 { argument_type = "const int64_t *" }
@@ -536,12 +570,15 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     if s.error != "" { return s }
     s = compiler_next(s)
     if s.token == "[" {
-        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 { return compiler_fail(s, "indexing requires an integer array") }
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 { return compiler_fail(s, "indexing requires an integer array or slice") }
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
         string index = s.value
         s = compiler_expect(s, "]")
-        s.value = compiler_var(slot) + "[compiler_index(" + compiler_array_length(s, slot) + "," + index + ")]"
+        string data = compiler_var(slot)
+        string length = compiler_array_length(s, slot)
+        if s.kinds[slot] == 9 { data = compiler_var(slot) + "->data"; length = compiler_var(slot) + "->len" }
+        s.value = data + "[compiler_index(" + length + "," + index + ")]"
         s.value_kind = 1
         s.value_slot = -1
         return s
@@ -624,7 +661,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if !declaration && s.value_kind >= 3 && s.value_kind <= 4 { return compiler_fail(s, "reference reassignment is not supported") }
     string rhs = s.value
     int origin = s.value_slot
-    if s.value_kind == 2 || s.value_kind == 5 {
+    if s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9 {
         if s.value_field >= 0 {
             if s.kinds[origin] != 5 { return compiler_fail(s, "field move requires a pair") }
             if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
@@ -641,6 +678,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         if origin >= 0 {
             s = compiler_consume(s, origin)
             if s.value_kind == 5 { rhs = "compiler_pair_move(&" + compiler_var(origin) + ")" }
+            else if s.value_kind == 9 { rhs = "compiler_slice_move(&" + compiler_var(origin) + ")" }
             else { rhs = "compiler_move(&" + compiler_var(origin) + ")" }
         }
     }
@@ -652,14 +690,16 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     }
     string ctype = "int64_t "
     if s.value_kind == 5 { ctype = "compiler_pair *" }
+    else if s.value_kind == 9 { ctype = "compiler_slice *" }
     else if s.value_kind >= 2 { ctype = "int64_t *" }
     if s.value_kind == 3 { ctype = "const int64_t *" }
     if s.value_kind == 6 { ctype = "int64_t " }
     if !declaration { ctype = "" }
-    if !declaration && (s.value_kind == 2 || s.value_kind == 5) {
+    if !declaration && (s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9) {
         string replacement_type = "int64_t *"
         string replacement_drop = "compiler_drop"
         if s.value_kind == 5 { replacement_type = "compiler_pair *"; replacement_drop = "compiler_pair_drop" }
+        if s.value_kind == 9 { replacement_type = "compiler_slice *"; replacement_drop = "compiler_slice_drop" }
         s.code = s.code + "{ " + replacement_type + "compiler_new = " + rhs + ";\n" + replacement_drop + "(&" + compiler_var(slot) + ");\n" + compiler_var(slot) + " = compiler_new; }\n"
     } else if s.value_kind == 6 {
         if !declaration { return compiler_fail(s, "array reassignment is not supported") }
@@ -790,6 +830,14 @@ func compiler_statement(compiler_state initial) compiler_state {
                 s.value = "compiler_pair_move(&" + compiler_var(origin) + ")"
             }
         }
+        else if s.value_kind == 9 {
+            result_type = "compiler_slice *"
+            if s.value_slot >= 0 {
+                int origin = s.value_slot
+                s = compiler_consume(s, origin)
+                s.value = "compiler_slice_move(&" + compiler_var(origin) + ")"
+            }
+        }
         s = compiler_expect(s, ";")
         string finish = "return compiler_result;"
         if s.function_main { finish = "return compiler_finish(compiler_result);" }
@@ -872,7 +920,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         int slot = compiler_find(s, name)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
-        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 { return compiler_fail(s, "index assignment requires an integer array") }
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 { return compiler_fail(s, "index assignment requires an integer array or slice") }
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
         string index = s.value
@@ -880,7 +928,10 @@ func compiler_statement(compiler_state initial) compiler_state {
         s = compiler_expect(s, "=")
         s = compiler_expression(s, 1)
         if s.value_kind != 1 { return compiler_fail(s, "array elements require integers") }
-        s.code = s.code + compiler_var(slot) + "[compiler_index(" + compiler_array_length(s, slot) + "," + index + ")] = " + s.value + ";\n"
+        string data = compiler_var(slot)
+        string length = compiler_array_length(s, slot)
+        if s.kinds[slot] == 9 { data = compiler_var(slot) + "->data"; length = compiler_var(slot) + "->len" }
+        s.code = s.code + data + "[compiler_index(" + length + "," + index + ")] = " + s.value + ";\n"
         s = compiler_expect(s, ";")
         return s
     }
@@ -909,6 +960,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         else if s.token == "ref" { kind = 3 }
         else if s.token == "mutref" { kind = 4 }
         else if s.token == "pair" { kind = 5 }
+        else if s.token == "slice" { kind = 9 }
         else { return compiler_fail(s, "function parameters require int, box, ref, mutref or pair") }
         s = compiler_next(s)
         if kind == 1 && s.token == "[" {
@@ -934,6 +986,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     else if s.token == "ref" { s.return_kind = 3 }
     else if s.token == "mutref" { s.return_kind = 4 }
     else if s.token == "pair" { s.return_kind = 5 }
+    else if s.token == "slice" { s.return_kind = 9 }
     else if s.token != "int" { return compiler_fail(s, "function return type must be int, box, ref, mutref or pair") }
     s = compiler_next(s)
     s.parameter_count = param_count
@@ -956,12 +1009,14 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     string signature = "static int64_t " + name + "("
     if s.return_kind == 2 || s.return_kind == 4 { signature = "static int64_t *" + name + "(" }
     else if s.return_kind == 5 { signature = "static compiler_pair *" + name + "(" }
+    else if s.return_kind == 9 { signature = "static compiler_slice *" + name + "(" }
     else if s.return_kind == 3 { signature = "static const int64_t *" + name + "(" }
     pi = 0
     for pi < param_count {
         if pi > 0 { signature = signature + ", " }
         if s.kinds[pi] == 2 || s.kinds[pi] == 4 { signature = signature + "int64_t *" }
         else if s.kinds[pi] == 5 { signature = signature + "compiler_pair *" }
+        else if s.kinds[pi] == 9 { signature = signature + "compiler_slice *" }
         else if s.kinds[pi] == 7 { signature = signature + "const int64_t *" }
         else if s.kinds[pi] == 8 { signature = signature + "int64_t *" }
         else if s.kinds[pi] == 3 { signature = signature + "const int64_t *" }
@@ -985,6 +1040,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         string ctype = "int64_t "
         if s.kinds[pi] == 2 || s.kinds[pi] == 4 { ctype = "int64_t *" }
         else if s.kinds[pi] == 5 { ctype = "compiler_pair *" }
+        else if s.kinds[pi] == 9 { ctype = "compiler_slice *" }
         else if s.kinds[pi] == 7 { ctype = "const int64_t *" }
         else if s.kinds[pi] == 8 { ctype = "int64_t *" }
         else if s.kinds[pi] == 3 { ctype = "const int64_t *" }
