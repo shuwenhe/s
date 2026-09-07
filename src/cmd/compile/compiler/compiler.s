@@ -523,7 +523,7 @@ func compiler_compile(string source) compiler_state {
     return s
 }
 
-func main() int {
+func main() {
     args := host_args()
     if len(args) != 4 || args[1] != "--emit-c" {
         eprintln("usage: s_compiler --emit-c input.s output.c")
