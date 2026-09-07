@@ -37,6 +37,41 @@ static inline int64_t *compiler_move(int64_t **source) {
     *source = NULL;
     return p;
 }
+static inline void compiler_drop(int64_t **owner);
+typedef struct compiler_pair {
+    int64_t *left;
+    int64_t *right;
+} compiler_pair;
+static inline compiler_pair *compiler_pair_make(int64_t *left, int64_t *right) {
+    compiler_pair *p = (compiler_pair *)malloc(sizeof(*p));
+    if (!p) compiler_trap("allocation failed");
+    p->left = left;
+    p->right = right;
+#ifdef S_COMPILER_CHECK_ALLOCATIONS
+    ++compiler_objects;
+#endif
+    return p;
+}
+static inline compiler_pair *compiler_pair_move(compiler_pair **source) {
+    compiler_pair *p = *source;
+    *source = NULL;
+    return p;
+}
+static inline int64_t *compiler_pair_move_field(compiler_pair *p, int field) {
+    int64_t **slot = field == 0 ? &p->left : &p->right;
+    return compiler_move(slot);
+}
+static inline void compiler_pair_drop(compiler_pair **owner) {
+    if (*owner) {
+        compiler_drop(&(*owner)->left);
+        compiler_drop(&(*owner)->right);
+        free(*owner);
+        *owner = NULL;
+#ifdef S_COMPILER_CHECK_ALLOCATIONS
+        --compiler_objects;
+#endif
+    }
+}
 static inline void compiler_drop(int64_t **owner) {
     if (*owner) {
         free(*owner);

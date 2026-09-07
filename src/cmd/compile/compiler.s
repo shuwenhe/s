@@ -17,6 +17,8 @@ struct compiler_state {
     int[] live
     int[] roots
     int[] parents
+    int[] field_left_live
+    int[] field_right_live
     int count
     int loop_floor
     int loop_cleanup
@@ -27,6 +29,7 @@ struct compiler_state {
     int value_kind
     int value_slot
     int value_parent
+    int value_field
     bool new_borrow
     string[] function_names
     int[] function_counts
@@ -140,6 +143,11 @@ func compiler_find(compiler_state initial, string name) int {
 
 func compiler_var(int slot) string { return "s_v" + compiler_number(slot) }
 
+func compiler_field_name(int field) string {
+    if field == 0 { return "left" }
+    return "right"
+}
+
 func compiler_find_func(compiler_state initial, string name) int {
     s := initial
     int i = s.function_count - 1
@@ -193,6 +201,7 @@ func compiler_cleanup(compiler_state initial, int floor) string {
     int i = s.count - 1
     for i >= floor {
         if s.kinds[i] == 2 { code = code + "compiler_drop(&" + compiler_var(i) + ");\n" }
+        if s.kinds[i] == 5 { code = code + "compiler_pair_drop(&" + compiler_var(i) + ");\n" }
         i = i - 1
     }
     return code
@@ -223,6 +232,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     string t = s.token
     s.value_slot = -1
     s.value_parent = -1
+    s.value_field = -1
     s.new_borrow = false
     if t == "(" {
         s = compiler_expression(compiler_next(s), 1)
@@ -269,10 +279,20 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s = compiler_available(s, slot)
         if s.error != "" { return s }
         if s.kinds[slot] < 2 { return compiler_fail(s, "dereference requires a box or reference") }
+        int field = -1
+        s = compiler_next(s)
+        if s.token == "." {
+            s = compiler_next(s)
+            if s.token == "left" { field = 0 }
+            if s.token == "right" { field = 1 }
+            if field < 0 || s.kinds[slot] != 5 { return compiler_fail(s, "invalid pair field dereference") }
+            if (field == 0 && s.field_left_live[slot] != 1) || (field == 1 && s.field_right_live[slot] != 1) { return compiler_fail(s, "use of moved pair field") }
+            s.value = "(*" + compiler_var(slot) + "->" + compiler_field_name(field) + ")"
+        } else {
+            s.value = "(*" + compiler_var(slot) + ")"
+        }
         if s.kinds[slot] >= 3 && compiler_child_conflict(s, slot, false) { return compiler_fail(s, "cannot read reference during a mutable reborrow") }
         if s.kinds[slot] == 2 && compiler_conflict(s, slot, false) { return compiler_fail(s, "owner cannot be read during a mutable borrow") }
-        s = compiler_next(s)
-        s.value = "(*" + compiler_var(slot) + ")"
         s.value_kind = 1
         s.value_slot = -1
         return s
@@ -284,6 +304,31 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s = compiler_expect(s, ")")
         s.value = "compiler_box(" + s.value + ")"
         s.value_kind = 2
+        s.value_slot = -1
+        return s
+    }
+    if t == "pair" {
+        s = compiler_expect(compiler_next(s), "(")
+        s = compiler_expression(s, 1)
+        if s.value_kind != 2 { return compiler_fail(s, "pair left field requires an owner") }
+        string left = s.value
+        if s.value_slot >= 0 {
+            int origin = s.value_slot
+            s = compiler_consume(s, origin)
+            left = "compiler_move(&" + compiler_var(origin) + ")"
+        }
+        s = compiler_expect(s, ",")
+        s = compiler_expression(s, 1)
+        if s.value_kind != 2 { return compiler_fail(s, "pair right field requires an owner") }
+        string right = s.value
+        if s.value_slot >= 0 {
+            int origin = s.value_slot
+            s = compiler_consume(s, origin)
+            right = "compiler_move(&" + compiler_var(origin) + ")"
+        }
+        s = compiler_expect(s, ")")
+        s.value = "compiler_pair_make(" + left + "," + right + ")"
+        s.value_kind = 5
         s.value_slot = -1
         return s
     }
@@ -391,10 +436,27 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     int slot = compiler_find(s, t)
     s = compiler_available(s, slot)
     if s.error != "" { return s }
+    s = compiler_next(s)
+    if s.token == "." {
+        s = compiler_next(s)
+        int field = -1
+        if s.token == "left" { field = 0 }
+        if s.token == "right" { field = 1 }
+        if field < 0 { return compiler_fail(s, "pair has only left and right fields") }
+        if s.kinds[slot] != 5 { return compiler_fail(s, "field access requires a pair") }
+        if (field == 0 && s.field_left_live[slot] != 1) || (field == 1 && s.field_right_live[slot] != 1) {
+            return compiler_fail(s, "use of moved pair field")
+        }
+        s.value = compiler_var(slot) + "->" + compiler_field_name(field)
+        s.value_kind = 2
+        s.value_slot = slot
+        s.value_field = field
+        return s
+    }
     s.value = compiler_var(slot)
     s.value_kind = s.kinds[slot]
     s.value_slot = slot
-    return compiler_next(s)
+    return s
 }
 
 func compiler_expression(compiler_state initial, int minimum) compiler_state {
@@ -449,7 +511,15 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if !declaration && s.value_kind >= 3 { return compiler_fail(s, "reference reassignment is not supported") }
     string rhs = s.value
     int origin = s.value_slot
-    if s.value_kind == 2 {
+    if s.value_kind == 2 || s.value_kind == 5 {
+        if s.value_field >= 0 {
+            if s.kinds[origin] != 5 { return compiler_fail(s, "field move requires a pair") }
+            if compiler_conflict(s, origin, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+            if s.value_field == 0 { s.field_left_live[origin] = 0 }
+            else { s.field_right_live[origin] = 0 }
+            rhs = "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(s.value_field) + ")"
+            origin = -1
+        }
         if !declaration {
             if compiler_conflict(s, slot, true) { return compiler_fail(s, "cannot overwrite borrowed owner") }
             if s.loop_floor >= 0 && slot < s.loop_floor { return compiler_fail(s, "cannot replace an outer owner inside a loop") }
@@ -457,7 +527,8 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         if origin == slot { return compiler_fail(s, "self move is not supported") }
         if origin >= 0 {
             s = compiler_consume(s, origin)
-            rhs = "compiler_move(&" + compiler_var(origin) + ")"
+            if s.value_kind == 5 { rhs = "compiler_pair_move(&" + compiler_var(origin) + ")" }
+            else { rhs = "compiler_move(&" + compiler_var(origin) + ")" }
         }
     }
     int parent = s.value_parent
@@ -467,11 +538,15 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         origin = s.roots[origin]
     }
     string ctype = "int64_t "
-    if s.value_kind >= 2 { ctype = "int64_t *" }
+    if s.value_kind == 5 { ctype = "compiler_pair *" }
+    else if s.value_kind >= 2 { ctype = "int64_t *" }
     if s.value_kind == 3 { ctype = "const int64_t *" }
     if !declaration { ctype = "" }
-    if !declaration && s.value_kind == 2 {
-        s.code = s.code + "{ int64_t *compiler_new = " + rhs + ";\ncompiler_drop(&" + compiler_var(slot) + ");\n" + compiler_var(slot) + " = compiler_new; }\n"
+    if !declaration && (s.value_kind == 2 || s.value_kind == 5) {
+        string replacement_type = "int64_t *"
+        string replacement_drop = "compiler_drop"
+        if s.value_kind == 5 { replacement_type = "compiler_pair *"; replacement_drop = "compiler_pair_drop" }
+        s.code = s.code + "{ " + replacement_type + "compiler_new = " + rhs + ";\n" + replacement_drop + "(&" + compiler_var(slot) + ");\n" + compiler_var(slot) + " = compiler_new; }\n"
     } else {
         s.code = s.code + ctype + compiler_var(slot) + " = " + rhs + ";\n"
     }
@@ -481,6 +556,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     s.live[slot] = 1
     s.roots[slot] = -1
     s.parents[slot] = -1
+    if s.value_kind == 5 { s.field_left_live[slot] = 1; s.field_right_live[slot] = 1 }
     if s.value_kind >= 3 { s.roots[slot] = origin; s.parents[slot] = parent }
     if declaration { s.count = s.count + 1 }
     return s
@@ -605,6 +681,9 @@ func compiler_statement(compiler_state initial) compiler_state {
         if s.kinds[slot] == 2 {
             s = compiler_consume(s, slot)
             s.code = s.code + "compiler_drop(&" + compiler_var(slot) + ");\n"
+        } else if s.kinds[slot] == 5 {
+            s = compiler_consume(s, slot)
+            s.code = s.code + "compiler_pair_drop(&" + compiler_var(slot) + ");\n"
         } else if s.kinds[slot] >= 3 {
             if compiler_child_conflict(s, slot, true) { return compiler_fail(s, "cannot drop reference with a live reborrow") }
             if s.loop_floor >= 0 && slot < s.loop_floor { return compiler_fail(s, "cannot end an outer borrow inside a loop") }
