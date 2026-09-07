@@ -5,6 +5,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CASES = [
+    ("return_ref", "func identity(ref a) ref { return a; }",
+     "a := box(42); r := identity(&a); return *r;", True),
+    ("return_mutref", "func identity(mutref a) mutref { return a; }",
+     "a := box(1); r := identity(&mut a); *r = 42; return *r;", True),
+    ("return_second_ref", "func second(int x, ref a) ref { return a; }",
+     "a := box(42); r := second(0, &a); return *r;", True),
+    ("return_second_mutref", "func second(int x, mutref a) mutref { return a; }",
+     "a := box(1); r := second(0, &mut a); *r = 42; return *r;", True),
+    ("return_ref_mismatch", "func bad(ref a, ref b) ref { if true { return a; } else { return b; } }",
+     "a := box(1); b := box(2); r := bad(&a, &b); return *r;", False),
+    ("return_local_ref", "func bad(box a) ref { r := &a; return r; }",
+     "a := box(42); r := bad(a); return *r;", False),
+    ("return_ref_missing", "func bad(ref a) ref { if true { return a; } }",
+     "a := box(42); r := bad(&a); return *r;", False),
     ("loop_evaluation", "func bump(mutref a) int { *a = *a + 1; return *a; }",
      "a := box(0); while bump(&mut a) < 42 { } return *a;", True),
     ("mutation_order", "func bump(mutref a) int { *a = *a + 1; return *a; }",
