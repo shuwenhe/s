@@ -59,8 +59,8 @@ func compiler_fail(compiler_state initial, string message) compiler_state {
     return s
 }
 
-func compiler_next(initial* compiler_state) compiler_state {
-    s := *initial
+func (compiler_state* self) compiler_next() compiler_state {
+    s := compiler_state { source: self.source, pos: self.pos, line: self.line, token: self.token, error: self.error, code: self.code, names: self.names, kinds: self.kinds, live: self.live, roots: self.roots, parents: self.parents, count: self.count, loop_floor: self.loop_floor, loop_cleanup: self.loop_cleanup, depth: self.depth, expr_depth: self.expr_depth, terminated: self.terminated, value: self.value, value_kind: self.value_kind, value_slot: self.value_slot, value_parent: self.value_parent, new_borrow: self.new_borrow }
     if s.error != "" { return s }
     int n = len(s.source)
     eprintln("trace next a")
@@ -117,7 +117,7 @@ func compiler_next(initial* compiler_state) compiler_state {
 func compiler_expect(compiler_state initial, string token) compiler_state {
     s := initial
     if s.token != token { return compiler_fail(s, "expected '" + token + "', found '" + s.token + "'") }
-    return compiler_next(&s)
+    return s.compiler_next()
 }
 
 func compiler_find(compiler_state initial, string name) int {
@@ -207,11 +207,11 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     s.value_parent = -1
     s.new_borrow = false
     if t == "(" {
-        s = compiler_expression(compiler_next(&s), 1)
+        s = compiler_expression(s.compiler_next(), 1)
         return compiler_expect(s, ")")
     }
     if t == "-" || t == "!" {
-        s = compiler_atom(compiler_next(&s))
+        s = compiler_atom(s.compiler_next())
         if s.value_kind != 1 { return compiler_fail(s, "unary operator requires an integer") }
         if t == "-" { s.value = "compiler_sub(0," + s.value + ")" }
         else { s.value = "(!(" + s.value + "))" }
@@ -219,11 +219,11 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         return s
     }
     if t == "&" {
-        s = compiler_next(&s)
+        s = s.compiler_next()
         int kind = 3
-        if s.token == "mut" { kind = 4; s = compiler_next(&s) }
+        if s.token == "mut" { kind = 4; s = s.compiler_next() }
         bool reborrow = s.token == "*"
-        if reborrow { s = compiler_next(&s) }
+        if reborrow { s = s.compiler_next() }
         int slot = compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
@@ -238,7 +238,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if s.kinds[slot] != 2 { return compiler_fail(s, "borrow requires an owned box; use &*reference to reborrow") }
             if compiler_conflict(s, slot, kind == 4) { return compiler_fail(s, "conflicting borrow: " + s.names[slot]) }
         }
-        s = compiler_next(&s)
+        s = s.compiler_next()
         s.value = compiler_var(slot)
         s.value_kind = kind
         s.value_slot = root
@@ -246,21 +246,21 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         return s
     }
     if t == "*" {
-        s = compiler_next(&s)
+        s = s.compiler_next()
         int slot = compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
         if s.kinds[slot] < 2 { return compiler_fail(s, "dereference requires a box or reference") }
         if s.kinds[slot] >= 3 && compiler_child_conflict(s, slot, false) { return compiler_fail(s, "cannot read reference during a mutable reborrow") }
         if s.kinds[slot] == 2 && compiler_conflict(s, slot, false) { return compiler_fail(s, "owner cannot be read during a mutable borrow") }
-        s = compiler_next(&s)
+        s = s.compiler_next()
         s.value = "(*" + compiler_var(slot) + ")"
         s.value_kind = 1
         s.value_slot = -1
         return s
     }
     if t == "box" {
-        s = compiler_expect(compiler_next(&s), "(")
+        s = compiler_expect(s.compiler_next(), "(")
         s = compiler_expression(s, 1)
         if s.value_kind != 1 { return compiler_fail(s, "box requires an integer") }
         s = compiler_expect(s, ")")
@@ -270,7 +270,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         return s
     }
     if t == "live_allocations" {
-        s = compiler_expect(compiler_next(&s), "(")
+        s = compiler_expect(s.compiler_next(), "(")
         s = compiler_expect(s, ")")
         s.value = "compiler_live()"
         s.value_kind = 1
@@ -280,7 +280,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.value = "0"
         if t == "true" { s.value = "1" }
         s.value_kind = 1
-        return compiler_next(&s)
+        return s.compiler_next()
     }
     if compiler_digit(__host_char_at(t, 0)) {
         int i = 0
@@ -293,7 +293,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         for i + 1 < len(t) && __host_char_at(t, i) == "0" { i = i + 1 }
         s.value = "INT64_C(" + __host_slice(t, i, len(t)) + ")"
         s.value_kind = 1
-        return compiler_next(&s)
+        return s.compiler_next()
     }
     int slot = compiler_find(s, t)
     s = compiler_available(s, slot)
@@ -301,7 +301,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     s.value = compiler_var(slot)
     s.value_kind = s.kinds[slot]
     s.value_slot = slot
-    return compiler_next(&s)
+    return s.compiler_next()
 }
 
 func compiler_expression(compiler_state initial, int minimum) compiler_state {
@@ -312,7 +312,7 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
         int precedence = compiler_precedence(op)
         string left = s.value
         if s.value_kind != 1 { return compiler_fail(s, "binary operator requires integers") }
-        s = compiler_expression(compiler_next(&s), precedence + 1)
+        s = compiler_expression(s.compiler_next(), precedence + 1)
         if s.value_kind != 1 { return compiler_fail(s, "binary operator requires integers") }
         string helper = ""
         if op == "+" { helper = "compiler_add" }
@@ -400,7 +400,7 @@ func compiler_statement(compiler_state initial) compiler_state {
     s := initial
     if s.token == "{" { return compiler_block(s) }
     if s.token == "if" {
-        s = compiler_expression(compiler_next(&s), 1)
+        s = compiler_expression(s.compiler_next(), 1)
         if s.value_kind != 1 { return compiler_fail(s, "condition requires an integer") }
         s.code = s.code + "if (" + s.value + ")\n"
         before := s
@@ -409,7 +409,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         no := before
         no.pos = yes.pos; no.line = yes.line; no.token = yes.token; no.code = yes.code
         if no.token == "else" {
-            no = compiler_next(&no)
+            no = no.compiler_next()
             no.code = no.code + "else\n"
             no = compiler_block(no)
         }
@@ -426,7 +426,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         return no
     }
     if s.token == "while" {
-        s = compiler_expression(compiler_next(&s), 1)
+        s = compiler_expression(s.compiler_next(), 1)
         if s.value_kind != 1 { return compiler_fail(s, "condition requires an integer") }
         s.code = s.code + "while (" + s.value + ")\n"
         int old_floor = s.loop_floor
@@ -440,7 +440,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         return body
     }
     if s.token == "return" {
-        s = compiler_expression(compiler_next(&s), 1)
+        s = compiler_expression(s.compiler_next(), 1)
         if s.value_kind != 1 { return compiler_fail(s, "return requires an integer; references and owners cannot escape this subset") }
         s = compiler_expect(s, ";")
         s.code = s.code + "{ int64_t compiler_result = " + s.value + ";\n" + compiler_cleanup(s, 0) + "return compiler_finish(compiler_result); }\n"
@@ -450,13 +450,13 @@ func compiler_statement(compiler_state initial) compiler_state {
     if s.token == "break" || s.token == "continue" {
         string op = s.token
         if s.loop_floor < 0 { return compiler_fail(s, "loop control outside a loop") }
-        s = compiler_expect(compiler_next(&s), ";")
+        s = compiler_expect(s.compiler_next(), ";")
         s.code = s.code + compiler_cleanup(s, s.loop_cleanup) + op + ";\n"
         s.terminated = 1
         return s
     }
     if s.token == "drop" {
-        s = compiler_expect(compiler_next(&s), "(")
+        s = compiler_expect(s.compiler_next(), "(")
         int slot = compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
@@ -468,11 +468,11 @@ func compiler_statement(compiler_state initial) compiler_state {
             if s.loop_floor >= 0 && slot < s.loop_floor { return compiler_fail(s, "cannot end an outer borrow inside a loop") }
             s.live[slot] = 0
         } else { return compiler_fail(s, "drop requires an owner or reference") }
-        s = compiler_expect(compiler_next(&s), ")")
+        s = compiler_expect(s.compiler_next(), ")")
         return compiler_expect(s, ";")
     }
     if s.token == "assert" {
-        s = compiler_expect(compiler_next(&s), "(")
+        s = compiler_expect(s.compiler_next(), "(")
         s = compiler_expression(s, 1)
         if s.value_kind != 1 { return compiler_fail(s, "assert requires an integer") }
         s = compiler_expect(s, ")")
@@ -481,14 +481,14 @@ func compiler_statement(compiler_state initial) compiler_state {
         return s
     }
     if s.token == "*" {
-        s = compiler_next(&s)
+        s = s.compiler_next()
         int slot = compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
         if s.kinds[slot] != 2 && s.kinds[slot] != 4 { return compiler_fail(s, "write requires an owner or mutable reference") }
         if s.kinds[slot] == 4 && compiler_child_conflict(s, slot, true) { return compiler_fail(s, "cannot write reference with a live reborrow") }
         if s.kinds[slot] == 2 && compiler_conflict(s, slot, true) { return compiler_fail(s, "cannot write borrowed owner") }
-        s = compiler_expect(compiler_next(&s), "=")
+        s = compiler_expect(s.compiler_next(), "=")
         s = compiler_expression(s, 1)
         if s.value_kind != 1 { return compiler_fail(s, "box write requires an integer") }
         s = compiler_expect(s, ";")
@@ -496,10 +496,10 @@ func compiler_statement(compiler_state initial) compiler_state {
         return s
     }
     string name = s.token
-    s = compiler_next(&s)
+    s = s.compiler_next()
     bool declaration = s.token == ":="
     if !declaration && s.token != "=" { return compiler_fail(s, "expected := or =; unsupported statement") }
-    s = compiler_expression(compiler_next(&s), 1)
+    s = compiler_expression(s.compiler_next(), 1)
     s = compiler_bind(s, name, declaration)
     return compiler_expect(s, ";")
 }
@@ -513,11 +513,11 @@ func compiler_compile(string source) compiler_state {
     parents := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\nint main(void)\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, new_borrow: false }
     eprintln("trace compile b")
-    s = compiler_next(&s)
+    s = s.compiler_next()
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
-    s = compiler_next(&s)
-    if s.token == ";" { s = compiler_next(&s) }
+    s = s.compiler_next()
+    if s.token == ";" { s = s.compiler_next() }
     s = compiler_expect(s, "func")
     s = compiler_expect(s, "main")
     s = compiler_expect(s, "(")
