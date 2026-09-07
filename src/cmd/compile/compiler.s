@@ -17,6 +17,7 @@ struct compiler_state {
     int[] live
     int[] roots
     int[] parents
+    int[] loan_fields
     int[] field_left_live
     int[] field_right_live
     int count
@@ -158,14 +159,19 @@ func compiler_find_func(compiler_state initial, string name) int {
     return -1
 }
 
-func compiler_conflict(compiler_state initial, int owner, bool exclusive) bool {
+func compiler_conflict_at(compiler_state initial, int owner, int field, bool exclusive) bool {
     s := initial
     int i = 0
     for i < s.count {
-        if s.live[i] != 0 && s.roots[i] == owner && (s.kinds[i] == 4 || (exclusive && s.kinds[i] == 3)) { return true }
+        bool same_field = field < 0 || s.loan_fields[i] < 0 || s.loan_fields[i] == field
+        if s.live[i] != 0 && s.roots[i] == owner && same_field && (s.kinds[i] == 4 || (exclusive && s.kinds[i] == 3)) { return true }
         i = i + 1
     }
     return false
+}
+
+func compiler_conflict(compiler_state initial, int owner, bool exclusive) bool {
+    return compiler_conflict_at(initial, owner, -1, exclusive)
 }
 
 func compiler_child_conflict(compiler_state initial, int parent, bool exclusive) bool {
@@ -255,6 +261,19 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         int slot = compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
+        int field = -1
+        if !reborrow {
+            s = compiler_next(s)
+            if s.token == "." {
+                s = compiler_next(s)
+                if s.token == "left" { field = 0 }
+                if s.token == "right" { field = 1 }
+                if field < 0 { return compiler_fail(s, "pair has only left and right fields") }
+                if s.kinds[slot] != 5 { return compiler_fail(s, "field borrow requires a pair") }
+                if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
+                if field == 1 && s.field_right_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
+            }
+        }
         int root = slot
         if reborrow {
             if s.kinds[slot] < 3 { return compiler_fail(s, "reborrow requires a reference") }
@@ -263,13 +282,17 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             root = s.roots[slot]
             s.value_parent = slot
         } else {
-            if s.kinds[slot] != 2 { return compiler_fail(s, "borrow requires an owned box; use &*reference to reborrow") }
-            if compiler_conflict(s, slot, kind == 4) { return compiler_fail(s, "conflicting borrow: " + s.names[slot]) }
+            if field < 0 && s.kinds[slot] != 2 { return compiler_fail(s, "borrow requires an owned box or pair field; use &*reference to reborrow") }
+            if field >= 0 {
+                if compiler_conflict_at(s, slot, field, kind == 4) { return compiler_fail(s, "conflicting field borrow: " + s.names[slot]) }
+            } else if compiler_conflict(s, slot, kind == 4) { return compiler_fail(s, "conflicting borrow: " + s.names[slot]) }
         }
-        s = compiler_next(s)
+        if reborrow || field >= 0 { s = compiler_next(s) }
         s.value = compiler_var(slot)
+        if field >= 0 { s.value = compiler_var(slot) + "->" + compiler_field_name(field) }
         s.value_kind = kind
         s.value_slot = root
+        s.value_field = field
         s.new_borrow = true
         return s
     }
@@ -289,6 +312,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if s.kinds[slot] != 5 { return compiler_fail(s, "invalid pair field dereference") }
             if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
             if field == 1 && s.field_right_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
+            if compiler_conflict_at(s, slot, field, false) { return compiler_fail(s, "cannot read pair field during a mutable borrow") }
             s.value = "(*" + compiler_var(slot) + "->" + compiler_field_name(field) + ")"
             s = compiler_next(s)
         } else {
@@ -318,7 +342,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         if s.value_slot >= 0 {
             int origin = s.value_slot
             if s.value_field >= 0 {
-                if compiler_conflict(s, origin, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+                if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
                 if s.value_field == 0 { s.field_left_live[origin] = 0 }
                 else { s.field_right_live[origin] = 0 }
                 left = "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(s.value_field) + ")"
@@ -334,7 +358,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         if s.value_slot >= 0 {
             int origin = s.value_slot
             if s.value_field >= 0 {
-                if compiler_conflict(s, origin, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+                if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
                 if s.value_field == 0 { s.field_left_live[origin] = 0 }
                 else { s.field_right_live[origin] = 0 }
                 right = "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(s.value_field) + ")"
@@ -387,6 +411,8 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 s.live[s.count] = 1
                 s.roots[s.count] = root
                 s.parents[s.count] = parent
+                s.loan_fields[s.count] = -1
+                if s.value_field >= 0 { s.loan_fields[s.count] = s.value_field }
                 if s.function_returns[function_index] >= 3 && s.function_returns[function_index] <= 4 && arg == s.function_return_params[function_index] {
                     returned_loan_slot = s.count
                 }
@@ -537,7 +563,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if s.value_kind == 2 || s.value_kind == 5 {
         if s.value_field >= 0 {
             if s.kinds[origin] != 5 { return compiler_fail(s, "field move requires a pair") }
-            if compiler_conflict(s, origin, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+            if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
             if s.value_field == 0 { s.field_left_live[origin] = 0 }
             else { s.field_right_live[origin] = 0 }
             rhs = "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(s.value_field) + ")"
@@ -579,8 +605,13 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     s.live[slot] = 1
     s.roots[slot] = -1
     s.parents[slot] = -1
+    s.loan_fields[slot] = -1
     if s.value_kind == 5 { s.field_left_live[slot] = 1; s.field_right_live[slot] = 1 }
-    if s.value_kind >= 3 && s.value_kind <= 4 { s.roots[slot] = origin; s.parents[slot] = parent }
+    if s.value_kind >= 3 && s.value_kind <= 4 {
+        s.roots[slot] = origin
+        s.parents[slot] = parent
+        if s.value_field >= 0 { s.loan_fields[slot] = s.value_field }
+    }
     if declaration { s.count = s.count + 1 }
     return s
 }
@@ -737,15 +768,32 @@ func compiler_statement(compiler_state initial) compiler_state {
         int slot = compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
-        if s.kinds[slot] != 2 && s.kinds[slot] != 4 { return compiler_fail(s, "write requires an owner or mutable reference") }
-        if s.kinds[slot] == 4 && compiler_child_conflict(s, slot, true) { return compiler_fail(s, "cannot write reference with a live reborrow") }
-        if s.kinds[slot] == 2 && compiler_conflict(s, slot, true) { return compiler_fail(s, "cannot write borrowed owner") }
-        s = compiler_expect(compiler_next(s), "=")
+        string target = compiler_var(slot)
+        if s.kinds[slot] == 5 {
+            s = compiler_next(s)
+            if s.token != "." { return compiler_fail(s, "pair write requires a field") }
+            s = compiler_next(s)
+            int field = -1
+            if s.token == "left" { field = 0 }
+            if s.token == "right" { field = 1 }
+            if field < 0 { return compiler_fail(s, "pair has only left and right fields") }
+            if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
+            if field == 1 && s.field_right_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
+            if compiler_conflict_at(s, slot, field, true) { return compiler_fail(s, "cannot write pair field during a borrow") }
+            target = compiler_var(slot) + "->" + compiler_field_name(field)
+            s = compiler_next(s)
+        } else {
+            if s.kinds[slot] != 2 && s.kinds[slot] != 4 { return compiler_fail(s, "write requires an owner or mutable reference") }
+            if s.kinds[slot] == 4 && compiler_child_conflict(s, slot, true) { return compiler_fail(s, "cannot write reference with a live reborrow") }
+            if s.kinds[slot] == 2 && compiler_conflict(s, slot, true) { return compiler_fail(s, "cannot write borrowed owner") }
+            s = compiler_next(s)
+        }
+        s = compiler_expect(s, "=")
         s = compiler_expression(s, 1)
         if s.value_kind != 1 { return compiler_fail(s, "box write requires an integer") }
         s = compiler_available(s, slot)
         s = compiler_expect(s, ";")
-        s.code = s.code + "*" + compiler_var(slot) + " = " + s.value + ";\n"
+        s.code = s.code + "*" + target + " = " + s.value + ";\n"
         return s
     }
     string name = s.token
@@ -845,6 +893,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         s.roots[pi] = -1
         if s.kinds[pi] >= 3 && s.kinds[pi] <= 4 { s.roots[pi] = pi }
         s.parents[pi] = -1
+        s.loan_fields[pi] = -1
         if s.kinds[pi] == 5 { s.field_left_live[pi] = 1; s.field_right_live[pi] = 1 }
         s.count = s.count + 1
         pi = pi + 1
@@ -865,13 +914,14 @@ func compiler_compile(string source) compiler_state {
     parents := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     field_left_live := live
     field_right_live := live
+    loan_fields := roots
     function_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]; 
     function_counts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_returns := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_return_params := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_starts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_param_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, function_name: "", function_main: false }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
