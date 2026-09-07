@@ -153,6 +153,8 @@ func compiler_field_name(int field) string {
 
 func compiler_array_length(compiler_state initial, int slot) string {
     s := initial
+    if s.kinds[slot] == 9 { return compiler_var(slot) + "->len" }
+    if s.kinds[slot] == 15 || s.kinds[slot] == 16 { return compiler_var(slot) + "_len" }
     if s.array_lengths[slot] >= 0 { return compiler_number(s.array_lengths[slot]) }
     return compiler_var(slot) + "_len"
 }
@@ -372,10 +374,11 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         int slot = compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
-        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 { return compiler_fail(s, "len requires an integer array or slice") }
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 { return compiler_fail(s, "len requires an integer array or slice") }
         s = compiler_expect(compiler_next(s), ")")
         s.value = "INT64_C(" + compiler_array_length(s, slot) + ")"
         if s.kinds[slot] == 9 { s.value = compiler_var(slot) + "->len" }
+        if s.kinds[slot] == 15 || s.kinds[slot] == 16 { s.value = compiler_var(slot) + "_len" }
         else if s.array_lengths[slot] < 0 { s.value = compiler_var(slot) + "_len" }
         s.value_kind = 1
         s.value_slot = -1
@@ -457,12 +460,17 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             int expected = s.function_param_kinds[s.function_starts[function_index] + arg]
             if expected == 7 || expected == 8 {
                 if s.value_kind != 6 && s.value_kind != 7 && s.value_kind != 8 { return compiler_fail(s, "function argument requires an integer array") }
+            } else if expected == 15 || expected == 16 {
+                if s.value_kind != 9 && s.value_kind != 15 && s.value_kind != 16 { return compiler_fail(s, "function argument requires a slice") }
             } else if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
             string argument = s.value
             string argument_length = ""
-            if expected == 7 || expected == 8 {
+            if expected == 7 || expected == 8 || expected == 15 || expected == 16 {
                 if s.value_slot < 0 { return compiler_fail(s, "array argument requires a named array") }
                 argument_length = compiler_array_length(s, s.value_slot)
+                if expected == 15 || expected == 16 {
+                    if s.value_kind == 9 { argument = compiler_var(s.value_slot) + "->data" }
+                }
             }
             if expected >= 3 && expected <= 4 {
                 int root = s.value_slot
@@ -485,13 +493,13 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 }
                 s.count = s.count + 1
             }
-            if expected == 7 || expected == 8 {
+            if expected == 7 || expected == 8 || expected == 15 || expected == 16 {
                 if s.value_slot < 0 { return compiler_fail(s, "array argument requires a named array") }
-                bool exclusive = expected == 8
+                bool exclusive = expected == 8 || expected == 16
                 if compiler_conflict(s, s.value_slot, exclusive) { return compiler_fail(s, "conflicting array argument borrow") }
                 if s.count >= len(s.names) { return compiler_fail(s, "argument loan capacity exceeded") }
                 s.names[s.count] = ""
-                if expected == 8 { s.kinds[s.count] = 11 }
+                if exclusive { s.kinds[s.count] = 11 }
                 else { s.kinds[s.count] = 10 }
                 s.live[s.count] = 1
                 s.roots[s.count] = s.value_slot
@@ -514,14 +522,14 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if expected == 2 || expected == 4 { argument_type = "int64_t *" }
             if expected == 5 { argument_type = "compiler_pair *" }
             if expected == 9 { argument_type = "compiler_slice *" }
-            if expected == 7 { argument_type = "const int64_t *" }
-            if expected == 8 { argument_type = "int64_t *" }
+            if expected == 7 || expected == 15 { argument_type = "const int64_t *" }
+            if expected == 8 || expected == 16 { argument_type = "int64_t *" }
             if expected == 3 { argument_type = "const int64_t *" }
             s.code = s.code + argument_type + temporary + ";\n"
             evaluations = evaluations + "(" + temporary + " = " + argument + "),"
             if arg > 0 { args = args + "," }
             args = args + temporary
-            if expected == 7 || expected == 8 { args = args + "," + argument_length }
+            if expected == 7 || expected == 8 || expected == 15 || expected == 16 { args = args + "," + argument_length }
             arg = arg + 1
         }
         if arg != s.function_counts[function_index] { return compiler_fail(s, "wrong number of function arguments") }
@@ -570,7 +578,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     if s.error != "" { return s }
     s = compiler_next(s)
     if s.token == "[" {
-        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 { return compiler_fail(s, "indexing requires an integer array or slice") }
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 { return compiler_fail(s, "indexing requires an integer array or slice") }
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
         string index = s.value
@@ -578,6 +586,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         string data = compiler_var(slot)
         string length = compiler_array_length(s, slot)
         if s.kinds[slot] == 9 { data = compiler_var(slot) + "->data"; length = compiler_var(slot) + "->len" }
+        if s.kinds[slot] == 15 || s.kinds[slot] == 16 { data = compiler_var(slot); length = compiler_var(slot) + "_len" }
         s.value = data + "[compiler_index(" + length + "," + index + ")]"
         s.value_kind = 1
         s.value_slot = -1
@@ -864,6 +873,9 @@ func compiler_statement(compiler_state initial) compiler_state {
         } else if s.kinds[slot] == 5 {
             s = compiler_consume(s, slot)
             s.code = s.code + "compiler_pair_drop(&" + compiler_var(slot) + ");\n"
+        } else if s.kinds[slot] == 9 {
+            s = compiler_consume(s, slot)
+            s.code = s.code + "compiler_slice_drop(&" + compiler_var(slot) + ");\n"
         } else if s.kinds[slot] >= 3 {
             if compiler_child_conflict(s, slot, true) { return compiler_fail(s, "cannot drop reference with a live reborrow") }
             if s.loop_floor >= 0 && slot < s.loop_floor { return compiler_fail(s, "cannot end an outer borrow inside a loop") }
@@ -920,7 +932,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         int slot = compiler_find(s, name)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
-        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 { return compiler_fail(s, "index assignment requires an integer array or slice") }
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 { return compiler_fail(s, "index assignment requires an integer array or slice") }
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
         string index = s.value
@@ -931,6 +943,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         string data = compiler_var(slot)
         string length = compiler_array_length(s, slot)
         if s.kinds[slot] == 9 { data = compiler_var(slot) + "->data"; length = compiler_var(slot) + "->len" }
+        if s.kinds[slot] == 15 || s.kinds[slot] == 16 { data = compiler_var(slot); length = compiler_var(slot) + "_len" }
         s.code = s.code + data + "[compiler_index(" + length + "," + index + ")] = " + s.value + ";\n"
         s = compiler_expect(s, ";")
         return s
@@ -961,6 +974,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         else if s.token == "mutref" { kind = 4 }
         else if s.token == "pair" { kind = 5 }
         else if s.token == "slice" { kind = 9 }
+        else if s.token == "mutslice" { kind = 16 }
         else { return compiler_fail(s, "function parameters require int, box, ref, mutref or pair") }
         s = compiler_next(s)
         if kind == 1 && s.token == "[" {
@@ -969,6 +983,15 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
             kind = 7
         }
         if kind == 8 && s.token == "[" {
+            s = compiler_expect(s, "[")
+            s = compiler_expect(s, "]")
+        }
+        if kind == 9 && s.token == "[" {
+            s = compiler_expect(s, "[")
+            s = compiler_expect(s, "]")
+            kind = 15
+        }
+        if kind == 16 && s.token == "[" {
             s = compiler_expect(s, "[")
             s = compiler_expect(s, "]")
         }
@@ -1017,12 +1040,14 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         if s.kinds[pi] == 2 || s.kinds[pi] == 4 { signature = signature + "int64_t *" }
         else if s.kinds[pi] == 5 { signature = signature + "compiler_pair *" }
         else if s.kinds[pi] == 9 { signature = signature + "compiler_slice *" }
+        else if s.kinds[pi] == 15 { signature = signature + "const int64_t *" }
+        else if s.kinds[pi] == 16 { signature = signature + "int64_t *" }
         else if s.kinds[pi] == 7 { signature = signature + "const int64_t *" }
         else if s.kinds[pi] == 8 { signature = signature + "int64_t *" }
         else if s.kinds[pi] == 3 { signature = signature + "const int64_t *" }
         else { signature = signature + "int64_t " }
         signature = signature + "p" + compiler_number(pi)
-        if s.kinds[pi] == 7 || s.kinds[pi] == 8 { signature = signature + ", int64_t p" + compiler_number(pi) + "_len" }
+        if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { signature = signature + ", int64_t p" + compiler_number(pi) + "_len" }
         pi = pi + 1
     }
     signature = signature + ")\n"
@@ -1041,11 +1066,13 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         if s.kinds[pi] == 2 || s.kinds[pi] == 4 { ctype = "int64_t *" }
         else if s.kinds[pi] == 5 { ctype = "compiler_pair *" }
         else if s.kinds[pi] == 9 { ctype = "compiler_slice *" }
+        else if s.kinds[pi] == 15 { ctype = "const int64_t *" }
+        else if s.kinds[pi] == 16 { ctype = "int64_t *" }
         else if s.kinds[pi] == 7 { ctype = "const int64_t *" }
         else if s.kinds[pi] == 8 { ctype = "int64_t *" }
         else if s.kinds[pi] == 3 { ctype = "const int64_t *" }
         s.code = s.code + ctype + compiler_var(pi) + " = p" + compiler_number(pi) + ";\n"
-        if s.kinds[pi] == 7 || s.kinds[pi] == 8 { s.code = s.code + "int64_t " + compiler_var(pi) + "_len = p" + compiler_number(pi) + "_len;\n" }
+        if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { s.code = s.code + "int64_t " + compiler_var(pi) + "_len = p" + compiler_number(pi) + "_len;\n" }
         s.code = s.code + "(void)" + compiler_var(pi) + ";\n"
         s.live[pi] = 1
         s.roots[pi] = -1
@@ -1053,7 +1080,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         s.parents[pi] = -1
         s.loan_fields[pi] = -1
         s.array_lengths[pi] = 0
-        if s.kinds[pi] == 7 || s.kinds[pi] == 8 { s.array_lengths[pi] = -1 }
+        if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { s.array_lengths[pi] = -1 }
         if s.kinds[pi] == 5 { s.field_left_live[pi] = 1; s.field_right_live[pi] = 1 }
         s.count = s.count + 1
         pi = pi + 1
