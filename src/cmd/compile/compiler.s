@@ -18,6 +18,7 @@ struct compiler_state {
     int[] roots
     int[] parents
     int[] loan_fields
+    int[] array_lengths
     int[] field_left_live
     int[] field_right_live
     int count
@@ -31,6 +32,7 @@ struct compiler_state {
     int value_slot
     int value_parent
     int value_field
+    int value_array_length
     bool new_borrow
     string[] function_names
     int[] function_counts
@@ -118,7 +120,7 @@ func compiler_next(compiler_state initial) compiler_state {
         if s.pos < n { pair = pair + __host_char_at(s.source, s.pos) }
         if pair == ":=" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "&&" || pair == "||" {
             s.pos = s.pos + 1
-        } else if c != "(" && c != ")" && c != "{" && c != "}" && c != ";" && c != "," && c != "." && c != "+" && c != "-" && c != "*" && c != "/" && c != "%" && c != "&" && c != "=" && c != "!" && c != "<" && c != ">" {
+        } else if c != "(" && c != ")" && c != "{" && c != "}" && c != "[" && c != "]" && c != ";" && c != "," && c != "." && c != "+" && c != "-" && c != "*" && c != "/" && c != "%" && c != "&" && c != "=" && c != "!" && c != "<" && c != ">" {
             return compiler_fail(s, "unsupported token: " + c)
         }
     }
@@ -239,10 +241,32 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     s.value_slot = -1
     s.value_parent = -1
     s.value_field = -1
+    s.value_array_length = 0
     s.new_borrow = false
     if t == "(" {
         s = compiler_expression(compiler_next(s), 1)
         return compiler_expect(s, ")")
+    }
+    if t == "[" {
+        s = compiler_next(s)
+        int count = 0
+        string values = "{"
+        while s.token != "]" && s.token != "" {
+            if count > 0 { s = compiler_expect(s, ",") }
+            s = compiler_expression(s, 1)
+            if s.value_kind != 1 { return compiler_fail(s, "array elements require integers") }
+            if count > 0 { values = values + "," }
+            values = values + s.value
+            count = count + 1
+            if count > 64 { return compiler_fail(s, "array literal exceeds 64 elements") }
+        }
+        if count == 0 { return compiler_fail(s, "array literal cannot be empty") }
+        s = compiler_expect(s, "]")
+        s.value = values + "}"
+        s.value_kind = 6
+        s.value_array_length = count
+        s.value_slot = -1
+        return s
     }
     if t == "-" || t == "!" {
         s = compiler_atom(compiler_next(s))
@@ -331,6 +355,19 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s = compiler_expect(s, ")")
         s.value = "compiler_box(" + s.value + ")"
         s.value_kind = 2
+        s.value_slot = -1
+        return s
+    }
+    if t == "len" {
+        s = compiler_expect(compiler_next(s), "(")
+        int slot = compiler_find(s, s.token)
+        s = compiler_available(s, slot)
+        if s.error != "" { return s }
+        if s.kinds[slot] != 6 { return compiler_fail(s, "len requires an integer array") }
+        int length = s.array_lengths[slot]
+        s = compiler_expect(compiler_next(s), ")")
+        s.value = "INT64_C(" + compiler_number(length) + ")"
+        s.value_kind = 1
         s.value_slot = -1
         return s
     }
@@ -482,6 +519,18 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     s = compiler_available(s, slot)
     if s.error != "" { return s }
     s = compiler_next(s)
+    if s.token == "[" {
+        if s.kinds[slot] != 6 { return compiler_fail(s, "indexing requires an integer array") }
+        int length = s.array_lengths[slot]
+        s = compiler_expression(compiler_next(s), 1)
+        if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
+        string index = s.value
+        s = compiler_expect(s, "]")
+        s.value = compiler_var(slot) + "[compiler_index(" + compiler_number(length) + "," + index + ")]"
+        s.value_kind = 1
+        s.value_slot = -1
+        return s
+    }
     if s.token == "." {
         s = compiler_next(s)
         int field = -1
@@ -590,12 +639,16 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if s.value_kind == 5 { ctype = "compiler_pair *" }
     else if s.value_kind >= 2 { ctype = "int64_t *" }
     if s.value_kind == 3 { ctype = "const int64_t *" }
+    if s.value_kind == 6 { ctype = "int64_t " }
     if !declaration { ctype = "" }
     if !declaration && (s.value_kind == 2 || s.value_kind == 5) {
         string replacement_type = "int64_t *"
         string replacement_drop = "compiler_drop"
         if s.value_kind == 5 { replacement_type = "compiler_pair *"; replacement_drop = "compiler_pair_drop" }
         s.code = s.code + "{ " + replacement_type + "compiler_new = " + rhs + ";\n" + replacement_drop + "(&" + compiler_var(slot) + ");\n" + compiler_var(slot) + " = compiler_new; }\n"
+    } else if s.value_kind == 6 {
+        if !declaration { return compiler_fail(s, "array reassignment is not supported") }
+        s.code = s.code + ctype + compiler_var(slot) + "[" + compiler_number(s.value_array_length) + "] = " + rhs + ";\n"
     } else {
         s.code = s.code + ctype + compiler_var(slot) + " = " + rhs + ";\n"
     }
@@ -606,7 +659,9 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     s.roots[slot] = -1
     s.parents[slot] = -1
     s.loan_fields[slot] = -1
+    s.array_lengths[slot] = 0
     if s.value_kind == 5 { s.field_left_live[slot] = 1; s.field_right_live[slot] = 1 }
+    if s.value_kind == 6 { s.array_lengths[slot] = s.value_array_length }
     if s.value_kind >= 3 && s.value_kind <= 4 {
         s.roots[slot] = origin
         s.parents[slot] = parent
@@ -798,6 +853,23 @@ func compiler_statement(compiler_state initial) compiler_state {
     }
     string name = s.token
     s = compiler_next(s)
+    if s.token == "[" {
+        int slot = compiler_find(s, name)
+        s = compiler_available(s, slot)
+        if s.error != "" { return s }
+        if s.kinds[slot] != 6 { return compiler_fail(s, "index assignment requires an integer array") }
+        int length = s.array_lengths[slot]
+        s = compiler_expression(compiler_next(s), 1)
+        if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
+        string index = s.value
+        s = compiler_expect(s, "]")
+        s = compiler_expect(s, "=")
+        s = compiler_expression(s, 1)
+        if s.value_kind != 1 { return compiler_fail(s, "array elements require integers") }
+        s.code = s.code + compiler_var(slot) + "[compiler_index(" + compiler_number(length) + "," + index + ")] = " + s.value + ";\n"
+        s = compiler_expect(s, ";")
+        return s
+    }
     bool declaration = s.token == ":="
     if !declaration && s.token != "=" { return compiler_fail(s, "expected := or =; unsupported statement") }
     s = compiler_expression(compiler_next(s), 1)
@@ -894,6 +966,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         if s.kinds[pi] >= 3 && s.kinds[pi] <= 4 { s.roots[pi] = pi }
         s.parents[pi] = -1
         s.loan_fields[pi] = -1
+        s.array_lengths[pi] = 0
         if s.kinds[pi] == 5 { s.field_left_live[pi] = 1; s.field_right_live[pi] = 1 }
         s.count = s.count + 1
         pi = pi + 1
@@ -915,13 +988,14 @@ func compiler_compile(string source) compiler_state {
     field_left_live := live
     field_right_live := live
     loan_fields := roots
+    array_lengths := roots
     function_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]; 
     function_counts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_returns := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_return_params := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_starts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_param_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, function_name: "", function_main: false }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
