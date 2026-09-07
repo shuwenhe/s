@@ -3,6 +3,7 @@ enum option[t] {
     some(t),
     none,
 }
+
 func (option[t]* self) is_some() bool {
         switch self {
             option::some(_) : true,

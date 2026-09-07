@@ -284,4 +284,3 @@ func ir_instr_alloca() ir_instruction {
         instr_type: ir_instr_alloca
     }
 }
-

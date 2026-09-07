@@ -212,4 +212,3 @@ func ir_module_add_function(ir_module module*, ir_function func) {
 func ir_module_add_global(ir_module module*, ir_value global) {
     module.global_vars = append(module.global_vars, global)
 }
-

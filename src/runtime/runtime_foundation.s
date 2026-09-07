@@ -235,9 +235,13 @@ extern "intrinsic" func __syscall3(int nr, int a1, int a2, int a3) int;
 extern "intrinsic" func __syscall6(int nr, int a1, int a2, int a3, int a4, int a5, int a6) int;
 
 func runtime_syscall0(int nr) int { __syscall0(nr) }
+
 func runtime_syscall1(int nr, int a1) int { __syscall1(nr, a1) }
+
 func runtime_syscall2(int nr, int a1, int a2) int { __syscall2(nr, a1, a2) }
+
 func runtime_syscall3(int nr, int a1, int a2, int a3) int { __syscall3(nr, a1, a2, a3) }
+
 func runtime_syscall6(int nr, int a1, int a2, int a3, int a4, int a5, int a6) int {
     __syscall6(nr, a1, a2, a3, a4, a5, a6)
 }
@@ -252,6 +256,7 @@ var runtime_profile_samples = runtime_profile_sample[]()
 var runtime_profile_enabled = false
 
 func runtime_profile_start() () { runtime_profile_enabled = true }
+
 func runtime_profile_stop() () { runtime_profile_enabled = false }
 
 func runtime_profile_record(string name, int nanos) () {
@@ -280,7 +285,9 @@ extern "intrinsic" func __race_read(int address, int size) ();
 extern "intrinsic" func __race_write(int address, int size) ();
 
 func runtime_race_read(int address, int size) () { __race_read(address, size) }
+
 func runtime_race_write(int address, int size) () { __race_write(address, size) }
 
 func runtime_foundation_unit_name() string { "src/runtime/runtime_foundation" }
+
 func runtime_foundation_unit_ready() int { 1 }

@@ -33,6 +33,7 @@ enum ast_node_type {
     ast_chan_type = 51,
     ast_pointer_type = 52,
 }
+
 struct ast_node {
     type_* int
     line int

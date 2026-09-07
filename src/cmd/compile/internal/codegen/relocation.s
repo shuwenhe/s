@@ -9,6 +9,7 @@ enum reloc_type {
     reloc_type_pltoff64,
     reloc_type_pltgot,
 }
+
 struct relocation_entry {
     int64 offset
     reloc_type type

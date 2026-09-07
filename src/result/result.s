@@ -3,6 +3,7 @@ enum (t, e) {
     ok(t),
     err(e),
 }
+
 func ((t, e)* self) is_ok() bool {
     switch self {
         _  : true,

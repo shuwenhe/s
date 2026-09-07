@@ -25,8 +25,11 @@ func address_value(int address, type value_type) value {
 }
 
 func (value* self) type_of() type { self.type_info }
+
 func (value* self) can_int() bool { self.type_info.kind == kind_int }
+
 func (value* self) can_bool() bool { self.type_info.kind == kind_bool }
+
 func (value* self) can_string() bool { self.type_info.kind == kind_string }
 
 func (value* self) as_int() int {
