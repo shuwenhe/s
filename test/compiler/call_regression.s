@@ -80,7 +80,7 @@ func main() int {
         "a := box(42); x := false && consume(a); assert(live_allocations() == 1); return 42;", true) != 0 { return 1 }
     if run_case(dir, compiler, cc, "integer_array",
         "",
-        "values := [20, 22]; values[1] = 23; return values[0] + values[1] - 1;", true) != 0 { return 1 }
+        "values := [20, 22]; assert(len(values) == 2); values[1] = 23; return values[0] + values[1] - 1;", true) != 0 { return 1 }
     if run_case(dir, compiler, cc, "pair_fields",
         "",
         "p := pair(box(20), box(22)); return *p.left + *p.right;", true) != 0 { return 1 }
