@@ -31,7 +31,10 @@ struct compiler_state {
     string[] function_names
     int[] function_counts
     int[] function_returns
+    int[] function_return_params
     int return_kind
+    int parameter_count
+    int return_param
     int[] function_starts
     int[] function_param_kinds
     int function_count
@@ -299,6 +302,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         string call_id = compiler_number(s.pos)
         int arg = 0
         int loan_floor = s.count
+        int returned_loan_slot = -1
         for s.error == "" && s.token != ")" && s.token != "" {
             if arg > 0 { s = compiler_expect(s, ",") }
             s = compiler_expression(s, 1)
@@ -321,6 +325,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 s.live[s.count] = 1
                 s.roots[s.count] = root
                 s.parents[s.count] = parent
+                if s.function_returns[function_index] >= 3 && arg == s.function_return_params[function_index] {
+                    returned_loan_slot = s.count
+                }
                 s.count = s.count + 1
             }
             if expected == 2 {
@@ -342,11 +349,24 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         }
         if arg != s.function_counts[function_index] { return compiler_fail(s, "wrong number of function arguments") }
         s = compiler_expect(s, ")")
+        int returned_root = -1
+        int returned_parent = -1
+        if s.function_returns[function_index] >= 3 {
+            if returned_loan_slot < 0 || returned_loan_slot >= s.count { return compiler_fail(s, "reference return argument is unavailable") }
+            returned_root = s.roots[returned_loan_slot]
+            returned_parent = s.parents[returned_loan_slot]
+        }
         s.count = loan_floor
         s.value = "(" + evaluations + s.function_names[function_index] + "(" + args + "))"
         s.value_kind = s.function_returns[function_index]
-        s.value_slot = -1
-        s.new_borrow = false
+        if s.value_kind >= 3 {
+            s.new_borrow = true
+            s.value_parent = returned_parent
+            s.value_slot = returned_root
+        } else {
+            s.value_slot = -1
+        }
+        if s.value_kind < 3 { s.new_borrow = false }
         return s
     }
     if t == "true" || t == "false" {
@@ -511,6 +531,18 @@ func compiler_statement(compiler_state initial) compiler_state {
         }
         int both_terminated = 0
         if yes.terminated != 0 && no.terminated != 0 { both_terminated = 1 }
+        if s.return_kind >= 3 {
+            int returned_param = -1
+            if yes.terminated != 0 { returned_param = yes.return_param }
+            if no.terminated != 0 {
+                if returned_param >= 0 && no.return_param != returned_param { return compiler_fail(no, "reference return parameter differs across paths") }
+                returned_param = no.return_param
+            }
+            if returned_param >= 0 {
+                no.return_param = returned_param
+                no.function_return_params[no.function_count - 1] = returned_param
+            }
+        }
         no.terminated = both_terminated
         return no
     }
@@ -531,7 +563,15 @@ func compiler_statement(compiler_state initial) compiler_state {
     }
     if s.token == "return" {
         s = compiler_expression(compiler_next(s), 1)
-        if s.value_kind != s.return_kind { return compiler_fail(s, "return type mismatch; references cannot escape") }
+        if s.value_kind != s.return_kind { return compiler_fail(s, "return type mismatch") }
+        if s.return_kind >= 3 && (s.value_slot < 0 || s.value_slot >= s.parameter_count) {
+            return compiler_fail(s, "reference return must use a parameter")
+        }
+        if s.return_kind >= 3 {
+            if s.return_param < 0 { s.return_param = s.value_slot }
+            else if s.return_param != s.value_slot { return compiler_fail(s, "reference return parameter differs across paths") }
+            s.function_return_params[s.function_count - 1] = s.return_param
+        }
         string result_type = "int64_t "
         if s.value_kind == 2 {
             result_type = "int64_t *"
@@ -540,7 +580,8 @@ func compiler_statement(compiler_state initial) compiler_state {
                 s = compiler_consume(s, origin)
                 s.value = "compiler_move(&" + compiler_var(origin) + ")"
             }
-        }
+        } else if s.value_kind == 3 { result_type = "const int64_t *" }
+        else if s.value_kind == 4 { result_type = "int64_t *" }
         s = compiler_expect(s, ";")
         string finish = "return compiler_result;"
         if s.function_main { finish = "return compiler_finish(compiler_result);" }
@@ -635,13 +676,18 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     s = compiler_expect(s, ")")
     s.return_kind = 1
     if s.token == "box" { s.return_kind = 2 }
-    else if s.token != "int" { return compiler_fail(s, "function return type must be int or box") }
+    else if s.token == "ref" { s.return_kind = 3 }
+    else if s.token == "mutref" { s.return_kind = 4 }
+    else if s.token != "int" { return compiler_fail(s, "function return type must be int, box, ref or mutref") }
     s = compiler_next(s)
+    s.parameter_count = param_count
+    s.return_param = -1
 
     int start = s.function_param_total
     s.function_names[s.function_count] = name
     s.function_counts[s.function_count] = param_count
     s.function_returns[s.function_count] = s.return_kind
+    s.function_return_params[s.function_count] = s.return_param
     s.function_starts[s.function_count] = start
     int pi = 0
     for pi < param_count {
@@ -652,7 +698,8 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     s.function_count = s.function_count + 1
 
     string signature = "static int64_t " + name + "("
-    if s.return_kind == 2 { signature = "static int64_t *" + name + "(" }
+    if s.return_kind == 2 || s.return_kind == 4 { signature = "static int64_t *" + name + "(" }
+    else if s.return_kind == 3 { signature = "static const int64_t *" + name + "(" }
     pi = 0
     for pi < param_count {
         if pi > 0 { signature = signature + ", " }
@@ -688,7 +735,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     }
     s = compiler_block(s)
     if s.error != "" { return s }
-    if s.return_kind == 2 && s.terminated == 0 { return compiler_fail(s, "box function must return on every path") }
+    if s.return_kind != 1 && s.terminated == 0 { return compiler_fail(s, "non-integer function must return on every path") }
     if s.terminated == 0 { s.code = s.code + compiler_cleanup(s, 0) + "return 0;\n" }
     s.code = s.code + "}\n"
     return s
@@ -702,11 +749,12 @@ func compiler_compile(string source) compiler_state {
     parents := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]; 
     function_counts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    function_returns := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    function_return_params := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_starts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_param_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, function_name: "", function_main: false }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
-    s.function_returns = function_counts
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
     s = compiler_next(s)
