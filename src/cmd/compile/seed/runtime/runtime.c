@@ -2661,22 +2661,34 @@ static int name_has_dotted_prefix(const char *name, const char *prefix) {
 static int values_have_prefixed(const runtime_values *vals, const char *prefix);
 static int values_copy_prefixed_depth(const runtime_values *src, const char *old_prefix, runtime_values *dst, const char *new_prefix, int depth) {
 	size_t i;
+	size_t source_len;
 	size_t old_len;
 	char mapped_name[256];
+	runtime_data_value field_value;
 	if (!src || !old_prefix || !new_prefix || depth > 16) {
 		return 0;
 	}
+	/* A record copy can use the same value table as its source. Snapshot the
+	   source length so values appended during the copy are not copied again. */
+	source_len = src->len;
 	old_len = strlen(old_prefix);
-	for (i = 0; i < src->len; i++) {
+	for (i = 0; i < source_len; i++) {
 		if (!name_has_dotted_prefix(src->data[i].name, old_prefix)) {
 			continue;
 		}
 		if (snprintf(mapped_name, sizeof(mapped_name), "%s%s", new_prefix, src->data[i].name + old_len) >= (int)sizeof(mapped_name)) {
 			return 0;
 		}
-		if (!values_set(dst, mapped_name, &src->data[i].value)) {
+		/* values_set may realloc the same table when src == dst. Copy the
+		   field before passing its address so reallocation cannot invalidate it. */
+		if (!value_copy(&field_value, &src->data[i].value)) {
 			return 0;
 		}
+		if (!values_set(dst, mapped_name, &field_value)) {
+			value_clear(&field_value);
+			return 0;
+		}
+		value_clear(&field_value);
 		if (src->data[i].value.record_alias && src->data[i].value.kind == RUNTIME_STRING &&
 		    src->data[i].value.str_value &&
 		    src->data[i].value.str_value[0] != '\0' &&
