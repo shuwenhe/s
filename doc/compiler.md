@@ -1,13 +1,13 @@
-# S ownership compiler (no tracing GC)
+# S compiler ownership and lowering
 
 This is an executable, deliberately restricted S compiler implemented in
-`src/cmd/compile/nogc/compiler.s`. It checks ownership and lexical borrows and
+`src/cmd/compile/compiler/compiler.s`. It checks ownership and lexical borrows and
 lowers accepted source to C11. The host C compiler generates the executable.
 The application links only the host allocator and the small inline helpers in
-`src/runtime/nogc_runtime.h`; it does not link the seed runtime or S's GC.
+`src/runtime/compiler_runtime.h`; it does not link the seed runtime or S's GC.
 
 This is not full-language Rust parity, and it is not a converged self-hosted
-compiler. The existing C seed builds `bin/s_nogc_compiler`, supplying its host
+compiler. The existing C seed builds `bin/s_compiler`, supplying its host
 I/O and value-management runtime. That runtime uses explicit allocation and
 recursive value cleanup rather than a tracing collector. The new compiler's
 semantic analysis and lowering are S code; its C header is the host allocation
@@ -18,13 +18,13 @@ and checked-integer ABI. Existing S compilation modes are unchanged.
 On macOS/arm64 or Linux/amd64 with a C11 GCC/Clang toolchain:
 
 ```sh
-make nogc-compiler
-./misc/scripts/s-nogc.sh check test/nogc/ownership.s
-./misc/scripts/s-nogc.sh build test/nogc/ownership.s -o /tmp/s-owned
+make compiler
+./misc/scripts/s-compiler.sh check test/compiler/ownership.s
+./misc/scripts/s-compiler.sh build test/compiler/ownership.s -o /tmp/s-owned
 /tmp/s-owned
 # Exit status: 42
-./misc/scripts/s-nogc.sh --emit-c test/nogc/ownership.s /tmp/s-owned.c
-make nogc-check
+./misc/scripts/s-compiler.sh --emit-c test/compiler/ownership.s /tmp/s-owned.c
+make compiler-check
 ```
 
 The regression target additionally requires Python 3, `nm`, AddressSanitizer
@@ -87,7 +87,7 @@ func main() int {
   Integer operations use checked signed 64-bit arithmetic. `true`/`false`
   lower to integers. Normal process status is the low 8 bits of the return.
 - `assert(integer_expression)` traps on false. `live_allocations()` is a test
-  intrinsic requiring `-DS_NOGC_CHECK_ALLOCATIONS` when compiling emitted C.
+  intrinsic requiring `-DS_COMPILER_CHECK_ALLOCATIONS` when compiling emitted C.
   The public release driver omits allocation counting.
 - Line and nested block comments are supported. Nesting is bounded. Rejection
   reports a line and leaves an existing output untouched.
@@ -114,11 +114,11 @@ after checking the relevant state. The C output contains ordinary local
 pointers and compiler-inserted move/drop calls. There is no GC-disable toggle
 that can leave allocations without an owner.
 
-`test/nogc/check.py` compiles and executes positive source fixtures with
+`test/compiler/check.py` compiles and executes positive source fixtures with
 ASan/UBSan and allocation-count assertions, checks expected rejection reasons
 and output preservation, exercises arithmetic traps and the public driver,
 and checks application symbols for GC/seed execution entry points. The main
-example is `test/nogc/ownership.s`. These tests validate this subset; they are
+example is `test/compiler/ownership.s`. These tests validate this subset; they are
 not a proof of full-language memory safety.
 
 Building this compiler exposed a seed bug where a string equal to a record
@@ -129,5 +129,5 @@ passing and returning such a string while preserving genuine record copies.
 The next language extensions need explicit contracts and tests: ownership
 across function calls and returns; field-level move paths and aggregate drop
 glue; references tied to parameters; loop fixed-point analysis; owned
-containers and closure captures. General no-GC S compilation and compiling
-this compiler with itself remain future work.
+containers and closure captures. General ownership-aware S compilation and
+compiling this compiler with itself remain future work.

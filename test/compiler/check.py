@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-COMPILER = ROOT / "bin/s_nogc_compiler"
+COMPILER = ROOT / "bin/s_compiler"
 CC = os.environ.get("CC", "cc")
 
 
@@ -114,14 +114,14 @@ NEGATIVE = {
 
 
 def main():
-    with tempfile.TemporaryDirectory(prefix="s-nogc-tests-") as td:
+    with tempfile.TemporaryDirectory(prefix="s-compiler-tests-") as td:
         work = Path(td)
         for name, (body, expected) in POSITIVE.items():
             src, c, exe = (work / (name + suffix) for suffix in (".s", ".c", ".bin"))
             src.write_text(source(body))
             run([COMPILER, "--emit-c", src, c])
             run([CC, "-std=c11", "-O1", "-g", "-Wall", "-Wextra", "-Werror", 
-                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-DS_NOGC_CHECK_ALLOCATIONS",
+                 "-fsanitize=address,undefined", "-fno-omit-frame-pointer", "-DS_COMPILER_CHECK_ALLOCATIONS",
                  "-I", ROOT / "src/runtime", c, "-o", exe])
             run([exe], expected)
             print("PASS", name, flush=True)
@@ -142,7 +142,7 @@ def main():
             run([exe], 70)
         # Exercise the public driver and inspect the linked application.
         exe = work / "ownership"
-        run([ROOT / "misc/scripts/s-nogc.sh", "build", ROOT / "test/nogc/ownership.s", "-o", exe])
+        run([ROOT / "misc/scripts/s-compiler.sh", "build", ROOT / "test/compiler/ownership.s", "-o", exe])
         run([exe], 42)
         symbols = run(["nm", exe]).stdout
         for forbidden in ("runtime_gc", "run_gc", "mark_roots", "sweep_pass", "runtime_execute"):
