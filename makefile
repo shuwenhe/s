@@ -834,9 +834,11 @@ selfhost-bin:
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
 	@./bin/s_seed src/cmd/compile/compiler/compiler.s .bootstrap/compiler/compiler.ir
+	# The bootstrap compiler passes compiler_state records; use the hosted seed
+	# runner until the standalone six-register backend supports record ABI.
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \
 	  S_TARGET_ARCH=$$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/') \
-	  ./bin/s_seed --emit-aot .bootstrap/compiler/compiler.ir ./bin/s_compiler
+	  ./bin/s_seed --emit-bin .bootstrap/compiler/compiler.ir ./bin/s_compiler
 
 compiler-check: compiler
 	@python3 test/compiler/check.py
