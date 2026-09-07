@@ -20,8 +20,10 @@ func main() int {
 
 Returning an owner moves it before local cleanup. Other owned resources are
 released, and the caller owns the returned box. Borrowed owners cannot be
-returned. Box functions must explicitly return on every accepted control-flow
-path; reference returns remain unsupported. Helpers precede main.
+returned. A `ref` or `mutref` return may return any reference parameter;
+returning a local borrow is rejected, and all return paths must use the same
+parameter. Box functions must explicitly return on
+every accepted control-flow path. Helpers precede main.
 
 Arguments and binary operands evaluate from left to right. Calls accept fresh
 boxes and box-returning calls as owning arguments. Logical operators preserve
