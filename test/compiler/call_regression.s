@@ -90,6 +90,15 @@ func main() int {
     if run_case(dir, compiler, cc, "pair_parameter",
         "func sum(pair p) int { return *p.left + *p.right; }",
         "p := pair(box(20), box(22)); return sum(p);", true) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "pair_field_borrow",
+        "",
+        "p := pair(box(20), box(22)); *p.right = 23; r := &p.left; return *r + *p.right;", true) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "pair_field_mutborrow",
+        "",
+        "p := pair(box(20), box(22)); r := &mut p.left; *r = 21; return *r;", true) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "pair_field_mutborrow_conflict",
+        "",
+        "p := pair(box(20), box(22)); r := &mut p.left; *p.right = 21; return *r;", false) != 0 { return 1 }
     if run_case(dir, compiler, cc, "pair_scope_drop",
         "",
         "{ p := pair(box(20), box(22)); assert(live_allocations() == 3); } assert(live_allocations() == 0); return 42;", true) != 0 { return 1 }
