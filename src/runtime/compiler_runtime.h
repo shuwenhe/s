@@ -41,6 +41,37 @@ static inline int64_t compiler_index(int64_t length, int64_t index) {
     if (index < 0 || index >= length) compiler_trap("array index out of bounds");
     return index;
 }
+typedef struct compiler_slice {
+    int64_t *data;
+    int64_t len;
+} compiler_slice;
+static inline compiler_slice *compiler_slice_from_array(const int64_t *source, int64_t len) {
+    compiler_slice *slice = (compiler_slice *)malloc(sizeof(*slice));
+    if (!slice) compiler_trap("allocation failed");
+    slice->data = (int64_t *)malloc((size_t)len * sizeof(*slice->data));
+    if (!slice->data) compiler_trap("allocation failed");
+    for (int64_t i = 0; i < len; ++i) slice->data[i] = source[i];
+    slice->len = len;
+#ifdef S_COMPILER_CHECK_ALLOCATIONS
+    compiler_objects += 2;
+#endif
+    return slice;
+}
+static inline compiler_slice *compiler_slice_move(compiler_slice **source) {
+    compiler_slice *slice = *source;
+    *source = NULL;
+    return slice;
+}
+static inline void compiler_slice_drop(compiler_slice **owner) {
+    if (*owner) {
+        free((*owner)->data);
+        free(*owner);
+        *owner = NULL;
+#ifdef S_COMPILER_CHECK_ALLOCATIONS
+        compiler_objects -= 2;
+#endif
+    }
+}
 static inline void compiler_drop(int64_t **owner);
 typedef struct compiler_pair {
     int64_t *left;
