@@ -833,7 +833,7 @@ selfhost-bin:
 .PHONY: compiler compiler-check compiler-s-check
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
-	@./bin/s_seed src/cmd/compile/compiler/compiler.s .bootstrap/compiler/compiler.ir
+	@./bin/s_seed src/cmd/compile/compiler.s .bootstrap/compiler/compiler.ir
 	# The bootstrap compiler passes compiler_state records; use the hosted seed
 	# runner until the standalone six-register backend supports record ABI.
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \

@@ -297,7 +297,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         for s.token != ")" && s.token != "" {
             if arg > 0 { s = compiler_expect(s, ",") }
             s = compiler_expression(s, 1)
-            if s.value_kind != 1 && s.value_kind != 2 { return compiler_fail(s, "function arguments require integers or owners") }
+            if s.value_kind < 1 || s.value_kind > 4 { return compiler_fail(s, "function arguments require integers, owners or references") }
             if arg >= s.function_counts[function_index] { return compiler_fail(s, "too many function arguments") }
             int expected = s.function_param_kinds[s.function_starts[function_index] + arg]
             if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
@@ -564,7 +564,9 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         int kind = 0
         if s.token == "int" { kind = 1 }
         else if s.token == "box" { kind = 2 }
-        else { return compiler_fail(s, "function parameters require int or box") }
+        else if s.token == "ref" { kind = 3 }
+        else if s.token == "mutref" { kind = 4 }
+        else { return compiler_fail(s, "function parameters require int, box, ref or mutref") }
         s = compiler_next(s)
         string param = s.token
         if !compiler_ident(param) { return compiler_fail(s, "expected parameter name") }
@@ -593,7 +595,8 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     pi = 0
     for pi < param_count {
         if pi > 0 { signature = signature + ", " }
-        if s.kinds[pi] == 2 { signature = signature + "int64_t *" }
+        if s.kinds[pi] == 2 || s.kinds[pi] == 4 { signature = signature + "int64_t *" }
+        else if s.kinds[pi] == 3 { signature = signature + "const int64_t *" }
         else { signature = signature + "int64_t " }
         signature = signature + "p" + compiler_number(pi)
         pi = pi + 1
@@ -611,11 +614,13 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     pi = 0
     for pi < param_count {
         string ctype = "int64_t "
-        if s.kinds[pi] == 2 { ctype = "int64_t *" }
+        if s.kinds[pi] == 2 || s.kinds[pi] == 4 { ctype = "int64_t *" }
+        else if s.kinds[pi] == 3 { ctype = "const int64_t *" }
         s.code = s.code + ctype + compiler_var(pi) + " = p" + compiler_number(pi) + ";\n"
         s.code = s.code + "(void)" + compiler_var(pi) + ";\n"
         s.live[pi] = 1
         s.roots[pi] = -1
+        if s.kinds[pi] >= 3 { s.roots[pi] = pi }
         s.parents[pi] = -1
         s.count = s.count + 1
         pi = pi + 1
@@ -651,7 +656,6 @@ func compiler_compile(string source) compiler_state {
     for s.token == "func" {
         look := compiler_next(s)
         if look.token == "main" {
-            s = look
             break
         }
         s = compiler_parse_helper(s)
