@@ -101,7 +101,7 @@ func compiler_next(compiler_state initial) compiler_state {
         if s.pos < n { pair = pair + __host_char_at(s.source, s.pos) }
         if pair == ":=" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "&&" || pair == "||" {
             s.pos = s.pos + 1
-        } else if c != "(" && c != ")" && c != "{" && c != "}" && c != ";" && c != "+" && c != "-" && c != "*" && c != "/" && c != "%" && c != "&" && c != "=" && c != "!" && c != "<" && c != ">" {
+        } else if c != "(" && c != ")" && c != "{" && c != "}" && c != ";" && c != "." && c != "+" && c != "-" && c != "*" && c != "/" && c != "%" && c != "&" && c != "=" && c != "!" && c != "<" && c != ">" {
             return compiler_fail(s, "unsupported token: " + c)
         }
     }
@@ -510,6 +510,11 @@ func compiler_compile(string source) compiler_state {
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
     s = compiler_next(s)
+    for s.token == "." {
+        s = compiler_next(s)
+        if !compiler_ident(s.token) { return compiler_fail(s, "expected package path component") }
+        s = compiler_next(s)
+    }
     if s.token == ";" { s = compiler_next(s) }
     s = compiler_expect(s, "func")
     s = compiler_expect(s, "main")
