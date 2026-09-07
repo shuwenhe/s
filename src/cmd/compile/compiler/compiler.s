@@ -5,8 +5,6 @@ extern "intrinsic" func __host_write_text_file(string path, string contents) int
 extern "intrinsic" func __host_char_at(string text, int index) string;
 extern "intrinsic" func __host_slice(string text, int start, int end) string;
 
-// The seed passes records by value. Returning the entire state makes branch
-// snapshots independent, including ownership and outstanding lexical loans.
 struct compiler_state {
     string source
     int pos
@@ -126,8 +124,6 @@ func compiler_conflict(compiler_state initial, int owner, bool exclusive) bool {
     }
     return false
 }
-// A child loan keeps its parent restricted until every child is ended.
-// Copies retain the same parent so dropping one alias cannot release another.
 func compiler_child_conflict(compiler_state initial, int parent, bool exclusive) bool {
     s := initial
     int i = 0
@@ -157,7 +153,6 @@ func compiler_cleanup(compiler_state initial, int floor) string {
     string code = ""
     int i = s.count - 1
     for i >= floor {
-        // Moved slots are null at runtime; a join may still own its allocation.
         if s.kinds[i] == 2 { code = code + "compiler_drop(&" + compiler_var(i) + ");\n" }
         i = i - 1
     }
@@ -270,7 +265,6 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             i = i + 1
         }
         if len(t) > 18 { return compiler_fail(s, "integer literal exceeds supported 18 decimal digits") }
-        // Strip leading zeroes so the C backend never interprets an octal literal.
         i = 0
         for i + 1 < len(t) && __host_char_at(t, i) == "0" { i = i + 1 }
         s.value = "INT64_C(" + __host_slice(t, i, len(t)) + ")"
@@ -498,7 +492,6 @@ func compiler_compile(string source) compiler_state {
     s = compiler_expect(s, "(")
     s = compiler_expect(s, ")")
     s = compiler_expect(s, "int")
-    // The outer wrapper provides an implicit return after normal scope cleanup.
     s.code = s.code + "{\n"
     s = compiler_block(s)
     s.code = s.code + "return compiler_finish(0);\n}\n"
