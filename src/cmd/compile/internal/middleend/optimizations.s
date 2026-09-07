@@ -269,4 +269,3 @@ func opt_licm(cfg* control_flow_graph, loop_info[] loops) {
         }
     }
 }
-
