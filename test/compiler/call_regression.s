@@ -78,6 +78,24 @@ func main() int {
     if run_case(dir, compiler, cc, "short_circuit_cleanup",
         "func consume(box a) int { return *a; }",
         "a := box(42); x := false && consume(a); assert(live_allocations() == 1); return 42;", true) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "pair_fields",
+        "",
+        "p := pair(box(20), box(22)); return *p.left + *p.right;", true) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "pair_field_move",
+        "",
+        "p := pair(box(20), box(22)); left := p.left; return *left + *p.right;", true) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "pair_return",
+        "func forward(pair p) pair { return p; }",
+        "p := forward(pair(box(20), box(22))); return *p.left + *p.right;", true) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "pair_parameter",
+        "func sum(pair p) int { return *p.left + *p.right; }",
+        "p := pair(box(20), box(22)); return sum(p);", true) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "pair_scope_drop",
+        "",
+        "{ p := pair(box(20), box(22)); assert(live_allocations() == 3); } assert(live_allocations() == 0); return 42;", true) != 0 { return 1 }
+    if run_case(dir, compiler, cc, "pair_double_field_move",
+        "",
+        "p := pair(box(20), box(22)); left := p.left; second := p.left; return *left;", false) != 0 { return 1 }
     if run_case(dir, compiler, cc, "return_local_ref",
         "func bad(box a) ref { r := &a; return r; }",
         "a := box(42); r := bad(a); return *r;", false) != 0 { return 1 }
