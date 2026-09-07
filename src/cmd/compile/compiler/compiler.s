@@ -28,6 +28,14 @@ struct compiler_state {
     int value_slot
     int value_parent
     bool new_borrow
+    string[] function_names
+    int[] function_counts
+    int[] function_starts
+    int[] function_param_kinds
+    int function_count
+    int function_param_total
+    string function_name
+    bool function_main
 }
 
 func compiler_number(int n) string {
@@ -101,7 +109,7 @@ func compiler_next(compiler_state initial) compiler_state {
         if s.pos < n { pair = pair + __host_char_at(s.source, s.pos) }
         if pair == ":=" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "&&" || pair == "||" {
             s.pos = s.pos + 1
-        } else if c != "(" && c != ")" && c != "{" && c != "}" && c != ";" && c != "." && c != "+" && c != "-" && c != "*" && c != "/" && c != "%" && c != "&" && c != "=" && c != "!" && c != "<" && c != ">" {
+        } else if c != "(" && c != ")" && c != "{" && c != "}" && c != ";" && c != "," && c != "." && c != "+" && c != "-" && c != "*" && c != "/" && c != "%" && c != "&" && c != "=" && c != "!" && c != "<" && c != ">" {
             return compiler_fail(s, "unsupported token: " + c)
         }
     }
@@ -126,6 +134,16 @@ func compiler_find(compiler_state initial, string name) int {
 }
 
 func compiler_var(int slot) string { return "s_v" + compiler_number(slot) }
+
+func compiler_find_func(compiler_state initial, string name) int {
+    s := initial
+    int i = s.function_count - 1
+    for i >= 0 {
+        if s.function_names[i] == name { return i }
+        i = i - 1
+    }
+    return -1
+}
 
 func compiler_conflict(compiler_state initial, int owner, bool exclusive) bool {
     s := initial
@@ -269,6 +287,37 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s = compiler_expect(s, ")")
         s.value = "compiler_live()"
         s.value_kind = 1
+        return s
+    }
+    if compiler_ident(t) && compiler_find_func(s, t) >= 0 {
+        int function_index = compiler_find_func(s, t)
+        s = compiler_expect(compiler_next(s), "(")
+        string args = ""
+        int arg = 0
+        for s.token != ")" && s.token != "" {
+            if arg > 0 { s = compiler_expect(s, ",") }
+            s = compiler_expression(s, 1)
+            if s.value_kind != 1 && s.value_kind != 2 { return compiler_fail(s, "function arguments require integers or owners") }
+            if arg >= s.function_counts[function_index] { return compiler_fail(s, "too many function arguments") }
+            int expected = s.function_param_kinds[s.function_starts[function_index] + arg]
+            if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
+            string argument = s.value
+            if expected == 2 {
+                if s.value_slot < 0 { return compiler_fail(s, "owner argument must be a variable") }
+                int origin = s.value_slot
+                s = compiler_consume(s, origin)
+                argument = "compiler_move(&" + compiler_var(origin) + ")"
+            }
+            if arg > 0 { args = args + "," }
+            args = args + argument
+            arg = arg + 1
+        }
+        if arg != s.function_counts[function_index] { return compiler_fail(s, "wrong number of function arguments") }
+        s = compiler_expect(s, ")")
+        s.value = s.function_names[function_index] + "(" + args + ")"
+        s.value_kind = 1
+        s.value_slot = -1
+        s.new_borrow = false
         return s
     }
     if t == "true" || t == "false" {
@@ -438,7 +487,9 @@ func compiler_statement(compiler_state initial) compiler_state {
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != 1 { return compiler_fail(s, "return requires an integer; references and owners cannot escape this subset") }
         s = compiler_expect(s, ";")
-        s.code = s.code + "{ int64_t compiler_result = " + s.value + ";\n" + compiler_cleanup(s, 0) + "return compiler_finish(compiler_result); }\n"
+        string finish = "return compiler_result;"
+        if s.function_main { finish = "return compiler_finish(compiler_result);" }
+        s.code = s.code + "{ int64_t compiler_result = " + s.value + ";\n" + compiler_cleanup(s, 0) + finish + " }\n"
         s.terminated = 1
         return s
     }
@@ -499,13 +550,94 @@ func compiler_statement(compiler_state initial) compiler_state {
     return compiler_expect(s, ";")
 }
 
+func compiler_parse_helper(compiler_state initial) compiler_state {
+    s := initial
+    s = compiler_expect(s, "func")
+    string name = s.token
+    if !compiler_ident(name) || name == "main" { return compiler_fail(s, "expected helper function name") }
+    s = compiler_next(s)
+    s = compiler_expect(s, "(")
+    int param_count = 0
+    s.count = 0
+    for s.token != ")" && s.token != "" {
+        if param_count > 0 { s = compiler_expect(s, ",") }
+        int kind = 0
+        if s.token == "int" { kind = 1 }
+        else if s.token == "box" { kind = 2 }
+        else { return compiler_fail(s, "function parameters require int or box") }
+        s = compiler_next(s)
+        string param = s.token
+        if !compiler_ident(param) { return compiler_fail(s, "expected parameter name") }
+        if param_count >= 16 { return compiler_fail(s, "too many function parameters") }
+        s.names[param_count] = param
+        s.kinds[param_count] = kind
+        param_count = param_count + 1
+        s = compiler_next(s)
+    }
+    s = compiler_expect(s, ")")
+    s = compiler_expect(s, "int")
+
+    int start = s.function_param_total
+    s.function_names[s.function_count] = name
+    s.function_counts[s.function_count] = param_count
+    s.function_starts[s.function_count] = start
+    int pi = 0
+    for pi < param_count {
+        s.function_param_kinds[s.function_param_total + pi] = s.kinds[pi]
+        pi = pi + 1
+    }
+    s.function_param_total = s.function_param_total + param_count
+    s.function_count = s.function_count + 1
+
+    string signature = "static int64_t " + name + "("
+    pi = 0
+    for pi < param_count {
+        if pi > 0 { signature = signature + ", " }
+        if s.kinds[pi] == 2 { signature = signature + "int64_t *" }
+        else { signature = signature + "int64_t " }
+        signature = signature + "p" + compiler_number(pi)
+        pi = pi + 1
+    }
+    signature = signature + ")\n"
+
+    s.count = 0
+    s.depth = 0
+    s.loop_floor = -1
+    s.loop_cleanup = -1
+    s.terminated = 0
+    s.function_name = name
+    s.function_main = false
+    s.code = s.code + signature + "{\n"
+    pi = 0
+    for pi < param_count {
+        string ctype = "int64_t "
+        if s.kinds[pi] == 2 { ctype = "int64_t *" }
+        s.code = s.code + ctype + compiler_var(pi) + " = p" + compiler_number(pi) + ";\n"
+        s.code = s.code + "(void)" + compiler_var(pi) + ";\n"
+        s.live[pi] = 1
+        s.roots[pi] = -1
+        s.parents[pi] = -1
+        s.count = s.count + 1
+        pi = pi + 1
+    }
+    s = compiler_block(s)
+    if s.error != "" { return s }
+    if s.terminated == 0 { s.code = s.code + "return 0;\n" }
+    s.code = s.code + "}\n"
+    return s
+}
+
 func compiler_compile(string source) compiler_state {
     names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     live := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     roots := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     parents := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\nint main(void)\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, new_borrow: false }
+    function_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]; 
+    function_counts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    function_starts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    function_param_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
@@ -516,15 +648,31 @@ func compiler_compile(string source) compiler_state {
         s = compiler_next(s)
     }
     if s.token == ";" { s = compiler_next(s) }
+    for s.token == "func" {
+        look := compiler_next(s)
+        if look.token == "main" {
+            s = look
+            break
+        }
+        s = compiler_parse_helper(s)
+        if s.error != "" { return s }
+    }
     s = compiler_expect(s, "func")
     s = compiler_expect(s, "main")
     s = compiler_expect(s, "(")
     s = compiler_expect(s, ")")
     s = compiler_expect(s, "int")
-    s.code = s.code + "{\n"
+    s.count = 0
+    s.depth = 0
+    s.loop_floor = -1
+    s.loop_cleanup = -1
+    s.terminated = 0
+    s.function_name = "main"
+    s.function_main = true
+    s.code = s.code + "int main(void)\n{\n"
     s = compiler_block(s)
     s.code = s.code + "return compiler_finish(0);\n}\n"
-    if s.token != "" { s = compiler_fail(s, "only one main function is supported; imports and extern declarations are forbidden") }
+    if s.token != "" { s = compiler_fail(s, "unexpected declaration after main") }
     return s
 }
 

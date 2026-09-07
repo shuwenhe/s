@@ -830,7 +830,7 @@ selfhost-bin:
 
 # The ownership checker and C lowering are written in S. The trusted seed
 # constructs a host executable; generated applications do not link its runtime.
-.PHONY: compiler compiler-check
+.PHONY: compiler compiler-check compiler-s-check
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
 	@./bin/s_seed src/cmd/compile/compiler/compiler.s .bootstrap/compiler/compiler.ir
@@ -841,4 +841,9 @@ compiler: seed-compiler-bin
 	  ./bin/s_seed --emit-bin .bootstrap/compiler/compiler.ir ./bin/s_compiler
 
 compiler-check: compiler
-	@python3 test/compiler/check.py
+	@$(MAKE) compiler-s-check
+
+compiler-s-check: compiler
+	@mkdir -p .bootstrap/compiler
+	@S_PROJECT_ROOT=$(CURDIR) ./bin/s build test/compiler/check.s -o .bootstrap/compiler/check
+	@S_PROJECT_ROOT=$(CURDIR) ./.bootstrap/compiler/check
