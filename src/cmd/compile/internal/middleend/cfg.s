@@ -262,4 +262,3 @@ func cfg_dump(cfg* control_flow_graph) string {
 
     result
 }
-

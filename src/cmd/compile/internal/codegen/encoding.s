@@ -29,6 +29,7 @@ enum amd64_opcode {
     op_imul,
     op_idiv,
 }
+
 struct amd64_operand {
     addr operand
 }
