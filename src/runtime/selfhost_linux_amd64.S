@@ -242,6 +242,29 @@ s_value_len:
     mov $1, %rax
     ret
 .size s_value_len, .-s_value_len
+.global s_array_new
+.type s_array_new, @function
+s_array_new:
+    push %r12
+    sar $1, %rdi
+    mov %rdi, %r12
+    lea 16(,%r12,8), %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Larray_new_pop
+    movq $4, (%rax)
+    mov %r12, 8(%rax)
+    xor %rdx, %rdx
+.Larray_new_zero:
+    cmp %r12, %rdx
+    jae .Larray_new_pop
+    movq $1, 16(%rax,%rdx,8)
+    inc %rdx
+    jmp .Larray_new_zero
+.Larray_new_pop:
+    pop %r12
+    ret
+.size s_array_new, .-s_array_new
 .global s_value_add
 .type s_value_add, @function
 s_value_add:
