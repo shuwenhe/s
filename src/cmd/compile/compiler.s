@@ -151,6 +151,12 @@ func compiler_field_name(int field) string {
     return "right"
 }
 
+func compiler_array_length(compiler_state initial, int slot) string {
+    s := initial
+    if s.array_lengths[slot] >= 0 { return compiler_number(s.array_lengths[slot]) }
+    return compiler_var(slot) + "_len"
+}
+
 func compiler_find_func(compiler_state initial, string name) int {
     s := initial
     int i = s.function_count - 1
@@ -363,10 +369,10 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         int slot = compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
-        if s.kinds[slot] != 6 { return compiler_fail(s, "len requires an integer array") }
-        int length = s.array_lengths[slot]
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 { return compiler_fail(s, "len requires an integer array") }
         s = compiler_expect(compiler_next(s), ")")
-        s.value = "INT64_C(" + compiler_number(length) + ")"
+        s.value = "INT64_C(" + compiler_array_length(s, slot) + ")"
+        if s.array_lengths[slot] < 0 { s.value = compiler_var(slot) + "_len" }
         s.value_kind = 1
         s.value_slot = -1
         return s
@@ -432,8 +438,15 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if s.value_kind < 1 || s.value_kind > 5 { return compiler_fail(s, "function arguments require integers, owners, pairs or references") }
             if arg >= s.function_counts[function_index] { return compiler_fail(s, "too many function arguments") }
             int expected = s.function_param_kinds[s.function_starts[function_index] + arg]
-            if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
+            if expected == 7 {
+                if s.value_kind != 6 && s.value_kind != 7 { return compiler_fail(s, "function argument requires an integer array") }
+            } else if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
             string argument = s.value
+            string argument_length = ""
+            if expected == 7 {
+                if s.value_slot < 0 { return compiler_fail(s, "array argument requires a named array") }
+                argument_length = compiler_array_length(s, s.value_slot)
+            }
             if expected >= 3 && expected <= 4 {
                 int root = s.value_slot
                 int parent = s.value_parent
@@ -467,11 +480,13 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             string argument_type = "int64_t "
             if expected == 2 || expected == 4 { argument_type = "int64_t *" }
             if expected == 5 { argument_type = "compiler_pair *" }
+            if expected == 7 { argument_type = "const int64_t *" }
             if expected == 3 { argument_type = "const int64_t *" }
             s.code = s.code + argument_type + temporary + ";\n"
             evaluations = evaluations + "(" + temporary + " = " + argument + "),"
             if arg > 0 { args = args + "," }
             args = args + temporary
+            if expected == 7 { args = args + "," + argument_length }
             arg = arg + 1
         }
         if arg != s.function_counts[function_index] { return compiler_fail(s, "wrong number of function arguments") }
@@ -520,13 +535,12 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     if s.error != "" { return s }
     s = compiler_next(s)
     if s.token == "[" {
-        if s.kinds[slot] != 6 { return compiler_fail(s, "indexing requires an integer array") }
-        int length = s.array_lengths[slot]
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 { return compiler_fail(s, "indexing requires an integer array") }
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
         string index = s.value
         s = compiler_expect(s, "]")
-        s.value = compiler_var(slot) + "[compiler_index(" + compiler_number(length) + "," + index + ")]"
+        s.value = compiler_var(slot) + "[compiler_index(" + compiler_array_length(s, slot) + "," + index + ")]"
         s.value_kind = 1
         s.value_slot = -1
         return s
@@ -857,8 +871,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         int slot = compiler_find(s, name)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
-        if s.kinds[slot] != 6 { return compiler_fail(s, "index assignment requires an integer array") }
-        int length = s.array_lengths[slot]
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 { return compiler_fail(s, "index assignment requires an integer array") }
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
         string index = s.value
@@ -866,7 +879,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         s = compiler_expect(s, "=")
         s = compiler_expression(s, 1)
         if s.value_kind != 1 { return compiler_fail(s, "array elements require integers") }
-        s.code = s.code + compiler_var(slot) + "[compiler_index(" + compiler_number(length) + "," + index + ")] = " + s.value + ";\n"
+        s.code = s.code + compiler_var(slot) + "[compiler_index(" + compiler_array_length(s, slot) + "," + index + ")] = " + s.value + ";\n"
         s = compiler_expect(s, ";")
         return s
     }
@@ -896,6 +909,11 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         else if s.token == "pair" { kind = 5 }
         else { return compiler_fail(s, "function parameters require int, box, ref, mutref or pair") }
         s = compiler_next(s)
+        if kind == 1 && s.token == "[" {
+            s = compiler_expect(s, "[")
+            s = compiler_expect(s, "]")
+            kind = 7
+        }
         string param = s.token
         if !compiler_ident(param) { return compiler_fail(s, "expected parameter name") }
         if param_count >= 16 { return compiler_fail(s, "too many function parameters") }
@@ -938,9 +956,11 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         if pi > 0 { signature = signature + ", " }
         if s.kinds[pi] == 2 || s.kinds[pi] == 4 { signature = signature + "int64_t *" }
         else if s.kinds[pi] == 5 { signature = signature + "compiler_pair *" }
+        else if s.kinds[pi] == 7 { signature = signature + "const int64_t *" }
         else if s.kinds[pi] == 3 { signature = signature + "const int64_t *" }
         else { signature = signature + "int64_t " }
         signature = signature + "p" + compiler_number(pi)
+        if s.kinds[pi] == 7 { signature = signature + ", int64_t p" + compiler_number(pi) + "_len" }
         pi = pi + 1
     }
     signature = signature + ")\n"
@@ -958,8 +978,10 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         string ctype = "int64_t "
         if s.kinds[pi] == 2 || s.kinds[pi] == 4 { ctype = "int64_t *" }
         else if s.kinds[pi] == 5 { ctype = "compiler_pair *" }
+        else if s.kinds[pi] == 7 { ctype = "const int64_t *" }
         else if s.kinds[pi] == 3 { ctype = "const int64_t *" }
         s.code = s.code + ctype + compiler_var(pi) + " = p" + compiler_number(pi) + ";\n"
+        if s.kinds[pi] == 7 { s.code = s.code + "int64_t " + compiler_var(pi) + "_len = p" + compiler_number(pi) + "_len;\n" }
         s.code = s.code + "(void)" + compiler_var(pi) + ";\n"
         s.live[pi] = 1
         s.roots[pi] = -1
@@ -967,6 +989,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         s.parents[pi] = -1
         s.loan_fields[pi] = -1
         s.array_lengths[pi] = 0
+        if s.kinds[pi] == 7 { s.array_lengths[pi] = -1 }
         if s.kinds[pi] == 5 { s.field_left_live[pi] = 1; s.field_right_live[pi] = 1 }
         s.count = s.count + 1
         pi = pi + 1
