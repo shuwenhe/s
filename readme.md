@@ -121,6 +121,26 @@ Compile an S source file to IR:
 ./bin/s_seed input.s output.ir
 ```
 
+## Compile a program (GCC-style command line)
+
+After `make selfhost`, add the compiler to your current shell's PATH:
+
+```sh
+export PATH="$PWD/bin:$PATH"
+cp test/cli/hello.s hello.s
+s hello.s                 # writes ./a.out
+./a.out
+s hello.s -o hello        # explicit executable name
+./hello
+s -o hello hello.s        # -o may also precede the input
+```
+
+The existing `s build hello.s -o hello` command remains supported. Run
+`s --help` for basic usage and `sh test/cli/check.sh` for CLI regression checks.
+This interface compiles one S source file using the existing Linux/amd64 native
+backend and its supported language subset; it does not compile C/C++ sources
+or implement the full GCC option set.
+
 ## Build the native self-hosted compiler
 
 ```sh
