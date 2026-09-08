@@ -19,6 +19,23 @@ struct mir_operand {
     string type_name
 }
 
+struct mir_place_projection {
+    string kind
+    string value
+}
+
+struct mir_place {
+    string root
+    mir_place_projection[] projections
+}
+
+struct mir_flow_state {
+    string[] moved
+    string[] dropped
+    string[] shared_borrows
+    string[] mutable_borrows
+}
+
 struct mir_local_slot {
     int id
     string name
@@ -187,18 +204,91 @@ func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements,
 }
 
 func mir_local_moved_at_exit(string name, string[] events) bool {
-    moved := false
+    state := mir_flow_state { moved: string[](), dropped: string[](), shared_borrows: string[](), mutable_borrows: string[]() }
     i := 0
     for i < len(events) {
-        event := events[i]
-        if starts_with(event, "move:") && slice(event, 5, len(event)) == name {
-            moved = true
-        } else if starts_with(event, "write:") && slice(event, 6, len(event)) == name {
-            moved = false
-        }
+        state = mir_apply_flow_event(state, events[i])
         i = i + 1
     }
-    moved
+    mir_contains(state.moved, name)
+}
+
+func mir_contains(string[] values, string value) bool {
+    i := 0
+    for i < len(values) {
+        if values[i] == value { return true }
+        i = i + 1
+    }
+    false
+}
+
+func mir_remove(string[] values, string value) string[] {
+    out := string[]()
+    i := 0
+    for i < len(values) {
+        if values[i] != value { out = append(out, values[i]) }
+        i = i + 1
+    }
+    out
+}
+
+func mir_add_unique(string[] values, string value) string[] {
+    if value == "" || mir_contains(values, value) { return values }
+    values = append(values, value)
+    values
+}
+
+func mir_apply_flow_event(mir_flow_state state, string event) mir_flow_state {
+    if starts_with(event, "move:") {
+        name := slice(event, 5, len(event))
+        state.moved = mir_add_unique(state.moved, name)
+        state.dropped = mir_remove(state.dropped, name)
+    } else if starts_with(event, "write:") {
+        name := slice(event, 6, len(event))
+        state.moved = mir_remove(state.moved, name)
+        state.dropped = mir_remove(state.dropped, name)
+    } else if starts_with(event, "drop:") {
+        name := slice(event, 5, len(event))
+        state.dropped = mir_add_unique(state.dropped, name)
+        state.moved = mir_remove(state.moved, name)
+    } else if starts_with(event, "shared:") {
+        state.shared_borrows = mir_add_unique(state.shared_borrows, slice(event, 7, len(event)))
+    } else if starts_with(event, "mutable:") {
+        state.mutable_borrows = mir_add_unique(state.mutable_borrows, slice(event, 8, len(event)))
+    }
+    state
+}
+
+func mir_place_from_expr(expr value) mir_place {
+    switch value {
+        expr.name(name_expr) : {
+            return mir_place { root: name_expr.name, projections: mir_place_projection[]() }
+        }
+        expr.member(member_expr) : {
+            place := mir_place_from_expr(member_expr.target.unwrap())
+            place.projections = append(place.projections, mir_place_projection { kind: "field", value: member_expr.member })
+            return place
+        }
+        expr.index(index_expr) : {
+            place := mir_place_from_expr(index_expr.target.unwrap())
+            place.projections = append(place.projections, mir_place_projection { kind: "index", value: dump_expr(index_expr.index.unwrap()) })
+            return place
+        }
+        _ : { return mir_place { root: "", projections: mir_place_projection[]() } }
+    }
+}
+
+func mir_place_key(mir_place place) string {
+    if place.root == "" { return "" }
+    out := place.root
+    i := 0
+    for i < len(place.projections) {
+        projection := place.projections[i]
+        if projection.kind == "field" { out = out + "." + projection.value }
+        else if projection.kind == "index" { out = out + "[" + projection.value + "]" }
+        i = i + 1
+    }
+    out
 }
 
 func mir_extend_events(string[] base, string[] extra) string[] {
@@ -312,12 +402,7 @@ func mir_expr_events(expr value, mir_local_slot[] locals, bool consume) string[]
 }
 
 func mir_place_name(expr value) string {
-    switch value {
-        expr.name(name_expr) : return name_expr.name
-        expr.member(member_expr) : return mir_place_name(member_expr.target.unwrap()) + "." + member_expr.member
-        expr.index(index_expr) : return mir_place_name(index_expr.target.unwrap())
-        _ : return ""
-    }
+    mir_place_key(mir_place_from_expr(value))
 }
 
 func mir_stmt_events(stmt value, mir_local_slot[] locals) string[] {

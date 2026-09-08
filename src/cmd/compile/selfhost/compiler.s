@@ -3593,16 +3593,56 @@ func compile_native_binary(string source, string output_path) int {
     return 0
 }
 
+func file_extension(string path) string {
+    int dot = -1
+    int index = len(path) - 1
+    while index >= 0 {
+        if __host_char_at(path, index) == "." {
+            dot = index
+            break
+        }
+        if __host_char_at(path, index) == "/" {
+            break
+        }
+        index = index - 1
+    }
+    if dot < 0 { return "" }
+    return __host_slice(path, dot, len(path))
+}
+
+func default_output_path(string path) string {
+    int index = len(path) - 1
+    while index >= 0 {
+        if __host_char_at(path, index) == "." {
+            return __host_slice(path, 0, index)
+        }
+        if __host_char_at(path, index) == "/" {
+            break
+        }
+        index = index - 1
+    }
+    return path + ".out"
+}
+
 func main() {
     args := host_args()
-    if len(args) != 3 && len(args) != 4 && len(args) != 5 {
-        eprintln("usage: s build <input.s> -o <output>")
-        eprintln("       s [--report-unsupported|--emit-bin|--emit-native|--emit-asm|--emit-asm-darwin-arm64] <input.s> <output>")
+    if len(args) == 2 && args[1] == "--help" {
+        eprintln("usage: s <input.s> [-o <output>] (default: a.out)")
+        eprintln("       s -o <output> <input.s>")
+        eprintln("       s build <input.s> -o <output>")
+        return 0
+    }
+    if len(args) == 3 && (args[1] == "-o" || args[2] == "-o") {
+        eprintln("compile: -o requires an output path and an input file")
         return 2
     }
+    bool direct_default = len(args) == 2 && file_extension(args[1]) == ".s"
+    bool direct_output = len(args) == 4 && args[2] == "-o"
+    bool output_first = len(args) == 4 && args[1] == "-o"
     bool build_native = len(args) == 5 && args[1] == "build" && args[3] == "-o"
-    if len(args) == 5 && !build_native {
-        eprintln("usage: s build <input.s> -o <output>")
+    if (len(args) != 3 && len(args) != 4 && !build_native && !direct_default) {
+        eprintln("usage: s <input.s> [-o <output>] (default: a.out)")
+        eprintln("       s build <input.s> -o <output>")
         return 2
     }
     bool report_unsupported = len(args) == 4 && args[1] == "--report-unsupported"
@@ -3613,7 +3653,7 @@ func main() {
     bool native_call = len(args) == 4 && args[1] == "--emit-native-call"
     bool native_loop = len(args) == 4 && args[1] == "--emit-native-loop"
     bool native_string = len(args) == 4 && args[1] == "--emit-native-string"
-    bool native = (len(args) == 4 && args[1] == "--emit-native") || build_native
+    bool native = (len(args) == 4 && args[1] == "--emit-native") || build_native || direct_default || direct_output || output_first
     bool native_array = len(args) == 4 && args[1] == "--emit-native-array"
     bool native_multi_call = len(args) == 4 && args[1] == "--emit-native-multicall"
     bool native_copy = len(args) == 4 && args[1] == "--emit-native-copy"
@@ -3630,16 +3670,29 @@ func main() {
         input_index = 2
         output_index = 3
     }
+    if direct_output { input_index = 1; output_index = 3 }
+    if output_first { input_index = 3; output_index = 2 }
+    if direct_default { input_index = 1 }
+    if len(args) == 4 && input_index == 1 && !direct_output {
+        eprintln("compile: unknown option or invalid arguments")
+        return 2
+    }
+    string output_path = "a.out"
+    if !direct_default { output_path = args[output_index] }
+    if output_path == args[input_index] {
+        eprintln("compile: input and output paths must differ")
+        return 2
+    }
     string source = __host_read_to_string(args[input_index])
     if len(source) == 0 {
         eprintln("compile: cannot read input or input is empty")
         return 1
     }
-    if selfhost_c { return compile_selfhost_c(source, args[output_index]) }
+    if selfhost_c { return compile_selfhost_c(source, output_path) }
     if debug_find {
         int found = find_function_from(source, 0)
         int body = function_body(source, "main")
-        return __host_write_text_file(args[output_index], int_text(found) + "|" + int_text(body))
+        return __host_write_text_file(output_path, int_text(found) + "|" + int_text(body))
     }
     if !native_assembly && !darwin_arm64_assembly && parse_package_name(source) == "" {
         eprintln("compile: invalid or missing package declaration")
@@ -3654,57 +3707,57 @@ func main() {
         return 1
     }
     if report_unsupported {
-        if __host_write_text_file(args[output_index], unsupported_report(source)) != 0 {
+        if __host_write_text_file(output_path, unsupported_report(source)) != 0 {
             eprintln("compile: cannot write unsupported capability report")
             return 1
         }
         return 0
     }
     if binary {
-        return compile_binary(source, args[output_index])
+        return compile_binary(source, output_path)
     }
     if native_expression {
-        return compile_native_expression_binary(source, args[output_index])
+        return compile_native_expression_binary(source, output_path)
     }
     if native_control {
-        return compile_native_control_binary(source, args[output_index])
+        return compile_native_control_binary(source, output_path)
     }
     if native_locals {
-        return compile_native_locals_binary(source, args[output_index])
+        return compile_native_locals_binary(source, output_path)
     }
     if native_call {
-        return compile_native_call_binary(source, args[output_index])
+        return compile_native_call_binary(source, output_path)
     }
     if native_loop {
-        return compile_native_loop_binary(source, args[output_index])
+        return compile_native_loop_binary(source, output_path)
     }
     if native_string {
-        return compile_native_string_binary(source, args[output_index])
+        return compile_native_string_binary(source, output_path)
     }
     if native {
-        return compile_native_binary(source, args[output_index])
+        return compile_native_binary(source, output_path)
     }
     if native_array {
-        return compile_native_array_binary(source, args[output_index])
+        return compile_native_array_binary(source, output_path)
     }
     if native_multi_call {
-        return compile_native_multi_call_binary(source, args[output_index])
+        return compile_native_multi_call_binary(source, output_path)
     }
     if native_copy {
-        return compile_native_copy_binary(source, args[output_index])
+        return compile_native_copy_binary(source, output_path)
     }
     if native_assembly {
-        return compile_native_assembly(source, args[output_index])
+        return compile_native_assembly(source, output_path)
     }
     if darwin_arm64_assembly {
-        return compile_darwin_arm64_assembly(source, args[output_index])
+        return compile_darwin_arm64_assembly(source, output_path)
     }
     string ir = compile_main_expression(source)
     if len(ir) == 0 {
         eprintln("compile: source is outside bootstrap slice 1")
         return 1
     }
-    if __host_write_text_file(args[output_index], ir) != 0 {
+    if __host_write_text_file(output_path, ir) != 0 {
         eprintln("compile: cannot write output")
         return 1
     }
