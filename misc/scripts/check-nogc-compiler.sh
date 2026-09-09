@@ -103,4 +103,31 @@ if "$root/bin/s" "$work/reject.s" -o "$work/reject" >/dev/null 2>&1; then
     exit 1
 fi
 
+check_diagnostic() {
+    name=$1
+    source=$2
+    printf '%s\n' "$source" >"$work/$name.s"
+    if "$root/bin/s" "$work/$name.s" -o "$work/$name" >"$work/$name.out" 2>&1; then
+        echo "unsupported syntax unexpectedly compiled: $name" >&2
+        exit 1
+    fi
+    if ! grep -q 'unsupported in no-GC compiler subset' "$work/$name.out"; then
+        echo "missing no-GC subset diagnostic for $name" >&2
+        cat "$work/$name.out" >&2
+        exit 1
+    fi
+}
+
+check_diagnostic import 'package bad
+use std.io.println
+func main() int { return 0 }'
+
+check_diagnostic enum 'package bad
+enum option { some none }
+func main() int { return 0 }'
+
+check_diagnostic struct_shape 'package bad
+struct pair { value box }
+func main() int { return 0 }'
+
 echo "No-GC compiler checks passed"

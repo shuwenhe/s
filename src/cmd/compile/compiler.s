@@ -45,6 +45,8 @@ struct compiler_state {
     int[] function_param_kinds
     int function_count
     int function_param_total
+    string struct_field_left
+    string struct_field_right
     string function_name
     bool function_main
 }
@@ -76,6 +78,24 @@ func compiler_fail(compiler_state initial, string message) compiler_state {
     s := initial
     if s.error == "" { s.error = "compiler:" + compiler_number(s.line) + ": " + message }
     return s
+}
+
+func compiler_subset_fail(compiler_state initial, string feature) compiler_state {
+    return compiler_fail(initial, "unsupported in no-GC compiler subset: " + feature)
+}
+
+func compiler_unsupported_token_message(string token) string {
+    if token == "use" || token == "import" { return "imports and multi-package resolution" }
+    if token == "enum" { return "enum declarations" }
+    if token == "trait" || token == "interface" { return "traits and interfaces" }
+    if token == "impl" { return "impl blocks" }
+    if token == "defer" { return "defer statements" }
+    if token == "go" || token == "sroutine" { return "concurrency statements" }
+    if token == "match" || token == "switch" { return "match/switch statements" }
+    if token == "map" { return "map values" }
+    if token == "auto" { return "auto type declarations" }
+    if token == "struct" { return "only two-field owned box structs are currently supported" }
+    return ""
 }
 
 func compiler_next(compiler_state initial) compiler_state {
@@ -167,12 +187,14 @@ func compiler_is_struct_type(string token) bool {
 func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "struct")
-    if !compiler_is_struct_type(s.token) { return compiler_fail(s, "expected exported struct name") }
+    if !compiler_is_struct_type(s.token) { return compiler_subset_fail(s, "struct names must be exported and use `left box` plus `right box` fields") }
     s = compiler_next(s)
     s = compiler_expect(s, "{")
+    if s.token != "left" { return compiler_subset_fail(s, "struct fields must be exactly `left box` then `right box`") }
     s = compiler_expect(s, "left")
     s = compiler_expect(s, "box")
     s = compiler_optional_semicolon(s)
+    if s.token != "right" { return compiler_subset_fail(s, "struct fields must be exactly `left box` then `right box`") }
     s = compiler_expect(s, "right")
     s = compiler_expect(s, "box")
     s = compiler_optional_semicolon(s)
@@ -195,6 +217,13 @@ func compiler_var(int slot) string { return "s_v" + compiler_number(slot) }
 func compiler_field_name(int field) string {
     if field == 0 { return "left" }
     return "right"
+}
+
+func compiler_field_index(compiler_state initial, string field_name) int {
+    s := initial
+    if field_name == "left" || field_name == s.struct_field_left { return 0 }
+    if field_name == "right" || field_name == s.struct_field_right { return 1 }
+    return -1
 }
 
 func compiler_array_length(compiler_state initial, int slot) string {
@@ -626,6 +655,8 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.value_kind = 1
         return compiler_next(s)
     }
+    string unsupported = compiler_unsupported_token_message(t)
+    if unsupported != "" { return compiler_subset_fail(s, unsupported) }
     int slot = compiler_find(s, t)
     s = compiler_available(s, slot)
     if s.error != "" { return s }
@@ -810,6 +841,8 @@ func compiler_block(compiler_state initial) compiler_state {
 
 func compiler_statement(compiler_state initial) compiler_state {
     s := initial
+    string unsupported = compiler_unsupported_token_message(s.token)
+    if unsupported != "" { return compiler_subset_fail(s, unsupported) }
     if s.token == "{" { return compiler_block(s) }
     if s.token == "if" {
         s = compiler_expression(compiler_next(s), 1)
@@ -1041,6 +1074,9 @@ func compiler_statement(compiler_state initial) compiler_state {
         return s
     }
     string name = s.token
+    if name == "var" || name == "let" || name == "const" {
+        return compiler_subset_fail(s, "typed declarations; use `name := value` in this subset")
+    }
     s = compiler_next(s)
     if s.token == "(" && compiler_find_func(s, name) >= 0 {
         int function_index = compiler_find_func(s, name)
@@ -1273,9 +1309,16 @@ func compiler_compile(string source) compiler_state {
         s = compiler_next(s)
     }
     if s.token == ";" { s = compiler_next(s) }
+    while s.token == "use" || s.token == "import" {
+        return compiler_subset_fail(s, "imports and multi-package resolution")
+    }
     while s.token == "struct" {
         s = compiler_parse_struct_decl(s)
         if s.error != "" { return s }
+    }
+    if s.token != "func" {
+        string unsupported = compiler_unsupported_token_message(s.token)
+        if unsupported != "" { return compiler_subset_fail(s, unsupported) }
     }
     for s.token == "func" {
         look := compiler_next(s)
