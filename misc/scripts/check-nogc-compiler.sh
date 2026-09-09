@@ -386,6 +386,78 @@ func main() int {
 }
 SRC
 
+cat >"$work/general_struct_three_fields.s" <<'SRC'
+package fields
+struct Triple { a box; b box; c box }
+func main() int {
+    t := Triple(box(1), box(2), box(39))
+    assert(live_allocations() == 4)
+    return *t.c + 3
+}
+SRC
+
+cat >"$work/mixed_struct_fields.s" <<'SRC'
+package fields
+struct Resource { id int; data box; active bool }
+func main() int {
+    r := Resource(7, box(35), true)
+    assert(r.id == 7)
+    assert(r.active == true)
+    return *r.data + 7
+}
+SRC
+
+cat >"$work/nested_owned_struct.s" <<'SRC'
+package fields
+struct Inner { left box; right box }
+struct Outer { inner Inner; tail box }
+func main() int {
+    o := Outer(Inner(box(1), box(2)), box(3))
+    assert(live_allocations() == 5)
+    return 42
+}
+SRC
+
+cat >"$work/nested_custom_drop_order.s" <<'SRC'
+package fields
+struct Inner { left box; right box }
+struct Outer { inner Inner; tail box }
+func (Inner* inner) drop() { println("Inner.drop") }
+func (Outer* outer) drop() { println("Outer.drop") }
+func main() int {
+    o := Outer(Inner(box(1), box(2)), box(3))
+    return 42
+}
+SRC
+
+cat >"$work/partial_move_scope_exit.s" <<'SRC'
+package fields
+struct Left { data box }
+struct Right { data box }
+struct Pair { left Left; right Right }
+func (Left* left) drop() { println("Left.drop") }
+func (Right* right) drop() { println("Right.drop") }
+func main() int {
+    p := Pair(Left(box(1)), Right(box(2)))
+    x := p.left
+    return 42
+}
+SRC
+
+cat >"$work/partial_move_arg.s" <<'SRC'
+package fields
+struct Left { data box }
+struct Right { data box }
+struct Pair { left Left; right Right }
+func (Left* left) drop() { println("Left.drop") }
+func (Right* right) drop() { println("Right.drop") }
+func take(Left left) int { return 40 }
+func main() int {
+    p := Pair(Left(box(1)), Right(box(2)))
+    return take(p.left) + 2
+}
+SRC
+
 "$root/bin/s" "$work/ownership.s" -o "$work/ownership"
 set +e
 "$work/ownership"
@@ -521,27 +593,56 @@ test "$status" -eq 42
 
 run_custom_drop_case struct_custom_drop_with_fields 'Pair.drop'
 
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/general_struct_three_fields.s" -o "$work/general_struct_three_fields"
+set +e
+"$work/general_struct_three_fields"
+status=$?
+set -e
+test "$status" -eq 42
+
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/mixed_struct_fields.s" -o "$work/mixed_struct_fields"
+set +e
+"$work/mixed_struct_fields"
+status=$?
+set -e
+test "$status" -eq 42
+
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/nested_owned_struct.s" -o "$work/nested_owned_struct"
+set +e
+"$work/nested_owned_struct"
+status=$?
+set -e
+test "$status" -eq 42
+
+run_custom_drop_case nested_custom_drop_order 'Outer.drop
+Inner.drop'
+run_custom_drop_case partial_move_scope_exit 'Left.drop
+Right.drop'
+run_custom_drop_case partial_move_arg 'Left.drop
+Right.drop'
+
 "$root/bin/s_compiler" --emit-c "$work/custom_drop_move.s" "$work/custom_drop_move.c"
-if grep -q '__s_drop_Resource(s_v0)' "$work/custom_drop_move.c"; then
+if grep -q 'compiler_drop_user_Resource(s_v0)' "$work/custom_drop_move.c"; then
     echo "custom drop emitted for moved source owner" >&2
     cat "$work/custom_drop_move.c" >&2
     exit 1
 fi
-if ! grep -q '__s_drop_Resource(s_v1)' "$work/custom_drop_move.c"; then
+if ! grep -q 'compiler_drop_owned_Resource(&s_v1)' "$work/custom_drop_move.c"; then
     echo "custom drop missing for moved-to owner" >&2
     cat "$work/custom_drop_move.c" >&2
     exit 1
 fi
 "$root/bin/s_compiler" --emit-c "$work/custom_drop_conditional_move.s" "$work/custom_drop_conditional_move.c"
-if ! grep -q 'if (s_v0 != NULL)' "$work/custom_drop_conditional_move.c"; then
-    echo "custom drop missing maybe-live guard" >&2
+if ! grep -q 'compiler_drop_owned_Resource(&s_v0)' "$work/custom_drop_conditional_move.c" ||
+   ! grep -q -F 'if (*owner)' "$work/custom_drop_conditional_move.c"; then
+    echo "custom drop missing guarded owned cleanup" >&2
     cat "$work/custom_drop_conditional_move.c" >&2
     exit 1
 fi
 
 "$root/bin/s_compiler" --emit-c "$work/overwrite_custom_drop.s" "$work/overwrite_custom_drop.c"
-rhs_line=$(grep -n 'compiler_new = compiler_pair_make' "$work/overwrite_custom_drop.c" | head -1 | cut -d: -f1)
-drop_line=$(grep -n '__s_drop_Resource(s_v0)' "$work/overwrite_custom_drop.c" | head -1 | cut -d: -f1)
+rhs_line=$(grep -n 'compiler_new = compiler_make_Resource' "$work/overwrite_custom_drop.c" | head -1 | cut -d: -f1)
+drop_line=$(grep -n 'compiler_drop_owned_Resource(&s_v0)' "$work/overwrite_custom_drop.c" | head -1 | cut -d: -f1)
 assign_line=$(grep -n 's_v0 = compiler_new' "$work/overwrite_custom_drop.c" | head -1 | cut -d: -f1)
 if [ -z "$rhs_line" ] || [ -z "$drop_line" ] || [ -z "$assign_line" ] ||
    [ "$rhs_line" -ge "$drop_line" ] || [ "$drop_line" -ge "$assign_line" ]; then
@@ -551,34 +652,60 @@ if [ -z "$rhs_line" ] || [ -z "$drop_line" ] || [ -z "$assign_line" ] ||
 fi
 "$root/bin/s_compiler" --emit-c "$work/overwrite_moved_owner.s" "$work/overwrite_moved_owner.c"
 assign_reinit_line=$(grep -n 's_v0 = compiler_new' "$work/overwrite_moved_owner.c" | head -1 | cut -d: -f1)
-old_reinit_drop_line=$(grep -n '__s_drop_Resource(s_v0)' "$work/overwrite_moved_owner.c" | head -1 | cut -d: -f1)
+old_reinit_drop_line=$(grep -n 'compiler_drop_owned_Resource(&s_v0)' "$work/overwrite_moved_owner.c" | head -1 | cut -d: -f1)
 if [ -n "$old_reinit_drop_line" ] && [ "$old_reinit_drop_line" -lt "$assign_reinit_line" ]; then
     echo "moved LHS reinitialization dropped dead source" >&2
     cat "$work/overwrite_moved_owner.c" >&2
     exit 1
 fi
 "$root/bin/s_compiler" --emit-c "$work/overwrite_conditional_true.s" "$work/overwrite_conditional_true.c"
-if ! grep -q 'if (s_v0 != NULL)' "$work/overwrite_conditional_true.c"; then
-    echo "maybe-live overwrite missing guard" >&2
+if ! grep -q 'compiler_drop_owned_Resource(&s_v0)' "$work/overwrite_conditional_true.c" ||
+   ! grep -q -F 'if (*owner)' "$work/overwrite_conditional_true.c"; then
+    echo "maybe-live overwrite missing guarded owned cleanup" >&2
     cat "$work/overwrite_conditional_true.c" >&2
     exit 1
 fi
 
 "$root/bin/s_compiler" --emit-c "$work/struct_custom_drop_with_fields.s" "$work/struct_custom_drop_with_fields.c"
-if ! grep -q '__s_drop_Pair(s_v0)' "$work/struct_custom_drop_with_fields.c" ||
-   ! grep -q 'compiler_pair_drop(&s_v0)' "$work/struct_custom_drop_with_fields.c"; then
+if ! grep -q 'static void compiler_drop_user_Pair' "$work/struct_custom_drop_with_fields.c" ||
+   ! grep -q 'compiler_drop_owned_Pair(&s_v0)' "$work/struct_custom_drop_with_fields.c"; then
     echo "custom drop with fields did not emit hook plus field cleanup" >&2
     cat "$work/struct_custom_drop_with_fields.c" >&2
     exit 1
 fi
-right_line=$(grep -n -F 'compiler_drop(&(*owner)->right)' "$root/src/runtime/compiler_runtime.h" | head -1 | cut -d: -f1)
-left_line=$(grep -n -F 'compiler_drop(&(*owner)->left)' "$root/src/runtime/compiler_runtime.h" | head -1 | cut -d: -f1)
-if [ -z "$right_line" ] || [ -z "$left_line" ] || [ "$right_line" -ge "$left_line" ]; then
-    echo "struct field cleanup is not reverse declaration order" >&2
+"$root/bin/s_compiler" --emit-c "$work/nested_owned_struct.s" "$work/nested_owned_struct.c"
+if ! grep -q 'typedef struct S_Outer' "$work/nested_owned_struct.c" ||
+   ! grep -q -F 'S_Inner *inner' "$work/nested_owned_struct.c" ||
+   ! grep -q 'compiler_drop_owned_Inner(&value->inner)' "$work/nested_owned_struct.c"; then
+    echo "recursive named struct cleanup was not generated" >&2
+    cat "$work/nested_owned_struct.c" >&2
+    exit 1
+fi
+tail_line=$(grep -n -F 'compiler_drop(&value->tail)' "$work/nested_owned_struct.c" | head -1 | cut -d: -f1)
+inner_line=$(grep -n -F 'compiler_drop_owned_Inner(&value->inner)' "$work/nested_owned_struct.c" | head -1 | cut -d: -f1)
+if [ -z "$tail_line" ] || [ -z "$inner_line" ] || [ "$tail_line" -ge "$inner_line" ]; then
+    echo "nested field cleanup is not reverse declaration order" >&2
+    cat "$work/nested_owned_struct.c" >&2
+    exit 1
+fi
+"$root/bin/s_compiler" --emit-c "$work/mixed_struct_fields.s" "$work/mixed_struct_fields.c"
+if grep -q 'compiler_drop(&value->id)' "$work/mixed_struct_fields.c" ||
+   grep -q 'compiler_drop(&value->active)' "$work/mixed_struct_fields.c" ||
+   ! grep -q 'compiler_drop(&value->data)' "$work/mixed_struct_fields.c"; then
+    echo "mixed field cleanup did not isolate owned fields" >&2
+    cat "$work/mixed_struct_fields.c" >&2
+    exit 1
+fi
+"$root/bin/s_compiler" --emit-c "$work/partial_move_scope_exit.s" "$work/partial_move_scope_exit.c"
+if ! grep -q 'compiler_move_Left(&s_v0->left)' "$work/partial_move_scope_exit.c" ||
+   ! grep -q 'compiler_drop_owned_Right(&value->right)' "$work/partial_move_scope_exit.c" ||
+   ! grep -q 'compiler_drop_owned_Left(&value->left)' "$work/partial_move_scope_exit.c"; then
+    echo "partial move generated C did not move field and preserve guarded field cleanup" >&2
+    cat "$work/partial_move_scope_exit.c" >&2
     exit 1
 fi
 
-if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" "$work/struct_owned_fields_scope_exit" "$work/struct_owned_fields_early_return" "$work/struct_owned_fields_loop" "$work/struct_custom_drop_with_fields" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
+if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" "$work/struct_owned_fields_scope_exit" "$work/struct_owned_fields_early_return" "$work/struct_owned_fields_loop" "$work/struct_custom_drop_with_fields" "$work/general_struct_three_fields" "$work/mixed_struct_fields" "$work/nested_owned_struct" "$work/nested_custom_drop_order" "$work/partial_move_scope_exit" "$work/partial_move_arg" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
     echo "GC or seed runtime symbol linked into no-GC binary" >&2
     exit 1
 fi
@@ -613,10 +740,6 @@ func main() int { return 0 }'
 
 check_diagnostic struct_shape 'package bad
 struct pair { value box }
-func main() int { return 0 }'
-
-check_diagnostic struct_int_field 'package bad
-struct Mixed { count int; value box }
 func main() int { return 0 }'
 
 cat >"$work/struct_mismatch.s" <<'SRC'
@@ -680,20 +803,15 @@ func main() int {
     return 42
 }' 'self move is not supported'
 
-expect_compile_fail named_struct_partial_move 'package bad
-struct Pair { left box; right box }
+expect_compile_fail partial_move_use_after_move 'package bad
+struct Left { data box }
+struct Right { data box }
+struct Pair { left Left; right Right }
 func main() int {
-    p := Pair(box(1), box(2))
+    p := Pair(Left(box(1)), Right(box(2)))
     x := p.left
-    return *x
-}' 'moving owned fields from structs is not supported before partial move'
-
-expect_compile_fail nested_owned_struct_unsupported 'package bad
-struct Resource { left box; right box }
-struct Outer { inner Resource; right box }
-func main() int {
-    value := Outer(Resource(box(1), box(2)), box(3))
+    y := p.left
     return 42
-}' 'struct field type is not supported'
+}' 'use of moved owned struct field'
 
 echo "No-GC compiler checks passed"

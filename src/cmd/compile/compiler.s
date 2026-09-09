@@ -54,6 +54,11 @@ struct compiler_state {
     string[] struct_field_rights
     int[] struct_field_left_kinds
     int[] struct_field_right_kinds
+    string[] struct_field_names
+    int[] struct_field_kinds
+    int[] struct_field_structs
+    int[] struct_field_starts
+    int[] struct_field_counts
     int[] struct_custom_drops
     int struct_count
     string function_name
@@ -195,6 +200,7 @@ func compiler_is_struct_type(string token) bool {
 
 func compiler_type_kind(string token) int {
     if token == "int" { return 1 }
+    if token == "bool" { return 1 }
     if token == "box" { return 2 }
     if token == "ref" { return 3 }
     if token == "mutref" { return 4 }
@@ -203,6 +209,39 @@ func compiler_type_kind(string token) int {
     if token == "mutslice" { return 16 }
     if token == "string" { return 17 }
     return 0
+}
+
+func compiler_struct_c_name(compiler_state initial, int struct_id) string {
+    s := initial
+    "S_" + s.struct_names[struct_id]
+}
+
+func compiler_c_type_for_kind(compiler_state initial, int kind, int struct_id) string {
+    s := initial
+    if kind == 2 || kind == 4 { return "int64_t *" }
+    if kind == 5 {
+        if struct_id >= 0 { return compiler_struct_c_name(s, struct_id) + " *" }
+        return "compiler_pair *"
+    }
+    if kind == 9 { return "compiler_slice *" }
+    if kind == 15 { return "const int64_t *" }
+    if kind == 16 { return "int64_t *" }
+    if kind == 7 { return "const int64_t *" }
+    if kind == 8 { return "int64_t *" }
+    if kind == 3 { return "const int64_t *" }
+    if kind == 17 { return "const char *" }
+    "int64_t "
+}
+
+func compiler_drop_field_code(compiler_state initial, string target, int kind, int struct_id) string {
+    s := initial
+    if kind == 2 { return "compiler_drop(&" + target + ");\n" }
+    if kind == 5 {
+        if struct_id >= 0 { return "compiler_drop_owned_" + s.struct_names[struct_id] + "(&" + target + ");\n" }
+        return "compiler_pair_drop(&" + target + ");\n"
+    }
+    if kind == 9 { return "compiler_slice_drop(&" + target + ");\n" }
+    ""
 }
 
 func compiler_find_struct(compiler_state initial, string name) int {
@@ -218,37 +257,84 @@ func compiler_find_struct(compiler_state initial, string name) int {
 func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "struct")
-    if !compiler_is_struct_type(s.token) { return compiler_subset_fail(s, "struct names must be exported two-field owned box structs") }
+    if !compiler_is_struct_type(s.token) { return compiler_subset_fail(s, "struct names must be exported") }
     string struct_name = s.token
     if compiler_find_struct(s, struct_name) >= 0 { return compiler_fail(s, "duplicate struct: " + struct_name) }
     if s.struct_count >= 8 { return compiler_fail(s, "too many structs") }
+    int struct_id = s.struct_count
+    int field_start = s.function_param_total
+    int field_count = 0
+    string typedef_code = "typedef struct S_" + struct_name + " {\n"
+    string make_params = ""
+    string make_args = ""
+    string make_body = ""
+    string fields_drop = ""
     s = compiler_next(s)
     s = compiler_expect(s, "{")
-    if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields must be named") }
-    string left_name = s.token
-    s = compiler_next(s)
-    int left_kind = compiler_type_kind(s.token)
-    if left_kind == 0 { return compiler_subset_fail(s, "struct field type is not supported") }
-    if left_kind != 2 { return compiler_subset_fail(s, "struct field metadata is recorded, but only box fields can be lowered today") }
-    s = compiler_next(s)
-    s = compiler_optional_semicolon(s)
-    if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields must be named") }
-    string right_name = s.token
-    if right_name == left_name { return compiler_subset_fail(s, "struct fields must have distinct names") }
-    s = compiler_next(s)
-    int right_kind = compiler_type_kind(s.token)
-    if right_kind == 0 { return compiler_subset_fail(s, "struct field type is not supported") }
-    if right_kind != 2 { return compiler_subset_fail(s, "struct field metadata is recorded, but only box fields can be lowered today") }
-    s = compiler_next(s)
-    s = compiler_optional_semicolon(s)
-    if s.token != "}" { return compiler_subset_fail(s, "structs currently support exactly two owned box fields") }
+    for s.token != "}" && s.token != "" {
+        if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields must be named") }
+        field_name := s.token
+        duplicate := false
+        scan := 0
+        for scan < field_count {
+            if s.struct_field_names[field_start + scan] == field_name { duplicate = true }
+            scan = scan + 1
+        }
+        if duplicate { return compiler_subset_fail(s, "struct fields must have distinct names") }
+        s = compiler_next(s)
+        field_kind := compiler_type_kind(s.token)
+        field_struct := -1
+        if field_kind == 0 && compiler_is_struct_type(s.token) {
+            field_kind = 5
+            field_struct = compiler_find_struct(s, s.token)
+            if field_struct < 0 { return compiler_fail(s, "unknown struct field type: " + s.token) }
+        }
+        if field_kind == 0 { return compiler_subset_fail(s, "struct field type is not supported") }
+        if field_count >= 8 { return compiler_fail(s, "too many struct fields") }
+        index := field_start + field_count
+        s.struct_field_names[index] = field_name
+        s.struct_field_kinds[index] = field_kind
+        s.struct_field_structs[index] = field_struct
+        ctype := compiler_c_type_for_kind(s, field_kind, field_struct)
+        typedef_code = typedef_code + "    " + ctype + field_name + ";\n"
+        if field_count > 0 { make_params = make_params + ", "; make_args = make_args + "," }
+        make_params = make_params + ctype + "p" + compiler_number(field_count)
+        make_body = make_body + "    value->" + field_name + " = p" + compiler_number(field_count) + ";\n"
+        make_args = make_args + "p" + compiler_number(field_count)
+        drop_code := compiler_drop_field_code(s, "value->" + field_name, field_kind, field_struct)
+        if drop_code != "" { fields_drop = drop_code + fields_drop }
+        field_count = field_count + 1
+        s = compiler_next(s)
+        s = compiler_optional_semicolon(s)
+    }
+    if field_count == 0 { return compiler_subset_fail(s, "structs require at least one field") }
     s = compiler_expect(s, "}")
-    s.struct_names[s.struct_count] = struct_name
-    s.struct_field_lefts[s.struct_count] = left_name
-    s.struct_field_rights[s.struct_count] = right_name
-    s.struct_field_left_kinds[s.struct_count] = left_kind
-    s.struct_field_right_kinds[s.struct_count] = right_kind
+    typedef_code = typedef_code + "} S_" + struct_name + ";\n"
+    fields_drop = "static inline __attribute__((unused)) void compiler_drop_fields_" + struct_name + "(S_" + struct_name + " *value) {\n" + fields_drop + "}\n"
+    s.code = s.code + typedef_code
+    s.code = s.code + "static void compiler_drop_user_" + struct_name + "(S_" + struct_name + " *value);\n"
+    s.code = s.code + "static inline __attribute__((unused)) S_" + struct_name + " *compiler_make_" + struct_name + "(" + make_params + ") {\n"
+    s.code = s.code + "    S_" + struct_name + " *value = (S_" + struct_name + " *)malloc(sizeof(*value));\n"
+    s.code = s.code + "    if (!value) compiler_trap(\"allocation failed\");\n"
+    s.code = s.code + make_body
+    s.code = s.code + "#ifdef S_COMPILER_CHECK_ALLOCATIONS\n    ++compiler_objects;\n#endif\n"
+    s.code = s.code + "    return value;\n}\n"
+    s.code = s.code + fields_drop
+    s.code = s.code + "static inline __attribute__((unused)) void compiler_drop_owned_" + struct_name + "(S_" + struct_name + " **owner) {\n"
+    s.code = s.code + "    if (*owner) { compiler_drop_user_" + struct_name + "(*owner); compiler_drop_fields_" + struct_name + "(*owner); free(*owner); *owner = NULL;\n"
+    s.code = s.code + "#ifdef S_COMPILER_CHECK_ALLOCATIONS\n    --compiler_objects;\n#endif\n"
+    s.code = s.code + "    }\n}\n"
+    s.code = s.code + "static inline __attribute__((unused)) S_" + struct_name + " *compiler_move_" + struct_name + "(S_" + struct_name + " **source) {\n"
+    s.code = s.code + "    S_" + struct_name + " *value = *source;\n"
+    s.code = s.code + "    *source = NULL;\n"
+    s.code = s.code + "    return value;\n}\n"
+    s.struct_names[struct_id] = struct_name
+    s.struct_field_starts[struct_id] = field_start
+    s.struct_field_counts[struct_id] = field_count
+    if field_count >= 1 { s.struct_field_lefts[struct_id] = s.struct_field_names[field_start]; s.struct_field_left_kinds[struct_id] = s.struct_field_kinds[field_start] }
+    if field_count >= 2 { s.struct_field_rights[struct_id] = s.struct_field_names[field_start + 1]; s.struct_field_right_kinds[struct_id] = s.struct_field_kinds[field_start + 1] }
     s.struct_count = s.struct_count + 1
+    s.function_param_total = s.function_param_total + field_count
     return compiler_optional_semicolon(s)
 }
 
@@ -272,13 +358,60 @@ func compiler_field_name(int field) string {
 func compiler_field_index(compiler_state initial, int struct_id, string field_name) int {
     s := initial
     if struct_id >= 0 {
-        if field_name == s.struct_field_lefts[struct_id] { return 0 }
-        if field_name == s.struct_field_rights[struct_id] { return 1 }
+        start := s.struct_field_starts[struct_id]
+        count := s.struct_field_counts[struct_id]
+        i := 0
+        for i < count {
+            if field_name == s.struct_field_names[start + i] { return i }
+            i = i + 1
+        }
         return -1
     }
     if field_name == "left" { return 0 }
     if field_name == "right" { return 1 }
     return -1
+}
+
+func compiler_struct_field_name(compiler_state initial, int struct_id, int field) string {
+    s := initial
+    if struct_id >= 0 { return s.struct_field_names[s.struct_field_starts[struct_id] + field] }
+    compiler_field_name(field)
+}
+
+func compiler_struct_field_kind(compiler_state initial, int struct_id, int field) int {
+    s := initial
+    if struct_id >= 0 { return s.struct_field_kinds[s.struct_field_starts[struct_id] + field] }
+    2
+}
+
+func compiler_struct_field_struct(compiler_state initial, int struct_id, int field) int {
+    s := initial
+    if struct_id >= 0 { return s.struct_field_structs[s.struct_field_starts[struct_id] + field] }
+    -1
+}
+
+func compiler_field_live(compiler_state initial, int slot, int field) int {
+    s := initial
+    if field == 0 { return s.field_left_live[slot] }
+    if field == 1 { return s.field_right_live[slot] }
+    return 1
+}
+
+func compiler_set_field_moved(compiler_state initial, int slot, int field) compiler_state {
+    s := initial
+    if field == 0 { s.field_left_live[slot] = 0; return s }
+    if field == 1 { s.field_right_live[slot] = 0; return s }
+    return compiler_fail(s, "partial move currently supports the first two owned fields")
+}
+
+func compiler_move_field_expr(compiler_state initial, int origin, int field, int kind, int struct_id) string {
+    s := initial
+    if s.struct_ids[origin] < 0 { return "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(field) + ")" }
+    target := compiler_var(origin) + "->" + compiler_struct_field_name(s, s.struct_ids[origin], field)
+    if kind == 2 { return "compiler_move(&" + target + ")" }
+    if kind == 5 { return "compiler_move_" + s.struct_names[struct_id] + "(&" + target + ")" }
+    if kind == 9 { return "compiler_slice_move(&" + target + ")" }
+    return target
 }
 
 func compiler_array_length(compiler_state initial, int slot) string {
@@ -359,8 +492,8 @@ func compiler_drop_owner(compiler_state initial, int slot) string {
     if s.kinds[slot] == 2 { return "compiler_drop(&" + compiler_var(slot) + ");\n" }
     if s.kinds[slot] == 5 {
         struct_id := s.struct_ids[slot]
-        if struct_id >= 0 && s.struct_custom_drops[struct_id] == 1 {
-            return "if (" + compiler_var(slot) + " != NULL) { __s_drop_" + s.struct_names[struct_id] + "(" + compiler_var(slot) + "); compiler_pair_drop(&" + compiler_var(slot) + "); }\n"
+        if struct_id >= 0 {
+            return "compiler_drop_owned_" + s.struct_names[struct_id] + "(&" + compiler_var(slot) + ");\n"
         }
         return "compiler_pair_drop(&" + compiler_var(slot) + ");\n"
     }
@@ -453,8 +586,8 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 field = compiler_field_index(s, s.struct_ids[slot], s.token)
                 if field < 0 { return compiler_fail(s, "unknown owned struct field") }
                 if s.kinds[slot] != 5 { return compiler_fail(s, "field borrow requires a pair") }
-                if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
-                if field == 1 && s.field_right_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
+                if compiler_struct_field_kind(s, s.struct_ids[slot], field) != 2 { return compiler_fail(s, "field borrow requires an owned box field") }
+                if compiler_field_live(s, slot, field) != 1 { return compiler_fail(s, "use of moved owned struct field") }
             }
         }
         int root = slot
@@ -472,7 +605,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         }
         if reborrow || field >= 0 { s = compiler_next(s) }
         s.value = compiler_var(slot)
-        if field >= 0 { s.value = compiler_var(slot) + "->" + compiler_field_name(field) }
+        if field >= 0 { s.value = compiler_var(slot) + "->" + compiler_struct_field_name(s, s.struct_ids[slot], field) }
         s.value_kind = kind
         s.value_slot = root
         s.value_field = field
@@ -492,10 +625,11 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             field = compiler_field_index(s, s.struct_ids[slot], s.token)
             if field < 0 { return compiler_fail(s, "invalid owned struct field dereference") }
             if s.kinds[slot] != 5 { return compiler_fail(s, "invalid pair field dereference") }
-            if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
-            if field == 1 && s.field_right_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
+            if compiler_struct_field_kind(s, s.struct_ids[slot], field) != 2 { return compiler_fail(s, "field dereference requires an owned box field") }
+            if compiler_field_live(s, slot, field) != 1 { return compiler_fail(s, "use of moved owned struct field") }
             if compiler_conflict_at(s, slot, field, false) { return compiler_fail(s, "cannot read pair field during a mutable borrow") }
-            s.value = "(*" + compiler_var(slot) + "->" + compiler_field_name(field) + ")"
+            field_name := compiler_struct_field_name(s, s.struct_ids[slot], field)
+            s.value = "(*" + compiler_var(slot) + "->" + field_name + ")"
             s = compiler_next(s)
         } else {
             s.value = "(*" + compiler_var(slot) + ")"
@@ -544,25 +678,20 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.value_slot = -1
         return s
     }
-    if t == "pair" || compiler_is_struct_type(t) {
+    if t == "pair" {
         int constructed_struct = -1
-        if t != "pair" {
-            constructed_struct = compiler_find_struct(s, t)
-            if constructed_struct < 0 { return compiler_fail(s, "unknown struct: " + t) }
-        }
         s = compiler_expect(compiler_next(s), "(")
         s = compiler_expression(s, 1)
         if s.value_kind != 2 { return compiler_fail(s, "struct left field requires an owner") }
         string left = s.value
-        if s.value_slot >= 0 {
-            int origin = s.value_slot
-            if s.value_field >= 0 {
-                if s.struct_ids[origin] >= 0 { return compiler_fail(s, "moving owned fields from structs is not supported before partial move") }
-                if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-                if s.value_field == 0 { s.field_left_live[origin] = 0 }
-                else { s.field_right_live[origin] = 0 }
-                left = "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(s.value_field) + ")"
-            } else {
+            if s.value_slot >= 0 {
+                int origin = s.value_slot
+                if s.value_field >= 0 {
+                    if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+                    s = compiler_set_field_moved(s, origin, s.value_field)
+                    if s.error != "" { return s }
+                    left = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+                } else {
                 s = compiler_consume(s, origin)
                 left = "compiler_move(&" + compiler_var(origin) + ")"
             }
@@ -571,21 +700,64 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s = compiler_expression(s, 1)
         if s.value_kind != 2 { return compiler_fail(s, "struct right field requires an owner") }
         string right = s.value
-        if s.value_slot >= 0 {
-            int origin = s.value_slot
-            if s.value_field >= 0 {
-                if s.struct_ids[origin] >= 0 { return compiler_fail(s, "moving owned fields from structs is not supported before partial move") }
-                if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-                if s.value_field == 0 { s.field_left_live[origin] = 0 }
-                else { s.field_right_live[origin] = 0 }
-                right = "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(s.value_field) + ")"
-            } else {
+            if s.value_slot >= 0 {
+                int origin = s.value_slot
+                if s.value_field >= 0 {
+                    if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+                    s = compiler_set_field_moved(s, origin, s.value_field)
+                    if s.error != "" { return s }
+                    right = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+                } else {
                 s = compiler_consume(s, origin)
                 right = "compiler_move(&" + compiler_var(origin) + ")"
             }
         }
         s = compiler_expect(s, ")")
         s.value = "compiler_pair_make(" + left + "," + right + ")"
+        s.value_kind = 5
+        s.value_struct_id = constructed_struct
+        s.value_slot = -1
+        return s
+    }
+    if compiler_is_struct_type(t) {
+        constructed_struct := compiler_find_struct(s, t)
+        if constructed_struct < 0 { return compiler_fail(s, "unknown struct: " + t) }
+        field_count := s.struct_field_counts[constructed_struct]
+        field_start := s.struct_field_starts[constructed_struct]
+        s = compiler_expect(compiler_next(s), "(")
+        args := ""
+        field := 0
+        for field < field_count {
+            if field > 0 { s = compiler_expect(s, ",") }
+            s = compiler_expression(s, 1)
+            expected := s.struct_field_kinds[field_start + field]
+            expected_struct := s.struct_field_structs[field_start + field]
+            if s.value_kind != expected { return compiler_fail(s, "struct field initializer type mismatch") }
+            if expected == 5 && s.value_struct_id != expected_struct { return compiler_fail(s, "struct field initializer struct type mismatch") }
+            argument := s.value
+            if expected == 2 || expected == 5 || expected == 9 {
+                if s.value_field >= 0 {
+                    origin := s.value_slot
+                    if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+                    s = compiler_set_field_moved(s, origin, s.value_field)
+                    if s.error != "" { return s }
+                    argument = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+                } else if s.value_slot >= 0 {
+                    origin := s.value_slot
+                    s = compiler_consume(s, origin)
+                    if expected == 5 {
+                        if s.value_struct_id >= 0 { argument = "compiler_move_" + s.struct_names[s.value_struct_id] + "(&" + compiler_var(origin) + ")" }
+                        else { argument = "compiler_pair_move(&" + compiler_var(origin) + ")" }
+                    } else if expected == 9 { argument = "compiler_slice_move(&" + compiler_var(origin) + ")" }
+                    else { argument = "compiler_move(&" + compiler_var(origin) + ")" }
+                }
+            }
+            if field > 0 { args = args + "," }
+            args = args + argument
+            field = field + 1
+        }
+        s = compiler_expect(s, ")")
+        s.value = "compiler_make_" + t + "(" + args + ")"
         s.value_kind = 5
         s.value_struct_id = constructed_struct
         s.value_slot = -1
@@ -665,23 +837,25 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 s.count = s.count + 1
             }
             if expected == 2 || expected == 5 || expected == 9 {
-                if s.value_slot >= 0 {
+                if s.value_field >= 0 {
+                    int origin = s.value_slot
+                    if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+                    s = compiler_set_field_moved(s, origin, s.value_field)
+                    if s.error != "" { return s }
+                    argument = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+                } else if s.value_slot >= 0 {
                     int origin = s.value_slot
                     s = compiler_consume(s, origin)
-                    if expected == 5 { argument = "compiler_pair_move(&" + compiler_var(origin) + ")" }
+                    if expected == 5 {
+                        if s.value_struct_id >= 0 { argument = "compiler_move_" + s.struct_names[s.value_struct_id] + "(&" + compiler_var(origin) + ")" }
+                        else { argument = "compiler_pair_move(&" + compiler_var(origin) + ")" }
+                    }
                     else if expected == 9 { argument = "compiler_slice_move(&" + compiler_var(origin) + ")" }
                     else { argument = "compiler_move(&" + compiler_var(origin) + ")" }
                 }
             }
             string temporary = "s_arg" + call_id + "_" + compiler_number(arg)
-            string argument_type = "int64_t "
-            if expected == 2 || expected == 4 { argument_type = "int64_t *" }
-            if expected == 5 { argument_type = "compiler_pair *" }
-            if expected == 9 { argument_type = "compiler_slice *" }
-            if expected == 7 || expected == 15 { argument_type = "const int64_t *" }
-            if expected == 8 || expected == 16 { argument_type = "int64_t *" }
-            if expected == 3 { argument_type = "const int64_t *" }
-            if expected == 17 { argument_type = "const char *" }
+            string argument_type = compiler_c_type_for_kind(s, expected, s.function_param_structs[s.function_starts[function_index] + arg])
             s.code = s.code + argument_type + temporary + ";\n"
             evaluations = evaluations + "(" + temporary + " = " + argument + "),"
             if arg > 0 { args = args + "," }
@@ -764,19 +938,17 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         field = compiler_field_index(s, s.struct_ids[slot], s.token)
         if field < 0 { return compiler_fail(s, "unknown owned struct field") }
         if s.kinds[slot] != 5 { return compiler_fail(s, "field access requires a pair") }
-        if field == 0 && s.field_left_live[slot] != 1 {
-            return compiler_fail(s, "use of moved pair field")
+        if compiler_field_live(s, slot, field) != 1 {
+            return compiler_fail(s, "use of moved owned struct field")
         }
-        if field == 1 && s.field_right_live[slot] != 1 {
-            return compiler_fail(s, "use of moved pair field")
-        }
-        if s.struct_ids[slot] >= 0 {
-            return compiler_fail(s, "moving owned fields from structs is not supported before partial move")
-        }
-        s.value = compiler_var(slot) + "->" + compiler_field_name(field)
-        s.value_kind = 2
+        field_kind := compiler_struct_field_kind(s, s.struct_ids[slot], field)
+        field_struct := compiler_struct_field_struct(s, s.struct_ids[slot], field)
+        field_name := compiler_struct_field_name(s, s.struct_ids[slot], field)
+        s.value = compiler_var(slot) + "->" + field_name
+        s.value_kind = field_kind
         s.value_slot = slot
         s.value_field = field
+        s.value_struct_id = field_struct
         s = compiler_next(s)
         return s
     }
@@ -843,11 +1015,10 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9 {
         if s.value_field >= 0 {
             if s.kinds[origin] != 5 { return compiler_fail(s, "field move requires a pair") }
-            if s.struct_ids[origin] >= 0 { return compiler_fail(s, "moving owned fields from structs is not supported before partial move") }
             if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-            if s.value_field == 0 { s.field_left_live[origin] = 0 }
-            else { s.field_right_live[origin] = 0 }
-            rhs = "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(s.value_field) + ")"
+            s = compiler_set_field_moved(s, origin, s.value_field)
+            if s.error != "" { return s }
+            rhs = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
             origin = -1
         }
         if !declaration {
@@ -856,7 +1027,10 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         if origin == slot { return compiler_fail(s, "self move is not supported") }
         if origin >= 0 {
             s = compiler_consume(s, origin)
-            if s.value_kind == 5 { rhs = "compiler_pair_move(&" + compiler_var(origin) + ")" }
+            if s.value_kind == 5 {
+                if s.value_struct_id >= 0 { rhs = "compiler_move_" + s.struct_names[s.value_struct_id] + "(&" + compiler_var(origin) + ")" }
+                else { rhs = "compiler_pair_move(&" + compiler_var(origin) + ")" }
+            }
             else if s.value_kind == 9 { rhs = "compiler_slice_move(&" + compiler_var(origin) + ")" }
             else { rhs = "compiler_move(&" + compiler_var(origin) + ")" }
         }
@@ -867,17 +1041,12 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         parent = s.parents[origin]
         origin = s.roots[origin]
     }
-    string ctype = "int64_t "
-    if s.value_kind == 5 { ctype = "compiler_pair *" }
-    else if s.value_kind == 9 { ctype = "compiler_slice *" }
-    else if s.value_kind == 17 { ctype = "const char *" }
-    else if s.value_kind >= 2 { ctype = "int64_t *" }
-    if s.value_kind == 3 { ctype = "const int64_t *" }
+    string ctype = compiler_c_type_for_kind(s, s.value_kind, s.value_struct_id)
     if s.value_kind == 6 { ctype = "int64_t " }
     if !declaration { ctype = "" }
     if !declaration && (s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9) {
         string replacement_type = "int64_t *"
-        if s.value_kind == 5 { replacement_type = "compiler_pair *" }
+        if s.value_kind == 5 { replacement_type = compiler_c_type_for_kind(s, s.value_kind, s.value_struct_id) }
         if s.value_kind == 9 { replacement_type = "compiler_slice *" }
         s.code = s.code + "{ " + replacement_type + "compiler_new = " + rhs + ";\n" + compiler_overwrite_old_owner(s, slot) + compiler_var(slot) + " = compiler_new; }\n"
     } else if s.value_kind == 6 {
@@ -1049,7 +1218,13 @@ func compiler_statement(compiler_state initial) compiler_state {
         string result_type = "int64_t "
         if s.value_kind == 2 {
             result_type = "int64_t *"
-            if s.value_slot >= 0 {
+            if s.value_field >= 0 {
+                int origin = s.value_slot
+                if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+                s = compiler_set_field_moved(s, origin, s.value_field)
+                if s.error != "" { return s }
+                s.value = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+            } else if s.value_slot >= 0 {
                 int origin = s.value_slot
                 s = compiler_consume(s, origin)
                 s.value = "compiler_move(&" + compiler_var(origin) + ")"
@@ -1057,16 +1232,29 @@ func compiler_statement(compiler_state initial) compiler_state {
         } else if s.value_kind == 3 { result_type = "const int64_t *" }
         else if s.value_kind == 4 { result_type = "int64_t *" }
         else if s.value_kind == 5 {
-            result_type = "compiler_pair *"
-            if s.value_slot >= 0 {
+            result_type = compiler_c_type_for_kind(s, s.value_kind, s.value_struct_id)
+            if s.value_field >= 0 {
+                int origin = s.value_slot
+                if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+                s = compiler_set_field_moved(s, origin, s.value_field)
+                if s.error != "" { return s }
+                s.value = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+            } else if s.value_slot >= 0 {
                 int origin = s.value_slot
                 s = compiler_consume(s, origin)
-                s.value = "compiler_pair_move(&" + compiler_var(origin) + ")"
+                if s.value_struct_id >= 0 { s.value = "compiler_move_" + s.struct_names[s.value_struct_id] + "(&" + compiler_var(origin) + ")" }
+                else { s.value = "compiler_pair_move(&" + compiler_var(origin) + ")" }
             }
         }
         else if s.value_kind == 9 {
             result_type = "compiler_slice *"
-            if s.value_slot >= 0 {
+            if s.value_field >= 0 {
+                int origin = s.value_slot
+                if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+                s = compiler_set_field_moved(s, origin, s.value_field)
+                if s.error != "" { return s }
+                s.value = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+            } else if s.value_slot >= 0 {
                 int origin = s.value_slot
                 s = compiler_consume(s, origin)
                 s.value = "compiler_slice_move(&" + compiler_var(origin) + ")"
@@ -1137,10 +1325,10 @@ func compiler_statement(compiler_state initial) compiler_state {
             int field = -1
             field = compiler_field_index(s, s.struct_ids[slot], s.token)
             if field < 0 { return compiler_fail(s, "unknown owned struct field") }
-            if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
-            if field == 1 && s.field_right_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
+            if compiler_struct_field_kind(s, s.struct_ids[slot], field) != 2 { return compiler_fail(s, "pair write requires an owned box field") }
+            if compiler_field_live(s, slot, field) != 1 { return compiler_fail(s, "use of moved owned struct field") }
             if compiler_conflict_at(s, slot, field, true) { return compiler_fail(s, "cannot write pair field during a borrow") }
-            target = compiler_var(slot) + "->" + compiler_field_name(field)
+            target = compiler_var(slot) + "->" + compiler_struct_field_name(s, s.struct_ids[slot], field)
             s = compiler_next(s)
         } else {
             if s.kinds[slot] != 2 && s.kinds[slot] != 4 { return compiler_fail(s, "write requires an owner or mutable reference") }
@@ -1312,22 +1500,13 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     string signature = "static int64_t " + name + "("
     if s.return_kind == 0 { signature = "static void " + name + "(" }
     if s.return_kind == 2 || s.return_kind == 4 { signature = "static int64_t *" + name + "(" }
-    else if s.return_kind == 5 { signature = "static compiler_pair *" + name + "(" }
+    else if s.return_kind == 5 { signature = "static " + compiler_c_type_for_kind(s, s.return_kind, return_struct) + name + "(" }
     else if s.return_kind == 9 { signature = "static compiler_slice *" + name + "(" }
     else if s.return_kind == 3 { signature = "static const int64_t *" + name + "(" }
     pi = 0
     for pi < param_count {
         if pi > 0 { signature = signature + ", " }
-        if s.kinds[pi] == 2 || s.kinds[pi] == 4 { signature = signature + "int64_t *" }
-        else if s.kinds[pi] == 5 { signature = signature + "compiler_pair *" }
-        else if s.kinds[pi] == 9 { signature = signature + "compiler_slice *" }
-        else if s.kinds[pi] == 15 { signature = signature + "const int64_t *" }
-        else if s.kinds[pi] == 16 { signature = signature + "int64_t *" }
-        else if s.kinds[pi] == 7 { signature = signature + "const int64_t *" }
-        else if s.kinds[pi] == 8 { signature = signature + "int64_t *" }
-        else if s.kinds[pi] == 3 { signature = signature + "const int64_t *" }
-        else if s.kinds[pi] == 17 { signature = signature + "const char *" }
-        else { signature = signature + "int64_t " }
+        signature = signature + compiler_c_type_for_kind(s, s.kinds[pi], s.function_param_structs[start + pi])
         signature = signature + "p" + compiler_number(pi)
         if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { signature = signature + ", int64_t p" + compiler_number(pi) + "_len" }
         pi = pi + 1
@@ -1344,16 +1523,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     s.code = s.code + signature + "{\n"
     pi = 0
     for pi < param_count {
-        string ctype = "int64_t "
-        if s.kinds[pi] == 2 || s.kinds[pi] == 4 { ctype = "int64_t *" }
-        else if s.kinds[pi] == 5 { ctype = "compiler_pair *" }
-        else if s.kinds[pi] == 9 { ctype = "compiler_slice *" }
-        else if s.kinds[pi] == 15 { ctype = "const int64_t *" }
-        else if s.kinds[pi] == 16 { ctype = "int64_t *" }
-        else if s.kinds[pi] == 7 { ctype = "const int64_t *" }
-        else if s.kinds[pi] == 8 { ctype = "int64_t *" }
-        else if s.kinds[pi] == 3 { ctype = "const int64_t *" }
-        else if s.kinds[pi] == 17 { ctype = "const char *" }
+        string ctype = compiler_c_type_for_kind(s, s.kinds[pi], s.function_param_structs[start + pi])
         s.code = s.code + ctype + compiler_var(pi) + " = p" + compiler_number(pi) + ";\n"
         if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { s.code = s.code + "int64_t " + compiler_var(pi) + "_len = p" + compiler_number(pi) + "_len;\n" }
         s.code = s.code + "(void)" + compiler_var(pi) + ";\n"
@@ -1403,7 +1573,7 @@ func compiler_parse_drop_method(compiler_state initial) compiler_state {
     if s.token != "{" { return compiler_fail(s, "drop method must not return a value") }
     s.struct_custom_drops[struct_id] = 1
     s = compiler_expect(s, "{")
-    s.code = s.code + "static void __s_drop_" + type_name + "(compiler_pair *" + receiver + ")\n{\n(void)" + receiver + ";\n"
+    s.code = s.code + "static void compiler_drop_user_" + type_name + "(S_" + type_name + " *" + receiver + ")\n{\n(void)" + receiver + ";\n"
     for s.error == "" && s.token != "}" && s.token != "" {
         if s.token == "println" {
             s = compiler_expect(compiler_next(s), "(")
@@ -1426,6 +1596,19 @@ func compiler_parse_drop_method(compiler_state initial) compiler_state {
     }
     s = compiler_expect(s, "}")
     s.code = s.code + "}\n"
+    s
+}
+
+func compiler_emit_default_drop_hooks(compiler_state initial) compiler_state {
+    s := initial
+    i := 0
+    for i < s.struct_count {
+        if s.struct_custom_drops[i] == 0 {
+            name := s.struct_names[i]
+            s.code = s.code + "static void compiler_drop_user_" + name + "(S_" + name + " *value) { (void)value; }\n"
+        }
+        i = i + 1
+    }
     s
 }
 
@@ -1460,8 +1643,13 @@ func compiler_compile(string source) compiler_state {
     struct_field_rights := struct_names
     struct_field_left_kinds := function_returns
     struct_field_right_kinds := function_returns
+    struct_field_names := names
+    struct_field_kinds := function_param_kinds
+    struct_field_structs := function_param_structs
+    struct_field_starts := function_returns
+    struct_field_counts := function_counts
     struct_custom_drops := function_returns
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
@@ -1491,6 +1679,7 @@ func compiler_compile(string source) compiler_state {
         s = compiler_parse_function_like(s)
         if s.error != "" { return s }
     }
+    s = compiler_emit_default_drop_hooks(s)
     s = compiler_expect(s, "func")
     s = compiler_expect(s, "main")
     s = compiler_expect(s, "(")
