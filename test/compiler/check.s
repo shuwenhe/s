@@ -81,6 +81,11 @@ func reject(string dir, string compiler, string name, string body) int {
         eprintln("rejected fixture compiled: " + name)
         return 1
     }
+    kept := run_process_output(["cat", c_path])
+    if kept.is_err() || kept.unwrap() != "sentinel" {
+        eprintln("rejected fixture overwrote output: " + name)
+        return 1
+    }
     0
 }
 
@@ -138,6 +143,10 @@ func main() int {
     if compile_and_run(dir, compiler, cc, "scope", "{ a := box(7); assert(live_allocations() == 1); } assert(live_allocations() == 0); return 42;", 42) != 0 { return 1 }
     if compile_and_run(dir, compiler, cc, "divide_zero", "return 1 / 0;", 70) != 0 { return 1 }
     if reject(dir, compiler, "borrow_error", "a := box(1); r := &a; drop(a);") != 0 { return 1 }
+    if reject(dir, compiler, "move_after_move", "a := box(1); b := a; c := a; return *b;") != 0 { return 1 }
+    if reject(dir, compiler, "assign_while_borrowed", "a := box(1); r := &a; a = box(2); return *r;") != 0 { return 1 }
+    if reject(dir, compiler, "write_while_shared", "a := box(1); r := &a; *a = 2; return *r;") != 0 { return 1 }
+    if reject(dir, compiler, "read_while_mutably_borrowed", "a := box(1); r := &mut a; x := *a; return *r + x;") != 0 { return 1 }
     if reject(dir, compiler, "syntax_error", "return @;") != 0 { return 1 }
     if symbol_check(dir, compiler) != 0 { return 1 }
 
