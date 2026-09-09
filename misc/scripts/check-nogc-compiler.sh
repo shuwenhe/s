@@ -60,8 +60,15 @@ struct Pair {
     first box
     second box
 }
+struct Duo {
+    left box
+    right box
+}
 func sum(Pair p) int {
     return *p.first + *p.second
+}
+func duo_sum(Duo d) int {
+    return *d.left + *d.right
 }
 func main() int {
     {
@@ -71,6 +78,8 @@ func main() int {
         drop(q)
         *p.second = 22
         assert(sum(p) == 42)
+        d := Duo(box(1), box(2))
+        assert(duo_sum(d) == 3)
     }
     assert(live_allocations() == 0)
     return 42
@@ -133,5 +142,25 @@ func main() int { return 0 }'
 check_diagnostic struct_shape 'package bad
 struct pair { value box }
 func main() int { return 0 }'
+
+cat >"$work/struct_mismatch.s" <<'SRC'
+package bad
+struct Pair { first box; second box }
+struct Duo { left box; right box }
+func sum(Pair p) int { return *p.first + *p.second }
+func main() int {
+    d := Duo(box(1), box(2))
+    return sum(d)
+}
+SRC
+if "$root/bin/s" "$work/struct_mismatch.s" -o "$work/struct_mismatch" >"$work/struct_mismatch.out" 2>&1; then
+    echo "struct type mismatch unexpectedly compiled" >&2
+    exit 1
+fi
+if ! grep -q 'function argument struct type mismatch' "$work/struct_mismatch.out"; then
+    echo "missing struct mismatch diagnostic" >&2
+    cat "$work/struct_mismatch.out" >&2
+    exit 1
+fi
 
 echo "No-GC compiler checks passed"
