@@ -238,6 +238,107 @@ func main() int {
 }
 SRC
 
+cat >"$work/overwrite_live_owner.s" <<'SRC'
+package overwrite
+func main() int {
+    a := box(1)
+    a = box(42)
+    return *a
+}
+SRC
+
+cat >"$work/overwrite_custom_drop.s" <<'SRC'
+package overwrite
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-resource") }
+func main() int {
+    a := Resource(box(1), box(2))
+    a = Resource(box(3), box(4))
+    return 42
+}
+SRC
+
+cat >"$work/overwrite_moved_owner.s" <<'SRC'
+package overwrite
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-moved-reinit") }
+func main() int {
+    a := Resource(box(1), box(2))
+    b := a
+    a = Resource(box(3), box(4))
+    return 42
+}
+SRC
+
+cat >"$work/overwrite_conditional_true.s" <<'SRC'
+package overwrite
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-conditional-true") }
+func main() int {
+    a := Resource(box(1), box(2))
+    if true {
+        b := a
+    }
+    a = Resource(box(3), box(4))
+    return 42
+}
+SRC
+
+cat >"$work/overwrite_conditional_false.s" <<'SRC'
+package overwrite
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-conditional-false") }
+func main() int {
+    a := Resource(box(1), box(2))
+    if false {
+        b := a
+    }
+    a = Resource(box(3), box(4))
+    return 42
+}
+SRC
+
+cat >"$work/overwrite_inside_loop.s" <<'SRC'
+package overwrite
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-loop") }
+func main() int {
+    a := Resource(box(0), box(0))
+    i := 0
+    while i < 2 {
+        a = Resource(box(i), box(i))
+        i = i + 1
+    }
+    return 42
+}
+SRC
+
+cat >"$work/overwrite_early_return.s" <<'SRC'
+package overwrite
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-early-overwrite") }
+func main() int {
+    a := Resource(box(1), box(2))
+    a = Resource(box(3), box(4))
+    return 42
+}
+SRC
+
+cat >"$work/rhs_before_lhs_drop.s" <<'SRC'
+package overwrite
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-after-rhs") }
+func make_resource() Resource {
+    println("make-rhs")
+    return Resource(box(3), box(4))
+}
+func main() int {
+    a := Resource(box(1), box(2))
+    a = make_resource()
+    return 42
+}
+SRC
+
 "$root/bin/s" "$work/ownership.s" -o "$work/ownership"
 set +e
 "$work/ownership"
@@ -326,6 +427,30 @@ run_custom_drop_case custom_drop_early_return 'drop-early'
 run_custom_drop_case custom_drop_loop_break 'drop-break'
 run_custom_drop_case custom_drop_loop_continue 'drop-continue'
 
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/overwrite_live_owner.s" -o "$work/overwrite_live_owner"
+set +e
+"$work/overwrite_live_owner"
+status=$?
+set -e
+test "$status" -eq 42
+
+run_custom_drop_case overwrite_custom_drop 'drop-resource
+drop-resource'
+run_custom_drop_case overwrite_moved_owner 'drop-moved-reinit
+drop-moved-reinit'
+run_custom_drop_case overwrite_conditional_true 'drop-conditional-true
+drop-conditional-true'
+run_custom_drop_case overwrite_conditional_false 'drop-conditional-false
+drop-conditional-false'
+run_custom_drop_case overwrite_inside_loop 'drop-loop
+drop-loop
+drop-loop'
+run_custom_drop_case overwrite_early_return 'drop-early-overwrite
+drop-early-overwrite'
+run_custom_drop_case rhs_before_lhs_drop 'make-rhs
+drop-after-rhs
+drop-after-rhs'
+
 "$root/bin/s_compiler" --emit-c "$work/custom_drop_move.s" "$work/custom_drop_move.c"
 if grep -q '__s_drop_Resource(s_v0)' "$work/custom_drop_move.c"; then
     echo "custom drop emitted for moved source owner" >&2
@@ -344,7 +469,32 @@ if ! grep -q 'if (s_v0 != NULL)' "$work/custom_drop_conditional_move.c"; then
     exit 1
 fi
 
-if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
+"$root/bin/s_compiler" --emit-c "$work/overwrite_custom_drop.s" "$work/overwrite_custom_drop.c"
+rhs_line=$(grep -n 'compiler_new = compiler_pair_make' "$work/overwrite_custom_drop.c" | head -1 | cut -d: -f1)
+drop_line=$(grep -n '__s_drop_Resource(s_v0)' "$work/overwrite_custom_drop.c" | head -1 | cut -d: -f1)
+assign_line=$(grep -n 's_v0 = compiler_new' "$work/overwrite_custom_drop.c" | head -1 | cut -d: -f1)
+if [ -z "$rhs_line" ] || [ -z "$drop_line" ] || [ -z "$assign_line" ] ||
+   [ "$rhs_line" -ge "$drop_line" ] || [ "$drop_line" -ge "$assign_line" ]; then
+    echo "overwrite order is not RHS -> old drop -> assign" >&2
+    cat "$work/overwrite_custom_drop.c" >&2
+    exit 1
+fi
+"$root/bin/s_compiler" --emit-c "$work/overwrite_moved_owner.s" "$work/overwrite_moved_owner.c"
+assign_reinit_line=$(grep -n 's_v0 = compiler_new' "$work/overwrite_moved_owner.c" | head -1 | cut -d: -f1)
+old_reinit_drop_line=$(grep -n '__s_drop_Resource(s_v0)' "$work/overwrite_moved_owner.c" | head -1 | cut -d: -f1)
+if [ -n "$old_reinit_drop_line" ] && [ "$old_reinit_drop_line" -lt "$assign_reinit_line" ]; then
+    echo "moved LHS reinitialization dropped dead source" >&2
+    cat "$work/overwrite_moved_owner.c" >&2
+    exit 1
+fi
+"$root/bin/s_compiler" --emit-c "$work/overwrite_conditional_true.s" "$work/overwrite_conditional_true.c"
+if ! grep -q 'if (s_v0 != NULL)' "$work/overwrite_conditional_true.c"; then
+    echo "maybe-live overwrite missing guard" >&2
+    cat "$work/overwrite_conditional_true.c" >&2
+    exit 1
+fi
+
+if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
     echo "GC or seed runtime symbol linked into no-GC binary" >&2
     exit 1
 fi
@@ -436,5 +586,14 @@ struct File { first box; second box }
 func (File* f) drop() { }
 func (File* g) drop() { }
 func main() int { value := File(box(1), box(2)); return 42 }' 'duplicate drop method'
+
+expect_compile_fail self_assignment 'package bad
+struct File { first box; second box }
+func (File* f) drop() { println("drop") }
+func main() int {
+    value := File(box(1), box(2))
+    value = value
+    return 42
+}' 'self move is not supported'
 
 echo "No-GC compiler checks passed"

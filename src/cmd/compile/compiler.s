@@ -368,6 +368,12 @@ func compiler_drop_owner(compiler_state initial, int slot) string {
     ""
 }
 
+func compiler_overwrite_old_owner(compiler_state initial, int slot) string {
+    s := initial
+    if s.live[slot] == 0 { return "" }
+    compiler_drop_owner(s, slot)
+}
+
 func compiler_precedence(string op) int {
     if op == "||" { return 1 }
     if op == "&&" { return 2 }
@@ -840,7 +846,6 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         }
         if !declaration {
             if compiler_conflict(s, slot, true) { return compiler_fail(s, "cannot overwrite borrowed owner") }
-            if s.loop_floor >= 0 && slot < s.loop_floor { return compiler_fail(s, "cannot replace an outer owner inside a loop") }
         }
         if origin == slot { return compiler_fail(s, "self move is not supported") }
         if origin >= 0 {
@@ -866,10 +871,9 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if !declaration { ctype = "" }
     if !declaration && (s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9) {
         string replacement_type = "int64_t *"
-        string replacement_drop = "compiler_drop"
-        if s.value_kind == 5 { replacement_type = "compiler_pair *"; replacement_drop = "compiler_pair_drop" }
-        if s.value_kind == 9 { replacement_type = "compiler_slice *"; replacement_drop = "compiler_slice_drop" }
-        s.code = s.code + "{ " + replacement_type + "compiler_new = " + rhs + ";\n" + replacement_drop + "(&" + compiler_var(slot) + ");\n" + compiler_var(slot) + " = compiler_new; }\n"
+        if s.value_kind == 5 { replacement_type = "compiler_pair *" }
+        if s.value_kind == 9 { replacement_type = "compiler_slice *" }
+        s.code = s.code + "{ " + replacement_type + "compiler_new = " + rhs + ";\n" + compiler_overwrite_old_owner(s, slot) + compiler_var(slot) + " = compiler_new; }\n"
     } else if s.value_kind == 6 {
         if !declaration { return compiler_fail(s, "array reassignment is not supported") }
         s.code = s.code + ctype + compiler_var(slot) + "[" + compiler_number(s.value_array_length) + "] = " + rhs + ";\n"
