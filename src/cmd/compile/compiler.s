@@ -557,6 +557,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         if s.value_slot >= 0 {
             int origin = s.value_slot
             if s.value_field >= 0 {
+                if s.struct_ids[origin] >= 0 { return compiler_fail(s, "moving owned fields from structs is not supported before partial move") }
                 if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
                 if s.value_field == 0 { s.field_left_live[origin] = 0 }
                 else { s.field_right_live[origin] = 0 }
@@ -573,6 +574,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         if s.value_slot >= 0 {
             int origin = s.value_slot
             if s.value_field >= 0 {
+                if s.struct_ids[origin] >= 0 { return compiler_fail(s, "moving owned fields from structs is not supported before partial move") }
                 if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
                 if s.value_field == 0 { s.field_left_live[origin] = 0 }
                 else { s.field_right_live[origin] = 0 }
@@ -768,6 +770,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         if field == 1 && s.field_right_live[slot] != 1 {
             return compiler_fail(s, "use of moved pair field")
         }
+        if s.struct_ids[slot] >= 0 {
+            return compiler_fail(s, "moving owned fields from structs is not supported before partial move")
+        }
         s.value = compiler_var(slot) + "->" + compiler_field_name(field)
         s.value_kind = 2
         s.value_slot = slot
@@ -838,6 +843,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9 {
         if s.value_field >= 0 {
             if s.kinds[origin] != 5 { return compiler_fail(s, "field move requires a pair") }
+            if s.struct_ids[origin] >= 0 { return compiler_fail(s, "moving owned fields from structs is not supported before partial move") }
             if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
             if s.value_field == 0 { s.field_left_live[origin] = 0 }
             else { s.field_right_live[origin] = 0 }
