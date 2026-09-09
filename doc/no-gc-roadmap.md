@@ -15,10 +15,9 @@ programs. The compatibility seed path remains available through `s --seed`.
 
 ## Near-Term Language Work
 
-1. Add per-type struct metadata so different struct declarations can use
-   different field layouts.
-2. Expand owned aggregate support beyond the current two-field pair-shaped
+1. Expand owned aggregate support beyond the current two-field pair-shaped
    struct subset.
+2. Add field type metadata so struct fields can hold supported non-`box` types.
 3. Add a larger smoke corpus that exercises nested helpers, structs, strings,
    and loops together.
 
@@ -32,6 +31,8 @@ programs. The compatibility seed path remains available through `s --seed`.
   with no heap ownership or GC participation.
 - Minimal nominal structs with any two named `box` fields lower through the
   existing owned pair representation and get deterministic field cleanup.
+- Per-type struct metadata lets different two-field structs use different field
+  names and rejects mismatched struct arguments.
 - Unsupported syntax now reports an explicit no-GC subset diagnostic for common
   out-of-scope features such as imports, enums, and unsupported struct shapes.
 
