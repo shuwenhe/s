@@ -86,6 +86,158 @@ func main() int {
 }
 SRC
 
+cat >"$work/early_return_cleanup.s" <<'SRC'
+package early
+func main() int {
+    outer := box(1)
+    inner := box(2)
+    if *outer == 1 {
+        return 42
+    }
+    drop(inner)
+    drop(outer)
+    return 1
+}
+SRC
+
+cat >"$work/loop_cleanup.s" <<'SRC'
+package loops
+func main() int {
+    i := 0
+    while i < 4 {
+        item := box(i)
+        i = i + 1
+        if i == 2 {
+            continue
+        }
+        if i == 3 {
+            break
+        }
+        drop(item)
+    }
+    assert(live_allocations() == 0)
+    return 42
+}
+SRC
+
+cat >"$work/conditional_move_cleanup.s" <<'SRC'
+package conditional
+func take(box value) int {
+    return *value
+}
+func main() int {
+    owner := box(42)
+    if live_allocations() == 1 {
+        moved := owner
+        assert(take(moved) == 42)
+    }
+    assert(live_allocations() == 0)
+    return 42
+}
+SRC
+
+cat >"$work/drop_flag_elision.s" <<'SRC'
+package flags
+func main() int {
+    first := box(1)
+    second := first
+    third := second
+    return *third + 41
+}
+SRC
+
+cat >"$work/custom_drop_scope_exit.s" <<'SRC'
+package custom
+struct Resource { first box; second box }
+func (Resource* r) drop() {
+    println("drop-resource")
+}
+func main() int {
+    a := Resource(box(1), box(2))
+    return 42
+}
+SRC
+
+cat >"$work/custom_drop_lifo.s" <<'SRC'
+package custom
+struct A { first box; second box }
+struct B { first box; second box }
+func (A* a) drop() { println("drop-a") }
+func (B* b) drop() { println("drop-b") }
+func main() int {
+    a := A(box(1), box(2))
+    b := B(box(3), box(4))
+    return 42
+}
+SRC
+
+cat >"$work/custom_drop_move.s" <<'SRC'
+package custom
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-moved") }
+func main() int {
+    a := Resource(box(1), box(2))
+    b := a
+    return 42
+}
+SRC
+
+cat >"$work/custom_drop_conditional_move.s" <<'SRC'
+package custom
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-conditional") }
+func main() int {
+    a := Resource(box(1), box(2))
+    if live_allocations() == 3 {
+        b := a
+        assert(*b.first == 1)
+    }
+    assert(live_allocations() == 0)
+    return 42
+}
+SRC
+
+cat >"$work/custom_drop_early_return.s" <<'SRC'
+package custom
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-early") }
+func main() int {
+    a := Resource(box(1), box(2))
+    return 42
+}
+SRC
+
+cat >"$work/custom_drop_loop_break.s" <<'SRC'
+package custom
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-break") }
+func main() int {
+    i := 0
+    while i < 1 {
+        r := Resource(box(1), box(2))
+        break
+    }
+    assert(live_allocations() == 0)
+    return 42
+}
+SRC
+
+cat >"$work/custom_drop_loop_continue.s" <<'SRC'
+package custom
+struct Resource { first box; second box }
+func (Resource* r) drop() { println("drop-continue") }
+func main() int {
+    i := 0
+    while i < 1 {
+        r := Resource(box(1), box(2))
+        i = i + 1
+        continue
+    }
+    assert(live_allocations() == 0)
+    return 42
+}
+SRC
+
 "$root/bin/s" "$work/ownership.s" -o "$work/ownership"
 set +e
 "$work/ownership"
@@ -106,7 +258,93 @@ status=$?
 set -e
 test "$status" -eq 42
 
-if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/early_return_cleanup.s" -o "$work/early_return_cleanup"
+set +e
+"$work/early_return_cleanup"
+status=$?
+set -e
+test "$status" -eq 42
+
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/loop_cleanup.s" -o "$work/loop_cleanup"
+set +e
+"$work/loop_cleanup"
+status=$?
+set -e
+test "$status" -eq 42
+
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/conditional_move_cleanup.s" -o "$work/conditional_move_cleanup"
+set +e
+"$work/conditional_move_cleanup"
+status=$?
+set -e
+test "$status" -eq 42
+
+"$root/bin/s_compiler" --emit-c "$work/drop_flag_elision.s" "$work/drop_flag_elision.c"
+if grep -q 'compiler_drop(&s_v0)' "$work/drop_flag_elision.c" ||
+   grep -q 'compiler_drop(&s_v1)' "$work/drop_flag_elision.c"; then
+    echo "drop flag elision failed for moved owners" >&2
+    cat "$work/drop_flag_elision.c" >&2
+    exit 1
+fi
+if ! grep -q 'compiler_drop(&s_v2)' "$work/drop_flag_elision.c"; then
+    echo "drop flag elision removed live owner cleanup" >&2
+    cat "$work/drop_flag_elision.c" >&2
+    exit 1
+fi
+
+cc -std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined \
+    -fno-omit-frame-pointer -DS_COMPILER_CHECK_ALLOCATIONS \
+    -I "$root/src/runtime" "$work/drop_flag_elision.c" -o "$work/drop_flag_elision"
+set +e
+"$work/drop_flag_elision"
+status=$?
+set -e
+test "$status" -eq 42
+
+run_custom_drop_case() {
+    name=$1
+    expected_output=$2
+    S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/$name.s" -o "$work/$name"
+    set +e
+    output=$("$work/$name")
+    status=$?
+    set -e
+    test "$status" -eq 42
+    if [ "$output" != "$expected_output" ]; then
+        echo "unexpected custom drop output for $name" >&2
+        printf 'expected:\n%s\nactual:\n%s\n' "$expected_output" "$output" >&2
+        exit 1
+    fi
+}
+
+run_custom_drop_case custom_drop_scope_exit 'drop-resource'
+run_custom_drop_case custom_drop_lifo 'drop-b
+drop-a'
+run_custom_drop_case custom_drop_move 'drop-moved'
+run_custom_drop_case custom_drop_conditional_move 'drop-conditional'
+run_custom_drop_case custom_drop_early_return 'drop-early'
+run_custom_drop_case custom_drop_loop_break 'drop-break'
+run_custom_drop_case custom_drop_loop_continue 'drop-continue'
+
+"$root/bin/s_compiler" --emit-c "$work/custom_drop_move.s" "$work/custom_drop_move.c"
+if grep -q '__s_drop_Resource(s_v0)' "$work/custom_drop_move.c"; then
+    echo "custom drop emitted for moved source owner" >&2
+    cat "$work/custom_drop_move.c" >&2
+    exit 1
+fi
+if ! grep -q '__s_drop_Resource(s_v1)' "$work/custom_drop_move.c"; then
+    echo "custom drop missing for moved-to owner" >&2
+    cat "$work/custom_drop_move.c" >&2
+    exit 1
+fi
+"$root/bin/s_compiler" --emit-c "$work/custom_drop_conditional_move.s" "$work/custom_drop_conditional_move.c"
+if ! grep -q 'if (s_v0 != NULL)' "$work/custom_drop_conditional_move.c"; then
+    echo "custom drop missing maybe-live guard" >&2
+    cat "$work/custom_drop_conditional_move.c" >&2
+    exit 1
+fi
+
+if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
     echo "GC or seed runtime symbol linked into no-GC binary" >&2
     exit 1
 fi
@@ -166,5 +404,37 @@ if ! grep -q 'function argument struct type mismatch' "$work/struct_mismatch.out
     cat "$work/struct_mismatch.out" >&2
     exit 1
 fi
+
+expect_compile_fail() {
+    name=$1
+    source=$2
+    needle=$3
+    printf '%s\n' "$source" >"$work/$name.s"
+    if "$root/bin/s" "$work/$name.s" -o "$work/$name" >"$work/$name.out" 2>&1; then
+        echo "invalid program unexpectedly compiled: $name" >&2
+        exit 1
+    fi
+    if ! grep -q "$needle" "$work/$name.out"; then
+        echo "missing expected diagnostic for $name" >&2
+        cat "$work/$name.out" >&2
+        exit 1
+    fi
+}
+
+expect_compile_fail invalid_drop_args 'package bad
+struct File { first box; second box }
+func (File* f) drop(int code) { }
+func main() int { value := File(box(1), box(2)); return 42 }' 'drop method must not have parameters'
+
+expect_compile_fail invalid_drop_return 'package bad
+struct File { first box; second box }
+func (File* f) drop() int { return 0 }
+func main() int { value := File(box(1), box(2)); return 42 }' 'drop method must not return a value'
+
+expect_compile_fail duplicate_drop 'package bad
+struct File { first box; second box }
+func (File* f) drop() { }
+func (File* g) drop() { }
+func main() int { value := File(box(1), box(2)); return 42 }' 'duplicate drop method'
 
 echo "No-GC compiler checks passed"
