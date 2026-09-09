@@ -98,8 +98,8 @@ static inline int64_t *compiler_pair_move_field(compiler_pair *p, int field) {
 }
 static inline void compiler_pair_drop(compiler_pair **owner) {
     if (*owner) {
-        compiler_drop(&(*owner)->left);
         compiler_drop(&(*owner)->right);
+        compiler_drop(&(*owner)->left);
         free(*owner);
         *owner = NULL;
 #ifdef S_COMPILER_CHECK_ALLOCATIONS
