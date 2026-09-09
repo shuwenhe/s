@@ -49,7 +49,7 @@ emit_binary() {
     work=$(mktemp -d "${TMPDIR:-/tmp}/s-nogc.XXXXXXXX")
     trap 'rm -rf "$work"' EXIT HUP INT TERM
     "$compiler" --emit-c "$input" "$work/program.c"
-    "${CC:-cc}" -std=c11 -O2 -Wall -Wextra -Werror \
+    "${CC:-cc}" -std=c11 -O2 -Wall -Wextra -Werror ${S_COMPILER_CFLAGS:-} \
         -I "$root/src/runtime" "$work/program.c" -o "$work/program"
     cp "$work/program" "$output"
     chmod +x "$output"

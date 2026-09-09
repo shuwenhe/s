@@ -150,6 +150,36 @@ func compiler_expect(compiler_state initial, string token) compiler_state {
     return compiler_next(s)
 }
 
+func compiler_optional_semicolon(compiler_state initial) compiler_state {
+    s := initial
+    if s.token == ";" { return compiler_next(s) }
+    return s
+}
+
+func compiler_is_string_literal(string token) bool {
+    return len(token) >= 2 && __host_char_at(token, 0) == "\""
+}
+
+func compiler_is_struct_type(string token) bool {
+    return compiler_ident(token) && __host_char_at(token, 0) >= "A" && __host_char_at(token, 0) <= "Z"
+}
+
+func compiler_parse_struct_decl(compiler_state initial) compiler_state {
+    s := initial
+    s = compiler_expect(s, "struct")
+    if !compiler_is_struct_type(s.token) { return compiler_fail(s, "expected exported struct name") }
+    s = compiler_next(s)
+    s = compiler_expect(s, "{")
+    s = compiler_expect(s, "left")
+    s = compiler_expect(s, "box")
+    s = compiler_optional_semicolon(s)
+    s = compiler_expect(s, "right")
+    s = compiler_expect(s, "box")
+    s = compiler_optional_semicolon(s)
+    s = compiler_expect(s, "}")
+    return compiler_optional_semicolon(s)
+}
+
 func compiler_find(compiler_state initial, string name) int {
     s := initial
     int i = s.count - 1
@@ -413,10 +443,10 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.value_slot = -1
         return s
     }
-    if t == "pair" {
+    if t == "pair" || compiler_is_struct_type(t) {
         s = compiler_expect(compiler_next(s), "(")
         s = compiler_expression(s, 1)
-        if s.value_kind != 2 { return compiler_fail(s, "pair left field requires an owner") }
+        if s.value_kind != 2 { return compiler_fail(s, "struct left field requires an owner") }
         string left = s.value
         if s.value_slot >= 0 {
             int origin = s.value_slot
@@ -432,7 +462,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         }
         s = compiler_expect(s, ",")
         s = compiler_expression(s, 1)
-        if s.value_kind != 2 { return compiler_fail(s, "pair right field requires an owner") }
+        if s.value_kind != 2 { return compiler_fail(s, "struct right field requires an owner") }
         string right = s.value
         if s.value_slot >= 0 {
             int origin = s.value_slot
@@ -471,7 +501,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         for s.error == "" && s.token != ")" && s.token != "" {
             if arg > 0 { s = compiler_expect(s, ",") }
             s = compiler_expression(s, 1)
-            if s.value_kind < 1 || s.value_kind > 9 { return compiler_fail(s, "function arguments require integers, owners, arrays, slices, pairs or references") }
+            if s.value_kind < 1 || (s.value_kind > 9 && s.value_kind != 17) { return compiler_fail(s, "function arguments require integers, strings, owners, arrays, slices, pairs or references") }
             if arg >= s.function_counts[function_index] { return compiler_fail(s, "too many function arguments") }
             int expected = s.function_param_kinds[s.function_starts[function_index] + arg]
             if expected == 7 || expected == 8 {
@@ -541,6 +571,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if expected == 7 || expected == 15 { argument_type = "const int64_t *" }
             if expected == 8 || expected == 16 { argument_type = "int64_t *" }
             if expected == 3 { argument_type = "const int64_t *" }
+            if expected == 17 { argument_type = "const char *" }
             s.code = s.code + argument_type + temporary + ";\n"
             evaluations = evaluations + "(" + temporary + " = " + argument + "),"
             if arg > 0 { args = args + "," }
@@ -574,6 +605,12 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.value = "0"
         if t == "true" { s.value = "1" }
         s.value_kind = 1
+        return compiler_next(s)
+    }
+    if compiler_is_string_literal(t) {
+        s.value = t
+        s.value_kind = 17
+        s.value_slot = -1
         return compiler_next(s)
     }
     if compiler_digit(__host_char_at(t, 0)) {
@@ -716,6 +753,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     string ctype = "int64_t "
     if s.value_kind == 5 { ctype = "compiler_pair *" }
     else if s.value_kind == 9 { ctype = "compiler_slice *" }
+    else if s.value_kind == 17 { ctype = "const char *" }
     else if s.value_kind >= 2 { ctype = "int64_t *" }
     if s.value_kind == 3 { ctype = "const int64_t *" }
     if s.value_kind == 6 { ctype = "int64_t " }
@@ -826,11 +864,55 @@ func compiler_statement(compiler_state initial) compiler_state {
         body.terminated = 0
         return body
     }
+    if s.token == "for" {
+        s = compiler_expect(compiler_next(s), "(")
+        s = compiler_statement(s)
+        if s.error != "" { return s }
+        s = compiler_expression(s, 1)
+        if s.value_kind != 1 { return compiler_fail(s, "for condition requires an integer") }
+        string condition = s.value
+        s = compiler_expect(s, ";")
+        string step_name = s.token
+        s = compiler_next(s)
+        if s.token != "=" { return compiler_fail(s, "for step expects assignment") }
+        int step_slot = compiler_find(s, step_name)
+        s = compiler_available(s, step_slot)
+        if s.error != "" { return s }
+        if s.kinds[step_slot] != 1 { return compiler_fail(s, "for step currently requires an integer variable") }
+        s = compiler_expression(compiler_next(s), 1)
+        if s.value_kind != 1 { return compiler_fail(s, "for step requires an integer expression") }
+        string step_code = compiler_var(step_slot) + " = " + s.value + ";\n"
+        s = compiler_expect(s, ")")
+        int old_floor = s.loop_floor
+        int old_cleanup = s.loop_cleanup
+        int floor = s.count
+        s.loop_floor = s.count
+        s.loop_cleanup = s.count
+        s.depth = s.depth + 1
+        if s.depth > 64 { return compiler_fail(s, "block nesting limit exceeded") }
+        s = compiler_expect(s, "{")
+        s.code = s.code + "while (" + condition + ")\n{\n"
+        for s.error == "" && s.token != "}" && s.token != "" {
+            if s.terminated != 0 { return compiler_fail(s, "unreachable statement") }
+            s = compiler_statement(s)
+        }
+        s = compiler_expect(s, "}")
+        if s.terminated == 0 { s.code = s.code + step_code + compiler_cleanup(s, floor) }
+        s.code = s.code + "}\n"
+        s.count = floor
+        s.depth = s.depth - 1
+        s.loop_floor = old_floor
+        s.loop_cleanup = old_cleanup
+        s.terminated = 0
+        return s
+    }
     if s.token == "return" {
         if s.return_kind == 0 {
             s = compiler_next(s)
-            if s.token == ";" { s = compiler_next(s) }
-            s.code = s.code + compiler_cleanup(s, 0) + "return compiler_finish(0);\n"
+            s = compiler_optional_semicolon(s)
+            string finish = "return;\n"
+            if s.function_main { finish = "return compiler_finish(0);\n" }
+            s.code = s.code + compiler_cleanup(s, 0) + finish
             s.terminated = 1
             return s
         }
@@ -870,7 +952,7 @@ func compiler_statement(compiler_state initial) compiler_state {
                 s.value = "compiler_slice_move(&" + compiler_var(origin) + ")"
             }
         }
-        s = compiler_expect(s, ";")
+        s = compiler_optional_semicolon(s)
         string finish = "return compiler_result;"
         if s.function_main { finish = "return compiler_finish(compiler_result);" }
         s.code = s.code + "{ " + result_type + "compiler_result = " + s.value + ";\n" + compiler_cleanup(s, 0) + finish + " }\n"
@@ -879,18 +961,17 @@ func compiler_statement(compiler_state initial) compiler_state {
     }
     if s.token == "println" {
         s = compiler_expect(compiler_next(s), "(")
-        if len(s.token) < 2 || __host_char_at(s.token, 0) != "\"" {
-            return compiler_fail(s, "println currently expects a string literal")
-        }
-        s.code = s.code + "fputs(" + s.token + ", stdout);\nfputc('\\n', stdout);\n"
-        s = compiler_expect(compiler_next(s), ")")
-        if s.token == ";" { s = compiler_next(s) }
+        s = compiler_expression(s, 1)
+        if s.value_kind != 17 { return compiler_fail(s, "println currently expects a string") }
+        s.code = s.code + "fputs(" + s.value + ", stdout);\nfputc('\\n', stdout);\n"
+        s = compiler_expect(s, ")")
+        s = compiler_optional_semicolon(s)
         return s
     }
     if s.token == "break" || s.token == "continue" {
         string op = s.token
         if s.loop_floor < 0 { return compiler_fail(s, "loop control outside a loop") }
-        s = compiler_expect(compiler_next(s), ";")
+        s = compiler_optional_semicolon(compiler_next(s))
         s.code = s.code + compiler_cleanup(s, s.loop_cleanup) + op + ";\n"
         s.terminated = 1
         return s
@@ -915,14 +996,14 @@ func compiler_statement(compiler_state initial) compiler_state {
             s.live[slot] = 0
         } else { return compiler_fail(s, "drop requires an owner or reference") }
         s = compiler_expect(compiler_next(s), ")")
-        return compiler_expect(s, ";")
+        return compiler_optional_semicolon(s)
     }
     if s.token == "assert" {
         s = compiler_expect(compiler_next(s), "(")
         s = compiler_expression(s, 1)
         if s.value_kind != 1 { return compiler_fail(s, "assert requires an integer") }
         s = compiler_expect(s, ")")
-        s = compiler_expect(s, ";")
+        s = compiler_optional_semicolon(s)
         s.code = s.code + "compiler_assert(" + s.value + ");\n"
         return s
     }
@@ -955,12 +1036,41 @@ func compiler_statement(compiler_state initial) compiler_state {
         s = compiler_expression(s, 1)
         if s.value_kind != 1 { return compiler_fail(s, "box write requires an integer") }
         s = compiler_available(s, slot)
-        s = compiler_expect(s, ";")
+        s = compiler_optional_semicolon(s)
         s.code = s.code + "*" + target + " = " + s.value + ";\n"
         return s
     }
     string name = s.token
     s = compiler_next(s)
+    if s.token == "(" && compiler_find_func(s, name) >= 0 {
+        int function_index = compiler_find_func(s, name)
+        if s.function_returns[function_index] != 0 { return compiler_fail(s, "non-void function result must be used") }
+        s = compiler_expect(s, "(")
+        string args = ""
+        string evaluations = ""
+        string call_id = compiler_number(s.pos)
+        int arg = 0
+        for s.error == "" && s.token != ")" && s.token != "" {
+            if arg > 0 { s = compiler_expect(s, ",") }
+            s = compiler_expression(s, 1)
+            if arg >= s.function_counts[function_index] { return compiler_fail(s, "too many function arguments") }
+            int expected = s.function_param_kinds[s.function_starts[function_index] + arg]
+            if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
+            string temporary = "s_arg" + call_id + "_" + compiler_number(arg)
+            string argument_type = "int64_t "
+            if expected == 17 { argument_type = "const char *" }
+            s.code = s.code + argument_type + temporary + ";\n"
+            evaluations = evaluations + temporary + " = " + s.value + ";\n"
+            if arg > 0 { args = args + "," }
+            args = args + temporary
+            arg = arg + 1
+        }
+        if arg != s.function_counts[function_index] { return compiler_fail(s, "wrong number of function arguments") }
+        s = compiler_expect(s, ")")
+        s = compiler_optional_semicolon(s)
+        s.code = s.code + evaluations + s.function_names[function_index] + "(" + args + ");\n"
+        return s
+    }
     if s.token == "[" {
         int slot = compiler_find(s, name)
         s = compiler_available(s, slot)
@@ -978,14 +1088,14 @@ func compiler_statement(compiler_state initial) compiler_state {
         if s.kinds[slot] == 9 { data = compiler_var(slot) + "->data"; length = compiler_var(slot) + "->len" }
         if s.kinds[slot] == 15 || s.kinds[slot] == 16 { data = compiler_var(slot); length = compiler_var(slot) + "_len" }
         s.code = s.code + data + "[compiler_index(" + length + "," + index + ")] = " + s.value + ";\n"
-        s = compiler_expect(s, ";")
+        s = compiler_optional_semicolon(s)
         return s
     }
     bool declaration = s.token == ":="
     if !declaration && s.token != "=" { return compiler_fail(s, "expected := or =; unsupported statement") }
     s = compiler_expression(compiler_next(s), 1)
     s = compiler_bind(s, name, declaration)
-    return compiler_expect(s, ";")
+    return compiler_optional_semicolon(s)
 }
 
 func compiler_parse_helper(compiler_state initial) compiler_state {
@@ -1008,7 +1118,9 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         else if s.token == "pair" { kind = 5 }
         else if s.token == "slice" { kind = 9 }
         else if s.token == "mutslice" { kind = 16 }
-        else { return compiler_fail(s, "function parameters require int, box, ref, mutref or pair") }
+        else if s.token == "string" { kind = 17 }
+        else if compiler_is_struct_type(s.token) { kind = 5 }
+        else { return compiler_fail(s, "function parameters require int, string, box, ref, mutref or pair") }
         s = compiler_next(s)
         if kind == 1 && s.token == "[" {
             s = compiler_expect(s, "[")
@@ -1037,14 +1149,16 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         s = compiler_next(s)
     }
     s = compiler_expect(s, ")")
-    s.return_kind = 1
-    if s.token == "box" { s.return_kind = 2 }
+    s.return_kind = 0
+    if s.token == "int" { s.return_kind = 1; s = compiler_next(s) }
+    else if s.token == "box" { s.return_kind = 2; s = compiler_next(s) }
     else if s.token == "ref" { s.return_kind = 3 }
     else if s.token == "mutref" { s.return_kind = 4 }
     else if s.token == "pair" { s.return_kind = 5 }
+    else if compiler_is_struct_type(s.token) { s.return_kind = 5 }
     else if s.token == "slice" { s.return_kind = 9 }
-    else if s.token != "int" { return compiler_fail(s, "function return type must be int, box, ref, mutref or pair") }
-    s = compiler_next(s)
+    else if s.token != "{" { return compiler_fail(s, "function return type must be int, box, ref, mutref, pair or struct") }
+    if s.return_kind == 3 || s.return_kind == 4 || s.return_kind == 5 || s.return_kind == 9 { s = compiler_next(s) }
     s.parameter_count = param_count
     s.return_param = -1
 
@@ -1063,6 +1177,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     s.function_count = s.function_count + 1
 
     string signature = "static int64_t " + name + "("
+    if s.return_kind == 0 { signature = "static void " + name + "(" }
     if s.return_kind == 2 || s.return_kind == 4 { signature = "static int64_t *" + name + "(" }
     else if s.return_kind == 5 { signature = "static compiler_pair *" + name + "(" }
     else if s.return_kind == 9 { signature = "static compiler_slice *" + name + "(" }
@@ -1078,6 +1193,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         else if s.kinds[pi] == 7 { signature = signature + "const int64_t *" }
         else if s.kinds[pi] == 8 { signature = signature + "int64_t *" }
         else if s.kinds[pi] == 3 { signature = signature + "const int64_t *" }
+        else if s.kinds[pi] == 17 { signature = signature + "const char *" }
         else { signature = signature + "int64_t " }
         signature = signature + "p" + compiler_number(pi)
         if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { signature = signature + ", int64_t p" + compiler_number(pi) + "_len" }
@@ -1104,6 +1220,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         else if s.kinds[pi] == 7 { ctype = "const int64_t *" }
         else if s.kinds[pi] == 8 { ctype = "int64_t *" }
         else if s.kinds[pi] == 3 { ctype = "const int64_t *" }
+        else if s.kinds[pi] == 17 { ctype = "const char *" }
         s.code = s.code + ctype + compiler_var(pi) + " = p" + compiler_number(pi) + ";\n"
         if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { s.code = s.code + "int64_t " + compiler_var(pi) + "_len = p" + compiler_number(pi) + "_len;\n" }
         s.code = s.code + "(void)" + compiler_var(pi) + ";\n"
@@ -1120,8 +1237,11 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     }
     s = compiler_block(s)
     if s.error != "" { return s }
-    if s.return_kind != 1 && s.terminated == 0 { return compiler_fail(s, "non-integer function must return on every path") }
-    if s.terminated == 0 { s.code = s.code + compiler_cleanup(s, 0) + "return 0;\n" }
+    if s.return_kind != 0 && s.return_kind != 1 && s.terminated == 0 { return compiler_fail(s, "non-integer function must return on every path") }
+    if s.terminated == 0 {
+        if s.return_kind == 0 { s.code = s.code + compiler_cleanup(s, 0) + "return;\n" }
+        else { s.code = s.code + compiler_cleanup(s, 0) + "return 0;\n" }
+    }
     s.code = s.code + "}\n"
     return s
 }
@@ -1153,6 +1273,10 @@ func compiler_compile(string source) compiler_state {
         s = compiler_next(s)
     }
     if s.token == ";" { s = compiler_next(s) }
+    while s.token == "struct" {
+        s = compiler_parse_struct_decl(s)
+        if s.error != "" { return s }
+    }
     for s.token == "func" {
         look := compiler_next(s)
         if look.token == "main" {
