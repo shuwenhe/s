@@ -1147,6 +1147,36 @@ done:
 	free(source_text);
 	return ok;
 }
+static int default_binary_path_from_source(const char *input_path, char *output_path, size_t output_cap, compile_error *err) {
+	size_t len;
+	if (!input_path || !*input_path || !output_path || output_cap == 0) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "invalid source path");
+		return 0;
+	}
+	len = strlen(input_path);
+	if (len > 2 && strcmp(input_path + len - 2, ".s") == 0) {
+		len -= 2;
+	}
+	if (len == 0 || len >= output_cap) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "default output path is too long");
+		return 0;
+	}
+	memcpy(output_path, input_path, len);
+	output_path[len] = '\0';
+	return 1;
+}
+static int compile_s_file_to_default_binary(const char *input_path, const char *output_path, compile_error *err) {
+	char temp_ir[256];
+	int ok;
+	snprintf(temp_ir, sizeof(temp_ir), "/tmp/s_seed_cli_%ld_%ld.ir", (long)getpid(), (long)time(NULL));
+	if (!compile_s_file_to_ir(input_path, temp_ir, err)) {
+		remove(temp_ir);
+		return 0;
+	}
+	ok = emit_native_from_ir_file(temp_ir, output_path, err);
+	remove(temp_ir);
+	return ok;
+}
 static void print_compile_error_local(const compile_error *err) {
 	if (!err || !error_is_set(err)) {
 		return;
@@ -1405,6 +1435,18 @@ static int host_dispatch_call(
 		}
 		*out = value_make_int((unsigned char)text[index]);
 		return 1;
+	}
+	if (strcmp(name, "__host_byte_string") == 0) {
+		long value;
+		char text[2];
+		if (argc != 1 || !host_int_arg(&args[0], &value)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_byte_string expects int");
+			return 0;
+		}
+		text[0] = (char)(value & 255);
+		text[1] = '\0';
+		*out = value_make_string_copy(text);
+		return out->str_value != NULL;
 	}
 	if (strcmp(name, "__host_slice") == 0) {
 		const char *text = NULL;
@@ -2155,7 +2197,23 @@ static int host_dispatch_call(
 			*out = value_make_int(0);
 			return 1;
 		}
-		fprintf(stderr, "usage:\n  s <input.s> <output.ir>\n  s --compile-unit <output.ir> <input.s>...\n  s --emit-bin <input.ir> <output.bin>\n  s --bootstrap <compiler_source.s> [output_dir]\n  s mod index <dir>\n");
+		if (s_argc == 2) {
+			char output_path[1024];
+			error_clear(&compile_err);
+			if (!default_binary_path_from_source(s_argv[1], output_path, sizeof(output_path), &compile_err)) {
+				print_compile_error_local(&compile_err);
+				*out = value_make_int(1);
+				return 1;
+			}
+			if (!compile_s_file_to_default_binary(s_argv[1], output_path, &compile_err)) {
+				print_compile_error_local(&compile_err);
+				*out = value_make_int(1);
+				return 1;
+			}
+			*out = value_make_int(0);
+			return 1;
+		}
+		fprintf(stderr, "usage:\n  s <input.s>\n  s <input.s> <output.ir>\n  s --compile-unit <output.ir> <input.s>...\n  s --emit-bin <input.ir> <output.bin>\n  s --bootstrap <compiler_source.s> [output_dir]\n  s mod index <dir>\n");
 		*out = value_make_int(2);
 		return 1;
 	}
