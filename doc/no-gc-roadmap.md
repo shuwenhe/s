@@ -15,9 +15,11 @@ programs. The compatibility seed path remains available through `s --seed`.
 
 ## Near-Term Language Work
 
-1. Expand owned aggregate support beyond the current two-field pair-shaped
+1. Add per-type struct metadata so different struct declarations can use
+   different field layouts.
+2. Expand owned aggregate support beyond the current two-field pair-shaped
    struct subset.
-2. Add a larger smoke corpus that exercises nested helpers, structs, strings,
+3. Add a larger smoke corpus that exercises nested helpers, structs, strings,
    and loops together.
 
 ## Completed Language Work
@@ -28,8 +30,8 @@ programs. The compatibility seed path remains available through `s --seed`.
 - Plain `void` helper calls are supported as statements.
 - Local string literal bindings are supported as borrowed `const char *` values
   with no heap ownership or GC participation.
-- Minimal nominal structs with `left box` and `right box` fields lower through
-  the existing owned pair representation and get deterministic field cleanup.
+- Minimal nominal structs with any two named `box` fields lower through the
+  existing owned pair representation and get deterministic field cleanup.
 - Unsupported syntax now reports an explicit no-GC subset diagnostic for common
   out-of-scope features such as imports, enums, and unsupported struct shapes.
 
