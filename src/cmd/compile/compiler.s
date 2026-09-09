@@ -19,6 +19,7 @@ struct compiler_state {
     int[] parents
     int[] loan_fields
     int[] array_lengths
+    int[] struct_ids
     int[] field_left_live
     int[] field_right_live
     int count
@@ -33,6 +34,7 @@ struct compiler_state {
     int value_parent
     int value_field
     int value_array_length
+    int value_struct_id
     bool new_borrow
     string[] function_names
     int[] function_counts
@@ -43,10 +45,14 @@ struct compiler_state {
     int return_param
     int[] function_starts
     int[] function_param_kinds
+    int[] function_param_structs
+    int[] function_return_structs
     int function_count
     int function_param_total
-    string struct_field_left
-    string struct_field_right
+    string[] struct_names
+    string[] struct_field_lefts
+    string[] struct_field_rights
+    int struct_count
     string function_name
     bool function_main
 }
@@ -184,10 +190,23 @@ func compiler_is_struct_type(string token) bool {
     return compiler_ident(token) && __host_char_at(token, 0) >= "A" && __host_char_at(token, 0) <= "Z"
 }
 
+func compiler_find_struct(compiler_state initial, string name) int {
+    s := initial
+    int i = s.struct_count - 1
+    for i >= 0 {
+        if s.struct_names[i] == name { return i }
+        i = i - 1
+    }
+    return -1
+}
+
 func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "struct")
     if !compiler_is_struct_type(s.token) { return compiler_subset_fail(s, "struct names must be exported two-field owned box structs") }
+    string struct_name = s.token
+    if compiler_find_struct(s, struct_name) >= 0 { return compiler_fail(s, "duplicate struct: " + struct_name) }
+    if s.struct_count >= 8 { return compiler_fail(s, "too many structs") }
     s = compiler_next(s)
     s = compiler_expect(s, "{")
     if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields must be named owned boxes") }
@@ -203,12 +222,10 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s = compiler_optional_semicolon(s)
     if s.token != "}" { return compiler_subset_fail(s, "structs currently support exactly two owned box fields") }
     s = compiler_expect(s, "}")
-    if s.struct_field_left == "" {
-        s.struct_field_left = left_name
-        s.struct_field_right = right_name
-    } else if s.struct_field_left != left_name || s.struct_field_right != right_name {
-        return compiler_subset_fail(s, "all structs in this stage must use the same two field names")
-    }
+    s.struct_names[s.struct_count] = struct_name
+    s.struct_field_lefts[s.struct_count] = left_name
+    s.struct_field_rights[s.struct_count] = right_name
+    s.struct_count = s.struct_count + 1
     return compiler_optional_semicolon(s)
 }
 
@@ -229,10 +246,15 @@ func compiler_field_name(int field) string {
     return "right"
 }
 
-func compiler_field_index(compiler_state initial, string field_name) int {
+func compiler_field_index(compiler_state initial, int struct_id, string field_name) int {
     s := initial
-    if field_name == "left" || field_name == s.struct_field_left { return 0 }
-    if field_name == "right" || field_name == s.struct_field_right { return 1 }
+    if struct_id >= 0 {
+        if field_name == s.struct_field_lefts[struct_id] { return 0 }
+        if field_name == s.struct_field_rights[struct_id] { return 1 }
+        return -1
+    }
+    if field_name == "left" { return 0 }
+    if field_name == "right" { return 1 }
     return -1
 }
 
@@ -338,6 +360,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     s.value_parent = -1
     s.value_field = -1
     s.value_array_length = 0
+    s.value_struct_id = -1
     s.new_borrow = false
     if t == "(" {
         s = compiler_expression(compiler_next(s), 1)
@@ -386,7 +409,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             s = compiler_next(s)
             if s.token == "." {
                 s = compiler_next(s)
-                field = compiler_field_index(s, s.token)
+                field = compiler_field_index(s, s.struct_ids[slot], s.token)
                 if field < 0 { return compiler_fail(s, "unknown owned struct field") }
                 if s.kinds[slot] != 5 { return compiler_fail(s, "field borrow requires a pair") }
                 if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
@@ -425,7 +448,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s = compiler_next(s)
         if s.token == "." {
             s = compiler_next(s)
-            field = compiler_field_index(s, s.token)
+            field = compiler_field_index(s, s.struct_ids[slot], s.token)
             if field < 0 { return compiler_fail(s, "invalid owned struct field dereference") }
             if s.kinds[slot] != 5 { return compiler_fail(s, "invalid pair field dereference") }
             if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
@@ -481,6 +504,11 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         return s
     }
     if t == "pair" || compiler_is_struct_type(t) {
+        int constructed_struct = -1
+        if t != "pair" {
+            constructed_struct = compiler_find_struct(s, t)
+            if constructed_struct < 0 { return compiler_fail(s, "unknown struct: " + t) }
+        }
         s = compiler_expect(compiler_next(s), "(")
         s = compiler_expression(s, 1)
         if s.value_kind != 2 { return compiler_fail(s, "struct left field requires an owner") }
@@ -516,6 +544,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s = compiler_expect(s, ")")
         s.value = "compiler_pair_make(" + left + "," + right + ")"
         s.value_kind = 5
+        s.value_struct_id = constructed_struct
         s.value_slot = -1
         return s
     }
@@ -546,6 +575,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             } else if expected == 15 || expected == 16 {
                 if s.value_kind != 9 && s.value_kind != 15 && s.value_kind != 16 { return compiler_fail(s, "function argument requires a slice") }
             } else if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
+            if expected == 5 && s.value_struct_id != s.function_param_structs[s.function_starts[function_index] + arg] { return compiler_fail(s, "function argument struct type mismatch") }
             string argument = s.value
             string argument_length = ""
             if expected == 7 || expected == 8 || expected == 15 || expected == 16 {
@@ -628,6 +658,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.count = loan_floor
         s.value = "(" + evaluations + s.function_names[function_index] + "(" + args + "))"
         s.value_kind = s.function_returns[function_index]
+        s.value_struct_id = s.function_return_structs[function_index]
         if s.value_kind >= 3 && s.value_kind <= 4 {
             s.new_borrow = true
             s.value_parent = returned_parent
@@ -687,7 +718,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     if s.token == "." {
         s = compiler_next(s)
         int field = -1
-        field = compiler_field_index(s, s.token)
+        field = compiler_field_index(s, s.struct_ids[slot], s.token)
         if field < 0 { return compiler_fail(s, "unknown owned struct field") }
         if s.kinds[slot] != 5 { return compiler_fail(s, "field access requires a pair") }
         if field == 0 && s.field_left_live[slot] != 1 {
@@ -706,6 +737,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     s.value = compiler_var(slot)
     s.value_kind = s.kinds[slot]
     s.value_slot = slot
+    s.value_struct_id = s.struct_ids[slot]
     return s
 }
 
@@ -758,6 +790,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if !compiler_ident(name) { return compiler_fail(s, "expected variable name") }
     if declaration { slot = s.count }
     if !declaration && s.kinds[slot] != s.value_kind { return compiler_fail(s, "assignment changes variable type") }
+    if !declaration && s.value_kind == 5 && s.struct_ids[slot] != s.value_struct_id { return compiler_fail(s, "assignment changes struct type") }
     if !declaration && s.value_kind >= 3 && s.value_kind <= 4 { return compiler_fail(s, "reference reassignment is not supported") }
     string rhs = s.value
     int origin = s.value_slot
@@ -811,6 +844,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     s.code = s.code + "(void)" + compiler_var(slot) + ";\n"
     s.names[slot] = name
     s.kinds[slot] = s.value_kind
+    s.struct_ids[slot] = s.value_struct_id
     s.live[slot] = 1
     s.roots[slot] = -1
     s.parents[slot] = -1
@@ -958,6 +992,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         }
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != s.return_kind { return compiler_fail(s, "return type mismatch") }
+        if s.return_kind == 5 && s.value_struct_id != s.function_return_structs[s.function_count - 1] { return compiler_fail(s, "return struct type mismatch") }
         if s.return_kind >= 3 && s.return_kind <= 4 && (s.value_slot < 0 || s.value_slot >= s.parameter_count) {
             return compiler_fail(s, "reference return must use a parameter")
         }
@@ -1058,7 +1093,7 @@ func compiler_statement(compiler_state initial) compiler_state {
             if s.token != "." { return compiler_fail(s, "pair write requires a field") }
             s = compiler_next(s)
             int field = -1
-            field = compiler_field_index(s, s.token)
+            field = compiler_field_index(s, s.struct_ids[slot], s.token)
             if field < 0 { return compiler_fail(s, "unknown owned struct field") }
             if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
             if field == 1 && s.field_right_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
@@ -1098,6 +1133,7 @@ func compiler_statement(compiler_state initial) compiler_state {
             if arg >= s.function_counts[function_index] { return compiler_fail(s, "too many function arguments") }
             int expected = s.function_param_kinds[s.function_starts[function_index] + arg]
             if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
+            if expected == 5 && s.value_struct_id != s.function_param_structs[s.function_starts[function_index] + arg] { return compiler_fail(s, "function argument struct type mismatch") }
             string temporary = "s_arg" + call_id + "_" + compiler_number(arg)
             string argument_type = "int64_t "
             if expected == 17 { argument_type = "const char *" }
@@ -1152,6 +1188,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     for s.token != ")" && s.token != "" {
         if param_count > 0 { s = compiler_expect(s, ",") }
         int kind = 0
+        int param_struct = -1
         if s.token == "int" { kind = 1 }
         else if s.token == "mutint" { kind = 8 }
         else if s.token == "box" { kind = 2 }
@@ -1161,7 +1198,11 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         else if s.token == "slice" { kind = 9 }
         else if s.token == "mutslice" { kind = 16 }
         else if s.token == "string" { kind = 17 }
-        else if compiler_is_struct_type(s.token) { kind = 5 }
+        else if compiler_is_struct_type(s.token) {
+            kind = 5
+            param_struct = compiler_find_struct(s, s.token)
+            if param_struct < 0 { return compiler_fail(s, "unknown struct: " + s.token) }
+        }
         else { return compiler_fail(s, "function parameters require int, string, box, ref, mutref or pair") }
         s = compiler_next(s)
         if kind == 1 && s.token == "[" {
@@ -1187,17 +1228,23 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         if param_count >= 16 { return compiler_fail(s, "too many function parameters") }
         s.names[param_count] = param
         s.kinds[param_count] = kind
+        s.struct_ids[param_count] = param_struct
         param_count = param_count + 1
         s = compiler_next(s)
     }
     s = compiler_expect(s, ")")
     s.return_kind = 0
+    int return_struct = -1
     if s.token == "int" { s.return_kind = 1; s = compiler_next(s) }
     else if s.token == "box" { s.return_kind = 2; s = compiler_next(s) }
     else if s.token == "ref" { s.return_kind = 3 }
     else if s.token == "mutref" { s.return_kind = 4 }
     else if s.token == "pair" { s.return_kind = 5 }
-    else if compiler_is_struct_type(s.token) { s.return_kind = 5 }
+    else if compiler_is_struct_type(s.token) {
+        s.return_kind = 5
+        return_struct = compiler_find_struct(s, s.token)
+        if return_struct < 0 { return compiler_fail(s, "unknown struct: " + s.token) }
+    }
     else if s.token == "slice" { s.return_kind = 9 }
     else if s.token != "{" { return compiler_fail(s, "function return type must be int, box, ref, mutref, pair or struct") }
     if s.return_kind == 3 || s.return_kind == 4 || s.return_kind == 5 || s.return_kind == 9 { s = compiler_next(s) }
@@ -1208,11 +1255,13 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     s.function_names[s.function_count] = name
     s.function_counts[s.function_count] = param_count
     s.function_returns[s.function_count] = s.return_kind
+    s.function_return_structs[s.function_count] = return_struct
     s.function_return_params[s.function_count] = s.return_param
     s.function_starts[s.function_count] = start
     int pi = 0
     for pi < param_count {
         s.function_param_kinds[s.function_param_total + pi] = s.kinds[pi]
+        s.function_param_structs[s.function_param_total + pi] = s.struct_ids[pi]
         pi = pi + 1
     }
     s.function_param_total = s.function_param_total + param_count
@@ -1267,6 +1316,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { s.code = s.code + "int64_t " + compiler_var(pi) + "_len = p" + compiler_number(pi) + "_len;\n" }
         s.code = s.code + "(void)" + compiler_var(pi) + ";\n"
         s.live[pi] = 1
+        s.struct_ids[pi] = s.function_param_structs[start + pi]
         s.roots[pi] = -1
         if s.kinds[pi] >= 3 && s.kinds[pi] <= 4 { s.roots[pi] = pi }
         s.parents[pi] = -1
@@ -1298,13 +1348,19 @@ func compiler_compile(string source) compiler_state {
     field_right_live := live
     loan_fields := roots
     array_lengths := roots
+    struct_ids := roots
     function_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]; 
     function_counts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_returns := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_return_params := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_starts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_param_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, struct_field_left: "", struct_field_right: "", function_name: "", function_main: false }
+    function_param_structs := function_param_kinds
+    function_return_structs := function_returns
+    struct_names := ["", "", "", "", "", "", "", ""];
+    struct_field_lefts := struct_names
+    struct_field_rights := struct_names
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
