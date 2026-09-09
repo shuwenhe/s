@@ -761,6 +761,9 @@ help:
 	@echo "  make seed-runtime-regression"
 	@echo "  make seed-network-tests"
 	@echo "  make seed-c-abi-test"
+	@echo "  make compiler                # Build the no-GC ownership compiler driver"
+	@echo "  make compiler-check          # Verify no-GC ownership compiler behavior"
+	@echo "  make benchmark               # Compare no-GC S with available toolchains"
 	@echo "  make bootstrap-stage0       # Build the trusted C stage0 compiler"
 	@echo "  make bootstrap-convergence  # Compatibility seed-hosted IR convergence"
 	@echo "  make bootstrap-pure-s       # Run the pure-S bootstrap entrypoint"
@@ -796,13 +799,14 @@ help:
 	@echo "  make PARALLEL_JOBS=8          # Override CPU count (default: nproc)"
 	@echo "  override install dir: make INSTALL_BIN_DIR=/usr/local/bin SUDO=sudo"
 
-test-quick: seed-tests
+test-quick: seed-tests compiler-check
 	@echo "✓ Quick tests passed"
 
 test-full: seed-compiler-bin
 	@echo "Running test suites with isolated runtime resources..."
 	@$(MAKE) seed-tests
 	@$(MAKE) seed-runtime-regression
+	@$(MAKE) compiler-check
 	@echo "✓ All tests passed"
 
 build-parallel:

@@ -30,35 +30,18 @@ See [the compiler guide](doc/compiler.md) for the supported syntax, tests and
 limitations. The compiler is seed-hosted; this is not yet full-language or
 converged self-hosted ownership-aware compilation.
 
-## Performance Comparison
+## Performance status
 
-S delivers measurable performance advantages over C and Rust across critical system programming workloads:
+S is not yet claiming to outperform Rust or C. The current no-GC compiler path
+is intentionally small and measurable: supported S programs are lowered to C,
+compiled with the host C compiler, and checked so generated binaries do not
+link the S GC or the seed interpreter runtime.
 
-### Runtime Performance
-- **12-18% faster execution** than equivalent C code on CPU-bound operations (integer arithmetic, memory operations, control flow)
-- **8-14% faster execution** than Rust in comparable scenarios
-- Performance gains stem from optimized inline code generation and reduced memory indirection overhead
-
-### Compilation Speed
-- **3.5-4.2x faster compilation** than C (when compiling equivalent codebases with GCC/Clang)
-- **6-7x faster compilation** than Rust (compared to rustc baseline)
-- Self-hosted compiler compiles typical 10,000-line modules in under 50ms
-
-### Memory Efficiency
-- **15-22% smaller binary sizes** than C executables (with equivalent functionality)
-- **20-28% smaller binary sizes** than Rust binaries
-- Reduced memory footprint in runtime data structures (no reference counting overhead, optimized allocator)
-
-### System Performance Metrics
-- **Syscall overhead reduced by 11-16%** compared to C wrappers
-- **Lock-free data structure operations 19-24% faster** than C and Rust implementations
-- **Network I/O throughput 13-17% higher** in high-concurrency scenarios (10K+ concurrent connections)
-
-### Verification
-These performance metrics are reproducible and verified against standard benchmarking suites:
-- **AlgoExpert benchmark suite** (sorting, searching, graph algorithms)
-- **Techempower Round** (web framework comparative tests)
-- **SPEC-style workloads** (system utility and infrastructure code)
+Use `make benchmark` to compare the no-GC S benchmark with C, Rust when
+`rustc` is available, and Go when `go` is available. Treat the result as local
+measurement data rather than a project-wide performance claim. The immediate
+goal is correctness, deterministic cleanup, and regression tracking; broad
+performance claims need repeated benchmarks across realistic workloads.
 
 ## Repository layout
 
