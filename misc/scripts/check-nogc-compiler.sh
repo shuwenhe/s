@@ -498,6 +498,29 @@ run_custom_drop_case rhs_before_lhs_drop 'make-rhs
 drop-after-rhs
 drop-after-rhs'
 
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/struct_owned_fields_scope_exit.s" -o "$work/struct_owned_fields_scope_exit"
+set +e
+"$work/struct_owned_fields_scope_exit"
+status=$?
+set -e
+test "$status" -eq 42
+
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/struct_owned_fields_early_return.s" -o "$work/struct_owned_fields_early_return"
+set +e
+"$work/struct_owned_fields_early_return"
+status=$?
+set -e
+test "$status" -eq 42
+
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/struct_owned_fields_loop.s" -o "$work/struct_owned_fields_loop"
+set +e
+"$work/struct_owned_fields_loop"
+status=$?
+set -e
+test "$status" -eq 42
+
+run_custom_drop_case struct_custom_drop_with_fields 'Pair.drop'
+
 "$root/bin/s_compiler" --emit-c "$work/custom_drop_move.s" "$work/custom_drop_move.c"
 if grep -q '__s_drop_Resource(s_v0)' "$work/custom_drop_move.c"; then
     echo "custom drop emitted for moved source owner" >&2
@@ -541,7 +564,21 @@ if ! grep -q 'if (s_v0 != NULL)' "$work/overwrite_conditional_true.c"; then
     exit 1
 fi
 
-if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
+"$root/bin/s_compiler" --emit-c "$work/struct_custom_drop_with_fields.s" "$work/struct_custom_drop_with_fields.c"
+if ! grep -q '__s_drop_Pair(s_v0)' "$work/struct_custom_drop_with_fields.c" ||
+   ! grep -q 'compiler_pair_drop(&s_v0)' "$work/struct_custom_drop_with_fields.c"; then
+    echo "custom drop with fields did not emit hook plus field cleanup" >&2
+    cat "$work/struct_custom_drop_with_fields.c" >&2
+    exit 1
+fi
+right_line=$(grep -n -F 'compiler_drop(&(*owner)->right)' "$root/src/runtime/compiler_runtime.h" | head -1 | cut -d: -f1)
+left_line=$(grep -n -F 'compiler_drop(&(*owner)->left)' "$root/src/runtime/compiler_runtime.h" | head -1 | cut -d: -f1)
+if [ -z "$right_line" ] || [ -z "$left_line" ] || [ "$right_line" -ge "$left_line" ]; then
+    echo "struct field cleanup is not reverse declaration order" >&2
+    exit 1
+fi
+
+if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" "$work/struct_owned_fields_scope_exit" "$work/struct_owned_fields_early_return" "$work/struct_owned_fields_loop" "$work/struct_custom_drop_with_fields" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
     echo "GC or seed runtime symbol linked into no-GC binary" >&2
     exit 1
 fi
@@ -642,5 +679,21 @@ func main() int {
     value = value
     return 42
 }' 'self move is not supported'
+
+expect_compile_fail named_struct_partial_move 'package bad
+struct Pair { left box; right box }
+func main() int {
+    p := Pair(box(1), box(2))
+    x := p.left
+    return *x
+}' 'moving owned fields from structs is not supported before partial move'
+
+expect_compile_fail nested_owned_struct_unsupported 'package bad
+struct Resource { left box; right box }
+struct Outer { inner Resource; right box }
+func main() int {
+    value := Outer(Resource(box(1), box(2)), box(3))
+    return 42
+}' 'struct field type is not supported'
 
 echo "No-GC compiler checks passed"
