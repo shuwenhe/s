@@ -26,14 +26,14 @@ func (engine* ssa_rule_engine) add_rule(string name, int priority) int {
     if engine.rule_count >= engine.max_rules {
         return -1
     }
-    
+
     rule := ssa_rule {
         id: engine.rule_count,
         name: name,
         priority: priority,
         enabled: 1
     }
-    
+
     engine.rules = append(engine.rules, rule)
     engine.rule_count = engine.rule_count + 1
     return rule.id
@@ -43,16 +43,16 @@ func (engine* ssa_rule_engine) apply_all(ssa_value* v) ssa_value* {
     if v == 0 {
         return v
     }
-    
+
     for i := 0; i < engine.rule_count; i = i + 1 {
         rule := engine.rules[i]
         if rule.enabled == 0 {
             continue
         }
-        
+
         v = engine.apply_rule(v, rule.id)
     }
-    
+
     v
 }
 
@@ -110,7 +110,7 @@ func (engine* ssa_rule_engine) apply_rule(ssa_value* v, int rule_id) ssa_value* 
     case 49: v = rule_de_morgan_and(v)
     case 50: v = rule_de_morgan_or(v)
     }
-    
+
     v
 }
 
@@ -121,17 +121,17 @@ func rule_add_const_const(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
     if left.op != op_const || right.op != op_const {
         return v
     }
-    
+
     result_val := left.aux_int + right.aux_int
     result := ssa_value_new_const_int(v.id + 1000000, result_val, v.type_id)
     result
@@ -144,10 +144,10 @@ func rule_add_x_zero(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
@@ -157,7 +157,7 @@ func rule_add_x_zero(v ssa_value*) ssa_value* {
     if right.aux_int != 0 {
         return v
     }
-    
+
     left
 }
 
@@ -168,10 +168,10 @@ func rule_add_zero_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
@@ -181,7 +181,7 @@ func rule_add_zero_x(v ssa_value*) ssa_value* {
     if left.aux_int != 0 {
         return v
     }
-    
+
     right
 }
 
@@ -192,17 +192,17 @@ func rule_sub_const_const(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
     if left.op != op_const || right.op != op_const {
         return v
     }
-    
+
     result_val := left.aux_int - right.aux_int
     result := ssa_value_new_const_int(v.id + 1000001, result_val, v.type_id)
     result
@@ -215,10 +215,10 @@ func rule_sub_x_zero(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
@@ -228,7 +228,7 @@ func rule_sub_x_zero(v ssa_value*) ssa_value* {
     if right.aux_int != 0 {
         return v
     }
-    
+
     left
 }
 
@@ -239,10 +239,10 @@ func rule_sub_zero_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
@@ -252,7 +252,7 @@ func rule_sub_zero_x(v ssa_value*) ssa_value* {
     if left.aux_int != 0 {
         return v
     }
-    
+
     neg_result := ssa_value_new_const_int(v.id + 1000002, -right.aux_int, v.type_id)
     neg_result
 }
@@ -264,17 +264,17 @@ func rule_mul_const_const(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
     if left.op != op_const || right.op != op_const {
         return v
     }
-    
+
     result_val := left.aux_int * right.aux_int
     result := ssa_value_new_const_int(v.id + 1000003, result_val, v.type_id)
     result
@@ -287,10 +287,10 @@ func rule_mul_x_zero(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -300,7 +300,7 @@ func rule_mul_x_zero(v ssa_value*) ssa_value* {
     if right.aux_int != 0 {
         return v
     }
-    
+
     ssa_value_new_const_int(v.id + 1000004, 0, v.type_id)
 }
 
@@ -311,10 +311,10 @@ func rule_mul_zero_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 {
         return v
     }
@@ -324,7 +324,7 @@ func rule_mul_zero_x(v ssa_value*) ssa_value* {
     if left.aux_int != 0 {
         return v
     }
-    
+
     ssa_value_new_const_int(v.id + 1000005, 0, v.type_id)
 }
 
@@ -335,10 +335,10 @@ func rule_mul_x_one(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -348,7 +348,7 @@ func rule_mul_x_one(v ssa_value*) ssa_value* {
     if right.aux_int != 1 {
         return v
     }
-    
+
     left
 }
 
@@ -359,10 +359,10 @@ func rule_mul_one_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 {
         return v
     }
@@ -372,7 +372,7 @@ func rule_mul_one_x(v ssa_value*) ssa_value* {
     if left.aux_int != 1 {
         return v
     }
-    
+
     right
 }
 
@@ -383,10 +383,10 @@ func rule_mul_x_two(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -396,7 +396,7 @@ func rule_mul_x_two(v ssa_value*) ssa_value* {
     if right.aux_int != 2 {
         return v
     }
-    
+
     shift_val := ssa_value_new_const_int(v.id + 1000006, 1, v.type_id)
     shift_result := ssa_value_new_binary_op(v.id + 1000007, op_shl, left, shift_val, v.type_id)
     shift_result
@@ -409,10 +409,10 @@ func rule_mul_two_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 {
         return v
     }
@@ -422,7 +422,7 @@ func rule_mul_two_x(v ssa_value*) ssa_value* {
     if left.aux_int != 2 {
         return v
     }
-    
+
     shift_val := ssa_value_new_const_int(v.id + 1000008, 1, v.type_id)
     shift_result := ssa_value_new_binary_op(v.id + 1000009, op_shl, right, shift_val, v.type_id)
     shift_result
@@ -435,10 +435,10 @@ func rule_div_const_const(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
@@ -448,7 +448,7 @@ func rule_div_const_const(v ssa_value*) ssa_value* {
     if right.aux_int == 0 {
         return v
     }
-    
+
     result_val := left.aux_int / right.aux_int
     result := ssa_value_new_const_int(v.id + 1000010, result_val, v.type_id)
     result
@@ -461,10 +461,10 @@ func rule_div_zero_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 {
         return v
     }
@@ -474,7 +474,7 @@ func rule_div_zero_x(v ssa_value*) ssa_value* {
     if left.aux_int != 0 {
         return v
     }
-    
+
     ssa_value_new_const_int(v.id + 1000011, 0, v.type_id)
 }
 
@@ -485,10 +485,10 @@ func rule_div_x_one(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -498,7 +498,7 @@ func rule_div_x_one(v ssa_value*) ssa_value* {
     if right.aux_int != 1 {
         return v
     }
-    
+
     left
 }
 
@@ -509,10 +509,10 @@ func rule_rem_const_const(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
@@ -522,7 +522,7 @@ func rule_rem_const_const(v ssa_value*) ssa_value* {
     if right.aux_int == 0 {
         return v
     }
-    
+
     result_val := left.aux_int % right.aux_int
     result := ssa_value_new_const_int(v.id + 1000012, result_val, v.type_id)
     result
@@ -535,10 +535,10 @@ func rule_rem_zero_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 {
         return v
     }
@@ -548,7 +548,7 @@ func rule_rem_zero_x(v ssa_value*) ssa_value* {
     if left.aux_int != 0 {
         return v
     }
-    
+
     ssa_value_new_const_int(v.id + 1000013, 0, v.type_id)
 }
 
@@ -559,10 +559,10 @@ func rule_rem_x_one(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -572,7 +572,7 @@ func rule_rem_x_one(v ssa_value*) ssa_value* {
     if right.aux_int != 1 {
         return v
     }
-    
+
     ssa_value_new_const_int(v.id + 1000014, 0, v.type_id)
 }
 
@@ -583,10 +583,10 @@ func rule_and_x_zero(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -596,7 +596,7 @@ func rule_and_x_zero(v ssa_value*) ssa_value* {
     if right.aux_int != 0 {
         return v
     }
-    
+
     ssa_value_new_const_int(v.id + 1000015, 0, v.type_id)
 }
 
@@ -607,10 +607,10 @@ func rule_and_zero_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 {
         return v
     }
@@ -620,7 +620,7 @@ func rule_and_zero_x(v ssa_value*) ssa_value* {
     if left.aux_int != 0 {
         return v
     }
-    
+
     ssa_value_new_const_int(v.id + 1000016, 0, v.type_id)
 }
 
@@ -631,18 +631,18 @@ func rule_and_x_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
-    
+
     if left.id == right.id {
         return left
     }
-    
+
     v
 }
 
@@ -653,10 +653,10 @@ func rule_and_x_minus_one(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -666,7 +666,7 @@ func rule_and_x_minus_one(v ssa_value*) ssa_value* {
     if right.aux_int != -1 {
         return v
     }
-    
+
     left
 }
 
@@ -677,10 +677,10 @@ func rule_or_x_zero(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -690,7 +690,7 @@ func rule_or_x_zero(v ssa_value*) ssa_value* {
     if right.aux_int != 0 {
         return v
     }
-    
+
     left
 }
 
@@ -701,10 +701,10 @@ func rule_or_zero_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 {
         return v
     }
@@ -714,7 +714,7 @@ func rule_or_zero_x(v ssa_value*) ssa_value* {
     if left.aux_int != 0 {
         return v
     }
-    
+
     right
 }
 
@@ -725,18 +725,18 @@ func rule_or_x_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
-    
+
     if left.id == right.id {
         return left
     }
-    
+
     v
 }
 
@@ -747,10 +747,10 @@ func rule_or_x_minus_one(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -760,7 +760,7 @@ func rule_or_x_minus_one(v ssa_value*) ssa_value* {
     if right.aux_int != -1 {
         return v
     }
-    
+
     ssa_value_new_const_int(v.id + 1000017, -1, v.type_id)
 }
 
@@ -771,10 +771,10 @@ func rule_xor_x_zero(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -784,7 +784,7 @@ func rule_xor_x_zero(v ssa_value*) ssa_value* {
     if right.aux_int != 0 {
         return v
     }
-    
+
     left
 }
 
@@ -795,10 +795,10 @@ func rule_xor_zero_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 {
         return v
     }
@@ -808,7 +808,7 @@ func rule_xor_zero_x(v ssa_value*) ssa_value* {
     if left.aux_int != 0 {
         return v
     }
-    
+
     right
 }
 
@@ -819,18 +819,18 @@ func rule_xor_x_x(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
-    
+
     if left.id == right.id {
         return ssa_value_new_const_int(v.id + 1000018, 0, v.type_id)
     }
-    
+
     v
 }
 
@@ -841,17 +841,17 @@ func rule_shl_const_const(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
     if left.op != op_const || right.op != op_const {
         return v
     }
-    
+
     result_val := left.aux_int << right.aux_int
     result := ssa_value_new_const_int(v.id + 1000019, result_val, v.type_id)
     result
@@ -864,10 +864,10 @@ func rule_shl_x_zero(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -877,7 +877,7 @@ func rule_shl_x_zero(v ssa_value*) ssa_value* {
     if right.aux_int != 0 {
         return v
     }
-    
+
     left
 }
 
@@ -888,17 +888,17 @@ func rule_shr_const_const(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
     if left.op != op_const || right.op != op_const {
         return v
     }
-    
+
     result_val := left.aux_int >> right.aux_int
     result := ssa_value_new_const_int(v.id + 1000020, result_val, v.type_id)
     result
@@ -911,10 +911,10 @@ func rule_shr_x_zero(v ssa_value*) ssa_value* {
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if right == 0 {
         return v
     }
@@ -924,7 +924,7 @@ func rule_shr_x_zero(v ssa_value*) ssa_value* {
     if right.aux_int != 0 {
         return v
     }
-    
+
     left
 }
 
@@ -935,16 +935,16 @@ func rule_neg_const(v ssa_value*) ssa_value* {
     if v.arg_count != 1 {
         return v
     }
-    
+
     arg := v.args[0]
-    
+
     if arg == 0 {
         return v
     }
     if arg.op != op_const {
         return v
     }
-    
+
     result_val := -arg.aux_int
     result := ssa_value_new_const_int(v.id + 1000021, result_val, v.type_id)
     result
@@ -957,20 +957,20 @@ func rule_neg_neg(v ssa_value*) ssa_value* {
     if v.arg_count != 1 {
         return v
     }
-    
+
     arg := v.args[0]
-    
+
     if arg == 0 {
         return v
     }
     if arg.op != op_neg {
         return v
     }
-    
+
     if arg.arg_count != 1 {
         return v
     }
-    
+
     arg.args[0]
 }
 
@@ -981,16 +981,16 @@ func rule_not_const(v ssa_value*) ssa_value* {
     if v.arg_count != 1 {
         return v
     }
-    
+
     arg := v.args[0]
-    
+
     if arg == 0 {
         return v
     }
     if arg.op != op_const {
         return v
     }
-    
+
     result_val := ^arg.aux_int
     result := ssa_value_new_const_int(v.id + 1000022, result_val, v.type_id)
     result
@@ -1003,20 +1003,20 @@ func rule_not_not(v ssa_value*) ssa_value* {
     if v.arg_count != 1 {
         return v
     }
-    
+
     arg := v.args[0]
-    
+
     if arg == 0 {
         return v
     }
     if arg.op != op_not {
         return v
     }
-    
+
     if arg.arg_count != 1 {
         return v
     }
-    
+
     arg.args[0]
 }
 
@@ -1027,9 +1027,9 @@ func rule_neg_zero(v ssa_value*) ssa_value* {
     if v.arg_count != 1 {
         return v
     }
-    
+
     arg := v.args[0]
-    
+
     if arg == 0 {
         return v
     }
@@ -1039,7 +1039,7 @@ func rule_neg_zero(v ssa_value*) ssa_value* {
     if arg.aux_int != 0 {
         return v
     }
-    
+
     ssa_value_new_const_int(v.id + 1000023, 0, v.type_id)
 }
 
@@ -1047,29 +1047,29 @@ func rule_cmp_const_const(v ssa_value*) ssa_value* {
     if v == 0 {
         return v
     }
-    
+
     if v.op < op_eq || v.op > op_ge {
         return v
     }
-    
+
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
     if left.op != op_const || right.op != op_const {
         return v
     }
-    
+
     lv := left.aux_int
     rv := right.aux_int
     result := 0
-    
+
     switch v.op {
     case op_eq:
         result = (lv == rv) ? 1 : 0
@@ -1084,7 +1084,7 @@ func rule_cmp_const_const(v ssa_value*) ssa_value* {
     case op_ge:
         result = (lv >= rv) ? 1 : 0
     }
-    
+
     ssa_value_new_const_int(v.id + 1000024, result, v.type_id)
 }
 
@@ -1092,27 +1092,27 @@ func rule_cmp_x_x(v ssa_value*) ssa_value* {
     if v == 0 {
         return v
     }
-    
+
     if v.op < op_eq || v.op > op_ge {
         return v
     }
-    
+
     if v.arg_count != 2 {
         return v
     }
-    
+
     left := v.args[0]
     right := v.args[1]
-    
+
     if left == 0 || right == 0 {
         return v
     }
     if left.id != right.id {
         return v
     }
-    
+
     result := 0
-    
+
     switch v.op {
     case op_eq:
         result = 1
@@ -1127,7 +1127,7 @@ func rule_cmp_x_x(v ssa_value*) ssa_value* {
     case op_ge:
         result = 1
     }
-    
+
     ssa_value_new_const_int(v.id + 1000025, result, v.type_id)
 }
 

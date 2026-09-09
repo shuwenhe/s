@@ -28,27 +28,27 @@ func relocation_resolve(relocation_context ctx*, int symbol_value, int load_base
         resolved_address: 0,
         error_message: ""
     }
-    
+
     switch ctx.relocation_type {
         case r_x86_64_64:
             result.resolved_address = symbol_value + load_base + ctx.addend
             return result
-        
+
         case r_x86_64_pc32:
             pc := load_base + ctx.offset
             result.resolved_address = (symbol_value + load_base) - pc + ctx.addend
             return result
-        
+
         case r_x86_64_relative:
             result.resolved_address = load_base + ctx.addend
             return result
-        
+
         default:
             result.success = 0
             result.error_message = "Unknown relocation type"
             return result
     }
-    
+
     result
 }
 
@@ -103,10 +103,10 @@ func relocation_create_entry(int offset, int symbol_index, int reloc_type) elf64
 
 func relocation_verify(elf64_relocation reloc, int num_symbols) int {
     sym_idx := (reloc.info >> 32) & 0xffffffff
-    
+
     if sym_idx >= num_symbols {
         return 0
     }
-    
+
     1
 }

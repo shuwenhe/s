@@ -2726,8 +2726,8 @@ static int values_copy_prefixed_depth(const runtime_values *src, const char *old
 	if (!src || !old_prefix || !new_prefix || depth > 16) {
 		return 0;
 	}
-	/* A record copy can use the same value table as its source. Snapshot the
-	   source length so values appended during the copy are not copied again. */
+
+
 	source_len = src->len;
 	old_len = strlen(old_prefix);
 	for (i = 0; i < source_len; i++) {
@@ -2737,8 +2737,8 @@ static int values_copy_prefixed_depth(const runtime_values *src, const char *old
 		if (snprintf(mapped_name, sizeof(mapped_name), "%s%s", new_prefix, src->data[i].name + old_len) >= (int)sizeof(mapped_name)) {
 			return 0;
 		}
-		/* values_set may realloc the same table when src == dst. Copy the
-		   field before passing its address so reallocation cannot invalidate it. */
+
+
 		if (!value_copy(&field_value, &src->data[i].value)) {
 			return 0;
 		}
@@ -3764,8 +3764,8 @@ static int execute_function(
 				values_free(&vals);
 				return 0;
 			}
-			/* A record handle is tagged by construction, never inferred from
-			   ordinary string contents that happen to name another value. */
+
+
 			{
 				size_t result_len = strlen(ins->result);
 				if (result_len > 7 && strcmp(ins->result + result_len - 7, ".__type") == 0) {

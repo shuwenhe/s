@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <limits.h>
 
-/* Host allocator boundary for the S ownership backend. No object registry,
-   tracing, root scanning, write barriers or reference counting is involved. */
+
+
 #ifdef S_COMPILER_CHECK_ALLOCATIONS
 static int64_t compiler_objects;
 #endif

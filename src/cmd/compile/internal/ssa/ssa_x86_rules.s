@@ -34,7 +34,7 @@ func x86_rule_engine_new() x86_rule_engine* {
 func (engine* x86_rule_engine) register_x86_rule(int id, int pattern_op, int x86_opcode, int priority) int {
     idx := engine.rule_count
     engine.rule_count = engine.rule_count + 1
-    
+
     rule := x86_rule {
         id: id,
         pattern_op: pattern_op,
@@ -51,7 +51,7 @@ func (engine* x86_rule_engine) match_lea_pattern(int op, int[] args) (int, int, 
     base := 0
     offset := 0
     scale := 0
-    
+
     if op == op_add {
         base = args[0]
         offset = args[1]
@@ -61,14 +61,14 @@ func (engine* x86_rule_engine) match_lea_pattern(int op, int[] args) (int, int, 
             scale = args[1]
         }
     }
-    
+
     return base, offset, scale
 }
 
 func (engine* x86_rule_engine) match_shift_pattern(int op, int[] args) (int, int) {
     value := args[0]
     shift_amount := args[1]
-    
+
     return value, shift_amount
 }
 
@@ -84,7 +84,7 @@ func (engine* x86_rule_engine) match_mul_to_shift(int op, int shift_amount) int 
             return 3
         }
     }
-    
+
     return 0
 }
 
@@ -100,7 +100,7 @@ func (engine* x86_rule_engine) match_div_to_shift(int op, int shift_amount) int 
             return 3
         }
     }
-    
+
     return 0
 }
 
@@ -119,23 +119,23 @@ func (engine* x86_rule_engine) is_power_of_2(int n) int {
     if n <= 0 {
         return 0
     }
-    
+
     if n & (n - 1) == 0 {
         return 1
     }
-    
+
     return 0
 }
 
 func (engine* x86_rule_engine) log2_value(int n) int {
     result := 0
-    
+
     i := 1
     for i < n {
         i = i * 2
         result = result + 1
     }
-    
+
     result
 }
 
@@ -152,7 +152,7 @@ func (engine* x86_rule_engine) optimize_mul_to_lea(int base, int shift_amount) i
     if shift_amount == 8 {
         return 1
     }
-    
+
     return 0
 }
 
@@ -163,13 +163,13 @@ func (engine* x86_rule_engine) optimize_add_to_lea(int base, int offset) int {
     if offset < -2147483648 || offset > 2147483647 {
         return 0
     }
-    
+
     return 1
 }
 
 func (engine* x86_rule_engine) optimize_compare_and_branch(int cmp_op, int branch_cond) (int, int) {
     x86_cond := 0
-    
+
     if branch_cond == cond_eq {
         x86_cond = x86_je
     } else {
@@ -193,7 +193,7 @@ func (engine* x86_rule_engine) optimize_compare_and_branch(int cmp_op, int branc
             }
         }
     }
-    
+
     return x86_cond, 1
 }
 
@@ -219,7 +219,7 @@ func (engine* x86_rule_engine) fuse_load_op(int load_op, int op, int store_op) (
             }
         }
     }
-    
+
     return 0, 0
 }
 
@@ -227,7 +227,7 @@ func (engine* x86_rule_engine) optimize_push_pop(int pop_reg, int push_reg) int 
     if pop_reg == push_reg {
         return 1
     }
-    
+
     return 0
 }
 
@@ -235,7 +235,7 @@ func (engine* x86_rule_engine) optimize_register_move(int src_reg, int dst_reg) 
     if src_reg == dst_reg {
         return 1
     }
-    
+
     return 0
 }
 
@@ -243,7 +243,7 @@ func (engine* x86_rule_engine) optimize_zero_extension(int size) int {
     if size == 1 || size == 2 || size == 4 {
         return 1
     }
-    
+
     return 0
 }
 
@@ -251,7 +251,7 @@ func (engine* x86_rule_engine) optimize_sign_extension(int size) int {
     if size == 1 || size == 2 || size == 4 {
         return 1
     }
-    
+
     return 0
 }
 
@@ -259,7 +259,7 @@ func (engine* x86_rule_engine) optimize_memory_access(int addr_base, int offset)
     if offset >= -128 && offset <= 127 {
         return 1
     }
-    
+
     return 0
 }
 
@@ -267,7 +267,7 @@ func (engine* x86_rule_engine) fuse_compare_branch(int cmp_op, int branch_op) in
     if cmp_op == op_cmp && branch_op == op_branch {
         return 1
     }
-    
+
     return 0
 }
 
@@ -327,6 +327,6 @@ func init_x86_rules(engine* x86_rule_engine) int {
     engine.register_x86_rule(10, op_load, x86_mov, 5)
     engine.register_x86_rule(11, op_store, x86_mov, 5)
     engine.register_x86_rule(12, op_cmp, x86_cmp, 8)
-    
+
     0
 }
