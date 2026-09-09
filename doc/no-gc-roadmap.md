@@ -15,9 +15,10 @@ programs. The compatibility seed path remains available through `s --seed`.
 
 ## Near-Term Language Work
 
-1. Add minimal structs with deterministic field cleanup.
-2. Improve diagnostics for unsupported syntax so users see the no-GC subset
-   boundary clearly.
+1. Expand owned aggregate support beyond the current two-field pair-shaped
+   struct subset.
+2. Add a larger smoke corpus that exercises nested helpers, structs, strings,
+   and loops together.
 
 ## Completed Language Work
 
@@ -27,11 +28,16 @@ programs. The compatibility seed path remains available through `s --seed`.
 - Plain `void` helper calls are supported as statements.
 - Local string literal bindings are supported as borrowed `const char *` values
   with no heap ownership or GC participation.
+- Minimal nominal structs with `left box` and `right box` fields lower through
+  the existing owned pair representation and get deterministic field cleanup.
+- Unsupported syntax now reports an explicit no-GC subset diagnostic for common
+  out-of-scope features such as imports, enums, and unsupported struct shapes.
 
 ## Verification Gates
 
 - `make compiler-check` must compile and run ownership examples, reject borrow
-  violations, compile hello, and check symbols for GC/runtime leaks.
+  violations, compile hello, verify unsupported syntax diagnostics, and check
+  symbols for GC/runtime leaks.
 - `sh test/cli/check.sh` must cover default output, `-o`, legacy `build`, help,
   invalid sources, and input/output overwrite protection.
 - `make benchmark` must build the no-GC S benchmark and available comparison
