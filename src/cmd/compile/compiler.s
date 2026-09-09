@@ -187,18 +187,28 @@ func compiler_is_struct_type(string token) bool {
 func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "struct")
-    if !compiler_is_struct_type(s.token) { return compiler_subset_fail(s, "struct names must be exported and use `left box` plus `right box` fields") }
+    if !compiler_is_struct_type(s.token) { return compiler_subset_fail(s, "struct names must be exported two-field owned box structs") }
     s = compiler_next(s)
     s = compiler_expect(s, "{")
-    if s.token != "left" { return compiler_subset_fail(s, "struct fields must be exactly `left box` then `right box`") }
-    s = compiler_expect(s, "left")
+    if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields must be named owned boxes") }
+    string left_name = s.token
+    s = compiler_next(s)
     s = compiler_expect(s, "box")
     s = compiler_optional_semicolon(s)
-    if s.token != "right" { return compiler_subset_fail(s, "struct fields must be exactly `left box` then `right box`") }
-    s = compiler_expect(s, "right")
+    if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields must be named owned boxes") }
+    string right_name = s.token
+    if right_name == left_name { return compiler_subset_fail(s, "struct fields must have distinct names") }
+    s = compiler_next(s)
     s = compiler_expect(s, "box")
     s = compiler_optional_semicolon(s)
+    if s.token != "}" { return compiler_subset_fail(s, "structs currently support exactly two owned box fields") }
     s = compiler_expect(s, "}")
+    if s.struct_field_left == "" {
+        s.struct_field_left = left_name
+        s.struct_field_right = right_name
+    } else if s.struct_field_left != left_name || s.struct_field_right != right_name {
+        return compiler_subset_fail(s, "all structs in this stage must use the same two field names")
+    }
     return compiler_optional_semicolon(s)
 }
 
@@ -376,9 +386,8 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             s = compiler_next(s)
             if s.token == "." {
                 s = compiler_next(s)
-                if s.token == "left" { field = 0 }
-                if s.token == "right" { field = 1 }
-                if field < 0 { return compiler_fail(s, "pair has only left and right fields") }
+                field = compiler_field_index(s, s.token)
+                if field < 0 { return compiler_fail(s, "unknown owned struct field") }
                 if s.kinds[slot] != 5 { return compiler_fail(s, "field borrow requires a pair") }
                 if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
                 if field == 1 && s.field_right_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
@@ -416,9 +425,8 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s = compiler_next(s)
         if s.token == "." {
             s = compiler_next(s)
-            if s.token == "left" { field = 0 }
-            if s.token == "right" { field = 1 }
-            if field < 0 { return compiler_fail(s, "invalid pair field dereference") }
+            field = compiler_field_index(s, s.token)
+            if field < 0 { return compiler_fail(s, "invalid owned struct field dereference") }
             if s.kinds[slot] != 5 { return compiler_fail(s, "invalid pair field dereference") }
             if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
             if field == 1 && s.field_right_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
@@ -679,9 +687,8 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     if s.token == "." {
         s = compiler_next(s)
         int field = -1
-        if s.token == "left" { field = 0 }
-        if s.token == "right" { field = 1 }
-        if field < 0 { return compiler_fail(s, "pair has only left and right fields") }
+        field = compiler_field_index(s, s.token)
+        if field < 0 { return compiler_fail(s, "unknown owned struct field") }
         if s.kinds[slot] != 5 { return compiler_fail(s, "field access requires a pair") }
         if field == 0 && s.field_left_live[slot] != 1 {
             return compiler_fail(s, "use of moved pair field")
@@ -1051,9 +1058,8 @@ func compiler_statement(compiler_state initial) compiler_state {
             if s.token != "." { return compiler_fail(s, "pair write requires a field") }
             s = compiler_next(s)
             int field = -1
-            if s.token == "left" { field = 0 }
-            if s.token == "right" { field = 1 }
-            if field < 0 { return compiler_fail(s, "pair has only left and right fields") }
+            field = compiler_field_index(s, s.token)
+            if field < 0 { return compiler_fail(s, "unknown owned struct field") }
             if field == 0 && s.field_left_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
             if field == 1 && s.field_right_live[slot] != 1 { return compiler_fail(s, "use of moved pair field") }
             if compiler_conflict_at(s, slot, field, true) { return compiler_fail(s, "cannot write pair field during a borrow") }
@@ -1298,7 +1304,7 @@ func compiler_compile(string source) compiler_state {
     function_return_params := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_starts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_param_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, function_name: "", function_main: false }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_total: 0, function_count: 0, struct_field_left: "", struct_field_right: "", function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }

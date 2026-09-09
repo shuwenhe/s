@@ -57,15 +57,19 @@ SRC
 cat >"$work/struct_pair.s" <<'SRC'
 package structs
 struct Pair {
-    left box
-    right box
+    first box
+    second box
 }
 func sum(Pair p) int {
-    return *p.left + *p.right
+    return *p.first + *p.second
 }
 func main() int {
     {
         p := Pair(box(20), box(22))
+        q := &p.first
+        assert(*q == 20)
+        drop(q)
+        *p.second = 22
         assert(sum(p) == 42)
     }
     assert(live_allocations() == 0)
