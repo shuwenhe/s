@@ -143,6 +143,10 @@ check_diagnostic struct_shape 'package bad
 struct pair { value box }
 func main() int { return 0 }'
 
+check_diagnostic struct_int_field 'package bad
+struct Mixed { count int; value box }
+func main() int { return 0 }'
+
 cat >"$work/struct_mismatch.s" <<'SRC'
 package bad
 struct Pair { first box; second box }
