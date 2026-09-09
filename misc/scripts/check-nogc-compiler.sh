@@ -339,6 +339,53 @@ func main() int {
 }
 SRC
 
+cat >"$work/struct_owned_fields_scope_exit.s" <<'SRC'
+package fields
+struct Pair { left box; right box }
+func main() int {
+    {
+        p := Pair(box(1), box(2))
+        assert(live_allocations() == 3)
+    }
+    assert(live_allocations() == 0)
+    return 42
+}
+SRC
+
+cat >"$work/struct_owned_fields_early_return.s" <<'SRC'
+package fields
+struct Pair { left box; right box }
+func main() int {
+    p := Pair(box(1), box(2))
+    return 42
+}
+SRC
+
+cat >"$work/struct_owned_fields_loop.s" <<'SRC'
+package fields
+struct Pair { left box; right box }
+func main() int {
+    i := 0
+    while i < 2 {
+        p := Pair(box(i), box(i))
+        assert(live_allocations() == 3)
+        i = i + 1
+    }
+    assert(live_allocations() == 0)
+    return 42
+}
+SRC
+
+cat >"$work/struct_custom_drop_with_fields.s" <<'SRC'
+package fields
+struct Pair { left box; right box }
+func (Pair* p) drop() { println("Pair.drop") }
+func main() int {
+    p := Pair(box(1), box(2))
+    return 42
+}
+SRC
+
 "$root/bin/s" "$work/ownership.s" -o "$work/ownership"
 set +e
 "$work/ownership"
