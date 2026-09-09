@@ -311,7 +311,7 @@ func s_dwarf_line_program(s_dwarf_range[] ranges) u8[] {
 }
 
 func s_unwind_cfi(int cfa_register, int cfa_offset) u8[] {
-    
+
     data := u8[] { 0x0c, u8(cfa_register), u8(cfa_offset) }
     data
 }

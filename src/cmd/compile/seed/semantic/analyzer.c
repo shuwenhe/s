@@ -885,7 +885,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			}
 			if (lhs_type) {
 				const char *resolved = NULL;
-				/* Preserve explicit record-field annotations even if an earlier inferred pass cached any. */
+
 				if (strcmp(lookup_type, "lexer") == 0 && strcmp(node->as.member_expr.member, "source") == 0) {
 					*out_type = TYPE_STRING;
 					return 1;
@@ -959,7 +959,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				return 0;
 			}
 			if (lhs_type && strcmp(lhs_type, TYPE_STRING) == 0) {
-				/* S models a character as a one-character string. */
+
 				*out_type = TYPE_STRING;
 				return 1;
 			}
@@ -1377,7 +1377,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 	}
 	switch (node->kind) {
 		case AST_PROGRAM:
-			/* Register declared record layouts before analyzing any function bodies. */
+
 			for (i = 0; i < node->as.program.statements.len; i++) {
 				ast_node *decl = node->as.program.statements.data[i];
 				if (decl->kind == AST_LET_STMT && decl->as.let_stmt.type_name &&
@@ -1657,7 +1657,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				return 0;
 			}
 			if (node->as.return_stmt.values.len > 0 && ctx->current_return_type && strchr(ctx->current_return_type, ',')) {
-				/* Tuple returns are represented as a primary value plus trailing values. */
+
 				if (!analyze_expr(ctx, node->as.return_stmt.value, &expr_type)) return 0;
 				for (i = 0; i < node->as.return_stmt.values.len; i++) {
 					if (!analyze_expr(ctx, node->as.return_stmt.values.data[i], &expr_type)) return 0;
