@@ -52,6 +52,8 @@ struct compiler_state {
     string[] struct_names
     string[] struct_field_lefts
     string[] struct_field_rights
+    int[] struct_field_left_kinds
+    int[] struct_field_right_kinds
     int struct_count
     string function_name
     bool function_main
@@ -190,6 +192,18 @@ func compiler_is_struct_type(string token) bool {
     return compiler_ident(token) && __host_char_at(token, 0) >= "A" && __host_char_at(token, 0) <= "Z"
 }
 
+func compiler_type_kind(string token) int {
+    if token == "int" { return 1 }
+    if token == "box" { return 2 }
+    if token == "ref" { return 3 }
+    if token == "mutref" { return 4 }
+    if token == "pair" { return 5 }
+    if token == "slice" { return 9 }
+    if token == "mutslice" { return 16 }
+    if token == "string" { return 17 }
+    return 0
+}
+
 func compiler_find_struct(compiler_state initial, string name) int {
     s := initial
     int i = s.struct_count - 1
@@ -209,22 +223,30 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     if s.struct_count >= 8 { return compiler_fail(s, "too many structs") }
     s = compiler_next(s)
     s = compiler_expect(s, "{")
-    if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields must be named owned boxes") }
+    if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields must be named") }
     string left_name = s.token
     s = compiler_next(s)
-    s = compiler_expect(s, "box")
+    int left_kind = compiler_type_kind(s.token)
+    if left_kind == 0 { return compiler_subset_fail(s, "struct field type is not supported") }
+    if left_kind != 2 { return compiler_subset_fail(s, "struct field metadata is recorded, but only box fields can be lowered today") }
+    s = compiler_next(s)
     s = compiler_optional_semicolon(s)
-    if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields must be named owned boxes") }
+    if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields must be named") }
     string right_name = s.token
     if right_name == left_name { return compiler_subset_fail(s, "struct fields must have distinct names") }
     s = compiler_next(s)
-    s = compiler_expect(s, "box")
+    int right_kind = compiler_type_kind(s.token)
+    if right_kind == 0 { return compiler_subset_fail(s, "struct field type is not supported") }
+    if right_kind != 2 { return compiler_subset_fail(s, "struct field metadata is recorded, but only box fields can be lowered today") }
+    s = compiler_next(s)
     s = compiler_optional_semicolon(s)
     if s.token != "}" { return compiler_subset_fail(s, "structs currently support exactly two owned box fields") }
     s = compiler_expect(s, "}")
     s.struct_names[s.struct_count] = struct_name
     s.struct_field_lefts[s.struct_count] = left_name
     s.struct_field_rights[s.struct_count] = right_name
+    s.struct_field_left_kinds[s.struct_count] = left_kind
+    s.struct_field_right_kinds[s.struct_count] = right_kind
     s.struct_count = s.struct_count + 1
     return compiler_optional_semicolon(s)
 }
@@ -1360,7 +1382,9 @@ func compiler_compile(string source) compiler_state {
     struct_names := ["", "", "", "", "", "", "", ""];
     struct_field_lefts := struct_names
     struct_field_rights := struct_names
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_count: 0, function_name: "", function_main: false }
+    struct_field_left_kinds := function_returns
+    struct_field_right_kinds := function_returns
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
