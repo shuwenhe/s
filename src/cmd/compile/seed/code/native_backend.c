@@ -135,6 +135,7 @@ static bool write_runner_c_file(FILE *out, const char *ir_text, compile_error *e
 		"}\n\n"
 		"static void print_usage(const char *argv0) {\n"
 		"    fprintf(stderr, \"usage:\\n\");\n"
+		"    fprintf(stderr, \"  %%s <input.s>\\n\", argv0);\n"
 		"    fprintf(stderr, \"  %%s <input.s> <output.ir>\\n\", argv0);\n"
 		"    fprintf(stderr, \"  %%s --emit-bin <input.ir> <output.bin>\\n\", argv0);\n"
 		"    fprintf(stderr, \"  %%s --emit-aot <input.ir> <output.bin>\\n\", argv0);\n"

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
 #include "code/target.h"
 #include "error/error.h"
 #include "intermediate/ir.h"
@@ -385,6 +387,7 @@ static bool seed_link_ir_files(const char *output_path, int input_count, char **
 #ifndef SEED_COMPILE_ONLY
 static void print_usage(const char *argv0) {
 	fprintf(stderr, "usage:\n");
+	fprintf(stderr, "  %s <input.s>\n", argv0);
 	fprintf(stderr, "  %s <input.s> <output.ir>\n", argv0);
 	fprintf(stderr, "  %s ir <input.s> -o <output.ir>\n", argv0);
 	fprintf(stderr, "  %s --emit-bin <input.ir> <output.bin>\n", argv0);
@@ -402,6 +405,36 @@ static void print_usage(const char *argv0) {
 	fprintf(stderr, "  %s --dump-ast <input.s> <output.ast>\n", argv0);
 	fprintf(stderr, "  %s --link-ir <output.ir> <input.ir>...\n", argv0);
 	fprintf(stderr, "  %s --compile-unit <output.ir> <input.s>...\n", argv0);
+}
+static bool default_binary_path_from_source(const char *input_path, char *output_path, size_t output_cap, compile_error *err) {
+	size_t len;
+	if (!input_path || !*input_path || !output_path || output_cap == 0) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "invalid source path");
+		return false;
+	}
+	len = strlen(input_path);
+	if (len > 2 && strcmp(input_path + len - 2, ".s") == 0) {
+		len -= 2;
+	}
+	if (len == 0 || len >= output_cap) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "default output path is too long");
+		return false;
+	}
+	memcpy(output_path, input_path, len);
+	output_path[len] = '\0';
+	return true;
+}
+static bool seed_compile_source_to_binary(const char *input_path, const char *output_path, compile_error *err) {
+	char temp_ir[256];
+	bool ok = false;
+	snprintf(temp_ir, sizeof(temp_ir), "/tmp/s_seed_cli_%ld_%ld.ir", (long)getpid(), (long)time(NULL));
+	if (!seed_compile_file(input_path, temp_ir, err)) {
+		remove(temp_ir);
+		return false;
+	}
+	ok = emit_native_from_ir_file(temp_ir, output_path, err);
+	remove(temp_ir);
+	return ok;
 }
 int main(int argc, char **argv) {
 	compile_error err;
@@ -601,6 +634,19 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 		printf("bootstrap self-host check passed (stage2 IR == stage3 IR)\n");
+		return 0;
+	}
+	if (argc == 2) {
+		char output_path[1024];
+		if (!default_binary_path_from_source(argv[1], output_path, sizeof(output_path), &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		if (!seed_compile_source_to_binary(argv[1], output_path, &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("compiled %s -> %s\n", argv[1], output_path);
 		return 0;
 	}
 	if (argc != 3) {
