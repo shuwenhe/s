@@ -47,62 +47,62 @@ func (cp compiler_pipeline*) analyze_function(func_idx i32) {
     if func_idx < 0 || func_idx >= i32(len(cp.functions)) {
         return
     }
-    
+
     func := cp.functions[func_idx]
-    
+
     func.build_ssa()
-    
+
     num_blocks := i32(len(func.blocks))
-    
+
     if cp.dominators[func_idx] == nil {
         cp.dominators[func_idx] = new_dominator_tree(num_blocks)
-        
+
         preds := make(i32[][], num_blocks)
         for i := i32(0); i < num_blocks; i += 1 {
             preds[i] = func.blocks[i].predecessors
         }
-        
+
         cp.dominators[func_idx].compute_dominators(preds, func.entry_block)
-        
+
         succs := make(i32[][], num_blocks)
         for i := i32(0); i < num_blocks; i += 1 {
             succs[i] = func.blocks[i].successors
         }
         cp.dominators[func_idx].compute_dominance_frontier(succs, preds)
     }
-    
+
     if cp.liveness_analyses[func_idx] == nil {
         num_values := i32(len(func.values))
         cp.liveness_analyses[func_idx] = new_liveness_analyzer(num_values, num_blocks)
-        
+
         for i := i32(0); i < num_blocks; i += 1 {
             block := func.blocks[i]
             for _, val := range block.values {
                 cp.liveness_analyses[func_idx].mark_use(i, val.id)
             }
         }
-        
+
         succs := make(i32[][], num_blocks)
         for i := i32(0); i < num_blocks; i += 1 {
             succs[i] = func.blocks[i].successors
         }
         cp.liveness_analyses[func_idx].compute_liveness(succs)
     }
-    
+
     if cp.alias_analyses[func_idx] == nil {
         num_values := i32(len(func.values))
         cp.alias_analyses[func_idx] = new_alias_analysis(num_values)
     }
-    
+
     if cp.write_barriers[func_idx] == nil {
         num_values := i32(len(func.values))
         cp.write_barriers[func_idx] = new_wb_inserter(num_values)
     }
-    
+
     if cp.debug_propagators[func_idx] == nil {
         cp.debug_propagators[func_idx] = new_debug_loc_propagator()
     }
-    
+
     cp.computed[func_idx] = true
 }
 
@@ -144,10 +144,10 @@ func (cp compiler_pipeline*) get_debug_info(func_idx i32) debug_loc_propagator* 
 func (cp compiler_pipeline*) run_optimization_pipeline() {
     for i := i32(0); i < i32(len(cp.functions)); i += 1 {
         cp.analyze_function(i)
-        
+
         func := cp.functions[i]
         func.eliminate_dead_code()
-        
+
         liveness := cp.get_liveness_info(i)
         if liveness != nil {
             for block_id := i32(0); block_id < i32(len(func.blocks)); block_id += 1 {
@@ -178,7 +178,7 @@ func (cp compiler_pipeline*) emit_debug_info() string {
 func (cp compiler_pipeline*) to_string() string {
     s := "Compiler Optimization Pipeline:\n"
     s += "Functions: " + string(i32(len(cp.functions))) + "\n"
-    
+
     for i := i32(0); i < i32(len(cp.functions)); i += 1 {
         if cp.functions[i] != nil {
             s += "  [" + string(i) + "] " + cp.functions[i].name
@@ -188,6 +188,6 @@ func (cp compiler_pipeline*) to_string() string {
             s += "\n"
         }
     }
-    
+
     s
 }

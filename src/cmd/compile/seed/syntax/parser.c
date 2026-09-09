@@ -678,7 +678,7 @@ static ast_node *parse_call(parser *p) {
 		if (next_tok && last_tok && next_tok->pos.line > last_tok->pos.line) {
 			break;
 		}
-		/* S uses a postfix star when passing a mutable value by pointer. */
+
 		if (check(p, TOKEN_STAR) && peek_ahead(p, 1) &&
 			(peek_ahead(p, 1)->type == TOKEN_RPAREN ||
 			 peek_ahead(p, 1)->type == TOKEN_COMMA ||
@@ -701,7 +701,7 @@ static ast_node *parse_call(parser *p) {
 				return NULL;
 			}
 			call->as.call_expr.callee = expr;
-			/* make's first argument is a type, not a runtime expression. */
+
 			if (expr->kind == AST_IDENT_EXPR &&
 				strcmp(expr->as.ident_expr.name, "make") == 0 &&
 				(check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_LBRACKET))) {
@@ -1114,7 +1114,7 @@ static ast_node *parse_assign_declare_statement(parser *p) {
 static ast_node *parse_var_binding_statement(parser *p) {
 	ast_node *node = ast_new(AST_LET_STMT, peek(p)->pos);
 	if (!node) return NULL;
-	/* `var name = expr` is inferred, unlike a typed `name type = expr`. */
+
 	if (!expect(p, TOKEN_IDENTIFIER, "variable name")) {
 		ast_free(node);
 		return NULL;
@@ -1826,7 +1826,7 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 		p->current = saved;
 		return 0;
 	}
-	/* S permits an inferred pointer parameter written as `value*`. */
+
 	if (last_ident == start && p->current >= start) {
 		size_t j = last_ident + 1;
 		int pointer_suffix = 0;

@@ -67,11 +67,11 @@ func liveness_analyzer_new(int block_count, int var_count) liveness_analyzer* {
 
 func (analyzer* liveness_analyzer) compute_block_gen_kill(block[] blocks, int block_id) int {
     block := blocks[block_id]
-    
+
     i := 0
     for i < len(block.values) {
         v := block.values[i]
-        
+
         j := 0
         for j < len(v.args) {
             arg_id := v.args[j]
@@ -82,37 +82,37 @@ func (analyzer* liveness_analyzer) compute_block_gen_kill(block[] blocks, int bl
             }
             j = j + 1
         }
-        
+
         if v.id >= 0 && v.id < analyzer.var_count {
             analyzer.block_killed[block_id][v.id] = 1
         }
-        
+
         i = i + 1
     }
-    
+
     0
 }
 
 func (analyzer* liveness_analyzer) compute_live_ranges_iterative(block[] blocks) int {
     changed := 1
-    
+
     for changed == 1 {
         changed = 0
-        
+
         i := 0
         for i < analyzer.block_count {
             block := blocks[i]
-            
+
             int[analyzer.var_count] new_live_in
             int[analyzer.var_count] new_live_out
-            
+
             j := 0
             for j < analyzer.var_count {
                 new_live_in[j] = analyzer.block_used[i][j]
                 new_live_out[j] = 0
                 j = j + 1
             }
-            
+
             j = 0
             for j < len(block.values) {
                 v := block.values[j]
@@ -121,11 +121,11 @@ func (analyzer* liveness_analyzer) compute_live_ranges_iterative(block[] blocks)
                 }
                 j = j + 1
             }
-            
+
             succ_idx := 0
             for succ_idx < len(block.succs) {
                 succ_id := block.succs[succ_idx]
-                
+
                 k := 0
                 for k < analyzer.var_count {
                     if analyzer.block_liveness[succ_id].live_in[k] == 1 {
@@ -133,10 +133,10 @@ func (analyzer* liveness_analyzer) compute_live_ranges_iterative(block[] blocks)
                     }
                     k = k + 1
                 }
-                
+
                 succ_idx = succ_idx + 1
             }
-            
+
             k := 0
             for k < analyzer.var_count {
                 if new_live_in[k] != analyzer.block_liveness[i].live_in[k] {
@@ -147,14 +147,14 @@ func (analyzer* liveness_analyzer) compute_live_ranges_iterative(block[] blocks)
                 }
                 k = k + 1
             }
-            
+
             analyzer.block_liveness[i].live_in = new_live_in
             analyzer.block_liveness[i].live_out = new_live_out
-            
+
             i = i + 1
         }
     }
-    
+
     0
 }
 
@@ -164,9 +164,9 @@ func (analyzer* liveness_analyzer) analyze(block[] blocks) int {
         analyzer.compute_block_gen_kill(blocks, i)
         i = i + 1
     }
-    
+
     analyzer.compute_live_ranges_iterative(blocks)
-    
+
     0
 }
 
@@ -174,11 +174,11 @@ func (analyzer* liveness_analyzer) is_live_at_point(int var_id, int block_id, in
     if analyzer.block_liveness[block_id].live_in[var_id] == 1 {
         return 1
     }
-    
+
     if analyzer.block_liveness[block_id].live_out[var_id] == 1 {
         return 1
     }
-    
+
     return 0
 }
 
@@ -230,23 +230,23 @@ func (frame* stack_frame) get_var_stack_location(int var_id) int {
         }
         i = i + 1
     }
-    
+
     frame.slot_to_var[frame.slot_count] = var_id
     slot_offset := frame.spill_area_offset + frame.slot_count * 8
     frame.slot_count = frame.slot_count + 1
-    
+
     slot_offset
 }
 
 func (frame* stack_frame) eliminate_dead_slots() int {
     int[256] live_vars
-    
+
     i := 0
     for i < frame.slot_count {
         live_vars[i] = 1
         i = i + 1
     }
-    
+
     i = 0
     for i < frame.slot_count {
         if live_vars[i] == 0 {
@@ -254,10 +254,10 @@ func (frame* stack_frame) eliminate_dead_slots() int {
         }
         i = i + 1
     }
-    
+
     frame.total_size = frame.spill_area_offset + frame.slot_count * 8
     frame.total_size = align_to_16(frame.total_size)
-    
+
     0
 }
 
@@ -265,7 +265,7 @@ func (frame* stack_frame) omit_frame_pointer() int {
     if frame.total_size <= 128 {
         return 1
     }
-    
+
     return 0
 }
 
@@ -277,6 +277,6 @@ func (frame* stack_frame) verify_alignment() int {
     if frame.total_size & 15 == 0 {
         return 1
     }
-    
+
     return 0
 }
