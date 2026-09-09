@@ -128,8 +128,8 @@ After `make selfhost`, add the compiler to your current shell's PATH:
 ```sh
 export PATH="$PWD/bin:$PATH"
 cp test/cli/hello.s hello.s
-s hello.s                 # writes ./a.out
-./a.out
+s hello.s                 # writes ./hello
+./hello
 s hello.s -o hello        # explicit executable name
 ./hello
 s -o hello hello.s        # -o may also precede the input
@@ -140,6 +140,12 @@ The existing `s build hello.s -o hello` command remains supported. Run
 This interface compiles one S source file using the existing Linux/amd64 native
 backend and its supported language subset; it does not compile C/C++ sources
 or implement the full GCC option set.
+
+The default driver uses the ownership compiler path for supported programs:
+S source is lowered to C, then the host C compiler links it with
+`src/runtime/compiler_runtime.h`. That runtime boundary uses ownership and
+explicit drops; generated binaries are checked to avoid S GC and seed runtime
+symbols.
 
 ## Build the native self-hosted compiler
 
@@ -207,7 +213,14 @@ make seed-runtime-regression
 make seed-network-tests
 make seed-c-abi-test
 make selfhost-lexer-check
+make compiler-check
+make benchmark
 ```
+
+`make benchmark` builds the no-GC S benchmark beside C, Rust when `rustc` is
+available, and Go when `go` is available. Treat its output as measurement data:
+do not claim S is faster than Rust or C unless repeated runs on the target
+machine support that claim.
 
 Use `make help` to list the primary build and test targets.
 

@@ -109,7 +109,23 @@ func compiler_next(compiler_state initial) compiler_state {
     int start = s.pos
     string c = __host_char_at(s.source, s.pos)
     s.pos = s.pos + 1
-    if compiler_alpha(c) || compiler_digit(c) {
+    if c == "\"" {
+        bool escaped = false
+        for s.pos < n {
+            string next_char = __host_char_at(s.source, s.pos)
+            s.pos = s.pos + 1
+            if escaped {
+                escaped = false
+            } else if next_char == "\\" {
+                escaped = true
+            } else if next_char == "\"" {
+                break
+            } else if next_char == "\n" {
+                return compiler_fail(s, "unterminated string literal")
+            }
+        }
+        if __host_char_at(s.source, s.pos - 1) != "\"" { return compiler_fail(s, "unterminated string literal") }
+    } else if compiler_alpha(c) || compiler_digit(c) {
         for s.pos < n {
             string next_char = __host_char_at(s.source, s.pos)
             if !compiler_alpha(next_char) && !compiler_digit(next_char) { break }
@@ -811,6 +827,13 @@ func compiler_statement(compiler_state initial) compiler_state {
         return body
     }
     if s.token == "return" {
+        if s.return_kind == 0 {
+            s = compiler_next(s)
+            if s.token == ";" { s = compiler_next(s) }
+            s.code = s.code + compiler_cleanup(s, 0) + "return compiler_finish(0);\n"
+            s.terminated = 1
+            return s
+        }
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != s.return_kind { return compiler_fail(s, "return type mismatch") }
         if s.return_kind >= 3 && s.return_kind <= 4 && (s.value_slot < 0 || s.value_slot >= s.parameter_count) {
@@ -852,6 +875,16 @@ func compiler_statement(compiler_state initial) compiler_state {
         if s.function_main { finish = "return compiler_finish(compiler_result);" }
         s.code = s.code + "{ " + result_type + "compiler_result = " + s.value + ";\n" + compiler_cleanup(s, 0) + finish + " }\n"
         s.terminated = 1
+        return s
+    }
+    if s.token == "println" {
+        s = compiler_expect(compiler_next(s), "(")
+        if len(s.token) < 2 || __host_char_at(s.token, 0) != "\"" {
+            return compiler_fail(s, "println currently expects a string literal")
+        }
+        s.code = s.code + "fputs(" + s.token + ", stdout);\nfputc('\\n', stdout);\n"
+        s = compiler_expect(compiler_next(s), ")")
+        if s.token == ";" { s = compiler_next(s) }
         return s
     }
     if s.token == "break" || s.token == "continue" {
@@ -1132,7 +1165,11 @@ func compiler_compile(string source) compiler_state {
     s = compiler_expect(s, "main")
     s = compiler_expect(s, "(")
     s = compiler_expect(s, ")")
-    s = compiler_expect(s, "int")
+    s.return_kind = 0
+    if s.token == "int" {
+        s.return_kind = 1
+        s = compiler_next(s)
+    }
     s.count = 0
     s.depth = 0
     s.loop_floor = -1
@@ -1140,7 +1177,6 @@ func compiler_compile(string source) compiler_state {
     s.terminated = 0
     s.function_name = "main"
     s.function_main = true
-    s.return_kind = 1
     s.code = s.code + "int main(void)\n{\n"
     s = compiler_block(s)
     s.code = s.code + "return compiler_finish(0);\n}\n"

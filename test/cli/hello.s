@@ -1,6 +1,6 @@
 package main
 
 func main() int {
-    println("Hello, world!\n")
-    return 0
+    println("Hello, world!")
+    return 0;
 }

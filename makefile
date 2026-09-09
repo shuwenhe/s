@@ -742,7 +742,7 @@ selfhost-runtime-check:
 
 .PHONY: benchmark help target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test darwin-arm64-hosted-compiler darwin-arm64-slice-check test-quick test-full build-parallel selfhost-full
 
-benchmark: seed-compiler-bin
+benchmark: compiler
 	@sh test/benchmarks/run.sh
 
 verify-true-selfhost:
@@ -839,13 +839,12 @@ compiler: seed-compiler-bin
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \
 	  S_TARGET_ARCH=$$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/') \
 	  ./bin/s_seed --emit-bin .bootstrap/compiler/compiler.ir ./bin/s_compiler
+	@cp misc/scripts/s-driver.sh ./bin/s
+	@chmod +x ./bin/s
 
 compiler-check: compiler
 	@$(MAKE) compiler-s-check
 
 compiler-s-check: compiler
 	@mkdir -p .bootstrap/compiler
-	@S_PROJECT_ROOT=$(CURDIR) ./bin/s build test/compiler/check.s -o .bootstrap/compiler/check
-	@S_PROJECT_ROOT=$(CURDIR) ./.bootstrap/compiler/check
-	@S_PROJECT_ROOT=$(CURDIR) ./bin/s build test/compiler/call_regression.s -o .bootstrap/compiler/call_regression
-	@S_PROJECT_ROOT=$(CURDIR) ./.bootstrap/compiler/call_regression
+	@misc/scripts/check-nogc-compiler.sh
