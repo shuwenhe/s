@@ -20,8 +20,7 @@ struct compiler_state {
     int[] loan_fields
     int[] array_lengths
     int[] struct_ids
-    int[] field_left_live
-    int[] field_right_live
+    int[][] field_state
     int count
     int loop_floor
     int loop_cleanup
@@ -392,16 +391,18 @@ func compiler_struct_field_struct(compiler_state initial, int struct_id, int fie
 
 func compiler_field_live(compiler_state initial, int slot, int field) int {
     s := initial
-    if field == 0 { return s.field_left_live[slot] }
-    if field == 1 { return s.field_right_live[slot] }
+    if slot >= 0 && slot < len(s.field_state) && field >= 0 && field < len(s.field_state[slot]) {
+        return s.field_state[slot][field]
+    }
     return 1
 }
 
 func compiler_set_field_moved(compiler_state initial, int slot, int field) compiler_state {
     s := initial
-    if field == 0 { s.field_left_live[slot] = 0; return s }
-    if field == 1 { s.field_right_live[slot] = 0; return s }
-    return compiler_fail(s, "partial move currently supports the first two owned fields")
+    if slot >= 0 && slot < len(s.field_state) && field >= 0 && field < len(s.field_state[slot]) {
+        s.field_state[slot][field] = 0
+    }
+    return s
 }
 
 func compiler_move_field_expr(compiler_state initial, int origin, int field, int kind, int struct_id) string {
@@ -1064,7 +1065,16 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     s.parents[slot] = -1
     s.loan_fields[slot] = -1
     s.array_lengths[slot] = 0
-    if s.value_kind == 5 { s.field_left_live[slot] = 1; s.field_right_live[slot] = 1 }
+    if s.value_kind == 5 {
+        struct_id := s.value_struct_id
+        field_count := 2
+        if struct_id >= 0 { field_count = s.struct_field_counts[struct_id] }
+        fi := 0
+        for fi < field_count {
+            s.field_state[slot][fi] = 1
+            fi = fi + 1
+        }
+    }
     if s.value_kind == 6 { s.array_lengths[slot] = s.value_array_length }
     if s.value_kind >= 3 && s.value_kind <= 4 {
         s.roots[slot] = origin
@@ -1535,7 +1545,16 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         s.loan_fields[pi] = -1
         s.array_lengths[pi] = 0
         if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { s.array_lengths[pi] = -1 }
-        if s.kinds[pi] == 5 { s.field_left_live[pi] = 1; s.field_right_live[pi] = 1 }
+        if s.kinds[pi] == 5 {
+            struct_id := s.function_param_structs[start + pi]
+            field_count := 2
+            if struct_id >= 0 { field_count = s.struct_field_counts[struct_id] }
+            fi := 0
+            for fi < field_count {
+                s.field_state[pi][fi] = 1
+                fi = fi + 1
+            }
+        }
         s.count = s.count + 1
         pi = pi + 1
     }
@@ -1625,8 +1644,17 @@ func compiler_compile(string source) compiler_state {
     live := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     roots := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     parents := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    field_left_live := live
-    field_right_live := live
+    field_state := make([][]int, 64)
+    i := 0
+    for i < 64 {
+        field_state[i] = make([]int, 8)
+        j := 0
+        for j < 8 {
+            field_state[i][j] = 1
+            j = j + 1
+        }
+        i = i + 1
+    }
     loan_fields := roots
     array_lengths := roots
     struct_ids := roots
@@ -1649,7 +1677,7 @@ func compiler_compile(string source) compiler_state {
     struct_field_starts := function_returns
     struct_field_counts := function_counts
     struct_custom_drops := function_returns
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_left_live: field_left_live, field_right_live: field_right_live, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
