@@ -29,7 +29,7 @@ func rt_init(int heap_size) {
     rt_context.allocator.total_allocated = 0
     rt_context.allocator.block_list = -1
     rt_context.allocator.blocks = memory_block[]()
-    
+
     rt_context.exit_code = 0
 }
 
@@ -37,7 +37,7 @@ func rt_malloc(int size) int {
     if size <= 0 {
         return -1
     }
-    
+
     i := 0
     for i < len(rt_context.allocator.blocks) {
         block := rt_context.allocator.blocks[i]

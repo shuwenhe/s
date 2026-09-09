@@ -426,8 +426,8 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			if (!lower_expr(b, expr->as.unary_expr.operand, rhs)) {
 				return false;
 			}
-			/* Postfix `value*` is an ABI-level pointer argument; the value's
-			 * storage operand is already the address used by the native backend. */
+
+
 			if (expr->as.unary_expr.op == TOKEN_STAR) {
 				snprintf(out, IR_OPERAND_CAP, "%s", rhs);
 				return true;

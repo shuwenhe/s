@@ -1,35 +1,26 @@
 package macho_backend
 
-// Mach-O二进制格式生成 - 支持macOS平台
-// 支持ARM64 (Apple Silicon) 和 x86_64架构
-
-// Mach-O文件头常量
 const (
-    MACHO_MAGIC_64 = 0xfeedf00d      // 64-bit Mach-O魔数
-    MACHO_MAGIC_ARM64 = 0xfeedf00d  // ARM64魔数
-    MACHO_CIGAM_64 = 0xcefaedfe      // 小端64位魔数
-    
-    // CPU类型
+    MACHO_MAGIC_64 = 0xfeedf00d
+    MACHO_MAGIC_ARM64 = 0xfeedf00d
+    MACHO_CIGAM_64 = 0xcefaedfe
+
     CPU_TYPE_X86_64 = 7
     CPU_TYPE_ARM64 = 0x0100000c
-    
-    // CPU子类型
+
     CPU_SUBTYPE_X86_64_ALL = 3
     CPU_SUBTYPE_ARM64_ALL = 0
-    
-    // Mach-O文件类型
-    MH_EXECUTE = 2  // 可执行文件
-    MH_OBJECT = 1   // 目标文件
-    
-    // 加载命令类型
+
+    MH_EXECUTE = 2
+    MH_OBJECT = 1
+
     LC_SEGMENT = 0x1
     LC_SEGMENT_64 = 0x19
     LC_MAIN = 0x28
     LC_DYLD_INFO_ONLY = 0x22
     LC_SYMTAB = 0x2
     LC_DYSYMTAB = 0xb
-    
-    // 内存访问权限
+
     VM_PROT_READ = 1
     VM_PROT_WRITE = 2
     VM_PROT_EXECUTE = 4
@@ -49,7 +40,7 @@ struct macho_header {
 struct macho_segment_64 {
     uint cmd
     uint cmd_size
-    string seg_name    // 16字节
+    string seg_name
     uint64 vm_addr
     uint64 vm_size
     uint64 file_offset
@@ -61,8 +52,8 @@ struct macho_segment_64 {
 }
 
 struct macho_section_64 {
-    string sect_name       // 16字节
-    string seg_name        // 16字节
+    string sect_name
+    string seg_name
     uint64 addr
     uint64 size
     uint offset
@@ -91,10 +82,10 @@ struct macho_main_cmd {
 }
 
 struct macho_builder {
-    string arch          // "arm64" 或 "x86_64"
-    string[] code_text   // 代码段
-    string[] data_text   // 数据段
-    string[] rodata_text // 只读数据
+    string arch
+    string[] code_text
+    string[] data_text
+    string[] rodata_text
     int code_offset
     int data_offset
     int rodata_offset
@@ -129,7 +120,7 @@ func (b* macho_builder) add_code(string asm) {
 }
 
 func (b* macho_builder) add_function_arm64(string name, string body) {
-    // ARM64汇编格式
+
     func_asm := ".globl _" + name + "\n"
     func_asm = func_asm + "_" + name + ":\n"
     func_asm = func_asm + "    sub sp, sp, #16\n"
@@ -140,7 +131,7 @@ func (b* macho_builder) add_function_arm64(string name, string body) {
 }
 
 func (b* macho_builder) add_function_x86_64(string name, string body) {
-    // x86_64汇编格式 (macOS ABI)
+
     func_asm := ".globl _" + name + "\n"
     func_asm = func_asm + "_" + name + ":\n"
     func_asm = func_asm + "    push rbp\n"
@@ -162,7 +153,7 @@ func (b* macho_builder) add_symbol(string name) int {
 }
 
 func macho_uint32_to_bytes(uint val) string {
-    // 转换32位整数为小端字节
+
     byte1 := val % 256
     byte2 := (val / 256) % 256
     byte3 := (val / 65536) % 256
@@ -171,14 +162,14 @@ func macho_uint32_to_bytes(uint val) string {
 }
 
 func macho_uint64_to_bytes(uint64 val) string {
-    // 转换64位整数为小端字节
+
     low := uint(val % 4294967296)
     high := uint(val / 4294967296)
     return macho_uint32_to_bytes(low) + macho_uint32_to_bytes(high)
 }
 
 func chr(int b) string {
-    // 将字节转为字符
+
     if b < 0 || b > 255 { return "\x00" }
     chars := "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f" +
              "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f" +
@@ -200,7 +191,7 @@ func chr(int b) string {
 }
 
 func (b* macho_builder) pad_string(string s, int len) string {
-    // 填充字符串到指定长度
+
     current_len := len(s)
     if current_len >= len { return s }
     padding := len - current_len
@@ -214,56 +205,43 @@ func (b* macho_builder) pad_string(string s, int len) string {
 }
 
 func (b* macho_builder) write_mach_header(string arch) string {
-    // 写入Mach-O文件头
+
     header := ""
-    
-    // 魔数 (0xfeedf00d - 小端64位)
+
     header = header + macho_uint32_to_bytes(0xcefaedfe)
-    
-    // CPU类型
+
     if arch == "arm64" {
-        header = header + macho_uint32_to_bytes(0x0100000c)  // CPU_TYPE_ARM64
-        header = header + macho_uint32_to_bytes(0)           // CPU_SUBTYPE_ARM64_ALL
+        header = header + macho_uint32_to_bytes(0x0100000c)
+        header = header + macho_uint32_to_bytes(0)
     } else if arch == "x86_64" {
-        header = header + macho_uint32_to_bytes(7)           // CPU_TYPE_X86_64
-        header = header + macho_uint32_to_bytes(3)           // CPU_SUBTYPE_X86_64_ALL
+        header = header + macho_uint32_to_bytes(7)
+        header = header + macho_uint32_to_bytes(3)
     }
-    
-    // 文件类型 (MH_EXECUTE = 2)
+
     header = header + macho_uint32_to_bytes(2)
-    
-    // 加载命令数量 (3: LC_SEGMENT_64, LC_MAIN, LC_SYMTAB)
+
     header = header + macho_uint32_to_bytes(3)
-    
-    // 加载命令大小
+
     header = header + macho_uint32_to_bytes(200)
-    
-    // 标志
-    header = header + macho_uint32_to_bytes(0x200085)  // MH_PIE | MH_NOUNDEFS
-    
-    // 保留字段 (64位特定)
+
+    header = header + macho_uint32_to_bytes(0x200085)
+
     header = header + macho_uint32_to_bytes(0)
-    
+
     return header
 }
 
 func (b* macho_builder) generate_arm64_binary() string {
-    // 为ARM64生成Mach-O二进制
+
     binary := b.write_mach_header("arm64")
-    
-    // TODO: 添加段和节
-    // TODO: 生成目标代码
-    
+
     return binary
 }
 
 func (b* macho_builder) generate_x86_64_binary() string {
-    // 为x86_64生成Mach-O二进制
+
     binary := b.write_mach_header("x86_64")
-    
-    // TODO: 添加段和节
-    // TODO: 生成目标代码
-    
+
     return binary
 }
 

@@ -106,7 +106,7 @@ bool s_target_platform_from_environment(s_target_platform *target, char *detail,
 }
 
 bool s_target_platform_supports_standalone(const s_target_platform *target) {
-	/* darwin/arm64 uses the hosted native path until its direct S backend lands. */
+
 	return target && ((target->os == S_TARGET_OS_LINUX && target->arch == S_TARGET_ARCH_AMD64) ||
 		(target->os == S_TARGET_OS_DARWIN && target->arch == S_TARGET_ARCH_ARM64));
 }

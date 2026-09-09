@@ -55,7 +55,7 @@ func (allocator* register_allocator) compute_live_ranges(value[] all_values, int
     i := 0
     for i < num_values {
         v := all_values[i]
-        
+
         live_range := live_range {
             value_id: v.id,
             start_block: v.block,
@@ -69,10 +69,10 @@ func (allocator* register_allocator) compute_live_ranges(value[] all_values, int
 
         allocator.ranges[allocator.range_count] = &live_range
         allocator.range_count = allocator.range_count + 1
-        
+
         i = i + 1
     }
-    
+
     allocator.range_count
 }
 
@@ -84,27 +84,27 @@ func (allocator* register_allocator) build_interference_graph() int {
         degree: int[allocator.range_count],
         spill_cost: int[allocator.range_count],
     }
-    
+
     i := 0
     for i < graph.node_count {
         graph.adjacency[i] = int[graph.node_count]
         graph.color[i] = -1
         graph.degree[i] = 0
         graph.spill_cost[i] = 0
-        
+
         j := 0
         for j < graph.node_count {
             graph.adjacency[i][j] = 0
             j = j + 1
         }
-        
+
         i = i + 1
     }
-    
+
     i = 0
     for i < allocator.range_count {
         range_i := allocator.ranges[i]
-        
+
         j := i + 1
         for j < allocator.range_count {
             range_j := allocator.ranges[j]
@@ -116,10 +116,10 @@ func (allocator* register_allocator) build_interference_graph() int {
             }
             j = j + 1
         }
-        
+
         i = i + 1
     }
-    
+
     allocator.graph = graph
     0
 }
@@ -142,10 +142,10 @@ func ranges_interfere(live_range* range_a, live_range* range_b) int {
 
 func (allocator* register_allocator) color_graph() int {
     graph := allocator.graph
-    
+
     int[graph.node_count] worklist
     worklist_size := 0
-    
+
     i := 0
     for i < graph.node_count {
         if graph.degree[i] >= allocator.num_regs {
@@ -154,22 +154,22 @@ func (allocator* register_allocator) color_graph() int {
         }
         i = i + 1
     }
-    
+
     int[graph.node_count] simplified
     simplified_count := 0
-    
+
     for worklist_size > 0 {
         worklist_size = worklist_size - 1
         node := worklist[worklist_size]
-        
+
         simplified[simplified_count] = node
         simplified_count = simplified_count + 1
-        
+
         j := 0
         for j < graph.node_count {
             if graph.adjacency[node][j] == 1 {
                 graph.degree[j] = graph.degree[j] - 1
-                
+
                 if graph.degree[j] >= allocator.num_regs {
                     worklist[worklist_size] = j
                     worklist_size = worklist_size + 1
@@ -178,13 +178,13 @@ func (allocator* register_allocator) color_graph() int {
             j = j + 1
         }
     }
-    
+
     i = simplified_count - 1
     for i >= 0 {
         node := simplified[i]
-        
+
         int[allocator.num_regs] used_colors
-        
+
         j := 0
         for j < graph.node_count {
             if graph.adjacency[node][j] == 1 && graph.color[j] != -1 {
@@ -192,7 +192,7 @@ func (allocator* register_allocator) color_graph() int {
             }
             j = j + 1
         }
-        
+
         color := 0
         for color < allocator.num_regs {
             if used_colors[color] == 0 {
@@ -201,16 +201,16 @@ func (allocator* register_allocator) color_graph() int {
             }
             color = color + 1
         }
-        
+
         if graph.color[node] == -1 {
             allocator.spill_list[allocator.spill_count] = node
             allocator.spill_count = allocator.spill_count + 1
             allocator.ranges[node].spilled = 1
         }
-        
+
         i = i - 1
     }
-    
+
     allocator.spill_count
 }
 
@@ -218,17 +218,17 @@ func (allocator* register_allocator) assign_registers() int {
     i := 0
     for i < allocator.range_count {
         range_obj := allocator.ranges[i]
-        
+
         if range_obj.spilled == 0 {
             color := allocator.graph.color[i]
             if color >= 0 && color < allocator.num_regs {
                 range_obj.reg = allocator.available_regs[color]
             }
         }
-        
+
         i = i + 1
     }
-    
+
     allocator.spill_count
 }
 
@@ -236,21 +236,21 @@ func (allocator* register_allocator) perform_move_coalescing() int {
     i := 0
     for i < allocator.range_count {
         range_i := allocator.ranges[i]
-        
+
         j := i + 1
         for j < allocator.range_count {
             range_j := allocator.ranges[j]
-            
+
             if can_coalesce(range_i, range_j) == 1 {
                 range_j.reg = range_i.reg
             }
-            
+
             j = j + 1
         }
-        
+
         i = i + 1
     }
-    
+
     0
 }
 
@@ -258,11 +258,11 @@ func can_coalesce(live_range* range_a, live_range* range_b) int {
     if range_a.start_block != range_b.start_block {
         return 0
     }
-    
+
     if ranges_interfere(range_a, range_b) == 1 {
         return 0
     }
-    
+
     return 1
 }
 
@@ -270,13 +270,13 @@ func (allocator* register_allocator) generate_spill_code(int num_stack_slots) in
     i := 0
     for i < allocator.spill_count {
         spill_node := allocator.spill_list[i]
-        
+
         stack_slot := i
         allocator.ranges[spill_node].reg = -stack_slot - 1
-        
+
         i = i + 1
     }
-    
+
     allocator.spill_count
 }
 
@@ -286,20 +286,20 @@ func (allocator* register_allocator) optimize_allocation_order() int {
         allocator.ranges[i].priority = compute_priority(allocator.ranges[i])
         i = i + 1
     }
-    
+
     sort_by_priority(allocator.ranges, allocator.range_count)
-    
+
     0
 }
 
 func compute_priority(live_range* range_obj) int {
     priority := 0
-    
+
     length := range_obj.end_instr - range_obj.start_instr
     if length > 100 {
         priority = priority + 1
     }
-    
+
     priority
 }
 
@@ -317,7 +317,7 @@ func sort_by_priority(live_range[] ranges, int count) int {
         }
         i = i + 1
     }
-    
+
     0
 }
 
@@ -325,13 +325,13 @@ func (allocator* register_allocator) verify_coloring() int {
     i := 0
     for i < allocator.range_count {
         range_i := allocator.ranges[i]
-        
+
         if range_i.spilled == 0 {
             j := 0
             for j < allocator.range_count {
                 if i != j {
                     range_j := allocator.ranges[j]
-                    
+
                     if range_j.spilled == 0 {
                         if allocator.graph.adjacency[i][j] == 1 {
                             if range_i.reg == range_j.reg {
@@ -340,14 +340,14 @@ func (allocator* register_allocator) verify_coloring() int {
                         }
                     }
                 }
-                
+
                 j = j + 1
             }
         }
-        
+
         i = i + 1
     }
-    
+
     1
 }
 

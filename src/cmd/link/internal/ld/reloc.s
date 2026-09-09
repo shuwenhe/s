@@ -91,7 +91,7 @@ func (rp reloc_processor*) AddSymbol(sym symbol_entry) i32 {
 func (rp reloc_processor*) AllocateGOTEntry(symIndex i32, relocType reloc_type) i64 {
 	offset := rp.GOTOffset
 	rp.GOTOffset += 8 
-	
+
 	reloc := relocation{
 		Offset: offset,
 		Type: relocType,
@@ -103,13 +103,11 @@ func (rp reloc_processor*) AllocateGOTEntry(symIndex i32, relocType reloc_type) 
 }
 
 func (rp reloc_processor*) AllocatePLTEntry(symIndex i32, gotIndex i64) i64 {
-	
+
 	pltSize := i64(16)
 	offset := rp.PLTOffset
 	rp.PLTOffset += pltSize
-	
-	
-	
+
 	offset
 }
 
@@ -120,7 +118,7 @@ func (rp reloc_processor*) AllocateTLSBlock(size i64) i64 {
 }
 
 func (rp reloc_processor*) ResolveSymbols() {
-	
+
 	symbolMap := make(map[string]i32)
 
 	for i, sym := range rp.SymbolTable {
@@ -130,9 +128,9 @@ func (rp reloc_processor*) ResolveSymbols() {
 
 		existing, found := symbolMap[sym.Name]
 		if found {
-			
+
 			existingSym := rp.SymbolTable[existing]
-			
+
 			if sym.Binding == 1 && existingSym.Binding == 2 { 
 				symbolMap[sym.Name] = i32(i)
 			}
@@ -150,23 +148,23 @@ func (rp reloc_processor*) ApplyRelocations(targetBuffer u8[]) error {
 
 		sym := rp.SymbolTable[reloc.SymIndex]
 		targetAddr := reloc.Offset
-		
+
 		if targetAddr < 0 || targetAddr+8 > i64(len(targetBuffer)) {
 			continue
 		}
 
 		value := i64(0)
-		
+
 		switch reloc.Type {
 		case RELOC_ABSOLUTE:
 			value = sym.Value
 		case RELOC_PC_RELATIVE:
 			value = sym.Value - targetAddr
 		case RELOC_GOT:
-			
+
 			value = rp.AllocateGOTEntry(reloc.SymIndex, RELOC_GOT)
 		case RELOC_PLT:
-			
+
 			value = rp.AllocatePLTEntry(reloc.SymIndex, 0)
 		case RELOC_RELATIVE:
 			value = sym.Value + reloc.Addend
@@ -175,7 +173,7 @@ func (rp reloc_processor*) ApplyRelocations(targetBuffer u8[]) error {
 		case RELOC_TLS_IE:
 			value = rp.AllocateGOTEntry(reloc.SymIndex, RELOC_TLS_IE)
 		}
-		
+
 		binary.LittleEndian.PutUint64(targetBuffer[targetAddr:], u64(value))
 	}
 
@@ -184,11 +182,11 @@ func (rp reloc_processor*) ApplyRelocations(targetBuffer u8[]) error {
 
 func (rp reloc_processor*) ValidateRelocations() error {
 	for i, reloc := range rp.Relocs {
-		
+
 		if reloc.SymIndex < 0 || reloc.SymIndex >= i32(len(rp.SymbolTable)) {
 			fmt.Printf("Warning: Invalid symbol index %d in relocation %d\n", reloc.SymIndex, i)
 		}
-		
+
 		if reloc.SectionIndex < 0 || reloc.SectionIndex >= i32(len(rp.SectionTable)) {
 			fmt.Printf("Warning: Invalid section index %d in relocation %d\n", reloc.SectionIndex, i)
 		}
@@ -201,7 +199,7 @@ func (rp reloc_processor*) GenerateDynamicSymtab() symbol_entry[] {
 	dynSyms := make(symbol_entry[], 0)
 
 	for _, sym := range rp.SymbolTable {
-		
+
 		if sym.IsGlobal || sym.IsWeak {
 			dynSyms = append(dynSyms, sym)
 		}
@@ -218,7 +216,7 @@ func (rp reloc_processor*) GenerateRelocationData() u8[] {
 	data := make(u8[], 0)
 
 	for _, reloc := range rp.Relocs {
-		
+
 		buf := make(u8[], 24)
 
 		binary.LittleEndian.PutUint64(buf[0:], u64(reloc.Offset))

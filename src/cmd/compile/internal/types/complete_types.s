@@ -80,13 +80,13 @@ func type_table_new() type_table {
 func type_register_builtin(type_table* table) {
     int_type := type_info { kind: type_int, name: "int", size: 8, align: 8 }
     table.types = append(table.types, int_type)
-    
+
     float_type := type_info { kind: type_float, name: "float", size: 8, align: 8 }
     table.types = append(table.types, float_type)
-    
+
     string_type := type_info { kind: type_string, name: "string", size: 24, align: 8 }
     table.types = append(table.types, string_type)
-    
+
     bool_type := type_info { kind: type_bool, name: "bool", size: 1, align: 1 }
     table.types = append(table.types, bool_type)
 }
@@ -97,7 +97,7 @@ func type_lookup(type_table* table, string name) type_info {
             return table.types[i]
         }
     }
-    
+
     type_info { kind: type_invalid, name: "invalid" }
 }
 
@@ -154,7 +154,7 @@ func type_create_func(type_table* table, string[] params, string[] returns) type
         func_name = func_name + returns[i]
     }
     func_name = func_name + ")"
-    
+
     func_type := type_info { 
         kind: type_func, 
         name: func_name, 
@@ -218,7 +218,7 @@ func type_instantiate_generic(type_table* table, string generic_name, string[] t
         inst_name = inst_name + type_args[i]
     }
     inst_name = inst_name + "]"
-    
+
     type_info { kind: type_generic, name: inst_name }
 }
 
@@ -226,32 +226,32 @@ func type_is_assignable(type_table* table, string from_type, string to_type) int
     if from_type == to_type {
         return 1
     }
-    
+
     from := type_lookup(table, from_type)
     to := type_lookup(table, to_type)
-    
+
     if from.kind == type_invalid || to.kind == type_invalid {
         return 0
     }
-    
+
     if from.kind == type_ptr && to.kind == type_ptr {
         return type_is_assignable(table, from.elem_type, to.elem_type)
     }
-    
+
     return 0
 }
 
 func type_implements_interface(type_table* table, string type_name, string interface_name) int {
     type_type := type_lookup(table, type_name)
     iface := type_lookup(table, interface_name)
-    
+
     if iface.kind != type_interface {
         return 0
     }
-    
+
     for i := 0; i < iface.methods.len(); i = i + 1 {
         iface_method := iface.methods[i]
-        
+
         found := 0
         for j := 0; j < type_type.methods.len(); j = j + 1 {
             type_method := type_type.methods[j]
@@ -260,12 +260,12 @@ func type_implements_interface(type_table* table, string type_name, string inter
                 break
             }
         }
-        
+
         if found == 0 {
             return 0
         }
     }
-    
+
     return 1
 }
 

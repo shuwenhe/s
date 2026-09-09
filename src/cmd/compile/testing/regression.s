@@ -35,10 +35,10 @@ func test_suite_add_test(test_suite* suite, string name, string source, string e
 func test_suite_run(test_suite* suite) int {
     passed := 0
     failed := 0
-    
+
     for i := 0; i < suite.tests.len(); i = i + 1 {
         test := suite.tests[i]
-        
+
         result := run_single_test(&test)
         if result != 0 {
             passed = passed + 1
@@ -46,7 +46,7 @@ func test_suite_run(test_suite* suite) int {
             failed = failed + 1
         }
     }
-    
+
     suite.passed = passed
     suite.failed = failed
     passed
@@ -68,14 +68,14 @@ func regression_add_suite(regression_suite* suite, test_suite ts) {
 func regression_run_all(regression_suite* suite) int {
     total_passed := 0
     total_failed := 0
-    
+
     for i := 0; i < suite.suites.len(); i = i + 1 {
         s := suite.suites[i]
         test_suite_run(&s)
         total_passed = total_passed + s.passed
         total_failed = total_failed + s.failed
     }
-    
+
     suite.total_tests = total_passed + total_failed
     suite.total_passed = total_passed
     total_passed
@@ -124,28 +124,28 @@ func test_compile_error() test_case {
 
 func setup_frontend_tests() test_suite {
     suite := test_suite_new("frontend")
-    
+
     test_suite_add_test(&suite, "lexer", "func f() {}", "OK", 1)
     test_suite_add_test(&suite, "parser", "struct S { int x }", "OK", 1)
     test_suite_add_test(&suite, "semantic", "func f(int x) int { x }", "OK", 1)
-    
+
     suite
 }
 
 func setup_backend_tests() test_suite {
     suite := test_suite_new("backend")
-    
+
     test_suite_add_test(&suite, "codegen", "func f() int { 42 }", "42", 1)
     test_suite_add_test(&suite, "linker", "func main() { }", "OK", 1)
-    
+
     suite
 }
 
 func setup_integration_tests() test_suite {
     suite := test_suite_new("integration")
-    
+
     test_suite_add_test(&suite, "end_to_end", "func main() { print(1 + 2) }", "3", 1)
-    
+
     suite
 }
 
@@ -157,18 +157,18 @@ func write_int(int val) {
 
 func run_all_regression_tests() int {
     regression_data = regression_suite_new()
-    
+
     frontend := setup_frontend_tests()
     regression_add_suite(&regression_data, frontend)
-    
+
     backend := setup_backend_tests()
     regression_add_suite(&regression_data, backend)
-    
+
     integration := setup_integration_tests()
     regression_add_suite(&regression_data, integration)
-    
+
     result := regression_run_all(&regression_data)
     regression_print_results(&regression_data)
-    
+
     result
 }

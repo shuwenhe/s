@@ -29,7 +29,7 @@ func new_wb_inserter(i32 num_values) wb_inserter* {
     wbi.num_barriers = 0
     wbi.is_heap_allocated = make(bool[], num_values)
     wbi.is_pointer_type = make(bool[], num_values)
-    
+
     for i := i32(0); i < num_values; i += 1 {
         wbi.is_heap_allocated[i] = false
         wbi.is_pointer_type[i] = false
@@ -56,7 +56,7 @@ func (wb_inserter* wbi) needs_write_barrier(i32 target_id, i32 value_id) bool {
     if value_id < 0 || value_id >= i32(len(wbi.is_pointer_type)) {
         return false
     }
-    
+
     return wbi.is_heap_allocated[target_id] && wbi.is_pointer_type[value_id]
 }
 
@@ -64,7 +64,7 @@ func (wb_inserter* wbi) insert_ptr_write_barrier(i32 instr_id, i32 target_ptr, i
     if !wbi.needs_write_barrier(target_ptr, value_ptr) {
         return
     }
-    
+
     info := wb_info{
         instr_id: instr_id,
         kind: wb_ptr_write,
@@ -80,7 +80,7 @@ func (wb_inserter* wbi) insert_slice_write_barrier(i32 instr_id, i32 slice_ptr, 
     if !wbi.needs_write_barrier(slice_ptr, value_ptr) {
         return
     }
-    
+
     info := wb_info{
         instr_id: instr_id,
         kind: wb_slice_write,
@@ -96,7 +96,7 @@ func (wb_inserter* wbi) insert_array_write_barrier(i32 instr_id, i32 array_ptr, 
     if !wbi.needs_write_barrier(array_ptr, value_ptr) {
         return
     }
-    
+
     info := wb_info{
         instr_id: instr_id,
         kind: wb_array_write,
@@ -112,7 +112,7 @@ func (wb_inserter* wbi) insert_interface_write_barrier(i32 instr_id, i32 iface_p
     if !wbi.needs_write_barrier(iface_ptr, value_ptr) {
         return
     }
-    
+
     info := wb_info{
         instr_id: instr_id,
         kind: wb_interface_write,
@@ -150,7 +150,7 @@ func (wb_inserter* wbi) barrier_count() i32 {
 
 func (wb_inserter* wbi) generate_barrier_call(wb_info info) string {
     call_str := "runtime.write_barrier("
-    
+
     switch info.kind {
         wb_ptr_write: {
             call_str += "target=" + string(info.target_ptr) + ", value=" + string(info.value_ptr)
@@ -166,7 +166,7 @@ func (wb_inserter* wbi) generate_barrier_call(wb_info info) string {
         }
         wb_none: {}
     }
-    
+
     call_str + ")"
 }
 

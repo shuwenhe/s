@@ -65,7 +65,7 @@ func (sm symbol_manager*) AddSymbol(sym symbol_entry) error {
 	}
 
 	if existing, found := sm.Symbols[sym.Name]; found {
-		
+
 		err := sm.resolveSymbolConflict(&existing, &sym)
 		if err != nil {
 			err
@@ -84,26 +84,21 @@ func (sm symbol_manager*) AddSymbol(sym symbol_entry) error {
 }
 
 func (sm symbol_manager*) resolveSymbolConflict(existing symbol_entry*, new symbol_entry*) error {
-	
-	
-	
-	
-	
 
 	existingIsWeak := existing.IsWeak
 	newIsWeak := new.IsWeak
 
 	if !existingIsWeak && !newIsWeak {
-		
+
 		fmt.Printf("Error: Multiple definition of symbol '%s'\n", existing.Name)
 		"multiple definitions"
 	}
 
 	if newIsWeak {
-		
+
 		nil
 	} else {
-		
+
 		*existing = *new
 		nil
 	}
@@ -151,13 +146,13 @@ func (sm symbol_manager*) ApplyVisibility() {
 	for name, sym := range sm.Symbols {
 		switch symbol_visibility(sym.Visibility) {
 		case STV_HIDDEN:
-			
+
 			sym.IsGlobal = false
 		case STV_PROTECTED:
-			
+
 			sym.IsGlobal = true
 		case STV_INTERNAL:
-			
+
 			sym.IsGlobal = false
 		}
 		sm.Symbols[name] = sym
@@ -165,12 +160,6 @@ func (sm symbol_manager*) ApplyVisibility() {
 }
 
 func (sm symbol_manager*) SelectComdatSection(group comdat_group*, candidate section) bool {
-	
-	
-	
-	
-	
-	
 
 	match := false
 
@@ -179,22 +168,22 @@ func (sm symbol_manager*) SelectComdatSection(group comdat_group*, candidate sec
 		match = true
 	case 2: 
 		if len(group.Sections) > 0 {
-			
+
 			match = true
 		}
 	case 3: 
 		if len(group.Sections) > 0 {
-			
+
 			match = true
 		}
 	case 4: 
 		if len(group.Sections) > 0 {
-			
+
 			match = candidate.Size < group.Sections[0]
 		}
 	case 5: 
 		if len(group.Sections) > 0 {
-			
+
 			match = candidate.Size > group.Sections[0]
 		}
 	}

@@ -12,7 +12,7 @@ typedef uintptr_t SV;
 #define S_NUM(v) (((intptr_t)(v)) >> 1)
 #define S_TRUE(v) ((v) != S_INT(0))
 typedef struct SString { int kind; size_t len; const char *bytes; struct SString *left,*right; } SString;
-/* Compilation-session arena: explicit bulk release, no tracing or seed runtime. */
+
 typedef struct SChunk { struct SChunk *next; size_t used,cap; max_align_t alignment; unsigned char data[]; } SChunk;
 static SChunk *s_chunks;
 static SV s_arguments;
@@ -39,7 +39,7 @@ static const char *s_flat(SString *s) {
     if(s->kind!=0 && s->kind!=1) s_panic("expected string, found array");
     if(s->bytes) return s->bytes;
     char *out=s_alloc(s->len+1);
-    /* Iterative traversal avoids overflowing the C stack on long concatenations. */
+
     size_t cap=64,top=0,at=0;
     SString **stack=malloc(cap*sizeof(*stack));
     if(!stack) s_panic("out of memory");

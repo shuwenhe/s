@@ -18,15 +18,14 @@ struct rules_engine {
 func (engine* rules_engine) init() void {
     engine.rules = vec()
     engine.rules_by_opcode = map()
-    
-    
+
     engine.register_const_fold_rules()
     engine.register_algebraic_rules()
     engine.register_expr_rules()
 }
 
 func (engine* rules_engine) register_const_fold_rules() void {
-    
+
     engine.add_rule(rule {
         id: "const_add_fold",
         name: "Constant addition folding",
@@ -46,8 +45,7 @@ func (engine* rules_engine) register_const_fold_rules() void {
         },
         priority: 0
     })
-    
-    
+
     engine.add_rule(rule {
         id: "const_mul_fold",
         name: "Constant multiplication folding",
@@ -67,8 +65,7 @@ func (engine* rules_engine) register_const_fold_rules() void {
         },
         priority: 0
     })
-    
-    
+
     engine.add_rule(rule {
         id: "const_sub_fold",
         name: "Constant subtraction folding",
@@ -88,12 +85,11 @@ func (engine* rules_engine) register_const_fold_rules() void {
         },
         priority: 0
     })
-    
-    
+
 }
 
 func (engine* rules_engine) register_algebraic_rules() void {
-    
+
     engine.add_rule(rule {
         id: "mul_by_zero",
         name: "Multiplication by zero",
@@ -112,8 +108,7 @@ func (engine* rules_engine) register_algebraic_rules() void {
         },
         priority: 1
     })
-    
-    
+
     engine.add_rule(rule {
         id: "mul_by_one",
         name: "Multiplication by one",
@@ -132,8 +127,7 @@ func (engine* rules_engine) register_algebraic_rules() void {
         },
         priority: 1
     })
-    
-    
+
     engine.add_rule(rule {
         id: "add_zero",
         name: "Addition by zero",
@@ -151,8 +145,7 @@ func (engine* rules_engine) register_algebraic_rules() void {
         },
         priority: 1
     })
-    
-    
+
     engine.add_rule(rule {
         id: "mul_by_two_to_lsh",
         name: "Multiplication by two to left shift",
@@ -174,12 +167,11 @@ func (engine* rules_engine) register_algebraic_rules() void {
         },
         priority: 2
     })
-    
-    
+
 }
 
 func (engine* rules_engine) register_expr_rules() void {
-    
+
     engine.add_rule(rule {
         id: "and_self",
         name: "AND with self",
@@ -192,8 +184,7 @@ func (engine* rules_engine) register_expr_rules() void {
         },
         priority: 2
     })
-    
-    
+
     engine.add_rule(rule {
         id: "or_self",
         name: "OR with self",
@@ -206,8 +197,7 @@ func (engine* rules_engine) register_expr_rules() void {
         },
         priority: 2
     })
-    
-    
+
     engine.add_rule(rule {
         id: "xor_self",
         name: "XOR with self",
@@ -228,30 +218,26 @@ func (engine* rules_engine) register_expr_rules() void {
 
 func (engine* rules_engine) add_rule(r rule) void {
     engine.rules.push(r)
-    
-    
-    
-    
+
 }
 
 func (engine* rules_engine) apply_block(block* basic_block) int {
     let total_transforms := 0
     let max_iterations := 100  
-    
+
     for iteration := 0; iteration < max_iterations; iteration++ {
         let changed_in_iteration := 0
-        
+
         for _for_idx_243 := 0; _for_idx_243 < len(block.instructions); _for_idx_243++ {
             instruction := block.instructions[_for_idx_243]
             let original := instruction
             let transformed := false
-            
-            
+
             for _for_idx_248 := 0; _for_idx_248 < len(engine.rules); _for_idx_248++ {
                 rule := engine.rules[_for_idx_248]
                 if rule.matcher(instruction) {
                     let result := rule.transformer(instruction)
-                    
+
                     if result != original {
                         replace_instruction(block, instruction, result)
                         changed_in_iteration++
@@ -261,30 +247,28 @@ func (engine* rules_engine) apply_block(block* basic_block) int {
                     }
                 }
             }
-            
-            
+
             if transformed {
-                
-                
+
             }
         }
-        
+
         if changed_in_iteration == 0 {
             break  
         }
     }
-    
+
     return total_transforms
 }
 
 func (engine* rules_engine) apply_func(func* ir_func) int {
     let total := 0
-    
+
     for _for_idx_280 := 0; _for_idx_280 < len(func.blocks); _for_idx_280++ {
         block := func.blocks[_for_idx_280]
         total += engine.apply_block(block)
     }
-    
+
     return total
 }
 
@@ -292,12 +276,11 @@ func ir_equals(a, b IR) bool {
     if a.opcode != b.opcode {
         return false
     }
-    
+
     if a.opcode == "Const64" {
         return a.value == b.value
     }
-    
-    
+
     return a.id == b.id  
 }
 
@@ -312,25 +295,23 @@ func replace_instruction(block* basic_block, old_instr, new_instr IR) void {
 }
 
 func main() void {
-    
+
     let engine := rules_engine{}
     engine.init()
-    
-    
+
     let ir := IR {
         opcode: "Add",
         left: IR { opcode: "Const64", value: 5 },
         right: IR { opcode: "Const64", value: 3 },
         pos: 0
     }
-    
+
     let mut block := basic_block {
         instructions: vec(ir)
     }
-    
+
     let transformed_count := engine.apply_block(&block)
-    
-    
+
     print("Transformed: ${transformed_count} instructions")
     print("Result: ${block.instructions[0]}")
 }

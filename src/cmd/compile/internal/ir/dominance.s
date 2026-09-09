@@ -15,7 +15,7 @@ func new_dominator_tree(num_blocks i32) dominator_tree* {
     dt.dom_frontier = make(i32[][], num_blocks)
     dt.strict_dom_frontier = make(i32[][], num_blocks)
     dt.computed = make(bool[], num_blocks)
-    
+
     for i := i32(0); i < num_blocks; i += 1 {
         dt.immediate_dominator[i] = -1
         dt.dom_children[i] = i32[]()
@@ -29,21 +29,21 @@ func new_dominator_tree(num_blocks i32) dominator_tree* {
 func (dt dominator_tree*) compute_dominators(preds i32[][], entry i32) {
     n := i32(len(preds))
     dom := make(bool[][], n)
-    
+
     for i := i32(0); i < n; i += 1 {
         dom[i] = make(bool[], n)
         for j := i32(0); j < n; j += 1 {
             dom[i][j] = true
         }
     }
-    
+
     dom[entry][entry] = true
     for j := i32(0); j < n; j += 1 {
         if j != entry {
             dom[entry][j] = false
         }
     }
-    
+
     changed := true
     for changed {
         changed = false
@@ -51,17 +51,17 @@ func (dt dominator_tree*) compute_dominators(preds i32[][], entry i32) {
             if b == entry {
                 continue
             }
-            
+
             pred_list := preds[b]
             if len(pred_list) == 0 {
                 continue
             }
-            
+
             new_dom := make(bool[], n)
             for j := i32(0); j < n; j += 1 {
                 new_dom[j] = true
             }
-            
+
             for _, p := range pred_list {
                 if p >= 0 && p < n {
                     for j := i32(0); j < n; j += 1 {
@@ -69,9 +69,9 @@ func (dt dominator_tree*) compute_dominators(preds i32[][], entry i32) {
                     }
                 }
             }
-            
+
             new_dom[b] = true
-            
+
             for j := i32(0); j < n; j += 1 {
                 if new_dom[j] != dom[b][j] {
                     changed = true
@@ -80,7 +80,7 @@ func (dt dominator_tree*) compute_dominators(preds i32[][], entry i32) {
             }
         }
     }
-    
+
     for b := i32(0); b < n; b += 1 {
         idom := -1
         for d := i32(0); d < n; d += 1 {
@@ -103,14 +103,14 @@ func (dt dominator_tree*) compute_dominators(preds i32[][], entry i32) {
         }
         dt.immediate_dominator[b] = idom
     }
-    
+
     for b := i32(0); b < n; b += 1 {
         if dt.immediate_dominator[b] >= 0 {
             parent := dt.immediate_dominator[b]
             dt.dom_children[parent] = append(dt.dom_children[parent], b)
         }
     }
-    
+
     for b := i32(0); b < n; b += 1 {
         dt.computed[b] = true
     }
@@ -118,7 +118,7 @@ func (dt dominator_tree*) compute_dominators(preds i32[][], entry i32) {
 
 func (dt dominator_tree*) compute_dominance_frontier(succs i32[][], preds i32[][]) {
     n := i32(len(preds))
-    
+
     for b := i32(0); b < n; b += 1 {
         succ_list := succs[b]
         if len(succ_list) >= 2 {
@@ -142,7 +142,7 @@ func (dt dominator_tree*) strictly_dominates(a i32, b i32) bool {
     if a == b {
         return false
     }
-    
+
     runner := b
     for runner >= 0 {
         if runner == a {
