@@ -18,11 +18,13 @@ struct compiler_state {
     int[] roots
     int[] parents
     int[] loan_fields
+    int[] loan_parent_fields
     int[] array_lengths
     int[] struct_ids
     int[] field_state
     int[] field_borrow_state
     int[] nested_field_state
+    int[] nested_field_borrow_state
     int count
     int loop_floor
     int loop_cleanup
