@@ -963,6 +963,38 @@ func main() int {
 
 SRC
 
+cat >"$work/nested_partial_move_leaf.s" <<'SRC'
+
+package fields
+
+struct Left { data box }
+
+struct Right { data box }
+
+struct Tail { data box }
+
+struct Inner { left Left; right Right }
+
+struct Outer { inner Inner; tail Tail }
+
+func (Left* left) drop() { println("Left.drop") }
+
+func (Right* right) drop() { println("Right.drop") }
+
+func (Tail* tail) drop() { println("Tail.drop") }
+
+func main() int {
+
+    p := Outer(Inner(Left(box(1)), Right(box(2))), Tail(box(3)))
+
+    x := p.inner.left
+
+    return 42
+
+}
+
+SRC
+
 cat >"$work/cfg_field_no_move_both_branches.s" <<'SRC'
 
 package fields
@@ -1423,6 +1455,8 @@ run_custom_drop_case quad_partial_move "$(printf 'drop-resource\ndrop-resource\n
 
 run_custom_drop_case quad_field_borrow_then_move "$(printf 'drop-resource\ndrop-resource\ndrop-resource\ndrop-resource')"
 
+run_custom_drop_case nested_partial_move_leaf "$(printf 'Left.drop\nTail.drop\nRight.drop')"
+
 run_custom_drop_case field_overwrite_custom_drop "$(printf 'drop-resource\ndrop-resource\ndrop-resource\ndrop-resource\ndrop-resource')"
 
 run_custom_drop_case cfg_field_borrow_drop_then_move "$(printf 'drop-resource\ndrop-resource\ndrop-resource\ndrop-resource')"
@@ -1621,9 +1655,23 @@ if ! grep -q 'compiler_move_Resource(&s_v0->c)' "$work/quad_partial_move.c" ||
 
 fi
 
+"$root/bin/s_compiler" --emit-c "$work/nested_partial_move_leaf.s" "$work/nested_partial_move_leaf.c"
+
+if ! grep -q 'compiler_move_Left(&s_v0->inner->left)' "$work/nested_partial_move_leaf.c" ||
+   grep -q '__field_p_inner_left' "$work/nested_partial_move_leaf.c" ||
+   grep -q '__field_s_v0_inner_left' "$work/nested_partial_move_leaf.c"; then
+
+    echo "nested partial move did not use the real aggregate field" >&2
+
+    cat "$work/nested_partial_move_leaf.c" >&2
+
+    exit 1
+
+fi
 
 
-if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" "$work/struct_owned_fields_scope_exit" "$work/struct_owned_fields_early_return" "$work/struct_owned_fields_loop" "$work/struct_custom_drop_with_fields" "$work/general_struct_three_fields" "$work/mixed_struct_fields" "$work/nested_owned_struct" "$work/nested_custom_drop_order" "$work/partial_move_scope_exit" "$work/partial_move_arg" "$work/quad_partial_move" "$work/quad_field_borrow_then_move" "$work/cfg_field_no_move_both_branches" "$work/field_reinit_after_partial_move" "$work/cfg_field_move_reinit" "$work/field_overwrite_custom_drop" "$work/cfg_field_borrow_drop_then_move" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
+
+if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" "$work/struct_owned_fields_scope_exit" "$work/struct_owned_fields_early_return" "$work/struct_owned_fields_loop" "$work/struct_custom_drop_with_fields" "$work/general_struct_three_fields" "$work/mixed_struct_fields" "$work/nested_owned_struct" "$work/nested_custom_drop_order" "$work/partial_move_scope_exit" "$work/partial_move_arg" "$work/quad_partial_move" "$work/quad_field_borrow_then_move" "$work/nested_partial_move_leaf" "$work/cfg_field_no_move_both_branches" "$work/field_reinit_after_partial_move" "$work/cfg_field_move_reinit" "$work/field_overwrite_custom_drop" "$work/cfg_field_borrow_drop_then_move" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
 
     echo "GC or seed runtime symbol linked into no-GC binary" >&2
 
@@ -2024,6 +2072,106 @@ func main() int {
     return 42
 
 }' 'cannot overwrite borrowed struct field'
+
+expect_compile_fail nested_partial_move_use_after_move 'package bad
+
+struct Left { data box }
+
+struct Right { data box }
+
+struct Inner { left Left; right Right }
+
+struct Outer { inner Inner; tail Right }
+
+func main() int {
+
+    p := Outer(Inner(Left(box(1)), Right(box(2))), Right(box(3)))
+
+    x := p.inner.left
+
+    y := p.inner.left
+
+    return 42
+
+}' 'use of moved owned struct field'
+
+expect_compile_fail nested_partial_move_whole_field 'package bad
+
+struct Left { data box }
+
+struct Right { data box }
+
+struct Inner { left Left; right Right }
+
+struct Outer { inner Inner; tail Right }
+
+func main() int {
+
+    p := Outer(Inner(Left(box(1)), Right(box(2))), Right(box(3)))
+
+    x := p.inner.left
+
+    y := p.inner
+
+    return 42
+
+}' 'cannot move partially moved struct field'
+
+expect_compile_fail cfg_nested_field_maybe_moved_read 'package bad
+
+struct Left { data box }
+
+struct Right { data box }
+
+struct Inner { left Left; right Right }
+
+struct Outer { inner Inner; tail Right }
+
+func use(Left left) int { return 1 }
+
+func main() int {
+
+    p := Outer(Inner(Left(box(1)), Right(box(2))), Right(box(3)))
+
+    if true {
+
+        x := p.inner.left
+
+    }
+
+    return use(p.inner.left)
+
+}' 'use of conditionally moved owned struct field'
+
+expect_compile_fail cfg_nested_field_moved_both_branches 'package bad
+
+struct Left { data box }
+
+struct Right { data box }
+
+struct Inner { left Left; right Right }
+
+struct Outer { inner Inner; tail Right }
+
+func main() int {
+
+    p := Outer(Inner(Left(box(1)), Right(box(2))), Right(box(3)))
+
+    if true {
+
+        x := p.inner.left
+
+    } else {
+
+        y := p.inner.left
+
+    }
+
+    z := p.inner.left
+
+    return 42
+
+}' 'use of moved owned struct field'
 
 
 
