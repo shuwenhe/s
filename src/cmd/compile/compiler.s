@@ -228,8 +228,21 @@ func compiler_c_type_for_kind(compiler_state initial, int kind, int struct_id) s
     if kind == 7 { return "const int64_t *" }
     if kind == 8 { return "int64_t *" }
     if kind == 3 { return "const int64_t *" }
+    if kind == 18 { return "const void *" }
+    if kind == 19 { return "void *" }
     if kind == 17 { return "const char *" }
     "int64_t "
+}
+
+func compiler_is_borrow_kind(int kind) bool {
+    if kind == 3 || kind == 4 { return true }
+    if kind == 18 || kind == 19 { return true }
+    return false
+}
+
+func compiler_is_mutable_borrow_kind(int kind) bool {
+    if kind == 4 || kind == 19 { return true }
+    return false
 }
 
 func compiler_drop_field_code(compiler_state initial, string target, int kind, int struct_id) string {
@@ -407,6 +420,17 @@ func compiler_set_field_moved(compiler_state initial, int slot, int field) compi
     return s
 }
 
+func compiler_merge_ownership_state(int left, int right) int {
+    if left == right { return left }
+    return 2
+}
+
+func compiler_field_unavailable_message(int state) string {
+    if state == 0 { return "use of moved owned struct field" }
+    if state == 2 { return "use of conditionally moved owned struct field" }
+    return ""
+}
+
 func compiler_has_moved_field(compiler_state initial, int slot) bool {
     s := initial
     if slot < 0 || slot >= len(s.names) { return false }
@@ -420,6 +444,27 @@ func compiler_has_moved_field(compiler_state initial, int slot) bool {
         field = field + 1
     }
     return false
+}
+
+func compiler_merge_field_states(compiler_state initial, compiler_state yes, compiler_state no, int limit) compiler_state {
+    merged := no
+    slot := 0
+    for slot < limit {
+        field := 0
+        for field < 8 {
+            idx := slot * 8 + field
+            if idx < len(merged.field_state) {
+                if yes.terminated == 0 && no.terminated != 0 {
+                    merged.field_state[idx] = yes.field_state[idx]
+                } else if yes.terminated == 0 && no.terminated == 0 {
+                    merged.field_state[idx] = compiler_merge_ownership_state(yes.field_state[idx], no.field_state[idx])
+                }
+            }
+            field = field + 1
+        }
+        slot = slot + 1
+    }
+    return merged
 }
 
 func compiler_move_field_expr(compiler_state initial, int origin, int field, int kind, int struct_id) string {
@@ -455,8 +500,8 @@ func compiler_conflict_at(compiler_state initial, int owner, int field, bool exc
     int i = 0
     for i < s.count {
         bool same_field = field < 0 || s.loan_fields[i] < 0 || s.loan_fields[i] == field
-        bool mutable_loan = s.kinds[i] == 4 || s.kinds[i] == 11
-        bool shared_loan = s.kinds[i] == 3 || s.kinds[i] == 10
+        bool mutable_loan = compiler_is_mutable_borrow_kind(s.kinds[i]) || s.kinds[i] == 11
+        bool shared_loan = s.kinds[i] == 3 || s.kinds[i] == 10 || s.kinds[i] == 18
         if s.live[i] != 0 && s.roots[i] == owner && same_field && (mutable_loan || (exclusive && shared_loan)) { return true }
         i = i + 1
     }
@@ -471,7 +516,7 @@ func compiler_child_conflict(compiler_state initial, int parent, bool exclusive)
     s := initial
     int i = 0
     for i < s.count {
-        if s.live[i] != 0 && s.parents[i] == parent && (s.kinds[i] == 4 || (exclusive && s.kinds[i] == 3)) { return true }
+        if s.live[i] != 0 && s.parents[i] == parent && (compiler_is_mutable_borrow_kind(s.kinds[i]) || (exclusive && (s.kinds[i] == 3 || s.kinds[i] == 18))) { return true }
         i = i + 1
     }
     return false
@@ -605,8 +650,14 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 field = compiler_field_index(s, s.struct_ids[slot], s.token)
                 if field < 0 { return compiler_fail(s, "unknown owned struct field") }
                 if s.kinds[slot] != 5 { return compiler_fail(s, "field borrow requires a pair") }
-                if compiler_struct_field_kind(s, s.struct_ids[slot], field) != 2 { return compiler_fail(s, "field borrow requires an owned box field") }
-                if compiler_field_live(s, slot, field) != 1 { return compiler_fail(s, "use of moved owned struct field") }
+                field_state := compiler_field_live(s, slot, field)
+                field_error := compiler_field_unavailable_message(field_state)
+                if field_error != "" { return compiler_fail(s, field_error) }
+                int field_kind = compiler_struct_field_kind(s, s.struct_ids[slot], field)
+                if field_kind != 2 {
+                    if kind == 4 { kind = 19 }
+                    else { kind = 18 }
+                }
             }
         }
         int root = slot
@@ -625,6 +676,8 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         if reborrow || field >= 0 { s = compiler_next(s) }
         s.value = compiler_var(slot)
         if field >= 0 { s.value = compiler_var(slot) + "->" + compiler_struct_field_name(s, s.struct_ids[slot], field) }
+        if kind == 18 { s.value = "(const void *)" + s.value }
+        if kind == 19 { s.value = "(void *)" + s.value }
         s.value_kind = kind
         s.value_slot = root
         s.value_field = field
@@ -636,7 +689,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         int slot = compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
-        if s.kinds[slot] < 2 { return compiler_fail(s, "dereference requires a box or reference") }
+        if s.kinds[slot] != 2 && s.kinds[slot] != 3 && s.kinds[slot] != 4 && s.kinds[slot] != 5 { return compiler_fail(s, "dereference requires a box or integer reference") }
         int field = -1
         s = compiler_next(s)
         if s.token == "." {
@@ -645,15 +698,18 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if field < 0 { return compiler_fail(s, "invalid owned struct field dereference") }
             if s.kinds[slot] != 5 { return compiler_fail(s, "invalid pair field dereference") }
             if compiler_struct_field_kind(s, s.struct_ids[slot], field) != 2 { return compiler_fail(s, "field dereference requires an owned box field") }
-            if compiler_field_live(s, slot, field) != 1 { return compiler_fail(s, "use of moved owned struct field") }
+            field_state := compiler_field_live(s, slot, field)
+            field_error := compiler_field_unavailable_message(field_state)
+            if field_error != "" { return compiler_fail(s, field_error) }
             if compiler_conflict_at(s, slot, field, false) { return compiler_fail(s, "cannot read pair field during a mutable borrow") }
             field_name := compiler_struct_field_name(s, s.struct_ids[slot], field)
             s.value = "(*" + compiler_var(slot) + "->" + field_name + ")"
             s = compiler_next(s)
         } else {
+            if s.kinds[slot] == 5 { return compiler_fail(s, "struct dereference requires an owned box field") }
             s.value = "(*" + compiler_var(slot) + ")"
         }
-        if s.kinds[slot] >= 3 && s.kinds[slot] <= 4 && compiler_child_conflict(s, slot, false) { return compiler_fail(s, "cannot read reference during a mutable reborrow") }
+        if compiler_is_borrow_kind(s.kinds[slot]) && compiler_child_conflict(s, slot, false) { return compiler_fail(s, "cannot read reference during a mutable reborrow") }
         if s.kinds[slot] == 2 && compiler_conflict(s, slot, false) { return compiler_fail(s, "owner cannot be read during a mutable borrow") }
         s.value_kind = 1
         s.value_slot = -1
@@ -957,9 +1013,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         field = compiler_field_index(s, s.struct_ids[slot], s.token)
         if field < 0 { return compiler_fail(s, "unknown owned struct field") }
         if s.kinds[slot] != 5 { return compiler_fail(s, "field access requires a pair") }
-        if compiler_field_live(s, slot, field) != 1 {
-            return compiler_fail(s, "use of moved owned struct field")
-        }
+        field_state := compiler_field_live(s, slot, field)
+        field_error := compiler_field_unavailable_message(field_state)
+        if field_error != "" { return compiler_fail(s, field_error) }
         field_kind := compiler_struct_field_kind(s, s.struct_ids[slot], field)
         field_struct := compiler_struct_field_struct(s, s.struct_ids[slot], field)
         field_name := compiler_struct_field_name(s, s.struct_ids[slot], field)
@@ -1028,7 +1084,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if declaration { slot = s.count }
     if !declaration && s.kinds[slot] != s.value_kind { return compiler_fail(s, "assignment changes variable type") }
     if !declaration && s.value_kind == 5 && s.struct_ids[slot] != s.value_struct_id { return compiler_fail(s, "assignment changes struct type") }
-    if !declaration && s.value_kind >= 3 && s.value_kind <= 4 { return compiler_fail(s, "reference reassignment is not supported") }
+    if !declaration && compiler_is_borrow_kind(s.value_kind) { return compiler_fail(s, "reference reassignment is not supported") }
     string rhs = s.value
     int origin = s.value_slot
     if s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9 {
@@ -1055,8 +1111,8 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         }
     }
     int parent = s.value_parent
-    if s.value_kind >= 3 && s.value_kind <= 4 && !s.new_borrow {
-        if s.value_kind == 4 { return compiler_fail(s, "mutable reference copying is not supported; create a reborrow") }
+    if compiler_is_borrow_kind(s.value_kind) && !s.new_borrow {
+        if compiler_is_mutable_borrow_kind(s.value_kind) { return compiler_fail(s, "mutable reference copying is not supported; create a reborrow") }
         parent = s.parents[origin]
         origin = s.roots[origin]
     }
@@ -1094,7 +1150,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         }
     }
     if s.value_kind == 6 { s.array_lengths[slot] = s.value_array_length }
-    if s.value_kind >= 3 && s.value_kind <= 4 {
+    if compiler_is_borrow_kind(s.value_kind) {
         s.roots[slot] = origin
         s.parents[slot] = parent
         if s.value_field >= 0 { s.loan_fields[slot] = s.value_field }
@@ -1148,6 +1204,7 @@ func compiler_statement(compiler_state initial) compiler_state {
             else if yes.terminated == 0 && no.terminated == 0 && yes.live[i] != no.live[i] { no.live[i] = 2 }
             i = i + 1
         }
+        no = compiler_merge_field_states(before, yes, no, before.count)
         int both_terminated = 0
         if yes.terminated != 0 && no.terminated != 0 { both_terminated = 1 }
         if s.return_kind >= 3 && s.return_kind <= 4 {
@@ -1354,7 +1411,9 @@ func compiler_statement(compiler_state initial) compiler_state {
             field = compiler_field_index(s, s.struct_ids[slot], s.token)
             if field < 0 { return compiler_fail(s, "unknown owned struct field") }
             if compiler_struct_field_kind(s, s.struct_ids[slot], field) != 2 { return compiler_fail(s, "pair write requires an owned box field") }
-            if compiler_field_live(s, slot, field) != 1 { return compiler_fail(s, "use of moved owned struct field") }
+            field_state := compiler_field_live(s, slot, field)
+            field_error := compiler_field_unavailable_message(field_state)
+            if field_error != "" { return compiler_fail(s, field_error) }
             if compiler_conflict_at(s, slot, field, true) { return compiler_fail(s, "cannot write pair field during a borrow") }
             target = compiler_var(slot) + "->" + compiler_struct_field_name(s, s.struct_ids[slot], field)
             s = compiler_next(s)
@@ -1677,19 +1736,19 @@ func compiler_compile(string source) compiler_state {
     function_return_params := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_starts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_param_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    function_param_structs := function_param_kinds
-    function_return_structs := function_returns
+    function_param_structs := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    function_return_structs := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     struct_names := ["", "", "", "", "", "", "", ""];
-    struct_field_lefts := struct_names
-    struct_field_rights := struct_names
-    struct_field_left_kinds := function_returns
-    struct_field_right_kinds := function_returns
-    struct_field_names := names
-    struct_field_kinds := function_param_kinds
-    struct_field_structs := function_param_structs
-    struct_field_starts := function_returns
-    struct_field_counts := function_counts
-    struct_custom_drops := function_returns
+    struct_field_lefts := ["", "", "", "", "", "", "", ""];
+    struct_field_rights := ["", "", "", "", "", "", "", ""];
+    struct_field_left_kinds := [0, 0, 0, 0, 0, 0, 0, 0];
+    struct_field_right_kinds := [0, 0, 0, 0, 0, 0, 0, 0];
+    struct_field_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
+    struct_field_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    struct_field_structs := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    struct_field_starts := [0, 0, 0, 0, 0, 0, 0, 0];
+    struct_field_counts := [0, 0, 0, 0, 0, 0, 0, 0];
+    struct_custom_drops := [0, 0, 0, 0, 0, 0, 0, 0];
     s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
