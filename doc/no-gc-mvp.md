@@ -14,6 +14,10 @@ That means the current priority is not broad language growth. The priority is
 a stable, no-GC ownership compiler path that can build real programs with
 deterministic cleanup and repeatable performance.
 
+`make no-gc-mvp-check` passing means the No-GC MVP infrastructure gate is
+working. It does not mean ownership, borrow checking, or drop semantics are
+complete.
+
 ## Current baseline
 
 The existing no-GC compiler path lowers the supported S subset to C and links
@@ -28,6 +32,10 @@ diagnostics.
 
 This is a real no-GC compiler path, but it is still a subset compiler. It
 should not be described as a complete Rust/C replacement yet.
+
+S No-GC MVP establishes deterministic ownership compilation and its regression
+gate. Field-sensitive partial move, CFG-sensitive ownership, borrow
+integration, and NLL remain separate closure gates.
 
 ## Near-term product slice
 
@@ -52,13 +60,16 @@ For programs inside the MVP subset, this must mean:
 
 1. Keep `make compiler-check` green and expand it only with behavior that
    belongs to the MVP subset.
-2. Add one realistic no-GC demo, such as a JSON parser, HTTP parser,
+2. Close field-sensitive partial move for named structs, including double
+   move rejection, use-after-field-move rejection, whole-move-after-partial
+   rejection, and borrow-plus-field-move rejection.
+3. Add one realistic no-GC demo, such as a JSON parser, HTTP parser,
    grep-style CLI, or small arena-backed key-value store.
-3. Add benchmark cases for that demo against C, Rust, and Go. The initial
+4. Add benchmark cases for that demo against C, Rust, and Go. The initial
    goal is credible measurement, not a claim that S is faster.
-4. Stabilize the MVP language surface: functions, structs, owned fields,
+5. Stabilize the MVP language surface: functions, structs, owned fields,
    borrowing, arrays or slices, modules, errors, and C ABI calls.
-5. Improve diagnostics before adding advanced language features.
+6. Improve diagnostics before adding advanced language features.
 
 ## What to avoid for now
 
@@ -90,8 +101,13 @@ until the no-GC core is already boringly reliable.
 The MVP is credible when:
 
 - `make compiler-check` passes on supported hosts
+- `make no-gc-mvp-check` exercises real ownership semantics, not only the
+  build scripts and current happy-path subset
 - `make benchmark` reports S, C, Rust when available, and Go when available
 - one realistic no-GC demo builds and tests cleanly
 - emitted binaries pass the no-GC symbol checks
 - the README states the supported subset and limitations without performance
   overclaiming
+
+The ownership closure is credible only when field-sensitive ownership, CFG
+dataflow, borrow integration, and NLL gates pass separately.

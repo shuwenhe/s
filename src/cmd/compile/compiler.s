@@ -407,6 +407,21 @@ func compiler_set_field_moved(compiler_state initial, int slot, int field) compi
     return s
 }
 
+func compiler_has_moved_field(compiler_state initial, int slot) bool {
+    s := initial
+    if slot < 0 || slot >= len(s.names) { return false }
+    if s.kinds[slot] != 5 { return false }
+    struct_id := s.struct_ids[slot]
+    if struct_id < 0 { return false }
+    field_count := s.struct_field_counts[struct_id]
+    field := 0
+    for field < field_count {
+        if compiler_field_live(s, slot, field) != 1 { return true }
+        field = field + 1
+    }
+    return false
+}
+
 func compiler_move_field_expr(compiler_state initial, int origin, int field, int kind, int struct_id) string {
     s := initial
     if s.struct_ids[origin] < 0 { return "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(field) + ")" }
@@ -474,6 +489,7 @@ func compiler_consume(compiler_state initial, int slot) compiler_state {
     s = compiler_available(s, slot)
     if s.error != "" { return s }
     if compiler_conflict(s, slot, true) { return compiler_fail(s, "cannot move or drop borrowed owner: " + s.names[slot]) }
+    if compiler_has_moved_field(s, slot) { return compiler_fail(s, "cannot move partially moved struct: " + s.names[slot]) }
     if s.loop_floor >= 0 && slot < s.loop_floor { return compiler_fail(s, "cannot consume an outer owner inside a loop") }
     s.live[slot] = 0
     return s
