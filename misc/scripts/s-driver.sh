@@ -100,7 +100,6 @@ emit_binary() {
     "$compiler" --emit-c "$input" "$work/program.c"
 
     "${CC:-cc}" -std=c11 -O2 -Wall -Wextra -Werror ${S_COMPILER_CFLAGS:-} \
-
         -I "$root/src/runtime" "$work/program.c" -o "$work/program"
 
     cp "$work/program" "$output"
