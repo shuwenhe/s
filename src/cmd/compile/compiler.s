@@ -517,6 +517,7 @@ func compiler_has_moved_field(compiler_state initial, int slot) bool {
     field := 0
     for field < field_count {
         if compiler_field_live(s, slot, field) != 1 { return true }
+        if compiler_has_moved_nested_field(s, slot, field) { return true }
         field = field + 1
     }
     return false
@@ -1335,6 +1336,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         fi := 0
         for fi < field_count {
             s.field_state[slot * 8 + fi] = 1
+            s = compiler_clear_nested_field_state(s, slot, fi)
             fi = fi + 1
         }
     }
@@ -1395,6 +1397,7 @@ func compiler_statement(compiler_state initial) compiler_state {
             i = i + 1
         }
         no = compiler_merge_field_states(before, yes, no, before.count)
+        no = compiler_merge_nested_field_states(before, yes, no, before.count)
         no = compiler_merge_field_borrow_states(before, yes, no, before.count)
         int both_terminated = 0
         if yes.terminated != 0 && no.terminated != 0 { both_terminated = 1 }
@@ -1495,11 +1498,8 @@ func compiler_statement(compiler_state initial) compiler_state {
         if s.value_kind == 2 {
             result_type = "int64_t *"
             if s.value_field >= 0 {
-                int origin = s.value_slot
-                if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-                s = compiler_set_field_moved(s, origin, s.value_field)
+                s = compiler_move_value_field_expr(s)
                 if s.error != "" { return s }
-                s.value = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
             } else if s.value_slot >= 0 {
                 int origin = s.value_slot
                 s = compiler_consume(s, origin)
@@ -1510,11 +1510,8 @@ func compiler_statement(compiler_state initial) compiler_state {
         else if s.value_kind == 5 {
             result_type = compiler_c_type_for_kind(s, s.value_kind, s.value_struct_id)
             if s.value_field >= 0 {
-                int origin = s.value_slot
-                if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-                s = compiler_set_field_moved(s, origin, s.value_field)
+                s = compiler_move_value_field_expr(s)
                 if s.error != "" { return s }
-                s.value = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
             } else if s.value_slot >= 0 {
                 int origin = s.value_slot
                 s = compiler_consume(s, origin)
@@ -1525,11 +1522,8 @@ func compiler_statement(compiler_state initial) compiler_state {
         else if s.value_kind == 9 {
             result_type = "compiler_slice *"
             if s.value_field >= 0 {
-                int origin = s.value_slot
-                if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-                s = compiler_set_field_moved(s, origin, s.value_field)
+                s = compiler_move_value_field_expr(s)
                 if s.error != "" { return s }
-                s.value = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
             } else if s.value_slot >= 0 {
                 int origin = s.value_slot
                 s = compiler_consume(s, origin)
@@ -1955,10 +1949,12 @@ func compiler_compile(string source) compiler_state {
     parents := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     field_state := roots
     field_borrow_state := roots
+    nested_field_state := roots
     field_state_index := 0
     while field_state_index < len(field_state) {
         field_state[field_state_index] = 1
         field_borrow_state[field_state_index] = 0
+        nested_field_state[field_state_index] = 1
         field_state_index = field_state_index + 1
     }
     loan_fields := roots
@@ -1983,7 +1979,7 @@ func compiler_compile(string source) compiler_state {
     struct_field_starts := [0, 0, 0, 0, 0, 0, 0, 0];
     struct_field_counts := [0, 0, 0, 0, 0, 0, 0, 0];
     struct_custom_drops := [0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, field_borrow_state: field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, field_borrow_state: field_borrow_state, nested_field_state: nested_field_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
