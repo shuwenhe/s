@@ -331,41 +331,23 @@ bin/s_seed: $(SEED_COMPILER_SOURCES)
 	@echo "Building seed compiler..."
 
 	@set -e; tmp="$$(mktemp ./bin/s_seed.XXXXXX)"; trap 'rm -f "$$tmp"' EXIT HUP INT TERM; \
-
 	  gcc -std=c11 -Wall -Wextra -Werror \
-
 	  -o "$$tmp" \
-
 	  src/cmd/compile/seed/s_seed.c \
-
 	  src/cmd/compile/seed/bootstrap/bootstrap.c \
-
 	  src/cmd/compile/seed/lexical/lexer.c \
-
 	  src/cmd/compile/seed/lexical/selfhost_bridge.c \
-
 	  src/cmd/compile/seed/error/error.c \
-
 	  src/cmd/compile/seed/syntax/parser.c \
-
 	  src/cmd/compile/seed/semantic/analyzer.c \
-
 	  src/cmd/compile/seed/intermediate/ir.c \
-
 	  src/cmd/compile/seed/code/generator.c \
-
 	  src/cmd/compile/seed/code/backend_registry.c \
-
 	  src/cmd/compile/seed/code/native_backend.c \
-
 	  src/cmd/compile/seed/code/standalone_amd64_backend.c \
-
 	  src/cmd/compile/seed/runtime/network_windows.c \
-
 	  src/cmd/compile/seed/runtime/runtime.c; \
-
 	  mv "$$tmp" ./bin/s_seed; \
-
 	  trap - EXIT HUP INT TERM
 
 
@@ -726,15 +708,10 @@ bootstrap-audit: selfhost
 
 
 NATIVE_BOOTSTRAP_INPUTS := \
-
   $(SEED_COMPILER_SOURCES) \
-
   src/cmd/compile/selfhost/compiler.s \
-
   src/cmd/dist/native-bootstrap.sh \
-
   src/runtime/selfhost_linux_amd64.S \
-
   src/runtime/linker/nostdlib.ld
 
 
@@ -1456,13 +1433,23 @@ selfhost-runtime-check:
 
 
 
-.PHONY: benchmark help target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test darwin-arm64-hosted-compiler darwin-arm64-slice-check test-quick test-full build-parallel selfhost-full
+.PHONY: benchmark help no-gc-mvp no-gc-mvp-check target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test darwin-arm64-hosted-compiler darwin-arm64-slice-check test-quick test-full build-parallel selfhost-full
 
 
 
 benchmark: compiler
 
 	@sh test/benchmarks/run.sh
+
+no-gc-mvp:
+
+	@sed -n '1,220p' doc/no-gc-mvp.md
+
+
+
+no-gc-mvp-check: compiler-check
+
+	@echo "No-GC MVP acceptance checks passed"
 
 
 
@@ -1501,6 +1488,10 @@ help:
 	@echo "  make compiler                # Build the no-GC ownership compiler driver"
 
 	@echo "  make compiler-check          # Verify no-GC ownership compiler behavior"
+
+	@echo "  make no-gc-mvp              # Show the current no-GC MVP scope"
+
+	@echo "  make no-gc-mvp-check        # Run the no-GC MVP acceptance checks"
 
 	@echo "  make benchmark               # Compare no-GC S with available toolchains"
 
