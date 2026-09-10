@@ -571,6 +571,13 @@ func compiler_overwrite_old_owner(compiler_state initial, int slot) string {
     compiler_drop_owner(s, slot)
 }
 
+func compiler_drop_field_owner_code(compiler_state initial, int slot, int field, int kind, int struct_id) string {
+    s := initial
+    target := compiler_var(slot) + "->" + compiler_struct_field_name(s, s.struct_ids[slot], field)
+    if compiler_field_live(s, slot, field) != 1 { return "" }
+    return compiler_drop_field_code(s, target, kind, struct_id)
+}
+
 func compiler_precedence(string op) int {
     if op == "||" { return 1 }
     if op == "&&" { return 2 }
@@ -1483,6 +1490,47 @@ func compiler_statement(compiler_state initial) compiler_state {
         if s.kinds[slot] == 9 { data = compiler_var(slot) + "->data"; length = compiler_var(slot) + "->len" }
         if s.kinds[slot] == 15 || s.kinds[slot] == 16 { data = compiler_var(slot); length = compiler_var(slot) + "_len" }
         s.code = s.code + data + "[compiler_index(" + length + "," + index + ")] = " + s.value + ";\n"
+        s = compiler_optional_semicolon(s)
+        return s
+    }
+    if s.token == "." {
+        int slot = compiler_find(s, name)
+        s = compiler_available(s, slot)
+        if s.error != "" { return s }
+        if s.kinds[slot] != 5 { return compiler_fail(s, "field assignment requires an owned struct") }
+        s = compiler_next(s)
+        int field = compiler_field_index(s, s.struct_ids[slot], s.token)
+        if field < 0 { return compiler_fail(s, "unknown owned struct field") }
+        int field_kind = compiler_struct_field_kind(s, s.struct_ids[slot], field)
+        int field_struct = compiler_struct_field_struct(s, s.struct_ids[slot], field)
+        if field_kind != 2 && field_kind != 5 && field_kind != 9 { return compiler_fail(s, "field assignment requires an owned field") }
+        if compiler_conflict_at(s, slot, field, true) { return compiler_fail(s, "cannot overwrite borrowed struct field") }
+        s = compiler_expect(compiler_next(s), "=")
+        s = compiler_expression(s, 1)
+        if s.value_kind != field_kind { return compiler_fail(s, "field assignment type mismatch") }
+        if field_kind == 5 && s.value_struct_id != field_struct { return compiler_fail(s, "field assignment struct type mismatch") }
+        string rhs = s.value
+        int origin = s.value_slot
+        if s.value_field >= 0 {
+            if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+            s = compiler_set_field_moved(s, origin, s.value_field)
+            if s.error != "" { return s }
+            rhs = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+        } else if origin >= 0 {
+            if origin == slot { return compiler_fail(s, "self field assignment is not supported") }
+            s = compiler_consume(s, origin)
+            if s.error != "" { return s }
+            if field_kind == 2 { rhs = "compiler_move(&" + compiler_var(origin) + ")" }
+            else if field_kind == 5 {
+                if s.value_struct_id >= 0 { rhs = "compiler_move_" + s.struct_names[s.value_struct_id] + "(&" + compiler_var(origin) + ")" }
+                else { rhs = "compiler_pair_move(&" + compiler_var(origin) + ")" }
+            }
+            else if field_kind == 9 { rhs = "compiler_slice_move(&" + compiler_var(origin) + ")" }
+        }
+        string target = compiler_var(slot) + "->" + compiler_struct_field_name(s, s.struct_ids[slot], field)
+        string replacement_type = compiler_c_type_for_kind(s, field_kind, field_struct)
+        s.code = s.code + "{ " + replacement_type + "compiler_new = " + rhs + ";\n" + compiler_drop_field_owner_code(s, slot, field, field_kind, field_struct) + target + " = compiler_new; }\n"
+        s.field_state[slot * 8 + field] = 1
         s = compiler_optional_semicolon(s)
         return s
     }
