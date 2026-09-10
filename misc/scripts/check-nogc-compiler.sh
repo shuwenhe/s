@@ -1026,9 +1026,7 @@ fi
 
 
 cc -std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined \
-
     -fno-omit-frame-pointer -DS_COMPILER_CHECK_ALLOCATIONS \
-
     -I "$root/src/runtime" "$work/drop_flag_elision.c" -o "$work/drop_flag_elision"
 
 set +e
@@ -1077,9 +1075,7 @@ run_custom_drop_case() {
 
 run_custom_drop_case custom_drop_scope_exit 'drop-resource'
 
-run_custom_drop_case custom_drop_lifo 'drop-b
-
-drop-a'
+run_custom_drop_case custom_drop_lifo "$(printf 'drop-b\ndrop-a')"
 
 run_custom_drop_case custom_drop_move 'drop-moved'
 
@@ -1107,37 +1103,19 @@ test "$status" -eq 42
 
 
 
-run_custom_drop_case overwrite_custom_drop 'drop-resource
+run_custom_drop_case overwrite_custom_drop "$(printf 'drop-resource\ndrop-resource')"
 
-drop-resource'
+run_custom_drop_case overwrite_moved_owner "$(printf 'drop-moved-reinit\ndrop-moved-reinit')"
 
-run_custom_drop_case overwrite_moved_owner 'drop-moved-reinit
+run_custom_drop_case overwrite_conditional_true "$(printf 'drop-conditional-true\ndrop-conditional-true')"
 
-drop-moved-reinit'
+run_custom_drop_case overwrite_conditional_false "$(printf 'drop-conditional-false\ndrop-conditional-false')"
 
-run_custom_drop_case overwrite_conditional_true 'drop-conditional-true
+run_custom_drop_case overwrite_inside_loop "$(printf 'drop-loop\ndrop-loop\ndrop-loop')"
 
-drop-conditional-true'
+run_custom_drop_case overwrite_early_return "$(printf 'drop-early-overwrite\ndrop-early-overwrite')"
 
-run_custom_drop_case overwrite_conditional_false 'drop-conditional-false
-
-drop-conditional-false'
-
-run_custom_drop_case overwrite_inside_loop 'drop-loop
-
-drop-loop
-
-drop-loop'
-
-run_custom_drop_case overwrite_early_return 'drop-early-overwrite
-
-drop-early-overwrite'
-
-run_custom_drop_case rhs_before_lhs_drop 'make-rhs
-
-drop-after-rhs
-
-drop-after-rhs'
+run_custom_drop_case rhs_before_lhs_drop "$(printf 'make-rhs\ndrop-after-rhs\ndrop-after-rhs')"
 
 
 
@@ -1229,17 +1207,11 @@ test "$status" -eq 42
 
 
 
-run_custom_drop_case nested_custom_drop_order 'Outer.drop
+run_custom_drop_case nested_custom_drop_order "$(printf 'Outer.drop\nInner.drop')"
 
-Inner.drop'
+run_custom_drop_case partial_move_scope_exit "$(printf 'Left.drop\nRight.drop')"
 
-run_custom_drop_case partial_move_scope_exit 'Left.drop
-
-Right.drop'
-
-run_custom_drop_case partial_move_arg 'Left.drop
-
-Right.drop'
+run_custom_drop_case partial_move_arg "$(printf 'Left.drop\nRight.drop')"
 
 
 
