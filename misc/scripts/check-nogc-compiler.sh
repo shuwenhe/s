@@ -937,6 +937,32 @@ func main() int {
 
 SRC
 
+cat >"$work/quad_field_borrow_then_move.s" <<'SRC'
+
+package fields
+
+struct Resource { data box }
+
+struct Quad { a Resource; b Resource; c Resource; d Resource }
+
+func (Resource* resource) drop() { println("drop-resource") }
+
+func main() int {
+
+    p := Quad(Resource(box(1)), Resource(box(2)), Resource(box(3)), Resource(box(4)))
+
+    r := &p.c
+
+    drop(r)
+
+    x := p.c
+
+    return 42
+
+}
+
+SRC
+
 
 
 "$root/bin/s" "$work/ownership.s" -o "$work/ownership"
@@ -1237,6 +1263,8 @@ run_custom_drop_case partial_move_arg "$(printf 'Left.drop\nRight.drop')"
 
 run_custom_drop_case quad_partial_move "$(printf 'drop-resource\ndrop-resource\ndrop-resource\ndrop-resource')"
 
+run_custom_drop_case quad_field_borrow_then_move "$(printf 'drop-resource\ndrop-resource\ndrop-resource\ndrop-resource')"
+
 
 
 "$root/bin/s_compiler" --emit-c "$work/custom_drop_move.s" "$work/custom_drop_move.c"
@@ -1421,7 +1449,7 @@ fi
 
 
 
-if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" "$work/struct_owned_fields_scope_exit" "$work/struct_owned_fields_early_return" "$work/struct_owned_fields_loop" "$work/struct_custom_drop_with_fields" "$work/general_struct_three_fields" "$work/mixed_struct_fields" "$work/nested_owned_struct" "$work/nested_custom_drop_order" "$work/partial_move_scope_exit" "$work/partial_move_arg" "$work/quad_partial_move" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
+if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" "$work/struct_owned_fields_scope_exit" "$work/struct_owned_fields_early_return" "$work/struct_owned_fields_loop" "$work/struct_custom_drop_with_fields" "$work/general_struct_three_fields" "$work/mixed_struct_fields" "$work/nested_owned_struct" "$work/nested_custom_drop_order" "$work/partial_move_scope_exit" "$work/partial_move_arg" "$work/quad_partial_move" "$work/quad_field_borrow_then_move" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
 
     echo "GC or seed runtime symbol linked into no-GC binary" >&2
 
@@ -1673,7 +1701,7 @@ func main() int {
 
 }' 'cannot move partially moved struct'
 
-expect_compile_fail partial_move_borrow_conflict_unsupported 'package bad
+expect_compile_fail partial_move_borrow_conflict 'package bad
 
 struct Resource { data box }
 
@@ -1689,7 +1717,77 @@ func main() int {
 
     return 42
 
-}' 'field borrow requires an owned box field'
+}' 'cannot move borrowed pair field'
+
+expect_compile_fail cfg_field_maybe_moved_read 'package bad
+
+struct Resource { data box }
+
+struct Quad { a Resource; b Resource; c Resource; d Resource }
+
+func use(Resource resource) int { return 1 }
+
+func main() int {
+
+    p := Quad(Resource(box(1)), Resource(box(2)), Resource(box(3)), Resource(box(4)))
+
+    if true {
+
+        x := p.c
+
+    }
+
+    return use(p.c)
+
+}' 'use of conditionally moved owned struct field'
+
+expect_compile_fail cfg_field_maybe_moved_move 'package bad
+
+struct Resource { data box }
+
+struct Quad { a Resource; b Resource; c Resource; d Resource }
+
+func main() int {
+
+    p := Quad(Resource(box(1)), Resource(box(2)), Resource(box(3)), Resource(box(4)))
+
+    if true {
+
+        x := p.c
+
+    }
+
+    y := p.c
+
+    return 42
+
+}' 'use of conditionally moved owned struct field'
+
+expect_compile_fail cfg_field_moved_both_branches 'package bad
+
+struct Resource { data box }
+
+struct Quad { a Resource; b Resource; c Resource; d Resource }
+
+func main() int {
+
+    p := Quad(Resource(box(1)), Resource(box(2)), Resource(box(3)), Resource(box(4)))
+
+    if true {
+
+        x := p.c
+
+    } else {
+
+        y := p.c
+
+    }
+
+    z := p.c
+
+    return 42
+
+}' 'use of moved owned struct field'
 
 
 
