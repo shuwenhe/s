@@ -22,6 +22,7 @@ struct compiler_state {
     int[] struct_ids
     int[] field_state
     int[] field_borrow_state
+    int[] nested_field_state
     int count
     int loop_floor
     int loop_cleanup
@@ -33,6 +34,7 @@ struct compiler_state {
     int value_slot
     int value_parent
     int value_field
+    int value_parent_field
     int value_array_length
     int value_struct_id
     bool new_borrow
@@ -421,6 +423,41 @@ func compiler_set_field_moved(compiler_state initial, int slot, int field) compi
     return s
 }
 
+func compiler_nested_field_index(int slot, int parent_field, int field) int {
+    return slot * 64 + parent_field * 8 + field
+}
+
+func compiler_nested_field_live(compiler_state initial, int slot, int parent_field, int field) int {
+    s := initial
+    idx := compiler_nested_field_index(slot, parent_field, field)
+    if slot >= 0 && parent_field >= 0 && parent_field < 8 && field >= 0 && field < 8 && idx < len(s.nested_field_state) {
+        return s.nested_field_state[idx]
+    }
+    return 1
+}
+
+func compiler_set_nested_field_moved(compiler_state initial, int slot, int parent_field, int field) compiler_state {
+    s := initial
+    idx := compiler_nested_field_index(slot, parent_field, field)
+    if slot >= 0 && parent_field >= 0 && parent_field < 8 && field >= 0 && field < 8 && idx < len(s.nested_field_state) {
+        s.nested_field_state[idx] = 0
+    }
+    return s
+}
+
+func compiler_clear_nested_field_state(compiler_state initial, int slot, int parent_field) compiler_state {
+    s := initial
+    field := 0
+    for field < 8 {
+        idx := compiler_nested_field_index(slot, parent_field, field)
+        if slot >= 0 && parent_field >= 0 && parent_field < 8 && idx < len(s.nested_field_state) {
+            s.nested_field_state[idx] = 1
+        }
+        field = field + 1
+    }
+    return s
+}
+
 func compiler_merge_ownership_state(int left, int right) int {
     if left == right { return left }
     return 2
@@ -485,6 +522,16 @@ func compiler_has_moved_field(compiler_state initial, int slot) bool {
     return false
 }
 
+func compiler_has_moved_nested_field(compiler_state initial, int slot, int parent_field) bool {
+    s := initial
+    field := 0
+    for field < 8 {
+        if compiler_nested_field_live(s, slot, parent_field, field) != 1 { return true }
+        field = field + 1
+    }
+    return false
+}
+
 func compiler_merge_field_states(compiler_state initial, compiler_state yes, compiler_state no, int limit) compiler_state {
     merged := no
     slot := 0
@@ -500,6 +547,31 @@ func compiler_merge_field_states(compiler_state initial, compiler_state yes, com
                 }
             }
             field = field + 1
+        }
+        slot = slot + 1
+    }
+    return merged
+}
+
+func compiler_merge_nested_field_states(compiler_state initial, compiler_state yes, compiler_state no, int limit) compiler_state {
+    merged := no
+    slot := 0
+    for slot < limit {
+        parent_field := 0
+        for parent_field < 8 {
+            field := 0
+            for field < 8 {
+                idx := compiler_nested_field_index(slot, parent_field, field)
+                if idx < len(merged.nested_field_state) {
+                    if yes.terminated == 0 && no.terminated != 0 {
+                        merged.nested_field_state[idx] = yes.nested_field_state[idx]
+                    } else if yes.terminated == 0 && no.terminated == 0 {
+                        merged.nested_field_state[idx] = compiler_merge_ownership_state(yes.nested_field_state[idx], no.nested_field_state[idx])
+                    }
+                }
+                field = field + 1
+            }
+            parent_field = parent_field + 1
         }
         slot = slot + 1
     }
@@ -539,6 +611,36 @@ func compiler_move_field_expr(compiler_state initial, int origin, int field, int
     if kind == 5 { return "compiler_move_" + s.struct_names[struct_id] + "(&" + target + ")" }
     if kind == 9 { return "compiler_slice_move(&" + target + ")" }
     return target
+}
+
+func compiler_move_nested_field_expr(compiler_state initial, int origin, int parent_field, int field, int kind, int struct_id) string {
+    s := initial
+    parent_name := compiler_struct_field_name(s, s.struct_ids[origin], parent_field)
+    parent_struct := compiler_struct_field_struct(s, s.struct_ids[origin], parent_field)
+    target := compiler_var(origin) + "->" + parent_name + "->" + compiler_struct_field_name(s, parent_struct, field)
+    if kind == 2 { return "compiler_move(&" + target + ")" }
+    if kind == 5 { return "compiler_move_" + s.struct_names[struct_id] + "(&" + target + ")" }
+    if kind == 9 { return "compiler_slice_move(&" + target + ")" }
+    return target
+}
+
+func compiler_move_value_field_expr(compiler_state initial) compiler_state {
+    s := initial
+    origin := s.value_slot
+    if s.value_parent_field >= 0 {
+        if compiler_conflict_at(s, origin, s.value_parent_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+        s = compiler_set_nested_field_moved(s, origin, s.value_parent_field, s.value_field)
+        if s.error != "" { return s }
+        s.value = compiler_move_nested_field_expr(s, origin, s.value_parent_field, s.value_field, s.value_kind, s.value_struct_id)
+        return s
+    }
+    if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+    if s.value_kind == 5 && compiler_has_moved_nested_field(s, origin, s.value_field) { return compiler_fail(s, "cannot move partially moved struct field") }
+    s = compiler_set_field_moved(s, origin, s.value_field)
+    s = compiler_clear_nested_field_state(s, origin, s.value_field)
+    if s.error != "" { return s }
+    s.value = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+    return s
 }
 
 func compiler_array_length(compiler_state initial, int slot) string {
@@ -669,6 +771,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     s.value_slot = -1
     s.value_parent = -1
     s.value_field = -1
+    s.value_parent_field = -1
     s.value_array_length = 0
     s.value_struct_id = -1
     s.new_borrow = false
@@ -834,10 +937,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if s.value_slot >= 0 {
                 int origin = s.value_slot
                 if s.value_field >= 0 {
-                    if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-                    s = compiler_set_field_moved(s, origin, s.value_field)
+                    s = compiler_move_value_field_expr(s)
                     if s.error != "" { return s }
-                    left = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+                    left = s.value
                 } else {
                 s = compiler_consume(s, origin)
                 left = "compiler_move(&" + compiler_var(origin) + ")"
@@ -850,10 +952,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if s.value_slot >= 0 {
                 int origin = s.value_slot
                 if s.value_field >= 0 {
-                    if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-                    s = compiler_set_field_moved(s, origin, s.value_field)
+                    s = compiler_move_value_field_expr(s)
                     if s.error != "" { return s }
-                    right = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+                    right = s.value
                 } else {
                 s = compiler_consume(s, origin)
                 right = "compiler_move(&" + compiler_var(origin) + ")"
@@ -885,10 +986,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if expected == 2 || expected == 5 || expected == 9 {
                 if s.value_field >= 0 {
                     origin := s.value_slot
-                    if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-                    s = compiler_set_field_moved(s, origin, s.value_field)
+                    s = compiler_move_value_field_expr(s)
                     if s.error != "" { return s }
-                    argument = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+                    argument = s.value
                 } else if s.value_slot >= 0 {
                     origin := s.value_slot
                     s = compiler_consume(s, origin)
@@ -986,10 +1086,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if expected == 2 || expected == 5 || expected == 9 {
                 if s.value_field >= 0 {
                     int origin = s.value_slot
-                    if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-                    s = compiler_set_field_moved(s, origin, s.value_field)
+                    s = compiler_move_value_field_expr(s)
                     if s.error != "" { return s }
-                    argument = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+                    argument = s.value
                 } else if s.value_slot >= 0 {
                     int origin = s.value_slot
                     s = compiler_consume(s, origin)
@@ -1097,6 +1196,25 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.value_field = field
         s.value_struct_id = field_struct
         s = compiler_next(s)
+        if s.token == "." {
+            if field_kind != 5 || field_struct < 0 { return compiler_fail(s, "nested field access requires a named struct field") }
+            s = compiler_next(s)
+            int nested_field = compiler_field_index(s, field_struct, s.token)
+            if nested_field < 0 { return compiler_fail(s, "unknown nested owned struct field") }
+            nested_state := compiler_nested_field_live(s, slot, field, nested_field)
+            nested_error := compiler_field_unavailable_message(nested_state)
+            if nested_error != "" { return compiler_fail(s, nested_error) }
+            nested_kind := compiler_struct_field_kind(s, field_struct, nested_field)
+            nested_struct := compiler_struct_field_struct(s, field_struct, nested_field)
+            nested_name := compiler_struct_field_name(s, field_struct, nested_field)
+            s.value = compiler_var(slot) + "->" + field_name + "->" + nested_name
+            s.value_kind = nested_kind
+            s.value_slot = slot
+            s.value_parent_field = field
+            s.value_field = nested_field
+            s.value_struct_id = nested_struct
+            s = compiler_next(s)
+        }
         return s
     }
     s.value = compiler_var(slot)
@@ -1162,10 +1280,9 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9 {
         if s.value_field >= 0 {
             if s.kinds[origin] != 5 { return compiler_fail(s, "field move requires a pair") }
-            if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-            s = compiler_set_field_moved(s, origin, s.value_field)
-            if s.error != "" { return s }
-            rhs = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+            s = compiler_move_value_field_expr(s)
+                    if s.error != "" { return s }
+                    rhs = s.value
             origin = -1
         }
         if !declaration {
@@ -1580,10 +1697,9 @@ func compiler_statement(compiler_state initial) compiler_state {
         string rhs = s.value
         int origin = s.value_slot
         if s.value_field >= 0 {
-            if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
-            s = compiler_set_field_moved(s, origin, s.value_field)
-            if s.error != "" { return s }
-            rhs = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
+            s = compiler_move_value_field_expr(s)
+                    if s.error != "" { return s }
+                    rhs = s.value
         } else if origin >= 0 {
             if origin == slot { return compiler_fail(s, "self field assignment is not supported") }
             s = compiler_consume(s, origin)
