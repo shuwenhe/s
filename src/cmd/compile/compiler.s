@@ -21,6 +21,7 @@ struct compiler_state {
     int[] array_lengths
     int[] struct_ids
     int[] field_state
+    int[] field_borrow_state
     int count
     int loop_floor
     int loop_cleanup
@@ -425,6 +426,44 @@ func compiler_merge_ownership_state(int left, int right) int {
     return 2
 }
 
+func compiler_field_borrow_count(compiler_state initial, int slot, int field) int {
+    s := initial
+    idx := slot * 8 + field
+    if slot >= 0 && slot < len(s.names) && field >= 0 && field < 8 && idx < len(s.field_borrow_state) {
+        return s.field_borrow_state[idx]
+    }
+    return 0
+}
+
+func compiler_field_has_borrow(compiler_state initial, int slot, int field) bool {
+    s := initial
+    if field >= 0 { return compiler_field_borrow_count(s, slot, field) > 0 }
+    scan := 0
+    for scan < 8 {
+        if compiler_field_borrow_count(s, slot, scan) > 0 { return true }
+        scan = scan + 1
+    }
+    return false
+}
+
+func compiler_add_field_borrow(compiler_state initial, int slot, int field) compiler_state {
+    s := initial
+    idx := slot * 8 + field
+    if slot >= 0 && slot < len(s.names) && field >= 0 && field < 8 && idx < len(s.field_borrow_state) {
+        s.field_borrow_state[idx] = s.field_borrow_state[idx] + 1
+    }
+    return s
+}
+
+func compiler_drop_field_borrow(compiler_state initial, int slot, int field) compiler_state {
+    s := initial
+    idx := slot * 8 + field
+    if slot >= 0 && slot < len(s.names) && field >= 0 && field < 8 && idx < len(s.field_borrow_state) && s.field_borrow_state[idx] > 0 {
+        s.field_borrow_state[idx] = s.field_borrow_state[idx] - 1
+    }
+    return s
+}
+
 func compiler_field_unavailable_message(int state) string {
     if state == 0 { return "use of moved owned struct field" }
     if state == 2 { return "use of conditionally moved owned struct field" }
@@ -458,6 +497,31 @@ func compiler_merge_field_states(compiler_state initial, compiler_state yes, com
                     merged.field_state[idx] = yes.field_state[idx]
                 } else if yes.terminated == 0 && no.terminated == 0 {
                     merged.field_state[idx] = compiler_merge_ownership_state(yes.field_state[idx], no.field_state[idx])
+                }
+            }
+            field = field + 1
+        }
+        slot = slot + 1
+    }
+    return merged
+}
+
+func compiler_merge_field_borrow_states(compiler_state initial, compiler_state yes, compiler_state no, int limit) compiler_state {
+    merged := no
+    slot := 0
+    for slot < limit {
+        field := 0
+        for field < 8 {
+            idx := slot * 8 + field
+            if idx < len(merged.field_borrow_state) {
+                if yes.terminated == 0 && no.terminated != 0 {
+                    merged.field_borrow_state[idx] = yes.field_borrow_state[idx]
+                } else if yes.terminated == 0 && no.terminated == 0 {
+                    if yes.field_borrow_state[idx] > 0 || no.field_borrow_state[idx] > 0 {
+                        merged.field_borrow_state[idx] = 1
+                    } else {
+                        merged.field_borrow_state[idx] = 0
+                    }
                 }
             }
             field = field + 1
@@ -505,6 +569,7 @@ func compiler_conflict_at(compiler_state initial, int owner, int field, bool exc
         if s.live[i] != 0 && s.roots[i] == owner && same_field && (mutable_loan || (exclusive && shared_loan)) { return true }
         i = i + 1
     }
+    if exclusive && compiler_field_has_borrow(s, owner, field) { return true }
     return false
 }
 
@@ -1161,6 +1226,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         s.roots[slot] = origin
         s.parents[slot] = parent
         if s.value_field >= 0 { s.loan_fields[slot] = s.value_field }
+        if s.value_field >= 0 { s = compiler_add_field_borrow(s, origin, s.value_field) }
     }
     if declaration { s.count = s.count + 1 }
     return s
@@ -1212,6 +1278,7 @@ func compiler_statement(compiler_state initial) compiler_state {
             i = i + 1
         }
         no = compiler_merge_field_states(before, yes, no, before.count)
+        no = compiler_merge_field_borrow_states(before, yes, no, before.count)
         int both_terminated = 0
         if yes.terminated != 0 && no.terminated != 0 { both_terminated = 1 }
         if s.return_kind >= 3 && s.return_kind <= 4 {
@@ -1390,6 +1457,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         } else if s.kinds[slot] >= 3 {
             if compiler_child_conflict(s, slot, true) { return compiler_fail(s, "cannot drop reference with a live reborrow") }
             if s.loop_floor >= 0 && slot < s.loop_floor { return compiler_fail(s, "cannot end an outer borrow inside a loop") }
+            if s.loan_fields[slot] >= 0 { s = compiler_drop_field_borrow(s, s.roots[slot], s.loan_fields[slot]) }
             s.live[slot] = 0
         } else { return compiler_fail(s, "drop requires an owner or reference") }
         s = compiler_expect(compiler_next(s), ")")
@@ -1770,9 +1838,11 @@ func compiler_compile(string source) compiler_state {
     roots := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     parents := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     field_state := roots
+    field_borrow_state := roots
     field_state_index := 0
     while field_state_index < len(field_state) {
         field_state[field_state_index] = 1
+        field_borrow_state[field_state_index] = 0
         field_state_index = field_state_index + 1
     }
     loan_fields := roots
@@ -1797,7 +1867,7 @@ func compiler_compile(string source) compiler_state {
     struct_field_starts := [0, 0, 0, 0, 0, 0, 0, 0];
     struct_field_counts := [0, 0, 0, 0, 0, 0, 0, 0];
     struct_custom_drops := [0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, field_borrow_state: field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
