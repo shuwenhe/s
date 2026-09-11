@@ -341,6 +341,50 @@ func main() int {
 
 SRC
 
+cat >"$work/impl_drop_scope_exit.s" <<'SRC'
+
+package custom
+
+struct Resource { first box; second box }
+
+impl Drop for Resource {
+
+    func drop(Resource* r) { println("drop-impl") }
+
+}
+
+func main() int {
+
+    a := Resource(box(1), box(2))
+
+    return 42
+
+}
+
+SRC
+
+cat >"$work/receiver_method_implicit.s" <<'SRC'
+
+package methods
+
+struct Counter { value box }
+
+func (Counter* c) get() int {
+
+    return *c.value
+
+}
+
+func main() int {
+
+    c := Counter(box(42))
+
+    return c.get()
+
+}
+
+SRC
+
 
 
 cat >"$work/custom_drop_move.s" <<'SRC'
@@ -1351,6 +1395,20 @@ run_custom_drop_case custom_drop_scope_exit 'drop-resource'
 
 run_custom_drop_case custom_drop_lifo "$(printf 'drop-b\ndrop-a')"
 
+run_custom_drop_case impl_drop_scope_exit 'drop-impl'
+
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/receiver_method_implicit.s" -o "$work/receiver_method_implicit"
+
+set +e
+
+"$work/receiver_method_implicit"
+
+status=$?
+
+set -e
+
+test "$status" -eq 42
+
 run_custom_drop_case custom_drop_move 'drop-moved'
 
 run_custom_drop_case custom_drop_conditional_move 'drop-conditional'
@@ -1709,7 +1767,7 @@ fi
 
 
 
-if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" "$work/struct_owned_fields_scope_exit" "$work/struct_owned_fields_early_return" "$work/struct_owned_fields_loop" "$work/struct_custom_drop_with_fields" "$work/general_struct_three_fields" "$work/mixed_struct_fields" "$work/nested_owned_struct" "$work/nested_custom_drop_order" "$work/partial_move_scope_exit" "$work/partial_move_arg" "$work/quad_partial_move" "$work/quad_field_borrow_then_move" "$work/nested_partial_move_leaf" "$work/nested_field_borrow_drop_then_move" "$work/cfg_field_no_move_both_branches" "$work/field_reinit_after_partial_move" "$work/cfg_field_move_reinit" "$work/field_overwrite_custom_drop" "$work/cfg_field_borrow_drop_then_move" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
+if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/impl_drop_scope_exit" "$work/receiver_method_implicit" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" "$work/struct_owned_fields_scope_exit" "$work/struct_owned_fields_early_return" "$work/struct_owned_fields_loop" "$work/struct_custom_drop_with_fields" "$work/general_struct_three_fields" "$work/mixed_struct_fields" "$work/nested_owned_struct" "$work/nested_custom_drop_order" "$work/partial_move_scope_exit" "$work/partial_move_arg" "$work/quad_partial_move" "$work/quad_field_borrow_then_move" "$work/nested_partial_move_leaf" "$work/nested_field_borrow_drop_then_move" "$work/cfg_field_no_move_both_branches" "$work/field_reinit_after_partial_move" "$work/cfg_field_move_reinit" "$work/field_overwrite_custom_drop" "$work/cfg_field_borrow_drop_then_move" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
 
     echo "GC or seed runtime symbol linked into no-GC binary" >&2
 
