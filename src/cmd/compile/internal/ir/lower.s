@@ -44,13 +44,13 @@ func from_syntax(source_file src) ir_ast.package_ir {
                 }))
             }
             item.struct(struct_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir::r#type(ir_ast.type_decl { name: struct_decl.name, type_expr: "struct" }))
+                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.type_decl { name: struct_decl.name, type_expr: "struct" }))
             }
             item.enum(enum_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir::r#type(ir_ast.type_decl { name: enum_decl.name, type_expr: "enum" }))
+                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.type_decl { name: enum_decl.name, type_expr: "enum" }))
             }
             item.trait(trait_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir::r#type(ir_ast.type_decl { name: trait_decl.name, type_expr: "trait" }))
+                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.type_decl { name: trait_decl.name, type_expr: "trait" }))
             }
             item.method(method_decl) : {
                 pkg.decls.push(ir_ast.decl_ir::method(ir_ast.method_decl {
@@ -113,7 +113,7 @@ func validate_block_contract(ir_ast.block_ir block) ((), string) {
                     return checked
                 }
             }
-            ir_ast.stmt_ir::r#return(return_stmt) : {
+            ir_ast.stmt_ir::return_stmt(return_stmt) : {
                 if return_stmt.value.is_some() {
                     checked := validate_expr_contract(return_stmt.value.unwrap())
                     if checked.is_err() {
@@ -279,9 +279,9 @@ func convert_stmt(stmt s, const_rewrite_entry[] const_entries) ir_ast.stmt_ir {
         }
         stmt.return(return_stmt) : {
             if return_stmt.value.is_some() {
-                ir_ast.stmt_ir::r#return(ir_ast.return_stmt { value: option[ir_ast.expr_ir].some(convert_expr(return_stmt.value.unwrap(), const_entries)) })
+                ir_ast.stmt_ir::return_stmt(ir_ast.return_stmt { value: option[ir_ast.expr_ir].some(convert_expr(return_stmt.value.unwrap(), const_entries)) })
             } else {
-                ir_ast.stmt_ir::r#return(ir_ast.return_stmt { value: option[ir_ast.expr_ir].none })
+                ir_ast.stmt_ir::return_stmt(ir_ast.return_stmt { value: option[ir_ast.expr_ir].none })
             }
         }
         stmt.expr(expr_stmt) : {
@@ -309,8 +309,14 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
         expr.binary(binary_expr) : ir_ast.expr_ir::binary(ir_ast.binary_expr { op: binary_expr.op, left convert_expr(binary_expr.left.unwrap(), const_entries), right convert_expr(binary_expr.right.unwrap(), const_entries) }),
         expr.call(call_expr) : {
             callee_name := "<call>"
+            switch call_expr.resolved_callee {
+                option.some(name) : callee_name = name,
+                option.none : (),
+            }
             switch call_expr.callee.unwrap() {
-                expr.name(name_expr) : callee_name = name_expr.name,
+                expr.name(name_expr) : {
+                    if callee_name == "<call>" { callee_name = name_expr.name }
+                }
                 _ : callee_name = "<expr-callee>",
             }
             args := ir_ast.expr_ir[]()
