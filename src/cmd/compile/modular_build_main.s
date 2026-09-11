@@ -1,5 +1,5 @@
 package cmd
-use compile.internal.backend_elf64.build as build_binary
+use compile.internal.backend_elf64.build as build_elf64
 use internal.buildcfg.check as buildcfg_check
 use internal.buildcfg.goarch as buildcfg_goarch
 use compile.internal.arch.dispatch_init as arch_dispatch_init
@@ -27,5 +27,5 @@ func main() int {
         eprintln("compile: " + arch_err)
         return 2
     }
-    return build_binary(args[2], args[4], "", false)
+    return build_elf64(args[2], args[4], "", false)
 }

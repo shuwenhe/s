@@ -1672,3 +1672,60 @@ compiler-s-check: compiler
 no-gc-test: compiler-check
 
 	@echo "No-GC memory system tests passed"
+
+
+# ================================================================
+# Modular Compiler Targets
+# ================================================================
+
+.PHONY: package-index
+package-index:
+	@echo "Generating package index..."
+	@bash scripts/gen_package_index.sh $(CURDIR)/s-package-index.tsv
+	@echo "Package index ready: $(CURDIR)/s-package-index.tsv"
+
+.PHONY: bin/s_modular
+bin/s_modular: package-index
+	@echo "Building modular compiler..."
+	@mkdir -p .bootstrap
+	@S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) \
+	 S_PROJECT_ROOT=$(CURDIR) \
+	 S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./bin/s_seed src/cmd/compile/modular_build_main.s .bootstrap/s_modular.ir
+	@echo "Emitting s_modular binary..."
+	@S_SOURCE_ROOT=$(CURDIR) S_PROJECT_ROOT=$(CURDIR) \
+	 ./bin/s_seed --emit-bin .bootstrap/s_modular.ir ./bin/s_modular 2>&1 || \
+	 (echo "Warning: emit-bin failed, attempting AOT compilation..."; \
+	  S_SOURCE_ROOT=$(CURDIR) S_PROJECT_ROOT=$(CURDIR) \
+	  ./bin/s_seed --emit-aot .bootstrap/s_modular.ir ./bin/s_modular)
+	@chmod +x ./bin/s_modular
+	@echo "Modular compiler ready: ./bin/s_modular"
+
+.PHONY: modular-test-help
+modular-test-help: bin/s_modular
+	@echo "Testing modular compiler --help..."
+	@S_PROJECT_ROOT=$(CURDIR) ./bin/s_modular --help
+	@echo "✓ Modular compiler help works"
+
+.PHONY: modular-gate-b
+modular-gate-b: bin/s_modular package-index
+	@echo "Gate B: Testing modular compilation (simple_test.s -> native -> 42)..."
+	@mkdir -p .bootstrap/gate-b
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./bin/s_modular build test/simple_test.s -o .bootstrap/gate-b/simple
+	@echo "Running compiled binary..."
+	@./.bootstrap/gate-b/simple
+	@EXIT_CODE=$$?; \
+	 if [ $$EXIT_CODE -eq 42 ]; then \
+		echo "✓ Gate B passed: program returned 42"; \
+	 else \
+		echo "✗ Gate B failed: program returned $$EXIT_CODE (expected 42)"; \
+		exit 1; \
+	 fi
+
+.PHONY: ownership-check
+ownership-check: bin/s_modular package-index
+	@echo "Running ownership system semantic validation..."
+	@echo "Gate 1: Semantic correctness tests (not yet implemented)"
+	@echo "TODO: Implement ownership test suite"
+
