@@ -698,8 +698,8 @@ func compiler_move_value_field_expr(compiler_state initial) compiler_state {
     s := initial
     origin := s.value_slot
     if s.value_parent_field >= 0 {
-        if compiler_conflict_at(s, origin, s.value_parent_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
         if compiler_nested_field_has_borrow(s, origin, s.value_parent_field, s.value_field) { return compiler_fail(s, "cannot move borrowed nested struct field") }
+        if compiler_conflict_at(s, origin, s.value_parent_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
         s = compiler_set_nested_field_moved(s, origin, s.value_parent_field, s.value_field)
         if s.error != "" { return s }
         s.value = compiler_move_nested_field_expr(s, origin, s.value_parent_field, s.value_field, s.value_kind, s.value_struct_id)
