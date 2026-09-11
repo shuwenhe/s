@@ -96,7 +96,7 @@ func keep_alive_stmt(string name_value) stmt {
     })
     stmt::expr(expr_stmt {
         expr: expr::call(call_expr {
-            callee: box(callee), args args, inferred_type option::none,
+            callee: box(callee), args args, inferred_type option::none, resolved_callee option::none, type_args string[](),
         }),
     })
 }
@@ -151,7 +151,7 @@ func edit_expr(expr value, bool in_bloop) expr {
                 i = i + 1
             }
             expr::call(call_expr {
-                callee: box(edit_expr(call_value.callee.value, in_bloop)), args out_args, inferred_type call_value.inferred_type,
+                callee: box(edit_expr(call_value.callee.value, in_bloop)), args out_args, inferred_type call_value.inferred_type, resolved_callee call_value.resolved_callee, type_args call_value.type_args,
             })
         }
         expr.if(if_value) : {

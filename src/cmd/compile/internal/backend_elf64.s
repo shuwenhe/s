@@ -20,7 +20,9 @@ use compile.internal.ssa_core.dump_pipeline as dump_ssa_pipeline
 use compile.internal.ssa_core.dump_debug_map as dump_ssa_debug_map
 use internal.buildcfg.goarch as buildcfg_goarch
 use compile.internal.safety.prove_safety
+use compile.internal.semantic.check_source_file
 use compile.internal.syntax.parse_source
+use compile.internal.mono.monomorphize_file
 use s.assign_stmt
 use s.binary_expr
 use s.block_expr
@@ -1572,7 +1574,7 @@ func normalize_go_symbol(string text) string {
 
 func strip_go_asm_comment(string line) string {
     out := line
-    slash := index_of(out, "
+    slash := index_of(out, "//")
     if slash >= 0 {
         out = slice(out, 0, slash)
     }
@@ -2535,6 +2537,17 @@ func load_source_graph(string path, string source) (source_file, backend_error) 
     deps_result := append_dependency_items(combined, combined.uses, visited)
     if deps_result.is_err() {
         return deps_result.unwrap_err()
+    }
+    if !should_skip_semantic_check(path) {
+        diagnostics := check_source_file(combined, source)
+        if len(diagnostics) > 0 {
+            return backend_error { message: "semantic check failed before monomorphization" }
+        }
+        mono_result := monomorphize_file(combined)
+        if mono_result.invariant_errors != 0 {
+            return backend_error { message: "monomorphization failed: unresolved generic residue" }
+        }
+        return mono_result.file
     }
     combined
 }

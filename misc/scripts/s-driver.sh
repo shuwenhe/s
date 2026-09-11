@@ -16,6 +16,7 @@ else
 fi
 
 compiler="$root/bin/s_compiler"
+modular_compiler=${S_MODULAR_COMPILER:-"$root/bin/s_modular"}
 
 
 
@@ -30,6 +31,7 @@ usage() {
     echo '  s -o <output> <input.s>' >&2
 
     echo '  s build <input.s> -o <output>' >&2
+    echo '  s build --legacy <input.s> -o <output>' >&2
 
     echo '  s --emit-c <input.s> <output.c>' >&2
 
@@ -67,7 +69,7 @@ ensure_compiler() {
 
 
 
-emit_binary() {
+emit_binary_legacy() {
 
     input=$1
 
@@ -105,6 +107,32 @@ emit_binary() {
     cp "$work/program" "$output"
 
     chmod +x "$output"
+
+}
+
+
+
+emit_binary() {
+
+    input=$1
+
+    output=$2
+
+    if [ -x "$modular_compiler" ]; then
+
+        exec "$modular_compiler" build "$input" -o "$output"
+
+    fi
+
+    if [ "${S_DRIVER_VERBOSE:-}" = "1" ]; then
+
+        echo "s: modular compiler not found; falling back to legacy compiler" >&2
+
+        echo "s: set S_MODULAR_COMPILER or install bin/s_modular to use the modular pipeline" >&2
+
+    fi
+
+    emit_binary_legacy "$input" "$output"
 
 }
 
@@ -175,6 +203,16 @@ fi
 if [ "$#" -eq 4 ] && [ "$1" = "build" ] && [ "$3" = "-o" ]; then
 
     emit_binary "$2" "$4"
+
+    exit 0
+
+fi
+
+
+
+if [ "$#" -eq 5 ] && [ "$1" = "build" ] && [ "$2" = "--legacy" ] && [ "$4" = "-o" ]; then
+
+    emit_binary_legacy "$3" "$5"
 
     exit 0
 

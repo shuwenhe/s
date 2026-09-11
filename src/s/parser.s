@@ -1365,7 +1365,7 @@ func (parser* self) parse_call_expr() (expr, parse_error) {
                 _, err := self.expect_symbol(")")
             if err.message != "" { expr empty; return empty, err }
                 expr = expr::call(call_expr {
-                    callee: box(expr), args args, inferred_type option::none,
+                    callee: box(expr), args args, inferred_type option::none, resolved_callee option::none, type_args string[](),
                 })
                 continue
             }
@@ -1864,7 +1864,7 @@ func build_call_expr(string callee_name, expr[] args) expr {
     expr::call(call_expr {
         callee: box(expr::name(name_expr {
             name: callee_name, inferred_type option::none,
-        })), args args, inferred_type option::none,
+        })), args args, inferred_type option::none, resolved_callee option::none, type_args string[](),
     })
 }
 

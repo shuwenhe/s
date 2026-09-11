@@ -25,6 +25,7 @@ use s.pattern
 use s.stmt
 use s.parse_source
 use s.param_decl
+use s.source_file
 use std.option.option
 use std.prelude.char_at
 use std.prelude.len
@@ -81,6 +82,7 @@ struct signature_match {
     bool ok
     string return_type
     string instance_name
+    string[] type_args
     int score
     int generic_bind_count
     int unknown_arg_count
@@ -264,6 +266,24 @@ func check_detailed(string source) semantic_error[] {
         return finalize_diagnostics(diagnostics)
     }
     file := parsed.unwrap()
+    functions := collect_functions(file.items)
+    traits := collect_traits(file.items)
+    consts := collect_consts(file.items, functions, traits, source, diagnostics)
+    validate_function_set(functions, source, diagnostics)
+    i := 0
+    for i < len(file.items) {
+        ignored := check_item(file.items[i], functions, traits, consts, source, diagnostics)
+        i = i + 1
+    }
+    finalize_diagnostics(diagnostics)
+}
+
+func check_source_file(source_file file, string source) semantic_error[] {
+    diagnostics := semantic_error[]()
+    if !rules_consistent() {
+        add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
+        return finalize_diagnostics(diagnostics)
+    }
     functions := collect_functions(file.items)
     traits := collect_traits(file.items)
     consts := collect_consts(file.items, functions, traits, source, diagnostics)
@@ -1489,6 +1509,8 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                                 type_name: "unknown", errors errors + add_error(source, diagnostics, "e1003", "ambiguous overload", member.member),
                             }
                         }
+                        value.resolved_callee = option::some(best.instance_name)
+                        value.type_args = best.type_args
                         return check_result {
                             type_name: best.return_type, errors errors,
                         }
@@ -1625,6 +1647,8 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                             type_name: "unknown", errors errors + add_error(source, diagnostics, "e1003", "ambiguous overload", callee_name.name),
                         }
                     }
+                    value.resolved_callee = option::some(best.instance_name)
+                    value.type_args = best.type_args
                     check_result {
                         type_name: best.return_type, errors errors,
                     }
@@ -2201,7 +2225,7 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
     if len(binding.param_types) != len(arg_types) {
         return signature_match {
             ok: false,
-            return_type: "unknown", instance_name: "", score 0, generic_bind_count 0, unknown_arg_count 0,
+            return_type: "unknown", instance_name: "", type_args string[](), score 0, generic_bind_count 0, unknown_arg_count 0,
         }
     }
     generic_bindings := type_binding[]()
@@ -2224,15 +2248,29 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
         if !matched {
             return signature_match {
                 ok: false,
-                return_type: "unknown", instance_name: "", score 0, generic_bind_count 0, unknown_arg_count 0,
+                return_type: "unknown", instance_name: "", type_args string[](), score 0, generic_bind_count 0, unknown_arg_count 0,
             }
         }
         score = score + match_specificity(expected_ref, actual_ref, binding.generic_names)
         i = i + 1
     }
     signature_match {
-        ok: true, return_type instantiate_type(binding.return_type, binding.generic_names, generic_bindings), instance_name specialized_instance_name(binding, generic_bindings), score score, generic_bind_count len(generic_bindings), unknown_arg_count unknown_arg_count,
+        ok: true, return_type instantiate_type(binding.return_type, binding.generic_names, generic_bindings), instance_name specialized_instance_name(binding, generic_bindings), type_args ordered_type_args(binding.generic_names, generic_bindings), score score, generic_bind_count len(generic_bindings), unknown_arg_count unknown_arg_count,
     }
+}
+
+func ordered_type_args(string[] generic_names, type_binding[] bindings) string[] {
+    args := string[]()
+    i := 0
+    for i < len(generic_names) {
+        bound := lookup_name_type(bindings, generic_names[i])
+        if is_unknown(bound) {
+            bound = "unknown"
+        }
+        args = append(args, bound)
+        i = i + 1
+    }
+    args
 }
 
 func specialized_instance_name(function_binding binding, type_binding[] bindings) string {

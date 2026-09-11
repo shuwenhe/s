@@ -96,6 +96,8 @@ struct call_expr {
     box[expr] callee
     expr[] args
     option[string] inferred_type
+    option[string] resolved_callee
+    string[] type_args
 }
 
 struct switch_arm {
