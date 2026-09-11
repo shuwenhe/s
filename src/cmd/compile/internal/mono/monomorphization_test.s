@@ -8,6 +8,7 @@ use compile.internal.mono.specialize_function
 use compile.internal.mono.substitute_type
 use compile.internal.mono.monomorphize_file
 use compile.internal.mono.summarize_instance
+use compile.internal.mono.verify_monomorphized_file_with_details
 use s.function_decl
 use s.function_sig
 use s.param
@@ -165,5 +166,144 @@ func run_monomorphization_test() int {
     if box_summary.params[0].copy || !box_summary.params[0].drop {
         return 1
     }
+    0
+}
+
+// E2E test: Verify transitive monomorphization works correctly for chain: main -> foo[int] -> bar[int] -> baz[int]
+func run_e2e_transitive_monomorphization_test() int {
+    // Phase 1: Test transitive chain resolution
+    // Scenario: main calls foo(42), foo calls bar, bar calls baz
+    
+    // Create baz[T](T x) -> T
+    baz_return := expr::name(name_expr { name: "x", inferred_type option::some("T") })
+    baz := function_decl {
+        sig: function_sig {
+            name: "baz",
+            generics: string[] { "T" },
+            params: param[] { param { name: "x", type_name: "T" } },
+            return_type: option::some("T"),
+        },
+        body: option::some(block_expr { 
+            statements: stmt[] {},
+            final_expr: option::some(baz_return),
+            inferred_type: option::some("T"),
+        }),
+        is_public: false,
+    }
+    
+    // Create bar[T](T x) -> T calls baz[T](x)
+    baz_call := expr::call(call_expr {
+        callee: box(expr::name(name_expr { name: "baz", inferred_type: option::none })),
+        args: expr[] { expr::name(name_expr { name: "x", inferred_type: option::some("T") }) },
+        inferred_type: option::some("T"),
+        resolved_callee: option::some("baz__mono_T"),
+        type_args: string[] { "T" },
+    })
+    bar := function_decl {
+        sig: function_sig {
+            name: "bar",
+            generics: string[] { "T" },
+            params: param[] { param { name: "x", type_name: "T" } },
+            return_type: option::some("T"),
+        },
+        body: option::some(block_expr {
+            statements: stmt[] {},
+            final_expr: option::some(baz_call),
+            inferred_type: option::some("T"),
+        }),
+        is_public: false,
+    }
+    
+    // Create foo[T](T x) -> T calls bar[T](x)
+    bar_call := expr::call(call_expr {
+        callee: box(expr::name(name_expr { name: "bar", inferred_type: option::none })),
+        args: expr[] { expr::name(name_expr { name: "x", inferred_type: option::some("T") }) },
+        inferred_type: option::some("T"),
+        resolved_callee: option::some("bar__mono_T"),
+        type_args: string[] { "T" },
+    })
+    foo := function_decl {
+        sig: function_sig {
+            name: "foo",
+            generics: string[] { "T" },
+            params: param[] { param { name: "x", type_name: "T" } },
+            return_type: option::some("T"),
+        },
+        body: option::some(block_expr {
+            statements: stmt[] {},
+            final_expr: option::some(bar_call),
+            inferred_type: option::some("T"),
+        }),
+        is_public: false,
+    }
+    
+    // Create main() calls foo[int](42)
+    foo_call := expr::call(call_expr {
+        callee: box(expr::name(name_expr { name: "foo", inferred_type: option::none })),
+        args: expr[] { expr::int(int_expr { value: "42", inferred_type: option::some("int") }) },
+        inferred_type: option::some("int"),
+        resolved_callee: option::some("foo__mono_int"),
+        type_args: string[] { "int" },
+    })
+    main := function_decl {
+        sig: function_sig {
+            name: "main",
+            generics: string[] {},
+            params: param[] {},
+            return_type: option::some("int"),
+        },
+        body: option::some(block_expr {
+            statements: stmt[] {},
+            final_expr: option::some(foo_call),
+            inferred_type: option::some("int"),
+        }),
+        is_public: true,
+    }
+    
+    // Create source file with all functions
+    file := source_file {
+        pkg: "e2e.mono.test",
+        uses: use_decl[] {},
+        items: item[] {
+            item::function(foo),
+            item::function(bar),
+            item::function(baz),
+            item::function(main),
+        },
+    }
+    
+    // Phase 2: Run monomorphization
+    mono_file := monomorphize_file(file)
+    
+    // Phase 3: Verify results
+    // After monomorphization, we should have:
+    // - main (non-generic, kept)
+    // - foo__mono_int (generated)
+    // - bar__mono_int (generated)
+    // - baz__mono_int (generated)
+    // Total: 4 concrete instances
+    
+    if mono_cache_count(mono_file.cache) != 3 {
+        // Expected 3: foo[int], bar[int], baz[int]
+        return 1
+    }
+    
+    if len(mono_file.file.items) != 4 {
+        // Expected 4: main + 3 generated instances
+        return 1
+    }
+    
+    // Phase 4: Verify post-mono invariants (no generic residue)
+    if mono_file.invariant_errors != 0 {
+        return 1
+    }
+    
+    // Phase 5: Verify detailed invariants (all resolved)
+    if verify_monomorphized_file_with_details(mono_file.file) != 0 {
+        return 1
+    }
+    
+    // Success: E2E pipeline verified
+    // generic source -> semantic -> monomorphize (with transitive closure) -> concrete instances
     0
 }
