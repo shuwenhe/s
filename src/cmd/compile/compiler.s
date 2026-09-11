@@ -67,6 +67,10 @@ struct compiler_state {
     int struct_count
     string function_name
     bool function_main
+    string[] method_names
+    int[] method_structs
+    int[] method_returns
+    int method_count
 }
 
 func compiler_number(int n) string {
@@ -235,6 +239,7 @@ func compiler_c_type_for_kind(compiler_state initial, int kind, int struct_id) s
     if kind == 3 { return "const int64_t *" }
     if kind == 18 { return "const void *" }
     if kind == 19 { return "void *" }
+    if kind == 20 { return compiler_struct_c_name(s, struct_id) + " *" }
     if kind == 17 { return "const char *" }
     "int64_t "
 }
@@ -248,6 +253,10 @@ func compiler_is_borrow_kind(int kind) bool {
 func compiler_is_mutable_borrow_kind(int kind) bool {
     if kind == 4 || kind == 19 { return true }
     return false
+}
+
+func compiler_is_struct_access_kind(int kind) bool {
+    return kind == 5 || kind == 20
 }
 
 func compiler_drop_field_code(compiler_state initial, string target, int kind, int struct_id) string {
@@ -733,6 +742,21 @@ func compiler_find_func(compiler_state initial, string name) int {
     return -1
 }
 
+func compiler_find_method(compiler_state initial, int struct_id, string name) int {
+    s := initial
+    int i = s.method_count - 1
+    for i >= 0 {
+        if s.method_structs[i] == struct_id && s.method_names[i] == name { return i }
+        i = i - 1
+    }
+    return -1
+}
+
+func compiler_method_c_name(compiler_state initial, int method_index) string {
+    s := initial
+    return "method_" + s.struct_names[s.method_structs[method_index]] + "_" + s.method_names[method_index]
+}
+
 func compiler_conflict_at(compiler_state initial, int owner, int field, bool exclusive) bool {
     s := initial
     int i = 0
@@ -961,14 +985,14 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         int slot = compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
-        if s.kinds[slot] != 2 && s.kinds[slot] != 3 && s.kinds[slot] != 4 && s.kinds[slot] != 5 { return compiler_fail(s, "dereference requires a box or integer reference") }
+        if s.kinds[slot] != 2 && s.kinds[slot] != 3 && s.kinds[slot] != 4 && !compiler_is_struct_access_kind(s.kinds[slot]) { return compiler_fail(s, "dereference requires a box or integer reference") }
         int field = -1
         s = compiler_next(s)
         if s.token == "." {
             s = compiler_next(s)
             field = compiler_field_index(s, s.struct_ids[slot], s.token)
             if field < 0 { return compiler_fail(s, "invalid owned struct field dereference") }
-            if s.kinds[slot] != 5 { return compiler_fail(s, "invalid pair field dereference") }
+            if !compiler_is_struct_access_kind(s.kinds[slot]) { return compiler_fail(s, "invalid pair field dereference") }
             if compiler_struct_field_kind(s, s.struct_ids[slot], field) != 2 { return compiler_fail(s, "field dereference requires an owned box field") }
             field_state := compiler_field_live(s, slot, field)
             field_error := compiler_field_unavailable_message(field_state)
@@ -978,7 +1002,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             s.value = "(*" + compiler_var(slot) + "->" + field_name + ")"
             s = compiler_next(s)
         } else {
-            if s.kinds[slot] == 5 { return compiler_fail(s, "struct dereference requires an owned box field") }
+            if compiler_is_struct_access_kind(s.kinds[slot]) { return compiler_fail(s, "struct dereference requires an owned box field") }
             s.value = "(*" + compiler_var(slot) + ")"
         }
         if compiler_is_borrow_kind(s.kinds[slot]) && compiler_child_conflict(s, slot, false) { return compiler_fail(s, "cannot read reference during a mutable reborrow") }
@@ -1280,10 +1304,27 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     }
     if s.token == "." {
         s = compiler_next(s)
+        member_name := s.token
+        method_look := compiler_next(s)
         int field = -1
-        field = compiler_field_index(s, s.struct_ids[slot], s.token)
-        if field < 0 { return compiler_fail(s, "unknown owned struct field") }
-        if s.kinds[slot] != 5 { return compiler_fail(s, "field access requires a pair") }
+        field = compiler_field_index(s, s.struct_ids[slot], member_name)
+        if field < 0 {
+            method_index := compiler_find_method(s, s.struct_ids[slot], member_name)
+            if method_index >= 0 && method_look.token == "(" {
+                if !compiler_is_struct_access_kind(s.kinds[slot]) { return compiler_fail(s, "method call requires an owned struct receiver") }
+                if compiler_conflict(s, slot, false) { return compiler_fail(s, "cannot call method while receiver is mutably borrowed") }
+                s = compiler_expect(method_look, "(")
+                if s.token != ")" { return compiler_fail(s, "receiver methods in this subset do not accept extra arguments") }
+                s = compiler_expect(s, ")")
+                s.value = compiler_method_c_name(s, method_index) + "(" + compiler_var(slot) + ")"
+                s.value_kind = s.method_returns[method_index]
+                s.value_slot = -1
+                s.value_struct_id = -1
+                return s
+            }
+            return compiler_fail(s, "unknown owned struct field")
+        }
+        if !compiler_is_struct_access_kind(s.kinds[slot]) { return compiler_fail(s, "field access requires a pair") }
         field_state := compiler_field_live(s, slot, field)
         field_error := compiler_field_unavailable_message(field_state)
         if field_error != "" { return compiler_fail(s, field_error) }
@@ -1295,7 +1336,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.value_slot = slot
         s.value_field = field
         s.value_struct_id = field_struct
-        s = compiler_next(s)
+        s = method_look
         if s.token == "." {
             if field_kind != 5 || field_struct < 0 { return compiler_fail(s, "nested field access requires a named struct field") }
             s = compiler_next(s)
@@ -1978,6 +2019,85 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     return s
 }
 
+func compiler_parse_receiver_method(compiler_state initial) compiler_state {
+    s := initial
+    s = compiler_expect(s, "func")
+    s = compiler_expect(s, "(")
+    if !compiler_is_struct_type(s.token) { return compiler_fail(s, "receiver type must be an owned struct") }
+    type_name := s.token
+    struct_id := compiler_find_struct(s, type_name)
+    if struct_id < 0 { return compiler_fail(s, "receiver type is not declared: " + type_name) }
+    s = compiler_next(s)
+    s = compiler_expect(s, "*")
+    receiver := s.token
+    if !compiler_ident(receiver) { return compiler_fail(s, "expected receiver name") }
+    s = compiler_next(s)
+    s = compiler_expect(s, ")")
+    method_name := s.token
+    if !compiler_ident(method_name) { return compiler_fail(s, "expected receiver method name") }
+    if method_name != "drop" && compiler_find_method(s, struct_id, method_name) >= 0 { return compiler_fail(s, "duplicate receiver method for type: " + type_name + "." + method_name) }
+    if method_name != "drop" && s.method_count >= len(s.method_names) { return compiler_fail(s, "too many receiver methods") }
+    s = compiler_next(s)
+    s = compiler_expect(s, "(")
+    if s.token != ")" { return compiler_fail(s, "receiver methods in this subset do not accept extra parameters") }
+    s = compiler_expect(s, ")")
+    if method_name == "drop" {
+        if s.token != "{" { return compiler_fail(s, "drop method must not return a value") }
+        if s.struct_custom_drops[struct_id] != 0 { return compiler_fail(s, "duplicate drop method for type: " + type_name) }
+        return compiler_parse_drop_body(s, type_name, struct_id, receiver)
+    }
+    method_return := 0
+    if s.token == "int" {
+        method_return = 1
+        s = compiler_next(s)
+    } else if s.token != "{" {
+        return compiler_fail(s, "receiver method return type must be int or omitted")
+    }
+    method_index := s.method_count
+    s.method_names[method_index] = method_name
+    s.method_structs[method_index] = struct_id
+    s.method_returns[method_index] = method_return
+    s.method_count = s.method_count + 1
+    result_type := "void "
+    if method_return == 1 { result_type = "int64_t " }
+    s.return_kind = method_return
+    s.parameter_count = 1
+    s.return_param = -1
+    s.count = 0
+    s.depth = 0
+    s.loop_floor = -1
+    s.loop_cleanup = -1
+    s.terminated = 0
+    s.function_name = compiler_method_c_name(s, method_index)
+    s.function_main = false
+    s.code = s.code + "static " + result_type + compiler_method_c_name(s, method_index) + "(S_" + type_name + " *p0)\n{\n"
+    s.code = s.code + "S_" + type_name + " *" + compiler_var(0) + " = p0;\n(void)" + compiler_var(0) + ";\n"
+    s.names[0] = receiver
+    s.kinds[0] = 20
+    s.live[0] = 1
+    s.struct_ids[0] = struct_id
+    s.roots[0] = -1
+    s.parents[0] = -1
+    s.loan_fields[0] = -1
+    s.loan_parent_fields[0] = -1
+    field_count := s.struct_field_counts[struct_id]
+    fi := 0
+    for fi < field_count {
+        s.field_state[fi] = 1
+        s = compiler_clear_nested_field_state(s, 0, fi)
+        fi = fi + 1
+    }
+    s.count = 1
+    s = compiler_block(s)
+    if s.error != "" { return s }
+    if s.terminated == 0 {
+        if method_return == 0 { s.code = s.code + "return;\n" }
+        else { s.code = s.code + "return 0;\n" }
+    }
+    s.code = s.code + "}\n"
+    return s
+}
+
 func compiler_parse_drop_method(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "func")
@@ -1999,6 +2119,42 @@ func compiler_parse_drop_method(compiler_state initial) compiler_state {
     if s.token != ")" { return compiler_fail(s, "drop method must not have parameters") }
     s = compiler_expect(s, ")")
     if s.token != "{" { return compiler_fail(s, "drop method must not return a value") }
+    return compiler_parse_drop_body(s, type_name, struct_id, receiver)
+}
+
+func compiler_parse_drop_impl(compiler_state initial) compiler_state {
+    s := initial
+    s = compiler_expect(s, "impl")
+    if s.token != "Drop" { return compiler_fail(s, "only Drop impl blocks are supported in no-GC compiler subset") }
+    s = compiler_next(s)
+    s = compiler_expect(s, "for")
+    if !compiler_is_struct_type(s.token) { return compiler_fail(s, "Drop impl type must be an owned struct") }
+    type_name := s.token
+    struct_id := compiler_find_struct(s, type_name)
+    if struct_id < 0 { return compiler_fail(s, "Drop impl type is not declared: " + type_name) }
+    if s.struct_custom_drops[struct_id] != 0 { return compiler_fail(s, "duplicate drop method for type: " + type_name) }
+    s = compiler_next(s)
+    s = compiler_expect(s, "{")
+    s = compiler_expect(s, "func")
+    if s.token != "drop" { return compiler_fail(s, "Drop impl must define func drop") }
+    s = compiler_next(s)
+    s = compiler_expect(s, "(")
+    if s.token != type_name { return compiler_fail(s, "Drop impl receiver type mismatch") }
+    s = compiler_next(s)
+    s = compiler_expect(s, "*")
+    receiver := s.token
+    if !compiler_ident(receiver) { return compiler_fail(s, "expected drop receiver name") }
+    s = compiler_next(s)
+    s = compiler_expect(s, ")")
+    if s.token != "{" { return compiler_fail(s, "drop method must not return a value") }
+    s = compiler_parse_drop_body(s, type_name, struct_id, receiver)
+    if s.error != "" { return s }
+    s = compiler_expect(s, "}")
+    return s
+}
+
+func compiler_parse_drop_body(compiler_state initial, string type_name, int struct_id, string receiver) compiler_state {
+    s := initial
     s.struct_custom_drops[struct_id] = 1
     s = compiler_expect(s, "{")
     s.code = s.code + "static void compiler_drop_user_" + type_name + "(S_" + type_name + " *" + receiver + ")\n{\n(void)" + receiver + ";\n"
@@ -2043,7 +2199,7 @@ func compiler_emit_default_drop_hooks(compiler_state initial) compiler_state {
 func compiler_parse_function_like(compiler_state initial) compiler_state {
     s := initial
     look := compiler_next(s)
-    if look.token == "(" { return compiler_parse_drop_method(s) }
+    if look.token == "(" { return compiler_parse_receiver_method(s) }
     compiler_parse_helper(s)
 }
 
@@ -2073,6 +2229,9 @@ func compiler_compile(string source) compiler_state {
     function_counts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_returns := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_return_params := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    method_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
+    method_structs := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    method_returns := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_starts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_param_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_param_structs := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -2088,7 +2247,7 @@ func compiler_compile(string source) compiler_state {
     struct_field_starts := [0, 0, 0, 0, 0, 0, 0, 0];
     struct_field_counts := [0, 0, 0, 0, 0, 0, 0, 0];
     struct_custom_drops := [0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, loan_parent_fields: loan_parent_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, field_borrow_state: field_borrow_state, nested_field_state: nested_field_state, nested_field_borrow_state: nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, loan_parent_fields: loan_parent_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, field_borrow_state: field_borrow_state, nested_field_state: nested_field_state, nested_field_borrow_state: nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false, method_names: method_names, method_structs: method_structs, method_returns: method_returns, method_count: 0 }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
@@ -2106,17 +2265,22 @@ func compiler_compile(string source) compiler_state {
         s = compiler_parse_struct_decl(s)
         if s.error != "" { return s }
     }
-    if s.token != "func" {
+    if s.token != "func" && s.token != "impl" {
         string unsupported = compiler_unsupported_token_message(s.token)
         if unsupported != "" { return compiler_subset_fail(s, unsupported) }
     }
-    for s.token == "func" {
-        look := compiler_next(s)
-        if look.token == "main" {
-            break
+    for s.token == "func" || s.token == "impl" {
+        if s.token == "impl" {
+            s = compiler_parse_drop_impl(s)
+            if s.error != "" { return s }
+        } else {
+            look := compiler_next(s)
+            if look.token == "main" {
+                break
+            }
+            s = compiler_parse_function_like(s)
+            if s.error != "" { return s }
         }
-        s = compiler_parse_function_like(s)
-        if s.error != "" { return s }
     }
     s = compiler_emit_default_drop_hooks(s)
     s = compiler_expect(s, "func")
