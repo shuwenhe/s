@@ -1,11 +1,29 @@
-# S Language Generics Phase 1: Function Generics MVP Implementation
+# S Language Generics Phase 1: Function Generics MVP - CORE IMPLEMENTATION
 
-## Overview
-Successfully implemented Phase 1 of the S language's generic system, completing the Function Generics MVP with a robust monomorphization pipeline and comprehensive validation.
+## ⚠️ IMPORTANT: Current Scope Clarification
 
-**Status**: ✅ COMPLETE (Commit: 65af6104)
+**Current Status**: ✅ **CORE COMPLETE** (AST-Level Monomorphization)
 
-## Architecture
+This document describes the monomorphization algorithm and AST transformation layer. **Native E2E (full compilation to binary) is NOT YET VALIDATED.**
+
+### What This Phase Actually Covers
+- ✅ Semantic generic type inference
+- ✅ Monomorphization algorithm (worklist-based transitive closure)
+- ✅ Post-mono invariant verification
+- ✅ AST-level transformation proof
+
+### What's Explicitly NOT Included
+- ❌ Integration with ownership analysis
+- ❌ Integration with IR lowering
+- ❌ Native backend integration
+- ❌ Full user-facing compilation pipeline
+- ❌ Binary execution validation
+
+**The statement "E2E gate passing (source → semantic → mono → concrete binary)" is INCORRECT.**
+
+**Corrected Statement**: E2E AST transformation verified (source → semantic → mono → concrete AST)
+
+---
 
 ### 1. MonoContext - Unified Monomorphization Context
 ```s
@@ -159,33 +177,73 @@ This ensures lowering doesn't need to re-resolve generic calls.
 
 **Test Status**: All tests expected to pass
 - Existing monomorphization tests unaffected
-- New E2E test validates transitive closure
+- New E2E test validates transitive closure (at AST level)
 
-## What's Next: Phase 2
+## ⚠️ WHAT'S NOT DONE YET
 
-### Generic Structs
-- Build on solid foundation: transitive mono + no-generic invariant
-- Apply same worklist algorithm to struct field monomorphization
-- Expected benefits from Phase 1 groundwork
+The following remain to complete a TRUE native E2E for generics:
 
-### Future Phases (3+)
-- Trait/where constraints (after generic structs stabilized)
-- SSA improvements with concrete types
-- AOT compilation with full type information
+### 1. Integration with Ownership Analysis
+- Concrete instances must pass through ownership inference
+- Generic ownership constraints need validation
+
+### 2. Integration with IR Lowering
+- Concrete types must be correctly lowered to IR
+- No generic residue should appear in IR
+
+### 3. Integration with Native Backend
+- IR must successfully emit native code for all instantiations
+- All monomorphic instances must be compilable
+
+### 4. Full User-Facing Pipeline
+- `bin/s_modular build generic_chain.s` (not yet supported)
+- Complete compilation to native binary
+- Execution validation
+
+**These items are explicitly DEFERRED to subsequent work.**
+
+## Next Immediate Goals: NOT Generic Structs
+
+**DO NOT PROCEED TO GENERIC STRUCTS YET.**
+
+Instead, freeze monomorphization.s and focus on:
+
+1. **IR Closed-World Gate** (`src/cmd/compile/main.s`)
+   - Verify every CALL has matching FUNC definition or extern declaration
+   - Prevents emission of invalid IR referencing undefined symbols
+
+2. **Source Closure** (`source_closure.sh`)
+   - Collect all transitive package dependencies
+   - Build file index for complete compilation unit
+   - Foundation for true modular compilation
+
+3. **bin/s_modular Integration**
+   - Connect source closure to s_seed --compile-unit
+   - Validate closed IR (no external symbol references)
+   - Emit native binary
+
+4. **Native E2E Validation Gate** (`make generic-native-e2e-check`)
+   - Must complete full pipeline: source → binary → 42
+   - Only then consider Phase 1 truly COMPLETE
 
 ## Architecture Principles Applied
 
 1. **Separation of Concerns**: Monomorphization context isolated from verification
 2. **Transitivity**: Worklist ensures all required instances generated
 3. **Invariant Enforcement**: Post-mono checks prevent invalid instances entering lowering
-4. **Systematic Validation**: E2E gate verifies complete pipeline
+4. **Systematic Validation**: AST-level gate verifies algorithm correctness
 
 ## Conclusion
 
-Phase 1 establishes a solid, validated foundation for S language generics:
-- ✅ Worklist-based transitive monomorphization proven working
-- ✅ Post-mono invariants guaranteed by verification
-- ✅ E2E pipeline validated from source to concrete
-- ✅ Clean architecture supports future generic features
+**Phase 1 Core Achievement**: 
+- ✅ Worklist-based transitive monomorphization algorithm proven
+- ✅ Post-mono invariants enforced at AST level
+- ✅ Algorithm-level E2E validated (source → AST → concrete functions)
+- ❌ NOT YET: Full compilation pipeline integration
 
-The implementation is production-ready for function generics and provides a strong base for generic structs and advanced features.
+**Current Status**: Function generic monomorphization CORE ALGORITHM COMPLETE
+
+**Next Phase**: NOT generic structs, but **modular compiler pipeline** to support user-facing native E2E
+
+The monomorphization algorithm is solid and can now be integrated into the broader compiler pipeline. Further generic enhancements (structs, traits) should wait until the native compilation pipeline is proven working.
+
