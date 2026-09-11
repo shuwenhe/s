@@ -1218,3 +1218,156 @@ func summarize_instance(function_decl instance) mono_function_summary {
     }
     mono_function_summary { instance_name: instance.sig.name, params: params, result: result }
 }
+
+// verify_monomorphized_file_with_details: verify post-monomorphization invariants with detailed reporting
+// Returns number of errors found
+// Post-mono invariants:
+//   - All concrete functions (__mono) must have no generic type parameters
+//   - No residual generics: T, U, V, box[T], T[], etc.
+//   - All call expressions must have resolved_callee set
+//   - All type_args in calls must be resolved (no T)
+func verify_monomorphized_file_with_details(source_file file) int {
+    errors := verify_monomorphized_file(file)
+    
+    // Additional detailed verification for concrete instances
+    i := 0
+    for i < len(file.items) {
+        switch file.items[i] {
+            item.function(fn) : {
+                if contains_text(fn.sig.name, "__mono") {
+                    // Verify call expressions have resolved_callee
+                    errors = errors + verify_function_resolved_calls(fn)
+                }
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    
+    errors
+}
+
+func verify_function_resolved_calls(function_decl fn) int {
+    errors := 0
+    switch fn.body {
+        option.some(body) : errors = verify_block_resolved_calls(body),
+        option.none : (),
+    }
+    errors
+}
+
+func verify_block_resolved_calls(block_expr block) int {
+    errors := 0
+    i := 0
+    for i < len(block.statements) {
+        errors = errors + verify_stmt_resolved_calls(block.statements[i])
+        i = i + 1
+    }
+    switch block.final_expr {
+        option.some(value) : errors = errors + verify_expr_resolved_calls(value),
+        option.none : (),
+    }
+    errors
+}
+
+func verify_stmt_resolved_calls(stmt value) int {
+    switch value {
+        stmt.let(v) : verify_expr_resolved_calls(v.value),
+        stmt.assign(v) : verify_expr_resolved_calls(v.value),
+        stmt.increment(_) : 0,
+        stmt.c_for(v) : verify_stmt_resolved_calls(v.init.value) + verify_expr_resolved_calls(v.condition) + verify_stmt_resolved_calls(v.step.value) + verify_block_resolved_calls(v.body),
+        stmt.return(v) : {
+            switch v.value {
+                option.some(e) : verify_expr_resolved_calls(e),
+                option.none : 0,
+            }
+        }
+        stmt.expr(v) : verify_expr_resolved_calls(v.expr),
+        stmt.defer(v) : verify_expr_resolved_calls(v.expr),
+        stmt.sroutine(v) : verify_expr_resolved_calls(v.expr),
+    }
+}
+
+func verify_expr_resolved_calls(expr value) int {
+    switch value {
+        expr.call(v) : {
+            errors := 0
+            // Monomorphized calls should have resolved_callee
+            if len(v.type_args) == 0 {
+                switch v.resolved_callee {
+                    option.some(_) : (),
+                    option.none : errors = 1,
+                }
+            }
+            errors = errors + verify_expr_resolved_calls(v.callee.value)
+            i := 0
+            for i < len(v.args) {
+                errors = errors + verify_expr_resolved_calls(v.args[i])
+                i = i + 1
+            }
+            errors
+        }
+        expr.binary(v) : verify_expr_resolved_calls(v.left.value) + verify_expr_resolved_calls(v.right.value),
+        expr.borrow(v) : verify_expr_resolved_calls(v.target.value),
+        expr.member(v) : verify_expr_resolved_calls(v.target.value),
+        expr.index(v) : verify_expr_resolved_calls(v.target.value) + verify_expr_resolved_calls(v.index.value),
+        expr.if(v) : {
+            errors := verify_expr_resolved_calls(v.condition.value) + verify_block_resolved_calls(v.then_branch)
+            switch v.else_branch {
+                option.some(e) : errors = errors + verify_expr_resolved_calls(e.value),
+                option.none : (),
+            }
+            errors
+        }
+        expr.for(v) : {
+            errors := 0
+            switch v.init {
+                option.some(s) : errors = errors + verify_stmt_resolved_calls(s.value),
+                option.none : (),
+            }
+            switch v.condition {
+                option.some(e) : errors = errors + verify_expr_resolved_calls(e.value),
+                option.none : (),
+            }
+            switch v.post {
+                option.some(s) : errors = errors + verify_stmt_resolved_calls(s.value),
+                option.none : (),
+            }
+            switch v.iterable {
+                option.some(e) : errors = errors + verify_expr_resolved_calls(e.value),
+                option.none : (),
+            }
+            errors + verify_block_resolved_calls(v.body)
+        }
+        expr.block(v) : verify_block_resolved_calls(v),
+        expr.switch(v) : {
+            errors := verify_expr_resolved_calls(v.subject.value)
+            i := 0
+            for i < len(v.arms) {
+                errors = errors + verify_expr_resolved_calls(v.arms[i].expr)
+                i = i + 1
+            }
+            errors
+        }
+        expr.array(v) : {
+            errors := 0
+            i := 0
+            for i < len(v.items) {
+                errors = errors + verify_expr_resolved_calls(v.items[i])
+                i = i + 1
+            }
+            errors
+        }
+        expr.map(v) : {
+            errors := 0
+            i := 0
+            for i < len(v.entries) {
+                errors = errors + verify_expr_resolved_calls(v.entries[i].key)
+                errors = errors + verify_expr_resolved_calls(v.entries[i].value)
+                i = i + 1
+            }
+            errors
+        }
+        _ : 0,
+    }
+}
