@@ -742,6 +742,18 @@ func compiler_find_func(compiler_state initial, string name) int {
     return -1
 }
 
+func compiler_generic_instance_name(string generic_name, int kind) string {
+    if kind == 1 { return generic_name + "__mono_int" }
+    if kind == 2 { return generic_name + "__mono_box" }
+    return generic_name + "__mono_unknown"
+}
+
+func compiler_explicit_type_arg_kind(string token) int {
+    if token == "int" { return 1 }
+    if token == "box" { return 2 }
+    return 0
+}
+
 func compiler_find_method(compiler_state initial, int struct_id, string name) int {
     s := initial
     int i = s.method_count - 1
@@ -1137,6 +1149,42 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.value = "compiler_live()"
         s.value_kind = 1
         return s
+    }
+    if compiler_ident(t) {
+        generic_call := compiler_next(s)
+        if generic_call.token == "[" {
+            generic_call = compiler_next(generic_call)
+            type_kind := compiler_explicit_type_arg_kind(generic_call.token)
+            if type_kind == 0 { return compiler_fail(s, "generic function type argument must be int or box in this subset") }
+            instance_name := compiler_generic_instance_name(t, type_kind)
+            function_index := compiler_find_func(generic_call, instance_name)
+            if function_index < 0 { return compiler_fail(s, "unknown generic function instance: " + instance_name) }
+            generic_call = compiler_expect(compiler_next(generic_call), "]")
+            generic_call = compiler_expect(generic_call, "(")
+            generic_call = compiler_expression(generic_call, 1)
+            expected := generic_call.function_param_kinds[generic_call.function_starts[function_index]]
+            if generic_call.value_kind != expected { return compiler_fail(generic_call, "generic function argument type mismatch") }
+            argument := generic_call.value
+            if expected == 2 {
+                if generic_call.value_field >= 0 {
+                    generic_call = compiler_move_value_field_expr(generic_call)
+                    if generic_call.error != "" { return generic_call }
+                    argument = generic_call.value
+                } else if generic_call.value_slot >= 0 {
+                    origin := generic_call.value_slot
+                    generic_call = compiler_consume(generic_call, origin)
+                    if generic_call.error != "" { return generic_call }
+                    argument = "compiler_move(&" + compiler_var(origin) + ")"
+                }
+            }
+            generic_call = compiler_expect(generic_call, ")")
+            generic_call.value = instance_name + "(" + argument + ")"
+            generic_call.value_kind = generic_call.function_returns[function_index]
+            generic_call.value_slot = -1
+            generic_call.value_struct_id = -1
+            generic_call.new_borrow = false
+            return generic_call
+        }
     }
     if compiler_ident(t) && compiler_find_func(s, t) >= 0 {
         int function_index = compiler_find_func(s, t)
@@ -1870,6 +1918,9 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     string name = s.token
     if !compiler_ident(name) || name == "main" { return compiler_fail(s, "expected helper function name") }
     s = compiler_next(s)
+    if s.token == "[" {
+        return compiler_parse_generic_identity_helper(s, name)
+    }
     s = compiler_expect(s, "(")
     int param_count = 0
     s.count = 0
@@ -2016,6 +2067,53 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         else { s.code = s.code + compiler_cleanup(s, 0) + "return 0;\n" }
     }
     s.code = s.code + "}\n"
+    return s
+}
+
+func compiler_register_generated_function(compiler_state initial, string name, int param_kind, int return_kind) compiler_state {
+    s := initial
+    if s.function_count >= len(s.function_names) { return compiler_fail(s, "too many functions") }
+    start := s.function_param_total
+    s.function_names[s.function_count] = name
+    s.function_counts[s.function_count] = 1
+    s.function_returns[s.function_count] = return_kind
+    s.function_return_structs[s.function_count] = -1
+    s.function_return_params[s.function_count] = -1
+    s.function_starts[s.function_count] = start
+    s.function_param_kinds[start] = param_kind
+    s.function_param_structs[start] = -1
+    s.function_param_total = s.function_param_total + 1
+    s.function_count = s.function_count + 1
+    s
+}
+
+func compiler_parse_generic_identity_helper(compiler_state initial, string name) compiler_state {
+    s := initial
+    s = compiler_expect(s, "[")
+    type_param := s.token
+    if !compiler_ident(type_param) { return compiler_fail(s, "expected generic type parameter") }
+    s = compiler_expect(compiler_next(s), "]")
+    s = compiler_expect(s, "(")
+    if s.token != type_param { return compiler_fail(s, "generic function P0 requires parameter type T") }
+    s = compiler_next(s)
+    param_name := s.token
+    if !compiler_ident(param_name) { return compiler_fail(s, "expected generic parameter name") }
+    s = compiler_expect(compiler_next(s), ")")
+    if s.token != type_param { return compiler_fail(s, "generic function P0 requires return type T") }
+    s = compiler_expect(compiler_next(s), "{")
+    s = compiler_expect(s, "return")
+    if s.token != param_name { return compiler_fail(s, "generic function P0 body must return its parameter") }
+    s = compiler_next(s)
+    s = compiler_optional_semicolon(s)
+    s = compiler_expect(s, "}")
+    int_name := compiler_generic_instance_name(name, 1)
+    box_name := compiler_generic_instance_name(name, 2)
+    s = compiler_register_generated_function(s, int_name, 1, 1)
+    if s.error != "" { return s }
+    s = compiler_register_generated_function(s, box_name, 2, 2)
+    if s.error != "" { return s }
+    s.code = s.code + "static int64_t " + int_name + "(int64_t p0)\n{\nint64_t s_v0 = p0;\n(void)s_v0;\nreturn s_v0;\n}\n"
+    s.code = s.code + "static int64_t *" + box_name + "(int64_t *p0)\n{\nint64_t *s_v0 = p0;\n(void)s_v0;\nint64_t *compiler_result = compiler_move(&s_v0);\nreturn compiler_result;\n}\n"
     return s
 }
 
