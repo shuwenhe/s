@@ -385,6 +385,30 @@ func main() int {
 
 SRC
 
+cat >"$work/generic_function_p0.s" <<'SRC'
+
+package generic
+
+func id[T](T value) T {
+
+    return value
+
+}
+
+func main() int {
+
+    a := id[int](40)
+
+    b := id[box](box(2))
+
+    c := id[box](b)
+
+    return a + *c
+
+}
+
+SRC
+
 
 
 cat >"$work/custom_drop_move.s" <<'SRC'
@@ -1409,6 +1433,18 @@ set -e
 
 test "$status" -eq 42
 
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/generic_function_p0.s" -o "$work/generic_function_p0"
+
+set +e
+
+"$work/generic_function_p0"
+
+status=$?
+
+set -e
+
+test "$status" -eq 42
+
 run_custom_drop_case custom_drop_move 'drop-moved'
 
 run_custom_drop_case custom_drop_conditional_move 'drop-conditional'
@@ -1767,7 +1803,7 @@ fi
 
 
 
-if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/impl_drop_scope_exit" "$work/receiver_method_implicit" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" "$work/struct_owned_fields_scope_exit" "$work/struct_owned_fields_early_return" "$work/struct_owned_fields_loop" "$work/struct_custom_drop_with_fields" "$work/general_struct_three_fields" "$work/mixed_struct_fields" "$work/nested_owned_struct" "$work/nested_custom_drop_order" "$work/partial_move_scope_exit" "$work/partial_move_arg" "$work/quad_partial_move" "$work/quad_field_borrow_then_move" "$work/nested_partial_move_leaf" "$work/nested_field_borrow_drop_then_move" "$work/cfg_field_no_move_both_branches" "$work/field_reinit_after_partial_move" "$work/cfg_field_move_reinit" "$work/field_overwrite_custom_drop" "$work/cfg_field_borrow_drop_then_move" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
+if nm "$work/hello" "$work/ownership" "$work/string_helper" "$work/struct_pair" "$work/early_return_cleanup" "$work/loop_cleanup" "$work/conditional_move_cleanup" "$work/drop_flag_elision" "$work/custom_drop_scope_exit" "$work/custom_drop_lifo" "$work/impl_drop_scope_exit" "$work/receiver_method_implicit" "$work/generic_function_p0" "$work/custom_drop_move" "$work/custom_drop_conditional_move" "$work/custom_drop_early_return" "$work/custom_drop_loop_break" "$work/custom_drop_loop_continue" "$work/overwrite_live_owner" "$work/overwrite_custom_drop" "$work/overwrite_moved_owner" "$work/overwrite_conditional_true" "$work/overwrite_conditional_false" "$work/overwrite_inside_loop" "$work/overwrite_early_return" "$work/rhs_before_lhs_drop" "$work/struct_owned_fields_scope_exit" "$work/struct_owned_fields_early_return" "$work/struct_owned_fields_loop" "$work/struct_custom_drop_with_fields" "$work/general_struct_three_fields" "$work/mixed_struct_fields" "$work/nested_owned_struct" "$work/nested_custom_drop_order" "$work/partial_move_scope_exit" "$work/partial_move_arg" "$work/quad_partial_move" "$work/quad_field_borrow_then_move" "$work/nested_partial_move_leaf" "$work/nested_field_borrow_drop_then_move" "$work/cfg_field_no_move_both_branches" "$work/field_reinit_after_partial_move" "$work/cfg_field_move_reinit" "$work/field_overwrite_custom_drop" "$work/cfg_field_borrow_drop_then_move" | grep -E 'runtime_gc|run_gc|mark_roots|sweep_pass|runtime_execute|SSEED|gc_' >/dev/null; then
 
     echo "GC or seed runtime symbol linked into no-GC binary" >&2
 
@@ -1960,6 +1996,36 @@ func main() int {
     return 42
 
 }' 'self move is not supported'
+
+
+
+expect_compile_fail generic_box_arg_moves_owner 'package bad
+
+func id[T](T value) T { return value }
+
+func main() int {
+
+    x := box(42)
+
+    a := id[box](x)
+
+    return *x
+
+}' 'use of moved, dropped or conditionally initialized value'
+
+expect_compile_fail generic_box_result_moves_like_owner 'package bad
+
+func id[T](T value) T { return value }
+
+func main() int {
+
+    b := id[box](box(42))
+
+    c := b
+
+    return *b
+
+}' 'use of moved, dropped or conditionally initialized value'
 
 
 
