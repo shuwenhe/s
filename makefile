@@ -1433,7 +1433,7 @@ selfhost-runtime-check:
 
 
 
-.PHONY: benchmark help no-gc-mvp no-gc-mvp-check target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test darwin-arm64-hosted-compiler darwin-arm64-slice-check test-quick test-full build-parallel selfhost-full
+.PHONY: benchmark help no-gc-mvp no-gc-mvp-check target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check s-syntax-check s-semantic-check s-compiler-integration-check s-e2e-check s-validation-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test darwin-arm64-hosted-compiler darwin-arm64-slice-check test-quick test-full build-parallel selfhost-full
 
 
 
@@ -1547,6 +1547,8 @@ help:
 
 	@echo "  make selfhost-lexer-check"
 
+	@echo "  make s-validation-check       # Run S syntax, semantic, compiler integration, and E2E gates"
+
 	@echo "  PARALLEL BUILDS:"
 
 	@echo "  make test-quick               # Run quick tests only"
@@ -1582,6 +1584,39 @@ test-full: seed-compiler-bin
 	@$(MAKE) compiler-check
 
 	@echo "✓ All tests passed"
+
+
+s-syntax-check: seed-frontend-parser-check bin/s_modular
+	@mkdir -p /tmp/s_validation_check
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular tokens src/cmd/compile/internal/tests/fixtures/sample.s >/tmp/s_validation_check/sample.tokens
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular ast src/cmd/compile/internal/tests/fixtures/sample.s >/tmp/s_validation_check/sample.ast
+	@test -s /tmp/s_validation_check/sample.tokens
+	@test -s /tmp/s_validation_check/sample.ast
+	@echo "✓ 语法编译验证 passed"
+
+
+s-semantic-check: bin/s_modular
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular check src/cmd/compile/internal/tests/fixtures/check_ok.s
+	@! S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular check src/cmd/compile/internal/tests/fixtures/check_fail.s >/tmp/s_semantic_negative.out 2>&1
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular test src/cmd/compile/internal/tests/fixtures
+	@echo "✓ 语义正确性 passed"
+
+
+s-compiler-integration-check: bin/s_modular package-index
+	@mkdir -p .bootstrap/s-validation
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular build test/simple_test.s -o .bootstrap/s-validation/simple
+	@test -x .bootstrap/s-validation/simple
+	@! S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular build src/cmd/compile/internal/tests/fixtures/check_fail.s -o .bootstrap/s-validation/check_fail >/tmp/s_compiler_integration_negative.out 2>&1
+	@echo "✓ 编译器集成 passed"
+
+
+s-e2e-check: s-compiler-integration-check
+	@set +e; ./.bootstrap/s-validation/simple; status=$$?; set -e; test $$status -eq 42
+	@echo "✓ 端到端测试 passed"
+
+
+s-validation-check: s-syntax-check s-semantic-check s-compiler-integration-check s-e2e-check
+	@echo "S validation matrix passed"
 
 
 
@@ -1685,7 +1720,7 @@ package-index:
 	@echo "Package index ready: $(CURDIR)/s-package-index.tsv"
 
 .PHONY: bin/s_modular
-bin/s_modular: package-index
+bin/s_modular: seed-compiler-bin package-index
 	@echo "Building modular compiler..."
 	@mkdir -p .bootstrap
 	@S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) \
@@ -1728,4 +1763,3 @@ ownership-check: bin/s_modular package-index
 	@echo "Running ownership system semantic validation..."
 	@echo "Gate 1: Semantic correctness tests (not yet implemented)"
 	@echo "TODO: Implement ownership test suite"
-
