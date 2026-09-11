@@ -1336,7 +1336,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.value_slot = slot
         s.value_field = field
         s.value_struct_id = field_struct
-        s = method_look
+        s = compiler_next(s)
         if s.token == "." {
             if field_kind != 5 || field_struct < 0 { return compiler_fail(s, "nested field access requires a named struct field") }
             s = compiler_next(s)
@@ -2039,7 +2039,10 @@ func compiler_parse_receiver_method(compiler_state initial) compiler_state {
     if method_name != "drop" && s.method_count >= len(s.method_names) { return compiler_fail(s, "too many receiver methods") }
     s = compiler_next(s)
     s = compiler_expect(s, "(")
-    if s.token != ")" { return compiler_fail(s, "receiver methods in this subset do not accept extra parameters") }
+    if s.token != ")" {
+        if method_name == "drop" { return compiler_fail(s, "drop method must not have parameters") }
+        return compiler_fail(s, "receiver methods in this subset do not accept extra parameters")
+    }
     s = compiler_expect(s, ")")
     if method_name == "drop" {
         if s.token != "{" { return compiler_fail(s, "drop method must not return a value") }
