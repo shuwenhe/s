@@ -7,7 +7,7 @@ use s.token
 use s.dump_source_file
 use s.dump_tokens
 use s.new_lexer
-use s.parse_tokens
+use s.parse_tokens as parse_s_tokens
 struct syntax_error {
     string message
     int line
@@ -33,12 +33,16 @@ func tokenize(string source) (token[], syntax_error) {
 }
 
 func parse_source(string source) (source_file, syntax_error) {
-    tokens := tokenize(source)?
-    parse_tokens(tokens)
+    switch tokenize(source) {
+        tokens : parse_tokens(tokens),
+        err : syntax_error {
+            message: err.message, line err.line, column err.column,
+        },
+    }
 }
 
 func parse_tokens(token[] tokens) (source_file, syntax_error) {
-    switch parse_tokens(tokens) {
+    switch parse_s_tokens(tokens) {
         ast : ast,
         err : syntax_error {
             message: err.message, line err.line, column err.column,

@@ -6,6 +6,7 @@ use compile.internal.tests.test_ssa.run_ssa_suite
 use compile.internal.tests.test_pipeline_regression.run_pipeline_regression_suite
 use compile.internal.tests.test_typesys.run_typesys_suite
 use compile.internal.tests.test_semantic.run_semantic_suite
+use compile.internal.mono_test.run_monomorphization_test
 use std.env.args as host_args
 use std.env.get
 use std.io.eprintln
@@ -65,6 +66,11 @@ func main() {
     if typesys_result != 0 {
         eprintln("typesys suite failed");
         return typesys_result
+    }
+    mono_result := run_monomorphization_test()
+    if mono_result != 0 {
+        eprintln("monomorphization suite failed");
+        return mono_result
     }
     println("test_compiler: ok");
     0

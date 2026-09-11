@@ -12,7 +12,7 @@ struct package_ir {
 }
 enum decl_ir {
     func(func_decl),
-    r#type(type_decl),
+    type_decl(type_decl),
     let(var_decl),
     const(const_decl),
     method(method_decl),
@@ -47,7 +47,7 @@ enum stmt_ir {
     increment(increment_stmt),
     cfor(c_for_stmt),
     expr(expr_stmt),
-    r#return(return_stmt),
+    return_stmt(return_stmt),
 }
 
 struct var_stmt { string name, option[string] type_name, expr_ir value }

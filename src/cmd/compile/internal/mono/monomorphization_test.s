@@ -5,11 +5,23 @@ use compile.internal.mono.make_instance_key
 use compile.internal.mono.mono_cache_count
 use compile.internal.mono.mono_cache_get_or_create_key
 use compile.internal.mono.specialize_function
+use compile.internal.mono.substitute_type
+use compile.internal.mono.monomorphize_file
 use compile.internal.mono.summarize_instance
 use s.function_decl
 use s.function_sig
 use s.param
+use s.source_file
+use s.use_decl
+use s.item
+use s.block_expr
+use s.expr
+use s.int_expr
+use s.name_expr
+use s.call_expr
+use s.stmt
 use std.option.option
+use std.prelude.box
 
 func run_monomorphization_test() int {
     int_args := string[] { "int" }
@@ -51,6 +63,98 @@ func run_monomorphization_test() int {
         return 1
     }
     if box_instance.sig.params[0].type_name != "box[int]" || box_instance.sig.return_type.unwrap() != "box[int]" {
+        return 1
+    }
+    nested_args := string[] { "string[]" }
+    nested := specialize_function(generic, nested_args)
+    if nested.sig.params[0].type_name != "string[]" || nested.sig.return_type.unwrap() != "string[]" {
+        return 1
+    }
+    if substitute_type("box[T[]]", string[] { "T" }, string[] { "int" }) != "box[int[]]" {
+        return 1
+    }
+    call_args := expr[] { expr::int(int_expr { value: "1", inferred_type option::some("int") }) }
+    mono_call := expr::call(call_expr {
+        callee: box(expr::name(name_expr { name: "identity", inferred_type option::none })),
+        args: call_args,
+        inferred_type: option::some("int"),
+        resolved_callee: option::some("identity__mono_int"),
+        type_args: string[] { "int" },
+    })
+    caller := function_decl {
+        sig: function_sig {
+            name: "caller",
+            generics: string[] {},
+            params: param[] {},
+            return_type: option::some("int"),
+        },
+        body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(mono_call), inferred_type option::some("int") }),
+        is_public: false,
+    }
+    bar_call := expr::call(call_expr {
+        callee: box(expr::name(name_expr { name: "bar", inferred_type option::none })),
+        args: expr[] { expr::name(name_expr { name: "value", inferred_type option::some("T") }) },
+        inferred_type: option::some("T"),
+        resolved_callee: option::some("bar__mono_T"),
+        type_args: string[] { "T" },
+    })
+    foo := function_decl {
+        sig: function_sig {
+            name: "foo",
+            generics: string[] { "T" },
+            params: param[] { param { name: "value", type_name: "T" } },
+            return_type: option::some("T"),
+        },
+        body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(bar_call), inferred_type option::some("T") }),
+        is_public: false,
+    }
+    baz_call := expr::call(call_expr {
+        callee: box(expr::name(name_expr { name: "baz", inferred_type option::none })),
+        args: expr[] { expr::name(name_expr { name: "value", inferred_type option::some("T") }) },
+        inferred_type: option::some("T"),
+        resolved_callee: option::some("baz__mono_T"),
+        type_args: string[] { "T" },
+    })
+    bar := function_decl {
+        sig: function_sig {
+            name: "bar",
+            generics: string[] { "T" },
+            params: param[] { param { name: "value", type_name: "T" } },
+            return_type: option::some("T"),
+        },
+        body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(baz_call), inferred_type option::some("T") }),
+        is_public: false,
+    }
+    baz := function_decl {
+        sig: function_sig {
+            name: "baz",
+            generics: string[] { "T" },
+            params: param[] { param { name: "value", type_name: "T" } },
+            return_type: option::some("T"),
+        },
+        body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(expr::name(name_expr { name: "value", inferred_type option::some("T") })), inferred_type option::some("T") }),
+        is_public: false,
+    }
+    foo_seed := expr::call(call_expr {
+        callee: box(expr::name(name_expr { name: "foo", inferred_type option::none })),
+        args: call_args,
+        inferred_type: option::some("int"),
+        resolved_callee: option::some("foo__mono_int"),
+        type_args: string[] { "int" },
+    })
+    chain_caller := function_decl {
+        sig: function_sig {
+            name: "chain_caller",
+            generics: string[] {},
+            params: param[] {},
+            return_type: option::some("int"),
+        },
+        body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(foo_seed), inferred_type option::some("int") }),
+        is_public: false,
+    }
+    file := source_file { pkg: "mono.test", uses: use_decl[](), items item[] { item::function(generic), item::function(caller), item::function(foo), item::function(bar), item::function(baz), item::function(chain_caller) } }
+    mono_file := monomorphize_file(file)
+    if mono_cache_count(mono_file.cache) != 4 || len(mono_file.file.items) != 6 || mono_file.invariant_errors != 0 {
         return 1
     }
     int_summary := summarize_instance(int_instance)
