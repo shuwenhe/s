@@ -3,9 +3,9 @@ func TestMoveSemantics() bool {
     ctx := NewOwnershipContext()
     checker := new_move_checker(ctx)
     test1Stmts := interface{}[]{
-        &AssignmentStmt{LHS: "a", RHS: "value", IsMove: false},
-        &AssignmentStmt{LHS: "b", RHS: "a", IsMove: true},  // a → b (move)
-        &UseStmt{Variable: "a"},  // ERROR: use-after-move
+        AssignmentStmt*{LHS: "a", RHS: "value", IsMove: false},
+        AssignmentStmt*{LHS: "b", RHS: "a", IsMove: true},  // a → b (move)
+        UseStmt*{Variable: "a"},  // ERROR: use-after-move
     }
     checker.CheckMoveSemantics(test1Stmts)
     if !ctx.HasErrors() {
@@ -14,9 +14,9 @@ func TestMoveSemantics() bool {
     ctx = NewOwnershipContext()
     checker = new_move_checker(ctx)
     test2Stmts := interface{}[]{
-        &AssignmentStmt{LHS: "x", RHS: "5", IsCopy: true},  // x = 5 (copy)
-        &AssignmentStmt{LHS: "y", RHS: "x", IsCopy: true},  // y = x (copy, still valid)
-        &UseStmt{Variable: "x"},  // OK: x still valid after copy
+        AssignmentStmt*{LHS: "x", RHS: "5", IsCopy: true},  // x = 5 (copy)
+        AssignmentStmt*{LHS: "y", RHS: "x", IsCopy: true},  // y = x (copy, still valid)
+        UseStmt*{Variable: "x"},  // OK: x still valid after copy
     }
     checker.CheckMoveSemantics(test2Stmts)
     if ctx.HasErrors() {
@@ -28,10 +28,10 @@ func TestBorrowSemantics() bool {
     ctx := NewOwnershipContext()
     checker := NewBorrowChecker(ctx)
     test1Stmts := interface{}[]{
-        &BorrowStmt{Source: "data", IsMutable: false},     // borrow &data
-        &BorrowStmt{Source: "data", IsMutable: false},     // borrow &data again (OK)
-        &BorrowEndStmt{Source: "data"},
-        &BorrowEndStmt{Source: "data"},
+        BorrowStmt*{Source: "data", IsMutable: false},     // borrow &data
+        BorrowStmt*{Source: "data", IsMutable: false},     // borrow &data again (OK)
+        BorrowEndStmt*{Source: "data"},
+        BorrowEndStmt*{Source: "data"},
     }
     checker.CheckBorrowSemantics(test1Stmts)
     if ctx.HasErrors() {
@@ -40,8 +40,8 @@ func TestBorrowSemantics() bool {
     ctx = NewOwnershipContext()
     checker = NewBorrowChecker(ctx)
     test2Stmts := interface{}[]{
-        &BorrowStmt{Source: "data", IsMutable: true},      // &mut data
-        &BorrowStmt{Source: "data", IsMutable: false},     // &data (ERROR: conflict)
+        BorrowStmt*{Source: "data", IsMutable: true},      // &mut data
+        BorrowStmt*{Source: "data", IsMutable: false},     // &data (ERROR: conflict)
     }
     checker.CheckBorrowSemantics(test2Stmts)
     if !ctx.HasErrors() {
@@ -50,8 +50,8 @@ func TestBorrowSemantics() bool {
     ctx = NewOwnershipContext()
     checker = NewBorrowChecker(ctx)
     test3Stmts := interface{}[]{
-        &BorrowStmt{Source: "x", IsMutable: false},
-        &MoveStmt{Variable: "x"},  // ERROR: move while borrowed
+        BorrowStmt*{Source: "x", IsMutable: false},
+        MoveStmt*{Variable: "x"},  // ERROR: move while borrowed
     }
     checker.CheckBorrowSemantics(test3Stmts)
     if !ctx.HasErrors() {
@@ -63,14 +63,14 @@ func TestDropElaboration() bool {
     ctx := NewOwnershipContext()
     elaborator := NewDropElaborator(ctx)
     test1Stmts := interface{}[]{
-        &AssignmentStmt{LHS: "x", RHS: "value", IsMove: false},
-        &UseStmt{Variable: "x"},
+        AssignmentStmt*{LHS: "x", RHS: "value", IsMove: false},
+        UseStmt*{Variable: "x"},
     }
     elaborated := elaborator.ElaborateDrops(test1Stmts)
     dropCount := 0
     for _, stmt := range elaborated {
         switch stmt.(type) {
-        case *DropCall:
+case DropCall*:
             dropCount++
         }
     }
@@ -126,11 +126,11 @@ func TestPartialMove() bool {
 func TestCompleteOwnershipPipeline() bool {
     oa := NewOwnershipAnalysis()
     testStmts := interface{}[]{
-        &AssignmentStmt{LHS: "x", RHS: "box::new()", IsMove: false},
-        &BorrowStmt{Source: "x", IsMutable: false, LifetimeName: "a"},
-        &UseStmt{Variable: "y", ThroughBorrow: true},
-        &BorrowEndStmt{Source: "x"},
-        &AssignmentStmt{LHS: "z", RHS: "x", IsMove: true},
+        AssignmentStmt*{LHS: "x", RHS: "box::new()", IsMove: false},
+        BorrowStmt*{Source: "x", IsMutable: false, LifetimeName: "a"},
+        UseStmt*{Variable: "y", ThroughBorrow: true},
+        BorrowEndStmt*{Source: "x"},
+        AssignmentStmt*{LHS: "z", RHS: "x", IsMove: true},
     }
     elaborated, success := oa.AnalyzeFunction("test_func", testStmts)
     if !success {

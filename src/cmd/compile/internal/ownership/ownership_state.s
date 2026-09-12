@@ -60,24 +60,24 @@ type OwnershipContext struct {
     BorrowStack []map[string]*BorrowInfo
     Errors string[]
 }
-func NewOwnershipContext() *OwnershipContext {
-    return &OwnershipContext{
+func NewOwnershipContext() OwnershipContext* {
+    return OwnershipContext*{
         StateAtPC:   make(map[int]*OwnershipInfo),
         TypeClasses: make(map[string]*type_classification),
         BorrowStack: []map[string]*BorrowInfo{make(map[string]*BorrowInfo)},
         Errors:      make(string[], 0),
     }
 }
-func (ctx *OwnershipContext) GetStateAt(pc int, varName string) OwnershipState {
+func (OwnershipContext* ctx) GetStateAt(pc int, varName string) OwnershipState {
     info, ok := ctx.StateAtPC[pc]
     if !ok {
         return STATE_UNDEFINED
     }
     return info.State
 }
-func (ctx *OwnershipContext) SetStateAt(pc int, varName string, state OwnershipState) {
+func (OwnershipContext* ctx) SetStateAt(pc int, varName string, state OwnershipState) {
     if _, ok := ctx.StateAtPC[pc]; !ok {
-        ctx.StateAtPC[pc] = &OwnershipInfo{
+        ctx.StateAtPC[pc] = OwnershipInfo*{
             State:         state,
             ActiveBorrows: make(BorrowInfo[], 0),
             FieldStates:   make(map[string]OwnershipState),
@@ -86,17 +86,17 @@ func (ctx *OwnershipContext) SetStateAt(pc int, varName string, state OwnershipS
         ctx.StateAtPC[pc].State = state
     }
 }
-func (ctx *OwnershipContext) AddError(msg string) {
+func (OwnershipContext* ctx) AddError(msg string) {
     ctx.Errors = append(ctx.Errors, msg)
 }
-func (ctx *OwnershipContext) HasErrors() bool {
+func (OwnershipContext* ctx) HasErrors() bool {
     return len(ctx.Errors) > 0
 }
-func (ctx *OwnershipContext) classify_type(typeName string) *type_classification {
+func (OwnershipContext* ctx) classify_type(typeName string) type_classification* {
     if class, ok := ctx.TypeClasses[typeName]; ok {
         return class
     }
-    class := &type_classification{
+    class := type_classification*{
         NeedsOwnership: !isPrimitiveType(typeName),
         IsCopy:         isPrimitiveType(typeName),
         OwnedFields:    make(string[], 0),

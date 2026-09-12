@@ -2,19 +2,19 @@ package compile.internal.ownership
 type OwnershipAnalysis struct {
     ctx           *OwnershipContext
     moveChecker   *move_checker
-    borrowChecker *BorrowChecker
-    dropElaborator *DropElaborator
+borrowChecker BorrowChecker*
+dropElaborator DropElaborator*
 }
-func NewOwnershipAnalysis() *OwnershipAnalysis {
+func NewOwnershipAnalysis() OwnershipAnalysis* {
     ctx := NewOwnershipContext()
-    return &OwnershipAnalysis{
+    return OwnershipAnalysis*{
         ctx:           ctx,
         moveChecker:   new_move_checker(ctx),
         borrowChecker: NewBorrowChecker(ctx),
         dropElaborator: NewDropElaborator(ctx),
     }
 }
-func (oa *OwnershipAnalysis) AnalyzeFunction(funcName string, stmts interface{}[]) (interface{}[], bool) {
+func (OwnershipAnalysis* oa) AnalyzeFunction(funcName string, stmts interface{}[]) (interface{}[], bool) {
     oa.moveChecker.CheckMoveSemantics(stmts)
     if oa.ctx.HasErrors() {
         return nil, false
@@ -35,19 +35,19 @@ func (oa *OwnershipAnalysis) AnalyzeFunction(funcName string, stmts interface{}[
     }
     return elaborated, true
 }
-func (oa *OwnershipAnalysis) GetErrors() string[] {
+func (OwnershipAnalysis* oa) GetErrors() string[] {
     return oa.ctx.Errors
 }
-func (oa *OwnershipAnalysis) HasErrors() bool {
+func (OwnershipAnalysis* oa) HasErrors() bool {
     return oa.ctx.HasErrors()
 }
-func (oa *OwnershipAnalysis) classify_type(typeName string) *type_classification {
+func (OwnershipAnalysis* oa) classify_type(typeName string) type_classification* {
     return oa.ctx.classify_type(typeName)
 }
-func (oa *OwnershipAnalysis) set_type_classification(typeName string, class *type_classification) {
+func (OwnershipAnalysis* oa) set_type_classification(typeName string, class* type_classification) {
     oa.ctx.TypeClasses[typeName] = class
 }
-func (oa *OwnershipAnalysis) SetVariableType(varName string, typeName string) {
+func (OwnershipAnalysis* oa) SetVariableType(varName string, typeName string) {
 }
 type AnalysisReport struct {
     FunctionName string
@@ -61,8 +61,8 @@ type AnalysisReport struct {
     MovesVerified     int
     ElaboratedStmts interface{}[]
 }
-func (oa *OwnershipAnalysis) GenerateReport(funcName string, elaborated interface{}) *AnalysisReport {
-    report := &AnalysisReport{
+func (OwnershipAnalysis* oa) GenerateReport(funcName string, elaborated interface{}) AnalysisReport* {
+    report := AnalysisReport*{
         FunctionName: funcName,
         Success:      !oa.ctx.HasErrors(),
         MoveErrors:   make(string[], 0),
@@ -94,9 +94,9 @@ func countDropCalls(stmts interface{}[]) int {
     count := 0
     for _, stmt := range stmts {
         switch s := stmt.(type) {
-        case *DropCall:
+case DropCall*:
             count++
-        case *BlockStmt:
+case BlockStmt*:
             count += countDropCalls(s.Statements)
         }
     }
@@ -107,7 +107,7 @@ type OwnershipHints struct {
     VariableTypes map[string]string
     ParamOwnership map[string]string
 }
-func (oa *OwnershipAnalysis) ApplyOwnershipHints(hints *OwnershipHints) {
+func (OwnershipAnalysis* oa) ApplyOwnershipHints(OwnershipHints* hints) {
     if hints == nil {
         return
     }
@@ -115,8 +115,8 @@ func (oa *OwnershipAnalysis) ApplyOwnershipHints(hints *OwnershipHints) {
         oa.ctx.TypeClasses[typeName] = class
     }
 }
-func (oa *OwnershipAnalysis) PrintErrors() {
-    report := &AnalysisReport{
+func (OwnershipAnalysis* oa) PrintErrors() {
+    report := AnalysisReport*{
         FunctionName: "analysis",
         MoveErrors:   make(string[], 0),
         BorrowErrors: make(string[], 0),

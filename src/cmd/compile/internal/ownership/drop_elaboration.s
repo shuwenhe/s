@@ -1,91 +1,91 @@
 package compile.internal.ownership
 type DropElaborator struct {
-    ctx *OwnershipContext
+ctx OwnershipContext*
 }
-func NewDropElaborator(ctx *OwnershipContext) *DropElaborator {
-    return &DropElaborator{
+func NewDropElaborator(OwnershipContext* ctx) DropElaborator* {
+    return DropElaborator*{
         ctx: ctx,
     }
 }
-func (de *DropElaborator) ElaborateDrops(stmts interface{}[]) interface{}[] {
+func (DropElaborator* de) ElaborateDrops(stmts interface{}[]) interface{}[] {
     var result interface{}[]
     for _, stmt := range stmts {
         result = append(result, de.elaborateStatement(stmt))
     }
     return result
 }
-func (de *DropElaborator) elaborateStatement(stmt interface{}) interface{} {
+func (DropElaborator* de) elaborateStatement(stmt interface{}) interface{} {
     switch s := stmt.(type) {
-    case *BlockStmt:
+case BlockStmt*:
         return de.elaborateBlock(s)
-    case *ReturnStmt:
+case ReturnStmt*:
         return de.elaborateReturn(s)
-    case *IfStmt:
+case IfStmt*:
         return de.elaborateIf(s)
-    case *LoopStmt:
+case LoopStmt*:
         return de.elaborateLoop(s)
     default:
         return stmt
     }
 }
-func (de *DropElaborator) elaborateBlock(block *BlockStmt) *BlockStmt {
+func (DropElaborator* de) elaborateBlock(BlockStmt* block) BlockStmt* {
     var stmts interface{}[]
     for _, stmt := range block.Statements {
         stmts = append(stmts, de.elaborateStatement(stmt))
     }
     dropsNeeded := de.collectDropsForBlock(block)
     for _, dropVar := range dropsNeeded {
-        stmts = append(stmts, &DropCall{
+        stmts = append(stmts, DropCall*{
             Variable: dropVar,
             Kind:     "explicit",
         })
     }
-    return &BlockStmt{
+    return BlockStmt*{
         Statements: stmts,
     }
 }
-func (de *DropElaborator) elaborateReturn(ret *ReturnStmt) interface{} {
+func (DropElaborator* de) elaborateReturn(ReturnStmt* ret) interface{} {
     dropsNeeded := de.collectDropsForReturn()
     var result interface{}[]
     for _, dropVar := range dropsNeeded {
-        result = append(result, &DropCall{
+        result = append(result, DropCall*{
             Variable: dropVar,
             Kind:     "return-cleanup",
         })
     }
     result = append(result, ret)
-    return &BlockStmt{
+    return BlockStmt*{
         Statements: result,
     }
 }
-func (de *DropElaborator) elaborateIf(ifStmt *IfStmt) *IfStmt {
+func (DropElaborator* de) elaborateIf(IfStmt* ifStmt) IfStmt* {
     elaboratedThen := de.elaborateStatement(ifStmt.ThenBranch)
     var elaboratedElse interface{}
     if ifStmt.ElseBranch != nil {
         elaboratedElse = de.elaborateStatement(ifStmt.ElseBranch)
     }
-    return &IfStmt{
+    return IfStmt*{
         Condition:   ifStmt.Condition,
         ThenBranch:  elaboratedThen,
         ElseBranch:  elaboratedElse,
     }
 }
-func (de *DropElaborator) elaborateLoop(loop *LoopStmt) *LoopStmt {
+func (DropElaborator* de) elaborateLoop(LoopStmt* loop) LoopStmt* {
     elaboratedBody := de.elaborateStatement(loop.Body)
-    return &LoopStmt{
+    return LoopStmt*{
         Condition: loop.Condition,
         Body:      elaboratedBody,
     }
 }
-func (de *DropElaborator) collectDropsForBlock(block *BlockStmt) string[] {
+func (DropElaborator* de) collectDropsForBlock(BlockStmt* block) string[] {
     var drops string[]
     return drops
 }
-func (de *DropElaborator) collectDropsForReturn() string[] {
+func (DropElaborator* de) collectDropsForReturn() string[] {
     var drops string[]
     return drops
 }
-func (de *DropElaborator) VerifyExactlyOnceDrop(elaborated interface{}[]) bool {
+func (DropElaborator* de) VerifyExactlyOnceDrop(elaborated interface{}[]) bool {
     dropCounts := make(map[string]int)
     de.countDrops(elaborated, dropCounts)
     for variable, count := range dropCounts {
@@ -101,36 +101,36 @@ func (de *DropElaborator) VerifyExactlyOnceDrop(elaborated interface{}[]) bool {
     }
     return !de.ctx.HasErrors()
 }
-func (de *DropElaborator) countDrops(stmts interface{}[], counts map[string]int) {
+func (DropElaborator* de) countDrops(stmts interface{}[], counts map[string]int) {
     for _, stmt := range stmts {
         switch s := stmt.(type) {
-        case *DropCall:
+case DropCall*:
             counts[s.Variable]++
-        case *BlockStmt:
+case BlockStmt*:
             de.countDrops(s.Statements, counts)
         }
     }
 }
-func (de *DropElaborator) VerifyNoUseAfterDrop(stmts interface{}[]) bool {
+func (DropElaborator* de) VerifyNoUseAfterDrop(stmts interface{}[]) bool {
     droppedVars := make(map[string]bool)
     return de.checkUseAfterDrop(stmts, droppedVars)
 }
-func (de *DropElaborator) checkUseAfterDrop(stmts interface{}[], 
+func (DropElaborator* de) checkUseAfterDrop(stmts interface{}[], 
     droppedVars map[string]bool) bool {
     for _, stmt := range stmts {
         switch s := stmt.(type) {
-        case *DropCall:
+case DropCall*:
             if droppedVars[s.Variable] {
                 de.ctx.AddError(errorf("use-after-drop: variable %s", s.Variable))
                 return false
             }
             droppedVars[s.Variable] = true
-        case *UseStmt:
+case UseStmt*:
             if droppedVars[s.Variable] {
                 de.ctx.AddError(errorf("use-after-drop: using %s", s.Variable))
                 return false
             }
-        case *BlockStmt:
+case BlockStmt*:
             scopeDropped := make(map[string]bool)
             for k, v := range droppedVars {
                 scopeDropped[k] = v
@@ -142,10 +142,10 @@ func (de *DropElaborator) checkUseAfterDrop(stmts interface{}[],
     }
     return true
 }
-func (de *DropElaborator) VerifyPartialMoveDrops(stmts interface{}[]) bool {
+func (DropElaborator* de) VerifyPartialMoveDrops(stmts interface{}[]) bool {
     return true  // Placeholder
 }
-func (de *DropElaborator) GetDropOrder(typeName string) string[] {
+func (DropElaborator* de) GetDropOrder(typeName string) string[] {
     typeClass := de.ctx.classify_type(typeName)
     result := make(string[], len(typeClass.DropOrder))
     for i, field := range typeClass.DropOrder {
@@ -175,8 +175,8 @@ type DropSummary struct {
     DropOrder string[]
     FieldDrops map[string]string[]
 }
-func (de *DropElaborator) GenerateDropSummary(block *BlockStmt) *DropSummary {
-    summary := &DropSummary{
+func (DropElaborator* de) GenerateDropSummary(BlockStmt* block) DropSummary* {
+    summary := DropSummary*{
         MustDrop:   make(string[], 0),
         MayDrop:    make(string[], 0),
         DropOrder:  make(string[], 0),
