@@ -26,23 +26,23 @@ func allocate_block(int size) MemoryBlock {
 
 func deallocate_block(block MemoryBlock) () {
     if block.allocated {
-        // 内存被释放，block不再有效
+
         _ = *block.addr
     }
 }
 
 func memory_example() int {
-    // 分配内存块
+
     block1 := allocateBlock(1024)
     block2 := allocateBlock(2048)
     
-    // 在某个点转移所有权
-    block3 := block2  // block2的所有权转移给block3
+
+    block3 := block2
     
-    // 使用block
+
     total := block1.size + block3.size
     
-    // 块在作用域结束时自动销毁
+
     return total
 }
 
@@ -52,7 +52,7 @@ func memory_example() int {
 // =============================================================================
 
 struct owned_string {
-    data *int  // 指向字符数据
+    data *int
     len int
     capacity int
 }
@@ -72,12 +72,12 @@ func append_to_string(s *OwnedString, int value) () {
 }
 
 func string_example() int {
-    s1 := newString(100)  // s1拥有字符串数据
+    s1 := newString(100)
     appendToString(&s1, 65)
     
-    s2 := s1  // s1的所有权转移给s2，s1不再有效
+    s2 := s1
     return s2.len
-    // s2在这里销毁，所有数据被释放
+
 }
 
 // =============================================================================
@@ -86,7 +86,7 @@ func string_example() int {
 // =============================================================================
 
 struct vector {
-    elements [100]*int  // 固定大小数组
+    elements [100]*int
     len int
 }
 
@@ -118,18 +118,18 @@ func (v *Vector) len_value() int {
 func vector_example() int {
     v := newVector()
     
-    // 向向量添加元素
+
     v.push(10)
     v.push(20)
     v.push(30)
     
-    // 访问元素（借用）
+
     first := v.get(0)
     second := v.get(1)
     
     sum := *first + *second
     return sum
-    // v离开作用域时，所有elements被自动清理
+
 }
 
 // =============================================================================
@@ -144,7 +144,7 @@ struct file_handle {
 
 func open_file(string path) FileHandle {
     return FileHandle{
-        fd: 12345,  // 模拟文件描述符
+        fd: 12345,
         open: true,
     }
 }
@@ -158,25 +158,25 @@ func (f *FileHandle) read() int {
 
 func (f *FileHandle) write(int data) () {
     if f.open {
-        _ = data  // 写入
+        _ = data
     }
 }
 
 func close_file(f FileHandle) () {
     if f.open {
-        // 关闭文件
+
         _ = f.fd
     }
 }
 
 func file_example() int {
-    // 打开文件
+
     f := openFile("data.txt")
     
-    // 使用文件
+
     content := f.read()
     
-    // 文件自动关闭（或显式调用closeFile）
+
     return content
 }
 
@@ -200,7 +200,7 @@ func new_node(int value) ListNode {
 func create_list(int head, int next_val) ListNode {
     node1 := newNode(head)
     node2 := newNode(next_val)
-    // 模拟链表构建（实际使用会更复杂）
+
     return node1
 }
 
@@ -245,7 +245,7 @@ func ref_counted_example() int {
     rc1 := newRefCounted(100)
     rc2 := rc1.clone()
     
-    // rc1和rc2共享数据，但两个都拥有
+
     val1 := *rc1.data
     val2 := *rc2.data
     
@@ -362,7 +362,7 @@ func pool_example() int {
     
     total := *r1 + *r2 + *r3
     return total
-    // pool销毁时所有资源被自动清理
+
 }
 
 // =============================================================================
@@ -382,20 +382,20 @@ struct moveable_data {
 }
 
 func copy_example() int {
-    // Copy类型：值被复制
+
     c1 := CopyableData{x: 10, y: 20}
-    c2 := c1  // c1的值被复制给c2
+    c2 := c1
     
-    // c1和c2都有效
+
     return c1.x + c2.y
 }
 
 func move_example() int {
-    // Moveable类型：所有权被转移
+
     m1 := MoveableData{ptr: box(10)}
-    m2 := m1  // m1的所有权转移给m2
+    m2 := m1
     
-    // 这里只能使用m2
+
     value := *m2.ptr
     return value
 }
@@ -449,20 +449,20 @@ struct wrapper {
 }
 
 func deep_transfer() int {
-    // 第1层：创建资源
+
     container := Container{
         item: box(100),
     }
     
-    // 第2层：包装
+
     wrapper := Wrapper{
         container: container,
     }
     
-    // 第3层：提取
+
     value := *wrapper.container.item
     return value
-    // 所有权在各层之间转移，最终在这里全部销毁
+
 }
 
 // =============================================================================
@@ -470,52 +470,52 @@ func deep_transfer() int {
 // =============================================================================
 
 func main() int {
-    // 示例1
+
     println("=== Memory Allocator ===")
     println("Result:", memoryExample())
     
-    // 示例2
+
     println("=== Owned String ===")
     println("Result:", stringExample())
     
-    // 示例3
+
     println("=== Vector ===")
     println("Result:", vectorExample())
     
-    // 示例4
+
     println("=== File Handle ===")
     println("Result:", fileExample())
     
-    // 示例5
+
     println("=== Linked List ===")
     println("Result:", listExample())
     
-    // 示例6
+
     println("=== Reference Counting ===")
     println("Result:", refCountedExample())
     
-    // 示例7
+
     println("=== State Machine ===")
     println("Result:", processExample())
     
-    // 示例8
+
     println("=== Owned Callback ===")
     println("Result:", callbackExample())
     
-    // 示例9
+
     println("=== Resource Pool ===")
     println("Result:", poolExample())
     
-    // 示例10
+
     println("=== Copy vs Move ===")
     println("Copy result:", copyExample())
     println("Move result:", moveExample())
     
-    // 示例11
+
     println("=== Early Return ===")
     println("Result:", earlyReturnExample())
     
-    // 示例12
+
     println("=== Complex Transfer ===")
     println("Result:", deepTransfer())
     

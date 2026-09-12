@@ -179,7 +179,7 @@ struct borrow_stmt {
     source    string
     is_mutable    bool
     lifetime_name string
-    ref_name      string  // The reference variable created
+    ref_name      string
 }
 
 struct borrow_end_stmt {

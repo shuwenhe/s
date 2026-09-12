@@ -29,33 +29,33 @@ struct owner {
 }
 
 func ownership_rule1() {
-    // Rule: 每个值都有一个所有者
+
     r := Owner{
         resource: box(42),
     }
-    // r是resource的所有者
+
 }
 
 func ownership_rule2() {
-    // Rule: 所有权可以转移
+
     r1 := Owner{
         resource: box(42),
     }
-    r2 := r1  // r1的所有权转移给r2
+    r2 := r1
     
-    // r1现在无效（所有权已转移）
-    // 使用r1会导致编译错误
+
+
 }
 
 func ownership_rule3() {
-    // Rule: 当所有者离开作用域时，资源被销毁
+
     {
         r := Owner{
             resource: box(42),
         }
-        // r拥有resource
+
     }
-    // r离开作用域，resource自动销毁
+
 }
 
 // =============================================================================
@@ -91,7 +91,7 @@ func valid_shared_borrows() int {
     b2 := &d
     b3 := &d
     
-    // 所有借用都有效，可以共存
+
     return *b1.value + *b2.value + *b3.value
 }
 
@@ -100,7 +100,7 @@ func valid_shared_borrows() int {
 //     d := Data{value: box(100)}
 //     
 //     b1 := &mut d
-//     b2 := &mut d  // ERROR: 两个可变借用不能共存
+//     b2 := &mut d
 // }
 
 // ERROR CASE: 共享和可变借用混合
@@ -108,7 +108,7 @@ func valid_shared_borrows() int {
 //     d := Data{value: box(100)}
 //     
 //     s := &d
-//     m := &mut d  // ERROR: 不能与共享借用混合
+//     m := &mut d
 // }
 
 // VALID: 顺序的可变借用
@@ -118,12 +118,12 @@ func valid_sequential_mutable() int {
     {
         b1 := &mut d
         *b1.value = *b1.value + 10
-    }  // b1的借用在这里结束
+    }
     
     {
         b2 := &mut d
         *b2.value = *b2.value + 20
-    }  // b2的借用在这里结束
+    }
     
     return *d.value
 }
@@ -151,13 +151,13 @@ func valid_lifetime() int {
     c := Container{data: box(50)}
     
     {
-        // 借用开始
+
         ref := &c
         value := *ref.data
-        // 借用结束
+
     }
     
-    // c仍然有效
+
     return *c.data
 }
 
@@ -165,13 +165,13 @@ func valid_lifetime() int {
 // func invalid_lifetime() *int {
 //     c := Container{data: box(50)}
 //     ref := &c
-//     return ref.data  // ERROR: ref指向c的数据
-//                      //        但c的生命周期比返回值短
+//     return ref.data
+//
 // }
 
 // VALID: 返回值与参数的生命周期关系
 func borrow_from_param(c *Container) *int {
-    // 返回的引用生命周期受c的制约
+
     return c.data
 }
 
@@ -187,26 +187,26 @@ struct resource {
 // MOVE: 转移所有权
 func consume_resource(r Resource) int {
     return *r.ptr
-    // r在这里销毁
+
 }
 
 // BORROW: 保留所有权
 func borrow_resource(r *Resource) int {
     return *r.ptr
-    // r仍然有效
+
 }
 
 // 对比示例
 func move_vs_borrow() int {
     r := Resource{ptr: box(100)}
     
-    // 选项1: 转移所有权（Move）
-    // value1 := consumeResource(r)  // r的所有权转移
-    // 下面无法使用r
+
+
+
     
-    // 选项2: 借用（Borrow）- 推荐
+
     value := borrowResource(&r)
-    // r仍然有效，可以继续使用
+
     
     return value
 }
@@ -232,14 +232,14 @@ func borrow_scope_example() int {
     b := box_int{ptr: box(50)}
     
     {
-        // 借用作用域开始
+
         ref := &b
         println(*ref.ptr)
-        // 最后一次使用ref
-    }  // 借用作用域结束
+
+    }
     
     {
-        // 现在可以进行可变借用
+
         mut_ref := &b
         *mut_ref.ptr = 100
     }
@@ -271,28 +271,28 @@ func borrow_scope_example() int {
 // 冲突示例1: Move后使用
 // func conflict_move_use() {
 //     r := Resource{ptr: box(10)}
-//     r2 := r  // Move
-//     x := *r.ptr  // ERROR: r已moved
+//     r2 := r
+//     x := *r.ptr
 // }
 
 // 冲突示例2: 可变借用冲突
 // func conflict_mutable_borrow() {
 //     r := Resource{ptr: box(10)}
 //     m1 := &mut r
-//     m2 := &mut r  // ERROR: 两个可变借用
+//     m2 := &mut r
 // }
 
 // 冲突示例3: 共享与可变混合
 // func conflict_mixed_borrow() {
 //     r := Resource{ptr: box(10)}
 //     s := &r
-//     m := &mut r  // ERROR: 混合借用
+//     m := &mut r
 // }
 
 // 冲突示例4: 生命周期冲突
 // fn conflictLifetime() *int {
 //     x := box(10)
-//     return &x  // ERROR: &x在x销毁后无效
+//     return &x
 // }
 
 // =============================================================================
@@ -309,30 +309,30 @@ For each variable v:
 
 For each statement:
   If assignment: v = e
-    // 检查e的所有权
+
     check_ownership(e)
-    // 转移所有权给v
+
     transfer_ownership(e, v)
     
   If borrow: ref = &v
-    // 检查v是否被独占借用
+
     check_exclusive_mutable(v)
-    // 创建共享借用
+
     create_shared_borrow(v)
     
   If mutable_borrow: ref = &mut v
-    // 检查v是否有任何借用
+
     check_no_borrows(v)
-    // 创建可变借用
+
     create_exclusive_borrow(v)
     
   If use: x = *ref
-    // 检查ref是否有效
+
     check_lifetime_valid(ref)
-    // 使用ref
+
     
   If scope_exit:
-    // 清理作用域内的所有变量
+
     for each v in scope:
       if not moved:
         drop(v)
@@ -376,20 +376,20 @@ State Diagram:
 // State transitions example:
 func state_transitions() int {
     r := Resource{ptr: box(10)}
-    // State: r = Owned
+
     
     {
         ref := &r
-        // State: r = Shared (borrowed)
+
         println(*ref.ptr)
     }
-    // State: r = Owned (borrow ended)
+
     
     r2 := r
-    // State: r = Moved, r2 = Owned
+
     
     return *r2.ptr
-    // State: r2 = Destroyed
+
 }
 
 // =============================================================================
@@ -417,11 +417,11 @@ func non_lexical_lifetime() int {
     {
         ref := &r
         println(*ref.ptr)
-        // ref的最后使用在这里
-    }  // ref的借用在这里结束（不是块结束）
+
+    }
     
     {
-        // 可以立即进行可变借用
+
         mut_ref := &r
         *mut_ref.ptr = 100
     }
@@ -436,8 +436,8 @@ func non_lexical_lifetime() int {
 //     {
 //         let ref = &r;
 //         println!("{}", *ref);
-//     }  // ref的生命周期到这里结束
-//     r = new_resource();  // OK
+//     }
+//     r = new_resource();
 // }
 
 // 非词法生命周期（灵活）：
@@ -446,9 +446,9 @@ func non_lexical_lifetime() int {
 //     {
 //         let ref = &r;
 //         println!("{}", *ref);
-//         // ref的生命周期在这里结束（最后使用）
+//
 //     }
-//     r = new_resource();  // OK - 相同的代码更早允许
+//     r = new_resource();
 // }
 
 // =============================================================================
@@ -459,8 +459,8 @@ func non_lexical_lifetime() int {
 // 特殊情况1: 返回值的所有权
 func return_ownership_example() Resource {
     r := Resource{ptr: box(100)}
-    return r  // OK - 所有权转移给调用者
-    // r的销毁责任转移
+    return r
+
 }
 
 // 特殊情况2: 条件返回
@@ -469,16 +469,16 @@ func conditional_return(bool condition) Resource {
     r2 := Resource{ptr: box(2)}
     
     if condition {
-        return r1  // r1转移给调用者，r2销毁
+        return r1
     } else {
-        return r2  // r2转移给调用者，r1销毁
+        return r2
     }
 }
 
 // 特殊情况3: 自引用（有限支持）
 // type node struct {
 //     value int
-//     next *Node  // 需要谨慎使用
+//     next *Node
 // }
 
 // 特殊情况4: 全局状态
@@ -551,13 +551,13 @@ Error 5: Dangling reference
 
 // 示例：最佳实践
 func best_practices() int {
-    // 1. 使用借用
+
     r := Resource{ptr: box(42)}
     
-    // 2. 传递引用而不是转移所有权
+
     value := useWithBorrow(&r)
     
-    // 3. r仍然有效
+
     println(*r.ptr)
     
     return value

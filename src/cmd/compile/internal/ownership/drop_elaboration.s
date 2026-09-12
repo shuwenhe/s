@@ -1,4 +1,5 @@
 package compile.internal.ownership
+
 struct drop_elaborator {
 ctx ownership_context*
 }
@@ -157,7 +158,7 @@ case block_stmt*:
 }
 
 func (drop_elaborator* de) verify_partial_move_drops(stmts interface{}[]) bool {
-    return true  // Placeholder
+    return true
 }
 
 func (drop_elaborator* de) get_drop_order(string type_name) string[] {
@@ -186,7 +187,7 @@ struct loop_stmt {
 
 struct drop_call {
     variable    string
-    kind     string  // "explicit", "return-cleanup", "error-cleanup"
+    kind     string
 }
 
 struct drop_summary {
