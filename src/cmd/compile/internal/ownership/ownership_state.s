@@ -14,23 +14,23 @@ const (
 func (s ownership_state) string() string {
     switch s {
     case state_undefined:
-        return "UNDEFINED"
+        return "undefined"
     case state_owned:
-        return "OWNED"
+        return "owned"
     case state_moved:
-        return "MOVED"
+        return "moved"
     case state_borrowed_shared:
-        return "BORROWED_SHARED"
+        return "borrowed_shared"
     case state_borrowed_mut:
-        return "BORROWED_MUT"
+        return "borrowed_mut"
     case state_partially_moved:
-        return "PARTIALLY_MOVED"
+        return "partially_moved"
     case state_dropped:
-        return "DROPPED"
+        return "dropped"
     case state_maybe_moved:
-        return "MAYBE_MOVED"
+        return "maybe_moved"
     default:
-        return "UNKNOWN"
+        return "unknown"
     }
 }
 

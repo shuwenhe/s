@@ -108,7 +108,7 @@ func event1_type_str(t race_type) string {
 		return "READ"
 	}
 	default {
-		return "UNKNOWN"
+		return "unknown"
 	}
 	}
 }
@@ -122,7 +122,7 @@ func event2_type_str(t race_type) string {
 		return "READ"
 	}
 	default {
-		return "UNKNOWN"
+		return "unknown"
 	}
 	}
 }
