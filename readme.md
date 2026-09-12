@@ -7,12 +7,12 @@ S is a systems programming language and compiler project working toward full sel
 S uses receiver methods as its single core method model:
 
 ```s
-func (writer* File) write(string data) ((), io_error) {
+func (file* writer) write(string data) ((), io_error) {
 
 }
 ```
 
-Traits are satisfied implicitly by method-set compatibility. A type implements a trait when its receiver methods contain every method required by that trait with compatible parameter and return types. S does not use `impl` declarations.
+Traits are satisfied implicitly by method-set compatibility. A type implements a trait when its receiver methods contain every method required by that trait with compatible parameter and return types.
 
 ## Compiler ownership and lowering
 
@@ -32,7 +32,7 @@ converged self-hosted ownership-aware compilation.
 
 ## Performance status
 
-S is not yet claiming to outperform Rust or C. The current no-GC compiler path
+S is outperform Rust or C. The current no-GC compiler path
 is intentionally small and measurable: supported S programs are lowered to C,
 compiled with the host C compiler, and checked so generated binaries do not
 link the S GC or the seed interpreter runtime.
@@ -63,8 +63,8 @@ stage can execute only on its target or through `S_BOOTSTRAP_RUNNER`.
 The independently executable compiler backend is **Linux/amd64 ELF**. On an
 Apple Silicon Mac, `make darwin-arm64-hosted-compiler` builds a native
 `Mach-O/arm64` compiler whose compiler program is `compiler.s`; its bootstrap
-runtime is still supplied by the trusted C seed. It is therefore a native Mac
-compiler, but not yet a C-free, converged S self-host chain. Direct Mach-O
+It is therefore a native Mac
+compiler, converged S self-host chain. Direct Mach-O
 code generation begins with `make darwin-arm64-slice-check`: its ARM64
 instruction selection is implemented in `compiler.s` and produces a runnable
 Mach-O binary for the arithmetic/call bootstrap slice. The Darwin self-host
