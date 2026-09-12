@@ -11,7 +11,7 @@ package ownership_system
 // =============================================================================
 
 // Resource: 一个基础资源结构，展示所有权和Drop
-type resource struct {
+struct resource {
     ptr *int
     id int
 }
@@ -125,7 +125,7 @@ func demonstrate_scope() int {
 // =============================================================================
 
 // LifetimeTracker: 用于追踪引用的生命周期
-type lifetime_tracker struct {
+struct lifetime_tracker {
     ref *int
     createdAt int
 }
@@ -158,7 +158,7 @@ func demonstrate_lifetime_valid() int {
 // =============================================================================
 
 // BoxedResource: 展示堆分配的所有权
-type boxed_resource struct {
+struct boxed_resource {
     data *int
 }
 
@@ -180,12 +180,12 @@ func consume_boxed(br BoxedResource) int {
 // =============================================================================
 
 // MoveType: 需要move的类型（包含堆分配或指针）
-type move_type struct {
+struct move_type {
     ptr *int
 }
 
 // CopyType: 可以copy的类型（只包含值类型）
-type copy_type struct {
+struct copy_type {
     value int
 }
 
@@ -215,7 +215,7 @@ func demonstrate_copy_semantics() int {
 // =============================================================================
 
 // DropFlaggedResource: 带有drop flag的资源（用于追踪是否已销毁）
-type drop_flagged_resource struct {
+struct drop_flagged_resource {
     ptr *int
     dropped bool  // 模拟drop flag
 }
@@ -250,7 +250,7 @@ func (r *DropFlaggedResource) drop_it() () {
 // =============================================================================
 
 // RAIIResource: 展示RAII模式
-type raii_resource struct {
+struct raii_resource {
     id int
     handle *int
 }
@@ -284,7 +284,7 @@ func (r RAIIResource) release_resource() () {
 // =============================================================================
 
 // Container: 演示容器拥有的资源
-type container struct {
+struct container {
     resources []*int
     count int
 }

@@ -10,7 +10,7 @@ package ownership_examples
 // 展示所有权追踪的内存管理
 // =============================================================================
 
-type memory_block struct {
+struct memory_block {
     addr *int
     size int
     allocated bool
@@ -51,7 +51,7 @@ func memory_example() int {
 // 展示复杂数据结构的所有权
 // =============================================================================
 
-type owned_string struct {
+struct owned_string {
     data *int  // 指向字符数据
     len int
     capacity int
@@ -85,7 +85,7 @@ func string_example() int {
 // 展示集合容器的所有权管理
 // =============================================================================
 
-type vector struct {
+struct vector {
     elements [100]*int  // 固定大小数组
     len int
 }
@@ -137,7 +137,7 @@ func vector_example() int {
 // 展示资源的获取和释放
 // =============================================================================
 
-type file_handle struct {
+struct file_handle {
     fd int
     open bool
 }
@@ -185,7 +185,7 @@ func file_example() int {
 // 展示递归数据结构的所有权
 // =============================================================================
 
-type list_node struct {
+struct list_node {
     value int
     next *ListNode
 }
@@ -221,7 +221,7 @@ func list_example() int {
 // 展示如何在所有权系统中实现引用计数
 // =============================================================================
 
-type ref_counted struct {
+struct ref_counted {
     data *int
     refCount *int
 }
@@ -264,7 +264,7 @@ const (
     STOPPED ProcessState = 2
 )
 
-type process struct {
+struct process {
     state ProcessState
     data *int
 }
@@ -298,7 +298,7 @@ func process_example() int {
 // 展示捕获资源的回调函数
 // =============================================================================
 
-type event_handler struct {
+struct event_handler {
     callback func() int
     context *int
 }
@@ -328,7 +328,7 @@ func callback_example() int {
 // 展示容器管理多个资源
 // =============================================================================
 
-type resource_pool struct {
+struct resource_pool {
     resources [10]*int
     count int
 }
@@ -371,13 +371,13 @@ func pool_example() int {
 // =============================================================================
 
 // CopyableData: 可复制的数据（只包含值类型）
-type copyable_data struct {
+struct copyable_data {
     x int
     y int
 }
 
 // MoveableData: 需要move的数据（包含指针）
-type moveable_data struct {
+struct moveable_data {
     ptr *int
 }
 
@@ -405,7 +405,7 @@ func move_example() int {
 // 展示资源在不同返回路径中的所有权
 // =============================================================================
 
-type validation_result struct {
+struct validation_result {
     resource *int
     valid bool
 }
@@ -440,11 +440,11 @@ func early_return_example() int {
 // 展示多层所有权转移
 // =============================================================================
 
-type container struct {
+struct container {
     item *int
 }
 
-type wrapper struct {
+struct wrapper {
     container Container
 }
 
