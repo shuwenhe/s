@@ -21,9 +21,9 @@ func (move_checker* mc) initialize_variable_states(stmts interface{}[]) {
 
 func (move_checker* mc) check_statement(int pc, stmt interface{}) {
     switch s := stmt.(type) {
-    case AssignmentStmt*:
+    case assignment_stmt*:
         mc.check_assignment(pc, s)
-    case CallStmt*:
+    case call_stmt*:
         mc.check_function_call(pc, s)
     case ReturnStmt*:
         mc.check_return(pc, s)
@@ -32,7 +32,7 @@ func (move_checker* mc) check_statement(int pc, stmt interface{}) {
     }
 }
 
-func (move_checker* mc) check_assignment(int pc, assign* AssignmentStmt) {
+func (move_checker* mc) check_assignment(int pc, assign* assignment_stmt) {
     if assign.rhs != nil {
         mc.check_use(pc, assign.rhs, "read")
     }
@@ -60,7 +60,7 @@ func (move_checker* mc) check_assignment(int pc, assign* AssignmentStmt) {
     mc.ctx.set_state_at(pc, assign.lhs, STATE_OWNED)
 }
 
-func (move_checker* mc) check_function_call(int pc, call* CallStmt) {
+func (move_checker* mc) check_function_call(int pc, call* call_stmt) {
     for i, arg := range call.args {
         arg_state := mc.ctx.get_state_at(pc, arg.string())
         if arg_state == STATE_MOVED {
