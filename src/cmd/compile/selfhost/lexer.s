@@ -62,7 +62,7 @@ func symbol_kind(string text) string {
     if text == "." { return "." }
     if text == ":" { return ":" }
     if text == ";" { return ";" }
-    return "UNKNOWN"
+    return "unknown"
 }
 
 func digit_text(int value) string {
@@ -243,7 +243,7 @@ func dump_tokens(string source) string {
             }
         }
         output = append_token(output, symbol_kind(symbol), symbol, token_line, token_column)
-		if symbol_kind(symbol) == "UNKNOWN" {
+		if symbol_kind(symbol) == "unknown" {
 			return lexer_error("ILLEGAL_CHAR", token_line, token_column, "illegal character: " + symbol)
 		}
         i = i + len(symbol)

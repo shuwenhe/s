@@ -78,7 +78,7 @@ func reloc_type_name(reloc_type type) string {
         case reloc_type_pltoff64: return "R_X86_64_PLTOFF64"
         case reloc_type_pltgot: return "R_X86_64_PLTGOT"
     }
-    "UNKNOWN"
+    "unknown"
 }
 
 func (ctx* relocation_context) has_symbol_relocation(string symbol) bool {
