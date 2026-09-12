@@ -171,10 +171,10 @@ func run_monomorphization_test() int {
 
 // E2E test: Verify transitive monomorphization works correctly for chain: main -> foo[int] -> bar[int] -> baz[int]
 func run_e2e_transitive_monomorphization_test() int {
-    // Phase 1: Test transitive chain resolution
-    // Scenario: main calls foo(42), foo calls bar, bar calls baz
+
+
     
-    // Create baz[T](T x) -> T
+
     baz_return := expr::name(name_expr { name: "x", inferred_type option::some("T") })
     baz := function_decl {
         sig: function_sig {
@@ -191,7 +191,7 @@ func run_e2e_transitive_monomorphization_test() int {
         is_public: false,
     }
     
-    // Create bar[T](T x) -> T calls baz[T](x)
+
     baz_call := expr::call(call_expr {
         callee: box(expr::name(name_expr { name: "baz", inferred_type: option::none })),
         args: expr[] { expr::name(name_expr { name: "x", inferred_type: option::some("T") }) },
@@ -214,7 +214,7 @@ func run_e2e_transitive_monomorphization_test() int {
         is_public: false,
     }
     
-    // Create foo[T](T x) -> T calls bar[T](x)
+
     bar_call := expr::call(call_expr {
         callee: box(expr::name(name_expr { name: "bar", inferred_type: option::none })),
         args: expr[] { expr::name(name_expr { name: "x", inferred_type: option::some("T") }) },
@@ -237,7 +237,7 @@ func run_e2e_transitive_monomorphization_test() int {
         is_public: false,
     }
     
-    // Create main() calls foo[int](42)
+
     foo_call := expr::call(call_expr {
         callee: box(expr::name(name_expr { name: "foo", inferred_type: option::none })),
         args: expr[] { expr::int(int_expr { value: "42", inferred_type: option::some("int") }) },
@@ -260,7 +260,7 @@ func run_e2e_transitive_monomorphization_test() int {
         is_public: true,
     }
     
-    // Create source file with all functions
+
     file := source_file {
         pkg: "e2e.mono.test",
         uses: use_decl[] {},
@@ -272,38 +272,38 @@ func run_e2e_transitive_monomorphization_test() int {
         },
     }
     
-    // Phase 2: Run monomorphization
+
     mono_file := monomorphize_file(file)
     
-    // Phase 3: Verify results
-    // After monomorphization, we should have:
-    // - main (non-generic, kept)
-    // - foo__mono_int (generated)
-    // - bar__mono_int (generated)
-    // - baz__mono_int (generated)
-    // Total: 4 concrete instances
+
+
+
+
+
+
+
     
     if mono_cache_count(mono_file.cache) != 3 {
-        // Expected 3: foo[int], bar[int], baz[int]
+
         return 1
     }
     
     if len(mono_file.file.items) != 4 {
-        // Expected 4: main + 3 generated instances
+
         return 1
     }
     
-    // Phase 4: Verify post-mono invariants (no generic residue)
+
     if mono_file.invariant_errors != 0 {
         return 1
     }
     
-    // Phase 5: Verify detailed invariants (all resolved)
+
     if verify_monomorphized_file_with_details(mono_file.file) != 0 {
         return 1
     }
     
-    // success: E2E pipeline verified
-    // generic source -> semantic -> monomorphize (with transitive closure) -> concrete instances
+
+
     0
 }

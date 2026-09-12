@@ -210,52 +210,52 @@ func mono_cache_count(mono_cache cache) int {
 }
 
 func monomorphize_file(source_file file) monomorphize_file_result {
-    // Initialize monomorphization context
+
     ctx := new_context()
     extra_items := item[]()
     
-    // Phase 1: Collect seed instances from all top-level items
-    // This identifies all monomorphization requests (generic calls with concrete type arguments)
+
+
     i := 0
     for i < len(file.items) {
         ctx = collect_item_instances_ctx(file.items[i], file.items, ctx)
         i = i + 1
     }
     
-    // Phase 2: Process worklist with transitive closure (worklist algorithm)
-    // This ensures we generate all transitively required instances
-    // Example: foo[int] calls bar[int], which calls baz[int] - all three get generated
+
+
+
     cursor := 0
     for cursor < len(ctx.worklist) {
         work := ctx.worklist[cursor]
         cursor = cursor + 1
         
-        // Skip if already processed (handles cycles and duplicates)
+
         if is_work_processed(ctx, work.generic_name, work.type_args) {
             continue
         }
         ctx = mark_work_processed(ctx, work.generic_name, work.type_args)
         
-        // Find generic source definition in the file
+
         source := find_generic_function(file.items, work.generic_name)
         if source.sig.name == "" {
             continue
         }
         
-        // Specialize the generic function with concrete type arguments
+
         instance := specialize_function(source, work.type_args)
         ctx.generated = append(ctx.generated, instance)
         
-        // Collect instances called by this specialized function (transitive discovery)
-        // This may add new work items to the worklist
+
+
         ctx = collect_item_instances_ctx(item::function(instance), file.items, ctx)
         
-        // Finalize and add to output
+
         extra_items = append(extra_items, item::function(finalize_monomorphized_function(instance)))
     }
     
-    // Phase 3: Remove all generic functions from original file
-    // Keep only concrete functions and non-function items
+
+
     stripped := item[]()
     i = 0
     for i < len(file.items) {
@@ -266,7 +266,7 @@ func monomorphize_file(source_file file) monomorphize_file_result {
     }
     file.items = stripped
     
-    // Phase 4: Add all generated monomorphic instances
+
     i = 0
     for i < len(extra_items) {
         file.items = append(file.items, extra_items[i])
@@ -422,12 +422,12 @@ func collect_call_instance_ctx(call_expr call, item[] all_items, mono_context ct
         return ctx
     }
     
-    // Check if this instance already exists
+
     existing := mono_cache_lookup(ctx.cache, generic_name, call.type_args)
     result := mono_cache_get_or_create(ctx.cache, generic_name, call.type_args)
     ctx.cache = result.cache
     
-    // If this is a new instance, add it to worklist for processing
+
     if existing == "" {
         ctx.worklist = append(ctx.worklist, mono_work_item { generic_name: generic_name, type_args: call.type_args })
     }
@@ -1229,13 +1229,13 @@ func summarize_instance(function_decl instance) mono_function_summary {
 func verify_monomorphized_file_with_details(source_file file) int {
     errors := verify_monomorphized_file(file)
     
-    // Additional detailed verification for concrete instances
+
     i := 0
     for i < len(file.items) {
         switch file.items[i] {
             item.function(fn) : {
                 if contains_text(fn.sig.name, "__mono") {
-                    // Verify call expressions have resolved_callee
+
                     errors = errors + verify_function_resolved_calls(fn)
                 }
             }
@@ -1292,7 +1292,7 @@ func verify_expr_resolved_calls(expr value) int {
     switch value {
         expr.call(v) : {
             errors := 0
-            // Monomorphized calls should have resolved_callee
+
             if len(v.type_args) == 0 {
                 switch v.resolved_callee {
                     option.some(_) : (),
