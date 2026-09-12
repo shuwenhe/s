@@ -4,19 +4,19 @@ use std.prelude.len
 use std.prelude.slice
 use std.slices
 struct build_cfg_error {
-    message string
+    string message
 }
 
 struct target {
-    goos string
-    goarch string
+    string goos
+    string goarch
 }
 
 struct toolchain {
-    compiler string
-    assembler string
-    linker string
-    archiver string
+    string compiler
+    string assembler
+    string linker
+    string archiver
 }
 
 struct build_cfg {

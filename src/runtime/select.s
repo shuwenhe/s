@@ -2,9 +2,9 @@ package src.runtime
 use std.option.option
 
 struct runtime_select_result {
-    index int
-    value int
-    ok bool
+    int index
+    int value
+    bool ok
 }
 
 const runtime_select_receive = 0
@@ -12,8 +12,8 @@ const runtime_select_send = 1
 
 struct runtime_select_case {
     channel raw_chan
-    kind int
-    value int
+    int kind
+    int value
 }
 
 func runtime_select_try(runtime_select_case[] cases) runtime_select_result {

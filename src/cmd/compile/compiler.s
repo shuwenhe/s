@@ -6,12 +6,12 @@ extern "intrinsic" func __host_char_at(string text, int index) string;
 extern "intrinsic" func __host_slice(string text, int start, int end) string;
 
 struct compiler_state {
-    source string
-    pos int
-    line int
-    token string
-    error string
-    code string
+    string source
+    int pos
+    int line
+    string token
+    string error
+    string code
     string[] names
     int[] kinds
     int[] live
@@ -25,34 +25,34 @@ struct compiler_state {
     int[] field_borrow_state
     int[] nested_field_state
     int[] nested_field_borrow_state
-    count int
-    loop_floor int
-    loop_cleanup int
-    depth int
-    expr_depth int
-    terminated int
-    value string
-    value_kind int
-    value_slot int
-    value_parent int
-    value_field int
-    value_parent_field int
-    value_array_length int
-    value_struct_id int
-    new_borrow bool
+    int count
+    int loop_floor
+    int loop_cleanup
+    int depth
+    int expr_depth
+    int terminated
+    string value
+    int value_kind
+    int value_slot
+    int value_parent
+    int value_field
+    int value_parent_field
+    int value_array_length
+    int value_struct_id
+    bool new_borrow
     string[] function_names
     int[] function_counts
     int[] function_returns
     int[] function_return_params
-    return_kind int
-    parameter_count int
-    return_param int
+    int return_kind
+    int parameter_count
+    int return_param
     int[] function_starts
     int[] function_param_kinds
     int[] function_param_structs
     int[] function_return_structs
-    function_count int
-    function_param_total int
+    int function_count
+    int function_param_total
     string[] struct_names
     string[] struct_field_lefts
     string[] struct_field_rights
@@ -64,13 +64,13 @@ struct compiler_state {
     int[] struct_field_starts
     int[] struct_field_counts
     int[] struct_custom_drops
-    struct_count int
-    function_name string
-    function_main bool
+    int struct_count
+    string function_name
+    bool function_main
     string[] method_names
     int[] method_structs
     int[] method_returns
-    method_count int
+    int method_count
 }
 
 func compiler_number(int n) string {

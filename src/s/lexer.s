@@ -5,16 +5,16 @@ use std.prelude.slice
 use std.slices
 use std.result.result
 struct lex_error {
-    message string
-    line int
-    column int
+    string message
+    int line
+    int column
 }
 
 struct lexer {
-    source string
-    index int
-    line int
-    column int
+    string source
+    int index
+    int line
+    int column
 }
 
 func new_lexer(string source) lexer {

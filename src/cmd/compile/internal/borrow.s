@@ -69,29 +69,29 @@ func starts_with(string text, string prefix) bool {
 }
 
 struct borrow_slot {
-    name string
-    shared_count int
-    mutable_borrowed bool
-    moved bool
+    string name
+    int shared_count
+    bool mutable_borrowed
+    bool moved
 }
 
 struct borrow_check_result {
-    ok bool
-    errors int
-    message string
+    bool ok
+    int errors
+    string message
 }
 
 struct ownership_slot {
-    name string
-    copyable bool
-    moved bool
-    dropped bool
+    string name
+    bool copyable
+    bool moved
+    bool dropped
 }
 
 struct ownership_check_result {
-    ok bool
-    errors int
-    message string
+    bool ok
+    int errors
+    string message
 }
 
 func ownership_find_slot(ownership_slot[] slots, string name) int {
@@ -308,15 +308,15 @@ func find_event_colon(string event) int {
 }
 
 struct lifetime_reference {
-    reference_name string
-    owner_name string
-    scope_name string
+    string reference_name
+    string owner_name
+    string scope_name
 }
 
 struct lifetime_check_result {
-    ok bool
-    errors int
-    message string
+    bool ok
+    int errors
+    string message
 }
 
 func lifetime_find_reference(lifetime_reference[] refs, string name) int {

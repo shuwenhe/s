@@ -5,20 +5,20 @@ extern "intrinsic" func __host_read_to_string(string path) string;
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
 
 struct macos_config {
-    arch string
-    os_version string
-    deployment_target string
-    sdk_path string
-    use_clang bool
+    string arch
+    string os_version
+    string deployment_target
+    string sdk_path
+    bool use_clang
 }
 
 struct macos_compiler {
     config macos_config
-    source_file string
-    output_file string
-    temp_dir string
-    asm_file string
-    obj_file string
+    string source_file
+    string output_file
+    string temp_dir
+    string asm_file
+    string obj_file
 }
 
 func macos_config_new() macos_config {

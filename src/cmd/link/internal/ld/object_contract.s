@@ -22,46 +22,46 @@ const s_reloc_tls_le64 = 5
 const s_reloc_tls_ie64 = 6
 
 struct s_obj_section {
-    name string
-    kind int
-    flags int
-    align int
+    string name
+    int kind
+    int flags
+    int align
     u8[] data
 }
 
 struct s_obj_symbol {
-    name string
-    value int
-    size int
-    binding int
-    visibility int
-    section int
-    comdat int
+    string name
+    int value
+    int size
+    int binding
+    int visibility
+    int section
+    int comdat
 }
 
 struct s_obj_reloc {
-    section int
-    offset int
-    kind int
-    symbol int
-    addend int
+    int section
+    int offset
+    int kind
+    int symbol
+    int addend
 }
 
 struct s_object {
-    format int
-    machine int
+    int format
+    int machine
     s_obj_section[] sections
     s_obj_symbol[] symbols
     s_obj_reloc[] relocs
 }
 
 struct s_link_layout {
-    got_base int
-    plt_base int
-    tls_base int
-    got_count int
-    plt_count int
-    tls_size int
+    int got_base
+    int plt_base
+    int tls_base
+    int got_count
+    int plt_count
+    int tls_size
 }
 
 func s_obj_empty() s_object {
@@ -285,17 +285,17 @@ func s_build_id_for(u8[] data) s_build_id {
 }
 
 struct s_dwarf_range {
-    start int
-    length int
-    file string
-    line int
+    int start
+    int length
+    string file
+    int line
 }
 
 struct s_unwind_entry {
-    start int
-    length int
-    cfa_register int
-    cfa_offset int
+    int start
+    int length
+    int cfa_register
+    int cfa_offset
     u8[] instructions
 }
 

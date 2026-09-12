@@ -1,7 +1,7 @@
 package compile.internal.ssa
 struct sparse_pos_entry {
-    pos int
-    value int
+    int pos
+    int value
 }
 
 func make_sparse_pos_entry(int pos, int value) sparse_pos_entry {

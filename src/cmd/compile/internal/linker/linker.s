@@ -1,7 +1,7 @@
 package linker
 
 struct object_file {
-    filename string
+    string filename
     elf64_header header
     elf64_section[] sections
     elf64_symbol[] symbols
@@ -22,7 +22,7 @@ struct linker_context {
 struct link_result {
     int success
     string error_message
-    output_filename string
+    string output_filename
 }
 
 func linker_context_new(string output_file) linker_context {

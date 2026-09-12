@@ -2,12 +2,12 @@ package compile.internal.ir.ast
 use std.slices
 use compile.internal.ir.types
 struct program_ir {
-    package_name string
+    string package_name
     package_ir[] packages
 }
 
 struct package_ir {
-    name string
+    string name
     decl_ir[] decls
 }
 enum decl_ir {
@@ -19,7 +19,7 @@ enum decl_ir {
 }
 
 struct func_decl {
-    name string
+    string name
     sig func_sig
     option[block_ir] body
 }

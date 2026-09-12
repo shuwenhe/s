@@ -2,21 +2,21 @@ package std.tensor
 use std.switch.{abs, sqrt, exp, log, pow, max as fmax, min as fmin, epsilon}
 struct tensor_shape {
     int[] dims
-    ndim int
-    size int
+    int ndim
+    int size
 }
 
 struct tensor_data {
     float[] values
-    length int
-    owns_data bool
+    int length
+    bool owns_data
 }
 
 struct tensor {
     shape tensor_shape
     data tensor_data
-    device string
-    requires_grad bool
+    string device
+    bool requires_grad
 }
 
 func shape_from_dims(int[] dims) tensor_shape {
@@ -174,7 +174,7 @@ func scalar(float value) tensor {
 }
 
 struct rand_state {
-    seed int
+    int seed
 }
 var global_rand_state = rand_state { seed: 42 }
 

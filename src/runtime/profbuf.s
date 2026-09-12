@@ -2,8 +2,8 @@ package src.runtime
 
 struct profile_buffer {
     runtime_profile_sample[] samples
-    limit int
-    dropped int
+    int limit
+    int dropped
 }
 
 func profile_buffer_new(int limit) profile_buffer {

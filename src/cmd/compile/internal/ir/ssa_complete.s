@@ -24,43 +24,43 @@ enum value_op {
 }
 
 struct ssa_value {
-    id i32
-    name string
+    i32 id
+    string name
     op value_op
     i32[] args
-    block i32
-    type_str string
-    is_const bool
-    const_value string
-    removed bool
+    i32 block
+    string type_str
+    bool is_const
+    string const_value
+    bool removed
 }
 
 struct ssa_phi {
-    id i32
-    var_id i32
+    i32 id
+    i32 var_id
     i32[] block_preds
     i32[] value_preds
-    type_str string
+    string type_str
 }
 
 struct ssa_block {
-    id i32
-    label string
+    i32 id
+    string label
     ssa_value*[] values
     i32[] predecessors
     i32[] successors
     ssa_phi*[] phis
-    removed bool
+    bool removed
 }
 
 struct ssa_function {
-    name string
+    string name
     ssa_block*[] blocks
     ssa_value*[] values
-    entry_block i32
-    exit_block i32
-    value_counter i32
-    block_counter i32
+    i32 entry_block
+    i32 exit_block
+    i32 value_counter
+    i32 block_counter
     map[string]i32 name_to_value
 }
 
@@ -169,11 +169,11 @@ func (f ssa_function*) build_ssa() {
 }
 
 struct ssa_opt_stats {
-    constants_folded int
-    cse_eliminated int
-    dead_removed int
-    branches_folded int
-    blocks_merged int
+    int constants_folded
+    int cse_eliminated
+    int dead_removed
+    int branches_folded
+    int blocks_merged
 }
 
 func ssa_value_at(ssa_function* f, int id) ssa_value* {

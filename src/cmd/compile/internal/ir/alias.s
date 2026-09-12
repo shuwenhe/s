@@ -7,8 +7,8 @@ enum alias_kind {
 }
 
 struct alias_relation {
-    value1 i32
-    value2 i32
+    i32 value1
+    i32 value2
     kind alias_kind
 }
 
@@ -17,7 +17,7 @@ struct alias_analysis {
     i32[][] may_alias_matrix
     i32[][] must_alias_matrix
     string[] value_names
-    num_values i32
+    i32 num_values
 }
 
 func new_alias_analysis(num_values i32) alias_analysis* {

@@ -3,26 +3,26 @@ package liveness_analysis
 struct liveness_set {
     int[] live_in
     int[] live_out
-    num_vars int
+    int num_vars
 }
 
 struct liveness_analyzer {
-    block_count int
-    instr_count int
-    var_count int
+    int block_count
+    int instr_count
+    int var_count
     liveness_set[] block_liveness
     int[][] block_killed
     int[][] block_used
 }
 
 struct stack_frame {
-    total_size int
-    spill_area_offset int
-    callee_saved_offset int
-    local_vars_offset int
-    arg_area_offset int
+    int total_size
+    int spill_area_offset
+    int callee_saved_offset
+    int local_vars_offset
+    int arg_area_offset
     int[] slot_to_var
-    slot_count int
+    int slot_count
 }
 
 const callee_saved_rbx = 0x1

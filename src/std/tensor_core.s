@@ -4,15 +4,15 @@ const float_inf = 1e308
 const float_neg_inf = -1e308
 struct tensor_shape {
     int[] dims
-    ndim int
-    size int
+    int ndim
+    int size
 }
 
 struct tensor {
     shape tensor_shape
     float[] data
-    device string
-    requires_grad bool
+    string device
+    bool requires_grad
 }
 
 func make_shape(int[] dims) tensor_shape {

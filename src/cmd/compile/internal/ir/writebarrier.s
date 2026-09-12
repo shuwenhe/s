@@ -10,19 +10,19 @@ enum barrier_type {
 }
 
 struct write_barrier {
-    instr_id int
-    target_var int
-    source_var int
+    int instr_id
+    int target_var
+    int source_var
     kind barrier_type
-    needs_nil_check bool
-    needs_bounds_check bool
+    bool needs_nil_check
+    bool needs_bounds_check
 }
 
 struct write_barrier_analysis {
     write_barrier[] barriers
     int[] gc_safe_points
     bool[] var_needs_barrier
-    num_vars int
+    int num_vars
 }
 
 func new_write_barrier_analysis(int num_vars) write_barrier_analysis {

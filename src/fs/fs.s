@@ -1,7 +1,7 @@
 package std.fs
 use std.result.result
 struct fs_error {
-    message string
+    string message
 }
 
 func read_to_string(string path) (string, fs_error) {

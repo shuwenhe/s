@@ -1,29 +1,29 @@
 package src.runtime
 use std.slices
 struct sroutine {
-    id int
-    status int
-    name string
-    parent_id int
-    m_id int
-    wait_for int
-    stack_size int
-    system bool
+    int id
+    int status
+    string name
+    int parent_id
+    int m_id
+    int wait_for
+    int stack_size
+    bool system
 }
 
 struct p {
-    id int
-    current_sroutine int
+    int id
+    int current_sroutine
     int[] local_q
-    local_head int
-    local_tail int
+    int local_head
+    int local_tail
 }
 
 struct m {
-    id int
-    p_id int
-    current_sroutine int
-    spinning bool
+    int id
+    int p_id
+    int current_sroutine
+    bool spinning
 }
 
 struct scheduler {
@@ -31,9 +31,9 @@ struct scheduler {
     m[]   ms
     p[]   ps
     int[] global_q
-    next_sroutine_id int
-    next_mid int
-    num_p int
+    int next_sroutine_id
+    int next_mid
+    int num_p
     mu mutex
 }
 scheduler _sched = init_scheduler()
@@ -176,9 +176,9 @@ func num_sroutine() int {
 }
 
 struct sroutine_info {
-    id int
-    status int
-    name string
+    int id
+    int status
+    string name
 }
 
 func sroutine_list() sroutine_info[] {

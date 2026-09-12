@@ -19,13 +19,13 @@ use compile.internal.drop_state_v2.drop_state_needs_drop
 struct field_level_entry {
     path path
     state drop_state
-    type_name string
-    scope_depth int
+    string type_name
+    int scope_depth
 }
 
 struct field_level_drop_flag {
     field_level_entry[] entries
-    scope_depth int
+    int scope_depth
     string[] errors
 }
 
@@ -171,7 +171,7 @@ func fldf_scope_exit(field_level_drop_flag f) (field_level_drop_flag, path[]) {
 
 struct branch_snapshot {
     field_level_entry[] entries
-    branch_id int
+    int branch_id
 }
 
 func fldf_save_checkpoint(field_level_drop_flag f) branch_snapshot {

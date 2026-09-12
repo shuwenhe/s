@@ -1,16 +1,16 @@
 package compile.internal.liveness
 use std.slices
 struct local_slot {
-    name string
-    size int
-    ptr_words int
-    align int
-    offset int
+    string name
+    int size
+    int ptr_words
+    int align
+    int offset
 }
 
 struct merged_locals {
     local_slot[] slots
-    frame_size int
+    int frame_size
 }
 
 func merge_locals(local_slot[] a, local_slot[] b) merged_locals {
