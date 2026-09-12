@@ -56,6 +56,7 @@ func (OwnershipAnalysis* oa) set_type_classification(string typeName, class* typ
 
 func (OwnershipAnalysis* oa) set_variable_type(string varName, string typeName) {
 }
+
 struct analysis_report {
     function_name    string
     success    bool
@@ -112,6 +113,7 @@ case BlockStmt*:
     }
     return count
 }
+
 struct ownership_hints {
     type_classes map[string]*type_classification
     VariableTypes map[string]string

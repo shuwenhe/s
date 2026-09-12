@@ -12,6 +12,7 @@ struct ownership_drop_context {
     errors string[]
     warnings string[]
 }
+
 struct ownership_record {
     name string
     type_name string
@@ -20,6 +21,7 @@ struct ownership_record {
     scope_depth int
     is_param bool
 }
+
 struct borrow_record {
     borrow_var string
     source_var string
@@ -28,6 +30,7 @@ struct borrow_record {
     lifetime_end int
     scope_depth int
 }
+
 struct drop_record {
     variable string
     type_name string
@@ -36,6 +39,7 @@ struct drop_record {
     fields string[]
     field_drop_order string[]
 }
+
 struct ownership_state {
     UNDEFINED = 0
     OWNED = 1
@@ -360,6 +364,7 @@ func (OwnershipDropContext* ctx) verify_closed_loop() bool {
     }
     return len(ctx.errors) == 0
 }
+
 struct analysis_result {
     success bool
     elaborated_stmts interface{}{}
@@ -408,32 +413,40 @@ func new_ownership_drop_context() OwnershipDropContext* {
         warnings: make(string[], 0),
     }
 }
+
 struct decl_stmt {
     name string
     type_name string
 }
+
 struct assign_stmt {
     lhs string
     rhs string
     is_move bool
 }
+
 struct move_stmt {
     source string
 }
+
 struct drop_stmt {
     target string
 }
+
 struct borrow_stmt {
     borrow_var string
     source string
     is_mutable bool
 }
+
 struct borrow_end_stmt {
     borrow_var string
 }
+
 struct block_stmt {
     statements interface{}[]
 }
+
 struct drop_call {
     variable string
     drop_fn string
