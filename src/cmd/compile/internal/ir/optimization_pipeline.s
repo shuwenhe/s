@@ -31,7 +31,7 @@ func new_compiler_pipeline() compiler_pipeline* {
     cp
 }
 
-func (cp compiler_pipeline*) add_function(name string) ssa_function* {
+func (cp compiler_pipeline*) add_function(string name) ssa_function* {
     func := new_ssa_function(name)
     cp.functions = append(cp.functions, func)
     cp.dominators = append(cp.dominators, nil)

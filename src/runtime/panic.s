@@ -59,7 +59,7 @@ func defer_call(fn func(), arg unsafe.pointer) {
 	global_exception_context.defer_stack = entry
 }
 
-func panic_impl(msg string) {
+func panic_impl(string msg) {
 	global_exception_context.lock.lock()
 	defer global_exception_context.lock.unlock()
 
@@ -142,7 +142,7 @@ func capture_stack_trace() string[] {
 	return trace
 }
 
-func abort_with_panic_message(msg string, trace string[]) {
+func abort_with_panic_message(string msg, string trace[]) {
 	fmt.fprintf(fmt.stderr, "panic: %s\n", msg)
 
 	for i := i32(0); i < i32(len(trace)); i += 1 {

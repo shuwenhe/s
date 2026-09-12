@@ -71,7 +71,7 @@ func NewOwnershipContext() OwnershipContext* {
     }
 }
 
-func (OwnershipContext* ctx) GetStateAt(pc int, varName string) OwnershipState {
+func (OwnershipContext* ctx) GetStateAt(int pc, string varName) OwnershipState {
     info, ok := ctx.StateAtPC[pc]
     if !ok {
         return STATE_UNDEFINED
@@ -79,7 +79,7 @@ func (OwnershipContext* ctx) GetStateAt(pc int, varName string) OwnershipState {
     return info.State
 }
 
-func (OwnershipContext* ctx) SetStateAt(pc int, varName string, state OwnershipState) {
+func (OwnershipContext* ctx) SetStateAt(int pc, string varName, state OwnershipState) {
     if _, ok := ctx.StateAtPC[pc]; !ok {
         ctx.StateAtPC[pc] = OwnershipInfo*{
             State:         state,
@@ -91,7 +91,7 @@ func (OwnershipContext* ctx) SetStateAt(pc int, varName string, state OwnershipS
     }
 }
 
-func (OwnershipContext* ctx) AddError(msg string) {
+func (OwnershipContext* ctx) AddError(string msg) {
     ctx.Errors = append(ctx.Errors, msg)
 }
 
@@ -99,7 +99,7 @@ func (OwnershipContext* ctx) HasErrors() bool {
     return len(ctx.Errors) > 0
 }
 
-func (OwnershipContext* ctx) classify_type(typeName string) type_classification* {
+func (OwnershipContext* ctx) classify_type(string typeName) type_classification* {
     if class, ok := ctx.TypeClasses[typeName]; ok {
         return class
     }
@@ -113,7 +113,7 @@ func (OwnershipContext* ctx) classify_type(typeName string) type_classification*
     return class
 }
 
-func isPrimitiveType(typeName string) bool {
+func isPrimitiveType(string typeName) bool {
     switch typeName {
     case "int", "bool", "u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64":
         return true

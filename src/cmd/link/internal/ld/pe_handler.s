@@ -175,7 +175,7 @@ func new_pe_object(machine pe_machine) pe_object {
 	obj
 }
 
-func (po pe_object*) AddSection(name string, data u8[]) i32 {
+func (po pe_object*) AddSection(string name, data u8[]) i32 {
 	idx := i32(len(po.Sections))
 
 	shdr := pe_section_header{

@@ -103,7 +103,7 @@ func (machine_code_builder* b) emit_function_epilogue() {
     b.emit_byte(195)
 }
 
-func (machine_code_builder* b) emit_mov_immediate_to_register( value int, reg string) {
+func (machine_code_builder* b) emit_mov_immediate_to_register( value int, string reg) {
     b.instructions = append(b.instructions, "\tmov\t$" + value as string + ", %" + reg)
     reg_id := b.reg_code(reg)
     if reg_id >= 0 {
@@ -113,7 +113,7 @@ func (machine_code_builder* b) emit_mov_immediate_to_register( value int, reg st
     }
 }
 
-func (machine_code_builder* b) emit_mov_register_to_register( src string, dst string) {
+func (machine_code_builder* b) emit_mov_register_to_register( src string, string dst) {
     b.instructions = append(b.instructions, "\tmov\t%" + src + ", %" + dst)
     src_id := b.reg_code(src)
     dst_id := b.reg_code(dst)
@@ -124,7 +124,7 @@ func (machine_code_builder* b) emit_mov_register_to_register( src string, dst st
     }
 }
 
-func (machine_code_builder* b) emit_add_registers( src string, dst string) {
+func (machine_code_builder* b) emit_add_registers( src string, string dst) {
     b.instructions = append(b.instructions, "\tadd\t%" + src + ", %" + dst)
     src_id := b.reg_code(src)
     dst_id := b.reg_code(dst)
@@ -135,7 +135,7 @@ func (machine_code_builder* b) emit_add_registers( src string, dst string) {
     }
 }
 
-func (machine_code_builder* b) emit_sub_registers( src string, dst string) {
+func (machine_code_builder* b) emit_sub_registers( src string, string dst) {
     b.instructions = append(b.instructions, "\tsub\t%" + src + ", %" + dst)
     src_id := b.reg_code(src)
     dst_id := b.reg_code(dst)

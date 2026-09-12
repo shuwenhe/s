@@ -1,5 +1,5 @@
 package src.net
-func parse_ip_port(addr string) (string, int) {
+func parse_ip_port(string addr) (string, int) {
     parts = split(addr, ":")
     if len(parts) != 2 {
         return "", 0
@@ -9,7 +9,7 @@ func parse_ip_port(addr string) (string, int) {
     ip, port
 }
 
-func split_host_port(addr string) (string, string) {
+func split_host_port(string addr) (string, string) {
     parts = split(addr, ":")
     if len(parts) != 2 {
         return "", ""

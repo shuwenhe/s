@@ -16,7 +16,7 @@ type MemoryBlock struct {
     allocated bool
 }
 
-func allocateBlock(size int) MemoryBlock {
+func allocateBlock(int size) MemoryBlock {
     return MemoryBlock{
         addr: box(size),
         size: size,
@@ -57,7 +57,7 @@ type OwnedString struct {
     capacity int
 }
 
-func newString(capacity int) OwnedString {
+func newString(int capacity) OwnedString {
     return OwnedString{
         data: box(capacity),
         len: 0,
@@ -65,7 +65,7 @@ func newString(capacity int) OwnedString {
     }
 }
 
-func appendToString(s *OwnedString, value int) () {
+func appendToString(s *OwnedString, int value) () {
     if s.len < s.capacity {
         s.len = s.len + 1
     }
@@ -97,14 +97,14 @@ func newVector() Vector {
     return v
 }
 
-func (v *Vector) push(value int) () {
+func (v *Vector) push(int value) () {
     if v.len < 100 {
         v.elements[v.len] = box(value)
         v.len = v.len + 1
     }
 }
 
-func (v *Vector) get(index int) *int {
+func (v *Vector) get(int index) *int {
     if index < v.len {
         return v.elements[index]
     }
@@ -142,7 +142,7 @@ type FileHandle struct {
     open bool
 }
 
-func openFile(path string) FileHandle {
+func openFile(string path) FileHandle {
     return FileHandle{
         fd: 12345,  // 模拟文件描述符
         open: true,
@@ -156,7 +156,7 @@ func (f *FileHandle) read() int {
     return 0
 }
 
-func (f *FileHandle) write(data int) () {
+func (f *FileHandle) write(int data) () {
     if f.open {
         _ = data  // 写入
     }
@@ -190,14 +190,14 @@ type ListNode struct {
     next *ListNode
 }
 
-func newNode(value int) ListNode {
+func newNode(int value) ListNode {
     return ListNode{
         value: value,
         next: nil,
     }
 }
 
-func createList(head int, next_val int) ListNode {
+func createList(int head, int next_val) ListNode {
     node1 := newNode(head)
     node2 := newNode(next_val)
     // 模拟链表构建（实际使用会更复杂）
@@ -226,7 +226,7 @@ type RefCounted struct {
     refCount *int
 }
 
-func newRefCounted(value int) RefCounted {
+func newRefCounted(int value) RefCounted {
     return RefCounted{
         data: box(value),
         refCount: box(1),
@@ -303,7 +303,7 @@ type EventHandler struct {
     context *int
 }
 
-func createEventHandler(contextData int) EventHandler {
+func createEventHandler(int contextData) EventHandler {
     context := box(contextData)
     
     return EventHandler{
@@ -410,7 +410,7 @@ type ValidationResult struct {
     valid bool
 }
 
-func validateAndAllocate(value int) ValidationResult {
+func validateAndAllocate(int value) ValidationResult {
     if value < 0 {
         return ValidationResult{
             resource: nil,

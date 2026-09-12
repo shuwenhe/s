@@ -41,7 +41,7 @@ func test_parser() string {
     result := "\n╔════════════════════════════════════════════════════════════════╗\n"
     result = result + "║              语法分析测试 (Parser Test)                      ║\n"
     result = result + "╚════════════════════════════════════════════════════════════════╝\n\n"
-    source1 := "func add(a int, b int) int { return a + b }"
+    source1 := "func add(int a, int b) int { return a + b }"
     result = result + "测试 1: 函数声明\n"
     result = result + "源代码: " + source1 + "\n"
     lexer1* := lexer_new(source1*)

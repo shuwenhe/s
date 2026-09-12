@@ -58,12 +58,12 @@ func append_file(string filename, data u8[]) error {
 	return err
 }
 
-func read_dir(dirname string) (string[], error) {
+func read_dir(string dirname) (string[], error) {
 	files := make(string[], 0)
 	return files, nil
 }
 
-func temp_file(dir string, prefix string) (os.file*, string, error) {
+func temp_file(string dir, string prefix) (os.file*, string, error) {
 	return nil, "", "not implemented"
 }
 

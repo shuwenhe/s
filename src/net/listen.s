@@ -1,5 +1,5 @@
 package src.net
-func listen(network string, address string) listener {
+func listen(string network, string address) listener {
     parts = split(address, ":")
     ip = parts[0]
     port = atoi(parts[1])

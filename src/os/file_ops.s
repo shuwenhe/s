@@ -19,7 +19,7 @@ func (file_error* fe) error() string {
 	fe.op + " " + fe.path + ": " + fe.err
 }
 
-func open(name string, flags i32, mode i32) (file*, error) {
+func open(string name, flags i32, mode i32) (file*, error) {
 	fd, err := syscall.open(name, flags, mode)
 	if err != nil {
 		nil, &file_error{op: "open", path: name, err: err}
@@ -29,7 +29,7 @@ func open(name string, flags i32, mode i32) (file*, error) {
 	f, nil
 }
 
-func create(name string) (file*, error) {
+func create(string name) (file*, error) {
 	flags := syscall.O_WRONLY | syscall.O_CREATE | syscall.O_TRUNC
 	mode := i32(0o666)
 	fd, err := syscall.open(name, flags, mode)
@@ -108,6 +108,6 @@ func (file* f) close() error {
 	nil
 }
 
-func open(name string) (file*, error) {
+func open(string name) (file*, error) {
 	open(name, syscall.O_RDONLY, 0)
 }

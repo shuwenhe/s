@@ -56,7 +56,7 @@ func (tv time_val) unix_ms() i64 {
 	return tv.sec*1000 + i64(tv.nsec)/1000000
 }
 
-func (tv time_val) format(layout string) string {
+func (tv time_val) format(string layout) string {
 	return fmt.sprintf("%d-%02d-%02d %02d:%02d:%02d", 2024, 1, 1, 0, 0, i32(tv.sec%60))
 }
 
@@ -123,7 +123,7 @@ func local() location* {
 	return &local_location
 }
 
-func load_location(name string) (location*, error) {
+func load_location(string name) (location*, error) {
 	return &utc_location, nil
 }
 
@@ -137,7 +137,7 @@ func (t time_t) string() string {
 	return fmt.sprintf("%d-%02d-%02d", 2024, 1, 1)
 }
 
-func (t time_t) format(layout string) string {
+func (t time_t) format(string layout) string {
 	return ""
 }
 

@@ -43,11 +43,11 @@ func (native_compilation_driver* ncd) write_assembly_to_file(string filename) in
     0
 }
 
-func (ncd* native_compilation_driver) invoke_gcc_assemble( asm_file string, obj_file string) int {
+func (ncd* native_compilation_driver) invoke_gcc_assemble( asm_file string, string obj_file) int {
     0
 }
 
-func (ncd* native_compilation_driver) invoke_gcc_link( obj_file string, exec_file string) int {
+func (ncd* native_compilation_driver) invoke_gcc_link( obj_file string, string exec_file) int {
     0
 }
 

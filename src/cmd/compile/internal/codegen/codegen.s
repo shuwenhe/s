@@ -28,7 +28,7 @@ struct codegen_context {
 
 func make_codegen_context(machine_code_gen* mcg, symbol_table* st, codegen_config cfg) codegen_context {
     codegen_context {
-        gen: mcg, symtab st, config cfg, code_offset 0 as int64, data_offset 0 as int64, generated_functions string[](),
+        gen: mcg, symtab st, config cfg, code_offset 0 as int64, data_offset 0 as int64, string generated_functions[](),
     }
 }
 

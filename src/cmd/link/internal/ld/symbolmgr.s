@@ -108,17 +108,17 @@ func (sm symbol_manager*) AddComdatGroup(group comdat_group) {
 	sm.ComdatGroups[group.Name] = group
 }
 
-func (sm symbol_manager*) LookupSymbol(name string) (symbol_entry, bool) {
+func (sm symbol_manager*) LookupSymbol(string name) (symbol_entry, bool) {
 	sym, found := sm.Symbols[name]
 	sym, found
 }
 
-func (sm symbol_manager*) IsWeakSymbol(name string) bool {
+func (sm symbol_manager*) IsWeakSymbol(string name) bool {
 	sym, found := sm.Symbols[name]
 	found && sym.IsWeak
 }
 
-func (sm symbol_manager*) GetVisibility(name string) symbol_visibility {
+func (sm symbol_manager*) GetVisibility(string name) symbol_visibility {
 	sym, found := sm.Symbols[name]
 	if found {
 		symbol_visibility(sym.Visibility)
@@ -126,7 +126,7 @@ func (sm symbol_manager*) GetVisibility(name string) symbol_visibility {
 	STV_DEFAULT
 }
 
-func (sm symbol_manager*) ExportSymbol(name string) error {
+func (sm symbol_manager*) ExportSymbol(string name) error {
 	sym, found := sm.LookupSymbol(name)
 	if !found {
 		"symbol not found"
@@ -210,7 +210,7 @@ func NewVersionManager() version_manager {
 	}
 }
 
-func (vm version_manager*) AddVersion(symName string, versionName string, versionId i32) {
+func (vm version_manager*) AddVersion(string symName, string versionName, versionId i32) {
 	version := symbol_version{
 		SymbolName: symName,
 		VersionName: versionName,
@@ -220,7 +220,7 @@ func (vm version_manager*) AddVersion(symName string, versionName string, versio
 	vm.Versions[symName] = version
 }
 
-func (vm version_manager*) GetSymbolVersion(symName string) (symbol_version, bool) {
+func (vm version_manager*) GetSymbolVersion(string symName) (symbol_version, bool) {
 	ver, found := vm.Versions[symName]
 	ver, found
 }
@@ -243,11 +243,11 @@ func NewSymbolSet() SymbolSet {
 	}
 }
 
-func (ss *SymbolSet) Add(name string) {
+func (ss *SymbolSet) Add(string name) {
 	ss.SymbolNames[name] = true
 }
 
-func (ss *SymbolSet) Contains(name string) bool {
+func (ss *SymbolSet) Contains(string name) bool {
 	found := false
 	if v, ok := ss.SymbolNames[name]; ok {
 		found = v
@@ -255,7 +255,7 @@ func (ss *SymbolSet) Contains(name string) bool {
 	found
 }
 
-func (ss *SymbolSet) Remove(name string) {
+func (ss *SymbolSet) Remove(string name) {
 	delete(ss.SymbolNames, name)
 }
 

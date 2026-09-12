@@ -84,7 +84,7 @@ struct timeval {
 	usec i64
 }
 
-func open(path string, flags i32, mode i32) (i32, error) {
+func open(string path, flags i32, mode i32) (i32, error) {
 	return 0, nil
 }
 
@@ -112,7 +112,7 @@ func lseek(fd i32, offset i64, whence i32) (i64, error) {
 	return 0, nil
 }
 
-func stat(path string) (stat*, error) {
+func stat(string path) (stat*, error) {
 	return nil, nil
 }
 
@@ -120,35 +120,35 @@ func fstat(fd i32) (stat*, error) {
 	return nil, nil
 }
 
-func mkdir(path string, mode i32) error {
+func mkdir(string path, mode i32) error {
 	return nil
 }
 
-func rmdir(path string) error {
+func rmdir(string path) error {
 	return nil
 }
 
-func remove(path string) error {
+func remove(string path) error {
 	return nil
 }
 
-func rename(oldpath string, newpath string) error {
+func rename(string oldpath, string newpath) error {
 	return nil
 }
 
-func chmod(path string, mode i32) error {
+func chmod(string path, mode i32) error {
 	return nil
 }
 
-func link(oldpath string, newpath string) error {
+func link(string oldpath, string newpath) error {
 	return nil
 }
 
-func symlink(oldpath string, newpath string) error {
+func symlink(string oldpath, string newpath) error {
 	return nil
 }
 
-func readlink(path string) (string, error) {
+func readlink(string path) (string, error) {
 	return "", nil
 }
 
@@ -168,7 +168,7 @@ func fork() (i32, error) {
 	return 0, nil
 }
 
-func exec(path string, args string[]) error {
+func exec(string path, string args[]) error {
 	return nil
 }
 
@@ -271,7 +271,7 @@ func gethostname() (string, error) {
 	return "", nil
 }
 
-func getaddrinfo(host string, service string) (u8[], error) {
+func getaddrinfo(string host, string service) (u8[], error) {
 	return nil, nil
 }
 

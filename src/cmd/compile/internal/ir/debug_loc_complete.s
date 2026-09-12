@@ -31,7 +31,7 @@ func new_debug_loc_propagator() debug_loc_propagator* {
     dlp
 }
 
-func (dlp debug_loc_propagator*) enter_scope(scope_name string) {
+func (dlp debug_loc_propagator*) enter_scope(string scope_name) {
     if dlp.current_depth < i32(len(dlp.scope_stack)) {
         dlp.scope_stack[dlp.current_depth] = scope_name
         dlp.current_depth += 1
@@ -171,7 +171,7 @@ func (debug_loc_propagator* dlp) get_locations_by_file(string filename) debug_lo
     result
 }
 
-func (dlp debug_loc_propagator*) get_locations_by_scope(scope string) debug_loc_info[] {
+func (dlp debug_loc_propagator*) get_locations_by_scope(string scope) debug_loc_info[] {
     result := debug_loc_info[]()
     for _for_idx_172 := 0; _for_idx_172 < len(dlp.loc_infos); _for_idx_172++ {
         info := dlp.loc_infos[_for_idx_172]

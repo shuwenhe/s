@@ -116,7 +116,7 @@ func new_macho_object(cpuType macho_machine, filetype macho_file_type) macho_obj
 	obj
 }
 
-func (mo macho_object*) AddSegment(name string, vmAddr i64, vmSize i64) {
+func (mo macho_object*) AddSegment(string name, vmAddr i64, vmSize i64) {
 	seg := macho_segment{
 		VmAddr: u64(vmAddr),
 		VmSize: u64(vmSize),

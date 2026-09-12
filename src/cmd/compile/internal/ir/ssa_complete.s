@@ -64,7 +64,7 @@ struct ssa_function {
     map[string]i32 name_to_value
 }
 
-func new_ssa_function(name string) ssa_function* {
+func new_ssa_function(string name) ssa_function* {
     f := new(ssa_function)
     f.name = name
     f.blocks = ssa_block*[]()
@@ -77,7 +77,7 @@ func new_ssa_function(name string) ssa_function* {
     f
 }
 
-func (f ssa_function*) new_block(label string) ssa_block* {
+func (f ssa_function*) new_block(string label) ssa_block* {
     block := new(ssa_block)
     block.id = f.block_counter
     block.label = label
@@ -91,7 +91,7 @@ func (f ssa_function*) new_block(label string) ssa_block* {
     block
 }
 
-func (f ssa_function*) new_value(op value_op, name string, type_str string) ssa_value* {
+func (f ssa_function*) new_value(op value_op, string name, string type_str) ssa_value* {
     val := new(ssa_value)
     val.id = f.value_counter
     val.op = op
@@ -107,14 +107,14 @@ func (f ssa_function*) new_value(op value_op, name string, type_str string) ssa_
     val
 }
 
-func (f ssa_function*) new_const_value(const_val string, type_str string) ssa_value* {
+func (f ssa_function*) new_const_value(string const_val, string type_str) ssa_value* {
     val := f.new_value(op_const, "const_" + const_val, type_str)
     val.is_const = true
     val.const_value = const_val
     val
 }
 
-func (f ssa_function*) new_param_value(name string, type_str string) ssa_value* {
+func (f ssa_function*) new_param_value(string name, string type_str) ssa_value* {
     val := f.new_value(op_param, name, type_str)
     val
 }
@@ -124,7 +124,7 @@ func (b ssa_block*) add_value(val ssa_value*) {
     b.values = append(b.values, val)
 }
 
-func (b ssa_block*) add_phi(var_id i32, type_str string) ssa_phi* {
+func (b ssa_block*) add_phi(var_id i32, string type_str) ssa_phi* {
     phi := new(ssa_phi)
     phi.id = i32(len(b.phis))
     phi.var_id = var_id
@@ -391,7 +391,7 @@ func (f ssa_function*) optimize() ssa_opt_stats {
     stats
 }
 
-func (f ssa_function*) get_value_by_name(name string) ssa_value* {
+func (f ssa_function*) get_value_by_name(string name) ssa_value* {
     if id, ok := f.name_to_value[name]; ok {
         if id >= 0 && id < i32(len(f.values)) {
             return f.values[id]

@@ -16,7 +16,7 @@ func stack_frame_create(int param_count) stack_frame {
     frame
 }
 
-func (stack_frame sf*) allocate_local( var_name string, size int) int {
+func (stack_frame sf*) allocate_local( var_name string, int size) int {
     offset := sf.current_offset - size
     sf.locals.push((var_name, offset, size))
     sf.current_offset = offset

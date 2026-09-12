@@ -155,7 +155,7 @@ struct test_server {
     port int
 }
 
-func (test_server* ts) start(port int) error {
+func (test_server* ts) start(int port) error {
     listener, err := listen_tcp("127.0.0.1", port)
     if err != nil {
         return err
