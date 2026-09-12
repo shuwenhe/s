@@ -116,7 +116,7 @@ func new_macho_object(cpuType macho_machine, filetype macho_file_type) macho_obj
 	obj
 }
 
-func (mo macho_object*) AddSegment(string name, vmAddr i64, vmSize i64) {
+func (mo macho_object*) add_segment(string name, vmAddr i64, vmSize i64) {
 	seg := macho_segment{
 		VmAddr: u64(vmAddr),
 		VmSize: u64(vmSize),
@@ -137,74 +137,74 @@ func (mo macho_object*) AddSegment(string name, vmAddr i64, vmSize i64) {
 	mo.Segments = append(mo.Segments, seg)
 }
 
-func (mo macho_object*) AddSymbol(sym macho_symbol) {
+func (mo macho_object*) add_symbol(sym macho_symbol) {
 	mo.SymbolTable = append(mo.SymbolTable, sym)
 }
 
-func ReadMachoObject(string filename) (macho_object, error) {
-	file, err := os.Open(filename)
+func read_macho_object(string filename) (macho_object, error) {
+	file, err := os.open(filename)
 	if err != nil {
 		macho_object{}, err
 	}
-	defer file.Close()
+	defer file.close()
 
 	hdrBuf := make(u8[], 32)
-	_, err = file.Read(hdrBuf)
+	_, err = file.read(hdrBuf)
 	if err != nil {
 		macho_object{}, err
 	}
 
-	magic := binary.LittleEndian.Uint32(hdrBuf[0:4])
+	magic := binary.LittleEndian.uint32(hdrBuf[0:4])
 	if magic != MACHO_MAGIC_64 {
 		macho_object{}, "invalid Mach-O magic"
 	}
 
-	obj := new_macho_object(macho_machine(binary.LittleEndian.Uint32(hdrBuf[4:8])), 
-		macho_file_type(binary.LittleEndian.Uint32(hdrBuf[12:16])))
+	obj := new_macho_object(macho_machine(binary.LittleEndian.uint32(hdrBuf[4:8])), 
+		macho_file_type(binary.LittleEndian.uint32(hdrBuf[12:16])))
 
-	obj.Header.CpuType = i32(binary.LittleEndian.Uint32(hdrBuf[4:8]))
-	obj.Header.CpuSubtype = i32(binary.LittleEndian.Uint32(hdrBuf[8:12]))
-	obj.Header.NumCommands = binary.LittleEndian.Uint32(hdrBuf[16:20])
-	obj.Header.CommandsSize = binary.LittleEndian.Uint32(hdrBuf[20:24])
-	obj.Header.Flags = binary.LittleEndian.Uint32(hdrBuf[24:28])
+	obj.Header.CpuType = i32(binary.LittleEndian.uint32(hdrBuf[4:8]))
+	obj.Header.CpuSubtype = i32(binary.LittleEndian.uint32(hdrBuf[8:12]))
+	obj.Header.NumCommands = binary.LittleEndian.uint32(hdrBuf[16:20])
+	obj.Header.CommandsSize = binary.LittleEndian.uint32(hdrBuf[20:24])
+	obj.Header.Flags = binary.LittleEndian.uint32(hdrBuf[24:28])
 
 	obj, nil
 }
 
-func (macho_object* mo) WriteToFile(string filename) error {
-	file, err := os.Create(filename)
+func (macho_object* mo) write_to_file(string filename) error {
+	file, err := os.create(filename)
 	if err != nil {
 		err
 	}
-	defer file.Close()
+	defer file.close()
 
 	hdrBuf := make(u8[], 32)
 
-	binary.LittleEndian.PutUint32(hdrBuf[0:4], mo.Header.Magic)
-	binary.LittleEndian.PutUint32(hdrBuf[4:8], u32(mo.Header.CpuType))
-	binary.LittleEndian.PutUint32(hdrBuf[8:12], u32(mo.Header.CpuSubtype))
-	binary.LittleEndian.PutUint32(hdrBuf[12:16], mo.Header.FileType)
-	binary.LittleEndian.PutUint32(hdrBuf[16:20], mo.Header.NumCommands)
-	binary.LittleEndian.PutUint32(hdrBuf[20:24], mo.Header.CommandsSize)
-	binary.LittleEndian.PutUint32(hdrBuf[24:28], mo.Header.Flags)
-	binary.LittleEndian.PutUint32(hdrBuf[28:32], mo.Header.Reserved)
+	binary.LittleEndian.put_uint32(hdrBuf[0:4], mo.Header.Magic)
+	binary.LittleEndian.put_uint32(hdrBuf[4:8], u32(mo.Header.CpuType))
+	binary.LittleEndian.put_uint32(hdrBuf[8:12], u32(mo.Header.CpuSubtype))
+	binary.LittleEndian.put_uint32(hdrBuf[12:16], mo.Header.FileType)
+	binary.LittleEndian.put_uint32(hdrBuf[16:20], mo.Header.NumCommands)
+	binary.LittleEndian.put_uint32(hdrBuf[20:24], mo.Header.CommandsSize)
+	binary.LittleEndian.put_uint32(hdrBuf[24:28], mo.Header.Flags)
+	binary.LittleEndian.put_uint32(hdrBuf[28:32], mo.Header.Reserved)
 
-	_, err = file.Write(hdrBuf)
+	_, err = file.write(hdrBuf)
 	if err != nil {
 		err
 	}
 
 	for _, cmd := range mo.LoadCommands {
 		cmdBuf := make(u8[], 8)
-		binary.LittleEndian.PutUint32(cmdBuf[0:4], cmd.Cmd)
-		binary.LittleEndian.PutUint32(cmdBuf[4:8], cmd.Size)
+		binary.LittleEndian.put_uint32(cmdBuf[0:4], cmd.Cmd)
+		binary.LittleEndian.put_uint32(cmdBuf[4:8], cmd.Size)
 
-		_, err = file.Write(cmdBuf)
+		_, err = file.write(cmdBuf)
 		if err != nil {
 			err
 		}
 
-		_, err = file.Write(cmd.Data)
+		_, err = file.write(cmd.Data)
 		if err != nil {
 			err
 		}

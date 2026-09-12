@@ -172,7 +172,7 @@ func test_frontend_for_loop() int {
 }
 
 func test_frontend_method_with_receiver() int {
-    source := "func (m: &MyType) Name() string {
+    source := "func (m: &MyType) name() string {
     return m.name
 }"
     lex := lexer_new(source)

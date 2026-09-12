@@ -1,43 +1,43 @@
 package compile.internal.ownership
-type DropElaborator struct {
+type drop_elaborator struct {
 ctx OwnershipContext*
 }
 
-func NewDropElaborator(OwnershipContext* ctx) DropElaborator* {
-    return DropElaborator*{
+func new_drop_elaborator(OwnershipContext* ctx) drop_elaborator* {
+    return drop_elaborator*{
         ctx: ctx,
     }
 }
 
-func (DropElaborator* de) ElaborateDrops(stmts interface{}[]) interface{}[] {
+func (drop_elaborator* de) elaborate_drops(stmts interface{}[]) interface{}[] {
     var result interface{}[]
     for _, stmt := range stmts {
-        result = append(result, de.elaborateStatement(stmt))
+        result = append(result, de.elaborate_statement(stmt))
     }
     return result
 }
 
-func (DropElaborator* de) elaborateStatement(stmt interface{}) interface{} {
+func (drop_elaborator* de) elaborate_statement(stmt interface{}) interface{} {
     switch s := stmt.(type) {
 case BlockStmt*:
-        return de.elaborateBlock(s)
+        return de.elaborate_block(s)
 case ReturnStmt*:
-        return de.elaborateReturn(s)
+        return de.elaborate_return(s)
 case IfStmt*:
-        return de.elaborateIf(s)
+        return de.elaborate_if(s)
 case LoopStmt*:
-        return de.elaborateLoop(s)
+        return de.elaborate_loop(s)
     default:
         return stmt
     }
 }
 
-func (DropElaborator* de) elaborateBlock(BlockStmt* block) BlockStmt* {
+func (drop_elaborator* de) elaborate_block(BlockStmt* block) BlockStmt* {
     var stmts interface{}[]
     for _, stmt := range block.Statements {
-        stmts = append(stmts, de.elaborateStatement(stmt))
+        stmts = append(stmts, de.elaborate_statement(stmt))
     }
-    dropsNeeded := de.collectDropsForBlock(block)
+    dropsNeeded := de.collect_drops_for_block(block)
     for _, dropVar := range dropsNeeded {
         stmts = append(stmts, DropCall*{
             Variable: dropVar,
@@ -49,8 +49,8 @@ func (DropElaborator* de) elaborateBlock(BlockStmt* block) BlockStmt* {
     }
 }
 
-func (DropElaborator* de) elaborateReturn(ReturnStmt* ret) interface{} {
-    dropsNeeded := de.collectDropsForReturn()
+func (drop_elaborator* de) elaborate_return(ReturnStmt* ret) interface{} {
+    dropsNeeded := de.collect_drops_for_return()
     var result interface{}[]
     for _, dropVar := range dropsNeeded {
         result = append(result, DropCall*{
@@ -64,11 +64,11 @@ func (DropElaborator* de) elaborateReturn(ReturnStmt* ret) interface{} {
     }
 }
 
-func (DropElaborator* de) elaborateIf(IfStmt* ifStmt) IfStmt* {
-    elaboratedThen := de.elaborateStatement(ifStmt.ThenBranch)
+func (drop_elaborator* de) elaborate_if(IfStmt* ifStmt) IfStmt* {
+    elaboratedThen := de.elaborate_statement(ifStmt.ThenBranch)
     var elaboratedElse interface{}
     if ifStmt.ElseBranch != nil {
-        elaboratedElse = de.elaborateStatement(ifStmt.ElseBranch)
+        elaboratedElse = de.elaborate_statement(ifStmt.ElseBranch)
     }
     return IfStmt*{
         Condition:   ifStmt.Condition,
@@ -77,70 +77,70 @@ func (DropElaborator* de) elaborateIf(IfStmt* ifStmt) IfStmt* {
     }
 }
 
-func (DropElaborator* de) elaborateLoop(LoopStmt* loop) LoopStmt* {
-    elaboratedBody := de.elaborateStatement(loop.Body)
+func (drop_elaborator* de) elaborate_loop(LoopStmt* loop) LoopStmt* {
+    elaboratedBody := de.elaborate_statement(loop.Body)
     return LoopStmt*{
         Condition: loop.Condition,
         Body:      elaboratedBody,
     }
 }
 
-func (DropElaborator* de) collectDropsForBlock(BlockStmt* block) string[] {
+func (drop_elaborator* de) collect_drops_for_block(BlockStmt* block) string[] {
     var drops string[]
     return drops
 }
 
-func (DropElaborator* de) collectDropsForReturn() string[] {
+func (drop_elaborator* de) collect_drops_for_return() string[] {
     var drops string[]
     return drops
 }
 
-func (DropElaborator* de) VerifyExactlyOnceDrop(elaborated interface{}[]) bool {
+func (drop_elaborator* de) verify_exactly_once_drop(elaborated interface{}[]) bool {
     dropCounts := make(map[string]int)
-    de.countDrops(elaborated, dropCounts)
+    de.count_drops(elaborated, dropCounts)
     for variable, count := range dropCounts {
         if count == 0 {
-            de.ctx.AddError(errorf("variable %s never dropped", variable))
+            de.ctx.add_error(errorf("variable %s never dropped", variable))
             return false
         }
         if count > 1 {
-            de.ctx.AddError(errorf("variable %s dropped %d times (double-drop)", 
+            de.ctx.add_error(errorf("variable %s dropped %d times (double-drop)", 
                 variable, count))
             return false
         }
     }
-    return !de.ctx.HasErrors()
+    return !de.ctx.has_errors()
 }
 
-func (DropElaborator* de) countDrops(stmts interface{}[], counts map[string]int) {
+func (drop_elaborator* de) count_drops(stmts interface{}[], counts map[string]int) {
     for _, stmt := range stmts {
         switch s := stmt.(type) {
 case DropCall*:
             counts[s.Variable]++
 case BlockStmt*:
-            de.countDrops(s.Statements, counts)
+            de.count_drops(s.Statements, counts)
         }
     }
 }
 
-func (DropElaborator* de) VerifyNoUseAfterDrop(stmts interface{}[]) bool {
+func (drop_elaborator* de) verify_no_use_after_drop(stmts interface{}[]) bool {
     droppedVars := make(map[string]bool)
-    return de.checkUseAfterDrop(stmts, droppedVars)
+    return de.check_use_after_drop(stmts, droppedVars)
 }
 
-func (DropElaborator* de) checkUseAfterDrop(stmts interface{}[], 
+func (drop_elaborator* de) check_use_after_drop(stmts interface{}[], 
     droppedVars map[string]bool) bool {
     for _, stmt := range stmts {
         switch s := stmt.(type) {
 case DropCall*:
             if droppedVars[s.Variable] {
-                de.ctx.AddError(errorf("use-after-drop: variable %s", s.Variable))
+                de.ctx.add_error(errorf("use-after-drop: variable %s", s.Variable))
                 return false
             }
             droppedVars[s.Variable] = true
 case UseStmt*:
             if droppedVars[s.Variable] {
-                de.ctx.AddError(errorf("use-after-drop: using %s", s.Variable))
+                de.ctx.add_error(errorf("use-after-drop: using %s", s.Variable))
                 return false
             }
 case BlockStmt*:
@@ -148,7 +148,7 @@ case BlockStmt*:
             for k, v := range droppedVars {
                 scopeDropped[k] = v
             }
-            if !de.checkUseAfterDrop(s.Statements, scopeDropped) {
+            if !de.check_use_after_drop(s.Statements, scopeDropped) {
                 return false
             }
         }
@@ -156,11 +156,11 @@ case BlockStmt*:
     return true
 }
 
-func (DropElaborator* de) VerifyPartialMoveDrops(stmts interface{}[]) bool {
+func (drop_elaborator* de) verify_partial_move_drops(stmts interface{}[]) bool {
     return true  // Placeholder
 }
 
-func (DropElaborator* de) GetDropOrder(string typeName) string[] {
+func (drop_elaborator* de) get_drop_order(string typeName) string[] {
     typeClass := de.ctx.classify_type(typeName)
     result := make(string[], len(typeClass.DropOrder))
     for i, field := range typeClass.DropOrder {
@@ -168,30 +168,30 @@ func (DropElaborator* de) GetDropOrder(string typeName) string[] {
     }
     return result
 }
-type BlockStmt struct {
+type block_stmt struct {
     Statements interface{}[]
 }
-type IfStmt struct {
+type if_stmt struct {
     Condition  interface{}
     ThenBranch interface{}
     ElseBranch interface{}
 }
-type LoopStmt struct {
+type loop_stmt struct {
     Condition interface{}
     Body      interface{}
 }
-type DropCall struct {
+type drop_call struct {
     Variable string
     Kind     string  // "explicit", "return-cleanup", "error-cleanup"
 }
-type DropSummary struct {
+type drop_summary struct {
     MustDrop string[]
     MayDrop string[]
     DropOrder string[]
     FieldDrops map[string]string[]
 }
 
-func (DropElaborator* de) GenerateDropSummary(BlockStmt* block) DropSummary* {
+func (drop_elaborator* de) generate_drop_summary(BlockStmt* block) DropSummary* {
     summary := DropSummary*{
         MustDrop:   make(string[], 0),
         MayDrop:    make(string[], 0),

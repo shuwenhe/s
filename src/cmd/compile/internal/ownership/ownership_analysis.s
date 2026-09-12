@@ -1,49 +1,49 @@
 package compile.internal.ownership
-type OwnershipAnalysis struct {
+type ownership_analysis struct {
     ctx           *OwnershipContext
     moveChecker   *move_checker
-borrowChecker BorrowChecker*
-dropElaborator DropElaborator*
+borrowChecker borrow_checker*
+dropElaborator drop_elaborator*
 }
 
-func NewOwnershipAnalysis() OwnershipAnalysis* {
+func new_ownership_analysis() OwnershipAnalysis* {
     ctx := NewOwnershipContext()
     return OwnershipAnalysis*{
         ctx:           ctx,
         moveChecker:   new_move_checker(ctx),
-        borrowChecker: NewBorrowChecker(ctx),
-        dropElaborator: NewDropElaborator(ctx),
+        borrowChecker: new_borrow_checker(ctx),
+        dropElaborator: new_drop_elaborator(ctx),
     }
 }
 
-func (OwnershipAnalysis* oa) AnalyzeFunction(string funcName, stmts interface{}[]) (interface{}[], bool) {
-    oa.moveChecker.CheckMoveSemantics(stmts)
-    if oa.ctx.HasErrors() {
+func (OwnershipAnalysis* oa) analyze_function(string funcName, stmts interface{}[]) (interface{}[], bool) {
+    oa.moveChecker.check_move_semantics(stmts)
+    if oa.ctx.has_errors() {
         return nil, false
     }
-    oa.borrowChecker.CheckBorrowSemantics(stmts)
-    if oa.ctx.HasErrors() {
+    oa.borrowChecker.check_borrow_semantics(stmts)
+    if oa.ctx.has_errors() {
         return nil, false
     }
-    elaborated := oa.dropElaborator.ElaborateDrops(stmts)
-    if !oa.dropElaborator.VerifyExactlyOnceDrop(elaborated) {
+    elaborated := oa.dropElaborator.elaborate_drops(stmts)
+    if !oa.dropElaborator.verify_exactly_once_drop(elaborated) {
         return nil, false
     }
-    if !oa.dropElaborator.VerifyNoUseAfterDrop(elaborated) {
+    if !oa.dropElaborator.verify_no_use_after_drop(elaborated) {
         return nil, false
     }
-    if !oa.dropElaborator.VerifyPartialMoveDrops(elaborated) {
+    if !oa.dropElaborator.verify_partial_move_drops(elaborated) {
         return nil, false
     }
     return elaborated, true
 }
 
-func (OwnershipAnalysis* oa) GetErrors() string[] {
+func (OwnershipAnalysis* oa) get_errors() string[] {
     return oa.ctx.Errors
 }
 
-func (OwnershipAnalysis* oa) HasErrors() bool {
-    return oa.ctx.HasErrors()
+func (OwnershipAnalysis* oa) has_errors() bool {
+    return oa.ctx.has_errors()
 }
 
 func (OwnershipAnalysis* oa) classify_type(string typeName) type_classification* {
@@ -54,9 +54,9 @@ func (OwnershipAnalysis* oa) set_type_classification(string typeName, class* typ
     oa.ctx.TypeClasses[typeName] = class
 }
 
-func (OwnershipAnalysis* oa) SetVariableType(string varName, string typeName) {
+func (OwnershipAnalysis* oa) set_variable_type(string varName, string typeName) {
 }
-type AnalysisReport struct {
+type analysis_report struct {
     FunctionName string
     Success bool
     MoveErrors     string[]
@@ -69,10 +69,10 @@ type AnalysisReport struct {
     ElaboratedStmts interface{}[]
 }
 
-func (OwnershipAnalysis* oa) GenerateReport(string funcName, elaborated interface{}) AnalysisReport* {
+func (OwnershipAnalysis* oa) generate_report(string funcName, elaborated interface{}) AnalysisReport* {
     report := AnalysisReport*{
         FunctionName: funcName,
-        Success:      !oa.ctx.HasErrors(),
+        Success:      !oa.ctx.has_errors(),
         MoveErrors:   make(string[], 0),
         BorrowErrors: make(string[], 0),
         DropErrors:   make(string[], 0),
@@ -100,7 +100,7 @@ func contains(string s, string substr) bool {
     return false
 }
 
-func countDropCalls(stmts interface{}[]) int {
+func count_drop_calls(stmts interface{}[]) int {
     count := 0
     for _, stmt := range stmts {
         switch s := stmt.(type) {
@@ -112,13 +112,13 @@ case BlockStmt*:
     }
     return count
 }
-type OwnershipHints struct {
+type ownership_hints struct {
     TypeClasses map[string]*type_classification
     VariableTypes map[string]string
     ParamOwnership map[string]string
 }
 
-func (OwnershipAnalysis* oa) ApplyOwnershipHints(OwnershipHints* hints) {
+func (OwnershipAnalysis* oa) apply_ownership_hints(OwnershipHints* hints) {
     if hints == nil {
         return
     }
@@ -127,7 +127,7 @@ func (OwnershipAnalysis* oa) ApplyOwnershipHints(OwnershipHints* hints) {
     }
 }
 
-func (OwnershipAnalysis* oa) PrintErrors() {
+func (OwnershipAnalysis* oa) print_errors() {
     report := AnalysisReport*{
         FunctionName: "analysis",
         MoveErrors:   make(string[], 0),

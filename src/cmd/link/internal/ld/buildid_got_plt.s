@@ -29,7 +29,7 @@ func new_build_id_manager(t build_id_type) build_id_manager {
 
 func (bim build_id_manager*) generate_build_id(data u8[]) {
 
-	hash := sha256.Sum256(data)
+	hash := sha256.sum256(data)
 	bim.id = make(u8[], len(hash))
 	for i, b := range hash {
 		bim.id[i] = b
@@ -39,7 +39,7 @@ func (bim build_id_manager*) generate_build_id(data u8[]) {
 func (bim build_id_manager*) get_build_id_string() string {
 	s := ""
 	for _, b := range bim.id {
-		s = fmt.Sprintf("%s%02x", s, b)
+		s = fmt.sprintf("%s%02x", s, b)
 	}
 	s
 }
@@ -54,13 +54,13 @@ func (bim build_id_manager*) generate_note_section() u8[] {
 	aligned_namesz := (namesz + 3) & ^3
 	aligned_descsz := (descsz + 3) & ^3
 
-	binary.LittleEndian.PutUint32(data[0:4], u32(namesz))
+	binary.LittleEndian.put_uint32(data[0:4], u32(namesz))
 	data = append(data, 0, 0, 0, 0)
 
-	binary.LittleEndian.PutUint32(data[4:8], u32(descsz))
+	binary.LittleEndian.put_uint32(data[4:8], u32(descsz))
 	data = append(data, 0, 0, 0, 0)
 
-	binary.LittleEndian.PutUint32(data[8:12], 3)
+	binary.LittleEndian.put_uint32(data[8:12], 3)
 	data = append(data, 0, 0, 0, 0)
 
 	data = append(data, u8[](name)...)
@@ -139,7 +139,7 @@ func (gm got_manager*) generate_got_data() u8[] {
 
 	for i, entry := range gm.entries {
 		offset := i * 8
-		binary.LittleEndian.PutUint64(data[offset:offset+8], u64(entry.value))
+		binary.LittleEndian.put_uint64(data[offset:offset+8], u64(entry.value))
 	}
 
 	data
@@ -192,13 +192,13 @@ func (pm plt_manager*) generate_plt_code() u8[] {
 		data[offset+1] = 0x25
 
 		rip_rel_offset := entry.got_address - (entry.stub_address + 6)
-		binary.LittleEndian.PutUint32(data[offset+2:offset+6], u32(rip_rel_offset))
+		binary.LittleEndian.put_uint32(data[offset+2:offset+6], u32(rip_rel_offset))
 
 		data[offset+6] = 0x68
-		binary.LittleEndian.PutUint32(data[offset+7:offset+11], u32(entry.symbol_index))
+		binary.LittleEndian.put_uint32(data[offset+7:offset+11], u32(entry.symbol_index))
 
 		jmp_offset := -i32(offset+11) - 5 
-		binary.LittleEndian.PutUint32(data[offset+11:offset+15], u32(jmp_offset))
+		binary.LittleEndian.put_uint32(data[offset+11:offset+15], u32(jmp_offset))
 	}
 
 	data
@@ -289,14 +289,14 @@ func (drm dynamic_reloc_manager*) generate_rela_dyn() u8[] {
 
 	for _, reloc := range drm.relocs {
 
-		binary.LittleEndian.PutUint64(data[0:8], u64(reloc.offset))
+		binary.LittleEndian.put_uint64(data[0:8], u64(reloc.offset))
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
 
 		info := (u64(reloc.SymIndex) << 32) | u64(reloc.Type)
-		binary.LittleEndian.PutUint64(data[8:16], info)
+		binary.LittleEndian.put_uint64(data[8:16], info)
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
 
-		binary.LittleEndian.PutUint64(data[16:24], u64(reloc.Addend))
+		binary.LittleEndian.put_uint64(data[16:24], u64(reloc.Addend))
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
 	}
 

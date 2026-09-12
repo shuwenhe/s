@@ -169,7 +169,7 @@ func read_elf_object(string filename) (elf_object, error) {
 		elf_object{}, "failed to read ELF header"
 	}
 
-	obj.header.magic = binary.LittleEndian.Uint32(hdr_buf[0:4])
+	obj.header.magic = binary.LittleEndian.uint32(hdr_buf[0:4])
 	if obj.header.magic != elf_magic {
 		elf_object{}, "invalid ELF magic number"
 	}
@@ -179,12 +179,12 @@ func read_elf_object(string filename) (elf_object, error) {
 	obj.header.version = hdr_buf[6]
 
 	if obj.header.class == elf_class_64 {
-		obj.header.type = i16(binary.LittleEndian.Uint16(hdr_buf[16:18]))
-		obj.header.machine = i16(binary.LittleEndian.Uint16(hdr_buf[18:20]))
-		obj.header.version = i32(binary.LittleEndian.Uint32(hdr_buf[20:24]))
-		obj.header.shdr_offset = binary.LittleEndian.Uint64(hdr_buf[32:40])
-		obj.header.shdr_num = i16(binary.LittleEndian.Uint16(hdr_buf[48:50]))
-		obj.header.shdr_entry_size = i16(binary.LittleEndian.Uint16(hdr_buf[58:60]))
+		obj.header.type = i16(binary.LittleEndian.uint16(hdr_buf[16:18]))
+		obj.header.machine = i16(binary.LittleEndian.uint16(hdr_buf[18:20]))
+		obj.header.version = i32(binary.LittleEndian.uint32(hdr_buf[20:24]))
+		obj.header.shdr_offset = binary.LittleEndian.uint64(hdr_buf[32:40])
+		obj.header.shdr_num = i16(binary.LittleEndian.uint16(hdr_buf[48:50]))
+		obj.header.shdr_entry_size = i16(binary.LittleEndian.uint16(hdr_buf[58:60]))
 	}
 
 	for i := i32(0); i < i32(obj.header.shdr_num); i += 1 {
@@ -195,16 +195,16 @@ func read_elf_object(string filename) (elf_object, error) {
 		}
 
 		shdr := section_header{
-			name: i32(binary.LittleEndian.Uint32(shdr_buf[0:4])),
-			type: i32(binary.LittleEndian.Uint32(shdr_buf[4:8])),
-			flags: i64(binary.LittleEndian.Uint64(shdr_buf[8:16])),
-			addr: i64(binary.LittleEndian.Uint64(shdr_buf[16:24])),
-			offset: i64(binary.LittleEndian.Uint64(shdr_buf[24:32])),
-			size: i64(binary.LittleEndian.Uint64(shdr_buf[32:40])),
-			link: i32(binary.LittleEndian.Uint32(shdr_buf[40:44])),
-			info: i32(binary.LittleEndian.Uint32(shdr_buf[44:48])),
-			addr_align: i64(binary.LittleEndian.Uint64(shdr_buf[48:56])),
-			entry_size: i64(binary.LittleEndian.Uint64(shdr_buf[56:64])),
+			name: i32(binary.LittleEndian.uint32(shdr_buf[0:4])),
+			type: i32(binary.LittleEndian.uint32(shdr_buf[4:8])),
+			flags: i64(binary.LittleEndian.uint64(shdr_buf[8:16])),
+			addr: i64(binary.LittleEndian.uint64(shdr_buf[16:24])),
+			offset: i64(binary.LittleEndian.uint64(shdr_buf[24:32])),
+			size: i64(binary.LittleEndian.uint64(shdr_buf[32:40])),
+			link: i32(binary.LittleEndian.uint32(shdr_buf[40:44])),
+			info: i32(binary.LittleEndian.uint32(shdr_buf[44:48])),
+			addr_align: i64(binary.LittleEndian.uint64(shdr_buf[48:56])),
+			entry_size: i64(binary.LittleEndian.uint64(shdr_buf[56:64])),
 		}
 
 		obj.sections = append(obj.sections, shdr)
@@ -230,21 +230,21 @@ func (elf_object* eo) write_to_file(string filename) error {
 
 	hdr_buf := make(u8[], 64)
 
-	binary.LittleEndian.PutUint32(hdr_buf[0:4], eo.header.magic)
+	binary.LittleEndian.put_uint32(hdr_buf[0:4], eo.header.magic)
 	hdr_buf[4] = eo.header.class
 	hdr_buf[5] = eo.header.endian
 	hdr_buf[6] = eo.header.version
 	hdr_buf[7] = eo.header.os_abi
 	hdr_buf[8] = eo.header.abi_version
 
-	binary.LittleEndian.PutUint16(hdr_buf[16:18], u16(eo.header.type))
-	binary.LittleEndian.PutUint16(hdr_buf[18:20], u16(eo.header.machine))
-	binary.LittleEndian.PutUint32(hdr_buf[20:24], u32(eo.header.version))
+	binary.LittleEndian.put_uint16(hdr_buf[16:18], u16(eo.header.type))
+	binary.LittleEndian.put_uint16(hdr_buf[18:20], u16(eo.header.machine))
+	binary.LittleEndian.put_uint32(hdr_buf[20:24], u32(eo.header.version))
 
-	binary.LittleEndian.PutUint64(hdr_buf[32:40], eo.header.shdr_offset)
-	binary.LittleEndian.PutUint16(hdr_buf[48:50], u16(eo.header.shdr_num))
-	binary.LittleEndian.PutUint16(hdr_buf[50:52], u16(eo.header.shdr_str_index))
-	binary.LittleEndian.PutUint16(hdr_buf[58:60], u16(eo.header.shdr_entry_size))
+	binary.LittleEndian.put_uint64(hdr_buf[32:40], eo.header.shdr_offset)
+	binary.LittleEndian.put_uint16(hdr_buf[48:50], u16(eo.header.shdr_num))
+	binary.LittleEndian.put_uint16(hdr_buf[50:52], u16(eo.header.shdr_str_index))
+	binary.LittleEndian.put_uint16(hdr_buf[58:60], u16(eo.header.shdr_entry_size))
 
 	_, err = file.write(hdr_buf)
 	if err != nil {
@@ -282,16 +282,16 @@ func (elf_object* eo) write_to_file(string filename) error {
 	for _, shdr := range eo.sections {
 		shdr_buf := make(u8[], 64)
 
-		binary.LittleEndian.PutUint32(shdr_buf[0:4], u32(shdr.name))
-		binary.LittleEndian.PutUint32(shdr_buf[4:8], u32(shdr.type))
-		binary.LittleEndian.PutUint64(shdr_buf[8:16], u64(shdr.flags))
-		binary.LittleEndian.PutUint64(shdr_buf[16:24], u64(shdr.addr))
-		binary.LittleEndian.PutUint64(shdr_buf[24:32], u64(shdr.offset))
-		binary.LittleEndian.PutUint64(shdr_buf[32:40], u64(shdr.size))
-		binary.LittleEndian.PutUint32(shdr_buf[40:44], u32(shdr.link))
-		binary.LittleEndian.PutUint32(shdr_buf[44:48], u32(shdr.info))
-		binary.LittleEndian.PutUint64(shdr_buf[48:56], u64(shdr.addr_align))
-		binary.LittleEndian.PutUint64(shdr_buf[56:64], u64(shdr.entry_size))
+		binary.LittleEndian.put_uint32(shdr_buf[0:4], u32(shdr.name))
+		binary.LittleEndian.put_uint32(shdr_buf[4:8], u32(shdr.type))
+		binary.LittleEndian.put_uint64(shdr_buf[8:16], u64(shdr.flags))
+		binary.LittleEndian.put_uint64(shdr_buf[16:24], u64(shdr.addr))
+		binary.LittleEndian.put_uint64(shdr_buf[24:32], u64(shdr.offset))
+		binary.LittleEndian.put_uint64(shdr_buf[32:40], u64(shdr.size))
+		binary.LittleEndian.put_uint32(shdr_buf[40:44], u32(shdr.link))
+		binary.LittleEndian.put_uint32(shdr_buf[44:48], u32(shdr.info))
+		binary.LittleEndian.put_uint64(shdr_buf[48:56], u64(shdr.addr_align))
+		binary.LittleEndian.put_uint64(shdr_buf[56:64], u64(shdr.entry_size))
 
 		_, err = file.write(shdr_buf)
 		if err != nil {

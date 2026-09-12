@@ -6,7 +6,7 @@ import (
 	"src/testing"
 )
 
-func TestELFObjectParsing(t testing.T) {
+func test_elf_object_parsing(t testing.T) {
 
 	obj := NewELFObject(0x3e) 
 
@@ -15,9 +15,9 @@ func TestELFObjectParsing(t testing.T) {
 		data[i] = u8(i)
 	}
 
-	textIdx := obj.AddSection(".text", 1, 0x6, data)
+	textIdx := obj.add_section(".text", 1, 0x6, data)
 	if textIdx != 0 {
-		t.Errorf("Expected section index 0, got %d", textIdx)
+		t.errorf("Expected section index 0, got %d", textIdx)
 	}
 
 	sym := SymbolEntry{
@@ -32,15 +32,15 @@ func TestELFObjectParsing(t testing.T) {
 		IsWeak: false,
 	}
 
-	symIdx := obj.AddSymbol(sym)
+	symIdx := obj.add_symbol(sym)
 	if symIdx != 0 {
-		t.Errorf("Expected symbol index 0, got %d", symIdx)
+		t.errorf("Expected symbol index 0, got %d", symIdx)
 	}
 
-	fmt.Printf("ELF object creation test passed!\n")
+	fmt.printf("ELF object creation test passed!\n")
 }
 
-func TestSymbolResolution(t testing.T) {
+func test_symbol_resolution(t testing.T) {
 	sm := NewSymbolManager()
 
 	globalSym := SymbolEntry{
@@ -55,9 +55,9 @@ func TestSymbolResolution(t testing.T) {
 		IsWeak: false,
 	}
 
-	err := sm.AddSymbol(globalSym)
+	err := sm.add_symbol(globalSym)
 	if err != nil {
-		t.Errorf("Failed to add global symbol: %v", err)
+		t.errorf("Failed to add global symbol: %v", err)
 	}
 
 	weakSym := SymbolEntry{
@@ -72,24 +72,24 @@ func TestSymbolResolution(t testing.T) {
 		IsWeak: true,
 	}
 
-	err = sm.AddSymbol(weakSym)
+	err = sm.add_symbol(weakSym)
 	if err != nil {
-		t.Errorf("Failed to add weak symbol: %v", err)
+		t.errorf("Failed to add weak symbol: %v", err)
 	}
 
-	resolved, found := sm.LookupSymbol("global_func")
+	resolved, found := sm.lookup_symbol("global_func")
 	if !found {
-		t.Errorf("Symbol not found")
+		t.errorf("Symbol not found")
 	}
 
 	if resolved.Value != 0x1000 {
-		t.Errorf("Expected value 0x1000, got 0x%x", resolved.Value)
+		t.errorf("Expected value 0x1000, got 0x%x", resolved.Value)
 	}
 
-	fmt.Printf("Symbol resolution test passed!\n")
+	fmt.printf("Symbol resolution test passed!\n")
 }
 
-func TestRelocations(t testing.T) {
+func test_relocations(t testing.T) {
 	rp := NewRelocProcessor()
 
 	sym := SymbolEntry{
@@ -104,7 +104,7 @@ func TestRelocations(t testing.T) {
 		IsWeak: false,
 	}
 
-	symIdx := rp.AddSymbol(sym)
+	symIdx := rp.add_symbol(sym)
 
 	reloc := Relocation{
 		Offset: 0x1000,
@@ -113,107 +113,107 @@ func TestRelocations(t testing.T) {
 		Addend: 0,
 	}
 
-	rp.AddRelocation(reloc)
+	rp.add_relocation(reloc)
 
-	err := rp.ValidateRelocations()
+	err := rp.validate_relocations()
 	if err != nil {
-		t.Errorf("Validation failed: %v", err)
+		t.errorf("Validation failed: %v", err)
 	}
 
 	if len(rp.Relocs) != 1 {
-		t.Errorf("Expected 1 relocation, got %d", len(rp.Relocs))
+		t.errorf("Expected 1 relocation, got %d", len(rp.Relocs))
 	}
 
-	fmt.Printf("Relocation test passed!\n")
+	fmt.printf("Relocation test passed!\n")
 }
 
-func TestGOTAllocation(t testing.T) {
+func test_got_allocation(t testing.T) {
 	gm := NewGOTManager()
 
-	addr1 := gm.AddEntry(0, RELOC_GLOB_DAT)
+	addr1 := gm.add_entry(0, RELOC_GLOB_DAT)
 	if addr1 != 0 {
-		t.Errorf("Expected first GOT address 0, got %d", addr1)
+		t.errorf("Expected first GOT address 0, got %d", addr1)
 	}
 
-	addr2 := gm.AddEntry(1, RELOC_GLOB_DAT)
+	addr2 := gm.add_entry(1, RELOC_GLOB_DAT)
 	if addr2 != 8 {
-		t.Errorf("Expected second GOT address 8, got %d", addr2)
+		t.errorf("Expected second GOT address 8, got %d", addr2)
 	}
 
-	gm.ResolveEntry(addr1, 0x1000)
-	gm.ResolveEntry(addr2, 0x2000)
+	gm.resolve_entry(addr1, 0x1000)
+	gm.resolve_entry(addr2, 0x2000)
 
-	data := gm.GenerateGOTData()
+	data := gm.generate_gotdata()
 	if len(data) != 16 {
-		t.Errorf("Expected GOT data size 16, got %d", len(data))
+		t.errorf("Expected GOT data size 16, got %d", len(data))
 	}
 
-	fmt.Printf("GOT allocation test passed!\n")
+	fmt.printf("GOT allocation test passed!\n")
 }
 
-func TestPLTGeneration(t testing.T) {
+func test_plt_generation(t testing.T) {
 	pm := NewPLTManager()
 
-	addr1 := pm.AddEntry(0, 0x3000)
+	addr1 := pm.add_entry(0, 0x3000)
 	if addr1 != 0 {
-		t.Errorf("Expected first PLT address 0, got %d", addr1)
+		t.errorf("Expected first PLT address 0, got %d", addr1)
 	}
 
-	addr2 := pm.AddEntry(1, 0x3008)
+	addr2 := pm.add_entry(1, 0x3008)
 	if addr2 != 16 {
-		t.Errorf("Expected second PLT address 16, got %d", addr2)
+		t.errorf("Expected second PLT address 16, got %d", addr2)
 	}
 
-	code := pm.GeneratePLTCode()
+	code := pm.generate_pltcode()
 	if len(code) != 32 {
-		t.Errorf("Expected PLT code size 32, got %d", len(code))
+		t.errorf("Expected PLT code size 32, got %d", len(code))
 	}
 
-	fmt.Printf("PLT generation test passed!\n")
+	fmt.printf("PLT generation test passed!\n")
 }
 
-func TestTLSAllocation(t testing.T) {
+func test_tls_allocation(t testing.T) {
 	tm := NewTLSManager()
 
-	off1 := tm.AddVariable("errno", 4, 4)
+	off1 := tm.add_variable("errno", 4, 4)
 	if off1 != 0 {
-		t.Errorf("Expected first TLS offset 0, got %d", off1)
+		t.errorf("Expected first TLS offset 0, got %d", off1)
 	}
 
-	off2 := tm.AddVariable("thread_id", 8, 8)
+	off2 := tm.add_variable("thread_id", 8, 8)
 
 	if off2 != 8 {
-		t.Errorf("Expected second TLS offset 8, got %d", off2)
+		t.errorf("Expected second TLS offset 8, got %d", off2)
 	}
 
-	data := tm.GenerateTLSData()
-	if i64(len(data)) != tm.GetTLSSize() {
-		t.Errorf("TLS data size mismatch")
+	data := tm.generate_tlsdata()
+	if i64(len(data)) != tm.get_tlssize() {
+		t.errorf("TLS data size mismatch")
 	}
 
-	fmt.Printf("TLS allocation test passed!\n")
+	fmt.printf("TLS allocation test passed!\n")
 }
 
-func TestBuildIDGeneration(t testing.T) {
+func test_build_id_generation(t testing.T) {
 	bm := NewBuildIDManager(BID_SHA256)
 
 	data := u8[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	bm.GenerateBuildID(data)
+	bm.generate_build_id(data)
 
-	bidStr := bm.GetBuildIDString()
+	bidStr := bm.get_build_idstring()
 	if len(bidStr) != 64 { 
-		t.Errorf("Expected Build-ID string length 64, got %d", len(bidStr))
+		t.errorf("Expected Build-ID string length 64, got %d", len(bidStr))
 	}
 
-	noteData := bm.GenerateNoteSection()
+	noteData := bm.generate_note_section()
 	if len(noteData) == 0 {
-		t.Errorf("Note section data is empty")
+		t.errorf("Note section data is empty")
 	}
 
-	fmt.Printf("Build-ID generation test passed: %s\n", bidStr)
+	fmt.printf("Build-ID generation test passed: %s\n", bidStr)
 }
 
-func TestProductionLinkerWorkflow(t testing.T) {
+func test_production_linker_workflow(t testing.T) {
 
 	config := LinkerConfig{
 		Format: FORMAT_ELF,
@@ -235,7 +235,7 @@ func TestProductionLinkerWorkflow(t testing.T) {
 	obj := NewELFObject(0x3e)
 
 	codeData := u8[]{0x55, 0x48, 0x89, 0xe5}
-	obj.AddSection(".text", 1, 0x6, codeData)
+	obj.add_section(".text", 1, 0x6, codeData)
 
 	sym := SymbolEntry{
 		Name: "main",
@@ -248,26 +248,26 @@ func TestProductionLinkerWorkflow(t testing.T) {
 		IsGlobal: true,
 		IsWeak: false,
 	}
-	obj.AddSymbol(sym)
+	obj.add_symbol(sym)
 
 	linker.ElfObjects = append(linker.ElfObjects, obj)
 
-	err := linker.MergeSymbols()
+	err := linker.merge_symbols()
 	if err != nil {
-		t.Errorf("Symbol merge failed: %v", err)
+		t.errorf("Symbol merge failed: %v", err)
 	}
 
-	err = linker.Validate()
+	err = linker.validate()
 	if err != nil {
-		t.Errorf("Validation failed: %v", err)
+		t.errorf("Validation failed: %v", err)
 	}
 
-	fmt.Printf("Production linker workflow test passed!\n")
+	fmt.printf("Production linker workflow test passed!\n")
 }
 
-func ExampleCompleteLinkerUsage() {
-	fmt.Println("=== S Language Production Linker Example ===")
-	fmt.Println()
+func example_complete_linker_usage() {
+	fmt.println("=== S Language Production Linker Example ===")
+	fmt.println()
 
 	config := LinkerConfig{
 		Format: FORMAT_ELF,
@@ -282,22 +282,22 @@ func ExampleCompleteLinkerUsage() {
 
 	linker := NewProductionLinker(config)
 
-	fmt.Println("Linker Configuration:")
-	fmt.Printf("  Format: ELF\n")
-	fmt.Printf("  Machine: x86-64\n")
-	fmt.Printf("  Output: %s\n", config.OutputFile)
-	fmt.Printf("  Debug Info: %v\n", config.GenerateDebugInfo)
-	fmt.Printf("  Build-ID: %v\n", config.GenerateBuildID)
-	fmt.Println()
+	fmt.println("Linker Configuration:")
+	fmt.printf("  Format: ELF\n")
+	fmt.printf("  Machine: x86-64\n")
+	fmt.printf("  Output: %s\n", config.OutputFile)
+	fmt.printf("  Debug Info: %v\n", config.GenerateDebugInfo)
+	fmt.printf("  Build-ID: %v\n", config.GenerateBuildID)
+	fmt.println()
 
-	fmt.Println("Creating sample ELF objects...")
+	fmt.println("Creating sample ELF objects...")
 
 	obj1 := NewELFObject(0x3e)
 	codeData := u8[]{
 		0x55, 0x48, 0x89, 0xe5, 
 		0xc9, 0xc3,              
 	}
-	obj1.AddSection(".text", 1, 0x6, codeData)
+	obj1.add_section(".text", 1, 0x6, codeData)
 
 	sym1 := SymbolEntry{
 		Name: "hello",
@@ -310,31 +310,31 @@ func ExampleCompleteLinkerUsage() {
 		IsGlobal: true,
 		IsWeak: false,
 	}
-	obj1.AddSymbol(sym1)
+	obj1.add_symbol(sym1)
 
 	linker.ElfObjects = append(linker.ElfObjects, obj1)
 
-	fmt.Println("Objects loaded")
-	fmt.Println()
+	fmt.println("Objects loaded")
+	fmt.println()
 
-	fmt.Println("Processing symbols and relocations...")
-	linker.MergeSymbols()
-	linker.ProcessRelocations()
-	fmt.Println()
+	fmt.println("Processing symbols and relocations...")
+	linker.merge_symbols()
+	linker.process_relocations()
+	fmt.println()
 
-	fmt.Println("Generating output...")
-	fmt.Printf("  GOT entries: %d\n", len(linker.GotManager.Entries))
-	fmt.Printf("  PLT entries: %d\n", len(linker.PltManager.Entries))
-	fmt.Printf("  TLS size: %d bytes\n", linker.TlsManager.GetTLSSize())
-	fmt.Println()
+	fmt.println("Generating output...")
+	fmt.printf("  GOT entries: %d\n", len(linker.GotManager.Entries))
+	fmt.printf("  PLT entries: %d\n", len(linker.PltManager.Entries))
+	fmt.printf("  TLS size: %d bytes\n", linker.TlsManager.get_tls_size())
+	fmt.println()
 
 	if config.GenerateBuildID {
-		fmt.Println("Generating Build-ID...")
+		fmt.println("Generating Build-ID...")
 		outputData := u8[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-		linker.BuildIDManager.GenerateBuildID(outputData)
-		fmt.Printf("  Build-ID: %s\n", linker.BuildIDManager.GetBuildIDString())
+		linker.BuildIDManager.generate_build_id(outputData)
+		fmt.printf("  Build-ID: %s\n", linker.BuildIDManager.get_build_id_string())
 	}
-	fmt.Println()
+	fmt.println()
 
-	fmt.Println("=== Linking Complete ===")
+	fmt.println("=== Linking Complete ===")
 }

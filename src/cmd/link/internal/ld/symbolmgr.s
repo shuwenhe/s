@@ -59,14 +59,14 @@ func new_symbol_manager() symbol_manager {
 	}
 }
 
-func (sm symbol_manager*) AddSymbol(sym symbol_entry) error {
+func (sm symbol_manager*) add_symbol(sym symbol_entry) error {
 	if sym.Name == "" {
 		nil
 	}
 
 	if existing, found := sm.Symbols[sym.Name]; found {
 
-		err := sm.resolveSymbolConflict(&existing, &sym)
+		err := sm.resolve_symbol_conflict(&existing, &sym)
 		if err != nil {
 			err
 		}
@@ -83,14 +83,14 @@ func (sm symbol_manager*) AddSymbol(sym symbol_entry) error {
 	nil
 }
 
-func (sm symbol_manager*) resolveSymbolConflict(existing symbol_entry*, new symbol_entry*) error {
+func (sm symbol_manager*) resolve_symbol_conflict(existing symbol_entry*, new symbol_entry*) error {
 
 	existingIsWeak := existing.IsWeak
 	newIsWeak := new.IsWeak
 
 	if !existingIsWeak && !newIsWeak {
 
-		fmt.Printf("Error: Multiple definition of symbol '%s'\n", existing.Name)
+		fmt.printf("Error: Multiple definition of symbol '%s'\n", existing.Name)
 		"multiple definitions"
 	}
 
@@ -104,21 +104,21 @@ func (sm symbol_manager*) resolveSymbolConflict(existing symbol_entry*, new symb
 	}
 }
 
-func (sm symbol_manager*) AddComdatGroup(group comdat_group) {
+func (sm symbol_manager*) add_comdat_group(group comdat_group) {
 	sm.ComdatGroups[group.Name] = group
 }
 
-func (sm symbol_manager*) LookupSymbol(string name) (symbol_entry, bool) {
+func (sm symbol_manager*) lookup_symbol(string name) (symbol_entry, bool) {
 	sym, found := sm.Symbols[name]
 	sym, found
 }
 
-func (sm symbol_manager*) IsWeakSymbol(string name) bool {
+func (sm symbol_manager*) is_weak_symbol(string name) bool {
 	sym, found := sm.Symbols[name]
 	found && sym.IsWeak
 }
 
-func (sm symbol_manager*) GetVisibility(string name) symbol_visibility {
+func (sm symbol_manager*) get_visibility(string name) symbol_visibility {
 	sym, found := sm.Symbols[name]
 	if found {
 		symbol_visibility(sym.Visibility)
@@ -126,8 +126,8 @@ func (sm symbol_manager*) GetVisibility(string name) symbol_visibility {
 	STV_DEFAULT
 }
 
-func (sm symbol_manager*) ExportSymbol(string name) error {
-	sym, found := sm.LookupSymbol(name)
+func (sm symbol_manager*) export_symbol(string name) error {
+	sym, found := sm.lookup_symbol(name)
 	if !found {
 		"symbol not found"
 	}
@@ -137,12 +137,12 @@ func (sm symbol_manager*) ExportSymbol(string name) error {
 	nil
 }
 
-func (sm symbol_manager*) ImportSymbol(sym symbol_entry) {
+func (sm symbol_manager*) import_symbol(sym symbol_entry) {
 	sm.ImportedSyms = append(sm.ImportedSyms, sym)
-	sm.AddSymbol(sym)
+	sm.add_symbol(sym)
 }
 
-func (sm symbol_manager*) ApplyVisibility() {
+func (sm symbol_manager*) apply_visibility() {
 	for name, sym := range sm.Symbols {
 		switch symbol_visibility(sym.Visibility) {
 		case STV_HIDDEN:
@@ -159,7 +159,7 @@ func (sm symbol_manager*) ApplyVisibility() {
 	}
 }
 
-func (sm symbol_manager*) SelectComdatSection(group comdat_group*, candidate section) bool {
+func (sm symbol_manager*) select_comdat_section(group comdat_group*, candidate section) bool {
 
 	match := false
 
@@ -203,14 +203,14 @@ struct version_manager {
 	default_version string
 }
 
-func NewVersionManager() version_manager {
+func new_version_manager() version_manager {
 	version_manager{
 		Versions: make(map[string]symbol_version),
 		DefaultVersion: "Base",
 	}
 }
 
-func (vm version_manager*) AddVersion(string symName, string versionName, versionId i32) {
+func (vm version_manager*) add_version(string symName, string versionName, versionId i32) {
 	version := symbol_version{
 		SymbolName: symName,
 		VersionName: versionName,
@@ -220,12 +220,12 @@ func (vm version_manager*) AddVersion(string symName, string versionName, versio
 	vm.Versions[symName] = version
 }
 
-func (vm version_manager*) GetSymbolVersion(string symName) (symbol_version, bool) {
+func (vm version_manager*) get_symbol_version(string symName) (symbol_version, bool) {
 	ver, found := vm.Versions[symName]
 	ver, found
 }
 
-func (vm version_manager*) GenerateVersionSymtab() symbol_version[] {
+func (vm version_manager*) generate_version_symtab() symbol_version[] {
 	vers := make(symbol_version[], 0)
 	for _, ver := range vm.Versions {
 		vers = append(vers, ver)
@@ -237,17 +237,17 @@ struct SymbolSet {
 	symbol_names map[string]bool
 }
 
-func NewSymbolSet() SymbolSet {
+func new_symbol_set() SymbolSet {
 	SymbolSet{
 		SymbolNames: make(map[string]bool),
 	}
 }
 
-func (ss *SymbolSet) Add(string name) {
+func (ss *SymbolSet) add(string name) {
 	ss.SymbolNames[name] = true
 }
 
-func (ss *SymbolSet) Contains(string name) bool {
+func (ss *SymbolSet) contains(string name) bool {
 	found := false
 	if v, ok := ss.SymbolNames[name]; ok {
 		found = v
@@ -255,10 +255,10 @@ func (ss *SymbolSet) Contains(string name) bool {
 	found
 }
 
-func (ss *SymbolSet) Remove(string name) {
+func (ss *SymbolSet) remove(string name) {
 	delete(ss.SymbolNames, name)
 }
 
-func (ss *SymbolSet) Size() i32 {
+func (ss *SymbolSet) size() i32 {
 	i32(len(ss.SymbolNames))
 }
