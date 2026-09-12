@@ -2549,17 +2549,82 @@ func compiler_emit_mir(string source) string {
     s = compiler_expect(s, ")")
     if s.token == "int" { s = compiler_next(s) }
     s = compiler_expect(s, "{")
-    out := "mir main blocks=1 entry=0 exit=0\nbb0:\n"
+    out := "bb0:\n"
+    block_count := 1
+    exit_block := 0
     count := 0
     next_value := 1
     returned := false
     while s.error == "" && s.token != "" && s.token != "}" && !returned {
-        if s.token == "return" {
+        if s.token == "if" {
+            s = compiler_next(s)
+            condition := s.token
+            while s.error == "" && s.token != "{" && s.token != "" {
+                s = compiler_next(s)
+            }
+            s = compiler_expect(s, "{")
+            block_count = 4
+            exit_block = 3
+            out = out + "    Branch(" + condition + ", bb1, bb2)\n"
+            out = out + "bb1:\n"
+            block_depth := 1
+            then_moved := empty_ints
+            while s.error == "" && block_depth > 0 && s.token != "" {
+                if block_depth == 1 && compiler_ident(s.token) {
+                    look := compiler_next(s)
+                    if look.token == ":=" {
+                        rhs := compiler_next(look)
+                        origin := compiler_mir_find(names, count, rhs.token)
+                        if origin >= 0 && live[origin] == 1 && kinds[origin] == 2 {
+                            then_moved[origin] = 1
+                        }
+                    }
+                }
+                if s.token == "{" { block_depth = block_depth + 1; s = compiler_next(s) }
+                else if s.token == "}" { block_depth = block_depth - 1; if block_depth > 0 { s = compiler_next(s) } }
+                else { s = compiler_next(s) }
+            }
+            s = compiler_expect(s, "}")
+            out = out + "    Goto(bb3)\n"
+            out = out + "bb2:\n"
+            else_moved := empty_ints
+            if s.token == "else" {
+                s = compiler_expect(compiler_next(s), "{")
+                block_depth = 1
+                while s.error == "" && block_depth > 0 && s.token != "" {
+                    if block_depth == 1 && compiler_ident(s.token) {
+                        look := compiler_next(s)
+                        if look.token == ":=" {
+                            rhs := compiler_next(look)
+                            origin := compiler_mir_find(names, count, rhs.token)
+                            if origin >= 0 && live[origin] == 1 && kinds[origin] == 2 {
+                                else_moved[origin] = 1
+                            }
+                        }
+                    }
+                    if s.token == "{" { block_depth = block_depth + 1; s = compiler_next(s) }
+                    else if s.token == "}" { block_depth = block_depth - 1; if block_depth > 0 { s = compiler_next(s) } }
+                    else { s = compiler_next(s) }
+                }
+                s = compiler_expect(s, "}")
+            }
+            join_slot := 0
+            while join_slot < count {
+                if live[join_slot] == 1 {
+                    if then_moved[join_slot] == 1 && else_moved[join_slot] == 1 { live[join_slot] = 0 }
+                    else if then_moved[join_slot] == 1 || else_moved[join_slot] == 1 { live[join_slot] = 2 }
+                }
+                join_slot = join_slot + 1
+            }
+            out = out + "    Goto(bb3)\n"
+            out = out + "bb3:\n"
+        } else if s.token == "return" {
             s = compiler_next(s)
             if s.token == "*" {
                 s = compiler_next(s)
                 slot := compiler_mir_find(names, count, s.token)
-                if slot < 0 || live[slot] != 1 { return "mir-error moved or unknown return value\n" }
+                if slot < 0 || live[slot] == 0 { return "mir-error moved or unknown return value\n" }
+                if live[slot] == 2 { return "mir-error use of possibly moved value\n" }
                 result := next_value
                 next_value = next_value + 1
                 out = out + "    " + compiler_mir_value(result) + " = Deref(" + compiler_mir_value(value_ids[slot]) + ")\n"
@@ -2569,7 +2634,8 @@ func compiler_emit_mir(string source) string {
                 s = compiler_next(s)
             } else if compiler_ident(s.token) {
                 slot := compiler_mir_find(names, count, s.token)
-                if slot < 0 || live[slot] != 1 { return "mir-error moved or unknown return value\n" }
+                if slot < 0 || live[slot] == 0 { return "mir-error moved or unknown return value\n" }
+                if live[slot] == 2 { return "mir-error use of possibly moved value\n" }
                 out = compiler_mir_drop_live(out, live, value_ids, kinds, count)
                 out = out + "    Return(" + compiler_mir_value(value_ids[slot]) + ")\n"
                 returned = true
@@ -2647,7 +2713,8 @@ func compiler_emit_mir(string source) string {
                 s = compiler_next(s)
             } else if compiler_ident(s.token) {
                 origin := compiler_mir_find(names, count, s.token)
-                if origin < 0 || live[origin] != 1 { return "mir-error move from moved or unknown value\n" }
+                if origin < 0 || live[origin] == 0 { return "mir-error move from moved or unknown value\n" }
+                if live[origin] == 2 { return "mir-error move from possibly moved value\n" }
                 if kinds[origin] != 2 { return "mir-error move requires owned value\n" }
                 if compiler_mir_has_live_borrow(live, kinds, roots, count, origin) { return "mir-error move of borrowed value\n" }
                 value := next_value
@@ -2674,7 +2741,7 @@ func compiler_emit_mir(string source) string {
         out = compiler_mir_drop_live(out, live, value_ids, kinds, count)
         out = out + "    Return(0)\n"
     }
-    return out
+    return "mir main blocks=" + compiler_number(block_count) + " entry=0 exit=" + compiler_number(exit_block) + "\n" + out
 }
 
 func main() {
