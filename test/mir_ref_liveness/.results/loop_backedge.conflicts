@@ -1,1 +1,3 @@
-PLACEHOLDER
+[test: loop_backedge]
+loan_r_active_after_loop: true (backedge)
+result: CONFLICT
