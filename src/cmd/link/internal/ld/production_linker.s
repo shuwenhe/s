@@ -113,7 +113,7 @@ func (production_linker* pl) load_object_file(string filename) error {
 	nil
 }
 
-func (pl production_linker*) link() error {
+func (pl* production_linker) link() error {
 	fmt.printf("Linking %d object files...\n", len(pl.Config.InputFiles))
 
 	for _, input_file := range pl.Config.InputFiles {
@@ -142,7 +142,7 @@ func (pl production_linker*) link() error {
 	nil
 }
 
-func (pl production_linker*) merge_symbols() error {
+func (pl* production_linker) merge_symbols() error {
 
 	for _, obj := range pl.elf_objects {
 		for _, sym := range obj.Symbols {
@@ -158,7 +158,7 @@ func (pl production_linker*) merge_symbols() error {
 	nil
 }
 
-func (pl production_linker*) process_relocations() error {
+func (pl* production_linker) process_relocations() error {
 
 	for objIdx, obj := range pl.elf_objects {
 		for _, reloc := range obj.Relocations {
@@ -196,7 +196,7 @@ func (pl production_linker*) process_relocations() error {
 	nil
 }
 
-func (pl production_linker*) generate_output() error {
+func (pl* production_linker) generate_output() error {
 
 	switch pl.Config.Format {
 	case format_elf:
@@ -224,7 +224,7 @@ func (pl production_linker*) generate_output() error {
 	nil
 }
 
-func (pl production_linker*) generate_elf_output() error {
+func (pl* production_linker) generate_elf_output() error {
 
 	output := NewELFObject(0x3e) 
 
@@ -271,7 +271,7 @@ func (pl production_linker*) generate_elf_output() error {
 	nil
 }
 
-func (pl production_linker*) generate_macho_output() error {
+func (pl* production_linker) generate_macho_output() error {
 	output := NewMachoObject(CPU_TYPE_X86_64, MH_OBJECT)
 
 	output.add_segment("__TEXT", 0, 0x1000)
@@ -285,7 +285,7 @@ func (pl production_linker*) generate_macho_output() error {
 	nil
 }
 
-func (pl production_linker*) generate_pe_output() error {
+func (pl* production_linker) generate_pe_output() error {
 	output := NewPEObject(MACHINE_AMD64)
 
 	code_data := make(u8[], 0)
@@ -302,7 +302,7 @@ func (pl production_linker*) generate_pe_output() error {
 	nil
 }
 
-func (pl production_linker*) validate() error {
+func (pl* production_linker) validate() error {
 
 	err := pl.reloc_processor.validate_relocations()
 	if err != nil {

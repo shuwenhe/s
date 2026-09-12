@@ -60,7 +60,7 @@ func make_channel(element_size u64, buffer_size i32) (channel*, error) {
 	return ch, nil
 }
 
-func (ch channel*) send(data unsafe.pointer) error {
+func (ch* channel) send(data unsafe.pointer) error {
 	if ch == nil {
 		return "channel is nil"
 	}
@@ -113,7 +113,7 @@ func (ch channel*) send(data unsafe.pointer) error {
 	nil
 }
 
-func (ch channel*) recv() (unsafe.pointer, error) {
+func (ch* channel) recv() (unsafe.pointer, error) {
 	if ch == nil {
 		return nil, "channel is nil"
 	}
@@ -171,7 +171,7 @@ func (ch channel*) recv() (unsafe.pointer, error) {
 	get_element_from_buffer(ch), nil
 }
 
-func (ch channel*) close() error {
+func (ch* channel) close() error {
 	if ch == nil {
 		return "channel is nil"
 	}
@@ -200,11 +200,11 @@ func (ch channel*) close() error {
 	nil
 }
 
-func (ch channel*) len() i32 {
+func (ch* channel) len() i32 {
 	return ch.buf_size
 }
 
-func (ch channel*) cap() i32 {
+func (ch* channel) cap() i32 {
 	return ch.buf_capacity
 }
 
@@ -273,14 +273,14 @@ func select_channels(cases select_case[]) select_result {
 	result
 }
 
-func copy_element_to_buffer(ch channel*, data unsafe.pointer) {
+func copy_element_to_buffer(ch* channel, data unsafe.pointer) {
 	offset := i64(ch.buf_tail) * i64(ch.element_size)
 	dst := unsafe.pointer(u64(unsafe.pointer(ch.buffer)) + u64(offset))
 	copy_memory(dst, data, ch.element_size)
 	ch.buf_tail = (ch.buf_tail + 1) % ch.buf_capacity
 }
 
-func get_element_from_buffer(ch channel*) unsafe.pointer {
+func get_element_from_buffer(ch* channel) unsafe.pointer {
 	offset := i64(ch.buf_head) * i64(ch.element_size)
 	src := unsafe.pointer(u64(unsafe.pointer(ch.buffer)) + u64(offset))
 	ch.buf_head = (ch.buf_head + 1) % ch.buf_capacity

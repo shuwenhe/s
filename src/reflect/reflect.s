@@ -250,56 +250,56 @@ func (v value) is_valid() bool {
 	return v.type_info != nil
 }
 
-func (ti type_info*) kind() kind {
+func (ti* type_info) kind() kind {
 	if ti != nil {
 		return ti.kind
 	}
 	return invalid
 }
 
-func (ti type_info*) name() string {
+func (ti* type_info) name() string {
 	if ti != nil {
 		return ti.name
 	}
 	return ""
 }
 
-func (ti type_info*) size() u64 {
+func (ti* type_info) size() u64 {
 	if ti != nil {
 		return ti.size
 	}
 	return 0
 }
 
-func (ti type_info*) elem() type_info* {
+func (ti* type_info) elem() type_info* {
 	if ti != nil {
 		return ti.elem_type
 	}
 	return nil
 }
 
-func (ti type_info*) key() type_info* {
+func (ti* type_info) key() type_info* {
 	if ti != nil {
 		return ti.key_type
 	}
 	return nil
 }
 
-func (ti type_info*) field_count() i32 {
+func (ti* type_info) field_count() i32 {
 	if ti != nil && ti.kind == struct {
 		return ti.field_count
 	}
 	return 0
 }
 
-func (ti type_info*) field_by_index(index i32) field_info* {
+func (ti* type_info) field_by_index(index i32) field_info* {
 	if ti != nil && index >= 0 && index < ti.field_count {
 		return &ti.fields[index]
 	}
 	return nil
 }
 
-func (ti type_info*) field_by_name(string name) field_info* {
+func (ti* type_info) field_by_name(string name) field_info* {
 	if ti == nil || ti.kind != struct {
 		return nil
 	}

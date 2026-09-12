@@ -22,11 +22,11 @@ func bootstrap_compiler_new() bootstrap_compiler* {
     return bc
 }
 
-func bootstrap_compiler_compile_file(bc* bootstrap_compiler, string filename*) int {
+func bootstrap_compiler_compile_file(bc* bootstrap_compiler, string* filename) int {
     return 0
 }
 
-func bootstrap_compiler_compile_program(bc* bootstrap_compiler, string source*) int {
+func bootstrap_compiler_compile_program(bc* bootstrap_compiler, string* source) int {
     return 0
 }
 

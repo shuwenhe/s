@@ -40,7 +40,7 @@ func new_alias_analysis(num_values i32) alias_analysis* {
     aa
 }
 
-func (aa alias_analysis*) add_may_alias(v1 i32, v2 i32) {
+func (aa* alias_analysis) add_may_alias(v1 i32, v2 i32) {
     if v1 >= 0 && v1 < aa.num_values && v2 >= 0 && v2 < aa.num_values {
         aa.may_alias_matrix[v1][v2] = 1
         aa.may_alias_matrix[v2][v1] = 1
@@ -50,7 +50,7 @@ func (aa alias_analysis*) add_may_alias(v1 i32, v2 i32) {
     }
 }
 
-func (aa alias_analysis*) add_must_alias(v1 i32, v2 i32) {
+func (aa* alias_analysis) add_must_alias(v1 i32, v2 i32) {
     if v1 >= 0 && v1 < aa.num_values && v2 >= 0 && v2 < aa.num_values {
         aa.must_alias_matrix[v1][v2] = 1
         aa.must_alias_matrix[v2][v1] = 1
@@ -62,7 +62,7 @@ func (aa alias_analysis*) add_must_alias(v1 i32, v2 i32) {
     }
 }
 
-func (aa alias_analysis*) may_alias(v1 i32, v2 i32) bool {
+func (aa* alias_analysis) may_alias(v1 i32, v2 i32) bool {
     if v1 == v2 {
         return true
     }
@@ -72,7 +72,7 @@ func (aa alias_analysis*) may_alias(v1 i32, v2 i32) bool {
     false
 }
 
-func (aa alias_analysis*) must_alias(v1 i32, v2 i32) bool {
+func (aa* alias_analysis) must_alias(v1 i32, v2 i32) bool {
     if v1 == v2 {
         return true
     }
@@ -82,7 +82,7 @@ func (aa alias_analysis*) must_alias(v1 i32, v2 i32) bool {
     false
 }
 
-func (aa alias_analysis*) no_alias(v1 i32, v2 i32) bool {
+func (aa* alias_analysis) no_alias(v1 i32, v2 i32) bool {
     if v1 == v2 {
         return false
     }
@@ -92,7 +92,7 @@ func (aa alias_analysis*) no_alias(v1 i32, v2 i32) bool {
     true
 }
 
-func (aa alias_analysis*) analyze_pointer_equality() {
+func (aa* alias_analysis) analyze_pointer_equality() {
     for i := i32(0); i < aa.num_values; i += 1 {
         for j := i32(0); j < aa.num_values; j += 1 {
             if i != j {
@@ -108,7 +108,7 @@ func (aa alias_analysis*) analyze_pointer_equality() {
     }
 }
 
-func (aa alias_analysis*) analyze_pointer_dereferencing(load_values i32[], load_targets i32[]) {
+func (aa* alias_analysis) analyze_pointer_dereferencing(load_values i32[], load_targets i32[]) {
     for i := i32(0); i < i32(len(load_values)); i += 1 {
         src := load_values[i]
         tgt := load_targets[i]
@@ -118,7 +118,7 @@ func (aa alias_analysis*) analyze_pointer_dereferencing(load_values i32[], load_
     }
 }
 
-func (aa alias_analysis*) analyze_pointer_stores(store_values i32[], store_targets i32[]) {
+func (aa* alias_analysis) analyze_pointer_stores(store_values i32[], store_targets i32[]) {
     for i := i32(0); i < i32(len(store_values)); i += 1 {
         src := store_values[i]
         tgt := store_targets[i]
@@ -128,7 +128,7 @@ func (aa alias_analysis*) analyze_pointer_stores(store_values i32[], store_targe
     }
 }
 
-func (aa alias_analysis*) analyze_function_parameters(param_values i32[], bool escape_flags[]) {
+func (aa* alias_analysis) analyze_function_parameters(param_values i32[], bool escape_flags[]) {
     for i := i32(0); i < i32(len(param_values)); i += 1 {
         param := param_values[i]
         if param >= 0 && escape_flags[i] {
@@ -141,7 +141,7 @@ func (aa alias_analysis*) analyze_function_parameters(param_values i32[], bool e
     }
 }
 
-func (aa alias_analysis*) compute_transitive_closure() {
+func (aa* alias_analysis) compute_transitive_closure() {
     changed := true
     for changed {
         changed = false
@@ -160,7 +160,7 @@ func (aa alias_analysis*) compute_transitive_closure() {
     }
 }
 
-func (aa alias_analysis*) get_all_aliases(v i32) i32[] {
+func (aa* alias_analysis) get_all_aliases(v i32) i32[] {
     i32[] aliases
     if v >= 0 && v < aa.num_values {
         for i := i32(0); i < aa.num_values; i += 1 {
@@ -172,7 +172,7 @@ func (aa alias_analysis*) get_all_aliases(v i32) i32[] {
     aliases
 }
 
-func (aa alias_analysis*) to_string() string {
+func (aa* alias_analysis) to_string() string {
     s := "Alias Analysis:\n"
     s += "May-Alias Relations:\n"
     for i := i32(0); i < aa.num_values; i += 1 {

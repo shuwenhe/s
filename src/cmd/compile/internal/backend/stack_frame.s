@@ -32,7 +32,7 @@ func stack_frame_new(string func_name) stack_frame {
     frame
 }
 
-func stack_frame_add_arg(stack_frame frame*, int slot_id, int size) int {
+func stack_frame_add_arg(stack_frame* frame, int slot_id, int size) int {
     offset := frame.arg_slots.len() * 8
 
     slot := stack_slot {
@@ -46,7 +46,7 @@ func stack_frame_add_arg(stack_frame frame*, int slot_id, int size) int {
     offset
 }
 
-func stack_frame_add_local(stack_frame frame*, int slot_id, int size) int {
+func stack_frame_add_local(stack_frame* frame, int slot_id, int size) int {
     offset := -(frame.local_slots.len() + 1) * 8
 
     slot := stack_slot {
@@ -60,7 +60,7 @@ func stack_frame_add_local(stack_frame frame*, int slot_id, int size) int {
     offset
 }
 
-func stack_frame_add_spill(stack_frame frame*, int slot_id, int size) int {
+func stack_frame_add_spill(stack_frame* frame, int slot_id, int size) int {
     base_offset := -(frame.local_slots.len() + 1) * 8
     spill_offset := base_offset - (frame.spill_slots.len() + 1) * 8
 
@@ -75,7 +75,7 @@ func stack_frame_add_spill(stack_frame frame*, int slot_id, int size) int {
     spill_offset
 }
 
-func stack_frame_compute_size(stack_frame frame*) int {
+func stack_frame_compute_size(stack_frame* frame) int {
     local_size := frame.local_slots.len() * 8
     spill_size := frame.spill_slots.len() * 8
     return_addr_size := 8

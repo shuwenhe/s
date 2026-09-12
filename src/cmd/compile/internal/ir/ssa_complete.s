@@ -77,7 +77,7 @@ func new_ssa_function(string name) ssa_function* {
     f
 }
 
-func (f ssa_function*) new_block(string label) ssa_block* {
+func (f* ssa_function) new_block(string label) ssa_block* {
     block := new(ssa_block)
     block.id = f.block_counter
     block.label = label
@@ -91,7 +91,7 @@ func (f ssa_function*) new_block(string label) ssa_block* {
     block
 }
 
-func (f ssa_function*) new_value(op value_op, string name, string type_str) ssa_value* {
+func (f* ssa_function) new_value(op value_op, string name, string type_str) ssa_value* {
     val := new(ssa_value)
     val.id = f.value_counter
     val.op = op
@@ -107,24 +107,24 @@ func (f ssa_function*) new_value(op value_op, string name, string type_str) ssa_
     val
 }
 
-func (f ssa_function*) new_const_value(string const_val, string type_str) ssa_value* {
+func (f* ssa_function) new_const_value(string const_val, string type_str) ssa_value* {
     val := f.new_value(op_const, "const_" + const_val, type_str)
     val.is_const = true
     val.const_value = const_val
     val
 }
 
-func (f ssa_function*) new_param_value(string name, string type_str) ssa_value* {
+func (f* ssa_function) new_param_value(string name, string type_str) ssa_value* {
     val := f.new_value(op_param, name, type_str)
     val
 }
 
-func (b ssa_block*) add_value(val ssa_value*) {
+func (b* ssa_block) add_value(val* ssa_value) {
     val.block = b.id
     b.values = append(b.values, val)
 }
 
-func (b ssa_block*) add_phi(var_id i32, string type_str) ssa_phi* {
+func (b* ssa_block) add_phi(var_id i32, string type_str) ssa_phi* {
     phi := new(ssa_phi)
     phi.id = i32(len(b.phis))
     phi.var_id = var_id
@@ -135,12 +135,12 @@ func (b ssa_block*) add_phi(var_id i32, string type_str) ssa_phi* {
     phi
 }
 
-func (phi ssa_phi*) add_input(pred_block i32, value_id i32) {
+func (phi* ssa_phi) add_input(pred_block i32, value_id i32) {
     phi.block_preds = append(phi.block_preds, pred_block)
     phi.value_preds = append(phi.value_preds, value_id)
 }
 
-func (f ssa_function*) add_edge(from_id i32, to_id i32) {
+func (f* ssa_function) add_edge(from_id i32, to_id i32) {
     if from_id >= 0 && from_id < i32(len(f.blocks)) {
         from_block := f.blocks[from_id]
         from_block.successors = append(from_block.successors, to_id)
@@ -151,7 +151,7 @@ func (f ssa_function*) add_edge(from_id i32, to_id i32) {
     }
 }
 
-func (f ssa_function*) build_ssa() {
+func (f* ssa_function) build_ssa() {
     for i := i32(0); i < i32(len(f.blocks)); i += 1 {
         block := f.blocks[i]
         if len(block.predecessors) > 1 {
@@ -380,7 +380,7 @@ func ssa_merge_trivial_blocks(ssa_function* f) int {
     merged
 }
 
-func (f ssa_function*) optimize() ssa_opt_stats {
+func (f* ssa_function) optimize() ssa_opt_stats {
     stats := ssa_opt_stats {}
     stats.constants_folded = ssa_fold_constants(f)
     stats.constants_folded = stats.constants_folded + ssa_apply_identities(f)
@@ -391,7 +391,7 @@ func (f ssa_function*) optimize() ssa_opt_stats {
     stats
 }
 
-func (f ssa_function*) get_value_by_name(string name) ssa_value* {
+func (f* ssa_function) get_value_by_name(string name) ssa_value* {
     if id, ok := f.name_to_value[name]; ok {
         if id >= 0 && id < i32(len(f.values)) {
             return f.values[id]
@@ -400,7 +400,7 @@ func (f ssa_function*) get_value_by_name(string name) ssa_value* {
     nil
 }
 
-func (f ssa_function*) eliminate_dead_code() {
+func (f* ssa_function) eliminate_dead_code() {
     live := make(map[i32]bool)
 
     for i := i32(0); i < i32(len(f.values)); i += 1 {
@@ -427,7 +427,7 @@ func (f ssa_function*) eliminate_dead_code() {
     }
 }
 
-func (f ssa_function*) to_string() string {
+func (f* ssa_function) to_string() string {
     s := "SSA Function: " + f.name + "\n"
     for _, block := range f.blocks {
         s += "Block " + string(block.id) + ": " + block.label + "\n"

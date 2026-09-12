@@ -74,7 +74,7 @@ func create_stack(size i32) (stack_info*, error) {
 	return s, nil
 }
 
-func (s stack_info*) check_growth(needed u64) error {
+func (s* stack_info) check_growth(needed u64) error {
 	if s == nil {
 		return "stack is nil"
 	}
@@ -90,7 +90,7 @@ func (s stack_info*) check_growth(needed u64) error {
 	nil
 }
 
-func grow_stack(s stack_info*, needed i32) error {
+func grow_stack(s* stack_info, needed i32) error {
 	if s == nil {
 		return "stack is nil"
 	}
@@ -132,7 +132,7 @@ func grow_stack(s stack_info*, needed i32) error {
 	nil
 }
 
-func (s stack_info*) push_frame(pc u64, locals_size u64, args_size u64) stack_frame {
+func (s* stack_info) push_frame(pc u64, locals_size u64, args_size u64) stack_frame {
 	frame := stack_frame{
 		pc: pc,
 		sp: 0,
@@ -145,7 +145,7 @@ func (s stack_info*) push_frame(pc u64, locals_size u64, args_size u64) stack_fr
 	return frame
 }
 
-func (s stack_info*) pop_frame() stack_frame* {
+func (s* stack_info) pop_frame() stack_frame* {
 	if len(s.frame_stack) == 0 {
 		return nil
 	}
@@ -155,7 +155,7 @@ func (s stack_info*) pop_frame() stack_frame* {
 	return &frame
 }
 
-func (s stack_info*) shrink_check() error {
+func (s* stack_info) shrink_check() error {
 	if s == nil {
 		return "stack is nil"
 	}
@@ -173,7 +173,7 @@ func (s stack_info*) shrink_check() error {
 	nil
 }
 
-func shrink_stack(s stack_info*) error {
+func shrink_stack(s* stack_info) error {
 	if s.shrink_state != shrink_idle {
 		return "shrink already in progress"
 	}
@@ -203,15 +203,15 @@ func shrink_stack(s stack_info*) error {
 	nil
 }
 
-func (s stack_info*) get_used_size() u64 {
+func (s* stack_info) get_used_size() u64 {
 	return s.current_size - (s.top - s.base)
 }
 
-func (s stack_info*) get_free_size() u64 {
+func (s* stack_info) get_free_size() u64 {
 	return s.top - s.base
 }
 
-func (s stack_info*) release() error {
+func (s* stack_info) release() error {
 	if s == nil {
 		return "stack is nil"
 	}
@@ -230,7 +230,7 @@ func free_stack_memory(base u64, size u64) {
 func copy_stack_memory(dst u64, src u64, size u64) {
 }
 
-func update_stack_pointers(s stack_info*, old_base u64, new_base u64, old_size u64) {
+func update_stack_pointers(s* stack_info, old_base u64, new_base u64, old_size u64) {
 	offset := i64(new_base) - i64(old_base)
 
 	for i := i32(0); i < i32(len(s.frame_stack)); i += 1 {
@@ -249,7 +249,7 @@ struct split_stack_info {
 	u8[] saved_context
 }
 
-func split_stack(parent stack_info*) (split_stack_info*, error) {
+func split_stack(parent* stack_info) (split_stack_info*, error) {
 	child, err := create_stack(8192)
 	if err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ func split_stack(parent stack_info*) (split_stack_info*, error) {
 	return split, nil
 }
 
-func (ssi split_stack_info*) restore() error {
+func (ssi* split_stack_info) restore() error {
 	if ssi == nil {
 		return "split stack info is nil"
 	}

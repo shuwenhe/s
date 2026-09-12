@@ -211,7 +211,7 @@ func gettimeofday() (i64, i64, error) {
 	return 0, 0, nil
 }
 
-func nanosleep(req timespec*) (timespec*, error) {
+func nanosleep(req* timespec) (timespec*, error) {
 	return nil, nil
 }
 

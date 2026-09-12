@@ -115,7 +115,7 @@ func create_sroutine(fn func()) sroutine {
 	return g
 }
 
-func schedule_sroutine(g sroutine*) {
+func schedule_sroutine(g* sroutine) {
 	p_id := select_processor()
 	p := &global_scheduler.p[p_id]
 
@@ -142,7 +142,7 @@ func select_processor() i32 {
 	return min_p
 }
 
-func move_to_global_queue(g sroutine*) {
+func move_to_global_queue(g* sroutine) {
 	global_scheduler.global_lock.lock()
 	defer global_scheduler.global_lock.unlock()
 
@@ -192,7 +192,7 @@ func pick_next_sroutine() sroutine* {
 	nil
 }
 
-func run_sroutine(g sroutine*) {
+func run_sroutine(g* sroutine) {
 	if g == nil {
 		return
 	}

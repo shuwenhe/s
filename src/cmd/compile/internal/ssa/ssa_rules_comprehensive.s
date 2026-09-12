@@ -114,7 +114,7 @@ func (engine* ssa_rule_engine) apply_rule(ssa_value* v, int rule_id) ssa_value* 
     v
 }
 
-func rule_add_const_const(v ssa_value*) ssa_value* {
+func rule_add_const_const(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_add {
         return v
     }
@@ -137,7 +137,7 @@ func rule_add_const_const(v ssa_value*) ssa_value* {
     result
 }
 
-func rule_add_x_zero(v ssa_value*) ssa_value* {
+func rule_add_x_zero(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_add {
         return v
     }
@@ -161,7 +161,7 @@ func rule_add_x_zero(v ssa_value*) ssa_value* {
     left
 }
 
-func rule_add_zero_x(v ssa_value*) ssa_value* {
+func rule_add_zero_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_add {
         return v
     }
@@ -185,7 +185,7 @@ func rule_add_zero_x(v ssa_value*) ssa_value* {
     right
 }
 
-func rule_sub_const_const(v ssa_value*) ssa_value* {
+func rule_sub_const_const(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_sub {
         return v
     }
@@ -208,7 +208,7 @@ func rule_sub_const_const(v ssa_value*) ssa_value* {
     result
 }
 
-func rule_sub_x_zero(v ssa_value*) ssa_value* {
+func rule_sub_x_zero(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_sub {
         return v
     }
@@ -232,7 +232,7 @@ func rule_sub_x_zero(v ssa_value*) ssa_value* {
     left
 }
 
-func rule_sub_zero_x(v ssa_value*) ssa_value* {
+func rule_sub_zero_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_sub {
         return v
     }
@@ -257,7 +257,7 @@ func rule_sub_zero_x(v ssa_value*) ssa_value* {
     neg_result
 }
 
-func rule_mul_const_const(v ssa_value*) ssa_value* {
+func rule_mul_const_const(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_mul {
         return v
     }
@@ -280,7 +280,7 @@ func rule_mul_const_const(v ssa_value*) ssa_value* {
     result
 }
 
-func rule_mul_x_zero(v ssa_value*) ssa_value* {
+func rule_mul_x_zero(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_mul {
         return v
     }
@@ -304,7 +304,7 @@ func rule_mul_x_zero(v ssa_value*) ssa_value* {
     ssa_value_new_const_int(v.id + 1000004, 0, v.type_id)
 }
 
-func rule_mul_zero_x(v ssa_value*) ssa_value* {
+func rule_mul_zero_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_mul {
         return v
     }
@@ -328,7 +328,7 @@ func rule_mul_zero_x(v ssa_value*) ssa_value* {
     ssa_value_new_const_int(v.id + 1000005, 0, v.type_id)
 }
 
-func rule_mul_x_one(v ssa_value*) ssa_value* {
+func rule_mul_x_one(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_mul {
         return v
     }
@@ -352,7 +352,7 @@ func rule_mul_x_one(v ssa_value*) ssa_value* {
     left
 }
 
-func rule_mul_one_x(v ssa_value*) ssa_value* {
+func rule_mul_one_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_mul {
         return v
     }
@@ -376,7 +376,7 @@ func rule_mul_one_x(v ssa_value*) ssa_value* {
     right
 }
 
-func rule_mul_x_two(v ssa_value*) ssa_value* {
+func rule_mul_x_two(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_mul {
         return v
     }
@@ -402,7 +402,7 @@ func rule_mul_x_two(v ssa_value*) ssa_value* {
     shift_result
 }
 
-func rule_mul_two_x(v ssa_value*) ssa_value* {
+func rule_mul_two_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_mul {
         return v
     }
@@ -428,7 +428,7 @@ func rule_mul_two_x(v ssa_value*) ssa_value* {
     shift_result
 }
 
-func rule_div_const_const(v ssa_value*) ssa_value* {
+func rule_div_const_const(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_div {
         return v
     }
@@ -454,7 +454,7 @@ func rule_div_const_const(v ssa_value*) ssa_value* {
     result
 }
 
-func rule_div_zero_x(v ssa_value*) ssa_value* {
+func rule_div_zero_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_div {
         return v
     }
@@ -478,7 +478,7 @@ func rule_div_zero_x(v ssa_value*) ssa_value* {
     ssa_value_new_const_int(v.id + 1000011, 0, v.type_id)
 }
 
-func rule_div_x_one(v ssa_value*) ssa_value* {
+func rule_div_x_one(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_div {
         return v
     }
@@ -502,7 +502,7 @@ func rule_div_x_one(v ssa_value*) ssa_value* {
     left
 }
 
-func rule_rem_const_const(v ssa_value*) ssa_value* {
+func rule_rem_const_const(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_rem {
         return v
     }
@@ -528,7 +528,7 @@ func rule_rem_const_const(v ssa_value*) ssa_value* {
     result
 }
 
-func rule_rem_zero_x(v ssa_value*) ssa_value* {
+func rule_rem_zero_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_rem {
         return v
     }
@@ -552,7 +552,7 @@ func rule_rem_zero_x(v ssa_value*) ssa_value* {
     ssa_value_new_const_int(v.id + 1000013, 0, v.type_id)
 }
 
-func rule_rem_x_one(v ssa_value*) ssa_value* {
+func rule_rem_x_one(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_rem {
         return v
     }
@@ -576,7 +576,7 @@ func rule_rem_x_one(v ssa_value*) ssa_value* {
     ssa_value_new_const_int(v.id + 1000014, 0, v.type_id)
 }
 
-func rule_and_x_zero(v ssa_value*) ssa_value* {
+func rule_and_x_zero(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_and {
         return v
     }
@@ -600,7 +600,7 @@ func rule_and_x_zero(v ssa_value*) ssa_value* {
     ssa_value_new_const_int(v.id + 1000015, 0, v.type_id)
 }
 
-func rule_and_zero_x(v ssa_value*) ssa_value* {
+func rule_and_zero_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_and {
         return v
     }
@@ -624,7 +624,7 @@ func rule_and_zero_x(v ssa_value*) ssa_value* {
     ssa_value_new_const_int(v.id + 1000016, 0, v.type_id)
 }
 
-func rule_and_x_x(v ssa_value*) ssa_value* {
+func rule_and_x_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_and {
         return v
     }
@@ -646,7 +646,7 @@ func rule_and_x_x(v ssa_value*) ssa_value* {
     v
 }
 
-func rule_and_x_minus_one(v ssa_value*) ssa_value* {
+func rule_and_x_minus_one(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_and {
         return v
     }
@@ -670,7 +670,7 @@ func rule_and_x_minus_one(v ssa_value*) ssa_value* {
     left
 }
 
-func rule_or_x_zero(v ssa_value*) ssa_value* {
+func rule_or_x_zero(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_or {
         return v
     }
@@ -694,7 +694,7 @@ func rule_or_x_zero(v ssa_value*) ssa_value* {
     left
 }
 
-func rule_or_zero_x(v ssa_value*) ssa_value* {
+func rule_or_zero_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_or {
         return v
     }
@@ -718,7 +718,7 @@ func rule_or_zero_x(v ssa_value*) ssa_value* {
     right
 }
 
-func rule_or_x_x(v ssa_value*) ssa_value* {
+func rule_or_x_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_or {
         return v
     }
@@ -740,7 +740,7 @@ func rule_or_x_x(v ssa_value*) ssa_value* {
     v
 }
 
-func rule_or_x_minus_one(v ssa_value*) ssa_value* {
+func rule_or_x_minus_one(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_or {
         return v
     }
@@ -764,7 +764,7 @@ func rule_or_x_minus_one(v ssa_value*) ssa_value* {
     ssa_value_new_const_int(v.id + 1000017, -1, v.type_id)
 }
 
-func rule_xor_x_zero(v ssa_value*) ssa_value* {
+func rule_xor_x_zero(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_xor {
         return v
     }
@@ -788,7 +788,7 @@ func rule_xor_x_zero(v ssa_value*) ssa_value* {
     left
 }
 
-func rule_xor_zero_x(v ssa_value*) ssa_value* {
+func rule_xor_zero_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_xor {
         return v
     }
@@ -812,7 +812,7 @@ func rule_xor_zero_x(v ssa_value*) ssa_value* {
     right
 }
 
-func rule_xor_x_x(v ssa_value*) ssa_value* {
+func rule_xor_x_x(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_xor {
         return v
     }
@@ -834,7 +834,7 @@ func rule_xor_x_x(v ssa_value*) ssa_value* {
     v
 }
 
-func rule_shl_const_const(v ssa_value*) ssa_value* {
+func rule_shl_const_const(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_shl {
         return v
     }
@@ -857,7 +857,7 @@ func rule_shl_const_const(v ssa_value*) ssa_value* {
     result
 }
 
-func rule_shl_x_zero(v ssa_value*) ssa_value* {
+func rule_shl_x_zero(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_shl {
         return v
     }
@@ -881,7 +881,7 @@ func rule_shl_x_zero(v ssa_value*) ssa_value* {
     left
 }
 
-func rule_shr_const_const(v ssa_value*) ssa_value* {
+func rule_shr_const_const(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_shr {
         return v
     }
@@ -904,7 +904,7 @@ func rule_shr_const_const(v ssa_value*) ssa_value* {
     result
 }
 
-func rule_shr_x_zero(v ssa_value*) ssa_value* {
+func rule_shr_x_zero(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_shr {
         return v
     }
@@ -928,7 +928,7 @@ func rule_shr_x_zero(v ssa_value*) ssa_value* {
     left
 }
 
-func rule_neg_const(v ssa_value*) ssa_value* {
+func rule_neg_const(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_neg {
         return v
     }
@@ -950,7 +950,7 @@ func rule_neg_const(v ssa_value*) ssa_value* {
     result
 }
 
-func rule_neg_neg(v ssa_value*) ssa_value* {
+func rule_neg_neg(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_neg {
         return v
     }
@@ -974,7 +974,7 @@ func rule_neg_neg(v ssa_value*) ssa_value* {
     arg.args[0]
 }
 
-func rule_not_const(v ssa_value*) ssa_value* {
+func rule_not_const(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_not {
         return v
     }
@@ -996,7 +996,7 @@ func rule_not_const(v ssa_value*) ssa_value* {
     result
 }
 
-func rule_not_not(v ssa_value*) ssa_value* {
+func rule_not_not(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_not {
         return v
     }
@@ -1020,7 +1020,7 @@ func rule_not_not(v ssa_value*) ssa_value* {
     arg.args[0]
 }
 
-func rule_neg_zero(v ssa_value*) ssa_value* {
+func rule_neg_zero(v* ssa_value) ssa_value* {
     if v == 0 || v.op != op_neg {
         return v
     }
@@ -1043,7 +1043,7 @@ func rule_neg_zero(v ssa_value*) ssa_value* {
     ssa_value_new_const_int(v.id + 1000023, 0, v.type_id)
 }
 
-func rule_cmp_const_const(v ssa_value*) ssa_value* {
+func rule_cmp_const_const(v* ssa_value) ssa_value* {
     if v == 0 {
         return v
     }
@@ -1088,7 +1088,7 @@ func rule_cmp_const_const(v ssa_value*) ssa_value* {
     ssa_value_new_const_int(v.id + 1000024, result, v.type_id)
 }
 
-func rule_cmp_x_x(v ssa_value*) ssa_value* {
+func rule_cmp_x_x(v* ssa_value) ssa_value* {
     if v == 0 {
         return v
     }
@@ -1131,42 +1131,42 @@ func rule_cmp_x_x(v ssa_value*) ssa_value* {
     ssa_value_new_const_int(v.id + 1000025, result, v.type_id)
 }
 
-func rule_commute_add(v ssa_value*) ssa_value* {
+func rule_commute_add(v* ssa_value) ssa_value* {
     v
 }
 
-func rule_commute_mul(v ssa_value*) ssa_value* {
+func rule_commute_mul(v* ssa_value) ssa_value* {
     v
 }
 
-func rule_commute_and(v ssa_value*) ssa_value* {
+func rule_commute_and(v* ssa_value) ssa_value* {
     v
 }
 
-func rule_commute_or(v ssa_value*) ssa_value* {
+func rule_commute_or(v* ssa_value) ssa_value* {
     v
 }
 
-func rule_commute_xor(v ssa_value*) ssa_value* {
+func rule_commute_xor(v* ssa_value) ssa_value* {
     v
 }
 
-func rule_add_mul_dist(v ssa_value*) ssa_value* {
+func rule_add_mul_dist(v* ssa_value) ssa_value* {
     v
 }
 
-func rule_sub_mul_dist(v ssa_value*) ssa_value* {
+func rule_sub_mul_dist(v* ssa_value) ssa_value* {
     v
 }
 
-func rule_and_or_dist(v ssa_value*) ssa_value* {
+func rule_and_or_dist(v* ssa_value) ssa_value* {
     v
 }
 
-func rule_de_morgan_and(v ssa_value*) ssa_value* {
+func rule_de_morgan_and(v* ssa_value) ssa_value* {
     v
 }
 
-func rule_de_morgan_or(v ssa_value*) ssa_value* {
+func rule_de_morgan_or(v* ssa_value) ssa_value* {
     v
 }
