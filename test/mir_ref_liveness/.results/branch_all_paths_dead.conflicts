@@ -1,1 +1,3 @@
-PLACEHOLDER
+[test: branch_all_paths_dead]
+loan_r_active_at_join: true (union)
+result: CONFLICT

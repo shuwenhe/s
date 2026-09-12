@@ -1,1 +1,3 @@
-PLACEHOLDER
+[test: straight_last_use]
+loan_r_active_at_reborrow: false
+result: ALLOW

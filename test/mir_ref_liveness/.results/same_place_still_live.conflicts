@@ -1,1 +1,3 @@
-PLACEHOLDER
+[test: same_place_still_live]
+loan_r_active_at_reborrow: true
+result: CONFLICT

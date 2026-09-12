@@ -1,1 +1,3 @@
-PLACEHOLDER
+[test: disjoint_place]
+place_overlap: false
+result: ALLOW
