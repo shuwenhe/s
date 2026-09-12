@@ -43,6 +43,7 @@ usage() {
     echo '  s --emit-mir-partial-drop <input.s> <output.mir>' >&2
     echo '  s --emit-mir-place-borrow <input.s> <output.mir>' >&2
     echo '  s --emit-mir-reference-liveness <input.s> <output.mir>' >&2
+    echo '  s --emit-mir-loan-liveness <input.s> <output.mir>' >&2
 
     echo '  s --seed <input.s> <output.ir>' >&2
 
@@ -242,6 +243,14 @@ if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir-place-borrow" ]; then
 fi
 
 if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir-reference-liveness" ]; then
+
+    ensure_compiler
+
+    exec "$compiler" "$@"
+
+fi
+
+if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir-loan-liveness" ]; then
 
     ensure_compiler
 
