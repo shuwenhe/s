@@ -81,7 +81,7 @@ func build_cfg_test2() cfg {
 // Block 1: use(r) → Block3
 // Block 2: (empty) → Block3
 // Block 3: reborrow(r2)
-// Expected: r live at join → CONFLICT (union means any path uses r)
+// Expected: ALLOW (backward liveness: r dead after last-use, no use after join)
 
 func build_cfg_test3() cfg {
     c := cfg{}
@@ -412,16 +412,17 @@ func validate_test2(liveness map[int]block_liveness) string {
     return "ALLOW"
 }
 
-// Test 3: r should be live at join due to union
+// Test 3: r should be dead at join (backward liveness: no use after join)
 func validate_test3(liveness map[int]block_liveness) string {
-    // Block 3 (join): r should be live because block1 uses it
+    // Block 3 (join): backward liveness computes if r is still live
+    // Since Block 3 has no uses of r and is exit, r is NOT live entering Block 3
     block3 := liveness[3]
     
     if block3.live_in["r"] {
-        return "CONFLICT"
+        return "CONFLICT"  // r unexpectedly live (error in analysis)
     }
     
-    return "ALLOW"
+    return "ALLOW"  // r correctly dead
 }
 
 // Test 4: r should be live after join due to later use
