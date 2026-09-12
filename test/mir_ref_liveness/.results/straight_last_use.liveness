@@ -1,0 +1,3 @@
+[reference_liveness: straight_last_use]
+# Backward liveness analysis results
+# live_in/live_out to be populated by actual analyzer
