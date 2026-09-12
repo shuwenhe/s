@@ -1,5 +1,5 @@
 package compile.internal.ownership
-type ownership_analysis struct {
+struct ownership_analysis {
     ctx           *OwnershipContext
     moveChecker   *move_checker
 borrowChecker borrow_checker*
@@ -56,7 +56,7 @@ func (OwnershipAnalysis* oa) set_type_classification(string typeName, class* typ
 
 func (OwnershipAnalysis* oa) set_variable_type(string varName, string typeName) {
 }
-type analysis_report struct {
+struct analysis_report {
     function_name    string
     success    bool
     move_errors     string[]
@@ -112,7 +112,7 @@ case BlockStmt*:
     }
     return count
 }
-type ownership_hints struct {
+struct ownership_hints {
     type_classes map[string]*type_classification
     VariableTypes map[string]string
     ParamOwnership map[string]string

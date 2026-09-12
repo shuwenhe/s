@@ -33,7 +33,7 @@ func (s OwnershipState) string() string {
         return "UNKNOWN"
     }
 }
-type ownership_info struct {
+struct ownership_info {
     state OwnershipState
     is_owned bool
     is_copy  bool
@@ -41,20 +41,20 @@ type ownership_info struct {
     field_states map[string]OwnershipState
 }
 type borrow_info tracks information about an active borrow
-type borrow_info struct {
+struct borrow_info {
     start_pc int
     end_pc   int
     is_mutable bool
     source    string
     lifetime_name string
 }
-type type_classification struct {
+struct type_classification {
     needs_ownership bool
     is_copy bool
     owned_fields string[]
     drop_order string[]
 }
-type ownership_context struct {
+struct ownership_context {
     state_at_pc map[int]*ownership_info
     type_classes map[string]*type_classification
     current_block string
