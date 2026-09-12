@@ -16,10 +16,10 @@ func test_basic_ownership() bool {
     ctx := new_ownership_drop_context()
     
     // Simulate: var x: File = ...
-    x_decl := &DeclStmt{ name: "x", type_name: "File" }
+    x_decl := &decl_stmt{ name: "x", type_name: "File" }
     
     // Simulate: var y = x (move)
-    move_stmt := &MoveStmt{ source: "x" }
+    move_stmt := &move_stmt{ source: "x" }
     
     stmts := []interface{}{ x_decl, move_stmt }
     
@@ -48,9 +48,9 @@ func test_use_after_move_error() bool {
     // var y = x (move)
     // use(x)  <- ERROR
     
-    x_decl := &DeclStmt{ name: "x", type_name: "File" }
-    move_stmt := &MoveStmt{ source: "x" }
-    use_stmt := &MoveStmt{ source: "x" } // Second use = ERROR
+    x_decl := &decl_stmt{ name: "x", type_name: "File" }
+    move_stmt := &move_stmt{ source: "x" }
+    use_stmt := &move_stmt{ source: "x" } // Second use = ERROR
     
     stmts := []interface{}{ x_decl, move_stmt, use_stmt }
     
@@ -73,7 +73,7 @@ func test_shared_borrow() bool {
     ctx := new_ownership_drop_context()
     
     // First run ownership
-    x_decl := &DeclStmt{ name: "x", type_name: "File" }
+    x_decl := &decl_stmt{ name: "x", type_name: "File" }
     stmts := []interface{}{ x_decl }
     
     if !ctx.phase_ownership_analyze(stmts) {
@@ -83,12 +83,12 @@ func test_shared_borrow() bool {
     // Simulate:
     // let r1 = &x (shared)
     // let r2 = &x (shared)  <- OK, multiple shared allowed
-    borrow1 := &BorrowStmt{ 
+    borrow1 := &borrow_stmt{ 
         borrow_var: "r1", 
         source: "x", 
         is_mutable: false,
     }
-    borrow2 := &BorrowStmt{ 
+    borrow2 := &borrow_stmt{ 
         borrow_var: "r2", 
         source: "x", 
         is_mutable: false,
@@ -112,7 +112,7 @@ func test_mutable_borrow_conflict() bool {
     ctx := new_ownership_drop_context()
     
     // First run ownership
-    x_decl := &DeclStmt{ name: "x", type_name: "File" }
+    x_decl := &decl_stmt{ name: "x", type_name: "File" }
     stmts := []interface{}{ x_decl }
     
     if !ctx.phase_ownership_analyze(stmts) {
@@ -122,12 +122,12 @@ func test_mutable_borrow_conflict() bool {
     // Simulate:
     // let r1 = &x (shared)
     // let r2 = &mut x  <- ERROR, conflicts with shared
-    borrow1 := &BorrowStmt{ 
+    borrow1 := &borrow_stmt{ 
         borrow_var: "r1", 
         source: "x", 
         is_mutable: false,
     }
-    borrow2 := &BorrowStmt{ 
+    borrow2 := &borrow_stmt{ 
         borrow_var: "r2", 
         source: "x", 
         is_mutable: true,  // mutable
@@ -154,7 +154,7 @@ func test_basic_drop_insertion() bool {
     ctx := new_ownership_drop_context()
     
     // Declare and setup
-    x_decl := &DeclStmt{ name: "x", type_name: "File" }
+    x_decl := &decl_stmt{ name: "x", type_name: "File" }
     stmts := []interface{}{ x_decl }
     
     ctx.phase_ownership_analyze(stmts)
@@ -171,7 +171,7 @@ func test_basic_drop_insertion() bool {
     // Last statement should be drop call
     drop_found := false
     for _, stmt := range elaborated {
-        if _, is_drop := stmt.(*DropCall); is_drop {
+        if _, is_drop := stmt.(*drop_call); is_drop {
             drop_found = true
             break
         }
@@ -197,9 +197,9 @@ func test_drop_lifo_order() bool {
     // var z: File = ...
     // <- should drop: z, y, x (reverse order)
     
-    x_decl := &DeclStmt{ name: "x", type_name: "File" }
-    y_decl := &DeclStmt{ name: "y", type_name: "File" }
-    z_decl := &DeclStmt{ name: "z", type_name: "File" }
+    x_decl := &decl_stmt{ name: "x", type_name: "File" }
+    y_decl := &decl_stmt{ name: "y", type_name: "File" }
+    z_decl := &decl_stmt{ name: "z", type_name: "File" }
     
     stmts := []interface{}{ x_decl, y_decl, z_decl }
     
@@ -240,7 +240,7 @@ func test_complete_pipeline_valid() bool {
     // var dest = source       (move)
     // <- drop dest, source
     
-    source_decl := &DeclStmt{ name: "source", type_name: "File" }
+    source_decl := &decl_stmt{ name: "source", type_name: "File" }
     
     stmts := []interface{}{ source_decl }
     
@@ -284,9 +284,9 @@ func test_complete_pipeline_invalid() bool {
     // var y = x               (move)
     // var z = x               (ERROR: use-after-move)
     
-    x_decl := &DeclStmt{ name: "x", type_name: "File" }
-    y_move := &MoveStmt{ source: "x" }
-    z_move := &MoveStmt{ source: "x" } // ERROR
+    x_decl := &decl_stmt{ name: "x", type_name: "File" }
+    y_move := &move_stmt{ source: "x" }
+    z_move := &move_stmt{ source: "x" } // ERROR
     
     stmts := []interface{}{ x_decl, y_move, z_move }
     
@@ -319,14 +319,14 @@ func test_borrow_ends_before_move() bool {
     // <- r ends (implicit scope exit)
     // var y = x  (move OK now)
     
-    x_decl := &DeclStmt{ name: "x", type_name: "File" }
-    borrow := &BorrowStmt{ 
+    x_decl := &decl_stmt{ name: "x", type_name: "File" }
+    borrow := &borrow_stmt{ 
         borrow_var: "r", 
         source: "x", 
         is_mutable: false,
     }
-    borrow_end := &BorrowEndStmt{ borrow_var: "r" }
-    move_stmt := &MoveStmt{ source: "x" }
+    borrow_end := &borrow_end_stmt{ borrow_var: "r" }
+    move_stmt := &move_stmt{ source: "x" }
     
     stmts := []interface{}{ x_decl, borrow, borrow_end, move_stmt }
     
@@ -353,13 +353,13 @@ func test_move_while_borrowed_error() bool {
     // let r = &x
     // var y = x  (ERROR: move while borrowed)
     
-    x_decl := &DeclStmt{ name: "x", type_name: "File" }
-    borrow := &BorrowStmt{ 
+    x_decl := &decl_stmt{ name: "x", type_name: "File" }
+    borrow := &borrow_stmt{ 
         borrow_var: "r", 
         source: "x", 
         is_mutable: false,
     }
-    move_stmt := &MoveStmt{ source: "x" }
+    move_stmt := &move_stmt{ source: "x" }
     
     stmts := []interface{}{ x_decl, borrow, move_stmt }
     
