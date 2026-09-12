@@ -72,13 +72,11 @@ func (oa *OwnershipAnalysis) HasErrors() bool {
     return oa.ctx.HasErrors()
 }
 
-// ClassifyType provides type classification for ownership
-func (oa *OwnershipAnalysis) ClassifyType(typeName string) *TypeClassification {
-    return oa.ctx.ClassifyType(typeName)
+func (oa *OwnershipAnalysis) classify_type(typeName string) *type_classification {
+    return oa.ctx.classify_type(typeName)
 }
 
-// SetTypeClassification sets ownership characteristics for a type
-func (oa *OwnershipAnalysis) SetTypeClassification(typeName string, class *TypeClassification) {
+func (oa *OwnershipAnalysis) set_type_classification(typeName string, class *type_classification) {
     oa.ctx.TypeClasses[typeName] = class
 }
 
@@ -166,7 +164,7 @@ func countDropCalls(stmts interface{}[]) int {
 // OwnershipHints provides type information to ownership analysis
 type OwnershipHints struct {
     // Type → Ownership characteristics
-    TypeClasses map[string]*TypeClassification
+    TypeClasses map[string]*type_classification
     
     // Variable → Type mapping
     VariableTypes map[string]string
