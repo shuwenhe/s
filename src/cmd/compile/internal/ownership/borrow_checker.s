@@ -29,8 +29,8 @@ case MoveStmt*:
 }
 
 func (borrow_checker* bc) check_borrow_creation(int pc, borrow* BorrowStmt) {
-    varName := borrow.Source
-    isMutable := borrow.IsMutable
+    varName := borrow.source
+    isMutable := borrow.is_mutable
     sourceState := bc.ctx.get_state_at(pc, varName)
     if sourceState == STATE_UNDEFINED {
         bc.ctx.add_error(errorf("borrow of uninitialized variable %s at PC %d",
@@ -58,7 +58,7 @@ func (borrow_checker* bc) check_borrow_creation(int pc, borrow* BorrowStmt) {
             }
         } else {
             for _, existing := range existingBorrows {
-                if existing.IsMutable {
+                if existing.is_mutable {
                     bc.ctx.add_error(errorf(
                         "cannot create shared borrow of %s: mutable borrow active at PC %d",
                         varName, pc))
@@ -73,15 +73,15 @@ func (borrow_checker* bc) check_borrow_creation(int pc, borrow* BorrowStmt) {
         bc.ctx.set_state_at(pc, varName, STATE_BORROWED_SHARED)
     }
     bc.record_borrow(varName, borrow_info*{
-        StartPC:      pc,
-        IsMutable:    isMutable,
-        Source:       varName,
-        LifetimeName: borrow.LifetimeName,
+        start_pc:      pc,
+        is_mutable:    isMutable,
+        source:       varName,
+        lifetime_name: borrow.lifetime_name,
     })
 }
 
 func (borrow_checker* bc) check_borrow_end(int pc, borrowEnd* BorrowEndStmt) {
-    varName := borrowEnd.Source
+    varName := borrowEnd.source
     if !bc.has_borrows(varName) {
         bc.ctx.add_error(errorf("borrow end: no active borrow of %s at PC %d",
             varName, pc))
@@ -92,16 +92,16 @@ func (borrow_checker* bc) check_borrow_end(int pc, borrowEnd* BorrowEndStmt) {
 }
 
 func (borrow_checker* bc) check_use_with_borrows(int pc, use* UseStmt) {
-    varName := use.Variable
+    varName := use.variable
     state := bc.ctx.get_state_at(pc, varName)
     if state == STATE_BORROWED_MUT {
-        if !use.ThroughBorrow {
+        if !use.through_borrow {
             bc.ctx.add_error(errorf(
                 "use of mutably-borrowed %s without borrow reference at PC %d",
                 varName, pc))
         }
     } else if state == STATE_BORROWED_SHARED {
-        if !use.ThroughBorrow {
+        if !use.through_borrow {
             bc.ctx.add_error(errorf(
                 "use of shared-borrowed %s without borrow reference at PC %d",
                 varName, pc))
@@ -110,7 +110,7 @@ func (borrow_checker* bc) check_use_with_borrows(int pc, use* UseStmt) {
 }
 
 func (borrow_checker* bc) check_move_with_borrows(int pc, move* MoveStmt) {
-    varName := move.Variable
+    varName := move.variable
     if bc.has_borrows(varName) {
         borrows := bc.get_borrows(varName)
         bc.ctx.add_error(errorf(
@@ -120,8 +120,8 @@ func (borrow_checker* bc) check_move_with_borrows(int pc, move* MoveStmt) {
 }
 
 func (borrow_checker* bc) has_borrows(string varName) bool {
-    if len(bc.ctx.BorrowStack) > 0 {
-        borrows := bc.ctx.BorrowStack[len(bc.ctx.BorrowStack)-1]
+    if len(bc.ctx.borrow_stack) > 0 {
+        borrows := bc.ctx.borrow_stack[len(bc.ctx.borrow_stack)-1]
         _, exists := borrows[varName]
         return exists
     }
@@ -130,8 +130,8 @@ func (borrow_checker* bc) has_borrows(string varName) bool {
 
 func (borrow_checker* bc) get_borrows(string varName) []*borrow_info {
     var result []*borrow_info
-    if len(bc.ctx.BorrowStack) > 0 {
-        borrows := bc.ctx.BorrowStack[len(bc.ctx.BorrowStack)-1]
+    if len(bc.ctx.borrow_stack) > 0 {
+        borrows := bc.ctx.borrow_stack[len(bc.ctx.borrow_stack)-1]
         if borrow, ok := borrows[varName]; ok {
             result = append(result, borrow)
         }
@@ -140,34 +140,34 @@ func (borrow_checker* bc) get_borrows(string varName) []*borrow_info {
 }
 
 func (borrow_checker* bc) record_borrow(string varName, borrow* borrow_info) {
-    if len(bc.ctx.BorrowStack) > 0 {
-        borrows := bc.ctx.BorrowStack[len(bc.ctx.BorrowStack)-1]
+    if len(bc.ctx.borrow_stack) > 0 {
+        borrows := bc.ctx.borrow_stack[len(bc.ctx.borrow_stack)-1]
         borrows[varName] = borrow
     }
 }
 
 func (borrow_checker* bc) remove_borrow(string varName) {
-    if len(bc.ctx.BorrowStack) > 0 {
-        borrows := bc.ctx.BorrowStack[len(bc.ctx.BorrowStack)-1]
+    if len(bc.ctx.borrow_stack) > 0 {
+        borrows := bc.ctx.borrow_stack[len(bc.ctx.borrow_stack)-1]
         delete(borrows, varName)
     }
 }
 
 func (borrow_checker* bc) enter_scope() {
-    bc.ctx.BorrowStack = append(bc.ctx.BorrowStack, make(map[string]*borrow_info))
+    bc.ctx.borrow_stack = append(bc.ctx.borrow_stack, make(map[string]*borrow_info))
 }
 
 func (borrow_checker* bc) exit_scope() {
-    if len(bc.ctx.BorrowStack) > 1 {
-        scope := bc.ctx.BorrowStack[len(bc.ctx.BorrowStack)-1]
+    if len(bc.ctx.borrow_stack) > 1 {
+        scope := bc.ctx.borrow_stack[len(bc.ctx.borrow_stack)-1]
         for varName, borrow := range scope {
-            if borrow.EndPC == 0 {
+            if borrow.end_pc == 0 {
                 bc.ctx.add_error(errorf(
                     "dangling borrow: %s still borrowed at scope exit",
                     varName))
             }
         }
-        bc.ctx.BorrowStack = bc.ctx.BorrowStack[:len(bc.ctx.BorrowStack)-1]
+        bc.ctx.borrow_stack = bc.ctx.borrow_stack[:len(bc.ctx.borrow_stack)-1]
     }
 }
 
@@ -175,18 +175,18 @@ func (borrow_checker* bc) verify_no_borrow_conflicts() bool {
     return !bc.ctx.has_errors()
 }
 type borrow_stmt struct {
-    Source       string
-    IsMutable    bool
-    LifetimeName string
-    RefName      string  // The reference variable created
+    source    string
+    is_mutable    bool
+    lifetime_name string
+    ref_name      string  // The reference variable created
 }
 type borrow_end_stmt struct {
-    Source string
+    source    string
 }
 type use_stmt struct {
-    Variable     string
-    ThroughBorrow bool
+    variable     string
+    through_borrow bool
 }
 type move_stmt struct {
-    Variable string
+    variable string
 }

@@ -48,10 +48,10 @@ func (move_checker* mc) check_assignment(int pc, assign* AssignmentStmt) {
             mc.ctx.add_error(errorf("move %s while borrowed at PC %d",
                 assign.RHS, pc))
         }
-    } else if assign.IsCopy {
+    } else if assign.is_copy {
         rhsState := mc.ctx.get_state_at(pc, assign.RHS.string())
         typeClass := mc.ctx.classify_type(assign.RHS.string())
-        if !typeClass.IsCopy && rhsState != STATE_OWNED {
+        if !typeClass.is_copy && rhsState != STATE_OWNED {
             mc.ctx.add_error(errorf("copy %s (%s type) from %s state at PC %d",
                 assign.RHS, "non-Copy", rhsState, pc))
             return
@@ -145,8 +145,8 @@ func (move_checker* mc) check_use(int pc, expr interface{}, string useKind) {
 }
 
 func (move_checker* mc) has_borrow(string varName) bool {
-    if len(mc.ctx.BorrowStack) > 0 {
-        borrows := mc.ctx.BorrowStack[len(mc.ctx.BorrowStack)-1]
+    if len(mc.ctx.borrow_stack) > 0 {
+        borrows := mc.ctx.borrow_stack[len(mc.ctx.borrow_stack)-1]
         _, exists := borrows[varName]
         return exists
     }

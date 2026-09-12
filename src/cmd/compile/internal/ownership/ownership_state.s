@@ -34,82 +34,82 @@ func (s OwnershipState) string() string {
     }
 }
 type ownership_info struct {
-    State OwnershipState
-    IsOwned bool
-    IsCopy  bool
-    ActiveBorrows   borrow_info[]
-    FieldStates map[string]OwnershipState
+    state OwnershipState
+    is_owned bool
+    is_copy  bool
+    active_borrows   borrow_info[]
+    field_states map[string]OwnershipState
 }
 type borrow_info tracks information about an active borrow
 type borrow_info struct {
-    StartPC int
-    EndPC   int
-    IsMutable bool
-    Source string
-    LifetimeName string
+    start_pc int
+    end_pc   int
+    is_mutable bool
+    source    string
+    lifetime_name string
 }
 type type_classification struct {
-    NeedsOwnership bool
-    IsCopy bool
-    OwnedFields string[]
-    DropOrder string[]
+    needs_ownership bool
+    is_copy bool
+    owned_fields string[]
+    drop_order string[]
 }
 type ownership_context struct {
-    StateAtPC map[int]*OwnershipInfo
-    TypeClasses map[string]*type_classification
-    CurrentBlock string
-    BorrowStack []map[string]*borrow_info
-    Errors string[]
+    state_at_pc map[int]*ownership_info
+    type_classes map[string]*type_classification
+    current_block string
+    borrow_stack []map[string]*borrow_info
+    errors string[]
 }
 
 func new_ownership_context() OwnershipContext* {
     return OwnershipContext*{
-        StateAtPC:   make(map[int]*OwnershipInfo),
-        TypeClasses: make(map[string]*type_classification),
-        BorrowStack: []map[string]*borrow_info{make(map[string]*borrow_info)},
-        Errors:      make(string[], 0),
+        state_at_pc:   make(map[int]*ownership_info),
+        type_classes: make(map[string]*type_classification),
+        borrow_stack: []map[string]*borrow_info{make(map[string]*borrow_info)},
+        errors:      make(string[], 0),
     }
 }
 
 func (OwnershipContext* ctx) get_state_at(int pc, string varName) OwnershipState {
-    info, ok := ctx.StateAtPC[pc]
+    info, ok := ctx.state_at_pc[pc]
     if !ok {
         return STATE_UNDEFINED
     }
-    return info.State
+    return info.state
 }
 
 func (OwnershipContext* ctx) set_state_at(int pc, string varName, state OwnershipState) {
-    if _, ok := ctx.StateAtPC[pc]; !ok {
-        ctx.StateAtPC[pc] = OwnershipInfo*{
-            State:         state,
-            ActiveBorrows: make(borrow_info[], 0),
-            FieldStates:   make(map[string]OwnershipState),
+    if _, ok := ctx.state_at_pc[pc]; !ok {
+        ctx.state_at_pc[pc] = ownership_info*{
+            state:         state,
+            active_borrows: make(borrow_info[], 0),
+            field_states:   make(map[string]OwnershipState),
         }
     } else {
-        ctx.StateAtPC[pc].State = state
+        ctx.state_at_pc[pc].state = state
     }
 }
 
 func (OwnershipContext* ctx) add_error(string msg) {
-    ctx.Errors = append(ctx.Errors, msg)
+    ctx.errors = append(ctx.errors, msg)
 }
 
 func (OwnershipContext* ctx) has_errors() bool {
-    return len(ctx.Errors) > 0
+    return len(ctx.errors) > 0
 }
 
 func (OwnershipContext* ctx) classify_type(string typeName) type_classification* {
-    if class, ok := ctx.TypeClasses[typeName]; ok {
+    if class, ok := ctx.type_classes[typeName]; ok {
         return class
     }
     class := type_classification*{
         NeedsOwnership: !isPrimitiveType(typeName),
-        IsCopy:         isPrimitiveType(typeName),
+        is_copy:         isPrimitiveType(typeName),
         OwnedFields:    make(string[], 0),
         DropOrder:      make(string[], 0),
     }
-    ctx.TypeClasses[typeName] = class
+    ctx.type_classes[typeName] = class
     return class
 }
 

@@ -39,7 +39,7 @@ func (OwnershipAnalysis* oa) analyze_function(string funcName, stmts interface{}
 }
 
 func (OwnershipAnalysis* oa) get_errors() string[] {
-    return oa.ctx.Errors
+    return oa.ctx.errors
 }
 
 func (OwnershipAnalysis* oa) has_errors() bool {
@@ -51,7 +51,7 @@ func (OwnershipAnalysis* oa) classify_type(string typeName) type_classification*
 }
 
 func (OwnershipAnalysis* oa) set_type_classification(string typeName, class* type_classification) {
-    oa.ctx.TypeClasses[typeName] = class
+    oa.ctx.type_classes[typeName] = class
 }
 
 func (OwnershipAnalysis* oa) set_variable_type(string varName, string typeName) {
@@ -59,9 +59,9 @@ func (OwnershipAnalysis* oa) set_variable_type(string varName, string typeName) 
 type analysis_report struct {
     FunctionName string
     Success bool
-    MoveErrors     string[]
-    BorrowErrors   string[]
-    DropErrors     string[]
+    move_errors     string[]
+    borrow_errors   string[]
+    drop_errors     string[]
     VariablesAnalyzed int
     BorrowsFound      int
     DropsInserted     int
@@ -73,17 +73,17 @@ func (OwnershipAnalysis* oa) generate_report(string funcName, elaborated interfa
     report := AnalysisReport*{
         FunctionName: funcName,
         Success:      !oa.ctx.has_errors(),
-        MoveErrors:   make(string[], 0),
-        BorrowErrors: make(string[], 0),
-        DropErrors:   make(string[], 0),
+        move_errors:   make(string[], 0),
+        borrow_errors: make(string[], 0),
+        drop_errors:   make(string[], 0),
     }
-    for _, err := range oa.ctx.Errors {
+    for _, err := range oa.ctx.errors {
         if contains(err, "move") || contains(err, "use-after-move") {
-            report.MoveErrors = append(report.MoveErrors, err)
+            report.move_errors = append(report.move_errors, err)
         } else if contains(err, "borrow") {
-            report.BorrowErrors = append(report.BorrowErrors, err)
+            report.borrow_errors = append(report.borrow_errors, err)
         } else if contains(err, "drop") {
-            report.DropErrors = append(report.DropErrors, err)
+            report.drop_errors = append(report.drop_errors, err)
         }
     }
     report.DropsInserted = countDropCalls(elaborated)
@@ -113,7 +113,7 @@ case BlockStmt*:
     return count
 }
 type ownership_hints struct {
-    TypeClasses map[string]*type_classification
+    type_classes map[string]*type_classification
     VariableTypes map[string]string
     ParamOwnership map[string]string
 }
@@ -122,31 +122,31 @@ func (OwnershipAnalysis* oa) apply_ownership_hints(OwnershipHints* hints) {
     if hints == nil {
         return
     }
-    for typeName, class := range hints.TypeClasses {
-        oa.ctx.TypeClasses[typeName] = class
+    for typeName, class := range hints.type_classes {
+        oa.ctx.type_classes[typeName] = class
     }
 }
 
 func (OwnershipAnalysis* oa) print_errors() {
     report := AnalysisReport*{
         FunctionName: "analysis",
-        MoveErrors:   make(string[], 0),
-        BorrowErrors: make(string[], 0),
-        DropErrors:   make(string[], 0),
+        move_errors:   make(string[], 0),
+        borrow_errors: make(string[], 0),
+        drop_errors:   make(string[], 0),
     }
-    for _, err := range oa.ctx.Errors {
+    for _, err := range oa.ctx.errors {
         if contains(err, "move") {
-            report.MoveErrors = append(report.MoveErrors, err)
+            report.move_errors = append(report.move_errors, err)
         } else if contains(err, "borrow") {
-            report.BorrowErrors = append(report.BorrowErrors, err)
+            report.borrow_errors = append(report.borrow_errors, err)
         } else if contains(err, "drop") {
-            report.DropErrors = append(report.DropErrors, err)
+            report.drop_errors = append(report.drop_errors, err)
         }
     }
-    if len(report.MoveErrors) > 0 {
+    if len(report.move_errors) > 0 {
     }
-    if len(report.BorrowErrors) > 0 {
+    if len(report.borrow_errors) > 0 {
     }
-    if len(report.DropErrors) > 0 {
+    if len(report.drop_errors) > 0 {
     }
 }
