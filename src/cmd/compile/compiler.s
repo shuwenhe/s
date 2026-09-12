@@ -3192,11 +3192,6 @@ func compiler_reference_liveness_borrow(string ref_name, int target, bool mutabl
         if mutable { return "mir-error mutable borrow while mutably borrowed " + compiler_place_borrow_place_name(target) + "\n" }
         return "mir-error shared borrow while mutably borrowed " + compiler_place_borrow_place_name(target) + "\n"
     }
-    loan_names[loan_count] = ref_name
-    loan_places[loan_count] = target
-    loan_live[loan_count] = 1
-    if mutable { loan_mut[loan_count] = 1 }
-    else { loan_mut[loan_count] = 0 }
     mode := "shared"
     if mutable { mode = "mut" }
     return ref_name + " = Borrow(" + mode + ", " + compiler_place_borrow_place_name(target) + ")\n"
@@ -3227,8 +3222,16 @@ func compiler_emit_mir_reference_liveness(string source) string {
             if base == "_1" && field == "0" { target = 1 }
             if base == "_1" && field == "1" { target = 2 }
             if target >= 0 {
+                ok := compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable) == 0
                 out = out + compiler_reference_liveness_borrow(ref_name, target, mutable, loan_names, loan_places, loan_mut, loan_live, loan_count)
-                if compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable) == 0 { loan_count = loan_count + 1 }
+                if ok {
+                    loan_names[loan_count] = ref_name
+                    loan_places[loan_count] = target
+                    loan_live[loan_count] = 1
+                    if mutable { loan_mut[loan_count] = 1 }
+                    else { loan_mut[loan_count] = 0 }
+                    loan_count = loan_count + 1
+                }
             }
         } else if s.token == "borrow_shared_nested_field" || s.token == "borrow_mut_nested_field" {
             if s.token == "borrow_mut_nested_field" { mutable = true }
@@ -3244,8 +3247,16 @@ func compiler_emit_mir_reference_liveness(string source) string {
             if base == "_1" && first == "0" && second == "0" { target = 3 }
             if base == "_1" && first == "0" && second == "1" { target = 4 }
             if target >= 0 {
+                ok := compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable) == 0
                 out = out + compiler_reference_liveness_borrow(ref_name, target, mutable, loan_names, loan_places, loan_mut, loan_live, loan_count)
-                if compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable) == 0 { loan_count = loan_count + 1 }
+                if ok {
+                    loan_names[loan_count] = ref_name
+                    loan_places[loan_count] = target
+                    loan_live[loan_count] = 1
+                    if mutable { loan_mut[loan_count] = 1 }
+                    else { loan_mut[loan_count] = 0 }
+                    loan_count = loan_count + 1
+                }
             }
         } else if s.token == "use_ref" {
             s = compiler_next(s)
@@ -3376,8 +3387,8 @@ func compiler_emit_mir_partial_drop(string source) string {
 
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow") {
-        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow) input.s output")
+    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness") {
+        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness) input.s output")
         return 2
     }
     string source = __host_read_to_string(args[2])
@@ -3404,6 +3415,10 @@ func main() {
     }
     if args[1] == "--emit-mir-place-borrow" {
         if __host_write_text_file(args[3], compiler_emit_mir_place_borrow(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-reference-liveness" {
+        if __host_write_text_file(args[3], compiler_emit_mir_reference_liveness(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-mir" || args[1] == "--emit-mir-after-drop" {
