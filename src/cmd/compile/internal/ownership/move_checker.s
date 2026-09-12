@@ -152,19 +152,23 @@ func (move_checker* mc) has_borrow(string varName) bool {
     }
     return false
 }
+
 struct assignment_stmt {
     lhs    string
     rhs    interface{}
     is_move    bool
     is_copy    bool
 }
+
 struct call_stmt {
     func    string
     Args interface{}[]
 }
+
 struct return_stmt {
     Value interface{}
 }
+
 struct if_stmt {
     Condition interface{}
     ThenBody  interface{}[]

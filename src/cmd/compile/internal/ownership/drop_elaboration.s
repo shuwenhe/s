@@ -168,22 +168,27 @@ func (drop_elaborator* de) get_drop_order(string typeName) string[] {
     }
     return result
 }
+
 struct block_stmt {
     statements interface{}[]
 }
+
 struct if_stmt {
     condition  interface{}
     then_branch interface{}
     else_branch interface{}
 }
+
 struct loop_stmt {
     condition interface{}
     body      interface{}
 }
+
 struct drop_call {
     variable    string
     kind     string  // "explicit", "return-cleanup", "error-cleanup"
 }
+
 struct drop_summary {
     must_drop string[]
     may_drop string[]
