@@ -26,7 +26,7 @@
 │   • 所有者离开作用域时，值被销毁                                         │
 │                                                                         │
 │ 示例:                                                                    │
-│   r := newResource(10)   // r是所有者                                    │
+│   r := newResource(10)
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 */
@@ -44,8 +44,8 @@
 │                                                                         │
 │ 示例:                                                                    │
 │   r1 := newResource(10)                                                 │
-│   r2 := r1               // r1的所有权转移给r2                           │
-│   // r1不能再使用        // r2现在是所有者                               │
+│   r2 := r1
+│
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 */
@@ -66,11 +66,11 @@
 │   • 共享和可变借用不能混合                                                │
 │                                                                         │
 │ 示例:                                                                    │
-│   // 共享借用                                                            │
+│
 │   ref := &resource                                                      │
 │   val := borrowShared(ref)                                              │
 │                                                                         │
-│   // 可变借用                                                            │
+│
 │   mut_ref := &mut resource                                              │
 │   borrowMutable(mut_ref)                                                │
 │                                                                         │
@@ -88,9 +88,9 @@
 │                                                                         │
 │ 示例:                                                                    │
 │   {                                                                      │
-│       r := newResource(10)   // r获取所有权                             │
-│       // 使用r                                                           │
-│   }   // r离开作用域，自动销毁，内存释放                                  │
+│       r := newResource(10)
+│
+│   }
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 */
@@ -104,17 +104,17 @@
 │ 规则: 引用不能比其所有者活得更长                                          │
 │                                                                         │
 │ 示例:                                                                    │
-│   // VALID                                                               │
+│
 │   func valid() int {                                                    │
 │       value := box(42)                                                  │
 │       ptr := &value                                                     │
-│       return *ptr        // OK - value仍然有效                          │
+│       return *ptr
 │   }                                                                      │
 │                                                                         │
-│   // INVALID                                                             │
+│
 │   func invalid() *int {                                                 │
 │       value := box(42)                                                  │
-│       return &value      // ERROR - value离开作用域                     │
+│       return &value
 │   }                                                                      │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -135,13 +135,13 @@
 │                                                                         │
 │ 示例:                                                                    │
 │   func consume_resource(r Resource) int {                                │
-│       return *r.ptr     // r在函数中有效                                │
-│   }   // r在这里销毁                                                     │
+│       return *r.ptr
+│   }
 │                                                                         │
 │   caller() {                                                            │
 │       r := newResource(10)                                              │
-│       result := consumeResource(r)  // r的所有权转移                   │
-│       // r不能再使用                                                    │
+│       result := consumeResource(r)
+│
 │   }                                                                      │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -158,14 +158,14 @@
 │                                                                         │
 │ 示例:                                                                    │
 │   func read_data(r *Resource) int {                                      │
-│       return *r.ptr     // r仍然有效                                    │
+│       return *r.ptr
 │   }                                                                      │
 │                                                                         │
 │   caller() {                                                            │
 │       r := newResource(10)                                              │
-│       val1 := readData(&r)  // 共享借用                                │
-│       val2 := readData(&r)  // 多个可以共存                            │
-│       val3 := readData(&r)  // r仍然是所有者                           │
+│       val1 := readData(&r)
+│       val2 := readData(&r)
+│       val3 := readData(&r)
 │   }                                                                      │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -182,13 +182,13 @@
 │                                                                         │
 │ 示例:                                                                    │
 │   func modify_data(r *Resource) () {                                     │
-│       *r.ptr = *r.ptr + 100  // 可以修改                               │
+│       *r.ptr = *r.ptr + 100
 │   }                                                                      │
 │                                                                         │
 │   caller() {                                                            │
 │       r := newResource(10)                                              │
-│       modifyData(&r)    // 可变借用                                     │
-│       // 一次只能有一个可变借用                                          │
+│       modifyData(&r)
+│
 │   }                                                                      │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -206,12 +206,12 @@
 │ 示例:                                                                    │
 │   func allocate() Resource {                                            │
 │       r := newResource(42)                                              │
-│       return r  // 所有权返回给调用者                                   │
+│       return r
 │   }                                                                      │
 │                                                                         │
 │   caller() {                                                            │
-│       r := allocate()   // 获得所有权                                   │
-│       // r现在属于caller                                                │
+│       r := allocate()
+│
 │   }                                                                      │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -258,8 +258,8 @@
 │                                                                         │
 │ 共享借用:      ref := &r                                                │
 │ 可变借用:      ref := &mut r                                            │
-│ 函数参数:      func(r *Resource)  // 共享                               │
-│                func(r *Resource)  // 可变（取决于使用）                 │
+│ 函数参数:      func(r *Resource)
+│                func(r *Resource)
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -278,7 +278,7 @@
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │ 作用域开始:    {                                                        │
-│ 作用域结束:    }  // 变量销毁                                            │
+│ 作用域结束:    }
 │ 嵌套作用域:    { { inner } }                                            │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -301,14 +301,14 @@
 我想在函数中使用一个资源
     │
     ├─ 需要修改它？
-    │   ├─ 是 → func(r *Resource)   // 可变借用
-    │   └─ 否 → func(r *Resource)   // 共享借用
+    │   ├─ 是 → func(r *Resource)
+    │   └─ 否 → func(r *Resource)
     │
     ├─ 需要完全控制它？
-    │   └─ 是 → func(r Resource)    // 转移所有权
+    │   └─ 是 → func(r Resource)
     │
     └─ 只是读取它？
-        └─ 是 → func(r *Resource)   // 共享借用
+        └─ 是 → func(r *Resource)
 
 
 我想在多个地方使用一个资源
@@ -365,21 +365,21 @@
 ├────────────────────────────────────────────────────────────────────────┤
 │                                                                        │
 │ 1. 优先使用借用而非所有权转移                                            │
-│    func process(r *Resource)  // 快速                                  │
+│    func process(r *Resource)
 │    vs                                                                  │
-│    func process(r Resource)   // 需要初始化                            │
+│    func process(r Resource)
 │                                                                        │
 │ 2. 小对象在栈上分配                                                     │
-│    type small struct { x int }  // 栈分配更快                          │
+│    type small struct { x int }
 │                                                                        │
 │ 3. 在块中限制借用生命周期                                                │
 │    {                                                                   │
 │        ref := &x                                                       │
-│        // 使用ref                                                      │
-│    }  // ref生命周期在这里结束，x可以被修改                            │
+│
+│    }
 │                                                                        │
 │ 4. 返回所有权而不是通过指针输出                                          │
-│    return Result { value: x }  // 清晰，编译器可优化                   │
+│    return Result { value: x }
 │                                                                        │
 │ 5. 避免不必要的复制                                                     │
 │    使用box(value) 而不是复制大结构                                      │
@@ -402,15 +402,15 @@ Resource* create() {              func create() Resource {
 }                                 return r
                                   }
 
-void destroy(Resource* r) {       // 自动调用
-    free(r->ptr);                 // 销毁时自动释放
+void destroy(Resource* r) {
+    free(r->ptr);
     free(r);
 }
 
 Resource* caller() {              func caller() Resource {
     Resource* r = create();           r := create()
-    // 使用r                          // 使用r
-    destroy(r);                   }   // r在这里自动销毁
+
+    destroy(r);                   }
     return ...;
 }
 
