@@ -23,8 +23,8 @@ func NewDropElaborator(ctx *OwnershipContext) *DropElaborator {
 }
 
 // ElaborateDrops transforms AST to insert drop calls
-func (de *DropElaborator) ElaborateDrops(stmts []interface{}) []interface{} {
-    var result []interface{}
+func (de *DropElaborator) ElaborateDrops(stmts interface{}[]) interface{}[] {
+    var result interface{}[]
     
     // Walk statements and insert drops
     for _, stmt := range stmts {
@@ -52,7 +52,7 @@ func (de *DropElaborator) elaborateStatement(stmt interface{}) interface{} {
 
 // elaborateBlock inserts drops at block exit
 func (de *DropElaborator) elaborateBlock(block *BlockStmt) *BlockStmt {
-    var stmts []interface{}
+    var stmts interface{}[]
     
     // Process all statements in block
     for _, stmt := range block.Statements {
@@ -80,7 +80,7 @@ func (de *DropElaborator) elaborateReturn(ret *ReturnStmt) interface{} {
     // Collect all variables in scope that need dropping
     dropsNeeded := de.collectDropsForReturn()
     
-    var result []interface{}
+    var result interface{}[]
     
     // Insert drop calls
     for _, dropVar := range dropsNeeded {
@@ -127,8 +127,8 @@ func (de *DropElaborator) elaborateLoop(loop *LoopStmt) *LoopStmt {
 }
 
 // collectDropsForBlock determines which variables need drops at block exit
-func (de *DropElaborator) collectDropsForBlock(block *BlockStmt) []string {
-    var drops []string
+func (de *DropElaborator) collectDropsForBlock(block *BlockStmt) string[] {
+    var drops string[]
     
     // Walk block to find variables that:
     // 1. Are owned types (require drop)
@@ -140,8 +140,8 @@ func (de *DropElaborator) collectDropsForBlock(block *BlockStmt) []string {
 }
 
 // collectDropsForReturn collects all variables needing cleanup before return
-func (de *DropElaborator) collectDropsForReturn() []string {
-    var drops []string
+func (de *DropElaborator) collectDropsForReturn() string[] {
+    var drops string[]
     
     // Collect all variables in current scope that are OWNED
     // and will be exiting with scope
@@ -150,7 +150,7 @@ func (de *DropElaborator) collectDropsForReturn() []string {
 }
 
 // VerifyExactlyOnceDrop checks that each owned value is dropped exactly once
-func (de *DropElaborator) VerifyExactlyOnceDrop(elaborated []interface{}) bool {
+func (de *DropElaborator) VerifyExactlyOnceDrop(elaborated interface{}[]) bool {
     dropCounts := make(map[string]int)
     
     // Walk elaborated code and count drops
@@ -173,7 +173,7 @@ func (de *DropElaborator) VerifyExactlyOnceDrop(elaborated []interface{}) bool {
 }
 
 // countDrops walks code and counts drop calls per variable
-func (de *DropElaborator) countDrops(stmts []interface{}, counts map[string]int) {
+func (de *DropElaborator) countDrops(stmts interface{}[], counts map[string]int) {
     for _, stmt := range stmts {
         switch s := stmt.(type) {
         case *DropCall:
@@ -185,13 +185,13 @@ func (de *DropElaborator) countDrops(stmts []interface{}, counts map[string]int)
 }
 
 // VerifyNoUseAfterDrop checks that variables aren't used after drop
-func (de *DropElaborator) VerifyNoUseAfterDrop(stmts []interface{}) bool {
+func (de *DropElaborator) VerifyNoUseAfterDrop(stmts interface{}[]) bool {
     droppedVars := make(map[string]bool)
     return de.checkUseAfterDrop(stmts, droppedVars)
 }
 
 // checkUseAfterDrop recursively checks for use-after-drop
-func (de *DropElaborator) checkUseAfterDrop(stmts []interface{}, 
+func (de *DropElaborator) checkUseAfterDrop(stmts interface{}[], 
     droppedVars map[string]bool) bool {
     
     for _, stmt := range stmts {
@@ -225,7 +225,7 @@ func (de *DropElaborator) checkUseAfterDrop(stmts []interface{},
 }
 
 // VerifyPartialMoveDrops checks that partially-moved structs handle field drops
-func (de *DropElaborator) VerifyPartialMoveDrops(stmts []interface{}) bool {
+func (de *DropElaborator) VerifyPartialMoveDrops(stmts interface{}[]) bool {
     // For each variable with PARTIALLY_MOVED state:
     // - Verify remaining fields are dropped
     // - Verify moved fields are not dropped again
@@ -236,11 +236,11 @@ func (de *DropElaborator) VerifyPartialMoveDrops(stmts []interface{}) bool {
 
 // GetDropOrder returns the correct drop order for a struct type
 // (reverse declaration order to respect dependencies)
-func (de *DropElaborator) GetDropOrder(typeName string) []string {
+func (de *DropElaborator) GetDropOrder(typeName string) string[] {
     typeClass := de.ctx.ClassifyType(typeName)
     
     // Reverse the order (drop fields in reverse of declaration)
-    result := make([]string, len(typeClass.DropOrder))
+    result := make(string[], len(typeClass.DropOrder))
     for i, field := range typeClass.DropOrder {
         result[len(result)-1-i] = field
     }
@@ -250,7 +250,7 @@ func (de *DropElaborator) GetDropOrder(typeName string) []string {
 
 // Simplified AST node types for drop operations
 type BlockStmt struct {
-    Statements []interface{}
+    Statements interface{}[]
 }
 
 type IfStmt struct {
@@ -269,28 +269,19 @@ type DropCall struct {
     Kind     string  // "explicit", "return-cleanup", "error-cleanup"
 }
 
-// DropSummary represents drop information for a scope
 type DropSummary struct {
-    // Variables that must be dropped
-    MustDrop []string
-    
-    // Variables that may be dropped (conditional)
-    MayDrop []string
-    
-    // Drop order (respects dependencies)
-    DropOrder []string
-    
-    // Field-level drops for partial move
-    FieldDrops map[string][]string
+    MustDrop string[]
+    MayDrop string[]
+    DropOrder string[]
+    FieldDrops map[string]string[]
 }
 
-// GenerateDropSummary creates drop information for a function/block
 func (de *DropElaborator) GenerateDropSummary(block *BlockStmt) *DropSummary {
     summary := &DropSummary{
-        MustDrop:   []string{},
-        MayDrop:    []string{},
-        DropOrder:  []string{},
-        FieldDrops: make(map[string][]string),
+        MustDrop:   make(string[], 0),
+        MayDrop:    make(string[], 0),
+        DropOrder:  make(string[], 0),
+        FieldDrops: make(map[string]string[]),
     }
     
     // Walk block and determine drops

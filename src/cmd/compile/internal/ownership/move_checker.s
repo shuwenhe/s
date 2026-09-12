@@ -21,7 +21,7 @@ func NewMoveChecker(ctx *OwnershipContext) *MoveChecker {
 }
 
 // CheckMoveSemantics performs move checking on all variable accesses
-func (mc *MoveChecker) CheckMoveSemantics(stmts []interface{}) {
+func (mc *MoveChecker) CheckMoveSemantics(stmts interface{}[]) {
     // First pass: assign initial states
     mc.initializeVariableStates(stmts)
     
@@ -32,7 +32,7 @@ func (mc *MoveChecker) CheckMoveSemantics(stmts []interface{}) {
 }
 
 // initializeVariableStates sets initial UNDEFINED state for all variables
-func (mc *MoveChecker) initializeVariableStates(stmts []interface{}) {
+func (mc *MoveChecker) initializeVariableStates(stmts interface{}[]) {
     // In a real implementation, walk AST to find all variable declarations
     // For now, this is a placeholder
 }
@@ -146,7 +146,7 @@ func (mc *MoveChecker) checkIfStatement(pc int, ifStmt *IfStmt) {
 }
 
 // analyzeBranch returns variable states after executing a branch
-func (mc *MoveChecker) analyzeBranch(pc int, stmts []interface{}) map[string]OwnershipState {
+func (mc *MoveChecker) analyzeBranch(pc int, stmts interface{}[]) map[string]OwnershipState {
     states := make(map[string]OwnershipState)
     
     for _, stmt := range stmts {
@@ -232,7 +232,7 @@ type AssignmentStmt struct {
 
 type CallStmt struct {
     Func string
-    Args []interface{}
+    Args interface{}[]
 }
 
 type ReturnStmt struct {
@@ -241,8 +241,8 @@ type ReturnStmt struct {
 
 type IfStmt struct {
     Condition interface{}
-    ThenBody  []interface{}
-    ElseBody  []interface{}
+    ThenBody  interface{}[]
+    ElseBody  interface{}[]
 }
 
 // errorf formats an error message

@@ -23,7 +23,7 @@ func NewBorrowChecker(ctx *OwnershipContext) *BorrowChecker {
 }
 
 // CheckBorrowSemantics performs complete borrow checking
-func (bc *BorrowChecker) CheckBorrowSemantics(stmts []interface{}) {
+func (bc *BorrowChecker) CheckBorrowSemantics(stmts interface{}[]) {
     // Walk statements and check borrow rules
     for pc, stmt := range stmts {
         bc.checkStatement(pc, stmt)

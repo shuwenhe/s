@@ -15,7 +15,7 @@ func TestMoveSemantics() bool {
     checker := NewMoveChecker(ctx)
     
     // Test 1: Simple move
-    test1Stmts := []interface{}{
+    test1Stmts := interface{}[]{
         &AssignmentStmt{LHS: "a", RHS: "value", IsMove: false},
         &AssignmentStmt{LHS: "b", RHS: "a", IsMove: true},  // a → b (move)
         &UseStmt{Variable: "a"},  // ERROR: use-after-move
@@ -30,7 +30,7 @@ func TestMoveSemantics() bool {
     ctx = NewOwnershipContext()
     checker = NewMoveChecker(ctx)
     
-    test2Stmts := []interface{}{
+    test2Stmts := interface{}[]{
         &AssignmentStmt{LHS: "x", RHS: "5", IsCopy: true},  // x = 5 (copy)
         &AssignmentStmt{LHS: "y", RHS: "x", IsCopy: true},  // y = x (copy, still valid)
         &UseStmt{Variable: "x"},  // OK: x still valid after copy
@@ -50,7 +50,7 @@ func TestBorrowSemantics() bool {
     checker := NewBorrowChecker(ctx)
     
     // Test 1: Multiple shared borrows OK
-    test1Stmts := []interface{}{
+    test1Stmts := interface{}[]{
         &BorrowStmt{Source: "data", IsMutable: false},     // borrow &data
         &BorrowStmt{Source: "data", IsMutable: false},     // borrow &data again (OK)
         &BorrowEndStmt{Source: "data"},
@@ -66,7 +66,7 @@ func TestBorrowSemantics() bool {
     ctx = NewOwnershipContext()
     checker = NewBorrowChecker(ctx)
     
-    test2Stmts := []interface{}{
+    test2Stmts := interface{}[]{
         &BorrowStmt{Source: "data", IsMutable: true},      // &mut data
         &BorrowStmt{Source: "data", IsMutable: false},     // &data (ERROR: conflict)
     }
@@ -80,7 +80,7 @@ func TestBorrowSemantics() bool {
     ctx = NewOwnershipContext()
     checker = NewBorrowChecker(ctx)
     
-    test3Stmts := []interface{}{
+    test3Stmts := interface{}[]{
         &BorrowStmt{Source: "x", IsMutable: false},
         &MoveStmt{Variable: "x"},  // ERROR: move while borrowed
     }
@@ -99,7 +99,7 @@ func TestDropElaboration() bool {
     elaborator := NewDropElaborator(ctx)
     
     // Test 1: Simple drop at block exit
-    test1Stmts := []interface{}{
+    test1Stmts := interface{}[]{
         &AssignmentStmt{LHS: "x", RHS: "value", IsMove: false},
         &UseStmt{Variable: "x"},
         // x should be dropped here (end of block)
@@ -200,7 +200,7 @@ func TestCompleteOwnershipPipeline() bool {
     oa := NewOwnershipAnalysis()
     
     // Test function with various ownership patterns
-    testStmts := []interface{}{
+    testStmts := interface{}[]{
         // x owns a box
         &AssignmentStmt{LHS: "x", RHS: "box::new()", IsMove: false},
         
