@@ -346,7 +346,7 @@ func run_backend_abi_suite() int {
     if validate_wasi_contract_source(wasm_source).is_err() {
         return 1
     }
-    fn_map_src := "package demo.fnmap\nfunc arm64_init() int {\n  println(\"arm64\")\n  0\n}\nfunc amd64_init() int {\n  println(\"amd64\")\n  0\n}\nfunc main() {\n  archInits := map[string]func() int{\"amd64\": amd64_init, \"arm64\": arm64_init}\n  goarch := \"arm64\"\n  init := archInits[goarch]\n  init()\n  0\n}"
+    fn_map_src := "package demo.fnmap\nfunc arm64_init() int {\n  println(\"arm64\")\n  0\n}\nfunc amd64_init() int {\n  println(\"amd64\")\n  0\n}\nfunc main() {\n  arch_inits := map[string]func() int{\"amd64\": amd64_init, \"arm64\": arm64_init}\n  goarch := \"arm64\"\n  init := arch_inits[goarch]\n  init()\n  0\n}"
     fn_map_parsed := parse_source(fn_map_src)
     if fn_map_parsed.is_err() {
         return 1

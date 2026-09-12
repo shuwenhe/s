@@ -150,45 +150,45 @@ func (dm dwarf_manager*) add_compile_unit(cu dwarf_compile_unit) {
 func (dm dwarf_manager*) generate_debug_line() u8[] {
 	data := make(u8[], 0)
 
-	for _, lineInfo := range dm.LineInfo {
+	for _, line_info := range dm.LineInfo {
 
-		lenOffset := len(data)
+		len_offset := len(data)
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
 
-		versionStart := len(data)
+		version_start := len(data)
 
 		data = append(data, 4, 0) 
 
-		hdrLenOffset := len(data)
+		hdr_len_offset := len(data)
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
 
-		data = append(data, u8(lineInfo.MinInstructionLength))
+		data = append(data, u8(line_info.MinInstructionLength))
 
 		data = append(data, 1)
 
 		data = append(data, 1)
 
 		data = append(data,
-			u8(lineInfo.LineBase),
-			u8(lineInfo.LineBase >> 8),
-			u8(lineInfo.LineBase >> 16),
-			u8(lineInfo.LineBase >> 24))
+			u8(line_info.LineBase),
+			u8(line_info.LineBase >> 8),
+			u8(line_info.LineBase >> 16),
+			u8(line_info.LineBase >> 24))
 
-		data = append(data, u8(lineInfo.LineRange))
+		data = append(data, u8(line_info.LineRange))
 
-		data = append(data, u8(lineInfo.OpcodeBase))
+		data = append(data, u8(line_info.OpcodeBase))
 
-		for i := i32(1); i < lineInfo.OpcodeBase; i += 1 {
+		for i := i32(1); i < line_info.OpcodeBase; i += 1 {
 			data = append(data, 0)
 		}
 
-		for _, dir := range lineInfo.DirectoryNames {
+		for _, dir := range line_info.DirectoryNames {
 			data = append(data, u8[](dir)...)
 			data = append(data, 0)
 		}
 		data = append(data, 0) 
 
-		for _, fname := range lineInfo.FileNames {
+		for _, fname := range line_info.FileNames {
 			data = append(data, u8[](fname)...)
 			data = append(data, 0)
 			data = append(data, 1) 
