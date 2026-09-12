@@ -48,17 +48,17 @@ const ast_type_enum = 69
 const ast_type_generic = 70
 
 struct ast_node {
-    int node_type
-    int line
-    int column
+    node_type int
+    line int
+    column int
 
-    string string_data
-    int int_data
+    string_data string
+    int_data int
 
     vec[ast_node] children
 
-    string name
-    string type_name
+    name string
+    type_name string
 }
 
 func ast_new(int node_type, int line, int column) ast_node* {

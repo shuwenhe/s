@@ -176,21 +176,21 @@ func (borrow_checker* bc) verify_no_borrow_conflicts() bool {
 }
 
 struct borrow_stmt {
-    source    string
-    is_mutable    bool
-    lifetime_name string
-    ref_name      string
+    string source
+    bool is_mutable
+    string lifetime_name
+    string ref_name
 }
 
 struct borrow_end_stmt {
-    source    string
+    string source
 }
 
 struct use_stmt {
-    variable     string
-    through_borrow bool
+    string variable
+    bool through_borrow
 }
 
 struct move_stmt {
-    variable string
+    string variable
 }

@@ -32,90 +32,90 @@ use std.prelude.len
 use std.prelude.slice
 use std.slices
 struct type_binding {
-    string name
-    string type_name
+    name string
+    type_name string
 }
 
 struct function_binding {
-    string name
-    string owner_type
-    bool has_receiver
-    string receiver_mode
+    name string
+    owner_type string
+    has_receiver bool
+    receiver_mode string
     string[] generic_names
     string[] param_types
-    string return_type
+    return_type string
 }
 
 struct method_binding {
-    string name
-    string receiver_mode
+    name string
+    receiver_mode string
     string[] param_types
-    string return_type
+    return_type string
 }
 
 struct trait_binding {
-    string name
+    name string
     method_binding[] methods
 }
 
 struct const_binding {
-    string name
-    string type_name
-    bool has_int_value
-    int int_value
+    name string
+    type_name string
+    has_int_value bool
+    int_value int
 }
 
 struct const_eval_int_result {
-    bool ok
-    int value
-    string error
+    ok bool
+    value int
+    error string
 }
 
 struct borrow_record {
-    string name
-    bool mutable
-    bool moved
-    bool copyable
+    name string
+    mutable bool
+    moved bool
+    copyable bool
 }
 
 struct signature_match {
-    bool ok
-    string return_type
-    string instance_name
+    ok bool
+    return_type string
+    instance_name string
     string[] type_args
-    int score
-    int generic_bind_count
-    int unknown_arg_count
+    score int
+    generic_bind_count int
+    unknown_arg_count int
 }
 
 struct check_result {
-    string type_name
-    int errors
+    type_name string
+    errors int
 }
 
 struct pattern_check_result {
     type_binding[] bindings
-    int errors
+    errors int
 }
 
 struct source_pos {
-    int line
-    int column
+    line int
+    column int
 }
 
 struct semantic_error {
-    string code
-    string message
-    string stage
-    string chain_id
-    string upstream_code
-    string severity
-    string hint
-    string anchor
-    int tier
-    int repeat_count
-    int line
-    int column
+    code string
+    message string
+    stage string
+    chain_id string
+    upstream_code string
+    severity string
+    hint string
+    anchor string
+    tier int
+    repeat_count int
+    line int
+    column int
 }
 
 func check_text(string source) int {

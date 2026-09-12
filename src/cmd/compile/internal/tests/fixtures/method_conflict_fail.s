@@ -1,6 +1,6 @@
 package demo.conflict
 struct point {
-    int x
+    x int
 }
 trait measure_a {
     func size() int;

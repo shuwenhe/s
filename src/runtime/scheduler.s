@@ -14,54 +14,54 @@ enum sroutine_status {
 }
 
 struct sroutine {
-	id u64
-	status sroutine_status
-	sp u64
-	pc u64
+	u64 id
+	sroutine_status status
+	u64 sp
+	u64 pc
 	fn func()
-	stack_base u64
-	stack_size u64
-	create_time i64
-	start_time i64
-	end_time i64
-	parent_g u64
-	context u8[]
+	u64 stack_base
+	u64 stack_size
+	i64 create_time
+	i64 start_time
+	i64 end_time
+	u64 parent_g
+	u8[] context
 }
 
 struct processor {
-	id i32
-	runnext sroutine*
-	runq sroutine*[]
-	runq_head i32
-	runq_tail i32
-	runq_size i32
-	gfree sroutine*[]
-	nfree i32
+	i32 id
+	sroutine* runnext
+	sroutine*[] runq
+	i32 runq_head
+	i32 runq_tail
+	i32 runq_size
+	sroutine*[] gfree
+	i32 nfree
 }
 
 struct machine_thread {
-	id i32
-	p processor*
-	g sroutine*
-	lockedg sroutine*
-	spinning bool
-	idle_time i64
-	cpu_ticks u64
+	i32 id
+	processor* p
+	sroutine* g
+	sroutine* lockedg
+	bool spinning
+	i64 idle_time
+	u64 cpu_ticks
 }
 
 struct scheduler {
-	m machine_thread[]
-	p processor[]
-	allg sroutine[]
-	idle_m i32
-	spinlock_num i32
-	next_gid u64
-	glock sync.mutex
-	plock sync.mutex
-	mlock sync.mutex
-	run_queue sroutine*[]
-	global_lock sync.mutex
-	schedenable bool
+	machine_thread[] m
+	processor[] p
+	sroutine[] allg
+	i32 idle_m
+	i32 spinlock_num
+	u64 next_gid
+	sync.mutex glock
+	sync.mutex plock
+	sync.mutex mlock
+	sroutine*[] run_queue
+	sync.mutex global_lock
+	bool schedenable
 }
 
 var global_scheduler scheduler

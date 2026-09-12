@@ -4,51 +4,51 @@ use std.option.option
 use std.result.result
 use std.slices
 struct noder_error {
-    string code
-    string message
-    string path
-    int line
-    int column
+    code string
+    message string
+    path string
+    line int
+    column int
 }
 
 struct source_unit {
-    string path
-    string text
+    path string
+    text string
 }
 
 struct token_item {
-    string kind
-    string text
-    int line
-    int column
+    kind string
+    text string
+    line int
+    column int
 }
 
 struct import_record {
-    string path
+    path string
     option[string] alias
 }
 
 struct export_record {
-    string name
-    string kind
+    name string
+    kind string
 }
 
 struct pos_entry {
-    int offset
-    int line
-    int column
+    offset int
+    line int
+    column int
 }
 
 struct ir_node {
-    string op
-    string payload
+    op string
+    payload string
 }
 
 struct noder_output {
-    source_unit unit
+    unit source_unit
     token_item[] tokens
     import_record[] imports
-    source_file ast
+    ast source_file
     ir_node[] ir
     export_record[] exports
     string[] notes

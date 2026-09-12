@@ -1,28 +1,28 @@
 package linker
 
 struct object_file {
-    string filename
-    header elf64_header
-    sections elf64_section[]
-    symbols elf64_symbol[]
-    relocations elf64_relocation[]
+    filename string
+    elf64_header header
+    elf64_section[] sections
+    elf64_symbol[] symbols
+    elf64_relocation[] relocations
 }
 
 struct linker_context {
-    output_file string
-    object_files object_file[]
-    sections elf64_section[]
-    symbols elf64_symbol[]
-    symbol_table string[]
-    string_table string
-    load_address int
-    current_offset int
+    string output_file
+    object_file[] object_files
+    elf64_section[] sections
+    elf64_symbol[] symbols
+    string[] symbol_table
+    string string_table
+    int load_address
+    int current_offset
 }
 
 struct link_result {
-    success int
-    error_message string
-    string output_filename
+    int success
+    string error_message
+    output_filename string
 }
 
 func linker_context_new(string output_file) linker_context {

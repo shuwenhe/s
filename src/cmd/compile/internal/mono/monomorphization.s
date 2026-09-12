@@ -37,13 +37,13 @@ use s.map_entry
 use std.option.option
 
 struct generic_instance_key {
-    string function_name
+    function_name string
     string[] type_args
 }
 
 struct mono_instance {
-    string generic_name
-    string instance_name
+    generic_name string
+    instance_name string
     string[] type_args
 }
 
@@ -52,36 +52,36 @@ struct mono_cache {
 }
 
 struct mono_cache_result {
-    mono_cache cache
-    string instance_name
+    cache mono_cache
+    instance_name string
 }
 
 struct mono_ownership_summary {
-    string type_name
-    string ownership
-    bool copy
-    bool drop
+    type_name string
+    ownership string
+    copy bool
+    drop bool
 }
 
 struct mono_function_summary {
-    string instance_name
+    instance_name string
     mono_ownership_summary[] params
-    mono_ownership_summary result
+    result mono_ownership_summary
 }
 
 struct monomorphize_file_result {
-    source_file file
-    mono_cache cache
-    int invariant_errors
+    file source_file
+    cache mono_cache
+    invariant_errors int
 }
 
 struct mono_work_item {
-    string generic_name
+    generic_name string
     string[] type_args
 }
 
 struct mono_context {
-    mono_cache cache
+    cache mono_cache
     mono_work_item[] worklist
     string[] processed
     function_decl[] generated

@@ -1,9 +1,9 @@
 package compile.internal.noder
 use std.slices
 struct link_symbol {
-    string pkg
-    string name
-    string kind
+    pkg string
+    name string
+    kind string
 }
 
 func build_link_symbols(string pkg_name, export_record[] exports) link_symbol[] {
@@ -29,9 +29,9 @@ func emit_link_manifest(link_symbol[] syms) string {
 }
 
 struct link_symbol {
-    string pkg
-    string name
-    string kind
+    pkg string
+    name string
+    kind string
 }
 
 func build_link_symbols(string pkg_name, export_record[] exports) link_symbol[] {

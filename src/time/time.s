@@ -6,17 +6,17 @@ import (
 )
 
 struct time_val {
-	sec i64
-	nsec i32
+	i64 sec
+	i32 nsec
 }
 
 struct time_zone {
-	name string
-	offset i32
+	string name
+	i32 offset
 }
 
 struct duration {
-	nanoseconds i64
+	i64 nanoseconds
 }
 
 const (
@@ -87,8 +87,8 @@ func (d duration) string() string {
 }
 
 struct timer {
-	fired bool
-	c channel*
+	bool fired
+	channel* c
 }
 
 func after_func(d duration, f func()) timer* {
@@ -108,8 +108,8 @@ func tick(d duration) channel* {
 }
 
 struct location {
-	name string
-	zone time_zone[]
+	string name
+	time_zone[] zone
 }
 
 var utc_location location = location{name: "UTC"}
@@ -128,9 +128,9 @@ func load_location(string name) (location*, error) {
 }
 
 struct time_t {
-	sec i64
-	nsec i32
-	zone location*
+	i64 sec
+	i32 nsec
+	location* zone
 }
 
 func (t time_t) string() string {

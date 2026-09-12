@@ -36,8 +36,8 @@ enum ast_node_type {
 
 struct ast_node {
     type_* int
-    line int
-    col int
+    int line
+    int col
     value* string
     left* ast_node
     right* ast_node
@@ -47,8 +47,8 @@ struct ast_node {
 
 struct parser {
     tokens* token
-    token_count int
-    pos int
+    int token_count
+    int pos
 }
 
 func parser_new(tokens* token, int token_count) parser* {

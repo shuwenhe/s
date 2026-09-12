@@ -1,14 +1,14 @@
 package compile.internal.ssa
 use std.slices
 struct ssa_value {
-    int id
-    string name
-    string op
-    string ty
+    id int
+    name string
+    op string
+    ty string
     int[] args
-    int uses
-    bool removed
-    string literal
+    uses int
+    removed bool
+    literal string
 }
 
 func make_value(int id, string name, string op, string ty, int[] args, string literal) ssa_value {

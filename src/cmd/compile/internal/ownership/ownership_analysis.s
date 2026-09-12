@@ -1,7 +1,7 @@
 package compile.internal.ownership
 struct ownership_analysis {
-    ctx           *ownership_context
-    moveChecker   *move_checker
+    *ownership_context ctx
+    *move_checker moveChecker
 borrowChecker borrow_checker*
 dropElaborator drop_elaborator*
 }
@@ -58,15 +58,15 @@ func (ownership_analysis* oa) set_variable_type(string var_name, string type_nam
 }
 
 struct analysis_report {
-    function_name    string
-    success    bool
-    move_errors     string[]
-    borrow_errors   string[]
-    drop_errors     string[]
-    variables_analyzed    int
-    borrows_found    int
-    drops_inserted    int
-    moves_verified    int
+    string function_name
+    bool success
+    string[] move_errors
+    string[] borrow_errors
+    string[] drop_errors
+    int variables_analyzed
+    int borrows_found
+    int drops_inserted
+    int moves_verified
     elaborated_stmts interface{}[]
 }
 
@@ -115,9 +115,9 @@ case block_stmt*:
 }
 
 struct ownership_hints {
-    type_classes map[string]*type_classification
-    variable_types map[string]string
-    param_ownership map[string]string
+    map[string]*type_classification type_classes
+    map[string]string variable_types
+    map[string]string param_ownership
 }
 
 func (ownership_analysis* oa) apply_ownership_hints(ownership_hints* hints) {

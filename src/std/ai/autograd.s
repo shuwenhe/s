@@ -2,21 +2,21 @@ package std.ai.autograd
 use std.tensor.{tensor, tensor_shape, scalar, zeros, add, sub, mul, div, matmul_2d, reshape}
 use std.switch.{exp as math_exp, log as math_log, tanh as math_tanh}
 struct grad_context {
-    bool needs_grad
-    string op_name
+    needs_grad bool
+    op_name string
     tensor[] inputs
-    tensor output
-    func backward_fn
+    output tensor
+    backward_fn func
     float[] cache_floats
     int[] cache_ints
     bool[] cache_bools
 }
 
 struct auto_grad_tensor {
-    tensor data
-    tensor grad
-    grad_context grad_ctx
-    bool requires_grad
+    data tensor
+    grad tensor
+    grad_ctx grad_context
+    requires_grad bool
 }
 var current_graph = graph_node[1000]
 var graph_size = 0
@@ -317,13 +317,13 @@ func autograd_transpose(auto_grad_tensor x, int dim0, int dim1) auto_grad_tensor
 }
 
 struct optimizer_state {
-    string name
-    float learning_rate
-    float momentum
-    float beta2
-    float weight_decay
-    float eps
-    int step_count
+    name string
+    learning_rate float
+    momentum float
+    beta2 float
+    weight_decay float
+    eps float
+    step_count int
     map<string, tensor> velocity
     map<string, tensor> second_moment
 }

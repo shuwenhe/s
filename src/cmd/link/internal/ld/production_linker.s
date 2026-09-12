@@ -14,35 +14,35 @@ enum object_format {
 }
 
 struct linker_config {
-	format             object_format
-	machine            i16
-	output_file         string
-	input_files string[]
-	symbol_strip_mode    i32  
-	optimize_level      i32
-	generate_debug_info  bool
-	generate_build_id    bool
-	enable_relro        bool  
-	enable_now          bool  
-	pie                bool  
-	pie_library         bool  
+	object_format format
+	i16 machine
+	string output_file
+	string[] input_files
+	i32 symbol_strip_mode
+	i32 optimize_level
+	bool generate_debug_info
+	bool generate_build_id
+	bool enable_relro
+	bool enable_now
+	bool pie
+	bool pie_library
 }
 
 struct production_linker {
-	config              linker_config
-	elf_objects elf_object[]
-	macho_objects macho_object[]
-	pe_objects pe_object[]
-	symbol_manager       symbol_manager
-	reloc_processor      reloc_processor
-	dwarf_manager        dwarf_manager
-	unwind_manager       unwind_manager
-	build_id_manager      build_id_manager
-	got_manager          got_manager
-	plt_manager          plt_manager
-	tls_manager          tls_manager
+	linker_config config
+	elf_object[] elf_objects
+	macho_object[] macho_objects
+	pe_object[] pe_objects
+	symbol_manager symbol_manager
+	reloc_processor reloc_processor
+	dwarf_manager dwarf_manager
+	unwind_manager unwind_manager
+	build_id_manager build_id_manager
+	got_manager got_manager
+	plt_manager plt_manager
+	tls_manager tls_manager
 	dynamic_reloc_manager dynamic_reloc_manager
-	sections            map[string]section
+	map[string]section sections
 }
 
 func new_production_linker(config linker_config) production_linker {

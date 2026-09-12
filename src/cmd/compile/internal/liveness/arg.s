@@ -1,14 +1,14 @@
 package compile.internal.liveness
 use std.slices
 struct arg_liveness_slot {
-    string name
-    int frame_offset
-    int ptr_words
+    name string
+    frame_offset int
+    ptr_words int
 }
 
 struct arg_liveness_payload {
-    string symbol_name
-    int min_slot_offset
+    symbol_name string
+    min_slot_offset int
     int[] map_offsets
     string[] maps
 }

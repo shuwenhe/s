@@ -27,13 +27,13 @@ const op_if = 24
 const op_phi = 25
 
 struct ssa_value {
-    int id
-    int op
-    int type_id
-    int arg_count
+    id int
+    op int
+    type_id int
+    arg_count int
     ssa_value*[] args
-    long aux_int
-    string aux_string
+    aux_int long
+    aux_string string
 }
 
 func ssa_value_new_const_int(int id, long value, int type_id) ssa_value* {

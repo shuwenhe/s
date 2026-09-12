@@ -11,8 +11,8 @@ use compile.internal.typesys.is_heap_reference_type
 
 struct ir_builder {
     current_function* mir.ir_function
-    current_block_id int
-    instruction_counter int
+    int current_block_id
+    int instruction_counter
 }
 
 func new_ir_builder(string func_name) ir_builder {

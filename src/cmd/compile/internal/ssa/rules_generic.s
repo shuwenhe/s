@@ -4,12 +4,12 @@ use std.vec.vec
 use std.string
 
 struct ssa_rule {
-    string name
-    string pattern
-    string replacement
-    int priority
-    int benefit_estimate
-    bool requires_liveness
+    name string
+    pattern string
+    replacement string
+    priority int
+    benefit_estimate int
+    requires_liveness bool
 }
 
 struct rule_context {
@@ -466,11 +466,11 @@ struct ssa_optimizer {
 }
 
 struct optimization_stats {
-    string pass_name
-    int64 instructions_before
-    int64 instructions_after
-    int64 time_us
-    float reduction_ratio
+    pass_name string
+    instructions_before int64
+    instructions_after int64
+    time_us int64
+    reduction_ratio float
 }
 
 func (opt: &mut ssa_optimizer) run_optimization(ssa: &mut ssa_function) () {

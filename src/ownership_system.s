@@ -3,8 +3,8 @@ package ownership_system
 
 
 struct resource {
-    ptr *int
-    id int
+    *int ptr
+    int id
 }
 
 func new_resource(int id) Resource {
@@ -91,8 +91,8 @@ func demonstrate_scope() int {
 
 
 struct lifetime_tracker {
-    ref *int
-    createdAt int
+    *int ref
+    int createdAt
 }
 
 func borrow_with_lifetime(r *Resource) *int {
@@ -111,7 +111,7 @@ func demonstrate_lifetime_valid() int {
 
 
 struct boxed_resource {
-    data *int
+    *int data
 }
 
 func create_boxed_resource(int value) BoxedResource {
@@ -127,11 +127,11 @@ func consume_boxed(br BoxedResource) int {
 
 
 struct move_type {
-    ptr *int
+    *int ptr
 }
 
 struct copy_type {
-    value int
+    int value
 }
 
 func demonstrate_move_semantics() int {
@@ -155,8 +155,8 @@ func demonstrate_copy_semantics() int {
 
 
 struct drop_flagged_resource {
-    ptr *int
-    dropped bool
+    *int ptr
+    bool dropped
 }
 
 func new_drop_flagged_resource(int value) DropFlaggedResource {
@@ -183,8 +183,8 @@ func (r *DropFlaggedResource) drop_it() () {
 
 
 struct raii_resource {
-    id int
-    handle *int
+    int id
+    *int handle
 }
 
 func acquire_resource(int id) RAIIResource {
@@ -210,8 +210,8 @@ func (r RAIIResource) release_resource() () {
 
 
 struct container {
-    resources []*int
-    count int
+    []*int resources
+    int count
 }
 
 func (c *Container) add_to_container(int value) () {

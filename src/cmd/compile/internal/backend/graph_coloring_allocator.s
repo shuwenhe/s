@@ -1,18 +1,18 @@
 package register_allocator
 
 struct live_range {
-    int value_id
-    int start_block
-    int start_instr
-    int end_block
-    int end_instr
-    int reg
-    int spilled
-    int priority
+    value_id int
+    start_block int
+    start_instr int
+    end_block int
+    end_instr int
+    reg int
+    spilled int
+    priority int
 }
 
 struct interference_graph {
-    int node_count
+    node_count int
     int[][] adjacency
     int[] color
     int[] degree
@@ -20,14 +20,14 @@ struct interference_graph {
 }
 
 struct register_allocator {
-    int num_regs
+    num_regs int
     int[] available_regs
-    int reg_count
+    reg_count int
     live_range[] ranges
-    int range_count
-    interference_graph graph
+    range_count int
+    graph interference_graph
     int[] spill_list
-    int spill_count
+    spill_count int
 }
 
 func register_allocator_new(int num_regs) register_allocator* {

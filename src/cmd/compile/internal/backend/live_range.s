@@ -1,23 +1,23 @@
 package backend
 struct live_range {
-    int value_id
-    int start
-    int end
-    int reg
-    bool spilled
-    int stack_offset
+    value_id int
+    start int
+    end int
+    reg int
+    spilled bool
+    stack_offset int
 }
 
 struct interval {
-    int start
-    int end
+    start int
+    end int
 }
 
 struct reg_alloc_state {
     live_range* ranges
-    int range_count
+    range_count int
     int[] free_regs
-    int next_stack_offset
+    next_stack_offset int
 }
 
 func make_reg_alloc_state() reg_alloc_state {

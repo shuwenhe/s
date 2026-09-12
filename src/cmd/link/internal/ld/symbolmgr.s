@@ -33,19 +33,19 @@ enum symbol_type {
 }
 
 struct comdat_group {
-	name         string
-	signature    i64
-	sections i32[]      
-	selection_kind i32       
+	string name
+	i64 signature
+	i32[] sections
+	i32 selection_kind
 }
 
 struct symbol_manager {
-	symbols      map[string]symbol_entry
-	all_symbols symbol_entry[]
-	comdat_groups map[string]comdat_group
-	weak_symbols  map[string]symbol_entry
-	imported_syms symbol_entry[]
-	exported_syms symbol_entry[]
+	map[string]symbol_entry symbols
+	symbol_entry[] all_symbols
+	map[string]comdat_group comdat_groups
+	map[string]symbol_entry weak_symbols
+	symbol_entry[] imported_syms
+	symbol_entry[] exported_syms
 }
 
 func new_symbol_manager() symbol_manager {
@@ -192,15 +192,15 @@ func (sm symbol_manager*) select_comdat_section(group comdat_group*, candidate s
 }
 
 struct symbol_version {
-	symbol_name string
-	version_name string
-	version_id i32
-	flags i32
+	string symbol_name
+	string version_name
+	i32 version_id
+	i32 flags
 }
 
 struct version_manager {
-	versions map[string]symbol_version
-	default_version string
+	map[string]symbol_version versions
+	string default_version
 }
 
 func new_version_manager() version_manager {
@@ -234,7 +234,7 @@ func (vm version_manager*) generate_version_symtab() symbol_version[] {
 }
 
 struct SymbolSet {
-	symbol_names map[string]bool
+	map[string]bool symbol_names
 }
 
 func new_symbol_set() SymbolSet {

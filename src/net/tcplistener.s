@@ -1,7 +1,7 @@
 package src.net
 struct tcp_listener {
-    int fd
-    tcp_addr laddr
+    fd int
+    laddr tcp_addr
 }
 
 func (l *tcp_listener) accept() conn {

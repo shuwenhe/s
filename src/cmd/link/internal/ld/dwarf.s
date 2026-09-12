@@ -70,10 +70,10 @@ enum dwarf_encoding {
 }
 
 struct dwarf_die {
-	tag       dwarf_tag
-	attributes map[dwarf_attribute]dwarf_attribute_value
-	children dwarf_die[]
-	offset     i64
+	dwarf_tag tag
+	map[dwarf_attribute]dwarf_attribute_value attributes
+	dwarf_die[] children
+	i64 offset
 }
 
 enum dwarf_attribute_value {
@@ -86,51 +86,51 @@ enum dwarf_attribute_value {
 }
 
 struct dwarf_compile_unit {
-	version        i32
-	abbrev_offset   i64
-	address_size    i32
-	offset         i64
-	unit_type       i32
-	die            dwarf_die
-	line_info       dwarf_line_info
-	location_info   DWARFLocationInfo[]
+	i32 version
+	i64 abbrev_offset
+	i32 address_size
+	i64 offset
+	i32 unit_type
+	dwarf_die die
+	dwarf_line_info line_info
+	DWARFLocationInfo[] location_info
 }
 
 struct dwarf_line_info {
-	min_instruction_length i32
-	line_base             i32
-	line_range            i32
-	opcode_base           i32
-	prologue u8[]
-	file_names string[]
-	directory_names string[]
-	statements dwarf_line_statement[]
+	i32 min_instruction_length
+	i32 line_base
+	i32 line_range
+	i32 opcode_base
+	u8[] prologue
+	string[] file_names
+	string[] directory_names
+	dwarf_line_statement[] statements
 }
 
 struct dwarf_line_statement {
-	address  i64
-	file     i32
-	line     i32
-	column   i32
-	is_stmt   bool
-	basic_block bool
-	end_sequence bool
+	i64 address
+	i32 file
+	i32 line
+	i32 column
+	bool is_stmt
+	bool basic_block
+	bool end_sequence
 }
 
 struct DWARFLocationInfo {
-	variable string
-	address  i64
-	size     i64
-	register i32
-	offset   i64
+	string variable
+	i64 address
+	i64 size
+	i32 register
+	i64 offset
 }
 
 struct dwarf_manager {
-	compile_units dwarf_compile_unit[]
-	abbrev_table  map[i32]u8[]
-	str_offsets   map[string]i64
-	line_info dwarf_line_info[]
-	version      i32
+	dwarf_compile_unit[] compile_units
+	map[i32]u8[] abbrev_table
+	map[string]i64 str_offsets
+	dwarf_line_info[] line_info
+	i32 version
 }
 
 func new_dwarfmanager(version i32) dwarf_manager {
@@ -202,34 +202,34 @@ func (dm dwarf_manager*) generate_debug_line() u8[] {
 }
 
 struct UnwindInfo {
-	version       i32
-	eh_frame_offset i64
-	fdes          FrameDescriptionEntry[]
-	cies          CommonInformationEntry[]
+	i32 version
+	i64 eh_frame_offset
+	FrameDescriptionEntry[] fdes
+	CommonInformationEntry[] cies
 }
 
 struct CommonInformationEntry {
-	length                i32
-	cie_id                 i32
-	version               i32
-	augmentation_string    string
-	code_alignment_factor   i32
-	data_alignment_factor   i32
-	return_address_register i32
-	augmentation_data u8[]
+	i32 length
+	i32 cie_id
+	i32 version
+	string augmentation_string
+	i32 code_alignment_factor
+	i32 data_alignment_factor
+	i32 return_address_register
+	u8[] augmentation_data
 }
 
 struct FrameDescriptionEntry {
-	length          i32
-	cie_pointer      i32
-	pc_begin         i64
-	pc_range         i64
-	augmentation_data u8[]
-	instructions u8[]
+	i32 length
+	i32 cie_pointer
+	i64 pc_begin
+	i64 pc_range
+	u8[] augmentation_data
+	u8[] instructions
 }
 
 struct unwind_manager {
-	unwind_info UnwindInfo
+	UnwindInfo unwind_info
 }
 
 func new_unwind_manager() unwind_manager {
