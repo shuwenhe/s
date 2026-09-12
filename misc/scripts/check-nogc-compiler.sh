@@ -9,6 +9,8 @@ work=$(mktemp -d "${TMPDIR:-/tmp}/s-nogc-check.XXXXXXXX")
 
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 
+export S_MODULAR_COMPILER=/nonexistent/s_modular
+
 
 
 cat >"$work/ownership.s" <<'SRC'
@@ -56,6 +58,42 @@ package main
 func main() {
 
     println("Hello, world!")
+
+    return
+
+}
+
+SRC
+
+cat >"$work/c_style_int_locals.s" <<'SRC'
+
+package main
+
+func main() {
+
+    int i,j
+
+    i = 10
+
+    j = 20
+
+    println("i + j =", i + j)
+
+    print("prefix", 7)
+
+    println(" suffix")
+
+    count := 5
+
+    int sum = 0
+
+    for i := 0; i < count; i++ {
+
+        sum += i
+
+    }
+
+    println("sum =", sum)
 
     return
 
@@ -1276,6 +1314,10 @@ test "$status" -eq 42
 "$root/bin/s" "$work/hello.s" -o "$work/hello"
 
 test "$("$work/hello")" = "Hello, world!"
+
+"$root/bin/s" "$work/c_style_int_locals.s" -o "$work/c_style_int_locals"
+
+test "$("$work/c_style_int_locals")" = "$(printf 'i + j = 30\nprefix 7 suffix\nsum = 10')"
 
 
 
