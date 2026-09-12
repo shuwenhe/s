@@ -41,12 +41,12 @@ struct drop_record {
 }
 
 struct ownership_state {
-    UNDEFINED = 0
-    OWNED = 1
-    BORROWED_SHARED = 2
-    BORROWED_MUT = 3
-    MOVED = 4
-    DROPPED = 5
+    undefined = 0
+    owned = 1
+    borrowed_shared = 2
+    borrowed_mut = 3
+    moved = 4
+    dropped = 5
 }
 
 func (ownership_drop_context* ctx) phase_ownership_analyze(stmts interface{}[]) bool {
@@ -211,7 +211,7 @@ func (ownership_drop_context* ctx) check_borrow_creation(int pc, stmt* borrow_st
                     sprintf("ERROR at PC %d: cannot create mutable borrow while %s is borrowed", pc, source))
                 return false
             }
-            record.state = ownership_state.BORROWED_MUT
+            record.state = ownership_state.borrowed_mut
         } else {
             for _, existing := range ctx.borrowed_set[source] {
                 if existing.is_mutable {
@@ -220,7 +220,7 @@ func (ownership_drop_context* ctx) check_borrow_creation(int pc, stmt* borrow_st
                     return false
                 }
             }
-            record.state = ownership_state.BORROWED_SHARED
+            record.state = ownership_state.borrowed_shared
         }
         borrow := borrow_record*{
             borrow_var: stmt.borrow_var,
