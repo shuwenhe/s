@@ -1648,7 +1648,7 @@ selfhost-bin:
 
 
 
-.PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-ownership-lowering-check mir-nogc-e2e-check no-gc-test
+.PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-borrow-dataflow-check mir-drop-elaboration-check mir-place-check mir-movepath-check mir-partial-move-check mir-ownership-lowering-check mir-nogc-e2e-check no-gc-test
 
 compiler: seed-compiler-bin
 
@@ -1701,6 +1701,56 @@ mir-move-dataflow-check: compiler
 	@misc/scripts/check-mir-move-dataflow.sh
 
 	@echo "✓ MIR move dataflow check passed"
+
+
+
+mir-borrow-dataflow-check: compiler
+
+	@echo "Running MIR borrow dataflow check..."
+
+	@misc/scripts/check-mir-borrow-dataflow.sh
+
+	@echo "✓ MIR borrow dataflow check passed"
+
+
+
+mir-drop-elaboration-check: compiler
+
+	@echo "Running MIR drop elaboration check..."
+
+	@misc/scripts/check-mir-drop-elaboration.sh
+
+	@echo "✓ MIR drop elaboration check passed"
+
+
+
+mir-place-check: compiler
+
+	@echo "Running MIR place check..."
+
+	@misc/scripts/check-mir-place.sh
+
+	@echo "✓ MIR place check passed"
+
+
+
+mir-movepath-check: compiler
+
+	@echo "Running MIR movepath check..."
+
+	@misc/scripts/check-mir-movepath.sh
+
+	@echo "✓ MIR movepath check passed"
+
+
+
+mir-partial-move-check: compiler
+
+	@echo "Running MIR partial move check..."
+
+	@misc/scripts/check-mir-partial-move.sh
+
+	@echo "✓ MIR partial move check passed"
 
 
 
