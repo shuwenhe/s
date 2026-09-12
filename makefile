@@ -1648,7 +1648,7 @@ selfhost-bin:
 
 
 
-.PHONY: compiler compiler-check compiler-s-check mir-nogc-e2e-check no-gc-test
+.PHONY: compiler compiler-check compiler-s-check mir-ownership-lowering-check mir-nogc-e2e-check no-gc-test
 
 compiler: seed-compiler-bin
 
@@ -1681,6 +1681,16 @@ compiler-s-check: compiler
 	@mkdir -p .bootstrap/compiler
 
 	@misc/scripts/check-nogc-compiler.sh
+
+
+
+mir-ownership-lowering-check: compiler
+
+	@echo "Running MIR ownership lowering check..."
+
+	@misc/scripts/check-mir-ownership-lowering.sh
+
+	@echo "✓ MIR ownership lowering check passed"
 
 
 

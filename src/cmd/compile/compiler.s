@@ -2491,14 +2491,204 @@ func compiler_compile(string source) compiler_state {
     return s
 }
 
+func compiler_mir_find(string[] names, int count, string name) int {
+    i := 0
+    while i < count {
+        if names[i] == name { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+func compiler_mir_value(int id) string {
+    return "_" + compiler_number(id)
+}
+
+func compiler_mir_has_live_borrow(int[] live, int[] kinds, int[] roots, int count, int owner) bool {
+    i := 0
+    while i < count {
+        if live[i] == 1 && (kinds[i] == 3 || kinds[i] == 4) && roots[i] == owner {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+func compiler_mir_drop_live(string out, int[] live, int[] value_ids, int[] kinds, int count) string {
+    result := out
+    i := count - 1
+    while i >= 0 {
+        if live[i] == 1 && kinds[i] == 2 {
+            result = result + "    Drop(" + compiler_mir_value(value_ids[i]) + ")\n"
+            live[i] = 0
+        }
+        i = i - 1
+    }
+    return result
+}
+
+func compiler_emit_mir(string source) string {
+    empty_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    names := empty_names
+    value_ids := empty_ints
+    live := empty_ints
+    kinds := empty_ints
+    roots := empty_ints
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    s = compiler_expect(s, "package")
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    s = compiler_next(s)
+    while s.token == "." { s = compiler_next(compiler_next(s)) }
+    while s.token != "func" && s.token != "" { s = compiler_next(s) }
+    s = compiler_expect(s, "func")
+    s = compiler_expect(s, "main")
+    s = compiler_expect(s, "(")
+    s = compiler_expect(s, ")")
+    if s.token == "int" { s = compiler_next(s) }
+    s = compiler_expect(s, "{")
+    out := "mir main blocks=1 entry=0 exit=0\nbb0:\n"
+    count := 0
+    next_value := 1
+    returned := false
+    while s.error == "" && s.token != "" && s.token != "}" && !returned {
+        if s.token == "return" {
+            s = compiler_next(s)
+            if s.token == "*" {
+                s = compiler_next(s)
+                slot := compiler_mir_find(names, count, s.token)
+                if slot < 0 || live[slot] != 1 { return "mir-error moved or unknown return value\n" }
+                result := next_value
+                next_value = next_value + 1
+                out = out + "    " + compiler_mir_value(result) + " = Deref(" + compiler_mir_value(value_ids[slot]) + ")\n"
+                out = compiler_mir_drop_live(out, live, value_ids, kinds, count)
+                out = out + "    Return(" + compiler_mir_value(result) + ")\n"
+                returned = true
+                s = compiler_next(s)
+            } else if compiler_ident(s.token) {
+                slot := compiler_mir_find(names, count, s.token)
+                if slot < 0 || live[slot] != 1 { return "mir-error moved or unknown return value\n" }
+                out = compiler_mir_drop_live(out, live, value_ids, kinds, count)
+                out = out + "    Return(" + compiler_mir_value(value_ids[slot]) + ")\n"
+                returned = true
+                s = compiler_next(s)
+            } else {
+                out = compiler_mir_drop_live(out, live, value_ids, kinds, count)
+                out = out + "    Return(0)\n"
+                returned = true
+            }
+        } else if s.token == "drop" {
+            s = compiler_expect(compiler_next(s), "(")
+            slot := compiler_mir_find(names, count, s.token)
+            if slot < 0 || live[slot] != 1 { return "mir-error drop of moved or unknown value\n" }
+            out = out + "    Drop(" + compiler_mir_value(value_ids[slot]) + ")\n"
+            live[slot] = 0
+            s = compiler_expect(compiler_next(s), ")")
+        } else if compiler_ident(s.token) {
+            name := s.token
+            s = compiler_next(s)
+            if s.token != ":=" { return "mir-error expected :=\n" }
+            s = compiler_next(s)
+            if s.token == "box" {
+                value := next_value
+                next_value = next_value + 1
+                s = compiler_expect(compiler_next(s), "(")
+                literal := s.token
+                s = compiler_expect(compiler_next(s), ")")
+                out = out + "    " + compiler_mir_value(value) + " = Box(" + literal + ")\n"
+                names[count] = name
+                value_ids[count] = value
+                live[count] = 1
+                kinds[count] = 2
+                roots[count] = -1
+                count = count + 1
+            } else if s.token == "&" {
+                mutable := false
+                s = compiler_next(s)
+                if s.token == "mut" {
+                    mutable = true
+                    s = compiler_next(s)
+                }
+                origin := compiler_mir_find(names, count, s.token)
+                if origin < 0 || live[origin] != 1 { return "mir-error borrow of moved or unknown value\n" }
+                if kinds[origin] != 2 { return "mir-error borrow requires owned value\n" }
+                value := next_value
+                next_value = next_value + 1
+                mode := "shared"
+                kind := 3
+                if mutable {
+                    mode = "mut"
+                    kind = 4
+                }
+                out = out + "    " + compiler_mir_value(value) + " = Borrow(" + mode + ", " + compiler_mir_value(value_ids[origin]) + ")\n"
+                names[count] = name
+                value_ids[count] = value
+                live[count] = 1
+                kinds[count] = kind
+                roots[count] = origin
+                count = count + 1
+                s = compiler_next(s)
+            } else if s.token == "*" {
+                s = compiler_next(s)
+                origin := compiler_mir_find(names, count, s.token)
+                if origin < 0 || live[origin] != 1 { return "mir-error deref of moved or unknown value\n" }
+                if kinds[origin] != 2 && kinds[origin] != 3 && kinds[origin] != 4 { return "mir-error deref requires owner or reference\n" }
+                value := next_value
+                next_value = next_value + 1
+                out = out + "    " + compiler_mir_value(value) + " = Deref(" + compiler_mir_value(value_ids[origin]) + ")\n"
+                names[count] = name
+                value_ids[count] = value
+                live[count] = 1
+                kinds[count] = 1
+                roots[count] = -1
+                count = count + 1
+                s = compiler_next(s)
+            } else if compiler_ident(s.token) {
+                origin := compiler_mir_find(names, count, s.token)
+                if origin < 0 || live[origin] != 1 { return "mir-error move from moved or unknown value\n" }
+                if kinds[origin] != 2 { return "mir-error move requires owned value\n" }
+                if compiler_mir_has_live_borrow(live, kinds, roots, count, origin) { return "mir-error move of borrowed value\n" }
+                value := next_value
+                next_value = next_value + 1
+                out = out + "    " + compiler_mir_value(value) + " = Move(" + compiler_mir_value(value_ids[origin]) + ")\n"
+                live[origin] = 0
+                names[count] = name
+                value_ids[count] = value
+                live[count] = 1
+                kinds[count] = kinds[origin]
+                roots[count] = -1
+                count = count + 1
+                s = compiler_next(s)
+            } else {
+                return "mir-error unsupported initializer\n"
+            }
+        } else {
+            s = compiler_next(s)
+        }
+        if s.token == ";" { s = compiler_next(s) }
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    if !returned {
+        out = compiler_mir_drop_live(out, live, value_ids, kinds, count)
+        out = out + "    Return(0)\n"
+    }
+    return out
+}
+
 func main() {
     args := host_args()
-    if len(args) != 4 || args[1] != "--emit-c" {
-        eprintln("usage: s_compiler --emit-c input.s output.c")
+    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir") {
+        eprintln("usage: s_compiler (--emit-c|--emit-mir) input.s output")
         return 2
     }
     string source = __host_read_to_string(args[2])
     if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
+    if args[1] == "--emit-mir" {
+        if __host_write_text_file(args[3], compiler_emit_mir(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
     result := compiler_compile(source)
     if result.error != "" { eprintln(result.error); return 1 }
     if __host_write_text_file(args[3], result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
