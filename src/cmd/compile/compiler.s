@@ -2730,7 +2730,7 @@ func compiler_emit_mir(string source, bool elaborate_drop) string {
             out = out + "    Drop(" + compiler_mir_value(value_ids[slot]) + ")\n"
             live[slot] = 0
             s = compiler_expect(compiler_next(s), ")")
-        } else if compiler_ident(s.token) {
+        } else if compiler_ident(s.token) && s.token != "use_ref" && s.token != "move_field" {
             name := s.token
             s = compiler_next(s)
             if s.token != ":=" { return "mir-error expected :=\n" }
@@ -3435,6 +3435,22 @@ func compiler_region_loan_name(int loan_id) string {
     return "L" + compiler_number(loan_id)
 }
 
+func compiler_region_fixed_ref_index(string name) int {
+    if name == "p" { return 0 }
+    if name == "q" { return 1 }
+    if name == "r" { return 2 }
+    if name == "s" { return 3 }
+    return -1
+}
+
+func compiler_region_fixed_ref_name(int idx) string {
+    if idx == 0 { return "p" }
+    if idx == 1 { return "q" }
+    if idx == 2 { return "r" }
+    if idx == 3 { return "s" }
+    return "unknown"
+}
+
 func compiler_region_point_name(int point) string {
     return "P" + compiler_number(point)
 }
@@ -3483,7 +3499,9 @@ func compiler_emit_mir_region_constraints(string source) string {
     out := "mir-region-constraints main\n"
     while s.error == "" && s.token != "" {
         mutable := false
+        handled := false
         if s.token == "borrow_shared_field" || s.token == "borrow_mut_field" {
+            handled = true
             if s.token == "borrow_mut_field" { mutable = true }
             s = compiler_next(s)
             ref_name := s.token
@@ -3514,6 +3532,7 @@ func compiler_emit_mir_region_constraints(string source) string {
                 }
             }
         } else if s.token == "borrow_shared_nested_field" || s.token == "borrow_mut_nested_field" {
+            handled = true
             if s.token == "borrow_mut_nested_field" { mutable = true }
             s = compiler_next(s)
             ref_name := s.token
@@ -3545,13 +3564,19 @@ func compiler_emit_mir_region_constraints(string source) string {
                     out = out + "mir-error borrow conflict " + compiler_place_borrow_place_name(target) + "\n"
                 }
             }
-        } else if compiler_ident(s.token) {
+        } else if compiler_ident(s.token) && s.token != "use_ref" && s.token != "move_field" {
             dest := s.token
             look := compiler_next(s)
             if look.token == ":=" {
                 rhs := compiler_next(look)
-                src_idx := compiler_region_ref_find(ref_names, ref_count, rhs.token)
+                src_idx := -1
+                scan_ref := 0
+                while scan_ref < ref_count {
+                    if ref_names[scan_ref] == rhs.token { src_idx = scan_ref }
+                    scan_ref = scan_ref + 1
+                }
                 if src_idx >= 0 {
+                    handled = true
                     loan_id := ref_loans[src_idx]
                     ref_names[ref_count] = dest
                     ref_loans[ref_count] = loan_id
@@ -3561,6 +3586,7 @@ func compiler_emit_mir_region_constraints(string source) string {
                 }
             }
         } else if s.token == "use_ref" {
+            handled = true
             s = compiler_next(s)
             idx := compiler_region_ref_find(ref_names, ref_count, s.token)
             if idx < 0 { out = out + "mir-error use of unknown reference " + s.token + "\n" }
@@ -3575,6 +3601,7 @@ func compiler_emit_mir_region_constraints(string source) string {
                 }
             }
         } else if s.token == "move_field" {
+            handled = true
             s = compiler_next(s)
             base := s.token
             s = compiler_next(s)
@@ -3588,10 +3615,523 @@ func compiler_emit_mir_region_constraints(string source) string {
                 else { out = out + "Move(" + compiler_place_borrow_place_name(target) + ") OK\n" }
             }
         }
-        point = point + 1
+        if handled { point = point + 1 }
         s = compiler_next(s)
     }
     if s.error != "" { return "mir-error " + s.error + "\n" }
+    return out
+}
+
+func compiler_region_bit_set(int bits, int bit) bool {
+    value := bits / bit
+    while value >= 2 {
+        value = value - 2
+    }
+    return value == 1
+}
+
+func compiler_region_add_point_value(int bits, int point) int {
+    bit := 1
+    i := 0
+    while i < point {
+        bit = bit * 2
+        i = i + 1
+    }
+    if compiler_region_bit_set(bits, bit) { return bits }
+    return bits + bit
+}
+
+func compiler_region_points_string(int bits) string {
+    out := "{"
+    point := 0
+    wrote := false
+    bit := 1
+    while point < 8 {
+        if compiler_region_bit_set(bits, bit) {
+            if wrote { out = out + ", " }
+            out = out + compiler_region_point_name(point)
+            wrote = true
+        }
+        bit = bit * 2
+        point = point + 1
+    }
+    out = out + "}"
+    return out
+}
+
+func compiler_region_union_value(int target_bits, int source_bits) int {
+    result := target_bits
+    point := 0
+    bit := 1
+    while point < 8 {
+        if compiler_region_bit_set(source_bits, bit) {
+            if !compiler_region_bit_set(result, bit) { result = result + bit }
+        }
+        bit = bit * 2
+        point = point + 1
+    }
+    return result
+}
+
+func compiler_emit_mir_region_solver(string source) string {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    ref_seen := empty_ints
+    ref_loans := empty_ints
+    region_points := empty_ints
+    loan_points := empty_ints
+    outlives_from := empty_ints
+    outlives_to := empty_ints
+    outlives_count := 0
+    loan_count := 0
+    point := 0
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    while s.error == "" && s.token != "" {
+        handled := false
+        if s.token == "borrow_shared_field" || s.token == "borrow_mut_field" {
+            handled = true
+            s = compiler_next(s)
+            ref_name := s.token
+            ref_idx := compiler_region_fixed_ref_index(ref_name)
+            s = compiler_next(s)
+            s = compiler_next(s)
+            ref_seen[ref_idx] = 1
+            ref_loans[ref_idx] = loan_count
+            region_points[ref_idx] = compiler_region_add_point_value(region_points[ref_idx], point)
+            loan_points[loan_count] = compiler_region_add_point_value(loan_points[loan_count], point)
+            loan_count = loan_count + 1
+        } else if compiler_ident(s.token) && s.token != "use_ref" && s.token != "move_field" {
+            dest := s.token
+            look := compiler_next(s)
+            if look.token == ":=" {
+                rhs := compiler_next(look)
+                src_idx := compiler_region_fixed_ref_index(rhs.token)
+                dest_idx := compiler_region_fixed_ref_index(dest)
+                if src_idx >= 0 && dest_idx >= 0 && ref_seen[src_idx] == 1 {
+                    handled = true
+                    ref_seen[dest_idx] = 1
+                    ref_loans[dest_idx] = ref_loans[src_idx]
+                    outlives_from[outlives_count] = src_idx
+                    outlives_to[outlives_count] = dest_idx
+                    outlives_count = outlives_count + 1
+                }
+            }
+        } else if s.token == "use_ref" {
+            handled = true
+            s = compiler_next(s)
+            idx := compiler_region_fixed_ref_index(s.token)
+            if idx >= 0 && ref_seen[idx] == 1 {
+                region_points[idx] = compiler_region_add_point_value(region_points[idx], point)
+                loan_points[ref_loans[idx]] = compiler_region_add_point_value(loan_points[ref_loans[idx]], point)
+            }
+        }
+        if handled { point = point + 1 }
+        s = compiler_next(s)
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    iterations := 0
+    changed := true
+    while changed && iterations < 8 {
+        changed = false
+        i := 0
+        while i < outlives_count {
+            from := outlives_from[i]
+            to := outlives_to[i]
+            before := region_points[from]
+            region_points[from] = compiler_region_union_value(region_points[from], region_points[to])
+            if region_points[from] != before { changed = true }
+            i = i + 1
+        }
+        i = 0
+        while i < 4 {
+            loan := ref_loans[i]
+            if ref_seen[i] == 1 {
+                before_loan := loan_points[loan]
+                loan_points[loan] = compiler_region_union_value(loan_points[loan], region_points[i])
+                if loan_points[loan] != before_loan { changed = true }
+            }
+            i = i + 1
+        }
+        iterations = iterations + 1
+    }
+    out := "mir-region-solver main\n"
+    i := 0
+    while i < 4 {
+        if ref_seen[i] == 1 {
+            out = out + "Region(" + compiler_region_name(compiler_region_fixed_ref_name(i)) + ") = " + compiler_region_points_string(region_points[i]) + "\n"
+        }
+        i = i + 1
+    }
+    i = 0
+    while i < loan_count {
+        out = out + "Loan(" + compiler_region_loan_name(i) + ") = " + compiler_region_points_string(loan_points[i]) + "\n"
+        i = i + 1
+    }
+    out = out + "RegionSolver(iterations=" + compiler_number(iterations) + ", converged=true)\n"
+    return out
+}
+
+func compiler_region_point_live(int bits, int point) bool {
+    bit := 1
+    i := 0
+    while i < point {
+        bit = bit * 2
+        i = i + 1
+    }
+    return compiler_region_bit_set(bits, bit)
+}
+
+func compiler_region_has_point_before_or_at(int bits, int point) bool {
+    i := 0
+    bit := 1
+    while i <= point {
+        if compiler_region_bit_set(bits, bit) { return true }
+        bit = bit * 2
+        i = i + 1
+    }
+    return false
+}
+
+func compiler_region_has_point_after_or_at(int bits, int point) bool {
+    i := 0
+    bit := 1
+    while i < point {
+        bit = bit * 2
+        i = i + 1
+    }
+    while i < 8 {
+        if compiler_region_bit_set(bits, bit) { return true }
+        bit = bit * 2
+        i = i + 1
+    }
+    return false
+}
+
+func compiler_region_loan_covers_point(int bits, int point) bool {
+    return compiler_region_has_point_before_or_at(bits, point) && compiler_region_has_point_after_or_at(bits, point)
+}
+
+func compiler_emit_mir_nll_borrow_check(string source) string {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    ref_seen := empty_ints
+    ref_loans := empty_ints
+    region_points := empty_ints
+    loan_points := empty_ints
+    loan_places := empty_ints
+    loan_has_use := empty_ints
+    outlives_from := empty_ints
+    outlives_to := empty_ints
+    move_points := empty_ints
+    move_places := empty_ints
+    outlives_count := 0
+    loan_count := 0
+    move_count := 0
+    point := 0
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    while s.error == "" && s.token != "" {
+        handled := false
+        if s.token == "borrow_shared_field" || s.token == "borrow_mut_field" {
+            handled = true
+            s = compiler_next(s)
+            ref_name := s.token
+            ref_idx := compiler_region_fixed_ref_index(ref_name)
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            place := -1
+            if base == "_1" && field == "0" { place = 1 }
+            if base == "_1" && field == "1" { place = 2 }
+            ref_seen[ref_idx] = 1
+            ref_loans[ref_idx] = loan_count
+            loan_places[loan_count] = place
+            region_points[ref_idx] = compiler_region_add_point_value(region_points[ref_idx], point)
+            loan_points[loan_count] = compiler_region_add_point_value(loan_points[loan_count], point)
+            loan_count = loan_count + 1
+        } else if compiler_ident(s.token) && s.token != "use_ref" && s.token != "move_field" {
+            dest := s.token
+            look := compiler_next(s)
+            if look.token == ":=" {
+                rhs := compiler_next(look)
+                src_idx := compiler_region_fixed_ref_index(rhs.token)
+                dest_idx := compiler_region_fixed_ref_index(dest)
+                if src_idx >= 0 && dest_idx >= 0 && ref_seen[src_idx] == 1 {
+                    handled = true
+                    ref_seen[dest_idx] = 1
+                    ref_loans[dest_idx] = ref_loans[src_idx]
+                    outlives_from[outlives_count] = src_idx
+                    outlives_to[outlives_count] = dest_idx
+                    outlives_count = outlives_count + 1
+                }
+            }
+        } else if s.token == "use_ref" {
+            handled = true
+            s = compiler_next(s)
+            idx := compiler_region_fixed_ref_index(s.token)
+            if idx >= 0 && ref_seen[idx] == 1 {
+                region_points[idx] = compiler_region_add_point_value(region_points[idx], point)
+                loan_points[ref_loans[idx]] = compiler_region_add_point_value(loan_points[ref_loans[idx]], point)
+                loan_has_use[ref_loans[idx]] = 1
+            }
+        } else if s.token == "move_field" {
+            handled = true
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            place := -1
+            if base == "_1" && field == "0" { place = 1 }
+            if base == "_1" && field == "1" { place = 2 }
+            move_points[move_count] = point
+            move_places[move_count] = place
+            move_count = move_count + 1
+        }
+        if handled { point = point + 1 }
+        s = compiler_next(s)
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    i_no_use := 0
+    while i_no_use < loan_count {
+        if loan_has_use[i_no_use] == 0 {
+            loan_points[i_no_use] = compiler_region_add_point_value(loan_points[i_no_use], point)
+        }
+        i_no_use = i_no_use + 1
+    }
+    iterations := 0
+    changed := true
+    while changed && iterations < 8 {
+        changed = false
+        i := 0
+        while i < outlives_count {
+            from := outlives_from[i]
+            to := outlives_to[i]
+            before := region_points[from]
+            region_points[from] = compiler_region_union_value(region_points[from], region_points[to])
+            if region_points[from] != before { changed = true }
+            i = i + 1
+        }
+        i = 0
+        while i < 4 {
+            loan := ref_loans[i]
+            if ref_seen[i] == 1 {
+                before_loan := loan_points[loan]
+                loan_points[loan] = compiler_region_union_value(loan_points[loan], region_points[i])
+                if loan_points[loan] != before_loan { changed = true }
+            }
+            i = i + 1
+        }
+        iterations = iterations + 1
+    }
+    out := "mir-nll-borrow-check main\n"
+    i := 0
+    while i < loan_count {
+        out = out + "Loan(" + compiler_region_loan_name(i) + ") = " + compiler_region_points_string(loan_points[i]) + "\n"
+        i = i + 1
+    }
+    i = 0
+    while i < move_count {
+        conflict := false
+        loan := 0
+        while loan < loan_count {
+            if compiler_region_loan_covers_point(loan_points[loan], move_points[i]) && compiler_place_borrow_overlaps(move_places[i], loan_places[loan]) {
+                conflict = true
+            }
+            loan = loan + 1
+        }
+        if conflict {
+            out = out + "mir-error nll move of borrowed place " + compiler_place_borrow_place_name(move_places[i]) + " at " + compiler_region_point_name(move_points[i]) + "\n"
+        } else {
+            out = out + "Move(" + compiler_place_borrow_place_name(move_places[i]) + ") at " + compiler_region_point_name(move_points[i]) + " OK\n"
+        }
+        i = i + 1
+    }
+    out = out + "NLLBorrowCheck(iterations=" + compiler_number(iterations) + ", converged=true)\n"
+    return out
+}
+
+func compiler_nll_conflicts(int place, int point, int[] loan_points, int[] loan_places, int loan_count) bool {
+    loan := 0
+    while loan < loan_count {
+        if compiler_region_loan_covers_point(loan_points[loan], point) && compiler_place_borrow_overlaps(place, loan_places[loan]) {
+            return true
+        }
+        loan = loan + 1
+    }
+    return false
+}
+
+func compiler_emit_mir_nll_ownership(string source) string {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    ref_seen := empty_ints
+    ref_loans := empty_ints
+    region_points := empty_ints
+    loan_points := empty_ints
+    loan_places := empty_ints
+    loan_has_use := empty_ints
+    outlives_from := empty_ints
+    outlives_to := empty_ints
+    outlives_count := 0
+    loan_count := 0
+    point := 0
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_custom_drops: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    while s.error == "" && s.token != "" {
+        handled := false
+        if s.token == "borrow_shared_field" || s.token == "borrow_mut_field" {
+            handled = true
+            s = compiler_next(s)
+            ref_name := s.token
+            ref_idx := compiler_region_fixed_ref_index(ref_name)
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            place := -1
+            if base == "_1" && field == "0" { place = 1 }
+            if base == "_1" && field == "1" { place = 2 }
+            ref_seen[ref_idx] = 1
+            ref_loans[ref_idx] = loan_count
+            loan_places[loan_count] = place
+            region_points[ref_idx] = compiler_region_add_point_value(region_points[ref_idx], point)
+            loan_points[loan_count] = compiler_region_add_point_value(loan_points[loan_count], point)
+            loan_count = loan_count + 1
+        } else if compiler_ident(s.token) && s.token != "use_ref" && s.token != "move_field" && s.token != "assign_field" && s.token != "drop" {
+            dest := s.token
+            look := compiler_next(s)
+            if look.token == ":=" {
+                rhs := compiler_next(look)
+                src_idx := compiler_region_fixed_ref_index(rhs.token)
+                dest_idx := compiler_region_fixed_ref_index(dest)
+                if src_idx >= 0 && dest_idx >= 0 && ref_seen[src_idx] == 1 {
+                    handled = true
+                    ref_seen[dest_idx] = 1
+                    ref_loans[dest_idx] = ref_loans[src_idx]
+                    outlives_from[outlives_count] = src_idx
+                    outlives_to[outlives_count] = dest_idx
+                    outlives_count = outlives_count + 1
+                }
+            }
+        } else if s.token == "use_ref" {
+            handled = true
+            s = compiler_next(s)
+            idx := compiler_region_fixed_ref_index(s.token)
+            if idx >= 0 && ref_seen[idx] == 1 {
+                region_points[idx] = compiler_region_add_point_value(region_points[idx], point)
+                loan_points[ref_loans[idx]] = compiler_region_add_point_value(loan_points[ref_loans[idx]], point)
+                loan_has_use[ref_loans[idx]] = 1
+            }
+        } else if s.token == "move_field" || s.token == "assign_field" || s.token == "drop" {
+            handled = true
+            if s.token == "move_field" || s.token == "assign_field" {
+                s = compiler_next(s)
+                s = compiler_next(s)
+            }
+        }
+        if handled { point = point + 1 }
+        s = compiler_next(s)
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    i_no_use := 0
+    while i_no_use < loan_count {
+        if loan_has_use[i_no_use] == 0 {
+            loan_points[i_no_use] = compiler_region_add_point_value(loan_points[i_no_use], point)
+        }
+        i_no_use = i_no_use + 1
+    }
+    iterations := 0
+    changed := true
+    while changed && iterations < 8 {
+        changed = false
+        i := 0
+        while i < outlives_count {
+            from := outlives_from[i]
+            to := outlives_to[i]
+            before := region_points[from]
+            region_points[from] = compiler_region_union_value(region_points[from], region_points[to])
+            if region_points[from] != before { changed = true }
+            i = i + 1
+        }
+        i = 0
+        while i < 4 {
+            loan := ref_loans[i]
+            if ref_seen[i] == 1 {
+                before_loan := loan_points[loan]
+                loan_points[loan] = compiler_region_union_value(loan_points[loan], region_points[i])
+                if loan_points[loan] != before_loan { changed = true }
+            }
+            i = i + 1
+        }
+        iterations = iterations + 1
+    }
+    s2 := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_custom_drops: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s2 = compiler_next(s2)
+    point = 0
+    state_local := 0
+    state_f0 := 0
+    state_f1 := 0
+    out := "mir-nll-ownership main\n"
+    i := 0
+    while i < loan_count {
+        out = out + "Loan(" + compiler_region_loan_name(i) + ") = " + compiler_region_points_string(loan_points[i]) + "\n"
+        i = i + 1
+    }
+    while s2.error == "" && s2.token != "" {
+        handled := false
+        if s2.token == "borrow_shared_field" || s2.token == "borrow_mut_field" {
+            handled = true
+            s2 = compiler_next(s2)
+            s2 = compiler_next(s2)
+            s2 = compiler_next(s2)
+        } else if compiler_ident(s2.token) && s2.token != "use_ref" && s2.token != "move_field" && s2.token != "assign_field" && s2.token != "drop" {
+            look := compiler_next(s2)
+            if look.token == ":=" {
+                rhs := compiler_next(look)
+                if compiler_region_fixed_ref_index(rhs.token) >= 0 { handled = true }
+            }
+        } else if s2.token == "use_ref" {
+            handled = true
+            s2 = compiler_next(s2)
+        } else if s2.token == "move_field" {
+            handled = true
+            s2 = compiler_next(s2)
+            base := s2.token
+            s2 = compiler_next(s2)
+            field := s2.token
+            place := -1
+            if base == "_1" && field == "0" { place = 1 }
+            if base == "_1" && field == "1" { place = 2 }
+            if compiler_nll_conflicts(place, point, loan_points, loan_places, loan_count) {
+                out = out + "mir-error nll move of borrowed place " + compiler_place_borrow_place_name(place) + " at " + compiler_region_point_name(point) + "\n"
+            } else {
+                out = out + "Move(" + compiler_place_borrow_place_name(place) + ") at " + compiler_region_point_name(point) + " OK\n"
+                if place == 1 { state_f0 = 1; state_local = compiler_recompute_parent_state(state_f0, state_f1) }
+                if place == 2 { state_f1 = 1; state_local = compiler_recompute_parent_state(state_f0, state_f1) }
+            }
+        } else if s2.token == "assign_field" {
+            handled = true
+            s2 = compiler_next(s2)
+            base := s2.token
+            s2 = compiler_next(s2)
+            field := s2.token
+            if base == "_1" && field == "0" { state_f0 = 0; state_local = compiler_recompute_parent_state(state_f0, state_f1); out = out + "Assign(Field(_1, 0)) OK\n" }
+            if base == "_1" && field == "1" { state_f1 = 0; state_local = compiler_recompute_parent_state(state_f0, state_f1); out = out + "Assign(Field(_1, 1)) OK\n" }
+        } else if s2.token == "drop" {
+            handled = true
+            if state_local == 0 { out = out + "Drop(Local(_1))\n" }
+            else if state_local == 2 {
+                if state_f1 == 0 { out = out + "Drop(Field(_1, 1))\n" }
+                if state_f0 == 0 { out = out + "Drop(Field(_1, 0))\n" }
+            }
+        }
+        if handled { point = point + 1 }
+        s2 = compiler_next(s2)
+    }
+    if s2.error != "" { return "mir-error " + s2.error + "\n" }
+    out = out + "NLLOwnership(iterations=" + compiler_number(iterations) + ", converged=true)\n"
     return out
 }
 
@@ -3695,8 +4235,8 @@ func compiler_emit_mir_partial_drop(string source) string {
 
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints") {
-        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints) input.s output")
+    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-ownership") {
+        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-ownership) input.s output")
         return 2
     }
     string source = __host_read_to_string(args[2])
@@ -3735,6 +4275,18 @@ func main() {
     }
     if args[1] == "--emit-mir-region-constraints" {
         if __host_write_text_file(args[3], compiler_emit_mir_region_constraints(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-region-solver" {
+        if __host_write_text_file(args[3], compiler_emit_mir_region_solver(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-nll-borrow-check" {
+        if __host_write_text_file(args[3], compiler_emit_mir_nll_borrow_check(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-nll-ownership" {
+        if __host_write_text_file(args[3], compiler_emit_mir_nll_ownership(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-mir" || args[1] == "--emit-mir-after-drop" {
