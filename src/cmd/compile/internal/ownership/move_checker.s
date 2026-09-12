@@ -24,7 +24,7 @@ func (move_checker* mc) checkStatement(pc int, stmt interface{}) {
     case AssignmentStmt*:
         mc.checkAssignment(pc, s)
     case CallStmt*:
-        mc.checkFunctionCall(pc, s)
+        mc.check_function_call(pc, s)
     case ReturnStmt*:
         mc.checkReturn(pc, s)
     case IfStmt*:
@@ -60,7 +60,7 @@ func (move_checker* mc) checkAssignment(pc int, assign* AssignmentStmt) {
     mc.ctx.SetStateAt(pc, assign.LHS, STATE_OWNED)
 }
 
-func (move_checker* mc) checkFunctionCall(pc int, call* CallStmt) {
+func (move_checker* mc) check_function_call(pc int, call* CallStmt) {
     for i, arg := range call.Args {
         argState := mc.ctx.GetStateAt(pc, arg.String())
         if argState == STATE_MOVED {
