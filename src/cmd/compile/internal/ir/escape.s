@@ -8,13 +8,13 @@ enum escape_level {
 }
 
 struct escape_info {
-    int var_id
-    escape_level level
+    var_id int
+    level escape_level
     int[] escapes_to
-    bool is_pointer_receiver
-    bool assigned_to_global
-    bool returned_to_caller
-    bool passed_to_func
+    is_pointer_receiver bool
+    assigned_to_global bool
+    returned_to_caller bool
+    passed_to_func bool
 }
 
 struct escape_analysis {

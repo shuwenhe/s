@@ -1,12 +1,12 @@
 package compile.internal.ssa
 use std.slices
 struct ssa_block {
-    int id
-    string kind
+    id int
+    kind string
     int[] values
     int[] preds
     int[] succs
-    int control
+    control int
 }
 
 func make_block(int id, string kind) ssa_block {

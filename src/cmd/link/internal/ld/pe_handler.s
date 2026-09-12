@@ -38,85 +38,85 @@ enum pe_machine {
 }
 
 struct pe_file_header {
-	machine              u16
-	number_of_sections     u16
-	time_date_stamp        u32
-	pointer_to_symbol_table u32
-	number_of_symbols      u32
-	size_of_optional_header u16
-	characteristics      u16
+	u16 machine
+	u16 number_of_sections
+	u32 time_date_stamp
+	u32 pointer_to_symbol_table
+	u32 number_of_symbols
+	u16 size_of_optional_header
+	u16 characteristics
 }
 
 struct pe_optional_header {
-	magic                       u16
-	major_linker_version          u8
-	minor_linker_version          u8
-	size_of_code                  u32
-	size_of_initialized_data       u32
-	size_of_uninitialized_data     u32
-	address_of_entry_point         u32
-	base_of_code                  u32
-	base_of_data                  u32
-	image_base                   u64
-	section_alignment            u32
-	file_alignment               u32
-	major_operating_system_version u16
-	minor_operating_system_version u16
-	major_image_version           u16
-	minor_image_version           u16
-	major_subsystem_version       u16
-	minor_subsystem_version       u16
-	win32_version_value           u32
-	size_of_image                 u32
-	size_of_headers               u32
-	check_sum                    u32
-	subsystem                   u16
-	dll_characteristics         u16
-	size_of_stack_reserve          u64
-	size_of_stack_commit           u64
-	size_of_heap_reserve           u64
-	size_of_heap_commit            u64
-	loader_flags                 u32
-	number_of_rva_and_sizes         u32
+	u16 magic
+	u8 major_linker_version
+	u8 minor_linker_version
+	u32 size_of_code
+	u32 size_of_initialized_data
+	u32 size_of_uninitialized_data
+	u32 address_of_entry_point
+	u32 base_of_code
+	u32 base_of_data
+	u64 image_base
+	u32 section_alignment
+	u32 file_alignment
+	u16 major_operating_system_version
+	u16 minor_operating_system_version
+	u16 major_image_version
+	u16 minor_image_version
+	u16 major_subsystem_version
+	u16 minor_subsystem_version
+	u32 win32_version_value
+	u32 size_of_image
+	u32 size_of_headers
+	u32 check_sum
+	u16 subsystem
+	u16 dll_characteristics
+	u64 size_of_stack_reserve
+	u64 size_of_stack_commit
+	u64 size_of_heap_reserve
+	u64 size_of_heap_commit
+	u32 loader_flags
+	u32 number_of_rva_and_sizes
 }
 
 struct pe_section_header {
-	name                 [8]u8
-	virtual_size          u32
-	virtual_address       u32
-	size_of_raw_data        u32
-	pointer_to_raw_data     u32
-	pointer_to_relocations u32
-	pointer_to_linenumbers u32
-	number_of_relocations  u16
-	number_of_linenumbers  u16
-	characteristics      u32
+	[8]u8 name
+	u32 virtual_size
+	u32 virtual_address
+	u32 size_of_raw_data
+	u32 pointer_to_raw_data
+	u32 pointer_to_relocations
+	u32 pointer_to_linenumbers
+	u16 number_of_relocations
+	u16 number_of_linenumbers
+	u32 characteristics
 }
 
 struct pe_object {
-	dos_header       [64]u8
-	pe_signature     u32
-	file_header      pe_file_header
-	optional_header  pe_optional_header
-	sections pe_section_header[]
-	section_data     map[i32]u8[]
-	symbol_table pe_symbol[]
-	relocations pe_relocation[]
+	[64]u8 dos_header
+	u32 pe_signature
+	pe_file_header file_header
+	pe_optional_header optional_header
+	pe_section_header[] sections
+	map[i32]u8[] section_data
+	pe_symbol[] symbol_table
+	pe_relocation[] relocations
 }
 
 struct pe_symbol {
-	name          string
-	value         u32
-	section_number i16
-	type          u16
-	storage_class  u8
-	aux_symbols    i32
+	string name
+	u32 value
+	i16 section_number
+	u16 type
+	u8 storage_class
+	i32 aux_symbols
 }
 
 struct pe_relocation {
-	virtual_address u32
-	symbol_index    u32
-	type           u16
+	u32 virtual_address
+	u32 symbol_index
+	u16 type
 }
 
 func new_pe_object(machine pe_machine) pe_object {

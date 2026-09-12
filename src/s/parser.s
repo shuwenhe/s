@@ -5,14 +5,14 @@ use std.prelude.len
 use std.result.result
 use std.slices
 struct parse_error {
-    string message
-    int line
-    int column
+    message string
+    line int
+    column int
 }
 
 struct parser {
     token[] tokens
-    int index
+    index int
 }
 
 func parse_source(string source) (source_file, parse_error) {
@@ -1869,14 +1869,14 @@ func build_call_expr(string callee_name, expr[] args) expr {
 }
 
 struct parsed_function {
-    function_sig sig
+    sig function_sig
     option[block_expr] body
     option[named_type] receiver
 }
 
 struct named_type {
-    string name
-    string type_name
+    name string
+    type_name string
 }
 
 func decode_receiver_type(token[] tokens) (named_type, parse_error) {

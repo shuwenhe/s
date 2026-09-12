@@ -8,8 +8,8 @@ struct document_manager {
 }
 
 struct parse_error {
-    string message
-    position pos
+    message string
+    pos position
 }
 
 func new_document_manager() document_manager {

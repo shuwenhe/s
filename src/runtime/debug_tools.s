@@ -14,21 +14,21 @@ enum race_type {
 }
 
 struct race_event {
-	addr u64
-	g_id u64
-	event_type race_type
-	timestamp i64
-	stack_trace string[]
-	is_write bool
+	u64 addr
+	u64 g_id
+	race_type event_type
+	i64 timestamp
+	string[] stack_trace
+	bool is_write
 }
 
 struct race_detector {
-	enabled bool
-	events race_event[]
-	addr_map map[u64]race_event[]
-	lock sync.rwmutex
-	race_count i32
-	stop_on_race bool
+	bool enabled
+	race_event[] events
+	map[u64]race_event[] addr_map
+	sync.rwmutex lock
+	i32 race_count
+	bool stop_on_race
 }
 
 var global_race_detector race_detector
@@ -128,22 +128,22 @@ func event2_type_str(t race_type) string {
 }
 
 struct profiler {
-	enabled bool
-	samples profile_sample[]
-	current_sample i32
-	max_samples i32
-	sampling_rate i32
-	cpu_samples u64
-	mem_samples u64
+	bool enabled
+	profile_sample[] samples
+	i32 current_sample
+	i32 max_samples
+	i32 sampling_rate
+	u64 cpu_samples
+	u64 mem_samples
 }
 
 struct profile_sample {
-	g_id u64
-	pc u64
-	timestamp i64
-	stack_trace string[]
-	mem_used u64
-	cpu_time i64
+	u64 g_id
+	u64 pc
+	i64 timestamp
+	string[] stack_trace
+	u64 mem_used
+	i64 cpu_time
 }
 
 var global_profiler profiler
@@ -187,19 +187,19 @@ func profiler_sample(pc u64) {
 }
 
 struct tracer {
-	enabled bool
-	events trace_event[]
-	start_time i64
-	end_time i64
-	max_events i32
+	bool enabled
+	trace_event[] events
+	i64 start_time
+	i64 end_time
+	i32 max_events
 }
 
 struct trace_event {
-	event_type string
-	g_id u64
-	timestamp i64
-	duration i64
-	extra string
+	string event_type
+	u64 g_id
+	i64 timestamp
+	i64 duration
+	string extra
 }
 
 var global_tracer tracer

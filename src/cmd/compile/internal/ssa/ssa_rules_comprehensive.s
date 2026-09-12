@@ -1,16 +1,16 @@
 package internal.ssa
 
 struct ssa_rule {
-    int id
-    string name
-    int priority
-    int enabled
+    id int
+    name string
+    priority int
+    enabled int
 }
 
 struct ssa_rule_engine {
     ssa_rule[] rules
-    int rule_count
-    int max_rules
+    rule_count int
+    max_rules int
 }
 
 func ssa_rule_engine_new(int capacity) ssa_rule_engine {

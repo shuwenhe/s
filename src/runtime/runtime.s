@@ -26,11 +26,11 @@ func gc() () {
 }
 
 struct mem_stats {
-    int alloc
-    int total_alloc
-    int sys
-    int num_gc
-    int freed
+    alloc int
+    total_alloc int
+    sys int
+    num_gc int
+    freed int
 }
 
 func read_mem_stats() mem_stats {

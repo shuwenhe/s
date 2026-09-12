@@ -1,16 +1,16 @@
 package src.net.http
 use std.conv.int_to_string
 struct http_request {
-    string method
-    string path
+    method string
+    path string
     string[] headers
-    string body
+    body string
 }
 
 struct http_response {
-    int status_code
+    status_code int
     string[] headers
-    string body
+    body string
 }
 
 func split_http_string(string s, string sep) string[] {

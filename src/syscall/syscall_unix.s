@@ -2,8 +2,8 @@ package src.syscall
 use std.result.result
 use std.slices
 struct net_error {
-    string message
-    int    errno_code
+    message string
+    errno_code int
 }
 const af_unspec = 0
 const af_inet = 2
@@ -124,9 +124,9 @@ func accept_addr(int sockfd) (accept_result, net_error) {
 }
 
 struct accept_result {
-    int    fd
-    string ip
-    int    port
+    fd int
+    ip string
+    port int
 }
 
 func local_ip(int fd) string { __sys_local_ip(fd) }
@@ -197,9 +197,9 @@ func sendto_string(int fd, string data, string ip, int port, int family) (int, n
 }
 
 struct recvfrom_result {
-    string data
-    string ip
-    int port
+    data string
+    ip string
+    port int
 }
 
 func recvfrom_string(int fd, int max_bytes) (recvfrom_result, net_error) {

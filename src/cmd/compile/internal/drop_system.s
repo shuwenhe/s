@@ -3,15 +3,15 @@ package compile.internal.drop_system
 use compile.internal.typesys.is_copy_type
 
 struct dtor_field {
-    string name
-    string type_name
-    bool needs_drop
+    name string
+    type_name string
+    needs_drop bool
 }
 
 struct dtor_impl {
-    string type_name
-    bool custom
-    string function_name
+    type_name string
+    custom bool
+    function_name string
     dtor_field[] fields
 }
 
@@ -20,8 +20,8 @@ struct dtor_registry {
 }
 
 struct dtor_check_result {
-    bool ok
-    string message
+    ok bool
+    message string
 }
 
 func dtor_registry_new() dtor_registry {

@@ -15,7 +15,7 @@ package borrow_checker_guide
 
 
 struct owner {
-    resource *int
+    *int resource
 }
 
 func ownership_rule1() {
@@ -66,7 +66,7 @@ Rule 2: Mutable Borrow (可变借用)
 */
 
 struct data {
-    value *int
+    *int value
 }
 
 func valid_shared_borrows() int {
@@ -109,7 +109,7 @@ Key Concepts:
 */
 
 struct container {
-    data *int
+    *int data
 }
 
 func valid_lifetime() int {
@@ -134,7 +134,7 @@ func borrow_from_param(c *Container) *int {
 
 
 struct resource {
-    ptr *int
+    *int ptr
 }
 
 func consume_resource(r Resource) int {
@@ -171,7 +171,7 @@ func move_vs_borrow() int {
 */
 
 struct box_int {
-    ptr *int
+    *int ptr
 }
 
 func borrow_scope_example() int {
@@ -356,7 +356,7 @@ func conditional_return(bool condition) Resource {
 
 
 struct global_state {
-    data *int
+    *int data
 }
 
 

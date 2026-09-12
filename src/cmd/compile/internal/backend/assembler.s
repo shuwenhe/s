@@ -1,11 +1,11 @@
 package backend
 
 struct assembler {
-    output string[]
-    labels string[]
-    current_section string
-    data_section string[]
-    text_section string[]
+    string[] output
+    string[] labels
+    string current_section
+    string[] data_section
+    string[] text_section
 }
 
 func assembler_new() assembler {

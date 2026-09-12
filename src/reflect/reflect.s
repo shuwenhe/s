@@ -34,33 +34,33 @@ enum kind {
 
 struct type_info {
 	kind kind
-	name string
-	size u64
-	align u64
-	field_count i32
-	fields field_info[]
-	elem_type type_info*
-	key_type type_info*
-	value_type type_info*
+	string name
+	u64 size
+	u64 align
+	i32 field_count
+	field_info[] fields
+	type_info* elem_type
+	type_info* key_type
+	type_info* value_type
 }
 
 struct field_info {
-	name string
-	type_info type_info*
-	offset u64
-	index i32
-	is_exported bool
+	string name
+	type_info* type_info
+	u64 offset
+	i32 index
+	bool is_exported
 }
 
 struct value {
-	type_info type_info*
-	data unsafe.pointer
-	is_nil bool
+	type_info* type_info
+	unsafe.pointer data
+	bool is_nil
 }
 
 struct method {
-	name string
-	func_type type_info*
+	string name
+	type_info* func_type
 }
 
 func type_of(v value) type_info* {

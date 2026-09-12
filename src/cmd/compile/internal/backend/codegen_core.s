@@ -2,9 +2,9 @@ package backend
 struct codegen_context {
     prog_list* progs
     reg_alloc_state* alloc_state
-    string current_func
-    int current_pos
-    int next_label_id
+    current_func string
+    current_pos int
+    next_label_id int
     string[] labels
 }
 

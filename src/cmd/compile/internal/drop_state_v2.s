@@ -7,14 +7,14 @@ func drop_state_kind_partial() int { 3 }
 func drop_state_kind_dropped() int { 4 }
 
 struct drop_state {
-    int kind
-    string reason
-    int line_number
-    int column_number
+    kind int
+    reason string
+    line_number int
+    column_number int
 
     struct {
-        string field_name
-        int field_state
+        field_name string
+        field_state int
     }[] field_states
 
     int[] source_branch_ids

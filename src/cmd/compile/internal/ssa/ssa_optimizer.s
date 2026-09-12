@@ -1,10 +1,10 @@
 package internal.ssa
 
 struct ssa_optimizer {
-    ssa_rule_engine rule_engine
-    int optimization_level
-    int iteration_count
-    int max_iterations
+    rule_engine ssa_rule_engine
+    optimization_level int
+    iteration_count int
+    max_iterations int
 }
 
 func ssa_optimizer_new(int capacity, int opt_level) ssa_optimizer {

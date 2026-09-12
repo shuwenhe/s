@@ -1,14 +1,14 @@
 package bootstrap
 
 struct bootstrap_stage {
-    stage_num int
-    name string
-    is_complete int
+    int stage_num
+    string name
+    int is_complete
 }
 
 struct bootstrap_chain {
-    stages bootstrap_stage[]
-    current_stage int
+    bootstrap_stage[] stages
+    int current_stage
 }
 
 bootstrap_chain bootstrap_chain_global

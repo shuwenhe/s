@@ -1,14 +1,14 @@
 package compile.internal.arm
 struct arch_info {
-    string link_arch
-    int reg_sp
-    int max_width
-    bool soft_float
-    string zero_range_hook
-    string ginsnop_hook
-    string ssa_mark_moves_hook
-    string ssa_gen_value_hook
-    string ssa_gen_block_hook
+    link_arch string
+    reg_sp int
+    max_width int
+    soft_float bool
+    zero_range_hook string
+    ginsnop_hook string
+    ssa_mark_moves_hook string
+    ssa_gen_value_hook string
+    ssa_gen_block_hook string
 }
 
 func init() () {

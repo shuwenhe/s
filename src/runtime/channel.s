@@ -13,28 +13,28 @@ enum channel_status {
 }
 
 struct channel {
-	element_size u64
-	buffer u8[]
-	buf_capacity i32
-	buf_size i32
-	buf_head i32
-	buf_tail i32
-	status channel_status
-	recv_queue u64[]
-	send_queue u64[]
-	recv_lock sync.mutex
-	send_lock sync.mutex
-	close_lock sync.mutex
-	recv_count u64
-	send_count u64
-	closed_count u64
+	u64 element_size
+	u8[] buffer
+	i32 buf_capacity
+	i32 buf_size
+	i32 buf_head
+	i32 buf_tail
+	channel_status status
+	u64[] recv_queue
+	u64[] send_queue
+	sync.mutex recv_lock
+	sync.mutex send_lock
+	sync.mutex close_lock
+	u64 recv_count
+	u64 send_count
+	u64 closed_count
 }
 
 struct channel_op {
-	g u64
-	data unsafe.pointer
-	is_send bool
-	is_close bool
+	u64 g
+	unsafe.pointer data
+	bool is_send
+	bool is_close
 }
 
 func make_channel(element_size u64, buffer_size i32) (channel*, error) {
@@ -209,15 +209,15 @@ func (ch channel*) cap() i32 {
 }
 
 struct select_case {
-	ch channel*
-	data unsafe.pointer
-	is_send bool
-	is_default bool
+	channel* ch
+	unsafe.pointer data
+	bool is_send
+	bool is_default
 }
 
 struct select_result {
-	chosen i32
-	received_ok bool
+	i32 chosen
+	bool received_ok
 }
 
 func select_channels(cases select_case[]) select_result {
