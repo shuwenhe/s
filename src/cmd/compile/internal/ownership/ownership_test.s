@@ -5,23 +5,23 @@ func test_move_semantics() bool {
     checker := new_move_checker(ctx)
     test1_stmts := interface{}[]{
         assignment_stmt*{lhs: "a", rhs: "value", is_move: false},
-        assignment_stmt*{lhs: "b", rhs: "a", is_move: true},  // a → b (move)
-        use_stmt*{variable: "a"},  // ERROR: use-after-move
+        assignment_stmt*{lhs: "b", rhs: "a", is_move: true},
+        use_stmt*{variable: "a"},
     }
     checker.check_move_semantics(test1_stmts)
     if !ctx.has_errors() {
-        return false  // Should have detected use-after-move
+        return false
     }
     ctx = new_ownership_context()
     checker = new_move_checker(ctx)
     test2_stmts := interface{}[]{
-        assignment_stmt*{lhs: "x", rhs: "5", is_copy: true},  // x = 5 (copy)
-        assignment_stmt*{lhs: "y", rhs: "x", is_copy: true},  // y = x (copy, still valid)
-        use_stmt*{variable: "x"},  // OK: x still valid after copy
+        assignment_stmt*{lhs: "x", rhs: "5", is_copy: true},
+        assignment_stmt*{lhs: "y", rhs: "x", is_copy: true},
+        use_stmt*{variable: "x"},
     }
     checker.check_move_semantics(test2_stmts)
     if ctx.has_errors() {
-        return false  // Copy shouldn't cause errors
+        return false
     }
     return true
 }
@@ -30,34 +30,34 @@ func test_borrow_semantics() bool {
     ctx := new_ownership_context()
     checker := new_borrow_checker(ctx)
     test1_stmts := interface{}[]{
-        borrow_stmt*{source: "data", is_mutable: false},     // borrow &data
-        borrow_stmt*{source: "data", is_mutable: false},     // borrow &data again (OK)
+        borrow_stmt*{source: "data", is_mutable: false},
+        borrow_stmt*{source: "data", is_mutable: false},
         borrow_end_stmt*{source: "data"},
         borrow_end_stmt*{source: "data"},
     }
     checker.check_borrow_semantics(test1_stmts)
     if ctx.has_errors() {
-        return false  // Multiple shared borrows should be OK
+        return false
     }
     ctx = new_ownership_context()
     checker = new_borrow_checker(ctx)
     test2_stmts := interface{}[]{
-        borrow_stmt*{source: "data", is_mutable: true},      // &mut data
-        borrow_stmt*{source: "data", is_mutable: false},     // &data (ERROR: conflict)
+        borrow_stmt*{source: "data", is_mutable: true},
+        borrow_stmt*{source: "data", is_mutable: false},
     }
     checker.check_borrow_semantics(test2_stmts)
     if !ctx.has_errors() {
-        return false  // Should detect mutable borrow conflict
+        return false
     }
     ctx = new_ownership_context()
     checker = new_borrow_checker(ctx)
     test3_stmts := interface{}[]{
         borrow_stmt*{source: "x", is_mutable: false},
-        move_stmt*{variable: "x"},  // ERROR: move while borrowed
+        move_stmt*{variable: "x"},
     }
     checker.check_borrow_semantics(test3_stmts)
     if !ctx.has_errors() {
-        return false  // Should detect move while borrowed
+        return false
     }
     return true
 }
@@ -78,10 +78,10 @@ case drop_call*:
         }
     }
     if drop_count != 1 {
-        return false  // Should insert exactly one drop
+        return false
     }
     if !elaborator.verify_exactly_once_drop(elaborated) {
-        return false  // Should verify drop count
+        return false
     }
     return true
 }
@@ -141,7 +141,7 @@ func test_complete_ownership_pipeline() bool {
     }
     elaborated, success := oa.analyze_function("test_func", test_stmts)
     if !success {
-        return true  // For now, either result is OK
+        return true
     }
     return true
 }
