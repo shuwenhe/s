@@ -61,7 +61,7 @@ func main() int {
 }
 SRC
 
-"$root/bin/s" --emit-mir "$work/box_move_deref_drop.s" "$work/box_move_deref_drop.mir"
+"$root/bin/s" --emit-mir-after-drop "$work/box_move_deref_drop.s" "$work/box_move_deref_drop.mir"
 
 box_count=$(grep -c 'Box(' "$work/box_move_deref_drop.mir" || true)
 move_count=$(grep -c 'Move(' "$work/box_move_deref_drop.mir" || true)
@@ -111,7 +111,7 @@ if ! grep -q 'mir-error moved or unknown return value' "$work/use_after_move.mir
     exit 1
 fi
 
-"$root/bin/s" --emit-mir "$work/borrow_deref.s" "$work/borrow_deref.mir"
+"$root/bin/s" --emit-mir-after-drop "$work/borrow_deref.s" "$work/borrow_deref.mir"
 if ! grep -q 'Borrow(shared, _2)' "$work/borrow_deref.mir"; then
     echo "mir ownership lowering: expected shared Borrow from moved owner" >&2
     cat "$work/borrow_deref.mir" >&2
@@ -145,7 +145,7 @@ if ! grep -q 'mir-error move of borrowed value' "$work/move_while_borrowed.mir";
     exit 1
 fi
 
-"$root/bin/s" --emit-mir "$work/mut_borrow_deref.s" "$work/mut_borrow_deref.mir"
+"$root/bin/s" --emit-mir-after-drop "$work/mut_borrow_deref.s" "$work/mut_borrow_deref.mir"
 if ! grep -q 'Borrow(mut, _1)' "$work/mut_borrow_deref.mir"; then
     echo "mir ownership lowering: expected mutable Borrow" >&2
     cat "$work/mut_borrow_deref.mir" >&2

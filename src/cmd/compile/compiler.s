@@ -2515,8 +2515,31 @@ func compiler_mir_has_live_borrow(int[] live, int[] kinds, int[] roots, int coun
     return false
 }
 
-func compiler_mir_drop_live(string out, int[] live, int[] value_ids, int[] kinds, int count) string {
+func compiler_mir_has_shared_borrow(int[] live, int[] kinds, int[] roots, int count, int owner) bool {
+    i := 0
+    while i < count {
+        if live[i] == 1 && kinds[i] == 3 && roots[i] == owner {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+func compiler_mir_has_mut_borrow(int[] live, int[] kinds, int[] roots, int count, int owner) bool {
+    i := 0
+    while i < count {
+        if live[i] == 1 && kinds[i] == 4 && roots[i] == owner {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+func compiler_mir_drop_live(string out, int[] live, int[] value_ids, int[] kinds, int count, bool elaborate_drop) string {
     result := out
+    if !elaborate_drop { return result }
     i := count - 1
     while i >= 0 {
         if live[i] == 1 && kinds[i] == 2 {
@@ -2528,7 +2551,7 @@ func compiler_mir_drop_live(string out, int[] live, int[] value_ids, int[] kinds
     return result
 }
 
-func compiler_emit_mir(string source) string {
+func compiler_emit_mir(string source, bool elaborate_drop) string {
     empty_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     names := empty_names
@@ -2536,6 +2559,7 @@ func compiler_emit_mir(string source) string {
     live := empty_ints
     kinds := empty_ints
     roots := empty_ints
+    borrow_state := empty_ints
     s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
@@ -2569,14 +2593,40 @@ func compiler_emit_mir(string source) string {
             out = out + "bb1:\n"
             block_depth := 1
             then_moved := empty_ints
+            then_shared := empty_ints
+            then_mut := empty_ints
+            then_returned := false
             while s.error == "" && block_depth > 0 && s.token != "" {
+                if block_depth == 1 && s.token == "return" {
+                    out = compiler_mir_drop_live(out, live, value_ids, kinds, count, elaborate_drop)
+                    out = out + "    Return(" + compiler_next(s).token + ")\n"
+                    then_returned = true
+                }
                 if block_depth == 1 && compiler_ident(s.token) {
                     look := compiler_next(s)
                     if look.token == ":=" {
                         rhs := compiler_next(look)
-                        origin := compiler_mir_find(names, count, rhs.token)
-                        if origin >= 0 && live[origin] == 1 && kinds[origin] == 2 {
-                            then_moved[origin] = 1
+                        if rhs.token == "&" {
+                            borrow_rhs := compiler_next(rhs)
+                            mutable_rhs := false
+                            if borrow_rhs.token == "mut" {
+                                mutable_rhs = true
+                                borrow_rhs = compiler_next(borrow_rhs)
+                            }
+                            origin := compiler_mir_find(names, count, borrow_rhs.token)
+                            if origin >= 0 && live[origin] == 1 && kinds[origin] == 2 {
+                                if mutable_rhs { then_mut[origin] = 1 }
+                                else { then_shared[origin] = 1 }
+                            }
+                        } else {
+                            origin := compiler_mir_find(names, count, rhs.token)
+                            if origin >= 0 && live[origin] == 1 && kinds[origin] == 2 {
+                                then_moved[origin] = 1
+                                value := next_value
+                                next_value = next_value + 1
+                                out = out + "    " + compiler_mir_value(value) + " = Move(" + compiler_mir_value(value_ids[origin]) + ")\n"
+                                if elaborate_drop { out = out + "    Drop(" + compiler_mir_value(value) + ")\n" }
+                            }
                         }
                     }
                 }
@@ -2585,20 +2635,46 @@ func compiler_emit_mir(string source) string {
                 else { s = compiler_next(s) }
             }
             s = compiler_expect(s, "}")
-            out = out + "    Goto(bb3)\n"
+            if !then_returned { out = out + "    Goto(bb3)\n" }
             out = out + "bb2:\n"
             else_moved := empty_ints
+            else_shared := empty_ints
+            else_mut := empty_ints
+            else_returned := false
             if s.token == "else" {
                 s = compiler_expect(compiler_next(s), "{")
                 block_depth = 1
                 while s.error == "" && block_depth > 0 && s.token != "" {
+                    if block_depth == 1 && s.token == "return" {
+                        out = compiler_mir_drop_live(out, live, value_ids, kinds, count, elaborate_drop)
+                        out = out + "    Return(" + compiler_next(s).token + ")\n"
+                        else_returned = true
+                    }
                     if block_depth == 1 && compiler_ident(s.token) {
                         look := compiler_next(s)
                         if look.token == ":=" {
                             rhs := compiler_next(look)
-                            origin := compiler_mir_find(names, count, rhs.token)
-                            if origin >= 0 && live[origin] == 1 && kinds[origin] == 2 {
-                                else_moved[origin] = 1
+                            if rhs.token == "&" {
+                                borrow_rhs := compiler_next(rhs)
+                                mutable_rhs := false
+                                if borrow_rhs.token == "mut" {
+                                    mutable_rhs = true
+                                    borrow_rhs = compiler_next(borrow_rhs)
+                                }
+                                origin := compiler_mir_find(names, count, borrow_rhs.token)
+                                if origin >= 0 && live[origin] == 1 && kinds[origin] == 2 {
+                                    if mutable_rhs { else_mut[origin] = 1 }
+                                    else { else_shared[origin] = 1 }
+                                }
+                            } else {
+                                origin := compiler_mir_find(names, count, rhs.token)
+                                if origin >= 0 && live[origin] == 1 && kinds[origin] == 2 {
+                                    else_moved[origin] = 1
+                                    value := next_value
+                                    next_value = next_value + 1
+                                    out = out + "    " + compiler_mir_value(value) + " = Move(" + compiler_mir_value(value_ids[origin]) + ")\n"
+                                    if elaborate_drop { out = out + "    Drop(" + compiler_mir_value(value) + ")\n" }
+                                }
                             }
                         }
                     }
@@ -2614,9 +2690,11 @@ func compiler_emit_mir(string source) string {
                     if then_moved[join_slot] == 1 && else_moved[join_slot] == 1 { live[join_slot] = 0 }
                     else if then_moved[join_slot] == 1 || else_moved[join_slot] == 1 { live[join_slot] = 2 }
                 }
+                if then_mut[join_slot] == 1 || else_mut[join_slot] == 1 { borrow_state[join_slot] = 4 }
+                else if then_shared[join_slot] == 1 || else_shared[join_slot] == 1 { borrow_state[join_slot] = 3 }
                 join_slot = join_slot + 1
             }
-            out = out + "    Goto(bb3)\n"
+            if !else_returned { out = out + "    Goto(bb3)\n" }
             out = out + "bb3:\n"
         } else if s.token == "return" {
             s = compiler_next(s)
@@ -2628,7 +2706,7 @@ func compiler_emit_mir(string source) string {
                 result := next_value
                 next_value = next_value + 1
                 out = out + "    " + compiler_mir_value(result) + " = Deref(" + compiler_mir_value(value_ids[slot]) + ")\n"
-                out = compiler_mir_drop_live(out, live, value_ids, kinds, count)
+                out = compiler_mir_drop_live(out, live, value_ids, kinds, count, elaborate_drop)
                 out = out + "    Return(" + compiler_mir_value(result) + ")\n"
                 returned = true
                 s = compiler_next(s)
@@ -2636,12 +2714,12 @@ func compiler_emit_mir(string source) string {
                 slot := compiler_mir_find(names, count, s.token)
                 if slot < 0 || live[slot] == 0 { return "mir-error moved or unknown return value\n" }
                 if live[slot] == 2 { return "mir-error use of possibly moved value\n" }
-                out = compiler_mir_drop_live(out, live, value_ids, kinds, count)
+                out = compiler_mir_drop_live(out, live, value_ids, kinds, count, elaborate_drop)
                 out = out + "    Return(" + compiler_mir_value(value_ids[slot]) + ")\n"
                 returned = true
                 s = compiler_next(s)
             } else {
-                out = compiler_mir_drop_live(out, live, value_ids, kinds, count)
+                out = compiler_mir_drop_live(out, live, value_ids, kinds, count, elaborate_drop)
                 out = out + "    Return(0)\n"
                 returned = true
             }
@@ -2680,6 +2758,9 @@ func compiler_emit_mir(string source) string {
                 origin := compiler_mir_find(names, count, s.token)
                 if origin < 0 || live[origin] != 1 { return "mir-error borrow of moved or unknown value\n" }
                 if kinds[origin] != 2 { return "mir-error borrow requires owned value\n" }
+                if mutable && (compiler_mir_has_shared_borrow(live, kinds, roots, count, origin) || borrow_state[origin] == 3) { return "mir-error mutable borrow while shared borrowed\n" }
+                if mutable && (compiler_mir_has_mut_borrow(live, kinds, roots, count, origin) || borrow_state[origin] == 4) { return "mir-error mutable borrow while mutably borrowed\n" }
+                if !mutable && (compiler_mir_has_mut_borrow(live, kinds, roots, count, origin) || borrow_state[origin] == 4) { return "mir-error shared borrow while mutably borrowed\n" }
                 value := next_value
                 next_value = next_value + 1
                 mode := "shared"
@@ -2716,6 +2797,7 @@ func compiler_emit_mir(string source) string {
                 if origin < 0 || live[origin] == 0 { return "mir-error move from moved or unknown value\n" }
                 if live[origin] == 2 { return "mir-error move from possibly moved value\n" }
                 if kinds[origin] != 2 { return "mir-error move requires owned value\n" }
+                if borrow_state[origin] != 0 { return "mir-error move of possibly borrowed value\n" }
                 if compiler_mir_has_live_borrow(live, kinds, roots, count, origin) { return "mir-error move of borrowed value\n" }
                 value := next_value
                 next_value = next_value + 1
@@ -2738,22 +2820,216 @@ func compiler_emit_mir(string source) string {
     }
     if s.error != "" { return "mir-error " + s.error + "\n" }
     if !returned {
-        out = compiler_mir_drop_live(out, live, value_ids, kinds, count)
+        out = compiler_mir_drop_live(out, live, value_ids, kinds, count, elaborate_drop)
         out = out + "    Return(0)\n"
     }
     return "mir main blocks=" + compiler_number(block_count) + " entry=0 exit=" + compiler_number(exit_block) + "\n" + out
 }
 
+func compiler_emit_mir_place(string source) string {
+    empty_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    out := "mir-place main\n"
+    while s.error == "" && s.token != "" {
+        if s.token == "local" {
+            s = compiler_next(s)
+            out = out + "Local(" + s.token + ")\n"
+        } else if s.token == "field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            out = out + "Field(" + base + ", " + field + ")\n"
+        } else if s.token == "nested_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            first := s.token
+            s = compiler_next(s)
+            second := s.token
+            out = out + "Field(Field(" + base + ", " + first + "), " + second + ")\n"
+        } else if s.token == "deref_place" {
+            s = compiler_next(s)
+            out = out + "Deref(" + s.token + ")\n"
+        } else if s.token == "index_place" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            out = out + "Index(" + base + ", " + s.token + ")\n"
+        }
+        s = compiler_next(s)
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    return out
+}
+
+func compiler_movepath_state_name(int state) string {
+    if state == 0 { return "LIVE" }
+    if state == 1 { return "MOVED" }
+    if state == 2 { return "PARTIALLY_MOVED" }
+    return "UNKNOWN"
+}
+
+func compiler_movepath_emit(string place, int parent, string[] children, int child_count, int state) string {
+    out := "MovePath(place=" + place + ", parent="
+    if parent < 0 { out = out + "none" }
+    else { out = out + compiler_number(parent) }
+    out = out + ", children=["
+    i := 0
+    while i < child_count {
+        if i > 0 { out = out + "," }
+        out = out + children[i]
+        i = i + 1
+    }
+    out = out + "], state=" + compiler_movepath_state_name(state) + ")\n"
+    return out
+}
+
+func compiler_emit_mir_movepath(string source) string {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    state_local := 0
+    state_f0 := 0
+    state_f1 := 0
+    state_f0_0 := 0
+    state_f0_1 := 0
+    while s.error == "" && s.token != "" {
+        if s.token == "move_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            if base == "_1" && field == "0" { state_f0 = 1; state_local = 2 }
+            if base == "_1" && field == "1" { state_f1 = 1; state_local = 2 }
+        } else if s.token == "move_nested_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            first := s.token
+            s = compiler_next(s)
+            second := s.token
+            if base == "_1" && first == "0" && second == "0" { state_f0_0 = 1; state_f0 = 2; state_local = 2 }
+            if base == "_1" && first == "0" && second == "1" { state_f0_1 = 1; state_f0 = 2; state_local = 2 }
+        } else if s.token == "move_local" {
+            s = compiler_next(s)
+            if s.token == "_1" {
+                state_local = 1
+                state_f0 = 1
+                state_f1 = 1
+                state_f0_0 = 1
+                state_f0_1 = 1
+            }
+        }
+        s = compiler_next(s)
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    out := "mir-movepath main\n"
+    children_local := ["Field(_1,0)", "Field(_1,1)", "", "", "", "", "", ""];
+    children_f0 := ["Field(Field(_1,0),0)", "Field(Field(_1,0),1)", "", "", "", "", "", ""];
+    no_children := empty_names
+    out = out + compiler_movepath_emit("Local(_1)", -1, children_local, 2, state_local)
+    out = out + compiler_movepath_emit("Field(_1,0)", 0, children_f0, 2, state_f0)
+    out = out + compiler_movepath_emit("Field(Field(_1,0),0)", 1, no_children, 0, state_f0_0)
+    out = out + compiler_movepath_emit("Field(Field(_1,0),1)", 1, no_children, 0, state_f0_1)
+    out = out + compiler_movepath_emit("Field(_1,1)", 0, no_children, 0, state_f1)
+    return out
+}
+
+func compiler_partial_move_status(string place, int state) string {
+    if state == 1 { return "mir-error use of moved place " + place + "\n" }
+    if state == 2 { return "mir-error use of partially moved place " + place + "\n" }
+    return "Use(" + place + ") OK\n"
+}
+
+func compiler_emit_mir_partial_move(string source) string {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    state_local := 0
+    state_f0 := 0
+    state_f1 := 0
+    state_f0_0 := 0
+    state_f0_1 := 0
+    out := "mir-partial-move main\n"
+    while s.error == "" && s.token != "" {
+        if s.token == "move_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            if base == "_1" && field == "0" { state_f0 = 1; state_local = 2 }
+            if base == "_1" && field == "1" { state_f1 = 1; state_local = 2 }
+        } else if s.token == "move_nested_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            first := s.token
+            s = compiler_next(s)
+            second := s.token
+            if base == "_1" && first == "0" && second == "0" { state_f0_0 = 1; state_f0 = 2; state_local = 2 }
+            if base == "_1" && first == "0" && second == "1" { state_f0_1 = 1; state_f0 = 2; state_local = 2 }
+        } else if s.token == "move_local" {
+            s = compiler_next(s)
+            if s.token == "_1" {
+                state_local = 1
+                state_f0 = 1
+                state_f1 = 1
+                state_f0_0 = 1
+                state_f0_1 = 1
+            }
+        } else if s.token == "use_local" {
+            s = compiler_next(s)
+            if s.token == "_1" { out = out + compiler_partial_move_status("Local(_1)", state_local) }
+        } else if s.token == "use_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            if base == "_1" && field == "0" { out = out + compiler_partial_move_status("Field(_1, 0)", state_f0) }
+            if base == "_1" && field == "1" { out = out + compiler_partial_move_status("Field(_1, 1)", state_f1) }
+        } else if s.token == "use_nested_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            first := s.token
+            s = compiler_next(s)
+            second := s.token
+            if base == "_1" && first == "0" && second == "0" { out = out + compiler_partial_move_status("Field(Field(_1, 0), 0)", state_f0_0) }
+            if base == "_1" && first == "0" && second == "1" { out = out + compiler_partial_move_status("Field(Field(_1, 0), 1)", state_f0_1) }
+        }
+        s = compiler_next(s)
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    return out
+}
+
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir") {
-        eprintln("usage: s_compiler (--emit-c|--emit-mir) input.s output")
+    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move") {
+        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move) input.s output")
         return 2
     }
     string source = __host_read_to_string(args[2])
     if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
-    if args[1] == "--emit-mir" {
-        if __host_write_text_file(args[3], compiler_emit_mir(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+    if args[1] == "--emit-mir-place" {
+        if __host_write_text_file(args[3], compiler_emit_mir_place(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-movepath" {
+        if __host_write_text_file(args[3], compiler_emit_mir_movepath(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-partial-move" {
+        if __host_write_text_file(args[3], compiler_emit_mir_partial_move(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir" || args[1] == "--emit-mir-after-drop" {
+        if __host_write_text_file(args[3], compiler_emit_mir(source, args[1] == "--emit-mir-after-drop")) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     result := compiler_compile(source)

@@ -70,7 +70,7 @@ func main() int {
 }
 SRC
 
-"$root/bin/s" --emit-mir "$work/live_live.s" "$work/live_live.mir"
+"$root/bin/s" --emit-mir-after-drop "$work/live_live.s" "$work/live_live.mir"
 if ! grep -q '_2 = Deref(_1)' "$work/live_live.mir"; then
     echo "mir move dataflow: LIVE + LIVE should allow Deref" >&2
     cat "$work/live_live.mir" >&2
@@ -82,7 +82,7 @@ if ! grep -q 'Drop(_1)' "$work/live_live.mir"; then
     exit 1
 fi
 
-"$root/bin/s" --emit-mir "$work/moved_moved.s" "$work/moved_moved.mir"
+"$root/bin/s" --emit-mir-after-drop "$work/moved_moved.s" "$work/moved_moved.mir"
 if grep -q 'Drop(_1)' "$work/moved_moved.mir"; then
     echo "mir move dataflow: MOVED + MOVED must not drop moved-from owner" >&2
     cat "$work/moved_moved.mir" >&2
