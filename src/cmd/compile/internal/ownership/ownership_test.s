@@ -3,23 +3,23 @@ package compile.internal.ownership
 func test_move_semantics() bool {
     ctx := NewOwnershipContext()
     checker := new_move_checker(ctx)
-    test1Stmts := interface{}[]{
+    test1_stmts := interface{}[]{
         AssignmentStmt*{lhs: "a", rhs: "value", is_move: false},
         AssignmentStmt*{lhs: "b", rhs: "a", is_move: true},  // a → b (move)
         UseStmt*{variable: "a"},  // ERROR: use-after-move
     }
-    checker.check_move_semantics(test1Stmts)
+    checker.check_move_semantics(test1_stmts)
     if !ctx.has_errors() {
         return false  // Should have detected use-after-move
     }
     ctx = NewOwnershipContext()
     checker = new_move_checker(ctx)
-    test2Stmts := interface{}[]{
+    test2_stmts := interface{}[]{
         AssignmentStmt*{lhs: "x", rhs: "5", is_copy: true},  // x = 5 (copy)
         AssignmentStmt*{lhs: "y", rhs: "x", is_copy: true},  // y = x (copy, still valid)
         UseStmt*{variable: "x"},  // OK: x still valid after copy
     }
-    checker.check_move_semantics(test2Stmts)
+    checker.check_move_semantics(test2_stmts)
     if ctx.has_errors() {
         return false  // Copy shouldn't cause errors
     }
@@ -29,33 +29,33 @@ func test_move_semantics() bool {
 func test_borrow_semantics() bool {
     ctx := NewOwnershipContext()
     checker := new_borrow_checker(ctx)
-    test1Stmts := interface{}[]{
+    test1_stmts := interface{}[]{
         BorrowStmt*{source: "data", is_mutable: false},     // borrow &data
         BorrowStmt*{source: "data", is_mutable: false},     // borrow &data again (OK)
         BorrowEndStmt*{source: "data"},
         BorrowEndStmt*{source: "data"},
     }
-    checker.check_borrow_semantics(test1Stmts)
+    checker.check_borrow_semantics(test1_stmts)
     if ctx.has_errors() {
         return false  // Multiple shared borrows should be OK
     }
     ctx = NewOwnershipContext()
     checker = new_borrow_checker(ctx)
-    test2Stmts := interface{}[]{
+    test2_stmts := interface{}[]{
         BorrowStmt*{source: "data", is_mutable: true},      // &mut data
         BorrowStmt*{source: "data", is_mutable: false},     // &data (ERROR: conflict)
     }
-    checker.check_borrow_semantics(test2Stmts)
+    checker.check_borrow_semantics(test2_stmts)
     if !ctx.has_errors() {
         return false  // Should detect mutable borrow conflict
     }
     ctx = NewOwnershipContext()
     checker = new_borrow_checker(ctx)
-    test3Stmts := interface{}[]{
+    test3_stmts := interface{}[]{
         BorrowStmt*{source: "x", is_mutable: false},
         MoveStmt*{variable: "x"},  // ERROR: move while borrowed
     }
-    checker.check_borrow_semantics(test3Stmts)
+    checker.check_borrow_semantics(test3_stmts)
     if !ctx.has_errors() {
         return false  // Should detect move while borrowed
     }
@@ -65,19 +65,19 @@ func test_borrow_semantics() bool {
 func test_drop_elaboration() bool {
     ctx := NewOwnershipContext()
     elaborator := new_drop_elaborator(ctx)
-    test1Stmts := interface{}[]{
+    test1_stmts := interface{}[]{
         AssignmentStmt*{lhs: "x", rhs: "value", is_move: false},
         UseStmt*{variable: "x"},
     }
-    elaborated := elaborator.elaborate_drops(test1Stmts)
-    dropCount := 0
+    elaborated := elaborator.elaborate_drops(test1_stmts)
+    drop_count := 0
     for _, stmt := range elaborated {
         switch stmt.(type) {
 case DropCall*:
-            dropCount++
+            drop_count++
         }
     }
-    if dropCount != 1 {
+    if drop_count != 1 {
         return false  // Should insert exactly one drop
     }
     if !elaborator.verify_exactly_once_drop(elaborated) {
@@ -106,13 +106,13 @@ func test_ownership_state_transitions() bool {
 func test_control_flow_merge() bool {
     ctx := NewOwnershipContext()
     checker := new_move_checker(ctx)
-    thenStates := map[string]OwnershipState{
+    then_states := map[string]OwnershipState{
         "x": STATE_MOVED,
     }
-    elseStates := map[string]OwnershipState{
+    else_states := map[string]OwnershipState{
         "x": STATE_OWNED,
     }
-    checker.merge_branch_states(0, thenStates, elseStates)
+    checker.merge_branch_states(0, then_states, else_states)
     if ctx.get_state_at(0, "x") != STATE_MAYBE_MOVED {
         return false
     }
@@ -132,14 +132,14 @@ func test_partial_move() bool {
 
 func test_complete_ownership_pipeline() bool {
     oa := NewOwnershipAnalysis()
-    testStmts := interface{}[]{
+    test_stmts := interface{}[]{
         AssignmentStmt*{lhs: "x", rhs: "box::new()", is_move: false},
         BorrowStmt*{source: "x", is_mutable: false, lifetime_name: "a"},
         UseStmt*{variable: "y", through_borrow: true},
         BorrowEndStmt*{source: "x"},
         AssignmentStmt*{lhs: "z", rhs: "x", is_move: true},
     }
-    elaborated, success := oa.analyze_function("test_func", testStmts)
+    elaborated, success := oa.analyze_function("test_func", test_stmts)
     if !success {
         return true  // For now, either result is OK
     }
@@ -159,11 +159,11 @@ func run_all_tests() bool {
         {"PartialMove", TestPartialMove},
         {"CompletePipeline", TestCompleteOwnershipPipeline},
     }
-    allPassed := true
+    all_passed := true
     for _, test := range tests {
         if !test.test() {
-            allPassed = false
+            all_passed = false
         }
     }
-    return allPassed
+    return all_passed
 }

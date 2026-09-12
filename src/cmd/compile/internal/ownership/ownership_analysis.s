@@ -54,7 +54,7 @@ func (OwnershipAnalysis* oa) set_type_classification(string typeName, class* typ
     oa.ctx.type_classes[typeName] = class
 }
 
-func (OwnershipAnalysis* oa) set_variable_type(string varName, string typeName) {
+func (OwnershipAnalysis* oa) set_variable_type(string var_name, string typeName) {
 }
 
 struct analysis_report {

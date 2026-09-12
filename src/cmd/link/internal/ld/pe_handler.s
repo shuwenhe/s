@@ -190,9 +190,9 @@ func (po pe_object*) add_section(string name, data u8[]) i32 {
 		Characteristics: 0x60000020, 
 	}
 
-	nameBytes := u8[](name)
-	for i := i32(0); i < 8 && i < i32(len(nameBytes)); i += 1 {
-		shdr.Name[i] = nameBytes[i]
+	name_bytes := u8[](name)
+	for i := i32(0); i < 8 && i < i32(len(name_bytes)); i += 1 {
+		shdr.Name[i] = name_bytes[i]
 	}
 
 	po.Sections = append(po.Sections, shdr)
@@ -226,27 +226,27 @@ func read_pe_object(string filename) (pe_object, error) {
 		pe_object{}, "invalid DOS header"
 	}
 
-	peOffset := i32(binary.LittleEndian.uint32(buf[60:64]))
+	pe_offset := i32(binary.LittleEndian.uint32(buf[60:64]))
 
-	if peOffset+4 > i32(n) {
+	if pe_offset+4 > i32(n) {
 		pe_object{}, "PE header offset out of bounds"
 	}
 
-	signature := binary.LittleEndian.uint32(buf[peOffset : peOffset+4])
+	signature := binary.LittleEndian.uint32(buf[pe_offset : pe_offset+4])
 	if signature != PE_SIGNATURE {
 		pe_object{}, "invalid PE signature"
 	}
 
-	fhOffset := peOffset + 4
-	obj := new_pe_object(pe_machine(binary.LittleEndian.uint16(buf[fhOffset : fhOffset+2])))
+	fh_offset := pe_offset + 4
+	obj := new_pe_object(pe_machine(binary.LittleEndian.uint16(buf[fh_offset : fh_offset+2])))
 
-	obj.FileHeader.Machine = binary.LittleEndian.uint16(buf[fhOffset : fhOffset+2])
-	obj.FileHeader.NumberOfSections = binary.LittleEndian.uint16(buf[fhOffset+2 : fhOffset+4])
-	obj.FileHeader.TimeDateStamp = binary.LittleEndian.uint32(buf[fhOffset+4 : fhOffset+8])
-	obj.FileHeader.PointerToSymbolTable = binary.LittleEndian.uint32(buf[fhOffset+8 : fhOffset+12])
-	obj.FileHeader.NumberOfSymbols = binary.LittleEndian.uint32(buf[fhOffset+12 : fhOffset+16])
-	obj.FileHeader.SizeOfOptionalHeader = binary.LittleEndian.uint16(buf[fhOffset+16 : fhOffset+18])
-	obj.FileHeader.Characteristics = binary.LittleEndian.uint16(buf[fhOffset+18 : fhOffset+20])
+	obj.FileHeader.Machine = binary.LittleEndian.uint16(buf[fh_offset : fh_offset+2])
+	obj.FileHeader.NumberOfSections = binary.LittleEndian.uint16(buf[fh_offset+2 : fh_offset+4])
+	obj.FileHeader.TimeDateStamp = binary.LittleEndian.uint32(buf[fh_offset+4 : fh_offset+8])
+	obj.FileHeader.PointerToSymbolTable = binary.LittleEndian.uint32(buf[fh_offset+8 : fh_offset+12])
+	obj.FileHeader.NumberOfSymbols = binary.LittleEndian.uint32(buf[fh_offset+12 : fh_offset+16])
+	obj.FileHeader.SizeOfOptionalHeader = binary.LittleEndian.uint16(buf[fh_offset+16 : fh_offset+18])
+	obj.FileHeader.Characteristics = binary.LittleEndian.uint16(buf[fh_offset+18 : fh_offset+20])
 
 	obj, nil
 }
@@ -263,56 +263,56 @@ func (pe_object* po) write_to_file(string filename) error {
 		err
 	}
 
-	sigBuf := make(u8[], 4)
-	binary.LittleEndian.put_uint32(sigBuf, po.PESignature)
-	_, err = file.write(sigBuf)
+	sig_buf := make(u8[], 4)
+	binary.LittleEndian.put_uint32(sig_buf, po.PESignature)
+	_, err = file.write(sig_buf)
 	if err != nil {
 		err
 	}
 
-	fhBuf := make(u8[], 20)
-	binary.LittleEndian.put_uint16(fhBuf[0:2], po.FileHeader.Machine)
-	binary.LittleEndian.put_uint16(fhBuf[2:4], po.FileHeader.NumberOfSections)
-	binary.LittleEndian.put_uint32(fhBuf[4:8], po.FileHeader.TimeDateStamp)
-	binary.LittleEndian.put_uint32(fhBuf[8:12], po.FileHeader.PointerToSymbolTable)
-	binary.LittleEndian.put_uint32(fhBuf[12:16], po.FileHeader.NumberOfSymbols)
-	binary.LittleEndian.put_uint16(fhBuf[16:18], po.FileHeader.SizeOfOptionalHeader)
-	binary.LittleEndian.put_uint16(fhBuf[18:20], po.FileHeader.Characteristics)
+	fh_buf := make(u8[], 20)
+	binary.LittleEndian.put_uint16(fh_buf[0:2], po.FileHeader.Machine)
+	binary.LittleEndian.put_uint16(fh_buf[2:4], po.FileHeader.NumberOfSections)
+	binary.LittleEndian.put_uint32(fh_buf[4:8], po.FileHeader.TimeDateStamp)
+	binary.LittleEndian.put_uint32(fh_buf[8:12], po.FileHeader.PointerToSymbolTable)
+	binary.LittleEndian.put_uint32(fh_buf[12:16], po.FileHeader.NumberOfSymbols)
+	binary.LittleEndian.put_uint16(fh_buf[16:18], po.FileHeader.SizeOfOptionalHeader)
+	binary.LittleEndian.put_uint16(fh_buf[18:20], po.FileHeader.Characteristics)
 
-	_, err = file.write(fhBuf)
+	_, err = file.write(fh_buf)
 	if err != nil {
 		err
 	}
 
-	optBuf := make(u8[], 240)
+	opt_buf := make(u8[], 240)
 
-	binary.LittleEndian.put_uint16(optBuf[0:2], po.OptionalHeader.Magic)
-	optBuf[2] = po.OptionalHeader.MajorLinkerVersion
-	optBuf[3] = po.OptionalHeader.MinorLinkerVersion
+	binary.LittleEndian.put_uint16(opt_buf[0:2], po.OptionalHeader.Magic)
+	opt_buf[2] = po.OptionalHeader.MajorLinkerVersion
+	opt_buf[3] = po.OptionalHeader.MinorLinkerVersion
 
-	_, err = file.write(optBuf)
+	_, err = file.write(opt_buf)
 	if err != nil {
 		err
 	}
 
 	for _, shdr := range po.Sections {
-		shBuf := make(u8[], 40)
+		sh_buf := make(u8[], 40)
 
 		for i := i32(0); i < 8; i += 1 {
-			shBuf[i] = shdr.Name[i]
+			sh_buf[i] = shdr.Name[i]
 		}
 
-		binary.LittleEndian.put_uint32(shBuf[8:12], shdr.VirtualSize)
-		binary.LittleEndian.put_uint32(shBuf[12:16], shdr.VirtualAddress)
-		binary.LittleEndian.put_uint32(shBuf[16:20], shdr.SizeOfRawData)
-		binary.LittleEndian.put_uint32(shBuf[20:24], shdr.PointerToRawData)
-		binary.LittleEndian.put_uint32(shBuf[24:28], shdr.PointerToRelocations)
-		binary.LittleEndian.put_uint32(shBuf[28:32], shdr.PointerToLinenumbers)
-		binary.LittleEndian.put_uint16(shBuf[32:34], shdr.NumberOfRelocations)
-		binary.LittleEndian.put_uint16(shBuf[34:36], shdr.NumberOfLinenumbers)
-		binary.LittleEndian.put_uint32(shBuf[36:40], shdr.Characteristics)
+		binary.LittleEndian.put_uint32(sh_buf[8:12], shdr.VirtualSize)
+		binary.LittleEndian.put_uint32(sh_buf[12:16], shdr.VirtualAddress)
+		binary.LittleEndian.put_uint32(sh_buf[16:20], shdr.SizeOfRawData)
+		binary.LittleEndian.put_uint32(sh_buf[20:24], shdr.PointerToRawData)
+		binary.LittleEndian.put_uint32(sh_buf[24:28], shdr.PointerToRelocations)
+		binary.LittleEndian.put_uint32(sh_buf[28:32], shdr.PointerToLinenumbers)
+		binary.LittleEndian.put_uint16(sh_buf[32:34], shdr.NumberOfRelocations)
+		binary.LittleEndian.put_uint16(sh_buf[34:36], shdr.NumberOfLinenumbers)
+		binary.LittleEndian.put_uint32(sh_buf[36:40], shdr.Characteristics)
 
-		_, err = file.write(shBuf)
+		_, err = file.write(sh_buf)
 		if err != nil {
 			err
 		}
@@ -327,8 +327,8 @@ func (pe_object* po) write_to_file(string filename) error {
 
 			padding := shdr.SizeOfRawData - u32(len(data))
 			if padding > 0 {
-				padBuf := make(u8[], padding)
-				_, err = file.write(padBuf)
+				pad_buf := make(u8[], padding)
+				_, err = file.write(pad_buf)
 				if err != nil {
 					err
 				}

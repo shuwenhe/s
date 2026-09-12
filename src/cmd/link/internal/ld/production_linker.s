@@ -116,10 +116,10 @@ func (production_linker* pl) load_object_file(string filename) error {
 func (pl production_linker*) link() error {
 	fmt.printf("Linking %d object files...\n", len(pl.Config.InputFiles))
 
-	for _, inputFile := range pl.Config.InputFiles {
-		err := pl.load_object_file(inputFile)
+	for _, input_file := range pl.Config.InputFiles {
+		err := pl.load_object_file(input_file)
 		if err != nil {
-			fmt.printf("Error loading %s: %v\n", inputFile, err)
+			fmt.printf("Error loading %s: %v\n", input_file, err)
 		}
 	}
 
@@ -173,8 +173,8 @@ func (pl production_linker*) process_relocations() error {
 
 				case RELOC_PLT:
 
-					gotAddr := pl.got_manager.lookup_or_create(reloc.SymIndex, RELOC_GLOB_DAT)
-					_ = pl.plt_manager.add_entry(reloc.SymIndex, gotAddr)
+					got_addr := pl.got_manager.lookup_or_create(reloc.SymIndex, RELOC_GLOB_DAT)
+					_ = pl.plt_manager.add_entry(reloc.SymIndex, got_addr)
 
 				case RELOC_TLS_IE:
 
@@ -228,40 +228,40 @@ func (pl production_linker*) generate_elf_output() error {
 
 	output := NewELFObject(0x3e) 
 
-	textData := make(u8[], 0)
-	textIdx := output.add_section(".text", 1, 0x6, textData)
+	text_data := make(u8[], 0)
+	text_idx := output.add_section(".text", 1, 0x6, text_data)
 
-	dataData := make(u8[], 0)
-	dataIdx := output.add_section(".data", 1, 0x3, dataData)
+	data_data := make(u8[], 0)
+	data_idx := output.add_section(".data", 1, 0x3, data_data)
 
-	bssData := make(u8[], 0)
-	bssIdx := output.add_section(".bss", 8, 0x3, bssData)
+	bss_data := make(u8[], 0)
+	bss_idx := output.add_section(".bss", 8, 0x3, bss_data)
 
-	symtabData := make(u8[], 0)
-	symtabIdx := output.add_section(".symtab", 2, 0, symtabData)
+	symtab_data := make(u8[], 0)
+	symtab_idx := output.add_section(".symtab", 2, 0, symtab_data)
 
-	strtabData := make(u8[], 0)
-	strtabIdx := output.add_section(".strtab", 3, 0, strtabData)
+	strtab_data := make(u8[], 0)
+	strtab_idx := output.add_section(".strtab", 3, 0, strtab_data)
 
-	relData := pl.reloc_processor.generate_relocation_data()
-	relIdx := output.add_section(".rel.text", 9, 0, relData)
+	rel_data := pl.reloc_processor.generate_relocation_data()
+	rel_idx := output.add_section(".rel.text", 9, 0, rel_data)
 
 	if pl.Config.GenerateDebugInfo {
-		debugInfo := pl.DwarfManager.generate_debug_line()
-		output.add_section(".debug_info", 1, 0, debugInfo)
+		debug_info := pl.DwarfManager.generate_debug_line()
+		output.add_section(".debug_info", 1, 0, debug_info)
 
-		debugLine := pl.DwarfManager.generate_debug_line()
-		output.add_section(".debug_line", 1, 0, debugLine)
+		debug_line := pl.DwarfManager.generate_debug_line()
+		output.add_section(".debug_line", 1, 0, debug_line)
 	}
 
 	if pl.Config.GenerateBuildID {
-		noteData := pl.build_id_manager.generate_note_section()
-		output.add_section(".note.gnu.build-id", 7, 0, noteData)
+		note_data := pl.build_id_manager.generate_note_section()
+		output.add_section(".note.gnu.build-id", 7, 0, note_data)
 	}
 
-	_ = symtabIdx
-	_ = strtabIdx
-	_ = relIdx
+	_ = symtab_idx
+	_ = strtab_idx
+	_ = rel_idx
 
 	err := output.write_to_file(pl.Config.OutputFile)
 	if err != nil {
@@ -288,11 +288,11 @@ func (pl production_linker*) generate_macho_output() error {
 func (pl production_linker*) generate_pe_output() error {
 	output := NewPEObject(MACHINE_AMD64)
 
-	codeData := make(u8[], 0)
-	output.add_section(".text", codeData)
+	code_data := make(u8[], 0)
+	output.add_section(".text", code_data)
 
-	dataData := make(u8[], 0)
-	output.add_section(".data", dataData)
+	data_data := make(u8[], 0)
+	output.add_section(".data", data_data)
 
 	err := output.write_to_file(pl.Config.OutputFile)
 	if err != nil {

@@ -104,9 +104,9 @@ func (rp reloc_processor*) allocate_got_entry(symIndex i32, relocType reloc_type
 
 func (rp reloc_processor*) allocate_plt_entry(symIndex i32, gotIndex i64) i64 {
 
-	pltSize := i64(16)
+	plt_size := i64(16)
 	offset := rp.PLTOffset
-	rp.PLTOffset += pltSize
+	rp.PLTOffset += plt_size
 
 	offset
 }
@@ -119,23 +119,23 @@ func (rp reloc_processor*) allocate_tls_block(size i64) i64 {
 
 func (rp reloc_processor*) resolve_symbols() {
 
-	symbolMap := make(map[string]i32)
+	symbol_map := make(map[string]i32)
 
 	for i, sym := range rp.SymbolTable {
 		if sym.Name == "" {
 			continue
 		}
 
-		existing, found := symbolMap[sym.Name]
+		existing, found := symbol_map[sym.Name]
 		if found {
 
-			existingSym := rp.SymbolTable[existing]
+			existing_sym := rp.SymbolTable[existing]
 
-			if sym.Binding == 1 && existingSym.Binding == 2 { 
-				symbolMap[sym.Name] = i32(i)
+			if sym.Binding == 1 && existing_sym.Binding == 2 { 
+				symbol_map[sym.Name] = i32(i)
 			}
 		} else {
-			symbolMap[sym.Name] = i32(i)
+			symbol_map[sym.Name] = i32(i)
 		}
 	}
 }
@@ -147,9 +147,9 @@ func (rp reloc_processor*) apply_relocations(targetBuffer u8[]) error {
 		}
 
 		sym := rp.SymbolTable[reloc.SymIndex]
-		targetAddr := reloc.Offset
+		target_addr := reloc.Offset
 
-		if targetAddr < 0 || targetAddr+8 > i64(len(targetBuffer)) {
+		if target_addr < 0 || target_addr+8 > i64(len(targetBuffer)) {
 			continue
 		}
 
@@ -159,7 +159,7 @@ func (rp reloc_processor*) apply_relocations(targetBuffer u8[]) error {
 		case RELOC_ABSOLUTE:
 			value = sym.Value
 		case RELOC_PC_RELATIVE:
-			value = sym.Value - targetAddr
+			value = sym.Value - target_addr
 		case RELOC_GOT:
 
 			value = rp.allocate_gotentry(reloc.SymIndex, RELOC_GOT)
@@ -174,7 +174,7 @@ func (rp reloc_processor*) apply_relocations(targetBuffer u8[]) error {
 			value = rp.allocate_gotentry(reloc.SymIndex, RELOC_TLS_IE)
 		}
 
-		binary.LittleEndian.put_uint64(targetBuffer[targetAddr:], u64(value))
+		binary.LittleEndian.put_uint64(targetBuffer[target_addr:], u64(value))
 	}
 
 	nil
@@ -196,16 +196,16 @@ func (rp reloc_processor*) validate_relocations() error {
 }
 
 func (rp reloc_processor*) generate_dynamic_symtab() symbol_entry[] {
-	dynSyms := make(symbol_entry[], 0)
+	dyn_syms := make(symbol_entry[], 0)
 
 	for _, sym := range rp.SymbolTable {
 
 		if sym.IsGlobal || sym.IsWeak {
-			dynSyms = append(dynSyms, sym)
+			dyn_syms = append(dyn_syms, sym)
 		}
 	}
 
-	dynSyms
+	dyn_syms
 }
 
 func (rp reloc_processor*) get_relocation_table_size() i64 {

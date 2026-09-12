@@ -85,16 +85,16 @@ func (sm symbol_manager*) add_symbol(sym symbol_entry) error {
 
 func (sm symbol_manager*) resolve_symbol_conflict(existing symbol_entry*, new symbol_entry*) error {
 
-	existingIsWeak := existing.IsWeak
-	newIsWeak := new.IsWeak
+	existing_is_weak := existing.IsWeak
+	new_is_weak := new.IsWeak
 
-	if !existingIsWeak && !newIsWeak {
+	if !existing_is_weak && !new_is_weak {
 
 		fmt.printf("Error: Multiple definition of symbol '%s'\n", existing.Name)
 		"multiple definitions"
 	}
 
-	if newIsWeak {
+	if new_is_weak {
 
 		nil
 	} else {

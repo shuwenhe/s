@@ -74,7 +74,7 @@ func new_ownership_context() OwnershipContext* {
     }
 }
 
-func (OwnershipContext* ctx) get_state_at(int pc, string varName) OwnershipState {
+func (OwnershipContext* ctx) get_state_at(int pc, string var_name) OwnershipState {
     info, ok := ctx.state_at_pc[pc]
     if !ok {
         return STATE_UNDEFINED
@@ -82,7 +82,7 @@ func (OwnershipContext* ctx) get_state_at(int pc, string varName) OwnershipState
     return info.state
 }
 
-func (OwnershipContext* ctx) set_state_at(int pc, string varName, state OwnershipState) {
+func (OwnershipContext* ctx) set_state_at(int pc, string var_name, state OwnershipState) {
     if _, ok := ctx.state_at_pc[pc]; !ok {
         ctx.state_at_pc[pc] = ownership_info*{
             state:         state,

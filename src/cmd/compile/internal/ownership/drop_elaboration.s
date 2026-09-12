@@ -38,9 +38,9 @@ func (drop_elaborator* de) elaborate_block(BlockStmt* block) BlockStmt* {
         stmts = append(stmts, de.elaborate_statement(stmt))
     }
     drops_needed := de.collect_drops_for_block(block)
-    for _, dropVar := range drops_needed {
+    for _, drop_var := range drops_needed {
         stmts = append(stmts, DropCall*{
-            variable: dropVar,
+            variable: drop_var,
             kind:     "explicit",
         })
     }
@@ -52,9 +52,9 @@ func (drop_elaborator* de) elaborate_block(BlockStmt* block) BlockStmt* {
 func (drop_elaborator* de) elaborate_return(ReturnStmt* ret) interface{} {
     drops_needed := de.collect_drops_for_return()
     var result interface{}[]
-    for _, dropVar := range drops_needed {
+    for _, drop_var := range drops_needed {
         result = append(result, DropCall*{
-            variable: dropVar,
+            variable: drop_var,
             kind:     "return-cleanup",
         })
     }
@@ -65,23 +65,23 @@ func (drop_elaborator* de) elaborate_return(ReturnStmt* ret) interface{} {
 }
 
 func (drop_elaborator* de) elaborate_if(IfStmt* ifStmt) IfStmt* {
-    elaboratedThen := de.elaborate_statement(ifStmt.then_branch)
-    var elaboratedElse interface{}
+    elaborated_then := de.elaborate_statement(ifStmt.then_branch)
+    var elaborated_else interface{}
     if ifStmt.else_branch != nil {
-        elaboratedElse = de.elaborate_statement(ifStmt.else_branch)
+        elaborated_else = de.elaborate_statement(ifStmt.else_branch)
     }
     return IfStmt*{
         condition:   ifStmt.condition,
-        then_branch:  elaboratedThen,
-        else_branch:  elaboratedElse,
+        then_branch:  elaborated_then,
+        else_branch:  elaborated_else,
     }
 }
 
 func (drop_elaborator* de) elaborate_loop(LoopStmt* loop) LoopStmt* {
-    elaboratedBody := de.elaborate_statement(loop.body)
+    elaborated_body := de.elaborate_statement(loop.body)
     return LoopStmt*{
         condition: loop.condition,
-        body:      elaboratedBody,
+        body:      elaborated_body,
     }
 }
 
@@ -96,9 +96,9 @@ func (drop_elaborator* de) collect_drops_for_return() string[] {
 }
 
 func (drop_elaborator* de) verify_exactly_once_drop(elaborated interface{}[]) bool {
-    dropCounts := make(map[string]int)
-    de.count_drops(elaborated, dropCounts)
-    for variable, count := range dropCounts {
+    drop_counts := make(map[string]int)
+    de.count_drops(elaborated, drop_counts)
+    for variable, count := range drop_counts {
         if count == 0 {
             de.ctx.add_error(errorf("variable %s never dropped", variable))
             return false
@@ -124,31 +124,31 @@ case BlockStmt*:
 }
 
 func (drop_elaborator* de) verify_no_use_after_drop(stmts interface{}[]) bool {
-    droppedVars := make(map[string]bool)
-    return de.check_use_after_drop(stmts, droppedVars)
+    dropped_vars := make(map[string]bool)
+    return de.check_use_after_drop(stmts, dropped_vars)
 }
 
 func (drop_elaborator* de) check_use_after_drop(stmts interface{}[], 
-    droppedVars map[string]bool) bool {
+    dropped_vars map[string]bool) bool {
     for _, stmt := range stmts {
         switch s := stmt.(type) {
 case DropCall*:
-            if droppedVars[s.variable] {
+            if dropped_vars[s.variable] {
                 de.ctx.add_error(errorf("use-after-drop: variable %s", s.variable))
                 return false
             }
-            droppedVars[s.variable] = true
+            dropped_vars[s.variable] = true
 case UseStmt*:
-            if droppedVars[s.variable] {
+            if dropped_vars[s.variable] {
                 de.ctx.add_error(errorf("use-after-drop: using %s", s.variable))
                 return false
             }
 case BlockStmt*:
-            scopeDropped := make(map[string]bool)
-            for k, v := range droppedVars {
-                scopeDropped[k] = v
+            scope_dropped := make(map[string]bool)
+            for k, v := range dropped_vars {
+                scope_dropped[k] = v
             }
-            if !de.check_use_after_drop(s.statements, scopeDropped) {
+            if !de.check_use_after_drop(s.statements, scope_dropped) {
                 return false
             }
         }
@@ -161,9 +161,9 @@ func (drop_elaborator* de) verify_partial_move_drops(stmts interface{}[]) bool {
 }
 
 func (drop_elaborator* de) get_drop_order(string typeName) string[] {
-    typeClass := de.ctx.classify_type(typeName)
-    result := make(string[], len(typeClass.drop_order))
-    for i, field := range typeClass.drop_order {
+    type_class := de.ctx.classify_type(typeName)
+    result := make(string[], len(type_class.drop_order))
+    for i, field := range type_class.drop_order {
         result[len(result)-1-i] = field
     }
     return result
