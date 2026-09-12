@@ -174,19 +174,23 @@ func (borrow_checker* bc) exit_scope() {
 func (borrow_checker* bc) verify_no_borrow_conflicts() bool {
     return !bc.ctx.has_errors()
 }
+
 struct borrow_stmt {
     source    string
     is_mutable    bool
     lifetime_name string
     ref_name      string  // The reference variable created
 }
+
 struct borrow_end_stmt {
     source    string
 }
+
 struct use_stmt {
     variable     string
     through_borrow bool
 }
+
 struct move_stmt {
     variable string
 }
