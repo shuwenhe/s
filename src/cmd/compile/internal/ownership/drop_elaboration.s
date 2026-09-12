@@ -169,34 +169,34 @@ func (drop_elaborator* de) get_drop_order(string typeName) string[] {
     return result
 }
 type block_stmt struct {
-    Statements interface{}[]
+    statements interface{}[]
 }
 type if_stmt struct {
-    Condition  interface{}
-    ThenBranch interface{}
-    ElseBranch interface{}
+    condition  interface{}
+    then_branch interface{}
+    else_branch interface{}
 }
 type loop_stmt struct {
-    Condition interface{}
-    Body      interface{}
+    condition interface{}
+    body      interface{}
 }
 type drop_call struct {
     variable    string
-    Kind     string  // "explicit", "return-cleanup", "error-cleanup"
+    kind     string  // "explicit", "return-cleanup", "error-cleanup"
 }
 type drop_summary struct {
-    MustDrop string[]
-    MayDrop string[]
-    DropOrder string[]
-    FieldDrops map[string]string[]
+    must_drop string[]
+    may_drop string[]
+    drop_order string[]
+    field_drops map[string]string[]
 }
 
-func (drop_elaborator* de) generate_drop_summary(BlockStmt* block) DropSummary* {
-    summary := DropSummary*{
-        MustDrop:   make(string[], 0),
-        MayDrop:    make(string[], 0),
+func (drop_elaborator* de) generate_drop_summary(BlockStmt* block) drop_summary* {
+    summary := drop_summary*{
+        must_drop:   make(string[], 0),
+        may_drop:    make(string[], 0),
         drop_order:  make(string[], 0),
-        FieldDrops: make(map[string]string[]),
+        field_drops: make(map[string]string[]),
     }
     return summary
 }
