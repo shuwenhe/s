@@ -1,5 +1,4 @@
 package compile.internal.ownership
-
 func test_basic_ownership() bool {
     ctx := new_ownership_drop_context()
     x_decl := &decl_stmt{ name: "x", type_name: "File" }
@@ -13,7 +12,6 @@ func test_basic_ownership() bool {
     }
     return true
 }
-
 func test_use_after_move_error() bool {
     ctx := new_ownership_drop_context()
     x_decl := &decl_stmt{ name: "x", type_name: "File" }
@@ -26,12 +24,10 @@ func test_use_after_move_error() bool {
     }
     return true
 }
-
 func test_shared_borrow() bool {
     ctx := new_ownership_drop_context()
     x_decl := &decl_stmt{ name: "x", type_name: "File" }
     stmts := interface{}[]{ x_decl }
-    
     if !ctx.phase_ownership_analyze(stmts) {
         return false
     }
@@ -51,12 +47,10 @@ func test_shared_borrow() bool {
     }
     return true
 }
-
 func test_mutable_borrow_conflict() bool {
     ctx := new_ownership_drop_context()
     x_decl := &decl_stmt{ name: "x", type_name: "File" }
     stmts := interface{}[]{ x_decl }
-    
     if !ctx.phase_ownership_analyze(stmts) {
         return false
     }
@@ -77,12 +71,10 @@ func test_mutable_borrow_conflict() bool {
     }
     return true
 }
-
 func test_basic_drop_insertion() bool {
     ctx := new_ownership_drop_context()
     x_decl := &decl_stmt{ name: "x", type_name: "File" }
     stmts := interface{}[]{ x_decl }
-    
     ctx.phase_ownership_analyze(stmts)
     ctx.phase_borrow_check(stmts)
     elaborated := ctx.phase_drop_elaboration(stmts)
@@ -101,13 +93,11 @@ func test_basic_drop_insertion() bool {
     }
     return true
 }
-
 func test_drop_lifo_order() bool {
     ctx := new_ownership_drop_context()
     x_decl := &decl_stmt{ name: "x", type_name: "File" }
     y_decl := &decl_stmt{ name: "y", type_name: "File" }
     z_decl := &decl_stmt{ name: "z", type_name: "File" }
-    
     stmts := interface{}[]{ x_decl, y_decl, z_decl }
     ctx.phase_ownership_analyze(stmts)
     ctx.phase_borrow_check(stmts)
@@ -126,7 +116,6 @@ func test_drop_lifo_order() bool {
     }
     return true
 }
-
 func test_complete_pipeline_valid() bool {
     ctx := new_ownership_drop_context()
     source_decl := &decl_stmt{ name: "source", type_name: "File" }
@@ -150,7 +139,6 @@ func test_complete_pipeline_valid() bool {
     }
     return true
 }
-
 func test_complete_pipeline_invalid() bool {
     ctx := new_ownership_drop_context()
     x_decl := &decl_stmt{ name: "x", type_name: "File" }
@@ -166,10 +154,8 @@ func test_complete_pipeline_invalid() bool {
     }
     return true
 }
-
 func test_borrow_ends_before_move() bool {
     ctx := new_ownership_drop_context()
-    
     x_decl := &decl_stmt{ name: "x", type_name: "File" }
     borrow := &borrow_stmt{ 
         borrow_var: "r", 
@@ -178,9 +164,7 @@ func test_borrow_ends_before_move() bool {
     }
     borrow_end := &borrow_end_stmt{ borrow_var: "r" }
     move_stmt := &move_stmt{ source: "x" }
-    
     stmts := interface{}[]{ x_decl, borrow, borrow_end, move_stmt }
-    
     ctx.phase_ownership_analyze(stmts)
     ctx.phase_borrow_check(stmts)
     if len(ctx.errors) > 0 {
@@ -188,10 +172,8 @@ func test_borrow_ends_before_move() bool {
     }
     return true
 }
-
 func test_move_while_borrowed_error() bool {
     ctx := new_ownership_drop_context()
-    
     x_decl := &decl_stmt{ name: "x", type_name: "File" }
     borrow := &borrow_stmt{ 
         borrow_var: "r", 
@@ -199,9 +181,7 @@ func test_move_while_borrowed_error() bool {
         is_mutable: false,
     }
     move_stmt := &move_stmt{ source: "x" }
-    
     stmts := interface{}[]{ x_decl, borrow, move_stmt }
-    
     ctx.phase_ownership_analyze(stmts)
     ok := ctx.phase_borrow_check(stmts)
     if ok || len(ctx.errors) == 0 {
@@ -209,7 +189,6 @@ func test_move_while_borrowed_error() bool {
     }
     return true
 }
-
 func run_ownership_drop_closure_tests() int {
     tests := string[]{
         "basic_ownership",
@@ -223,13 +202,10 @@ func run_ownership_drop_closure_tests() int {
         "borrow_ends_before_move",
         "move_while_borrowed_error",
     }
-    
     passed := 0
     failed := 0
-    
     for _, test_name := range tests {
         var result bool
-        
         switch test_name {
         case "basic_ownership":
             result = test_basic_ownership()
@@ -252,7 +228,6 @@ func run_ownership_drop_closure_tests() int {
         case "move_while_borrowed_error":
             result = test_move_while_borrowed_error()
         }
-        
         if result {
             passed++
             println("[PASS] " + test_name)
