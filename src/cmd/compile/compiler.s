@@ -3050,10 +3050,108 @@ func compiler_emit_mir_reinit(string source) string {
     return compiler_emit_mir_partial_move(source)
 }
 
+func compiler_emit_partial_drop_field0(int state_f0, int state_f0_0, int state_f0_1) string {
+    if state_f0 == 0 { return "Drop(Field(_1, 0))\n" }
+    if state_f0 == 1 { return "" }
+    out := ""
+    if state_f0_1 == 0 { out = out + "Drop(Field(Field(_1, 0), 1))\n" }
+    if state_f0_0 == 0 { out = out + "Drop(Field(Field(_1, 0), 0))\n" }
+    return out
+}
+
+func compiler_emit_mir_partial_drop(string source) string {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    state_local := 0
+    state_f0 := 0
+    state_f1 := 0
+    state_f0_0 := 0
+    state_f0_1 := 0
+    while s.error == "" && s.token != "" {
+        if s.token == "move_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            if base == "_1" && field == "0" { state_f0 = 1; state_local = compiler_recompute_parent_state(state_f0, state_f1) }
+            if base == "_1" && field == "1" { state_f1 = 1; state_local = compiler_recompute_parent_state(state_f0, state_f1) }
+        } else if s.token == "move_nested_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            first := s.token
+            s = compiler_next(s)
+            second := s.token
+            if base == "_1" && first == "0" && second == "0" {
+                state_f0_0 = 1
+                state_f0 = compiler_recompute_parent_state(state_f0_0, state_f0_1)
+                state_local = compiler_recompute_parent_state(state_f0, state_f1)
+            }
+            if base == "_1" && first == "0" && second == "1" {
+                state_f0_1 = 1
+                state_f0 = compiler_recompute_parent_state(state_f0_0, state_f0_1)
+                state_local = compiler_recompute_parent_state(state_f0, state_f1)
+            }
+        } else if s.token == "assign_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            if base == "_1" && field == "0" {
+                state_f0 = 0
+                state_f0_0 = 0
+                state_f0_1 = 0
+                state_local = compiler_recompute_parent_state(state_f0, state_f1)
+            }
+            if base == "_1" && field == "1" {
+                state_f1 = 0
+                state_local = compiler_recompute_parent_state(state_f0, state_f1)
+            }
+        } else if s.token == "assign_nested_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            first := s.token
+            s = compiler_next(s)
+            second := s.token
+            if base == "_1" && first == "0" && second == "0" {
+                state_f0_0 = 0
+                state_f0 = compiler_recompute_parent_state(state_f0_0, state_f0_1)
+                state_local = compiler_recompute_parent_state(state_f0, state_f1)
+            }
+            if base == "_1" && first == "0" && second == "1" {
+                state_f0_1 = 0
+                state_f0 = compiler_recompute_parent_state(state_f0_0, state_f0_1)
+                state_local = compiler_recompute_parent_state(state_f0, state_f1)
+            }
+        } else if s.token == "move_local" {
+            s = compiler_next(s)
+            if s.token == "_1" {
+                state_local = 1
+                state_f0 = 1
+                state_f1 = 1
+                state_f0_0 = 1
+                state_f0_1 = 1
+            }
+        }
+        s = compiler_next(s)
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    out := "mir-partial-drop main\n"
+    if state_local == 0 { out = out + "Drop(Local(_1))\n" }
+    else if state_local == 2 {
+        if state_f1 == 0 { out = out + "Drop(Field(_1, 1))\n" }
+        out = out + compiler_emit_partial_drop_field0(state_f0, state_f0_0, state_f0_1)
+    }
+    return out
+}
+
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit") {
-        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit) input.s output")
+    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop") {
+        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop) input.s output")
         return 2
     }
     string source = __host_read_to_string(args[2])
@@ -3072,6 +3170,10 @@ func main() {
     }
     if args[1] == "--emit-mir-reinit" {
         if __host_write_text_file(args[3], compiler_emit_mir_reinit(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-partial-drop" {
+        if __host_write_text_file(args[3], compiler_emit_mir_partial_drop(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-mir" || args[1] == "--emit-mir-after-drop" {
