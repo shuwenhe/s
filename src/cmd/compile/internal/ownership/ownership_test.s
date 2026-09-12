@@ -4,8 +4,8 @@ func test_move_semantics() bool {
     ctx := NewOwnershipContext()
     checker := new_move_checker(ctx)
     test1_stmts := interface{}[]{
-        AssignmentStmt*{lhs: "a", rhs: "value", is_move: false},
-        AssignmentStmt*{lhs: "b", rhs: "a", is_move: true},  // a → b (move)
+        assignment_stmt*{lhs: "a", rhs: "value", is_move: false},
+        assignment_stmt*{lhs: "b", rhs: "a", is_move: true},  // a → b (move)
         UseStmt*{variable: "a"},  // ERROR: use-after-move
     }
     checker.check_move_semantics(test1_stmts)
@@ -15,8 +15,8 @@ func test_move_semantics() bool {
     ctx = NewOwnershipContext()
     checker = new_move_checker(ctx)
     test2_stmts := interface{}[]{
-        AssignmentStmt*{lhs: "x", rhs: "5", is_copy: true},  // x = 5 (copy)
-        AssignmentStmt*{lhs: "y", rhs: "x", is_copy: true},  // y = x (copy, still valid)
+        assignment_stmt*{lhs: "x", rhs: "5", is_copy: true},  // x = 5 (copy)
+        assignment_stmt*{lhs: "y", rhs: "x", is_copy: true},  // y = x (copy, still valid)
         UseStmt*{variable: "x"},  // OK: x still valid after copy
     }
     checker.check_move_semantics(test2_stmts)
@@ -66,7 +66,7 @@ func test_drop_elaboration() bool {
     ctx := NewOwnershipContext()
     elaborator := new_drop_elaborator(ctx)
     test1_stmts := interface{}[]{
-        AssignmentStmt*{lhs: "x", rhs: "value", is_move: false},
+        assignment_stmt*{lhs: "x", rhs: "value", is_move: false},
         UseStmt*{variable: "x"},
     }
     elaborated := elaborator.elaborate_drops(test1_stmts)
@@ -133,11 +133,11 @@ func test_partial_move() bool {
 func test_complete_ownership_pipeline() bool {
     oa := NewOwnershipAnalysis()
     test_stmts := interface{}[]{
-        AssignmentStmt*{lhs: "x", rhs: "box::new()", is_move: false},
+        assignment_stmt*{lhs: "x", rhs: "box::new()", is_move: false},
         BorrowStmt*{source: "x", is_mutable: false, lifetime_name: "a"},
         UseStmt*{variable: "y", through_borrow: true},
         BorrowEndStmt*{source: "x"},
-        AssignmentStmt*{lhs: "z", rhs: "x", is_move: true},
+        assignment_stmt*{lhs: "z", rhs: "x", is_move: true},
     }
     elaborated, success := oa.analyze_function("test_func", test_stmts)
     if !success {
