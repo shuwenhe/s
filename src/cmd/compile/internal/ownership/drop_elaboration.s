@@ -34,18 +34,18 @@ case LoopStmt*:
 
 func (drop_elaborator* de) elaborate_block(BlockStmt* block) BlockStmt* {
     var stmts interface{}[]
-    for _, stmt := range block.Statements {
+    for _, stmt := range block.statements {
         stmts = append(stmts, de.elaborate_statement(stmt))
     }
     dropsNeeded := de.collect_drops_for_block(block)
     for _, dropVar := range dropsNeeded {
         stmts = append(stmts, DropCall*{
             variable: dropVar,
-            Kind:     "explicit",
+            kind:     "explicit",
         })
     }
     return BlockStmt*{
-        Statements: stmts,
+        statements: stmts,
     }
 }
 
@@ -55,33 +55,33 @@ func (drop_elaborator* de) elaborate_return(ReturnStmt* ret) interface{} {
     for _, dropVar := range dropsNeeded {
         result = append(result, DropCall*{
             variable: dropVar,
-            Kind:     "return-cleanup",
+            kind:     "return-cleanup",
         })
     }
     result = append(result, ret)
     return BlockStmt*{
-        Statements: result,
+        statements: result,
     }
 }
 
 func (drop_elaborator* de) elaborate_if(IfStmt* ifStmt) IfStmt* {
-    elaboratedThen := de.elaborate_statement(ifStmt.ThenBranch)
+    elaboratedThen := de.elaborate_statement(ifStmt.then_branch)
     var elaboratedElse interface{}
-    if ifStmt.ElseBranch != nil {
-        elaboratedElse = de.elaborate_statement(ifStmt.ElseBranch)
+    if ifStmt.else_branch != nil {
+        elaboratedElse = de.elaborate_statement(ifStmt.else_branch)
     }
     return IfStmt*{
-        Condition:   ifStmt.Condition,
-        ThenBranch:  elaboratedThen,
-        ElseBranch:  elaboratedElse,
+        condition:   ifStmt.condition,
+        then_branch:  elaboratedThen,
+        else_branch:  elaboratedElse,
     }
 }
 
 func (drop_elaborator* de) elaborate_loop(LoopStmt* loop) LoopStmt* {
-    elaboratedBody := de.elaborate_statement(loop.Body)
+    elaboratedBody := de.elaborate_statement(loop.body)
     return LoopStmt*{
-        Condition: loop.Condition,
-        Body:      elaboratedBody,
+        condition: loop.condition,
+        body:      elaboratedBody,
     }
 }
 
@@ -118,7 +118,7 @@ func (drop_elaborator* de) count_drops(stmts interface{}[], counts map[string]in
 case DropCall*:
             counts[s.variable]++
 case BlockStmt*:
-            de.count_drops(s.Statements, counts)
+            de.count_drops(s.statements, counts)
         }
     }
 }
@@ -148,7 +148,7 @@ case BlockStmt*:
             for k, v := range droppedVars {
                 scopeDropped[k] = v
             }
-            if !de.check_use_after_drop(s.Statements, scopeDropped) {
+            if !de.check_use_after_drop(s.statements, scopeDropped) {
                 return false
             }
         }
@@ -162,8 +162,8 @@ func (drop_elaborator* de) verify_partial_move_drops(stmts interface{}[]) bool {
 
 func (drop_elaborator* de) get_drop_order(string typeName) string[] {
     typeClass := de.ctx.classify_type(typeName)
-    result := make(string[], len(typeClass.DropOrder))
-    for i, field := range typeClass.DropOrder {
+    result := make(string[], len(typeClass.drop_order))
+    for i, field := range typeClass.drop_order {
         result[len(result)-1-i] = field
     }
     return result
@@ -195,7 +195,7 @@ func (drop_elaborator* de) generate_drop_summary(BlockStmt* block) DropSummary* 
     summary := DropSummary*{
         MustDrop:   make(string[], 0),
         MayDrop:    make(string[], 0),
-        DropOrder:  make(string[], 0),
+        drop_order:  make(string[], 0),
         FieldDrops: make(map[string]string[]),
     }
     return summary

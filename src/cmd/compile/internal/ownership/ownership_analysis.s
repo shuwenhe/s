@@ -107,7 +107,7 @@ func count_drop_calls(stmts interface{}[]) int {
 case DropCall*:
             count++
 case BlockStmt*:
-            count += countDropCalls(s.Statements)
+            count += countDropCalls(s.statements)
         }
     }
     return count
