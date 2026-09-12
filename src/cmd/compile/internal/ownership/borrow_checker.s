@@ -32,17 +32,17 @@ func (borrow_checker* bc) check_borrow_creation(int pc, borrow* borrow_stmt) {
     var_name := borrow.source
     is_mutable := borrow.is_mutable
     source_state := bc.ctx.get_state_at(pc, var_name)
-    if source_state == STATE_UNDEFINED {
+    if source_state == state_undefined {
         bc.ctx.add_error(errorf("borrow of uninitialized variable %s at PC %d",
             var_name, pc))
         return
     }
-    if source_state == STATE_DROPPED {
+    if source_state == state_dropped {
         bc.ctx.add_error(errorf("borrow of dropped variable %s at PC %d (dangling borrow)",
             var_name, pc))
         return
     }
-    if source_state == STATE_MOVED {
+    if source_state == state_moved {
         bc.ctx.add_error(errorf("borrow of moved variable %s at PC %d",
             var_name, pc))
         return
@@ -68,9 +68,9 @@ func (borrow_checker* bc) check_borrow_creation(int pc, borrow* borrow_stmt) {
         }
     }
     if is_mutable {
-        bc.ctx.set_state_at(pc, var_name, STATE_BORROWED_MUT)
+        bc.ctx.set_state_at(pc, var_name, state_borrowed_mut)
     } else {
-        bc.ctx.set_state_at(pc, var_name, STATE_BORROWED_SHARED)
+        bc.ctx.set_state_at(pc, var_name, state_borrowed_shared)
     }
     bc.record_borrow(var_name, borrow_info*{
         start_pc:      pc,
@@ -88,19 +88,19 @@ func (borrow_checker* bc) check_borrow_end(int pc, borrow_end* borrow_end_stmt) 
         return
     }
     bc.remove_borrow(var_name)
-    bc.ctx.set_state_at(pc, var_name, STATE_OWNED)
+    bc.ctx.set_state_at(pc, var_name, state_owned)
 }
 
 func (borrow_checker* bc) check_use_with_borrows(int pc, use* use_stmt) {
     var_name := use.variable
     state := bc.ctx.get_state_at(pc, var_name)
-    if state == STATE_BORROWED_MUT {
+    if state == state_borrowed_mut {
         if !use.through_borrow {
             bc.ctx.add_error(errorf(
                 "use of mutably-borrowed %s without borrow reference at PC %d",
                 var_name, pc))
         }
-    } else if state == STATE_BORROWED_SHARED {
+    } else if state == state_borrowed_shared {
         if !use.through_borrow {
             bc.ctx.add_error(errorf(
                 "use of shared-borrowed %s without borrow reference at PC %d",

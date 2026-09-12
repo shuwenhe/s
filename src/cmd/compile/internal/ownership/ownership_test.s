@@ -88,16 +88,16 @@ case drop_call*:
 
 func test_ownership_state_transitions() bool {
     ctx := new_ownership_context()
-    ctx.set_state_at(0, "x", STATE_OWNED)
-    if ctx.get_state_at(0, "x") != STATE_OWNED {
+    ctx.set_state_at(0, "x", state_owned)
+    if ctx.get_state_at(0, "x") != state_owned {
         return false
     }
-    ctx.set_state_at(1, "x", STATE_MOVED)
-    if ctx.get_state_at(1, "x") != STATE_MOVED {
+    ctx.set_state_at(1, "x", state_moved)
+    if ctx.get_state_at(1, "x") != state_moved {
         return false
     }
-    ctx.set_state_at(2, "x", STATE_DROPPED)
-    if ctx.get_state_at(2, "x") != STATE_DROPPED {
+    ctx.set_state_at(2, "x", state_dropped)
+    if ctx.get_state_at(2, "x") != state_dropped {
         return false
     }
     return true
@@ -107,13 +107,13 @@ func test_control_flow_merge() bool {
     ctx := new_ownership_context()
     checker := new_move_checker(ctx)
     then_states := map[string]ownership_state{
-        "x": STATE_MOVED,
+        "x": state_moved,
     }
     else_states := map[string]ownership_state{
-        "x": STATE_OWNED,
+        "x": state_owned,
     }
     checker.merge_branch_states(0, then_states, else_states)
-    if ctx.get_state_at(0, "x") != STATE_MAYBE_MOVED {
+    if ctx.get_state_at(0, "x") != state_maybe_moved {
         return false
     }
     return true
@@ -121,10 +121,10 @@ func test_control_flow_merge() bool {
 
 func test_partial_move() bool {
     ctx := new_ownership_context()
-    ctx.set_state_at(0, "s.a", STATE_MOVED)
-    ctx.set_state_at(0, "s.b", STATE_OWNED)
-    ctx.set_state_at(0, "s", STATE_PARTIALLY_MOVED)
-    if ctx.get_state_at(0, "s") != STATE_PARTIALLY_MOVED {
+    ctx.set_state_at(0, "s.a", state_moved)
+    ctx.set_state_at(0, "s.b", state_owned)
+    ctx.set_state_at(0, "s", state_partially_moved)
+    if ctx.get_state_at(0, "s") != state_partially_moved {
         return false
     }
     return true
