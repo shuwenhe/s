@@ -22,7 +22,7 @@ func (move_checker* mc) initializeVariableStates(stmts interface{}[]) {
 func (move_checker* mc) checkStatement(pc int, stmt interface{}) {
     switch s := stmt.(type) {
     case AssignmentStmt*:
-        mc.checkAssignment(pc, s)
+        mc.check_assignment(pc, s)
     case CallStmt*:
         mc.check_function_call(pc, s)
     case ReturnStmt*:
@@ -32,7 +32,7 @@ func (move_checker* mc) checkStatement(pc int, stmt interface{}) {
     }
 }
 
-func (move_checker* mc) checkAssignment(pc int, assign* AssignmentStmt) {
+func (move_checker* mc) check_assignment(pc int, assign* AssignmentStmt) {
     if assign.RHS != nil {
         mc.checkUse(pc, assign.RHS, "read")
     }
