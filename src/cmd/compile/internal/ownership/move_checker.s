@@ -82,7 +82,7 @@ func (mc *MoveChecker) checkAssignment(pc int, assign *AssignmentStmt) {
     } else if assign.IsCopy {
         // Copy assignment - RHS must be Copy type or OWNED
         rhsState := mc.ctx.GetStateAt(pc, assign.RHS.String())
-        typeClass := mc.ctx.ClassifyType(assign.RHS.String())
+        typeClass := mc.ctx.classify_type(assign.RHS.String())
         
         if !typeClass.IsCopy && rhsState != STATE_OWNED {
             mc.ctx.AddError(errorf("copy %s (%s type) from %s state at PC %d",
