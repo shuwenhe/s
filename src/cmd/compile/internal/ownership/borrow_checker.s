@@ -72,7 +72,7 @@ func (borrow_checker* bc) check_borrow_creation(int pc, borrow* BorrowStmt) {
     } else {
         bc.ctx.set_state_at(pc, varName, STATE_BORROWED_SHARED)
     }
-    bc.record_borrow(varName, BorrowInfo*{
+    bc.record_borrow(varName, borrow_info*{
         StartPC:      pc,
         IsMutable:    isMutable,
         Source:       varName,
@@ -128,8 +128,8 @@ func (borrow_checker* bc) has_borrows(string varName) bool {
     return false
 }
 
-func (borrow_checker* bc) get_borrows(string varName) []*BorrowInfo {
-    var result []*BorrowInfo
+func (borrow_checker* bc) get_borrows(string varName) []*borrow_info {
+    var result []*borrow_info
     if len(bc.ctx.BorrowStack) > 0 {
         borrows := bc.ctx.BorrowStack[len(bc.ctx.BorrowStack)-1]
         if borrow, ok := borrows[varName]; ok {
@@ -139,7 +139,7 @@ func (borrow_checker* bc) get_borrows(string varName) []*BorrowInfo {
     return result
 }
 
-func (borrow_checker* bc) record_borrow(string varName, borrow* BorrowInfo) {
+func (borrow_checker* bc) record_borrow(string varName, borrow* borrow_info) {
     if len(bc.ctx.BorrowStack) > 0 {
         borrows := bc.ctx.BorrowStack[len(bc.ctx.BorrowStack)-1]
         borrows[varName] = borrow
@@ -154,7 +154,7 @@ func (borrow_checker* bc) remove_borrow(string varName) {
 }
 
 func (borrow_checker* bc) enter_scope() {
-    bc.ctx.BorrowStack = append(bc.ctx.BorrowStack, make(map[string]*BorrowInfo))
+    bc.ctx.BorrowStack = append(bc.ctx.BorrowStack, make(map[string]*borrow_info))
 }
 
 func (borrow_checker* bc) exit_scope() {
