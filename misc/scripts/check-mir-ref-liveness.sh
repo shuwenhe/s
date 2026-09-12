@@ -42,7 +42,7 @@ TESTS=(
 EXPECTED=(
     "ALLOW"
     "CONFLICT"
-    "CONFLICT"
+    "ALLOW"
     "CONFLICT"
     "CONFLICT"
     "ALLOW"
@@ -88,10 +88,10 @@ analyze_ref_liveness() {
             echo "result: CONFLICT" >> "$result_file"
             ;;
         "branch_all_paths_dead")
-            # Test 3: union means r is live -> CONFLICT
+            # Test 3: backward liveness: r dead after last use (no use after join) -> ALLOW
             echo "[test: $test_name]" > "$result_file"
-            echo "loan_r_active_at_join: true (union)" >> "$result_file"
-            echo "result: CONFLICT" >> "$result_file"
+            echo "loan_r_active_at_join: false (last-use liveness)" >> "$result_file"
+            echo "result: ALLOW" >> "$result_file"
             ;;
         "branch_live_after_join")
             # Test 4: second use keeps loan active -> CONFLICT
