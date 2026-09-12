@@ -2,19 +2,23 @@ package compile.internal.ownership
 type move_checker struct {
     ctx OwnershipContext*
 }
+
 func new_move_checker(OwnershipContext* ctx) move_checker* {
     return move_checker*{
         ctx: ctx,
     }
 }
+
 func (move_checker* mc) CheckMoveSemantics(stmts interface{}[]) {
     mc.initializeVariableStates(stmts)
     for i, stmt := range stmts {
         mc.checkStatement(i, stmt)
     }
 }
+
 func (move_checker* mc) initializeVariableStates(stmts interface{}[]) {
 }
+
 func (move_checker* mc) checkStatement(pc int, stmt interface{}) {
     switch s := stmt.(type) {
     case AssignmentStmt*:
@@ -27,6 +31,7 @@ func (move_checker* mc) checkStatement(pc int, stmt interface{}) {
         mc.checkIfStatement(pc, s)
     }
 }
+
 func (move_checker* mc) checkAssignment(pc int, assign* AssignmentStmt) {
     if assign.RHS != nil {
         mc.checkUse(pc, assign.RHS, "read")
@@ -54,6 +59,7 @@ func (move_checker* mc) checkAssignment(pc int, assign* AssignmentStmt) {
     }
     mc.ctx.SetStateAt(pc, assign.LHS, STATE_OWNED)
 }
+
 func (move_checker* mc) checkFunctionCall(pc int, call* CallStmt) {
     for i, arg := range call.Args {
         argState := mc.ctx.GetStateAt(pc, arg.String())
@@ -66,6 +72,7 @@ func (move_checker* mc) checkFunctionCall(pc int, call* CallStmt) {
         }
     }
 }
+
 func (move_checker* mc) checkReturn(pc int, ret* ReturnStmt) {
     if ret.Value == nil {
         return
@@ -79,18 +86,21 @@ func (move_checker* mc) checkReturn(pc int, ret* ReturnStmt) {
             ret.Value, pc))
     }
 }
+
 func (move_checker* mc) checkIfStatement(pc int, ifStmt* IfStmt) {
     mc.checkUse(pc, ifStmt.Condition, "read")
     thenStates := mc.analyzeBranch(pc, ifStmt.ThenBody)
     elseStates := mc.analyzeBranch(pc, ifStmt.ElseBody)
     mc.mergeBranchStates(pc, thenStates, elseStates)
 }
+
 func (move_checker* mc) analyzeBranch(pc int, stmts interface{}[]) map[string]OwnershipState {
     states := make(map[string]OwnershipState)
     for _, stmt := range stmts {
     }
     return states
 }
+
 func (move_checker* mc) mergeBranchStates(pc int,
     thenStates map[string]OwnershipState,
     elseStates map[string]OwnershipState) {
@@ -113,6 +123,7 @@ func (move_checker* mc) mergeBranchStates(pc int,
         }
     }
 }
+
 func (move_checker* mc) checkUse(pc int, expr interface{}, useKind string) {
     exprStr := expr.(interface{}).String()
     state := mc.ctx.GetStateAt(pc, exprStr)
@@ -132,6 +143,7 @@ func (move_checker* mc) checkUse(pc int, expr interface{}, useKind string) {
         }
     }
 }
+
 func (move_checker* mc) hasBorrow(varName string) bool {
     if len(mc.ctx.BorrowStack) > 0 {
         borrows := mc.ctx.BorrowStack[len(mc.ctx.BorrowStack)-1]
@@ -158,6 +170,7 @@ type IfStmt struct {
     ThenBody  interface{}[]
     ElseBody  interface{}[]
 }
+
 func errorf(format string, args ...interface{}) string {
     result := format
     for _, arg := range args {
@@ -165,6 +178,7 @@ func errorf(format string, args ...interface{}) string {
     }
     return result
 }
+
 func replaceFirst(s string, old string, new string) string {
     for i := 0; i < len(s); i++ {
         if i+len(old) <= len(s) && s[i:i+len(old)] == old {

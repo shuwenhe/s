@@ -2,11 +2,13 @@ package compile.internal.ownership
 type DropElaborator struct {
 ctx OwnershipContext*
 }
+
 func NewDropElaborator(OwnershipContext* ctx) DropElaborator* {
     return DropElaborator*{
         ctx: ctx,
     }
 }
+
 func (DropElaborator* de) ElaborateDrops(stmts interface{}[]) interface{}[] {
     var result interface{}[]
     for _, stmt := range stmts {
@@ -14,6 +16,7 @@ func (DropElaborator* de) ElaborateDrops(stmts interface{}[]) interface{}[] {
     }
     return result
 }
+
 func (DropElaborator* de) elaborateStatement(stmt interface{}) interface{} {
     switch s := stmt.(type) {
 case BlockStmt*:
@@ -28,6 +31,7 @@ case LoopStmt*:
         return stmt
     }
 }
+
 func (DropElaborator* de) elaborateBlock(BlockStmt* block) BlockStmt* {
     var stmts interface{}[]
     for _, stmt := range block.Statements {
@@ -44,6 +48,7 @@ func (DropElaborator* de) elaborateBlock(BlockStmt* block) BlockStmt* {
         Statements: stmts,
     }
 }
+
 func (DropElaborator* de) elaborateReturn(ReturnStmt* ret) interface{} {
     dropsNeeded := de.collectDropsForReturn()
     var result interface{}[]
@@ -58,6 +63,7 @@ func (DropElaborator* de) elaborateReturn(ReturnStmt* ret) interface{} {
         Statements: result,
     }
 }
+
 func (DropElaborator* de) elaborateIf(IfStmt* ifStmt) IfStmt* {
     elaboratedThen := de.elaborateStatement(ifStmt.ThenBranch)
     var elaboratedElse interface{}
@@ -70,6 +76,7 @@ func (DropElaborator* de) elaborateIf(IfStmt* ifStmt) IfStmt* {
         ElseBranch:  elaboratedElse,
     }
 }
+
 func (DropElaborator* de) elaborateLoop(LoopStmt* loop) LoopStmt* {
     elaboratedBody := de.elaborateStatement(loop.Body)
     return LoopStmt*{
@@ -77,14 +84,17 @@ func (DropElaborator* de) elaborateLoop(LoopStmt* loop) LoopStmt* {
         Body:      elaboratedBody,
     }
 }
+
 func (DropElaborator* de) collectDropsForBlock(BlockStmt* block) string[] {
     var drops string[]
     return drops
 }
+
 func (DropElaborator* de) collectDropsForReturn() string[] {
     var drops string[]
     return drops
 }
+
 func (DropElaborator* de) VerifyExactlyOnceDrop(elaborated interface{}[]) bool {
     dropCounts := make(map[string]int)
     de.countDrops(elaborated, dropCounts)
@@ -101,6 +111,7 @@ func (DropElaborator* de) VerifyExactlyOnceDrop(elaborated interface{}[]) bool {
     }
     return !de.ctx.HasErrors()
 }
+
 func (DropElaborator* de) countDrops(stmts interface{}[], counts map[string]int) {
     for _, stmt := range stmts {
         switch s := stmt.(type) {
@@ -111,10 +122,12 @@ case BlockStmt*:
         }
     }
 }
+
 func (DropElaborator* de) VerifyNoUseAfterDrop(stmts interface{}[]) bool {
     droppedVars := make(map[string]bool)
     return de.checkUseAfterDrop(stmts, droppedVars)
 }
+
 func (DropElaborator* de) checkUseAfterDrop(stmts interface{}[], 
     droppedVars map[string]bool) bool {
     for _, stmt := range stmts {
@@ -142,9 +155,11 @@ case BlockStmt*:
     }
     return true
 }
+
 func (DropElaborator* de) VerifyPartialMoveDrops(stmts interface{}[]) bool {
     return true  // Placeholder
 }
+
 func (DropElaborator* de) GetDropOrder(typeName string) string[] {
     typeClass := de.ctx.classify_type(typeName)
     result := make(string[], len(typeClass.DropOrder))
@@ -175,6 +190,7 @@ type DropSummary struct {
     DropOrder string[]
     FieldDrops map[string]string[]
 }
+
 func (DropElaborator* de) GenerateDropSummary(BlockStmt* block) DropSummary* {
     summary := DropSummary*{
         MustDrop:   make(string[], 0),

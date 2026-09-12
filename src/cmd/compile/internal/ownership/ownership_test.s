@@ -1,4 +1,5 @@
 package compile.internal.ownership
+
 func TestMoveSemantics() bool {
     ctx := NewOwnershipContext()
     checker := new_move_checker(ctx)
@@ -24,6 +25,7 @@ func TestMoveSemantics() bool {
     }
     return true
 }
+
 func TestBorrowSemantics() bool {
     ctx := NewOwnershipContext()
     checker := NewBorrowChecker(ctx)
@@ -59,6 +61,7 @@ func TestBorrowSemantics() bool {
     }
     return true
 }
+
 func TestDropElaboration() bool {
     ctx := NewOwnershipContext()
     elaborator := NewDropElaborator(ctx)
@@ -82,6 +85,7 @@ case DropCall*:
     }
     return true
 }
+
 func TestOwnershipStateTransitions() bool {
     ctx := NewOwnershipContext()
     ctx.SetStateAt(0, "x", STATE_OWNED)
@@ -98,6 +102,7 @@ func TestOwnershipStateTransitions() bool {
     }
     return true
 }
+
 func TestControlFlowMerge() bool {
     ctx := NewOwnershipContext()
     checker := new_move_checker(ctx)
@@ -113,6 +118,7 @@ func TestControlFlowMerge() bool {
     }
     return true
 }
+
 func TestPartialMove() bool {
     ctx := NewOwnershipContext()
     ctx.SetStateAt(0, "s.a", STATE_MOVED)
@@ -123,6 +129,7 @@ func TestPartialMove() bool {
     }
     return true
 }
+
 func TestCompleteOwnershipPipeline() bool {
     oa := NewOwnershipAnalysis()
     testStmts := interface{}[]{
@@ -138,6 +145,7 @@ func TestCompleteOwnershipPipeline() bool {
     }
     return true
 }
+
 func RunAllTests() bool {
     tests := []struct {
         name string
