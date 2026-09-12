@@ -1,7 +1,7 @@
 package compile.internal.ownership
 func TestMoveSemantics() bool {
     ctx := NewOwnershipContext()
-    checker := NewMoveChecker(ctx)
+    checker := new_move_checker(ctx)
     test1Stmts := interface{}[]{
         &AssignmentStmt{LHS: "a", RHS: "value", IsMove: false},
         &AssignmentStmt{LHS: "b", RHS: "a", IsMove: true},  // a → b (move)
@@ -12,7 +12,7 @@ func TestMoveSemantics() bool {
         return false  // Should have detected use-after-move
     }
     ctx = NewOwnershipContext()
-    checker = NewMoveChecker(ctx)
+    checker = new_move_checker(ctx)
     test2Stmts := interface{}[]{
         &AssignmentStmt{LHS: "x", RHS: "5", IsCopy: true},  // x = 5 (copy)
         &AssignmentStmt{LHS: "y", RHS: "x", IsCopy: true},  // y = x (copy, still valid)
@@ -100,7 +100,7 @@ func TestOwnershipStateTransitions() bool {
 }
 func TestControlFlowMerge() bool {
     ctx := NewOwnershipContext()
-    checker := NewMoveChecker(ctx)
+    checker := new_move_checker(ctx)
     thenStates := map[string]OwnershipState{
         "x": STATE_MOVED,
     }

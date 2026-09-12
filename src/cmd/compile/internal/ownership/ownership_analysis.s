@@ -1,7 +1,7 @@
 package compile.internal.ownership
 type OwnershipAnalysis struct {
     ctx           *OwnershipContext
-    moveChecker   *MoveChecker
+    moveChecker   *move_checker
     borrowChecker *BorrowChecker
     dropElaborator *DropElaborator
 }
@@ -9,7 +9,7 @@ func NewOwnershipAnalysis() *OwnershipAnalysis {
     ctx := NewOwnershipContext()
     return &OwnershipAnalysis{
         ctx:           ctx,
-        moveChecker:   NewMoveChecker(ctx),
+        moveChecker:   new_move_checker(ctx),
         borrowChecker: NewBorrowChecker(ctx),
         dropElaborator: NewDropElaborator(ctx),
     }
