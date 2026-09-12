@@ -8,7 +8,7 @@ struct document_manager {
 }
 
 struct parse_error {
-    message string
+    string message
     pos position
 }
 

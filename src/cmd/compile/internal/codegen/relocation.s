@@ -11,11 +11,11 @@ enum reloc_type {
 }
 
 struct relocation_entry {
-    offset int64
+    int offset64
     type reloc_type
-    symbol string
-    addend int64
-    rel_size int32
+    string symbol
+    int addend64
+    int rel_size32
 }
 
 struct relocation_context {

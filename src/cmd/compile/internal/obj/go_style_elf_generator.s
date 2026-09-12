@@ -9,7 +9,7 @@ struct go_style_elf_generator {
     int8[] rodata_section
     elf_section_header[] sections
     elf_symbol[] symbols
-    string_table string
+    string string_table
 }
 
 func make_go_style_elf_generator(

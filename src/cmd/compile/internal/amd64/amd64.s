@@ -1,37 +1,37 @@
 package compile.internal.amd64
 struct arch_info {
-	link_arch string
-	reg_sp int
-	max_width int
-	zero_range_hook string
-	ginsnop_hook string
-	ssa_mark_moves_hook string
-	ssa_gen_value_hook string
-	ssa_gen_block_hook string
-	load_reg_result_hook string
-	spill_arg_reg_hook string
+	string link_arch
+	int reg_sp
+	int max_width
+	string zero_range_hook
+	string ginsnop_hook
+	string ssa_mark_moves_hook
+	string ssa_gen_value_hook
+	string ssa_gen_block_hook
+	string load_reg_result_hook
+	string spill_arg_reg_hook
 }
 
 struct prog {
-	op string
-	from string
-	to string
-	offset int
+	string op
+	string from
+	string to
+	int offset
 }
 
 struct ssa_value {
-	op string
+	string op
 	string[] args
-	flags bool
-	marked bool
-	aux string
-	reg int
+	bool flags
+	bool marked
+	string aux
+	int reg
 }
 
 struct ssa_block {
 	ssa_value[] values
 	ssa_value[] controls
-	flags_live_at_end bool
+	bool flags_live_at_end
 }
 
 func init() () {

@@ -5,13 +5,13 @@ import (
 )
 
 struct file {
-	fd i32
-	name string
+	i32 fd
+	string name
 }
 
 struct file_error {
-	op string
-	path string
+	string op
+	string path
 	err error
 }
 

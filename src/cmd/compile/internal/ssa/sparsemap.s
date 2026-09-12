@@ -1,8 +1,8 @@
 package compile.internal.ssa
 use std.slices
 struct sparse_entry {
-    key int
-    value int
+    int key
+    int value
 }
 
 struct sparse_map {

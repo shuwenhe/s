@@ -14,18 +14,18 @@ enum panic_state {
 }
 
 struct defer_entry {
-	pc u64
-	sp u64
+	u64 pc
+	u64 sp
 	func() fn
 	unsafe.pointer arg
 	defer_entry* next
 }
 
 struct panic_entry {
-	message string
+	string message
 	string[] stack_trace
-	recovered bool
-	panic_time i64
+	bool recovered
+	i64 panic_time
 	state panic_state
 	defer_entry* defer_stack
 }
@@ -34,8 +34,8 @@ struct exception_context {
 	panic_entry* current_panic
 	panic_entry[] panic_stack
 	defer_entry* defer_stack
-	recovery_pc u64
-	recovery_sp u64
+	u64 recovery_pc
+	u64 recovery_sp
 	sync.mutex lock
 }
 
@@ -154,7 +154,7 @@ func abort_with_panic_message(string msg, string trace[]) {
 
 struct defer_context {
 	defer_entry* stack
-	count i32
+	i32 count
 }
 
 func (defer_context* dc) push(fn func(), arg unsafe.pointer) {

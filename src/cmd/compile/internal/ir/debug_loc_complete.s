@@ -1,25 +1,25 @@
 package compile.internal.ir.debug_loc_complete
 
 struct source_location {
-    filename string
-    line i32
-    column i32
-    end_line i32
-    end_column i32
+    string filename
+    i32 line
+    i32 column
+    i32 end_line
+    i32 end_column
 }
 
 struct debug_loc_info {
-    instr_id i32
+    i32 instr_id
     loc source_location
-    var_name string
-    scope string
+    string var_name
+    string scope
 }
 
 struct debug_loc_propagator {
     debug_loc_info[] loc_infos
     source_location[] file_locations
     string[] scope_stack
-    current_depth i32
+    i32 current_depth
 }
 
 func new_debug_loc_propagator() debug_loc_propagator* {

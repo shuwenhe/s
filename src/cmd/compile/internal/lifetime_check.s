@@ -1,16 +1,16 @@
 package compile.internal.lifetime_check
 
 struct lifetime_scope {
-    name string
-    active bool
+    string name
+    bool active
 }
 
 struct lifetime_borrow {
-    ref_name string
-    owner_scope string
-    ref_scope string
-    mutable bool
-    active bool
+    string ref_name
+    string owner_scope
+    string ref_scope
+    bool mutable
+    bool active
 }
 
 struct lifetime_context {
@@ -20,14 +20,14 @@ struct lifetime_context {
 }
 
 struct lifetime_result {
-    ok bool
-    message string
+    bool ok
+    string message
 }
 
 struct dropck_field {
-    name string
-    lifetime_name string
-    accessed_by_drop bool
+    string name
+    string lifetime_name
+    bool accessed_by_drop
 }
 
 func lifetime_context_new() lifetime_context {

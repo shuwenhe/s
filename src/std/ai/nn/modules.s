@@ -6,8 +6,8 @@ use std.tensor.{tensor, zeros, ones, randn, xavier_uniform, kaiming_normal,
 use std.switch.{sqrt, exp, tanh}
 use std.ai.autograd.{auto_grad_tensor, parameter, create_autograd_tensor}
 struct module {
-    name string
-    type_name string
+    string name
+    string type_name
     auto_grad_tensor[] parameters
     map<string, tensor> buffers
     func forward(auto_grad_tensor input) auto_grad_tensor

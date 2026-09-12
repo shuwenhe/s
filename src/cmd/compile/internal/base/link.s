@@ -1,9 +1,9 @@
 package compile.internal.base
 use std.slices
 struct link_symbol {
-    pkg string
-    name string
-    abi int
+    string pkg
+    string name
+    int abi
 }
 
 struct link_context {

@@ -1,8 +1,8 @@
 package src.net
 import "src.net.internal"
 struct tcp_addr {
-    ip string
-    port int
+    string ip
+    int port
 }
 
 func (tcp_addr* a) network() string {

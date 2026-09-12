@@ -5,14 +5,14 @@ word_bits := 32
 word_mask := 31
 word_shift := 5
 struct bit_vec {
-    n int
+    int n
     int[] b
 }
 
 struct bulk {
     int[] words
-    nbit int
-    nword int
+    int nbit
+    int nword
 }
 
 func new(int n) bit_vec {

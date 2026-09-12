@@ -1,7 +1,7 @@
 package compile.internal.ssa
 struct int_pair {
-    left int
-    right int
+    int left
+    int right
 }
 
 func make_int_pair(int left, int right) int_pair {

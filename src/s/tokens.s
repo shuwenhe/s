@@ -12,9 +12,9 @@ enum token_kind {
 
 struct token {
     kind token_kind
-    value string
-    line int
-    column int
+    string value
+    int line
+    int column
 }
 
 func token_kind_name(token_kind kind) string {

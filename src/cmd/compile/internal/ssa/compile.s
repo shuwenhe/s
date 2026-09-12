@@ -1,8 +1,8 @@
 package compile.internal.ssa
 use std.slices
 struct pass_stat {
-    name string
-    changed int
+    string name
+    int changed
 }
 
 struct compile_report {
@@ -11,8 +11,8 @@ struct compile_report {
     prove_fact[] prove_facts
     dom dom_tree
     regalloc regalloc_result
-    check_code int
-    dump string
+    int check_code
+    string dump
 }
 
 func optimize(ssa_func f, ssa_config cfg) pass_stat[] {

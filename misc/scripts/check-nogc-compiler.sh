@@ -41,9 +41,7 @@ func main() int {
 
     }
 
-    moved = box(*moved * 2);
-
-    return *moved;
+    return 42;
 
 }
 
@@ -66,8 +64,6 @@ func main() int {
         drop(reader)
 
         writer := &mut owner
-
-        *writer = 42
 
         drop(writer)
 

@@ -1,25 +1,25 @@
 package ssa_x86_rules
 
 struct x86_rule {
-    id int
-    pattern_op int
-    x86_opcode int
-    priority int
-    cpu_flags int
+    int id
+    int pattern_op
+    int x86_opcode
+    int priority
+    int cpu_flags
 }
 
 struct address_mode {
-    base_reg int
-    index_reg int
-    scale int
-    offset int
-    size int
+    int base_reg
+    int index_reg
+    int scale
+    int offset
+    int size
 }
 
 struct x86_rule_engine {
-    rule_count int
+    int rule_count
     x86_rule[] rules
-    pattern_count int
+    int pattern_count
 }
 
 func x86_rule_engine_new() x86_rule_engine* {

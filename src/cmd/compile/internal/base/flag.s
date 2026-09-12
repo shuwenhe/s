@@ -3,37 +3,37 @@ use std.slices
 struct cmd_cfg {
     string[] import_dirs
     string[] import_map
-    spectre_index bool
-    instrumenting bool
+    bool spectre_index
+    bool instrumenting
 }
 
 struct cmd_flags {
-    b int
-    c int
-    d string
-    e int
-    n int
-    s int
-    lower_c int
-    lower_e int
-    lower_h int
-    lower_l int
-    lower_m int
-    lower_o string
-    lower_p string
-    lower_t bool
-    complete bool
-    dwarf bool
-    race bool
-    msan bool
-    asan bool
-    std bool
-    compiling_runtime bool
-    build_id string
-    trim_path string
-    go_version string
-    lang string
-    spectre string
+    int b
+    int c
+    string d
+    int e
+    int n
+    int s
+    int lower_c
+    int lower_e
+    int lower_h
+    int lower_l
+    int lower_m
+    string lower_o
+    string lower_p
+    bool lower_t
+    bool complete
+    bool dwarf
+    bool race
+    bool msan
+    bool asan
+    bool std
+    bool compiling_runtime
+    string build_id
+    string trim_path
+    string go_version
+    string lang
+    string spectre
     cfg cmd_cfg
 }
 flag := default_cmd_flags()

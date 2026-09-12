@@ -1,7 +1,7 @@
 package demo.member
 struct point {
-    x int
-    y int
+    int x
+    int y
 }
 trait measure {
     func size() int;

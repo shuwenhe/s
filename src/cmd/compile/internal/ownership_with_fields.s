@@ -6,19 +6,19 @@ use compile.internal.field_virtualization.field_decode_virtual_name
 use std.slices
 
 struct ownership_slot_ext {
-    name string
-    type_name string
-    moved bool
-    dropped bool
-    base_var string
-    field_name string
-    is_virtual_field bool
+    string name
+    string type_name
+    bool moved
+    bool dropped
+    string base_var
+    string field_name
+    bool is_virtual_field
 }
 
 struct ownership_result_ext {
-    ok bool
-    errors int
-    message string
+    bool ok
+    int errors
+    string message
     string[] drops
     string[] field_moves
 }

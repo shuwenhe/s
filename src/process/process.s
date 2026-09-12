@@ -2,7 +2,7 @@ package std.process
 use std.result.result
 use std.slices
 struct process_error {
-    message string
+    string message
 }
 
 func run_process(string[] argv) ((), process_error) {

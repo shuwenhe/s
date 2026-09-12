@@ -11,28 +11,28 @@ enum stack_shrink_state {
 }
 
 struct stack_guard {
-	limit u64
-	next_call_size u64
-	can_split bool
+	u64 limit
+	u64 next_call_size
+	bool can_split
 }
 
 struct stack_frame {
-	pc u64
-	sp u64
-	bp u64
-	locals_size u64
-	args_size u64
+	u64 pc
+	u64 sp
+	u64 bp
+	u64 locals_size
+	u64 args_size
 }
 
 struct stack_info {
-	base u64
-	top u64
-	current_size u64
-	max_size u64
-	min_size u64
+	u64 base
+	u64 top
+	u64 current_size
+	u64 max_size
+	u64 min_size
 	guard stack_guard
 	stack_frame[] frame_stack
-	grow_count i32
+	i32 grow_count
 	shrink_state stack_shrink_state
 	sync.mutex lock
 }

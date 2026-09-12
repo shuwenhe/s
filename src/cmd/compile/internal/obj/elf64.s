@@ -24,50 +24,50 @@ struct elf_header {
     int8[] ident
     type elf_type
     machine elf_machine
-    version int32
-    entry int64
-    phoff int64
-    shoff int64
-    flags int32
-    ehsize int16
-    phentsize int16
-    phnum int16
-    shentsize int16
-    shnum int16
-    shstrndx int16
+    int version32
+    int entry64
+    int phoff64
+    int shoff64
+    int flags32
+    int ehsize16
+    int phentsize16
+    int phnum16
+    int shentsize16
+    int shnum16
+    int shstrndx16
 }
 
 struct elf_section_header {
-    name int32
-    type int32
-    flags int64
-    addr int64
-    offset int64
-    size int64
-    link int32
-    info int32
-    addralign int64
-    entsize int64
+    int name32
+    int type32
+    int flags64
+    int addr64
+    int offset64
+    int size64
+    int link32
+    int info32
+    int addralign64
+    int entsize64
 }
 
 struct elf_symbol {
-    name int32
-    info int8
-    other int8
-    shndx int16
-    value int64
-    size int64
+    int name32
+    int info8
+    int other8
+    int shndx16
+    int value64
+    int size64
 }
 
 struct elf_relocation {
-    offset int64
-    info int64
-    addend int64
+    int offset64
+    int info64
+    int addend64
 }
 
 struct elf_writer {
     int8[] data
-    offset int64
+    int offset64
     target_machine elf_machine
 }
 

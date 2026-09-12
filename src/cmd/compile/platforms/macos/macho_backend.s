@@ -40,7 +40,7 @@ struct macho_header {
 struct macho_segment_64 {
     cmd uint
     cmd_size uint
-    seg_name string
+    string seg_name
     vm_addr uint64
     vm_size uint64
     file_offset uint64
@@ -52,8 +52,8 @@ struct macho_segment_64 {
 }
 
 struct macho_section_64 {
-    sect_name string
-    seg_name string
+    string sect_name
+    string seg_name
     addr uint64
     size uint64
     offset uint
@@ -82,15 +82,15 @@ struct macho_main_cmd {
 }
 
 struct macho_builder {
-    arch string
+    string arch
     string[] code_text
     string[] data_text
     string[] rodata_text
-    code_offset int
-    data_offset int
-    rodata_offset int
+    int code_offset
+    int data_offset
+    int rodata_offset
     string[] symbols
-    symbol_count int
+    int symbol_count
 }
 
 func macho_builder_new() macho_builder* {

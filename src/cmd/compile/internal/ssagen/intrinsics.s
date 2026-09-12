@@ -1,8 +1,8 @@
 package compile.internal.ssagen
 struct intrinsic_rule {
-    name string
-    op string
-    side_effect bool
+    string name
+    string op
+    bool side_effect
 }
 
 func lookup_intrinsic(string fn_name) intrinsic_rule {

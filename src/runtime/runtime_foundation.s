@@ -86,14 +86,14 @@ func runtime_yield() () {
 
 struct runtime_stack_segment {
     int[] words
-    used int
-    previous int
+    int used
+    int previous
 }
 
 struct runtime_stack {
     runtime_stack_segment[] segments
-    current int
-    limit int
+    int current
+    int limit
 }
 
 func runtime_stack_new(int initial_words) runtime_stack {
@@ -162,13 +162,13 @@ func runtime_stack_pop(runtime_stack* self) int {
 
 struct runtime_defer_record {
     callback func
-    active bool
+    bool active
 }
 
 struct runtime_panic_state {
     runtime_defer_record[] defers
-    message string
-    panicking bool
+    string message
+    bool panicking
 }
 
 func runtime_panic_state_new() runtime_panic_state {
@@ -209,14 +209,14 @@ func runtime_recover(runtime_panic_state* self) string {
 }
 
 struct runtime_type {
-    id int
-    name string
-    size int
-    pointer_words int
+    int id
+    string name
+    int size
+    int pointer_words
 }
 
 struct runtime_value {
-    address int
+    int address
     type runtime_type
 }
 
@@ -247,9 +247,9 @@ func runtime_syscall6(int nr, int a1, int a2, int a3, int a4, int a5, int a6) in
 }
 
 struct runtime_profile_sample {
-    name string
-    count int
-    nanos int
+    string name
+    int count
+    int nanos
 }
 
 var runtime_profile_samples = runtime_profile_sample[]()

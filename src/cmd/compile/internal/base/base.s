@@ -2,7 +2,7 @@ package compile.internal.base
 use std.slices
 enable_trace := false
 struct at_exit_entry {
-    name string
+    string name
 }
 at_exit_funcs := at_exit_entry[]()
 

@@ -1,11 +1,11 @@
 package ssa
 
 struct rule {
-    id string
-    name string
+    string id
+    string name
     matcher func
     transformer func
-    priority int
+    int priority
 }
 
 struct rules_engine {

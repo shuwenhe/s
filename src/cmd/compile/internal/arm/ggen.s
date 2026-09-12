@@ -1,11 +1,11 @@
 package compile.internal.arm
 use std.slices
 struct prog {
-    op string
-    from string
-    to string
-    offset int
-    cond string
+    string op
+    string from
+    string to
+    int offset
+    string cond
 }
 
 func zerorange(prog[] insns, int off, int cnt, bool r0_ready) prog[] {

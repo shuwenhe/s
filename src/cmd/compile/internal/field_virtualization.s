@@ -40,18 +40,18 @@ func field_decode_virtual_name(string virt_name) (string, string) {
 }
 
 struct field_access_record {
-    virtual_name string
-    base_var string
-    field_name string
+    string virtual_name
+    string base_var
+    string field_name
     field_path path
-    line int
-    column int
+    int line
+    int column
 }
 
 struct field_virtualization_context {
     field_access_record[] records
     drop_flag field_level_drop_flag
-    error_count int
+    int error_count
     string[] error_messages
 }
 

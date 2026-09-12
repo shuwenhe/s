@@ -1648,7 +1648,7 @@ selfhost-bin:
 
 
 
-.PHONY: compiler compiler-check compiler-s-check no-gc-test
+.PHONY: compiler compiler-check compiler-s-check mir-nogc-e2e-check no-gc-test
 
 compiler: seed-compiler-bin
 
@@ -1681,6 +1681,20 @@ compiler-s-check: compiler
 	@mkdir -p .bootstrap/compiler
 
 	@misc/scripts/check-nogc-compiler.sh
+
+
+
+mir-nogc-e2e-check: compiler seed-compiler-bin
+
+	@echo "Running MIR no-GC ownership/move/borrow/drop e2e gate..."
+
+	@mkdir -p .bootstrap/mir-nogc
+
+	@./bin/s_seed src/cmd/compile/internal/mir_nogc_gate.s .bootstrap/mir-nogc/mir_nogc_gate.ir
+
+	@misc/scripts/check-mir-nogc-e2e.sh
+
+	@echo "✓ MIR no-GC e2e check passed"
 
 
 
@@ -1739,7 +1753,7 @@ modular-gate-b: bin/s_modular package-index
 	 fi
 
 .PHONY: ownership-check
-ownership-check: seed-compiler-bin
+ownership-check: seed-compiler-bin mir-nogc-e2e-check
 	@echo "Running ownership system semantic validation..."
 	@mkdir -p .bootstrap/ownership
 	@./bin/s_seed src/cmd/compile/internal/ownership_system.s .bootstrap/ownership/ownership_system.ir

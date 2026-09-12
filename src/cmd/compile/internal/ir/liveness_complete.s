@@ -1,13 +1,13 @@
 package compile.internal.ir.liveness_complete
 
 struct live_range {
-    start_instr i32
-    end_instr i32
-    reason string
+    i32 start_instr
+    i32 end_instr
+    string reason
 }
 
 struct liveness_info {
-    value_id i32
+    i32 value_id
     bool[][] live_in
     bool[][] live_out
     live_range[] ranges
@@ -15,8 +15,8 @@ struct liveness_info {
 
 struct liveness_analyzer {
     liveness_info[] infos
-    num_values i32
-    num_blocks i32
+    i32 num_values
+    i32 num_blocks
     i32[][] gen_set
     i32[][] kill_set
 }

@@ -18,40 +18,40 @@ enum type_kind {
 }
 
 struct type_info {
-    kind int
+    int kind
     string* name
-    size int
-    align int
+    int size
+    int align
     type_info* elem_type
     type_info* key_type
     type_info* val_type
     symbol_entry* fields
-    field_count int
-    is_pointer int
+    int field_count
+    int is_pointer
 }
 
 struct symbol_entry {
     string* name
     type_info* type_
-    kind int
-    line int
-    col int
-    value int
+    int kind
+    int line
+    int col
+    int value
     symbol_entry* next
 }
 
 struct scope {
     symbol_entry* symbols
     scope* parent
-    level int
+    int level
 }
 
 struct typecheck_context {
     scope* current_scope
     scope* root_scope
     string* errors
-    error_count int
-    max_errors int
+    int error_count
+    int max_errors
     type_info* function_return
 }
 

@@ -10,10 +10,10 @@ struct s_compiler {
     symbol_table* symtab
     relocation_context* reloc_ctx
     config codegen_config
-    total_code_size int64
-    total_data_size int64
-    function_count int64
-    symbol_count int64
+    int total_code_size64
+    int total_data_size64
+    int function_count64
+    int symbol_count64
 }
 
 func make_s_compiler(string target_arch) s_compiler {

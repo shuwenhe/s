@@ -44,7 +44,7 @@ struct pe_file_header {
 	u32 pointer_to_symbol_table
 	u32 number_of_symbols
 	u16 size_of_optional_header
-	u16 characteristics
+	char u16acteristics
 }
 
 struct pe_optional_header {
@@ -90,7 +90,7 @@ struct pe_section_header {
 	u32 pointer_to_linenumbers
 	u16 number_of_relocations
 	u16 number_of_linenumbers
-	u32 characteristics
+	char u32acteristics
 }
 
 struct pe_object {

@@ -1,19 +1,19 @@
 package compile.internal.liveness
 use std.slices
 struct live_stack_slot {
-    name string
-    frame_offset int
-    ptr_words int
-    is_arg bool
-    addr_taken bool
+    string name
+    int frame_offset
+    int ptr_words
+    bool is_arg
+    bool addr_taken
 }
 
 struct liveness_emit_blob {
-    args_symbol string
-    locals_symbol string
-    bitmap_count int
-    args_bits int
-    locals_bits int
+    string args_symbol
+    string locals_symbol
+    int bitmap_count
+    int args_bits
+    int locals_bits
     string[] args_maps
     string[] locals_maps
     string[] stack_objects

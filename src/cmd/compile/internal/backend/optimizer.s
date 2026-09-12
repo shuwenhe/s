@@ -1,7 +1,7 @@
 package backend
 struct optimizer {
     prog_list* prog
-    pass_count int
+    int pass_count
 }
 
 func make_optimizer(prog_list* prog) optimizer {

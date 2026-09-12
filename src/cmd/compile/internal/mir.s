@@ -14,18 +14,18 @@ use std.option.option
 use std.prelude.to_string
 use std.slices
 struct mir_operand {
-    kind string
-    value string
-    type_name string
+    string kind
+    string value
+    string type_name
 }
 
 struct mir_place_projection {
-    kind string
-    value string
+    string kind
+    string value
 }
 
 struct mir_place {
-    root string
+    string root
     mir_place_projection[] projections
 }
 
@@ -37,37 +37,37 @@ struct mir_flow_state {
 }
 
 struct mir_local_slot {
-    id int
-    name string
-    kind string
-    version int
-    type_name string
-    copyable bool
+    int id
+    string name
+    string kind
+    int version
+    string type_name
+    bool copyable
 }
 
 struct mir_assign_stmt {
-    target int
-    op string
+    int target
+    string op
     string[] args
 }
 
 struct mir_eval_stmt {
-    op string
+    string op
     string[] args
 }
 
 struct mir_move_stmt {
-    target int
+    int target
     source mir_operand
 }
 
 struct mir_copy_stmt {
-    target int
+    int target
     source mir_operand
 }
 
 struct mir_drop_stmt {
-    slot int
+    int slot
 }
 enum mir_statement {
     assign(mir_assign_stmt),
@@ -78,33 +78,33 @@ enum mir_statement {
 }
 
 struct mir_control_edge {
-    label string
-    target int
+    string label
+    int target
     mir_operand[] args
 }
 
 struct mir_terminator {
-    kind string
+    string kind
     mir_control_edge[] edges
 }
 
 struct mir_basic_block {
-    id int
-    label string
+    int id
+    string label
     mir_statement[] statements
     terminator mir_terminator
 }
 
 struct mir_graph {
-    function_name string
+    string function_name
     mir_basic_block[] blocks
     mir_local_slot[] locals
     string[] trace
-    entry int
-    exit int
-    borrow_ok bool
-    borrow_errors int
-    borrow_message string
+    int entry
+    int exit
+    bool borrow_ok
+    int borrow_errors
+    string borrow_message
 }
 
 func lower_function_graph(function_decl function) mir_graph {

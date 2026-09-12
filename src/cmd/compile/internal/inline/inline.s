@@ -37,7 +37,7 @@ func count_token(string text, string token) int {
 
 struct inline_result {
     graph mir_graph
-    inlined_count int
+    int inlined_count
 }
 
 func can_inline_leaf(mir_graph callee) bool {
