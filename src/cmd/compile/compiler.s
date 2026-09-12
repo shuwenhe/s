@@ -3050,6 +3050,232 @@ func compiler_emit_mir_reinit(string source) string {
     return compiler_emit_mir_partial_move(source)
 }
 
+func compiler_place_borrow_place_name(int place) string {
+    if place == 0 { return "Local(_1)" }
+    if place == 1 { return "Field(_1, 0)" }
+    if place == 2 { return "Field(_1, 1)" }
+    if place == 3 { return "Field(Field(_1, 0), 0)" }
+    if place == 4 { return "Field(Field(_1, 0), 1)" }
+    return "Unknown"
+}
+
+func compiler_place_borrow_overlaps(int left, int right) bool {
+    if left == right { return true }
+    if left == 0 || right == 0 { return true }
+    if left == 1 && (right == 3 || right == 4) { return true }
+    if right == 1 && (left == 3 || left == 4) { return true }
+    return false
+}
+
+func compiler_place_borrow_conflict(int target, int[] shared, int[] mut, bool mutable) int {
+    i := 0
+    while i < 5 {
+        if compiler_place_borrow_overlaps(target, i) {
+            if mut[i] > 0 { return 2 }
+            if mutable && shared[i] > 0 { return 1 }
+        }
+        i = i + 1
+    }
+    return 0
+}
+
+func compiler_place_borrow_result(int target, bool mutable, int[] shared, int[] mut) string {
+    conflict := compiler_place_borrow_conflict(target, shared, mut, mutable)
+    if conflict == 1 { return "mir-error mutable borrow while shared borrowed " + compiler_place_borrow_place_name(target) + "\n" }
+    if conflict == 2 {
+        if mutable { return "mir-error mutable borrow while mutably borrowed " + compiler_place_borrow_place_name(target) + "\n" }
+        return "mir-error shared borrow while mutably borrowed " + compiler_place_borrow_place_name(target) + "\n"
+    }
+    mode := "shared"
+    if mutable { mode = "mut" }
+    return "Borrow(" + mode + ", " + compiler_place_borrow_place_name(target) + ") OK\n"
+}
+
+func compiler_place_borrow_success(int target, bool mutable, int[] shared, int[] mut) bool {
+    return compiler_place_borrow_conflict(target, shared, mut, mutable) == 0
+}
+
+func compiler_emit_mir_place_borrow(string source) string {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    shared := empty_ints
+    mut := empty_ints
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    out := "mir-place-borrow main\n"
+    while s.error == "" && s.token != "" {
+        mutable := false
+        handled := false
+        if s.token == "borrow_shared_local" || s.token == "borrow_mut_local" {
+            if s.token == "borrow_mut_local" { mutable = true }
+            s = compiler_next(s)
+            if s.token == "_1" {
+                ok := compiler_place_borrow_success(0, mutable, shared, mut)
+                out = out + compiler_place_borrow_result(0, mutable, shared, mut)
+                if ok {
+                    if mutable { mut[0] = 1 }
+                    else { shared[0] = shared[0] + 1 }
+                }
+            }
+            handled = true
+        } else if s.token == "borrow_shared_field" || s.token == "borrow_mut_field" {
+            if s.token == "borrow_mut_field" { mutable = true }
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            target := -1
+            if base == "_1" && field == "0" { target = 1 }
+            if base == "_1" && field == "1" { target = 2 }
+            if target >= 0 {
+                ok := compiler_place_borrow_success(target, mutable, shared, mut)
+                out = out + compiler_place_borrow_result(target, mutable, shared, mut)
+                if ok {
+                    if mutable { mut[target] = 1 }
+                    else { shared[target] = shared[target] + 1 }
+                }
+            }
+            handled = true
+        } else if s.token == "borrow_shared_nested_field" || s.token == "borrow_mut_nested_field" {
+            if s.token == "borrow_mut_nested_field" { mutable = true }
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            first := s.token
+            s = compiler_next(s)
+            second := s.token
+            target := -1
+            if base == "_1" && first == "0" && second == "0" { target = 3 }
+            if base == "_1" && first == "0" && second == "1" { target = 4 }
+            if target >= 0 {
+                ok := compiler_place_borrow_success(target, mutable, shared, mut)
+                out = out + compiler_place_borrow_result(target, mutable, shared, mut)
+                if ok {
+                    if mutable { mut[target] = 1 }
+                    else { shared[target] = shared[target] + 1 }
+                }
+            }
+            handled = true
+        }
+        s = compiler_next(s)
+        if !handled && s.token == "" { }
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    return out
+}
+
+func compiler_reference_liveness_conflict(int target, int[] loan_places, int[] loan_mut, int[] loan_live, int loan_count, bool exclusive) int {
+    i := 0
+    while i < loan_count {
+        if loan_live[i] == 1 && compiler_place_borrow_overlaps(target, loan_places[i]) {
+            if loan_mut[i] == 1 { return 2 }
+            if exclusive { return 1 }
+        }
+        i = i + 1
+    }
+    return 0
+}
+
+func compiler_reference_liveness_find(string[] names, int count, string name) int {
+    i := 0
+    while i < count {
+        if names[i] == name { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+func compiler_reference_liveness_borrow(string ref_name, int target, bool mutable, string[] loan_names, int[] loan_places, int[] loan_mut, int[] loan_live, int loan_count) string {
+    conflict := compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable)
+    if conflict == 1 { return "mir-error mutable borrow while shared borrowed " + compiler_place_borrow_place_name(target) + "\n" }
+    if conflict == 2 {
+        if mutable { return "mir-error mutable borrow while mutably borrowed " + compiler_place_borrow_place_name(target) + "\n" }
+        return "mir-error shared borrow while mutably borrowed " + compiler_place_borrow_place_name(target) + "\n"
+    }
+    loan_names[loan_count] = ref_name
+    loan_places[loan_count] = target
+    loan_live[loan_count] = 1
+    if mutable { loan_mut[loan_count] = 1 }
+    else { loan_mut[loan_count] = 0 }
+    mode := "shared"
+    if mutable { mode = "mut" }
+    return ref_name + " = Borrow(" + mode + ", " + compiler_place_borrow_place_name(target) + ")\n"
+}
+
+func compiler_emit_mir_reference_liveness(string source) string {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    loan_names := empty_names
+    loan_places := empty_ints
+    loan_mut := empty_ints
+    loan_live := empty_ints
+    loan_count := 0
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    out := "mir-reference-liveness main\n"
+    while s.error == "" && s.token != "" {
+        mutable := false
+        if s.token == "borrow_shared_field" || s.token == "borrow_mut_field" {
+            if s.token == "borrow_mut_field" { mutable = true }
+            s = compiler_next(s)
+            ref_name := s.token
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            target := -1
+            if base == "_1" && field == "0" { target = 1 }
+            if base == "_1" && field == "1" { target = 2 }
+            if target >= 0 {
+                out = out + compiler_reference_liveness_borrow(ref_name, target, mutable, loan_names, loan_places, loan_mut, loan_live, loan_count)
+                if compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable) == 0 { loan_count = loan_count + 1 }
+            }
+        } else if s.token == "borrow_shared_nested_field" || s.token == "borrow_mut_nested_field" {
+            if s.token == "borrow_mut_nested_field" { mutable = true }
+            s = compiler_next(s)
+            ref_name := s.token
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            first := s.token
+            s = compiler_next(s)
+            second := s.token
+            target := -1
+            if base == "_1" && first == "0" && second == "0" { target = 3 }
+            if base == "_1" && first == "0" && second == "1" { target = 4 }
+            if target >= 0 {
+                out = out + compiler_reference_liveness_borrow(ref_name, target, mutable, loan_names, loan_places, loan_mut, loan_live, loan_count)
+                if compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable) == 0 { loan_count = loan_count + 1 }
+            }
+        } else if s.token == "use_ref" {
+            s = compiler_next(s)
+            idx := compiler_reference_liveness_find(loan_names, loan_count, s.token)
+            if idx < 0 || loan_live[idx] == 0 { out = out + "mir-error use of dead or unknown reference " + s.token + "\n" }
+            else {
+                out = out + "UseRef(" + s.token + ")\n"
+                out = out + "EndBorrow(" + s.token + ", " + compiler_place_borrow_place_name(loan_places[idx]) + ")\n"
+                loan_live[idx] = 0
+            }
+        } else if s.token == "move_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            target := -1
+            if base == "_1" && field == "0" { target = 1 }
+            if base == "_1" && field == "1" { target = 2 }
+            if target >= 0 {
+                conflict := compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, true)
+                if conflict != 0 { out = out + "mir-error move of borrowed place " + compiler_place_borrow_place_name(target) + "\n" }
+                else { out = out + "Move(" + compiler_place_borrow_place_name(target) + ") OK\n" }
+            }
+        }
+        s = compiler_next(s)
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    return out
+}
+
 func compiler_emit_partial_drop_field0(int state_f0, int state_f0_0, int state_f0_1) string {
     if state_f0 == 0 { return "Drop(Field(_1, 0))\n" }
     if state_f0 == 1 { return "" }
@@ -3150,8 +3376,8 @@ func compiler_emit_mir_partial_drop(string source) string {
 
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop") {
-        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop) input.s output")
+    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow") {
+        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow) input.s output")
         return 2
     }
     string source = __host_read_to_string(args[2])
@@ -3174,6 +3400,10 @@ func main() {
     }
     if args[1] == "--emit-mir-partial-drop" {
         if __host_write_text_file(args[3], compiler_emit_mir_partial_drop(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-place-borrow" {
+        if __host_write_text_file(args[3], compiler_emit_mir_place_borrow(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-mir" || args[1] == "--emit-mir-after-drop" {
