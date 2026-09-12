@@ -4,44 +4,44 @@ use std.option.option
 use std.result.result
 use std.slices
 struct noder_error {
-    code string
-    message string
-    path string
-    line int
-    column int
+    string code
+    string message
+    string path
+    int line
+    int column
 }
 
 struct source_unit {
-    path string
-    text string
+    string path
+    string text
 }
 
 struct token_item {
-    kind string
-    text string
-    line int
-    column int
+    string kind
+    string text
+    int line
+    int column
 }
 
 struct import_record {
-    path string
+    string path
     option[string] alias
 }
 
 struct export_record {
-    name string
-    kind string
+    string name
+    string kind
 }
 
 struct pos_entry {
-    offset int
-    line int
-    column int
+    int offset
+    int line
+    int column
 }
 
 struct ir_node {
-    op string
-    payload string
+    string op
+    string payload
 }
 
 struct noder_output {

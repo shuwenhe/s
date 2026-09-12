@@ -1,6 +1,6 @@
 package src.net
 struct tcp_listener {
-    fd int
+    int fd
     laddr tcp_addr
 }
 

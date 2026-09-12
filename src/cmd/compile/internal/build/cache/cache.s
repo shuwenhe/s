@@ -5,20 +5,20 @@ use std.prelude.len
 use std.prelude.slice
 use std.prelude.to_string
 struct dep_version_state {
-    version int
-    depth int
-    layer_epoch int
+    int version
+    int depth
+    int layer_epoch
 }
 
 struct dep_graph_state {
-    max_depth int
-    epoch_acc int
-    dep_count int
-    pruned_count int
-    minimal_invalidation_score int
-    parallel_wave_count int
-    direct_signature string
-    pruned_signature string
+    int max_depth
+    int epoch_acc
+    int dep_count
+    int pruned_count
+    int minimal_invalidation_score
+    int parallel_wave_count
+    string direct_signature
+    string pruned_signature
 }
 
 func cache_hit(string source_path, string source_text, string phase) bool {

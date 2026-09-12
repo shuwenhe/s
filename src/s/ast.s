@@ -4,36 +4,36 @@ use std.prelude.box
 use std.prelude.to_string
 use std.slices
 struct use_decl {
-    path string
+    string path
     option[string] alias
 }
 
 struct field {
-    name string
-    type_name string
-    is_public bool
+    string name
+    string type_name
+    bool is_public
 }
 
 struct param {
-    name string
-    type_name string
+    string name
+    string type_name
 }
 
 struct function_sig {
-    name string
+    string name
     string[] generics
     param[] params
     option[string] return_type
 }
 
 struct name_pattern {
-    name string
+    string name
 }
 
 struct wildcard_pattern {}
 
 struct variant_pattern {
-    path string
+    string path
     pattern[] args
 }
 
@@ -48,41 +48,41 @@ enum pattern {
 }
 
 struct int_expr {
-    value string
+    string value
     option[string] inferred_type
 }
 
 struct string_expr {
-    value string
+    string value
     option[string] inferred_type
 }
 
 struct bool_expr {
-    value bool
+    bool value
     option[string] inferred_type
 }
 
 struct name_expr {
-    name string
+    string name
     option[string] inferred_type
 }
 
 struct borrow_expr {
     box[expr] target
-    mutable bool
+    bool mutable
     option[string] inferred_type
 }
 
 struct binary_expr {
     box[expr] left
-    op string
+    string op
     box[expr] right
     option[string] inferred_type
 }
 
 struct member_expr {
     box[expr] target
-    member string
+    string member
     option[string] inferred_type
 }
 
@@ -167,18 +167,18 @@ enum expr {
 }
 
 struct var_stmt {
-    name string
+    string name
     option[string] type_name
     value expr
 }
 
 struct assign_stmt {
-    name string
+    string name
     value expr
 }
 
 struct increment_stmt {
-    name string
+    string name
 }
 
 struct c_for_stmt {
@@ -217,49 +217,49 @@ enum stmt {
 struct function_decl {
     sig function_sig
     option[block_expr] body
-    is_public bool
+    bool is_public
 }
 
 struct struct_decl {
-    name string
+    string name
     string[] generics
     field[] fields
-    is_public bool
+    bool is_public
 }
 
 struct enum_variant {
-    name string
+    string name
     option[string] payload
 }
 
 struct enum_decl {
-    name string
+    string name
     string[] generics
     enum_variant[] variants
-    is_public bool
+    bool is_public
 }
 
 struct trait_decl {
-    name string
+    string name
     string[] generics
     function_sig[] methods
-    is_public bool
+    bool is_public
 }
 
 struct receiver_method_decl {
-    receiver_name string
-    receiver_type string
+    string receiver_name
+    string receiver_type
     method function_decl
 }
 
 struct const_decl {
-    name string
+    string name
     option[expr] value
-    iota_index int
+    int iota_index
 }
 
 struct var_decl {
-    name string
+    string name
     option[string] type_name
     option[expr] value
 }
@@ -274,7 +274,7 @@ enum item {
 }
 
 struct source_file {
-    pkg string
+    string pkg
     use_decl[] uses
     item[] items
 }

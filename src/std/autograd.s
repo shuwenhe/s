@@ -2,30 +2,30 @@ package std.autograd
 use std.tensor_core as t
 use std.math_dl as m
 struct graph_node {
-    id int
-    op_name string
+    int id
+    string op_name
     int[] input_node_ids
-    output_node_id int
+    int output_node_id
     t.tensor output_data
     float[] cache_float
     int[] cache_int
-    is_leaf bool
-    requires_grad bool
+    bool is_leaf
+    bool requires_grad
     t.tensor grad
 }
 
 struct ag_tensor {
     t.tensor data
     t.tensor grad
-    graph_node_id int
-    requires_grad bool
-    is_leaf bool
-    name string
+    int graph_node_id
+    bool requires_grad
+    bool is_leaf
+    string name
 }
 
 struct computation_graph {
     graph_node[] nodes
-    node_count int
+    int node_count
     int[] topo_order
 }
 var _global_graph = computation_graph { nodes: graph_node[2000], node_count 0 }
@@ -580,13 +580,13 @@ func cache_to_ints(int[] arr, int start, int count) int[] {
 }
 
 struct optimizer {
-    name string
-    lr float
-    momentum float
-    beta2 float
-    weight_decay float
-    eps float
-    step int
+    string name
+    float lr
+    float momentum
+    float beta2
+    float weight_decay
+    float eps
+    int step
     map<string, t.tensor> velocity
     map<string, t.tensor> second_moment
 }

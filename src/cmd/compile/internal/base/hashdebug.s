@@ -1,16 +1,16 @@
 package compile.internal.base
 use std.slices
 struct hash_mask {
-    name string
-    suffix string
-    exclude bool
+    string name
+    string suffix
+    bool exclude
 }
 
 struct hash_debug {
-    name string
-    raw string
-    file_suffix_only bool
-    inline_suffix_only bool
+    string name
+    string raw
+    bool file_suffix_only
+    bool inline_suffix_only
     hash_mask[] matches
 }
 hash_debug_default := new_hash_debug("gossahash", "")

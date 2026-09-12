@@ -1,10 +1,10 @@
 package compile.internal.bounds
 
 struct bounds_proof {
-    safe bool
-    lower_bound int
-    upper_bound int
-    reason string
+    bool safe
+    int lower_bound
+    int upper_bound
+    string reason
 }
 
 func bounds_prove_constant_index(int index, int length) bounds_proof {

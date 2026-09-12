@@ -1,30 +1,30 @@
 package compile.internal.abi
 use std.slices
 struct reg_amounts {
-    int_regs int
-    float_regs int
+    int int_regs
+    int float_regs
 }
 
 struct abi_config {
-    offset_for_locals int
+    int offset_for_locals
     reg_amounts reg_amounts
-    which int
+    int which
 }
 
 struct abi_param_assignment {
-    type_name string
-    name string
+    string type_name
+    string name
     int[] registers
-    offset int
+    int offset
 }
 
 struct abi_param_result_info {
     abi_param_assignment[] inparams
     abi_param_assignment[] outparams
-    offset_to_spill_area int
-    spill_area_size int
-    in_registers_used int
-    out_registers_used int
+    int offset_to_spill_area
+    int spill_area_size
+    int in_registers_used
+    int out_registers_used
     config abi_config
 }
 
@@ -36,12 +36,12 @@ struct register_layout {
 struct assign_state {
     r_total reg_amounts
     r_used reg_amounts
-    stack_offset int
-    spill_offset int
+    int stack_offset
+    int spill_offset
 }
 
 struct reg_alloc_result {
-    ok bool
+    bool ok
     int[] regs
 }
 
@@ -246,7 +246,7 @@ func compute_padding(abi_param_assignment assignment, int slots) int[] {
 
 struct offset_result {
     int[] offsets
-    next int
+    int next
 }
 
 func append_param_offsets(int[] offsets, int at, string type_name) offset_result {

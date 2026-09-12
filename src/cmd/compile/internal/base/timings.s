@@ -1,14 +1,14 @@
 package compile.internal.base
 use std.slices
 struct timestamp {
-    tick int
-    label string
-    start bool
+    int tick
+    string label
+    bool start
 }
 
 struct timing_event {
-    size int
-    unit string
+    int size
+    string unit
 }
 
 struct timings {

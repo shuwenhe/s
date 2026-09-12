@@ -1,29 +1,29 @@
 package compile.internal.ir.debug_loc
 
 struct source_location {
-    file string
-    line int
-    column int
-    end_line int
-    end_column int
+    string file
+    int line
+    int column
+    int end_line
+    int end_column
 }
 
 struct debug_scope {
-    id int
-    parent_scope int
-    scope_name string
-    start_instr int
-    end_instr int
+    int id
+    int parent_scope
+    string scope_name
+    int start_instr
+    int end_instr
     int[] local_vars
-    line_start int
-    line_end int
+    int line_start
+    int line_end
 }
 
 struct debug_variable {
-    id int
-    name string
-    type_name string
-    scope_id int
+    int id
+    string name
+    string type_name
+    int scope_id
     int[] ssa_values
     def_location source_location
     int[] use_locations
@@ -35,7 +35,7 @@ struct debug_info {
     source_location[] instr_locations
     int[] line_numbers
     string[] file_names
-    num_instructions int
+    int num_instructions
 }
 
 func new_debug_info(int num_instructions) debug_info {

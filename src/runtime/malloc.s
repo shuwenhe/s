@@ -2,10 +2,10 @@ package src.runtime
 use std.slices
 use std.result.result
 struct obj_header {
-    size int
-    type_id int
-    mark int
-    next_free int
+    int size
+    int type_id
+    int mark
+    int next_free
 }
 const num_size_classes = 68
 const max_small_size   = 32768
@@ -67,11 +67,11 @@ func alloc_stats() malloc_stats {
 }
 
 struct malloc_stats {
-    alloc_bytes int
-    sys_bytes int
-    live_objs int
-    dead_objs int
-    goal_bytes int
+    int alloc_bytes
+    int sys_bytes
+    int live_objs
+    int dead_objs
+    int goal_bytes
 }
 
 func heap_all_objects() int[] {

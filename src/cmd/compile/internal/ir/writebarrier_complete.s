@@ -9,16 +9,16 @@ enum wb_kind {
 }
 
 struct wb_info {
-    instr_id i32
+    i32 instr_id
     kind wb_kind
-    target_ptr i32
-    value_ptr i32
-    needs_barrier bool
+    i32 target_ptr
+    i32 value_ptr
+    bool needs_barrier
 }
 
 struct wb_inserter {
     wb_info[] barriers
-    num_barriers i32
+    i32 num_barriers
     bool[] is_heap_allocated
     bool[] is_pointer_type
 }

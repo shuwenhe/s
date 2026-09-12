@@ -4,13 +4,13 @@ use std.prelude.len
 use std.prelude.slice
 use std.slices
 struct type_ref {
-    canonical string
-    base string
-    is_ref bool
-    is_mut_ref bool
-    is_slice bool
-    is_array bool
-    array_len string
+    string canonical
+    string base
+    bool is_ref
+    bool is_mut_ref
+    bool is_slice
+    bool is_array
+    string array_len
     string[] args
 }
 

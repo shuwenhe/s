@@ -1,15 +1,15 @@
 package compile.internal.ssagen
 use std.slices
 struct abi_location {
-    in_reg bool
-    place string
-    stack_offset int
+    bool in_reg
+    string place
+    int stack_offset
 }
 
 struct abi_layout {
     abi_location[] params
     abi_location[] results
-    spill_size int
+    int spill_size
 }
 
 func assign_abi_layout(string arch, int params, int results) abi_layout {

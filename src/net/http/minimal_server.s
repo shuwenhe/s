@@ -1,14 +1,14 @@
 package src.net.http
 type handler_func = func(http_request) http_response
 struct route_entry {
-    method string
-    path string
+    string method
+    string path
     handler handler_func
 }
 
 struct server {
-    host string
-    port int
+    string host
+    int port
     route_entry[] routes
 }
 

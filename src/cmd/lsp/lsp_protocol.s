@@ -1,7 +1,7 @@
 package lsp
 struct position {
-    line int
-    character int
+    int line
+    int character
 }
 
 struct range {
@@ -10,13 +10,13 @@ struct range {
 }
 
 struct location {
-    uri string
+    string uri
     r range
 }
 
 struct diagnostic {
     r range
-    message string
+    string message
     option[int] severity
     option[string] code
     option[string] source
@@ -25,40 +25,40 @@ struct diagnostic {
 
 struct diagnostic_related_information {
     location location
-    message string
+    string message
 }
 
 struct version_change_event {
-    uri string
-    text string
+    string uri
+    string text
 }
 
 struct text_document {
-    uri string
-    language_id string
-    version int
-    text string
+    string uri
+    string language_id
+    int version
+    string text
 }
 
 struct text_document_item {
-    uri string
-    language_id string
-    version int
-    text string
+    string uri
+    string language_id
+    int version
+    string text
 }
 
 struct text_document_position_params {
-    uri string
+    string uri
     pos position
 }
 
 struct text_document_identifier {
-    uri string
+    string uri
 }
 
 struct versioned_text_document_identifier {
-    uri string
-    version int
+    string uri
+    int version
 }
 enum completion_item_kind {
     text,
@@ -89,7 +89,7 @@ enum completion_item_kind {
 }
 
 struct completion_item {
-    label string
+    string label
     option[completion_item_kind] kind
     option[string] detail
     option[string] documentation
@@ -101,12 +101,12 @@ struct completion_item {
 }
 
 struct completion_list {
-    is_incomplete bool
+    bool is_incomplete
     completion_item[] items
 }
 
 struct hover {
-    contents string
+    string contents
     option[range] r
 }
 enum symbol_kind {
@@ -139,7 +139,7 @@ enum symbol_kind {
 }
 
 struct document_symbol {
-    name string
+    string name
     kind symbol_kind
     range_val range
     selection_range range
@@ -148,20 +148,20 @@ struct document_symbol {
 }
 
 struct reference_params {
-    uri string
+    string uri
     pos position
     option[bool] include_declaration
 }
 
 struct rename_params {
-    uri string
+    string uri
     pos position
-    new_name string
+    string new_name
 }
 
 struct text_edit {
     r range
-    new_text string
+    string new_text
 }
 
 struct workspace_edit {
@@ -169,14 +169,14 @@ struct workspace_edit {
 }
 
 struct server_capabilities {
-    text_document_sync bool
-    completion_provider bool
-    hover_provider bool
-    definition_provider bool
-    references_provider bool
-    document_symbol_provider bool
-    rename_provider bool
-    workspace_symbol_provider bool
+    bool text_document_sync
+    bool completion_provider
+    bool hover_provider
+    bool definition_provider
+    bool references_provider
+    bool document_symbol_provider
+    bool rename_provider
+    bool workspace_symbol_provider
 }
 
 struct initialize_result {
@@ -186,7 +186,7 @@ struct initialize_result {
 
 struct text_document_content_change_event {
     option[range] range_val
-    text string
+    string text
 }
 
 struct did_change_text_document_params {

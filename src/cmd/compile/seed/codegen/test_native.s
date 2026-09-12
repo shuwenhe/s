@@ -5,15 +5,15 @@ use codegen.stackframe
 use codegen.instruction_select
 use codegen.linker
 struct test_result {
-    name string
-    passed bool
-    message string
+    string name
+    bool passed
+    string message
 }
 
 struct test_suite {
     test_result[] results
-    passed_count int
-    failed_count int
+    int passed_count
+    int failed_count
 }
 
 func (suite* test_suite) add_result(string name, bool passed, string message) {

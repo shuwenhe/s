@@ -5,7 +5,7 @@ struct elf_output {
     elf_section_header[] sections
     elf_symbol[] symbols
     int32[] section_offsets
-    string_table string
+    string string_table
 }
 
 func make_elf_output() elf_output {

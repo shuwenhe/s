@@ -1,9 +1,9 @@
 package compile.internal.ir.liveness
 
 struct liveness_info {
-    var_id int
-    first_use int
-    last_use int
+    int var_id
+    int first_use
+    int last_use
     bool[] live_in_blocks
     bool[] live_out_blocks
     int[] live_range
@@ -14,7 +14,7 @@ struct liveness_analysis {
     int[] def_points
     int[] use_points
     int[] phi_references
-    num_blocks int
+    int num_blocks
 }
 
 func new_liveness_analysis(int num_blocks) liveness_analysis {
