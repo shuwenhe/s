@@ -237,7 +237,7 @@ func (de *DropElaborator) VerifyPartialMoveDrops(stmts interface{}[]) bool {
 // GetDropOrder returns the correct drop order for a struct type
 // (reverse declaration order to respect dependencies)
 func (de *DropElaborator) GetDropOrder(typeName string) string[] {
-    typeClass := de.ctx.ClassifyType(typeName)
+    typeClass := de.ctx.classify_type(typeName)
     
     // Reverse the order (drop fields in reverse of declaration)
     result := make(string[], len(typeClass.DropOrder))

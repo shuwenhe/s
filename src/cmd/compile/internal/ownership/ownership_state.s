@@ -83,15 +83,10 @@ type BorrowInfo struct {
     LifetimeName string
 }
 
-// TypeClassification determines ownership characteristics of a type
-type TypeClassification struct {
-    // true if type needs explicit ownership tracking
+type type_classification struct {
     NeedsOwnership bool
-    
     IsCopy bool
-    
     OwnedFields string[]
-    
     DropOrder string[]
 }
 
@@ -101,7 +96,7 @@ type OwnershipContext struct {
     StateAtPC map[int]*OwnershipInfo
     
     // Type classifications for all types in scope
-    TypeClasses map[string]*TypeClassification
+    TypeClasses map[string]*type_classification
     
     // Current control flow block
     CurrentBlock string
@@ -114,7 +109,7 @@ type OwnershipContext struct {
 func NewOwnershipContext() *OwnershipContext {
     return &OwnershipContext{
         StateAtPC:   make(map[int]*OwnershipInfo),
-        TypeClasses: make(map[string]*TypeClassification),
+        TypeClasses: make(map[string]*type_classification),
         BorrowStack: []map[string]*BorrowInfo{make(map[string]*BorrowInfo)},
         Errors:      make(string[], 0),
     }
@@ -152,14 +147,13 @@ func (ctx *OwnershipContext) HasErrors() bool {
     return len(ctx.Errors) > 0
 }
 
-// ClassifyType determines ownership characteristics
-func (ctx *OwnershipContext) ClassifyType(typeName string) *TypeClassification {
+func (ctx *OwnershipContext) classify_type(typeName string) *type_classification {
     if class, ok := ctx.TypeClasses[typeName]; ok {
         return class
     }
     
     // Default classification (can be overridden by semantic analysis)
-    class := &TypeClassification{
+    class := &type_classification{
         NeedsOwnership: !isPrimitiveType(typeName),
         IsCopy:         isPrimitiveType(typeName),
         OwnedFields:    make(string[], 0),
