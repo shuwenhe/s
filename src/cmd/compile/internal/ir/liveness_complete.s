@@ -49,7 +49,7 @@ func new_liveness_analyzer(num_values i32, num_blocks i32) liveness_analyzer* {
     la
 }
 
-func (la liveness_analyzer*) mark_use(block_id i32, value_id i32) {
+func (la* liveness_analyzer) mark_use(block_id i32, value_id i32) {
     if block_id >= 0 && block_id < la.num_blocks && value_id >= 0 && value_id < la.num_values {
         found := false
         for _for_idx_54 := 0; _for_idx_54 < len(la.gen_set[block_id]); _for_idx_54++ {
@@ -65,7 +65,7 @@ func (la liveness_analyzer*) mark_use(block_id i32, value_id i32) {
     }
 }
 
-func (la liveness_analyzer*) mark_def(block_id i32, value_id i32) {
+func (la* liveness_analyzer) mark_def(block_id i32, value_id i32) {
     if block_id >= 0 && block_id < la.num_blocks && value_id >= 0 && value_id < la.num_values {
         found := false
         for _for_idx_69 := 0; _for_idx_69 < len(la.kill_set[block_id]); _for_idx_69++ {
@@ -81,7 +81,7 @@ func (la liveness_analyzer*) mark_def(block_id i32, value_id i32) {
     }
 }
 
-func (la liveness_analyzer*) compute_liveness(succs i32[][]) {
+func (la* liveness_analyzer) compute_liveness(succs i32[][]) {
     changed := true
     for changed {
         changed = false
@@ -153,7 +153,7 @@ func (la liveness_analyzer*) compute_liveness(succs i32[][]) {
     }
 }
 
-func (la liveness_analyzer*) is_live_at_point(value_id i32, block_id i32, instr_index i32) bool {
+func (la* liveness_analyzer) is_live_at_point(value_id i32, block_id i32, instr_index i32) bool {
     if value_id >= 0 && value_id < la.num_values && block_id >= 0 && block_id < la.num_blocks {
         is_used := false
         for _for_idx_153 := 0; _for_idx_153 < len(la.gen_set[block_id]); _for_idx_153++ {
@@ -173,7 +173,7 @@ func (la liveness_analyzer*) is_live_at_point(value_id i32, block_id i32, instr_
     false
 }
 
-func (la liveness_analyzer*) get_live_values(block_id i32) i32[] {
+func (la* liveness_analyzer) get_live_values(block_id i32) i32[] {
     i32[] result
     if block_id >= 0 && block_id < la.num_blocks {
         for v := i32(0); v < la.num_values; v += 1 {
@@ -193,7 +193,7 @@ func (la liveness_analyzer*) get_live_values(block_id i32) i32[] {
     result
 }
 
-func (la liveness_analyzer*) get_live_in(block_id i32) i32[] {
+func (la* liveness_analyzer) get_live_in(block_id i32) i32[] {
     i32[] result
     if block_id >= 0 && block_id < la.num_blocks {
         for v := i32(0); v < la.num_values; v += 1 {
@@ -205,7 +205,7 @@ func (la liveness_analyzer*) get_live_in(block_id i32) i32[] {
     result
 }
 
-func (la liveness_analyzer*) get_live_out(block_id i32) i32[] {
+func (la* liveness_analyzer) get_live_out(block_id i32) i32[] {
     i32[] result
     if block_id >= 0 && block_id < la.num_blocks {
         for v := i32(0); v < la.num_values; v += 1 {
@@ -217,7 +217,7 @@ func (la liveness_analyzer*) get_live_out(block_id i32) i32[] {
     result
 }
 
-func (la liveness_analyzer*) to_string() string {
+func (la* liveness_analyzer) to_string() string {
     s := "Liveness Analysis:\n"
     for b := i32(0); b < la.num_blocks; b += 1 {
         s += "Block " + string(b) + ":\n"

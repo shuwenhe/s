@@ -86,7 +86,7 @@ func panic_impl(string msg) {
 	}
 }
 
-func run_defer_stack(p panic_entry*) {
+func run_defer_stack(p* panic_entry) {
 	defer_entry := p.defer_stack
 
 	for defer_entry != nil {
@@ -178,7 +178,7 @@ func (defer_context* dc) pop() defer_entry* {
 	return entry
 }
 
-func (dc defer_context*) run_all() {
+func (dc* defer_context) run_all() {
 	for dc.stack != nil {
 		entry := dc.pop()
 		if entry != nil && entry.fn != nil {
@@ -187,7 +187,7 @@ func (dc defer_context*) run_all() {
 	}
 }
 
-func (dc defer_context*) clear() {
+func (dc* defer_context) clear() {
 	dc.stack = nil
 	dc.count = 0
 }

@@ -150,7 +150,7 @@ func elf64_section_new(int name, int type, int flags) elf64_section {
     section
 }
 
-func elf64_section_add_data(elf64_section section*, int[] data) {
+func elf64_section_add_data(elf64_section* section, int[] data) {
     for i := 0; i < data.len(); i = i + 1 {
         section.data = append(section.data, data[i])
     }

@@ -22,7 +22,7 @@ func relocation_apply_pc32(int symbol_value, int offset, int addend) int {
     (symbol_value + addend) - offset
 }
 
-func relocation_resolve(relocation_context ctx*, int symbol_value, int load_base) relocation_result {
+func relocation_resolve(relocation_context* ctx, int symbol_value, int load_base) relocation_result {
     result := relocation_result {
         success: 1,
         resolved_address: 0,

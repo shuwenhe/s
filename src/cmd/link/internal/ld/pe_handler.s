@@ -175,7 +175,7 @@ func new_pe_object(machine pe_machine) pe_object {
 	obj
 }
 
-func (po pe_object*) add_section(string name, data u8[]) i32 {
+func (po* pe_object) add_section(string name, data u8[]) i32 {
 	idx := i32(len(po.Sections))
 
 	shdr := pe_section_header{
@@ -201,11 +201,11 @@ func (po pe_object*) add_section(string name, data u8[]) i32 {
 	idx
 }
 
-func (po pe_object*) add_symbol(sym pe_symbol) {
+func (po* pe_object) add_symbol(sym pe_symbol) {
 	po.SymbolTable = append(po.SymbolTable, sym)
 }
 
-func (po pe_object*) add_relocation(reloc pe_relocation) {
+func (po* pe_object) add_relocation(reloc pe_relocation) {
 	po.Relocations = append(po.Relocations, reloc)
 }
 
