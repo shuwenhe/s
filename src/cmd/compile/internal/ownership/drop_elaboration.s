@@ -1,5 +1,5 @@
 package compile.internal.ownership
-type drop_elaborator struct {
+struct drop_elaborator {
 ctx OwnershipContext*
 }
 
@@ -168,23 +168,23 @@ func (drop_elaborator* de) get_drop_order(string typeName) string[] {
     }
     return result
 }
-type block_stmt struct {
+struct block_stmt {
     statements interface{}[]
 }
-type if_stmt struct {
+struct if_stmt {
     condition  interface{}
     then_branch interface{}
     else_branch interface{}
 }
-type loop_stmt struct {
+struct loop_stmt {
     condition interface{}
     body      interface{}
 }
-type drop_call struct {
+struct drop_call {
     variable    string
     kind     string  // "explicit", "return-cleanup", "error-cleanup"
 }
-type drop_summary struct {
+struct drop_summary {
     must_drop string[]
     may_drop string[]
     drop_order string[]

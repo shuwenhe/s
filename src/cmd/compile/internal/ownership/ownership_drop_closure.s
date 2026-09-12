@@ -1,5 +1,5 @@
 package compile.internal.ownership
-type ownership_drop_context struct {
+struct ownership_drop_context {
     variableOwners map[string]*OwnershipRecord
     owned_set map[string]bool
     moved_set map[string]bool
@@ -12,7 +12,7 @@ type ownership_drop_context struct {
     errors string[]
     warnings string[]
 }
-type ownership_record struct {
+struct ownership_record {
     name string
     type_name string
     state int
@@ -20,7 +20,7 @@ type ownership_record struct {
     scope_depth int
     is_param bool
 }
-type borrow_record struct {
+struct borrow_record {
     borrow_var string
     source_var string
     is_mutable bool
@@ -28,7 +28,7 @@ type borrow_record struct {
     lifetime_end int
     scope_depth int
 }
-type drop_record struct {
+struct drop_record {
     variable string
     type_name string
     has_drop_impl bool
@@ -36,7 +36,7 @@ type drop_record struct {
     fields string[]
     field_drop_order string[]
 }
-type ownership_state struct {
+struct ownership_state {
     UNDEFINED = 0
     OWNED = 1
     BORROWED_SHARED = 2
@@ -360,7 +360,7 @@ func (OwnershipDropContext* ctx) verify_closed_loop() bool {
     }
     return len(ctx.errors) == 0
 }
-type analysis_result struct {
+struct analysis_result {
     success bool
     elaborated_stmts interface{}{}
     errors string[]
@@ -408,33 +408,33 @@ func new_ownership_drop_context() OwnershipDropContext* {
         warnings: make(string[], 0),
     }
 }
-type decl_stmt struct {
+struct decl_stmt {
     name string
     type_name string
 }
-type assign_stmt struct {
+struct assign_stmt {
     lhs string
     rhs string
     is_move bool
 }
-type move_stmt struct {
+struct move_stmt {
     source string
 }
-type drop_stmt struct {
+struct drop_stmt {
     target string
 }
-type borrow_stmt struct {
+struct borrow_stmt {
     borrow_var string
     source string
     is_mutable bool
 }
-type borrow_end_stmt struct {
+struct borrow_end_stmt {
     borrow_var string
 }
-type block_stmt struct {
+struct block_stmt {
     statements interface{}[]
 }
-type drop_call struct {
+struct drop_call {
     variable string
     drop_fn string
     kind string
