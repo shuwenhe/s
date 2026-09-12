@@ -1,9 +1,9 @@
 package compile.internal.ssagen
 struct simd_intrinsic_rule {
-    string name
-    string op
-    int lanes
-    bool supported
+    name string
+    op string
+    lanes int
+    supported bool
 }
 
 func lookup_simd_intrinsic(string arch, string fn_name) simd_intrinsic_rule {

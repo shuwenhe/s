@@ -93,18 +93,18 @@ enum token_type {
 struct token {
     type_* int
     value* string
-    line int
-    col int
+    int line
+    int col
 }
 
 struct lexer {
     source* string
-    pos int
-    line int
-    col int
+    int pos
+    int line
+    int col
     tokens* token
-    token_count int
-    token_capacity int
+    int token_count
+    int token_capacity
 }
 
 func lexer_new(string source*) lexer* {

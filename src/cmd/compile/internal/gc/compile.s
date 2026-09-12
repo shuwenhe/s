@@ -2,8 +2,8 @@ package compile.internal.gc
 use compile.internal.build.main as build_main
 use std.slices
 struct compile_result {
-    int status
-    string report
+    status int
+    report string
 }
 
 func compile_package(string[] args) compile_result {

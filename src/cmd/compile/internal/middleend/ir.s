@@ -49,51 +49,51 @@ const ir_instr_cast = 310
 const ir_instr_switch = 311
 
 struct ir_value {
-    value_type int
-    value_id int
-    type_info string
-    line int
-    column int
+    int value_type
+    int value_id
+    string type_info
+    int line
+    int column
 
-    const_value string
-    var_name string
-    param_index int
+    string const_value
+    string var_name
+    int param_index
 }
 
 struct ir_instruction {
-    instr_type int
-    result ir_value
-    operands ir_value[]
-    opcode int
-    line int
-    column int
+    int instr_type
+    ir_value result
+    ir_value[] operands
+    int opcode
+    int line
+    int column
 
-    branch_target_true int
-    branch_target_false int
-    branch_targets int[]
+    int branch_target_true
+    int branch_target_false
+    int[] branch_targets
 }
 
 struct ir_basicblock {
-    block_id int
-    label string
-    instructions ir_instruction[]
-    terminator ir_instruction
+    int block_id
+    string label
+    ir_instruction[] instructions
+    ir_instruction terminator
 
-    predecessors int[]
-    successors int[]
+    int[] predecessors
+    int[] successors
 }
 
 struct ir_function {
-    name string
-    return_type string
-    parameters ir_value[]
-    basic_blocks ir_basicblock[]
-    value_counter int
+    string name
+    string return_type
+    ir_value[] parameters
+    ir_basicblock[] basic_blocks
+    int value_counter
 }
 
 struct ir_module {
-    functions ir_function[]
-    global_vars ir_value[]
+    ir_function[] functions
+    ir_value[] global_vars
 }
 
 func ir_value_const(string const_val, string type_info) ir_value {

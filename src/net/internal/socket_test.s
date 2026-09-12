@@ -151,8 +151,8 @@ func test_is_timeout_error(t *testing.t) {
 }
 
 struct test_server {
-    listener *tcp_listener
-    port int
+    *tcp_listener listener
+    int port
 }
 
 func (test_server* ts) start(int port) error {

@@ -1,27 +1,27 @@
 package optimization_pipeline
 
 struct compilation_phase {
-    int phase_id
-    string phase_name
-    int stats_time
-    int stats_changes
+    phase_id int
+    phase_name string
+    stats_time int
+    stats_changes int
 }
 
 struct optimization_stats {
-    int total_phases
-    int total_time
-    int total_optimizations
-    int code_size_before
-    int code_size_after
-    int instr_count_before
-    int instr_count_after
+    total_phases int
+    total_time int
+    total_optimizations int
+    code_size_before int
+    code_size_after int
+    instr_count_before int
+    instr_count_after int
 }
 
 struct optimization_pipeline {
-    int phase_count
+    phase_count int
     compilation_phase[] phases
-    optimization_stats stats
-    int debug_enabled
+    stats optimization_stats
+    debug_enabled int
 }
 
 func optimization_pipeline_new() optimization_pipeline* {

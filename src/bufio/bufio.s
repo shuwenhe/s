@@ -1,11 +1,11 @@
 package src.bufio
 struct buffer_reader {
-    string data
-    int offset
+    data string
+    offset int
 }
 
 struct buffer_writer {
-    string data
+    data string
 }
 
 func bufio_unit_name() string {

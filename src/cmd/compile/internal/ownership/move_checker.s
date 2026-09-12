@@ -1,6 +1,6 @@
 package compile.internal.ownership
 struct move_checker {
-    ctx ownership_context*
+    ownership_context* ctx
 }
 
 func new_move_checker(ownership_context* ctx) move_checker* {
@@ -154,14 +154,14 @@ func (move_checker* mc) has_borrow(string var_name) bool {
 }
 
 struct assignment_stmt {
-    lhs    string
+    string lhs
     rhs    interface{}
-    is_move    bool
-    is_copy    bool
+    bool is_move
+    bool is_copy
 }
 
 struct call_stmt {
-    func    string
+    string func
     Args interface{}[]
 }
 

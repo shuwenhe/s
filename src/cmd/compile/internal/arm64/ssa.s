@@ -1,13 +1,13 @@
 package compile.internal.arm64
 use std.slices
 struct ssa_value {
-    string op
+    op string
     string[] args
-    int reg
-    int reg0
-    int aux_int
-    string type_name
-    bool signed
+    reg int
+    reg0 int
+    aux_int int
+    type_name string
+    signed bool
 }
 
 func ssa_mark_moves() () {

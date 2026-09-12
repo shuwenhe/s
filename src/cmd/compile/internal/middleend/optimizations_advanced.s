@@ -12,21 +12,21 @@ const inline_threshold_medium = 80
 const inline_threshold_large = 160
 
 struct inline_candidate {
-    func_name string
-    cost int
-    benefit int
-    call_count int
-    is_recursive int
+    string func_name
+    int cost
+    int benefit
+    int call_count
+    int is_recursive
 }
 
 struct escape_node {
-    var_name string
-    escapes int
-    depth int
+    string var_name
+    int escapes
+    int depth
 }
 
 struct escape_graph {
-    nodes escape_node[]
+    escape_node[] nodes
 }
 
 func estimate_inline_cost(ir_function func) int {

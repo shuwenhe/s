@@ -1,19 +1,19 @@
 package compile.internal.ssagen
 use std.slices
 struct abi_param_desc {
-    int frame_offset
-    int size
-    bool aggregate
+    frame_offset int
+    size int
+    aggregate bool
 }
 
 struct arg_info_blob {
-    string symbol_name
+    symbol_name string
     int[] bytes
 }
 
 struct wrap_info_blob {
-    string symbol_name
-    string wrapped_symbol
+    symbol_name string
+    wrapped_symbol string
 }
 
 func emit_arg_info(string fn_name, abi_param_desc[] in_params) arg_info_blob {

@@ -4,41 +4,41 @@ use std.prelude.box
 use std.prelude.to_string
 use std.slices
 struct use_decl {
-    string path
+    path string
     option[string] alias
 }
 
 struct field {
-    string name
-    string type_name
-    bool is_public
+    name string
+    type_name string
+    is_public bool
 }
 
 struct param {
-    string name
-    string type_name
+    name string
+    type_name string
 }
 
 struct function_sig {
-    string name
+    name string
     string[] generics
     param[] params
     option[string] return_type
 }
 
 struct name_pattern {
-    string name
+    name string
 }
 
 struct wildcard_pattern {}
 
 struct variant_pattern {
-    string path
+    path string
     pattern[] args
 }
 
 struct literal_pattern {
-    expr value
+    value expr
 }
 enum pattern {
     name(name_pattern),
@@ -48,41 +48,41 @@ enum pattern {
 }
 
 struct int_expr {
-    string value
+    value string
     option[string] inferred_type
 }
 
 struct string_expr {
-    string value
+    value string
     option[string] inferred_type
 }
 
 struct bool_expr {
-    bool value
+    value bool
     option[string] inferred_type
 }
 
 struct name_expr {
-    string name
+    name string
     option[string] inferred_type
 }
 
 struct borrow_expr {
     box[expr] target
-    bool mutable
+    mutable bool
     option[string] inferred_type
 }
 
 struct binary_expr {
     box[expr] left
-    string op
+    op string
     box[expr] right
     option[string] inferred_type
 }
 
 struct member_expr {
     box[expr] target
-    string member
+    member string
     option[string] inferred_type
 }
 
@@ -113,7 +113,7 @@ struct switch_expr {
 
 struct if_expr {
     box[expr] condition
-    block_expr then_branch
+    then_branch block_expr
     option[box[expr]] else_branch
     option[string] inferred_type
 }
@@ -124,7 +124,7 @@ struct for_expr {
     option[box[stmt]] post
     string[] names
     option[box[expr]] iterable
-    block_expr body
+    body block_expr
     option[string] inferred_type
 }
 
@@ -140,8 +140,8 @@ struct array_literal {
 }
 
 struct map_entry {
-    expr key
-    expr value
+    key expr
+    value expr
 }
 
 struct map_literal {
@@ -167,25 +167,25 @@ enum expr {
 }
 
 struct var_stmt {
-    string name
+    name string
     option[string] type_name
-    expr value
+    value expr
 }
 
 struct assign_stmt {
-    string name
-    expr value
+    name string
+    value expr
 }
 
 struct increment_stmt {
-    string name
+    name string
 }
 
 struct c_for_stmt {
     box[stmt] init
-    expr condition
+    condition expr
     box[stmt] step
-    block_expr body
+    body block_expr
 }
 
 struct return_stmt {
@@ -215,51 +215,51 @@ enum stmt {
 }
 
 struct function_decl {
-    function_sig sig
+    sig function_sig
     option[block_expr] body
-    bool is_public
+    is_public bool
 }
 
 struct struct_decl {
-    string name
+    name string
     string[] generics
     field[] fields
-    bool is_public
+    is_public bool
 }
 
 struct enum_variant {
-    string name
+    name string
     option[string] payload
 }
 
 struct enum_decl {
-    string name
+    name string
     string[] generics
     enum_variant[] variants
-    bool is_public
+    is_public bool
 }
 
 struct trait_decl {
-    string name
+    name string
     string[] generics
     function_sig[] methods
-    bool is_public
+    is_public bool
 }
 
 struct receiver_method_decl {
-    string receiver_name
-    string receiver_type
-    function_decl method
+    receiver_name string
+    receiver_type string
+    method function_decl
 }
 
 struct const_decl {
-    string name
+    name string
     option[expr] value
-    int iota_index
+    iota_index int
 }
 
 struct var_decl {
-    string name
+    name string
     option[string] type_name
     option[expr] value
 }
@@ -274,7 +274,7 @@ enum item {
 }
 
 struct source_file {
-    string pkg
+    pkg string
     use_decl[] uses
     item[] items
 }

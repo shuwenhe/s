@@ -110,62 +110,62 @@ const eprotonosupport = 93
 const esocktnosupport = 94
 const eopnotsupp = 95
 struct sockaddr_inet {
-    u16 sin_family
-    u16 sin_port
-    u32 sin_addr
+    sin_family u16
+    sin_port u16
+    sin_addr u32
     byte[] sin_zero
 }
 
 struct sockaddr_inet6 {
-    u16 sin6_family
-    u16 sin6_port
-    u32 sin6_flowinfo
+    sin6_family u16
+    sin6_port u16
+    sin6_flowinfo u32
     byte[] sin6_addr
-    u32 sin6_scope_id
+    sin6_scope_id u32
 }
 
 struct sockaddr {
-    u16 sa_family
+    sa_family u16
     byte[] sa_data
 }
 
 struct pollfd {
-    int fd
-    i16 events
-    i16 revents
+    fd int
+    events i16
+    revents i16
 }
 
 struct raw_socket {
-    int fd
-    int family
-    int socktype
-    int protocol
-    bool blocking
-    i64 read_deadline_ns
-    i64 write_deadline_ns
+    fd int
+    family int
+    socktype int
+    protocol int
+    blocking bool
+    read_deadline_ns i64
+    write_deadline_ns i64
 }
 
 struct tcp_conn_state {
-    raw_socket sock
+    sock raw_socket
     byte[] local_addr
     byte[] remote_addr
 }
 
 struct udp_conn_state {
-    raw_socket sock
+    sock raw_socket
     byte[] local_addr
     byte[] remote_addr
 }
 
 struct tcp_listener_state {
-    raw_socket sock
+    sock raw_socket
     byte[] addr
 }
 
 struct socket_error {
-    int errno
-    string message
-    string syscall_name
+    errno int
+    message string
+    syscall_name string
 }
 
 func (socket_error* e) error() string {

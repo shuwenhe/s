@@ -3,37 +3,37 @@ package middleend
 use cmd.compile.internal.frontend
 
 struct ir_builder_context {
-    module ir_module
-    current_function ir_function
-    current_block ir_basicblock
+    ir_module module
+    ir_function current_function
+    ir_basicblock current_block
 
-    symbol_table ir_symbol_table
+    ir_symbol_table symbol_table
     type_system type_system
 
-    block_counter int
-    value_counter int
+    int block_counter
+    int value_counter
 
-    errors string[]
+    string[] errors
 }
 
 struct ir_symbol_table {
-    symbols ir_ir_symbol[]
-    scopes ir_scope[]
+    ir_ir_symbol[] symbols
+    ir_scope[] scopes
 }
 
 struct ir_ir_symbol {
-    name string
+    string name
     ir_value ir_value
-    block_id int
+    int block_id
 }
 
 struct ir_scope {
-    symbol_count int
-    depth int
+    int symbol_count
+    int depth
 }
 
 struct type_system {
-    type_cache string_ir_type_map
+    string_ir_type_map type_cache
 }
 
 func ir_builder_context_new() ir_builder_context {

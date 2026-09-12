@@ -19,34 +19,34 @@ enum gc_phase {
 }
 
 struct gc_object {
-	addr u64
-	size u64
-	color gc_color
-	mark_bit u32
-	alloc_tick u64
+	u64 addr
+	u64 size
+	gc_color color
+	u32 mark_bit
+	u64 alloc_tick
 }
 
 struct gc_heap {
-	objects gc_object[]
-	gray_queue u64[]
-	total_alloc u64
-	total_freed u64
-	num_gc i32
+	gc_object[] objects
+	u64[] gray_queue
+	u64 total_alloc
+	u64 total_freed
+	i32 num_gc
 	gc_phase gc_phase
-	mark_bits u8[]
-	barrier_buf u64[]
-	lock sync.mutex
+	u8[] mark_bits
+	u64[] barrier_buf
+	sync.mutex lock
 }
 
 struct gc_stats {
-	alloc_bytes u64
-	freed_bytes u64
-	num_collections i32
-	mark_time_ns i64
-	sweep_time_ns i64
-	pause_ns i64[]
-	heap_size u64
-	live_objects i32
+	u64 alloc_bytes
+	u64 freed_bytes
+	i32 num_collections
+	i64 mark_time_ns
+	i64 sweep_time_ns
+	i64[] pause_ns
+	u64 heap_size
+	i32 live_objects
 }
 
 var global_heap gc_heap

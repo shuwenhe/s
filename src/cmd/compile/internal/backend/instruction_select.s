@@ -28,26 +28,26 @@ const operand_mem = 3
 const operand_label = 4
 
 struct x86_operand {
-    operand_type int
-    reg_id int
-    imm_value string
-    mem_base string
-    mem_offset int
-    label_name string
+    int operand_type
+    int reg_id
+    string imm_value
+    string mem_base
+    int mem_offset
+    string label_name
 }
 
 struct x86_instruction {
-    instr_type int
-    operand1 x86_operand
-    operand2 x86_operand
-    operand3 x86_operand
+    int instr_type
+    x86_operand operand1
+    x86_operand operand2
+    x86_operand operand3
 }
 
 struct instruction_selector {
-    ir_func ir_function
-    x86_instrs x86_instruction[]
-    var_to_reg_map string[]
-    stack_offset int
+    ir_function ir_func
+    x86_instruction[] x86_instrs
+    string[] var_to_reg_map
+    int stack_offset
 }
 
 func instruction_selector_new(ir_function ir_func) instruction_selector {

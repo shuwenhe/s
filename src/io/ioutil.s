@@ -6,11 +6,11 @@ import (
 )
 
 struct file_reader {
-	file os.file*
+	os.file* file
 }
 
 struct file_writer {
-	file os.file*
+	os.file* file
 }
 
 func read_file(string filename) (u8[], error) {

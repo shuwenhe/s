@@ -1,9 +1,9 @@
 package compile.internal.ssa
 use std.slices
 struct prove_fact {
-    int value_id
-    bool known_zero
-    bool known_non_zero
+    value_id int
+    known_zero bool
+    known_non_zero bool
 }
 
 func fact_for(int id, bool z, bool nz) prove_fact {

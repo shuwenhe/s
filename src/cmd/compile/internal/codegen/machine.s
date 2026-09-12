@@ -22,7 +22,7 @@ enum amd64_register {
 
 struct instr_stream {
     int8[] code
-    int64 offset
+    offset int64
     string[] labels
     int64[] label_offsets
 }
@@ -126,11 +126,11 @@ func (stream* instr_stream) get_code() int8[] {
 }
 
 struct machine_code_gen {
-    instr_stream stream
+    stream instr_stream
     link_context* link_ctx
-    relocation_context reloc_ctx
-    int64 text_base
-    int64 data_base
+    reloc_ctx relocation_context
+    text_base int64
+    data_base int64
 }
 
 func make_machine_code_gen(link_context* ctx) machine_code_gen {

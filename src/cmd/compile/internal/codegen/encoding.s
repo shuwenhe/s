@@ -31,24 +31,24 @@ enum amd64_opcode {
 }
 
 struct amd64_operand {
-    addr operand
+    operand addr
 }
 
 struct amd64_instr {
-    amd64_opcode opcode
-    int prefix_count
+    opcode amd64_opcode
+    prefix_count int
     int8[] prefixes
-    int rex_byte
-    int opcode_byte1
-    int opcode_byte2
-    int modrm_byte
-    int sib_byte
-    int64 immediate
-    bool has_immediate
-    bool has_modrm
-    bool has_sib
-    int operand_size
-    int address_size
+    rex_byte int
+    opcode_byte1 int
+    opcode_byte2 int
+    modrm_byte int
+    sib_byte int
+    immediate int64
+    has_immediate bool
+    has_modrm bool
+    has_sib bool
+    operand_size int
+    address_size int
 }
 
 func make_amd64_instr(amd64_opcode op) amd64_instr {

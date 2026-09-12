@@ -1,22 +1,22 @@
 package lsp
 use "std"
 struct jsonrpc_request {
-    string jsonrpc
-    string method
+    jsonrpc string
+    method string
     option[map[string, string]] params
     option[int] id
 }
 
 struct jsonrpc_response {
-    string jsonrpc
+    jsonrpc string
     option[string] result
     option[string] error_msg
     option[int] id
 }
 
 struct jsonrpc_notification {
-    string jsonrpc
-    string method
+    jsonrpc string
+    method string
     option[map[string, string]] params
 }
 

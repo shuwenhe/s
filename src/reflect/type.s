@@ -9,19 +9,19 @@ const kind_array = 5
 const kind_function = 6
 
 struct field {
-    string name
-    int offset
-    int size
-    int type_id
-    bool exported
+    name string
+    offset int
+    size int
+    type_id int
+    exported bool
 }
 
 struct type {
-    int id
-    string name
-    int kind
-    int size
-    int align
+    id int
+    name string
+    kind int
+    size int
+    align int
     field[] fields
 }
 

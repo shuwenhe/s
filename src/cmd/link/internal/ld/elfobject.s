@@ -29,62 +29,62 @@ enum elf_type {
 }
 
 struct elf_header {
-	magic         u32
-	class         u8  
-	endian        u8  
-	version       u8
-	os_abi        u8
-	abi_version   u8
-	padding       [7]u8
-	type          i16
-	machine       i16
-	version       i32
-	entry         u64
-	phdr_offset   u64
-	shdr_offset   u64
-	flags         i32
-	ehdr_size     i16
-	phdr_entry_size i16
-	phdr_num      i16
-	shdr_entry_size i16
-	shdr_num      i16
-	shdr_str_index i16
+	u32 magic
+	u8 class
+	u8 endian
+	u8 version
+	u8 os_abi
+	u8 abi_version
+	[7]u8 padding
+	i16 type
+	i16 machine
+	i32 version
+	u64 entry
+	u64 phdr_offset
+	u64 shdr_offset
+	i32 flags
+	i16 ehdr_size
+	i16 phdr_entry_size
+	i16 phdr_num
+	i16 shdr_entry_size
+	i16 shdr_num
+	i16 shdr_str_index
 }
 
 struct section_header {
-	name        i32
-	type        i32
-	flags       i64
-	addr        i64
-	offset      i64
-	size        i64
-	link        i32
-	info        i32
-	addr_align  i64
-	entry_size  i64
+	i32 name
+	i32 type
+	i64 flags
+	i64 addr
+	i64 offset
+	i64 size
+	i32 link
+	i32 info
+	i64 addr_align
+	i64 entry_size
 }
 
 struct program_header {
-	type       i32
-	flags      i32
-	offset     i64
-	virt_addr  i64
-	phys_addr  i64
-	file_size  i64
-	mem_size   i64
-	align      i64
+	i32 type
+	i32 flags
+	i64 offset
+	i64 virt_addr
+	i64 phys_addr
+	i64 file_size
+	i64 mem_size
+	i64 align
 }
 
 struct elf_object {
-	header           elf_header
-	sections section_header[]
-	section_data     map[i32]u8[]    
-	symbols symbol_entry[]
-	string_table     map[i32]string  
-	relocations relocation[]
-	machine          i16             
-	flags            i32
-	endian           int             
+	elf_header header
+	section_header[] sections
+	map[i32]u8[] section_data
+	symbol_entry[] symbols
+	map[i32]string string_table
+	relocation[] relocations
+	i16 machine
+	i32 flags
+	int endian
 }
 
 func new_elf_object(machine i16) elf_object {

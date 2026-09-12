@@ -8,8 +8,8 @@ enum type_kind {
 }
 
 struct type {
-    type_kind kind
-    string name,
+    kind type_kind
+    name, string
     option[type] inner,
     type[] params,
 }

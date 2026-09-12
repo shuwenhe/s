@@ -35,8 +35,8 @@ const op_test_r_r64  = 0x4885
 struct register_allocator {
     int[] free_regs
     int[] allocated
-    int reg_count
-    int current_temp
+    reg_count int
+    current_temp int
 }
 
 func make_register_allocator() register_allocator {
@@ -62,13 +62,13 @@ struct amd64_code_gen {
     machine_code_gen* mcg
     symbol_table* symtab
     relocation_context* reloc_ctx
-    codegen_config config
-    register_allocator reg_alloc
-    string current_func_name
-    int64 stack_depth
-    int64 max_stack_depth
-    int64 function_start_offset
-    int label_counter
+    config codegen_config
+    reg_alloc register_allocator
+    current_func_name string
+    stack_depth int64
+    max_stack_depth int64
+    function_start_offset int64
+    label_counter int
     int64[] temp_locations
 }
 

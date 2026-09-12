@@ -8,7 +8,7 @@ struct s_compiler_full {
     relocation_context* reloc_ctx
     go_style_code_generator* codegen
     go_style_elf_generator* elf_gen
-    codegen_config config
+    config codegen_config
 }
 
 func make_s_compiler_full() s_compiler_full {

@@ -47,65 +47,65 @@ const r_x86_64_plt32 = 4
 const r_x86_64_relative = 8
 
 struct elf64_header {
-    magic int
-    class int
-    data int
-    version int
-    osabi int
-    abiversion int
-    type int
-    machine int
-    e_version int
-    entry int
-    phoff int
-    shoff int
-    flags int
-    ehsize int
-    phentsize int
-    phnum int
-    shentsize int
-    shnum int
-    shstrndx int
+    int magic
+    int class
+    int data
+    int version
+    int osabi
+    int abiversion
+    int type
+    int machine
+    int e_version
+    int entry
+    int phoff
+    int shoff
+    int flags
+    int ehsize
+    int phentsize
+    int phnum
+    int shentsize
+    int shnum
+    int shstrndx
 }
 
 struct elf64_section {
-    name int
-    type int
-    flags int
-    addr int
-    offset int
-    size int
-    link int
-    info int
-    addralign int
-    entsize int
-    data int[]
+    int name
+    int type
+    int flags
+    int addr
+    int offset
+    int size
+    int link
+    int info
+    int addralign
+    int entsize
+    int[] data
 }
 
 struct elf64_symbol {
-    name int
-    info int
-    other int
-    shndx int
-    value int
-    size int
+    int name
+    int info
+    int other
+    int shndx
+    int value
+    int size
 }
 
 struct elf64_relocation {
-    offset int
-    info int
-    addend int
+    int offset
+    int info
+    int addend
 }
 
 struct elf64_program_header {
-    type int
-    flags int
-    offset int
-    vaddr int
-    paddr int
-    filesz int
-    memsz int
-    align int
+    int type
+    int flags
+    int offset
+    int vaddr
+    int paddr
+    int filesz
+    int memsz
+    int align
 }
 
 func elf64_header_new() elf64_header {

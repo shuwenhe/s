@@ -1,37 +1,37 @@
 package middleend
 
 struct control_flow_graph {
-    function ir_function
-    blocks cfg_block[]
-    entry_block_id int
-    exit_block_id int
+    ir_function function
+    cfg_block[] blocks
+    int entry_block_id
+    int exit_block_id
 
-    dominators int[][]
-    post_dominators int[][]
-    dominance_frontier int[][]
+    int[][] dominators
+    int[][] post_dominators
+    int[][] dominance_frontier
 }
 
 struct cfg_block {
-    block_id int
-    label string
-    instructions ir_instruction[]
+    int block_id
+    string label
+    ir_instruction[] instructions
 
-    predecessors int[]
-    successors int[]
+    int[] predecessors
+    int[] successors
 
-    is_loop_header int
-    loop_id int
+    int is_loop_header
+    int loop_id
 
-    idom int
-    depth int
+    int idom
+    int depth
 }
 
 struct loop_info {
-    loop_id int
-    header_id int
-    back_edges int[]
-    body_blocks int[]
-    exit_blocks int[]
+    int loop_id
+    int header_id
+    int[] back_edges
+    int[] body_blocks
+    int[] exit_blocks
 }
 
 func cfg_new(ir_function func) control_flow_graph {

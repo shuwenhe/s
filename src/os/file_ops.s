@@ -5,14 +5,14 @@ import (
 )
 
 struct file {
-	i32 fd
-	string name
+	fd i32
+	name string
 }
 
 struct file_error {
-	string op
-	string path
-	error err
+	op string
+	path string
+	err error
 }
 
 func (file_error* fe) error() string {

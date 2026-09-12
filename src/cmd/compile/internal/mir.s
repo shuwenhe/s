@@ -14,18 +14,18 @@ use std.option.option
 use std.prelude.to_string
 use std.slices
 struct mir_operand {
-    string kind
-    string value
-    string type_name
+    kind string
+    value string
+    type_name string
 }
 
 struct mir_place_projection {
-    string kind
-    string value
+    kind string
+    value string
 }
 
 struct mir_place {
-    string root
+    root string
     mir_place_projection[] projections
 }
 
@@ -37,37 +37,37 @@ struct mir_flow_state {
 }
 
 struct mir_local_slot {
-    int id
-    string name
-    string kind
-    int version
-    string type_name
-    bool copyable
+    id int
+    name string
+    kind string
+    version int
+    type_name string
+    copyable bool
 }
 
 struct mir_assign_stmt {
-    int target
-    string op
+    target int
+    op string
     string[] args
 }
 
 struct mir_eval_stmt {
-    string op
+    op string
     string[] args
 }
 
 struct mir_move_stmt {
-    int target
-    mir_operand source
+    target int
+    source mir_operand
 }
 
 struct mir_copy_stmt {
-    int target
-    mir_operand source
+    target int
+    source mir_operand
 }
 
 struct mir_drop_stmt {
-    int slot
+    slot int
 }
 enum mir_statement {
     assign(mir_assign_stmt),
@@ -78,33 +78,33 @@ enum mir_statement {
 }
 
 struct mir_control_edge {
-    string label
-    int target
+    label string
+    target int
     mir_operand[] args
 }
 
 struct mir_terminator {
-    string kind
+    kind string
     mir_control_edge[] edges
 }
 
 struct mir_basic_block {
-    int id
-    string label
+    id int
+    label string
     mir_statement[] statements
-    mir_terminator terminator
+    terminator mir_terminator
 }
 
 struct mir_graph {
-    string function_name
+    function_name string
     mir_basic_block[] blocks
     mir_local_slot[] locals
     string[] trace
-    int entry
-    int exit
-    bool borrow_ok
-    int borrow_errors
-    string borrow_message
+    entry int
+    exit int
+    borrow_ok bool
+    borrow_errors int
+    borrow_message string
 }
 
 func lower_function_graph(function_decl function) mir_graph {

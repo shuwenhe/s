@@ -1,13 +1,13 @@
 package compile.internal.base
 struct start_heap_state {
-    int requested_heap_goal
-    int derate_break
-    int derate_lo_pct
-    int derate_hi_pct
-    bool log_heap_tweaks
-    int current_gogc
-    int original_gogc
-    bool active
+    requested_heap_goal int
+    derate_break int
+    derate_lo_pct int
+    derate_hi_pct int
+    log_heap_tweaks bool
+    current_gogc int
+    original_gogc int
+    active bool
 }
 start_heap := start_heap_state {
     requested_heap_goal: 0, derate_break 600, derate_lo_pct 70, derate_hi_pct 55, log_heap_tweaks false, current_gogc 100, original_gogc 100, active false,

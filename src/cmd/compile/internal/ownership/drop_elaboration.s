@@ -186,15 +186,15 @@ struct loop_stmt {
 }
 
 struct drop_call {
-    variable    string
-    kind     string
+    string variable
+    string kind
 }
 
 struct drop_summary {
-    must_drop string[]
-    may_drop string[]
-    drop_order string[]
-    field_drops map[string]string[]
+    string[] must_drop
+    string[] may_drop
+    string[] drop_order
+    map[string]string[] field_drops
 }
 
 func (drop_elaborator* de) generate_drop_summary(block_stmt* block) drop_summary* {

@@ -6,14 +6,14 @@ func path_segment_kind_index_var() int { 2 }
 func path_segment_kind_deref() int { 3 }
 
 struct path_segment {
-    int kind
-    string field_name
-    int index_value
-    string index_var
+    kind int
+    field_name string
+    index_value int
+    index_var string
 }
 
 struct path {
-    string base_var
+    base_var string
     path_segment[] segments
 }
 

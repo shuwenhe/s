@@ -16,11 +16,11 @@ const reg_r14 = 12
 const reg_r15 = 13
 
 struct live_interval {
-    int var_id
-    int start
-    int end
-    int spilled
-    int assigned_reg
+    var_id int
+    start int
+    end int
+    spilled int
+    assigned_reg int
 }
 
 struct interference_graph {
@@ -30,9 +30,9 @@ struct interference_graph {
 
 struct register_allocator {
     live_interval[] intervals
-    interference_graph graph
-    int spill_count
-    int reserved_regs
+    graph interference_graph
+    spill_count int
+    reserved_regs int
 }
 
 func register_allocator_new() register_allocator {
@@ -163,10 +163,10 @@ func register_allocator_insert_spill_code(allocator* register_allocator, x86_ins
 }
 
 struct spill_reload_action {
-    int value_id
-    int stack_offset
-    int instruction_index
-    bool reload
+    value_id int
+    stack_offset int
+    instruction_index int
+    reload bool
 }
 
 func register_allocator_spill_reload_plan(register_allocator* allocator) spill_reload_action[] {

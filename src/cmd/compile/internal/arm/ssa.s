@@ -1,25 +1,25 @@
 package compile.internal.arm
 use std.slices
 struct ssa_value {
-    string op
+    op string
     string[] args
-    int reg
-    int reg0
-    int aux_int
-    string type_name
-    bool signed
+    reg int
+    reg0 int
+    aux_int int
+    type_name string
+    signed bool
 }
 
 struct ssa_block {
-    string kind
+    kind string
     int[] succs
-    int likely
+    likely int
 }
 
 struct bfc_result {
-    bool ok
-    int lsb
-    int width
+    ok bool
+    lsb int
+    width int
 }
 
 func ssa_mark_moves() () {

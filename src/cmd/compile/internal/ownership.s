@@ -21,16 +21,16 @@ func make_plan(string[] type_env) string[] {
 }
 
 struct ownership_slot {
-    string name
-    string type_name
-    bool moved
-    bool dropped
+    name string
+    type_name string
+    moved bool
+    dropped bool
 }
 
 struct ownership_result {
-    bool ok
-    int errors
-    string message
+    ok bool
+    errors int
+    message string
     string[] drops
 }
 

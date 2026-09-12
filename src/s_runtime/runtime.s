@@ -1,24 +1,24 @@
 package s_runtime
 
 struct memory_block {
-    addr int
-    size int
-    used int
-    next int
+    int addr
+    int size
+    int used
+    int next
 }
 
 struct allocator {
-    heap_start int
-    heap_size int
-    total_allocated int
-    block_list int
+    int heap_start
+    int heap_size
+    int total_allocated
+    int block_list
     memory_block[] blocks
 }
 
 struct context {
     allocator allocator
-    panic_msg string
-    exit_code int
+    string panic_msg
+    int exit_code
 }
 
 context rt_context

@@ -1,23 +1,23 @@
 package testing
 
 struct test_case {
-    name string
-    source string
-    expected_output string
-    should_compile int
+    string name
+    string source
+    string expected_output
+    int should_compile
 }
 
 struct test_suite {
-    name string
-    tests test_case[]
-    passed int
-    failed int
+    string name
+    test_case[] tests
+    int passed
+    int failed
 }
 
 struct regression_suite {
-    suites test_suite[]
-    total_tests int
-    total_passed int
+    test_suite[] suites
+    int total_tests
+    int total_passed
 }
 
 regression_suite regression_data

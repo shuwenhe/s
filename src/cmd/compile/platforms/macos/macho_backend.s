@@ -27,70 +27,70 @@ const (
 )
 
 struct macho_header {
-    uint magic
-    uint cpu_type
-    uint cpu_subtype
-    uint file_type
-    uint n_cmds
-    uint size_cmds
-    uint flags
-    uint reserved
+    magic uint
+    cpu_type uint
+    cpu_subtype uint
+    file_type uint
+    n_cmds uint
+    size_cmds uint
+    flags uint
+    reserved uint
 }
 
 struct macho_segment_64 {
-    uint cmd
-    uint cmd_size
-    string seg_name
-    uint64 vm_addr
-    uint64 vm_size
-    uint64 file_offset
-    uint64 file_size
-    uint prot_max
-    uint prot_init
-    uint n_sections
-    uint flags
+    cmd uint
+    cmd_size uint
+    seg_name string
+    vm_addr uint64
+    vm_size uint64
+    file_offset uint64
+    file_size uint64
+    prot_max uint
+    prot_init uint
+    n_sections uint
+    flags uint
 }
 
 struct macho_section_64 {
-    string sect_name
-    string seg_name
-    uint64 addr
-    uint64 size
-    uint offset
-    uint align
-    uint reloff
-    uint nreloc
-    uint flags
-    uint reserved1
-    uint reserved2
+    sect_name string
+    seg_name string
+    addr uint64
+    size uint64
+    offset uint
+    align uint
+    reloff uint
+    nreloc uint
+    flags uint
+    reserved1 uint
+    reserved2 uint
 }
 
 struct macho_symtab_cmd {
-    uint cmd
-    uint cmd_size
-    uint symoff
-    uint nsyms
-    uint stroff
-    uint strsize
+    cmd uint
+    cmd_size uint
+    symoff uint
+    nsyms uint
+    stroff uint
+    strsize uint
 }
 
 struct macho_main_cmd {
-    uint cmd
-    uint cmd_size
-    uint64 entry_off
-    uint64 stack_size
+    cmd uint
+    cmd_size uint
+    entry_off uint64
+    stack_size uint64
 }
 
 struct macho_builder {
-    string arch
+    arch string
     string[] code_text
     string[] data_text
     string[] rodata_text
-    int code_offset
-    int data_offset
-    int rodata_offset
+    code_offset int
+    data_offset int
+    rodata_offset int
     string[] symbols
-    int symbol_count
+    symbol_count int
 }
 
 func macho_builder_new() macho_builder* {

@@ -1,43 +1,43 @@
 package compile.internal.ownership
 struct ownership_drop_context {
-    variableOwners map[string]*ownership_record
-    owned_set map[string]bool
-    moved_set map[string]bool
-    borrowed_set map[string]borrow_record[]
-    borrow_contexts borrow_context[]
-    active_borrows map[string]*borrow_record
-    drop_registry map[string]*drop_record
-    drop_order string[]
-    analysis_phase int
-    errors string[]
-    warnings string[]
+    map[string]*ownership_record variableOwners
+    map[string]bool owned_set
+    map[string]bool moved_set
+    map[string]borrow_record[] borrowed_set
+    borrow_context[] borrow_contexts
+    map[string]*borrow_record active_borrows
+    map[string]*drop_record drop_registry
+    string[] drop_order
+    int analysis_phase
+    string[] errors
+    string[] warnings
 }
 
 struct ownership_record {
-    name string
-    type_name string
-    state int
-    declaration_order int
-    scope_depth int
-    is_param bool
+    string name
+    string type_name
+    int state
+    int declaration_order
+    int scope_depth
+    bool is_param
 }
 
 struct borrow_record {
-    borrow_var string
-    source_var string
-    is_mutable bool
-    lifetime_start int
-    lifetime_end int
-    scope_depth int
+    string borrow_var
+    string source_var
+    bool is_mutable
+    int lifetime_start
+    int lifetime_end
+    int scope_depth
 }
 
 struct drop_record {
-    variable string
-    type_name string
-    has_drop_impl bool
-    drop_fn string
-    fields string[]
-    field_drop_order string[]
+    string variable
+    string type_name
+    bool has_drop_impl
+    string drop_fn
+    string[] fields
+    string[] field_drop_order
 }
 
 struct ownership_state {
@@ -366,11 +366,11 @@ func (ownership_drop_context* ctx) verify_closed_loop() bool {
 }
 
 struct analysis_result {
-    success bool
+    bool success
     elaborated_stmts interface{}{}
-    errors string[]
-    warnings string[]
-    drop_order string[]
+    string[] errors
+    string[] warnings
+    string[] drop_order
 }
 
 func (ownership_drop_context* ctx) analyze_complete(stmts interface{}) analysis_result* {
@@ -415,32 +415,32 @@ func new_ownership_drop_context() ownership_drop_context* {
 }
 
 struct decl_stmt {
-    name string
-    type_name string
+    string name
+    string type_name
 }
 
 struct assign_stmt {
-    lhs string
-    rhs string
-    is_move bool
+    string lhs
+    string rhs
+    bool is_move
 }
 
 struct move_stmt {
-    source string
+    string source
 }
 
 struct drop_stmt {
-    target string
+    string target
 }
 
 struct borrow_stmt {
-    borrow_var string
-    source string
-    is_mutable bool
+    string borrow_var
+    string source
+    bool is_mutable
 }
 
 struct borrow_end_stmt {
-    borrow_var string
+    string borrow_var
 }
 
 struct block_stmt {
@@ -448,7 +448,7 @@ struct block_stmt {
 }
 
 struct drop_call {
-    variable string
-    drop_fn string
-    kind string
+    string variable
+    string drop_fn
+    string kind
 }

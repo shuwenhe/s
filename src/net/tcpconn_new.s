@@ -1,8 +1,8 @@
 package src.net
 import "src.net.internal"
 struct tcp_addr {
-    string ip
-    int port
+    ip string
+    port int
 }
 
 func (tcp_addr* a) network() string {
@@ -15,8 +15,8 @@ func (tcp_addr* a) string() string {
 
 struct tcp_conn {
     *internal.raw_socket
-    laddr *tcp_addr
-    raddr *tcp_addr
+    *tcp_addr laddr
+    *tcp_addr raddr
 }
 
 func (tcp_conn* c) read(byte buf[]) (int, error) {
@@ -126,7 +126,7 @@ func dial_tcp(string address, int port, int timeout_ms) (*tcp_conn, error) {
 
 struct tcp_listener {
     *internal.raw_socket
-    addr *tcp_addr
+    *tcp_addr addr
 }
 
 func listen_tcp(string address, int port) (*tcp_listener, error) {

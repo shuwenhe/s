@@ -35,64 +35,64 @@ enum macho_file_type {
 }
 
 struct macho_header {
-	magic          u32
-	cpu_type        i32
-	cpu_subtype     i32
-	file_type       u32
-	num_commands    u32
-	commands_size   u32
-	flags          u32
-	reserved       u32  
+	u32 magic
+	i32 cpu_type
+	i32 cpu_subtype
+	u32 file_type
+	u32 num_commands
+	u32 commands_size
+	u32 flags
+	u32 reserved
 }
 
 struct macho_load_command {
-	cmd  u32
-	size u32
-	data u8[]
+	u32 cmd
+	u32 size
+	u8[] data
 }
 
 struct macho_segment {
-	name         [16]u8
-	vm_addr       u64
-	vm_size       u64
-	file_offset   u64
-	file_size     u64
-	max_prot      i32
-	init_prot     i32
-	num_sections  u32
-	flags        u32
-	sections macho_section[]
+	[16]u8 name
+	u64 vm_addr
+	u64 vm_size
+	u64 file_offset
+	u64 file_size
+	i32 max_prot
+	i32 init_prot
+	u32 num_sections
+	u32 flags
+	macho_section[] sections
 }
 
 struct macho_section {
-	name       [16]u8
-	seg_name    [16]u8
-	addr       u64
-	size       u64
-	offset     u32
-	align      u32
-	reloff     u32
-	nreloc     u32
-	flags      u32
-	reserved1  u32
-	reserved2  u32
-	reserved3  u32
+	[16]u8 name
+	[16]u8 seg_name
+	u64 addr
+	u64 size
+	u32 offset
+	u32 align
+	u32 reloff
+	u32 nreloc
+	u32 flags
+	u32 reserved1
+	u32 reserved2
+	u32 reserved3
 }
 
 struct macho_object {
-	header       macho_header
-	load_commands macho_load_command[]
-	segments macho_segment[]
-	symbol_table macho_symbol[]
-	strings u8[]
+	macho_header header
+	macho_load_command[] load_commands
+	macho_segment[] segments
+	macho_symbol[] symbol_table
+	u8[] strings
 }
 
 struct macho_symbol {
-	name    string
-	value   u64
-	section u8
-	desc    u16
-	type    u8
+	string name
+	u64 value
+	u8 section
+	u16 desc
+	u8 type
 }
 
 func new_macho_object(cpuType macho_machine, filetype macho_file_type) macho_object {

@@ -1,11 +1,11 @@
 package compile.internal.ssagen
 struct arch_profile {
-    string name
-    int int_arg_regs
-    int stack_align
-    int caller_saved
-    int callee_saved
-    bool has_simd
+    name string
+    int_arg_regs int
+    stack_align int
+    caller_saved int
+    callee_saved int
+    has_simd bool
 }
 
 func lookup_arch(string arch) arch_profile {

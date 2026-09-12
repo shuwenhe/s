@@ -22,53 +22,53 @@ enum elf_machine {
 
 struct elf_header {
     int8[] ident
-    elf_type type
-    elf_machine machine
-    int32 version
-    int64 entry
-    int64 phoff
-    int64 shoff
-    int32 flags
-    int16 ehsize
-    int16 phentsize
-    int16 phnum
-    int16 shentsize
-    int16 shnum
-    int16 shstrndx
+    type elf_type
+    machine elf_machine
+    version int32
+    entry int64
+    phoff int64
+    shoff int64
+    flags int32
+    ehsize int16
+    phentsize int16
+    phnum int16
+    shentsize int16
+    shnum int16
+    shstrndx int16
 }
 
 struct elf_section_header {
-    int32 name
-    int32 type
-    int64 flags
-    int64 addr
-    int64 offset
-    int64 size
-    int32 link
-    int32 info
-    int64 addralign
-    int64 entsize
+    name int32
+    type int32
+    flags int64
+    addr int64
+    offset int64
+    size int64
+    link int32
+    info int32
+    addralign int64
+    entsize int64
 }
 
 struct elf_symbol {
-    int32 name
-    int8 info
-    int8 other
-    int16 shndx
-    int64 value
-    int64 size
+    name int32
+    info int8
+    other int8
+    shndx int16
+    value int64
+    size int64
 }
 
 struct elf_relocation {
-    int64 offset
-    int64 info
-    int64 addend
+    offset int64
+    info int64
+    addend int64
 }
 
 struct elf_writer {
     int8[] data
-    int64 offset
-    elf_machine target_machine
+    offset int64
+    target_machine elf_machine
 }
 
 func make_elf_writer(elf_machine machine) elf_writer {

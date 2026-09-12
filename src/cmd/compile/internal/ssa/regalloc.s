@@ -1,20 +1,20 @@
 package compile.internal.ssa
 use std.slices
 struct reg_assign {
-    int value_id
-    string reg
-    bool spilled
+    value_id int
+    reg string
+    spilled bool
 }
 
 struct live_interval {
-    int value_id
-    int start
-    int end
+    value_id int
+    start int
+    end int
 }
 
 struct regalloc_result {
     reg_assign[] assigns
-    int spills
+    spills int
 }
 
 func interval_less(live_interval a, live_interval b) bool {

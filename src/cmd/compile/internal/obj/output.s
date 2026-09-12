@@ -1,11 +1,11 @@
 package compile.internal.obj
 use compile.internal.codegen
 struct elf_output {
-    elf_writer writer
+    writer elf_writer
     elf_section_header[] sections
     elf_symbol[] symbols
     int32[] section_offsets
-    string string_table
+    string_table string
 }
 
 func make_elf_output() elf_output {
@@ -60,7 +60,7 @@ struct object_file_generator {
     machine_code_gen* code_gen
     symbol_table* symbols
     relocation_context* relocs
-    elf_output elf_out
+    elf_out elf_output
 }
 
 func make_object_file_generator(machine_code_gen* cg, symbol_table* st, relocation_context* rc) object_file_generator {

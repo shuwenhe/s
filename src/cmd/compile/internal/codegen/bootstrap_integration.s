@@ -9,11 +9,11 @@ struct s_compiler {
     machine_code_gen* mcg
     symbol_table* symtab
     relocation_context* reloc_ctx
-    codegen_config config
-    int64 total_code_size
-    int64 total_data_size
-    int64 function_count
-    int64 symbol_count
+    config codegen_config
+    total_code_size int64
+    total_data_size int64
+    function_count int64
+    symbol_count int64
 }
 
 func make_s_compiler(string target_arch) s_compiler {

@@ -7,9 +7,9 @@ struct bootstrap_compiler {
     typechecker* any
     codegen* any
     elf_gen* any
-    file_count int
-    line_count int
-    error_count int
+    int file_count
+    int line_count
+    int error_count
 }
 
 func bootstrap_compiler_new() bootstrap_compiler* {

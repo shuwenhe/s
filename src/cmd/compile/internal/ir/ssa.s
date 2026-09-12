@@ -1,41 +1,41 @@
 package compile.internal.ir.ssa
 
 struct ssa_value {
-    int id
-    string op
+    id int
+    op string
     int[] args
-    int block_id
-    int version
+    block_id int
+    version int
     option[string] type_name
 }
 
 struct ssa_phi_node {
-    int id
-    int target_block
+    id int
+    target_block int
     int[] incoming_blocks
     int[] incoming_values
-    string type_name
+    type_name string
 }
 
 struct ssa_block {
-    int id
-    string label
+    id int
+    label string
     ssa_value[] values
     ssa_phi_node[] phis
     int[] predecessors
     int[] successors
-    int terminator_value
+    terminator_value int
 }
 
 struct static_single_assignment {
     ssa_block[] blocks
     ssa_value[] all_values
     ssa_phi_node[] all_phis
-    int value_counter
-    int phi_counter
+    value_counter int
+    phi_counter int
     int[] variable_versions
-    int entry_block
-    int exit_block
+    entry_block int
+    exit_block int
 }
 
 func new_ssa() static_single_assignment {

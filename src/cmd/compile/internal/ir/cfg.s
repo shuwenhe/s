@@ -1,26 +1,26 @@
 package compile.internal.ir.cfg
 
 struct cfg_edge {
-    int from_block
-    int to_block
-    string edge_type
+    from_block int
+    to_block int
+    edge_type string
 }
 
 struct cfg_block {
-    int id
-    string label
+    id int
+    label string
     int[] predecessors
     int[] successors
-    int loop_depth
-    bool is_loop_header
-    bool is_exception_handler
+    loop_depth int
+    is_loop_header bool
+    is_exception_handler bool
 }
 
 struct control_flow_graph {
     cfg_block[] blocks
     cfg_edge[] edges
-    int entry_block
-    int exit_block
+    entry_block int
+    exit_block int
     int[] loop_headers
     int[][] dominator_tree
     int[][] post_dominator_tree

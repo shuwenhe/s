@@ -1,33 +1,33 @@
 package ssa_rules
 
 struct rule {
-    int id
-    int pattern_op
-    int result_op
-    int priority
-    func_ptr apply_func
+    id int
+    pattern_op int
+    result_op int
+    priority int
+    apply_func func_ptr
 }
 
 struct pattern {
-    int op
+    op int
     int[] arg_ops
-    int num_args
-    int constants
+    num_args int
+    constants int
 }
 
 struct rewrite {
-    int result_op
+    result_op int
     int[] result_args
-    int num_args
+    num_args int
 }
 
 struct rule_engine {
-    int rule_count
+    rule_count int
     rule[] rules
-    int pattern_count
+    pattern_count int
     pattern[] patterns
-    int stats_applied
-    int stats_optimizations
+    stats_applied int
+    stats_optimizations int
 }
 
 func rule_engine_new() rule_engine* {

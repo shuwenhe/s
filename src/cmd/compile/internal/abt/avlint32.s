@@ -4,24 +4,24 @@ leaf_height := 1
 zero_height := 0
 not_key32 := -2147483648
 struct kv32 {
-    int key
-    string data
+    key int
+    data string
 }
 
 struct t {
     kv32[] items
-    int size
+    size int
 }
 
 struct iter32 {
     kv32[] items
-    int index
+    index int
 }
 
 struct find_result {
-    bool ok
-    int key
-    string data
+    ok bool
+    key int
+    data string
 }
 
 func new_tree() t {

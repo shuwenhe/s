@@ -9,13 +9,13 @@ enum addr_type {
 }
 
 struct addr {
-    addr_type type
-    int reg
-    int index
-    int scale
-    int64 offset
-    string sym
-    int64 symoff
+    type addr_type
+    reg int
+    index int
+    scale int
+    offset int64
+    sym string
+    symoff int64
 }
 
 func make_addr_const(int64 offset) addr {

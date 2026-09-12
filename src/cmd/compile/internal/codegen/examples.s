@@ -5,7 +5,7 @@ struct compilation_session {
     link_context* link_ctx
     machine_code_gen* mcg
     symbol_table* symtab
-    relocation_context reloc_ctx
+    reloc_ctx relocation_context
     codegen_pipeline* pipeline
 }
 

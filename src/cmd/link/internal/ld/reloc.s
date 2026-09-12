@@ -24,47 +24,47 @@ enum reloc_type {
 }
 
 struct relocation {
-	offset    i64      
-	type      reloc_type 
-	sym_index  i32      
-	addend    i64      
-	section_index i32   
+	i64 offset
+	reloc_type type
+	i32 sym_index
+	i64 addend
+	i32 section_index
 }
 
 struct reloc_processor {
-	relocs relocation[]
-	symbol_table symbol_entry[]
-	section_table section[]
-	got_offset     i64
-	plt_offset     i64
-	tls_offset     i64
+	relocation[] relocs
+	symbol_entry[] symbol_table
+	section[] section_table
+	i64 got_offset
+	i64 plt_offset
+	i64 tls_offset
 }
 
 struct symbol_entry {
-	name      string
-	value     i64
-	size      i64
-	binding   i32  
-	type      i32  
-	visibility i32 
-	section_index i32
-	is_comdat  bool
-	is_weak    bool
-	is_global  bool
+	string name
+	i64 value
+	i64 size
+	i32 binding
+	i32 type
+	i32 visibility
+	i32 section_index
+	bool is_comdat
+	bool is_weak
+	bool is_global
 }
 
 struct section {
-	name          string
-	type          i32
-	flags         i64
-	offset        i64
-	size          i64
-	alignment     i64
-	link          i32
-	info          i32
-	entry_size     i64
-	data u8[]
-	relocs relocation[]
+	string name
+	i32 type
+	i64 flags
+	i64 offset
+	i64 size
+	i64 alignment
+	i32 link
+	i32 info
+	i64 entry_size
+	u8[] data
+	relocation[] relocs
 }
 
 func new_reloc_processor() reloc_processor {

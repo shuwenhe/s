@@ -1,16 +1,16 @@
 package compile.internal.arm64
 struct arch_info {
-    string link_arch
-    int reg_sp
-    int max_width
-    string pad_frame_hook
-    string zero_range_hook
-    string ginsnop_hook
-    string ssa_mark_moves_hook
-    string ssa_gen_value_hook
-    string ssa_gen_block_hook
-    string load_reg_result_hook
-    string spill_arg_reg_hook
+    link_arch string
+    reg_sp int
+    max_width int
+    pad_frame_hook string
+    zero_range_hook string
+    ginsnop_hook string
+    ssa_mark_moves_hook string
+    ssa_gen_value_hook string
+    ssa_gen_block_hook string
+    load_reg_result_hook string
+    spill_arg_reg_hook string
 }
 
 func init_arm64(arch_info arch) arch_info {

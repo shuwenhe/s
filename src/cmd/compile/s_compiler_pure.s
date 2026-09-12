@@ -1,17 +1,17 @@
 package s_compiler_pure
 
 struct compiler_state {
-    version string
-    target string
-    optimize_level int
-    debug_info int
+    string version
+    string target
+    int optimize_level
+    int debug_info
 }
 
 struct compilation_result {
-    success int
-    output string
-    errors string[]
-    warnings string[]
+    int success
+    string output
+    string[] errors
+    string[] warnings
 }
 
 var compiler_state_global compiler_state

@@ -4,14 +4,14 @@ use compile.internal.semantic.check_detailed
 use compile.internal.semantic.semantic_error
 
 struct safety_proof {
-    bool proven
-    int diagnostic_count
-    int type_errors
-    int ownership_errors
-    int borrow_errors
-    int lifetime_errors
-    int unsafe_errors
-    string summary
+    proven bool
+    diagnostic_count int
+    type_errors int
+    ownership_errors int
+    borrow_errors int
+    lifetime_errors int
+    unsafe_errors int
+    summary string
 }
 
 func classify_safety_error(semantic_error diagnostic, safety_proof* proof) () {

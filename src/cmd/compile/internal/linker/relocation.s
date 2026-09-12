@@ -1,17 +1,17 @@
 package linker
 
 struct relocation_context {
-    section_index int
-    symbol_index int
-    relocation_type int
-    offset int
-    addend int
+    int section_index
+    int symbol_index
+    int relocation_type
+    int offset
+    int addend
 }
 
 struct relocation_result {
-    success int
-    resolved_address int
-    error_message string
+    int success
+    int resolved_address
+    string error_message
 }
 
 func relocation_apply_64(int symbol_value, int offset, int addend) int {

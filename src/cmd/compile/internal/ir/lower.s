@@ -18,12 +18,12 @@ use compile.internal.mir.mir_operand
 use compile.internal.backend_elf64.parse_int_literal as parse_int_literal
 use std.slices
 struct const_rewrite_entry {
-    string name
-    string expr_text
-    string value_kind
-    int int_value
-    string string_value
-    bool bool_value
+    name string
+    expr_text string
+    value_kind string
+    int_value int
+    string_value string
+    bool_value bool
 }
 
 func from_syntax(source_file src) ir_ast.package_ir {
@@ -749,10 +749,10 @@ func render_const_folded_entry(string name, expr value, const_rewrite_entry[] ou
 }
 
 struct const_fold_value {
-    string value_kind
-    int int_value
-    string string_value
-    bool bool_value
+    value_kind string
+    int_value int
+    string_value string
+    bool_value bool
 }
 
 func eval_const_fold_value(expr value, const_rewrite_entry[] out, int iota_index) const_fold_value {

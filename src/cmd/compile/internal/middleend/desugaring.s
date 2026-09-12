@@ -5,22 +5,22 @@ const switch_binary_search = 1
 const switch_jump_table = 2
 
 struct switch_optimization {
-    case_count int
-    strategy int
-    min_val int
-    max_val int
+    int case_count
+    int strategy
+    int min_val
+    int max_val
 }
 
 struct defer_info {
-    func_name string
-    args string[]
-    cleanup_block int
+    string func_name
+    string[] args
+    int cleanup_block
 }
 
 struct range_loop_info {
-    var_name string
-    collection string
-    is_map int
+    string var_name
+    string collection
+    int is_map
 }
 
 func optimize_switch_statement(ir_instruction switch_instr) switch_optimization {

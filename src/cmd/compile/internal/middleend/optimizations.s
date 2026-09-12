@@ -8,15 +8,15 @@ const opt_licm = 5
 const opt_inlining = 6
 
 struct optimization_pass {
-    pass_type int
-    pass_name string
+    int pass_type
+    string pass_name
 }
 
 struct optimization_context {
-    module ir_module
-    cfg control_flow_graph
-    dfa dataflow_analysis
-    changes int
+    ir_module module
+    control_flow_graph cfg
+    dataflow_analysis dfa
+    int changes
 }
 
 func run_optimization_pipeline(ir_module module*) {

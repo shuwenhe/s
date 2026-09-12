@@ -1,35 +1,35 @@
 package middleend
 
 struct dataflow_analysis {
-    function ir_function
-    cfg control_flow_graph
+    ir_function function
+    control_flow_graph cfg
 
-    liveness liveness_info[]
+    liveness_info[] liveness
 
-    reaching_defs reaching_def_info[]
+    reaching_def_info[] reaching_defs
 
-    use_def_chains use_def_chain[]
+    use_def_chain[] use_def_chains
 }
 
 struct liveness_info {
-    block_id int
-    live_in int_set
-    live_out int_set
+    int block_id
+    int_set live_in
+    int_set live_out
 }
 
 struct reaching_def_info {
-    block_id int
-    def_in int_set
-    def_out int_set
+    int block_id
+    int_set def_in
+    int_set def_out
 }
 
 struct use_def_chain {
-    use_instr_id int
-    def_instr_ids int[]
+    int use_instr_id
+    int[] def_instr_ids
 }
 
 struct int_set {
-    values int[]
+    int[] values
 }
 
 func int_set_new() int_set {

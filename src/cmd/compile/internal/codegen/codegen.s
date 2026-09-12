@@ -4,11 +4,11 @@ use compile.internal.obj
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
 extern "intrinsic" func __host_make_executable(string path) int;
 struct codegen_config {
-    string target_arch
-    int64 code_section_align
-    int64 data_section_align
-    bool emit_debug_info
-    bool optimize_size
+    target_arch string
+    code_section_align int64
+    data_section_align int64
+    emit_debug_info bool
+    optimize_size bool
 }
 
 func make_codegen_config(string arch) codegen_config {
@@ -20,9 +20,9 @@ func make_codegen_config(string arch) codegen_config {
 struct codegen_context {
     machine_code_gen* gen
     symbol_table* symtab
-    codegen_config config
-    int64 code_offset
-    int64 data_offset
+    config codegen_config
+    code_offset int64
+    data_offset int64
     string[] generated_functions
 }
 
@@ -132,7 +132,7 @@ func (builder* object_file_builder) write_to_file(string path, int8[] data) stri
 }
 
 struct codegen_pipeline {
-    codegen_context ctx
+    ctx codegen_context
 }
 
 func make_codegen_pipeline(machine_code_gen* gen, symbol_table* st, codegen_config cfg) codegen_pipeline {

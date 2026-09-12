@@ -1,38 +1,38 @@
 package ssa_form
 
 struct block {
-    int id
+    id int
     int[] preds
     int[] succs
     value[] values
-    int kind
+    kind int
 }
 
 struct value {
-    int id
-    int op
-    int type_id
+    id int
+    op int
+    type_id int
     int[] args
-    int block
-    int line
-    int aux
+    block int
+    line int
+    aux int
 }
 
 struct phi {
-    int value_id
+    value_id int
     int[] edges
 }
 
 struct var_version {
-    int var_id
-    int version
-    int value_id
+    var_id int
+    version int
+    value_id int
 }
 
 struct ssa_builder {
-    int block_count
-    int value_count
-    int var_count
+    block_count int
+    value_count int
+    var_count int
     block[] blocks
     value[] all_values
     var_version[] var_versions

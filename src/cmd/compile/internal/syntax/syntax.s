@@ -9,9 +9,9 @@ use s.dump_tokens
 use s.new_lexer
 use s.parse_tokens as parse_s_tokens
 struct syntax_error {
-    string message
-    int line
-    int column
+    message string
+    line int
+    column int
 }
 
 func read_source(string path) (string, syntax_error) {

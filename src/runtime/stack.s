@@ -11,29 +11,29 @@ enum stack_shrink_state {
 }
 
 struct stack_guard {
-	u64 limit
-	u64 next_call_size
-	bool can_split
+	limit u64
+	next_call_size u64
+	can_split bool
 }
 
 struct stack_frame {
-	u64 pc
-	u64 sp
-	u64 bp
-	u64 locals_size
-	u64 args_size
+	pc u64
+	sp u64
+	bp u64
+	locals_size u64
+	args_size u64
 }
 
 struct stack_info {
-	u64 base
-	u64 top
-	u64 current_size
-	u64 max_size
-	u64 min_size
-	stack_guard guard
+	base u64
+	top u64
+	current_size u64
+	max_size u64
+	min_size u64
+	guard stack_guard
 	stack_frame[] frame_stack
-	i32 grow_count
-	stack_shrink_state shrink_state
+	grow_count i32
+	shrink_state stack_shrink_state
 	sync.mutex lock
 }
 
@@ -244,9 +244,9 @@ func update_stack_pointers(s stack_info*, old_base u64, new_base u64, old_size u
 }
 
 struct split_stack_info {
-	parent_stack stack_info*
-	child_stack stack_info*
-	saved_context u8[]
+	stack_info* parent_stack
+	stack_info* child_stack
+	u8[] saved_context
 }
 
 func split_stack(parent stack_info*) (split_stack_info*, error) {

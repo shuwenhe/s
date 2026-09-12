@@ -47,12 +47,12 @@ func force_gc() () {
 }
 
 struct gc_stats {
-    int phase
-    int heap_alloc
-    int heap_goal
-    int num_gc
-    int total_freed
-    int live_objects
+    phase int
+    heap_alloc int
+    heap_goal int
+    num_gc int
+    total_freed int
+    live_objects int
 }
 
 func gc_stats() gc_stats {

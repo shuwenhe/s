@@ -14,9 +14,9 @@ enum build_id_type {
 }
 
 struct build_id_manager {
-	type    build_id_type
-	id u8[]
-	version string
+	build_id_type type
+	u8[] id
+	string version
 }
 
 func new_build_id_manager(t build_id_type) build_id_manager {
@@ -80,16 +80,16 @@ func (bim build_id_manager*) generate_note_section() u8[] {
 }
 
 struct got_manager {
-	entries got_entry[]
-	offset  i64
+	got_entry[] entries
+	i64 offset
 }
 
 struct got_entry {
-	symbol_index i32
-	reloc_type   reloc_type
-	address     i64
-	value       i64
-	is_resolved  bool
+	i32 symbol_index
+	reloc_type reloc_type
+	i64 address
+	i64 value
+	bool is_resolved
 }
 
 func new_got_manager() got_manager {
@@ -146,15 +146,15 @@ func (gm got_manager*) generate_got_data() u8[] {
 }
 
 struct plt_manager {
-	entries plt_entry[]
-	offset  i64
+	plt_entry[] entries
+	i64 offset
 }
 
 struct plt_entry {
-	symbol_index  i32
-	got_address   i64
-	stub_address  i64
-	resolver_addr i64
+	i32 symbol_index
+	i64 got_address
+	i64 stub_address
+	i64 resolver_addr
 }
 
 func new_plt_manager() plt_manager {
@@ -205,15 +205,15 @@ func (pm plt_manager*) generate_plt_code() u8[] {
 }
 
 struct tls_manager {
-	blocks tls_block[]
-	offset i64
+	tls_block[] blocks
+	i64 offset
 }
 
 struct tls_block {
-	symbol    string
-	size      i64
-	offset    i64
-	alignment i64
+	string symbol
+	i64 size
+	i64 offset
+	i64 alignment
 }
 
 func new_tls_manager() tls_manager {
@@ -257,14 +257,14 @@ func (tm tls_manager*) generate_tls_data() u8[] {
 }
 
 struct dynamic_relocation {
-	offset   i64
-	type     i32  
-	sym_index i32
-	addend   i64
+	i64 offset
+	i32 type
+	i32 sym_index
+	i64 addend
 }
 
 struct dynamic_reloc_manager {
-	relocs dynamic_relocation[]
+	dynamic_relocation[] relocs
 }
 
 func new_dynamic_reloc_manager() dynamic_reloc_manager {

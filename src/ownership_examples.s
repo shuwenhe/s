@@ -3,9 +3,9 @@ package ownership_examples
 
 
 struct memory_block {
-    addr *int
-    size int
-    allocated bool
+    *int addr
+    int size
+    bool allocated
 }
 
 func allocate_block(int size) MemoryBlock {
@@ -40,9 +40,9 @@ func memory_example() int {
 
 
 struct owned_string {
-    data *int
-    len int
-    capacity int
+    *int data
+    int len
+    int capacity
 }
 
 func new_string(int capacity) OwnedString {
@@ -70,8 +70,8 @@ func string_example() int {
 
 
 struct vector {
-    elements [100]*int
-    len int
+    [100]*int elements
+    int len
 }
 
 func new_vector() Vector {
@@ -118,8 +118,8 @@ func vector_example() int {
 
 
 struct file_handle {
-    fd int
-    open bool
+    int fd
+    bool open
 }
 
 func open_file(string path) FileHandle {
@@ -162,8 +162,8 @@ func file_example() int {
 
 
 struct list_node {
-    value int
-    next *ListNode
+    int value
+    *ListNode next
 }
 
 func new_node(int value) ListNode {
@@ -194,8 +194,8 @@ func list_example() int {
 
 
 struct ref_counted {
-    data *int
-    refCount *int
+    *int data
+    *int refCount
 }
 
 func new_ref_counted(int value) RefCounted {
@@ -233,8 +233,8 @@ const (
 )
 
 struct process {
-    state ProcessState
-    data *int
+    ProcessState state
+    *int data
 }
 
 func create_process() Process {
@@ -264,7 +264,7 @@ func process_example() int {
 
 struct event_handler {
     callback func() int
-    context *int
+    *int context
 }
 
 func create_event_handler(int contextData) EventHandler {
@@ -289,8 +289,8 @@ func callback_example() int {
 
 
 struct resource_pool {
-    resources [10]*int
-    count int
+    [10]*int resources
+    int count
 }
 
 func new_pool() ResourcePool {
@@ -327,12 +327,12 @@ func pool_example() int {
 
 
 struct copyable_data {
-    x int
-    y int
+    int x
+    int y
 }
 
 struct moveable_data {
-    ptr *int
+    *int ptr
 }
 
 func copy_example() int {
@@ -356,8 +356,8 @@ func move_example() int {
 
 
 struct validation_result {
-    resource *int
-    valid bool
+    *int resource
+    bool valid
 }
 
 func validate_and_allocate(int value) ValidationResult {
@@ -387,11 +387,11 @@ func early_return_example() int {
 
 
 struct container {
-    item *int
+    *int item
 }
 
 struct wrapper {
-    container Container
+    Container container
 }
 
 func deep_transfer() int {

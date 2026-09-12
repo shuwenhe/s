@@ -1,8 +1,8 @@
 package compile.internal.arch
 use std.slices
 struct arch_dispatch_entry {
-    string goarch
-    string init_name
+    goarch string
+    init_name string
 }
 
 func dispatch_init(string arch) string {
