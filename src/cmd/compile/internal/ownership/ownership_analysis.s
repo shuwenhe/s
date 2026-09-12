@@ -57,22 +57,22 @@ func (OwnershipAnalysis* oa) set_type_classification(string typeName, class* typ
 func (OwnershipAnalysis* oa) set_variable_type(string varName, string typeName) {
 }
 type analysis_report struct {
-    FunctionName string
-    Success bool
+    function_name    string
+    success    bool
     move_errors     string[]
     borrow_errors   string[]
     drop_errors     string[]
-    VariablesAnalyzed int
-    BorrowsFound      int
-    DropsInserted     int
-    MovesVerified     int
+    variables_analyzed    int
+    borrows_found    int
+    drops_inserted    int
+    moves_verified    int
     ElaboratedStmts interface{}[]
 }
 
 func (OwnershipAnalysis* oa) generate_report(string funcName, elaborated interface{}) AnalysisReport* {
     report := AnalysisReport*{
-        FunctionName: funcName,
-        Success:      !oa.ctx.has_errors(),
+        function_name: funcName,
+        success:      !oa.ctx.has_errors(),
         move_errors:   make(string[], 0),
         borrow_errors: make(string[], 0),
         drop_errors:   make(string[], 0),
@@ -86,7 +86,7 @@ func (OwnershipAnalysis* oa) generate_report(string funcName, elaborated interfa
             report.drop_errors = append(report.drop_errors, err)
         }
     }
-    report.DropsInserted = countDropCalls(elaborated)
+    report.drops_inserted = countDropCalls(elaborated)
     report.ElaboratedStmts = elaborated
     return report
 }
@@ -129,7 +129,7 @@ func (OwnershipAnalysis* oa) apply_ownership_hints(OwnershipHints* hints) {
 
 func (OwnershipAnalysis* oa) print_errors() {
     report := AnalysisReport*{
-        FunctionName: "analysis",
+        function_name: "analysis",
         move_errors:   make(string[], 0),
         borrow_errors: make(string[], 0),
         drop_errors:   make(string[], 0),
