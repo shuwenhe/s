@@ -56,23 +56,18 @@ func (s OwnershipState) String() string {
     }
 }
 
-// OwnershipInfo tracks ownership metadata for a value
 type OwnershipInfo struct {
-    // Current state at this program point
     State OwnershipState
     
-    // Type classification
-    IsOwned bool  // true if type requires explicit ownership
-    IsCopy  bool  // true if type is Copy (bitwise copyable)
+    IsOwned bool
+    IsCopy  bool
     
-    // Borrow tracking
-    ActiveBorrows   []BorrowInfo
+    ActiveBorrows   BorrowInfo[]
     
-    // Field-level state (for structs)
     FieldStates map[string]OwnershipState
 }
 
-// BorrowInfo tracks information about an active borrow
+type BorrowInfo tracks information about an active borrow
 type BorrowInfo struct {
     // Borrow scope (lexical range where borrow is active)
     StartPC int
@@ -93,14 +88,11 @@ type TypeClassification struct {
     // true if type needs explicit ownership tracking
     NeedsOwnership bool
     
-    // true if type is Copy (can be implicitly duplicated)
     IsCopy bool
     
-    // For owned types, fields that also need ownership
-    OwnedFields []string
+    OwnedFields string[]
     
-    // Drop order for multi-field structs
-    DropOrder []string
+    DropOrder string[]
 }
 
 // OwnershipContext maintains ownership state across a function
@@ -114,11 +106,8 @@ type OwnershipContext struct {
     // Current control flow block
     CurrentBlock string
     
-    // Active borrow scopes (stack of borrow contexts)
     BorrowStack []map[string]*BorrowInfo
-    
-    // Errors collected during analysis
-    Errors []string
+    Errors string[]
 }
 
 // NewOwnershipContext creates a fresh ownership context
@@ -127,7 +116,7 @@ func NewOwnershipContext() *OwnershipContext {
         StateAtPC:   make(map[int]*OwnershipInfo),
         TypeClasses: make(map[string]*TypeClassification),
         BorrowStack: []map[string]*BorrowInfo{make(map[string]*BorrowInfo)},
-        Errors:      []string{},
+        Errors:      make(string[], 0),
     }
 }
 
@@ -145,7 +134,7 @@ func (ctx *OwnershipContext) SetStateAt(pc int, varName string, state OwnershipS
     if _, ok := ctx.StateAtPC[pc]; !ok {
         ctx.StateAtPC[pc] = &OwnershipInfo{
             State:         state,
-            ActiveBorrows: []BorrowInfo{},
+            ActiveBorrows: make(BorrowInfo[], 0),
             FieldStates:   make(map[string]OwnershipState),
         }
     } else {
@@ -173,8 +162,8 @@ func (ctx *OwnershipContext) ClassifyType(typeName string) *TypeClassification {
     class := &TypeClassification{
         NeedsOwnership: !isPrimitiveType(typeName),
         IsCopy:         isPrimitiveType(typeName),
-        OwnedFields:    []string{},
-        DropOrder:      []string{},
+        OwnedFields:    make(string[], 0),
+        DropOrder:      make(string[], 0),
     }
     
     ctx.TypeClasses[typeName] = class
