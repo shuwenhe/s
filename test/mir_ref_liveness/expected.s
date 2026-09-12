@@ -17,15 +17,13 @@ const test2_expected_result = "CONFLICT"
 
 // Test 3: branch_all_paths_dead
 // r borrow at BB0
-// BB0 -> BB1 (if true) / BB2 (else)
-// BB1: use(r)
-// BB2: no use
-// BB1 join BB3, BB2 join BB3
-// At BB3 (join): live_in[BB3] = live_in[BB1] ⋃ live_in[BB2]
-//                             = {r} ⋃ {r}  (may-liveness: any path uses)
-//                             = {r}
-// Expected: CONFLICT at reborrow in BB3
-const test3_expected_result = "CONFLICT"
+// BB0 -> BB1 (if true: use r) / BB2 (else: no use)
+// BB1, BB2 join BB3
+// At BB3 (join): backward liveness checks if r will be used AFTER join
+// BB3 has: reborrow r2 (no use of r after join)
+// Therefore: r is NOT live entering BB3 (last-use is in BB1, before join)
+// Expected: ALLOW at reborrow in BB3
+const test3_expected_result = "ALLOW"
 
 // Test 4: branch_live_after_join
 // BB0: borrow r

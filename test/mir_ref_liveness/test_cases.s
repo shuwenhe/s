@@ -30,8 +30,8 @@ func test_same_place_still_live() {
 }
 
 // Test 3: branch_all_paths_dead
-// one path uses, one doesn't → after join reborrow
-// Expected: CONFLICT (may-liveness union: any path uses r)
+// if branch uses r, else doesn't → after join reborrow
+// Expected: ALLOW (backward liveness: r dead after last-use, no use after join)
 
 func test_branch_all_paths_dead(cond bool) {
     mut x mut_int
@@ -44,7 +44,7 @@ func test_branch_all_paths_dead(cond bool) {
     }
     // else branch: no use
     
-    r2 := &mut x                    // at join: loan STILL active (union)
+    r2 := &mut x                    // at join: r is DEAD (no use after join)
 }
 
 // Test 4: branch_live_after_join  

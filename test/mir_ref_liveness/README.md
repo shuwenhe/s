@@ -16,11 +16,11 @@ reborrow r2 := &x.left
 ```
 borrow r := &x.left
 reborrow r2 := &x.left   // conflict
-use(r)
+use(r)                   // r used later
 ```
-**Expected**: CONFLICT (r still live)
+**Expected**: CONFLICT (r still live at reborrow)
 
-### 3. branch_dead_after_join
+### 3. branch_all_paths_dead
 ```
 borrow r := &x.left
 if cond {
@@ -29,23 +29,7 @@ if cond {
 join
 reborrow r2 := &x.left
 ```
-**Expected**: ALLOW (union on join = one path doesn't use r, but may-liveness = ⋃, so loan IS live)
-
-Actually, this needs reconsideration. Standard may-liveness: loan is live because one path DOES use r.
-Let's reframe: **branch_live_after_join is the critical test**.
-
-### 3b. branch_all_paths_dead
-```
-borrow r := &x.left
-if cond {
-    use(r)
-} else {
-    // no use of r
-}
-join
-reborrow r2 := &x.left
-```
-**Expected**: CONFLICT (union on join = at least one path uses r, so loan active at join)
+**Expected**: ALLOW (backward liveness: r dead at join, no use after join)
 
 ### 4. branch_live_after_join
 ```
@@ -57,7 +41,7 @@ join
 use(r)              // second use AFTER join
 reborrow
 ```
-**Expected**: CONFLICT (join point loan still active because of use after)
+**Expected**: CONFLICT (r live after join due to later use)
 
 ### 5. loop_backedge
 ```
