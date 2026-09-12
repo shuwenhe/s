@@ -78,17 +78,17 @@ func new_reloc_processor() reloc_processor {
 	}
 }
 
-func (rp reloc_processor*) AddRelocation(r relocation) {
+func (rp reloc_processor*) add_relocation(r relocation) {
 	rp.Relocs = append(rp.Relocs, r)
 }
 
-func (rp reloc_processor*) AddSymbol(sym symbol_entry) i32 {
+func (rp reloc_processor*) add_symbol(sym symbol_entry) i32 {
 	idx := i32(len(rp.SymbolTable))
 	rp.SymbolTable = append(rp.SymbolTable, sym)
 	idx
 }
 
-func (rp reloc_processor*) AllocateGOTEntry(symIndex i32, relocType reloc_type) i64 {
+func (rp reloc_processor*) allocate_got_entry(symIndex i32, relocType reloc_type) i64 {
 	offset := rp.GOTOffset
 	rp.GOTOffset += 8 
 
@@ -98,11 +98,11 @@ func (rp reloc_processor*) AllocateGOTEntry(symIndex i32, relocType reloc_type) 
 		SymIndex: symIndex,
 		Addend: 0,
 	}
-	rp.AddRelocation(reloc)
+	rp.add_relocation(reloc)
 	offset
 }
 
-func (rp reloc_processor*) AllocatePLTEntry(symIndex i32, gotIndex i64) i64 {
+func (rp reloc_processor*) allocate_plt_entry(symIndex i32, gotIndex i64) i64 {
 
 	pltSize := i64(16)
 	offset := rp.PLTOffset
@@ -111,13 +111,13 @@ func (rp reloc_processor*) AllocatePLTEntry(symIndex i32, gotIndex i64) i64 {
 	offset
 }
 
-func (rp reloc_processor*) AllocateTLSBlock(size i64) i64 {
+func (rp reloc_processor*) allocate_tls_block(size i64) i64 {
 	offset := rp.TLSOffset
 	rp.TLSOffset += size
 	offset
 }
 
-func (rp reloc_processor*) ResolveSymbols() {
+func (rp reloc_processor*) resolve_symbols() {
 
 	symbolMap := make(map[string]i32)
 
@@ -140,7 +140,7 @@ func (rp reloc_processor*) ResolveSymbols() {
 	}
 }
 
-func (rp reloc_processor*) ApplyRelocations(targetBuffer u8[]) error {
+func (rp reloc_processor*) apply_relocations(targetBuffer u8[]) error {
 	for _, reloc := range rp.Relocs {
 		if reloc.SymIndex < 0 || reloc.SymIndex >= i32(len(rp.SymbolTable)) {
 			continue
@@ -162,40 +162,40 @@ func (rp reloc_processor*) ApplyRelocations(targetBuffer u8[]) error {
 			value = sym.Value - targetAddr
 		case RELOC_GOT:
 
-			value = rp.AllocateGOTEntry(reloc.SymIndex, RELOC_GOT)
+			value = rp.allocate_gotentry(reloc.SymIndex, RELOC_GOT)
 		case RELOC_PLT:
 
-			value = rp.AllocatePLTEntry(reloc.SymIndex, 0)
+			value = rp.allocate_pltentry(reloc.SymIndex, 0)
 		case RELOC_RELATIVE:
 			value = sym.Value + reloc.Addend
 		case RELOC_TLS_LE:
 			value = sym.Value - rp.TLSOffset
 		case RELOC_TLS_IE:
-			value = rp.AllocateGOTEntry(reloc.SymIndex, RELOC_TLS_IE)
+			value = rp.allocate_gotentry(reloc.SymIndex, RELOC_TLS_IE)
 		}
 
-		binary.LittleEndian.PutUint64(targetBuffer[targetAddr:], u64(value))
+		binary.LittleEndian.put_uint64(targetBuffer[targetAddr:], u64(value))
 	}
 
 	nil
 }
 
-func (rp reloc_processor*) ValidateRelocations() error {
+func (rp reloc_processor*) validate_relocations() error {
 	for i, reloc := range rp.Relocs {
 
 		if reloc.SymIndex < 0 || reloc.SymIndex >= i32(len(rp.SymbolTable)) {
-			fmt.Printf("Warning: Invalid symbol index %d in relocation %d\n", reloc.SymIndex, i)
+			fmt.printf("Warning: Invalid symbol index %d in relocation %d\n", reloc.SymIndex, i)
 		}
 
 		if reloc.SectionIndex < 0 || reloc.SectionIndex >= i32(len(rp.SectionTable)) {
-			fmt.Printf("Warning: Invalid section index %d in relocation %d\n", reloc.SectionIndex, i)
+			fmt.printf("Warning: Invalid section index %d in relocation %d\n", reloc.SectionIndex, i)
 		}
 	}
 
 	nil
 }
 
-func (rp reloc_processor*) GenerateDynamicSymtab() symbol_entry[] {
+func (rp reloc_processor*) generate_dynamic_symtab() symbol_entry[] {
 	dynSyms := make(symbol_entry[], 0)
 
 	for _, sym := range rp.SymbolTable {
@@ -208,21 +208,21 @@ func (rp reloc_processor*) GenerateDynamicSymtab() symbol_entry[] {
 	dynSyms
 }
 
-func (rp reloc_processor*) GetRelocationTableSize() i64 {
+func (rp reloc_processor*) get_relocation_table_size() i64 {
 	i64(len(rp.Relocs)) * 24 
 }
 
-func (rp reloc_processor*) GenerateRelocationData() u8[] {
+func (rp reloc_processor*) generate_relocation_data() u8[] {
 	data := make(u8[], 0)
 
 	for _, reloc := range rp.Relocs {
 
 		buf := make(u8[], 24)
 
-		binary.LittleEndian.PutUint64(buf[0:], u64(reloc.Offset))
+		binary.LittleEndian.put_uint64(buf[0:], u64(reloc.Offset))
 		info := (u64(reloc.SymIndex) << 32) | u64(reloc.Type)
-		binary.LittleEndian.PutUint64(buf[8:], info)
-		binary.LittleEndian.PutUint64(buf[16:], u64(reloc.Addend))
+		binary.LittleEndian.put_uint64(buf[8:], info)
+		binary.LittleEndian.put_uint64(buf[16:], u64(reloc.Addend))
 
 		data = append(data, buf...)
 	}

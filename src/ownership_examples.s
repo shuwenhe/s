@@ -10,13 +10,13 @@ package ownership_examples
 // 展示所有权追踪的内存管理
 // =============================================================================
 
-type MemoryBlock struct {
+type memory_block struct {
     addr *int
     size int
     allocated bool
 }
 
-func allocateBlock(int size) MemoryBlock {
+func allocate_block(int size) MemoryBlock {
     return MemoryBlock{
         addr: box(size),
         size: size,
@@ -24,14 +24,14 @@ func allocateBlock(int size) MemoryBlock {
     }
 }
 
-func deallocateBlock(block MemoryBlock) () {
+func deallocate_block(block MemoryBlock) () {
     if block.allocated {
         // 内存被释放，block不再有效
         _ = *block.addr
     }
 }
 
-func memoryExample() int {
+func memory_example() int {
     // 分配内存块
     block1 := allocateBlock(1024)
     block2 := allocateBlock(2048)
@@ -51,13 +51,13 @@ func memoryExample() int {
 // 展示复杂数据结构的所有权
 // =============================================================================
 
-type OwnedString struct {
+type owned_string struct {
     data *int  // 指向字符数据
     len int
     capacity int
 }
 
-func newString(int capacity) OwnedString {
+func new_string(int capacity) OwnedString {
     return OwnedString{
         data: box(capacity),
         len: 0,
@@ -65,13 +65,13 @@ func newString(int capacity) OwnedString {
     }
 }
 
-func appendToString(s *OwnedString, int value) () {
+func append_to_string(s *OwnedString, int value) () {
     if s.len < s.capacity {
         s.len = s.len + 1
     }
 }
 
-func stringExample() int {
+func string_example() int {
     s1 := newString(100)  // s1拥有字符串数据
     appendToString(&s1, 65)
     
@@ -85,12 +85,12 @@ func stringExample() int {
 // 展示集合容器的所有权管理
 // =============================================================================
 
-type Vector struct {
+type vector struct {
     elements [100]*int  // 固定大小数组
     len int
 }
 
-func newVector() Vector {
+func new_vector() Vector {
     v := Vector{
         len: 0,
     }
@@ -115,7 +115,7 @@ func (v *Vector) len_value() int {
     return v.len
 }
 
-func vectorExample() int {
+func vector_example() int {
     v := newVector()
     
     // 向向量添加元素
@@ -137,12 +137,12 @@ func vectorExample() int {
 // 展示资源的获取和释放
 // =============================================================================
 
-type FileHandle struct {
+type file_handle struct {
     fd int
     open bool
 }
 
-func openFile(string path) FileHandle {
+func open_file(string path) FileHandle {
     return FileHandle{
         fd: 12345,  // 模拟文件描述符
         open: true,
@@ -162,14 +162,14 @@ func (f *FileHandle) write(int data) () {
     }
 }
 
-func closeFile(f FileHandle) () {
+func close_file(f FileHandle) () {
     if f.open {
         // 关闭文件
         _ = f.fd
     }
 }
 
-func fileExample() int {
+func file_example() int {
     // 打开文件
     f := openFile("data.txt")
     
@@ -185,33 +185,33 @@ func fileExample() int {
 // 展示递归数据结构的所有权
 // =============================================================================
 
-type ListNode struct {
+type list_node struct {
     value int
     next *ListNode
 }
 
-func newNode(int value) ListNode {
+func new_node(int value) ListNode {
     return ListNode{
         value: value,
         next: nil,
     }
 }
 
-func createList(int head, int next_val) ListNode {
+func create_list(int head, int next_val) ListNode {
     node1 := newNode(head)
     node2 := newNode(next_val)
     // 模拟链表构建（实际使用会更复杂）
     return node1
 }
 
-func sumList(node *ListNode) int {
+func sum_list(node *ListNode) int {
     if node == nil {
         return 0
     }
     return node.value + sumList(node.next)
 }
 
-func listExample() int {
+func list_example() int {
     head := createList(1, 2)
     return sumList(&head)
 }
@@ -221,12 +221,12 @@ func listExample() int {
 // 展示如何在所有权系统中实现引用计数
 // =============================================================================
 
-type RefCounted struct {
+type ref_counted struct {
     data *int
     refCount *int
 }
 
-func newRefCounted(int value) RefCounted {
+func new_ref_counted(int value) RefCounted {
     return RefCounted{
         data: box(value),
         refCount: box(1),
@@ -241,7 +241,7 @@ func (rc *RefCounted) clone() RefCounted {
     }
 }
 
-func refCountedExample() int {
+func ref_counted_example() int {
     rc1 := newRefCounted(100)
     rc2 := rc1.clone()
     
@@ -264,12 +264,12 @@ const (
     STOPPED ProcessState = 2
 )
 
-type Process struct {
+type process struct {
     state ProcessState
     data *int
 }
 
-func createProcess() Process {
+func create_process() Process {
     return Process{
         state: IDLE,
         data: box(0),
@@ -285,7 +285,7 @@ func (p *Process) stop() () {
     p.state = STOPPED
 }
 
-func processExample() int {
+func process_example() int {
     proc := createProcess()
     proc.start()
     result := *proc.data
@@ -298,12 +298,12 @@ func processExample() int {
 // 展示捕获资源的回调函数
 // =============================================================================
 
-type EventHandler struct {
+type event_handler struct {
     callback func() int
     context *int
 }
 
-func createEventHandler(int contextData) EventHandler {
+func create_event_handler(int contextData) EventHandler {
     context := box(contextData)
     
     return EventHandler{
@@ -314,11 +314,11 @@ func createEventHandler(int contextData) EventHandler {
     }
 }
 
-func triggerEvent(handler *EventHandler) int {
+func trigger_event(handler *EventHandler) int {
     return handler.callback()
 }
 
-func callbackExample() int {
+func callback_example() int {
     handler := createEventHandler(50)
     return triggerEvent(&handler)
 }
@@ -328,12 +328,12 @@ func callbackExample() int {
 // 展示容器管理多个资源
 // =============================================================================
 
-type ResourcePool struct {
+type resource_pool struct {
     resources [10]*int
     count int
 }
 
-func newPool() ResourcePool {
+func new_pool() ResourcePool {
     return ResourcePool{
         count: 0,
     }
@@ -353,7 +353,7 @@ func (p *ResourcePool) size() int {
     return p.count
 }
 
-func poolExample() int {
+func pool_example() int {
     pool := newPool()
     
     r1 := pool.acquire()
@@ -371,17 +371,17 @@ func poolExample() int {
 // =============================================================================
 
 // CopyableData: 可复制的数据（只包含值类型）
-type CopyableData struct {
+type copyable_data struct {
     x int
     y int
 }
 
 // MoveableData: 需要move的数据（包含指针）
-type MoveableData struct {
+type moveable_data struct {
     ptr *int
 }
 
-func copyExample() int {
+func copy_example() int {
     // Copy类型：值被复制
     c1 := CopyableData{x: 10, y: 20}
     c2 := c1  // c1的值被复制给c2
@@ -390,7 +390,7 @@ func copyExample() int {
     return c1.x + c2.y
 }
 
-func moveExample() int {
+func move_example() int {
     // Moveable类型：所有权被转移
     m1 := MoveableData{ptr: box(10)}
     m2 := m1  // m1的所有权转移给m2
@@ -405,12 +405,12 @@ func moveExample() int {
 // 展示资源在不同返回路径中的所有权
 // =============================================================================
 
-type ValidationResult struct {
+type validation_result struct {
     resource *int
     valid bool
 }
 
-func validateAndAllocate(int value) ValidationResult {
+func validate_and_allocate(int value) ValidationResult {
     if value < 0 {
         return ValidationResult{
             resource: nil,
@@ -425,7 +425,7 @@ func validateAndAllocate(int value) ValidationResult {
     }
 }
 
-func earlyReturnExample() int {
+func early_return_example() int {
     result := validateAndAllocate(42)
     
     if !result.valid {
@@ -440,15 +440,15 @@ func earlyReturnExample() int {
 // 展示多层所有权转移
 // =============================================================================
 
-type Container struct {
+type container struct {
     item *int
 }
 
-type Wrapper struct {
+type wrapper struct {
     container Container
 }
 
-func deepTransfer() int {
+func deep_transfer() int {
     // 第1层：创建资源
     container := Container{
         item: box(100),

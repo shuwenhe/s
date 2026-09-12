@@ -134,7 +134,7 @@
 │ 签名: func process(r Resource) int                                      │
 │                                                                         │
 │ 示例:                                                                    │
-│   func consumeResource(r Resource) int {                                │
+│   func consume_resource(r Resource) int {                                │
 │       return *r.ptr     // r在函数中有效                                │
 │   }   // r在这里销毁                                                     │
 │                                                                         │
@@ -157,7 +157,7 @@
 │ 签名: func read(r *Resource) int                                        │
 │                                                                         │
 │ 示例:                                                                    │
-│   func readData(r *Resource) int {                                      │
+│   func read_data(r *Resource) int {                                      │
 │       return *r.ptr     // r仍然有效                                    │
 │   }                                                                      │
 │                                                                         │
@@ -181,7 +181,7 @@
 │ 签名: func modify(r *Resource) ()                                       │
 │                                                                         │
 │ 示例:                                                                    │
-│   func modifyData(r *Resource) () {                                     │
+│   func modify_data(r *Resource) () {                                     │
 │       *r.ptr = *r.ptr + 100  // 可以修改                               │
 │   }                                                                      │
 │                                                                         │
@@ -370,7 +370,7 @@
 │    func process(r Resource)   // 需要初始化                            │
 │                                                                        │
 │ 2. 小对象在栈上分配                                                     │
-│    type Small struct { x int }  // 栈分配更快                          │
+│    type small struct { x int }  // 栈分配更快                          │
 │                                                                        │
 │ 3. 在块中限制借用生命周期                                                │
 │    {                                                                   │

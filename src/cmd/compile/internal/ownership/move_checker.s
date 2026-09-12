@@ -9,99 +9,99 @@ func new_move_checker(OwnershipContext* ctx) move_checker* {
     }
 }
 
-func (move_checker* mc) CheckMoveSemantics(stmts interface{}[]) {
-    mc.initializeVariableStates(stmts)
+func (move_checker* mc) check_move_semantics(stmts interface{}[]) {
+    mc.initialize_variable_states(stmts)
     for i, stmt := range stmts {
-        mc.checkStatement(i, stmt)
+        mc.check_statement(i, stmt)
     }
 }
 
-func (move_checker* mc) initializeVariableStates(stmts interface{}[]) {
+func (move_checker* mc) initialize_variable_states(stmts interface{}[]) {
 }
 
-func (move_checker* mc) checkStatement(int pc, stmt interface{}) {
+func (move_checker* mc) check_statement(int pc, stmt interface{}) {
     switch s := stmt.(type) {
     case AssignmentStmt*:
         mc.check_assignment(pc, s)
     case CallStmt*:
         mc.check_function_call(pc, s)
     case ReturnStmt*:
-        mc.checkReturn(pc, s)
+        mc.check_return(pc, s)
     case IfStmt*:
-        mc.checkIfStatement(pc, s)
+        mc.check_if_statement(pc, s)
     }
 }
 
 func (move_checker* mc) check_assignment(int pc, assign* AssignmentStmt) {
     if assign.RHS != nil {
-        mc.checkUse(pc, assign.RHS, "read")
+        mc.check_use(pc, assign.RHS, "read")
     }
     if assign.IsMove {
-        rhsState := mc.ctx.GetStateAt(pc, assign.RHS.String())
+        rhsState := mc.ctx.get_state_at(pc, assign.RHS.string())
         if rhsState != STATE_OWNED {
-            mc.ctx.AddError(errorf("move %s from %s state at PC %d",
+            mc.ctx.add_error(errorf("move %s from %s state at PC %d",
                 assign.RHS, rhsState, pc))
             return
         }
-        mc.ctx.SetStateAt(pc, assign.RHS.String(), STATE_MOVED)
-        if mc.hasBorrow(assign.RHS.String()) {
-            mc.ctx.AddError(errorf("move %s while borrowed at PC %d",
+        mc.ctx.set_state_at(pc, assign.RHS.string(), STATE_MOVED)
+        if mc.has_borrow(assign.RHS.string()) {
+            mc.ctx.add_error(errorf("move %s while borrowed at PC %d",
                 assign.RHS, pc))
         }
     } else if assign.IsCopy {
-        rhsState := mc.ctx.GetStateAt(pc, assign.RHS.String())
-        typeClass := mc.ctx.classify_type(assign.RHS.String())
+        rhsState := mc.ctx.get_state_at(pc, assign.RHS.string())
+        typeClass := mc.ctx.classify_type(assign.RHS.string())
         if !typeClass.IsCopy && rhsState != STATE_OWNED {
-            mc.ctx.AddError(errorf("copy %s (%s type) from %s state at PC %d",
+            mc.ctx.add_error(errorf("copy %s (%s type) from %s state at PC %d",
                 assign.RHS, "non-Copy", rhsState, pc))
             return
         }
     }
-    mc.ctx.SetStateAt(pc, assign.LHS, STATE_OWNED)
+    mc.ctx.set_state_at(pc, assign.LHS, STATE_OWNED)
 }
 
 func (move_checker* mc) check_function_call(int pc, call* CallStmt) {
     for i, arg := range call.Args {
-        argState := mc.ctx.GetStateAt(pc, arg.String())
+        argState := mc.ctx.get_state_at(pc, arg.string())
         if argState == STATE_MOVED {
-            mc.ctx.AddError(errorf("use-after-move: argument %d (%s) at PC %d",
+            mc.ctx.add_error(errorf("use-after-move: argument %d (%s) at PC %d",
                 i, arg, pc))
         } else if argState == STATE_UNDEFINED {
-            mc.ctx.AddError(errorf("use-before-init: argument %d (%s) at PC %d",
+            mc.ctx.add_error(errorf("use-before-init: argument %d (%s) at PC %d",
                 i, arg, pc))
         }
     }
 }
 
-func (move_checker* mc) checkReturn(int pc, ret* ReturnStmt) {
+func (move_checker* mc) check_return(int pc, ret* ReturnStmt) {
     if ret.Value == nil {
         return
     }
-    returnState := mc.ctx.GetStateAt(pc, ret.Value.String())
+    returnState := mc.ctx.get_state_at(pc, ret.Value.string())
     if returnState == STATE_MOVED {
-        mc.ctx.AddError(errorf("return-after-move: %s at PC %d",
+        mc.ctx.add_error(errorf("return-after-move: %s at PC %d",
             ret.Value, pc))
     } else if returnState == STATE_UNDEFINED {
-        mc.ctx.AddError(errorf("return-uninitialized: %s at PC %d",
+        mc.ctx.add_error(errorf("return-uninitialized: %s at PC %d",
             ret.Value, pc))
     }
 }
 
-func (move_checker* mc) checkIfStatement(int pc, ifStmt* IfStmt) {
-    mc.checkUse(pc, ifStmt.Condition, "read")
-    thenStates := mc.analyzeBranch(pc, ifStmt.ThenBody)
-    elseStates := mc.analyzeBranch(pc, ifStmt.ElseBody)
-    mc.mergeBranchStates(pc, thenStates, elseStates)
+func (move_checker* mc) check_if_statement(int pc, ifStmt* IfStmt) {
+    mc.check_use(pc, ifStmt.Condition, "read")
+    thenStates := mc.analyze_branch(pc, ifStmt.ThenBody)
+    elseStates := mc.analyze_branch(pc, ifStmt.ElseBody)
+    mc.merge_branch_states(pc, thenStates, elseStates)
 }
 
-func (move_checker* mc) analyzeBranch(int pc, stmts interface{}[]) map[string]OwnershipState {
+func (move_checker* mc) analyze_branch(int pc, stmts interface{}[]) map[string]OwnershipState {
     states := make(map[string]OwnershipState)
     for _, stmt := range stmts {
     }
     return states
 }
 
-func (move_checker* mc) mergeBranchStates(int pc,
+func (move_checker* mc) merge_branch_states(int pc,
     thenStates map[string]OwnershipState,
     elseStates map[string]OwnershipState) {
     allVars := make(map[string]bool)
@@ -115,36 +115,36 @@ func (move_checker* mc) mergeBranchStates(int pc,
         thenState, thenOk := thenStates[v]
         elseState, elseOk := elseStates[v]
         if !thenOk || !elseOk {
-            mc.ctx.SetStateAt(pc, v, STATE_MAYBE_MOVED)
+            mc.ctx.set_state_at(pc, v, STATE_MAYBE_MOVED)
         } else if thenState == elseState {
-            mc.ctx.SetStateAt(pc, v, thenState)
+            mc.ctx.set_state_at(pc, v, thenState)
         } else {
-            mc.ctx.SetStateAt(pc, v, STATE_MAYBE_MOVED)
+            mc.ctx.set_state_at(pc, v, STATE_MAYBE_MOVED)
         }
     }
 }
 
-func (move_checker* mc) checkUse(int pc, expr interface{}, string useKind) {
-    exprStr := expr.(interface{}).String()
-    state := mc.ctx.GetStateAt(pc, exprStr)
+func (move_checker* mc) check_use(int pc, expr interface{}, string useKind) {
+    exprStr := expr.(interface{}).string()
+    state := mc.ctx.get_state_at(pc, exprStr)
     switch useKind {
     case "read":
         if state == STATE_MOVED {
-            mc.ctx.AddError(errorf("use-after-move: reading %s at PC %d", exprStr, pc))
+            mc.ctx.add_error(errorf("use-after-move: reading %s at PC %d", exprStr, pc))
         } else if state == STATE_DROPPED {
-            mc.ctx.AddError(errorf("use-after-drop: reading %s at PC %d", exprStr, pc))
+            mc.ctx.add_error(errorf("use-after-drop: reading %s at PC %d", exprStr, pc))
         } else if state == STATE_UNDEFINED {
-            mc.ctx.AddError(errorf("use-before-init: reading %s at PC %d", exprStr, pc))
+            mc.ctx.add_error(errorf("use-before-init: reading %s at PC %d", exprStr, pc))
         }
     case "move":
         if state != STATE_OWNED {
-            mc.ctx.AddError(errorf("cannot move %s from %s state at PC %d", 
+            mc.ctx.add_error(errorf("cannot move %s from %s state at PC %d", 
                 exprStr, state, pc))
         }
     }
 }
 
-func (move_checker* mc) hasBorrow(string varName) bool {
+func (move_checker* mc) has_borrow(string varName) bool {
     if len(mc.ctx.BorrowStack) > 0 {
         borrows := mc.ctx.BorrowStack[len(mc.ctx.BorrowStack)-1]
         _, exists := borrows[varName]
@@ -152,20 +152,20 @@ func (move_checker* mc) hasBorrow(string varName) bool {
     }
     return false
 }
-type AssignmentStmt struct {
+type assignment_stmt struct {
     LHS    string
     RHS    interface{}
     IsMove bool
     IsCopy bool
 }
-type CallStmt struct {
+type call_stmt struct {
     Func string
     Args interface{}[]
 }
-type ReturnStmt struct {
+type return_stmt struct {
     Value interface{}
 }
-type IfStmt struct {
+type if_stmt struct {
     Condition interface{}
     ThenBody  interface{}[]
     ElseBody  interface{}[]
@@ -179,7 +179,7 @@ func errorf(string format, args ...interface{}) string {
     return result
 }
 
-func replaceFirst(string s, string old, string new) string {
+func replace_first(string s, string old, string new) string {
     for i := 0; i < len(s); i++ {
         if i+len(old) <= len(s) && s[i:i+len(old)] == old {
             return s[:i] + new + s[i+len(old):]

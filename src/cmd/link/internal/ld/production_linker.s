@@ -66,17 +66,17 @@ func new_production_linker(config linker_config) production_linker {
 	linker
 }
 
-func (production_linker* pl) LoadObjectFile(string filename) error {
-	fmt.Printf("Loading %s...\n", filename)
+func (production_linker* pl) load_object_file(string filename) error {
+	fmt.printf("Loading %s...\n", filename)
 
-	file, err := os.Open(filename)
+	file, err := os.open(filename)
 	if err != nil {
 		err
 	}
-	defer file.Close()
+	defer file.close()
 
 	magic := make(u8[], 4)
-	_, err = file.Read(magic)
+	_, err = file.read(magic)
 	if err != nil {
 		err
 	}
@@ -113,52 +113,52 @@ func (production_linker* pl) LoadObjectFile(string filename) error {
 	nil
 }
 
-func (pl production_linker*) Link() error {
-	fmt.Printf("Linking %d object files...\n", len(pl.Config.InputFiles))
+func (pl production_linker*) link() error {
+	fmt.printf("Linking %d object files...\n", len(pl.Config.InputFiles))
 
 	for _, inputFile := range pl.Config.InputFiles {
-		err := pl.LoadObjectFile(inputFile)
+		err := pl.load_object_file(inputFile)
 		if err != nil {
-			fmt.Printf("Error loading %s: %v\n", inputFile, err)
+			fmt.printf("Error loading %s: %v\n", inputFile, err)
 		}
 	}
 
-	err := pl.MergeSymbols()
+	err := pl.merge_symbols()
 	if err != nil {
 		err
 	}
 
-	err = pl.ProcessRelocations()
+	err = pl.process_relocations()
 	if err != nil {
 		err
 	}
 
-	err = pl.GenerateOutput()
+	err = pl.generate_output()
 	if err != nil {
 		err
 	}
 
-	fmt.Printf("Linking successful! Output: %s\n", pl.Config.OutputFile)
+	fmt.printf("Linking successful! Output: %s\n", pl.Config.OutputFile)
 	nil
 }
 
-func (pl production_linker*) MergeSymbols() error {
+func (pl production_linker*) merge_symbols() error {
 
 	for _, obj := range pl.elf_objects {
 		for _, sym := range obj.Symbols {
-			err := pl.symbol_manager.AddSymbol(sym)
+			err := pl.symbol_manager.add_symbol(sym)
 			if err != nil {
-				fmt.Printf("Warning: %v\n", err)
+				fmt.printf("Warning: %v\n", err)
 			}
 		}
 	}
 
-	pl.symbol_manager.ApplyVisibility()
+	pl.symbol_manager.apply_visibility()
 
 	nil
 }
 
-func (pl production_linker*) ProcessRelocations() error {
+func (pl production_linker*) process_relocations() error {
 
 	for objIdx, obj := range pl.elf_objects {
 		for _, reloc := range obj.Relocations {
@@ -169,50 +169,50 @@ func (pl production_linker*) ProcessRelocations() error {
 				switch reloc.Type {
 				case RELOC_GOT:
 
-					_ = pl.got_manager.AddEntry(reloc.SymIndex, reloc.Type)
+					_ = pl.got_manager.add_entry(reloc.SymIndex, reloc.Type)
 
 				case RELOC_PLT:
 
-					gotAddr := pl.got_manager.LookupOrCreate(reloc.SymIndex, RELOC_GLOB_DAT)
-					_ = pl.plt_manager.AddEntry(reloc.SymIndex, gotAddr)
+					gotAddr := pl.got_manager.lookup_or_create(reloc.SymIndex, RELOC_GLOB_DAT)
+					_ = pl.plt_manager.add_entry(reloc.SymIndex, gotAddr)
 
 				case RELOC_TLS_IE:
 
-					_ = pl.tls_manager.AddVariable(sym.Name, sym.Size, 8)
+					_ = pl.tls_manager.add_variable(sym.Name, sym.Size, 8)
 
 				default:
 
 				}
 
-				pl.reloc_processor.AddRelocation(reloc)
+				pl.reloc_processor.add_relocation(reloc)
 			}
 		}
 	}
 
 	for i, entry := range pl.got_manager.Entries {
-		pl.dynamic_reloc_manager.AddRelocation(entry.Address, 7, i32(i), 0)
+		pl.dynamic_reloc_manager.add_relocation(entry.Address, 7, i32(i), 0)
 	}
 
 	nil
 }
 
-func (pl production_linker*) GenerateOutput() error {
+func (pl production_linker*) generate_output() error {
 
 	switch pl.Config.Format {
 	case format_elf:
-		err := pl.generateELFOutput()
+		err := pl.generate_elf_output()
 		if err != nil {
 			err
 		}
 
 	case format_macho:
-		err := pl.generateMachoOutput()
+		err := pl.generate_macho_output()
 		if err != nil {
 			err
 		}
 
 	case format_pe:
-		err := pl.generatePEOutput()
+		err := pl.generate_pe_output()
 		if err != nil {
 			err
 		}
@@ -224,46 +224,46 @@ func (pl production_linker*) GenerateOutput() error {
 	nil
 }
 
-func (pl production_linker*) generateELFOutput() error {
+func (pl production_linker*) generate_elf_output() error {
 
 	output := NewELFObject(0x3e) 
 
 	textData := make(u8[], 0)
-	textIdx := output.AddSection(".text", 1, 0x6, textData)
+	textIdx := output.add_section(".text", 1, 0x6, textData)
 
 	dataData := make(u8[], 0)
-	dataIdx := output.AddSection(".data", 1, 0x3, dataData)
+	dataIdx := output.add_section(".data", 1, 0x3, dataData)
 
 	bssData := make(u8[], 0)
-	bssIdx := output.AddSection(".bss", 8, 0x3, bssData)
+	bssIdx := output.add_section(".bss", 8, 0x3, bssData)
 
 	symtabData := make(u8[], 0)
-	symtabIdx := output.AddSection(".symtab", 2, 0, symtabData)
+	symtabIdx := output.add_section(".symtab", 2, 0, symtabData)
 
 	strtabData := make(u8[], 0)
-	strtabIdx := output.AddSection(".strtab", 3, 0, strtabData)
+	strtabIdx := output.add_section(".strtab", 3, 0, strtabData)
 
-	relData := pl.reloc_processor.GenerateRelocationData()
-	relIdx := output.AddSection(".rel.text", 9, 0, relData)
+	relData := pl.reloc_processor.generate_relocation_data()
+	relIdx := output.add_section(".rel.text", 9, 0, relData)
 
 	if pl.Config.GenerateDebugInfo {
-		debugInfo := pl.DwarfManager.GenerateDebugLine()
-		output.AddSection(".debug_info", 1, 0, debugInfo)
+		debugInfo := pl.DwarfManager.generate_debug_line()
+		output.add_section(".debug_info", 1, 0, debugInfo)
 
-		debugLine := pl.DwarfManager.GenerateDebugLine()
-		output.AddSection(".debug_line", 1, 0, debugLine)
+		debugLine := pl.DwarfManager.generate_debug_line()
+		output.add_section(".debug_line", 1, 0, debugLine)
 	}
 
 	if pl.Config.GenerateBuildID {
-		noteData := pl.build_id_manager.GenerateNoteSection()
-		output.AddSection(".note.gnu.build-id", 7, 0, noteData)
+		noteData := pl.build_id_manager.generate_note_section()
+		output.add_section(".note.gnu.build-id", 7, 0, noteData)
 	}
 
 	_ = symtabIdx
 	_ = strtabIdx
 	_ = relIdx
 
-	err := output.WriteToFile(pl.Config.OutputFile)
+	err := output.write_to_file(pl.Config.OutputFile)
 	if err != nil {
 		err
 	}
@@ -271,13 +271,13 @@ func (pl production_linker*) generateELFOutput() error {
 	nil
 }
 
-func (pl production_linker*) generateMachoOutput() error {
+func (pl production_linker*) generate_macho_output() error {
 	output := NewMachoObject(CPU_TYPE_X86_64, MH_OBJECT)
 
-	output.AddSegment("__TEXT", 0, 0x1000)
-	output.AddSegment("__DATA", 0x1000, 0x1000)
+	output.add_segment("__TEXT", 0, 0x1000)
+	output.add_segment("__DATA", 0x1000, 0x1000)
 
-	err := output.WriteToFile(pl.Config.OutputFile)
+	err := output.write_to_file(pl.Config.OutputFile)
 	if err != nil {
 		err
 	}
@@ -285,16 +285,16 @@ func (pl production_linker*) generateMachoOutput() error {
 	nil
 }
 
-func (pl production_linker*) generatePEOutput() error {
+func (pl production_linker*) generate_pe_output() error {
 	output := NewPEObject(MACHINE_AMD64)
 
 	codeData := make(u8[], 0)
-	output.AddSection(".text", codeData)
+	output.add_section(".text", codeData)
 
 	dataData := make(u8[], 0)
-	output.AddSection(".data", dataData)
+	output.add_section(".data", dataData)
 
-	err := output.WriteToFile(pl.Config.OutputFile)
+	err := output.write_to_file(pl.Config.OutputFile)
 	if err != nil {
 		err
 	}
@@ -302,16 +302,16 @@ func (pl production_linker*) generatePEOutput() error {
 	nil
 }
 
-func (pl production_linker*) Validate() error {
+func (pl production_linker*) validate() error {
 
-	err := pl.reloc_processor.ValidateRelocations()
+	err := pl.reloc_processor.validate_relocations()
 	if err != nil {
-		fmt.Printf("Validation warning: %v\n", err)
+		fmt.printf("Validation warning: %v\n", err)
 	}
 
 	for _, sym := range pl.symbol_manager.AllSymbols {
 		if sym.IsGlobal && sym.Value == 0 {
-			fmt.Printf("Warning: Undefined symbol: %s\n", sym.Name)
+			fmt.printf("Warning: Undefined symbol: %s\n", sym.Name)
 		}
 	}
 

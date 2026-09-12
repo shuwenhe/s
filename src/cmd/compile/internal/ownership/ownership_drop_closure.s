@@ -1,5 +1,5 @@
 package compile.internal.ownership
-type OwnershipDropContext struct {
+type ownership_drop_context struct {
     variableOwners map[string]*OwnershipRecord
     owned_set map[string]bool
     moved_set map[string]bool
@@ -12,7 +12,7 @@ type OwnershipDropContext struct {
     errors string[]
     warnings string[]
 }
-type OwnershipRecord struct {
+type ownership_record struct {
     name string
     type_name string
     state int
@@ -20,7 +20,7 @@ type OwnershipRecord struct {
     scope_depth int
     is_param bool
 }
-type BorrowRecord struct {
+type borrow_record struct {
     borrow_var string
     source_var string
     is_mutable bool
@@ -28,7 +28,7 @@ type BorrowRecord struct {
     lifetime_end int
     scope_depth int
 }
-type DropRecord struct {
+type drop_record struct {
     variable string
     type_name string
     has_drop_impl bool
@@ -36,7 +36,7 @@ type DropRecord struct {
     fields string[]
     field_drop_order string[]
 }
-type OwnershipState struct {
+type ownership_state struct {
     UNDEFINED = 0
     OWNED = 1
     BORROWED_SHARED = 2
@@ -360,7 +360,7 @@ func (OwnershipDropContext* ctx) verify_closed_loop() bool {
     }
     return len(ctx.errors) == 0
 }
-type AnalysisResult struct {
+type analysis_result struct {
     success bool
     elaborated_stmts interface{}{}
     errors string[]
