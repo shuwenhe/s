@@ -61,7 +61,7 @@ func (move_checker* mc) check_assignment(int pc, assign* AssignmentStmt) {
 }
 
 func (move_checker* mc) check_function_call(int pc, call* CallStmt) {
-    for i, arg := range call.Args {
+    for i, arg := range call.args {
         argState := mc.ctx.get_state_at(pc, arg.string())
         if argState == STATE_MOVED {
             mc.ctx.add_error(errorf("use-after-move: argument %d (%s) at PC %d",
@@ -74,16 +74,16 @@ func (move_checker* mc) check_function_call(int pc, call* CallStmt) {
 }
 
 func (move_checker* mc) check_return(int pc, ret* ReturnStmt) {
-    if ret.Value == nil {
+    if ret.value == nil {
         return
     }
-    returnState := mc.ctx.get_state_at(pc, ret.Value.string())
+    returnState := mc.ctx.get_state_at(pc, ret.value.string())
     if returnState == STATE_MOVED {
         mc.ctx.add_error(errorf("return-after-move: %s at PC %d",
-            ret.Value, pc))
+            ret.value, pc))
     } else if returnState == STATE_UNDEFINED {
         mc.ctx.add_error(errorf("return-uninitialized: %s at PC %d",
-            ret.Value, pc))
+            ret.value, pc))
     }
 }
 
