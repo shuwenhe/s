@@ -104,7 +104,7 @@ func (ctx *OwnershipDropContext) collect_declarations(stmts []interface{}, depth
 func (ctx *OwnershipDropContext) collect_from_stmt(stmt interface{}, depth int) {
     // Extract variable declarations from various statement types
     switch s := stmt.(type) {
-    case *DeclStmt:
+    case *decl_stmt:
         owner := &OwnershipRecord{
             name: s.name,
             type_name: s.type_name,
@@ -120,19 +120,19 @@ func (ctx *OwnershipDropContext) collect_from_stmt(stmt interface{}, depth int) 
 
 func (ctx *OwnershipDropContext) analyze_ownership_in_stmt(pc int, stmt interface{}, depth int) bool {
     switch s := stmt.(type) {
-    case *AssignStmt:
+    case *assign_stmt:
         return ctx.analyze_assign(pc, s, depth)
-    case *MoveStmt:
+    case *move_stmt:
         return ctx.analyze_move(pc, s, depth)
-    case *DropStmt:
+    case *drop_stmt:
         return ctx.analyze_drop(pc, s, depth)
-    case *BlockStmt:
+    case *block_stmt:
         return ctx.analyze_block(pc, s, depth+1)
     }
     return true
 }
 
-func (ctx *OwnershipDropContext) analyze_assign(pc int, stmt *AssignStmt, depth int) bool {
+func (ctx *OwnershipDropContext) analyze_assign(pc int, stmt *assign_stmt, depth int) bool {
     // Check if RHS is in valid OWNED state for move assignment
     if stmt.is_move {
         rhs_var := stmt.rhs
@@ -158,7 +158,7 @@ func (ctx *OwnershipDropContext) analyze_assign(pc int, stmt *AssignStmt, depth 
     return true
 }
 
-func (ctx *OwnershipDropContext) analyze_move(pc int, stmt *MoveStmt, depth int) bool {
+func (ctx *OwnershipDropContext) analyze_move(pc int, stmt *move_stmt, depth int) bool {
     if record, exists := ctx.variableOwners[stmt.source]; exists {
         if record.state == OwnershipState.MOVED {
             ctx.errors = append(ctx.errors, 
@@ -175,7 +175,7 @@ func (ctx *OwnershipDropContext) analyze_move(pc int, stmt *MoveStmt, depth int)
     return true
 }
 
-func (ctx *OwnershipDropContext) analyze_drop(pc int, stmt *DropStmt, depth int) bool {
+func (ctx *OwnershipDropContext) analyze_drop(pc int, stmt *drop_stmt, depth int) bool {
     if record, exists := ctx.variableOwners[stmt.target]; exists {
         if record.state == OwnershipState.DROPPED {
             ctx.errors = append(ctx.errors, 
@@ -187,7 +187,7 @@ func (ctx *OwnershipDropContext) analyze_drop(pc int, stmt *DropStmt, depth int)
     return true
 }
 
-func (ctx *OwnershipDropContext) analyze_block(pc int, stmt *BlockStmt, depth int) bool {
+func (ctx *OwnershipDropContext) analyze_block(pc int, stmt *block_stmt, depth int) bool {
     for i := 0; i < len(stmt.statements); i++ {
         if !ctx.analyze_ownership_in_stmt(pc+i, stmt.statements[i], depth) {
             return false
@@ -227,19 +227,19 @@ func (ctx *OwnershipDropContext) phase_borrow_check(stmts []interface{}) bool {
 
 func (ctx *OwnershipDropContext) check_borrows_in_stmt(pc int, stmt interface{}, depth int) bool {
     switch s := stmt.(type) {
-    case *BorrowStmt:
+    case *borrow_stmt:
         return ctx.check_borrow_creation(pc, s, depth)
-    case *BorrowEndStmt:
+    case *borrow_end_stmt:
         return ctx.check_borrow_end(pc, s, depth)
-    case *MoveStmt:
+    case *move_stmt:
         return ctx.check_move_with_borrows(pc, s, depth)
-    case *BlockStmt:
+    case *block_stmt:
         return ctx.check_block_borrows(pc, s, depth+1)
     }
     return true
 }
 
-func (ctx *OwnershipDropContext) check_borrow_creation(pc int, stmt *BorrowStmt, depth int) bool {
+func (ctx *OwnershipDropContext) check_borrow_creation(pc int, stmt *borrow_stmt, depth int) bool {
     source := stmt.source
     
     // Check source exists and is OWNED
@@ -291,7 +291,7 @@ func (ctx *OwnershipDropContext) check_borrow_creation(pc int, stmt *BorrowStmt,
     return true
 }
 
-func (ctx *OwnershipDropContext) check_borrow_end(pc int, stmt *BorrowEndStmt, depth int) bool {
+func (ctx *OwnershipDropContext) check_borrow_end(pc int, stmt *borrow_end_stmt, depth int) bool {
     borrow_var := stmt.borrow_var
     
     if record, exists := ctx.active_borrows[borrow_var]; exists {
@@ -306,7 +306,7 @@ func (ctx *OwnershipDropContext) check_borrow_end(pc int, stmt *BorrowEndStmt, d
     return true
 }
 
-func (ctx *OwnershipDropContext) check_move_with_borrows(pc int, stmt *MoveStmt, depth int) bool {
+func (ctx *OwnershipDropContext) check_move_with_borrows(pc int, stmt *move_stmt, depth int) bool {
     source := stmt.source
     
     // Cannot move if borrowed
@@ -318,7 +318,7 @@ func (ctx *OwnershipDropContext) check_move_with_borrows(pc int, stmt *MoveStmt,
     return true
 }
 
-func (ctx *OwnershipDropContext) check_block_borrows(pc int, stmt *BlockStmt, depth int) bool {
+func (ctx *OwnershipDropContext) check_block_borrows(pc int, stmt *block_stmt, depth int) bool {
     for i := 0; i < len(stmt.statements); i++ {
         if !ctx.check_borrows_in_stmt(pc+i, stmt.statements[i], depth) {
             return false
@@ -387,7 +387,7 @@ func (ctx *OwnershipDropContext) elaborate_drops(stmts []interface{}, depth int)
         
         // Insert drops at scope boundaries
         switch s := stmt.(type) {
-        case *BlockStmt:
+        case *block_stmt:
             // Recursively elaborate inner blocks
             s.statements = ctx.elaborate_drops(s.statements, depth+1)
             
@@ -396,7 +396,7 @@ func (ctx *OwnershipDropContext) elaborate_drops(stmts []interface{}, depth int)
                 var_name := ctx.drop_order[i]
                 if record, exists := ctx.variableOwners[var_name]; exists {
                     if record.scope_depth == depth && record.state != OwnershipState.MOVED {
-                        drop_call := &DropCall{
+                        drop_call := &drop_call{
                             variable: var_name,
                             drop_fn: ctx.drop_registry[var_name].drop_fn,
                             kind: "block-exit",
@@ -526,40 +526,40 @@ func new_ownership_drop_context() *OwnershipDropContext {
 }
 
 // Helper types for statement representation
-type DeclStmt struct {
+type decl_stmt struct {
     name string
     type_name string
 }
 
-type AssignStmt struct {
+type assign_stmt struct {
     lhs string
     rhs string
     is_move bool
 }
 
-type MoveStmt struct {
+type move_stmt struct {
     source string
 }
 
-type DropStmt struct {
+type drop_stmt struct {
     target string
 }
 
-type BorrowStmt struct {
+type borrow_stmt struct {
     borrow_var string
     source string
     is_mutable bool
 }
 
-type BorrowEndStmt struct {
+type borrow_end_stmt struct {
     borrow_var string
 }
 
-type BlockStmt struct {
+type block_stmt struct {
     statements []interface{}
 }
 
-type DropCall struct {
+type drop_call struct {
     variable string
     drop_fn string
     kind string
