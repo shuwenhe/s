@@ -581,6 +581,6 @@ func token_type_name(int tok_type) string {
     case token_arrow : "ARROW"
     case token_question : "QUESTION"
     case token_newline : "NEWLINE"
-    default : "UNKNOWN"
+    default : "unknown"
     }
 }
