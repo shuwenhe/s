@@ -8,7 +8,7 @@ func test_basic_ownership() bool {
     if !ctx.phase_ownership_analyze(stmts) {
         return false
     }
-    if ctx.variable_owners["x"].state != OwnershipState.MOVED {
+    if ctx.variable_owners["x"].state != ownership_state.MOVED {
         return false
     }
     return true
