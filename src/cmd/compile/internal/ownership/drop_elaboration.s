@@ -23,7 +23,7 @@ case BlockStmt*:
         return de.elaborate_block(s)
 case ReturnStmt*:
         return de.elaborate_return(s)
-case IfStmt*:
+case if_stmt*:
         return de.elaborate_if(s)
 case LoopStmt*:
         return de.elaborate_loop(s)
@@ -64,13 +64,13 @@ func (drop_elaborator* de) elaborate_return(ReturnStmt* ret) interface{} {
     }
 }
 
-func (drop_elaborator* de) elaborate_if(IfStmt* ifStmt) IfStmt* {
+func (drop_elaborator* de) elaborate_if(if_stmt* ifStmt) if_stmt* {
     elaborated_then := de.elaborate_statement(ifStmt.then_branch)
     var elaborated_else interface{}
     if ifStmt.else_branch != nil {
         elaborated_else = de.elaborate_statement(ifStmt.else_branch)
     }
-    return IfStmt*{
+    return if_stmt*{
         condition:   ifStmt.condition,
         then_branch:  elaborated_then,
         else_branch:  elaborated_else,
