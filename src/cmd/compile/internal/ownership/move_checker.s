@@ -33,31 +33,31 @@ func (move_checker* mc) check_statement(int pc, stmt interface{}) {
 }
 
 func (move_checker* mc) check_assignment(int pc, assign* AssignmentStmt) {
-    if assign.RHS != nil {
-        mc.check_use(pc, assign.RHS, "read")
+    if assign.rhs != nil {
+        mc.check_use(pc, assign.rhs, "read")
     }
-    if assign.IsMove {
-        rhsState := mc.ctx.get_state_at(pc, assign.RHS.string())
+    if assign.is_move {
+        rhsState := mc.ctx.get_state_at(pc, assign.rhs.string())
         if rhsState != STATE_OWNED {
             mc.ctx.add_error(errorf("move %s from %s state at PC %d",
-                assign.RHS, rhsState, pc))
+                assign.rhs, rhsState, pc))
             return
         }
-        mc.ctx.set_state_at(pc, assign.RHS.string(), STATE_MOVED)
-        if mc.has_borrow(assign.RHS.string()) {
+        mc.ctx.set_state_at(pc, assign.rhs.string(), STATE_MOVED)
+        if mc.has_borrow(assign.rhs.string()) {
             mc.ctx.add_error(errorf("move %s while borrowed at PC %d",
-                assign.RHS, pc))
+                assign.rhs, pc))
         }
     } else if assign.is_copy {
-        rhsState := mc.ctx.get_state_at(pc, assign.RHS.string())
-        typeClass := mc.ctx.classify_type(assign.RHS.string())
+        rhsState := mc.ctx.get_state_at(pc, assign.rhs.string())
+        typeClass := mc.ctx.classify_type(assign.rhs.string())
         if !typeClass.is_copy && rhsState != STATE_OWNED {
             mc.ctx.add_error(errorf("copy %s (%s type) from %s state at PC %d",
-                assign.RHS, "non-Copy", rhsState, pc))
+                assign.rhs, "non-Copy", rhsState, pc))
             return
         }
     }
-    mc.ctx.set_state_at(pc, assign.LHS, STATE_OWNED)
+    mc.ctx.set_state_at(pc, assign.lhs, STATE_OWNED)
 }
 
 func (move_checker* mc) check_function_call(int pc, call* CallStmt) {
@@ -153,13 +153,13 @@ func (move_checker* mc) has_borrow(string varName) bool {
     return false
 }
 type assignment_stmt struct {
-    LHS    string
-    RHS    interface{}
-    IsMove bool
-    IsCopy bool
+    lhs    string
+    rhs    interface{}
+    is_move    bool
+    is_copy    bool
 }
 type call_stmt struct {
-    Func string
+    func    string
     Args interface{}[]
 }
 type return_stmt struct {

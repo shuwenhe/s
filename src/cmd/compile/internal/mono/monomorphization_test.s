@@ -303,7 +303,7 @@ func run_e2e_transitive_monomorphization_test() int {
         return 1
     }
     
-    // Success: E2E pipeline verified
+    // success: E2E pipeline verified
     // generic source -> semantic -> monomorphize (with transitive closure) -> concrete instances
     0
 }
