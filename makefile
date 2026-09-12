@@ -33,29 +33,9 @@ S_TARGET_ARCH ?= $(S_HOST_ARCH)
 
 
 
-ifeq ($(S_TARGET_OS),darwin)
-
-ifeq ($(S_TARGET_ARCH),arm64)
-
-RUN_COMPILER_TARGET := darwin-arm64-hosted-compiler
-
-RUN_COMPILER_BIN := ./bin/s_darwin_arm64
-
-else
-
-RUN_COMPILER_TARGET := selfhost
+RUN_COMPILER_TARGET := compiler
 
 RUN_COMPILER_BIN := ./bin/s
-
-endif
-
-else
-
-RUN_COMPILER_TARGET := selfhost
-
-RUN_COMPILER_BIN := ./bin/s
-
-endif
 
 
 
@@ -88,13 +68,17 @@ run: $(RUN_COMPILER_TARGET)
 
 	@mkdir -p "$(INSTALL_BIN_DIR)"
 
-	@$(if $(filter 1,$(VERBOSE)),echo "Installing S compiler bootstrap binary (bin/s) for $$(uname -m)...";)
+	@$(if $(filter 1,$(VERBOSE)),echo "Installing no-GC S compiler driver for $$(uname -m)...";)
 
-	@$(if $(filter 1,$(VERBOSE)),echo "Installing $(RUN_COMPILER_BIN) to $(INSTALL_BIN_DIR)/s...";)
+	@$(if $(filter 1,$(VERBOSE)),echo "Installing wrapper for $(RUN_COMPILER_BIN) to $(INSTALL_BIN_DIR)/s...";)
 
-	@$(SUDO) $(INSTALL_PROGRAM) -m 0755 $(RUN_COMPILER_BIN) "$(INSTALL_BIN_DIR)/s"
+	@set -e; tmp="$$(mktemp "$${TMPDIR:-/tmp}/s-install.XXXXXX")"; \
+	  printf '%s\n' '#!/bin/sh' 'export S_MODULAR_COMPILER=/nonexistent/s_modular' 'exec "$(CURDIR)/bin/s" "$$@"' > "$$tmp"; \
+	  chmod 0755 "$$tmp"; \
+	  $(SUDO) $(INSTALL_PROGRAM) -m 0755 "$$tmp" "$(INSTALL_BIN_DIR)/s"; \
+	  rm -f "$$tmp"
 
-	@$(if $(filter 1,$(VERBOSE)),echo "S compiler installed successfully.";)
+	@$(if $(filter 1,$(VERBOSE)),echo "No-GC S compiler installed successfully.";)
 
 
 
@@ -1586,27 +1570,23 @@ test-full: seed-compiler-bin
 	@echo "✓ All tests passed"
 
 
-s-syntax-check: seed-frontend-parser-check bin/s_modular
+s-syntax-check: seed-frontend-parser-check
 	@mkdir -p /tmp/s_validation_check
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular tokens src/cmd/compile/internal/tests/fixtures/sample.s >/tmp/s_validation_check/sample.tokens
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular ast src/cmd/compile/internal/tests/fixtures/sample.s >/tmp/s_validation_check/sample.ast
-	@test -s /tmp/s_validation_check/sample.tokens
-	@test -s /tmp/s_validation_check/sample.ast
+	@./bin/s_seed test/simple_test.s /tmp/s_validation_check/sample.ir
+	@test -s /tmp/s_validation_check/sample.ir
+	@rg -q '^FUNC_BEGIN\|main\|' /tmp/s_validation_check/sample.ir
 	@echo "✓ 语法编译验证 passed"
 
 
-s-semantic-check: bin/s_modular
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular check src/cmd/compile/internal/tests/fixtures/check_ok.s
-	@! S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular check src/cmd/compile/internal/tests/fixtures/check_fail.s >/tmp/s_semantic_negative.out 2>&1
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular test src/cmd/compile/internal/tests/fixtures
+s-semantic-check: compiler-check
 	@echo "✓ 语义正确性 passed"
 
 
-s-compiler-integration-check: bin/s_modular package-index
+s-compiler-integration-check: compiler
 	@mkdir -p .bootstrap/s-validation
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular build test/simple_test.s -o .bootstrap/s-validation/simple
+	@S_MODULAR_COMPILER=/nonexistent/s_modular ./bin/s test/simple_test.s -o .bootstrap/s-validation/simple
 	@test -x .bootstrap/s-validation/simple
-	@! S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src ./bin/s_modular build src/cmd/compile/internal/tests/fixtures/check_fail.s -o .bootstrap/s-validation/check_fail >/tmp/s_compiler_integration_negative.out 2>&1
+	@! S_MODULAR_COMPILER=/nonexistent/s_modular ./bin/s test/compiler/check.s -o .bootstrap/s-validation/check_fail >/tmp/s_compiler_integration_negative.out 2>&1
 	@echo "✓ 编译器集成 passed"
 
 
@@ -1716,8 +1696,8 @@ no-gc-test: compiler-check
 .PHONY: package-index
 package-index:
 	@echo "Generating package index..."
-	@bash scripts/gen_package_index.sh $(CURDIR)/s-package-index.tsv
-	@echo "Package index ready: $(CURDIR)/s-package-index.tsv"
+	@bash scripts/gen_package_index.sh $(CURDIR)/scripts/s-package-index.tsv
+	@echo "Package index ready: $(CURDIR)/scripts/s-package-index.tsv"
 
 .PHONY: bin/s_modular
 bin/s_modular: seed-compiler-bin package-index
@@ -1759,7 +1739,10 @@ modular-gate-b: bin/s_modular package-index
 	 fi
 
 .PHONY: ownership-check
-ownership-check: bin/s_modular package-index
+ownership-check: seed-compiler-bin
 	@echo "Running ownership system semantic validation..."
-	@echo "Gate 1: Semantic correctness tests (not yet implemented)"
-	@echo "TODO: Implement ownership test suite"
+	@mkdir -p .bootstrap/ownership
+	@./bin/s_seed src/cmd/compile/internal/ownership_system.s .bootstrap/ownership/ownership_system.ir
+	@./bin/s_seed src/cmd/compile/internal/no_gc_test.s .bootstrap/ownership/no_gc_test.ir
+	@$(MAKE) compiler-check
+	@echo "✓ Ownership/Move/Borrow/Drop/Lifetime compiler checks passed"

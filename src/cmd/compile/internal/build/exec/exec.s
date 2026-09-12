@@ -196,12 +196,12 @@ func run_mod_index(string dir) int {
         return 1
     }
     index_content := result.unwrap()
-    write_res := write_text_file("s-package-index.tsv", index_content)
+    write_res := write_text_file("scripts/s-package-index.tsv", index_content)
     if write_res.is_err() {
         eprintln("failed to save index: " + write_res.unwrap_err().message)
         return 1
     }
-    println("mod index: generated s-package-index.tsv")
+    println("mod index: generated scripts/s-package-index.tsv")
     0
 }
 

@@ -27,6 +27,7 @@ use compile.internal.no_gc_memory.no_gc_finish
 use compile.internal.no_gc_memory.no_gc_move
 use compile.internal.no_gc_memory.no_gc_register_drop
 use compile.internal.no_gc_memory.no_gc_state_new
+use compile.internal.ownership_system.ownership_system_verify
 
 func run_drop_trait_test() int {
     registry := dtor_registry_new()
@@ -77,7 +78,7 @@ func run_lifetime_test() int {
     bad = lifetime_create_borrow(bad, "dangling", "inner", "outer", false)
     if lifetime_finish(bad).ok { return 2 }
 
-    dropck_field[] fields
+    fields := vec[dropck_field]()
     fields = append(fields, dropck_field { name: "ref_field", lifetime_name: "", accessed_by_drop: true })
     if dropck_check_fields("Wrapper", fields).ok { return 3 }
     0
@@ -101,6 +102,7 @@ func run_no_gc_memory_test() int {
 }
 
 func run_no_gc_tests() int {
+    if ownership_system_verify() != 0 { return 5 }
     if run_drop_trait_test() != 0 { return 1 }
     if run_drop_flag_test() != 0 { return 2 }
     if run_lifetime_test() != 0 { return 3 }

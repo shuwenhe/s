@@ -2659,6 +2659,7 @@ func package_index_candidate_paths() string[] {
     project := resolve_project_root()
     if project != "" {
         paths = append(paths, project + "/build/s-package-index.tsv")
+        paths = append(paths, project + "/scripts/s-package-index.tsv")
         paths = append(paths, project + "/s-package-index.tsv")
     }
     paths
