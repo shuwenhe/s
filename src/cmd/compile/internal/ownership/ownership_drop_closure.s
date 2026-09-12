@@ -47,7 +47,7 @@ type ownership_state struct {
 
 func (OwnershipDropContext* ctx) phase_ownership_analyze(stmts interface{}[]) bool {
     ctx.analysis_phase = 0
-    ctx.variableOwners = make(map[string]*OwnershipRecord)
+    ctx.variable_owners = make(map[string]*OwnershipRecord)
     ctx.owned_set = make(map[string]bool)
     ctx.moved_set = make(map[string]bool)
     ctx.borrow_contexts = make(BorrowContext[], 0)
@@ -74,11 +74,11 @@ case decl_stmt*:
             name: s.name,
             type_name: s.type_name,
             state: OwnershipState.OWNED,
-            declaration_order: len(ctx.variableOwners),
+            declaration_order: len(ctx.variable_owners),
             scope_depth: depth,
             is_param: false,
         }
-        ctx.variableOwners[s.name] = owner
+        ctx.variable_owners[s.name] = owner
         ctx.owned_set[s.name] = true
     }
 }
@@ -100,7 +100,7 @@ case block_stmt*:
 func (OwnershipDropContext* ctx) analyze_assign(int pc, stmt* assign_stmt, int depth) bool {
     if stmt.is_move {
         rhs_var := stmt.rhs
-        if record, exists := ctx.variableOwners[rhs_var]; exists {
+        if record, exists := ctx.variable_owners[rhs_var]; exists {
             if record.state != OwnershipState.OWNED {
                 ctx.errors = append(ctx.errors, 
                     sprintf("ERROR at PC %d: Cannot move %s from state %d", pc, rhs_var, record.state))
@@ -109,7 +109,7 @@ func (OwnershipDropContext* ctx) analyze_assign(int pc, stmt* assign_stmt, int d
             record.state = OwnershipState.MOVED
             ctx.moved_set[rhs_var] = true
             delete(ctx.owned_set, rhs_var)
-            if lhs_record, exists := ctx.variableOwners[stmt.lhs]; exists {
+            if lhs_record, exists := ctx.variable_owners[stmt.lhs]; exists {
                 lhs_record.state = OwnershipState.OWNED
                 ctx.owned_set[stmt.lhs] = true
             }
@@ -119,7 +119,7 @@ func (OwnershipDropContext* ctx) analyze_assign(int pc, stmt* assign_stmt, int d
 }
 
 func (OwnershipDropContext* ctx) analyze_move(int pc, stmt* move_stmt, int depth) bool {
-    if record, exists := ctx.variableOwners[stmt.source]; exists {
+    if record, exists := ctx.variable_owners[stmt.source]; exists {
         if record.state == OwnershipState.MOVED {
             ctx.errors = append(ctx.errors, 
                 sprintf("ERROR at PC %d: double-move of %s", pc, stmt.source))
@@ -136,7 +136,7 @@ func (OwnershipDropContext* ctx) analyze_move(int pc, stmt* move_stmt, int depth
 }
 
 func (OwnershipDropContext* ctx) analyze_drop(int pc, stmt* drop_stmt, int depth) bool {
-    if record, exists := ctx.variableOwners[stmt.target]; exists {
+    if record, exists := ctx.variable_owners[stmt.target]; exists {
         if record.state == OwnershipState.DROPPED {
             ctx.errors = append(ctx.errors, 
                 sprintf("ERROR at PC %d: double-drop of %s", pc, stmt.target))
@@ -190,7 +190,7 @@ case block_stmt*:
 
 func (OwnershipDropContext* ctx) check_borrow_creation(int pc, stmt* borrow_stmt, int depth) bool {
     source := stmt.source
-    if record, exists := ctx.variableOwners[source]; exists {
+    if record, exists := ctx.variable_owners[source]; exists {
         if record.state == OwnershipState.MOVED {
             ctx.errors = append(ctx.errors, 
                 sprintf("ERROR at PC %d: borrow of moved variable %s", pc, source))
@@ -237,7 +237,7 @@ func (OwnershipDropContext* ctx) check_borrow_end(int pc, stmt* borrow_end_stmt,
     if record, exists := ctx.active_borrows[borrow_var]; exists {
         record.lifetime_end = pc
         delete(ctx.active_borrows, borrow_var)
-        if source_record, exists := ctx.variableOwners[record.source_var]; exists {
+        if source_record, exists := ctx.variable_owners[record.source_var]; exists {
             source_record.state = OwnershipState.OWNED
         }
     }
@@ -273,7 +273,7 @@ func (OwnershipDropContext* ctx) phase_drop_elaboration(stmts interface{}) inter
 }
 
 func (OwnershipDropContext* ctx) build_drop_registry() {
-    for var_name, record := range ctx.variableOwners {
+    for var_name, record := range ctx.variable_owners {
         if record.state != OwnershipState.MOVED {
             drop_record := DropRecord*{
                 variable: var_name,
@@ -292,8 +292,8 @@ func (OwnershipDropContext* ctx) build_drop_registry() {
 func (OwnershipDropContext* ctx) sort_drop_order_lifo() {
     for i := 0; i < len(ctx.drop_order); i++ {
         for j := i + 1; j < len(ctx.drop_order); j++ {
-            record_i := ctx.variableOwners[ctx.drop_order[i]]
-            record_j := ctx.variableOwners[ctx.drop_order[j]]
+            record_i := ctx.variable_owners[ctx.drop_order[i]]
+            record_j := ctx.variable_owners[ctx.drop_order[j]]
             if record_i.declaration_order < record_j.declaration_order {
                 ctx.drop_order[i], ctx.drop_order[j] = ctx.drop_order[j], ctx.drop_order[i]
             }
@@ -310,7 +310,7 @@ case block_stmt*:
             s.statements = ctx.elaborate_drops(s.statements, depth+1)
             for i := len(ctx.drop_order) - 1; i >= 0; i-- {
                 var_name := ctx.drop_order[i]
-                if record, exists := ctx.variableOwners[var_name]; exists {
+                if record, exists := ctx.variable_owners[var_name]; exists {
                     if record.scope_depth == depth && record.state != OwnershipState.MOVED {
                         drop_call := drop_call*{
                             variable: var_name,
@@ -327,7 +327,7 @@ case block_stmt*:
 }
 
 func (OwnershipDropContext* ctx) verify_closed_loop() bool {
-    for var_name, record := range ctx.variableOwners {
+    for var_name, record := range ctx.variable_owners {
         if record.state == OwnershipState.UNDEFINED {
             ctx.errors = append(ctx.errors, 
                 sprintf("ERROR: %s is never initialized", var_name))
@@ -350,7 +350,7 @@ func (OwnershipDropContext* ctx) verify_closed_loop() bool {
             return false
         }
     }
-    for var_name, record := range ctx.variableOwners {
+    for var_name, record := range ctx.variable_owners {
         if record.state != OwnershipState.MOVED && record.state != OwnershipState.DROPPED {
             if _, has_drop := ctx.drop_registry[var_name]; !has_drop {
                 ctx.warnings = append(ctx.warnings, 
@@ -400,7 +400,7 @@ func (OwnershipDropContext* ctx) analyze_complete(stmts interface{}) AnalysisRes
 
 func new_ownership_drop_context() OwnershipDropContext* {
     return OwnershipDropContext*{
-        variableOwners: make(map[string]*OwnershipRecord),
+        variable_owners: make(map[string]*OwnershipRecord),
         owned_set: make(map[string]bool),
         moved_set: make(map[string]bool),
         borrowed_set: make(map[string]BorrowRecord[]),
