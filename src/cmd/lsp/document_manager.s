@@ -26,7 +26,7 @@ func (dm document_manager) open_document(item text_document_item) {
     dm.parse_document(item.uri)
 }
 
-func (dm document_manager) update_document(uri string, text string, version int) {
+func (dm document_manager) update_document(string uri, string text, int version) {
     switch dm.documents.get(uri) {
         option::some(doc) : {
             updated := text_document {
@@ -40,25 +40,25 @@ func (dm document_manager) update_document(uri string, text string, version int)
     }
 }
 
-func (dm document_manager) close_document(uri string) {
+func (dm document_manager) close_document(string uri) {
     dm.documents.remove(uri)
     dm.ast_cache.remove(uri)
     dm.error_cache.remove(uri)
 }
 
-func (dm document_manager) get_document(uri string) option[text_document] {
+func (dm document_manager) get_document(string uri) option[text_document] {
     dm.documents.get(uri)
 }
 
-func (dm document_manager) get_ast(uri string) option[s::source_file] {
+func (dm document_manager) get_ast(string uri) option[s::source_file] {
     dm.ast_cache.get(uri)
 }
 
-func (dm document_manager) get_errors(uri string) option[parse_error[]] {
+func (dm document_manager) get_errors(string uri) option[parse_error[]] {
     dm.error_cache.get(uri)
 }
 
-func (dm document_manager) parse_document(uri string) {
+func (dm document_manager) parse_document(string uri) {
     switch dm.documents.get(uri) {
         option::some(doc) : {
             lexer := s::new_lexer(doc.text)
@@ -92,7 +92,7 @@ func (dm document_manager) parse_document(uri string) {
     }
 }
 
-func (dm document_manager) get_token_at_position(uri string, pos position) option[string] {
+func (dm document_manager) get_token_at_position(string uri, pos position) option[string] {
     switch dm.documents.get(uri) {
         option::some(doc) : {
             lines := std::split(doc.text, "\n")
@@ -128,7 +128,7 @@ func is_identifier_char(c str) bool {
     (c >= "0" && c <= "9") || c == "_"
 }
 
-func (dm document_manager) get_document_symbols(uri string) option[document_symbol[]] {
+func (dm document_manager) get_document_symbols(string uri) option[document_symbol[]] {
     switch dm.get_ast(uri) {
         option::some(ast) : option::some(extract_symbols_from_ast(ast)),
         option::none() : option::none()

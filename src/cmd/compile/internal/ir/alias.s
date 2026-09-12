@@ -128,7 +128,7 @@ func (aa alias_analysis*) analyze_pointer_stores(store_values i32[], store_targe
     }
 }
 
-func (aa alias_analysis*) analyze_function_parameters(param_values i32[], escape_flags bool[]) {
+func (aa alias_analysis*) analyze_function_parameters(param_values i32[], bool escape_flags[]) {
     for i := i32(0); i < i32(len(param_values)); i += 1 {
         param := param_values[i]
         if param >= 0 && escape_flags[i] {

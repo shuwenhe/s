@@ -45,7 +45,7 @@ func (server lsp_server) run() {
     }
 }
 
-func (server lsp_server) handle_message(message string) {
+func (server lsp_server) handle_message(string message) {
     switch lsp::parse_jsonrpc_message(message) {
         req : {
             switch req.method {
@@ -110,7 +110,7 @@ func (server lsp_server) handle_shutdown(req lsp::jsonrpc_request) {
     }
 }
 
-func (server lsp_server) handle_did_open(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_did_open(req lsp::jsonrpc_request, string message) {
     switch extract_text_document_item(message) {
         option::some(item) : {
             params := lsp::did_open_text_document_params {
@@ -123,7 +123,7 @@ func (server lsp_server) handle_did_open(req lsp::jsonrpc_request, message strin
     }
 }
 
-func (server lsp_server) handle_did_change(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_did_change(req lsp::jsonrpc_request, string message) {
     switch extract_did_change_params(message) {
         option::some((uri, text, version)) : {
             changes := lsp::text_document_content_change_event[]{
@@ -143,7 +143,7 @@ func (server lsp_server) handle_did_change(req lsp::jsonrpc_request, message str
     }
 }
 
-func (server lsp_server) handle_did_save(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_did_save(req lsp::jsonrpc_request, string message) {
     switch extract_text_document_identifier(message) {
         option::some(uri) : {
             params := lsp::did_save_text_document_params {
@@ -155,7 +155,7 @@ func (server lsp_server) handle_did_save(req lsp::jsonrpc_request, message strin
     }
 }
 
-func (server lsp_server) handle_did_close(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_did_close(req lsp::jsonrpc_request, string message) {
     switch extract_text_document_identifier(message) {
         option::some(uri) : {
             params := lsp::did_close_text_document_params {
@@ -167,7 +167,7 @@ func (server lsp_server) handle_did_close(req lsp::jsonrpc_request, message stri
     }
 }
 
-func (server lsp_server) handle_completion(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_completion(req lsp::jsonrpc_request, string message) {
     switch req.id {
         option::some(id) : {
             switch extract_position_params(message) {
@@ -184,7 +184,7 @@ func (server lsp_server) handle_completion(req lsp::jsonrpc_request, message str
     }
 }
 
-func (server lsp_server) handle_hover(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_hover(req lsp::jsonrpc_request, string message) {
     switch req.id {
         option::some(id) : {
             switch extract_position_params(message) {
@@ -205,7 +205,7 @@ func (server lsp_server) handle_hover(req lsp::jsonrpc_request, message string) 
     }
 }
 
-func (server lsp_server) handle_definition(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_definition(req lsp::jsonrpc_request, string message) {
     switch req.id {
         option::some(id) : {
             switch extract_position_params(message) {
@@ -227,7 +227,7 @@ func (server lsp_server) handle_definition(req lsp::jsonrpc_request, message str
     }
 }
 
-func (server lsp_server) handle_references(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_references(req lsp::jsonrpc_request, string message) {
     switch req.id {
         option::some(id) : {
             server.send_response(id, "[]")
@@ -236,7 +236,7 @@ func (server lsp_server) handle_references(req lsp::jsonrpc_request, message str
     }
 }
 
-func (server lsp_server) handle_document_symbol(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_document_symbol(req lsp::jsonrpc_request, string message) {
     switch req.id {
         option::some(id) : {
             switch extract_text_document_identifier(message) {
@@ -252,7 +252,7 @@ func (server lsp_server) handle_document_symbol(req lsp::jsonrpc_request, messag
     }
 }
 
-func (server lsp_server) handle_rename(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_rename(req lsp::jsonrpc_request, string message) {
     switch req.id {
         option::some(id) : {
             server.send_response(id, "{\"changes\":{}}")
@@ -261,7 +261,7 @@ func (server lsp_server) handle_rename(req lsp::jsonrpc_request, message string)
     }
 }
 
-func (server lsp_server) handle_workspace_symbol(req lsp::jsonrpc_request, message string) {
+func (server lsp_server) handle_workspace_symbol(req lsp::jsonrpc_request, string message) {
     switch req.id {
         option::some(id) : {
             server.send_response(id, "[]")
@@ -270,7 +270,7 @@ func (server lsp_server) handle_workspace_symbol(req lsp::jsonrpc_request, messa
     }
 }
 
-func (server lsp_server) send_diagnostics(uri string) {
+func (server lsp_server) send_diagnostics(string uri) {
     diags := server.handler.publish_diagnostics(uri)
     diag_json := lsp::serialize_diagnostics(diags)
     message := lsp::create_notification(
@@ -280,27 +280,27 @@ func (server lsp_server) send_diagnostics(uri string) {
     server.send_notification(message)
 }
 
-func (server lsp_server) send_response(id int, result string) {
+func (server lsp_server) send_response(int id, string result) {
     response := lsp::create_response(id, result)
     server.send_message(response)
 }
 
-func (server lsp_server) send_error(id int, code int, message string) {
+func (server lsp_server) send_error(int id, int code, string message) {
     response := lsp::create_error_response(id, code, message)
     server.send_message(response)
 }
 
-func (server lsp_server) send_notification(message string) {
+func (server lsp_server) send_notification(string message) {
     server.send_message(message)
 }
 
-func (server lsp_server) send_message(message string) {
+func (server lsp_server) send_message(string message) {
     header := "Content-Length: " + std::to_string(len(message)) + "\r\n\r\n"
     std::print(header)
     std::print(message)
 }
 
-func extract_text_document_item(message string) option[lsp::text_document_item] {
+func extract_text_document_item(string message) option[lsp::text_document_item] {
     switch extract_text_document_identifier(message) {
         option::some(uri) : {
             option::none()
@@ -309,11 +309,11 @@ func extract_text_document_item(message string) option[lsp::text_document_item] 
     }
 }
 
-func extract_text_document_identifier(message string) option[string] {
+func extract_text_document_identifier(string message) option[string] {
     lsp::extract_json_string(message, "uri")
 }
 
-func extract_position_params(message string) option[(string, int, int)] {
+func extract_position_params(string message) option[(string, int, int)] {
     switch lsp::extract_json_string(message, "uri") {
         option::some(uri) : {
             switch lsp::extract_json_string(message, "line") {
@@ -342,7 +342,7 @@ func extract_position_params(message string) option[(string, int, int)] {
     }
 }
 
-func extract_did_change_params(message string) option[(string, string, int)] {
+func extract_did_change_params(string message) option[(string, string, int)] {
     switch lsp::extract_json_string(message, "uri") {
         option::some(uri) : {
             switch lsp::extract_json_string(message, "text") {

@@ -19,14 +19,14 @@ struct tcp_conn {
     raddr *tcp_addr
 }
 
-func (tcp_conn* c) read(buf byte[]) (int, error) {
+func (tcp_conn* c) read(byte buf[]) (int, error) {
     if c.raw_socket == nil {
         return 0, "connection closed"
     }
     c.raw_socket.read(buf)
 }
 
-func (tcp_conn* c) write(buf byte[]) (int, error) {
+func (tcp_conn* c) write(byte buf[]) (int, error) {
     if c.raw_socket == nil {
         return 0, "connection closed"
     }
@@ -48,11 +48,11 @@ func (tcp_conn* c) remote_addr() addr {
     c.raddr
 }
 
-func (tcp_conn* c) read_from(buf byte[]) (int, addr, error) {
+func (tcp_conn* c) read_from(byte buf[]) (int, addr, error) {
     0, nil, "tcp does not support ReadFrom"
 }
 
-func (tcp_conn* c) write_to(buf byte[], addr addr) (int, error) {
+func (tcp_conn* c) write_to(byte buf[], addr addr) (int, error) {
     0, "tcp does not support WriteTo"
 }
 
@@ -82,28 +82,28 @@ func (tcp_conn* c) set_write_deadline(deadline_ns i64) error {
     c.raw_socket.set_write_deadline(deadline_ns)
 }
 
-func (tcp_conn* c) set_no_delay(on bool) error {
+func (tcp_conn* c) set_no_delay(bool on) error {
     if c.raw_socket == nil {
         return "connection closed"
     }
     c.raw_socket.set_tcp_no_delay(on)
 }
 
-func (tcp_conn* c) set_reuse_addr(on bool) error {
+func (tcp_conn* c) set_reuse_addr(bool on) error {
     if c.raw_socket == nil {
         return "connection closed"
     }
     c.raw_socket.set_reuse_addr(on)
 }
 
-func (tcp_conn* c) set_reuse_port(on bool) error {
+func (tcp_conn* c) set_reuse_port(bool on) error {
     if c.raw_socket == nil {
         return "connection closed"
     }
     c.raw_socket.set_reuse_port(on)
 }
 
-func dial_tcp(address string, port int, timeout_ms int) (*tcp_conn, error) {
+func dial_tcp(string address, int port, int timeout_ms) (*tcp_conn, error) {
     sock, err := internal.new_raw_socket(
         internal.af_inet,
         internal.sock_stream,
@@ -129,7 +129,7 @@ struct tcp_listener {
     addr *tcp_addr
 }
 
-func listen_tcp(address string, port int) (*tcp_listener, error) {
+func listen_tcp(string address, int port) (*tcp_listener, error) {
     sock, err := internal.new_raw_socket(
         internal.af_inet,
         internal.sock_stream,

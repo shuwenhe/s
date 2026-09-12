@@ -299,7 +299,7 @@ func (ti type_info*) field_by_index(index i32) field_info* {
 	return nil
 }
 
-func (ti type_info*) field_by_name(name string) field_info* {
+func (ti type_info*) field_by_name(string name) field_info* {
 	if ti == nil || ti.kind != struct {
 		return nil
 	}

@@ -223,7 +223,7 @@ func new_tls_manager() tls_manager {
 	}
 }
 
-func (tm tls_manager*) add_variable(symbol string, size i64, alignment i64) i64 {
+func (tm tls_manager*) add_variable(string symbol, size i64, alignment i64) i64 {
 
 	if tm.offset % alignment != 0 {
 		tm.offset += alignment - (tm.offset % alignment)

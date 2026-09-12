@@ -160,7 +160,7 @@ func (DropElaborator* de) VerifyPartialMoveDrops(stmts interface{}[]) bool {
     return true  // Placeholder
 }
 
-func (DropElaborator* de) GetDropOrder(typeName string) string[] {
+func (DropElaborator* de) GetDropOrder(string typeName) string[] {
     typeClass := de.ctx.classify_type(typeName)
     result := make(string[], len(typeClass.DropOrder))
     for i, field := range typeClass.DropOrder {

@@ -16,7 +16,7 @@ func NewOwnershipAnalysis() OwnershipAnalysis* {
     }
 }
 
-func (OwnershipAnalysis* oa) AnalyzeFunction(funcName string, stmts interface{}[]) (interface{}[], bool) {
+func (OwnershipAnalysis* oa) AnalyzeFunction(string funcName, stmts interface{}[]) (interface{}[], bool) {
     oa.moveChecker.CheckMoveSemantics(stmts)
     if oa.ctx.HasErrors() {
         return nil, false
@@ -46,15 +46,15 @@ func (OwnershipAnalysis* oa) HasErrors() bool {
     return oa.ctx.HasErrors()
 }
 
-func (OwnershipAnalysis* oa) classify_type(typeName string) type_classification* {
+func (OwnershipAnalysis* oa) classify_type(string typeName) type_classification* {
     return oa.ctx.classify_type(typeName)
 }
 
-func (OwnershipAnalysis* oa) set_type_classification(typeName string, class* type_classification) {
+func (OwnershipAnalysis* oa) set_type_classification(string typeName, class* type_classification) {
     oa.ctx.TypeClasses[typeName] = class
 }
 
-func (OwnershipAnalysis* oa) SetVariableType(varName string, typeName string) {
+func (OwnershipAnalysis* oa) SetVariableType(string varName, string typeName) {
 }
 type AnalysisReport struct {
     FunctionName string
@@ -69,7 +69,7 @@ type AnalysisReport struct {
     ElaboratedStmts interface{}[]
 }
 
-func (OwnershipAnalysis* oa) GenerateReport(funcName string, elaborated interface{}) AnalysisReport* {
+func (OwnershipAnalysis* oa) GenerateReport(string funcName, elaborated interface{}) AnalysisReport* {
     report := AnalysisReport*{
         FunctionName: funcName,
         Success:      !oa.ctx.HasErrors(),
@@ -91,7 +91,7 @@ func (OwnershipAnalysis* oa) GenerateReport(funcName string, elaborated interfac
     return report
 }
 
-func contains(s string, substr string) bool {
+func contains(string s, string substr) bool {
     for i := 0; i <= len(s)-len(substr); i++ {
         if s[i:i+len(substr)] == substr {
             return true
