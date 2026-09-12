@@ -63,7 +63,7 @@ func relocation_get_type_name(int reloc_type) string {
         case r_x86_64_relative:
             return "R_X86_64_RELATIVE"
         default:
-            return "UNKNOWN"
+            return "unknown"
     }
 }
 
