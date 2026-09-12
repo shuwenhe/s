@@ -1648,7 +1648,7 @@ selfhost-bin:
 
 
 
-.PHONY: compiler compiler-check compiler-s-check mir-ownership-lowering-check mir-nogc-e2e-check no-gc-test
+.PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-ownership-lowering-check mir-nogc-e2e-check no-gc-test
 
 compiler: seed-compiler-bin
 
@@ -1681,6 +1681,26 @@ compiler-s-check: compiler
 	@mkdir -p .bootstrap/compiler
 
 	@misc/scripts/check-nogc-compiler.sh
+
+
+
+mir-cfg-check: compiler
+
+	@echo "Running MIR CFG check..."
+
+	@misc/scripts/check-mir-cfg.sh
+
+	@echo "✓ MIR CFG check passed"
+
+
+
+mir-move-dataflow-check: compiler
+
+	@echo "Running MIR move dataflow check..."
+
+	@misc/scripts/check-mir-move-dataflow.sh
+
+	@echo "✓ MIR move dataflow check passed"
 
 
 
