@@ -1,215 +1,122 @@
-#!/bin/bash
+#!/bin/sh
+set -eu
 
-# check-mir-ref-liveness.sh
-# Test driver for Reference Liveness analysis
-#
-# Usage:
-#   bash misc/scripts/check-mir-ref-liveness.sh [test_name]
-#   bash misc/scripts/check-mir-ref-liveness.sh              # run all tests
-#
-# This script:
-#   1. Compiles each test case to MIR
-#   2. Runs reference liveness analysis
-#   3. Checks place borrow conflicts
-#   4. Compares with expected results
+root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+work=$(mktemp -d "${TMPDIR:-/tmp}/s-mir-ref-live.XXXXXXXX")
+trap 'rm -rf "$work"' EXIT HUP INT TERM
 
-set -e
+export S_MODULAR_COMPILER=/nonexistent/s_modular
 
-REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-TEST_DIR="$REPO_ROOT/test/mir_ref_liveness"
-MIR_OUT="$TEST_DIR/.mir_output"
-RESULTS="$TEST_DIR/.results"
-
-# Create temp directories
-mkdir -p "$MIR_OUT" "$RESULTS"
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# Test definitions as arrays (bash compatible)
-TESTS=(
-    "straight_last_use"
-    "same_place_still_live"
-    "branch_all_paths_dead"
-    "branch_live_after_join"
-    "loop_backedge"
-    "disjoint_place"
-)
-
-EXPECTED=(
-    "ALLOW"
-    "CONFLICT"
-    "ALLOW"
-    "CONFLICT"
-    "CONFLICT"
-    "ALLOW"
-)
-
-# Function to compile S source to MIR
-compile_to_mir() {
-    local test_name="$1"
-    local src="$TEST_DIR/test_cases.s"
-    local mir_out="$MIR_OUT/${test_name}.mir"
-    
-    # Placeholder: would be actual S compiler invocation
-    # For now, just touch file to indicate compilation
-    # s --emit-mir --filter-func "$test_name" "$src" > "$mir_out" 2>&1 || true
-    
-    touch "$mir_out"
-    echo "$mir_out"
+cat >"$work/borrow_then_move_bad.s" <<'SRC'
+package reflive
+func main() int {
+    borrow_shared_field p _1 0
+    move_field _1 0
+    return 0
 }
+SRC
 
-# Function to run reference liveness analysis
-analyze_ref_liveness() {
-    local test_name="$1"
-    local result_file="$RESULTS/${test_name}.liveness"
-    
-    # Call S analyzer directly (prototype phase: simplified model, not full MIR)
-    # This will invoke a function in ref_liveness_prototype.s
-    # s --analyze-ref-liveness-test "$test_name" > "$result_file" 2>&1 || true
-    
-    # For prototype phase: simulate analysis results based on test case
-    # This is a placeholder that will be replaced with actual analyzer
-    
-    case "$test_name" in
-        "straight_last_use")
-            # Test 1: loan dead after last use -> ALLOW
-            echo "[test: $test_name]" > "$result_file"
-            echo "loan_r_active_at_reborrow: false" >> "$result_file"
-            echo "result: ALLOW" >> "$result_file"
-            ;;
-        "same_place_still_live")
-            # Test 2: old ref r still live -> CONFLICT
-            echo "[test: $test_name]" > "$result_file"
-            echo "loan_r_active_at_reborrow: true" >> "$result_file"
-            echo "result: CONFLICT" >> "$result_file"
-            ;;
-        "branch_all_paths_dead")
-            # Test 3: backward liveness: r dead after last use (no use after join) -> ALLOW
-            echo "[test: $test_name]" > "$result_file"
-            echo "loan_r_active_at_join: false (last-use liveness)" >> "$result_file"
-            echo "result: ALLOW" >> "$result_file"
-            ;;
-        "branch_live_after_join")
-            # Test 4: second use keeps loan active -> CONFLICT
-            echo "[test: $test_name]" > "$result_file"
-            echo "loan_r_active_after_join: true (later use)" >> "$result_file"
-            echo "result: CONFLICT" >> "$result_file"
-            ;;
-        "loop_backedge")
-            # Test 5: backedge propagates liveness -> CONFLICT
-            echo "[test: $test_name]" > "$result_file"
-            echo "loan_r_active_after_loop: true (backedge)" >> "$result_file"
-            echo "result: CONFLICT" >> "$result_file"
-            ;;
-        "disjoint_place")
-            # Test 6: different places, no overlap -> ALLOW
-            echo "[test: $test_name]" > "$result_file"
-            echo "place_overlap: false" >> "$result_file"
-            echo "result: ALLOW" >> "$result_file"
-            ;;
-    esac
-    
-    echo "$result_file"
+cat >"$work/borrow_use_then_move_ok.s" <<'SRC'
+package reflive
+func main() int {
+    borrow_shared_field p _1 0
+    use_ref p
+    move_field _1 0
+    return 0
 }
+SRC
 
-# Function to check place borrow conflicts
-check_conflicts() {
-    local liveness_file="$1"
-    local conflict_file="$RESULTS/${test_name}.conflicts"
-    
-    # Analysis results are in liveness_file, extract and return
-    # The liveness_file already has the "result: ALLOW/CONFLICT" line
-    cp "$liveness_file" "$conflict_file"
-    
-    echo "$conflict_file"
+cat >"$work/mut_borrow_use_then_shared_ok.s" <<'SRC'
+package reflive
+func main() int {
+    borrow_mut_field p _1 0
+    use_ref p
+    borrow_shared_field q _1 0
+    return 0
 }
+SRC
 
-# Main test runner
-run_test() {
-    local test_num="$1"
-    local test_name="${TESTS[$test_num]}"
-    local expected="${EXPECTED[$test_num]}"
-    
-    if [[ -z "$test_name" ]]; then
-        return
-    fi
-    
-    echo -n "Testing: $test_name ... "
-    
-    # Step 1: Skip MIR compilation (using simplified prototype model)
-    local mir_file
-    mir_file="$MIR_OUT/${test_name}.mir"
-    touch "$mir_file"
-    
-    # Step 2: Run reference liveness analysis  
-    local liveness_file
-    liveness_file=$(analyze_ref_liveness "$test_name") || {
-        echo -e "${RED}FAIL${NC} (liveness analysis)"
-        return 1
-    }
-    
-    # Step 3: Check conflicts
-    local conflict_file
-    conflict_file=$(check_conflicts "$liveness_file") || {
-        echo -e "${RED}FAIL${NC} (conflict check)"
-        return 1
-    }
-    
-    # Step 4: Extract result and compare
-    local actual
-    actual=$(grep -E "^result:" "$conflict_file" | awk '{print $2}') || {
-        actual="ERROR"
-    }
-    
-    # If not found, try old format
-    if [[ -z "$actual" ]]; then
-        actual=$(grep -E "(ALLOW|CONFLICT|PLACEHOLDER)" "$conflict_file" | head -1 | awk '{print $1}') || {
-            actual="ERROR"
-        }
-    fi
-    
-    if [[ "$actual" == "$expected" ]]; then
-        echo -e "${GREEN}PASS${NC}"
-        return 0
-    else
-        echo -e "${RED}FAIL${NC} (expected=$expected, got=$actual)"
-        return 1
-    fi
+cat >"$work/nested_borrow_use_then_parent_mut_ok.s" <<'SRC'
+package reflive
+func main() int {
+    borrow_shared_nested_field p _1 0 1
+    use_ref p
+    borrow_mut_field q _1 0
+    return 0
 }
+SRC
 
-# Parse arguments
-FILTER="${1:-}"
-PASS=0
-FAIL=0
+cat >"$work/nested_borrow_parent_mut_bad.s" <<'SRC'
+package reflive
+func main() int {
+    borrow_shared_nested_field p _1 0 1
+    borrow_mut_field q _1 0
+    return 0
+}
+SRC
 
-echo "=========================================="
-echo "Reference Liveness Test Suite"
-echo "=========================================="
-echo ""
+cat >"$work/sibling_move_ok.s" <<'SRC'
+package reflive
+func main() int {
+    borrow_shared_field p _1 0
+    move_field _1 1
+    return 0
+}
+SRC
 
-# Run tests
-for ((i=0; i<${#TESTS[@]}; i++)); do
-    test_name="${TESTS[$i]}"
-    
-    if [[ -z "$FILTER" ]] || [[ "$test_name" == "$FILTER" ]]; then
-        if run_test "$i"; then
-            ((PASS++))
-        else
-            ((FAIL++))
-        fi
+"$root/bin/s" --emit-mir-reference-liveness "$work/borrow_then_move_bad.s" "$work/borrow_then_move_bad.mir"
+if ! grep -Fq 'mir-error move of borrowed place Field(_1, 0)' "$work/borrow_then_move_bad.mir"; then
+    echo "mir reference liveness: live reference should block move" >&2
+    cat "$work/borrow_then_move_bad.mir" >&2
+    exit 1
+fi
+
+"$root/bin/s" --emit-mir-reference-liveness "$work/borrow_use_then_move_ok.s" "$work/borrow_use_then_move_ok.mir"
+for expected in \
+    'p = Borrow(shared, Field(_1, 0))' \
+    'UseRef(p)' \
+    'EndBorrow(p, Field(_1, 0))' \
+    'Move(Field(_1, 0)) OK'
+do
+    if ! grep -Fq "$expected" "$work/borrow_use_then_move_ok.mir"; then
+        echo "mir reference liveness: borrow should end after last use: $expected" >&2
+        cat "$work/borrow_use_then_move_ok.mir" >&2
+        exit 1
     fi
 done
 
-echo ""
-echo "=========================================="
-echo "Results: ${GREEN}$PASS PASS${NC} ${RED}$FAIL FAIL${NC}"
-echo "=========================================="
+"$root/bin/s" --emit-mir-reference-liveness "$work/mut_borrow_use_then_shared_ok.s" "$work/mut_borrow_use_then_shared_ok.mir"
+for expected in \
+    'p = Borrow(mut, Field(_1, 0))' \
+    'EndBorrow(p, Field(_1, 0))' \
+    'q = Borrow(shared, Field(_1, 0))'
+do
+    if ! grep -Fq "$expected" "$work/mut_borrow_use_then_shared_ok.mir"; then
+        echo "mir reference liveness: mutable loan should end before later shared borrow: $expected" >&2
+        cat "$work/mut_borrow_use_then_shared_ok.mir" >&2
+        exit 1
+    fi
+done
 
-# Cleanup
-# rm -rf "$MIR_OUT" "$RESULTS"  # Uncomment after debugging
+"$root/bin/s" --emit-mir-reference-liveness "$work/nested_borrow_use_then_parent_mut_ok.s" "$work/nested_borrow_use_then_parent_mut_ok.mir"
+if ! grep -Fq 'q = Borrow(mut, Field(_1, 0))' "$work/nested_borrow_use_then_parent_mut_ok.mir"; then
+    echo "mir reference liveness: ended nested loan should not block parent mutable borrow" >&2
+    cat "$work/nested_borrow_use_then_parent_mut_ok.mir" >&2
+    exit 1
+fi
 
-exit $([[ $FAIL -eq 0 ]] && echo 0 || echo 1)
+"$root/bin/s" --emit-mir-reference-liveness "$work/nested_borrow_parent_mut_bad.s" "$work/nested_borrow_parent_mut_bad.mir"
+if ! grep -Fq 'mir-error mutable borrow while shared borrowed Field(_1, 0)' "$work/nested_borrow_parent_mut_bad.mir"; then
+    echo "mir reference liveness: live nested loan should block parent mutable borrow" >&2
+    cat "$work/nested_borrow_parent_mut_bad.mir" >&2
+    exit 1
+fi
+
+"$root/bin/s" --emit-mir-reference-liveness "$work/sibling_move_ok.s" "$work/sibling_move_ok.mir"
+if ! grep -Fq 'Move(Field(_1, 1)) OK' "$work/sibling_move_ok.mir"; then
+    echo "mir reference liveness: sibling field move should not overlap live borrow" >&2
+    cat "$work/sibling_move_ok.mir" >&2
+    exit 1
+fi
+
+echo "MIR reference liveness check passed"
