@@ -107,7 +107,7 @@ func (OwnershipContext* ctx) classify_type(string typeName) type_classification*
         NeedsOwnership: !isPrimitiveType(typeName),
         is_copy:         isPrimitiveType(typeName),
         OwnedFields:    make(string[], 0),
-        DropOrder:      make(string[], 0),
+        drop_order:      make(string[], 0),
     }
     ctx.type_classes[typeName] = class
     return class

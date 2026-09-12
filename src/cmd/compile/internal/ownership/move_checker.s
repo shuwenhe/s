@@ -88,7 +88,7 @@ func (move_checker* mc) check_return(int pc, ret* ReturnStmt) {
 }
 
 func (move_checker* mc) check_if_statement(int pc, ifStmt* IfStmt) {
-    mc.check_use(pc, ifStmt.Condition, "read")
+    mc.check_use(pc, ifStmt.condition, "read")
     thenStates := mc.analyze_branch(pc, ifStmt.ThenBody)
     elseStates := mc.analyze_branch(pc, ifStmt.ElseBody)
     mc.merge_branch_states(pc, thenStates, elseStates)
