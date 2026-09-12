@@ -1,14 +1,6 @@
-// ============================================================================
-// Borrow Checker Implementation Guide
-// 借用检查器的详细实现和工作原理
-// ============================================================================
 
 package borrow_checker_guide
 
-// =============================================================================
-// Part 1: Borrow Checker Basics
-// 借用检查器基础
-// =============================================================================
 
 /**
 借用检查器的核心职责：
@@ -21,8 +13,6 @@ package borrow_checker_guide
 检查时机：编译时（静态分析）
 */
 
-// Rule Set 1: Ownership Rules
-// 规则集1：所有权规则
 
 struct owner {
     resource *int
@@ -58,10 +48,6 @@ func ownership_rule3() {
 
 }
 
-// =============================================================================
-// Part 2: Borrow Rules and Constraints
-// 第2部分：借用规则和约束
-// =============================================================================
 
 /**
 Borrow Checker的两条核心规则：
@@ -83,7 +69,6 @@ struct data {
     value *int
 }
 
-// VALID: 多个共享借用
 func valid_shared_borrows() int {
     d := Data{value: box(100)}
     
@@ -95,23 +80,8 @@ func valid_shared_borrows() int {
     return *b1.value + *b2.value + *b3.value
 }
 
-// ERROR CASE: 可变借用冲突
-// func invalid_mutable_borrows() {
-//     d := Data{value: box(100)}
-//     
-//     b1 := &mut d
-//     b2 := &mut d
-// }
 
-// ERROR CASE: 共享和可变借用混合
-// func invalid_mixed_borrows() {
-//     d := Data{value: box(100)}
-//     
-//     s := &d
-//     m := &mut d
-// }
 
-// VALID: 顺序的可变借用
 func valid_sequential_mutable() int {
     d := Data{value: box(100)}
     
@@ -128,10 +98,6 @@ func valid_sequential_mutable() int {
     return *d.value
 }
 
-// =============================================================================
-// Part 3: Lifetime Tracking
-// 第3部分：生命周期追踪
-// =============================================================================
 
 /**
 生命周期定义：借用的有效期
@@ -146,7 +112,6 @@ struct container {
     data *int
 }
 
-// VALID: 借用的生命周期短于所有者
 func valid_lifetime() int {
     c := Container{data: box(50)}
     
@@ -161,42 +126,27 @@ func valid_lifetime() int {
     return *c.data
 }
 
-// ERROR: 借用超过所有者的生命周期
-// func invalid_lifetime() *int {
-//     c := Container{data: box(50)}
-//     ref := &c
-//     return ref.data
-//
-// }
 
-// VALID: 返回值与参数的生命周期关系
 func borrow_from_param(c *Container) *int {
 
     return c.data
 }
 
-// =============================================================================
-// Part 4: Move vs Borrow
-// 第4部分：Move vs Borrow
-// =============================================================================
 
 struct resource {
     ptr *int
 }
 
-// MOVE: 转移所有权
 func consume_resource(r Resource) int {
     return *r.ptr
 
 }
 
-// BORROW: 保留所有权
 func borrow_resource(r *Resource) int {
     return *r.ptr
 
 }
 
-// 对比示例
 func move_vs_borrow() int {
     r := Resource{ptr: box(100)}
     
@@ -211,10 +161,6 @@ func move_vs_borrow() int {
     return value
 }
 
-// =============================================================================
-// Part 5: Borrow Scope Detection
-// 第5部分：借用作用域检测
-// =============================================================================
 
 /**
 编译器如何检测借用的作用域：
@@ -247,10 +193,6 @@ func borrow_scope_example() int {
     return *b.ptr
 }
 
-// =============================================================================
-// Part 6: Conflict Detection
-// 第6部分：冲突检测
-// =============================================================================
 
 /**
 冲突类型：
@@ -268,37 +210,10 @@ func borrow_scope_example() int {
    引用超出所有者生命周期
 */
 
-// 冲突示例1: Move后使用
-// func conflict_move_use() {
-//     r := Resource{ptr: box(10)}
-//     r2 := r
-//     x := *r.ptr
-// }
 
-// 冲突示例2: 可变借用冲突
-// func conflict_mutable_borrow() {
-//     r := Resource{ptr: box(10)}
-//     m1 := &mut r
-//     m2 := &mut r
-// }
 
-// 冲突示例3: 共享与可变混合
-// func conflict_mixed_borrow() {
-//     r := Resource{ptr: box(10)}
-//     s := &r
-//     m := &mut r
-// }
 
-// 冲突示例4: 生命周期冲突
-// fn conflictLifetime() *int {
-//     x := box(10)
-//     return &x
-// }
 
-// =============================================================================
-// Part 7: Borrow Checker Algorithm
-// 第7部分：借用检查器算法
-// =============================================================================
 
 /**
 伪代码 - 借用检查器的工作流程：
@@ -339,10 +254,6 @@ For each statement:
 ```
 */
 
-// =============================================================================
-// Part 8: State Machine
-// 第8部分：变量状态机
-// =============================================================================
 
 /**
 变量可以处于以下状态之一：
@@ -373,7 +284,6 @@ State Diagram:
   └─────────────┘
 */
 
-// State transitions example:
 func state_transitions() int {
     r := Resource{ptr: box(10)}
 
@@ -392,10 +302,6 @@ func state_transitions() int {
 
 }
 
-// =============================================================================
-// Part 9: NLL (Non-Lexical Lifetimes)
-// 第9部分：非词法生命周期
-// =============================================================================
 
 /**
 NLL是一种更精确的生命周期推断方式：
@@ -410,7 +316,6 @@ NLL是一种更精确的生命周期推断方式：
   - 更精确，更少的错误报告
 */
 
-// 使用NLL的示例
 func non_lexical_lifetime() int {
     r := Resource{ptr: box(50)}
     
@@ -429,41 +334,15 @@ func non_lexical_lifetime() int {
     return *r.ptr
 }
 
-// 比较：词法vs非词法
-// 词法生命周期（严格）：
-// fn lexical() {
-//     let mut r = Resource { ... };
-//     {
-//         let ref = &r;
-//         println!("{}", *ref);
-//     }
-//     r = new_resource();
-// }
 
-// 非词法生命周期（灵活）：
-// fn non_lexical() {
-//     let mut r = Resource { ... };
-//     {
-//         let ref = &r;
-//         println!("{}", *ref);
-//
-//     }
-//     r = new_resource();
-// }
 
-// =============================================================================
-// Part 10: Special Cases
-// 第10部分：特殊情况
-// =============================================================================
 
-// 特殊情况1: 返回值的所有权
 func return_ownership_example() Resource {
     r := Resource{ptr: box(100)}
     return r
 
 }
 
-// 特殊情况2: 条件返回
 func conditional_return(bool condition) Resource {
     r1 := Resource{ptr: box(1)}
     r2 := Resource{ptr: box(2)}
@@ -475,23 +354,12 @@ func conditional_return(bool condition) Resource {
     }
 }
 
-// 特殊情况3: 自引用（有限支持）
-// type node struct {
-//     value int
-//     next *Node
-// }
 
-// 特殊情况4: 全局状态
 struct global_state {
     data *int
 }
 
-// 全局所有权管理需要特殊处理
 
-// =============================================================================
-// Part 11: Error Messages from Borrow Checker
-// 第11部分：借用检查器的错误消息
-// =============================================================================
 
 /**
 常见的借用检查器错误消息：
@@ -518,10 +386,6 @@ Error 5: Dangling reference
   返回的引用没有有效的所有者
 */
 
-// =============================================================================
-// Part 12: Best Practices
-// 第12部分：最佳实践
-// =============================================================================
 
 /**
 1. 倾向于借用而非转移所有权
@@ -549,7 +413,6 @@ Error 5: Dangling reference
    - 某些类型的移动很昂贵（大结构）
 */
 
-// 示例：最佳实践
 func best_practices() int {
 
     r := Resource{ptr: box(42)}
@@ -567,10 +430,6 @@ func use_with_borrow(r *Resource) int {
     return *r.ptr
 }
 
-// =============================================================================
-// Part 13: Integration with Ownership System
-// 第13部分：与所有权系统的集成
-// =============================================================================
 
 /**
 三者的关系：
@@ -591,9 +450,6 @@ Ownership (所有权)
 流程：编译时检查 → 运行时执行 → 自动清理
 */
 
-// =============================================================================
-// Compilation and Testing
-// =============================================================================
 
 func main() int {
     println("=== Ownership Rules ===") ownership_rule1()
@@ -629,13 +485,3 @@ func main() int {
     return 0
 }
 
-// =============================================================================
-// 参考资源
-// =============================================================================
-//
-// - 所有权系统实现: /Users/feifei/shuwen/s/src/ownership_system.s
-// - 所有权系统指南: /Users/feifei/shuwen/s/doc/OWNERSHIP_SYSTEM.md
-// - Rust Borrow Checker 文档:
-//   https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html
-//
-// =============================================================================

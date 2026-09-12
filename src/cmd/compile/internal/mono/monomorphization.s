@@ -80,11 +80,6 @@ struct mono_work_item {
     string[] type_args
 }
 
-// MonoContext: the unified context for monomorphization processing
-// - cache: tracks all (generic_def, type_args) -> instance_name mappings
-// - worklist: pending (generic_name, type_args) pairs to process
-// - processed: set of processed work items, keyed by "name:type_args"
-// - generated: all generated concrete function instances
 struct mono_context {
     mono_cache cache
     mono_work_item[] worklist
@@ -284,7 +279,6 @@ func should_keep_after_monomorphization(item value) bool {
     }
 }
 
-// collect_item_instances_ctx: collect monomorphization instances using MonoContext
 func collect_item_instances_ctx(item value, item[] all_items, mono_context ctx) mono_context {
     switch value {
         item.function(fn) : {
@@ -1219,13 +1213,6 @@ func summarize_instance(function_decl instance) mono_function_summary {
     mono_function_summary { instance_name: instance.sig.name, params: params, result: result }
 }
 
-// verify_monomorphized_file_with_details: verify post-monomorphization invariants with detailed reporting
-// Returns number of errors found
-// Post-mono invariants:
-//   - All concrete functions (__mono) must have no generic type parameters
-//   - No residual generics: T, U, V, box[T], T[], etc.
-//   - All call expressions must have resolved_callee set
-//   - All type_args in calls must be resolved (no T)
 func verify_monomorphized_file_with_details(source_file file) int {
     errors := verify_monomorphized_file(file)
     

@@ -169,7 +169,6 @@ func run_monomorphization_test() int {
     0
 }
 
-// E2E test: Verify transitive monomorphization works correctly for chain: main -> foo[int] -> bar[int] -> baz[int]
 func run_e2e_transitive_monomorphization_test() int {
 
 
