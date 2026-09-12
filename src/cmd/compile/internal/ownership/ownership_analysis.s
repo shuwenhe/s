@@ -70,8 +70,8 @@ struct analysis_report {
     ElaboratedStmts interface{}[]
 }
 
-func (OwnershipAnalysis* oa) generate_report(string funcName, elaborated interface{}) AnalysisReport* {
-    report := AnalysisReport*{
+func (OwnershipAnalysis* oa) generate_report(string funcName, elaborated interface{}) analysis_report* {
+    report := analysis_report*{
         function_name: funcName,
         success:      !oa.ctx.has_errors(),
         move_errors:   make(string[], 0),
@@ -130,7 +130,7 @@ func (OwnershipAnalysis* oa) apply_ownership_hints(OwnershipHints* hints) {
 }
 
 func (OwnershipAnalysis* oa) print_errors() {
-    report := AnalysisReport*{
+    report := analysis_report*{
         function_name: "analysis",
         move_errors:   make(string[], 0),
         borrow_errors: make(string[], 0),

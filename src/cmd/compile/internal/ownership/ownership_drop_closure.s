@@ -373,28 +373,28 @@ struct analysis_result {
     drop_order string[]
 }
 
-func (OwnershipDropContext* ctx) analyze_complete(stmts interface{}) AnalysisResult* {
+func (OwnershipDropContext* ctx) analyze_complete(stmts interface{}) analysis_result* {
     if !ctx.phase_ownership_analyze(stmts) {
-        return AnalysisResult*{
+        return analysis_result*{
             success: false,
             errors: ctx.errors,
         }
     }
     if !ctx.phase_borrow_check(stmts) {
-        return AnalysisResult*{
+        return analysis_result*{
             success: false,
             errors: ctx.errors,
         }
     }
     elaborated := ctx.phase_drop_elaboration(stmts)
     if !ctx.verify_closed_loop() {
-        return AnalysisResult*{
+        return analysis_result*{
             success: false,
             errors: ctx.errors,
             warnings: ctx.warnings,
         }
     }
-    return AnalysisResult*{
+    return analysis_result*{
         success: true,
         elaborated_stmts: elaborated,
         errors: ctx.errors,
