@@ -40,7 +40,7 @@ func (drop_elaborator* de) elaborate_block(BlockStmt* block) BlockStmt* {
     dropsNeeded := de.collect_drops_for_block(block)
     for _, dropVar := range dropsNeeded {
         stmts = append(stmts, DropCall*{
-            Variable: dropVar,
+            variable: dropVar,
             Kind:     "explicit",
         })
     }
@@ -54,7 +54,7 @@ func (drop_elaborator* de) elaborate_return(ReturnStmt* ret) interface{} {
     var result interface{}[]
     for _, dropVar := range dropsNeeded {
         result = append(result, DropCall*{
-            Variable: dropVar,
+            variable: dropVar,
             Kind:     "return-cleanup",
         })
     }
@@ -116,7 +116,7 @@ func (drop_elaborator* de) count_drops(stmts interface{}[], counts map[string]in
     for _, stmt := range stmts {
         switch s := stmt.(type) {
 case DropCall*:
-            counts[s.Variable]++
+            counts[s.variable]++
 case BlockStmt*:
             de.count_drops(s.Statements, counts)
         }
@@ -133,14 +133,14 @@ func (drop_elaborator* de) check_use_after_drop(stmts interface{}[],
     for _, stmt := range stmts {
         switch s := stmt.(type) {
 case DropCall*:
-            if droppedVars[s.Variable] {
-                de.ctx.add_error(errorf("use-after-drop: variable %s", s.Variable))
+            if droppedVars[s.variable] {
+                de.ctx.add_error(errorf("use-after-drop: variable %s", s.variable))
                 return false
             }
-            droppedVars[s.Variable] = true
+            droppedVars[s.variable] = true
 case UseStmt*:
-            if droppedVars[s.Variable] {
-                de.ctx.add_error(errorf("use-after-drop: using %s", s.Variable))
+            if droppedVars[s.variable] {
+                de.ctx.add_error(errorf("use-after-drop: using %s", s.variable))
                 return false
             }
 case BlockStmt*:
