@@ -1,33 +1,33 @@
 package compile.internal.ownership
 type ownership_state int
 const (
-    STATE_UNDEFINED ownership_state = iota
-    STATE_OWNED
-    STATE_MOVED
-    STATE_BORROWED_SHARED
-    STATE_BORROWED_MUT
-    STATE_PARTIALLY_MOVED
-    STATE_DROPPED
-    STATE_MAYBE_MOVED
+    state_undefined ownership_state = iota
+    state_owned
+    state_moved
+    state_borrowed_shared
+    state_borrowed_mut
+    state_partially_moved
+    state_dropped
+    state_maybe_moved
 )
 
 func (s ownership_state) string() string {
     switch s {
-    case STATE_UNDEFINED:
+    case state_undefined:
         return "UNDEFINED"
-    case STATE_OWNED:
+    case state_owned:
         return "OWNED"
-    case STATE_MOVED:
+    case state_moved:
         return "MOVED"
-    case STATE_BORROWED_SHARED:
+    case state_borrowed_shared:
         return "BORROWED_SHARED"
-    case STATE_BORROWED_MUT:
+    case state_borrowed_mut:
         return "BORROWED_MUT"
-    case STATE_PARTIALLY_MOVED:
+    case state_partially_moved:
         return "PARTIALLY_MOVED"
-    case STATE_DROPPED:
+    case state_dropped:
         return "DROPPED"
-    case STATE_MAYBE_MOVED:
+    case state_maybe_moved:
         return "MAYBE_MOVED"
     default:
         return "UNKNOWN"
@@ -77,7 +77,7 @@ func new_ownership_context() ownership_context* {
 func (ownership_context* ctx) get_state_at(int pc, string var_name) ownership_state {
     info, ok := ctx.state_at_pc[pc]
     if !ok {
-        return STATE_UNDEFINED
+        return state_undefined
     }
     return info.state
 }
@@ -107,9 +107,9 @@ func (ownership_context* ctx) classify_type(string type_name) type_classificatio
         return class
     }
     class := type_classification*{
-        NeedsOwnership: !isPrimitiveType(type_name),
+        needs_ownership: !isPrimitiveType(type_name),
         is_copy:         isPrimitiveType(type_name),
-        OwnedFields:    make(string[], 0),
+        owned_fields:    make(string[], 0),
         drop_order:      make(string[], 0),
     }
     ctx.type_classes[type_name] = class
