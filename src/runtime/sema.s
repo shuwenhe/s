@@ -7,8 +7,8 @@ extern "intrinsic" func __atomic_add(int target, int delta) int
 extern "intrinsic" func __atomic_load(int target) int
 extern "intrinsic" func __sema_new_id() int
 struct semaphore {
-    id int
-    count int
+    int id
+    int count
 }
 
 func new_semaphore(int initial) semaphore {
@@ -45,7 +45,7 @@ func (semaphore* self) try_wait() bool {
     }
 
 struct mutex {
-    state int
+    int state
     sem semaphore
 }
 
@@ -79,8 +79,8 @@ func (mutex* self) try_lock() bool {
     }
 
 struct rw_mutex {
-    readers int
-    writer int
+    int readers
+    int writer
     write_mu mutex
     read_sem semaphore
 }
@@ -120,7 +120,7 @@ func (rw_mutex* self) wunlock() () {
     }
 
 struct once {
-    done int
+    int done
     mu mutex
 }
 

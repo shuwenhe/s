@@ -5,17 +5,17 @@ use std.option.option
 const chan_open   = 0
 const chan_closed = 1
 struct waiter {
-    sroutine_id int
-    val_idx int
+    int sroutine_id
+    int val_idx
 }
 
 struct raw_chan {
-    buffer_capacity int
+    int buffer_capacity
     int[] buf
-    head int
-    tail int
-    count int
-    state int
+    int head
+    int tail
+    int count
+    int state
     waiter[] senders
     waiter[] receivers
     mu mutex
@@ -135,8 +135,8 @@ func chan_recv(raw_chan ch) recv_result {
 }
 
 struct recv_result {
-    value int
-    ok bool
+    int value
+    bool ok
 }
 
 func chan_try_send(raw_chan ch, int val) bool {

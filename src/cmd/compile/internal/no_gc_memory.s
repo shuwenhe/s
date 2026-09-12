@@ -24,9 +24,9 @@ func alloc_stack() int { 1 }
 func alloc_heap() int { 2 }
 
 struct allocation_decision {
-    strategy int
-    size int
-    reason string
+    int strategy
+    int size
+    string reason
 }
 
 struct raii_scope {
@@ -41,8 +41,8 @@ struct no_gc_state {
 }
 
 struct no_gc_result {
-    ok bool
-    message string
+    bool ok
+    string message
     string[] cleanup
 }
 

@@ -1,16 +1,16 @@
 package compile.internal.ssa
 struct ssa_config {
-    debug bool
-    target_arch string
-    enable_rewrite bool
-    enable_cse bool
-    enable_copyelim bool
-    enable_prove bool
-    enable_dom bool
-    enable_deadcode bool
-    enable_schedule bool
-    enable_regalloc bool
-    regalloc_register_count int
+    bool debug
+    string target_arch
+    bool enable_rewrite
+    bool enable_cse
+    bool enable_copyelim
+    bool enable_prove
+    bool enable_dom
+    bool enable_deadcode
+    bool enable_schedule
+    bool enable_regalloc
+    int regalloc_register_count
 }
 
 func default_config() ssa_config {

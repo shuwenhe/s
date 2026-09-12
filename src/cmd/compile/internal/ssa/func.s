@@ -1,12 +1,12 @@
 package compile.internal.ssa
 use std.slices
 struct ssa_func {
-    name string
-    entry int
+    string name
+    int entry
     ssa_block[] blocks
     ssa_value[] values
-    next_block_id int
-    next_value_id int
+    int next_block_id
+    int next_value_id
 }
 
 func make_func(string name) ssa_func {

@@ -1,7 +1,7 @@
 package src.net
 struct parse_error {
-    typ string
-    text string
+    string typ
+    string text
 }
 
 func (e *parse_error) error() string {
@@ -9,8 +9,8 @@ func (e *parse_error) error() string {
 }
 
 struct addr_error {
-    err string
-    addr string
+    string err
+    string addr
 }
 
 func (e *addr_error) error() string {
@@ -25,7 +25,7 @@ func (e *addr_error) error() string {
 }
 
 struct unknown_network_error {
-    net string
+    string net
 }
 
 func (e *unknown_network_error) error() string {
@@ -37,11 +37,11 @@ struct timeout_error {}
 func (e *timeout_error) error() string { "i/o timeout" }
 
 struct op_error {
-    op string
-    net string
+    string op
+    string net
     source addr
     addr addr
-    err string
+    string err
 }
 
 func (e *op_error) error() string {

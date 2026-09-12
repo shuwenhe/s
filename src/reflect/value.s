@@ -1,11 +1,11 @@
 package src.reflect
 
 struct value {
-    address int
+    int address
     type_info type
-    int_value int
-    bool_value bool
-    string_value string
+    int int_value
+    bool bool_value
+    string string_value
 }
 
 func int_value(int number, type value_type) value {

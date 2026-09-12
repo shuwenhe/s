@@ -14,19 +14,19 @@ enum symbol_type {
 }
 
 struct symbol_entry {
-    name string
+    string name
     bind symbol_bind
     type symbol_type
-    value int64
-    size int64
-    section_index int
-    defined bool
+    int value64
+    int size64
+    int section_index
+    bool defined
 }
 
 struct symbol_table {
     symbol_entry[] entries
     string[] names
-    string_table_offset int64
+    int string_table_offset64
 }
 
 func make_symbol_table() symbol_table {

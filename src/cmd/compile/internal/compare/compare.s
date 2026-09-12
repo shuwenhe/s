@@ -1,61 +1,61 @@
 package compile.internal.compare
 use std.slices
 struct compare_field {
-    name string
-    offset int
-    size int
-    alignment int
-    padded bool
-    regular_memory bool
-    can_panic bool
-    type_kind string
-    num_elem int
-    elem_cost int
-    elem_can_panic bool
+    string name
+    int offset
+    int size
+    int alignment
+    bool padded
+    bool regular_memory
+    bool can_panic
+    string type_kind
+    int num_elem
+    int elem_cost
+    bool elem_can_panic
 }
 
 struct compare_struct {
     compare_field[] fields
-    alignment int
-    reg_size int
-    arch_alignment int
-    can_merge_loads bool
+    int alignment
+    int reg_size
+    int arch_alignment
+    bool can_merge_loads
 }
 
 struct memrun_result {
-    size int
-    next int
+    int size
+    int next
 }
 
 struct field_cost_result {
-    cost int
-    size int
-    next int
+    int cost
+    int size
+    int next
 }
 
 struct compare_node {
-    expr string
-    is_call bool
+    string expr
+    bool is_call
 }
 
 struct eq_struct_result {
     compare_node[] conds
-    can_panic bool
+    bool can_panic
 }
 
 struct eq_string_result {
-    eqlen string
-    eqmem string
+    string eqlen
+    string eqmem
 }
 
 struct eq_interface_result {
-    eqtab string
-    eqdata string
+    string eqtab
+    string eqdata
 }
 
 struct eqmem_func_result {
-    name string
-    need_size bool
+    string name
+    bool need_size
 }
 
 func is_regular_memory(compare_field field_value) bool {

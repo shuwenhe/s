@@ -1,20 +1,20 @@
 package compile.internal.ssa
 use std.slices
 struct line_range {
-    first int
-    last int
+    int first
+    int last
 }
 
 struct xpos_map_entry {
-    file_index int
+    int file_index
     lines line_range
     data sparse_map
 }
 
 struct xpos_map {
     xpos_map_entry[] maps
-    last_index int
-    last_slot int
+    int last_index
+    int last_slot
 }
 
 func new_xpos_map(int_pair[] file_ranges) xpos_map {

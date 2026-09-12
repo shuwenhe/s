@@ -8,28 +8,28 @@ enum sym_type {
 }
 
 struct link_sym {
-    name string
+    string name
     type sym_type
-    size int64
-    value int64
+    int size64
+    int value64
     int8[] data
     link_reloc[] relocs
-    is_defined bool
+    bool is_defined
 }
 
 struct link_reloc {
-    offset int64
-    size int64
-    target_sym string
-    add_end int64
+    int offset64
+    int size64
+    string target_sym
+    int add_end64
 }
 
 struct link_context {
     link_sym[] symbols
     string[] symbol_names
-    text_size int64
-    data_size int64
-    bss_size int64
+    int text_size64
+    int data_size64
+    int bss_size64
 }
 
 func make_link_context() link_context {

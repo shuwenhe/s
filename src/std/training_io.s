@@ -1,36 +1,36 @@
 package std.training_io
 use std.tensor_core as t
 struct checkpoint_meta {
-    format_version string
-    framework string
-    timestamp string
-    s_compiler_version string
+    string format_version
+    string framework
+    string timestamp
+    string s_compiler_version
 }
 
 struct train_state {
-    global_step int
-    current_loss float
-    best_loss float
-    best_step int
-    training_complete bool
+    int global_step
+    float current_loss
+    float best_loss
+    int best_step
+    bool training_complete
     float[] loss_history
-    grad_norm float
-    learning_rate float
-    epoch_time_ms int
-    total_time_ms int
-    tokens_per_second float
+    float grad_norm
+    float learning_rate
+    int epoch_time_ms
+    int total_time_ms
+    float tokens_per_second
 }
 
 struct model_config_snapshot {
-    vocab_size int
-    embed_dim int
-    num_heads int
-    ffn_dim int
-    num_layers int
-    max_seq_len int
-    dropout_prob float
-    total_param_count int
-    trainable_param_count int
+    int vocab_size
+    int embed_dim
+    int num_heads
+    int ffn_dim
+    int num_layers
+    int max_seq_len
+    float dropout_prob
+    int total_param_count
+    int trainable_param_count
 }
 
 struct checkpoint {
@@ -38,9 +38,9 @@ struct checkpoint {
     state train_state
     config model_config_snapshot
     map<string, t.tensor> weight_map
-    file_path string
+    string file_path
     file_size_bytes long
-    checksum_md5 string
+    string checksum_md5
 }
 
 func default_meta() checkpoint_meta {
@@ -258,13 +258,13 @@ func export_weights_binary(ag.ag_tensor[] params, string output_path) string {
 }
 
 struct training_log_entry {
-    step int
-    loss float
-    best_loss float
-    grad_norm float
-    lr float
-    elapsed_ms int
-    message string
+    int step
+    float loss
+    float best_loss
+    float grad_norm
+    float lr
+    int elapsed_ms
+    string message
 }
 var _log_entries = training_log_entry[5000]
 var _log_count = 0
@@ -497,14 +497,14 @@ func _read_file(string path) read_result {
 }
 
 struct write_result {
-    ok bool
-    error_code int
+    bool ok
+    int error_code
 }
 
 struct read_result {
-    ok bool
-    data string
-    error string
+    bool ok
+    string data
+    string error
 }
 
 func result_is_ok(write_result r) bool { r.ok }

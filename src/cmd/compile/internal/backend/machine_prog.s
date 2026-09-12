@@ -1,22 +1,22 @@
 package backend
 struct prog_op {
-    name string
-    code int
+    string name
+    int code
 }
 
 struct prog {
-    id int
-    op int
+    int id
+    int op
     prog* prev
     prog* next
-    as_string string
-    lineno int
+    string as_string
+    int lineno
 }
 
 struct prog_list {
     prog* head
     prog* tail
-    count int
+    int count
 }
 
 func prog_op_mov() int { 0 }

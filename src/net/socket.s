@@ -11,8 +11,8 @@ const poll_in = sc.poll_in
 const poll_out = sc.poll_out
 const poll_err = sc.poll_err
 struct net_error {
-    message string
-    errno_code int
+    string message
+    int errno_code
 }
 
 func wrap_sc_err(sc.net_error e) net_error {
@@ -20,9 +20,9 @@ func wrap_sc_err(sc.net_error e) net_error {
 }
 
 struct tcp_listener {
-    fd int
-    host string
-    port int
+    int fd
+    string host
+    int port
 }
 
 func listen_tcp(string host, int port) (tcp_listener, net_error) {
@@ -80,11 +80,11 @@ func (tcp_listener self) close() ((), net_error) {
     }
 
 struct tcp_conn {
-    fd int
-    remote_ip string
-    remote_port int
-    read_timeout_ms int
-    write_timeout_ms int
+    int fd
+    string remote_ip
+    int remote_port
+    int read_timeout_ms
+    int write_timeout_ms
 }
 
 func dial_tcp(string host, int port) (tcp_conn, net_error) {
@@ -237,7 +237,7 @@ func (tcp_conn self) close() ((), net_error) {
     }
 
 struct poller {
-    fd int
+    int fd
 }
 
 func new_poller() (poller, net_error) {
@@ -276,11 +276,11 @@ func (poller self) close() ((), net_error) {
     }
 
 struct udp_conn {
-    fd int
-    local_ip string
-    local_port int
-    read_timeout_ms int
-    write_timeout_ms int
+    int fd
+    string local_ip
+    int local_port
+    int read_timeout_ms
+    int write_timeout_ms
 }
 
 func listen_udp(string host, int port) (udp_conn, net_error) {

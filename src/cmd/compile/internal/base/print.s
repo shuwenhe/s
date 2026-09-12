@@ -1,10 +1,10 @@
 package compile.internal.base
 use std.slices
 struct error_msg {
-    pos string
-    msg string
-    code int
-    warning bool
+    string pos
+    string msg
+    int code
+    bool warning
 }
 pos := ""
 error_msgs := error_msg[]()

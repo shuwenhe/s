@@ -6,8 +6,8 @@ struct go_style_code_generator {
     symbol_table* symtab
     relocation_context* reloc_ctx
     config codegen_config
-    current_func_id int
-    current_section_offset int64
+    int current_func_id
+    int current_section_offset64
 }
 
 func make_go_style_code_generator(
