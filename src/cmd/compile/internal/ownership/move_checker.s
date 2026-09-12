@@ -87,10 +87,10 @@ func (move_checker* mc) check_return(int pc, ret* return_stmt) {
     }
 }
 
-func (move_checker* mc) check_if_statement(int pc, ifStmt* if_stmt) {
-    mc.check_use(pc, ifStmt.condition, "read")
-    then_states := mc.analyze_branch(pc, ifStmt.then_body)
-    else_states := mc.analyze_branch(pc, ifStmt.else_body)
+func (move_checker* mc) check_if_statement(int pc, if_stmt* if_stmt) {
+    mc.check_use(pc, if_stmt.condition, "read")
+    then_states := mc.analyze_branch(pc, if_stmt.then_body)
+    else_states := mc.analyze_branch(pc, if_stmt.else_body)
     mc.merge_branch_states(pc, then_states, else_states)
 }
 
@@ -112,22 +112,22 @@ func (move_checker* mc) merge_branch_states(int pc,
         all_vars[v] = true
     }
     for v := range all_vars {
-        thenState, then_ok := then_states[v]
+        then_state, then_ok := then_states[v]
         elseState, else_ok := else_states[v]
         if !then_ok || !else_ok {
             mc.ctx.set_state_at(pc, v, STATE_MAYBE_MOVED)
-        } else if thenState == elseState {
-            mc.ctx.set_state_at(pc, v, thenState)
+        } else if then_state == elseState {
+            mc.ctx.set_state_at(pc, v, then_state)
         } else {
             mc.ctx.set_state_at(pc, v, STATE_MAYBE_MOVED)
         }
     }
 }
 
-func (move_checker* mc) check_use(int pc, expr interface{}, string useKind) {
+func (move_checker* mc) check_use(int pc, expr interface{}, string use_kind) {
     expr_str := expr.(interface{}).string()
     state := mc.ctx.get_state_at(pc, expr_str)
-    switch useKind {
+    switch use_kind {
     case "read":
         if state == STATE_MOVED {
             mc.ctx.add_error(errorf("use-after-move: reading %s at PC %d", expr_str, pc))
