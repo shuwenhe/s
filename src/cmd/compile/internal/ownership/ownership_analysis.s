@@ -28,7 +28,7 @@ func NewOwnershipAnalysis() *OwnershipAnalysis {
 }
 
 // AnalyzeFunction performs complete ownership analysis on a function
-func (oa *OwnershipAnalysis) AnalyzeFunction(funcName string, stmts []interface{}) ([]interface{}, bool) {
+func (oa *OwnershipAnalysis) AnalyzeFunction(funcName string, stmts interface{}[]) (interface{}[], bool) {
     // Step 1: Check move semantics
     oa.moveChecker.CheckMoveSemantics(stmts)
     if oa.ctx.HasErrors() {
@@ -63,7 +63,7 @@ func (oa *OwnershipAnalysis) AnalyzeFunction(funcName string, stmts []interface{
 }
 
 // GetErrors returns all collected ownership errors
-func (oa *OwnershipAnalysis) GetErrors() []string {
+func (oa *OwnershipAnalysis) GetErrors() string[] {
     return oa.ctx.Errors
 }
 
@@ -92,38 +92,28 @@ func (oa *OwnershipAnalysis) SetVariableType(varName string, typeName string) {
 // Ownership Analysis Report
 // ========================================================================
 
-// AnalysisReport summarizes ownership analysis results
 type AnalysisReport struct {
     FunctionName string
-    
-    // Pass/Fail
     Success bool
-    
-    // Results
-    MoveErrors     []string
-    BorrowErrors   []string
-    DropErrors     []string
+    MoveErrors     string[]
+    BorrowErrors   string[]
+    DropErrors     string[]
     
     // Summary statistics
     VariablesAnalyzed int
     BorrowsFound      int
     DropsInserted     int
     MovesVerified     int
-    
-    // Elaborated code
-    ElaboratedStmts []interface{}
+    ElaboratedStmts interface{}[]
 }
 
-// GenerateReport creates a summary of the analysis
-func (oa *OwnershipAnalysis) GenerateReport(funcName string, 
-    elaborated []interface{}) *AnalysisReport {
-    
+func (oa *OwnershipAnalysis) GenerateReport(funcName string, elaborated interface{}) *AnalysisReport {
     report := &AnalysisReport{
         FunctionName: funcName,
         Success:      !oa.ctx.HasErrors(),
-        MoveErrors:   []string{},
-        BorrowErrors: []string{},
-        DropErrors:   []string{},
+        MoveErrors:   make(string[], 0),
+        BorrowErrors: make(string[], 0),
+        DropErrors:   make(string[], 0),
     }
     
     // Categorize errors
@@ -156,7 +146,7 @@ func contains(s string, substr string) bool {
 }
 
 // countDropCalls counts DropCall nodes in elaborated code
-func countDropCalls(stmts []interface{}) int {
+func countDropCalls(stmts interface{}[]) int {
     count := 0
     for _, stmt := range stmts {
         switch s := stmt.(type) {
@@ -201,13 +191,12 @@ func (oa *OwnershipAnalysis) ApplyOwnershipHints(hints *OwnershipHints) {
 // Error Pretty-Printing
 // ========================================================================
 
-// PrintErrors outputs formatted ownership errors
 func (oa *OwnershipAnalysis) PrintErrors() {
     report := &AnalysisReport{
         FunctionName: "analysis",
-        MoveErrors:   []string{},
-        BorrowErrors: []string{},
-        DropErrors:   []string{},
+        MoveErrors:   make(string[], 0),
+        BorrowErrors: make(string[], 0),
+        DropErrors:   make(string[], 0),
     }
     
     for _, err := range oa.ctx.Errors {
