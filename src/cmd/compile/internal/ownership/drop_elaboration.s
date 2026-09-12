@@ -37,8 +37,8 @@ func (drop_elaborator* de) elaborate_block(BlockStmt* block) BlockStmt* {
     for _, stmt := range block.statements {
         stmts = append(stmts, de.elaborate_statement(stmt))
     }
-    dropsNeeded := de.collect_drops_for_block(block)
-    for _, dropVar := range dropsNeeded {
+    drops_needed := de.collect_drops_for_block(block)
+    for _, dropVar := range drops_needed {
         stmts = append(stmts, DropCall*{
             variable: dropVar,
             kind:     "explicit",
@@ -50,9 +50,9 @@ func (drop_elaborator* de) elaborate_block(BlockStmt* block) BlockStmt* {
 }
 
 func (drop_elaborator* de) elaborate_return(ReturnStmt* ret) interface{} {
-    dropsNeeded := de.collect_drops_for_return()
+    drops_needed := de.collect_drops_for_return()
     var result interface{}[]
-    for _, dropVar := range dropsNeeded {
+    for _, dropVar := range drops_needed {
         result = append(result, DropCall*{
             variable: dropVar,
             kind:     "return-cleanup",
