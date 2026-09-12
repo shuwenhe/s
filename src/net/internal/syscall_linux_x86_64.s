@@ -33,7 +33,7 @@ func set_errno( err int) {
     *errno_location() = err
 }
 
-func sys_socket( family int, socktype int, protocol int) (int, int) {
+func sys_socket( family int, int socktype, int protocol) (int, int) {
     clear_errno()
     fd := socket(family, socktype | sock_nonblock | sock_cloexec, protocol)
     if fd < 0 {
@@ -52,7 +52,7 @@ func sys_close( fd int) int {
     }
 }
 
-func sys_bind( fd int, so* addrckaddr, addrlen int) int {
+func sys_bind( fd int, so* addrckaddr, int addrlen) int {
     clear_errno()
     if bind(fd, addr, addrlen) < 0 {
         get_errno()
@@ -61,7 +61,7 @@ func sys_bind( fd int, so* addrckaddr, addrlen int) int {
     }
 }
 
-func sys_listen( fd int, backlog int) int {
+func sys_listen( fd int, int backlog) int {
     clear_errno()
     if listen(fd, backlog) < 0 {
         get_errno()
@@ -79,7 +79,7 @@ func sys_accept( fd int, so* addrckaddr, in* addrlent) (int, int) {
     client_fd, 0
 }
 
-func sys_connect( fd int, so* addrckaddr, addrlen int) int {
+func sys_connect( fd int, so* addrckaddr, int addrlen) int {
     clear_errno()
     if connect(fd, addr, addrlen) < 0 {
         get_errno()
@@ -88,7 +88,7 @@ func sys_connect( fd int, so* addrckaddr, addrlen int) int {
     }
 }
 
-func sys_read( fd int, by* bufte, len int) (int, int) {
+func sys_read( fd int, by* bufte, int len) (int, int) {
     clear_errno()
     n := read(fd, buf, len)
     if n < 0 {
@@ -97,7 +97,7 @@ func sys_read( fd int, by* bufte, len int) (int, int) {
     n, 0
 }
 
-func sys_write( fd int, by* bufte, len int) (int, int) {
+func sys_write( fd int, by* bufte, int len) (int, int) {
     clear_errno()
     n := write(fd, buf, len)
     if n < 0 {
@@ -106,7 +106,7 @@ func sys_write( fd int, by* bufte, len int) (int, int) {
     n, 0
 }
 
-func sys_sendto( fd int, by* bufte, len int, so* dest_addrckaddr, addrlen int) (int, int) {
+func sys_sendto( fd int, by* bufte, int len, so* dest_addrckaddr, int addrlen) (int, int) {
     clear_errno()
     n := sendto(fd, buf, len, 0, dest_addr, addrlen)
     if n < 0 {
@@ -115,7 +115,7 @@ func sys_sendto( fd int, by* bufte, len int, so* dest_addrckaddr, addrlen int) (
     n, 0
 }
 
-func sys_recvfrom( fd int, by* bufte, len int, so* src_addrckaddr, in* addrlent) (int, int) {
+func sys_recvfrom( fd int, by* bufte, int len, so* src_addrckaddr, in* addrlent) (int, int) {
     clear_errno()
     n := recvfrom(fd, buf, len, 0, src_addr, addrlen)
     if n < 0 {
@@ -124,7 +124,7 @@ func sys_recvfrom( fd int, by* bufte, len int, so* src_addrckaddr, in* addrlent)
     n, 0
 }
 
-func sys_setsockopt( fd int, level int, optname int, by* optvalte, optlen int) int {
+func sys_setsockopt( fd int, int level, int optname, by* optvalte, int optlen) int {
     clear_errno()
     if setsockopt(fd, level, optname, optval, optlen) < 0 {
         get_errno()
@@ -133,7 +133,7 @@ func sys_setsockopt( fd int, level int, optname int, by* optvalte, optlen int) i
     }
 }
 
-func sys_getsockopt( fd int, level int, optname int, by* optvalte, in* optlent) int {
+func sys_getsockopt( fd int, int level, int optname, by* optvalte, in* optlent) int {
     clear_errno()
     if getsockopt(fd, level, optname, optval, optlen) < 0 {
         get_errno()
@@ -173,7 +173,7 @@ func sys_getpeername( fd int, so* addrckaddr, in* addrlent) int {
     }
 }
 
-func sys_poll(pollfd* fds, nfds int, timeout_ms int) (int, int) {
+func sys_poll(pollfd* fds, int nfds, int timeout_ms) (int, int) {
     clear_errno()
     n := poll(fds, nfds, timeout_ms)
     if n < 0 {
@@ -182,7 +182,7 @@ func sys_poll(pollfd* fds, nfds int, timeout_ms int) (int, int) {
     n, 0
 }
 
-func sys_shutdown( fd int, how int) int {
+func sys_shutdown( fd int, int how) int {
     clear_errno()
     if shutdown(fd, how) < 0 {
         get_errno()
@@ -191,7 +191,7 @@ func sys_shutdown( fd int, how int) int {
     }
 }
 
-func ipv4_to_sockaddr(byte* ip_str, port int) (sockaddr_inet, bool) {
+func ipv4_to_sockaddr(byte* ip_str, int port) (sockaddr_inet, bool) {
     var addr sockaddr_inet
     addr.sin_family = af_inet
     addr.sin_port = htons(port)

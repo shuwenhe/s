@@ -464,7 +464,7 @@ func returnOwnershipExample() Resource {
 }
 
 // 特殊情况2: 条件返回
-func conditionalReturn(condition bool) Resource {
+func conditionalReturn(bool condition) Resource {
     r1 := Resource{ptr: box(1)}
     r2 := Resource{ptr: box(2)}
     

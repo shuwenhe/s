@@ -17,7 +17,7 @@ type Resource struct {
 }
 
 // Constructor: 创建一个新资源
-func newResource(id int) Resource {
+func newResource(int id) Resource {
     resource := Resource{
         ptr: box(id * 10),
         id: id,
@@ -163,7 +163,7 @@ type BoxedResource struct {
 }
 
 // createBoxedResource: 在堆上创建资源
-func createBoxedResource(value int) BoxedResource {
+func createBoxedResource(int value) BoxedResource {
     return BoxedResource{
         data: box(value),
     }
@@ -221,7 +221,7 @@ type DropFlaggedResource struct {
 }
 
 // newDropFlaggedResource: 创建一个新的drop-flagged资源
-func newDropFlaggedResource(value int) DropFlaggedResource {
+func newDropFlaggedResource(int value) DropFlaggedResource {
     return DropFlaggedResource{
         ptr: box(value),
         dropped: false,
@@ -256,7 +256,7 @@ type RAIIResource struct {
 }
 
 // acquireResource: 获取资源
-func acquireResource(id int) RAIIResource {
+func acquireResource(int id) RAIIResource {
     return RAIIResource{
         id: id,
         handle: box(id * 1000),
@@ -290,7 +290,7 @@ type Container struct {
 }
 
 // addToContainer: 添加资源到容器（转移所有权）
-func (c *Container) addToContainer(value int) () {
+func (c *Container) addToContainer(int value) () {
     // 容器获取资源的所有权
     ptr := box(value)
     c.resources[c.count] = ptr
@@ -298,7 +298,7 @@ func (c *Container) addToContainer(value int) () {
 }
 
 // getFromContainer: 从容器中获取引用（共享借用）
-func (c *Container) getFromContainer(index int) *int {
+func (c *Container) getFromContainer(int index) *int {
     if index < c.count {
         return c.resources[index]
     }
@@ -310,7 +310,7 @@ func (c *Container) getFromContainer(index int) *int {
 // =============================================================================
 
 // ownershipWithReturn: 所有权随return语句转移
-func ownershipWithReturn(condition bool) Resource {
+func ownershipWithReturn(bool condition) Resource {
     r1 := newResource(1)
     r2 := newResource(2)
     
@@ -322,7 +322,7 @@ func ownershipWithReturn(condition bool) Resource {
 }
 
 // ownershipWithLoop: 展示循环中的所有权
-func ownershipWithLoop(n int) int {
+func ownershipWithLoop(int n) int {
     total := 0
     i := 0
     

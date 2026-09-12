@@ -1,6 +1,6 @@
 package src.net.internal
 import "src.std.time"
-func new_raw_socket( family int, socktype int, protocol int) (*raw_socket, error) {
+func new_raw_socket( family int, int socktype, int protocol) (*raw_socket, error) {
     fd, errno := sys_socket(family, socktype, protocol)
     if errno != 0 {
         return nil, new_socket_error(errno, "socket"
@@ -22,7 +22,7 @@ func (raw_socket* s) close() error {
     nil
 }
 
-func (raw_socket* s) bind( addr_str string, port int) error {
+func (raw_socket* s) bind( addr_str string, int port) error {
     if s.fd < 0 {
         return new_socket_error(ebadf, "bind"
     }
@@ -62,7 +62,7 @@ func (raw_socket* s) accept() (*raw_socket, error) {
     }, nil
 }
 
-func (raw_socket* s) connect( addr_str string, port int, timeout_ms int) error {
+func (raw_socket* s) connect( addr_str string, int port, int timeout_ms) error {
     if s.fd < 0 {
         return new_socket_error(ebadf, "connect"
     }
@@ -94,7 +94,7 @@ func (raw_socket* s) connect( addr_str string, port int, timeout_ms int) error {
     nil
 }
 
-func (raw_socket* s) udp_bind( addr_str string, port int) error {
+func (raw_socket* s) udp_bind( addr_str string, int port) error {
     if s.fd < 0 {
         return new_socket_error(ebadf, "bind"
     }
@@ -108,7 +108,7 @@ func (raw_socket* s) udp_bind( addr_str string, port int) error {
     nil
 }
 
-func (raw_socket* s) send_to(buf: byte[], addr_str string, port int) (int, error) {
+func (raw_socket* s) send_to(buf: byte[], string addr_str, int port) (int, error) {
     if s.fd < 0 {
         return 0, new_socket_error(ebadf, "sendto"
     }
