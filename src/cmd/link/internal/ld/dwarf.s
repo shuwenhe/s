@@ -143,11 +143,11 @@ func new_dwarfmanager(version i32) dwarf_manager {
 	}
 }
 
-func (dm dwarf_manager*) add_compile_unit(cu dwarf_compile_unit) {
+func (dm* dwarf_manager) add_compile_unit(cu dwarf_compile_unit) {
 	dm.CompileUnits = append(dm.CompileUnits, cu)
 }
 
-func (dm dwarf_manager*) generate_debug_line() u8[] {
+func (dm* dwarf_manager) generate_debug_line() u8[] {
 	data := make(u8[], 0)
 
 	for _, line_info := range dm.LineInfo {
@@ -243,7 +243,7 @@ func new_unwind_manager() unwind_manager {
 	}
 }
 
-func (um unwind_manager*) generate_eh_frame() u8[] {
+func (um* unwind_manager) generate_eh_frame() u8[] {
 	data := make(u8[], 0)
 
 	for _, cie := range um.UnwindInfo.Cies {

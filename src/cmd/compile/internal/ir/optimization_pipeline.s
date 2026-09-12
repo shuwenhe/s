@@ -31,7 +31,7 @@ func new_compiler_pipeline() compiler_pipeline* {
     cp
 }
 
-func (cp compiler_pipeline*) add_function(string name) ssa_function* {
+func (cp* compiler_pipeline) add_function(string name) ssa_function* {
     func := new_ssa_function(name)
     cp.functions = append(cp.functions, func)
     cp.dominators = append(cp.dominators, nil)
@@ -43,7 +43,7 @@ func (cp compiler_pipeline*) add_function(string name) ssa_function* {
     func
 }
 
-func (cp compiler_pipeline*) analyze_function(func_idx i32) {
+func (cp* compiler_pipeline) analyze_function(func_idx i32) {
     if func_idx < 0 || func_idx >= i32(len(cp.functions)) {
         return
     }
@@ -106,42 +106,42 @@ func (cp compiler_pipeline*) analyze_function(func_idx i32) {
     cp.computed[func_idx] = true
 }
 
-func (cp compiler_pipeline*) get_dominator_tree(func_idx i32) dominator_tree* {
+func (cp* compiler_pipeline) get_dominator_tree(func_idx i32) dominator_tree* {
     if func_idx >= 0 && func_idx < i32(len(cp.dominators)) {
         return cp.dominators[func_idx]
     }
     nil
 }
 
-func (cp compiler_pipeline*) get_liveness_info(func_idx i32) liveness_analyzer* {
+func (cp* compiler_pipeline) get_liveness_info(func_idx i32) liveness_analyzer* {
     if func_idx >= 0 && func_idx < i32(len(cp.liveness_analyses)) {
         return cp.liveness_analyses[func_idx]
     }
     nil
 }
 
-func (cp compiler_pipeline*) get_alias_info(func_idx i32) alias_analysis* {
+func (cp* compiler_pipeline) get_alias_info(func_idx i32) alias_analysis* {
     if func_idx >= 0 && func_idx < i32(len(cp.alias_analyses)) {
         return cp.alias_analyses[func_idx]
     }
     nil
 }
 
-func (cp compiler_pipeline*) get_write_barriers(func_idx i32) wb_inserter* {
+func (cp* compiler_pipeline) get_write_barriers(func_idx i32) wb_inserter* {
     if func_idx >= 0 && func_idx < i32(len(cp.write_barriers)) {
         return cp.write_barriers[func_idx]
     }
     nil
 }
 
-func (cp compiler_pipeline*) get_debug_info(func_idx i32) debug_loc_propagator* {
+func (cp* compiler_pipeline) get_debug_info(func_idx i32) debug_loc_propagator* {
     if func_idx >= 0 && func_idx < i32(len(cp.debug_propagators)) {
         return cp.debug_propagators[func_idx]
     }
     nil
 }
 
-func (cp compiler_pipeline*) run_optimization_pipeline() {
+func (cp* compiler_pipeline) run_optimization_pipeline() {
     for i := i32(0); i < i32(len(cp.functions)); i += 1 {
         cp.analyze_function(i)
 
@@ -164,7 +164,7 @@ func (cp compiler_pipeline*) run_optimization_pipeline() {
     }
 }
 
-func (cp compiler_pipeline*) emit_debug_info() string {
+func (cp* compiler_pipeline) emit_debug_info() string {
     s := "Debug Information:\n"
     for i := i32(0); i < i32(len(cp.functions)); i += 1 {
         debug_info := cp.get_debug_info(i)
@@ -175,7 +175,7 @@ func (cp compiler_pipeline*) emit_debug_info() string {
     s
 }
 
-func (cp compiler_pipeline*) to_string() string {
+func (cp* compiler_pipeline) to_string() string {
     s := "Compiler Optimization Pipeline:\n"
     s += "Functions: " + string(i32(len(cp.functions))) + "\n"
 

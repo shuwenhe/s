@@ -107,7 +107,7 @@ struct lexer {
     int token_capacity
 }
 
-func lexer_new(string source*) lexer* {
+func lexer_new(string* source) lexer* {
     l := alloc(lexer)
     l.source = source
     l.pos = 0
@@ -219,7 +219,7 @@ func lexer_read_ident(l* lexer) token {
     return *tok
 }
 
-func lexer_keyword_type(string s*) int {
+func lexer_keyword_type(string* s) int {
     if s == nil {
         return 0
     }

@@ -19,7 +19,7 @@ struct optimization_context {
     int changes
 }
 
-func run_optimization_pipeline(ir_module module*) {
+func run_optimization_pipeline(ir_module* module) {
     for f_idx := 0; f_idx < module.functions.len(); f_idx = f_idx + 1 {
         func := module.functions[f_idx]
 
