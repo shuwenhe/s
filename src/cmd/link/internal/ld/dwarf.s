@@ -133,7 +133,7 @@ struct dwarf_manager {
 	version      i32
 }
 
-func NewDWARFManager(version i32) dwarf_manager {
+func new_dwarfmanager(version i32) dwarf_manager {
 	dwarf_manager{
 		CompileUnits: make(dwarf_compile_unit[], 0),
 		AbbrevTable: make(map[i32]u8[]),
@@ -143,11 +143,11 @@ func NewDWARFManager(version i32) dwarf_manager {
 	}
 }
 
-func (dm dwarf_manager*) AddCompileUnit(cu dwarf_compile_unit) {
+func (dm dwarf_manager*) add_compile_unit(cu dwarf_compile_unit) {
 	dm.CompileUnits = append(dm.CompileUnits, cu)
 }
 
-func (dm dwarf_manager*) GenerateDebugLine() u8[] {
+func (dm dwarf_manager*) generate_debug_line() u8[] {
 	data := make(u8[], 0)
 
 	for _, lineInfo := range dm.LineInfo {
@@ -232,7 +232,7 @@ struct unwind_manager {
 	unwind_info UnwindInfo
 }
 
-func NewUnwindManager() unwind_manager {
+func new_unwind_manager() unwind_manager {
 	unwind_manager{
 		UnwindInfo: UnwindInfo{
 			Version: 1,
@@ -243,7 +243,7 @@ func NewUnwindManager() unwind_manager {
 	}
 }
 
-func (um unwind_manager*) GenerateEhFrame() u8[] {
+func (um unwind_manager*) generate_eh_frame() u8[] {
 	data := make(u8[], 0)
 
 	for _, cie := range um.UnwindInfo.Cies {
