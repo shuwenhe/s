@@ -181,7 +181,7 @@ type loop_stmt struct {
     Body      interface{}
 }
 type drop_call struct {
-    Variable string
+    variable    string
     Kind     string  // "explicit", "return-cleanup", "error-cleanup"
 }
 type drop_summary struct {
