@@ -1648,7 +1648,7 @@ selfhost-bin:
 
 
 
-.PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-borrow-dataflow-check mir-drop-elaboration-check mir-place-check mir-movepath-check mir-partial-move-check mir-reinit-check mir-partial-drop-check mir-ownership-lowering-check mir-nogc-e2e-check no-gc-test
+.PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-borrow-dataflow-check mir-drop-elaboration-check mir-place-check mir-movepath-check mir-partial-move-check mir-reinit-check mir-partial-drop-check mir-place-borrow-check mir-ownership-lowering-check mir-nogc-e2e-check no-gc-test
 
 compiler: seed-compiler-bin
 
@@ -1771,6 +1771,16 @@ mir-partial-drop-check: compiler
 	@misc/scripts/check-mir-partial-drop.sh
 
 	@echo "✓ MIR partial drop check passed"
+
+
+
+mir-place-borrow-check: compiler
+
+	@echo "Running MIR place borrow check..."
+
+	@misc/scripts/check-mir-place-borrow.sh
+
+	@echo "✓ MIR place borrow check passed"
 
 
 
