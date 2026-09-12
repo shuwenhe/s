@@ -3185,6 +3185,44 @@ func compiler_reference_liveness_find(string[] names, int count, string name) in
     return -1
 }
 
+func compiler_loan_liveness_use_counts(string source, string[] use_names, int[] use_counts) int {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    count := 0
+    while s.error == "" && s.token != "" {
+        if s.token == "use_ref" {
+            s = compiler_next(s)
+            idx := compiler_reference_liveness_find(use_names, count, s.token)
+            if idx < 0 {
+                use_names[count] = s.token
+                use_counts[count] = 1
+                count = count + 1
+            } else {
+                use_counts[idx] = use_counts[idx] + 1
+            }
+        }
+        s = compiler_next(s)
+    }
+    return count
+}
+
+func compiler_loan_liveness_has_future_use(string source, int pos, string ref_name) bool {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    s := compiler_state { source: source, pos: pos, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    while s.error == "" && s.token != "" {
+        if s.token == "use_ref" {
+            s = compiler_next(s)
+            if s.token == ref_name { return true }
+        }
+        s = compiler_next(s)
+    }
+    return false
+}
+
 func compiler_reference_liveness_borrow(string ref_name, int target, bool mutable, string[] loan_names, int[] loan_places, int[] loan_mut, int[] loan_live, int loan_count) string {
     conflict := compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable)
     if conflict == 1 { return "mir-error mutable borrow while shared borrowed " + compiler_place_borrow_place_name(target) + "\n" }
@@ -3281,6 +3319,276 @@ func compiler_emit_mir_reference_liveness(string source) string {
                 else { out = out + "Move(" + compiler_place_borrow_place_name(target) + ") OK\n" }
             }
         }
+        s = compiler_next(s)
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    return out
+}
+
+func compiler_emit_mir_loan_liveness(string source) string {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    loan_names := empty_names
+    loan_places := empty_ints
+    loan_mut := empty_ints
+    loan_live := empty_ints
+    loan_count := 0
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    out := "mir-loan-liveness main\n"
+    while s.error == "" && s.token != "" {
+        mutable := false
+        if s.token == "borrow_shared_field" || s.token == "borrow_mut_field" {
+            if s.token == "borrow_mut_field" { mutable = true }
+            s = compiler_next(s)
+            ref_name := s.token
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            target := -1
+            if base == "_1" && field == "0" { target = 1 }
+            if base == "_1" && field == "1" { target = 2 }
+            if target >= 0 {
+                ok := compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable) == 0
+                out = out + compiler_reference_liveness_borrow(ref_name, target, mutable, loan_names, loan_places, loan_mut, loan_live, loan_count)
+                if ok {
+                    loan_names[loan_count] = ref_name
+                    loan_places[loan_count] = target
+                    loan_live[loan_count] = 1
+                    if mutable { loan_mut[loan_count] = 1 }
+                    else { loan_mut[loan_count] = 0 }
+                    loan_count = loan_count + 1
+                }
+            }
+        } else if s.token == "borrow_shared_nested_field" || s.token == "borrow_mut_nested_field" {
+            if s.token == "borrow_mut_nested_field" { mutable = true }
+            s = compiler_next(s)
+            ref_name := s.token
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            first := s.token
+            s = compiler_next(s)
+            second := s.token
+            target := -1
+            if base == "_1" && first == "0" && second == "0" { target = 3 }
+            if base == "_1" && first == "0" && second == "1" { target = 4 }
+            if target >= 0 {
+                ok := compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable) == 0
+                out = out + compiler_reference_liveness_borrow(ref_name, target, mutable, loan_names, loan_places, loan_mut, loan_live, loan_count)
+                if ok {
+                    loan_names[loan_count] = ref_name
+                    loan_places[loan_count] = target
+                    loan_live[loan_count] = 1
+                    if mutable { loan_mut[loan_count] = 1 }
+                    else { loan_mut[loan_count] = 0 }
+                    loan_count = loan_count + 1
+                }
+            }
+        } else if s.token == "use_ref" {
+            s = compiler_next(s)
+            ref_name := s.token
+            idx := compiler_reference_liveness_find(loan_names, loan_count, s.token)
+            if idx < 0 || loan_live[idx] == 0 { out = out + "mir-error use of dead or unknown reference " + s.token + "\n" }
+            else {
+                out = out + "UseRef(" + s.token + ")\n"
+                if !compiler_loan_liveness_has_future_use(source, s.pos, ref_name) {
+                    out = out + "EndBorrow(" + s.token + ", " + compiler_place_borrow_place_name(loan_places[idx]) + ")\n"
+                    loan_live[idx] = 0
+                }
+            }
+        } else if s.token == "move_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            target := -1
+            if base == "_1" && field == "0" { target = 1 }
+            if base == "_1" && field == "1" { target = 2 }
+            if target >= 0 {
+                conflict := compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, true)
+                if conflict != 0 { out = out + "mir-error move of borrowed place " + compiler_place_borrow_place_name(target) + "\n" }
+                else { out = out + "Move(" + compiler_place_borrow_place_name(target) + ") OK\n" }
+            }
+        }
+        s = compiler_next(s)
+    }
+    if s.error != "" { return "mir-error " + s.error + "\n" }
+    return out
+}
+
+func compiler_region_ref_find(string[] names, int count, string name) int {
+    i := 0
+    while i < count {
+        if names[i] == name { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+func compiler_region_name(string ref_name) string {
+    return "'r_" + ref_name
+}
+
+func compiler_region_loan_name(int loan_id) string {
+    return "L" + compiler_number(loan_id)
+}
+
+func compiler_region_point_name(int point) string {
+    return "P" + compiler_number(point)
+}
+
+func compiler_region_has_future_loan_use(string source, int pos, int loan_id, string[] ref_names, int[] ref_loans, int ref_count) bool {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    s := compiler_state { source: source, pos: pos, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    while s.error == "" && s.token != "" {
+        if s.token == "use_ref" {
+            s = compiler_next(s)
+            idx := compiler_region_ref_find(ref_names, ref_count, s.token)
+            if idx >= 0 && ref_loans[idx] == loan_id { return true }
+        }
+        s = compiler_next(s)
+    }
+    return false
+}
+
+func compiler_region_conflict(int target, int[] loan_places, int[] loan_mut, int[] loan_live, int loan_count, bool exclusive) int {
+    i := 0
+    while i < loan_count {
+        if loan_live[i] == 1 && compiler_place_borrow_overlaps(target, loan_places[i]) {
+            if loan_mut[i] == 1 { return 2 }
+            if exclusive { return 1 }
+        }
+        i = i + 1
+    }
+    return 0
+}
+
+func compiler_emit_mir_region_constraints(string source) string {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    ref_names := empty_names
+    ref_loans := empty_ints
+    loan_places := empty_ints
+    loan_mut := empty_ints
+    loan_live := empty_ints
+    ref_count := 0
+    loan_count := 0
+    point := 0
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s = compiler_next(s)
+    out := "mir-region-constraints main\n"
+    while s.error == "" && s.token != "" {
+        mutable := false
+        if s.token == "borrow_shared_field" || s.token == "borrow_mut_field" {
+            if s.token == "borrow_mut_field" { mutable = true }
+            s = compiler_next(s)
+            ref_name := s.token
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            target := -1
+            if base == "_1" && field == "0" { target = 1 }
+            if base == "_1" && field == "1" { target = 2 }
+            if target >= 0 {
+                conflict := compiler_region_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable)
+                if conflict == 0 {
+                    loan_id := loan_count
+                    ref_names[ref_count] = ref_name
+                    ref_loans[ref_count] = loan_id
+                    ref_count = ref_count + 1
+                    loan_places[loan_id] = target
+                    loan_live[loan_id] = 1
+                    if mutable { loan_mut[loan_id] = 1 }
+                    else { loan_mut[loan_id] = 0 }
+                    out = out + ref_name + " = Borrow(" + compiler_region_loan_name(loan_id) + ", " + compiler_place_borrow_place_name(target) + ")\n"
+                    out = out + "loan_live_at(" + compiler_region_loan_name(loan_id) + ", " + compiler_region_point_name(point) + ")\n"
+                    out = out + "region_contains(" + compiler_region_name(ref_name) + ", " + compiler_region_point_name(point) + ")\n"
+                    loan_count = loan_count + 1
+                } else {
+                    out = out + "mir-error borrow conflict " + compiler_place_borrow_place_name(target) + "\n"
+                }
+            }
+        } else if s.token == "borrow_shared_nested_field" || s.token == "borrow_mut_nested_field" {
+            if s.token == "borrow_mut_nested_field" { mutable = true }
+            s = compiler_next(s)
+            ref_name := s.token
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            first := s.token
+            s = compiler_next(s)
+            second := s.token
+            target := -1
+            if base == "_1" && first == "0" && second == "0" { target = 3 }
+            if base == "_1" && first == "0" && second == "1" { target = 4 }
+            if target >= 0 {
+                conflict := compiler_region_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable)
+                if conflict == 0 {
+                    loan_id := loan_count
+                    ref_names[ref_count] = ref_name
+                    ref_loans[ref_count] = loan_id
+                    ref_count = ref_count + 1
+                    loan_places[loan_id] = target
+                    loan_live[loan_id] = 1
+                    if mutable { loan_mut[loan_id] = 1 }
+                    else { loan_mut[loan_id] = 0 }
+                    out = out + ref_name + " = Borrow(" + compiler_region_loan_name(loan_id) + ", " + compiler_place_borrow_place_name(target) + ")\n"
+                    out = out + "loan_live_at(" + compiler_region_loan_name(loan_id) + ", " + compiler_region_point_name(point) + ")\n"
+                    out = out + "region_contains(" + compiler_region_name(ref_name) + ", " + compiler_region_point_name(point) + ")\n"
+                    loan_count = loan_count + 1
+                } else {
+                    out = out + "mir-error borrow conflict " + compiler_place_borrow_place_name(target) + "\n"
+                }
+            }
+        } else if compiler_ident(s.token) {
+            dest := s.token
+            look := compiler_next(s)
+            if look.token == ":=" {
+                rhs := compiler_next(look)
+                src_idx := compiler_region_ref_find(ref_names, ref_count, rhs.token)
+                if src_idx >= 0 {
+                    loan_id := ref_loans[src_idx]
+                    ref_names[ref_count] = dest
+                    ref_loans[ref_count] = loan_id
+                    ref_count = ref_count + 1
+                    out = out + dest + " = Alias(" + rhs.token + ", " + compiler_region_loan_name(loan_id) + ")\n"
+                    out = out + "outlives(" + compiler_region_name(rhs.token) + ", " + compiler_region_name(dest) + ")\n"
+                }
+            }
+        } else if s.token == "use_ref" {
+            s = compiler_next(s)
+            idx := compiler_region_ref_find(ref_names, ref_count, s.token)
+            if idx < 0 { out = out + "mir-error use of unknown reference " + s.token + "\n" }
+            else {
+                loan_id := ref_loans[idx]
+                out = out + "UseRef(" + s.token + ", " + compiler_region_loan_name(loan_id) + ")\n"
+                out = out + "loan_live_at(" + compiler_region_loan_name(loan_id) + ", " + compiler_region_point_name(point) + ")\n"
+                out = out + "region_contains(" + compiler_region_name(s.token) + ", " + compiler_region_point_name(point) + ")\n"
+                if !compiler_region_has_future_loan_use(source, s.pos, loan_id, ref_names, ref_loans, ref_count) {
+                    out = out + "EndBorrow(" + compiler_region_loan_name(loan_id) + ", " + compiler_place_borrow_place_name(loan_places[loan_id]) + ")\n"
+                    loan_live[loan_id] = 0
+                }
+            }
+        } else if s.token == "move_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            target := -1
+            if base == "_1" && field == "0" { target = 1 }
+            if base == "_1" && field == "1" { target = 2 }
+            if target >= 0 {
+                conflict := compiler_region_conflict(target, loan_places, loan_mut, loan_live, loan_count, true)
+                if conflict != 0 { out = out + "mir-error move of region-live borrowed place " + compiler_place_borrow_place_name(target) + "\n" }
+                else { out = out + "Move(" + compiler_place_borrow_place_name(target) + ") OK\n" }
+            }
+        }
+        point = point + 1
         s = compiler_next(s)
     }
     if s.error != "" { return "mir-error " + s.error + "\n" }
@@ -3387,8 +3695,8 @@ func compiler_emit_mir_partial_drop(string source) string {
 
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness") {
-        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness) input.s output")
+    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints") {
+        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints) input.s output")
         return 2
     }
     string source = __host_read_to_string(args[2])
@@ -3419,6 +3727,14 @@ func main() {
     }
     if args[1] == "--emit-mir-reference-liveness" {
         if __host_write_text_file(args[3], compiler_emit_mir_reference_liveness(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-loan-liveness" {
+        if __host_write_text_file(args[3], compiler_emit_mir_loan_liveness(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-region-constraints" {
+        if __host_write_text_file(args[3], compiler_emit_mir_region_constraints(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-mir" || args[1] == "--emit-mir-after-drop" {
