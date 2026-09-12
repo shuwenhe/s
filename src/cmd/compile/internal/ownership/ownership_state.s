@@ -37,10 +37,10 @@ type ownership_info struct {
     State OwnershipState
     IsOwned bool
     IsCopy  bool
-    ActiveBorrows   BorrowInfo[]
+    ActiveBorrows   borrow_info[]
     FieldStates map[string]OwnershipState
 }
-type BorrowInfo tracks information about an active borrow
+type borrow_info tracks information about an active borrow
 type borrow_info struct {
     StartPC int
     EndPC   int
@@ -58,7 +58,7 @@ type ownership_context struct {
     StateAtPC map[int]*OwnershipInfo
     TypeClasses map[string]*type_classification
     CurrentBlock string
-    BorrowStack []map[string]*BorrowInfo
+    BorrowStack []map[string]*borrow_info
     Errors string[]
 }
 
@@ -66,7 +66,7 @@ func new_ownership_context() OwnershipContext* {
     return OwnershipContext*{
         StateAtPC:   make(map[int]*OwnershipInfo),
         TypeClasses: make(map[string]*type_classification),
-        BorrowStack: []map[string]*BorrowInfo{make(map[string]*BorrowInfo)},
+        BorrowStack: []map[string]*borrow_info{make(map[string]*borrow_info)},
         Errors:      make(string[], 0),
     }
 }
@@ -83,7 +83,7 @@ func (OwnershipContext* ctx) set_state_at(int pc, string varName, state Ownershi
     if _, ok := ctx.StateAtPC[pc]; !ok {
         ctx.StateAtPC[pc] = OwnershipInfo*{
             State:         state,
-            ActiveBorrows: make(BorrowInfo[], 0),
+            ActiveBorrows: make(borrow_info[], 0),
             FieldStates:   make(map[string]OwnershipState),
         }
     } else {
