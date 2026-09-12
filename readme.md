@@ -106,6 +106,40 @@ Compile an S source file to IR:
 
 ## Compile a program (GCC-style command line)
 
+### Example: Hello World
+
+Here's a simple S program that demonstrates the feature:
+
+```s
+package main
+
+func main() {
+    println("Hello, world!")
+    int i,j
+    i = 10
+    j = 20
+    println("i + j =", i + j)
+    count := 100
+    int sum = 0
+    for i := 0; i < count; i++ {
+        print("i =", i)
+        sum += i
+    }
+    println("sum =", sum)
+    return
+}
+```
+
+To compile this program:
+
+```sh
+s hello.s                 # writes ./hello
+./hello
+s hello.s -o hello        # explicit executable name
+./hello
+s -o hello hello.s        # -o may also precede the input
+```
+
 After `make selfhost`, add the compiler to your current shell's PATH:
 
 ```sh
