@@ -1,5 +1,5 @@
 package compile.internal.ownership
-type borrow_checker struct {
+struct borrow_checker {
 ctx OwnershipContext*
 }
 
@@ -174,19 +174,19 @@ func (borrow_checker* bc) exit_scope() {
 func (borrow_checker* bc) verify_no_borrow_conflicts() bool {
     return !bc.ctx.has_errors()
 }
-type borrow_stmt struct {
+struct borrow_stmt {
     source    string
     is_mutable    bool
     lifetime_name string
     ref_name      string  // The reference variable created
 }
-type borrow_end_stmt struct {
+struct borrow_end_stmt {
     source    string
 }
-type use_stmt struct {
+struct use_stmt {
     variable     string
     through_borrow bool
 }
-type move_stmt struct {
+struct move_stmt {
     variable string
 }

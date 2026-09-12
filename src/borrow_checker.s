@@ -24,7 +24,7 @@ package borrow_checker_guide
 // Rule Set 1: Ownership Rules
 // 规则集1：所有权规则
 
-type owner struct {
+struct owner {
     resource *int
 }
 
@@ -79,7 +79,7 @@ Rule 2: Mutable Borrow (可变借用)
   - 读写访问
 */
 
-type data struct {
+struct data {
     value *int
 }
 
@@ -142,7 +142,7 @@ Key Concepts:
   3. Constraint: 借用不能比所有者活得更长
 */
 
-type container struct {
+struct container {
     data *int
 }
 
@@ -180,7 +180,7 @@ func borrow_from_param(c *Container) *int {
 // 第4部分：Move vs Borrow
 // =============================================================================
 
-type resource struct {
+struct resource {
     ptr *int
 }
 
@@ -224,7 +224,7 @@ func move_vs_borrow() int {
 3. 借用结束：在NLL (Non-Lexical Lifetimes)之后
 */
 
-type box_int struct {
+struct box_int {
     ptr *int
 }
 
@@ -482,7 +482,7 @@ func conditional_return(bool condition) Resource {
 // }
 
 // 特殊情况4: 全局状态
-type global_state struct {
+struct global_state {
     data *int
 }
 
