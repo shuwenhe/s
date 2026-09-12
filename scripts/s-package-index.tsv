@@ -283,6 +283,7 @@ compile.internal.ownership	src/cmd/compile/internal/ownership/drop_elaboration.s
 compile.internal.ownership	src/cmd/compile/internal/ownership/move_checker.s
 compile.internal.ownership	src/cmd/compile/internal/ownership/ownership_analysis.s
 compile.internal.ownership	src/cmd/compile/internal/ownership/ownership_state.s
+compile.internal.ownership_system	src/cmd/compile/internal/ownership_system.s
 compile.internal.ownership_with_fields	src/cmd/compile/internal/ownership_with_fields.s
 compile.internal.path	src/cmd/compile/internal/path.s
 compile.internal.pgoir	src/cmd/compile/internal/pgoir/irgraph.s

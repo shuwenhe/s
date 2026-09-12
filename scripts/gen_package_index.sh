@@ -6,7 +6,7 @@ set -e
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SOURCE_ROOT="$PROJECT_ROOT/src"
-OUTPUT="${1:-$PROJECT_ROOT/s-package-index.tsv}"
+OUTPUT="${1:-$PROJECT_ROOT/scripts/s-package-index.tsv}"
 
 # Temp file
 TMPINDEX=$(mktemp)

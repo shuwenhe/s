@@ -1457,13 +1457,14 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
 func compiler_bind(compiler_state initial, string name, bool declaration) compiler_state {
     s := initial
     int slot = compiler_find(s, name)
-    if declaration && slot >= 0 { return compiler_fail(s, "duplicate or shadowed variable: " + name) }
-    if !declaration && slot < 0 { return compiler_fail(s, "assignment to unknown variable: " + name) }
+    bool is_declaration = declaration
+    if is_declaration && slot >= 0 { is_declaration = false }
+    if !is_declaration && slot < 0 { return compiler_fail(s, "assignment to unknown variable: " + name) }
     if !compiler_ident(name) { return compiler_fail(s, "expected variable name") }
-    if declaration { slot = s.count }
-    if !declaration && s.kinds[slot] != s.value_kind { return compiler_fail(s, "assignment changes variable type") }
-    if !declaration && s.value_kind == 5 && s.struct_ids[slot] != s.value_struct_id { return compiler_fail(s, "assignment changes struct type") }
-    if !declaration && compiler_is_borrow_kind(s.value_kind) { return compiler_fail(s, "reference reassignment is not supported") }
+    if is_declaration { slot = s.count }
+    if !is_declaration && s.kinds[slot] != s.value_kind { return compiler_fail(s, "assignment changes variable type") }
+    if !is_declaration && s.value_kind == 5 && s.struct_ids[slot] != s.value_struct_id { return compiler_fail(s, "assignment changes struct type") }
+    if !is_declaration && compiler_is_borrow_kind(s.value_kind) { return compiler_fail(s, "reference reassignment is not supported") }
     string rhs = s.value
     int origin = s.value_slot
     if s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9 {
@@ -1474,7 +1475,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
                     rhs = s.value
             origin = -1
         }
-        if !declaration {
+        if !is_declaration {
             if compiler_conflict(s, slot, true) { return compiler_fail(s, "cannot overwrite borrowed owner") }
         }
         if origin == slot { return compiler_fail(s, "self move is not supported") }
@@ -1496,14 +1497,14 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     }
     string ctype = compiler_c_type_for_kind(s, s.value_kind, s.value_struct_id)
     if s.value_kind == 6 { ctype = "int64_t " }
-    if !declaration { ctype = "" }
-    if !declaration && (s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9) {
+    if !is_declaration { ctype = "" }
+    if !is_declaration && (s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9) {
         string replacement_type = "int64_t *"
         if s.value_kind == 5 { replacement_type = compiler_c_type_for_kind(s, s.value_kind, s.value_struct_id) }
         if s.value_kind == 9 { replacement_type = "compiler_slice *" }
         s.code = s.code + "{ " + replacement_type + "compiler_new = " + rhs + ";\n" + compiler_overwrite_old_owner(s, slot) + compiler_var(slot) + " = compiler_new; }\n"
     } else if s.value_kind == 6 {
-        if !declaration { return compiler_fail(s, "array reassignment is not supported") }
+        if !is_declaration { return compiler_fail(s, "array reassignment is not supported") }
         s.code = s.code + ctype + compiler_var(slot) + "[" + compiler_number(s.value_array_length) + "] = " + rhs + ";\n"
     } else {
         s.code = s.code + ctype + compiler_var(slot) + " = " + rhs + ";\n"
@@ -1539,6 +1540,41 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         else if s.value_field >= 0 { s = compiler_add_field_borrow(s, origin, s.value_field) }
     }
     if declaration { s.count = s.count + 1 }
+    return s
+}
+
+func compiler_declare_int_locals(compiler_state initial) compiler_state {
+    s := compiler_next(initial)
+    int decl_line = initial.line
+    while s.error == "" && s.token != "" {
+        string name = s.token
+        if !compiler_ident(name) { return compiler_fail(s, "expected int local name") }
+        if compiler_find(s, name) >= 0 { return compiler_fail(s, "duplicate or shadowed variable: " + name) }
+        int slot = s.count
+        string initial_value = "0"
+        s = compiler_next(s)
+        if s.token == "=" {
+            s = compiler_expression(compiler_next(s), 1)
+            if s.value_kind != 1 { return compiler_fail(s, "int local initializer must be an int") }
+            initial_value = s.value
+        }
+        s.code = s.code + "int64_t " + compiler_var(slot) + " = " + initial_value + ";\n(void)" + compiler_var(slot) + ";\n"
+        s.names[slot] = name
+        s.kinds[slot] = 1
+        s.struct_ids[slot] = -1
+        s.live[slot] = 1
+        s.roots[slot] = -1
+        s.parents[slot] = -1
+        s.loan_fields[slot] = -1
+        s.loan_parent_fields[slot] = -1
+        s.array_lengths[slot] = 0
+        s.count = s.count + 1
+        if s.token == ";" { return compiler_next(s) }
+        if s.line != decl_line { return s }
+        if s.token != "," { return compiler_fail(s, "expected ',' after int local name") }
+        s = compiler_next(s)
+        if s.line != decl_line { return compiler_fail(s, "expected int local name after ','") }
+    }
     return s
 }
 
@@ -1624,7 +1660,12 @@ func compiler_statement(compiler_state initial) compiler_state {
         return body
     }
     if s.token == "for" {
-        s = compiler_expect(compiler_next(s), "(")
+        s = compiler_next(s)
+        bool has_for_parens = false
+        if s.token == "(" {
+            has_for_parens = true
+            s = compiler_next(s)
+        }
         s = compiler_statement(s)
         if s.error != "" { return s }
         s = compiler_expression(s, 1)
@@ -1633,15 +1674,27 @@ func compiler_statement(compiler_state initial) compiler_state {
         s = compiler_expect(s, ";")
         string step_name = s.token
         s = compiler_next(s)
-        if s.token != "=" { return compiler_fail(s, "for step expects assignment") }
         int step_slot = compiler_find(s, step_name)
         s = compiler_available(s, step_slot)
         if s.error != "" { return s }
         if s.kinds[step_slot] != 1 { return compiler_fail(s, "for step currently requires an integer variable") }
-        s = compiler_expression(compiler_next(s), 1)
-        if s.value_kind != 1 { return compiler_fail(s, "for step requires an integer expression") }
-        string step_code = compiler_var(step_slot) + " = " + s.value + ";\n"
-        s = compiler_expect(s, ")")
+        string step_code = ""
+        if s.token == "=" {
+            s = compiler_expression(compiler_next(s), 1)
+            if s.value_kind != 1 { return compiler_fail(s, "for step requires an integer expression") }
+            step_code = compiler_var(step_slot) + " = " + s.value + ";\n"
+        } else if s.token == "+" {
+            s = compiler_next(s)
+            if s.token == "+" {
+                step_code = compiler_var(step_slot) + " = compiler_add(" + compiler_var(step_slot) + ",1);\n"
+                s = compiler_next(s)
+            } else if s.token == "=" {
+                s = compiler_expression(compiler_next(s), 1)
+                if s.value_kind != 1 { return compiler_fail(s, "for step += requires an integer expression") }
+                step_code = compiler_var(step_slot) + " = compiler_add(" + compiler_var(step_slot) + "," + s.value + ");\n"
+            } else { return compiler_fail(s, "for step expects assignment") }
+        } else { return compiler_fail(s, "for step expects assignment") }
+        if has_for_parens { s = compiler_expect(s, ")") }
         int old_floor = s.loop_floor
         int old_cleanup = s.loop_cleanup
         int floor = s.count
@@ -1729,11 +1782,20 @@ func compiler_statement(compiler_state initial) compiler_state {
         s.terminated = 1
         return s
     }
-    if s.token == "println" {
+    if s.token == "println" || s.token == "print" {
+        bool newline = s.token == "println"
         s = compiler_expect(compiler_next(s), "(")
         s = compiler_expression(s, 1)
-        if s.value_kind != 17 { return compiler_fail(s, "println currently expects a string") }
-        s.code = s.code + "fputs(" + s.value + ", stdout);\nfputc('\\n', stdout);\n"
+        if s.value_kind != 17 { return compiler_fail(s, "print/println currently expects a string") }
+        string message = s.value
+        if s.token == "," {
+            s = compiler_expression(compiler_next(s), 1)
+            if s.value_kind != 1 { return compiler_fail(s, "print/println integer argument must be an int") }
+            s.code = s.code + "fputs(" + message + ", stdout);\nfputc(' ', stdout);\nfprintf(stdout, \"%lld\", (long long)(" + s.value + "));\n"
+        } else {
+            s.code = s.code + "fputs(" + message + ", stdout);\n"
+        }
+        if newline { s.code = s.code + "fputc('\\n', stdout);\n" }
         s = compiler_expect(s, ")")
         s = compiler_optional_semicolon(s)
         return s
@@ -1809,6 +1871,9 @@ func compiler_statement(compiler_state initial) compiler_state {
         s = compiler_optional_semicolon(s)
         s.code = s.code + "*" + target + " = " + s.value + ";\n"
         return s
+    }
+    if s.token == "int" {
+        return compiler_declare_int_locals(s)
     }
     string name = s.token
     if name == "var" || name == "let" || name == "const" {
@@ -1904,6 +1969,25 @@ func compiler_statement(compiler_state initial) compiler_state {
         s.field_state[slot * 8 + field] = 1
         s = compiler_optional_semicolon(s)
         return s
+    }
+    if s.token == "+" {
+        int slot = compiler_find(s, name)
+        s = compiler_available(s, slot)
+        if s.error != "" { return s }
+        if s.kinds[slot] != 1 { return compiler_fail(s, "integer update requires an integer variable") }
+        s = compiler_next(s)
+        if s.token == "+" {
+            s.code = s.code + compiler_var(slot) + " = compiler_add(" + compiler_var(slot) + ",1);\n"
+            s = compiler_next(s)
+            return compiler_optional_semicolon(s)
+        }
+        if s.token == "=" {
+            s = compiler_expression(compiler_next(s), 1)
+            if s.value_kind != 1 { return compiler_fail(s, "+= requires an integer expression") }
+            s.code = s.code + compiler_var(slot) + " = compiler_add(" + compiler_var(slot) + "," + s.value + ");\n"
+            return compiler_optional_semicolon(s)
+        }
+        return compiler_fail(s, "expected ++ or += after integer variable")
     }
     bool declaration = s.token == ":="
     if !declaration && s.token != "=" { return compiler_fail(s, "expected := or =; unsupported statement") }
