@@ -1648,7 +1648,7 @@ selfhost-bin:
 
 
 
-.PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-borrow-dataflow-check mir-drop-elaboration-check mir-place-check mir-movepath-check mir-partial-move-check mir-reinit-check mir-partial-drop-check mir-place-borrow-check mir-ownership-lowering-check mir-nogc-e2e-check no-gc-test
+.PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-borrow-dataflow-check mir-drop-elaboration-check mir-place-check mir-movepath-check mir-partial-move-check mir-reinit-check mir-partial-drop-check mir-place-borrow-check mir-ref-liveness-check mir-ownership-lowering-check mir-nogc-e2e-check no-gc-test
 
 compiler: seed-compiler-bin
 
@@ -1781,6 +1781,18 @@ mir-place-borrow-check: compiler
 	@misc/scripts/check-mir-place-borrow.sh
 
 	@echo "✓ MIR place borrow check passed"
+
+
+
+mir-ref-liveness-check: compiler
+
+	@echo "Running MIR reference liveness check..."
+
+	@chmod +x misc/scripts/check-mir-ref-liveness.sh
+
+	@misc/scripts/check-mir-ref-liveness.sh
+
+	@echo "✓ MIR reference liveness check passed"
 
 
 
