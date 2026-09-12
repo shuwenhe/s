@@ -1,15 +1,15 @@
 package compile.internal.liveness
 use std.slices
 struct live_interval {
-    int value_id
-    int start
-    int end
+    value_id int
+    start int
+    end int
 }
 
 struct live_event {
-    int point
-    int value_id
-    bool on
+    point int
+    value_id int
+    on bool
 }
 
 func build_live_intervals(live_event[] events) live_interval[] {

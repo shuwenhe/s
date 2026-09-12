@@ -5,19 +5,19 @@ const frame_local_area = 2
 const frame_spill_area = 3
 
 struct stack_slot {
-    slot_id int
-    offset int
-    size int
-    slot_type int
+    int slot_id
+    int offset
+    int size
+    int slot_type
 }
 
 struct stack_frame {
-    func_name string
-    arg_slots stack_slot[]
-    local_slots stack_slot[]
-    spill_slots stack_slot[]
-    stack_size int
-    alignment int
+    string func_name
+    stack_slot[] arg_slots
+    stack_slot[] local_slots
+    stack_slot[] spill_slots
+    int stack_size
+    int alignment
 }
 
 func stack_frame_new(string func_name) stack_frame {
@@ -151,8 +151,8 @@ func stack_frame_emit_epilogue(stack_frame frame, ctx* codegen_context) {
 }
 
 struct codegen_context {
-    module ir_module
-    instrs x86_instruction[]
-    labels string[]
-    current_func ir_function
+    ir_module module
+    x86_instruction[] instrs
+    string[] labels
+    ir_function current_func
 }

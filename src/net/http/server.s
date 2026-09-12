@@ -1,6 +1,6 @@
 package src.net.http
 struct http_server {
-    string addr
+    addr string
     map[string, func(http_request, http_response)] routes
 }
 

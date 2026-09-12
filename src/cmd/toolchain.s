@@ -1,28 +1,28 @@
 package toolchain
 
 struct compiler_tool {
-    name string
-    version string
-    path string
+    string name
+    string version
+    string path
 }
 
 struct linker_tool {
-    name string
-    version string
-    target string
+    string name
+    string version
+    string target
 }
 
 struct toolchain_config {
-    target string
-    compiler compiler_tool
-    linker linker_tool
-    tools string[]
+    string target
+    compiler_tool compiler
+    linker_tool linker
+    string[] tools
 }
 
 struct build_system {
-    config toolchain_config
-    build_dir string
-    output_dir string
+    toolchain_config config
+    string build_dir
+    string output_dir
 }
 
 toolchain_config global_toolchain

@@ -35,34 +35,34 @@ func (s ownership_state) string() string {
 }
 
 struct ownership_info {
-    state ownership_state
-    is_owned bool
-    is_copy  bool
-    active_borrows   borrow_info[]
-    field_states map[string]ownership_state
+    ownership_state state
+    bool is_owned
+    bool is_copy
+    borrow_info[] active_borrows
+    map[string]ownership_state field_states
 }
 type borrow_info tracks information about an active borrow
 struct borrow_info {
-    start_pc int
-    end_pc   int
-    is_mutable bool
-    source    string
-    lifetime_name string
+    int start_pc
+    int end_pc
+    bool is_mutable
+    string source
+    string lifetime_name
 }
 
 struct type_classification {
-    needs_ownership bool
-    is_copy bool
-    owned_fields string[]
-    drop_order string[]
+    bool needs_ownership
+    bool is_copy
+    string[] owned_fields
+    string[] drop_order
 }
 
 struct ownership_context {
-    state_at_pc map[int]*ownership_info
-    type_classes map[string]*type_classification
-    current_block string
-    borrow_stack []map[string]*borrow_info
-    errors string[]
+    map[int]*ownership_info state_at_pc
+    map[string]*type_classification type_classes
+    string current_block
+    []map[string]*borrow_info borrow_stack
+    string[] errors
 }
 
 func new_ownership_context() ownership_context* {

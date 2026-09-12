@@ -1,9 +1,9 @@
 package linker
 
 struct linker_test_result {
-    test_name string
-    passed int
-    error_message string
+    string test_name
+    int passed
+    string error_message
 }
 
 func test_elf64_header_creation() linker_test_result {

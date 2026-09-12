@@ -5,9 +5,9 @@ struct go_style_code_generator {
     machine_code_gen* mcg
     symbol_table* symtab
     relocation_context* reloc_ctx
-    codegen_config config
-    int current_func_id
-    int64 current_section_offset
+    config codegen_config
+    current_func_id int
+    current_section_offset int64
 }
 
 func make_go_style_code_generator(

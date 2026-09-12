@@ -11,25 +11,25 @@ use compile.internal.typesys.is_heap_reference_type
 use compile.internal.typesys.is_explicit_owned_type
 
 struct mir_operand {
-    string kind
-    string value
+    kind string
+    value string
     option[string] type_name
 }
 
 struct mir_local_slot {
-    int id
-    string name
+    id int
+    name string
     option[string] type_name
 }
 
 struct mir_assign_stmt {
-    int target
-    string op
+    target int
+    op string
     string[] args
 }
 
 struct mir_eval_stmt {
-    string op
+    op string
     string[] args
 }
 
@@ -39,23 +39,23 @@ enum mir_statement {
 }
 
 struct mir_terminator {
-    string kind
+    kind string
     int[] targets
 }
 
 struct mir_basic_block {
-    int id
-    string label
+    id int
+    label string
     mir_statement[] statements
-    mir_terminator terminator
+    terminator mir_terminator
 }
 
 struct ir_function {
-    string name
+    name string
     mir_local_slot[] locals
     mir_basic_block[] blocks
-    int entry
-    int exit
+    entry int
+    exit int
 
     cfg.control_flow_graph cfg
     ssa.static_single_assignment ssa
@@ -64,12 +64,12 @@ struct ir_function {
     writebarrier.write_barrier_analysis write_barriers
     debug_loc.debug_info debug_info
 
-    bool cfg_computed
-    bool ssa_computed
-    bool dominators_computed
-    bool escape_computed
-    bool liveness_computed
-    bool barriers_computed
+    cfg_computed bool
+    ssa_computed bool
+    dominators_computed bool
+    escape_computed bool
+    liveness_computed bool
+    barriers_computed bool
 }
 
 func new_empty_function(string name) ir_function {

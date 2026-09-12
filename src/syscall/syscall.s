@@ -56,32 +56,32 @@ enum errno {
 }
 
 struct stat {
-	dev u64
-	ino u64
-	nlink u64
-	mode u32
-	uid u32
-	gid u32
-	rdev u64
-	size i64
-	blksize i64
-	blocks i64
-	atime_sec i64
-	atime_nsec i64
-	mtime_sec i64
-	mtime_nsec i64
-	ctime_sec i64
-	ctime_nsec i64
+	u64 dev
+	u64 ino
+	u64 nlink
+	u32 mode
+	u32 uid
+	u32 gid
+	u64 rdev
+	i64 size
+	i64 blksize
+	i64 blocks
+	i64 atime_sec
+	i64 atime_nsec
+	i64 mtime_sec
+	i64 mtime_nsec
+	i64 ctime_sec
+	i64 ctime_nsec
 }
 
 struct timespec {
-	sec i64
-	nsec i64
+	i64 sec
+	i64 nsec
 }
 
 struct timeval {
-	sec i64
-	usec i64
+	i64 sec
+	i64 usec
 }
 
 func open(string path, flags i32, mode i32) (i32, error) {

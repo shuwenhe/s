@@ -50,9 +50,9 @@ func sweep_stats() sweep_result {
 }
 
 struct sweep_result {
-    int freed_bytes
-    int freed_count
-    int live_count
+    freed_bytes int
+    freed_count int
+    live_count int
 }
 
 func mgcsweep_unit_name() string { "src/runtime/mgcsweep" }

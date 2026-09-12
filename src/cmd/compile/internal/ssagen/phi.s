@@ -1,15 +1,15 @@
 package compile.internal.ssagen
 use std.slices
 struct phi_input {
-    int pred
-    int value
+    pred int
+    value int
 }
 
 struct lowered_phi {
-    int target
+    target int
     int[] incoming
-    bool trivial
-    int chosen
+    trivial bool
+    chosen int
 }
 
 func lower_phi(int target, phi_input[] inputs) lowered_phi {

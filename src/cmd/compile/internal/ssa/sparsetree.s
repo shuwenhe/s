@@ -1,11 +1,11 @@
 package compile.internal.ssa
 use std.slices
 struct sparse_tree_node {
-    int parent
-    int child
-    int sibling
-    int entry
-    int exit
+    parent int
+    child int
+    sibling int
+    entry int
+    exit int
 }
 
 struct sparse_tree {

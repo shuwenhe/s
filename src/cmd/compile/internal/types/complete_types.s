@@ -21,53 +21,53 @@ const type_union = 17
 const type_error = 18
 
 struct type_constraint {
-    name string
-    bounds string[]
-    methods string[]
+    string name
+    string[] bounds
+    string[] methods
 }
 
 struct type_param {
-    name string
-    constraint type_constraint
-    index int
+    string name
+    type_constraint constraint
+    int index
 }
 
 struct generic_type {
-    name string
-    params type_param[]
-    instantiations type_info[]
+    string name
+    type_param[] params
+    type_info[] instantiations
 }
 
 struct method_info {
-    name string
-    receiver string
-    params string[]
-    returns string[]
-    is_pointer int
+    string name
+    string receiver
+    string[] params
+    string[] returns
+    int is_pointer
 }
 
 struct type_info {
-    kind int
-    name string
-    size int
-    align int
-    fields string[]
-    methods method_info[]
-    constraints type_constraint[]
-    generic_params type_param[]
-    underlying string
-    elem_type string
-    key_type string
-    value_type string
-    params string[]
-    returns string[]
+    int kind
+    string name
+    int size
+    int align
+    string[] fields
+    method_info[] methods
+    type_constraint[] constraints
+    type_param[] generic_params
+    string underlying
+    string elem_type
+    string key_type
+    string value_type
+    string[] params
+    string[] returns
 }
 
 struct type_table {
-    types type_info[]
-    named_types type_info[]
-    generics generic_type[]
-    method_sets method_info[][]
+    type_info[] types
+    type_info[] named_types
+    generic_type[] generics
+    method_info[][] method_sets
 }
 
 var global_type_table type_table

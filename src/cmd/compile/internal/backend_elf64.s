@@ -58,7 +58,7 @@ use std.prelude.slice
 use std.prelude.to_string
 use std.slices
 struct backend_error {
-    string message
+    message string
 }
 
 func ok_function(function_decl value) (function_decl, backend_error) {
@@ -117,71 +117,71 @@ control_in_defer := "@defer.active"
 struct unit_value {}
 
 struct fn_map_entry_value {
-    string key
-    string func_name
+    key string
+    func_name string
 }
 
 struct channel_handle_value {
-    int id
+    id int
 }
 
 struct owned_box_value {
-    int id
-    value payload
-    bool live
+    id int
+    payload value
+    live bool
 }
 
 struct channel_runtime_state {
-    int id
-    int capacity
+    id int
+    capacity int
     value[] buffer
-    bool closed
-    int sends
-    int recvs
+    closed bool
+    sends int
+    recvs int
 }
 
 struct captured_binding {
-    string name
+    name string
     value value
 }
 
 struct sroutine_task {
-    string fn_name
+    fn_name string
     value[] args
     captured_binding[] captured_env
-    string origin
+    origin string
 }
 
 struct runtime_state {
     sroutine_task[] runq
     channel_runtime_state[] channels
     owned_box_value[] owned_boxes
-    int next_owned_box_id
-    int next_channel_id
-    int select_rr_cursor
-    int sroutine_scheduled
-    int sroutine_completed
-    int sroutine_panics
-    int sroutine_recovered
-    int sroutine_yields
-    int select_attempts
-    int select_default_fallbacks
-    int select_timeouts
+    next_owned_box_id int
+    next_channel_id int
+    select_rr_cursor int
+    sroutine_scheduled int
+    sroutine_completed int
+    sroutine_panics int
+    sroutine_recovered int
+    sroutine_yields int
+    select_attempts int
+    select_default_fallbacks int
+    select_timeouts int
 }
 
 struct runtime_metrics {
-    int sroutine_scheduled
-    int sroutine_completed
-    int sroutine_panics
-    int sroutine_recovered
-    int sroutine_yields
-    int select_attempts
-    int select_default_fallbacks
-    int select_timeouts
-    int channels
-    int channel_sends
-    int channel_recvs
-    int channel_closed
+    sroutine_scheduled int
+    sroutine_completed int
+    sroutine_panics int
+    sroutine_recovered int
+    sroutine_yields int
+    select_attempts int
+    select_default_fallbacks int
+    select_timeouts int
+    channels int
+    channel_sends int
+    channel_recvs int
+    channel_closed int
 }
 enum value {
     int(int),
@@ -195,44 +195,44 @@ enum value {
 }
 
 struct binding {
-    string name
+    name string
     value value
 }
 
 struct write_op {
-    int fd
-    string text
+    fd int
+    text string
 }
 
 struct mir_execution_result {
     write_op[] writes
-    int exit_code
-    runtime_metrics runtime
+    exit_code int
+    runtime runtime_metrics
 }
 
 struct midend_result {
-    string optimized_mir_text
-    string report
+    optimized_mir_text string
+    report string
 }
 
 struct stackmap_function_entry {
-    string name
-    int slots
-    string bitmap
-    int callee_saved
+    name string
+    slots int
+    bitmap string
+    callee_saved int
 }
 
 struct abi_behavior_entry {
-    string name
-    int param_count
-    bool variadic
-    string pass_mode
-    string return_mode
-    int abi_in_regs
-    int abi_out_regs
-    int abi_spill_size
-    int abi_arg_width
-    string abi_summary
+    name string
+    param_count int
+    variadic bool
+    pass_mode string
+    return_mode string
+    abi_in_regs int
+    abi_out_regs int
+    abi_spill_size int
+    abi_arg_width int
+    abi_summary string
 }
 
 func build_object(string path, string output, string ssa_margin_override) int {
@@ -667,12 +667,12 @@ func parse_non_negative_int(string raw) int {
 }
 
 struct midend_pass_result {
-    mir_graph graph
-    int simplified_jump_to_return
-    int removed_unit_lines
-    int dedup_lines
-    int removed_unreachable_blocks
-    int folded_redundant_branches
+    graph mir_graph
+    simplified_jump_to_return int
+    removed_unit_lines int
+    dedup_lines int
+    removed_unreachable_blocks int
+    folded_redundant_branches int
 }
 
 func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
@@ -790,8 +790,8 @@ func contains_int32(int[] values, int needle) bool {
 }
 
 struct graph_pass_count_result {
-    mir_graph graph
-    int count
+    graph mir_graph
+    count int
 }
 
 func simplify_jump_to_return_pass(mir_graph graph) graph_pass_count_result {

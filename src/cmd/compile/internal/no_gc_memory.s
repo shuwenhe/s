@@ -24,9 +24,9 @@ func alloc_stack() int { 1 }
 func alloc_heap() int { 2 }
 
 struct allocation_decision {
-    int strategy
-    int size
-    string reason
+    strategy int
+    size int
+    reason string
 }
 
 struct raii_scope {
@@ -35,14 +35,14 @@ struct raii_scope {
 }
 
 struct no_gc_state {
-    dtor_registry registry
-    dflag_map flags
-    lifetime_context lifetimes
+    registry dtor_registry
+    flags dflag_map
+    lifetimes lifetime_context
 }
 
 struct no_gc_result {
-    bool ok
-    string message
+    ok bool
+    message string
     string[] cleanup
 }
 

@@ -10,21 +10,21 @@ func drop_state_absent() int { 2 }
 func drop_state_partial() int { 3 }
 
 struct dflag_entry {
-    string name
-    string type_name
-    int state
-    int scope_depth
+    name string
+    type_name string
+    state int
+    scope_depth int
 }
 
 struct dflag_map {
     dflag_entry[] entries
-    int scope_depth
+    scope_depth int
     string[] errors
 }
 
 struct dflag_result {
-    bool ok
-    string message
+    ok bool
+    message string
     string[] cleanup
 }
 

@@ -1,45 +1,45 @@
 package backend
 struct elf64_header {
-    string magic
-    int ei_class
-    int ei_data
-    int ei_version
-    int ei_osabi
-    int e_type
-    int e_machine
-    int e_version
-    int e_entry
-    int e_phoff
-    int e_shoff
-    int e_flags
-    int e_ehsize
-    int e_phentsize
-    int e_phnum
-    int e_shentsize
-    int e_shnum
-    int e_shstrndx
+    magic string
+    ei_class int
+    ei_data int
+    ei_version int
+    ei_osabi int
+    e_type int
+    e_machine int
+    e_version int
+    e_entry int
+    e_phoff int
+    e_shoff int
+    e_flags int
+    e_ehsize int
+    e_phentsize int
+    e_phnum int
+    e_shentsize int
+    e_shnum int
+    e_shstrndx int
 }
 
 struct elf64_section {
-    int sh_name
-    int sh_type
-    int sh_flags
-    int sh_addr
-    int sh_offset
-    int sh_size
-    int sh_link
-    int sh_info
-    int sh_addralign
-    int sh_entsize
-    string name
+    sh_name int
+    sh_type int
+    sh_flags int
+    sh_addr int
+    sh_offset int
+    sh_size int
+    sh_link int
+    sh_info int
+    sh_addralign int
+    sh_entsize int
+    name string
     int[] data
 }
 
 struct elf64_writer {
     elf64_header* header
     elf64_section* sections
-    int section_count
-    int file_offset
+    section_count int
+    file_offset int
 }
 
 func make_elf64_writer() elf64_writer {

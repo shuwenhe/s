@@ -5,8 +5,8 @@ interface addr {
 }
 
 struct tcp_addr {
-    string ip
-    int port
+    ip string
+    port int
 }
 
 func (a *tcp_addr) network() string {

@@ -1,46 +1,46 @@
 package std.training_io
 use std.tensor_core as t
 struct checkpoint_meta {
-    string format_version
-    string framework
-    string timestamp
-    string s_compiler_version
+    format_version string
+    framework string
+    timestamp string
+    s_compiler_version string
 }
 
 struct train_state {
-    int global_step
-    float current_loss
-    float best_loss
-    int best_step
-    bool training_complete
+    global_step int
+    current_loss float
+    best_loss float
+    best_step int
+    training_complete bool
     float[] loss_history
-    float grad_norm
-    float learning_rate
-    int epoch_time_ms
-    int total_time_ms
-    float tokens_per_second
+    grad_norm float
+    learning_rate float
+    epoch_time_ms int
+    total_time_ms int
+    tokens_per_second float
 }
 
 struct model_config_snapshot {
-    int vocab_size
-    int embed_dim
-    int num_heads
-    int ffn_dim
-    int num_layers
-    int max_seq_len
-    float dropout_prob
-    int total_param_count
-    int trainable_param_count
+    vocab_size int
+    embed_dim int
+    num_heads int
+    ffn_dim int
+    num_layers int
+    max_seq_len int
+    dropout_prob float
+    total_param_count int
+    trainable_param_count int
 }
 
 struct checkpoint {
-    checkpoint_meta meta
-    train_state state
-    model_config_snapshot config
+    meta checkpoint_meta
+    state train_state
+    config model_config_snapshot
     map<string, t.tensor> weight_map
-    string file_path
-    long file_size_bytes
-    string checksum_md5
+    file_path string
+    file_size_bytes long
+    checksum_md5 string
 }
 
 func default_meta() checkpoint_meta {
@@ -258,13 +258,13 @@ func export_weights_binary(ag.ag_tensor[] params, string output_path) string {
 }
 
 struct training_log_entry {
-    int step
-    float loss
-    float best_loss
-    float grad_norm
-    float lr
-    int elapsed_ms
-    string message
+    step int
+    loss float
+    best_loss float
+    grad_norm float
+    lr float
+    elapsed_ms int
+    message string
 }
 var _log_entries = training_log_entry[5000]
 var _log_count = 0
@@ -497,14 +497,14 @@ func _read_file(string path) read_result {
 }
 
 struct write_result {
-    bool ok
-    int error_code
+    ok bool
+    error_code int
 }
 
 struct read_result {
-    bool ok
-    string data
-    string error
+    ok bool
+    data string
+    error string
 }
 
 func result_is_ok(write_result r) bool { r.ok }
