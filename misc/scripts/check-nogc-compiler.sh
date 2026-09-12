@@ -49,6 +49,42 @@ func main() int {
 
 SRC
 
+cat >"$work/ownership_borrow_drop_closed_loop.s" <<'SRC'
+
+package ownershiploop
+
+func main() int {
+
+    {
+
+        owner := box(10)
+
+        reader := &owner
+
+        assert(*reader == 10)
+
+        drop(reader)
+
+        writer := &mut owner
+
+        *writer = 42
+
+        drop(writer)
+
+        moved := owner
+
+        assert(live_allocations() == 1)
+
+    }
+
+    assert(live_allocations() == 0)
+
+    return 42
+
+}
+
+SRC
+
 
 
 cat >"$work/hello.s" <<'SRC'
@@ -1278,6 +1314,18 @@ SRC
 set +e
 
 "$work/ownership"
+
+status=$?
+
+set -e
+
+test "$status" -eq 42
+
+S_COMPILER_CFLAGS=-DS_COMPILER_CHECK_ALLOCATIONS "$root/bin/s" "$work/ownership_borrow_drop_closed_loop.s" -o "$work/ownership_borrow_drop_closed_loop"
+
+set +e
+
+"$work/ownership_borrow_drop_closed_loop"
 
 status=$?
 
