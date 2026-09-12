@@ -27,7 +27,7 @@ func (move_checker* mc) check_statement(int pc, stmt interface{}) {
         mc.check_function_call(pc, s)
     case ReturnStmt*:
         mc.check_return(pc, s)
-    case IfStmt*:
+    case if_stmt*:
         mc.check_if_statement(pc, s)
     }
 }
@@ -87,7 +87,7 @@ func (move_checker* mc) check_return(int pc, ret* ReturnStmt) {
     }
 }
 
-func (move_checker* mc) check_if_statement(int pc, ifStmt* IfStmt) {
+func (move_checker* mc) check_if_statement(int pc, ifStmt* if_stmt) {
     mc.check_use(pc, ifStmt.condition, "read")
     then_states := mc.analyze_branch(pc, ifStmt.ThenBody)
     else_states := mc.analyze_branch(pc, ifStmt.ElseBody)
