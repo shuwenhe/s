@@ -64,14 +64,14 @@ func (drop_elaborator* de) elaborate_return(return_stmt* ret) interface{} {
     }
 }
 
-func (drop_elaborator* de) elaborate_if(if_stmt* ifStmt) if_stmt* {
-    elaborated_then := de.elaborate_statement(ifStmt.then_branch)
+func (drop_elaborator* de) elaborate_if(if_stmt* if_stmt) if_stmt* {
+    elaborated_then := de.elaborate_statement(if_stmt.then_branch)
     var elaborated_else interface{}
-    if ifStmt.else_branch != nil {
-        elaborated_else = de.elaborate_statement(ifStmt.else_branch)
+    if if_stmt.else_branch != nil {
+        elaborated_else = de.elaborate_statement(if_stmt.else_branch)
     }
     return if_stmt*{
-        condition:   ifStmt.condition,
+        condition:   if_stmt.condition,
         then_branch:  elaborated_then,
         else_branch:  elaborated_else,
     }

@@ -80,8 +80,8 @@ func (borrow_checker* bc) check_borrow_creation(int pc, borrow* borrow_stmt) {
     })
 }
 
-func (borrow_checker* bc) check_borrow_end(int pc, borrowEnd* borrow_end_stmt) {
-    var_name := borrowEnd.source
+func (borrow_checker* bc) check_borrow_end(int pc, borrow_end* borrow_end_stmt) {
+    var_name := borrow_end.source
     if !bc.has_borrows(var_name) {
         bc.ctx.add_error(errorf("borrow end: no active borrow of %s at PC %d",
             var_name, pc))
