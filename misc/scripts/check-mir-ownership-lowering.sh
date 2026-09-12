@@ -27,6 +27,40 @@ func main() int {
 }
 SRC
 
+cat >"$work/borrow_deref.s" <<'SRC'
+package mirborrow
+
+func main() int {
+    x := box(42)
+    y := x
+    p := &y
+    z := *p
+    return z
+}
+SRC
+
+cat >"$work/move_while_borrowed.s" <<'SRC'
+package mirborrowbad
+
+func main() int {
+    x := box(42)
+    p := &x
+    y := x
+    return *y
+}
+SRC
+
+cat >"$work/mut_borrow_deref.s" <<'SRC'
+package mirmut
+
+func main() int {
+    x := box(42)
+    p := &mut x
+    z := *p
+    return z
+}
+SRC
+
 "$root/bin/s" --emit-mir "$work/box_move_deref_drop.s" "$work/box_move_deref_drop.mir"
 
 box_count=$(grep -c 'Box(' "$work/box_move_deref_drop.mir" || true)
@@ -74,6 +108,47 @@ fi
 if ! grep -q 'mir-error moved or unknown return value' "$work/use_after_move.mir"; then
     echo "mir ownership lowering: use-after-move must be rejected by MIR builder" >&2
     cat "$work/use_after_move.mir" >&2
+    exit 1
+fi
+
+"$root/bin/s" --emit-mir "$work/borrow_deref.s" "$work/borrow_deref.mir"
+if ! grep -q 'Borrow(shared, _2)' "$work/borrow_deref.mir"; then
+    echo "mir ownership lowering: expected shared Borrow from moved owner" >&2
+    cat "$work/borrow_deref.mir" >&2
+    exit 1
+fi
+if ! grep -q '_4 = Deref(_3)' "$work/borrow_deref.mir"; then
+    echo "mir ownership lowering: expected Deref from borrow value" >&2
+    cat "$work/borrow_deref.mir" >&2
+    exit 1
+fi
+if grep -q 'Drop(_3)' "$work/borrow_deref.mir"; then
+    echo "mir ownership lowering: borrow value must not receive owner Drop" >&2
+    cat "$work/borrow_deref.mir" >&2
+    exit 1
+fi
+if ! grep -q 'Drop(_2)' "$work/borrow_deref.mir"; then
+    echo "mir ownership lowering: borrowed owner must still be dropped" >&2
+    cat "$work/borrow_deref.mir" >&2
+    exit 1
+fi
+if ! grep -q 'Return(_4)' "$work/borrow_deref.mir"; then
+    echo "mir ownership lowering: return must use named deref value" >&2
+    cat "$work/borrow_deref.mir" >&2
+    exit 1
+fi
+
+"$root/bin/s" --emit-mir "$work/move_while_borrowed.s" "$work/move_while_borrowed.mir"
+if ! grep -q 'mir-error move of borrowed value' "$work/move_while_borrowed.mir"; then
+    echo "mir ownership lowering: move while borrowed must be rejected" >&2
+    cat "$work/move_while_borrowed.mir" >&2
+    exit 1
+fi
+
+"$root/bin/s" --emit-mir "$work/mut_borrow_deref.s" "$work/mut_borrow_deref.mir"
+if ! grep -q 'Borrow(mut, _1)' "$work/mut_borrow_deref.mir"; then
+    echo "mir ownership lowering: expected mutable Borrow" >&2
+    cat "$work/mut_borrow_deref.mir" >&2
     exit 1
 fi
 
