@@ -7,7 +7,7 @@ dropElaborator drop_elaborator*
 }
 
 func new_ownership_analysis() ownership_analysis* {
-    ctx := NewOwnershipContext()
+    ctx := new_ownership_context()
     return ownership_analysis*{
         ctx:           ctx,
         moveChecker:   new_move_checker(ctx),
@@ -67,7 +67,7 @@ struct analysis_report {
     borrows_found    int
     drops_inserted    int
     moves_verified    int
-    ElaboratedStmts interface{}[]
+    elaborated_stmts interface{}[]
 }
 
 func (ownership_analysis* oa) generate_report(string funcName, elaborated interface{}) analysis_report* {
@@ -88,7 +88,7 @@ func (ownership_analysis* oa) generate_report(string funcName, elaborated interf
         }
     }
     report.drops_inserted = countDropCalls(elaborated)
-    report.ElaboratedStmts = elaborated
+    report.elaborated_stmts = elaborated
     return report
 }
 
@@ -116,8 +116,8 @@ case block_stmt*:
 
 struct ownership_hints {
     type_classes map[string]*type_classification
-    VariableTypes map[string]string
-    ParamOwnership map[string]string
+    variable_types map[string]string
+    param_ownership map[string]string
 }
 
 func (ownership_analysis* oa) apply_ownership_hints(ownership_hints* hints) {

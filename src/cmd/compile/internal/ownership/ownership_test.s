@@ -1,7 +1,7 @@
 package compile.internal.ownership
 
 func test_move_semantics() bool {
-    ctx := NewOwnershipContext()
+    ctx := new_ownership_context()
     checker := new_move_checker(ctx)
     test1_stmts := interface{}[]{
         assignment_stmt*{lhs: "a", rhs: "value", is_move: false},
@@ -12,7 +12,7 @@ func test_move_semantics() bool {
     if !ctx.has_errors() {
         return false  // Should have detected use-after-move
     }
-    ctx = NewOwnershipContext()
+    ctx = new_ownership_context()
     checker = new_move_checker(ctx)
     test2_stmts := interface{}[]{
         assignment_stmt*{lhs: "x", rhs: "5", is_copy: true},  // x = 5 (copy)
@@ -27,7 +27,7 @@ func test_move_semantics() bool {
 }
 
 func test_borrow_semantics() bool {
-    ctx := NewOwnershipContext()
+    ctx := new_ownership_context()
     checker := new_borrow_checker(ctx)
     test1_stmts := interface{}[]{
         borrow_stmt*{source: "data", is_mutable: false},     // borrow &data
@@ -39,7 +39,7 @@ func test_borrow_semantics() bool {
     if ctx.has_errors() {
         return false  // Multiple shared borrows should be OK
     }
-    ctx = NewOwnershipContext()
+    ctx = new_ownership_context()
     checker = new_borrow_checker(ctx)
     test2_stmts := interface{}[]{
         borrow_stmt*{source: "data", is_mutable: true},      // &mut data
@@ -49,7 +49,7 @@ func test_borrow_semantics() bool {
     if !ctx.has_errors() {
         return false  // Should detect mutable borrow conflict
     }
-    ctx = NewOwnershipContext()
+    ctx = new_ownership_context()
     checker = new_borrow_checker(ctx)
     test3_stmts := interface{}[]{
         borrow_stmt*{source: "x", is_mutable: false},
@@ -63,7 +63,7 @@ func test_borrow_semantics() bool {
 }
 
 func test_drop_elaboration() bool {
-    ctx := NewOwnershipContext()
+    ctx := new_ownership_context()
     elaborator := new_drop_elaborator(ctx)
     test1_stmts := interface{}[]{
         assignment_stmt*{lhs: "x", rhs: "value", is_move: false},
@@ -87,7 +87,7 @@ case drop_call*:
 }
 
 func test_ownership_state_transitions() bool {
-    ctx := NewOwnershipContext()
+    ctx := new_ownership_context()
     ctx.set_state_at(0, "x", STATE_OWNED)
     if ctx.get_state_at(0, "x") != STATE_OWNED {
         return false
@@ -104,7 +104,7 @@ func test_ownership_state_transitions() bool {
 }
 
 func test_control_flow_merge() bool {
-    ctx := NewOwnershipContext()
+    ctx := new_ownership_context()
     checker := new_move_checker(ctx)
     then_states := map[string]ownership_state{
         "x": STATE_MOVED,
@@ -120,7 +120,7 @@ func test_control_flow_merge() bool {
 }
 
 func test_partial_move() bool {
-    ctx := NewOwnershipContext()
+    ctx := new_ownership_context()
     ctx.set_state_at(0, "s.a", STATE_MOVED)
     ctx.set_state_at(0, "s.b", STATE_OWNED)
     ctx.set_state_at(0, "s", STATE_PARTIALLY_MOVED)
@@ -131,7 +131,7 @@ func test_partial_move() bool {
 }
 
 func test_complete_ownership_pipeline() bool {
-    oa := NewOwnershipAnalysis()
+    oa := new_ownership_analysis()
     test_stmts := interface{}[]{
         assignment_stmt*{lhs: "x", rhs: "box::new()", is_move: false},
         borrow_stmt*{source: "x", is_mutable: false, lifetime_name: "a"},
@@ -151,13 +151,13 @@ func run_all_tests() bool {
         name string
         test func() bool
     }{
-        {"MoveSemantics", TestMoveSemantics},
-        {"BorrowSemantics", TestBorrowSemantics},
-        {"DropElaboration", TestDropElaboration},
-        {"StateTransitions", TestOwnershipStateTransitions},
-        {"control_flow_merge", TestControlFlowMerge},
-        {"PartialMove", TestPartialMove},
-        {"CompletePipeline", TestCompleteOwnershipPipeline},
+        {"move_semantics", test_movesemantics},
+        {"borrow_semantics", test_borrowsemantics},
+        {"DropElaboration", test_dropelaboration},
+        {"state_transitions", test_ownershipstatetransitions},
+        {"control_flow_merge", test_controlflowmerge},
+        {"partial_move", test_partialmove},
+        {"CompletePipeline", test_completeownershippipeline},
     }
     all_passed := true
     for _, test := range tests {

@@ -89,8 +89,8 @@ func (move_checker* mc) check_return(int pc, ret* return_stmt) {
 
 func (move_checker* mc) check_if_statement(int pc, ifStmt* if_stmt) {
     mc.check_use(pc, ifStmt.condition, "read")
-    then_states := mc.analyze_branch(pc, ifStmt.ThenBody)
-    else_states := mc.analyze_branch(pc, ifStmt.ElseBody)
+    then_states := mc.analyze_branch(pc, ifStmt.then_body)
+    else_states := mc.analyze_branch(pc, ifStmt.else_body)
     mc.merge_branch_states(pc, then_states, else_states)
 }
 
@@ -171,8 +171,8 @@ struct return_stmt {
 
 struct if_stmt {
     Condition interface{}
-    ThenBody  interface{}[]
-    ElseBody  interface{}[]
+    then_body  interface{}[]
+    else_body  interface{}[]
 }
 
 func errorf(string format, args ...interface{}) string {
