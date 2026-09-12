@@ -160,8 +160,8 @@ func (drop_elaborator* de) verify_partial_move_drops(stmts interface{}[]) bool {
     return true  // Placeholder
 }
 
-func (drop_elaborator* de) get_drop_order(string typeName) string[] {
-    type_class := de.ctx.classify_type(typeName)
+func (drop_elaborator* de) get_drop_order(string type_name) string[] {
+    type_class := de.ctx.classify_type(type_name)
     result := make(string[], len(type_class.drop_order))
     for i, field := range type_class.drop_order {
         result[len(result)-1-i] = field

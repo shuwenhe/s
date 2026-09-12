@@ -102,22 +102,22 @@ func (ownership_context* ctx) has_errors() bool {
     return len(ctx.errors) > 0
 }
 
-func (ownership_context* ctx) classify_type(string typeName) type_classification* {
-    if class, ok := ctx.type_classes[typeName]; ok {
+func (ownership_context* ctx) classify_type(string type_name) type_classification* {
+    if class, ok := ctx.type_classes[type_name]; ok {
         return class
     }
     class := type_classification*{
-        NeedsOwnership: !isPrimitiveType(typeName),
-        is_copy:         isPrimitiveType(typeName),
+        NeedsOwnership: !isPrimitiveType(type_name),
+        is_copy:         isPrimitiveType(type_name),
         OwnedFields:    make(string[], 0),
         drop_order:      make(string[], 0),
     }
-    ctx.type_classes[typeName] = class
+    ctx.type_classes[type_name] = class
     return class
 }
 
-func is_primitive_type(string typeName) bool {
-    switch typeName {
+func is_primitive_type(string type_name) bool {
+    switch type_name {
     case "int", "bool", "u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64":
         return true
     default:

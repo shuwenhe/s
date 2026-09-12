@@ -46,15 +46,15 @@ func (ownership_analysis* oa) has_errors() bool {
     return oa.ctx.has_errors()
 }
 
-func (ownership_analysis* oa) classify_type(string typeName) type_classification* {
-    return oa.ctx.classify_type(typeName)
+func (ownership_analysis* oa) classify_type(string type_name) type_classification* {
+    return oa.ctx.classify_type(type_name)
 }
 
-func (ownership_analysis* oa) set_type_classification(string typeName, class* type_classification) {
-    oa.ctx.type_classes[typeName] = class
+func (ownership_analysis* oa) set_type_classification(string type_name, class* type_classification) {
+    oa.ctx.type_classes[type_name] = class
 }
 
-func (ownership_analysis* oa) set_variable_type(string var_name, string typeName) {
+func (ownership_analysis* oa) set_variable_type(string var_name, string type_name) {
 }
 
 struct analysis_report {
@@ -124,8 +124,8 @@ func (ownership_analysis* oa) apply_ownership_hints(ownership_hints* hints) {
     if hints == nil {
         return
     }
-    for typeName, class := range hints.type_classes {
-        oa.ctx.type_classes[typeName] = class
+    for type_name, class := range hints.type_classes {
+        oa.ctx.type_classes[type_name] = class
     }
 }
 
