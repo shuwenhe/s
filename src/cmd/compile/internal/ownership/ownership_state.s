@@ -1,7 +1,7 @@
 package compile.internal.ownership
-type OwnershipState int
+type ownership_state int
 const (
-    STATE_UNDEFINED OwnershipState = iota
+    STATE_UNDEFINED ownership_state = iota
     STATE_OWNED
     STATE_MOVED
     STATE_BORROWED_SHARED
@@ -11,7 +11,7 @@ const (
     STATE_MAYBE_MOVED
 )
 
-func (s OwnershipState) string() string {
+func (s ownership_state) string() string {
     switch s {
     case STATE_UNDEFINED:
         return "UNDEFINED"
@@ -35,11 +35,11 @@ func (s OwnershipState) string() string {
 }
 
 struct ownership_info {
-    state OwnershipState
+    state ownership_state
     is_owned bool
     is_copy  bool
     active_borrows   borrow_info[]
-    field_states map[string]OwnershipState
+    field_states map[string]ownership_state
 }
 type borrow_info tracks information about an active borrow
 struct borrow_info {
@@ -65,8 +65,8 @@ struct ownership_context {
     errors string[]
 }
 
-func new_ownership_context() OwnershipContext* {
-    return OwnershipContext*{
+func new_ownership_context() ownership_context* {
+    return ownership_context*{
         state_at_pc:   make(map[int]*ownership_info),
         type_classes: make(map[string]*type_classification),
         borrow_stack: []map[string]*borrow_info{make(map[string]*borrow_info)},
@@ -74,7 +74,7 @@ func new_ownership_context() OwnershipContext* {
     }
 }
 
-func (OwnershipContext* ctx) get_state_at(int pc, string var_name) OwnershipState {
+func (ownership_context* ctx) get_state_at(int pc, string var_name) ownership_state {
     info, ok := ctx.state_at_pc[pc]
     if !ok {
         return STATE_UNDEFINED
@@ -82,27 +82,27 @@ func (OwnershipContext* ctx) get_state_at(int pc, string var_name) OwnershipStat
     return info.state
 }
 
-func (OwnershipContext* ctx) set_state_at(int pc, string var_name, state OwnershipState) {
+func (ownership_context* ctx) set_state_at(int pc, string var_name, state ownership_state) {
     if _, ok := ctx.state_at_pc[pc]; !ok {
         ctx.state_at_pc[pc] = ownership_info*{
             state:         state,
             active_borrows: make(borrow_info[], 0),
-            field_states:   make(map[string]OwnershipState),
+            field_states:   make(map[string]ownership_state),
         }
     } else {
         ctx.state_at_pc[pc].state = state
     }
 }
 
-func (OwnershipContext* ctx) add_error(string msg) {
+func (ownership_context* ctx) add_error(string msg) {
     ctx.errors = append(ctx.errors, msg)
 }
 
-func (OwnershipContext* ctx) has_errors() bool {
+func (ownership_context* ctx) has_errors() bool {
     return len(ctx.errors) > 0
 }
 
-func (OwnershipContext* ctx) classify_type(string typeName) type_classification* {
+func (ownership_context* ctx) classify_type(string typeName) type_classification* {
     if class, ok := ctx.type_classes[typeName]; ok {
         return class
     }

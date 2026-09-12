@@ -1,9 +1,9 @@
 package compile.internal.ownership
 struct move_checker {
-    ctx OwnershipContext*
+    ctx ownership_context*
 }
 
-func new_move_checker(OwnershipContext* ctx) move_checker* {
+func new_move_checker(ownership_context* ctx) move_checker* {
     return move_checker*{
         ctx: ctx,
     }
@@ -25,7 +25,7 @@ func (move_checker* mc) check_statement(int pc, stmt interface{}) {
         mc.check_assignment(pc, s)
     case call_stmt*:
         mc.check_function_call(pc, s)
-    case ReturnStmt*:
+    case return_stmt*:
         mc.check_return(pc, s)
     case if_stmt*:
         mc.check_if_statement(pc, s)
@@ -73,7 +73,7 @@ func (move_checker* mc) check_function_call(int pc, call* call_stmt) {
     }
 }
 
-func (move_checker* mc) check_return(int pc, ret* ReturnStmt) {
+func (move_checker* mc) check_return(int pc, ret* return_stmt) {
     if ret.value == nil {
         return
     }
@@ -94,16 +94,16 @@ func (move_checker* mc) check_if_statement(int pc, ifStmt* if_stmt) {
     mc.merge_branch_states(pc, then_states, else_states)
 }
 
-func (move_checker* mc) analyze_branch(int pc, stmts interface{}[]) map[string]OwnershipState {
-    states := make(map[string]OwnershipState)
+func (move_checker* mc) analyze_branch(int pc, stmts interface{}[]) map[string]ownership_state {
+    states := make(map[string]ownership_state)
     for _, stmt := range stmts {
     }
     return states
 }
 
 func (move_checker* mc) merge_branch_states(int pc,
-    then_states map[string]OwnershipState,
-    else_states map[string]OwnershipState) {
+    then_states map[string]ownership_state,
+    else_states map[string]ownership_state) {
     all_vars := make(map[string]bool)
     for v := range then_states {
         all_vars[v] = true
