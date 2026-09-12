@@ -35,6 +35,10 @@ usage() {
 
     echo '  s --emit-c <input.s> <output.c>' >&2
     echo '  s --emit-mir <input.s> <output.mir>' >&2
+    echo '  s --emit-mir-after-drop <input.s> <output.mir>' >&2
+    echo '  s --emit-mir-place <input.s> <output.mir>' >&2
+    echo '  s --emit-mir-movepath <input.s> <output.mir>' >&2
+    echo '  s --emit-mir-partial-move <input.s> <output.mir>' >&2
 
     echo '  s --seed <input.s> <output.ir>' >&2
 
@@ -170,6 +174,38 @@ if [ "$#" -eq 3 ] && [ "$1" = "--emit-c" ]; then
 fi
 
 if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir" ]; then
+
+    ensure_compiler
+
+    exec "$compiler" "$@"
+
+fi
+
+if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir-after-drop" ]; then
+
+    ensure_compiler
+
+    exec "$compiler" "$@"
+
+fi
+
+if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir-place" ]; then
+
+    ensure_compiler
+
+    exec "$compiler" "$@"
+
+fi
+
+if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir-movepath" ]; then
+
+    ensure_compiler
+
+    exec "$compiler" "$@"
+
+fi
+
+if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir-partial-move" ]; then
 
     ensure_compiler
 
