@@ -2945,6 +2945,12 @@ func compiler_partial_move_status(string place, int state) string {
     return "Use(" + place + ") OK\n"
 }
 
+func compiler_recompute_parent_state(int left, int right) int {
+    if left == 0 && right == 0 { return 0 }
+    if left == 1 && right == 1 { return 1 }
+    return 2
+}
+
 func compiler_emit_mir_partial_move(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -2973,6 +2979,38 @@ func compiler_emit_mir_partial_move(string source) string {
             second := s.token
             if base == "_1" && first == "0" && second == "0" { state_f0_0 = 1; state_f0 = 2; state_local = 2 }
             if base == "_1" && first == "0" && second == "1" { state_f0_1 = 1; state_f0 = 2; state_local = 2 }
+        } else if s.token == "assign_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            field := s.token
+            if base == "_1" && field == "0" {
+                state_f0 = 0
+                state_f0_0 = 0
+                state_f0_1 = 0
+                state_local = compiler_recompute_parent_state(state_f0, state_f1)
+            }
+            if base == "_1" && field == "1" {
+                state_f1 = 0
+                state_local = compiler_recompute_parent_state(state_f0, state_f1)
+            }
+        } else if s.token == "assign_nested_field" {
+            s = compiler_next(s)
+            base := s.token
+            s = compiler_next(s)
+            first := s.token
+            s = compiler_next(s)
+            second := s.token
+            if base == "_1" && first == "0" && second == "0" {
+                state_f0_0 = 0
+                state_f0 = compiler_recompute_parent_state(state_f0_0, state_f0_1)
+                state_local = compiler_recompute_parent_state(state_f0, state_f1)
+            }
+            if base == "_1" && first == "0" && second == "1" {
+                state_f0_1 = 0
+                state_f0 = compiler_recompute_parent_state(state_f0_0, state_f0_1)
+                state_local = compiler_recompute_parent_state(state_f0, state_f1)
+            }
         } else if s.token == "move_local" {
             s = compiler_next(s)
             if s.token == "_1" {
@@ -3008,10 +3046,14 @@ func compiler_emit_mir_partial_move(string source) string {
     return out
 }
 
+func compiler_emit_mir_reinit(string source) string {
+    return compiler_emit_mir_partial_move(source)
+}
+
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move") {
-        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move) input.s output")
+    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit") {
+        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit) input.s output")
         return 2
     }
     string source = __host_read_to_string(args[2])
@@ -3026,6 +3068,10 @@ func main() {
     }
     if args[1] == "--emit-mir-partial-move" {
         if __host_write_text_file(args[3], compiler_emit_mir_partial_move(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-reinit" {
+        if __host_write_text_file(args[3], compiler_emit_mir_reinit(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-mir" || args[1] == "--emit-mir-after-drop" {
