@@ -1,9 +1,9 @@
 package compile.internal.ownership
 struct borrow_checker {
-ctx OwnershipContext*
+ctx ownership_context*
 }
 
-func new_borrow_checker(OwnershipContext* ctx) borrow_checker* {
+func new_borrow_checker(ownership_context* ctx) borrow_checker* {
     return borrow_checker*{
         ctx: ctx,
     }
@@ -17,18 +17,18 @@ func (borrow_checker* bc) check_borrow_semantics(stmts interface{}[]) {
 
 func (borrow_checker* bc) check_statement(int pc, stmt interface{}) {
     switch s := stmt.(type) {
-case BorrowStmt*:
+case borrow_stmt*:
         bc.check_borrow_creation(pc, s)
-case BorrowEndStmt*:
+case borrow_end_stmt*:
         bc.check_borrow_end(pc, s)
-case UseStmt*:
+case use_stmt*:
         bc.check_use_with_borrows(pc, s)
-case MoveStmt*:
+case move_stmt*:
         bc.check_move_with_borrows(pc, s)
     }
 }
 
-func (borrow_checker* bc) check_borrow_creation(int pc, borrow* BorrowStmt) {
+func (borrow_checker* bc) check_borrow_creation(int pc, borrow* borrow_stmt) {
     var_name := borrow.source
     is_mutable := borrow.is_mutable
     source_state := bc.ctx.get_state_at(pc, var_name)
@@ -80,7 +80,7 @@ func (borrow_checker* bc) check_borrow_creation(int pc, borrow* BorrowStmt) {
     })
 }
 
-func (borrow_checker* bc) check_borrow_end(int pc, borrowEnd* BorrowEndStmt) {
+func (borrow_checker* bc) check_borrow_end(int pc, borrowEnd* borrow_end_stmt) {
     var_name := borrowEnd.source
     if !bc.has_borrows(var_name) {
         bc.ctx.add_error(errorf("borrow end: no active borrow of %s at PC %d",
@@ -91,7 +91,7 @@ func (borrow_checker* bc) check_borrow_end(int pc, borrowEnd* BorrowEndStmt) {
     bc.ctx.set_state_at(pc, var_name, STATE_OWNED)
 }
 
-func (borrow_checker* bc) check_use_with_borrows(int pc, use* UseStmt) {
+func (borrow_checker* bc) check_use_with_borrows(int pc, use* use_stmt) {
     var_name := use.variable
     state := bc.ctx.get_state_at(pc, var_name)
     if state == STATE_BORROWED_MUT {
@@ -109,7 +109,7 @@ func (borrow_checker* bc) check_use_with_borrows(int pc, use* UseStmt) {
     }
 }
 
-func (borrow_checker* bc) check_move_with_borrows(int pc, move* MoveStmt) {
+func (borrow_checker* bc) check_move_with_borrows(int pc, move* move_stmt) {
     var_name := move.variable
     if bc.has_borrows(var_name) {
         borrows := bc.get_borrows(var_name)

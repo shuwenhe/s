@@ -1,9 +1,9 @@
 package compile.internal.ownership
 struct drop_elaborator {
-ctx OwnershipContext*
+ctx ownership_context*
 }
 
-func new_drop_elaborator(OwnershipContext* ctx) drop_elaborator* {
+func new_drop_elaborator(ownership_context* ctx) drop_elaborator* {
     return drop_elaborator*{
         ctx: ctx,
     }
@@ -19,47 +19,47 @@ func (drop_elaborator* de) elaborate_drops(stmts interface{}[]) interface{}[] {
 
 func (drop_elaborator* de) elaborate_statement(stmt interface{}) interface{} {
     switch s := stmt.(type) {
-case BlockStmt*:
+case block_stmt*:
         return de.elaborate_block(s)
-case ReturnStmt*:
+case return_stmt*:
         return de.elaborate_return(s)
 case if_stmt*:
         return de.elaborate_if(s)
-case LoopStmt*:
+case loop_stmt*:
         return de.elaborate_loop(s)
     default:
         return stmt
     }
 }
 
-func (drop_elaborator* de) elaborate_block(BlockStmt* block) BlockStmt* {
+func (drop_elaborator* de) elaborate_block(block_stmt* block) block_stmt* {
     var stmts interface{}[]
     for _, stmt := range block.statements {
         stmts = append(stmts, de.elaborate_statement(stmt))
     }
     drops_needed := de.collect_drops_for_block(block)
     for _, drop_var := range drops_needed {
-        stmts = append(stmts, DropCall*{
+        stmts = append(stmts, drop_call*{
             variable: drop_var,
             kind:     "explicit",
         })
     }
-    return BlockStmt*{
+    return block_stmt*{
         statements: stmts,
     }
 }
 
-func (drop_elaborator* de) elaborate_return(ReturnStmt* ret) interface{} {
+func (drop_elaborator* de) elaborate_return(return_stmt* ret) interface{} {
     drops_needed := de.collect_drops_for_return()
     var result interface{}[]
     for _, drop_var := range drops_needed {
-        result = append(result, DropCall*{
+        result = append(result, drop_call*{
             variable: drop_var,
             kind:     "return-cleanup",
         })
     }
     result = append(result, ret)
-    return BlockStmt*{
+    return block_stmt*{
         statements: result,
     }
 }
@@ -77,15 +77,15 @@ func (drop_elaborator* de) elaborate_if(if_stmt* ifStmt) if_stmt* {
     }
 }
 
-func (drop_elaborator* de) elaborate_loop(LoopStmt* loop) LoopStmt* {
+func (drop_elaborator* de) elaborate_loop(loop_stmt* loop) loop_stmt* {
     elaborated_body := de.elaborate_statement(loop.body)
-    return LoopStmt*{
+    return loop_stmt*{
         condition: loop.condition,
         body:      elaborated_body,
     }
 }
 
-func (drop_elaborator* de) collect_drops_for_block(BlockStmt* block) string[] {
+func (drop_elaborator* de) collect_drops_for_block(block_stmt* block) string[] {
     var drops string[]
     return drops
 }
@@ -115,9 +115,9 @@ func (drop_elaborator* de) verify_exactly_once_drop(elaborated interface{}[]) bo
 func (drop_elaborator* de) count_drops(stmts interface{}[], counts map[string]int) {
     for _, stmt := range stmts {
         switch s := stmt.(type) {
-case DropCall*:
+case drop_call*:
             counts[s.variable]++
-case BlockStmt*:
+case block_stmt*:
             de.count_drops(s.statements, counts)
         }
     }
@@ -132,18 +132,18 @@ func (drop_elaborator* de) check_use_after_drop(stmts interface{}[],
     dropped_vars map[string]bool) bool {
     for _, stmt := range stmts {
         switch s := stmt.(type) {
-case DropCall*:
+case drop_call*:
             if dropped_vars[s.variable] {
                 de.ctx.add_error(errorf("use-after-drop: variable %s", s.variable))
                 return false
             }
             dropped_vars[s.variable] = true
-case UseStmt*:
+case use_stmt*:
             if dropped_vars[s.variable] {
                 de.ctx.add_error(errorf("use-after-drop: using %s", s.variable))
                 return false
             }
-case BlockStmt*:
+case block_stmt*:
             scope_dropped := make(map[string]bool)
             for k, v := range dropped_vars {
                 scope_dropped[k] = v
@@ -196,7 +196,7 @@ struct drop_summary {
     field_drops map[string]string[]
 }
 
-func (drop_elaborator* de) generate_drop_summary(BlockStmt* block) drop_summary* {
+func (drop_elaborator* de) generate_drop_summary(block_stmt* block) drop_summary* {
     summary := drop_summary*{
         must_drop:   make(string[], 0),
         may_drop:    make(string[], 0),
