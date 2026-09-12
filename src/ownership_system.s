@@ -11,13 +11,13 @@ package ownership_system
 // =============================================================================
 
 // Resource: 一个基础资源结构，展示所有权和Drop
-type Resource struct {
+type resource struct {
     ptr *int
     id int
 }
 
 // Constructor: 创建一个新资源
-func newResource(int id) Resource {
+func new_resource(int id) Resource {
     resource := Resource{
         ptr: box(id * 10),
         id: id,
@@ -27,7 +27,7 @@ func newResource(int id) Resource {
 
 // Drop trait equivalent: 资源的清理逻辑
 // 在S中，当Resource离开作用域时，自动调用析构函数
-func (r Resource) dropMe() () {
+func (r Resource) drop_me() () {
     // 释放内部资源
     if r.ptr != nil {
         // 在S中，box自动管理内存，当ptr离开作用域时自动释放
@@ -41,7 +41,7 @@ func (r Resource) dropMe() () {
 
 // moveOwnership: 演示所有权转移
 // 当resource作为参数传入时，所有权转移给函数
-func moveOwnership(resource Resource) int {
+func move_ownership(resource Resource) int {
     value := *resource.ptr
     // resource的所有权现在在这个函数中
     // 函数结束时，resource被自动销毁
@@ -49,14 +49,14 @@ func moveOwnership(resource Resource) int {
 }
 
 // returnOwnership: 所有权从函数返回给调用者
-func returnOwnership() Resource {
+func return_ownership() Resource {
     r := newResource(42)
     // 所有权从这个函数转移给调用者
     return r
 }
 
 // swapOwnership: 两个资源交换所有权
-func swapOwnership(r1 Resource, r2 Resource) (Resource, Resource) {
+func swap_ownership(r1 Resource, r2 Resource) (Resource, Resource) {
     return r2, r1
 }
 
@@ -66,7 +66,7 @@ func swapOwnership(r1 Resource, r2 Resource) (Resource, Resource) {
 
 // borrowShared: 共享借用 - 只读访问，不转移所有权
 // 多个共享借用可以同时存在
-func borrowShared(r *Resource) int {
+func borrow_shared(r *Resource) int {
     // 可以读取r的内容，但不能修改
     if r.ptr != nil {
         return *r.ptr
@@ -76,14 +76,14 @@ func borrowShared(r *Resource) int {
 
 // borrowMutable: 可变借用 - 读写访问，但同一时间只能有一个
 // 可变借用会独占资源
-func borrowMutable(r *Resource) () {
+func borrow_mutable(r *Resource) () {
     if r.ptr != nil {
         *r.ptr = *r.ptr + 100
     }
 }
 
 // borrowMultipleShared: 展示多个共享借用的安全性
-func borrowMultipleShared(r *Resource) int {
+func borrow_multiple_shared(r *Resource) int {
     first := borrowShared(r)
     second := borrowShared(r)
     third := borrowShared(r)
@@ -95,7 +95,7 @@ func borrowMultipleShared(r *Resource) int {
 // =============================================================================
 
 // demonstrateScope: 展示作用域退出时的自动清理
-func demonstrateScope() int {
+func demonstrate_scope() int {
     total := 0
     
     {
@@ -125,27 +125,27 @@ func demonstrateScope() int {
 // =============================================================================
 
 // LifetimeTracker: 用于追踪引用的生命周期
-type LifetimeTracker struct {
+type lifetime_tracker struct {
     ref *int
     createdAt int
 }
 
 // borrowWithLifetime: 演示生命周期约束
 // 返回的引用的生命周期不能长于所有者
-func borrowWithLifetime(r *Resource) *int {
+func borrow_with_lifetime(r *Resource) *int {
     // 返回的引用生命周期受限于r的生命周期
     return r.ptr
 }
 
 // demonstrateLifetimeInvalid: 展示无效的生命周期（注释掉会编译错误）
-// func demonstrateLifetimeInvalid() *int {
+// func demonstrate_lifetime_invalid() *int {
 //     r := newResource(99)
 //     ptr := borrowWithLifetime(&r)
 //     return ptr  // ERROR: ptr引用的资源已被销毁
 // }
 
 // demonstrateLifetimeValid: 展示有效的生命周期
-func demonstrateLifetimeValid() int {
+func demonstrate_lifetime_valid() int {
     r := newResource(99)
     ptr := borrowWithLifetime(&r)
     value := *ptr
@@ -158,19 +158,19 @@ func demonstrateLifetimeValid() int {
 // =============================================================================
 
 // BoxedResource: 展示堆分配的所有权
-type BoxedResource struct {
+type boxed_resource struct {
     data *int
 }
 
 // createBoxedResource: 在堆上创建资源
-func createBoxedResource(int value) BoxedResource {
+func create_boxed_resource(int value) BoxedResource {
     return BoxedResource{
         data: box(value),
     }
 }
 
 // consumeBoxed: 消费boxed资源，取得所有权
-func consumeBoxed(br BoxedResource) int {
+func consume_boxed(br BoxedResource) int {
     return *br.data
     // br在这里超出作用域，data会被自动释放
 }
@@ -180,17 +180,17 @@ func consumeBoxed(br BoxedResource) int {
 // =============================================================================
 
 // MoveType: 需要move的类型（包含堆分配或指针）
-type MoveType struct {
+type move_type struct {
     ptr *int
 }
 
 // CopyType: 可以copy的类型（只包含值类型）
-type CopyType struct {
+type copy_type struct {
     value int
 }
 
 // demonstrateMoveSemantics: 展示move语义
-func demonstrateMoveSemantics() int {
+func demonstrate_move_semantics() int {
     // Move: 所有权转移
     m1 := MoveType{ ptr: box(10) }
     m2 := m1  // m1的所有权转移给m2，m1不再有效
@@ -201,7 +201,7 @@ func demonstrateMoveSemantics() int {
 }
 
 // demonstrateCopySemantics: 展示copy语义
-func demonstrateCopySemantics() int {
+func demonstrate_copy_semantics() int {
     // Copy: 值被复制
     c1 := CopyType{ value: 10 }
     c2 := c1  // c1的值被复制给c2，c1仍然有效
@@ -215,13 +215,13 @@ func demonstrateCopySemantics() int {
 // =============================================================================
 
 // DropFlaggedResource: 带有drop flag的资源（用于追踪是否已销毁）
-type DropFlaggedResource struct {
+type drop_flagged_resource struct {
     ptr *int
     dropped bool  // 模拟drop flag
 }
 
 // newDropFlaggedResource: 创建一个新的drop-flagged资源
-func newDropFlaggedResource(int value) DropFlaggedResource {
+func new_drop_flagged_resource(int value) DropFlaggedResource {
     return DropFlaggedResource{
         ptr: box(value),
         dropped: false,
@@ -229,7 +229,7 @@ func newDropFlaggedResource(int value) DropFlaggedResource {
 }
 
 // getValue: 安全地获取值（检查drop flag）
-func (r *DropFlaggedResource) getValue() (int, bool) {
+func (r *DropFlaggedResource) get_value() (int, bool) {
     if r.dropped {
         return 0, false  // 错误：资源已被销毁
     }
@@ -237,7 +237,7 @@ func (r *DropFlaggedResource) getValue() (int, bool) {
 }
 
 // dropIt: 显式销毁资源
-func (r *DropFlaggedResource) dropIt() () {
+func (r *DropFlaggedResource) drop_it() () {
     if !r.dropped {
         // 清理资源
         _ = *r.ptr
@@ -250,13 +250,13 @@ func (r *DropFlaggedResource) dropIt() () {
 // =============================================================================
 
 // RAIIResource: 展示RAII模式
-type RAIIResource struct {
+type raii_resource struct {
     id int
     handle *int
 }
 
 // acquireResource: 获取资源
-func acquireResource(int id) RAIIResource {
+func acquire_resource(int id) RAIIResource {
     return RAIIResource{
         id: id,
         handle: box(id * 1000),
@@ -264,7 +264,7 @@ func acquireResource(int id) RAIIResource {
 }
 
 // useResource: 使用资源
-func (r *RAIIResource) useResource() int {
+func (r *RAIIResource) use_resource() int {
     if r.handle != nil {
         return *r.handle
     }
@@ -272,7 +272,7 @@ func (r *RAIIResource) useResource() int {
 }
 
 // releaseResource: 在资源对象销毁时自动调用
-func (r RAIIResource) releaseResource() () {
+func (r RAIIResource) release_resource() () {
     // 在生命周期结束时自动清理
     if r.handle != nil {
         _ = *r.handle
@@ -284,13 +284,13 @@ func (r RAIIResource) releaseResource() () {
 // =============================================================================
 
 // Container: 演示容器拥有的资源
-type Container struct {
+type container struct {
     resources []*int
     count int
 }
 
 // addToContainer: 添加资源到容器（转移所有权）
-func (c *Container) addToContainer(int value) () {
+func (c *Container) add_to_container(int value) () {
     // 容器获取资源的所有权
     ptr := box(value)
     c.resources[c.count] = ptr
@@ -298,7 +298,7 @@ func (c *Container) addToContainer(int value) () {
 }
 
 // getFromContainer: 从容器中获取引用（共享借用）
-func (c *Container) getFromContainer(int index) *int {
+func (c *Container) get_from_container(int index) *int {
     if index < c.count {
         return c.resources[index]
     }
@@ -310,7 +310,7 @@ func (c *Container) getFromContainer(int index) *int {
 // =============================================================================
 
 // ownershipWithReturn: 所有权随return语句转移
-func ownershipWithReturn(bool condition) Resource {
+func ownership_with_return(bool condition) Resource {
     r1 := newResource(1)
     r2 := newResource(2)
     
@@ -322,7 +322,7 @@ func ownershipWithReturn(bool condition) Resource {
 }
 
 // ownershipWithLoop: 展示循环中的所有权
-func ownershipWithLoop(int n) int {
+func ownership_with_loop(int n) int {
     total := 0
     i := 0
     
@@ -365,8 +365,7 @@ func main() int {
     
     // 演示5: 可变借用
     println("\n=== Mutable Borrow ===")
-    r4 := newResource(20)
-    borrowMutable(&r4)
+    r4 := newResource(20) borrow_mutable(&r4)
     println("After mutable borrow: ", *r4.ptr)
     
     // 演示6: 生命周期有效性
