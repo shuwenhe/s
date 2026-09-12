@@ -360,8 +360,8 @@ func main() int {
     
     // 演示4: 作用域清理
     println("\n=== Scope-based Cleanup ===")
-    scopeTotal := demonstrateScope()
-    println("Scope cleanup total: ", scopeTotal)
+    scope_total := demonstrateScope()
+    println("Scope cleanup total: ", scope_total)
     
     // 演示5: 可变借用
     println("\n=== Mutable Borrow ===")
@@ -370,28 +370,28 @@ func main() int {
     
     // 演示6: 生命周期有效性
     println("\n=== Lifetime Validity ===")
-    ltVal := demonstrateLifetimeValid()
-    println("Lifetime valid value: ", ltVal)
+    lt_val := demonstrateLifetimeValid()
+    println("Lifetime valid value: ", lt_val)
     
     // 演示7: Boxed资源
     println("\n=== Boxed Resource ===")
     br := createBoxedResource(88)
-    boxVal := consumeBoxed(br)
-    println("Boxed value: ", boxVal)
+    box_val := consumeBoxed(br)
+    println("Boxed value: ", box_val)
     
     // 演示8: Move vs Copy
     println("\n=== Move Semantics ===")
-    moveVal := demonstrateMoveSemantics()
-    println("After move: ", moveVal)
+    move_val := demonstrateMoveSemantics()
+    println("After move: ", move_val)
     
     println("\n=== Copy Semantics ===")
-    copyVal := demonstrateCopySemantics()
-    println("Copy result: ", copyVal)
+    copy_val := demonstrateCopySemantics()
+    println("Copy result: ", copy_val)
     
     // 演示9: 循环中的所有权
     println("\n=== Loop Ownership ===")
-    loopTotal := ownershipWithLoop(5)
-    println("Loop total: ", loopTotal)
+    loop_total := ownershipWithLoop(5)
+    println("Loop total: ", loop_total)
     
     // 演示10: 条件中的所有权
     println("\n=== Conditional Ownership ===")

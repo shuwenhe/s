@@ -15,9 +15,9 @@ func test_elf_object_parsing(t testing.T) {
 		data[i] = u8(i)
 	}
 
-	textIdx := obj.add_section(".text", 1, 0x6, data)
-	if textIdx != 0 {
-		t.errorf("Expected section index 0, got %d", textIdx)
+	text_idx := obj.add_section(".text", 1, 0x6, data)
+	if text_idx != 0 {
+		t.errorf("Expected section index 0, got %d", text_idx)
 	}
 
 	sym := SymbolEntry{
@@ -32,9 +32,9 @@ func test_elf_object_parsing(t testing.T) {
 		IsWeak: false,
 	}
 
-	symIdx := obj.add_symbol(sym)
-	if symIdx != 0 {
-		t.errorf("Expected symbol index 0, got %d", symIdx)
+	sym_idx := obj.add_symbol(sym)
+	if sym_idx != 0 {
+		t.errorf("Expected symbol index 0, got %d", sym_idx)
 	}
 
 	fmt.printf("ELF object creation test passed!\n")
@@ -43,7 +43,7 @@ func test_elf_object_parsing(t testing.T) {
 func test_symbol_resolution(t testing.T) {
 	sm := NewSymbolManager()
 
-	globalSym := SymbolEntry{
+	global_sym := SymbolEntry{
 		Name: "global_func",
 		Value: 0x1000,
 		Size: 50,
@@ -55,12 +55,12 @@ func test_symbol_resolution(t testing.T) {
 		IsWeak: false,
 	}
 
-	err := sm.add_symbol(globalSym)
+	err := sm.add_symbol(global_sym)
 	if err != nil {
 		t.errorf("Failed to add global symbol: %v", err)
 	}
 
-	weakSym := SymbolEntry{
+	weak_sym := SymbolEntry{
 		Name: "global_func",
 		Value: 0x2000,
 		Size: 30,
@@ -72,7 +72,7 @@ func test_symbol_resolution(t testing.T) {
 		IsWeak: true,
 	}
 
-	err = sm.add_symbol(weakSym)
+	err = sm.add_symbol(weak_sym)
 	if err != nil {
 		t.errorf("Failed to add weak symbol: %v", err)
 	}
@@ -104,12 +104,12 @@ func test_relocations(t testing.T) {
 		IsWeak: false,
 	}
 
-	symIdx := rp.add_symbol(sym)
+	sym_idx := rp.add_symbol(sym)
 
 	reloc := Relocation{
 		Offset: 0x1000,
 		Type: RELOC_GOT,
-		SymIndex: symIdx,
+		SymIndex: sym_idx,
 		Addend: 0,
 	}
 
@@ -200,17 +200,17 @@ func test_build_id_generation(t testing.T) {
 	data := u8[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	bm.generate_build_id(data)
 
-	bidStr := bm.get_build_idstring()
-	if len(bidStr) != 64 { 
-		t.errorf("Expected Build-ID string length 64, got %d", len(bidStr))
+	bid_str := bm.get_build_idstring()
+	if len(bid_str) != 64 { 
+		t.errorf("Expected Build-ID string length 64, got %d", len(bid_str))
 	}
 
-	noteData := bm.generate_note_section()
-	if len(noteData) == 0 {
+	note_data := bm.generate_note_section()
+	if len(note_data) == 0 {
 		t.errorf("Note section data is empty")
 	}
 
-	fmt.printf("Build-ID generation test passed: %s\n", bidStr)
+	fmt.printf("Build-ID generation test passed: %s\n", bid_str)
 }
 
 func test_production_linker_workflow(t testing.T) {
@@ -234,8 +234,8 @@ func test_production_linker_workflow(t testing.T) {
 
 	obj := NewELFObject(0x3e)
 
-	codeData := u8[]{0x55, 0x48, 0x89, 0xe5}
-	obj.add_section(".text", 1, 0x6, codeData)
+	code_data := u8[]{0x55, 0x48, 0x89, 0xe5}
+	obj.add_section(".text", 1, 0x6, code_data)
 
 	sym := SymbolEntry{
 		Name: "main",
@@ -293,11 +293,11 @@ func example_complete_linker_usage() {
 	fmt.println("Creating sample ELF objects...")
 
 	obj1 := NewELFObject(0x3e)
-	codeData := u8[]{
+	code_data := u8[]{
 		0x55, 0x48, 0x89, 0xe5, 
 		0xc9, 0xc3,              
 	}
-	obj1.add_section(".text", 1, 0x6, codeData)
+	obj1.add_section(".text", 1, 0x6, code_data)
 
 	sym1 := SymbolEntry{
 		Name: "hello",
@@ -330,8 +330,8 @@ func example_complete_linker_usage() {
 
 	if config.GenerateBuildID {
 		fmt.println("Generating Build-ID...")
-		outputData := u8[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-		linker.BuildIDManager.generate_build_id(outputData)
+		output_data := u8[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+		linker.BuildIDManager.generate_build_id(output_data)
 		fmt.printf("  Build-ID: %s\n", linker.BuildIDManager.get_build_id_string())
 	}
 	fmt.println()

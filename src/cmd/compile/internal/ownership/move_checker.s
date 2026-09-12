@@ -37,10 +37,10 @@ func (move_checker* mc) check_assignment(int pc, assign* AssignmentStmt) {
         mc.check_use(pc, assign.rhs, "read")
     }
     if assign.is_move {
-        rhsState := mc.ctx.get_state_at(pc, assign.rhs.string())
-        if rhsState != STATE_OWNED {
+        rhs_state := mc.ctx.get_state_at(pc, assign.rhs.string())
+        if rhs_state != STATE_OWNED {
             mc.ctx.add_error(errorf("move %s from %s state at PC %d",
-                assign.rhs, rhsState, pc))
+                assign.rhs, rhs_state, pc))
             return
         }
         mc.ctx.set_state_at(pc, assign.rhs.string(), STATE_MOVED)
@@ -49,11 +49,11 @@ func (move_checker* mc) check_assignment(int pc, assign* AssignmentStmt) {
                 assign.rhs, pc))
         }
     } else if assign.is_copy {
-        rhsState := mc.ctx.get_state_at(pc, assign.rhs.string())
-        typeClass := mc.ctx.classify_type(assign.rhs.string())
-        if !typeClass.is_copy && rhsState != STATE_OWNED {
+        rhs_state := mc.ctx.get_state_at(pc, assign.rhs.string())
+        type_class := mc.ctx.classify_type(assign.rhs.string())
+        if !type_class.is_copy && rhs_state != STATE_OWNED {
             mc.ctx.add_error(errorf("copy %s (%s type) from %s state at PC %d",
-                assign.rhs, "non-Copy", rhsState, pc))
+                assign.rhs, "non-Copy", rhs_state, pc))
             return
         }
     }
@@ -62,11 +62,11 @@ func (move_checker* mc) check_assignment(int pc, assign* AssignmentStmt) {
 
 func (move_checker* mc) check_function_call(int pc, call* CallStmt) {
     for i, arg := range call.args {
-        argState := mc.ctx.get_state_at(pc, arg.string())
-        if argState == STATE_MOVED {
+        arg_state := mc.ctx.get_state_at(pc, arg.string())
+        if arg_state == STATE_MOVED {
             mc.ctx.add_error(errorf("use-after-move: argument %d (%s) at PC %d",
                 i, arg, pc))
-        } else if argState == STATE_UNDEFINED {
+        } else if arg_state == STATE_UNDEFINED {
             mc.ctx.add_error(errorf("use-before-init: argument %d (%s) at PC %d",
                 i, arg, pc))
         }
@@ -77,11 +77,11 @@ func (move_checker* mc) check_return(int pc, ret* ReturnStmt) {
     if ret.value == nil {
         return
     }
-    returnState := mc.ctx.get_state_at(pc, ret.value.string())
-    if returnState == STATE_MOVED {
+    return_state := mc.ctx.get_state_at(pc, ret.value.string())
+    if return_state == STATE_MOVED {
         mc.ctx.add_error(errorf("return-after-move: %s at PC %d",
             ret.value, pc))
-    } else if returnState == STATE_UNDEFINED {
+    } else if return_state == STATE_UNDEFINED {
         mc.ctx.add_error(errorf("return-uninitialized: %s at PC %d",
             ret.value, pc))
     }
@@ -89,9 +89,9 @@ func (move_checker* mc) check_return(int pc, ret* ReturnStmt) {
 
 func (move_checker* mc) check_if_statement(int pc, ifStmt* IfStmt) {
     mc.check_use(pc, ifStmt.condition, "read")
-    thenStates := mc.analyze_branch(pc, ifStmt.ThenBody)
-    elseStates := mc.analyze_branch(pc, ifStmt.ElseBody)
-    mc.merge_branch_states(pc, thenStates, elseStates)
+    then_states := mc.analyze_branch(pc, ifStmt.ThenBody)
+    else_states := mc.analyze_branch(pc, ifStmt.ElseBody)
+    mc.merge_branch_states(pc, then_states, else_states)
 }
 
 func (move_checker* mc) analyze_branch(int pc, stmts interface{}[]) map[string]OwnershipState {
@@ -102,19 +102,19 @@ func (move_checker* mc) analyze_branch(int pc, stmts interface{}[]) map[string]O
 }
 
 func (move_checker* mc) merge_branch_states(int pc,
-    thenStates map[string]OwnershipState,
-    elseStates map[string]OwnershipState) {
-    allVars := make(map[string]bool)
-    for v := range thenStates {
-        allVars[v] = true
+    then_states map[string]OwnershipState,
+    else_states map[string]OwnershipState) {
+    all_vars := make(map[string]bool)
+    for v := range then_states {
+        all_vars[v] = true
     }
-    for v := range elseStates {
-        allVars[v] = true
+    for v := range else_states {
+        all_vars[v] = true
     }
-    for v := range allVars {
-        thenState, thenOk := thenStates[v]
-        elseState, elseOk := elseStates[v]
-        if !thenOk || !elseOk {
+    for v := range all_vars {
+        thenState, then_ok := then_states[v]
+        elseState, else_ok := else_states[v]
+        if !then_ok || !else_ok {
             mc.ctx.set_state_at(pc, v, STATE_MAYBE_MOVED)
         } else if thenState == elseState {
             mc.ctx.set_state_at(pc, v, thenState)
@@ -125,29 +125,29 @@ func (move_checker* mc) merge_branch_states(int pc,
 }
 
 func (move_checker* mc) check_use(int pc, expr interface{}, string useKind) {
-    exprStr := expr.(interface{}).string()
-    state := mc.ctx.get_state_at(pc, exprStr)
+    expr_str := expr.(interface{}).string()
+    state := mc.ctx.get_state_at(pc, expr_str)
     switch useKind {
     case "read":
         if state == STATE_MOVED {
-            mc.ctx.add_error(errorf("use-after-move: reading %s at PC %d", exprStr, pc))
+            mc.ctx.add_error(errorf("use-after-move: reading %s at PC %d", expr_str, pc))
         } else if state == STATE_DROPPED {
-            mc.ctx.add_error(errorf("use-after-drop: reading %s at PC %d", exprStr, pc))
+            mc.ctx.add_error(errorf("use-after-drop: reading %s at PC %d", expr_str, pc))
         } else if state == STATE_UNDEFINED {
-            mc.ctx.add_error(errorf("use-before-init: reading %s at PC %d", exprStr, pc))
+            mc.ctx.add_error(errorf("use-before-init: reading %s at PC %d", expr_str, pc))
         }
     case "move":
         if state != STATE_OWNED {
             mc.ctx.add_error(errorf("cannot move %s from %s state at PC %d", 
-                exprStr, state, pc))
+                expr_str, state, pc))
         }
     }
 }
 
-func (move_checker* mc) has_borrow(string varName) bool {
+func (move_checker* mc) has_borrow(string var_name) bool {
     if len(mc.ctx.borrow_stack) > 0 {
         borrows := mc.ctx.borrow_stack[len(mc.ctx.borrow_stack)-1]
-        _, exists := borrows[varName]
+        _, exists := borrows[var_name]
         return exists
     }
     return false
