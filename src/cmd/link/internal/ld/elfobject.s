@@ -113,7 +113,7 @@ func new_elf_object(machine i16) elf_object {
 	obj
 }
 
-func (elf_object* eo) add_section(name string, sec_type i32, flags i64, data u8[]) i32 {
+func (elf_object* eo) add_section(string name, sec_type i32, flags i64, data u8[]) i32 {
 	idx := i32(len(eo.sections))
 
 	shdr := section_header{
@@ -143,7 +143,7 @@ func (elf_object* eo) add_symbol(sym symbol_entry) i32 {
 	idx
 }
 
-func (elf_object* eo) add_string(s string) i32 {
+func (elf_object* eo) add_string(string s) i32 {
 
 	idx := i32(len(eo.string_table))
 	eo.string_table[idx] = s

@@ -29,7 +29,7 @@ func (lnk* linker) add_library( lib string) {
     lnk.libraries = append(lnk.libraries, lib)
 }
 
-func (lnk* linker) assemble_file( input string, output string) int {
+func (lnk* linker) assemble_file( input string, string output) int {
     0
 }
 

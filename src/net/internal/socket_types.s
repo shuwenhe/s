@@ -172,7 +172,7 @@ func (socket_error* e) error() string {
     e.syscall_name + ": " + e.message
 }
 
-func new_socket_error( errno int, syscall_name string) *socket_error {
+func new_socket_error( errno int, string syscall_name) *socket_error {
     var msg string
     case errno {
     econnrefused → msg = "connection refused"

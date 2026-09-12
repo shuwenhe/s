@@ -33,7 +33,7 @@ func (h lsp_handler) on_did_close(params did_close_text_document_params) {
     h.doc_manager.close_document(params.text_document.uri)
 }
 
-func (h lsp_handler) publish_diagnostics(uri string) diagnostic[] {
+func (h lsp_handler) publish_diagnostics(string uri) diagnostic[] {
     diags := diagnostic[]()
     switch h.doc_manager.get_errors(uri) {
         option::some(errors) : {
@@ -53,14 +53,14 @@ func (h lsp_handler) publish_diagnostics(uri string) diagnostic[] {
     diags
 }
 
-func (h lsp_handler) get_document_symbols(uri string) document_symbol[] {
+func (h lsp_handler) get_document_symbols(string uri) document_symbol[] {
     switch h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : symbols,
         option::none() : document_symbol[]()
     }
 }
 
-func (h lsp_handler) get_completions(uri string, pos position) completion_list {
+func (h lsp_handler) get_completions(string uri, pos position) completion_list {
     completions := completion_item[]()
     completions.append(get_keyword_completions())
     switch h.doc_manager.get_document_symbols(uri) {
@@ -99,7 +99,7 @@ func get_keyword_completions() completion_item[] {
     completions
 }
 
-func (h lsp_handler) get_hover(uri string, pos position) option[hover] {
+func (h lsp_handler) get_hover(string uri, pos position) option[hover] {
     switch h.doc_manager.get_token_at_position(uri, pos) {
         option::some(token) : {
             switch h.find_symbol_definition(uri, token) {
@@ -123,14 +123,14 @@ func (h lsp_handler) get_hover(uri string, pos position) option[hover] {
     }
 }
 
-func (h lsp_handler) find_symbol_definition(uri string, name string) option[document_symbol] {
+func (h lsp_handler) find_symbol_definition(string uri, string name) option[document_symbol] {
     switch h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : find_symbol_in_list(symbols, name),
         option::none() : option::none()
     }
 }
 
-func find_symbol_in_list(symbols document_symbol[], name string) option[document_symbol] {
+func find_symbol_in_list(symbols document_symbol[], string name) option[document_symbol] {
     i := 0
     for i < len(symbols) {
         if symbols[i].name == name {
@@ -141,7 +141,7 @@ func find_symbol_in_list(symbols document_symbol[], name string) option[document
     option::none()
 }
 
-func apply_content_changes(text string, changes text_document_content_change_event[]) string {
+func apply_content_changes(string text, changes text_document_content_change_event[]) string {
     result := text
     i := 0
     for i < len(changes) {
@@ -164,7 +164,7 @@ func apply_content_changes(text string, changes text_document_content_change_eve
     result
 }
 
-func position_to_offset(lines string[], pos position) int {
+func position_to_offset(string lines[], pos position) int {
     offset := 0
     i := 0
     for i < pos.line && i < len(lines) {

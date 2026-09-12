@@ -42,7 +42,7 @@ func race_detector_init() error {
 	nil
 }
 
-func race_record_access(addr u64, is_write bool) {
+func race_record_access(addr u64, bool is_write) {
 	if !global_race_detector.enabled {
 		return
 	}
@@ -212,7 +212,7 @@ func tracer_init() error {
 	nil
 }
 
-func tracer_event(event_type string, g_id u64, duration i64, extra string) {
+func tracer_event(string event_type, g_id u64, duration i64, string extra) {
 	if !global_tracer.enabled {
 		return
 	}
@@ -280,7 +280,7 @@ func fmt_int64(v i64) string {
 	return ""
 }
 
-func select(cond bool, true_val i32, false_val i32) i32 {
+func select(bool cond, true_val i32, false_val i32) i32 {
 	if cond {
 		return true_val
 	}

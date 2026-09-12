@@ -20,7 +20,7 @@ struct jsonrpc_notification {
     option[map[string, string]] params
 }
 
-func parse_jsonrpc_message(raw string) (jsonrpc_request, string) {
+func parse_jsonrpc_message(string raw) (jsonrpc_request, string) {
     switch extract_json_string(raw, "method") {
         option::some(method) : {
             id_str := extract_json_string(raw, "id")
@@ -45,16 +45,16 @@ func parse_jsonrpc_message(raw string) (jsonrpc_request, string) {
     }
 }
 
-func create_response(id int, result string) string {
+func create_response(int id, string result) string {
     "{\"jsonrpc\":\"2.0\",\"id\":" + std::to_string(id) + ",\"result\":" + result + "}"
 }
 
-func create_error_response(id int, code int, message string) string {
+func create_error_response(int id, int code, string message) string {
     "{\"jsonrpc\":\"2.0\",\"id\":" + std::to_string(id) +
     ",\"error\":{\"code\":" + std::to_string(code) + ",\"message\":\"" + escape_json_string(message) + "\"}}"
 }
 
-func create_notification(method string, params string) string {
+func create_notification(string method, string params) string {
     "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params + "}"
 }
 
@@ -155,7 +155,7 @@ func serialize_severity(severity option[int]) string {
     }
 }
 
-func extract_json_string(json string, key string) option[string] {
+func extract_json_string(string json, string key) option[string] {
     search_key := "\"" + key + "\":"
     switch std::find_substring(json, search_key) {
         option::some(pos) : {
@@ -193,7 +193,7 @@ func extract_json_string(json string, key string) option[string] {
     }
 }
 
-func escape_json_string(s string) string {
+func escape_json_string(string s) string {
     var result = ""
     var i = 0
     for i < len(s) {

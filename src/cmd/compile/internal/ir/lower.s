@@ -591,7 +591,7 @@ func lower_function_to_mir(function_decl fd, const_rewrite_entry[] const_entries
         empty_blocks := mir_basic_block[]()
         empty_blocks = append(empty_blocks, make_block(0, "entry", string[](), "return", mir_control_edge[]()))
         return mir_graph {
-            function_name: fd.sig.name, blocks empty_blocks, locals mir_local_slot[](), trace string[](), entry 0, exit 0,
+            function_name: fd.sig.name, blocks empty_blocks, locals mir_local_slot[](), string trace[](), entry 0, exit 0,
             borrow_ok: true, borrow_errors: 0, borrow_message: "",
         }
     }

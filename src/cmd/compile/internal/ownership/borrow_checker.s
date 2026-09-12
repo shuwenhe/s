@@ -15,7 +15,7 @@ func (BorrowChecker* bc) CheckBorrowSemantics(stmts interface{}[]) {
     }
 }
 
-func (BorrowChecker* bc) checkStatement(pc int, stmt interface{}) {
+func (BorrowChecker* bc) checkStatement(int pc, stmt interface{}) {
     switch s := stmt.(type) {
 case BorrowStmt*:
         bc.checkBorrowCreation(pc, s)
@@ -28,7 +28,7 @@ case MoveStmt*:
     }
 }
 
-func (BorrowChecker* bc) checkBorrowCreation(pc int, borrow* BorrowStmt) {
+func (BorrowChecker* bc) checkBorrowCreation(int pc, borrow* BorrowStmt) {
     varName := borrow.Source
     isMutable := borrow.IsMutable
     sourceState := bc.ctx.GetStateAt(pc, varName)
@@ -80,7 +80,7 @@ func (BorrowChecker* bc) checkBorrowCreation(pc int, borrow* BorrowStmt) {
     })
 }
 
-func (BorrowChecker* bc) checkBorrowEnd(pc int, borrowEnd* BorrowEndStmt) {
+func (BorrowChecker* bc) checkBorrowEnd(int pc, borrowEnd* BorrowEndStmt) {
     varName := borrowEnd.Source
     if !bc.hasBorrows(varName) {
         bc.ctx.AddError(errorf("borrow end: no active borrow of %s at PC %d",
@@ -91,7 +91,7 @@ func (BorrowChecker* bc) checkBorrowEnd(pc int, borrowEnd* BorrowEndStmt) {
     bc.ctx.SetStateAt(pc, varName, STATE_OWNED)
 }
 
-func (BorrowChecker* bc) checkUseWithBorrows(pc int, use* UseStmt) {
+func (BorrowChecker* bc) checkUseWithBorrows(int pc, use* UseStmt) {
     varName := use.Variable
     state := bc.ctx.GetStateAt(pc, varName)
     if state == STATE_BORROWED_MUT {
@@ -109,7 +109,7 @@ func (BorrowChecker* bc) checkUseWithBorrows(pc int, use* UseStmt) {
     }
 }
 
-func (BorrowChecker* bc) checkMoveWithBorrows(pc int, move* MoveStmt) {
+func (BorrowChecker* bc) checkMoveWithBorrows(int pc, move* MoveStmt) {
     varName := move.Variable
     if bc.hasBorrows(varName) {
         borrows := bc.getBorrows(varName)
@@ -119,7 +119,7 @@ func (BorrowChecker* bc) checkMoveWithBorrows(pc int, move* MoveStmt) {
     }
 }
 
-func (BorrowChecker* bc) hasBorrows(varName string) bool {
+func (BorrowChecker* bc) hasBorrows(string varName) bool {
     if len(bc.ctx.BorrowStack) > 0 {
         borrows := bc.ctx.BorrowStack[len(bc.ctx.BorrowStack)-1]
         _, exists := borrows[varName]
@@ -128,7 +128,7 @@ func (BorrowChecker* bc) hasBorrows(varName string) bool {
     return false
 }
 
-func (BorrowChecker* bc) getBorrows(varName string) []*BorrowInfo {
+func (BorrowChecker* bc) getBorrows(string varName) []*BorrowInfo {
     var result []*BorrowInfo
     if len(bc.ctx.BorrowStack) > 0 {
         borrows := bc.ctx.BorrowStack[len(bc.ctx.BorrowStack)-1]
@@ -139,14 +139,14 @@ func (BorrowChecker* bc) getBorrows(varName string) []*BorrowInfo {
     return result
 }
 
-func (BorrowChecker* bc) recordBorrow(varName string, borrow* BorrowInfo) {
+func (BorrowChecker* bc) recordBorrow(string varName, borrow* BorrowInfo) {
     if len(bc.ctx.BorrowStack) > 0 {
         borrows := bc.ctx.BorrowStack[len(bc.ctx.BorrowStack)-1]
         borrows[varName] = borrow
     }
 }
 
-func (BorrowChecker* bc) removeBorrow(varName string) {
+func (BorrowChecker* bc) removeBorrow(string varName) {
     if len(bc.ctx.BorrowStack) > 0 {
         borrows := bc.ctx.BorrowStack[len(bc.ctx.BorrowStack)-1]
         delete(borrows, varName)

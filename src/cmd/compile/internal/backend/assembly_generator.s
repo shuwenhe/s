@@ -39,13 +39,13 @@ func (assembly_generator* ag) emit_label( label string) {
     ag.buffer = ag.buffer + label + ":\n"
 }
 
-func (assembly_generator* ag) emit_data( name string, value string) {
+func (assembly_generator* ag) emit_data( name string, string value) {
     ag.emit_section("data")
     ag.buffer = ag.buffer + name + ":\n"
     ag.buffer = ag.buffer + "\t.quad\t" + value + "\n"
 }
 
-func (assembly_generator* ag) emit_string_literal( label string, value string) {
+func (assembly_generator* ag) emit_string_literal( label string, string value) {
     ag.emit_section("rodata")
     ag.buffer = ag.buffer + label + ":\n"
     ag.buffer = ag.buffer + "\t.string\t\"" + value + "\"\n"

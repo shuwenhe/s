@@ -68,7 +68,7 @@ func (udp_conn* c) write_to_udp(buf: byte[], ud* addrp_addr) (int, error) {
     c.raw_socket.send_to(buf, addr.ip, addr.port)
 }
 
-func dial_udp( address string, port int, timeout_ms int) (*udp_conn, error) {
+func dial_udp( address string, int port, int timeout_ms) (*udp_conn, error) {
     sock, err := new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
         return nil, err
@@ -91,7 +91,7 @@ func dial_udp( address string, port int, timeout_ms int) (*udp_conn, error) {
     }, nil
 }
 
-func listen_udp( address string, port int) (*udp_listener, error) {
+func listen_udp( address string, int port) (*udp_listener, error) {
     sock, err := new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
         return nil, err
