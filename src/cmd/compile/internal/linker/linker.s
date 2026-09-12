@@ -39,7 +39,7 @@ func linker_context_new(string output_file) linker_context {
     ctx
 }
 
-func linker_add_object_file(linker_context ctx*, string filename) int {
+func linker_add_object_file(linker_context* ctx, string filename) int {
     obj := object_file {
         filename: filename,
         header: elf64_header_new(),
@@ -51,7 +51,7 @@ func linker_add_object_file(linker_context ctx*, string filename) int {
     0
 }
 
-func linker_resolve_symbols(linker_context ctx*) int {
+func linker_resolve_symbols(linker_context* ctx) int {
     symbol_map := make_string_int_map()
 
     for i := 0; i < ctx.object_files.len(); i = i + 1 {
@@ -75,7 +75,7 @@ func linker_resolve_symbols(linker_context ctx*) int {
     0
 }
 
-func linker_apply_relocations(linker_context ctx*) int {
+func linker_apply_relocations(linker_context* ctx) int {
     for i := 0; i < ctx.object_files.len(); i = i + 1 {
         obj := ctx.object_files[i]
 
@@ -103,7 +103,7 @@ func linker_apply_relocations(linker_context ctx*) int {
     0
 }
 
-func linker_allocate_sections(linker_context ctx*) int {
+func linker_allocate_sections(linker_context* ctx) int {
     text_offset := 0x401000
     data_offset := 0x402000
 
@@ -122,7 +122,7 @@ func linker_allocate_sections(linker_context ctx*) int {
     0
 }
 
-func linker_write_executable(linker_context ctx*) link_result {
+func linker_write_executable(linker_context* ctx) link_result {
     result := link_result {
         success: 1,
         error_message: "",

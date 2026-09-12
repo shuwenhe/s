@@ -111,7 +111,7 @@ func (optimizer* ssa_optimizer) register_algebraic_simplification_rules() int {
     engine.rule_count - starting_id
 }
 
-func (optimizer* ssa_optimizer) optimize_value(v ssa_value*) ssa_value* {
+func (optimizer* ssa_optimizer) optimize_value(v* ssa_value) ssa_value* {
     if v == 0 {
         return v
     }

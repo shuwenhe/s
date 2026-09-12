@@ -78,17 +78,17 @@ func new_reloc_processor() reloc_processor {
 	}
 }
 
-func (rp reloc_processor*) add_relocation(r relocation) {
+func (rp* reloc_processor) add_relocation(r relocation) {
 	rp.Relocs = append(rp.Relocs, r)
 }
 
-func (rp reloc_processor*) add_symbol(sym symbol_entry) i32 {
+func (rp* reloc_processor) add_symbol(sym symbol_entry) i32 {
 	idx := i32(len(rp.SymbolTable))
 	rp.SymbolTable = append(rp.SymbolTable, sym)
 	idx
 }
 
-func (rp reloc_processor*) allocate_got_entry(symIndex i32, relocType reloc_type) i64 {
+func (rp* reloc_processor) allocate_got_entry(symIndex i32, relocType reloc_type) i64 {
 	offset := rp.GOTOffset
 	rp.GOTOffset += 8 
 
@@ -102,7 +102,7 @@ func (rp reloc_processor*) allocate_got_entry(symIndex i32, relocType reloc_type
 	offset
 }
 
-func (rp reloc_processor*) allocate_plt_entry(symIndex i32, gotIndex i64) i64 {
+func (rp* reloc_processor) allocate_plt_entry(symIndex i32, gotIndex i64) i64 {
 
 	plt_size := i64(16)
 	offset := rp.PLTOffset
@@ -111,13 +111,13 @@ func (rp reloc_processor*) allocate_plt_entry(symIndex i32, gotIndex i64) i64 {
 	offset
 }
 
-func (rp reloc_processor*) allocate_tls_block(size i64) i64 {
+func (rp* reloc_processor) allocate_tls_block(size i64) i64 {
 	offset := rp.TLSOffset
 	rp.TLSOffset += size
 	offset
 }
 
-func (rp reloc_processor*) resolve_symbols() {
+func (rp* reloc_processor) resolve_symbols() {
 
 	symbol_map := make(map[string]i32)
 
@@ -140,7 +140,7 @@ func (rp reloc_processor*) resolve_symbols() {
 	}
 }
 
-func (rp reloc_processor*) apply_relocations(targetBuffer u8[]) error {
+func (rp* reloc_processor) apply_relocations(targetBuffer u8[]) error {
 	for _, reloc := range rp.Relocs {
 		if reloc.SymIndex < 0 || reloc.SymIndex >= i32(len(rp.SymbolTable)) {
 			continue
@@ -180,7 +180,7 @@ func (rp reloc_processor*) apply_relocations(targetBuffer u8[]) error {
 	nil
 }
 
-func (rp reloc_processor*) validate_relocations() error {
+func (rp* reloc_processor) validate_relocations() error {
 	for i, reloc := range rp.Relocs {
 
 		if reloc.SymIndex < 0 || reloc.SymIndex >= i32(len(rp.SymbolTable)) {
@@ -195,7 +195,7 @@ func (rp reloc_processor*) validate_relocations() error {
 	nil
 }
 
-func (rp reloc_processor*) generate_dynamic_symtab() symbol_entry[] {
+func (rp* reloc_processor) generate_dynamic_symtab() symbol_entry[] {
 	dyn_syms := make(symbol_entry[], 0)
 
 	for _, sym := range rp.SymbolTable {
@@ -208,11 +208,11 @@ func (rp reloc_processor*) generate_dynamic_symtab() symbol_entry[] {
 	dyn_syms
 }
 
-func (rp reloc_processor*) get_relocation_table_size() i64 {
+func (rp* reloc_processor) get_relocation_table_size() i64 {
 	i64(len(rp.Relocs)) * 24 
 }
 
-func (rp reloc_processor*) generate_relocation_data() u8[] {
+func (rp* reloc_processor) generate_relocation_data() u8[] {
 	data := make(u8[], 0)
 
 	for _, reloc := range rp.Relocs {

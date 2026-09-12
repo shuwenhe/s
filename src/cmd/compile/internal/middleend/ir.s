@@ -166,19 +166,19 @@ func ir_basicblock_new(int block_id, string label) ir_basicblock {
     }
 }
 
-func ir_basicblock_add_instr(ir_basicblock block*, ir_instruction instr) {
+func ir_basicblock_add_instr(ir_basicblock* block, ir_instruction instr) {
     block.instructions = append(block.instructions, instr)
 }
 
-func ir_basicblock_set_terminator(ir_basicblock block*, ir_instruction instr) {
+func ir_basicblock_set_terminator(ir_basicblock* block, ir_instruction instr) {
     block.terminator = instr
 }
 
-func ir_basicblock_add_predecessor(ir_basicblock block*, int pred_id) {
+func ir_basicblock_add_predecessor(ir_basicblock* block, int pred_id) {
     block.predecessors = append(block.predecessors, pred_id)
 }
 
-func ir_basicblock_add_successor(ir_basicblock block*, int succ_id) {
+func ir_basicblock_add_successor(ir_basicblock* block, int succ_id) {
     block.successors = append(block.successors, succ_id)
 }
 
@@ -188,15 +188,15 @@ func ir_function_new(string name, string return_type) ir_function {
     }
 }
 
-func ir_function_add_param(ir_function func*, ir_value param) {
+func ir_function_add_param(ir_function* func, ir_value param) {
     func.parameters = append(func.parameters, param)
 }
 
-func ir_function_add_block(ir_function func*, ir_basicblock block) {
+func ir_function_add_block(ir_function* func, ir_basicblock block) {
     func.basic_blocks = append(func.basic_blocks, block)
 }
 
-func ir_function_gen_value_id(ir_function func*) int {
+func ir_function_gen_value_id(ir_function* func) int {
     func.value_counter = func.value_counter + 1
     func.value_counter
 }
@@ -205,10 +205,10 @@ func ir_module_new() ir_module {
     ir_module {}
 }
 
-func ir_module_add_function(ir_module module*, ir_function func) {
+func ir_module_add_function(ir_module* module, ir_function func) {
     module.functions = append(module.functions, func)
 }
 
-func ir_module_add_global(ir_module module*, ir_value global) {
+func ir_module_add_global(ir_module* module, ir_value global) {
     module.global_vars = append(module.global_vars, global)
 }

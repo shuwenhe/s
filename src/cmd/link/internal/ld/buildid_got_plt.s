@@ -27,7 +27,7 @@ func new_build_id_manager(t build_id_type) build_id_manager {
 	}
 }
 
-func (bim build_id_manager*) generate_build_id(data u8[]) {
+func (bim* build_id_manager) generate_build_id(data u8[]) {
 
 	hash := sha256.sum256(data)
 	bim.id = make(u8[], len(hash))
@@ -36,7 +36,7 @@ func (bim build_id_manager*) generate_build_id(data u8[]) {
 	}
 }
 
-func (bim build_id_manager*) get_build_id_string() string {
+func (bim* build_id_manager) get_build_id_string() string {
 	s := ""
 	for _, b := range bim.id {
 		s = fmt.sprintf("%s%02x", s, b)
@@ -44,7 +44,7 @@ func (bim build_id_manager*) get_build_id_string() string {
 	s
 }
 
-func (bim build_id_manager*) generate_note_section() u8[] {
+func (bim* build_id_manager) generate_note_section() u8[] {
 	data := make(u8[], 0)
 
 	name := "GNU"
@@ -99,7 +99,7 @@ func new_got_manager() got_manager {
 	}
 }
 
-func (gm got_manager*) add_entry(sym_idx i32, reloc_type reloc_type) i64 {
+func (gm* got_manager) add_entry(sym_idx i32, reloc_type reloc_type) i64 {
 	entry := got_entry{
 		symbol_index: sym_idx,
 		reloc_type: reloc_type,
@@ -115,7 +115,7 @@ func (gm got_manager*) add_entry(sym_idx i32, reloc_type reloc_type) i64 {
 	idx
 }
 
-func (gm got_manager*) lookup_or_create(sym_idx i32, reloc_type reloc_type) i64 {
+func (gm* got_manager) lookup_or_create(sym_idx i32, reloc_type reloc_type) i64 {
 
 	for _, entry := range gm.entries {
 		if entry.symbol_index == sym_idx && entry.reloc_type == reloc_type {
@@ -126,7 +126,7 @@ func (gm got_manager*) lookup_or_create(sym_idx i32, reloc_type reloc_type) i64 
 	gm.add_entry(sym_idx, reloc_type)
 }
 
-func (gm got_manager*) resolve_entry(index i64, value i64) {
+func (gm* got_manager) resolve_entry(index i64, value i64) {
 	idx := index / 8
 	if idx >= 0 && idx < i64(len(gm.entries)) {
 		gm.entries[idx].value = value
@@ -134,7 +134,7 @@ func (gm got_manager*) resolve_entry(index i64, value i64) {
 	}
 }
 
-func (gm got_manager*) generate_got_data() u8[] {
+func (gm* got_manager) generate_got_data() u8[] {
 	data := make(u8[], gm.offset)
 
 	for i, entry := range gm.entries {
@@ -164,7 +164,7 @@ func new_plt_manager() plt_manager {
 	}
 }
 
-func (pm plt_manager*) add_entry(sym_idx i32, got_addr i64) i64 {
+func (pm* plt_manager) add_entry(sym_idx i32, got_addr i64) i64 {
 
 	plt_size := i64(16)
 
@@ -182,7 +182,7 @@ func (pm plt_manager*) add_entry(sym_idx i32, got_addr i64) i64 {
 	idx
 }
 
-func (pm plt_manager*) generate_plt_code() u8[] {
+func (pm* plt_manager) generate_plt_code() u8[] {
 	data := make(u8[], pm.offset)
 
 	for i, entry := range pm.entries {
@@ -223,7 +223,7 @@ func new_tls_manager() tls_manager {
 	}
 }
 
-func (tm tls_manager*) add_variable(string symbol, size i64, alignment i64) i64 {
+func (tm* tls_manager) add_variable(string symbol, size i64, alignment i64) i64 {
 
 	if tm.offset % alignment != 0 {
 		tm.offset += alignment - (tm.offset % alignment)
@@ -243,11 +243,11 @@ func (tm tls_manager*) add_variable(string symbol, size i64, alignment i64) i64 
 	idx
 }
 
-func (tm tls_manager*) get_tls_size() i64 {
+func (tm* tls_manager) get_tls_size() i64 {
 	tm.offset
 }
 
-func (tm tls_manager*) generate_tls_data() u8[] {
+func (tm* tls_manager) generate_tls_data() u8[] {
 	data := make(u8[], tm.offset)
 
 	for i := i64(0); i < tm.offset; i += 1 {
@@ -273,7 +273,7 @@ func new_dynamic_reloc_manager() dynamic_reloc_manager {
 	}
 }
 
-func (drm dynamic_reloc_manager*) add_relocation(offset i64, rel_type i32, sym_idx i32, addend i64) {
+func (drm* dynamic_reloc_manager) add_relocation(offset i64, rel_type i32, sym_idx i32, addend i64) {
 	reloc := dynamic_relocation{
 		offset: offset,
 		type: rel_type,
@@ -284,7 +284,7 @@ func (drm dynamic_reloc_manager*) add_relocation(offset i64, rel_type i32, sym_i
 	drm.relocs = append(drm.relocs, reloc)
 }
 
-func (drm dynamic_reloc_manager*) generate_rela_dyn() u8[] {
+func (drm* dynamic_reloc_manager) generate_rela_dyn() u8[] {
 	data := make(u8[], 0)
 
 	for _, reloc := range drm.relocs {
