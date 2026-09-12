@@ -129,9 +129,9 @@ func (mo macho_object*) add_segment(string name, vmAddr i64, vmSize i64) {
 		Sections: make(macho_section[], 0),
 	}
 
-	nameBytes := u8[](name)
-	for i := i32(0); i < 16 && i < i32(len(nameBytes)); i += 1 {
-		seg.Name[i] = nameBytes[i]
+	name_bytes := u8[](name)
+	for i := i32(0); i < 16 && i < i32(len(name_bytes)); i += 1 {
+		seg.Name[i] = name_bytes[i]
 	}
 
 	mo.Segments = append(mo.Segments, seg)
@@ -148,25 +148,25 @@ func read_macho_object(string filename) (macho_object, error) {
 	}
 	defer file.close()
 
-	hdrBuf := make(u8[], 32)
-	_, err = file.read(hdrBuf)
+	hdr_buf := make(u8[], 32)
+	_, err = file.read(hdr_buf)
 	if err != nil {
 		macho_object{}, err
 	}
 
-	magic := binary.LittleEndian.uint32(hdrBuf[0:4])
+	magic := binary.LittleEndian.uint32(hdr_buf[0:4])
 	if magic != MACHO_MAGIC_64 {
 		macho_object{}, "invalid Mach-O magic"
 	}
 
-	obj := new_macho_object(macho_machine(binary.LittleEndian.uint32(hdrBuf[4:8])), 
-		macho_file_type(binary.LittleEndian.uint32(hdrBuf[12:16])))
+	obj := new_macho_object(macho_machine(binary.LittleEndian.uint32(hdr_buf[4:8])), 
+		macho_file_type(binary.LittleEndian.uint32(hdr_buf[12:16])))
 
-	obj.Header.CpuType = i32(binary.LittleEndian.uint32(hdrBuf[4:8]))
-	obj.Header.CpuSubtype = i32(binary.LittleEndian.uint32(hdrBuf[8:12]))
-	obj.Header.NumCommands = binary.LittleEndian.uint32(hdrBuf[16:20])
-	obj.Header.CommandsSize = binary.LittleEndian.uint32(hdrBuf[20:24])
-	obj.Header.Flags = binary.LittleEndian.uint32(hdrBuf[24:28])
+	obj.Header.CpuType = i32(binary.LittleEndian.uint32(hdr_buf[4:8]))
+	obj.Header.CpuSubtype = i32(binary.LittleEndian.uint32(hdr_buf[8:12]))
+	obj.Header.NumCommands = binary.LittleEndian.uint32(hdr_buf[16:20])
+	obj.Header.CommandsSize = binary.LittleEndian.uint32(hdr_buf[20:24])
+	obj.Header.Flags = binary.LittleEndian.uint32(hdr_buf[24:28])
 
 	obj, nil
 }
@@ -178,28 +178,28 @@ func (macho_object* mo) write_to_file(string filename) error {
 	}
 	defer file.close()
 
-	hdrBuf := make(u8[], 32)
+	hdr_buf := make(u8[], 32)
 
-	binary.LittleEndian.put_uint32(hdrBuf[0:4], mo.Header.Magic)
-	binary.LittleEndian.put_uint32(hdrBuf[4:8], u32(mo.Header.CpuType))
-	binary.LittleEndian.put_uint32(hdrBuf[8:12], u32(mo.Header.CpuSubtype))
-	binary.LittleEndian.put_uint32(hdrBuf[12:16], mo.Header.FileType)
-	binary.LittleEndian.put_uint32(hdrBuf[16:20], mo.Header.NumCommands)
-	binary.LittleEndian.put_uint32(hdrBuf[20:24], mo.Header.CommandsSize)
-	binary.LittleEndian.put_uint32(hdrBuf[24:28], mo.Header.Flags)
-	binary.LittleEndian.put_uint32(hdrBuf[28:32], mo.Header.Reserved)
+	binary.LittleEndian.put_uint32(hdr_buf[0:4], mo.Header.Magic)
+	binary.LittleEndian.put_uint32(hdr_buf[4:8], u32(mo.Header.CpuType))
+	binary.LittleEndian.put_uint32(hdr_buf[8:12], u32(mo.Header.CpuSubtype))
+	binary.LittleEndian.put_uint32(hdr_buf[12:16], mo.Header.FileType)
+	binary.LittleEndian.put_uint32(hdr_buf[16:20], mo.Header.NumCommands)
+	binary.LittleEndian.put_uint32(hdr_buf[20:24], mo.Header.CommandsSize)
+	binary.LittleEndian.put_uint32(hdr_buf[24:28], mo.Header.Flags)
+	binary.LittleEndian.put_uint32(hdr_buf[28:32], mo.Header.Reserved)
 
-	_, err = file.write(hdrBuf)
+	_, err = file.write(hdr_buf)
 	if err != nil {
 		err
 	}
 
 	for _, cmd := range mo.LoadCommands {
-		cmdBuf := make(u8[], 8)
-		binary.LittleEndian.put_uint32(cmdBuf[0:4], cmd.Cmd)
-		binary.LittleEndian.put_uint32(cmdBuf[4:8], cmd.Size)
+		cmd_buf := make(u8[], 8)
+		binary.LittleEndian.put_uint32(cmd_buf[0:4], cmd.Cmd)
+		binary.LittleEndian.put_uint32(cmd_buf[4:8], cmd.Size)
 
-		_, err = file.write(cmdBuf)
+		_, err = file.write(cmd_buf)
 		if err != nil {
 			err
 		}
