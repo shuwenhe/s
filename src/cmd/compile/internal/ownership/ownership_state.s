@@ -10,6 +10,7 @@ const (
     STATE_DROPPED
     STATE_MAYBE_MOVED
 )
+
 func (s OwnershipState) String() string {
     switch s {
     case STATE_UNDEFINED:
@@ -60,6 +61,7 @@ type OwnershipContext struct {
     BorrowStack []map[string]*BorrowInfo
     Errors string[]
 }
+
 func NewOwnershipContext() OwnershipContext* {
     return OwnershipContext*{
         StateAtPC:   make(map[int]*OwnershipInfo),
@@ -68,6 +70,7 @@ func NewOwnershipContext() OwnershipContext* {
         Errors:      make(string[], 0),
     }
 }
+
 func (OwnershipContext* ctx) GetStateAt(pc int, varName string) OwnershipState {
     info, ok := ctx.StateAtPC[pc]
     if !ok {
@@ -75,6 +78,7 @@ func (OwnershipContext* ctx) GetStateAt(pc int, varName string) OwnershipState {
     }
     return info.State
 }
+
 func (OwnershipContext* ctx) SetStateAt(pc int, varName string, state OwnershipState) {
     if _, ok := ctx.StateAtPC[pc]; !ok {
         ctx.StateAtPC[pc] = OwnershipInfo*{
@@ -86,12 +90,15 @@ func (OwnershipContext* ctx) SetStateAt(pc int, varName string, state OwnershipS
         ctx.StateAtPC[pc].State = state
     }
 }
+
 func (OwnershipContext* ctx) AddError(msg string) {
     ctx.Errors = append(ctx.Errors, msg)
 }
+
 func (OwnershipContext* ctx) HasErrors() bool {
     return len(ctx.Errors) > 0
 }
+
 func (OwnershipContext* ctx) classify_type(typeName string) type_classification* {
     if class, ok := ctx.TypeClasses[typeName]; ok {
         return class
@@ -105,6 +112,7 @@ func (OwnershipContext* ctx) classify_type(typeName string) type_classification*
     ctx.TypeClasses[typeName] = class
     return class
 }
+
 func isPrimitiveType(typeName string) bool {
     switch typeName {
     case "int", "bool", "u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64":

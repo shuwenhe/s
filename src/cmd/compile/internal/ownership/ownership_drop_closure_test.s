@@ -1,4 +1,5 @@
 package compile.internal.ownership
+
 func test_basic_ownership() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
@@ -12,6 +13,7 @@ func test_basic_ownership() bool {
     }
     return true
 }
+
 func test_use_after_move_error() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
@@ -24,6 +26,7 @@ func test_use_after_move_error() bool {
     }
     return true
 }
+
 func test_shared_borrow() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
@@ -47,6 +50,7 @@ func test_shared_borrow() bool {
     }
     return true
 }
+
 func test_mutable_borrow_conflict() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
@@ -71,6 +75,7 @@ func test_mutable_borrow_conflict() bool {
     }
     return true
 }
+
 func test_basic_drop_insertion() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
@@ -93,6 +98,7 @@ func test_basic_drop_insertion() bool {
     }
     return true
 }
+
 func test_drop_lifo_order() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
@@ -116,6 +122,7 @@ func test_drop_lifo_order() bool {
     }
     return true
 }
+
 func test_complete_pipeline_valid() bool {
     ctx := new_ownership_drop_context()
     source_decl := decl_stmt*{ name: "source", type_name: "File" }
@@ -139,6 +146,7 @@ func test_complete_pipeline_valid() bool {
     }
     return true
 }
+
 func test_complete_pipeline_invalid() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
@@ -154,6 +162,7 @@ func test_complete_pipeline_invalid() bool {
     }
     return true
 }
+
 func test_borrow_ends_before_move() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
@@ -172,6 +181,7 @@ func test_borrow_ends_before_move() bool {
     }
     return true
 }
+
 func test_move_while_borrowed_error() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
@@ -189,6 +199,7 @@ func test_move_while_borrowed_error() bool {
     }
     return true
 }
+
 func run_ownership_drop_closure_tests() int {
     tests := string[]{
         "basic_ownership",

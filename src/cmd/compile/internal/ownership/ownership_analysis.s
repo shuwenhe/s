@@ -5,6 +5,7 @@ type OwnershipAnalysis struct {
 borrowChecker BorrowChecker*
 dropElaborator DropElaborator*
 }
+
 func NewOwnershipAnalysis() OwnershipAnalysis* {
     ctx := NewOwnershipContext()
     return OwnershipAnalysis*{
@@ -14,6 +15,7 @@ func NewOwnershipAnalysis() OwnershipAnalysis* {
         dropElaborator: NewDropElaborator(ctx),
     }
 }
+
 func (OwnershipAnalysis* oa) AnalyzeFunction(funcName string, stmts interface{}[]) (interface{}[], bool) {
     oa.moveChecker.CheckMoveSemantics(stmts)
     if oa.ctx.HasErrors() {
@@ -35,18 +37,23 @@ func (OwnershipAnalysis* oa) AnalyzeFunction(funcName string, stmts interface{}[
     }
     return elaborated, true
 }
+
 func (OwnershipAnalysis* oa) GetErrors() string[] {
     return oa.ctx.Errors
 }
+
 func (OwnershipAnalysis* oa) HasErrors() bool {
     return oa.ctx.HasErrors()
 }
+
 func (OwnershipAnalysis* oa) classify_type(typeName string) type_classification* {
     return oa.ctx.classify_type(typeName)
 }
+
 func (OwnershipAnalysis* oa) set_type_classification(typeName string, class* type_classification) {
     oa.ctx.TypeClasses[typeName] = class
 }
+
 func (OwnershipAnalysis* oa) SetVariableType(varName string, typeName string) {
 }
 type AnalysisReport struct {
@@ -61,6 +68,7 @@ type AnalysisReport struct {
     MovesVerified     int
     ElaboratedStmts interface{}[]
 }
+
 func (OwnershipAnalysis* oa) GenerateReport(funcName string, elaborated interface{}) AnalysisReport* {
     report := AnalysisReport*{
         FunctionName: funcName,
@@ -82,6 +90,7 @@ func (OwnershipAnalysis* oa) GenerateReport(funcName string, elaborated interfac
     report.ElaboratedStmts = elaborated
     return report
 }
+
 func contains(s string, substr string) bool {
     for i := 0; i <= len(s)-len(substr); i++ {
         if s[i:i+len(substr)] == substr {
@@ -90,6 +99,7 @@ func contains(s string, substr string) bool {
     }
     return false
 }
+
 func countDropCalls(stmts interface{}[]) int {
     count := 0
     for _, stmt := range stmts {
@@ -107,6 +117,7 @@ type OwnershipHints struct {
     VariableTypes map[string]string
     ParamOwnership map[string]string
 }
+
 func (OwnershipAnalysis* oa) ApplyOwnershipHints(OwnershipHints* hints) {
     if hints == nil {
         return
@@ -115,6 +126,7 @@ func (OwnershipAnalysis* oa) ApplyOwnershipHints(OwnershipHints* hints) {
         oa.ctx.TypeClasses[typeName] = class
     }
 }
+
 func (OwnershipAnalysis* oa) PrintErrors() {
     report := AnalysisReport*{
         FunctionName: "analysis",
