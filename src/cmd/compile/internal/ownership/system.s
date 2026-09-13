@@ -1,7 +1,6 @@
 
 package ownership_system
 
-
 struct resource {
     *int ptr
     int id
@@ -23,10 +22,8 @@ func (r Resource) drop_me() () {
     }
 }
 
-
 func move_ownership(resource Resource) int {
     value := *resource.ptr
-
 
     return value
 }
@@ -40,7 +37,6 @@ func return_ownership() Resource {
 func swap_ownership(r1 Resource, r2 Resource) (Resource, Resource) {
     return r2, r1
 }
-
 
 func borrow_shared(r *Resource) int {
 
@@ -63,7 +59,6 @@ func borrow_multiple_shared(r *Resource) int {
     return first + second + third
 }
 
-
 func demonstrate_scope() int {
     total := 0
 
@@ -73,7 +68,6 @@ func demonstrate_scope() int {
         total = total + *r1.ptr
 
     }
-
 
     {
         r2 := newResource(2)
@@ -89,7 +83,6 @@ func demonstrate_scope() int {
     return total
 }
 
-
 struct lifetime_tracker {
     *int ref
     int createdAt
@@ -100,7 +93,6 @@ func borrow_with_lifetime(r *Resource) *int {
     return r.ptr
 }
 
-
 func demonstrate_lifetime_valid() int {
     r := newResource(99)
     ptr := borrowWithLifetime(&r)
@@ -108,7 +100,6 @@ func demonstrate_lifetime_valid() int {
 
     return value
 }
-
 
 struct boxed_resource {
     *int data
@@ -125,7 +116,6 @@ func consume_boxed(br BoxedResource) int {
 
 }
 
-
 struct move_type {
     *int ptr
 }
@@ -139,7 +129,6 @@ func demonstrate_move_semantics() int {
     m1 := MoveType{ ptr: box(10) }
     m2 := m1
 
-
     value := *m2.ptr
     return value
 }
@@ -149,10 +138,8 @@ func demonstrate_copy_semantics() int {
     c1 := CopyType{ value: 10 }
     c2 := c1
 
-
     return c1.value + c2.value
 }
-
 
 struct drop_flagged_resource {
     *int ptr
@@ -181,7 +168,6 @@ func (r *DropFlaggedResource) drop_it() () {
     }
 }
 
-
 struct raii_resource {
     int id
     *int handle
@@ -208,7 +194,6 @@ func (r RAIIResource) release_resource() () {
     }
 }
 
-
 struct container {
     []*int resources
     int count
@@ -227,7 +212,6 @@ func (c *Container) get_from_container(int index) *int {
     }
     return nil
 }
-
 
 func ownership_with_return(bool condition) Resource {
     r1 := newResource(1)
@@ -254,7 +238,6 @@ func ownership_with_loop(int n) int {
     return total
 }
 
-
 func main() int {
 
     println("=== Ownership Transfer ===")
@@ -262,38 +245,31 @@ func main() int {
     value := moveOwnership(r)
     println("Moved value: ", value)
 
-
     println("\n=== Return Ownership ===")
     r2 := returnOwnership()
     println("Returned value: ", *r2.ptr)
-
 
     println("\n=== Shared Borrow ===")
     r3 := newResource(15)
     sum := borrowMultipleShared(&r3)
     println("Sum of multiple borrows: ", sum)
 
-
     println("\n=== Scope-based Cleanup ===")
     scope_total := demonstrateScope()
     println("Scope cleanup total: ", scope_total)
-
 
     println("\n=== Mutable Borrow ===")
     r4 := newResource(20) borrow_mutable(&r4)
     println("After mutable borrow: ", *r4.ptr)
 
-
     println("\n=== Lifetime Validity ===")
     lt_val := demonstrateLifetimeValid()
     println("Lifetime valid value: ", lt_val)
-
 
     println("\n=== Boxed Resource ===")
     br := createBoxedResource(88)
     box_val := consumeBoxed(br)
     println("Boxed value: ", box_val)
-
 
     println("\n=== Move Semantics ===")
     move_val := demonstrateMoveSemantics()
@@ -303,11 +279,9 @@ func main() int {
     copy_val := demonstrateCopySemantics()
     println("Copy result: ", copy_val)
 
-
     println("\n=== Loop Ownership ===")
     loop_total := ownershipWithLoop(5)
     println("Loop total: ", loop_total)
-
 
     println("\n=== Conditional Ownership ===")
     cr := ownershipWithReturn(true)

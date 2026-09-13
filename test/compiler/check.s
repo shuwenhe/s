@@ -126,7 +126,6 @@ func contains(string text, string needle) bool {
 func char_at(string text, int index) string {
     __host_char_at(text, index)
 }
-
 extern "intrinsic" func __host_char_at(string text, int index) string;
 
 func main() int {

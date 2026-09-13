@@ -289,7 +289,6 @@ func rename_variables(block[] blocks, int block_id, var_version[] var_stack) int
 
     0
 }
-
 const op_phi = 1
 const op_const = 2
 const op_add = 3

@@ -16,7 +16,6 @@ struct lexer {
     column: int
     start_column: int
 }
-
 const token_eof = 0
 const token_error = 1
 

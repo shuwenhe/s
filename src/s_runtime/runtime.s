@@ -20,7 +20,6 @@ struct context {
     string panic_msg
     int exit_code
 }
-
 context rt_context
 
 func rt_init(int heap_size) {

@@ -32,7 +32,6 @@ struct mir_eval_stmt {
     string op
     string[] args
 }
-
 enum mir_statement {
     assign(mir_assign_stmt)
     eval(mir_eval_stmt)

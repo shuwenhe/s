@@ -13,7 +13,6 @@ struct compilation_result {
     string[] errors
     string[] warnings
 }
-
 var compiler_state_global compiler_state
 
 func compiler_init(string version, string target) {

@@ -72,7 +72,6 @@ func create_universal_binary() int {
     ret := system(cmd)
     return ret
 }
-
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
 extern "intrinsic" func system(string cmd) int;
 

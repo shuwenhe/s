@@ -1,6 +1,5 @@
 package test.third_field_partial_move
 
-
 struct Quad {
     box a
     box b
@@ -11,14 +10,11 @@ struct Quad {
 func test_third_field_partial_move() {
     p := Quad{box(1), box(2), box(3), box(4)}
 
-
     x := p.c
-
 
     if *x != 3 {
         println("FAIL: expected p.c == 3")
     }
-
 
     if *p.a != 1 {
         println("FAIL: expected p.a == 1 after p.c move")
@@ -36,13 +32,11 @@ func test_third_field_partial_move() {
 func test_fourth_field_partial_move() {
     q := Quad{box(10), box(20), box(30), box(40)}
 
-
     y := q.d
 
     if *y != 40 {
         println("FAIL: expected q.d == 40")
     }
-
 
     if *q.a != 10 {
         println("FAIL: expected q.a == 10 after q.d move")
@@ -60,7 +54,6 @@ func test_fourth_field_partial_move() {
 func test_multiple_field_partial_moves() {
     r := Quad{box(100), box(200), box(300), box(400)}
 
-
     x := r.c
     y := r.a
 
@@ -70,7 +63,6 @@ func test_multiple_field_partial_moves() {
     if *y != 100 {
         println("FAIL: expected r.a == 100")
     }
-
 
     if *r.b != 200 {
         println("FAIL: expected r.b == 200")

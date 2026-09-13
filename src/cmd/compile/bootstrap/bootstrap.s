@@ -10,7 +10,6 @@ struct bootstrap_chain {
     bootstrap_stage[] stages
     int current_stage
 }
-
 bootstrap_chain bootstrap_chain_global
 
 func bootstrap_init() {

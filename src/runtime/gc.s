@@ -48,7 +48,6 @@ struct gc_stats {
 	u64 heap_size
 	i32 live_objects
 }
-
 var global_heap gc_heap
 var gc_stats_data gc_stats
 var gc_roots u64[]

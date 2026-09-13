@@ -69,7 +69,6 @@ struct type_table {
     generic_type[] generics
     method_info[][] method_sets
 }
-
 var global_type_table type_table
 
 func type_table_new() type_table {

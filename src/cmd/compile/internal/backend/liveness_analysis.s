@@ -24,7 +24,6 @@ struct stack_frame {
     int[] slot_to_var
     int slot_count
 }
-
 const callee_saved_rbx = 0x1
 const callee_saved_r12 = 0x2
 const callee_saved_r13 = 0x4

@@ -1,8 +1,11 @@
 package compile.internal.path
 
 func path_segment_kind_field() int { 0 }
+
 func path_segment_kind_index() int { 1 }
+
 func path_segment_kind_index_var() int { 2 }
+
 func path_segment_kind_deref() int { 3 }
 
 struct path_segment {

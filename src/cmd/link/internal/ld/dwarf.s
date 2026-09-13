@@ -75,7 +75,6 @@ struct dwarf_die {
 	dwarf_die[] children
 	i64 offset
 }
-
 enum dwarf_attribute_value {
 	IntValue(i64)
 	StringValue(string)

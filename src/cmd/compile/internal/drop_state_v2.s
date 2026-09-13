@@ -1,9 +1,13 @@
 package compile.internal.drop_state_v2
 
 func drop_state_kind_live() int { 0 }
+
 func drop_state_kind_moved() int { 1 }
+
 func drop_state_kind_maybe() int { 2 }
+
 func drop_state_kind_partial() int { 3 }
+
 func drop_state_kind_dropped() int { 4 }
 
 struct drop_state {

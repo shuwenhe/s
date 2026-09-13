@@ -350,7 +350,6 @@ func (allocator* register_allocator) verify_coloring() int {
 
     1
 }
-
 const reg_rax = 0
 const reg_rbx = 1
 const reg_rcx = 2
