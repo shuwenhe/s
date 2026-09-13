@@ -61,7 +61,7 @@ struct ownership_context {
     map[int]*ownership_info state_at_pc
     map[string]*type_classification type_classes
     string current_block
-    []map[string]*borrow_info borrow_stack
+    map[string]*borrow_info[] borrow_stack
     string[] errors
 }
 
@@ -69,7 +69,7 @@ func new_ownership_context() ownership_context* {
     return ownership_context*{
         state_at_pc:   make(map[int]*ownership_info),
         type_classes: make(map[string]*type_classification),
-        borrow_stack: []map[string]*borrow_info{make(map[string]*borrow_info)},
+        borrow_stack: make(map[string]*borrow_info[]),
         errors:      make(string[], 0),
     }
 }

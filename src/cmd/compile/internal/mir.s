@@ -8,6 +8,15 @@ import (
     "std.option"
     "std.prelude"
 )
+
+// C.3.1b.2-pre.A1: Canonical projection kind
+// Structured representation of place projection operations
+enum mir_projection_kind {
+    field   // struct/tuple field access (value: field name or index)
+    deref   // pointer dereference (value: unused)
+    index   // array/slice indexing (value: index expression)
+}
+
 struct mir_operand {
     string kind
     string value
@@ -15,9 +24,10 @@ struct mir_operand {
 }
 
 struct mir_place_projection {
-    string kind
-    string value
+    mir_projection_kind kind   // Canonical: enum, not string
+    string value               // Field name or index expression (string for now)
 }
+
 
 struct mir_place {
     string root
@@ -509,12 +519,12 @@ func mir_place_from_expr(expr value) mir_place {
         }
         expr.member(member_expr) : {
             place := mir_place_from_expr(member_expr.target.unwrap())
-            place.projections = append(place.projections, mir_place_projection { kind: "field", value: member_expr.member })
+            place.projections = append(place.projections, mir_place_projection { kind: mir_projection_kind.field, value: member_expr.member })
             return place
         }
         expr.index(index_expr) : {
             place := mir_place_from_expr(index_expr.target.unwrap())
-            place.projections = append(place.projections, mir_place_projection { kind: "index", value: s.dump_expr(index_expr.index.unwrap()) })
+            place.projections = append(place.projections, mir_place_projection { kind: mir_projection_kind.index, value: s.dump_expr(index_expr.index.unwrap()) })
             return place
         }
         _ : { return mir_place { root: "", projections: mir_place_projection[]() } }
@@ -527,8 +537,13 @@ func mir_place_key(mir_place place) string {
     i := 0
     for i < len(place.projections) {
         projection := place.projections[i]
-        if projection.kind == "field" { out = out + "." + projection.value }
-        else if projection.kind == "index" { out = out + "[" + projection.value + "]" }
+        // C.3.1b.2-pre.A1: Canonical projection kind enum dispatch
+        // mir_place_key() is diagnostic/lookup helper, NOT ownership semantic authority
+        switch projection.kind {
+            mir_projection_kind.field : { out = out + "." + projection.value }
+            mir_projection_kind.index : { out = out + "[" + projection.value + "]" }
+            mir_projection_kind.deref : { out = out + ".*" }
+        }
         i = i + 1
     }
     out

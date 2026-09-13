@@ -1,7 +1,7 @@
 package compile.internal.ownership
 
 struct drop_elaborator {
-ctx ownership_context*
+    ownership_context* ctx
 }
 
 func new_drop_elaborator(ownership_context* ctx) drop_elaborator* {
@@ -171,18 +171,18 @@ func (drop_elaborator* de) get_drop_order(string type_name) string[] {
 }
 
 struct block_stmt {
-    statements interface{}[]
+    interface{}[] statements
 }
 
 struct if_stmt {
-    condition  interface{}
-    then_branch interface{}
-    else_branch interface{}
+    interface{} condition
+    interface{} then_branch
+    interface{} else_branch
 }
 
 struct loop_stmt {
-    condition interface{}
-    body      interface{}
+    interface{} condition
+    interface{} body
 }
 
 struct drop_call {
