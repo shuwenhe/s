@@ -1,10 +1,12 @@
 package compile.internal.check
-use compile.internal.semantic.check_text
-use std.fs.read_to_string
+import (
+    "compile.internal.semantic"
+    "std.fs"
+)
 func load_frontend(string path) string {
-    return read_to_string(path).unwrap(
+    return std.fs.read_to_string(path).unwrap(
 }
 
 func check_frontend(string frontend) int {
-    return check_text(frontend
+    return compile.internal.semantic.check_text(frontend
 }

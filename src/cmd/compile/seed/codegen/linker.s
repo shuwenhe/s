@@ -1,6 +1,8 @@
 package seed.codegen
-use std.process.run_command
-use std.string.string
+import (
+    "std.process"
+    "std.string"
+)
 struct compiler_toolchain {
     gcc_path: string
     ld_path: string
@@ -17,7 +19,7 @@ func toolchain_create() compiler_toolchain {
 
 func (compiler_toolchain* tc) assemble( asm_file string, string obj_file) (int, string) {
     cmd := tc.gcc_path + " -c " + asm_file + " -o " + obj_file
-    exit_code, output := run_command(cmd)
+    exit_code, output := std.process.run_command(cmd)
     exit_code, output
 }
 
@@ -27,7 +29,7 @@ func (compiler_toolchain* tc) link_executable(obj_files* string[], string output
         cmd = cmd + obj_files[i] + " "
     }
     cmd = cmd + "-o " + output
-    exit_code, output := run_command(cmd)
+    exit_code, output := std.process.run_command(cmd)
     exit_code, output
 }
 

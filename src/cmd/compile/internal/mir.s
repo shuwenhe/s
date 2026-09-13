@@ -1,20 +1,13 @@
 package compile.internal.mir
-use compile.internal.borrow.borrow_check_events
-use compile.internal.borrow.analyze_function as analyze_borrow_function
-use compile.internal.ownership.analysis.ownership_analysis_input
-use compile.internal.ownership.analysis.analyze_ownership_liveness
-use compile.internal.typesys.is_copy_type
-use compile.internal.typesys.requires_drop
-use s.block_expr
-use s.function_decl
-use s.param
-use s.expr
-use s.stmt
-use s.dump_expr
-use s.dump_stmt
-use std.option.option
-use std.prelude.to_string
-use std.slices
+import (
+    "compile.internal.borrow"
+    "compile.internal.ownership.analysis"
+    "compile.internal.typesys"
+    "s"
+    "std"
+    "std.option"
+    "std.prelude"
+)
 struct mir_operand {
     string kind
     string value
@@ -198,12 +191,12 @@ func mir_point_text(mir_graph graph, mir_point point) string {
         if graph.blocks[i].id == point.block_id {
             label = graph.blocks[i].label
             if point.statement_index == len(graph.blocks[i].statements) {
-                return "BB" + to_string(point.block_id) + "(" + label + "):term"
+                return "BB" + std.prelude.to_string(point.block_id) + "(" + label + "):term"
             }
         }
         i = i + 1
     }
-    "BB" + to_string(point.block_id) + "(" + label + "):stmt" + to_string(point.statement_index)
+    "BB" + std.prelude.to_string(point.block_id) + "(" + label + "):stmt" + std.prelude.to_string(point.statement_index)
 }
 
 func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_ownership_facts {
@@ -295,7 +288,7 @@ func mir_points_string(int bits) string {
     for point < 31 {
         if mir_point_bit_set(bits, bit) {
             if !first { out = out + "," }
-            out = out + "P" + to_string(point)
+            out = out + "P" + std.prelude.to_string(point)
             first = false
         }
         point = point + 1
@@ -308,33 +301,33 @@ func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
     points := build_mir_point_map(graph)
     facts := build_ownership_facts_from_mir(graph, points)
     input := facts.input
-    out := "PointCount = " + to_string(input.point_count)
+    out := "PointCount = " + std.prelude.to_string(input.point_count)
     i := 0
     for i < len(facts.ref_names) {
-        out = out + " | Ref(" + facts.ref_names[i] + ") = R" + to_string(i)
+        out = out + " | Ref(" + facts.ref_names[i] + ") = R" + std.prelude.to_string(i)
         i = i + 1
     }
     i = 0
     for i < input.loan_count {
-        out = out + " | Loan" + to_string(i) + " issued = " + mir_points_string(input.loan_points[i])
+        out = out + " | Loan" + std.prelude.to_string(i) + " issued = " + mir_points_string(input.loan_points[i])
         out = out + " place=" + facts.loan_places[i]
         i = i + 1
     }
     i = 0
     for i < len(facts.ref_names) {
         if input.ref_loans[i] >= 0 {
-            out = out + " | RefLoan(R" + to_string(i) + ") = L" + to_string(input.ref_loans[i])
+            out = out + " | RefLoan(R" + std.prelude.to_string(i) + ") = L" + std.prelude.to_string(input.ref_loans[i])
         }
         i = i + 1
     }
     i = 0
     for i < input.outlives_count {
-        out = out + " | Outlives(R" + to_string(input.outlives_from[i]) + ",R" + to_string(input.outlives_to[i]) + ")"
+        out = out + " | Outlives(R" + std.prelude.to_string(input.outlives_from[i]) + ",R" + std.prelude.to_string(input.outlives_to[i]) + ")"
         i = i + 1
     }
     i = 0
     for i < len(facts.ref_names) {
-        out = out + " | RegionPoint(R" + to_string(i) + ") = " + mir_points_string(input.region_points[i])
+        out = out + " | RegionPoint(R" + std.prelude.to_string(i) + ") = " + mir_points_string(input.region_points[i])
         i = i + 1
     }
     out
@@ -343,15 +336,15 @@ func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
 func dump_ownership_shadow_from_mir(mir_graph graph) string {
     points := build_mir_point_map(graph)
     facts := build_ownership_facts_from_mir(graph, points)
-    analysis := analyze_ownership_liveness(facts.input)
+    analysis := compile.internal.ownership.analysis.analyze_ownership_liveness(facts.input)
     out := "RealMIROwnershipShadow\n"
-    out = out + "RealMIRFacts(point_count=" + to_string(facts.input.point_count) + ", refs=" + to_string(len(facts.ref_names)) + ", loans=" + to_string(facts.input.loan_count) + ", outlives=" + to_string(facts.input.outlives_count) + ")\n"
+    out = out + "RealMIRFacts(point_count=" + std.prelude.to_string(facts.input.point_count) + ", refs=" + std.prelude.to_string(len(facts.ref_names)) + ", loans=" + std.prelude.to_string(facts.input.loan_count) + ", outlives=" + std.prelude.to_string(facts.input.outlives_count) + ")\n"
     i := 0
     for i < facts.input.loan_count {
-        out = out + "LoanLivePoints(L" + to_string(i) + ") = " + mir_points_string(analysis.loan_live_points[i]) + "\n"
+        out = out + "LoanLivePoints(L" + std.prelude.to_string(i) + ") = " + mir_points_string(analysis.loan_live_points[i]) + "\n"
         i = i + 1
     }
-    out = out + "SharedSolverShadow(iterations=" + to_string(analysis.iterations) + ", converged=true)\n"
+    out = out + "SharedSolverShadow(iterations=" + std.prelude.to_string(analysis.iterations) + ", converged=true)\n"
     out
 }
 
@@ -387,7 +380,7 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
     }
     index := 0
     for index < len(block.statements) {
-        stmt_text := join_text(dump_stmt(block.statements[index], indent(1)), " | ")
+        stmt_text := join_text(s.dump_stmt(block.statements[index], indent(1)), " | ")
         args := string[]()
         args = append(args, stmt_text)
         statements.push(mir_statement::eval(mir_eval_stmt {
@@ -402,17 +395,17 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
         mir_append_ownership_semantics_from_expr(statements, block.final_expr.unwrap(), "")
     }
     mir_append_scope_drops(locals, statements, events)
-    borrow_result := borrow_check_events(events)
+    borrow_result := compile.internal.borrow.borrow_check_events(events)
     trace := string[]()
     trace_text := "block"
     index = 0
     for index < len(block.statements) {
-        stmt_trace := join_text(dump_stmt(block.statements[index], indent(1)), " | ")
+        stmt_trace := join_text(s.dump_stmt(block.statements[index], indent(1)), " | ")
         trace_text = trace_text + " | " + indent(1) + stmt_trace
         index = index + 1
     }
     if block.final_expr.is_some() {
-        trace_text = trace_text + " | " + indent(1) + "yield " + dump_expr(block.final_expr.unwrap())
+        trace_text = trace_text + " | " + indent(1) + "yield " + s.dump_expr(block.final_expr.unwrap())
     } else {
         trace_text = trace_text + " | " + indent(1) + "yield unit"
     }
@@ -440,13 +433,13 @@ func mir_find_local(mir_local_slot[] locals, string name) int {
 }
 
 func mir_type_is_copy(string type_name) bool {
-    is_copy_type(type_name)
+    compile.internal.typesys.is_copy_type(type_name)
 }
 
 func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements, string[] events) () {
     i := len(locals) - 1
     for i >= 0 {
-        if requires_drop(locals[i].type_name) && locals[i].type_name != "unknown" && !mir_local_moved_at_exit(locals[i].name, events) {
+        if compile.internal.typesys.requires_drop(locals[i].type_name) && locals[i].type_name != "unknown" && !mir_local_moved_at_exit(locals[i].name, events) {
             statements.push(mir_statement::drop(mir_drop_stmt { slot: locals[i].id }))
         }
         i = i - 1
@@ -521,7 +514,7 @@ func mir_place_from_expr(expr value) mir_place {
         }
         expr.index(index_expr) : {
             place := mir_place_from_expr(index_expr.target.unwrap())
-            place.projections = append(place.projections, mir_place_projection { kind: "index", value: dump_expr(index_expr.index.unwrap()) })
+            place.projections = append(place.projections, mir_place_projection { kind: "index", value: s.dump_expr(index_expr.index.unwrap()) })
             return place
         }
         _ : { return mir_place { root: "", projections: mir_place_projection[]() } }
@@ -766,15 +759,15 @@ func mir_stmt_events(stmt value, mir_local_slot[] locals) string[] {
 
 func dump_graph(mir_graph graph) string {
     out := "mir " + graph.function_name
-        + " blocks=" + to_string(len(graph.blocks))
-        + " entry=" + to_string(graph.entry)
-        + " exit=" + to_string(graph.exit)
+        + " blocks=" + std.prelude.to_string(len(graph.blocks))
+        + " entry=" + std.prelude.to_string(graph.entry)
+        + " exit=" + std.prelude.to_string(graph.exit)
     i := 0
     for i < len(graph.blocks) {
         block := graph.blocks[i]
-        out = out + " | bb" + to_string(block.id)
+        out = out + " | bb" + std.prelude.to_string(block.id)
             + "(" + block.label + ")"
-            + " stmts=" + to_string(len(block.statements))
+            + " stmts=" + std.prelude.to_string(len(block.statements))
             + " term=" + block.terminator.kind
         i = i + 1
     }
@@ -794,13 +787,13 @@ func lower_block(block_expr block) string {
     text := "block"
     index := 0
     for index < len(block.statements) {
-        stmt_text := join_text(dump_stmt(block.statements[index], indent(1)), " | ")
+        stmt_text := join_text(s.dump_stmt(block.statements[index], indent(1)), " | ")
         text = text + " | " + indent(1) + stmt_text
         index = index + 1
     }
     if block.final_expr.is_some() {
         tail := block.final_expr.unwrap()
-        return text + " | " + indent(1) + "yield " + dump_expr(tail)
+        return text + " | " + indent(1) + "yield " + s.dump_expr(tail)
     } else {
         return text + " | " + indent(1) + "yield unit"
     }

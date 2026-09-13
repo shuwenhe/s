@@ -1,9 +1,9 @@
 package s
-use std.prelude.char_at
-use std.prelude.len
-use std.prelude.slice
-use std.slices
-use std.result.result
+import (
+    "std"
+    "std.prelude"
+    "std.result"
+)
 struct lex_error {
     string message
     int line
@@ -163,11 +163,11 @@ func (lexer* self) read_symbol() (string, lex_error) {
         ">>",
         "::",
     }
-    for _for_idx_165 := 0; _for_idx_165 < len(multi); _for_idx_165++ {
+    for _for_idx_165 := 0; _for_idx_165 < std.prelude.len(multi); _for_idx_165++ {
         symbol := multi[_for_idx_165]
         if self.match_text(symbol) {
             string out = ""
-            int count = len(symbol)
+            int count = std.prelude.len(symbol)
             int i = 0
             for i < count {
                 out = out + self.advance()
@@ -184,24 +184,24 @@ func (lexer* self) read_symbol() (string, lex_error) {
 }
 
 func (lexer* self) match_text(string text) bool {
-    if self.index + len(text) > len(self.source) {
+    if self.index + std.prelude.len(text) > std.prelude.len(self.source) {
         return false
     }
-    slice(self.source, self.index, self.index + len(text)) == text
+    std.prelude.slice(self.source, self.index, self.index + std.prelude.len(text)) == text
 }
 
 func (lexer* self) peek() (string, lex_error) {
     if self.is_eof() {
         return self.error("unexpected eof")
     }
-    char_at(self.source, self.index)
+    std.prelude.char_at(self.source, self.index)
 }
 
 func (lexer* self) advance() (string, lex_error) {
     if self.is_eof() {
         return self.error("unexpected eof")
     }
-    string ch = char_at(self.source, self.index)
+    string ch = std.prelude.char_at(self.source, self.index)
     self.index = self.index + 1
     if ch == "\n" {
         self.line = self.line + 1
@@ -213,7 +213,7 @@ func (lexer* self) advance() (string, lex_error) {
 }
 
 func (lexer* self) is_eof() bool {
-    self.index >= len(self.source)
+    self.index >= std.prelude.len(self.source)
 }
 
 func (lexer* self) error(string message) lex_error {

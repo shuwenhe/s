@@ -1,5 +1,7 @@
 package compile.internal.base
-use std.slices
+import (
+    "std"
+)
 struct hash_mask {
     string name
     string suffix

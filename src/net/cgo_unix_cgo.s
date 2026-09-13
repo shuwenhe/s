@@ -1,7 +1,8 @@
 package src.net
-use src.syscall as sc
-use std.result.result
-use std.slices
+import (
+    "std"
+    "std.result"
+)
 func lookup_host_native(string host) (string[], net_error) {
     switch sc.resolve_ip(host, sc.af_unspec) {
         addresses : addresses,

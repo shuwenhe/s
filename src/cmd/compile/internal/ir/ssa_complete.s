@@ -1,5 +1,7 @@
 package compile.internal.ir.ssa
-use std.conv.int_to_string
+import (
+    "std.conv"
+)
 
 enum value_op {
     op_const,
@@ -230,7 +232,7 @@ func ssa_fold_constants(ssa_function* f) int {
         if valid {
             value.op = op_const
             value.is_const = true
-            value.const_value = int_to_string(result)
+            value.const_value = std.conv.int_to_string(result)
             value.args = int[]()
             changed = changed + 1
         }

@@ -1,7 +1,7 @@
 package cmd
-use std.io.file as file_type
-use std.encoding.binary.write as binary_write
-use std.encoding.binary.little_endian
+import (
+    "std.encoding.binary"
+)
 const elf_magic = 0x464c457f
 const elf_class_64 = 2
 const elf_data_le = 1

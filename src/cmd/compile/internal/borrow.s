@@ -1,8 +1,7 @@
 package compile.internal.borrow
-use s.function_decl
-use s.block_expr
-use s.expr
-use s.stmt
+import (
+    "s"
+)
 func analyze_block() int {
     return 0
 }

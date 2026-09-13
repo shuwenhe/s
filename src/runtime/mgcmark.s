@@ -1,5 +1,7 @@
 package src.runtime
-use std.slices
+import (
+    "std"
+)
 const gc_white = 0
 const gc_gray  = 1
 const gc_black = 2

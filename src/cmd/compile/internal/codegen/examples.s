@@ -1,6 +1,7 @@
 package compile.internal.codegen
-use compile.internal.link
-use compile.internal.obj
+import (
+    "compile.internal"
+)
 struct compilation_session {
     link_context* link_ctx
     machine_code_gen* mcg

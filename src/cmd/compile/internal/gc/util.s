@@ -1,5 +1,7 @@
 package compile.internal.gc
-use std.slices
+import (
+    "std"
+)
 func profile_name(string target, string suffix) string {
     if target == "" {
         return ""

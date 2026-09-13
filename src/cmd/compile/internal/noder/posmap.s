@@ -1,5 +1,7 @@
 package compile.internal.noder
-use std.slices
+import (
+    "std"
+)
 func build_pos_map(string source) pos_entry[] {
     out := pos_entry[]()
     lines := split_lines(source)

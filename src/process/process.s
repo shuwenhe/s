@@ -1,6 +1,8 @@
 package std.process
-use std.result.result
-use std.slices
+import (
+    "std"
+    "std.result"
+)
 struct process_error {
     string message
 }

@@ -1,5 +1,7 @@
 package compile.internal.ssa
-use std.slices
+import (
+    "std"
+)
 func recompute_uses(ssa_func f) {
     i := 0
     for i < len(f.values) {

@@ -1,6 +1,7 @@
 package std.process
-use std.syscall
-use std.io_syscall
+import (
+    "std"
+)
 struct process {
     pid: int
     status: int

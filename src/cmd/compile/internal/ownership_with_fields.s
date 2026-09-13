@@ -1,9 +1,10 @@
 package compile.internal.ownership_with_fields
 
-use compile.internal.typesys.is_copy_type
-use compile.internal.field_virtualization.field_encode_virtual_name
-use compile.internal.field_virtualization.field_decode_virtual_name
-use std.slices
+import (
+    "compile.internal.field_virtualization"
+    "compile.internal.typesys"
+    "std"
+)
 
 struct ownership_slot_ext {
     string name
@@ -84,7 +85,7 @@ func ownership_check_events_ext(string[] events) ownership_result_ext {
                     }
                 }
 
-                if available && !is_copy_type(slot.type_name) {
+                if available && !compile.internal.typesys.is_copy_type(slot.type_name) {
                     drops = append(drops, slot.name)
                     dropped = append(dropped, slot.name)
                 }
@@ -115,7 +116,7 @@ func ownership_check_events_ext(string[] events) ownership_result_ext {
                 name := slice(payload, 0, type_colon)
                 type_name := slice(payload, type_colon + 1, len(payload))
 
-                base, field := field_decode_virtual_name(name)
+                base, field := compile.internal.field_virtualization.field_decode_virtual_name(name)
                 is_vfield := base != "" && field != ""
 
                 slot := ownership_slot_ext {
@@ -138,7 +139,7 @@ func ownership_check_events_ext(string[] events) ownership_result_ext {
             if ownership_contains(moved, payload) || ownership_contains(dropped, payload) {
                 errors = errors + 1
                 message = message + "move-after-move:" + payload + ";"
-            } else if is_copy_type(slot.type_name) {
+            } else if compile.internal.typesys.is_copy_type(slot.type_name) {
 
             } else {
                 moved = append(moved, payload)

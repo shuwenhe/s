@@ -1,5 +1,7 @@
 package compile.internal.base
-use std.slices
+import (
+    "std"
+)
 enable_trace := false
 struct at_exit_entry {
     string name

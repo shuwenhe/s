@@ -1,9 +1,10 @@
 package s
-use std.option.option
-use std.prelude.char_at
-use std.prelude.len
-use std.result.result
-use std.slices
+import (
+    "std"
+    "std.option"
+    "std.prelude"
+    "std.result"
+)
 struct parse_error {
     string message
     int line
@@ -67,7 +68,7 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
                 return empty, err
             }
             int ci = 0
-            for ci < len(consts) {
+            for ci < std.prelude.len(consts) {
                 items = append(items, item::const(consts[ci]))
                 ci = ci + 1
             }
@@ -1034,11 +1035,11 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
                                     return self.error_here("select cannot mix recv and send cases")
                                 }
                                 mode = "recv"
-                                if len(call_value.args) == 0 {
+                                if std.prelude.len(call_value.args) == 0 {
                                     return self.error_here("select recv case requires at least one channel")
                                 }
                                 ri = 0
-                                for ri < len(call_value.args) {
+                                for ri < std.prelude.len(call_value.args) {
                                     recv_args = append(recv_args, call_value.args[ri])
                                     ri = ri + 1
                                 }
@@ -1047,11 +1048,11 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
                                     return self.error_here("select cannot mix recv and send cases")
                                 }
                                 mode = "send"
-                                if len(call_value.args) < 2 || (len(call_value.args) % 2) != 0 {
+                                if std.prelude.len(call_value.args) < 2 || (std.prelude.len(call_value.args) % 2) != 0 {
                                     return self.error_here("select send case expects channel/value pairs")
                                 }
                                 si = 0
-                                for si < len(call_value.args) {
+                                for si < std.prelude.len(call_value.args) {
                                     send_args = append(send_args, call_value.args[si])
                                     si = si + 1
                                 }
@@ -1059,7 +1060,7 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
                                 if timeout_arg.is_some() {
                                     return self.error_here("duplicate timeout case in select")
                                 }
-                                if len(call_value.args) != 1 {
+                                if std.prelude.len(call_value.args) != 1 {
                                     return self.error_here("select timeout case expects one tick argument")
                                 }
                                 timeout_arg = option[expr].some(call_value.args[0])
@@ -1082,12 +1083,12 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
         callee_name = ""
         args = expr[]()
         if mode == "recv" {
-            if len(recv_args) == 0 {
+            if std.prelude.len(recv_args) == 0 {
                 return self.error_here("select recv requires at least one channel")
             }
             callee_name = "select_recv"
             ri = 0
-            for ri < len(recv_args) {
+            for ri < std.prelude.len(recv_args) {
                 args = append(args, recv_args[ri])
                 ri = ri + 1
             }
@@ -1098,12 +1099,12 @@ func (parser* self) parse_select_expr() (expr, parse_error) {
                 callee_name = "select_recv_default"
             }
         } else {
-            if len(send_args) < 2 || (len(send_args) % 2) != 0 {
+            if std.prelude.len(send_args) < 2 || (std.prelude.len(send_args) % 2) != 0 {
                 return self.error_here("select send requires channel/value pairs")
             }
             callee_name = "select_send"
             si = 0
-            for si < len(send_args) {
+            for si < std.prelude.len(send_args) {
                 args = append(args, send_args[si])
                 si = si + 1
             }
@@ -1802,13 +1803,13 @@ func (parser* self) peek() (token, parse_error) {
     }
 
 func (parser* self) peek_at(int offset) (token, parse_error) {
-        if self.index >= len(self.tokens) {
+        if self.index >= std.prelude.len(self.tokens) {
             return parse_error {
                 message: "unexpected eof", line 0, column 0,
             }
         }
-        int target = self.index + offset        if target >= len(self.tokens) {
-            target = len(self.tokens) - 1
+        int target = self.index + offset        if target >= std.prelude.len(self.tokens) {
+            target = std.prelude.len(self.tokens) - 1
         }
         self.tokens[target]
     }
@@ -1834,7 +1835,7 @@ func (parser* self) find_top_level_symbol_offset(string value) int {
         int bracket = 0
         int paren = 0
         int offset = 0
-        for self.index + offset < len(self.tokens) {
+        for self.index + offset < std.prelude.len(self.tokens) {
             token := self.tokens[self.index + offset]
             if token.kind == token_kind::eof {
                 break
@@ -1884,9 +1885,9 @@ func decode_receiver_type(token[] tokens) (named_type, parse_error) {
     if colon >= 0 {
         return decode_named_type(tokens
     }
-    if len(tokens) >= 2 && tokens[0].kind == token_kind::ident {
+    if std.prelude.len(tokens) >= 2 && tokens[0].kind == token_kind::ident {
         return named_type {
-            name: tokens[0].value, type_name normalize_type_text(join_token_values(slice_tokens(tokens, 1, len(tokens)))),
+            name: tokens[0].value, type_name normalize_type_text(join_token_values(slice_tokens(tokens, 1, std.prelude.len(tokens)))),
         })
     }
     parse_error {
@@ -1898,7 +1899,7 @@ func decode_named_type(token[] tokens) (named_type, parse_error) {
     int colon = find_token_value(tokens, ":")
     if colon >= 0 {
         name_tokens := slice_tokens(tokens, 0, colon)
-        type_tokens := slice_tokens(tokens, colon + 1, len(tokens))
+        type_tokens := slice_tokens(tokens, colon + 1, std.prelude.len(tokens))
         return named_type {
             name: normalize_type_text(join_token_values(name_tokens)), type_name normalize_type_text(join_token_values(type_tokens)),
         }
@@ -1926,7 +1927,7 @@ func slice_tokens(token[] tokens, int start, int end) token[] {
 
 func join_token_values(token[] tokens) string {
     string[] parts = string[]()
-    for _for_idx_1928 := 0; _for_idx_1928 < len(tokens); _for_idx_1928++ {
+    for _for_idx_1928 := 0; _for_idx_1928 < std.prelude.len(tokens); _for_idx_1928++ {
         token := tokens[_for_idx_1928]
         parts = append(parts, token.value)
     }
@@ -1937,7 +1938,7 @@ func find_token_value(token[] tokens, string value) int {
     int bracket = 0
     int paren = 0
     int i = 0
-    for i < len(tokens) {
+    for i < std.prelude.len(tokens) {
         token := tokens[i]
         if token.value == "[" {
             bracket = bracket + 1
@@ -1960,7 +1961,7 @@ func find_decl_name_index(token[] tokens) int {
     int paren = 0
     int index = -1
     int i = 0
-    for i < len(tokens) {
+    for i < std.prelude.len(tokens) {
         token := tokens[i]
         if token.value == "[" {
             bracket = bracket + 1
@@ -1991,7 +1992,7 @@ func normalize_type_text(string text) string {
 }
 
 func contains_string(string[] values, string target) bool {
-    for _for_idx_1992 := 0; _for_idx_1992 < len(values); _for_idx_1992++ {
+    for _for_idx_1992 := 0; _for_idx_1992 < std.prelude.len(values); _for_idx_1992++ {
         value := values[_for_idx_1992]
         if value == target {
             return true
@@ -2003,7 +2004,7 @@ func contains_string(string[] values, string target) bool {
 func join_strings(string[] values, string sep) string {
     string out = ""
     bool first = true
-    for _for_idx_2003 := 0; _for_idx_2003 < len(values); _for_idx_2003++ {
+    for _for_idx_2003 := 0; _for_idx_2003 < std.prelude.len(values); _for_idx_2003++ {
         value := values[_for_idx_2003]
         if !first {
             out = out + sep
@@ -2016,8 +2017,8 @@ func join_strings(string[] values, string sep) string {
 
 func path_contains_dot(string path) bool {
     int i = 0
-    for i < len(path) {
-        if char_at(path, i) == "." {
+    for i < std.prelude.len(path) {
+        if std.prelude.char_at(path, i) == "." {
             return true
         }
         i = i + 1
@@ -2029,7 +2030,7 @@ func starts_with_upper(string text) bool {
     if text == "" {
         return false
     }
-    string ch = char_at(text, 0)
+    string ch = std.prelude.char_at(text, 0)
     switch ch {
         "a" : true,
         "b" : true,

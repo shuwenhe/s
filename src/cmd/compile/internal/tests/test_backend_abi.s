@@ -1,41 +1,18 @@
 package compile.internal.tests.test_backend_abi
-use compile.internal.backend_elf64.build_abi_emit_plan
-use compile.internal.backend_elf64.build_dwarf_like_artifact
-use compile.internal.backend_elf64.build_drop_metadata_artifact
-use compile.internal.backend_elf64.validate_drop_contract_chain
-use compile.internal.backend_elf64.build_abi_machine_matrix_artifact
-use compile.internal.backend_elf64.build_toolchain_compat_artifact
-use compile.internal.backend_elf64.build_go_asm_bridge_artifact
-use compile.internal.backend_elf64.build_backend_perf_baseline_artifact
-use compile.internal.backend_elf64.build_midend_opt_artifact
-use compile.internal.backend_elf64.build
-use compile.internal.backend_elf64.build_cfi_artifact
-use compile.internal.backend_elf64.build_wasm_binary_probe_plan
-use compile.internal.backend_elf64.compile_writes
-use compile.internal.backend_elf64.compile_exit_code
-use compile.internal.backend_elf64.compile_runtime_metrics
-use compile.internal.backend_elf64.translate_go_plan9_to_gas
-use compile.internal.backend_elf64.validate_backend_perf_baseline
-use compile.internal.backend_elf64.validate_cfi_artifact
-use compile.internal.backend_elf64.validate_dwarf_consumability
-use compile.internal.backend_elf64.validate_go_asm_bridge_artifact
-use compile.internal.backend_elf64.validate_midend_opt_artifact
-use compile.internal.backend_elf64.validate_ssa_abi_contracts
-use compile.internal.backend_elf64.validate_toolchain_compat_artifact
-use compile.internal.backend_elf64.validate_wasi_contract_source
-use compile.internal.ir.lower.lower_main_to_mir
-use compile.internal.syntax.parse_source
-use std.fs.make_temp_dir
-use std.fs.read_to_string
-use std.fs.write_text_file
-use std.prelude.slice
+import (
+    "compile.internal.backend_elf64"
+    "compile.internal.ir.lower"
+    "compile.internal.syntax"
+    "std.fs"
+    "std.prelude"
+)
 func run_backend_abi_suite() int {
     src := "package demo.abi\nfunc pair(int a, int b) (int, int) {\n  a\n}\nfunc big((int, string) a, (int, string) b, (int, string) c) (int, string) {\n  a\n}\nfunc triple(int a, int b, int c) (int, int, int) {\n  a\n}"
-    parsed := parse_source(src)
+    parsed := compile.internal.syntax.parse_source(src)
     if parsed.is_err() {
         return 1
     }
-    plan := build_abi_emit_plan("amd64", parsed.unwrap())
+    plan := compile.internal.backend_elf64.build_abi_emit_plan("amd64", parsed.unwrap())
     if !contains(plan, "abi-emit version=1 arch=amd64") {
         return 1
     }
@@ -87,7 +64,7 @@ func run_backend_abi_suite() int {
     if !contains(plan, "tuple_parts=3") {
         return 1
     }
-    dwarf := build_dwarf_like_artifact(parsed.unwrap(), "ssa pair blocks=2 values=4 loops=1 dbg_lines=3", "ssa.debug pair | value#0 reg=r10 | let v0 -> r10")
+    dwarf := compile.internal.backend_elf64.build_dwarf_like_artifact(parsed.unwrap(), "ssa pair blocks=2 values=4 loops=1 dbg_lines=3", "ssa.debug pair | value#0 reg=r10 | let v0 -> r10")
     if !contains(dwarf, "section .debug_loc") {
         return 1
     }
@@ -109,7 +86,7 @@ func run_backend_abi_suite() int {
     if !contains(dwarf, "metric location_continuity=") {
         return 1
     }
-    dropmap := build_drop_metadata_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 loops=1 spills=2 rollback=0 proof_fail=0")
+    dropmap := compile.internal.backend_elf64.build_drop_metadata_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 loops=1 spills=2 rollback=0 proof_fail=0")
     if !contains(dropmap, "dropmap version=1") {
         return 1
     }
@@ -125,10 +102,10 @@ func run_backend_abi_suite() int {
     if !contains(dropmap, "contract ownership=checked drop=deterministic") {
         return 1
     }
-    if validate_drop_contract_chain(dropmap, parsed.unwrap(), "ssa rollback=0 proof_fail=0").is_err() {
+    if compile.internal.backend_elf64.validate_drop_contract_chain(dropmap, parsed.unwrap(), "ssa rollback=0 proof_fail=0").is_err() {
         return 1
     }
-    matrix := build_abi_machine_matrix_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 spills=2")
+    matrix := compile.internal.backend_elf64.build_abi_machine_matrix_artifact("amd64", parsed.unwrap(), "ssa pair blocks=2 values=4 spills=2")
     if !contains(matrix, "abi-matrix version=1") {
         return 1
     }
@@ -141,7 +118,7 @@ func run_backend_abi_suite() int {
     if !contains(matrix, "cross_arch_consistency=") {
         return 1
     }
-    toolchain := build_toolchain_compat_artifact(parsed.unwrap(), "amd64")
+    toolchain := compile.internal.backend_elf64.build_toolchain_compat_artifact(parsed.unwrap(), "amd64")
     if !contains(toolchain, "toolchain-compat version=1") {
         return 1
     }
@@ -173,7 +150,7 @@ func run_backend_abi_suite() int {
         return 1
     }
     go_asm_src := "TEXT main(SB),$0-0\nMOVQ $7, AX\nADDQ $3, AX\nRET\n"
-    gas := translate_go_plan9_to_gas("amd64", go_asm_src)
+    gas := compile.internal.backend_elf64.translate_go_plan9_to_gas("amd64", go_asm_src)
     if gas.is_err() {
         return 1
     }
@@ -189,16 +166,16 @@ func run_backend_abi_suite() int {
     if !contains(gas.unwrap(), "ret") {
         return 1
     }
-    asm_artifact := build_go_asm_bridge_artifact("amd64", go_asm_src)
-    if validate_go_asm_bridge_artifact(asm_artifact).is_err() {
+    asm_artifact := compile.internal.backend_elf64.build_go_asm_bridge_artifact("amd64", go_asm_src)
+    if compile.internal.backend_elf64.validate_go_asm_bridge_artifact(asm_artifact).is_err() {
         return 1
     }
     bad_go_asm := "MOVQ $1, AX\nRET\n"
-    if translate_go_plan9_to_gas("amd64", bad_go_asm).is_ok() {
+    if compile.internal.backend_elf64.translate_go_plan9_to_gas("amd64", bad_go_asm).is_ok() {
         return 1
     }
     go_asm_ctrl := "TEXT helper(SB),$0-0\nMOVQ ret+8(FP), AX\nRET\nTEXT main(SB),$0-0\nCALL helper(SB)\nCMPQ AX, AX\nJE done\nJMP done\ndone:\nRET\n"
-    gas_ctrl := translate_go_plan9_to_gas("amd64", go_asm_ctrl)
+    gas_ctrl := compile.internal.backend_elf64.translate_go_plan9_to_gas("amd64", go_asm_ctrl)
     if gas_ctrl.is_err() {
         return 1
     }
@@ -218,10 +195,10 @@ func run_backend_abi_suite() int {
         return 1
     }
     bad_go_asm_base := "TEXT main(SB),$0-0\nMOVQ 0(X0), AX\nRET\n"
-    if translate_go_plan9_to_gas("amd64", bad_go_asm_base).is_ok() {
+    if compile.internal.backend_elf64.translate_go_plan9_to_gas("amd64", bad_go_asm_base).is_ok() {
         return 1
     }
-    perf := build_backend_perf_baseline_artifact(
+    perf := compile.internal.backend_elf64.build_backend_perf_baseline_artifact(
         "amd64",
         "ssa pair blocks=2 values=4 spills=2 splits=1 remat=1 sched_tp=8 sched_lat=5",
         "midend inline_sites=2 sroutine_sites=1 select_weighted_sites=1 select_timeout_sites=1 select_send_sites=1",
@@ -254,7 +231,7 @@ func run_backend_abi_suite() int {
     if !contains(perf, "runtime_memory strategy=ownership+explicit-drop") {
         return 1
     }
-    opt := build_midend_opt_artifact(
+    opt := compile.internal.backend_elf64.build_midend_opt_artifact(
         "midend inline_sites=2 escape_sites=1 devirtualized=1 cross_pkg_inline=0 const_prop=1 sroutine_sites=1 select_weighted_sites=1 select_timeout_sites=1 select_send_sites=1 const_fold_hits=2 ipo_synergy=3 pass_rm_unreachable=1 pass_fold_branch=1 pass_simplify_j2r=0 pass_trim_unit=0 pass_dedup=1"
     )
     if !contains(opt, "midend-opt version=1") {
@@ -269,10 +246,10 @@ func run_backend_abi_suite() int {
     if !contains(opt, "passes rm_unreachable=1 fold_branch=1 simplify_j2r=0 trim_unit=0 dedup=1 ipo_synergy=3") {
         return 1
     }
-    if validate_midend_opt_artifact(opt).is_err() {
+    if compile.internal.backend_elf64.validate_midend_opt_artifact(opt).is_err() {
         return 1
     }
-    e2e_temp := make_temp_dir("s-opt-e2e-")
+    e2e_temp := std.fs.make_temp_dir("s-opt-e2e-")
     if e2e_temp.is_err() {
         return 1
     }
@@ -280,59 +257,59 @@ func run_backend_abi_suite() int {
     e2e_src_path := e2e_dir + "/select_opt_demo.s"
     e2e_out_path := e2e_dir + "/select_opt_demo"
     e2e_src := "package demo.opte2e\nfunc worker() int {\n  chan_send(ch1, 7)\n  0\n}\nfunc main() {\n  ch1 := chan_make(1)\n  sroutine worker()\n  println(select_recv_timeout(ch1, 2))\n  select_send(ch1, 9)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  0\n}"
-    if write_text_file(e2e_src_path, e2e_src).is_err() {
+    if std.fs.write_text_file(e2e_src_path, e2e_src).is_err() {
         return 1
     }
-    if build(e2e_src_path, e2e_out_path, "") != 0 {
+    if compile.internal.backend_elf64.build(e2e_src_path, e2e_out_path, "") != 0 {
         return 1
     }
     if !validate_emitted_artifacts(e2e_out_path) {
         return 1
     }
-    if build(e2e_src_path, e2e_out_path + ".badmargin", "oops") == 0 {
+    if compile.internal.backend_elf64.build(e2e_src_path, e2e_out_path + ".badmargin", "oops") == 0 {
         return 1
     }
     e2e_nomaint_src_path := e2e_dir + "/missing_main_demo.s"
     e2e_nomaint_out_path := e2e_dir + "/missing_main_demo"
     e2e_missing_main_src := "package demo.nomian\nfunc helper() int {\n  0\n}"
-    if write_text_file(e2e_nomaint_src_path, e2e_missing_main_src).is_err() {
+    if std.fs.write_text_file(e2e_nomaint_src_path, e2e_missing_main_src).is_err() {
         return 1
     }
-    if build(e2e_nomaint_src_path, e2e_nomaint_out_path, "") == 0 {
+    if compile.internal.backend_elf64.build(e2e_nomaint_src_path, e2e_nomaint_out_path, "") == 0 {
         return 1
     }
     e2e_semantic_src_path := e2e_dir + "/semantic_fail_demo.s"
     e2e_semantic_out_path := e2e_dir + "/semantic_fail_demo"
     e2e_semantic_fail_src := "package demo.semanticfail\nfunc main() {\n  missing()\n  0\n}"
-    if write_text_file(e2e_semantic_src_path, e2e_semantic_fail_src).is_err() {
+    if std.fs.write_text_file(e2e_semantic_src_path, e2e_semantic_fail_src).is_err() {
         return 1
     }
-    if build(e2e_semantic_src_path, e2e_semantic_out_path, "") == 0 {
+    if compile.internal.backend_elf64.build(e2e_semantic_src_path, e2e_semantic_out_path, "") == 0 {
         return 1
     }
-    cfi := build_cfi_artifact("amd64", "ssa pair blocks=2 spills=1 reloads=1", "ssa.debug pair")
+    cfi := compile.internal.backend_elf64.build_cfi_artifact("amd64", "ssa pair blocks=2 spills=1 reloads=1", "ssa.debug pair")
     if !contains(cfi, ".cfi_startproc") {
         return 1
     }
     if !contains(cfi, ".cfi_endproc") {
         return 1
     }
-    if validate_cfi_artifact(cfi).is_err() {
+    if compile.internal.backend_elf64.validate_cfi_artifact(cfi).is_err() {
         return 1
     }
-    if validate_ssa_abi_contracts("amd64", "spills=3 reloads=1 call_pressure=2").is_ok() {
+    if compile.internal.backend_elf64.validate_ssa_abi_contracts("amd64", "spills=3 reloads=1 call_pressure=2").is_ok() {
         return 1
     }
-    if validate_ssa_abi_contracts("amd64", "spills=1 reloads=2 call_pressure=2").is_err() {
+    if compile.internal.backend_elf64.validate_ssa_abi_contracts("amd64", "spills=1 reloads=2 call_pressure=2").is_err() {
         return 1
     }
-    if validate_ssa_abi_contracts("amd64", "spills=1 reloads=2 call_pressure=2 callee_saved_clobber=1").is_ok() {
+    if compile.internal.backend_elf64.validate_ssa_abi_contracts("amd64", "spills=1 reloads=2 call_pressure=2 callee_saved_clobber=1").is_ok() {
         return 1
     }
-    if validate_ssa_abi_contracts("amd64", "spills=1 reloads=2 call_pressure=2 caller_restore_missing=1").is_ok() {
+    if compile.internal.backend_elf64.validate_ssa_abi_contracts("amd64", "spills=1 reloads=2 call_pressure=2 caller_restore_missing=1").is_ok() {
         return 1
     }
-    wasm_probe := build_wasm_binary_probe_plan("/tmp/out.wasm")
+    wasm_probe := compile.internal.backend_elf64.build_wasm_binary_probe_plan("/tmp/out.wasm")
     if !contains(wasm_probe, "wasm-objdump -x /tmp/out.wasm") {
         return 1
     }
@@ -343,19 +320,19 @@ func run_backend_abi_suite() int {
         return 1
     }
     wasm_source := "__attribute__((__import_module__(\"wasi_snapshot_preview1\"), __import_name__(\"fd_write\")))\nextern int fd_write();\n__attribute__((__import_module__(\"wasi_snapshot_preview1\"), __import_name__(\"proc_exit\")))\nextern void proc_exit(int);\nint s_main(void){return 0;}\nvoid _start(void){proc_exit(s_main());}"
-    if validate_wasi_contract_source(wasm_source).is_err() {
+    if compile.internal.backend_elf64.validate_wasi_contract_source(wasm_source).is_err() {
         return 1
     }
     fn_map_src := "package demo.fnmap\nfunc arm64_init() int {\n  println(\"arm64\")\n  0\n}\nfunc amd64_init() int {\n  println(\"amd64\")\n  0\n}\nfunc main() {\n  arch_inits := map[string]func() int{\"amd64\": amd64_init, \"arm64\": arm64_init}\n  goarch := \"arm64\"\n  init := arch_inits[goarch]\n  init()\n  0\n}"
-    fn_map_parsed := parse_source(fn_map_src)
+    fn_map_parsed := compile.internal.syntax.parse_source(fn_map_src)
     if fn_map_parsed.is_err() {
         return 1
     }
-    fn_map_graph := lower_main_to_mir(fn_map_parsed.unwrap())
+    fn_map_graph := compile.internal.ir.lower.lower_main_to_mir(fn_map_parsed.unwrap())
     if fn_map_graph.is_err() {
         return 1
     }
-    fn_map_writes := compile_writes(fn_map_parsed.unwrap(), fn_map_graph.unwrap())
+    fn_map_writes := compile.internal.backend_elf64.compile_writes(fn_map_parsed.unwrap(), fn_map_graph.unwrap())
     if fn_map_writes.is_err() {
         return 1
     }
@@ -365,7 +342,7 @@ func run_backend_abi_suite() int {
     if fn_map_writes.unwrap()[0].text != "arm64\n" {
         return 1
     }
-    fn_map_exit := compile_exit_code(fn_map_parsed.unwrap(), fn_map_graph.unwrap())
+    fn_map_exit := compile.internal.backend_elf64.compile_exit_code(fn_map_parsed.unwrap(), fn_map_graph.unwrap())
     if fn_map_exit.is_err() {
         return 1
     }
@@ -373,15 +350,15 @@ func run_backend_abi_suite() int {
         return 1
     }
     defer_src := "package demo.defer\nfunc main() {\n  defer println(\"cleanup\")\n  println(\"work\")\n  0\n}"
-    defer_parsed := parse_source(defer_src)
+    defer_parsed := compile.internal.syntax.parse_source(defer_src)
     if defer_parsed.is_err() {
         return 1
     }
-    defer_graph := lower_main_to_mir(defer_parsed.unwrap())
+    defer_graph := compile.internal.ir.lower.lower_main_to_mir(defer_parsed.unwrap())
     if defer_graph.is_err() {
         return 1
     }
-    defer_writes := compile_writes(defer_parsed.unwrap(), defer_graph.unwrap())
+    defer_writes := compile.internal.backend_elf64.compile_writes(defer_parsed.unwrap(), defer_graph.unwrap())
     if defer_writes.is_err() {
         return 1
     }
@@ -394,7 +371,7 @@ func run_backend_abi_suite() int {
     if defer_writes.unwrap()[1].text != "cleanup\n" {
         return 1
     }
-    defer_exit := compile_exit_code(defer_parsed.unwrap(), defer_graph.unwrap())
+    defer_exit := compile.internal.backend_elf64.compile_exit_code(defer_parsed.unwrap(), defer_graph.unwrap())
     if defer_exit.is_err() {
         return 1
     }
@@ -402,15 +379,15 @@ func run_backend_abi_suite() int {
         return 1
     }
     recover_src := "package demo.recover\nfunc handle() int {\n  recover()\n  println(\"recovered\")\n  0\n}\nfunc main() {\n  defer handle()\n  panic(\"boom\")\n  0\n}"
-    recover_parsed := parse_source(recover_src)
+    recover_parsed := compile.internal.syntax.parse_source(recover_src)
     if recover_parsed.is_err() {
         return 1
     }
-    recover_graph := lower_main_to_mir(recover_parsed.unwrap())
+    recover_graph := compile.internal.ir.lower.lower_main_to_mir(recover_parsed.unwrap())
     if recover_graph.is_err() {
         return 1
     }
-    recover_writes := compile_writes(recover_parsed.unwrap(), recover_graph.unwrap())
+    recover_writes := compile.internal.backend_elf64.compile_writes(recover_parsed.unwrap(), recover_graph.unwrap())
     if recover_writes.is_err() {
         return 1
     }
@@ -420,7 +397,7 @@ func run_backend_abi_suite() int {
     if recover_writes.unwrap()[0].text != "recovered\n" {
         return 1
     }
-    recover_exit := compile_exit_code(recover_parsed.unwrap(), recover_graph.unwrap())
+    recover_exit := compile.internal.backend_elf64.compile_exit_code(recover_parsed.unwrap(), recover_graph.unwrap())
     if recover_exit.is_err() {
         return 1
     }
@@ -428,15 +405,15 @@ func run_backend_abi_suite() int {
         return 1
     }
     sroutine_src := "package demo.sroutine\nfunc worker() int {\n  println(\"worker\")\n  0\n}\nfunc main() {\n  sroutine worker()\n  println(\"main\")\n  0\n}"
-    sroutine_parsed := parse_source(sroutine_src)
+    sroutine_parsed := compile.internal.syntax.parse_source(sroutine_src)
     if sroutine_parsed.is_err() {
         return 1
     }
-    sroutine_graph := lower_main_to_mir(sroutine_parsed.unwrap())
+    sroutine_graph := compile.internal.ir.lower.lower_main_to_mir(sroutine_parsed.unwrap())
     if sroutine_graph.is_err() {
         return 1
     }
-    sroutine_writes := compile_writes(sroutine_parsed.unwrap(), sroutine_graph.unwrap())
+    sroutine_writes := compile.internal.backend_elf64.compile_writes(sroutine_parsed.unwrap(), sroutine_graph.unwrap())
     if sroutine_writes.is_err() {
         return 1
     }
@@ -449,7 +426,7 @@ func run_backend_abi_suite() int {
     if sroutine_writes.unwrap()[1].text != "main\n" {
         return 1
     }
-    sroutine_exit := compile_exit_code(sroutine_parsed.unwrap(), sroutine_graph.unwrap())
+    sroutine_exit := compile.internal.backend_elf64.compile_exit_code(sroutine_parsed.unwrap(), sroutine_graph.unwrap())
     if sroutine_exit.is_err() {
         return 1
     }
@@ -457,15 +434,15 @@ func run_backend_abi_suite() int {
         return 1
     }
     sroutine_chan_src := "package demo.sroutinechan\nfunc producer1() int {\n  chan_send(ch1, 1)\n  chan_send(ch1, 4)\n  0\n}\nfunc producer2() int {\n  chan_send(ch2, 2)\n  0\n}\nfunc main() {\n  ch1 := chan_make(3)\n  ch2 := chan_make(3)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv(ch1, ch2))\n  println(select_recv_default(ch1, ch2))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
-    sroutine_chan_parsed := parse_source(sroutine_chan_src)
+    sroutine_chan_parsed := compile.internal.syntax.parse_source(sroutine_chan_src)
     if sroutine_chan_parsed.is_err() {
         return 1
     }
-    sroutine_chan_graph := lower_main_to_mir(sroutine_chan_parsed.unwrap())
+    sroutine_chan_graph := compile.internal.ir.lower.lower_main_to_mir(sroutine_chan_parsed.unwrap())
     if sroutine_chan_graph.is_err() {
         return 1
     }
-    sroutine_chan_writes := compile_writes(sroutine_chan_parsed.unwrap(), sroutine_chan_graph.unwrap())
+    sroutine_chan_writes := compile.internal.backend_elf64.compile_writes(sroutine_chan_parsed.unwrap(), sroutine_chan_graph.unwrap())
     if sroutine_chan_writes.is_err() {
         return 1
     }
@@ -484,7 +461,7 @@ func run_backend_abi_suite() int {
     if sroutine_chan_writes.unwrap()[3].text != "()\n" {
         return 1
     }
-    sroutine_chan_metrics := compile_runtime_metrics(sroutine_chan_parsed.unwrap(), sroutine_chan_graph.unwrap())
+    sroutine_chan_metrics := compile.internal.backend_elf64.compile_runtime_metrics(sroutine_chan_parsed.unwrap(), sroutine_chan_graph.unwrap())
     if sroutine_chan_metrics.is_err() {
         return 1
     }
@@ -501,15 +478,15 @@ func run_backend_abi_suite() int {
         return 1
     }
     weighted_timeout_src := "package demo.weighted\nfunc producer1() int {\n  chan_send(ch1, 7)\n  0\n}\nfunc producer2() int {\n  chan_send(ch2, 9)\n  0\n}\nfunc main() {\n  ch1 := chan_make(2)\n  ch2 := chan_make(2)\n  sroutine producer1()\n  sroutine producer2()\n  println(select_recv_weighted(ch1, 2, ch2, 1))\n  println(select_recv_timeout(ch1, ch2, 3))\n  println(select_recv_timeout(ch1, ch2, 3))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
-    weighted_timeout_parsed := parse_source(weighted_timeout_src)
+    weighted_timeout_parsed := compile.internal.syntax.parse_source(weighted_timeout_src)
     if weighted_timeout_parsed.is_err() {
         return 1
     }
-    weighted_timeout_graph := lower_main_to_mir(weighted_timeout_parsed.unwrap())
+    weighted_timeout_graph := compile.internal.ir.lower.lower_main_to_mir(weighted_timeout_parsed.unwrap())
     if weighted_timeout_graph.is_err() {
         return 1
     }
-    weighted_timeout_writes := compile_writes(weighted_timeout_parsed.unwrap(), weighted_timeout_graph.unwrap())
+    weighted_timeout_writes := compile.internal.backend_elf64.compile_writes(weighted_timeout_parsed.unwrap(), weighted_timeout_graph.unwrap())
     if weighted_timeout_writes.is_err() {
         return 1
     }
@@ -525,7 +502,7 @@ func run_backend_abi_suite() int {
     if weighted_timeout_writes.unwrap()[2].text != "()\n" {
         return 1
     }
-    weighted_timeout_metrics := compile_runtime_metrics(weighted_timeout_parsed.unwrap(), weighted_timeout_graph.unwrap())
+    weighted_timeout_metrics := compile.internal.backend_elf64.compile_runtime_metrics(weighted_timeout_parsed.unwrap(), weighted_timeout_graph.unwrap())
     if weighted_timeout_metrics.is_err() {
         return 1
     }
@@ -539,15 +516,15 @@ func run_backend_abi_suite() int {
         return 1
     }
     select_send_src := "package demo.selectsend\nfunc main() {\n  ch1 := chan_make(1)\n  ch2 := chan_make(1)\n  select_send(ch1, 5, ch2, 6)\n  println(chan_recv(ch1))\n  select_send_default(ch1, 7, ch2, 8)\n  println(chan_recv(ch2))\n  select_send_timeout(ch1, 9, ch2, 10, 2)\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
-    select_send_parsed := parse_source(select_send_src)
+    select_send_parsed := compile.internal.syntax.parse_source(select_send_src)
     if select_send_parsed.is_err() {
         return 1
     }
-    select_send_graph := lower_main_to_mir(select_send_parsed.unwrap())
+    select_send_graph := compile.internal.ir.lower.lower_main_to_mir(select_send_parsed.unwrap())
     if select_send_graph.is_err() {
         return 1
     }
-    select_send_writes := compile_writes(select_send_parsed.unwrap(), select_send_graph.unwrap())
+    select_send_writes := compile.internal.backend_elf64.compile_writes(select_send_parsed.unwrap(), select_send_graph.unwrap())
     if select_send_writes.is_err() {
         return 1
     }
@@ -563,7 +540,7 @@ func run_backend_abi_suite() int {
     if select_send_writes.unwrap()[2].text != "7\n" {
         return 1
     }
-    select_send_metrics := compile_runtime_metrics(select_send_parsed.unwrap(), select_send_graph.unwrap())
+    select_send_metrics := compile.internal.backend_elf64.compile_runtime_metrics(select_send_parsed.unwrap(), select_send_graph.unwrap())
     if select_send_metrics.is_err() {
         return 1
     }
@@ -580,15 +557,15 @@ func run_backend_abi_suite() int {
         return 1
     }
     select_syntax_src := "package demo.selectsyntax\nfunc main() {\n  ch1 := chan_make(1)\n  ch2 := chan_make(1)\n  chan_send(ch1, 5)\n  chan_send(ch2, 7)\n  println(select {\n    case recv(ch1, ch2):\n  })\n  select {\n    case recv(ch1, ch2):\n    case timeout(3):\n  }\n  select {\n    case send(ch1, 8, ch2, 9):\n    case default:\n  }\n  println(chan_recv(ch1))\n  chan_close(ch1)\n  chan_close(ch2)\n  0\n}"
-    select_syntax_parsed := parse_source(select_syntax_src)
+    select_syntax_parsed := compile.internal.syntax.parse_source(select_syntax_src)
     if select_syntax_parsed.is_err() {
         return 1
     }
-    select_syntax_graph := lower_main_to_mir(select_syntax_parsed.unwrap())
+    select_syntax_graph := compile.internal.ir.lower.lower_main_to_mir(select_syntax_parsed.unwrap())
     if select_syntax_graph.is_err() {
         return 1
     }
-    select_syntax_writes := compile_writes(select_syntax_parsed.unwrap(), select_syntax_graph.unwrap())
+    select_syntax_writes := compile.internal.backend_elf64.compile_writes(select_syntax_parsed.unwrap(), select_syntax_graph.unwrap())
     if select_syntax_writes.is_err() {
         return 1
     }
@@ -601,7 +578,7 @@ func run_backend_abi_suite() int {
     if select_syntax_writes.unwrap()[1].text != "8\n" {
         return 1
     }
-    select_syntax_metrics := compile_runtime_metrics(select_syntax_parsed.unwrap(), select_syntax_graph.unwrap())
+    select_syntax_metrics := compile.internal.backend_elf64.compile_runtime_metrics(select_syntax_parsed.unwrap(), select_syntax_graph.unwrap())
     if select_syntax_metrics.is_err() {
         return 1
     }
@@ -615,15 +592,15 @@ func run_backend_abi_suite() int {
         return 1
     }
     sroutine_recover_src := "package demo.srrecover\nfunc recover_worker() int {\n  recover()\n  println(\"recover-ok\")\n  0\n}\nfunc worker() int {\n  defer recover_worker()\n  println(msg)\n  panic(\"boom\")\n  0\n}\nfunc main() {\n  msg := \"captured\"\n  sroutine worker()\n  println(\"main\")\n  0\n}"
-    sroutine_recover_parsed := parse_source(sroutine_recover_src)
+    sroutine_recover_parsed := compile.internal.syntax.parse_source(sroutine_recover_src)
     if sroutine_recover_parsed.is_err() {
         return 1
     }
-    sroutine_recover_graph := lower_main_to_mir(sroutine_recover_parsed.unwrap())
+    sroutine_recover_graph := compile.internal.ir.lower.lower_main_to_mir(sroutine_recover_parsed.unwrap())
     if sroutine_recover_graph.is_err() {
         return 1
     }
-    sroutine_recover_writes := compile_writes(sroutine_recover_parsed.unwrap(), sroutine_recover_graph.unwrap())
+    sroutine_recover_writes := compile.internal.backend_elf64.compile_writes(sroutine_recover_parsed.unwrap(), sroutine_recover_graph.unwrap())
     if sroutine_recover_writes.is_err() {
         return 1
     }
@@ -640,15 +617,15 @@ func run_backend_abi_suite() int {
         return 1
     }
     const_iota_src := "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() {\n  println(C)\n  0\n}"
-    const_iota_parsed := parse_source(const_iota_src)
+    const_iota_parsed := compile.internal.syntax.parse_source(const_iota_src)
     if const_iota_parsed.is_err() {
         return 1
     }
-    const_iota_graph := lower_main_to_mir(const_iota_parsed.unwrap())
+    const_iota_graph := compile.internal.ir.lower.lower_main_to_mir(const_iota_parsed.unwrap())
     if const_iota_graph.is_err() {
         return 1
     }
-    const_iota_writes := compile_writes(const_iota_parsed.unwrap(), const_iota_graph.unwrap())
+    const_iota_writes := compile.internal.backend_elf64.compile_writes(const_iota_parsed.unwrap(), const_iota_graph.unwrap())
     if const_iota_writes.is_err() {
         return 1
     }
@@ -659,15 +636,15 @@ func run_backend_abi_suite() int {
         return 1
     }
     const_iota_fail_src := "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() {\n  0\n}"
-    const_iota_fail_parsed := parse_source(const_iota_fail_src)
+    const_iota_fail_parsed := compile.internal.syntax.parse_source(const_iota_fail_src)
     if const_iota_fail_parsed.is_err() {
         return 1
     }
-    const_iota_fail_graph := lower_main_to_mir(const_iota_fail_parsed.unwrap())
+    const_iota_fail_graph := compile.internal.ir.lower.lower_main_to_mir(const_iota_fail_parsed.unwrap())
     if const_iota_fail_graph.is_err() {
         return 1
     }
-    const_iota_fail_writes := compile_writes(const_iota_fail_parsed.unwrap(), const_iota_fail_graph.unwrap())
+    const_iota_fail_writes := compile.internal.backend_elf64.compile_writes(const_iota_fail_parsed.unwrap(), const_iota_fail_graph.unwrap())
     if const_iota_fail_writes.is_ok() {
         return 1
     }
@@ -686,7 +663,7 @@ func contains(string text, string needle) bool {
     }
     i := 0
     for i <= len(text) - len(needle) {
-        if slice(text, i, i + len(needle)) == needle {
+        if std.prelude.slice(text, i, i + len(needle)) == needle {
             return true
         }
         i = i + 1
@@ -706,7 +683,7 @@ func contains_all(string text, string[] needles) bool {
 }
 
 func read_artifact_or_empty(string path) string {
-    content := read_to_string(path)
+    content := std.fs.read_to_string(path)
     if content.is_err() {
         return ""
     }
@@ -726,26 +703,26 @@ func require_artifact_markers(string path, string[] markers) string {
 
 func validate_emitted_artifacts(string out_path) bool {
     opt := require_artifact_markers(out_path + ".opt", string[]("midend-opt version=1", "scheduler_opt sroutine_sites=1", "select_timeout_sites=1", "select_send_sites=1"))
-    if opt == "" || validate_midend_opt_artifact(opt).is_err() {
+    if opt == "" || compile.internal.backend_elf64.validate_midend_opt_artifact(opt).is_err() {
         return false
     }
     perf := require_artifact_markers(out_path + ".perf", string[]("perf-baseline version=1", "scheduler queue_policy=priority-rr select_policy=multi-chan-priority-rr", "select_timeout_sites=1", "select_send_sites=1", "scheduler_counters", "runtime_sched sroutine_scheduled=1", "runtime_memory strategy=ownership+explicit-drop"))
-    if perf == "" || validate_backend_perf_baseline(perf).is_err() {
+    if perf == "" || compile.internal.backend_elf64.validate_backend_perf_baseline(perf).is_err() {
         return false
     }
     toolchain := require_artifact_markers(out_path + ".toolchain", string[]("toolchain-compat version=1", "asm=go-plan9-min", "go_asm syntax=plan9 translator=enabled status=ok"))
-    if toolchain == "" || validate_toolchain_compat_artifact(toolchain).is_err() {
+    if toolchain == "" || compile.internal.backend_elf64.validate_toolchain_compat_artifact(toolchain).is_err() {
         return false
     }
     if require_artifact_markers(out_path + ".dropmap", string[]("dropmap version=1", "ownership strategy=move-copy-clone", "resource_release=scope-exit", "contract ownership=checked drop=deterministic")) == "" {
         return false
     }
     cfi := require_artifact_markers(out_path + ".cfi", string[]("cfi version=1", ".cfi_startproc", ".cfi_def_cfa", ".cfi_endproc"))
-    if cfi == "" || validate_cfi_artifact(cfi).is_err() {
+    if cfi == "" || compile.internal.backend_elf64.validate_cfi_artifact(cfi).is_err() {
         return false
     }
     dwarf := require_artifact_markers(out_path + ".dwarf", string[]("section .debug_info", "section .debug_line", "section .debug_loc", "section .debug_ranges", "policy debug_budget_mode=", "metric location_continuity="))
-    if dwarf == "" || validate_dwarf_consumability(dwarf, "ssa dbg_budget=30").is_err() {
+    if dwarf == "" || compile.internal.backend_elf64.validate_dwarf_consumability(dwarf, "ssa dbg_budget=30").is_err() {
         return false
     }
     if require_artifact_markers(out_path + ".stackmap", string[]("stackmap version=1", "fn main slots=", "bitmap=", "callee_saved=")) == "" {

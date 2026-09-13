@@ -1,5 +1,7 @@
 package compile.internal.obj
-use compile.internal.codegen
+import (
+    "compile.internal"
+)
 struct elf_output {
     writer elf_writer
     elf_section_header[] sections

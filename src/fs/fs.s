@@ -1,5 +1,7 @@
 package std.fs
-use std.result.result
+import (
+    "std.result"
+)
 struct fs_error {
     string message
 }

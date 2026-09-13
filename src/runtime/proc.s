@@ -1,5 +1,7 @@
 package src.runtime
-use std.slices
+import (
+    "std"
+)
 struct sroutine {
     int id
     int status
