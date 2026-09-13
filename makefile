@@ -1648,7 +1648,7 @@ selfhost-bin:
 
 
 
-.PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-borrow-dataflow-check mir-drop-elaboration-check mir-place-check mir-movepath-check mir-partial-move-check mir-reinit-check mir-partial-drop-check mir-place-borrow-check mir-ref-liveness-check mir-loan-liveness-check mir-region-constraints-check mir-region-solver-check mir-nll-borrow-check mir-nll-shadow-check mir-real-point-audit-check mir-real-point-map-check mir-real-ownership-facts-check mir-real-ownership-preservation-check mir-real-ownership-extractor-check mir-real-ownership-shared-analysis-check mir-real-ownership-shadow-check mir-nll-real-cfg-check mir-ownership-solver-check mir-ownership-analysis-consistency-check mir-nll-authority-check mir-nll-ownership-check ownership-module-check mir-ownership-lowering-check mir-ownership-pipeline-check mir-nogc-e2e-check no-gc-test
+.PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-borrow-dataflow-check mir-drop-elaboration-check mir-place-check mir-movepath-check mir-partial-move-check mir-reinit-check mir-partial-drop-check mir-place-borrow-check mir-ref-liveness-check mir-loan-liveness-check mir-region-constraints-check mir-region-solver-check mir-nll-borrow-check mir-nll-shadow-check mir-real-point-audit-check mir-real-point-map-check mir-real-ownership-facts-check mir-real-ownership-preservation-check mir-real-ownership-extractor-check mir-real-ownership-shared-analysis-check mir-real-ownership-shadow-check mir-nll-real-cfg-check mir-ownership-solver-check mir-ownership-analysis-consistency-check mir-nll-authority-check mir-nll-ownership-check mir-borrow-canonical-authority-check ownership-module-check mir-ownership-lowering-check mir-ownership-pipeline-check mir-nogc-e2e-check no-gc-test
 
 compiler: seed-compiler-bin
 
@@ -1971,6 +1971,15 @@ mir-nll-ownership-check: compiler
 	@misc/scripts/check-mir-nll-ownership.sh
 
 	@echo "✓ MIR NLL ownership check passed"
+
+
+mir-borrow-canonical-authority-check: compiler
+
+	@echo "Running MIR borrow canonical authority audit..."
+
+	@bash src/cmd/compile/internal/tests/gates/mir-borrow-canonical-authority-check.sh
+
+	@echo "✓ MIR borrow canonical authority audit passed"
 
 
 

@@ -160,6 +160,7 @@ struct mir_ownership_facts {
     // LEGACY / DEBUG: string representation of borrowed places
     // Used for backward compatibility and diagnostic output only
     // Authority: NONE (use loan_borrowed_places for semantics)
+    // TODO: Remove after legacy diagnostic consumers migrate.
     string[] loan_places
 
     // CANONICAL / SEMANTIC: structured representation of borrowed places
