@@ -208,7 +208,6 @@ func monomorphize_file(source_file file) monomorphize_file_result {
 
     ctx := new_context()
     extra_items := item[]()
-    
 
 
     i := 0
@@ -216,39 +215,35 @@ func monomorphize_file(source_file file) monomorphize_file_result {
         ctx = collect_item_instances_ctx(file.items[i], file.items, ctx)
         i = i + 1
     }
-    
-
 
 
     cursor := 0
     for cursor < len(ctx.worklist) {
         work := ctx.worklist[cursor]
         cursor = cursor + 1
-        
+
 
         if is_work_processed(ctx, work.generic_name, work.type_args) {
             continue
         }
         ctx = mark_work_processed(ctx, work.generic_name, work.type_args)
-        
+
 
         source := find_generic_function(file.items, work.generic_name)
         if source.sig.name == "" {
             continue
         }
-        
+
 
         instance := specialize_function(source, work.type_args)
         ctx.generated = append(ctx.generated, instance)
-        
 
 
         ctx = collect_item_instances_ctx(item::function(instance), file.items, ctx)
-        
+
 
         extra_items = append(extra_items, item::function(finalize_monomorphized_function(instance)))
     }
-    
 
 
     stripped := item[]()
@@ -260,14 +255,14 @@ func monomorphize_file(source_file file) monomorphize_file_result {
         i = i + 1
     }
     file.items = stripped
-    
+
 
     i = 0
     for i < len(extra_items) {
         file.items = append(file.items, extra_items[i])
         i = i + 1
     }
-    
+
     monomorphize_file_result { file: file, cache: ctx.cache, invariant_errors: verify_monomorphized_file(file) }
 }
 
@@ -398,34 +393,34 @@ func collect_call_instance_ctx(call_expr call, item[] all_items, mono_context ct
     if len(call.type_args) == 0 {
         return ctx
     }
-    
+
     resolved := ""
     switch call.resolved_callee {
         option.some(name) : resolved = name,
         option.none : return ctx,
     }
-    
+
     generic_name := ""
     switch call.callee.value {
         expr.name(name) : generic_name = name.name,
         _ : return ctx,
     }
-    
+
     source := find_generic_function(all_items, generic_name)
     if source.sig.name == "" {
         return ctx
     }
-    
+
 
     existing := mono_cache_lookup(ctx.cache, generic_name, call.type_args)
     result := mono_cache_get_or_create(ctx.cache, generic_name, call.type_args)
     ctx.cache = result.cache
-    
+
 
     if existing == "" {
         ctx.worklist = append(ctx.worklist, mono_work_item { generic_name: generic_name, type_args: call.type_args })
     }
-    
+
     ctx
 }
 
@@ -1215,7 +1210,7 @@ func summarize_instance(function_decl instance) mono_function_summary {
 
 func verify_monomorphized_file_with_details(source_file file) int {
     errors := verify_monomorphized_file(file)
-    
+
 
     i := 0
     for i < len(file.items) {
@@ -1230,7 +1225,7 @@ func verify_monomorphized_file_with_details(source_file file) int {
         }
         i = i + 1
     }
-    
+
     errors
 }
 

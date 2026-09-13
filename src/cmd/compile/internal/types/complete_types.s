@@ -102,12 +102,12 @@ func type_lookup(type_table* table, string name) type_info {
 }
 
 func type_create_pointer(type_table* table, string elem_type) type_info {
-    ptr_type := type_info { 
-        kind: type_ptr, 
-        name: elem_type + "*", 
-        size: 8, 
+    ptr_type := type_info {
+        kind: type_ptr,
+        name: elem_type + "*",
+        size: 8,
         align: 8,
-        elem_type: elem_type 
+        elem_type: elem_type
     }
     table.types = append(table.types, ptr_type)
     ptr_type
@@ -115,24 +115,24 @@ func type_create_pointer(type_table* table, string elem_type) type_info {
 
 func type_create_array(type_table* table, string elem_type, int size) type_info {
     elem := type_lookup(table, elem_type)
-    array_type := type_info { 
-        kind: type_array, 
-        name: elem_type + "[]", 
-        size: elem.size * size, 
+    array_type := type_info {
+        kind: type_array,
+        name: elem_type + "[]",
+        size: elem.size * size,
         align: elem.align,
-        elem_type: elem_type 
+        elem_type: elem_type
     }
     table.types = append(table.types, array_type)
     array_type
 }
 
 func type_create_slice(type_table* table, string elem_type) type_info {
-    slice_type := type_info { 
-        kind: type_slice, 
-        name: "[]" + elem_type, 
-        size: 24, 
+    slice_type := type_info {
+        kind: type_slice,
+        name: "[]" + elem_type,
+        size: 24,
         align: 8,
-        elem_type: elem_type 
+        elem_type: elem_type
     }
     table.types = append(table.types, slice_type)
     slice_type
@@ -155,10 +155,10 @@ func type_create_func(type_table* table, string[] params, string[] returns) type
     }
     func_name = func_name + ")"
 
-    func_type := type_info { 
-        kind: type_func, 
-        name: func_name, 
-        size: 16, 
+    func_type := type_info {
+        kind: type_func,
+        name: func_name,
+        size: 16,
         align: 8,
         params: params,
         returns: returns
@@ -168,10 +168,10 @@ func type_create_func(type_table* table, string[] params, string[] returns) type
 }
 
 func type_create_struct(type_table* table, string name, string[] fields) type_info {
-    struct_type := type_info { 
-        kind: type_struct, 
-        name: name, 
-        size: 0, 
+    struct_type := type_info {
+        kind: type_struct,
+        name: name,
+        size: 0,
         align: 8,
         fields: fields
     }
@@ -180,10 +180,10 @@ func type_create_struct(type_table* table, string name, string[] fields) type_in
 }
 
 func type_create_interface(type_table* table, string name, string[] methods) type_info {
-    iface_type := type_info { 
-        kind: type_interface, 
-        name: name, 
-        size: 16, 
+    iface_type := type_info {
+        kind: type_interface,
+        name: name,
+        size: 16,
         align: 8,
         methods: method_info[]()
     }
@@ -200,10 +200,10 @@ func type_add_method(type_table* table, string type_name, method_info method) {
 }
 
 func type_create_generic(type_table* table, string name, type_param[] params) generic_type {
-    gen_type := generic_type { 
-        name: name, 
-        params: params, 
-        instantiations: type_info[]() 
+    gen_type := generic_type {
+        name: name,
+        params: params,
+        instantiations: type_info[]()
     }
     table.generics = append(table.generics, gen_type)
     gen_type

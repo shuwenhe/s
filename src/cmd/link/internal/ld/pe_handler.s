@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	PE_SIGNATURE = 0x00004550 
+	PE_SIGNATURE = 0x00004550
 	PE_MAGIC_PE32 = 0x10b
 	PE_MAGIC_PE32PLUS = 0x20b
 )
@@ -128,8 +128,8 @@ func new_pe_object(machine pe_machine) pe_object {
 			TimeDateStamp: 0,
 			PointerToSymbolTable: 0,
 			NumberOfSymbols: 0,
-			SizeOfOptionalHeader: 240, 
-			Characteristics: 0x0002 | 0x0004 | 0x0008, 
+			SizeOfOptionalHeader: 240,
+			Characteristics: 0x0002 | 0x0004 | 0x0008,
 		},
 		OptionalHeader: pe_optional_header{
 			Magic: PE_MAGIC_PE32PLUS,
@@ -154,7 +154,7 @@ func new_pe_object(machine pe_machine) pe_object {
 			SizeOfImage: 0,
 			SizeOfHeaders: 0x400,
 			CheckSum: 0,
-			Subsystem: 3,  
+			Subsystem: 3,
 			DllCharacteristics: 0,
 			SizeOfStackReserve: 0x100000,
 			SizeOfStackCommit: 0x1000,
@@ -187,7 +187,7 @@ func (po* pe_object) add_section(string name, data u8[]) i32 {
 		PointerToLinenumbers: 0,
 		NumberOfRelocations: 0,
 		NumberOfLinenumbers: 0,
-		Characteristics: 0x60000020, 
+		Characteristics: 0x60000020,
 	}
 
 	name_bytes := u8[](name)

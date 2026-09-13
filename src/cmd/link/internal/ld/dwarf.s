@@ -157,7 +157,7 @@ func (dm* dwarf_manager) generate_debug_line() u8[] {
 
 		version_start := len(data)
 
-		data = append(data, 4, 0) 
+		data = append(data, 4, 0)
 
 		hdr_len_offset := len(data)
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -186,16 +186,16 @@ func (dm* dwarf_manager) generate_debug_line() u8[] {
 			data = append(data, u8[](dir)...)
 			data = append(data, 0)
 		}
-		data = append(data, 0) 
+		data = append(data, 0)
 
 		for _, fname := range line_info.FileNames {
 			data = append(data, u8[](fname)...)
 			data = append(data, 0)
-			data = append(data, 1) 
-			data = append(data, 0) 
-			data = append(data, 0) 
+			data = append(data, 1)
+			data = append(data, 0)
+			data = append(data, 0)
 		}
-		data = append(data, 0) 
+		data = append(data, 0)
 	}
 
 	data

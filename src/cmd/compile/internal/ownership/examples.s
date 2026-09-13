@@ -27,13 +27,13 @@ func memory_example() int {
 
     block1 := allocateBlock(1024)
     block2 := allocateBlock(2048)
-    
+
 
     block3 := block2
-    
+
 
     total := block1.size + block3.size
-    
+
 
     return total
 }
@@ -62,7 +62,7 @@ func append_to_string(s *OwnedString, int value) () {
 func string_example() int {
     s1 := newString(100)
     appendToString(&s1, 65)
-    
+
     s2 := s1
     return s2.len
 
@@ -101,16 +101,16 @@ func (v *Vector) len_value() int {
 
 func vector_example() int {
     v := newVector()
-    
+
 
     v.push(10)
     v.push(20)
     v.push(30)
-    
+
 
     first := v.get(0)
     second := v.get(1)
-    
+
     sum := *first + *second
     return sum
 
@@ -152,10 +152,10 @@ func close_file(f FileHandle) () {
 func file_example() int {
 
     f := openFile("data.txt")
-    
+
 
     content := f.read()
-    
+
 
     return content
 }
@@ -216,11 +216,11 @@ func (rc *RefCounted) clone() RefCounted {
 func ref_counted_example() int {
     rc1 := newRefCounted(100)
     rc2 := rc1.clone()
-    
+
 
     val1 := *rc1.data
     val2 := *rc2.data
-    
+
     return val1 + val2
 }
 
@@ -269,7 +269,7 @@ struct event_handler {
 
 func create_event_handler(int contextData) EventHandler {
     context := box(contextData)
-    
+
     return EventHandler{
         callback: func() int {
             return *context * 2
@@ -315,11 +315,11 @@ func (p *ResourcePool) size() int {
 
 func pool_example() int {
     pool := newPool()
-    
+
     r1 := pool.acquire()
     r2 := pool.acquire()
     r3 := pool.acquire()
-    
+
     total := *r1 + *r2 + *r3
     return total
 
@@ -339,7 +339,7 @@ func copy_example() int {
 
     c1 := CopyableData{x: 10, y: 20}
     c2 := c1
-    
+
 
     return c1.x + c2.y
 }
@@ -348,7 +348,7 @@ func move_example() int {
 
     m1 := MoveableData{ptr: box(10)}
     m2 := m1
-    
+
 
     value := *m2.ptr
     return value
@@ -367,7 +367,7 @@ func validate_and_allocate(int value) ValidationResult {
             valid: false,
         }
     }
-    
+
     resource := box(value * 2)
     return ValidationResult{
         resource: resource,
@@ -377,11 +377,11 @@ func validate_and_allocate(int value) ValidationResult {
 
 func early_return_example() int {
     result := validateAndAllocate(42)
-    
+
     if !result.valid {
         return 0
     }
-    
+
     return *result.resource
 }
 
@@ -399,12 +399,12 @@ func deep_transfer() int {
     container := Container{
         item: box(100),
     }
-    
+
 
     wrapper := Wrapper{
         container: container,
     }
-    
+
 
     value := *wrapper.container.item
     return value
@@ -416,52 +416,51 @@ func main() int {
 
     println("=== Memory Allocator ===")
     println("Result:", memoryExample())
-    
+
 
     println("=== Owned String ===")
     println("Result:", stringExample())
-    
+
 
     println("=== Vector ===")
     println("Result:", vectorExample())
-    
+
 
     println("=== File Handle ===")
     println("Result:", fileExample())
-    
+
 
     println("=== Linked List ===")
     println("Result:", listExample())
-    
+
 
     println("=== Reference Counting ===")
     println("Result:", refCountedExample())
-    
+
 
     println("=== State Machine ===")
     println("Result:", processExample())
-    
+
 
     println("=== Owned Callback ===")
     println("Result:", callbackExample())
-    
+
 
     println("=== Resource Pool ===")
     println("Result:", poolExample())
-    
+
 
     println("=== Copy vs Move ===")
     println("Copy result:", copyExample())
     println("Move result:", moveExample())
-    
+
 
     println("=== Early Return ===")
     println("Result:", earlyReturnExample())
-    
+
 
     println("=== Complex Transfer ===")
     println("Result:", deepTransfer())
-    
+
     return 0
 }
-
