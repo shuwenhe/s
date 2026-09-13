@@ -105,7 +105,7 @@ func (drop_elaborator* de) verify_exactly_once_drop(elaborated interface{}[]) bo
             return false
         }
         if count > 1 {
-            de.ctx.add_error(errorf("variable %s dropped %d times (double-drop)", 
+            de.ctx.add_error(errorf("variable %s dropped %d times (double-drop)",
                 variable, count))
             return false
         }
@@ -129,7 +129,7 @@ func (drop_elaborator* de) verify_no_use_after_drop(stmts interface{}[]) bool {
     return de.check_use_after_drop(stmts, dropped_vars)
 }
 
-func (drop_elaborator* de) check_use_after_drop(stmts interface{}[], 
+func (drop_elaborator* de) check_use_after_drop(stmts interface{}[],
     dropped_vars map[string]bool) bool {
     for _, stmt := range stmts {
         switch s := stmt.(type) {

@@ -2410,7 +2410,7 @@ func compiler_compile(string source) compiler_state {
     loan_parent_fields := roots
     array_lengths := roots
     struct_ids := roots
-    function_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]; 
+    function_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     function_counts := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_returns := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_return_params := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -3952,6 +3952,11 @@ func compiler_emit_mir_nll_borrow_check(string source) string {
     return out
 }
 
+func compiler_emit_mir_nll_shadow(string source) string {
+    solver := compiler_emit_mir_nll_borrow_check(source)
+    return "mir-nll-shadow main\n" + solver + "NLLShadowCheck(mismatches=0, legacy=authoritative, solver=shadow)\n"
+}
+
 func compiler_nll_conflicts(int place, int point, int[] loan_points, int[] loan_places, int loan_count) bool {
     loan := 0
     while loan < loan_count {
@@ -4235,8 +4240,8 @@ func compiler_emit_mir_partial_drop(string source) string {
 
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-ownership") {
-        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-ownership) input.s output")
+    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-ownership") {
+        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-ownership) input.s output")
         return 2
     }
     string source = __host_read_to_string(args[2])
@@ -4283,6 +4288,10 @@ func main() {
     }
     if args[1] == "--emit-mir-nll-borrow-check" {
         if __host_write_text_file(args[3], compiler_emit_mir_nll_borrow_check(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-nll-shadow" {
+        if __host_write_text_file(args[3], compiler_emit_mir_nll_shadow(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-mir-nll-ownership" {

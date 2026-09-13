@@ -164,24 +164,24 @@ func (sm* symbol_manager) select_comdat_section(group* comdat_group, candidate s
 	match := false
 
 	switch group.SelectionKind {
-	case 1: 
+	case 1:
 		match = true
-	case 2: 
+	case 2:
 		if len(group.Sections) > 0 {
 
 			match = true
 		}
-	case 3: 
+	case 3:
 		if len(group.Sections) > 0 {
 
 			match = true
 		}
-	case 4: 
+	case 4:
 		if len(group.Sections) > 0 {
 
 			match = candidate.Size < group.Sections[0]
 		}
-	case 5: 
+	case 5:
 		if len(group.Sections) > 0 {
 
 			match = candidate.Size > group.Sections[0]

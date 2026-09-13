@@ -223,7 +223,7 @@ func (engine* rules_engine) add_rule(r rule) void {
 
 func (engine* rules_engine) apply_block(block* basic_block) int {
     let total_transforms := 0
-    let max_iterations := 100  
+    let max_iterations := 100
 
     for iteration := 0; iteration < max_iterations; iteration++ {
         let changed_in_iteration := 0
@@ -243,7 +243,7 @@ func (engine* rules_engine) apply_block(block* basic_block) int {
                         changed_in_iteration++
                         total_transforms++
                         transformed = true
-                        break  
+                        break
                     }
                 }
             }
@@ -254,7 +254,7 @@ func (engine* rules_engine) apply_block(block* basic_block) int {
         }
 
         if changed_in_iteration == 0 {
-            break  
+            break
         }
     }
 
@@ -281,7 +281,7 @@ func ir_equals(a, b IR) bool {
         return a.value == b.value
     }
 
-    return a.id == b.id  
+    return a.id == b.id
 }
 
 func replace_instruction(block* basic_block, old_instr, new_instr IR) void {

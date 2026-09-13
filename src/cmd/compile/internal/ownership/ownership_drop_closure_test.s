@@ -34,14 +34,14 @@ func test_shared_borrow() bool {
     if !ctx.phase_ownership_analyze(stmts) {
         return false
     }
-    borrow1 := borrow_stmt*{ 
-        borrow_var: "r1", 
-        source: "x", 
+    borrow1 := borrow_stmt*{
+        borrow_var: "r1",
+        source: "x",
         is_mutable: false,
     }
-    borrow2 := borrow_stmt*{ 
-        borrow_var: "r2", 
-        source: "x", 
+    borrow2 := borrow_stmt*{
+        borrow_var: "r2",
+        source: "x",
         is_mutable: false,
     }
     borrow_stmts := interface{}[]{ borrow1, borrow2 }
@@ -58,14 +58,14 @@ func test_mutable_borrow_conflict() bool {
     if !ctx.phase_ownership_analyze(stmts) {
         return false
     }
-    borrow1 := borrow_stmt*{ 
-        borrow_var: "r1", 
-        source: "x", 
+    borrow1 := borrow_stmt*{
+        borrow_var: "r1",
+        source: "x",
         is_mutable: false,
     }
-    borrow2 := borrow_stmt*{ 
-        borrow_var: "r2", 
-        source: "x", 
+    borrow2 := borrow_stmt*{
+        borrow_var: "r2",
+        source: "x",
         is_mutable: true,
     }
     borrow_stmts := interface{}[]{ borrow1, borrow2 }
@@ -166,9 +166,9 @@ func test_complete_pipeline_invalid() bool {
 func test_borrow_ends_before_move() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
-    borrow := borrow_stmt*{ 
-        borrow_var: "r", 
-        source: "x", 
+    borrow := borrow_stmt*{
+        borrow_var: "r",
+        source: "x",
         is_mutable: false,
     }
     borrow_end := borrow_end_stmt*{ borrow_var: "r" }
@@ -185,9 +185,9 @@ func test_borrow_ends_before_move() bool {
 func test_move_while_borrowed_error() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
-    borrow := borrow_stmt*{ 
-        borrow_var: "r", 
-        source: "x", 
+    borrow := borrow_stmt*{
+        borrow_var: "r",
+        source: "x",
         is_mutable: false,
     }
     move_stmt := move_stmt*{ source: "x" }

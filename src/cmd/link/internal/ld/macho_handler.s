@@ -122,8 +122,8 @@ func (mo* macho_object) add_segment(string name, vmAddr i64, vmSize i64) {
 		VmSize: u64(vmSize),
 		FileOffset: 0,
 		FileSize: 0,
-		MaxProt: 3,  
-		InitProt: 1, 
+		MaxProt: 3,
+		InitProt: 1,
 		NumSections: 0,
 		Flags: 0,
 		Sections: make(macho_section[], 0),
@@ -159,7 +159,7 @@ func read_macho_object(string filename) (macho_object, error) {
 		macho_object{}, "invalid Mach-O magic"
 	}
 
-	obj := new_macho_object(macho_machine(binary.LittleEndian.uint32(hdr_buf[4:8])), 
+	obj := new_macho_object(macho_machine(binary.LittleEndian.uint32(hdr_buf[4:8])),
 		macho_file_type(binary.LittleEndian.uint32(hdr_buf[12:16])))
 
 	obj.Header.CpuType = i32(binary.LittleEndian.uint32(hdr_buf[4:8]))

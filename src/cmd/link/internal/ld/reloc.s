@@ -90,7 +90,7 @@ func (rp* reloc_processor) add_symbol(sym symbol_entry) i32 {
 
 func (rp* reloc_processor) allocate_got_entry(symIndex i32, relocType reloc_type) i64 {
 	offset := rp.GOTOffset
-	rp.GOTOffset += 8 
+	rp.GOTOffset += 8
 
 	reloc := relocation{
 		Offset: offset,
@@ -131,7 +131,7 @@ func (rp* reloc_processor) resolve_symbols() {
 
 			existing_sym := rp.SymbolTable[existing]
 
-			if sym.Binding == 1 && existing_sym.Binding == 2 { 
+			if sym.Binding == 1 && existing_sym.Binding == 2 {
 				symbol_map[sym.Name] = i32(i)
 			}
 		} else {
@@ -209,7 +209,7 @@ func (rp* reloc_processor) generate_dynamic_symtab() symbol_entry[] {
 }
 
 func (rp* reloc_processor) get_relocation_table_size() i64 {
-	i64(len(rp.Relocs)) * 24 
+	i64(len(rp.Relocs)) * 24
 }
 
 func (rp* reloc_processor) generate_relocation_data() u8[] {

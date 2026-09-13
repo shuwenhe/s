@@ -1,6 +1,5 @@
 package test
 
-// P0A Gate Test: 4字段 Quad 第三字段 partial move
 
 struct Resource {
     value box
@@ -21,7 +20,7 @@ func main() {
         Resource(box(40))
     )
 
-    // *** 关键：partial move 第三字段 (field index 2) ***
+
     x := p.c
 
     println("got third field")

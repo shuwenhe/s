@@ -53,7 +53,7 @@ func new_production_linker(config linker_config) production_linker {
 		pe_objects: make(pe_object[], 0),
 		symbol_manager: NewSymbolManager(),
 		reloc_processor: NewRelocProcessor(),
-		DwarfManager: NewDWARFManager(4), 
+		DwarfManager: NewDWARFManager(4),
 		unwind_manager: NewUnwindManager(),
 		build_id_manager: NewBuildIDManager(BID_SHA256),
 		got_manager: NewGOTManager(),
@@ -226,7 +226,7 @@ func (pl* production_linker) generate_output() error {
 
 func (pl* production_linker) generate_elf_output() error {
 
-	output := NewELFObject(0x3e) 
+	output := NewELFObject(0x3e)
 
 	text_data := make(u8[], 0)
 	text_idx := output.add_section(".text", 1, 0x6, text_data)

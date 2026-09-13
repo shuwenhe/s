@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	elf_magic = 0x464c457f 
+	elf_magic = 0x464c457f
 	elf_class_32 = 1
 	elf_class_64 = 2
 	elf_endian_little = 1
@@ -20,10 +20,10 @@ const (
 
 enum elf_type {
 	et_none = 0
-	et_rel = 1     
-	et_exec = 2    
-	et_dyn = 3     
-	et_core = 4    
+	et_rel = 1
+	et_exec = 2
+	et_dyn = 3
+	et_core = 4
 	et_loproc = 0xff00
 	et_hiproc = 0xffff
 }
@@ -117,7 +117,7 @@ func (elf_object* eo) add_section(string name, sec_type i32, flags i64, data u8[
 	idx := i32(len(eo.sections))
 
 	shdr := section_header{
-		name: 0,    
+		name: 0,
 		type: sec_type,
 		flags: flags,
 		addr: 0,
@@ -255,7 +255,7 @@ func (elf_object* eo) write_to_file(string filename) error {
 	var shdr_offset i64 = 0
 
 	for _, shdr := range eo.sections {
-		if shdr.type != 8 { 
+		if shdr.type != 8 {
 			offset += shdr.size
 		}
 	}
@@ -264,7 +264,7 @@ func (elf_object* eo) write_to_file(string filename) error {
 
 	current_offset := i64(len(hdr_buf))
 	for i, shdr := range eo.sections {
-		if shdr.type != 8 { 
+		if shdr.type != 8 {
 			if data, ok := eo.section_data[i32(i)]; ok {
 				_, err = file.write_at(data, current_offset)
 				if err != nil {
