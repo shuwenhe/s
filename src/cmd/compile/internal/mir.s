@@ -139,10 +139,23 @@ struct mir_point_map {
     mir_point[] points
 }
 
+// B1.2: Preserve canonical borrowed Place through MIR ownership facts
+// Dual-path migration: legacy string paths + canonical structured places
 struct mir_ownership_facts {
     ownership_analysis_input input
     string[] ref_names
+
+    // LEGACY / DEBUG: string representation of borrowed places
+    // Used for backward compatibility and diagnostic output only
+    // Authority: NONE (use loan_borrowed_places for semantics)
     string[] loan_places
+
+    // CANONICAL / SEMANTIC: structured representation of borrowed places
+    // Indexed by loan_id, stored directly from mir_borrow_stmt.place
+    // Structured preservation: no string serialization involved
+    // Authority: YES (source of truth for place identity)
+    // Contract: loan_borrowed_places[i] corresponds to loan id i
+    mir_place[] loan_borrowed_places
 }
 
 func build_mir_point_map(mir_graph graph) mir_point_map {
@@ -222,7 +235,15 @@ func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_o
                     loan_id := facts.input.loan_count
                     facts.input.loan_count = facts.input.loan_count + 1
                     facts.input.loan_points = append(facts.input.loan_points, mir_add_point_value(0, point))
+
+                    // [LEGACY] Store string representation for backward compatibility/diagnostics
                     facts.loan_places = append(facts.loan_places, mir_place_key(borrow_stmt.place))
+
+                    // [CANONICAL] Store structured place directly from borrow statement
+                    // Structural preservation without string conversion (no serialization round-trip)
+                    // This is the canonical semantic record of what place was borrowed
+                    facts.loan_borrowed_places = append(facts.loan_borrowed_places, borrow_stmt.place)
+
                     facts.input.ref_loans[ref_id] = loan_id
                     facts.input.region_points[ref_id] = mir_add_point_value(facts.input.region_points[ref_id], point)
                 }
@@ -256,7 +277,9 @@ func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
         input: ownership_analysis_input {
             point_count: point_count, ref_seen int[](), ref_loans int[](), region_points int[](), loan_points int[](), outlives_from int[](), outlives_to int[](), outlives_count 0, loan_count 0,
         },
-        ref_names string[](), loan_places string[](),
+        ref_names: string[](),
+        loan_places: string[](),
+        loan_borrowed_places: mir_place[](),
     }
 }
 
