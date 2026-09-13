@@ -69,12 +69,30 @@ struct mir_copy_stmt {
 struct mir_drop_stmt {
     int slot
 }
+
+struct mir_borrow_stmt {
+    string ref_name
+    mir_place place
+    bool mutable
+}
+
+struct mir_ref_use_stmt {
+    string ref_name
+}
+
+struct mir_ref_assign_stmt {
+    string target_ref
+    string source_ref
+}
 enum mir_statement {
     assign(mir_assign_stmt),
     eval(mir_eval_stmt),
     move(mir_move_stmt),
     copy(mir_copy_stmt),
     drop(mir_drop_stmt),
+    borrow(mir_borrow_stmt),
+    ref_use(mir_ref_use_stmt),
+    ref_assign(mir_ref_assign_stmt),
 }
 
 struct mir_control_edge {
@@ -105,6 +123,217 @@ struct mir_graph {
     bool borrow_ok
     int borrow_errors
     string borrow_message
+}
+
+struct mir_point {
+    int block_id
+    int statement_index
+}
+
+struct mir_point_map {
+    mir_point[] points
+}
+
+struct mir_ownership_analysis_input {
+    int point_count
+    string[] ref_names
+    int[] ref_loans
+    int[] region_points
+    int[] loan_points
+    string[] loan_places
+    int[] outlives_from
+    int[] outlives_to
+    int outlives_count
+    int loan_count
+}
+
+func build_mir_point_map(mir_graph graph) mir_point_map {
+    points := mir_point[]()
+    emitted_blocks := 0
+    next_block_id := 0
+    // Deterministic dense ids: block_id ascending, then statements, then terminator.
+    for emitted_blocks < len(graph.blocks) {
+        block_index := -1
+        scan := 0
+        for scan < len(graph.blocks) {
+            if graph.blocks[scan].id == next_block_id {
+                block_index = scan
+            }
+            scan = scan + 1
+        }
+        if block_index >= 0 {
+            stmt_index := 0
+            for stmt_index < len(graph.blocks[block_index].statements) {
+                points = append(points, mir_point { block_id: graph.blocks[block_index].id, statement_index stmt_index })
+                stmt_index = stmt_index + 1
+            }
+            points = append(points, mir_point { block_id: graph.blocks[block_index].id, statement_index len(graph.blocks[block_index].statements) })
+            emitted_blocks = emitted_blocks + 1
+        }
+        next_block_id = next_block_id + 1
+    }
+    mir_point_map { points: points }
+}
+
+func mir_point_id(mir_point_map point_map, int block_id, int statement_index) int {
+    i := 0
+    for i < len(point_map.points) {
+        if point_map.points[i].block_id == block_id && point_map.points[i].statement_index == statement_index {
+            return i
+        }
+        i = i + 1
+    }
+    -1
+}
+
+func mir_point_count(mir_graph graph) int {
+    count := 0
+    i := 0
+    for i < len(graph.blocks) {
+        count = count + len(graph.blocks[i].statements) + 1
+        i = i + 1
+    }
+    count
+}
+
+func mir_point_text(mir_graph graph, mir_point point) string {
+    label := "unknown"
+    i := 0
+    for i < len(graph.blocks) {
+        if graph.blocks[i].id == point.block_id {
+            label = graph.blocks[i].label
+            if point.statement_index == len(graph.blocks[i].statements) {
+                return "BB" + to_string(point.block_id) + "(" + label + "):term"
+            }
+        }
+        i = i + 1
+    }
+    "BB" + to_string(point.block_id) + "(" + label + "):stmt" + to_string(point.statement_index)
+}
+
+func build_ownership_analysis_input_from_mir(mir_graph graph, mir_point_map points) mir_ownership_analysis_input {
+    input := mir_empty_ownership_analysis_input(len(points.points))
+    block_index := 0
+    for block_index < len(graph.blocks) {
+        stmt_index := 0
+        for stmt_index < len(graph.blocks[block_index].statements) {
+            point := mir_point_id(points, graph.blocks[block_index].id, stmt_index)
+            switch graph.blocks[block_index].statements[stmt_index] {
+                mir_statement::borrow(borrow_stmt) : {
+                    ref_id := mir_ownership_ref_id(&input, borrow_stmt.ref_name)
+                    loan_id := input.loan_count
+                    input.loan_count = input.loan_count + 1
+                    input.loan_points = append(input.loan_points, mir_add_point_value(0, point))
+                    input.loan_places = append(input.loan_places, mir_place_key(borrow_stmt.place))
+                    input.ref_loans[ref_id] = loan_id
+                    input.region_points[ref_id] = mir_add_point_value(input.region_points[ref_id], point)
+                }
+                mir_statement::ref_use(use_stmt) : {
+                    ref_id := mir_ownership_ref_id(&input, use_stmt.ref_name)
+                    input.region_points[ref_id] = mir_add_point_value(input.region_points[ref_id], point)
+                }
+                mir_statement::ref_assign(assign_stmt) : {
+                    target_ref := mir_ownership_ref_id(&input, assign_stmt.target_ref)
+                    source_ref := mir_ownership_ref_id(&input, assign_stmt.source_ref)
+                    input.ref_loans[target_ref] = input.ref_loans[source_ref]
+                    input.outlives_from = append(input.outlives_from, source_ref)
+                    input.outlives_to = append(input.outlives_to, target_ref)
+                    input.outlives_count = input.outlives_count + 1
+                }
+                _ : { }
+            }
+            stmt_index = stmt_index + 1
+        }
+        block_index = block_index + 1
+    }
+    input
+}
+
+func mir_empty_ownership_analysis_input(int point_count) mir_ownership_analysis_input {
+    mir_ownership_analysis_input {
+        point_count: point_count, ref_names string[](), ref_loans int[](), region_points int[](), loan_points int[](), loan_places string[](), outlives_from int[](), outlives_to int[](), outlives_count 0, loan_count 0,
+    }
+}
+
+func mir_ownership_ref_id(mir_ownership_analysis_input* input, string name) int {
+    i := 0
+    for i < len(input.ref_names) {
+        if input.ref_names[i] == name { return i }
+        i = i + 1
+    }
+    input.ref_names = append(input.ref_names, name)
+    input.ref_loans = append(input.ref_loans, -1)
+    input.region_points = append(input.region_points, 0)
+    len(input.ref_names) - 1
+}
+
+func mir_add_point_value(int bits, int point) int {
+    if point < 0 { return bits }
+    bit := 1
+    i := 0
+    for i < point {
+        bit = bit * 2
+        i = i + 1
+    }
+    if mir_point_bit_set(bits, bit) { return bits }
+    bits + bit
+}
+
+func mir_point_bit_set(int bits, int bit) bool {
+    value := bits / bit
+    return value % 2 == 1
+}
+
+func mir_points_string(int bits) string {
+    out := "{"
+    first := true
+    point := 0
+    bit := 1
+    for point < 31 {
+        if mir_point_bit_set(bits, bit) {
+            if !first { out = out + "," }
+            out = out + "P" + to_string(point)
+            first = false
+        }
+        point = point + 1
+        bit = bit * 2
+    }
+    out + "}"
+}
+
+func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
+    points := build_mir_point_map(graph)
+    input := build_ownership_analysis_input_from_mir(graph, points)
+    out := "PointCount = " + to_string(input.point_count)
+    i := 0
+    for i < len(input.ref_names) {
+        out = out + " | Ref(" + input.ref_names[i] + ") = R" + to_string(i)
+        i = i + 1
+    }
+    i = 0
+    for i < input.loan_count {
+        out = out + " | Loan" + to_string(i) + " issued = " + mir_points_string(input.loan_points[i])
+        out = out + " place=" + input.loan_places[i]
+        i = i + 1
+    }
+    i = 0
+    for i < len(input.ref_names) {
+        if input.ref_loans[i] >= 0 {
+            out = out + " | RefLoan(R" + to_string(i) + ") = L" + to_string(input.ref_loans[i])
+        }
+        i = i + 1
+    }
+    i = 0
+    for i < input.outlives_count {
+        out = out + " | Outlives(R" + to_string(input.outlives_from[i]) + ",R" + to_string(input.outlives_to[i]) + ")"
+        i = i + 1
+    }
+    i = 0
+    for i < len(input.ref_names) {
+        out = out + " | RegionPoint(R" + to_string(i) + ") = " + mir_points_string(input.region_points[i])
+        i = i + 1
+    }
+    out
 }
 
 func lower_function_graph(function_decl function) mir_graph {
@@ -145,11 +374,13 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
         statements.push(mir_statement::eval(mir_eval_stmt {
             op: "stmt", args args,
         }))
+        mir_append_ownership_semantics_from_stmt(statements, block.statements[index])
         events = mir_extend_events(events, mir_stmt_events(block.statements[index], locals))
         index = index + 1
     }
     if block.final_expr.is_some() {
         events = mir_extend_events(events, mir_expr_events(block.final_expr.unwrap(), locals, true))
+        mir_append_ownership_semantics_from_expr(statements, block.final_expr.unwrap(), "")
     }
     mir_append_scope_drops(locals, statements, events)
     borrow_result := borrow_check_events(events)
@@ -403,6 +634,88 @@ func mir_expr_events(expr value, mir_local_slot[] locals, bool consume) string[]
 
 func mir_place_name(expr value) string {
     mir_place_key(mir_place_from_expr(value))
+}
+
+func mir_append_ownership_semantics_from_stmt(mir_statement[] statements, stmt value) () {
+    switch value {
+        stmt.let(let_stmt) : {
+            mir_append_ownership_semantics_from_expr(statements, let_stmt.value, let_stmt.name)
+        }
+        stmt.assign(assign_stmt) : {
+            mir_append_ownership_semantics_from_expr(statements, assign_stmt.value, assign_stmt.name)
+        }
+        stmt.expr(expr_stmt) : {
+            mir_append_ownership_semantics_from_expr(statements, expr_stmt.expr, "")
+        }
+        stmt.return(return_stmt) : {
+            if return_stmt.value.is_some() {
+                mir_append_ownership_semantics_from_expr(statements, return_stmt.value.unwrap(), "")
+            }
+        }
+        stmt.defer(defer_stmt) : {
+            mir_append_ownership_semantics_from_expr(statements, defer_stmt.expr, "")
+        }
+        stmt.sroutine(sroutine_stmt) : {
+            mir_append_ownership_semantics_from_expr(statements, sroutine_stmt.expr, "")
+        }
+        _ : { }
+    }
+}
+
+func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr value, string result_name) () {
+    switch value {
+        expr.borrow(borrow_expr) : {
+            target := borrow_expr.target.unwrap()
+            place := mir_place_from_expr(target)
+            if result_name != "" && place.root != "" {
+                statements.push(mir_statement::borrow(mir_borrow_stmt {
+                    ref_name: result_name, place place, mutable borrow_expr.mutable,
+                }))
+            }
+            mir_append_ownership_semantics_from_expr(statements, target, "")
+        }
+        expr.name(name_expr) : {
+            if result_name != "" {
+                statements.push(mir_statement::ref_assign(mir_ref_assign_stmt {
+                    target_ref: result_name, source_ref name_expr.name,
+                }))
+            } else {
+                statements.push(mir_statement::ref_use(mir_ref_use_stmt {
+                    ref_name: name_expr.name,
+                }))
+            }
+        }
+        expr.binary(binary_expr) : {
+            mir_append_ownership_semantics_from_expr(statements, binary_expr.left.unwrap(), "")
+            mir_append_ownership_semantics_from_expr(statements, binary_expr.right.unwrap(), "")
+        }
+        expr.call(call_expr) : {
+            mir_append_ownership_semantics_from_expr(statements, call_expr.callee.unwrap(), "")
+            i := 0
+            for i < len(call_expr.args) {
+                mir_append_ownership_semantics_from_expr(statements, call_expr.args[i], "")
+                i = i + 1
+            }
+        }
+        expr.member(member_expr) : {
+            mir_append_ownership_semantics_from_expr(statements, member_expr.target.unwrap(), result_name)
+        }
+        expr.index(index_expr) : {
+            mir_append_ownership_semantics_from_expr(statements, index_expr.target.unwrap(), result_name)
+            mir_append_ownership_semantics_from_expr(statements, index_expr.index.unwrap(), "")
+        }
+        expr.block(block_expr) : {
+            i := 0
+            for i < len(block_expr.statements) {
+                mir_append_ownership_semantics_from_stmt(statements, block_expr.statements[i])
+                i = i + 1
+            }
+            if block_expr.final_expr.is_some() {
+                mir_append_ownership_semantics_from_expr(statements, block_expr.final_expr.unwrap(), result_name)
+            }
+        }
+        _ : { }
+    }
 }
 
 func mir_stmt_events(stmt value, mir_local_slot[] locals) string[] {
