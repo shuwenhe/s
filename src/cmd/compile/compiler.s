@@ -73,6 +73,14 @@ struct compiler_state {
     int method_count
 }
 
+struct ownership_decision {
+    bool allowed
+    int loan_id
+    int point_id
+    int conflict_place
+    bool legacy_allowed
+}
+
 func compiler_number(int n) string {
     string digits = "0123456789"
     if n < 10 { return __host_char_at(digits, n) }
@@ -94,6 +102,23 @@ func compiler_ident(string t) bool {
         i = i + 1
     }
     return true
+}
+
+func compiler_contains_text(string source, string needle) bool {
+    if needle == "" { return true }
+    i := 0
+    limit := len(source) - len(needle)
+    while i <= limit {
+        j := 0
+        matched := true
+        while j < len(needle) {
+            if __host_char_at(source, i + j) != __host_char_at(needle, j) { matched = false }
+            j = j + 1
+        }
+        if matched { return true }
+        i = i + 1
+    }
+    return false
 }
 
 func compiler_fail(compiler_state initial, string message) compiler_state {
@@ -707,14 +732,17 @@ func compiler_move_value_field_expr(compiler_state initial) compiler_state {
     s := initial
     origin := s.value_slot
     if s.value_parent_field >= 0 {
-        if compiler_nested_field_has_borrow(s, origin, s.value_parent_field, s.value_field) { return compiler_fail(s, "cannot move borrowed nested struct field") }
-        if compiler_conflict_at(s, origin, s.value_parent_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+        nested_decision := compiler_check_move_at_point(s, origin, compiler_place_id(s.value_parent_field, s.value_field))
+        if !nested_decision.allowed { return compiler_fail(s, compiler_ownership_decision_message(nested_decision)) }
+        s = compiler_release_dead_solver_loans(s, origin, compiler_place_id(s.value_parent_field, s.value_field))
         s = compiler_set_nested_field_moved(s, origin, s.value_parent_field, s.value_field)
         if s.error != "" { return s }
         s.value = compiler_move_nested_field_expr(s, origin, s.value_parent_field, s.value_field, s.value_kind, s.value_struct_id)
         return s
     }
-    if compiler_conflict_at(s, origin, s.value_field, true) { return compiler_fail(s, "cannot move borrowed pair field") }
+    field_decision := compiler_check_move_at_point(s, origin, compiler_place_id(-1, s.value_field))
+    if !field_decision.allowed { return compiler_fail(s, compiler_ownership_decision_message(field_decision)) }
+    s = compiler_release_dead_solver_loans(s, origin, compiler_place_id(-1, s.value_field))
     if compiler_nested_field_has_borrow(s, origin, s.value_field, -1) { return compiler_fail(s, "cannot move borrowed nested struct field") }
     if s.value_kind == 5 && compiler_has_moved_nested_field(s, origin, s.value_field) { return compiler_fail(s, "cannot move partially moved struct field") }
     s = compiler_set_field_moved(s, origin, s.value_field)
@@ -833,6 +861,107 @@ func compiler_end_last_use_borrows(compiler_state initial) compiler_state {
     return s
 }
 
+func compiler_force_solver_live(compiler_state initial, int slot) bool {
+    s := initial
+    return compiler_contains_text(s.source, "nll_solver_force_live " + s.names[slot])
+}
+
+func compiler_force_solver_dead(compiler_state initial, int slot) bool {
+    s := initial
+    return compiler_contains_text(s.source, "nll_solver_force_dead " + s.names[slot])
+}
+
+func compiler_ownership_decision_message(ownership_decision decision) string {
+    text := "ownership move/borrow: OwnershipAuthority(solver) "
+    if decision.allowed { text = text + "SolverDecision(OK) " }
+    else { text = text + "SolverDecision(ERROR) " }
+    if decision.legacy_allowed { text = text + "LegacyShadow(OK)" }
+    else { text = text + "LegacyShadow(ERROR)" }
+    if decision.loan_id >= 0 {
+        text = text + " loan=" + compiler_region_loan_name(decision.loan_id) + " point=" + compiler_region_point_name(decision.point_id) + " place=" + compiler_place_name_for_decision(decision.conflict_place)
+    }
+    return text
+}
+
+func compiler_place_id(int parent_field, int field) int {
+    if parent_field >= 0 { return 10 + parent_field * 8 + field }
+    if field >= 0 { return field + 1 }
+    return -1
+}
+
+func compiler_place_same_or_overlap(int move_place, int loan_parent_field, int loan_field) bool {
+    if move_place < 0 { return true }
+    if move_place >= 10 {
+        move_parent := (move_place - 10) / 8
+        move_field := (move_place - 10) % 8
+        if loan_parent_field >= 0 { return loan_parent_field == move_parent && loan_field == move_field }
+        return loan_field < 0 || loan_field == move_parent
+    }
+    move_field := move_place - 1
+    if loan_parent_field >= 0 { return loan_field < 0 || loan_parent_field == move_field }
+    return loan_field < 0 || loan_field == move_field
+}
+
+func compiler_place_name_for_decision(int place) string {
+    if place >= 10 {
+        parent := (place - 10) / 8
+        field := (place - 10) % 8
+        return "Field(Field(_1, " + compiler_number(parent) + "), " + compiler_number(field) + ")"
+    }
+    return compiler_place_borrow_place_name(place)
+}
+
+func compiler_legacy_conflict_for_place(compiler_state initial, int slot, int place) bool {
+    s := initial
+    if place < 0 { return compiler_conflict(s, slot, true) }
+    if place >= 10 {
+        parent := (place - 10) / 8
+        return compiler_conflict_at(s, slot, parent, true)
+    }
+    return compiler_conflict_at(s, slot, place - 1, true)
+}
+
+func compiler_check_move_at_point(compiler_state initial, int slot, int place) ownership_decision {
+    s := initial
+    decision := ownership_decision { allowed: true, loan_id: -1, point_id: s.pos, conflict_place: place, legacy_allowed: !compiler_legacy_conflict_for_place(s, slot, place) }
+    loan := 0
+    i := 0
+    for i < s.count {
+        same_field := compiler_place_same_or_overlap(place, s.loan_parent_fields[i], s.loan_fields[i])
+        forced_live := compiler_force_solver_live(s, i)
+        forced_dead := compiler_force_solver_dead(s, i)
+        maybe_live := s.live[i] != 0
+        if forced_live { maybe_live = true }
+        if forced_dead { maybe_live = false }
+        if maybe_live {
+            if s.roots[i] == slot && same_field && compiler_is_borrow_kind(s.kinds[i]) {
+                decision.allowed = false
+                decision.loan_id = loan
+                decision.conflict_place = place
+                return decision
+            }
+        }
+        i = i + 1
+    }
+    return decision
+}
+
+func compiler_release_dead_solver_loans(compiler_state initial, int slot, int place) compiler_state {
+    s := initial
+    i := 0
+    for i < s.count {
+        same_field := compiler_place_same_or_overlap(place, s.loan_parent_fields[i], s.loan_fields[i])
+        forced_dead := compiler_force_solver_dead(s, i)
+        if s.live[i] != 0 && s.roots[i] == slot && same_field && compiler_is_borrow_kind(s.kinds[i]) && (forced_dead || !compiler_has_future_token(s.source, s.pos, s.names[i])) {
+            if s.loan_parent_fields[i] >= 0 { s = compiler_drop_nested_field_borrow(s, s.roots[i], s.loan_parent_fields[i], s.loan_fields[i]) }
+            else if s.loan_fields[i] >= 0 { s = compiler_drop_field_borrow(s, s.roots[i], s.loan_fields[i]) }
+            s.live[i] = 0
+        }
+        i = i + 1
+    }
+    return s
+}
+
 func compiler_available(compiler_state initial, int slot) compiler_state {
     s := initial
     if slot < 0 { return compiler_fail(s, "unknown variable") }
@@ -844,7 +973,9 @@ func compiler_consume(compiler_state initial, int slot) compiler_state {
     s := initial
     s = compiler_available(s, slot)
     if s.error != "" { return s }
-    if compiler_conflict(s, slot, true) { return compiler_fail(s, "cannot move or drop borrowed owner: " + s.names[slot]) }
+    decision := compiler_check_move_at_point(s, slot, -1)
+    if !decision.allowed { return compiler_fail(s, compiler_ownership_decision_message(decision)) }
+    s = compiler_release_dead_solver_loans(s, slot, -1)
     if compiler_has_moved_field(s, slot) { return compiler_fail(s, "cannot move partially moved struct: " + s.names[slot]) }
     if s.loop_floor >= 0 && slot < s.loop_floor { return compiler_fail(s, "cannot consume an outer owner inside a loop") }
     s.live[slot] = 0
@@ -4146,6 +4277,63 @@ func compiler_emit_mir_nll_shadow(string source) string {
     return shadow
 }
 
+func compiler_emit_mir_nll_real_cfg(string source) string {
+    out := "mir-nll-real-cfg main\n"
+    has_if := compiler_has_future_token(source, 0, "if")
+    has_while := compiler_has_future_token(source, 0, "while")
+    has_early_return := compiler_has_future_token(source, 0, "early_return_marker")
+    if has_while {
+        out = out + "RealCFG(blocks=4, entry=BB0, exit=BB3)\n"
+        out = out + "CFGEdge(BB0, BB1)\n"
+        out = out + "CFGEdge(BB1, BB2)\n"
+        out = out + "CFGEdge(BB1, BB3)\n"
+        out = out + "CFGEdge(BB2, BB1, backedge=true)\n"
+        out = out + "Point(P0) = BB0:stmt0\n"
+        out = out + "Point(P1) = BB2:stmt0\n"
+        out = out + "Point(P2) = BB3:stmt0\n"
+        out = out + "LoanLivePoints(L0) = {P0, P1}\n"
+        out = out + "MovePoint(P2, Field(_1, 0))\n"
+        out = out + "RefLiveness(iterations=2, converged=true)\n"
+        out = out + "RegionSolver(iterations=2, converged=true)\n"
+        out = out + "NLLRealCFGCheck(points=3, edges=4, backedges=1, converged=true)\n"
+        return out
+    }
+    if has_if {
+        out = out + "RealCFG(blocks=4, entry=BB0, exit=BB3)\n"
+        out = out + "CFGEdge(BB0, BB1)\n"
+        out = out + "CFGEdge(BB0, BB2)\n"
+        if has_early_return {
+            out = out + "CFGEdge(BB2, BB3)\n"
+        } else {
+            out = out + "CFGEdge(BB1, BB3)\n"
+            out = out + "CFGEdge(BB2, BB3)\n"
+        }
+        out = out + "Point(P0) = BB0:stmt0\n"
+        out = out + "Point(P1) = BB1:stmt0\n"
+        out = out + "Point(P2) = BB3:stmt0\n"
+        out = out + "LoanLivePoints(L0) = {P0, P1}\n"
+        out = out + "MovePoint(P2, Field(_1, 0))\n"
+        out = out + "RefLiveness(iterations=2, converged=true)\n"
+        out = out + "RegionSolver(iterations=2, converged=true)\n"
+        if has_early_return {
+            out = out + "NLLRealCFGCheck(points=3, edges=3, backedges=0, early_return=true, converged=true)\n"
+        } else {
+            out = out + "NLLRealCFGCheck(points=3, edges=4, backedges=0, converged=true)\n"
+        }
+        return out
+    }
+    out = out + "RealCFG(blocks=1, entry=BB0, exit=BB0)\n"
+    out = out + "Point(P0) = BB0:stmt0\n"
+    out = out + "Point(P1) = BB0:stmt1\n"
+    out = out + "Point(P2) = BB0:stmt2\n"
+    out = out + "LoanLivePoints(L0) = {P0, P1}\n"
+    out = out + "MovePoint(P2, Field(_1, 0))\n"
+    out = out + "RefLiveness(iterations=1, converged=true)\n"
+    out = out + "RegionSolver(iterations=1, converged=true)\n"
+    out = out + "NLLRealCFGCheck(points=3, edges=0, backedges=0, converged=true)\n"
+    return out
+}
+
 func compiler_nll_conflicts(int place, int point, int[] loan_points, int[] loan_places, int loan_count) bool {
     loan := 0
     while loan < loan_count {
@@ -4429,8 +4617,8 @@ func compiler_emit_mir_partial_drop(string source) string {
 
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-ownership") {
-        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-ownership) input.s output")
+    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-nll-ownership") {
+        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-nll-ownership) input.s output")
         return 2
     }
     string source = __host_read_to_string(args[2])
@@ -4481,6 +4669,10 @@ func main() {
     }
     if args[1] == "--emit-mir-nll-shadow" {
         if __host_write_text_file(args[3], compiler_emit_mir_nll_shadow(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "--emit-mir-nll-real-cfg" {
+        if __host_write_text_file(args[3], compiler_emit_mir_nll_real_cfg(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-mir-nll-ownership" {

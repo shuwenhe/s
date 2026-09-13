@@ -2187,7 +2187,7 @@ func main() int {
 
     return 42
 
-}' 'cannot move borrowed pair field'
+}' 'OwnershipAuthority(solver) SolverDecision(ERROR)'
 
 expect_compile_fail cfg_field_maybe_moved_read 'package bad
 
